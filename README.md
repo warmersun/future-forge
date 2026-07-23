@@ -149,10 +149,26 @@ Typical approach:
 3. Set `PORT` and **`XAI_API_KEY`** in the host environment (prefer API key over SuperGrok OAuth on servers).
 4. Terminate TLS with nginx, Caddy, or the platform’s HTTPS.
 
-Do not commit secrets. Keep the GitHub repo private if it is not meant to be public.
+Do not commit secrets. Do not put API keys in the client or the git repo.
 
 ---
 
-## License / status
+## License
 
-Private learning prototype. Content and art are development-time static assets; scenario text can be generated via the co-inventor when AI is available.
+Future Forge is **source available**, **not** OSI open source.
+
+| Use | Free under `LICENSE`? |
+|-----|------------------------|
+| **Personal** self-host (private hobby / own learning only) | **Yes** |
+| **School / university / training** | **No** — needs a paid license |
+| **Company / commercial / client work** | **No** — needs a paid license |
+| **Cloud / multi-tenant / managed service** for others | **No** — needs a paid license |
+
+- Full free grant and restrictions: **[`LICENSE`](LICENSE)**  
+- Education, Commercial, and Cloud tiers: **[`COMMERCIAL.md`](COMMERCIAL.md)**  
+
+**Personal free use** means a natural person, non-commercial, on infrastructure they control, not offering the game as a product, service, or institutional classroom tool. If you are unsure, you need a commercial license — open a GitHub issue with subject **Commercial license**.
+
+Content and art are development-time static assets; scenario text may be generated via the co-inventor when AI is available. AI providers’ terms apply to any keys you use.
+
+> The license text is a practical draft for this product model. Have a lawyer review before large commercial enforcement or sales.
