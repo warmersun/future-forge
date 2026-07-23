@@ -198,13 +198,14 @@ Role:
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory.
-- When mode is scrutinize: stress-test the idea from THREE angles (see below). Put results in proposals.scrutiny.
+- When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
 - Tone: vivid, concise, hopeful, practical.
 
-Scrutiny angles (plain language, local, specific):
-1. moloch — Multipolar traps / race-to-the-bottom / coordination failure (Scott Alexander's "Moloch"): who defects, what metric gets goodharted, arms races, tragedy of the commons. Optional one nod to "Moloch" if natural. Always a safeguard that is a coordination fix, not a sermon.
-2. nature — Mother Nature: energy, materials, ecology, disease, climate feedbacks, physical failure modes. Safeguard = design limit or monitoring.
-3. policy — Policy buy-in AND affordability: who must say yes (mayor, clinic, voters, regulators), budget, who is priced out, legitimacy. Safeguard = financing or governance move.
+Scrutiny / challenge angles (plain language, local, specific):
+1. moloch — System game mechanics: multipolar traps, freeriding, Goodhart’s law, race-to-the-bottom. Safeguard = coordination fix.
+2. ethicist — Ethical dilemmas with no clean good/bad answer: dignity, bias, dual-use, who is harmed at scale. Safeguard = a hard constraint you refuse to cross.
+3. stakeholder — City officials and community leaders: funding, permits, policy, public support. Safeguard = financing or legitimacy move.
+4. nature — Mother Nature / natural world: energy, materials, ecology, disease, storms. Safeguard = design limit or monitoring.
 
 Hard rules:
 - Only use technology ids from availableTechs.
@@ -233,8 +234,9 @@ For other modes timing may be null.
 scrutiny when used:
 "scrutiny": {
   "moloch": { "analysis": "...", "safeguard": "..." },
-  "nature": { "analysis": "...", "safeguard": "..." },
-  "policy": { "analysis": "...", "safeguard": "..." }
+  "ethicist": { "analysis": "...", "safeguard": "..." },
+  "stakeholder": { "analysis": "...", "safeguard": "..." },
+  "nature": { "analysis": "...", "safeguard": "..." }
 }
 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
@@ -615,26 +617,30 @@ function localCoInvent({ mode, messages, context }) {
   if (mode === "pose-challenge") {
     const place = context.place || "this place";
     const name = context.inventionName || "this invention";
-    const angles = ["moloch", "nature", "policy"];
+    const angles = ["moloch", "ethicist", "stakeholder", "nature"];
     const angle = angles.includes(context.challengeAngle)
       ? context.challengeAngle
-      : angles[Math.floor(Math.random() * 3)];
+      : angles[Math.floor(Math.random() * angles.length)];
     const labels = {
       moloch: "Moloch",
+      ethicist: "Ethicist",
+      stakeholder: "Stakeholder",
       nature: "Mother Nature",
-      policy: "Policy & money",
     };
     let speech;
     let question;
     if (angle === "nature") {
-      speech = `Mother Nature, ${place}: “${name} still burns energy and makes waste. Storms and scarcity don’t care about your pitch deck.”`;
+      speech = `Mother Nature, ${place}: “${name} still burns energy and makes waste. Storms and scarcity do not care about your pitch deck.”`;
       question = "What physical limit hits first — and how does the design absorb a bad week?";
-    } else if (angle === "policy") {
-      speech = `Policy & money, ${place}: “Who signs? Who pays year five? If households can’t afford it, the pilot is a photo-op.”`;
-      question = "Who pays — and who is priced out?";
+    } else if (angle === "ethicist") {
+      speech = `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity or opportunity is on the line — and both sides have a point.”`;
+      question = "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?";
+    } else if (angle === "stakeholder") {
+      speech = `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public.”`;
+      question = "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?";
     } else {
-      speech = `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design.”`;
-      question = "What stops defection when neighbors can freeride?";
+      speech = `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`;
+      question = "What stops defection when neighbors can freeride — name the game mechanic you change?";
     }
     return {
       source: "local",
@@ -685,9 +691,11 @@ function localCoInvent({ mode, messages, context }) {
       const tips =
         angle === "nature"
           ? `• Name the physical limit (energy, corrosion, heat, waste, flood height).\n• Tie it to ${techNames || "your stack"}.\n• Say what fails first in a bad week.\n• Add a sensor, cap, or graceful degrade.`
-          : angle === "policy"
-            ? `• Name who must say yes in ${place}.\n• Say who pays year 1 vs year 5.\n• Name who is priced out.\n• Offer a free tier, subsidy, or phased cost.`
-            : `• Name who can freeride on ${name}.\n• What they gain by defecting.\n• Make defection visible.\n• Align incentives (shared fund, default enroll, small fee/reward).`;
+          : angle === "ethicist"
+            ? `• Name the values in tension (privacy vs safety, speed vs consent, inclusion vs cost).\n• Say who is harmed on each horn of the dilemma.\n• State one hard line you will not cross.\n• Show how ${techNames || "your stack"} is constrained by that line.`
+            : angle === "stakeholder"
+              ? `• Name who must say yes in ${place} (official, board, neighbors).\n• Say who pays year 1 vs year 5.\n• Name who is priced out or loses status.\n• Offer a permit path, free tier, subsidy, or public forum move.`
+              : `• Name who can freeride on ${name}.\n• What they gain by defecting.\n• Make defection visible.\n• Align incentives (shared fund, default enroll, small fee/reward).`;
       return {
         source: "local",
         message:
@@ -699,9 +707,11 @@ function localCoInvent({ mode, messages, context }) {
     const draft =
       angle === "nature"
         ? `In ${place}, the first physical failure for ${name} is overload or waste if ${techNames || "the stack"} runs without caps. We limit scale to measured budgets, add monitoring, and fail safe to a manual fallback during extremes so the system degrades instead of collapsing.`
-        : angle === "policy"
-          ? `In ${place}, the clinic/city signs off only if year-1 capital is grant-backed and year-5 ops are under a known line item. Households below a threshold get a free tier; others pay a small fee. That keeps legitimacy and affordability without killing the pilot.`
-          : `In ${place}, freeriders would keep old habits while careful users pay. ${name} makes participation the default for covered blocks, publishes compliance, and ties a small shared fee/reward to verified use so defection is visible and costly.`;
+        : angle === "ethicist"
+          ? `In ${place}, ${name} creates a real ethical tension around who is surveilled or left out when ${techNames || "the stack"} scales. We refuse one hard line (no coercive enrollment / no sale of identifiable data without consent), publish that rule, and keep a human review path so the dilemma is governed rather than ignored.`
+          : angle === "stakeholder"
+            ? `In ${place}, the clinic or city signs off only if year-1 capital is grant-backed and year-5 ops sit under a known line item. Households below a threshold get a free tier; a public briefing and simple permit checklist build legitimacy without killing the pilot.`
+            : `In ${place}, freeriders would keep old habits while careful users pay. ${name} makes participation the default for covered blocks, publishes compliance, and ties a small shared fee/reward to verified use so defection is visible and costly.`;
     return {
       source: "local",
       message: "Draft answer below — edit it so it sounds like your invention, then submit.",
@@ -954,7 +964,7 @@ function buildUserPayload({ messages, context, mode }) {
     "complete-picture":
       "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack.",
     "pose-challenge":
-      "You ARE a hostile critic of the invention. Use context.challengeAngle if set (moloch|nature|policy), else pick one. Speak in character: Moloch (coordination traps/race to the bottom), Mother Nature (physical/ecological limits), or Policy & money (buy-in and affordability). Attack the idea as if it will fail. End with ONE clear question the learner must answer. Also return top-level fields: angle, angleLabel, challengeSpeech (full attack), challengeQuestion (the one question). proposals can be empty.",
+      "You ARE a hostile critic of the invention. Use context.challengeAngle if set (moloch|ethicist|stakeholder|nature), else pick one. Speak in character: Moloch (system game mechanics / multipolar traps), Ethicist (ethical dilemmas with no clean good answer), Stakeholder (city officials & community leaders — funding, permits, policy, public support), or Mother Nature (physical/ecological limits of the natural world). Attack the idea as if it will fail. End with ONE clear question. Return top-level fields: angle, angleLabel, challengeSpeech, challengeQuestion. proposals can be empty.",
     "judge-challenge":
       "Judge the learner's answer to the challenge (context has challengeSpeech, challengeQuestion, playerAnswer, challengeAngle). Return top-level verdict: pass | partial | fail, message (feedback), lesson (one teaching sentence). Be fair: concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail.",
     "coach-challenge":
@@ -1029,10 +1039,18 @@ function sanitizeScrutinyAngle(raw) {
 function sanitizeScrutiny(raw) {
   if (!raw || typeof raw !== "object") return null;
   const moloch = sanitizeScrutinyAngle(raw.moloch);
+  const ethicist = sanitizeScrutinyAngle(raw.ethicist);
+  const stakeholder = sanitizeScrutinyAngle(raw.stakeholder);
   const nature = sanitizeScrutinyAngle(raw.nature);
+  // legacy alias
   const policy = sanitizeScrutinyAngle(raw.policy);
-  if (!moloch && !nature && !policy) return null;
-  return { moloch, nature, policy };
+  if (!moloch && !ethicist && !stakeholder && !nature && !policy) return null;
+  return {
+    moloch,
+    ethicist,
+    stakeholder: stakeholder || policy,
+    nature,
+  };
 }
 
 function sanitizeResult(parsed, availableIds, source = "ai") {

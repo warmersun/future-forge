@@ -6,7 +6,8 @@
   "description": "Learning game: invent with emerging technologies and an AI co-inventor",
   "scripts": {
     "start": "node server.mjs",
-    "serve": "node server.mjs"
+    "serve": "node server.mjs",
+    "check:briefs": "node scripts/check-problem-briefs.mjs"
   },
   "dependencies": {
     "openai": "^6.16.0"

@@ -11,7 +11,6 @@ const QUICK_ACTIONS = [
     hint: "Milestones, capabilities, unlocked use cases for this stack & year",
   },
   { mode: "draft-name", label: "Name it", hint: "Invention name" },
-  { mode: "complete-picture", label: "Fill other side", hint: "AI writes the story face you skipped" },
   { mode: "push-further", label: "Timing check", hint: "Wait vs claim fit for this year" },
   { mode: "explain-techs", label: "Teach me", hint: "Explain techs in the stack" },
 ];

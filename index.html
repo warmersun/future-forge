@@ -90,6 +90,28 @@
           </button>
         </div>
         <div id="mission-status" class="mission-status" hidden aria-live="polite"></div>
+        <article id="problem-brief" class="problem-brief" hidden aria-live="polite">
+          <header class="problem-brief-head">
+            <h2 id="problem-brief-title">About this problem</h2>
+            <p class="problem-brief-sub" id="problem-brief-sub">
+              Read while local scenarios draft.
+            </p>
+          </header>
+          <div class="problem-brief-grid">
+            <section class="problem-brief-block">
+              <h3>Current state</h3>
+              <p id="problem-brief-state"></p>
+            </section>
+            <section class="problem-brief-block">
+              <h3>Root causes</h3>
+              <p id="problem-brief-causes"></p>
+            </section>
+            <section class="problem-brief-block problem-brief-warn">
+              <h3>Warnings for inventors</h3>
+              <p id="problem-brief-warnings"></p>
+            </section>
+          </div>
+        </article>
         <div id="mission-grid" class="challenge-grid"></div>
       </div>
     </section>
@@ -103,24 +125,39 @@
           <span class="pill" data-step="challenge">2 · Challenge</span>
           <span class="pill" data-step="deploy">3 · Deploy</span>
         </div>
-        <div class="hud-clock" id="hud-clock">
+        <div class="hud-clock" id="hud-clock" title="Mission calendar">
           <span class="hud-year" id="hud-year">2026</span>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
         </div>
-        <div class="hud-crisis-wrap">
-          <div class="hud-crisis-label" title="How bad the local crisis is right now (0–5). Wait raises these. Deploy lowers them. Hit 5 or the collapse year and you lose.">
-            Crisis now
-          </div>
+        <div
+          class="hud-crisis-wrap"
+          id="hud-crisis-wrap"
+          title="Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the mission ends. More in ?"
+        >
+          <span class="hud-crisis-label">Crisis</span>
           <div class="hud-pressure" id="hud-pressure"></div>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
+        <div class="hud-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
+          <button
+            type="button"
+            class="btn-help"
+            id="btn-help"
+            title="How Future Forge works"
+            aria-label="Help: how this works"
+          >
+            ?
+          </button>
+        </div>
       </header>
 
       <div class="workshop-layout">
         <aside class="tech-library">
           <div class="panel-header">
             <h2>Emerging tech</h2>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech">Learn</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
+              Learn
+            </button>
           </div>
           <div id="filter-row" class="filter-row"></div>
           <div id="tech-list" class="tech-list" role="list"></div>
@@ -133,8 +170,6 @@
             <p id="ws-mission-place" class="mission-place"></p>
             <p id="ws-mission-scene"></p>
             <p id="ws-stakeholder" class="stakeholder"></p>
-            <p id="ws-crisis-help" class="crisis-help"></p>
-            <p id="ws-news" class="year-news" hidden></p>
             <div id="wait-report" class="wait-report" hidden></div>
           </div>
 
@@ -164,31 +199,23 @@
               <p class="feasibility-foot" id="feasibility-foot"></p>
             </div>
 
-            <div class="story-mode" role="group" aria-label="What you write">
-              <span class="story-mode-label">You write:</span>
-              <button type="button" class="story-mode-btn active" data-face="how" id="face-how">
+            <div class="story-mode" role="group" aria-label="Primary story face">
+              <span class="story-mode-label">Focus:</span>
+              <button type="button" class="story-mode-btn active" data-face="how" id="face-how" aria-pressed="true">
                 How it works
               </button>
-              <button type="button" class="story-mode-btn" data-face="life" id="face-life">
+              <button type="button" class="story-mode-btn" data-face="life" id="face-life" aria-pressed="false">
                 Everyday life
               </button>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-write-both" title="Write both yourself">
-                Write both
-              </button>
             </div>
+            <p class="story-mode-hint" id="story-mode-hint">
+              Both boxes stay editable. <strong>Fill other side</strong> sits on your focus and AI-drafts the other face.
+            </p>
 
-            <!-- Fixed story faces: Fill-other-side chrome moves to the face you are not writing -->
+            <!-- Both faces always editable; one Fill button is moved into the focused header -->
             <div class="field story-face-field" id="field-how" data-face="how">
-              <div class="story-face-header">
+              <div class="story-face-header" id="header-how">
                 <label for="invention-how" id="label-how">How does it work?</label>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm btn-fill-other"
-                  data-fill-for="how"
-                  hidden
-                >
-                  Fill other side
-                </button>
               </div>
               <textarea
                 id="invention-how"
@@ -199,16 +226,8 @@
             </div>
 
             <div class="field story-face-field" id="field-life" data-face="life">
-              <div class="story-face-header">
+              <div class="story-face-header" id="header-life">
                 <label for="invention-impact" id="label-life">Everyday life if it works</label>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm btn-fill-other"
-                  data-fill-for="life"
-                  hidden
-                >
-                  Fill other side
-                </button>
               </div>
               <textarea
                 id="invention-impact"
@@ -217,6 +236,15 @@
               ></textarea>
               <p class="story-face-note" id="note-life" hidden></p>
             </div>
+
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              id="btn-fill-other"
+              hidden
+            >
+              Fill other side
+            </button>
 
             <div class="prompt-tip" id="prompt-tip"></div>
 
@@ -278,7 +306,7 @@
       </div>
     </section>
 
-    <!-- CHALLENGE (random Moloch / Nature / Policy attack) -->
+    <!-- CHALLENGE (Moloch / Ethicist / Stakeholder / Mother Nature) -->
     <section id="screen-challenge-step" class="screen">
       <header class="topbar topbar-game">
         <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
@@ -295,9 +323,23 @@
       </header>
       <div class="content challenge-step-content">
         <div class="challenge-step-card panel">
-          <div class="label" id="challenge-angle-label">Challenge</div>
-          <h1 id="challenge-angle-title">Moloch</h1>
-          <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
+          <div class="challenger-banner" id="challenger-visual" hidden>
+            <div class="challenger-portrait-wrap">
+              <img
+                id="challenger-portrait"
+                class="challenger-portrait"
+                alt=""
+                width="320"
+                height="400"
+              />
+            </div>
+            <div class="challenger-copy">
+              <div class="label" id="challenge-angle-label">Your idea is under attack</div>
+              <h1 id="challenge-angle-title">Moloch</h1>
+              <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
+              <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
+            </div>
+          </div>
           <div class="challenge-speech" id="challenge-speech">
             <p class="muted">Loading challenge…</p>
           </div>
@@ -392,22 +434,94 @@
       </div>
     </section>
 
-    <!-- Tech modal -->
+    <!-- Tech learn modal (single card or stack, newest first) -->
     <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
-      <div class="modal">
-        <h3 id="modal-title">Tech</h3>
-        <p id="modal-summary"></p>
-        <div class="learn-block">
-          <strong>Learn</strong>
-          <span id="modal-learn"></span>
+      <div class="modal modal-learn">
+        <h3 id="modal-title">Learn</h3>
+        <p id="modal-lead" class="modal-lead" hidden></p>
+        <div id="modal-body" class="modal-body"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="modal-close">Close</button>
         </div>
-        <div class="learn-block" style="background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.25)">
-          <strong>Timing &amp; risk</strong>
-          <span id="modal-hint"></span>
+      </div>
+    </div>
+
+    <!-- How to play help -->
+    <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="modal help-modal">
+        <h3 id="help-title">How Future Forge works</h3>
+        <div class="help-body">
+          <p>
+            You invent a <strong>local</strong> solution for a concrete place under pressure — with emerging tech
+            and an <strong>AI co-inventor</strong> as your creative partner (not the sole inventor).
+          </p>
+          <ol class="help-steps">
+            <li>
+              <strong>Invent</strong> — pick a tech stack, name the idea, and tell the story of the invention
+              in two faces (see below).
+            </li>
+            <li>
+              <strong>Feasibility</strong> — the red / yellow / green light judges whether your
+              <em>claims</em> fit this year and place. Categories are always choosable; over-claiming is what goes red.
+            </li>
+            <li>
+              <strong>Challenge</strong> — defend the idea against a random challenger:
+              <em>Moloch</em> (system game mechanics), <em>Ethicist</em> (hard tradeoffs),
+              <em>Stakeholder</em> (officials &amp; community), or <em>Mother Nature</em> (physical world).
+              The co-inventor can coach or draft an answer if you are stuck.
+            </li>
+            <li>
+              <strong>Deploy</strong> — if you pass, crisis meters drop. Too little relief and you can keep inventing.
+            </li>
+          </ol>
+          <h4>How it works ↔ Everyday life</h4>
+          <p>
+            Your invention has two story faces. Both text boxes stay editable at all times.
+          </p>
+          <ul>
+            <li>
+              <strong>How it works</strong> — the mechanism: what acts, what decides, how the pieces connect
+              for <em>this</em> place.
+            </li>
+            <li>
+              <strong>Everyday life</strong> — a day after it works: who feels the change, what is easier or safer.
+            </li>
+            <li>
+              The <strong>Focus</strong> toggle (How it works / Everyday life) selects which face you are emphasizing.
+              The pressed button stays selected; only one is active at a time.
+            </li>
+            <li>
+              <strong>Fill other side</strong> sits on the focused face. Write that face first, then click it so the
+              AI drafts the <em>other</em> face from your stack and text. You can always edit either box yourself.
+            </li>
+          </ul>
+          <h4>AI co-inventor</h4>
+          <p>
+            Open the <strong>AI co-inventor</strong> tab (or the ✦ button) to brainstorm with Grok: spark ideas,
+            suggest a tech stack, name the invention, teach techs, or use
+            <strong>Art of the possible</strong> for milestones, current capabilities, and use cases.
+            You lead; it proposes. Apply suggestions only when you want them.
+          </p>
+          <h4>Mission clock (top center)</h4>
+          <p>
+            Shows the current year and turn. Waiting advances the calendar in multi-year steps and can improve
+            world conditions for stretch ideas — but it is never free.
+          </p>
+          <h4>Crisis meters (top right)</h4>
+          <p>
+            Each meter is <strong>0–5</strong>: how bad that part of the local crisis is right now.
+            <strong>Wait</strong> raises them. <strong>Deploy</strong> after a successful challenge lowers them.
+            Hit <strong>5</strong> on any meter, or the fail year on the clock, and the mission ends.
+          </p>
+          <h4>Tips</h4>
+          <ul>
+            <li>Stay local: name who benefits on this street, clinic, or quay.</li>
+            <li>Mix domains when the problem needs it — not as a checkbox.</li>
+            <li>Feasibility judges <em>claims in how it works</em>, not whether a tech card is “unlocked.”</li>
+          </ul>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary btn-sm" id="modal-close">Close</button>
-          <button type="button" class="btn btn-primary btn-sm" id="modal-add">Add to stack</button>
+          <button type="button" class="btn btn-primary btn-sm" id="help-close">Got it</button>
         </div>
       </div>
     </div>

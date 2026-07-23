@@ -22,6 +22,7 @@ import {
   techHorizonYear,
   techForAi,
 } from "./data.js";
+import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 
@@ -36,8 +37,7 @@ const state = {
   inventionName: "",
   inventionHow: "",
   inventionImpact: "",
-  storyFace: "how", // player writes how | life
-  writeBoth: false,
+  storyFace: "how", // focus: which face "Fill other side" attaches to (AI drafts the other)
   challengePassed: false,
   challengeAngle: null,
   challengeText: "",
@@ -56,12 +56,105 @@ const state = {
   aiBusy: false,
   /** @type {{ level: string, reason: string, forKey: string } | null} */
   aiTiming: null,
-  /** @type {Record<string, object[]>} generated/curated scenarios per global theme */
+  /** @type {Record<string, object[]>} last generated scenarios per theme (max SCENARIO_COUNT) */
   scenarioCache: {},
   /** @type {object[]} scenarios currently shown on mission screen */
   missionChoices: [],
   scenariosLoading: false,
+  /** Mission ids the player has already deployed/solved (still replayable) */
+  solvedMissionIds: new Set(),
+  /**
+   * Learn stack: selected tech ids, most recently selected first.
+   * Push on select, remove on deselect; Learn modal shows this order.
+   */
+  learnOrder: [],
 };
+
+const STORAGE_SCENARIOS = "future-forge:scenarioCache";
+const STORAGE_SOLVED = "future-forge:solvedMissions";
+
+function loadPersistedProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_SCENARIOS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        for (const [gid, list] of Object.entries(parsed)) {
+          if (!Array.isArray(list)) continue;
+          state.scenarioCache[gid] = list
+            .slice(0, SCENARIO_COUNT)
+            .map((m) => normalizeMission(m, gid));
+        }
+      }
+    }
+  } catch {
+    /* ignore corrupt cache */
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_SOLVED);
+    if (raw) {
+      const ids = JSON.parse(raw);
+      if (Array.isArray(ids)) state.solvedMissionIds = new Set(ids.map(String));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistScenarioCache() {
+  try {
+    const slim = {};
+    for (const [gid, list] of Object.entries(state.scenarioCache)) {
+      if (!Array.isArray(list) || !list.length) continue;
+      slim[gid] = list.slice(0, SCENARIO_COUNT).map((m) => ({
+        id: m.id,
+        globalId: m.globalId,
+        title: m.title,
+        place: m.place,
+        startYear: m.startYear,
+        collapseYear: m.collapseYear,
+        yearsPerTurn: m.yearsPerTurn,
+        pressure: m.pressure,
+        pressureRise: m.pressureRise,
+        winMax: m.winMax,
+        scene: m.scene,
+        stakeholder: m.stakeholder,
+        suggested: m.suggested,
+        visionTheme: m.visionTheme,
+        source: m.source,
+      }));
+    }
+    localStorage.setItem(STORAGE_SCENARIOS, JSON.stringify(slim));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function persistSolvedMissions() {
+  try {
+    localStorage.setItem(STORAGE_SOLVED, JSON.stringify([...state.solvedMissionIds]));
+  } catch {
+    /* ignore */
+  }
+}
+
+function isMissionSolved(missionId) {
+  return Boolean(missionId && state.solvedMissionIds.has(String(missionId)));
+}
+
+function markMissionSolved(mission) {
+  if (!mission?.id) return;
+  state.solvedMissionIds.add(String(mission.id));
+  persistSolvedMissions();
+}
+
+function cacheScenariosForGlobal(globalId, list) {
+  const capped = (list || []).slice(0, SCENARIO_COUNT);
+  state.scenarioCache[globalId] = capped;
+  state.missionChoices = capped;
+  persistScenarioCache();
+  return capped;
+}
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -168,13 +261,14 @@ function renderGlobals() {
   grid.innerHTML = GLOBALS.map((g) => {
     const tag = g.kind === "before" ? "Before it hits" : "Now";
     const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
-    const cached = state.scenarioCache[g.id]?.length || 0;
-    const curated = missionsForGlobal(g.id).length;
+    const cachedList = state.scenarioCache[g.id] || [];
+    const cached = cachedList.length;
+    const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
     const hint = cached
-      ? `${cached} scenarios ready →`
-      : curated
-        ? `Generate scenarios (${curated} curated seed${curated > 1 ? "s" : ""}) →`
-        : "Generate local scenarios →";
+      ? solvedOnTheme
+        ? `${cached} cached · ${solvedOnTheme} solved →`
+        : `${cached} cached scenarios →`
+      : "Generate local scenarios →";
     const img = problemVisualUrl(g.id);
     return `
       <button type="button" class="challenge-card challenge-card-visual" data-id="${g.id}">
@@ -213,9 +307,59 @@ function setMissionStatus(text, { loading = false } = {}) {
     : escapeHtml(text);
 }
 
-function paintMissionCards(list) {
+/**
+ * Theme brief on the mission screen — readable while scenarios draft (static data).
+ * @param {object | null} global
+ * @param {{ drafting?: boolean }} [opts]
+ */
+function renderProblemBrief(global, { drafting = false } = {}) {
+  const root = $("#problem-brief");
+  if (!root) return;
+  const brief = global ? briefForGlobal(global) : null;
+  if (!brief) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  root.classList.toggle("is-drafting", drafting);
+  const title = $("#problem-brief-title");
+  const sub = $("#problem-brief-sub");
+  const stateEl = $("#problem-brief-state");
+  const causesEl = $("#problem-brief-causes");
+  const warnEl = $("#problem-brief-warnings");
+  if (title) title.textContent = global.title || "About this problem";
+  if (sub) {
+    sub.textContent = drafting
+      ? "Read this while local scenarios draft — then pick a place to invent."
+      : "Context for this theme. Pick a local scenario below to invent.";
+  }
+  if (stateEl) stateEl.textContent = brief.currentState;
+  if (causesEl) causesEl.textContent = brief.rootCauses;
+  if (warnEl) warnEl.textContent = brief.warnings;
+}
+
+/** Neutral loading shells — no draft titles that get replaced when AI finishes */
+function paintMissionSkeletons(count = SCENARIO_COUNT) {
   const grid = $("#mission-grid");
   if (!grid) return;
+  grid.classList.add("mission-grid-loading");
+  grid.innerHTML = Array.from({ length: count }, (_, i) => {
+    return `
+    <div class="challenge-card mission-skeleton" aria-hidden="true">
+      <span class="skel skel-line skel-short"></span>
+      <span class="skel skel-line skel-title"></span>
+      <span class="skel skel-line"></span>
+      <span class="skel skel-line"></span>
+      <span class="skel skel-line skel-mid"></span>
+      <span class="skel skel-cta">Scenario ${i + 1}</span>
+    </div>`;
+  }).join("");
+}
+
+function paintMissionCards(list, { disabled = false } = {}) {
+  const grid = $("#mission-grid");
+  if (!grid) return;
+  grid.classList.toggle("mission-grid-loading", disabled);
   if (!list.length) {
     grid.innerHTML = `<p class="empty-hint">No scenarios yet — try Generate new scenarios.</p>`;
     return;
@@ -224,12 +368,16 @@ function paintMissionCards(list) {
     .map((m) => {
       const tag = m.source === "curated" ? "curated" : "generated";
       const tagLabel = m.source === "curated" ? "Curated" : "Scenario";
+      const solved = isMissionSolved(m.id);
       const scene = (m.scene || "").slice(0, 180);
       const ellipsis = (m.scene || "").length > 180 ? "…" : "";
       return `
-    <button type="button" class="challenge-card" data-id="${escapeHtml(m.id)}">
+    <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
+      solved ? "solved" : ""
+    }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
       <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
         <span class="scenario-tag ${tag}">${tagLabel}</span>
+        ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
       </span>
       <h3>${escapeHtml(m.title)}</h3>
       <p>${escapeHtml(scene)}${ellipsis}</p>
@@ -238,12 +386,16 @@ function paintMissionCards(list) {
           ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
           : ""
       }
-      <span class="cta">Invent here →</span>
+      <span class="cta">${
+        disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
+      }</span>
     </button>`;
     })
     .join("");
-  grid.querySelectorAll(".challenge-card").forEach((btn) => {
+  if (disabled) return;
+  grid.querySelectorAll(".challenge-card:not([disabled])").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (state.scenariosLoading) return;
       const mission = state.missionChoices.find((m) => m.id === btn.dataset.id);
       if (mission) startMission(mission);
     });
@@ -252,17 +404,10 @@ function paintMissionCards(list) {
 
 async function ensureScenarios(global, { force = false } = {}) {
   if (!global) return [];
+  // Prefer last cached set of up to 4 (unless user asked for a fresh generation)
   if (!force && state.scenarioCache[global.id]?.length) {
-    return state.scenarioCache[global.id];
+    return state.scenarioCache[global.id].slice(0, SCENARIO_COUNT);
   }
-
-  // Instant local pack so the grid is never empty while AI works
-  const localPack = localScenariosForGlobal(global, {
-    count: SCENARIO_COUNT,
-    salt: force ? Date.now() % 10000 : 0,
-  });
-  state.scenarioCache[global.id] = localPack;
-  state.missionChoices = localPack;
 
   try {
     const res = await fetch("/api/co-invent", {
@@ -299,15 +444,21 @@ async function ensureScenarios(global, { force = false } = {}) {
     const data = await res.json();
     const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
     if (scenarios.length >= 2) {
-      const normalized = scenarios.map((m) => normalizeMission(m, global.id));
-      state.scenarioCache[global.id] = normalized;
-      state.missionChoices = normalized;
-      return normalized;
+      const normalized = scenarios
+        .map((m) => normalizeMission(m, global.id))
+        .slice(0, SCENARIO_COUNT);
+      return cacheScenariosForGlobal(global.id, normalized);
     }
   } catch {
-    /* keep local pack */
+    /* fall through to local pack */
   }
-  return state.scenarioCache[global.id] || localPack;
+
+  // Offline / AI failure only — not shown during the loading wait
+  const localPack = localScenariosForGlobal(global, {
+    count: SCENARIO_COUNT,
+    salt: force ? Date.now() % 10000 : 0,
+  }).slice(0, SCENARIO_COUNT);
+  return cacheScenariosForGlobal(global.id, localPack);
 }
 
 function normalizeMission(raw, globalId) {
@@ -359,7 +510,7 @@ async function renderMissions({ force = false } = {}) {
   const g = state.global;
   $("#mission-global-title").textContent = g ? g.title : "Local scenarios";
   $("#mission-global-blurb").textContent = g
-    ? `${g.blurb} — generating several concrete places living a piece of this. Pick one to invent for.`
+    ? `${g.blurb} — several concrete places living a piece of this. Pick one to invent for.`
     : "Pick a concrete place.";
   const regenBtn = $("#btn-regen-scenarios");
   if (regenBtn) regenBtn.hidden = !g;
@@ -368,59 +519,90 @@ async function renderMissions({ force = false } = {}) {
     state.missionChoices = [];
     paintMissionCards([]);
     setMissionStatus("");
+    renderProblemBrief(null);
     return;
   }
 
-  // Show cache or local pack immediately
+  // Brief is static — show immediately so the learner can read during drafting
+  renderProblemBrief(g, { drafting: true });
+
   const cached = !force && state.scenarioCache[g.id];
-  if (cached?.length) {
-    state.missionChoices = cached;
-    paintMissionCards(cached);
-    setMissionStatus(`${cached.length} scenarios for this theme. Pick one, or generate a fresh set.`);
-  } else {
-    const localPack = localScenariosForGlobal(g, { count: SCENARIO_COUNT, salt: 0 });
-    state.missionChoices = localPack;
-    paintMissionCards(localPack);
-    setMissionStatus("Drafting more local scenarios…", { loading: true });
+  const needsGenerate = force || !cached?.length;
+
+  // Ready cache (last 4): clickable immediately — no network wait
+  if (!needsGenerate) {
+    const list = cached.slice(0, SCENARIO_COUNT);
+    state.missionChoices = list;
+    state.scenariosLoading = false;
+    paintMissionCards(list, { disabled: false });
+    renderProblemBrief(g, { drafting: false });
+    const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
+    setMissionStatus(
+      solvedN
+        ? `${list.length} cached scenarios (${solvedN} solved — still playable). Generate new to replace the set.`
+        : `${list.length} cached scenarios. Pick one, or generate a new set.`
+    );
+    if (regenBtn) {
+      regenBtn.disabled = false;
+      regenBtn.textContent = "Generate new scenarios";
+    }
+    return;
   }
 
-  if (force) {
-    setMissionStatus("Generating a fresh set of local scenarios…", { loading: true });
-  }
-
+  // Skeletons only while generating — avoid flashing placeholder plot lines
+  // (e.g. "A deadline arrives in East Works") that get replaced by the AI set.
+  state.missionChoices = [];
   state.scenariosLoading = true;
+  paintMissionSkeletons(SCENARIO_COUNT);
+  setMissionStatus(
+    force ? "Generating a fresh set of local scenarios…" : "Drafting local scenarios…",
+    { loading: true }
+  );
   if (regenBtn) regenBtn.disabled = true;
+
   try {
     const list = await ensureScenarios(g, { force });
-    if (state.global?.id === g.id) {
-      state.missionChoices = list;
-      paintMissionCards(list);
-      const curated = list.filter((m) => m.source === "curated").length;
-      const gen = list.length - curated;
-      setMissionStatus(
-        curated
-          ? `${list.length} scenarios (${curated} curated · ${gen} generated). Pick a place to invent.`
-          : `${list.length} local scenarios. Pick a place to invent.`
-      );
-    }
+    if (state.global?.id !== g.id) return;
+    state.missionChoices = list;
+    paintMissionCards(list, { disabled: false });
+    renderProblemBrief(g, { drafting: false });
+    const curated = list.filter((m) => m.source === "curated").length;
+    const gen = list.length - curated;
+    const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
+    let msg = curated
+      ? `${list.length} scenarios (${curated} curated · ${gen} generated). Pick a place to invent.`
+      : `${list.length} local scenarios. Pick a place to invent.`;
+    if (solvedN) msg += ` ${solvedN} already solved — you can play them again.`;
+    if (force) msg = `New set ready (${list.length}). ` + msg;
+    setMissionStatus(msg);
   } finally {
-    state.scenariosLoading = false;
-    if (regenBtn) regenBtn.disabled = false;
+    if (state.global?.id === g.id) {
+      state.scenariosLoading = false;
+      if (regenBtn) {
+        regenBtn.disabled = false;
+        regenBtn.textContent = "Generate new scenarios";
+      }
+    }
   }
 }
 
 function startMission(mission) {
+  if (state.scenariosLoading) {
+    flashToast("Scenarios still drafting — wait a moment.");
+    return;
+  }
+  if (!mission) return;
   state.mission = mission;
   state.global = globalById(mission.globalId) || state.global;
   state.year = mission.startYear;
   state.turn = 0;
   state.pressure = clonePressure(mission.pressure);
   state.selectedTechIds = [];
+  state.learnOrder = [];
   state.inventionName = "";
   state.inventionHow = "";
   state.inventionImpact = "";
   state.storyFace = "how";
-  state.writeBoth = false;
   state.challengePassed = false;
   state.challengeAngle = null;
   state.challengeText = "";
@@ -431,7 +613,7 @@ function startMission(mission) {
   state.challengeFails = 0;
   state.domainFilter = "all";
   state.sideTab = "vision";
-  state.lastNews = `Mission clock starts ${mission.startYear}. Every emTech category is pickable — feasibility judges your claims.`;
+  state.lastNews = "";
   state.waitReport = "";
   state.outcome = null;
   state.aiTiming = null;
@@ -478,15 +660,14 @@ function renderWorkshop() {
   $("#ws-mission-place").textContent = `${m.place}`;
   $("#ws-mission-scene").textContent = m.scene;
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
-  const help = $("#ws-crisis-help");
-  if (help) {
-    help.textContent = `Crisis meters = how bad things are here (0–5). Wait raises them. After you invent and pass a challenge, Deploy lowers them. Hit 5 on any meter or year ${m.collapseYear} and the mission fails.`;
+
+  // Compact crisis HUD: full copy lives on title + Help (?)
+  const crisisWrap = $("#hud-crisis-wrap");
+  if (crisisWrap) {
+    crisisWrap.title =
+      `Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. ` +
+      `Hit 5 on any meter or year ${m.collapseYear} and the mission ends. Open ? for more.`;
   }
-  const news = $("#ws-news");
-  if (state.lastNews) {
-    news.hidden = false;
-    news.textContent = state.lastNews;
-  } else news.hidden = true;
 
   const wr = $("#wait-report");
   if (wr) {
@@ -508,6 +689,7 @@ function renderWorkshop() {
   renderStoryFaceUI();
   syncHiddenStoryFields();
   renderFeasibility();
+  updateLearnButton();
   updateChallengeButton();
   ensureCoInventor();
 }
@@ -550,18 +732,32 @@ function syncHiddenStoryFields() {
 }
 
 /**
- * Fixed sections: How it works + Everyday life.
- * "Fill other side" + companion styling sit on the face the player is NOT writing.
+ * How it works + Everyday life — both always editable.
+ * One "Fill other side" button is moved into the focused face header;
+ * AI drafts the opposite face from that focus.
+ */
+function placeFillOtherButton(face) {
+  const btn = $("#btn-fill-other");
+  const header = face === "life" ? $("#header-life") : $("#header-how");
+  if (!btn || !header) return;
+  header.appendChild(btn);
+  btn.hidden = false;
+}
+
+/**
+ * How it works + Everyday life — both always editable.
+ * Focus toggle (exclusive) marks which face owns the single "Fill other side" button;
+ * AI drafts the opposite face from that focus.
  */
 function renderStoryFaceUI() {
-  const both = state.writeBoth;
+  const face = state.storyFace === "life" ? "life" : "how";
+  state.storyFace = face;
+
   $$(".story-mode-btn").forEach((btn) => {
-    btn.classList.toggle("active", !both && btn.dataset.face === state.storyFace);
+    const on = btn.dataset.face === face;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
   });
-  const writeBothBtn = $("#btn-write-both");
-  if (writeBothBtn) {
-    writeBothBtn.textContent = both ? "One face + AI" : "Write both";
-  }
 
   const fieldHow = $("#field-how");
   const fieldLife = $("#field-life");
@@ -571,95 +767,73 @@ function renderStoryFaceUI() {
   const lifeArea = $("#invention-impact");
   const noteHow = $("#note-how");
   const noteLife = $("#note-life");
-  const fillHow = document.querySelector('.btn-fill-other[data-fill-for="how"]');
-  const fillLife = document.querySelector('.btn-fill-other[data-fill-for="life"]');
+  const hint = $("#story-mode-hint");
 
-  // Always keep textareas in sync with state
-  if (howArea) howArea.value = state.inventionHow;
-  if (lifeArea) lifeArea.value = state.inventionImpact;
+  if (howArea) {
+    howArea.value = state.inventionHow;
+    howArea.readOnly = false;
+    howArea.placeholder = "What acts, what decides, how the pieces connect for *this* place…";
+  }
+  if (lifeArea) {
+    lifeArea.value = state.inventionImpact;
+    lifeArea.readOnly = false;
+    lifeArea.placeholder = "A Tuesday here after your invention lands…";
+  }
+  if (labelHow) labelHow.textContent = "How does it work?";
+  if (labelLife) labelLife.textContent = "Everyday life if it works";
 
   const setRole = (field, role) => {
     if (!field) return;
-    field.classList.remove("is-player", "is-companion", "is-both");
+    field.classList.remove("is-focus", "is-other", "is-player", "is-companion", "is-both");
     field.classList.add(`is-${role}`);
   };
 
-  if (both) {
-    setRole(fieldHow, "both");
-    setRole(fieldLife, "both");
-    if (labelHow) labelHow.textContent = "How does it work? (you write)";
-    if (labelLife) labelLife.textContent = "Everyday life if it works (you write)";
-    if (howArea) {
-      howArea.placeholder = "What acts, what decides, how the pieces connect…";
-      howArea.readOnly = false;
-    }
-    if (lifeArea) {
-      lifeArea.placeholder = "A Tuesday here after your invention lands…";
-      lifeArea.readOnly = false;
-    }
-    if (fillHow) fillHow.hidden = true;
-    if (fillLife) fillLife.hidden = true;
-    if (noteHow) {
-      noteHow.hidden = true;
-      noteHow.textContent = "";
-    }
-    if (noteLife) {
-      noteLife.hidden = false;
-      noteLife.textContent = "Writing both yourself — AI fill is optional.";
-    }
-  } else if (state.storyFace === "how") {
-    // Player writes HOW; AI fill lives on EVERYDAY LIFE
-    setRole(fieldHow, "player");
-    setRole(fieldLife, "companion");
-    if (labelHow) labelHow.textContent = "How does it work? (you write)";
-    if (labelLife) labelLife.textContent = "Everyday life (co-inventor)";
-    if (howArea) {
-      howArea.placeholder = "What acts, what decides, how the pieces connect for *this* place…";
-      howArea.readOnly = false;
-    }
-    if (lifeArea) {
-      lifeArea.placeholder = "Click “Fill other side” — AI writes everyday life from your mechanism…";
-      lifeArea.readOnly = false;
-    }
-    if (fillHow) fillHow.hidden = true;
-    if (fillLife) fillLife.hidden = false;
-    if (noteHow) {
-      noteHow.hidden = true;
-      noteHow.textContent = "";
-    }
-    if (noteLife) {
-      noteLife.hidden = false;
-      noteLife.textContent = state.inventionImpact.trim()
-        ? "AI draft — edit freely if it misses the mark."
-        : "You write how it works; AI fills everyday life.";
-    }
-  } else {
-    // Player writes EVERYDAY LIFE; AI fill lives on HOW IT WORKS
-    setRole(fieldHow, "companion");
-    setRole(fieldLife, "player");
-    if (labelHow) labelHow.textContent = "How it works (co-inventor)";
-    if (labelLife) labelLife.textContent = "Everyday life if it works (you write)";
-    if (howArea) {
-      howArea.placeholder = "Click “Fill other side” — AI writes the mechanism from your day-in-the-life…";
-      howArea.readOnly = false;
-    }
-    if (lifeArea) {
-      lifeArea.placeholder = "A Tuesday here after your invention lands…";
-      lifeArea.readOnly = false;
-    }
-    if (fillHow) fillHow.hidden = false;
-    if (fillLife) fillLife.hidden = true;
-    if (noteLife) {
-      noteLife.hidden = true;
-      noteLife.textContent = "";
-    }
+  // Single button lives on the focused header only
+  placeFillOtherButton(face);
+
+  if (face === "how") {
+    setRole(fieldHow, "focus");
+    setRole(fieldLife, "other");
     if (noteHow) {
       noteHow.hidden = false;
+      noteHow.textContent = "Focus: write the mechanism. Fill other side drafts everyday life.";
+    }
+    if (noteLife) {
+      noteLife.hidden = !state.inventionImpact.trim();
+      noteLife.textContent = state.inventionImpact.trim()
+        ? "Editable anytime — can be AI draft or your own words."
+        : "";
+    }
+    if (hint) {
+      hint.innerHTML =
+        "Both boxes stay editable. <strong>Fill other side</strong> is on How it works and drafts Everyday life.";
+    }
+  } else {
+    setRole(fieldHow, "other");
+    setRole(fieldLife, "focus");
+    if (noteLife) {
+      noteLife.hidden = false;
+      noteLife.textContent = "Focus: write everyday life. Fill other side drafts how it works.";
+    }
+    if (noteHow) {
+      noteHow.hidden = !state.inventionHow.trim();
       noteHow.textContent = state.inventionHow.trim()
-        ? "AI draft — edit freely if it misses the mark."
-        : "You write everyday life; AI fills how it works.";
+        ? "Editable anytime — can be AI draft or your own words."
+        : "";
+    }
+    if (hint) {
+      hint.innerHTML =
+        "Both boxes stay editable. <strong>Fill other side</strong> is on Everyday life and drafts How it works.";
     }
   }
+}
+
+function hasPlayerFace() {
+  return playerStoryText().trim().length >= 20;
+}
+
+function hasCompanionFace() {
+  return companionStoryText().trim().length >= 20;
 }
 
 function timingCacheKey() {
@@ -702,23 +876,23 @@ function assessFeasibility() {
 
   // Story completeness
   let storyLevel = "red";
-  let storyNote = "Need a name plus your story face and the other face (AI fill or write both).";
+  let storyNote = "Need a name plus both story faces (write them, or fill one and use Fill other side).";
   const named = state.inventionName.trim().length >= 2;
-  const playerOk = hasPlayerFace();
-  const companionOk = hasCompanionFace();
-  if (named && playerOk && companionOk) {
+  const howOk = state.inventionHow.trim().length >= 20;
+  const lifeOk = state.inventionImpact.trim().length >= 20;
+  if (named && howOk && lifeOk) {
     const len = (state.inventionHow + state.inventionImpact).trim().length;
     storyLevel = len >= 120 ? "green" : "yellow";
     storyNote =
       storyLevel === "green"
         ? "Story faces are filled with enough detail to challenge."
         : "Both faces exist but are thin — a clearer mechanism will help under attack.";
-  } else if (named && playerOk) {
+  } else if (named && (howOk || lifeOk)) {
     storyLevel = "yellow";
-    storyNote = "You've written one face — still need the other side filled.";
-  } else if (playerOk || named) {
+    storyNote = "One face is started — still need the other (write it or Fill other side).";
+  } else if (howOk || lifeOk || named) {
     storyLevel = "red";
-    storyNote = "Incomplete: name + your paragraph + companion face.";
+    storyNote = "Incomplete: name + how it works + everyday life.";
   }
   dims.push({ id: "story", name: "Story", level: storyLevel, note: storyNote });
 
@@ -894,15 +1068,50 @@ function renderTechList() {
   });
 }
 
+function pushLearnOrder(id) {
+  state.learnOrder = state.learnOrder.filter((x) => x !== id);
+  state.learnOrder.unshift(id);
+}
+
+function removeFromLearnOrder(id) {
+  state.learnOrder = state.learnOrder.filter((x) => x !== id);
+}
+
+/** Keep learnOrder in sync if stack changes from elsewhere (e.g. co-inventor) */
+function syncLearnOrderWithSelection() {
+  const selected = new Set(state.selectedTechIds);
+  state.learnOrder = state.learnOrder.filter((id) => selected.has(id));
+  for (const id of state.selectedTechIds) {
+    if (!state.learnOrder.includes(id)) state.learnOrder.push(id);
+  }
+}
+
+function updateLearnButton() {
+  const btn = $("#btn-learn-tech");
+  if (!btn) return;
+  const n = state.selectedTechIds.length;
+  btn.disabled = n === 0;
+  btn.title =
+    n === 0
+      ? "Select techs in your stack to learn about them"
+      : n === 1
+        ? "Learn about the selected tech"
+        : `Learn about ${n} selected techs (newest first)`;
+  btn.textContent = n > 1 ? `Learn (${n})` : "Learn";
+}
+
 function onTechClick(id) {
   const idx = state.selectedTechIds.indexOf(id);
-  if (idx >= 0) state.selectedTechIds.splice(idx, 1);
-  else {
+  if (idx >= 0) {
+    state.selectedTechIds.splice(idx, 1);
+    removeFromLearnOrder(id);
+  } else {
     if (state.selectedTechIds.length >= 8) {
       flashToast("Stack full (8). Remove one first.");
       return;
     }
     state.selectedTechIds.push(id);
+    pushLearnOrder(id);
   }
   state.aiTiming = null;
   renderTechList();
@@ -910,6 +1119,7 @@ function onTechClick(id) {
   renderSynergy();
   renderTiming();
   renderFeasibility();
+  updateLearnButton();
   updateChallengeButton();
   updateVision();
   scheduleAiTimingAssess();
@@ -1092,20 +1302,43 @@ function localPose(angle) {
   const name = state.inventionName || "this invention";
   if (angle.id === "nature") {
     return {
-      speech: `Mother Nature, ${place}: “${name} still runs on energy, materials, and waste. Storms and scarcity don’t negotiate.”`,
-      question: "What breaks first in a bad week — and how does your design absorb it?",
+      speech: `Mother Nature, ${place}: “${name} still runs on energy, materials, and waste. Storms, heat, and scarcity do not negotiate with your pitch.”`,
+      question: "What breaks first when the natural world pushes back — and how does the design absorb a bad week?",
     };
   }
-  if (angle.id === "policy") {
+  if (angle.id === "ethicist") {
     return {
-      speech: `Policy & money, ${place}: “Someone must sign and someone must pay. If households can’t afford this, the pilot photo is the whole story.”`,
-      question: "Who pays year 1 and year 5 — and who is priced out?",
+      speech: `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity, privacy, or opportunity is on the line — and both sides have a point.”`,
+      question: "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?",
+    };
+  }
+  if (angle.id === "stakeholder") {
+    return {
+      speech: `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public — or it dies as a pilot photo.”`,
+      question: "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?",
     };
   }
   return {
-    speech: `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design.”`,
-    question: "What stops defection when neighbors or vendors can freeride?",
+    speech: `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`,
+    question: "What stops defection when neighbors or vendors can freeride — name the game mechanic you change?",
   };
+}
+
+function setChallengerVisual(angle) {
+  const wrap = $("#challenger-visual");
+  const img = $("#challenger-portrait");
+  const nameEl = $("#challenger-name");
+  if (!wrap || !img) return;
+  const a = angle || CHALLENGE_ANGLES.find((x) => x.id === state.challengeAngle);
+  if (!a) {
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  wrap.dataset.challenger = a.id;
+  img.src = a.visual || `assets/challengers/${a.id}.jpg`;
+  img.alt = `${a.label}, challenger`;
+  if (nameEl) nameEl.textContent = a.label;
 }
 
 async function apiCoInvent(mode, userContent, extra = {}) {
@@ -1195,6 +1428,7 @@ async function poseChallenge(angleMeta) {
   $("#challenge-angle-label").textContent = "Your idea is under attack";
   $("#challenge-angle-title").textContent = angle.label;
   $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
+  setChallengerVisual(angle);
   $("#ch-hud-year").textContent = String(state.year);
   $("#ch-hud-turn").textContent = `Turn ${state.turn}`;
   $("#challenge-speech").innerHTML = `<p class="muted">Posing challenge…</p>`;
@@ -1214,12 +1448,15 @@ async function poseChallenge(angleMeta) {
     if (data.angle) state.challengeAngle = data.angle;
     const meta = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle) || angle;
     $("#challenge-angle-title").textContent = data.angleLabel || meta.label;
+    $("#challenge-angle-sub").textContent = `${meta.subtitle} — ${meta.blurb}`;
+    setChallengerVisual(meta);
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
     $("#challenge-question").textContent = state.challengeQuestion;
   } catch {
     const fb = localPose(angle);
     state.challengeText = fb.speech;
     state.challengeQuestion = fb.question;
+    setChallengerVisual(angle);
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(fb.speech)}</p>`;
     $("#challenge-question").textContent = fb.question;
   }
@@ -1229,6 +1466,12 @@ async function poseChallenge(angleMeta) {
 function renderChallengeStep() {
   $("#ch-hud-year").textContent = String(state.year);
   $("#ch-hud-turn").textContent = `Turn ${state.turn}`;
+  const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
+  if (angle) {
+    $("#challenge-angle-title").textContent = angle.label;
+    $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
+    setChallengerVisual(angle);
+  }
   if (state.challengeText) {
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
   }
@@ -1308,9 +1551,11 @@ async function coachChallenge(mode, userText) {
       const draft =
         angle.id === "nature"
           ? `In ${place}, ${name} fails first on overload or waste without caps. We meter energy/materials, monitor, and degrade safely in extremes.`
-          : angle.id === "policy"
-            ? `In ${place}, adoption needs a named payer for year-1 and year-5 costs, plus a free tier so low-income users aren't priced out.`
-            : `In ${place}, freeriders would skip ${name}. We make participation default for covered blocks, publish compliance, and tie a small shared fee/reward to verified use.`;
+          : angle.id === "ethicist"
+            ? `In ${place}, ${name} creates a real ethical tension about who is exposed or left out. We name both sides, refuse one hard line (e.g. no coercive enrollment), and keep a human review path.`
+            : angle.id === "stakeholder"
+              ? `In ${place}, adoption needs a named official and payer for year-1 and year-5 costs, a permit path, and a free tier so low-income users aren't priced out.`
+              : `In ${place}, freeriders would skip ${name}. We make participation default for covered blocks, publish compliance, and tie a small shared fee/reward to verified use.`;
       const panel = $("#challenge-coach-panel");
       if (panel) panel.dataset.draft = draft;
       showChallengeCoach(
@@ -1387,7 +1632,7 @@ function attemptDeploy() {
     flashToast("Add at least one technology.");
     return;
   }
-  if (!hasPlayerFace() || !hasCompanionFace()) {
+  if (state.inventionHow.trim().length < 20 || state.inventionImpact.trim().length < 20) {
     flashToast("Need both story faces.");
     return;
   }
@@ -1428,6 +1673,8 @@ function attemptDeploy() {
 
   state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.`;
   state.waitReport = "";
+  // Deployed = solved (full win or partial relief); still replayable from the mission grid
+  markMissionSolved(state.mission);
   finishOutcome(wonMission() ? "win" : "partial", {
     drop,
     domains,
@@ -1439,6 +1686,7 @@ function attemptDeploy() {
 
 function finishOutcome(kind, meta = {}) {
   const techs = selectedTechs();
+  // Collapse / abandon does not mark solved — only deploy paths above do
   state.outcome = { kind, meta, techs, year: state.year, turn: state.turn, pressure: clonePressure(state.pressure) };
   showScreen("outcome");
 }
@@ -1656,7 +1904,6 @@ function ensureCoInventor() {
       inventionHow: state.inventionHow,
       inventionImpact: state.inventionImpact,
       storyFace: state.storyFace,
-      writeBoth: state.writeBoth,
       year: state.year,
       turn: state.turn,
       pressure: state.pressure,
@@ -1701,11 +1948,17 @@ function applyCoInventorProposals(proposals) {
   }
   if (changed) {
     state.aiTiming = null;
+    syncLearnOrderWithSelection();
+    // Newly added techs from AI go to the front of Learn (most recent)
+    for (const id of proposals.addTechIds || []) {
+      if (state.selectedTechIds.includes(id)) pushLearnOrder(id);
+    }
     renderTechList();
     renderSelectedChips();
     renderSynergy();
     renderTiming();
     renderStoryFaceUI();
+    updateLearnButton();
     updateChallengeButton();
     updateVision();
     scheduleAiTimingAssess();
@@ -1714,9 +1967,8 @@ function applyCoInventorProposals(proposals) {
 }
 
 function setFillButtonsDisabled(disabled) {
-  document.querySelectorAll(".btn-fill-other").forEach((btn) => {
-    btn.disabled = disabled;
-  });
+  const btn = $("#btn-fill-other");
+  if (btn) btn.disabled = disabled;
 }
 
 async function callCoInventMode(mode, userLabel) {
@@ -1739,7 +1991,6 @@ async function callCoInventMode(mode, userLabel) {
       inventionHow: state.inventionHow,
       inventionImpact: state.inventionImpact,
       storyFace: state.storyFace,
-      writeBoth: state.writeBoth,
       year: state.year,
       turn: state.turn,
       place: state.mission?.place,
@@ -1783,35 +2034,126 @@ async function callCoInventMode(mode, userLabel) {
 }
 
 /* —— Modal —— */
+function learnSection(title, bodyHtml) {
+  if (!bodyHtml) return "";
+  return `<section class="learn-sec"><h5>${title}</h5><div class="learn-sec-body">${bodyHtml}</div></section>`;
+}
+
+function techLearnCardHtml(t, { newest = false } = {}) {
+  if (!t) return "";
+  const mat = t.maturity || {};
+  const soft = techHorizonYear(t);
+  const domain = DOMAINS[t.domain]?.label || t.domain;
+  const primer =
+    t.primer ||
+    t.learn ||
+    `${t.name} is an emerging-technology family you can invent with for this local mission.`;
+  const inventWith =
+    t.inventionHint ||
+    `Ask how ${t.name} could change what is scarce in this place — then write a concrete local mechanism.`;
+  const useNow = (t.useCasesNow || []).filter(Boolean);
+  const milestones = (t.milestones || []).filter(Boolean);
+  const risks = (t.risk || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const horizonNote =
+    soft > state.year
+      ? `Broader “near” use cases often become more common around <strong>${soft}</strong> — a soft horizon, not a lock. You may invent with this category in <strong>${state.year}</strong>; feasibility judges whether your <em>how it works</em> over-claims what is possible now.`
+      : `Near-scale applications of this family are already in the toolkit in many places by <strong>${state.year}</strong>. Feasibility still judges your specific claims, not the card.`;
+
+  const badge = newest ? `<span class="learn-newest">Latest select</span>` : "";
+  const useList = useNow.length
+    ? `<ul class="learn-list">${useNow.map((u) => `<li>${escapeHtml(u)}</li>`).join("")}</ul>`
+    : `<p class="learn-muted">Look for pilots and products that already ship under human oversight.</p>`;
+  const mileList = milestones.length
+    ? `<ul class="learn-list">${milestones.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
+    : "";
+  const riskList = risks.length
+    ? `<ul class="learn-list learn-list-warn">${risks.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`
+    : `<p class="learn-muted">Every tool has failure modes — name them in your design.</p>`;
+
+  return `
+    <article class="learn-tech-card ${newest ? "is-newest" : ""}" data-tech-id="${escapeHtml(t.id)}">
+      <header class="learn-tech-head">
+        <div>
+          <h4><span class="learn-tech-icon">${t.icon}</span> ${escapeHtml(t.name)}</h4>
+          <p class="learn-tech-meta">${escapeHtml(domain)} · ${escapeHtml(t.curve || "emerging")} curve</p>
+        </div>
+        ${badge}
+      </header>
+      <p class="learn-tech-summary">${escapeHtml(t.summary)}</p>
+      ${learnSection("What is this family?", `<p>${escapeHtml(primer)}</p>`)}
+      ${learnSection(
+        "What already works",
+        `<p><strong>Now:</strong> ${escapeHtml(mat.now || "Real deployments exist in some form today.")}</p>
+         <p class="learn-subhead">Use cases you can honestly claim this decade</p>
+         ${useList}
+         ${mileList ? `<p class="learn-subhead">Recent milestones</p>${mileList}` : ""}`
+      )}
+      ${learnSection(
+        "Where the curve is heading",
+        `<p><strong>Near:</strong> ${escapeHtml(mat.near || "Broader, cheaper, more reliable applications.")}</p>
+         <p><strong>Frontier (stretch if claimed as routine):</strong> ${escapeHtml(
+           mat.frontier || "Transformative default infrastructure everywhere."
+         )}</p>
+         <p class="learn-horizon">${horizonNote}</p>`
+      )}
+      ${learnSection("How to invent with it here", `<p>${escapeHtml(inventWith)}</p>
+         <p class="learn-muted">Pair with other domains when the local problem needs sensing, power, logistics, or care — not as a checklist.</p>`)}
+      ${learnSection("Watch-outs", riskList)}
+    </article>`;
+}
+
+/** Right-click / single-tech learn peek */
 function openTechModal(id) {
   const t = techById(id);
   if (!t) return;
-  $("#modal-title").innerHTML = `${t.icon} ${escapeHtml(t.name)}`;
-  $("#modal-summary").textContent = t.summary;
-  $("#modal-learn").textContent = t.learn;
-  const mat = t.maturity || {};
-  const soft = techHorizonYear(t);
-  const softLine =
-    soft > state.year
-      ? `Soft horizon ~${soft}: “near” use cases often get more common later (not a lock — always pickable).`
-      : `Soft horizon ~${soft}: near-scale use cases are already in play for many places.`;
-  $("#modal-hint").textContent =
-    `Always pickable in ${state.year}. Feasibility judges your invention claims.\n\n` +
-    `NOW: ${mat.now || "Real applications exist in this category."}\n` +
-    `NEAR: ${mat.near || "Broader/cheaper access."}\n` +
-    `FRONTIER: ${mat.frontier || "Transformative everyday infrastructure."}\n\n` +
-    `Milestones: ${(t.milestones || []).join(" ")}\n` +
-    `Use cases now: ${(t.useCasesNow || []).join("; ")}\n\n` +
-    `${softLine}\n` +
-    `Domain: ${DOMAINS[t.domain]?.label || t.domain}\nRisk: ${t.risk}\n` +
-    `Tip: Art of the possible on the co-inventor for stack- and place-specific detail.`;
-  const addBtn = $("#modal-add");
-  const selected = state.selectedTechIds.includes(id);
-  addBtn.textContent = selected ? "Remove from stack" : "Add to stack";
-  addBtn.onclick = () => {
-    onTechClick(id);
-    closeModal();
-  };
+  const title = $("#modal-title");
+  const lead = $("#modal-lead");
+  const body = $("#modal-body");
+  if (title) title.innerHTML = `${t.icon} ${escapeHtml(t.name)}`;
+  if (lead) {
+    lead.hidden = false;
+    lead.textContent =
+      "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
+  }
+  if (body) body.innerHTML = techLearnCardHtml(t, { newest: true });
+  $("#modal-backdrop").classList.add("open");
+}
+
+/**
+ * Learn from the selection stack — newest selection first, older ones underneath.
+ * Disabled when nothing is selected.
+ */
+function openLearnStack() {
+  syncLearnOrderWithSelection();
+  const ids = state.learnOrder.filter((id) => state.selectedTechIds.includes(id));
+  if (!ids.length) {
+    flashToast("Select at least one tech to learn about.");
+    updateLearnButton();
+    return;
+  }
+  const title = $("#modal-title");
+  const lead = $("#modal-lead");
+  const body = $("#modal-body");
+  if (title) {
+    title.textContent =
+      ids.length === 1 ? "Learn · your selection" : `Learn · ${ids.length} techs (newest first)`;
+  }
+  if (lead) {
+    lead.hidden = false;
+    lead.textContent =
+      ids.length === 1
+        ? "What this family can do, where the curve is going, and how to invent with it in this place."
+        : "Most recently selected on top. Scroll for earlier picks — same depth for each.";
+  }
+  if (body) {
+    body.innerHTML = ids
+      .map((id, i) => techLearnCardHtml(techById(id), { newest: i === 0 }))
+      .join("");
+  }
   $("#modal-backdrop").classList.add("open");
 }
 
@@ -1888,59 +2230,38 @@ function bind() {
 
   $$(".story-mode-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.writeBoth = false;
-      state.storyFace = btn.dataset.face;
+      state.storyFace = btn.dataset.face === "life" ? "life" : "how";
       renderStoryFaceUI();
       updateChallengeButton();
     });
-  });
-  $("#btn-write-both")?.addEventListener("click", () => {
-    state.writeBoth = !state.writeBoth;
-    if (state.writeBoth) state.storyFace = "how";
-    renderStoryFaceUI();
-    updateChallengeButton();
   });
 
   $("#invention-how")?.addEventListener("input", (e) => {
     state.inventionHow = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
-    // Refresh companion note if AI fill already present
-    if (!state.writeBoth && state.storyFace === "life") {
-      const noteHow = $("#note-how");
-      if (noteHow && !noteHow.hidden) {
-        noteHow.textContent = state.inventionHow.trim()
-          ? "AI draft — edit freely if it misses the mark."
-          : "You write everyday life; AI fills how it works.";
-      }
-    }
   });
   $("#invention-impact")?.addEventListener("input", (e) => {
     state.inventionImpact = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
-    if (!state.writeBoth && state.storyFace === "how") {
-      const noteLife = $("#note-life");
-      if (noteLife && !noteLife.hidden) {
-        noteLife.textContent = state.inventionImpact.trim()
-          ? "AI draft — edit freely if it misses the mark."
-          : "You write how it works; AI fills everyday life.";
-      }
-    }
   });
 
-  document.querySelectorAll(".btn-fill-other").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (!hasPlayerFace()) {
-        flashToast("Write your story face first (a short paragraph).");
-        return;
-      }
-      if (!selectedTechs().length) {
-        flashToast("Add at least one technology first.");
-        return;
-      }
-      callCoInventMode("complete-picture", "[Fill other story face]");
-    });
+  $("#btn-fill-other")?.addEventListener("click", () => {
+    const face = state.storyFace === "life" ? "life" : "how";
+    if (!hasPlayerFace()) {
+      flashToast(
+        face === "how"
+          ? "Write how it works first (a short paragraph), then Fill other side."
+          : "Write everyday life first (a short paragraph), then Fill other side."
+      );
+      return;
+    }
+    if (!selectedTechs().length) {
+      flashToast("Add at least one technology first.");
+      return;
+    }
+    callCoInventMode("complete-picture", "[Fill other story face]");
   });
 
   $("#btn-wait").addEventListener("click", () => waitTurn());
@@ -1961,10 +2282,7 @@ function bind() {
     $("#challenge-help-input").value = "";
   });
   $("#btn-open-coinventor").addEventListener("click", () => setSideTab("coinventor"));
-  $("#btn-learn-tech").addEventListener("click", () => {
-    const id = state.selectedTechIds[0] || state.mission?.suggested?.[0] || TECHS[0].id;
-    openTechModal(id);
-  });
+  $("#btn-learn-tech").addEventListener("click", () => openLearnStack());
   $("#btn-regen-vision").addEventListener("click", () => updateVision({ immediate: true, force: true }));
 
   $$(".side-tab").forEach((btn) => btn.addEventListener("click", () => setSideTab(btn.dataset.tab)));
@@ -1979,8 +2297,20 @@ function bind() {
   $("#modal-backdrop").addEventListener("click", (e) => {
     if (e.target.id === "modal-backdrop") closeModal();
   });
+
+  const openHelp = () => $("#help-backdrop")?.classList.add("open");
+  const closeHelp = () => $("#help-backdrop")?.classList.remove("open");
+  $("#btn-help")?.addEventListener("click", openHelp);
+  $("#help-close")?.addEventListener("click", closeHelp);
+  $("#help-backdrop")?.addEventListener("click", (e) => {
+    if (e.target.id === "help-backdrop") closeHelp();
+  });
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
+    if (e.key === "Escape") {
+      closeModal();
+      closeHelp();
+    }
   });
 
   $("#game-title").textContent = GAME.title;
@@ -1991,6 +2321,7 @@ function bind() {
 }
 
 export function init() {
+  loadPersistedProgress();
   bind();
   showScreen("title");
 }
