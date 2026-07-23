@@ -157,14 +157,14 @@ Do not commit secrets. Do not put API keys in the client or the git repo.
 
 Future Forge is **source available**, **not** OSI open source.
 
-| Use | Free under `LICENSE`? |
+| Use | Free under `LICENSE.md`? |
 |-----|------------------------|
 | **Personal** self-host (private hobby / own learning only) | **Yes** |
 | **School / university / training** | **No** — needs a paid license |
 | **Company / commercial / client work** | **No** — needs a paid license |
 | **Cloud / multi-tenant / managed service** for others | **No** — needs a paid license |
 
-- Full free grant and restrictions: **[`LICENSE`](LICENSE)**  
+- Full free grant and restrictions: **[`LICENSE.md`](LICENSE.md)**  
 - Education, Commercial, and Cloud tiers: **[`COMMERCIAL.md`](COMMERCIAL.md)**  
 
 **Personal free use** means a natural person, non-commercial, on infrastructure they control, not offering the game as a product, service, or institutional classroom tool. If you are unsure, you need a commercial license — open a GitHub issue with subject **Commercial license**.

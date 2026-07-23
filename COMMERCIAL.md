@@ -2,7 +2,7 @@
 
 Future Forge is **source available**, not OSI open source.
 
-**Free:** personal, non-commercial self-host only (see `LICENSE`).  
+**Free:** personal, non-commercial self-host only (see `LICENSE.md`).  
 **Paid license required:** schools, companies, nonprofits, multi-user deployments, and any cloud / managed service.
 
 > Draft commercial terms for product clarity. Final pricing and contracts should be reviewed by a lawyer.
