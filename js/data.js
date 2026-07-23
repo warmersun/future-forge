@@ -871,6 +871,387 @@ export function missionsForGlobal(globalId) {
   return MISSIONS.filter((m) => m.globalId === globalId);
 }
 
+/** Valid tech ids for scenario suggested stacks */
+export function allTechIds() {
+  return TECHS.map((t) => t.id);
+}
+
+export const VISION_THEME_IDS = [
+  "coastal-city",
+  "food-city",
+  "care-city",
+  "energy-city",
+  "learn-city",
+  "rebuild-city",
+  "social-city",
+  "ocean-city",
+];
+
+/**
+ * Client-side local scenario pack when the API is offline.
+ * Produces multiple concrete places per global theme.
+ */
+export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
+  const g = typeof global === "string" ? globalById(global) : global;
+  if (!g) return [];
+  const seeds = missionsForGlobal(g.id).map((m) => ({ ...m, source: "curated" }));
+  const generated = buildLocalScenarioVariants(g, count, salt);
+  const out = [];
+  const seenPlaces = new Set();
+  for (const m of [...seeds, ...generated]) {
+    const key = (m.place || m.title || "").toLowerCase();
+    if (seenPlaces.has(key)) continue;
+    seenPlaces.add(key);
+    out.push(m);
+    if (out.length >= count) break;
+  }
+  // If still short (no seeds / collision), pad with more salt variants
+  let extra = 1;
+  while (out.length < count) {
+    const more = buildLocalScenarioVariants(g, count, salt + extra * 17);
+    for (const m of more) {
+      const key = (m.place || m.title || "").toLowerCase();
+      if (seenPlaces.has(key)) continue;
+      seenPlaces.add(key);
+      out.push(m);
+      if (out.length >= count) break;
+    }
+    extra += 1;
+    if (extra > 8) break;
+  }
+  return out.slice(0, count);
+}
+
+function buildLocalScenarioVariants(g, count, salt) {
+  const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
+  const suggestedDefault = DEFAULT_SUGGESTED_BY_KIND[g.kind] || DEFAULT_SUGGESTED_BY_KIND.now;
+  const visionDefault = DEFAULT_VISION_BY_GLOBAL[g.id] || "rebuild-city";
+  const n = Math.max(count, packs.length);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const pack = packs[(i + salt) % packs.length];
+    const place = pickRot(pack.places, i + salt);
+    const title = pack.title.replace("{place}", place);
+    const scene = pack.scene.replace(/\{place\}/g, place).replace(/\{theme\}/g, g.title);
+    const pressureKeys = pack.pressureKeys || ["Pressure", "Cost", "Trust"];
+    const pressure = {};
+    const pressureRise = {};
+    const winMax = {};
+    pressureKeys.forEach((k, ki) => {
+      pressure[k] = 2 + ((i + ki + salt) % 2);
+      pressureRise[k] = ki === 2 ? 0 : 1;
+      winMax[k] = 1;
+    });
+    const collapseYear = 2032 + ((i + salt) % 3) * 2;
+    out.push({
+      id: `gen-${g.id}-${i}-${salt}`,
+      globalId: g.id,
+      title,
+      place,
+      startYear: GAME.startYear,
+      collapseYear,
+      yearsPerTurn: GAME.yearsPerTurn,
+      pressure,
+      pressureRise,
+      winMax,
+      scene,
+      stakeholder: pack.stakeholder,
+      suggested: pack.suggested || suggestedDefault,
+      visionTheme: pack.visionTheme || visionDefault,
+      source: "generated",
+    });
+  }
+  return out;
+}
+
+function pickRot(arr, i) {
+  return arr[Math.abs(i) % arr.length];
+}
+
+const DEFAULT_SUGGESTED_BY_KIND = {
+  before: ["ai", "networks", "iot", "computing", "crypto"],
+  now: ["ai", "iot", "networks", "solar", "battery", "drones"],
+};
+
+const DEFAULT_VISION_BY_GLOBAL = {
+  climate: "coastal-city",
+  weather: "coastal-city",
+  water: "coastal-city",
+  infectious: "care-city",
+  cancer: "care-city",
+  maternal: "care-city",
+  child: "care-city",
+  mental: "care-city",
+  alzheimer: "care-city",
+  ageing: "care-city",
+  education: "learn-city",
+  automation: "social-city",
+  refugees: "rebuild-city",
+  homeless: "rebuild-city",
+  food: "food-city",
+  ag: "food-city",
+  energy: "energy-city",
+  "energy-access": "energy-city",
+  air: "energy-city",
+  eco: "ocean-city",
+  rogue: "social-city",
+  "rogue-si": "social-city",
+  coord: "coastal-city",
+  cities: "rebuild-city",
+  slavery: "social-city",
+  women: "social-city",
+  poverty: "rebuild-city",
+  nuclear: "energy-city",
+  asteroid: "rebuild-city",
+  "chem-bio": "care-city",
+  mideast: "rebuild-city",
+};
+
+/** Angle packs: multiple local faces per global problem */
+const SCENARIO_ANGLE_PACKS = {
+  climate: [
+    {
+      places: ["Portside Ward", "Delta Flats", "Harbor Row"],
+      title: "{place} floods again",
+      scene:
+        "The school gym in {place} is the emergency shelter for the third time this decade. Fishers lose weeks when the quay goes under. Residents want something that works *here*, not a national slogan.",
+      stakeholder: "Aisha, ward climate liaison",
+      pressureKeys: ["Floods", "Livelihoods", "Trust"],
+      suggested: ["iot", "solar", "battery", "drones", "ai", "materials", "networks"],
+      visionTheme: "coastal-city",
+    },
+    {
+      places: ["Roofblock District", "Kiln Street", "Old Foundry"],
+      title: "Heat island nights in {place}",
+      scene:
+        "Night temperatures in {place} stay above safe sleep thresholds. Elderly residents fill the clinic each heat wave. Shade, power for cooling, and early warning all fail at once.",
+      stakeholder: "Dr. Imani, night clinic",
+      pressureKeys: ["Heat", "Health", "Power"],
+      suggested: ["iot", "solar", "battery", "materials", "ai", "networks"],
+      visionTheme: "energy-city",
+    },
+    {
+      places: ["Saltmarsh Co-op", "Lowland Farms", "Silt Parish"],
+      title: "Saltwater takes the fields near {place}",
+      scene:
+        "Fields near {place} go saline after storm surges. Crop insurance is a rumor. Farmers need water, soil, and income options that fit this coast.",
+      stakeholder: "Rafi, co-op chair",
+      pressureKeys: ["Salinity", "Income", "Food"],
+      suggested: ["synbio", "iot", "solar", "alt-proteins", "ai", "drones"],
+      visionTheme: "food-city",
+    },
+    {
+      places: ["Bridge End", "Levee Town", "Canal Quarter"],
+      title: "Insurance retreats from {place}",
+      scene:
+        "Insurers redraw maps and drop {place}. Mortgages freeze. People still live here. A local fix must cut risk and keep trust without waiting for capital markets.",
+      stakeholder: "Nina, housing clerk",
+      pressureKeys: ["Risk", "Housing", "Trust"],
+      suggested: ["iot", "ai", "materials", "networks", "drones", "crypto"],
+      visionTheme: "coastal-city",
+    },
+  ],
+  water: [
+    {
+      places: ["Harran Wells", "Dust Spring", "Old Cistern"],
+      title: "The well turned saline at {place}",
+      scene:
+        "The main well at {place} is brackish. Tanker prices spike every dry month. Kids miss school to haul water. A fix must be affordable and maintainable locally.",
+      stakeholder: "Yusuf, co-op well keeper",
+      pressureKeys: ["Thirst", "Cost", "Health"],
+      suggested: ["solar", "battery", "materials", "nano", "iot", "ai", "print3d"],
+      visionTheme: "coastal-city",
+    },
+    {
+      places: ["Pipe End Estate", "North Reservoir", "Hilltank"],
+      title: "Night rationing in {place}",
+      scene:
+        "Municipal pipes to {place} only flow before dawn. Households queue with jerrycans. Theft and leaks eat half the volume. Measurement and fairness matter as much as new supply.",
+      stakeholder: "Sana, water board tech",
+      pressureKeys: ["Access", "Leaks", "Fairness"],
+      suggested: ["iot", "networks", "ai", "solar", "materials", "crypto"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Schoolyard Tap", "Clinic Bore", "Market Fountain"],
+      title: "Unsafe taps at {place}",
+      scene:
+        "Coliform alerts keep returning at {place}. Boiling fuel is expensive. Parents need trusted tests and a treatment path that works without a full utility rebuild.",
+      stakeholder: "Mina, parent committee",
+      pressureKeys: ["Contamination", "Health", "Cost"],
+      suggested: ["iot", "nano", "materials", "solar", "ai", "networks"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Irrigation Circle", "Canal Bend", "Orchard Strip"],
+      title: "Upstream takes first cut near {place}",
+      scene:
+        "Farms upstream of {place} take water before the village share arrives. Conflict rises each dry season. Coordination and proof of use are the invention, not just a pump.",
+      stakeholder: "The canal users’ council",
+      pressureKeys: ["Share", "Conflict", "Crops"],
+      suggested: ["iot", "crypto", "networks", "ai", "drones", "solar"],
+      visionTheme: "food-city",
+    },
+  ],
+  infectious: [
+    {
+      places: ["Crossing Clinic 7", "Border Post B", "Transit Bay"],
+      title: "Fever cluster at {place}",
+      scene:
+        "Staff at {place} see a new fever pattern among travelers. They are three nurses deep. They need detection, logistics, and trust — this week, not after a conference.",
+      stakeholder: "Dr. Okonkwo, clinic lead",
+      pressureKeys: ["Outbreak", "Capacity", "Fear"],
+      suggested: ["gene-sequencing", "ai", "networks", "drones", "iot", "synbio"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Market Ward", "Night Bazaar", "Dock Markets"],
+      title: "Rumor outruns results in {place}",
+      scene:
+        "A suspected outbreak rumor empties {place}’s market. Lab results take days. Vendors lose income; fear spreads faster than facts. Speed and trusted communication are the mission.",
+      stakeholder: "Hana, market association",
+      pressureKeys: ["Rumor", "Trade", "Trust"],
+      suggested: ["gene-sequencing", "ai", "networks", "iot", "drones"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["School Cluster", "Dorm Block", "Campus Edge"],
+      title: "Classrooms empty after two cases near {place}",
+      scene:
+        "Two confirmed cases near {place} close three schools. Parents demand proof of safety. Contact tracing is paper and phone trees. Keep kids learning without fueling panic.",
+      stakeholder: "Principal Ade",
+      pressureKeys: ["Spread", "Learning", "Fear"],
+      suggested: ["ai", "networks", "iot", "gene-sequencing", "vr"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Cold-chain Depot", "Vaccine Shed", "Last-mile Hub"],
+      title: "Vaccines warm at {place}",
+      scene:
+        "Power blips at {place} spoil a vaccine shipment. The next delivery is weeks out. Cold-chain reliability and rapid redistribution are on the line.",
+      stakeholder: "Kofi, logistics nurse",
+      pressureKeys: ["ColdChain", "Doses", "Trust"],
+      suggested: ["solar", "battery", "iot", "drones", "networks", "ai"],
+      visionTheme: "energy-city",
+    },
+  ],
+  education: [
+    {
+      places: ["Ridge County", "Three Hills", "River Schools"],
+      title: "One science teacher, three schools in {place}",
+      scene:
+        "Three rural schools in {place} share one science teacher who drives 90 minutes between them. Labs sit empty half the week. Students who can leave, leave.",
+      stakeholder: "Ms. Reyes, shared science teacher",
+      pressureKeys: ["Learning", "Burnout", "Equity"],
+      suggested: ["ai", "vr", "networks", "solar", "computing", "robots"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Shift Town", "Mill District", "Nightshift Ward"],
+      title: "Homework after the factory whistle in {place}",
+      scene:
+        "Teens in {place} work evening shifts. Day school assumes free evenings. Dropout risk climbs. Learning has to fit real schedules and weak home connectivity.",
+      stakeholder: "Omar, youth mentor",
+      pressureKeys: ["Attendance", "Skills", "Access"],
+      suggested: ["ai", "networks", "vr", "solar", "computing"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Language Block", "Newcomer School", "Welcome Campus"],
+      title: "Twelve home languages in one classroom at {place}",
+      scene:
+        "A single classroom at {place} has twelve home languages and two teachers. Assessment is unfair and slow. Tools must help without erasing culture or teachers.",
+      stakeholder: "Ms. Patel, lead teacher",
+      pressureKeys: ["Language", "Equity", "Burnout"],
+      suggested: ["ai", "vr", "networks", "computing", "iot"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Lab-less High", "Tool Shed School", "Workshop Annex"],
+      title: "No working lab in {place}",
+      scene:
+        "The only secondary school in {place} has broken equipment and no consumables. Students memorize diagrams. Local makers and remote expertise could change that — if designed carefully.",
+      stakeholder: "Coach Lin, STEM club",
+      pressureKeys: ["Practice", "Materials", "Equity"],
+      suggested: ["print3d", "vr", "robots", "networks", "ai", "solar"],
+      visionTheme: "learn-city",
+    },
+  ],
+  _default: [
+    {
+      places: ["Northgate", "Riverside Ward", "Old Market", "Hillcrest"],
+      title: "{theme} hits home in {place}",
+      scene:
+        "In {place}, {theme} is not abstract — it shapes this week’s work, care, and trust. People need a local invention that fits the street, clinic, or quay they actually live in.",
+      stakeholder: "Local working group",
+      pressureKeys: ["Pressure", "Capacity", "Trust"],
+      suggested: ["ai", "iot", "networks", "solar", "drones"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Canal District", "East Works", "South Pier", "Green Belt"],
+      title: "A deadline arrives in {place}",
+      scene:
+        "{place} faces a hard deadline around {theme}. Temporary fixes are failing. Stakeholders want something deployable this year that doesn’t make the next crisis worse.",
+      stakeholder: "City liaison",
+      pressureKeys: ["Urgency", "Cost", "Trust"],
+      suggested: ["ai", "networks", "iot", "battery", "materials"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Clinic Lane", "School Yard", "Depot Edge", "Harbor Path"],
+      title: "Frontline staff in {place} are out of runway",
+      scene:
+        "Frontline workers in {place} are absorbing {theme} with overtime and paper systems. They need tools that reduce load without removing human judgment.",
+      stakeholder: "Shift lead",
+      pressureKeys: ["Burnout", "Backlog", "Quality"],
+      suggested: ["ai", "robots", "networks", "iot", "vr"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Co-op Hall", "Parish Room", "Union House", "Youth Hub"],
+      title: "Neighbors organize around {theme} in {place}",
+      scene:
+        "Neighbors in {place} are organizing around {theme} but lack shared data, power, or logistics. Coordination itself is part of the invention.",
+      stakeholder: "Community organizer",
+      pressureKeys: ["Coordination", "Resources", "Trust"],
+      suggested: ["networks", "crypto", "iot", "ai", "solar"],
+      visionTheme: "social-city",
+    },
+  ],
+};
+
+// Alias common globals to richer packs or defaults
+for (const id of [
+  "weather",
+  "food",
+  "eco",
+  "air",
+  "energy-access",
+  "refugees",
+  "automation",
+  "homeless",
+  "maternal",
+  "cancer",
+  "alzheimer",
+  "coord",
+  "rogue-si",
+  "poverty",
+  "cities",
+  "mental",
+  "ag",
+  "child",
+  "women",
+  "slavery",
+  "nuclear",
+  "asteroid",
+  "chem-bio",
+  "mideast",
+  "ageing",
+]) {
+  if (!SCENARIO_ANGLE_PACKS[id]) SCENARIO_ANGLE_PACKS[id] = SCENARIO_ANGLE_PACKS._default;
+}
+
 export function techById(id) {
   return TECHS.find((t) => t.id === id);
 }

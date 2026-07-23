@@ -24,14 +24,14 @@
           <h2>How you play</h2>
           <ol>
             <li>
-              <strong>Get a local mission</strong> — a concrete place living a piece of a global problem.
+              <strong>Pick a local scenario</strong> — several concrete places living a piece of a global problem.
             </li>
             <li>
               <strong>Invent with AI</strong> — pick emerging technologies that fit the local problem
               (mix domains when it helps — not as a rule).
             </li>
             <li>
-              <strong>Watch the years tick</strong> — techs get ready on exponential curves; the crisis gets worse if you wait.
+              <strong>Watch the years tick</strong> — world conditions shift; the crisis gets worse if you wait.
             </li>
             <li>
               <strong>Deploy in time</strong> — intercept the future: not too early, not too late — then see that world painted.
@@ -60,8 +60,8 @@
         <div class="section-intro">
           <h1>What kind of problem?</h1>
           <p>
-            Global problems are huge. You’ll play a <strong>local instance</strong> — a town, clinic, or district —
-            so invention stays real. Cross-disciplinary stacks win; the calendar won’t wait.
+            Global problems are huge. You’ll get <strong>several local scenarios</strong> — towns, clinics, districts —
+            so invention stays real. Cross-disciplinary stacks help when needed; the calendar won’t wait.
           </p>
         </div>
         <div id="global-grid" class="challenge-grid"></div>
@@ -80,10 +80,16 @@
         <button type="button" class="btn btn-ghost btn-sm" id="btn-mission-back">← Themes</button>
       </header>
       <div class="content">
-        <div class="section-intro">
-          <h1 id="mission-global-title">Local missions</h1>
-          <p id="mission-global-blurb">Pick a concrete place and story.</p>
+        <div class="section-intro mission-intro">
+          <div class="mission-intro-text">
+            <h1 id="mission-global-title">Local scenarios</h1>
+            <p id="mission-global-blurb">Several concrete places living a piece of this problem — pick one to invent for.</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-regen-scenarios" hidden>
+            Generate new scenarios
+          </button>
         </div>
+        <div id="mission-status" class="mission-status" hidden aria-live="polite"></div>
         <div id="mission-grid" class="challenge-grid"></div>
       </div>
     </section>
@@ -171,32 +177,46 @@
               </button>
             </div>
 
-            <div class="field" id="field-player-story">
-              <label for="invention-player" id="label-player-story">How does it work?</label>
-              <textarea
-                id="invention-player"
-                placeholder="What acts, what decides, how the pieces connect for *this* place…"
-              ></textarea>
-            </div>
-
-            <div class="field field-companion" id="field-companion" hidden>
-              <div class="companion-header">
-                <label id="label-companion">Co-inventor fills the other side</label>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-complete-picture">
+            <!-- Fixed story faces: Fill-other-side chrome moves to the face you are not writing -->
+            <div class="field story-face-field" id="field-how" data-face="how">
+              <div class="story-face-header">
+                <label for="invention-how" id="label-how">How does it work?</label>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm btn-fill-other"
+                  data-fill-for="how"
+                  hidden
+                >
                   Fill other side
                 </button>
               </div>
               <textarea
-                id="invention-companion"
-                rows="3"
-                placeholder="Click “Fill other side” — AI writes the missing half from your stack and story…"
+                id="invention-how"
+                rows="4"
+                placeholder="What acts, what decides, how the pieces connect for *this* place…"
               ></textarea>
-              <p class="companion-note" id="companion-note"></p>
+              <p class="story-face-note" id="note-how" hidden></p>
             </div>
 
-            <!-- Hidden mirrors for vision / deploy (always both how + impact) -->
-            <textarea id="invention-how" hidden></textarea>
-            <textarea id="invention-impact" hidden></textarea>
+            <div class="field story-face-field" id="field-life" data-face="life">
+              <div class="story-face-header">
+                <label for="invention-impact" id="label-life">Everyday life if it works</label>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm btn-fill-other"
+                  data-fill-for="life"
+                  hidden
+                >
+                  Fill other side
+                </button>
+              </div>
+              <textarea
+                id="invention-impact"
+                rows="4"
+                placeholder="A Tuesday here after your invention lands…"
+              ></textarea>
+              <p class="story-face-note" id="note-life" hidden></p>
+            </div>
 
             <div class="prompt-tip" id="prompt-tip"></div>
 

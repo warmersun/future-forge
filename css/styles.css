@@ -354,6 +354,84 @@ button:disabled {
   max-width: 52ch;
 }
 
+.mission-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mission-intro-text {
+  flex: 1;
+  min-width: min(100%, 28rem);
+}
+
+.mission-status {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(56, 189, 248, 0.08);
+  color: var(--text-dim);
+  font-size: 0.92rem;
+}
+
+.mission-status.loading {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.mission-status .co-dots {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.mission-status .co-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.mission-status .co-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.mission-status .co-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.challenge-card .scenario-tag {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-mute);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.35rem;
+}
+
+.challenge-card .scenario-tag.curated {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.challenge-card .scenario-tag.generated {
+  color: #7c9cff;
+  border-color: rgba(124, 156, 255, 0.35);
+}
+
+.challenge-card .stakeholder-line {
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  margin: 0;
+}
+
 .challenge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -371,6 +449,40 @@ button:disabled {
   flex-direction: column;
   gap: 0.65rem;
   min-height: 220px;
+  overflow: hidden;
+}
+
+.challenge-card-visual {
+  padding: 0;
+  min-height: 0;
+}
+
+.challenge-card-visual .card-visual {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.challenge-card-visual .card-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s var(--ease);
+}
+
+.challenge-card-visual:hover .card-visual img {
+  transform: scale(1.04);
+}
+
+.challenge-card-visual .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.95rem 1.15rem 1.15rem;
+  flex: 1;
 }
 
 .challenge-card:hover {
@@ -845,14 +957,11 @@ button:disabled {
   background: rgba(56, 189, 248, 0.12);
 }
 
-.field-companion {
-  padding: 0.75rem;
-  border-radius: var(--radius);
-  border: 1px dashed rgba(167, 139, 250, 0.4);
-  background: rgba(167, 139, 250, 0.06);
+.story-face-field {
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
-.companion-header {
+.story-face-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -860,18 +969,59 @@ button:disabled {
   margin-bottom: 0.4rem;
 }
 
-.companion-header label {
+.story-face-header label {
   margin: 0;
+}
+
+/* Player is writing this face */
+.story-face-field.is-player {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  background: var(--bg-elevated, transparent);
+}
+
+.story-face-field.is-player .story-face-header label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent, #38bdf8);
+}
+
+/* Co-inventor fills this face — Fill button lives here */
+.story-face-field.is-companion {
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  border: 1px dashed rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.06);
+}
+
+.story-face-field.is-companion .story-face-header label {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #c4b5fd;
 }
 
-.companion-note {
+/* Write-both: both faces are player-owned */
+.story-face-field.is-both {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  background: transparent;
+}
+
+.story-face-note {
   margin: 0.35rem 0 0;
   font-size: 0.72rem;
   color: var(--text-mute);
+}
+
+/* legacy aliases if any leftover */
+.field-companion,
+.companion-header,
+.companion-note {
+  /* kept empty for safety */
 }
 
 .hud-crisis-wrap {

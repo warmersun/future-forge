@@ -14,6 +14,8 @@ import {
   foresightForStack,
   globalById,
   missionsForGlobal,
+  localScenariosForGlobal,
+  allTechIds,
   techById,
   domainsInStack,
   detectClaimStretch,
@@ -54,6 +56,11 @@ const state = {
   aiBusy: false,
   /** @type {{ level: string, reason: string, forKey: string } | null} */
   aiTiming: null,
+  /** @type {Record<string, object[]>} generated/curated scenarios per global theme */
+  scenarioCache: {},
+  /** @type {object[]} scenarios currently shown on mission screen */
+  missionChoices: [],
+  scenariosLoading: false,
 };
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -150,22 +157,39 @@ function showScreen(id) {
 }
 
 /* —— Global / mission select —— */
+const SCENARIO_COUNT = 4;
+
+function problemVisualUrl(globalId) {
+  return `assets/problems/${globalId}.jpg`;
+}
+
 function renderGlobals() {
   const grid = $("#global-grid");
   grid.innerHTML = GLOBALS.map((g) => {
     const tag = g.kind === "before" ? "Before it hits" : "Now";
     const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
-    const count = missionsForGlobal(g.id).length;
-    const disabled = count === 0;
+    const cached = state.scenarioCache[g.id]?.length || 0;
+    const curated = missionsForGlobal(g.id).length;
+    const hint = cached
+      ? `${cached} scenarios ready →`
+      : curated
+        ? `Generate scenarios (${curated} curated seed${curated > 1 ? "s" : ""}) →`
+        : "Generate local scenarios →";
+    const img = problemVisualUrl(g.id);
     return `
-      <button type="button" class="challenge-card ${disabled ? "disabled" : ""}" data-id="${g.id}" ${disabled ? "disabled" : ""}>
-        <span class="num"><span class="flag ${cls}">${tag}</span></span>
-        <h3>${escapeHtml(g.title)}</h3>
-        <p>${escapeHtml(g.blurb)}</p>
-        <span class="cta">${count ? `${count} local mission${count > 1 ? "s" : ""} →` : "Coming soon"}</span>
+      <button type="button" class="challenge-card challenge-card-visual" data-id="${g.id}">
+        <span class="card-visual" aria-hidden="true">
+          <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
+        </span>
+        <span class="card-body">
+          <span class="num"><span class="flag ${cls}">${tag}</span></span>
+          <h3>${escapeHtml(g.title)}</h3>
+          <p>${escapeHtml(g.blurb)}</p>
+          <span class="cta">${hint}</span>
+        </span>
       </button>`;
   }).join("");
-  grid.querySelectorAll(".challenge-card:not([disabled])").forEach((btn) => {
+  grid.querySelectorAll(".challenge-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.global = globalById(btn.dataset.id);
       showScreen("mission");
@@ -173,28 +197,216 @@ function renderGlobals() {
   });
 }
 
-function renderMissions() {
-  const g = state.global;
-  $("#mission-global-title").textContent = g ? g.title : "Local missions";
-  $("#mission-global-blurb").textContent = g
-    ? `${g.blurb} — pick a concrete place living a piece of this.`
-    : "Pick a concrete place.";
-  const list = g ? missionsForGlobal(g.id) : MISSIONS;
+function setMissionStatus(text, { loading = false } = {}) {
+  const el = $("#mission-status");
+  if (!el) return;
+  if (!text) {
+    el.hidden = true;
+    el.textContent = "";
+    el.classList.remove("loading");
+    return;
+  }
+  el.hidden = false;
+  el.classList.toggle("loading", loading);
+  el.innerHTML = loading
+    ? `<span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>${escapeHtml(text)}`
+    : escapeHtml(text);
+}
+
+function paintMissionCards(list) {
   const grid = $("#mission-grid");
+  if (!grid) return;
+  if (!list.length) {
+    grid.innerHTML = `<p class="empty-hint">No scenarios yet — try Generate new scenarios.</p>`;
+    return;
+  }
   grid.innerHTML = list
-    .map(
-      (m) => `
-    <button type="button" class="challenge-card" data-id="${m.id}">
-      <span class="num">${escapeHtml(m.place)} · ${m.startYear}</span>
+    .map((m) => {
+      const tag = m.source === "curated" ? "curated" : "generated";
+      const tagLabel = m.source === "curated" ? "Curated" : "Scenario";
+      const scene = (m.scene || "").slice(0, 180);
+      const ellipsis = (m.scene || "").length > 180 ? "…" : "";
+      return `
+    <button type="button" class="challenge-card" data-id="${escapeHtml(m.id)}">
+      <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
+        <span class="scenario-tag ${tag}">${tagLabel}</span>
+      </span>
       <h3>${escapeHtml(m.title)}</h3>
-      <p>${escapeHtml(m.scene.slice(0, 160))}…</p>
-      <span class="cta">Accept mission →</span>
-    </button>`
-    )
+      <p>${escapeHtml(scene)}${ellipsis}</p>
+      ${
+        m.stakeholder
+          ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
+          : ""
+      }
+      <span class="cta">Invent here →</span>
+    </button>`;
+    })
     .join("");
   grid.querySelectorAll(".challenge-card").forEach((btn) => {
-    btn.addEventListener("click", () => startMission(MISSIONS.find((m) => m.id === btn.dataset.id)));
+    btn.addEventListener("click", () => {
+      const mission = state.missionChoices.find((m) => m.id === btn.dataset.id);
+      if (mission) startMission(mission);
+    });
   });
+}
+
+async function ensureScenarios(global, { force = false } = {}) {
+  if (!global) return [];
+  if (!force && state.scenarioCache[global.id]?.length) {
+    return state.scenarioCache[global.id];
+  }
+
+  // Instant local pack so the grid is never empty while AI works
+  const localPack = localScenariosForGlobal(global, {
+    count: SCENARIO_COUNT,
+    salt: force ? Date.now() % 10000 : 0,
+  });
+  state.scenarioCache[global.id] = localPack;
+  state.missionChoices = localPack;
+
+  try {
+    const res = await fetch("/api/co-invent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "generate-scenarios",
+        messages: [{ role: "user", content: "[Generate local scenarios]" }],
+        context: {
+          globalTheme: {
+            id: global.id,
+            title: global.title,
+            blurb: global.blurb,
+            kind: global.kind,
+          },
+          scenarioCount: SCENARIO_COUNT,
+          seedMissions: missionsForGlobal(global.id).map((m) => ({
+            id: m.id,
+            title: m.title,
+            place: m.place,
+            scene: m.scene,
+            stakeholder: m.stakeholder,
+            suggested: m.suggested,
+            visionTheme: m.visionTheme,
+            pressure: m.pressure,
+            collapseYear: m.collapseYear,
+          })),
+          forceRegen: force,
+          availableTechs: TECHS.map((t) => techForAi(t, GAME.startYear)),
+          year: GAME.startYear,
+        },
+      }),
+    });
+    const data = await res.json();
+    const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
+    if (scenarios.length >= 2) {
+      const normalized = scenarios.map((m) => normalizeMission(m, global.id));
+      state.scenarioCache[global.id] = normalized;
+      state.missionChoices = normalized;
+      return normalized;
+    }
+  } catch {
+    /* keep local pack */
+  }
+  return state.scenarioCache[global.id] || localPack;
+}
+
+function normalizeMission(raw, globalId) {
+  const id =
+    String(raw.id || "").trim() ||
+    `gen-${globalId}-${Math.random().toString(36).slice(2, 8)}`;
+  const pressure =
+    raw.pressure && typeof raw.pressure === "object" && Object.keys(raw.pressure).length
+      ? Object.fromEntries(
+          Object.entries(raw.pressure)
+            .slice(0, 4)
+            .map(([k, v]) => [String(k).slice(0, 24), Math.min(5, Math.max(0, Number(v) || 2))])
+        )
+      : { Pressure: 2, Capacity: 2, Trust: 1 };
+  const keys = Object.keys(pressure);
+  const pressureRise =
+    raw.pressureRise && typeof raw.pressureRise === "object"
+      ? Object.fromEntries(keys.map((k) => [k, Math.min(2, Math.max(0, Number(raw.pressureRise[k]) || 1))]))
+      : Object.fromEntries(keys.map((k, i) => [k, i === keys.length - 1 ? 0 : 1]));
+  const winMax =
+    raw.winMax && typeof raw.winMax === "object"
+      ? Object.fromEntries(keys.map((k) => [k, Math.min(3, Math.max(0, Number(raw.winMax[k]) ?? 1))]))
+      : Object.fromEntries(keys.map((k) => [k, 1]));
+  const validTech = new Set(allTechIds());
+  const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
+    .map(String)
+    .filter((t) => validTech.has(t))
+    .slice(0, 8);
+  return {
+    id,
+    globalId,
+    title: String(raw.title || "Local scenario").slice(0, 100),
+    place: String(raw.place || "Local place").slice(0, 80),
+    startYear: Number(raw.startYear) || GAME.startYear,
+    collapseYear: Number(raw.collapseYear) || GAME.startYear + 8,
+    yearsPerTurn: Number(raw.yearsPerTurn) || GAME.yearsPerTurn,
+    pressure,
+    pressureRise,
+    winMax,
+    scene: String(raw.scene || "").slice(0, 800),
+    stakeholder: String(raw.stakeholder || "").slice(0, 120),
+    suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+    visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
+    source: raw.source === "curated" ? "curated" : "generated",
+  };
+}
+
+async function renderMissions({ force = false } = {}) {
+  const g = state.global;
+  $("#mission-global-title").textContent = g ? g.title : "Local scenarios";
+  $("#mission-global-blurb").textContent = g
+    ? `${g.blurb} — generating several concrete places living a piece of this. Pick one to invent for.`
+    : "Pick a concrete place.";
+  const regenBtn = $("#btn-regen-scenarios");
+  if (regenBtn) regenBtn.hidden = !g;
+
+  if (!g) {
+    state.missionChoices = [];
+    paintMissionCards([]);
+    setMissionStatus("");
+    return;
+  }
+
+  // Show cache or local pack immediately
+  const cached = !force && state.scenarioCache[g.id];
+  if (cached?.length) {
+    state.missionChoices = cached;
+    paintMissionCards(cached);
+    setMissionStatus(`${cached.length} scenarios for this theme. Pick one, or generate a fresh set.`);
+  } else {
+    const localPack = localScenariosForGlobal(g, { count: SCENARIO_COUNT, salt: 0 });
+    state.missionChoices = localPack;
+    paintMissionCards(localPack);
+    setMissionStatus("Drafting more local scenarios…", { loading: true });
+  }
+
+  if (force) {
+    setMissionStatus("Generating a fresh set of local scenarios…", { loading: true });
+  }
+
+  state.scenariosLoading = true;
+  if (regenBtn) regenBtn.disabled = true;
+  try {
+    const list = await ensureScenarios(g, { force });
+    if (state.global?.id === g.id) {
+      state.missionChoices = list;
+      paintMissionCards(list);
+      const curated = list.filter((m) => m.source === "curated").length;
+      const gen = list.length - curated;
+      setMissionStatus(
+        curated
+          ? `${list.length} scenarios (${curated} curated · ${gen} generated). Pick a place to invent.`
+          : `${list.length} local scenarios. Pick a place to invent.`
+      );
+    }
+  } finally {
+    state.scenariosLoading = false;
+    if (regenBtn) regenBtn.disabled = false;
+  }
 }
 
 function startMission(mission) {
@@ -318,13 +530,29 @@ function setCompanionStoryText(text) {
   else state.inventionImpact = text;
 }
 
-function syncHiddenStoryFields() {
+function syncStoryFieldsFromDom() {
   const howEl = $("#invention-how");
   const impEl = $("#invention-impact");
-  if (howEl) howEl.value = state.inventionHow;
-  if (impEl) impEl.value = state.inventionImpact;
+  if (howEl) state.inventionHow = howEl.value;
+  if (impEl) state.inventionImpact = impEl.value;
 }
 
+function syncStoryFieldsToDom() {
+  const howEl = $("#invention-how");
+  const impEl = $("#invention-impact");
+  if (howEl && howEl.value !== state.inventionHow) howEl.value = state.inventionHow;
+  if (impEl && impEl.value !== state.inventionImpact) impEl.value = state.inventionImpact;
+}
+
+/** @deprecated alias — keep callers working */
+function syncHiddenStoryFields() {
+  syncStoryFieldsToDom();
+}
+
+/**
+ * Fixed sections: How it works + Everyday life.
+ * "Fill other side" + companion styling sit on the face the player is NOT writing.
+ */
 function renderStoryFaceUI() {
   const both = state.writeBoth;
   $$(".story-mode-btn").forEach((btn) => {
@@ -335,71 +563,103 @@ function renderStoryFaceUI() {
     writeBothBtn.textContent = both ? "One face + AI" : "Write both";
   }
 
-  const label = $("#label-player-story");
-  const player = $("#invention-player");
-  const companion = $("#field-companion");
-  const compArea = $("#invention-companion");
-  const compLabel = $("#label-companion");
-  const note = $("#companion-note");
+  const fieldHow = $("#field-how");
+  const fieldLife = $("#field-life");
+  const labelHow = $("#label-how");
+  const labelLife = $("#label-life");
+  const howArea = $("#invention-how");
+  const lifeArea = $("#invention-impact");
+  const noteHow = $("#note-how");
+  const noteLife = $("#note-life");
+  const fillHow = document.querySelector('.btn-fill-other[data-fill-for="how"]');
+  const fillLife = document.querySelector('.btn-fill-other[data-fill-for="life"]');
+
+  // Always keep textareas in sync with state
+  if (howArea) howArea.value = state.inventionHow;
+  if (lifeArea) lifeArea.value = state.inventionImpact;
+
+  const setRole = (field, role) => {
+    if (!field) return;
+    field.classList.remove("is-player", "is-companion", "is-both");
+    field.classList.add(`is-${role}`);
+  };
 
   if (both) {
-    if (label) label.textContent = "How does it work?";
-    if (player) {
-      player.placeholder = "What acts, what decides, how the pieces connect…";
-      player.value = state.inventionHow;
+    setRole(fieldHow, "both");
+    setRole(fieldLife, "both");
+    if (labelHow) labelHow.textContent = "How does it work? (you write)";
+    if (labelLife) labelLife.textContent = "Everyday life if it works (you write)";
+    if (howArea) {
+      howArea.placeholder = "What acts, what decides, how the pieces connect…";
+      howArea.readOnly = false;
     }
-    if (companion) companion.hidden = false;
-    if (compLabel) compLabel.textContent = "Everyday life if it works (you write this too)";
-    if (compArea) {
-      compArea.placeholder = "A Tuesday here after your invention lands…";
-      compArea.value = state.inventionImpact;
-      compArea.readOnly = false;
+    if (lifeArea) {
+      lifeArea.placeholder = "A Tuesday here after your invention lands…";
+      lifeArea.readOnly = false;
     }
-    if (note) note.textContent = "Writing both yourself — AI fill is optional.";
-    const fillBtn = $("#btn-complete-picture");
-    if (fillBtn) fillBtn.hidden = true;
-  } else {
-    if (state.storyFace === "how") {
-      if (label) label.textContent = "How does it work? (you write)";
-      if (player) {
-        player.placeholder = "What acts, what decides, how the pieces connect for *this* place…";
-        player.value = state.inventionHow;
-      }
-      if (compLabel) compLabel.textContent = "Everyday life (co-inventor)";
-    } else {
-      if (label) label.textContent = "Everyday life if it works (you write)";
-      if (player) {
-        player.placeholder = "A Tuesday here after your invention lands…";
-        player.value = state.inventionImpact;
-      }
-      if (compLabel) compLabel.textContent = "How it works (co-inventor)";
+    if (fillHow) fillHow.hidden = true;
+    if (fillLife) fillLife.hidden = true;
+    if (noteHow) {
+      noteHow.hidden = true;
+      noteHow.textContent = "";
     }
-    if (companion) companion.hidden = false;
-    if (compArea) {
-      compArea.placeholder = "Click “Fill other side” — AI writes the missing half…";
-      compArea.value = companionStoryText();
-      compArea.readOnly = false; // allow edits after AI fill
+    if (noteLife) {
+      noteLife.hidden = false;
+      noteLife.textContent = "Writing both yourself — AI fill is optional.";
     }
-    if (note) {
-      note.textContent = companionStoryText().trim()
+  } else if (state.storyFace === "how") {
+    // Player writes HOW; AI fill lives on EVERYDAY LIFE
+    setRole(fieldHow, "player");
+    setRole(fieldLife, "companion");
+    if (labelHow) labelHow.textContent = "How does it work? (you write)";
+    if (labelLife) labelLife.textContent = "Everyday life (co-inventor)";
+    if (howArea) {
+      howArea.placeholder = "What acts, what decides, how the pieces connect for *this* place…";
+      howArea.readOnly = false;
+    }
+    if (lifeArea) {
+      lifeArea.placeholder = "Click “Fill other side” — AI writes everyday life from your mechanism…";
+      lifeArea.readOnly = false;
+    }
+    if (fillHow) fillHow.hidden = true;
+    if (fillLife) fillLife.hidden = false;
+    if (noteHow) {
+      noteHow.hidden = true;
+      noteHow.textContent = "";
+    }
+    if (noteLife) {
+      noteLife.hidden = false;
+      noteLife.textContent = state.inventionImpact.trim()
         ? "AI draft — edit freely if it misses the mark."
-        : "You write one face; AI fills the other.";
+        : "You write how it works; AI fills everyday life.";
     }
-    const fillBtn = $("#btn-complete-picture");
-    if (fillBtn) fillBtn.hidden = false;
+  } else {
+    // Player writes EVERYDAY LIFE; AI fill lives on HOW IT WORKS
+    setRole(fieldHow, "companion");
+    setRole(fieldLife, "player");
+    if (labelHow) labelHow.textContent = "How it works (co-inventor)";
+    if (labelLife) labelLife.textContent = "Everyday life if it works (you write)";
+    if (howArea) {
+      howArea.placeholder = "Click “Fill other side” — AI writes the mechanism from your day-in-the-life…";
+      howArea.readOnly = false;
+    }
+    if (lifeArea) {
+      lifeArea.placeholder = "A Tuesday here after your invention lands…";
+      lifeArea.readOnly = false;
+    }
+    if (fillHow) fillHow.hidden = false;
+    if (fillLife) fillLife.hidden = true;
+    if (noteLife) {
+      noteLife.hidden = true;
+      noteLife.textContent = "";
+    }
+    if (noteHow) {
+      noteHow.hidden = false;
+      noteHow.textContent = state.inventionHow.trim()
+        ? "AI draft — edit freely if it misses the mark."
+        : "You write everyday life; AI fills how it works.";
+    }
   }
-  syncHiddenStoryFields();
-}
-
-function hasPlayerFace() {
-  return playerStoryText().trim().length >= 20;
-}
-
-function hasCompanionFace() {
-  if (state.writeBoth) {
-    return state.inventionHow.trim().length >= 20 && state.inventionImpact.trim().length >= 20;
-  }
-  return companionStoryText().trim().length >= 20;
 }
 
 function timingCacheKey() {
@@ -1433,7 +1693,6 @@ function applyCoInventorProposals(proposals) {
   }
   if (proposals.inventionHow) {
     state.inventionHow = proposals.inventionHow;
-    $("#invention-how").value = state.inventionHow;
     changed = true;
   }
   if (proposals.inventionImpact) {
@@ -1447,7 +1706,6 @@ function applyCoInventorProposals(proposals) {
     renderSynergy();
     renderTiming();
     renderStoryFaceUI();
-    syncHiddenStoryFields();
     updateChallengeButton();
     updateVision();
     scheduleAiTimingAssess();
@@ -1455,11 +1713,16 @@ function applyCoInventorProposals(proposals) {
   }
 }
 
+function setFillButtonsDisabled(disabled) {
+  document.querySelectorAll(".btn-fill-other").forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
 async function callCoInventMode(mode, userLabel) {
   if (state.aiBusy) return;
   state.aiBusy = true;
-  const fillBtn = $("#btn-complete-picture");
-  if (fillBtn) fillBtn.disabled = true;
+  setFillButtonsDisabled(true);
 
   try {
     const ctx = {
@@ -1514,7 +1777,7 @@ async function callCoInventMode(mode, userLabel) {
     flashToast(e.message || "AI request failed");
   } finally {
     state.aiBusy = false;
-    if (fillBtn) fillBtn.disabled = false;
+    setFillButtonsDisabled(false);
     updateChallengeButton();
   }
 }
@@ -1582,18 +1845,26 @@ function flashToast(msg) {
   }, 2800);
 }
 
-function surpriseMission() {
-  const m = MISSIONS[Math.floor(Math.random() * MISSIONS.length)];
-  state.global = globalById(m.globalId);
+async function surpriseMission() {
+  const g = GLOBALS[Math.floor(Math.random() * GLOBALS.length)];
+  state.global = g;
+  const list = await ensureScenarios(g, { force: false });
+  const m = list[Math.floor(Math.random() * list.length)] || MISSIONS[0];
   startMission(m);
 }
 
 /* —— Bind —— */
 function bind() {
   $("#btn-start").addEventListener("click", () => showScreen("global"));
-  $("#btn-surprise").addEventListener("click", () => surpriseMission());
+  $("#btn-surprise").addEventListener("click", () => {
+    surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
+  });
   $("#btn-global-back").addEventListener("click", () => showScreen("title"));
   $("#btn-mission-back").addEventListener("click", () => showScreen("global"));
+  $("#btn-regen-scenarios")?.addEventListener("click", () => {
+    if (!state.global || state.scenariosLoading) return;
+    renderMissions({ force: true });
+  });
   $("#btn-abandon").addEventListener("click", () => {
     if (confirm("Leave this mission? The local clock resets.")) showScreen("title");
   });
@@ -1630,31 +1901,46 @@ function bind() {
     updateChallengeButton();
   });
 
-  $("#invention-player")?.addEventListener("input", (e) => {
-    if (state.writeBoth) state.inventionHow = e.target.value;
-    else setPlayerStoryText(e.target.value);
-    syncHiddenStoryFields();
+  $("#invention-how")?.addEventListener("input", (e) => {
+    state.inventionHow = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
+    // Refresh companion note if AI fill already present
+    if (!state.writeBoth && state.storyFace === "life") {
+      const noteHow = $("#note-how");
+      if (noteHow && !noteHow.hidden) {
+        noteHow.textContent = state.inventionHow.trim()
+          ? "AI draft — edit freely if it misses the mark."
+          : "You write everyday life; AI fills how it works.";
+      }
+    }
   });
-  $("#invention-companion")?.addEventListener("input", (e) => {
-    if (state.writeBoth) state.inventionImpact = e.target.value;
-    else setCompanionStoryText(e.target.value);
-    syncHiddenStoryFields();
+  $("#invention-impact")?.addEventListener("input", (e) => {
+    state.inventionImpact = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
+    if (!state.writeBoth && state.storyFace === "how") {
+      const noteLife = $("#note-life");
+      if (noteLife && !noteLife.hidden) {
+        noteLife.textContent = state.inventionImpact.trim()
+          ? "AI draft — edit freely if it misses the mark."
+          : "You write how it works; AI fills everyday life.";
+      }
+    }
   });
 
-  $("#btn-complete-picture")?.addEventListener("click", () => {
-    if (!hasPlayerFace()) {
-      flashToast("Write your story face first (a short paragraph).");
-      return;
-    }
-    if (!selectedTechs().length) {
-      flashToast("Add at least one technology first.");
-      return;
-    }
-    callCoInventMode("complete-picture", "[Fill other story face]");
+  document.querySelectorAll(".btn-fill-other").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!hasPlayerFace()) {
+        flashToast("Write your story face first (a short paragraph).");
+        return;
+      }
+      if (!selectedTechs().length) {
+        flashToast("Add at least one technology first.");
+        return;
+      }
+      callCoInventMode("complete-picture", "[Fill other story face]");
+    });
   });
 
   $("#btn-wait").addEventListener("click", () => waitTurn());

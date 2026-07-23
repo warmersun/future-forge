@@ -10,6 +10,13 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
+import {
+  localScenariosForGlobal,
+  globalById,
+  allTechIds,
+  VISION_THEME_IDS,
+  GAME,
+} from "./js/data.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -174,6 +181,8 @@ const MIME = {
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
 };
@@ -187,6 +196,7 @@ Role:
 - readyYear / softHorizon on a tech is only a soft hint that near-scale use cases get more common later — not a lock.
 - When mode is art-of-the-possible: teach milestones, current capabilities (now), use cases unlocked, near vs frontier stretch for the selected stack (or recommended if empty) and year/place. Use maturity/milestones/useCasesNow from availableTechs as baseline; enrich with real-world knowledge when confident. Label uncertainty. Do not invent fake paper titles.
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves.
+- When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory.
 - When mode is scrutinize: stress-test the idea from THREE angles (see below). Put results in proposals.scrutiny.
 - Tone: vivid, concise, hopeful, practical.
@@ -292,6 +302,123 @@ function localArtOfThePossible(context, selected, stack, map, base) {
     proposals: base,
     teaching,
   };
+}
+
+function localGenerateScenarios(context, base) {
+  const theme = context.globalTheme || {};
+  const globalId = theme.id || "climate";
+  const g = globalById(globalId) || {
+    id: globalId,
+    title: theme.title || "Global problem",
+    blurb: theme.blurb || "",
+    kind: theme.kind || "now",
+  };
+  const count = Math.min(6, Math.max(3, Number(context.scenarioCount) || 4));
+  const salt = context.forceRegen ? Date.now() % 10000 : 0;
+  const scenarios = localScenariosForGlobal(g, { count, salt });
+  return {
+    source: "local",
+    message: `Here are ${scenarios.length} local scenarios for **${g.title}**. Pick one place to invent for.`,
+    scenarios,
+    proposals: base,
+    teaching: [],
+  };
+}
+
+function sanitizeScenarioList(rawList, context, techIds) {
+  const theme = context?.globalTheme || {};
+  const globalId = theme.id || "climate";
+  const validTech = new Set(techIds?.length ? techIds : allTechIds());
+  const visionOk = new Set(VISION_THEME_IDS);
+  const seeds = Array.isArray(context?.seedMissions) ? context.seedMissions : [];
+  const list = Array.isArray(rawList) ? rawList : [];
+  const out = [];
+  const seen = new Set();
+
+  const pushOne = (raw, sourceHint) => {
+    if (!raw || typeof raw !== "object") return;
+    const place = String(raw.place || "").trim().slice(0, 80);
+    const title = String(raw.title || "").trim().slice(0, 100);
+    if (!place && !title) return;
+    const key = (place || title).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    let pressure = {};
+    if (raw.pressure && typeof raw.pressure === "object") {
+      for (const [k, v] of Object.entries(raw.pressure).slice(0, 4)) {
+        pressure[String(k).slice(0, 24)] = Math.min(5, Math.max(0, Number(v) || 2));
+      }
+    }
+    if (!Object.keys(pressure).length) pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
+    const keys = Object.keys(pressure);
+    const pressureRise = {};
+    const winMax = {};
+    keys.forEach((k, i) => {
+      pressureRise[k] =
+        raw.pressureRise && raw.pressureRise[k] != null
+          ? Math.min(2, Math.max(0, Number(raw.pressureRise[k]) || 1))
+          : i === keys.length - 1
+            ? 0
+            : 1;
+      winMax[k] =
+        raw.winMax && raw.winMax[k] != null
+          ? Math.min(3, Math.max(0, Number(raw.winMax[k]) ?? 1))
+          : 1;
+    });
+    const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
+      .map(String)
+      .filter((id) => validTech.has(id))
+      .slice(0, 8);
+    const visionTheme = visionOk.has(String(raw.visionTheme))
+      ? String(raw.visionTheme)
+      : "rebuild-city";
+    const id =
+      String(raw.id || "").trim() ||
+      `gen-${globalId}-${out.length}-${Math.random().toString(36).slice(2, 7)}`;
+    out.push({
+      id,
+      globalId,
+      title: title || `Scenario in ${place}`,
+      place: place || "Local place",
+      startYear: Number(raw.startYear) || GAME.startYear,
+      collapseYear: Number(raw.collapseYear) || GAME.startYear + 8,
+      yearsPerTurn: Number(raw.yearsPerTurn) || GAME.yearsPerTurn,
+      pressure,
+      pressureRise,
+      winMax,
+      scene: String(raw.scene || "").trim().slice(0, 800),
+      stakeholder: String(raw.stakeholder || "").trim().slice(0, 120),
+      suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+      visionTheme,
+      source: sourceHint || (raw.source === "curated" ? "curated" : "generated"),
+    });
+  };
+
+  // Prefer curated seeds first (unless force full regen without seeds)
+  if (!context?.forceRegen || seeds.length) {
+    for (const s of seeds) pushOne({ ...s, source: "curated" }, "curated");
+  }
+  for (const s of list) pushOne(s, "generated");
+
+  const target = Math.min(6, Math.max(3, Number(context?.scenarioCount) || 4));
+  if (out.length < target) {
+    const g = globalById(globalId) || {
+      id: globalId,
+      title: theme.title || "Global problem",
+      blurb: theme.blurb || "",
+      kind: theme.kind || "now",
+    };
+    const fill = localScenariosForGlobal(g, {
+      count: target,
+      salt: context?.forceRegen ? Date.now() % 10000 : 3,
+    });
+    for (const s of fill) {
+      pushOne(s, s.source || "generated");
+      if (out.length >= target) break;
+    }
+  }
+  return out.slice(0, target);
 }
 
 function localAssessFeasibility(context, selected, map, base) {
@@ -723,6 +850,10 @@ function localCoInvent({ mode, messages, context }) {
     return localAssessFeasibility(context, selected, map, base);
   }
 
+  if (mode === "generate-scenarios") {
+    return localGenerateScenarios(context, base);
+  }
+
   // free chat — heuristic reply
   const lower = lastUser.toLowerCase();
   let message =
@@ -830,6 +961,8 @@ function buildUserPayload({ messages, context, mode }) {
       "The learner is stuck on the challenge step. Context has challengeAngle, challengeSpeech, challengeQuestion, invention details. Coach them: explain what this angle cares about, give 2–4 concrete hint bullets for THIS local invention (not generic theory). Do NOT write a full ready-to-submit answer unless they clearly asked to draft. Put coaching in message. Optional top-level field draftAnswer only if mode intent is draft (see draft-challenge).",
     "draft-challenge":
       "Write a solid draft answer the learner can edit and submit to the challenge. Context has challengeAngle, challengeSpeech, challengeQuestion, invention how/impact, techs, place. Draft must be specific to their invention: name actors, costs or physical limits, anti-defection or affordability moves as relevant. Put full draft in top-level draftAnswer AND a short coaching note in message. Do not auto-judge.",
+    "generate-scenarios":
+      "Generate MULTIPLE distinct local mission scenarios for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount). Each scenario MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene (2–4 vivid sentences), stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (3 named meters 0–5), pressureRise, winMax, suggested (array of tech ids from availableTechs only), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). message: one short line inviting the learner to pick a place. proposals empty.",
   };
 
   // Prefer selected techs with full capability seeds for literacy modes
@@ -852,6 +985,10 @@ function buildUserPayload({ messages, context, mode }) {
     stackCapability: focusTechs,
     availableTechs: available,
     conversation: (messages || []).slice(-12),
+    globalTheme: context?.globalTheme || null,
+    scenarioCount: context?.scenarioCount || 4,
+    seedMissions: context?.seedMissions || [],
+    forceRegen: Boolean(context?.forceRegen),
     designRule:
       "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year.",
   };
@@ -985,6 +1122,32 @@ function sanitizeResult(parsed, availableIds, source = "ai") {
   return out;
 }
 
+function sanitizeScenariosResult(parsed, context, source = "ai") {
+  const techIds = (context?.availableTechs || []).map((t) => t.id);
+  const scenarios = sanitizeScenarioList(
+    parsed?.scenarios || parsed?.missions || [],
+    context,
+    techIds
+  );
+  return {
+    source,
+    message: String(
+      parsed?.message ||
+        `Here are ${scenarios.length} local scenarios. Pick a place to invent for.`
+    ).slice(0, 2000),
+    scenarios,
+    proposals: {
+      addTechIds: [],
+      removeTechIds: [],
+      inventionName: null,
+      inventionHow: null,
+      inventionImpact: null,
+      scrutiny: null,
+    },
+    teaching: [],
+  };
+}
+
 async function aiCoInvent(body, client) {
   const mode = body.mode || "chat";
   const context = body.context || {};
@@ -1004,12 +1167,22 @@ async function aiCoInvent(body, client) {
   const response = await client.responses.create({
     model: MODEL,
     input,
-    temperature: 0.8,
+    temperature: mode === "generate-scenarios" ? 0.95 : 0.8,
   });
 
   const text = response.output_text || "";
   const parsed = extractJson(text);
   if (!parsed) {
+    if (mode === "generate-scenarios") {
+      return localGenerateScenarios(context, {
+        addTechIds: [],
+        removeTechIds: [],
+        inventionName: null,
+        inventionHow: null,
+        inventionImpact: null,
+        scrutiny: null,
+      });
+    }
     return {
       source: "ai",
       message: text.slice(0, 2000) || "I had trouble shaping that thought — try again?",
@@ -1022,6 +1195,9 @@ async function aiCoInvent(body, client) {
       },
       teaching: [],
     };
+  }
+  if (mode === "generate-scenarios") {
+    return sanitizeScenariosResult(parsed, context, "ai");
   }
   return sanitizeResult(parsed, availableIds, "ai");
 }
