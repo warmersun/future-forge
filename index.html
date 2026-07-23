@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Future Forge — invent local solutions with emerging technologies, combine disciplines, and race the exponential clock with an AI co-inventor."
+    />
+    <title>Future Forge — Invent Tomorrow</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <!-- TITLE -->
+    <section id="screen-title" class="screen active">
+      <div class="title-orb" aria-hidden="true"></div>
+      <div class="title-card">
+        <div class="logo-mark" aria-hidden="true">⟡</div>
+        <h1 id="game-title">Future Forge</h1>
+        <p class="tagline" id="game-tagline">
+          Invent local solutions with emerging tech — beat the clock as the future arrives.
+        </p>
+        <div class="pitch">
+          <h2>How you play</h2>
+          <ol>
+            <li>
+              <strong>Get a local mission</strong> — a concrete place living a piece of a global problem.
+            </li>
+            <li>
+              <strong>Invent with AI</strong> — pick emerging technologies that fit the local problem
+              (mix domains when it helps — not as a rule).
+            </li>
+            <li>
+              <strong>Watch the years tick</strong> — techs get ready on exponential curves; the crisis gets worse if you wait.
+            </li>
+            <li>
+              <strong>Deploy in time</strong> — intercept the future: not too early, not too late — then see that world painted.
+            </li>
+          </ol>
+        </div>
+        <div class="form-actions" style="justify-content: center; gap: 0.75rem">
+          <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
+          <button type="button" class="btn btn-primary" id="btn-start">Choose a theme →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GLOBAL THEME -->
+    <section id="screen-global" class="screen">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills">
+          <span class="pill active">1 · Theme</span>
+          <span class="pill">2 · Mission</span>
+          <span class="pill">3 · Invent</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-global-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>What kind of problem?</h1>
+          <p>
+            Global problems are huge. You’ll play a <strong>local instance</strong> — a town, clinic, or district —
+            so invention stays real. Cross-disciplinary stacks win; the calendar won’t wait.
+          </p>
+        </div>
+        <div id="global-grid" class="challenge-grid"></div>
+      </div>
+    </section>
+
+    <!-- LOCAL MISSION PICK -->
+    <section id="screen-mission" class="screen">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills">
+          <span class="pill done">1 · Theme</span>
+          <span class="pill active">2 · Mission</span>
+          <span class="pill">3 · Invent</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-mission-back">← Themes</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1 id="mission-global-title">Local missions</h1>
+          <p id="mission-global-blurb">Pick a concrete place and story.</p>
+        </div>
+        <div id="mission-grid" class="challenge-grid"></div>
+      </div>
+    </section>
+
+    <!-- WORKSHOP -->
+    <section id="screen-workshop" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills invent-steps" aria-label="Mission steps">
+          <span class="pill active" data-step="invent">1 · Invent</span>
+          <span class="pill" data-step="challenge">2 · Challenge</span>
+          <span class="pill" data-step="deploy">3 · Deploy</span>
+        </div>
+        <div class="hud-clock" id="hud-clock">
+          <span class="hud-year" id="hud-year">2026</span>
+          <span class="hud-turn" id="hud-turn">Turn 0</span>
+        </div>
+        <div class="hud-crisis-wrap">
+          <div class="hud-crisis-label" title="How bad the local crisis is right now (0–5). Wait raises these. Deploy lowers them. Hit 5 or the collapse year and you lose.">
+            Crisis now
+          </div>
+          <div class="hud-pressure" id="hud-pressure"></div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
+      </header>
+
+      <div class="workshop-layout">
+        <aside class="tech-library">
+          <div class="panel-header">
+            <h2>Emerging tech</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech">Learn</button>
+          </div>
+          <div id="filter-row" class="filter-row"></div>
+          <div id="tech-list" class="tech-list" role="list"></div>
+        </aside>
+
+        <main class="invent-center">
+          <div class="challenge-banner">
+            <div class="label" id="ws-global-label">Global theme</div>
+            <h2 id="ws-mission-title">—</h2>
+            <p id="ws-mission-place" class="mission-place"></p>
+            <p id="ws-mission-scene"></p>
+            <p id="ws-stakeholder" class="stakeholder"></p>
+            <p id="ws-crisis-help" class="crisis-help"></p>
+            <p id="ws-news" class="year-news" hidden></p>
+            <div id="wait-report" class="wait-report" hidden></div>
+          </div>
+
+          <div class="invent-form">
+            <div class="field">
+              <label for="invention-name">Name your invention</label>
+              <input id="invention-name" type="text" maxlength="80" placeholder="Something people here could say out loud…" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label>Technologies in your stack</label>
+              <div id="selected-techs" class="selected-techs"></div>
+            </div>
+
+            <div id="synergy-box" class="synergy-box"></div>
+            <div id="timing-box" class="timing-box"></div>
+
+            <div class="feasibility" id="feasibility" aria-live="polite">
+              <div class="feasibility-head">
+                <div class="feasibility-light" id="feasibility-light" data-level="red" title="Feasibility"></div>
+                <div>
+                  <div class="feasibility-title">Feasibility <span id="feasibility-level-label">red</span></div>
+                  <p class="feasibility-summary" id="feasibility-summary">Add tech and a story to assess.</p>
+                </div>
+              </div>
+              <ul class="feasibility-dims" id="feasibility-dims"></ul>
+              <p class="feasibility-foot" id="feasibility-foot"></p>
+            </div>
+
+            <div class="story-mode" role="group" aria-label="What you write">
+              <span class="story-mode-label">You write:</span>
+              <button type="button" class="story-mode-btn active" data-face="how" id="face-how">
+                How it works
+              </button>
+              <button type="button" class="story-mode-btn" data-face="life" id="face-life">
+                Everyday life
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-write-both" title="Write both yourself">
+                Write both
+              </button>
+            </div>
+
+            <div class="field" id="field-player-story">
+              <label for="invention-player" id="label-player-story">How does it work?</label>
+              <textarea
+                id="invention-player"
+                placeholder="What acts, what decides, how the pieces connect for *this* place…"
+              ></textarea>
+            </div>
+
+            <div class="field field-companion" id="field-companion" hidden>
+              <div class="companion-header">
+                <label id="label-companion">Co-inventor fills the other side</label>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-complete-picture">
+                  Fill other side
+                </button>
+              </div>
+              <textarea
+                id="invention-companion"
+                rows="3"
+                placeholder="Click “Fill other side” — AI writes the missing half from your stack and story…"
+              ></textarea>
+              <p class="companion-note" id="companion-note"></p>
+            </div>
+
+            <!-- Hidden mirrors for vision / deploy (always both how + impact) -->
+            <textarea id="invention-how" hidden></textarea>
+            <textarea id="invention-impact" hidden></textarea>
+
+            <div class="prompt-tip" id="prompt-tip"></div>
+
+            <div class="wait-help" id="wait-help">
+              <strong>Wait +2 years</strong> advances the calendar and
+              <em>raises crisis meters</em>. Use it when you want later world conditions
+              (costs, adoption, infrastructure) — not to “unlock” a category card.
+              EmTechs are always pickable; Feasibility judges whether your <em>how it works</em> over-claims this year.
+            </div>
+
+            <div class="form-actions game-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
+              <button type="button" class="btn btn-secondary" id="btn-wait" title="Advance calendar and world conditions; crisis rises. Categories stay pickable.">
+                Wait +2 years
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
+                Face the challenge →
+              </button>
+            </div>
+            <p class="challenge-ready-hint" id="challenge-ready-hint" aria-live="polite"></p>
+            <p class="foot-hint">
+              Pipeline: invent → feasibility → challenge → deploy. Use <strong>Art of the possible</strong> on the co-inventor for milestones &amp; capabilities.
+            </p>
+          </div>
+        </main>
+
+        <aside class="vision-panel side-panel">
+          <div class="side-tabs" role="tablist">
+            <button type="button" class="side-tab active" data-tab="vision" role="tab">Future vision</button>
+            <button type="button" class="side-tab" data-tab="coinventor" role="tab">AI co-inventor</button>
+          </div>
+
+          <div id="side-vision" class="side-pane" role="tabpanel">
+            <div class="vision-stage-bar">
+              <div>
+                <div class="vision-stage-name" id="vision-stage-name">Today</div>
+                <div class="vision-stage-blurb" id="vision-stage-blurb">The place as it is.</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision">↻</button>
+            </div>
+            <div class="vision-canvas-wrap" id="vision-root">
+              <img class="vision-image" alt="Vision of this place" hidden />
+              <div class="vision-loading" hidden>
+                <div class="vision-loading-inner">
+                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="vision-loading-text">Imagining this place…</span>
+                </div>
+              </div>
+              <div class="vision-placeholder">Add technologies or describe your idea — the image follows</div>
+              <div class="vision-status" aria-live="polite"></div>
+            </div>
+            <div id="vision-narratives" class="vision-narratives"></div>
+          </div>
+
+          <div id="side-coinventor" class="side-pane" role="tabpanel" hidden>
+            <div id="co-inventor-root" class="co-inventor-root"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- CHALLENGE (random Moloch / Nature / Policy attack) -->
+    <section id="screen-challenge-step" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills invent-steps" aria-label="Mission steps">
+          <span class="pill done" data-step="invent">1 · Invent</span>
+          <span class="pill active" data-step="challenge">2 · Challenge</span>
+          <span class="pill" data-step="deploy">3 · Deploy</span>
+        </div>
+        <div class="hud-clock">
+          <span class="hud-year" id="ch-hud-year">2026</span>
+          <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-challenge-back">← Invent</button>
+      </header>
+      <div class="content challenge-step-content">
+        <div class="challenge-step-card panel">
+          <div class="label" id="challenge-angle-label">Challenge</div>
+          <h1 id="challenge-angle-title">Moloch</h1>
+          <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
+          <div class="challenge-speech" id="challenge-speech">
+            <p class="muted">Loading challenge…</p>
+          </div>
+          <p class="challenge-question" id="challenge-question"></p>
+
+          <div class="challenge-help panel" id="challenge-help">
+            <div class="challenge-help-header">
+              <div>
+                <div class="progress-strip-label">AI co-inventor help</div>
+                <p class="scrutiny-sub">You still own the answer — the AI can coach or draft a reply you edit.</p>
+              </div>
+            </div>
+            <div class="challenge-help-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-coach">
+                Coach me
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-draft">
+                Draft an answer
+              </button>
+            </div>
+            <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
+            <form class="challenge-help-form" id="challenge-help-form">
+              <input
+                type="text"
+                id="challenge-help-input"
+                placeholder="Ask for help… e.g. “What would a good Moloch answer mention?”"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
+            </form>
+          </div>
+
+          <div class="field">
+            <label for="challenge-answer">Your answer</label>
+            <textarea id="challenge-answer" rows="5" placeholder="How do you answer this attack on your idea?"></textarea>
+          </div>
+          <div id="challenge-feedback" class="challenge-feedback" hidden></div>
+          <div class="form-actions game-actions">
+            <button type="button" class="btn btn-secondary" id="btn-challenge-submit">Submit answer</button>
+            <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
+              Deploy invention →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OUTCOME / LEARN -->
+    <section id="screen-outcome" class="screen">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills">
+          <span class="pill done">Invent</span>
+          <span class="pill done">Challenge</span>
+          <span class="pill done">Deploy</span>
+          <span class="pill active">Learn</span>
+        </div>
+        <div style="width: 5rem"></div>
+      </header>
+      <div class="content">
+        <div class="reveal-hero">
+          <h1 id="outcome-headline">Outcome</h1>
+          <div class="invention-name" id="outcome-name">—</div>
+          <p id="outcome-meta" style="color: var(--text-dim)"></p>
+        </div>
+
+        <div class="panel" style="margin-bottom: 1.25rem; overflow: hidden">
+          <div class="vision-canvas-wrap reveal-vision-wrap" id="outcome-vision-root" style="height: 280px">
+            <img class="vision-image" id="outcome-vision-image" alt="Final vision" hidden />
+            <div class="vision-status" id="outcome-vision-status"></div>
+          </div>
+        </div>
+
+        <div class="future-story">
+          <h3 id="outcome-story-label">What happened</h3>
+          <p id="outcome-story"></p>
+        </div>
+
+        <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
+        <ul id="outcome-lessons" class="feedback-list"></ul>
+
+        <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Foresight for your stack</h3>
+        <div id="outcome-foresight" class="foresight-grid"></div>
+
+        <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Technologies you used</h3>
+        <div id="outcome-techs" class="learn-grid"></div>
+
+        <div class="form-actions" style="justify-content: center">
+          <button type="button" class="btn btn-secondary" id="btn-outcome-retry">Keep inventing</button>
+          <button type="button" class="btn btn-primary" id="btn-outcome-new">New mission</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech modal -->
+    <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal">
+        <h3 id="modal-title">Tech</h3>
+        <p id="modal-summary"></p>
+        <div class="learn-block">
+          <strong>Learn</strong>
+          <span id="modal-learn"></span>
+        </div>
+        <div class="learn-block" style="background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.25)">
+          <strong>Timing &amp; risk</strong>
+          <span id="modal-hint"></span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="modal-close">Close</button>
+          <button type="button" class="btn btn-primary btn-sm" id="modal-add">Add to stack</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

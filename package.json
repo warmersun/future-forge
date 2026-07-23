@@ -1,0 +1,14 @@
+{
+  "name": "future-forge",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Learning game: invent with emerging technologies and an AI co-inventor",
+  "scripts": {
+    "start": "node server.mjs",
+    "serve": "node server.mjs"
+  },
+  "dependencies": {
+    "openai": "^6.16.0"
+  }
+}

@@ -1,0 +1,218 @@
+/**
+ * Future vision — AI image generation via /api/vision (Grok Imagine)
+ * Generates a base scene, then evolves it as technologies are added.
+ */
+
+/** Collect vision feature tags from selected tech objects */
+export function featuresFromTechs(techs) {
+  const features = new Set();
+  for (const tech of techs) {
+    if (!tech.vision) continue;
+    for (const [key, val] of Object.entries(tech.vision)) {
+      if (key === "narrative") continue;
+      if (typeof val === "string") features.add(val);
+    }
+  }
+  return [...features];
+}
+
+export function narrativesFromTechs(techs) {
+  return techs
+    .filter((t) => t.vision?.narrative)
+    .map((t) => ({ id: t.id, name: t.name, text: t.vision.narrative }));
+}
+
+export class VisionRenderer {
+  /**
+   * @param {HTMLElement} root — container with .vision-image, status, etc.
+   */
+  constructor(root) {
+    this.root = root;
+    this.img = root.querySelector(".vision-image");
+    this.status = root.querySelector(".vision-status");
+    this.overlay = root.querySelector(".vision-loading");
+    this.sessionId = crypto.randomUUID?.() || `v-${Date.now()}`;
+    this.lastFingerprint = "";
+    this.pending = null;
+    this.timer = null;
+    this.busy = false;
+    this.queue = null;
+    this.currentUrl = "";
+  }
+
+  destroy() {
+    clearTimeout(this.timer);
+    this.pending = null;
+  }
+
+  /** Reset session (new challenge) so present-day regenerates cleanly */
+  newSession() {
+    this.sessionId = crypto.randomUUID?.() || `v-${Date.now()}`;
+    this.lastFingerprint = "";
+    this.currentUrl = "";
+    if (this.img) {
+      this.img.removeAttribute("src");
+      this.img.hidden = true;
+    }
+    this.setStatus("A new horizon waits to be imagined…");
+  }
+
+  resize() {
+    /* no-op — image is CSS-sized */
+  }
+
+  /**
+   * @param {object} state
+   * @param {string} state.stageId
+   * @param {object} state.stage
+   * @param {object} state.challenge
+   * @param {object[]} state.techs
+   * @param {string} state.inventionName
+   * @param {string} [state.inventionHow]
+   * @param {string} [state.inventionImpact]
+   * @param {string} [state.inventionRisk]
+   * @param {boolean} [state.immediate]
+   * @param {boolean} [state.force]
+   * @param {number} [state.debounceMs]
+   */
+  setState(state) {
+    this.pending = state;
+    clearTimeout(this.timer);
+    const delay = state.immediate
+      ? 80
+      : typeof state.debounceMs === "number"
+        ? state.debounceMs
+        : 1400;
+    this.timer = setTimeout(() => this.flush(), delay);
+  }
+
+  async flush() {
+    const state = this.pending;
+    if (!state?.challenge) return;
+
+    const techKey = (state.techs || []).map((t) => t.id).sort().join(",");
+    const howKey = (state.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 400);
+    const lifeKey = (state.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 400);
+    const pressureKey = state.pressure
+      ? Object.entries(state.pressure)
+          .map(([k, v]) => `${k}:${v}`)
+          .join(",")
+      : "";
+    const fingerprint = [
+      state.challenge.id,
+      state.stageId,
+      state.year || "",
+      state.place || "",
+      pressureKey,
+      techKey,
+      (state.inventionName || "").trim(),
+      howKey,
+      lifeKey,
+    ].join("|");
+    if (!state.force && fingerprint === this.lastFingerprint && this.currentUrl) {
+      return;
+    }
+
+    if (this.busy) {
+      this.queue = state;
+      return;
+    }
+
+    this.busy = true;
+    const hasNarrative = Boolean(howKey || lifeKey);
+    this.setLoading(
+      true,
+      state.stageId === "present" && !this.currentUrl
+        ? "Imagining the present…"
+        : hasNarrative
+          ? "Painting your pathway into the world…"
+          : "Imagining how the future shifts…"
+    );
+
+    try {
+      const payload = {
+        sessionId: this.sessionId,
+        force: Boolean(state.force),
+        inventionName: state.inventionName || "",
+        inventionHow: state.inventionHow || "",
+        inventionImpact: state.inventionImpact || "",
+        inventionRisk: state.inventionRisk || "",
+        year: state.year || null,
+        place: state.place || "",
+        pressure: state.pressure || null,
+        challenge: {
+          id: state.challenge.id,
+          title: state.challenge.title,
+          problem: state.challenge.problem,
+          visionTheme: state.challenge.visionTheme,
+        },
+        stage: {
+          id: state.stageId,
+          name: state.stage?.name || state.stageId,
+        },
+        techs: (state.techs || []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          summary: t.summary,
+          narrative: t.vision?.narrative || "",
+        })),
+      };
+
+      const res = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `Vision failed (${res.status})`);
+      }
+
+      this.lastFingerprint = fingerprint;
+      this.currentUrl = data.imageUrl;
+      if (this.img && data.imageUrl) {
+        this.img.hidden = false;
+        // Fade transition
+        this.img.classList.add("is-fading");
+        const show = () => {
+          this.img.classList.remove("is-fading");
+        };
+        this.img.onload = show;
+        this.img.src = data.imageUrl;
+        if (this.img.complete) show();
+      }
+
+      const modeLabel = data.cached
+        ? "Cached vision"
+        : data.mode === "edit"
+          ? "Evolved with Imagine"
+          : "Generated with Imagine";
+      this.setStatus(`${modeLabel} · ${state.stage?.name || state.stageId}`);
+    } catch (e) {
+      console.error("[vision]", e);
+      this.setStatus(e.message || "Could not imagine this future");
+    } finally {
+      this.busy = false;
+      this.setLoading(false);
+      if (this.queue) {
+        const next = this.queue;
+        this.queue = null;
+        this.pending = next;
+        this.flush();
+      }
+    }
+  }
+
+  setLoading(on, message) {
+    if (this.overlay) {
+      this.overlay.hidden = !on;
+      const text = this.overlay.querySelector(".vision-loading-text");
+      if (text && message) text.textContent = message;
+    }
+    if (on && message) this.setStatus(message);
+  }
+
+  setStatus(msg) {
+    if (this.status) this.status.textContent = msg;
+  }
+}
