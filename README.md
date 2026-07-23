@@ -157,6 +157,8 @@ Do not commit secrets. Do not put API keys in the client or the git repo.
 
 Future Forge is **source available**, **not** OSI open source.
 
+**Copyright / Licensor:** Warmer Sun Education, a sole proprietorship in Vancouver, BC, Canada.
+
 | Use | Free under `LICENSE.md`? |
 |-----|------------------------|
 | **Personal** self-host (private hobby / own learning only) | **Yes** |

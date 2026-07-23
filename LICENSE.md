@@ -2,9 +2,13 @@ Future Forge License
 Version 1.0 — Personal Use Grant + Commercial License Required
 
 This is a source-available software license, not an OSI-approved open-source
-license. The maintainers may publish revised versions.
+license. The Licensor may publish revised versions.
 
-Copyright (c) 2026 Future Forge authors. All rights reserved.
+Copyright (c) 2026 Warmer Sun Education, a sole proprietorship in Vancouver, BC,
+Canada. All rights reserved.
+
+"Licensor" means Warmer Sun Education, a sole proprietorship in Vancouver, BC,
+Canada.
 
 ----------------------------------------------------------------------
 1. Definitions

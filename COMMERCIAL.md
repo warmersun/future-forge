@@ -2,6 +2,8 @@
 
 Future Forge is **source available**, not OSI open source.
 
+**Licensor:** Warmer Sun Education, a sole proprietorship in Vancouver, BC, Canada.
+
 **Free:** personal, non-commercial self-host only (see `LICENSE.md`).  
 **Paid license required:** schools, companies, nonprofits, multi-user deployments, and any cloud / managed service.
 
@@ -83,14 +85,11 @@ Self-host under Education/Commercial is still available for orgs that prefer on-
 
 1. Email or open a GitHub issue with subject **Commercial license** (see contact below).  
 2. Include: organization name, use case (Education / Commercial / Cloud), approximate users, self-host vs want hosted.  
-3. We send an order form / agreement and invoice.  
+3. Warmer Sun Education sends an order form / agreement and invoice.  
 4. On signature (and payment, if required), you receive a license confirmation.
 
-**Contact:** open an issue on the GitHub repository  
-`https://github.com/warmersun/future-forge`  
-or email the maintainers listed in the repository profile.
-
-*(Replace with a dedicated licensing@ address when ready.)*
+**Licensor / contact:** Warmer Sun Education (sole proprietorship, Vancouver, BC, Canada)  
+GitHub: `https://github.com/warmersun/future-forge` (issue subject: **Commercial license**)
 
 ---
 
