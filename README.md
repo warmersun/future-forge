@@ -170,5 +170,3 @@ Future Forge is **source available**, **not** OSI open source.
 **Personal free use** means a natural person, non-commercial, on infrastructure they control, not offering the game as a product, service, or institutional classroom tool. If you are unsure, you need a commercial license — open a GitHub issue with subject **Commercial license**.
 
 Content and art are development-time static assets; scenario text may be generated via the co-inventor when AI is available. AI providers’ terms apply to any keys you use.
-
-> The license text is a practical draft for this product model. Have a lawyer review before large commercial enforcement or sales.

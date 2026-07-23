@@ -1,9 +1,8 @@
 Future Forge License
 Version 1.0 — Personal Use Grant + Commercial License Required
 
-IMPORTANT: This is a source-available software license, not an OSI-approved
-open-source license. Have a qualified lawyer review before relying on it for
-enforcement or sales. The maintainers may publish revised versions.
+This is a source-available software license, not an OSI-approved open-source
+license. The maintainers may publish revised versions.
 
 Copyright (c) 2026 Future Forge authors. All rights reserved.
 
