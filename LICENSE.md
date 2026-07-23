@@ -35,7 +35,7 @@ License.
 2. Free Personal Use Grant
 ----------------------------------------------------------------------
 
-Subject to this License, the copyright holders grant You a free, worldwide,
+Subject to this License, the Licensor grants You a free, worldwide,
 non-exclusive, non-transferable, revocable license to use, copy, modify, and
 run the Software solely for Personal Use.
 
@@ -53,8 +53,8 @@ Under the Personal Use Grant You may NOT:
 ----------------------------------------------------------------------
 
 Any Commercial Use requires a separate written commercial license from the
-copyright holders. See COMMERCIAL.md for license tiers (Education,
-Commercial, Cloud / Managed Service) and how to obtain one.
+Licensor. See COMMERCIAL.md for license tiers (Education, Commercial,
+Cloud / Managed Service) and how to obtain one.
 
 Without a commercial license, Commercial Use is prohibited.
 
@@ -71,10 +71,10 @@ does not grant rights beyond this License or a separate commercial agreement.
 ----------------------------------------------------------------------
 
 By submitting a contribution (including pull requests), You assign to the
-copyright holders (or grant an irrevocable, perpetual, worldwide license
-including the right to relicense) sufficient rights for the project to
-distribute the contribution under this License and under commercial licenses.
-If You cannot grant those rights, do not contribute.
+Licensor (or grant an irrevocable, perpetual, worldwide license including the
+right to relicense) sufficient rights for the Licensor to distribute the
+contribution under this License and under commercial licenses. If You cannot
+grant those rights, do not contribute.
 
 ----------------------------------------------------------------------
 6. Trademarks
@@ -91,10 +91,9 @@ Personal Use. Official hosted offerings and branding remain reserved.
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
-OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ----------------------------------------------------------------------
 8. Termination

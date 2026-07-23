@@ -105,7 +105,7 @@ Pricing is **custom** until public plans are published. Expect:
 
 ## Contributions
 
-By contributing code you agree that contributions may be distributed under the Future Forge License and under commercial licenses we grant to customers (see `LICENSE.md` §5). Do not contribute code you cannot license that way.
+By contributing code you agree that contributions may be distributed under the Future Forge License and under commercial licenses Warmer Sun Education grants to customers (see `LICENSE.md` §5). Do not contribute code you cannot license that way.
 
 ---
 
