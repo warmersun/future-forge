@@ -2933,6 +2933,7 @@ function ensureCoInventor() {
   if (state.coInventor && state.coInventor.root === root) return state.coInventor;
 
   const messages = state.coInventor?.messages || [];
+  const onChallenge = state.screen === "challenge-step";
   state.coInventor = new CoInventor({
     getContext: () => ({
       challenge: state.mission
@@ -2963,6 +2964,14 @@ function ensureCoInventor() {
     }),
     applyProposals: applyCoInventorProposals,
     techById,
+    // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
+    showQuickActions: !onChallenge,
+    subtitle: onChallenge
+      ? "Help with this challenger — you still own Defend / Fix / Sidestep"
+      : "Your creative partner for this challenge",
+    placeholder: onChallenge
+      ? "Ask about this attack… e.g. “What would a solid Moloch answer name?”"
+      : undefined,
     beforeRequest: (mode) => {
       if (!apEnabled()) return true;
       // First free coach already handled in coachChallenge; co-inventor chat always costs

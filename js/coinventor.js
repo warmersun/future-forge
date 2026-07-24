@@ -23,6 +23,9 @@ export class CoInventor {
    * @param {(techId: string) => object|null} opts.techById
    * @param {(mode: string) => boolean|Promise<boolean>} [opts.beforeRequest] — return false to abort (e.g. no AP)
    * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
+   * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
+   * @param {string} [opts.placeholder] — compose box placeholder
+   * @param {string} [opts.subtitle] — header subtitle default before health check
    */
   constructor(opts) {
     this.getContext = opts.getContext;
@@ -30,6 +33,11 @@ export class CoInventor {
     this.techById = opts.techById;
     this.beforeRequest = opts.beforeRequest || null;
     this.afterRequest = opts.afterRequest || null;
+    this.showQuickActions = opts.showQuickActions !== false;
+    this.placeholder =
+      opts.placeholder ||
+      "Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”";
+    this.subtitle = opts.subtitle || "Your creative partner for this challenge";
     this.messages = [];
     this.busy = false;
     this.available = null;
@@ -42,31 +50,36 @@ export class CoInventor {
       <div class="co-header">
         <div>
           <div class="co-title">AI Co-Inventor</div>
-          <div class="co-sub" id="co-status">Your creative partner for this challenge</div>
+          <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
       </div>
-      <div class="co-actions" id="co-actions"></div>
+      <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
       <div class="co-messages" id="co-messages" role="log" aria-live="polite"></div>
       <form class="co-compose" id="co-form">
         <textarea
           id="co-input"
           rows="2"
-          placeholder="Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”"
+          placeholder="${escapeHtml(this.placeholder)}"
         ></textarea>
         <button type="submit" class="btn btn-primary btn-sm" id="co-send">Send</button>
       </form>
     `;
 
     const actions = root.querySelector("#co-actions");
-    actions.innerHTML = QUICK_ACTIONS.map(
-      (a) =>
-        `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
-    ).join("");
-
-    actions.querySelectorAll(".co-chip").forEach((btn) => {
-      btn.addEventListener("click", () => this.runMode(btn.dataset.mode));
-    });
+    if (this.showQuickActions && actions) {
+      actions.hidden = false;
+      actions.innerHTML = QUICK_ACTIONS.map(
+        (a) =>
+          `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
+      ).join("");
+      actions.querySelectorAll(".co-chip").forEach((btn) => {
+        btn.addEventListener("click", () => this.runMode(btn.dataset.mode));
+      });
+    } else if (actions) {
+      actions.hidden = true;
+      actions.innerHTML = "";
+    }
 
     root.querySelector("#co-form").addEventListener("submit", (e) => {
       e.preventDefault();
