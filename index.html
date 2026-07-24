@@ -337,9 +337,12 @@
           <span class="pill active" data-step="challenge">2 · Challenge</span>
           <span class="pill" data-step="deploy">3 · Deploy</span>
         </div>
-        <div class="hud-clock">
+        <div class="hud-clock" id="ch-hud-clock" title="Mission calendar and resources">
           <span class="hud-year" id="ch-hud-year">2026</span>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
+          <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
+          <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5</span>
+          <span class="hud-will" id="ch-hud-will" hidden title="Political will">Will 3</span>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-challenge-back">← Invent</button>
       </header>
@@ -371,7 +374,10 @@
             <div class="challenge-help-header">
               <div>
                 <div class="progress-strip-label">AI co-inventor help</div>
-                <p class="scrutiny-sub">You still own the answer — the AI can coach or draft a reply you edit.</p>
+                <p class="scrutiny-sub">
+                  You still own the answer — the AI can coach or draft a reply you edit
+                  (<strong>1 AP</strong> each).
+                </p>
               </div>
             </div>
             <div class="challenge-help-actions">

@@ -1716,6 +1716,7 @@ async function poseChallenge(angleMeta) {
   setChallengerVisual(angle);
   $("#challenge-angle-title").textContent = angle.label;
   $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
+  renderChallengeHud();
 
   try {
     const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
@@ -1744,11 +1745,51 @@ async function poseChallenge(angleMeta) {
     $("#challenge-question").textContent = fb.question;
   }
   $("#btn-challenge-submit").disabled = false;
+  renderChallengeHud();
+}
+
+function renderChallengeHud() {
+  const yearEl = $("#ch-hud-year");
+  if (!yearEl) return;
+  yearEl.textContent = String(state.year);
+  const waitsBit = state.waits ? ` · waits ${state.waits}` : "";
+  const turnEl = $("#ch-hud-turn");
+  if (turnEl) turnEl.textContent = `Turn ${state.turn}${waitsBit}`;
+
+  const apEl = $("#ch-hud-ap");
+  if (apEl) {
+    if (apEnabled()) {
+      apEl.hidden = false;
+      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
+      apEl.title = "Action points. Coach / Draft / Ask and submitting for judgment cost 1 AP each.";
+    } else {
+      apEl.hidden = true;
+    }
+  }
+  const budgetEl = $("#ch-hud-budget");
+  if (budgetEl) {
+    if (budgetWillEnabled()) {
+      budgetEl.hidden = false;
+      budgetEl.textContent = `Budget ${state.budget ?? 0}`;
+      budgetEl.title = "Capital (same as invent). Challenge success can raise Budget.";
+    } else {
+      budgetEl.hidden = true;
+    }
+  }
+  const willEl = $("#ch-hud-will");
+  if (willEl) {
+    if (budgetWillEnabled()) {
+      willEl.hidden = false;
+      willEl.textContent = `Will ${state.will ?? 0}`;
+      willEl.title = "Political will (same as invent). Pass/partial challenge can raise Will.";
+    } else {
+      willEl.hidden = true;
+    }
+  }
 }
 
 function renderChallengeStep() {
-  $("#ch-hud-year").textContent = String(state.year);
-  $("#ch-hud-turn").textContent = `Turn ${state.turn}`;
+  renderChallengeHud();
   const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
   if (angle) {
     $("#challenge-angle-title").textContent = angle.label;
@@ -1803,11 +1844,24 @@ async function coachChallenge(mode, userText) {
     flashToast("Wait for the challenge to load first.");
     return;
   }
+  if (apEnabled()) {
+    const reserve = dispatchSim("reserve_ai", {
+      mode,
+      reservedAp: 1,
+      clientActionId: `ch-ai-${Date.now()}`,
+    });
+    if (!reserve.ok) {
+      flashToast("No AP left for AI help — End turn on Invent, or submit without coaching.");
+      return;
+    }
+    renderChallengeHud();
+  }
   state.aiBusy = true;
   setChallengeHelpBusy(true);
   const pendingLabel =
     mode === "draft-challenge" ? "Drafting an answer…" : "Coaching…";
   showChallengeCoach(aiPendingHtml(pendingLabel));
+  let requestOk = false;
   try {
     const data = await apiCoInvent(mode, userText || "[Help with challenge]", {
       challengeAngle: state.challengeAngle,
@@ -1827,8 +1881,10 @@ async function coachChallenge(mode, userText) {
       if (panel) panel.dataset.draft = draft;
     }
     showChallengeCoach(html);
+    requestOk = true;
   } catch (e) {
-    // local fallback
+    // local fallback — still counts as a used AI attempt (AP spent)
+    requestOk = true;
     const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle) || CHALLENGE_ANGLES[0];
     const place = state.mission?.place || "this place";
     const name = state.inventionName || "your invention";
@@ -1858,8 +1914,13 @@ async function coachChallenge(mode, userText) {
       );
     }
   } finally {
+    if (apEnabled()) {
+      if (requestOk) dispatchSim("resolve_ai");
+      else dispatchSim("reject_ai");
+    }
     state.aiBusy = false;
     setChallengeHelpBusy(false);
+    renderChallengeHud();
   }
 }
 
@@ -1870,6 +1931,18 @@ async function submitChallengeAnswer() {
     flashToast("Give a real answer — a short paragraph.");
     return;
   }
+  if (apEnabled()) {
+    const reserve = dispatchSim("reserve_ai", {
+      mode: "judge-challenge",
+      reservedAp: 1,
+      clientActionId: `judge-${Date.now()}`,
+    });
+    if (!reserve.ok) {
+      flashToast("No AP left to submit for judgment — return to Invent and End turn first.");
+      return;
+    }
+    renderChallengeHud();
+  }
   $("#btn-challenge-submit").disabled = true;
   const fbPending = $("#challenge-feedback");
   if (fbPending) {
@@ -1877,6 +1950,7 @@ async function submitChallengeAnswer() {
     fbPending.className = "challenge-feedback is-pending";
     fbPending.innerHTML = aiPendingHtml("Judging your answer…");
   }
+  let requestOk = false;
   try {
     const data = await apiCoInvent("judge-challenge", answer, {
       challengeAngle: state.challengeAngle,
@@ -1904,7 +1978,9 @@ async function submitChallengeAnswer() {
     if (budgetWillEnabled()) {
       dispatchSim("challenge_income", { verdict: state.challengeVerdict });
     }
+    requestOk = true;
   } catch {
+    requestOk = true;
     const ok = answer.length >= 40;
     state.challengeVerdict = ok ? "partial" : "fail";
     state.challengePassed = ok;
@@ -1917,6 +1993,10 @@ async function submitChallengeAnswer() {
     if (budgetWillEnabled()) {
       dispatchSim("challenge_income", { verdict: state.challengeVerdict });
     }
+  }
+  if (apEnabled()) {
+    if (requestOk) dispatchSim("resolve_ai");
+    else dispatchSim("reject_ai");
   }
   $("#btn-challenge-submit").disabled = false;
   renderChallengeStep();
