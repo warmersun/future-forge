@@ -128,6 +128,7 @@
         <div class="hud-clock" id="hud-clock" title="Mission calendar">
           <span class="hud-year" id="hud-year">2026</span>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
+          <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
         </div>
         <div
           class="hud-crisis-wrap"
@@ -255,9 +256,19 @@
               EmTechs are always pickable; Feasibility judges whether your <em>how it works</em> over-claims this year.
             </div>
 
+            <p class="wait-preview" id="wait-preview" aria-live="polite" hidden></p>
             <div class="form-actions game-actions">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
-              <button type="button" class="btn btn-secondary" id="btn-wait" title="Advance calendar and world conditions; crisis rises. Categories stay pickable.">
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-end-turn"
+                hidden
+                title="Refill AP without advancing the calendar or crisis"
+              >
+                End turn
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-wait" title="Advance calendar and world conditions; crisis rises. Unspent AP are burned. Categories stay pickable.">
                 Wait +2 years
               </button>
               <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
@@ -403,6 +414,7 @@
         <div class="reveal-hero">
           <h1 id="outcome-headline">Outcome</h1>
           <div class="invention-name" id="outcome-name">—</div>
+          <div id="outcome-stars" class="outcome-stars" hidden></div>
           <p id="outcome-meta" style="color: var(--text-dim)"></p>
         </div>
 

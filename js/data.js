@@ -8,6 +8,17 @@ export const GAME = {
   tagline: "Invent local solutions with emerging tech — beat the clock as the future arrives.",
   startYear: 2026,
   yearsPerTurn: 2,
+  /** Solo / friends default action points per invent turn */
+  apMax: 3,
+  features: {
+    runReport: true,
+    actionPoints: true,
+    budgetWill: false,
+    scrutinyCombat: false,
+    deployStages: false,
+    multiplayer: false,
+    hotseat: false,
+  },
 };
 
 /**
@@ -1357,6 +1368,11 @@ export const FRONTIER_CLAIM_PATTERNS = [
 /** Pilot-honest language softens longer-horizon categories */
 const PILOT_LANGUAGE =
   /\b(pilot|trial|partnership|partner with|lab|research|limited|mapped corridor|geofenced|supervised|clinical|opt[- ]in|phase\s*1|prototype|with oversight|human[- ]in[- ]the[- ]loop)\b/i;
+
+/** Exported for run scoring / honesty without leaking private regex imports elsewhere */
+export function hasPilotLanguage(text) {
+  return PILOT_LANGUAGE.test(String(text || ""));
+}
 
 /** Routine/universal claims that stretch "near" capabilities */
 const ROUTINE_LANGUAGE =

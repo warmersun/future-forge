@@ -8,7 +8,8 @@
     "start": "node server.mjs",
     "serve": "node server.mjs",
     "check:briefs": "node scripts/check-problem-briefs.mjs",
-    "check:vision-prompts": "node scripts/check-vision-prompts.mjs"
+    "check:vision-prompts": "node scripts/check-vision-prompts.mjs",
+    "test": "node --test js/sim/*.test.js"
   },
   "dependencies": {
     "openai": "^6.16.0"

@@ -25,6 +25,21 @@ import {
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
+import {
+  clonePressure as simClonePressure,
+  previewPressureAfterWait,
+  applyPressureDrop,
+  maxPressure as simMaxPressure,
+  totalPressure as simTotalPressure,
+} from "./sim/pressure.js";
+import { computeDeployDrop } from "./sim/deploy.js";
+import { isWin as simIsWin, isCollapsed as simIsCollapsed } from "./sim/collapse.js";
+import { scoreRun, starLabel } from "./sim/scoring.js";
+import {
+  applyAction,
+  simSliceFromState,
+  applySimSliceToState,
+} from "./sim/actions.js";
 
 const state = {
   screen: "title",
@@ -32,6 +47,7 @@ const state = {
   mission: null,
   year: GAME.startYear,
   turn: 0,
+  waits: 0,
   pressure: {},
   selectedTechIds: [],
   inventionName: "",
@@ -46,6 +62,8 @@ const state = {
   challengeFeedback: "",
   challengeVerdict: null,
   challengeFails: 0,
+  hadChallengeAttempt: false,
+  lastChallengeVerdict: null,
   domainFilter: "all",
   vision: null,
   coInventor: null,
@@ -53,9 +71,12 @@ const state = {
   lastNews: "",
   waitReport: "",
   outcome: null,
+  runReport: null,
   aiBusy: false,
   /** @type {{ level: string, reason: string, forKey: string } | null} */
   aiTiming: null,
+  /** Timing snapshot at deploy click for scoring */
+  timingLevelAtDeploy: null,
   /** @type {Record<string, object[]>} last generated scenarios per theme (max SCENARIO_COUNT) */
   scenarioCache: {},
   /** @type {object[]} scenarios currently shown on mission screen */
@@ -68,10 +89,37 @@ const state = {
    * Push on select, remove on deselect; Learn modal shows this order.
    */
   learnOrder: [],
+  // G1 action economy
+  ap: GAME.apMax ?? 3,
+  apMax: GAME.apMax ?? 3,
+  apSpentThisTurn: 0,
+  writeCommitsThisTurn: 0,
+  learnOpenedThisTurn: false,
+  turnPhase: "act",
+  pendingAi: null,
+  lastWriteSnapshot: { name: "", how: "", impact: "" },
 };
 
 const STORAGE_SCENARIOS = "future-forge:scenarioCache";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
+const STORAGE_RUNS = "future-forge:runReports";
+
+function features() {
+  return GAME.features || {};
+}
+
+function apEnabled() {
+  return Boolean(features().actionPoints);
+}
+
+function dispatchSim(type, payload = {}) {
+  const result = applyAction(simSliceFromState(state), { type, payload }, {
+    features: features(),
+    apMax: state.apMax ?? GAME.apMax,
+  });
+  if (result.ok) applySimSliceToState(state, result.sim);
+  return result;
+}
 
 function loadPersistedProgress() {
   try {
@@ -173,24 +221,28 @@ function currentStage() {
 }
 
 function clonePressure(p) {
-  return { ...p };
+  return simClonePressure(p);
 }
 
 function totalPressure(p = state.pressure) {
-  return Object.values(p).reduce((a, b) => a + b, 0);
+  return simTotalPressure(p);
 }
 
 function maxPressure(p = state.pressure) {
-  return Math.max(0, ...Object.values(p));
+  return simMaxPressure(p);
 }
 
 function wonMission() {
-  const win = state.mission?.winMax || {};
-  return Object.entries(win).every(([k, max]) => (state.pressure[k] ?? 0) <= max);
+  return simIsWin(state.pressure, state.mission?.winMax || {});
 }
 
 function collapsed() {
-  return state.year >= state.mission.collapseYear || maxPressure() >= 5;
+  if (!state.mission) return false;
+  return simIsCollapsed({
+    year: state.year,
+    collapseYear: state.mission.collapseYear,
+    pressure: state.pressure,
+  });
 }
 
 function computeSynergies(techs) {
@@ -596,6 +648,7 @@ function startMission(mission) {
   state.global = globalById(mission.globalId) || state.global;
   state.year = mission.startYear;
   state.turn = 0;
+  state.waits = 0;
   state.pressure = clonePressure(mission.pressure);
   state.selectedTechIds = [];
   state.learnOrder = [];
@@ -611,12 +664,24 @@ function startMission(mission) {
   state.challengeFeedback = "";
   state.challengeVerdict = null;
   state.challengeFails = 0;
+  state.hadChallengeAttempt = false;
+  state.lastChallengeVerdict = null;
   state.domainFilter = "all";
   state.sideTab = "vision";
   state.lastNews = "";
   state.waitReport = "";
   state.outcome = null;
+  state.runReport = null;
   state.aiTiming = null;
+  state.timingLevelAtDeploy = null;
+  state.apMax = GAME.apMax ?? 3;
+  state.ap = state.apMax;
+  state.apSpentThisTurn = 0;
+  state.writeCommitsThisTurn = 0;
+  state.learnOpenedThisTurn = false;
+  state.turnPhase = "act";
+  state.pendingAi = null;
+  state.lastWriteSnapshot = { name: "", how: "", impact: "" };
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   state.coInventor?.onChallengeStart?.();
@@ -992,7 +1057,18 @@ function renderFeasibility() {
 
 function renderHud() {
   $("#hud-year").textContent = String(state.year);
-  $("#hud-turn").textContent = `Turn ${state.turn} · fail at ${state.mission.collapseYear}`;
+  const waitsBit = state.waits ? ` · waits ${state.waits}` : "";
+  $("#hud-turn").textContent = `Turn ${state.turn}${waitsBit} · fail at ${state.mission.collapseYear}`;
+  const apEl = $("#hud-ap");
+  if (apEl) {
+    if (apEnabled()) {
+      apEl.hidden = false;
+      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
+      apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
+    } else {
+      apEl.hidden = true;
+    }
+  }
   const box = $("#hud-pressure");
   box.innerHTML = Object.entries(state.pressure)
     .map(([k, v]) => {
@@ -1006,6 +1082,8 @@ function renderHud() {
     p.classList.toggle("active", step === "invent" && state.screen === "workshop");
     p.classList.toggle("done", step === "invent" && state.screen !== "workshop");
   });
+  updateWaitPreview();
+  updateEndTurnButton();
 }
 
 function renderFilters() {
@@ -1105,15 +1183,22 @@ function updateLearnButton() {
 function onTechClick(id) {
   const idx = state.selectedTechIds.indexOf(id);
   if (idx >= 0) {
-    state.selectedTechIds.splice(idx, 1);
+    const r = dispatchSim("deselect_tech", { techId: id });
+    if (!r.ok) return;
     removeFromLearnOrder(id);
   } else {
     if (state.selectedTechIds.length >= 8) {
       flashToast("Stack full (8). Remove one first.");
       return;
     }
-    state.selectedTechIds.push(id);
-    pushLearnOrder(id);
+    const r = dispatchSim("select_tech", { techId: id });
+    if (!r.ok) {
+      if (r.error === "no_ap") flashToast("No AP left — End Turn or Wait.");
+      else if (r.error === "stack full") flashToast("Stack full.");
+      return;
+    }
+    // dispatch already pushed id via slice — ensure learn order
+    if (!state.learnOrder.includes(id)) pushLearnOrder(id);
   }
   state.aiTiming = null;
   renderTechList();
@@ -1124,6 +1209,7 @@ function onTechClick(id) {
   updateLearnButton();
   updateChallengeButton();
   updateVision();
+  renderHud();
   scheduleAiTimingAssess();
 }
 
@@ -1154,8 +1240,23 @@ function renderSynergy() {
     box.innerHTML = `Pick tech that fits the local problem. Crossing domains can strengthen a solution — only when it makes sense.`;
     return;
   }
+  const dropInfo = computeDeployDrop({
+    techs,
+    domains,
+    pairs,
+    inventionHow: state.inventionHow,
+    inventionImpact: state.inventionImpact,
+    challengeVerdict: state.challengeVerdict,
+    challengeAnswer: state.challengeAnswer,
+    suggested: state.mission?.suggested || [],
+  });
+  const dropNote = `<div class="deploy-drop-preview muted">Deploy crisis drop preview: <strong>−${dropInfo.drop}</strong>${
+    pairs.length
+      ? " · elegance scores each synergy pair; drop only needs one pair for +1"
+      : ""
+  }</div>`;
   if (techs.length === 1) {
-    box.innerHTML = `Stack: <strong>${escapeHtml(techs[0].name)}</strong> (${DOMAINS[domains[0]]?.label || domains[0]}). A single tool can be enough if the mechanism is clear.`;
+    box.innerHTML = `Stack: <strong>${escapeHtml(techs[0].name)}</strong> (${DOMAINS[domains[0]]?.label || domains[0]}). A single tool can be enough if the mechanism is clear.${dropNote}`;
     return;
   }
   const pairText = pairs.length
@@ -1164,9 +1265,9 @@ function renderSynergy() {
   if (domains.length >= 2) {
     box.innerHTML = `<strong>Cross-domain mix:</strong> ${domains
       .map((d) => DOMAINS[d]?.label || d)
-      .join(" + ")}.${pairText}`;
+      .join(" + ")}.${pairText}${dropNote}`;
   } else {
-    box.innerHTML = `Stack in <strong>${DOMAINS[domains[0]]?.label}</strong> (${techs.length} techs).${pairText} Fine to deploy — add another domain only if you need it.`;
+    box.innerHTML = `Stack in <strong>${DOMAINS[domains[0]]?.label}</strong> (${techs.length} techs).${pairText} Fine to deploy — add another domain only if you need it.${dropNote}`;
   }
 }
 
@@ -1229,22 +1330,74 @@ function updateChallengeButton() {
 }
 
 /* —— Wait / Challenge / Deploy —— */
+function updateWaitPreview() {
+  const el = $("#wait-preview");
+  if (!el || !state.mission) return;
+  const m = state.mission;
+  const rise = m.pressureRise || {};
+  const next = previewPressureAfterWait(state.pressure, rise);
+  const step = m.yearsPerTurn || GAME.yearsPerTurn;
+  const nextYear = state.year + step;
+  const yearsLeft = Math.max(0, m.collapseYear - nextYear);
+  const line = Object.keys(state.pressure)
+    .map((k) => {
+      const a = state.pressure[k] ?? 0;
+      const b = next[k] ?? 0;
+      const hot = b >= 4 ? " class=\"bad\"" : "";
+      return `<span${hot}>${escapeHtml(k)} ${a}→${b}</span>`;
+    })
+    .join(" · ");
+  el.hidden = false;
+  el.innerHTML = `<strong>If you Wait</strong> → year <strong>${nextYear}</strong> · crisis ${line}. ${
+    yearsLeft === 0 ? "Next Wait may hit fail year." : `${yearsLeft} year(s) of buffer after that Wait.`
+  } Unspent AP are burned.`;
+}
+
+function updateEndTurnButton() {
+  const btn = $("#btn-end-turn");
+  if (!btn) return;
+  if (!apEnabled()) {
+    btn.hidden = true;
+    return;
+  }
+  btn.hidden = false;
+  const can =
+    (state.apSpentThisTurn || 0) >= 1 ||
+    state.turnPhase === "scrutiny" ||
+    state.turnPhase === "between_stages";
+  btn.disabled = !can;
+  btn.title = can
+    ? "Refill AP without advancing the calendar or crisis"
+    : "Spend AP on an action first, or Wait";
+}
+
+function endTurn() {
+  const r = dispatchSim("end_turn");
+  if (!r.ok) {
+    if (r.error === "end_turn_noop") flashToast("Do something this turn, or Wait.");
+    return;
+  }
+  flashToast(`End turn · AP refilled (${state.ap})`);
+  renderWorkshop();
+}
+
 function waitTurn() {
   if (collapsed()) {
     finishOutcome("collapse");
     return;
   }
+  if (state.turnPhase === "scrutiny" || state.turnPhase === "between_stages") {
+    flashToast("Finish or abandon the challenge before Waiting.");
+    return;
+  }
   const m = state.mission;
-  const step = m.yearsPerTurn || GAME.yearsPerTurn;
   const prevYear = state.year;
   const prevPressure = clonePressure(state.pressure);
-  state.year += step;
-  state.turn += 1;
 
-  const rise = m.pressureRise || {};
-  for (const [k, v] of Object.entries(state.pressure)) {
-    const delta = rise[k] ?? 1;
-    state.pressure[k] = Math.min(5, v + delta);
+  const r = dispatchSim("wait", { mission: m });
+  if (!r.ok) {
+    flashToast(r.error || "Cannot Wait now.");
+    return;
   }
 
   // Soft horizon: categories whose "near" use cases often get more common
@@ -1258,14 +1411,12 @@ function waitTurn() {
     .map((k) => `${k} ${prevPressure[k]}→${state.pressure[k]}`)
     .join(" · ");
 
-  state.waitReport = `<strong>→ ${state.year}</strong> (Wait from ${prevYear})<br/>
+  state.waitReport = `<strong>→ ${state.year}</strong> (Wait from ${prevYear}; waits ${state.waits})<br/>
     <span class="ok">Capability horizon:</span> ${escapeHtml(horizon)}<br/>
     <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}<br/>
     <span class="muted">${escapeHtml(news)}</span>`;
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
   state.aiTiming = null; // re-evaluate claims in new year
-  state.challengePassed = false;
-  state.challengeVerdict = null;
 
   if (collapsed()) {
     renderWorkshop();
@@ -1273,7 +1424,7 @@ function waitTurn() {
     return;
   }
 
-  flashToast(`Clock → ${state.year} · crisis rose`);
+  flashToast(`Clock → ${state.year} · crisis rose · AP refilled`);
   renderWorkshop();
   updateVision({ immediate: true });
   scheduleAiTimingAssess();
@@ -1606,6 +1757,8 @@ async function submitChallengeAnswer() {
     });
     const verdict = (data.verdict || "partial").toLowerCase();
     state.challengeVerdict = ["pass", "partial", "fail"].includes(verdict) ? verdict : "partial";
+    state.hadChallengeAttempt = true;
+    state.lastChallengeVerdict = state.challengeVerdict;
     state.challengeFeedback = `<strong>${state.challengeVerdict.toUpperCase()}</strong> — ${escapeHtml(
       data.message || data.lesson || "Judged."
     )}${data.lesson ? `<br/><em>${escapeHtml(data.lesson)}</em>` : ""}`;
@@ -1623,6 +1776,8 @@ async function submitChallengeAnswer() {
     const ok = answer.length >= 40;
     state.challengeVerdict = ok ? "partial" : "fail";
     state.challengePassed = ok;
+    state.hadChallengeAttempt = true;
+    state.lastChallengeVerdict = state.challengeVerdict;
     state.challengeFeedback = ok
       ? "<strong>PARTIAL</strong> — Concrete enough to try a deploy."
       : "<strong>FAIL</strong> — Too vague. Name who acts, who pays, or what limit you respect.";
@@ -1654,33 +1809,24 @@ function attemptDeploy() {
 
   const domains = domainsInStack(techs);
   const pairs = computeSynergies(techs);
-  const words = (state.inventionHow + " " + state.inventionImpact).trim().split(/\s+/).length;
-  let drop = 1 + Math.min(2, techs.length - 1);
-  if (domains.length >= 2) drop += 1;
-  if (pairs.length) drop += 1;
-  if (words >= 40) drop += 1;
-  if (state.challengeVerdict === "pass") drop += 1;
-  if (state.challengeAnswer.trim().length >= 60) drop += 1;
-  const suggested = new Set(state.mission.suggested || []);
-  if (techs.filter((t) => suggested.has(t.id)).length >= 2) drop += 1;
+  const dropInfo = computeDeployDrop({
+    techs,
+    domains,
+    pairs,
+    inventionHow: state.inventionHow,
+    inventionImpact: state.inventionImpact,
+    challengeVerdict: state.challengeVerdict,
+    challengeAnswer: state.challengeAnswer,
+    suggested: state.mission.suggested || [],
+  });
+  const drop = dropInfo.drop;
+  const timingSnap =
+    state.aiTiming?.level && state.aiTiming?.forKey === timingCacheKey()
+      ? state.aiTiming.level
+      : detectClaimStretch(state.inventionHow, techs, state.year).level;
+  state.timingLevelAtDeploy = timingSnap;
 
-  const keys = Object.keys(state.pressure);
-  const ordered = [...keys].sort((a, b) => state.pressure[b] - state.pressure[a]);
-  let remaining = drop;
-  for (const k of ordered) {
-    if (remaining <= 0) break;
-    const can = state.pressure[k];
-    const take = Math.min(can, Math.ceil(remaining / 2) || 1);
-    state.pressure[k] = Math.max(0, can - take);
-    remaining -= take;
-  }
-  for (const k of ordered) {
-    if (remaining <= 0) break;
-    if (state.pressure[k] > 0) {
-      state.pressure[k]--;
-      remaining--;
-    }
-  }
+  state.pressure = applyPressureDrop(state.pressure, drop);
 
   state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.`;
   state.waitReport = "";
@@ -1688,17 +1834,78 @@ function attemptDeploy() {
   markMissionSolved(state.mission);
   finishOutcome(wonMission() ? "win" : "partial", {
     drop,
+    dropParts: dropInfo.parts,
     domains,
     pairs,
     verdict: state.challengeVerdict,
     angle: state.challengeAngle,
+    timingLevel: timingSnap,
   });
+}
+
+function buildRunReport(kind, meta = {}) {
+  const techs = selectedTechs();
+  const pairs = computeSynergies(techs);
+  const domains = domainsInStack(techs);
+  const suggested = new Set(state.mission?.suggested || []);
+  const answerWords = (state.challengeAnswer || "").trim().split(/\s+/).filter(Boolean).length;
+  return scoreRun({
+    kind,
+    year: state.year,
+    startYear: state.mission?.startYear || GAME.startYear,
+    yearsPerTurn: state.mission?.yearsPerTurn || GAME.yearsPerTurn,
+    waits: state.waits || 0,
+    turn: state.turn,
+    challengeVerdict: state.challengeVerdict || state.lastChallengeVerdict,
+    hadChallengeAttempt: state.hadChallengeAttempt,
+    lastChallengeVerdict: state.lastChallengeVerdict,
+    timingLevel:
+      meta.timingLevel ||
+      state.timingLevelAtDeploy ||
+      state.aiTiming?.level ||
+      detectClaimStretch(state.inventionHow, techs, state.year).level,
+    inventionHow: state.inventionHow,
+    synergyPairCount: pairs.length,
+    domainCount: domains.length,
+    suggestedHitCount: techs.filter((t) => suggested.has(t.id)).length,
+    challengeAnswerWords: answerWords,
+    drop: meta.drop || 0,
+  });
+}
+
+function persistRunReport(missionId, report) {
+  if (!features().runReport || !missionId) return;
+  try {
+    const raw = localStorage.getItem(STORAGE_RUNS);
+    const all = raw ? JSON.parse(raw) : {};
+    const prev = all[missionId] || { bestStars: 0, count: 0 };
+    all[missionId] = {
+      bestStars: Math.max(prev.bestStars || 0, report.stars || 0),
+      lastReport: report,
+      count: (prev.count || 0) + 1,
+    };
+    localStorage.setItem(STORAGE_RUNS, JSON.stringify(all));
+  } catch {
+    /* ignore */
+  }
 }
 
 function finishOutcome(kind, meta = {}) {
   const techs = selectedTechs();
+  const report = features().runReport ? buildRunReport(kind, meta) : null;
+  state.runReport = report;
+  if (report && state.mission?.id) persistRunReport(state.mission.id, report);
   // Collapse / abandon does not mark solved — only deploy paths above do
-  state.outcome = { kind, meta, techs, year: state.year, turn: state.turn, pressure: clonePressure(state.pressure) };
+  state.outcome = {
+    kind,
+    meta,
+    techs,
+    year: state.year,
+    turn: state.turn,
+    waits: state.waits || 0,
+    pressure: clonePressure(state.pressure),
+    runReport: report,
+  };
   showScreen("outcome");
 }
 
@@ -1707,9 +1914,29 @@ function renderOutcome() {
   const m = state.mission;
   const name = state.inventionName.trim() || "Untitled invention";
   $("#outcome-name").textContent = name;
-  $("#outcome-meta").textContent = `${m.place} · ${o.year} · Turn ${o.turn} · ${
-    state.global?.title || ""
-  }`;
+  $("#outcome-meta").textContent = `${m.place} · ${o.year} · Turn ${o.turn} · waits ${
+    o.waits ?? state.waits ?? 0
+  } · ${state.global?.title || ""}`;
+
+  const starsEl = $("#outcome-stars");
+  const report = o.runReport || state.runReport;
+  if (starsEl) {
+    if (report && features().runReport) {
+      starsEl.hidden = false;
+      starsEl.innerHTML = `<div class="run-stars" aria-label="${report.stars} stars">${starLabel(
+        report.stars
+      )}</div>
+        <div class="run-scores muted">Speed ${report.speedScore} · Honesty ${report.honestyScore} · Elegance ${
+        report.eleganceScore
+      }</div>
+        <ul class="run-highlights">${(report.highlights || [])
+          .map((h) => `<li>${escapeHtml(h)}</li>`)
+          .join("")}</ul>`;
+    } else {
+      starsEl.hidden = true;
+      starsEl.innerHTML = "";
+    }
+  }
 
   const img = $("#outcome-vision-image");
   if (state.vision?.currentUrl && img) {
@@ -1926,6 +2153,26 @@ function ensureCoInventor() {
     }),
     applyProposals: applyCoInventorProposals,
     techById,
+    beforeRequest: (mode) => {
+      if (!apEnabled()) return true;
+      const r = dispatchSim("reserve_ai", {
+        mode,
+        reservedAp: 1,
+        clientActionId: `co-${Date.now()}`,
+      });
+      if (!r.ok) {
+        flashToast("No AP left for co-inventor — End Turn or Wait.");
+        return false;
+      }
+      renderHud();
+      return true;
+    },
+    afterRequest: (_mode, ok) => {
+      if (!apEnabled()) return;
+      if (ok) dispatchSim("resolve_ai");
+      else dispatchSim("reject_ai");
+      renderHud();
+    },
   });
   state.coInventor.mount(root);
   return state.coInventor;
@@ -1992,6 +2239,18 @@ function completePictureTargetFace() {
 
 async function callCoInventMode(mode, userLabel) {
   if (state.aiBusy) return;
+  if (apEnabled()) {
+    const reserve = dispatchSim("reserve_ai", {
+      mode,
+      reservedAp: 1,
+      clientActionId: `ai-${Date.now()}`,
+    });
+    if (!reserve.ok) {
+      flashToast("No AP left for AI — End Turn or Wait.");
+      return;
+    }
+    renderHud();
+  }
   state.aiBusy = true;
   setFillButtonsDisabled(true);
 
@@ -2055,14 +2314,37 @@ async function callCoInventMode(mode, userLabel) {
       scheduleAiTimingAssess();
     }
   } catch (e) {
+    if (apEnabled()) dispatchSim("reject_ai");
     flashToast(e.message || "AI request failed");
   } finally {
+    if (apEnabled() && state.pendingAi) dispatchSim("resolve_ai");
     if (fillOther) clearStoryFacePending();
     state.aiBusy = false;
     setFillButtonsDisabled(false);
     updateChallengeButton();
+    renderHud();
     if (fillOther) renderStoryFaceUI();
   }
+}
+
+function commitWriteIfNeeded() {
+  const snap = {
+    name: state.inventionName,
+    how: state.inventionHow,
+    impact: state.inventionImpact,
+  };
+  const prev = state.lastWriteSnapshot || { name: "", how: "", impact: "" };
+  const changed =
+    snap.name !== prev.name || snap.how !== prev.how || snap.impact !== prev.impact;
+  if (!changed) return;
+  const r = dispatchSim("write_commit", { changed: true });
+  if (!r.ok && r.error === "no_ap_buffer") {
+    flashToast("No AP for more edits — End Turn or Wait (changes kept).");
+    state.lastWriteSnapshot = snap;
+    return;
+  }
+  if (r.ok) state.lastWriteSnapshot = snap;
+  renderHud();
 }
 
 /* —— Modal —— */
@@ -2313,15 +2595,29 @@ function bind() {
     });
   });
 
+  let writeCommitTimer = null;
+  const scheduleWriteCommit = () => {
+    clearTimeout(writeCommitTimer);
+    writeCommitTimer = setTimeout(() => commitWriteIfNeeded(), 1500);
+  };
   $("#invention-how")?.addEventListener("input", (e) => {
     state.inventionHow = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
+    scheduleWriteCommit();
   });
   $("#invention-impact")?.addEventListener("input", (e) => {
     state.inventionImpact = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
+    scheduleWriteCommit();
+  });
+  $("#invention-name")?.addEventListener("input", (e) => {
+    state.inventionName = e.target.value;
+    scheduleWriteCommit();
+  });
+  ["#invention-how", "#invention-impact", "#invention-name"].forEach((sel) => {
+    $(sel)?.addEventListener("blur", () => commitWriteIfNeeded());
   });
 
   $("#btn-fill-other")?.addEventListener("click", () => {
@@ -2342,8 +2638,29 @@ function bind() {
   });
 
   $("#btn-wait").addEventListener("click", () => waitTurn());
-  $("#btn-to-challenge")?.addEventListener("click", () => enterChallenge());
-  $("#btn-challenge-back")?.addEventListener("click", () => showScreen("workshop"));
+  $("#btn-end-turn")?.addEventListener("click", () => endTurn());
+  $("#btn-to-challenge")?.addEventListener("click", () => {
+    if (!inventReadyForChallenge()) {
+      flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
+      return;
+    }
+    if (apEnabled()) {
+      const r = dispatchSim("enter_challenge");
+      if (!r.ok) {
+        if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.");
+        return;
+      }
+      renderHud();
+    } else {
+      state.turnPhase = "scrutiny";
+    }
+    enterChallenge();
+  });
+  $("#btn-challenge-back")?.addEventListener("click", () => {
+    if (apEnabled()) dispatchSim("abandon_scrutiny");
+    else state.turnPhase = "act";
+    showScreen("workshop");
+  });
   $("#btn-challenge-submit")?.addEventListener("click", () => submitChallengeAnswer());
   $("#btn-challenge-deploy")?.addEventListener("click", () => attemptDeploy());
   $("#btn-challenge-coach")?.addEventListener("click", () => coachChallenge("coach-challenge"));

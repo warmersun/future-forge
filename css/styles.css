@@ -1142,6 +1142,55 @@ button:disabled {
   flex-shrink: 0;
 }
 
+.hud-ap {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-2, #a78bfa);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  margin-left: 0.35rem;
+}
+
+.wait-preview {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.wait-preview .bad {
+  color: var(--danger, #f87171);
+}
+
+.deploy-drop-preview {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.outcome-stars {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.run-stars {
+  font-size: 1.5rem;
+  letter-spacing: 0.15em;
+  color: #fbbf24;
+}
+
+.run-scores {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.run-highlights {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
 .btn-help {
   width: 2rem;
   height: 2rem;

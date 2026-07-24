@@ -1,0 +1,170 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import {
+  applyPressureRise,
+  applyPressureDrop,
+  previewPressureAfterWait,
+  maxPressure,
+} from "./pressure.js";
+import { computeDeployDrop } from "./deploy.js";
+import { isWin, isCollapsed } from "./collapse.js";
+import { scoreRun } from "./scoring.js";
+import { applyAction } from "./actions.js";
+import { GAME } from "../data.js";
+
+describe("pressure", () => {
+  it("applies full Wait rise (portside-style)", () => {
+    const rise = { Floods: 1, Livelihoods: 1, Trust: 0 };
+    const next = applyPressureRise({ Floods: 2, Livelihoods: 2, Trust: 1 }, rise);
+    assert.deepEqual(next, { Floods: 3, Livelihoods: 3, Trust: 1 });
+  });
+
+  it("preview matches rise", () => {
+    const p = { A: 2, B: 0 };
+    assert.deepEqual(previewPressureAfterWait(p, { A: 1, B: 1 }), { A: 3, B: 1 });
+  });
+
+  it("drop allocates highest first", () => {
+    const next = applyPressureDrop({ Floods: 4, Livelihoods: 2, Trust: 1 }, 3);
+    assert.ok(maxPressure(next) < 5);
+    assert.ok(next.Floods <= 4);
+  });
+});
+
+describe("deploy drop", () => {
+  it("matches baseline stack formula", () => {
+    const techs = [
+      { id: "a", domain: "power" },
+      { id: "b", domain: "automator" },
+      { id: "c", domain: "power" },
+    ];
+    const { drop, parts } = computeDeployDrop({
+      techs,
+      domains: ["power", "automator"],
+      pairs: [["a", "b"]],
+      inventionHow: "word ".repeat(30),
+      inventionImpact: "word ".repeat(20),
+      challengeVerdict: "pass",
+      challengeAnswer: "x".repeat(60),
+      suggested: ["a", "b"],
+    });
+    // 1+min(2,2)=3 stack + domain + synergy + words + pass + answer + suggested = 9
+    assert.equal(drop, 9);
+    assert.ok(parts.length >= 5);
+  });
+});
+
+describe("collapse / win", () => {
+  it("detects win and collapse", () => {
+    assert.equal(isWin({ Floods: 1 }, { Floods: 2 }), true);
+    assert.equal(isWin({ Floods: 3 }, { Floods: 2 }), false);
+    assert.equal(isCollapsed({ year: 2030, collapseYear: 2032, pressure: { A: 5 } }), true);
+    assert.equal(isCollapsed({ year: 2032, collapseYear: 2032, pressure: { A: 1 } }), true);
+  });
+});
+
+describe("scoring", () => {
+  it("awards three stars for early honest win", () => {
+    const r = scoreRun({
+      kind: "win",
+      year: 2026,
+      startYear: 2026,
+      yearsPerTurn: 2,
+      waits: 0,
+      challengeVerdict: "pass",
+      hadChallengeAttempt: true,
+      timingLevel: "green",
+      inventionHow: "A supervised pilot with human-in-the-loop review.",
+      synergyPairCount: 1,
+      domainCount: 2,
+      suggestedHitCount: 2,
+      challengeAnswerWords: 90,
+    });
+    assert.equal(r.stars, 3);
+    assert.equal(r.v, 1);
+  });
+
+  it("collapse without attempt is zero stars", () => {
+    const r = scoreRun({
+      kind: "collapse",
+      year: 2034,
+      startYear: 2026,
+      yearsPerTurn: 2,
+      waits: 4,
+      hadChallengeAttempt: false,
+      challengeVerdict: null,
+      timingLevel: "yellow",
+      inventionHow: "",
+      synergyPairCount: 0,
+      domainCount: 1,
+      suggestedHitCount: 0,
+      challengeAnswerWords: 0,
+    });
+    assert.equal(r.stars, 0);
+  });
+});
+
+describe("actions", () => {
+  const base = () => ({
+    year: 2026,
+    turn: 0,
+    waits: 0,
+    pressure: { Floods: 2, Livelihoods: 2, Trust: 1 },
+    ap: 3,
+    apMax: 3,
+    apSpentThisTurn: 0,
+    writeCommitsThisTurn: 0,
+    learnOpenedThisTurn: false,
+    turnPhase: "act",
+    selectedTechIds: [],
+    pendingAi: null,
+    challengePassed: false,
+    challengeVerdict: null,
+    hadChallengeAttempt: false,
+    lastChallengeVerdict: null,
+  });
+
+  it("select_tech spends AP", () => {
+    const r = applyAction(base(), { type: "select_tech", payload: { techId: "solar" } }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.ap, 2);
+    assert.deepEqual(r.sim.selectedTechIds, ["solar"]);
+  });
+
+  it("end_turn does not raise pressure", () => {
+    const s = base();
+    s.apSpentThisTurn = 1;
+    s.ap = 2;
+    const r = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } });
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.year, 2026);
+    assert.equal(r.sim.waits, 0);
+    assert.deepEqual(r.sim.pressure, { Floods: 2, Livelihoods: 2, Trust: 1 });
+    assert.equal(r.sim.ap, 3);
+    assert.equal(r.sim.turn, 1);
+  });
+
+  it("wait full-ticks crisis and burns AP", () => {
+    const r = applyAction(
+      base(),
+      {
+        type: "wait",
+        payload: {
+          mission: {
+            yearsPerTurn: 2,
+            pressureRise: { Floods: 1, Livelihoods: 1, Trust: 0 },
+            collapseYear: 2036,
+          },
+        },
+      },
+      { features: { actionPoints: true }, apMax: GAME.apMax }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.year, 2028);
+    assert.equal(r.sim.waits, 1);
+    assert.deepEqual(r.sim.pressure, { Floods: 3, Livelihoods: 3, Trust: 1 });
+    assert.equal(r.sim.ap, 3);
+  });
+});

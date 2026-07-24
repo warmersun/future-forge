@@ -21,11 +21,15 @@ export class CoInventor {
    * @param {() => object} opts.getContext — returns challenge, techs, draft fields
    * @param {(proposals: object) => void} opts.applyProposals
    * @param {(techId: string) => object|null} opts.techById
+   * @param {(mode: string) => boolean|Promise<boolean>} [opts.beforeRequest] — return false to abort (e.g. no AP)
+   * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
    */
   constructor(opts) {
     this.getContext = opts.getContext;
     this.applyProposals = opts.applyProposals;
     this.techById = opts.techById;
+    this.beforeRequest = opts.beforeRequest || null;
+    this.afterRequest = opts.afterRequest || null;
     this.messages = [];
     this.busy = false;
     this.available = null;
@@ -167,6 +171,11 @@ export class CoInventor {
       return;
     }
 
+    if (this.beforeRequest) {
+      const ok = await this.beforeRequest(mode);
+      if (!ok) return;
+    }
+
     if (showUser) {
       this.messages.push({ role: "user", content: userDisplay || userText });
       this.renderMessages();
@@ -175,6 +184,7 @@ export class CoInventor {
     this.busy = true;
     this.setBusyUi(true);
     const thinkingId = this.pushThinking();
+    let requestOk = false;
 
     try {
       const ctx = this.getContext();
@@ -233,6 +243,7 @@ export class CoInventor {
         teaching: data.teaching,
       });
       this.renderMessages();
+      requestOk = true;
     } catch (e) {
       this.removeThinking(thinkingId);
       this.pushAssistant({
@@ -243,6 +254,11 @@ export class CoInventor {
     } finally {
       this.busy = false;
       this.setBusyUi(false);
+      try {
+        this.afterRequest?.(mode, requestOk);
+      } catch {
+        /* host cleanup must not break chat */
+      }
     }
   }
 
