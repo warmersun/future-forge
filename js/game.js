@@ -1711,6 +1711,12 @@ async function poseChallenge(angleMeta) {
   $("#btn-challenge-deploy").hidden = true;
   $("#btn-challenge-submit").disabled = true;
 
+  // Lock challenger before AI returns — never swap portrait/angle mid-load.
+  state.challengeAngle = angle.id;
+  setChallengerVisual(angle);
+  $("#challenge-angle-title").textContent = angle.label;
+  $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
+
   try {
     const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
       challengeAngle: angle.id,
@@ -1718,18 +1724,22 @@ async function poseChallenge(angleMeta) {
     state.challengeText = data.challengeSpeech || data.message || "";
     state.challengeQuestion =
       data.challengeQuestion || "How does your invention survive this attack?";
-    if (data.angle) state.challengeAngle = data.angle;
-    const meta = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle) || angle;
-    $("#challenge-angle-title").textContent = data.angleLabel || meta.label;
-    $("#challenge-angle-sub").textContent = `${meta.subtitle} — ${meta.blurb}`;
-    setChallengerVisual(meta);
+    // Ignore data.angle / data.angleLabel if the model picks a different critic —
+    // the player already saw this challenger while the speech was loading.
+    state.challengeAngle = angle.id;
+    setChallengerVisual(angle);
+    $("#challenge-angle-title").textContent = angle.label;
+    $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
     $("#challenge-question").textContent = state.challengeQuestion;
   } catch {
     const fb = localPose(angle);
     state.challengeText = fb.speech;
     state.challengeQuestion = fb.question;
+    state.challengeAngle = angle.id;
     setChallengerVisual(angle);
+    $("#challenge-angle-title").textContent = angle.label;
+    $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(fb.speech)}</p>`;
     $("#challenge-question").textContent = fb.question;
   }
