@@ -2637,10 +2637,30 @@ button:disabled {
 
 /* Must beat .modal { width } — same stylesheet order used to win over the base rule */
 .modal.help-modal {
-  width: min(800px, 96vw);
-  max-width: 96vw;
-  max-height: 90vh;
-  padding: 1.5rem 1.75rem;
+  width: min(1100px, 98vw);
+  max-width: 98vw;
+  max-height: 92vh;
+  padding: 1.6rem 2rem 1.4rem;
+}
+
+/* Optional two-column layout on wide help panels */
+@media (min-width: 900px) {
+  .help-body.help-body-wide {
+    column-count: 2;
+    column-gap: 2rem;
+  }
+  .help-body.help-body-wide > h4,
+  .help-body.help-body-wide > ol,
+  .help-body.help-body-wide > .help-steps {
+    column-span: all;
+  }
+  .help-body.help-body-wide h4 {
+    break-after: avoid;
+  }
+  .help-body.help-body-wide ul,
+  .help-body.help-body-wide p {
+    break-inside: avoid;
+  }
 }
 
 .modal h3 {
