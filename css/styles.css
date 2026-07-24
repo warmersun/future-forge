@@ -1346,13 +1346,71 @@ button:disabled {
 }
 
 .challenger-portrait-wrap {
-  width: 7.5rem;
-  height: 7.5rem;
+  width: 9rem;
+  height: 9rem;
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--border-strong);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   background: #0f172a;
+}
+
+/* Speech / answer use the wide card; keep readable line length without shrinking the panel */
+.challenge-step-card .challenge-speech,
+.challenge-step-card .challenge-question,
+.challenge-step-card .challenge-help,
+.challenge-step-card .field {
+  max-width: none;
+}
+
+.scrutiny-encounters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.scrutiny-enc {
+  flex: 1 1 10rem;
+  min-width: 9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  background: rgba(7, 11, 20, 0.35);
+  font-size: 0.82rem;
+}
+
+.scrutiny-enc.is-active {
+  border-color: rgba(167, 139, 250, 0.55);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
+}
+
+.scrutiny-enc.is-cleared {
+  opacity: 0.55;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.scrutiny-enc-label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scrutiny-enc-hp {
+  margin-top: 0.25rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.scrutiny-status {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.scrutiny-moves {
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .challenger-portrait {

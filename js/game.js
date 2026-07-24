@@ -41,6 +41,19 @@ import {
   applySimSliceToState,
 } from "./sim/actions.js";
 import { techCost, deployActionCost } from "./sim/economy.js";
+import {
+  pickChallengeAngles,
+  encounterCountForFeasibility,
+  buildEncounters,
+  activeEncounter,
+  allEncountersCleared,
+  applyArgueResult,
+  applyPatchResult,
+  applyPivotResult,
+  localArgueQuality,
+  MISS_BUDGET,
+  cloneScrutiny,
+} from "./sim/scrutiny.js";
 
 const state = {
   screen: "title",
@@ -103,6 +116,9 @@ const state = {
   budget: GAME.startingBudget ?? 5,
   will: GAME.startingWill ?? 3,
   techAddedThisTurn: {},
+  /** G3 multi-encounter scrutiny (null when essay mode) */
+  scrutiny: null,
+  elegancePivotPenalty: false,
 };
 
 const STORAGE_SCENARIOS = "future-forge:scenarioCache";
@@ -119,6 +135,10 @@ function apEnabled() {
 
 function budgetWillEnabled() {
   return Boolean(features().budgetWill);
+}
+
+function scrutinyCombatEnabled() {
+  return Boolean(features().scrutinyCombat);
 }
 
 function dispatchSim(type, payload = {}) {
@@ -708,6 +728,8 @@ function startMission(mission) {
   state.budget = GAME.startingBudget ?? 5;
   state.will = GAME.startingWill ?? 3;
   state.techAddedThisTurn = {};
+  state.scrutiny = null;
+  state.elegancePivotPenalty = false;
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   state.coInventor?.onChallengeStart?.();
@@ -1688,21 +1710,173 @@ async function enterChallenge() {
   state.challengeAnswer = "";
   state.challengeFeedback = "";
   state.challengeVerdict = null;
+  state.challengePassed = false;
   if (state.challengeFails >= 2) state.challengeFails = 0;
+
+  if (scrutinyCombatEnabled()) {
+    const feas = assessFeasibility();
+    const n = encounterCountForFeasibility(feas.overall);
+    const angles = pickChallengeAngles(CHALLENGE_ANGLES, n, null);
+    state.scrutiny = {
+      missCount: 0,
+      pivotUsed: false,
+      coachFreeUsed: false,
+      encounters: buildEncounters(angles, 2),
+    };
+    state.challengeAngle = angles[0]?.id || null;
+    showScreen("challenge-step");
+    await poseScrutinyEncounters();
+    return;
+  }
+
+  state.scrutiny = null;
   const angle = pickChallengeAngle();
   state.challengeAngle = angle.id;
   showScreen("challenge-step");
   await poseChallenge(angle);
 }
 
+async function poseScrutinyEncounters() {
+  const box = $("#scrutiny-encounters");
+  const status = $("#scrutiny-status");
+  const moves = $("#scrutiny-moves");
+  const essayBtn = $("#btn-challenge-submit");
+  if (box) box.hidden = false;
+  if (status) {
+    status.hidden = false;
+    status.textContent = "Scrutiny combat — clear every challenger (HP). 2 misses and you fail.";
+  }
+  if (moves) moves.hidden = false;
+  if (essayBtn) essayBtn.hidden = true;
+
+  $("#challenge-speech").innerHTML = aiPendingHtml("Posing challengers…");
+  $("#challenge-question").textContent = "";
+  $("#challenge-answer").value = "";
+  $("#challenge-feedback").hidden = true;
+  $("#btn-challenge-deploy").hidden = true;
+  renderChallengeHud();
+  renderScrutinyEncounters();
+
+  const list = state.scrutiny?.encounters || [];
+  await Promise.all(
+    list.map(async (enc) => {
+      const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId);
+      try {
+        const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
+          challengeAngle: enc.angleId,
+        });
+        enc.speech = data.challengeSpeech || data.message || "";
+        enc.question =
+          data.challengeQuestion || "How does your invention survive this attack?";
+      } catch {
+        const fb = localPose(meta || { id: enc.angleId, label: enc.label });
+        enc.speech = fb.speech;
+        enc.question = fb.question;
+      }
+    })
+  );
+
+  // Focus first uncleared — never swap angle from AI
+  paintActiveEncounter();
+  renderScrutinyEncounters();
+  renderChallengeHud();
+}
+
+function paintActiveEncounter() {
+  const enc = activeEncounter(state.scrutiny);
+  if (!enc) {
+    $("#challenge-speech").innerHTML =
+      "<p><strong>All challenges cleared.</strong> You may deploy when ready.</p>";
+    $("#challenge-question").textContent = "";
+    state.challengePassed = true;
+    state.challengeVerdict = state.challengeVerdict || "pass";
+    state.hadChallengeAttempt = true;
+    if (!state.lastChallengeVerdict) state.lastChallengeVerdict = "pass";
+    const moves = $("#scrutiny-moves");
+    if (moves) moves.hidden = true;
+    updateDeployButtonCost();
+    const dep = $("#btn-challenge-deploy");
+    if (dep) {
+      dep.hidden = false;
+      dep.disabled = false;
+    }
+    renderChallengeHud();
+    return;
+  }
+  const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId) || {
+    id: enc.angleId,
+    label: enc.label,
+    subtitle: enc.subtitle,
+    blurb: enc.blurb,
+    visual: enc.visual,
+  };
+  state.challengeAngle = enc.angleId;
+  state.challengeText = enc.speech;
+  state.challengeQuestion = enc.question;
+  setChallengerVisual(meta);
+  $("#challenge-angle-label").textContent = "Your idea is under attack";
+  $("#challenge-angle-title").textContent = meta.label;
+  $("#challenge-angle-sub").textContent = `${meta.subtitle || ""} — ${meta.blurb || ""}`;
+  $("#challenge-speech").innerHTML = `<p>${escapeHtml(enc.speech || "").replace(/\n/g, "<br>")}</p>`;
+  $("#challenge-question").textContent = enc.question || "";
+  const label = $("#challenge-answer-label");
+  if (label) label.textContent = `Your argument vs ${meta.label}`;
+  const moves = $("#scrutiny-moves");
+  if (moves) moves.hidden = false;
+  $("#btn-challenge-submit").hidden = true;
+}
+
+function renderScrutinyEncounters() {
+  const box = $("#scrutiny-encounters");
+  const status = $("#scrutiny-status");
+  if (!box) return;
+  if (!scrutinyCombatEnabled() || !state.scrutiny) {
+    box.hidden = true;
+    if (status) status.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const active = activeEncounter(state.scrutiny);
+  box.innerHTML = state.scrutiny.encounters
+    .map((e) => {
+      const hp = "♥".repeat(e.hp) + "♡".repeat(Math.max(0, e.maxHp - e.hp));
+      const cls = [
+        "scrutiny-enc",
+        e.cleared ? "is-cleared" : "",
+        active && active.id === e.id ? "is-active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `<div class="${cls}" data-enc="${escapeHtml(e.id)}">
+        <div class="scrutiny-enc-label">${escapeHtml(e.label)}${e.pivoted ? " · pivoted" : e.cleared ? " · clear" : ""}</div>
+        <div class="scrutiny-enc-hp" aria-label="HP ${e.hp} of ${e.maxHp}">${hp}</div>
+      </div>`;
+    })
+    .join("");
+  if (status) {
+    status.hidden = false;
+    const misses = state.scrutiny.missCount || 0;
+    status.textContent = `Misses ${misses}/${MISS_BUDGET} · Pivot ${
+      state.scrutiny.pivotUsed ? "used" : "available"
+    } · Clear all challengers to deploy`;
+  }
+}
+
 async function poseChallenge(angleMeta) {
   const angle = angleMeta || CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
+  const box = $("#scrutiny-encounters");
+  const status = $("#scrutiny-status");
+  const moves = $("#scrutiny-moves");
+  if (box) box.hidden = true;
+  if (status) status.hidden = true;
+  if (moves) moves.hidden = true;
+  const essayBtn = $("#btn-challenge-submit");
+  if (essayBtn) essayBtn.hidden = false;
+
   $("#challenge-angle-label").textContent = "Your idea is under attack";
   $("#challenge-angle-title").textContent = angle.label;
   $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
   setChallengerVisual(angle);
-  $("#ch-hud-year").textContent = String(state.year);
-  $("#ch-hud-turn").textContent = `Turn ${state.turn}`;
   $("#challenge-speech").innerHTML = aiPendingHtml("Posing challenge…");
   $("#challenge-question").textContent = "";
   $("#challenge-answer").value = "";
@@ -1725,8 +1899,6 @@ async function poseChallenge(angleMeta) {
     state.challengeText = data.challengeSpeech || data.message || "";
     state.challengeQuestion =
       data.challengeQuestion || "How does your invention survive this attack?";
-    // Ignore data.angle / data.angleLabel if the model picks a different critic —
-    // the player already saw this challenger while the speech was loading.
     state.challengeAngle = angle.id;
     setChallengerVisual(angle);
     $("#challenge-angle-title").textContent = angle.label;
@@ -1790,6 +1962,36 @@ function renderChallengeHud() {
 
 function renderChallengeStep() {
   renderChallengeHud();
+  if (scrutinyCombatEnabled() && state.scrutiny) {
+    renderScrutinyEncounters();
+    paintActiveEncounter();
+    const essayBtn = $("#btn-challenge-submit");
+    if (essayBtn) essayBtn.hidden = true;
+    if (state.challengeFeedback) {
+      const fb = $("#challenge-feedback");
+      fb.hidden = false;
+      fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
+      fb.innerHTML = state.challengeFeedback;
+    }
+    if (state.challengePassed) {
+      const dep = $("#btn-challenge-deploy");
+      if (dep) {
+        dep.hidden = false;
+        dep.disabled = false;
+      }
+      updateDeployButtonCost();
+    }
+    return;
+  }
+  const moves = $("#scrutiny-moves");
+  if (moves) moves.hidden = true;
+  const box = $("#scrutiny-encounters");
+  if (box) box.hidden = true;
+  const status = $("#scrutiny-status");
+  if (status) status.hidden = true;
+  const essayBtn = $("#btn-challenge-submit");
+  if (essayBtn) essayBtn.hidden = false;
+
   const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
   if (angle) {
     $("#challenge-angle-title").textContent = angle.label;
@@ -1815,6 +2017,195 @@ function renderChallengeStep() {
   } else {
     dep.hidden = true;
     dep.disabled = true;
+  }
+}
+
+async function scrutinyArgue() {
+  if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  const enc = activeEncounter(state.scrutiny);
+  if (!enc) {
+    flashToast("All challengers cleared.");
+    return;
+  }
+  const answer = ($("#challenge-answer")?.value || "").trim();
+  if (answer.length < 20) {
+    flashToast("Argue with at least a short paragraph.");
+    return;
+  }
+  if (apEnabled()) {
+    const r = dispatchSim("reserve_ai", {
+      mode: "judge-scrutiny-move",
+      reservedAp: 1,
+      clientActionId: `argue-${Date.now()}`,
+    });
+    if (!r.ok) {
+      flashToast("No AP to Argue — End turn on Invent first.");
+      return;
+    }
+    renderChallengeHud();
+  }
+  state.challengeAnswer = answer;
+  const fb = $("#challenge-feedback");
+  fb.hidden = false;
+  fb.className = "challenge-feedback is-pending";
+  fb.innerHTML = aiPendingHtml("Judging your argument…");
+  let quality = "miss";
+  let message = "";
+  try {
+    const data = await apiCoInvent("judge-scrutiny-move", answer, {
+      challengeAngle: enc.angleId,
+      challengeSpeech: enc.speech,
+      challengeQuestion: enc.question,
+      playerAnswer: answer,
+    });
+    quality = ["hit", "glance", "miss"].includes(data.quality) ? data.quality : "miss";
+    message = data.message || "";
+    if (apEnabled()) dispatchSim("resolve_ai");
+  } catch {
+    const local = localArgueQuality(answer);
+    quality = local.quality;
+    message = local.message;
+    if (apEnabled()) dispatchSim("resolve_ai");
+  }
+  const result = applyArgueResult(state.scrutiny, enc.id, quality);
+  state.scrutiny = result.scrutiny;
+  state.hadChallengeAttempt = true;
+  const verdictMap = { hit: "pass", glance: "partial", miss: "fail" };
+  state.lastChallengeVerdict = verdictMap[quality] || "partial";
+  fb.className = `challenge-feedback ${quality === "hit" ? "pass" : quality === "glance" ? "partial" : "fail"}`;
+  fb.innerHTML = `<strong>${quality.toUpperCase()}</strong> (−${result.damage} HP) — ${escapeHtml(
+    message || "Judged."
+  )}`;
+
+  if ((state.scrutiny.missCount || 0) >= MISS_BUDGET) {
+    state.challengeFails += 1;
+    state.challengePassed = false;
+    state.challengeVerdict = "fail";
+    fb.innerHTML += `<br/>Two misses — scrutiny fails. Return to Invent and strengthen the idea.`;
+    const moves = $("#scrutiny-moves");
+    if (moves) moves.hidden = true;
+    flashToast("Scrutiny failed (2 misses).");
+    renderScrutinyEncounters();
+    renderChallengeHud();
+    return;
+  }
+
+  if (budgetWillEnabled() && quality === "hit") {
+    dispatchSim("challenge_income", { verdict: "pass" });
+  } else if (budgetWillEnabled() && quality === "miss") {
+    dispatchSim("challenge_income", { verdict: "fail" });
+  }
+
+  $("#challenge-answer").value = "";
+  state.challengeAnswer = "";
+  renderScrutinyEncounters();
+  paintActiveEncounter();
+  renderChallengeHud();
+  if (allEncountersCleared(state.scrutiny)) {
+    state.challengePassed = true;
+    state.challengeVerdict = "pass";
+    if (budgetWillEnabled()) dispatchSim("challenge_income", { verdict: "pass" });
+    flashToast("All challengers cleared — deploy when ready.");
+  }
+}
+
+function scrutinyPatch() {
+  if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  const enc = activeEncounter(state.scrutiny);
+  if (!enc) return;
+  if (apEnabled()) {
+    // Patch is sync AP spend without AI reserve
+    if ((state.ap ?? 0) < 1) {
+      flashToast("No AP to Patch.");
+      return;
+    }
+    state.ap -= 1;
+    state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+  }
+  let funded = false;
+  if (budgetWillEnabled() && (state.budget ?? 0) >= 1) {
+    const use = window.confirm(
+      "Funded patch? Spend 1 Budget for +2 HP damage (vs 1 HP unfunded)."
+    );
+    if (use) {
+      state.budget -= 1;
+      funded = true;
+    }
+  }
+  // Ensure a small how patch exists
+  const how = state.inventionHow.trim();
+  if (how.length < 20) {
+    flashToast("Write a clearer how-it-works before patching.");
+    if (apEnabled()) {
+      state.ap = Math.min(state.apMax, (state.ap || 0) + 1);
+    }
+    return;
+  }
+  const note = funded
+    ? " [Funded patch: extra monitoring and contingency budget for this place.]"
+    : " [Patch: added fail-safe / metering for local extremes.]";
+  if (!how.includes("[Patch:") && !how.includes("[Funded patch:")) {
+    state.inventionHow = `${how}${note}`;
+    const howEl = $("#invention-how");
+    if (howEl) howEl.value = state.inventionHow;
+  }
+  const result = applyPatchResult(state.scrutiny, enc.id, funded);
+  state.scrutiny = result.scrutiny;
+  state.hadChallengeAttempt = true;
+  const fb = $("#challenge-feedback");
+  fb.hidden = false;
+  fb.className = "challenge-feedback partial";
+  fb.innerHTML = `<strong>PATCH</strong> (−${result.damage} HP) — Design revised under fire.`;
+  renderScrutinyEncounters();
+  paintActiveEncounter();
+  renderChallengeHud();
+  if (allEncountersCleared(state.scrutiny)) {
+    state.challengePassed = true;
+    state.challengeVerdict = "pass";
+    flashToast("All challengers cleared — deploy when ready.");
+  }
+}
+
+function scrutinyPivot() {
+  if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  const enc = activeEncounter(state.scrutiny);
+  if (!enc) return;
+  if (state.scrutiny.pivotUsed) {
+    flashToast("Pivot already used this run.");
+    return;
+  }
+  if (apEnabled() && (state.ap ?? 0) < 1) {
+    flashToast("No AP to Pivot.");
+    return;
+  }
+  if (budgetWillEnabled() && (state.will ?? 0) < 1) {
+    flashToast("Pivot needs 1 Political will.");
+    return;
+  }
+  if (apEnabled()) {
+    state.ap -= 1;
+    state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+  }
+  if (budgetWillEnabled()) state.will = Math.max(0, (state.will ?? 0) - 1);
+  const result = applyPivotResult(state.scrutiny, enc.id);
+  if (!result.ok) {
+    flashToast(result.error || "Cannot pivot.");
+    return;
+  }
+  state.scrutiny = result.scrutiny;
+  state.elegancePivotPenalty = true;
+  state.hadChallengeAttempt = true;
+  const fb = $("#challenge-feedback");
+  fb.hidden = false;
+  fb.className = "challenge-feedback pass";
+  fb.innerHTML = `<strong>PIVOT</strong> — You sidestepped ${escapeHtml(enc.label)} (once per run).`;
+  renderScrutinyEncounters();
+  paintActiveEncounter();
+  renderChallengeHud();
+  if (allEncountersCleared(state.scrutiny)) {
+    state.challengePassed = true;
+    state.challengeVerdict = "pass";
+    flashToast("All challengers cleared — deploy when ready.");
   }
 }
 
@@ -1845,7 +2236,13 @@ async function coachChallenge(mode, userText) {
     flashToast("Wait for the challenge to load first.");
     return;
   }
-  if (apEnabled()) {
+  // First coach/draft/ask in a scrutiny combat run is free
+  let freeCoach = false;
+  if (scrutinyCombatEnabled() && state.scrutiny && !state.scrutiny.coachFreeUsed) {
+    freeCoach = true;
+    state.scrutiny.coachFreeUsed = true;
+  }
+  if (apEnabled() && !freeCoach) {
     const reserve = dispatchSim("reserve_ai", {
       mode,
       reservedAp: 1,
@@ -1915,7 +2312,7 @@ async function coachChallenge(mode, userText) {
       );
     }
   } finally {
-    if (apEnabled()) {
+    if (apEnabled() && !freeCoach) {
       if (requestOk) dispatchSim("resolve_ai");
       else dispatchSim("reject_ai");
     }
@@ -1926,6 +2323,10 @@ async function coachChallenge(mode, userText) {
 }
 
 async function submitChallengeAnswer() {
+  if (scrutinyCombatEnabled() && state.scrutiny) {
+    await scrutinyArgue();
+    return;
+  }
   const answer = $("#challenge-answer").value.trim();
   state.challengeAnswer = answer;
   if (answer.length < 20) {
@@ -2122,7 +2523,7 @@ function buildRunReport(kind, meta = {}) {
   const domains = domainsInStack(techs);
   const suggested = new Set(state.mission?.suggested || []);
   const answerWords = (state.challengeAnswer || "").trim().split(/\s+/).filter(Boolean).length;
-  return scoreRun({
+  const report = scoreRun({
     kind,
     year: state.year,
     startYear: state.mission?.startYear || GAME.startYear,
@@ -2144,6 +2545,11 @@ function buildRunReport(kind, meta = {}) {
     challengeAnswerWords: answerWords,
     drop: meta.drop || 0,
   });
+  if (state.elegancePivotPenalty) {
+    report.eleganceScore = Math.max(0, (report.eleganceScore || 0) - 15);
+    report.highlights = [...(report.highlights || []), "Pivot used (−15 elegance)."];
+  }
+  return report;
 }
 
 function persistRunReport(missionId, report) {
@@ -2948,6 +3354,9 @@ function bind() {
   $("#btn-challenge-deploy")?.addEventListener("click", () => attemptDeploy());
   $("#btn-challenge-coach")?.addEventListener("click", () => coachChallenge("coach-challenge"));
   $("#btn-challenge-draft")?.addEventListener("click", () => coachChallenge("draft-challenge"));
+  $("#btn-scrutiny-argue")?.addEventListener("click", () => scrutinyArgue());
+  $("#btn-scrutiny-patch")?.addEventListener("click", () => scrutinyPatch());
+  $("#btn-scrutiny-pivot")?.addEventListener("click", () => scrutinyPivot());
   $("#challenge-help-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const q = $("#challenge-help-input")?.value?.trim();

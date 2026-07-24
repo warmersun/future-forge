@@ -664,6 +664,33 @@ function localCoInvent({ mode, messages, context }) {
     };
   }
 
+  if (mode === "judge-scrutiny-move") {
+    const ans = String(context.playerAnswer || lastUser || "");
+    const concrete =
+      /\b(who|pay|cost|meter|limit|permit|default|fee|cap|monitor|opt[- ]in|human|review|budget|year)\b/i.test(
+        ans
+      );
+    const long = ans.trim().length >= 80;
+    let quality = "miss";
+    if (ans.trim().length < 20) quality = "miss";
+    else if (concrete && long) quality = "hit";
+    else if (concrete || long) quality = "glance";
+    const damage = quality === "hit" ? 2 : quality === "glance" ? 1 : 0;
+    const messages = {
+      hit: "That names a real mechanism — the challenge takes a solid hit.",
+      glance: "Some substance — not enough to end the attack.",
+      miss: "Too vague for this critic — try actors, costs, or hard limits.",
+    };
+    return {
+      source: "local",
+      quality,
+      damage,
+      message: messages[quality],
+      proposals: base,
+      teaching: [],
+    };
+  }
+
   if (mode === "judge-challenge") {
     const ans = String(context.playerAnswer || lastUser || "");
     const concrete =
@@ -975,6 +1002,8 @@ function buildUserPayload({ messages, context, mode }) {
       "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack.",
     "pose-challenge":
       "You ARE a hostile critic of the invention. context.challengeAngle is REQUIRED and FIXED (moloch|ethicist|stakeholder|nature) — you MUST speak as that critic only; do NOT switch to another angle. Moloch = system game mechanics / multipolar traps; Ethicist = hard ethical tradeoffs; Stakeholder = city officials & community (funding, permits, policy); Mother Nature = physical/ecological limits. Attack the idea as if it will fail. End with ONE clear question. Return top-level fields: angle (must equal context.challengeAngle), angleLabel, challengeSpeech, challengeQuestion. proposals can be empty.",
+    "judge-scrutiny-move":
+      "The learner Argues against a fixed challenger (context.challengeAngle, challengeSpeech, challengeQuestion, playerAnswer). Score their argument as quality: hit | glance | miss. hit = concrete actors/costs/limits/mechanics that answer the question; glance = partial substance; miss = vague hope or off-topic. Return top-level: quality, message (1-2 sentences feedback), damage (hit=2, glance=1, miss=0). Be fair but strict on freeriding and handwaving.",
     "judge-challenge":
       "Judge the learner's answer to the challenge (context has challengeSpeech, challengeQuestion, playerAnswer, challengeAngle). Return top-level verdict: pass | partial | fail, message (feedback), lesson (one teaching sentence). Be fair: concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail.",
     "coach-challenge":
@@ -1126,6 +1155,13 @@ function sanitizeResult(parsed, availableIds, source = "ai") {
   if (parsed.verdict) out.verdict = String(parsed.verdict).toLowerCase();
   if (parsed.lesson) out.lesson = String(parsed.lesson).slice(0, 500);
   if (parsed.draftAnswer) out.draftAnswer = String(parsed.draftAnswer).slice(0, 2500);
+  if (parsed.quality) {
+    const q = String(parsed.quality).toLowerCase();
+    if (["hit", "glance", "miss"].includes(q)) out.quality = q;
+  }
+  if (parsed.damage != null && Number.isFinite(Number(parsed.damage))) {
+    out.damage = Math.max(0, Math.min(2, Math.floor(Number(parsed.damage))));
+  }
 
   // Feasibility timing (assess-feasibility mode)
   const rawTiming = parsed.timing || null;

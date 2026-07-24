@@ -365,6 +365,9 @@
               <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
             </div>
           </div>
+          <div id="scrutiny-encounters" class="scrutiny-encounters" hidden></div>
+          <p id="scrutiny-status" class="scrutiny-status muted" hidden></p>
+
           <div class="challenge-speech" id="challenge-speech">
             <p class="muted">Loading challenge…</p>
           </div>
@@ -376,7 +379,7 @@
                 <div class="progress-strip-label">AI co-inventor help</div>
                 <p class="scrutiny-sub">
                   You still own the answer — the AI can coach or draft a reply you edit
-                  (<strong>1 AP</strong> each).
+                  (<strong>1 AP</strong> each; first help in a scrutiny run is free).
                 </p>
               </div>
             </div>
@@ -401,10 +404,21 @@
           </div>
 
           <div class="field">
-            <label for="challenge-answer">Your answer</label>
+            <label for="challenge-answer" id="challenge-answer-label">Your answer</label>
             <textarea id="challenge-answer" rows="5" placeholder="How do you answer this attack on your idea?"></textarea>
           </div>
           <div id="challenge-feedback" class="challenge-feedback" hidden></div>
+          <div class="form-actions game-actions scrutiny-moves" id="scrutiny-moves" hidden>
+            <button type="button" class="btn btn-primary" id="btn-scrutiny-argue" title="1 AP — AI judges hit / glance / miss">
+              Argue (1 AP)
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-scrutiny-patch" title="1 AP — patch design for 1 HP (optional +1 Budget for funded +2 HP)">
+              Patch (1 AP)
+            </button>
+            <button type="button" class="btn btn-ghost" id="btn-scrutiny-pivot" title="1 AP + 1 Will — clear this encounter, once per run">
+              Pivot (1 AP · 1 Will)
+            </button>
+          </div>
           <div class="form-actions game-actions">
             <button type="button" class="btn btn-secondary" id="btn-challenge-submit">Submit answer</button>
             <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
@@ -494,10 +508,12 @@
               <em>claims</em> fit this year and place. Categories are always choosable; over-claiming is what goes red.
             </li>
             <li>
-              <strong>Challenge</strong> — defend the idea against a random challenger:
-              <em>Moloch</em> (system game mechanics), <em>Ethicist</em> (hard tradeoffs),
-              <em>Stakeholder</em> (officials &amp; community), or <em>Mother Nature</em> (physical world).
-              The co-inventor can coach or draft an answer if you are stuck.
+              <strong>Challenge (scrutiny combat)</strong> — face <strong>2–3</strong> challengers
+              (green feasibility → 2, yellow → 3), each with 2 HP:
+              <em>Moloch</em>, <em>Ethicist</em>, <em>Stakeholder</em>, or <em>Mother Nature</em>.
+              Use <strong>Argue</strong> (AI judges hit/glance/miss), <strong>Patch</strong> (edit design for HP),
+              or one <strong>Pivot</strong> (1 Will, clears that encounter). Two misses fail the run.
+              Clear all to unlock deploy.
             </li>
             <li>
               <strong>Deploy</strong> — if you pass, crisis meters drop. Too little relief and you can keep inventing.
