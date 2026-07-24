@@ -63,11 +63,45 @@ function loadEnvFile() {
 loadEnvFile();
 
 const PORT = Number(process.env.PORT) || 8765;
+/** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
+const HOST = process.env.HOST || "0.0.0.0";
 const MODEL = process.env.XAI_MODEL || "grok-4.5";
 /** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED ? new RoomManager() : null;
+
+/**
+ * Private LAN IPv4 addresses for "join from another computer" display.
+ * Skips loopback and public/routable interfaces — local network only.
+ * @returns {string[]}
+ */
+function listLanIpv4() {
+  const nets = os.networkInterfaces();
+  const out = [];
+  for (const list of Object.values(nets || {})) {
+    for (const net of list || []) {
+      if (!net || net.internal) continue;
+      // Node may use family 4 or "IPv4"
+      const fam = net.family;
+      if (fam !== "IPv4" && fam !== 4) continue;
+      const ip = String(net.address || "");
+      if (!ip || ip.startsWith("127.")) continue;
+      // RFC1918 private only (not meant for Internet exposure)
+      const priv =
+        ip.startsWith("10.") ||
+        ip.startsWith("192.168.") ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
+      if (!priv) continue;
+      if (!out.includes(ip)) out.push(ip);
+    }
+  }
+  return out;
+}
+
+function lanJoinUrls() {
+  return listLanIpv4().map((ip) => `http://${ip}:${PORT}`);
+}
 
 /** @type {{ source: 'supergrok'|'api-key'|null, email?: string }} */
 let authInfo = { source: null };
@@ -1644,6 +1678,7 @@ const server = http.createServer(async (req, res) => {
     } catch {
       ai = false;
     }
+    const lanIps = listLanIpv4();
     return sendJson(res, 200, {
       ok: true,
       coInventor: true,
@@ -1653,6 +1688,10 @@ const server = http.createServer(async (req, res) => {
       model: MODEL,
       imageModel: IMAGE_MODEL,
       rooms: ROOMS_ENABLED,
+      port: PORT,
+      /** Private LAN IPs / join URLs for friends on the same network */
+      lanIps,
+      lanUrls: lanIps.map((ip) => `http://${ip}:${PORT}`),
       features: {
         actionPoints: Boolean(GAME.features?.actionPoints),
         budgetWill: Boolean(GAME.features?.budgetWill),
@@ -1855,8 +1894,15 @@ if (ROOMS_ENABLED && roomManager) {
   });
 }
 
-server.listen(PORT, async () => {
-  console.log(`Future Forge → http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, async () => {
+  console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  const urls = lanJoinUrls();
+  if (urls.length) {
+    console.log("LAN (same Wi‑Fi) — friends open one of:");
+    for (const u of urls) console.log(`  ${u}`);
+  } else {
+    console.log("LAN: no private IPv4 found — check Wi‑Fi / ethernet");
+  }
   if (ROOMS_ENABLED) {
     console.log(`Friends rooms: ON · WS /ws/rooms (ENABLE_ROOMS=0 to disable)`);
   } else {

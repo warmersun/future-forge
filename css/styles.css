@@ -406,18 +406,120 @@ button:disabled {
   color: var(--accent);
 }
 
+/* Room lobby: side padding like friends hub (labels/code never flush to edge) */
+#screen-room-lobby .room-lobby-content {
+  max-width: min(1200px, 100%);
+  width: 100%;
+  box-sizing: border-box;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+  padding-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.room-connect-panel {
+  padding: 1.15rem 1.35rem 1.25rem;
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), var(--bg-elevated, #151f33));
+}
+
+.room-connect-panel h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.room-connect-lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.room-connect-grid {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+  gap: 0.85rem 1.25rem;
+  align-items: start;
+}
+
+.room-connect-field {
+  min-width: 0;
+}
+
+.room-connect-field-wide {
+  grid-column: 2;
+}
+
+@media (max-width: 640px) {
+  .room-connect-grid {
+    grid-template-columns: 1fr;
+  }
+  .room-connect-field-wide {
+    grid-column: 1;
+  }
+  #screen-room-lobby .room-lobby-content {
+    padding-inline: clamp(1rem, 5vw, 1.5rem);
+  }
+}
+
+.room-connect-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-mute, #94a3b8);
+  margin-bottom: 0.3rem;
+}
+
+.room-connect-code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 1.45rem;
+  letter-spacing: 0.14em;
+  color: #7dd3fc;
+}
+
+.room-connect-urls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.room-connect-urls li {
+  margin: 0;
+}
+
+.room-connect-urls a,
+.room-connect-url {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.95rem;
+  color: #6ee7b7;
+  word-break: break-all;
+}
+
+.room-connect-hint {
+  margin: 0.75rem 0 0;
+}
+
+.room-connect-actions {
+  margin-top: 0.85rem;
+  justify-content: flex-start;
+}
+
 .room-lobby-layout {
   display: grid;
   grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.6fr);
   gap: 1.25rem;
-  max-width: min(1200px, 100%);
+  max-width: 100%;
   width: 100%;
 }
 
 .room-lobby-layout.room-lobby-wide {
-  max-width: min(1400px, 100%);
+  max-width: 100%;
   grid-template-columns: minmax(15rem, 0.75fr) minmax(0, 2.4fr);
-  padding-bottom: 2rem;
+  padding-bottom: 0;
 }
 
 .room-lobby-mission {

@@ -78,11 +78,99 @@ export function initFriendsUi(api) {
     if (el) el.textContent = msg || "";
   }
 
+  /** @type {{ port?: number, lanIps?: string[], lanUrls?: string[] } | null} */
+  let lanJoinInfo = null;
+  let lanJoinInfoPromise = null;
+
+  async function ensureLanJoinInfo() {
+    if (lanJoinInfo) return lanJoinInfo;
+    if (lanJoinInfoPromise) return lanJoinInfoPromise;
+    lanJoinInfoPromise = fetch("/api/health")
+      .then((r) => r.json())
+      .then((data) => {
+        lanJoinInfo = {
+          port: data.port || 8765,
+          lanIps: Array.isArray(data.lanIps) ? data.lanIps : [],
+          lanUrls: Array.isArray(data.lanUrls) ? data.lanUrls : [],
+        };
+        // Fallback: if server omitted URLs but we have port, still empty list
+        if (!lanJoinInfo.lanUrls.length && lanJoinInfo.lanIps.length) {
+          lanJoinInfo.lanUrls = lanJoinInfo.lanIps.map(
+            (ip) => `http://${ip}:${lanJoinInfo.port}`
+          );
+        }
+        return lanJoinInfo;
+      })
+      .catch(() => {
+        lanJoinInfo = { port: 8765, lanIps: [], lanUrls: [] };
+        return lanJoinInfo;
+      });
+    return lanJoinInfoPromise;
+  }
+
+  function renderRoomConnectInfo(code) {
+    const codeBig = $("#room-connect-code");
+    if (codeBig) codeBig.textContent = code || "————";
+
+    const ul = $("#room-connect-urls");
+    const hint = $("#room-connect-hint");
+    if (!ul) return;
+
+    const urls = lanJoinInfo?.lanUrls || [];
+    const port = lanJoinInfo?.port || 8765;
+
+    if (!lanJoinInfo) {
+      ul.innerHTML = `<li class="muted">Loading network address…</li>`;
+      return;
+    }
+
+    if (!urls.length) {
+      ul.innerHTML = `<li class="muted">No private LAN IP found on this machine. Check Wi‑Fi, or share <code>http://&lt;host-ip&gt;:${port}</code> manually.</li>`;
+      if (hint) {
+        hint.textContent =
+          "On the host, run npm start and note the “LAN” lines in the terminal. Friends open that URL, then Join with the room code.";
+      }
+      return;
+    }
+
+    ul.innerHTML = urls
+      .map(
+        (u) =>
+          `<li><a class="room-connect-url" href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(
+            u
+          )}</a></li>`
+      )
+      .join("");
+    if (hint) {
+      hint.textContent =
+        "Same local network only (not the public Internet). They open the link → Play with friends → Join → room code + name.";
+    }
+  }
+
+  function buildJoinInfoText(code) {
+    const c = (code || "").toUpperCase();
+    const urls = lanJoinInfo?.lanUrls || [];
+    const lines = [
+      "Future Forge — join my room",
+      `Room code: ${c}`,
+      "",
+      "On the same Wi‑Fi, open:",
+      ...(urls.length ? urls : ["(ask host for their LAN IP and port)"]),
+      "",
+      "Then: Play with friends → Join → enter code and your name.",
+    ];
+    return lines.join("\n");
+  }
+
   function renderLobby() {
     const snap = client.snapshot;
     if (!snap) return;
+    const code = snap.code || client.session?.code || "————";
     const codeEl = $("#room-code-display");
-    if (codeEl) codeEl.textContent = snap.code || client.session?.code || "————";
+    if (codeEl) codeEl.textContent = code;
+    renderRoomConnectInfo(code);
+    // Refresh LAN IPs in background (first paint may be "loading")
+    ensureLanJoinInfo().then(() => renderRoomConnectInfo(code));
     const list = $("#room-player-list");
     if (list) {
       list.innerHTML = (snap.players || [])
@@ -833,6 +921,18 @@ export function initFriendsUi(api) {
       flashToast(`Copied ${code}`);
     } catch {
       flashToast(code);
+    }
+  });
+
+  $("#btn-copy-join-info")?.addEventListener("click", async () => {
+    await ensureLanJoinInfo();
+    const code = client.session?.code || $("#room-code-display")?.textContent || "";
+    const text = buildJoinInfoText(code);
+    try {
+      await navigator.clipboard.writeText(text);
+      flashToast("Copied join info (code + LAN address)");
+    } catch {
+      flashToast(text.slice(0, 80) + "…");
     }
   });
 

@@ -80,8 +80,9 @@
         <div class="section-intro">
           <h1>Play with friends</h1>
           <p>
-            Create a room, share the code, invent <strong>one shared stack</strong> under a rising crisis.
-            Live on WebSocket — party pace (single challenge essay, single deploy).
+            Create a room and share the <strong>room code</strong> plus the host’s
+            <strong>local network address</strong> (shown after create). Same Wi‑Fi only — not the public Internet.
+            Live WebSocket; personal invents, shared crisis.
           </p>
         </div>
         <div class="friends-hub-grid">
@@ -270,7 +271,36 @@
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-room-leave">Leave</button>
       </header>
-      <div class="content room-lobby-layout">
+      <div class="content room-lobby-content">
+        <!-- Join info for another computer on the same LAN -->
+        <aside class="panel room-connect-panel" id="room-connect-panel" aria-labelledby="room-connect-title">
+          <h2 id="room-connect-title">Connect from another computer</h2>
+          <p class="muted room-connect-lead">
+            Same Wi‑Fi / local network only. Friends open the address below, then join with the room code.
+          </p>
+          <div class="room-connect-grid">
+            <div class="room-connect-field">
+              <span class="room-connect-label">Room code</span>
+              <strong class="room-connect-code" id="room-connect-code">————</strong>
+            </div>
+            <div class="room-connect-field room-connect-field-wide">
+              <span class="room-connect-label">Open this address on their browser</span>
+              <ul class="room-connect-urls" id="room-connect-urls">
+                <li class="muted">Loading network address…</li>
+              </ul>
+            </div>
+          </div>
+          <p class="muted sm room-connect-hint" id="room-connect-hint">
+            Then: Play with friends → Join → enter the room code and their name.
+          </p>
+          <div class="form-actions room-connect-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-join-info">
+              Copy join info
+            </button>
+          </div>
+        </aside>
+
+        <div class="room-lobby-layout">
         <div class="panel room-lobby-party">
           <h2>Party</h2>
           <ul id="room-player-list" class="room-player-list"></ul>
@@ -294,6 +324,7 @@
           <div id="room-guest-mission" class="room-guest-mission" hidden>
             <p class="muted">Waiting for host to pick a crisis and local scenario…</p>
           </div>
+        </div>
         </div>
       </div>
     </section>
