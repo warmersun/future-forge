@@ -318,21 +318,33 @@ function problemVisualUrl(globalId) {
   return `assets/problems/${globalId}.jpg`;
 }
 
+function shuffleCopy(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function renderGlobals() {
   const grid = $("#global-grid");
-  grid.innerHTML = GLOBALS.map((g) => {
-    const tag = g.kind === "before" ? "Before it hits" : "Now";
-    const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
-    const cachedList = state.scenarioCache[g.id] || [];
-    const cached = cachedList.length;
-    const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
-    const hint = cached
-      ? solvedOnTheme
-        ? `${cached} cached · ${solvedOnTheme} solved →`
-        : `${cached} cached scenarios →`
-      : "Generate local scenarios →";
-    const img = problemVisualUrl(g.id);
-    return `
+  // Fresh random order each time the Themes screen is painted
+  const themes = shuffleCopy(GLOBALS);
+  grid.innerHTML = themes
+    .map((g) => {
+      const tag = g.kind === "before" ? "Before it hits" : "Now";
+      const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
+      const cachedList = state.scenarioCache[g.id] || [];
+      const cached = cachedList.length;
+      const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
+      const hint = cached
+        ? solvedOnTheme
+          ? `${cached} cached · ${solvedOnTheme} solved →`
+          : `${cached} cached scenarios →`
+        : "Generate local scenarios →";
+      const img = problemVisualUrl(g.id);
+      return `
       <button type="button" class="challenge-card challenge-card-visual" data-id="${g.id}">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
@@ -344,7 +356,8 @@ function renderGlobals() {
           <span class="cta">${hint}</span>
         </span>
       </button>`;
-  }).join("");
+    })
+    .join("");
   grid.querySelectorAll(".challenge-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.global = globalById(btn.dataset.id);
