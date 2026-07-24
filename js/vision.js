@@ -1,6 +1,7 @@
 /**
  * Future vision — AI image generation via /api/vision (Grok Imagine)
- * Generates a base scene, then evolves it as technologies are added.
+ * Generates a base scene, then either evolves in place (edit) or
+ * opens a new scene of the same place (generate) when the story framing changes.
  */
 
 /** Collect vision feature tags from selected tech objects */
@@ -143,7 +144,10 @@ export class VisionRenderer {
         challenge: {
           id: state.challenge.id,
           title: state.challenge.title,
-          problem: state.challenge.problem,
+          // scenario + place are immutable locale lock for Imagine prompts
+          problem: state.challenge.problem || state.challenge.scene || "",
+          scene: state.challenge.scene || state.challenge.problem || "",
+          place: state.challenge.place || state.place || "",
           visionTheme: state.challenge.visionTheme,
         },
         stage: {
@@ -168,6 +172,7 @@ export class VisionRenderer {
         throw new Error(data.error || `Vision failed (${res.status})`);
       }
 
+      const hadPriorImage = Boolean(this.currentUrl);
       this.lastFingerprint = fingerprint;
       this.currentUrl = data.imageUrl;
       if (this.img && data.imageUrl) {
@@ -182,12 +187,20 @@ export class VisionRenderer {
         if (this.img.complete) show();
       }
 
-      const modeLabel = data.cached
-        ? "Cached vision"
-        : data.mode === "edit"
-          ? "Evolved with Imagine"
-          : "Generated with Imagine";
-      this.setStatus(`${modeLabel} · ${state.stage?.name || state.stageId}`);
+      let modeLabel = "Generated with Imagine";
+      if (data.cached) {
+        modeLabel = "Cached vision";
+      } else if (data.mode === "edit" || data.continuity === "same-frame") {
+        modeLabel = "Evolved in place";
+      } else if (
+        data.continuity === "new-shot" ||
+        data.continuity === "new-scene" ||
+        (data.mode === "generate" && hadPriorImage)
+      ) {
+        modeLabel = "New scene · same place";
+      }
+      const placeBit = data.place ? ` · ${data.place}` : "";
+      this.setStatus(`${modeLabel}${placeBit} · ${state.stage?.name || state.stageId}`);
     } catch (e) {
       console.error("[vision]", e);
       this.setStatus(e.message || "Could not imagine this future");

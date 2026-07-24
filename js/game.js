@@ -1855,7 +1855,10 @@ function updateVision(opts = {}) {
     challenge: {
       id: state.mission.id,
       title: state.mission.title,
+      // Full scenario text — locked geography for every vision regenerate
       problem: state.mission.scene,
+      scene: state.mission.scene,
+      place: state.mission.place,
       visionTheme: state.mission.visionTheme,
     },
     techs,

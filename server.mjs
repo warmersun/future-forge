@@ -17,6 +17,16 @@ import {
   VISION_THEME_IDS,
   GAME,
 } from "./js/data.js";
+import {
+  buildWorldCard,
+  resolveShot,
+  composeGeneratePrompt,
+  composeEditPrompt,
+  assertCleanImagePrompt,
+  visionFingerprint,
+  shotNarrativeKey,
+  clipText as visionClip,
+} from "./js/vision-prompt.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -1256,148 +1266,8 @@ async function handleCoInvent(body) {
 /* —— Future vision (Imagine) —— */
 
 const IMAGE_MODEL = process.env.XAI_IMAGE_MODEL || "grok-imagine-image";
-const visionSessions = new Map(); // sessionId -> { fingerprint, dataUrl, prompt, stageId }
-
-const THEME_SCENES = {
-  "coastal-city":
-    "a coastal megacity skyline at the waterfront, dense towers meeting the sea, embankments and ports",
-  "food-city":
-    "a dense modern city with farmland at its edge and markets in the streets, food systems visible in the landscape",
-  "care-city":
-    "a calm residential city district with clinics, parks, and multi-generational public spaces",
-  "energy-city":
-    "an industrial-meets-urban skyline with power infrastructure, substations, and distant generation plants",
-  "learn-city":
-    "a campus-city hybrid with schools, libraries, plazas, and students moving between buildings",
-  "ocean-city":
-    "a harbor and open ocean horizon with ships, piers, and the living sea as the main character",
-  "social-city":
-    "intimate city streets and gathering places — cafes, parks, transit hubs where people meet",
-  "rebuild-city":
-    "a city district recovering after shock — mixed damaged and renewed structures, temporary and permanent builds",
-};
-
-const STAGE_LOOK = {
-  present:
-    "Present day, realistic documentary photography. Weathered infrastructure, ordinary life, the problem visible but not apocalyptic. Muted cool color grade, overcast or late-day light.",
-  prototype:
-    "Near-future early prototypes appearing in the same place. A few experimental installations, soft tech glows, scaffolding of change. Still mostly today's world with hopeful interventions.",
-  transition:
-    "Transition-era city: new systems at scale, transformed streets and infrastructure, cleaner light, integrated technology in architecture and public space. Optimistic but grounded speculative realism.",
-  transformed:
-    "Fully transformed civilization-scale future of this place. Harmonious advanced systems, luminous civic design, nature and technology woven together. Cinematic hopeful sci-fi realism, same camera viewpoint.",
-};
-
-function clipText(s, max = 600) {
-  const t = String(s || "").replace(/\s+/g, " ").trim();
-  if (!t) return "";
-  return t.length > max ? t.slice(0, max) + "…" : t;
-}
-
-function visionFingerprint(body) {
-  const techIds = (body.techs || []).map((t) => t.id || t.name).sort().join(",");
-  const stage = body.stage?.id || "present";
-  const theme = body.challenge?.visionTheme || "";
-  const name = (body.inventionName || "").trim().toLowerCase();
-  const how = clipText(body.inventionHow, 400).toLowerCase();
-  const life = clipText(body.inventionImpact, 400).toLowerCase();
-  const year = body.year || "";
-  const place = clipText(body.place, 80).toLowerCase();
-  const pressure = body.pressure
-    ? Object.entries(body.pressure)
-        .map(([k, v]) => `${k}:${v}`)
-        .join(",")
-    : "";
-  return `${theme}|${stage}|${year}|${place}|${pressure}|${techIds}|${name}|${how}|${life}`;
-}
-
-function buildVisionPrompt(body, { isEdit }) {
-  const theme = body.challenge?.visionTheme || "coastal-city";
-  const place = THEME_SCENES[theme] || THEME_SCENES["coastal-city"];
-  const stageId = body.stage?.id || "present";
-  const stageLook = STAGE_LOOK[stageId] || STAGE_LOOK.present;
-  const challengeTitle = body.challenge?.title || "a future city";
-  const problem = body.challenge?.problem || "";
-  const invention = (body.inventionName || "").trim();
-  const how = clipText(body.inventionHow, 700);
-  const everyday = clipText(body.inventionImpact, 700);
-  const risk = clipText(body.inventionRisk, 280);
-  const year = body.year || null;
-  const localPlace = clipText(body.place, 120);
-  const pressure = body.pressure
-    ? Object.entries(body.pressure)
-        .map(([k, v]) => `${k} ${v}/5`)
-        .join(", ")
-    : "";
-  const techs = body.techs || [];
-
-  const techLines = techs
-    .slice(0, 8)
-    .map((t) => {
-      const bit = t.narrative || t.summary || "";
-      return `- ${t.name}: ${bit}`.slice(0, 180);
-    })
-    .join("\n");
-
-  const style =
-    "Single cohesive wide cinematic still (not a collage, not a UI mockup, no text overlays, no watermarks, no logos, no readable signage). Photorealistic speculative architecture concept art, 16:9 composition, consistent camera angle.";
-
-  const strain =
-    pressure &&
-    (Object.values(body.pressure || {}).some((v) => v >= 3)
-      ? "Visible strain from the crisis (subtle, human-scale — not apocalypse porn)."
-      : "Early stress signs from the local crisis, still a lived-in place.");
-
-  const learnerBlock = [
-    how
-      ? `How the invention works (show this mechanism in the environment and tools people use):\n${how}`
-      : "",
-    everyday
-      ? `Everyday life if it works (people, streets, work, care):\n${everyday}`
-      : "",
-    risk
-      ? `Subtle risk atmosphere only (not disaster porn): ${risk}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-
-  const localeLine = localPlace
-    ? `Specific locale: ${localPlace}${year ? `, year ${year}` : ""}. Keep this same place recognizable.`
-    : `Locale type: ${place}.`;
-
-  if (!isEdit) {
-    return (
-      `${style}\n\n` +
-      `${localeLine}\n` +
-      `Mission: "${challengeTitle}". ${problem}\n\n` +
-      `Era look: ${stageLook}\n` +
-      (pressure ? `Crisis pressure meters: ${pressure}. ${strain}\n\n` : "\n") +
-      (invention ? `Invention name: "${invention}".\n\n` : "") +
-      (learnerBlock
-        ? `LEARNER VISION (highest priority — depict concretely):\n${learnerBlock}\n\n`
-        : "") +
-      (techs.length
-        ? `Emerging technologies as believable local infrastructure:\n${techLines}\n\n`
-        : `Ordinary infrastructure and daily life before the fix.\n\n`) +
-      `Mood: serious hope, human-scale figures, atmospheric depth. Local and specific over generic futurism.`
-    );
-  }
-
-  return (
-    `Edit this image into the same place at a later moment. Keep camera viewpoint and landmarks.\n\n` +
-    `${localeLine}\n` +
-    `Evolve toward: ${stageLook}\n` +
-    `Mission: ${challengeTitle}. ${problem}\n` +
-    (pressure ? `Pressure now: ${pressure}. ${strain}\n\n` : "\n") +
-    (invention ? `Invention: "${invention}".\n\n` : "") +
-    (learnerBlock
-      ? `LEARNER VISION (highest priority):\n${learnerBlock}\n\n`
-      : "") +
-    (techs.length ? `Technologies to show:\n${techLines}\n\n` : "") +
-    `Gradual change, photorealistic, no text/UI. Prefer learner description over generic sci-fi.`
-  );
-}
+/** @type {Map<string, object>} */
+const visionSessions = new Map();
 
 async function xaiImageRequest(path, payload, { forceRefresh = false } = {}) {
   let token = await resolveAccessToken({ forceRefresh });
@@ -1444,61 +1314,33 @@ function extractImageDataUrl(data) {
   return null;
 }
 
-async function handleVision(body) {
-  const sessionId = String(body.sessionId || "default").slice(0, 80);
-  const fingerprint = visionFingerprint(body);
-  const force = Boolean(body.force);
-  const prev = visionSessions.get(sessionId);
-
-  if (!force && prev?.fingerprint === fingerprint && prev.dataUrl) {
-    return {
-      ok: true,
-      cached: true,
-      imageUrl: prev.dataUrl,
-      prompt: prev.prompt,
-      stageId: body.stage?.id || "present",
-      model: IMAGE_MODEL,
-      mode: prev.mode || "generate",
-    };
-  }
-
-  const techs = body.techs || [];
-  const stageId = body.stage?.id || "present";
-  const canEdit = Boolean(prev?.dataUrl?.startsWith("data:")) && techs.length > 0 && stageId !== "present";
-  const isEdit = canEdit && !force;
-  const prompt = buildVisionPrompt(body, { isEdit });
-
-  let data;
-  let mode;
-  if (isEdit) {
-    mode = "edit";
-    data = await xaiImageRequest("/images/edits", {
+async function runVisionImage(mode, prompt, prevDataUrl) {
+  if (mode === "edit") {
+    return xaiImageRequest("/images/edits", {
       model: IMAGE_MODEL,
       prompt,
       image: {
-        url: prev.dataUrl,
+        url: prevDataUrl,
         type: "image_url",
       },
       response_format: "b64_json",
       aspect_ratio: "16:9",
     });
-  } else {
-    mode = "generate";
-    data = await xaiImageRequest("/images/generations", {
-      model: IMAGE_MODEL,
-      prompt,
-      n: 1,
-      response_format: "b64_json",
-      aspect_ratio: "16:9",
-    });
   }
+  return xaiImageRequest("/images/generations", {
+    model: IMAGE_MODEL,
+    prompt,
+    n: 1,
+    response_format: "b64_json",
+    aspect_ratio: "16:9",
+  });
+}
 
+async function normalizeVisionDataUrl(data) {
   let imageUrl = extractImageDataUrl(data);
   if (!imageUrl) {
     throw new Error("Image API returned no image data");
   }
-
-  // Normalize remote URLs into data URLs so edit chains stay stable
   if (imageUrl.startsWith("http")) {
     try {
       const imgRes = await fetch(imageUrl);
@@ -1506,20 +1348,110 @@ async function handleVision(body) {
       const mime = imgRes.headers.get("content-type") || "image/jpeg";
       imageUrl = `data:${mime};base64,${buf.toString("base64")}`;
     } catch {
-      // keep remote URL if download fails
+      /* keep remote URL */
     }
   }
+  return imageUrl;
+}
+
+/**
+ * Ensure frozen World Card for this session.
+ * Rebuild only when mission place/title/scene identity changes.
+ */
+function ensureWorldCard(sessionId, body, prev) {
+  const fresh = buildWorldCard(body);
+  if (prev?.worldCard?.key && prev.worldCard.key === fresh.key) {
+    return prev.worldCard;
+  }
+  return fresh;
+}
+
+async function handleVision(body) {
+  const sessionId = String(body.sessionId || "default").slice(0, 80);
+  const fingerprint = visionFingerprint(body);
+  const force = Boolean(body.force);
+  const prev = visionSessions.get(sessionId);
+  const stageId = body.stage?.id || "present";
+
+  if (!force && prev?.fingerprint === fingerprint && prev.dataUrl) {
+    return {
+      ok: true,
+      cached: true,
+      imageUrl: prev.dataUrl,
+      prompt: prev.prompt,
+      stageId,
+      model: IMAGE_MODEL,
+      mode: prev.mode || "generate",
+      continuity: prev.continuity || "baseline",
+      reason: prev.decisionReason || "Cached vision",
+      place: prev.worldCard?.place || null,
+    };
+  }
+
+  const worldCard = ensureWorldCard(sessionId, body, prev);
+  const client = await getClient().catch(() => null);
+  let shot = await resolveShot(body, prev, worldCard, { client, model: MODEL });
+
+  let mode = shot.mode === "edit" ? "edit" : "generate";
+  if (mode === "edit" && !prev?.dataUrl?.startsWith("data:")) {
+    mode = "generate";
+    shot = { ...shot, mode: "generate", continuity: "new-shot", reason: "No prior frame to edit" };
+  }
+
+  let prompt =
+    mode === "edit"
+      ? composeEditPrompt(worldCard, shot)
+      : composeGeneratePrompt(worldCard, shot, stageId);
+
+  const clean = assertCleanImagePrompt(prompt, { worldScene: worldCard.scene });
+  if (!clean.ok) {
+    console.warn("[vision] prompt pollution detected:", clean.issues);
+  }
+
+  let data;
+  let usedMode = mode;
+  let continuity = shot.continuity || (mode === "edit" ? "same-frame" : "new-shot");
+  let reason = shot.reason || "";
+
+  try {
+    data = await runVisionImage(mode, prompt, prev?.dataUrl);
+  } catch (e) {
+    if (mode === "edit") {
+      console.warn("[vision] edit failed, falling back to generate:", e.message || e);
+      usedMode = "generate";
+      continuity = "new-shot";
+      reason = `Edit failed — regenerate (${String(e.message || "error").slice(0, 80)})`;
+      prompt = composeGeneratePrompt(worldCard, shot, stageId);
+      data = await runVisionImage("generate", prompt, null);
+    } else {
+      throw e;
+    }
+  }
+
+  const imageUrl = await normalizeVisionDataUrl(data);
 
   visionSessions.set(sessionId, {
     fingerprint,
     dataUrl: imageUrl,
     prompt,
     stageId,
-    mode,
+    mode: usedMode,
+    continuity,
+    worldCard,
+    lastShot: {
+      mode: usedMode,
+      continuity,
+      happening: shot.happening,
+      subjects: shot.subjects || [],
+      reason,
+    },
+    shotNarrativeKey: shotNarrativeKey(body),
+    how: visionClip(body.inventionHow, 700),
+    impact: visionClip(body.inventionImpact, 700),
+    decisionReason: reason,
     updatedAt: Date.now(),
   });
 
-  // Bound memory: drop oldest if too many sessions
   if (visionSessions.size > 40) {
     const oldest = [...visionSessions.entries()].sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
     if (oldest) visionSessions.delete(oldest[0]);
@@ -1532,7 +1464,10 @@ async function handleVision(body) {
     prompt,
     stageId,
     model: IMAGE_MODEL,
-    mode,
+    mode: usedMode,
+    continuity,
+    reason,
+    place: worldCard.place || null,
   };
 }
 
