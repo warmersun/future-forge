@@ -1236,19 +1236,13 @@ button:disabled {
   transform: scale(1.05);
 }
 
-.help-modal {
-  width: min(720px, 96vw);
-  max-width: 96vw;
-  max-height: 90vh;
-  padding: 1.5rem 1.65rem;
-}
+/* Width is set on .modal.help-modal below the base .modal rule (specificity). */
 
 .help-body {
   font-size: 0.92rem;
   color: var(--text-dim);
   line-height: 1.55;
   margin-bottom: 1rem;
-  column-width: auto;
 }
 
 .help-body p {
