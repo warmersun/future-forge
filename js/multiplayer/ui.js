@@ -2,28 +2,66 @@
  * Friends room UI — lobby + shared invent + room AI (PR9–11) + hotseat entry (PR12).
  */
 
-import { GLOBALS, localScenariosForGlobal, techById } from "../data.js";
+import { techById, GLOBALS } from "../data.js";
+import { briefForGlobal } from "../problem-briefs.js";
 import { RoomClient } from "./client.js";
 import {
   createHotseatSession,
   activeSeat,
-  rotateSeat,
+  activeForge,
+  getOpenTable,
   setHotseatMission,
   startHotseatMission,
   hotseatApplyAction,
 } from "./hotseat.js";
 import { paintFieldLockElements } from "./locks-ui.js";
+import { MpSidePanel } from "./mp-side.js";
+import { paintScenarioBrief } from "./mission-picker.js";
+import {
+  paintTechFilters,
+  paintTechLibrary,
+  paintSelectedStack,
+} from "./tech-library.js";
 
 /**
- * @param {{ showScreen: Function, flashToast: Function, $: Function, $$: Function, escapeHtml: Function }} api
+ * @param {{
+ *   showScreen: Function,
+ *   flashToast: Function,
+ *   $: Function,
+ *   $$: Function,
+ *   escapeHtml: Function,
+ *   beginMissionPick?: Function,
+ *   clearMissionPickSession?: Function,
+ * }} api
  */
 export function initFriendsUi(api) {
-  const { showScreen, flashToast, $, $$, escapeHtml } = api;
+  const {
+    showScreen,
+    flashToast,
+    $,
+    $$,
+    escapeHtml,
+    beginMissionPick,
+    clearMissionPickSession,
+    enterHotseatPlay,
+    leaveHotseat,
+  } = api;
   const client = new RoomClient();
   let bufferTimers = {};
   /** @type {import('./hotseat.js').HotseatSession|null} */
   let hotseat = null;
   let hsWired = false;
+  /** @type {MpSidePanel|null} */
+  let hsSide = null;
+  /** @type {MpSidePanel|null} */
+  let roomSide = null;
+  let roomSideMounted = false;
+
+  /** Room host mission pick (from solo screens) */
+  let roomPick = { globalId: null, mission: null };
+  /** Domain filter for hotseat tech library */
+  let hsDomainFilter = "all";
+  let hsVisionFingerprint = "";
 
   function setHubStatus(msg) {
     const el = $("#friends-hub-status");
@@ -64,80 +102,218 @@ export function initFriendsUi(api) {
     }
     const hostBox = $("#room-host-controls");
     if (hostBox) hostBox.hidden = !snap.you?.isHost;
+    const guestBox = $("#room-guest-mission");
+    if (guestBox) guestBox.hidden = Boolean(snap.you?.isHost);
+
+    const briefMission = roomPick.mission || snap.missionMeta?.mission || null;
+    const briefGid = roomPick.globalId || snap.missionMeta?.globalId || briefMission?.globalId;
+    paintScenarioBrief($("#room-scenario-brief"), briefMission, {
+      escapeHtml,
+      globalId: briefGid,
+      heading: briefMission ? "Selected scenario" : "Scenario",
+    });
+
     const summary = $("#room-mission-summary");
     if (summary) {
       if (snap.missionMeta?.mission) {
         const m = snap.missionMeta.mission;
-        summary.textContent = `${m.title} · ${m.place}`;
+        summary.textContent = `Ready: ${m.title} · ${m.place}`;
+      } else if (roomPick.mission) {
+        summary.textContent = `Selected: ${roomPick.mission.title} · ${roomPick.mission.place}. Start when the party is ready.`;
       } else {
         summary.textContent = snap.you?.isHost
-          ? "Pick a theme and mission, then start."
-          : "Waiting for host to pick a mission…";
+          ? "Use the same crisis → scenario screens as solo play, then start the race."
+          : "Waiting for host to pick a crisis and local scenario…";
       }
     }
-    if (snap.you?.isHost) fillHostSelects();
-    if (snap.phase === "playing" && snap.sim) {
+
+    const startBtn = $("#btn-room-start");
+    if (startBtn) {
+      startBtn.disabled = !(roomPick.mission || snap.missionMeta?.mission);
+    }
+
+    if (snap.phase === "playing" || snap.mp?.place) {
       showScreen("room-play");
       renderPlay();
     }
   }
 
-  function fillHostSelects() {
-    const themeSel = $("#room-theme-select");
-    const missionSel = $("#room-mission-select");
-    if (!themeSel || !missionSel) return;
-    if (!themeSel.options.length) {
-      themeSel.innerHTML = GLOBALS.map(
-        (g) => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.title)}</option>`
-      ).join("");
-      themeSel.addEventListener("change", () => populateMissions(themeSel.value));
-      populateMissions(themeSel.value || GLOBALS[0]?.id);
+  function currentHostMission() {
+    if (roomPick.mission) {
+      return { globalId: roomPick.globalId, mission: roomPick.mission };
+    }
+    const snap = client.snapshot;
+    if (snap?.missionMeta?.mission) {
+      return {
+        globalId: snap.missionMeta.globalId,
+        mission: snap.missionMeta.mission,
+      };
+    }
+    return { globalId: null, mission: null };
+  }
+
+  function launchRoomMissionPick() {
+    if (typeof beginMissionPick !== "function") {
+      flashToast("Mission pick unavailable");
+      return;
+    }
+    beginMissionPick({
+      onSelect: async (mission, global) => {
+        roomPick = {
+          globalId: global?.id || mission.globalId,
+          mission,
+        };
+        try {
+          await client.hostCmd("set_mission", {
+            globalId: roomPick.globalId,
+            mission,
+          });
+          if (client.snapshot) {
+            client.snapshot.missionMeta = {
+              globalId: roomPick.globalId,
+              mission,
+            };
+            client.snapshot.phase = "ready";
+          }
+          setLobbyStatus(`Mission set: ${mission.title}`);
+        } catch (e) {
+          flashToast(e.message || "Could not set mission");
+        }
+        showScreen("room-lobby");
+        renderLobby();
+      },
+      onCancel: () => {
+        showScreen("room-lobby");
+        renderLobby();
+      },
+    });
+  }
+
+  function launchHotseatMissionPick() {
+    if (typeof beginMissionPick !== "function") {
+      flashToast("Mission pick unavailable");
+      return;
+    }
+    const raw = $("#hotseat-names")?.value || "Alex, Bea";
+    const names = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const seatNames = names.length >= 2 ? names : ["Alex", "Bea"];
+    beginMissionPick({
+      onSelect: (mission, global) => {
+        if (typeof enterHotseatPlay === "function") {
+          const ok = enterHotseatPlay(seatNames, mission, global);
+          if (!ok) showScreen("friends");
+          return;
+        }
+        flashToast("Hotseat bridge unavailable");
+        showScreen("friends");
+      },
+      onCancel: () => {
+        leaveHotseat?.();
+        showScreen("friends");
+      },
+    });
+  }
+
+  function mpSend(action) {
+    try {
+      client.sendAction(action);
+    } catch (e) {
+      flashToast(e.message || "Not connected");
     }
   }
 
-  function populateMissions(globalId) {
-    const missionSel = $("#room-mission-select");
-    if (!missionSel) return;
-    const g = GLOBALS.find((x) => x.id === globalId) || GLOBALS[0];
-    const list = localScenariosForGlobal(g, { count: 4, salt: 0 });
-    missionSel.innerHTML = list
-      .map(
-        (m) =>
-          `<option value="${escapeHtml(m.id)}">${escapeHtml(m.title)} — ${escapeHtml(m.place)}</option>`
-      )
-      .join("");
-    missionSel._missions = list;
-  }
-
-  function currentHostMission() {
-    const themeSel = $("#room-theme-select");
-    const missionSel = $("#room-mission-select");
-    const list = missionSel?._missions || [];
-    const m = list.find((x) => x.id === missionSel?.value) || list[0];
-    return { globalId: themeSel?.value, mission: m };
+  function ensureRoomSide() {
+    if (roomSideMounted && roomSide) return roomSide;
+    roomSide = new MpSidePanel({
+      mode: "room",
+      toast: flashToast,
+      getPlace: () => client.snapshot?.place || client.snapshot?.mp?.place || null,
+      getForge: () => {
+        const snap = client.snapshot;
+        const id = snap?.you?.id || client.session?.playerId;
+        return snap?.you?.forge || snap?.mp?.forges?.[id] || null;
+      },
+      canAct: () => {
+        const snap = client.snapshot;
+        const id = snap?.you?.id || client.session?.playerId;
+        return Boolean(id && snap?.activeSeatId === id && snap?.place?.status === "playing");
+      },
+      applyField: (field, value) => {
+        try {
+          client.sendAction({ type: "buffer_write", payload: { field, value } });
+          client.sendAction({
+            type: "write_commit",
+            payload: { field, value, changed: true },
+          });
+        } catch (e) {
+          flashToast(e.message || "Not connected");
+        }
+      },
+      // AP reserved server-side via transport — no client payAp
+      transport: (body) => client.requestAiAsync(body),
+    });
+    roomSide.mount(
+      $("#mp-vision-root"),
+      $("#mp-co-inventor-root"),
+      $("#mp-side-panel")
+    );
+    roomSideMounted = true;
+    $("#btn-mp-regen-vision")?.addEventListener("click", () => {
+      roomSide?.syncVision({ force: true, immediate: true });
+    });
+    return roomSide;
   }
 
   function renderPlay() {
     const snap = client.snapshot;
-    const sim = snap?.sim;
-    if (!sim) return;
+    const mp = snap?.mp;
+    const place = snap?.place || mp?.place;
+    const myId = snap?.you?.id || client.session?.playerId;
+    const forge = snap?.you?.forge || mp?.forges?.[myId] || null;
+    if (!place && !snap?.sim) return;
+
+    ensureRoomSide();
+
     const code = $("#mp-room-code");
     if (code) code.textContent = snap.code || "";
-    $("#mp-hud-year").textContent = String(sim.year);
-    $("#mp-hud-turn").textContent = `Turn ${sim.turn}`;
-    $("#mp-hud-ap").textContent = `AP ${sim.ap}/${sim.apMax}`;
-    $("#mp-hud-budget").textContent = `Budget ${sim.budget}$`;
-    $("#mp-hud-will").textContent = `Will ${sim.will}`;
-    $("#mp-mission-title").textContent = sim.mission?.title || "Shared invention";
-    $("#mp-mission-place").textContent = sim.mission
-      ? `${sim.mission.place} · collapse ${sim.mission.collapseYear}`
-      : "";
-    $("#mp-news").textContent = sim.lastNews || sim.waitReport || "";
 
-    // Pressure
+    const year = place?.year ?? snap?.sim?.year ?? 2026;
+    const pressure = place?.pressure || snap?.sim?.pressure || {};
+    const mission = place?.mission || snap?.sim?.mission;
+    const activeId = snap?.activeSeatId || mp?.activeSeatId;
+    const activeName =
+      (snap?.players || []).find((p) => p.id === activeId)?.displayName || "—";
+
+    $("#mp-hud-year").textContent = String(year);
+    $("#mp-hud-turn").textContent = `Round ${mp?.round || 1}`;
+    if (forge) {
+      $("#mp-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
+      $("#mp-hud-budget").textContent = `Budget ${forge.budget}$`;
+      $("#mp-hud-will").textContent = `Will ${forge.will}`;
+    } else if (snap?.sim) {
+      $("#mp-hud-ap").textContent = `AP ${snap.sim.ap}/${snap.sim.apMax}`;
+      $("#mp-hud-budget").textContent = `Budget ${snap.sim.budget}$`;
+      $("#mp-hud-will").textContent = `Will ${snap.sim.will}`;
+    }
+
+    const badge = $("#mp-active-badge");
+    if (badge) {
+      const mine = myId && activeId === myId;
+      badge.textContent = mine ? `Your turn · ${activeName}` : `Active: ${activeName}`;
+    }
+
+    $("#mp-mission-title").textContent = mission?.title || "Friends race";
+    $("#mp-mission-place").textContent = mission
+      ? `${mission.place} · personal inventions · Scale updates crisis · collapse ${mission.collapseYear}`
+      : "";
+    $("#mp-news").textContent = place?.lastNews || snap?.sim?.lastNews || "";
+
     const box = $("#mp-pressure");
     if (box) {
-      box.innerHTML = Object.entries(sim.pressure || {})
+      box.innerHTML = Object.entries(pressure)
         .map(([k, v]) => {
           const level = v >= 4 ? "hot" : v >= 2 ? "warm" : "cool";
           return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(v)}${"○".repeat(
@@ -147,27 +323,228 @@ export function initFriendsUi(api) {
         .join("");
     }
 
-    // Players
+    paintScenarioBrief($("#mp-scenario-brief"), mission, {
+      escapeHtml,
+      globalId: place?.globalId || mission?.globalId || snap?.mp?.place?.globalId,
+      heading: "The place",
+    });
+
     const plist = $("#mp-player-list");
     if (plist) {
       plist.innerHTML = (snap.players || [])
-        .map(
-          (p) =>
-            `<li class="${p.connected ? "is-online" : "is-offline"}"><strong>${escapeHtml(
-              p.displayName
-            )}</strong>${p.isHost ? " · host" : ""}</li>`
-        )
+        .map((p) => {
+          const f = mp?.forges?.[p.id];
+          const tags = [];
+          if (p.id === activeId) tags.push('<span class="tag">active</span>');
+          if (p.isHost) tags.push('<span class="tag">host</span>');
+          if (f?.abandoned) tags.push('<span class="tag">abandoned</span>');
+          if (f?.deployStage === "scaled") tags.push('<span class="tag">scaled</span>');
+          else if (f?.deployStage === "pilot_ok") tags.push('<span class="tag">pilot</span>');
+          return `<li class="${p.connected ? "is-online" : "is-offline"} ${
+            p.id === activeId ? "is-active-seat" : ""
+          }"><strong>${escapeHtml(p.displayName)}</strong>
+            <span class="muted sm">B${f?.budget ?? "—"} W${f?.will ?? "—"}</span>
+            ${tags.join(" ")}</li>`;
+        })
         .join("");
     }
 
-    // Fields — avoid clobbering active focus
-    syncField("mp-invention-name", sim.inventionName, "inventionName");
-    syncField("mp-invention-how", sim.inventionHow, "inventionHow");
-    syncField("mp-invention-impact", sim.inventionImpact, "inventionImpact");
+    // Open table
+    const table = $("#mp-open-table");
+    if (table) {
+      const rows = snap.openTable || mp?.openTable || [];
+      table.innerHTML = rows
+        .map((row) => {
+          const stack = (row.stack || [])
+            .map((x) => {
+              const name = x.tech?.name || x.techId;
+              const helper =
+                x.addedBy && x.addedBy !== row.seatId
+                  ? ` <em class="muted">(+${escapeHtml(
+                      (snap.players || []).find((s) => s.id === x.addedBy)?.displayName || "?"
+                    )})</em>`
+                  : "";
+              return `<span class="mp-chip sm">${escapeHtml(x.tech?.icon || "")} ${escapeHtml(
+                name
+              )}${helper}</span>`;
+            })
+            .join(" ");
+          return `<article class="hs-forge-card ${row.active ? "is-active" : ""} ${
+            row.abandoned ? "is-abandoned" : ""
+          }">
+            <header><strong>${escapeHtml(row.displayName)}</strong>
+              ${row.active ? '<span class="tag">turn</span>' : ""}
+              ${row.abandoned ? '<span class="tag">abandoned</span>' : ""}
+            </header>
+            <p class="hs-forge-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
+            <p class="muted sm">${escapeHtml((row.inventionHow || "").slice(0, 100))}${
+              (row.inventionHow || "").length > 100 ? "…" : ""
+            }</p>
+            <div class="hs-forge-stack">${stack || '<span class="muted">No techs</span>'}</div>
+            <p class="muted sm">Stage: ${escapeHtml(row.deployStage || "none")}</p>
+          </article>`;
+        })
+        .join("");
+    }
+
+    // Your forge fields
+    if (forge) {
+      syncField("mp-invention-name", forge.inventionName, "inventionName");
+      syncField("mp-invention-how", forge.inventionHow, "inventionHow");
+      syncField("mp-invention-impact", forge.inventionImpact, "inventionImpact");
+      const ans = $("#mp-challenge-answer");
+      if (ans && document.activeElement !== ans) {
+        ans.value = forge.challengeAnswer || "";
+      }
+      const disabled = Boolean(forge.abandoned) || snap.phase === "outcome" || place?.status === "won";
+      for (const id of [
+        "mp-invention-name",
+        "mp-invention-how",
+        "mp-invention-impact",
+        "mp-challenge-answer",
+      ]) {
+        const el = $(`#${id}`);
+        if (el) el.disabled = disabled || (myId && activeId !== myId);
+      }
+    }
 
     paintLocks(snap.fieldLocks || {});
-    paintStack(sim);
-    paintTechTray(sim);
+    paintStack(forge, myId);
+    paintTechTray(forge, place, mp, myId);
+    paintLayerTarget(mp, myId);
+    paintMpPhase(forge, place, myId, activeId);
+    paintMpOutcome(snap);
+
+    const isActive = myId && activeId === myId;
+    const playing = place?.status === "playing" || snap.phase === "playing";
+    const setDis = (id, on) => {
+      const el = $(id);
+      if (el) el.disabled = !on;
+    };
+    setDis("#btn-mp-end-turn", playing && isActive);
+    setDis("#btn-mp-wait", playing && isActive);
+    setDis("#btn-mp-ai", playing && isActive && forge && !forge.abandoned);
+    setDis(
+      "#btn-mp-challenge",
+      playing && isActive && forge && !forge.abandoned && !forge.challengePassed
+    );
+    setDis(
+      "#btn-mp-submit-challenge",
+      playing && isActive && forge && !forge.abandoned && !forge.challengePassed
+    );
+    setDis(
+      "#btn-mp-pilot",
+      playing &&
+        isActive &&
+        forge &&
+        forge.challengePassed &&
+        forge.deployStage === "none" &&
+        !forge.pilotFailedThisTurn
+    );
+    setDis(
+      "#btn-mp-scale",
+      playing &&
+        isActive &&
+        forge &&
+        forge.deployStage === "pilot_ok" &&
+        !forge.scaleFailedThisTurn
+    );
+    setDis(
+      "#btn-mp-abandon",
+      playing && isActive && forge && !forge.abandoned && forge.deployStage !== "scaled"
+    );
+
+    // Vision follows your forge (and shared place year/pressure)
+    try {
+      roomSide?.syncVision({
+        immediate: Boolean(
+          forge?.deployStage === "pilot_ok" || forge?.deployStage === "scaled"
+        ),
+      });
+    } catch {
+      /* vision optional */
+    }
+  }
+
+  function paintMpPhase(forge, place, myId, activeId) {
+    const phase = $("#mp-phase-hint");
+    if (!phase) return;
+    if (place?.status === "won") {
+      phase.textContent = "Place solved — see ranking.";
+      return;
+    }
+    if (place?.status === "collapsed") {
+      phase.textContent = "Collapsed — nobody wins.";
+      return;
+    }
+    if (myId && activeId !== myId) {
+      phase.textContent = "Waiting for the active player…";
+      return;
+    }
+    if (!forge) {
+      phase.textContent = "";
+      return;
+    }
+    if (forge.abandoned) phase.textContent = "You abandoned — layer emTech on others or Wait.";
+    else if (!forge.challengePassed)
+      phase.textContent = "Your turn: write → stack → Face challenge → Pilot → Scale.";
+    else if (forge.deployStage === "none")
+      phase.textContent = "Challenge cleared — Attempt Pilot (does not change the place).";
+    else if (forge.deployStage === "pilot_ok")
+      phase.textContent = "Pilot ok — Scale to update the shared crisis!";
+    else if (forge.deployStage === "scaled")
+      phase.textContent = "You Scaled. End turn or help others.";
+    else phase.textContent = "";
+  }
+
+  function paintMpOutcome(snap) {
+    const wrap = $("#mp-outcome");
+    const body = $("#mp-outcome-body");
+    if (!wrap || !body) return;
+    const place = snap.place || snap.mp?.place;
+    const show =
+      place?.status === "won" ||
+      place?.status === "collapsed" ||
+      snap.phase === "outcome";
+    wrap.hidden = !show;
+    if (!show) return;
+    if (place?.status === "collapsed") {
+      body.innerHTML = `<p><strong>The place fell.</strong> No champion.</p>`;
+      return;
+    }
+    const rows = snap.ranking?.rows || snap.mp?.ranking?.rows || [];
+    body.innerHTML = `<p><strong>Crisis held!</strong></p>
+      <ol class="hs-rank-list">
+      ${rows
+        .map(
+          (r) =>
+            `<li><strong>#${r.rank} ${escapeHtml(r.displayName)}</strong> — ${r.score} pts
+            <span class="muted sm">(impact ${Math.round((r.impactNorm || 0) * 100)} · craft ${Math.round(
+              (r.craftNorm || 0) * 100
+            )} · help ${Math.round((r.contributionNorm || 0) * 100)} · race ${Math.round(
+              (r.raceNorm || 0) * 100
+            )})</span></li>`
+        )
+        .join("")}
+      </ol>`;
+  }
+
+  function paintLayerTarget(mp, myId) {
+    const sel = $("#mp-layer-target");
+    if (!sel || !mp?.seatOrder) return;
+    const cur = sel.value;
+    sel.innerHTML = mp.seatOrder
+      .map((id) => {
+        const s = mp.seats?.find((x) => x.id === id);
+        const label =
+          id === myId
+            ? `${s?.displayName || "Me"} (my stack)`
+            : `${s?.displayName || id} (layer help)`;
+        return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
+      })
+      .join("");
+    if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    else if (myId) sel.value = myId;
   }
 
   function syncField(id, value, fieldKey) {
@@ -179,6 +556,7 @@ export function initFriendsUi(api) {
   }
 
   function paintLocks(locks) {
+    // Per-player lock keys: prefer scoped; fieldLockLabels may show generic
     paintFieldLockElements(locks || {}, {
       inventionName: $("#mp-lock-name"),
       inventionHow: $("#mp-lock-how"),
@@ -186,43 +564,47 @@ export function initFriendsUi(api) {
     });
   }
 
-  function paintStack(sim) {
+  function paintStack(forge, myId) {
     const box = $("#mp-stack");
     if (!box) return;
-    const techs = (sim.selectedTechIds || []).map(techById).filter(Boolean);
-    if (!techs.length) {
-      box.innerHTML = `<span class="muted">No techs yet — pick from the tray (1 AP + Budget each).</span>`;
+    if (!forge?.stack?.length) {
+      box.innerHTML = `<span class="muted">No techs yet — pick from the tray (1 AP + Budget). You can layer on others.</span>`;
       return;
     }
-    box.innerHTML = techs
-      .map(
-        (t) =>
-          `<button type="button" class="mp-chip" data-tech-id="${escapeHtml(t.id)}" title="Remove">${escapeHtml(
-            t.icon || ""
-          )} ${escapeHtml(t.name)}</button>`
-      )
+    box.innerHTML = forge.stack
+      .map((x) => {
+        const t = techById(x.techId);
+        const by =
+          x.addedBy && x.addedBy !== myId
+            ? ` · +${escapeHtml(
+                (client.snapshot?.players || []).find((p) => p.id === x.addedBy)?.displayName || "?"
+              )}`
+            : "";
+        return `<button type="button" class="mp-chip" data-tech-id="${escapeHtml(
+          x.techId
+        )}">${escapeHtml(t?.icon || "")} ${escapeHtml(t?.name || x.techId)}${by}</button>`;
+      })
       .join("");
     box.querySelectorAll(".mp-chip").forEach((btn) => {
       btn.addEventListener("click", () => {
-        try {
-          client.sendAction({ type: "deselect_tech", payload: { techId: btn.dataset.techId } });
-        } catch (e) {
-          flashToast(e.message || "Not connected");
-        }
+        mpSend({
+          type: "deselect_tech",
+          payload: { techId: btn.dataset.techId, targetSeatId: myId },
+        });
       });
     });
   }
 
-  function paintTechTray(sim) {
+  function paintTechTray(forge, place, mp, myId) {
     const tray = $("#mp-tech-tray");
     if (!tray) return;
-    const selected = new Set(sim.selectedTechIds || []);
-    // Show a compact set: mission suggested + a few staples
-    const suggested = sim.mission?.suggested || [];
-    const ids = [...new Set([...suggested, "ai", "iot", "solar", "networks", "drones", "battery"])].slice(
-      0,
-      14
-    );
+    const targetId = $("#mp-layer-target")?.value || myId;
+    const target = mp?.forges?.[targetId] || forge;
+    const selected = new Set((target?.stack || []).map((x) => x.techId));
+    const suggested = place?.mission?.suggested || [];
+    const ids = [
+      ...new Set([...suggested, "ai", "iot", "solar", "networks", "drones", "battery"]),
+    ].slice(0, 14);
     tray.innerHTML = ids
       .map((id) => {
         const t = techById(id);
@@ -235,14 +617,16 @@ export function initFriendsUi(api) {
       .join("");
     tray.querySelectorAll(".mp-tech-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const tech = techById(btn.dataset.techId);
-        try {
-          client.sendAction({
-            type: "select_tech",
-            payload: { techId: btn.dataset.techId, tech },
+        const techId = btn.dataset.techId;
+        const tech = techById(techId);
+        const targetSeatId = $("#mp-layer-target")?.value || myId;
+        if (targetSeatId === myId) {
+          mpSend({ type: "select_tech", payload: { techId, tech } });
+        } else {
+          mpSend({
+            type: "layer_tech",
+            payload: { techId, targetSeatId, tech },
           });
-        } catch (e) {
-          flashToast(e.message || "Not connected");
         }
       });
     });
@@ -313,7 +697,8 @@ export function initFriendsUi(api) {
 
   client.on((evt) => {
     if (evt.type === "hello" || evt.type === "snapshot" || evt.type === "lobby" || evt.type === "presence") {
-      if (client.snapshot?.phase === "playing") {
+      const phase = client.snapshot?.phase;
+      if (phase === "playing" || phase === "outcome") {
         showScreen("room-play");
         wireFields();
         renderPlay();
@@ -331,15 +716,23 @@ export function initFriendsUi(api) {
       return;
     }
     if (evt.type === "settings") {
-      if (client.snapshot?.phase === "playing") renderPlay();
+      if (client.snapshot?.phase === "playing" || client.snapshot?.phase === "outcome") renderPlay();
       else renderLobby();
     }
     if (evt.type === "patch") {
       renderPlay();
       const last = (evt.events || [])[0];
-      if (last?.type === "wait") setPlayStatus(`Wait → year ${client.snapshot?.sim?.year}`);
-      if (last?.type === "end_turn") setPlayStatus("End turn — AP refilled for everyone.");
-      if (last?.type === "tech_added") setPlayStatus("Stack updated.");
+      if (last?.type === "wait") setPlayStatus(`Wait → year ${client.snapshot?.place?.year}`);
+      if (last?.type === "end_turn" || last?.type === "seat_turn_start") {
+        const who = (client.snapshot?.players || []).find(
+          (p) => p.id === client.snapshot?.activeSeatId
+        );
+        setPlayStatus(who ? `Active: ${who.displayName}` : "Turn passed.");
+      }
+      if (last?.type === "tech_added" || last?.type === "tech_layered") setPlayStatus("Stack updated.");
+      if (last?.type === "scale_ok") setPlayStatus(last.solved ? "Place solved!" : "Scale landed (partial).");
+      if (last?.type === "race_won") setPlayStatus("Race over — ranking ready.");
+      if (last?.type === "collapsed") setPlayStatus("Place collapsed — nobody wins.");
     }
     if (evt.type === "ai_pending") {
       setAiPending(true, `${evt.displayName || "Someone"} asked the co-inventor…`);
@@ -395,7 +788,10 @@ export function initFriendsUi(api) {
     showScreen("friends");
     setHubStatus("");
   });
-  $("#btn-friends-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-friends-back")?.addEventListener("click", () => {
+    clearMissionPickSession?.();
+    showScreen("title");
+  });
   $("#btn-friends-create")?.addEventListener("click", async () => {
     const name = $("#friends-create-name")?.value?.trim() || "Host";
     setHubStatus("Creating room…");
@@ -442,39 +838,38 @@ export function initFriendsUi(api) {
 
   $("#btn-room-leave")?.addEventListener("click", () => {
     client.leaveLocal();
+    roomSide?.destroy();
+    roomSide = null;
+    roomSideMounted = false;
     showScreen("friends");
   });
   $("#btn-mp-leave")?.addEventListener("click", () => {
     client.leaveLocal();
+    roomSide?.destroy();
+    roomSide = null;
+    roomSideMounted = false;
     showScreen("friends");
   });
 
-  $("#btn-room-set-mission")?.addEventListener("click", async () => {
-    const { globalId, mission } = currentHostMission();
-    if (!mission) {
-      flashToast("Pick a mission");
+  $("#btn-room-pick-mission")?.addEventListener("click", () => {
+    if (!client.snapshot?.you?.isHost) {
+      flashToast("Only the host picks the mission");
       return;
     }
-    try {
-      await client.hostCmd("set_mission", { globalId, mission });
-      setLobbyStatus(`Mission set: ${mission.title}`);
-      // optimistic
-      if (client.snapshot) {
-        client.snapshot.missionMeta = { globalId, mission };
-        client.snapshot.phase = "ready";
-      }
-      renderLobby();
-    } catch (e) {
-      flashToast(e.message || "Failed");
-    }
+    launchRoomMissionPick();
   });
 
   $("#btn-room-start")?.addEventListener("click", async () => {
+    const n = client.snapshot?.players?.length || 0;
+    if (n < 2) {
+      flashToast("Need at least 2 players to start");
+      return;
+    }
     let meta = client.snapshot?.missionMeta;
     if (!meta?.mission) {
       const cur = currentHostMission();
       if (!cur.mission) {
-        flashToast("Set a mission first");
+        flashToast("Pick a theme and scenario card first");
         return;
       }
       await client.hostCmd("set_mission", cur);
@@ -482,47 +877,47 @@ export function initFriendsUi(api) {
     }
     try {
       await client.hostCmd("start_mission", meta);
-      setLobbyStatus("Starting…");
+      setLobbyStatus("Starting race…");
     } catch (e) {
       flashToast(e.message || "Start failed");
     }
   });
 
-  $("#btn-mp-end-turn")?.addEventListener("click", () => {
-    try {
-      client.sendAction({ type: "end_turn" });
-    } catch (e) {
-      flashToast(e.message);
+  $("#btn-mp-end-turn")?.addEventListener("click", () => mpSend({ type: "end_turn" }));
+  $("#btn-mp-wait")?.addEventListener("click", () => mpSend({ type: "wait" }));
+  $("#btn-mp-challenge")?.addEventListener("click", () => mpSend({ type: "enter_challenge" }));
+  $("#btn-mp-submit-challenge")?.addEventListener("click", () => {
+    const answer = $("#mp-challenge-answer")?.value || "";
+    const forge = client.snapshot?.you?.forge;
+    if (forge && forge.turnPhase !== "scrutiny") {
+      mpSend({ type: "enter_challenge" });
     }
+    setTimeout(() => mpSend({ type: "submit_challenge", payload: { answer } }), 50);
   });
-  $("#btn-mp-wait")?.addEventListener("click", () => {
-    const sim = client.snapshot?.sim;
-    if (!sim?.mission) return;
-    try {
-      client.sendAction({
-        type: "wait",
-        payload: {
-          mission: sim.mission,
-          techs: (sim.selectedTechIds || []).map(techById).filter(Boolean),
-          stretchLevel: "yellow",
-        },
-      });
-    } catch (e) {
-      flashToast(e.message);
-    }
+  $("#btn-mp-pilot")?.addEventListener("click", () =>
+    mpSend({ type: "attempt_pilot", payload: { feasibilityLevel: "yellow" } })
+  );
+  $("#btn-mp-scale")?.addEventListener("click", () =>
+    mpSend({ type: "attempt_scale", payload: { feasibilityLevel: "yellow" } })
+  );
+  $("#btn-mp-abandon")?.addEventListener("click", () => {
+    if (!confirm("Abandon your invention and only help others?")) return;
+    mpSend({ type: "abandon" });
   });
 
   $("#btn-mp-ai")?.addEventListener("click", () => {
-    const sim = client.snapshot?.sim;
-    if (!sim) return;
+    const snap = client.snapshot;
+    const forge = snap?.you?.forge;
+    const place = snap?.place || snap?.mp?.place;
+    if (!forge) return;
     try {
       setAiPending(true, "Asking co-inventor…");
       client.requestAi({
         mode: "chat",
         userLabel:
-          `Shared invention "${sim.inventionName || "untitled"}" in ${sim.mission?.place || "this place"}. ` +
-          `How: ${String(sim.inventionHow || "").slice(0, 400)}. ` +
-          `Suggest one concrete improvement for the stack or how-it-works.`,
+          `My invention "${forge.inventionName || "untitled"}" in ${place?.mission?.place || "this place"}. ` +
+          `How: ${String(forge.inventionHow || "").slice(0, 400)}. ` +
+          `Suggest one concrete improvement for my stack or how-it-works.`,
         reservedAp: 1,
       });
     } catch (e) {
@@ -531,49 +926,267 @@ export function initFriendsUi(api) {
     }
   });
 
-  /* —— Hotseat (PR12) —— */
+  /* —— Hotseat (rev 6 coopetition) —— */
   function setHsStatus(msg) {
     const el = $("#hs-status");
     if (el) el.textContent = msg || "";
   }
 
+  function hsAct(action, okMsg) {
+    if (!hotseat?.place) {
+      flashToast("Start the mission first");
+      return;
+    }
+    const r = hotseatApplyAction(hotseat, action);
+    if (!r.ok) {
+      const err = r.error || "rejected";
+      const friendly = {
+        not_active_seat: "Not your turn — pass the device",
+        retry_next_turn: "Already tried this turn — End Turn and come back",
+        challenge_required: "Face the challenge first",
+        pilot_required: "Pilot successfully before Scale",
+        abandoned: "You abandoned this invention",
+        no_ap: "Not enough AP",
+        no_budget: "Not enough Budget",
+        end_turn_noop: "Do something first (write, tech, or attempt)",
+        race_over: "Race is over — the place is solved",
+        run_over: "Run is over",
+      }[err] || err;
+      flashToast(friendly);
+      return false;
+    }
+    hotseat = r.session;
+    if (okMsg) flashToast(okMsg);
+    const ev = r.events || [];
+    renderHotseat();
+    if (
+      ev.some((e) =>
+        ["pilot_ok", "scale_ok", "tech_added", "tech_layered", "buffer_write", "challenge_pass"].includes(
+          e.type
+        )
+      )
+    ) {
+      scheduleHsVision({
+        immediate: ev.some((e) => e.type === "pilot_ok" || e.type === "scale_ok" || e.type === "tech_added"),
+        force: true,
+      });
+    }
+    return true;
+  }
+
+  function ensureHsSide() {
+    if (hsSide) return hsSide;
+    hsSide = new MpSidePanel({
+      mode: "hotseat",
+      toast: flashToast,
+      getPlace: () => hotseat?.place || null,
+      getForge: () => activeForge(hotseat),
+      canAct: () => {
+        if (!hotseat?.place || hotseat.place.status !== "playing") return false;
+        const f = activeForge(hotseat);
+        return Boolean(f && !f.abandoned);
+      },
+      applyField: (field, value) => {
+        if (!hotseat?.place) return;
+        const r = hotseatApplyAction(hotseat, {
+          type: "buffer_write",
+          payload: { field, value },
+        });
+        if (r.ok) {
+          hotseat = r.session;
+          const c = hotseatApplyAction(hotseat, {
+            type: "write_commit",
+            payload: { field, value, changed: true },
+          });
+          if (c.ok) hotseat = c.session;
+          renderHotseat();
+          scheduleHsVision({ force: true });
+        }
+      },
+      applyProposals: (proposals) => {
+        if (!proposals || !hotseat?.place) return;
+        for (const [field, value] of [
+          ["inventionName", proposals.inventionName],
+          ["inventionHow", proposals.inventionHow],
+          ["inventionImpact", proposals.inventionImpact],
+        ]) {
+          if (value == null || value === "") continue;
+          const r = hotseatApplyAction(hotseat, {
+            type: "buffer_write",
+            payload: { field, value: String(value) },
+          });
+          if (r.ok) hotseat = r.session;
+        }
+        const ids = proposals.selectedTechIds || proposals.techIds || [];
+        for (const techId of ids) {
+          const r = hotseatApplyAction(hotseat, {
+            type: "select_tech",
+            payload: { techId, tech: techById(techId) },
+          });
+          if (r.ok) hotseat = r.session;
+        }
+        renderHotseat();
+        scheduleHsVision({ force: true, immediate: true });
+        flashToast("Applied co-inventor suggestions");
+      },
+      payAp: (amount) => {
+        if (!hotseat?.place) return false;
+        const r = hotseatApplyAction(hotseat, {
+          type: "pay_ap",
+          payload: { amount: amount || 1 },
+        });
+        if (!r.ok) return false;
+        hotseat = r.session;
+        const f = activeForge(hotseat);
+        if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
+        return true;
+      },
+      refundAp: (amount) => {
+        if (!hotseat?.place) return;
+        const r = hotseatApplyAction(hotseat, {
+          type: "refund_ap",
+          payload: { amount: amount || 1 },
+        });
+        if (r.ok) {
+          hotseat = r.session;
+          const f = activeForge(hotseat);
+          if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
+        }
+      },
+    });
+    hsSide.mount($("#hs-vision-root"), $("#hs-co-inventor-root"), $("#hs-side-panel"));
+    $("#btn-hs-regen-vision")?.addEventListener("click", () => {
+      scheduleHsVision({ force: true, immediate: true });
+    });
+    return hsSide;
+  }
+
+  function scheduleHsVision(opts = {}) {
+    try {
+      ensureHsSide();
+      const forge = activeForge(hotseat);
+      const place = hotseat?.place;
+      if (!place) return;
+      const fp = [
+        place.year,
+        JSON.stringify(place.pressure || {}),
+        forge?.deployStage,
+        (forge?.stack || []).map((x) => x.techId).join(","),
+        (forge?.inventionName || "").slice(0, 40),
+        (forge?.inventionHow || "").slice(0, 80),
+        (forge?.inventionImpact || "").slice(0, 80),
+      ].join("|");
+      if (!opts.force && fp === hsVisionFingerprint && hsSide?.vision?.currentUrl) return;
+      hsVisionFingerprint = fp;
+      hsSide.syncVision({
+        immediate: Boolean(opts.immediate),
+        force: Boolean(opts.force),
+      });
+    } catch (e) {
+      console.warn("[hotseat vision]", e);
+    }
+  }
+
+  function paintHsSeatList(listEl, seat) {
+    if (!listEl || !hotseat) return;
+    const order = hotseat.seatOrder || hotseat.seats.map((s) => s.id);
+    const place = hotseat.place;
+    listEl.innerHTML = order
+      .map((id) => {
+        const s = hotseat.seats.find((x) => x.id === id);
+        const f = hotseat.forges?.[id];
+        const isActive = id === seat?.id;
+        const tags = [];
+        if (isActive) tags.push('<span class="tag">active</span>');
+        if (f?.abandoned) tags.push('<span class="tag">abandoned</span>');
+        if (f?.deployStage === "scaled") tags.push('<span class="tag">scaled</span>');
+        else if (f?.deployStage === "pilot_ok") tags.push('<span class="tag">pilot</span>');
+        else if (f?.challengePassed) tags.push('<span class="tag">challenged</span>');
+        return `<li class="${isActive ? "is-online" : "is-offline"}">
+            <strong>${escapeHtml(s?.displayName || id)}</strong>
+            ${place ? `<span class="muted sm">B${f?.budget ?? "—"} W${f?.will ?? "—"}</span>` : ""}
+            ${tags.join(" ")}
+          </li>`;
+      })
+      .join("");
+  }
+
   function renderHotseat() {
     if (!hotseat) return;
     const seat = activeSeat(hotseat);
+    const forge = activeForge(hotseat);
+    const place = hotseat.place;
     const badge = $("#hs-active-seat");
-    if (badge) badge.textContent = seat ? `Active: ${seat.displayName}` : "Seat —";
-    const list = $("#hs-seat-list");
-    if (list) {
-      list.innerHTML = hotseat.seats
-        .map(
-          (s, i) =>
-            `<li class="${i === hotseat.activeIndex ? "is-online" : "is-offline"}">
-              <strong>${escapeHtml(s.displayName)}</strong>
-              ${i === hotseat.activeIndex ? '<span class="tag">active</span>' : ""}
-            </li>`
-        )
-        .join("");
+    if (badge) {
+      badge.textContent = seat ? `R${hotseat.round || 1} · ${seat.displayName}` : "Seat —";
     }
-    const setup = $("#hs-setup");
-    if (setup) setup.hidden = Boolean(hotseat.sim);
-    const sim = hotseat.sim;
-    if (!sim) {
-      fillHsSelects();
+
+    document.getElementById("screen-hotseat")?.classList.toggle("is-setup", !place);
+    const play = $("#hs-play");
+    if (play) play.hidden = !place;
+
+    paintHsSeatList($("#hs-seat-list-play"), seat);
+
+    if (!place) {
+      // Mission not started — should be on solo global/mission pick screens
       return;
     }
-    $("#hs-hud-year").textContent = String(sim.year);
-    $("#hs-hud-turn").textContent = `Turn ${sim.turn}`;
-    $("#hs-hud-ap").textContent = `AP ${sim.ap}/${sim.apMax}`;
-    $("#hs-hud-budget").textContent = `Budget ${sim.budget}$`;
-    $("#hs-hud-will").textContent = `Will ${sim.will}`;
-    $("#hs-mission-title").textContent = sim.mission?.title || "Hotseat invention";
-    $("#hs-mission-place").textContent = sim.mission
-      ? `${sim.mission.place} · pass device to take turns`
-      : "";
-    $("#hs-news").textContent = sim.lastNews || "";
+
+    ensureHsSide();
+
+    $("#hs-hud-year").textContent = String(place.year);
+    $("#hs-hud-turn").textContent = `Round ${hotseat.round || 1}`;
+    if (forge) {
+      $("#hs-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
+      $("#hs-hud-budget").textContent = `Budget ${forge.budget}$`;
+      $("#hs-hud-will").textContent = `Will ${forge.will}`;
+    }
+
+    const m = place.mission;
+    const globalId = place.globalId || m?.globalId || hotseat.missionMeta?.globalId;
+    const global =
+      GLOBALS.find((g) => g.id === globalId) ||
+      (m?.globalId ? GLOBALS.find((g) => g.id === m.globalId) : null);
+    const setText = (id, text) => {
+      const el = $(id);
+      if (el) el.textContent = text || "";
+    };
+    setText(
+      "hs-play-global-label",
+      global ? `Global · ${global.title}` : "Hotseat race"
+    );
+    setText("hs-play-mission-title", m?.title || "Hotseat race");
+    setText("hs-play-mission-place", m?.place || "");
+    // Local scenario description (solo workshop uses m.scene here)
+    const sceneEl = $("#hs-play-mission-scene");
+    if (sceneEl) {
+      const scene = m?.scene || m?.problem || m?.description || "";
+      sceneEl.textContent = scene;
+      sceneEl.hidden = !scene;
+    }
+    setText(
+      "hs-play-stakeholder",
+      m?.stakeholder ? `Stakeholder: ${m.stakeholder}` : ""
+    );
+    setText("hs-news", place.lastNews || "");
+
+    // Theme-level problem brief (same content as solo mission-pick screen)
+    const briefRoot = $("#hs-play-problem-brief");
+    const brief = global ? briefForGlobal(global) : null;
+    if (briefRoot) {
+      if (brief) {
+        briefRoot.hidden = false;
+        setText("hs-brief-state", brief.currentState || "");
+        setText("hs-brief-causes", brief.rootCauses || "");
+        setText("hs-brief-warnings", brief.warnings || "");
+      } else {
+        briefRoot.hidden = true;
+      }
+    }
+
     const box = $("#hs-pressure");
     if (box) {
-      box.innerHTML = Object.entries(sim.pressure || {})
+      box.innerHTML = Object.entries(place.pressure || {})
         .map(([k, v]) => {
           const level = v >= 4 ? "hot" : v >= 2 ? "warm" : "cool";
           return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(v)}${"○".repeat(
@@ -582,97 +1195,196 @@ export function initFriendsUi(api) {
         })
         .join("");
     }
-    for (const [id, val] of [
-      ["hs-invention-name", sim.inventionName],
-      ["hs-invention-how", sim.inventionHow],
-      ["hs-invention-impact", sim.inventionImpact],
-    ]) {
-      const el = $(`#${id}`);
-      if (el && document.activeElement !== el && el.value !== (val || "")) el.value = val || "";
+
+    const table = $("#hs-open-table");
+    if (table) {
+      const rows = getOpenTable(hotseat);
+      table.innerHTML =
+        `<h3 class="mp-section-label">Open table</h3>` +
+        rows
+          .map((row) => {
+            const stack = (row.stack || [])
+              .map((x) => {
+                const name = x.tech?.name || x.techId;
+                return `<span class="tech-chip">${escapeHtml(x.tech?.icon || "")} ${escapeHtml(name)}</span>`;
+              })
+              .join(" ");
+            return `<article class="hs-forge-card ${row.active ? "is-active" : ""} ${
+              row.abandoned ? "is-abandoned" : ""
+            }">
+              <header><strong>${escapeHtml(row.displayName)}</strong>
+                ${row.active ? '<span class="tag">your turn</span>' : ""}
+              </header>
+              <p class="hs-forge-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
+              <div class="hs-forge-stack">${stack || '<span class="muted">No techs</span>'}</div>
+            </article>`;
+          })
+          .join("");
     }
-    const stack = $("#hs-stack");
-    if (stack) {
-      const techs = (sim.selectedTechIds || []).map(techById).filter(Boolean);
-      stack.innerHTML = techs.length
-        ? techs
-            .map(
-              (t) =>
-                `<button type="button" class="mp-chip" data-tech-id="${escapeHtml(t.id)}">${escapeHtml(
-                  t.icon || ""
-                )} ${escapeHtml(t.name)}</button>`
-            )
-            .join("")
-        : `<span class="muted">No techs yet.</span>`;
-      stack.querySelectorAll(".mp-chip").forEach((btn) => {
-        btn.onclick = () => {
-          const r = hotseatApplyAction(hotseat, {
-            type: "deselect_tech",
-            payload: { techId: btn.dataset.techId },
-          });
-          if (!r.ok) {
-            flashToast(r.error === "not_active_seat" ? "Not your turn — pass the device" : r.error);
-            return;
-          }
-          hotseat = r.session;
-          renderHotseat();
-        };
-      });
+
+    const canEdit = place.status === "playing" && forge && !forge.abandoned;
+
+    if (forge) {
+      for (const [id, val] of [
+        ["hs-invention-name", forge.inventionName],
+        ["hs-invention-how", forge.inventionHow],
+        ["hs-invention-impact", forge.inventionImpact],
+      ]) {
+        const el = $(`#${id}`);
+        if (el && document.activeElement !== el && el.value !== (val || "")) el.value = val || "";
+        if (el) el.disabled = !canEdit;
+      }
+      const ans = $("#hs-challenge-answer");
+      if (ans && document.activeElement !== ans) {
+        ans.value = forge.challengeAnswer || "";
+        ans.disabled = !canEdit;
+      }
     }
-    const tray = $("#hs-tech-tray");
-    if (tray) {
-      const selected = new Set(sim.selectedTechIds || []);
-      const ids = [
-        ...new Set([...(sim.mission?.suggested || []), "ai", "iot", "solar", "networks", "drones"]),
-      ].slice(0, 12);
-      tray.innerHTML = ids
+
+    const layerSel = $("#hs-layer-target");
+    if (layerSel && forge) {
+      const cur = layerSel.value;
+      layerSel.innerHTML = (hotseat.seatOrder || [])
         .map((id) => {
-          const t = techById(id);
-          if (!t || selected.has(id)) return "";
-          return `<button type="button" class="mp-tech-btn" data-tech-id="${escapeHtml(id)}">${escapeHtml(
-            t.icon || ""
-          )} ${escapeHtml(t.name)}</button>`;
+          const s = hotseat.seats.find((x) => x.id === id);
+          const label =
+            id === forge.seatId
+              ? `${s?.displayName || id} (my stack)`
+              : `${s?.displayName || id} (layer help)`;
+          return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
         })
-        .filter(Boolean)
         .join("");
-      tray.querySelectorAll(".mp-tech-btn").forEach((btn) => {
-        btn.onclick = () => {
-          const tech = techById(btn.dataset.techId);
-          const r = hotseatApplyAction(hotseat, {
-            type: "select_tech",
-            payload: { techId: btn.dataset.techId, tech },
-          });
-          if (!r.ok) {
-            flashToast(r.error === "not_active_seat" ? "Not your turn — pass the device" : r.error);
-            return;
-          }
-          hotseat = r.session;
-          renderHotseat();
-        };
-      });
+      if (cur && [...layerSel.options].some((o) => o.value === cur)) layerSel.value = cur;
+      else layerSel.value = forge.seatId;
+      layerSel.disabled = !canEdit;
     }
+
+    const targetId = $("#hs-layer-target")?.value || forge?.seatId;
+    const targetForge = hotseat.forges?.[targetId] || forge;
+    const seatNames = Object.fromEntries((hotseat.seats || []).map((s) => [s.id, s.displayName]));
+
+    paintSelectedStack($("#hs-selected-techs"), {
+      stack: targetForge?.stack || [],
+      ownerSeatId: targetId,
+      seatNames,
+      disabled: !canEdit,
+      escapeHtml,
+      onRemove: (techId) => {
+        hsAct({ type: "deselect_tech", payload: { techId, targetSeatId: targetId } });
+        scheduleHsVision({ force: true, immediate: true });
+      },
+    });
+
+    paintTechFilters($("#hs-filter-row"), {
+      domainFilter: hsDomainFilter,
+      escapeHtml,
+      onFilter: (d) => {
+        hsDomainFilter = d;
+        renderHotseat();
+      },
+    });
+    paintTechLibrary($("#hs-tech-list"), {
+      selectedIds: (targetForge?.stack || []).map((x) => x.techId),
+      suggested: place.mission?.suggested || [],
+      domainFilter: hsDomainFilter,
+      disabled: !canEdit,
+      escapeHtml,
+      onToggle: (techId) => {
+        const onStack = (targetForge?.stack || []).some((x) => x.techId === techId);
+        if (onStack) {
+          hsAct({ type: "deselect_tech", payload: { techId, targetSeatId: targetId } });
+        } else if (targetId === forge.seatId) {
+          hsAct({ type: "select_tech", payload: { techId, tech: techById(techId) } });
+        } else {
+          hsAct(
+            {
+              type: "layer_tech",
+              payload: { techId, targetSeatId: targetId, tech: techById(techId) },
+            },
+            "Layered emTech (you paid)"
+          );
+        }
+        scheduleHsVision({ force: true, immediate: true });
+      },
+    });
+
+    const hint = $("#hs-layer-hint");
+    if (hint && forge) {
+      const tName = hotseat.seats.find((s) => s.id === targetId)?.displayName || "stack";
+      hint.textContent = targetId === forge.seatId ? "Your stack" : `Layering on ${tName}`;
+    }
+
+    const playing = Boolean(canEdit);
+    const setDis = (id, on) => {
+      const el = $(id);
+      if (el) el.disabled = !on;
+    };
+    setDis("#btn-hs-challenge", playing && !forge.challengePassed && forge.turnPhase !== "scrutiny");
+    setDis(
+      "#btn-hs-submit-challenge",
+      playing && (forge.turnPhase === "scrutiny" || !forge.challengePassed)
+    );
+    setDis(
+      "#btn-hs-pilot",
+      playing && forge.challengePassed && forge.deployStage === "none" && !forge.pilotFailedThisTurn
+    );
+    setDis(
+      "#btn-hs-scale",
+      playing && forge.deployStage === "pilot_ok" && !forge.scaleFailedThisTurn
+    );
+    setDis("#btn-hs-abandon", playing && forge.deployStage !== "scaled");
+    setDis("#btn-hs-end-turn", place.status === "playing");
+    setDis("#btn-hs-wait", place.status === "playing");
+
+    const phase = $("#hs-phase-hint");
+    if (phase && forge) {
+      if (place.status === "won") phase.textContent = "Place solved — see ranking.";
+      else if (place.status === "collapsed") phase.textContent = "Collapsed — nobody wins.";
+      else if (forge.abandoned) phase.textContent = "You abandoned — layer on others or Wait.";
+      else if (!forge.challengePassed)
+        phase.textContent = "Add emTech on the left → write story → Face challenge → Pilot → Scale.";
+      else if (forge.deployStage === "none")
+        phase.textContent = "Challenge cleared — attempt Pilot (personal).";
+      else if (forge.deployStage === "pilot_ok")
+        phase.textContent = "Pilot ok — Scale to update the shared crisis!";
+      else if (forge.deployStage === "scaled") phase.textContent = "You Scaled. End turn or help others.";
+      else phase.textContent = "";
+    }
+
+    const outcome = $("#hs-outcome");
+    if (outcome) {
+      const showOut = place.status === "won" || place.status === "collapsed";
+      outcome.hidden = !showOut;
+      if (showOut) renderHsOutcome();
+    }
+
+    scheduleHsVision();
   }
 
-  function fillHsSelects() {
-    const themeSel = $("#hs-theme-select");
-    const missionSel = $("#hs-mission-select");
-    if (!themeSel || !missionSel) return;
-    if (!themeSel.options.length) {
-      themeSel.innerHTML = GLOBALS.map(
-        (g) => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.title)}</option>`
-      ).join("");
-      themeSel.onchange = () => {
-        const g = GLOBALS.find((x) => x.id === themeSel.value) || GLOBALS[0];
-        const list = localScenariosForGlobal(g, { count: 4, salt: 0 });
-        missionSel.innerHTML = list
-          .map(
-            (m) =>
-              `<option value="${escapeHtml(m.id)}">${escapeHtml(m.title)} — ${escapeHtml(m.place)}</option>`
-          )
-          .join("");
-        missionSel._missions = list;
-      };
-      themeSel.onchange();
+  function renderHsOutcome() {
+    const el = $("#hs-outcome-body");
+    if (!el || !hotseat?.place) return;
+    if (hotseat.place.status === "collapsed") {
+      el.innerHTML = `<p><strong>The place fell.</strong> No champion.</p><p class="muted">${escapeHtml(
+        hotseat.place.lastNews || ""
+      )}</p>`;
+      return;
     }
+    const rows = hotseat.ranking?.rows || [];
+    el.innerHTML = `<p><strong>Crisis held!</strong> Friendly ranking:</p>
+      <ol class="hs-rank-list">
+      ${rows
+        .map(
+          (r) =>
+            `<li><strong>#${r.rank} ${escapeHtml(r.displayName)}</strong> — ${r.score} pts
+            <span class="muted sm">(impact ${Math.round(r.impactNorm * 100)} · craft ${Math.round(
+              r.craftNorm * 100
+            )} · help ${Math.round(r.contributionNorm * 100)} · race ${Math.round(
+              r.raceNorm * 100
+            )})</span></li>`
+        )
+        .join("")}
+      </ol>`;
   }
 
   function wireHotseatFields() {
@@ -686,7 +1398,7 @@ export function initFriendsUi(api) {
       const el = $(`#${id}`);
       if (!el) continue;
       el.addEventListener("input", () => {
-        if (!hotseat?.sim) return;
+        if (!hotseat?.place) return;
         const r = hotseatApplyAction(hotseat, {
           type: "buffer_write",
           payload: { field, value: el.value },
@@ -696,95 +1408,82 @@ export function initFriendsUi(api) {
           return;
         }
         hotseat = r.session;
+        scheduleHsVision();
       });
       el.addEventListener("blur", () => {
-        if (!hotseat?.sim) return;
+        if (!hotseat?.place) return;
         const r = hotseatApplyAction(hotseat, {
           type: "write_commit",
           payload: { field, value: el.value, changed: true },
         });
-        if (r.ok) hotseat = r.session;
+        if (r.ok) {
+          hotseat = r.session;
+          scheduleHsVision({ force: true });
+        }
       });
     }
+    $("#hs-layer-target")?.addEventListener("change", () => {
+      if (hotseat?.place) renderHotseat();
+    });
   }
 
   $("#btn-hotseat-start")?.addEventListener("click", () => {
-    const raw = $("#hotseat-names")?.value || "Alex, Bea";
-    const names = raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    hotseat = createHotseatSession(names.length >= 2 ? names : ["Alex", "Bea"]);
-    showScreen("hotseat");
-    wireHotseatFields();
-    renderHotseat();
-    setHsStatus("Pick a mission, then begin. Pass the device between seats.");
-  });
-
-  $("#btn-hs-begin")?.addEventListener("click", () => {
-    if (!hotseat) return;
-    const themeSel = $("#hs-theme-select");
-    const missionSel = $("#hs-mission-select");
-    const list = missionSel?._missions || [];
-    const m = list.find((x) => x.id === missionSel?.value) || list[0];
-    if (!m) {
-      flashToast("Pick a mission");
-      return;
-    }
-    hotseat = setHotseatMission(hotseat, m, themeSel?.value);
-    const started = startHotseatMission(hotseat);
-    if (!started.ok) {
-      flashToast(started.error || "Start failed");
-      return;
-    }
-    hotseat = started.session;
-    renderHotseat();
-    setHsStatus(`Active: ${activeSeat(hotseat).displayName}`);
+    // Solo crisis → scenario screens, then real workshop via hotseat bridge
+    launchHotseatMissionPick();
   });
 
   $("#btn-hs-rotate")?.addEventListener("click", () => {
-    if (!hotseat) return;
-    hotseat = rotateSeat(hotseat, 1);
-    renderHotseat();
-    const s = activeSeat(hotseat);
-    setHsStatus(`Passed to ${s.displayName}`);
-    flashToast(`Now playing: ${s.displayName}`);
+    if (!hotseat?.place) return;
+    hsAct({ type: "end_turn" }, `Now playing: next seat`);
   });
 
   $("#btn-hs-leave")?.addEventListener("click", () => {
     hotseat = null;
+    hsSide?.destroy();
+    hsSide = null;
     showScreen("friends");
   });
 
   $("#btn-hs-end-turn")?.addEventListener("click", () => {
-    if (!hotseat?.sim) return;
-    const r = hotseatApplyAction(hotseat, { type: "end_turn" });
-    if (!r.ok) {
-      flashToast(r.error === "not_active_seat" ? "Not your turn" : r.error);
-      return;
-    }
-    hotseat = r.session;
-    renderHotseat();
-    setHsStatus("End turn — AP refilled.");
+    const nextName = (() => {
+      if (!hotseat?.seatOrder) return "";
+      const n = hotseat.seatOrder.length;
+      const i = (hotseat.activeIndex + 1) % n;
+      const id = hotseat.seatOrder[i];
+      return hotseat.seats.find((s) => s.id === id)?.displayName || "";
+    })();
+    hsAct({ type: "end_turn" }, nextName ? `Passed to ${nextName}` : "Turn ended");
   });
 
   $("#btn-hs-wait")?.addEventListener("click", () => {
-    if (!hotseat?.sim?.mission) return;
-    const r = hotseatApplyAction(hotseat, {
-      type: "wait",
-      payload: {
-        mission: hotseat.sim.mission,
-        techs: (hotseat.sim.selectedTechIds || []).map(techById).filter(Boolean),
-        stretchLevel: "yellow",
-      },
-    });
-    if (!r.ok) {
-      flashToast(r.error === "not_active_seat" ? "Not your turn" : r.error);
-      return;
+    hsAct({ type: "wait" }, "Wait — year advanced, turn passed");
+  });
+
+  $("#btn-hs-challenge")?.addEventListener("click", () => {
+    hsAct({ type: "enter_challenge" }, "Challenge started — write your answer");
+  });
+
+  $("#btn-hs-submit-challenge")?.addEventListener("click", () => {
+    const answer = $("#hs-challenge-answer")?.value || "";
+    // enter if needed
+    if (activeForge(hotseat)?.turnPhase !== "scrutiny") {
+      const ent = hotseatApplyAction(hotseat, { type: "enter_challenge" });
+      if (ent.ok) hotseat = ent.session;
     }
-    hotseat = r.session;
-    renderHotseat();
-    setHsStatus(`Wait → year ${hotseat.sim.year}`);
+    hsAct({ type: "submit_challenge", payload: { answer } }, "Challenge submitted");
+  });
+
+  $("#btn-hs-pilot")?.addEventListener("click", () => {
+    hsAct({ type: "attempt_pilot", payload: { feasibilityLevel: "yellow" } });
+  });
+
+  $("#btn-hs-scale")?.addEventListener("click", () => {
+    hsAct({ type: "attempt_scale", payload: { feasibilityLevel: "yellow" } });
+  });
+
+  $("#btn-hs-abandon")?.addEventListener("click", () => {
+    if (!confirm("Abandon your invention and only help others?")) return;
+    hsAct({ type: "abandon" }, "Abandoned — you can layer on others");
   });
 
   // Resume room session if present

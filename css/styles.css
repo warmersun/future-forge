@@ -290,14 +290,41 @@ button:disabled {
 }
 
 /* Friends multiplayer */
-.friends-content {
-  max-width: 920px;
+#screen-friends .friends-content {
+  max-width: min(1100px, 100%);
+  /* Extra side breathing room so labels/fields never kiss the viewport edge */
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .friends-hub-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.friends-panel {
+  min-width: 0; /* grid children can shrink without clipping labels */
+  overflow: visible;
+  /* Content sits directly in .panel (no .panel-body) — give the card real inset */
+  padding: 1.15rem 1.35rem 1.35rem;
+}
+
+.friends-panel .field {
+  min-width: 0;
+}
+
+.friends-panel .field label {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.friends-panel h2 {
+  margin: 0 0 0.95rem;
+  font-size: 1.1rem;
+  padding: 0;
 }
 
 .friends-panel-wide {
@@ -307,6 +334,10 @@ button:disabled {
 @media (max-width: 720px) {
   .friends-hub-grid {
     grid-template-columns: 1fr;
+  }
+
+  #screen-friends .friends-content {
+    padding-inline: clamp(1rem, 5vw, 1.5rem);
   }
 }
 
@@ -340,11 +371,6 @@ button:disabled {
 
 .hs-setup {
   margin-top: 0.75rem;
-}
-
-.friends-panel h2 {
-  margin: 0 0 0.85rem;
-  font-size: 1.1rem;
 }
 
 .friends-status {
@@ -382,13 +408,475 @@ button:disabled {
 
 .room-lobby-layout {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 1rem;
-  max-width: 960px;
+  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.6fr);
+  gap: 1.25rem;
+  max-width: min(1200px, 100%);
+  width: 100%;
+}
+
+.room-lobby-layout.room-lobby-wide {
+  max-width: min(1400px, 100%);
+  grid-template-columns: minmax(15rem, 0.75fr) minmax(0, 2.4fr);
+  padding-bottom: 2rem;
+}
+
+.room-lobby-mission {
+  min-width: 0;
+}
+
+.room-mission-summary {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+
+/* Visual theme / mission picker (multiplayer) */
+.mp-setup-panel {
+  width: 100%;
+}
+
+.mp-setup-intro h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.mp-setup-intro {
+  margin-bottom: 1rem;
+}
+
+.mp-pick-step {
+  margin-bottom: 1.25rem;
+}
+
+.mp-pick-label {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.mp-pick-blurb {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.mp-pick-grid.challenge-grid {
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 0.85rem;
+}
+
+.mp-pick-card.is-selected {
+  outline: 2px solid var(--accent-3);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35), var(--glow);
+}
+
+.mp-pick-card.is-selected .cta {
+  color: var(--accent-3);
+}
+
+.mp-setup-actions {
+  position: sticky;
+  bottom: 0;
+  padding: 0.75rem 0 0.25rem;
+  background: linear-gradient(180deg, transparent, rgba(7, 11, 20, 0.92) 30%);
+  z-index: 2;
+}
+
+/* Hotseat multiplayer bar on solo workshop */
+.mp-workshop-bar {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.92);
+  padding: 0.3rem var(--page-gutter) 0.35rem;
+  z-index: 40;
+}
+
+.mp-workshop-bar.is-contrib-locked {
+  opacity: 0.85;
+}
+
+.mp-workshop-bar.is-contrib-locked #btn-mp-pass-device,
+.mp-workshop-bar.is-contrib-locked #btn-mp-prev-invent,
+.mp-workshop-bar.is-contrib-locked #btn-mp-next-invent,
+.mp-workshop-bar.is-contrib-locked .mp-seat-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Active player: leftmost in topbar brand (no extra vertical chrome) */
+.brand .mp-active-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.15rem 0 0;
+  padding: 0.2rem 0.65rem 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.22), rgba(52, 211, 153, 0.14));
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.12);
+  white-space: nowrap;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand .mp-active-player::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.28);
+  flex-shrink: 0;
+  animation: mp-active-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mp-active-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+}
+
+.brand .mp-active-player strong {
+  color: #7dd3fc;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand .mp-active-player .mp-active-label {
+  color: var(--muted, #94a3b8);
+  font-weight: 550;
+  font-size: 0.92em;
+}
+
+.brand .mp-active-player[hidden] {
+  display: none !important;
+}
+
+.mp-workshop-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Shell wraps each story textarea so the notice can cover it exactly */
+.story-textarea-shell {
+  position: relative;
+  display: block;
+}
+
+.story-textarea-shell textarea {
+  display: block;
+  width: 100%;
+}
+
+/* Contribution result — solid panel over the edited textarea (auto-dismiss) */
+.mp-contrib-banner {
+  display: none;
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius, 10px);
+  border: 1px solid #334155;
+  /* Fully opaque — never see story text through this */
+  background: #151f33;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.mp-contrib-banner.is-visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mp-contrib-banner.is-over-field.is-visible {
+  display: flex;
+}
+
+.mp-contrib-banner.is-leaving {
+  opacity: 0;
+  transform: translateY(2px);
+}
+
+.mp-contrib-banner.is-accept {
+  border-color: #34d399;
+  background: #0d281f; /* solid opaque green */
+}
+
+.mp-contrib-banner.is-reject {
+  border-color: #f87171;
+  background: #2a1212; /* solid opaque red */
+}
+
+.mp-contrib-banner .mp-contrib-banner-title {
+  display: block;
+  font-weight: 750;
+  margin-bottom: 0.2rem;
+  font-size: 0.92rem;
+}
+
+.mp-contrib-banner.is-accept .mp-contrib-banner-title {
+  color: #6ee7b7;
+}
+
+.mp-contrib-banner.is-reject .mp-contrib-banner-title {
+  color: #fca5a5;
+}
+
+.mp-contrib-banner .mp-contrib-banner-body {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.86rem;
+}
+
+.mp-contrib-banner .mp-contrib-banner-ap {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* Sit directly on top of the textarea inside .story-textarea-shell */
+.mp-contrib-banner.is-over-field {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  margin: 0;
+  overflow: auto;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mp-seat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-seat-tab {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.5);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.mp-seat-tab:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--text);
+}
+
+.mp-seat-tab.is-viewing {
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.25);
+  color: var(--text);
+}
+
+.mp-seat-tab.is-active-turn {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.mp-view-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+}
+
+body.mp-hotseat .workshop-layout {
+  height: calc(100vh - 57px - 4.25rem);
+}
+
+/* Hotseat setup = scrollable pick; play = workshop shell */
+#screen-hotseat.is-setup {
+  height: auto;
+  max-height: none;
+  overflow: auto;
+}
+
+#screen-hotseat.is-setup .mp-workshop {
+  display: none !important;
+}
+
+#screen-hotseat:not(.is-setup) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+#screen-hotseat:not(.is-setup) .mp-setup-shell {
+  display: none !important;
+}
+
+#screen-hotseat:not(.is-setup) .mp-workshop {
+  display: grid;
+}
+
+.mp-setup-shell {
+  flex: 1;
+  width: 100%;
+  padding-bottom: 2rem;
+}
+
+.mp-setup-with-brief {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.85fr) minmax(0, 2.4fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.mp-setup-party {
+  position: sticky;
+  top: 0.75rem;
+  max-height: calc(100vh - 5rem);
+  overflow: auto;
+}
+
+.mp-setup-panel.panel {
+  padding: 1.15rem 1.35rem 1.5rem;
+}
+
+/* Hotseat play reuses .workshop-layout */
+.mp-workshop.workshop-layout {
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 57px);
+}
+
+.mp-layer-field {
+  padding: 0.5rem 0.85rem 0.25rem;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mp-layer-field label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
+}
+
+.mp-layer-field select {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.mp-party-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mp-seat-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.mp-seat-inline li {
+  flex: 0 1 auto;
+}
+
+.mp-section-label {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+/* Local scenario scene — always readable in hotseat banner */
+.mp-mission-scene {
+  margin: 0.55rem 0 0.45rem !important;
+  color: var(--text) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.mp-play-problem-brief {
+  margin: 0.75rem 0 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.45);
+}
+
+.mp-play-problem-brief[hidden] {
+  display: none !important;
+}
+
+.mp-play-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.mp-play-brief-grid h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-mute);
+}
+
+.mp-play-brief-grid p {
+  margin: 0 !important;
+  font-size: 0.84rem !important;
+  color: var(--text-dim) !important;
+  line-height: 1.45;
+}
+
+.mp-play-brief-grid .mp-brief-warn p {
+  color: #fcd34d !important;
+}
+
+@media (max-width: 1100px) {
+  .mp-setup-with-brief {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-setup-party {
+    position: static;
+    max-height: none;
+  }
 }
 
 @media (max-width: 800px) {
   .room-lobby-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .room-lobby-layout.room-lobby-wide {
     grid-template-columns: 1fr;
   }
 }
@@ -426,17 +914,328 @@ button:disabled {
   font-weight: 700;
 }
 
-.mp-play-layout {
-  display: grid;
-  grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2fr);
-  gap: 1rem;
-  max-width: 1100px;
+/* —— Multiplayer play shell (full-width, workshop-style) —— */
+#screen-hotseat.active,
+#screen-room-play.active {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
-@media (max-width: 860px) {
-  .mp-play-layout {
-    grid-template-columns: 1fr;
+.mp-shell {
+  display: grid;
+  /* party : invent : vision/co-inventor — full viewport, like workshop */
+  grid-template-columns: minmax(15rem, 0.9fr) minmax(0, 1.5fr) minmax(0, 1.4fr);
+  grid-template-rows: 1fr;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+
+.mp-party-panel,
+.mp-main-panel,
+.mp-side-panel {
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.45);
+}
+
+.mp-side-panel {
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 11, 20, 0.55);
+  position: relative;
+  top: auto;
+  max-height: none;
+}
+
+.mp-party-panel {
+  padding: 1rem 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+/* Left-rail scenario brief */
+.mp-scenario-brief {
+  margin-top: 0.35rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.mp-scenario-brief[hidden] {
+  display: none !important;
+}
+
+.mp-brief-heading {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  font-weight: 700;
+}
+
+.mp-brief-visual {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+  border: 1px solid var(--border);
+  aspect-ratio: 16 / 9;
+  background: var(--bg-2);
+}
+
+.mp-brief-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mp-brief-theme {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+}
+
+.mp-brief-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.mp-brief-place {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mp-brief-scene {
+  margin: 0 0 0.75rem;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+
+.mp-brief-stake,
+.mp-brief-meters {
+  margin: 0 0 0.55rem;
+  font-size: 0.84rem;
+}
+
+.mp-brief-stake .muted,
+.mp-brief-meters .muted {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.room-lobby-party .mp-scenario-brief {
+  margin-top: 0.75rem;
+}
+
+.mp-main-panel {
+  padding: 1rem 1.25rem 2rem;
+}
+
+.mp-main-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mp-main-header h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.35rem;
+}
+
+.mp-main-header .muted {
+  margin: 0;
+}
+
+.mp-main-header .friends-status {
+  margin: 0;
+  max-width: 22rem;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.mp-play-primary {
+  max-width: none;
+}
+
+.mp-play-primary h3 {
+  margin: 1.15rem 0 0.5rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+.mp-play-primary .field textarea {
+  min-height: 5.5rem;
+}
+
+.mp-play-primary #hs-challenge-answer,
+.mp-play-primary #mp-challenge-answer {
+  min-height: 6.5rem;
+}
+
+/* Vision column fills height like workshop */
+.mp-side-panel .side-tabs {
+  flex-shrink: 0;
+}
+
+.mp-side-panel .side-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.mp-side-panel .side-pane[hidden] {
+  display: none !important;
+}
+
+.mp-side-panel .vision-canvas-wrap {
+  flex: 1;
+  min-height: min(42vh, 28rem);
+  max-height: none;
+}
+
+.mp-side-panel .co-inventor-root {
+  flex: 1;
+  min-height: min(50vh, 32rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-side-panel .vision-narratives {
+  max-height: 9rem;
+  overflow: auto;
+}
+
+.mp-side-panel .co-messages {
+  flex: 1;
+  min-height: 12rem;
+}
+
+@media (max-width: 1100px) {
+  #screen-hotseat,
+  #screen-room-play {
+    height: auto;
+    max-height: none;
+    overflow: auto;
   }
+
+  .mp-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+
+  .mp-party-panel,
+  .mp-main-panel,
+  .mp-side-panel {
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mp-side-panel .vision-canvas-wrap {
+    min-height: 18rem;
+  }
+}
+
+/* legacy class kept if referenced */
+.mp-play-layout {
+  display: contents;
+}
+
+.hs-open-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.hs-forge-card {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+  font-size: 0.85rem;
+}
+
+.hs-forge-card.is-active {
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.2);
+}
+
+.hs-forge-card.is-abandoned {
+  opacity: 0.65;
+}
+
+.hs-forge-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.hs-forge-name {
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.hs-forge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.35rem 0;
+}
+
+.hs-forge-stack .mp-chip.sm,
+.mp-chip.sm {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+}
+
+.hs-outcome {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.hs-rank-list {
+  padding-left: 1.2rem;
+  margin: 0.5rem 0 0;
+}
+
+.hs-rank-list li {
+  margin-bottom: 0.4rem;
+}
+
+.sm {
+  font-size: 0.78rem;
 }
 
 .mp-party-panel h3,
@@ -1438,6 +2237,7 @@ button:disabled {
 }
 
 .story-face-field {
+  position: relative;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1569,7 +2369,7 @@ button:disabled {
   top: 0.85rem;
   left: 50%;
   transform: translateX(-50%) translateY(-8px);
-  z-index: 300;
+  z-index: 10000;
   max-width: min(36rem, 92vw);
   padding: 0.55rem 1.05rem;
   border-radius: 999px;
@@ -1624,8 +2424,125 @@ button:disabled {
   font-size: 0.78rem;
 }
 
+/* Challenge UI locked while AI poses the critic */
+body.challenge-pose-pending #scrutiny-moves.is-pose-pending {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+body.challenge-pose-pending #mode-panel-defend,
+body.challenge-pose-pending #mode-panel-fix,
+body.challenge-pose-pending #mode-panel-sidestep {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+body.challenge-pose-pending .challenge-side-actions,
+body.challenge-pose-pending #challenge-help-form {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .outcome-stars {
   margin: 0.5rem 0 0.75rem;
+}
+
+/* Multiplayer / hotseat end standings */
+.outcome-mp {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.15rem 1.1rem;
+}
+
+.outcome-mp-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.outcome-mp-lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.outcome-mp-standings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.outcome-mp-row {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  grid-template-areas:
+    "medal name score"
+    "medal detail detail"
+    "medal badges badges";
+  gap: 0.15rem 0.55rem;
+  align-items: baseline;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius, 10px);
+  border: 1px solid var(--border);
+  background: var(--bg-1, #0c1220);
+}
+
+.outcome-mp-row.is-winner {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), var(--bg-1, #0c1220));
+}
+
+.outcome-mp-row.is-collapse {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "name"
+    "detail";
+}
+
+.outcome-mp-medal {
+  grid-area: medal;
+  font-size: 1.1rem;
+}
+
+.outcome-mp-name {
+  grid-area: name;
+  font-weight: 700;
+}
+
+.outcome-mp-score {
+  grid-area: score;
+  font-variant-numeric: tabular-nums;
+  color: #7dd3fc;
+}
+
+.outcome-mp-detail {
+  grid-area: detail;
+  font-size: 0.78rem;
+}
+
+.outcome-mp-badges {
+  grid-area: badges;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.outcome-mp-badges .tag-win {
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #6ee7b7;
+}
+
+.outcome-mp-legend {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.outcome-mp-winner-line {
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  color: #fbbf24;
 }
 
 .run-stars {

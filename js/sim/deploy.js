@@ -209,7 +209,9 @@ export function visionStageIdForDeployStage(deployStage) {
   const map = {
     none: "present",
     pilot: "prototype",
+    pilot_ok: "prototype", // multiplayer forge stage after successful Pilot
     scale: "transition",
+    scaled: "transformed", // multiplayer forge stage after successful Scale
     new_normal: "transformed",
   };
   return map[deployStage] || "present";

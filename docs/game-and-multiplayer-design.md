@@ -4,10 +4,10 @@
 |-------|--------|
 | **Title** | Future Forge: Solo Turn Economy & Friends Multiplayer |
 | **Author** | Future Forge design (Grok) |
-| **Date** | 2026-07-23 |
-| **Status** | Draft (rev 5 — friends group multiplayer) |
-| **Codebase** | `/mnt/data/dev/learning-game` (v1.1.0) |
-| **North star** | Small team racing a local crisis; spend attention, capital, and political will; invent under time pressure; survive hostile scrutiny; clever stacks and honest timing beat generic futurism |
+| **Date** | 2026-07-24 |
+| **Status** | Draft (rev 6 — multiplayer coopetition goals) |
+| **Codebase** | `/mnt/data/dev/learning-game` |
+| **North star** | Solo or with friends: spend attention, capital, and political will; invent under time pressure; survive scrutiny; clever stacks and honest timing beat generic futurism. Multiplayer: **personal inventions, shared crisis, rank only if the place survives.** |
 
 ---
 
@@ -37,7 +37,7 @@ When this doc says “Trust” alone, it means a **crisis pressure key** (existi
 
 Future Forge today is a compelling **solo browser learning loop**: theme → local mission → invent (tech stack + dual story faces) → feasibility light → single-essay challenge → deploy. Crisis meters rise on Wait; deploy drops them; collapse year or any meter ≥ 5 loses. There is no turn economy, no budget, no political will, no multi-stage deploy, and no multiplayer. Progress is `localStorage` only (`future-forge:scenarioCache`, `future-forge:solvedMissions`).
 
-This design adds **real game mechanics** in five solo phases (G0–G4), then layers **multiplayer for a group of friends** (not a classroom). Priority: **live friends co-op rooms** (one shared invention, WebSocket) → optional hotseat → async friends studio → competitive race among friends → adversarial critic last. **Classroom / teacher tooling is a later commercial track**, not the multiplayer MVP. Solo action-point economy (G1) lands before networked multiplayer: multiplayer multiplies empty loops. Every mechanic is specified against existing symbols in `js/game.js`, `js/data.js`, `server.mjs`, and `index.html`.
+This design adds **real game mechanics** in five solo phases (G0–G4), then layers **multiplayer for a group of friends** (not a classroom). **Rev 6 multiplayer product goals:** 2–6 players, **personal inventions**, **shared crisis** (if the place falls everyone loses), **ranked score among survivors** when the place is held; players may race or collaborate. Full loop parity (invent → AI co-inventor → challenge → staged deploy → vision/outcome) is required — invent-only rooms/hotseat are scaffolding, not “done multiplayer.” **Classroom / teacher tooling is a later commercial track.** Every mechanic is specified against existing symbols in `js/game.js`, `js/data.js`, `server.mjs`, and `index.html`.
 
 ---
 
@@ -114,7 +114,7 @@ if (techs.filter((t) => suggested.has(t.id)).length >= 2) drop += 1;
 2. Make **Wait costs and synergy payoffs visible and consequential**.
 3. Evolve challenge into **scrutiny combat** (Argue / Patch / Pivot) without losing the writing/learning core.
 4. Stage deploy as **pilot → scale → new normal**, with explicit rules for vision stage driving.
-5. Enable **friends co-op rooms** (first multiplayer product milestone): invite code, **one shared invention**, live WebSocket, shared sim + AI rate limits. Hotseat optional. Classroom/teacher tools are **out of multiplayer MVP scope**.
+5. Enable **friends multiplayer (coopetition)**: 2–6 players, personal inventions, shared place/crisis, full solo-loop parity in-party, rank-on-survive / no-champion-on-lose. Live party primary; hotseat = same goals, different input. Classroom tools **out of multiplayer MVP scope**.
 6. Migrate incrementally: feature flags, no big-bang rewrite.
 
 ### Non-Goals
@@ -656,69 +656,479 @@ Allocation still uses existing highest-first `applyPressureDrop`.
 
 ## Part B — Multiplayer (friends group)
 
-**Product correction (rev 5, locked):** Multiplayer is for a **group of friends** inventing together — not a school classroom, not a teacher-led workshop. "Group learning" means social co-op under a shared crisis.
+**Audience (rev 5, still locked):** Multiplayer is for a **group of friends** — not a school classroom, not a teacher-led workshop.
 
-### Fantasy
+**Gameplay goals (rev 6, locked):** Multiplayer is **friendly competition under a shared crisis** — not pure co-op on one invention, and not pure PvP.
 
-> 2–5 friends join with a room code, pick a mission, and invent **one shared invention** under rising crisis meters — live on WebSocket. Roles are optional flavor; the stack, name, and story faces are shared. Win or fail together. Optional later: race the same seed for bragging rights among friends.
+### North-star fantasy (rev 6)
 
-### Priority ladder (product locked — friends first)
+> **2–6 friends** face the **same local crisis at the same time.**  
+> Each forges **their own invention** (name, how, life, stack) under rising pressure.  
+> If the place collapses, **everybody loses** — no champion.  
+> If the crisis is held, friends **rank by contribution** (impact, craft, speed, honesty, help).  
+> Along the way they choose: **race alone**, **trade/help**, or **ally** when meters look fatal.
 
-1. **Friends co-op room (live WebSocket)** — first multiplayer product milestone  
-2. **Hotseat / pass-and-play** — same friends, one device; optional before or after rooms  
-3. **Async friends studio** — drop-in over days (later)  
-4. **Competitive friends race** — same seed, invite-only (later)  
-5. **Adversarial critic** (one friend plays Moloch) — last  
-6. **Classroom / Education track** — *separate commercial product later*; not in this MVP  
+Tone: table trash-talk allowed; griefing the shared fate loses for everyone, including you.
 
-**MP merge gate:** `actionPoints` feature stable **≥ 7 days** (or product sign-off) before default-on rooms.
+### Honest status of shipped code (PR9–12)
 
-**Session length:** flexible evening party (~30–90 min). No class-period script as core design.
+Current rooms + hotseat are **transport / invent-slice scaffolding**, not the product:
 
-### Invention model (product locked)
+| Present | Missing for “real multiplayer” |
+|---------|--------------------------------|
+| Codes, WS, soft locks, AI quotas, thin invent UI | Personal invent boards |
+| Partial shared meters | Full loop: challenge → Pilot/Scale → vision → outcome |
+| Hotseat pass-device invent | Rank-on-survive / no-champion-on-lose |
+| | Meaningful collab verbs; graphics parity; AI as first-class play |
 
-| Decision | Spec |
-|----------|------|
-| **One shared invention** | Single `selectedTechIds`, `inventionName`, `inventionHow`, `inventionImpact` for the room |
-| Who can edit | Any seated player may act when they have AP (free-for-all on shared board), subject to field soft-locks |
-| Optional roles | Cosmetic / soft preference only in MVP — do not hard-lock fields unless friends enable "role locks" in settings |
-| Scoring | Shared run report + stars; optional personal "actions taken" vanity stats |
+**Definition of multiplayer not half-done:** **MP-A** below complete. Invent-only is pre-MP-A.
 
-### Roles (optional, not teacher)
+### Goals checklist (G-MP — product acceptance)
 
-| Role id | Soft focus (if enabled) | Notes |
-|---------|-------------------------|--------|
-| `polymath` | stack, how-it-works, scout AI | Default seat name if no roles |
-| `storyteller` | everyday life, name | |
-| `diplomat` | lobby, stakeholder/ethicist Argue | needs `budgetWill` |
-| `operator` | Wait/End Turn, Patch, deploy | |
-| `host` | create room, pick mission, kick, end room | **Friend host** — light power only |
+| ID | Goal |
+|----|------|
+| G-MP1 | 2–6 seats; multiplayer run needs ≥2 humans |
+| G-MP2 | Shared mission before play |
+| G-MP3 | One evening run (~30–90 min) → shared outcome ceremony |
+| G-MP4 | Same crisis meters + year for all seats |
+| G-MP5 | Place fail ends run for **everyone** |
+| G-MP6 | Personal deploys relieve **shared** pressure (impact scores) |
+| G-MP7 | Each seat: full invent → challenge → deploy on **own** invention |
+| G-MP8 | Personal AP / Budget / Will by default |
+| G-MP9 | AI co-inventor per seat under fair room limits |
+| G-MP10 | Vision/graphics in multiplayer deploy fantasy |
+| G-MP11 | Group win/partial → **ranked score** + readable breakdown |
+| G-MP12 | Group lose → **no champion** |
+| G-MP13 | Score rewards craft + impact, not click spam |
+| G-MP14 | ≥1 costly help/trade/ally choice |
+| G-MP15 | Help can save the place and may affect rank |
+| G-MP16 | Refusing help is allowed (tension if place still lives) |
+| G-MP17 | Live party = primary online mode |
+| G-MP18 | Hotseat = **same rules**, pass-device focus — not invent-only toy |
+| G-MP19 | Async / pure race-without-shared-fate = later |
+| G-MP20 | Light host only; no teacher resolve |
+| G-MP21 | Ranking is playful, not public shaming |
 
-**No host gradebook. No host force-pass of scrutiny in MVP.**
+### Core model (goals-level)
 
-Solo = all capabilities. Hotseat may rotate seats. Networked: first joiner is host; seats claim nicknames.
+```text
+SHARED PLACE: mission · pressure · year · collapse
+  if place fails → ALL lose (no ranking champion)
+        ▲ personal deploys reduce shared meters
+PLAYER A invent │ PLAYER B invent │ … (2–6)
+  own stack/story, AP/Budget/Will, challenge, score
+        └── collab links: help / trade / ally (optional, costly)
+```
 
-### Friends room defaults
+| Layer | Spec |
+|-------|------|
+| **Shared place** | One mission; one pressure board; one calendar; group win/lose |
+| **Personal forge** | Per seat: invention fields, resources, feasibility, challenge, deploy path, run score components |
+| **Coopetition** | Solo race / selective help / alliance postures all viable |
+| **Outcome** | Lose → no champion. Win/partial → ranked among survivors |
+
+### Solo mechanics reused as multiplayer grammar
+
+AP, Budget, Will, pressure, Wait/year, feasibility, challenge, staged deploy, run report/stars, AI co-inventor, vision — **compose** these; do not invent a parallel game.
+
+### Turn structure (rev 6 rules — locked)
+
+Multiplayer is **strictly turn-based**. One **active seat** at a time. Play **goes around** the table in fixed seat order until the run ends.
+
+This is the same structure for **live party** and **hotseat** (hotseat “Pass device” = end of seat-turn / hand to next).
+
+#### Seats & order
+
+| Rule | Spec |
+|------|------|
+| Seat count | 2–6 named seats at mission start |
+| Seat order | Fixed for the run: join order by default; host may reorder in lobby before start |
+| Order display | Always visible (e.g. Alex → Bea → Cara → … → Alex) |
+| Mid-run join | Not in MP-A (spectate only or wait for next mission) |
+
+#### Who starts
+
+| Rule | Spec |
+|------|------|
+| **Default first player** | **Host’s seat** |
+| Host may designate | Before **Begin**, host may pick any seated player as first |
+| Optional random | Lobby control: “Random first player” (fairness / rematch) |
+| After first seat-turn | Play proceeds **clockwise in seat order** (index +1, wrap) |
+| First player does **not** rotate each round | Same seat order every round; first player of round 2 is again the seat after the last seat of round 1 (continuous circle). Optional later: “rotating initiative” — **not** MP-A |
+
+#### Seat-turn (one player’s turn)
+
+```text
+Start seat-turn (active seat S):
+  → S.ap = apMax (3)
+  → only S may act on S’s forge and on shared Wait/deploy effects they trigger
+  → others: read-only watch (open table)
+
+During seat-turn, S may (subject to costs/gates):
+  → edit **own** name / how / life (free commits) — never rewrite another seat’s prose
+  → add/remove emTech on **own** stack (AP / Budget / Will as solo)
+  → **layer emTech onto another seat’s stack** (additive only; S pays full resource cost)
+  → lobby, AI co-inventor, scout on **own** forge (as solo; AI does not rewrite others’ prose)
+  → enter challenge / resolve challenge on **own** invention only (required before Pilot)
+  → Pilot on **own** invention (personal; does not update shared place; fail → no retry until next seat-turn)
+  → Scale on **own** invention if Pilot already succeeded (success → **shared place updates**; fail → no retry until next seat-turn)
+  → **Abandon** own invention and contribute only via layering / Wait
+  → Wait (see below) — ends the seat-turn
+  → End Turn — ends the seat-turn without advancing year
+
+End seat-turn:
+  → active seat = next in order
+  → begin that seat’s seat-turn (their AP refills)
+```
+
+| Rule | Spec |
+|------|------|
+| **Who may act** | Only the **active seat**. Others cannot spend AP, edit forges, challenge, deploy, or Wait |
+| **AP scope** | Personal: each seat has own `ap` / `apMax`. Refill at **start of your seat-turn**, not when others act |
+| **Budget / Will** | Personal per seat |
+| **End Turn** | Active seat only. Does **not** change shared year or pressure (same as solo). Ends seat-turn → next player |
+| **Forced pass** | If active seat disconnects too long: host may **Force end turn** (light host power). Not a teacher grade tool |
+| **Empty AP** | Player may still End Turn (or Wait). They are not auto-passed (writers need time); UI should prompt “End turn?” when AP=0 |
+
+#### Rounds
+
+| Term | Meaning |
+|------|---------|
+| **Seat-turn** | One player’s active window |
+| **Round** | One full pass: every seated player has taken exactly one seat-turn since the round began |
+| UI | Show `Round N · Active: Bea` and seat list with “active” tag |
+
+Round counter is flavor + scoring aid (thrift / speed later); it does **not** by itself raise pressure.
+
+#### Wait (shared calendar — party-critical)
+
+Wait is the only routine way to advance **year** and apply **pressureRise** to the shared place. Under turn-based play:
+
+| Rule | Spec |
+|------|------|
+| **When** | Only the **active seat** may Wait |
+| **Effect** | Same crisis math as solo Wait: +year, full `pressureRise` on shared meters, news, collapse check |
+| **AP** | Burns remaining AP (solo parity), then seat-turn **ends** — play passes to next seat |
+| **No double Wait** | At most **one Wait per seat-turn**. After Wait, you do **not** get a fresh AP bar to Wait again before others play |
+| **Why** | Prevents one player solo-spamming the calendar while friends never act |
+| **Consent** | **Not required** in MP-A (speed + clarity). Table talk is social. Optional later: “Wait needs majority ready” |
+| **After Wait** | If place collapses → **run ends, no champion**. Else next seat plays under the new year/meters |
+
+**Design note:** Waiting is powerful and selfish-or-heroic: you spend the table’s future so *you* might deploy next round into worse/better timing. Rank and place-survival create the tension—not a veto minigame (for MP-A).
+
+#### Challenge (every idea)
+
+| Rule | Spec |
+|------|------|
+| **Mandatory** | Every invention that goes to deploy must **face a challenge** first — same product fantasy as solo. No host skip, no free pass |
+| **Whose challenge** | Only the **owner** of that invention, on their seat-turn |
+| **Incomplete** | If you End Turn mid-challenge: stay in challenge as personal state; resume next seat-turn |
+| **Helpers** | Layering emTech does not skip or share the owner’s challenge |
+
+#### Contribution by invent phase (hotseat / friends — locked)
+
+Personal invents move through **invent → challenge → deploy (Pilot/Scale) → scaled**.
+
+**Hard lock:** Passing Challenge **freezes the invention** (name, how, life, stack). No further story edits or emTech layers for **anyone**, including the owner.
+
+| Phase | Detect (forge) | Owner | Other active player |
+|-------|----------------|-------|---------------------|
+| **Invent** | `!challengePassed` and not scrutiny | Full invent + enter Challenge | **Additive story** + **layer emTech** (helper pays). Cannot Face Challenge |
+| **Challenge** | `turnPhase === "scrutiny"` | Alone in scrutiny | **Watch only** — invent locked for helpers |
+| **Deploy** | `challengePassed` and not scaled | May **Pilot / Scale** on seat-turn (pays) | May **Pilot / Scale** that locked invent on *their* seat-turn (they pay). **No** story/stack changes |
+| **Scaled / abandoned** | scaled or abandoned | Done | Browse only |
+
+**UX:** Seat tabs show phase tags. After Pass device, view snaps to the new active seat; they may switch tabs to field someone else’s locked invent.
+
+**Why:** Challenge is personal defense. Clearing it locks the idea so the race is about **fielding** (who spends to Pilot/Scale), not rewriting winners mid-deploy.
+
+#### Deploy stages, place updates & the race (rev 6 rules — locked)
+
+Multiplayer is a **race to Scale**, under uncertainty: Pilot and Scale can **fail**. Going first is not a free win.
+
+##### Personal path (owner only, own seat-turn)
+
+```text
+Invent → Challenge (required) → Pilot attempt → (on Pilot success) Scale attempt
+```
+
+| Stage | Shared place updated? | Notes |
+|-------|----------------------|--------|
+| **Challenge** | No | Gate only; required before Pilot |
+| **Pilot** | **No** | Personal trial. Success unlocks Scale readiness on that forge. Failure: no place change |
+| **Scale** | **Only on success** | **This** is when the scenario / shared meters update |
+| **New normal** | Flavor / banner only after place fully solved (optional UI); not a second race mechanic in MP-A |
+
+##### No same-turn retry (multiplayer only)
+
+| Rule | Spec |
+|------|------|
+| **Pilot fail** | Cannot attempt Pilot again until your **next seat-turn** |
+| **Scale fail** | Cannot attempt Scale again until your **next seat-turn** |
+| **Pilot success** | May attempt Scale **later the same seat-turn** if costs/AP allow (Scale is the next stage, not a retry) |
+| **Why** | Stops spam-rerolling odds on one turn; keeps the race tense and gives others a chance to act between attempts |
+
+Solo may keep different retry UX; this rule is **multiplayer mode**.
+
+##### Successful Scale → scenario update
+
+When a player **succeeds at Scale**:
+
+1. Apply that invention’s **deploy relief** to **shared** pressure (use frozen staged pool / solo drop math for the full deploy effect of this invention — MP-A: the world-changing hit lands at Scale, not split as two public hits).  
+   - *Rules intent:* Pilot is private readiness; **Scale is the public impact.** Implementation may map solo Pilot+Scale pool so total relief ≈ one full `computeDeployDrop`, applied on Scale success (Pilot success spends costs/risk only).  
+2. Everyone sees meters / news update.  
+3. Evaluate place state:
+
+| Result after this Scale | Meaning | What happens next |
+|-------------------------|---------|-------------------|
+| **Essentially solved** | `wonMission()` — all pressure keys ≤ `mission.winMax` | **Race over.** Further Scales are **moot** (no more place rewards / no more scenario updates). Run goes to **group outcome + ranking** |
+| **Only partially solved** | Place improved but not at winMax | **Game continues.** Other players may still Pilot/Scale **their** inventions and earn rewards if they Scale successfully. Meters stay at the new (lower) baseline |
+| **Collapse check** | After any Wait (and if meters ever hit fail thresholds) | **Everyone loses** — no champion |
+
+So: it **is** a race, but a failed Pilot/Scale wastes the attempt until next seat-turn; a partial Scale keeps the door open for rivals; a full solve closes the race.
+
+##### Rewards when Scale succeeds (partial or full)
+
+| Reward | Spec |
+|--------|------|
+| **Impact credit** | Scaler is credited with the **pressure drop amount** applied (for ranking) |
+| **Partial continue** | If place only partial, other owners can still Scale later for **their** impact credit on the *remaining* relief their drop can still apply (cannot push below 0; diminishing room is part of the race) |
+| **Full solve** | First Scale that achieves `wonMission()` ends competitive place updates; that Scaler gets full-solve bonus in rank; others keep craft/contribution scores only |
+
+##### Failed Pilot / Scale
+
+- No shared meter change  
+- Attempt marked used for this seat-turn (retry locked until next seat-turn)  
+- Resources spent on the attempt stay spent (same spirit as solo fail costs if any)
+
+#### Abandon own idea & work with another (rev 6 — locked)
+
+| Rule | Spec |
+|------|------|
+| **No merge** | Two inventions never fuse into one name/story/deploy entity |
+| **Abandon** | On your seat-turn you may **Abandon my invention** — you stop advancing **your** forge (no further challenge/Pilot/Scale on it) |
+| **After abandon** | You remain in the game: take seat-turns, **layer emTech** on others, Wait, End Turn. You play as a **contributor** |
+| **Cannot un-abandon** in MP-A (keeps rules simple); rematch = new mission |
+| **Visibility** | Abandoned forges stay visible (read-only history); marked *Abandoned* |
+| **Rank** | Abandoned players can still place via **contribution** (and any impact already earned before abandon). They get **no** further deploy impact from their own forge |
+
+#### Ranking among survivors (rev 6 — proposed locked formula)
+
+Only computed if the place does **not** collapse (group lose → no champion).  
+If the place is **essentially solved** by a Scale, rank immediately.  
+If the run ends another way while partial (e.g. collapse year hits without win) → lose, no champion.  
+Optional later: “time’s up / host end” while partial → rank with **partial** flag and lower glory copy.
+
+**Total score** (higher = better rank; ties → earlier successful Scale, then higher contribution, then seat order):
+
+```text
+score = 40 * impactNorm
+      + 25 * craftNorm
+      + 20 * contributionNorm
+      + 15 * raceNorm
+```
+
+Each `*Norm` is 0–1 before multiplying (so max 100).
+
+| Component | Weight | How to compute (MP-A) |
+|-----------|--------|------------------------|
+| **Impact** | 40% | Sum of shared pressure points your **successful Scales** actually removed, divided by max(1, total pressure that existed at mission start across keys). Cap at 1.0 |
+| **Craft** | 25% | From your own forge (0 if never challenged): challenge pass=1.0, partial=0.6, fail-best=0.2, never=0; blend 50% with honesty/elegance proxies (timing green + synergy) scaled 0–1. Abandoned without challenge → craft 0 |
+| **Contribution** | 20% | Resources you spent **layering emTech on others’ stacks**: `budgetSpentOnOthers + apSpentOnOthers` (+ will if any), normalized by a soft cap (e.g. 8 resource-points = 1.0). Own-stack spends do **not** count here (they feed craft/impact instead) |
+| **Race** | 15% | If you landed the **solving Scale** (`wonMission`): 1.0. Else if you landed ≥1 successful Scale while place was still partial: 0.5. Else if you only Piloted or never: 0. Helpers who never Scaled: 0 on race (they rely on contribution) |
+
+**Worked intuition:**
+
+- Strong solo scaler who closes the place: high impact + race + craft → usually 1st  
+- Second scaler on a partial board: still solid impact/craft  
+- Pure helper who abandoned and stacked techs on the winner: can beat a lazy non-deployer; rarely beats a solving scaler unless contribution is huge and scaler craft is weak  
+- Collapse: **no ranking podium**
+
+UI: show breakdown bars (Impact / Craft / Contribution / Race) so the table can argue fairly.
+
+#### What non-active players may do
+
+| Allowed | Not allowed |
+|---------|-------------|
+| **See all inventions** (full open table) | Spend AP / Budget / Will |
+| Read shared meters, year, news | Edit any forge / layer tech |
+| Table talk / voice / external chat | Wait, challenge, deploy |
+| Prepare mentally | Queue actions for when active (no simultaneous queue in MP-A) |
+
+#### Contribution & open table (rev 6 rules — locked)
+
+##### Open table (visibility)
+
+| Rule | Spec |
+|------|------|
+| **Everything visible** | All seats see **every** invention being worked on: name, how-it-works, everyday life, full emTech stack (with who layered what), challenge state, deploy stage |
+| **Shared HUD** | All seats see place meters, year, whose turn, round |
+| **Personal resources visible** | Each seat’s remaining AP (on turn), Budget, Will are visible to the table (friendly competition needs scouting) |
+| **No fog of war** | Hidden private drafts are **out of multiplayer**. If you type it on a forge, the table sees it |
+| **Hotseat** | Same information architecture: when you hold the device you can browse all seats’ forges (read-only for others’ prose) |
+
+##### Who pays
+
+| Rule | Spec |
+|------|------|
+| **Actor pays** | Any action that costs AP / Budget / Will is paid by the **active seat taking the action**, whether the target forge is **theirs or someone else’s** |
+| **No free rides** | Layering emTech on a friend’s invention still costs the helper the normal `techCost` (and AP if select costs AP under actionPoints) from **the helper’s** wallet |
+| **Owner does not auto-pay** | The invention owner is not charged when someone else layers tech onto their stack |
+
+##### Own forge (owner powers)
+
+On your seat-turn, on **your** invention you may:
+
+- Edit name / how / life  
+- Add emTech (pay costs)  
+- Remove emTech you are allowed to remove (solo refund rules if same seat-turn; see stack authorship below)  
+- Run AI co-inventor against **your** story/stack  
+- Challenge and deploy  
+
+##### Others’ forges (helper powers — additive only)
+
+On your seat-turn, targeting **another seat’s** invention you may **only**:
+
+| Allowed on others | Not allowed on others |
+|-------------------|------------------------|
+| **Layer (add) one emTech** they do not already have on that stack | Edit name / how / life |
+| Pay **your** AP / Budget / Will for that add | Delete or swap **their** techs (including techs they added) |
+| | Remove a tech **you** layered earlier **only** if rules below allow unlayer |
+| | Enter / resolve **their** challenge |
+| | Deploy **their** invention |
+| | Force their AI fills onto their prose |
+
+**Additive only** means: contribution = **stack layering** (another emTech card on their invention). It is **not** co-authoring the story, not vetoing their cards, not taking over deploy.
+
+##### Stack authorship & unlayer
+
+| Rule | Spec |
+|------|------|
+| **Layer record** | Each tech on a stack records `addedBySeatId` (and cost snapshot if needed for refunds) |
+| **Owner remove** | Owner may remove techs from **their** stack on their turn (solo deselect rules). Removing a helper’s layer does **not** refund the helper (gift was spent) unless same helper unlayers on the same seat-turn they added — keep simple for MP-A: **no refund to helper when owner strips a layer** |
+| **Helper unlayer** | Helper may remove **only a tech they personally layered**, and only on their seat-turn, and only if that tech is still on the stack — refund per solo `techAddedThisTurn` style **if unlayered on the same helper seat-turn it was added**; otherwise no refund (committed contribution) |
+| **Duplicates** | Cannot layer a tech id already present on that invention’s stack |
+| **Stack caps** | Same practical limits as solo (budget/AP and any max stack size the solo game uses) |
+
+##### Challenge, deploy, credit
+
+| Rule | Spec |
+|------|------|
+| **Owner faces scrutiny** | Only the owner challenges/deploys that invention, even if helpers layered techs |
+| **Deploy math** | Uses the **full current stack** (owner + helper layers) for drop / feasibility |
+| **Contribution credit** | For ranking: track resources the helper spent on layers (and optional “techs layered” count). Exact rank weights still deferred; **credit is earned by spending**, not by ownership alone |
+| **Owner credit** | Owner still gets primary deploy/challenge craft scores; helpers get **contribution** sub-score |
+
+##### Collab verb v1 (locked shape)
+
+MP-A collaboration verb is not a vague “help button.” It is:
+
+> **Layer emTech** — active seat pays to add one tech card onto a chosen invention (own or other).
+
+**Abandon + help:** a player may abandon their own idea and spend the rest of the run layering on others (and Waiting). That is the supported “work together” path — **not** merging inventions.
+
+Other verbs (gift Budget, joint Pilot, rewrite prose, merge forges) are **out** of MP-A.
+
+#### Hotseat mapping
+
+| Live party | Hotseat |
+|------------|---------|
+| Active seat badge | Same |
+| End Turn → next | **Pass device →** after End Turn (or combined control) |
+| Wait → next | Pass device after Wait |
+| Others watch on their screens | Others look over shoulder / wait for device |
+
+#### Settings additions (turn rules)
 
 ```js
 settings: {
-  mode: "friends_coop",
-  apMax: 3,                 // same as solo
-  maxPlayers: 5,
-  sharedInvention: true,    // locked true for v1
-  roleLocks: false,         // free-for-all shared board
-  scrutinyCombat: false,    // single-essay challenge default (party pace)
-  deployStages: false,      // single deploy unless friends enable
-  freeWrite: true,
-  allowWait: true,
-  hostCanKick: true,
-  hostCanResolveScrutiny: false,  // MVP: friends must face the challenge
-  allowRejoinByToken: true,
-  allowRejoinByName: true,  // if disconnected seat + same displayName
+  // …rev 6 goals…
+  turnBased: true,           // locked
+  seatOrder: "join",         // or host-permuted array of seat ids
+  firstPlayer: "host",       // "host" | "random" | seatId
+  waitEndsTurn: true,        // locked MP-A
+  maxWaitsPerSeatTurn: 1,    // locked MP-A
+  hostForceEndTurn: true,
 }
 ```
 
-### B1 Friends co-op rooms (first multiplayer product milestone)
+### Product phases (player-visible; not an eng ticket list)
+
+| Phase | Meaning |
+|-------|---------|
+| **MP-Goals** | This rev 6 section accepted |
+| **MP-A Fantasy vertical** | Personal boards + shared meters + full loop + rank rules (collab can be minimal) |
+| **MP-B Coopetition verbs** | Help/trade/ally + party Wait rule |
+| **MP-C Polish parity** | Vision, AI feel, HUD, hotseat full-loop |
+| **MP-D Optional** | Async, pure seed race, adversarial Moloch seat |
+
+### Priority ladder (rev 6)
+
+1. **Live party coopetition (MP-A → MP-B)** — product definition of multiplayer  
+2. **Hotseat** — same goals, one device  
+3. **MP-C polish**  
+4. Async friends studio (later)  
+5. Pure seed race without shared fate (later; not the primary competition model)  
+6. Adversarial critic seat (last)  
+7. Classroom / Education track — separate commercial product  
+
+**Session length:** evening party (~30–90 min).
+
+### Invention model (rev 6 — supersedes “one shared invention”)
+
+| Decision | Spec |
+|----------|------|
+| **Personal inventions** | Each seat **owns** a forge: `inventionName`, `inventionHow`, `inventionImpact`, challenge/deploy progress, and a **tech stack** that may include layered emTech from helpers |
+| **Shared place** | `pressure`, `year`, mission, collapse — one board |
+| **Visibility** | **Open table (locked):** every player **must** see every invention in progress — full name, how, life, stack, challenge/deploy status. No hidden drafts in multiplayer |
+| **Authorship** | Owner controls story faces (name/how/life), challenge, and deploy of **their** invention |
+| **Contribution** | See **Contribution & open table** below — resources always cost the actor; help on others is **additive emTech only** |
+| **Scoring** | Group place outcome first; then personal rank (includes credit for resources spent on any forge you contributed to) |
+
+### Host powers (friends, light)
+
+Host: create room, set/start mission, kick grief, end run.  
+**No** gradebook, **no** force-pass scrutiny.
+
+### Target settings (goals direction — supersedes sharedInvention:true)
+
+```js
+settings: {
+  mode: "friends_coopetition", // was friends_coop + shared invention
+  apMax: 3,
+  minPlayers: 2,
+  maxPlayers: 6,
+  personalInventions: true,   // rev 6 locked
+  sharedPlace: true,          // pressure/year shared
+  openTable: true,            // all inventions fully visible
+  layerEmTechOnOthers: true,  // additive help only
+  actorPaysCosts: true,       // helper pays when layering
+  rankOnSurvive: true,
+  noChampionOnLose: true,
+  scrutinyCombat: false,      // party default TBD in rules pass
+  deployStages: true,         // full loop parity goal
+  hostCanKick: true,
+  hostCanResolveScrutiny: false,
+  allowRejoinByToken: true,
+  allowRejoinByName: true,
+}
+```
+
+### Deferred rules (still open / minor)
+
+1. ~~Place update / multi-deploy race~~ **Resolved → only successful Scale updates place; full solve ends race; partial continues; no same-turn Pilot/Scale retry**  
+2. ~~Rank formula~~ **Resolved → 40% impact / 25% craft / 20% contribution / 15% race** (tune in playtest)  
+3. ~~Collab~~ **Resolved → layer emTech; abandon own idea to help; no merge**  
+4. ~~Turn / Wait~~ **Resolved**  
+5. Challenge **presentation** (single essay vs scrutiny combat UI) — both still require a challenge; exact mode is a UX default, not “no challenge”  
+6. ~~Visibility~~ **Resolved → open table**  
+7. ~~Merge~~ **Rejected** — abandon + layer instead  
+8. Rotating initiative, AFK timers — out of MP-A  
+9. Playtest knobs: exact Pilot fail costs; whether Pilot spends part of drop pool privately or only gates Scale
+
+### B1 Friends rooms — transport scaffolding (pre-MP-A)
+
+> **Note:** Sections B1–B1b below describe **engineering already started** under the old “shared invention” assumption. They remain useful as **protocol history / partial implementation**. Product target is rev 6 above; protocol and UI must be **redesigned for personal forges + shared place** in a later rules/implementation pass. Do not treat B1 invent UI as the multiplayer product.
 
 #### Tokens & codes
 
@@ -797,24 +1207,24 @@ Every successful apply/resolve increments **`simVersion`**. Clients reject stale
 | Per player / session | 25 |
 | Reserved pose/judge | 20 of room budget |
 
-### B1b Hotseat (optional)
+### B1b Hotseat (rev 6 goals)
 
-Client-only `js/multiplayer/hotseat.js`. Pass device; shared invention; seats rotate. No server. Can ship before or after live rooms as capacity allows — **not** the product definition of multiplayer.
+Hotseat is **not** an invent-only side mode. Goal: **same coopetition rules as live party** on one device (pass device = focus seat). Current `hotseat.js` invent slice is pre-MP-A scaffolding only.
 
-### B2–B5 (later)
+### B2–B5 (later — after MP-A/B)
 
 | Mode | Notes |
 |------|--------|
-| Async friends studio | REST/SSE, 7-day TTL, team Wait when all ready |
-| Friends race | Same seed, invite-only leaderboard, server-authoritative |
-| Adversarial | One friend is Critic with challenge budget; last |
-| Classroom / Education | Separate track: teacher dashboard, resolve controls, roster — **not designed in depth here** |
+| Async friends studio | Drop-in over days; still shared place if used |
+| Pure seed race | Parallel runs without shared-fate tension — optional, **not** primary multiplayer |
+| Adversarial | One friend is Critic / Moloch; last |
+| Classroom / Education | Separate track — **not designed in depth here** |
 
-### Field editing MVP (friends)
+### Field editing (rev 6 direction)
 
-**Decision:** MVP = **soft field locks** on shared invention fields + LWW for chat (if chat exists). No OT/CRDT.  
-Optional `roleLocks` for friends who want structure.  
-**No host unlock** — lock expires by TTL or peer "request unlock".
+**Personal boards:** each seat edits own invention fields — soft locks mainly for multi-device / focus conflicts, not for co-authoring one stack.  
+**Open table:** friends should see others’ summaries (and preferably full text).  
+Legacy soft-lock design for one shared invention is **superseded** as the product model.
 
 ---
 
@@ -1042,7 +1452,7 @@ Alerting only in hosted context.
 11. **Feature flags on `GAME.features`.**  
 12. **Pilot (or single deploy) marks mission solved** — aligns with current `markMissionSolved` on any successful deploy.  
 13. **Async AI is reserve → resolve/reject with AP refund on failure; pure `applyAction` stays sync.**  
-14. **Friends MVP field model = soft locks on one shared invention, not OT.**  
+14. ~~Friends MVP = soft locks on one shared invention~~ **Superseded (rev 6)** → personal invention boards + shared place.  
 15. **Auth = 128-bit player/host tokens; room code is only a locator.**  
 16. **Deploy stage actions cost 0 AP.**  
 17. **Wait burns unspent AP (intentional).**  
@@ -1053,12 +1463,28 @@ Alerting only in hosted context.
 22. **Abandon scrutiny is free (no fail increment); re-enter re-poses.**  
 23. **G2 deploy deltas only: will≥4 +1, will===0 −1.**  
 24. **techCost: steep does not inflate budget; playtest target = 3-tech stack from starting 5 budget.**  
-25. **First multiplayer product milestone is friends co-op rooms (live WS, shared invention), not classroom.**  
+25. **First multiplayer product milestone is MP-A coopetition** (personal forges, shared place, full loop, rank-on-survive) — not invent-only rooms, not classroom.  
 26. **Friends multiplayer is not classroom tooling** — Education track is separate and later.  
-27. **Solo and friends-room `apMax` default is 3.**  
+27. **Solo and multiplayer `apMax` default is 3** (personal per seat).  
 28. **G0 stars appear on the outcome screen only** — not the mission grid. Share cards are G4.  
-29. **One shared invention per friends room** (product locked).  
-30. **Live WebSocket for friends v1** (product locked).  
+29. **Personal inventions + shared place** (rev 6 product locked). Supersedes one shared invention.  
+30. **Live party is primary online form**; hotseat = same goals, different input.  
+31. **Ranked score among survivors when place held; no champion when place falls** (rev 6).  
+32. **2–6 players; multiplayer run minimum 2.**  
+33. **Collaboration is optional and costly** — not free co-edit of one board.  
+34. **Multiplayer is turn-based** (rev 6 rules): fixed seat order; one active seat; goes around.  
+35. **First player = host by default**; host may designate or randomize before start.  
+36. **AP refills at start of your seat-turn**; End Turn does not raise pressure; passes to next seat.  
+37. **Wait only on active seat; max one Wait per seat-turn; Wait ends the seat-turn** and advances shared year/pressure.  
+38. **Open table:** all inventions in progress are fully visible to every player (no hidden drafts).  
+39. **Actor pays:** resource costs are paid by the seat taking the action, on own or others’ forges.  
+40. **Help on others = additive emTech only** (layer a tech card); no editing others’ prose, challenge, or deploy.  
+41. **Only a successful Scale updates the shared scenario** (meters). Pilot is personal readiness and does not change the place.  
+42. **After Scale:** if `wonMission()` → race over, rank; if only partial → others may still Scale for rewards.  
+43. **Multiplayer: no Pilot or Scale retry until next seat-turn** after a fail (Scale after successful Pilot same turn is allowed).  
+44. **Every invention faces a challenge** before Pilot — mandatory.  
+45. **No merge.** Player may **abandon** own invention and work with others via layering.  
+46. **Rank (survivors):** 40% impact + 25% craft + 20% contribution + 15% race; no podium on collapse.  
 
 ---
 
@@ -1068,16 +1494,20 @@ Resolved answers are locked below.
 
 1. ~~Audience~~ **Resolved → friends group**, not classroom.  
 2. ~~End Turn crisis math~~ **Resolved → no pressure.**  
-3. ~~Invention model~~ **Resolved → one shared invention.**  
-4. ~~Live model~~ **Resolved → WebSocket party session.**  
+3. ~~Invention model~~ **Resolved (rev 6) → personal inventions + shared place** (supersedes one shared invention).  
+4. ~~Live model~~ **Resolved → live party primary**; hotseat same goals.  
 5. ~~Stars placement~~ **Resolved → outcome screen only for G0.**  
-6. ~~Solo / friends apMax~~ **Resolved → 3.**  
-7. ~~MP order~~ **Resolved → friends rooms first**; classroom later/separate.  
+6. ~~Solo / friends apMax~~ **Resolved → 3** (per seat in multiplayer).  
+7. ~~MP product definition~~ **Resolved (rev 6) → coopetition MP-A**, not invent-only co-op.  
 8. Free chat in room, or action log only?  
-9. Competitive race invite-only only, or public later?  
+9. Pure seed race invite-only only, or public later? (secondary to shared-fate multiplayer)  
 10. Brand name for multiplayer (“Forge Room”, “Party code”)?  
-11. Optional role-locks setting default on or off for friends?  
+11. ~~Role-locks on one board~~ **Mostly obsolete** under personal inventions; optional later for alliances.  
 12. Minimum age / writing expectation for free-write?  
+13. ~~Turn order / Wait~~ **Resolved → turn-based circle; Wait ends seat-turn** (see Part B Turn structure).  
+14. ~~Visibility / collab~~ **Resolved → open table; layer emTech; actor pays; abandon to help; no merge**.  
+15. ~~Race / Scale / rank~~ **Resolved → Scale updates place; partial continues; rank 40/25/20/15**.  
+16. Challenge **UI mode** (essay vs combat) still choosable; challenge itself is mandatory.
 
 ---
 ## PR Plan (revised — friends first)
@@ -1093,18 +1523,15 @@ Resolved answers are locked below.
 | **PR6** | G3 Scrutiny combat | challenge UI, move table | PR5 prefer | Optional; friends default essay. |
 | **PR7** | G3 Staged deploy | deploy bay, stage override | PR6, PR3 | Frozen drop pool. |
 | **PR8** | G4 dailies/pins/share | client | PR2 | |
-| **PR9** | Friends room protocol | REST create/join, WS auth, snapshot/patch, in-memory rooms, **no AI** | PR1, PR4, MP gate | Shared SimState; hostToken/playerToken. |
-| **PR10** | Friends room AI + quotas | reserve/resolve proxy | PR9 | |
-| **PR11** | Friends lobby + shared invent UI | nicknames, soft field locks, party HUD | PR10 | **First MP product milestone** |
-| **PR12** | Hotseat (optional) | `hotseat.js` | PR4 | One device; after or parallel to PR11 |
-| **PR13** | Async friends studio | REST/SSE | PR10 | |
-| **PR14** | Friends race (invite seed) | leaderboard | PR10 | |
-| **PR15** | Adversarial critic | | PR14, PR6 | Off by default |
-| **Later** | Education / classroom track | teacher tools | separate | Not blocking friends MP |
+| **PR9–12** | Transport scaffolding | rooms, AI quotas, invent-slice UI, hotseat invent | — | **Shipped as prototype only** under old shared-invention assumption — **not** MP-A complete |
+| **Future** | MP-A fantasy vertical | personal forges, shared place, full loop, rank rules | rules pass first | **True multiplayer product milestone** |
+| **Future** | MP-B coopetition verbs | help/trade/ally, party Wait | MP-A | |
+| **Future** | MP-C polish + hotseat parity | vision, AI feel, full hotseat | MP-A | |
+| **Later** | Async / pure race / adversarial / Education | optional tracks | after MP-B | Not the definition of multiplayer |
 
-**First solo milestone:** PR0–PR4.  
-**First multiplayer product milestone:** **PR9 → PR10 → PR11** (friends co-op).  
-**Hotseat:** optional. **Classroom:** later commercial track.
+**First solo milestone:** PR0–PR8 (largely shipped).  
+**First multiplayer product milestone:** **MP-A** (rev 6 goals) — redesign beyond invent-only scaffolding.  
+**Classroom:** later commercial track.
 
 ---
 ## Implementation notes (symbols)
@@ -1148,21 +1575,21 @@ Mission: `portside-floods`. Start year 2026, pressure Floods 2 / Livelihoods 2 /
 6. Pilot deploy (0 AP): apply drop; `markMissionSolved`; optional continue Scale.  
 7. Stars: with waits=0 and year=2026 and pass+green → ★★★ candidate.
 
-## Appendix B — Friends party session (~60 min example)
+## Appendix B — Friends party session (~60–90 min example, rev 6)
 
-Uses **friends defaults**: `apMax: 3`, shared invention, single essay, live WS, no host force-pass.
+**Goals defaults:** 2–6 seats, personal inventions, shared place, full loop, rank-on-survive / no-champion-on-lose. Collab optional.
 
 | Min | Activity |
 |-----|----------|
-| 0–5 | Host creates code; friends join with nicknames; pick mission |
-| 5–25 | Shared stack + story faces (soft locks); AI fill costs AP |
-| 25–35 | Feasibility green/yellow; lobby if budgetWill on |
-| 35–50 | One shared challenge essay; coach/draft optional |
-| 50–55 | Deploy + shared vision |
-| 55–60 | Outcome stars debrief; brag / rematch |
+| 0–5 | Host creates code; friends join (min 2); pick shared mission |
+| 5–30 | **Parallel invent:** each seat builds own stack + story; AI co-inventor under room limits; watch shared meters |
+| 30–40 | Feasibility per seat; optional help/trade if meters spike; party decides whether to Wait |
+| 40–60 | Personal challenges; deploys relieve **shared** pressure; vision/graphics per deploy fantasy |
+| 60–75 | More Wait/deploy cycles if place not held; race vs rescue tension |
+| 75–90 | **Outcome:** place saved → ranked podium + score breakdown; place fell → no champion, debrief |
 
-Evening can run longer with Wait cycles and optional scrutiny combat.
+Evening can run longer. Exact Wait/collab rules deferred (Part B).
 
 ---
 
-*End of design document — Status: Draft rev 5 (friends group multiplayer) — 2026-07-23*
+*End of design document — Status: Draft rev 6 (multiplayer coopetition goals) — 2026-07-24*

@@ -23,6 +23,7 @@ export class CoInventor {
    * @param {(techId: string) => object|null} opts.techById
    * @param {(mode: string) => boolean|Promise<boolean>} [opts.beforeRequest] — return false to abort (e.g. no AP)
    * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
+   * @param {(body: object) => Promise<object>} [opts.transport] — replace fetch /api/co-invent (e.g. room WS)
    * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
    * @param {string} [opts.placeholder] — compose box placeholder
    * @param {string} [opts.subtitle] — header subtitle default before health check
@@ -33,6 +34,7 @@ export class CoInventor {
     this.techById = opts.techById;
     this.beforeRequest = opts.beforeRequest || null;
     this.afterRequest = opts.afterRequest || null;
+    this.transport = opts.transport || null;
     this.showQuickActions = opts.showQuickActions !== false;
     this.placeholder =
       opts.placeholder ||
@@ -201,51 +203,65 @@ export class CoInventor {
 
     try {
       const ctx = this.getContext();
-      const res = await fetch("/api/co-invent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          messages: [
-            ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
-          ].map((m) => ({ role: m.role, content: m.content })),
-          context: {
-            challenge: ctx.challenge
-              ? {
-                  id: ctx.challenge.id,
-                  title: ctx.challenge.title,
-                  problem: ctx.challenge.problem,
-                  stakes: ctx.challenge.stakes,
-                  prompt: ctx.challenge.prompt,
-                  recommended: ctx.challenge.recommended,
-                  successLens: ctx.challenge.successLens,
-                }
-              : null,
-            selectedTechIds: ctx.selectedTechIds,
-            inventionName: ctx.inventionName,
-            inventionHow: ctx.inventionHow,
-            inventionImpact: ctx.inventionImpact,
-            storyFace: ctx.storyFace,
-            writeBoth: ctx.writeBoth,
-            year: ctx.year,
-            turn: ctx.turn,
-            place: ctx.place,
-            pressure: ctx.pressure,
-            availableTechs: ctx.availableTechs,
-          },
-        }),
-      });
+      const requestBody = {
+        mode,
+        messages: [
+          ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
+        ].map((m) => ({ role: m.role, content: m.content })),
+        context: {
+          challenge: ctx.challenge
+            ? {
+                id: ctx.challenge.id,
+                title: ctx.challenge.title,
+                problem: ctx.challenge.problem,
+                stakes: ctx.challenge.stakes,
+                prompt: ctx.challenge.prompt,
+                recommended: ctx.challenge.recommended,
+                successLens: ctx.challenge.successLens,
+              }
+            : null,
+          selectedTechIds: ctx.selectedTechIds,
+          inventionName: ctx.inventionName,
+          inventionHow: ctx.inventionHow,
+          inventionImpact: ctx.inventionImpact,
+          storyFace: ctx.storyFace,
+          writeBoth: ctx.writeBoth,
+          year: ctx.year,
+          turn: ctx.turn,
+          place: ctx.place,
+          pressure: ctx.pressure,
+          availableTechs: ctx.availableTechs,
+        },
+      };
 
-      const data = await res.json();
-      this.removeThinking(thinkingId);
-
-      if (!res.ok && data.error) {
-        this.pushAssistant({
-          message: data.message || data.error,
-          proposals: emptyProposals(),
-          teaching: [],
+      let data;
+      if (this.transport) {
+        data = await this.transport(requestBody);
+        this.removeThinking(thinkingId);
+        if (data?.error && !data.message) {
+          this.pushAssistant({
+            message: data.message || data.error,
+            proposals: emptyProposals(),
+            teaching: [],
+          });
+          return;
+        }
+      } else {
+        const res = await fetch("/api/co-invent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
         });
-        return;
+        data = await res.json();
+        this.removeThinking(thinkingId);
+        if (!res.ok && data.error) {
+          this.pushAssistant({
+            message: data.message || data.error,
+            proposals: emptyProposals(),
+            teaching: [],
+          });
+          return;
+        }
       }
 
       // Store plain text for conversation history

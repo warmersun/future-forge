@@ -213,7 +213,8 @@ Role:
 - When mode is art-of-the-possible: teach milestones, current capabilities (now), use cases unlocked, near vs frontier stretch for the selected stack (or recommended if empty) and year/place. Use maturity/milestones/useCasesNow from availableTechs as baseline; enrich with real-world knowledge when confident. Label uncertainty. Do not invent fake paper titles.
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
-- When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory.
+- When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
+- When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
 - When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
 - Tone: vivid, concise, hopeful, practical.
 
@@ -630,6 +631,50 @@ function localCoInvent({ mode, messages, context }) {
     };
   }
 
+  if (mode === "judge-contribution") {
+    // Lenient local fallback — prefer accept; only block clear gutting/clearing.
+    const before = String(context.beforeText || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    const after = String(context.afterText || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    let additive = true;
+    let reason = "Keeps original substance and extends it.";
+    if (!before || before.length < 12) {
+      reason = "Original was empty or stub — addition allowed.";
+    } else if (!after) {
+      additive = false;
+      reason = "Cleared the text — destructive.";
+    } else if (after.length < before.length * 0.55) {
+      additive = false;
+      reason = "Shortened the original too much.";
+    } else {
+      const bWords = [...new Set(before.split(/\s+/).filter((w) => w.length > 3))];
+      const aSet = new Set(after.split(/\s+/));
+      let kept = 0;
+      for (const w of bWords) if (aSet.has(w)) kept++;
+      const retention = bWords.length ? kept / bWords.length : 1;
+      // Soft: only reject when most substance gone AND not a longer rewrite
+      if (retention < 0.35 && after.length < before.length * 1.15) {
+        additive = false;
+        reason = `Removed too much original wording (${Math.round(retention * 100)}% kept).`;
+      } else {
+        reason = "Keeps enough of the original and extends it.";
+      }
+    }
+    return {
+      source: "local",
+      additive,
+      reason,
+      message: additive ? `Additive: ${reason}` : `Destructive: ${reason}`,
+      proposals: { ...base },
+      teaching: [],
+    };
+  }
+
   if (mode === "pose-challenge") {
     const place = context.place || "this place";
     const name = context.inventionName || "this invention";
@@ -1005,7 +1050,9 @@ function buildUserPayload({ messages, context, mode }) {
     "assess-feasibility":
       "Judge claim timing only. Read inventionHow/inventionImpact and selected stack vs context.year. Return top-level timing: { level: red|yellow|green, reason: one sentence }. green = near-term/pilot-honest; yellow = stretch/vague; red = frontier as routine. Selecting synbio/quantum/BCI never forces red by itself. message can briefly echo the reason. proposals empty.",
     "complete-picture":
-      "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack.",
+      "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack. If context.contributingToOther, extend their invent additively — never replace their core idea.",
+    "judge-contribution":
+      "Multiplayer contribution check. Context has field, beforeText, afterText (and optional full invent). Decide if afterText is ADDITIVE vs DESTRUCTIVE relative to beforeText. Additive keeps original actors/mechanisms/intent and adds detail; destructive rewrites, clears, or strips core meaning. Return JSON with top-level additive (boolean) and reason (one sentence). message may echo the reason. proposals empty.",
     "pose-challenge":
       "You ARE a hostile critic of the invention. context.challengeAngle is REQUIRED and FIXED (moloch|ethicist|stakeholder|nature) — you MUST speak as that critic only; do NOT switch to another angle. Moloch = system game mechanics / multipolar traps; Ethicist = hard ethical tradeoffs; Stakeholder = city officials & community (funding, permits, policy); Mother Nature = physical/ecological limits. Attack the idea as if it will fail. End with ONE clear question. Return top-level fields: angle (must equal context.challengeAngle), angleLabel, challengeSpeech, challengeQuestion. proposals can be empty.",
     "judge-scrutiny-move":

@@ -152,7 +152,7 @@ export class RoomClient {
           this.emit(msg);
           return;
         }
-        if (msg.type === "patch" && msg.sim) {
+        if (msg.type === "patch" && (msg.mp || msg.sim)) {
           if (this.snapshot) {
             if (msg.simVersion && this.snapshot.simVersion && msg.simVersion > this.snapshot.simVersion + 1) {
               this.resync();
@@ -161,9 +161,18 @@ export class RoomClient {
             this.snapshot = {
               ...this.snapshot,
               simVersion: msg.simVersion,
-              sim: msg.sim,
+              sim: msg.sim ?? this.snapshot.sim,
+              mp: msg.mp ?? this.snapshot.mp,
+              place: msg.place ?? msg.mp?.place ?? this.snapshot.place,
+              forges: msg.forges ?? msg.mp?.forges ?? this.snapshot.forges,
+              openTable: msg.openTable ?? msg.mp?.openTable ?? this.snapshot.openTable,
+              ranking: msg.ranking !== undefined ? msg.ranking : this.snapshot.ranking,
+              activeSeatId: msg.activeSeatId ?? msg.mp?.activeSeatId ?? this.snapshot.activeSeatId,
               fieldLocks: msg.fieldLocks || this.snapshot.fieldLocks,
-              phase: "playing",
+              phase: msg.phase || (msg.mp ? "playing" : this.snapshot.phase),
+              you: msg.you
+                ? { ...(this.snapshot.you || {}), ...msg.you }
+                : this.snapshot.you,
             };
           }
           this.emit(msg);
@@ -182,11 +191,15 @@ export class RoomClient {
           return;
         }
         if (msg.type === "ai_pending" || msg.type === "ai_result") {
-          if (msg.sim && this.snapshot) {
+          if (this.snapshot && (msg.sim || msg.mp)) {
             this.snapshot = {
               ...this.snapshot,
               simVersion: msg.simVersion ?? this.snapshot.simVersion,
-              sim: msg.sim,
+              sim: msg.sim ?? this.snapshot.sim,
+              mp: msg.mp ?? this.snapshot.mp,
+              place: msg.mp?.place ?? this.snapshot.place,
+              forges: msg.mp?.forges ?? this.snapshot.forges,
+              openTable: msg.mp?.openTable ?? this.snapshot.openTable,
               phase: "playing",
             };
           }
@@ -241,7 +254,8 @@ export class RoomClient {
 
   /**
    * PR10: request room co-inventor AI (server reserves AP/quota then proxies).
-   * @param {{ mode: string, userLabel?: string, prompt?: string, reservedAp?: number, clientActionId?: string, context?: object }} payload
+   * @param {{ mode: string, userLabel?: string, prompt?: string, messages?: object[], reservedAp?: number, clientActionId?: string, context?: object }} payload
+   * @returns {string} clientActionId
    */
   requestAi(payload = {}) {
     if (!this.ws || this.ws.readyState !== 1) throw new Error("not_connected");
@@ -254,6 +268,73 @@ export class RoomClient {
       })
     );
     return clientActionId;
+  }
+
+  /**
+   * Promise wrapper for CoInventor transport — waits for matching ai_result.
+   * @param {object} body — { mode, messages, context }
+   * @returns {Promise<object>} co-invent style result
+   */
+  requestAiAsync(body = {}) {
+    if (!this.ws || this.ws.readyState !== 1) {
+      return Promise.reject(new Error("not_connected"));
+    }
+    const clientActionId = `co-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => {
+        off();
+        reject(new Error("ai_timeout"));
+      }, 90000);
+      const off = this.on((evt) => {
+        if (evt.type === "reject" && !evt.clientActionId) {
+          // generic reject — ignore unless we just sent
+        }
+        if (evt.type === "ai_result" && evt.clientActionId === clientActionId) {
+          clearTimeout(t);
+          off();
+          if (evt.ok === false) {
+            reject(new Error(evt.error || "ai_failed"));
+            return;
+          }
+          resolve({
+            message: evt.result?.message || "",
+            proposals: evt.result?.proposals || null,
+            teaching: evt.result?.teaching || [],
+            source: evt.result?.source || null,
+            challengeSpeech: evt.result?.challengeSpeech,
+            challengeQuestion: evt.result?.challengeQuestion,
+            verdict: evt.result?.verdict,
+            quality: evt.result?.quality,
+            draftAnswer: evt.result?.draftAnswer,
+          });
+        }
+        if (evt.type === "reject" && evt.error && evt.clientActionId === clientActionId) {
+          clearTimeout(t);
+          off();
+          reject(new Error(evt.error));
+        }
+      });
+      try {
+        this.ws.send(
+          JSON.stringify({
+            type: "request_ai",
+            payload: {
+              mode: body.mode || "chat",
+              messages: body.messages,
+              context: body.context,
+              reservedAp: body.reservedAp ?? 1,
+              clientActionId,
+              userLabel: body.userLabel,
+              prompt: body.prompt,
+            },
+          })
+        );
+      } catch (e) {
+        clearTimeout(t);
+        off();
+        reject(e);
+      }
+    });
   }
 
   async hostCmd(cmd, payload = {}) {

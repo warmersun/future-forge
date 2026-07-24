@@ -107,7 +107,7 @@
           </article>
           <article class="panel friends-panel friends-panel-wide">
             <h2>Hotseat (one device)</h2>
-            <p class="muted">Pass the device — shared invention, seats take turns. No server room required.</p>
+            <p class="muted">Pass-and-play race: personal inventions, shared crisis. Scale updates the place. No server required.</p>
             <div class="field">
               <label for="hotseat-names">Seat names (comma-separated)</label>
               <input id="hotseat-names" type="text" placeholder="Alex, Bea" value="Alex, Bea" />
@@ -119,13 +119,13 @@
       </div>
     </section>
 
-    <!-- HOTSEAT PLAY -->
+    <!-- HOTSEAT PLAY (rev 6 coopetition) -->
     <section id="screen-hotseat" class="screen">
       <header class="topbar topbar-game">
         <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
         <div class="hud-clock">
           <span class="hud-year" id="hs-hud-year">2026</span>
-          <span class="hud-turn" id="hs-hud-turn">Turn 0</span>
+          <span class="hud-turn" id="hs-hud-turn">Round 1</span>
           <span class="hud-ap" id="hs-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="hs-hud-budget">Budget 5$</span>
           <span class="hud-will" id="hs-hud-will">Will 3</span>
@@ -136,48 +136,127 @@
           <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-leave">Exit</button>
         </div>
       </header>
-      <div class="content mp-play-layout">
-        <aside class="panel mp-party-panel">
-          <h3>Seats</h3>
-          <ul id="hs-seat-list" class="room-player-list"></ul>
-          <div id="hs-pressure" class="hud-pressure"></div>
-          <p id="hs-news" class="muted mp-news"></p>
-          <div id="hs-setup" class="hs-setup">
+      <!-- Play: same 3-column shell as solo workshop (mission pick uses solo global/mission screens) -->
+      <div id="hs-play" class="workshop-layout mp-workshop" hidden>
+        <aside class="tech-library">
+          <div class="panel-header">
+            <h2>Emerging tech</h2>
+            <span class="muted sm" id="hs-layer-hint">Add to your stack</span>
+          </div>
+          <div class="field mp-layer-field">
+            <label for="hs-layer-target">Stack target</label>
+            <select id="hs-layer-target"></select>
+          </div>
+          <div id="hs-filter-row" class="filter-row"></div>
+          <div id="hs-tech-list" class="tech-list" role="list"></div>
+        </aside>
+
+        <main class="invent-center">
+          <div class="challenge-banner">
+            <div class="mp-party-strip">
+              <ul id="hs-seat-list-play" class="room-player-list mp-seat-inline"></ul>
+              <div id="hs-pressure" class="hud-pressure"></div>
+            </div>
+            <div class="label" id="hs-play-global-label">Hotseat race</div>
+            <h2 id="hs-play-mission-title">—</h2>
+            <p id="hs-play-mission-place" class="mission-place"></p>
+            <p id="hs-play-mission-scene" class="mp-mission-scene"></p>
+            <p id="hs-play-stakeholder" class="stakeholder"></p>
+            <article id="hs-play-problem-brief" class="mp-play-problem-brief" hidden>
+              <h3 class="mp-brief-heading">About this problem</h3>
+              <div class="mp-play-brief-grid">
+                <section>
+                  <h4>Current state</h4>
+                  <p id="hs-brief-state"></p>
+                </section>
+                <section>
+                  <h4>Root causes</h4>
+                  <p id="hs-brief-causes"></p>
+                </section>
+                <section class="mp-brief-warn">
+                  <h4>Warnings for inventors</h4>
+                  <p id="hs-brief-warnings"></p>
+                </section>
+              </div>
+            </article>
+            <p id="hs-news" class="muted mp-news"></p>
+            <p id="hs-phase-hint" class="friends-status" aria-live="polite"></p>
+          </div>
+
+          <div id="hs-open-table" class="hs-open-table"></div>
+
+          <div class="invent-form">
             <div class="field">
-              <label for="hs-theme-select">Theme</label>
-              <select id="hs-theme-select"></select>
+              <label for="hs-invention-name">Name your invention</label>
+              <input id="hs-invention-name" type="text" maxlength="100" placeholder="Something people here could say out loud…" autocomplete="off" />
             </div>
             <div class="field">
-              <label for="hs-mission-select">Mission</label>
-              <select id="hs-mission-select"></select>
+              <label>Technologies in your stack</label>
+              <div id="hs-selected-techs" class="selected-techs"></div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-hs-begin">Begin shared invent →</button>
+            <div class="field">
+              <label for="hs-invention-how">How does it work?</label>
+              <textarea id="hs-invention-how" rows="4" placeholder="What acts, what decides, how the pieces connect for *this* place…"></textarea>
+            </div>
+            <div class="field">
+              <label for="hs-invention-impact">Everyday life if it works</label>
+              <textarea id="hs-invention-impact" rows="3" placeholder="A Tuesday here after your invention lands…"></textarea>
+            </div>
+
+            <h3 class="mp-section-label">Challenge → Pilot → Scale</h3>
+            <div class="field">
+              <label for="hs-challenge-answer">Challenge answer</label>
+              <textarea id="hs-challenge-answer" rows="3" placeholder="How you face scrutiny…"></textarea>
+            </div>
+            <div class="form-actions mp-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-challenge">Face challenge</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-submit-challenge">Submit answer</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-hs-pilot">Attempt Pilot</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-hs-scale">Attempt Scale</button>
+            </div>
+            <div class="form-actions mp-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-end-turn">End turn</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-wait">Wait +2 years</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-abandon">Abandon my idea</button>
+            </div>
+            <div id="hs-outcome" class="hs-outcome" hidden>
+              <h3>Outcome</h3>
+              <div id="hs-outcome-body"></div>
+            </div>
+            <p id="hs-status" class="friends-status muted" aria-live="polite"></p>
+          </div>
+        </main>
+
+        <aside class="vision-panel side-panel mp-side-panel" id="hs-side-panel">
+          <div class="side-tabs" role="tablist">
+            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">Future vision</button>
+            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">AI co-inventor</button>
+          </div>
+          <div id="hs-side-vision" class="side-pane mp-side-vision" role="tabpanel">
+            <div class="vision-stage-bar">
+              <div>
+                <div class="vision-stage-name mp-vision-stage-name">Today</div>
+                <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-regen-vision" title="Regenerate">↻</button>
+            </div>
+            <div class="vision-canvas-wrap" id="hs-vision-root">
+              <img class="vision-image" alt="Vision of this place" hidden />
+              <div class="vision-loading" hidden>
+                <div class="vision-loading-inner">
+                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="vision-loading-text">Imagining this place…</span>
+                </div>
+              </div>
+              <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
+              <div class="vision-status" aria-live="polite"></div>
+            </div>
+            <div class="vision-narratives mp-vision-narratives"></div>
+          </div>
+          <div id="hs-side-coinventor" class="side-pane mp-side-coinventor" role="tabpanel" hidden>
+            <div id="hs-co-inventor-root" class="co-inventor-root"></div>
           </div>
         </aside>
-        <main class="panel mp-main-panel">
-          <h2 id="hs-mission-title">Hotseat invention</h2>
-          <p id="hs-mission-place" class="muted"></p>
-          <div class="field">
-            <label for="hs-invention-name">Name</label>
-            <input id="hs-invention-name" type="text" maxlength="100" />
-          </div>
-          <div class="field">
-            <label for="hs-invention-how">How it works</label>
-            <textarea id="hs-invention-how" rows="4"></textarea>
-          </div>
-          <div class="field">
-            <label for="hs-invention-impact">Everyday life</label>
-            <textarea id="hs-invention-impact" rows="3"></textarea>
-          </div>
-          <div class="form-actions mp-actions">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-end-turn">End turn</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-wait">Wait +2 years</button>
-          </div>
-          <h3>Stack</h3>
-          <div id="hs-stack" class="mp-stack"></div>
-          <div id="hs-tech-tray" class="mp-tech-tray"></div>
-          <p id="hs-status" class="friends-status muted" aria-live="polite"></p>
-        </main>
       </div>
     </section>
 
@@ -192,91 +271,156 @@
         <button type="button" class="btn btn-ghost btn-sm" id="btn-room-leave">Leave</button>
       </header>
       <div class="content room-lobby-layout">
-        <div class="panel">
+        <div class="panel room-lobby-party">
           <h2>Party</h2>
           <ul id="room-player-list" class="room-player-list"></ul>
           <p class="muted" id="room-you-line"></p>
+          <p id="room-lobby-status" class="friends-status muted" aria-live="polite"></p>
         </div>
-        <div class="panel">
+        <div class="panel room-lobby-mission">
           <h2>Mission</h2>
-          <p id="room-mission-summary" class="muted">Host picks a theme mission to start.</p>
+          <p id="room-mission-summary" class="muted room-mission-summary">
+            Host picks a crisis, then a local scenario — same screens as solo play.
+          </p>
+          <article id="room-scenario-brief" class="mp-scenario-brief" hidden></article>
           <div id="room-host-controls" hidden>
-            <div class="field">
-              <label for="room-theme-select">Theme</label>
-              <select id="room-theme-select"></select>
-            </div>
-            <div class="field">
-              <label for="room-mission-select">Mission</label>
-              <select id="room-mission-select"></select>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-room-set-mission">Set mission</button>
-              <button type="button" class="btn btn-primary" id="btn-room-start">Start inventing →</button>
+            <div class="form-actions" id="room-start-actions">
+              <button type="button" class="btn btn-secondary" id="btn-room-pick-mission">
+                Pick crisis &amp; scenario →
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-room-start" disabled>Start race →</button>
             </div>
           </div>
-          <p id="room-lobby-status" class="friends-status muted" aria-live="polite"></p>
+          <div id="room-guest-mission" class="room-guest-mission" hidden>
+            <p class="muted">Waiting for host to pick a crisis and local scenario…</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- FRIENDS PLAY (shared invent strip) -->
+    <!-- FRIENDS PLAY (coopetition — personal forges + shared place) -->
     <section id="screen-room-play" class="screen">
       <header class="topbar topbar-game">
         <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
         <div class="hud-clock">
           <span class="hud-year" id="mp-hud-year">2026</span>
-          <span class="hud-turn" id="mp-hud-turn">Turn 0</span>
+          <span class="hud-turn" id="mp-hud-turn">Round 1</span>
           <span class="hud-ap" id="mp-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="mp-hud-budget">Budget 5$</span>
           <span class="hud-will" id="mp-hud-will">Will 3</span>
         </div>
         <div class="hud-actions">
+          <span class="room-code-chip sm" id="mp-active-badge">Seat —</span>
           <span class="room-code-chip sm"><strong id="mp-room-code">————</strong></span>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-leave">Leave</button>
         </div>
       </header>
-      <div class="content mp-play-layout">
+      <div class="mp-shell">
         <aside class="panel mp-party-panel">
           <h3>Party</h3>
           <ul id="mp-player-list" class="room-player-list"></ul>
           <div id="mp-pressure" class="hud-pressure"></div>
           <p id="mp-news" class="muted mp-news"></p>
+          <article id="mp-scenario-brief" class="mp-scenario-brief" hidden></article>
+          <div id="mp-outcome" class="hs-outcome" hidden>
+            <h3>Outcome</h3>
+            <div id="mp-outcome-body"></div>
+          </div>
         </aside>
+
         <main class="panel mp-main-panel">
-          <h2 id="mp-mission-title">Shared invention</h2>
-          <p id="mp-mission-place" class="muted"></p>
-          <div class="field">
-            <label for="mp-invention-name">Name</label>
-            <input id="mp-invention-name" type="text" maxlength="100" placeholder="Shared invention name" />
-            <span class="lock-hint" id="mp-lock-name"></span>
+          <header class="mp-main-header">
+            <div>
+              <h2 id="mp-mission-title">Friends race</h2>
+              <p id="mp-mission-place" class="muted"></p>
+            </div>
+            <p id="mp-phase-hint" class="friends-status" aria-live="polite"></p>
+          </header>
+
+          <div class="mp-play-primary">
+            <h3>Open table</h3>
+            <div id="mp-open-table" class="hs-open-table"></div>
+
+            <h3>Your forge</h3>
+            <div class="field">
+              <label for="mp-invention-name">Name</label>
+              <input id="mp-invention-name" type="text" maxlength="100" placeholder="Your invention name" />
+              <span class="lock-hint" id="mp-lock-name"></span>
+            </div>
+            <div class="field">
+              <label for="mp-invention-how">How it works</label>
+              <textarea id="mp-invention-how" rows="4" placeholder="Mechanism for this place…"></textarea>
+              <span class="lock-hint" id="mp-lock-how"></span>
+            </div>
+            <div class="field">
+              <label for="mp-invention-impact">Everyday life</label>
+              <textarea id="mp-invention-impact" rows="3" placeholder="Who feels the change…"></textarea>
+              <span class="lock-hint" id="mp-lock-impact"></span>
+            </div>
+
+            <h3>Stack</h3>
+            <div id="mp-stack" class="mp-stack"></div>
+            <div class="field">
+              <label for="mp-layer-target">Add emTech to</label>
+              <select id="mp-layer-target"></select>
+            </div>
+            <div id="mp-tech-tray" class="mp-tech-tray"></div>
+
+            <h3>Challenge → Pilot → Scale</h3>
+            <div class="field">
+              <label for="mp-challenge-answer">Challenge answer</label>
+              <textarea id="mp-challenge-answer" rows="4" placeholder="How you face scrutiny…"></textarea>
+            </div>
+            <div class="form-actions mp-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-challenge">Face challenge</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-submit-challenge">Submit answer</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-pilot">Attempt Pilot</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-scale">Attempt Scale</button>
+            </div>
+            <div class="form-actions mp-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">Wait +2 years</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-abandon">Abandon my idea</button>
+            </div>
+            <div id="mp-ai-pending" class="mp-ai-pending" hidden>
+              <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span id="mp-ai-pending-text">Co-inventor thinking…</span>
+            </div>
+            <div id="mp-ai-log" class="mp-ai-log muted"></div>
           </div>
-          <div class="field">
-            <label for="mp-invention-how">How it works</label>
-            <textarea id="mp-invention-how" rows="4" placeholder="Mechanism for this place…"></textarea>
-            <span class="lock-hint" id="mp-lock-how"></span>
-          </div>
-          <div class="field">
-            <label for="mp-invention-impact">Everyday life</label>
-            <textarea id="mp-invention-impact" rows="3" placeholder="Who feels the change…"></textarea>
-            <span class="lock-hint" id="mp-lock-impact"></span>
-          </div>
-          <div class="form-actions mp-actions">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">Wait +2 years</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-ai" title="1 AP · room AI quota">
-              Ask co-inventor
-            </button>
-          </div>
-          <div id="mp-ai-pending" class="mp-ai-pending" hidden>
-            <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span id="mp-ai-pending-text">Co-inventor thinking…</span>
-          </div>
-          <div id="mp-ai-log" class="mp-ai-log muted"></div>
-          <h3>Stack</h3>
-          <div id="mp-stack" class="mp-stack"></div>
-          <div id="mp-tech-tray" class="mp-tech-tray"></div>
           <p id="mp-status" class="friends-status muted" aria-live="polite"></p>
         </main>
+
+        <aside class="vision-panel side-panel mp-side-panel" id="mp-side-panel">
+          <div class="side-tabs" role="tablist">
+            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">Future vision</button>
+            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">AI co-inventor</button>
+          </div>
+          <div id="mp-side-vision" class="side-pane mp-side-vision" role="tabpanel">
+            <div class="vision-stage-bar">
+              <div>
+                <div class="vision-stage-name mp-vision-stage-name">Today</div>
+                <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-regen-vision" title="Regenerate">↻</button>
+            </div>
+            <div class="vision-canvas-wrap" id="mp-vision-root">
+              <img class="vision-image" alt="Vision of this place" hidden />
+              <div class="vision-loading" hidden>
+                <div class="vision-loading-inner">
+                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="vision-loading-text">Imagining this place…</span>
+                </div>
+              </div>
+              <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
+              <div class="vision-status" aria-live="polite"></div>
+            </div>
+            <div class="vision-narratives mp-vision-narratives"></div>
+          </div>
+          <div id="mp-side-coinventor" class="side-pane mp-side-coinventor" role="tabpanel" hidden>
+            <div id="mp-co-inventor-root" class="co-inventor-root"></div>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -354,7 +498,11 @@
     <!-- WORKSHOP -->
     <section id="screen-workshop" class="screen">
       <header class="topbar topbar-game">
-        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="brand">
+          <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
+          <span class="brand-dot"></span>
+          <span class="brand-name">Future Forge</span>
+        </div>
         <div class="progress-pills invent-steps" aria-label="Mission steps">
           <span class="pill active" data-step="invent">1 · Invent</span>
           <span class="pill" data-step="challenge">2 · Challenge</span>
@@ -388,6 +536,23 @@
           </button>
         </div>
       </header>
+
+      <!-- Hotseat chrome: seat focus + pass device (active player lives in topbar brand) -->
+      <div id="mp-workshop-bar" class="mp-workshop-bar" hidden>
+        <div class="mp-workshop-bar-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-prev-invent" title="Previous invention">
+            ←
+          </button>
+          <div id="mp-seat-tabs" class="mp-seat-tabs"></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-next-invent" title="Next invention">
+            →
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device">
+            Pass device →
+          </button>
+        </div>
+        <p id="mp-view-hint" class="mp-view-hint muted" hidden></p>
+      </div>
 
       <div class="workshop-layout">
         <aside class="tech-library">
@@ -450,16 +615,27 @@
               Both boxes stay editable. <strong>Fill other side</strong> sits on your focus and AI-drafts the other face.
             </p>
 
+            <!-- Hotseat contribution result — floats above story boxes, auto-dismisses -->
+            <div
+              id="mp-contrib-banner"
+              class="mp-contrib-banner"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+
             <!-- Both faces always editable; one Fill button is moved into the focused header -->
             <div class="field story-face-field" id="field-how" data-face="how">
               <div class="story-face-header" id="header-how">
                 <label for="invention-how" id="label-how">How does it work?</label>
               </div>
-              <textarea
-                id="invention-how"
-                rows="4"
-                placeholder="What acts, what decides, how the pieces connect for *this* place…"
-              ></textarea>
+              <div class="story-textarea-shell" id="shell-how">
+                <textarea
+                  id="invention-how"
+                  rows="4"
+                  placeholder="What acts, what decides, how the pieces connect for *this* place…"
+                ></textarea>
+              </div>
               <p class="story-face-note" id="note-how" hidden></p>
             </div>
 
@@ -467,11 +643,13 @@
               <div class="story-face-header" id="header-life">
                 <label for="invention-impact" id="label-life">Everyday life if it works</label>
               </div>
-              <textarea
-                id="invention-impact"
-                rows="4"
-                placeholder="A Tuesday here after your invention lands…"
-              ></textarea>
+              <div class="story-textarea-shell" id="shell-life">
+                <textarea
+                  id="invention-impact"
+                  rows="4"
+                  placeholder="A Tuesday here after your invention lands…"
+                ></textarea>
+              </div>
               <p class="story-face-note" id="note-life" hidden></p>
             </div>
 
@@ -575,7 +753,11 @@
     <!-- CHALLENGE (Moloch / Ethicist / Stakeholder / Mother Nature) -->
     <section id="screen-challenge-step" class="screen">
       <header class="topbar topbar-game">
-        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="brand">
+          <span class="mp-active-player" id="mp-active-player-ch" hidden aria-live="polite"></span>
+          <span class="brand-dot"></span>
+          <span class="brand-name">Future Forge</span>
+        </div>
         <div class="progress-pills invent-steps" aria-label="Mission steps">
           <span class="pill done" data-step="invent">1 · Invent</span>
           <span class="pill active" data-step="challenge">2 · Challenge</span>
@@ -774,6 +956,7 @@
               >
                 End turn
               </button>
+              <!-- Label becomes "Pass device →" in hotseat (see renderChallengeHud) -->
             </div>
           </div>
         </main>
@@ -884,6 +1067,14 @@
           <div class="invention-name" id="outcome-name">—</div>
           <div id="outcome-stars" class="outcome-stars" hidden></div>
           <p id="outcome-meta" style="color: var(--text-dim)"></p>
+        </div>
+
+        <!-- Multiplayer standings (hotseat / friends) — who ranked when the place held or fell -->
+        <div id="outcome-mp" class="outcome-mp panel" hidden>
+          <h3 id="outcome-mp-title" class="outcome-mp-title">Friends standings</h3>
+          <p id="outcome-mp-lead" class="outcome-mp-lead muted"></p>
+          <ol id="outcome-mp-standings" class="outcome-mp-standings"></ol>
+          <p id="outcome-mp-legend" class="outcome-mp-legend muted sm"></p>
         </div>
 
         <div class="panel" style="margin-bottom: 1.25rem; overflow: hidden">
@@ -1148,22 +1339,66 @@
 
           <!-- Friends -->
           <section class="help-block">
-            <h4 class="help-block-title">Friends co-op &amp; hotseat</h4>
+            <h4 class="help-block-title">Friends · hotseat coopetition</h4>
             <ul class="help-list">
               <li>
-                Home → <strong>Play with friends</strong>: create a room (6-char code) or join one. Live WebSocket
-                shared invention.
+                Home → <strong>Play with friends</strong>: live room (code) or <strong>Hotseat</strong> (one device,
+                pass-and-play). Personal inventions, shared crisis, rank if the place holds.
               </li>
               <li>
-                Host sets a mission and starts. Soft field locks show who is editing name / how / life.
+                <strong>Pass device →</strong> ends your seat-turn and hands play to the next player. Only the
+                <em>active</em> player spends AP / Budget / Will.
               </li>
               <li>
-                <strong>Ask co-inventor</strong> in-room (1 AP + room quotas). Pose/judge is single-flight.
-              </li>
-              <li>
-                <strong>Hotseat</strong>: one device, pass between seats — same shared stack, no server room.
+                <strong>Open table</strong> — on your turn you can view any seat’s invent (tabs at the top).
               </li>
             </ul>
+            <div class="help-grid-2" style="margin-top: 0.75rem">
+              <div class="help-card">
+                <h5>While they invent</h5>
+                <p class="help-cost">Still on Invent</p>
+                <p>
+                  You may <strong>add to their story</strong> (additive only — destructive edits rejected, AP not
+                  refunded) and <strong>layer emTech</strong> on their stack. <em>You</em> pay. Only the
+                  <strong>owner</strong> can Face the challenge.
+                </p>
+              </div>
+              <div class="help-card">
+                <h5>During Challenge</h5>
+                <p class="help-cost">Owner in scrutiny</p>
+                <p>
+                  Invention is <strong>locked</strong> for helpers — no story, no stack. Owner defends alone. If they
+                  fail and return to Invent, help opens again.
+                </p>
+              </div>
+              <div class="help-card">
+                <h5>After Challenge passes</h5>
+                <p class="help-cost">Invention locked in</p>
+                <p>
+                  Passing Challenge <strong>freezes</strong> that invent: no more story edits or tech layers for
+                  anyone. The idea is set. What remains is fielding it.
+                </p>
+              </div>
+              <div class="help-card">
+                <h5>Pilot &amp; Scale</h5>
+                <p class="help-cost">Anyone’s seat-turn</p>
+                <p>
+                  On your turn you may open a locked invent’s <strong>Deploy bay</strong> and attempt
+                  <strong>Pilot</strong> or <strong>Scale</strong> — <em>you</em> pay the costs. Successful
+                  <strong>Scale</strong> updates the shared place; Pilot does not. After Scale, that invent is done.
+                </p>
+              </div>
+            </div>
+            <p class="help-note" style="margin-top: 0.75rem; margin-bottom: 0">
+              Example: Alex invents → Bea layers a tech → Alex alone faces Challenge and passes (invent locks) →
+              device to Bea → Bea can open Alex’s Deploy and try Pilot/Scale (she pays), but she cannot change his
+              story or stack. She cannot join his Challenge.
+            </p>
+            <p class="help-note" style="margin-top: 0.55rem; margin-bottom: 0">
+              <strong>End of run:</strong> if a Scale solves the place, the outcome shows
+              <em>friends standings</em> (who ranked among survivors). If the place collapses, everyone loses — no
+              champion. Partial Scale (crisis drops but place not won) keeps the race going.
+            </p>
           </section>
 
           <!-- Meta -->

@@ -1,12 +1,21 @@
 /**
- * In-memory friends co-op rooms (PR9–PR10).
- * REST create/join + WS snapshot/patch + room AI proxy with quotas.
+ * Friends coopetition rooms — REST create/join + WS + mp-session authority.
+ * Personal forges, shared place, turn-based; AI quotas per active seat.
  */
 
 import crypto from "node:crypto";
-import { applyAction } from "../sim/actions.js";
-import { createSimState, cloneSimState, friendsFeatureFlags } from "../sim/state.js";
 import { techById } from "../data.js";
+import {
+  createMpLobby,
+  setMpMission,
+  startMpMission,
+  setFirstPlayer,
+  applyMpAction,
+  activeSeatId,
+  publicMpState,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+} from "../sim/mp-session.js";
 import {
   createRoomAiQuotaState,
   reserveRoomAiJob,
@@ -27,51 +36,22 @@ export function randomRoomCode(len = 6) {
   return out;
 }
 
-/**
- * @typedef {object} Player
- * @property {string} id
- * @property {string} displayName
- * @property {string} playerToken
- * @property {boolean} connected
- * @property {boolean} isHost
- * @property {number} joinedAt
- * @property {string|null} role
- */
-
-/**
- * @typedef {object} Room
- * @property {string} code
- * @property {string} hostToken
- * @property {string} hostPlayerId
- * @property {Player[]} players
- * @property {object} settings
- * @property {object|null} sim
- * @property {number} simVersion
- * @property {number} createdAt
- * @property {number} updatedAt
- * @property {Map<string, object>} fieldLocks — field → { playerId, displayName, until }
- * @property {Set<object>} sockets — WS sockets bound to this room
- */
-
 export class RoomManager {
   /**
    * @param {object} [opts]
-   * @param {(body: object) => Promise<object>} [opts.coInventHandler] — server injects handleCoInvent
+   * @param {(body: object) => Promise<object>} [opts.coInventHandler]
    * @param {number} [opts.roomTtlMs]
    * @param {number} [opts.maxPlayers]
    */
   constructor(opts = {}) {
-    /** @type {Map<string, Room>} */
+    /** @type {Map<string, object>} */
     this.rooms = new Map();
     this.roomTtlMs = opts.roomTtlMs ?? 4 * 60 * 60 * 1000;
-    this.maxPlayersDefault = opts.maxPlayers ?? 5;
-    /** simple rate: key → { count, resetAt } */
+    this.maxPlayersDefault = opts.maxPlayers ?? MAX_PLAYERS;
     this.rate = new Map();
-    /** @type {null | ((body: object) => Promise<object>)} */
     this.coInventHandler = opts.coInventHandler || null;
   }
 
-  /** @param {string} key @param {number} limit @param {number} windowMs */
   checkRate(key, limit, windowMs) {
     const now = Date.now();
     let e = this.rate.get(key);
@@ -86,9 +66,7 @@ export class RoomManager {
   sweep() {
     const now = Date.now();
     for (const [code, room] of this.rooms) {
-      if (now - room.updatedAt > this.roomTtlMs) {
-        this.rooms.delete(code);
-      }
+      if (now - room.updatedAt > this.roomTtlMs) this.rooms.delete(code);
     }
   }
 
@@ -106,9 +84,8 @@ export class RoomManager {
     const playerId = randomToken(8);
     const now = Date.now();
 
-    /** @type {Room} */
     const room = {
-      code,
+      code: code.toUpperCase(),
       hostToken,
       hostPlayerId: playerId,
       players: [
@@ -123,31 +100,33 @@ export class RoomManager {
         },
       ],
       settings: {
-        mode: "friends_coop",
+        mode: "friends_coopetition",
         apMax: 3,
+        minPlayers: MIN_PLAYERS,
         maxPlayers: this.maxPlayersDefault,
-        sharedInvention: true,
-        roleLocks: false,
+        personalInventions: true,
+        sharedPlace: true,
+        openTable: true,
+        turnBased: true,
+        layerEmTechOnOthers: true,
         scrutinyCombat: false,
-        deployStages: false,
-        freeWrite: true,
-        allowWait: true,
+        deployStages: true,
         hostCanKick: true,
         hostCanResolveScrutiny: false,
         allowRejoinByToken: true,
         allowRejoinByName: true,
       },
-      sim: null,
+      /** @type {object|null} mp-session */
+      mp: null,
       simVersion: 0,
       createdAt: now,
       updatedAt: now,
       fieldLocks: new Map(),
       sockets: new Set(),
-      missionMeta: null, // { globalId, mission } before start
+      missionMeta: null,
       aiQuota: createRoomAiQuotaState(),
     };
-    this.rooms.set(code.toUpperCase(), room);
-    room.code = code.toUpperCase();
+    this.rooms.set(room.code, room);
 
     return {
       ok: true,
@@ -170,7 +149,6 @@ export class RoomManager {
       return { ok: false, error: "rate_limited", status: 429 };
     }
 
-    // Rejoin by token
     if (playerToken) {
       const seat = room.players.find((p) => p.playerToken === playerToken);
       if (seat) {
@@ -190,7 +168,6 @@ export class RoomManager {
     const name = cleanName(displayName);
     if (!name) return { ok: false, error: "name_required", status: 400 };
 
-    // Rejoin by name if disconnected
     if (room.settings.allowRejoinByName) {
       const seat = room.players.find(
         (p) => p.displayName.toLowerCase() === name.toLowerCase()
@@ -214,7 +191,11 @@ export class RoomManager {
       }
     }
 
-    if (room.players.length >= (room.settings.maxPlayers || 5)) {
+    if (room.mp) {
+      return { ok: false, error: "already_started", status: 403 };
+    }
+
+    if (room.players.length >= (room.settings.maxPlayers || MAX_PLAYERS)) {
       return { ok: false, error: "room_full", status: 403 };
     }
 
@@ -276,6 +257,8 @@ export class RoomManager {
   snapshotFor(room, playerId) {
     expireLocks(room);
     const you = room.players.find((p) => p.id === playerId) || null;
+    const mp = room.mp ? publicMpState(room.mp) : null;
+    const activeId = mp?.activeSeatId || null;
     return {
       simVersion: room.simVersion,
       code: room.code,
@@ -287,18 +270,30 @@ export class RoomManager {
             displayName: you.displayName,
             isHost: you.isHost,
             role: you.role,
+            isActive: you.id === activeId,
+            forge: mp?.forges?.[you.id] || null,
           }
         : null,
-      sim: room.sim ? cloneSimState(room.sim) : null,
+      mp,
+      place: mp?.place || null,
+      forges: mp?.forges || null,
+      openTable: mp?.openTable || null,
+      ranking: mp?.ranking || null,
+      activeSeatId: activeId,
+      // Legacy shim: "sim" = your forge + place for older UI/AI helpers
+      sim: mp && you ? forgePlaceShim(mp, you.id) : null,
       missionMeta: room.missionMeta,
       fieldLocks: locksPublic(room),
-      phase: room.sim ? "playing" : room.missionMeta ? "ready" : "lobby",
+      phase: room.mp
+        ? room.mp.place?.status === "won" || room.mp.place?.status === "collapsed"
+          ? "outcome"
+          : "playing"
+        : room.missionMeta
+          ? "ready"
+          : "lobby",
     };
   }
 
-  /**
-   * Host sets mission (before start) or updates settings.
-   */
   hostCommand(room, player, cmd, payload = {}) {
     const isHost =
       Boolean(player?.isHost) ||
@@ -306,7 +301,7 @@ export class RoomManager {
     if (!isHost) return { ok: false, error: "not_host" };
 
     if (cmd === "set_mission") {
-      if (room.sim) return { ok: false, error: "already_started" };
+      if (room.mp) return { ok: false, error: "already_started" };
       const mission = payload.mission;
       const globalId = payload.globalId || mission?.globalId;
       if (!mission?.id) return { ok: false, error: "mission_required" };
@@ -321,26 +316,52 @@ export class RoomManager {
     }
 
     if (cmd === "start_mission") {
-      if (room.sim) return { ok: false, error: "already_started" };
+      if (room.mp) return { ok: false, error: "already_started" };
+      if (room.players.length < MIN_PLAYERS) {
+        return { ok: false, error: "min_players", min: MIN_PLAYERS };
+      }
       const meta = room.missionMeta || payload;
       const mission = meta.mission || payload.mission;
       if (!mission) return { ok: false, error: "mission_required" };
-      const global = meta.globalId ? { id: meta.globalId } : { id: mission.globalId };
-      room.sim = createSimState(mission, global, {
-        features: friendsFeatureFlags({
-          scrutinyCombat: Boolean(room.settings.scrutinyCombat),
-          deployStages: Boolean(room.settings.deployStages),
-        }),
-        apMax: room.settings.apMax || 3,
-      });
-      room.simVersion = 1;
-      room.missionMeta = { globalId: global.id, mission };
+      if (payload.mission && !room.missionMeta) {
+        room.missionMeta = {
+          globalId: payload.globalId || mission.globalId,
+          mission,
+        };
+      }
+
+      let mp = createMpLobby(
+        room.players.map((p) => ({
+          id: p.id,
+          displayName: p.displayName,
+          isHost: p.isHost,
+        })),
+        {
+          mode: "friends_coopetition",
+          apMax: room.settings.apMax || 3,
+          settings: {
+            deployStages: true,
+            multiplayer: true,
+          },
+        }
+      );
+      mp = setMpMission(
+        mp,
+        mission,
+        room.missionMeta?.globalId || mission.globalId
+      );
+      mp = setFirstPlayer(mp, "host");
+      const started = startMpMission(mp);
+      if (!started.ok) return { ok: false, error: started.error || "start_failed" };
+
+      room.mp = started.session;
+      room.simVersion = room.mp.version || 1;
+      room.missionMeta = {
+        globalId: room.missionMeta?.globalId || mission.globalId,
+        mission,
+      };
       room.updatedAt = Date.now();
-      this.broadcast(room, {
-        type: "snapshot",
-        snapshot: this.snapshotFor(room, null),
-      });
-      // send personalized snapshots
+
       for (const p of room.players) {
         if (p._socket && p._socket.readyState === 1) {
           safeSend(p._socket, {
@@ -353,8 +374,8 @@ export class RoomManager {
     }
 
     if (cmd === "set_settings") {
-      if (room.sim) return { ok: false, error: "already_started" };
-      const allowed = ["maxPlayers", "scrutinyCombat", "deployStages", "roleLocks", "apMax"];
+      if (room.mp) return { ok: false, error: "already_started" };
+      const allowed = ["maxPlayers", "scrutinyCombat", "deployStages", "apMax"];
       for (const k of allowed) {
         if (payload[k] !== undefined) room.settings[k] = payload[k];
       }
@@ -369,6 +390,7 @@ export class RoomManager {
       if (!targetId || targetId === room.hostPlayerId) {
         return { ok: false, error: "cannot_kick" };
       }
+      if (room.mp) return { ok: false, error: "cannot_kick_after_start" };
       const idx = room.players.findIndex((p) => p.id === targetId);
       if (idx < 0) return { ok: false, error: "not_found" };
       const [gone] = room.players.splice(idx, 1);
@@ -400,19 +422,29 @@ export class RoomManager {
       return { ok: true, ended: true };
     }
 
+    if (cmd === "force_end_turn") {
+      if (!room.mp) return { ok: false, error: "not_started" };
+      const active = activeSeatId(room.mp);
+      if (!active) return { ok: false, error: "no_active" };
+      const r = applyMpAction(room.mp, { type: "end_turn" }, active);
+      if (!r.ok) return { ok: false, error: r.error || "rejected" };
+      return this._commitMp(room, r, player, [{ type: "force_end_turn", by: player.id }]);
+    }
+
     return { ok: false, error: "unknown_cmd" };
   }
 
   /**
-   * Apply a sync game action from a player.
+   * Apply a game action from a player (must be active seat for most actions).
    */
   applyPlayerAction(room, player, action) {
-    if (!room.sim) return { ok: false, error: "not_started" };
+    if (!room.mp) return { ok: false, error: "not_started" };
     if (!player) return { ok: false, error: "no_player" };
     expireLocks(room);
 
     const type = action?.type;
-    // Soft field locks for writes
+
+    // Soft locks only apply when writing your own forge (optional UX)
     if (type === "write_commit" || type === "buffer_write") {
       const field = action.payload?.field;
       if (field && !canEditField(room, player, field)) {
@@ -426,75 +458,71 @@ export class RoomManager {
       return this.unlockField(room, player, action.payload?.field);
     }
 
-    // Apply invention text writes into sim before/with action
-    if (type === "buffer_write" || type === "write_commit") {
-      const field = action.payload?.field;
-      const value = action.payload?.value;
-      if (field && ["inventionName", "inventionHow", "inventionImpact"].includes(field)) {
-        room.sim[field] = String(value ?? "").slice(0, field === "inventionName" ? 120 : 4000);
-      }
-      if (type === "buffer_write") {
-        // no AP; just broadcast soft patch
-        room.simVersion += 1;
-        room.updatedAt = Date.now();
-        const patch = {
-          type: "patch",
-          simVersion: room.simVersion,
-          events: [{ type: "buffer_write", field, playerId: player.id }],
-          sim: cloneSimState(room.sim),
-          fieldLocks: locksPublic(room),
-        };
-        this.broadcast(room, patch);
-        return { ok: true, ...patch };
-      }
-    }
-
-    const result = applyAction(room.sim, action, {
-      features: room.sim.featureFlags || friendsFeatureFlags(),
-      apMax: room.sim.apMax,
-      techById,
-    });
+    const result = applyMpAction(room.mp, action, player.id);
     if (!result.ok) {
-      return { ok: false, error: result.error || "rejected" };
+      return {
+        ok: false,
+        error: result.error || "rejected",
+        activeSeatId: activeSeatId(room.mp),
+      };
     }
-    room.sim = result.sim;
-    room.simVersion += 1;
+    return this._commitMp(room, result, player, result.events || []);
+  }
+
+  _commitMp(room, result, player, extraEvents = []) {
+    room.mp = result.session;
+    room.simVersion = room.mp.version || room.simVersion + 1;
     room.updatedAt = Date.now();
+    const events = [...(result.events || []), ...extraEvents];
     const patch = {
       type: "patch",
       simVersion: room.simVersion,
-      events: result.events || [],
-      sim: cloneSimState(room.sim),
+      events,
+      actorId: player?.id,
+      mp: publicMpState(room.mp),
+      place: publicMpState(room.mp)?.place,
+      forges: publicMpState(room.mp)?.forges,
+      openTable: publicMpState(room.mp)?.openTable,
+      ranking: room.mp.ranking,
+      activeSeatId: activeSeatId(room.mp),
       fieldLocks: locksPublic(room),
-      actorId: player.id,
+      phase:
+        room.mp.place?.status === "won" || room.mp.place?.status === "collapsed"
+          ? "outcome"
+          : "playing",
     };
-    this.broadcast(room, patch);
-    return { ok: true, ...patch };
+    // Personalized sim shim per client
+    for (const p of room.players) {
+      if (p._socket && p._socket.readyState === 1) {
+        safeSend(p._socket, {
+          ...patch,
+          sim: forgePlaceShim(publicMpState(room.mp), p.id),
+          you: {
+            id: p.id,
+            displayName: p.displayName,
+            isHost: p.isHost,
+            isActive: p.id === activeSeatId(room.mp),
+            forge: room.mp.forges[p.id] || null,
+          },
+        });
+      }
+    }
+    return { ok: true, ...patch, sim: forgePlaceShim(publicMpState(room.mp), player?.id) };
   }
 
   lockField(room, player, field, ttlSec = 30) {
     if (!["inventionName", "inventionHow", "inventionImpact"].includes(field)) {
       return { ok: false, error: "bad_field" };
     }
+    // Per-player field key so open-table doesn't block others
+    const key = `${player.id}:${field}`;
     expireLocks(room);
-    const existing = room.fieldLocks.get(field);
-    if (existing && existing.playerId !== player.id && existing.until > Date.now()) {
-      return {
-        ok: false,
-        error: "field_locked",
-        lock: {
-          field,
-          playerId: existing.playerId,
-          displayName: existing.displayName,
-          until: existing.until,
-        },
-      };
-    }
     const until = Date.now() + Math.min(120, Math.max(5, Number(ttlSec) || 30)) * 1000;
-    room.fieldLocks.set(field, {
+    room.fieldLocks.set(key, {
       playerId: player.id,
       displayName: player.displayName,
       until,
+      field,
     });
     room.updatedAt = Date.now();
     const msg = { type: "locks", fieldLocks: locksPublic(room) };
@@ -503,56 +531,60 @@ export class RoomManager {
   }
 
   unlockField(room, player, field) {
-    const existing = room.fieldLocks.get(field);
+    const key = `${player.id}:${field}`;
+    const existing = room.fieldLocks.get(key);
     if (existing && existing.playerId !== player.id && !player.isHost) {
       return { ok: false, error: "not_owner" };
     }
+    room.fieldLocks.delete(key);
+    // also clear legacy unscoped keys
     room.fieldLocks.delete(field);
     this.broadcast(room, { type: "locks", fieldLocks: locksPublic(room) });
     return { ok: true, fieldLocks: locksPublic(room) };
   }
 
-  /**
-   * PR10: request co-invent AI for the room (async).
-   * Reserves AP+quota, broadcasts ai_pending, proxies to coInventHandler, then resolve/reject.
-   * @param {Room} room
-   * @param {Player} player
-   * @param {object} payload — { mode, messages?, userLabel?, clientActionId, reservedAp? }
-   */
   async requestAi(room, player, payload = {}) {
-    if (!room.sim) return { ok: false, error: "not_started" };
+    if (!room.mp) return { ok: false, error: "not_started" };
     if (!player) return { ok: false, error: "no_player" };
+    if (activeSeatId(room.mp) !== player.id) {
+      return { ok: false, error: "not_active_seat" };
+    }
     if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
 
     const mode = payload.mode || "chat";
     const clientActionId =
-      payload.clientActionId || `ai-${player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      payload.clientActionId ||
+      `ai-${player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const reservedAp = payload.reservedAp ?? 1;
 
+    const slice = forgePlaceShim(publicMpState(room.mp), player.id);
+    if (!slice) return { ok: false, error: "no_forge" };
+
     const reserved = reserveRoomAiJob(
-      room.sim,
+      slice,
       room.aiQuota,
       player.id,
       { mode, reservedAp, clientActionId, playerId: player.id },
-      { features: room.sim.featureFlags || friendsFeatureFlags(), apMax: room.sim.apMax }
+      { features: { actionPoints: true, multiplayer: true }, apMax: slice.apMax }
     );
 
     if (!reserved.ok) {
       return { ok: false, error: reserved.error || "ai_rejected" };
     }
-
     if (reserved.idempotent) {
       return { ok: true, idempotent: true, clientActionId };
     }
 
-    room.sim = reserved.sim;
-    room.simVersion += 1;
+    applySliceToForge(room.mp, player.id, reserved.sim);
+    room.simVersion = (room.mp.version || 0) + 1;
+    room.mp.version = room.simVersion;
     room.updatedAt = Date.now();
 
     this.broadcast(room, {
       type: "ai_pending",
       simVersion: room.simVersion,
-      sim: cloneSimState(room.sim),
+      mp: publicMpState(room.mp),
+      sim: forgePlaceShim(publicMpState(room.mp), player.id),
       clientActionId,
       mode,
       playerId: player.id,
@@ -560,7 +592,6 @@ export class RoomManager {
     });
 
     if (!this.coInventHandler) {
-      // No handler (unit tests): leave pending; caller may complete via completeAiJob
       return {
         ok: true,
         pending: true,
@@ -571,11 +602,18 @@ export class RoomManager {
     }
 
     try {
+      const messages =
+        Array.isArray(payload.messages) && payload.messages.length
+          ? payload.messages
+          : [
+              {
+                role: "user",
+                content: payload.userLabel || payload.prompt || "[Room AI]",
+              },
+            ];
       const body = {
         mode,
-        messages: payload.messages || [
-          { role: "user", content: payload.userLabel || payload.prompt || "[Room AI]" },
-        ],
+        messages,
         context: buildRoomAiContext(room, player, payload),
       };
       const result = await this.coInventHandler(body);
@@ -593,20 +631,20 @@ export class RoomManager {
     }
   }
 
-  /**
-   * Finish AI job: resolve (success) or reject (refund). Testable without network.
-   */
   completeAiJob(room, player, clientActionId, outcome = {}) {
-    if (!room.sim) return { ok: false, error: "not_started" };
+    if (!room.mp) return { ok: false, error: "not_started" };
     if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
+    const slice = forgePlaceShim(publicMpState(room.mp), player.id);
+    if (!slice) return { ok: false, error: "no_forge" };
 
     if (outcome.ok === false) {
-      const rejected = rejectRoomAiJob(room.sim, room.aiQuota, clientActionId, {
-        features: room.sim.featureFlags || friendsFeatureFlags(),
-        apMax: room.sim.apMax,
+      const rejected = rejectRoomAiJob(slice, room.aiQuota, clientActionId, {
+        features: { actionPoints: true },
+        apMax: slice.apMax,
       });
-      room.sim = rejected.sim;
-      room.simVersion += 1;
+      applySliceToForge(room.mp, player.id, rejected.sim);
+      room.simVersion = (room.mp.version || 0) + 1;
+      room.mp.version = room.simVersion;
       room.updatedAt = Date.now();
       const msg = {
         type: "ai_result",
@@ -616,23 +654,26 @@ export class RoomManager {
         mode: outcome.mode || null,
         playerId: player?.id,
         simVersion: room.simVersion,
-        sim: cloneSimState(room.sim),
+        mp: publicMpState(room.mp),
+        sim: forgePlaceShim(publicMpState(room.mp), player?.id),
         events: rejected.events,
       };
       this.broadcast(room, msg);
-      return msg; // ok: false on the message; job completed with refund
+      return msg;
     }
 
-    // Apply proposals lightly onto shared sim when present
     const result = outcome.result || {};
-    applyAiProposalsToSim(room.sim, result.proposals);
+    applyAiProposalsToForge(room.mp, player.id, result.proposals);
 
-    const resolved = resolveRoomAiJob(room.sim, room.aiQuota, clientActionId, {
-      features: room.sim.featureFlags || friendsFeatureFlags(),
+    const slice2 = forgePlaceShim(publicMpState(room.mp), player.id);
+    const resolved = resolveRoomAiJob(slice2, room.aiQuota, clientActionId, {
+      features: { actionPoints: true },
     });
-    room.sim = resolved.sim;
-    room.simVersion += 1;
+    applySliceToForge(room.mp, player.id, resolved.sim);
+    room.simVersion = (room.mp.version || 0) + 1;
+    room.mp.version = room.simVersion;
     room.updatedAt = Date.now();
+
     const msg = {
       type: "ai_result",
       ok: true,
@@ -652,7 +693,8 @@ export class RoomManager {
         draftAnswer: result.draftAnswer,
       },
       simVersion: room.simVersion,
-      sim: cloneSimState(room.sim),
+      mp: publicMpState(room.mp),
+      sim: forgePlaceShim(publicMpState(room.mp), player?.id),
       events: resolved.events,
     };
     this.broadcast(room, msg);
@@ -711,6 +753,7 @@ function locksPublic(room) {
       playerId: v.playerId,
       displayName: v.displayName,
       until: v.until,
+      field: v.field || k,
     };
   }
   return out;
@@ -718,7 +761,8 @@ function locksPublic(room) {
 
 function canEditField(room, player, field) {
   expireLocks(room);
-  const lock = room.fieldLocks.get(field);
+  const key = `${player.id}:${field}`;
+  const lock = room.fieldLocks.get(key) || room.fieldLocks.get(field);
   if (!lock) return true;
   return lock.playerId === player.id;
 }
@@ -731,35 +775,95 @@ function safeSend(socket, obj) {
   }
 }
 
-function buildRoomAiContext(room, player, payload) {
-  const sim = room.sim;
+/** Merge place + personal forge into a solo-like sim slice for AI / legacy UI. */
+function forgePlaceShim(mp, playerId) {
+  if (!mp?.place || !playerId) return null;
+  const f = mp.forges?.[playerId];
+  if (!f) return null;
   return {
-    year: sim.year,
-    place: sim.mission?.place,
-    globalTheme: { id: sim.globalId },
-    mission: sim.mission,
-    inventionName: sim.inventionName,
-    inventionHow: sim.inventionHow,
-    inventionImpact: sim.inventionImpact,
-    selectedTechIds: sim.selectedTechIds,
-    pressure: sim.pressure,
+    year: mp.place.year,
+    turn: mp.place.turn,
+    waits: mp.place.waits,
+    pressure: { ...(mp.place.pressure || {}) },
+    mission: mp.place.mission,
+    globalId: mp.place.globalId,
+    lastNews: mp.place.lastNews,
+    ap: f.ap,
+    apMax: f.apMax,
+    budget: f.budget,
+    will: f.will,
+    inventionName: f.inventionName,
+    inventionHow: f.inventionHow,
+    inventionImpact: f.inventionImpact,
+    selectedTechIds: (f.stack || []).map((x) => x.techId),
+    challengePassed: f.challengePassed,
+    challengeVerdict: f.challengeVerdict,
+    challengeAnswer: f.challengeAnswer,
+    hadChallengeAttempt: f.hadChallengeAttempt,
+    deployStage: f.deployStage,
+    abandoned: f.abandoned,
+    pendingAi: f.pendingAi || null,
+    turnPhase: f.pendingAi ? "ai_pending" : f.turnPhase || "act",
+    featureFlags: {
+      actionPoints: true,
+      budgetWill: true,
+      multiplayer: true,
+      deployStages: true,
+    },
+    apSpentThisTurn: f.apSpentThisTurn || 0,
+  };
+}
+
+function applySliceToForge(mp, playerId, slice) {
+  const f = mp.forges[playerId];
+  if (!f || !slice) return;
+  f.ap = slice.ap;
+  f.pendingAi = slice.pendingAi || null;
+  if (slice.turnPhase === "ai_pending") {
+    /* keep forge turnPhase */
+  } else if (slice.turnPhase) {
+    f.turnPhase = slice.turnPhase === "act" ? f.turnPhase : slice.turnPhase;
+  }
+  if (slice.inventionName != null) f.inventionName = slice.inventionName;
+  if (slice.inventionHow != null) f.inventionHow = slice.inventionHow;
+  if (slice.inventionImpact != null) f.inventionImpact = slice.inventionImpact;
+}
+
+function applyAiProposalsToForge(mp, playerId, proposals) {
+  if (!proposals || typeof proposals !== "object") return;
+  const f = mp.forges[playerId];
+  if (!f) return;
+  if (proposals.inventionName && !String(f.inventionName || "").trim()) {
+    f.inventionName = String(proposals.inventionName).slice(0, 120);
+  }
+  if (proposals.inventionHow) {
+    f.inventionHow = String(proposals.inventionHow).slice(0, 4000);
+  }
+  if (proposals.inventionImpact) {
+    f.inventionImpact = String(proposals.inventionImpact).slice(0, 4000);
+  }
+}
+
+function buildRoomAiContext(room, player, payload) {
+  const mp = publicMpState(room.mp);
+  const f = mp?.forges?.[player.id];
+  return {
+    year: mp?.place?.year,
+    place: mp?.place?.mission?.place,
+    globalTheme: { id: mp?.place?.globalId },
+    mission: mp?.place?.mission,
+    inventionName: f?.inventionName,
+    inventionHow: f?.inventionHow,
+    inventionImpact: f?.inventionImpact,
+    selectedTechIds: (f?.stack || []).map((x) => x.techId),
+    pressure: mp?.place?.pressure,
     roomCode: room.code,
     playerId: player.id,
     displayName: player.displayName,
+    openTable: mp?.openTable,
     ...(payload.context || {}),
   };
 }
 
-function applyAiProposalsToSim(sim, proposals) {
-  if (!proposals || typeof proposals !== "object") return;
-  if (proposals.inventionName && !String(sim.inventionName || "").trim()) {
-    sim.inventionName = String(proposals.inventionName).slice(0, 120);
-  }
-  if (proposals.inventionHow) {
-    sim.inventionHow = String(proposals.inventionHow).slice(0, 4000);
-  }
-  if (proposals.inventionImpact) {
-    sim.inventionImpact = String(proposals.inventionImpact).slice(0, 4000);
-  }
-  // Tech adds still go through select_tech so AP/budget rules apply — skip silent stack mutation
-}
+// silence unused in case techById needed later for host tools
+void techById;

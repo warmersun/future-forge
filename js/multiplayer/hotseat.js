@@ -1,176 +1,133 @@
 /**
- * PR12 — Hotseat / pass-and-play (client-only, no server).
- * Shared invention; seats rotate; only active seat may act.
+ * Hotseat — pass-and-play wrapper around mp-session (rev 6 coopetition).
+ * Client-only; no server.
  */
 
-import { createSimState, cloneSimState, friendsFeatureFlags } from "../sim/state.js";
-import { applyAction } from "../sim/actions.js";
-import { techById } from "../data.js";
-
-/**
- * @typedef {object} HotseatSeat
- * @property {string} id
- * @property {string} displayName
- * @property {string|null} role
- */
-
-/**
- * @typedef {object} HotseatSession
- * @property {HotseatSeat[]} seats
- * @property {number} activeIndex
- * @property {object|null} sim
- * @property {number} simVersion
- * @property {object|null} missionMeta
- * @property {object} settings
- */
+import {
+  createMpLobby,
+  setMpMission,
+  startMpMission,
+  setFirstPlayer,
+  applyMpAction,
+  activeSeat,
+  activeSeatId,
+  activeForge,
+  getOpenTable,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+} from "../sim/mp-session.js";
 
 /**
  * @param {string[]} names
- * @returns {HotseatSession}
  */
-export function createHotseatSession(names = ["Player 1", "Player 2"]) {
-  const seats = (names.length ? names : ["Player 1", "Player 2"]).slice(0, 5).map((n, i) => ({
-    id: `seat-${i}`,
-    displayName: String(n || `Player ${i + 1}`).slice(0, 24),
-    role: i === 0 ? "host" : "polymath",
-  }));
-  return {
-    seats,
-    activeIndex: 0,
-    sim: null,
-    simVersion: 0,
-    missionMeta: null,
-    settings: {
-      mode: "hotseat",
-      apMax: 3,
-      sharedInvention: true,
-      scrutinyCombat: false,
-      deployStages: false,
-    },
-    fieldLocks: {}, // optional cosmetic for parity
-  };
+export function createHotseatSession(names = ["Alex", "Bea"]) {
+  const session = createMpLobby(names, { mode: "hotseat" });
+  // Clamp 2–6
+  if (session.seats.length < MIN_PLAYERS) {
+    /* createMpLobby pads */
+  }
+  return session;
 }
 
-export function activeSeat(session) {
-  if (!session?.seats?.length) return null;
-  const i = Math.max(0, Math.min(session.activeIndex, session.seats.length - 1));
-  return session.seats[i];
-}
+export { activeSeat, activeSeatId, activeForge, getOpenTable, MIN_PLAYERS, MAX_PLAYERS };
 
 export function rotateSeat(session, delta = 1) {
-  if (!session?.seats?.length) return session;
-  const n = session.seats.length;
+  // Manual pass without End Turn is discouraged; still allow for device handoff UI
+  // that mirrors end_turn when the player is done.
+  if (!session?.seatOrder?.length) return session;
+  const n = session.seatOrder.length;
   const next = ((session.activeIndex + delta) % n + n) % n;
-  return { ...session, activeIndex: next };
+  // Prefer applyMpAction end_turn for proper AP refill — this is display-only rotate if not started
+  if (!session.place) {
+    return { ...session, activeIndex: next };
+  }
+  // If mission started, use end_turn semantics via apply
+  const r = applyMpAction(session, { type: "end_turn" });
+  return r.ok ? r.session : session;
 }
 
 export function setActiveSeat(session, index) {
-  if (!session?.seats?.length) return session;
-  const i = Math.max(0, Math.min(Number(index) || 0, session.seats.length - 1));
+  if (!session?.seatOrder?.length) return session;
+  const i = Math.max(0, Math.min(Number(index) || 0, session.seatOrder.length - 1));
   return { ...session, activeIndex: i };
 }
 
 export function setHotseatMission(session, mission, globalId) {
-  return {
-    ...session,
-    missionMeta: { mission, globalId: globalId || mission?.globalId },
-  };
+  return setMpMission(session, mission, globalId);
 }
 
-export function startHotseatMission(session) {
-  const mission = session.missionMeta?.mission;
-  if (!mission) return { ok: false, error: "mission_required", session };
-  const global = { id: session.missionMeta.globalId || mission.globalId };
-  const sim = createSimState(mission, global, {
-    features: friendsFeatureFlags({
-      multiplayer: false, // hotseat is local pass-and-play
-      scrutinyCombat: Boolean(session.settings.scrutinyCombat),
-      deployStages: Boolean(session.settings.deployStages),
-    }),
-    apMax: session.settings.apMax || 3,
-  });
-  // Keep multiplayer false but still shared invent
-  sim.featureFlags = { ...sim.featureFlags, multiplayer: false };
-  return {
-    ok: true,
-    session: {
-      ...session,
-      sim,
-      simVersion: 1,
-    },
-  };
+export function startHotseatMission(session, firstPlayer = "host") {
+  let s = setFirstPlayer(session, firstPlayer);
+  return startMpMission(s);
 }
 
 /**
- * Apply action only if seatId is the active seat (or seatId omitted = active).
+ * @param {object} session
+ * @param {object} action
+ * @param {string|null} [seatId]
+ * @param {object} [opts]
  */
-export function hotseatApplyAction(session, action, seatId = null) {
-  if (!session?.sim) return { ok: false, error: "not_started", session };
-  const active = activeSeat(session);
-  if (!active) return { ok: false, error: "no_seat", session };
-  if (seatId != null && seatId !== active.id) {
-    return { ok: false, error: "not_active_seat", session, activeSeatId: active.id };
-  }
-
-  const type = action?.type;
-  if (type === "buffer_write" || type === "write_commit") {
-    const field = action.payload?.field;
-    const value = action.payload?.value;
-    if (field && ["inventionName", "inventionHow", "inventionImpact"].includes(field)) {
-      const sim = cloneSimState(session.sim);
-      sim[field] = String(value ?? "").slice(0, field === "inventionName" ? 120 : 4000);
-      if (type === "buffer_write") {
-        return {
-          ok: true,
-          session: { ...session, sim, simVersion: session.simVersion + 1 },
-          events: [{ type: "buffer_write", field, seatId: active.id }],
-        };
-      }
-      // write_commit falls through to applyAction after local field set
-      session = { ...session, sim };
-    }
-  }
-
-  const result = applyAction(session.sim, action, {
-    features: session.sim.featureFlags || friendsFeatureFlags(),
-    apMax: session.sim.apMax,
-    techById,
-  });
-  if (!result.ok) {
-    return { ok: false, error: result.error || "rejected", session };
-  }
-  return {
-    ok: true,
-    session: {
-      ...session,
-      sim: result.sim,
-      simVersion: session.simVersion + 1,
-    },
-    events: result.events || [],
-  };
+export function hotseatApplyAction(session, action, seatId = null, opts = {}) {
+  return applyMpAction(session, action, seatId, opts);
 }
 
-/** Serializable snapshot for tests / optional localStorage */
 export function serializeHotseat(session) {
   return JSON.stringify({
+    schemaVersion: session.schemaVersion,
+    mode: session.mode,
     seats: session.seats,
+    seatOrder: session.seatOrder,
     activeIndex: session.activeIndex,
-    sim: session.sim,
-    simVersion: session.simVersion,
+    firstPlayerId: session.firstPlayerId,
+    round: session.round,
+    place: session.place,
+    forges: session.forges,
     missionMeta: session.missionMeta,
     settings: session.settings,
+    version: session.version,
+    ranking: session.ranking,
   });
 }
 
 export function deserializeHotseat(raw) {
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
   return {
+    schemaVersion: data.schemaVersion || 2,
+    mode: data.mode || "hotseat",
     seats: data.seats || [],
+    seatOrder: data.seatOrder || (data.seats || []).map((s) => s.id),
     activeIndex: data.activeIndex || 0,
-    sim: data.sim || null,
-    simVersion: data.simVersion || 0,
+    firstPlayerId: data.firstPlayerId || null,
+    round: data.round || 1,
+    place: data.place || null,
+    forges: data.forges || {},
     missionMeta: data.missionMeta || null,
     settings: data.settings || { mode: "hotseat", apMax: 3 },
-    fieldLocks: {},
+    version: data.version || 0,
+    ranking: data.ranking || null,
+    log: data.log || [],
+  };
+}
+
+/** @deprecated legacy name — session.sim no longer used */
+export function getLegacySimShim(session) {
+  const f = activeForge(session);
+  const p = session.place;
+  if (!f || !p) return null;
+  return {
+    year: p.year,
+    turn: p.turn,
+    waits: p.waits,
+    pressure: p.pressure,
+    mission: p.mission,
+    ap: f.ap,
+    apMax: f.apMax,
+    budget: f.budget,
+    will: f.will,
+    inventionName: f.inventionName,
+    inventionHow: f.inventionHow,
+    inventionImpact: f.inventionImpact,
+    selectedTechIds: (f.stack || []).map((x) => x.techId),
+    lastNews: p.lastNews,
   };
 }

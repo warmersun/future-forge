@@ -26,11 +26,25 @@ export function formatFieldLockHint(lock, now = Date.now()) {
  * @param {number} [now]
  * @returns {Record<string, string>} field → label
  */
-export function fieldLockLabels(locks, now = Date.now()) {
+/**
+ * Resolve lock for a story field. Supports legacy keys (`inventionHow`) and
+ * per-player keys (`playerId:inventionHow` with optional `field` property).
+ */
+export function resolveFieldLock(locks, field) {
   const src = locks && typeof locks === "object" ? locks : {};
+  if (src[field]) return src[field];
+  for (const [k, v] of Object.entries(src)) {
+    if (!v || typeof v !== "object") continue;
+    if (v.field === field) return v;
+    if (k === field || k.endsWith(`:${field}`)) return v;
+  }
+  return null;
+}
+
+export function fieldLockLabels(locks, now = Date.now()) {
   const out = {};
   for (const [field] of STORY_LOCK_FIELDS) {
-    out[field] = formatFieldLockHint(src[field], now);
+    out[field] = formatFieldLockHint(resolveFieldLock(locks, field), now);
   }
   return out;
 }

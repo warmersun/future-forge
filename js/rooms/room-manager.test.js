@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { RoomManager, randomRoomCode } from "./room-manager.mjs";
+import { TECHS } from "../data.js";
+
+const T0 = TECHS[0]?.id || "solar";
 
 const sampleMission = {
   id: "test-mission",
@@ -18,6 +21,16 @@ const sampleMission = {
   suggested: ["ai", "iot"],
   visionTheme: "coastal-city",
 };
+
+function twoPlayerRoom() {
+  const rm = new RoomManager();
+  const created = rm.createRoom({ displayName: "Host" });
+  const room = rm.rooms.get(created.code);
+  room.players[0].connected = true;
+  const joined = rm.joinRoom(created.code, { displayName: "Bea" });
+  assert.equal(joined.ok, true);
+  return { rm, created, room, host: room.players[0], bea: room.players[1] };
+}
 
 describe("RoomManager", () => {
   it("creates room with host tokens", () => {
@@ -44,7 +57,6 @@ describe("RoomManager", () => {
   it("rejects duplicate connected name", () => {
     const rm = new RoomManager();
     const created = rm.createRoom({ displayName: "Host" });
-    // mark host connected
     const room = rm.rooms.get(created.code);
     room.players[0].connected = true;
     const j = rm.joinRoom(created.code, { displayName: "Host" });
@@ -52,31 +64,84 @@ describe("RoomManager", () => {
     assert.equal(j.error, "name_in_use");
   });
 
-  it("starts mission and applies select_tech", () => {
+  it("requires 2 players to start and builds personal forges", () => {
     const rm = new RoomManager();
     const created = rm.createRoom({ displayName: "Host" });
     const room = rm.rooms.get(created.code);
     const host = room.players[0];
-    const set = rm.hostCommand(room, host, "set_mission", {
+    const alone = rm.hostCommand(room, host, "start_mission", {
       hostToken: created.hostToken,
       mission: sampleMission,
       globalId: "climate",
     });
-    assert.equal(set.ok, true);
+    assert.equal(alone.ok, false);
+    assert.equal(alone.error, "min_players");
+
+    rm.joinRoom(created.code, { displayName: "Bea" });
     const start = rm.hostCommand(room, host, "start_mission", {
       hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
     });
     assert.equal(start.ok, true);
-    assert.ok(room.sim);
-    assert.equal(room.simVersion, 1);
+    assert.ok(room.mp);
+    assert.ok(room.mp.forges[host.id]);
+    assert.ok(room.mp.place);
+    assert.equal(room.mp.seats.length, 2);
+  });
+
+  it("starts mission and active seat can select_tech on own forge", () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    const start = rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    assert.equal(start.ok, true);
 
     const act = rm.applyPlayerAction(room, host, {
       type: "select_tech",
-      payload: { techId: "ai", tech: { id: "ai", curve: "mature", readyYear: 2026 } },
+      payload: { techId: T0 },
     });
     assert.equal(act.ok, true);
-    assert.ok(room.sim.selectedTechIds.includes("ai"));
-    assert.equal(room.simVersion, 2);
+    assert.equal(room.mp.forges[host.id].stack[0].techId, T0);
+    assert.equal(room.mp.forges[bea.id].stack.length, 0);
+  });
+
+  it("non-active seat cannot act", () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const denied = rm.applyPlayerAction(room, bea, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "Nope" },
+    });
+    assert.equal(denied.ok, false);
+    assert.equal(denied.error, "not_active_seat");
+  });
+
+  it("bea can layer emTech on host after end_turn", () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    rm.applyPlayerAction(room, host, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "HostGate" },
+    });
+    rm.applyPlayerAction(room, host, { type: "end_turn" });
+    const layer = rm.applyPlayerAction(room, bea, {
+      type: "layer_tech",
+      payload: { techId: T0, targetSeatId: host.id },
+    });
+    assert.equal(layer.ok, true);
+    assert.equal(room.mp.forges[host.id].stack[0].addedBy, bea.id);
+    assert.ok(room.mp.forges[bea.id].contributionBudgetSpent >= 1);
   });
 
   it("room codes use crockford alphabet", () => {
@@ -86,47 +151,22 @@ describe("RoomManager", () => {
     }
   });
 
-  it("soft lock blocks other player buffer_write", () => {
-    const rm = new RoomManager();
-    const created = rm.createRoom({ displayName: "Host" });
-    const room = rm.rooms.get(created.code);
-    const host = room.players[0];
-    rm.joinRoom(created.code, { displayName: "Bea" });
-    const bea = room.players[1];
+  it("requestAi only for active seat; refunds on failure", async () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_mission", {
       hostToken: created.hostToken,
       mission: sampleMission,
       globalId: "climate",
     });
-    const lock = rm.lockField(room, host, "inventionHow", 30);
-    assert.equal(lock.ok, true);
-    const denied = rm.applyPlayerAction(room, bea, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "hijack" },
+    const denied = await rm.requestAi(room, bea, {
+      mode: "chat",
+      clientActionId: "nope",
+      reservedAp: 1,
     });
     assert.equal(denied.ok, false);
-    assert.equal(denied.error, "field_locked");
-    // expire lock
-    room.fieldLocks.get("inventionHow").until = Date.now() - 1;
-    const ok = rm.applyPlayerAction(room, bea, {
-      type: "buffer_write",
-      payload: { field: "inventionHow", value: "ok now" },
-    });
-    assert.equal(ok.ok, true);
-    assert.equal(room.sim.inventionHow, "ok now");
-  });
+    assert.equal(denied.error, "not_active_seat");
 
-  it("requestAi reserves then completeAiJob refunds on failure", async () => {
-    const rm = new RoomManager();
-    const created = rm.createRoom({ displayName: "Host" });
-    const room = rm.rooms.get(created.code);
-    const host = room.players[0];
-    rm.hostCommand(room, host, "start_mission", {
-      hostToken: created.hostToken,
-      mission: sampleMission,
-      globalId: "climate",
-    });
-    const startAp = room.sim.ap;
+    const startAp = room.mp.forges[host.id].ap;
     const pending = await rm.requestAi(room, host, {
       mode: "chat",
       clientActionId: "t1",
@@ -134,27 +174,20 @@ describe("RoomManager", () => {
     });
     assert.equal(pending.ok, true);
     assert.equal(pending.needsHandler, true);
-    assert.equal(room.sim.ap, startAp - 1);
-    assert.equal(room.sim.pendingAi.clientActionId, "t1");
+    assert.equal(room.mp.forges[host.id].ap, startAp - 1);
     const done = rm.completeAiJob(room, host, "t1", { ok: false, error: "network" });
     assert.equal(done.type, "ai_result");
     assert.equal(done.ok, false);
-    assert.equal(done.error, "network");
-    assert.equal(room.sim.pendingAi, null);
-    assert.equal(room.sim.ap, startAp);
+    assert.equal(room.mp.forges[host.id].ap, startAp);
   });
 
-  it("requestAi success applies proposals via completeAiJob", async () => {
-    const rm = new RoomManager({
-      coInventHandler: async () => ({
-        message: "Try sensors",
-        proposals: { inventionHow: "Sensors close the floodgate with human override." },
-        source: "test",
-      }),
+  it("requestAi success applies proposals to personal forge", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.coInventHandler = async () => ({
+      message: "Try sensors",
+      proposals: { inventionHow: "Sensors close the floodgate with human override." },
+      source: "test",
     });
-    const created = rm.createRoom({ displayName: "Host" });
-    const room = rm.rooms.get(created.code);
-    const host = room.players[0];
     rm.hostCommand(room, host, "start_mission", {
       hostToken: created.hostToken,
       mission: sampleMission,
@@ -167,21 +200,16 @@ describe("RoomManager", () => {
     });
     assert.equal(r.ok, true);
     assert.equal(r.type, "ai_result");
-    assert.match(room.sim.inventionHow, /Sensors/);
-    assert.equal(room.sim.pendingAi, null);
+    assert.match(room.mp.forges[host.id].inventionHow, /Sensors/);
   });
 
   it("over quota rejects without AP spend", async () => {
-    const rm = new RoomManager();
-    const created = rm.createRoom({ displayName: "Host" });
-    const room = rm.rooms.get(created.code);
-    const host = room.players[0];
+    const { rm, created, room, host } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_mission", {
       hostToken: created.hostToken,
       mission: sampleMission,
       globalId: "climate",
     });
-    // Exhaust per-minute quota with zero-AP jobs completed
     const { ROOM_AI_QUOTAS } = await import("../sim/ai_jobs.js");
     for (let i = 0; i < ROOM_AI_QUOTAS.perPlayerPerMin; i++) {
       const p = await rm.requestAi(room, host, {
@@ -192,7 +220,7 @@ describe("RoomManager", () => {
       assert.equal(p.ok, true);
       rm.completeAiJob(room, host, `q${i}`, { ok: true, result: { message: "ok" } });
     }
-    const ap = room.sim.ap;
+    const ap = room.mp.forges[host.id].ap;
     const blocked = await rm.requestAi(room, host, {
       mode: "chat",
       clientActionId: "blocked",
@@ -200,6 +228,6 @@ describe("RoomManager", () => {
     });
     assert.equal(blocked.ok, false);
     assert.equal(blocked.error, "player_rate_quota");
-    assert.equal(room.sim.ap, ap);
+    assert.equal(room.mp.forges[host.id].ap, ap);
   });
 });
