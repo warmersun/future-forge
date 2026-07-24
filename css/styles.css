@@ -1771,6 +1771,84 @@ button:disabled {
   gap: 1rem;
 }
 
+/* PR7 deploy bay */
+.deploy-bay {
+  margin: 1rem 0 0;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: linear-gradient(160deg, rgba(52, 211, 153, 0.1), rgba(7, 11, 20, 0.4));
+}
+
+.deploy-bay-workshop {
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+}
+
+.deploy-bay-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.deploy-bay-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-3);
+  letter-spacing: 0.02em;
+}
+
+.deploy-stage-pills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.deploy-stage-pill {
+  margin: 0;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-mute);
+  background: rgba(7, 11, 20, 0.35);
+}
+
+.deploy-stage-pill.is-active {
+  border-color: rgba(52, 211, 153, 0.55);
+  color: var(--text);
+  background: rgba(52, 211, 153, 0.15);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.2);
+}
+
+.deploy-stage-pill.is-done {
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--accent-3);
+  opacity: 0.85;
+}
+
+.deploy-bay-status {
+  margin: 0 0 0.75rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.deploy-bay-actions {
+  margin: 0;
+  flex-wrap: wrap;
+}
+
 .scrutiny-moves {
   margin: 0;
   padding: 1rem 1.1rem;

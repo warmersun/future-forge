@@ -32,7 +32,12 @@ import {
   maxPressure as simMaxPressure,
   totalPressure as simTotalPressure,
 } from "./sim/pressure.js";
-import { computeDeployDrop } from "./sim/deploy.js";
+import {
+  computeDeployDrop,
+  freezeStagedDropPool,
+  applyStagedDropStep,
+  visionStageIdForDeployStage,
+} from "./sim/deploy.js";
 import { isWin as simIsWin, isCollapsed as simIsCollapsed } from "./sim/collapse.js";
 import { scoreRun, starLabel } from "./sim/scoring.js";
 import {
@@ -122,6 +127,17 @@ const state = {
   elegancePivotPenalty: false,
   /** @type {"defend"|"fix"|"sidestep"|null} selected challenge response mode */
   scrutinyMoveMode: null,
+  // PR7 staged deploy (pilot → scale → new normal)
+  deployUnlocked: false,
+  /** @type {"none"|"pilot"|"scale"|"new_normal"} last completed stage */
+  deployStage: "none",
+  stagedDropPool: 0,
+  stagedDropRemaining: 0,
+  dropPilotApplied: 0,
+  dropScaleApplied: 0,
+  dropNewNormalApplied: 0,
+  stagedDropParts: null,
+  deployFieldPaid: false,
 };
 
 const STORAGE_SCENARIOS = "future-forge:scenarioCache";
@@ -142,6 +158,10 @@ function budgetWillEnabled() {
 
 function scrutinyCombatEnabled() {
   return Boolean(features().scrutinyCombat);
+}
+
+function deployStagesEnabled() {
+  return Boolean(features().deployStages);
 }
 
 function dispatchSim(type, payload = {}) {
@@ -245,6 +265,10 @@ function selectedTechs() {
 }
 
 function currentStage() {
+  if (deployStagesEnabled() && state.deployUnlocked) {
+    const id = visionStageIdForDeployStage(state.deployStage || "none");
+    return VISION_STAGES.find((s) => s.id === id) || VISION_STAGES[0];
+  }
   const n = state.selectedTechIds.length;
   let stage = VISION_STAGES[0];
   for (const s of VISION_STAGES) {
@@ -737,6 +761,7 @@ function startMission(mission) {
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
   state.scrutinyMoveMode = null;
+  resetDeployBayState();
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   state.coInventor?.onChallengeStart?.();
@@ -811,7 +836,33 @@ function renderWorkshop() {
   renderFeasibility();
   updateLearnButton();
   updateChallengeButton();
+  renderWorkshopDeployBay();
   ensureCoInventor();
+}
+
+/** Banner on invent when deploy is unlocked (return to invent is cosmetic). */
+function renderWorkshopDeployBay() {
+  const el = $("#deploy-bay-workshop");
+  const status = $("#deploy-bay-workshop-status");
+  if (!el) return;
+  if (!deployStagesEnabled() || !state.deployUnlocked) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  const next = nextDeployStageAction();
+  if (status) {
+    status.textContent = next
+      ? `Deploy bay open · next: ${next.replace("_", " ")}. Crisis pool −${state.stagedDropRemaining}/${state.stagedDropPool} left. Wait is blocked.`
+      : "Deploy stages finished.";
+  }
+  // Challenge entry becomes "back to deploy" once unlocked
+  const btn = $("#btn-to-challenge");
+  if (btn && state.challengePassed) {
+    btn.disabled = false;
+    btn.textContent = "Back to deploy bay →";
+    btn.title = "Deploy is unlocked — no re-challenge needed";
+  }
 }
 
 function playerStoryText() {
@@ -1423,6 +1474,22 @@ function challengeBlockReason() {
 function updateChallengeButton() {
   const btn = $("#btn-to-challenge");
   if (!btn) return;
+  // Deploy bay open — no re-scrutiny; button is a return path
+  if (deployStagesEnabled() && state.deployUnlocked) {
+    btn.disabled = false;
+    btn.textContent = "Back to deploy bay →";
+    btn.title = "Deploy is unlocked — no re-challenge needed";
+    const hint = $("#challenge-ready-hint");
+    if (hint) {
+      const next = nextDeployStageAction();
+      hint.textContent = next
+        ? `Deploy bay open · next stage: ${next.replace("_", " ")}.`
+        : "Deploy stages finished.";
+      hint.className = "challenge-ready-hint ready";
+    }
+    return;
+  }
+  btn.textContent = "Face the challenge →";
   renderFeasibility();
   const f = assessFeasibility();
   const reason = challengeBlockReason();
@@ -1551,7 +1618,11 @@ function waitTurn() {
     return;
   }
   if (state.turnPhase === "scrutiny" || state.turnPhase === "between_stages") {
-    flashToast("Finish or abandon the challenge before Waiting.");
+    flashToast(
+      state.deployUnlocked
+        ? "Wait is blocked while the deploy bay is open — finish stages or hold the line."
+        : "Finish or abandon the challenge before Waiting."
+    );
     return;
   }
   const m = state.mission;
@@ -1802,6 +1873,8 @@ async function poseScrutinyEncounters() {
   $("#challenge-answer").value = "";
   $("#challenge-feedback").hidden = true;
   $("#btn-challenge-deploy").hidden = true;
+  const bay = $("#deploy-bay");
+  if (bay) bay.hidden = true;
   renderChallengeHud();
   renderScrutinyEncounters();
 
@@ -1832,23 +1905,21 @@ async function poseScrutinyEncounters() {
 function paintActiveEncounter() {
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
-    $("#challenge-speech").innerHTML =
-      "<p><strong>Challenge cleared.</strong> You may deploy when ready.</p>";
+    $("#challenge-speech").innerHTML = deployStagesEnabled()
+      ? "<p><strong>Challenge cleared.</strong> Field a <strong>Pilot</strong>, then Scale, then declare the new normal — or hold the line after Pilot.</p>"
+      : "<p><strong>Challenge cleared.</strong> You may deploy when ready.</p>";
     $("#challenge-question").textContent = "";
-    state.challengePassed = true;
     state.challengeVerdict = state.challengeVerdict || "pass";
     state.hadChallengeAttempt = true;
     if (!state.lastChallengeVerdict) state.lastChallengeVerdict = "pass";
     const moves = $("#scrutiny-moves");
     if (moves) moves.hidden = true;
     hideAllModePanels();
+    if (!state.deployUnlocked) unlockDeployBay();
+    else state.challengePassed = true;
     updateDeployButtonCost();
-    const dep = $("#btn-challenge-deploy");
-    if (dep) {
-      dep.hidden = false;
-      dep.disabled = false;
-    }
-    paintChallengerResolve(null);
+    renderDeployBay();
+    paintChallengerResolve(state.scrutiny?.encounters?.[0] || null);
     renderChallengeHud();
     return;
   }
@@ -2175,13 +2246,21 @@ function renderChallengeStep() {
     fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
     fb.innerHTML = state.challengeFeedback;
   } else if (fb) fb.hidden = true;
-  if (state.challengePassed && dep) {
-    dep.hidden = false;
-    dep.disabled = false;
-    updateDeployButtonCost();
+  if (state.challengePassed) {
+    if (deployStagesEnabled()) {
+      if (dep) dep.hidden = true;
+      if (!state.deployUnlocked) unlockDeployBay();
+      renderDeployBay();
+    } else if (dep) {
+      dep.hidden = false;
+      dep.disabled = false;
+      updateDeployButtonCost();
+    }
   } else if (dep) {
     dep.hidden = true;
     dep.disabled = true;
+    const bay = $("#deploy-bay");
+    if (bay) bay.hidden = true;
   }
   renderChallengeHud();
 }
@@ -2273,10 +2352,16 @@ async function scrutinyArgue() {
   paintActiveEncounter();
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
-    state.challengePassed = true;
     state.challengeVerdict = "pass";
-    if (budgetWillEnabled()) dispatchSim("challenge_income", { verdict: "pass" });
-    flashToast("Challenge cleared — deploy when ready.");
+    // Hit already paid challenge income; glance-clear still counts as a win
+    if (budgetWillEnabled() && quality === "glance") {
+      dispatchSim("challenge_income", { verdict: "pass" });
+    }
+    flashToast(
+      deployStagesEnabled()
+        ? "Challenge cleared — open the deploy bay (Pilot → Scale → New normal)."
+        : "Challenge cleared — deploy when ready."
+    );
   }
 }
 
@@ -2331,9 +2416,12 @@ function scrutinyPatch() {
   paintActiveEncounter();
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
-    state.challengePassed = true;
     state.challengeVerdict = "pass";
-    flashToast("Challenge cleared — deploy when ready.");
+    flashToast(
+      deployStagesEnabled()
+        ? "Challenge cleared — open the deploy bay (Pilot → Scale → New normal)."
+        : "Challenge cleared — deploy when ready."
+    );
   }
 }
 
@@ -2381,9 +2469,12 @@ function scrutinyPivot() {
   paintActiveEncounter();
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
-    state.challengePassed = true;
     state.challengeVerdict = "pass";
-    flashToast("Challenge cleared — deploy when ready.");
+    flashToast(
+      deployStagesEnabled()
+        ? "Challenge cleared — open the deploy bay (Pilot → Scale → New normal)."
+        : "Challenge cleared — deploy when ready."
+    );
   }
 }
 
@@ -2554,6 +2645,7 @@ async function submitChallengeAnswer() {
           : "<br/>Not enough. Revise your answer, or return to Invent. Next challenge may use a different angle.";
     } else {
       state.challengePassed = true;
+      if (deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
     }
     if (budgetWillEnabled()) {
       dispatchSim("challenge_income", { verdict: state.challengeVerdict });
@@ -2564,6 +2656,7 @@ async function submitChallengeAnswer() {
     const ok = answer.length >= 40;
     state.challengeVerdict = ok ? "partial" : "fail";
     state.challengePassed = ok;
+    if (ok && deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
     state.hadChallengeAttempt = true;
     state.lastChallengeVerdict = state.challengeVerdict;
     state.challengeFeedback = ok
@@ -2586,8 +2679,81 @@ function currentDeployFieldCost(techs = selectedTechs()) {
   return deployActionCost(techs, { will: state.will ?? 0 });
 }
 
+function resetDeployBayState() {
+  state.deployUnlocked = false;
+  state.deployStage = "none";
+  state.stagedDropPool = 0;
+  state.stagedDropRemaining = 0;
+  state.dropPilotApplied = 0;
+  state.dropScaleApplied = 0;
+  state.dropNewNormalApplied = 0;
+  state.stagedDropParts = null;
+  state.deployFieldPaid = false;
+}
+
+function computeCurrentDropInfo() {
+  const techs = selectedTechs();
+  const domains = domainsInStack(techs);
+  const pairs = computeSynergies(techs);
+  return {
+    techs,
+    domains,
+    pairs,
+    dropInfo: computeDeployDrop({
+      techs,
+      domains,
+      pairs,
+      inventionHow: state.inventionHow,
+      inventionImpact: state.inventionImpact,
+      challengeVerdict: state.challengeVerdict,
+      challengeAnswer: state.challengeAnswer,
+      suggested: state.mission?.suggested || [],
+      will: state.will,
+      budgetWill: budgetWillEnabled(),
+    }),
+  };
+}
+
+/** Freeze crisis relief pool and open deploy bay after challenge clear. */
+function unlockDeployBay() {
+  state.challengePassed = true;
+  if (!deployStagesEnabled()) return;
+  // Sticky unlock — do not re-freeze mid-bay
+  if (state.deployUnlocked) {
+    state.turnPhase = "between_stages";
+    return;
+  }
+  state.deployUnlocked = true;
+  state.turnPhase = "between_stages";
+
+  const { dropInfo } = computeCurrentDropInfo();
+  const frozen = freezeStagedDropPool(dropInfo.drop);
+  state.stagedDropPool = frozen.stagedDropPool;
+  state.stagedDropRemaining = frozen.stagedDropRemaining;
+  state.dropPilotApplied = 0;
+  state.dropScaleApplied = 0;
+  state.dropNewNormalApplied = 0;
+  state.deployStage = "none";
+  state.deployFieldPaid = false;
+  state.stagedDropParts = dropInfo.parts;
+  state.lastNews = `Challenge cleared · deploy bay open. Crisis relief pool frozen at −${state.stagedDropPool} (Pilot → Scale → New normal).`;
+}
+
+function nextDeployStageAction() {
+  if (!state.deployUnlocked) return null;
+  if (state.deployStage === "none") return "pilot";
+  if (state.deployStage === "pilot") return "scale";
+  if (state.deployStage === "scale") return "new_normal";
+  return null;
+}
+
 function updateDeployButtonCost() {
   const dep = $("#btn-challenge-deploy");
+  if (deployStagesEnabled()) {
+    if (dep) dep.hidden = true;
+    renderDeployBay();
+    return;
+  }
   if (!dep || dep.hidden) return;
   const techs = selectedTechs();
   if (!techs.length) {
@@ -2608,7 +2774,287 @@ function updateDeployButtonCost() {
     : "Deploy after a successful challenge.";
 }
 
+function renderDeployBay() {
+  const bay = $("#deploy-bay");
+  if (!bay) return;
+  if (!deployStagesEnabled() || !state.deployUnlocked || !state.challengePassed) {
+    bay.hidden = true;
+    return;
+  }
+  bay.hidden = false;
+
+  const next = nextDeployStageAction();
+  $$(".deploy-stage-pill", bay).forEach((pill) => {
+    const id = pill.dataset.stage;
+    const done =
+      (id === "pilot" && ["pilot", "scale", "new_normal"].includes(state.deployStage)) ||
+      (id === "scale" && ["scale", "new_normal"].includes(state.deployStage)) ||
+      (id === "new_normal" && state.deployStage === "new_normal");
+    const active = next === id;
+    pill.classList.toggle("is-done", done);
+    pill.classList.toggle("is-active", active);
+  });
+
+  const status = $("#deploy-bay-status");
+  const primary = $("#btn-deploy-stage-primary");
+  const hold = $("#btn-deploy-hold");
+  const remaining = state.stagedDropRemaining ?? 0;
+  const pool = state.stagedDropPool ?? 0;
+  const fieldCost = currentDeployFieldCost();
+  const costBits = [];
+  if (!state.deployFieldPaid) {
+    if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
+    if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
+  }
+  const costSuffix = costBits.length ? ` · fielding ${costBits.join(" · ")}` : "";
+
+  if (status) {
+    if (next === "pilot") {
+      const pilotAmt = Math.min(remaining, Math.max(1, Math.ceil(pool / 2)) || 0);
+      status.textContent = `Pool −${pool} frozen at unlock. Pilot drops −${pilotAmt} crisis (then Scale).${costSuffix}`;
+    } else if (next === "scale") {
+      status.textContent = `Pilot landed (−${state.dropPilotApplied}). Scale spends remaining −${remaining}. Wait is blocked until you finish or hold.`;
+    } else if (next === "new_normal") {
+      const extra =
+        (state.will ?? 0) >= 4 && pool >= 4 ? " Optional +1 if Will ≥ 4." : " Win check only (no extra drop).";
+      status.textContent = `Scale done (−${state.dropScaleApplied}). Declare new normal or hold the line.${extra}`;
+    } else {
+      status.textContent = "Deploy complete.";
+    }
+  }
+
+  if (primary) {
+    if (next === "pilot") {
+      primary.hidden = false;
+      primary.disabled = assessFeasibility().overall === "red";
+      primary.textContent = costBits.length
+        ? `Deploy Pilot (${costBits.join(" · ")}) →`
+        : "Deploy Pilot →";
+    } else if (next === "scale") {
+      primary.hidden = false;
+      primary.disabled = assessFeasibility().overall === "red";
+      primary.textContent =
+        remaining > 0 ? `Deploy Scale (−${remaining} crisis) →` : "Deploy Scale (narrative) →";
+    } else if (next === "new_normal") {
+      primary.hidden = false;
+      primary.disabled = assessFeasibility().overall === "red";
+      primary.textContent = "Declare new normal →";
+    } else {
+      primary.hidden = true;
+    }
+  }
+
+  if (hold) {
+    const canHold = next === "scale" || next === "new_normal";
+    hold.hidden = !canHold;
+    hold.disabled = !canHold;
+  }
+
+  // Hide legacy single deploy when bay is active
+  const legacy = $("#btn-challenge-deploy");
+  if (legacy) legacy.hidden = true;
+}
+
+function payDeployFieldingOnce() {
+  if (state.deployFieldPaid) return { ok: true, fieldCost: null };
+  const techs = selectedTechs();
+  const fieldCost = currentDeployFieldCost(techs);
+  if (!apEnabled() && !budgetWillEnabled()) {
+    state.deployFieldPaid = true;
+    return { ok: true, fieldCost };
+  }
+  const pay = dispatchSim("deploy", {
+    apCost: apEnabled() ? fieldCost.ap : 0,
+    budgetCost: budgetWillEnabled() ? fieldCost.budget : 0,
+  });
+  if (!pay.ok) {
+    if (pay.error === "no_ap") {
+      flashToast("No AP to field the pilot — End turn, then deploy.");
+    } else if (pay.error === "no_budget") {
+      flashToast(
+        `Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}).`
+      );
+    } else {
+      flashToast("Cannot deploy right now.");
+    }
+    return { ok: false, fieldCost };
+  }
+  state.deployFieldPaid = true;
+  renderChallengeHud();
+  return { ok: true, fieldCost };
+}
+
+function snapshotTimingAtDeploy() {
+  const techs = selectedTechs();
+  const timingSnap =
+    state.aiTiming?.level && state.aiTiming?.forKey === timingCacheKey()
+      ? state.aiTiming.level
+      : detectClaimStretch(state.inventionHow, techs, state.year).level;
+  state.timingLevelAtDeploy = timingSnap;
+  return timingSnap;
+}
+
+function attemptDeployStage(stage) {
+  if (!deployStagesEnabled()) {
+    attemptDeployLegacy();
+    return;
+  }
+  if (!state.challengePassed || !state.deployUnlocked) {
+    flashToast("Clear the challenge first.");
+    return;
+  }
+  const expected = nextDeployStageAction();
+  if (stage !== expected) {
+    flashToast(expected ? `Next step is ${expected}.` : "Deploy already finished.");
+    return;
+  }
+  const techs = selectedTechs();
+  if (!techs.length) {
+    flashToast("Add at least one technology.");
+    return;
+  }
+  if (state.inventionHow.trim().length < 20 || state.inventionImpact.trim().length < 20) {
+    flashToast("Need both story faces.");
+    return;
+  }
+  if (assessFeasibility().overall === "red") {
+    flashToast("Feasibility is red — revise how-it-works timing claims first.");
+    return;
+  }
+
+  // Fielding cost once at Pilot
+  let fieldCost = null;
+  if (stage === "pilot") {
+    const pay = payDeployFieldingOnce();
+    if (!pay.ok) {
+      renderDeployBay();
+      return;
+    }
+    fieldCost = pay.fieldCost;
+  }
+
+  const step = applyStagedDropStep(
+    stage,
+    {
+      stagedDropPool: state.stagedDropPool,
+      stagedDropRemaining: state.stagedDropRemaining,
+      dropPilotApplied: state.dropPilotApplied,
+      dropScaleApplied: state.dropScaleApplied,
+      dropNewNormalApplied: state.dropNewNormalApplied,
+    },
+    { will: state.will ?? 0 }
+  );
+  if (!step.ok) {
+    flashToast("Cannot advance deploy stage.");
+    return;
+  }
+
+  if (step.drop > 0) {
+    state.pressure = applyPressureDrop(state.pressure, step.drop);
+  }
+  state.stagedDropPool = step.frozen.stagedDropPool;
+  state.stagedDropRemaining = step.frozen.stagedDropRemaining;
+  state.dropPilotApplied = step.frozen.dropPilotApplied;
+  state.dropScaleApplied = step.frozen.dropScaleApplied;
+  state.dropNewNormalApplied = step.frozen.dropNewNormalApplied;
+  state.deployStage = stage;
+
+  const timingSnap = snapshotTimingAtDeploy();
+  const { domains, pairs, dropInfo } = computeCurrentDropInfo();
+
+  if (stage === "pilot") {
+    markMissionSolved(state.mission);
+    state.lastNews = `Pilot fielded in ${state.year}. Crisis −${step.drop}. Scale ready (remaining pool −${state.stagedDropRemaining}).`;
+    flashToast(`Pilot landed · crisis −${step.drop}`);
+    renderDeployBay();
+    renderChallengeHud();
+    if (state.screen === "workshop") renderWorkshop();
+    return;
+  }
+
+  if (stage === "scale") {
+    state.lastNews = `Scale rollout. Crisis −${step.drop}. Declare new normal or hold the line.`;
+    flashToast(step.drop ? `Scale landed · crisis −${step.drop}` : "Scale advanced (no further crisis drop)");
+    renderDeployBay();
+    renderChallengeHud();
+    if (state.screen === "workshop") renderWorkshop();
+    return;
+  }
+
+  // new_normal — win check
+  if (step.drop > 0) {
+    state.lastNews = `New normal declared. Mandate encore −${step.drop}.`;
+  } else {
+    state.lastNews = `New normal declared in ${state.year}.`;
+  }
+  state.waitReport = "";
+  const kind = wonMission() ? "win" : "partial";
+  finishOutcome(kind, {
+    drop:
+      (state.dropPilotApplied || 0) +
+      (state.dropScaleApplied || 0) +
+      (state.dropNewNormalApplied || 0),
+    dropParts: [
+      ...(state.stagedDropParts || []),
+      ...step.parts,
+      { id: "pilot_applied", label: "Pilot drop", amount: state.dropPilotApplied || 0 },
+      { id: "scale_applied", label: "Scale drop", amount: state.dropScaleApplied || 0 },
+    ],
+    deployCost: fieldCost || currentDeployFieldCost(techs),
+    domains,
+    pairs,
+    verdict: state.challengeVerdict,
+    angle: state.challengeAngle,
+    timingLevel: timingSnap,
+    deployStage: "new_normal",
+    stagedPool: state.stagedDropPool,
+  });
+}
+
+function holdTheLine() {
+  if (!deployStagesEnabled() || !state.deployUnlocked) return;
+  const next = nextDeployStageAction();
+  if (next !== "scale" && next !== "new_normal") {
+    flashToast("Hold the line after Pilot or Scale.");
+    return;
+  }
+  const timingSnap = snapshotTimingAtDeploy();
+  const { domains, pairs } = computeCurrentDropInfo();
+  const totalDrop =
+    (state.dropPilotApplied || 0) +
+    (state.dropScaleApplied || 0) +
+    (state.dropNewNormalApplied || 0);
+  state.lastNews = `Held the line after ${state.deployStage} in ${state.year}. Crisis relief −${totalDrop}.`;
+  state.waitReport = "";
+  finishOutcome("partial", {
+    drop: totalDrop,
+    dropParts: [
+      { id: "pilot_applied", label: "Pilot drop", amount: state.dropPilotApplied || 0 },
+      { id: "scale_applied", label: "Scale drop", amount: state.dropScaleApplied || 0 },
+      { id: "hold", label: "Held the line", amount: 0 },
+    ],
+    domains,
+    pairs,
+    verdict: state.challengeVerdict,
+    angle: state.challengeAngle,
+    timingLevel: timingSnap,
+    deployStage: state.deployStage,
+    held: true,
+    stagedPool: state.stagedDropPool,
+  });
+}
+
 function attemptDeploy() {
+  if (deployStagesEnabled()) {
+    const next = nextDeployStageAction();
+    if (next) attemptDeployStage(next);
+    else flashToast("Deploy stages finished — declare new normal or hold.");
+    return;
+  }
+  attemptDeployLegacy();
+}
+
+function attemptDeployLegacy() {
   if (!state.challengePassed) {
     flashToast("Pass the challenge step first.");
     showScreen("challenge-step");
@@ -2651,26 +3097,9 @@ function attemptDeploy() {
     renderChallengeHud();
   }
 
-  const domains = domainsInStack(techs);
-  const pairs = computeSynergies(techs);
-  const dropInfo = computeDeployDrop({
-    techs,
-    domains,
-    pairs,
-    inventionHow: state.inventionHow,
-    inventionImpact: state.inventionImpact,
-    challengeVerdict: state.challengeVerdict,
-    challengeAnswer: state.challengeAnswer,
-    suggested: state.mission.suggested || [],
-    will: state.will,
-    budgetWill: budgetWillEnabled(),
-  });
+  const { domains, pairs, dropInfo } = computeCurrentDropInfo();
   const drop = dropInfo.drop;
-  const timingSnap =
-    state.aiTiming?.level && state.aiTiming?.forKey === timingCacheKey()
-      ? state.aiTiming.level
-      : detectClaimStretch(state.inventionHow, techs, state.year).level;
-  state.timingLevelAtDeploy = timingSnap;
+  const timingSnap = snapshotTimingAtDeploy();
 
   state.pressure = applyPressureDrop(state.pressure, drop);
 
@@ -2681,7 +3110,6 @@ function attemptDeploy() {
 
   state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.${costNote}`;
   state.waitReport = "";
-  // Deployed = solved (full win or partial relief); still replayable from the mission grid
   markMissionSolved(state.mission);
   finishOutcome(wonMission() ? "win" : "partial", {
     drop,
@@ -3534,6 +3962,14 @@ function bind() {
   $("#btn-end-turn")?.addEventListener("click", () => endTurn());
   $("#btn-lobby")?.addEventListener("click", () => lobbyAction());
   $("#btn-to-challenge")?.addEventListener("click", () => {
+    // Return to deploy bay without re-posing challenge
+    if (deployStagesEnabled() && state.deployUnlocked) {
+      state.turnPhase = "between_stages";
+      showScreen("challenge-step");
+      renderChallengeStep();
+      renderDeployBay();
+      return;
+    }
     if (!inventReadyForChallenge()) {
       flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
       return;
@@ -3551,12 +3987,30 @@ function bind() {
     enterChallenge();
   });
   $("#btn-challenge-back")?.addEventListener("click", () => {
+    // Leaving mid-scrutiny abandons; leaving deploy bay is cosmetic only
+    if (state.deployUnlocked) {
+      state.turnPhase = "between_stages";
+      showScreen("workshop");
+      renderWorkshop();
+      return;
+    }
     if (apEnabled()) dispatchSim("abandon_scrutiny");
     else state.turnPhase = "act";
     showScreen("workshop");
   });
   $("#btn-challenge-submit")?.addEventListener("click", () => submitChallengeAnswer());
   $("#btn-challenge-deploy")?.addEventListener("click", () => attemptDeploy());
+  $("#btn-deploy-stage-primary")?.addEventListener("click", () => {
+    const next = nextDeployStageAction();
+    if (next) attemptDeployStage(next);
+  });
+  $("#btn-deploy-hold")?.addEventListener("click", () => holdTheLine());
+  $("#btn-workshop-to-deploy")?.addEventListener("click", () => {
+    if (!state.deployUnlocked) return;
+    showScreen("challenge-step");
+    renderChallengeStep();
+    renderDeployBay();
+  });
   $("#btn-challenge-coach")?.addEventListener("click", () => coachChallenge("coach-challenge"));
   $("#btn-challenge-draft")?.addEventListener("click", () => coachChallenge("draft-challenge"));
   // Mode toggles (select only)

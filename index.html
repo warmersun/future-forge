@@ -287,8 +287,17 @@
               </button>
             </div>
             <p class="challenge-ready-hint" id="challenge-ready-hint" aria-live="polite"></p>
+            <div id="deploy-bay-workshop" class="deploy-bay deploy-bay-workshop" hidden>
+              <p class="deploy-bay-status" id="deploy-bay-workshop-status"></p>
+              <div class="deploy-bay-actions form-actions game-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-workshop-to-deploy">
+                  Open deploy bay →
+                </button>
+              </div>
+            </div>
             <p class="foot-hint">
-              Pipeline: invent → feasibility → challenge → deploy. Use <strong>Art of the possible</strong> on the co-inventor for milestones &amp; capabilities.
+              Pipeline: invent → feasibility → challenge → pilot → scale → new normal.
+              Use <strong>Art of the possible</strong> on the co-inventor for milestones &amp; capabilities.
             </p>
           </div>
         </main>
@@ -493,6 +502,33 @@
               </div>
             </div>
 
+            <!-- Deploy bay (PR7 staged: Pilot → Scale → New normal) -->
+            <div id="deploy-bay" class="deploy-bay" hidden>
+              <div class="deploy-bay-head">
+                <h2 class="deploy-bay-title">Deploy bay</h2>
+                <ol class="deploy-stage-pills" aria-label="Deploy stages">
+                  <li class="deploy-stage-pill" data-stage="pilot">Pilot</li>
+                  <li class="deploy-stage-pill" data-stage="scale">Scale</li>
+                  <li class="deploy-stage-pill" data-stage="new_normal">New normal</li>
+                </ol>
+              </div>
+              <p id="deploy-bay-status" class="deploy-bay-status muted"></p>
+              <div class="deploy-bay-actions form-actions game-actions">
+                <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary">
+                  Deploy Pilot →
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="btn-deploy-hold"
+                  hidden
+                  title="End the mission with partial relief — no further stages"
+                >
+                  Hold the line
+                </button>
+              </div>
+            </div>
+
             <!-- Essay mode fallback (feature off) uses defend panel + submit -->
             <div class="form-actions game-actions challenge-footer-actions" id="challenge-footer">
               <button
@@ -648,7 +684,7 @@
                 <span class="help-step-num">4</span>
                 <span class="help-step-body">
                   <strong>Deploy</strong>
-                  <span>Pay to field; crisis drops</span>
+                  <span>Pilot → Scale → New normal</span>
                 </span>
               </li>
             </ol>
@@ -773,15 +809,20 @@
           <section class="help-block help-block-last">
             <div class="help-tiles help-tiles-2">
               <article class="help-tile">
-                <h5>Deploy</h5>
+                <h5>Deploy bay</h5>
                 <ul class="help-list">
                   <li>
-                    <strong>Fielding:</strong> 1 AP + Budget (base ¤1; +¤1 if 3+ techs; +¤1 frontier;
-                    Will ≥ 4 can shave ¤1). Button shows the cost.
+                    <strong>Frozen pool:</strong> total crisis relief is locked when you clear Challenge
+                    (same power as one classic deploy).
                   </li>
                   <li>
-                    <strong>Crisis drop:</strong> stronger stack, story, challenge quality, and Will ≥ 4
-                    increase relief. Meter at 5 or fail year → mission ends.
+                    <strong>Pilot</strong> (fielding cost once: AP + Budget) takes ~half the pool.
+                    <strong>Scale</strong> spends the rest. <strong>New normal</strong> is a win check
+                    (optional +1 if Will ≥ 4 and pool was big).
+                  </li>
+                  <li>
+                    After Pilot or Scale you may <strong>Hold the line</strong> for a partial outcome.
+                    Wait stays blocked until you finish.
                   </li>
                 </ul>
               </article>

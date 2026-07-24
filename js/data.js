@@ -15,7 +15,7 @@ export const GAME = {
     actionPoints: true,
     budgetWill: true,
     scrutinyCombat: true,
-    deployStages: false,
+    deployStages: true,
     multiplayer: false,
     hotseat: false,
   },

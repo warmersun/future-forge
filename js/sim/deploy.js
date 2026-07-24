@@ -71,3 +71,108 @@ export function computeDeployDrop(opts) {
 
   return { drop, parts };
 }
+
+/* —— PR7 staged deploy (pilot → scale → new normal) —— */
+
+/**
+ * Freeze total crisis relief at unlock time (one baseline deploy pool).
+ * @param {number} fullDrop
+ */
+export function freezeStagedDropPool(fullDrop) {
+  const pool = Math.max(0, Math.floor(Number(fullDrop) || 0));
+  return {
+    stagedDropPool: pool,
+    stagedDropRemaining: pool,
+    dropPilotApplied: 0,
+    dropScaleApplied: 0,
+    dropNewNormalApplied: 0,
+  };
+}
+
+/**
+ * Pilot takes half the pool (ceil), at least 1 if pool > 0, never more than remaining.
+ * @param {number} pool
+ * @param {number} remaining
+ */
+export function pilotDropAmount(pool, remaining) {
+  const p = Math.max(0, Math.floor(Number(pool) || 0));
+  const r = Math.max(0, Math.floor(Number(remaining) || 0));
+  if (p <= 0 || r <= 0) return 0;
+  return Math.min(r, Math.max(1, Math.ceil(p / 2)));
+}
+
+/**
+ * Scale spends whatever is left in the frozen pool (may be 0).
+ * @param {number} remaining
+ */
+export function scaleDropAmount(remaining) {
+  return Math.max(0, Math.floor(Number(remaining) || 0));
+}
+
+/**
+ * New normal is a win-check step. Optional +1 only if will ≥ 4 and original pool ≥ 4.
+ * @param {number} will
+ * @param {number} pool
+ */
+export function newNormalExtraDrop(will, pool) {
+  if ((Number(will) || 0) >= 4 && (Number(pool) || 0) >= 4) return 1;
+  return 0;
+}
+
+/**
+ * Apply one stage to a frozen pool snapshot (pure).
+ * @param {"pilot"|"scale"|"new_normal"} stage
+ * @param {{ stagedDropPool: number, stagedDropRemaining: number, dropPilotApplied?: number, dropScaleApplied?: number, dropNewNormalApplied?: number }} frozen
+ * @param {{ will?: number }} [opts]
+ */
+export function applyStagedDropStep(stage, frozen, opts = {}) {
+  const next = {
+    stagedDropPool: frozen.stagedDropPool ?? 0,
+    stagedDropRemaining: frozen.stagedDropRemaining ?? 0,
+    dropPilotApplied: frozen.dropPilotApplied ?? 0,
+    dropScaleApplied: frozen.dropScaleApplied ?? 0,
+    dropNewNormalApplied: frozen.dropNewNormalApplied ?? 0,
+  };
+  let drop = 0;
+  let partId = stage;
+  let label = stage;
+
+  if (stage === "pilot") {
+    drop = pilotDropAmount(next.stagedDropPool, next.stagedDropRemaining);
+    next.stagedDropRemaining = Math.max(0, next.stagedDropRemaining - drop);
+    next.dropPilotApplied = drop;
+    partId = "pilot";
+    label = "Pilot fielding";
+  } else if (stage === "scale") {
+    drop = scaleDropAmount(next.stagedDropRemaining);
+    next.stagedDropRemaining = 0;
+    next.dropScaleApplied = drop;
+    partId = "scale";
+    label = "Scale rollout";
+  } else if (stage === "new_normal") {
+    drop = newNormalExtraDrop(opts.will ?? 0, next.stagedDropPool);
+    next.dropNewNormalApplied = drop;
+    partId = "new_normal_mandate";
+    label = drop ? "New normal mandate (Will ≥ 4)" : "New normal (no extra drop)";
+  } else {
+    return { ok: false, error: "unknown_stage", frozen: next, drop: 0, parts: [] };
+  }
+
+  return {
+    ok: true,
+    frozen: next,
+    drop,
+    parts: drop > 0 || stage === "new_normal" ? [{ id: partId, label, amount: drop }] : [],
+  };
+}
+
+/** Vision stage id from deploy stage after each successful step */
+export function visionStageIdForDeployStage(deployStage) {
+  const map = {
+    none: "present",
+    pilot: "prototype",
+    scale: "transition",
+    new_normal: "transformed",
+  };
+  return map[deployStage] || "present";
+}
