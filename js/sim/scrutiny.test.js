@@ -28,9 +28,10 @@ describe("scrutiny", () => {
     assert.equal(ids.size, 3);
   });
 
-  it("encounter count by feasibility", () => {
-    assert.equal(encounterCountForFeasibility("green"), 2);
-    assert.equal(encounterCountForFeasibility("yellow"), 3);
+  it("always one critic (no multi-challenger gauntlet)", () => {
+    assert.equal(encounterCountForFeasibility("green"), 1);
+    assert.equal(encounterCountForFeasibility("yellow"), 1);
+    assert.equal(encounterCountForFeasibility("red"), 1);
   });
 
   it("argue hit clears 2 HP encounter", () => {

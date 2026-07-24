@@ -44,6 +44,7 @@ import { techCost, deployActionCost } from "./sim/economy.js";
 import {
   pickChallengeAngles,
   encounterCountForFeasibility,
+  resolveForFeasibility,
   buildEncounters,
   activeEncounter,
   allEncountersCleared,
@@ -1753,13 +1754,17 @@ async function enterChallenge() {
 
   if (scrutinyCombatEnabled()) {
     const feas = assessFeasibility();
-    const n = encounterCountForFeasibility(feas.overall);
-    const angles = pickChallengeAngles(CHALLENGE_ANGLES, n, null);
+    // One critic only — Defend / Fix / Sidestep vs their resolve (no gauntlet).
+    const angles = pickChallengeAngles(
+      CHALLENGE_ANGLES,
+      encounterCountForFeasibility(feas.overall),
+      null
+    );
     state.scrutiny = {
       missCount: 0,
       pivotUsed: false,
       coachFreeUsed: false,
-      encounters: buildEncounters(angles, 2),
+      encounters: buildEncounters(angles, resolveForFeasibility(feas.overall)),
     };
     state.challengeAngle = angles[0]?.id || null;
     showScreen("challenge-step");
@@ -1779,15 +1784,20 @@ async function poseScrutinyEncounters() {
   const status = $("#scrutiny-status");
   const moves = $("#scrutiny-moves");
   const essayBtn = $("#btn-challenge-submit");
-  if (box) box.hidden = false;
+  // Multi-critic strip retired — resolve lives on the banner
+  if (box) {
+    box.hidden = true;
+    box.innerHTML = "";
+  }
   if (status) {
     status.hidden = false;
-    status.textContent = "Scrutiny combat — clear every challenger (HP). 2 misses and you fail.";
+    status.textContent =
+      "One critic. Empty their resolve (hearts) with Defend or Fix — or Sidestep once. Two misses fail.";
   }
   if (moves) moves.hidden = false;
   if (essayBtn) essayBtn.hidden = true;
 
-  $("#challenge-speech").innerHTML = aiPendingHtml("Posing challengers…");
+  $("#challenge-speech").innerHTML = aiPendingHtml("Posing the challenger…");
   $("#challenge-question").textContent = "";
   $("#challenge-answer").value = "";
   $("#challenge-feedback").hidden = true;
@@ -1795,26 +1805,24 @@ async function poseScrutinyEncounters() {
   renderChallengeHud();
   renderScrutinyEncounters();
 
-  const list = state.scrutiny?.encounters || [];
-  await Promise.all(
-    list.map(async (enc) => {
-      const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId);
-      try {
-        const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
-          challengeAngle: enc.angleId,
-        });
-        enc.speech = data.challengeSpeech || data.message || "";
-        enc.question =
-          data.challengeQuestion || "How does your invention survive this attack?";
-      } catch {
-        const fb = localPose(meta || { id: enc.angleId, label: enc.label });
-        enc.speech = fb.speech;
-        enc.question = fb.question;
-      }
-    })
-  );
+  // Single critic — one pose, not a gauntlet of speeches
+  const enc = state.scrutiny?.encounters?.[0];
+  if (enc) {
+    const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId);
+    try {
+      const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
+        challengeAngle: enc.angleId,
+      });
+      enc.speech = data.challengeSpeech || data.message || "";
+      enc.question =
+        data.challengeQuestion || "How does your invention survive this attack?";
+    } catch {
+      const fb = localPose(meta || { id: enc.angleId, label: enc.label });
+      enc.speech = fb.speech;
+      enc.question = fb.question;
+    }
+  }
 
-  // Focus first uncleared — never swap angle from AI
   state.scrutinyMoveMode = null;
   paintActiveEncounter();
   renderScrutinyEncounters();
@@ -1825,7 +1833,7 @@ function paintActiveEncounter() {
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
     $("#challenge-speech").innerHTML =
-      "<p><strong>All challenges cleared.</strong> You may deploy when ready.</p>";
+      "<p><strong>Challenge cleared.</strong> You may deploy when ready.</p>";
     $("#challenge-question").textContent = "";
     state.challengePassed = true;
     state.challengeVerdict = state.challengeVerdict || "pass";
@@ -1840,6 +1848,7 @@ function paintActiveEncounter() {
       dep.hidden = false;
       dep.disabled = false;
     }
+    paintChallengerResolve(null);
     renderChallengeHud();
     return;
   }
@@ -1859,49 +1868,65 @@ function paintActiveEncounter() {
   $("#challenge-angle-sub").textContent = `${meta.subtitle || ""} — ${meta.blurb || ""}`;
   $("#challenge-speech").innerHTML = `<p>${escapeHtml(enc.speech || "").replace(/\n/g, "<br>")}</p>`;
   $("#challenge-question").textContent = enc.question || "";
-  const label = $("#challenge-answer-label");
+  paintChallengerResolve(enc);
   const moves = $("#scrutiny-moves");
   if (moves) moves.hidden = false;
   // Restore or default to defend mode so the player always has a next step
-  setScrutinyMoveMode(state.scrutinyMoveMode || "defend");
+  let mode = state.scrutinyMoveMode || "defend";
+  if (mode === "sidestep" && state.scrutiny?.pivotUsed) mode = "defend";
+  setScrutinyMoveMode(mode);
+  updateSidestepAvailability();
   updateDeployButtonCost();
   renderChallengeHud();
 }
 
-function renderScrutinyEncounters() {
-  const box = $("#scrutiny-encounters");
-  const status = $("#scrutiny-status");
-  if (!box) return;
-  if (!scrutinyCombatEnabled() || !state.scrutiny) {
-    box.hidden = true;
-    if (status) status.hidden = true;
+/** Resolve hearts on the challenger banner (single critic). */
+function paintChallengerResolve(enc) {
+  const el = $("#challenger-resolve");
+  if (!el) return;
+  if (!enc) {
+    el.hidden = true;
+    el.textContent = "";
     return;
   }
-  box.hidden = false;
-  const active = activeEncounter(state.scrutiny);
-  box.innerHTML = state.scrutiny.encounters
-    .map((e) => {
-      const hp = "♥".repeat(e.hp) + "♡".repeat(Math.max(0, e.maxHp - e.hp));
-      const cls = [
-        "scrutiny-enc",
-        e.cleared ? "is-cleared" : "",
-        active && active.id === e.id ? "is-active" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return `<div class="${cls}" data-enc="${escapeHtml(e.id)}">
-        <div class="scrutiny-enc-label">${escapeHtml(e.label)}${e.pivoted ? " · pivoted" : e.cleared ? " · clear" : ""}</div>
-        <div class="scrutiny-enc-hp" aria-label="HP ${e.hp} of ${e.maxHp}">${hp}</div>
-      </div>`;
-    })
-    .join("");
-  if (status) {
-    status.hidden = false;
-    const misses = state.scrutiny.missCount || 0;
-    status.textContent = `Misses ${misses}/${MISS_BUDGET} · Pivot ${
-      state.scrutiny.pivotUsed ? "used" : "available"
-    } · Clear all challengers to deploy`;
+  el.hidden = false;
+  if (enc.cleared) {
+    el.innerHTML = enc.pivoted
+      ? `<span class="challenger-resolve-label">Sidestepped</span>`
+      : `<span class="challenger-resolve-label">Resolve broken</span>`;
+    return;
   }
+  const filled = "♥".repeat(enc.hp);
+  const empty = "♡".repeat(Math.max(0, enc.maxHp - enc.hp));
+  el.innerHTML = `<span class="challenger-resolve-label">Their resolve</span>
+    <span class="challenger-resolve-hearts" aria-label="${enc.hp} of ${enc.maxHp}">${filled}${empty}</span>`;
+}
+
+function renderScrutinyEncounters() {
+  // Strip retired — keep status line only
+  const box = $("#scrutiny-encounters");
+  const status = $("#scrutiny-status");
+  if (box) {
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+  if (!status) return;
+  if (!scrutinyCombatEnabled() || !state.scrutiny) {
+    status.hidden = true;
+    return;
+  }
+  status.hidden = false;
+  const misses = state.scrutiny.missCount || 0;
+  const enc = activeEncounter(state.scrutiny);
+  if (!enc) {
+    status.textContent = "Critic cleared — deploy when ready.";
+    paintChallengerResolve(state.scrutiny.encounters?.[0] || null);
+    return;
+  }
+  status.textContent = `Your misses ${misses}/${MISS_BUDGET} · Sidestep ${
+    state.scrutiny.pivotUsed ? "used" : "available once"
+  } · Empty their resolve to deploy`;
+  paintChallengerResolve(enc);
 }
 
 async function poseChallenge(angleMeta) {
@@ -2026,8 +2051,38 @@ function renderChallengeHud() {
   }
 }
 
+/** Grey out Sidestep after the one-per-run use (does not change mode). */
+function updateSidestepAvailability() {
+  const used = Boolean(state.scrutiny?.pivotUsed);
+  const pivotBtn = $("#btn-scrutiny-pivot");
+  const confirmBtn = $("#btn-challenge-confirm-sidestep");
+  const blurb = pivotBtn?.querySelector(".scrutiny-move-blurb");
+  const cost = pivotBtn?.querySelector(".scrutiny-move-cost");
+  if (pivotBtn) {
+    pivotBtn.disabled = used;
+    pivotBtn.setAttribute("aria-disabled", used ? "true" : "false");
+    pivotBtn.title = used ? "Sidestep already used this run" : "";
+  }
+  if (cost) cost.textContent = used ? "used this run" : "then 1 AP · 1 Will";
+  if (blurb) {
+    blurb.textContent = used
+      ? "You already sidestepped once — Defend or Fix from here."
+      : "Skip this challenger without winning the argument — once per run. Confirm below.";
+  }
+  if (confirmBtn) {
+    confirmBtn.disabled = used;
+    confirmBtn.textContent = used
+      ? "Sidestep already used"
+      : "Confirm sidestep (1 AP · 1 Will)";
+  }
+}
+
 /** Select Defend / Fix / Sidestep — toggle only; does not spend AP until confirm */
 function setScrutinyMoveMode(mode) {
+  if (mode === "sidestep" && state.scrutiny?.pivotUsed) {
+    flashToast("Sidestep already used this run.");
+    mode = "defend";
+  }
   state.scrutinyMoveMode = mode;
   $$(".scrutiny-move-btn").forEach((btn) => {
     const on = btn.dataset.mode === mode;
@@ -2050,6 +2105,7 @@ function setScrutinyMoveMode(mode) {
     const name = enc?.label || "this challenger";
     if (label) label.textContent = `Write your defense against ${name}`;
   }
+  updateSidestepAvailability();
 }
 
 function hideAllModePanels() {
@@ -2139,7 +2195,7 @@ async function scrutinyArgue() {
   }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
-    flashToast("All challengers cleared.");
+    flashToast("Challenge cleared.");
     return;
   }
   const answer = ($("#challenge-answer")?.value || "").trim();
@@ -2188,7 +2244,7 @@ async function scrutinyArgue() {
   const verdictMap = { hit: "pass", glance: "partial", miss: "fail" };
   state.lastChallengeVerdict = verdictMap[quality] || "partial";
   fb.className = `challenge-feedback ${quality === "hit" ? "pass" : quality === "glance" ? "partial" : "fail"}`;
-  fb.innerHTML = `<strong>${quality.toUpperCase()}</strong> (−${result.damage} HP) — ${escapeHtml(
+  fb.innerHTML = `<strong>${quality.toUpperCase()}</strong> (−${result.damage} resolve) — ${escapeHtml(
     message || "Judged."
   )}`;
 
@@ -2220,7 +2276,7 @@ async function scrutinyArgue() {
     state.challengePassed = true;
     state.challengeVerdict = "pass";
     if (budgetWillEnabled()) dispatchSim("challenge_income", { verdict: "pass" });
-    flashToast("All challengers cleared — deploy when ready.");
+    flashToast("Challenge cleared — deploy when ready.");
   }
 }
 
@@ -2269,7 +2325,7 @@ function scrutinyPatch() {
   const fb = $("#challenge-feedback");
   fb.hidden = false;
   fb.className = "challenge-feedback partial";
-  fb.innerHTML = `<strong>FIX APPLIED</strong> (−${result.damage} HP) — Your how-it-works was updated under fire.`;
+  fb.innerHTML = `<strong>FIX APPLIED</strong> (−${result.damage} resolve) — Your how-it-works was updated under fire.`;
   if ($("#challenge-fund-patch")) $("#challenge-fund-patch").checked = false;
   renderScrutinyEncounters();
   paintActiveEncounter();
@@ -2277,7 +2333,7 @@ function scrutinyPatch() {
   if (allEncountersCleared(state.scrutiny)) {
     state.challengePassed = true;
     state.challengeVerdict = "pass";
-    flashToast("All challengers cleared — deploy when ready.");
+    flashToast("Challenge cleared — deploy when ready.");
   }
 }
 
@@ -2319,13 +2375,15 @@ function scrutinyPivot() {
   fb.hidden = false;
   fb.className = "challenge-feedback pass";
   fb.innerHTML = `<strong>SIDESTEP</strong> — You skipped ${escapeHtml(enc.label)} (once per run).`;
+  // Drop off sidestep mode — button is now spent
+  setScrutinyMoveMode("defend");
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
     state.challengePassed = true;
     state.challengeVerdict = "pass";
-    flashToast("All challengers cleared — deploy when ready.");
+    flashToast("Challenge cleared — deploy when ready.");
   }
 }
 
@@ -3504,7 +3562,13 @@ function bind() {
   // Mode toggles (select only)
   $("#btn-scrutiny-argue")?.addEventListener("click", () => setScrutinyMoveMode("defend"));
   $("#btn-scrutiny-patch")?.addEventListener("click", () => setScrutinyMoveMode("fix"));
-  $("#btn-scrutiny-pivot")?.addEventListener("click", () => setScrutinyMoveMode("sidestep"));
+  $("#btn-scrutiny-pivot")?.addEventListener("click", () => {
+    if (state.scrutiny?.pivotUsed || $("#btn-scrutiny-pivot")?.disabled) {
+      flashToast("Sidestep already used this run.");
+      return;
+    }
+    setScrutinyMoveMode("sidestep");
+  });
   // Confirm actions
   $("#btn-challenge-apply-fix")?.addEventListener("click", () => scrutinyPatch());
   $("#btn-challenge-confirm-sidestep")?.addEventListener("click", () => scrutinyPivot());

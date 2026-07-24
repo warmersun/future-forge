@@ -1,5 +1,7 @@
 /**
- * G3 multi-encounter scrutiny combat (DOM-free).
+ * G3 scrutiny combat (DOM-free).
+ * One critic per run — Defend / Fix / Sidestep against their resolve.
+ * (Multi-challenger gauntlets were too much text and not fun.)
  */
 
 /**
@@ -19,10 +21,16 @@ export function pickChallengeAngles(angles, n, excludeId = null) {
   return list.slice(0, take);
 }
 
-/** green → 2 encounters, yellow → 3 */
-export function encounterCountForFeasibility(overall) {
-  if (overall === "green") return 2;
-  if (overall === "yellow") return 3;
+/**
+ * Always one critic. Feasibility no longer multiplies speech walls.
+ * Kept as a function so call sites / tests stay stable.
+ */
+export function encounterCountForFeasibility(_overall) {
+  return 1;
+}
+
+/** Resolve (hearts) on the single critic — always 2 for a short fight. */
+export function resolveForFeasibility(_overall) {
   return 2;
 }
 

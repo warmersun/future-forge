@@ -376,8 +376,10 @@
                 <h1 id="challenge-angle-title">Moloch</h1>
                 <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
                 <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
+                <p id="challenger-resolve" class="challenger-resolve" hidden></p>
               </div>
             </div>
+            <!-- multi-critic strip removed; resolve is on the banner -->
             <div id="scrutiny-encounters" class="scrutiny-encounters" hidden></div>
             <p id="scrutiny-status" class="scrutiny-status muted" hidden></p>
 
@@ -391,8 +393,8 @@
             <!-- Mode picker: select how you will respond (toggle) -->
             <div id="scrutiny-moves" class="scrutiny-moves" hidden>
               <p class="scrutiny-moves-lead">
-                <strong>How will you respond?</strong> Pick one option (it stays selected), then complete
-                the step below. Clear every challenger’s HP to unlock deploy.
+                <strong>How will you respond?</strong> One critic. Hearts are <em>their</em> resolve —
+                empty them with Defend or Fix, or Sidestep once. Pick a mode, then finish the step below.
               </p>
               <div class="scrutiny-move-grid" role="radiogroup" aria-label="Response strategy">
                 <button
@@ -407,7 +409,7 @@
                   <span class="scrutiny-move-cost">then 1 AP to submit</span>
                   <span class="scrutiny-move-blurb">
                     Write a defense that answers their question. You stay on this screen and click
-                    <em>Submit defense</em>. Strong answers deal more HP damage.
+                    <em>Submit defense</em>. Strong answers chip more of their resolve.
                   </span>
                 </button>
                 <button
@@ -422,7 +424,7 @@
                   <span class="scrutiny-move-cost">then 1 AP (+ optional ¤1)</span>
                   <span class="scrutiny-move-blurb">
                     <strong>You</strong> edit how-it-works here (not the AI alone). Strengthen the design
-                    under fire, then click <em>Apply fix</em>. That deals HP to the challenger.
+                    under fire, then click <em>Apply fix</em>. That chips their resolve.
                   </span>
                 </button>
                 <button
@@ -436,7 +438,7 @@
                   <span class="scrutiny-move-title">3 · Sidestep once</span>
                   <span class="scrutiny-move-cost">then 1 AP · 1 Will</span>
                   <span class="scrutiny-move-blurb">
-                    Skip this challenger without winning the argument — once per run. Confirm below.
+                    Skip without winning — once per challenge. Confirm below. Softens elegance.
                   </span>
                 </button>
               </div>
@@ -470,7 +472,7 @@
               </div>
               <label class="mode-check">
                 <input type="checkbox" id="challenge-fund-patch" />
-                Funded fix (+1 Budget, deals 2 HP instead of 1)
+                Funded fix (+1 Budget, chips 2 resolve instead of 1)
               </label>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-primary" id="btn-challenge-apply-fix">
@@ -611,144 +613,188 @@
         <header class="help-header">
           <h3 id="help-title">How Future Forge works</h3>
           <p class="help-intro">
-            Invent a <strong>local</strong> solution under a rising crisis. Spend scarce resources, survive
-            hostile critics, then field the system. The AI co-inventor advises — you decide.
+            Invent a <strong>local</strong> solution under a rising crisis. Spend scarce resources, clear critics,
+            then field the system. The AI co-inventor advises — you decide.
           </p>
         </header>
 
         <div class="help-body">
-          <section class="help-section help-section-span">
-            <h4>The loop</h4>
-            <ol class="help-steps help-steps-horizontal">
-              <li><strong>1. Invent</strong><span>Stack, story, resources</span></li>
-              <li><strong>2. Feasibility</strong><span>Claims fit this year?</span></li>
-              <li><strong>3. Challenge</strong><span>Clear 2–3 critics</span></li>
-              <li><strong>4. Deploy</strong><span>Pay to field; crisis drops</span></li>
+          <!-- Loop -->
+          <section class="help-block">
+            <h4 class="help-block-title">The loop</h4>
+            <ol class="help-steps">
+              <li>
+                <span class="help-step-num">1</span>
+                <span class="help-step-body">
+                  <strong>Invent</strong>
+                  <span>Stack, story, resources</span>
+                </span>
+              </li>
+              <li>
+                <span class="help-step-num">2</span>
+                <span class="help-step-body">
+                  <strong>Feasibility</strong>
+                  <span>Claims fit this year?</span>
+                </span>
+              </li>
+              <li>
+                <span class="help-step-num">3</span>
+                <span class="help-step-body">
+                  <strong>Challenge</strong>
+                  <span>One critic · Defend / Fix / Sidestep</span>
+                </span>
+              </li>
+              <li>
+                <span class="help-step-num">4</span>
+                <span class="help-step-body">
+                  <strong>Deploy</strong>
+                  <span>Pay to field; crisis drops</span>
+                </span>
+              </li>
             </ol>
           </section>
 
-          <section class="help-section">
-            <h4>Resources</h4>
-            <p class="help-note">Shown on Invent and Challenge. Only AP refills on End turn.</p>
-            <dl class="help-dl">
-              <div>
-                <dt>Year &amp; turn</dt>
-                <dd>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</dd>
-              </div>
-              <div>
-                <dt>AP (3 / turn)</dt>
-                <dd>
-                  Attention. Spend on tech, Lobby, enter challenge, AI, Defend / Fix / Sidestep, Deploy.
-                  <strong>End turn</strong> refills AP (crisis stays). <strong>Wait</strong> burns leftover AP, then refills.
-                </dd>
-              </div>
-              <div>
-                <dt>Budget (start 5)</dt>
-                <dd>
-                  Capital for techs (card cost ¤) and for <strong>deploy fielding</strong>. Same-turn remove refunds half.
-                  Not refilled by End turn.
-                </dd>
-              </div>
-              <div>
-                <dt>Will (start 3)</dt>
-                <dd>
-                  Political will — <em>not</em> a crisis “Trust” meter. Lobby: 1 AP + 1 Budget → +1 Will.
-                  ≥4 boosts deploy; 0 hurts it. Sidestep costs 1 Will.
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          <section class="help-section">
-            <h4>End turn vs Wait</h4>
-            <dl class="help-dl">
-              <div>
-                <dt>End turn</dt>
-                <dd>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</dd>
-              </div>
-              <div>
-                <dt>Wait (+2 years)</dt>
-                <dd>
-                  Later world conditions. Crisis meters <strong>rise</strong>. Leftover AP burned, then refilled.
-                  Preview shows the rise. Frontier stacks can risk an extra spike.
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          <section class="help-section">
-            <h4>Story faces</h4>
-            <ul>
-              <li><strong>How it works</strong> — mechanism for this place.</li>
-              <li><strong>Everyday life</strong> — who feels the change.</li>
-              <li>
-                <strong>Focus</strong> + <strong>Fill other side</strong> (1 AP) drafts the other face. Both stay editable.
-              </li>
-            </ul>
-          </section>
-
-          <section class="help-section">
-            <h4>AI co-inventor</h4>
-            <ul>
-              <li><strong>Invent:</strong> chips (spark, stack, Art of the possible, …) + chat. 1 AP per request.</li>
-              <li>
-                <strong>Challenge:</strong> chat + Coach / Draft / Ask only (no invent chips). First help free, then 1 AP.
-              </li>
-              <li>You still own Defend / Fix / Sidestep on the left.</li>
-            </ul>
-          </section>
-
-          <section class="help-section help-section-span">
-            <h4>Challenge — how you respond</h4>
-            <p class="help-note">
-              Green feasibility → 2 challengers; yellow → 3. Each has 2 HP. Pick a response mode (it stays selected),
-              then complete the step under it.
-            </p>
-            <div class="help-cards">
-              <article class="help-card">
-                <h5>Defend in writing</h5>
-                <p class="help-card-cost">1 AP to submit</p>
-                <p>Write who acts, who pays, or what limit you respect. Hit −2 HP · glance −1 · miss 0. Two misses fail the run.</p>
+          <!-- Resources as equal tiles -->
+          <section class="help-block">
+            <div class="help-block-head">
+              <h4 class="help-block-title">Resources</h4>
+              <p class="help-note">On Invent and Challenge. Only AP refills on End turn.</p>
+            </div>
+            <div class="help-tiles help-tiles-4">
+              <article class="help-tile">
+                <h5>Year &amp; turn</h5>
+                <p>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</p>
               </article>
-              <article class="help-card">
-                <h5>Fix the invention</h5>
-                <p class="help-card-cost">1 AP · optional +¤1</p>
+              <article class="help-tile">
+                <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
                 <p>
-                  <strong>You</strong> edit how-it-works on Challenge (not back to Invent). Apply fix deals 1 HP
-                  (2 if funded). AI can coach; it does not apply the fix for you.
+                  Attention for tech, Lobby, challenge entry, AI, Defend / Fix / Sidestep, Deploy.
+                  <strong>End turn</strong> refills AP. <strong>Wait</strong> burns leftover AP, then refills.
                 </p>
               </article>
-              <article class="help-card">
-                <h5>Sidestep once</h5>
-                <p class="help-card-cost">1 AP · 1 Will</p>
-                <p>Skip this challenger without winning. Once per run; softens elegance score.</p>
+              <article class="help-tile">
+                <h5>Budget <span class="help-tile-meta">start 5</span></h5>
+                <p>
+                  Capital for techs (card ¤) and <strong>deploy fielding</strong>. Same-turn remove refunds half.
+                  Not refilled by End turn.
+                </p>
+              </article>
+              <article class="help-tile">
+                <h5>Will <span class="help-tile-meta">start 3</span></h5>
+                <p>
+                  Political will — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Will.
+                  ≥4 boosts deploy; 0 hurts it. Sidestep costs 1 Will.
+                </p>
               </article>
             </div>
-            <p class="help-note">Clear <strong>all</strong> challengers to unlock Deploy.</p>
           </section>
 
-          <section class="help-section">
-            <h4>Deploy</h4>
-            <ul>
-              <li>
-                <strong>Fielding cost:</strong> 1 AP + Budget (base ¤1; +¤1 if 3+ techs; +¤1 frontier stack;
-                Will ≥ 4 can shave ¤1). Button shows the cost.
-              </li>
-              <li>
-                <strong>Crisis drop:</strong> stronger stack, story, challenge quality, Will ≥ 4 increase relief.
-                Meter at 5 or fail year → mission ends.
-              </li>
-            </ul>
+          <!-- End turn vs Wait -->
+          <section class="help-block">
+            <h4 class="help-block-title">End turn vs Wait</h4>
+            <div class="help-tiles help-tiles-2">
+              <article class="help-tile help-tile-accent">
+                <h5>End turn</h5>
+                <p>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</p>
+              </article>
+              <article class="help-tile help-tile-warn">
+                <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
+                <p>
+                  Later world conditions. Crisis meters <strong>rise</strong>. Leftover AP burned, then refilled.
+                  Preview shows the rise. Frontier stacks can risk an extra spike.
+                </p>
+              </article>
+            </div>
           </section>
 
-          <section class="help-section">
-            <h4>Stars &amp; tips</h4>
-            <ul>
-              <li>★★★ for speed, honesty, elegance (outcome screen only). Sidestep softens elegance.</li>
-              <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
-              <li>Lobby toward Will 4 before deploy. Save AP for Defend and Deploy.</li>
-              <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
-            </ul>
+          <!-- Story + AI pair -->
+          <section class="help-block">
+            <div class="help-tiles help-tiles-2">
+              <article class="help-tile">
+                <h5>Story faces</h5>
+                <ul class="help-list">
+                  <li><strong>How it works</strong> — mechanism for this place.</li>
+                  <li><strong>Everyday life</strong> — who feels the change.</li>
+                  <li>
+                    <strong>Focus</strong> + <strong>Fill other side</strong> (1 AP) drafts the other face.
+                    Both stay editable.
+                  </li>
+                </ul>
+              </article>
+              <article class="help-tile">
+                <h5>AI co-inventor</h5>
+                <ul class="help-list">
+                  <li><strong>Invent:</strong> chips + chat. 1 AP per request.</li>
+                  <li>
+                    <strong>Challenge:</strong> chat + Coach / Draft / Ask only (no invent chips).
+                    First help free, then 1 AP.
+                  </li>
+                  <li>You own Defend / Fix / Sidestep on the left.</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <!-- Challenge responses -->
+          <section class="help-block">
+            <div class="help-block-head">
+              <h4 class="help-block-title">Challenge — how you respond</h4>
+              <p class="help-note">
+                One random critic. They start with 2 resolve (hearts on <em>their</em> banner — not yours).
+                Empty it to unlock Deploy. Two weak defenses (misses) fail the run.
+              </p>
+            </div>
+            <div class="help-tiles help-tiles-3">
+              <article class="help-tile help-tile-move">
+                <h5>Defend in writing</h5>
+                <p class="help-cost">1 AP to submit</p>
+                <p>
+                  Write who acts, who pays, or what limit you respect. Strong answer clears them (−2);
+                  partial chips 1; miss chips 0 and counts against you.
+                </p>
+              </article>
+              <article class="help-tile help-tile-move">
+                <h5>Fix the invention</h5>
+                <p class="help-cost">1 AP · optional +¤1</p>
+                <p>
+                  <strong>You</strong> edit how-it-works on Challenge. Apply fix chips 1 resolve
+                  (2 if funded = clear). AI coaches; you apply.
+                </p>
+              </article>
+              <article class="help-tile help-tile-move">
+                <h5>Sidestep once</h5>
+                <p class="help-cost">1 AP · 1 Will</p>
+                <p>Skip without winning. Once per run; softens elegance. Button greys out after use.</p>
+              </article>
+            </div>
+          </section>
+
+          <!-- Deploy + tips -->
+          <section class="help-block help-block-last">
+            <div class="help-tiles help-tiles-2">
+              <article class="help-tile">
+                <h5>Deploy</h5>
+                <ul class="help-list">
+                  <li>
+                    <strong>Fielding:</strong> 1 AP + Budget (base ¤1; +¤1 if 3+ techs; +¤1 frontier;
+                    Will ≥ 4 can shave ¤1). Button shows the cost.
+                  </li>
+                  <li>
+                    <strong>Crisis drop:</strong> stronger stack, story, challenge quality, and Will ≥ 4
+                    increase relief. Meter at 5 or fail year → mission ends.
+                  </li>
+                </ul>
+              </article>
+              <article class="help-tile">
+                <h5>Stars &amp; tips</h5>
+                <ul class="help-list">
+                  <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
+                  <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
+                  <li>Lobby toward Will 4 before deploy. Save AP for Defend and Deploy.</li>
+                  <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
+                </ul>
+              </article>
+            </div>
           </section>
         </div>
 
