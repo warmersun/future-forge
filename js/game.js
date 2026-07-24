@@ -3387,6 +3387,7 @@ function bind() {
   const openHelp = () => $("#help-backdrop")?.classList.add("open");
   const closeHelp = () => $("#help-backdrop")?.classList.remove("open");
   $("#btn-help")?.addEventListener("click", openHelp);
+  $("#btn-challenge-help")?.addEventListener("click", openHelp);
   $("#help-close")?.addEventListener("click", closeHelp);
   $("#help-backdrop")?.addEventListener("click", (e) => {
     if (e.target.id === "help-backdrop") closeHelp();
