@@ -289,6 +289,193 @@ button:disabled {
   background: rgba(251, 191, 36, 0.1);
 }
 
+/* Friends multiplayer */
+.friends-content {
+  max-width: 920px;
+}
+
+.friends-hub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .friends-hub-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.friends-panel h2 {
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
+}
+
+.friends-status {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+}
+
+.code-input {
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.room-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.08);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.room-code-chip.sm {
+  font-size: 0.78rem;
+}
+
+.room-code-chip strong {
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.room-lobby-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1rem;
+  max-width: 960px;
+}
+
+@media (max-width: 800px) {
+  .room-lobby-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.room-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.room-player-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.35);
+  font-size: 0.88rem;
+}
+
+.room-player-list li.is-offline {
+  opacity: 0.55;
+}
+
+.room-player-list .tag {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mp-play-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2fr);
+  gap: 1rem;
+  max-width: 1100px;
+}
+
+@media (max-width: 860px) {
+  .mp-play-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mp-party-panel h3,
+.mp-main-panel h2,
+.mp-main-panel h3 {
+  margin-top: 0;
+}
+
+.mp-news {
+  font-size: 0.82rem;
+  margin-top: 0.75rem;
+}
+
+.mp-actions {
+  margin: 0.5rem 0 1rem;
+}
+
+.mp-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.mp-chip {
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mp-tech-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mp-tech-btn {
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.45);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.mp-tech-btn:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--text);
+}
+
+.lock-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--accent-2);
+  min-height: 1em;
+  margin-top: 0.2rem;
+}
+
+.field input[type="text"],
+.field input:not([type]),
+.field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.5);
+  color: var(--text);
+}
+
 .logo-mark {
   display: inline-flex;
   align-items: center;

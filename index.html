@@ -38,8 +38,9 @@
             </li>
           </ol>
         </div>
-        <div class="form-actions" style="justify-content: center; gap: 0.75rem">
+        <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
+          <button type="button" class="btn btn-secondary" id="btn-friends">Play with friends</button>
           <button type="button" class="btn btn-primary" id="btn-start">Choose a theme →</button>
         </div>
 
@@ -63,6 +64,140 @@
           <h3 class="pins-heading">Pinned missions <span class="muted">(max 3)</span></h3>
           <div id="pins-list" class="pins-list"></div>
         </section>
+      </div>
+    </section>
+
+    <!-- FRIENDS ROOM HUB -->
+    <section id="screen-friends" class="screen">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="progress-pills">
+          <span class="pill active">Friends</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-friends-back">← Home</button>
+      </header>
+      <div class="content friends-content">
+        <div class="section-intro">
+          <h1>Play with friends</h1>
+          <p>
+            Create a room, share the code, invent <strong>one shared stack</strong> under a rising crisis.
+            Live on WebSocket — party pace (single challenge essay, single deploy).
+          </p>
+        </div>
+        <div class="friends-hub-grid">
+          <article class="panel friends-panel">
+            <h2>Create room</h2>
+            <div class="field">
+              <label for="friends-create-name">Your name</label>
+              <input id="friends-create-name" type="text" maxlength="24" placeholder="Alex" autocomplete="nickname" />
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-friends-create">Create room →</button>
+          </article>
+          <article class="panel friends-panel">
+            <h2>Join room</h2>
+            <div class="field">
+              <label for="friends-join-name">Your name</label>
+              <input id="friends-join-name" type="text" maxlength="24" placeholder="Bea" autocomplete="nickname" />
+            </div>
+            <div class="field">
+              <label for="friends-join-code">Room code</label>
+              <input id="friends-join-code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" class="code-input" />
+            </div>
+            <button type="button" class="btn btn-secondary" id="btn-friends-join">Join →</button>
+          </article>
+        </div>
+        <p id="friends-hub-status" class="friends-status muted" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- FRIENDS LOBBY -->
+    <section id="screen-room-lobby" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="room-code-chip" title="Share this code with friends">
+          Room <strong id="room-code-display">————</strong>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-room-code">Copy</button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-room-leave">Leave</button>
+      </header>
+      <div class="content room-lobby-layout">
+        <div class="panel">
+          <h2>Party</h2>
+          <ul id="room-player-list" class="room-player-list"></ul>
+          <p class="muted" id="room-you-line"></p>
+        </div>
+        <div class="panel">
+          <h2>Mission</h2>
+          <p id="room-mission-summary" class="muted">Host picks a theme mission to start.</p>
+          <div id="room-host-controls" hidden>
+            <div class="field">
+              <label for="room-theme-select">Theme</label>
+              <select id="room-theme-select"></select>
+            </div>
+            <div class="field">
+              <label for="room-mission-select">Mission</label>
+              <select id="room-mission-select"></select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-room-set-mission">Set mission</button>
+              <button type="button" class="btn btn-primary" id="btn-room-start">Start inventing →</button>
+            </div>
+          </div>
+          <p id="room-lobby-status" class="friends-status muted" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FRIENDS PLAY (shared invent strip) -->
+    <section id="screen-room-play" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="hud-clock">
+          <span class="hud-year" id="mp-hud-year">2026</span>
+          <span class="hud-turn" id="mp-hud-turn">Turn 0</span>
+          <span class="hud-ap" id="mp-hud-ap">AP 3/3</span>
+          <span class="hud-budget" id="mp-hud-budget">Budget 5$</span>
+          <span class="hud-will" id="mp-hud-will">Will 3</span>
+        </div>
+        <div class="hud-actions">
+          <span class="room-code-chip sm"><strong id="mp-room-code">————</strong></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-leave">Leave</button>
+        </div>
+      </header>
+      <div class="content mp-play-layout">
+        <aside class="panel mp-party-panel">
+          <h3>Party</h3>
+          <ul id="mp-player-list" class="room-player-list"></ul>
+          <div id="mp-pressure" class="hud-pressure"></div>
+          <p id="mp-news" class="muted mp-news"></p>
+        </aside>
+        <main class="panel mp-main-panel">
+          <h2 id="mp-mission-title">Shared invention</h2>
+          <p id="mp-mission-place" class="muted"></p>
+          <div class="field">
+            <label for="mp-invention-name">Name</label>
+            <input id="mp-invention-name" type="text" maxlength="100" placeholder="Shared invention name" />
+            <span class="lock-hint" id="mp-lock-name"></span>
+          </div>
+          <div class="field">
+            <label for="mp-invention-how">How it works</label>
+            <textarea id="mp-invention-how" rows="4" placeholder="Mechanism for this place…"></textarea>
+            <span class="lock-hint" id="mp-lock-how"></span>
+          </div>
+          <div class="field">
+            <label for="mp-invention-impact">Everyday life</label>
+            <textarea id="mp-invention-impact" rows="3" placeholder="Who feels the change…"></textarea>
+            <span class="lock-hint" id="mp-lock-impact"></span>
+          </div>
+          <div class="form-actions mp-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">Wait +2 years</button>
+          </div>
+          <h3>Stack</h3>
+          <div id="mp-stack" class="mp-stack"></div>
+          <div id="mp-tech-tray" class="mp-tech-tray"></div>
+          <p id="mp-status" class="friends-status muted" aria-live="polite"></p>
+        </main>
       </div>
     </section>
 
@@ -930,6 +1065,24 @@
               Overall light aggregates all of them (including Scale). Pilot uses the overall light;
               Scale uses the Scale dim alone. Toasts only say succeeded or failed — not the raw roll.
             </p>
+          </section>
+
+          <!-- Friends -->
+          <section class="help-block">
+            <h4 class="help-block-title">Friends co-op (multiplayer)</h4>
+            <ul class="help-list">
+              <li>
+                Home → <strong>Play with friends</strong>: create a room (6-char code) or join one.
+              </li>
+              <li>
+                Host sets a mission and starts. Everyone invents <strong>one shared stack</strong> and story —
+                live over WebSocket.
+              </li>
+              <li>
+                Party pace: AP / Budget / Will still apply. Challenge essay + single deploy defaults (solo combat
+                rules stay on for solo).
+              </li>
+            </ul>
           </section>
 
           <!-- Meta -->

@@ -59,6 +59,7 @@ import {
   downloadDataUrl,
   kindLabelForOutcome,
 } from "./meta.js";
+import { initFriendsUi } from "./multiplayer/ui.js";
 import {
   pickChallengeAngles,
   encounterCountForFeasibility,
@@ -4531,6 +4532,13 @@ async function surpriseMission() {
 
 /* —— Bind —— */
 function bind() {
+  initFriendsUi({
+    showScreen,
+    flashToast,
+    $,
+    $$,
+    escapeHtml,
+  });
   $("#btn-start").addEventListener("click", () => showScreen("global"));
   $("#btn-surprise").addEventListener("click", () => {
     surpriseMission().catch(() => flashToast("Could not start a surprise mission"));

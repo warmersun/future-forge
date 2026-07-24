@@ -9,9 +9,10 @@
     "serve": "node server.mjs",
     "check:briefs": "node scripts/check-problem-briefs.mjs",
     "check:vision-prompts": "node scripts/check-vision-prompts.mjs",
-    "test": "node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js"
+    "test": "node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/rooms/*.test.js"
   },
   "dependencies": {
-    "openai": "^6.16.0"
+    "openai": "^6.16.0",
+    "ws": "^8.21.1"
   }
 }

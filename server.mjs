@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
+import { WebSocketServer } from "ws";
 import OpenAI from "openai";
 import {
   localScenariosForGlobal,
@@ -27,6 +28,7 @@ import {
   shotNarrativeKey,
   clipText as visionClip,
 } from "./js/vision-prompt.mjs";
+import { RoomManager } from "./js/rooms/room-manager.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -62,6 +64,9 @@ loadEnvFile();
 
 const PORT = Number(process.env.PORT) || 8765;
 const MODEL = process.env.XAI_MODEL || "grok-4.5";
+/** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
+const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
+const roomManager = ROOMS_ENABLED ? new RoomManager() : null;
 
 /** @type {{ source: 'supergrok'|'api-key'|null, email?: string }} */
 let authInfo = { source: null };
@@ -1599,7 +1604,79 @@ const server = http.createServer(async (req, res) => {
       auth: authInfo.source,
       model: MODEL,
       imageModel: IMAGE_MODEL,
+      rooms: ROOMS_ENABLED,
+      features: {
+        actionPoints: Boolean(GAME.features?.actionPoints),
+        budgetWill: Boolean(GAME.features?.budgetWill),
+        rooms: ROOMS_ENABLED,
+      },
+      roomStats: roomManager ? roomManager.stats() : null,
     });
+  }
+
+  // —— Friends rooms (PR9) ——
+  if (ROOMS_ENABLED && roomManager && req.method === "POST" && req.url === "/api/rooms") {
+    try {
+      const body = await readBody(req);
+      const ip = clientIp(req);
+      const result = roomManager.createRoom({
+        displayName: body.displayName,
+        ip,
+      });
+      return sendJson(res, result.ok ? 200 : result.status || 400, result);
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message || "create_failed" });
+    }
+  }
+
+  if (ROOMS_ENABLED && roomManager && req.method === "POST") {
+    const joinMatch = req.url?.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/join\/?$/);
+    if (joinMatch) {
+      try {
+        const body = await readBody(req);
+        const ip = clientIp(req);
+        const result = roomManager.joinRoom(joinMatch[1].toUpperCase(), {
+          displayName: body.displayName,
+          playerToken: body.playerToken,
+          ip,
+        });
+        return sendJson(res, result.ok ? 200 : result.status || 400, result);
+      } catch (e) {
+        return sendJson(res, 500, { ok: false, error: e.message || "join_failed" });
+      }
+    }
+    const hostMatch = req.url?.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/host\/?$/);
+    if (hostMatch) {
+      try {
+        const body = await readBody(req);
+        const room = roomManager.rooms.get(hostMatch[1].toUpperCase());
+        if (!room) return sendJson(res, 404, { ok: false, error: "room_not_found" });
+        const found = roomManager.findByPlayerToken(body.playerToken);
+        const player = found?.player || null;
+        const result = roomManager.hostCommand(room, player, body.cmd, body);
+        return sendJson(res, result.ok ? 200 : 400, result);
+      } catch (e) {
+        return sendJson(res, 500, { ok: false, error: e.message || "host_failed" });
+      }
+    }
+  }
+
+  if (ROOMS_ENABLED && roomManager && req.method === "GET") {
+    const snapMatch = req.url?.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/snapshot\/?/);
+    if (snapMatch) {
+      const room = roomManager.rooms.get(snapMatch[1].toUpperCase());
+      if (!room) return sendJson(res, 404, { ok: false, error: "room_not_found" });
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const token = url.searchParams.get("token") || "";
+      const found = roomManager.findByPlayerToken(token);
+      if (!found || found.room.code !== room.code) {
+        return sendJson(res, 401, { ok: false, error: "unauthorized" });
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        snapshot: roomManager.snapshotFor(room, found.player.id),
+      });
+    }
   }
 
   if (req.method === "POST" && req.url?.startsWith("/api/vision")) {
@@ -1647,8 +1724,75 @@ const server = http.createServer(async (req, res) => {
   res.end("Method not allowed");
 });
 
+// WebSocket for friends rooms
+if (ROOMS_ENABLED && roomManager) {
+  const wss = new WebSocketServer({ server, path: "/ws/rooms" });
+  wss.on("connection", (socket, req) => {
+    let bound = null; // { room, player }
+    const ip = clientIp(req);
+
+    socket.on("message", (raw) => {
+      let msg;
+      try {
+        msg = JSON.parse(String(raw));
+      } catch {
+        return safeWs(socket, { type: "error", error: "bad_json" });
+      }
+
+      if (msg.type === "auth") {
+        if (!roomManager.checkRate(`ws-auth:${ip}`, 20, 60 * 1000)) {
+          return safeWs(socket, { type: "error", error: "rate_limited" });
+        }
+        const found = roomManager.findByPlayerToken(msg.token);
+        if (!found) return safeWs(socket, { type: "error", error: "unauthorized" });
+        bound = found;
+        roomManager.bindSocket(found.room, found.player, socket);
+        return safeWs(socket, {
+          type: "hello",
+          snapshot: roomManager.snapshotFor(found.room, found.player.id),
+        });
+      }
+
+      if (!bound) return safeWs(socket, { type: "error", error: "auth_required" });
+
+      const { room, player } = bound;
+
+      if (msg.type === "action") {
+        const result = roomManager.applyPlayerAction(room, player, msg.action || msg);
+        if (!result.ok) return safeWs(socket, { type: "reject", error: result.error, ...result });
+        return; // patch already broadcast
+      }
+
+      if (msg.type === "host") {
+        const result = roomManager.hostCommand(room, player, msg.cmd, {
+          ...msg.payload,
+          hostToken: msg.hostToken,
+          playerToken: player.playerToken,
+        });
+        if (!result.ok) return safeWs(socket, { type: "reject", error: result.error });
+        return safeWs(socket, { type: "host_ok", cmd: msg.cmd, ...result });
+      }
+
+      if (msg.type === "ping") {
+        return safeWs(socket, { type: "pong", t: Date.now() });
+      }
+
+      safeWs(socket, { type: "error", error: "unknown_type" });
+    });
+
+    socket.on("close", () => {
+      roomManager.unbindSocket(socket);
+    });
+  });
+}
+
 server.listen(PORT, async () => {
   console.log(`Future Forge → http://127.0.0.1:${PORT}`);
+  if (ROOMS_ENABLED) {
+    console.log(`Friends rooms: ON · WS /ws/rooms (ENABLE_ROOMS=0 to disable)`);
+  } else {
+    console.log("Friends rooms: OFF");
+  }
   try {
     const token = await resolveAccessToken();
     if (token && authInfo.source === "supergrok") {
@@ -1664,3 +1808,17 @@ server.listen(PORT, async () => {
     console.log("Co-inventor: local only —", e.message);
   }
 });
+
+function clientIp(req) {
+  const xf = req.headers["x-forwarded-for"];
+  if (typeof xf === "string" && xf.length) return xf.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
+function safeWs(socket, obj) {
+  try {
+    if (socket.readyState === 1) socket.send(JSON.stringify(obj));
+  } catch {
+    /* ignore */
+  }
+}
