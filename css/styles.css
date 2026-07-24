@@ -1316,21 +1316,24 @@ button:disabled {
   color: var(--text-mute);
 }
 
+/* Full content width (same shell as invent) — not a narrow center column */
 .challenge-step-content {
-  max-width: 760px;
+  max-width: 1280px;
+  width: 100%;
 }
 
 .challenge-step-card {
-  padding: 1.5rem 1.35rem;
+  padding: 1.75rem 2rem;
+  max-width: none;
 }
 
 .challenger-banner {
   display: grid;
-  grid-template-columns: 7.5rem 1fr;
-  gap: 1rem 1.15rem;
+  grid-template-columns: 9rem 1fr;
+  gap: 1.25rem 1.5rem;
   align-items: center;
-  margin-bottom: 1.1rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.15rem;
   border-bottom: 1px solid var(--border);
 }
 
