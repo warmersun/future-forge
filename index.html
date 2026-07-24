@@ -105,8 +105,79 @@
             </div>
             <button type="button" class="btn btn-secondary" id="btn-friends-join">Join →</button>
           </article>
+          <article class="panel friends-panel friends-panel-wide">
+            <h2>Hotseat (one device)</h2>
+            <p class="muted">Pass the device — shared invention, seats take turns. No server room required.</p>
+            <div class="field">
+              <label for="hotseat-names">Seat names (comma-separated)</label>
+              <input id="hotseat-names" type="text" placeholder="Alex, Bea" value="Alex, Bea" />
+            </div>
+            <button type="button" class="btn btn-secondary" id="btn-hotseat-start">Start hotseat →</button>
+          </article>
         </div>
         <p id="friends-hub-status" class="friends-status muted" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- HOTSEAT PLAY -->
+    <section id="screen-hotseat" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="hud-clock">
+          <span class="hud-year" id="hs-hud-year">2026</span>
+          <span class="hud-turn" id="hs-hud-turn">Turn 0</span>
+          <span class="hud-ap" id="hs-hud-ap">AP 3/3</span>
+          <span class="hud-budget" id="hs-hud-budget">Budget 5$</span>
+          <span class="hud-will" id="hs-hud-will">Will 3</span>
+        </div>
+        <div class="hud-actions">
+          <span class="room-code-chip sm" id="hs-active-seat">Seat —</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-rotate">Pass device →</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-leave">Exit</button>
+        </div>
+      </header>
+      <div class="content mp-play-layout">
+        <aside class="panel mp-party-panel">
+          <h3>Seats</h3>
+          <ul id="hs-seat-list" class="room-player-list"></ul>
+          <div id="hs-pressure" class="hud-pressure"></div>
+          <p id="hs-news" class="muted mp-news"></p>
+          <div id="hs-setup" class="hs-setup">
+            <div class="field">
+              <label for="hs-theme-select">Theme</label>
+              <select id="hs-theme-select"></select>
+            </div>
+            <div class="field">
+              <label for="hs-mission-select">Mission</label>
+              <select id="hs-mission-select"></select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-hs-begin">Begin shared invent →</button>
+          </div>
+        </aside>
+        <main class="panel mp-main-panel">
+          <h2 id="hs-mission-title">Hotseat invention</h2>
+          <p id="hs-mission-place" class="muted"></p>
+          <div class="field">
+            <label for="hs-invention-name">Name</label>
+            <input id="hs-invention-name" type="text" maxlength="100" />
+          </div>
+          <div class="field">
+            <label for="hs-invention-how">How it works</label>
+            <textarea id="hs-invention-how" rows="4"></textarea>
+          </div>
+          <div class="field">
+            <label for="hs-invention-impact">Everyday life</label>
+            <textarea id="hs-invention-impact" rows="3"></textarea>
+          </div>
+          <div class="form-actions mp-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-end-turn">End turn</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-wait">Wait +2 years</button>
+          </div>
+          <h3>Stack</h3>
+          <div id="hs-stack" class="mp-stack"></div>
+          <div id="hs-tech-tray" class="mp-tech-tray"></div>
+          <p id="hs-status" class="friends-status muted" aria-live="polite"></p>
+        </main>
       </div>
     </section>
 
@@ -192,7 +263,15 @@
           <div class="form-actions mp-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">Wait +2 years</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-ai" title="1 AP · room AI quota">
+              Ask co-inventor
+            </button>
           </div>
+          <div id="mp-ai-pending" class="mp-ai-pending" hidden>
+            <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span id="mp-ai-pending-text">Co-inventor thinking…</span>
+          </div>
+          <div id="mp-ai-log" class="mp-ai-log muted"></div>
           <h3>Stack</h3>
           <div id="mp-stack" class="mp-stack"></div>
           <div id="mp-tech-tray" class="mp-tech-tray"></div>
@@ -1069,18 +1148,20 @@
 
           <!-- Friends -->
           <section class="help-block">
-            <h4 class="help-block-title">Friends co-op (multiplayer)</h4>
+            <h4 class="help-block-title">Friends co-op &amp; hotseat</h4>
             <ul class="help-list">
               <li>
-                Home → <strong>Play with friends</strong>: create a room (6-char code) or join one.
+                Home → <strong>Play with friends</strong>: create a room (6-char code) or join one. Live WebSocket
+                shared invention.
               </li>
               <li>
-                Host sets a mission and starts. Everyone invents <strong>one shared stack</strong> and story —
-                live over WebSocket.
+                Host sets a mission and starts. Soft field locks show who is editing name / how / life.
               </li>
               <li>
-                Party pace: AP / Budget / Will still apply. Challenge essay + single deploy defaults (solo combat
-                rules stay on for solo).
+                <strong>Ask co-inventor</strong> in-room (1 AP + room quotas). Pose/judge is single-flight.
+              </li>
+              <li>
+                <strong>Hotseat</strong>: one device, pass between seats — same shared stack, no server room.
               </li>
             </ul>
           </section>

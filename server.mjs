@@ -66,6 +66,7 @@ const PORT = Number(process.env.PORT) || 8765;
 const MODEL = process.env.XAI_MODEL || "grok-4.5";
 /** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
+/** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED ? new RoomManager() : null;
 
 /** @type {{ source: 'supergrok'|'api-key'|null, email?: string }} */
@@ -1724,6 +1725,11 @@ const server = http.createServer(async (req, res) => {
   res.end("Method not allowed");
 });
 
+// Inject AI boundary into rooms (PR10) once handleCoInvent is in scope
+if (roomManager) {
+  roomManager.coInventHandler = (body) => handleCoInvent(body);
+}
+
 // WebSocket for friends rooms
 if (ROOMS_ENABLED && roomManager) {
   const wss = new WebSocketServer({ server, path: "/ws/rooms" });
@@ -1761,6 +1767,22 @@ if (ROOMS_ENABLED && roomManager) {
         const result = roomManager.applyPlayerAction(room, player, msg.action || msg);
         if (!result.ok) return safeWs(socket, { type: "reject", error: result.error, ...result });
         return; // patch already broadcast
+      }
+
+      if (msg.type === "request_ai") {
+        // Async — do not block the socket handler on await chain failures
+        roomManager
+          .requestAi(room, player, msg.payload || msg)
+          .then((result) => {
+            if (!result.ok) {
+              safeWs(socket, { type: "reject", error: result.error || "ai_rejected" });
+            }
+            // ai_pending / ai_result already broadcast on success path
+          })
+          .catch((e) => {
+            safeWs(socket, { type: "reject", error: e.message || "ai_failed" });
+          });
+        return;
       }
 
       if (msg.type === "host") {

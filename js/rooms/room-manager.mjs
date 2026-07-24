@@ -1,12 +1,18 @@
 /**
- * In-memory friends co-op rooms (PR9).
- * REST create/join + WS snapshot/patch. No AI in this module.
+ * In-memory friends co-op rooms (PR9–PR10).
+ * REST create/join + WS snapshot/patch + room AI proxy with quotas.
  */
 
 import crypto from "node:crypto";
 import { applyAction } from "../sim/actions.js";
 import { createSimState, cloneSimState, friendsFeatureFlags } from "../sim/state.js";
 import { techById } from "../data.js";
+import {
+  createRoomAiQuotaState,
+  reserveRoomAiJob,
+  resolveRoomAiJob,
+  rejectRoomAiJob,
+} from "../sim/ai_jobs.js";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -48,6 +54,12 @@ export function randomRoomCode(len = 6) {
  */
 
 export class RoomManager {
+  /**
+   * @param {object} [opts]
+   * @param {(body: object) => Promise<object>} [opts.coInventHandler] — server injects handleCoInvent
+   * @param {number} [opts.roomTtlMs]
+   * @param {number} [opts.maxPlayers]
+   */
   constructor(opts = {}) {
     /** @type {Map<string, Room>} */
     this.rooms = new Map();
@@ -55,6 +67,8 @@ export class RoomManager {
     this.maxPlayersDefault = opts.maxPlayers ?? 5;
     /** simple rate: key → { count, resetAt } */
     this.rate = new Map();
+    /** @type {null | ((body: object) => Promise<object>)} */
+    this.coInventHandler = opts.coInventHandler || null;
   }
 
   /** @param {string} key @param {number} limit @param {number} windowMs */
@@ -130,6 +144,7 @@ export class RoomManager {
       fieldLocks: new Map(),
       sockets: new Set(),
       missionMeta: null, // { globalId, mission } before start
+      aiQuota: createRoomAiQuotaState(),
     };
     this.rooms.set(code.toUpperCase(), room);
     room.code = code.toUpperCase();
@@ -497,6 +512,153 @@ export class RoomManager {
     return { ok: true, fieldLocks: locksPublic(room) };
   }
 
+  /**
+   * PR10: request co-invent AI for the room (async).
+   * Reserves AP+quota, broadcasts ai_pending, proxies to coInventHandler, then resolve/reject.
+   * @param {Room} room
+   * @param {Player} player
+   * @param {object} payload — { mode, messages?, userLabel?, clientActionId, reservedAp? }
+   */
+  async requestAi(room, player, payload = {}) {
+    if (!room.sim) return { ok: false, error: "not_started" };
+    if (!player) return { ok: false, error: "no_player" };
+    if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
+
+    const mode = payload.mode || "chat";
+    const clientActionId =
+      payload.clientActionId || `ai-${player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const reservedAp = payload.reservedAp ?? 1;
+
+    const reserved = reserveRoomAiJob(
+      room.sim,
+      room.aiQuota,
+      player.id,
+      { mode, reservedAp, clientActionId, playerId: player.id },
+      { features: room.sim.featureFlags || friendsFeatureFlags(), apMax: room.sim.apMax }
+    );
+
+    if (!reserved.ok) {
+      return { ok: false, error: reserved.error || "ai_rejected" };
+    }
+
+    if (reserved.idempotent) {
+      return { ok: true, idempotent: true, clientActionId };
+    }
+
+    room.sim = reserved.sim;
+    room.simVersion += 1;
+    room.updatedAt = Date.now();
+
+    this.broadcast(room, {
+      type: "ai_pending",
+      simVersion: room.simVersion,
+      sim: cloneSimState(room.sim),
+      clientActionId,
+      mode,
+      playerId: player.id,
+      displayName: player.displayName,
+    });
+
+    if (!this.coInventHandler) {
+      // No handler (unit tests): leave pending; caller may complete via completeAiJob
+      return {
+        ok: true,
+        pending: true,
+        clientActionId,
+        needsHandler: true,
+        simVersion: room.simVersion,
+      };
+    }
+
+    try {
+      const body = {
+        mode,
+        messages: payload.messages || [
+          { role: "user", content: payload.userLabel || payload.prompt || "[Room AI]" },
+        ],
+        context: buildRoomAiContext(room, player, payload),
+      };
+      const result = await this.coInventHandler(body);
+      return this.completeAiJob(room, player, clientActionId, {
+        ok: true,
+        result,
+        mode,
+      });
+    } catch (e) {
+      return this.completeAiJob(room, player, clientActionId, {
+        ok: false,
+        error: e.message || "ai_failed",
+        mode,
+      });
+    }
+  }
+
+  /**
+   * Finish AI job: resolve (success) or reject (refund). Testable without network.
+   */
+  completeAiJob(room, player, clientActionId, outcome = {}) {
+    if (!room.sim) return { ok: false, error: "not_started" };
+    if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
+
+    if (outcome.ok === false) {
+      const rejected = rejectRoomAiJob(room.sim, room.aiQuota, clientActionId, {
+        features: room.sim.featureFlags || friendsFeatureFlags(),
+        apMax: room.sim.apMax,
+      });
+      room.sim = rejected.sim;
+      room.simVersion += 1;
+      room.updatedAt = Date.now();
+      const msg = {
+        type: "ai_result",
+        ok: false,
+        error: outcome.error || "ai_failed",
+        clientActionId,
+        mode: outcome.mode || null,
+        playerId: player?.id,
+        simVersion: room.simVersion,
+        sim: cloneSimState(room.sim),
+        events: rejected.events,
+      };
+      this.broadcast(room, msg);
+      return msg; // ok: false on the message; job completed with refund
+    }
+
+    // Apply proposals lightly onto shared sim when present
+    const result = outcome.result || {};
+    applyAiProposalsToSim(room.sim, result.proposals);
+
+    const resolved = resolveRoomAiJob(room.sim, room.aiQuota, clientActionId, {
+      features: room.sim.featureFlags || friendsFeatureFlags(),
+    });
+    room.sim = resolved.sim;
+    room.simVersion += 1;
+    room.updatedAt = Date.now();
+    const msg = {
+      type: "ai_result",
+      ok: true,
+      clientActionId,
+      mode: outcome.mode || result.mode || null,
+      playerId: player?.id,
+      displayName: player?.displayName,
+      result: {
+        message: result.message || "",
+        proposals: result.proposals || null,
+        teaching: result.teaching || [],
+        source: result.source || null,
+        challengeSpeech: result.challengeSpeech,
+        challengeQuestion: result.challengeQuestion,
+        verdict: result.verdict,
+        quality: result.quality,
+        draftAnswer: result.draftAnswer,
+      },
+      simVersion: room.simVersion,
+      sim: cloneSimState(room.sim),
+      events: resolved.events,
+    };
+    this.broadcast(room, msg);
+    return msg;
+  }
+
   broadcast(room, msg, exceptSocket = null) {
     const data = JSON.stringify(msg);
     for (const p of room.players) {
@@ -567,4 +729,37 @@ function safeSend(socket, obj) {
   } catch {
     /* ignore */
   }
+}
+
+function buildRoomAiContext(room, player, payload) {
+  const sim = room.sim;
+  return {
+    year: sim.year,
+    place: sim.mission?.place,
+    globalTheme: { id: sim.globalId },
+    mission: sim.mission,
+    inventionName: sim.inventionName,
+    inventionHow: sim.inventionHow,
+    inventionImpact: sim.inventionImpact,
+    selectedTechIds: sim.selectedTechIds,
+    pressure: sim.pressure,
+    roomCode: room.code,
+    playerId: player.id,
+    displayName: player.displayName,
+    ...(payload.context || {}),
+  };
+}
+
+function applyAiProposalsToSim(sim, proposals) {
+  if (!proposals || typeof proposals !== "object") return;
+  if (proposals.inventionName && !String(sim.inventionName || "").trim()) {
+    sim.inventionName = String(proposals.inventionName).slice(0, 120);
+  }
+  if (proposals.inventionHow) {
+    sim.inventionHow = String(proposals.inventionHow).slice(0, 4000);
+  }
+  if (proposals.inventionImpact) {
+    sim.inventionImpact = String(proposals.inventionImpact).slice(0, 4000);
+  }
+  // Tech adds still go through select_tech so AP/budget rules apply — skip silent stack mutation
 }

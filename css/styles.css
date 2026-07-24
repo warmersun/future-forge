@@ -300,10 +300,46 @@ button:disabled {
   gap: 1rem;
 }
 
+.friends-panel-wide {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 720px) {
   .friends-hub-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.mp-ai-pending {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.08);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.mp-ai-pending[hidden] {
+  display: none !important;
+}
+
+.mp-ai-log {
+  font-size: 0.8rem;
+  max-height: 6rem;
+  overflow: auto;
+  margin-bottom: 0.75rem;
+}
+
+.mp-ai-log p {
+  margin: 0.25rem 0;
+}
+
+.hs-setup {
+  margin-top: 0.75rem;
 }
 
 .friends-panel h2 {

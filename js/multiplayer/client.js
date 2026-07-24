@@ -180,6 +180,18 @@ export class RoomClient {
           this.emit(msg);
           return;
         }
+        if (msg.type === "ai_pending" || msg.type === "ai_result") {
+          if (msg.sim && this.snapshot) {
+            this.snapshot = {
+              ...this.snapshot,
+              simVersion: msg.simVersion ?? this.snapshot.simVersion,
+              sim: msg.sim,
+              phase: "playing",
+            };
+          }
+          this.emit(msg);
+          return;
+        }
         if (msg.type === "kicked" || msg.type === "room_ended") {
           this.leaveLocal();
           this.emit(msg);
@@ -224,6 +236,23 @@ export class RoomClient {
   sendAction(action) {
     if (!this.ws || this.ws.readyState !== 1) throw new Error("not_connected");
     this.ws.send(JSON.stringify({ type: "action", action }));
+  }
+
+  /**
+   * PR10: request room co-inventor AI (server reserves AP/quota then proxies).
+   * @param {{ mode: string, userLabel?: string, prompt?: string, reservedAp?: number, clientActionId?: string, context?: object }} payload
+   */
+  requestAi(payload = {}) {
+    if (!this.ws || this.ws.readyState !== 1) throw new Error("not_connected");
+    const clientActionId =
+      payload.clientActionId || `cli-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.ws.send(
+      JSON.stringify({
+        type: "request_ai",
+        payload: { ...payload, clientActionId },
+      })
+    );
+    return clientActionId;
   }
 
   async hostCmd(cmd, payload = {}) {
