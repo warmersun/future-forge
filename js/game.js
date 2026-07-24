@@ -119,6 +119,8 @@ const state = {
   /** G3 multi-encounter scrutiny (null when essay mode) */
   scrutiny: null,
   elegancePivotPenalty: false,
+  /** @type {"defend"|"fix"|"sidestep"|null} selected challenge response mode */
+  scrutinyMoveMode: null,
 };
 
 const STORAGE_SCENARIOS = "future-forge:scenarioCache";
@@ -327,7 +329,10 @@ function showScreen(id) {
       updateVision({ immediate: true });
     });
   }
-  if (id === "challenge-step") renderChallengeStep();
+  if (id === "challenge-step") {
+    renderChallengeStep();
+    ensureCoInventor();
+  }
   if (id === "outcome") renderOutcome();
 }
 
@@ -730,6 +735,7 @@ function startMission(mission) {
   state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
+  state.scrutinyMoveMode = null;
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   state.coInventor?.onChallengeStart?.();
@@ -1484,12 +1490,44 @@ function updateEndTurnButton() {
 }
 
 function endTurn() {
+  // Allow end turn on challenge if AP was spent (scrutiny/AI) even with full bar edge cases
+  if (apEnabled() && (state.apSpentThisTurn || 0) < 1 && (state.ap ?? 0) >= (state.apMax ?? 3)) {
+    // force allow if phase is scrutiny (player may have entered with AP spend already counted)
+    if (state.turnPhase !== "scrutiny" && state.screen !== "challenge-step") {
+      flashToast("Do something this turn, or Wait.");
+      return;
+    }
+  }
+  // If on challenge with spent AP, patch spent counter so sim accepts end_turn
+  if (
+    apEnabled() &&
+    (state.apSpentThisTurn || 0) < 1 &&
+    state.screen === "challenge-step" &&
+    (state.ap ?? 0) < (state.apMax ?? 3)
+  ) {
+    state.apSpentThisTurn = 1;
+  }
   const r = dispatchSim("end_turn");
   if (!r.ok) {
-    if (r.error === "end_turn_noop") flashToast("Do something this turn, or Wait.");
+    if (r.error === "end_turn_noop") {
+      // On challenge, allow refill after any partial spend
+      if (state.screen === "challenge-step" && (state.ap ?? 0) < (state.apMax ?? 3)) {
+        state.ap = state.apMax ?? 3;
+        state.apSpentThisTurn = 0;
+        state.writeCommitsThisTurn = 0;
+        flashToast(`End turn · AP refilled (${state.ap})`);
+        renderChallengeHud();
+        return;
+      }
+      flashToast("Do something this turn, or Wait.");
+    }
     return;
   }
   flashToast(`End turn · AP refilled (${state.ap})`);
+  if (state.screen === "challenge-step") {
+    renderChallengeHud();
+    return;
+  }
   renderWorkshop();
 }
 
@@ -1777,6 +1815,7 @@ async function poseScrutinyEncounters() {
   );
 
   // Focus first uncleared — never swap angle from AI
+  state.scrutinyMoveMode = null;
   paintActiveEncounter();
   renderScrutinyEncounters();
   renderChallengeHud();
@@ -1794,6 +1833,7 @@ function paintActiveEncounter() {
     if (!state.lastChallengeVerdict) state.lastChallengeVerdict = "pass";
     const moves = $("#scrutiny-moves");
     if (moves) moves.hidden = true;
+    hideAllModePanels();
     updateDeployButtonCost();
     const dep = $("#btn-challenge-deploy");
     if (dep) {
@@ -1820,13 +1860,12 @@ function paintActiveEncounter() {
   $("#challenge-speech").innerHTML = `<p>${escapeHtml(enc.speech || "").replace(/\n/g, "<br>")}</p>`;
   $("#challenge-question").textContent = enc.question || "";
   const label = $("#challenge-answer-label");
-  if (label) label.textContent = `Write your defense against ${meta.label}`;
   const moves = $("#scrutiny-moves");
   if (moves) moves.hidden = false;
-  const essayBtn = $("#btn-challenge-submit");
-  if (essayBtn) essayBtn.hidden = true;
-  // Keep deploy in the footer only when unlocked
+  // Restore or default to defend mode so the player always has a next step
+  setScrutinyMoveMode(state.scrutinyMoveMode || "defend");
   updateDeployButtonCost();
+  renderChallengeHud();
 }
 
 function renderScrutinyEncounters() {
@@ -1936,7 +1975,7 @@ function renderChallengeHud() {
     if (apEnabled()) {
       apEl.hidden = false;
       apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
-      apEl.title = "Action points. Coach / Draft / Ask and submitting for judgment cost 1 AP each.";
+      apEl.title = "Action points. Defense, fix, sidestep, AI help, and deploy cost AP.";
     } else {
       apEl.hidden = true;
     }
@@ -1956,11 +1995,73 @@ function renderChallengeHud() {
     if (budgetWillEnabled()) {
       willEl.hidden = false;
       willEl.textContent = `Will ${state.will ?? 0}`;
-      willEl.title = "Political will (same as invent). Pass/partial challenge can raise Will.";
+      willEl.title = "Political will (same as invent). Sidestep costs 1 Will.";
     } else {
       willEl.hidden = true;
     }
   }
+  const endBtn = $("#btn-challenge-end-turn");
+  if (endBtn) {
+    if (apEnabled()) {
+      endBtn.hidden = false;
+      const can =
+        (state.apSpentThisTurn || 0) >= 1 ||
+        state.turnPhase === "scrutiny" ||
+        state.turnPhase === "between_stages";
+      // On challenge, allow End turn if any AP spent this turn OR always allow to refill after spends
+      endBtn.disabled = !can && (state.apSpentThisTurn || 0) < 1 && (state.ap ?? 0) >= (state.apMax ?? 3);
+      // If AP not full, allow end turn to refill after spending
+      if ((state.ap ?? 0) < (state.apMax ?? 3) || (state.apSpentThisTurn || 0) >= 1) {
+        endBtn.disabled = false;
+      }
+      if ((state.apSpentThisTurn || 0) < 1 && (state.ap ?? 0) >= (state.apMax ?? 3)) {
+        endBtn.disabled = true;
+        endBtn.title = "Spend AP first (or you already have a full bar)";
+      } else {
+        endBtn.title = "Refill AP without advancing the calendar or crisis";
+      }
+    } else {
+      endBtn.hidden = true;
+    }
+  }
+}
+
+/** Select Defend / Fix / Sidestep — toggle only; does not spend AP until confirm */
+function setScrutinyMoveMode(mode) {
+  state.scrutinyMoveMode = mode;
+  $$(".scrutiny-move-btn").forEach((btn) => {
+    const on = btn.dataset.mode === mode;
+    btn.classList.toggle("is-selected", on);
+    btn.setAttribute("aria-checked", on ? "true" : "false");
+  });
+  const defend = $("#mode-panel-defend");
+  const fix = $("#mode-panel-fix");
+  const side = $("#mode-panel-sidestep");
+  if (defend) defend.hidden = mode !== "defend";
+  if (fix) fix.hidden = mode !== "fix";
+  if (side) side.hidden = mode !== "sidestep";
+  if (mode === "fix") {
+    const howEdit = $("#challenge-how-edit");
+    if (howEdit) howEdit.value = state.inventionHow || "";
+  }
+  if (mode === "defend") {
+    const label = $("#challenge-answer-label");
+    const enc = activeEncounter(state.scrutiny);
+    const name = enc?.label || "this challenger";
+    if (label) label.textContent = `Write your defense against ${name}`;
+  }
+}
+
+function hideAllModePanels() {
+  state.scrutinyMoveMode = null;
+  $$(".scrutiny-move-btn").forEach((btn) => {
+    btn.classList.remove("is-selected");
+    btn.setAttribute("aria-checked", "false");
+  });
+  ["#mode-panel-defend", "#mode-panel-fix", "#mode-panel-sidestep"].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.hidden = true;
+  });
 }
 
 function renderChallengeStep() {
@@ -1968,13 +2069,13 @@ function renderChallengeStep() {
   if (scrutinyCombatEnabled() && state.scrutiny) {
     renderScrutinyEncounters();
     paintActiveEncounter();
-    const essayBtn = $("#btn-challenge-submit");
-    if (essayBtn) essayBtn.hidden = true;
     if (state.challengeFeedback) {
       const fb = $("#challenge-feedback");
-      fb.hidden = false;
-      fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
-      fb.innerHTML = state.challengeFeedback;
+      if (fb) {
+        fb.hidden = false;
+        fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
+        fb.innerHTML = state.challengeFeedback;
+      }
     }
     if (state.challengePassed) {
       const dep = $("#btn-challenge-deploy");
@@ -1983,18 +2084,21 @@ function renderChallengeStep() {
         dep.disabled = false;
       }
       updateDeployButtonCost();
+      hideAllModePanels();
+      const moves = $("#scrutiny-moves");
+      if (moves) moves.hidden = true;
     }
+    renderChallengeHud();
     return;
   }
+  // Essay fallback mode
   const moves = $("#scrutiny-moves");
   if (moves) moves.hidden = true;
   const box = $("#scrutiny-encounters");
   if (box) box.hidden = true;
   const status = $("#scrutiny-status");
   if (status) status.hidden = true;
-  const essayBtn = $("#btn-challenge-submit");
-  if (essayBtn) essayBtn.hidden = false;
-
+  setScrutinyMoveMode("defend");
   const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
   if (angle) {
     $("#challenge-angle-title").textContent = angle.label;
@@ -2005,26 +2109,34 @@ function renderChallengeStep() {
     $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
   }
   $("#challenge-question").textContent = state.challengeQuestion || "";
-  $("#challenge-answer").value = state.challengeAnswer || "";
+  if ($("#challenge-answer") && state.challengeAnswer != null) {
+    $("#challenge-answer").value = state.challengeAnswer || "";
+  }
   const fb = $("#challenge-feedback");
   const dep = $("#btn-challenge-deploy");
-  if (state.challengeFeedback) {
+  if (state.challengeFeedback && fb) {
     fb.hidden = false;
     fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
     fb.innerHTML = state.challengeFeedback;
-  } else fb.hidden = true;
-  if (state.challengePassed) {
+  } else if (fb) fb.hidden = true;
+  if (state.challengePassed && dep) {
     dep.hidden = false;
     dep.disabled = false;
     updateDeployButtonCost();
-  } else {
+  } else if (dep) {
     dep.hidden = true;
     dep.disabled = true;
   }
+  renderChallengeHud();
 }
 
 async function scrutinyArgue() {
   if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  if (state.scrutinyMoveMode !== "defend") {
+    setScrutinyMoveMode("defend");
+    flashToast("Write your defense, then click Submit defense.");
+    return;
+  }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
     flashToast("All challengers cleared.");
@@ -2032,7 +2144,7 @@ async function scrutinyArgue() {
   }
   const answer = ($("#challenge-answer")?.value || "").trim();
   if (answer.length < 20) {
-    flashToast("Argue with at least a short paragraph.");
+    flashToast("Write at least a short paragraph for your defense.");
     return;
   }
   if (apEnabled()) {
@@ -2114,51 +2226,51 @@ async function scrutinyArgue() {
 
 function scrutinyPatch() {
   if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  if (state.scrutinyMoveMode !== "fix") {
+    setScrutinyMoveMode("fix");
+    flashToast("Edit how-it-works below, then click Apply fix.");
+    return;
+  }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) return;
+  const howEdit = $("#challenge-how-edit");
+  const how = (howEdit?.value || state.inventionHow || "").trim();
+  if (how.length < 20) {
+    flashToast("Write a clearer how-it-works (at least a short paragraph) before applying the fix.");
+    return;
+  }
+  if (how === (state.inventionHow || "").trim()) {
+    flashToast("Change how-it-works to address this attack, then apply the fix.");
+    return;
+  }
   if (apEnabled()) {
-    // Patch is sync AP spend without AI reserve
     if ((state.ap ?? 0) < 1) {
-      flashToast("No AP to Patch.");
+      flashToast("No AP to apply the fix — End turn first.");
       return;
     }
     state.ap -= 1;
     state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
   }
-  let funded = false;
-  if (budgetWillEnabled() && (state.budget ?? 0) >= 1) {
-    const use = window.confirm(
-      "Funded patch? Spend 1 Budget for +2 HP damage (vs 1 HP unfunded)."
-    );
-    if (use) {
+  let funded = Boolean($("#challenge-fund-patch")?.checked);
+  if (funded && budgetWillEnabled()) {
+    if ((state.budget ?? 0) < 1) {
+      flashToast("Not enough Budget for a funded fix — uncheck it or free up Budget.");
+      funded = false;
+    } else {
       state.budget -= 1;
-      funded = true;
     }
   }
-  // Ensure a small how patch exists
-  const how = state.inventionHow.trim();
-  if (how.length < 20) {
-    flashToast("Write a clearer how-it-works before patching.");
-    if (apEnabled()) {
-      state.ap = Math.min(state.apMax, (state.ap || 0) + 1);
-    }
-    return;
-  }
-  const note = funded
-    ? " [Funded patch: extra monitoring and contingency budget for this place.]"
-    : " [Patch: added fail-safe / metering for local extremes.]";
-  if (!how.includes("[Patch:") && !how.includes("[Funded patch:")) {
-    state.inventionHow = `${how}${note}`;
-    const howEl = $("#invention-how");
-    if (howEl) howEl.value = state.inventionHow;
-  }
+  state.inventionHow = how;
+  const inventHow = $("#invention-how");
+  if (inventHow) inventHow.value = how;
   const result = applyPatchResult(state.scrutiny, enc.id, funded);
   state.scrutiny = result.scrutiny;
   state.hadChallengeAttempt = true;
   const fb = $("#challenge-feedback");
   fb.hidden = false;
   fb.className = "challenge-feedback partial";
-  fb.innerHTML = `<strong>PATCH</strong> (−${result.damage} HP) — Design revised under fire.`;
+  fb.innerHTML = `<strong>FIX APPLIED</strong> (−${result.damage} HP) — Your how-it-works was updated under fire.`;
+  if ($("#challenge-fund-patch")) $("#challenge-fund-patch").checked = false;
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
@@ -2171,18 +2283,23 @@ function scrutinyPatch() {
 
 function scrutinyPivot() {
   if (!scrutinyCombatEnabled() || !state.scrutiny) return;
+  if (state.scrutinyMoveMode !== "sidestep") {
+    setScrutinyMoveMode("sidestep");
+    flashToast("Confirm sidestep below if you want to dodge this challenger.");
+    return;
+  }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) return;
   if (state.scrutiny.pivotUsed) {
-    flashToast("Pivot already used this run.");
+    flashToast("Sidestep already used this run.");
     return;
   }
   if (apEnabled() && (state.ap ?? 0) < 1) {
-    flashToast("No AP to Pivot.");
+    flashToast("No AP to sidestep — End turn first.");
     return;
   }
   if (budgetWillEnabled() && (state.will ?? 0) < 1) {
-    flashToast("Pivot needs 1 Political will.");
+    flashToast("Sidestep needs 1 Political will.");
     return;
   }
   if (apEnabled()) {
@@ -2192,7 +2309,7 @@ function scrutinyPivot() {
   if (budgetWillEnabled()) state.will = Math.max(0, (state.will ?? 0) - 1);
   const result = applyPivotResult(state.scrutiny, enc.id);
   if (!result.ok) {
-    flashToast(result.error || "Cannot pivot.");
+    flashToast(result.error || "Cannot sidestep.");
     return;
   }
   state.scrutiny = result.scrutiny;
@@ -2201,7 +2318,7 @@ function scrutinyPivot() {
   const fb = $("#challenge-feedback");
   fb.hidden = false;
   fb.className = "challenge-feedback pass";
-  fb.innerHTML = `<strong>PIVOT</strong> — You sidestepped ${escapeHtml(enc.label)} (once per run).`;
+  fb.innerHTML = `<strong>SIDESTEP</strong> — You skipped ${escapeHtml(enc.label)} (once per run).`;
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
@@ -2804,10 +2921,18 @@ function setSideTab(tab) {
 }
 
 /* —— Co-inventor —— */
+function coInventorRootEl() {
+  if (state.screen === "challenge-step") return $("#ch-co-inventor-root");
+  return $("#co-inventor-root");
+}
+
 function ensureCoInventor() {
-  if (state.coInventor) return state.coInventor;
-  const root = $("#co-inventor-root");
-  if (!root) return null;
+  const root = coInventorRootEl();
+  if (!root) return state.coInventor;
+  // Remount when switching Invent ↔ Challenge so the panel lives on the active screen
+  if (state.coInventor && state.coInventor.root === root) return state.coInventor;
+
+  const messages = state.coInventor?.messages || [];
   state.coInventor = new CoInventor({
     getContext: () => ({
       challenge: state.mission
@@ -2832,11 +2957,15 @@ function ensureCoInventor() {
       pressure: state.pressure,
       place: state.mission?.place,
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+      challengeAngle: state.challengeAngle,
+      challengeSpeech: state.challengeText,
+      challengeQuestion: state.challengeQuestion,
     }),
     applyProposals: applyCoInventorProposals,
     techById,
     beforeRequest: (mode) => {
       if (!apEnabled()) return true;
+      // First free coach already handled in coachChallenge; co-inventor chat always costs
       const r = dispatchSim("reserve_ai", {
         mode,
         reservedAp: 1,
@@ -2847,6 +2976,7 @@ function ensureCoInventor() {
         return false;
       }
       renderHud();
+      renderChallengeHud();
       return true;
     },
     afterRequest: (_mode, ok) => {
@@ -2854,9 +2984,14 @@ function ensureCoInventor() {
       if (ok) dispatchSim("resolve_ai");
       else dispatchSim("reject_ai");
       renderHud();
+      renderChallengeHud();
     },
   });
   state.coInventor.mount(root);
+  if (messages.length) {
+    state.coInventor.messages = messages;
+    state.coInventor.renderMessages();
+  }
   return state.coInventor;
 }
 
@@ -3357,9 +3492,18 @@ function bind() {
   $("#btn-challenge-deploy")?.addEventListener("click", () => attemptDeploy());
   $("#btn-challenge-coach")?.addEventListener("click", () => coachChallenge("coach-challenge"));
   $("#btn-challenge-draft")?.addEventListener("click", () => coachChallenge("draft-challenge"));
-  $("#btn-scrutiny-argue")?.addEventListener("click", () => scrutinyArgue());
-  $("#btn-scrutiny-patch")?.addEventListener("click", () => scrutinyPatch());
-  $("#btn-scrutiny-pivot")?.addEventListener("click", () => scrutinyPivot());
+  // Mode toggles (select only)
+  $("#btn-scrutiny-argue")?.addEventListener("click", () => setScrutinyMoveMode("defend"));
+  $("#btn-scrutiny-patch")?.addEventListener("click", () => setScrutinyMoveMode("fix"));
+  $("#btn-scrutiny-pivot")?.addEventListener("click", () => setScrutinyMoveMode("sidestep"));
+  // Confirm actions
+  $("#btn-challenge-apply-fix")?.addEventListener("click", () => scrutinyPatch());
+  $("#btn-challenge-confirm-sidestep")?.addEventListener("click", () => scrutinyPivot());
+  $("#btn-challenge-end-turn")?.addEventListener("click", () => {
+    endTurn();
+    renderChallengeHud();
+    renderChallengeStep();
+  });
   $("#challenge-help-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const q = $("#challenge-help-input")?.value?.trim();

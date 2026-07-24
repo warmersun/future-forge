@@ -357,49 +357,177 @@
           </button>
         </div>
       </header>
-      <div class="content challenge-step-content">
-        <div class="challenge-step-card panel">
-          <div class="challenger-banner" id="challenger-visual" hidden>
-            <div class="challenger-portrait-wrap">
-              <img
-                id="challenger-portrait"
-                class="challenger-portrait"
-                alt=""
-                width="320"
-                height="400"
-              />
-            </div>
-            <div class="challenger-copy">
-              <div class="label" id="challenge-angle-label">Your idea is under attack</div>
-              <h1 id="challenge-angle-title">Moloch</h1>
-              <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
-              <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
-            </div>
-          </div>
-          <div id="scrutiny-encounters" class="scrutiny-encounters" hidden></div>
-          <p id="scrutiny-status" class="scrutiny-status muted" hidden></p>
-
-          <div class="challenge-speech" id="challenge-speech">
-            <p class="muted">Loading challenge…</p>
-          </div>
-          <p class="challenge-question" id="challenge-question"></p>
-
-          <div class="challenge-help panel" id="challenge-help">
-            <div class="challenge-help-header">
-              <div>
-                <div class="progress-strip-label">AI co-inventor help</div>
-                <p class="scrutiny-sub">
-                  You still own the answer — the AI can coach or draft a reply you edit
-                  (<strong>1 AP</strong> each; first help in a scrutiny run is free).
-                </p>
+      <div class="challenge-layout">
+        <!-- LEFT: the challenge -->
+        <main class="challenge-main">
+          <div class="challenge-step-card panel">
+            <div class="challenger-banner" id="challenger-visual" hidden>
+              <div class="challenger-portrait-wrap">
+                <img
+                  id="challenger-portrait"
+                  class="challenger-portrait"
+                  alt=""
+                  width="320"
+                  height="400"
+                />
+              </div>
+              <div class="challenger-copy">
+                <div class="label" id="challenge-angle-label">Your idea is under attack</div>
+                <h1 id="challenge-angle-title">Moloch</h1>
+                <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
+                <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
               </div>
             </div>
-            <div class="challenge-help-actions">
+            <div id="scrutiny-encounters" class="scrutiny-encounters" hidden></div>
+            <p id="scrutiny-status" class="scrutiny-status muted" hidden></p>
+
+            <div class="challenge-speech" id="challenge-speech">
+              <p class="muted">Loading challenge…</p>
+            </div>
+            <p class="challenge-question" id="challenge-question"></p>
+
+            <div id="challenge-feedback" class="challenge-feedback" hidden></div>
+
+            <!-- Mode picker: select how you will respond (toggle) -->
+            <div id="scrutiny-moves" class="scrutiny-moves" hidden>
+              <p class="scrutiny-moves-lead">
+                <strong>How will you respond?</strong> Pick one option (it stays selected), then complete
+                the step below. Clear every challenger’s HP to unlock deploy.
+              </p>
+              <div class="scrutiny-move-grid" role="radiogroup" aria-label="Response strategy">
+                <button
+                  type="button"
+                  class="scrutiny-move-btn"
+                  id="btn-scrutiny-argue"
+                  role="radio"
+                  aria-checked="false"
+                  data-mode="defend"
+                >
+                  <span class="scrutiny-move-title">1 · Defend in writing</span>
+                  <span class="scrutiny-move-cost">then 1 AP to submit</span>
+                  <span class="scrutiny-move-blurb">
+                    Write a defense that answers their question. You stay on this screen and click
+                    <em>Submit defense</em>. Strong answers deal more HP damage.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="scrutiny-move-btn"
+                  id="btn-scrutiny-patch"
+                  role="radio"
+                  aria-checked="false"
+                  data-mode="fix"
+                >
+                  <span class="scrutiny-move-title">2 · Fix the invention</span>
+                  <span class="scrutiny-move-cost">then 1 AP (+ optional ¤1)</span>
+                  <span class="scrutiny-move-blurb">
+                    <strong>You</strong> edit how-it-works here (not the AI alone). Strengthen the design
+                    under fire, then click <em>Apply fix</em>. That deals HP to the challenger.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="scrutiny-move-btn"
+                  id="btn-scrutiny-pivot"
+                  role="radio"
+                  aria-checked="false"
+                  data-mode="sidestep"
+                >
+                  <span class="scrutiny-move-title">3 · Sidestep once</span>
+                  <span class="scrutiny-move-cost">then 1 AP · 1 Will</span>
+                  <span class="scrutiny-move-blurb">
+                    Skip this challenger without winning the argument — once per run. Confirm below.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Context panels for the selected mode -->
+            <div id="mode-panel-defend" class="mode-panel" hidden>
+              <div class="field">
+                <label for="challenge-answer" id="challenge-answer-label">Your written defense</label>
+                <textarea
+                  id="challenge-answer"
+                  rows="5"
+                  placeholder="Name who acts, who pays, or what hard limit you respect — vague hope will miss."
+                ></textarea>
+              </div>
+              <div class="form-actions game-actions challenge-footer-actions">
+                <button type="button" class="btn btn-primary" id="btn-challenge-submit">
+                  Submit defense (1 AP)
+                </button>
+              </div>
+            </div>
+
+            <div id="mode-panel-fix" class="mode-panel" hidden>
+              <p class="mode-panel-lead">
+                Edit <strong>how it works</strong> yourself to address this attack (add metering, funding,
+                a hard limit, etc.). The AI on the right can coach, but you apply the fix.
+              </p>
+              <div class="field">
+                <label for="challenge-how-edit">How it works (editable now)</label>
+                <textarea id="challenge-how-edit" rows="5" placeholder="Revise the mechanism…"></textarea>
+              </div>
+              <label class="mode-check">
+                <input type="checkbox" id="challenge-fund-patch" />
+                Funded fix (+1 Budget, deals 2 HP instead of 1)
+              </label>
+              <div class="form-actions game-actions challenge-footer-actions">
+                <button type="button" class="btn btn-primary" id="btn-challenge-apply-fix">
+                  Apply fix to invention (1 AP)
+                </button>
+              </div>
+            </div>
+
+            <div id="mode-panel-sidestep" class="mode-panel" hidden>
+              <p class="mode-panel-lead">
+                You dodge this challenger without answering. Costs <strong>1 AP</strong> and
+                <strong>1 Political will</strong>. Only once per mission run.
+              </p>
+              <div class="form-actions game-actions challenge-footer-actions">
+                <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep">
+                  Confirm sidestep (1 AP · 1 Will)
+                </button>
+              </div>
+            </div>
+
+            <!-- Essay mode fallback (feature off) uses defend panel + submit -->
+            <div class="form-actions game-actions challenge-footer-actions" id="challenge-footer">
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-challenge-end-turn"
+                hidden
+                title="Refill AP without advancing the calendar or crisis"
+              >
+                End turn
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
+                Deploy invention →
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- RIGHT: AI co-inventor (same partner as Invent) -->
+        <aside class="challenge-side vision-panel side-panel">
+          <div class="side-tabs" role="tablist">
+            <button type="button" class="side-tab active" data-ch-tab="coinventor" role="tab">
+              AI co-inventor
+            </button>
+          </div>
+          <div id="side-challenge-coinventor" class="side-pane" role="tabpanel">
+            <div id="ch-co-inventor-root" class="co-inventor-root"></div>
+            <div class="challenge-side-hint muted">
+              Coach, draft, or ask questions here. First help this scrutiny run is free; then 1 AP each.
+              You still choose Defend / Fix / Sidestep on the left.
+            </div>
+            <div class="challenge-help-actions challenge-side-actions">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-coach">
                 Coach me
               </button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-draft">
-                Draft an answer
+                Draft a defense
               </button>
             </div>
             <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
@@ -407,66 +535,13 @@
               <input
                 type="text"
                 id="challenge-help-input"
-                placeholder="Ask for help… e.g. “What would a good Moloch answer mention?”"
+                placeholder="Ask… e.g. “What would a good Moloch answer mention?”"
                 autocomplete="off"
               />
               <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
             </form>
           </div>
-
-          <div class="field">
-            <label for="challenge-answer" id="challenge-answer-label">Your written defense</label>
-            <textarea
-              id="challenge-answer"
-              rows="5"
-              placeholder="Name who acts, who pays, or what hard limit you respect — vague hope will miss."
-            ></textarea>
-          </div>
-          <div id="challenge-feedback" class="challenge-feedback" hidden></div>
-
-          <!-- Single action block: combat moves OR essay submit, then deploy -->
-          <div class="challenge-actions" id="challenge-actions">
-            <div id="scrutiny-moves" class="scrutiny-moves" hidden>
-              <p class="scrutiny-moves-lead">
-                Choose how you answer <em>this</em> challenger. Each move costs resources; clear every
-                challenger’s HP to unlock deploy.
-              </p>
-              <div class="scrutiny-move-grid" role="group" aria-label="Scrutiny moves">
-                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-argue">
-                  <span class="scrutiny-move-title">Defend in writing</span>
-                  <span class="scrutiny-move-cost">1 AP</span>
-                  <span class="scrutiny-move-blurb">
-                    Submit the text above. A strong, concrete answer deals 2 HP; a partial one deals 1;
-                    vague hope deals 0 (a miss). Two misses fail the whole challenge.
-                  </span>
-                </button>
-                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-patch">
-                  <span class="scrutiny-move-title">Fix the invention</span>
-                  <span class="scrutiny-move-cost">1 AP · optional +¤1</span>
-                  <span class="scrutiny-move-blurb">
-                    Patch how-it-works under fire (−1 HP). Spend 1 extra Budget for a funded patch (−2 HP).
-                  </span>
-                </button>
-                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-pivot">
-                  <span class="scrutiny-move-title">Sidestep once</span>
-                  <span class="scrutiny-move-cost">1 AP · 1 Will</span>
-                  <span class="scrutiny-move-blurb">
-                    Dodge this challenger completely. Only once per run; costs elegance later.
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div class="form-actions game-actions challenge-footer-actions">
-              <button type="button" class="btn btn-secondary" id="btn-challenge-submit">
-                Submit answer
-              </button>
-              <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
-                Deploy invention →
-              </button>
-            </div>
-          </div>
-        </div>
+        </aside>
       </div>
     </section>
 
@@ -577,7 +652,7 @@
             <li>
               <strong>Will (start 3, max 5)</strong> — political will, <em>not</em> a crisis “Trust” meter.
               <strong>Lobby</strong> = 1 AP + 1 Budget → +1 Will. Helps deploy relief (≥4) and can discount fielding cost;
-              Will 0 hurts deploy drop. Pivot spends 1 Will.
+              Will 0 hurts deploy drop. Sidestep spends 1 Will.
             </li>
           </ul>
 
@@ -648,7 +723,7 @@
           <h4>Outcome stars</h4>
           <p>
             Up to ★★★ for speed (few Waits / early year), honesty (feasible claims), and elegance (synergies).
-            Pivot softens elegance. Stars appear on the outcome screen only.
+            Sidestep softens elegance. Stars appear on the outcome screen only.
           </p>
 
           <h4>Tips</h4>
@@ -656,7 +731,7 @@
             <li>Stay local: who benefits on this street, clinic, or quay.</li>
             <li>End turn often; Wait only when later years are worth the crisis cost.</li>
             <li>Lobby toward Will 4 before deploy for mandate bonuses.</li>
-            <li>Save AP for Argue/Deploy — don’t burn it all on freeform AI chat.</li>
+            <li>Save AP for Defend and Deploy — don’t burn it all on freeform AI chat.</li>
             <li>Feasibility judges <em>claims</em>, not whether a card is “unlocked.”</li>
           </ul>
         </div>

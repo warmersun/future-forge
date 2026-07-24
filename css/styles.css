@@ -1316,15 +1316,117 @@ button:disabled {
   color: var(--text-mute);
 }
 
-/* Full content width (same shell as invent) — not a narrow center column */
+/* Challenge = 1:1 left challenge · right co-inventor (like invent center + side) */
+.challenge-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 57px);
+  margin-inline: var(--page-gutter);
+  width: calc(100% - 2 * var(--page-gutter));
+  gap: 0;
+}
+
+@media (max-width: 960px) {
+  .challenge-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: auto;
+  }
+}
+
+.challenge-main {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  padding: 1rem 1.1rem 1.5rem;
+}
+
+.challenge-side {
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1, rgba(7, 11, 20, 0.4));
+}
+
+.challenge-side .side-tabs {
+  flex-shrink: 0;
+}
+
+.challenge-side .side-pane {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.challenge-side .co-inventor-root {
+  flex: 1;
+  min-height: 12rem;
+}
+
+.challenge-side-hint {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.challenge-side-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .challenge-step-content {
   max-width: 1280px;
   width: 100%;
 }
 
 .challenge-step-card {
-  padding: 1.75rem 2rem;
+  padding: 1.25rem 1.35rem 1.5rem;
   max-width: none;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mode-panel {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(7, 11, 20, 0.4);
+}
+
+.mode-panel-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.mode-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0.5rem 0 0.75rem;
+  cursor: pointer;
+}
+
+.scrutiny-move-btn.is-selected {
+  border-color: rgba(56, 189, 248, 0.7) !important;
+  background: rgba(56, 189, 248, 0.14) !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25);
+}
+
+.scrutiny-move-btn.is-selected .scrutiny-move-title {
+  color: var(--accent, #38bdf8);
 }
 
 .challenger-banner {
