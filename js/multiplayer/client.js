@@ -175,7 +175,8 @@ export class RoomClient {
             if (msg.missionMeta) this.snapshot.missionMeta = msg.missionMeta;
             if (msg.phase) this.snapshot.phase = msg.phase;
             if (msg.settings) this.snapshot.settings = msg.settings;
-            if (msg.fieldLocks) this.snapshot.fieldLocks = msg.fieldLocks;
+            // Always apply fieldLocks when present (including {} after unlock)
+            if (msg.fieldLocks !== undefined) this.snapshot.fieldLocks = msg.fieldLocks;
           }
           this.emit(msg);
           return;

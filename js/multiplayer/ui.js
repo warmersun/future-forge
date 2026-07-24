@@ -12,6 +12,7 @@ import {
   startHotseatMission,
   hotseatApplyAction,
 } from "./hotseat.js";
+import { paintFieldLockElements } from "./locks-ui.js";
 
 /**
  * @param {{ showScreen: Function, flashToast: Function, $: Function, $$: Function, escapeHtml: Function }} api
@@ -178,20 +179,11 @@ export function initFriendsUi(api) {
   }
 
   function paintLocks(locks) {
-    for (const [field, hintId] of [
-      ["inventionName", "mp-lock-name"],
-      ["inventionHow", "mp-lock-how"],
-      ["inventionImpact", "mp-lock-impact"],
-    ]) {
-      const el = $(`#${hintId}`);
-      if (!el) continue;
-      const lock = locks[field];
-      if (lock && lock.until > Date.now()) {
-        el.textContent = `${lock.displayName} is editing…`;
-      } else {
-        el.textContent = "";
-      }
-    }
+    paintFieldLockElements(locks || {}, {
+      inventionName: $("#mp-lock-name"),
+      inventionHow: $("#mp-lock-how"),
+      inventionImpact: $("#mp-lock-impact"),
+    });
   }
 
   function paintStack(sim) {
@@ -329,6 +321,18 @@ export function initFriendsUi(api) {
         showScreen("room-lobby");
         renderLobby();
       }
+    }
+    // Soft locks + settings must refresh labels even when no sim patch arrives
+    if (evt.type === "locks") {
+      if (client.snapshot && evt.fieldLocks) {
+        client.snapshot.fieldLocks = evt.fieldLocks;
+      }
+      paintLocks(client.snapshot?.fieldLocks || evt.fieldLocks || {});
+      return;
+    }
+    if (evt.type === "settings") {
+      if (client.snapshot?.phase === "playing") renderPlay();
+      else renderLobby();
     }
     if (evt.type === "patch") {
       renderPlay();
