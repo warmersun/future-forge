@@ -8,6 +8,9 @@ import {
   newNormalExtraDrop,
   applyStagedDropStep,
   visionStageIdForDeployStage,
+  successChancePct,
+  rollDeploySuccess,
+  FEASIBILITY_SUCCESS_PCT,
 } from "./deploy.js";
 
 describe("staged deploy pool", () => {
@@ -83,5 +86,25 @@ describe("staged deploy pool", () => {
     });
     assert.ok(r.drop >= 2);
     assert.ok(r.parts.length >= 1);
+  });
+
+  it("success odds: red 10, yellow 50, green 85 (not 100)", () => {
+    assert.equal(successChancePct("red"), 10);
+    assert.equal(successChancePct("yellow"), 50);
+    assert.equal(successChancePct("green"), 85);
+    assert.ok(FEASIBILITY_SUCCESS_PCT.green < 100);
+  });
+
+  it("rollDeploySuccess respects pct with fixed rng", () => {
+    // roll 1..100 from r: floor(r*100)+1 → r=0 → 1, r=0.099 → 10, r=0.1 → 11
+    const failRed = rollDeploySuccess("red", () => 0.1); // roll 11 > 10
+    assert.equal(failRed.ok, false);
+    assert.equal(failRed.pct, 10);
+    const passRed = rollDeploySuccess("red", () => 0); // roll 1 <= 10
+    assert.equal(passRed.ok, true);
+    const passGreen = rollDeploySuccess("green", () => 0.84); // roll 85 <= 85
+    assert.equal(passGreen.ok, true);
+    const failGreen = rollDeploySuccess("green", () => 0.85); // roll 86 > 85
+    assert.equal(failGreen.ok, false);
   });
 });

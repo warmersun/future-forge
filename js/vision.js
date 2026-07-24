@@ -29,9 +29,9 @@ export class VisionRenderer {
    */
   constructor(root) {
     this.root = root;
-    this.img = root.querySelector(".vision-image");
-    this.status = root.querySelector(".vision-status");
-    this.overlay = root.querySelector(".vision-loading");
+    this.img = root?.querySelector?.(".vision-image") || null;
+    this.status = root?.querySelector?.(".vision-status") || null;
+    this.overlay = root?.querySelector?.(".vision-loading") || null;
     this.sessionId = crypto.randomUUID?.() || `v-${Date.now()}`;
     this.lastFingerprint = "";
     this.pending = null;
@@ -39,6 +39,8 @@ export class VisionRenderer {
     this.busy = false;
     this.queue = null;
     this.currentUrl = "";
+    /** Optional extra roots to keep in sync (e.g. invent + challenge panels) */
+    this.mirrorRoots = [];
   }
 
   destroy() {
@@ -46,20 +48,56 @@ export class VisionRenderer {
     this.pending = null;
   }
 
-  /** Reset session (new challenge) so present-day regenerates cleanly */
+  /**
+   * Point this renderer at another panel (challenge vs invent) without new session.
+   * @param {HTMLElement|null} root
+   */
+  attach(root) {
+    if (!root) return;
+    this.root = root;
+    this.img = root.querySelector(".vision-image");
+    this.status = root.querySelector(".vision-status");
+    this.overlay = root.querySelector(".vision-loading");
+    if (this.currentUrl && this.img) {
+      this.img.hidden = false;
+      this.img.src = this.currentUrl;
+    }
+  }
+
+  /** Keep invent/challenge canvases showing the same latest frame */
+  addMirror(root) {
+    if (root && !this.mirrorRoots.includes(root)) this.mirrorRoots.push(root);
+  }
+
+  /** Reset session (new mission) so present-day regenerates cleanly */
   newSession() {
     this.sessionId = crypto.randomUUID?.() || `v-${Date.now()}`;
     this.lastFingerprint = "";
     this.currentUrl = "";
-    if (this.img) {
-      this.img.removeAttribute("src");
-      this.img.hidden = true;
-    }
+    const clearImg = (img) => {
+      if (!img) return;
+      img.removeAttribute("src");
+      img.hidden = true;
+    };
+    clearImg(this.img);
+    for (const r of this.mirrorRoots) clearImg(r.querySelector?.(".vision-image"));
     this.setStatus("A new horizon waits to be imagined…");
   }
 
   resize() {
     /* no-op — image is CSS-sized */
+  }
+
+  challengeBeatKey(beat) {
+    if (!beat) return "";
+    return [
+      beat.angle || "",
+      beat.phase || "",
+      (beat.question || "").slice(0, 80),
+      (beat.response || "").slice(0, 120),
+      beat.quality || "",
+      beat.move || "",
+    ].join("|");
   }
 
   /**
@@ -72,6 +110,7 @@ export class VisionRenderer {
    * @param {string} [state.inventionHow]
    * @param {string} [state.inventionImpact]
    * @param {string} [state.inventionRisk]
+   * @param {object} [state.challengeBeat]
    * @param {boolean} [state.immediate]
    * @param {boolean} [state.force]
    * @param {number} [state.debounceMs]
@@ -87,6 +126,22 @@ export class VisionRenderer {
     this.timer = setTimeout(() => this.flush(), delay);
   }
 
+  applyImageUrl(url) {
+    if (!url) return;
+    this.currentUrl = url;
+    const apply = (img) => {
+      if (!img) return;
+      img.hidden = false;
+      img.classList.add("is-fading");
+      const show = () => img.classList.remove("is-fading");
+      img.onload = show;
+      img.src = url;
+      if (img.complete) show();
+    };
+    apply(this.img);
+    for (const r of this.mirrorRoots) apply(r.querySelector?.(".vision-image"));
+  }
+
   async flush() {
     const state = this.pending;
     if (!state?.challenge) return;
@@ -99,6 +154,7 @@ export class VisionRenderer {
           .map(([k, v]) => `${k}:${v}`)
           .join(",")
       : "";
+    const beatKey = this.challengeBeatKey(state.challengeBeat);
     const fingerprint = [
       state.challenge.id,
       state.stageId,
@@ -109,6 +165,7 @@ export class VisionRenderer {
       (state.inventionName || "").trim(),
       howKey,
       lifeKey,
+      beatKey,
     ].join("|");
     if (!state.force && fingerprint === this.lastFingerprint && this.currentUrl) {
       return;
@@ -121,13 +178,18 @@ export class VisionRenderer {
 
     this.busy = true;
     const hasNarrative = Boolean(howKey || lifeKey);
+    const underChallenge = Boolean(state.challengeBeat?.angle);
     this.setLoading(
       true,
-      state.stageId === "present" && !this.currentUrl
-        ? "Imagining the present…"
-        : hasNarrative
-          ? "Painting your pathway into the world…"
-          : "Imagining how the future shifts…"
+      underChallenge
+        ? state.challengeBeat?.response
+          ? "Updating the scene with your response…"
+          : "Imagining the challenge in this place…"
+        : state.stageId === "present" && !this.currentUrl
+          ? "Imagining the present…"
+          : hasNarrative
+            ? "Painting your pathway into the world…"
+            : "Imagining how the future shifts…"
     );
 
     try {
@@ -141,6 +203,7 @@ export class VisionRenderer {
         year: state.year || null,
         place: state.place || "",
         pressure: state.pressure || null,
+        challengeBeat: state.challengeBeat || null,
         challenge: {
           id: state.challenge.id,
           title: state.challenge.title,
@@ -174,33 +237,25 @@ export class VisionRenderer {
 
       const hadPriorImage = Boolean(this.currentUrl);
       this.lastFingerprint = fingerprint;
-      this.currentUrl = data.imageUrl;
-      if (this.img && data.imageUrl) {
-        this.img.hidden = false;
-        // Fade transition
-        this.img.classList.add("is-fading");
-        const show = () => {
-          this.img.classList.remove("is-fading");
-        };
-        this.img.onload = show;
-        this.img.src = data.imageUrl;
-        if (this.img.complete) show();
-      }
+      if (data.imageUrl) this.applyImageUrl(data.imageUrl);
 
       let modeLabel = "Generated with Imagine";
       if (data.cached) {
         modeLabel = "Cached vision";
       } else if (data.mode === "edit" || data.continuity === "same-frame") {
-        modeLabel = "Evolved in place";
+        modeLabel = underChallenge ? "Challenge evolved in place" : "Evolved in place";
       } else if (
         data.continuity === "new-shot" ||
         data.continuity === "new-scene" ||
         (data.mode === "generate" && hadPriorImage)
       ) {
-        modeLabel = "New scene · same place";
+        modeLabel = underChallenge ? "Challenge scene · same place" : "New scene · same place";
       }
       const placeBit = data.place ? ` · ${data.place}` : "";
-      this.setStatus(`${modeLabel}${placeBit} · ${state.stage?.name || state.stageId}`);
+      const stageBit = underChallenge
+        ? state.challengeBeat?.label || "Challenge"
+        : state.stage?.name || state.stageId;
+      this.setStatus(`${modeLabel}${placeBit} · ${stageBit}`);
     } catch (e) {
       console.error("[vision]", e);
       this.setStatus(e.message || "Could not imagine this future");

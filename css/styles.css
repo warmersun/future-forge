@@ -143,6 +143,150 @@ button:disabled {
   position: relative;
   z-index: 1;
   max-width: 640px;
+  width: 100%;
+}
+
+/* G4 — daily + pins on title */
+.daily-card {
+  margin-top: 1.75rem;
+  text-align: left;
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: linear-gradient(160deg, rgba(56, 189, 248, 0.1), rgba(7, 11, 20, 0.55));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.daily-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.daily-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.daily-hint {
+  font-size: 0.78rem;
+}
+
+.daily-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.daily-meta {
+  margin: 0 0 0.45rem;
+  font-size: 0.84rem;
+}
+
+.daily-scene {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.daily-actions {
+  justify-content: flex-start;
+  margin: 0;
+}
+
+.pins-panel {
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.pins-heading {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.pins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.4);
+}
+
+.pin-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pin-copy strong {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.pin-copy .muted {
+  font-size: 0.78rem;
+}
+
+.pin-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.mission-card-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mission-card-wrap .challenge-card {
+  width: 100%;
+}
+
+.btn-pin {
+  align-self: flex-end;
+  margin: -0.35rem 0.35rem 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.65);
+  color: var(--text-mute);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.btn-pin:hover:not(:disabled) {
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fbbf24;
+}
+
+.btn-pin.is-pinned,
+#btn-daily-pin.is-pinned {
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
 }
 
 .logo-mark {
@@ -1176,6 +1320,71 @@ button:disabled {
   border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
+/* Pulse resource when an action fails for that currency */
+.hud-ap.hud-pulse,
+.hud-budget.hud-pulse,
+.hud-will.hud-pulse {
+  animation: hudPulse 0.7s ease 2;
+}
+
+@keyframes hudPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  40% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.35);
+    border-color: rgba(248, 113, 113, 0.7);
+  }
+}
+
+/* Toasts sit under the top bar, next to resource counters */
+#toast {
+  position: fixed;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 300;
+  max-width: min(36rem, 92vw);
+  padding: 0.55rem 1.05rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--text);
+  background: var(--bg-elevated, #151f33);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+#toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: none;
+}
+
+#toast.is-resource-ap {
+  border-color: rgba(167, 139, 250, 0.55);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(167, 139, 250, 0.2);
+}
+
+#toast.is-resource-budget {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(251, 191, 36, 0.2);
+}
+
+#toast.is-resource-will {
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(52, 211, 153, 0.2);
+}
+
+/* Stay top-aligned even on narrow screens so messages sit by the resource HUD */
+
 .wait-preview {
   margin: 0.5rem 0 0.25rem;
   font-size: 0.8rem;
@@ -1594,6 +1803,27 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+
+.challenge-side .side-pane[hidden] {
+  display: none !important;
+}
+
+.challenge-side #side-challenge-vision {
+  /* Match invent vision pane: canvas grows, less scroll thrash */
+  overflow: hidden;
+}
+
+.challenge-side #challenge-vision-root {
+  flex: 1;
+  min-height: 14rem;
+}
+
+.challenge-vision-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .challenge-side .co-inventor-root {
@@ -2381,6 +2611,57 @@ button:disabled {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--domain, var(--text-mute));
+  font-weight: 600;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.tech-cost-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-top: 0.4rem;
+}
+
+.tech-cost-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: rgba(7, 11, 20, 0.45);
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.tech-cost-budget {
+  /* Yellow chip, short label (e.g. 1$) — no "Budget" word */
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.tech-cost-will {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.tech-cost-ap {
+  color: var(--accent-2, #a78bfa);
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.1);
+}
+
+.tech-cost-owned {
+  color: var(--accent-3);
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
   font-weight: 600;
 }
 

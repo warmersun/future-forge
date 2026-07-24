@@ -75,6 +75,44 @@ export function computeDeployDrop(opts) {
 /* —— PR7 staged deploy (pilot → scale → new normal) —— */
 
 /**
+ * Success odds by feasibility traffic light.
+ * Green is strong but never certain.
+ */
+export const FEASIBILITY_SUCCESS_PCT = {
+  red: 10,
+  yellow: 50,
+  green: 85,
+};
+
+/**
+ * @param {"red"|"yellow"|"green"|string} level
+ * @returns {number} 0–100
+ */
+export function successChancePct(level) {
+  const key = String(level || "yellow").toLowerCase();
+  return FEASIBILITY_SUCCESS_PCT[key] ?? FEASIBILITY_SUCCESS_PCT.yellow;
+}
+
+/**
+ * Roll success against a traffic-light level.
+ * @param {"red"|"yellow"|"green"|string} level
+ * @param {() => number} [rng] returns 0..1
+ * @returns {{ ok: boolean, pct: number, roll: number, level: string }}
+ *   roll is 1–100 (inclusive); success if roll <= pct
+ */
+export function rollDeploySuccess(level, rng = Math.random) {
+  const pct = successChancePct(level);
+  const r = typeof rng === "function" ? rng() : Math.random();
+  const roll = Math.min(100, Math.max(1, Math.floor(r * 100) + 1));
+  return {
+    ok: roll <= pct,
+    pct,
+    roll,
+    level: String(level || "yellow").toLowerCase(),
+  };
+}
+
+/**
  * Freeze total crisis relief at unlock time (one baseline deploy pool).
  * @param {number} fullDrop
  */

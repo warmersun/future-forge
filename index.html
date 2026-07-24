@@ -42,6 +42,27 @@
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
           <button type="button" class="btn btn-primary" id="btn-start">Choose a theme →</button>
         </div>
+
+        <article id="daily-card" class="daily-card" hidden>
+          <div class="daily-card-head">
+            <span class="daily-badge">Daily · <span id="daily-seed-label">—</span></span>
+            <span class="daily-hint muted">Same seed for everyone today</span>
+          </div>
+          <h3 id="daily-title">Today’s forge</h3>
+          <p id="daily-meta" class="daily-meta muted"></p>
+          <p id="daily-scene" class="daily-scene"></p>
+          <div class="form-actions daily-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-daily-play">Play daily →</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-pin" title="Pin up to 3 missions">
+              Pin
+            </button>
+          </div>
+        </article>
+
+        <section id="pins-panel" class="pins-panel" hidden>
+          <h3 class="pins-heading">Pinned missions <span class="muted">(max 3)</span></h3>
+          <div id="pins-list" class="pins-list"></div>
+        </section>
       </div>
     </section>
 
@@ -129,7 +150,7 @@
           <span class="hud-year" id="hud-year">2026</span>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
           <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
-          <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5</span>
+          <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
           <span class="hud-will" id="hud-will" hidden title="Political will">Will 3</span>
         </div>
         <div
@@ -350,7 +371,7 @@
           <span class="hud-year" id="ch-hud-year">2026</span>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
           <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
-          <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5</span>
+          <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
           <span class="hud-will" id="ch-hud-will" hidden title="Political will">Will 3</span>
         </div>
         <div class="hud-actions">
@@ -515,16 +536,15 @@
               <p id="deploy-bay-status" class="deploy-bay-status muted"></p>
               <div class="deploy-bay-actions form-actions game-actions">
                 <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary">
-                  Deploy Pilot →
+                  Try Pilot →
                 </button>
                 <button
                   type="button"
                   class="btn btn-secondary"
-                  id="btn-deploy-hold"
-                  hidden
-                  title="End the mission with partial relief — no further stages"
+                  id="btn-deploy-back-invent"
+                  title="Return to Invent to rework the idea, then come back to try again"
                 >
-                  Hold the line
+                  ← Back to Invent
                 </button>
               </div>
             </div>
@@ -540,21 +560,70 @@
               >
                 End turn
               </button>
-              <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
-                Deploy invention →
-              </button>
             </div>
           </div>
         </main>
 
-        <!-- RIGHT: AI co-inventor (same partner as Invent) -->
+        <!-- RIGHT: Future vision + AI co-inventor (same pattern as Invent) -->
         <aside class="challenge-side vision-panel side-panel">
-          <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-ch-tab="coinventor" role="tab">
+          <div class="side-tabs" role="tablist" aria-label="Challenge side panel">
+            <button
+              type="button"
+              class="side-tab active"
+              data-ch-tab="vision"
+              role="tab"
+              aria-selected="true"
+            >
+              Future vision
+            </button>
+            <button
+              type="button"
+              class="side-tab"
+              data-ch-tab="coinventor"
+              role="tab"
+              aria-selected="false"
+            >
               AI co-inventor
             </button>
           </div>
-          <div id="side-challenge-coinventor" class="side-pane" role="tabpanel">
+
+          <div id="side-challenge-vision" class="side-pane" role="tabpanel">
+            <div class="vision-stage-bar">
+              <div>
+                <div class="vision-stage-name" id="challenge-vision-stage-name">Under challenge</div>
+                <div class="vision-stage-blurb" id="challenge-vision-stage-blurb">
+                  How the place looks while this critic presses the idea.
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-regen-challenge-vision"
+                title="Regenerate challenge vision"
+              >
+                ↻
+              </button>
+            </div>
+            <div class="vision-canvas-wrap" id="challenge-vision-root">
+              <img class="vision-image" alt="Vision of this place under challenge" hidden />
+              <div class="vision-loading" hidden>
+                <div class="vision-loading-inner">
+                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="vision-loading-text">Imagining the challenge…</span>
+                </div>
+              </div>
+              <div class="vision-placeholder">
+                The critic steps in — the image follows the challenge and your response
+              </div>
+              <div class="vision-status" aria-live="polite"></div>
+            </div>
+            <p class="challenge-vision-hint muted">
+              Same place as Invent. Updates when the critic poses, and again when you Defend, Fix, or
+              Sidestep.
+            </p>
+          </div>
+
+          <div id="side-challenge-coinventor" class="side-pane" role="tabpanel" hidden>
             <div id="ch-co-inventor-root" class="co-inventor-root"></div>
             <div class="challenge-side-hint muted">
               Coach, draft, or ask questions here. First help this scrutiny run is free; then 1 AP each.
@@ -624,7 +693,10 @@
         <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Technologies you used</h3>
         <div id="outcome-techs" class="learn-grid"></div>
 
-        <div class="form-actions" style="justify-content: center">
+        <div class="form-actions" style="justify-content: center; flex-wrap: wrap; gap: 0.65rem">
+          <button type="button" class="btn btn-secondary" id="btn-outcome-share" title="Download a shareable run card (PNG)">
+            Share card
+          </button>
           <button type="button" class="btn btn-secondary" id="btn-outcome-retry">Keep inventing</button>
           <button type="button" class="btn btn-primary" id="btn-outcome-new">New mission</button>
         </div>
@@ -711,8 +783,8 @@
               <article class="help-tile">
                 <h5>Budget <span class="help-tile-meta">start 5</span></h5>
                 <p>
-                  Capital for techs (card ¤) and <strong>deploy fielding</strong>. Same-turn remove refunds half.
-                  Not refilled by End turn.
+                  Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
+                  Not refilled by End turn. Solo: <strong>Budget 0$ is game over</strong> — keep cash to field.
                 </p>
               </article>
               <article class="help-tile">
@@ -805,37 +877,94 @@
             </div>
           </section>
 
-          <!-- Deploy + tips -->
-          <section class="help-block help-block-last">
+          <!-- Deploy bay: Pilot → Scale → New normal -->
+          <section class="help-block">
+            <div class="help-block-head">
+              <h4 class="help-block-title">Deploy bay — Pilot · Scale · New normal</h4>
+              <p class="help-note">
+                After Challenge, crisis relief is <strong>frozen</strong> into a pool. Pilot and Scale
+                each <strong>roll to succeed</strong> — they are not automatic. Odds come from the
+                traffic light: <strong>Red 10% · Yellow 50% · Green 85%</strong> (green is strong, never
+                certain). Wait stays blocked while the bay is open.
+              </p>
+            </div>
             <div class="help-tiles help-tiles-2">
-              <article class="help-tile">
-                <h5>Deploy bay</h5>
-                <ul class="help-list">
-                  <li>
-                    <strong>Frozen pool:</strong> total crisis relief is locked when you clear Challenge
-                    (same power as one classic deploy).
-                  </li>
-                  <li>
-                    <strong>Pilot</strong> (fielding cost once: AP + Budget) takes ~half the pool.
-                    <strong>Scale</strong> spends the rest. <strong>New normal</strong> is a win check
-                    (optional +1 if Will ≥ 4 and pool was big).
-                  </li>
-                  <li>
-                    After Pilot or Scale you may <strong>Hold the line</strong> for a partial outcome.
-                    Wait stays blocked until you finish.
-                  </li>
-                </ul>
+              <article class="help-tile help-tile-accent">
+                <h5>1 · Pilot</h5>
+                <p class="help-cost">Each try: AP + Budget · chance = overall feasibility</p>
+                <p>
+                  First fielding. You pay each attempt. Success: ~half the crisis pool drops; mission
+                  counts as solved; Scale unlocks. Fail: no crisis drop — retry Pilot (pay again) or
+                  <strong>Back to Invent</strong> to rework.
+                </p>
+              </article>
+              <article class="help-tile help-tile-accent">
+                <h5>2 · Scale</h5>
+                <p class="help-cost">Each try: AP + Budget + Will (Will free if Will ≥ 4)</p>
+                <p>
+                  Wider rollout. Chance uses the <strong>Scale</strong> feasibility dim only (not the
+                  overall light). Success spends the rest of the crisis pool and automatically reaches
+                  New normal. Fail: Pilot still stands — retry Scale or go back to Invent.
+                </p>
+              </article>
+              <article class="help-tile help-tile-move">
+                <h5>3 · New normal</h5>
+                <p class="help-cost">Automatic when Scale succeeds</p>
+                <p>
+                  Not a separate button. On Scale success the mission ends: full <strong>win</strong> if
+                  meters are low enough, else <strong>partial</strong>. Optional +1 crisis drop if Will ≥ 4
+                  and the original pool was ≥ 4.
+                </p>
               </article>
               <article class="help-tile">
-                <h5>Stars &amp; tips</h5>
-                <ul class="help-list">
-                  <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
-                  <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
-                  <li>Lobby toward Will 4 before deploy. Save AP for Defend and Deploy.</li>
-                  <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
-                </ul>
+                <h5>← Back to Invent</h5>
+                <p class="help-cost">Anytime in the deploy bay</p>
+                <p>
+                  Rework stack, story, or resources, then return via <strong>Back to deploy bay</strong>.
+                  You do not lose a successful Pilot; failed attempts only cost what you already spent.
+                </p>
               </article>
             </div>
+            <p class="help-note" style="margin-top: 0.65rem; margin-bottom: 0">
+              Feasibility dims: Timing, Story, Local fit, Resources, Stack, and <strong>Scale</strong>.
+              Overall light aggregates all of them (including Scale). Pilot uses the overall light;
+              Scale uses the Scale dim alone. Toasts only say succeeded or failed — not the raw roll.
+            </p>
+          </section>
+
+          <!-- Meta -->
+          <section class="help-block">
+            <h4 class="help-block-title">Daily · Pins · Share</h4>
+            <ul class="help-list">
+              <li>
+                <strong>Daily mission</strong> on the home screen — same date seed for everyone today.
+                Play or pin it.
+              </li>
+              <li>
+                <strong>Pins</strong> (max 3) save missions on the home screen for later. Pin from Daily or
+                the mission list.
+              </li>
+              <li>
+                <strong>Share card</strong> on the outcome screen downloads a PNG of your run (stars, place,
+                stack) — no server required.
+              </li>
+            </ul>
+          </section>
+
+          <!-- Tips -->
+          <section class="help-block help-block-last">
+            <h4 class="help-block-title">Stars &amp; tips</h4>
+            <ul class="help-list">
+              <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
+              <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
+              <li>Lobby toward Will 4 before Pilot. Save AP for Defend and fielding cost.</li>
+              <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
+              <li>
+                Stronger stack, story, challenge quality, and Will ≥ 4 increase the frozen relief pool
+                at unlock — stages only split that pool; they don’t recompute it later.
+              </li>
+              <li>Solo: <strong>Budget 0$ is game over</strong> — keep capital to field Pilot/Scale.</li>
+            </ul>
           </section>
         </div>
 

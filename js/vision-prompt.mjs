@@ -105,6 +105,94 @@ function groundInPlace(place, text) {
  * Heuristic shot decision — control plane only.
  * @returns {{ mode: "edit"|"generate", continuity: string, happening: string, subjects: string[], reason: string }}
  */
+/**
+ * Challenge-step beat for vision (critic + player response).
+ * Kept out of World Card so geography stays frozen.
+ */
+export function challengeBeatKey(beat) {
+  if (!beat || typeof beat !== "object") return "";
+  return [
+    beat.angle || "",
+    beat.phase || "",
+    clipText(beat.question, 120),
+    clipText(beat.response, 200),
+    beat.quality || "",
+    beat.move || "",
+  ]
+    .join("|")
+    .toLowerCase();
+}
+
+function shotFromChallengeBeat(body, prev, worldCard) {
+  const beat = body.challengeBeat;
+  if (!beat || !beat.angle) return null;
+  const place = worldCard.place || "this place";
+  const how = clipText(body.inventionHow, 360);
+  const life = clipText(body.inventionImpact, 280);
+  const names = techNames(body);
+  const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
+  const label = clipText(beat.label || beat.angle, 40) || "critic";
+  const question = clipText(beat.question, 220);
+  const speech = clipText(beat.speech, 220);
+  const response = clipText(beat.response, 280);
+  const move = String(beat.move || "");
+  const quality = String(beat.quality || "");
+  const phase = String(beat.phase || "posed");
+
+  // Pose: invention under hostile scrutiny in this place
+  if (phase === "posed" || !response) {
+    const pressureBits = [
+      speech || `${label} challenges whether the plan can work here.`,
+      question ? `The open question hangs over the scene: ${question}` : "",
+      how ? `The invention as currently designed: ${how}` : "",
+      life ? `Everyday stakes: ${life}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      mode: hasPrior ? "edit" : "generate",
+      continuity: hasPrior ? "same-frame" : "baseline",
+      reason: "Challenge posed — critic pressure in the same place",
+      happening: groundInPlace(
+        place,
+        `Tension in ${place}: the local invention is under public challenge from ${label}. ${pressureBits} People, signs of the local crisis, and the invention's early form are visible — not a cartoon villain, a real documentary moment of pushback.`
+      ),
+      subjects: names,
+    };
+  }
+
+  // After player move: scene reflects defense / fix / sidestep
+  let moveLine = "";
+  if (move === "defend") {
+    moveLine =
+      quality === "hit"
+        ? `A concrete public defense lands: specific actors, funding, or hard limits are being explained and accepted.`
+        : quality === "glance"
+          ? `A partial defense is offered — some substance, still under debate in the room.`
+          : `A weak defense fails to settle the room; doubt remains visible.`;
+    if (response) moveLine += ` What they argued: ${response}`;
+  } else if (move === "fix") {
+    moveLine = `The invention is being revised under fire — mechanisms change on the ground. ${how || response || "Designers rewrite how it works in public."}`;
+  } else if (move === "sidestep") {
+    moveLine = `The team sidesteps this critic for now — attention pivots away from a full answer; political capital is spent to move on.`;
+  } else if (phase === "cleared") {
+    moveLine = `The challenge has been cleared. Relief and cautious confidence return to ${place}; the invention can move toward fielding.`;
+  } else {
+    moveLine = response || `The team answers ${label} under pressure.`;
+  }
+
+  return {
+    mode: hasPrior ? "edit" : "generate",
+    continuity: hasPrior ? "same-frame" : "new-shot",
+    reason: `Challenge response (${move || phase})`,
+    happening: groundInPlace(
+      place,
+      `In ${place}, after facing ${label}: ${moveLine} Keep the same locale, climate, and terrain; show the social and physical consequence of this moment.`
+    ),
+    subjects: names,
+  };
+}
+
 export function decideShot(body, prev, worldCard) {
   const place = worldCard.place || "this place";
   const techs = body.techs || [];
@@ -115,6 +203,9 @@ export function decideShot(body, prev, worldCard) {
   const names = techNames(body);
   const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
   const force = Boolean(body.force);
+
+  const challengeShot = shotFromChallengeBeat(body, prev, worldCard);
+  if (challengeShot) return challengeShot;
 
   if (!hasPrior) {
     return {
@@ -463,11 +554,13 @@ export function visionFingerprint(body) {
         .map(([k, v]) => `${k}:${v}`)
         .join(",")
     : "";
-  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${name}|${how}|${life}`;
+  const beat = challengeBeatKey(body.challengeBeat);
+  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${name}|${how}|${life}|${beat}`;
 }
 
 export function shotNarrativeKey(body) {
   const how = clipText(body.inventionHow, 400);
   const impact = clipText(body.inventionImpact, 400);
-  return `${how}|${impact}|${techNames(body).join(",")}`;
+  const beat = challengeBeatKey(body.challengeBeat);
+  return `${how}|${impact}|${techNames(body).join(",")}|${beat}`;
 }

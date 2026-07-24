@@ -78,6 +78,49 @@ export function deployActionCost(techs = [], opts = {}) {
 }
 
 /**
+ * Cost to scale a successful pilot city-wide / program-wide.
+ * Uses capital + political will (Resources dim), not only attention.
+ *
+ * @param {object[]} techs
+ * @param {{ will?: number }} [opts]
+ * @returns {{ ap: number, budget: number, will: number, parts: { id: string, label: string, amount: number }[] }}
+ */
+export function scaleActionCost(techs = [], opts = {}) {
+  const will = Number(opts.will) || 0;
+  const parts = [];
+  let budget = 1;
+  parts.push({ id: "scale_base", label: "Scale rollout (base)", amount: 1 });
+
+  if (techs.length >= 3) {
+    budget += 1;
+    parts.push({ id: "scale_stack", label: "Larger stack (3+ techs)", amount: 1 });
+  }
+  if (stackFrontierRisk(techs) >= 3) {
+    budget += 1;
+    parts.push({ id: "scale_frontier", label: "Frontier scale ops", amount: 1 });
+  }
+
+  let willCost = 1;
+  parts.push({ id: "scale_will", label: "Political will to expand", amount: 1 });
+  if (will >= 4) {
+    willCost = 0;
+    parts.push({ id: "scale_mandate", label: "Will ≥ 4 (mandate covers expansion)", amount: -1 });
+  }
+
+  if (will >= 4 && budget > 1) {
+    budget -= 1;
+    parts.push({ id: "scale_funding", label: "Will ≥ 4 (funding help)", amount: -1 });
+  }
+
+  return {
+    ap: 1,
+    budget: Math.max(1, budget),
+    will: Math.max(0, willCost),
+    parts,
+  };
+}
+
+/**
  * G2 deploy modifiers on top of baseline drop.
  * @param {number} drop
  * @param {number} will

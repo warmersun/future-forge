@@ -37,6 +37,8 @@ import {
   freezeStagedDropPool,
   applyStagedDropStep,
   visionStageIdForDeployStage,
+  successChancePct,
+  rollDeploySuccess,
 } from "./sim/deploy.js";
 import { isWin as simIsWin, isCollapsed as simIsCollapsed } from "./sim/collapse.js";
 import { scoreRun, starLabel } from "./sim/scoring.js";
@@ -45,7 +47,18 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
-import { techCost, deployActionCost } from "./sim/economy.js";
+import { techCost, deployActionCost, scaleActionCost } from "./sim/economy.js";
+import {
+  dailySeedString,
+  pickDailyMission,
+  loadPins,
+  togglePin,
+  isPinned,
+  MAX_PINS,
+  renderShareCard,
+  downloadDataUrl,
+  kindLabelForOutcome,
+} from "./meta.js";
 import {
   pickChallengeAngles,
   encounterCountForFeasibility,
@@ -88,6 +101,10 @@ const state = {
   vision: null,
   coInventor: null,
   sideTab: "vision",
+  /** Challenge side panel: vision | coinventor */
+  challengeSideTab: "vision",
+  /** Last vision beat for challenge (pose / defend / fix / sidestep) */
+  challengeVisionBeat: null,
   lastNews: "",
   waitReport: "",
   outcome: null,
@@ -138,9 +155,12 @@ const state = {
   dropNewNormalApplied: 0,
   stagedDropParts: null,
   deployFieldPaid: false,
+  /** @type {{ stage: string, ok: boolean, pct: number, roll: number, level: string }|null} */
+  lastDeployRoll: null,
 };
 
-const STORAGE_SCENARIOS = "future-forge:scenarioCache";
+/** v3: curated seed packs for all themes (invalidates old AI/local caches) */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v3";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -170,11 +190,42 @@ function dispatchSim(type, payload = {}) {
     apMax: state.apMax ?? GAME.apMax,
     techById,
   });
-  if (result.ok) applySimSliceToState(state, result.sim);
+  if (result.ok) {
+    applySimSliceToState(state, result.sim);
+    // Solo: Budget 0 is terminal (after any spend that emptied the wallet)
+    if (type !== "wait" && type !== "end_turn") {
+      maybeBudgetGameOver({ from: type });
+    }
+  }
   return result;
 }
 
+/**
+ * Solo rule: running out of Budget ends the mission.
+ * @returns {boolean} true if the run just ended
+ */
+function maybeBudgetGameOver(meta = {}) {
+  if (!budgetWillEnabled()) return false;
+  if (state.screen === "outcome") return false;
+  if (!state.mission) return false;
+  if ((state.budget ?? 0) > 0) return false;
+  flashToast("Budget hit 0$ — game over. Capital ran out before the idea could field.");
+  finishOutcome("collapse", {
+    bankrupt: true,
+    reason: "budget",
+    ...meta,
+  });
+  return true;
+}
+
 function loadPersistedProgress() {
+  // Drop pre-v3 scenario caches (weak AI / incomplete theme packs)
+  try {
+    localStorage.removeItem("future-forge:scenarioCache");
+    localStorage.removeItem("future-forge:scenarioCache:v2");
+  } catch {
+    /* ignore */
+  }
   try {
     const raw = localStorage.getItem(STORAGE_SCENARIOS);
     if (raw) {
@@ -343,6 +394,7 @@ function tips() {
 function showScreen(id) {
   state.screen = id;
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
+  if (id === "title") renderTitleMeta();
   if (id === "global") renderGlobals();
   if (id === "mission") renderMissions();
   if (id === "workshop") {
@@ -357,6 +409,23 @@ function showScreen(id) {
   if (id === "challenge-step") {
     renderChallengeStep();
     ensureCoInventor();
+    setChallengeSideTab(state.challengeSideTab || "vision");
+    requestAnimationFrame(() => {
+      ensureVision();
+      // Share invent frame into challenge canvas, then evolve with critic
+      const chRoot = $("#challenge-vision-root");
+      if (state.vision && chRoot) {
+        state.vision.addMirror(chRoot);
+        if (state.vision.currentUrl) {
+          const img = chRoot.querySelector(".vision-image");
+          if (img) {
+            img.hidden = false;
+            img.src = state.vision.currentUrl;
+          }
+        }
+      }
+      updateVision({ immediate: true, context: "challenge" });
+    });
   }
   if (id === "outcome") renderOutcome();
 }
@@ -375,6 +444,142 @@ function shuffleCopy(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function renderTitleMeta() {
+  renderDailyCard();
+  renderPinsPanel();
+}
+
+function renderDailyCard() {
+  const card = $("#daily-card");
+  if (!card) return;
+  const daily = pickDailyMission(GLOBALS, localScenariosForGlobal, dailySeedString());
+  state.dailyPick = daily;
+  if (!daily?.mission) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const seedEl = $("#daily-seed-label");
+  const titleEl = $("#daily-title");
+  const metaEl = $("#daily-meta");
+  const sceneEl = $("#daily-scene");
+  const pinBtn = $("#btn-daily-pin");
+  if (seedEl) seedEl.textContent = daily.seed;
+  if (titleEl) titleEl.textContent = daily.mission.title;
+  if (metaEl) {
+    metaEl.textContent = `${daily.global.title} · ${daily.mission.place} · ${
+      daily.mission.startYear || GAME.startYear
+    }`;
+  }
+  if (sceneEl) {
+    const s = daily.mission.scene || "";
+    sceneEl.textContent = s.length > 220 ? `${s.slice(0, 220)}…` : s;
+  }
+  if (pinBtn) {
+    const pinned = isPinned(daily.mission.id);
+    pinBtn.textContent = pinned ? "Pinned ✓" : "Pin";
+    pinBtn.classList.toggle("is-pinned", pinned);
+  }
+}
+
+function renderPinsPanel() {
+  const panel = $("#pins-panel");
+  const list = $("#pins-list");
+  if (!panel || !list) return;
+  const pins = loadPins();
+  state.pins = pins;
+  if (!pins.length) {
+    panel.hidden = true;
+    list.innerHTML = "";
+    return;
+  }
+  panel.hidden = false;
+  list.innerHTML = pins
+    .map(
+      (p) => `
+    <div class="pin-row" data-mission-id="${escapeHtml(p.missionId)}" data-global-id="${escapeHtml(
+        p.globalId
+      )}">
+      <div class="pin-copy">
+        <strong>${escapeHtml(p.title)}</strong>
+        <span class="muted">${escapeHtml(p.place)}${
+          p.globalTitle ? ` · ${escapeHtml(p.globalTitle)}` : ""
+        }</span>
+      </div>
+      <div class="pin-actions">
+        <button type="button" class="btn btn-primary btn-sm pin-play">Play</button>
+        <button type="button" class="btn btn-ghost btn-sm pin-remove" title="Unpin">×</button>
+      </div>
+    </div>`
+    )
+    .join("");
+  list.querySelectorAll(".pin-row").forEach((row) => {
+    row.querySelector(".pin-play")?.addEventListener("click", () => playPinnedMission(row));
+    row.querySelector(".pin-remove")?.addEventListener("click", () => {
+      const missionId = row.dataset.missionId;
+      const pin = pins.find((p) => p.missionId === missionId);
+      if (!pin) return;
+      togglePin(
+        { id: pin.missionId, globalId: pin.globalId, title: pin.title, place: pin.place },
+        { id: pin.globalId, title: pin.globalTitle }
+      );
+      renderPinsPanel();
+      renderDailyCard();
+      flashToast("Unpinned.");
+    });
+  });
+}
+
+async function playPinnedMission(row) {
+  const missionId = row?.dataset?.missionId;
+  const globalId = row?.dataset?.globalId;
+  const g = globalById(globalId);
+  if (!g) {
+    flashToast("Pinned theme missing.");
+    return;
+  }
+  state.global = g;
+  const list = await ensureScenarios(g, { force: false });
+  let m = list.find((x) => x.id === missionId);
+  if (!m) {
+    // Rebuild from seeds with pin metadata
+    const pin = loadPins().find((p) => p.missionId === missionId);
+    const pack = localScenariosForGlobal(g, { count: 4, salt: 0 });
+    m = pack.find((x) => x.id === missionId) || {
+      id: missionId,
+      globalId,
+      title: pin?.title || "Pinned mission",
+      place: pin?.place || g.title,
+      startYear: GAME.startYear,
+      collapseYear: GAME.startYear + 8,
+      yearsPerTurn: GAME.yearsPerTurn,
+      pressure: { Pressure: 2, Capacity: 2, Trust: 1 },
+      pressureRise: { Pressure: 1, Capacity: 1, Trust: 0 },
+      winMax: { Pressure: 1, Capacity: 1, Trust: 1 },
+      scene: `Pinned local scenario for ${g.title}.`,
+      stakeholder: "Local working group",
+      suggested: ["ai", "iot", "networks"],
+      visionTheme: "rebuild-city",
+      source: "curated",
+    };
+    m = normalizeMission(m, globalId);
+  }
+  startMission(m);
+}
+
+function pinMission(mission, global) {
+  const r = togglePin(mission, global || state.global || globalById(mission?.globalId));
+  if (!r.ok && r.error === "pins_full") {
+    flashToast(`Pin list full (max ${MAX_PINS}). Unpin one first.`);
+    return r;
+  }
+  if (r.added) flashToast("Pinned — find it on the home screen.");
+  if (r.removed) flashToast("Unpinned.");
+  renderPinsPanel();
+  renderDailyCard();
+  return r;
 }
 
 function renderGlobals() {
@@ -494,27 +699,37 @@ function paintMissionCards(list, { disabled = false } = {}) {
       const tag = m.source === "curated" ? "curated" : "generated";
       const tagLabel = m.source === "curated" ? "Curated" : "Scenario";
       const solved = isMissionSolved(m.id);
+      const pinned = isPinned(m.id);
       const scene = (m.scene || "").slice(0, 180);
       const ellipsis = (m.scene || "").length > 180 ? "…" : "";
       return `
-    <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
-      solved ? "solved" : ""
-    }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
-      <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
-        <span class="scenario-tag ${tag}">${tagLabel}</span>
-        ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
-      </span>
-      <h3>${escapeHtml(m.title)}</h3>
-      <p>${escapeHtml(scene)}${ellipsis}</p>
-      ${
-        m.stakeholder
-          ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
-          : ""
-      }
-      <span class="cta">${
-        disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
-      }</span>
-    </button>`;
+    <div class="mission-card-wrap">
+      <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
+        solved ? "solved" : ""
+      }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
+        <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
+          <span class="scenario-tag ${tag}">${tagLabel}</span>
+          ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
+        </span>
+        <h3>${escapeHtml(m.title)}</h3>
+        <p>${escapeHtml(scene)}${ellipsis}</p>
+        ${
+          m.stakeholder
+            ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
+            : ""
+        }
+        <span class="cta">${
+          disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
+        }</span>
+      </button>
+      <button
+        type="button"
+        class="btn-pin ${pinned ? "is-pinned" : ""}"
+        data-pin-id="${escapeHtml(m.id)}"
+        title="${pinned ? "Unpin" : `Pin (max ${MAX_PINS})`}"
+        ${disabled ? "disabled" : ""}
+      >${pinned ? "Pinned" : "Pin"}</button>
+    </div>`;
     })
     .join("");
   if (disabled) return;
@@ -525,13 +740,39 @@ function paintMissionCards(list, { disabled = false } = {}) {
       if (mission) startMission(mission);
     });
   });
+  grid.querySelectorAll(".btn-pin").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const mission = state.missionChoices.find((m) => m.id === btn.dataset.pinId);
+      if (!mission) return;
+      pinMission(mission, state.global);
+      paintMissionCards(state.missionChoices, { disabled: false });
+    });
+  });
 }
 
 async function ensureScenarios(global, { force = false } = {}) {
   if (!global) return [];
-  // Prefer last cached set of up to 4 (unless user asked for a fresh generation)
+  // Prefer last cached set (unless user asked for a fresh generation)
   if (!force && state.scenarioCache[global.id]?.length) {
     return state.scenarioCache[global.id].slice(0, SCENARIO_COUNT);
+  }
+
+  // Product default: curated seed packs for every theme (not AI one-shots).
+  // "Generate new set" (force) still tries the AI, then falls back to salted seeds.
+  const seedLocal = () => {
+    const localPack = localScenariosForGlobal(global, {
+      count: SCENARIO_COUNT,
+      salt: force ? Date.now() % 10000 : 0,
+    })
+      .map((m) => normalizeMission({ ...m, source: "curated" }, global.id))
+      .slice(0, SCENARIO_COUNT);
+    return cacheScenariosForGlobal(global.id, localPack);
+  };
+
+  if (!force) {
+    return seedLocal();
   }
 
   try {
@@ -549,7 +790,7 @@ async function ensureScenarios(global, { force = false } = {}) {
             kind: global.kind,
           },
           scenarioCount: SCENARIO_COUNT,
-          seedMissions: missionsForGlobal(global.id).map((m) => ({
+          seedMissions: localScenariosForGlobal(global, { count: SCENARIO_COUNT }).map((m) => ({
             id: m.id,
             title: m.title,
             place: m.place,
@@ -563,6 +804,8 @@ async function ensureScenarios(global, { force = false } = {}) {
           forceRegen: force,
           availableTechs: TECHS.map((t) => techForAi(t, GAME.startYear)),
           year: GAME.startYear,
+          guidance:
+            "Missions must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk. Keep each scenario concrete and inventable with emerging tech.",
         },
       }),
     });
@@ -578,12 +821,7 @@ async function ensureScenarios(global, { force = false } = {}) {
     /* fall through to local pack */
   }
 
-  // Offline / AI failure only — not shown during the loading wait
-  const localPack = localScenariosForGlobal(global, {
-    count: SCENARIO_COUNT,
-    salt: force ? Date.now() % 10000 : 0,
-  }).slice(0, SCENARIO_COUNT);
-  return cacheScenariosForGlobal(global.id, localPack);
+  return seedLocal();
 }
 
 function normalizeMission(raw, globalId) {
@@ -741,6 +979,8 @@ function startMission(mission) {
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
   state.sideTab = "vision";
+  state.challengeSideTab = "vision";
+  state.challengeVisionBeat = null;
   state.lastNews = "";
   state.waitReport = "";
   state.outcome = null;
@@ -1122,17 +1362,60 @@ function assessFeasibility() {
   }
   dims.push({ id: "stack", name: "Stack", level: stackLevel, note: stackNote });
 
+  // Scale — readiness to expand a pilot city-wide / program-wide (also used for Scale roll)
+  let scaleLevel = "red";
+  let scaleNote = "No stack to scale.";
+  if (techs.length) {
+    const b = budgetWillEnabled() ? state.budget ?? 0 : 5;
+    const w = budgetWillEnabled() ? state.will ?? 0 : 3;
+    const howLen = state.inventionHow.trim().length;
+    const lifeLen = state.inventionImpact.trim().length;
+    const opsReady = howLen >= 40 && lifeLen >= 40;
+    const capitalOk = !budgetWillEnabled() || (b >= 2 && w >= 2);
+    const capitalThin = budgetWillEnabled() && (b < 1 || w < 1);
+    if (timingLevel === "red" || techs.length < 1 || howLen < 20) {
+      scaleLevel = "red";
+      scaleNote =
+        timingLevel === "red"
+          ? "Claims look too stretched to scale — pilot may still be honest; city-wide is not."
+          : "Need a clear how-it-works before scale is realistic.";
+    } else if (
+      techs.length >= 2 &&
+      opsReady &&
+      capitalOk &&
+      timingLevel === "green" &&
+      storyLevel === "green"
+    ) {
+      scaleLevel = "green";
+      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Will ${w}).`;
+    } else if (capitalThin || techs.length === 1 || !opsReady || timingLevel === "yellow") {
+      scaleLevel = "yellow";
+      scaleNote = capitalThin
+        ? `Scale is thin on capital (Budget ${b}, Will ${w}) — expansion may stall.`
+        : techs.length === 1
+          ? "Single-tech pilot can scale, but ops breadth is limited."
+          : "Scale is possible but shaky — strengthen story, capital, or timing claims.";
+    } else {
+      scaleLevel = "yellow";
+      scaleNote = "Scale looks middling — improve stack, story, or Resources before expanding.";
+    }
+  }
+  dims.push({ id: "scale", name: "Scale", level: scaleLevel, note: scaleNote });
+
   // Overall: any critical red → red; else any yellow → yellow; else green
+  // Includes Scale so deploy risk shows on the invent traffic light.
   const levels = dims.map((d) => d.level);
-  // Timing red or no techs or incomplete story that blocks = red
   let overall = "green";
   if (levels.includes("red")) overall = "red";
   else if (levels.includes("yellow")) overall = "yellow";
 
+  const pilotPct = successChancePct(overall);
+  const scalePct = successChancePct(scaleLevel);
+
   const summaries = {
-    red: "Not ready for the challenge yet — fix red items (story, stack, or over-claim timing).",
-    yellow: "Risky but challengeable — you can proceed; strengthen weak spots if you can.",
-    green: "Looks feasible for this year and place — face the challenge when you're ready.",
+    red: `Not ready for the challenge yet — fix red items. Pilot success ~${pilotPct}% if you forced fielding; Scale ~${scalePct}%.`,
+    yellow: `Risky but challengeable. Pilot success ~${pilotPct}% · Scale ~${scalePct}% (Scale dim alone).`,
+    green: `Looks feasible — still not certain. Pilot success ~${pilotPct}% · Scale ~${scalePct}%.`,
   };
 
   return {
@@ -1140,6 +1423,12 @@ function assessFeasibility() {
     summary: summaries[overall],
     dims,
     canChallenge: overall !== "red" && !collapsed(),
+    /** Used for Pilot roll */
+    pilotLevel: overall,
+    pilotChancePct: pilotPct,
+    /** Used for Scale roll (Scale dim only, not overall aggregate) */
+    scaleLevel,
+    scaleChancePct: scalePct,
   };
 }
 
@@ -1195,8 +1484,9 @@ function renderHud() {
   if (budgetEl) {
     if (budgetWillEnabled()) {
       budgetEl.hidden = false;
-      budgetEl.textContent = `Budget ${state.budget ?? 0}`;
-      budgetEl.title = "Capital to add technologies. Lobby spends 1 for political will.";
+      budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
+      budgetEl.title =
+        "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ is game over. Not refilled by End turn.";
     } else {
       budgetEl.hidden = true;
     }
@@ -1228,14 +1518,33 @@ function renderHud() {
       return `<span class="meter ${level}" title="${escapeHtml(k)}: how bad this part of the local crisis is (0–5). Wait raises it; Deploy lowers it."><b>${escapeHtml(k)}</b> ${"●".repeat(v)}${"○".repeat(Math.max(0, 5 - v))}</span>`;
     })
     .join("");
-  // step pills
-  $$(".invent-steps .pill").forEach((p) => {
-    const step = p.dataset.step;
-    p.classList.toggle("active", step === "invent" && state.screen === "workshop");
-    p.classList.toggle("done", step === "invent" && state.screen !== "workshop");
-  });
+  updateMissionStepPills();
   updateWaitPreview();
   updateEndTurnButton();
+}
+
+/** Highlight Invent · Challenge · Deploy pills on workshop + challenge top bars */
+function updateMissionStepPills() {
+  let current = "invent";
+  if (state.screen === "outcome" || state.deployStage === "new_normal") {
+    current = "deploy";
+  } else if (state.deployUnlocked || (state.deployStage && state.deployStage !== "none")) {
+    current = "deploy";
+  } else if (state.screen === "challenge-step") {
+    current = "challenge";
+  } else if (state.screen === "workshop") {
+    current = "invent";
+  }
+
+  const order = ["invent", "challenge", "deploy"];
+  const curIdx = order.indexOf(current);
+
+  $$(".invent-steps .pill").forEach((p) => {
+    const step = p.dataset.step;
+    const si = order.indexOf(step);
+    p.classList.toggle("active", step === current);
+    p.classList.toggle("done", si >= 0 && si < curIdx);
+  });
 }
 
 function renderFilters() {
@@ -1276,15 +1585,35 @@ function renderTechList() {
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
       const nowCap = t.useCasesNow?.[0] || t.maturity?.now || t.summary;
       const cost = budgetWillEnabled() ? techCost(t) : null;
-      const costBit =
-        cost && !sel
-          ? ` · ¤${cost.budget}${cost.will ? ` · will ${cost.will}` : ""}`
-          : "";
       const costTitle = cost
-        ? ` | Cost: Budget ${cost.budget}${cost.will ? `, Will ${cost.will}` : ""}${
-            cost.frontierRisk ? `, frontier risk ${cost.frontierRisk}` : ""
-          }`
-        : "";
+        ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Will` : ""}${
+            apEnabled() ? ", 1 AP" : ""
+          }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}`
+        : apEnabled()
+          ? " | To add: 1 AP"
+          : "";
+      // Visible cost chips — not only in tooltip
+      let costHtml = "";
+      if (cost && !sel) {
+        const bits = [
+          `<span class="tech-cost-chip tech-cost-budget" title="Budget to add this to your stack">${cost.budget}$</span>`,
+        ];
+        if (cost.will > 0) {
+          bits.push(
+            `<span class="tech-cost-chip tech-cost-will" title="Political will needed to adopt this">Will ${cost.will}</span>`
+          );
+        }
+        if (apEnabled()) {
+          bits.push(
+            `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
+          );
+        }
+        costHtml = `<span class="tech-cost-row" aria-label="Cost to add">${bits.join("")}</span>`;
+      } else if (sel) {
+        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
+      } else if (apEnabled()) {
+        costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
+      }
       return `
         <button type="button" class="tech-card ${sel ? "selected" : ""} ${sug ? "recommended" : ""}"
           data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
@@ -1294,7 +1623,8 @@ function renderTechList() {
             <p>${escapeHtml(t.summary)}</p>
             <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
               sug ? " · suggested" : ""
-            }${costBit}</span>
+            }</span>
+            ${costHtml}
           </span>
           <span class="tech-add">${sel ? "✓" : "+"}</span>
         </button>`;
@@ -1355,10 +1685,19 @@ function onTechClick(id) {
     }
     const r = dispatchSim("select_tech", { techId: id, tech: techById(id) });
     if (!r.ok) {
-      if (r.error === "no_ap") flashToast("No AP left — End Turn or Wait.");
-      else if (r.error === "no_budget") flashToast("Not enough Budget for that tech.");
-      else if (r.error === "no_will") flashToast("Not enough Political will for that tech.");
-      else if (r.error === "stack full") flashToast("Stack full.");
+      if (r.error === "no_ap") {
+        flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+      } else if (r.error === "no_budget") {
+        const need = techCost(techById(id))?.budget ?? 1;
+        flashToast(`Need ¤${need} Budget to add this (you have ${state.budget ?? 0}).`, {
+          resource: "budget",
+        });
+      } else if (r.error === "no_will") {
+        const need = techCost(techById(id))?.will ?? 1;
+        flashToast(`Need ${need} Will to add this (you have ${state.will ?? 0}).`, {
+          resource: "will",
+        });
+      } else if (r.error === "stack full") flashToast("Stack full.");
       return;
     }
     // dispatch already pushed id via slice — ensure learn order
@@ -1603,8 +1942,9 @@ function lobbyAction() {
   if (!budgetWillEnabled()) return;
   const r = dispatchSim("lobby");
   if (!r.ok) {
-    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.");
-    else if (r.error === "no_budget") flashToast("Need 1 Budget to lobby.");
+    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.", { resource: "ap" });
+    else if (r.error === "no_budget")
+      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
     else flashToast("Cannot lobby now.");
     return;
   }
@@ -1821,6 +2161,8 @@ async function enterChallenge() {
   state.challengeFeedback = "";
   state.challengeVerdict = null;
   state.challengePassed = false;
+  state.challengeVisionBeat = null;
+  state.challengeSideTab = "vision";
   if (state.challengeFails >= 2) state.challengeFails = 0;
 
   if (scrutinyCombatEnabled()) {
@@ -1872,9 +2214,8 @@ async function poseScrutinyEncounters() {
   $("#challenge-question").textContent = "";
   $("#challenge-answer").value = "";
   $("#challenge-feedback").hidden = true;
-  $("#btn-challenge-deploy").hidden = true;
-  const bay = $("#deploy-bay");
-  if (bay) bay.hidden = true;
+  const bayHide = $("#deploy-bay");
+  if (bayHide) bayHide.hidden = true;
   renderChallengeHud();
   renderScrutinyEncounters();
 
@@ -1900,6 +2241,23 @@ async function poseScrutinyEncounters() {
   paintActiveEncounter();
   renderScrutinyEncounters();
   renderChallengeHud();
+  // Pose image: critic on stage in this place
+  const enc0 = state.scrutiny?.encounters?.[0];
+  if (enc0) {
+    refreshChallengeVision(
+      {
+        angle: enc0.angleId,
+        label: enc0.label,
+        phase: "posed",
+        speech: enc0.speech || "",
+        question: enc0.question || "",
+        move: "",
+        response: "",
+        quality: "",
+      },
+      { immediate: true }
+    );
+  }
 }
 
 function paintActiveEncounter() {
@@ -1921,6 +2279,22 @@ function paintActiveEncounter() {
     renderDeployBay();
     paintChallengerResolve(state.scrutiny?.encounters?.[0] || null);
     renderChallengeHud();
+    const cleared = state.scrutiny?.encounters?.[0];
+    if (cleared) {
+      refreshChallengeVision(
+        {
+          angle: cleared.angleId,
+          label: cleared.label,
+          phase: "cleared",
+          speech: cleared.speech || "",
+          question: cleared.question || "",
+          move: state.challengeVisionBeat?.move || "",
+          response: state.challengeVisionBeat?.response || "",
+          quality: state.challengeVisionBeat?.quality || "hit",
+        },
+        { immediate: true }
+      );
+    }
     return;
   }
   const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId) || {
@@ -2020,7 +2394,8 @@ async function poseChallenge(angleMeta) {
   $("#challenge-answer").value = "";
   $("#challenge-feedback").hidden = true;
   $("#challenge-feedback")?.classList.remove("is-pending", "pass", "partial", "fail");
-  $("#btn-challenge-deploy").hidden = true;
+  const bayEssay = $("#deploy-bay");
+  if (bayEssay) bayEssay.hidden = true;
   $("#btn-challenge-submit").disabled = true;
 
   // Lock challenger before AI returns — never swap portrait/angle mid-load.
@@ -2056,6 +2431,19 @@ async function poseChallenge(angleMeta) {
   }
   $("#btn-challenge-submit").disabled = false;
   renderChallengeHud();
+  refreshChallengeVision(
+    {
+      angle: angle.id,
+      label: angle.label,
+      phase: "posed",
+      speech: state.challengeText || "",
+      question: state.challengeQuestion || "",
+      move: "",
+      response: "",
+      quality: "",
+    },
+    { immediate: true }
+  );
 }
 
 function renderChallengeHud() {
@@ -2080,8 +2468,9 @@ function renderChallengeHud() {
   if (budgetEl) {
     if (budgetWillEnabled()) {
       budgetEl.hidden = false;
-      budgetEl.textContent = `Budget ${state.budget ?? 0}`;
-      budgetEl.title = "Capital (same as invent). Challenge success can raise Budget.";
+      budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
+      budgetEl.title =
+        "Capital (same as invent). Solo: Budget 0$ is game over. Challenge wins can restore a little.";
     } else {
       budgetEl.hidden = true;
     }
@@ -2120,6 +2509,7 @@ function renderChallengeHud() {
       endBtn.hidden = true;
     }
   }
+  updateMissionStepPills();
 }
 
 /** Grey out Sidestep after the one-per-run use (does not change mode). */
@@ -2212,11 +2602,6 @@ function renderChallengeStep() {
         if (!state.deployUnlocked) unlockDeployBay();
         renderDeployBay();
       } else {
-        const dep = $("#btn-challenge-deploy");
-        if (dep) {
-          dep.hidden = false;
-          dep.disabled = false;
-        }
         updateDeployButtonCost();
       }
     }
@@ -2245,7 +2630,6 @@ function renderChallengeStep() {
     $("#challenge-answer").value = state.challengeAnswer || "";
   }
   const fb = $("#challenge-feedback");
-  const dep = $("#btn-challenge-deploy");
   if (state.challengeFeedback && fb) {
     fb.hidden = false;
     fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
@@ -2253,17 +2637,12 @@ function renderChallengeStep() {
   } else if (fb) fb.hidden = true;
   if (state.challengePassed) {
     if (deployStagesEnabled()) {
-      if (dep) dep.hidden = true;
       if (!state.deployUnlocked) unlockDeployBay();
       renderDeployBay();
-    } else if (dep) {
-      dep.hidden = false;
-      dep.disabled = false;
+    } else {
       updateDeployButtonCost();
     }
-  } else if (dep) {
-    dep.hidden = true;
-    dep.disabled = true;
+  } else {
     const bay = $("#deploy-bay");
     if (bay) bay.hidden = true;
   }
@@ -2294,7 +2673,7 @@ async function scrutinyArgue() {
       clientActionId: `argue-${Date.now()}`,
     });
     if (!r.ok) {
-      flashToast("No AP to Argue — End turn on Invent first.");
+      flashToast("No AP to Argue — End turn on Invent first.", { resource: "ap" });
       return;
     }
     renderChallengeHud();
@@ -2353,6 +2732,19 @@ async function scrutinyArgue() {
 
   $("#challenge-answer").value = "";
   state.challengeAnswer = "";
+  refreshChallengeVision(
+    {
+      angle: enc.angleId,
+      label: enc.label,
+      phase: result.cleared ? "cleared" : "responded",
+      speech: enc.speech || "",
+      question: enc.question || "",
+      move: "defend",
+      response: answer,
+      quality,
+    },
+    { immediate: true }
+  );
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
@@ -2391,7 +2783,7 @@ function scrutinyPatch() {
   }
   if (apEnabled()) {
     if ((state.ap ?? 0) < 1) {
-      flashToast("No AP to apply the fix — End turn first.");
+      flashToast("No AP to apply the fix — End turn first.", { resource: "ap" });
       return;
     }
     state.ap -= 1;
@@ -2400,10 +2792,11 @@ function scrutinyPatch() {
   let funded = Boolean($("#challenge-fund-patch")?.checked);
   if (funded && budgetWillEnabled()) {
     if ((state.budget ?? 0) < 1) {
-      flashToast("Not enough Budget for a funded fix — uncheck it or free up Budget.");
+      flashToast("Not enough Budget for a funded fix — uncheck it or free up Budget.", { resource: "budget" });
       funded = false;
     } else {
       state.budget -= 1;
+      if (maybeBudgetGameOver({ from: "funded_fix" })) return;
     }
   }
   state.inventionHow = how;
@@ -2417,6 +2810,19 @@ function scrutinyPatch() {
   fb.className = "challenge-feedback partial";
   fb.innerHTML = `<strong>FIX APPLIED</strong> (−${result.damage} resolve) — Your how-it-works was updated under fire.`;
   if ($("#challenge-fund-patch")) $("#challenge-fund-patch").checked = false;
+  refreshChallengeVision(
+    {
+      angle: enc.angleId,
+      label: enc.label,
+      phase: result.cleared ? "cleared" : "responded",
+      speech: enc.speech || "",
+      question: enc.question || "",
+      move: "fix",
+      response: how.slice(0, 400),
+      quality: result.cleared ? "hit" : "glance",
+    },
+    { immediate: true }
+  );
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
@@ -2444,11 +2850,11 @@ function scrutinyPivot() {
     return;
   }
   if (apEnabled() && (state.ap ?? 0) < 1) {
-    flashToast("No AP to sidestep — End turn first.");
+    flashToast("No AP to sidestep — End turn first.", { resource: "ap" });
     return;
   }
   if (budgetWillEnabled() && (state.will ?? 0) < 1) {
-    flashToast("Sidestep needs 1 Political will.");
+    flashToast("Sidestep needs 1 Political will.", { resource: "will" });
     return;
   }
   if (apEnabled()) {
@@ -2470,6 +2876,19 @@ function scrutinyPivot() {
   fb.innerHTML = `<strong>SIDESTEP</strong> — You skipped ${escapeHtml(enc.label)} (once per run).`;
   // Drop off sidestep mode — button is now spent
   setScrutinyMoveMode("defend");
+  refreshChallengeVision(
+    {
+      angle: enc.angleId,
+      label: enc.label,
+      phase: "cleared",
+      speech: enc.speech || "",
+      question: enc.question || "",
+      move: "sidestep",
+      response: "Sidestepped without a full public answer.",
+      quality: "pivot",
+    },
+    { immediate: true }
+  );
   renderScrutinyEncounters();
   paintActiveEncounter();
   renderChallengeHud();
@@ -2523,7 +2942,7 @@ async function coachChallenge(mode, userText) {
       clientActionId: `ch-ai-${Date.now()}`,
     });
     if (!reserve.ok) {
-      flashToast("No AP left for AI help — End turn on Invent, or submit without coaching.");
+      flashToast("No AP left for AI help — End turn on Invent, or submit without coaching.", { resource: "ap" });
       return;
     }
     renderChallengeHud();
@@ -2614,7 +3033,7 @@ async function submitChallengeAnswer() {
       clientActionId: `judge-${Date.now()}`,
     });
     if (!reserve.ok) {
-      flashToast("No AP left to submit for judgment — return to Invent and End turn first.");
+      flashToast("No AP left to submit for judgment — return to Invent and End turn first.", { resource: "ap" });
       return;
     }
     renderChallengeHud();
@@ -2684,6 +3103,10 @@ function currentDeployFieldCost(techs = selectedTechs()) {
   return deployActionCost(techs, { will: state.will ?? 0 });
 }
 
+function currentScaleCost(techs = selectedTechs()) {
+  return scaleActionCost(techs, { will: state.will ?? 0 });
+}
+
 function resetDeployBayState() {
   state.deployUnlocked = false;
   state.deployStage = "none";
@@ -2694,6 +3117,7 @@ function resetDeployBayState() {
   state.dropNewNormalApplied = 0;
   state.stagedDropParts = null;
   state.deployFieldPaid = false;
+  state.lastDeployRoll = null;
 }
 
 function computeCurrentDropInfo() {
@@ -2746,37 +3170,17 @@ function unlockDeployBay() {
 
 function nextDeployStageAction() {
   if (!state.deployUnlocked) return null;
+  // After successful Scale we auto-finish New normal — no separate button
   if (state.deployStage === "none") return "pilot";
   if (state.deployStage === "pilot") return "scale";
-  if (state.deployStage === "scale") return "new_normal";
   return null;
 }
 
 function updateDeployButtonCost() {
-  const dep = $("#btn-challenge-deploy");
+  // Legacy single-button deploy removed — staged bay only when feature on
   if (deployStagesEnabled()) {
-    if (dep) dep.hidden = true;
     renderDeployBay();
-    return;
   }
-  if (!dep || dep.hidden) return;
-  const techs = selectedTechs();
-  if (!techs.length) {
-    dep.textContent = "Deploy invention →";
-    return;
-  }
-  const cost = currentDeployFieldCost(techs);
-  const bits = [];
-  if (apEnabled()) bits.push(`${cost.ap} AP`);
-  if (budgetWillEnabled()) bits.push(`¤${cost.budget}`);
-  dep.textContent = bits.length
-    ? `Deploy invention (${bits.join(" · ")}) →`
-    : "Deploy invention →";
-  dep.title = budgetWillEnabled()
-    ? `Field the invention: costs attention and capital to roll out on the ground. ${cost.parts
-        .map((p) => `${p.label}: ${p.amount > 0 ? "+" : ""}${p.amount} Budget`)
-        .join("; ")}`
-    : "Deploy after a successful challenge.";
 }
 
 function renderDeployBay() {
@@ -2789,83 +3193,94 @@ function renderDeployBay() {
   bay.hidden = false;
 
   const next = nextDeployStageAction();
+  const feas = assessFeasibility();
   $$(".deploy-stage-pill", bay).forEach((pill) => {
     const id = pill.dataset.stage;
     const done =
       (id === "pilot" && ["pilot", "scale", "new_normal"].includes(state.deployStage)) ||
       (id === "scale" && ["scale", "new_normal"].includes(state.deployStage)) ||
       (id === "new_normal" && state.deployStage === "new_normal");
-    const active = next === id;
+    const active =
+      (next === "pilot" && id === "pilot") ||
+      (next === "scale" && id === "scale") ||
+      (state.deployStage === "scale" && id === "new_normal");
     pill.classList.toggle("is-done", done);
-    pill.classList.toggle("is-active", active);
+    pill.classList.toggle("is-active", Boolean(active && !done));
   });
 
   const status = $("#deploy-bay-status");
   const primary = $("#btn-deploy-stage-primary");
-  const hold = $("#btn-deploy-hold");
+  const backInvent = $("#btn-deploy-back-invent");
   const remaining = state.stagedDropRemaining ?? 0;
   const pool = state.stagedDropPool ?? 0;
   const fieldCost = currentDeployFieldCost();
-  const costBits = [];
-  if (!state.deployFieldPaid) {
-    if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
-    if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
+  const scaleCost = currentScaleCost();
+  const pilotBits = [];
+  if (apEnabled()) pilotBits.push(`${fieldCost.ap} AP`);
+  if (budgetWillEnabled()) pilotBits.push(`${fieldCost.budget}$`);
+  const scaleBits = [];
+  if (apEnabled()) scaleBits.push(`${scaleCost.ap} AP`);
+  if (budgetWillEnabled()) {
+    scaleBits.push(`${scaleCost.budget}$`);
+    if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Will`);
   }
-  const costSuffix = costBits.length ? ` · fielding ${costBits.join(" · ")}` : "";
 
   if (status) {
+    const last = state.lastDeployRoll;
+    const lastLine =
+      last && last.ok === false
+        ? " Last try failed — rework or try again."
+        : last && last.ok
+          ? " Last try succeeded."
+          : "";
     if (next === "pilot") {
       const pilotAmt = Math.min(remaining, Math.max(1, Math.ceil(pool / 2)) || 0);
-      status.textContent = `Pool −${pool} frozen at unlock. Pilot drops −${pilotAmt} crisis (then Scale).${costSuffix}`;
+      status.textContent =
+        `Try Pilot (~${feas.pilotChancePct}% chance). Success drops −${pilotAmt} crisis.${
+          pilotBits.length ? ` Cost: ${pilotBits.join(" · ")}.` : ""
+        }${lastLine}`;
     } else if (next === "scale") {
-      status.textContent = `Pilot landed (−${state.dropPilotApplied}). Scale spends remaining −${remaining}. Wait is blocked until you finish or hold.`;
-    } else if (next === "new_normal") {
-      const extra =
-        (state.will ?? 0) >= 4 && pool >= 4 ? " Optional +1 if Will ≥ 4." : " Win check only (no extra drop).";
-      status.textContent = `Scale done (−${state.dropScaleApplied}). Declare new normal or hold the line.${extra}`;
+      status.textContent =
+        `Pilot landed (−${state.dropPilotApplied}). Try Scale (~${feas.scaleChancePct}% chance). ` +
+        `Success spends remaining −${remaining} and reaches New normal.${
+          scaleBits.length ? ` Cost: ${scaleBits.join(" · ")}.` : ""
+        }${lastLine}`;
     } else {
-      status.textContent = "Deploy complete.";
+      status.textContent = `Deploy complete.${lastLine}`;
     }
   }
 
   if (primary) {
     if (next === "pilot") {
       primary.hidden = false;
-      primary.disabled = assessFeasibility().overall === "red";
-      primary.textContent = costBits.length
-        ? `Deploy Pilot (${costBits.join(" · ")}) →`
-        : "Deploy Pilot →";
+      primary.disabled = false;
+      primary.textContent = pilotBits.length
+        ? `Try Pilot (${pilotBits.join(" · ")}) →`
+        : "Try Pilot →";
+      primary.title = `About ${feas.pilotChancePct}% chance. Succeeds or fails.`;
     } else if (next === "scale") {
       primary.hidden = false;
-      primary.disabled = assessFeasibility().overall === "red";
-      primary.textContent =
-        remaining > 0 ? `Deploy Scale (−${remaining} crisis) →` : "Deploy Scale (narrative) →";
-    } else if (next === "new_normal") {
-      primary.hidden = false;
-      primary.disabled = assessFeasibility().overall === "red";
-      primary.textContent = "Declare new normal →";
+      primary.disabled = false;
+      primary.textContent = scaleBits.length
+        ? `Try Scale (${scaleBits.join(" · ")}) →`
+        : "Try Scale →";
+      primary.title = `About ${feas.scaleChancePct}% chance. Success → New normal.`;
     } else {
       primary.hidden = true;
     }
   }
 
-  if (hold) {
-    const canHold = next === "scale" || next === "new_normal";
-    hold.hidden = !canHold;
-    hold.disabled = !canHold;
+  if (backInvent) {
+    backInvent.hidden = false;
+    backInvent.disabled = false;
   }
-
-  // Hide legacy single deploy when bay is active
-  const legacy = $("#btn-challenge-deploy");
-  if (legacy) legacy.hidden = true;
 }
 
-function payDeployFieldingOnce() {
-  if (state.deployFieldPaid) return { ok: true, fieldCost: null };
+/** Pay Pilot fielding each attempt (fail still spends — retry costs again). */
+function payPilotAttempt() {
   const techs = selectedTechs();
   const fieldCost = currentDeployFieldCost(techs);
   if (!apEnabled() && !budgetWillEnabled()) {
-    state.deployFieldPaid = true;
     return { ok: true, fieldCost };
   }
   const pay = dispatchSim("deploy", {
@@ -2874,19 +3289,60 @@ function payDeployFieldingOnce() {
   });
   if (!pay.ok) {
     if (pay.error === "no_ap") {
-      flashToast("No AP to field the pilot — End turn, then deploy.");
+      flashToast("No AP to try Pilot — End turn, then try again.", { resource: "ap" });
     } else if (pay.error === "no_budget") {
-      flashToast(
-        `Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}).`
-      );
+      flashToast(`Need ¤${fieldCost.budget} Budget to try Pilot (you have ${state.budget ?? 0}).`, {
+        resource: "budget",
+      });
     } else {
-      flashToast("Cannot deploy right now.");
+      flashToast("Cannot field Pilot right now.");
     }
     return { ok: false, fieldCost };
   }
-  state.deployFieldPaid = true;
   renderChallengeHud();
   return { ok: true, fieldCost };
+}
+
+/** Pay Scale attempt: AP + Budget + optional Will. */
+function payScaleAttempt() {
+  const techs = selectedTechs();
+  const cost = currentScaleCost(techs);
+  if (apEnabled() && (state.ap ?? 0) < cost.ap) {
+    flashToast("No AP to try Scale — End turn first.", { resource: "ap" });
+    return { ok: false, cost };
+  }
+  if (budgetWillEnabled()) {
+    if ((state.budget ?? 0) < cost.budget) {
+      flashToast(`Need ¤${cost.budget} Budget to try Scale (you have ${state.budget ?? 0}).`, {
+        resource: "budget",
+      });
+      return { ok: false, cost };
+    }
+    if ((state.will ?? 0) < cost.will) {
+      flashToast(`Need ${cost.will} Will to try Scale (you have ${state.will ?? 0}). Lobby first.`, {
+        resource: "will",
+      });
+      return { ok: false, cost };
+    }
+  }
+  if (apEnabled() || budgetWillEnabled()) {
+    const pay = dispatchSim("deploy", {
+      apCost: apEnabled() ? cost.ap : 0,
+      budgetCost: budgetWillEnabled() ? cost.budget : 0,
+    });
+    if (!pay.ok) {
+      if (pay.error === "no_ap") flashToast("No AP to try Scale.", { resource: "ap" });
+      else if (pay.error === "no_budget")
+        flashToast("Not enough Budget for Scale.", { resource: "budget" });
+      else flashToast("Cannot scale right now.");
+      return { ok: false, cost };
+    }
+    if (budgetWillEnabled() && cost.will > 0) {
+      state.will = Math.max(0, (state.will ?? 0) - cost.will);
+    }
+  }
+  renderChallengeHud();
+  return { ok: true, cost };
 }
 
 function snapshotTimingAtDeploy() {
@@ -2922,55 +3378,50 @@ function attemptDeployStage(stage) {
     flashToast("Need both story faces.");
     return;
   }
-  if (assessFeasibility().overall === "red") {
-    flashToast("Feasibility is red — revise how-it-works timing claims first.");
-    return;
-  }
 
-  // Fielding cost once at Pilot
-  let fieldCost = null;
+  const feas = assessFeasibility();
+  // Pilot/Scale are allowed even on red — red only means ~10% success
+
   if (stage === "pilot") {
-    const pay = payDeployFieldingOnce();
+    const pay = payPilotAttempt();
     if (!pay.ok) {
       renderDeployBay();
       return;
     }
-    fieldCost = pay.fieldCost;
-  }
+    const roll = rollDeploySuccess(feas.pilotLevel);
+    state.lastDeployRoll = { stage: "pilot", ok: roll.ok, pct: roll.pct, level: roll.level };
+    if (!roll.ok) {
+      state.lastNews = `Pilot failed in ${state.year}. Try again or return to Invent.`;
+      flashToast("Pilot failed. Try again, or go back to Invent to rework.");
+      renderDeployBay();
+      renderChallengeHud();
+      return;
+    }
 
-  const step = applyStagedDropStep(
-    stage,
-    {
-      stagedDropPool: state.stagedDropPool,
-      stagedDropRemaining: state.stagedDropRemaining,
-      dropPilotApplied: state.dropPilotApplied,
-      dropScaleApplied: state.dropScaleApplied,
-      dropNewNormalApplied: state.dropNewNormalApplied,
-    },
-    { will: state.will ?? 0 }
-  );
-  if (!step.ok) {
-    flashToast("Cannot advance deploy stage.");
-    return;
-  }
-
-  if (step.drop > 0) {
-    state.pressure = applyPressureDrop(state.pressure, step.drop);
-  }
-  state.stagedDropPool = step.frozen.stagedDropPool;
-  state.stagedDropRemaining = step.frozen.stagedDropRemaining;
-  state.dropPilotApplied = step.frozen.dropPilotApplied;
-  state.dropScaleApplied = step.frozen.dropScaleApplied;
-  state.dropNewNormalApplied = step.frozen.dropNewNormalApplied;
-  state.deployStage = stage;
-
-  const timingSnap = snapshotTimingAtDeploy();
-  const { domains, pairs, dropInfo } = computeCurrentDropInfo();
-
-  if (stage === "pilot") {
+    const step = applyStagedDropStep(
+      "pilot",
+      {
+        stagedDropPool: state.stagedDropPool,
+        stagedDropRemaining: state.stagedDropRemaining,
+        dropPilotApplied: state.dropPilotApplied,
+        dropScaleApplied: state.dropScaleApplied,
+        dropNewNormalApplied: state.dropNewNormalApplied,
+      },
+      { will: state.will ?? 0 }
+    );
+    if (!step.ok) {
+      flashToast("Cannot apply Pilot relief.");
+      return;
+    }
+    if (step.drop > 0) state.pressure = applyPressureDrop(state.pressure, step.drop);
+    state.stagedDropRemaining = step.frozen.stagedDropRemaining;
+    state.dropPilotApplied = step.frozen.dropPilotApplied;
+    state.deployStage = "pilot";
+    state.deployFieldPaid = true;
     markMissionSolved(state.mission);
-    state.lastNews = `Pilot fielded in ${state.year}. Crisis −${step.drop}. Scale ready (remaining pool −${state.stagedDropRemaining}).`;
-    flashToast(`Pilot landed · crisis −${step.drop}`);
+    snapshotTimingAtDeploy();
+    state.lastNews = `Pilot succeeded. Crisis −${step.drop}. Scale ready.`;
+    flashToast(step.drop ? `Pilot succeeded · crisis −${step.drop}` : "Pilot succeeded");
     renderDeployBay();
     renderChallengeHud();
     if (state.screen === "workshop") renderWorkshop();
@@ -2978,82 +3429,102 @@ function attemptDeployStage(stage) {
   }
 
   if (stage === "scale") {
-    state.lastNews = `Scale rollout. Crisis −${step.drop}. Declare new normal or hold the line.`;
-    flashToast(step.drop ? `Scale landed · crisis −${step.drop}` : "Scale advanced (no further crisis drop)");
-    renderDeployBay();
-    renderChallengeHud();
-    if (state.screen === "workshop") renderWorkshop();
-    return;
-  }
+    const pay = payScaleAttempt();
+    if (!pay.ok) {
+      renderDeployBay();
+      return;
+    }
+    const roll = rollDeploySuccess(feas.scaleLevel);
+    state.lastDeployRoll = { stage: "scale", ok: roll.ok, pct: roll.pct, level: roll.level };
+    if (!roll.ok) {
+      state.lastNews = `Scale failed. Pilot still stands — retry Scale or return to Invent.`;
+      flashToast("Scale failed. Try again, or go back to Invent to rework.");
+      renderDeployBay();
+      renderChallengeHud();
+      return;
+    }
 
-  // new_normal — win check
-  if (step.drop > 0) {
-    state.lastNews = `New normal declared. Mandate encore −${step.drop}.`;
-  } else {
-    state.lastNews = `New normal declared in ${state.year}.`;
-  }
-  state.waitReport = "";
-  const kind = wonMission() ? "win" : "partial";
-  finishOutcome(kind, {
-    drop:
+    // Success → apply Scale drop, then auto New normal
+    const scaleStep = applyStagedDropStep(
+      "scale",
+      {
+        stagedDropPool: state.stagedDropPool,
+        stagedDropRemaining: state.stagedDropRemaining,
+        dropPilotApplied: state.dropPilotApplied,
+        dropScaleApplied: state.dropScaleApplied,
+        dropNewNormalApplied: state.dropNewNormalApplied,
+      },
+      { will: state.will ?? 0 }
+    );
+    if (scaleStep.drop > 0) state.pressure = applyPressureDrop(state.pressure, scaleStep.drop);
+    state.stagedDropRemaining = scaleStep.frozen.stagedDropRemaining;
+    state.dropScaleApplied = scaleStep.frozen.dropScaleApplied;
+    state.deployStage = "scale";
+
+    const nnStep = applyStagedDropStep(
+      "new_normal",
+      {
+        stagedDropPool: state.stagedDropPool,
+        stagedDropRemaining: state.stagedDropRemaining,
+        dropPilotApplied: state.dropPilotApplied,
+        dropScaleApplied: state.dropScaleApplied,
+        dropNewNormalApplied: state.dropNewNormalApplied,
+      },
+      { will: state.will ?? 0 }
+    );
+    if (nnStep.drop > 0) state.pressure = applyPressureDrop(state.pressure, nnStep.drop);
+    state.dropNewNormalApplied = nnStep.frozen.dropNewNormalApplied;
+    state.deployStage = "new_normal";
+
+    const timingSnap = snapshotTimingAtDeploy();
+    const { domains, pairs } = computeCurrentDropInfo();
+    const totalDrop =
       (state.dropPilotApplied || 0) +
       (state.dropScaleApplied || 0) +
-      (state.dropNewNormalApplied || 0),
-    dropParts: [
-      ...(state.stagedDropParts || []),
-      ...step.parts,
-      { id: "pilot_applied", label: "Pilot drop", amount: state.dropPilotApplied || 0 },
-      { id: "scale_applied", label: "Scale drop", amount: state.dropScaleApplied || 0 },
-    ],
-    deployCost: fieldCost || currentDeployFieldCost(techs),
-    domains,
-    pairs,
-    verdict: state.challengeVerdict,
-    angle: state.challengeAngle,
-    timingLevel: timingSnap,
-    deployStage: "new_normal",
-    stagedPool: state.stagedDropPool,
-  });
-}
-
-function holdTheLine() {
-  if (!deployStagesEnabled() || !state.deployUnlocked) return;
-  const next = nextDeployStageAction();
-  if (next !== "scale" && next !== "new_normal") {
-    flashToast("Hold the line after Pilot or Scale.");
+      (state.dropNewNormalApplied || 0);
+    state.lastNews = `Scale succeeded · New normal. Crisis −${totalDrop} total.`;
+    state.waitReport = "";
+    flashToast("Scale succeeded · New normal");
+    const kind = wonMission() ? "win" : "partial";
+    finishOutcome(kind, {
+      drop: totalDrop,
+      dropParts: [
+        ...(state.stagedDropParts || []),
+        ...scaleStep.parts,
+        ...nnStep.parts,
+        { id: "pilot_applied", label: "Pilot drop", amount: state.dropPilotApplied || 0 },
+        { id: "scale_applied", label: "Scale drop", amount: state.dropScaleApplied || 0 },
+      ],
+      deployCost: pay.cost || currentScaleCost(techs),
+      domains,
+      pairs,
+      verdict: state.challengeVerdict,
+      angle: state.challengeAngle,
+      timingLevel: timingSnap,
+      deployStage: "new_normal",
+      stagedPool: state.stagedDropPool,
+    });
     return;
   }
-  const timingSnap = snapshotTimingAtDeploy();
-  const { domains, pairs } = computeCurrentDropInfo();
-  const totalDrop =
-    (state.dropPilotApplied || 0) +
-    (state.dropScaleApplied || 0) +
-    (state.dropNewNormalApplied || 0);
-  state.lastNews = `Held the line after ${state.deployStage} in ${state.year}. Crisis relief −${totalDrop}.`;
-  state.waitReport = "";
-  finishOutcome("partial", {
-    drop: totalDrop,
-    dropParts: [
-      { id: "pilot_applied", label: "Pilot drop", amount: state.dropPilotApplied || 0 },
-      { id: "scale_applied", label: "Scale drop", amount: state.dropScaleApplied || 0 },
-      { id: "hold", label: "Held the line", amount: 0 },
-    ],
-    domains,
-    pairs,
-    verdict: state.challengeVerdict,
-    angle: state.challengeAngle,
-    timingLevel: timingSnap,
-    deployStage: state.deployStage,
-    held: true,
-    stagedPool: state.stagedDropPool,
-  });
+
+  flashToast("Unknown deploy stage.");
+}
+
+/** Leave deploy bay for Invent without abandoning unlock (can return). */
+function returnToInventFromDeploy() {
+  if (state.deployUnlocked) state.turnPhase = "between_stages";
+  else if (apEnabled()) dispatchSim("abandon_scrutiny");
+  else state.turnPhase = "act";
+  showScreen("workshop");
+  renderWorkshop();
+  flashToast("Back on Invent — rework, then open the deploy bay when ready.");
 }
 
 function attemptDeploy() {
   if (deployStagesEnabled()) {
     const next = nextDeployStageAction();
     if (next) attemptDeployStage(next);
-    else flashToast("Deploy stages finished — declare new normal or hold.");
+    else flashToast("Deploy finished.");
     return;
   }
   attemptDeployLegacy();
@@ -3087,11 +3558,9 @@ function attemptDeployLegacy() {
     });
     if (!pay.ok) {
       if (pay.error === "no_ap") {
-        flashToast("No AP to deploy — return to Invent and End turn, then come back.");
+        flashToast("No AP to deploy — return to Invent and End turn, then come back.", { resource: "ap" });
       } else if (pay.error === "no_budget") {
-        flashToast(
-          `Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, win challenge income, or simplify the stack.`
-        );
+        flashToast(`Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, win challenge income, or simplify the stack.`, { resource: "budget" });
       } else {
         flashToast("Cannot deploy right now.");
       }
@@ -3274,6 +3743,20 @@ function renderOutcome() {
         text: `You answered a ${o.meta.angle} challenge before deploying — that discipline matters.`,
       });
     }
+  } else if (o.kind === "collapse" && o.meta?.bankrupt) {
+    headline = "Out of capital";
+    story =
+      `In ${o.year}, ${name || "the invention"} never got a real chance in ${m.place}: Budget hit 0$ and the project went broke. ` +
+      `Tech cards, Lobby, Pilot, and Scale all spend capital — save enough to field what you invent. ` +
+      `Clearing Challenge can restore a little Budget; over-buying the stack often cannot.`;
+    lessons.push({
+      type: "grow",
+      text: "Solo rule: Budget 0$ is game over. Keep cash for Pilot (and Scale), not only for shiny cards.",
+    });
+    lessons.push({
+      type: "grow",
+      text: "Lean stacks, half-refunds on same-turn removes, and challenge wins (+1 Budget) are how you stay solvent.",
+    });
   } else if (o.kind === "collapse") {
     headline = "Too late";
     story =
@@ -3294,6 +3777,21 @@ function renderOutcome() {
   $("#outcome-lessons").innerHTML = lessons
     .map((l) => `<li class="${l.type}">${escapeHtml(l.text)}</li>`)
     .join("");
+
+  // Cache share payload for the Share card button
+  state.sharePayload = {
+    kindLabel: kindLabelForOutcome(o.kind, o.meta),
+    inventionName: name,
+    place: m.place,
+    year: o.year,
+    globalTitle: state.global?.title || "",
+    stars: report?.stars ?? 0,
+    speedScore: report?.speedScore,
+    honestyScore: report?.honestyScore,
+    eleganceScore: report?.eleganceScore,
+    blurb: story,
+    techs: (o.techs || []).map((t) => t.name || t.id),
+  };
 
   // Foresight: milestones, trends, predictions
   const fs = foresightForStack(
@@ -3336,18 +3834,85 @@ function ensureVision() {
   const root = $("#vision-root");
   if (!root) return;
   if (!state.vision) state.vision = new VisionRenderer(root);
+  const chRoot = $("#challenge-vision-root");
+  if (chRoot) state.vision.addMirror(chRoot);
 }
 
+/** Build challengeBeat for Imagine from current scrutiny / last response */
+function buildChallengeVisionBeat() {
+  if (state.screen !== "challenge-step" && !state.challengeVisionBeat) return null;
+  if (state.challengeVisionBeat) return state.challengeVisionBeat;
+  const enc = activeEncounter(state.scrutiny);
+  const angleId = enc?.angleId || state.challengeAngle;
+  if (!angleId) return null;
+  const meta = CHALLENGE_ANGLES.find((a) => a.id === angleId);
+  return {
+    angle: angleId,
+    label: meta?.label || enc?.label || angleId,
+    phase: enc?.cleared ? "cleared" : "posed",
+    speech: enc?.speech || state.challengeText || "",
+    question: enc?.question || state.challengeQuestion || "",
+    move: "",
+    response: "",
+    quality: "",
+  };
+}
+
+function setChallengeVisionBeat(partial) {
+  const base = buildChallengeVisionBeat() || {};
+  state.challengeVisionBeat = { ...base, ...partial };
+}
+
+function updateChallengeVisionLabels() {
+  const nameEl = $("#challenge-vision-stage-name");
+  const blurbEl = $("#challenge-vision-stage-blurb");
+  if (!nameEl || !blurbEl) return;
+  const beat = state.challengeVisionBeat || buildChallengeVisionBeat();
+  if (!beat?.angle) {
+    nameEl.textContent = `Under challenge · ${state.year}`;
+    blurbEl.textContent = "How this place looks while a critic presses the idea.";
+    return;
+  }
+  const label = beat.label || beat.angle;
+  if (beat.phase === "cleared") {
+    nameEl.textContent = `Cleared · ${state.year}`;
+    blurbEl.textContent = `${label} answered — the place can move toward fielding.`;
+  } else if (beat.move === "defend") {
+    nameEl.textContent = `Defense · ${label}`;
+    blurbEl.textContent =
+      beat.quality === "hit"
+        ? "Your answer lands in the scene."
+        : beat.quality === "glance"
+          ? "A partial answer — tension remains."
+          : "The room is not yet convinced.";
+  } else if (beat.move === "fix") {
+    nameEl.textContent = `Fix under fire · ${label}`;
+    blurbEl.textContent = "The invention changes while still under pressure.";
+  } else if (beat.move === "sidestep") {
+    nameEl.textContent = `Sidestep · ${label}`;
+    blurbEl.textContent = "You move on without a full public answer.";
+  } else {
+    nameEl.textContent = `${label} · ${state.year}`;
+    blurbEl.textContent = "The critic is on stage — same place, harder questions.";
+  }
+}
+
+/**
+ * @param {{ immediate?: boolean, force?: boolean, debounceMs?: number, context?: "invent"|"challenge" }} opts
+ */
 function updateVision(opts = {}) {
   if (!state.mission) return;
   ensureVision();
   const techs = selectedTechs();
   const stage = currentStage();
-  $("#vision-stage-name").textContent = `${stage.name} · ${state.year}`;
-  $("#vision-stage-blurb").textContent = stage.blurb;
+  const inventName = $("#vision-stage-name");
+  const inventBlurb = $("#vision-stage-blurb");
+  if (inventName) inventName.textContent = `${stage.name} · ${state.year}`;
+  if (inventBlurb) inventBlurb.textContent = stage.blurb;
+  updateChallengeVisionLabels();
 
   const box = $("#vision-narratives");
-  if (box) {
+  if (box && state.screen === "workshop") {
     const narratives = narrativesFromTechs(techs);
     const pressureLine = Object.entries(state.pressure)
       .map(([k, v]) => `${k} ${v}/5`)
@@ -3366,6 +3931,23 @@ function updateVision(opts = {}) {
   }
 
   if (!state.vision) return;
+
+  const onChallenge =
+    opts.context === "challenge" ||
+    state.screen === "challenge-step" ||
+    Boolean(state.challengeVisionBeat);
+
+  // Attach renderer status/loading to the visible panel
+  if (onChallenge && state.screen === "challenge-step") {
+    state.vision.attach($("#challenge-vision-root"));
+    state.vision.addMirror($("#vision-root"));
+  } else if (state.screen === "workshop") {
+    state.vision.attach($("#vision-root"));
+    state.vision.addMirror($("#challenge-vision-root"));
+  }
+
+  const challengeBeat = onChallenge ? buildChallengeVisionBeat() : null;
+
   state.vision.setState({
     stageId: stage.id,
     stage,
@@ -3385,6 +3967,7 @@ function updateVision(opts = {}) {
     year: state.year,
     place: state.mission.place,
     pressure: state.pressure,
+    challengeBeat,
     immediate: Boolean(opts.immediate),
     force: Boolean(opts.force),
     debounceMs: opts.debounceMs,
@@ -3393,7 +3976,8 @@ function updateVision(opts = {}) {
 
 function setSideTab(tab) {
   state.sideTab = tab;
-  $$(".side-tab").forEach((btn) => {
+  // Only invent-screen tabs use data-tab (not data-ch-tab)
+  $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
@@ -3405,10 +3989,42 @@ function setSideTab(tab) {
   if (tab === "vision") {
     requestAnimationFrame(() => {
       ensureVision();
-      updateVision();
+      updateVision({ context: "invent" });
     });
   }
   if (tab === "coinventor") ensureCoInventor();
+}
+
+function setChallengeSideTab(tab) {
+  state.challengeSideTab = tab === "coinventor" ? "coinventor" : "vision";
+  $$(".side-tab[data-ch-tab]").forEach((btn) => {
+    const on = btn.dataset.chTab === state.challengeSideTab;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const vision = $("#side-challenge-vision");
+  const co = $("#side-challenge-coinventor");
+  if (vision) vision.hidden = state.challengeSideTab !== "vision";
+  if (co) co.hidden = state.challengeSideTab !== "coinventor";
+  if (state.challengeSideTab === "vision") {
+    requestAnimationFrame(() => {
+      ensureVision();
+      updateVision({ context: "challenge", immediate: true });
+    });
+  }
+  if (state.challengeSideTab === "coinventor") ensureCoInventor();
+}
+
+function refreshChallengeVision(partialBeat, opts = {}) {
+  if (partialBeat) setChallengeVisionBeat(partialBeat);
+  else if (!state.challengeVisionBeat) setChallengeVisionBeat({ phase: "posed" });
+  updateChallengeVisionLabels();
+  updateVision({
+    context: "challenge",
+    immediate: opts.immediate !== false,
+    force: Boolean(opts.force),
+    debounceMs: opts.debounceMs,
+  });
 }
 
 /* —— Co-inventor —— */
@@ -3472,7 +4088,7 @@ function ensureCoInventor() {
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP left for co-inventor — End Turn or Wait.");
+        flashToast("No AP left for co-inventor — End Turn or Wait.", { resource: "ap" });
         return false;
       }
       renderHud();
@@ -3516,6 +4132,7 @@ function applyCoInventorProposals(proposals) {
       }
       state.budget -= cost.budget;
       state.will -= cost.will;
+      if (maybeBudgetGameOver({ from: "ai_add_tech" })) return;
     }
     state.selectedTechIds.push(id);
     changed = true;
@@ -3572,7 +4189,7 @@ async function callCoInventMode(mode, userLabel) {
       clientActionId: `ai-${Date.now()}`,
     });
     if (!reserve.ok) {
-      flashToast("No AP left for AI — End Turn or Wait.");
+      flashToast("No AP left for AI — End Turn or Wait.", { resource: "ap" });
       return;
     }
     renderHud();
@@ -3665,7 +4282,7 @@ function commitWriteIfNeeded() {
   if (!changed) return;
   const r = dispatchSim("write_commit", { changed: true });
   if (!r.ok && r.error === "no_ap_buffer") {
-    flashToast("No AP for more edits — End Turn or Wait (changes kept).");
+    flashToast("No AP for more edits — End Turn or Wait (changes kept).", { resource: "ap" });
     state.lastWriteSnapshot = snap;
     return;
   }
@@ -3855,21 +4472,53 @@ function clearStoryFacePending() {
   });
 }
 
-function flashToast(msg) {
+/**
+ * Toast near the top HUD (resource counters), not buried at the bottom.
+ * @param {string} msg
+ * @param {{ resource?: "ap"|"budget"|"will", durationMs?: number }} [opts]
+ */
+function flashToast(msg, opts = {}) {
   let el = $("#toast");
   if (!el) {
     el = document.createElement("div");
     el.id = "toast";
-    el.style.cssText =
-      "position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid rgba(148,163,184,.3);padding:.65rem 1rem;border-radius:999px;font-size:.85rem;z-index:200;color:#e2e8f0;box-shadow:0 8px 30px rgba(0,0,0,.4);transition:opacity .3s;max-width:90vw;text-align:center";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
     document.body.appendChild(el);
   }
   el.textContent = msg;
-  el.style.opacity = "1";
+  el.classList.remove("is-resource-ap", "is-resource-budget", "is-resource-will");
+  if (opts.resource) el.classList.add(`is-resource-${opts.resource}`);
+  el.classList.add("is-visible");
+  // Pulse the matching HUD counters (workshop + challenge)
+  pulseHudResource(opts.resource);
   clearTimeout(el._t);
+  const ms = opts.durationMs ?? 3200;
   el._t = setTimeout(() => {
-    el.style.opacity = "0";
-  }, 2800);
+    el.classList.remove("is-visible");
+  }, ms);
+}
+
+function pulseHudResource(resource) {
+  if (!resource) return;
+  const ids =
+    resource === "ap"
+      ? ["#hud-ap", "#ch-hud-ap"]
+      : resource === "budget"
+        ? ["#hud-budget", "#ch-hud-budget"]
+        : resource === "will"
+          ? ["#hud-will", "#ch-hud-will"]
+          : [];
+  ids.forEach((sel) => {
+    const node = $(sel);
+    if (!node || node.hidden) return;
+    node.classList.remove("hud-pulse");
+    // reflow so animation restarts
+    void node.offsetWidth;
+    node.classList.add("hud-pulse");
+    clearTimeout(node._pulseT);
+    node._pulseT = setTimeout(() => node.classList.remove("hud-pulse"), 1400);
+  });
 }
 
 async function surpriseMission() {
@@ -3885,6 +4534,20 @@ function bind() {
   $("#btn-start").addEventListener("click", () => showScreen("global"));
   $("#btn-surprise").addEventListener("click", () => {
     surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
+  });
+  $("#btn-daily-play")?.addEventListener("click", () => {
+    const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
+    if (!daily?.mission) {
+      flashToast("Daily mission unavailable.");
+      return;
+    }
+    state.global = daily.global;
+    startMission(normalizeMission(daily.mission, daily.global.id));
+  });
+  $("#btn-daily-pin")?.addEventListener("click", () => {
+    const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
+    if (!daily?.mission) return;
+    pinMission(daily.mission, daily.global);
   });
   $("#btn-global-back").addEventListener("click", () => showScreen("title"));
   $("#btn-mission-back").addEventListener("click", () => showScreen("global"));
@@ -3982,7 +4645,7 @@ function bind() {
     if (apEnabled()) {
       const r = dispatchSim("enter_challenge");
       if (!r.ok) {
-        if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.");
+        if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
         return;
       }
       renderHud();
@@ -4004,12 +4667,11 @@ function bind() {
     showScreen("workshop");
   });
   $("#btn-challenge-submit")?.addEventListener("click", () => submitChallengeAnswer());
-  $("#btn-challenge-deploy")?.addEventListener("click", () => attemptDeploy());
   $("#btn-deploy-stage-primary")?.addEventListener("click", () => {
     const next = nextDeployStageAction();
     if (next) attemptDeployStage(next);
   });
-  $("#btn-deploy-hold")?.addEventListener("click", () => holdTheLine());
+  $("#btn-deploy-back-invent")?.addEventListener("click", () => returnToInventFromDeploy());
   $("#btn-workshop-to-deploy")?.addEventListener("click", () => {
     if (!state.deployUnlocked) return;
     showScreen("challenge-step");
@@ -4048,14 +4710,46 @@ function bind() {
   });
   $("#btn-open-coinventor").addEventListener("click", () => setSideTab("coinventor"));
   $("#btn-learn-tech").addEventListener("click", () => openLearnStack());
-  $("#btn-regen-vision").addEventListener("click", () => updateVision({ immediate: true, force: true }));
+  $("#btn-regen-vision").addEventListener("click", () =>
+    updateVision({ immediate: true, force: true, context: "invent" })
+  );
+  $("#btn-regen-challenge-vision")?.addEventListener("click", () =>
+    refreshChallengeVision(null, { immediate: true, force: true })
+  );
 
-  $$(".side-tab").forEach((btn) => btn.addEventListener("click", () => setSideTab(btn.dataset.tab)));
+  $$(".side-tab[data-tab]").forEach((btn) =>
+    btn.addEventListener("click", () => setSideTab(btn.dataset.tab))
+  );
+  $$(".side-tab[data-ch-tab]").forEach((btn) =>
+    btn.addEventListener("click", () => setChallengeSideTab(btn.dataset.chTab))
+  );
 
   $("#btn-outcome-new").addEventListener("click", () => showScreen("global"));
   $("#btn-outcome-retry").addEventListener("click", () => {
     if (state.mission) showScreen("workshop");
     else showScreen("global");
+  });
+  $("#btn-outcome-share")?.addEventListener("click", () => {
+    const payload = state.sharePayload;
+    if (!payload) {
+      flashToast("Nothing to share yet.");
+      return;
+    }
+    try {
+      const url = renderShareCard(payload);
+      if (!url) {
+        flashToast("Could not build share card.");
+        return;
+      }
+      const slug = String(payload.inventionName || "run")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .slice(0, 40);
+      downloadDataUrl(url, `future-forge-${slug || "run"}.png`);
+      flashToast("Share card downloaded.");
+    } catch (e) {
+      flashToast("Share card failed.");
+    }
   });
 
   $("#modal-close").addEventListener("click", closeModal);
