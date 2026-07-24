@@ -2205,15 +2205,20 @@ function renderChallengeStep() {
       }
     }
     if (state.challengePassed) {
-      const dep = $("#btn-challenge-deploy");
-      if (dep) {
-        dep.hidden = false;
-        dep.disabled = false;
-      }
-      updateDeployButtonCost();
       hideAllModePanels();
       const moves = $("#scrutiny-moves");
       if (moves) moves.hidden = true;
+      if (deployStagesEnabled()) {
+        if (!state.deployUnlocked) unlockDeployBay();
+        renderDeployBay();
+      } else {
+        const dep = $("#btn-challenge-deploy");
+        if (dep) {
+          dep.hidden = false;
+          dep.disabled = false;
+        }
+        updateDeployButtonCost();
+      }
     }
     renderChallengeHud();
     return;
