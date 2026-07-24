@@ -480,7 +480,7 @@
           </p>
           <ol class="help-steps">
             <li>
-              <strong>Invent</strong> — pick a tech stack, name the idea, and tell the story of the invention
+              <strong>Invent</strong> — spend resources to build a tech stack, name the idea, and tell the story
               in two faces (see below).
             </li>
             <li>
@@ -495,8 +495,53 @@
             </li>
             <li>
               <strong>Deploy</strong> — if you pass, crisis meters drop. Too little relief and you can keep inventing.
+              Stronger stacks, story, challenge answers — and high political will — drop more.
             </li>
           </ol>
+
+          <h4>Resources (top bar)</h4>
+          <p>
+            The invent screen tracks scarce resources next to the year. They refill or change on
+            <strong>End turn</strong>, <strong>Wait</strong>, challenges, and lobby — not by time alone.
+          </p>
+          <ul>
+            <li>
+              <strong>Year &amp; turn</strong> — mission calendar. Turn counts invent rounds
+              (<em>End turn</em> or <em>Wait</em>). Year only moves when you <strong>Wait</strong>.
+            </li>
+            <li>
+              <strong>AP (action points)</strong> — attention this invent turn (default <strong>3</strong>).
+              Adding a tech, opening AI help (fill / co-inventor), facing the challenge, and lobby each spend AP.
+              When AP is gone, use <strong>End turn</strong> (refills AP, <em>no</em> crisis rise, year unchanged)
+              or <strong>Wait</strong> (see below).
+            </li>
+            <li>
+              <strong>Budget</strong> — capital for technologies (start <strong>5</strong>). Each tech card shows a
+              cost (e.g. ¤1). Adding it spends that Budget (and sometimes Will). You cannot add tech you cannot afford.
+              Removing a tech you just added this turn refunds half its Budget.
+            </li>
+            <li>
+              <strong>Will (political will)</strong> — soft power with people and officials (start <strong>3</strong>, max 5).
+              This is <em>not</em> the crisis meter that may also be named “Trust.”
+              <strong>Lobby</strong> spends <strong>1 AP + 1 Budget</strong> for <strong>+1 Will</strong>.
+              Passing or partially passing a challenge also earns Budget and Will; failing can lower Will.
+              At deploy: Will <strong>≥ 4</strong> adds extra crisis relief; Will <strong>0</strong> reduces it.
+            </li>
+          </ul>
+          <h4>Wait vs End turn</h4>
+          <ul>
+            <li>
+              <strong>End turn</strong> — “I spent this round inventing.” Refills AP. Does
+              <em>not</em> advance the year or raise crisis meters.
+            </li>
+            <li>
+              <strong>Wait (+2 years)</strong> — buy later world conditions. Advances the year, raises
+              <strong>crisis meters</strong>, and <strong>burns any leftover AP</strong> (then refills).
+              Preview under the actions shows how meters would rise. Stretch / frontier stacks can also risk an
+              extra meter spike when you Wait.
+            </li>
+          </ul>
+
           <h4>How it works ↔ Everyday life</h4>
           <p>
             Your invention has two story faces. Both text boxes stay editable at all times.
@@ -515,7 +560,7 @@
             </li>
             <li>
               <strong>Fill other side</strong> sits on the focused face. Write that face first, then click it so the
-              AI drafts the <em>other</em> face from your stack and text. You can always edit either box yourself.
+              AI drafts the <em>other</em> face (costs <strong>1 AP</strong>). You can always edit either box yourself.
             </li>
           </ul>
           <h4>AI co-inventor</h4>
@@ -523,24 +568,28 @@
             Open the <strong>AI co-inventor</strong> tab (or the ✦ button) to brainstorm with Grok: spark ideas,
             suggest a tech stack, name the invention, teach techs, or use
             <strong>Art of the possible</strong> for milestones, current capabilities, and use cases.
-            You lead; it proposes. Apply suggestions only when you want them.
-          </p>
-          <h4>Mission clock (top center)</h4>
-          <p>
-            Shows the current year and turn. Waiting advances the calendar in multi-year steps and can improve
-            world conditions for stretch ideas — but it is never free.
+            Each request costs <strong>1 AP</strong>. You lead; it proposes. Apply suggestions only when you want them
+            (adding suggested techs still needs enough Budget / Will).
           </p>
           <h4>Crisis meters (top right)</h4>
           <p>
             Each meter is <strong>0–5</strong>: how bad that part of the local crisis is right now.
-            <strong>Wait</strong> raises them. <strong>Deploy</strong> after a successful challenge lowers them.
-            Hit <strong>5</strong> on any meter, or the fail year on the clock, and the mission ends.
+            <strong>Wait</strong> raises them. <strong>Deploy</strong> after a successful challenge lowers them
+            (stronger invention → larger drop). Hit <strong>5</strong> on any meter, or the fail year on the clock,
+            and the mission ends.
+          </p>
+          <h4>Outcome stars</h4>
+          <p>
+            After a run ends you may earn up to <strong>★★★</strong> for speed (few Waits / early year),
+            honesty (feasible claims), and elegance (stack synergies). Stars show on the outcome screen only.
           </p>
           <h4>Tips</h4>
           <ul>
             <li>Stay local: name who benefits on this street, clinic, or quay.</li>
             <li>Mix domains when the problem needs it — not as a checkbox.</li>
             <li>Feasibility judges <em>claims in how it works</em>, not whether a tech card is “unlocked.”</li>
+            <li>Lobby before deploy if you want the Will ≥ 4 “mandate” bonus on crisis drop.</li>
+            <li>End turn often; Wait only when later years are worth the crisis cost.</li>
           </ul>
         </div>
         <div class="modal-actions">
