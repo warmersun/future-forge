@@ -2021,6 +2021,9 @@ button:disabled {
 }
 
 .co-msg.thinking .co-bubble {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--text-mute);
   font-style: italic;
 }
@@ -2058,6 +2061,70 @@ button:disabled {
   40% {
     transform: translateY(-3px);
     opacity: 1;
+  }
+}
+
+/* AI request in progress — rotating “snake” ring where text will appear */
+.ai-pending {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  color: var(--text-mute);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.ai-pending-label {
+  min-width: 0;
+}
+
+.ai-snake {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(167, 139, 250, 0.22);
+  border-top-color: var(--accent-2, #a78bfa);
+  border-right-color: rgba(167, 139, 250, 0.65);
+  animation: ai-snake-spin 0.75s linear infinite;
+}
+
+.ai-pending--field {
+  margin: 0.4rem 0 0.15rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.07);
+  font-style: normal;
+}
+
+.story-face-field.is-ai-pending textarea {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.challenge-coach-panel .ai-pending,
+.challenge-speech .ai-pending,
+.challenge-feedback .ai-pending {
+  margin: 0;
+  font-style: normal;
+}
+
+.challenge-feedback.is-pending {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.06);
+  color: var(--text-mute);
+}
+
+.co-msg.thinking .ai-snake {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+@keyframes ai-snake-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

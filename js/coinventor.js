@@ -263,7 +263,7 @@ export class CoInventor {
     const el = document.createElement("div");
     el.className = "co-msg assistant thinking";
     el.dataset.thinkId = id;
-    el.innerHTML = `<div class="co-bubble"><span class="co-dots"><i></i><i></i><i></i></span> Thinking with you…</div>`;
+    el.innerHTML = `<div class="co-bubble"><span class="ai-snake" aria-hidden="true"></span><span>Thinking with you…</span></div>`;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
     return id;

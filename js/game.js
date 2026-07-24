@@ -784,8 +784,10 @@ function renderStoryFaceUI() {
 
   const setRole = (field, role) => {
     if (!field) return;
+    const pending = field.classList.contains("is-ai-pending");
     field.classList.remove("is-focus", "is-other", "is-player", "is-companion", "is-both");
     field.classList.add(`is-${role}`);
+    if (pending) field.classList.add("is-ai-pending");
   };
 
   // Single button lives on the focused header only
@@ -1431,10 +1433,11 @@ async function poseChallenge(angleMeta) {
   setChallengerVisual(angle);
   $("#ch-hud-year").textContent = String(state.year);
   $("#ch-hud-turn").textContent = `Turn ${state.turn}`;
-  $("#challenge-speech").innerHTML = `<p class="muted">Posing challenge…</p>`;
+  $("#challenge-speech").innerHTML = aiPendingHtml("Posing challenge…");
   $("#challenge-question").textContent = "";
   $("#challenge-answer").value = "";
   $("#challenge-feedback").hidden = true;
+  $("#challenge-feedback")?.classList.remove("is-pending", "pass", "partial", "fail");
   $("#btn-challenge-deploy").hidden = true;
   $("#btn-challenge-submit").disabled = true;
 
@@ -1522,7 +1525,9 @@ async function coachChallenge(mode, userText) {
   }
   state.aiBusy = true;
   setChallengeHelpBusy(true);
-  showChallengeCoach(`<p class="muted">${mode === "draft-challenge" ? "Drafting…" : "Coaching…"}</p>`);
+  const pendingLabel =
+    mode === "draft-challenge" ? "Drafting an answer…" : "Coaching…";
+  showChallengeCoach(aiPendingHtml(pendingLabel));
   try {
     const data = await apiCoInvent(mode, userText || "[Help with challenge]", {
       challengeAngle: state.challengeAngle,
@@ -1586,6 +1591,12 @@ async function submitChallengeAnswer() {
     return;
   }
   $("#btn-challenge-submit").disabled = true;
+  const fbPending = $("#challenge-feedback");
+  if (fbPending) {
+    fbPending.hidden = false;
+    fbPending.className = "challenge-feedback is-pending";
+    fbPending.innerHTML = aiPendingHtml("Judging your answer…");
+  }
   try {
     const data = await apiCoInvent("judge-challenge", answer, {
       challengeAngle: state.challengeAngle,
@@ -1971,10 +1982,24 @@ function setFillButtonsDisabled(disabled) {
   if (btn) btn.disabled = disabled;
 }
 
+/** Face that complete-picture will fill (opposite of current focus). */
+function completePictureTargetFace() {
+  return state.storyFace === "life" ? "how" : "life";
+}
+
 async function callCoInventMode(mode, userLabel) {
   if (state.aiBusy) return;
   state.aiBusy = true;
   setFillButtonsDisabled(true);
+
+  const fillOther = mode === "complete-picture";
+  if (fillOther) {
+    const target = completePictureTargetFace();
+    showStoryFacePending(
+      target,
+      target === "life" ? "Drafting everyday life…" : "Drafting how it works…"
+    );
+  }
 
   try {
     const ctx = {
@@ -2008,6 +2033,8 @@ async function callCoInventMode(mode, userLabel) {
       }),
     });
     const data = await res.json();
+    // Drop the field spinner before writing text so it never overlaps the draft.
+    if (fillOther) clearStoryFacePending();
     if (data.proposals) applyCoInventorProposals(data.proposals);
     if (data.message) {
       ensureCoInventor();
@@ -2020,16 +2047,18 @@ async function callCoInventMode(mode, userLabel) {
         { local: data.source === "local" }
       );
     }
-    if (mode === "complete-picture") {
+    if (fillOther) {
       flashToast("Other story face filled");
       scheduleAiTimingAssess();
     }
   } catch (e) {
     flashToast(e.message || "AI request failed");
   } finally {
+    if (fillOther) clearStoryFacePending();
     state.aiBusy = false;
     setFillButtonsDisabled(false);
     updateChallengeButton();
+    if (fillOther) renderStoryFaceUI();
   }
 }
 
@@ -2168,6 +2197,51 @@ function escapeHtml(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Shared AI “still working” markup — snake spinner + label */
+function aiPendingHtml(label, { field = false } = {}) {
+  const cls = field ? "ai-pending ai-pending--field" : "ai-pending";
+  return `<div class="${cls}" role="status" aria-live="polite">
+    <span class="ai-snake" aria-hidden="true"></span>
+    <span class="ai-pending-label">${escapeHtml(label)}</span>
+  </div>`;
+}
+
+/**
+ * Show a pending indicator inside a story-face field (Fill other side).
+ * @param {"how"|"life"} targetFace — face that will receive AI text
+ * @param {string} label
+ */
+function showStoryFacePending(targetFace, label) {
+  const field = targetFace === "life" ? $("#field-life") : $("#field-how");
+  const note = targetFace === "life" ? $("#note-life") : $("#note-how");
+  if (!field) return;
+  field.classList.add("is-ai-pending");
+  let el = field.querySelector(".ai-pending--field");
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "ai-pending ai-pending--field";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    const header = field.querySelector(".story-face-header");
+    if (header?.nextSibling) field.insertBefore(el, header.nextSibling);
+    else field.prepend(el);
+  }
+  el.innerHTML = `<span class="ai-snake" aria-hidden="true"></span><span class="ai-pending-label">${escapeHtml(
+    label
+  )}</span>`;
+  el.hidden = false;
+  if (note) note.hidden = true;
+}
+
+function clearStoryFacePending() {
+  ["#field-how", "#field-life"].forEach((sel) => {
+    const field = $(sel);
+    if (!field) return;
+    field.classList.remove("is-ai-pending");
+    field.querySelector(".ai-pending--field")?.remove();
+  });
 }
 
 function flashToast(msg) {
