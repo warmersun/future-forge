@@ -608,135 +608,152 @@
     <!-- How to play help -->
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
-        <h3 id="help-title">How Future Forge works</h3>
-        <div class="help-body help-body-wide">
-          <p>
-            You invent a <strong>local</strong> solution for a concrete place under pressure — with emerging tech
-            and an <strong>AI co-inventor</strong> as partner (you lead). Scarce resources and hostile critics make
-            every choice matter.
+        <header class="help-header">
+          <h3 id="help-title">How Future Forge works</h3>
+          <p class="help-intro">
+            Invent a <strong>local</strong> solution under a rising crisis. Spend scarce resources, survive
+            hostile critics, then field the system. The AI co-inventor advises — you decide.
           </p>
-          <ol class="help-steps">
-            <li>
-              <strong>Invent</strong> — spend <strong>AP / Budget / Will</strong> to build a stack, name the idea,
-              and write two story faces.
-            </li>
-            <li>
-              <strong>Feasibility</strong> — red / yellow / green judges whether your <em>claims</em> fit this year.
-              Categories are always pickable; over-claiming goes red.
-            </li>
-            <li>
-              <strong>Scrutiny combat</strong> — clear <strong>2–3</strong> challengers (each 2 HP) by
-              defending in writing, fixing the invention, or sidestepping once.
-            </li>
-            <li>
-              <strong>Deploy</strong> — costs AP + Budget to field the system; crisis meters drop if you succeed.
-            </li>
-          </ol>
+        </header>
 
-          <h4>Resources (Invent &amp; Challenge top bar)</h4>
-          <ul>
-            <li>
-              <strong>Year &amp; turn</strong> — year only moves on <strong>Wait</strong>. Turn advances on Wait or
-              <strong>End turn</strong>.
-            </li>
-            <li>
-              <strong>AP (3 per invent turn)</strong> — attention. Spends on: add tech, Lobby, enter challenge,
-              AI help, challenge moves (Defend / Fix / Sidestep), and Deploy.
-              <strong>End turn</strong> refills AP without raising crisis. <strong>Wait</strong> burns leftover AP then refills.
-            </li>
-            <li>
-              <strong>Budget (start 5)</strong> — capital. Tech cards show cost (e.g. ¤1). You must afford a tech to add it.
-              Same-turn remove refunds half Budget. <strong>Deploy</strong> also costs Budget (ops / fielding — robots in a village
-              still need install money). Challenge success can grant +Budget.
-            </li>
-            <li>
-              <strong>Will (start 3, max 5)</strong> — political will, <em>not</em> a crisis “Trust” meter.
-              <strong>Lobby</strong> = 1 AP + 1 Budget → +1 Will. Helps deploy relief (≥4) and can discount fielding cost;
-              Will 0 hurts deploy drop. Sidestep spends 1 Will.
-            </li>
-          </ul>
+        <div class="help-body">
+          <section class="help-section help-section-span">
+            <h4>The loop</h4>
+            <ol class="help-steps help-steps-horizontal">
+              <li><strong>1. Invent</strong><span>Stack, story, resources</span></li>
+              <li><strong>2. Feasibility</strong><span>Claims fit this year?</span></li>
+              <li><strong>3. Challenge</strong><span>Clear 2–3 critics</span></li>
+              <li><strong>4. Deploy</strong><span>Pay to field; crisis drops</span></li>
+            </ol>
+          </section>
 
-          <h4>Wait vs End turn</h4>
-          <ul>
-            <li><strong>End turn</strong> — invent round ends; AP refills; year and crisis stay put.</li>
-            <li>
-              <strong>Wait (+2 years)</strong> — later world conditions; crisis meters rise; leftover AP burned.
-              Preview shows the rise before you click. Frontier-heavy stacks can risk an extra meter spike.
-            </li>
-          </ul>
+          <section class="help-section">
+            <h4>Resources</h4>
+            <p class="help-note">Shown on Invent and Challenge. Only AP refills on End turn.</p>
+            <dl class="help-dl">
+              <div>
+                <dt>Year &amp; turn</dt>
+                <dd>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</dd>
+              </div>
+              <div>
+                <dt>AP (3 / turn)</dt>
+                <dd>
+                  Attention. Spend on tech, Lobby, enter challenge, AI, Defend / Fix / Sidestep, Deploy.
+                  <strong>End turn</strong> refills AP (crisis stays). <strong>Wait</strong> burns leftover AP, then refills.
+                </dd>
+              </div>
+              <div>
+                <dt>Budget (start 5)</dt>
+                <dd>
+                  Capital for techs (card cost ¤) and for <strong>deploy fielding</strong>. Same-turn remove refunds half.
+                  Not refilled by End turn.
+                </dd>
+              </div>
+              <div>
+                <dt>Will (start 3)</dt>
+                <dd>
+                  Political will — <em>not</em> a crisis “Trust” meter. Lobby: 1 AP + 1 Budget → +1 Will.
+                  ≥4 boosts deploy; 0 hurts it. Sidestep costs 1 Will.
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-          <h4>Story faces</h4>
-          <ul>
-            <li><strong>How it works</strong> — mechanism for <em>this</em> place.</li>
-            <li><strong>Everyday life</strong> — who feels the change after it works.</li>
-            <li>
-              <strong>Focus</strong> picks which face owns <strong>Fill other side</strong> (AI drafts the other face, 1 AP).
-              Both boxes stay editable.
-            </li>
-          </ul>
+          <section class="help-section">
+            <h4>End turn vs Wait</h4>
+            <dl class="help-dl">
+              <div>
+                <dt>End turn</dt>
+                <dd>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</dd>
+              </div>
+              <div>
+                <dt>Wait (+2 years)</dt>
+                <dd>
+                  Later world conditions. Crisis meters <strong>rise</strong>. Leftover AP burned, then refilled.
+                  Preview shows the rise. Frontier stacks can risk an extra spike.
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-          <h4>AI co-inventor</h4>
-          <p>
-            Side tab or ✦ button: spark, stack, names, teach, <strong>Art of the possible</strong>. Each request costs
-            <strong>1 AP</strong>. Applying techs still needs Budget/Will.
-          </p>
+          <section class="help-section">
+            <h4>Story faces</h4>
+            <ul>
+              <li><strong>How it works</strong> — mechanism for this place.</li>
+              <li><strong>Everyday life</strong> — who feels the change.</li>
+              <li>
+                <strong>Focus</strong> + <strong>Fill other side</strong> (1 AP) drafts the other face. Both stay editable.
+              </li>
+            </ul>
+          </section>
 
-          <h4>Scrutiny combat (Challenge)</h4>
-          <p>
-            Resources stay visible. Green feasibility → <strong>2</strong> challengers; yellow → <strong>3</strong>.
-            Each has <strong>2 HP</strong> (Moloch, Ethicist, Stakeholder, or Mother Nature). The portrait shown first
-            for a challenger stays fixed.
-          </p>
-          <ul>
-            <li>
-              <strong>Defend in writing (1 AP)</strong> — submit your text. Strong concrete answers deal 2 HP;
-              partial deals 1; vague hope deals 0 (a <em>miss</em>). Two misses fail the whole challenge.
-            </li>
-            <li>
-              <strong>Fix the invention (1 AP)</strong> — patch how-it-works under fire (−1 HP). Optionally spend
-              +1 Budget for a funded patch (−2 HP).
-            </li>
-            <li>
-              <strong>Sidestep once (1 AP · 1 Will)</strong> — clear this challenger without winning the argument.
-              Only once per run; softens elegance score later.
-            </li>
-            <li>
-              <strong>Coach / Draft / Ask</strong> — first help in a run is free; then 1 AP each.
-            </li>
-            <li>
-              Clear <strong>all</strong> challengers to unlock <strong>Deploy</strong> (shown on its own when ready).
-            </li>
-          </ul>
+          <section class="help-section">
+            <h4>AI co-inventor</h4>
+            <ul>
+              <li><strong>Invent:</strong> chips (spark, stack, Art of the possible, …) + chat. 1 AP per request.</li>
+              <li>
+                <strong>Challenge:</strong> chat + Coach / Draft / Ask only (no invent chips). First help free, then 1 AP.
+              </li>
+              <li>You still own Defend / Fix / Sidestep on the left.</li>
+            </ul>
+          </section>
 
-          <h4>Deploy cost &amp; crisis drop</h4>
-          <ul>
-            <li>
-              <strong>Fielding cost:</strong> 1 AP + Budget (base ¤1; +¤1 if 3+ techs; +¤1 frontier-heavy stack;
-              Will ≥ 4 can shave ¤1 when cost would be higher). Button shows the cost.
-            </li>
-            <li>
-              <strong>Crisis drop:</strong> stronger stack, story, challenge quality, and Will ≥ 4 increase relief;
-              Will 0 reduces it. Hit 5 on any crisis meter or the fail year → mission ends.
-            </li>
-          </ul>
+          <section class="help-section help-section-span">
+            <h4>Challenge — how you respond</h4>
+            <p class="help-note">
+              Green feasibility → 2 challengers; yellow → 3. Each has 2 HP. Pick a response mode (it stays selected),
+              then complete the step under it.
+            </p>
+            <div class="help-cards">
+              <article class="help-card">
+                <h5>Defend in writing</h5>
+                <p class="help-card-cost">1 AP to submit</p>
+                <p>Write who acts, who pays, or what limit you respect. Hit −2 HP · glance −1 · miss 0. Two misses fail the run.</p>
+              </article>
+              <article class="help-card">
+                <h5>Fix the invention</h5>
+                <p class="help-card-cost">1 AP · optional +¤1</p>
+                <p>
+                  <strong>You</strong> edit how-it-works on Challenge (not back to Invent). Apply fix deals 1 HP
+                  (2 if funded). AI can coach; it does not apply the fix for you.
+                </p>
+              </article>
+              <article class="help-card">
+                <h5>Sidestep once</h5>
+                <p class="help-card-cost">1 AP · 1 Will</p>
+                <p>Skip this challenger without winning. Once per run; softens elegance score.</p>
+              </article>
+            </div>
+            <p class="help-note">Clear <strong>all</strong> challengers to unlock Deploy.</p>
+          </section>
 
-          <h4>Outcome stars</h4>
-          <p>
-            Up to ★★★ for speed (few Waits / early year), honesty (feasible claims), and elegance (synergies).
-            Sidestep softens elegance. Stars appear on the outcome screen only.
-          </p>
+          <section class="help-section">
+            <h4>Deploy</h4>
+            <ul>
+              <li>
+                <strong>Fielding cost:</strong> 1 AP + Budget (base ¤1; +¤1 if 3+ techs; +¤1 frontier stack;
+                Will ≥ 4 can shave ¤1). Button shows the cost.
+              </li>
+              <li>
+                <strong>Crisis drop:</strong> stronger stack, story, challenge quality, Will ≥ 4 increase relief.
+                Meter at 5 or fail year → mission ends.
+              </li>
+            </ul>
+          </section>
 
-          <h4>Tips</h4>
-          <ul>
-            <li>Stay local: who benefits on this street, clinic, or quay.</li>
-            <li>End turn often; Wait only when later years are worth the crisis cost.</li>
-            <li>Lobby toward Will 4 before deploy for mandate bonuses.</li>
-            <li>Save AP for Defend and Deploy — don’t burn it all on freeform AI chat.</li>
-            <li>Feasibility judges <em>claims</em>, not whether a card is “unlocked.”</li>
-          </ul>
+          <section class="help-section">
+            <h4>Stars &amp; tips</h4>
+            <ul>
+              <li>★★★ for speed, honesty, elegance (outcome screen only). Sidestep softens elegance.</li>
+              <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
+              <li>Lobby toward Will 4 before deploy. Save AP for Defend and Deploy.</li>
+              <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
+            </ul>
+          </section>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-primary btn-sm" id="help-close">Got it</button>
+
+        <div class="modal-actions help-footer">
+          <button type="button" class="btn btn-primary" id="help-close">Got it</button>
         </div>
       </div>
     </div>

@@ -1236,44 +1236,216 @@ button:disabled {
   transform: scale(1.05);
 }
 
-/* Width is set on .modal.help-modal below the base .modal rule (specificity). */
+/* Help modal body styles — panel size is .modal.help-modal below base .modal */
+
+.help-header {
+  margin: 0 0 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-header h3 {
+  margin: 0 0 0.45rem;
+}
+
+.help-intro {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  max-width: 52rem;
+}
 
 .help-body {
-  font-size: 0.92rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem 1rem;
+  margin: 0 0 0.25rem;
+  font-size: 0.88rem;
   color: var(--text-dim);
-  line-height: 1.55;
-  margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
-.help-body p {
-  margin: 0 0 0.75rem;
-  color: var(--text-dim);
+@media (max-width: 800px) {
+  .help-body {
+    grid-template-columns: 1fr;
+  }
 }
 
-.help-body h4 {
-  margin: 1rem 0 0.35rem;
-  font-size: 0.8rem;
+.help-section {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(7, 11, 20, 0.35);
+  min-width: 0;
+}
+
+.help-section-span {
+  grid-column: 1 / -1;
+}
+
+.help-section h4 {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--accent);
+  font-weight: 700;
+}
+
+.help-section h5 {
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.help-note {
+  margin: 0 0 0.55rem;
+  font-size: 0.84rem;
+  color: var(--text-mute);
+  line-height: 1.45;
+}
+
+.help-section ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.help-section li {
+  margin-bottom: 0.4rem;
+}
+
+.help-section li:last-child {
+  margin-bottom: 0;
+}
+
+.help-section p {
+  margin: 0 0 0.5rem;
+}
+
+.help-section p:last-child {
+  margin-bottom: 0;
+}
+
+.help-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.help-dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: start;
+}
+
+@media (max-width: 520px) {
+  .help-dl > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+.help-dl dt {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.help-dl dd {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  line-height: 1.45;
 }
 
 .help-steps {
-  margin: 0 0 0.75rem;
-  padding-left: 1.2rem;
-}
-
-.help-steps li {
-  margin-bottom: 0.45rem;
-}
-
-.help-body ul {
   margin: 0;
-  padding-left: 1.2rem;
+  padding: 0;
+  list-style: none;
 }
 
-.help-body li {
-  margin-bottom: 0.35rem;
+.help-steps-horizontal {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .help-steps-horizontal {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.help-steps-horizontal li {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.help-steps-horizontal li strong {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.help-steps-horizontal li span {
+  font-size: 0.78rem;
+  color: var(--text-mute);
+  line-height: 1.35;
+}
+
+.help-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+@media (max-width: 800px) {
+  .help-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.help-card {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: rgba(7, 11, 20, 0.45);
+}
+
+.help-card-cost {
+  margin: 0 0 0.35rem !important;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-2, #a78bfa);
+}
+
+.help-card p:last-child {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-mute);
+}
+
+.help-footer {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
 }
 
 /* legacy under-banner crisis line removed from layout */
