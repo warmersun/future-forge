@@ -1820,10 +1820,13 @@ function paintActiveEncounter() {
   $("#challenge-speech").innerHTML = `<p>${escapeHtml(enc.speech || "").replace(/\n/g, "<br>")}</p>`;
   $("#challenge-question").textContent = enc.question || "";
   const label = $("#challenge-answer-label");
-  if (label) label.textContent = `Your argument vs ${meta.label}`;
+  if (label) label.textContent = `Write your defense against ${meta.label}`;
   const moves = $("#scrutiny-moves");
   if (moves) moves.hidden = false;
-  $("#btn-challenge-submit").hidden = true;
+  const essayBtn = $("#btn-challenge-submit");
+  if (essayBtn) essayBtn.hidden = true;
+  // Keep deploy in the footer only when unlocked
+  updateDeployButtonCost();
 }
 
 function renderScrutinyEncounters() {

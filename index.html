@@ -415,26 +415,56 @@
           </div>
 
           <div class="field">
-            <label for="challenge-answer" id="challenge-answer-label">Your answer</label>
-            <textarea id="challenge-answer" rows="5" placeholder="How do you answer this attack on your idea?"></textarea>
+            <label for="challenge-answer" id="challenge-answer-label">Your written defense</label>
+            <textarea
+              id="challenge-answer"
+              rows="5"
+              placeholder="Name who acts, who pays, or what hard limit you respect — vague hope will miss."
+            ></textarea>
           </div>
           <div id="challenge-feedback" class="challenge-feedback" hidden></div>
-          <div class="form-actions game-actions scrutiny-moves" id="scrutiny-moves" hidden>
-            <button type="button" class="btn btn-primary" id="btn-scrutiny-argue" title="1 AP — AI judges hit / glance / miss">
-              Argue (1 AP)
-            </button>
-            <button type="button" class="btn btn-secondary" id="btn-scrutiny-patch" title="1 AP — patch design for 1 HP (optional +1 Budget for funded +2 HP)">
-              Patch (1 AP)
-            </button>
-            <button type="button" class="btn btn-ghost" id="btn-scrutiny-pivot" title="1 AP + 1 Will — clear this encounter, once per run">
-              Pivot (1 AP · 1 Will)
-            </button>
-          </div>
-          <div class="form-actions game-actions">
-            <button type="button" class="btn btn-secondary" id="btn-challenge-submit">Submit answer</button>
-            <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
-              Deploy invention →
-            </button>
+
+          <!-- Single action block: combat moves OR essay submit, then deploy -->
+          <div class="challenge-actions" id="challenge-actions">
+            <div id="scrutiny-moves" class="scrutiny-moves" hidden>
+              <p class="scrutiny-moves-lead">
+                Choose how you answer <em>this</em> challenger. Each move costs resources; clear every
+                challenger’s HP to unlock deploy.
+              </p>
+              <div class="scrutiny-move-grid" role="group" aria-label="Scrutiny moves">
+                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-argue">
+                  <span class="scrutiny-move-title">Defend in writing</span>
+                  <span class="scrutiny-move-cost">1 AP</span>
+                  <span class="scrutiny-move-blurb">
+                    Submit the text above. A strong, concrete answer deals 2 HP; a partial one deals 1;
+                    vague hope deals 0 (a miss). Two misses fail the whole challenge.
+                  </span>
+                </button>
+                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-patch">
+                  <span class="scrutiny-move-title">Fix the invention</span>
+                  <span class="scrutiny-move-cost">1 AP · optional +¤1</span>
+                  <span class="scrutiny-move-blurb">
+                    Patch how-it-works under fire (−1 HP). Spend 1 extra Budget for a funded patch (−2 HP).
+                  </span>
+                </button>
+                <button type="button" class="scrutiny-move-btn" id="btn-scrutiny-pivot">
+                  <span class="scrutiny-move-title">Sidestep once</span>
+                  <span class="scrutiny-move-cost">1 AP · 1 Will</span>
+                  <span class="scrutiny-move-blurb">
+                    Dodge this challenger completely. Only once per run; costs elegance later.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions game-actions challenge-footer-actions">
+              <button type="button" class="btn btn-secondary" id="btn-challenge-submit">
+                Submit answer
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-challenge-deploy" hidden disabled>
+                Deploy invention →
+              </button>
+            </div>
           </div>
         </div>
       </div>
