@@ -40,7 +40,7 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
-import { techCost } from "./sim/economy.js";
+import { techCost, deployActionCost } from "./sim/economy.js";
 
 const state = {
   screen: "title",
@@ -1811,6 +1811,7 @@ function renderChallengeStep() {
   if (state.challengePassed) {
     dep.hidden = false;
     dep.disabled = false;
+    updateDeployButtonCost();
   } else {
     dep.hidden = true;
     dep.disabled = true;
@@ -2002,6 +2003,32 @@ async function submitChallengeAnswer() {
   renderChallengeStep();
 }
 
+function currentDeployFieldCost(techs = selectedTechs()) {
+  return deployActionCost(techs, { will: state.will ?? 0 });
+}
+
+function updateDeployButtonCost() {
+  const dep = $("#btn-challenge-deploy");
+  if (!dep || dep.hidden) return;
+  const techs = selectedTechs();
+  if (!techs.length) {
+    dep.textContent = "Deploy invention →";
+    return;
+  }
+  const cost = currentDeployFieldCost(techs);
+  const bits = [];
+  if (apEnabled()) bits.push(`${cost.ap} AP`);
+  if (budgetWillEnabled()) bits.push(`¤${cost.budget}`);
+  dep.textContent = bits.length
+    ? `Deploy invention (${bits.join(" · ")}) →`
+    : "Deploy invention →";
+  dep.title = budgetWillEnabled()
+    ? `Field the invention: costs attention and capital to roll out on the ground. ${cost.parts
+        .map((p) => `${p.label}: ${p.amount > 0 ? "+" : ""}${p.amount} Budget`)
+        .join("; ")}`
+    : "Deploy after a successful challenge.";
+}
+
 function attemptDeploy() {
   if (!state.challengePassed) {
     flashToast("Pass the challenge step first.");
@@ -2020,6 +2047,29 @@ function attemptDeploy() {
   if (assessFeasibility().overall === "red") {
     flashToast("Feasibility is red — revise how-it-works timing claims first.");
     return;
+  }
+
+  const fieldCost = currentDeployFieldCost(techs);
+  if (apEnabled() || budgetWillEnabled()) {
+    const pay = dispatchSim("deploy", {
+      apCost: apEnabled() ? fieldCost.ap : 0,
+      budgetCost: budgetWillEnabled() ? fieldCost.budget : 0,
+    });
+    if (!pay.ok) {
+      if (pay.error === "no_ap") {
+        flashToast("No AP to deploy — return to Invent and End turn, then come back.");
+      } else if (pay.error === "no_budget") {
+        flashToast(
+          `Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, win challenge income, or simplify the stack.`
+        );
+      } else {
+        flashToast("Cannot deploy right now.");
+      }
+      renderChallengeHud();
+      updateDeployButtonCost();
+      return;
+    }
+    renderChallengeHud();
   }
 
   const domains = domainsInStack(techs);
@@ -2045,13 +2095,19 @@ function attemptDeploy() {
 
   state.pressure = applyPressureDrop(state.pressure, drop);
 
-  state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.`;
+  const costBits = [];
+  if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
+  if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
+  const costNote = costBits.length ? ` Cost: ${costBits.join(" · ")}.` : "";
+
+  state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.${costNote}`;
   state.waitReport = "";
   // Deployed = solved (full win or partial relief); still replayable from the mission grid
   markMissionSolved(state.mission);
   finishOutcome(wonMission() ? "win" : "partial", {
     drop,
     dropParts: dropInfo.parts,
+    deployCost: fieldCost,
     domains,
     pairs,
     verdict: state.challengeVerdict,

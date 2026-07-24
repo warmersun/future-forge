@@ -10,7 +10,7 @@ import { computeDeployDrop } from "./deploy.js";
 import { isWin, isCollapsed } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
-import { techCost, applyG2DeployDeltas } from "./economy.js";
+import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
 import { GAME } from "../data.js";
 
 describe("pressure", () => {
@@ -202,6 +202,21 @@ describe("actions", () => {
     assert.equal(r.sim.will, 4);
     assert.equal(r.sim.ap, 2);
   });
+
+  it("deploy action spends AP and budget", () => {
+    const s = base();
+    s.ap = 2;
+    s.budget = 3;
+    s.will = 3;
+    const r = applyAction(
+      s,
+      { type: "deploy", payload: { apCost: 1, budgetCost: 2 } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.ap, 1);
+    assert.equal(r.sim.budget, 1);
+  });
 });
 
 describe("economy", () => {
@@ -214,5 +229,31 @@ describe("economy", () => {
     assert.equal(applyG2DeployDeltas(5, 4).drop, 6);
     assert.equal(applyG2DeployDeltas(5, 0).drop, 4);
     assert.equal(applyG2DeployDeltas(5, 2).drop, 5);
+  });
+
+  it("deploy field cost scales with stack and discounts high will", () => {
+    const one = deployActionCost([{ id: "a", readyYear: 2026, curve: "mature" }], { will: 2 });
+    assert.equal(one.ap, 1);
+    assert.equal(one.budget, 1);
+
+    const three = deployActionCost(
+      [
+        { id: "a", readyYear: 2026, curve: "mature" },
+        { id: "b", readyYear: 2026, curve: "mature" },
+        { id: "c", readyYear: 2026, curve: "mature" },
+      ],
+      { will: 2 }
+    );
+    assert.equal(three.budget, 2);
+
+    const threeMandate = deployActionCost(
+      [
+        { id: "a", readyYear: 2026, curve: "mature" },
+        { id: "b", readyYear: 2026, curve: "mature" },
+        { id: "c", readyYear: 2026, curve: "mature" },
+      ],
+      { will: 4 }
+    );
+    assert.equal(threeMandate.budget, 1);
   });
 });

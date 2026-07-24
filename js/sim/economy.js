@@ -44,6 +44,40 @@ export function techBudgetRefund(cost) {
 }
 
 /**
+ * Cost to field / deploy the invention (on top of tech acquisition).
+ * Theme: robots in a village still need install, training, ops money.
+ *
+ * @param {object[]} techs
+ * @param {{ will?: number }} [opts]
+ * @returns {{ ap: number, budget: number, parts: { id: string, label: string, amount: number }[] }}
+ */
+export function deployActionCost(techs = [], opts = {}) {
+  const will = Number(opts.will) || 0;
+  const parts = [];
+  let budget = 1;
+  parts.push({ id: "base", label: "Field rollout (base)", amount: 1 });
+
+  if (techs.length >= 3) {
+    budget += 1;
+    parts.push({ id: "scale", label: "Larger stack (3+ techs)", amount: 1 });
+  }
+  if (stackFrontierRisk(techs) >= 3) {
+    budget += 1;
+    parts.push({ id: "frontier", label: "Frontier / stretch stack ops", amount: 1 });
+  }
+  if (will >= 4 && budget > 1) {
+    budget -= 1;
+    parts.push({ id: "mandate", label: "Political will ≥ 4 (funding help)", amount: -1 });
+  }
+
+  return {
+    ap: 1,
+    budget: Math.max(1, budget),
+    parts,
+  };
+}
+
+/**
  * G2 deploy modifiers on top of baseline drop.
  * @param {number} drop
  * @param {number} will

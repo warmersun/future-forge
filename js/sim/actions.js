@@ -232,6 +232,27 @@ export function applyAction(sim, action, opts = {}) {
     return { ok: true, events: [{ type: "challenge_attempt" }], sim: next };
   }
 
+  if (type === "deploy") {
+    // payload: { apCost, budgetCost } — computed by host via deployActionCost
+    const apCost = action.payload?.apCost ?? 1;
+    const budgetCost = action.payload?.budgetCost ?? 1;
+    if (apOn && apCost > 0 && !spendAp(apCost)) {
+      return { ok: false, error: "no_ap", sim };
+    }
+    if (bwOn) {
+      if ((next.budget ?? 0) < budgetCost) {
+        return { ok: false, error: "no_budget", sim };
+      }
+      next.budget -= budgetCost;
+    }
+    events.push({
+      type: "deploy",
+      apCost: apOn ? apCost : 0,
+      budgetCost: bwOn ? budgetCost : 0,
+    });
+    return { ok: true, events, sim: next };
+  }
+
   return { ok: false, error: `unknown_action:${type}`, sim };
 }
 
