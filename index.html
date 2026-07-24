@@ -129,6 +129,8 @@
           <span class="hud-year" id="hud-year">2026</span>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
           <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
+          <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5</span>
+          <span class="hud-will" id="hud-will" hidden title="Political will">Will 3</span>
         </div>
         <div
           class="hud-crisis-wrap"
@@ -259,6 +261,15 @@
             <p class="wait-preview" id="wait-preview" aria-live="polite" hidden></p>
             <div class="form-actions game-actions">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-lobby"
+                hidden
+                title="Spend 1 Budget and 1 AP for +1 political will"
+              >
+                Lobby
+              </button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"

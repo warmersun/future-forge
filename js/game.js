@@ -40,6 +40,7 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
+import { techCost } from "./sim/economy.js";
 
 const state = {
   screen: "title",
@@ -98,6 +99,10 @@ const state = {
   turnPhase: "act",
   pendingAi: null,
   lastWriteSnapshot: { name: "", how: "", impact: "" },
+  // G2 budget + political will (never state.trust)
+  budget: GAME.startingBudget ?? 5,
+  will: GAME.startingWill ?? 3,
+  techAddedThisTurn: {},
 };
 
 const STORAGE_SCENARIOS = "future-forge:scenarioCache";
@@ -112,10 +117,15 @@ function apEnabled() {
   return Boolean(features().actionPoints);
 }
 
+function budgetWillEnabled() {
+  return Boolean(features().budgetWill);
+}
+
 function dispatchSim(type, payload = {}) {
   const result = applyAction(simSliceFromState(state), { type, payload }, {
     features: features(),
     apMax: state.apMax ?? GAME.apMax,
+    techById,
   });
   if (result.ok) applySimSliceToState(state, result.sim);
   return result;
@@ -682,6 +692,9 @@ function startMission(mission) {
   state.turnPhase = "act";
   state.pendingAi = null;
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
+  state.budget = GAME.startingBudget ?? 5;
+  state.will = GAME.startingWill ?? 3;
+  state.techAddedThisTurn = {};
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   state.coInventor?.onChallengeStart?.();
@@ -984,6 +997,22 @@ function assessFeasibility() {
   }
   dims.push({ id: "fit", name: "Local fit", level: fitLevel, note: fitNote });
 
+  // Resources (G2) — at most yellow, never hard-blocks challenge alone
+  if (budgetWillEnabled()) {
+    const b = state.budget ?? 0;
+    const w = state.will ?? 0;
+    let resLevel = "green";
+    let resNote = `Budget ${b} · political will ${w}.`;
+    if (b === 0 && w === 0) {
+      resLevel = "yellow";
+      resNote = "Out of Budget and will — stack is fixed unless you Wait/End turn and lobby later.";
+    } else if (b <= 1 || w <= 1) {
+      resLevel = "yellow";
+      resNote = `Thin capital (Budget ${b}, will ${w}) — lobby or clear a challenge for more.`;
+    }
+    dims.push({ id: "resources", name: "Resources", level: resLevel, note: resNote });
+  }
+
   // Stack shape (soft — never a hard red unless empty)
   let stackLevel = "red";
   let stackNote = "Add at least one technology.";
@@ -1069,6 +1098,36 @@ function renderHud() {
       apEl.hidden = true;
     }
   }
+  const budgetEl = $("#hud-budget");
+  if (budgetEl) {
+    if (budgetWillEnabled()) {
+      budgetEl.hidden = false;
+      budgetEl.textContent = `Budget ${state.budget ?? 0}`;
+      budgetEl.title = "Capital to add technologies. Lobby spends 1 for political will.";
+    } else {
+      budgetEl.hidden = true;
+    }
+  }
+  const willEl = $("#hud-will");
+  if (willEl) {
+    if (budgetWillEnabled()) {
+      willEl.hidden = false;
+      willEl.textContent = `Will ${state.will ?? 0}`;
+      willEl.title =
+        "Political will (not a crisis meter). ≥4 boosts deploy drop; 0 hurts it. Lobby raises will.";
+    } else {
+      willEl.hidden = true;
+    }
+  }
+  const lobbyBtn = $("#btn-lobby");
+  if (lobbyBtn) {
+    lobbyBtn.hidden = !budgetWillEnabled();
+    if (budgetWillEnabled()) {
+      const can =
+        (!apEnabled() || (state.ap ?? 0) >= 1) && (state.budget ?? 0) >= 1;
+      lobbyBtn.disabled = !can;
+    }
+  }
   const box = $("#hud-pressure");
   box.innerHTML = Object.entries(state.pressure)
     .map(([k, v]) => {
@@ -1123,16 +1182,26 @@ function renderTechList() {
       const sug = suggested.has(t.id);
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
       const nowCap = t.useCasesNow?.[0] || t.maturity?.now || t.summary;
+      const cost = budgetWillEnabled() ? techCost(t) : null;
+      const costBit =
+        cost && !sel
+          ? ` · ¤${cost.budget}${cost.will ? ` · will ${cost.will}` : ""}`
+          : "";
+      const costTitle = cost
+        ? ` | Cost: Budget ${cost.budget}${cost.will ? `, Will ${cost.will}` : ""}${
+            cost.frontierRisk ? `, frontier risk ${cost.frontierRisk}` : ""
+          }`
+        : "";
       return `
         <button type="button" class="tech-card ${sel ? "selected" : ""} ${sug ? "recommended" : ""}"
-          data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}">
+          data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
           <span class="tech-icon">${t.icon}</span>
           <span class="tech-meta">
             <h4>${escapeHtml(t.name)}</h4>
             <p>${escapeHtml(t.summary)}</p>
             <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
               sug ? " · suggested" : ""
-            }</span>
+            }${costBit}</span>
           </span>
           <span class="tech-add">${sel ? "✓" : "+"}</span>
         </button>`;
@@ -1191,9 +1260,11 @@ function onTechClick(id) {
       flashToast("Stack full (8). Remove one first.");
       return;
     }
-    const r = dispatchSim("select_tech", { techId: id });
+    const r = dispatchSim("select_tech", { techId: id, tech: techById(id) });
     if (!r.ok) {
       if (r.error === "no_ap") flashToast("No AP left — End Turn or Wait.");
+      else if (r.error === "no_budget") flashToast("Not enough Budget for that tech.");
+      else if (r.error === "no_will") flashToast("Not enough Political will for that tech.");
       else if (r.error === "stack full") flashToast("Stack full.");
       return;
     }
@@ -1249,10 +1320,16 @@ function renderSynergy() {
     challengeVerdict: state.challengeVerdict,
     challengeAnswer: state.challengeAnswer,
     suggested: state.mission?.suggested || [],
+    will: state.will,
+    budgetWill: budgetWillEnabled(),
   });
   const dropNote = `<div class="deploy-drop-preview muted">Deploy crisis drop preview: <strong>−${dropInfo.drop}</strong>${
     pairs.length
       ? " · elegance scores each synergy pair; drop only needs one pair for +1"
+      : ""
+  }${
+    budgetWillEnabled()
+      ? ` · will ${state.will ?? 0}${(state.will ?? 0) >= 4 ? " (mandate +1)" : (state.will ?? 0) === 0 ? " (no mandate −1)" : ""}`
       : ""
   }</div>`;
   if (techs.length === 1) {
@@ -1381,6 +1458,19 @@ function endTurn() {
   renderWorkshop();
 }
 
+function lobbyAction() {
+  if (!budgetWillEnabled()) return;
+  const r = dispatchSim("lobby");
+  if (!r.ok) {
+    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.");
+    else if (r.error === "no_budget") flashToast("Need 1 Budget to lobby.");
+    else flashToast("Cannot lobby now.");
+    return;
+  }
+  flashToast(`Lobbied · Budget ${state.budget} · Will ${state.will}`);
+  renderWorkshop();
+}
+
 function waitTurn() {
   if (collapsed()) {
     finishOutcome("collapse");
@@ -1394,7 +1484,18 @@ function waitTurn() {
   const prevYear = state.year;
   const prevPressure = clonePressure(state.pressure);
 
-  const r = dispatchSim("wait", { mission: m });
+  const techsNow = selectedTechs();
+  const stretch = detectClaimStretch(
+    state.inventionHow.trim() || state.inventionImpact.trim(),
+    techsNow,
+    state.year
+  );
+  const r = dispatchSim("wait", {
+    mission: m,
+    techs: techsNow,
+    stretchLevel: stretch.level,
+    riskSeed: `${m.id}:${(state.waits || 0) + 1}:${(state.turn || 0) + 1}`,
+  });
   if (!r.ok) {
     flashToast(r.error || "Cannot Wait now.");
     return;
@@ -1411,9 +1512,14 @@ function waitTurn() {
     .map((k) => `${k} ${prevPressure[k]}→${state.pressure[k]}`)
     .join(" · ");
 
+  const riskEv = (r.events || []).find((e) => e.type === "frontier_risk");
+  const riskLine = riskEv
+    ? `<br/><span class="bad">Frontier risk:</span> hype spiked <strong>${escapeHtml(riskEv.meter)}</strong> +1.`
+    : "";
+
   state.waitReport = `<strong>→ ${state.year}</strong> (Wait from ${prevYear}; waits ${state.waits})<br/>
     <span class="ok">Capability horizon:</span> ${escapeHtml(horizon)}<br/>
-    <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}<br/>
+    <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}${riskLine}<br/>
     <span class="muted">${escapeHtml(news)}</span>`;
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
   state.aiTiming = null; // re-evaluate claims in new year
@@ -1772,6 +1878,9 @@ async function submitChallengeAnswer() {
     } else {
       state.challengePassed = true;
     }
+    if (budgetWillEnabled()) {
+      dispatchSim("challenge_income", { verdict: state.challengeVerdict });
+    }
   } catch {
     const ok = answer.length >= 40;
     state.challengeVerdict = ok ? "partial" : "fail";
@@ -1782,6 +1891,9 @@ async function submitChallengeAnswer() {
       ? "<strong>PARTIAL</strong> — Concrete enough to try a deploy."
       : "<strong>FAIL</strong> — Too vague. Name who acts, who pays, or what limit you respect.";
     if (!ok) state.challengeFails += 1;
+    if (budgetWillEnabled()) {
+      dispatchSim("challenge_income", { verdict: state.challengeVerdict });
+    }
   }
   $("#btn-challenge-submit").disabled = false;
   renderChallengeStep();
@@ -1818,6 +1930,8 @@ function attemptDeploy() {
     challengeVerdict: state.challengeVerdict,
     challengeAnswer: state.challengeAnswer,
     suggested: state.mission.suggested || [],
+    will: state.will,
+    budgetWill: budgetWillEnabled(),
   });
   const drop = dropInfo.drop;
   const timingSnap =
@@ -2191,6 +2305,15 @@ function applyCoInventorProposals(proposals) {
   for (const id of proposals.addTechIds || []) {
     if (!techById(id) || state.selectedTechIds.includes(id)) continue;
     if (state.selectedTechIds.length >= 8) break;
+    if (budgetWillEnabled()) {
+      const cost = techCost(techById(id));
+      if ((state.budget ?? 0) < cost.budget || (state.will ?? 0) < cost.will) {
+        flashToast(`AI suggested ${techById(id).name} but you cannot afford it (Budget/will).`);
+        continue;
+      }
+      state.budget -= cost.budget;
+      state.will -= cost.will;
+    }
     state.selectedTechIds.push(id);
     changed = true;
   }
@@ -2639,6 +2762,7 @@ function bind() {
 
   $("#btn-wait").addEventListener("click", () => waitTurn());
   $("#btn-end-turn")?.addEventListener("click", () => endTurn());
+  $("#btn-lobby")?.addEventListener("click", () => lobbyAction());
   $("#btn-to-challenge")?.addEventListener("click", () => {
     if (!inventReadyForChallenge()) {
       flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");

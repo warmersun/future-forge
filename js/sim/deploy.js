@@ -1,7 +1,9 @@
 /**
  * Pure deploy-drop calculation (DOM-free).
- * Matches attemptDeploy drop formula (game.js ~L1655–1665).
+ * Matches attemptDeploy drop formula (game.js ~L1655–1665) + optional G2 will deltas.
  */
+
+import { applyG2DeployDeltas } from "./economy.js";
 
 /**
  * @param {object} opts
@@ -13,6 +15,8 @@
  * @param {string[]} [opts.suggested] — mission.suggested tech ids
  * @param {Array<[string,string]>} [opts.pairs] — synergy pairs
  * @param {string[]} [opts.domains] — domain ids in stack
+ * @param {number} [opts.will] — political will (G2)
+ * @param {boolean} [opts.budgetWill] — feature flag
  */
 export function computeDeployDrop(opts) {
   const techs = opts.techs || [];
@@ -57,6 +61,12 @@ export function computeDeployDrop(opts) {
   if (techs.filter((t) => suggested.has(t.id)).length >= 2) {
     drop += 1;
     parts.push({ id: "suggested", label: "≥2 mission-suggested techs", amount: 1 });
+  }
+
+  if (opts.budgetWill) {
+    const g2 = applyG2DeployDeltas(drop, Number(opts.will) || 0);
+    drop = g2.drop;
+    parts.push(...g2.parts);
   }
 
   return { drop, parts };

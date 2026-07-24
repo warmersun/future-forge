@@ -1,0 +1,112 @@
+/**
+ * G2 Budget + political will helpers (DOM-free).
+ * Never use state.trust as a player resource — crisis meters may still be named "Trust".
+ */
+
+/** Sparse overrides after playtest */
+export const TECH_COST_OVERRIDES = {
+  // examples kept empty for default formula balance
+};
+
+/**
+ * @param {object} t — tech from TECHS
+ * @returns {{ budget: number, will: number, frontierRisk: number }}
+ */
+export function techCost(t) {
+  if (!t) return { budget: 1, will: 0, frontierRisk: 0 };
+  const overrides = TECH_COST_OVERRIDES[t.id];
+  if (overrides) return { ...overrides };
+
+  let budget = 1; // mature and steep default
+  let will = 0;
+  let frontierRisk = 0;
+
+  if (t.curve === "early") {
+    budget = 2;
+    will = 1;
+    frontierRisk = 1;
+  }
+  const ready = t.readyYear || 2026;
+  if (ready >= 2030) {
+    budget = Math.max(budget, 3);
+    will = Math.max(will, 1);
+    frontierRisk = Math.max(frontierRisk, 2);
+  } else if (ready >= 2028) {
+    frontierRisk = Math.max(frontierRisk, 1);
+    budget = Math.max(budget, 2);
+  }
+  return { budget, will, frontierRisk };
+}
+
+/** Half budget refund on same-turn remove (will not refunded). */
+export function techBudgetRefund(cost) {
+  return Math.floor((cost?.budget || 0) / 2);
+}
+
+/**
+ * G2 deploy modifiers on top of baseline drop.
+ * @param {number} drop
+ * @param {number} will
+ * @returns {{ drop: number, parts: { id: string, label: string, amount: number }[] }}
+ */
+export function applyG2DeployDeltas(drop, will) {
+  const parts = [];
+  let d = drop;
+  if (will >= 4) {
+    d += 1;
+    parts.push({ id: "mandate", label: "Political will ≥ 4 (mandate)", amount: 1 });
+  }
+  if (will === 0) {
+    d = Math.max(0, d - 1);
+    parts.push({ id: "no_mandate", label: "Political will 0 (no mandate)", amount: -1 });
+  }
+  return { drop: d, parts };
+}
+
+/** Deterministic PRNG for frontier risk ticks */
+export function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function hashSeed(str) {
+  let h = 2166136261;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Sum frontierRisk on stack techs.
+ * @param {object[]} techs
+ */
+export function stackFrontierRisk(techs) {
+  return (techs || []).reduce((sum, t) => sum + (techCost(t).frontierRisk || 0), 0);
+}
+
+/**
+ * Maybe apply frontier risk tick on Wait (mutates nothing — returns new pressure or null).
+ * @returns {{ pressure: Record<string,number>, meter: string } | null}
+ */
+export function maybeFrontierRiskTick(pressure, techs, stretchLevel, seedStr) {
+  if (stackFrontierRisk(techs) < 3) return null;
+  if (stretchLevel !== "yellow" && stretchLevel !== "red") return null;
+  const rng = mulberry32(hashSeed(seedStr));
+  if (rng() >= 0.2) return null;
+  const keys = Object.keys(pressure || {});
+  if (!keys.length) return null;
+  const ordered = [...keys].sort((a, b) => (pressure[b] ?? 0) - (pressure[a] ?? 0));
+  const meter = ordered[0];
+  const next = { ...pressure };
+  next[meter] = Math.min(5, (next[meter] ?? 0) + 1);
+  return { pressure: next, meter };
+}

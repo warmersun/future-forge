@@ -5,18 +5,31 @@
 import { GAME } from "../data.js";
 import { applyPressureRise, clonePressure } from "./pressure.js";
 import { isCollapsed } from "./collapse.js";
+import {
+  techCost,
+  techBudgetRefund,
+  maybeFrontierRiskTick,
+} from "./economy.js";
 
 /**
- * @param {object} sim — mutable sim slice (pressure, year, turn, waits, ap, …)
+ * @param {object} sim — mutable sim slice (pressure, year, turn, waits, ap, budget, will, …)
  * @param {{ type: string, payload?: object }} action
- * @param {{ features?: object, apMax?: number }} [opts]
+ * @param {{ features?: object, apMax?: number, techById?: (id: string) => object|null }} [opts]
  * @returns {{ ok: boolean, error?: string, events?: object[], sim: object }}
  */
 export function applyAction(sim, action, opts = {}) {
   const features = opts.features || GAME.features || {};
   const apMax = opts.apMax ?? GAME.apMax ?? 3;
   const apOn = Boolean(features.actionPoints);
-  const next = { ...sim, pressure: clonePressure(sim.pressure) };
+  const bwOn = Boolean(features.budgetWill);
+  const maxBudget = GAME.maxBudget ?? 10;
+  const maxWill = GAME.maxWill ?? 5;
+  const techById = opts.techById || (() => null);
+  const next = {
+    ...sim,
+    pressure: clonePressure(sim.pressure),
+    techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
+  };
   const events = [];
   const type = action?.type;
 
@@ -35,16 +48,34 @@ export function applyAction(sim, action, opts = {}) {
     if (ids.includes(id)) return { ok: true, events: [], sim: next };
     if (ids.length >= 6) return { ok: false, error: "stack full", sim };
     if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
+
+    const tech = action.payload?.tech || techById(id);
+    const cost = techCost(tech);
+    if (bwOn) {
+      if ((next.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", sim };
+      if ((next.will ?? 0) < cost.will) return { ok: false, error: "no_will", sim };
+      next.budget -= cost.budget;
+      next.will -= cost.will;
+      next.techAddedThisTurn[id] = cost;
+    }
     ids.push(id);
     next.selectedTechIds = ids;
-    events.push({ type: "tech_added", techId: id });
+    events.push({ type: "tech_added", techId: id, cost });
     return { ok: true, events, sim: next };
   }
 
   if (type === "deselect_tech") {
     const id = action.payload?.techId;
     next.selectedTechIds = (next.selectedTechIds || []).filter((x) => x !== id);
-    events.push({ type: "tech_removed", techId: id });
+    if (bwOn && next.techAddedThisTurn?.[id]) {
+      const cost = next.techAddedThisTurn[id];
+      const refund = techBudgetRefund(cost);
+      next.budget = Math.min(maxBudget, (next.budget ?? 0) + refund);
+      delete next.techAddedThisTurn[id];
+      events.push({ type: "tech_removed", techId: id, budgetRefund: refund });
+    } else {
+      events.push({ type: "tech_removed", techId: id });
+    }
     return { ok: true, events, sim: next };
   }
 
@@ -66,6 +97,17 @@ export function applyAction(sim, action, opts = {}) {
     }
     next.learnOpenedThisTurn = true;
     return { ok: true, events: [{ type: "open_learn" }], sim: next };
+  }
+
+  if (type === "lobby") {
+    if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
+    if (bwOn) {
+      if ((next.budget ?? 0) < 1) return { ok: false, error: "no_budget", sim };
+      next.budget -= 1;
+      next.will = Math.min(maxWill, (next.will ?? 0) + 1);
+    }
+    events.push({ type: "lobby", will: next.will, budget: next.budget });
+    return { ok: true, events, sim: next };
   }
 
   if (type === "reserve_ai") {
@@ -100,6 +142,21 @@ export function applyAction(sim, action, opts = {}) {
     return { ok: true, events: [{ type: "abandon_scrutiny" }], sim: next };
   }
 
+  if (type === "challenge_income") {
+    // After judge: pass/partial → +1 budget +1 will; fail → will −1
+    if (!bwOn) return { ok: true, events: [], sim: next };
+    const verdict = action.payload?.verdict;
+    if (verdict === "pass" || verdict === "partial") {
+      next.budget = Math.min(maxBudget, (next.budget ?? 0) + 1);
+      next.will = Math.min(maxWill, (next.will ?? 0) + 1);
+      events.push({ type: "challenge_income", kind: "success" });
+    } else if (verdict === "fail") {
+      next.will = Math.max(0, (next.will ?? 0) - 1);
+      events.push({ type: "challenge_income", kind: "fail" });
+    }
+    return { ok: true, events, sim: next };
+  }
+
   if (type === "end_turn") {
     if (apOn) {
       const spent = next.apSpentThisTurn || 0;
@@ -113,6 +170,7 @@ export function applyAction(sim, action, opts = {}) {
     next.apSpentThisTurn = 0;
     next.writeCommitsThisTurn = 0;
     next.learnOpenedThisTurn = false;
+    next.techAddedThisTurn = {};
     events.push({ type: "end_turn" });
     return { ok: true, events, sim: next };
   }
@@ -129,13 +187,29 @@ export function applyAction(sim, action, opts = {}) {
     next.waits = (next.waits || 0) + 1;
     next.turn = (next.turn || 0) + 1;
     next.pressure = applyPressureRise(next.pressure, rise);
+
+    // Frontier risk tick (G2)
+    if (bwOn && action.payload?.techs) {
+      const risk = maybeFrontierRiskTick(
+        next.pressure,
+        action.payload.techs,
+        action.payload.stretchLevel || "yellow",
+        action.payload.riskSeed ||
+          `${mission.id || "m"}:${next.waits}:${next.turn}`
+      );
+      if (risk) {
+        next.pressure = risk.pressure;
+        events.push({ type: "frontier_risk", meter: risk.meter });
+      }
+    }
+
     next.ap = apMax;
     next.apSpentThisTurn = 0;
     next.writeCommitsThisTurn = 0;
     next.learnOpenedThisTurn = false;
+    next.techAddedThisTurn = {};
     next.challengePassed = false;
     next.challengeVerdict = null;
-    // sticky: hadChallengeAttempt / lastChallengeVerdict unchanged
     events.push({ type: "wait", year: next.year });
     if (
       isCollapsed({
@@ -180,6 +254,9 @@ export function simSliceFromState(state) {
     challengeVerdict: state.challengeVerdict,
     hadChallengeAttempt: state.hadChallengeAttempt || false,
     lastChallengeVerdict: state.lastChallengeVerdict || null,
+    budget: state.budget ?? GAME.startingBudget ?? 5,
+    will: state.will ?? GAME.startingWill ?? 3,
+    techAddedThisTurn: { ...(state.techAddedThisTurn || {}) },
   };
 }
 
@@ -200,4 +277,7 @@ export function applySimSliceToState(state, slice) {
   state.challengeVerdict = slice.challengeVerdict;
   state.hadChallengeAttempt = slice.hadChallengeAttempt;
   state.lastChallengeVerdict = slice.lastChallengeVerdict;
+  state.budget = slice.budget;
+  state.will = slice.will;
+  state.techAddedThisTurn = { ...(slice.techAddedThisTurn || {}) };
 }

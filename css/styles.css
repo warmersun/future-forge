@@ -1142,15 +1142,30 @@ button:disabled {
   flex-shrink: 0;
 }
 
-.hud-ap {
+.hud-ap,
+.hud-budget,
+.hud-will {
   font-family: var(--mono);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--accent-2, #a78bfa);
-  border: 1px solid rgba(167, 139, 250, 0.35);
   border-radius: 999px;
   padding: 0.15rem 0.5rem;
   margin-left: 0.35rem;
+}
+
+.hud-ap {
+  color: var(--accent-2, #a78bfa);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+}
+
+.hud-budget {
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.hud-will {
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
 .wait-preview {

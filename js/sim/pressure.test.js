@@ -10,6 +10,7 @@ import { computeDeployDrop } from "./deploy.js";
 import { isWin, isCollapsed } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
+import { techCost, applyG2DeployDeltas } from "./economy.js";
 import { GAME } from "../data.js";
 
 describe("pressure", () => {
@@ -122,6 +123,9 @@ describe("actions", () => {
     challengeVerdict: null,
     hadChallengeAttempt: false,
     lastChallengeVerdict: null,
+    budget: 5,
+    will: 3,
+    techAddedThisTurn: {},
   });
 
   it("select_tech spends AP", () => {
@@ -166,5 +170,49 @@ describe("actions", () => {
     assert.equal(r.sim.waits, 1);
     assert.deepEqual(r.sim.pressure, { Floods: 3, Livelihoods: 3, Trust: 1 });
     assert.equal(r.sim.ap, 3);
+  });
+
+  it("select_tech spends budget when budgetWill on", () => {
+    const tech = { id: "solar", readyYear: 2026, curve: "mature" };
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    const r = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "solar", tech } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.budget, 4);
+    assert.equal(r.sim.ap, 2);
+  });
+
+  it("lobby trades budget for will", () => {
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    s.ap = 3;
+    const r = applyAction(
+      s,
+      { type: "lobby" },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.budget, 4);
+    assert.equal(r.sim.will, 4);
+    assert.equal(r.sim.ap, 2);
+  });
+});
+
+describe("economy", () => {
+  it("techCost does not inflate all steep techs to 2", () => {
+    const steep = techCost({ id: "x", readyYear: 2026, curve: "steep" });
+    assert.equal(steep.budget, 1);
+  });
+
+  it("G2 deploy deltas only will≥4 / will===0", () => {
+    assert.equal(applyG2DeployDeltas(5, 4).drop, 6);
+    assert.equal(applyG2DeployDeltas(5, 0).drop, 4);
+    assert.equal(applyG2DeployDeltas(5, 2).drop, 5);
   });
 });

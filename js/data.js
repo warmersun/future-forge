@@ -13,12 +13,17 @@ export const GAME = {
   features: {
     runReport: true,
     actionPoints: true,
-    budgetWill: false,
+    budgetWill: true,
     scrutinyCombat: false,
     deployStages: false,
     multiplayer: false,
     hotseat: false,
   },
+  /** Starting capital / political will when budgetWill is on */
+  startingBudget: 5,
+  startingWill: 3,
+  maxBudget: 10,
+  maxWill: 5,
 };
 
 /**
