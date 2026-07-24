@@ -522,6 +522,21 @@ button:disabled {
   padding-bottom: 0;
 }
 
+/* Party / Mission cards: content sits in .panel with no .panel-body — real inset */
+#screen-room-lobby .room-lobby-party,
+#screen-room-lobby .room-lobby-mission {
+  min-width: 0;
+  padding: 1.15rem 1.35rem 1.35rem;
+  box-sizing: border-box;
+}
+
+#screen-room-lobby .room-lobby-party h2,
+#screen-room-lobby .room-lobby-mission h2 {
+  margin: 0 0 0.85rem;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
 .room-lobby-mission {
   min-width: 0;
 }
