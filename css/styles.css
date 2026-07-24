@@ -2574,6 +2574,14 @@ button:disabled {
   animation: fadeIn 0.25s var(--ease);
 }
 
+/* Must beat .modal { width } — same stylesheet order used to win over the base rule */
+.modal.help-modal {
+  width: min(800px, 96vw);
+  max-width: 96vw;
+  max-height: 90vh;
+  padding: 1.5rem 1.75rem;
+}
+
 .modal h3 {
   margin: 0 0 0.5rem;
   display: flex;
