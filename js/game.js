@@ -616,12 +616,14 @@ function mpHydrateAndRender(opts = {}) {
   }
 }
 
-function setMpActivePlayerBadges(on, name, opts = {}) {
+/**
+ * Upper-left turn indicator only — whose seat-turn it is.
+ * Editing/viewing lives on the seat tabs, not here.
+ */
+function setMpActivePlayerBadges(on, name, _opts = {}) {
   const badges = ["#mp-active-player", "#mp-active-player-ch"]
     .map((sel) => $(sel))
     .filter(Boolean);
-  const viewName = opts.viewName || "";
-  const viewingOther = Boolean(opts.viewingOther);
   for (const badge of badges) {
     if (!on) {
       badge.hidden = true;
@@ -631,15 +633,8 @@ function setMpActivePlayerBadges(on, name, opts = {}) {
     }
     badge.hidden = false;
     badge.removeAttribute("hidden");
-    // Name first, compact — lives beside Future Forge in the topbar
-    const viewBit =
-      viewingOther && viewName
-        ? `<span class="mp-active-label"> · view ${escapeHtml(viewName)}</span>`
-        : "";
-    badge.innerHTML = `<strong>${escapeHtml(name || "—")}</strong><span class="mp-active-label"> · turn</span>${viewBit}`;
-    badge.title = viewingOther && viewName
-      ? `${name || "Player"}'s turn · you are viewing ${viewName}'s invent`
-      : `${name || "Player"}'s turn`;
+    badge.innerHTML = `<strong>${escapeHtml(name || "—")}</strong><span class="mp-active-label"> · turn</span>`;
+    badge.title = `${name || "Player"}'s turn`;
   }
 }
 
@@ -761,8 +756,7 @@ function softPersistInventDrafts() {
 
 const MP_LOCK_CONTROL_IDS = [
   "#btn-mp-pass-device",
-  "#btn-mp-prev-invent",
-  "#btn-mp-next-invent",
+
   "#btn-end-turn",
   "#btn-challenge-end-turn",
   "#btn-wait",
@@ -852,13 +846,78 @@ function applyMpContributionLockToDom() {
   }
 }
 
-function renderMpSeatTabsHtml(seats) {
+/**
+ * Is this seat *your* invent (ownership), not "whose turn".
+ * Room: your player id. Hotseat: the active seat while you hold the device.
+ * @param {object} s
+ * @param {object|null} b
+ */
+function mpSeatIsMine(s, b) {
+  if (!s?.id || !b) return false;
+  if (roomBridge.isRoom()) {
+    const me = b.myId?.() || roomBridge.myId?.();
+    return Boolean(me && s.id === me);
+  }
+  if (hotseatBridge.isHotseat()) {
+    return s.id === b.getActiveId?.();
+  }
+  return false;
+}
+
+/**
+ * Mode for the invent currently on screen (seat tab focus).
+ * - editing: you can act on it now (your turn + rights, not pure spectator)
+ * - viewing: look-only (not your turn, or locked help / Challenge watch)
+ * - null: this seat is not the focused invent
+ * @param {object} s — seat summary
+ * @param {object|null} b — mp bridge
+ * @returns {"editing"|"viewing"|null}
+ */
+function mpSeatFocusMode(s, b) {
+  if (!s?.viewing) return null;
+  if (!b?.isMyTurn?.()) return "viewing";
+  if (state.challengeSpectator) return "viewing";
+
+  // Looking at someone else's invent
+  if (b.viewingOther?.()) {
+    if (
+      b.canContributeStory?.() ||
+      b.canEditStack?.() ||
+      b.canRunDeploy?.()
+    ) {
+      return "editing";
+    }
+    return "viewing";
+  }
+
+  // Your invent, your turn — actively working (even if a step is locked)
+  if (s.abandoned) return "viewing";
+  return "editing";
+}
+
+/**
+ * Seat tabs: invent picker only.
+ * - Color = ownership (green = yours, neutral = someone else's)
+ * - Red = player left / disconnected
+ * - Tag on focused tab = editing | viewing
+ * Turn lives in the upper-left badge, not here.
+ * @param {object[]} seats
+ * @param {object|null} [bridge]
+ */
+function renderMpSeatTabsHtml(seats, bridge) {
+  const b = bridge || mpBridge();
   return (seats || [])
     .map((s) => {
+      const focus = mpSeatFocusMode(s, b);
+      const mine = mpSeatIsMine(s, b);
+      // Room presence: false when they disconnected / left
+      const left = s.connected === false;
       const cls = [
         "mp-seat-tab",
-        s.active ? "is-active-turn" : "",
-        s.viewing ? "is-viewing" : "",
+        left ? "is-left" : mine ? "is-mine" : "is-other",
+        s.viewing ? "is-focused" : "",
+        focus === "editing" ? "is-editing" : "",
+        focus === "viewing" ? "is-look-only" : "",
         s.abandoned ? "is-abandoned" : "",
         s.phase === "challenge" ? "is-challenge" : "",
         s.phase === "deploy" ? "is-deploy" : "",
@@ -877,10 +936,28 @@ function renderMpSeatTabsHtml(seats) {
             : s.phase === "scaled"
               ? '<span class="tag">scaled</span>'
               : "";
-      return `<button type="button" class="${cls}" data-seat="${escapeHtml(s.id)}">
+      // Only the invent on screen gets editing/viewing — not a turn badge
+      const focusTag =
+        focus === "editing"
+          ? '<span class="tag tag-editing">editing</span>'
+          : focus === "viewing"
+            ? '<span class="tag tag-viewing">viewing</span>'
+            : "";
+      const leftTag = left ? '<span class="tag tag-left">left</span>' : "";
+      const titleParts = left
+        ? [`${s.displayName} left the room`, "— invent still on the table"]
+        : [
+            mine ? "Your invent" : `${s.displayName}'s invent`,
+            focus === "editing"
+              ? "— editing"
+              : focus === "viewing"
+                ? "— viewing only"
+                : "— click to open",
+          ];
+      return `<button type="button" class="${cls}" data-seat="${escapeHtml(s.id)}" title="${escapeHtml(titleParts.join(" "))}">
           <span class="mp-seat-tab-name">${escapeHtml(label)}</span>
-          ${s.active ? '<span class="tag">turn</span>' : ""}
-          ${s.viewing ? '<span class="tag">viewing</span>' : ""}
+          ${leftTag}
+          ${focusTag}
           ${phaseTag}
           <span class="muted sm">${s.stackCount} tech</span>
         </button>`;
@@ -1090,74 +1167,6 @@ function bindMpSeatTabClicks(list, b) {
   });
 }
 
-/**
- * Who is active / whose invent is on screen — used on workshop + challenge.
- */
-function mpPresenceHintText(b, active) {
-  const who = active?.displayName || "Player";
-  const me = b.myId?.() || null;
-  const viewId = b.getViewId?.();
-  const seats = b.seatSummaries?.() || [];
-  const viewSeat = seats.find((s) => s.id === viewId);
-  const viewName = viewSeat?.displayName || "Player";
-  const phase = b.viewedPhase?.() || "invent";
-  const viewingOther = Boolean(b.viewingOther?.());
-  const myTurn = Boolean(b.isMyTurn?.());
-  const phaseLabel =
-    phase === "challenge"
-      ? "Challenge"
-      : phase === "deploy"
-        ? "Pilot/Scale"
-        : phase === "scaled"
-          ? "Scaled"
-          : "Invent";
-
-  // Multi-seat situation: note others also mid-challenge/deploy
-  const othersBusy = seats
-    .filter(
-      (s) =>
-        s.id !== viewId &&
-        (s.phase === "challenge" || s.phase === "deploy")
-    )
-    .map((s) => `${s.displayName} (${s.phase === "deploy" ? "Pilot/Scale" : "Challenge"})`);
-
-  let core = "";
-  if (isMpContributionLocked()) {
-    return mpContributionLockReason;
-  }
-  if (state.challengeSpectator) {
-    core = myTurn
-      ? `Your turn · watching ${viewName}'s ${phaseLabel} (read-only)`
-      : `${who}'s turn · watching ${viewName}'s ${phaseLabel} (read-only)`;
-  } else if (viewingOther) {
-    if (phase === "invent") {
-      core = `${who}'s turn · viewing ${viewName}'s invent — additive story & tech (you pay). Only the owner faces Challenge.`;
-    } else if (phase === "challenge") {
-      core = `${who}'s turn · viewing ${viewName} in Challenge — locked. Owner defends alone.`;
-    } else if (phase === "deploy") {
-      core = `${who}'s turn · viewing ${viewName}'s deploy-ready invent — you may Pilot/Scale (you pay).`;
-    } else {
-      core = `${who}'s turn · viewing ${viewName} (${phaseLabel}).`;
-    }
-  } else if (myTurn) {
-    if (phase === "challenge") {
-      core = `Your turn · you are facing Challenge on your invent.`;
-    } else if (phase === "deploy") {
-      core = `Your turn · your invent is deploy-ready — Pilot → Scale.`;
-    } else if (b.canContributeStory?.()) {
-      core = `Your turn · your invent — How / Everyday life, then Challenge → Pilot → Scale.`;
-    } else {
-      core = `Your turn · your invent is locked (${phaseLabel}).`;
-    }
-  } else {
-    core = `${who}'s turn · your invent (${phaseLabel}). Browse seats to help or watch.`;
-  }
-  if (othersBusy.length) {
-    core += ` · Also live: ${othersBusy.join(", ")}`;
-  }
-  return core;
-}
-
 function renderMpChrome() {
   const bar = $("#mp-workshop-bar");
   const chBar = $("#mp-challenge-bar");
@@ -1176,12 +1185,8 @@ function renderMpChrome() {
 
   const active = b.activeSeat?.() || null;
   const seats = b.seatSummaries?.() || [];
-  const viewId = b.getViewId?.();
-  const viewSeat = seats.find((s) => s.id === viewId);
-  setMpActivePlayerBadges(true, active?.displayName || "—", {
-    viewName: viewSeat?.displayName || "",
-    viewingOther: Boolean(b.viewingOther?.()) || Boolean(state.challengeSpectator && viewId !== b.myId?.()),
-  });
+  // Upper left: whose turn only (no editing/viewing clutter)
+  setMpActivePlayerBadges(true, active?.displayName || "—");
 
   // Room code chip in workshop bar (online only)
   let codeChip = $("#mp-room-code-chip");
@@ -1199,7 +1204,7 @@ function renderMpChrome() {
     codeChip.hidden = true;
   }
 
-  const seatHtml = renderMpSeatTabsHtml(seats);
+  const seatHtml = renderMpSeatTabsHtml(seats, b);
   const list = $("#mp-seat-tabs");
   if (list) {
     list.innerHTML = seatHtml;
@@ -1211,12 +1216,13 @@ function renderMpChrome() {
     bindMpSeatTabClicks(listCh, b);
   }
 
-  const hintText = mpPresenceHintText(b, active);
+  // No status blurb under seat tabs — editing/viewing tags + colors are enough
   for (const sel of ["#mp-view-hint", "#mp-challenge-view-hint"]) {
     const hint = $(sel);
     if (!hint) continue;
-    hint.textContent = hintText;
-    hint.hidden = !hintText;
+    hint.textContent = "";
+    hint.hidden = true;
+    hint.setAttribute("hidden", "");
   }
 
   // Story: invent phase only (Challenge start freezes prose for everyone)
@@ -1701,6 +1707,8 @@ function enterRoomPlay(client, opts = {}) {
       }
       if (evt.type === "player_left") {
         if (evt.message) flashToast(evt.message);
+        // Presence already updated on snapshot/players — refresh seat tab red "left"
+        renderMpChrome();
         return;
       }
       // New race after outcome — force full re-enter once
@@ -8436,16 +8444,17 @@ function renderOutcomeResultBanner(o, m) {
     if (kicker) kicker.textContent = multiparty ? "Friends race · full win" : "Solo · full win";
     if (title) title.textContent = "Place held";
     if (sub) {
+      // Plain English: meters 0–5 must each be ≤ this mission’s goal (shown as “goal ≤N”)
       sub.textContent = multiparty
-        ? "Shared crisis is under the win line. Survivors are ranked — the race is over."
-        : "Every crisis meter is at or below the win line. This place is held.";
+        ? "Every shared crisis meter is at or below its goal for this place. The race is over — players are ranked by score below."
+        : "Every crisis meter is at or below its goal for this place. You fully held the line here.";
     }
   } else if (kind === "partial") {
     if (kicker) kicker.textContent = "Solo · not fully solved";
     if (title) title.textContent = "Crisis still hot";
     if (sub) {
       sub.textContent =
-        "You deployed a New normal and eased pressure — but meters are still above the win line. " +
+        "You fielded a New normal and eased pressure — but at least one crisis meter is still above its goal. " +
         "Continue here to push further, or leave this place.";
     }
   } else if (kind === "collapse" && o.meta?.bankrupt) {
@@ -8464,7 +8473,7 @@ function renderOutcomeResultBanner(o, m) {
     if (title) title.textContent = multiparty ? "Place collapsed — no champion" : "Too late";
     if (sub) {
       sub.textContent = multiparty
-        ? "Shared crisis broke the place. Everyone loses; there is no ranking champion."
+        ? "The shared crisis got too bad (a meter hit 5, or every invent waited past the fail year). Everyone loses — no player ranking."
         : "Crisis passed what a late invent could fix.";
     }
   } else {
@@ -8482,13 +8491,18 @@ function renderOutcomeResultBanner(o, m) {
       gapsEl.hidden = false;
       gapsEl.innerHTML = gaps
         .map((g) => {
+          // “goal ≤N” = mission winMax for that meter (what “full win” requires)
           const needBit =
-            g.need != null ? ` · need ≤${g.need}` : "";
+            g.need != null ? ` · goal ≤${g.need}` : "";
           const mark =
             g.status === "ok" ? "✓" : g.status === "fail" ? "!" : "·";
+          const tip =
+            g.need != null
+              ? `${g.key}: now ${g.cur} (full win needs ≤${g.need})`
+              : `${g.key}: ${g.cur}`;
           return `<li class="outcome-meter-gap is-${g.status}" title="${escapeHtml(
-            g.key
-          )}: ${g.cur}${needBit}"><span>${mark}</span> <strong>${escapeHtml(
+            tip
+          )}"><span>${mark}</span> <strong>${escapeHtml(
             g.key
           )}</strong> ${g.cur}${needBit}</li>`;
         })
@@ -8559,7 +8573,7 @@ function renderMpOutcomeStandings(mp) {
   if (mp.placeStatus === "collapsed" || mp.kind === "collapse") {
     if (title) title.textContent = "Place collapsed — no champion";
     if (lead) {
-      lead.textContent = `${mp.place || "The place"} fell. Shared crisis ended the run for everyone — rank only applies when the place holds.`;
+      lead.textContent = `${mp.place || "The place"} fell. The shared crisis ended the run for every player — rankings only apply when the place is held.`;
     }
     if (list) {
       list.innerHTML = (mp.seats || [])
@@ -8592,7 +8606,7 @@ function renderMpOutcomeStandings(mp) {
     lead.textContent =
       `${mp.place || "The place"} held · “${mp.inventName || "An invent"}” (${whoSolved}) landed the solving Scale` +
       (mp.drop ? ` (−${mp.drop} crisis)` : "") +
-      `.${fielded} Scores among survivors (40% impact · 25% craft · 20% help · 15% race):`;
+      `.${fielded} Player ranking (40% impact · 25% craft · 20% help · 15% race):`;
   }
   if (list) {
     list.innerHTML = rows
@@ -8636,7 +8650,7 @@ function renderOutcome() {
     o.waits ?? state.waits ?? 0
   } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
 
-  // Unmissable full / partial / collapse strip (meters vs win line)
+  // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
 
   const starsEl = $("#outcome-stars");
@@ -8659,7 +8673,7 @@ function renderOutcome() {
       starsEl.innerHTML = `<div class="run-stars outcome-mp-winner-line" aria-label="Winner">🥇 ${escapeHtml(
         w.displayName
       )} · ${w.score} pts</div>
-        <div class="run-scores muted">Friends ranking when the place held — full table below</div>`;
+        <div class="run-scores muted">Player ranking for this race — full table below</div>`;
     } else {
       starsEl.hidden = true;
       starsEl.innerHTML = "";
@@ -8685,7 +8699,7 @@ function renderOutcome() {
     story =
       `In ${o.year}, “${name}” (${mp.inventOwnerName || "a player"}) Scaled in ${m.place}` +
       (mp.drop ? ` and cut crisis by ${mp.drop}` : "") +
-      `. The place held, so friends are ranked among survivors.` +
+      `. Crisis meters are at their goals, so the place is held and the race ends. Players are ranked by how they played (not story characters).` +
       (mp.fieldedByName && mp.fieldedByName !== mp.inventOwnerName
         ? ` ${mp.fieldedByName} paid to field the solving Scale.`
         : "") +
@@ -8700,7 +8714,7 @@ function renderOutcome() {
     });
     lessons.push({
       type: "good",
-      text: "Rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% race to Scale.",
+      text: "Player rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% race to Scale.",
     });
     lessons.push({
       type: "grow",
@@ -8739,9 +8753,9 @@ function renderOutcome() {
   } else if (o.kind === "partial") {
     headline = "Not fully solved";
     story =
-      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but meters are still above the win line. ` +
+      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its goal for a full win. ` +
       `Continue here to invent another step against the remaining crisis, or leave this place for a different problem. ` +
-      `(In friends multiplayer, a partial Scale would not open this screen — the race keeps going until the place is fully held.)`;
+      `(In friends multiplayer, a partial Scale would not open this screen — the race keeps going until every meter meets its goal.)`;
     lessons.push({
       type: "grow",
       text: "Solo partial: optional continue. Multiplayer: partial Scales accumulate on the shared place until someone fully holds it.",
@@ -9523,35 +9537,55 @@ function ensureCoInventor() {
   return state.coInventor;
 }
 
+/**
+ * Apply co-inventor proposals.
+ * Techs go through onTechClick (same AP / Budget / Will as a manual library pick).
+ * Never free bulk-add a whole suggested stack.
+ * @param {object} proposals
+ * @returns {{ changed: boolean, addedTechIds: string[] }}
+ */
 function applyCoInventorProposals(proposals) {
-  if (!proposals) return;
+  if (!proposals) return { changed: false, addedTechIds: [] };
   let changed = false;
+  const addedTechIds = [];
+
+  // Removals: same toggle path as clicking a selected chip/card
   for (const id of proposals.removeTechIds || []) {
-    const i = state.selectedTechIds.indexOf(id);
-    if (i >= 0) {
-      state.selectedTechIds.splice(i, 1);
+    if (!state.selectedTechIds.includes(id)) continue;
+    onTechClick(id);
+    if (!state.selectedTechIds.includes(id)) changed = true;
+  }
+
+  // Adds: one at a time via normal select/layer path (costs + multiplayer rules)
+  for (const id of proposals.addTechIds || []) {
+    if (!techById(id)) continue;
+    if (state.selectedTechIds.includes(id)) continue;
+    if (state.selectedTechIds.length >= 8) {
+      flashToast("Stack full (8). Remove one first.");
+      break;
+    }
+    onTechClick(id);
+    if (state.selectedTechIds.includes(id)) {
+      addedTechIds.push(id);
       changed = true;
     }
-  }
-  for (const id of proposals.addTechIds || []) {
-    if (!techById(id) || state.selectedTechIds.includes(id)) continue;
-    if (state.selectedTechIds.length >= 8) break;
-    if (budgetWillEnabled()) {
-      const cost = techCost(techById(id));
-      if ((state.budget ?? 0) < cost.budget || (state.will ?? 0) < cost.will) {
-        flashToast(`AI suggested ${techById(id).name} but you cannot afford it (Budget/will).`);
-        continue;
-      }
-      state.budget -= cost.budget;
-      state.will -= cost.will;
-      if (maybeBudgetGameOver({ from: "ai_add_tech" })) return;
+    // If unaffordable / not your turn, onTechClick already toasted — stop bulk
+    // so later techs don't pile on after the first hard failure mid "apply all"
+    if (
+      !state.selectedTechIds.includes(id) &&
+      (proposals.addTechIds || []).length > 1
+    ) {
+      // Continue trying remaining techs only if failure might be "already on stack"
+      // (we already skipped those). Stop only when AP/budget likely exhausted.
+      const afford = canAffordTech(techById(id));
+      if (!afford.ok) break;
     }
-    state.selectedTechIds.push(id);
-    changed = true;
   }
+
   if (proposals.inventionName) {
     state.inventionName = proposals.inventionName;
-    $("#invention-name").value = state.inventionName;
+    const nameEl = $("#invention-name");
+    if (nameEl) nameEl.value = state.inventionName;
     changed = true;
   }
   if (proposals.inventionHow) {
@@ -9562,24 +9596,40 @@ function applyCoInventorProposals(proposals) {
     state.inventionImpact = proposals.inventionImpact;
     changed = true;
   }
+  if (proposals.scrutiny) {
+    // Handled by challenge co-inventor consumers if present
+    changed = true;
+  }
+
   if (changed) {
     state.aiTiming = null;
-    syncLearnOrderWithSelection();
-    // Newly added techs from AI go to the front of Learn (most recent)
-    for (const id of proposals.addTechIds || []) {
-      if (state.selectedTechIds.includes(id)) pushLearnOrder(id);
+    // onTechClick already re-renders for tech changes; story fields need a pass
+    if (
+      proposals.inventionName ||
+      proposals.inventionHow ||
+      proposals.inventionImpact
+    ) {
+      syncLearnOrderWithSelection();
+      renderStoryFaceUI();
+      renderFeasibility();
+      updateChallengeButton();
+      updateVision();
+      scheduleAiTimingAssess();
+      mpSyncFromSolo?.();
     }
-    renderTechList();
-    renderSelectedChips();
-    renderSynergy();
-    renderTiming();
-    renderStoryFaceUI();
-    updateLearnButton();
-    updateChallengeButton();
-    updateVision();
-    scheduleAiTimingAssess();
-    flashToast("Co-inventor ideas applied");
+    if (addedTechIds.length === 1) {
+      flashToast(`Added ${techById(addedTechIds[0])?.name || "tech"} to stack`);
+    } else if (addedTechIds.length > 1) {
+      flashToast(`Added ${addedTechIds.length} techs to stack`);
+    } else if (
+      proposals.inventionName ||
+      proposals.inventionHow ||
+      proposals.inventionImpact
+    ) {
+      flashToast("Co-inventor ideas applied");
+    }
   }
+  return { changed, addedTechIds };
 }
 
 function setFillButtonsDisabled(disabled) {
@@ -11538,26 +11588,6 @@ function bind() {
   }
 
   $("#btn-mp-pass-device")?.addEventListener("click", () => mpPassDevice());
-  $("#btn-mp-prev-invent")?.addEventListener("click", () => {
-    if (!hotseatBridge.isHotseat()) return;
-    if (isMpContributionLocked()) {
-      flashToast(mpContributionLockReason);
-      return;
-    }
-    mpSyncFromSolo();
-    hotseatBridge.cycleView(-1);
-    mpHydrateAndRender();
-  });
-  $("#btn-mp-next-invent")?.addEventListener("click", () => {
-    if (!hotseatBridge.isHotseat()) return;
-    if (isMpContributionLocked()) {
-      flashToast(mpContributionLockReason);
-      return;
-    }
-    mpSyncFromSolo();
-    hotseatBridge.cycleView(1);
-    mpHydrateAndRender();
-  });
   $("#btn-daily-play")?.addEventListener("click", () => {
     clearMissionPickSession();
     const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);

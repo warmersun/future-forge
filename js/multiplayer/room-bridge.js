@@ -168,12 +168,18 @@ export function createRoomBridge() {
       const p = (s.players || []).find((x) => x.id === id);
       const f = m.forges?.[id];
       const phase = forgePhase(id);
+      // Presence: player.connected from WS; forge.connected also cleared on disconnect
+      const connected =
+        p != null
+          ? Boolean(p.connected)
+          : f?.connected !== false;
       return {
         id,
-        displayName: p?.displayName || id,
+        displayName: p?.displayName || f?.displayName || id,
         active: id === getActiveId(),
         viewing: id === getViewId(),
         abandoned: Boolean(f?.abandoned),
+        connected,
         stackCount: (f?.stack || []).length,
         inventionName: f?.inventionName || "",
         deployStage: f?.deployStage || "none",

@@ -629,16 +629,10 @@
         </div>
       </header>
 
-      <!-- Hotseat chrome: seat focus + pass device (active player lives in topbar brand) -->
+      <!-- Multiplayer chrome: invent tabs (same hotseat + room) + pass device (hotseat only) -->
       <div id="mp-workshop-bar" class="mp-workshop-bar" hidden>
         <div class="mp-workshop-bar-row">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-prev-invent" title="Previous invention">
-            ←
-          </button>
-          <div id="mp-seat-tabs" class="mp-seat-tabs"></div>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-next-invent" title="Next invention">
-            →
-          </button>
+          <div id="mp-seat-tabs" class="mp-seat-tabs" aria-label="Players and invents"></div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden>
             Pass device →
           </button>
@@ -1617,6 +1611,6 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js?v=challenge-seat-switch-1"></script>
+    <script type="module" src="js/main.js?v=outcome-plain-1"></script>
   </body>
 </html>

@@ -622,8 +622,6 @@ button:disabled {
 }
 
 .mp-workshop-bar.is-contrib-locked #btn-mp-pass-device,
-.mp-workshop-bar.is-contrib-locked #btn-mp-prev-invent,
-.mp-workshop-bar.is-contrib-locked #btn-mp-next-invent,
 .mp-workshop-bar.is-contrib-locked .mp-seat-tab:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -865,19 +863,73 @@ body.mp-contrib-evaluating .story-mode-btn {
   cursor: pointer;
 }
 
+/* Ownership / presence color (not turn — turn is upper-left only)
+ * green = your invent · neutral = someone else's · red = left the room */
+.mp-seat-tab.is-mine {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(16, 185, 129, 0.08);
+  color: #d1fae5;
+}
+
+.mp-seat-tab.is-other {
+  border-color: rgba(100, 116, 139, 0.45);
+  background: rgba(30, 41, 59, 0.55);
+  color: var(--text-dim);
+}
+
+.mp-seat-tab.is-left {
+  border-color: rgba(248, 113, 113, 0.75);
+  background: rgba(127, 29, 29, 0.4);
+  color: #fecaca;
+}
+
 .mp-seat-tab:hover {
-  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--text);
+  filter: brightness(1.08);
+}
+
+.mp-seat-tab.is-left:hover {
+  color: #fee2e2;
+}
+
+/* Currently open invent — stronger ring, keep ownership / left hue */
+.mp-seat-tab.is-focused.is-mine {
+  border-color: rgba(52, 211, 153, 0.85);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.16);
   color: var(--text);
 }
 
-.mp-seat-tab.is-viewing {
-  border-color: rgba(52, 211, 153, 0.55);
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.25);
+.mp-seat-tab.is-focused.is-other {
+  border-color: rgba(148, 163, 184, 0.7);
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+  background: rgba(71, 85, 105, 0.28);
   color: var(--text);
 }
 
-.mp-seat-tab.is-active-turn {
-  background: rgba(56, 189, 248, 0.12);
+.mp-seat-tab.is-focused.is-left {
+  border-color: rgba(248, 113, 113, 0.95);
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.4);
+  background: rgba(153, 27, 27, 0.5);
+  color: #fee2e2;
+}
+
+.mp-seat-tab .tag-editing {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.mp-seat-tab .tag-viewing {
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.mp-seat-tab .tag-left {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
 }
 
 .mp-view-hint {
@@ -5424,6 +5476,17 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   border-color: var(--border);
   color: var(--text-mute);
   background: transparent;
+}
+
+/* Per-tech stack add (normal costs) */
+.co-apply-tech {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fcd34d;
+}
+
+.co-apply-tech:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.2);
 }
 
 .co-compose {

@@ -496,6 +496,8 @@ export function createHotseatBridge() {
         active: id === getActiveId(),
         viewing: id === getViewId(),
         abandoned: Boolean(f?.abandoned),
+        // Hotseat is one device — seats are never "left the room"
+        connected: true,
         stackCount: (f?.stack || []).length,
         inventionName: f?.inventionName || "",
         year: forgeInventYear(f, session.place),

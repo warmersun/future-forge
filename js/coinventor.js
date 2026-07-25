@@ -346,6 +346,18 @@ export class CoInventor {
         const kind = btn.dataset.apply;
         const msg = this.messages[idx];
         if (!msg?.proposals) return;
+        // Per-tech: same as clicking that card in the library (AP / Budget / Will)
+        if (kind === "tech") {
+          const techId = btn.dataset.techId;
+          if (!techId) return;
+          const result = this.applyPartial(msg.proposals, "tech", { techId });
+          const added = result?.addedTechIds?.includes(techId);
+          if (!added) return; // unaffordable / locked — leave button active
+          btn.classList.add("applied");
+          btn.textContent = btn.textContent.replace(/^Add /, "Added ");
+          btn.disabled = true;
+          return;
+        }
         this.applyPartial(msg.proposals, kind);
         btn.classList.add("applied");
         btn.textContent = btn.textContent.replace(/^Apply/, "Applied");
@@ -358,11 +370,23 @@ export class CoInventor {
         const idx = Number(btn.dataset.applyAll);
         const msg = this.messages[idx];
         if (!msg?.proposals) return;
-        this.applyProposals(msg.proposals);
+        // Apply all still runs techs one-by-one with normal costs (not free bulk)
+        const result = this.applyProposals(msg.proposals) || {};
+        const added = new Set(result.addedTechIds || []);
         btn.classList.add("applied");
         btn.textContent = "Applied to invention";
         btn.disabled = true;
+        // Mark only what actually landed (techs that failed afford stay clickable)
         box.querySelectorAll(`[data-msg="${idx}"]`).forEach((b) => {
+          if (b.dataset.apply === "tech") {
+            const tid = b.dataset.techId;
+            if (tid && added.has(tid)) {
+              b.classList.add("applied");
+              b.disabled = true;
+              b.textContent = b.textContent.replace(/^Add /, "Added ");
+            }
+            return;
+          }
           b.classList.add("applied");
           b.disabled = true;
         });
@@ -380,10 +404,13 @@ export class CoInventor {
     let actions = "";
     if (hasProps && !m.local) {
       const bits = [];
-      if (p.addTechIds?.length) {
-        const names = p.addTechIds.map((id) => this.techById(id)?.name || id).join(", ");
+      // One button per suggested emTech — each uses normal select-tech costs
+      for (const id of p.addTechIds || []) {
+        const t = this.techById(id);
+        if (!t) continue;
+        const label = `${t.icon ? `${t.icon} ` : ""}${t.name || id}`;
         bits.push(
-          `<button type="button" class="co-apply" data-msg="${idx}" data-apply="techs">Apply techs (${escapeHtml(names)})</button>`
+          `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Add to stack — pays AP, Budget, and Will like a manual pick">Add ${escapeHtml(label)}</button>`
         );
       }
       if (p.inventionName) {
@@ -406,9 +433,16 @@ export class CoInventor {
           `<button type="button" class="co-apply" data-msg="${idx}" data-apply="scrutiny">Apply scrutiny</button>`
         );
       }
-      if (bits.length > 1) {
+      // "Apply all" only when there are non-tech proposals too (name/how/life…).
+      // Never free bulk-add of a whole stack — techs stay one button each.
+      const nonTechCount =
+        (p.inventionName ? 1 : 0) +
+        (p.inventionHow ? 1 : 0) +
+        (p.inventionImpact ? 1 : 0) +
+        (p.scrutiny ? 1 : 0);
+      if (nonTechCount > 0 && bits.length > 1) {
         bits.unshift(
-          `<button type="button" class="co-apply co-apply-all" data-apply-all="${idx}">Apply all suggestions</button>`
+          `<button type="button" class="co-apply co-apply-all" data-apply-all="${idx}" title="Applies story fields; techs still charge normally one by one">Apply all suggestions</button>`
         );
       }
       actions = `<div class="co-proposal-actions">${bits.join("")}</div>`;
@@ -433,9 +467,19 @@ export class CoInventor {
     </div>`;
   }
 
-  applyPartial(proposals, kind) {
+  /**
+   * @param {object} proposals
+   * @param {string} kind
+   * @param {{ techId?: string }} [extra]
+   * @returns {object|void} result from applyProposals when available
+   */
+  applyPartial(proposals, kind, extra = {}) {
     const partial = emptyProposals();
-    if (kind === "techs") {
+    if (kind === "tech") {
+      if (!extra.techId) return { addedTechIds: [] };
+      partial.addTechIds = [extra.techId];
+    } else if (kind === "techs") {
+      // Legacy bulk kind — still routes through per-tech cost path in applyProposals
       partial.addTechIds = proposals.addTechIds || [];
       partial.removeTechIds = proposals.removeTechIds || [];
     } else if (kind === "name") {
@@ -447,7 +491,7 @@ export class CoInventor {
     } else if (kind === "scrutiny") {
       partial.scrutiny = proposals.scrutiny;
     }
-    this.applyProposals(partial);
+    return this.applyProposals(partial);
   }
 }
 
