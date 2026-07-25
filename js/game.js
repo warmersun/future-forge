@@ -940,20 +940,6 @@ function openWorkshopForViewedInvent(bridge) {
   }
 }
 
-/**
- * True while the local player is mid-combat on *their own* Challenge
- * (not Deploy after pass — they may freely browse other invents then).
- */
-function isMidOwnChallengeCombat() {
-  if (state.challengeSpectator) return false;
-  if (state.screen !== "challenge-step") return false;
-  if (state.deployUnlocked || state.challengePassed) return false;
-  if (state.challengePosePending || challengeCombatBusy) return true;
-  const encs = state.scrutiny?.encounters;
-  if (encs?.length && encs.some((e) => !e.cleared)) return true;
-  return false;
-}
-
 function bindMpSeatTabClicks(list, b) {
   if (!list) return;
   list.querySelectorAll("[data-seat]").forEach((btn) => {
@@ -962,19 +948,11 @@ function bindMpSeatTabClicks(list, b) {
         flashToast(mpContributionLockReason);
         return;
       }
+      // In-flight invent AI (co-inventor / contribution eval) still blocks seat switch.
+      // Mid own Challenge no longer blocks — players may free-look other invents
+      // (spectator Challenge / Deploy) and return; combat state lives on the forge.
       const seatId = btn.dataset.seat;
       const me = b.myId?.() || null;
-      // Mid own challenge combat: don't abandon the fight via seat tabs
-      if (
-        roomBridge.isRoom() &&
-        isMidOwnChallengeCombat() &&
-        me &&
-        roomBridge.getViewId() === me &&
-        seatId !== me
-      ) {
-        flashToast("Finish or End turn on your Challenge before switching invents.");
-        return;
-      }
       // Flush own invent; abandon unvalidated contribution drafts on seat switch.
       // Suppress blur→commit so we don't double-fire AI while changing view.
       if (writeCommitTimer) {
@@ -1011,6 +989,8 @@ function bindMpSeatTabClicks(list, b) {
       // Challenge on someone else: watch only (owner-only to face challenger)
       if (phase === "challenge" && b.viewingOther?.()) {
         if (roomBridge.isRoom()) {
+          // Leaving own fight is OK — forge keeps scrutinyPublic; rehydrate on return
+          challengeCombatBusy = false;
           enterChallengeAsSpectator(f || {}, name);
           flashToast(`Watching ${name} on Challenge`);
           renderMpChrome();
@@ -1018,7 +998,7 @@ function bindMpSeatTabClicks(list, b) {
         }
       }
 
-      // Own mid-challenge: stay on Challenge screen
+      // Own mid-challenge: stay on / return to Challenge screen (interactive)
       if (phase === "challenge" && !b.viewingOther?.()) {
         try {
           b.hydrateSoloState?.(state, { global: state.global });
@@ -1027,11 +1007,17 @@ function bindMpSeatTabClicks(list, b) {
         }
         state.challengeSpectator = false;
         document.body.classList.remove("challenge-spectator");
+        // Drop watch-only lock; only keep busy if a real combat action is in flight
+        setChallengePoseBusy(Boolean(challengeCombatBusy), {
+          judging: Boolean(challengeCombatBusy),
+        });
         state.screen = "challenge-step";
         $$(".screen").forEach((el) =>
           el.classList.toggle("active", el.id === "screen-challenge-step")
         );
         renderChallengeStep();
+        // Re-apply interactive combat chrome after any spectator locks
+        applyEndTurnChrome();
         renderMpChrome();
         flashToast("Your Challenge");
         scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
@@ -10657,17 +10643,40 @@ function clearStoryFacePending() {
 
 /* —— Round market news (illustrated card) —— */
 // Same reliability model as mp-turn-modal (plain fixed div, display:flex, no opacity traps).
-// Multiplayer order: market bulletin FIRST → on dismiss, deferred "your turn" notice.
+// Multiplayer order: market bulletin FIRST → year flash → deferred "your turn" notice.
 
 const marketImageCache = new Map();
 /** Id currently open or about to open (blocks turn notice) */
 let marketNewsOpenId = null;
 /** @type {{ name?: string, isYou?: boolean, mode?: string } | null} */
 let deferredTurnNotice = null;
+/** Year advance banner/HUD pulse is on-screen — hold turn popup so it isn't covered */
+let yearFlashActive = false;
+let yearFlashReleaseT = null;
+/** Year advanced while market modal owned the screen — replay flash after dismiss */
+let yearFlashNeedsReplay = false;
 
 function isMarketNewsModalOpen() {
   const el = document.getElementById("market-news-modal");
   return Boolean(el && !el.hidden && el.style.display !== "none");
+}
+
+/** True while a modal/flash should keep "your turn" queued. */
+function shouldDeferTurnNotice() {
+  return Boolean(
+    isMarketNewsModalOpen() || marketNewsOpenId || yearBulletinOpen || yearFlashActive
+  );
+}
+
+/**
+ * Show any queued turn notice once market / year flash / year dialog are clear.
+ */
+function releaseDeferredTurnNotice() {
+  if (shouldDeferTurnNotice()) return;
+  const pending = deferredTurnNotice;
+  if (!pending) return;
+  deferredTurnNotice = null;
+  requestAnimationFrame(() => showTurnStartNotice(pending));
 }
 
 /**
@@ -10702,15 +10711,17 @@ function closeMarketNewsModal(opts = {}) {
   el.style.display = "none";
   el.classList.remove("is-open", "is-entering", "is-leaving");
 
-  // After dismiss: pulse market banner, then deferred turn notice (no year popup chain)
+  // After dismiss: pulse market banner, re-show year flash if market covered it,
+  // then deferred turn notice (year flash still holds the queue while active).
   if (opts.highlightBanner !== false) {
     renderMarketBanner({ pulse: true, scrollIntoView: true });
   }
-  const pending = deferredTurnNotice;
-  deferredTurnNotice = null;
-  if (pending) {
-    requestAnimationFrame(() => showTurnStartNotice(pending));
+  if (yearFlashNeedsReplay && state.lastYearBulletin?.toYear != null) {
+    yearFlashNeedsReplay = false;
+    pulseYearHud(state.lastYearBulletin.toYear);
+    flashYearAdvanceBanner(state.lastYearBulletin);
   }
+  releaseDeferredTurnNotice();
 }
 
 /* —— Year bulletin (world clock + foresight highlights) —— */
@@ -10768,16 +10779,25 @@ function pulseYearHud(toYear) {
 /**
  * Temporary fly-in + ring-pulse banner (same energy as Market Round).
  * Auto-hides after a few seconds; click opens year foresight.
+ * Holds the multiplayer "your turn" popup until the flash is mostly done.
  * @param {object} bulletin — { fromYear, toYear, highlights[] }
  */
 function flashYearAdvanceBanner(bulletin) {
   if (!bulletin?.toYear) return;
+  // If market owns the screen, still arm the hold but mark for replay after dismiss
+  if (isMarketNewsModalOpen() || marketNewsOpenId) {
+    yearFlashNeedsReplay = true;
+  }
   const hosts = [
     $("#year-advance-banner"),
     $("#hs-year-advance-banner"),
     $("#mp-year-advance-banner"),
   ].filter(Boolean);
-  if (!hosts.length) return;
+  if (!hosts.length) {
+    // Still hold turn notice briefly for HUD year pulse alone
+    armYearFlashHold(2200);
+    return;
+  }
 
   const from = bulletin.fromYear != null ? String(bulletin.fromYear) : "?";
   const to = String(bulletin.toYear);
@@ -10796,6 +10816,9 @@ function flashYearAdvanceBanner(bulletin) {
         <span class="year-advance-banner-hint">${escapeHtml(hint)}</span>
       </span>
     </button>`;
+
+  // Hold "your turn" until the pulse has played (turn modal would cover this banner)
+  armYearFlashHold(3000);
 
   for (const host of hosts) {
     if (!host.isConnected) continue;
@@ -10833,6 +10856,20 @@ function flashYearAdvanceBanner(bulletin) {
   }
 }
 
+/**
+ * Keep turn popup queued while year advance is highlighted.
+ * @param {number} ms
+ */
+function armYearFlashHold(ms) {
+  yearFlashActive = true;
+  clearTimeout(yearFlashReleaseT);
+  yearFlashReleaseT = setTimeout(() => {
+    yearFlashActive = false;
+    yearFlashReleaseT = null;
+    releaseDeferredTurnNotice();
+  }, Math.max(800, Number(ms) || 3000));
+}
+
 function closeYearBulletinModal() {
   const el = document.getElementById("year-bulletin-modal");
   if (!el) return;
@@ -10841,11 +10878,7 @@ function closeYearBulletinModal() {
   el.hidden = true;
   el.setAttribute("hidden", "");
   el.style.display = "none";
-  const pending = deferredTurnNotice;
-  deferredTurnNotice = null;
-  if (pending) {
-    requestAnimationFrame(() => showTurnStartNotice(pending));
-  }
+  releaseDeferredTurnNotice();
 }
 
 /** Click year in HUD — reopen foresight for this mission year (no market sequence). */
@@ -11276,9 +11309,9 @@ function bindMpTurnModalOnce(el) {
 }
 
 function showTurnStartNotice(opts = {}) {
-  // Market bulletin owns the screen first. Defer turn popup until dismiss.
-  // Year foresight is click-to-open only (no auto popup after market).
-  if (isMarketNewsModalOpen() || marketNewsOpenId || yearBulletinOpen) {
+  // Market bulletin + year flash own the screen first. Defer turn popup until clear.
+  // Year foresight modal is click-to-open only; year *flash* still holds the queue.
+  if (shouldDeferTurnNotice()) {
     deferredTurnNotice = { ...opts };
     return;
   }
