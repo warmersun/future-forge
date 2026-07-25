@@ -94,17 +94,190 @@ describe("mp-session turns", () => {
     assert.equal(s.forges["seat-1"].ap, 3);
   });
 
-  it("wait advances shared year and ends turn", () => {
+  it("wait advances only the waiter invent year and ends turn", () => {
     let s = started();
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "pump" },
     }).session;
     const year0 = s.place.year;
-    s = applyMpAction(s, { type: "wait" }).session;
-    assert.equal(s.place.year, year0 + 2);
-    assert.ok(s.place.pressure.Floods >= 3);
+    const pressure0 = s.place.pressure.Floods;
+    const alexY0 = s.forges["seat-0"].year;
+    const beaY0 = s.forges["seat-1"].year;
+    assert.equal(alexY0, year0);
+    assert.equal(beaY0, year0);
+    const r = applyMpAction(s, { type: "wait" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    // Shared place baseline stays present; only waiter invent calendar advances
+    assert.equal(s.place.year, year0);
+    assert.equal(s.forges["seat-0"].year, alexY0 + 2);
+    assert.equal(s.forges["seat-0"].waits, 1);
+    assert.equal(s.forges["seat-1"].year, beaY0);
+    assert.equal(s.forges["seat-1"].waits, 0);
+    // Personal Wait must not raise shared meters (one seat cannot Wait-spam collapse)
+    assert.equal(s.place.pressure.Floods, pressure0);
     assert.equal(activeSeatId(s), "seat-1");
+    // Clients need these to refresh turn chrome (was missing → frozen UI after Wait)
+    const waitEv = r.events.find((e) => e.type === "wait");
+    assert.ok(waitEv);
+    assert.equal(waitEv.year, alexY0 + 2);
+    assert.equal(waitEv.seatId, "seat-0");
+    assert.ok(r.events.some((e) => e.type === "end_turn"));
+    assert.ok(r.events.some((e) => e.type === "seat_turn_start" && e.seatId === "seat-1"));
+    assert.equal(s.forges["seat-1"].ap, s.forges["seat-1"].apMax);
+  });
+
+  it("one player waiting past fail year does not collapse while another invent is still early", () => {
+    // Fail year 2030: two waits on one seat → invent 2030, partner stays 2026
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpMission(
+      s,
+      {
+        ...mission,
+        collapseYear: 2030,
+        pressure: { Floods: 1, Trust: 1 },
+        pressureRise: { Floods: 0, Trust: 0 }, // isolate year rule from meter collapse
+      },
+      "climate"
+    );
+    s = startMpMission(s).session;
+
+    // Alex wait → 2028
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "pump" },
+    }).session;
+    let r = applyMpAction(s, { type: "wait" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.notEqual(s.place.status, "collapsed");
+    assert.equal(s.forges["seat-0"].year, 2028);
+
+    // Bea ends turn (or wait nothing) — force active back to Alex via end_turn after write
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "dike" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-0");
+
+    // Alex second wait → 2030 on their invent only
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "pump v2" },
+    }).session;
+    r = applyMpAction(s, { type: "wait" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.equal(s.forges["seat-0"].year, 2030);
+    assert.equal(s.forges["seat-1"].year, 2026);
+    assert.equal(
+      s.place.status,
+      "playing",
+      "late solo invent calendar must not end the shared place"
+    );
+    assert.ok(!r.events.some((e) => e.type === "collapsed"));
+  });
+
+  it("all invent calendars past fail year collapses the place", () => {
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpMission(
+      s,
+      {
+        ...mission,
+        collapseYear: 2030,
+        pressure: { Floods: 1, Trust: 1 },
+        pressureRise: { Floods: 0, Trust: 0 },
+      },
+      "climate"
+    );
+    s = startMpMission(s).session;
+
+    // Each seat waits twice → both invent years 2030
+    for (let i = 0; i < 4; i++) {
+      const id = activeSeatId(s);
+      s = applyMpAction(s, {
+        type: "buffer_write",
+        payload: { field: "inventionHow", value: `w${i}` },
+      }).session;
+      const r = applyMpAction(s, { type: "wait" });
+      assert.equal(r.ok, true, r.error);
+      s = r.session;
+      if (s.place.status === "collapsed") {
+        assert.equal(s.forges["seat-0"].year, 2030);
+        assert.equal(s.forges["seat-1"].year, 2030);
+        assert.ok(r.events.some((e) => e.type === "collapsed" && e.reason === "all_invent_years"));
+        return;
+      }
+      // wait already ends turn; ensure we progressed
+      assert.ok(id);
+    }
+    assert.equal(s.place.status, "collapsed");
+  });
+
+  it("wait does not collapse via meters; high meters still collapse if already maxed", () => {
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpMission(
+      s,
+      {
+        ...mission,
+        collapseYear: 2099,
+        pressure: { Floods: 5, Trust: 1 },
+        pressureRise: { Floods: 1, Trust: 0 },
+      },
+      "climate"
+    );
+    s = startMpMission(s).session;
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "x" },
+    }).session;
+    const r = applyMpAction(s, { type: "wait" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    // Meters already at 5 before Wait → place is collapsed (not because of invent year)
+    assert.equal(s.place.status, "collapsed");
+    assert.ok(r.events.some((e) => e.type === "collapsed" && e.reason === "pressure"));
+  });
+
+  it("two waits by one seat to fail year leave the place playing when partner is early", () => {
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpMission(
+      s,
+      {
+        ...mission,
+        startYear: 2026,
+        collapseYear: 2030,
+        pressure: { Floods: 4, Trust: 4 }, // would have meter-killed if Wait still raised crisis
+        pressureRise: { Floods: 1, Trust: 1 },
+      },
+      "climate"
+    );
+    s = startMpMission(s).session;
+    // Alex: two waits → invent 2030
+    for (let i = 0; i < 2; i++) {
+      s = applyMpAction(s, {
+        type: "buffer_write",
+        payload: { field: "inventionHow", value: `a${i}` },
+      }).session;
+      const r = applyMpAction(s, { type: "wait" });
+      assert.equal(r.ok, true, r.error);
+      s = r.session;
+      assert.notEqual(s.place.status, "collapsed", `collapse after Alex wait #${i + 1}`);
+      // Bea's turn — end without waiting so Alex can wait again
+      if (activeSeatId(s) === "seat-1") {
+        s = applyMpAction(s, {
+          type: "buffer_write",
+          payload: { field: "inventionHow", value: `b${i}` },
+        }).session;
+        s = applyMpAction(s, { type: "end_turn" }).session;
+      }
+    }
+    assert.equal(s.forges["seat-0"].year, 2030);
+    assert.equal(s.forges["seat-1"].year, 2026);
+    assert.equal(s.place.status, "playing");
+    assert.equal(s.place.pressure.Floods, 4, "Wait must not raise shared meters");
   });
 });
 
@@ -226,6 +399,10 @@ describe("mp-session challenge pilot scale", () => {
         verdict: "pass",
       },
     }).session;
+    // Techs + enter_challenge spend the invent AP bar. Pilot/Scale also cost 1 AP each.
+    // Real play: End turn to refill. Tests top up so deploy can be exercised same seat-turn.
+    const aid = activeSeatId(s);
+    if (s.forges[aid]) s.forges[aid].ap = s.forges[aid].apMax;
     return s;
   }
 
@@ -259,14 +436,12 @@ describe("mp-session challenge pilot scale", () => {
     let s = prepForPilot(started());
     assert.equal(s.forges["seat-0"].challengePassed, true);
     assert.equal(s.forges["seat-0"].deployStage, "none");
-    s = applyMpAction(s, {
-      type: "buffer_write",
-      payload: { field: "inventionName", value: "done" },
-    }).session;
+    // Challenge-passed invent is locked for prose — just end turn
     s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(activeSeatId(s), "seat-1");
 
     const beaBudget = s.forges["seat-1"].budget;
+    const beaAp = s.forges["seat-1"].ap;
     const rPilot = applyMpAction(
       s,
       {
@@ -281,6 +456,8 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(s.forges["seat-0"].deployStage, "pilot_ok");
     assert.equal(s.forges["seat-1"].deployStage, "none"); // Bea's invent untouched
     assert.ok(s.forges["seat-1"].budget < beaBudget);
+    // Helper pays AP for Pilot (same as solo deploy cost)
+    assert.ok(s.forges["seat-1"].ap < beaAp, "pilot should spend AP");
     assert.ok((s.forges["seat-1"].apSpentThisTurn || 0) >= 1);
 
     // Scale without pilot on *target* still fails if we wipe pilot stage
@@ -316,6 +493,123 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(r.error, "retry_next_turn");
   });
 
+  it("reopen_invent unlocks after challenge+pilot; owner only; keeps prose/stack", () => {
+    let s = prepForPilot(started());
+    s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
+    assert.equal(s.forges["seat-0"].challengePassed, true);
+    assert.equal(s.forges["seat-0"].deployStage, "pilot_ok");
+    const how = s.forges["seat-0"].inventionHow;
+    const stackLen = s.forges["seat-0"].stack.length;
+    assert.ok(how.length > 20);
+    assert.ok(stackLen >= 2);
+
+    // Helper cannot reopen owner's invent
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-1");
+    const denied = applyMpAction(s, {
+      type: "reopen_invent",
+      payload: { targetSeatId: "seat-0" },
+    });
+    assert.equal(denied.ok, false);
+    assert.equal(denied.error, "owner_only");
+
+    // Back to Alex (ensure engagement so end_turn is accepted)
+    s.forges["seat-1"].apSpentThisTurn = 1;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-0");
+    const re = applyMpAction(s, {
+      type: "reopen_invent",
+      payload: { targetSeatId: "seat-0" },
+    });
+    assert.equal(re.ok, true, re.error);
+    s = re.session;
+    assert.equal(s.forges["seat-0"].challengePassed, false);
+    assert.equal(s.forges["seat-0"].deployStage, "none");
+    assert.equal(s.forges["seat-0"].turnPhase, "act");
+    assert.equal(s.forges["seat-0"].inventionHow, how);
+    assert.equal(s.forges["seat-0"].stack.length, stackLen);
+    assert.ok(re.events.some((e) => e.type === "reopen_invent"));
+
+    // Story writeable again (owner)
+    const write = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: how + " Reworked with crews on site." },
+    });
+    assert.equal(write.ok, true, write.error);
+    s = write.session;
+
+    // Helper can layer again after reopen
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-1");
+    const otherTech = TECHS.find(
+      (t) => !s.forges["seat-0"].stack.some((x) => x.techId === t.id)
+    );
+    if (otherTech) {
+      const layer = applyMpAction(s, {
+        type: "layer_tech",
+        payload: { techId: otherTech.id, targetSeatId: "seat-0", tech: otherTech },
+      });
+      assert.equal(layer.ok, true, layer.error);
+      s = layer.session;
+    }
+
+    // Must re-challenge before pilot (Alex's turn again)
+    s.forges["seat-1"].apSpentThisTurn = Math.max(1, s.forges["seat-1"].apSpentThisTurn || 0);
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-0");
+    const pilotDenied = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk });
+    assert.equal(pilotDenied.ok, false);
+    assert.equal(pilotDenied.error, "challenge_required");
+  });
+
+  it("reopen_invent blocked after scale (or race already over)", () => {
+    let s = prepForPilot(started());
+    s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
+    // Force non-solving scale if possible: use yellow and ok rng — may still solve
+    const scaled = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk });
+    s = scaled.session;
+    if (s.place.status === "won" || s.place.status === "collapsed") {
+      const r = applyMpAction(s, {
+        type: "reopen_invent",
+        payload: { targetSeatId: "seat-0" },
+      });
+      assert.equal(r.ok, false);
+      assert.equal(r.error, "run_over");
+      return;
+    }
+    if (s.forges["seat-0"].deployStage === "scaled") {
+      const r = applyMpAction(s, {
+        type: "reopen_invent",
+        payload: { targetSeatId: "seat-0" },
+      });
+      assert.equal(r.ok, false);
+      assert.ok(r.error === "already_scaled" || r.error === "run_over");
+    }
+  });
+
+  it("stack locked after challenge until reopen", () => {
+    let s = prepForPilot(started());
+    const r = applyMpAction(s, {
+      type: "select_tech",
+      payload: { techId: TECHS[3]?.id || T0 },
+    });
+    // If tech already on stack, pick another
+    if (r.error === "already_on_stack") {
+      const other = TECHS.find((t) => !s.forges["seat-0"].stack.some((x) => x.techId === t.id));
+      if (other) {
+        const r2 = applyMpAction(s, {
+          type: "select_tech",
+          payload: { techId: other.id, tech: other },
+        });
+        assert.equal(r2.ok, false);
+        assert.equal(r2.error, "invent_locked");
+      }
+    } else {
+      assert.equal(r.ok, false);
+      assert.equal(r.error, "invent_locked");
+    }
+  });
+
   it("failed scale blocks retry same turn", () => {
     let s = prepForPilot(started());
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
@@ -326,7 +620,7 @@ describe("mp-session challenge pilot scale", () => {
   });
 
   it("solving scale ends race and ranks", () => {
-    // Low winMax all 5 so any drop may not solve — set easy win
+    // Easy winMax so any successful scale solves the place
     let s = createMpLobby(["Alex", "Bea"]);
     const easy = {
       ...mission,
@@ -336,17 +630,25 @@ describe("mp-session challenge pilot scale", () => {
     s = setMpMission(s, easy, "climate");
     s = startMpMission(s).session;
     s = prepForPilot(s);
+    const apBefore = s.forges["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
+    assert.ok(s.forges["seat-0"].ap < apBefore, "pilot spends AP");
+    const apAfterPilot = s.forges["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
-    // may or may not fully solve depending on drop; force check ranking path
-    if (s.place.status === "won") {
-      assert.ok(s.ranking?.rows?.length >= 2);
-      assert.equal(s.forges["seat-0"].landedSolvingScale, true);
-    } else {
-      // partial path still valid
-      assert.equal(s.place.status, "playing");
-      assert.ok(s.forges["seat-0"].successfulScales >= 1);
-    }
+    assert.ok(s.forges["seat-0"].ap < apAfterPilot, "scale spends AP");
+    assert.equal(s.place.status, "won");
+    assert.ok(s.ranking?.rows?.length >= 2);
+    assert.equal(s.forges["seat-0"].landedSolvingScale, true);
+  });
+
+  it("pilot and scale spend AP like solo", () => {
+    let s = prepForPilot(started());
+    const ap0 = s.forges["seat-0"].ap;
+    s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
+    assert.equal(s.forges["seat-0"].ap, ap0 - 1);
+    const ap1 = s.forges["seat-0"].ap;
+    s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
+    assert.equal(s.forges["seat-0"].ap, ap1 - 1);
   });
 });
 
@@ -420,6 +722,52 @@ describe("mp-session pay_ap", () => {
     assert.equal(s.forges["seat-0"].ap, ap0 - 1);
     s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
     assert.equal(s.forges["seat-0"].ap, ap0);
+  });
+});
+
+describe("mp-session lobby", () => {
+  it("trades 1 AP + 1 Budget for +1 Will on active seat", () => {
+    let s = started();
+    const f0 = s.forges["seat-0"];
+    const ap0 = f0.ap;
+    const budget0 = f0.budget;
+    const will0 = f0.will;
+    const r = applyMpAction(s, { type: "lobby" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.equal(s.forges["seat-0"].ap, ap0 - 1);
+    assert.equal(s.forges["seat-0"].budget, budget0 - 1);
+    assert.equal(s.forges["seat-0"].will, will0 + 1);
+    assert.ok(r.events.some((e) => e.type === "lobby"));
+    // Shared place unchanged
+    assert.deepEqual(s.place.pressure, started().place.pressure);
+  });
+
+  it("rejects lobby without AP or Budget; non-active cannot lobby", () => {
+    let s = started();
+    s.forges["seat-0"].ap = 0;
+    let r = applyMpAction(s, { type: "lobby" });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "no_ap");
+
+    s = started();
+    s.forges["seat-0"].budget = 0;
+    r = applyMpAction(s, { type: "lobby" });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "no_budget");
+
+    s = started();
+    r = applyMpAction(s, { type: "lobby" }, "seat-1");
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "not_active_seat");
+  });
+
+  it("caps Will at max", () => {
+    let s = started();
+    s.forges["seat-0"].will = 5;
+    const r = applyMpAction(s, { type: "lobby" });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.forges["seat-0"].will, 5);
   });
 });
 

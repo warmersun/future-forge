@@ -243,7 +243,8 @@
             </div>
             <div class="vision-canvas-wrap" id="hs-vision-root">
               <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden>
+              <div class="vision-loading" hidden aria-live="polite">
+                <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
                   <span class="vision-loading-text">Imagining this place…</span>
@@ -490,7 +491,8 @@
             </div>
             <div class="vision-canvas-wrap" id="mp-vision-root">
               <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden>
+              <div class="vision-loading" hidden aria-live="polite">
+                <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
                   <span class="vision-loading-text">Imagining this place…</span>
@@ -748,14 +750,6 @@
 
             <div class="prompt-tip" id="prompt-tip"></div>
 
-            <div class="wait-help" id="wait-help">
-              <strong>Wait +2 years</strong> advances the calendar and
-              <em>raises crisis meters</em>. Use it when you want later world conditions
-              (costs, adoption, infrastructure) — not to “unlock” a category card.
-              EmTechs are always pickable; Feasibility judges whether your <em>how it works</em> over-claims this year.
-            </div>
-
-            <p class="wait-preview" id="wait-preview" aria-live="polite" hidden></p>
             <div class="form-actions game-actions">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
               <button
@@ -776,7 +770,7 @@
               >
                 End turn
               </button>
-              <button type="button" class="btn btn-secondary" id="btn-wait" title="Advance calendar and world conditions; crisis rises. Unspent AP are burned. Categories stay pickable.">
+              <button type="button" class="btn btn-secondary" id="btn-wait" title="Wait +2 years — confirm first; advances invent calendar (and crisis in solo).">
                 Wait +2 years
               </button>
               <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
@@ -815,7 +809,8 @@
             </div>
             <div class="vision-canvas-wrap" id="vision-root">
               <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden>
+              <div class="vision-loading" hidden aria-live="polite">
+                <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
                   <span class="vision-loading-text">Imagining this place…</span>
@@ -1095,7 +1090,8 @@
             </div>
             <div class="vision-canvas-wrap" id="challenge-vision-root">
               <img class="vision-image" alt="Vision of this place under challenge" hidden />
-              <div class="vision-loading" hidden>
+              <div class="vision-loading" hidden aria-live="polite">
+                <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
                   <span class="vision-loading-text">Imagining the challenge…</span>
@@ -1115,15 +1111,25 @@
           <div id="side-challenge-coinventor" class="side-pane" role="tabpanel" hidden>
             <div id="ch-co-inventor-root" class="co-inventor-root"></div>
             <div class="challenge-side-hint muted">
-              Coach, draft, or ask questions here. First help this scrutiny run is free; then 1 AP each.
-              You still choose Defend / Fix / Sidestep on the left.
+              Coach, draft, or ask — <strong>1 AP each</strong> (same as invent co-inventor). You still choose
+              Defend / Fix / Sidestep on the left.
             </div>
             <div class="challenge-help-actions challenge-side-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-coach">
-                Coach me
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                id="btn-challenge-coach"
+                title="1 AP — coaching tips for this critic"
+              >
+                Coach me (1 AP)
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-challenge-draft">
-                Draft a defense
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                id="btn-challenge-draft"
+                title="1 AP — draft a defense paragraph you can edit"
+              >
+                Draft a defense (1 AP)
               </button>
             </div>
             <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
@@ -1239,6 +1245,25 @@
       </div>
     </div>
 
+    <!-- Wait +2 years confirmation -->
+    <div
+      id="wait-confirm-backdrop"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wait-confirm-title"
+      hidden
+    >
+      <div class="modal wait-confirm-modal">
+        <h3 id="wait-confirm-title">Wait +2 years?</h3>
+        <div id="wait-confirm-body" class="modal-body wait-confirm-body"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="wait-confirm-cancel">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="wait-confirm-ok">Wait +2 years</button>
+        </div>
+      </div>
+    </div>
+
     <!-- How to play help -->
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
@@ -1246,7 +1271,8 @@
           <h3 id="help-title">How Future Forge works</h3>
           <p class="help-intro">
             Invent a <strong>local</strong> solution under a rising crisis. Spend scarce resources, clear critics,
-            then field the system. The AI co-inventor advises — you decide.
+            then field the system. The <strong>AI co-inventor</strong> advises — you decide — and
+            <strong>every AI request costs 1 AP</strong> (Invent and Challenge).
           </p>
         </header>
 
@@ -1300,7 +1326,9 @@
               <article class="help-tile">
                 <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
                 <p>
-                  Attention for tech, Lobby, challenge entry, AI, Defend / Fix / Sidestep, Deploy.
+                  Attention for tech, Lobby, challenge entry, Defend / Fix / Sidestep, Deploy, and the
+                  <strong>AI co-inventor</strong> (Fill other side, chips, chat, Coach / Draft / Ask —
+                  <strong>1 AP each</strong>).
                   <strong>End turn</strong> refills AP. <strong>Wait</strong> burns leftover AP, then refills.
                 </p>
               </article>
@@ -1354,14 +1382,18 @@
                 </ul>
               </article>
               <article class="help-tile">
-                <h5>AI co-inventor</h5>
+                <h5>AI co-inventor <span class="help-tile-meta">1 AP each</span></h5>
+                <p class="help-cost">Not free — every AI request spends 1 Action Point.</p>
                 <ul class="help-list">
-                  <li><strong>Invent:</strong> chips + chat. 1 AP per request.</li>
                   <li>
-                    <strong>Challenge:</strong> chat + Coach / Draft / Ask only (no invent chips).
-                    First help free, then 1 AP.
+                    <strong>Invent:</strong> chips, chat, and <strong>Fill other side</strong> —
+                    <strong>1 AP</strong> per request.
                   </li>
-                  <li>You own Defend / Fix / Sidestep on the left.</li>
+                  <li>
+                    <strong>Challenge:</strong> Coach me, Draft a defense, and Ask —
+                    <strong>1 AP each</strong> (no free first help).
+                  </li>
+                  <li>You still own Defend / Fix / Sidestep on the left (those have their own costs).</li>
                 </ul>
               </article>
             </div>

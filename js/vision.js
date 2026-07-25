@@ -435,6 +435,25 @@ export class VisionRenderer {
   }
 
   setLoading(on, message) {
+    const hasImage = Boolean(
+      this.currentUrl ||
+        (this.img && !this.img.hidden && this.img.getAttribute("src"))
+    );
+    const applyRoot = (root) => {
+      if (!root) return;
+      root.classList.toggle("is-imagining", Boolean(on));
+      // Stronger empty-state chip only when there is nothing to look at yet
+      root.classList.toggle("is-imagining-empty", Boolean(on) && !hasImage);
+      const overlay = root.querySelector?.(".vision-loading");
+      if (overlay) {
+        overlay.hidden = !on;
+        const text = overlay.querySelector(".vision-loading-text");
+        if (text && message) text.textContent = message;
+      }
+    };
+    applyRoot(this.root);
+    for (const r of this.mirrorRoots) applyRoot(r);
+    // Keep this.overlay in sync (primary root)
     if (this.overlay) {
       this.overlay.hidden = !on;
       const text = this.overlay.querySelector(".vision-loading-text");

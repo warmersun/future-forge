@@ -87,9 +87,15 @@ export function rankSurvivors(session) {
     r.rank = i + 1;
   });
 
+  const forgeYears = (session.seatOrder || [])
+    .map((id) => session.forges?.[id]?.year)
+    .filter((y) => y != null);
+  const latestInventYear = forgeYears.length
+    ? Math.max(...forgeYears)
+    : session.place.year;
   return {
     kind: session.place.status === "won" ? "win" : "partial",
-    year: session.place.year,
+    year: latestInventYear,
     rows,
   };
 }

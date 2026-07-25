@@ -44,7 +44,35 @@ describe("hotseat-bridge", () => {
     assert.equal(state.inventionName, "");
     assert.equal(state.pressure.Floods, 2);
     assert.equal(state.ap, 3);
+    assert.equal(state.year, 2026);
     assert.equal(state.mp.mode, "hotseat");
+  });
+
+  it("wait advances only active invent year; other forge keeps present for feasibility", () => {
+    const b = createHotseatBridge();
+    b.startFromPick(["Alex", "Bea"], mission, "climate");
+    const alex = b.getActiveId();
+    const bea = b.getSession().seatOrder[1];
+    b.layerTechOnView("iot", { id: "iot", curve: "mature", readyYear: 2026 });
+    const r = b.waitShared({});
+    assert.equal(r.ok, true, r.error);
+    const s = b.getSession();
+    assert.equal(s.place.year, 2026);
+    assert.equal(s.forges[alex].year, 2028);
+    assert.equal(s.forges[alex].waits, 1);
+    assert.equal(s.forges[bea].year, 2026);
+    assert.equal(s.forges[bea].waits, 0);
+    // Next seat hydrates with their own invent year (present)
+    assert.equal(b.getActiveId(), bea);
+    const state = { global: { id: "climate" }, selectedTechIds: [] };
+    b.hydrateSoloState(state, { global: state.global });
+    assert.equal(state.year, 2026);
+    assert.equal(state.waits, 0);
+    // Viewing Alex still shows their waited invent year for feasibility
+    b.setViewSeat(alex);
+    b.hydrateSoloState(state, { global: state.global });
+    assert.equal(state.year, 2028);
+    assert.equal(state.waits, 1);
   });
 
   it("cycles view and layers tech on other forge", () => {
@@ -136,5 +164,21 @@ describe("hotseat-bridge", () => {
       readyYear: 2026,
     });
     assert.equal(noLayer.ok, false);
+
+    // Pass device back to Alex (owner), then reopen invent
+    let sess = b.getSession();
+    sess.forges[bea].apSpentThisTurn = 1;
+    b.setSession(sess);
+    assert.equal(b.passDevice().ok, true);
+    assert.equal(b.getActiveId(), alex);
+    b.setViewSeat(alex);
+    const re = b.reopenInvent();
+    assert.equal(re.ok, true, re.error);
+    assert.equal(b.forgePhase(alex), "invent");
+    assert.equal(b.viewedPhase(), "invent");
+    assert.equal(b.canRunDeploy(), false);
+    assert.equal(b.canFaceChallenge(), true);
+    assert.equal(b.canContributeStory(), true);
+    assert.equal(b.canEditStack(), true);
   });
 });

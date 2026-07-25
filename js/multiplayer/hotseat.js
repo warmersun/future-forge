@@ -115,9 +115,9 @@ export function getLegacySimShim(session) {
   const p = session.place;
   if (!f || !p) return null;
   return {
-    year: p.year,
+    year: f.year != null ? f.year : p.year,
     turn: p.turn,
-    waits: p.waits,
+    waits: f.waits != null ? f.waits : p.waits,
     pressure: p.pressure,
     mission: p.mission,
     ap: f.ap,

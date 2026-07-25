@@ -954,10 +954,13 @@ function forgePlaceShim(mp, playerId) {
   if (!mp?.place || !playerId) return null;
   const f = mp.forges?.[playerId];
   if (!f) return null;
+  // Personal invent calendar for feasibility / AI timing (not shared place baseline)
+  const year = f.year != null ? f.year : mp.place.year;
+  const waits = f.waits != null ? f.waits : mp.place.waits || 0;
   return {
-    year: mp.place.year,
+    year,
     turn: mp.place.turn,
-    waits: mp.place.waits,
+    waits,
     pressure: { ...(mp.place.pressure || {}) },
     mission: mp.place.mission,
     globalId: mp.place.globalId,
@@ -1021,8 +1024,10 @@ function applyAiProposalsToForge(mp, playerId, proposals) {
 function buildRoomAiContext(room, player, payload) {
   const mp = publicMpState(room.mp);
   const f = mp?.forges?.[player.id];
+  // AI feasibility / timing must use the invent owner's personal year
+  const inventYear = f?.year != null ? f.year : mp?.place?.year;
   return {
-    year: mp?.place?.year,
+    year: inventYear,
     place: mp?.place?.mission?.place,
     globalTheme: { id: mp?.place?.globalId },
     mission: mp?.place?.mission,

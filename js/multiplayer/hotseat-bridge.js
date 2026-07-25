@@ -13,6 +13,7 @@ import {
 } from "./hotseat.js";
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
+import { forgeInventYear, forgeInventWaits } from "../sim/mp-session.js";
 
 /** Map forge deployStage → solo deployStage string */
 export function forgeToSoloDeployStage(ds) {
@@ -221,8 +222,9 @@ export function createHotseatBridge() {
     if (!state.global && place.globalId) {
       state.global = { id: place.globalId };
     }
-    state.year = place.year;
-    state.waits = place.waits || 0;
+    // Invent calendar is personal (viewed forge) — not the shared place baseline
+    state.year = forgeInventYear(view, place);
+    state.waits = forgeInventWaits(view, place);
     state.turn = place.turn || 0;
     state.pressure = clonePressure(place.pressure);
     state.lastNews = place.lastNews || "";
@@ -281,12 +283,14 @@ export function createHotseatBridge() {
     const actor = session.forges[aId];
     if (!view || !actor) return session;
 
-    // Place (shared)
-    session.place.year = state.year;
-    session.place.waits = state.waits || 0;
+    // Place (shared crisis + baseline year only — invent calendars live on forges)
     session.place.turn = state.turn || 0;
     session.place.pressure = clonePressure(state.pressure);
     session.place.lastNews = state.lastNews || session.place.lastNews;
+
+    // Personal invent calendar for the viewed forge (feasibility / AI timing use this)
+    view.year = state.year;
+    view.waits = state.waits || 0;
 
     // Invention freeze: after Challenge starts or passes, story + stack no longer write back
     const inventOpen =
@@ -312,15 +316,20 @@ export function createHotseatBridge() {
       view.hadChallengeAttempt = Boolean(state.hadChallengeAttempt);
       view.lastChallengeVerdict = state.lastChallengeVerdict;
       view.challengeFails = state.challengeFails || 0;
-      if (state.challengePassed) view.challengePassed = true;
+      // Mirror both directions so "Back to invent" (reopen) can clear the lock
+      view.challengePassed = Boolean(state.challengePassed);
       if (state.turnPhase === "scrutiny") view.turnPhase = "scrutiny";
-      else if (view.challengePassed || state.deployUnlocked) view.turnPhase = "between_stages";
+      else if (state.challengePassed || state.deployUnlocked) view.turnPhase = "between_stages";
       else if (state.turnPhase === "act") view.turnPhase = "act";
+      // Reopened invent: clear Pilot progress (never un-scale a finished invent)
+      if (!state.challengePassed && state.turnPhase !== "scrutiny" && view.deployStage !== "scaled") {
+        view.deployStage = "none";
+        view.stagedDropPool = 0;
+      }
     }
 
-    // Deploy progress: active player may Pilot/Scale any deploy-ready invent they view
-    // (invention already locked; only stage / place progress updates)
-    if (view.challengePassed || state.challengePassed) {
+    // Deploy progress only while Challenge is still passed (reopen clears this)
+    if (state.challengePassed) {
       view.challengePassed = true;
       view.deployStage = soloToForgeDeployStage(state.deployStage);
       view.stagedDropPool = state.stagedDropPool || view.stagedDropPool || 0;
@@ -433,6 +442,26 @@ export function createHotseatBridge() {
     return r;
   }
 
+  /**
+   * Owner reopens their invent after Challenge/Pilot ("Back to invent").
+   * Unlocks story + stack; clears challenge pass and pilot progress.
+   */
+  function reopenInvent() {
+    if (!session) return { ok: false, error: "no_session" };
+    const active = getActiveId();
+    // Always reopen the active seat's own invent (owner-only on server)
+    const r = hotseatApplyAction(
+      session,
+      { type: "reopen_invent", payload: { targetSeatId: active } },
+      active
+    );
+    if (r.ok) {
+      session = r.session;
+      viewSeatId = active;
+    }
+    return r;
+  }
+
   function clear() {
     session = null;
     viewSeatId = null;
@@ -452,6 +481,8 @@ export function createHotseatBridge() {
         abandoned: Boolean(f?.abandoned),
         stackCount: (f?.stack || []).length,
         inventionName: f?.inventionName || "",
+        year: forgeInventYear(f, session.place),
+        waits: forgeInventWaits(f, session.place),
         deployStage: f?.deployStage || "none",
         challengePassed: Boolean(f?.challengePassed),
         phase,
@@ -489,6 +520,7 @@ export function createHotseatBridge() {
     removeTechFromView,
     passDevice,
     waitShared,
+    reopenInvent,
     clear,
     seatSummaries,
     activeSeat: () => (session ? activeSeat(session) : null),

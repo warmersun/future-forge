@@ -32,6 +32,7 @@ import {
  *   escapeHtml: Function,
  *   beginMissionPick?: Function,
  *   clearMissionPickSession?: Function,
+ *   openWaitConfirm?: Function,
  * }} api
  */
 export function initFriendsUi(api) {
@@ -47,6 +48,7 @@ export function initFriendsUi(api) {
     leaveHotseat,
     enterRoomPlay,
     leaveRoomPlay,
+    openWaitConfirm,
   } = api;
   const client = new RoomClient();
   let bufferTimers = {};
@@ -414,14 +416,19 @@ export function initFriendsUi(api) {
     const code = $("#mp-room-code");
     if (code) code.textContent = snap.code || "";
 
-    const year = place?.year ?? snap?.sim?.year ?? 2026;
+    // HUD year = your invent calendar (or active forge), not a shared global clock
+    const inventYear =
+      forge?.year ??
+      place?.year ??
+      snap?.sim?.year ??
+      2026;
     const pressure = place?.pressure || snap?.sim?.pressure || {};
     const mission = place?.mission || snap?.sim?.mission;
     const activeId = snap?.activeSeatId || mp?.activeSeatId;
     const activeName =
       (snap?.players || []).find((p) => p.id === activeId)?.displayName || "—";
 
-    $("#mp-hud-year").textContent = String(year);
+    $("#mp-hud-year").textContent = String(inventYear);
     $("#mp-hud-turn").textContent = `Round ${mp?.round || 1}`;
     if (forge) {
       $("#mp-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
@@ -923,7 +930,13 @@ export function initFriendsUi(api) {
       // When using workshop bridge, enterRoomPlay's subscription hydrates; still keep legacy render
       if (typeof enterRoomPlay !== "function") renderPlay();
       const last = (evt.events || [])[0];
-      if (last?.type === "wait") setPlayStatus(`Wait → year ${client.snapshot?.place?.year}`);
+      if (last?.type === "wait") {
+        const y =
+          last.year ??
+          client.snapshot?.mp?.forges?.[last.seatId]?.year ??
+          client.snapshot?.place?.year;
+        setPlayStatus(`Wait → invent year ${y} (your forge only)`);
+      }
       if (last?.type === "end_turn" || last?.type === "seat_turn_start") {
         const who = (client.snapshot?.players || []).find(
           (p) => p.id === client.snapshot?.activeSeatId
@@ -1123,7 +1136,20 @@ export function initFriendsUi(api) {
   });
 
   $("#btn-mp-end-turn")?.addEventListener("click", () => mpSend({ type: "end_turn" }));
-  $("#btn-mp-wait")?.addEventListener("click", () => mpSend({ type: "wait" }));
+  $("#btn-mp-wait")?.addEventListener("click", () => {
+    const forge = client.snapshot?.you?.forge;
+    const place = client.snapshot?.place || client.snapshot?.mp?.place;
+    const run = () => mpSend({ type: "wait" });
+    if (typeof openWaitConfirm === "function") {
+      openWaitConfirm(run, {
+        multiparty: true,
+        year: forge?.year ?? place?.year,
+        waits: forge?.waits ?? 0,
+        pressure: place?.pressure,
+        mission: place?.mission,
+      });
+    } else run();
+  });
   $("#btn-mp-challenge")?.addEventListener("click", () => mpSend({ type: "enter_challenge" }));
   $("#btn-mp-submit-challenge")?.addEventListener("click", () => {
     const answer = $("#mp-challenge-answer")?.value || "";
@@ -1307,7 +1333,7 @@ export function initFriendsUi(api) {
       const place = hotseat?.place;
       if (!place) return;
       const fp = [
-        place.year,
+        forge?.year ?? place.year,
         JSON.stringify(place.pressure || {}),
         forge?.deployStage,
         (forge?.stack || []).map((x) => x.techId).join(","),
@@ -1341,9 +1367,10 @@ export function initFriendsUi(api) {
         if (f?.deployStage === "scaled") tags.push('<span class="tag">scaled</span>');
         else if (f?.deployStage === "pilot_ok") tags.push('<span class="tag">pilot</span>');
         else if (f?.challengePassed) tags.push('<span class="tag">challenged</span>');
+        const y = f?.year != null ? f.year : place?.year;
         return `<li class="${isActive ? "is-online" : "is-offline"}">
             <strong>${escapeHtml(s?.displayName || id)}</strong>
-            ${place ? `<span class="muted sm">B${f?.budget ?? "—"} W${f?.will ?? "—"}</span>` : ""}
+            ${place ? `<span class="muted sm">${y ?? "—"} · B${f?.budget ?? "—"} W${f?.will ?? "—"}</span>` : ""}
             ${tags.join(" ")}
           </li>`;
       })
@@ -1373,7 +1400,9 @@ export function initFriendsUi(api) {
 
     ensureHsSide();
 
-    $("#hs-hud-year").textContent = String(place.year);
+    // Active seat invent calendar (personal — Wait only advances their forge year)
+    const inventYear = forge?.year != null ? forge.year : place.year;
+    $("#hs-hud-year").textContent = String(inventYear);
     $("#hs-hud-turn").textContent = `Round ${hotseat.round || 1}`;
     if (forge) {
       $("#hs-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
@@ -1695,7 +1724,19 @@ export function initFriendsUi(api) {
   });
 
   $("#btn-hs-wait")?.addEventListener("click", () => {
-    hsAct({ type: "wait" }, "Wait — year advanced, turn passed");
+    const forge = activeForge(hotseat);
+    const place = hotseat?.place;
+    const run = () =>
+      hsAct({ type: "wait" }, "Wait — your invent +2 years, turn passed");
+    if (typeof openWaitConfirm === "function") {
+      openWaitConfirm(run, {
+        multiparty: true,
+        year: forge?.year ?? place?.year,
+        waits: forge?.waits ?? 0,
+        pressure: place?.pressure,
+        mission: place?.mission,
+      });
+    } else run();
   });
 
   $("#btn-hs-challenge")?.addEventListener("click", () => {

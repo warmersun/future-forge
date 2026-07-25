@@ -5,6 +5,7 @@
 
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
+import { forgeInventYear, forgeInventWaits } from "../sim/mp-session.js";
 import { forgeToSoloDeployStage, soloToForgeDeployStage } from "./hotseat-bridge.js";
 
 /**
@@ -225,8 +226,9 @@ export function createRoomBridge() {
     if (!state.global && place.globalId) {
       state.global = { id: place.globalId };
     }
-    state.year = place.year;
-    state.waits = place.waits || 0;
+    // Invent calendar is personal (viewed forge) — feasibility / AI timing use this
+    state.year = forgeInventYear(view, place);
+    state.waits = forgeInventWaits(view, place);
     state.turn = place.turn || m.round || 0;
     state.pressure = clonePressure(place.pressure);
     state.lastNews = place.lastNews || "";

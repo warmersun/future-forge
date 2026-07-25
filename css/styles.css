@@ -315,6 +315,11 @@ button:disabled {
   min-width: 0;
 }
 
+/* Space action buttons off the field above (Create / Join / Hotseat) */
+.friends-panel > .btn {
+  margin-top: 1rem;
+}
+
 .friends-panel .field label {
   display: block;
   overflow-wrap: anywhere;
@@ -2270,17 +2275,21 @@ body.mp-hotseat .workshop-layout {
 
 .topbar-game {
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem 0.65rem;
+  /* Prefer a single row when the viewport has room; wrap only when cramped */
+  row-gap: 0.4rem;
 }
 
+/* Center cluster: invent calendar + resources — one line (was capped at 28rem and wrapping) */
 .hud-clock {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.35rem 0.5rem;
+  gap: 0.35rem 0.45rem;
+  flex: 1 1 28rem;
   min-width: 0;
-  max-width: min(28rem, 100%);
+  max-width: none;
 }
 
 .hud-year {
@@ -2293,6 +2302,7 @@ body.mp-hotseat .workshop-layout {
   background-clip: text;
   color: transparent;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hud-turn {
@@ -2301,6 +2311,72 @@ body.mp-hotseat .workshop-layout {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22rem;
+}
+
+/* Multiplayer: more chrome — keep year / invent / resources / crisis on one row */
+body.mp-room .topbar-game,
+body.mp-hotseat .topbar-game {
+  flex-wrap: nowrap;
+  gap: 0.35rem 0.5rem;
+}
+
+body.mp-room .topbar-game .brand .brand-name,
+body.mp-hotseat .topbar-game .brand .brand-name {
+  /* Active-player chip already identifies the session — free horizontal room */
+  display: none;
+}
+
+body.mp-room .topbar-game .brand .brand-dot,
+body.mp-hotseat .topbar-game .brand .brand-dot {
+  display: none;
+}
+
+body.mp-room .topbar-game .progress-pills .pill,
+body.mp-hotseat .topbar-game .progress-pills .pill {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+}
+
+body.mp-room .hud-clock,
+body.mp-hotseat .hud-clock {
+  flex: 1 1 24rem;
+  justify-content: flex-start;
+}
+
+body.mp-room .hud-crisis-wrap,
+body.mp-hotseat .hud-crisis-wrap {
+  flex: 0 1 auto;
+  max-width: none;
+  flex-wrap: nowrap;
+}
+
+/* Narrow viewports: allow wrap again so nothing is clipped */
+@media (max-width: 1100px) {
+  body.mp-room .topbar-game,
+  body.mp-hotseat .topbar-game {
+    flex-wrap: wrap;
+  }
+
+  body.mp-room .topbar-game .brand .brand-name,
+  body.mp-hotseat .topbar-game .brand .brand-name {
+    display: inline;
+  }
+
+  .hud-clock {
+    flex-wrap: wrap;
+    flex-basis: 100%;
+  }
+
+  body.mp-room .hud-crisis-wrap,
+  body.mp-hotseat .hud-crisis-wrap {
+    flex-wrap: wrap;
+  }
 }
 
 .hud-pressure {
@@ -2488,11 +2564,13 @@ body.mp-hotseat .workshop-layout {
 .hud-crisis-wrap {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.4rem 0.5rem;
-  max-width: min(34rem, 48vw);
+  max-width: none;
+  flex: 0 1 auto;
+  min-width: 0;
   cursor: help;
 }
 
@@ -3116,18 +3194,45 @@ body.challenge-pose-pending #challenge-help-form {
   display: none;
 }
 
-.wait-help {
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.06);
-  line-height: 1.45;
+/* Permanent invent-screen Wait blurb removed — explanation is in the confirm dialog */
+.wait-help,
+.wait-preview {
+  display: none !important;
 }
 
-.wait-help strong {
-  color: #fde68a;
+.wait-confirm-modal {
+  width: min(32rem, 100%);
+}
+
+.wait-confirm-body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.wait-confirm-body p {
+  margin: 0 0 0.55rem;
+}
+
+.wait-confirm-body p strong {
+  color: var(--text);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.wait-confirm-list {
+  margin: 0 0 0.85rem;
+  padding-left: 1.15rem;
+  color: var(--text-dim);
+}
+
+.wait-confirm-list li {
+  margin: 0.3rem 0;
+}
+
+.wait-confirm-list .bad {
+  color: #fca5a5;
 }
 
 .wait-report {
@@ -4632,9 +4737,35 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   flex: 1;
   min-height: 240px;
   overflow: hidden;
+  border-radius: var(--radius-sm, 8px);
   background:
     radial-gradient(ellipse at 50% 30%, rgba(56, 189, 248, 0.08), transparent 55%),
     var(--bg-0);
+}
+
+/* —— AI imagining: keep the current frame fully visible; signal work with a living frame —— */
+.vision-canvas-wrap.is-imagining {
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.35),
+    0 0 22px rgba(56, 189, 248, 0.18),
+    inset 0 0 40px rgba(56, 189, 248, 0.06);
+  animation: vision-glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes vision-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(56, 189, 248, 0.3),
+      0 0 16px rgba(56, 189, 248, 0.12),
+      inset 0 0 28px rgba(56, 189, 248, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(125, 211, 252, 0.55),
+      0 0 28px rgba(56, 189, 248, 0.28),
+      inset 0 0 48px rgba(56, 189, 248, 0.1);
+  }
 }
 
 .vision-image {
@@ -4642,11 +4773,17 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: opacity 0.45s var(--ease);
+  transition: opacity 0.45s var(--ease), filter 0.5s var(--ease);
 }
 
+/* Keep the old frame readable while a new one generates (was ~0.35 + full blur) */
 .vision-image.is-fading {
-  opacity: 0.35;
+  opacity: 0.72;
+}
+
+.vision-canvas-wrap.is-imagining .vision-image:not([hidden]) {
+  /* slight vitality — never hide the scene */
+  filter: saturate(1.05) brightness(1.02);
 }
 
 .vision-image[hidden] {
@@ -4670,32 +4807,121 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   display: none;
 }
 
+/* Non-blocking loader: frame + chip only — no full-bleed dim/blur over the art */
 .vision-loading {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(7, 11, 20, 0.55);
-  backdrop-filter: blur(4px);
   z-index: 2;
+  pointer-events: none;
+  background: transparent;
+  backdrop-filter: none;
+  display: block;
 }
 
 .vision-loading[hidden] {
   display: none;
 }
 
+/* Moving light that runs the border (rotating conic sweep, ring-masked) */
+.vision-loading-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  /* Punch out the center so only a 2px ring shows */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.95;
+}
+
+.vision-loading-frame::before {
+  content: "";
+  position: absolute;
+  /* Oversized so rotation never leaves the ring empty */
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(56, 189, 248, 0.05) 0deg,
+    rgba(56, 189, 248, 0.15) 60deg,
+    rgba(56, 189, 248, 0.95) 110deg,
+    rgba(167, 139, 250, 0.9) 150deg,
+    rgba(56, 189, 248, 0.2) 200deg,
+    rgba(56, 189, 248, 0.05) 360deg
+  );
+  animation: vision-frame-spin 2.1s linear infinite;
+}
+
+@keyframes vision-frame-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Steady secondary rim so the frame never disappears between sweeps */
+.vision-loading-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  pointer-events: none;
+}
+
+/* Small floating chip — does not cover the picture */
 .vision-loading-inner {
+  position: absolute;
+  top: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0.65rem;
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
-  background: rgba(18, 26, 43, 0.9);
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(10, 16, 28, 0.72);
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  max-width: calc(100% - 1.25rem);
+}
+
+.vision-loading-inner .co-dots {
+  flex-shrink: 0;
+}
+
+.vision-loading-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* First frame (no image yet): slightly stronger empty-state cue, still no heavy blur */
+.vision-canvas-wrap.is-imagining-empty .vision-loading-inner {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  white-space: normal;
+  text-align: center;
+  max-width: 85%;
+}
+
+.vision-canvas-wrap.is-imagining-empty .vision-placeholder {
+  opacity: 0.35;
 }
 
 .vision-status {
@@ -4708,6 +4934,12 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   color: var(--text-mute);
   background: linear-gradient(transparent, rgba(7, 11, 20, 0.85));
   z-index: 1;
+}
+
+/* Status line while imagining — extra cue without covering art */
+.vision-canvas-wrap.is-imagining .vision-status {
+  color: rgba(186, 230, 253, 0.95);
+  background: linear-gradient(transparent, rgba(8, 20, 36, 0.9));
 }
 
 .reveal-vision-wrap .vision-image {

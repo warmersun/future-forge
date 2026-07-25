@@ -7,13 +7,12 @@
 import { GAME, techById } from "../data.js";
 import { cloneMission, friendsFeatureFlags } from "./state.js";
 import {
-  applyPressureRise,
   applyPressureDrop,
   clonePressure,
   totalPressure,
 } from "./pressure.js";
-import { isCollapsed, isWin } from "./collapse.js";
-import { techCost, techBudgetRefund, deployActionCost } from "./economy.js";
+import { isMpPlaceCollapsed, isWin, mpEarliestInventYear } from "./collapse.js";
+import { techCost, techBudgetRefund, deployActionCost, scaleActionCost } from "./economy.js";
 import {
   computeDeployDrop,
   rollDeploySuccess,
@@ -188,8 +187,27 @@ export function setFirstPlayer(session, choice = "host") {
   };
 }
 
-function createForge(seat, settings) {
+/**
+ * Personal invent calendar (year/waits) for a forge.
+ * Wait advances the actor's invent year only — not the shared place baseline.
+ * @param {object|null|undefined} forge
+ * @param {object|null|undefined} place
+ */
+export function forgeInventYear(forge, place = null) {
+  if (forge?.year != null && Number.isFinite(Number(forge.year))) return Number(forge.year);
+  // Do not fall back to place.year for missing forge calendars — place.year is the
+  // scenario baseline / legacy field, not "this invent already waited".
+  return place?.mission?.startYear ?? GAME.startYear ?? 2026;
+}
+
+export function forgeInventWaits(forge, place = null) {
+  if (forge?.waits != null) return forge.waits;
+  return place?.waits ?? 0;
+}
+
+function createForge(seat, settings, mission = null) {
   const apMax = settings.apMax ?? 3;
+  const startYear = mission?.startYear ?? GAME.startYear ?? 2026;
   return {
     seatId: seat.id,
     displayName: seat.displayName,
@@ -200,6 +218,9 @@ function createForge(seat, settings) {
     apSpentThisTurn: 0,
     writeCommitsThisTurn: 0,
     techAddedThisTurn: {}, // techId -> { cost, targetSeatId }
+    /** Personal invent calendar — Wait advances this, not place.year */
+    year: startYear,
+    waits: 0,
     inventionName: "",
     inventionHow: "",
     inventionImpact: "",
@@ -250,11 +271,12 @@ export function startMpMission(session) {
 
   const forges = {};
   for (const seat of session.seats) {
-    forges[seat.id] = createForge(seat, session.settings);
+    forges[seat.id] = createForge(seat, session.settings, mission);
   }
 
   // Ensure activeIndex points at firstPlayer
   let next = setFirstPlayer(session, session.firstPlayerId || "host");
+  // place.year is the scenario baseline (present). Personal invent calendars live on forges.
   const place = {
     mission: cloneMission(mission),
     globalId: session.missionMeta.globalId || mission.globalId || null,
@@ -490,6 +512,28 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
+  // —— Lobby: personal political capital (same as solo) ——
+  // Active seat only: 1 AP + 1 Budget → +1 Will (cap maxWill). Does not touch shared place.
+  if (type === "lobby") {
+    if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+    if (bwOn) {
+      if ((actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
+      actor.budget -= 1;
+      actor.will = Math.min(maxWill, (actor.will ?? 0) + 1);
+    }
+    actor.lastNews = `Lobbied for support — Will ${actor.will}, Budget ${actor.budget}$.`;
+    events.push({
+      type: "lobby",
+      seatId: activeId,
+      will: actor.will,
+      budget: actor.budget,
+      ap: actor.ap,
+    });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
   // —— Abandon ——
   if (type === "abandon") {
     if (actor.abandoned) return { ok: false, error: "already_abandoned", session };
@@ -526,6 +570,14 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
     if (target.deployStage === "scaled") {
       return { ok: false, error: "target_already_scaled", session };
+    }
+    // Challenge pass / pilot locks the invent (story + stack) until owner reopens
+    if (
+      target.challengePassed ||
+      target.deployStage === "pilot_ok" ||
+      target.turnPhase === "scrutiny"
+    ) {
+      return { ok: false, error: "invent_locked", session };
     }
     if (targetSeatId !== activeId && actor.abandoned === false) {
       // non-abandoned can still layer on others (rules allow)
@@ -595,6 +647,14 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       if (entry.addedBy !== activeId) {
         return { ok: false, error: "not_your_layer", session };
       }
+    }
+    if (
+      target.challengePassed ||
+      target.deployStage === "pilot_ok" ||
+      target.deployStage === "scaled" ||
+      target.turnPhase === "scrutiny"
+    ) {
+      return { ok: false, error: "invent_locked", session };
     }
 
     target.stack = target.stack.filter((x) => x.techId !== techId);
@@ -769,13 +829,15 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
 
     const techs = stackTechs(target);
-    // Deploy stages cost 0 AP (solo key decision); field budget still applies to actor.
+    // Same costs as solo: deployActionCost (typically 1 AP + Budget)
     const cost = deployActionCost(techs, { will: actor.will });
+    if (!spendAp(actor, cost.ap || 1)) {
+      return { ok: false, error: "no_ap", session };
+    }
     if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
     actor.budget -= cost.budget;
-    actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1; // marks engagement for end_turn
     if (targetSeatId !== activeId) {
-      actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + (cost.ap || 1);
     }
 
     const level = payload.feasibilityLevel || "yellow";
@@ -848,12 +910,18 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: false, error: "race_over", session };
     }
 
-    // Scale: 0 AP; 1 Budget field cost when budget remains (actor pays)
-    if ((actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
-    actor.budget -= 1;
-    actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1;
+    // Same costs as solo: scaleActionCost (typically 1 AP + Budget + optional Will)
+    const techsForCost = stackTechs(target);
+    const cost = scaleActionCost(techsForCost, { will: actor.will });
+    if (!spendAp(actor, cost.ap || 1)) {
+      return { ok: false, error: "no_ap", session };
+    }
+    if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
+    if ((actor.will ?? 0) < (cost.will || 0)) return { ok: false, error: "no_will", session };
+    actor.budget -= cost.budget;
+    if (cost.will > 0) actor.will = Math.max(0, (actor.will ?? 0) - cost.will);
     if (targetSeatId !== activeId) {
-      actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + (cost.ap || 1);
     }
 
     const targetName = target.displayName || targetSeatId;
@@ -937,6 +1005,58 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
+  /**
+   * Owner reopens invent after Challenge / Pilot ("Back to invent").
+   * Unlocks story + stack for owner edits and helper layering; clears Challenge pass
+   * and Pilot progress so the invent must re-face Challenge before fielding again.
+   * Scaled invents cannot be reopened.
+   */
+  if (type === "reopen_invent") {
+    if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.forges[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    // Only the invent owner, on their seat-turn
+    if (targetSeatId !== activeId) {
+      return { ok: false, error: "owner_only", session };
+    }
+    if (target.abandoned) return { ok: false, error: "abandoned", session };
+    if (target.deployStage === "scaled" || target.deployStage === "new_normal") {
+      return { ok: false, error: "already_scaled", session };
+    }
+    // Already open invent phase — no-op success
+    if (
+      !target.challengePassed &&
+      target.deployStage === "none" &&
+      target.turnPhase !== "scrutiny"
+    ) {
+      return { ok: true, session: s, events: [] };
+    }
+
+    target.challengePassed = false;
+    target.deployStage = "none";
+    target.turnPhase = "act";
+    target.scrutinyPublic = null;
+    target.challengeAngle = null;
+    target.challengeSpeech = "";
+    target.challengeQuestion = "";
+    target.challengeJudging = false;
+    target.challengeMoveMode = null;
+    target.challengeFeedback = "";
+    target.challengeAnswer = "";
+    target.stagedDropPool = 0;
+    target.pilotFailedThisTurn = false;
+    target.scaleFailedThisTurn = false;
+    // Keep stack + prose; keep hadChallengeAttempt / lastChallengeVerdict as history
+    actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1; // counts as engagement for end_turn
+    target.lastNews =
+      "Invent reopened for rework — Challenge and Pilot progress cleared. Face the challenge again when ready.";
+    s.place.lastNews = `${actor.displayName} reopened their invent for rework.`;
+    events.push({ type: "reopen_invent", seatId: activeId, targetSeatId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
   // —— End turn ——
   if (type === "end_turn") {
     if ((actor.apSpentThisTurn || 0) < 1 && actor.turnPhase === "act") {
@@ -962,7 +1082,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
-  // —— Wait (shared calendar; ends seat-turn) ——
+  // —— Wait (personal invent calendar only; ends seat-turn) ——
+  // Wait is a choice about *your invention's* timing claims — not a global clock and not a
+  // way for one seat to meter-kill the shared place. Shared crisis only moves on Scale (down)
+  // or if *every* invent calendar is past the fail year (unanimous calendar timeout).
   if (type === "wait") {
     if (actor.waitedThisTurn) return { ok: false, error: "wait_once", session };
     if (actor.turnPhase === "scrutiny") {
@@ -970,32 +1093,64 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
     const mission = s.place.mission || {};
     const step = mission.yearsPerTurn || GAME.yearsPerTurn || 2;
-    const rise = mission.pressureRise || {};
-    s.place.year = (s.place.year || GAME.startYear) + step;
-    s.place.waits = (s.place.waits || 0) + 1;
-    s.place.pressure = applyPressureRise(s.place.pressure, rise);
+    const waiterId = activeId;
+    const startY = mission.startYear ?? s.place.year ?? GAME.startYear ?? 2026;
+    // Ensure every forge has an invent calendar (legacy snapshots may omit year)
+    for (const id of s.seatOrder || Object.keys(s.forges || {})) {
+      const f = s.forges[id];
+      if (f && f.year == null) f.year = startY;
+      if (f && f.waits == null) f.waits = 0;
+    }
+    const prevYear = forgeInventYear(actor, s.place);
+    actor.year = prevYear + step;
+    actor.waits = (forgeInventWaits(actor, s.place) || 0) + 1;
+    // Do NOT apply shared pressureRise here — that let one player Wait-spam collapse the table
+    // while others were still inventing in the present year.
+    s.place.waits = (s.place.waits || 0) + 1; // total Wait actions taken in the run (audit)
     actor.waitedThisTurn = true;
-    s.place.lastNews = `${actor.displayName} waited — year ${s.place.year}. Pressure rose.`;
+    // Counts as engagement (even though Wait burns leftover AP by ending the seat-turn)
+    actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1;
+    s.place.lastNews = `${actor.displayName} waited for their invent — year ${actor.year} (from ${prevYear}). Other forges keep their own invent year; shared crisis meters unchanged.`;
 
-    events.push({ type: "wait", year: s.place.year, seatId: activeId });
+    events.push({
+      type: "wait",
+      year: actor.year,
+      prevYear,
+      seatId: waiterId,
+      placeYear: s.place.year ?? startY,
+      pressureUnchanged: true,
+    });
 
-    if (
-      isCollapsed({
-        year: s.place.year,
-        collapseYear: s.place.collapseYear || mission.collapseYear || 2099,
-        pressure: s.place.pressure,
-      })
-    ) {
+    // Place ends on Wait only if every invent calendar is past fail year (not meters — Wait
+    // no longer raises meters). Meters still collapse the place after Scale failures etc. elsewhere.
+    if (isMpPlaceCollapsed(s, { forgeYear: forgeInventYear })) {
+      const failY = s.place.collapseYear || mission.collapseYear || 2099;
+      const earliest = mpEarliestInventYear(s, { forgeYear: forgeInventYear });
       s.place.status = "collapsed";
-      s.place.lastNews = "The place collapsed. Nobody wins.";
+      s.place.lastNews =
+        earliest != null && earliest >= failY
+          ? `Every invent calendar reached fail year ${failY}. The place collapsed — nobody wins.`
+          : "Shared crisis meters broke the place. Nobody wins.";
       s.ranking = null;
-      events.push({ type: "collapsed" });
+      events.push({
+        type: "collapsed",
+        reason:
+          earliest != null && earliest >= failY ? "all_invent_years" : "pressure",
+        earliestInventYear: earliest,
+        waiterYear: actor.year,
+        seatId: waiterId,
+      });
       s.version = (session.version || 0) + 1;
       return { ok: true, session: s, events };
     }
 
-    // Wait ends seat-turn
+    // Wait ends seat-turn — emit same handoff events as end_turn so clients refresh turn chrome
+    events.push({ type: "end_turn", seatId: waiterId, from: "wait" });
     s = passToNext(s);
+    const nextId = activeSeatId(s);
+    if (nextId) {
+      events.push({ type: "seat_turn_start", seatId: nextId, round: s.round });
+    }
     return { ok: true, session: s, events };
   }
 
@@ -1011,6 +1166,8 @@ export function getOpenTable(session) {
       seatId: id,
       displayName: seat?.displayName || f?.displayName || id,
       active: id === activeSeatId(session),
+      year: forgeInventYear(f, session.place),
+      waits: forgeInventWaits(f, session.place),
       inventionName: f?.inventionName || "",
       inventionHow: f?.inventionHow || "",
       inventionImpact: f?.inventionImpact || "",

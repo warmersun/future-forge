@@ -7,7 +7,7 @@ import {
   maxPressure,
 } from "./pressure.js";
 import { computeDeployDrop } from "./deploy.js";
-import { isWin, isCollapsed } from "./collapse.js";
+import { isWin, isCollapsed, isMpPlaceCollapsed } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
 import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
@@ -61,6 +61,32 @@ describe("collapse / win", () => {
     assert.equal(isWin({ Floods: 3 }, { Floods: 2 }), false);
     assert.equal(isCollapsed({ year: 2030, collapseYear: 2032, pressure: { A: 5 } }), true);
     assert.equal(isCollapsed({ year: 2032, collapseYear: 2032, pressure: { A: 1 } }), true);
+  });
+
+  it("mp place year-fail only when all invents are late", () => {
+    const base = {
+      seatOrder: ["a", "b"],
+      place: {
+        year: 2026,
+        collapseYear: 2030,
+        pressure: { Floods: 1 },
+        mission: { startYear: 2026, collapseYear: 2030 },
+      },
+      forges: {
+        a: { year: 2030, abandoned: false },
+        b: { year: 2026, abandoned: false },
+      },
+    };
+    assert.equal(isMpPlaceCollapsed(base), false);
+    // Missing year on partner counts as present (start), not place.year
+    base.forges.b = { abandoned: false };
+    assert.equal(isMpPlaceCollapsed(base), false);
+    base.forges.b = { year: 2030, abandoned: false };
+    assert.equal(isMpPlaceCollapsed(base), true);
+    // Pressure still ends everyone regardless of years
+    base.forges.b.year = 2026;
+    base.place.pressure = { Floods: 5 };
+    assert.equal(isMpPlaceCollapsed(base), true);
   });
 });
 

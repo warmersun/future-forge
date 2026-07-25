@@ -133,7 +133,7 @@ export class MpSidePanel {
       inventionImpact: forge?.inventionImpact || "",
       storyFace: "how",
       writeBoth: true,
-      year: place?.year,
+      year: forge?.year != null ? forge.year : place?.year,
       turn: place?.turn,
       place: mission?.place || "",
       pressure: place?.pressure || {},
@@ -178,7 +178,8 @@ export class MpSidePanel {
     const panel = this.visionRoot?.closest(".mp-side-panel");
     const nameEl = panel?.querySelector(".mp-vision-stage-name");
     const blurbEl = panel?.querySelector(".mp-vision-stage-blurb");
-    if (nameEl) nameEl.textContent = `${stage.name} · ${place.year}`;
+    const inventYear = forge?.year != null ? forge.year : place.year;
+    if (nameEl) nameEl.textContent = `${stage.name} · ${inventYear}`;
     if (blurbEl) {
       blurbEl.textContent =
         this.opts.mode === "room"
@@ -193,7 +194,7 @@ export class MpSidePanel {
         .map(([k, v]) => `${k} ${v}/5`)
         .join(" · ");
       narr.innerHTML =
-        `<div class="narrative-card"><div class="src">${place.year}</div>Pressure: ${escapeHtml(
+        `<div class="narrative-card"><div class="src">${inventYear}</div>Pressure: ${escapeHtml(
           pressureLine
         )}</div>` +
         (narratives.length
@@ -213,7 +214,7 @@ export class MpSidePanel {
     // Content gate — skip Imagine if nothing invent-related changed
     const contentKey = [
       forge?.seatId || forge?.displayName || "",
-      place.year,
+      inventYear,
       stageId,
       techs.map((t) => t.id).sort().join(","),
       (forge?.inventionName || "").trim(),
@@ -249,7 +250,7 @@ export class MpSidePanel {
       inventionName: forge?.inventionName || "",
       inventionHow: forge?.inventionHow || "",
       inventionImpact: forge?.inventionImpact || "",
-      year: place.year,
+      year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},
       challengeBeat: null,
