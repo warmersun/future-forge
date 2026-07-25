@@ -2339,7 +2339,7 @@ body.mp-hotseat .workshop-layout {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.45rem;
-  flex: 1 1 28rem;
+  flex: 1 1 18rem;
   min-width: 0;
   max-width: none;
 }
@@ -2425,6 +2425,86 @@ button.hud-year-btn.hud-year-pulse {
   flex-shrink: 0;
 }
 
+/* Product mark: sits between resources and Crisis (Warmer Sun palette) */
+.hud-product {
+  --ws-sun: #ffe29a;
+  --ws-gold: #ffb347;
+  --ws-amber: #ff9f43;
+  --ws-coral: #ff6b4a;
+  --ws-cream: #fff4e6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0.15rem 0.35rem 0.15rem 0.2rem;
+  line-height: 1.15;
+}
+
+.hud-product-sun {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #fff8e7 0%,
+    var(--ws-sun) 28%,
+    var(--ws-amber) 62%,
+    var(--ws-coral) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 180, 100, 0.28),
+    0 0 12px rgba(255, 159, 67, 0.45);
+}
+
+.hud-product-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.hud-product-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ws-cream);
+  white-space: nowrap;
+}
+
+.hud-product-credit {
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(247, 240, 230, 0.55);
+  white-space: nowrap;
+}
+
+.hud-product-link {
+  color: #ffd28a;
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.hud-product-link:hover {
+  color: var(--ws-cream);
+  border-bottom-color: rgba(255, 210, 138, 0.55);
+}
+
+.hud-product-link:focus-visible {
+  outline: 2px solid rgba(255, 159, 67, 0.7);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Left brand slot is only the active-player chip on invent/challenge */
+.topbar-game .brand:not(:has(.mp-active-player:not([hidden]))) {
+  display: none;
+}
+
 .hud-turn {
   font-size: 0.68rem;
   color: var(--text-mute);
@@ -2465,7 +2545,7 @@ body.mp-hotseat .topbar-game .progress-pills .pill {
 
 body.mp-room .hud-clock,
 body.mp-hotseat .hud-clock {
-  flex: 1 1 24rem;
+  flex: 1 1 16rem;
   justify-content: flex-start;
 }
 
@@ -2474,6 +2554,11 @@ body.mp-hotseat .hud-crisis-wrap {
   flex: 0 1 auto;
   max-width: none;
   flex-wrap: nowrap;
+}
+
+body.mp-room .hud-product,
+body.mp-hotseat .hud-product {
+  flex-shrink: 0;
 }
 
 /* Narrow viewports: allow wrap again so nothing is clipped */
@@ -2496,6 +2581,25 @@ body.mp-hotseat .hud-crisis-wrap {
   body.mp-room .hud-crisis-wrap,
   body.mp-hotseat .hud-crisis-wrap {
     flex-wrap: wrap;
+  }
+
+  .hud-product {
+    order: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .hud-product-credit {
+    display: none;
+  }
+
+  .hud-product-title {
+    font-size: 0.75rem;
+  }
+
+  .hud-product-sun {
+    width: 1rem;
+    height: 1rem;
   }
 }
 
