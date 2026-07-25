@@ -4,6 +4,7 @@
 
 import { techById, GLOBALS } from "../data.js";
 import { briefForGlobal } from "../problem-briefs.js";
+import { techCost } from "../sim/economy.js";
 import { RoomClient } from "./client.js";
 import {
   createHotseatSession,
@@ -22,6 +23,7 @@ import {
   paintTechLibrary,
   paintSelectedStack,
 } from "./tech-library.js";
+import { describeMarketEffects } from "../sim/market-news.js";
 
 /**
  * @param {{
@@ -33,6 +35,7 @@ import {
  *   beginMissionPick?: Function,
  *   clearMissionPickSession?: Function,
  *   openWaitConfirm?: Function,
+ *   queueMarketNewsModal?: Function,
  * }} api
  */
 export function initFriendsUi(api) {
@@ -48,6 +51,7 @@ export function initFriendsUi(api) {
     leaveHotseat,
     enterRoomPlay,
     leaveRoomPlay,
+    queueMarketNewsModal,
     openWaitConfirm,
   } = api;
   const client = new RoomClient();
@@ -69,10 +73,59 @@ export function initFriendsUi(api) {
   let hsDomainFilter = "all";
   let mpDomainFilter = "all";
   let hsVisionFingerprint = "";
+  /** Last market news id shown (modal + banner) for MP surfaces */
+  let lastMarketNewsId = null;
 
   function setHubStatus(msg) {
     const el = $("#friends-hub-status");
     if (el) el.textContent = msg || "";
+  }
+
+  /**
+   * Compact market banner + optional modal when a full seat-round rolls new prices.
+   * @param {string} bannerId
+   * @param {object|null|undefined} news
+   * @param {number} [round]
+   */
+  function paintMarketBanner(bannerId, news, round) {
+    const host = $(bannerId);
+    if (!host) return;
+    if (!news) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    const desc = describeMarketEffects(news, {
+      techName: (id) => techById(id)?.name || id,
+    });
+    host.hidden = false;
+    host.dataset.tone = news.tone || "mixed";
+    host.innerHTML = `
+      <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
+        <span class="market-news-banner-thumb" aria-hidden="true">
+          <span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>
+        </span>
+        <span class="market-news-banner-text">
+          <span class="market-news-banner-kicker">Market · Round ${escapeHtml(
+            String(news.round ?? round ?? 1)
+          )}</span>
+          <strong>${escapeHtml(news.headline || "Market shift")}</strong>
+          <span class="market-news-banner-effects">
+            ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
+          </span>
+        </span>
+      </button>`;
+    host.querySelector("[data-market-open]")?.addEventListener("click", () => {
+      if (typeof queueMarketNewsModal === "function") {
+        queueMarketNewsModal(news, { force: true });
+      }
+    });
+    if (news.id && news.id !== lastMarketNewsId) {
+      lastMarketNewsId = news.id;
+      if (typeof queueMarketNewsModal === "function") {
+        queueMarketNewsModal(news, { force: true });
+      }
+    }
   }
 
   function setLobbyStatus(msg) {
@@ -325,6 +378,7 @@ export function initFriendsUi(api) {
     beginMissionPick({
       onSelect: (mission, global) => {
         if (typeof enterHotseatPlay === "function") {
+          lastMarketNewsId = null;
           const ok = enterHotseatPlay(seatNames, mission, global);
           if (!ok) showScreen("friends");
           return;
@@ -428,7 +482,12 @@ export function initFriendsUi(api) {
     const activeName =
       (snap?.players || []).find((p) => p.id === activeId)?.displayName || "—";
 
-    $("#mp-hud-year").textContent = String(inventYear);
+    const mpYear = $("#mp-hud-year");
+    if (mpYear) {
+      mpYear.textContent = String(inventYear);
+      mpYear.title = "Click for year foresight";
+      mpYear.style.cursor = "pointer";
+    }
     $("#mp-hud-turn").textContent = `Round ${mp?.round || 1}`;
     if (forge) {
       $("#mp-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
@@ -466,6 +525,11 @@ export function initFriendsUi(api) {
         : "Friends race";
     }
     $("#mp-news").textContent = place?.lastNews || snap?.sim?.lastNews || "";
+    paintMarketBanner(
+      "#mp-market-news-banner",
+      place?.marketNews || null,
+      mp?.round
+    );
 
     const box = $("#mp-pressure");
     if (box) {
@@ -585,7 +649,19 @@ export function initFriendsUi(api) {
         ? "End your seat-turn (pass to next player)"
         : "Not your turn";
     }
-    setDis("#btn-mp-wait", playing && isActive);
+    // Wait only on *your* invent calendar — not while layer-helping someone else
+    const layerTarget = $("#mp-layer-target")?.value || myId;
+    const waitOnOwn = !layerTarget || layerTarget === myId;
+    setDis("#btn-mp-wait", playing && isActive && waitOnOwn);
+    const waitBtn = $("#btn-mp-wait");
+    if (waitBtn) {
+      waitBtn.title =
+        !isActive
+          ? "Not your turn"
+          : !waitOnOwn
+            ? "Wait is only for your own invent — switch stack target to your stack first"
+            : "Wait +2 years on your invent (ends seat-turn; others keep their year)";
+    }
     setDis("#btn-mp-ai", playing && isActive && forge && !forge.abandoned);
     setDis(
       "#btn-mp-challenge",
@@ -800,6 +876,10 @@ export function initFriendsUi(api) {
       suggested: place?.mission?.suggested || [],
       domainFilter: mpDomainFilter,
       disabled: !canEdit,
+      market: place?.marketNews || null,
+      ap: forge?.ap,
+      budget: forge?.budget,
+      will: forge?.will,
       escapeHtml,
       onToggle: (techId) => {
         const tech = techById(techId);
@@ -810,13 +890,29 @@ export function initFriendsUi(api) {
             type: "deselect_tech",
             payload: { techId, targetSeatId },
           });
-        } else if (targetSeatId === myId) {
-          mpSend({ type: "select_tech", payload: { techId, tech } });
         } else {
-          mpSend({
-            type: "layer_tech",
-            payload: { techId, targetSeatId, tech },
-          });
+          // Client-side afford gate — never paint selected on deny (server still re-checks)
+          const cost = techCost(tech, { market: place?.marketNews || null });
+          if ((forge?.ap ?? 0) < 1) {
+            flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+            return;
+          }
+          if ((forge?.budget ?? 0) < (cost.budget || 0)) {
+            flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
+            return;
+          }
+          if ((forge?.will ?? 0) < (cost.will || 0)) {
+            flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
+            return;
+          }
+          if (targetSeatId === myId) {
+            mpSend({ type: "select_tech", payload: { techId, tech } });
+          } else {
+            mpSend({
+              type: "layer_tech",
+              payload: { techId, targetSeatId, tech },
+            });
+          }
         }
       },
     });
@@ -911,6 +1007,7 @@ export function initFriendsUi(api) {
     }
     if (evt.type === "rematch_started" || evt.type === "race_started") {
       roomPlayEnteredFor = "";
+      lastMarketNewsId = null;
       tryEnterRoomPlayOnce(evt.type);
     }
     // Soft locks + settings must refresh labels even when no sim patch arrives
@@ -1137,8 +1234,17 @@ export function initFriendsUi(api) {
 
   $("#btn-mp-end-turn")?.addEventListener("click", () => mpSend({ type: "end_turn" }));
   $("#btn-mp-wait")?.addEventListener("click", () => {
-    const forge = client.snapshot?.you?.forge;
-    const place = client.snapshot?.place || client.snapshot?.mp?.place;
+    const snap = client.snapshot;
+    const myId = snap?.you?.id || client.session?.playerId;
+    const layerTarget = $("#mp-layer-target")?.value || myId;
+    if (myId && layerTarget && layerTarget !== myId) {
+      flashToast(
+        "Wait is only for your own invent — switch stack target to your stack first"
+      );
+      return;
+    }
+    const forge = snap?.you?.forge;
+    const place = snap?.place || snap?.mp?.place;
     const run = () => mpSend({ type: "wait" });
     if (typeof openWaitConfirm === "function") {
       openWaitConfirm(run, {
@@ -1402,7 +1508,12 @@ export function initFriendsUi(api) {
 
     // Active seat invent calendar (personal — Wait only advances their forge year)
     const inventYear = forge?.year != null ? forge.year : place.year;
-    $("#hs-hud-year").textContent = String(inventYear);
+    const hsYear = $("#hs-hud-year");
+    if (hsYear) {
+      hsYear.textContent = String(inventYear);
+      hsYear.title = "Click for year foresight";
+      hsYear.style.cursor = "pointer";
+    }
     $("#hs-hud-turn").textContent = `Round ${hotseat.round || 1}`;
     if (forge) {
       $("#hs-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
@@ -1437,6 +1548,11 @@ export function initFriendsUi(api) {
       m?.stakeholder ? `Stakeholder: ${m.stakeholder}` : ""
     );
     setText("hs-news", place.lastNews || "");
+    paintMarketBanner(
+      "#hs-market-news-banner",
+      place.marketNews || null,
+      hotseat?.round
+    );
 
     // Theme-level problem brief (same content as solo mission-pick screen)
     const briefRoot = $("#hs-play-problem-brief");
@@ -1556,21 +1672,41 @@ export function initFriendsUi(api) {
       suggested: place.mission?.suggested || [],
       domainFilter: hsDomainFilter,
       disabled: !canEdit,
+      market: place?.marketNews || null,
+      ap: forge?.ap,
+      budget: forge?.budget,
+      will: forge?.will,
       escapeHtml,
       onToggle: (techId) => {
         const onStack = (targetForge?.stack || []).some((x) => x.techId === techId);
         if (onStack) {
           hsAct({ type: "deselect_tech", payload: { techId, targetSeatId: targetId } });
-        } else if (targetId === forge.seatId) {
-          hsAct({ type: "select_tech", payload: { techId, tech: techById(techId) } });
         } else {
-          hsAct(
-            {
-              type: "layer_tech",
-              payload: { techId, targetSeatId: targetId, tech: techById(techId) },
-            },
-            "Layered emTech (you paid)"
-          );
+          const tech = techById(techId);
+          const cost = techCost(tech, { market: place?.marketNews || null });
+          if ((forge?.ap ?? 0) < 1) {
+            flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+            return;
+          }
+          if ((forge?.budget ?? 0) < (cost.budget || 0)) {
+            flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
+            return;
+          }
+          if ((forge?.will ?? 0) < (cost.will || 0)) {
+            flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
+            return;
+          }
+          if (targetId === forge.seatId) {
+            hsAct({ type: "select_tech", payload: { techId, tech } });
+          } else {
+            hsAct(
+              {
+                type: "layer_tech",
+                payload: { techId, targetSeatId: targetId, tech },
+              },
+              "Layered emTech (you paid)"
+            );
+          }
         }
         scheduleHsVision({ force: true, immediate: true });
       },
@@ -1602,7 +1738,18 @@ export function initFriendsUi(api) {
     );
     setDis("#btn-hs-abandon", playing && forge.deployStage !== "scaled");
     setDis("#btn-hs-end-turn", place.status === "playing");
-    setDis("#btn-hs-wait", place.status === "playing");
+    // Wait only when stack target is the active seat's own invent
+    const hsLayerTarget = $("#hs-layer-target")?.value || forge?.seatId;
+    const hsWaitOwn =
+      place.status === "playing" &&
+      (!hsLayerTarget || hsLayerTarget === forge?.seatId);
+    setDis("#btn-hs-wait", hsWaitOwn);
+    const hsWaitBtn = $("#btn-hs-wait");
+    if (hsWaitBtn) {
+      hsWaitBtn.title = !hsWaitOwn
+        ? "Wait is only for your own invent — switch stack target to your stack first"
+        : "Wait +2 years on your invent (ends seat-turn)";
+    }
 
     const phase = $("#hs-phase-hint");
     if (phase && forge) {
@@ -1726,6 +1873,13 @@ export function initFriendsUi(api) {
   $("#btn-hs-wait")?.addEventListener("click", () => {
     const forge = activeForge(hotseat);
     const place = hotseat?.place;
+    const hsLayerTarget = $("#hs-layer-target")?.value || forge?.seatId;
+    if (forge?.seatId && hsLayerTarget && hsLayerTarget !== forge.seatId) {
+      flashToast(
+        "Wait is only for your own invent — switch stack target to your stack first"
+      );
+      return;
+    }
     const run = () =>
       hsAct({ type: "wait" }, "Wait — your invent +2 years, turn passed");
     if (typeof openWaitConfirm === "function") {

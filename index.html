@@ -181,6 +181,8 @@
               </div>
             </article>
             <p id="hs-news" class="muted mp-news"></p>
+            <div id="hs-market-news-banner" class="market-news-banner" hidden></div>
+            <div id="hs-year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
             <p id="hs-phase-hint" class="friends-status" aria-live="polite"></p>
           </div>
 
@@ -381,6 +383,8 @@
             <p id="mp-mission-scene" class="mp-mission-scene"></p>
             <article id="mp-scenario-brief" class="mp-scenario-brief mp-play-problem-brief" hidden></article>
             <p id="mp-news" class="muted mp-news"></p>
+            <div id="mp-market-news-banner" class="market-news-banner" hidden></div>
+            <div id="mp-year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
             <p id="mp-phase-hint" class="friends-status" aria-live="polite"></p>
           </div>
 
@@ -595,11 +599,13 @@
           <span class="pill" data-step="deploy">3 · Deploy</span>
         </div>
         <div class="hud-clock" id="hud-clock" title="Mission calendar">
-          <span class="hud-year" id="hud-year">2026</span>
+          <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
-          <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
-          <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
-          <span class="hud-will" id="hud-will" hidden title="Political will">Will 3</span>
+          <span class="hud-resources" id="hud-resources">
+            <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
+            <span class="hud-will" id="hud-will" hidden title="Political will">Will 3</span>
+          </span>
         </div>
         <div
           class="hud-crisis-wrap"
@@ -660,6 +666,8 @@
             <p id="ws-mission-scene"></p>
             <p id="ws-stakeholder" class="stakeholder"></p>
             <div id="wait-report" class="wait-report" hidden></div>
+            <div id="market-news-banner" class="market-news-banner" hidden></div>
+            <div id="year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
           </div>
 
           <div class="invent-form">
@@ -843,11 +851,13 @@
           <span class="pill" data-step="deploy">3 · Deploy</span>
         </div>
         <div class="hud-clock" id="ch-hud-clock" title="Mission calendar and resources">
-          <span class="hud-year" id="ch-hud-year">2026</span>
+          <button type="button" class="hud-year hud-year-btn" id="ch-hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
-          <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
-          <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
-          <span class="hud-will" id="ch-hud-will" hidden title="Political will">Will 3</span>
+          <span class="hud-resources">
+            <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
+            <span class="hud-will" id="ch-hud-will" hidden title="Political will">Will 3</span>
+          </span>
         </div>
         <div class="hud-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="btn-challenge-back">← Invent</button>
@@ -1161,6 +1171,12 @@
       </header>
       <div class="content">
         <div class="reveal-hero">
+          <div id="outcome-result-banner" class="outcome-result-banner" hidden role="status" aria-live="polite">
+            <div class="outcome-result-kicker" id="outcome-result-kicker"></div>
+            <div class="outcome-result-title" id="outcome-result-title"></div>
+            <p class="outcome-result-sub" id="outcome-result-sub"></p>
+            <ul class="outcome-meter-gaps" id="outcome-meter-gaps" hidden></ul>
+          </div>
           <h1 id="outcome-headline">Outcome</h1>
           <div class="invention-name" id="outcome-name">—</div>
           <div id="outcome-stars" class="outcome-stars" hidden></div>
@@ -1196,15 +1212,18 @@
         <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Technologies you used</h3>
         <div id="outcome-techs" class="learn-grid"></div>
 
+        <p id="outcome-actions-hint" class="outcome-actions-hint muted sm" hidden></p>
         <div class="form-actions" style="justify-content: center; flex-wrap: wrap; gap: 0.65rem">
           <button type="button" class="btn btn-secondary" id="btn-outcome-share" title="Download a shareable run card (PNG)">
             Share card
           </button>
-          <button type="button" class="btn btn-secondary" id="btn-outcome-retry">Keep inventing</button>
-          <button type="button" class="btn btn-primary" id="btn-outcome-new">New mission</button>
-          <!-- Friends room rematch: winner picks next theme/scenario -->
+          <!-- Solo: continue same place (partial) / review invent -->
+          <button type="button" class="btn btn-secondary" id="btn-outcome-retry">Continue here</button>
+          <!-- Solo: leave this place for another problem -->
+          <button type="button" class="btn btn-primary" id="btn-outcome-new">Leave this place</button>
+          <!-- Friends room rematch: winner/chooser starts next race (not a solo button) -->
           <button type="button" class="btn btn-primary" id="btn-outcome-rematch-pick" hidden>
-            Pick next theme →
+            Start next race →
           </button>
           <p id="outcome-rematch-wait" class="muted sm" hidden style="margin: 0.5rem 0 0; width: 100%; text-align: center"></p>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-outcome-leave-room" hidden>
@@ -1598,6 +1617,6 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js?v=vision-quiet-1"></script>
+    <script type="module" src="js/main.js?v=wait-own-1"></script>
   </body>
 </html>

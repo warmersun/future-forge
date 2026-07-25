@@ -52,7 +52,18 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
-import { techCost, deployActionCost, scaleActionCost } from "./sim/economy.js";
+import { techCost as techCostRaw, deployActionCost, scaleActionCost } from "./sim/economy.js";
+import {
+  describeMarketEffects,
+  marketAffectsTech,
+  cloneMarketNews,
+  marketNewsImagePath,
+} from "./sim/market-news.js";
+import {
+  foresightCapabilityContext,
+  applyForesightToClaimStretch,
+  foresightForYear,
+} from "./sim/world-foresight.js";
 import {
   dailySeedString,
   pickDailyMission,
@@ -189,8 +200,26 @@ function mpFriendlyError(err) {
     not_connected: "Not connected to the room.",
     wait_once: "You already Waited this seat-turn.",
     wait_blocked_phase: "Cannot Wait during Challenge — finish or End turn first.",
+    wait_own_invent_only:
+      "Wait is only for your own invent — switch to your seat tab first (not while helping someone else).",
   };
   return map[code] || code;
+}
+
+/**
+ * Multiplayer: Wait advances *your* invent calendar only.
+ * Not allowed while viewing / contributing to another seat's invent.
+ */
+function canWaitOnCurrentInvent() {
+  const b = mpBridge();
+  if (!b) return { ok: true };
+  if (b.isMyTurn && !b.isMyTurn()) {
+    return { ok: false, error: "not_active_seat" };
+  }
+  if (b.viewingOther?.()) {
+    return { ok: false, error: "wait_own_invent_only" };
+  }
+  return { ok: true };
 }
 
 const state = {
@@ -230,6 +259,10 @@ const state = {
   challengeVisionBeat: null,
   lastNews: "",
   waitReport: "",
+  /** @type {import("./sim/market-news.js").MarketNews | null} */
+  marketNews: null,
+  /** Last market news id we already showed in the modal */
+  marketNewsShownId: null,
   outcome: null,
   runReport: null,
   aiBusy: false,
@@ -265,6 +298,8 @@ const state = {
   /** G3 multi-encounter scrutiny (null when essay mode) */
   scrutiny: null,
   elegancePivotPenalty: false,
+  /** How Challenge was cleared: defend | fix | sidestep | essay | null */
+  challengeClearMode: null,
   /** @type {"defend"|"fix"|"sidestep"|null} selected challenge response mode */
   scrutinyMoveMode: null,
   /** True while pose-challenge AI is generating the critic (UI locked) */
@@ -402,6 +437,57 @@ function deployStagesEnabled() {
   return Boolean(features().deployStages);
 }
 
+/** Active market card (solo state or shared place in multiplayer). */
+function currentMarketNews() {
+  return state.marketNews || null;
+}
+
+/**
+ * emTech cost including active market news (Budget/Will only; AP always 1).
+ * @param {object} t
+ */
+function techCost(t) {
+  return techCostRaw(t, { market: currentMarketNews() });
+}
+
+/**
+ * Can the local player pay to add this emTech right now?
+ * (AP + Budget + Will — never optimistically select when false.)
+ * @param {object|null|undefined} t
+ * @returns {{ ok: boolean, error?: "no_ap"|"no_budget"|"no_will" }}
+ */
+function canAffordTech(t) {
+  if (!t) return { ok: false };
+  if (apEnabled() && (state.ap ?? 0) < 1) return { ok: false, error: "no_ap" };
+  if (budgetWillEnabled()) {
+    const cost = techCost(t);
+    if ((state.budget ?? 0) < (cost.budget || 0)) return { ok: false, error: "no_budget" };
+    if ((state.will ?? 0) < (cost.will || 0)) return { ok: false, error: "no_will" };
+  }
+  return { ok: true };
+}
+
+/** Toast why an emTech can't be added — does not select it. */
+function flashUnaffordableTech(id, error) {
+  const t = techById(id);
+  const cost = techCost(t);
+  if (error === "no_ap") {
+    flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+  } else if (error === "no_budget") {
+    flashToast(
+      `Need ${cost.budget ?? 1}$ Budget to add ${t?.name || "this"} (you have ${state.budget ?? 0}$).`,
+      { resource: "budget" }
+    );
+  } else if (error === "no_will") {
+    flashToast(
+      `Need ${cost.will ?? 1} Will to add ${t?.name || "this"} (you have ${state.will ?? 0}).`,
+      { resource: "will" }
+    );
+  } else {
+    flashToast("Not enough resources to add this tech.");
+  }
+}
+
 function dispatchSim(type, payload = {}) {
   const result = applyAction(simSliceFromState(state), { type, payload }, {
     features: features(),
@@ -415,6 +501,15 @@ function dispatchSim(type, payload = {}) {
     // Hotseat: personal budget 0 is not whole-table game over
     if (!hotseatBridge.isHotseat() && type !== "wait" && type !== "end_turn") {
       maybeBudgetGameOver({ from: type });
+    }
+    const newsEv = (result.events || []).find((e) => e.type === "market_news");
+    if (newsEv?.marketNews) {
+      queueMarketNewsModal(newsEv.marketNews, { force: true });
+    }
+    // Year tick: store bulletin + pulse HUD year (no auto popup — click year to read)
+    const yearEv = (result.events || []).find((e) => e.type === "year_tick");
+    if (yearEv?.bulletin) {
+      noteYearAdvance(yearEv.bulletin);
     }
   }
   return result;
@@ -457,7 +552,7 @@ function mpHydrateAndRender(opts = {}) {
       b.hydrateSoloState(state, { global: state.global });
       reapplyFocusedInventDrafts(drafts);
       applyEndTurnChrome();
-      maybeNotifyMpTurnStart();
+      if (!opts.skipTurnNotice) maybeNotifyMpTurnStart();
     } catch (e) {
       console.error(e);
     }
@@ -468,12 +563,17 @@ function mpHydrateAndRender(opts = {}) {
     const drafts = captureFocusedInventDrafts();
     const yearBefore = state.year;
     const viewBefore = state.mp?.viewSeatId;
+    const marketBeforeId = state.marketNews?.id || null;
     b.hydrateSoloState(state, { global: state.global });
     reapplyFocusedInventDrafts(drafts);
     // Personal invent calendar / seat switch — re-run feasibility timing for this forge year
     if (state.year !== yearBefore || state.mp?.viewSeatId !== viewBefore) {
       state.aiTiming = null;
       if (state.screen === "workshop") scheduleAiTimingAssess();
+    }
+    // Multiplayer: full seat-round wrap ships new market news on the place
+    if (state.marketNews?.id && state.marketNews.id !== marketBeforeId) {
+      queueMarketNewsModal(state.marketNews, { force: true });
     }
     renderMpChrome();
     if (state.screen === "workshop") renderWorkshop();
@@ -504,7 +604,7 @@ function mpHydrateAndRender(opts = {}) {
         }, 900);
       }
     }
-    maybeNotifyMpTurnStart();
+    if (!opts.skipTurnNotice) maybeNotifyMpTurnStart();
   } finally {
     mpHydrateBusy = false;
     if (mpHydrateQueued) {
@@ -1199,8 +1299,21 @@ function mpPassDevice() {
   state.mpTurnNoticePrimed = true; // avoid double first-join path
   const nextId = hotseatBridge.getActiveId();
   state.mpLastActiveSeatId = null; // force change detection
-  mpHydrateAndRender();
-  // Explicit notice for hotseat pass (hydrate may see same primed path)
+
+  // Round wrap → market + year bulletins first (must run before turn popup)
+  const marketEv = (r.events || []).find((e) => e?.type === "market_news");
+  if (marketEv?.marketNews) {
+    queueMarketNewsModal(marketEv.marketNews, { force: true });
+  }
+  const yearEv = (r.events || []).find((e) => e?.type === "year_tick");
+  if (yearEv?.bulletin) {
+    noteYearAdvance(yearEv.bulletin);
+  }
+
+  mpHydrateAndRender({
+    skipTurnNotice: Boolean(marketEv?.marketNews),
+  });
+  // Turn notice after market (or immediately if no market card)
   const nextName = r.seat?.displayName || hotseatBridge.activeSeat()?.displayName || "next";
   if (nextId) {
     state.mpLastActiveSeatId = nextId;
@@ -1241,6 +1354,15 @@ function enterHotseatPlay(names, mission, global) {
 function handleRoomPlayEvent(client, evt) {
   const place = client.snapshot?.place || client.snapshot?.mp?.place;
   const eventsEarly = evt?.events || [];
+  // Round market + year bulletins — fire as soon as the seat-wrap event lands
+  const marketEv = eventsEarly.find((e) => e?.type === "market_news");
+  if (marketEv?.marketNews) {
+    queueMarketNewsModal(marketEv.marketNews, { force: true });
+  }
+  const yearEv = eventsEarly.find((e) => e?.type === "year_tick");
+  if (yearEv?.bulletin) {
+    noteYearAdvance(yearEv.bulletin);
+  }
   // Winner started rematch → everyone leaves outcome together
   if (
     state.screen === "outcome" &&
@@ -1566,6 +1688,20 @@ function enterRoomPlay(client, opts = {}) {
       if (!roomBridge.isRoom()) return;
       if (evt.type === "reject") {
         flashToast(mpFriendlyError(evt.error || "Action rejected"));
+        // Roll back optimistic stack (e.g. select_tech denied for no_budget/no_will/no_ap)
+        try {
+          roomBridge.hydrateSoloState(state, { global: state.global });
+          if (state.screen === "workshop") {
+            renderTechList();
+            renderSelectedChips();
+            renderHud();
+            updateLearnButton();
+            updateChallengeButton();
+            renderFeasibility();
+          }
+        } catch {
+          /* ignore */
+        }
         return;
       }
       if (evt.type === "alone") {
@@ -2575,6 +2711,10 @@ function startMission(mission) {
   state.challengeVisionBeat = null;
   state.lastNews = "";
   state.waitReport = "";
+  state.marketNews = null;
+  state.marketNewsShownId = null;
+  state.lastYearBulletin = null;
+  lastYearPulseKey = null;
   state.outcome = null;
   state.runReport = null;
   state.aiTiming = null;
@@ -2592,6 +2732,7 @@ function startMission(mission) {
   state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
+  state.challengeClearMode = null;
   state.scrutinyMoveMode = null;
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
@@ -2642,6 +2783,7 @@ function renderWorkshop() {
   $("#ws-mission-place").textContent = `${m.place}`;
   $("#ws-mission-scene").textContent = m.scene || m.problem || "";
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
+  renderMarketBanner();
   renderMpChrome();
 
   // Compact crisis HUD: full copy lives on title + Help (?)
@@ -2916,8 +3058,13 @@ function assessFeasibility() {
     } else {
       const how = state.inventionHow.trim() || state.inventionImpact.trim();
       const stretch = detectClaimStretch(how, techs, year);
-      timingLevel = stretch.level;
-      timingNote = stretch.reason;
+      const fCtx = foresightCapabilityContext(year, techs, {
+        globalId: state.global?.id || state.mission?.globalId,
+        seed: state.mission?.id,
+      });
+      const adj = applyForesightToClaimStretch(stretch, how, fCtx);
+      timingLevel = adj.level;
+      timingNote = adj.reason;
     }
     if (timingLevel === "green") {
       const yearsWaited = year - (state.mission?.startYear || GAME.startYear);
@@ -3127,8 +3274,23 @@ function renderFeasibility() {
   }
 }
 
+function showHudChip(el, on) {
+  if (!el) return;
+  if (on) {
+    el.hidden = false;
+    el.removeAttribute("hidden");
+  } else {
+    el.hidden = true;
+    el.setAttribute("hidden", "");
+  }
+}
+
 function renderHud() {
-  $("#hud-year").textContent = String(state.year);
+  const yearEl = $("#hud-year");
+  if (yearEl) {
+    yearEl.textContent = String(state.year);
+    yearEl.title = "Click for year foresight (capabilities & predictions)";
+  }
   const waitsBit = state.waits ? ` · waits ${state.waits}` : "";
   const mp = Boolean(mpBridge() || state.mp);
   // Year is already the big number beside this — don't repeat it (keeps HUD one line)
@@ -3136,36 +3298,36 @@ function renderHud() {
     ? `Invent${waitsBit} · R${state.turn || 1} · fail ${state.mission.collapseYear}`
     : `Turn ${state.turn}${waitsBit} · fail at ${state.mission.collapseYear}`;
   const apEl = $("#hud-ap");
-  if (apEl) {
-    if (apEnabled()) {
-      apEl.hidden = false;
+  if (apEnabled()) {
+    showHudChip(apEl, true);
+    if (apEl) {
       apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
       apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
-    } else {
-      apEl.hidden = true;
     }
+  } else {
+    showHudChip(apEl, false);
   }
   const budgetEl = $("#hud-budget");
-  if (budgetEl) {
-    if (budgetWillEnabled()) {
-      budgetEl.hidden = false;
+  if (budgetWillEnabled()) {
+    showHudChip(budgetEl, true);
+    if (budgetEl) {
       budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
       budgetEl.title =
         "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ is game over. Not refilled by End turn.";
-    } else {
-      budgetEl.hidden = true;
     }
+  } else {
+    showHudChip(budgetEl, false);
   }
   const willEl = $("#hud-will");
-  if (willEl) {
-    if (budgetWillEnabled()) {
-      willEl.hidden = false;
+  if (budgetWillEnabled()) {
+    showHudChip(willEl, true);
+    if (willEl) {
       willEl.textContent = `Will ${state.will ?? 0}`;
       willEl.title =
         "Political will (not a crisis meter). ≥4 boosts deploy drop; 0 hurts it. Lobby raises will.";
-    } else {
-      willEl.hidden = true;
     }
+  } else {
+    showHudChip(willEl, false);
   }
   const b = mpBridge();
   const myTurn = !b || b.isMyTurn?.();
@@ -3188,12 +3350,13 @@ function renderHud() {
   }
   const waitBtn = $("#btn-wait");
   if (waitBtn && b) {
-    waitBtn.disabled = !myTurn || inventBusy;
+    const waitGate = canWaitOnCurrentInvent();
+    waitBtn.disabled = !waitGate.ok || inventBusy;
     waitBtn.title = inventBusy
       ? busyReason
-      : myTurn
-        ? "Wait +2 years on your invent — confirm to see details (feasibility year; ends seat-turn; others keep their year)"
-        : "Not your turn — wait for the active player";
+      : !waitGate.ok
+        ? mpFriendlyError(waitGate.error)
+        : "Wait +2 years on your invent — confirm to see details (feasibility year; ends seat-turn; others keep their year)";
   } else if (waitBtn && inventBusy) {
     // Solo: still block Wait while Fill other side / co-inventor runs
     waitBtn.disabled = true;
@@ -3273,25 +3436,43 @@ function renderTechList() {
     .map((t) => {
       const sel = state.selectedTechIds.includes(t.id);
       const sug = suggested.has(t.id);
+      const afford = sel ? { ok: true } : canAffordTech(t);
+      const unaffordable = !sel && !afford.ok;
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
       const nowCap = t.useCasesNow?.[0] || t.maturity?.now || t.summary;
       const cost = budgetWillEnabled() ? techCost(t) : null;
+      const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
+      const marketHit =
+        budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
       const costTitle = cost
         ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Will` : ""}${
             apEnabled() ? ", 1 AP" : ""
-          }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}`
+          }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}${
+            marketHit ? " · market news active" : ""
+          }${unaffordable ? " · cannot afford" : ""}`
         : apEnabled()
           ? " | To add: 1 AP"
           : "";
       // Visible cost chips — not only in tooltip
       let costHtml = "";
       if (cost && !sel) {
+        const bDelta =
+          marketHit && baseCost ? cost.budget - baseCost.budget : 0;
+        const wDelta = marketHit && baseCost ? cost.will - baseCost.will : 0;
         const bits = [
-          `<span class="tech-cost-chip tech-cost-budget" title="Budget to add this to your stack">${cost.budget}$</span>`,
+          `<span class="tech-cost-chip tech-cost-budget${
+            bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
+          }" title="Budget to add this to your stack">${cost.budget}$${
+            bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
+          }</span>`,
         ];
-        if (cost.will > 0) {
+        if (cost.will > 0 || wDelta) {
           bits.push(
-            `<span class="tech-cost-chip tech-cost-will" title="Political will needed to adopt this">Will ${cost.will}</span>`
+            `<span class="tech-cost-chip tech-cost-will${
+              wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
+            }" title="Political will needed to adopt this">Will ${cost.will}${
+              wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
+            }</span>`
           );
         }
         if (apEnabled()) {
@@ -3305,8 +3486,11 @@ function renderTechList() {
       } else if (apEnabled()) {
         costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
       }
+      // Only techs already on the stack get green + ✓. Unaffordable never looks selected.
       return `
-        <button type="button" class="tech-card ${sel ? "selected" : ""} ${sug ? "recommended" : ""}"
+        <button type="button" class="tech-card ${sel ? "selected" : ""} ${
+          sug ? "recommended" : ""
+        } ${unaffordable ? "unaffordable" : ""}"
           data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
           <span class="tech-icon">${t.icon}</span>
           <span class="tech-meta">
@@ -3314,10 +3498,10 @@ function renderTechList() {
             <p>${escapeHtml(t.summary)}</p>
             <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
               sug ? " · suggested" : ""
-            }</span>
+            }${unaffordable ? " · can't afford" : ""}</span>
             ${costHtml}
           </span>
-          <span class="tech-add">${sel ? "✓" : "+"}</span>
+          <span class="tech-add">${sel ? "✓" : unaffordable ? "!" : "+"}</span>
         </button>`;
     })
     .join("");
@@ -3390,21 +3574,30 @@ function onTechClick(id) {
         // Optimistic UI until patch lands
         state.selectedTechIds = state.selectedTechIds.filter((x) => x !== id);
         removeFromLearnOrder(id);
-      } else if (targetSeatId === me) {
-        roomBridge.send({
-          type: "select_tech",
-          payload: { techId: id, tech: techById(id) },
-        });
-        if (!state.selectedTechIds.includes(id) && state.selectedTechIds.length < 8) {
-          state.selectedTechIds = [...state.selectedTechIds, id];
-        }
-        pushLearnOrder(id);
       } else {
-        roomBridge.send({
-          type: "layer_tech",
-          payload: { techId: id, targetSeatId, tech: techById(id) },
-        });
-        if (!state.selectedTechIds.includes(id) && state.selectedTechIds.length < 8) {
+        // Never show green/✓ unless we can actually pay (server will re-check)
+        const afford = canAffordTech(techById(id));
+        if (!afford.ok) {
+          flashUnaffordableTech(id, afford.error);
+          return;
+        }
+        if (state.selectedTechIds.length >= 8) {
+          flashToast("Stack full (8). Remove one first.");
+          return;
+        }
+        if (targetSeatId === me) {
+          roomBridge.send({
+            type: "select_tech",
+            payload: { techId: id, tech: techById(id) },
+          });
+        } else {
+          roomBridge.send({
+            type: "layer_tech",
+            payload: { techId: id, targetSeatId, tech: techById(id) },
+          });
+        }
+        // Optimistic only after local afford check — reject handler rehydrates if server denies
+        if (!state.selectedTechIds.includes(id)) {
           state.selectedTechIds = [...state.selectedTechIds, id];
         }
         pushLearnOrder(id);
@@ -3443,10 +3636,9 @@ function onTechClick(id) {
       ? hotseatBridge.removeTechFromView(id)
       : hotseatBridge.layerTechOnView(id, techById(id));
     if (!r.ok) {
-      if (r.error === "no_ap") flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
-      else if (r.error === "no_budget") flashToast("Not enough Budget.", { resource: "budget" });
-      else if (r.error === "no_will") flashToast("Not enough Will.", { resource: "will" });
-      else if (r.error === "stack_full" || r.error === "stack full") flashToast("Stack full.");
+      if (r.error === "no_ap" || r.error === "no_budget" || r.error === "no_will") {
+        flashUnaffordableTech(id, r.error);
+      } else if (r.error === "stack_full" || r.error === "stack full") flashToast("Stack full.");
       else if (r.error === "already_on_stack") flashToast("Already on that stack.");
       else if (r.error === "not_your_layer") flashToast("You can only remove techs you layered.");
       else if (r.error === "challenge_locked")
@@ -3454,6 +3646,8 @@ function onTechClick(id) {
       else if (r.error === "stack_locked" || r.error === "already_scaled")
         flashToast("This invent's stack is locked.");
       else flashToast(r.error || "Cannot change stack.");
+      // Do not mark selected — hydrate stays on last good session
+      renderTechList();
       return;
     }
     hotseatBridge.setSession(r.session);
@@ -3475,21 +3669,18 @@ function onTechClick(id) {
       flashToast("Stack full (8). Remove one first.");
       return;
     }
+    // Local pre-check so we never paint ✓ then roll back on failed spend
+    const afford = canAffordTech(techById(id));
+    if (!afford.ok) {
+      flashUnaffordableTech(id, afford.error);
+      return;
+    }
     const r = dispatchSim("select_tech", { techId: id, tech: techById(id) });
     if (!r.ok) {
-      if (r.error === "no_ap") {
-        flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
-      } else if (r.error === "no_budget") {
-        const need = techCost(techById(id))?.budget ?? 1;
-        flashToast(`Need ¤${need} Budget to add this (you have ${state.budget ?? 0}).`, {
-          resource: "budget",
-        });
-      } else if (r.error === "no_will") {
-        const need = techCost(techById(id))?.will ?? 1;
-        flashToast(`Need ${need} Will to add this (you have ${state.will ?? 0}).`, {
-          resource: "will",
-        });
+      if (r.error === "no_ap" || r.error === "no_budget" || r.error === "no_will") {
+        flashUnaffordableTech(id, r.error);
       } else if (r.error === "stack full") flashToast("Stack full.");
+      // dispatchSim does not apply slice on failure — selectedTechIds unchanged
       return;
     }
     // dispatch already pushed id via slice — ensure learn order
@@ -3818,6 +4009,11 @@ function requestWaitTurn() {
     flashToast(inventActionBusyReason());
     return;
   }
+  const waitGate = canWaitOnCurrentInvent();
+  if (!waitGate.ok) {
+    flashToast(mpFriendlyError(waitGate.error));
+    return;
+  }
   openWaitConfirm(() => waitTurn({ skipConfirm: true }));
 }
 
@@ -4026,6 +4222,11 @@ function waitTurn(opts = {}) {
     flashToast(inventActionBusyReason());
     return;
   }
+  const waitGate = canWaitOnCurrentInvent();
+  if (!waitGate.ok) {
+    flashToast(mpFriendlyError(waitGate.error));
+    return;
+  }
   if (!opts.skipConfirm) {
     openWaitConfirm(() => waitTurn({ skipConfirm: true }));
     return;
@@ -4121,13 +4322,31 @@ function waitTurn(opts = {}) {
       finishOutcome("collapse", { multiparty: true, mpOutcome });
       return;
     }
+    const marketEv = (r.events || []).find((e) => e?.type === "market_news");
+    if (marketEv?.marketNews) {
+      queueMarketNewsModal(marketEv.marketNews, { force: true });
+    }
+    const yearEv = (r.events || []).find((e) => e?.type === "year_tick");
+    if (yearEv?.bulletin) {
+      noteYearAdvance(yearEv.bulletin);
+    }
     const waiterYear =
       r.session.forges?.[waiterId]?.year ??
       (r.events || []).find((e) => e.type === "wait")?.year ??
       yearBefore + (m.yearsPerTurn || 2);
     flashToast(`Wait → your invent ${waiterYear} · next player keeps their year`);
     showScreen("workshop");
-    mpHydrateAndRender();
+    mpHydrateAndRender({ skipTurnNotice: Boolean(marketEv?.marketNews) });
+    // Explicit turn notice for next seat (deferred if market modal is up)
+    const nextSeat = hotseatBridge.activeSeat?.();
+    if (nextSeat) {
+      state.mpLastActiveSeatId = nextSeat.id;
+      showTurnStartNotice({
+        name: nextSeat.displayName || "Player",
+        isYou: true,
+        mode: "hotseat",
+      });
+    }
     return;
   }
 
@@ -4438,9 +4657,11 @@ async function enterChallenge() {
       encounterCountForFeasibility(feas.overall),
       null
     );
+    // Sidestep is once per *mission* (not per Face Challenge). Reopening invent
+    // after a failed Pilot does not restore another free sidestep.
     state.scrutiny = {
       missCount: 0,
-      pivotUsed: false,
+      pivotUsed: Boolean(state.elegancePivotPenalty),
       coachFreeUsed: false,
       encounters: buildEncounters(angles, resolveForFeasibility(feas.overall)),
     };
@@ -4719,7 +4940,9 @@ function renderScrutinyEncounters() {
     return;
   }
   status.textContent = `Your misses ${misses}/${MISS_BUDGET} · Sidestep ${
-    state.scrutiny.pivotUsed ? "used" : "available once"
+    state.scrutiny.pivotUsed || state.elegancePivotPenalty
+      ? "used this mission"
+      : "once this mission"
   } · Empty their resolve to deploy`;
   paintChallengerResolve(enc);
 }
@@ -4810,6 +5033,7 @@ function renderChallengeHud() {
   const yearEl = $("#ch-hud-year");
   if (!yearEl) return;
   yearEl.textContent = String(state.year);
+  yearEl.title = "Click for year foresight (capabilities & predictions)";
   const waitsBit = state.waits ? ` · waits ${state.waits}` : "";
   const turnEl = $("#ch-hud-turn");
   if (turnEl) {
@@ -4820,35 +5044,35 @@ function renderChallengeHud() {
   }
 
   const apEl = $("#ch-hud-ap");
-  if (apEl) {
-    if (apEnabled()) {
-      apEl.hidden = false;
+  if (apEnabled()) {
+    showHudChip(apEl, true);
+    if (apEl) {
       apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
       apEl.title = "Action points. Defense, fix, sidestep, AI help, and deploy cost AP.";
-    } else {
-      apEl.hidden = true;
     }
+  } else {
+    showHudChip(apEl, false);
   }
   const budgetEl = $("#ch-hud-budget");
-  if (budgetEl) {
-    if (budgetWillEnabled()) {
-      budgetEl.hidden = false;
+  if (budgetWillEnabled()) {
+    showHudChip(budgetEl, true);
+    if (budgetEl) {
       budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
       budgetEl.title =
         "Capital (same as invent). Solo: Budget 0$ is game over. Challenge wins can restore a little.";
-    } else {
-      budgetEl.hidden = true;
     }
+  } else {
+    showHudChip(budgetEl, false);
   }
   const willEl = $("#ch-hud-will");
-  if (willEl) {
-    if (budgetWillEnabled()) {
-      willEl.hidden = false;
+  if (budgetWillEnabled()) {
+    showHudChip(willEl, true);
+    if (willEl) {
       willEl.textContent = `Will ${state.will ?? 0}`;
       willEl.title = "Political will (same as invent). Sidestep costs 1 Will.";
-    } else {
-      willEl.hidden = true;
     }
+  } else {
+    showHudChip(willEl, false);
   }
   const endBtn = $("#btn-challenge-end-turn");
   if (endBtn) {
@@ -4902,9 +5126,10 @@ function renderChallengeHud() {
   updateMissionStepPills();
 }
 
-/** Grey out Sidestep after the one-per-run use (does not change mode). */
+/** Grey out Sidestep after the one-per-mission use (does not change mode). */
 function updateSidestepAvailability() {
-  const used = Boolean(state.scrutiny?.pivotUsed);
+  // Mission-scoped: elegancePivotPenalty sticks even after reopen invent / re-challenge
+  const used = Boolean(state.scrutiny?.pivotUsed || state.elegancePivotPenalty);
   const spectating = isChallengeSpectator();
   const poseBusy = isChallengePosePending() || challengeCombatBusy;
   const pivotBtn = $("#btn-scrutiny-pivot");
@@ -4919,18 +5144,18 @@ function updateSidestepAvailability() {
     pivotBtn.title = spectating
       ? "Read-only — watching the active player"
       : used
-        ? "Sidestep already used this run"
-        : "Skip this challenger once per run (costs 1 AP + 1 Will; softens elegance stars)";
+        ? "Sidestep already used this mission (once per run)"
+        : "Skip this challenger once per mission (1 AP + 1 Will; softens elegance ★)";
   }
   if (cost) {
     cost.textContent = used
-      ? "used this run"
-      : "then 1 AP · 1 Will · softens elegance";
+      ? "used this mission"
+      : "once/mission · 1 AP · 1 Will · softens elegance";
   }
   if (blurb) {
     blurb.textContent = used
-      ? "You already sidestepped once — Defend or Fix from here."
-      : "Skip without winning. Costs Will and softens ★ elegance at the end — not free.";
+      ? "Already used this mission — Defend or Fix if you face Challenge again."
+      : "Skip without winning the argument. Once per mission. Costs Will and softens ★ elegance — not free.";
   }
   if (confirmBtn) {
     confirmBtn.disabled = forceDisabled || used;
@@ -5244,6 +5469,7 @@ async function scrutinyArgue() {
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
     state.challengeVerdict = "pass";
+    if (state.challengeClearMode !== "sidestep") state.challengeClearMode = "defend";
     // Hit already paid challenge income; glance-clear still counts as a win
     if (budgetWillEnabled() && quality === "glance") {
       dispatchSim("challenge_income", { verdict: "pass" });
@@ -5364,6 +5590,7 @@ function scrutinyPatch() {
   renderChallengeHud();
   if (allEncountersCleared(state.scrutiny)) {
     state.challengeVerdict = "pass";
+    if (state.challengeClearMode !== "sidestep") state.challengeClearMode = "fix";
     if (!state.deployUnlocked) unlockDeployBay();
     else renderDeployBay();
     flashToast(
@@ -5392,8 +5619,8 @@ function scrutinyPivot() {
   }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) return;
-  if (state.scrutiny.pivotUsed) {
-    flashToast("Sidestep already used this run.");
+  if (state.scrutiny.pivotUsed || state.elegancePivotPenalty) {
+    flashToast("Sidestep already used this mission (once per run).");
     return;
   }
   // Refresh from multiparty forge (room snapshot may be ahead of stale state.ap)
@@ -5464,13 +5691,16 @@ function scrutinyPivot() {
     return;
   }
   state.scrutiny = result.scrutiny;
-  state.elegancePivotPenalty = true;
+  state.elegancePivotPenalty = true; // also gates further sidesteps this mission
   state.hadChallengeAttempt = true;
+  state.challengeClearMode = "sidestep";
   const sidestepMsg = `<strong>SIDESTEP</strong> — You skipped ${escapeHtml(
     enc.label
-  )} (once per run · 1 AP · 1 Will).`;
+  )} (once per mission · 1 AP · 1 Will · softens elegance ★).`;
   state.challengeFeedback = sidestepMsg;
+  // Not a defended pass — still unlocks deploy, but scoring/outcome treat it as a dodge
   state.challengeVerdict = "pass";
+  state.lastChallengeVerdict = "sidestep";
   const fb = $("#challenge-feedback");
   if (fb) {
     fb.hidden = false;
@@ -7870,7 +8100,10 @@ function buildRunReport(kind, meta = {}) {
   });
   if (state.elegancePivotPenalty) {
     report.eleganceScore = Math.max(0, (report.eleganceScore || 0) - 15);
-    report.highlights = [...(report.highlights || []), "Pivot used (−15 elegance)."];
+    report.highlights = [
+      ...(report.highlights || []),
+      "Sidestep used this mission (−15 elegance).",
+    ];
   }
   return report;
 }
@@ -7954,20 +8187,36 @@ function buildHotseatMpOutcome(sess, opts = {}) {
 
 function finishOutcome(kind, meta = {}) {
   const techs = selectedTechs();
-  const report = features().runReport ? buildRunReport(kind, meta) : null;
+  // Enrich meta so outcome copy can tell defend vs sidestep vs essay
+  const enriched = {
+    ...meta,
+    angle: meta.angle ?? state.challengeAngle ?? null,
+    verdict: meta.verdict ?? state.challengeVerdict ?? state.lastChallengeVerdict ?? null,
+    sidestep: Boolean(
+      meta.sidestep ||
+        state.elegancePivotPenalty ||
+        state.challengeClearMode === "sidestep" ||
+        state.lastChallengeVerdict === "sidestep"
+    ),
+    clearMode:
+      meta.clearMode ||
+      state.challengeClearMode ||
+      (state.elegancePivotPenalty ? "sidestep" : null),
+  };
+  const report = features().runReport ? buildRunReport(kind, enriched) : null;
   state.runReport = report;
   if (report && state.mission?.id) persistRunReport(state.mission.id, report);
   // Collapse / abandon does not mark solved — only deploy paths above do
   state.outcome = {
     kind,
-    meta,
+    meta: enriched,
     techs,
     year: state.year,
     turn: state.turn,
     waits: state.waits || 0,
     pressure: clonePressure(state.pressure),
     runReport: report,
-    mpOutcome: meta.mpOutcome || state.mpOutcome || null,
+    mpOutcome: enriched.mpOutcome || state.mpOutcome || null,
   };
   state.mpOutcome = state.outcome.mpOutcome;
   showScreen("outcome");
@@ -8032,11 +8281,25 @@ function applyOutcomeRematchChrome() {
   const pick = $("#btn-outcome-rematch-pick");
   const wait = $("#outcome-rematch-wait");
   const leave = $("#btn-outcome-leave-room");
+  const hint = $("#outcome-actions-hint");
   const roomMp = isRoomMultipartyOutcome();
   const hotseatMp = isHotseatMultipartyOutcome() && !roomMp;
   const multi = roomMp || hotseatMp || isMultipartyOutcome();
+  const kind = state.outcome?.kind || "partial";
+
+  const setHint = (text) => {
+    if (!hint) return;
+    if (!text) {
+      hint.hidden = true;
+      hint.textContent = "";
+      return;
+    }
+    hint.hidden = false;
+    hint.textContent = text;
+  };
 
   // Solo-only actions — never show after friends / hotseat races
+  // Multiplayer race ends only on full win or collapse; partial Scale does not open this screen.
   if (multi) {
     setOutcomeBtnVisible(retry, false);
     setOutcomeBtnVisible(neu, false);
@@ -8052,18 +8315,21 @@ function applyOutcomeRematchChrome() {
         pick.disabled = false;
         pick.textContent =
           (state.outcome?.mpOutcome || state.mpOutcome)?.placeStatus === "collapsed" ||
-          state.outcome?.kind === "collapse"
-            ? "Pick next theme (host/chooser) →"
-            : "Pick next theme (you won) →";
+          kind === "collapse"
+            ? "Start next race (host) →"
+            : "Start next race (you won) →";
+        pick.title = "Pick the next place for everyone still in the room";
       }
     }
     if (wait) {
       if (iAmChooser) {
         setOutcomeBtnVisible(wait, false);
         wait.textContent = "";
+        setHint("The place held (or fell). You choose the next race for the room.");
       } else {
         setOutcomeBtnVisible(wait, true);
-        wait.textContent = `Waiting for ${rematchChooserName()} to pick the next theme and scenario… Stay in the room.`;
+        wait.textContent = `Waiting for ${rematchChooserName()} to pick the next place… Stay in the room.`;
+        setHint("Friends race over — only the chooser starts the next race.");
       }
     }
     return;
@@ -8075,17 +8341,174 @@ function applyOutcomeRematchChrome() {
     setOutcomeBtnVisible(wait, false);
     setOutcomeBtnVisible(leave, true);
     leave.textContent = hotseatMp ? "Back to friends" : "Leave";
+    setHint(
+      kind === "collapse"
+        ? "Shared place fell — no champion. Start another race from Friends."
+        : "Race over. Return to Friends to play again."
+    );
     return;
   }
 
-  // Solo: Keep inventing + New mission
-  setOutcomeBtnVisible(retry, true);
-  retry.textContent = "Keep inventing";
-  setOutcomeBtnVisible(neu, true);
-  neu.textContent = "New mission";
+  // —— Solo only ——
   setOutcomeBtnVisible(pick, false);
   setOutcomeBtnVisible(wait, false);
   setOutcomeBtnVisible(leave, false);
+  setOutcomeBtnVisible(neu, true);
+
+  if (kind === "partial") {
+    // Optional continue: crisis still hot, same place
+    setOutcomeBtnVisible(retry, true);
+    retry.textContent = "Continue here";
+    retry.title = "Same place — crisis meters as left after deploy. Face Challenge again to field another step.";
+    neu.textContent = "Leave this place";
+    neu.title = "Pick another theme / local problem";
+    neu.classList.remove("btn-primary");
+    neu.classList.add("btn-secondary");
+    retry.classList.add("btn-primary");
+    retry.classList.remove("btn-secondary");
+    setHint("Not fully solved — keep working this place, or leave for another problem.");
+  } else if (kind === "win") {
+    setOutcomeBtnVisible(retry, true);
+    retry.textContent = "Review invent";
+    retry.title = "Return to the workshop (place already held)";
+    neu.textContent = "Play another place";
+    neu.title = "Pick another theme / local problem";
+    neu.classList.add("btn-primary");
+    neu.classList.remove("btn-secondary");
+    retry.classList.add("btn-secondary");
+    retry.classList.remove("btn-primary");
+    setHint("Place held. Take what you learned to another problem.");
+  } else if (kind === "collapse") {
+    const bankrupt = Boolean(state.outcome?.meta?.bankrupt);
+    setOutcomeBtnVisible(retry, true);
+    retry.textContent = bankrupt ? "Retry this place" : "Retry this place";
+    retry.title = "Restart this local scenario from the beginning";
+    neu.textContent = "Try another place";
+    neu.title = "Pick another theme / local problem";
+    neu.classList.add("btn-primary");
+    neu.classList.remove("btn-secondary");
+    retry.classList.add("btn-secondary");
+    retry.classList.remove("btn-primary");
+    setHint(
+      bankrupt
+        ? "Out of capital. Restart this place leaner, or try a different problem."
+        : "Too late here. Restart this place or try another."
+    );
+  } else {
+    setOutcomeBtnVisible(retry, true);
+    retry.textContent = "Continue here";
+    neu.textContent = "Leave this place";
+    setHint("");
+  }
+}
+
+/**
+ * Crisis meters vs winMax for outcome banner chips.
+ * @param {Record<string, number>} pressure
+ * @param {Record<string, number>} winMax
+ */
+function buildOutcomeMeterGaps(pressure, winMax) {
+  const p = pressure || {};
+  const w = winMax || {};
+  const keys = Object.keys({ ...p, ...w });
+  if (!keys.length) return [];
+  return keys.map((k) => {
+    const cur = Number(p[k] ?? 0);
+    const need = w[k] != null ? Number(w[k]) : null;
+    let status = "ok";
+    if (need == null) status = cur >= 4 ? "hot" : "ok";
+    else if (cur <= need) status = "ok";
+    else if (cur >= 5) status = "fail";
+    else status = "hot";
+    return { key: k, cur, need, status };
+  });
+}
+
+/**
+ * Paint unmissable full/partial/collapse banner on outcome screen.
+ * @param {object} o — state.outcome
+ * @param {object|null} m — mission
+ */
+function renderOutcomeResultBanner(o, m) {
+  const banner = $("#outcome-result-banner");
+  if (!banner || !o) return;
+  const kicker = $("#outcome-result-kicker");
+  const title = $("#outcome-result-title");
+  const sub = $("#outcome-result-sub");
+  const gapsEl = $("#outcome-meter-gaps");
+  const kind = o.kind || "partial";
+  const multiparty = Boolean(o.mpOutcome?.multiparty || o.meta?.multiparty || o.meta?.mpOutcome?.multiparty);
+  const pressure = o.pressure || state.pressure || {};
+  const winMax = m?.winMax || {};
+  const gaps = buildOutcomeMeterGaps(pressure, winMax);
+
+  banner.hidden = false;
+  banner.dataset.kind =
+    kind === "win" ? "win" : kind === "collapse" ? "collapse" : "partial";
+
+  if (kind === "win") {
+    if (kicker) kicker.textContent = multiparty ? "Friends race · full win" : "Solo · full win";
+    if (title) title.textContent = "Place held";
+    if (sub) {
+      sub.textContent = multiparty
+        ? "Shared crisis is under the win line. Survivors are ranked — the race is over."
+        : "Every crisis meter is at or below the win line. This place is held.";
+    }
+  } else if (kind === "partial") {
+    if (kicker) kicker.textContent = "Solo · not fully solved";
+    if (title) title.textContent = "Crisis still hot";
+    if (sub) {
+      sub.textContent =
+        "You deployed a New normal and eased pressure — but meters are still above the win line. " +
+        "Continue here to push further, or leave this place.";
+    }
+  } else if (kind === "collapse" && o.meta?.bankrupt) {
+    if (kicker) kicker.textContent = "Solo · out of capital";
+    if (title) title.textContent = "Budget hit 0$";
+    if (sub) {
+      sub.textContent =
+        "The project went broke before a full solve. Restart leaner or try another place.";
+    }
+  } else if (kind === "collapse") {
+    if (kicker) {
+      kicker.textContent = multiparty
+        ? "Friends race · shared loss"
+        : "Solo · too late";
+    }
+    if (title) title.textContent = multiparty ? "Place collapsed — no champion" : "Too late";
+    if (sub) {
+      sub.textContent = multiparty
+        ? "Shared crisis broke the place. Everyone loses; there is no ranking champion."
+        : "Crisis passed what a late invent could fix.";
+    }
+  } else {
+    if (kicker) kicker.textContent = "Outcome";
+    if (title) title.textContent = "Mission paused";
+    if (sub) sub.textContent = "";
+  }
+
+  if (gapsEl) {
+    const showGaps = kind === "partial" || kind === "win" || (kind === "collapse" && !o.meta?.bankrupt);
+    if (!showGaps || !gaps.length) {
+      gapsEl.hidden = true;
+      gapsEl.innerHTML = "";
+    } else {
+      gapsEl.hidden = false;
+      gapsEl.innerHTML = gaps
+        .map((g) => {
+          const needBit =
+            g.need != null ? ` · need ≤${g.need}` : "";
+          const mark =
+            g.status === "ok" ? "✓" : g.status === "fail" ? "!" : "·";
+          return `<li class="outcome-meter-gap is-${g.status}" title="${escapeHtml(
+            g.key
+          )}: ${g.cur}${needBit}"><span>${mark}</span> <strong>${escapeHtml(
+            g.key
+          )}</strong> ${g.cur}${needBit}</li>`;
+        })
+        .join("");
+    }
+  }
 }
 
 /**
@@ -8223,9 +8646,12 @@ function renderOutcome() {
     state.inventionName.trim() ||
     "Untitled invention";
   $("#outcome-name").textContent = name;
-  $("#outcome-meta").textContent = `${m.place} · ${o.year} · Turn ${o.turn} · waits ${
+  $("#outcome-meta").textContent = `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${
     o.waits ?? state.waits ?? 0
   } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
+
+  // Unmissable full / partial / collapse strip (meters vs win line)
+  renderOutcomeResultBanner(o, m);
 
   const starsEl = $("#outcome-stars");
   const report = o.runReport || state.runReport;
@@ -8296,16 +8722,26 @@ function renderOutcome() {
     });
   } else if (o.kind === "win") {
     headline = "Crisis eased";
+    const sidestepped = Boolean(o.meta?.sidestep);
     story =
       `In ${o.year}, ${name} landed in ${m.place}. Crisis meters fell enough for people to breathe. ` +
-      `You survived a ${o.meta?.angle || "challenge"} attack, then deployed. ` +
+      (sidestepped
+        ? `You sidestepped a ${o.meta?.angle || "challenge"} challenger (once per mission), then deployed. `
+        : `You faced a ${o.meta?.angle || "challenge"} attack, then deployed. `) +
       (state.inventionImpact.trim()
         ? `Everyday life: ${state.inventionImpact.trim()}`
         : "A local face of a global problem got smaller.");
-    lessons.push({
-      type: "good",
-      text: `Challenge (${o.meta?.angle || "stress-test"}): ${state.challengeVerdict || "passed"}.`,
-    });
+    if (sidestepped) {
+      lessons.push({
+        type: "grow",
+        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Will). Deploy unlocked, but elegance softens.`,
+      });
+    } else {
+      lessons.push({
+        type: "good",
+        text: `Challenge (${o.meta?.angle || "stress-test"}): ${state.challengeVerdict || "passed"}.`,
+      });
+    }
     lessons.push({
       type: "good",
       text: `Timing: deployed with feasible claims in ${o.year}, before fail year ${m.collapseYear}.`,
@@ -8315,15 +8751,21 @@ function renderOutcome() {
       text: `Local → global: ${m.place} is one face of “${state.global?.title || "the larger problem"}”.`,
     });
   } else if (o.kind === "partial") {
-    headline = "Deployed — crisis still hot";
+    headline = "Not fully solved";
     story =
-      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but not enough to fully win. ` +
-      `You can keep inventing (meters stay as they are) or take what you learned to a new mission.`;
+      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but meters are still above the win line. ` +
+      `Continue here to invent another step against the remaining crisis, or leave this place for a different problem. ` +
+      `(In friends multiplayer, a partial Scale would not open this screen — the race keeps going until the place is fully held.)`;
     lessons.push({
       type: "grow",
-      text: "Partial win: strengthen the mechanism, wait for better tech (crisis rises), or accept the lesson and try another place.",
+      text: "Solo partial: optional continue. Multiplayer: partial Scales accumulate on the shared place until someone fully holds it.",
     });
-    if (o.meta?.angle) {
+    if (o.meta?.sidestep) {
+      lessons.push({
+        type: "grow",
+        text: `You sidestepped the ${o.meta.angle || "challenge"} challenger before deploying — a paid dodge (once per mission), not a defended answer.`,
+      });
+    } else if (o.meta?.angle) {
       lessons.push({
         type: "good",
         text: `You answered a ${o.meta.angle} challenge before deploying — that discipline matters.`,
@@ -10213,11 +10655,578 @@ function clearStoryFacePending() {
   });
 }
 
+/* —— Round market news (illustrated card) —— */
+// Same reliability model as mp-turn-modal (plain fixed div, display:flex, no opacity traps).
+// Multiplayer order: market bulletin FIRST → on dismiss, deferred "your turn" notice.
+
+const marketImageCache = new Map();
+/** Id currently open or about to open (blocks turn notice) */
+let marketNewsOpenId = null;
+/** @type {{ name?: string, isYou?: boolean, mode?: string } | null} */
+let deferredTurnNotice = null;
+
+function isMarketNewsModalOpen() {
+  const el = document.getElementById("market-news-modal");
+  return Boolean(el && !el.hidden && el.style.display !== "none");
+}
+
 /**
- * Toast near the top HUD (resource counters), not buried at the bottom.
- * @param {string} msg
- * @param {{ resource?: "ap"|"budget"|"will", durationMs?: number }} [opts]
+ * Queue / show market bulletin. New cards always take the screen.
+ * @param {object} news
+ * @param {{ force?: boolean }} [opts]
  */
+function queueMarketNewsModal(news, opts = {}) {
+  if (!news?.id) return;
+  state.marketNews = cloneMarketNews(news);
+  // Already showing this exact card
+  if (marketNewsOpenId === news.id && isMarketNewsModalOpen()) {
+    renderMarketBanner({ pulse: false });
+    return;
+  }
+  // Already dismissed this id unless force (e.g. explicit event / re-open from banner)
+  if (!opts.force && state.marketNewsShownId === news.id && !isMarketNewsModalOpen()) {
+    renderMarketBanner({ pulse: false });
+    return;
+  }
+  // Show immediately — do not wait; turn popup must queue behind us
+  showMarketNewsModal(news);
+}
+
+function closeMarketNewsModal(opts = {}) {
+  const el = document.getElementById("market-news-modal");
+  if (!el) return;
+  marketNewsOpenId = null;
+  document.body.classList.remove("market-news-open");
+  el.hidden = true;
+  el.setAttribute("hidden", "");
+  el.style.display = "none";
+  el.classList.remove("is-open", "is-entering", "is-leaving");
+
+  // After dismiss: pulse market banner, then deferred turn notice (no year popup chain)
+  if (opts.highlightBanner !== false) {
+    renderMarketBanner({ pulse: true, scrollIntoView: true });
+  }
+  const pending = deferredTurnNotice;
+  deferredTurnNotice = null;
+  if (pending) {
+    requestAnimationFrame(() => showTurnStartNotice(pending));
+  }
+}
+
+/* —— Year bulletin (world clock + foresight highlights) —— */
+let yearBulletinOpen = false;
+let lastYearPulseKey = null;
+
+/**
+ * Round-end year advance: store bulletin + flash banner + pulse HUD (no auto modal).
+ * User clicks the year / banner to open the full foresight dialog.
+ * @param {object} bulletin — { fromYear, toYear, highlights[] }
+ */
+function noteYearAdvance(bulletin) {
+  if (!bulletin?.toYear) return;
+  state.lastYearBulletin = bulletin;
+  const key = `${bulletin.fromYear ?? "?"}→${bulletin.toYear}`;
+  if (lastYearPulseKey === key) return;
+  lastYearPulseKey = key;
+  // Refresh labels first — then pulse so renderHud doesn't clobber the flash title
+  try {
+    renderHud();
+  } catch {
+    /* ignore */
+  }
+  try {
+    renderChallengeHud();
+  } catch {
+    /* ignore */
+  }
+  pulseYearHud(bulletin.toYear);
+  flashYearAdvanceBanner(bulletin);
+}
+
+/**
+ * Brief highlight on year controls so calendar advance is visible without a popup.
+ * @param {number} [toYear]
+ */
+function pulseYearHud(toYear) {
+  const ids = ["hud-year", "ch-hud-year", "mp-hud-year", "hs-hud-year"];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (toYear != null) el.textContent = String(toYear);
+    el.classList.remove("hud-year-pulse");
+    void el.offsetWidth;
+    el.classList.add("hud-year-pulse");
+    el.title = "Year advanced — click for foresight (capabilities & predictions)";
+    clearTimeout(el._yearPulseT);
+    el._yearPulseT = setTimeout(() => {
+      el.classList.remove("hud-year-pulse");
+      el.title = "Click for year foresight (capabilities & predictions)";
+    }, 2800);
+  }
+}
+
+/**
+ * Temporary fly-in + ring-pulse banner (same energy as Market Round).
+ * Auto-hides after a few seconds; click opens year foresight.
+ * @param {object} bulletin — { fromYear, toYear, highlights[] }
+ */
+function flashYearAdvanceBanner(bulletin) {
+  if (!bulletin?.toYear) return;
+  const hosts = [
+    $("#year-advance-banner"),
+    $("#hs-year-advance-banner"),
+    $("#mp-year-advance-banner"),
+  ].filter(Boolean);
+  if (!hosts.length) return;
+
+  const from = bulletin.fromYear != null ? String(bulletin.fromYear) : "?";
+  const to = String(bulletin.toYear);
+  const n = Array.isArray(bulletin.highlights) ? bulletin.highlights.length : 0;
+  const hint =
+    n > 0
+      ? `${n} foresight note${n === 1 ? "" : "s"} · click for details`
+      : "Click for capabilities & predictions";
+
+  const html = `
+    <button type="button" class="year-advance-banner-btn" data-year-open="1" title="Open year foresight">
+      <span class="year-advance-banner-icon" aria-hidden="true">📅</span>
+      <span class="year-advance-banner-text">
+        <span class="year-advance-banner-kicker">Calendar · Year advanced</span>
+        <strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong>
+        <span class="year-advance-banner-hint">${escapeHtml(hint)}</span>
+      </span>
+    </button>`;
+
+  for (const host of hosts) {
+    if (!host.isConnected) continue;
+    clearTimeout(host._yearFlashHideT);
+    clearTimeout(host._yearFlashFadeT);
+    host.classList.remove("is-pulse", "is-fly-in", "is-fading");
+    host.hidden = false;
+    host.removeAttribute("hidden");
+    host.innerHTML = html;
+    host.querySelector("[data-year-open]")?.addEventListener("click", () => {
+      openYearForesightFromHud();
+    });
+
+    void host.offsetWidth;
+    host.classList.add("is-fly-in", "is-pulse");
+    if (host.offsetParent !== null) {
+      try {
+        host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Match market: pulse ~2.2s, then soft fade and hide (not sticky)
+    host._yearFlashFadeT = setTimeout(() => {
+      host.classList.remove("is-pulse");
+      host.classList.add("is-fading");
+      host._yearFlashHideT = setTimeout(() => {
+        host.hidden = true;
+        host.setAttribute("hidden", "");
+        host.innerHTML = "";
+        host.classList.remove("is-fly-in", "is-fading", "is-pulse");
+      }, 450);
+    }, 3200);
+  }
+}
+
+function closeYearBulletinModal() {
+  const el = document.getElementById("year-bulletin-modal");
+  if (!el) return;
+  yearBulletinOpen = false;
+  document.body.classList.remove("year-bulletin-open");
+  el.hidden = true;
+  el.setAttribute("hidden", "");
+  el.style.display = "none";
+  const pending = deferredTurnNotice;
+  deferredTurnNotice = null;
+  if (pending) {
+    requestAnimationFrame(() => showTurnStartNotice(pending));
+  }
+}
+
+/** Click year in HUD — reopen foresight for this mission year (no market sequence). */
+function openYearForesightFromHud() {
+  const b = state.lastYearBulletin;
+  if (b?.toYear != null && Number(b.toYear) === Number(state.year) && b.highlights?.length) {
+    showYearBulletinModal(b, { userOpen: true });
+    return;
+  }
+  const highlights = foresightForYear(state.year, {
+    techIds: state.selectedTechIds || [],
+    globalId: state.global?.id || state.mission?.globalId,
+    seed: `${state.mission?.id || "solo"}:hud:${state.year}`,
+  });
+  showYearBulletinModal(
+    {
+      fromYear: Math.max(GAME.startYear || 2026, (state.year || 2026) - 1),
+      toYear: state.year || GAME.startYear || 2026,
+      highlights: highlights.map((h) => ({
+        id: h.id,
+        kind: h.kind,
+        headline: h.headline,
+        detail: h.detail,
+        claimBand: h.claimBand,
+      })),
+    },
+    { userOpen: true }
+  );
+}
+
+function showYearBulletinModal(bulletin, opts = {}) {
+  if (!bulletin) return;
+  yearBulletinOpen = true;
+  try {
+    closeMpTurnModal();
+  } catch {
+    /* ignore */
+  }
+
+  let el = document.getElementById("year-bulletin-modal");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "year-bulletin-modal";
+    el.className = "year-bulletin-modal market-news-modal";
+    el.setAttribute("role", "alertdialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-labelledby", "year-bulletin-title");
+    el.innerHTML = `
+      <div class="market-news-dialog year-bulletin-dialog" role="document">
+        <div class="market-news-copy">
+          <p class="market-news-kicker" id="year-bulletin-kicker">World clock</p>
+          <h3 id="year-bulletin-title">Capabilities shift</h3>
+          <p id="year-bulletin-body" class="market-news-body"></p>
+          <ul class="year-bulletin-list" id="year-bulletin-list"></ul>
+          <p class="market-news-note muted">Claims in How it works are judged against this year. Predictions are forecasts — not free unlocks.</p>
+          <button type="button" class="btn btn-primary" id="year-bulletin-ok">Got it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    el.addEventListener("click", (ev) => {
+      if (ev.target === el || ev.target?.id === "year-bulletin-ok" || ev.target?.closest?.("#year-bulletin-ok")) {
+        closeYearBulletinModal();
+      }
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        const live = document.getElementById("year-bulletin-modal");
+        if (live && !live.hidden) closeYearBulletinModal();
+      }
+    });
+  }
+
+  const fromY = bulletin.fromYear ?? (bulletin.toYear - 1);
+  const toY = bulletin.toYear;
+  const kicker = el.querySelector("#year-bulletin-kicker");
+  const title = el.querySelector("#year-bulletin-title");
+  const body = el.querySelector("#year-bulletin-body");
+  const list = el.querySelector("#year-bulletin-list");
+  const okBtn = el.querySelector("#year-bulletin-ok");
+  if (kicker) {
+    kicker.textContent = opts.userOpen
+      ? `World clock · Year ${toY}`
+      : `World clock · ${fromY} → ${toY}`;
+  }
+  if (title) title.textContent = `Year ${toY} — capabilities shift`;
+  if (body) {
+    body.textContent = opts.userOpen
+      ? "Major predicted milestones and near-term capabilities for this calendar year:"
+      : "The calendar advanced for everyone. Major predicted milestones and near-term capabilities for this year:";
+  }
+  if (list) {
+    const rows = bulletin.highlights || [];
+    list.innerHTML = rows.length
+      ? rows
+          .map((h) => {
+            const kind = h.kind === "prediction" ? "Prediction" : h.kind === "trend" ? "Trend" : "Milestone";
+            return `<li class="year-bulletin-item" data-kind="${escapeHtml(h.kind || "")}">
+              <span class="year-bulletin-kind">${escapeHtml(kind)}</span>
+              <strong>${escapeHtml(h.headline || "")}</strong>
+              <span class="year-bulletin-detail">${escapeHtml(h.detail || "")}</span>
+            </li>`;
+          })
+          .join("")
+      : `<li class="year-bulletin-item"><strong>Quiet year</strong><span class="year-bulletin-detail">No major curated highlights — keep claims pilot-honest.</span></li>`;
+  }
+  if (okBtn) {
+    okBtn.onclick = (ev) => {
+      ev.preventDefault();
+      closeYearBulletinModal();
+    };
+  }
+
+  el.hidden = false;
+  el.removeAttribute("hidden");
+  el.style.display = "flex";
+  el.classList.add("is-open");
+  document.body.classList.add("year-bulletin-open");
+  try {
+    flashToast(`📅 World clock → ${toY}`, { durationMs: 2800 });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Full-screen market bulletin — same shell pattern as "It's your turn".
+ * @param {object} news
+ */
+function showMarketNewsModal(news) {
+  if (!news) return;
+  state.marketNews = cloneMarketNews(news);
+  marketNewsOpenId = news.id;
+
+  // Turn popup must wait — hide it if already up
+  try {
+    closeMpTurnModal();
+  } catch {
+    /* ignore */
+  }
+
+  let el = document.getElementById("market-news-modal");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "market-news-modal";
+    el.className = "market-news-modal";
+    el.setAttribute("role", "alertdialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-labelledby", "market-news-headline");
+    el.innerHTML = `
+      <div class="market-news-dialog" role="document">
+        <div class="market-news-art" id="market-news-art" aria-hidden="true">
+          <div class="market-news-art-fallback" id="market-news-art-fallback"></div>
+          <img id="market-news-img" alt="" hidden />
+          <div class="market-news-art-loading" id="market-news-art-loading" hidden>Illustrating…</div>
+        </div>
+        <div class="market-news-copy">
+          <p class="market-news-kicker" id="market-news-kicker">Market bulletin</p>
+          <h3 id="market-news-headline"></h3>
+          <p id="market-news-body" class="market-news-body"></p>
+          <div class="market-news-effects" id="market-news-effects"></div>
+          <p class="market-news-note muted">AP stays 1. Only Budget and Will for matching emTechs shift this round.</p>
+          <button type="button" class="btn btn-primary" id="market-news-ok">Got it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    el.addEventListener("click", (ev) => {
+      if (ev.target === el || ev.target?.id === "market-news-ok" || ev.target?.closest?.("#market-news-ok")) {
+        closeMarketNewsModal();
+      }
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        const live = document.getElementById("market-news-modal");
+        if (live && !live.hidden) closeMarketNewsModal();
+      }
+    });
+  }
+
+  const tone = news.tone || "mixed";
+  el.dataset.tone = tone;
+
+  // Identical visibility recipe as mp-turn-modal (proven to work in multiplayer)
+  el.hidden = false;
+  el.removeAttribute("hidden");
+  el.style.display = "flex";
+  el.classList.add("is-open");
+  document.body.classList.add("market-news-open");
+
+  // Card fly-in each open
+  const dialog = el.querySelector(".market-news-dialog");
+  if (dialog) {
+    dialog.classList.remove("market-news-dialog-enter");
+    void dialog.offsetWidth;
+    dialog.classList.add("market-news-dialog-enter");
+  }
+
+  const kicker = el.querySelector("#market-news-kicker");
+  const headline = el.querySelector("#market-news-headline");
+  const body = el.querySelector("#market-news-body");
+  const effectsEl = el.querySelector("#market-news-effects");
+  const fallback = el.querySelector("#market-news-art-fallback");
+  const img = el.querySelector("#market-news-img");
+  const loading = el.querySelector("#market-news-art-loading");
+  const okBtn = el.querySelector("#market-news-ok");
+
+  if (kicker) {
+    kicker.textContent =
+      news.round != null ? `Breaking · Round ${news.round}` : "Breaking market news";
+  }
+  if (headline) headline.textContent = news.headline || "Market shift";
+  if (body) body.textContent = news.body || "";
+  if (fallback) {
+    fallback.hidden = false;
+    fallback.textContent = news.icon || "📰";
+    fallback.dataset.tone = tone;
+  }
+  if (okBtn) {
+    okBtn.type = "button";
+    okBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      closeMarketNewsModal();
+    };
+  }
+
+  const desc = describeMarketEffects(news, {
+    techName: (id) => techById(id)?.name || id,
+    domainLabel: (d) => DOMAINS[d]?.label || d,
+  });
+  if (effectsEl) {
+    effectsEl.innerHTML = `
+      <span class="market-effect-scope">${escapeHtml(desc.scope)}</span>
+      ${desc.effects
+        .map((e) => {
+          const up = e.includes("+");
+          const down = e.includes("-");
+          const cls = up ? "up" : down ? "down" : "";
+          return `<span class="market-effect-chip ${cls}">${escapeHtml(e)}</span>`;
+        })
+        .join("")}`;
+  }
+
+  // Illustration: prebuilt static asset (dev-time Imagine batch). Icon fallback if missing.
+  if (img) {
+    img.hidden = true;
+    img.removeAttribute("src");
+    img.onerror = null;
+  }
+  if (loading) loading.hidden = true;
+  if (fallback) {
+    fallback.hidden = false;
+    fallback.textContent = news.icon || "📰";
+  }
+
+  const staticUrl = marketNewsImageUrl(news);
+  if (staticUrl && img) {
+    img.onload = () => {
+      if (state.marketNews?.id !== news.id) return;
+      img.hidden = false;
+      if (fallback) fallback.hidden = true;
+      if (loading) loading.hidden = true;
+      marketImageCache.set(news.id, staticUrl);
+      renderMarketBanner({ pulse: false });
+    };
+    img.onerror = () => {
+      img.hidden = true;
+      if (fallback) fallback.hidden = false;
+      if (loading) loading.hidden = true;
+    };
+    // Show loading briefly only when we don't already know the asset works
+    if (!marketImageCache.has(news.id) && loading) loading.hidden = false;
+    img.src = staticUrl;
+  }
+
+  // Mark shown only after the overlay is actually on screen
+  state.marketNewsShownId = news.id;
+  renderMarketBanner({ pulse: false });
+
+  try {
+    flashToast(`📰 Market news · ${news.headline || "costs shifted"}`, {
+      durationMs: 3500,
+    });
+  } catch {
+    /* ignore */
+  }
+
+  setTimeout(() => {
+    try {
+      okBtn?.focus?.({ preventScroll: true });
+    } catch {
+      /* ignore */
+    }
+  }, 30);
+}
+
+/**
+ * Static illustration URL for a market card (pre-generated at build time).
+ * @param {object} news
+ * @returns {string|null}
+ */
+function marketNewsImageUrl(news) {
+  if (!news?.id) return null;
+  if (marketImageCache.has(news.id)) return marketImageCache.get(news.id);
+  const p = marketNewsImagePath(news);
+  return p || null;
+}
+
+/**
+ * Compact persistent banner under the mission scene.
+ * @param {{ pulse?: boolean, scrollIntoView?: boolean }} [opts]
+ */
+function renderMarketBanner(opts = {}) {
+  const hosts = [
+    $("#market-news-banner"),
+    $("#hs-market-news-banner"),
+    $("#mp-market-news-banner"),
+  ].filter(Boolean);
+  if (!hosts.length) return;
+  const news = currentMarketNews();
+  if (!news) {
+    for (const host of hosts) {
+      host.hidden = true;
+      host.innerHTML = "";
+      host.classList.remove("is-pulse", "is-fly-in");
+    }
+    return;
+  }
+  const desc = describeMarketEffects(news, {
+    techName: (id) => techById(id)?.name || id,
+    domainLabel: (d) => DOMAINS[d]?.label || d,
+  });
+  const thumb = marketNewsImageUrl(news);
+  const html = `
+    <button type="button" class="market-news-banner-btn" data-market-open="1" title="Open market bulletin">
+      <span class="market-news-banner-thumb" aria-hidden="true">
+        ${
+          thumb
+            ? `<img src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.hidden=false)" /><span class="market-news-banner-icon" hidden>${escapeHtml(news.icon || "📰")}</span>`
+            : `<span class="market-news-banner-icon">${escapeHtml(news.icon || "📰")}</span>`
+        }
+      </span>
+      <span class="market-news-banner-text">
+        <span class="market-news-banner-kicker">Market · Round ${escapeHtml(
+          String(news.round ?? state.turn ?? 1)
+        )}</span>
+        <strong>${escapeHtml(news.headline)}</strong>
+        <span class="market-news-banner-effects">
+          ${escapeHtml(desc.scope)} · ${desc.effects.map(escapeHtml).join(" · ")}
+        </span>
+      </span>
+    </button>`;
+
+  for (const host of hosts) {
+    // Only paint hosts that exist in the active layout (others may be on hidden screens)
+    if (!host.isConnected) continue;
+    host.hidden = false;
+    host.dataset.tone = news.tone || "mixed";
+    host.innerHTML = html;
+    host.querySelector("[data-market-open]")?.addEventListener("click", () => {
+      showMarketNewsModal(news);
+    });
+
+    if (opts.pulse || opts.scrollIntoView) {
+      host.classList.remove("is-pulse", "is-fly-in");
+      void host.offsetWidth;
+      host.classList.add("is-fly-in", "is-pulse");
+      if (opts.scrollIntoView && host.offsetParent !== null) {
+        try {
+          host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch {
+          host.scrollIntoView();
+        }
+      }
+      clearTimeout(host._pulseTimer);
+      host._pulseTimer = setTimeout(() => {
+        host.classList.remove("is-pulse");
+      }, 2200);
+    }
+  }
+}
+
 /**
  * Unmissable "your turn is starting" popup for multiplayer (room + hotseat).
  * Uses a plain fixed div — never <dialog showModal()> (that trapped the page when
@@ -10267,6 +11276,13 @@ function bindMpTurnModalOnce(el) {
 }
 
 function showTurnStartNotice(opts = {}) {
+  // Market bulletin owns the screen first. Defer turn popup until dismiss.
+  // Year foresight is click-to-open only (no auto popup after market).
+  if (isMarketNewsModalOpen() || marketNewsOpenId || yearBulletinOpen) {
+    deferredTurnNotice = { ...opts };
+    return;
+  }
+
   const name = opts.name || "Player";
   const isYou = Boolean(opts.isYou);
   const mode = opts.mode || (roomBridge.isRoom() ? "room" : "hotseat");
@@ -10457,20 +11473,37 @@ async function surpriseMission() {
 
 /* —— Bind —— */
 function bind() {
-  initFriendsUi({
-    showScreen,
-    flashToast,
-    $,
-    $$,
-    escapeHtml,
-    beginMissionPick,
-    clearMissionPickSession,
-    enterHotseatPlay,
-    leaveHotseat,
-    enterRoomPlay,
-    leaveRoomPlay,
-    openWaitConfirm,
+  // Title actions first — never let multiplayer/friends setup block the home screen.
+  $("#btn-start")?.addEventListener("click", () => {
+    clearMissionPickSession();
+    leaveHotseat();
+    showScreen("global");
   });
+  $("#btn-surprise")?.addEventListener("click", () => {
+    clearMissionPickSession();
+    surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
+  });
+
+  try {
+    initFriendsUi({
+      showScreen,
+      flashToast,
+      $,
+      $$,
+      escapeHtml,
+      beginMissionPick,
+      clearMissionPickSession,
+      enterHotseatPlay,
+      leaveHotseat,
+      enterRoomPlay,
+      leaveRoomPlay,
+      openWaitConfirm,
+      queueMarketNewsModal,
+    });
+  } catch (e) {
+    console.error("[bind] initFriendsUi failed", e);
+  }
+
   $("#btn-mp-pass-device")?.addEventListener("click", () => mpPassDevice());
   $("#btn-mp-prev-invent")?.addEventListener("click", () => {
     if (!hotseatBridge.isHotseat()) return;
@@ -10491,15 +11524,6 @@ function bind() {
     mpSyncFromSolo();
     hotseatBridge.cycleView(1);
     mpHydrateAndRender();
-  });
-  $("#btn-start").addEventListener("click", () => {
-    clearMissionPickSession();
-    leaveHotseat();
-    showScreen("global");
-  });
-  $("#btn-surprise").addEventListener("click", () => {
-    clearMissionPickSession();
-    surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
   });
   $("#btn-daily-play")?.addEventListener("click", () => {
     clearMissionPickSession();
@@ -10879,29 +11903,66 @@ function bind() {
 
   $("#btn-outcome-new").addEventListener("click", () => {
     if (isMultipartyOutcome()) {
-      // Hidden in multiplayer; guard if shown via stale DOM
       flashToast(
         isRoomMultipartyOutcome()
-          ? "In friends play, the winner picks the next theme — use that button."
-          : "Multiplayer races don't use New mission here — leave and start another from Friends."
+          ? "In friends play, the chooser starts the next race — use that button."
+          : "Multiplayer races don't use Leave this place here — return via Friends."
       );
       return;
     }
+    // Leave this place → theme picker
     showScreen("global");
   });
   $("#btn-outcome-retry").addEventListener("click", () => {
     if (isMultipartyOutcome()) {
       flashToast(
         isRoomMultipartyOutcome()
-          ? "Friends races don't continue inventing — wait for the next theme."
-          : "Multiplayer races don't continue inventing from this screen."
+          ? "Friends races only end on a full win or collapse — partial Scales keep the race going in play."
+          : "Multiplayer races don't continue from this screen."
       );
       return;
     }
-    if (state.mission) showScreen("workshop");
-    else showScreen("global");
+    if (!state.mission) {
+      showScreen("global");
+      return;
+    }
+    const kind = state.outcome?.kind;
+    if (kind === "collapse") {
+      // Restart same mission from scratch
+      const mission = state.mission;
+      const global = state.global;
+      startMission(mission);
+      if (global) state.global = global;
+      return;
+    }
+    // Partial (or review invent after win): same place, meters as left
+    if (kind === "partial") {
+      // New invent cycle against remaining crisis — re-challenge before next Pilot/Scale
+      applyLocalReopenInvent();
+      flashToast(
+        "Back at the place — crisis still hot. Invent another step, then Face Challenge to field it."
+      );
+    }
+    showScreen("workshop");
+    renderWorkshop();
+    applyEndTurnChrome();
+    updateChallengeButton();
   });
   $("#btn-outcome-rematch-pick")?.addEventListener("click", () => launchRoomRematchPick());
+
+  // Year foresight — reopen bulletin (same dialog as round-end year tick)
+  const openYearFromHud = () => openYearForesightFromHud();
+  for (const id of ["hud-year", "ch-hud-year", "mp-hud-year", "hs-hud-year"]) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener("click", openYearFromHud);
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        openYearFromHud();
+      }
+    });
+  }
   $("#btn-outcome-leave-room")?.addEventListener("click", () => {
     if (!isMultipartyOutcome()) return;
     if (isRoomMultipartyOutcome()) {

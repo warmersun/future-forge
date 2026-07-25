@@ -9,10 +9,11 @@ export const TECH_COST_OVERRIDES = {
 };
 
 /**
+ * Base emTech cost (no market modifiers).
  * @param {object} t — tech from TECHS
  * @returns {{ budget: number, will: number, frontierRisk: number }}
  */
-export function techCost(t) {
+export function baseTechCost(t) {
   if (!t) return { budget: 1, will: 0, frontierRisk: 0 };
   const overrides = TECH_COST_OVERRIDES[t.id];
   if (overrides) return { ...overrides };
@@ -36,6 +37,37 @@ export function techCost(t) {
     budget = Math.max(budget, 2);
   }
   return { budget, will, frontierRisk };
+}
+
+/**
+ * @param {object} t — tech from TECHS
+ * @param {{ market?: object|null }} [opts] — active round market news
+ * @returns {{ budget: number, will: number, frontierRisk: number }}
+ */
+export function techCost(t, opts = {}) {
+  const base = baseTechCost(t);
+  const market = opts.market ?? opts.marketNews ?? null;
+  if (!market) return base;
+  // Lazy import avoided — inline floor math so economy stays free of circular deps at load.
+  // market-news.applyMarketToCost is the canonical path; keep parity here.
+  if (market.all || matchesMarketScope(market, t)) {
+    return {
+      budget: Math.max(0, base.budget + (Number(market.budgetDelta) || 0)),
+      will: Math.max(0, base.will + (Number(market.willDelta) || 0)),
+      frontierRisk: base.frontierRisk,
+    };
+  }
+  return base;
+}
+
+function matchesMarketScope(market, tech) {
+  if (!market || !tech) return false;
+  if (market.all) return true;
+  const ids = market.techIds || [];
+  if (ids.length) return Boolean(tech.id && ids.includes(tech.id));
+  const domains = market.domains || [];
+  if (domains.length) return Boolean(tech.domain && domains.includes(tech.domain));
+  return false;
 }
 
 /** Half budget refund on same-turn remove (will not refunded). */

@@ -143,7 +143,7 @@ describe("mp-session turns", () => {
     );
     s = startMpMission(s).session;
 
-    // Alex wait → 2028
+    // Alex wait → invent +2 (2028), pass to Bea
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "pump" },
@@ -154,15 +154,17 @@ describe("mp-session turns", () => {
     assert.notEqual(s.place.status, "collapsed");
     assert.equal(s.forges["seat-0"].year, 2028);
 
-    // Bea ends turn (or wait nothing) — force active back to Alex via end_turn after write
+    // Bea ends turn → wrap adds +1 to every invent year (market round year tick)
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "dike" },
     }).session;
     s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(activeSeatId(s), "seat-0");
+    assert.equal(s.forges["seat-0"].year, 2029);
+    assert.equal(s.forges["seat-1"].year, 2027);
 
-    // Alex second wait → 2030 on their invent only
+    // Alex second wait → +2 invent only (2031); partner stays earlier
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "pump v2" },
@@ -170,8 +172,8 @@ describe("mp-session turns", () => {
     r = applyMpAction(s, { type: "wait" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
-    assert.equal(s.forges["seat-0"].year, 2030);
-    assert.equal(s.forges["seat-1"].year, 2026);
+    assert.equal(s.forges["seat-0"].year, 2031);
+    assert.ok(s.forges["seat-1"].year < s.forges["seat-0"].year);
     assert.equal(
       s.place.status,
       "playing",
@@ -194,8 +196,8 @@ describe("mp-session turns", () => {
     );
     s = startMpMission(s).session;
 
-    // Each seat waits twice → both invent years 2030
-    for (let i = 0; i < 4; i++) {
+    // Each seat waits until both invent calendars reach fail year (wrap year-ticks accelerate)
+    for (let i = 0; i < 8; i++) {
       const id = activeSeatId(s);
       s = applyMpAction(s, {
         type: "buffer_write",
@@ -205,12 +207,11 @@ describe("mp-session turns", () => {
       assert.equal(r.ok, true, r.error);
       s = r.session;
       if (s.place.status === "collapsed") {
-        assert.equal(s.forges["seat-0"].year, 2030);
-        assert.equal(s.forges["seat-1"].year, 2030);
+        assert.ok(s.forges["seat-0"].year >= 2030);
+        assert.ok(s.forges["seat-1"].year >= 2030);
         assert.ok(r.events.some((e) => e.type === "collapsed" && e.reason === "all_invent_years"));
         return;
       }
-      // wait already ends turn; ensure we progressed
       assert.ok(id);
     }
     assert.equal(s.place.status, "collapsed");
@@ -274,8 +275,10 @@ describe("mp-session turns", () => {
         s = applyMpAction(s, { type: "end_turn" }).session;
       }
     }
-    assert.equal(s.forges["seat-0"].year, 2030);
-    assert.equal(s.forges["seat-1"].year, 2026);
+    // Alex waited +2 twice (→ +4) and two full seat-wraps each +1 everyone's invent year
+    // (Alex wait→Bea end wrap #1, Alex wait→Bea end wrap #2)
+    assert.equal(s.forges["seat-0"].year, 2032);
+    assert.equal(s.forges["seat-1"].year, 2028); // two wrap ticks only (no personal Wait)
     assert.equal(s.place.status, "playing");
     assert.equal(s.place.pressure.Floods, 4, "Wait must not raise shared meters");
   });

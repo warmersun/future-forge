@@ -232,6 +232,14 @@ export function createRoomBridge() {
     state.turn = place.turn || m.round || 0;
     state.pressure = clonePressure(place.pressure);
     state.lastNews = place.lastNews || "";
+    state.marketNews = place.marketNews
+      ? {
+          ...place.marketNews,
+          techIds: place.marketNews.techIds ? [...place.marketNews.techIds] : undefined,
+          domains: place.marketNews.domains ? [...place.marketNews.domains] : undefined,
+        }
+      : null;
+    if (place.lastYearBulletin) state.lastYearBulletin = place.lastYearBulletin;
 
     state.inventionName = view.inventionName || "";
     state.inventionHow = view.inventionHow || "";

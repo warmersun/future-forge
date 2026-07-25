@@ -10,6 +10,8 @@ import {
   techBudgetRefund,
   maybeFrontierRiskTick,
 } from "./economy.js";
+import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
+import { foresightForYear } from "./world-foresight.js";
 
 /**
  * @param {object} sim — mutable sim slice (pressure, year, turn, waits, ap, budget, will, …)
@@ -50,7 +52,7 @@ export function applyAction(sim, action, opts = {}) {
     if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
 
     const tech = action.payload?.tech || techById(id);
-    const cost = techCost(tech);
+    const cost = techCost(tech, { market: next.marketNews });
     if (bwOn) {
       if ((next.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", sim };
       if ((next.will ?? 0) < cost.will) return { ok: false, error: "no_will", sim };
@@ -171,7 +173,41 @@ export function applyAction(sim, action, opts = {}) {
     next.writeCommitsThisTurn = 0;
     next.learnOpenedThisTurn = false;
     next.techAddedThisTurn = {};
+    // Solo market round = seat-turn: world year +1 (capability clock; no crisis rise)
+    const yearBefore = next.year;
+    next.year = (next.year || GAME.startYear || 2026) + 1;
+    // New market conditions for the upcoming round
+    const news = rollRoundMarketNews({
+      round: next.turn,
+      year: next.year,
+      missionId: action.payload?.missionId || next.mission?.id || "solo",
+      prevId: next.marketNews?.id || null,
+    });
+    next.marketNews = news;
+    const highlights = foresightForYear(next.year, {
+      techIds: next.selectedTechIds || [],
+      globalId: next.globalId || next.mission?.globalId,
+      seed: `${next.mission?.id || "solo"}:y${next.year}`,
+    });
+    next.lastYearBulletin = {
+      fromYear: yearBefore,
+      toYear: next.year,
+      highlights: highlights.map((h) => ({
+        id: h.id,
+        kind: h.kind,
+        headline: h.headline,
+        detail: h.detail,
+        claimBand: h.claimBand,
+      })),
+    };
     events.push({ type: "end_turn" });
+    events.push({ type: "market_news", marketNews: cloneMarketNews(news), round: next.turn });
+    events.push({
+      type: "year_tick",
+      fromYear: yearBefore,
+      toYear: next.year,
+      bulletin: next.lastYearBulletin,
+    });
     return { ok: true, events, sim: next };
   }
 
@@ -183,6 +219,7 @@ export function applyAction(sim, action, opts = {}) {
     const mission = action.payload?.mission || {};
     const step = mission.yearsPerTurn || GAME.yearsPerTurn || 2;
     const rise = mission.pressureRise || {};
+    const yearBeforeWait = next.year;
     next.year = (next.year || GAME.startYear) + step;
     next.waits = (next.waits || 0) + 1;
     next.turn = (next.turn || 0) + 1;
@@ -210,7 +247,39 @@ export function applyAction(sim, action, opts = {}) {
     next.techAddedThisTurn = {};
     next.challengePassed = false;
     next.challengeVerdict = null;
+    // Wait also completes a solo market round → new market card.
+    // Year already advanced by yearsPerTurn (no extra +1 — avoid double-count).
+    const news = rollRoundMarketNews({
+      round: next.turn,
+      year: next.year,
+      missionId: mission.id || next.mission?.id || "solo",
+      prevId: next.marketNews?.id || null,
+    });
+    next.marketNews = news;
+    const highlights = foresightForYear(next.year, {
+      techIds: next.selectedTechIds || action.payload?.techs?.map((t) => t.id) || [],
+      globalId: mission.globalId || next.globalId,
+      seed: `${mission.id || "solo"}:y${next.year}:wait`,
+    });
+    next.lastYearBulletin = {
+      fromYear: yearBeforeWait,
+      toYear: next.year,
+      highlights: highlights.map((h) => ({
+        id: h.id,
+        kind: h.kind,
+        headline: h.headline,
+        detail: h.detail,
+        claimBand: h.claimBand,
+      })),
+    };
     events.push({ type: "wait", year: next.year });
+    events.push({ type: "market_news", marketNews: cloneMarketNews(news), round: next.turn });
+    events.push({
+      type: "year_tick",
+      fromYear: yearBeforeWait,
+      toYear: next.year,
+      bulletin: next.lastYearBulletin,
+    });
     if (
       isCollapsed({
         year: next.year,
@@ -278,6 +347,15 @@ export function simSliceFromState(state) {
     budget: state.budget ?? GAME.startingBudget ?? 5,
     will: state.will ?? GAME.startingWill ?? 3,
     techAddedThisTurn: { ...(state.techAddedThisTurn || {}) },
+    marketNews: state.marketNews ? cloneMarketNews(state.marketNews) : null,
+    lastYearBulletin: state.lastYearBulletin
+      ? {
+          ...state.lastYearBulletin,
+          highlights: [...(state.lastYearBulletin.highlights || [])],
+        }
+      : null,
+    mission: state.mission || null,
+    globalId: state.global?.id || state.globalId || null,
   };
 }
 
@@ -301,4 +379,15 @@ export function applySimSliceToState(state, slice) {
   state.budget = slice.budget;
   state.will = slice.will;
   state.techAddedThisTurn = { ...(slice.techAddedThisTurn || {}) };
+  if ("marketNews" in slice) {
+    state.marketNews = slice.marketNews ? cloneMarketNews(slice.marketNews) : null;
+  }
+  if ("lastYearBulletin" in slice) {
+    state.lastYearBulletin = slice.lastYearBulletin
+      ? {
+          ...slice.lastYearBulletin,
+          highlights: [...(slice.lastYearBulletin.highlights || [])],
+        }
+      : null;
+  }
 }

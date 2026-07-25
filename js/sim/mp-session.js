@@ -19,6 +19,8 @@ import {
   freezeStagedDropPool,
 } from "./deploy.js";
 import { rankSurvivors } from "./mp-rank.js";
+import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
+import { foresightForYear } from "./world-foresight.js";
 
 const MAX_PLAYERS = 6;
 const MIN_PLAYERS = 2;
@@ -106,6 +108,7 @@ export function publicMpState(session) {
           ...session.place,
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
+          marketNews: cloneMarketNews(session.place.marketNews),
         }
       : null,
     forges: Object.fromEntries(
@@ -285,6 +288,10 @@ export function startMpMission(session) {
     turn: 0,
     pressure: clonePressure(mission.pressure || {}),
     lastNews: "Mission started — invent, challenge, Pilot, then Scale the place.",
+    /** Active market news (shifts emTech costs). Set when a full seat-round completes. */
+    marketNews: null,
+    /** Cleared each new race — year foresight for HUD reopen */
+    lastYearBulletin: null,
     status: "playing", // playing | won | partial_locked | collapsed
     collapseYear: mission.collapseYear ?? 2036,
   };
@@ -326,6 +333,7 @@ function cloneSession(session) {
           ...session.place,
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
+          marketNews: cloneMarketNews(session.place.marketNews),
         }
       : null,
     missionMeta: session.missionMeta
@@ -391,7 +399,60 @@ function passToNext(session, opts = {}) {
   const wrapped = nextIdx <= prev && session.place?.status === "playing";
   const next = cloneSession(session);
   next.activeIndex = nextIdx;
-  if (wrapped) next.round = (next.round || 1) + 1;
+  let marketNewsEvent = null;
+  if (wrapped) {
+    next.round = (next.round || 1) + 1;
+    // Full seat-round completed → shared year +1 (all invent calendars) + market news
+    const yearBefore = next.place?.year ?? GAME.startYear ?? 2026;
+    const yearAfter = yearBefore + 1;
+    if (next.place) next.place.year = yearAfter;
+    for (const id of next.seatOrder || Object.keys(next.forges || {})) {
+      const f = next.forges[id];
+      if (!f) continue;
+      if (f.year != null && Number.isFinite(Number(f.year))) f.year = Number(f.year) + 1;
+      else f.year = yearAfter;
+    }
+    const news = rollRoundMarketNews({
+      round: next.round,
+      year: yearAfter,
+      missionId: next.place?.mission?.id || next.missionMeta?.mission?.id || "mp",
+      prevId: next.place?.marketNews?.id || null,
+    });
+    next.place.marketNews = news;
+    const stackIds = [];
+    for (const f of Object.values(next.forges || {})) {
+      for (const x of f.stack || []) if (x.techId) stackIds.push(x.techId);
+    }
+    const highlights = foresightForYear(yearAfter, {
+      techIds: stackIds,
+      globalId: next.place?.globalId || next.missionMeta?.globalId,
+      seed: `${next.place?.mission?.id || "mp"}:r${next.round}:y${yearAfter}`,
+    });
+    next.place.lastYearBulletin = {
+      fromYear: yearBefore,
+      toYear: yearAfter,
+      highlights: highlights.map((h) => ({
+        id: h.id,
+        kind: h.kind,
+        headline: h.headline,
+        detail: h.detail,
+        claimBand: h.claimBand,
+      })),
+    };
+    next.place.lastNews = `Year ${yearAfter} · Market news · ${news.headline}`;
+    marketNewsEvent = {
+      type: "market_news",
+      marketNews: cloneMarketNews(news),
+      round: next.round,
+    };
+    next._lastYearTickEvent = {
+      type: "year_tick",
+      fromYear: yearBefore,
+      toYear: yearAfter,
+      bulletin: next.place.lastYearBulletin,
+      round: next.round,
+    };
+  }
 
   const sid = next.seatOrder[nextIdx];
   const forge = next.forges[sid];
@@ -409,7 +470,12 @@ function passToNext(session, opts = {}) {
   next.log = [
     ...(session.log || []),
     { type: "seat_turn_start", seatId: sid, round: next.round },
+    ...(marketNewsEvent ? [marketNewsEvent] : []),
   ];
+  // Transient: applyMpAction reads then deletes. Never part of public snapshots.
+  if (marketNewsEvent) next._lastMarketNewsEvent = marketNewsEvent;
+  else delete next._lastMarketNewsEvent;
+  if (!next._lastYearTickEvent) delete next._lastYearTickEvent;
   return next;
 }
 
@@ -594,7 +660,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
     const tech = payload.tech || techById(techId);
     if (!tech) return { ok: false, error: "unknown_tech", session };
-    const cost = techCost(tech);
+    const cost = techCost(tech, { market: s.place?.marketNews });
 
     if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     if (bwOn) {
@@ -1078,6 +1144,14 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     s = finishEndTurn(s, {
       preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
     });
+    if (s._lastMarketNewsEvent) {
+      events.push(s._lastMarketNewsEvent);
+      delete s._lastMarketNewsEvent;
+    }
+    if (s._lastYearTickEvent) {
+      events.push(s._lastYearTickEvent);
+      delete s._lastYearTickEvent;
+    }
     s.log = [...(session.log || []), { type: "end_turn", seatId: activeId }];
     return { ok: true, session: s, events };
   }
@@ -1147,6 +1221,14 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     // Wait ends seat-turn — emit same handoff events as end_turn so clients refresh turn chrome
     events.push({ type: "end_turn", seatId: waiterId, from: "wait" });
     s = passToNext(s);
+    if (s._lastMarketNewsEvent) {
+      events.push(s._lastMarketNewsEvent);
+      delete s._lastMarketNewsEvent;
+    }
+    if (s._lastYearTickEvent) {
+      events.push(s._lastYearTickEvent);
+      delete s._lastYearTickEvent;
+    }
     const nextId = activeSeatId(s);
     if (nextId) {
       events.push({ type: "seat_turn_start", seatId: nextId, round: s.round });

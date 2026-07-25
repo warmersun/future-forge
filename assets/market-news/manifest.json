@@ -1,0 +1,734 @@
+[
+  {
+    "id": "ram-shortage",
+    "headline": "RAM shortage hits supply chains",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: RAM shortage hits supply chains. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ram-shortage.jpg"
+  },
+  {
+    "id": "ai-datacenter-backlash",
+    "headline": "Public divided over AI data centers",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Public divided over AI data centers. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ai-datacenter-backlash.jpg"
+  },
+  {
+    "id": "solar-glut",
+    "headline": "Solar panel glut drops prices",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Solar panel glut drops prices. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/solar-glut.jpg"
+  },
+  {
+    "id": "nuclear-permit-wave",
+    "headline": "Nuclear permits move faster",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Nuclear permits move faster. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/nuclear-permit-wave.jpg"
+  },
+  {
+    "id": "drone-airspace-clamp",
+    "headline": "Drone airspace rules tighten",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Drone airspace rules tighten. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/drone-airspace-clamp.jpg"
+  },
+  {
+    "id": "gene-sequencing-boom",
+    "headline": "Portable sequencers get cheaper",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Portable sequencers get cheaper. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/gene-sequencing-boom.jpg"
+  },
+  {
+    "id": "biotech-scare",
+    "headline": "Lab-leak scare fans biotech fear",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Lab-leak scare fans biotech fear. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/biotech-scare.jpg"
+  },
+  {
+    "id": "grid-congestion",
+    "headline": "Grid congestion fees spike",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Grid congestion fees spike. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/grid-congestion.jpg"
+  },
+  {
+    "id": "open-source-models",
+    "headline": "Open-source models flood the market",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Open-source models flood the market. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/open-source-models.jpg"
+  },
+  {
+    "id": "robot-labor-pushback",
+    "headline": "Unions push back on care robots",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Unions push back on care robots. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/robot-labor-pushback.jpg"
+  },
+  {
+    "id": "chip-export-thaw",
+    "headline": "Export controls ease on edge chips",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Export controls ease on edge chips. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/chip-export-thaw.jpg"
+  },
+  {
+    "id": "privacy-backlash",
+    "headline": "Sensor surveillance backlash",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Sensor surveillance backlash. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/privacy-backlash.jpg"
+  },
+  {
+    "id": "print-shop-grants",
+    "headline": "Municipal 3D print grants land",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Municipal 3D print grants land. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/print-shop-grants.jpg"
+  },
+  {
+    "id": "rare-earth-squeeze",
+    "headline": "Rare-earth squeeze hits hardware",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Rare-earth squeeze hits hardware. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/rare-earth-squeeze.jpg"
+  },
+  {
+    "id": "climate-fund-surge",
+    "headline": "Adaptation funds open early",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Adaptation funds open early. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/climate-fund-surge.jpg"
+  },
+  {
+    "id": "vr-training-fad",
+    "headline": "VR training budgets cut",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: VR training budgets cut. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/vr-training-fad.jpg"
+  },
+  {
+    "id": "quantum-hype-cycle",
+    "headline": "Quantum hype cools — pilots pause",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Quantum hype cools — pilots pause. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/quantum-hype-cycle.jpg"
+  },
+  {
+    "id": "community-broadband",
+    "headline": "Community broadband wins a vote",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Community broadband wins a vote. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/community-broadband.jpg"
+  },
+  {
+    "id": "crypto-winter-thaw",
+    "headline": "Ledger tools rebrand as civic rails",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Ledger tools rebrand as civic rails. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/crypto-winter-thaw.jpg"
+  },
+  {
+    "id": "battery-fire-scare",
+    "headline": "Warehouse battery fire dominates news",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Warehouse battery fire dominates news. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/battery-fire-scare.jpg"
+  },
+  {
+    "id": "wind-siting-wars",
+    "headline": "Wind siting wars escalate",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Wind siting wars escalate. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/wind-siting-wars.jpg"
+  },
+  {
+    "id": "offshore-wind-subsidy",
+    "headline": "Offshore wind subsidy package",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Offshore wind subsidy package. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/offshore-wind-subsidy.jpg"
+  },
+  {
+    "id": "geothermal-drill-boom",
+    "headline": "Geothermal drill costs drop",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Geothermal drill costs drop. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/geothermal-drill-boom.jpg"
+  },
+  {
+    "id": "seismic-permit-freeze",
+    "headline": "Seismic fears freeze geothermal permits",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Seismic fears freeze geothermal permits. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/seismic-permit-freeze.jpg"
+  },
+  {
+    "id": "tidal-pilot-success",
+    "headline": "Tidal pilot beats forecasts",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Tidal pilot beats forecasts. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/tidal-pilot-success.jpg"
+  },
+  {
+    "id": "marine-storm-damage",
+    "headline": "Storm damages marine energy kit",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Storm damages marine energy kit. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/marine-storm-damage.jpg"
+  },
+  {
+    "id": "nuclear-waste-standoff",
+    "headline": "Nuclear waste standoff returns",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Nuclear waste standoff returns. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/nuclear-waste-standoff.jpg"
+  },
+  {
+    "id": "smr-factory-discount",
+    "headline": "SMR factory offers bulk pricing",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: SMR factory offers bulk pricing. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/smr-factory-discount.jpg"
+  },
+  {
+    "id": "oil-price-spike",
+    "headline": "Oil price spike revives electrify-now",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Oil price spike revives electrify-now. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/oil-price-spike.jpg"
+  },
+  {
+    "id": "gas-lobby-blitz",
+    "headline": "Gas lobby blitz hits clean power",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Gas lobby blitz hits clean power. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/gas-lobby-blitz.jpg"
+  },
+  {
+    "id": "microgrid-standard",
+    "headline": "Microgrid standard adopted",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Microgrid standard adopted. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/microgrid-standard.jpg"
+  },
+  {
+    "id": "utility-monopoly-fee",
+    "headline": "Utility monopoly fees for edge devices",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Utility monopoly fees for edge devices. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/utility-monopoly-fee.jpg"
+  },
+  {
+    "id": "copper-shortage",
+    "headline": "Copper shortage hits wiring",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Copper shortage hits wiring. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/copper-shortage.jpg"
+  },
+  {
+    "id": "lithium-price-crash",
+    "headline": "Lithium price crash",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Lithium price crash. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/lithium-price-crash.jpg"
+  },
+  {
+    "id": "hydrogen-hype-tax",
+    "headline": "Hydrogen hype tax on energy budgets",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Hydrogen hype tax on energy budgets. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/hydrogen-hype-tax.jpg"
+  },
+  {
+    "id": "community-solar-law",
+    "headline": "Community solar law passes",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Community solar law passes. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/community-solar-law.jpg"
+  },
+  {
+    "id": "night-storage-mandate",
+    "headline": "Night storage mandate",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Night storage mandate. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/night-storage-mandate.jpg"
+  },
+  {
+    "id": "blackout-week",
+    "headline": "Blackout week focuses minds",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Blackout week focuses minds. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/blackout-week.jpg"
+  },
+  {
+    "id": "ai-chip-tax",
+    "headline": "AI chip import tax",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: AI chip import tax. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ai-chip-tax.jpg"
+  },
+  {
+    "id": "teacher-ai-grants",
+    "headline": "Teacher AI copilot grants",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Teacher AI copilot grants. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/teacher-ai-grants.jpg"
+  },
+  {
+    "id": "deepfake-scandal",
+    "headline": "Deepfake scandal week",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Deepfake scandal week. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/deepfake-scandal.jpg"
+  },
+  {
+    "id": "robot-lease-deals",
+    "headline": "Robot-as-a-service lease deals",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Robot-as-a-service lease deals. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/robot-lease-deals.jpg"
+  },
+  {
+    "id": "robot-injury-lawsuit",
+    "headline": "Robot injury lawsuit goes viral",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Robot injury lawsuit goes viral. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/robot-injury-lawsuit.jpg"
+  },
+  {
+    "id": "warehouse-robot-boom",
+    "headline": "Warehouse robot boom discounts spares",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Warehouse robot boom discounts spares. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/warehouse-robot-boom.jpg"
+  },
+  {
+    "id": "ai-energy-backlash",
+    "headline": "AI energy use backlash",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: AI energy use backlash. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ai-energy-backlash.jpg"
+  },
+  {
+    "id": "open-robotics-kit",
+    "headline": "Open robotics kit hits shelves",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Open robotics kit hits shelves. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/open-robotics-kit.jpg"
+  },
+  {
+    "id": "automation-tax-talk",
+    "headline": "Automation tax talk returns",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Automation tax talk returns. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/automation-tax-talk.jpg"
+  },
+  {
+    "id": "ai-safety-fund",
+    "headline": "National AI safety fund",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: National AI safety fund. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ai-safety-fund.jpg"
+  },
+  {
+    "id": "ev-charger-glut",
+    "headline": "EV charger glut",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: EV charger glut. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ev-charger-glut.jpg"
+  },
+  {
+    "id": "road-pricing-fight",
+    "headline": "Road pricing fight",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Road pricing fight. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/road-pricing-fight.jpg"
+  },
+  {
+    "id": "autonomy-corridor-opens",
+    "headline": "Autonomy corridor opens",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Autonomy corridor opens. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/autonomy-corridor-opens.jpg"
+  },
+  {
+    "id": "drone-crash-ban",
+    "headline": "Drone crash triggers temporary ban",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Drone crash triggers temporary ban. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/drone-crash-ban.jpg"
+  },
+  {
+    "id": "medical-drone-lane",
+    "headline": "Medical drone lane approved",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Medical drone lane approved. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/medical-drone-lane.jpg"
+  },
+  {
+    "id": "satellite-bandwidth-sale",
+    "headline": "Satellite bandwidth sale",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Satellite bandwidth sale. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/satellite-bandwidth-sale.jpg"
+  },
+  {
+    "id": "space-debris-scare",
+    "headline": "Space debris scare",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Space debris scare. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/space-debris-scare.jpg"
+  },
+  {
+    "id": "fiber-cut-wave",
+    "headline": "Fiber cut crime wave",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Fiber cut crime wave. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/fiber-cut-wave.jpg"
+  },
+  {
+    "id": "mesh-radio-legalized",
+    "headline": "Mesh radio legalized",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Mesh radio legalized. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/mesh-radio-legalized.jpg"
+  },
+  {
+    "id": "quantum-link-pilot",
+    "headline": "Quantum link pilot funded",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Quantum link pilot funded. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/quantum-link-pilot.jpg"
+  },
+  {
+    "id": "transport-strike",
+    "headline": "Transport strike disrupts pilots",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Transport strike disrupts pilots. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/transport-strike.jpg"
+  },
+  {
+    "id": "bike-lane-data-deal",
+    "headline": "Bike-lane sensor deal",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Bike-lane sensor deal. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/bike-lane-data-deal.jpg"
+  },
+  {
+    "id": "lidar-price-war",
+    "headline": "Lidar price war",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Lidar price war. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/lidar-price-war.jpg"
+  },
+  {
+    "id": "gps-jamming-zone",
+    "headline": "GPS jamming zone expands",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: GPS jamming zone expands. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/gps-jamming-zone.jpg"
+  },
+  {
+    "id": "gene-therapy-approval",
+    "headline": "Gene therapy approval wave",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Gene therapy approval wave. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/gene-therapy-approval.jpg"
+  },
+  {
+    "id": "clinic-sequencer-rebate",
+    "headline": "Clinic sequencer rebate",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Clinic sequencer rebate. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/clinic-sequencer-rebate.jpg"
+  },
+  {
+    "id": "gmo-crop-ban-talk",
+    "headline": "GMO crop ban talk spreads",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: GMO crop ban talk spreads. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/gmo-crop-ban-talk.jpg"
+  },
+  {
+    "id": "alt-protein-price-parity",
+    "headline": "Alt-protein price parity",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Alt-protein price parity. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/alt-protein-price-parity.jpg"
+  },
+  {
+    "id": "cultured-meat-ban",
+    "headline": "Cultured meat ban in key market",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Cultured meat ban in key market. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/cultured-meat-ban.jpg"
+  },
+  {
+    "id": "bci-trial-success",
+    "headline": "BCI trial restores speech",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: BCI trial restores speech. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/bci-trial-success.jpg"
+  },
+  {
+    "id": "bci-ethics-probe",
+    "headline": "BCI ethics probe opens",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: BCI ethics probe opens. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/bci-ethics-probe.jpg"
+  },
+  {
+    "id": "pandemic-stockpile",
+    "headline": "Pandemic stockpile restock",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Pandemic stockpile restock. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/pandemic-stockpile.jpg"
+  },
+  {
+    "id": "synbio-ip-thicket",
+    "headline": "Synbio IP thicket",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Synbio IP thicket. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/synbio-ip-thicket.jpg"
+  },
+  {
+    "id": "crispr-tool-drop",
+    "headline": "CRISPR tool prices drop",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: CRISPR tool prices drop. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/crispr-tool-drop.jpg"
+  },
+  {
+    "id": "blood-sample-privacy",
+    "headline": "Blood sample privacy law",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Blood sample privacy law. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/blood-sample-privacy.jpg"
+  },
+  {
+    "id": "school-lunch-proteins",
+    "headline": "School lunch protein pilots",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: School lunch protein pilots. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/school-lunch-proteins.jpg"
+  },
+  {
+    "id": "vr-headset-clearance",
+    "headline": "VR headset clearance sale",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: VR headset clearance sale. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/vr-headset-clearance.jpg"
+  },
+  {
+    "id": "ar-workplace-mandate",
+    "headline": "AR workplace safety mandate",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: AR workplace safety mandate. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ar-workplace-mandate.jpg"
+  },
+  {
+    "id": "motion-sickness-report",
+    "headline": "Motion sickness report goes viral",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Motion sickness report goes viral. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/motion-sickness-report.jpg"
+  },
+  {
+    "id": "metaverse-budget-purge",
+    "headline": "Metaverse budget purge",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Metaverse budget purge. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/metaverse-budget-purge.jpg"
+  },
+  {
+    "id": "medical-vr-therapy",
+    "headline": "Medical VR therapy covered",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Medical VR therapy covered. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/medical-vr-therapy.jpg"
+  },
+  {
+    "id": "iot-chip-shortage",
+    "headline": "IoT chip shortage returns",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: IoT chip shortage returns. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/iot-chip-shortage.jpg"
+  },
+  {
+    "id": "smart-city-grant",
+    "headline": "Smart city sensor grant",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Smart city sensor grant. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/smart-city-grant.jpg"
+  },
+  {
+    "id": "nano-hype-funding",
+    "headline": "Nano materials hype funding",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Nano materials hype funding. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/nano-hype-funding.jpg"
+  },
+  {
+    "id": "nano-toxicity-study",
+    "headline": "Nano toxicity study alarms public",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Nano toxicity study alarms public. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/nano-toxicity-study.jpg"
+  },
+  {
+    "id": "recycled-filaments",
+    "headline": "Recycled 3D filaments flood market",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Recycled 3D filaments flood market. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/recycled-filaments.jpg"
+  },
+  {
+    "id": "printer-fire-recall",
+    "headline": "3D printer fire recall",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: 3D printer fire recall. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/printer-fire-recall.jpg"
+  },
+  {
+    "id": "materials-tariff",
+    "headline": "Advanced materials tariff",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Advanced materials tariff. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/materials-tariff.jpg"
+  },
+  {
+    "id": "open-hardware-license",
+    "headline": "Open hardware license wave",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Open hardware license wave. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/open-hardware-license.jpg"
+  },
+  {
+    "id": "right-to-repair-win",
+    "headline": "Right-to-repair win",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Right-to-repair win. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/right-to-repair-win.jpg"
+  },
+  {
+    "id": "e-waste-crackdown",
+    "headline": "E-waste crackdown",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: E-waste crackdown. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/e-waste-crackdown.jpg"
+  },
+  {
+    "id": "interest-rate-hike",
+    "headline": "Interest rate hike",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Interest rate hike. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/interest-rate-hike.jpg"
+  },
+  {
+    "id": "stimulus-tech-window",
+    "headline": "Stimulus tech window",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Stimulus tech window. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/stimulus-tech-window.jpg"
+  },
+  {
+    "id": "election-year-caution",
+    "headline": "Election-year caution",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Election-year caution. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/election-year-caution.jpg"
+  },
+  {
+    "id": "mayors-innovation-pact",
+    "headline": "Mayors innovation pact",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Mayors innovation pact. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/mayors-innovation-pact.jpg"
+  },
+  {
+    "id": "cyberattack-week",
+    "headline": "Cyberattack week",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Cyberattack week. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/cyberattack-week.jpg"
+  },
+  {
+    "id": "open-data-law",
+    "headline": "Open data law passes",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Open data law passes. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/open-data-law.jpg"
+  },
+  {
+    "id": "talent-visa-freeze",
+    "headline": "Talent visa freeze",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Talent visa freeze. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/talent-visa-freeze.jpg"
+  },
+  {
+    "id": "university-lab-share",
+    "headline": "University lab share program",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: University lab share program. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/university-lab-share.jpg"
+  },
+  {
+    "id": "insurance-premium-spike",
+    "headline": "Tech pilot insurance spike",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Tech pilot insurance spike. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/insurance-premium-spike.jpg"
+  },
+  {
+    "id": "philanthropy-sprint",
+    "headline": "Philanthropy sprint for local tech",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Philanthropy sprint for local tech. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/philanthropy-sprint.jpg"
+  },
+  {
+    "id": "disinfo-wave",
+    "headline": "Disinfo wave about tech pilots",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Disinfo wave about tech pilots. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/disinfo-wave.jpg"
+  },
+  {
+    "id": "youth-climate-march",
+    "headline": "Youth climate march",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Youth climate march. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/youth-climate-march.jpg"
+  },
+  {
+    "id": "crypto-crash",
+    "headline": "Crypto crash",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Crypto crash. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/crypto-crash.jpg"
+  },
+  {
+    "id": "stablecoin-payroll",
+    "headline": "Stablecoin payroll pilots",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Stablecoin payroll pilots. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/stablecoin-payroll.jpg"
+  },
+  {
+    "id": "bci-data-breach",
+    "headline": "BCI vendor data breach",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: BCI vendor data breach. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/bci-data-breach.jpg"
+  },
+  {
+    "id": "space-earth-obs-deal",
+    "headline": "Earth observation deal for towns",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Earth observation deal for towns. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/space-earth-obs-deal.jpg"
+  },
+  {
+    "id": "self-driving-pedestrian-incident",
+    "headline": "Self-driving pedestrian incident",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Self-driving pedestrian incident. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/self-driving-pedestrian-incident.jpg"
+  },
+  {
+    "id": "drone-delivery-holiday",
+    "headline": "Drone delivery holiday rush",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Drone delivery holiday rush. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/drone-delivery-holiday.jpg"
+  },
+  {
+    "id": "materials-breakthrough",
+    "headline": "Lab materials breakthrough",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Lab materials breakthrough. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/materials-breakthrough.jpg"
+  },
+  {
+    "id": "quantum-error-milestone",
+    "headline": "Quantum error-correction milestone",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Quantum error-correction milestone. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/quantum-error-milestone.jpg"
+  },
+  {
+    "id": "network-neutrality-fight",
+    "headline": "Network neutrality fight",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Network neutrality fight. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/network-neutrality-fight.jpg"
+  },
+  {
+    "id": "fab-lab-franchise",
+    "headline": "Fab lab franchise wave",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Fab lab franchise wave. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/fab-lab-franchise.jpg"
+  },
+  {
+    "id": "robot-nurse-pilot",
+    "headline": "Robot nurse pilot praised",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Robot nurse pilot praised. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/robot-nurse-pilot.jpg"
+  },
+  {
+    "id": "energy-poverty-fund",
+    "headline": "Energy poverty fund",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Energy poverty fund. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/energy-poverty-fund.jpg"
+  },
+  {
+    "id": "storm-rebuild-surge",
+    "headline": "Storm rebuild surge",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Storm rebuild surge. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/storm-rebuild-surge.jpg"
+  },
+  {
+    "id": "public-trust-rebound",
+    "headline": "Public trust rebound poll",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Public trust rebound poll. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/public-trust-rebound.jpg"
+  },
+  {
+    "id": "global-shipping-jam",
+    "headline": "Global shipping jam",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Global shipping jam. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/global-shipping-jam.jpg"
+  },
+  {
+    "id": "local-currency-pilot",
+    "headline": "Local currency and ledger pilot",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Local currency and ledger pilot. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/local-currency-pilot.jpg"
+  },
+  {
+    "id": "ai-exam-cheating-panic",
+    "headline": "AI exam cheating panic",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: AI exam cheating panic. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/ai-exam-cheating-panic.jpg"
+  },
+  {
+    "id": "flood-sensor-rebate",
+    "headline": "Flood sensor rebate",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Flood sensor rebate. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/flood-sensor-rebate.jpg"
+  },
+  {
+    "id": "heatwave-grid-alert",
+    "headline": "Heatwave grid alert",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Heatwave grid alert. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/heatwave-grid-alert.jpg"
+  },
+  {
+    "id": "venture-winter",
+    "headline": "Venture winter for deep tech",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Venture winter for deep tech. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/venture-winter.jpg"
+  },
+  {
+    "id": "co-op-procurement",
+    "headline": "Co-op multi-city procurement",
+    "imagePrompt": "Editorial news illustration for a strategy board game about emerging technology. Scene: Co-op multi-city procurement. Cinematic 16:9, rich color, no readable text, no logos, no watermarks.",
+    "image": "assets/market-news/co-op-procurement.jpg"
+  }
+]

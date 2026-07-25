@@ -228,6 +228,14 @@ export function createHotseatBridge() {
     state.turn = place.turn || 0;
     state.pressure = clonePressure(place.pressure);
     state.lastNews = place.lastNews || "";
+    state.marketNews = place.marketNews
+      ? {
+          ...place.marketNews,
+          techIds: place.marketNews.techIds ? [...place.marketNews.techIds] : undefined,
+          domains: place.marketNews.domains ? [...place.marketNews.domains] : undefined,
+        }
+      : null;
+    if (place.lastYearBulletin) state.lastYearBulletin = place.lastYearBulletin;
 
     // Invention = viewed forge
     state.inventionName = view.inventionName || "";
@@ -429,17 +437,26 @@ export function createHotseatBridge() {
     if (!r.ok) return r;
     session = r.session;
     viewSeatId = activeSeatId(session);
-    return { ok: true, session, seat: activeSeat(session) };
+    return {
+      ok: true,
+      session,
+      seat: activeSeat(session),
+      events: r.events || [],
+    };
   }
 
   function waitShared(payload) {
     if (!session) return { ok: false, error: "no_session" };
+    // Wait advances the *active seat's* invent only — not while helping on another forge
+    if (viewingOther()) {
+      return { ok: false, error: "wait_own_invent_only", session };
+    }
     const r = hotseatApplyAction(session, { type: "wait", payload }, getActiveId());
     if (r.ok) {
       session = r.session;
       viewSeatId = activeSeatId(session);
     }
-    return r;
+    return r; // includes events (e.g. market_news on seat wrap)
   }
 
   /**

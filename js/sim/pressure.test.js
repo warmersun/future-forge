@@ -163,17 +163,37 @@ describe("actions", () => {
     assert.deepEqual(r.sim.selectedTechIds, ["solar"]);
   });
 
-  it("end_turn does not raise pressure", () => {
+  it("end_turn does not raise pressure (year +1 market round)", () => {
     const s = base();
     s.apSpentThisTurn = 1;
     s.ap = 2;
     const r = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } });
     assert.equal(r.ok, true);
-    assert.equal(r.sim.year, 2026);
+    assert.equal(r.sim.year, 2027); // world year tick on market round
     assert.equal(r.sim.waits, 0);
     assert.deepEqual(r.sim.pressure, { Floods: 2, Livelihoods: 2, Trust: 1 });
     assert.equal(r.sim.ap, 3);
     assert.equal(r.sim.turn, 1);
+    assert.ok((r.events || []).some((e) => e.type === "year_tick"));
+  });
+
+  it("select_tech after end_turn does not emit another year_tick", () => {
+    let s = base();
+    s.apSpentThisTurn = 1;
+    s.ap = 2;
+    s = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } }).sim;
+    assert.ok(s.lastYearBulletin);
+    const r = applyAction(
+      s,
+      {
+        type: "select_tech",
+        payload: { techId: "solar", tech: { id: "solar", readyYear: 2026, curve: "mature" } },
+      },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true);
+    assert.ok(!(r.events || []).some((e) => e.type === "year_tick"));
+    assert.equal(r.sim.year, s.year); // year unchanged on tech pick
   });
 
   it("wait full-ticks crisis and burns AP", () => {

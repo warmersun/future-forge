@@ -88,6 +88,26 @@ describe("hotseat-bridge", () => {
     assert.equal(stack[0].addedBy, b.getActiveId());
   });
 
+  it("rejects Wait while viewing another seat's invent", () => {
+    const b = createHotseatBridge();
+    b.startFromPick(["Alex", "Bea"], mission, "climate");
+    const alex = b.getActiveId();
+    const bea = b.getSession().seatOrder[1];
+    b.layerTechOnView("iot", { id: "iot", curve: "mature", readyYear: 2026 });
+    b.setViewSeat(bea);
+    assert.equal(b.viewingOther(), true);
+    const denied = b.waitShared({});
+    assert.equal(denied.ok, false);
+    assert.equal(denied.error, "wait_own_invent_only");
+    // Active seat's invent year unchanged
+    assert.equal(b.getSession().forges[alex].year, 2026);
+    // Own invent still allowed
+    b.setViewSeat(alex);
+    const ok = b.waitShared({});
+    assert.equal(ok.ok, true, ok.error);
+    assert.equal(b.getSession().forges[alex].year, 2028);
+  });
+
   it("passDevice rotates active seat", () => {
     const b = createHotseatBridge();
     b.startFromPick(["Alex", "Bea"], mission, "climate");

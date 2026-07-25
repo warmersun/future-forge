@@ -87,6 +87,8 @@ export function createSimState(mission, global = null, opts = {}) {
     outcome: null,
     lastNews: "",
     waitReport: "",
+    /** Active round market news (shifts emTech Budget/Will costs). Null until first round completes. */
+    marketNews: null,
     featureFlags: {
       actionPoints: Boolean(features.actionPoints),
       budgetWill: Boolean(features.budgetWill),
@@ -127,6 +129,13 @@ export function cloneSimState(sim) {
         }
       : null,
     outcome: sim.outcome ? { ...sim.outcome } : null,
+    marketNews: sim.marketNews
+      ? {
+          ...sim.marketNews,
+          techIds: sim.marketNews.techIds ? [...sim.marketNews.techIds] : undefined,
+          domains: sim.marketNews.domains ? [...sim.marketNews.domains] : undefined,
+        }
+      : null,
     featureFlags: { ...(sim.featureFlags || {}) },
   };
 }

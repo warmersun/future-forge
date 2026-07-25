@@ -1,0 +1,1121 @@
+{
+  "count": 72,
+  "generatedAt": "2026-07-25T16:19:46.250Z",
+  "note": "Curated bank — predictions are labeled forecasts, not locks.",
+  "sampleHighlightsByYear": {
+    "2026": [
+      {
+        "id": "drone-corridors-2026",
+        "kind": "milestone",
+        "headline": "Mapped drone corridors already fly",
+        "claimBand": "now"
+      },
+      {
+        "id": "free-energy-scam-always",
+        "kind": "milestone",
+        "headline": "Free energy remains a red flag",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "heat-early-warning-2026",
+        "kind": "milestone",
+        "headline": "Heat and flood early warning exists",
+        "claimBand": "now"
+      },
+      {
+        "id": "factory-cobots-2026",
+        "kind": "milestone",
+        "headline": "Cobots on factory floors are normal",
+        "claimBand": "now"
+      },
+      {
+        "id": "climate-attribution-2026",
+        "kind": "milestone",
+        "headline": "Climate attribution is operational",
+        "claimBand": "now"
+      }
+    ],
+    "2027": [
+      {
+        "id": "mesh-offline-2027",
+        "kind": "trend",
+        "headline": "Community mesh gets clearer rules",
+        "claimBand": "near"
+      },
+      {
+        "id": "autonomy-fixed-routes-2027",
+        "kind": "trend",
+        "headline": "Autonomy expands on fixed routes first",
+        "claimBand": "near"
+      },
+      {
+        "id": "supervised-autonomy-default-2027",
+        "kind": "trend",
+        "headline": "Supervised autonomy is the honest default",
+        "claimBand": "now"
+      },
+      {
+        "id": "pathogen-seq-hours-2027",
+        "kind": "trend",
+        "headline": "Sample-to-sequence keeps shrinking",
+        "claimBand": "near"
+      },
+      {
+        "id": "free-energy-scam-always",
+        "kind": "milestone",
+        "headline": "Free energy remains a red flag",
+        "claimBand": "frontier"
+      }
+    ],
+    "2028": [
+      {
+        "id": "agentic-workflows-2028",
+        "kind": "prediction",
+        "headline": "Narrow agentic workflows in production",
+        "claimBand": "near"
+      },
+      {
+        "id": "geofenced-shuttles-2028",
+        "kind": "prediction",
+        "headline": "Geofenced driverless shuttles normalize",
+        "claimBand": "near"
+      },
+      {
+        "id": "vr-therapy-covered-2028",
+        "kind": "prediction",
+        "headline": "VR therapy reimbursement spreads",
+        "claimBand": "near"
+      },
+      {
+        "id": "maternal-remote-monitor-2028",
+        "kind": "trend",
+        "headline": "Remote maternal monitoring kits",
+        "claimBand": "near"
+      },
+      {
+        "id": "precision-fermentation-2028",
+        "kind": "trend",
+        "headline": "Precision fermentation scales ingredients",
+        "claimBand": "near"
+      }
+    ],
+    "2029": [
+      {
+        "id": "agi-labs-2029",
+        "kind": "prediction",
+        "headline": "AGI-class systems debated in labs",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "alt-protein-parity-2029",
+        "kind": "prediction",
+        "headline": "Alt proteins hit more price parity",
+        "claimBand": "near"
+      },
+      {
+        "id": "robot-care-assist-2029",
+        "kind": "prediction",
+        "headline": "Care-assist robots under supervision",
+        "claimBand": "near"
+      },
+      {
+        "id": "space-eo-towns-2029",
+        "kind": "prediction",
+        "headline": "Near-real-time Earth observation for towns",
+        "claimBand": "near"
+      },
+      {
+        "id": "hydrogen-buses-2029",
+        "kind": "prediction",
+        "headline": "Hydrogen fleets stay niche",
+        "claimBand": "near"
+      }
+    ],
+    "2030": [
+      {
+        "id": "longevity-escape-velocity-2030",
+        "kind": "prediction",
+        "headline": "Longevity escape velocity debates",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "multimodal-agents-2030",
+        "kind": "prediction",
+        "headline": "Multimodal agents in controlled sites",
+        "claimBand": "near"
+      },
+      {
+        "id": "solar-meets-current-demand-2030",
+        "kind": "prediction",
+        "headline": "Solar scale vs today’s demand",
+        "claimBand": "near"
+      },
+      {
+        "id": "shared-response-funds-2030",
+        "kind": "prediction",
+        "headline": "Cross-border response funds rare but real",
+        "claimBand": "near"
+      },
+      {
+        "id": "privacy-preserving-sensing-2030",
+        "kind": "prediction",
+        "headline": "Privacy-preserving sensing tools",
+        "claimBand": "near"
+      }
+    ],
+    "2032": [
+      {
+        "id": "quantum-niche-2032",
+        "kind": "prediction",
+        "headline": "Useful quantum niches, not laptops",
+        "claimBand": "near"
+      },
+      {
+        "id": "cultured-meat-scale-2032",
+        "kind": "prediction",
+        "headline": "Cultured meat still niche at scale",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "wave-power-harbors-2032",
+        "kind": "prediction",
+        "headline": "Wave power stays harsh engineering",
+        "claimBand": "near"
+      },
+      {
+        "id": "smr-first-power-2032",
+        "kind": "prediction",
+        "headline": "First SMR fleets online in some regions",
+        "claimBand": "near"
+      },
+      {
+        "id": "global-early-warning-mesh-2032",
+        "kind": "prediction",
+        "headline": "Patchy global early-warning mesh",
+        "claimBand": "near"
+      }
+    ],
+    "2034": [
+      {
+        "id": "quantum-internet-2034",
+        "kind": "prediction",
+        "headline": "Limited quantum links leave the lab",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "general-household-robot-2034",
+        "kind": "prediction",
+        "headline": "General household robots still stretch",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "autonomous-rebuild-swarm-2034",
+        "kind": "prediction",
+        "headline": "Rebuild robot swarms need humans",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "neuromorphic-edge-2033",
+        "kind": "prediction",
+        "headline": "Neuromorphic chips in niches",
+        "claimBand": "near"
+      },
+      {
+        "id": "urban-air-mobility-2033",
+        "kind": "prediction",
+        "headline": "Urban air mobility stays limited",
+        "claimBand": "frontier"
+      }
+    ],
+    "2036": [
+      {
+        "id": "teleport-never-2036",
+        "kind": "prediction",
+        "headline": "Teleportation not a logistics option",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "brain-upload-never-2036",
+        "kind": "prediction",
+        "headline": "Mind upload remains science fiction",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "programmable-matter-2036",
+        "kind": "prediction",
+        "headline": "Programmable matter still not streets",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "fusion-not-yet-2036",
+        "kind": "prediction",
+        "headline": "Commercial fusion still not municipal",
+        "claimBand": "frontier"
+      },
+      {
+        "id": "orbital-data-centers-2035",
+        "kind": "prediction",
+        "headline": "Orbital data centers remain speculative",
+        "claimBand": "frontier"
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "solar-cheapest-new-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "solar",
+        "wind",
+        "battery",
+        "energy"
+      ],
+      "headline": "Cheap renewables + storage are real"
+    },
+    {
+      "id": "ai-copilots-everywhere-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "ai",
+        "computing",
+        "networks"
+      ],
+      "headline": "AI copilots are workplace tools"
+    },
+    {
+      "id": "edge-inference-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "computing",
+        "iot"
+      ],
+      "headline": "More inference moves to the edge"
+    },
+    {
+      "id": "drone-corridors-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "drones",
+        "robots"
+      ],
+      "headline": "Mapped drone corridors already fly"
+    },
+    {
+      "id": "geofenced-shuttles-2028",
+      "year": 2028,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "self-driving",
+        "transportation",
+        "networks"
+      ],
+      "headline": "Geofenced driverless shuttles normalize"
+    },
+    {
+      "id": "agi-labs-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "ai",
+        "computing"
+      ],
+      "headline": "AGI-class systems debated in labs"
+    },
+    {
+      "id": "agentic-workflows-2028",
+      "year": 2028,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "networks"
+      ],
+      "headline": "Narrow agentic workflows in production"
+    },
+    {
+      "id": "solar-meets-current-demand-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "solar",
+        "battery",
+        "energy",
+        "networks"
+      ],
+      "headline": "Solar scale vs today’s demand"
+    },
+    {
+      "id": "longevity-escape-velocity-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "synbio",
+        "genetic-engineering",
+        "ai"
+      ],
+      "headline": "Longevity escape velocity debates"
+    },
+    {
+      "id": "solid-state-battery-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "battery",
+        "self-driving",
+        "transportation"
+      ],
+      "headline": "Solid-state packs leave niche"
+    },
+    {
+      "id": "quantum-niche-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "quantum",
+        "materials",
+        "ai"
+      ],
+      "headline": "Useful quantum niches, not laptops"
+    },
+    {
+      "id": "quantum-internet-2034",
+      "year": 2034,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "quantum-internet",
+        "quantum",
+        "networks"
+      ],
+      "headline": "Limited quantum links leave the lab"
+    },
+    {
+      "id": "bci-clinical-routine-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "bci",
+        "ai"
+      ],
+      "headline": "Clinical BCI expands for narrow groups"
+    },
+    {
+      "id": "alt-protein-parity-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "alt-proteins",
+        "synbio"
+      ],
+      "headline": "Alt proteins hit more price parity"
+    },
+    {
+      "id": "smr-first-power-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "nuclear",
+        "energy"
+      ],
+      "headline": "First SMR fleets online in some regions"
+    },
+    {
+      "id": "marine-energy-2033",
+      "year": 2033,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "tidal",
+        "wave",
+        "energy"
+      ],
+      "headline": "Marine energy stays site-limited"
+    },
+    {
+      "id": "gene-therapy-access-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "genetic-engineering",
+        "gene-sequencing",
+        "synbio"
+      ],
+      "headline": "Gene therapies widen slowly"
+    },
+    {
+      "id": "pathogen-seq-hours-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "gene-sequencing",
+        "ai",
+        "networks"
+      ],
+      "headline": "Sample-to-sequence keeps shrinking"
+    },
+    {
+      "id": "robot-care-assist-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "robots",
+        "ai",
+        "bci"
+      ],
+      "headline": "Care-assist robots under supervision"
+    },
+    {
+      "id": "open-road-robotaxi-2033",
+      "year": 2033,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "self-driving",
+        "ai",
+        "networks"
+      ],
+      "headline": "Open-road robotaxis still uneven"
+    },
+    {
+      "id": "iot-flood-sensors-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "iot",
+        "networks"
+      ],
+      "headline": "Flood and leak sensors are deployable"
+    },
+    {
+      "id": "print3d-spares-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "print3d",
+        "materials"
+      ],
+      "headline": "Local spare-part printing works"
+    },
+    {
+      "id": "materials-design-ai-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "materials",
+        "ai",
+        "nano"
+      ],
+      "headline": "AI-accelerated materials design"
+    },
+    {
+      "id": "vr-therapy-covered-2028",
+      "year": 2028,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "vr",
+        "ai"
+      ],
+      "headline": "VR therapy reimbursement spreads"
+    },
+    {
+      "id": "space-eo-towns-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "space",
+        "ai",
+        "networks"
+      ],
+      "headline": "Near-real-time Earth observation for towns"
+    },
+    {
+      "id": "crypto-civic-rails-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "crypto",
+        "networks"
+      ],
+      "headline": "Ledgers as boring civic rails"
+    },
+    {
+      "id": "geothermal-drill-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "geothermal",
+        "energy"
+      ],
+      "headline": "Advanced geothermal pilots scale"
+    },
+    {
+      "id": "fusion-not-yet-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "energy",
+        "nuclear"
+      ],
+      "headline": "Commercial fusion still not municipal"
+    },
+    {
+      "id": "nano-swarm-frontier-2035",
+      "year": 2035,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "nano",
+        "synbio",
+        "robots"
+      ],
+      "headline": "Medical nanobot swarms stay frontier"
+    },
+    {
+      "id": "general-household-robot-2034",
+      "year": 2034,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "robots",
+        "ai"
+      ],
+      "headline": "General household robots still stretch"
+    },
+    {
+      "id": "mesh-offline-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "networks",
+        "iot",
+        "crypto"
+      ],
+      "headline": "Community mesh gets clearer rules"
+    },
+    {
+      "id": "telemedicine-default-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "networks",
+        "ai",
+        "iot"
+      ],
+      "headline": "Hybrid telemedicine as default"
+    },
+    {
+      "id": "carbon-removal-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "energy",
+        "materials",
+        "synbio"
+      ],
+      "headline": "Carbon removal still niche"
+    },
+    {
+      "id": "autonomy-fixed-routes-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "self-driving",
+        "drones",
+        "robots"
+      ],
+      "headline": "Autonomy expands on fixed routes first"
+    },
+    {
+      "id": "battery-cost-slide-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "battery",
+        "solar",
+        "wind",
+        "transportation"
+      ],
+      "headline": "Battery costs keep sliding"
+    },
+    {
+      "id": "open-source-medical-ai-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "computing"
+      ],
+      "headline": "Stronger open medical models"
+    },
+    {
+      "id": "desal-solar-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "solar",
+        "energy",
+        "materials"
+      ],
+      "headline": "Solar-powered desal pilots expand"
+    },
+    {
+      "id": "urban-air-mobility-2033",
+      "year": 2033,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "drones",
+        "transportation",
+        "battery"
+      ],
+      "headline": "Urban air mobility stays limited"
+    },
+    {
+      "id": "precision-fermentation-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "synbio",
+        "alt-proteins"
+      ],
+      "headline": "Precision fermentation scales ingredients"
+    },
+    {
+      "id": "digital-twin-city-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "computing",
+        "iot",
+        "ai",
+        "networks"
+      ],
+      "headline": "Partial digital twins for districts"
+    },
+    {
+      "id": "grid-forming-inverters-2029",
+      "year": 2029,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "energy",
+        "solar",
+        "battery",
+        "wind"
+      ],
+      "headline": "Grid-forming inverters spread"
+    },
+    {
+      "id": "privacy-preserving-sensing-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "iot",
+        "ai",
+        "crypto",
+        "networks"
+      ],
+      "headline": "Privacy-preserving sensing tools"
+    },
+    {
+      "id": "maternal-remote-monitor-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "iot",
+        "networks",
+        "ai"
+      ],
+      "headline": "Remote maternal monitoring kits"
+    },
+    {
+      "id": "heat-early-warning-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "iot",
+        "networks",
+        "ai"
+      ],
+      "headline": "Heat and flood early warning exists"
+    },
+    {
+      "id": "multimodal-agents-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "robots",
+        "computing"
+      ],
+      "headline": "Multimodal agents in controlled sites"
+    },
+    {
+      "id": "cultured-meat-scale-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "alt-proteins",
+        "synbio",
+        "energy"
+      ],
+      "headline": "Cultured meat still niche at scale"
+    },
+    {
+      "id": "orbital-data-centers-2035",
+      "year": 2035,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "space",
+        "computing",
+        "energy"
+      ],
+      "headline": "Orbital data centers remain speculative"
+    },
+    {
+      "id": "universal-basic-compute-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "computing",
+        "ai",
+        "energy"
+      ],
+      "headline": "Compute access still unequal"
+    },
+    {
+      "id": "tidal-baseload-islands-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "tidal",
+        "battery",
+        "energy"
+      ],
+      "headline": "Island tidal baseload pilots"
+    },
+    {
+      "id": "wearable-continuous-care-2029",
+      "year": 2029,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "iot",
+        "ai",
+        "networks"
+      ],
+      "headline": "Continuous wearable care loops"
+    },
+    {
+      "id": "autonomous-rebuild-swarm-2034",
+      "year": 2034,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "robots",
+        "drones",
+        "ai",
+        "print3d"
+      ],
+      "headline": "Rebuild robot swarms need humans"
+    },
+    {
+      "id": "climate-attribution-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "ai",
+        "computing",
+        "networks"
+      ],
+      "headline": "Climate attribution is operational"
+    },
+    {
+      "id": "shared-response-funds-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "networks",
+        "crypto",
+        "ai"
+      ],
+      "headline": "Cross-border response funds rare but real"
+    },
+    {
+      "id": "education-ai-tutor-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "networks",
+        "vr"
+      ],
+      "headline": "Hybrid human+AI tutoring spreads"
+    },
+    {
+      "id": "brain-upload-never-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "bci",
+        "ai",
+        "computing"
+      ],
+      "headline": "Mind upload remains science fiction"
+    },
+    {
+      "id": "teleport-never-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "quantum",
+        "transportation"
+      ],
+      "headline": "Teleportation not a logistics option"
+    },
+    {
+      "id": "free-energy-scam-always",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "frontier",
+      "techIds": [
+        "energy"
+      ],
+      "headline": "Free energy remains a red flag"
+    },
+    {
+      "id": "modular-shelter-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "print3d",
+        "materials",
+        "iot"
+      ],
+      "headline": "Modular shelter + digital ID pilots"
+    },
+    {
+      "id": "factory-cobots-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "claimBand": "now",
+      "techIds": [
+        "robots",
+        "ai"
+      ],
+      "headline": "Cobots on factory floors are normal"
+    },
+    {
+      "id": "satellite-iot-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "space",
+        "iot",
+        "networks"
+      ],
+      "headline": "Satellite IoT for remote sensors"
+    },
+    {
+      "id": "programmable-matter-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "claimBand": "frontier",
+      "techIds": [
+        "nano",
+        "materials",
+        "print3d"
+      ],
+      "headline": "Programmable matter still not streets"
+    },
+    {
+      "id": "hydrogen-buses-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "energy",
+        "transportation",
+        "battery"
+      ],
+      "headline": "Hydrogen fleets stay niche"
+    },
+    {
+      "id": "ai-scientific-discovery-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "synbio",
+        "materials",
+        "computing"
+      ],
+      "headline": "AI as lab copilot, not sole scientist"
+    },
+    {
+      "id": "grid-storage-hours-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "battery",
+        "energy",
+        "solar",
+        "wind"
+      ],
+      "headline": "Longer-duration storage expands"
+    },
+    {
+      "id": "open-source-robotics-2028",
+      "year": 2028,
+      "kind": "trend",
+      "claimBand": "near",
+      "techIds": [
+        "robots",
+        "print3d",
+        "ai"
+      ],
+      "headline": "Open robotics kits mature"
+    },
+    {
+      "id": "synthetic-data-clinics-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "ai",
+        "computing"
+      ],
+      "headline": "Synthetic data for rare conditions"
+    },
+    {
+      "id": "urban-digital-id-2030",
+      "year": 2030,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "crypto",
+        "networks",
+        "ai"
+      ],
+      "headline": "Portable digital identity pilots"
+    },
+    {
+      "id": "wave-power-harbors-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "wave",
+        "energy",
+        "battery"
+      ],
+      "headline": "Wave power stays harsh engineering"
+    },
+    {
+      "id": "agile-microfactories-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "print3d",
+        "materials",
+        "robots",
+        "ai"
+      ],
+      "headline": "Microfactories for local spares"
+    },
+    {
+      "id": "neuromorphic-edge-2033",
+      "year": 2033,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "computing",
+        "ai",
+        "iot"
+      ],
+      "headline": "Neuromorphic chips in niches"
+    },
+    {
+      "id": "global-early-warning-mesh-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "claimBand": "near",
+      "techIds": [
+        "networks",
+        "space",
+        "ai",
+        "iot"
+      ],
+      "headline": "Patchy global early-warning mesh"
+    },
+    {
+      "id": "supervised-autonomy-default-2027",
+      "year": 2027,
+      "kind": "trend",
+      "claimBand": "now",
+      "techIds": [
+        "ai",
+        "robots",
+        "self-driving",
+        "drones"
+      ],
+      "headline": "Supervised autonomy is the honest default"
+    }
+  ]
+}
