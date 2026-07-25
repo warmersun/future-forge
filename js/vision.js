@@ -23,6 +23,26 @@ export function narrativesFromTechs(techs) {
     .map((t) => ({ id: t.id, name: t.name, text: t.vision.narrative }));
 }
 
+/** data:image… → blob: URL so Chrome doesn't re-decode multi‑MB base64 on every img.src set */
+function dataUrlToBlobUrl(dataUrl) {
+  const m = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
+  if (!m) return null;
+  const mime = m[1] || "image/png";
+  const isB64 = Boolean(m[2]);
+  const data = m[3] || "";
+  let bytes;
+  if (isB64) {
+    const bin = atob(data);
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } else {
+    const str = decodeURIComponent(data);
+    bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+  }
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}
+
 export class VisionRenderer {
   /**
    * @param {HTMLElement} root — container with .vision-image, status, etc.
@@ -38,14 +58,33 @@ export class VisionRenderer {
     this.timer = null;
     this.busy = false;
     this.queue = null;
+    /** Display URL (prefer blob: — never re-assign huge data: URLs) */
     this.currentUrl = "";
+    /** Raw response key so we don't re-process the same frame */
+    this._rawKey = "";
+    this._blobUrl = "";
     /** Optional extra roots to keep in sync (e.g. invent + challenge panels) */
     this.mirrorRoots = [];
   }
 
   destroy() {
     clearTimeout(this.timer);
+    clearTimeout(this._queueFlush);
+    if (this._followRetry) {
+      clearTimeout(this._followRetry);
+      this._followRetry = null;
+    }
+    if (this._blobUrl) {
+      try {
+        URL.revokeObjectURL(this._blobUrl);
+      } catch {
+        /* ignore */
+      }
+      this._blobUrl = "";
+    }
     this.pending = null;
+    this.currentUrl = "";
+    this._rawKey = "";
   }
 
   /**
@@ -58,7 +97,8 @@ export class VisionRenderer {
     this.img = root.querySelector(".vision-image");
     this.status = root.querySelector(".vision-status");
     this.overlay = root.querySelector(".vision-loading");
-    if (this.currentUrl && this.img) {
+    // Only set src if different — re-assigning data: URLs freezes Chrome
+    if (this.currentUrl && this.img && this.img.getAttribute("src") !== this.currentUrl) {
       this.img.hidden = false;
       this.img.src = this.currentUrl;
     }
@@ -67,11 +107,46 @@ export class VisionRenderer {
   /** Keep invent/challenge canvases showing the same latest frame */
   addMirror(root) {
     if (root && !this.mirrorRoots.includes(root)) this.mirrorRoots.push(root);
+    if (root && this.currentUrl) {
+      const img = root.querySelector?.(".vision-image");
+      if (img && img.getAttribute("src") !== this.currentUrl) {
+        img.hidden = false;
+        img.src = this.currentUrl;
+      }
+    }
+  }
+
+  /**
+   * Use a shared session id (e.g. multiplayer room+seat) so all clients
+   * hit the same server-side vision cache and see the same image.
+   * @param {string} id
+   * @param {{ clear?: boolean }} [opts]
+   */
+  setSessionId(id, opts = {}) {
+    const next = String(id || "").slice(0, 120);
+    if (!next || next === this.sessionId) return false;
+    this.sessionId = next;
+    this.lastFingerprint = "";
+    // Default: clear previous seat's frame so we never show invent A while loading B
+    if (opts.clear !== false) {
+      this.currentUrl = "";
+      const clearImg = (img) => {
+        if (!img) return;
+        img.removeAttribute("src");
+        img.hidden = true;
+      };
+      clearImg(this.img);
+      for (const r of this.mirrorRoots) clearImg(r.querySelector?.(".vision-image"));
+    }
+    return true;
   }
 
   /** Reset session (new mission) so present-day regenerates cleanly */
-  newSession() {
-    this.sessionId = crypto.randomUUID?.() || `v-${Date.now()}`;
+  newSession(sessionId) {
+    this.sessionId =
+      (sessionId && String(sessionId).slice(0, 120)) ||
+      crypto.randomUUID?.() ||
+      `v-${Date.now()}`;
     this.lastFingerprint = "";
     this.currentUrl = "";
     const clearImg = (img) => {
@@ -128,14 +203,44 @@ export class VisionRenderer {
 
   applyImageUrl(url) {
     if (!url) return;
-    this.currentUrl = url;
+    // Same payload already processed
+    if (url === this._rawKey || url === this.currentUrl) return;
+    this._rawKey = url;
+
+    // Convert data: URLs → blob: once. Setting img.src to multi‑MB base64 data URLs
+    // repeatedly is what froze multiplayer tabs (main-thread base64 decode).
+    let display = url;
+    if (url.startsWith("data:")) {
+      try {
+        const blobUrl = dataUrlToBlobUrl(url);
+        if (blobUrl) {
+          if (this._blobUrl) {
+            try {
+              URL.revokeObjectURL(this._blobUrl);
+            } catch {
+              /* ignore */
+            }
+          }
+          this._blobUrl = blobUrl;
+          display = blobUrl;
+        }
+      } catch (e) {
+        console.warn("[vision] blob convert failed", e);
+      }
+    }
+    this.currentUrl = display;
+
     const apply = (img) => {
       if (!img) return;
+      if (img.getAttribute("src") === display) {
+        img.hidden = false;
+        return;
+      }
       img.hidden = false;
       img.classList.add("is-fading");
       const show = () => img.classList.remove("is-fading");
       img.onload = show;
-      img.src = url;
+      img.src = display;
       if (img.complete) show();
     };
     apply(this.img);
@@ -145,6 +250,9 @@ export class VisionRenderer {
   async flush() {
     const state = this.pending;
     if (!state?.challenge) return;
+
+    // Multiplayer shared cache key (room+seat) — no WS thrash, same server session
+    if (state.sessionId) this.setSessionId(state.sessionId, { clear: false });
 
     const techKey = (state.techs || []).map((t) => t.id).sort().join(",");
     const howKey = (state.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 400);
@@ -167,7 +275,11 @@ export class VisionRenderer {
       lifeKey,
       beatKey,
     ].join("|");
-    if (!state.force && fingerprint === this.lastFingerprint && this.currentUrl) {
+    const followOnly = Boolean(state.followOnly);
+    const localKey = followOnly
+      ? `${fingerprint}|rev:${state.visionRev ?? ""}`
+      : fingerprint;
+    if (!state.force && localKey === this.lastFingerprint && this.currentUrl) {
       return;
     }
 
@@ -179,23 +291,30 @@ export class VisionRenderer {
     this.busy = true;
     const hasNarrative = Boolean(howKey || lifeKey);
     const underChallenge = Boolean(state.challengeBeat?.angle);
-    this.setLoading(
-      true,
-      underChallenge
-        ? state.challengeBeat?.response
-          ? "Updating the scene with your response…"
-          : "Imagining the challenge in this place…"
-        : state.stageId === "present" && !this.currentUrl
-          ? "Imagining the present…"
-          : hasNarrative
-            ? "Painting your pathway into the world…"
-            : "Imagining how the future shifts…"
-    );
+    // Followers: silent re-peek when a frame is already on screen (no loading flicker)
+    const silentFollow = followOnly && Boolean(this.currentUrl);
+    if (!silentFollow) {
+      this.setLoading(
+        true,
+        followOnly
+          ? "Loading shared vision…"
+          : underChallenge
+            ? state.challengeBeat?.response
+              ? "Updating the scene with your response…"
+              : "Imagining the challenge in this place…"
+            : state.stageId === "present" && !this.currentUrl
+              ? "Imagining the present…"
+              : hasNarrative
+                ? "Painting your pathway into the world…"
+                : "Imagining how the future shifts…"
+      );
+    }
 
     try {
       const payload = {
         sessionId: this.sessionId,
-        force: Boolean(state.force),
+        force: Boolean(state.force) && !followOnly,
+        followOnly,
         inventionName: state.inventionName || "",
         inventionHow: state.inventionHow || "",
         inventionImpact: state.inventionImpact || "",
@@ -236,29 +355,72 @@ export class VisionRenderer {
       }
 
       const hadPriorImage = Boolean(this.currentUrl);
-      this.lastFingerprint = fingerprint;
-      if (data.imageUrl) this.applyImageUrl(data.imageUrl);
-
-      let modeLabel = "Generated with Imagine";
-      if (data.cached) {
-        modeLabel = "Cached vision";
-      } else if (data.mode === "edit" || data.continuity === "same-frame") {
-        modeLabel = underChallenge ? "Challenge evolved in place" : "Evolved in place";
-      } else if (
-        data.continuity === "new-shot" ||
-        data.continuity === "new-scene" ||
-        (data.mode === "generate" && hadPriorImage)
-      ) {
-        modeLabel = underChallenge ? "Challenge scene · same place" : "New scene · same place";
+      // For followers, fingerprint includes visionRev so re-peek isn't skipped
+      const storeKey = followOnly
+        ? `${fingerprint}|rev:${state.visionRev ?? ""}`
+        : fingerprint;
+      this.lastFingerprint = storeKey;
+      if (data.imageUrl) {
+        const prevRaw = this._rawKey;
+        this.applyImageUrl(data.imageUrl);
+        this._followWaitTries = 0;
+        // Notify host after a *new* frame (not pure cache re-apply of same raw URL)
+        if (
+          !followOnly &&
+          !data.cached &&
+          data.imageUrl !== prevRaw &&
+          typeof state.onGenerated === "function"
+        ) {
+          try {
+            state.onGenerated({
+              sessionId: this.sessionId,
+              fingerprint,
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+      } else if (followOnly && data.waiting) {
+        // Only announce wait if we have nothing to show yet
+        if (!this.currentUrl) this.setStatus("Waiting for shared vision…");
+        const tries = (this._followWaitTries || 0) + 1;
+        this._followWaitTries = tries;
+        // Peek until owner finishes (or give up after ~30s)
+        if (tries <= 12 && !this._followRetry) {
+          this._followRetry = setTimeout(() => {
+            this._followRetry = null;
+            // Allow re-flush with same fingerprint while waiting
+            this.lastFingerprint = "";
+            if (this.pending?.followOnly) this.flush();
+          }, 2500);
+        }
+        return;
       }
-      const placeBit = data.place ? ` · ${data.place}` : "";
-      const stageBit = underChallenge
-        ? state.challengeBeat?.label || "Challenge"
-        : state.stage?.name || state.stageId;
-      this.setStatus(`${modeLabel}${placeBit} · ${stageBit}`);
+
+      // Silent follow re-peeks: don't thrash status if the frame is unchanged
+      if (!(silentFollow && data.imageUrl && data.imageUrl === this._rawKey)) {
+        let modeLabel = "Generated with Imagine";
+        if (data.cached || followOnly) {
+          modeLabel = followOnly ? "Shared vision" : "Cached vision";
+        } else if (data.mode === "edit" || data.continuity === "same-frame") {
+          modeLabel = underChallenge ? "Challenge evolved in place" : "Evolved in place";
+        } else if (
+          data.continuity === "new-shot" ||
+          data.continuity === "new-scene" ||
+          (data.mode === "generate" && hadPriorImage)
+        ) {
+          modeLabel = underChallenge ? "Challenge scene · same place" : "New scene · same place";
+        }
+        const placeBit = data.place ? ` · ${data.place}` : "";
+        const stageBit = underChallenge
+          ? state.challengeBeat?.label || "Challenge"
+          : state.stage?.name || state.stageId;
+        this.setStatus(`${modeLabel}${placeBit} · ${stageBit}`);
+      }
     } catch (e) {
       console.error("[vision]", e);
-      this.setStatus(e.message || "Could not imagine this future");
+      // Don't clobber a good shared frame with error text on silent peeks
+      if (!silentFollow) this.setStatus(e.message || "Could not imagine this future");
     } finally {
       this.busy = false;
       this.setLoading(false);
@@ -266,7 +428,8 @@ export class VisionRenderer {
         const next = this.queue;
         this.queue = null;
         this.pending = next;
-        this.flush();
+        clearTimeout(this._queueFlush);
+        this._queueFlush = setTimeout(() => this.flush(), 400);
       }
     }
   }

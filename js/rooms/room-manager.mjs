@@ -243,15 +243,106 @@ export class RoomManager {
     for (const room of this.rooms.values()) {
       if (!room.sockets.has(socket)) continue;
       room.sockets.delete(socket);
+      /** @type {object|null} */
+      let left = null;
       for (const p of room.players) {
         if (p._socket === socket) {
           p.connected = false;
           p._socket = null;
+          left = p;
         }
       }
       room.updatedAt = Date.now();
       this.broadcast(room, { type: "presence", players: publicPlayers(room) });
+
+      // Mid-game disconnect handling (left alone / stuck active seat)
+      if (room.mp?.place?.status === "playing" && left) {
+        this.handlePlayerDisconnectDuringPlay(room, left);
+      }
     }
+  }
+
+  /**
+   * When someone drops mid-race: skip their turn if they were active,
+   * and notify if only one connected player remains.
+   */
+  handlePlayerDisconnectDuringPlay(room, leftPlayer) {
+    if (!room.mp) return;
+    const connected = room.players.filter((p) => p.connected);
+    const connectedIds = connected.map((p) => p.id);
+    const connectedSet = new Set(connectedIds);
+    const activeId = activeSeatId(room.mp);
+
+    const leftForge = room.mp.forges?.[leftPlayer.id];
+    if (leftForge) {
+      leftForge.connected = false;
+      leftForge.lastNews = leftForge.lastNews || "Disconnected.";
+    }
+
+    let advanced = false;
+    // If the active player left, force end_turn (skip offline seats)
+    if (activeId === leftPlayer.id && connected.length >= 1) {
+      const cur = activeId;
+      if (room.mp.forges[cur]) {
+        room.mp.forges[cur].apSpentThisTurn = Math.max(
+          1,
+          room.mp.forges[cur].apSpentThisTurn || 0
+        );
+      }
+      const r = applyMpAction(
+        room.mp,
+        {
+          type: "end_turn",
+          payload: { force: true, preferConnectedIds: connectedIds },
+        },
+        cur
+      );
+      if (r.ok) {
+        room.mp = r.session;
+        advanced = true;
+      }
+    }
+
+    if (advanced) {
+      this._commitMp(
+        room,
+        {
+          session: room.mp,
+          events: [
+            {
+              type: "seat_skipped_offline",
+              seatId: leftPlayer.id,
+              displayName: leftPlayer.displayName,
+            },
+          ],
+        },
+        leftPlayer,
+        []
+      );
+    }
+
+    if (connected.length === 1) {
+      const sole = connected[0];
+      this.broadcast(room, {
+        type: "alone",
+        connectedCount: 1,
+        playerId: sole.id,
+        displayName: sole.displayName,
+        leftDisplayName: leftPlayer.displayName,
+        message: `${leftPlayer.displayName || "A player"} left. You're the only one still connected — you can keep playing alone or leave the room.`,
+      });
+    } else if (connected.length === 0) {
+      this.rooms.delete(room.code);
+    } else {
+      this.broadcast(room, {
+        type: "player_left",
+        playerId: leftPlayer.id,
+        displayName: leftPlayer.displayName,
+        connectedCount: connected.length,
+        message: `${leftPlayer.displayName || "A player"} disconnected.`,
+      });
+    }
+    void connectedSet;
   }
 
   snapshotFor(room, playerId) {
@@ -279,6 +370,7 @@ export class RoomManager {
       forges: mp?.forges || null,
       openTable: mp?.openTable || null,
       ranking: mp?.ranking || null,
+      rematchChooserId: this.rematchChooserId(room),
       activeSeatId: activeId,
       // Legacy shim: "sim" = your forge + place for older UI/AI helpers
       sim: mp && you ? forgePlaceShim(mp, you.id) : null,
@@ -294,68 +386,132 @@ export class RoomManager {
     };
   }
 
+  /** Place race finished (won or collapsed) — rematch allowed */
+  isRoomOutcome(room) {
+    const st = room?.mp?.place?.status;
+    return st === "won" || st === "collapsed";
+  }
+
+  /** Who may pick the next theme after a race (ranking #1, else host) */
+  rematchChooserId(room) {
+    if (room.rematchChooserId) return room.rematchChooserId;
+    const rows = room.mp?.ranking?.rows;
+    if (rows?.[0]?.seatId) return rows[0].seatId;
+    return room.hostPlayerId || null;
+  }
+
+  /** Assign rematch chooser when a race ends */
+  refreshRematchChooser(room) {
+    if (!this.isRoomOutcome(room)) {
+      room.rematchChooserId = null;
+      return;
+    }
+    const rows = room.mp?.ranking?.rows;
+    if (room.mp?.place?.status === "won" && rows?.[0]?.seatId) {
+      room.rematchChooserId = rows[0].seatId;
+    } else {
+      // Collapse / no ranking → host picks next theme
+      room.rematchChooserId = room.hostPlayerId || null;
+    }
+  }
+
   hostCommand(room, player, cmd, payload = {}) {
     const isHost =
       Boolean(player?.isHost) ||
       (payload?.hostToken && payload.hostToken === room.hostToken);
-    if (!isHost) return { ok: false, error: "not_host" };
+    const outcome = this.isRoomOutcome(room);
+    const chooserId = this.rematchChooserId(room);
+    const isRematchChooser = Boolean(player?.id && chooserId && player.id === chooserId);
+
+    // Mission pick / start: host for lobby; after a race only the rematch chooser (winner, or host if collapse)
+    if (cmd === "set_mission" || cmd === "start_mission") {
+      if (outcome) {
+        if (!isRematchChooser) {
+          return { ok: false, error: "not_rematch_chooser" };
+        }
+      } else if (!isHost) {
+        return { ok: false, error: "not_host" };
+      }
+    } else if (!isHost) {
+      return { ok: false, error: "not_host" };
+    }
 
     if (cmd === "set_mission") {
-      if (room.mp) return { ok: false, error: "already_started" };
+      // Mid-race: locked. Lobby or post-outcome rematch: ok.
+      if (room.mp && !outcome) return { ok: false, error: "already_started" };
       const mission = payload.mission;
       const globalId = payload.globalId || mission?.globalId;
       if (!mission?.id) return { ok: false, error: "mission_required" };
       room.missionMeta = { globalId, mission };
       room.updatedAt = Date.now();
+      const phase = outcome ? "rematch_ready" : "ready";
       this.broadcast(room, {
         type: "lobby",
         missionMeta: room.missionMeta,
-        phase: "ready",
+        phase,
+        rematchChooserId: this.rematchChooserId(room),
       });
-      return { ok: true, snapshot: this.snapshotFor(room, player?.id) };
+      return {
+        ok: true,
+        phase,
+        snapshot: this.snapshotFor(room, player?.id),
+      };
     }
 
     if (cmd === "start_mission") {
-      if (room.mp) return { ok: false, error: "already_started" };
-      if (room.players.length < MIN_PLAYERS) {
+      // Fresh start: no mp yet. Rematch: only after previous race ended.
+      if (room.mp && !outcome) return { ok: false, error: "already_started" };
+      const connected = room.players.filter((p) => p.connected);
+      if (connected.length < MIN_PLAYERS && room.players.length < MIN_PLAYERS) {
         return { ok: false, error: "min_players", min: MIN_PLAYERS };
       }
+      // Prefer currently connected players for the new lobby; keep disconnected out of seats
+      const seats = (connected.length >= MIN_PLAYERS ? connected : room.players).map(
+        (p) => ({
+          id: p.id,
+          displayName: p.displayName,
+          isHost: p.isHost,
+        })
+      );
+      if (seats.length < MIN_PLAYERS) {
+        return { ok: false, error: "min_players", min: MIN_PLAYERS };
+      }
+
       const meta = room.missionMeta || payload;
       const mission = meta.mission || payload.mission;
       if (!mission) return { ok: false, error: "mission_required" };
-      if (payload.mission && !room.missionMeta) {
+      if (payload.mission) {
         room.missionMeta = {
           globalId: payload.globalId || mission.globalId,
           mission,
         };
       }
 
-      let mp = createMpLobby(
-        room.players.map((p) => ({
-          id: p.id,
-          displayName: p.displayName,
-          isHost: p.isHost,
-        })),
-        {
-          mode: "friends_coopetition",
-          apMax: room.settings.apMax || 3,
-          settings: {
-            deployStages: true,
-            multiplayer: true,
-          },
-        }
-      );
+      let mp = createMpLobby(seats, {
+        mode: "friends_coopetition",
+        apMax: room.settings.apMax || 3,
+        settings: {
+          deployStages: true,
+          multiplayer: true,
+        },
+      });
       mp = setMpMission(
         mp,
         mission,
         room.missionMeta?.globalId || mission.globalId
       );
-      mp = setFirstPlayer(mp, "host");
+      // Winner who picks next theme goes first when possible
+      const first =
+        outcome && isRematchChooser
+          ? player.id
+          : "host";
+      mp = setFirstPlayer(mp, first === "host" ? "host" : first);
       const started = startMpMission(mp);
       if (!started.ok) return { ok: false, error: started.error || "start_failed" };
 
       room.mp = started.session;
       room.simVersion = room.mp.version || 1;
+      room.rematchChooserId = null;
       room.missionMeta = {
         globalId: room.missionMeta?.globalId || mission.globalId,
         mission,
@@ -370,7 +526,14 @@ export class RoomManager {
           });
         }
       }
-      return { ok: true, simVersion: room.simVersion };
+      // First start vs rematch: clients key off this to enter play once
+      this.broadcast(room, {
+        type: outcome ? "rematch_started" : "race_started",
+        phase: "playing",
+        code: room.code,
+        simVersion: room.simVersion,
+      });
+      return { ok: true, simVersion: room.simVersion, rematch: Boolean(outcome) };
     }
 
     if (cmd === "set_settings") {
@@ -473,6 +636,8 @@ export class RoomManager {
     room.mp = result.session;
     room.simVersion = room.mp.version || room.simVersion + 1;
     room.updatedAt = Date.now();
+    // When race ends, freeze rematch chooser (winner, or host on collapse)
+    this.refreshRematchChooser(room);
     const events = [...(result.events || []), ...extraEvents];
     const patch = {
       type: "patch",
@@ -484,6 +649,7 @@ export class RoomManager {
       forges: publicMpState(room.mp)?.forges,
       openTable: publicMpState(room.mp)?.openTable,
       ranking: room.mp.ranking,
+      rematchChooserId: this.rematchChooserId(room),
       activeSeatId: activeSeatId(room.mp),
       fieldLocks: locksPublic(room),
       phase:
@@ -494,7 +660,7 @@ export class RoomManager {
     // Personalized sim shim per client
     for (const p of room.players) {
       if (p._socket && p._socket.readyState === 1) {
-        safeSend(p._socket, {
+        const payload = {
           ...patch,
           sim: forgePlaceShim(publicMpState(room.mp), p.id),
           you: {
@@ -504,7 +670,15 @@ export class RoomManager {
             isActive: p.id === activeSeatId(room.mp),
             forge: room.mp.forges[p.id] || null,
           },
-        });
+        };
+        try {
+          const bytes = JSON.stringify(payload).length;
+          if (bytes > 50000 || (room._patchLogN = (room._patchLogN || 0) + 1) <= 3) {
+            console.log(`[rooms] patch ${room.code} -> ${p.displayName} ${bytes}B events=${(events||[]).map(e=>e.type).join(',')}`);
+          }
+          if (bytes > 200000) console.warn(`[rooms] HUGE patch ${bytes}B`);
+        } catch {}
+        safeSend(p._socket, payload);
       }
     }
     return { ok: true, ...patch, sim: forgePlaceShim(publicMpState(room.mp), player?.id) };

@@ -131,8 +131,7 @@ describe("mp-session layer emTech", () => {
     assert.ok(s.forges["seat-1"].contributionBudgetSpent >= 1);
   });
 
-  it("cannot edit other prose", () => {
-    // writes always hit actor forge only — no target field
+  it("own write hits actor forge by default", () => {
     let s = started();
     s = applyMpAction(s, {
       type: "buffer_write",
@@ -140,6 +139,55 @@ describe("mp-session layer emTech", () => {
     }).session;
     assert.equal(s.forges["seat-0"].inventionName, "Mine");
     assert.equal(s.forges["seat-1"].inventionName, "");
+  });
+
+  it("active seat can write on another's invent still in invent phase", () => {
+    let s = started();
+    // Alex seeds own invent, ends turn
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "Solar stills on the roof" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    // Bea contributes everyday life onto Alex's invent
+    const r = applyMpAction(s, {
+      type: "write_commit",
+      payload: {
+        field: "inventionImpact",
+        value: "Families get clean water without a long walk.",
+        changed: true,
+        targetSeatId: "seat-0",
+      },
+    });
+    assert.equal(r.ok, true);
+    s = r.session;
+    assert.equal(
+      s.forges["seat-0"].inventionImpact,
+      "Families get clean water without a long walk."
+    );
+    // Bea's own invent stays empty
+    assert.equal(s.forges["seat-1"].inventionImpact, "");
+  });
+
+  it("cannot write on invent locked after challenge/scrutiny", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "How" },
+    }).session;
+    s = applyMpAction(s, { type: "enter_challenge" }).session;
+    assert.equal(s.forges["seat-0"].turnPhase, "scrutiny");
+    const r = applyMpAction(s, {
+      type: "write_commit",
+      payload: {
+        field: "inventionImpact",
+        value: "Should fail",
+        changed: true,
+        targetSeatId: "seat-0",
+      },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "invent_locked");
   });
 });
 
@@ -203,6 +251,59 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(s.forges["seat-0"].deployStage, "scaled");
     assert.ok(totalDrop(s) > 0 || s.forges["seat-0"].impactDropTotal >= 0);
     // pressure should not increase; usually drops
+    assert.ok(s.place.pressure.Floods <= p0);
+  });
+
+  it("active seat can pilot/scale another seat's invent (targetSeatId)", () => {
+    // Alex prep + pass challenge, end turn; Bea pilots/scales Alex's invent
+    let s = prepForPilot(started());
+    assert.equal(s.forges["seat-0"].challengePassed, true);
+    assert.equal(s.forges["seat-0"].deployStage, "none");
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "done" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-1");
+
+    const beaBudget = s.forges["seat-1"].budget;
+    const rPilot = applyMpAction(
+      s,
+      {
+        type: "attempt_pilot",
+        payload: { targetSeatId: "seat-0", feasibilityLevel: "yellow" },
+      },
+      null,
+      { rng: alwaysOk }
+    );
+    assert.equal(rPilot.ok, true, rPilot.error);
+    s = rPilot.session;
+    assert.equal(s.forges["seat-0"].deployStage, "pilot_ok");
+    assert.equal(s.forges["seat-1"].deployStage, "none"); // Bea's invent untouched
+    assert.ok(s.forges["seat-1"].budget < beaBudget);
+    assert.ok((s.forges["seat-1"].apSpentThisTurn || 0) >= 1);
+
+    // Scale without pilot on *target* still fails if we wipe pilot stage
+    const rBad = applyMpAction(s, {
+      type: "attempt_scale",
+      payload: { targetSeatId: "seat-1", feasibilityLevel: "yellow" },
+    });
+    assert.equal(rBad.ok, false);
+    assert.equal(rBad.error, "pilot_required");
+
+    const p0 = s.place.pressure.Floods;
+    const rScale = applyMpAction(
+      s,
+      {
+        type: "attempt_scale",
+        payload: { targetSeatId: "seat-0", feasibilityLevel: "yellow" },
+      },
+      null,
+      { rng: alwaysOk }
+    );
+    assert.equal(rScale.ok, true, rScale.error);
+    s = rScale.session;
+    assert.equal(s.forges["seat-0"].deployStage, "scaled");
     assert.ok(s.place.pressure.Floods <= p0);
   });
 
@@ -286,6 +387,31 @@ describe("mp-rank", () => {
   });
 });
 
+describe("mp-session end_turn skip offline", () => {
+  it("preferConnectedIds skips offline seats", () => {
+    let s = started();
+    // Alex ends turn, prefer only seat-0 online → should wrap back to seat-0 if only they preferred?
+    // seat-0 active; end_turn with preferConnectedIds only seat-0 → next is seat-1 not preferred, skip to seat-0
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, {
+      type: "end_turn",
+      payload: { preferConnectedIds: ["seat-0"] },
+    }).session;
+    // Only seat-0 preferred: from seat-0, next candidate seat-1 skipped, back to seat-0
+    assert.equal(activeSeatId(s), "seat-0");
+  });
+
+  it("force end_turn allows pass with no engagement", () => {
+    let s = started();
+    const r = applyMpAction(s, { type: "end_turn", payload: { force: true } });
+    assert.equal(r.ok, true);
+    assert.equal(activeSeatId(r.session), "seat-1");
+  });
+});
+
 describe("mp-session pay_ap", () => {
   it("pays and refunds AP for co-inventor", () => {
     let s = started();
@@ -294,6 +420,53 @@ describe("mp-session pay_ap", () => {
     assert.equal(s.forges["seat-0"].ap, ap0 - 1);
     s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
     assert.equal(s.forges["seat-0"].ap, ap0);
+  });
+});
+
+describe("mp-session challenge feedback", () => {
+  it("sync_challenge_view stores feedback for spectators (incl. sidestep)", () => {
+    let s = started();
+    s = applyMpAction(s, { type: "enter_challenge" }).session;
+    const r = applyMpAction(s, {
+      type: "sync_challenge_view",
+      payload: {
+        feedback: "<strong>SIDESTEP</strong> — You skipped Moloch (once per run).",
+        verdict: "pass",
+        moveMode: "defend",
+        scrutiny: {
+          pivotUsed: true,
+          missCount: 0,
+          encounters: [
+            {
+              id: "enc-moloch-0",
+              angleId: "moloch",
+              label: "Moloch",
+              cleared: true,
+              pivoted: true,
+              hp: 0,
+              maxHp: 2,
+            },
+          ],
+        },
+      },
+    });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.match(s.forges["seat-0"].challengeFeedback, /SIDESTEP/);
+    assert.equal(s.forges["seat-0"].scrutinyPublic?.pivotUsed, true);
+    // Other seat does not inherit feedback
+    assert.equal(s.forges["seat-1"].challengeFeedback || "", "");
+  });
+
+  it("sync_vision bumps invent visionRev for followers", () => {
+    let s = started();
+    const r = applyMpAction(s, {
+      type: "sync_vision",
+      payload: { targetSeatId: "seat-0", sessionId: "room-X-seat-seat-0" },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.forges["seat-0"].visionRev, 1);
+    assert.equal(r.events.some((e) => e.type === "vision_sync"), true);
   });
 });
 

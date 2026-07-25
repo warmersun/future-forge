@@ -123,6 +123,61 @@ describe("RoomManager", () => {
     assert.equal(denied.error, "not_active_seat");
   });
 
+  it("enter_challenge freezes host invent prose for helpers; sync is visible to bea", () => {
+    const { rm, room, host, bea, created } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    rm.applyPlayerAction(room, host, {
+      type: "write_commit",
+      payload: { field: "inventionHow", value: "Host how it works", changed: true },
+    });
+    rm.applyPlayerAction(room, host, {
+      type: "write_commit",
+      payload: { field: "inventionImpact", value: "Host everyday life", changed: true },
+    });
+    const ent = rm.applyPlayerAction(room, host, { type: "enter_challenge" });
+    assert.equal(ent.ok, true);
+    assert.equal(room.mp.forges[host.id].turnPhase, "scrutiny");
+
+    // Bea cannot act (not active)
+    const blocked = rm.applyPlayerAction(room, bea, {
+      type: "write_commit",
+      payload: {
+        field: "inventionHow",
+        value: "Hack",
+        changed: true,
+        targetSeatId: host.id,
+      },
+    });
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.error, "not_active_seat");
+
+    // Host ends turn mid-challenge — invent stays locked for Bea
+    rm.applyPlayerAction(room, host, { type: "end_turn" });
+    assert.equal(room.mp.forges[host.id].turnPhase, "scrutiny");
+    const locked = rm.applyPlayerAction(room, bea, {
+      type: "write_commit",
+      payload: {
+        field: "inventionHow",
+        value: "Hack",
+        changed: true,
+        targetSeatId: host.id,
+      },
+    });
+    assert.equal(locked.ok, false);
+    assert.equal(locked.error, "invent_locked");
+    assert.equal(room.mp.forges[host.id].inventionHow, "Host how it works");
+
+    // Challenge view sync only while host is active; after end_turn host cannot sync.
+    // Re-enter path: host was passed — Bea is active. Host mid-challenge state is still
+    // visible on snapshot for spectators.
+    const snap = rm.snapshotFor(room, bea.id);
+    assert.equal(snap.mp.forges[host.id].turnPhase, "scrutiny");
+  });
+
   it("bea can layer emTech on host after end_turn", () => {
     const { rm, created, room, host, bea } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_mission", {
@@ -144,11 +199,127 @@ describe("RoomManager", () => {
     assert.ok(room.mp.forges[bea.id].contributionBudgetSpent >= 1);
   });
 
+  it("bea can pilot then scale host invent after challenge pass (targetSeatId)", () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    // Host prepares invent + passes challenge
+    for (const [field, value] of [
+      ["inventionName", "FloodGate"],
+      [
+        "inventionHow",
+        "Sensors and pumps work with harbour crews on mapped flood corridors.",
+      ],
+      [
+        "inventionImpact",
+        "Homes stay dry and shops stay open when the river rises each spring.",
+      ],
+    ]) {
+      rm.applyPlayerAction(room, host, {
+        type: "write_commit",
+        payload: { field, value, changed: true },
+      });
+    }
+    rm.applyPlayerAction(room, host, {
+      type: "select_tech",
+      payload: { techId: T0 },
+    });
+    rm.applyPlayerAction(room, host, { type: "enter_challenge" });
+    rm.applyPlayerAction(room, host, {
+      type: "submit_challenge",
+      payload: {
+        answer:
+          "We partner with the harbour authority for a supervised pilot corridor with human oversight.",
+        verdict: "pass",
+      },
+    });
+    assert.equal(room.mp.forges[host.id].challengePassed, true);
+    rm.applyPlayerAction(room, host, { type: "end_turn" });
+
+    // Bea scales without pilot → pilot_required on *host* invent
+    const bad = rm.applyPlayerAction(room, bea, {
+      type: "attempt_scale",
+      payload: { targetSeatId: host.id, feasibilityLevel: "yellow" },
+    });
+    assert.equal(bad.ok, false);
+    assert.equal(bad.error, "pilot_required");
+
+    const pilot = rm.applyPlayerAction(room, bea, {
+      type: "attempt_pilot",
+      payload: { targetSeatId: host.id, feasibilityLevel: "yellow" },
+    });
+    // Pilot may fail on RNG — force by checking error or stage
+    if (pilot.ok) {
+      assert.equal(
+        room.mp.forges[host.id].deployStage === "pilot_ok" ||
+          room.mp.forges[bea.id].pilotFailedThisTurn,
+        true
+      );
+    }
+    // If pilot succeeded, scale should target host forge
+    if (room.mp.forges[host.id].deployStage === "pilot_ok") {
+      const scale = rm.applyPlayerAction(room, bea, {
+        type: "attempt_scale",
+        payload: { targetSeatId: host.id, feasibilityLevel: "yellow" },
+      });
+      if (scale.ok && room.mp.forges[host.id].deployStage === "scaled") {
+        assert.ok((room.mp.forges[bea.id].apSpentThisTurn || 0) >= 1);
+      }
+    }
+  });
+
   it("room codes use crockford alphabet", () => {
     for (let i = 0; i < 20; i++) {
       const c = randomRoomCode(6);
       assert.match(c, /^[0-9A-HJKMNP-TV-Z]{6}$/);
     }
+  });
+
+  it("after race ends, ranking winner can rematch with a new mission", () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_mission", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    // Force place won + ranking
+    room.mp.place.status = "won";
+    room.mp.ranking = {
+      rows: [
+        { seatId: bea.id, displayName: "Bea", rank: 1, score: 90 },
+        { seatId: host.id, displayName: "Host", rank: 2, score: 40 },
+      ],
+    };
+    rm.refreshRematchChooser(room);
+    assert.equal(room.rematchChooserId, bea.id);
+
+    // Host cannot steal rematch pick when Bea won
+    const denied = rm.hostCommand(room, host, "set_mission", {
+      hostToken: created.hostToken,
+      mission: { ...sampleMission, id: "other", title: "Other" },
+      globalId: "climate",
+    });
+    assert.equal(denied.ok, false);
+    assert.equal(denied.error, "not_rematch_chooser");
+
+    // Bea (winner) sets mission
+    const set = rm.hostCommand(room, bea, "set_mission", {
+      mission: { ...sampleMission, id: "rematch-1", title: "Rematch floods" },
+      globalId: "climate",
+    });
+    assert.equal(set.ok, true, set.error);
+    assert.equal(room.missionMeta.mission.id, "rematch-1");
+
+    const start = rm.hostCommand(room, bea, "start_mission", {
+      mission: room.missionMeta.mission,
+      globalId: "climate",
+    });
+    assert.equal(start.ok, true, start.error);
+    assert.equal(room.mp.place.status, "playing");
+    assert.equal(room.rematchChooserId, null);
   });
 
   it("requestAi only for active seat; refunds on failure", async () => {

@@ -212,6 +212,17 @@ function createForge(seat, settings) {
     challengeAnswer: "",
     hadChallengeAttempt: false,
     lastChallengeVerdict: null,
+    /** Live challenge UI for spectators (angle + speech + optional scrutiny snapshot) */
+    challengeAngle: null,
+    challengeSpeech: "",
+    challengeQuestion: "",
+    /** Live defense draft / judging flags for follow-along */
+    challengeJudging: false,
+    challengeMoveMode: null,
+    /** @type {object|null} public scrutiny combat state for follow-along */
+    scrutinyPublic: null,
+    /** Challenge feedback HTML (sidestep / defend result) for spectators */
+    challengeFeedback: "",
     deployStage: "none", // none | pilot_ok | scaled
     pilotFailedThisTurn: false,
     scaleFailedThisTurn: false,
@@ -224,6 +235,9 @@ function createForge(seat, settings) {
     contributionApSpent: 0,
     contributionWillSpent: 0,
     lastNews: "",
+    /** Lightweight Imagine sync — only a revision number, never image bytes */
+    visionRev: 0,
+    visionSessionId: "",
   };
 }
 
@@ -323,11 +337,35 @@ function domainsOf(techs) {
   return [...new Set(techs.map((t) => t.domain).filter(Boolean))];
 }
 
-function passToNext(session) {
+/**
+ * Advance to the next seat. Optionally skip seats not in `preferConnectedIds`
+ * (e.g. offline players), falling back to the immediate next seat if all offline.
+ * @param {object} session
+ * @param {{ preferConnectedIds?: string[]|Set<string> }} [opts]
+ */
+function passToNext(session, opts = {}) {
   const n = session.seatOrder.length;
   if (!n) return session;
   const prev = session.activeIndex || 0;
-  const nextIdx = (prev + 1) % n;
+  const prefer = opts.preferConnectedIds
+    ? new Set(
+        opts.preferConnectedIds instanceof Set
+          ? opts.preferConnectedIds
+          : opts.preferConnectedIds
+      )
+    : null;
+
+  let nextIdx = (prev + 1) % n;
+  if (prefer && prefer.size > 0) {
+    let tries = 0;
+    while (tries < n && !prefer.has(session.seatOrder[nextIdx])) {
+      nextIdx = (nextIdx + 1) % n;
+      tries++;
+    }
+    // If nobody preferred is online, keep simple +1 from prev
+    if (tries >= n) nextIdx = (prev + 1) % n;
+  }
+
   const wrapped = nextIdx <= prev && session.place?.status === "playing";
   const next = cloneSession(session);
   next.activeIndex = nextIdx;
@@ -353,8 +391,8 @@ function passToNext(session) {
   return next;
 }
 
-function finishEndTurn(session) {
-  return passToNext(session);
+function finishEndTurn(session, opts = {}) {
+  return passToNext(session, opts);
 }
 
 /**
@@ -398,23 +436,40 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return true;
   };
 
-  // —— Writes (own forge only) ——
+  // —— Writes (own forge, or another's invent still in invent phase) ——
   if (type === "buffer_write" || type === "write_commit") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
     const field = payload.field;
     if (!["inventionName", "inventionHow", "inventionImpact"].includes(field)) {
       return { ok: false, error: "bad_field", session };
     }
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.forges[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    if (target.abandoned) return { ok: false, error: "target_abandoned", session };
+    // After Challenge pass, invent is locked for everyone
+    if (
+      target.challengePassed ||
+      target.deployStage === "pilot_ok" ||
+      target.deployStage === "scaled" ||
+      target.turnPhase === "scrutiny"
+    ) {
+      return { ok: false, error: "invent_locked", session };
+    }
     const max = field === "inventionName" ? 120 : 4000;
-    actor[field] = String(payload.value ?? "").slice(0, max);
+    target[field] = String(payload.value ?? "").slice(0, max);
+    // AP cost always on the *actor* (helper pays when writing on others)
     if (type === "write_commit" && payload.changed) {
       const freeLeft = Math.max(0, 2 - (actor.writeCommitsThisTurn || 0));
       if (freeLeft <= 0 && !spendAp(actor, 1)) {
         return { ok: false, error: "no_ap", session };
       }
       actor.writeCommitsThisTurn = (actor.writeCommitsThisTurn || 0) + 1;
+      if (targetSeatId !== activeId) {
+        actor.contributionApSpent = (actor.contributionApSpent || 0) + (freeLeft <= 0 ? 1 : 0);
+      }
     }
-    events.push({ type, field, seatId: activeId });
+    events.push({ type, field, seatId: activeId, targetSeatId });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
@@ -565,7 +620,71 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
     if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     actor.turnPhase = "scrutiny";
+    actor.challengeSpeech = "";
+    actor.challengeQuestion = "";
+    actor.scrutinyPublic = null;
     events.push({ type: "enter_challenge", seatId: activeId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
+  /**
+   * Broadcast live challenge UI so other clients can follow on the Challenge screen.
+   * Active seat only; no AP cost.
+   */
+  if (type === "sync_challenge_view") {
+    if (actor.turnPhase !== "scrutiny" && !payload.force) {
+      return { ok: false, error: "not_in_challenge", session };
+    }
+    // Ensure invent stays locked while challenge UI is live
+    if (actor.turnPhase !== "scrutiny") actor.turnPhase = "scrutiny";
+    if (payload.angle != null) actor.challengeAngle = payload.angle;
+    if (payload.speech != null) actor.challengeSpeech = String(payload.speech).slice(0, 4000);
+    if (payload.question != null)
+      actor.challengeQuestion = String(payload.question).slice(0, 800);
+    // Live defense draft so spectators can read while the active player types
+    if (payload.answer != null) {
+      actor.challengeAnswer = String(payload.answer).slice(0, 4000);
+    }
+    if (payload.judging != null) actor.challengeJudging = Boolean(payload.judging);
+    if (payload.moveMode != null) {
+      actor.challengeMoveMode = String(payload.moveMode).slice(0, 32);
+    }
+    if (payload.scrutiny != null) {
+      try {
+        // Store only plain data so WS broadcast never fails to JSON.stringify
+        const plain = JSON.parse(JSON.stringify(payload.scrutiny));
+        actor.scrutinyPublic = plain;
+      } catch {
+        actor.scrutinyPublic = null;
+      }
+    }
+    if (payload.feedback != null) actor.challengeFeedback = String(payload.feedback).slice(0, 2000);
+    if (payload.verdict != null) actor.challengeVerdict = payload.verdict;
+    events.push({ type: "challenge_view_sync", seatId: activeId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
+  /**
+   * Owner finished a new Imagine frame — bump rev so followers re-peek the
+   * shared server cache (no image bytes on the wire).
+   */
+  if (type === "sync_vision") {
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.forges[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    if (payload.sessionId != null) {
+      target.visionSessionId = String(payload.sessionId).slice(0, 120);
+    }
+    target.visionRev = (target.visionRev || 0) + 1;
+    events.push({
+      type: "vision_sync",
+      seatId: activeId,
+      targetSeatId,
+      visionRev: target.visionRev,
+      visionSessionId: target.visionSessionId || "",
+    });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
@@ -597,6 +716,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       actor.challengePassed = true;
       actor.turnPhase = "act";
       actor.deployStage = "none"; // ready to pilot
+      actor.scrutinyPublic = null;
       if (bwOn) {
         actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + 1);
         actor.will = Math.min(maxWill, (actor.will ?? 0) + 1);
@@ -621,6 +741,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     } else {
       actor.challengePassed = false;
       actor.turnPhase = "act";
+      actor.scrutinyPublic = null;
       if (bwOn) actor.will = Math.max(0, (actor.will ?? 0) - 1);
       events.push({ type: "challenge_fail", verdict });
     }
@@ -628,64 +749,96 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
-  // —— Pilot (personal, no place update) ——
+  // —— Pilot (on viewed invent; actor pays). No place update. ——
   if (type === "attempt_pilot") {
-    if (actor.abandoned) return { ok: false, error: "abandoned", session };
-    if (!actor.challengePassed) return { ok: false, error: "challenge_required", session };
-    if (actor.deployStage === "pilot_ok" || actor.deployStage === "scaled") {
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.forges[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    if (target.abandoned) return { ok: false, error: "target_abandoned", session };
+    // Own invent abandoned → cannot pilot it; may still pilot others' deploy-ready invents
+    if (targetSeatId === activeId && actor.abandoned) {
+      return { ok: false, error: "abandoned", session };
+    }
+    if (!target.challengePassed) return { ok: false, error: "challenge_required", session };
+    if (target.deployStage === "pilot_ok" || target.deployStage === "scaled") {
       return { ok: false, error: "pilot_already_done", session };
     }
+    // Per-actor retry lock (who is paying the attempt)
     if (actor.pilotFailedThisTurn) {
       return { ok: false, error: "retry_next_turn", session };
     }
 
-    const techs = stackTechs(actor);
-    // Deploy stages cost 0 AP (solo key decision); field budget still applies.
+    const techs = stackTechs(target);
+    // Deploy stages cost 0 AP (solo key decision); field budget still applies to actor.
     const cost = deployActionCost(techs, { will: actor.will });
     if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
     actor.budget -= cost.budget;
     actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1; // marks engagement for end_turn
+    if (targetSeatId !== activeId) {
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+    }
 
     const level = payload.feasibilityLevel || "yellow";
     const roll = rollDeploySuccess(level, rng);
+    const targetName = target.displayName || targetSeatId;
     if (!roll.ok) {
       actor.pilotFailedThisTurn = true;
-      actor.lastNews = `Pilot failed (rolled ${roll.roll} vs ${roll.pct}%). Retry next seat-turn.`;
-      events.push({ type: "pilot_fail", ...roll });
+      actor.lastNews = `Pilot failed on ${targetName} (rolled ${roll.roll} vs ${roll.pct}%). Retry next seat-turn.`;
+      events.push({ type: "pilot_fail", ...roll, targetSeatId, seatId: activeId });
       s.version = (session.version || 0) + 1;
-      s.place.lastNews = `${actor.displayName}'s Pilot failed.`;
+      s.place.lastNews = `${actor.displayName}'s Pilot failed${
+        targetSeatId !== activeId ? ` on ${targetName}` : ""
+      }.`;
       return { ok: true, session: s, events };
     }
 
-    actor.deployStage = "pilot_ok";
-    actor.lastNews = "Pilot succeeded — Scale ready (updates the place).";
-    // Refresh pool in case stack grew after challenge
+    target.deployStage = "pilot_ok";
+    target.lastNews =
+      targetSeatId === activeId
+        ? "Pilot succeeded — Scale ready (updates the place)."
+        : `Pilot succeeded (by ${actor.displayName}) — Scale ready.`;
+    // Refresh pool from *target* invent in case stack grew after challenge
     const dropInfo = computeDeployDrop({
       techs,
-      inventionHow: actor.inventionHow,
-      inventionImpact: actor.inventionImpact,
-      challengeVerdict: actor.challengeVerdict,
-      challengeAnswer: actor.challengeAnswer,
+      inventionHow: target.inventionHow,
+      inventionImpact: target.inventionImpact,
+      challengeVerdict: target.challengeVerdict,
+      challengeAnswer: target.challengeAnswer,
       suggested: s.place.mission?.suggested || [],
       pairs: [],
       domains: domainsOf(techs),
       will: actor.will,
       budgetWill: true,
     });
-    actor.stagedDropPool = Math.max(actor.stagedDropPool || 0, dropInfo.drop);
-    events.push({ type: "pilot_ok", ...roll, dropPool: actor.stagedDropPool });
-    s.place.lastNews = `${actor.displayName} piloted successfully — ready to Scale.`;
+    target.stagedDropPool = Math.max(target.stagedDropPool || 0, dropInfo.drop);
+    events.push({
+      type: "pilot_ok",
+      ...roll,
+      dropPool: target.stagedDropPool,
+      targetSeatId,
+      seatId: activeId,
+    });
+    s.place.lastNews =
+      targetSeatId === activeId
+        ? `${actor.displayName} piloted successfully — ready to Scale.`
+        : `${actor.displayName} piloted ${targetName}'s invent — ready to Scale.`;
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
 
-  // —— Scale (updates shared place on success) ——
+  // —— Scale (on viewed invent; actor pays; updates shared place on success) ——
   if (type === "attempt_scale") {
-    if (actor.abandoned) return { ok: false, error: "abandoned", session };
-    if (actor.deployStage !== "pilot_ok") {
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.forges[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    if (target.abandoned) return { ok: false, error: "target_abandoned", session };
+    if (targetSeatId === activeId && actor.abandoned) {
+      return { ok: false, error: "abandoned", session };
+    }
+    if (target.deployStage !== "pilot_ok") {
       return { ok: false, error: "pilot_required", session };
     }
-    if (actor.deployStage === "scaled") {
+    if (target.deployStage === "scaled") {
       return { ok: false, error: "already_scaled", session };
     }
     if (actor.scaleFailedThisTurn) {
@@ -695,59 +848,83 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: false, error: "race_over", session };
     }
 
-    // Scale: 0 AP; 1 Budget field cost when budget remains
+    // Scale: 0 AP; 1 Budget field cost when budget remains (actor pays)
     if ((actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
     actor.budget -= 1;
     actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1;
+    if (targetSeatId !== activeId) {
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+    }
 
+    const targetName = target.displayName || targetSeatId;
     // Scale rolls on scale-ish feasibility; default yellow
     const level = payload.feasibilityLevel || payload.scaleLevel || "yellow";
     const roll = rollDeploySuccess(level, rng);
     if (!roll.ok) {
       actor.scaleFailedThisTurn = true;
-      actor.lastNews = `Scale failed (rolled ${roll.roll} vs ${roll.pct}%). Retry next seat-turn.`;
-      events.push({ type: "scale_fail", ...roll });
-      s.place.lastNews = `${actor.displayName}'s Scale failed — place unchanged.`;
+      actor.lastNews = `Scale failed on ${targetName} (rolled ${roll.roll} vs ${roll.pct}%). Retry next seat-turn.`;
+      events.push({ type: "scale_fail", ...roll, targetSeatId, seatId: activeId });
+      s.place.lastNews = `${actor.displayName}'s Scale failed${
+        targetSeatId !== activeId ? ` on ${targetName}` : ""
+      } — place unchanged.`;
       s.version = (session.version || 0) + 1;
       return { ok: true, session: s, events };
     }
 
-    // Apply FULL drop pool to shared place (Pilot was personal only)
-    const drop = Math.max(1, actor.stagedDropPool || 1);
+    // Apply FULL drop pool from *target* invent (Pilot was personal readiness)
+    const drop = Math.max(1, target.stagedDropPool || 1);
     const before = totalPressure(s.place.pressure);
     s.place.pressure = applyPressureDrop(s.place.pressure, drop);
     const after = totalPressure(s.place.pressure);
     const actual = Math.max(0, before - after);
 
-    actor.deployStage = "scaled";
-    actor.successfulScales = (actor.successfulScales || 0) + 1;
-    actor.impactDropTotal = (actor.impactDropTotal || 0) + actual;
-    actor.lastNews = `Scaled! Removed ${actual} pressure from the place.`;
+    target.deployStage = "scaled";
+    target.successfulScales = (target.successfulScales || 0) + 1;
+    target.impactDropTotal = (target.impactDropTotal || 0) + actual;
+    // Credit impact to actor for ranking when they fielded the Scale
+    if (targetSeatId !== activeId) {
+      actor.impactDropTotal = (actor.impactDropTotal || 0) + actual;
+      actor.successfulScales = (actor.successfulScales || 0) + 1;
+    }
+    target.lastNews = `Scaled! Removed ${actual} pressure from the place.`;
+    actor.lastNews =
+      targetSeatId === activeId
+        ? target.lastNews
+        : `Scaled ${targetName}'s invent — removed ${actual} pressure.`;
 
     const winMax = s.place.mission?.winMax || {};
     const solved = isWin(s.place.pressure, winMax);
 
     if (solved) {
-      actor.landedSolvingScale = true;
+      target.landedSolvingScale = true;
+      if (targetSeatId !== activeId) actor.landedSolvingScale = true;
       s.place.status = "won";
-      s.place.lastNews = `${actor.displayName} Scaled and essentially solved the crisis! Race over.`;
+      s.place.lastNews = `${actor.displayName} Scaled${
+        targetSeatId !== activeId ? ` ${targetName}'s invent and` : " and"
+      } essentially solved the crisis! Race over.`;
       s.ranking = rankSurvivors(s);
       events.push({
         type: "scale_ok",
         drop: actual,
         pool: drop,
         solved: true,
+        targetSeatId,
+        seatId: activeId,
         ...roll,
       });
-      events.push({ type: "race_won", seatId: activeId });
+      events.push({ type: "race_won", seatId: activeId, targetSeatId });
     } else {
       s.place.status = "playing";
-      s.place.lastNews = `${actor.displayName} Scaled (partial). Place improved — others may still Scale.`;
+      s.place.lastNews = `${actor.displayName} Scaled${
+        targetSeatId !== activeId ? ` ${targetName}'s invent` : ""
+      } (partial). Place improved — others may still Scale.`;
       events.push({
         type: "scale_ok",
         drop: actual,
         pool: drop,
         solved: false,
+        targetSeatId,
+        seatId: activeId,
         ...roll,
       });
     }
@@ -755,7 +932,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     s.version = (session.version || 0) + 1;
     s.log = [
       ...(s.log || []),
-      { type: "scale_ok", seatId: activeId, drop: actual, solved },
+      { type: "scale_ok", seatId: activeId, targetSeatId, drop: actual, solved },
     ];
     return { ok: true, session: s, events };
   }
@@ -767,12 +944,20 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       // Writers: buffer_write doesn't spend apSpent — allow end if they wrote or spent or challenged
       const wrote =
         (actor.inventionName || actor.inventionHow || actor.inventionImpact || "").length > 0;
-      if (!wrote && (actor.apSpentThisTurn || 0) < 1 && !actor.pilotFailedThisTurn && !actor.scaleFailedThisTurn) {
+      if (
+        !wrote &&
+        (actor.apSpentThisTurn || 0) < 1 &&
+        !actor.pilotFailedThisTurn &&
+        !actor.scaleFailedThisTurn &&
+        !payload.force
+      ) {
         return { ok: false, error: "end_turn_noop", session };
       }
     }
     events.push({ type: "end_turn", seatId: activeId });
-    s = finishEndTurn(s);
+    s = finishEndTurn(s, {
+      preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
+    });
     s.log = [...(session.log || []), { type: "end_turn", seatId: activeId }];
     return { ok: true, session: s, events };
   }

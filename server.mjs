@@ -1490,11 +1490,43 @@ function ensureWorldCard(sessionId, body, prev) {
 }
 
 async function handleVision(body) {
-  const sessionId = String(body.sessionId || "default").slice(0, 80);
+  const sessionId = String(body.sessionId || "default").slice(0, 120);
   const fingerprint = visionFingerprint(body);
   const force = Boolean(body.force);
+  /** Followers only consume the shared cache — never generate a divergent image */
+  const followOnly = Boolean(body.followOnly);
   const prev = visionSessions.get(sessionId);
   const stageId = body.stage?.id || "present";
+
+  // Multiplayer followers: return whatever the owner last generated for this session
+  if (followOnly) {
+    if (prev?.dataUrl) {
+      return {
+        ok: true,
+        cached: true,
+        followOnly: true,
+        imageUrl: prev.dataUrl,
+        prompt: prev.prompt,
+        stageId: prev.stageId || stageId,
+        model: IMAGE_MODEL,
+        mode: prev.mode || "generate",
+        continuity: prev.continuity || "baseline",
+        reason: "Shared vision for room seat",
+        place: prev.worldCard?.place || null,
+      };
+    }
+    return {
+      ok: true,
+      cached: false,
+      followOnly: true,
+      waiting: true,
+      imageUrl: null,
+      stageId,
+      model: IMAGE_MODEL,
+      reason: "Waiting for shared vision",
+      place: null,
+    };
+  }
 
   if (!force && prev?.fingerprint === fingerprint && prev.dataUrl) {
     return {
@@ -1850,8 +1882,38 @@ if (ROOMS_ENABLED && roomManager) {
       const { room, player } = bound;
 
       if (msg.type === "action") {
-        const result = roomManager.applyPlayerAction(room, player, msg.action || msg);
-        if (!result.ok) return safeWs(socket, { type: "reject", error: result.error, ...result });
+        const action = msg.action || msg;
+        const aType = action?.type || "?";
+        const t0 = Date.now();
+        // Rate-log spammy actions (vision thrash freezes clients)
+        if (!room._actionLog) room._actionLog = { n: 0, byType: Object.create(null), windowStart: t0 };
+        if (t0 - room._actionLog.windowStart > 2000) {
+          const top = Object.entries(room._actionLog.byType)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+            .map(([k, v]) => `${k}:${v}`)
+            .join(" ");
+          if (room._actionLog.n > 8) {
+            console.warn(
+              `[rooms] ${room.code} action burst ${room._actionLog.n} in 2s · ${top}`
+            );
+          }
+          room._actionLog = { n: 0, byType: Object.create(null), windowStart: t0 };
+        }
+        room._actionLog.n += 1;
+        room._actionLog.byType[aType] = (room._actionLog.byType[aType] || 0) + 1;
+        if (aType === "sync_vision" || aType === "sync_challenge_view") {
+          console.log(
+            `[rooms] ${room.code} ${player.displayName} ${aType} (seat ${player.id.slice(0, 8)})`
+          );
+        }
+        const result = roomManager.applyPlayerAction(room, player, action);
+        const ms = Date.now() - t0;
+        if (!result.ok) {
+          console.log(`[rooms] reject ${room.code} ${player.displayName} ${aType}: ${result.error}`);
+          return safeWs(socket, { type: "reject", error: result.error, ...result });
+        }
+        if (ms > 50) console.log(`[rooms] slow action ${aType} ${ms}ms`);
         return; // patch already broadcast
       }
 

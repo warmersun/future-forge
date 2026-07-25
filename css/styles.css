@@ -624,6 +624,42 @@ button:disabled {
   opacity: 0.55;
 }
 
+/* Challenge: defense locked while AI judges */
+#challenge-answer.is-evaluating,
+#challenge-how-edit.is-evaluating {
+  cursor: wait;
+  opacity: 0.85;
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(15, 23, 42, 0.9);
+}
+body.challenge-combat-busy #challenge-answer,
+body.challenge-spectator #challenge-answer {
+  cursor: default;
+}
+body.challenge-spectator #mode-panel-defend {
+  /* Keep defense panel visible so followers can read the live draft */
+  opacity: 1;
+}
+
+/* Invent screen: contribution eval in flight after blur */
+body.mp-contrib-evaluating #invention-how,
+body.mp-contrib-evaluating #invention-impact,
+body.mp-contrib-evaluating #invention-name {
+  cursor: wait;
+  opacity: 0.78;
+}
+body.mp-contrib-evaluating #tech-list .tech-card {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: wait;
+}
+body.mp-contrib-evaluating #btn-fill-other,
+body.mp-contrib-evaluating #btn-to-challenge,
+body.mp-contrib-evaluating .story-mode-btn {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 /* Active player: leftmost in topbar brand (no extra vertical chrome) */
 .brand .mp-active-player {
   display: inline-flex;
@@ -684,6 +720,22 @@ button:disabled {
 
 .brand .mp-active-player[hidden] {
   display: none !important;
+}
+
+/* Challenge screen: compact multiplayer seat strip (active + viewing) */
+.mp-challenge-bar {
+  margin: 0;
+  padding: 0.4rem 1rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.55);
+}
+.mp-challenge-bar .mp-view-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+}
+.mp-challenge-bar .mp-seat-tab {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
 }
 
 .mp-workshop-bar-row {
@@ -1037,11 +1089,39 @@ body.mp-hotseat .workshop-layout {
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Online room play uses same workshop grid as hotseat */
+#screen-room-play .mp-workshop.workshop-layout {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 57px);
+}
+
+#screen-room-play .invent-center {
+  overflow: auto;
+  min-height: 0;
+}
+
+#screen-room-play .tech-library {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#screen-room-play .tech-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .mp-shell {
   display: grid;
-  /* party : invent : vision/co-inventor — full viewport, like workshop */
+  /* legacy: party : invent : vision — prefer .mp-workshop now */
   grid-template-columns: minmax(15rem, 0.9fr) minmax(0, 1.5fr) minmax(0, 1.4fr);
   grid-template-rows: 1fr;
   flex: 1;
@@ -2541,6 +2621,64 @@ body.mp-hotseat .workshop-layout {
   font-size: 0.78rem;
 }
 
+/* Multiplayer: "your turn" overlay (div, not <dialog> — showModal trapped clicks) */
+.mp-turn-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 1rem;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  color: var(--text, #e2e8f0);
+  pointer-events: auto;
+}
+
+.mp-turn-modal[hidden] {
+  display: none !important;
+}
+
+.mp-turn-dialog {
+  width: min(26rem, calc(100vw - 2rem));
+  max-width: 26rem;
+  padding: 1.35rem 1.4rem 1.2rem;
+  border-radius: var(--radius, 12px);
+  background: var(--bg-elevated, #151f33);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(52, 211, 153, 0.12);
+  text-align: center;
+  pointer-events: auto;
+}
+
+.mp-turn-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted, #94a3b8);
+}
+
+.mp-turn-dialog h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1.45rem;
+  color: #7dd3fc;
+}
+
+.mp-turn-body {
+  margin: 0 0 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text, #e2e8f0);
+}
+
+.mp-turn-dialog .btn {
+  width: 100%;
+}
+
 /* Challenge UI locked while AI poses the critic */
 body.challenge-pose-pending #scrutiny-moves.is-pose-pending {
   opacity: 0.55;
@@ -3388,19 +3526,38 @@ body.challenge-pose-pending #challenge-help-form {
   transform: translateY(-1px);
 }
 
-.scrutiny-move-btn:disabled {
+.scrutiny-move-btn:disabled,
+.scrutiny-move-btn.is-spectator-locked,
+body.challenge-spectator .scrutiny-move-btn,
+body.challenge-pose-pending .scrutiny-move-btn {
   opacity: 0.42;
   cursor: not-allowed;
   transform: none;
-  border-color: var(--border);
-  background: rgba(7, 11, 20, 0.28);
+  border-color: var(--border) !important;
+  background: rgba(7, 11, 20, 0.28) !important;
   filter: grayscale(0.35);
+  pointer-events: none;
 }
 
 .scrutiny-move-btn:disabled .scrutiny-move-title,
 .scrutiny-move-btn:disabled .scrutiny-move-cost,
-.scrutiny-move-btn:disabled .scrutiny-move-blurb {
+.scrutiny-move-btn:disabled .scrutiny-move-blurb,
+.scrutiny-move-btn.is-spectator-locked .scrutiny-move-title,
+.scrutiny-move-btn.is-spectator-locked .scrutiny-move-cost,
+.scrutiny-move-btn.is-spectator-locked .scrutiny-move-blurb,
+body.challenge-spectator .scrutiny-move-btn .scrutiny-move-title,
+body.challenge-spectator .scrutiny-move-btn .scrutiny-move-cost,
+body.challenge-spectator .scrutiny-move-btn .scrutiny-move-blurb {
   color: var(--text-mute);
+}
+
+/* Selected mode still visible while locked (spectator follow) — slightly less dim */
+body.challenge-spectator .scrutiny-move-btn.is-selected:disabled,
+body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
+  opacity: 0.72;
+  filter: grayscale(0.15);
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  background: rgba(56, 189, 248, 0.08) !important;
 }
 
 .scrutiny-move-btn:nth-child(1) {
@@ -4003,6 +4160,18 @@ body.challenge-pose-pending #challenge-help-form {
 .field textarea {
   min-height: 110px;
   resize: vertical;
+}
+
+/* Multiplayer: invent frozen (Challenge started / not your turn) */
+.field input.is-locked,
+.field textarea.is-locked,
+#invention-name.is-locked,
+#invention-how.is-locked,
+#invention-impact.is-locked {
+  opacity: 0.72;
+  cursor: not-allowed;
+  background: var(--bg-0, #0b1220);
+  border-color: rgba(148, 163, 184, 0.25);
 }
 
 .selected-techs {

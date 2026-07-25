@@ -329,10 +329,14 @@
       </div>
     </section>
 
-    <!-- FRIENDS PLAY (coopetition — personal forges + shared place) -->
+    <!-- FRIENDS PLAY — same 3-column workshop shell as hotseat -->
     <section id="screen-room-play" class="screen">
       <header class="topbar topbar-game">
-        <div class="brand"><span class="brand-dot"></span><span class="brand-name">Future Forge</span></div>
+        <div class="brand">
+          <span class="mp-active-player" id="mp-room-active-player" hidden aria-live="polite"></span>
+          <span class="brand-dot"></span>
+          <span class="brand-name">Future Forge</span>
+        </div>
         <div class="hud-clock">
           <span class="hud-year" id="mp-hud-year">2026</span>
           <span class="hud-turn" id="mp-hud-turn">Round 1</span>
@@ -342,90 +346,132 @@
         </div>
         <div class="hud-actions">
           <span class="room-code-chip sm" id="mp-active-badge">Seat —</span>
-          <span class="room-code-chip sm"><strong id="mp-room-code">————</strong></span>
+          <span class="room-code-chip sm" title="Room code">Room <strong id="mp-room-code">————</strong></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn →</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-leave">Leave</button>
         </div>
       </header>
-      <div class="mp-shell">
-        <aside class="panel mp-party-panel">
-          <h3>Party</h3>
-          <ul id="mp-player-list" class="room-player-list"></ul>
-          <div id="mp-pressure" class="hud-pressure"></div>
-          <p id="mp-news" class="muted mp-news"></p>
-          <article id="mp-scenario-brief" class="mp-scenario-brief" hidden></article>
-          <div id="mp-outcome" class="hs-outcome" hidden>
-            <h3>Outcome</h3>
-            <div id="mp-outcome-body"></div>
+
+      <div id="mp-play" class="workshop-layout mp-workshop">
+        <aside class="tech-library">
+          <div class="panel-header">
+            <h2>Emerging tech</h2>
+            <span class="muted sm" id="mp-layer-hint">Add to your stack</span>
           </div>
+          <div class="field mp-layer-field">
+            <label for="mp-layer-target">Stack target</label>
+            <select id="mp-layer-target"></select>
+          </div>
+          <div id="mp-filter-row" class="filter-row"></div>
+          <div id="mp-tech-list" class="tech-list" role="list"></div>
+          <!-- tray kept for paintTechTray fallback; list is primary -->
+          <div id="mp-tech-tray" class="mp-tech-tray" hidden></div>
         </aside>
 
-        <main class="panel mp-main-panel">
-          <header class="mp-main-header">
-            <div>
-              <h2 id="mp-mission-title">Friends race</h2>
-              <p id="mp-mission-place" class="muted"></p>
+        <main class="invent-center">
+          <div class="challenge-banner">
+            <div class="mp-party-strip">
+              <ul id="mp-player-list" class="room-player-list mp-seat-inline"></ul>
+              <div id="mp-pressure" class="hud-pressure"></div>
             </div>
+            <div class="label" id="mp-play-global-label">Friends race</div>
+            <h2 id="mp-mission-title">—</h2>
+            <p id="mp-mission-place" class="mission-place"></p>
+            <p id="mp-mission-scene" class="mp-mission-scene"></p>
+            <article id="mp-scenario-brief" class="mp-scenario-brief mp-play-problem-brief" hidden></article>
+            <p id="mp-news" class="muted mp-news"></p>
             <p id="mp-phase-hint" class="friends-status" aria-live="polite"></p>
-          </header>
+          </div>
 
-          <div class="mp-play-primary">
-            <h3>Open table</h3>
-            <div id="mp-open-table" class="hs-open-table"></div>
+          <div id="mp-open-table" class="hs-open-table"></div>
 
-            <h3>Your forge</h3>
+          <div class="invent-form">
             <div class="field">
-              <label for="mp-invention-name">Name</label>
-              <input id="mp-invention-name" type="text" maxlength="100" placeholder="Your invention name" />
+              <label for="mp-invention-name">Name your invention</label>
+              <input
+                id="mp-invention-name"
+                type="text"
+                maxlength="100"
+                placeholder="Something people here could say out loud…"
+                autocomplete="off"
+              />
               <span class="lock-hint" id="mp-lock-name"></span>
             </div>
             <div class="field">
-              <label for="mp-invention-how">How it works</label>
-              <textarea id="mp-invention-how" rows="4" placeholder="Mechanism for this place…"></textarea>
+              <label>Technologies in your stack</label>
+              <div id="mp-stack" class="selected-techs mp-stack"></div>
+            </div>
+            <div class="field">
+              <label for="mp-invention-how">How does it work?</label>
+              <textarea
+                id="mp-invention-how"
+                rows="4"
+                placeholder="What acts, what decides, how the pieces connect for *this* place…"
+              ></textarea>
               <span class="lock-hint" id="mp-lock-how"></span>
             </div>
             <div class="field">
-              <label for="mp-invention-impact">Everyday life</label>
-              <textarea id="mp-invention-impact" rows="3" placeholder="Who feels the change…"></textarea>
+              <label for="mp-invention-impact">Everyday life if it works</label>
+              <textarea
+                id="mp-invention-impact"
+                rows="3"
+                placeholder="A Tuesday here after your invention lands…"
+              ></textarea>
               <span class="lock-hint" id="mp-lock-impact"></span>
             </div>
 
-            <h3>Stack</h3>
-            <div id="mp-stack" class="mp-stack"></div>
-            <div class="field">
-              <label for="mp-layer-target">Add emTech to</label>
-              <select id="mp-layer-target"></select>
-            </div>
-            <div id="mp-tech-tray" class="mp-tech-tray"></div>
-
-            <h3>Challenge → Pilot → Scale</h3>
+            <h3 class="mp-section-label">Challenge → Pilot → Scale</h3>
             <div class="field">
               <label for="mp-challenge-answer">Challenge answer</label>
-              <textarea id="mp-challenge-answer" rows="4" placeholder="How you face scrutiny…"></textarea>
+              <textarea
+                id="mp-challenge-answer"
+                rows="3"
+                placeholder="How you face scrutiny…"
+              ></textarea>
             </div>
             <div class="form-actions mp-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-challenge">Face challenge</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-submit-challenge">Submit answer</button>
-              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-pilot">Attempt Pilot</button>
-              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-scale">Attempt Scale</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-challenge">
+                Face challenge
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-submit-challenge">
+                Submit answer
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-pilot">
+                Attempt Pilot
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-mp-scale">
+                Attempt Scale
+              </button>
             </div>
             <div class="form-actions mp-actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-end-turn">End turn</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">Wait +2 years</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-abandon">Abandon my idea</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">
+                Wait +2 years
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-abandon">
+                Abandon my idea
+              </button>
             </div>
             <div id="mp-ai-pending" class="mp-ai-pending" hidden>
               <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
               <span id="mp-ai-pending-text">Co-inventor thinking…</span>
             </div>
             <div id="mp-ai-log" class="mp-ai-log muted"></div>
+            <div id="mp-outcome" class="hs-outcome" hidden>
+              <h3>Outcome</h3>
+              <div id="mp-outcome-body"></div>
+            </div>
+            <p id="mp-status" class="friends-status muted" aria-live="polite"></p>
           </div>
-          <p id="mp-status" class="friends-status muted" aria-live="polite"></p>
         </main>
 
         <aside class="vision-panel side-panel mp-side-panel" id="mp-side-panel">
           <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">Future vision</button>
-            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">AI co-inventor</button>
+            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">
+              Future vision
+            </button>
+            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">
+              AI co-inventor
+            </button>
           </div>
           <div id="mp-side-vision" class="side-pane mp-side-vision" role="tabpanel">
             <div class="vision-stage-bar">
@@ -433,7 +479,14 @@
                 <div class="vision-stage-name mp-vision-stage-name">Today</div>
                 <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
               </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-regen-vision" title="Regenerate">↻</button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-mp-regen-vision"
+                title="Regenerate"
+              >
+                ↻
+              </button>
             </div>
             <div class="vision-canvas-wrap" id="mp-vision-root">
               <img class="vision-image" alt="Vision of this place" hidden />
@@ -578,7 +631,7 @@
           <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-next-invent" title="Next invention">
             →
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden>
             Pass device →
           </button>
         </div>
@@ -814,6 +867,13 @@
           </button>
         </div>
       </header>
+      <!-- Multiplayer: who has the turn + whose invent you're watching (same seats as workshop) -->
+      <div id="mp-challenge-bar" class="mp-workshop-bar mp-challenge-bar" hidden>
+        <div class="mp-workshop-bar-row">
+          <div id="mp-seat-tabs-ch" class="mp-seat-tabs" aria-label="Players and invent phases"></div>
+        </div>
+        <p id="mp-challenge-view-hint" class="mp-view-hint muted" hidden></p>
+      </div>
       <div class="challenge-layout">
         <!-- LEFT: the challenge -->
         <main class="challenge-main">
@@ -893,9 +953,10 @@
                   data-mode="sidestep"
                 >
                   <span class="scrutiny-move-title">3 · Sidestep once</span>
-                  <span class="scrutiny-move-cost">then 1 AP · 1 Will</span>
+                  <span class="scrutiny-move-cost">then 1 AP · 1 Will · softens elegance</span>
                   <span class="scrutiny-move-blurb">
-                    Skip without winning — once per challenge. Confirm below. Softens elegance.
+                    Skip without winning — once per run. Costs Will (hurts deploy odds) and softens
+                    elegance stars. Confirm below.
                   </span>
                 </button>
               </div>
@@ -1135,9 +1196,36 @@
           </button>
           <button type="button" class="btn btn-secondary" id="btn-outcome-retry">Keep inventing</button>
           <button type="button" class="btn btn-primary" id="btn-outcome-new">New mission</button>
+          <!-- Friends room rematch: winner picks next theme/scenario -->
+          <button type="button" class="btn btn-primary" id="btn-outcome-rematch-pick" hidden>
+            Pick next theme →
+          </button>
+          <p id="outcome-rematch-wait" class="muted sm" hidden style="margin: 0.5rem 0 0; width: 100%; text-align: center"></p>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-outcome-leave-room" hidden>
+            Leave room
+          </button>
         </div>
       </div>
     </section>
+
+    <!-- Multiplayer: your turn is starting (plain div — no <dialog showModal> trap) -->
+    <div
+      id="mp-turn-modal"
+      class="mp-turn-modal"
+      hidden
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="mp-turn-title"
+    >
+      <div class="mp-turn-dialog">
+        <p class="mp-turn-kicker" id="mp-turn-kicker">Friends multiplayer</p>
+        <h3 id="mp-turn-title">Your turn</h3>
+        <p id="mp-turn-body" class="mp-turn-body"></p>
+        <button type="button" class="btn btn-primary" id="mp-turn-ok">
+          Let's go
+        </button>
+      </div>
+    </div>
 
     <!-- Tech learn modal (single card or stack, newest first) -->
     <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
@@ -1308,7 +1396,11 @@
               <article class="help-tile help-tile-move">
                 <h5>Sidestep once</h5>
                 <p class="help-cost">1 AP · 1 Will</p>
-                <p>Skip without winning. Once per run; softens elegance. Button greys out after use.</p>
+                <p>
+                  Skip this critic without winning the argument. <strong>Not free:</strong> costs Will
+                  (hurts deploy odds) and softens elegance stars at the end. Only once per run so it
+                  cannot replace defending or fixing.
+                </p>
               </article>
             </div>
           </section>
@@ -1474,6 +1566,6 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=vision-quiet-1"></script>
   </body>
 </html>

@@ -167,6 +167,10 @@ export class RoomClient {
               forges: msg.forges ?? msg.mp?.forges ?? this.snapshot.forges,
               openTable: msg.openTable ?? msg.mp?.openTable ?? this.snapshot.openTable,
               ranking: msg.ranking !== undefined ? msg.ranking : this.snapshot.ranking,
+              rematchChooserId:
+                msg.rematchChooserId !== undefined
+                  ? msg.rematchChooserId
+                  : this.snapshot.rematchChooserId,
               activeSeatId: msg.activeSeatId ?? msg.mp?.activeSeatId ?? this.snapshot.activeSeatId,
               fieldLocks: msg.fieldLocks || this.snapshot.fieldLocks,
               phase: msg.phase || (msg.mp ? "playing" : this.snapshot.phase),
@@ -184,8 +188,26 @@ export class RoomClient {
             if (msg.missionMeta) this.snapshot.missionMeta = msg.missionMeta;
             if (msg.phase) this.snapshot.phase = msg.phase;
             if (msg.settings) this.snapshot.settings = msg.settings;
+            if (msg.rematchChooserId !== undefined) {
+              this.snapshot.rematchChooserId = msg.rematchChooserId;
+            }
             // Always apply fieldLocks when present (including {} after unlock)
             if (msg.fieldLocks !== undefined) this.snapshot.fieldLocks = msg.fieldLocks;
+          }
+          this.emit(msg);
+          return;
+        }
+        if (
+          msg.type === "rematch_started" ||
+          msg.type === "race_started" ||
+          msg.type === "host_ok"
+        ) {
+          if (msg.snapshot) this.snapshot = msg.snapshot;
+          if (msg.phase) {
+            if (this.snapshot) this.snapshot.phase = msg.phase;
+          }
+          if (msg.simVersion != null && this.snapshot) {
+            this.snapshot.simVersion = msg.simVersion;
           }
           this.emit(msg);
           return;
@@ -338,7 +360,9 @@ export class RoomClient {
   }
 
   async hostCmd(cmd, payload = {}) {
-    if (!this.session?.isHost && !this.session?.hostToken) {
+    // Host for lobby start; rematch may be the ranking winner (not always host)
+    const isRematchCmd = cmd === "set_mission" || cmd === "start_mission";
+    if (!this.session?.isHost && !this.session?.hostToken && !isRematchCmd) {
       throw new Error("not_host");
     }
     // Prefer WS
@@ -347,7 +371,8 @@ export class RoomClient {
         JSON.stringify({
           type: "host",
           cmd,
-          hostToken: this.session.hostToken,
+          hostToken: this.session.hostToken || undefined,
+          playerToken: this.session.playerToken,
           payload,
         })
       );

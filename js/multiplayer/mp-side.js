@@ -154,12 +154,14 @@ export class MpSidePanel {
 
   /**
    * Refresh vision from current forge/place. Call after render / stack changes.
-   * @param {{ immediate?: boolean, force?: boolean }} [opts]
+   * Rooms: shared sessionId per invent + followOnly for non-owners; content-gated.
+   * @param {{ immediate?: boolean, force?: boolean, sessionId?: string, followOnly?: boolean }} [opts]
    */
   syncVision(opts = {}) {
     const place = this.opts.getPlace?.();
     const forge = this.opts.getForge?.();
     if (!place?.mission) return;
+
     // Lazy-mount vision if panel became visible after setup
     if (!this.vision && this.visionRoot) {
       this.vision = new VisionRenderer(this.visionRoot);
@@ -177,7 +179,12 @@ export class MpSidePanel {
     const nameEl = panel?.querySelector(".mp-vision-stage-name");
     const blurbEl = panel?.querySelector(".mp-vision-stage-blurb");
     if (nameEl) nameEl.textContent = `${stage.name} · ${place.year}`;
-    if (blurbEl) blurbEl.textContent = stage.blurb;
+    if (blurbEl) {
+      blurbEl.textContent =
+        this.opts.mode === "room"
+          ? `${stage.blurb} · shared room vision`
+          : stage.blurb;
+    }
 
     const narr = panel?.querySelector(".mp-vision-narratives");
     if (narr) {
@@ -203,8 +210,30 @@ export class MpSidePanel {
             )}</div>`);
     }
 
-    // Always have a challenge object so VisionRenderer.flush proceeds
+    // Content gate — skip Imagine if nothing invent-related changed
+    const contentKey = [
+      forge?.seatId || forge?.displayName || "",
+      place.year,
+      stageId,
+      techs.map((t) => t.id).sort().join(","),
+      (forge?.inventionName || "").trim(),
+      (forge?.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      (forge?.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 300),
+    ].join("¦");
+    if (!opts.force && contentKey === this._lastVisionKey && this.vision.currentUrl) {
+      return;
+    }
+    this._lastVisionKey = contentKey;
+
     const mission = place.mission;
+    const sessionId =
+      opts.sessionId ||
+      this.opts.visionSessionId?.(forge) ||
+      null;
+    if (sessionId) this.vision.setSessionId(sessionId);
+
+    const followOnly = Boolean(opts.followOnly) && !opts.force;
+
     this.vision.setState({
       stageId,
       stage,
@@ -225,8 +254,11 @@ export class MpSidePanel {
       pressure: place.pressure || {},
       challengeBeat: null,
       immediate: Boolean(opts.immediate),
-      force: Boolean(opts.force) || techs.length > 0,
-      debounceMs: opts.immediate ? 100 : 900,
+      // NEVER force just because stack has techs
+      force: Boolean(opts.force) && !followOnly,
+      debounceMs: opts.immediate ? 200 : this.opts.mode === "room" ? 1400 : 900,
+      sessionId: sessionId || undefined,
+      followOnly,
     });
   }
 

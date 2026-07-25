@@ -109,6 +109,15 @@ export function createHotseatBridge() {
     if (!isMyTurn()) return false;
     const f = forge(getViewId());
     if (!f || f.abandoned) return false;
+    // Challenge started → invent frozen (owner + helpers)
+    if (
+      f.turnPhase === "scrutiny" ||
+      f.challengePassed ||
+      f.deployStage === "pilot_ok" ||
+      f.deployStage === "scaled"
+    ) {
+      return false;
+    }
     return forgePhase(getViewId()) === "invent";
   }
 
@@ -145,6 +154,14 @@ export function createHotseatBridge() {
     if (!session || session.place?.status !== "playing") return false;
     const f = forge(getViewId());
     if (!f || f.abandoned) return false;
+    if (
+      f.turnPhase === "scrutiny" ||
+      f.challengePassed ||
+      f.deployStage === "pilot_ok" ||
+      f.deployStage === "scaled"
+    ) {
+      return false;
+    }
     return forgePhase(getViewId()) === "invent";
   }
 

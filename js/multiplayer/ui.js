@@ -45,6 +45,8 @@ export function initFriendsUi(api) {
     clearMissionPickSession,
     enterHotseatPlay,
     leaveHotseat,
+    enterRoomPlay,
+    leaveRoomPlay,
   } = api;
   const client = new RoomClient();
   let bufferTimers = {};
@@ -56,11 +58,14 @@ export function initFriendsUi(api) {
   /** @type {MpSidePanel|null} */
   let roomSide = null;
   let roomSideMounted = false;
+  /** Prevent host freeze: enterRoomPlay only once per race */
+  let roomPlayEnteredFor = "";
 
   /** Room host mission pick (from solo screens) */
   let roomPick = { globalId: null, mission: null };
-  /** Domain filter for hotseat tech library */
+  /** Domain filter for hotseat / room tech library */
   let hsDomainFilter = "all";
+  let mpDomainFilter = "all";
   let hsVisionFingerprint = "";
 
   function setHubStatus(msg) {
@@ -221,8 +226,35 @@ export function initFriendsUi(api) {
     }
 
     if (snap.phase === "playing" || snap.mp?.place) {
+      // Same workshop + Challenge screen as hotseat (not invent-inline challenge)
+      tryEnterRoomPlayOnce("lobby-render");
+    }
+  }
+
+  function roomRaceKey() {
+    const s = client.snapshot;
+    if (!s) return "";
+    return `${s.code || ""}|${s.simVersion || s.mp?.version || 0}|${
+      s.place?.mission?.id || s.mp?.place?.mission?.id || ""
+    }`;
+  }
+
+  /** Host was freezing: every snapshot/presence re-entered full room play setup. */
+  function tryEnterRoomPlayOnce(reason = "") {
+    if (typeof enterRoomPlay !== "function") {
       showScreen("room-play");
       renderPlay();
+      return;
+    }
+    const key = roomRaceKey();
+    if (!key) return;
+    if (roomPlayEnteredFor === key) return;
+    roomPlayEnteredFor = key;
+    try {
+      enterRoomPlay(client);
+    } catch (e) {
+      console.error("[friends] enterRoomPlay", reason, e);
+      roomPlayEnteredFor = "";
     }
   }
 
@@ -329,6 +361,12 @@ export function initFriendsUi(api) {
         const id = snap?.you?.id || client.session?.playerId;
         return Boolean(id && snap?.activeSeatId === id && snap?.place?.status === "playing");
       },
+      /** Shared Imagine cache key so all clients see the same invent frame */
+      visionSessionId: (forge) => {
+        const code = client.snapshot?.code || client.session?.code || "room";
+        const seat = forge?.seatId || client.snapshot?.you?.id || "seat";
+        return `room-${String(code).slice(0, 24)}-seat-${String(seat).slice(0, 40)}`;
+      },
       applyField: (field, value) => {
         try {
           client.sendAction({ type: "buffer_write", payload: { field, value } });
@@ -350,7 +388,15 @@ export function initFriendsUi(api) {
     );
     roomSideMounted = true;
     $("#btn-mp-regen-vision")?.addEventListener("click", () => {
-      roomSide?.syncVision({ force: true, immediate: true });
+      const snap = client.snapshot;
+      const me = snap?.you?.id;
+      const forge = snap?.you?.forge || snap?.mp?.forges?.[me];
+      roomSide?.syncVision({
+        force: true,
+        immediate: true,
+        followOnly: false,
+        sessionId: roomSide.opts.visionSessionId?.(forge),
+      });
     });
     return roomSide;
   }
@@ -392,11 +438,26 @@ export function initFriendsUi(api) {
       const mine = myId && activeId === myId;
       badge.textContent = mine ? `Your turn · ${activeName}` : `Active: ${activeName}`;
     }
+    const activePill = $("#mp-room-active-player");
+    if (activePill) {
+      activePill.hidden = false;
+      activePill.removeAttribute("hidden");
+      activePill.innerHTML = `<strong>${escapeHtml(activeName)}</strong><span class="mp-active-label"> · turn</span>`;
+      activePill.title = `${activeName}'s turn`;
+    }
 
     $("#mp-mission-title").textContent = mission?.title || "Friends race";
     $("#mp-mission-place").textContent = mission
-      ? `${mission.place} · personal inventions · Scale updates crisis · collapse ${mission.collapseYear}`
+      ? `${mission.place} · collapse ${mission.collapseYear}`
       : "";
+    const sceneEl = $("#mp-mission-scene");
+    if (sceneEl) sceneEl.textContent = mission?.scene || "";
+    const gLabel = $("#mp-play-global-label");
+    if (gLabel) {
+      gLabel.textContent = place?.globalId
+        ? `Friends · ${place.globalId}`
+        : "Friends race";
+    }
     $("#mp-news").textContent = place?.lastNews || snap?.sim?.lastNews || "";
 
     const box = $("#mp-pressure");
@@ -510,6 +571,13 @@ export function initFriendsUi(api) {
       if (el) el.disabled = !on;
     };
     setDis("#btn-mp-end-turn", playing && isActive);
+    const endBtn = $("#btn-mp-end-turn");
+    if (endBtn) {
+      endBtn.textContent = isActive ? "End turn →" : "Waiting…";
+      endBtn.title = isActive
+        ? "End your seat-turn (pass to next player)"
+        : "Not your turn";
+    }
     setDis("#btn-mp-wait", playing && isActive);
     setDis("#btn-mp-ai", playing && isActive && forge && !forge.abandoned);
     setDis(
@@ -542,12 +610,14 @@ export function initFriendsUi(api) {
       playing && isActive && forge && !forge.abandoned && forge.deployStage !== "scaled"
     );
 
-    // Vision follows your forge (and shared place year/pressure)
+    // Shared room vision — content-gated inside syncVision (no force-on-techs)
     try {
+      const me = myId;
+      const followOnly = false; // this panel shows *your* forge
       roomSide?.syncVision({
-        immediate: Boolean(
-          forge?.deployStage === "pilot_ok" || forge?.deployStage === "scaled"
-        ),
+        immediate: false,
+        followOnly,
+        sessionId: roomSide.opts.visionSessionId?.(forge),
       });
     } catch {
       /* vision optional */
@@ -655,60 +725,85 @@ export function initFriendsUi(api) {
   function paintStack(forge, myId) {
     const box = $("#mp-stack");
     if (!box) return;
-    if (!forge?.stack?.length) {
-      box.innerHTML = `<span class="muted">No techs yet — pick from the tray (1 AP + Budget). You can layer on others.</span>`;
-      return;
-    }
-    box.innerHTML = forge.stack
-      .map((x) => {
-        const t = techById(x.techId);
-        const by =
-          x.addedBy && x.addedBy !== myId
-            ? ` · +${escapeHtml(
-                (client.snapshot?.players || []).find((p) => p.id === x.addedBy)?.displayName || "?"
-              )}`
-            : "";
-        return `<button type="button" class="mp-chip" data-tech-id="${escapeHtml(
-          x.techId
-        )}">${escapeHtml(t?.icon || "")} ${escapeHtml(t?.name || x.techId)}${by}</button>`;
-      })
-      .join("");
-    box.querySelectorAll(".mp-chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
+    const snap = client.snapshot;
+    const mp = snap?.mp;
+    const targetId = $("#mp-layer-target")?.value || myId;
+    const target = mp?.forges?.[targetId] || forge;
+    const seatNames = Object.fromEntries(
+      (snap?.players || []).map((p) => [p.id, p.displayName])
+    );
+    const activeId = snap?.activeSeatId;
+    const isActive = myId && activeId === myId;
+    const canEdit =
+      isActive &&
+      !forge?.abandoned &&
+      snap?.place?.status !== "won" &&
+      snap?.place?.status !== "collapsed";
+
+    paintSelectedStack(box, {
+      stack: target?.stack || [],
+      ownerSeatId: targetId,
+      seatNames,
+      disabled: !canEdit,
+      escapeHtml,
+      onRemove: (techId) => {
         mpSend({
           type: "deselect_tech",
-          payload: { techId: btn.dataset.techId, targetSeatId: myId },
+          payload: { techId, targetSeatId: targetId },
         });
-      });
+      },
     });
   }
 
   function paintTechTray(forge, place, mp, myId) {
-    const tray = $("#mp-tech-tray");
-    if (!tray) return;
+    // Full solo-style library (same as hotseat) — not a tiny tray
+    const listEl = $("#mp-tech-list");
+    const filterRow = $("#mp-filter-row");
     const targetId = $("#mp-layer-target")?.value || myId;
     const target = mp?.forges?.[targetId] || forge;
-    const selected = new Set((target?.stack || []).map((x) => x.techId));
-    const suggested = place?.mission?.suggested || [];
-    const ids = [
-      ...new Set([...suggested, "ai", "iot", "solar", "networks", "drones", "battery"]),
-    ].slice(0, 14);
-    tray.innerHTML = ids
-      .map((id) => {
-        const t = techById(id);
-        if (!t || selected.has(id)) return "";
-        return `<button type="button" class="mp-tech-btn" data-tech-id="${escapeHtml(id)}">${escapeHtml(
-          t.icon || ""
-        )} ${escapeHtml(t.name)}</button>`;
-      })
-      .filter(Boolean)
-      .join("");
-    tray.querySelectorAll(".mp-tech-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const techId = btn.dataset.techId;
+    const snap = client.snapshot;
+    const activeId = snap?.activeSeatId || mp?.activeSeatId;
+    const isActive = myId && activeId === myId;
+    const playing =
+      place?.status === "playing" || snap?.phase === "playing";
+    const canEdit =
+      playing &&
+      isActive &&
+      !forge?.abandoned &&
+      place?.status !== "won" &&
+      place?.status !== "collapsed";
+
+    const hint = $("#mp-layer-hint");
+    if (hint) {
+      hint.textContent =
+        targetId === myId ? "Add to your stack" : "Layer help on their stack (you pay)";
+    }
+
+    paintTechFilters(filterRow, {
+      domainFilter: mpDomainFilter,
+      escapeHtml,
+      onFilter: (d) => {
+        mpDomainFilter = d;
+        paintTechTray(forge, place, mp, myId);
+      },
+    });
+
+    paintTechLibrary(listEl, {
+      selectedIds: (target?.stack || []).map((x) => x.techId),
+      suggested: place?.mission?.suggested || [],
+      domainFilter: mpDomainFilter,
+      disabled: !canEdit,
+      escapeHtml,
+      onToggle: (techId) => {
         const tech = techById(techId);
+        const onStack = (target?.stack || []).some((x) => x.techId === techId);
         const targetSeatId = $("#mp-layer-target")?.value || myId;
-        if (targetSeatId === myId) {
+        if (onStack) {
+          mpSend({
+            type: "deselect_tech",
+            payload: { techId, targetSeatId },
+          });
+        } else if (targetSeatId === myId) {
           mpSend({ type: "select_tech", payload: { techId, tech } });
         } else {
           mpSend({
@@ -716,8 +811,12 @@ export function initFriendsUi(api) {
             payload: { techId, targetSeatId, tech },
           });
         }
-      });
+      },
     });
+
+    // Hide legacy tray if present
+    const tray = $("#mp-tech-tray");
+    if (tray) tray.hidden = true;
   }
 
   function scheduleBuffer(field, value) {
@@ -763,6 +862,11 @@ export function initFriendsUi(api) {
         }
       });
     }
+    const layerSel = $("#mp-layer-target");
+    if (layerSel && !layerSel._mpWired) {
+      layerSel._mpWired = true;
+      layerSel.addEventListener("change", () => renderPlay());
+    }
   }
 
   function setAiPending(on, text) {
@@ -786,14 +890,21 @@ export function initFriendsUi(api) {
   client.on((evt) => {
     if (evt.type === "hello" || evt.type === "snapshot" || evt.type === "lobby" || evt.type === "presence") {
       const phase = client.snapshot?.phase;
-      if (phase === "playing" || phase === "outcome") {
-        showScreen("room-play");
-        wireFields();
-        renderPlay();
-      } else {
+      if (phase === "playing") {
+        // Once per race only — repeated enterRoomPlay froze the host on Start race
+        tryEnterRoomPlayOnce(evt.type);
+      } else if (phase === "outcome") {
+        // Soft re-enter for outcome handling (same key unless version bumped)
+        tryEnterRoomPlayOnce(`outcome-${evt.type}`);
+      } else if (client.snapshot) {
+        roomPlayEnteredFor = "";
         showScreen("room-lobby");
         renderLobby();
       }
+    }
+    if (evt.type === "rematch_started" || evt.type === "race_started") {
+      roomPlayEnteredFor = "";
+      tryEnterRoomPlayOnce(evt.type);
     }
     // Soft locks + settings must refresh labels even when no sim patch arrives
     if (evt.type === "locks") {
@@ -804,11 +915,13 @@ export function initFriendsUi(api) {
       return;
     }
     if (evt.type === "settings") {
-      if (client.snapshot?.phase === "playing" || client.snapshot?.phase === "outcome") renderPlay();
-      else renderLobby();
+      if (client.snapshot?.phase === "playing" || client.snapshot?.phase === "outcome") {
+        /* workshop is driven by room bridge */
+      } else renderLobby();
     }
     if (evt.type === "patch") {
-      renderPlay();
+      // When using workshop bridge, enterRoomPlay's subscription hydrates; still keep legacy render
+      if (typeof enterRoomPlay !== "function") renderPlay();
       const last = (evt.events || [])[0];
       if (last?.type === "wait") setPlayStatus(`Wait → year ${client.snapshot?.place?.year}`);
       if (last?.type === "end_turn" || last?.type === "seat_turn_start") {
@@ -843,23 +956,41 @@ export function initFriendsUi(api) {
     }
     if (evt.type === "reject") {
       const err = evt.error || "Action rejected";
+      // Prefer game.js map when available (pilot_required → human copy)
       const friendly =
-        err === "player_rate_quota"
-          ? "AI rate limit — wait a minute"
-          : err === "player_session_quota"
-            ? "Session AI quota reached"
-            : err === "room_quota"
-              ? "Room AI budget exhausted"
-              : err === "pose_judge_busy"
-                ? "Another pose/judge is in flight"
-                : err === "no_ap"
-                  ? "No AP for that action"
-                  : err === "field_locked"
-                    ? "Someone else is editing that field"
-                    : err;
+        typeof window !== "undefined" && typeof window.mpFriendlyError === "function"
+          ? window.mpFriendlyError(err)
+          : err === "player_rate_quota"
+            ? "AI rate limit — wait a minute"
+            : err === "player_session_quota"
+              ? "Session AI quota reached"
+              : err === "room_quota"
+                ? "Room AI budget exhausted"
+                : err === "pose_judge_busy"
+                  ? "Another pose/judge is in flight"
+                  : err === "no_ap"
+                    ? "No AP for that action"
+                    : err === "field_locked"
+                      ? "Someone else is editing that field"
+                      : err === "pilot_required"
+                        ? "Pilot this invention successfully before Scale."
+                        : err === "challenge_required"
+                          ? "This invent must pass Challenge before Pilot."
+                          : err === "not_active_seat"
+                            ? "Not your turn — wait for the active player."
+                            : err;
       flashToast(friendly);
       setPlayStatus(friendly);
       setAiPending(false);
+    }
+    if (evt.type === "alone") {
+      flashToast(
+        evt.message ||
+          "You're the only one still connected — you can keep playing alone or leave the room."
+      );
+    }
+    if (evt.type === "player_left" && evt.message) {
+      flashToast(evt.message);
     }
     if (evt.type === "kicked") {
       flashToast("You were kicked from the room.");
@@ -941,6 +1072,7 @@ export function initFriendsUi(api) {
     roomSide?.destroy();
     roomSide = null;
     roomSideMounted = false;
+    if (typeof leaveRoomPlay === "function") leaveRoomPlay();
     showScreen("friends");
   });
   $("#btn-mp-leave")?.addEventListener("click", () => {
@@ -948,6 +1080,8 @@ export function initFriendsUi(api) {
     roomSide?.destroy();
     roomSide = null;
     roomSideMounted = false;
+    roomPlayEnteredFor = "";
+    if (typeof leaveRoomPlay === "function") leaveRoomPlay();
     showScreen("friends");
   });
 
@@ -976,10 +1110,15 @@ export function initFriendsUi(api) {
       meta = cur;
     }
     try {
-      await client.hostCmd("start_mission", meta);
       setLobbyStatus("Starting race…");
+      const startBtn = $("#btn-room-start");
+      if (startBtn) startBtn.disabled = true;
+      await client.hostCmd("start_mission", meta);
+      // WS snapshot / race_started will call tryEnterRoomPlayOnce — don't double-enter here
     } catch (e) {
       flashToast(e.message || "Start failed");
+      const startBtn = $("#btn-room-start");
+      if (startBtn) startBtn.disabled = false;
     }
   });
 
@@ -1592,9 +1731,7 @@ export function initFriendsUi(api) {
       .connect()
       .then(() => {
         if (client.snapshot?.phase === "playing") {
-          showScreen("room-play");
-          wireFields();
-          renderPlay();
+          tryEnterRoomPlayOnce("resume");
         } else if (client.snapshot) {
           showScreen("room-lobby");
           renderLobby();
