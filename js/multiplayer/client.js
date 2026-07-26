@@ -158,12 +158,23 @@ export class RoomClient {
               this.resync();
               return;
             }
+            // Prefer explicit patch fields. Never invent a sticky "outcome" phase
+            // from an old snapshot when the place is still playing (that desynced tables).
+            const nextPlace = msg.place ?? msg.mp?.place ?? this.snapshot.place;
+            let nextPhase = this.snapshot.phase || "playing";
+            if (msg.phase != null && msg.phase !== "") {
+              nextPhase = msg.phase;
+            } else if (nextPlace?.status === "won" || nextPlace?.status === "collapsed" || nextPlace?.status === "abandoned_by_vote") {
+              nextPhase = "outcome";
+            } else if (nextPlace?.status === "playing") {
+              nextPhase = "playing";
+            }
             this.snapshot = {
               ...this.snapshot,
               simVersion: msg.simVersion,
               sim: msg.sim ?? this.snapshot.sim,
               mp: msg.mp ?? this.snapshot.mp,
-              place: msg.place ?? msg.mp?.place ?? this.snapshot.place,
+              place: nextPlace,
               invents:
                 msg.invents ??
                 msg.mp?.invents ??
@@ -176,7 +187,7 @@ export class RoomClient {
                   : this.snapshot.nextQuestChooserId,
               activeSeatId: msg.activeSeatId ?? msg.mp?.activeSeatId ?? this.snapshot.activeSeatId,
               fieldLocks: msg.fieldLocks || this.snapshot.fieldLocks,
-              phase: msg.phase || (msg.mp ? "playing" : this.snapshot.phase),
+              phase: nextPhase,
               you: msg.you
                 ? { ...(this.snapshot.you || {}), ...msg.you }
                 : this.snapshot.you,

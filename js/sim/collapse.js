@@ -13,6 +13,29 @@ export function isWin(pressure, winMax = {}) {
 }
 
 /**
+ * HUD color band for one crisis meter vs this Quest's win goal.
+ * No extra label text — color only:
+ * - cool (green): at or under winMax (this meter held)
+ * - warm (yellow): above goal, not yet near collapse
+ * - hot (red): dangerous (4+) or at collapse (5)
+ * If winMax for the key is missing, fall back to absolute severity.
+ *
+ * @param {number} cur — current pressure 0–5
+ * @param {number|null|undefined} winMaxForKey — mission.winMax[key]
+ * @returns {"cool"|"warm"|"hot"}
+ */
+export function crisisMeterLevel(cur, winMaxForKey) {
+  const n = Math.max(0, Math.min(5, Math.round(Number(cur) || 0)));
+  if (winMaxForKey == null || Number.isNaN(Number(winMaxForKey))) {
+    return n >= 4 ? "hot" : n >= 2 ? "warm" : "cool";
+  }
+  const goal = Math.max(0, Math.min(5, Math.round(Number(winMaxForKey))));
+  if (n <= goal) return "cool";
+  if (n >= 4) return "hot";
+  return "warm";
+}
+
+/**
  * Multiplayer race is over — no more seat-turns / deploy actions.
  * - won: full solve (meters under goals)
  * - collapsed: place fell

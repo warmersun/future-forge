@@ -112,6 +112,8 @@ export function publicMpState(session) {
     seats: (session.seats || []).map((s) => ({ ...s })),
     seatOrder: [...(session.seatOrder || [])],
     activeIndex: session.activeIndex,
+    /** Canonical active seat — clients must not recompute from activeIndex alone */
+    activeSeatId: activeSeatId(session),
     firstPlayerId: session.firstPlayerId,
     round: session.round,
     place: session.place
@@ -157,7 +159,6 @@ export function publicMpState(session) {
         }
       : null,
     openTable: getOpenTable(session),
-    activeSeatId: activeSeatId(session),
   };
 }
 
@@ -448,8 +449,25 @@ function domainsOf(techs) {
 }
 
 /**
- * Advance to the next seat. Optionally skip seats not in `preferConnectedIds`
- * (e.g. offline players), falling back to the immediate next seat if all offline.
+ * Whether a seat should receive the next seat-turn.
+ * - invent.connected === false → player left / disconnected mid-game (always skip)
+ * - preferConnectedIds (when provided) → only those ids are eligible
+ * @param {object} session
+ * @param {string} seatId
+ * @param {Set<string>|null} preferSet
+ */
+function seatEligibleForHandoff(session, seatId, preferSet) {
+  const f = session.invents?.[seatId];
+  // Sticky offline mark set when the player disconnects during play
+  if (f && f.connected === false) return false;
+  if (preferSet && preferSet.size > 0) return preferSet.has(seatId);
+  return true;
+}
+
+/**
+ * Advance to the next seat. Skips offline / left seats.
+ * Optionally also restrict to `preferConnectedIds` (live socket presence).
+ * Falls back to simple +1 only if every seat is ineligible.
  * @param {object} session
  * @param {{ preferConnectedIds?: string[]|Set<string> }} [opts]
  */
@@ -466,15 +484,16 @@ function passToNext(session, opts = {}) {
     : null;
 
   let nextIdx = (prev + 1) % n;
-  if (prefer && prefer.size > 0) {
-    let tries = 0;
-    while (tries < n && !prefer.has(session.seatOrder[nextIdx])) {
-      nextIdx = (nextIdx + 1) % n;
-      tries++;
-    }
-    // If nobody preferred is online, keep simple +1 from prev
-    if (tries >= n) nextIdx = (prev + 1) % n;
+  let tries = 0;
+  while (
+    tries < n &&
+    !seatEligibleForHandoff(session, session.seatOrder[nextIdx], prefer)
+  ) {
+    nextIdx = (nextIdx + 1) % n;
+    tries++;
   }
+  // Everyone offline / left — still advance one seat so the sim is not frozen
+  if (tries >= n) nextIdx = (prev + 1) % n;
 
   const wrapped = nextIdx <= prev && session.place?.status === "playing";
   const next = cloneSession(session);
@@ -628,6 +647,46 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
+  // —— Vision sync: invent owner may publish anytime (not only active seat) ——
+  // Active helpers can also bump when working a target invent on their turn.
+  if (type === "sync_vision") {
+    const actorId = seatId || activeSeatId(session);
+    if (!actorId || !session.invents?.[actorId]) {
+      return { ok: false, error: "no_seat", session };
+    }
+    const targetSeatId = payload.targetSeatId || actorId;
+    const target = session.invents[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    const activeIdEarly = activeSeatId(session);
+    const ownsTarget = targetSeatId === actorId;
+    const isActive = actorId === activeIdEarly;
+    if (!ownsTarget && !isActive) {
+      return {
+        ok: false,
+        error: "not_active_seat",
+        session,
+        activeSeatId: activeIdEarly,
+      };
+    }
+    let s = cloneSession(session);
+    const t = s.invents[targetSeatId];
+    if (payload.sessionId != null) {
+      t.visionSessionId = String(payload.sessionId).slice(0, 120);
+    }
+    t.visionRev = (t.visionRev || 0) + 1;
+    const events = [
+      {
+        type: "vision_sync",
+        seatId: actorId,
+        targetSeatId,
+        visionRev: t.visionRev,
+        visionSessionId: t.visionSessionId || "",
+      },
+    ];
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
   const activeId = activeSeatId(session);
   if (!activeId) return { ok: false, error: "no_seat", session };
   if (seatId != null && seatId !== activeId) {
@@ -698,6 +757,29 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
     actor.ap = Math.min(actor.apMax || 3, (actor.ap || 0) + n);
     events.push({ type: "refund_ap", amount: n, seatId: activeId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+  // Will pay / refund (e.g. scaled Sidestep cost on Challenge)
+  if (type === "pay_will") {
+    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
+    if (!bwOn) {
+      events.push({ type: "pay_will", amount: 0, seatId: activeId, skipped: true });
+      s.version = (session.version || 0) + 1;
+      return { ok: true, session: s, events };
+    }
+    if (n > 0 && (actor.will ?? 0) < n) return { ok: false, error: "no_will", session };
+    if (n > 0) actor.will = Math.max(0, (actor.will ?? 0) - n);
+    events.push({ type: "pay_will", amount: n, seatId: activeId, will: actor.will });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+  if (type === "refund_will") {
+    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
+    if (bwOn && n > 0) {
+      actor.will = Math.min(maxWill, (actor.will ?? 0) + n);
+    }
+    events.push({ type: "refund_will", amount: n, seatId: activeId, will: actor.will });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }
@@ -926,28 +1008,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     return { ok: true, session: s, events };
   }
 
-  /**
-   * Owner finished a new Imagine frame — bump rev so followers re-peek the
-   * shared server cache (no image bytes on the wire).
-   */
-  if (type === "sync_vision") {
-    const targetSeatId = payload.targetSeatId || activeId;
-    const target = s.invents[targetSeatId];
-    if (!target) return { ok: false, error: "no_target", session };
-    if (payload.sessionId != null) {
-      target.visionSessionId = String(payload.sessionId).slice(0, 120);
-    }
-    target.visionRev = (target.visionRev || 0) + 1;
-    events.push({
-      type: "vision_sync",
-      seatId: activeId,
-      targetSeatId,
-      visionRev: target.visionRev,
-      visionSessionId: target.visionSessionId || "",
-    });
-    s.version = (session.version || 0) + 1;
-    return { ok: true, session: s, events };
-  }
+  // sync_vision handled above (owner may publish off-turn)
 
   if (type === "submit_challenge") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
@@ -1203,6 +1264,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
     // Full solve → race over. Partial → invent is fielded (new_normal) but race continues
     // so other players can still Pilot/Scale their invents (or help remaining invents).
+    // Always include post-drop pressure so clients can update crisis HUD without
+    // waiting on a separate snapshot race (Deploy screen meters must move).
+    const pressureAfter = clonePressure(s.place.pressure);
+
     if (solved) {
       target.landedSolvingScale = true;
       if (targetSeatId !== activeId) actor.landedSolvingScale = true;
@@ -1224,6 +1289,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         targetSeatId,
         seatId: activeId,
         solverSeatId: activeId,
+        pressure: pressureAfter,
         ...roll,
       });
       events.push({
@@ -1233,6 +1299,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         solved: true,
         placeStatus: "won",
         solverSeatId: activeId,
+        pressure: pressureAfter,
       });
     } else {
       s.place.status = "playing";
@@ -1249,6 +1316,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         deployStage: "new_normal",
         targetSeatId,
         seatId: activeId,
+        pressure: pressureAfter,
         ...roll,
       });
     }
@@ -1345,10 +1413,21 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       actor.challengePassed = false;
       // keep turnPhase === "scrutiny" so content stays frozen across handoff
     }
-    events.push({ type: "end_turn", seatId: activeId });
+    const prevActive = activeId;
+    events.push({ type: "end_turn", seatId: prevActive });
     s = finishEndTurn(s, {
       preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
     });
+    // Same handoff event as Wait — clients need seat_turn_start to refresh turn chrome
+    const nextId = activeSeatId(s);
+    if (nextId) {
+      events.push({
+        type: "seat_turn_start",
+        seatId: nextId,
+        round: s.round,
+        prevSeatId: prevActive,
+      });
+    }
     if (s._lastMarketNewsEvent) {
       events.push(s._lastMarketNewsEvent);
       delete s._lastMarketNewsEvent;
@@ -1357,7 +1436,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       events.push(s._lastYearTickEvent);
       delete s._lastYearTickEvent;
     }
-    s.log = [...(session.log || []), { type: "end_turn", seatId: activeId }];
+    s.log = [...(session.log || []), { type: "end_turn", seatId: prevActive }];
     return { ok: true, session: s, events };
   }
 
@@ -1425,7 +1504,10 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
     // Wait ends seat-turn — emit same handoff events as end_turn so clients refresh turn chrome
     events.push({ type: "end_turn", seatId: waiterId, from: "wait" });
-    s = passToNext(s);
+    // Same offline skip as end_turn (preferConnectedIds from room-manager payload)
+    s = passToNext(s, {
+      preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
+    });
     if (s._lastMarketNewsEvent) {
       events.push(s._lastMarketNewsEvent);
       delete s._lastMarketNewsEvent;

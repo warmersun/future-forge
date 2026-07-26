@@ -42,6 +42,8 @@ export class CoInventor {
     this.subtitle = opts.subtitle || "Your creative partner for this challenge";
     this.messages = [];
     this.busy = false;
+    /** When false (e.g. multiplayer spectator), chips/send stay disabled. */
+    this.interactive = true;
     this.available = null;
     this.root = null;
   }
@@ -318,14 +320,34 @@ export class CoInventor {
     this.root?.querySelector(`[data-think-id="${id}"]`)?.remove();
   }
 
+  /**
+   * Enable/disable compose + quick chips (multiplayer spectator / not your turn).
+   * @param {boolean} on
+   * @param {string} [reason]
+   */
+  setInteractive(on, reason = "") {
+    this.interactive = Boolean(on);
+    this._lockReason = reason || "";
+    this.setBusyUi(this.busy);
+  }
+
   setBusyUi(busy) {
+    const locked = Boolean(busy) || !this.interactive;
     const send = this.root?.querySelector("#co-send");
     const input = this.root?.querySelector("#co-input");
-    if (send) send.disabled = busy;
-    if (input) input.disabled = busy;
+    const clear = this.root?.querySelector("#co-clear");
+    if (send) send.disabled = locked;
+    if (input) {
+      input.disabled = locked;
+      if (locked && this._lockReason) input.title = this._lockReason;
+      else input.removeAttribute("title");
+    }
+    if (clear) clear.disabled = locked;
     this.root?.querySelectorAll(".co-chip").forEach((b) => {
-      b.disabled = busy;
+      b.disabled = locked;
+      if (locked && this._lockReason) b.title = this._lockReason;
     });
+    this.root?.classList.toggle("co-locked", locked && !busy);
   }
 
   renderMessages() {

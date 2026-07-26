@@ -24,6 +24,7 @@ import {
   paintSelectedStack,
 } from "./tech-library.js";
 import { describeMarketEffects } from "../sim/market-news.js";
+import { crisisMeterLevel } from "../sim/collapse.js";
 
 /**
  * @param {{
@@ -537,11 +538,13 @@ export function initFriendsUi(api) {
 
     const box = $("#mp-pressure");
     if (box) {
+      const winMax = mission?.winMax || place?.mission?.winMax || {};
       box.innerHTML = Object.entries(pressure)
         .map(([k, v]) => {
-          const level = v >= 4 ? "hot" : v >= 2 ? "warm" : "cool";
-          return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(v)}${"○".repeat(
-            Math.max(0, 5 - v)
+          const n = Math.max(0, Math.min(5, Math.round(Number(v) || 0)));
+          const level = crisisMeterLevel(n, winMax[k]);
+          return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(n)}${"○".repeat(
+            Math.max(0, 5 - n)
           )}</span>`;
         })
         .join("");
@@ -1126,7 +1129,12 @@ export function initFriendsUi(api) {
       }
     }
     if (evt.type === "reject") {
-      const err = evt.error || "Action rejected";
+      const err = String(evt.error || "Action rejected").trim();
+      // Stale Challenge UI sync after pass / Deploy — never toast the raw code
+      if (err === "not_in_challenge" || err === "cannot_enter_challenge") {
+        setAiPending(false);
+        return;
+      }
       // Prefer game.js map when available (pilot_required → human copy)
       const friendly =
         typeof window !== "undefined" && typeof window.mpFriendlyError === "function"
@@ -1641,11 +1649,13 @@ export function initFriendsUi(api) {
 
     const box = $("#hs-pressure");
     if (box) {
+      const winMax = place.mission?.winMax || {};
       box.innerHTML = Object.entries(place.pressure || {})
         .map(([k, v]) => {
-          const level = v >= 4 ? "hot" : v >= 2 ? "warm" : "cool";
-          return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(v)}${"○".repeat(
-            Math.max(0, 5 - v)
+          const n = Math.max(0, Math.min(5, Math.round(Number(v) || 0)));
+          const level = crisisMeterLevel(n, winMax[k]);
+          return `<span class="meter ${level}"><b>${escapeHtml(k)}</b> ${"●".repeat(n)}${"○".repeat(
+            Math.max(0, 5 - n)
           )}</span>`;
         })
         .join("");

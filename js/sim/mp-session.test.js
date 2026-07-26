@@ -839,11 +839,81 @@ describe("mp-session end_turn skip offline", () => {
     assert.equal(activeSeatId(s), "seat-0");
   });
 
+  it("invent.connected === false is skipped even without prefer list", () => {
+    // 3 seats: seat-0 leaves, seat-1 ends turn → must not hand to seat-0
+    let s = started();
+    // Add a third seat by cloning structure used in lobby
+    const order = s.seatOrder || ["seat-0", "seat-1"];
+    if (!s.invents["seat-2"]) {
+      // minimal third invent for handoff tests
+      s.invents["seat-2"] = {
+        ...s.invents["seat-1"],
+        displayName: "Cara",
+        inventionName: "",
+      };
+      s.seatOrder = [...order, "seat-2"];
+      if (s.seats) {
+        s.seats = [
+          ...s.seats,
+          { id: "seat-2", displayName: "Cara" },
+        ];
+      }
+    }
+    // seat-0 left the room
+    s.invents["seat-0"].connected = false;
+    s.invents["seat-0"].apSpentThisTurn = 1;
+    // Active seat-0 force ends (or was skipped) — start from seat-1
+    s.activeIndex = 1;
+    s.invents["seat-1"].apSpentThisTurn = 1;
+    s = applyMpAction(s, { type: "end_turn", payload: { force: true } }, "seat-1")
+      .session;
+    assert.equal(activeSeatId(s), "seat-2", "should go seat-1 → seat-2");
+    s.invents["seat-2"].apSpentThisTurn = 1;
+    s = applyMpAction(s, { type: "end_turn", payload: { force: true } }, "seat-2")
+      .session;
+    // Wrap past offline seat-0 to seat-1
+    assert.equal(activeSeatId(s), "seat-1", "must skip left seat-0");
+  });
+
+  it("wait also skips invent.connected === false", () => {
+    let s = started();
+    s.invents["seat-1"].connected = false;
+    s.invents["seat-0"].ap = 3;
+    s = applyMpAction(
+      s,
+      { type: "wait", payload: { preferConnectedIds: ["seat-0"] } },
+      "seat-0"
+    ).session;
+    // only seat-0 preferred / seat-1 offline → back to seat-0
+    assert.equal(activeSeatId(s), "seat-0");
+  });
+
   it("force end_turn allows pass with no engagement", () => {
     let s = started();
     const r = applyMpAction(s, { type: "end_turn", payload: { force: true } });
     assert.equal(r.ok, true);
     assert.equal(activeSeatId(r.session), "seat-1");
+  });
+});
+
+describe("mp-session pay_will", () => {
+  it("pays and refunds Will for sidestep-scale spends", () => {
+    let s = started();
+    const a = activeSeatId(s);
+    const before = s.invents[a].will;
+    s = applyMpAction(s, { type: "pay_will", payload: { amount: 2 } }).session;
+    assert.equal(s.invents[a].will, before - 2);
+    s = applyMpAction(s, { type: "refund_will", payload: { amount: 2 } }).session;
+    assert.equal(s.invents[a].will, before);
+  });
+
+  it("rejects pay_will when short", () => {
+    let s = started();
+    const a = activeSeatId(s);
+    s.invents[a].will = 1;
+    const r = applyMpAction(s, { type: "pay_will", payload: { amount: 2 } });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "no_will");
   });
 });
 

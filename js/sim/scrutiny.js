@@ -115,6 +115,31 @@ export function applyPivotResult(scrutiny, encounterId) {
   return { ok: true, scrutiny: next };
 }
 
+/**
+ * Sidestep cost = remaining resolve hearts.
+ * Full critic (2♥) → 2 AP + 2 Will; after a glance (1♥) → 1 AP + 1 Will.
+ * @param {object|null|undefined} enc
+ * @param {{ budgetWill?: boolean }} [opts]
+ * @returns {{ ok: boolean, error?: string, hearts: number, ap: number, will: number }}
+ */
+export function sidestepCostForEncounter(enc, opts = {}) {
+  const budgetWill = opts.budgetWill !== false;
+  if (!enc || enc.cleared) {
+    return { ok: false, error: "no_encounter", hearts: 0, ap: 0, will: 0 };
+  }
+  const maxHp = Math.max(1, Math.floor(Number(enc.maxHp) || 2));
+  const hearts = Math.max(0, Math.min(maxHp, Math.floor(Number(enc.hp) || 0)));
+  if (hearts <= 0) {
+    return { ok: false, error: "already_cleared", hearts: 0, ap: 0, will: 0 };
+  }
+  return {
+    ok: true,
+    hearts,
+    ap: hearts,
+    will: budgetWill ? hearts : 0,
+  };
+}
+
 export function cloneScrutiny(s) {
   if (!s) return null;
   return {

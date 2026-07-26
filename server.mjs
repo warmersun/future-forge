@@ -292,6 +292,14 @@ scrutiny when used:
 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
+/** Compact system prompt for challenge pose — keeps TTFT low vs full co-inventor prompt. */
+const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local invention game).
+Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
+Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sharp question.
+Return JSON only (no markdown):
+{"angle":"<same as challengeAngle>","angleLabel":"<name>","challengeSpeech":"<2-4 sentences>","challengeQuestion":"<one question>","message":"","proposals":{"addTechIds":[],"removeTechIds":[],"inventionName":null,"inventionHow":null,"inventionImpact":null,"scrutiny":null},"teaching":[]}
+Stay local and specific. No UN resolutions. No tabletop jargon.`;
+
 /* —— Local co-inventor (always available) —— */
 
 function localArtOfThePossible(context, selected, stack, map, base) {
@@ -1051,17 +1059,30 @@ function localCoInvent({ mode, messages, context }) {
 /* —— AI path —— */
 
 function buildUserPayload({ messages, context, mode }) {
-  const available = (context?.availableTechs || []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    domain: t.domain,
-    summary: t.summary,
-    readyYear: t.readyYear || t.softHorizon || null,
-    maturity: t.maturity || null,
-    milestones: t.milestones || [],
-    useCasesNow: t.useCasesNow || [],
-    alwaysPickable: true,
-  }));
+  // Pose/judge: only selected stack summaries — full catalog is huge and slows the model.
+  const slimChallenge =
+    mode === "pose-challenge" ||
+    mode === "judge-scrutiny-move" ||
+    mode === "judge-challenge" ||
+    mode === "coach-challenge" ||
+    mode === "draft-challenge";
+  const available = (context?.availableTechs || []).map((t) => {
+    const base = {
+      id: t.id,
+      name: t.name,
+      domain: t.domain,
+      summary: t.summary,
+      readyYear: t.readyYear || t.softHorizon || null,
+    };
+    if (slimChallenge) return base;
+    return {
+      ...base,
+      maturity: t.maturity || null,
+      milestones: t.milestones || [],
+      useCasesNow: t.useCasesNow || [],
+      alwaysPickable: true,
+    };
+  });
 
   const modeHints = {
     chat: "Respond to the learner's latest message as co-inventor. Never say a category is locked until a year.",
@@ -1088,7 +1109,7 @@ function buildUserPayload({ messages, context, mode }) {
     "judge-contribution":
       "Multiplayer contribution check. Context has field, beforeText, afterText (and optional full invent). Decide if afterText is ADDITIVE vs DESTRUCTIVE relative to beforeText. Additive keeps original actors/mechanisms/intent and adds detail; destructive rewrites, clears, or strips core meaning. Return JSON with top-level additive (boolean) and reason (one sentence). message may echo the reason. proposals empty.",
     "pose-challenge":
-      "You ARE a hostile critic of the invention. context.challengeAngle is REQUIRED and FIXED (moloch|ethicist|stakeholder|nature) — you MUST speak as that critic only; do NOT switch to another angle. Moloch = system game mechanics / multipolar traps; Ethicist = hard ethical tradeoffs; Stakeholder = city officials & community (funding, permits, policy); Mother Nature = physical/ecological limits. Attack the idea as if it will fail. End with ONE clear question. Return top-level fields: angle (must equal context.challengeAngle), angleLabel, challengeSpeech, challengeQuestion. proposals can be empty.",
+      "Speak ONLY as context.challengeAngle (moloch|ethicist|stakeholder|nature). Attack this invent in 2–4 sentences; one question. Return angle, angleLabel, challengeSpeech, challengeQuestion. Keep speech under ~120 words.",
     "judge-scrutiny-move":
       "The learner Argues against a fixed challenger (context.challengeAngle, challengeSpeech, challengeQuestion, playerAnswer). Score their argument as quality: hit | glance | miss. hit = concrete actors/costs/limits/mechanics that answer the question; glance = partial substance; miss = vague hope or off-topic. Return top-level: quality, message (1-2 sentences feedback), damage (hit=2, glance=1, miss=0). Be fair but strict on freeriding and handwaving.",
     "judge-challenge":
@@ -1104,6 +1125,33 @@ function buildUserPayload({ messages, context, mode }) {
   // Prefer selected techs with full capability seeds for literacy modes
   const selectedIds = new Set(context?.selectedTechIds || []);
   const focusTechs = available.filter((t) => selectedIds.has(t.id));
+
+  // Fast path: minimal JSON for challenge pose (biggest latency win)
+  if (mode === "pose-challenge") {
+    const posePayload = {
+      mode: "pose-challenge",
+      modeInstruction: modeHints["pose-challenge"],
+      challengeAngle: context?.challengeAngle || null,
+      place: context?.place || null,
+      year: context?.year || null,
+      inventionName: context?.inventionName || "",
+      inventionHow: String(context?.inventionHow || "").slice(0, 1200),
+      inventionImpact: String(context?.inventionImpact || "").slice(0, 800),
+      selectedTechIds: context?.selectedTechIds || [],
+      stack: focusTechs.length ? focusTechs : available.slice(0, 6),
+      mission: context?.challenge
+        ? {
+            title: context.challenge.title || null,
+            scene: String(context.challenge.problem || context.challenge.scene || "").slice(
+              0,
+              600
+            ),
+          }
+        : null,
+    };
+    return JSON.stringify(posePayload);
+  }
+
   const payload = {
     mode: mode || "chat",
     modeInstruction: modeHints[mode] || modeHints.chat,
@@ -1305,21 +1353,36 @@ async function aiCoInvent(body, client) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const availableIds = (context.availableTechs || []).map((t) => t.id);
 
+  const isPose = mode === "pose-challenge";
+  const systemContent = isPose ? POSE_CHALLENGE_SYSTEM : SYSTEM_PROMPT;
+  const userContent = isPose
+    ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
+    : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
+      `Respond with the required JSON object only.`;
+
   const input = [
-    { role: "system", content: SYSTEM_PROMPT },
-    {
-      role: "user",
-      content:
-        `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only.`,
-    },
+    { role: "system", content: systemContent },
+    { role: "user", content: userContent },
   ];
 
-  const response = await client.responses.create({
+  /** @type {Record<string, unknown>} */
+  const createOpts = {
     model: MODEL,
     input,
-    temperature: mode === "generate-scenarios" ? 0.95 : 0.8,
-  });
+    temperature: mode === "generate-scenarios" ? 0.95 : isPose ? 0.65 : 0.8,
+  };
+  // Pose is short speech + one question — cap output for faster completion
+  if (isPose) createOpts.max_output_tokens = 450;
+  else if (
+    mode === "judge-scrutiny-move" ||
+    mode === "judge-challenge" ||
+    mode === "judge-contribution" ||
+    mode === "assess-feasibility"
+  ) {
+    createOpts.max_output_tokens = 600;
+  }
+
+  const response = await client.responses.create(createOpts);
 
   const text = response.output_text || "";
   const parsed = extractJson(text);
@@ -1333,6 +1396,10 @@ async function aiCoInvent(body, client) {
         inventionImpact: null,
         scrutiny: null,
       });
+    }
+    // Pose fallback so the client always has speech if model returns non-JSON
+    if (isPose) {
+      return localCoInvent({ mode, messages, context });
     }
     return {
       source: "ai",

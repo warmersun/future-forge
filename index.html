@@ -909,6 +909,14 @@
         <!-- LEFT: the challenge -->
         <main class="challenge-main">
           <div class="challenge-step-card panel">
+            <!-- Challenger carousel: slides while AI pose loads, lands on chosen critic -->
+            <div id="challenger-draw" class="challenger-draw" hidden aria-live="polite">
+              <p class="challenger-draw-kicker">Who challenges your invent?</p>
+              <p class="challenger-draw-status" id="challenger-draw-status">Summoning a challenger…</p>
+              <div class="challenger-draw-viewport">
+                <div class="challenger-draw-track" id="challenger-draw-reel"></div>
+              </div>
+            </div>
             <div class="challenger-banner" id="challenger-visual" hidden>
               <div class="challenger-portrait-wrap">
                 <img
@@ -984,10 +992,10 @@
                   data-mode="sidestep"
                 >
                   <span class="scrutiny-move-title">3 · Sidestep once</span>
-                  <span class="scrutiny-move-cost">then 1 AP · 1 Will · softens elegance</span>
+                  <span class="scrutiny-move-cost">cost = remaining ♥ · softens elegance</span>
                   <span class="scrutiny-move-blurb">
-                    Skip without winning — once per run. Costs Will (hurts deploy odds) and softens
-                    elegance stars. Confirm below.
+                    Skip without winning — once per run. Cost equals remaining resolve hearts
+                    (2♥ → 2 AP · 2 Will; 1♥ → 1 AP · 1 Will). Softens elegance. Confirm below.
                   </span>
                 </button>
               </div>
@@ -1032,44 +1040,28 @@
 
             <div id="mode-panel-sidestep" class="mode-panel" hidden>
               <p class="mode-panel-lead">
-                You dodge this challenger without answering. Costs <strong>1 AP</strong> and
-                <strong>1 Political will</strong>. Only once per mission run.
+                You dodge this challenger without answering. Cost equals
+                <strong>remaining resolve hearts</strong> (2♥ → 2 AP · 2 Will; after a partial
+                defense 1♥ → 1 AP · 1 Will). Only once per mission. Lobby if you need more Will.
               </p>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep">
-                  Confirm sidestep (1 AP · 1 Will)
-                </button>
-              </div>
-            </div>
-
-            <!-- Deploy bay (PR7 staged: Pilot → Scale → New normal) -->
-            <div id="deploy-bay" class="deploy-bay" hidden>
-              <div class="deploy-bay-head">
-                <h2 class="deploy-bay-title">Deploy bay</h2>
-                <ol class="deploy-stage-pills" aria-label="Deploy stages">
-                  <li class="deploy-stage-pill" data-stage="pilot">Pilot</li>
-                  <li class="deploy-stage-pill" data-stage="scale">Scale</li>
-                  <li class="deploy-stage-pill" data-stage="new_normal">New normal</li>
-                </ol>
-              </div>
-              <p id="deploy-bay-status" class="deploy-bay-status muted"></p>
-              <div class="deploy-bay-actions form-actions game-actions">
-                <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary">
-                  Try Pilot →
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  id="btn-deploy-back-invent"
-                  title="Return to Invent to rework the idea, then come back to try again"
-                >
-                  ← Back to Invent
+                  Confirm sidestep
                 </button>
               </div>
             </div>
 
             <!-- Essay mode fallback (feature off) uses defend panel + submit -->
             <div class="form-actions game-actions challenge-footer-actions" id="challenge-footer">
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-challenge-abandon"
+                hidden
+                title="Leave Challenge and unlock invent for rework — helpers can contribute again. Facing again costs AP."
+              >
+                Abandon the challenge
+              </button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
@@ -1178,6 +1170,179 @@
               />
               <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
             </form>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- DEPLOY (Pilot → Scale → New normal) — independent of Challenge combat -->
+    <section id="screen-deploy" class="screen">
+      <header class="topbar topbar-game">
+        <div class="brand">
+          <span class="mp-active-player" id="mp-active-player-dep" hidden aria-live="polite"></span>
+        </div>
+        <div class="progress-pills invent-steps" aria-label="Mission steps">
+          <span class="pill done" data-step="invent">1 · Invent</span>
+          <span class="pill done" data-step="challenge">2 · Challenge</span>
+          <span class="pill active" data-step="deploy">3 · Deploy</span>
+        </div>
+        <div class="hud-clock" id="dep-hud-clock" title="Mission calendar and resources">
+          <button type="button" class="hud-year hud-year-btn" id="dep-hud-year" title="Year foresight">2026</button>
+          <span class="hud-turn" id="dep-hud-turn">Turn 0</span>
+          <span class="hud-resources">
+            <span class="hud-ap" id="dep-hud-ap" hidden title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="dep-hud-budget" hidden title="Budget">Budget 5$</span>
+            <span class="hud-will" id="dep-hud-will" hidden title="Political will">Will 3</span>
+          </span>
+        </div>
+        <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+          <span class="hud-product-sun" aria-hidden="true"></span>
+          <div class="hud-product-text">
+            <span class="hud-product-title">Future Forge</span>
+            <span class="hud-product-credit">
+              by
+              <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+            </span>
+          </div>
+        </div>
+        <div
+          class="hud-crisis-wrap"
+          id="dep-hud-crisis-wrap"
+          title="Crisis meters 0–5: how bad things are. Wait raises them; Scale after Pilot lowers them. Hit 5 on any meter or the fail year and the mission ends."
+        >
+          <span class="hud-crisis-label">Crisis</span>
+          <div class="hud-pressure" id="dep-hud-pressure"></div>
+        </div>
+        <div class="hud-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-deploy-to-invent" title="Browse Invent without reopening Challenge">
+            ← Invent
+          </button>
+          <button
+            type="button"
+            class="btn-help"
+            id="btn-deploy-help"
+            title="How Future Forge works"
+            aria-label="Help: how this works"
+          >
+            ?
+          </button>
+        </div>
+      </header>
+      <div id="mp-deploy-bar" class="mp-workshop-bar mp-challenge-bar" hidden>
+        <div class="mp-workshop-bar-row">
+          <div id="mp-seat-tabs-dep" class="mp-seat-tabs" aria-label="Players and invent phases"></div>
+        </div>
+        <p id="mp-deploy-view-hint" class="mp-view-hint muted" hidden></p>
+      </div>
+      <div class="challenge-layout deploy-layout">
+        <main class="challenge-main deploy-main">
+          <div class="challenge-step-card panel">
+            <p class="deploy-screen-lead muted" id="deploy-screen-lead">
+              Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.
+            </p>
+            <div id="deploy-feedback" class="challenge-feedback" hidden></div>
+
+            <div id="deploy-bay" class="deploy-bay">
+              <div class="deploy-bay-head">
+                <h2 class="deploy-bay-title">Deploy bay</h2>
+                <ol class="deploy-stage-pills" aria-label="Deploy stages">
+                  <li class="deploy-stage-pill" data-stage="pilot">Pilot</li>
+                  <li class="deploy-stage-pill" data-stage="scale">Scale</li>
+                  <li class="deploy-stage-pill" data-stage="new_normal">New normal</li>
+                </ol>
+              </div>
+              <p id="deploy-bay-status" class="deploy-bay-status muted"></p>
+              <div class="deploy-bay-actions form-actions game-actions">
+                <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary">
+                  Try Pilot →
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions game-actions challenge-footer-actions" id="deploy-footer">
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-deploy-abandon"
+                title="Owner only — unlock invent for rework; clears Challenge and Pilot progress. Facing Challenge again costs AP."
+              >
+                Abandon deployment
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-deploy-end-turn"
+                title="End your seat-turn (needs at least one action this turn)"
+              >
+                End turn
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <aside class="challenge-side vision-panel side-panel">
+          <div class="side-tabs" role="tablist" aria-label="Deploy side panel">
+            <button
+              type="button"
+              class="side-tab active"
+              data-dep-tab="vision"
+              role="tab"
+              aria-selected="true"
+            >
+              Future vision
+            </button>
+            <button
+              type="button"
+              class="side-tab"
+              data-dep-tab="coinventor"
+              role="tab"
+              aria-selected="false"
+            >
+              AI co-inventor
+            </button>
+          </div>
+
+          <div id="side-deploy-vision" class="side-pane" role="tabpanel">
+            <div class="vision-stage-bar">
+              <div>
+                <div class="vision-stage-name" id="deploy-vision-stage-name">Fielding</div>
+                <div class="vision-stage-blurb" id="deploy-vision-stage-blurb">
+                  How the place looks as you Pilot and Scale this invent.
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btn-regen-deploy-vision"
+                title="Regenerate deploy vision"
+              >
+                ↻
+              </button>
+            </div>
+            <div class="vision-canvas-wrap" id="deploy-vision-root">
+              <img class="vision-image" alt="Vision of this place as the invent fields" hidden />
+              <div class="vision-loading" hidden aria-live="polite">
+                <div class="vision-loading-frame" aria-hidden="true"></div>
+                <div class="vision-loading-inner">
+                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="vision-loading-text">Imagining the fielding…</span>
+                </div>
+              </div>
+              <div class="vision-placeholder">
+                Pilot and Scale update how this place looks
+              </div>
+              <div class="vision-status" aria-live="polite"></div>
+            </div>
+            <p class="challenge-vision-hint muted">
+              Same place as Invent. Updates as Pilot succeeds and Scale lands.
+            </p>
+          </div>
+
+          <div id="side-deploy-coinventor" class="side-pane" role="tabpanel" hidden>
+            <div id="dep-co-inventor-root" class="co-inventor-root"></div>
+            <div class="challenge-side-hint muted">
+              Ask about Pilot odds, Scale timing, or who must buy in — then field on the left.
+            </div>
           </div>
         </aside>
       </div>
@@ -1393,7 +1558,7 @@
                 <h5>Will <span class="help-tile-meta">start 3</span></h5>
                 <p>
                   Political will — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Will.
-                  ≥4 boosts deploy; 0 hurts it. Sidestep costs 1 Will.
+                  ≥4 boosts deploy; 0 hurts it. Sidestep costs Will equal to remaining resolve hearts.
                 </p>
               </article>
             </div>
@@ -1477,11 +1642,11 @@
               </article>
               <article class="help-tile help-tile-move">
                 <h5>Sidestep once</h5>
-                <p class="help-cost">1 AP · 1 Will</p>
+                <p class="help-cost">Cost = remaining ♥</p>
                 <p>
-                  Skip this critic without winning the argument. <strong>Not free:</strong> costs Will
-                  (hurts deploy odds) and softens elegance stars at the end. Only once per run so it
-                  cannot replace defending or fixing.
+                  Skip this critic without winning. <strong>Cost equals remaining resolve:</strong>
+                  full critic (2♥) costs 2 AP · 2 Will; after a partial defense (1♥) only 1 AP · 1 Will.
+                  Softens elegance stars. Only once per run. Lobby on Invent if you need more Will.
                 </p>
               </article>
             </div>

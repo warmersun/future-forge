@@ -2612,6 +2612,8 @@ body.mp-hotseat .hud-product {
   max-width: none;
 }
 
+/* Crisis meters: color vs this Quest's winMax (see crisisMeterLevel).
+   cool = at/under goal (green) · warm = above goal (yellow) · hot = danger 4–5 (red) */
 .hud-pressure .meter {
   font-size: 0.68rem;
   padding: 0.25rem 0.45rem;
@@ -2619,23 +2621,36 @@ body.mp-hotseat .hud-product {
   border: 1px solid var(--border);
   color: var(--text-dim);
   background: var(--bg-2);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
 .hud-pressure .meter b {
   margin-right: 0.25rem;
   font-weight: 600;
-  color: var(--text);
+  letter-spacing: 0;
+  color: inherit;
 }
 
+/* Best — low crisis (0–1 filled) */
+.hud-pressure .meter.cool {
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+/* Getting better / still hot (2–3 filled) */
 .hud-pressure .meter.warm {
-  border-color: rgba(251, 191, 36, 0.4);
-  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
 }
 
+/* Dangerous (4–5 filled) — collapse risk at 5 */
 .hud-pressure .meter.hot {
-  border-color: rgba(248, 113, 113, 0.5);
-  color: #fecaca;
-  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.65);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .mission-place {
@@ -4289,6 +4304,208 @@ body.year-bulletin-open {
   color: var(--accent, #38bdf8);
 }
 
+/* —— Challenger horizontal carousel (runs while AI pose loads) —— */
+.challenger-draw {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 0.85rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(167, 139, 250, 0.12), transparent 55%),
+    rgba(7, 11, 20, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.challenger-draw[hidden] {
+  display: none !important;
+}
+
+/* .challenger-banner { display:grid } beats the UA [hidden] rule — force it */
+.challenger-banner[hidden] {
+  display: none !important;
+}
+
+/* While the carousel runs, never show the final challenger / speech underneath */
+body.challenge-reveal-pending #challenger-visual,
+body.challenge-reveal-pending #challenge-speech,
+body.challenge-reveal-pending #challenge-question,
+body.challenge-reveal-pending #challenger-resolve,
+body.challenge-reveal-pending #challenge-feedback {
+  display: none !important;
+}
+body.challenge-reveal-pending #scrutiny-moves,
+body.challenge-reveal-pending #mode-panel-defend,
+body.challenge-reveal-pending #mode-panel-fix,
+body.challenge-reveal-pending #mode-panel-sidestep,
+body.challenge-reveal-pending #deploy-bay {
+  display: none !important;
+}
+
+.challenger-draw-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, #94a3b8);
+  text-align: center;
+}
+
+.challenger-draw-status {
+  margin: 0.3rem 0 0.75rem;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-mute, #94a3b8);
+  min-height: 1.35em;
+}
+
+.challenger-draw-status.is-landed {
+  color: #c4b5fd;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.4);
+}
+
+.challenger-draw-viewport {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: 14px;
+}
+
+.challenger-draw-track {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  will-change: transform;
+  transition: transform 0.48s cubic-bezier(0.33, 0.9, 0.32, 1);
+}
+
+.challenger-draw-track.is-snap {
+  transition: none;
+}
+
+.challenger-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 0.15rem;
+}
+
+.challenger-slide-panel {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 1rem 1.25rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border, #1e293b);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+.challenger-slide-panel[data-challenger="moloch"] {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.challenger-slide-panel[data-challenger="ethicist"] {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+.challenger-slide-panel[data-challenger="stakeholder"] {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.challenger-slide-panel[data-challenger="nature"] {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.challenger-slide-panel .challenger-portrait-wrap {
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong, #334155);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  background: #0f172a;
+}
+
+.challenger-slide-panel .challenger-portrait-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.challenger-slide-copy .label {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #94a3b8);
+}
+
+.challenger-slide-copy h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+  line-height: 1.15;
+  color: var(--text, #f1f5f9);
+}
+
+.challenger-slide-copy .challenge-angle-sub {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text-mute, #94a3b8);
+}
+
+.challenger-slide-resolve {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text, #e2e8f0);
+}
+
+.challenger-slide-resolve .challenger-resolve-hearts {
+  letter-spacing: 0.12em;
+  color: #f87171;
+  margin-left: 0.35rem;
+}
+
+.challenger-slide.is-winner .challenger-slide-panel {
+  box-shadow:
+    0 0 0 2px rgba(167, 139, 250, 0.4),
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 36px rgba(167, 139, 250, 0.25);
+  animation: challenger-slide-land 0.5s ease-out;
+}
+
+@keyframes challenger-slide-land {
+  0% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 560px) {
+  .challenger-slide-panel {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .challenger-draw-track {
+    transition: none;
+  }
+  .challenger-slide.is-winner .challenger-slide-panel {
+    animation: none;
+  }
+}
+
 .challenger-banner {
   display: grid;
   grid-template-columns: 9rem 1fr;
@@ -4297,6 +4514,21 @@ body.year-bulletin-open {
   margin-bottom: 1.25rem;
   padding-bottom: 1.15rem;
   border-bottom: 1px solid var(--border);
+}
+
+.challenger-banner.is-revealing {
+  animation: challenger-banner-in 0.45s ease-out;
+}
+
+@keyframes challenger-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 560px) {

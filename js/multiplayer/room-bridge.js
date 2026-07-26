@@ -55,7 +55,16 @@ export function createRoomBridge() {
   }
 
   function getActiveId() {
-    return snap()?.activeSeatId || mp()?.activeSeatId || null;
+    const s = snap();
+    if (s?.activeSeatId) return s.activeSeatId;
+    const m = mp();
+    if (m?.activeSeatId) return m.activeSeatId;
+    // Fallback: derive from activeIndex + seatOrder (older snapshots)
+    if (m?.seatOrder?.length && m.activeIndex != null) {
+      const i = Math.max(0, Math.min(m.activeIndex, m.seatOrder.length - 1));
+      return m.seatOrder[i] || null;
+    }
+    return null;
   }
 
   function getViewId() {

@@ -7,7 +7,13 @@ import {
   maxPressure,
 } from "./pressure.js";
 import { computeDeployDrop } from "./deploy.js";
-import { isWin, isCollapsed, isMpPlaceCollapsed, isMpQuestOver } from "./collapse.js";
+import {
+  isWin,
+  isCollapsed,
+  isMpPlaceCollapsed,
+  isMpQuestOver,
+  crisisMeterLevel,
+} from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
 import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
@@ -65,6 +71,26 @@ describe("collapse / win", () => {
     assert.equal(isMpQuestOver("partial_locked"), false);
     assert.equal(isMpQuestOver("playing"), false);
     assert.equal(isMpQuestOver({ status: "collapsed" }), true);
+  });
+
+  it("crisisMeterLevel is relative to winMax", () => {
+    // goal ≤1: 0–1 green, 2–3 yellow, 4–5 red
+    assert.equal(crisisMeterLevel(0, 1), "cool");
+    assert.equal(crisisMeterLevel(1, 1), "cool");
+    assert.equal(crisisMeterLevel(2, 1), "warm");
+    assert.equal(crisisMeterLevel(3, 1), "warm");
+    assert.equal(crisisMeterLevel(4, 1), "hot");
+    assert.equal(crisisMeterLevel(5, 1), "hot");
+    // goal ≤0: only 0 is green
+    assert.equal(crisisMeterLevel(0, 0), "cool");
+    assert.equal(crisisMeterLevel(1, 0), "warm");
+    // goal ≤2: 2 is still green
+    assert.equal(crisisMeterLevel(2, 2), "cool");
+    assert.equal(crisisMeterLevel(3, 2), "warm");
+    // no goal → absolute severity
+    assert.equal(crisisMeterLevel(1, null), "cool");
+    assert.equal(crisisMeterLevel(3, undefined), "warm");
+    assert.equal(crisisMeterLevel(4, null), "hot");
   });
 
   it("mp place year-fail only when all invents are late", () => {

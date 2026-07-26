@@ -599,7 +599,7 @@ Distinct angles via `pickChallengeAngles(n)` from `CHALLENGE_ANGLES`.
 |------|-----|------------|-------------------|------------|--------------|
 | **Argue** | 1 | — | **hit** → 2 HP; **glance** → 1 HP; **miss** → 0 | Counts as 1 **miss** | Requires ≥20 chars; AI `judge-scrutiny-move` |
 | **Patch** | 1 | optional 1 budget for “funded patch” (+1 dmg) | Always **1** HP if player accepts a patch text (≥1 sentence change to how or stack) | If player cancels | Proposal from AI **or** local template if quota empty; player must edit/accept |
-| **Pivot** | 1 | **1 will** (G2+; if `budgetWill` off, skip will cost) | Clears encounter immediately (HP→0) | If will insufficient | Sets `encounter.pivoted=true`; elegance −15 once per run (not −1 star directly) |
+| **Pivot (Sidestep)** | **= remaining HP** (e.g. 2♥ → 2 AP; after glance 1♥ → 1 AP) | **= remaining HP will** (G2+; if `budgetWill` off, skip will cost) | Clears encounter immediately (HP→0) | If AP/will insufficient | Sets `encounter.pivoted=true`; elegance −15 once per run (not −1 star directly). Partial defense lowers sidestep price. |
 | **Coach / Draft** | 0 first total in scrutiny, then 1 | — | 0 | — | Existing coach UX |
 
 **Miss budget:** cumulative **miss** count across the whole scrutiny run. At **2 misses**, scrutiny fails → back to invent, `challengeFails++` (same as today’s 2-fail spirit). Glances do not count as misses. Hits do not reset miss count.

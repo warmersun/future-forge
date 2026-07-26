@@ -10,6 +10,7 @@ import {
   allEncountersCleared,
   activeEncounter,
   localArgueQuality,
+  sidestepCostForEncounter,
   MISS_BUDGET,
 } from "./scrutiny.js";
 
@@ -61,6 +62,28 @@ describe("scrutiny", () => {
     assert.equal(r.scrutiny.encounters[0].cleared, true);
     const r2 = applyPivotResult(r.scrutiny, r.scrutiny.encounters[1].id);
     assert.equal(r2.ok, false);
+  });
+
+  it("sidestep cost equals remaining hearts", () => {
+    const full = buildEncounters([ANGLES[0]], 2)[0];
+    const c2 = sidestepCostForEncounter(full);
+    assert.equal(c2.ok, true);
+    assert.equal(c2.hearts, 2);
+    assert.equal(c2.ap, 2);
+    assert.equal(c2.will, 2);
+
+    const half = { ...full, hp: 1 };
+    const c1 = sidestepCostForEncounter(half);
+    assert.equal(c1.ok, true);
+    assert.equal(c1.ap, 1);
+    assert.equal(c1.will, 1);
+
+    const noWill = sidestepCostForEncounter(full, { budgetWill: false });
+    assert.equal(noWill.ap, 2);
+    assert.equal(noWill.will, 0);
+
+    const dead = sidestepCostForEncounter({ ...full, hp: 0, cleared: true });
+    assert.equal(dead.ok, false);
   });
 
   it("patch deals 1 or 2", () => {

@@ -153,6 +153,9 @@ export class RoomManager {
       const seat = room.players.find((p) => p.playerToken === playerToken);
       if (seat) {
         seat.connected = true;
+        if (room.mp?.invents?.[seat.id]) {
+          room.mp.invents[seat.id].connected = true;
+        }
         room.updatedAt = Date.now();
         return {
           ok: true,
@@ -179,6 +182,9 @@ export class RoomManager {
         seat.playerToken = randomToken(16);
         seat.connected = true;
         seat.displayName = name;
+        if (room.mp?.invents?.[seat.id]) {
+          room.mp.invents[seat.id].connected = true;
+        }
         room.updatedAt = Date.now();
         return {
           ok: true,
@@ -235,6 +241,10 @@ export class RoomManager {
     player.connected = true;
     player._socket = socket;
     room.sockets.add(socket);
+    // Rejoin mid-game: invent can receive seat-turns again
+    if (room.mp?.invents?.[player.id]) {
+      room.mp.invents[player.id].connected = true;
+    }
     room.updatedAt = Date.now();
     this.broadcast(room, { type: "presence", players: publicPlayers(room) }, socket);
   }
@@ -263,23 +273,25 @@ export class RoomManager {
   }
 
   /**
-   * When someone drops mid-race: skip their turn if they were active,
-   * and notify if only one connected player remains.
+   * When someone drops mid-race: mark invent offline (sticky skip on later End turns),
+   * skip their turn if they were active, and notify remaining players.
    */
   handlePlayerDisconnectDuringPlay(room, leftPlayer) {
     if (!room.mp) return;
     const connected = room.players.filter((p) => p.connected);
     const connectedIds = connected.map((p) => p.id);
-    const connectedSet = new Set(connectedIds);
     const activeId = activeSeatId(room.mp);
 
-    const leftChallenge = room.mp.invents?.[leftPlayer.id];
-    if (leftChallenge) {
-      leftChallenge.connected = false;
-      leftChallenge.lastNews = leftChallenge.lastNews || "Disconnected.";
+    // Sticky offline on invent — passToNext always skips invent.connected === false
+    const leftInvent = room.mp.invents?.[leftPlayer.id];
+    if (leftInvent) {
+      leftInvent.connected = false;
+      leftInvent.lastNews = leftInvent.lastNews || "Disconnected.";
     }
+    // Bump version so clients hydrate invent.connected even when we don't advance turn
+    room.mp.version = (room.mp.version || 0) + 1;
 
-    let advanced = false;
+    let endResult = null;
     // If the active player left, force end_turn (skip offline seats)
     if (activeId === leftPlayer.id && connected.length >= 1) {
       const cur = activeId;
@@ -289,7 +301,7 @@ export class RoomManager {
           room.mp.invents[cur].apSpentThisTurn || 0
         );
       }
-      const r = applyMpAction(
+      endResult = applyMpAction(
         room.mp,
         {
           type: "end_turn",
@@ -297,29 +309,31 @@ export class RoomManager {
         },
         cur
       );
-      if (r.ok) {
-        room.mp = r.session;
-        advanced = true;
+      if (endResult.ok) {
+        room.mp = endResult.session;
+      } else {
+        endResult = null;
       }
     }
 
-    if (advanced) {
-      this._commitMp(
-        room,
-        {
-          session: room.mp,
-          events: [
-            {
-              type: "seat_skipped_offline",
-              seatId: leftPlayer.id,
-              displayName: leftPlayer.displayName,
-            },
-          ],
-        },
-        leftPlayer,
-        []
-      );
-    }
+    // Always commit invent.connected=false (+ optional seat handoff) so later End turns skip them
+    this._commitMp(
+      room,
+      {
+        session: room.mp,
+        events: [
+          ...(endResult?.events || []),
+          {
+            type: "seat_skipped_offline",
+            seatId: leftPlayer.id,
+            displayName: leftPlayer.displayName,
+            advanced: Boolean(endResult),
+          },
+        ],
+      },
+      leftPlayer,
+      []
+    );
 
     if (connected.length === 1) {
       const sole = connected[0];
@@ -342,14 +356,15 @@ export class RoomManager {
         message: `${leftPlayer.displayName || "A player"} disconnected.`,
       });
     }
-    void connectedSet;
   }
 
   snapshotFor(room, playerId) {
     expireLocks(room);
     const you = room.players.find((p) => p.id === playerId) || null;
     const mp = room.mp ? publicMpState(room.mp) : null;
-    const activeId = mp?.activeSeatId || null;
+    // Prefer function on live session — never trust a missing field on publicMpState alone
+    const activeId =
+      (room.mp ? activeSeatId(room.mp) : null) || mp?.activeSeatId || null;
     return {
       simVersion: room.simVersion,
       code: room.code,
@@ -624,7 +639,18 @@ export class RoomManager {
       if (!room.mp) return { ok: false, error: "not_started" };
       const active = activeSeatId(room.mp);
       if (!active) return { ok: false, error: "no_active" };
-      const r = applyMpAction(room.mp, { type: "end_turn" }, active);
+      const connectedIds = room.players.filter((p) => p.connected).map((p) => p.id);
+      const r = applyMpAction(
+        room.mp,
+        {
+          type: "end_turn",
+          payload: {
+            force: true,
+            preferConnectedIds: connectedIds.length ? connectedIds : undefined,
+          },
+        },
+        active
+      );
       if (!r.ok) return { ok: false, error: r.error || "rejected" };
       return this._commitMp(room, r, player, [{ type: "force_end_turn", by: player.id }]);
     }
@@ -667,6 +693,26 @@ export class RoomManager {
       }
     }
 
+    // Skip offline seats on End turn / Wait so handoff reaches a connected player
+    if (
+      (type === "end_turn" || type === "wait") &&
+      action &&
+      typeof action === "object"
+    ) {
+      const connectedIds = room.players
+        .filter((p) => p.connected)
+        .map((p) => p.id);
+      if (connectedIds.length) {
+        action = {
+          ...action,
+          payload: {
+            ...(action.payload || {}),
+            preferConnectedIds:
+              action.payload?.preferConnectedIds || connectedIds,
+          },
+        };
+      }
+    }
     const result = applyMpAction(room.mp, action, player.id, voteOpts);
     if (!result.ok) {
       return {
