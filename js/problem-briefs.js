@@ -1,5 +1,5 @@
 /**
- * Static problem briefs for the mission screen (read while local scenarios draft).
+ * Static problem briefs for the mission screen (read while Quests draft).
  * Authored once at development time — not generated at runtime.
  * Each brief: currentState, rootCauses, warnings.
  */

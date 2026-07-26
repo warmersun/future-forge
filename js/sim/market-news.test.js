@@ -13,8 +13,8 @@ import { techCost, baseTechCost } from "./economy.js";
 import { applyAction } from "./actions.js";
 import {
   createMpLobby,
-  setMpMission,
-  startMpMission,
+  setMpQuest,
+  startMpQuest,
   applyMpAction,
   activeSeatId,
 } from "./mp-session.js";
@@ -179,8 +179,8 @@ describe("multiplayer round market news", () => {
 
   function started() {
     let s = createMpLobby(["Alex", "Bea"]);
-    s = setMpMission(s, mission, "climate");
-    return startMpMission(s).session;
+    s = setMpQuest(s, mission, "climate");
+    return startMpQuest(s).session;
   }
 
   it("starts with no market news; wraps after full seat-round", () => {
@@ -217,13 +217,13 @@ describe("multiplayer round market news", () => {
     s.place.marketNews = news;
     const computing = TECHS.find((t) => t.id === "computing");
     const base = baseTechCost(computing);
-    const before = s.forges[activeSeatId(s)].budget;
+    const before = s.invents[activeSeatId(s)].budget;
     const r = applyMpAction(s, {
       type: "select_tech",
       payload: { techId: "computing", tech: computing },
     });
     assert.equal(r.ok, true);
-    const after = r.session.forges[activeSeatId(r.session)].budget;
+    const after = r.session.invents[activeSeatId(r.session)].budget;
     assert.equal(after, before - (base.budget + 1));
   });
 });

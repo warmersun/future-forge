@@ -245,6 +245,48 @@ export class VisionRenderer {
     };
     apply(this.img);
     for (const r of this.mirrorRoots) apply(r.querySelector?.(".vision-image"));
+    // Keep outcome panel in sync when the run already ended (share card needs this frame)
+    try {
+      if (typeof document !== "undefined") {
+        const outcomeScreen = document.getElementById("screen-outcome");
+        if (outcomeScreen?.classList?.contains("active")) {
+          apply(document.getElementById("outcome-vision-image"));
+          const st = document.getElementById("outcome-vision-status");
+          if (st && !st.textContent) st.textContent = "Invention vision";
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /**
+   * Best URL for share cards / outcome (blob: or data:). Empty if none.
+   * @returns {string}
+   */
+  getShareableUrl() {
+    if (this.currentUrl) return this.currentUrl;
+    if (this._rawKey && String(this._rawKey).startsWith("data:image")) return this._rawKey;
+    const attr = this.img?.getAttribute?.("src");
+    if (attr && (attr.startsWith("blob:") || attr.startsWith("data:image") || /^https?:\/\//i.test(attr))) {
+      return this.img.currentSrc || this.img.src || attr;
+    }
+    return "";
+  }
+
+  /**
+   * Already-decoded <img> for canvas drawImage (preferred for share cards).
+   * @returns {HTMLImageElement|null}
+   */
+  getDecodedImage() {
+    if (this.img && this.img.naturalWidth > 0 && this.img.getAttribute("src")) {
+      return this.img;
+    }
+    for (const r of this.mirrorRoots) {
+      const img = r?.querySelector?.(".vision-image");
+      if (img && img.naturalWidth > 0 && img.getAttribute("src")) return img;
+    }
+    return null;
   }
 
   async flush() {

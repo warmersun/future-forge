@@ -1,5 +1,5 @@
 /**
- * Visual theme + local scenario cards for multiplayer setup (hotseat & rooms).
+ * Visual theme + Quest cards for multiplayer setup (hotseat & rooms).
  * Mirrors solo challenge-card look.
  */
 
@@ -63,7 +63,7 @@ export function paintMissionGrid(grid, opts) {
   if (!grid) return;
   const { missions = [], selectedId, onSelect, escapeHtml, globalId } = opts;
   if (!missions.length) {
-    grid.innerHTML = `<p class="empty-hint muted">Pick a theme to see local scenarios.</p>`;
+    grid.innerHTML = `<p class="empty-hint muted">Pick a theme to see Quests.</p>`;
     return;
   }
   const thumb = globalId ? problemVisualUrl(globalId) : "";
@@ -72,7 +72,7 @@ export function paintMissionGrid(grid, opts) {
       const scene = String(m.scene || "").slice(0, 160);
       const ellipsis = String(m.scene || "").length > 160 ? "…" : "";
       const sel = m.id === selectedId ? "is-selected" : "";
-      const tag = m.source === "curated" ? "Curated" : "Scenario";
+      const tag = m.source === "curated" ? "Curated" : "Challenge";
       return `
       <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel}" data-id="${escapeHtml(
         m.id
@@ -123,17 +123,17 @@ export function missionsForTheme(globalOrId, opts = {}) {
 }
 
 /**
- * Full scenario brief for the left rail (setup + play).
+ * Full Challenge brief for the left rail (setup + play).
  * @param {HTMLElement|null} el
  * @param {object|null} mission
  * @param {object} opts
  * @param {(s: string) => string} opts.escapeHtml
  * @param {string} [opts.globalId]
- * @param {string} [opts.heading] — default "Scenario"
+ * @param {string} [opts.heading] — default "Challenge"
  */
 export function paintScenarioBrief(el, mission, opts = {}) {
   if (!el) return;
-  const { escapeHtml = (s) => String(s || ""), globalId, heading = "Scenario" } = opts;
+  const { escapeHtml = (s) => String(s || ""), globalId, heading = "Challenge" } = opts;
   if (!mission) {
     el.hidden = true;
     el.innerHTML = "";

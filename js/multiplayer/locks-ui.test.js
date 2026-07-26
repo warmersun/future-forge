@@ -41,7 +41,7 @@ describe("field lock labels (PR11 path)", () => {
     const room = rm.rooms.get(created.code);
     const alex = room.players[0];
     rm.joinRoom(created.code, { displayName: "Bea" });
-    rm.hostCommand(room, alex, "start_mission", {
+    rm.hostCommand(room, alex, "start_quest", {
       hostToken: created.hostToken,
       mission,
       globalId: "climate",

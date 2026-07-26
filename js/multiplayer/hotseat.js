@@ -5,13 +5,13 @@
 
 import {
   createMpLobby,
-  setMpMission,
-  startMpMission,
+  setMpQuest,
+  startMpQuest,
   setFirstPlayer,
   applyMpAction,
   activeSeat,
   activeSeatId,
-  activeForge,
+  activeInvent,
   getOpenTable,
   MIN_PLAYERS,
   MAX_PLAYERS,
@@ -29,7 +29,7 @@ export function createHotseatSession(names = ["Alex", "Bea"]) {
   return session;
 }
 
-export { activeSeat, activeSeatId, activeForge, getOpenTable, MIN_PLAYERS, MAX_PLAYERS };
+export { activeSeat, activeSeatId, activeInvent, getOpenTable, MIN_PLAYERS, MAX_PLAYERS };
 
 export function rotateSeat(session, delta = 1) {
   // Manual pass without End Turn is discouraged; still allow for device handoff UI
@@ -41,7 +41,7 @@ export function rotateSeat(session, delta = 1) {
   if (!session.place) {
     return { ...session, activeIndex: next };
   }
-  // If mission started, use end_turn semantics via apply
+  // If quest started, use end_turn semantics via apply
   const r = applyMpAction(session, { type: "end_turn" });
   return r.ok ? r.session : session;
 }
@@ -52,13 +52,14 @@ export function setActiveSeat(session, index) {
   return { ...session, activeIndex: i };
 }
 
-export function setHotseatMission(session, mission, globalId) {
-  return setMpMission(session, mission, globalId);
+/** Attach theme + local quest problem data before start. */
+export function setHotseatQuest(session, mission, globalId) {
+  return setMpQuest(session, mission, globalId);
 }
 
-export function startHotseatMission(session, firstPlayer = "host") {
+export function startHotseatQuest(session, firstPlayer = "host") {
   let s = setFirstPlayer(session, firstPlayer);
-  return startMpMission(s);
+  return startMpQuest(s);
 }
 
 /**
@@ -81,8 +82,8 @@ export function serializeHotseat(session) {
     firstPlayerId: session.firstPlayerId,
     round: session.round,
     place: session.place,
-    forges: session.forges,
-    missionMeta: session.missionMeta,
+    invents: session.invents,
+    questMeta: session.questMeta,
     settings: session.settings,
     version: session.version,
     ranking: session.ranking,
@@ -100,34 +101,11 @@ export function deserializeHotseat(raw) {
     firstPlayerId: data.firstPlayerId || null,
     round: data.round || 1,
     place: data.place || null,
-    forges: data.forges || {},
-    missionMeta: data.missionMeta || null,
+    invents: data.invents || {},
+    questMeta: data.questMeta || null,
     settings: data.settings || { mode: "hotseat", apMax: 3 },
     version: data.version || 0,
     ranking: data.ranking || null,
     log: data.log || [],
-  };
-}
-
-/** @deprecated legacy name — session.sim no longer used */
-export function getLegacySimShim(session) {
-  const f = activeForge(session);
-  const p = session.place;
-  if (!f || !p) return null;
-  return {
-    year: f.year != null ? f.year : p.year,
-    turn: p.turn,
-    waits: f.waits != null ? f.waits : p.waits,
-    pressure: p.pressure,
-    mission: p.mission,
-    ap: f.ap,
-    apMax: f.apMax,
-    budget: f.budget,
-    will: f.will,
-    inventionName: f.inventionName,
-    inventionHow: f.inventionHow,
-    inventionImpact: f.inventionImpact,
-    selectedTechIds: (f.stack || []).map((x) => x.techId),
-    lastNews: p.lastNews,
   };
 }

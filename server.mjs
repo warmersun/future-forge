@@ -371,7 +371,7 @@ function localGenerateScenarios(context, base) {
   const scenarios = localScenariosForGlobal(g, { count, salt });
   return {
     source: "local",
-    message: `Here are ${scenarios.length} local scenarios for **${g.title}**. Pick one place to invent for.`,
+    message: `Here are ${scenarios.length} Quests for **${g.title}**. Pick one to invent for.`,
     scenarios,
     proposals: base,
     teaching: [],
@@ -432,7 +432,7 @@ function sanitizeScenarioList(rawList, context, techIds) {
     out.push({
       id,
       globalId,
-      title: title || `Scenario in ${place}`,
+      title: title || `Challenge in ${place}`,
       place: place || "Local place",
       startYear: Number(raw.startYear) || GAME.startYear,
       collapseYear: Number(raw.collapseYear) || GAME.startYear + 8,
@@ -1098,7 +1098,7 @@ function buildUserPayload({ messages, context, mode }) {
     "draft-challenge":
       "Write a solid draft answer the learner can edit and submit to the challenge. Context has challengeAngle, challengeSpeech, challengeQuestion, invention how/impact, techs, place. Draft must be specific to their invention: name actors, costs or physical limits, anti-defection or affordability moves as relevant. Put full draft in top-level draftAnswer AND a short coaching note in message. Do not auto-judge.",
     "generate-scenarios":
-      "Generate MULTIPLE distinct local mission scenarios for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount). Each scenario MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene (2–4 vivid sentences), stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (3 named meters 0–5), pressureRise, winMax, suggested (array of tech ids from availableTechs only), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). message: one short line inviting the learner to pick a place. proposals empty.",
+      "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene (2–4 vivid sentences), stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (3 named meters 0–5), pressureRise, winMax, suggested (array of tech ids from availableTechs only), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). message: one short line inviting the learner to pick a Quest. proposals empty.",
   };
 
   // Prefer selected techs with full capability seeds for literacy modes
@@ -1284,7 +1284,7 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
     source,
     message: String(
       parsed?.message ||
-        `Here are ${scenarios.length} local scenarios. Pick a place to invent for.`
+        `Here are ${scenarios.length} Quests. Pick one to invent for.`
     ).slice(0, 2000),
     scenarios,
     proposals: {

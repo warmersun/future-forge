@@ -5,6 +5,9 @@ import {
   hashSeed,
   pickDailyMission,
   kindLabelForOutcome,
+  normalizeCrisisMeters,
+  normalizeShareTechs,
+  isUsableVisionUrl,
   MAX_PINS,
 } from "./meta.js";
 
@@ -44,5 +47,35 @@ describe("meta dailies", () => {
     assert.equal(kindLabelForOutcome("win"), "Crisis eased");
     assert.equal(kindLabelForOutcome("collapse", { bankrupt: true }), "Out of capital");
     assert.equal(MAX_PINS, 3);
+  });
+
+  it("normalizeCrisisMeters clamps 0–5", () => {
+    const m = normalizeCrisisMeters({ Floods: 3, Trust: 9, Empty: -1 });
+    assert.deepEqual(
+      m.map((x) => [x.key, x.value]),
+      [
+        ["Floods", 3],
+        ["Trust", 5],
+        ["Empty", 0],
+      ]
+    );
+  });
+
+  it("normalizeShareTechs keeps icons", () => {
+    const t = normalizeShareTechs([
+      { id: "solar", name: "Solar Power", icon: "☀" },
+      "raw-string",
+    ]);
+    assert.equal(t[0].icon, "☀");
+    assert.equal(t[0].name, "Solar Power");
+    assert.equal(t[1].name, "raw-string");
+  });
+
+  it("isUsableVisionUrl accepts image data/blob/http and rejects empty page URLs", () => {
+    assert.equal(isUsableVisionUrl("data:image/png;base64,abc"), true);
+    assert.equal(isUsableVisionUrl("blob:http://localhost/uuid"), true);
+    assert.equal(isUsableVisionUrl("https://cdn.example/vision.png"), true);
+    assert.equal(isUsableVisionUrl(""), false);
+    assert.equal(isUsableVisionUrl("not-a-url"), false);
   });
 });

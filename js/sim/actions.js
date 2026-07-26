@@ -115,11 +115,23 @@ export function applyAction(sim, action, opts = {}) {
   if (type === "reserve_ai") {
     const cost = action.payload?.reservedAp ?? 1;
     if (apOn && cost > 0 && !spendAp(cost)) return { ok: false, error: "no_ap", sim };
+    const prevPhase = next.turnPhase || "act";
     next.turnPhase = "ai_pending";
+    const mode = action.payload?.mode || "chat";
+    // Challenge/scrutiny judges must return to scrutiny — not drop to "act"
+    let resumePhase = prevPhase === "ai_pending" ? "act" : prevPhase;
+    if (
+      mode === "judge-scrutiny-move" ||
+      mode === "judge-challenge" ||
+      prevPhase === "scrutiny"
+    ) {
+      resumePhase = "scrutiny";
+    }
     next.pendingAi = {
       clientActionId: action.payload?.clientActionId || null,
-      mode: action.payload?.mode || "chat",
+      mode,
       reservedAp: cost,
+      resumePhase,
     };
     return { ok: true, events: [{ type: "ai_reserved", mode: next.pendingAi.mode }], sim: next };
   }
@@ -127,9 +139,13 @@ export function applyAction(sim, action, opts = {}) {
   if (type === "resolve_ai" || type === "reject_ai") {
     if (type === "reject_ai" && next.pendingAi?.reservedAp && apOn) {
       next.ap = Math.min(apMax, (next.ap || 0) + next.pendingAi.reservedAp);
+      // Reject refunds AP — also reverse spent counter so End turn still needs a real action
+      const refund = next.pendingAi.reservedAp;
+      next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - refund);
     }
+    const resume = next.pendingAi?.resumePhase || "act";
     next.pendingAi = null;
-    if (next.turnPhase === "ai_pending") next.turnPhase = "act";
+    if (next.turnPhase === "ai_pending") next.turnPhase = resume;
     return { ok: true, events: [{ type }], sim: next };
   }
 

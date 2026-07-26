@@ -2,8 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   createHotseatBridge,
-  forgeToSoloDeployStage,
-  soloToForgeDeployStage,
+  inventToSoloDeployStage,
+  soloToInventDeployStage,
 } from "./hotseat-bridge.js";
 
 const mission = {
@@ -24,10 +24,12 @@ const mission = {
 
 describe("hotseat-bridge", () => {
   it("maps deploy stages", () => {
-    assert.equal(forgeToSoloDeployStage("pilot_ok"), "pilot");
-    assert.equal(forgeToSoloDeployStage("scaled"), "scale");
-    assert.equal(soloToForgeDeployStage("pilot"), "pilot_ok");
-    assert.equal(soloToForgeDeployStage("scale"), "scaled");
+    assert.equal(inventToSoloDeployStage("pilot_ok"), "pilot");
+    assert.equal(inventToSoloDeployStage("scaled"), "scale");
+    assert.equal(inventToSoloDeployStage("new_normal"), "new_normal");
+    assert.equal(soloToInventDeployStage("pilot"), "pilot_ok");
+    assert.equal(soloToInventDeployStage("scale"), "scaled");
+    assert.equal(soloToInventDeployStage("new_normal"), "new_normal");
   });
 
   it("starts session and hydrates solo state", () => {
@@ -48,7 +50,7 @@ describe("hotseat-bridge", () => {
     assert.equal(state.mp.mode, "hotseat");
   });
 
-  it("wait advances only active invent year; other forge keeps present for feasibility", () => {
+  it("wait advances only active invent year; other invent keeps present for feasibility", () => {
     const b = createHotseatBridge();
     b.startFromPick(["Alex", "Bea"], mission, "climate");
     const alex = b.getActiveId();
@@ -58,10 +60,10 @@ describe("hotseat-bridge", () => {
     assert.equal(r.ok, true, r.error);
     const s = b.getSession();
     assert.equal(s.place.year, 2026);
-    assert.equal(s.forges[alex].year, 2028);
-    assert.equal(s.forges[alex].waits, 1);
-    assert.equal(s.forges[bea].year, 2026);
-    assert.equal(s.forges[bea].waits, 0);
+    assert.equal(s.invents[alex].year, 2028);
+    assert.equal(s.invents[alex].waits, 1);
+    assert.equal(s.invents[bea].year, 2026);
+    assert.equal(s.invents[bea].waits, 0);
     // Next seat hydrates with their own invent year (present)
     assert.equal(b.getActiveId(), bea);
     const state = { global: { id: "climate" }, selectedTechIds: [] };
@@ -75,7 +77,7 @@ describe("hotseat-bridge", () => {
     assert.equal(state.waits, 1);
   });
 
-  it("cycles view and layers tech on other forge", () => {
+  it("cycles view and layers tech on other invent", () => {
     const b = createHotseatBridge();
     b.startFromPick(["Alex", "Bea"], mission, "climate");
     const bea = b.getSession().seatOrder[1];
@@ -83,7 +85,7 @@ describe("hotseat-bridge", () => {
     assert.equal(b.viewingOther(), true);
     const r = b.layerTechOnView("solar", { id: "solar", curve: "mature", readyYear: 2026 });
     assert.equal(r.ok, true);
-    const stack = b.getSession().forges[bea].stack;
+    const stack = b.getSession().invents[bea].stack;
     assert.equal(stack[0].techId, "solar");
     assert.equal(stack[0].addedBy, b.getActiveId());
   });
@@ -100,12 +102,12 @@ describe("hotseat-bridge", () => {
     assert.equal(denied.ok, false);
     assert.equal(denied.error, "wait_own_invent_only");
     // Active seat's invent year unchanged
-    assert.equal(b.getSession().forges[alex].year, 2026);
+    assert.equal(b.getSession().invents[alex].year, 2026);
     // Own invent still allowed
     b.setViewSeat(alex);
     const ok = b.waitShared({});
     assert.equal(ok.ok, true, ok.error);
-    assert.equal(b.getSession().forges[alex].year, 2028);
+    assert.equal(b.getSession().invents[alex].year, 2028);
   });
 
   it("passDevice rotates active seat", () => {
@@ -146,8 +148,8 @@ describe("hotseat-bridge", () => {
 
     // Alex's invent is mid-challenge while Bea is active
     const s = b.getSession();
-    s.forges[alex].turnPhase = "scrutiny";
-    s.forges[alex].challengePassed = false;
+    s.invents[alex].turnPhase = "scrutiny";
+    s.invents[alex].challengePassed = false;
     b.setSession(s);
     b.setViewSeat(alex);
     assert.equal(b.viewingOther(), true);
@@ -167,9 +169,9 @@ describe("hotseat-bridge", () => {
 
     // Alex passed challenge → invent locked; Bea may Pilot/Scale, not layer
     const s2 = b.getSession();
-    s2.forges[alex].turnPhase = "between_stages";
-    s2.forges[alex].challengePassed = true;
-    s2.forges[alex].deployStage = "none";
+    s2.invents[alex].turnPhase = "between_stages";
+    s2.invents[alex].challengePassed = true;
+    s2.invents[alex].deployStage = "none";
     b.setSession(s2);
     b.setViewSeat(alex);
     assert.equal(b.viewedPhase(), "deploy");
@@ -187,7 +189,7 @@ describe("hotseat-bridge", () => {
 
     // Pass device back to Alex (owner), then reopen invent
     let sess = b.getSession();
-    sess.forges[bea].apSpentThisTurn = 1;
+    sess.invents[bea].apSpentThisTurn = 1;
     b.setSession(sess);
     assert.equal(b.passDevice().ok, true);
     assert.equal(b.getActiveId(), alex);

@@ -6,17 +6,18 @@
 import { totalPressure } from "./pressure.js";
 
 /**
- * @param {object} session — mp session with place + forges
+ * @param {object} session — mp session with place + invents
  * @returns {{ rows: object[], kind: string } | null}
  */
 export function rankSurvivors(session) {
   if (!session?.place || session.place.status === "collapsed") return null;
+  // Rank after full win or after Scale→New normal partial lock
 
   const startPressure = totalPressure(session.place.mission?.pressure || {});
   const impactDenom = Math.max(1, startPressure);
 
   const rows = (session.seatOrder || []).map((seatId) => {
-    const f = session.forges[seatId];
+    const f = session.invents[seatId];
     const seat = session.seats?.find((s) => s.id === seatId);
     if (!f) {
       return {
@@ -88,7 +89,7 @@ export function rankSurvivors(session) {
   });
 
   const forgeYears = (session.seatOrder || [])
-    .map((id) => session.forges?.[id]?.year)
+    .map((id) => session.invents?.[id]?.year)
     .filter((y) => y != null);
   const latestInventYear = forgeYears.length
     ? Math.max(...forgeYears)

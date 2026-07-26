@@ -1,14 +1,14 @@
 /**
  * Friends coopetition rooms — REST create/join + WS + mp-session authority.
- * Personal forges, shared place, turn-based; AI quotas per active seat.
+ * Personal invents, shared place, turn-based; AI quotas per active seat.
  */
 
 import crypto from "node:crypto";
 import { techById } from "../data.js";
 import {
   createMpLobby,
-  setMpMission,
-  startMpMission,
+  setMpQuest,
+  startMpQuest,
   setFirstPlayer,
   applyMpAction,
   activeSeatId,
@@ -123,7 +123,7 @@ export class RoomManager {
       updatedAt: now,
       fieldLocks: new Map(),
       sockets: new Set(),
-      missionMeta: null,
+      questMeta: null,
       aiQuota: createRoomAiQuotaState(),
     };
     this.rooms.set(room.code, room);
@@ -273,20 +273,20 @@ export class RoomManager {
     const connectedSet = new Set(connectedIds);
     const activeId = activeSeatId(room.mp);
 
-    const leftForge = room.mp.forges?.[leftPlayer.id];
-    if (leftForge) {
-      leftForge.connected = false;
-      leftForge.lastNews = leftForge.lastNews || "Disconnected.";
+    const leftChallenge = room.mp.invents?.[leftPlayer.id];
+    if (leftChallenge) {
+      leftChallenge.connected = false;
+      leftChallenge.lastNews = leftChallenge.lastNews || "Disconnected.";
     }
 
     let advanced = false;
     // If the active player left, force end_turn (skip offline seats)
     if (activeId === leftPlayer.id && connected.length >= 1) {
       const cur = activeId;
-      if (room.mp.forges[cur]) {
-        room.mp.forges[cur].apSpentThisTurn = Math.max(
+      if (room.mp.invents[cur]) {
+        room.mp.invents[cur].apSpentThisTurn = Math.max(
           1,
-          room.mp.forges[cur].apSpentThisTurn || 0
+          room.mp.invents[cur].apSpentThisTurn || 0
         );
       }
       const r = applyMpAction(
@@ -362,56 +362,88 @@ export class RoomManager {
             isHost: you.isHost,
             role: you.role,
             isActive: you.id === activeId,
-            forge: mp?.forges?.[you.id] || null,
+            invent: mp?.invents?.[you.id] || null,
           }
         : null,
       mp,
       place: mp?.place || null,
-      forges: mp?.forges || null,
+      invents: mp?.invents || null,
       openTable: mp?.openTable || null,
       ranking: mp?.ranking || null,
-      rematchChooserId: this.rematchChooserId(room),
+      nextQuestChooserId: this.nextQuestChooserId(room),
       activeSeatId: activeId,
-      // Legacy shim: "sim" = your forge + place for older UI/AI helpers
-      sim: mp && you ? forgePlaceShim(mp, you.id) : null,
-      missionMeta: room.missionMeta,
+      // Per-player invent + place shim for AI / UI helpers
+      sim: mp && you ? inventPlaceShim(mp, you.id) : null,
+      questMeta: room.questMeta,
       fieldLocks: locksPublic(room),
       phase: room.mp
-        ? room.mp.place?.status === "won" || room.mp.place?.status === "collapsed"
+        ? room.mp.place?.status === "won" ||
+          room.mp.place?.status === "collapsed" ||
+          room.mp.place?.status === "abandoned_by_vote"
           ? "outcome"
           : "playing"
-        : room.missionMeta
+        : room.questMeta
           ? "ready"
           : "lobby",
+      questExit: room.mp?.questExit
+        ? publicMpState(room.mp)?.questExit
+        : null,
     };
   }
 
-  /** Place race finished (won or collapsed) — rematch allowed */
-  isRoomOutcome(room) {
+  /** Quest finished (full hold, collapse, or majority leave) — next-Quest chooser allowed */
+  isQuestOutcome(room) {
     const st = room?.mp?.place?.status;
-    return st === "won" || st === "collapsed";
+    return st === "won" || st === "collapsed" || st === "abandoned_by_vote";
   }
 
-  /** Who may pick the next theme after a race (ranking #1, else host) */
-  rematchChooserId(room) {
-    if (room.rematchChooserId) return room.rematchChooserId;
+  /**
+   * Who landed the solving deployment (fielded Scale that held the Quest).
+   * Prefer place.solverSeatId; else invent with landedSolvingScale (scaledBySeatId or seat).
+   */
+  solvingSeatId(mp) {
+    if (!mp?.place || mp.place.status !== "won") return null;
+    if (mp.place.solverSeatId) return mp.place.solverSeatId;
+    const invents = mp.invents || {};
+    for (const [seatId, f] of Object.entries(invents)) {
+      if (!f?.landedSolvingScale) continue;
+      // Prefer the player who fielded the Scale (may be a helper)
+      if (f.scaledBySeatId && invents[f.scaledBySeatId]) return f.scaledBySeatId;
+      return seatId;
+    }
+    // Actor credit when helper scaled someone else's invent
+    for (const [seatId, f] of Object.entries(invents)) {
+      if (f?.landedSolvingScale) return seatId;
+    }
+    return null;
+  }
+
+  /** Who may pick the next Challenge (solver on win; host on collapse) */
+  nextQuestChooserId(room) {
+    if (room.nextQuestChooserId) return room.nextQuestChooserId;
+    const solver = this.solvingSeatId(room.mp);
+    if (solver) return solver;
     const rows = room.mp?.ranking?.rows;
-    if (rows?.[0]?.seatId) return rows[0].seatId;
+    if (room.mp?.place?.status === "won" && rows?.[0]?.seatId) return rows[0].seatId;
     return room.hostPlayerId || null;
   }
 
-  /** Assign rematch chooser when a race ends */
-  refreshRematchChooser(room) {
-    if (!this.isRoomOutcome(room)) {
-      room.rematchChooserId = null;
+  /** Assign next-Challenge chooser when a Challenge ends */
+  refreshNextQuestChooser(room) {
+    if (!this.isQuestOutcome(room)) {
+      room.nextQuestChooserId = null;
       return;
     }
-    const rows = room.mp?.ranking?.rows;
-    if (room.mp?.place?.status === "won" && rows?.[0]?.seatId) {
-      room.rematchChooserId = rows[0].seatId;
+    if (room.mp?.place?.status === "won") {
+      // Solver who landed the closing deployment — not merely rank #1
+      room.nextQuestChooserId =
+        this.solvingSeatId(room.mp) ||
+        room.mp?.ranking?.rows?.[0]?.seatId ||
+        room.hostPlayerId ||
+        null;
     } else {
-      // Collapse / no ranking → host picks next theme
-      room.rematchChooserId = room.hostPlayerId || null;
+      // Collapse / majority leave → host picks next Challenge
+      room.nextQuestChooserId = room.hostPlayerId || null;
     }
   }
 
@@ -419,15 +451,17 @@ export class RoomManager {
     const isHost =
       Boolean(player?.isHost) ||
       (payload?.hostToken && payload.hostToken === room.hostToken);
-    const outcome = this.isRoomOutcome(room);
-    const chooserId = this.rematchChooserId(room);
+    const outcome = this.isQuestOutcome(room);
+    const chooserId = this.nextQuestChooserId(room);
     const isRematchChooser = Boolean(player?.id && chooserId && player.id === chooserId);
 
-    // Mission pick / start: host for lobby; after a race only the rematch chooser (winner, or host if collapse)
-    if (cmd === "set_mission" || cmd === "start_mission") {
+    // Quest pick / start: host for lobby; after outcome only the next-Quest chooser
+    const isSetQuest = cmd === "set_quest";
+    const isStartQuest = cmd === "start_quest";
+    if (isSetQuest || isStartQuest) {
       if (outcome) {
         if (!isRematchChooser) {
-          return { ok: false, error: "not_rematch_chooser" };
+          return { ok: false, error: "not_quest_chooser" };
         }
       } else if (!isHost) {
         return { ok: false, error: "not_host" };
@@ -436,20 +470,21 @@ export class RoomManager {
       return { ok: false, error: "not_host" };
     }
 
-    if (cmd === "set_mission") {
-      // Mid-race: locked. Lobby or post-outcome rematch: ok.
+    if (isSetQuest) {
+      // Mid-Quest: locked. Lobby or post-outcome next Quest: ok.
       if (room.mp && !outcome) return { ok: false, error: "already_started" };
       const mission = payload.mission;
       const globalId = payload.globalId || mission?.globalId;
       if (!mission?.id) return { ok: false, error: "mission_required" };
-      room.missionMeta = { globalId, mission };
+      room.questMeta = { globalId, mission };
       room.updatedAt = Date.now();
-      const phase = outcome ? "rematch_ready" : "ready";
+      const phase = outcome ? "next_quest_ready" : "ready";
+      const chooser = this.nextQuestChooserId(room);
       this.broadcast(room, {
         type: "lobby",
-        missionMeta: room.missionMeta,
+        questMeta: room.questMeta,
         phase,
-        rematchChooserId: this.rematchChooserId(room),
+        nextQuestChooserId: chooser,
       });
       return {
         ok: true,
@@ -458,8 +493,8 @@ export class RoomManager {
       };
     }
 
-    if (cmd === "start_mission") {
-      // Fresh start: no mp yet. Rematch: only after previous race ended.
+    if (isStartQuest) {
+      // Fresh start: no mp yet. Next Quest: only after previous Quest ended.
       if (room.mp && !outcome) return { ok: false, error: "already_started" };
       const connected = room.players.filter((p) => p.connected);
       if (connected.length < MIN_PLAYERS && room.players.length < MIN_PLAYERS) {
@@ -477,11 +512,11 @@ export class RoomManager {
         return { ok: false, error: "min_players", min: MIN_PLAYERS };
       }
 
-      const meta = room.missionMeta || payload;
+      const meta = room.questMeta || payload;
       const mission = meta.mission || payload.mission;
       if (!mission) return { ok: false, error: "mission_required" };
       if (payload.mission) {
-        room.missionMeta = {
+        room.questMeta = {
           globalId: payload.globalId || mission.globalId,
           mission,
         };
@@ -495,25 +530,25 @@ export class RoomManager {
           multiplayer: true,
         },
       });
-      mp = setMpMission(
+      mp = setMpQuest(
         mp,
         mission,
-        room.missionMeta?.globalId || mission.globalId
+        room.questMeta?.globalId || mission.globalId
       );
-      // Winner who picks next theme goes first when possible
+      // Solver/host who picks next Quest goes first when possible
       const first =
         outcome && isRematchChooser
           ? player.id
           : "host";
       mp = setFirstPlayer(mp, first === "host" ? "host" : first);
-      const started = startMpMission(mp);
+      const started = startMpQuest(mp);
       if (!started.ok) return { ok: false, error: started.error || "start_failed" };
 
       room.mp = started.session;
       room.simVersion = room.mp.version || 1;
-      room.rematchChooserId = null;
-      room.missionMeta = {
-        globalId: room.missionMeta?.globalId || mission.globalId,
+      room.nextQuestChooserId = null;
+      room.questMeta = {
+        globalId: room.questMeta?.globalId || mission.globalId,
         mission,
       };
       room.updatedAt = Date.now();
@@ -528,7 +563,7 @@ export class RoomManager {
       }
       // First start vs rematch: clients key off this to enter play once
       this.broadcast(room, {
-        type: outcome ? "rematch_started" : "race_started",
+        type: outcome ? "next_quest_started" : "quest_started",
         phase: "playing",
         code: room.code,
         simVersion: room.simVersion,
@@ -607,7 +642,7 @@ export class RoomManager {
 
     const type = action?.type;
 
-    // Soft locks only apply when writing your own forge (optional UX)
+    // Soft locks only apply when writing your own invent (optional UX)
     if (type === "write_commit" || type === "buffer_write") {
       const field = action.payload?.field;
       if (field && !canEditField(room, player, field)) {
@@ -621,7 +656,18 @@ export class RoomManager {
       return this.unlockField(room, player, action.payload?.field);
     }
 
-    const result = applyMpAction(room.mp, action, player.id);
+    // Leave-Quest vote: any seated player; denominator = currently connected seats
+    const voteOpts = {};
+    if (type === "vote_leave_quest" || type === "unvote_leave_quest") {
+      voteOpts.eligibleIds = room.players
+        .filter((p) => p.connected)
+        .map((p) => p.id);
+      if (!voteOpts.eligibleIds.length) {
+        voteOpts.eligibleIds = (room.mp.seatOrder || []).slice();
+      }
+    }
+
+    const result = applyMpAction(room.mp, action, player.id, voteOpts);
     if (!result.ok) {
       return {
         ok: false,
@@ -637,7 +683,7 @@ export class RoomManager {
     room.simVersion = room.mp.version || room.simVersion + 1;
     room.updatedAt = Date.now();
     // When race ends, freeze rematch chooser (winner, or host on collapse)
-    this.refreshRematchChooser(room);
+    this.refreshNextQuestChooser(room);
     const events = [...(result.events || []), ...extraEvents];
     const patch = {
       type: "patch",
@@ -646,14 +692,17 @@ export class RoomManager {
       actorId: player?.id,
       mp: publicMpState(room.mp),
       place: publicMpState(room.mp)?.place,
-      forges: publicMpState(room.mp)?.forges,
+      invents: publicMpState(room.mp)?.invents,
       openTable: publicMpState(room.mp)?.openTable,
       ranking: room.mp.ranking,
-      rematchChooserId: this.rematchChooserId(room),
+      nextQuestChooserId: this.nextQuestChooserId(room),
       activeSeatId: activeSeatId(room.mp),
       fieldLocks: locksPublic(room),
-      phase:
-        room.mp.place?.status === "won" || room.mp.place?.status === "collapsed"
+      questExit: publicMpState(room.mp)?.questExit || null,
+            phase:
+        room.mp.place?.status === "won" ||
+        room.mp.place?.status === "collapsed" ||
+        room.mp.place?.status === "abandoned_by_vote"
           ? "outcome"
           : "playing",
     };
@@ -662,13 +711,13 @@ export class RoomManager {
       if (p._socket && p._socket.readyState === 1) {
         const payload = {
           ...patch,
-          sim: forgePlaceShim(publicMpState(room.mp), p.id),
+          sim: inventPlaceShim(publicMpState(room.mp), p.id),
           you: {
             id: p.id,
             displayName: p.displayName,
             isHost: p.isHost,
             isActive: p.id === activeSeatId(room.mp),
-            forge: room.mp.forges[p.id] || null,
+            invent: room.mp.invents[p.id] || null,
           },
         };
         try {
@@ -681,7 +730,7 @@ export class RoomManager {
         safeSend(p._socket, payload);
       }
     }
-    return { ok: true, ...patch, sim: forgePlaceShim(publicMpState(room.mp), player?.id) };
+    return { ok: true, ...patch, sim: inventPlaceShim(publicMpState(room.mp), player?.id) };
   }
 
   lockField(room, player, field, ttlSec = 30) {
@@ -711,7 +760,7 @@ export class RoomManager {
       return { ok: false, error: "not_owner" };
     }
     room.fieldLocks.delete(key);
-    // also clear legacy unscoped keys
+    // also clear unscoped keys
     room.fieldLocks.delete(field);
     this.broadcast(room, { type: "locks", fieldLocks: locksPublic(room) });
     return { ok: true, fieldLocks: locksPublic(room) };
@@ -731,7 +780,7 @@ export class RoomManager {
       `ai-${player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const reservedAp = payload.reservedAp ?? 1;
 
-    const slice = forgePlaceShim(publicMpState(room.mp), player.id);
+    const slice = inventPlaceShim(publicMpState(room.mp), player.id);
     if (!slice) return { ok: false, error: "no_forge" };
 
     const reserved = reserveRoomAiJob(
@@ -749,7 +798,7 @@ export class RoomManager {
       return { ok: true, idempotent: true, clientActionId };
     }
 
-    applySliceToForge(room.mp, player.id, reserved.sim);
+    applySliceToChallenge(room.mp, player.id, reserved.sim);
     room.simVersion = (room.mp.version || 0) + 1;
     room.mp.version = room.simVersion;
     room.updatedAt = Date.now();
@@ -758,7 +807,7 @@ export class RoomManager {
       type: "ai_pending",
       simVersion: room.simVersion,
       mp: publicMpState(room.mp),
-      sim: forgePlaceShim(publicMpState(room.mp), player.id),
+      sim: inventPlaceShim(publicMpState(room.mp), player.id),
       clientActionId,
       mode,
       playerId: player.id,
@@ -808,7 +857,7 @@ export class RoomManager {
   completeAiJob(room, player, clientActionId, outcome = {}) {
     if (!room.mp) return { ok: false, error: "not_started" };
     if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
-    const slice = forgePlaceShim(publicMpState(room.mp), player.id);
+    const slice = inventPlaceShim(publicMpState(room.mp), player.id);
     if (!slice) return { ok: false, error: "no_forge" };
 
     if (outcome.ok === false) {
@@ -816,7 +865,7 @@ export class RoomManager {
         features: { actionPoints: true },
         apMax: slice.apMax,
       });
-      applySliceToForge(room.mp, player.id, rejected.sim);
+      applySliceToChallenge(room.mp, player.id, rejected.sim);
       room.simVersion = (room.mp.version || 0) + 1;
       room.mp.version = room.simVersion;
       room.updatedAt = Date.now();
@@ -829,7 +878,7 @@ export class RoomManager {
         playerId: player?.id,
         simVersion: room.simVersion,
         mp: publicMpState(room.mp),
-        sim: forgePlaceShim(publicMpState(room.mp), player?.id),
+        sim: inventPlaceShim(publicMpState(room.mp), player?.id),
         events: rejected.events,
       };
       this.broadcast(room, msg);
@@ -837,13 +886,13 @@ export class RoomManager {
     }
 
     const result = outcome.result || {};
-    applyAiProposalsToForge(room.mp, player.id, result.proposals);
+    applyAiProposalsToChallenge(room.mp, player.id, result.proposals);
 
-    const slice2 = forgePlaceShim(publicMpState(room.mp), player.id);
+    const slice2 = inventPlaceShim(publicMpState(room.mp), player.id);
     const resolved = resolveRoomAiJob(slice2, room.aiQuota, clientActionId, {
       features: { actionPoints: true },
     });
-    applySliceToForge(room.mp, player.id, resolved.sim);
+    applySliceToChallenge(room.mp, player.id, resolved.sim);
     room.simVersion = (room.mp.version || 0) + 1;
     room.mp.version = room.simVersion;
     room.updatedAt = Date.now();
@@ -868,7 +917,7 @@ export class RoomManager {
       },
       simVersion: room.simVersion,
       mp: publicMpState(room.mp),
-      sim: forgePlaceShim(publicMpState(room.mp), player?.id),
+      sim: inventPlaceShim(publicMpState(room.mp), player?.id),
       events: resolved.events,
     };
     this.broadcast(room, msg);
@@ -949,10 +998,10 @@ function safeSend(socket, obj) {
   }
 }
 
-/** Merge place + personal forge into a solo-like sim slice for AI / legacy UI. */
-function forgePlaceShim(mp, playerId) {
+/** Merge place + personal invent into a solo-like sim slice for AI / UI. */
+function inventPlaceShim(mp, playerId) {
   if (!mp?.place || !playerId) return null;
-  const f = mp.forges?.[playerId];
+  const f = mp.invents?.[playerId];
   if (!f) return null;
   // Personal invent calendar for feasibility / AI timing (not shared place baseline)
   const year = f.year != null ? f.year : mp.place.year;
@@ -991,13 +1040,13 @@ function forgePlaceShim(mp, playerId) {
   };
 }
 
-function applySliceToForge(mp, playerId, slice) {
-  const f = mp.forges[playerId];
+function applySliceToChallenge(mp, playerId, slice) {
+  const f = mp.invents[playerId];
   if (!f || !slice) return;
   f.ap = slice.ap;
   f.pendingAi = slice.pendingAi || null;
   if (slice.turnPhase === "ai_pending") {
-    /* keep forge turnPhase */
+    /* keep invent turnPhase */
   } else if (slice.turnPhase) {
     f.turnPhase = slice.turnPhase === "act" ? f.turnPhase : slice.turnPhase;
   }
@@ -1006,9 +1055,9 @@ function applySliceToForge(mp, playerId, slice) {
   if (slice.inventionImpact != null) f.inventionImpact = slice.inventionImpact;
 }
 
-function applyAiProposalsToForge(mp, playerId, proposals) {
+function applyAiProposalsToChallenge(mp, playerId, proposals) {
   if (!proposals || typeof proposals !== "object") return;
-  const f = mp.forges[playerId];
+  const f = mp.invents[playerId];
   if (!f) return;
   if (proposals.inventionName && !String(f.inventionName || "").trim()) {
     f.inventionName = String(proposals.inventionName).slice(0, 120);
@@ -1023,7 +1072,7 @@ function applyAiProposalsToForge(mp, playerId, proposals) {
 
 function buildRoomAiContext(room, player, payload) {
   const mp = publicMpState(room.mp);
-  const f = mp?.forges?.[player.id];
+  const f = mp?.invents?.[player.id];
   // AI feasibility / timing must use the invent owner's personal year
   const inventYear = f?.year != null ? f.year : mp?.place?.year;
   return {

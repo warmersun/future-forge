@@ -13,6 +13,23 @@ export function isWin(pressure, winMax = {}) {
 }
 
 /**
+ * Multiplayer race is over — no more seat-turns / deploy actions.
+ * - won: full solve (meters under goals)
+ * - collapsed: place fell
+ * Partial Scale does NOT end the race (others may still Pilot/Scale).
+ * @param {object|null|undefined} placeOrStatus — place object or status string
+ */
+export function isMpQuestOver(placeOrStatus) {
+  const st =
+    typeof placeOrStatus === "string"
+      ? placeOrStatus
+      : placeOrStatus?.status || "";
+  // won | collapsed | abandoned_by_vote (majority left the Quest)
+  return st === "won" || st === "collapsed" || st === "abandoned_by_vote";
+}
+
+
+/**
  * Solo (and single invent) collapse: this invent's year or shared meters.
  * @param {object} opts
  * @param {number} opts.year
@@ -31,8 +48,8 @@ export function isCollapsed({ year, collapseYear, pressure }) {
  *   One player Waiting late does not sink seats still inventing in the present —
  *   they can keep solving / contributing on earlier invent calendars.
  *
- * @param {object} session — mp session with place + forges
- * @param {{ forgeYear?: (forge: object, place: object) => number }} [opts]
+ * @param {object} session — mp session with place + invents
+ * @param {{ forgeYear?: (invent: object, place: object) => number }} [opts]
  */
 export function isMpPlaceCollapsed(session, opts = {}) {
   const place = session?.place;
@@ -53,9 +70,9 @@ export function isMpPlaceCollapsed(session, opts = {}) {
 
   const order = session.seatOrder?.length
     ? session.seatOrder
-    : Object.keys(session.forges || {});
+    : Object.keys(session.invents || {});
   const contenders = order
-    .map((id) => session.forges?.[id])
+    .map((id) => session.invents?.[id])
     .filter((f) => f && !f.abandoned);
   if (!contenders.length) return false;
 
@@ -68,9 +85,9 @@ export function isMpPlaceCollapsed(session, opts = {}) {
 }
 
 /**
- * Earliest invent year among non-abandoned forges (for collapse copy / ranking meta).
+ * Earliest invent year among non-abandoned invents (for collapse copy / ranking meta).
  * @param {object} session
- * @param {{ forgeYear?: (forge: object, place: object) => number }} [opts]
+ * @param {{ forgeYear?: (invent: object, place: object) => number }} [opts]
  */
 export function mpEarliestInventYear(session, opts = {}) {
   const place = session?.place;
@@ -80,9 +97,9 @@ export function mpEarliestInventYear(session, opts = {}) {
     ((f, p) => (f?.year != null ? f.year : p?.year ?? 2026));
   const order = session.seatOrder?.length
     ? session.seatOrder
-    : Object.keys(session.forges || {});
+    : Object.keys(session.invents || {});
   const contenders = order
-    .map((id) => session.forges?.[id])
+    .map((id) => session.invents?.[id])
     .filter((f) => f && !f.abandoned);
   if (!contenders.length) return place.year ?? null;
   return Math.min(...contenders.map((f) => forgeYear(f, place)));

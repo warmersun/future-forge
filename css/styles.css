@@ -2923,6 +2923,24 @@ body.mp-hotseat .hud-product {
   font-size: 0.78rem;
 }
 
+/* Multiplayer: spend/act locked until “Let's go” on the turn popup */
+body.mp-turn-gate #btn-challenge-submit,
+body.mp-turn-gate #btn-challenge-apply-fix,
+body.mp-turn-gate #btn-challenge-confirm-sidestep,
+body.mp-turn-gate #btn-challenge-end-turn,
+body.mp-turn-gate #btn-end-turn,
+body.mp-turn-gate #btn-to-challenge,
+body.mp-turn-gate #btn-wait,
+body.mp-turn-gate #btn-lobby,
+body.mp-turn-gate #btn-deploy-stage-primary,
+body.mp-turn-gate .scrutiny-move-btn,
+body.mp-turn-gate #btn-challenge-coach,
+body.mp-turn-gate #btn-challenge-draft {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 /* Multiplayer: "your turn" overlay (div, not <dialog> — showModal trapped clicks) */
 .mp-turn-modal {
   position: fixed;

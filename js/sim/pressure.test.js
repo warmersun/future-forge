@@ -7,7 +7,7 @@ import {
   maxPressure,
 } from "./pressure.js";
 import { computeDeployDrop } from "./deploy.js";
-import { isWin, isCollapsed, isMpPlaceCollapsed } from "./collapse.js";
+import { isWin, isCollapsed, isMpPlaceCollapsed, isMpQuestOver } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
 import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
@@ -61,6 +61,10 @@ describe("collapse / win", () => {
     assert.equal(isWin({ Floods: 3 }, { Floods: 2 }), false);
     assert.equal(isCollapsed({ year: 2030, collapseYear: 2032, pressure: { A: 5 } }), true);
     assert.equal(isCollapsed({ year: 2032, collapseYear: 2032, pressure: { A: 1 } }), true);
+    assert.equal(isMpQuestOver("won"), true);
+    assert.equal(isMpQuestOver("partial_locked"), false);
+    assert.equal(isMpQuestOver("playing"), false);
+    assert.equal(isMpQuestOver({ status: "collapsed" }), true);
   });
 
   it("mp place year-fail only when all invents are late", () => {
@@ -72,19 +76,19 @@ describe("collapse / win", () => {
         pressure: { Floods: 1 },
         mission: { startYear: 2026, collapseYear: 2030 },
       },
-      forges: {
+      invents: {
         a: { year: 2030, abandoned: false },
         b: { year: 2026, abandoned: false },
       },
     };
     assert.equal(isMpPlaceCollapsed(base), false);
     // Missing year on partner counts as present (start), not place.year
-    base.forges.b = { abandoned: false };
+    base.invents.b = { abandoned: false };
     assert.equal(isMpPlaceCollapsed(base), false);
-    base.forges.b = { year: 2030, abandoned: false };
+    base.invents.b = { year: 2030, abandoned: false };
     assert.equal(isMpPlaceCollapsed(base), true);
     // Pressure still ends everyone regardless of years
-    base.forges.b.year = 2026;
+    base.invents.b.year = 2026;
     base.place.pressure = { Floods: 5 };
     assert.equal(isMpPlaceCollapsed(base), true);
   });
@@ -161,6 +165,54 @@ describe("actions", () => {
     assert.equal(r.ok, true);
     assert.equal(r.sim.ap, 2);
     assert.deepEqual(r.sim.selectedTechIds, ["solar"]);
+  });
+
+  it("reserve_ai in scrutiny restores scrutiny phase on resolve (AP stays spent)", () => {
+    const s = base();
+    s.turnPhase = "scrutiny";
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const reserved = applyAction(
+      s,
+      {
+        type: "reserve_ai",
+        payload: { mode: "judge-scrutiny-move", reservedAp: 1, clientActionId: "a1" },
+      },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(reserved.ok, true);
+    assert.equal(reserved.sim.ap, 2);
+    assert.equal(reserved.sim.apSpentThisTurn, 1);
+    assert.equal(reserved.sim.turnPhase, "ai_pending");
+    assert.equal(reserved.sim.pendingAi.resumePhase, "scrutiny");
+
+    const resolved = applyAction(reserved.sim, { type: "resolve_ai" }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.sim.ap, 2, "AP must stay spent on resolve");
+    assert.equal(resolved.sim.apSpentThisTurn, 1);
+    assert.equal(resolved.sim.turnPhase, "scrutiny", "must not drop to act after challenge judge");
+  });
+
+  it("reject_ai refunds AP and restores resume phase", () => {
+    const s = base();
+    s.turnPhase = "scrutiny";
+    const reserved = applyAction(
+      s,
+      {
+        type: "reserve_ai",
+        payload: { mode: "judge-scrutiny-move", reservedAp: 1 },
+      },
+      { features: { actionPoints: true } }
+    );
+    const rejected = applyAction(reserved.sim, { type: "reject_ai" }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(rejected.ok, true);
+    assert.equal(rejected.sim.ap, 3);
+    assert.equal(rejected.sim.apSpentThisTurn, 0);
+    assert.equal(rejected.sim.turnPhase, "scrutiny");
   });
 
   it("end_turn does not raise pressure (year +1 market round)", () => {

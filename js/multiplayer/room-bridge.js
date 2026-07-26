@@ -5,8 +5,14 @@
 
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
-import { forgeInventYear, forgeInventWaits } from "../sim/mp-session.js";
-import { forgeToSoloDeployStage, soloToForgeDeployStage } from "./hotseat-bridge.js";
+import { inventYear, inventWaits } from "../sim/mp-session.js";
+import {
+  deriveInventPhase,
+  inventPhaseToUiPhase,
+  isInventContentFrozen,
+  allowedActions,
+} from "../sim/invent-phase.js";
+import { inventToSoloDeployStage, soloToInventDeployStage } from "./hotseat-bridge.js";
 
 /**
  * @returns {object} bridge API
@@ -57,14 +63,14 @@ export function createRoomBridge() {
   }
 
   function setViewSeat(id) {
-    if (!mp()?.forges?.[id] && !snap()?.forges?.[id]) return false;
+    if (!mp()?.invents?.[id] && !snap()?.invents?.[id]) return false;
     viewSeatId = id;
     return true;
   }
 
-  function forge(id) {
+  function invent(id) {
     const sid = id || getViewId();
-    return mp()?.forges?.[sid] || snap()?.forges?.[sid] || null;
+    return mp()?.invents?.[sid] || snap()?.invents?.[sid] || null;
   }
 
   function isMyTurn() {
@@ -79,15 +85,13 @@ export function createRoomBridge() {
   }
 
   function forgePhase(id) {
-    const f = forge(id);
+    const f = invent(id);
     if (!f) return "none";
-    if (f.abandoned) return "locked";
-    if (f.deployStage === "scaled" || f.deployStage === "new_normal") return "scaled";
-    if (f.challengePassed || f.deployStage === "pilot_ok" || f.deployStage === "pilot") {
-      return "deploy";
-    }
-    if (f.turnPhase === "scrutiny") return "challenge";
-    return "invent";
+    return inventPhaseToUiPhase(deriveInventPhase(f));
+  }
+
+  function inventPhaseOf(id) {
+    return deriveInventPhase(invent(id));
   }
 
   function viewedPhase() {
@@ -102,19 +106,10 @@ export function createRoomBridge() {
   function canContributeStory() {
     if (!isRoom()) return true;
     if (!isMyTurn()) return false;
-    const f = forge(getViewId());
+    const f = invent(getViewId());
     if (!f || f.abandoned) return false;
-    // Face the challenge locks invent immediately (scrutiny), before pass/fail
-    if (
-      f.turnPhase === "scrutiny" ||
-      f.challengePassed ||
-      f.deployStage === "pilot_ok" ||
-      f.deployStage === "scaled" ||
-      forgePhase(getViewId()) === "challenge"
-    ) {
-      return false;
-    }
-    return forgePhase(getViewId()) === "invent";
+    // challenge / challenge_locked / deploy / fielded all freeze story
+    return !isInventContentFrozen(f);
   }
 
   function canFaceChallenge() {
@@ -122,28 +117,29 @@ export function createRoomBridge() {
     if (!isMyTurn()) return false;
     // Only your own invent for Challenge
     if (getViewId() !== myId()) return false;
-    const f = forge(getViewId());
+    const f = invent(getViewId());
     if (!f || f.abandoned) return false;
-    const phase = forgePhase(getViewId());
-    if (phase === "scaled" || phase === "locked") return false;
-    return phase === "invent" || phase === "challenge" || phase === "deploy";
+    const phase = inventPhaseOf(getViewId());
+    // Owner may Face from invent or after fail (challenge_locked); resume mid-challenge
+    return phase === "invent" || phase === "challenge_locked" || phase === "challenge";
+  }
+
+  /** Owner may open deploy bay when invent is deploy_ready / scale_ready */
+  function canOpenDeployBay() {
+    if (!isRoom()) return true;
+    if (!isMyTurn()) return false;
+    if (getViewId() !== myId()) return false;
+    const phase = inventPhaseOf(getViewId());
+    return phase === "deploy_ready" || phase === "scale_ready";
   }
 
   function canEditStack() {
     if (!isRoom()) return true;
     if (!isMyTurn()) return false;
     if (snap()?.place?.status !== "playing" && snap()?.phase !== "playing") return false;
-    const f = forge(getViewId());
+    const f = invent(getViewId());
     if (!f || f.abandoned) return false;
-    if (
-      f.turnPhase === "scrutiny" ||
-      f.challengePassed ||
-      f.deployStage === "pilot_ok" ||
-      f.deployStage === "scaled"
-    ) {
-      return false;
-    }
-    return forgePhase(getViewId()) === "invent";
+    return !isInventContentFrozen(f);
   }
 
   function canHelpDeploy() {
@@ -154,9 +150,19 @@ export function createRoomBridge() {
     if (!isRoom()) return true;
     if (!isMyTurn()) return false;
     if (snap()?.place?.status !== "playing" && snap()?.phase !== "playing") return false;
-    const f = forge(getViewId());
+    const f = invent(getViewId());
     if (!f || f.abandoned) return false;
-    return forgePhase(getViewId()) === "deploy";
+    const phase = inventPhaseOf(getViewId());
+    const actor = invent(myId());
+    const acts = allowedActions({
+      inventPhase: phase,
+      isOwner: getViewId() === myId(),
+      isActive: true,
+      pilotLockedThisTurn: Boolean(actor?.pilotFailedThisTurn),
+      scaleLockedThisTurn: Boolean(actor?.scaleFailedThisTurn),
+      placePlaying: true,
+    });
+    return acts.pilot || acts.scale;
   }
 
   function seatSummaries() {
@@ -166,9 +172,9 @@ export function createRoomBridge() {
     const order = m.seatOrder || (s.players || []).map((p) => p.id);
     return order.map((id) => {
       const p = (s.players || []).find((x) => x.id === id);
-      const f = m.forges?.[id];
+      const f = m.invents?.[id];
       const phase = forgePhase(id);
-      // Presence: player.connected from WS; forge.connected also cleared on disconnect
+      // Presence: player.connected from WS; invent.connected also cleared on disconnect
       const connected =
         p != null
           ? Boolean(p.connected)
@@ -205,8 +211,8 @@ export function createRoomBridge() {
     if (!place) return;
     const vId = getViewId();
     const aId = getActiveId();
-    const view = m?.forges?.[vId];
-    const actor = m?.forges?.[aId] || view;
+    const view = m?.invents?.[vId];
+    const actor = m?.invents?.[aId] || view;
     if (!view || !actor) return;
 
     const phase = forgePhase(vId);
@@ -218,13 +224,16 @@ export function createRoomBridge() {
       mySeatId: myId(),
       viewingOther: vId !== myId(),
       forgePhase: phase,
-      canEditProse: canContributeStory(),
-      canContributeStory: canContributeStory(),
+            canContributeStory: canContributeStory(),
       canFaceChallenge: canFaceChallenge(),
       canEditStack: canEditStack(),
       canHelpDeploy: canHelpDeploy(),
       canRunDeploy: canRunDeploy(),
-      inventLocked: phase === "deploy" || phase === "scaled" || phase === "challenge",
+      inventLocked:
+        phase === "deploy" ||
+        phase === "scaled" ||
+        phase === "challenge" ||
+        phase === "challenge_locked",
     };
 
     state.mission = cloneMission(place.mission);
@@ -232,9 +241,9 @@ export function createRoomBridge() {
     if (!state.global && place.globalId) {
       state.global = { id: place.globalId };
     }
-    // Invent calendar is personal (viewed forge) — feasibility / AI timing use this
-    state.year = forgeInventYear(view, place);
-    state.waits = forgeInventWaits(view, place);
+    // Invent calendar is personal (viewed invent) — feasibility / AI timing use this
+    state.year = inventYear(view, place);
+    state.waits = inventWaits(view, place);
     state.turn = place.turn || m.round || 0;
     state.pressure = clonePressure(place.pressure);
     state.lastNews = place.lastNews || "";
@@ -252,6 +261,7 @@ export function createRoomBridge() {
     state.inventionImpact = view.inventionImpact || "";
     state.selectedTechIds = (view.stack || []).map((x) => x.techId);
     state.challengePassed = Boolean(view.challengePassed);
+    state.challengeLocked = Boolean(view.challengeLocked);
     state.challengeVerdict = view.challengeVerdict;
     state.challengeAnswer = view.challengeAnswer || "";
     state.hadChallengeAttempt = Boolean(view.hadChallengeAttempt);
@@ -276,28 +286,28 @@ export function createRoomBridge() {
     // Shared vision revision (followers re-peek when this bumps)
     state.mpVisionRev = view.visionRev || 0;
     state.mpVisionSessionId = view.visionSessionId || "";
-    state.deployStage = forgeToSoloDeployStage(view.deployStage);
-    // Don't clobber a local unlock while submit_challenge is in flight
-    const scrutinyCleared =
-      view.scrutinyPublic?.encounters?.length &&
-      view.scrutinyPublic.encounters.every((e) => e.cleared);
-    if (view.challengePassed || view.deployStage !== "none" || scrutinyCleared) {
-      state.deployUnlocked = true;
-    } else if (view.turnPhase !== "scrutiny") {
-      state.deployUnlocked = false;
-    }
+    state.deployStage = inventToSoloDeployStage(view.deployStage);
+    // Always derive from *viewed* invent — never leave sticky unlock across seats
+    state.deployUnlocked = Boolean(
+      view.challengePassed ||
+        (view.deployStage && view.deployStage !== "none")
+    );
     state.stagedDropPool = view.stagedDropPool || state.stagedDropPool || 0;
     state.stagedDropRemaining =
       view.deployStage === "pilot_ok"
         ? view.stagedDropPool || 0
-        : view.deployStage === "scaled"
+        : view.deployStage === "scaled" || view.deployStage === "new_normal"
           ? 0
           : view.stagedDropPool || 0;
-    state.dropPilotApplied = view.deployStage === "pilot_ok" || view.deployStage === "scaled" ? 1 : 0;
-    state.dropScaleApplied = view.deployStage === "scaled" ? 1 : 0;
+    const deployDone =
+      view.deployStage === "scaled" || view.deployStage === "new_normal";
+    state.dropPilotApplied =
+      view.deployStage === "pilot_ok" || deployDone ? 1 : 0;
+    state.dropScaleApplied = deployDone ? 1 : 0;
+    state.dropNewNormalApplied = view.deployStage === "new_normal" ? 1 : 0;
 
     // Resources = always *you* (the local player), who pays
-    const me = m.forges?.[myId()] || actor;
+    const me = m.invents?.[myId()] || actor;
     state.ap = me.ap;
     state.apMax = me.apMax;
     state.budget = me.budget;
@@ -306,7 +316,12 @@ export function createRoomBridge() {
     state.writeCommitsThisTurn = me.writeCommitsThisTurn || 0;
     state.techAddedThisTurn = { ...(me.techAddedThisTurn || {}) };
 
-    if (view.challengePassed || view.deployStage === "pilot_ok" || view.deployStage === "scaled") {
+    if (
+      view.challengePassed ||
+      view.deployStage === "pilot_ok" ||
+      view.deployStage === "scaled" ||
+      view.deployStage === "new_normal"
+    ) {
       state.turnPhase = "between_stages";
     } else if (view.turnPhase === "scrutiny" || me.turnPhase === "scrutiny") {
       state.turnPhase = "scrutiny";
@@ -349,14 +364,15 @@ export function createRoomBridge() {
     getViewId,
     myId,
     setViewSeat,
-    forge,
+    invent,
     isMyTurn,
     viewingOther,
     forgePhase,
     viewedPhase,
     canContributeStory,
-    canEditProse: canContributeStory,
-    canFaceChallenge,
+        canFaceChallenge,
+    canOpenDeployBay,
+    inventPhaseOf,
     canEditStack,
     canHelpDeploy,
     canRunDeploy,
@@ -369,6 +385,6 @@ export function createRoomBridge() {
     onUpdate,
     notify,
     client: () => client,
-    soloToForgeDeployStage,
+    soloToInventDeployStage,
   };
 }

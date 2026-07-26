@@ -23,7 +23,7 @@ export function mpVisionStageId(deployStage, techCount = 0) {
  * @typedef {object} MpSideOpts
  * @property {"hotseat"|"room"} mode
  * @property {() => object|null} getPlace — { year, pressure, mission, lastNews }
- * @property {() => object|null} getForge — active local forge
+ * @property {() => object|null} getInvent — active local invent
  * @property {() => boolean} canAct — true if local seat may spend/edit
  * @property {(field: string, value: string) => void} applyField
  * @property {(proposals: object) => void} [applyProposals]
@@ -112,9 +112,9 @@ export class MpSidePanel {
 
   buildContext() {
     const place = this.opts.getPlace?.() || null;
-    const forge = this.opts.getForge?.() || null;
+    const invent = this.opts.getInvent?.() || null;
     const mission = place?.mission;
-    const stackIds = (forge?.stack || []).map((x) => x.techId);
+    const stackIds = (invent?.stack || []).map((x) => x.techId);
     return {
       challenge: mission
         ? {
@@ -128,12 +128,12 @@ export class MpSidePanel {
           }
         : null,
       selectedTechIds: stackIds,
-      inventionName: forge?.inventionName || "",
-      inventionHow: forge?.inventionHow || "",
-      inventionImpact: forge?.inventionImpact || "",
+      inventionName: invent?.inventionName || "",
+      inventionHow: invent?.inventionHow || "",
+      inventionImpact: invent?.inventionImpact || "",
       storyFace: "how",
       writeBoth: true,
-      year: forge?.year != null ? forge.year : place?.year,
+      year: invent?.year != null ? invent.year : place?.year,
       turn: place?.turn,
       place: mission?.place || "",
       pressure: place?.pressure || {},
@@ -153,13 +153,13 @@ export class MpSidePanel {
   }
 
   /**
-   * Refresh vision from current forge/place. Call after render / stack changes.
+   * Refresh vision from current invent/place. Call after render / stack changes.
    * Rooms: shared sessionId per invent + followOnly for non-owners; content-gated.
    * @param {{ immediate?: boolean, force?: boolean, sessionId?: string, followOnly?: boolean }} [opts]
    */
   syncVision(opts = {}) {
     const place = this.opts.getPlace?.();
-    const forge = this.opts.getForge?.();
+    const invent = this.opts.getInvent?.();
     if (!place?.mission) return;
 
     // Lazy-mount vision if panel became visible after setup
@@ -169,16 +169,16 @@ export class MpSidePanel {
     if (!this.vision) return;
     this.vision.attach(this.visionRoot);
 
-    const techs = (forge?.stack || [])
+    const techs = (invent?.stack || [])
       .map((x) => techById(x.techId))
       .filter(Boolean);
-    const stageId = mpVisionStageId(forge?.deployStage || "none", techs.length);
+    const stageId = mpVisionStageId(invent?.deployStage || "none", techs.length);
     const stage = VISION_STAGES.find((s) => s.id === stageId) || VISION_STAGES[0];
 
     const panel = this.visionRoot?.closest(".mp-side-panel");
     const nameEl = panel?.querySelector(".mp-vision-stage-name");
     const blurbEl = panel?.querySelector(".mp-vision-stage-blurb");
-    const inventYear = forge?.year != null ? forge.year : place.year;
+    const inventYear = invent?.year != null ? invent.year : place.year;
     if (nameEl) nameEl.textContent = `${stage.name} · ${inventYear}`;
     if (blurbEl) {
       blurbEl.textContent =
@@ -213,13 +213,13 @@ export class MpSidePanel {
 
     // Content gate — skip Imagine if nothing invent-related changed
     const contentKey = [
-      forge?.seatId || forge?.displayName || "",
+      invent?.seatId || invent?.displayName || "",
       inventYear,
       stageId,
       techs.map((t) => t.id).sort().join(","),
-      (forge?.inventionName || "").trim(),
-      (forge?.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 300),
-      (forge?.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      (invent?.inventionName || "").trim(),
+      (invent?.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      (invent?.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 300),
     ].join("¦");
     if (!opts.force && contentKey === this._lastVisionKey && this.vision.currentUrl) {
       return;
@@ -229,7 +229,7 @@ export class MpSidePanel {
     const mission = place.mission;
     const sessionId =
       opts.sessionId ||
-      this.opts.visionSessionId?.(forge) ||
+      this.opts.visionSessionId?.(invent) ||
       null;
     if (sessionId) this.vision.setSessionId(sessionId);
 
@@ -247,9 +247,9 @@ export class MpSidePanel {
         visionTheme: mission.visionTheme || "rebuild-city",
       },
       techs,
-      inventionName: forge?.inventionName || "",
-      inventionHow: forge?.inventionHow || "",
-      inventionImpact: forge?.inventionImpact || "",
+      inventionName: invent?.inventionName || "",
+      inventionHow: invent?.inventionHow || "",
+      inventionImpact: invent?.inventionImpact || "",
       year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},

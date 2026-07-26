@@ -9,10 +9,10 @@ import { RoomClient } from "./client.js";
 import {
   createHotseatSession,
   activeSeat,
-  activeForge,
+  activeInvent,
   getOpenTable,
-  setHotseatMission,
-  startHotseatMission,
+  setHotseatQuest,
+  startHotseatQuest,
   hotseatApplyAction,
 } from "./hotseat.js";
 import { paintFieldLockElements } from "./locks-ui.js";
@@ -253,31 +253,31 @@ export function initFriendsUi(api) {
     const guestBox = $("#room-guest-mission");
     if (guestBox) guestBox.hidden = Boolean(snap.you?.isHost);
 
-    const briefMission = roomPick.mission || snap.missionMeta?.mission || null;
-    const briefGid = roomPick.globalId || snap.missionMeta?.globalId || briefMission?.globalId;
+    const briefMission = roomPick.mission || snap.questMeta?.mission || null;
+    const briefGid = roomPick.globalId || snap.questMeta?.globalId || briefMission?.globalId;
     paintScenarioBrief($("#room-scenario-brief"), briefMission, {
       escapeHtml,
       globalId: briefGid,
-      heading: briefMission ? "Selected scenario" : "Scenario",
+      heading: briefMission ? "Selected Quest" : "Quest",
     });
 
     const summary = $("#room-mission-summary");
     if (summary) {
-      if (snap.missionMeta?.mission) {
-        const m = snap.missionMeta.mission;
+      if (snap.questMeta?.mission) {
+        const m = snap.questMeta.mission;
         summary.textContent = `Ready: ${m.title} · ${m.place}`;
       } else if (roomPick.mission) {
         summary.textContent = `Selected: ${roomPick.mission.title} · ${roomPick.mission.place}. Start when the party is ready.`;
       } else {
         summary.textContent = snap.you?.isHost
-          ? "Use the same crisis → scenario screens as solo play, then start the race."
-          : "Waiting for host to pick a crisis and local scenario…";
+          ? "Use the same crisis → Quest screens as solo play, then start the Quest."
+          : "Waiting for host to pick a crisis and a Quest…";
       }
     }
 
     const startBtn = $("#btn-room-start");
     if (startBtn) {
-      startBtn.disabled = !(roomPick.mission || snap.missionMeta?.mission);
+      startBtn.disabled = !(roomPick.mission || snap.questMeta?.mission);
     }
 
     if (snap.phase === "playing" || snap.mp?.place) {
@@ -318,10 +318,10 @@ export function initFriendsUi(api) {
       return { globalId: roomPick.globalId, mission: roomPick.mission };
     }
     const snap = client.snapshot;
-    if (snap?.missionMeta?.mission) {
+    if (snap?.questMeta?.mission) {
       return {
-        globalId: snap.missionMeta.globalId,
-        mission: snap.missionMeta.mission,
+        globalId: snap.questMeta.globalId,
+        mission: snap.questMeta.mission,
       };
     }
     return { globalId: null, mission: null };
@@ -339,12 +339,12 @@ export function initFriendsUi(api) {
           mission,
         };
         try {
-          await client.hostCmd("set_mission", {
+          await client.hostCmd("set_quest", {
             globalId: roomPick.globalId,
             mission,
           });
           if (client.snapshot) {
-            client.snapshot.missionMeta = {
+            client.snapshot.questMeta = {
               globalId: roomPick.globalId,
               mission,
             };
@@ -407,10 +407,14 @@ export function initFriendsUi(api) {
       mode: "room",
       toast: flashToast,
       getPlace: () => client.snapshot?.place || client.snapshot?.mp?.place || null,
-      getForge: () => {
+      getInvent: () => {
         const snap = client.snapshot;
         const id = snap?.you?.id || client.session?.playerId;
-        return snap?.you?.forge || snap?.mp?.forges?.[id] || null;
+        return (
+          snap?.you?.invent ||
+          snap?.mp?.invents?.[id] ||
+          null
+        );
       },
       canAct: () => {
         const snap = client.snapshot;
@@ -418,9 +422,9 @@ export function initFriendsUi(api) {
         return Boolean(id && snap?.activeSeatId === id && snap?.place?.status === "playing");
       },
       /** Shared Imagine cache key so all clients see the same invent frame */
-      visionSessionId: (forge) => {
+      visionSessionId: (invent) => {
         const code = client.snapshot?.code || client.session?.code || "room";
-        const seat = forge?.seatId || client.snapshot?.you?.id || "seat";
+        const seat = invent?.seatId || client.snapshot?.you?.id || "seat";
         return `room-${String(code).slice(0, 24)}-seat-${String(seat).slice(0, 40)}`;
       },
       applyField: (field, value) => {
@@ -446,12 +450,12 @@ export function initFriendsUi(api) {
     $("#btn-mp-regen-vision")?.addEventListener("click", () => {
       const snap = client.snapshot;
       const me = snap?.you?.id;
-      const forge = snap?.you?.forge || snap?.mp?.forges?.[me];
+      const invent = snap?.you?.invent || snap?.mp?.invents?.[me];
       roomSide?.syncVision({
         force: true,
         immediate: true,
         followOnly: false,
-        sessionId: roomSide.opts.visionSessionId?.(forge),
+        sessionId: roomSide.opts.visionSessionId?.(invent),
       });
     });
     return roomSide;
@@ -462,7 +466,7 @@ export function initFriendsUi(api) {
     const mp = snap?.mp;
     const place = snap?.place || mp?.place;
     const myId = snap?.you?.id || client.session?.playerId;
-    const forge = snap?.you?.forge || mp?.forges?.[myId] || null;
+    const invent = snap?.you?.invent || mp?.invents?.[myId] || null;
     if (!place && !snap?.sim) return;
 
     ensureRoomSide();
@@ -470,9 +474,9 @@ export function initFriendsUi(api) {
     const code = $("#mp-room-code");
     if (code) code.textContent = snap.code || "";
 
-    // HUD year = your invent calendar (or active forge), not a shared global clock
+    // HUD year = your invent calendar (or active invent), not a shared global clock
     const inventYear =
-      forge?.year ??
+      invent?.year ??
       place?.year ??
       snap?.sim?.year ??
       2026;
@@ -489,10 +493,10 @@ export function initFriendsUi(api) {
       mpYear.style.cursor = "pointer";
     }
     $("#mp-hud-turn").textContent = `Round ${mp?.round || 1}`;
-    if (forge) {
-      $("#mp-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
-      $("#mp-hud-budget").textContent = `Budget ${forge.budget}$`;
-      $("#mp-hud-will").textContent = `Will ${forge.will}`;
+    if (invent) {
+      $("#mp-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
+      $("#mp-hud-budget").textContent = `Budget ${invent.budget}$`;
+      $("#mp-hud-will").textContent = `Will ${invent.will}`;
     } else if (snap?.sim) {
       $("#mp-hud-ap").textContent = `AP ${snap.sim.ap}/${snap.sim.apMax}`;
       $("#mp-hud-budget").textContent = `Budget ${snap.sim.budget}$`;
@@ -546,19 +550,20 @@ export function initFriendsUi(api) {
     paintScenarioBrief($("#mp-scenario-brief"), mission, {
       escapeHtml,
       globalId: place?.globalId || mission?.globalId || snap?.mp?.place?.globalId,
-      heading: "The place",
+      heading: "Challenge",
     });
 
     const plist = $("#mp-player-list");
     if (plist) {
       plist.innerHTML = (snap.players || [])
         .map((p) => {
-          const f = mp?.forges?.[p.id];
+          const f = mp?.invents?.[p.id];
           const tags = [];
           if (p.id === activeId) tags.push('<span class="tag">active</span>');
           if (p.isHost) tags.push('<span class="tag">host</span>');
           if (f?.abandoned) tags.push('<span class="tag">abandoned</span>');
-          if (f?.deployStage === "scaled") tags.push('<span class="tag">scaled</span>');
+          if (f?.deployStage === "new_normal" || f?.deployStage === "scaled")
+            tags.push('<span class="tag">deployed</span>');
           else if (f?.deployStage === "pilot_ok") tags.push('<span class="tag">pilot</span>');
           return `<li class="${p.connected ? "is-online" : "is-offline"} ${
             p.id === activeId ? "is-active-seat" : ""
@@ -589,34 +594,39 @@ export function initFriendsUi(api) {
               )}${helper}</span>`;
             })
             .join(" ");
-          return `<article class="hs-forge-card ${row.active ? "is-active" : ""} ${
+          return `<article class="hs-invent-card ${row.active ? "is-active" : ""} ${
             row.abandoned ? "is-abandoned" : ""
           }">
             <header><strong>${escapeHtml(row.displayName)}</strong>
               ${row.active ? '<span class="tag">turn</span>' : ""}
               ${row.abandoned ? '<span class="tag">abandoned</span>' : ""}
             </header>
-            <p class="hs-forge-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
+            <p class="hs-invent-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
             <p class="muted sm">${escapeHtml((row.inventionHow || "").slice(0, 100))}${
               (row.inventionHow || "").length > 100 ? "…" : ""
             }</p>
-            <div class="hs-forge-stack">${stack || '<span class="muted">No techs</span>'}</div>
+            <div class="hs-invent-stack">${stack || '<span class="muted">No techs</span>'}</div>
             <p class="muted sm">Stage: ${escapeHtml(row.deployStage || "none")}</p>
           </article>`;
         })
         .join("");
     }
 
-    // Your forge fields
-    if (forge) {
-      syncField("mp-invention-name", forge.inventionName, "inventionName");
-      syncField("mp-invention-how", forge.inventionHow, "inventionHow");
-      syncField("mp-invention-impact", forge.inventionImpact, "inventionImpact");
+    // Your invent fields
+    if (invent) {
+      syncField("mp-invention-name", invent.inventionName, "inventionName");
+      syncField("mp-invention-how", invent.inventionHow, "inventionHow");
+      syncField("mp-invention-impact", invent.inventionImpact, "inventionImpact");
       const ans = $("#mp-challenge-answer");
       if (ans && document.activeElement !== ans) {
-        ans.value = forge.challengeAnswer || "";
+        ans.value = invent.challengeAnswer || "";
       }
-      const disabled = Boolean(forge.abandoned) || snap.phase === "outcome" || place?.status === "won";
+      const disabled =
+        Boolean(invent.abandoned) ||
+        snap.phase === "outcome" ||
+        place?.status === "won" ||
+        place?.status === "collapsed" ||
+        place?.status === "abandoned_by_vote";
       for (const id of [
         "mp-invention-name",
         "mp-invention-how",
@@ -629,10 +639,10 @@ export function initFriendsUi(api) {
     }
 
     paintLocks(snap.fieldLocks || {});
-    paintStack(forge, myId);
-    paintTechTray(forge, place, mp, myId);
+    paintStack(invent, myId);
+    paintTechTray(invent, place, mp, myId);
     paintLayerTarget(mp, myId);
-    paintMpPhase(forge, place, myId, activeId);
+    paintMpPhase(invent, place, myId, activeId);
     paintMpOutcome(snap);
 
     const isActive = myId && activeId === myId;
@@ -649,6 +659,40 @@ export function initFriendsUi(api) {
         ? "End your seat-turn (pass to next player)"
         : "Not your turn";
     }
+    // Leave Quest vote (n/m) — any connected player while Quest is playing
+    const leaveChallengeBtn = $("#btn-mp-leave-challenge");
+    if (leaveChallengeBtn) {
+      const fe =
+        snap.questExit ||
+        snap.mp?.questExit ||
+        (mp?.questExit
+          ? {
+              yes: Object.keys(mp.questExit.votes || {}).filter((id) => mp.questExit.votes[id])
+                .length,
+              total: (mp.seatOrder || Object.keys(mp.invents || {})).length,
+              votes: mp.questExit.votes || {},
+              resolved: mp.questExit.resolved,
+            }
+          : null);
+      const connected = (snap.players || []).filter((p) => p.connected !== false);
+      const total =
+        fe?.total != null
+          ? fe.total
+          : connected.length || (mp?.seatOrder || []).length || 0;
+      const yes =
+        fe?.yes != null
+          ? fe.yes
+          : Object.keys(fe?.votes || {}).filter((id) => fe.votes[id]).length;
+      const iVoted = Boolean(myId && (fe?.votes?.[myId] || mp?.questExit?.votes?.[myId]));
+      leaveChallengeBtn.hidden = false;
+      leaveChallengeBtn.disabled = !playing || Boolean(fe?.resolved);
+      leaveChallengeBtn.textContent = `Leave Quest (${yes}/${total})`;
+      leaveChallengeBtn.title = iVoted
+        ? "You voted to leave this Quest — click to revoke (until majority)"
+        : "Vote to leave this Quest (strict majority). Does not leave the room.";
+      leaveChallengeBtn.classList.toggle("is-voted", iVoted);
+      leaveChallengeBtn.dataset.voted = iVoted ? "1" : "0";
+    }
     // Wait only on *your* invent calendar — not while layer-helping someone else
     const layerTarget = $("#mp-layer-target")?.value || myId;
     const waitOnOwn = !layerTarget || layerTarget === myId;
@@ -662,56 +706,61 @@ export function initFriendsUi(api) {
             ? "Wait is only for your own invent — switch stack target to your stack first"
             : "Wait +2 years on your invent (ends seat-turn; others keep their year)";
     }
-    setDis("#btn-mp-ai", playing && isActive && forge && !forge.abandoned);
+    setDis("#btn-mp-ai", playing && isActive && invent && !invent.abandoned);
     setDis(
       "#btn-mp-challenge",
-      playing && isActive && forge && !forge.abandoned && !forge.challengePassed
+      playing && isActive && invent && !invent.abandoned && !invent.challengePassed
     );
     setDis(
       "#btn-mp-submit-challenge",
-      playing && isActive && forge && !forge.abandoned && !forge.challengePassed
+      playing && isActive && invent && !invent.abandoned && !invent.challengePassed
     );
     setDis(
       "#btn-mp-pilot",
       playing &&
         isActive &&
-        forge &&
-        forge.challengePassed &&
-        forge.deployStage === "none" &&
-        !forge.pilotFailedThisTurn
+        invent &&
+        invent.challengePassed &&
+        invent.deployStage === "none" &&
+        !invent.pilotFailedThisTurn
     );
     setDis(
       "#btn-mp-scale",
       playing &&
         isActive &&
-        forge &&
-        forge.deployStage === "pilot_ok" &&
-        !forge.scaleFailedThisTurn
+        invent &&
+        invent.deployStage === "pilot_ok" &&
+        !invent.scaleFailedThisTurn
     );
     setDis(
       "#btn-mp-abandon",
-      playing && isActive && forge && !forge.abandoned && forge.deployStage !== "scaled"
+      playing &&
+        isActive &&
+        invent &&
+        !invent.abandoned &&
+        invent.deployStage !== "scaled" &&
+        invent.deployStage !== "new_normal"
     );
 
     // Shared room vision — content-gated inside syncVision (no force-on-techs)
     try {
       const me = myId;
-      const followOnly = false; // this panel shows *your* forge
+      const followOnly = false; // this panel shows *your* invent
       roomSide?.syncVision({
         immediate: false,
         followOnly,
-        sessionId: roomSide.opts.visionSessionId?.(forge),
+        sessionId: roomSide.opts.visionSessionId?.(invent),
       });
     } catch {
       /* vision optional */
     }
   }
 
-  function paintMpPhase(forge, place, myId, activeId) {
+  function paintMpPhase(invent, place, myId, activeId) {
     const phase = $("#mp-phase-hint");
     if (!phase) return;
     if (place?.status === "won") {
-      phase.textContent = "Place solved — see ranking.";
+      phase.textContent = "Place held — see ranking.";
       return;
     }
     if (place?.status === "collapsed") {
@@ -722,19 +771,31 @@ export function initFriendsUi(api) {
       phase.textContent = "Waiting for the active player…";
       return;
     }
-    if (!forge) {
+    if (!invent) {
       phase.textContent = "";
       return;
     }
-    if (forge.abandoned) phase.textContent = "You abandoned — layer emTech on others or Wait.";
-    else if (!forge.challengePassed)
+    if (invent.abandoned) phase.textContent = "You abandoned — layer emTech on others or Wait.";
+    else if (!invent.challengePassed)
       phase.textContent = "Your turn: write → stack → Face challenge → Pilot → Scale.";
-    else if (forge.deployStage === "none")
-      phase.textContent = "Challenge cleared — Attempt Pilot (does not change the place).";
-    else if (forge.deployStage === "pilot_ok")
-      phase.textContent = "Pilot ok — Scale to update the shared crisis!";
-    else if (forge.deployStage === "scaled")
-      phase.textContent = "You Scaled. End turn or help others.";
+    else if (invent.challengeLocked && !invent.challengePassed)
+      phase.textContent =
+        myId && invent.seatId === myId
+          ? "Challenge failed — invent locked. Face challenge again, or Reopen invent to rework."
+          : "Challenge failed — only the owner can retry (invent stays locked).";
+    else if (invent.deployStage === "none" && invent.challengePassed)
+      phase.textContent = "Deploy ready — Attempt Pilot (does not change the place).";
+    else if (invent.deployStage === "pilot_ok")
+      phase.textContent = "Scale ready — Scale to update the shared crisis!";
+    else if (invent.deployStage === "scaled" || invent.deployStage === "new_normal")
+      phase.textContent =
+        myId && activeId === myId
+          ? "This invent is fielded. Help another invent or End turn."
+          : "This invent is fielded (Scale → New normal).";
+    else if (invent.pilotFailedThisTurn && invent.challengePassed && invent.deployStage === "none")
+      phase.textContent = "Pilot failed this seat-turn — End turn; others may still Pilot this invent.";
+    else if (invent.scaleFailedThisTurn && invent.deployStage === "pilot_ok")
+      phase.textContent = "Scale failed this seat-turn — End turn; others may still Scale this invent.";
     else phase.textContent = "";
   }
 
@@ -805,13 +866,13 @@ export function initFriendsUi(api) {
     });
   }
 
-  function paintStack(forge, myId) {
+  function paintStack(invent, myId) {
     const box = $("#mp-stack");
     if (!box) return;
     const snap = client.snapshot;
     const mp = snap?.mp;
     const targetId = $("#mp-layer-target")?.value || myId;
-    const target = mp?.forges?.[targetId] || forge;
+    const target = mp?.invents?.[targetId] || invent;
     const seatNames = Object.fromEntries(
       (snap?.players || []).map((p) => [p.id, p.displayName])
     );
@@ -819,7 +880,7 @@ export function initFriendsUi(api) {
     const isActive = myId && activeId === myId;
     const canEdit =
       isActive &&
-      !forge?.abandoned &&
+      !invent?.abandoned &&
       snap?.place?.status !== "won" &&
       snap?.place?.status !== "collapsed";
 
@@ -838,12 +899,12 @@ export function initFriendsUi(api) {
     });
   }
 
-  function paintTechTray(forge, place, mp, myId) {
+  function paintTechTray(invent, place, mp, myId) {
     // Full solo-style library (same as hotseat) — not a tiny tray
     const listEl = $("#mp-tech-list");
     const filterRow = $("#mp-filter-row");
     const targetId = $("#mp-layer-target")?.value || myId;
-    const target = mp?.forges?.[targetId] || forge;
+    const target = mp?.invents?.[targetId] || invent;
     const snap = client.snapshot;
     const activeId = snap?.activeSeatId || mp?.activeSeatId;
     const isActive = myId && activeId === myId;
@@ -852,7 +913,7 @@ export function initFriendsUi(api) {
     const canEdit =
       playing &&
       isActive &&
-      !forge?.abandoned &&
+      !invent?.abandoned &&
       place?.status !== "won" &&
       place?.status !== "collapsed";
 
@@ -867,7 +928,7 @@ export function initFriendsUi(api) {
       escapeHtml,
       onFilter: (d) => {
         mpDomainFilter = d;
-        paintTechTray(forge, place, mp, myId);
+        paintTechTray(invent, place, mp, myId);
       },
     });
 
@@ -877,9 +938,9 @@ export function initFriendsUi(api) {
       domainFilter: mpDomainFilter,
       disabled: !canEdit,
       market: place?.marketNews || null,
-      ap: forge?.ap,
-      budget: forge?.budget,
-      will: forge?.will,
+      ap: invent?.ap,
+      budget: invent?.budget,
+      will: invent?.will,
       escapeHtml,
       onToggle: (techId) => {
         const tech = techById(techId);
@@ -893,15 +954,15 @@ export function initFriendsUi(api) {
         } else {
           // Client-side afford gate — never paint selected on deny (server still re-checks)
           const cost = techCost(tech, { market: place?.marketNews || null });
-          if ((forge?.ap ?? 0) < 1) {
+          if ((invent?.ap ?? 0) < 1) {
             flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
             return;
           }
-          if ((forge?.budget ?? 0) < (cost.budget || 0)) {
+          if ((invent?.budget ?? 0) < (cost.budget || 0)) {
             flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
             return;
           }
-          if ((forge?.will ?? 0) < (cost.will || 0)) {
+          if ((invent?.will ?? 0) < (cost.will || 0)) {
             flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
             return;
           }
@@ -1005,7 +1066,7 @@ export function initFriendsUi(api) {
         renderLobby();
       }
     }
-    if (evt.type === "rematch_started" || evt.type === "race_started") {
+    if (evt.type === "next_quest_started" || evt.type === "quest_started") {
       roomPlayEnteredFor = "";
       lastMarketNewsId = null;
       tryEnterRoomPlayOnce(evt.type);
@@ -1030,9 +1091,9 @@ export function initFriendsUi(api) {
       if (last?.type === "wait") {
         const y =
           last.year ??
-          client.snapshot?.mp?.forges?.[last.seatId]?.year ??
+          client.snapshot?.mp?.invents?.[last.seatId]?.year ??
           client.snapshot?.place?.year;
-        setPlayStatus(`Wait → invent year ${y} (your forge only)`);
+        setPlayStatus(`Wait → invent year ${y} (your invent only)`);
       }
       if (last?.type === "end_turn" || last?.type === "seat_turn_start") {
         const who = (client.snapshot?.players || []).find(
@@ -1042,7 +1103,7 @@ export function initFriendsUi(api) {
       }
       if (last?.type === "tech_added" || last?.type === "tech_layered") setPlayStatus("Stack updated.");
       if (last?.type === "scale_ok") setPlayStatus(last.solved ? "Place solved!" : "Scale landed (partial).");
-      if (last?.type === "race_won") setPlayStatus("Race over — ranking ready.");
+      if (last?.type === "quest_won") setPlayStatus("Race over — ranking ready.");
       if (last?.type === "collapsed") setPlayStatus("Place collapsed — nobody wins.");
     }
     if (evt.type === "ai_pending") {
@@ -1186,6 +1247,7 @@ export function initFriendsUi(api) {
     showScreen("friends");
   });
   $("#btn-mp-leave")?.addEventListener("click", () => {
+    if (!confirm("Leave the room? Others can keep playing this game without you.")) return;
     client.leaveLocal();
     roomSide?.destroy();
     roomSide = null;
@@ -1193,6 +1255,14 @@ export function initFriendsUi(api) {
     roomPlayEnteredFor = "";
     if (typeof leaveRoomPlay === "function") leaveRoomPlay();
     showScreen("friends");
+  });
+
+  $("#btn-mp-leave-challenge")?.addEventListener("click", () => {
+    const snap = client.snapshot;
+    const myId = snap?.you?.id || client.session?.playerId;
+    const fe = snap?.questExit || snap?.mp?.questExit;
+    const iVoted = Boolean(myId && fe?.votes?.[myId]);
+    mpSend({ type: iVoted ? "unvote_leave_quest" : "vote_leave_quest" });
   });
 
   $("#btn-room-pick-mission")?.addEventListener("click", () => {
@@ -1209,22 +1279,22 @@ export function initFriendsUi(api) {
       flashToast("Need at least 2 players to start");
       return;
     }
-    let meta = client.snapshot?.missionMeta;
+    let meta = client.snapshot?.questMeta;
     if (!meta?.mission) {
       const cur = currentHostMission();
       if (!cur.mission) {
-        flashToast("Pick a theme and scenario card first");
+        flashToast("Pick a theme and Quest card first");
         return;
       }
-      await client.hostCmd("set_mission", cur);
+      await client.hostCmd("set_quest", cur);
       meta = cur;
     }
     try {
-      setLobbyStatus("Starting race…");
+      setLobbyStatus("Starting Quest…");
       const startBtn = $("#btn-room-start");
       if (startBtn) startBtn.disabled = true;
-      await client.hostCmd("start_mission", meta);
-      // WS snapshot / race_started will call tryEnterRoomPlayOnce — don't double-enter here
+      await client.hostCmd("start_quest", meta);
+      // WS snapshot / quest_started will call tryEnterRoomPlayOnce — don't double-enter here
     } catch (e) {
       flashToast(e.message || "Start failed");
       const startBtn = $("#btn-room-start");
@@ -1243,14 +1313,14 @@ export function initFriendsUi(api) {
       );
       return;
     }
-    const forge = snap?.you?.forge;
+    const invent = snap?.you?.invent;
     const place = snap?.place || snap?.mp?.place;
     const run = () => mpSend({ type: "wait" });
     if (typeof openWaitConfirm === "function") {
       openWaitConfirm(run, {
         multiparty: true,
-        year: forge?.year ?? place?.year,
-        waits: forge?.waits ?? 0,
+        year: invent?.year ?? place?.year,
+        waits: invent?.waits ?? 0,
         pressure: place?.pressure,
         mission: place?.mission,
       });
@@ -1259,8 +1329,8 @@ export function initFriendsUi(api) {
   $("#btn-mp-challenge")?.addEventListener("click", () => mpSend({ type: "enter_challenge" }));
   $("#btn-mp-submit-challenge")?.addEventListener("click", () => {
     const answer = $("#mp-challenge-answer")?.value || "";
-    const forge = client.snapshot?.you?.forge;
-    if (forge && forge.turnPhase !== "scrutiny") {
+    const invent = client.snapshot?.you?.invent;
+    if (invent && invent.turnPhase !== "scrutiny") {
       mpSend({ type: "enter_challenge" });
     }
     setTimeout(() => mpSend({ type: "submit_challenge", payload: { answer } }), 50);
@@ -1278,16 +1348,16 @@ export function initFriendsUi(api) {
 
   $("#btn-mp-ai")?.addEventListener("click", () => {
     const snap = client.snapshot;
-    const forge = snap?.you?.forge;
+    const invent = snap?.you?.invent;
     const place = snap?.place || snap?.mp?.place;
-    if (!forge) return;
+    if (!invent) return;
     try {
       setAiPending(true, "Asking co-inventor…");
       client.requestAi({
         mode: "chat",
         userLabel:
-          `My invention "${forge.inventionName || "untitled"}" in ${place?.mission?.place || "this place"}. ` +
-          `How: ${String(forge.inventionHow || "").slice(0, 400)}. ` +
+          `My invention "${invent.inventionName || "untitled"}" in ${place?.mission?.place || "this place"}. ` +
+          `How: ${String(invent.inventionHow || "").slice(0, 400)}. ` +
           `Suggest one concrete improvement for my stack or how-it-works.`,
         reservedAp: 1,
       });
@@ -1351,10 +1421,10 @@ export function initFriendsUi(api) {
       mode: "hotseat",
       toast: flashToast,
       getPlace: () => hotseat?.place || null,
-      getForge: () => activeForge(hotseat),
+      getInvent: () => activeInvent(hotseat),
       canAct: () => {
         if (!hotseat?.place || hotseat.place.status !== "playing") return false;
-        const f = activeForge(hotseat);
+        const f = activeInvent(hotseat);
         return Boolean(f && !f.abandoned);
       },
       applyField: (field, value) => {
@@ -1408,7 +1478,7 @@ export function initFriendsUi(api) {
         });
         if (!r.ok) return false;
         hotseat = r.session;
-        const f = activeForge(hotseat);
+        const f = activeInvent(hotseat);
         if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
         return true;
       },
@@ -1420,7 +1490,7 @@ export function initFriendsUi(api) {
         });
         if (r.ok) {
           hotseat = r.session;
-          const f = activeForge(hotseat);
+          const f = activeInvent(hotseat);
           if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
         }
       },
@@ -1435,17 +1505,17 @@ export function initFriendsUi(api) {
   function scheduleHsVision(opts = {}) {
     try {
       ensureHsSide();
-      const forge = activeForge(hotseat);
+      const invent = activeInvent(hotseat);
       const place = hotseat?.place;
       if (!place) return;
       const fp = [
-        forge?.year ?? place.year,
+        invent?.year ?? place.year,
         JSON.stringify(place.pressure || {}),
-        forge?.deployStage,
-        (forge?.stack || []).map((x) => x.techId).join(","),
-        (forge?.inventionName || "").slice(0, 40),
-        (forge?.inventionHow || "").slice(0, 80),
-        (forge?.inventionImpact || "").slice(0, 80),
+        invent?.deployStage,
+        (invent?.stack || []).map((x) => x.techId).join(","),
+        (invent?.inventionName || "").slice(0, 40),
+        (invent?.inventionHow || "").slice(0, 80),
+        (invent?.inventionImpact || "").slice(0, 80),
       ].join("|");
       if (!opts.force && fp === hsVisionFingerprint && hsSide?.vision?.currentUrl) return;
       hsVisionFingerprint = fp;
@@ -1465,12 +1535,13 @@ export function initFriendsUi(api) {
     listEl.innerHTML = order
       .map((id) => {
         const s = hotseat.seats.find((x) => x.id === id);
-        const f = hotseat.forges?.[id];
+        const f = hotseat.invents?.[id];
         const isActive = id === seat?.id;
         const tags = [];
         if (isActive) tags.push('<span class="tag">active</span>');
         if (f?.abandoned) tags.push('<span class="tag">abandoned</span>');
-        if (f?.deployStage === "scaled") tags.push('<span class="tag">scaled</span>');
+        if (f?.deployStage === "new_normal" || f?.deployStage === "scaled")
+          tags.push('<span class="tag">deployed</span>');
         else if (f?.deployStage === "pilot_ok") tags.push('<span class="tag">pilot</span>');
         else if (f?.challengePassed) tags.push('<span class="tag">challenged</span>');
         const y = f?.year != null ? f.year : place?.year;
@@ -1486,7 +1557,7 @@ export function initFriendsUi(api) {
   function renderHotseat() {
     if (!hotseat) return;
     const seat = activeSeat(hotseat);
-    const forge = activeForge(hotseat);
+    const invent = activeInvent(hotseat);
     const place = hotseat.place;
     const badge = $("#hs-active-seat");
     if (badge) {
@@ -1506,8 +1577,8 @@ export function initFriendsUi(api) {
 
     ensureHsSide();
 
-    // Active seat invent calendar (personal — Wait only advances their forge year)
-    const inventYear = forge?.year != null ? forge.year : place.year;
+    // Active seat invent calendar (personal — Wait only advances their invent year)
+    const inventYear = invent?.year != null ? invent.year : place.year;
     const hsYear = $("#hs-hud-year");
     if (hsYear) {
       hsYear.textContent = String(inventYear);
@@ -1515,14 +1586,14 @@ export function initFriendsUi(api) {
       hsYear.style.cursor = "pointer";
     }
     $("#hs-hud-turn").textContent = `Round ${hotseat.round || 1}`;
-    if (forge) {
-      $("#hs-hud-ap").textContent = `AP ${forge.ap}/${forge.apMax}`;
-      $("#hs-hud-budget").textContent = `Budget ${forge.budget}$`;
-      $("#hs-hud-will").textContent = `Will ${forge.will}`;
+    if (invent) {
+      $("#hs-hud-ap").textContent = `AP ${invent.ap}/${invent.apMax}`;
+      $("#hs-hud-budget").textContent = `Budget ${invent.budget}$`;
+      $("#hs-hud-will").textContent = `Will ${invent.will}`;
     }
 
     const m = place.mission;
-    const globalId = place.globalId || m?.globalId || hotseat.missionMeta?.globalId;
+    const globalId = place.globalId || m?.globalId || hotseat.questMeta?.globalId;
     const global =
       GLOBALS.find((g) => g.id === globalId) ||
       (m?.globalId ? GLOBALS.find((g) => g.id === m.globalId) : null);
@@ -1536,7 +1607,7 @@ export function initFriendsUi(api) {
     );
     setText("hs-play-mission-title", m?.title || "Hotseat race");
     setText("hs-play-mission-place", m?.place || "");
-    // Local scenario description (solo workshop uses m.scene here)
+    // Quest description (solo workshop uses m.scene here)
     const sceneEl = $("#hs-play-mission-scene");
     if (sceneEl) {
       const scene = m?.scene || m?.problem || m?.description || "";
@@ -1593,26 +1664,26 @@ export function initFriendsUi(api) {
                 return `<span class="tech-chip">${escapeHtml(x.tech?.icon || "")} ${escapeHtml(name)}</span>`;
               })
               .join(" ");
-            return `<article class="hs-forge-card ${row.active ? "is-active" : ""} ${
+            return `<article class="hs-invent-card ${row.active ? "is-active" : ""} ${
               row.abandoned ? "is-abandoned" : ""
             }">
               <header><strong>${escapeHtml(row.displayName)}</strong>
                 ${row.active ? '<span class="tag">your turn</span>' : ""}
               </header>
-              <p class="hs-forge-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
-              <div class="hs-forge-stack">${stack || '<span class="muted">No techs</span>'}</div>
+              <p class="hs-invent-name">${escapeHtml(row.inventionName || "— unnamed —")}</p>
+              <div class="hs-invent-stack">${stack || '<span class="muted">No techs</span>'}</div>
             </article>`;
           })
           .join("");
     }
 
-    const canEdit = place.status === "playing" && forge && !forge.abandoned;
+    const canEdit = place.status === "playing" && invent && !invent.abandoned;
 
-    if (forge) {
+    if (invent) {
       for (const [id, val] of [
-        ["hs-invention-name", forge.inventionName],
-        ["hs-invention-how", forge.inventionHow],
-        ["hs-invention-impact", forge.inventionImpact],
+        ["hs-invention-name", invent.inventionName],
+        ["hs-invention-how", invent.inventionHow],
+        ["hs-invention-impact", invent.inventionImpact],
       ]) {
         const el = $(`#${id}`);
         if (el && document.activeElement !== el && el.value !== (val || "")) el.value = val || "";
@@ -1620,35 +1691,35 @@ export function initFriendsUi(api) {
       }
       const ans = $("#hs-challenge-answer");
       if (ans && document.activeElement !== ans) {
-        ans.value = forge.challengeAnswer || "";
+        ans.value = invent.challengeAnswer || "";
         ans.disabled = !canEdit;
       }
     }
 
     const layerSel = $("#hs-layer-target");
-    if (layerSel && forge) {
+    if (layerSel && invent) {
       const cur = layerSel.value;
       layerSel.innerHTML = (hotseat.seatOrder || [])
         .map((id) => {
           const s = hotseat.seats.find((x) => x.id === id);
           const label =
-            id === forge.seatId
+            id === invent.seatId
               ? `${s?.displayName || id} (my stack)`
               : `${s?.displayName || id} (layer help)`;
           return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
         })
         .join("");
       if (cur && [...layerSel.options].some((o) => o.value === cur)) layerSel.value = cur;
-      else layerSel.value = forge.seatId;
+      else layerSel.value = invent.seatId;
       layerSel.disabled = !canEdit;
     }
 
-    const targetId = $("#hs-layer-target")?.value || forge?.seatId;
-    const targetForge = hotseat.forges?.[targetId] || forge;
+    const targetId = $("#hs-layer-target")?.value || invent?.seatId;
+    const targetInvent = hotseat.invents?.[targetId] || invent;
     const seatNames = Object.fromEntries((hotseat.seats || []).map((s) => [s.id, s.displayName]));
 
     paintSelectedStack($("#hs-selected-techs"), {
-      stack: targetForge?.stack || [],
+      stack: targetInvent?.stack || [],
       ownerSeatId: targetId,
       seatNames,
       disabled: !canEdit,
@@ -1668,35 +1739,35 @@ export function initFriendsUi(api) {
       },
     });
     paintTechLibrary($("#hs-tech-list"), {
-      selectedIds: (targetForge?.stack || []).map((x) => x.techId),
+      selectedIds: (targetInvent?.stack || []).map((x) => x.techId),
       suggested: place.mission?.suggested || [],
       domainFilter: hsDomainFilter,
       disabled: !canEdit,
       market: place?.marketNews || null,
-      ap: forge?.ap,
-      budget: forge?.budget,
-      will: forge?.will,
+      ap: invent?.ap,
+      budget: invent?.budget,
+      will: invent?.will,
       escapeHtml,
       onToggle: (techId) => {
-        const onStack = (targetForge?.stack || []).some((x) => x.techId === techId);
+        const onStack = (targetInvent?.stack || []).some((x) => x.techId === techId);
         if (onStack) {
           hsAct({ type: "deselect_tech", payload: { techId, targetSeatId: targetId } });
         } else {
           const tech = techById(techId);
           const cost = techCost(tech, { market: place?.marketNews || null });
-          if ((forge?.ap ?? 0) < 1) {
+          if ((invent?.ap ?? 0) < 1) {
             flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
             return;
           }
-          if ((forge?.budget ?? 0) < (cost.budget || 0)) {
+          if ((invent?.budget ?? 0) < (cost.budget || 0)) {
             flashToast(`Not enough Budget (need ${cost.budget}$).`, { resource: "budget" });
             return;
           }
-          if ((forge?.will ?? 0) < (cost.will || 0)) {
+          if ((invent?.will ?? 0) < (cost.will || 0)) {
             flashToast(`Not enough Will (need ${cost.will}).`, { resource: "will" });
             return;
           }
-          if (targetId === forge.seatId) {
+          if (targetId === invent.seatId) {
             hsAct({ type: "select_tech", payload: { techId, tech } });
           } else {
             hsAct(
@@ -1713,9 +1784,9 @@ export function initFriendsUi(api) {
     });
 
     const hint = $("#hs-layer-hint");
-    if (hint && forge) {
+    if (hint && invent) {
       const tName = hotseat.seats.find((s) => s.id === targetId)?.displayName || "stack";
-      hint.textContent = targetId === forge.seatId ? "Your stack" : `Layering on ${tName}`;
+      hint.textContent = targetId === invent.seatId ? "Your stack" : `Layering on ${tName}`;
     }
 
     const playing = Boolean(canEdit);
@@ -1723,26 +1794,31 @@ export function initFriendsUi(api) {
       const el = $(id);
       if (el) el.disabled = !on;
     };
-    setDis("#btn-hs-challenge", playing && !forge.challengePassed && forge.turnPhase !== "scrutiny");
+    setDis("#btn-hs-challenge", playing && !invent.challengePassed && invent.turnPhase !== "scrutiny");
     setDis(
       "#btn-hs-submit-challenge",
-      playing && (forge.turnPhase === "scrutiny" || !forge.challengePassed)
+      playing && (invent.turnPhase === "scrutiny" || !invent.challengePassed)
     );
     setDis(
       "#btn-hs-pilot",
-      playing && forge.challengePassed && forge.deployStage === "none" && !forge.pilotFailedThisTurn
+      playing && invent.challengePassed && invent.deployStage === "none" && !invent.pilotFailedThisTurn
     );
     setDis(
       "#btn-hs-scale",
-      playing && forge.deployStage === "pilot_ok" && !forge.scaleFailedThisTurn
+      playing && invent.deployStage === "pilot_ok" && !invent.scaleFailedThisTurn
     );
-    setDis("#btn-hs-abandon", playing && forge.deployStage !== "scaled");
+    setDis(
+      "#btn-hs-abandon",
+      playing &&
+        invent.deployStage !== "scaled" &&
+        invent.deployStage !== "new_normal"
+    );
     setDis("#btn-hs-end-turn", place.status === "playing");
     // Wait only when stack target is the active seat's own invent
-    const hsLayerTarget = $("#hs-layer-target")?.value || forge?.seatId;
+    const hsLayerTarget = $("#hs-layer-target")?.value || invent?.seatId;
     const hsWaitOwn =
       place.status === "playing" &&
-      (!hsLayerTarget || hsLayerTarget === forge?.seatId);
+      (!hsLayerTarget || hsLayerTarget === invent?.seatId);
     setDis("#btn-hs-wait", hsWaitOwn);
     const hsWaitBtn = $("#btn-hs-wait");
     if (hsWaitBtn) {
@@ -1752,17 +1828,18 @@ export function initFriendsUi(api) {
     }
 
     const phase = $("#hs-phase-hint");
-    if (phase && forge) {
-      if (place.status === "won") phase.textContent = "Place solved — see ranking.";
+    if (phase && invent) {
+      if (place.status === "won") phase.textContent = "Place held — see ranking.";
       else if (place.status === "collapsed") phase.textContent = "Collapsed — nobody wins.";
-      else if (forge.abandoned) phase.textContent = "You abandoned — layer on others or Wait.";
-      else if (!forge.challengePassed)
+      else if (invent.abandoned) phase.textContent = "You abandoned — layer on others or Wait.";
+      else if (!invent.challengePassed)
         phase.textContent = "Add emTech on the left → write story → Face challenge → Pilot → Scale.";
-      else if (forge.deployStage === "none")
+      else if (invent.deployStage === "none")
         phase.textContent = "Challenge cleared — attempt Pilot (personal).";
-      else if (forge.deployStage === "pilot_ok")
+      else if (invent.deployStage === "pilot_ok")
         phase.textContent = "Pilot ok — Scale to update the shared crisis!";
-      else if (forge.deployStage === "scaled") phase.textContent = "You Scaled. End turn or help others.";
+      else if (invent.deployStage === "scaled" || invent.deployStage === "new_normal")
+        phase.textContent = "This invent is fielded. Help another invent or End turn / Pass device.";
       else phase.textContent = "";
     }
 
@@ -1843,7 +1920,7 @@ export function initFriendsUi(api) {
   }
 
   $("#btn-hotseat-start")?.addEventListener("click", () => {
-    // Solo crisis → scenario screens, then real workshop via hotseat bridge
+    // Solo crisis → Quest screens, then real workshop via hotseat bridge
     launchHotseatMissionPick();
   });
 
@@ -1871,10 +1948,10 @@ export function initFriendsUi(api) {
   });
 
   $("#btn-hs-wait")?.addEventListener("click", () => {
-    const forge = activeForge(hotseat);
+    const invent = activeInvent(hotseat);
     const place = hotseat?.place;
-    const hsLayerTarget = $("#hs-layer-target")?.value || forge?.seatId;
-    if (forge?.seatId && hsLayerTarget && hsLayerTarget !== forge.seatId) {
+    const hsLayerTarget = $("#hs-layer-target")?.value || invent?.seatId;
+    if (invent?.seatId && hsLayerTarget && hsLayerTarget !== invent.seatId) {
       flashToast(
         "Wait is only for your own invent — switch stack target to your stack first"
       );
@@ -1885,8 +1962,8 @@ export function initFriendsUi(api) {
     if (typeof openWaitConfirm === "function") {
       openWaitConfirm(run, {
         multiparty: true,
-        year: forge?.year ?? place?.year,
-        waits: forge?.waits ?? 0,
+        year: invent?.year ?? place?.year,
+        waits: invent?.waits ?? 0,
         pressure: place?.pressure,
         mission: place?.mission,
       });
@@ -1900,7 +1977,7 @@ export function initFriendsUi(api) {
   $("#btn-hs-submit-challenge")?.addEventListener("click", () => {
     const answer = $("#hs-challenge-answer")?.value || "";
     // enter if needed
-    if (activeForge(hotseat)?.turnPhase !== "scrutiny") {
+    if (activeInvent(hotseat)?.turnPhase !== "scrutiny") {
       const ent = hotseatApplyAction(hotseat, { type: "enter_challenge" });
       if (ent.ok) hotseat = ent.session;
     }

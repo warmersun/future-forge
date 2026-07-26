@@ -164,13 +164,16 @@ export class RoomClient {
               sim: msg.sim ?? this.snapshot.sim,
               mp: msg.mp ?? this.snapshot.mp,
               place: msg.place ?? msg.mp?.place ?? this.snapshot.place,
-              forges: msg.forges ?? msg.mp?.forges ?? this.snapshot.forges,
+              invents:
+                msg.invents ??
+                msg.mp?.invents ??
+                this.snapshot.invents,
               openTable: msg.openTable ?? msg.mp?.openTable ?? this.snapshot.openTable,
               ranking: msg.ranking !== undefined ? msg.ranking : this.snapshot.ranking,
-              rematchChooserId:
-                msg.rematchChooserId !== undefined
-                  ? msg.rematchChooserId
-                  : this.snapshot.rematchChooserId,
+              nextQuestChooserId:
+                msg.nextQuestChooserId !== undefined
+                  ? msg.nextQuestChooserId
+                  : this.snapshot.nextQuestChooserId,
               activeSeatId: msg.activeSeatId ?? msg.mp?.activeSeatId ?? this.snapshot.activeSeatId,
               fieldLocks: msg.fieldLocks || this.snapshot.fieldLocks,
               phase: msg.phase || (msg.mp ? "playing" : this.snapshot.phase),
@@ -185,11 +188,13 @@ export class RoomClient {
         if (msg.type === "presence" || msg.type === "lobby" || msg.type === "settings" || msg.type === "locks") {
           if (this.snapshot) {
             if (msg.players) this.snapshot.players = msg.players;
-            if (msg.missionMeta) this.snapshot.missionMeta = msg.missionMeta;
+            if (msg.questMeta) {
+              this.snapshot.questMeta = msg.questMeta;
+            }
             if (msg.phase) this.snapshot.phase = msg.phase;
             if (msg.settings) this.snapshot.settings = msg.settings;
-            if (msg.rematchChooserId !== undefined) {
-              this.snapshot.rematchChooserId = msg.rematchChooserId;
+            if (msg.nextQuestChooserId !== undefined) {
+              this.snapshot.nextQuestChooserId = msg.nextQuestChooserId;
             }
             // Always apply fieldLocks when present (including {} after unlock)
             if (msg.fieldLocks !== undefined) this.snapshot.fieldLocks = msg.fieldLocks;
@@ -198,8 +203,8 @@ export class RoomClient {
           return;
         }
         if (
-          msg.type === "rematch_started" ||
-          msg.type === "race_started" ||
+          msg.type === "next_quest_started" ||
+          msg.type === "quest_started" ||
           msg.type === "host_ok"
         ) {
           if (msg.snapshot) this.snapshot = msg.snapshot;
@@ -220,7 +225,7 @@ export class RoomClient {
               sim: msg.sim ?? this.snapshot.sim,
               mp: msg.mp ?? this.snapshot.mp,
               place: msg.mp?.place ?? this.snapshot.place,
-              forges: msg.mp?.forges ?? this.snapshot.forges,
+              invents: msg.mp?.invents ?? this.snapshot.invents,
               openTable: msg.mp?.openTable ?? this.snapshot.openTable,
               phase: "playing",
             };
@@ -361,7 +366,7 @@ export class RoomClient {
 
   async hostCmd(cmd, payload = {}) {
     // Host for lobby start; rematch may be the ranking winner (not always host)
-    const isRematchCmd = cmd === "set_mission" || cmd === "start_mission";
+    const isRematchCmd = cmd === "set_quest" || cmd === "start_quest";
     if (!this.session?.isHost && !this.session?.hostToken && !isRematchCmd) {
       throw new Error("not_host");
     }
