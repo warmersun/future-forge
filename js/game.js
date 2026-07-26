@@ -965,11 +965,15 @@ function syncInventActionButtons() {
     "Not your turn — you can browse and use Learn, but only the active player acts.";
   const busyReason = busy ? inventActionBusyReason() : "";
 
-  // —— Lobby ——
+  // —— Lobby (Workshop economy only; Spark keeps it hidden) ——
   const lobbyBtn = $("#btn-lobby");
   if (lobbyBtn) {
-    lobbyBtn.hidden = !budgetWillEnabled();
-    if (budgetWillEnabled()) {
+    if (!budgetWillEnabled()) {
+      lobbyBtn.hidden = true;
+      lobbyBtn.setAttribute("hidden", "");
+    } else {
+      lobbyBtn.hidden = false;
+      lobbyBtn.removeAttribute("hidden");
       const can =
         !spectator &&
         !busy &&
@@ -985,7 +989,7 @@ function syncInventActionButtons() {
     }
   }
 
-  // —— Wait +2 years ——
+  // —— Wait +2 years (always available in Spark; crisis clock, not wallets) ——
   const waitBtn = $("#btn-wait");
   if (waitBtn) {
     if (spectator) {
@@ -1004,13 +1008,15 @@ function syncInventActionButtons() {
       waitBtn.title = busyReason;
     } else {
       waitBtn.disabled = false;
-      waitBtn.title =
-        "Wait +2 years — confirm first; advances calendar and raises crisis. Unspent AP are burned.";
+      waitBtn.title = apEnabled()
+        ? "Wait +2 years — confirm first; advances calendar and raises crisis. Unspent AP are burned."
+        : "Wait +2 years — confirm first; advances calendar and raises crisis.";
     }
   }
 
-  // —— End turn (shared invent + challenge chrome) ——
+  // —— End turn (shared invent + challenge chrome; hidden when AP off / Spark) ——
   updateEndTurnButton();
+  syncEconomyChromeVisibility();
 
   // —— Face the challenge ——
   updateChallengeButton();
@@ -3676,6 +3682,72 @@ function showHudChip(el, on) {
   }
 }
 
+/**
+ * Hide/show AP · Budget · Will strips and Lobby / End turn from live feature flags.
+ * Spark (actionPoints/budgetWill off) keeps crisis+year focus; Workshop + MP keep full chrome.
+ */
+function syncEconomyChromeVisibility() {
+  const apOn = apEnabled();
+  const bwOn = budgetWillEnabled();
+  const showStrip = apOn || bwOn;
+
+  // Empty resource strips vanish so the clock stays year/turn only
+  const strips = new Set();
+  const hudRes = $("#hud-resources");
+  if (hudRes) strips.add(hudRes);
+  for (const sel of ["#hud-ap", "#ch-hud-ap", "#dep-hud-ap"]) {
+    const chip = $(sel);
+    if (chip?.parentElement?.classList?.contains("hud-resources")) {
+      strips.add(chip.parentElement);
+    }
+  }
+  for (const strip of strips) {
+    strip.hidden = !showStrip;
+    if (!showStrip) strip.setAttribute("hidden", "");
+    else strip.removeAttribute("hidden");
+  }
+
+  if (!apOn) {
+    for (const sel of ["#btn-end-turn", "#btn-challenge-end-turn", "#btn-deploy-end-turn"]) {
+      const btn = $(sel);
+      if (!btn) continue;
+      btn.hidden = true;
+      btn.setAttribute("hidden", "");
+    }
+  }
+  if (!bwOn) {
+    const lobby = $("#btn-lobby");
+    if (lobby) {
+      lobby.hidden = true;
+      lobby.setAttribute("hidden", "");
+    }
+  }
+}
+
+function paintResourceChips(prefix) {
+  // prefix: "" | "ch-" | "dep-"
+  const apEl = $(`#${prefix}hud-ap`);
+  const budgetEl = $(`#${prefix}hud-budget`);
+  const willEl = $(`#${prefix}hud-will`);
+  if (apEnabled()) {
+    showHudChip(apEl, true);
+    if (apEl) {
+      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
+    }
+  } else {
+    showHudChip(apEl, false);
+  }
+  if (budgetWillEnabled()) {
+    showHudChip(budgetEl, true);
+    showHudChip(willEl, true);
+    if (budgetEl) budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
+    if (willEl) willEl.textContent = `Will ${state.will ?? 0}`;
+  } else {
+    showHudChip(budgetEl, false);
+    showHudChip(willEl, false);
+  }
+}
+
 function renderHud() {
   const yearEl = $("#hud-year");
   if (yearEl) {
@@ -3688,38 +3760,22 @@ function renderHud() {
   $("#hud-turn").textContent = mp
     ? `Invent${waitsBit} · R${state.turn || 1} · fail ${state.mission.collapseYear}`
     : `Turn ${state.turn}${waitsBit} · fail at ${state.mission.collapseYear}`;
+  paintResourceChips("");
   const apEl = $("#hud-ap");
-  if (apEnabled()) {
-    showHudChip(apEl, true);
-    if (apEl) {
-      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
-      apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
-    }
-  } else {
-    showHudChip(apEl, false);
+  if (apEl && apEnabled()) {
+    apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
   }
   const budgetEl = $("#hud-budget");
-  if (budgetWillEnabled()) {
-    showHudChip(budgetEl, true);
-    if (budgetEl) {
-      budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-      budgetEl.title =
-        "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ is game over. Not refilled by End turn.";
-    }
-  } else {
-    showHudChip(budgetEl, false);
+  if (budgetEl && budgetWillEnabled()) {
+    budgetEl.title =
+      "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ is game over. Not refilled by End turn.";
   }
   const willEl = $("#hud-will");
-  if (budgetWillEnabled()) {
-    showHudChip(willEl, true);
-    if (willEl) {
-      willEl.textContent = `Will ${state.will ?? 0}`;
-      willEl.title =
-        "Political will (not a crisis meter). ≥4 boosts deploy drop; 0 hurts it. Lobby raises will.";
-    }
-  } else {
-    showHudChip(willEl, false);
+  if (willEl && budgetWillEnabled()) {
+    willEl.title =
+      "Political will (not a crisis meter). ≥4 boosts deploy drop; 0 hurts it. Lobby raises will.";
   }
+  syncEconomyChromeVisibility();
   paintHudPressureMeters($("#hud-pressure"));
   paintHudPressureMeters($("#ch-hud-pressure"));
   paintHudPressureMeters($("#dep-hud-pressure"));
@@ -4353,12 +4409,15 @@ function buildWaitConfirmHtml(ctx = {}) {
       <p class="muted sm">EmTech categories stay pickable either way — Wait is for claim timing, not unlocking cards.</p>`;
   }
 
+  const apLine = apEnabled()
+    ? "<li>Unspent AP are burned; AP refills after Wait.</li>"
+    : "";
   return `
     <p><strong>What happens</strong></p>
     <ul class="wait-confirm-list">
       <li>Calendar moves <strong>${year} → ${nextYear}</strong> (waits ${waits + 1}).</li>
       <li>Crisis meters rise: ${crisisLine || "—"}. Wait is never free.</li>
-      <li>Unspent AP are burned; AP refills after Wait.</li>
+      ${apLine}
       <li>Feasibility re-checks whether your how-it-works over-claims <strong>${nextYear}</strong>.</li>
     </ul>
     <p><strong>Implications</strong></p>
@@ -4429,7 +4488,9 @@ function updateEndTurnButton() {
   if (!apEnabled()) {
     for (const sel of endTurnSels) {
       const btn = $(sel);
-      if (btn) btn.hidden = true;
+      if (!btn) continue;
+      btn.hidden = true;
+      btn.setAttribute("hidden", "");
     }
     updateDeployFooterButtons();
     return;
@@ -4467,6 +4528,7 @@ function updateEndTurnButton() {
     const btn = $(sel);
     if (!btn) continue;
     btn.hidden = false;
+    btn.removeAttribute("hidden");
     btn.textContent = label;
     if (challengeWatch || (sel === "#btn-deploy-end-turn" && deploySpectator)) {
       btn.disabled = true;
@@ -6017,37 +6079,21 @@ function renderChallengeHud() {
       : `Turn ${state.turn}${waitsBit}`;
   }
 
+  paintResourceChips("ch-");
   const apEl = $("#ch-hud-ap");
-  if (apEnabled()) {
-    showHudChip(apEl, true);
-    if (apEl) {
-      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
-      apEl.title = "Action points. Defense, fix, sidestep, AI help, and deploy cost AP.";
-    }
-  } else {
-    showHudChip(apEl, false);
+  if (apEl && apEnabled()) {
+    apEl.title = "Action points. Defense, fix, sidestep, AI help, and deploy cost AP.";
   }
   const budgetEl = $("#ch-hud-budget");
-  if (budgetWillEnabled()) {
-    showHudChip(budgetEl, true);
-    if (budgetEl) {
-      budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-      budgetEl.title =
-        "Capital (same as invent). Solo: Budget 0$ is game over. Challenge wins can restore a little.";
-    }
-  } else {
-    showHudChip(budgetEl, false);
+  if (budgetEl && budgetWillEnabled()) {
+    budgetEl.title =
+      "Capital (same as invent). Solo: Budget 0$ is game over. Challenge wins can restore a little.";
   }
   const willEl = $("#ch-hud-will");
-  if (budgetWillEnabled()) {
-    showHudChip(willEl, true);
-    if (willEl) {
-      willEl.textContent = `Will ${state.will ?? 0}`;
-      willEl.title = "Political will (same as invent). Sidestep costs 1 Will.";
-    }
-  } else {
-    showHudChip(willEl, false);
+  if (willEl && budgetWillEnabled()) {
+    willEl.title = "Political will (same as invent). Sidestep costs 1 Will.";
   }
+  syncEconomyChromeVisibility();
   // Crisis meters (same as invent top bar, beside Future Forge brand)
   paintHudPressureMeters($("#ch-hud-pressure"));
   // Invent + Challenge End turn: single rule set (includes spectator / not-your-turn)
@@ -8981,36 +9027,20 @@ function renderDeployHud() {
       ? `Invent${waitsBit} · R${state.turn || 1} · fail ${state.mission?.collapseYear ?? ""}`.trim()
       : `Turn ${state.turn}${waitsBit}`;
   }
+  paintResourceChips("dep-");
   const apEl = $("#dep-hud-ap");
-  if (apEnabled()) {
-    showHudChip(apEl, true);
-    if (apEl) {
-      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
-      apEl.title = "Action points. Pilot, Scale, and AI help cost AP.";
-    }
-  } else {
-    showHudChip(apEl, false);
+  if (apEl && apEnabled()) {
+    apEl.title = "Action points. Pilot, Scale, and AI help cost AP.";
   }
   const budgetEl = $("#dep-hud-budget");
-  if (budgetWillEnabled()) {
-    showHudChip(budgetEl, true);
-    if (budgetEl) {
-      budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-      budgetEl.title = "Capital (same as invent). Deploy spends Budget.";
-    }
-  } else {
-    showHudChip(budgetEl, false);
+  if (budgetEl && budgetWillEnabled()) {
+    budgetEl.title = "Capital (same as invent). Deploy spends Budget.";
   }
   const willEl = $("#dep-hud-will");
-  if (budgetWillEnabled()) {
-    showHudChip(willEl, true);
-    if (willEl) {
-      willEl.textContent = `Will ${state.will ?? 0}`;
-      willEl.title = "Political will (same as invent).";
-    }
-  } else {
-    showHudChip(willEl, false);
+  if (willEl && budgetWillEnabled()) {
+    willEl.title = "Political will (same as invent).";
   }
+  syncEconomyChromeVisibility();
   paintHudPressureMeters($("#dep-hud-pressure"));
   applyEndTurnChrome();
   updateEndTurnButton();
