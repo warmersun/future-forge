@@ -4035,6 +4035,45 @@ function renderFilters() {
       renderTechList();
     });
   });
+  renderDomainFilterHint();
+}
+
+/**
+ * One-line Convergence Canvas whisper under domain filters (bits ↔ atoms).
+ * Shown when a domain chip is active; hidden on All.
+ */
+function domainFilterHint(domainId) {
+  const lines = {
+    power:
+      "Power — energy runs the world of atoms; computing runs the world of bits.",
+    automator:
+      "Automator — robots act in atoms; AI judges and decides in bits.",
+    mover:
+      "Mover — transport moves stuff in atoms; networks move information in bits.",
+    portal:
+      "Portal — IoT senses atoms into bits; making/printing turns bits into atoms.",
+    lifeforce:
+      "LifeForce — read and rewrite living systems (genes, biology) across both worlds.",
+    link:
+      "Link — AR/VR overlays bits onto atoms so the two worlds share a view.",
+  };
+  return lines[domainId] || "";
+}
+
+function renderDomainFilterHint() {
+  const el = $("#filter-domain-hint");
+  if (!el) return;
+  const id = state.domainFilter;
+  const text = id && id !== "all" ? domainFilterHint(id) : "";
+  if (!text) {
+    el.hidden = true;
+    el.setAttribute("hidden", "");
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.removeAttribute("hidden");
+  el.textContent = text;
 }
 
 function renderTechList() {

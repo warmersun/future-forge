@@ -5270,8 +5270,26 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.65rem 0.85rem 0.35rem;
+  border-bottom: none;
+}
+
+.filter-domain-hint {
+  margin: 0;
+  padding: 0 0.85rem 0.65rem;
   border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-mute);
+}
+
+.filter-domain-hint[hidden] {
+  display: none !important;
+}
+
+.filter-domain-hint strong {
+  color: var(--text-dim);
+  font-weight: 600;
 }
 
 .filter-chip {
