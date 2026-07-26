@@ -1,18 +1,36 @@
 /**
- * Spark / Workshop feature profiles (pure data, no UI).
+ * Spark / Workshop feature profiles + tutorial-completion storage.
  *
- * Spark = quiet tutorial profile (only used when player starts "Play tutorial").
- * Workshop = full solo game (default for all other solo play + theme/daily/surprise).
- * Multiplayer does not use these profiles.
+ * Spark = quiet tutorial (only "Play tutorial" runs).
+ * Workshop = full solo game (theme / surprise / daily / everything else).
+ *
+ * Storage (tutorial CTA only — not mode toggle):
+ * - future-forge:hasCompletedSpark = "1" after finishing the tutorial once
+ *   → hides "Play tutorial" until reset
  */
+
+export const HAS_COMPLETED_SPARK_KEY = "future-forge:hasCompletedSpark";
+
+/**
+ * @param {Storage|null|undefined} storage
+ * @returns {Storage|null}
+ */
+function resolveStorage(storage) {
+  if (storage && typeof storage.getItem === "function") return storage;
+  try {
+    if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+      return globalThis.localStorage;
+    }
+  } catch {
+    /* private mode / missing localStorage */
+  }
+  return null;
+}
 
 /**
  * Feature profile for a play mode.
- * Spark turns off heavy systems; Workshop spreads base (today's full defaults)
- * and clears Spark-only flags.
- *
  * @param {"spark"|"workshop"} mode
- * @param {object} [baseFeatures] — typically GAME.features
+ * @param {object} [baseFeatures]
  * @returns {object}
  */
 export function featuresForPlayMode(mode, baseFeatures = {}) {
@@ -37,4 +55,38 @@ export function featuresForPlayMode(mode, baseFeatures = {}) {
     singleStoryFace: false,
     stackCap: 6,
   };
+}
+
+/**
+ * @param {Storage} [storage]
+ * @returns {boolean}
+ */
+export function readHasCompletedSpark(storage) {
+  const s = resolveStorage(storage);
+  if (!s) return false;
+  return s.getItem(HAS_COMPLETED_SPARK_KEY) === "1";
+}
+
+/**
+ * Tutorial finished once — hide "Play tutorial" until reset.
+ * @param {Storage} [storage]
+ */
+export function markSparkCompleted(storage) {
+  const s = resolveStorage(storage);
+  if (!s) return;
+  s.setItem(HAS_COMPLETED_SPARK_KEY, "1");
+}
+
+/**
+ * Show "Play tutorial" again (demo / replay).
+ * @param {Storage} [storage]
+ */
+export function resetSparkProgress(storage) {
+  const s = resolveStorage(storage);
+  if (!s) return;
+  try {
+    s.removeItem(HAS_COMPLETED_SPARK_KEY);
+  } catch {
+    /* ignore */
+  }
 }

@@ -101,7 +101,12 @@ import {
   cloneScrutiny,
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
-import { featuresForPlayMode } from "./sim/play-mode.js";
+import {
+  featuresForPlayMode,
+  readHasCompletedSpark,
+  markSparkCompleted,
+  resetSparkProgress,
+} from "./sim/play-mode.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -2541,21 +2546,38 @@ function shuffleCopy(arr) {
 }
 
 /**
- * Home CTAs: always available.
- * Primary = Play tutorial (Spark / quiet rules). Secondary = Choose a theme (Workshop / full).
+ * Home CTAs.
+ * - Tutorial not done: primary Play tutorial → (Spark); Choose a theme secondary (Workshop).
+ * - Tutorial done: Play tutorial hidden; primary Choose a theme →; Reset tutorial in small text.
  */
 function renderTitleCtas() {
+  const done = readHasCompletedSpark();
   const start = $("#btn-start");
   const choose = $("#btn-choose-theme");
-  if (start) {
-    start.textContent = "Play tutorial →";
-    start.setAttribute("title", "Quiet guided run: Portside Ward floods");
-  }
+  const resetBtn = $("#btn-reset-spark");
+
   if (choose) {
     choose.hidden = false;
     choose.removeAttribute("hidden");
-    choose.textContent = "Choose a theme";
+    choose.textContent = done ? "Choose a theme →" : "Choose a theme";
     choose.title = "Full game — all themes and systems";
+    choose.classList.toggle("btn-primary", done);
+    choose.classList.toggle("btn-secondary", !done);
+  }
+  if (start) {
+    start.textContent = "Play tutorial →";
+    start.setAttribute("title", "Quiet guided run: Portside Ward floods");
+    start.hidden = done;
+    if (done) start.setAttribute("hidden", "");
+    else start.removeAttribute("hidden");
+    start.classList.toggle("btn-primary", !done);
+    start.classList.toggle("btn-secondary", done);
+  }
+  if (resetBtn) {
+    resetBtn.hidden = !done;
+    if (done) resetBtn.removeAttribute("hidden");
+    else resetBtn.setAttribute("hidden", "");
+    resetBtn.textContent = "Reset tutorial";
   }
 }
 
@@ -2565,9 +2587,23 @@ function renderTitleMeta() {
   renderPinsPanel();
 }
 
+/** Show Play tutorial again (clears local completion flag). */
+function requestResetTutorialProgress() {
+  const ok = confirm(
+    "Reset tutorial progress?\n\n" +
+      "Play tutorial will show again on the home screen.\n" +
+      "This does not delete pinned missions or theme caches."
+  );
+  if (!ok) return;
+  resetSparkProgress();
+  state.tutorialRun = false;
+  state.playMode = null;
+  renderTitleMeta();
+  flashToast("Tutorial reset — Play tutorial when ready.");
+}
+
 /**
- * Play tutorial → Portside Ward with Spark feature profile for this run only.
- * Always available; no localStorage graduation.
+ * Play tutorial → Portside Ward with Spark profile for this run only.
  */
 function startSparkPortsideMission() {
   clearMissionPickSession();
@@ -10310,8 +10346,17 @@ function finishOutcome(kind, meta = {}) {
       state.challengeClearMode ||
       (state.elegancePivotPenalty ? "sidestep" : null),
   };
-  // Tutorial session ends with the run (no localStorage graduation)
-  if (!enriched.multiparty && !enriched.mpOutcome?.multiparty) {
+  // Tutorial win sets local flag so Home hides Play tutorial (until Reset tutorial)
+  const solo =
+    !enriched.multiparty && !enriched.mpOutcome?.multiparty;
+  if (solo && kind === "win" && (state.tutorialRun || state.playMode === "spark")) {
+    try {
+      markSparkCompleted();
+    } catch {
+      /* private mode */
+    }
+  }
+  if (solo) {
     state.tutorialRun = false;
   }
   const report = features().runReport ? buildRunReport(kind, enriched) : null;
@@ -13955,16 +14000,19 @@ function bind() {
   $("#btn-start")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Always: quiet tutorial (Spark profile for this run only)
+    // Quiet tutorial (Spark) — Portside; hidden after tutorial win until reset
     startSparkPortsideMission();
   });
   $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Full Workshop
+    // Full Workshop always
     state.tutorialRun = false;
     state.playMode = "workshop";
     showScreen("global");
+  });
+  $("#btn-reset-spark")?.addEventListener("click", () => {
+    requestResetTutorialProgress();
   });
   $("#btn-surprise")?.addEventListener("click", () => {
     clearMissionPickSession();

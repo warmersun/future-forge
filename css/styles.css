@@ -146,6 +146,15 @@ button:disabled {
   width: 100%;
 }
 
+.title-spark-reset-wrap {
+  margin: 0.65rem 0 0;
+  text-align: center;
+}
+
+.title-spark-reset-wrap .btn {
+  opacity: 0.85;
+}
+
 /* G4 — daily + pins on title */
 .daily-card {
   margin-top: 1.75rem;
