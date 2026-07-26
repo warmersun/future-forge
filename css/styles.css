@@ -3407,6 +3407,41 @@ body.challenge-pose-pending #challenge-help-form {
   min-width: 0;
 }
 
+.help-more {
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+}
+
+.help-more-summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--text);
+  list-style: none;
+}
+
+.help-more-summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-more-summary::before {
+  content: "▸ ";
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.help-more[open] > .help-more-summary::before {
+  content: "▾ ";
+}
+
+.help-more-body {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
 .help-block-last {
   margin-bottom: 0.15rem;
 }

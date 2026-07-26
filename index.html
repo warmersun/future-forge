@@ -1503,332 +1503,241 @@
       </div>
     </div>
 
-    <!-- How to play help -->
+    <!-- How to play help — three stepping-stones first; Workshop systems under More detail -->
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
         <header class="help-header">
           <h3 id="help-title">How Future Forge works</h3>
           <p class="help-intro">
-            Invent a <strong>local</strong> solution under a rising crisis. Spend scarce resources, clear critics,
-            then field the system. The <strong>AI co-inventor</strong> advises — you decide — and
-            <strong>every AI request costs 1 AP</strong> (Invent and Challenge).
+            Pick a place in trouble. Build an honest invention from emerging tech. Answer one hard question.
+            Field it before the crisis wins. The <strong>AI co-inventor</strong> advises — you lead.
           </p>
         </header>
 
         <div class="help-body">
-          <!-- Loop -->
           <section class="help-block">
-            <h4 class="help-block-title">The loop</h4>
+            <h4 class="help-block-title">Three steps</h4>
             <ol class="help-steps">
               <li>
                 <span class="help-step-num">1</span>
                 <span class="help-step-body">
-                  <strong>Invent</strong>
-                  <span>Stack, story, resources</span>
+                  <strong>The place is in trouble</strong>
+                  <span>Watch crisis meters and the year. Wait raises the crisis; stall and the place can fall.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">2</span>
                 <span class="help-step-body">
-                  <strong>Feasibility</strong>
-                  <span>Claims fit this year?</span>
+                  <strong>Invent something honest</strong>
+                  <span>Pick emerging tools for this place. Write what it does here — claims must fit this year.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">3</span>
                 <span class="help-step-body">
-                  <strong>Challenge</strong>
-                  <span>One critic · Defend / Fix / Sidestep</span>
-                </span>
-              </li>
-              <li>
-                <span class="help-step-num">4</span>
-                <span class="help-step-body">
-                  <strong>Deploy</strong>
-                  <span>Pilot → Scale → New normal</span>
+                  <strong>Answer a hard question, then field it</strong>
+                  <span
+                    >Face one challenge, then <strong>Field it</strong> before meters max or the fail year.</span
+                  >
                 </span>
               </li>
             </ol>
+            <p class="help-note" style="margin-top: 0.85rem; margin-bottom: 0">
+              Loop: <strong>Invent · Challenge · Field</strong>. Feasibility is honesty about timing — not a card
+              unlock gate.
+            </p>
           </section>
 
-          <!-- Resources as equal tiles -->
-          <section class="help-block">
-            <div class="help-block-head">
-              <h4 class="help-block-title">Resources</h4>
-              <p class="help-note">On Invent and Challenge. Only AP refills on End turn.</p>
-            </div>
-            <div class="help-tiles help-tiles-4">
-              <article class="help-tile">
-                <h5>Year &amp; turn</h5>
-                <p>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</p>
-              </article>
-              <article class="help-tile">
-                <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
-                <p>
-                  Attention for tech, Lobby, challenge entry, Defend / Fix / Sidestep, Deploy, and the
-                  <strong>AI co-inventor</strong> (Fill other side, chips, chat, Coach / Draft / Ask —
-                  <strong>1 AP each</strong>).
-                  <strong>End turn</strong> refills AP. <strong>Wait</strong> burns leftover AP, then refills.
-                </p>
-              </article>
-              <article class="help-tile">
-                <h5>Budget <span class="help-tile-meta">start 5</span></h5>
-                <p>
-                  Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
-                  Not refilled by End turn. Solo: <strong>Budget 0$ is game over</strong> — keep cash to field.
-                </p>
-              </article>
-              <article class="help-tile">
-                <h5>Will <span class="help-tile-meta">start 3</span></h5>
-                <p>
-                  Political will — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Will.
-                  ≥4 boosts deploy; 0 hurts it. Sidestep costs Will equal to remaining resolve hearts.
-                </p>
-              </article>
-            </div>
-          </section>
+          <details class="help-more">
+            <summary class="help-more-summary">More detail (Workshop systems)</summary>
+            <div class="help-more-body">
+              <section class="help-block">
+                <div class="help-block-head">
+                  <h4 class="help-block-title">Resources</h4>
+                  <p class="help-note">Full Workshop HUD. Only AP refills on End turn. First-run Spark hides most of this.</p>
+                </div>
+                <div class="help-tiles help-tiles-4">
+                  <article class="help-tile">
+                    <h5>Year &amp; turn</h5>
+                    <p>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</p>
+                  </article>
+                  <article class="help-tile">
+                    <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
+                    <p>
+                      Attention for tech, Lobby, hard question, scrutiny moves, Field, and the
+                      <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request).
+                      <strong>End turn</strong> refills AP. <strong>Wait</strong> burns leftover AP, then refills.
+                    </p>
+                  </article>
+                  <article class="help-tile">
+                    <h5>Budget <span class="help-tile-meta">start 5</span></h5>
+                    <p>
+                      Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
+                      Not refilled by End turn. Solo: <strong>Budget 0$ is game over</strong> — keep cash to field.
+                    </p>
+                  </article>
+                  <article class="help-tile">
+                    <h5>Support <span class="help-tile-meta">start 3</span></h5>
+                    <p>
+                      Public + policy support — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Support.
+                      ≥4 boosts fielding; 0 hurts it. Sidestep costs Support equal to remaining resolve hearts.
+                    </p>
+                  </article>
+                </div>
+              </section>
 
-          <!-- End turn vs Wait -->
-          <section class="help-block">
-            <h4 class="help-block-title">End turn vs Wait</h4>
-            <div class="help-tiles help-tiles-2">
-              <article class="help-tile help-tile-accent">
-                <h5>End turn</h5>
-                <p>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</p>
-              </article>
-              <article class="help-tile help-tile-warn">
-                <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
-                <p>
-                  Later world conditions. Crisis meters <strong>rise</strong>. Leftover AP burned, then refilled.
-                  Preview shows the rise. Frontier stacks can risk an extra spike.
-                </p>
-              </article>
-            </div>
-          </section>
+              <section class="help-block">
+                <h4 class="help-block-title">End turn vs Wait</h4>
+                <div class="help-tiles help-tiles-2">
+                  <article class="help-tile help-tile-accent">
+                    <h5>End turn</h5>
+                    <p>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</p>
+                  </article>
+                  <article class="help-tile help-tile-warn">
+                    <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
+                    <p>
+                      Later world conditions (tech and readiness can mature). Crisis meters <strong>rise</strong>.
+                      Leftover AP burned, then refilled. Preview shows the rise.
+                    </p>
+                  </article>
+                </div>
+              </section>
 
-          <!-- Story + AI pair -->
-          <section class="help-block">
-            <div class="help-tiles help-tiles-2">
-              <article class="help-tile">
-                <h5>Story faces</h5>
+              <section class="help-block">
+                <div class="help-tiles help-tiles-2">
+                  <article class="help-tile">
+                    <h5>Story</h5>
+                    <ul class="help-list">
+                      <li>Spark: one box — <strong>What does it do here?</strong></li>
+                      <li>Workshop: <strong>How it works</strong> + <strong>Everyday life</strong>.</li>
+                      <li>
+                        Workshop: <strong>Focus</strong> + <strong>Fill other side</strong> (1 AP) drafts the other face.
+                      </li>
+                    </ul>
+                  </article>
+                  <article class="help-tile">
+                    <h5>AI co-inventor <span class="help-tile-meta">1 AP each</span></h5>
+                    <p class="help-cost">Not free — every AI request spends 1 Action Point.</p>
+                    <ul class="help-list">
+                      <li><strong>Invent:</strong> chips, chat, Fill other side — 1 AP each.</li>
+                      <li><strong>Challenge:</strong> Coach / Draft / Ask — 1 AP each.</li>
+                      <li>You still decide stack, story, and whether to field.</li>
+                    </ul>
+                  </article>
+                </div>
+              </section>
+
+              <section class="help-block">
+                <div class="help-block-head">
+                  <h4 class="help-block-title">Hard question — Workshop scrutiny</h4>
+                  <p class="help-note">
+                    Spark is essay-only. Workshop may open Defend / Fix / Sidestep against one critic’s resolve hearts.
+                  </p>
+                </div>
+                <div class="help-tiles help-tiles-3">
+                  <article class="help-tile help-tile-move">
+                    <h5>Defend in writing</h5>
+                    <p class="help-cost">1 AP to submit</p>
+                    <p>
+                      Write who acts, who pays, or what limit you respect. Strong answer clears them (−2);
+                      partial chips 1; miss chips 0 and counts against you.
+                    </p>
+                  </article>
+                  <article class="help-tile help-tile-move">
+                    <h5>Fix the invention</h5>
+                    <p class="help-cost">1 AP · optional +¤1</p>
+                    <p>
+                      <strong>You</strong> edit how-it-works under fire. Apply fix chips resolve; AI coaches, you apply.
+                    </p>
+                  </article>
+                  <article class="help-tile help-tile-move">
+                    <h5>Sidestep once</h5>
+                    <p class="help-cost">Cost = remaining ♥</p>
+                    <p>
+                      Skip without winning — once per run. Cost tracks remaining resolve (AP + Support). Softens
+                      elegance stars.
+                    </p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="help-block">
+                <div class="help-block-head">
+                  <h4 class="help-block-title">Field — Pilot · Scale · New normal</h4>
+                  <p class="help-note">
+                    Spark: one <strong>Field it</strong> button. Workshop: Pilot then Scale after the hard question.
+                    Odds: <strong>Red 10% · Yellow 50% · Green 85%</strong>. Wait blocked while the bay is open.
+                  </p>
+                </div>
+                <div class="help-tiles help-tiles-2">
+                  <article class="help-tile help-tile-accent">
+                    <h5>1 · Pilot</h5>
+                    <p class="help-cost">Each try: AP + Budget · chance = overall feasibility</p>
+                    <p>
+                      First fielding. Success drops ~half the crisis pool; Scale unlocks. Fail: retry or rework on
+                      Invent.
+                    </p>
+                  </article>
+                  <article class="help-tile help-tile-accent">
+                    <h5>2 · Scale</h5>
+                    <p class="help-cost">Each try: AP + Budget + Support (Support free if ≥ 4)</p>
+                    <p>
+                      Wider rollout. Success spends the rest of the pool and reaches New normal. Fail: Pilot still
+                      stands.
+                    </p>
+                  </article>
+                  <article class="help-tile help-tile-move">
+                    <h5>3 · New normal</h5>
+                    <p class="help-cost">Automatic when Scale succeeds</p>
+                    <p>
+                      Mission ends: full <strong>win</strong> if meters are low enough, else <strong>partial</strong>.
+                    </p>
+                  </article>
+                  <article class="help-tile">
+                    <h5>← Back to Invent</h5>
+                    <p class="help-cost">Anytime in the field bay</p>
+                    <p>
+                      Rework stack or story, then return. You keep a successful Pilot; failed tries only cost what you
+                      spent.
+                    </p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="help-block">
+                <h4 class="help-block-title">Friends · hotseat</h4>
                 <ul class="help-list">
-                  <li><strong>How it works</strong> — mechanism for this place.</li>
-                  <li><strong>Everyday life</strong> — who feels the change.</li>
+                  <li>Each player builds their own invention.</li>
+                  <li>You share one crisis — if the place falls, everyone loses.</li>
+                  <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
                   <li>
-                    <strong>Focus</strong> + <strong>Fill other side</strong> (1 AP) drafts the other face.
-                    Both stay editable.
+                    Live room (code, same Wi‑Fi) or <strong>Hotseat</strong> (one device). Only the active seat spends
+                    AP / Budget / Support.
                   </li>
                 </ul>
-              </article>
-              <article class="help-tile">
-                <h5>AI co-inventor <span class="help-tile-meta">1 AP each</span></h5>
-                <p class="help-cost">Not free — every AI request spends 1 Action Point.</p>
+              </section>
+
+              <section class="help-block">
+                <h4 class="help-block-title">Daily · Pins · Share</h4>
                 <ul class="help-list">
-                  <li>
-                    <strong>Invent:</strong> chips, chat, and <strong>Fill other side</strong> —
-                    <strong>1 AP</strong> per request.
-                  </li>
-                  <li>
-                    <strong>Challenge:</strong> Coach me, Draft a defense, and Ask —
-                    <strong>1 AP each</strong> (no free first help).
-                  </li>
-                  <li>You still own Defend / Fix / Sidestep on the left (those have their own costs).</li>
+                  <li><strong>Daily</strong> on home — same seed for everyone today.</li>
+                  <li><strong>Pins</strong> (max 3) save missions for later.</li>
+                  <li><strong>Share card</strong> on outcome downloads a PNG of your run.</li>
                 </ul>
-              </article>
-            </div>
-          </section>
+              </section>
 
-          <!-- Challenge responses -->
-          <section class="help-block">
-            <div class="help-block-head">
-              <h4 class="help-block-title">Challenge — how you respond</h4>
-              <p class="help-note">
-                One random critic. They start with 2 resolve (hearts on <em>their</em> banner — not yours).
-                Empty it to unlock Deploy. Two weak defenses (misses) fail the run.
-              </p>
+              <section class="help-block help-block-last">
+                <h4 class="help-block-title">Stars &amp; tips</h4>
+                <ul class="help-list">
+                  <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
+                  <li>Stay local. End turn to refill AP; Wait when later years are worth the crisis cost.</li>
+                  <li>Lobby toward Support 4 before Pilot when economy is on.</li>
+                  <li>Feasibility judges <em>claims</em>, not card unlocks.</li>
+                  <li>Solo: <strong>Budget 0$ is game over</strong> when Budget is active.</li>
+                </ul>
+              </section>
             </div>
-            <div class="help-tiles help-tiles-3">
-              <article class="help-tile help-tile-move">
-                <h5>Defend in writing</h5>
-                <p class="help-cost">1 AP to submit</p>
-                <p>
-                  Write who acts, who pays, or what limit you respect. Strong answer clears them (−2);
-                  partial chips 1; miss chips 0 and counts against you.
-                </p>
-              </article>
-              <article class="help-tile help-tile-move">
-                <h5>Fix the invention</h5>
-                <p class="help-cost">1 AP · optional +¤1</p>
-                <p>
-                  <strong>You</strong> edit how-it-works on Challenge. Apply fix chips 1 resolve
-                  (2 if funded = clear). AI coaches; you apply.
-                </p>
-              </article>
-              <article class="help-tile help-tile-move">
-                <h5>Sidestep once</h5>
-                <p class="help-cost">Cost = remaining ♥</p>
-                <p>
-                  Skip this critic without winning. <strong>Cost equals remaining resolve:</strong>
-                  full critic (2♥) costs 2 AP · 2 Will; after a partial defense (1♥) only 1 AP · 1 Will.
-                  Softens elegance stars. Only once per run. Lobby on Invent if you need more Will.
-                </p>
-              </article>
-            </div>
-          </section>
-
-          <!-- Deploy bay: Pilot → Scale → New normal -->
-          <section class="help-block">
-            <div class="help-block-head">
-              <h4 class="help-block-title">Deploy bay — Pilot · Scale · New normal</h4>
-              <p class="help-note">
-                After Challenge, crisis relief is <strong>frozen</strong> into a pool. Pilot and Scale
-                each <strong>roll to succeed</strong> — they are not automatic. Odds come from the
-                traffic light: <strong>Red 10% · Yellow 50% · Green 85%</strong> (green is strong, never
-                certain). Wait stays blocked while the bay is open.
-              </p>
-            </div>
-            <div class="help-tiles help-tiles-2">
-              <article class="help-tile help-tile-accent">
-                <h5>1 · Pilot</h5>
-                <p class="help-cost">Each try: AP + Budget · chance = overall feasibility</p>
-                <p>
-                  First fielding. You pay each attempt. Success: ~half the crisis pool drops; mission
-                  counts as solved; Scale unlocks. Fail: no crisis drop — retry Pilot (pay again) or
-                  <strong>Back to Invent</strong> to rework.
-                </p>
-              </article>
-              <article class="help-tile help-tile-accent">
-                <h5>2 · Scale</h5>
-                <p class="help-cost">Each try: AP + Budget + Will (Will free if Will ≥ 4)</p>
-                <p>
-                  Wider rollout. Chance uses the <strong>Scale</strong> feasibility dim only (not the
-                  overall light). Success spends the rest of the crisis pool and automatically reaches
-                  New normal. Fail: Pilot still stands — retry Scale or go back to Invent.
-                </p>
-              </article>
-              <article class="help-tile help-tile-move">
-                <h5>3 · New normal</h5>
-                <p class="help-cost">Automatic when Scale succeeds</p>
-                <p>
-                  Not a separate button. On Scale success the mission ends: full <strong>win</strong> if
-                  meters are low enough, else <strong>partial</strong>. Optional +1 crisis drop if Will ≥ 4
-                  and the original pool was ≥ 4.
-                </p>
-              </article>
-              <article class="help-tile">
-                <h5>← Back to Invent</h5>
-                <p class="help-cost">Anytime in the deploy bay</p>
-                <p>
-                  Rework stack, story, or resources, then return via <strong>Back to deploy bay</strong>.
-                  You do not lose a successful Pilot; failed attempts only cost what you already spent.
-                </p>
-              </article>
-            </div>
-            <p class="help-note" style="margin-top: 0.65rem; margin-bottom: 0">
-              Feasibility dims: Timing, Story, Local fit, Resources, Stack, and <strong>Scale</strong>.
-              Overall light aggregates all of them (including Scale). Pilot uses the overall light;
-              Scale uses the Scale dim alone. Toasts only say succeeded or failed — not the raw roll.
-            </p>
-          </section>
-
-          <!-- Friends -->
-          <section class="help-block">
-            <h4 class="help-block-title">Friends · hotseat coopetition</h4>
-            <ul class="help-list">
-              <li>
-                Home → <strong>Play with friends</strong>: live room (code) or <strong>Hotseat</strong> (one device,
-                pass-and-play). Personal inventions, shared crisis, rank if the place holds.
-              </li>
-              <li>
-                <strong>Pass device →</strong> ends your seat-turn and hands play to the next player. Only the
-                <em>active</em> player spends AP / Budget / Will.
-              </li>
-              <li>
-                <strong>Open table</strong> — on your turn you can view any seat’s invent (tabs at the top).
-              </li>
-            </ul>
-            <div class="help-grid-2" style="margin-top: 0.75rem">
-              <div class="help-card">
-                <h5>While they invent</h5>
-                <p class="help-cost">Still on Invent</p>
-                <p>
-                  You may <strong>add to their story</strong> (additive only — destructive edits rejected, AP not
-                  refunded) and <strong>layer emTech</strong> on their stack. <em>You</em> pay. Only the
-                  <strong>owner</strong> can Face the challenge.
-                </p>
-              </div>
-              <div class="help-card">
-                <h5>During Challenge</h5>
-                <p class="help-cost">Owner in scrutiny</p>
-                <p>
-                  Invention is <strong>locked</strong> for helpers — no story, no stack. Owner defends alone. If they
-                  fail and return to Invent, help opens again.
-                </p>
-              </div>
-              <div class="help-card">
-                <h5>After Challenge passes</h5>
-                <p class="help-cost">Invention locked in</p>
-                <p>
-                  Passing Challenge <strong>freezes</strong> that invent: no more story edits or tech layers for
-                  anyone. The idea is set. What remains is fielding it.
-                </p>
-              </div>
-              <div class="help-card">
-                <h5>Pilot &amp; Scale</h5>
-                <p class="help-cost">Anyone’s seat-turn</p>
-                <p>
-                  On your turn you may open a locked invent’s <strong>Deploy bay</strong> and attempt
-                  <strong>Pilot</strong> or <strong>Scale</strong> — <em>you</em> pay the costs. Successful
-                  <strong>Scale</strong> updates the shared place; Pilot does not. After Scale, that invent is done.
-                </p>
-              </div>
-            </div>
-            <p class="help-note" style="margin-top: 0.75rem; margin-bottom: 0">
-              Example: Alex invents → Bea layers a tech → Alex alone faces Challenge and passes (invent locks) →
-              device to Bea → Bea can open Alex’s Deploy and try Pilot/Scale (she pays), but she cannot change his
-              story or stack. She cannot join his Challenge.
-            </p>
-            <p class="help-note" style="margin-top: 0.55rem; margin-bottom: 0">
-              <strong>End of run:</strong> if a Scale solves the place, the outcome shows
-              <em>friends standings</em> (who ranked among survivors). If the place collapses, everyone loses — no
-              champion. Partial Scale (crisis drops but place not won) keeps the race going.
-            </p>
-          </section>
-
-          <!-- Meta -->
-          <section class="help-block">
-            <h4 class="help-block-title">Daily · Pins · Share</h4>
-            <ul class="help-list">
-              <li>
-                <strong>Daily mission</strong> on the home screen — same date seed for everyone today.
-                Play or pin it.
-              </li>
-              <li>
-                <strong>Pins</strong> (max 3) save missions on the home screen for later. Pin from Daily or
-                the mission list.
-              </li>
-              <li>
-                <strong>Share card</strong> on the outcome screen downloads a PNG of your run — invention,
-                AI future vision, stack, and <em>Future Forge by Warmer Sun</em> — no server required.
-              </li>
-            </ul>
-          </section>
-
-          <!-- Tips -->
-          <section class="help-block help-block-last">
-            <h4 class="help-block-title">Stars &amp; tips</h4>
-            <ul class="help-list">
-              <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
-              <li>Stay local. End turn often; Wait when later years are worth the crisis cost.</li>
-              <li>Lobby toward Will 4 before Pilot. Save AP for Defend and fielding cost.</li>
-              <li>Feasibility judges <em>claims</em>, not card “unlocks.”</li>
-              <li>
-                Stronger stack, story, challenge quality, and Will ≥ 4 increase the frozen relief pool
-                at unlock — stages only split that pool; they don’t recompute it later.
-              </li>
-              <li>Solo: <strong>Budget 0$ is game over</strong> — keep capital to field Pilot/Scale.</li>
-            </ul>
-          </section>
+          </details>
         </div>
 
         <div class="modal-actions help-footer">
