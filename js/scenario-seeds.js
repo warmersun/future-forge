@@ -1299,6 +1299,565 @@ export const SCENARIO_ANGLE_PACKS = {
     },
   ],
 
+  radicalization: [
+    {
+      places: ["School Bench Corridor", "Youth Club Annex", "First-Year Assembly"],
+      title: "Prejudice starts on the school bench",
+      scene:
+        "In {place}, dehumanizing jokes and online memes harden into cliques before anyone names extremism. Invent early dialogue, media literacy, and rights-based peer tools that work in classrooms—not after a crisis headline.",
+      stakeholder: "School counselor network",
+      pressureKeys: ["Prejudice", "Isolation", "Trust"],
+      suggested: ["ai", "networks", "vr", "iot", "computing"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Campus Counter-Content Lab", "Student Media Desk", "Discord-to-Street Bridge"],
+      title: "Online pipeline, offline risk",
+      scene:
+        "Recruiters around {place} move youth from forums to meetups faster than moderators act. Invent youth-led counter-content and off-ramps that preserve free speech while slowing violent pathways.",
+      stakeholder: "Student peace coalition",
+      pressureKeys: ["Pipeline", "Speed", "Credibility"],
+      suggested: ["ai", "networks", "crypto", "computing", "vr"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Release Gate Hub", "Halfway House Desk", "Probation Square"],
+      title: "The reintegration cliff",
+      scene:
+        "People leaving detention near {place} hit housing and job voids that recruiters exploit. Invent dignified reintegration logistics that beat the extremist welcome package.",
+      stakeholder: "Reentry caseworkers",
+      pressureKeys: ["Void", "Recruitment", "Stability"],
+      suggested: ["networks", "ai", "iot", "solar", "transportation"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Layoff Rumor Mill", "Factory Town Square", "Night Shift Canteen"],
+      title: "Economic shock, easy scapegoat",
+      scene:
+        "After layoffs in {place}, rumors name a minority for the pain. Invent rumor-response and mutual-aid systems that channel anger into agency without surveillance blacklists.",
+      stakeholder: "Union and community mediators",
+      pressureKeys: ["Grievance", "Rumor", "Violence"],
+      suggested: ["networks", "ai", "iot", "crypto", "vr"],
+      visionTheme: "social-city",
+    },
+  ],
+
+  fgm: [
+    {
+      places: ["Border Cutting Season Post", "Transit Clinic Van", "Cross-River Kin Network"],
+      title: "Cutting season crosses the border",
+      scene:
+        "Families near {place} move girls across a soft border during school breaks to evade local bans. Invent protection and community signaling that works with kinship—not only police checkpoints.",
+      stakeholder: "Girls' protection coalition",
+      pressureKeys: ["Mobility", "Secrecy", "Risk"],
+      suggested: ["networks", "ai", "iot", "drones", "solar"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Traditional Midwife Cooperative", "Practitioner Transition Desk", "Village Skills Hall"],
+      title: "Livelihoods locked to the blade",
+      scene:
+        "Practitioners around {place} earn status and income from FGM. Invent economic and social transition paths so abandonment does not mean destitution—without medicalizing the cut.",
+      stakeholder: "Women elders' association",
+      pressureKeys: ["Income", "Status", "Norms"],
+      suggested: ["networks", "ai", "solar", "print3d", "iot"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Public Declaration Ground", "School Safe Space", "Radio Call-In Hut"],
+      title: "Beliefs shift faster than practice",
+      scene:
+        "Many girls and women near {place} say FGM should end, yet ceremonies continue. Invent community declaration, school protection, and peer accountability that turn attitude into abandonment.",
+      stakeholder: "Youth anti-FGM club",
+      pressureKeys: ["Norms", "PeerPressure", "Enforcement"],
+      suggested: ["networks", "ai", "vr", "solar", "iot"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Survivor Fistula Ward", "Confidential Care Annex", "Stigma Break Circle"],
+      title: "Care without the spotlight",
+      scene:
+        "Survivors near {place} need clinical repair and counseling but fear exposure. Invent private care navigation and stigma reduction that centers dignity—not spectacle.",
+      stakeholder: "Clinical social workers",
+      pressureKeys: ["Stigma", "Access", "Pain"],
+      suggested: ["networks", "ai", "iot", "drones", "gene-sequencing"],
+      visionTheme: "care-city",
+    },
+  ],
+
+  "short-termism": [
+    {
+      places: ["Burn Season Ridge", "Charcoal Camp Edge", "Community Forest Gate"],
+      title: "This season's field, next decade's flood",
+      scene:
+        "Households around {place} clear forest for grazing or crops because hunger is this month. Invent incentives and buffers so protecting trees is rational before soils wash away.",
+      stakeholder: "Forest user group",
+      pressureKeys: ["Hunger", "ForestLoss", "Erosion"],
+      suggested: ["iot", "space", "ai", "solar", "networks", "drones"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Drought Livestock Market", "Dairy Co-op Yard", "Famine Credit Desk"],
+      title: "Slaughter the future for meat today",
+      scene:
+        "In drought near {place}, farmers sell or slaughter productive animals for immediate food. Invent credit, feed, and insurance that keep long-term herds alive without empty stomachs.",
+      stakeholder: "Pastoralist cooperative",
+      pressureKeys: ["Drought", "Assets", "Credit"],
+      suggested: ["iot", "networks", "ai", "solar", "drones", "crypto"],
+      visionTheme: "food-city",
+    },
+    {
+      places: ["Election-Year Budget Hall", "Disaster Fund Vault", "Ribbon-Cut Plaza"],
+      title: "Raid the future for a ribbon",
+      scene:
+        "Politicians in {place} raid multi-year resilience funds for visible short projects before the vote. Invent transparent rails and citizen locks that make future-stripping costly.",
+      stakeholder: "Civic budget watch",
+      pressureKeys: ["Politics", "Funds", "Trust"],
+      suggested: ["crypto", "networks", "ai", "iot", "computing"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Cheap Rebuild Coast", "Code Waiver Desk", "Insurance Exit Ramp"],
+      title: "Rebuild cheaper, flood harder",
+      scene:
+        "After a flood, {place} rebuilds to last year's weak code to save money now. Invent financing and verification so resilient rebuild beats temporary cheap.",
+      stakeholder: "Municipal recovery cell",
+      pressureKeys: ["Cost", "Risk", "LockIn"],
+      suggested: ["materials", "iot", "ai", "networks", "drones", "print3d"],
+      visionTheme: "coastal-city",
+    },
+  ],
+
+  misinfo: [
+    {
+      places: ["Clinic Rumor Desk", "Vaccine Queue WhatsApp", "Ward Health Post"],
+      title: "A rumor empties the clinic",
+      scene:
+        "False claims about treatment race through {place} faster than nurses can answer. Invent local verification and trusted messengers that restore care uptake without silencing patients.",
+      stakeholder: "Community health workers",
+      pressureKeys: ["Rumor", "Uptake", "Trust"],
+      suggested: ["ai", "networks", "iot", "vr", "computing"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Deepfake Mayor Desk", "Election Week Newsroom", "Town Hall Screen"],
+      title: "The mayor's face says what she never said",
+      scene:
+        "A synthetic video of a local official floods {place} days before a vote or crisis decision. Invent provenance and rapid community checks that work on cheap phones.",
+      stakeholder: "Independent local journalists",
+      pressureKeys: ["Fakes", "Speed", "Polarization"],
+      suggested: ["ai", "crypto", "networks", "computing", "iot"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Evacuation Denial Channel", "Storm Siren Dispute", "Hillside Shelter Gate"],
+      title: "Denial in the evacuation window",
+      scene:
+        "As a storm approaches {place}, influencers claim the warning is a hoax. Invent last-mile trusted alerts and counter-rumor loops that still respect free speech under time pressure.",
+      stakeholder: "Civil defense liaison",
+      pressureKeys: ["Denial", "Time", "Safety"],
+      suggested: ["iot", "networks", "ai", "space", "drones"],
+      visionTheme: "coastal-city",
+    },
+    {
+      places: ["Closed Newsroom Building", "Parish Notice Board", "Co-op Radio Hut"],
+      title: "No trusted intermediate left",
+      scene:
+        "The last local paper near {place} folded; rumor fills the gap. Invent sustainable public-interest media and verification hubs people actually believe.",
+      stakeholder: "Citizen reporters' co-op",
+      pressureKeys: ["Vacuum", "Credibility", "Capture"],
+      suggested: ["networks", "ai", "solar", "crypto", "iot"],
+      visionTheme: "social-city",
+    },
+  ],
+
+  totalitarianism: [
+    {
+      places: ["State Channel Only Zone", "Hidden News Cache", "Border Radio Shadow"],
+      title: "One channel, one truth",
+      scene:
+        "People in {place} hear only state media. Invent safe logistics for independent news—language bridges, offline distribution, and verification that survive raids.",
+      stakeholder: "Exile journalist network",
+      pressureKeys: ["Monopoly", "Fear", "Isolation"],
+      suggested: ["networks", "crypto", "ai", "solar", "iot", "space"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Censorship Firewall Town", "Family Call Blackout", "Mesh Courtyard"],
+      title: "The line goes dead when it matters",
+      scene:
+        "Authorities near {place} throttle or cut networks during protests and funerals. Invent resilient family and civic communication that is hard to fully extinguish—without building a better spy tool for the regime.",
+      stakeholder: "Digital rights collective",
+      pressureKeys: ["Blackout", "Surveillance", "Kin"],
+      suggested: ["networks", "crypto", "iot", "solar", "computing"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Biometric Ration Gate", "Work Permit Desk", "Excluded Block"],
+      title: "No ID, no bread",
+      scene:
+        "Digital ID around {place} gates food and work; dissidents vanish from eligibility. Invent mutual aid and identity alternatives that reduce exclusion without feeding the registry.",
+      stakeholder: "Neighborhood mutual-aid cell",
+      pressureKeys: ["Exclusion", "Hunger", "Control"],
+      suggested: ["crypto", "networks", "ai", "iot", "print3d"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Forbidden Assembly Hall", "Shift Whisper Network", "Market Signal Chain"],
+      title: "Organize without a target list",
+      scene:
+        "Large gatherings near {place} are crushed; people need to coordinate aid and witness without creating a perfect arrest list. Invent sousveillance and mass coordination patterns that favor the many.",
+      stakeholder: "Labor and civic organizers",
+      pressureKeys: ["Repression", "Coordination", "Safety"],
+      suggested: ["networks", "crypto", "ai", "iot", "drones"],
+      visionTheme: "social-city",
+    },
+  ],
+
+  "women-stem": [
+    {
+      places: ["Secondary Math Wing", "Chore-Before-Dawn Home", "Long Walk Lab"],
+      title: "Talent exits at the science gate",
+      scene:
+        "Girls near {place} outperform early, then leave math and physics when distance, chores, and stereotypes stack. Invent pathway retention that is STEM-specific—not only general school access.",
+      stakeholder: "Head of science faculty",
+      pressureKeys: ["Dropout", "Chores", "Distance"],
+      suggested: ["ai", "vr", "networks", "solar", "transportation"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Night Lab Corridor", "Campus Gate After Hours", "Field Station Bunk"],
+      title: "The lab is brilliant—and unsafe after dark",
+      scene:
+        "Women students and techs in {place} leave STEM when harassment and unsafe transit make late experiments impossible. Invent lab culture and mobility that keep talent in science.",
+      stakeholder: "Women in STEM association",
+      pressureKeys: ["Safety", "Harassment", "Retention"],
+      suggested: ["iot", "networks", "ai", "self-driving", "solar"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["First-Degree Cliff Desk", "Mentorship Lottery Hall", "Industry Placement Void"],
+      title: "Degree in hand, pipeline ends",
+      scene:
+        "Women graduate STEM near {place} then hit a mentorship and placement desert. Invent matching, sponsorship, and first-job rails into labs and engineering shops.",
+      stakeholder: "University career STEM lead",
+      pressureKeys: ["Placement", "Mentors", "Bias"],
+      suggested: ["ai", "networks", "vr", "crypto", "computing"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Fab-Lab Nursery Wall", "Shift Childcare Co-op", "Engineering Park Gate"],
+      title: "Care hours vs cleanroom hours",
+      scene:
+        "STEM workplaces around {place} assume someone else does care work. Invent on-site or shared care so women engineers and scientists can stay in the pipeline without choosing between family and bench.",
+      stakeholder: "Industrial park HR and unions",
+      pressureKeys: ["Care", "Hours", "Equity"],
+      suggested: ["iot", "networks", "ai", "robots", "solar"],
+      visionTheme: "learn-city",
+    },
+  ],
+
+  memory: [
+    {
+      places: ["Everyday Life Log Desk", "Pocket Archive Co-op", "Consent Capture Cafe"],
+      title: "Ordinary lives leave no trace",
+      scene:
+        "People in {place} want to preserve experiences for themselves and family, but tools are either surveillance toys or unused. Invent privacy-first life capture ordinary households will actually own and search.",
+      stakeholder: "Community library tech desk",
+      pressureKeys: ["Forgetting", "Privacy", "Access"],
+      suggested: ["ai", "networks", "iot", "crypto", "computing", "vr"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Elder Story Circle", "Language Archive Hut", "Vanishing Dialect Room"],
+      title: "Stories leave with the elders",
+      scene:
+        "Oral histories around {place} die with the last fluent speakers. Invent dignified community archiving—audio, place, kinship—not extractive recording for outsiders only.",
+      stakeholder: "Cultural heritage keepers",
+      pressureKeys: ["Loss", "Consent", "Continuity"],
+      suggested: ["ai", "networks", "solar", "iot", "vr"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Disaster Plan Amnesia Desk", "Staff Churn Archive", "Empty Handover Shelf"],
+      title: "The plan existed—on a laptop that left",
+      scene:
+        "After turnover at {place}'s municipal or clinic team, flood and outbreak playbooks are forgotten. Invent institutional memory that survives staff churn without becoming a surveillance dump.",
+      stakeholder: "City continuity officer",
+      pressureKeys: ["Churn", "Amnesia", "Risk"],
+      suggested: ["ai", "networks", "crypto", "iot", "computing"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Format Rot Vault", "Unreadable Decade Disk", "Museum of Dead Media"],
+      title: "Saved forever, openable never",
+      scene:
+        "Schools and families near {place} 'backed up' life on formats nobody can read in ten years. Invent longevity and migration for personal and civic records that people control.",
+      stakeholder: "Digital preservation co-op",
+      pressureKeys: ["Rot", "LockIn", "Legacy"],
+      suggested: ["computing", "ai", "networks", "crypto", "materials"],
+      visionTheme: "social-city",
+    },
+  ],
+
+  "rural-roads": [
+    {
+      places: ["Mud Clinic Track", "Rainy Season Bridge Gap", "Maternity Detour Path"],
+      title: "The clinic vanishes when it rains",
+      scene:
+        "When rains hit near {place}, the only track to emergency care becomes mud. Invent all-weather access or last-mile medical logistics that do not wait for a perfect highway budget.",
+      stakeholder: "Rural clinic nurses",
+      pressureKeys: ["Access", "Rain", "Time"],
+      suggested: ["drones", "transportation", "iot", "solar", "materials", "networks"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Crop Rot Roadhead", "Market Two Days Away", "Broken Culvert Farm"],
+      title: "Harvest dies on the road",
+      scene:
+        "Farmers around {place} lose produce because the all-season road never reaches them. Invent connectivity and cold-chain logistics that shrink isolation from markets.",
+      stakeholder: "Farmer cooperative",
+      pressureKeys: ["Isolation", "Spoilage", "Income"],
+      suggested: ["transportation", "iot", "drones", "solar", "battery", "networks"],
+      visionTheme: "food-city",
+    },
+    {
+      places: ["Long Walk School Path", "Consolidated Campus Gate", "Unsafe Footbridge"],
+      title: "School is a dangerous walk",
+      scene:
+        "Children near {place} face hours on unsafe paths after school consolidation. Invent safe rural mobility and connectivity so education is not a hazard.",
+      stakeholder: "Parents' school committee",
+      pressureKeys: ["Distance", "Safety", "Attendance"],
+      suggested: ["transportation", "solar", "iot", "networks", "drones"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Ribbon-Cut Road Ghost", "Unfunded Maintenance Yard", "Pothole Politics Desk"],
+      title: "Built once, abandoned forever",
+      scene:
+        "{place} got a road for the photo-op; maintenance funds never followed. Invent upkeep incentives, local stewardship, and monitoring that keep access open after the cameras leave.",
+      stakeholder: "Rural roads authority engineer",
+      pressureKeys: ["Maintenance", "Politics", "Decay"],
+      suggested: ["iot", "drones", "ai", "materials", "networks", "space"],
+      visionTheme: "rebuild-city",
+    },
+  ],
+
+  smoking: [
+    {
+      places: ["School Gate Kiosk Row", "Youth Nicotine Alley", "Vape Near Campus"],
+      title: "The first pack is free at the gate",
+      scene:
+        "Retailers near {place}'s schools push cheap nicotine to teens. Invent initiation barriers and youth-led norms that work without criminalizing kids.",
+      stakeholder: "School health team",
+      pressureKeys: ["Initiation", "Retail", "Addiction"],
+      suggested: ["ai", "networks", "iot", "vr", "computing"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Multi-Unit Courtyard", "Shared Stairwell Air", "Sealed Window Block"],
+      title: "Secondhand smoke has no door",
+      scene:
+        "Families in {place}'s dense housing cannot escape neighbors' smoke. Invent building-scale protection and cessation support that respects tenants' rights.",
+      stakeholder: "Tenant union health desk",
+      pressureKeys: ["Secondhand", "Housing", "Conflict"],
+      suggested: ["iot", "materials", "networks", "ai", "solar"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Cessation Desert Clinic", "Quitline Empty Desk", "Shift Worker Break Yard"],
+      title: "Want to quit—can't afford the path",
+      scene:
+        "Heavy smokers in low-income work near {place} face costly or distant cessation. Invent affordable, continuous quit support that fits shift lives.",
+      stakeholder: "Primary care nurses",
+      pressureKeys: ["Access", "Cost", "Relapse"],
+      suggested: ["ai", "networks", "iot", "vr", "drones"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Clinic Door Ad Wall", "Tobacco Density Map", "Hospital Ashtray Street"],
+      title: "Ads outnumber clinics",
+      scene:
+        "Around {place}'s health facilities, tobacco retail and ads dominate the streetscape. Invent local policy tools and alternatives that shrink density without one-off bans that never stick.",
+      stakeholder: "Municipal health officer",
+      pressureKeys: ["Density", "Marketing", "Norms"],
+      suggested: ["ai", "networks", "iot", "space", "computing"],
+      visionTheme: "social-city",
+    },
+  ],
+
+  sanitation: [
+    {
+      places: ["Open Defecation Path", "Shared Latrine Queue", "Cholera Season Ward"],
+      title: "No private toilet, no dignity",
+      scene:
+        "Households near {place} lack basic latrines; disease follows the paths people still use. Invent affordable toilets and hygiene systems people will maintain—not posters alone.",
+      stakeholder: "WASH community committee",
+      pressureKeys: ["Access", "Disease", "Dignity"],
+      suggested: ["materials", "iot", "solar", "print3d", "networks"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Sludge Truck Night Route", "Illegal Dump Ravine", "Emptier Co-op Yard"],
+      title: "Someone empties it—into the river",
+      scene:
+        "Pit emptiers around {place} dump fecal sludge unsafely because treatment plants are far or closed. Invent safe emptying economies and treatment that pay emptiers to do right.",
+      stakeholder: "Sanitation workers' co-op",
+      pressureKeys: ["Sludge", "Dumping", "Health"],
+      suggested: ["iot", "drones", "networks", "materials", "ai", "solar"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["School Toilet Block", "Girls' Attendance Gap", "Broken Lock Cubicle"],
+      title: "No safe toilet, skip school",
+      scene:
+        "Schools near {place} lack private, clean toilets—especially for girls. Invent school sanitation that protects dignity and attendance.",
+      stakeholder: "Parent-teacher association",
+      pressureKeys: ["Attendance", "Privacy", "Hygiene"],
+      suggested: ["solar", "iot", "materials", "networks", "print3d"],
+      visionTheme: "learn-city",
+    },
+    {
+      places: ["Informal Settlement Edge", "No Sewer Map", "Shared Block Courtyard"],
+      title: "City grew; sewers didn't",
+      scene:
+        "{place}'s informal settlement has density without sewer rights. Invent leapfrog sanitation that works with tenure reality—not only master-plan pipes that never arrive.",
+      stakeholder: "Settlement WASH lead",
+      pressureKeys: ["Density", "Tenure", "Contamination"],
+      suggested: ["materials", "iot", "solar", "ai", "networks", "drones"],
+      visionTheme: "rebuild-city",
+    },
+  ],
+
+  waste: [
+    {
+      places: ["Plastic Drain Mouth", "Flooded Market Alley", "Clogged Culvert Ward"],
+      title: "Drains full of plastic, streets full of water",
+      scene:
+        "Single-use plastic chokes drains in {place} and turns rain into flood. Invent collection, redesign, and flow systems that cut both waste and water risk.",
+      stakeholder: "Municipal drainage crew",
+      pressureKeys: ["Plastic", "Floods", "Collection"],
+      suggested: ["robots", "iot", "ai", "materials", "drones", "networks"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Picker Cooperative Yard", "Formalization Desk", "Material Buyback Gate"],
+      title: "Informal heroes, formal exclusion",
+      scene:
+        "Waste pickers keep {place} circulating materials but face exclusion when new contracts arrive. Invent circular systems that include livelihoods—not only shiny MRFs that erase them.",
+      stakeholder: "Picker cooperative leaders",
+      pressureKeys: ["Livelihoods", "Toxics", "Formalization"],
+      suggested: ["networks", "ai", "iot", "crypto", "robots", "materials"],
+      visionTheme: "social-city",
+    },
+    {
+      places: ["Backyard E-Waste Fire", "Phone Scrap Lane", "Toxic Smoke Block"],
+      title: "E-waste burns after dark",
+      scene:
+        "Households near {place} burn cables for copper; smoke poisons kids. Invent safe e-waste recovery that still pays scrap workers.",
+      stakeholder: "Environmental health officers",
+      pressureKeys: ["Toxics", "Smoke", "Income"],
+      suggested: ["materials", "robots", "ai", "iot", "networks", "print3d"],
+      visionTheme: "rebuild-city",
+    },
+    {
+      places: ["Open Dump Ridge", "Methane Flare Gap", "Organics Only Stream"],
+      title: "The dump grows faster than the city",
+      scene:
+        "{place}'s open dump leaks methane and leachate while organics still mix with plastics. Invent separation and organics systems that shrink the mountain.",
+      stakeholder: "Solid waste utility",
+      pressureKeys: ["Volume", "Methane", "Leachate"],
+      suggested: ["iot", "ai", "drones", "synbio", "solar", "networks", "materials"],
+      visionTheme: "rebuild-city",
+    },
+  ],
+
+  reproductive: [
+    {
+      places: ["Method Stockout Clinic", "Contraception Desert Shelf", "Pharmacy Last Mile"],
+      title: "The shelf is empty again",
+      scene:
+        "People who need contraception near {place} hit stockouts and narrow method choice. Invent reliable supply and counseling for all who need methods—not only one demographic poster.",
+      stakeholder: "Family planning nurses",
+      pressureKeys: ["Stockouts", "Choice", "Access"],
+      suggested: ["networks", "ai", "drones", "iot", "solar"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Men's STI Evening Clinic", "Shift Worker Testing Van", "Stigma Side Door"],
+      title: "Men won't walk in the day door",
+      scene:
+        "STI rates rise around {place}, but men avoid daytime clinics. Invent confidential testing and treatment pathways that treat men as full users of reproductive health—not afterthoughts.",
+      stakeholder: "STI program lead",
+      pressureKeys: ["Stigma", "Men", "Transmission"],
+      suggested: ["ai", "networks", "iot", "gene-sequencing", "drones"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Adolescent Confidential Desk", "School-Linked RH Room", "Judgmental Queue"],
+      title: "Teens need care without the lecture",
+      scene:
+        "Adolescents near {place} face stigma and broken confidentiality when seeking RH care. Invent private, rights-based access that includes all genders.",
+      stakeholder: "Youth-friendly clinic team",
+      pressureKeys: ["Confidentiality", "Stigma", "Age"],
+      suggested: ["networks", "ai", "vr", "iot", "solar"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Couple Fertility Desert", "Male Factor Lab Gap", "IVF Only for the Rich"],
+      title: "Infertility with nowhere to go",
+      scene:
+        "Couples and individuals in {place} face infertility with almost no diagnostics—especially male-factor workups. Invent accessible fertility navigation that is not only maternal care and not only luxury IVF.",
+      stakeholder: "Reproductive medicine outreach",
+      pressureKeys: ["Infertility", "Cost", "Equity"],
+      suggested: ["ai", "gene-sequencing", "networks", "iot", "vr"],
+      visionTheme: "care-city",
+    },
+  ],
+
+  amr: [
+    {
+      places: ["Last-Line Ward", "ICU Culture Delay Desk", "Resistant Infection Bay"],
+      title: "The last antibiotic fails on the ward",
+      scene:
+        "A hospital near {place} watches common bacterial infections shrug off last-line drugs. Invent stewardship, infection control, and diagnostics that preserve remaining antibiotics—not a viral outbreak gadget.",
+      stakeholder: "Hospital antimicrobial steward",
+      pressureKeys: ["Resistance", "Beds", "Time"],
+      suggested: ["gene-sequencing", "ai", "iot", "networks", "synbio"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Livestock Antibiotic Trough", "Downstream Village Well", "Farm Pharmacy Window"],
+      title: "The farm doses the future",
+      scene:
+        "Farms upstream of {place} use antibiotics as growth crutches; resistance genes show up in people. Invent animal health and monitoring that cut misuse without collapsing livelihoods overnight.",
+      stakeholder: "One-health veterinary officer",
+      pressureKeys: ["FarmUse", "Runoff", "Resistance"],
+      suggested: ["iot", "gene-sequencing", "ai", "drones", "networks", "synbio"],
+      visionTheme: "food-city",
+    },
+    {
+      places: ["OTC Antibiotic Counter", "No-Script Pharmacy Row", "Leftover Pill Market"],
+      title: "Antibiotics without a diagnosis",
+      scene:
+        "Pharmacies around {place} sell antibiotics like sweets. Invent retail and care pathways that stop blind bacterial treatment while still treating people who are truly sick.",
+      stakeholder: "Community pharmacists' association",
+      pressureKeys: ["Misuse", "Access", "Resistance"],
+      suggested: ["ai", "networks", "iot", "gene-sequencing", "crypto"],
+      visionTheme: "care-city",
+    },
+    {
+      places: ["Blind Prescribe Desk", "48-Hour Culture Lab", "Point-of-Care Void"],
+      title: "Treat now, culture never",
+      scene:
+        "Clinicians near {place} prescribe broad antibiotics because results take days or never arrive. Invent rapid bacterial diagnostics and decision support that make the right drug the easy path.",
+      stakeholder: "District lab director",
+      pressureKeys: ["Delay", "BlindRx", "Capacity"],
+      suggested: ["gene-sequencing", "ai", "nano", "iot", "networks", "materials"],
+      visionTheme: "care-city",
+    },
+  ],
+
   _default: [
     {
       places: ["Northgate", "Riverside Ward", "Old Market", "Hillcrest"],

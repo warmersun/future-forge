@@ -248,6 +248,110 @@ export const PROBLEM_BRIEFS = {
     warnings:
       "A shared dashboard without a shared fund or decision rights is theater. Design governance and incentives as carefully as the sensors.",
   },
+  radicalization: {
+    currentState:
+      "Violent extremism and radicalization still recruit through prejudice, online pipelines, and offline grievances. Prevention programs exist in schools and communities, but coverage is uneven and often reacts after harm rather than disarming pathways early.",
+    rootCauses:
+      "Identity conflict, dehumanizing propaganda, social exclusion, weak rule of law, and platforms that amplify grievance faster than dialogue. Young people are targeted early—on school benches and online—before offline violence.",
+    warnings:
+      "Disarming radicalization starts with human rights, dialogue across boundaries, and youth empowerment—not mass surveillance or predictive “terror scores.” Dual-use watchlists can become tools of discrimination. Prefer off-ramps, media literacy, and community legitimacy.",
+  },
+  fgm: {
+    currentState:
+      "More than 200 million girls and women alive today have undergone FGM; millions more remain at risk each year. Prevalence has fallen in many countries—a girl is about one-third less likely to undergo FGM than thirty years ago—yet progress is uneven and COVID-era disruptions set programs back.",
+    rootCauses:
+      "Social norms, marriageability pressure, practitioner livelihoods, weak enforcement, and cross-border “cutting season” mobility. Attitudes are shifting in many places where girls and women who know of FGM say it should end, but practice can lag belief.",
+    warnings:
+      "Invent for community-led abandonment, girls’ education and protection, and survivor care—never graphic “rescue” theater or shaming gadgets. Do not medicalize FGM as a clinical upgrade. Center local women’s leadership, confidentiality, and dignity.",
+  },
+  "short-termism": {
+    currentState:
+      "Households and communities under pressure still liquidate long-term assets for immediate survival: farmers slaughter dairy cows in famine; forests are burned for this season’s field. The same pattern appears in politics and firms that raid the future for short returns.",
+    rootCauses:
+      "Poverty traps and missing safety nets force high discount rates; insecure land and resource rights; markets and politics that reward this quarter’s yield over decades of soil, forest, and resilience capital.",
+    warnings:
+      "Related to poverty, but the core problem is temporal tradeoff. Invent incentives and buffers that make protecting tomorrow rational today—not lectures that ignore empty stomachs. Avoid “green” schemes that lock the poor out of livelihoods without alternatives.",
+  },
+  misinfo: {
+    currentState:
+      "Shared facts and institutional trust are under pressure from algorithmic amplification, cheap synthetic media, and hollowed local journalism. Falsehoods travel faster than corrections; crises (health, elections, disasters) become epistemic emergencies as well as physical ones.",
+    rootCauses:
+      "Attention economies reward outrage; verification is costly; AI lowers the cost of convincing fakes; polarisation and weak media literacy erode common ground; underfunded public-interest media leave rumor unchallenged.",
+    warnings:
+      "Do not invent “AI deletes wrongthink” as a clean win. Prefer provenance, local trusted intermediaries, and user agency. Surveillance framed as anti-disinfo can silence legitimate speech. Design for correction speed and dignity, not purity police.",
+  },
+  totalitarianism: {
+    currentState:
+      "Strict totalitarian systems still isolate populations through repression, indoctrination, and information monopoly. Broader autocracy has expanded; tools that help people access free media, communicate, and organize are scarce where they are needed most.",
+    rootCauses:
+      "Concentrated coercive power, state media monopolies, censorship infrastructure, fear of association, and international free-riding when isolated populations cannot be reached safely.",
+    warnings:
+      "People need free media, language bridges, censorship circumvention, and safer collective action—not better state surveillance. Dual-use is extreme: tools can be seized. Prefer sousveillance and mutual aid designs that do not require a friendly regime.",
+  },
+  "women-stem": {
+    currentState:
+      "Only about 35% of STEM students in higher education globally are women. Girls often perform well early, then leave math and science pathways at secondary and tertiary transitions; workplace retention in labs and tech roles remains unequal.",
+    rootCauses:
+      "Stereotypes, unsafe or distant schools, household labor, hostile lab cultures, missing mentors and role models, and care infrastructure that falls on women after degrees. This is a STEM pipeline problem—not the whole of equal rights.",
+    warnings:
+      "Do not invent “one inspirational app” as the whole solution. Prefer safe transit, lab culture, scholarships with placement, and care near workplaces. Distinct from general women’s rights inventing (safety, law, political voice)—keep the focus on science and engineering pathways.",
+  },
+  memory: {
+    currentState:
+      "Human memory is incomplete and unreliable even in healthy people. For the first time, ordinary people can create rich multimedia records of lived experience—yet most life is still uncaptured, unsearchable, or locked in formats that will rot.",
+    rootCauses:
+      "Biological forgetting; lack of affordable, private capture tools; organizational churn that erases institutional knowledge; cultural loss when elders’ stories are never recorded; digital obsolescence of media and formats.",
+    warnings:
+      "This is not Alzheimer or dementia care. Invent for documenting and preserving experience—personal, community, and institutional—with consent and privacy. Life-logging without control becomes surveillance. Prefer user-owned archives and dignified legacy, not forced total recall.",
+  },
+  "rural-roads": {
+    currentState:
+      "On the order of a billion rural people live more than about 2 km from an all-season road. Isolation from markets, clinics, and schools is a core poverty trap feature—“to be poor is to be isolated.” Rainy seasons and terrain cut access further.",
+    rootCauses:
+      "Underinvestment in rural infrastructure, weak maintenance after ribbon-cutting, difficult terrain and climate, and political bias toward visible urban projects over last-mile connectivity.",
+    warnings:
+      "A road without maintenance is a temporary promise. Invent for all-weather access, clinic and market logistics, and upkeep incentives—not only one-time construction theater. Watch displacement and land grabs framed as “corridor development.”",
+  },
+  smoking: {
+    currentState:
+      "Over a billion people still use tobacco regularly; smoking kills millions yearly and remains concentrated in lower-income countries even as high-income rates fall. Secondhand smoke and youth nicotine uptake (including new products) keep the epidemic alive.",
+    rootCauses:
+      "Addiction biology, industry marketing, retail density, weak cessation services, and lagging regulation where enforcement is thin. Social norms and stress keep initiation high among youth in some places.",
+    warnings:
+      "Shame-only campaigns fail people with least access to cessation. Invent for initiation prevention, affordable quit support, and secondhand protection—not surveillance of smokers without care. Avoid industry-capture “solutions.”",
+  },
+  sanitation: {
+    currentState:
+      "Billions still lack safely managed sanitation; over a billion lack even basic private toilets or latrines, and hundreds of millions practice open defecation. Urban sewers lag informal growth; school toilets and fecal sludge systems remain weak links.",
+    rootCauses:
+      "Cost of toilets and sewers, underfunded utilities, stigma, land tenure barriers in informal settlements, and neglect of the full chain from latrine to safe treatment.",
+    warnings:
+      "This is toilets, sewage, and hygiene—not drinking-water filtration alone (see Clean Water). Sensors without emptying and treatment are theater. Prefer dignity, gender-safe school facilities, and safe sludge economies over luxury smart-toilet hype for the already served.",
+  },
+  waste: {
+    currentState:
+      "Cities generate on the order of two billion tons of municipal solid waste yearly, plus huge e-waste and hazardous streams. Recycling and circular systems grow but lag production; landfills, open dumps, and plastic-clogged drains still dominate many places.",
+    rootCauses:
+      "Linear production, cheap single-use packaging, weak collection, informal-sector exclusion from formal plans, and global waste trade that shifts harm to poorer regions.",
+    warnings:
+      "Do not invent “export the trash” as local success. Design with informal pickers’ livelihoods, real material recovery, and reduction at source. E-waste burning and plastic-choked floods need systems, not one-off beach cleanups as the whole invent.",
+  },
+  reproductive: {
+    currentState:
+      "Sexual and reproductive health means people can have a safe sex life and decide if, when, and how often to reproduce. Contraceptive access has improved globally but remains low in many regions; STIs, infertility care, and confidential services for all genders lag.",
+    rootCauses:
+      "Stockouts, stigma, provider bias, cost, restrictive policy, and services designed only around pregnancy—not men, partners, adolescents, or fertility care. FGM and forced marriage are related harms but not the whole of RH.",
+    warnings:
+      "This theme is for all people—not only women and children. Maternal emergency obstetric care is its own theme; FGM is its own theme. Invent for agency, privacy, STI care (including men), contraception choice, and fertility access—never coercive fertility control framed as good.",
+  },
+  amr: {
+    currentState:
+      "Bacteria and other microbes are evolving resistance to antibiotics and antimicrobials. Common infections and surgery become harder to treat; last-line drugs fail in hospitals while community misuse and farm use accelerate resistance. This is not a virus-outbreak theme—it is the erosion of antimicrobial effectiveness.",
+    rootCauses:
+      "Overuse and misuse of antibiotics in humans and animals, weak diagnostics that force blind treatment, poor infection control, and underinvestment in new antimicrobials and stewardship.",
+    warnings:
+      "Do not invent “another viral pandemic app” here. Prefer stewardship, rapid bacterial diagnostics, farm and pharmacy practice change, and access to the right drug—not unrestricted antibiotic vending. Preserve efficacy; do not invent systems that encourage more blind prescribing.",
+  },
 };
 
 /**

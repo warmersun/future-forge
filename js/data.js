@@ -87,6 +87,19 @@ export const GLOBALS = [
   { id: "child", title: "Child Health", kind: "now", blurb: "Preventable disease and malnutrition." },
   { id: "maternal", title: "Maternal Health", kind: "now", blurb: "Safe birth and postpartum care." },
   { id: "coord", title: "Global Coordination Failure", kind: "now", blurb: "No shared early-warning or response fund across places that need each other." },
+  { id: "radicalization", title: "Countering Radicalization", kind: "now", blurb: "Prejudice and extremism pipelines — rights-based off-ramps." },
+  { id: "fgm", title: "Female Genital Mutilation (FGM)", kind: "now", blurb: "Harmful practice; community abandonment and survivor care." },
+  { id: "short-termism", title: "Short-Term Needs vs Long-Term Future", kind: "now", blurb: "Survival and returns that liquidate tomorrow’s assets." },
+  { id: "misinfo", title: "Misinformation & Epistemic Crises", kind: "now", blurb: "Shared truth erodes under deepfakes and weak institutions." },
+  { id: "totalitarianism", title: "Totalitarianism", kind: "now", blurb: "Isolation, indoctrination, and tools for free association." },
+  { id: "women-stem", title: "STEM for Women", kind: "now", blurb: "Girls and women underrepresented in STEM pathways." },
+  { id: "memory", title: "Incomplete Memory", kind: "now", blurb: "We forget — document and preserve lived experience." },
+  { id: "rural-roads", title: "Rural Road Connectivity", kind: "now", blurb: "Rural isolation far from all-season roads." },
+  { id: "smoking", title: "Smoking", kind: "now", blurb: "Tobacco epidemic, cessation, and secondhand harm." },
+  { id: "sanitation", title: "Sanitation", kind: "now", blurb: "Toilets, sewage, and hygiene — not drinking water alone." },
+  { id: "waste", title: "Waste & Recycling", kind: "now", blurb: "Waste outruns recycling; circular systems lag." },
+  { id: "reproductive", title: "Reproductive Health", kind: "now", blurb: "Safe sex life and reproductive freedom for all people." },
+  { id: "amr", title: "Antimicrobial Resistance", kind: "now", blurb: "Superbugs and antibiotic failure — bacterial resistance." },
 ];
 
 /**
@@ -1106,6 +1119,19 @@ const DEFAULT_VISION_BY_GLOBAL = {
   asteroid: "rebuild-city",
   "chem-bio": "care-city",
   mideast: "rebuild-city",
+  radicalization: "social-city",
+  fgm: "care-city",
+  "short-termism": "rebuild-city",
+  misinfo: "social-city",
+  totalitarianism: "social-city",
+  "women-stem": "learn-city",
+  memory: "social-city",
+  "rural-roads": "rebuild-city",
+  smoking: "care-city",
+  sanitation: "rebuild-city",
+  waste: "rebuild-city",
+  reproductive: "care-city",
+  amr: "care-city",
 };
 
 /** Curated angle packs (seeded in scenario-seeds.js); unknown themes → _default */
