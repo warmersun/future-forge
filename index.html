@@ -709,7 +709,8 @@
               <p class="feasibility-foot" id="feasibility-foot"></p>
             </div>
 
-            <div class="story-mode" role="group" aria-label="Primary story face">
+            <!-- Workshop: Focus + both faces. Spark (singleStoryFace): JS hides Focus/life/fill; label becomes "What does it do here?" -->
+            <div class="story-mode" id="story-mode" role="group" aria-label="Primary story face">
               <span class="story-mode-label">Focus:</span>
               <button type="button" class="story-mode-btn active" data-face="how" id="face-how" aria-pressed="true">
                 How it works
@@ -731,7 +732,7 @@
               hidden
             ></div>
 
-            <!-- Both faces always editable; one Fill button is moved into the focused header -->
+            <!-- Both faces editable in Workshop; Spark shows only #field-how -->
             <div class="field story-face-field" id="field-how" data-face="how">
               <div class="story-face-header" id="header-how">
                 <label for="invention-how" id="label-how">How does it work?</label>

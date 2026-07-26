@@ -490,6 +490,11 @@ function starterTechOnlyEnabled() {
   return Boolean(features().starterTechOnly);
 }
 
+/** Spark: one story box; Workshop: How it works + Everyday life. */
+function singleStoryFaceEnabled() {
+  return Boolean(features().singleStoryFace);
+}
+
 /**
  * Techs shown in the invent tray for the current mode.
  * Spark: starters plus any mission-suggested ids (even non-starters).
@@ -498,6 +503,15 @@ function techsForTray() {
   if (!starterTechOnlyEnabled()) return [...TECHS];
   const suggested = new Set(state.mission?.suggested || []);
   return TECHS.filter((t) => t.starter || suggested.has(t.id));
+}
+
+/**
+ * Spark keeps both state fields populated so feasibility / deploy min-length still pass.
+ * Mirrors how → impact (same text).
+ */
+function mirrorSparkStoryImpact() {
+  if (!singleStoryFaceEnabled()) return;
+  state.inventionImpact = String(state.inventionHow || "");
 }
 
 /** Active market card (solo state or shared place in multiplayer). */
@@ -3294,13 +3308,18 @@ function syncStoryFieldsFromDom() {
   const howEl = $("#invention-how");
   const impEl = $("#invention-impact");
   if (howEl) state.inventionHow = howEl.value;
-  if (impEl) state.inventionImpact = impEl.value;
+  if (singleStoryFaceEnabled()) {
+    mirrorSparkStoryImpact();
+  } else if (impEl) {
+    state.inventionImpact = impEl.value;
+  }
 }
 
 function syncStoryFieldsToDom(opts = {}) {
   const force = Boolean(opts.force);
   const howEl = $("#invention-how");
   const impEl = $("#invention-impact");
+  if (singleStoryFaceEnabled()) mirrorSparkStoryImpact();
   // Default: never yank text out from under a focused caret.
   // Pass { force: true } after a rejected contribution / explicit reset.
   if (
@@ -3312,6 +3331,7 @@ function syncStoryFieldsToDom(opts = {}) {
   }
   if (
     impEl &&
+    !singleStoryFaceEnabled() &&
     impEl.value !== state.inventionImpact &&
     (force || document.activeElement !== impEl)
   ) {
@@ -3337,13 +3357,16 @@ function placeFillOtherButton(face) {
 }
 
 /**
- * How it works + Everyday life — both always editable.
+ * How it works + Everyday life — both always editable (Workshop).
+ * Spark (singleStoryFace): one box "What does it do here?" on #invention-how; impact mirrored.
  * Focus toggle (exclusive) marks which face owns the single "Fill other side" button;
  * AI drafts the opposite face from that focus.
  */
 function renderStoryFaceUI() {
-  const face = state.storyFace === "life" ? "life" : "how";
+  const sparkSingle = singleStoryFaceEnabled();
+  const face = sparkSingle ? "how" : state.storyFace === "life" ? "life" : "how";
   state.storyFace = face;
+  if (sparkSingle) mirrorSparkStoryImpact();
 
   $$(".story-mode-btn").forEach((btn) => {
     const on = btn.dataset.face === face;
@@ -3351,6 +3374,7 @@ function renderStoryFaceUI() {
     btn.setAttribute("aria-pressed", on ? "true" : "false");
   });
 
+  const storyMode = $(".story-mode");
   const fieldHow = $("#field-how");
   const fieldLife = $("#field-life");
   const labelHow = $("#label-how");
@@ -3360,6 +3384,28 @@ function renderStoryFaceUI() {
   const noteHow = $("#note-how");
   const noteLife = $("#note-life");
   const hint = $("#story-mode-hint");
+  const fillBtn = $("#btn-fill-other");
+
+  // Spark: hide dual-face chrome; Workshop: restore
+  if (storyMode) {
+    storyMode.hidden = sparkSingle;
+    if (sparkSingle) storyMode.setAttribute("hidden", "");
+    else storyMode.removeAttribute("hidden");
+  }
+  if (hint) {
+    hint.hidden = sparkSingle;
+    if (sparkSingle) hint.setAttribute("hidden", "");
+    else hint.removeAttribute("hidden");
+  }
+  if (fieldLife) {
+    fieldLife.hidden = sparkSingle;
+    if (sparkSingle) fieldLife.setAttribute("hidden", "");
+    else fieldLife.removeAttribute("hidden");
+  }
+  if (fillBtn && sparkSingle) {
+    fillBtn.hidden = true;
+    fillBtn.setAttribute("hidden", "");
+  }
 
   const b = mpBridge();
   const storyLocked = Boolean(b) && isViewedInventStoryLocked();
@@ -3374,11 +3420,13 @@ function renderStoryFaceUI() {
       ? b?.viewedPhase?.() === "challenge" || b?.invent?.(b.getViewId?.())?.turnPhase === "scrutiny"
         ? "Locked — Challenge started; invent is frozen."
         : "Locked — can't edit this invent right now."
-      : b?.viewingOther?.()
-        ? "Add to their how-it-works (additive only — don't gut their idea)…"
-        : "What acts, what decides, how the pieces connect for *this* place…";
+      : sparkSingle
+        ? "What does this invention do for people in this place?"
+        : b?.viewingOther?.()
+          ? "Add to their how-it-works (additive only — don't gut their idea)…"
+          : "What acts, what decides, how the pieces connect for *this* place…";
   }
-  if (lifeArea) {
+  if (lifeArea && !sparkSingle) {
     if (document.activeElement !== lifeArea) {
       lifeArea.value = state.inventionImpact;
     }
@@ -3393,7 +3441,9 @@ function renderStoryFaceUI() {
         : "A Tuesday here after your invention lands…";
   }
   applyStoryFieldLocks();
-  if (labelHow) labelHow.textContent = "How does it work?";
+  if (labelHow) {
+    labelHow.textContent = sparkSingle ? "What does it do here?" : "How does it work?";
+  }
   if (labelLife) labelLife.textContent = "Everyday life if it works";
 
   const setRole = (field, role) => {
@@ -3404,7 +3454,20 @@ function renderStoryFaceUI() {
     if (pending) field.classList.add("is-ai-pending");
   };
 
-  // Single button lives on the focused header only
+  if (sparkSingle) {
+    setRole(fieldHow, "focus");
+    if (noteHow) {
+      noteHow.hidden = true;
+      noteHow.setAttribute("hidden", "");
+    }
+    if (noteLife) {
+      noteLife.hidden = true;
+      noteLife.setAttribute("hidden", "");
+    }
+    return;
+  }
+
+  // Workshop / multiparty: single button lives on the focused header only
   placeFillOtherButton(face);
 
   if (face === "how") {
@@ -3412,10 +3475,13 @@ function renderStoryFaceUI() {
     setRole(fieldLife, "other");
     if (noteHow) {
       noteHow.hidden = false;
+      noteHow.removeAttribute("hidden");
       noteHow.textContent = "Focus: write the mechanism. Fill other side drafts everyday life.";
     }
     if (noteLife) {
       noteLife.hidden = !state.inventionImpact.trim();
+      if (noteLife.hidden) noteLife.setAttribute("hidden", "");
+      else noteLife.removeAttribute("hidden");
       noteLife.textContent = state.inventionImpact.trim()
         ? "Editable anytime — can be AI draft or your own words."
         : "";
@@ -3429,10 +3495,13 @@ function renderStoryFaceUI() {
     setRole(fieldLife, "focus");
     if (noteLife) {
       noteLife.hidden = false;
+      noteLife.removeAttribute("hidden");
       noteLife.textContent = "Focus: write everyday life. Fill other side drafts how it works.";
     }
     if (noteHow) {
       noteHow.hidden = !state.inventionHow.trim();
+      if (noteHow.hidden) noteHow.setAttribute("hidden", "");
+      else noteHow.removeAttribute("hidden");
       noteHow.textContent = state.inventionHow.trim()
         ? "Editable anytime — can be AI draft or your own words."
         : "";
@@ -13763,6 +13832,8 @@ function bind() {
       return;
     }
     state.inventionHow = e.target.value;
+    // Spark: keep impact in lockstep so challenge/deploy face length checks pass
+    mirrorSparkStoryImpact();
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
@@ -13778,6 +13849,8 @@ function bind() {
       }
       return;
     }
+    // Spark hides this field; ignore stray input
+    if (singleStoryFaceEnabled()) return;
     state.inventionImpact = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
