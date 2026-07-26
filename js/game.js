@@ -6502,12 +6502,8 @@ function renderChallengeStep() {
       hideAllModePanels();
       const moves = $("#scrutiny-moves");
       if (moves) moves.hidden = true;
-      if (deployStagesEnabled()) {
-        if (!state.deployUnlocked) unlockDeployBay();
-        renderDeployBay();
-      } else {
-        updateDeployButtonCost();
-      }
+      if (!state.deployUnlocked) unlockDeployBay();
+      else renderDeployBay();
     }
     renderChallengeHud();
     return;
@@ -6534,12 +6530,8 @@ function renderChallengeStep() {
     fb.innerHTML = state.challengeFeedback;
   } else if (fb) fb.hidden = true;
   if (state.challengePassed) {
-    if (deployStagesEnabled()) {
-      if (!state.deployUnlocked) unlockDeployBay();
-      renderDeployBay();
-    } else {
-      updateDeployButtonCost();
-    }
+    if (!state.deployUnlocked) unlockDeployBay();
+    else renderDeployBay();
   } else {
     const bay = $("#deploy-bay");
     if (bay) bay.hidden = true;
@@ -8912,7 +8904,7 @@ async function submitChallengeAnswer() {
     } else {
       state.challengePassed = true;
       state.challengeClearMode = state.challengeClearMode || "essay";
-      if (deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
+      // unlockDeployBay opens Field it (Spark) or staged bay (Workshop)
     }
     if (budgetWillEnabled()) {
       dispatchSim("challenge_income", { verdict: state.challengeVerdict });
@@ -8924,7 +8916,6 @@ async function submitChallengeAnswer() {
     state.challengeVerdict = ok ? "partial" : "fail";
     state.challengePassed = ok;
     if (ok) state.challengeClearMode = state.challengeClearMode || "essay";
-    if (ok && deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
     state.hadChallengeAttempt = true;
     state.lastChallengeVerdict = state.challengeVerdict;
     state.challengeFeedback = !bothStoryFacesReady()
@@ -8946,15 +8937,15 @@ async function submitChallengeAnswer() {
     feedbackHtml: state.challengeFeedback || "",
   });
   $("#btn-challenge-submit").disabled = false;
-  // Passed → unlockDeployBay navigates to Deploy (no more challenge_view sync)
-  if (state.challengePassed && deployStagesEnabled()) {
-    // unlock may already have run above; ensure Deploy if needed
-    if (!state.deployUnlocked) unlockDeployBay();
-    return;
-  }
-  // Essay pass with deploy stages off: still mark clear for field path
-  if (state.challengePassed && !deployStagesEnabled()) {
+  // Passed → open Deploy (staged Workshop or single Field it for Spark)
+  if (state.challengePassed) {
     state.challengeClearMode = state.challengeClearMode || "essay";
+    if (!state.deployUnlocked) unlockDeployBay();
+    else if (!deployStagesEnabled()) {
+      // Already unlocked: still ensure Field UI is painted
+      renderDeployBay();
+    }
+    return;
   }
   setupEssayChallengeChrome();
   renderChallengeStep();
@@ -9036,7 +9027,29 @@ function unlockDeployBay() {
       flashToast(e.message || "Could not sync challenge pass");
     }
   }
-  if (!deployStagesEnabled()) return;
+
+  const b = mpBridge();
+  const inv =
+    (b?.getViewId && b.invent?.(b.getViewId())) ||
+    (roomBridge.isRoom() && roomBridge.invent?.(roomBridge.getViewId())) ||
+    null;
+
+  // Spark / non-staged: one Field it beat (no Pilot → Scale pool)
+  if (!deployStagesEnabled()) {
+    state.deployUnlocked = true;
+    state.turnPhase = "between_stages";
+    state.deployStage = "none";
+    state.deployFieldPaid = false;
+    state.stagedDropPool = 0;
+    state.stagedDropRemaining = 0;
+    state.lastNews = "Challenge cleared · Field your invention when ready.";
+    enterDeployBayInteractive(inv, {
+      helper: Boolean(b?.viewingOther?.()),
+      ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
+    });
+    flashToast("Challenge cleared — Field it when ready.");
+    return;
+  }
 
   if (!state.deployUnlocked) {
     state.deployUnlocked = true;
@@ -9057,11 +9070,6 @@ function unlockDeployBay() {
   }
 
   // Leave Challenge combat screen entirely — Deploy is its own phase
-  const b = mpBridge();
-  const inv =
-    (b?.getViewId && b.invent?.(b.getViewId())) ||
-    (roomBridge.isRoom() && roomBridge.invent?.(roomBridge.getViewId())) ||
-    null;
   enterDeployBayInteractive(inv, {
     helper: Boolean(b?.viewingOther?.()),
     ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
@@ -9078,24 +9086,89 @@ function nextDeployStageAction() {
 }
 
 function updateDeployButtonCost() {
-  // Legacy single-button deploy removed — staged bay only when feature on
-  if (deployStagesEnabled()) {
+  // Keep bay paint in sync for both staged Workshop and single-field Spark
+  if (state.deployUnlocked && state.challengePassed) {
     renderDeployBay();
   }
 }
 
+/**
+ * Paint deploy bay: staged Pilot/Scale (Workshop) or one Field it (Spark / deployStages off).
+ */
 function renderDeployBay() {
   const bay = $("#deploy-bay");
   if (!bay) return;
-  if (!deployStagesEnabled() || !state.deployUnlocked || !state.challengePassed) {
+  if (!state.deployUnlocked || !state.challengePassed) {
     bay.hidden = true;
     return;
   }
   bay.hidden = false;
 
+  const pills = bay.querySelector(".deploy-stage-pills");
+  const title = bay.querySelector(".deploy-bay-title");
+  const status = $("#deploy-bay-status");
+  const primary = $("#btn-deploy-stage-primary");
+  const backInvent = $("#btn-deploy-back-invent");
+  const lead = $("#deploy-screen-lead");
+  const b = mpBridge();
+  const canField =
+    !state.challengeSpectator && (!b || Boolean(b.canRunDeploy?.()));
+
+  // —— Spark / friends-style single field ——
+  if (!deployStagesEnabled()) {
+    if (pills) {
+      pills.hidden = true;
+      pills.setAttribute("hidden", "");
+    }
+    $$(".deploy-stage-pill", bay).forEach((pill) => {
+      pill.hidden = true;
+      pill.classList.remove("is-done", "is-active");
+    });
+    if (title) title.textContent = "Field your invention";
+    if (lead) {
+      lead.textContent =
+        "Challenge cleared. Field your invention into this place — one step, then see how the crisis responds.";
+    }
+    const fieldCost = currentDeployFieldCost();
+    const costBits = [];
+    if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
+    if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
+    if (status) {
+      status.textContent = costBits.length
+        ? `One step: field the idea. Cost: ${costBits.join(" · ")}.`
+        : "One step: field the idea. Crisis drops if the hold works.";
+    }
+    if (primary) {
+      primary.hidden = false;
+      primary.removeAttribute("hidden");
+      primary.disabled = !canField;
+      primary.textContent = "Field it →";
+      primary.title = !canField
+        ? state.challengeSpectator
+          ? "Read-only — watching the active player"
+          : "Not your turn to field this invent"
+        : "Deploy your invention and see how the crisis responds";
+    }
+    if (backInvent) backInvent.hidden = true;
+    updateDeployFooterButtons();
+    return;
+  }
+
+  // —— Workshop staged: Pilot → Scale → New normal ——
+  if (pills) {
+    pills.hidden = false;
+    pills.removeAttribute("hidden");
+  }
+  if (title) title.textContent = "Deploy bay";
+  if (lead) {
+    lead.textContent =
+      "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
+  }
+
   const next = nextDeployStageAction();
   const feas = assessFeasibility();
   $$(".deploy-stage-pill", bay).forEach((pill) => {
+    pill.hidden = false;
     const id = pill.dataset.stage;
     const done =
       (id === "pilot" && ["pilot", "scale", "new_normal"].includes(state.deployStage)) ||
@@ -9109,9 +9182,6 @@ function renderDeployBay() {
     pill.classList.toggle("is-active", Boolean(active && !done));
   });
 
-  const status = $("#deploy-bay-status");
-  const primary = $("#btn-deploy-stage-primary");
-  const backInvent = $("#btn-deploy-back-invent");
   const remaining = state.stagedDropRemaining ?? 0;
   const pool = state.stagedDropPool ?? 0;
   const fieldCost = currentDeployFieldCost();
@@ -9162,12 +9232,6 @@ function renderDeployBay() {
         : `Deploy complete.${lastLine}`;
     }
   }
-
-  // Active seat may Pilot/Scale any deploy-ready invent they are viewing (own or helper).
-  // Spectators / non-active never enable fielding buttons.
-  const b = mpBridge();
-  const canField =
-    !state.challengeSpectator && (!b || Boolean(b.canRunDeploy?.()));
 
   if (primary) {
     if (next === "pilot") {
@@ -11190,9 +11254,15 @@ function enterDeployBayInteractive(invent, opts = {}) {
   const lead = $("#deploy-screen-lead");
   if (lead) {
     const who = opts.ownerName || "this invent";
-    lead.textContent = opts.helper
-      ? `Fielding ${who} — Pilot / Scale (you pay). Invent locked after Challenge.`
-      : "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
+    if (!deployStagesEnabled()) {
+      lead.textContent = opts.helper
+        ? `Fielding ${who} — one Field it step (you pay if costs apply).`
+        : "Challenge cleared. Field your invention into this place.";
+    } else {
+      lead.textContent = opts.helper
+        ? `Fielding ${who} — Pilot / Scale (you pay). Invent locked after Challenge.`
+        : "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
+    }
   }
   const fb = $("#deploy-feedback");
   if (fb && !state.lastDeployRoll) {
@@ -14125,11 +14195,21 @@ function bind() {
   });
   $("#btn-deploy-stage-primary")?.addEventListener("click", () => {
     if (isDeployWatchOnly()) {
-      flashToast("Watching only — active player fields Pilot/Scale.");
+      flashToast(
+        deployStagesEnabled()
+          ? "Watching only — active player fields Pilot/Scale."
+          : "Watching only — active player fields this invent."
+      );
+      return;
+    }
+    // Spark: single Field it → attemptDeployLegacy; Workshop: Pilot/Scale stages
+    if (!deployStagesEnabled()) {
+      attemptDeploy();
       return;
     }
     const next = nextDeployStageAction();
     if (next) attemptDeployStage(next);
+    else flashToast("Deploy finished.");
   });
   $("#btn-deploy-abandon")?.addEventListener("click", () => {
     const b = mpBridge();
