@@ -422,6 +422,42 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(r.error, "challenge_required");
   });
 
+  it("end_turn mid-challenge keeps invent frozen in challenge phase", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "how ".repeat(20) },
+    }).session;
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionImpact", value: "life ".repeat(20) },
+    }).session;
+    s = applyMpAction(s, { type: "select_tech", payload: { techId: T0 } }).session;
+    s = applyMpAction(s, { type: "enter_challenge" }).session;
+    assert.equal(s.invents["seat-0"].turnPhase, "scrutiny");
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    // Next seat is active, but owner invent must still be mid-challenge / frozen
+    const owner = s.invents["seat-0"];
+    assert.equal(owner.turnPhase, "scrutiny");
+    assert.equal(owner.inventPhase, "challenge");
+    assert.equal(owner.challengePassed, false);
+    const write = applyMpAction(
+      s,
+      {
+        type: "write_commit",
+        payload: {
+          field: "inventionHow",
+          value: "changed",
+          targetSeatId: "seat-0",
+          changed: true,
+        },
+      },
+      "seat-1"
+    );
+    assert.equal(write.ok, false);
+    assert.equal(write.error, "invent_locked");
+  });
+
   it("challenge fail → challenge_locked freezes invent; only owner re-enters; reopen unlocks", () => {
     let s = prepForPilot(started());
     // Force fail path on submit

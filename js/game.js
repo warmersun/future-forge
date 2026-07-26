@@ -1264,16 +1264,9 @@ function renderMpChrome() {
   const isRoomMp = isOnlineRoomMp();
 
   applyEndTurnChrome();
-  const endBtn = $("#btn-end-turn");
-  if (endBtn && !endBtn.hidden) {
-    endBtn.title = isMpContributionLocked()
-      ? mpContributionLockReason
-      : isRoomMp
-        ? "End your seat-turn (next player becomes active)"
-        : isHotseatMp
-          ? "End your seat-turn and pass the device to the next player"
-          : "Refill AP without advancing the calendar or crisis";
-  }
+  // Enable/disable both invent + Challenge End turn (do not clobber spectator locks)
+  updateEndTurnButton();
+  if (isChallengeWatchOnly()) applyChallengeWatchOnlyLock();
   const abandon = $("#btn-abandon");
   if (abandon) {
     abandon.textContent = isRoomMp
@@ -3412,12 +3405,38 @@ function renderHud() {
 
 /** Highlight Invent · Challenge · Deploy pills on workshop + challenge top bars */
 function updateMissionStepPills() {
+  const b = mpBridge();
+  const viewId = b?.getViewId?.();
+  const f = (viewId && b?.invent?.(viewId)) || null;
+  const fine =
+    (viewId && b?.inventPhaseOf?.(viewId)) ||
+    deriveInventPhase(
+      f || {
+        turnPhase: state.turnPhase,
+        challengePassed: state.challengePassed,
+        challengeLocked: state.challengeLocked,
+        deployStage: state.deployStage,
+        abandoned: false,
+      }
+    );
+
   let current = "invent";
-  if (state.screen === "outcome" || state.deployStage === "new_normal") {
+  if (
+    state.screen === "outcome" ||
+    fine === "fielded" ||
+    fine === "deploy_ready" ||
+    fine === "scale_ready" ||
+    state.deployUnlocked ||
+    (state.deployStage && state.deployStage !== "none")
+  ) {
     current = "deploy";
-  } else if (state.deployUnlocked || (state.deployStage && state.deployStage !== "none")) {
-    current = "deploy";
-  } else if (state.screen === "challenge-step") {
+  } else if (
+    fine === "challenge" ||
+    fine === "challenge_locked" ||
+    state.screen === "challenge-step" ||
+    state.turnPhase === "scrutiny"
+  ) {
+    // Mid-challenge stays "challenge" even if the player is parked on workshop
     current = "challenge";
   } else if (state.screen === "workshop") {
     current = "invent";
@@ -4053,59 +4072,71 @@ function requestWaitTurn() {
 }
 
 function updateEndTurnButton() {
-  const btn = $("#btn-end-turn");
-  if (!btn) return;
   if (!apEnabled()) {
-    btn.hidden = true;
+    for (const sel of ["#btn-end-turn", "#btn-challenge-end-turn"]) {
+      const btn = $(sel);
+      if (btn) btn.hidden = true;
+    }
     return;
   }
-  btn.hidden = false;
-  btn.textContent = endTurnButtonLabel();
   const b = mpBridge();
-  // Multiplayer: only the active seat may end turn / pass
-  if (b && !b.isMyTurn?.()) {
-    btn.disabled = true;
-    btn.title = "Not your turn — wait for the active player";
-    return;
-  }
-  if (isMpTurnGateBlocking()) {
-    btn.disabled = true;
-    btn.title = "Hit “Let's go” on “It's your turn!” first";
-    return;
-  }
-  // Watching someone else's Challenge/Deploy follow — never end turn from this context
-  if (isChallengeWatchOnly()) {
-    btn.disabled = true;
-    btn.title =
-      "Watching a Challenge — leave via seat tabs before ending your turn.";
-    return;
-  }
-  // Don't re-enable while Fill other side / co-inventor / contribution eval is running
-  if (isInventActionBusy()) {
-    btn.disabled = true;
-    btn.title = inventActionBusyReason();
-    return;
-  }
+  const label = endTurnButtonLabel();
+  const watchOnly = isChallengeWatchOnly();
+  const notMyTurn = Boolean(b && !b.isMyTurn?.());
+  const gate = isMpTurnGateBlocking();
+  const inventBusy = isInventActionBusy();
   // Do not treat *viewed* invent scrutiny as "you may end turn" (spectator hydrate used to)
   const ownScrutiny =
     state.turnPhase === "scrutiny" &&
-    !isChallengeWatchOnly() &&
+    !watchOnly &&
     (!b || !b.viewingOther?.());
   const spent = (state.apSpentThisTurn || 0) >= 1;
   const apNotFull = (state.ap ?? 0) < (state.apMax ?? GAME.apMax ?? 3);
-  const can =
-    spent ||
-    apNotFull ||
-    ownScrutiny ||
-    state.turnPhase === "between_stages";
-  btn.disabled = !can;
-  btn.title = can
-    ? b
-      ? isOnlineRoomMp()
-        ? "End your seat-turn (next player becomes active)"
-        : "End your seat-turn and pass to the next player"
-      : "Refill AP without advancing the calendar or crisis"
-    : "Spend AP on an action first, or Wait";
+  const canAct =
+    !watchOnly &&
+    !notMyTurn &&
+    !gate &&
+    !inventBusy &&
+    (spent || apNotFull || ownScrutiny || state.turnPhase === "between_stages");
+
+  for (const sel of ["#btn-end-turn", "#btn-challenge-end-turn"]) {
+    const btn = $(sel);
+    if (!btn) continue;
+    btn.hidden = false;
+    btn.textContent = label;
+    if (watchOnly) {
+      btn.disabled = true;
+      btn.title =
+        sel === "#btn-challenge-end-turn"
+          ? "Watching only — only the invent owner can finish this Challenge. Leave via seat tabs when you're done looking."
+          : "Watching a Challenge — leave via seat tabs before ending your turn.";
+      continue;
+    }
+    if (notMyTurn) {
+      btn.disabled = true;
+      btn.title = "Not your turn — wait for the active player";
+      continue;
+    }
+    if (gate) {
+      btn.disabled = true;
+      btn.title = "Hit “Let's go” on “It's your turn!” first";
+      continue;
+    }
+    if (inventBusy) {
+      btn.disabled = true;
+      btn.title = inventActionBusyReason();
+      continue;
+    }
+    btn.disabled = !canAct;
+    btn.title = canAct
+      ? b
+        ? isOnlineRoomMp()
+          ? "End your seat-turn (next player becomes active)"
+          : "End your seat-turn and pass to the next player"
+        : "Refill AP without advancing the calendar or crisis"
+      : "Spend AP on an action first, or Wait";
+  }
+  if (watchOnly) applyChallengeWatchOnlyLock();
 }
 
 function endTurn() {
@@ -4144,8 +4175,16 @@ function endTurn() {
     }
     try {
       roomBridge.send({ type: "end_turn" });
-      flashToast("Turn ended — next player");
+      flashToast(
+        state.turnPhase === "scrutiny"
+          ? "Turn ended — invent stays locked mid-Challenge until you resume"
+          : "Turn ended — next player"
+      );
+      // Workshop is fine for waiting; mid-challenge invent must stay frozen
       showScreen("workshop");
+      applyStoryFieldLocks();
+      updateMissionStepPills();
+      updateChallengeButton();
     } catch (e) {
       flashToast(e.message || "Could not end turn");
     }
@@ -4677,7 +4716,15 @@ async function enterChallenge() {
       judging: false,
     });
   } else if (hotseatBridge.isHotseat()) {
+    // Authoritative invent lifecycle (turnPhase scrutiny + inventPhase challenge)
+    const ent = hotseatBridge.applyActiveAction?.({ type: "enter_challenge" });
+    if (ent && !ent.ok) {
+      flashToast(mpFriendlyError(ent.error) || "Cannot enter challenge");
+      return;
+    }
+    hotseatBridge.hydrateSoloState?.(state, { global: state.global });
     state.turnPhase = "scrutiny";
+    state.challengeLocked = false;
     if (state.mp) {
       state.mp.inventLocked = true;
       state.mp.forgePhase = "challenge";
@@ -4685,7 +4732,6 @@ async function enterChallenge() {
       state.mp.canEditStack = false;
     }
     applyStoryFieldLocks();
-    mpSyncFromSolo();
   }
   state.challengeAnswer = "";
   state.challengeFeedback = "";
@@ -5139,55 +5185,10 @@ function renderChallengeHud() {
   }
   // Crisis meters (same as invent top bar, beside Future Forge brand)
   paintHudPressureMeters($("#ch-hud-pressure"));
-  const endBtn = $("#btn-challenge-end-turn");
-  if (endBtn) {
-    if (apEnabled()) {
-      endBtn.hidden = false;
-      const hotseat = hotseatBridge.isHotseat() && !isOnlineRoomMp();
-      const roomMp = isOnlineRoomMp();
-      const b = mpBridge();
-      // Watching someone else's Challenge: look only
-      if (isChallengeWatchOnly()) {
-        endBtn.disabled = true;
-        endBtn.title =
-          "Watching only — only the invent owner can finish this Challenge. Leave via seat tabs when you're done looking.";
-      } else if (b && !b.isMyTurn?.()) {
-        endBtn.disabled = true;
-        endBtn.title = "Not your turn";
-      } else if (isMpTurnGateBlocking()) {
-        endBtn.disabled = true;
-        endBtn.title = "Hit “Let's go” on “It's your turn!” first";
-      } else {
-        // Single rule: spent AP this turn, or AP bar not full (already spent), or own scrutiny engagement
-        const spent = (state.apSpentThisTurn || 0) >= 1;
-        const apNotFull = (state.ap ?? 0) < (state.apMax ?? GAME.apMax ?? 3);
-        const ownScrutiny =
-          state.turnPhase === "scrutiny" && (!b || !b.viewingOther?.());
-        const can =
-          spent ||
-          apNotFull ||
-          ownScrutiny ||
-          state.turnPhase === "between_stages";
-        endBtn.disabled = !can;
-        if (!can) {
-          endBtn.title = hotseat
-            ? "Spend AP first (e.g. Submit defense), then pass the device"
-            : "Spend AP first (e.g. Submit defense), then End turn";
-        } else {
-          endBtn.title = hotseat
-            ? "End your seat-turn and pass the device to the next player"
-            : roomMp
-              ? "End your seat-turn (next player becomes active)"
-              : "Refill AP without advancing the calendar or crisis";
-        }
-      }
-      // Keep invent End turn label + enable rule in sync
-      applyEndTurnChrome();
-      updateEndTurnButton();
-    } else {
-      endBtn.hidden = true;
-    }
-  }
+  // Invent + Challenge End turn: single rule set (includes spectator / not-your-turn)
+  applyEndTurnChrome();
+  updateEndTurnButton();
+  if (isChallengeWatchOnly()) applyChallengeWatchOnlyLock();
   updateSidestepAvailability();
   updateMissionStepPills();
 }
@@ -6104,9 +6105,21 @@ function isChallengeSpectator() {
   return Boolean(state.challengeSpectator && roomBridge.isRoom());
 }
 
-/** True whenever local UI is in watch-only challenge follow (prefer over isChallengeSpectator for locks). */
+/**
+ * True whenever local UI is look-only on the Challenge screen
+ * (spectator follow, not your turn, or browsing another invent's fight).
+ * Prefer this over state.challengeSpectator alone for End-turn / combat locks.
+ */
 function isChallengeWatchOnly() {
-  return Boolean(state.challengeSpectator);
+  if (state.challengeSpectator) return true;
+  if (state.screen !== "challenge-step") return false;
+  const b = mpBridge();
+  if (!b) return false;
+  // Not your seat-turn — never End turn or fight from Challenge chrome
+  if (!b.isMyTurn?.()) return true;
+  // Viewing someone else's invent: look only (unless you can Pilot/Scale their locked invent)
+  if (b.viewingOther?.() && !b.canRunDeploy?.()) return true;
+  return false;
 }
 
 /**
@@ -6115,20 +6128,18 @@ function isChallengeWatchOnly() {
  */
 function applyChallengeWatchOnlyLock() {
   if (!isChallengeWatchOnly()) return;
-  state.challengeSpectator = true;
-  document.body.classList.add("challenge-spectator", "challenge-pose-pending");
-  setChallengePoseBusy(true);
-  const endBtn = $("#btn-challenge-end-turn");
-  if (endBtn) {
+  if (state.challengeSpectator) {
+    document.body.classList.add("challenge-spectator", "challenge-pose-pending");
+    setChallengePoseBusy(true);
+  }
+  for (const sel of ["#btn-challenge-end-turn", "#btn-end-turn"]) {
+    const endBtn = $(sel);
+    if (!endBtn) continue;
     endBtn.disabled = true;
     endBtn.title =
-      "Watching only — only the invent owner can finish this Challenge. Use the seat tabs to leave.";
-  }
-  const inventEnd = $("#btn-end-turn");
-  if (inventEnd) {
-    inventEnd.disabled = true;
-    inventEnd.title =
-      "Watching a Challenge — leave via seat tabs before ending your turn.";
+      sel === "#btn-challenge-end-turn"
+        ? "Watching only — only the invent owner can finish this Challenge. Use the seat tabs to leave."
+        : "Watching a Challenge — leave via seat tabs before ending your turn.";
   }
   // Deploy bay must stay hidden/disabled while watching combat
   const bay = $("#deploy-bay");
@@ -6244,26 +6255,31 @@ function isViewedInventStoryLocked() {
   }
   if (!b.isMyTurn?.()) return true;
   if (!b.canContributeStory?.()) return true;
+  const f = b.invent?.(b.getViewId?.());
+  const fine =
+    b.inventPhaseOf?.(b.getViewId?.()) ||
+    deriveInventPhase(f) ||
+    "invent";
+  // challenge / challenge_locked / deploy / fielded — content frozen
+  if (fine && fine !== "invent") return true;
   const phase = b.viewedPhase?.() || b.forgePhase?.(b.getViewId?.());
   if (phase && phase !== "invent") return true;
-  const f = b.invent?.(b.getViewId?.());
   if (
     f &&
     (f.turnPhase === "scrutiny" ||
       f.challengePassed ||
+      f.challengeLocked ||
       f.deployStage === "pilot_ok" ||
-      f.deployStage === "scaled")
+      f.deployStage === "scaled" ||
+      f.deployStage === "new_normal")
   ) {
     return true;
   }
-  // Own client mid-challenge before next hydrate
-  if (
-    state.turnPhase === "scrutiny" &&
-    state.screen === "challenge-step" &&
-    !state.challengeSpectator
-  ) {
+  // Own client mid-challenge (workshop or challenge screen) before next hydrate
+  if (state.turnPhase === "scrutiny" && !state.challengeSpectator) {
     return true;
   }
+  if (state.challengeLocked) return true;
   return false;
 }
 
@@ -11062,6 +11078,10 @@ function clearStoryFacePending() {
 const marketImageCache = new Map();
 /** Id currently open or about to open (blocks turn notice) */
 let marketNewsOpenId = null;
+/** Auto-dismiss timer for market bulletin (cleared on manual Got it) */
+let marketNewsAutoCloseT = null;
+/** Default seconds before market bulletin auto-closes if not dismissed */
+const MARKET_NEWS_AUTO_CLOSE_MS = 2500;
 /** @type {{ name?: string, isYou?: boolean, mode?: string } | null} */
 let deferredTurnNotice = null;
 /** Year advance banner/HUD pulse is on-screen — hold turn popup so it isn't covered */
@@ -11188,6 +11208,10 @@ function queueMarketNewsModal(news, opts = {}) {
 function closeMarketNewsModal(opts = {}) {
   const el = document.getElementById("market-news-modal");
   if (!el) return;
+  if (marketNewsAutoCloseT) {
+    clearTimeout(marketNewsAutoCloseT);
+    marketNewsAutoCloseT = null;
+  }
   marketNewsOpenId = null;
   document.body.classList.remove("market-news-open");
   el.hidden = true;
@@ -11656,6 +11680,18 @@ function showMarketNewsModal(news) {
       /* ignore */
     }
   }, 30);
+
+  // Auto-dismiss if the player does not click Got it
+  if (marketNewsAutoCloseT) {
+    clearTimeout(marketNewsAutoCloseT);
+    marketNewsAutoCloseT = null;
+  }
+  marketNewsAutoCloseT = setTimeout(() => {
+    marketNewsAutoCloseT = null;
+    if (marketNewsOpenId === news.id && isMarketNewsModalOpen()) {
+      closeMarketNewsModal();
+    }
+  }, MARKET_NEWS_AUTO_CLOSE_MS);
 }
 
 /**
@@ -12282,9 +12318,10 @@ function bind() {
       flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
       return;
     }
-    // Room: enter_challenge is sent inside enterChallenge() (server AP)
-    // Solo/hotseat: local sim spend
-    if (apEnabled() && !roomBridge.isRoom()) {
+    // Room: enter_challenge inside enterChallenge() (server AP)
+    // Hotseat: enter_challenge via mp-session inside enterChallenge()
+    // Solo only: local sim spend here
+    if (apEnabled() && !roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
       const r = dispatchSim("enter_challenge");
       if (!r.ok) {
         if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
@@ -12292,8 +12329,7 @@ function bind() {
         return;
       }
       renderHud();
-      mpSyncFromSolo();
-    } else if (!roomBridge.isRoom()) {
+    } else if (!roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
       state.turnPhase = "scrutiny";
     }
     // Opens the dedicated Challenge screen (same as hotseat) — not invent inline

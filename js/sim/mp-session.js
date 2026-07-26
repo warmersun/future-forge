@@ -1338,6 +1338,13 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         return { ok: false, error: "end_turn_noop", session };
       }
     }
+    // Incomplete Face Challenge: invent stays mid-challenge (frozen) for next seat-turn
+    if (actor.turnPhase === "scrutiny" && !actor.challengePassed && !actor.abandoned) {
+      actor.inventPhase = "challenge";
+      actor.challengeLocked = false;
+      actor.challengePassed = false;
+      // keep turnPhase === "scrutiny" so content stays frozen across handoff
+    }
     events.push({ type: "end_turn", seatId: activeId });
     s = finishEndTurn(s, {
       preferConnectedIds: payload.preferConnectedIds || opts.preferConnectedIds,
