@@ -3352,8 +3352,15 @@ function placeFillOtherButton(face) {
   const btn = $("#btn-fill-other");
   const header = face === "life" ? $("#header-life") : $("#header-how");
   if (!btn || !header) return;
+  // Spark: never surface Fill other side (single story face)
+  if (singleStoryFaceEnabled()) {
+    btn.hidden = true;
+    btn.setAttribute("hidden", "");
+    return;
+  }
   header.appendChild(btn);
   btn.hidden = false;
+  btn.removeAttribute("hidden");
 }
 
 /**
@@ -3387,10 +3394,12 @@ function renderStoryFaceUI() {
   const fillBtn = $("#btn-fill-other");
 
   // Spark: hide dual-face chrome; Workshop: restore
-  if (storyMode) {
-    storyMode.hidden = sparkSingle;
-    if (sparkSingle) storyMode.setAttribute("hidden", "");
-    else storyMode.removeAttribute("hidden");
+  // Prefer #story-mode id (stable); fall back to class
+  const storyModeEl = $("#story-mode") || storyMode;
+  if (storyModeEl) {
+    storyModeEl.hidden = sparkSingle;
+    if (sparkSingle) storyModeEl.setAttribute("hidden", "");
+    else storyModeEl.removeAttribute("hidden");
   }
   if (hint) {
     hint.hidden = sparkSingle;
@@ -3402,9 +3411,11 @@ function renderStoryFaceUI() {
     if (sparkSingle) fieldLife.setAttribute("hidden", "");
     else fieldLife.removeAttribute("hidden");
   }
-  if (fillBtn && sparkSingle) {
-    fillBtn.hidden = true;
-    fillBtn.setAttribute("hidden", "");
+  if (fillBtn) {
+    if (sparkSingle) {
+      fillBtn.hidden = true;
+      fillBtn.setAttribute("hidden", "");
+    }
   }
 
   const b = mpBridge();
@@ -3463,6 +3474,11 @@ function renderStoryFaceUI() {
     if (noteLife) {
       noteLife.hidden = true;
       noteLife.setAttribute("hidden", "");
+    }
+    // Keep fill button out of the layout even if a later path calls placeFillOtherButton
+    if (fillBtn) {
+      fillBtn.hidden = true;
+      fillBtn.setAttribute("hidden", "");
     }
     return;
   }

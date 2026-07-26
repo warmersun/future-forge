@@ -1639,6 +1639,12 @@ body.mp-hotseat .workshop-layout {
   transition: transform 0.15s var(--ease), box-shadow 0.15s, background 0.15s;
 }
 
+/* .btn { display:inline-flex } beats the UA [hidden] rule — force hide (Spark Lobby / End turn / Fill other side) */
+.btn[hidden],
+button.btn[hidden] {
+  display: none !important;
+}
+
 .btn:hover:not(:disabled) {
   transform: translateY(-1px);
 }
@@ -2714,6 +2720,13 @@ body.mp-hotseat .hud-product {
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.25rem;
+}
+
+/* display:flex beats UA [hidden] — Spark hides Focus / dual-face chrome via hidden */
+.story-mode[hidden],
+.story-mode-hint[hidden],
+.story-face-field[hidden] {
+  display: none !important;
 }
 
 .story-mode-label {
