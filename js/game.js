@@ -5,6 +5,8 @@
 import {
   GAME,
   GLOBALS,
+  THEME_SHELVES,
+  START_HERE_THEME_IDS,
   MISSIONS,
   TECHS,
   DOMAINS,
@@ -2714,24 +2716,20 @@ function pinMission(mission, global) {
   return r;
 }
 
-function renderGlobals() {
-  const grid = $("#global-grid");
-  // Fresh random order each time the Themes screen is painted
-  const themes = shuffleCopy(GLOBALS);
-  grid.innerHTML = themes
-    .map((g) => {
-      const tag = g.kind === "before" ? "Before it hits" : "Now";
-      const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
-      const cachedList = state.scenarioCache[g.id] || [];
-      const cached = cachedList.length;
-      const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
-      const hint = cached
-        ? solvedOnTheme
-          ? `${cached} cached · ${solvedOnTheme} solved →`
-          : `${cached} cached Challenges →`
-        : "Generate Quests →";
-      const img = problemVisualUrl(g.id);
-      return `
+/** One theme card HTML for Choose a theme shelves. */
+function themeCardHtml(g) {
+  const tag = g.kind === "before" ? "Before it hits" : "Now";
+  const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
+  const cachedList = state.scenarioCache[g.id] || [];
+  const cached = cachedList.length;
+  const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
+  const hint = cached
+    ? solvedOnTheme
+      ? `${cached} cached · ${solvedOnTheme} solved →`
+      : `${cached} cached Challenges →`
+    : "Generate Quests →";
+  const img = problemVisualUrl(g.id);
+  return `
       <button type="button" class="challenge-card challenge-card-visual" data-id="${g.id}">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
@@ -2743,9 +2741,58 @@ function renderGlobals() {
           <span class="cta">${hint}</span>
         </span>
       </button>`;
-    })
-    .join("");
-  grid.querySelectorAll(".challenge-card").forEach((btn) => {
+}
+
+/**
+ * Theme picker: Start here row + shelf sections (not a flat shuffled wall).
+ * Spark one-click Portside is separate (title CTA) and unchanged.
+ */
+function renderGlobals() {
+  const root = $("#global-grid");
+  if (!root) return;
+
+  const byId = new Map(GLOBALS.map((g) => [g.id, g]));
+  const startThemes = START_HERE_THEME_IDS.map((id) => byId.get(id)).filter(Boolean);
+
+  const shelfSections = THEME_SHELVES.map((shelf) => {
+    const themes = GLOBALS.filter((g) => g.shelf === shelf.id).sort((a, b) =>
+      a.title.localeCompare(b.title)
+    );
+    return { shelf, themes };
+  }).filter((s) => s.themes.length);
+
+  // Orphans (missing shelf) still appear so nothing is lost
+  const shelved = new Set(GLOBALS.filter((g) => g.shelf).map((g) => g.id));
+  const orphans = GLOBALS.filter((g) => !shelved.has(g.id));
+
+  let html = "";
+  if (startThemes.length) {
+    html += `
+      <section class="theme-shelf theme-shelf-start" aria-labelledby="theme-shelf-start">
+        <h2 id="theme-shelf-start" class="theme-shelf-title">Start here</h2>
+        <p class="theme-shelf-blurb muted">Six solid first themes — or browse shelves below.</p>
+        <div class="challenge-grid">${startThemes.map(themeCardHtml).join("")}</div>
+      </section>`;
+  }
+  for (const { shelf, themes } of shelfSections) {
+    html += `
+      <section class="theme-shelf" aria-labelledby="theme-shelf-${escapeHtml(shelf.id)}">
+        <h2 id="theme-shelf-${escapeHtml(shelf.id)}" class="theme-shelf-title">${escapeHtml(
+          shelf.title
+        )}</h2>
+        <div class="challenge-grid">${themes.map(themeCardHtml).join("")}</div>
+      </section>`;
+  }
+  if (orphans.length) {
+    html += `
+      <section class="theme-shelf" aria-labelledby="theme-shelf-more">
+        <h2 id="theme-shelf-more" class="theme-shelf-title">More themes</h2>
+        <div class="challenge-grid">${orphans.map(themeCardHtml).join("")}</div>
+      </section>`;
+  }
+
+  root.innerHTML = html;
+  root.querySelectorAll(".challenge-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.global = globalById(btn.dataset.id);
       showScreen("mission");

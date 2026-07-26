@@ -1956,6 +1956,28 @@ button.btn[hidden] {
   margin: 0;
 }
 
+.theme-shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.theme-shelf-title {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.01em;
+}
+
+.theme-shelf-blurb {
+  margin: 0 0 0.85rem;
+}
+
+.theme-shelf-start {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
 .challenge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
