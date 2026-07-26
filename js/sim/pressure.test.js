@@ -17,7 +17,7 @@ import {
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
 import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
-import { GAME } from "../data.js";
+import { GAME, TECHS } from "../data.js";
 
 describe("pressure", () => {
   it("applies full Wait rise (portside-style)", () => {
@@ -191,6 +191,69 @@ describe("actions", () => {
     assert.equal(r.ok, true);
     assert.equal(r.sim.ap, 2);
     assert.deepEqual(r.sim.selectedTechIds, ["solar"]);
+  });
+
+  it("select_tech enforces stackCap 3 (Spark)", () => {
+    let s = base();
+    s.ap = 10;
+    const feats = { actionPoints: true, stackCap: 3 };
+    for (const id of ["solar", "battery", "iot"]) {
+      const r = applyAction(s, { type: "select_tech", payload: { techId: id } }, {
+        features: feats,
+      });
+      assert.equal(r.ok, true, id);
+      s = r.sim;
+    }
+    assert.equal(s.selectedTechIds.length, 3);
+    const blocked = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "ai" } },
+      { features: feats }
+    );
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.error, "stack full");
+    assert.equal(blocked.sim.selectedTechIds.length, 3);
+  });
+
+  it("select_tech allows 6 when stackCap is 6 (Workshop)", () => {
+    let s = base();
+    s.ap = 12;
+    const feats = { actionPoints: true, stackCap: 6 };
+    const ids = ["solar", "battery", "iot", "ai", "networks", "drones"];
+    for (const id of ids) {
+      const r = applyAction(s, { type: "select_tech", payload: { techId: id } }, {
+        features: feats,
+      });
+      assert.equal(r.ok, true, id);
+      s = r.sim;
+    }
+    assert.equal(s.selectedTechIds.length, 6);
+    const blocked = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "wind" } },
+      { features: feats }
+    );
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.error, "stack full");
+  });
+
+  it("marks the twelve Spark starter techs", () => {
+    const starters = TECHS.filter((t) => t.starter).map((t) => t.id).sort();
+    assert.deepEqual(starters, [
+      "ai",
+      "battery",
+      "drones",
+      "gene-sequencing",
+      "iot",
+      "materials",
+      "networks",
+      "print3d",
+      "robots",
+      "solar",
+      "transportation",
+      "wind",
+    ]);
+    assert.equal(TECHS.some((t) => t.id === "quantum" && !t.starter), true);
   });
 
   it("reserve_ai in scrutiny restores scrutiny phase on resolve (AP stays spent)", () => {

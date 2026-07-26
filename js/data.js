@@ -602,6 +602,25 @@ export const TECHS = [
     { people: "health-aura", narrative: "Tiny layers clean and deliver carefully." }),
 ];
 
+/** Spark first-run tray (~12); Workshop still shows full catalog */
+const STARTER_TECH_IDS = new Set([
+  "solar",
+  "battery",
+  "iot",
+  "ai",
+  "networks",
+  "drones",
+  "materials",
+  "print3d",
+  "gene-sequencing",
+  "robots",
+  "wind",
+  "transportation",
+]);
+for (const t of TECHS) {
+  if (STARTER_TECH_IDS.has(t.id)) t.starter = true;
+}
+
 function tech(id, name, icon, domain, readyYear, curve, summary, learn, inventionHint, risk, pairs, vision) {
   return {
     id,
@@ -617,6 +636,7 @@ function tech(id, name, icon, domain, readyYear, curve, summary, learn, inventio
     risk,
     pairs,
     vision,
+    starter: false,
     ...capabilitySeed(id, name, summary),
   };
 }

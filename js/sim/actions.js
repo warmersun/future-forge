@@ -48,7 +48,12 @@ export function applyAction(sim, action, opts = {}) {
     if (!id) return { ok: false, error: "missing tech", sim };
     const ids = [...(next.selectedTechIds || [])];
     if (ids.includes(id)) return { ok: true, events: [], sim: next };
-    if (ids.length >= 6) return { ok: false, error: "stack full", sim };
+    // Spark stackCap 3; Workshop / default 6 (features.stackCap from play-mode)
+    const stackCap =
+      typeof features.stackCap === "number" && features.stackCap > 0
+        ? features.stackCap
+        : 6;
+    if (ids.length >= stackCap) return { ok: false, error: "stack full", sim };
     if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
 
     const tech = action.payload?.tech || techById(id);

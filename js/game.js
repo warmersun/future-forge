@@ -478,6 +478,28 @@ function deployStagesEnabled() {
   return Boolean(features().deployStages);
 }
 
+/** Max techs on stack — Spark 3, Workshop 6 (from play-mode profile). */
+function stackCapLimit() {
+  const c = features().stackCap;
+  if (typeof c === "number" && c > 0) return Math.floor(c);
+  return 6;
+}
+
+/** Spark: only starter techs (+ mission.suggested). Workshop: full catalog. */
+function starterTechOnlyEnabled() {
+  return Boolean(features().starterTechOnly);
+}
+
+/**
+ * Techs shown in the invent tray for the current mode.
+ * Spark: starters plus any mission-suggested ids (even non-starters).
+ */
+function techsForTray() {
+  if (!starterTechOnlyEnabled()) return [...TECHS];
+  const suggested = new Set(state.mission?.suggested || []);
+  return TECHS.filter((t) => t.starter || suggested.has(t.id));
+}
+
 /** Active market card (solo state or shared place in multiplayer). */
 function currentMarketNews() {
   return state.marketNews || null;
@@ -3857,7 +3879,7 @@ function renderFilters() {
 
 function renderTechList() {
   const suggested = new Set(state.mission?.suggested || []);
-  let list = [...TECHS];
+  let list = techsForTray();
   if (state.domainFilter !== "all") list = list.filter((t) => t.domain === state.domainFilter);
   list.sort((a, b) => {
     const ar = suggested.has(a.id) ? 0 : 1;
@@ -4017,6 +4039,7 @@ function onTechClick(id) {
           flashUnaffordableTech(id, afford.error);
           return;
         }
+        // Online rooms keep table cap (not Spark solo profile)
         if (state.selectedTechIds.length >= 8) {
           flashToast("Stack full (8). Remove one first.");
           return;
@@ -4101,8 +4124,9 @@ function onTechClick(id) {
     if (!r.ok) return;
     removeFromLearnOrder(id);
   } else {
-    if (state.selectedTechIds.length >= 8) {
-      flashToast("Stack full (8). Remove one first.");
+    const cap = stackCapLimit();
+    if (state.selectedTechIds.length >= cap) {
+      flashToast(`Stack full (${cap}). Remove one first.`);
       return;
     }
     // Local pre-check so we never paint ✓ then roll back on failed spend
@@ -4115,7 +4139,9 @@ function onTechClick(id) {
     if (!r.ok) {
       if (r.error === "no_ap" || r.error === "no_budget" || r.error === "no_will") {
         flashUnaffordableTech(id, r.error);
-      } else if (r.error === "stack full") flashToast("Stack full.");
+      } else if (r.error === "stack full") {
+        flashToast(`Stack full (${stackCapLimit()}). Remove one first.`);
+      }
       // dispatchSim does not apply slice on failure — selectedTechIds unchanged
       return;
     }
@@ -11466,8 +11492,9 @@ function applyCoInventorProposals(proposals) {
   for (const id of proposals.addTechIds || []) {
     if (!techById(id)) continue;
     if (state.selectedTechIds.includes(id)) continue;
-    if (state.selectedTechIds.length >= 8) {
-      flashToast("Stack full (8). Remove one first.");
+    const cap = stackCapLimit();
+    if (state.selectedTechIds.length >= cap) {
+      flashToast(`Stack full (${cap}). Remove one first.`);
       break;
     }
     onTechClick(id);
