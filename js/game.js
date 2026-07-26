@@ -5121,11 +5121,79 @@ function waitTurn(opts = {}) {
   );
 }
 
+/**
+ * Essay-only (Spark / scrutinyCombat off): stakeholder + nature.
+ * Full combat Workshop: all CHALLENGE_ANGLES.
+ */
+function challengeAnglePool() {
+  if (!scrutinyCombatEnabled()) {
+    const soft = CHALLENGE_ANGLES.filter(
+      (a) => a.id === "stakeholder" || a.id === "nature"
+    );
+    if (soft.length) return soft;
+  }
+  return CHALLENGE_ANGLES;
+}
+
 function pickChallengeAngle() {
   const used = state.challengeAngle;
-  const pool = CHALLENGE_ANGLES.filter((a) => a.id !== used);
-  const list = pool.length ? pool : CHALLENGE_ANGLES;
+  const angles = challengeAnglePool();
+  const pool = angles.filter((a) => a.id !== used);
+  const list = pool.length ? pool : angles;
   return list[Math.floor(Math.random() * list.length)];
+}
+
+/**
+ * Essay challenge chrome: answer box + submit only — never Argue/Patch/Pivot.
+ */
+function setupEssayChallengeChrome() {
+  const moves = $("#scrutiny-moves");
+  if (moves) {
+    moves.hidden = true;
+    moves.setAttribute("hidden", "");
+  }
+  $$(".scrutiny-move-btn").forEach((btn) => {
+    btn.classList.remove("is-selected");
+    btn.setAttribute("aria-checked", "false");
+  });
+  const fix = $("#mode-panel-fix");
+  const side = $("#mode-panel-sidestep");
+  if (fix) {
+    fix.hidden = true;
+    fix.setAttribute("hidden", "");
+  }
+  if (side) {
+    side.hidden = true;
+    side.setAttribute("hidden", "");
+  }
+  const defend = $("#mode-panel-defend");
+  if (defend) {
+    defend.hidden = false;
+    defend.removeAttribute("hidden");
+  }
+  const label = $("#challenge-answer-label");
+  if (label) label.textContent = "Your answer";
+  const submit = $("#btn-challenge-submit");
+  if (submit) {
+    submit.hidden = false;
+    submit.removeAttribute("hidden");
+    submit.textContent = apEnabled() ? "Submit answer (1 AP)" : "Submit answer";
+    submit.title = apEnabled()
+      ? "Submit your written answer (costs 1 AP when judgment runs)"
+      : "Submit your written answer to this challenge";
+  }
+  const box = $("#scrutiny-encounters");
+  if (box) {
+    box.hidden = true;
+    box.setAttribute("hidden", "");
+  }
+  const status = $("#scrutiny-status");
+  if (status) {
+    status.hidden = true;
+    status.setAttribute("hidden", "");
+  }
+  // Essay is not multi-move combat
+  state.scrutinyMoveMode = null;
 }
 
 function localPose(angle) {
@@ -5675,6 +5743,10 @@ async function enterChallenge() {
   state.challengeVisionBeat = null;
   state.challengeSideTab = "vision";
   if (state.challengeFails >= 2) state.challengeFails = 0;
+  // Solo: mark mid-challenge so submit/canFight work (rooms/hotseat already set this)
+  if (!roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
+    state.turnPhase = "scrutiny";
+  }
 
   if (scrutinyCombatEnabled()) {
     const feas = assessFeasibility();
@@ -5711,6 +5783,7 @@ async function enterChallenge() {
     return;
   }
 
+  // Essay-only path (Spark / scrutinyCombat off) — no move grid
   state.scrutiny = null;
   const angle = pickChallengeAngle();
   state.challengeAngle = angle.id;
@@ -5725,6 +5798,7 @@ async function enterChallenge() {
     });
   }
   showScreen("challenge-step");
+  setupEssayChallengeChrome();
   await poseChallenge(angle);
 }
 
@@ -6043,14 +6117,7 @@ function renderScrutinyEncounters() {
 
 async function poseChallenge(angleMeta) {
   const angle = angleMeta || CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
-  const box = $("#scrutiny-encounters");
-  const status = $("#scrutiny-status");
-  const moves = $("#scrutiny-moves");
-  if (box) box.hidden = true;
-  if (status) status.hidden = true;
-  if (moves) moves.hidden = true;
-  const essayBtn = $("#btn-challenge-submit");
-  if (essayBtn) essayBtn.hidden = false;
+  setupEssayChallengeChrome();
   setChallengePoseBusy(true);
 
   state.challengeAngle = angle.id;
@@ -6063,7 +6130,8 @@ async function poseChallenge(angleMeta) {
   $("#challenge-feedback")?.classList.remove("is-pending", "pass", "partial", "fail");
   const bayEssay = $("#deploy-bay");
   if (bayEssay) bayEssay.hidden = true;
-  $("#btn-challenge-submit").disabled = true;
+  const essayBtn = $("#btn-challenge-submit");
+  if (essayBtn) essayBtn.disabled = true;
   renderChallengeHud();
 
   try {
@@ -6123,7 +6191,9 @@ async function poseChallenge(angleMeta) {
     state.challengeRevealPending = false;
     document.body.classList.remove("challenge-reveal-pending");
     setChallengePoseBusy(false);
-    $("#btn-challenge-submit").disabled = false;
+    setupEssayChallengeChrome();
+    const essayBtnDone = $("#btn-challenge-submit");
+    if (essayBtnDone) essayBtnDone.disabled = false;
     renderChallengeHud();
     roomSyncChallengeView({
       angle: state.challengeAngle,
@@ -6284,9 +6354,19 @@ function updateSidestepAvailability() {
  * @param {{ spectator?: boolean, activeName?: string }} [opts]
  */
 function paintScrutinyMoveModeChrome(mode, opts = {}) {
+  // Never paint Argue/Patch/Pivot when combat is off (Spark essay)
+  if (!scrutinyCombatEnabled() || !state.scrutiny) {
+    setupEssayChallengeChrome();
+    return;
+  }
   const m = mode === "fix" || mode === "sidestep" ? mode : "defend";
   state.scrutinyMoveMode = m;
   const sidestepUsed = Boolean(state.scrutiny?.pivotUsed || state.elegancePivotPenalty);
+  const moves = $("#scrutiny-moves");
+  if (moves) {
+    moves.hidden = false;
+    moves.removeAttribute("hidden");
+  }
   $$(".scrutiny-move-btn").forEach((btn) => {
     const on = btn.dataset.mode === m;
     btn.classList.toggle("is-selected", on);
@@ -6304,6 +6384,11 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
   if (defend) defend.hidden = m !== "defend";
   if (fix) fix.hidden = m !== "fix";
   if (side) side.hidden = m !== "sidestep";
+  // Combat defend button label (essay path uses setupEssayChallengeChrome)
+  const submit = $("#btn-challenge-submit");
+  if (submit && m === "defend" && !opts.spectator) {
+    submit.textContent = apEnabled() ? "Submit defense (1 AP)" : "Submit defense";
+  }
 
   if (m === "fix") {
     const howEdit = $("#challenge-how-edit");
@@ -6351,6 +6436,11 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
 
 /** Select Defend / Fix / Sidestep — toggle only; does not spend AP until confirm */
 function setScrutinyMoveMode(mode) {
+  // Spark / essay path: never open the strategy trio
+  if (!scrutinyCombatEnabled() || !state.scrutiny) {
+    setupEssayChallengeChrome();
+    return;
+  }
   if (blockIfMpTurnGate("choosing a challenge move")) return;
   if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
@@ -6422,14 +6512,8 @@ function renderChallengeStep() {
     renderChallengeHud();
     return;
   }
-  // Essay fallback mode
-  const moves = $("#scrutiny-moves");
-  if (moves) moves.hidden = true;
-  const box = $("#scrutiny-encounters");
-  if (box) box.hidden = true;
-  const status = $("#scrutiny-status");
-  if (status) status.hidden = true;
-  setScrutinyMoveMode("defend");
+  // Essay fallback mode (Spark / scrutinyCombat off) — answer box only
+  setupEssayChallengeChrome();
   const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
   if (angle) {
     $("#challenge-angle-title").textContent = angle.label;
@@ -7228,10 +7312,12 @@ function canFightChallengeCombat() {
   if (state.challengeRevealPending) return false;
   const b = mpBridge();
   if (!b) {
-    // Solo: only while this invent is mid-challenge combat
+    // Solo: mid Face-Challenge (essay or combat) until passed
+    if (state.challengePassed) return false;
     return (
       state.turnPhase === "scrutiny" ||
-      (Boolean(state.scrutiny) && !state.challengePassed)
+      state.screen === "challenge-step" ||
+      Boolean(state.scrutiny)
     );
   }
   if (!b.isMyTurn?.()) return false;
@@ -8737,7 +8823,20 @@ async function coachChallenge(mode, userText) {
 
 async function submitChallengeAnswer() {
   if (blockIfMpTurnGate("submitting a defense")) return;
-  if (!canFightChallengeCombat()) {
+  // Combat defend vs essay answer use the same button; combat still needs owner mid-fight
+  if (scrutinyCombatEnabled() && state.scrutiny) {
+    if (!canFightChallengeCombat()) {
+      lockChallengeCombatChrome();
+      flashToast("Only the invent owner can submit a defense mid-Challenge.");
+      return;
+    }
+  } else if (!canFightChallengeCombat() && state.screen === "challenge-step") {
+    // Essay: allow solo / owner on challenge screen even if phase flags lag
+    if (mpBridge() && !mpBridge().isMyTurn?.()) {
+      flashToast("Only the invent owner can submit an answer mid-Challenge.");
+      return;
+    }
+  } else if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
     flashToast("Only the invent owner can submit a defense mid-Challenge.");
     return;
@@ -8750,6 +8849,8 @@ async function submitChallengeAnswer() {
     await scrutinyArgue();
     return;
   }
+  // —— Essay-only judgment (Spark) ——
+  setupEssayChallengeChrome();
   const answer = $("#challenge-answer").value.trim();
   state.challengeAnswer = answer;
   if (answer.length < 20) {
@@ -8810,6 +8911,7 @@ async function submitChallengeAnswer() {
         "<br/>Both story faces are required (how it works + everyday life). Return to Invent and finish them.";
     } else {
       state.challengePassed = true;
+      state.challengeClearMode = state.challengeClearMode || "essay";
       if (deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
     }
     if (budgetWillEnabled()) {
@@ -8821,6 +8923,7 @@ async function submitChallengeAnswer() {
     const ok = answer.length >= 40 && bothStoryFacesReady();
     state.challengeVerdict = ok ? "partial" : "fail";
     state.challengePassed = ok;
+    if (ok) state.challengeClearMode = state.challengeClearMode || "essay";
     if (ok && deployStagesEnabled() && !state.deployUnlocked) unlockDeployBay();
     state.hadChallengeAttempt = true;
     state.lastChallengeVerdict = state.challengeVerdict;
@@ -8849,6 +8952,11 @@ async function submitChallengeAnswer() {
     if (!state.deployUnlocked) unlockDeployBay();
     return;
   }
+  // Essay pass with deploy stages off: still mark clear for field path
+  if (state.challengePassed && !deployStagesEnabled()) {
+    state.challengeClearMode = state.challengeClearMode || "essay";
+  }
+  setupEssayChallengeChrome();
   renderChallengeStep();
 }
 
