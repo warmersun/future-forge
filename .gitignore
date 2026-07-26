@@ -8,3 +8,6 @@ node_modules/
 .vscode/
 dist/
 coverage/
+
+# Local research notes (not game assets)
+problems/
