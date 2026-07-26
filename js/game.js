@@ -3848,7 +3848,7 @@ function paintResourceChips(prefix) {
     showHudChip(budgetEl, true);
     showHudChip(willEl, true);
     if (budgetEl) budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-    if (willEl) willEl.textContent = `Will ${state.will ?? 0}`;
+    if (willEl) willEl.textContent = `Support ${state.will ?? 0}`;
   } else {
     showHudChip(budgetEl, false);
     showHudChip(willEl, false);
@@ -3880,7 +3880,7 @@ function renderHud() {
   const willEl = $("#hud-will");
   if (willEl && budgetWillEnabled()) {
     willEl.title =
-      "Political will (not a crisis meter). ≥4 boosts deploy drop; 0 hurts it. Lobby raises will.";
+      "Support (public + policy) — not a crisis meter. ≥4 boosts deploy drop; 0 hurts it. Lobby raises Support.";
   }
   syncEconomyChromeVisibility();
   paintHudPressureMeters($("#hud-pressure"));
@@ -3892,7 +3892,7 @@ function renderHud() {
   syncInventActionButtons();
 }
 
-/** Highlight Invent · Challenge · Deploy pills on workshop + challenge top bars */
+/** Highlight Invent · Challenge · Field pills on workshop + challenge + deploy top bars */
 function updateMissionStepPills() {
   const b = mpBridge();
   const viewId = b?.getViewId?.();
@@ -4012,7 +4012,7 @@ function renderTechList() {
           bits.push(
             `<span class="tech-cost-chip tech-cost-will${
               wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
-            }" title="Political will needed to adopt this">Will ${cost.will}${
+            }" title="Support needed to adopt this">Support ${cost.will}${
               wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
             }</span>`
           );
@@ -4365,11 +4365,11 @@ function updateChallengeButton() {
   const spectatorReason =
     "Not your turn — you can browse and use Learn, but only the active player acts.";
 
-  // Multiplayer spectator (not your turn): never Face challenge
+  // Multiplayer spectator (not your turn): never start the hard question
   if (spectator) {
     btn.disabled = true;
     btn.title = spectatorReason;
-    btn.textContent = "Face the challenge →";
+    btn.textContent = "Answer the hard question →";
     const hint = $("#challenge-ready-hint");
     if (hint) {
       hint.textContent = spectatorReason;
@@ -4388,9 +4388,9 @@ function updateChallengeButton() {
     const fielded =
       state.deployStage === "new_normal" || state.deployStage === "scale";
     if (fielded) {
-      // Invent already scaled — no Face / no deploy re-entry from workshop
+      // Invent already scaled — no hard-question / no deploy re-entry from workshop
       btn.disabled = true;
-      btn.textContent = "Face the challenge →";
+      btn.textContent = "Answer the hard question →";
       btn.title = "This invent already Scaled — Quest continues or is held.";
       const hint = $("#challenge-ready-hint");
       if (hint) {
@@ -4400,19 +4400,19 @@ function updateChallengeButton() {
       return;
     }
     btn.disabled = !canDeploy;
-    btn.textContent = "Continue to Deploy →";
+    btn.textContent = "Continue to Field →";
     btn.title = inventBusy
       ? inventActionBusyReason()
       : canDeploy
         ? "Open Pilot / Scale for this invent"
-        : "Not your turn, or this invent is not ready to deploy";
+        : "Not your turn, or this invent is not ready to field";
     const hint = $("#challenge-ready-hint");
     if (hint) {
       if (inventBusy) {
         hint.textContent = inventActionBusyReason();
         hint.className = "challenge-ready-hint blocked";
       } else if (canDeploy) {
-        hint.textContent = "Challenge cleared — continue to Deploy (Pilot → Scale).";
+        hint.textContent = "Challenge cleared — continue to Field (Pilot → Scale).";
         hint.className = "challenge-ready-hint ready";
       } else {
         hint.textContent = "Only the active player can Pilot/Scale this invent.";
@@ -4421,7 +4421,7 @@ function updateChallengeButton() {
     }
     return;
   }
-  btn.textContent = "Face the challenge →";
+  btn.textContent = "Answer the hard question →";
   // Don't re-enable while Fill other side / co-inventor is still drafting
   if (isInventActionBusy()) {
     btn.disabled = true;
@@ -4439,8 +4439,8 @@ function updateChallengeButton() {
   let ok = f.canChallenge;
   let title = ok
     ? f.overall === "yellow"
-      ? "Feasibility yellow — you can still face the challenge"
-      : "Feasibility green — face a random challenge next"
+      ? "Feasibility yellow — you can still answer the hard question"
+      : "Feasibility green — answer a hard question next"
     : reason;
   // Multiplayer: only owner faces Challenge on their invent
   if (b && !b.canFaceChallenge?.()) {
@@ -4456,8 +4456,8 @@ function updateChallengeButton() {
     if (ok) {
       hint.textContent =
         f.overall === "green"
-          ? "Feasibility green — face the challenge when ready."
-          : "Feasibility yellow — risky but allowed. Challenge next.";
+          ? "Feasibility green — answer the hard question when ready."
+          : "Feasibility yellow — risky but allowed. Hard question next.";
       hint.className = "challenge-ready-hint ready";
     } else {
       hint.textContent = title;
@@ -4495,7 +4495,7 @@ function buildWaitConfirmHtml(ctx = {}) {
       const a = pressure[k] ?? 0;
       const b = nextPressure[k] ?? 0;
       const hot = b >= 4 ? ' class="bad"' : "";
-      return `<span${hot}>${escapeHtml(k)} ${a}→${b}</span>`;
+      return `<span${hot}>${escapeHtml(crisisMeterDisplayLabel(k))} ${a}→${b}</span>`;
     })
     .join(" · ");
 
@@ -6220,6 +6220,15 @@ async function poseChallenge(angleMeta) {
 }
 
 /**
+ * Display label for a crisis meter key (logic keys unchanged).
+ * Trust → Public confidence for players.
+ */
+function crisisMeterDisplayLabel(key) {
+  if (key === "Trust") return "Public confidence";
+  return String(key || "");
+}
+
+/**
  * Paint crisis ●○○ chips into a .hud-pressure container (invent + challenge top bars).
  * Color is dynamic vs this Quest's winMax (no extra HUD text):
  * green = at/under goal · yellow = above goal · red = dangerous (4–5).
@@ -6233,14 +6242,15 @@ function paintHudPressureMeters(box) {
       const n = Math.max(0, Math.min(5, Math.round(Number(v) || 0)));
       const goal = winMax[k];
       const level = crisisMeterLevel(n, goal);
+      const label = crisisMeterDisplayLabel(k);
       const goalBit =
         goal != null && !Number.isNaN(Number(goal))
           ? ` · goal ≤${Math.round(Number(goal))}`
           : "";
       return `<span class="meter ${level}" title="${escapeHtml(
-        k
+        label
       )}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers."><b>${escapeHtml(
-        k
+        label
       )}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
     })
     .join("");
@@ -6272,7 +6282,7 @@ function renderChallengeHud() {
   }
   const willEl = $("#ch-hud-will");
   if (willEl && budgetWillEnabled()) {
-    willEl.title = "Political will (same as invent). Sidestep costs 1 Will.";
+    willEl.title = "Support (same as invent). Sidestep costs 1 Support.";
   }
   syncEconomyChromeVisibility();
   // Crisis meters (same as invent top bar, beside Future Forge brand)
@@ -6297,7 +6307,7 @@ function currentSidestepCost() {
 function formatSidestepCostShort(cost) {
   if (!cost?.ok) return "—";
   const bits = [`${cost.ap} AP`];
-  if (budgetWillEnabled()) bits.push(`${cost.will} Will`);
+  if (budgetWillEnabled()) bits.push(`${cost.will} Support`);
   return bits.join(" · ");
 }
 
@@ -6946,7 +6956,7 @@ function scrutinyPivot() {
   }
   if (budgetWillEnabled() && willHave < needWill) {
     flashToast(
-      `Sidestep needs ${needWill} Political will for ${cost.hearts}♥ left (have ${willHave}). Lobby on Invent first.`,
+      `Sidestep needs ${needWill} Support for ${cost.hearts}♥ left (have ${willHave}). Lobby on Invent first.`,
       { resource: "will" }
     );
     renderChallengeHud();
@@ -9321,7 +9331,7 @@ function renderDeployHud() {
   }
   const willEl = $("#dep-hud-will");
   if (willEl && budgetWillEnabled()) {
-    willEl.title = "Political will (same as invent).";
+    willEl.title = "Support (same as invent).";
   }
   syncEconomyChromeVisibility();
   paintHudPressureMeters($("#dep-hud-pressure"));
