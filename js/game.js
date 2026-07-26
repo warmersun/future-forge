@@ -107,6 +107,7 @@ import {
   readPlayMode,
   readHasCompletedSpark,
   markSparkCompleted,
+  resetSparkProgress,
 } from "./sim/play-mode.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
@@ -2548,24 +2549,51 @@ function currentSoloPlayMode() {
 /**
  * Spark: primary Play → Portside; secondary Choose a theme.
  * Workshop: primary Choose a theme → (Surprise / Daily unchanged).
+ * Always offer restart first-run when the player has left Spark (demo-friendly).
  */
 function renderTitleCtas() {
   const mode = currentSoloPlayMode();
   const start = $("#btn-start");
   const choose = $("#btn-choose-theme");
+  const resetSpark = $("#btn-reset-spark");
   if (!start) return;
   if (mode === "spark") {
     start.textContent = "Play →";
     start.setAttribute("title", "Start Portside Ward floods");
     if (choose) {
       choose.hidden = false;
+      choose.removeAttribute("hidden");
       choose.textContent = "Choose a theme";
     }
   } else {
     start.textContent = "Choose a theme →";
     start.removeAttribute("title");
-    if (choose) choose.hidden = true;
+    if (choose) {
+      choose.hidden = true;
+      choose.setAttribute("hidden", "");
+    }
   }
+  // Show when Workshop (or graduation flag) so demos can return to first-run without DevTools
+  if (resetSpark) {
+    const showReset = mode !== "spark" || readHasCompletedSpark();
+    resetSpark.hidden = !showReset;
+    if (showReset) resetSpark.removeAttribute("hidden");
+    else resetSpark.setAttribute("hidden", "");
+  }
+}
+
+/** Clear Spark graduation; title becomes first-run again. */
+function requestResetSparkProgress() {
+  const ok = confirm(
+    "Restart the first-run experience (Spark)?\n\n" +
+      "The next Play will use the quieter first-run mode again — good for showing someone new.\n" +
+      "This does not delete pinned missions or theme caches."
+  );
+  if (!ok) return;
+  resetSparkProgress();
+  state.playMode = "spark";
+  renderTitleMeta();
+  flashToast("First-run (Spark) restored — Play → starts Portside again.");
 }
 
 function renderTitleMeta() {
@@ -13937,11 +13965,14 @@ function bind() {
     leaveHotseat();
     showScreen("global");
   });
+  $("#btn-reset-spark")?.addEventListener("click", () => {
+    requestResetSparkProgress();
+  });
   $("#btn-surprise")?.addEventListener("click", () => {
     clearMissionPickSession();
+    leaveHotseat();
     surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
   });
-
   try {
     initFriendsUi({
       showScreen,

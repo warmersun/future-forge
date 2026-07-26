@@ -117,3 +117,20 @@ export function markSparkCompleted(storage) {
   s.setItem(HAS_COMPLETED_SPARK_KEY, "1");
   s.setItem(PLAY_MODE_KEY, "workshop");
 }
+
+/**
+ * Reset solo first-run progress so the next session is Spark again
+ * (demos / show someone who has never played — no DevTools needed).
+ * Clears graduation flag and forces stored mode to spark.
+ * @param {Storage} [storage]
+ */
+export function resetSparkProgress(storage) {
+  const s = resolveStorage(storage);
+  if (!s) return;
+  try {
+    s.removeItem(HAS_COMPLETED_SPARK_KEY);
+  } catch {
+    /* ignore */
+  }
+  s.setItem(PLAY_MODE_KEY, "spark");
+}

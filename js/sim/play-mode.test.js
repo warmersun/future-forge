@@ -7,6 +7,7 @@ import {
   writePlayMode,
   readHasCompletedSpark,
   markSparkCompleted,
+  resetSparkProgress,
   PLAY_MODE_KEY,
   HAS_COMPLETED_SPARK_KEY,
 } from "./play-mode.js";
@@ -129,5 +130,22 @@ describe("play-mode storage", () => {
     assert.equal(readHasCompletedSpark(store), true);
     assert.equal(store.getItem(HAS_COMPLETED_SPARK_KEY), "1");
     assert.equal(readPlayMode(store), "workshop");
+  });
+
+  it("resetSparkProgress clears graduation and forces spark", () => {
+    const store = memoryStorage();
+    markSparkCompleted(store);
+    assert.equal(readHasCompletedSpark(store), true);
+    assert.equal(readPlayMode(store), "workshop");
+    resetSparkProgress(store);
+    assert.equal(readHasCompletedSpark(store), false);
+    assert.equal(readPlayMode(store), "spark");
+    assert.equal(
+      resolvePlayMode({
+        storedMode: readPlayMode(store),
+        hasCompletedSpark: readHasCompletedSpark(store),
+      }),
+      "spark"
+    );
   });
 });
