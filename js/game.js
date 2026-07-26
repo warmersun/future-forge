@@ -99,6 +99,13 @@ import {
   cloneScrutiny,
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
+import {
+  resolvePlayMode,
+  featuresForPlayMode,
+  readPlayMode,
+  readHasCompletedSpark,
+  markSparkCompleted,
+} from "./sim/play-mode.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -342,8 +349,29 @@ const STORAGE_SCENARIOS = "future-forge:scenarioCache:v3";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
+/**
+ * Friends room / hotseat keep today's full GAME.features (not Spark).
+ * Solo resolves Spark (first run) vs Workshop (after first win) via play-mode storage.
+ */
+function isRoomOrHotseatSession() {
+  try {
+    if (roomBridge.isRoom()) return true;
+    if (hotseatBridge.isHotseat()) return true;
+  } catch {
+    /* bridges may be mid-teardown */
+  }
+  const mode = state.mp?.mode;
+  return mode === "room" || mode === "hotseat";
+}
+
 function features() {
-  return GAME.features || {};
+  const base = GAME.features || {};
+  if (isRoomOrHotseatSession()) return base;
+  const mode = resolvePlayMode({
+    storedMode: readPlayMode(),
+    hasCompletedSpark: readHasCompletedSpark(),
+  });
+  return featuresForPlayMode(mode, base);
 }
 
 function apEnabled() {
@@ -3063,6 +3091,11 @@ function startMission(mission) {
   state.elegancePivotPenalty = false;
   state.challengeClearMode = null;
   state.scrutinyMoveMode = null;
+  // Solo Spark/Workshop snapshot for debugging (features() re-reads storage live)
+  state.playMode = resolvePlayMode({
+    storedMode: readPlayMode(),
+    hasCompletedSpark: readHasCompletedSpark(),
+  });
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
@@ -9827,6 +9860,18 @@ function finishOutcome(kind, meta = {}) {
       state.challengeClearMode ||
       (state.elegancePivotPenalty ? "sidestep" : null),
   };
+  // First solo win unlocks Workshop; multiparty (room/hotseat) never counts
+  if (
+    kind === "win" &&
+    !enriched.multiparty &&
+    !enriched.mpOutcome?.multiparty
+  ) {
+    try {
+      markSparkCompleted();
+    } catch {
+      /* private mode / missing storage */
+    }
+  }
   const report = features().runReport ? buildRunReport(kind, enriched) : null;
   state.runReport = report;
   if (report && state.mission?.id) persistRunReport(state.mission.id, report);
