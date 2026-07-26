@@ -2493,9 +2493,52 @@ function shuffleCopy(arr) {
   return a;
 }
 
+/** Solo play mode from storage (title CTAs; not room/hotseat). */
+function currentSoloPlayMode() {
+  return resolvePlayMode({
+    storedMode: readPlayMode(),
+    hasCompletedSpark: readHasCompletedSpark(),
+  });
+}
+
+/**
+ * Spark: primary Play → Portside; secondary Choose a theme.
+ * Workshop: primary Choose a theme → (Surprise / Daily unchanged).
+ */
+function renderTitleCtas() {
+  const mode = currentSoloPlayMode();
+  const start = $("#btn-start");
+  const choose = $("#btn-choose-theme");
+  if (!start) return;
+  if (mode === "spark") {
+    start.textContent = "Play →";
+    start.setAttribute("title", "Start Portside Ward floods");
+    if (choose) {
+      choose.hidden = false;
+      choose.textContent = "Choose a theme";
+    }
+  } else {
+    start.textContent = "Choose a theme →";
+    start.removeAttribute("title");
+    if (choose) choose.hidden = true;
+  }
+}
+
 function renderTitleMeta() {
+  renderTitleCtas();
   renderDailyCard();
   renderPinsPanel();
+}
+
+/** One-click Spark starter: Portside Ward floods (climate). */
+function startSparkPortsideMission() {
+  clearMissionPickSession();
+  leaveHotseat();
+  const raw = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
+  const globalId = raw.globalId || "climate";
+  const mission = normalizeMission({ ...raw, source: "curated" }, globalId);
+  state.global = globalById(globalId) || state.global;
+  startMission(mission);
 }
 
 function renderDailyCard() {
@@ -13504,6 +13547,15 @@ async function surpriseMission() {
 function bind() {
   // Title actions first — never let multiplayer/friends setup block the home screen.
   $("#btn-start")?.addEventListener("click", () => {
+    clearMissionPickSession();
+    leaveHotseat();
+    if (currentSoloPlayMode() === "spark") {
+      startSparkPortsideMission();
+      return;
+    }
+    showScreen("global");
+  });
+  $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
     showScreen("global");
