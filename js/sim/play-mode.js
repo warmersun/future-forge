@@ -1,12 +1,6 @@
 /**
  * Spark / Workshop play-mode resolver (pure data, no UI).
- *
- * Spark = quieter tutorial / simplified solo.
- * Workshop = full solo game (unlocked after tutorial win).
- *
- * Storage:
- * - future-forge:playMode — last chosen mode after unlock ("spark"|"workshop")
- * - future-forge:hasCompletedSpark — "1" after tutorial completed (unlocks Workshop)
+ * Solo first-run is Spark until first win; then Workshop (full game).
  */
 
 export const PLAY_MODE_KEY = "future-forge:playMode";
@@ -32,12 +26,10 @@ function resolveStorage(storage) {
 
 /**
  * Decide solo play mode.
- * Priority: forceMode → (if tutorial not done → spark) → valid storedMode → workshop.
- *
- * Before tutorial complete, Workshop is locked: always spark (ignore stored workshop).
+ * Priority: forceMode → valid storedMode → hasCompletedSpark → spark (default).
  *
  * @param {{ storedMode?: string|null, hasCompletedSpark?: boolean, forceMode?: string|null }} [opts]
- * @param {Storage} [_storage]
+ * @param {Storage} [storage] — unused for pure resolve; accepted for API symmetry
  * @returns {"spark"|"workshop"}
  */
 export function resolvePlayMode(
@@ -45,20 +37,9 @@ export function resolvePlayMode(
   _storage
 ) {
   if (VALID_MODES.has(forceMode)) return forceMode;
-  // Tutorial not finished — Workshop locked
-  if (!hasCompletedSpark) return "spark";
   if (VALID_MODES.has(storedMode)) return storedMode;
-  // Completed, no stored preference → default Workshop
-  return "workshop";
-}
-
-/**
- * Workshop is choosable only after tutorial completion.
- * @param {Storage} [storage]
- * @returns {boolean}
- */
-export function canSelectWorkshop(storage) {
-  return readHasCompletedSpark(storage);
+  if (hasCompletedSpark) return "workshop";
+  return "spark";
 }
 
 /**
@@ -127,7 +108,7 @@ export function readHasCompletedSpark(storage) {
 }
 
 /**
- * Mark tutorial complete; unlock Workshop and default stored mode to workshop.
+ * Mark first solo Spark win complete; prefer switching stored mode to workshop.
  * @param {Storage} [storage]
  */
 export function markSparkCompleted(storage) {
@@ -138,8 +119,9 @@ export function markSparkCompleted(storage) {
 }
 
 /**
- * Reset tutorial progress — Workshop locks again; mode forced to Spark.
- * Does not wipe pins / scenario cache.
+ * Reset solo first-run progress so the next session is Spark again
+ * (demos / show someone who has never played — no DevTools needed).
+ * Clears graduation flag and forces stored mode to spark.
  * @param {Storage} [storage]
  */
 export function resetSparkProgress(storage) {

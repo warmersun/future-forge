@@ -105,11 +105,9 @@ import {
   resolvePlayMode,
   featuresForPlayMode,
   readPlayMode,
-  writePlayMode,
   readHasCompletedSpark,
   markSparkCompleted,
   resetSparkProgress,
-  canSelectWorkshop,
 } from "./sim/play-mode.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
@@ -248,10 +246,6 @@ const state = {
   mission: null,
   /** @type {null | object} multiplayer chrome flags (set by hotseatBridge.hydrateSoloState) */
   mp: null,
-  /** Solo mode for current run: "spark" | "workshop" | null (title uses storage) */
-  playMode: null,
-  /** Play tutorial → forces spark profile for this mission even if storage is workshop */
-  tutorialRun: false,
   year: GAME.startYear,
   turn: 0,
   waits: 0,
@@ -360,7 +354,7 @@ const STORAGE_RUNS = "future-forge:runReports";
 
 /**
  * Friends room / hotseat keep today's full GAME.features (not Spark).
- * Solo: tutorial run / title mode Spark → spark profile; Workshop → full features.
+ * Solo resolves Spark (first run) vs Workshop (after first win) via play-mode storage.
  */
 function isRoomOrHotseatSession() {
   try {
@@ -373,21 +367,14 @@ function isRoomOrHotseatSession() {
   return mode === "room" || mode === "hotseat";
 }
 
-/** Active solo mode for features: session tutorial force → state snapshot → storage. */
-function activeSoloPlayMode() {
-  // Play tutorial always forces spark for the whole mission
-  if (state.tutorialRun) return "spark";
-  if (state.playMode === "spark" || state.playMode === "workshop") return state.playMode;
-  return resolvePlayMode({
-    storedMode: readPlayMode(),
-    hasCompletedSpark: readHasCompletedSpark(),
-  });
-}
-
 function features() {
   const base = GAME.features || {};
   if (isRoomOrHotseatSession()) return base;
-  return featuresForPlayMode(activeSoloPlayMode(), base);
+  const mode = resolvePlayMode({
+    storedMode: readPlayMode(),
+    hasCompletedSpark: readHasCompletedSpark(),
+  });
+  return featuresForPlayMode(mode, base);
 }
 
 function apEnabled() {
@@ -2489,12 +2476,7 @@ function tips() {
 function showScreen(id) {
   state.screen = id;
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
-  if (id === "title") {
-    // Leaving a run to Home clears session tutorial force (storage mode unchanged)
-    clearTutorialSession();
-    state.playMode = null;
-    renderTitleMeta();
-  }
+  if (id === "title") renderTitleMeta();
   if (id === "global") renderGlobals();
   if (id === "mission") renderMissions();
   if (id === "workshop") {
@@ -2565,105 +2547,53 @@ function currentSoloPlayMode() {
 }
 
 /**
- * Home CTAs from mode toggle + tutorial unlock.
- * Before unlock: Spark only; primary Play tutorial →.
- * After unlock: Spark → Play tutorial + Choose a theme; Workshop → Choose a theme + Play tutorial secondary.
+ * Spark: primary Play → Portside; secondary Choose a theme.
+ * Workshop: primary Choose a theme → (Surprise / Daily unchanged).
+ * Always offer restart first-run when the player has left Spark (demo-friendly).
  */
 function renderTitleCtas() {
-  const completed = readHasCompletedSpark();
   const mode = currentSoloPlayMode();
   const start = $("#btn-start");
   const choose = $("#btn-choose-theme");
-  const resetBtn = $("#btn-reset-spark");
-  const sparkBtn = $("#mode-spark");
-  const workshopBtn = $("#mode-workshop");
-  const hint = $("#title-mode-hint");
-
-  if (sparkBtn) {
-    sparkBtn.classList.toggle("is-active", mode === "spark");
-    sparkBtn.setAttribute("aria-pressed", mode === "spark" ? "true" : "false");
-    sparkBtn.disabled = false;
-  }
-  if (workshopBtn) {
-    workshopBtn.disabled = !completed;
-    workshopBtn.classList.toggle("is-active", mode === "workshop");
-    workshopBtn.setAttribute("aria-pressed", mode === "workshop" ? "true" : "false");
-    workshopBtn.title = completed
-      ? "Full game — all systems"
-      : "Play tutorial first to unlock Workshop";
-  }
-  if (hint) {
-    if (!completed) {
-      hint.hidden = false;
-      hint.removeAttribute("hidden");
-      hint.textContent = "Play tutorial first";
-    } else {
-      hint.hidden = true;
-      hint.setAttribute("hidden", "");
-      hint.textContent = "";
-    }
-  }
-
+  const resetSpark = $("#btn-reset-spark");
   if (!start) return;
-
   if (mode === "spark") {
-    start.textContent = "Play tutorial →";
-    start.setAttribute("title", "Start Portside Ward — guided quiet run");
+    start.textContent = "Play →";
+    start.setAttribute("title", "Start Portside Ward floods");
     if (choose) {
       choose.hidden = false;
       choose.removeAttribute("hidden");
       choose.textContent = "Choose a theme";
-      choose.title = "Browse themes (quiet Spark rules until you switch to Workshop)";
     }
   } else {
     start.textContent = "Choose a theme →";
-    start.setAttribute("title", "Full Workshop — all themes and systems");
+    start.removeAttribute("title");
     if (choose) {
-      choose.hidden = false;
-      choose.removeAttribute("hidden");
-      choose.textContent = "Play tutorial →";
-      choose.title = "Replay Portside tutorial (quiet rules for this run only)";
+      choose.hidden = true;
+      choose.setAttribute("hidden", "");
     }
   }
-
-  if (resetBtn) {
-    // Always available after first visit so demos can re-lock Workshop
-    const showReset = completed || mode === "workshop";
-    resetBtn.hidden = !showReset;
-    if (showReset) resetBtn.removeAttribute("hidden");
-    else resetBtn.setAttribute("hidden", "");
-    resetBtn.textContent = "Reset tutorial progress";
+  // Show when Workshop (or graduation flag) so demos can return to first-run without DevTools
+  if (resetSpark) {
+    const showReset = mode !== "spark" || readHasCompletedSpark();
+    resetSpark.hidden = !showReset;
+    if (showReset) resetSpark.removeAttribute("hidden");
+    else resetSpark.setAttribute("hidden", "");
   }
 }
 
-/** Persist mode from Home toggle (Workshop only after tutorial complete). */
-function setTitlePlayMode(mode) {
-  if (mode === "workshop" && !canSelectWorkshop()) return;
-  if (mode !== "spark" && mode !== "workshop") return;
-  writePlayMode(mode);
-  state.playMode = null;
-  state.tutorialRun = false;
-  renderTitleCtas();
-}
-
-/** Clear tutorial session force (leave to title / abandon). */
-function clearTutorialSession() {
-  state.tutorialRun = false;
-}
-
-/** Reset tutorial progress — Workshop locks again. */
+/** Clear Spark graduation; title becomes first-run again. */
 function requestResetSparkProgress() {
   const ok = confirm(
-    "Reset tutorial progress?\n\n" +
-      "Workshop will lock again until you finish the tutorial.\n" +
+    "Restart the first-run experience (Spark)?\n\n" +
+      "The next Play will use the quieter first-run mode again — good for showing someone new.\n" +
       "This does not delete pinned missions or theme caches."
   );
   if (!ok) return;
   resetSparkProgress();
   state.playMode = "spark";
-  clearTutorialSession();
   renderTitleMeta();
-  flashToast("Tutorial progress reset — Play tutorial when ready.");
+  flashToast("First-run (Spark) restored — Play → starts Portside again.");
 }
 
 function renderTitleMeta() {
@@ -2672,15 +2602,10 @@ function renderTitleMeta() {
   renderPinsPanel();
 }
 
-/**
- * Play tutorial → Portside Ward (always spark profile for this run).
- * Does not change stored mode after the run ends.
- */
+/** One-click Spark starter: Portside Ward floods (climate). */
 function startSparkPortsideMission() {
   clearMissionPickSession();
   leaveHotseat();
-  state.tutorialRun = true;
-  state.playMode = "spark";
   const raw = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
   const globalId = raw.globalId || "climate";
   const mission = normalizeMission({ ...raw, source: "curated" }, globalId);
@@ -3326,15 +3251,11 @@ function startMission(mission) {
   state.elegancePivotPenalty = false;
   state.challengeClearMode = null;
   state.scrutinyMoveMode = null;
-  // Solo mode for this run (tutorial forces spark; else title/storage mode)
-  if (state.tutorialRun) {
-    state.playMode = "spark";
-  } else {
-    state.playMode = resolvePlayMode({
-      storedMode: readPlayMode(),
-      hasCompletedSpark: readHasCompletedSpark(),
-    });
-  }
+  // Solo Spark/Workshop snapshot for debugging (features() re-reads storage live)
+  state.playMode = resolvePlayMode({
+    storedMode: readPlayMode(),
+    hasCompletedSpark: readHasCompletedSpark(),
+  });
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
@@ -10419,7 +10340,7 @@ function finishOutcome(kind, meta = {}) {
       state.challengeClearMode ||
       (state.elegancePivotPenalty ? "sidestep" : null),
   };
-  // First solo tutorial/spark win unlocks Workshop; multiparty never counts
+  // First solo win unlocks Workshop; multiparty (room/hotseat) never counts
   if (
     kind === "win" &&
     !enriched.multiparty &&
@@ -10430,8 +10351,6 @@ function finishOutcome(kind, meta = {}) {
     } catch {
       /* private mode / missing storage */
     }
-    // End tutorial session force so next Home visit uses stored mode (workshop default)
-    clearTutorialSession();
   }
   const report = features().runReport ? buildRunReport(kind, enriched) : null;
   state.runReport = report;
@@ -14071,40 +13990,26 @@ async function surpriseMission() {
 /* —— Bind —— */
 function bind() {
   // Title actions first — never let multiplayer/friends setup block the home screen.
-  $("#mode-spark")?.addEventListener("click", () => setTitlePlayMode("spark"));
-  $("#mode-workshop")?.addEventListener("click", () => setTitlePlayMode("workshop"));
   $("#btn-start")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Spark: Play tutorial → Portside. Workshop: Choose a theme →
     if (currentSoloPlayMode() === "spark") {
       startSparkPortsideMission();
       return;
     }
-    state.tutorialRun = false;
     showScreen("global");
   });
   $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Spark secondary: Choose a theme (spark profile). Workshop secondary: Play tutorial →
-    if (currentSoloPlayMode() === "workshop") {
-      startSparkPortsideMission();
-      return;
-    }
-    state.tutorialRun = false;
-    state.playMode = "spark";
     showScreen("global");
   });
   $("#btn-reset-spark")?.addEventListener("click", () => {
     requestResetSparkProgress();
   });
   $("#btn-surprise")?.addEventListener("click", () => {
-    // Uses current mode features (spark pre-unlock; workshop when selected after unlock)
     clearMissionPickSession();
     leaveHotseat();
-    state.tutorialRun = false;
-    state.playMode = currentSoloPlayMode();
     surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
   });
   try {
@@ -14130,15 +14035,11 @@ function bind() {
   $("#btn-mp-pass-device")?.addEventListener("click", () => mpPassDevice());
   $("#btn-daily-play")?.addEventListener("click", () => {
     clearMissionPickSession();
-    leaveHotseat();
     const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
     if (!daily?.mission) {
       flashToast("Daily mission unavailable.");
       return;
     }
-    // Daily follows Home mode (spark pre-unlock; workshop when selected)
-    state.tutorialRun = false;
-    state.playMode = currentSoloPlayMode();
     state.global = daily.global;
     startMission(normalizeMission(daily.mission, daily.global.id));
   });

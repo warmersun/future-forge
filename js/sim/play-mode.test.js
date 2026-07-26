@@ -8,7 +8,6 @@ import {
   readHasCompletedSpark,
   markSparkCompleted,
   resetSparkProgress,
-  canSelectWorkshop,
   PLAY_MODE_KEY,
   HAS_COMPLETED_SPARK_KEY,
 } from "./play-mode.js";
@@ -35,29 +34,19 @@ describe("resolvePlayMode", () => {
     assert.equal(resolvePlayMode({ storedMode: null, hasCompletedSpark: false }), "spark");
   });
 
-  it("tutorial not complete → spark even if stored workshop", () => {
-    assert.equal(
-      resolvePlayMode({ storedMode: "workshop", hasCompletedSpark: false }),
-      "spark"
-    );
-  });
-
-  it("hasCompletedSpark with no stored mode → workshop", () => {
+  it("hasCompletedSpark → workshop", () => {
     assert.equal(resolvePlayMode({ hasCompletedSpark: true }), "workshop");
   });
 
-  it("after complete, stored spark is respected", () => {
+  it("stored workshop is respected", () => {
     assert.equal(
-      resolvePlayMode({ storedMode: "spark", hasCompletedSpark: true }),
-      "spark"
+      resolvePlayMode({ storedMode: "workshop", hasCompletedSpark: false }),
+      "workshop"
     );
   });
 
-  it("after complete, stored workshop is respected", () => {
-    assert.equal(
-      resolvePlayMode({ storedMode: "workshop", hasCompletedSpark: true }),
-      "workshop"
-    );
+  it("stored spark is respected even if completed flag absent", () => {
+    assert.equal(resolvePlayMode({ storedMode: "spark" }), "spark");
   });
 
   it('forceMode: "spark" wins over completed', () => {
@@ -71,27 +60,19 @@ describe("resolvePlayMode", () => {
     );
   });
 
-  it('forceMode: "workshop" wins even when not completed', () => {
+  it('forceMode: "workshop" wins over stored spark', () => {
     assert.equal(
-      resolvePlayMode({ forceMode: "workshop", hasCompletedSpark: false }),
+      resolvePlayMode({ forceMode: "workshop", storedMode: "spark" }),
       "workshop"
     );
   });
 
-  it("invalid storedMode after complete falls to workshop", () => {
+  it("invalid storedMode falls through", () => {
+    assert.equal(resolvePlayMode({ storedMode: "nope" }), "spark");
     assert.equal(
       resolvePlayMode({ storedMode: "nope", hasCompletedSpark: true }),
       "workshop"
     );
-  });
-});
-
-describe("canSelectWorkshop", () => {
-  it("false for new player; true after mark complete", () => {
-    const store = memoryStorage();
-    assert.equal(canSelectWorkshop(store), false);
-    markSparkCompleted(store);
-    assert.equal(canSelectWorkshop(store), true);
   });
 });
 
@@ -149,17 +130,9 @@ describe("play-mode storage", () => {
     assert.equal(readHasCompletedSpark(store), true);
     assert.equal(store.getItem(HAS_COMPLETED_SPARK_KEY), "1");
     assert.equal(readPlayMode(store), "workshop");
-    assert.equal(canSelectWorkshop(store), true);
-    assert.equal(
-      resolvePlayMode({
-        storedMode: readPlayMode(store),
-        hasCompletedSpark: readHasCompletedSpark(store),
-      }),
-      "workshop"
-    );
   });
 
-  it("resetSparkProgress clears graduation and forces spark; workshop locked", () => {
+  it("resetSparkProgress clears graduation and forces spark", () => {
     const store = memoryStorage();
     markSparkCompleted(store);
     assert.equal(readHasCompletedSpark(store), true);
@@ -167,7 +140,6 @@ describe("play-mode storage", () => {
     resetSparkProgress(store);
     assert.equal(readHasCompletedSpark(store), false);
     assert.equal(readPlayMode(store), "spark");
-    assert.equal(canSelectWorkshop(store), false);
     assert.equal(
       resolvePlayMode({
         storedMode: readPlayMode(store),

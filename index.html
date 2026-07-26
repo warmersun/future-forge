@@ -38,24 +38,13 @@
             </li>
           </ol>
         </div>
-        <div class="title-mode-block">
-          <div class="title-mode-toggle" role="group" aria-label="Solo play mode">
-            <button type="button" class="title-mode-btn is-active" id="mode-spark" data-mode="spark" aria-pressed="true">
-              Spark
-            </button>
-            <button type="button" class="title-mode-btn" id="mode-workshop" data-mode="workshop" aria-pressed="false" disabled>
-              Workshop
-            </button>
-          </div>
-          <p class="title-mode-hint muted" id="title-mode-hint">Play tutorial first</p>
-        </div>
         <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
           <button type="button" class="btn btn-secondary" id="btn-friends">Play with friends</button>
-          <button type="button" class="btn btn-secondary" id="btn-choose-theme">
+          <button type="button" class="btn btn-secondary" id="btn-choose-theme" hidden>
             Choose a theme
           </button>
-          <button type="button" class="btn btn-primary" id="btn-start">Play tutorial →</button>
+          <button type="button" class="btn btn-primary" id="btn-start">Choose a theme →</button>
         </div>
         <p class="title-spark-reset-wrap">
           <button
@@ -63,9 +52,9 @@
             class="btn btn-ghost btn-sm"
             id="btn-reset-spark"
             hidden
-            title="Clear tutorial completion so Workshop locks again"
+            title="Clear first-run completion so Play uses the quiet Spark experience again (for demos)"
           >
-            Reset tutorial progress
+            Restart first-run (Spark)
           </button>
         </p>
 
