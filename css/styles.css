@@ -146,6 +146,15 @@ button:disabled {
   width: 100%;
 }
 
+.title-spark-reset-wrap {
+  margin: 0.65rem 0 0;
+  text-align: center;
+}
+
+.title-spark-reset-wrap .btn {
+  opacity: 0.85;
+}
+
 /* G4 — daily + pins on title */
 .daily-card {
   margin-top: 1.75rem;
@@ -296,6 +305,23 @@ button:disabled {
   padding-inline: clamp(1.25rem, 4vw, 2.5rem);
   box-sizing: border-box;
   width: 100%;
+}
+
+.friends-vs-solo {
+  margin: 0 0 0.65rem;
+}
+
+.friends-rules {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  line-height: 1.45;
+}
+
+.friends-rules li {
+  margin: 0;
 }
 
 .friends-hub-grid {

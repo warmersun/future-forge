@@ -46,6 +46,17 @@
           </button>
           <button type="button" class="btn btn-primary" id="btn-start">Choose a theme →</button>
         </div>
+        <p class="title-spark-reset-wrap">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            id="btn-reset-spark"
+            hidden
+            title="Clear first-run completion so Play uses the quiet Spark experience again (for demos)"
+          >
+            Restart first-run (Spark)
+          </button>
+        </p>
 
         <article id="daily-card" class="daily-card" hidden>
           <div class="daily-card-head">
@@ -82,10 +93,17 @@
       <div class="content friends-content">
         <div class="section-intro">
           <h1>Play with friends</h1>
-          <p>
+          <p class="friends-vs-solo muted">
+            Solo teaches the invent loop. Friends is a race: personal inventions, one shared place.
+          </p>
+          <ul class="friends-rules">
+            <li>Each player builds their own invention.</li>
+            <li>You share one crisis — if the place falls, everyone loses.</li>
+            <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
+          </ul>
+          <p class="muted sm">
             Create a room and share the <strong>room code</strong> plus the host’s
             <strong>local network address</strong> (shown after create). Same Wi‑Fi only — not the public Internet.
-            Live WebSocket; personal invents, shared crisis.
           </p>
         </div>
         <div class="friends-hub-grid">
