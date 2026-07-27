@@ -1429,6 +1429,56 @@
         <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>
 
+        <!-- Solo tutorial win only: what Workshop unlocks (hidden otherwise) -->
+        <section
+          id="outcome-workshop-unlock"
+          class="outcome-workshop-unlock panel"
+          hidden
+          aria-labelledby="outcome-workshop-unlock-title"
+        >
+          <p class="outcome-workshop-unlock-kicker">Tutorial complete</p>
+          <h2 id="outcome-workshop-unlock-title" class="outcome-workshop-unlock-title">
+            Workshop is unlocked
+          </h2>
+          <p class="outcome-workshop-unlock-lead">
+            You finished the quiet run. <strong>Choose a theme</strong> opens the full game — same loop,
+            more systems on the board.
+          </p>
+          <ul class="outcome-workshop-unlock-list">
+            <li>
+              <strong>AP · Budget · Support</strong> — spend attention and capital; End turn refills AP only.
+            </li>
+            <li>
+              <strong>End turn vs Wait</strong> — End turn refreshes AP without advancing the crisis year; Wait +2
+              years moves the calendar and raises crisis meters.
+            </li>
+            <li>
+              <strong>Lobby</strong> — spend to raise Support (public and policy backing) before fielding.
+            </li>
+            <li>
+              <strong>Story</strong> — two faces: How it works + Everyday life (tutorial used one box).
+            </li>
+            <li>
+              <strong>Hard question</strong> — may open Defend / Fix / Sidestep against a critic’s resolve
+              (tutorial was essay-only).
+            </li>
+            <li>
+              <strong>Field</strong> — Pilot → Scale → New normal with odds and costs (tutorial was one Field it).
+            </li>
+            <li>
+              <strong>Tech tray</strong> — full catalog and larger stack (tutorial: starters, smaller stack).
+            </li>
+            <li>
+              <strong>Themes</strong> — many places and problems, not only the tutorial mission.
+            </li>
+          </ul>
+          <div class="form-actions outcome-workshop-unlock-actions">
+            <button type="button" class="btn btn-primary" id="btn-outcome-workshop-themes">
+              Choose a theme →
+            </button>
+          </div>
+        </section>
+
         <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Foresight for your stack</h3>
         <div id="outcome-foresight" class="foresight-grid"></div>
 

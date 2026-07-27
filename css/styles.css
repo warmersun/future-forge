@@ -3175,6 +3175,66 @@ body.challenge-pose-pending #challenge-help-form {
   color: #fde68a;
 }
 
+/* Solo tutorial win — Workshop unlock explainer */
+.outcome-workshop-unlock {
+  margin: 1.35rem 0 1.5rem;
+  padding: 1.15rem 1.25rem 1.2rem;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: linear-gradient(
+    145deg,
+    rgba(56, 189, 248, 0.1),
+    rgba(15, 23, 42, 0.88)
+  );
+}
+
+.outcome-workshop-unlock[hidden] {
+  display: none !important;
+}
+
+.outcome-workshop-unlock-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.outcome-workshop-unlock-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #f8fafc;
+}
+
+.outcome-workshop-unlock-lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-dim, #cbd5e1);
+}
+
+.outcome-workshop-unlock-list {
+  margin: 0 0 1rem;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text, #e2e8f0);
+}
+
+.outcome-workshop-unlock-list li strong {
+  color: #f1f5f9;
+}
+
+.outcome-workshop-unlock-actions {
+  justify-content: flex-start;
+  margin: 0;
+}
+
 .outcome-result-sub {
   margin: 0 0 0.75rem;
   font-size: 0.95rem;

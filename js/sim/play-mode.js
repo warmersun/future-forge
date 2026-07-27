@@ -90,3 +90,14 @@ export function resetSparkProgress(storage) {
     /* ignore */
   }
 }
+
+/**
+ * Outcome screen: show "Welcome to Workshop" only for this solo tutorial win.
+ * @param {{ kind?: string, multiparty?: boolean, tutorialGraduation?: boolean }} opts
+ * @returns {boolean}
+ */
+export function shouldShowWorkshopUnlock(opts = {}) {
+  if (opts.kind !== "win") return false;
+  if (opts.multiparty) return false;
+  return Boolean(opts.tutorialGraduation);
+}

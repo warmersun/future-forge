@@ -106,6 +106,7 @@ import {
   readHasCompletedSpark,
   markSparkCompleted,
   resetSparkProgress,
+  shouldShowWorkshopUnlock,
 } from "./sim/play-mode.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
@@ -10402,10 +10403,14 @@ function finishOutcome(kind, meta = {}) {
       state.challengeClearMode ||
       (state.elegancePivotPenalty ? "sidestep" : null),
   };
-  // Tutorial win sets local flag so Home hides Play tutorial (until Reset tutorial)
+  // Tutorial win: set local flag (hide Play tutorial on Home) + meta for outcome explainer
+  // Snapshot graduation *before* clearing tutorialRun (renderOutcome needs the flag)
   const solo =
     !enriched.multiparty && !enriched.mpOutcome?.multiparty;
-  if (solo && kind === "win" && (state.tutorialRun || state.playMode === "spark")) {
+  const tutorialGraduation =
+    solo && kind === "win" && (state.tutorialRun || state.playMode === "spark");
+  if (tutorialGraduation) {
+    enriched.tutorialGraduation = true;
     try {
       markSparkCompleted();
     } catch {
@@ -10967,6 +10972,24 @@ function paintOutcomeVision(m, o) {
   }
 }
 
+/**
+ * Show/hide Workshop graduation panel on outcome (solo tutorial win only).
+ * @param {object} o — state.outcome
+ * @param {object|null} mp — multiparty snapshot if any
+ */
+function paintWorkshopUnlockPanel(o, mp) {
+  const panel = $("#outcome-workshop-unlock");
+  if (!panel) return;
+  const show = shouldShowWorkshopUnlock({
+    kind: o?.kind,
+    multiparty: Boolean(mp?.multiparty || o?.meta?.multiparty),
+    tutorialGraduation: Boolean(o?.meta?.tutorialGraduation),
+  });
+  panel.hidden = !show;
+  if (show) panel.removeAttribute("hidden");
+  else panel.setAttribute("hidden", "");
+}
+
 function renderOutcome() {
   const o = state.outcome;
   const m = state.mission;
@@ -10982,6 +11005,9 @@ function renderOutcome() {
 
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
+
+  // Solo tutorial win only — what Workshop layers on vs Spark
+  paintWorkshopUnlockPanel(o, mp);
 
   const starsEl = $("#outcome-stars");
   const report = o.runReport || state.runReport;
@@ -14561,6 +14587,14 @@ function bind() {
       return;
     }
     // Leave Quest → theme / Challenge picker (game continues)
+    state.tutorialRun = false;
+    state.playMode = "workshop";
+    showScreen("global");
+  });
+  $("#btn-outcome-workshop-themes")?.addEventListener("click", () => {
+    // Graduation CTA → same path as Home “Choose a theme →” (Workshop)
+    state.tutorialRun = false;
+    state.playMode = "workshop";
     showScreen("global");
   });
   $("#btn-outcome-retry").addEventListener("click", () => {

@@ -5,6 +5,7 @@ import {
   readHasCompletedSpark,
   markSparkCompleted,
   resetSparkProgress,
+  shouldShowWorkshopUnlock,
   HAS_COMPLETED_SPARK_KEY,
 } from "./play-mode.js";
 
@@ -67,5 +68,33 @@ describe("tutorial completion storage", () => {
     assert.equal(store.getItem(HAS_COMPLETED_SPARK_KEY), "1");
     resetSparkProgress(store);
     assert.equal(readHasCompletedSpark(store), false);
+  });
+});
+
+describe("shouldShowWorkshopUnlock", () => {
+  it("true only for solo tutorial win", () => {
+    assert.equal(
+      shouldShowWorkshopUnlock({ kind: "win", multiparty: false, tutorialGraduation: true }),
+      true
+    );
+  });
+
+  it("false for partial, collapse, multiparty, or non-tutorial win", () => {
+    assert.equal(
+      shouldShowWorkshopUnlock({ kind: "partial", multiparty: false, tutorialGraduation: true }),
+      false
+    );
+    assert.equal(
+      shouldShowWorkshopUnlock({ kind: "collapse", multiparty: false, tutorialGraduation: true }),
+      false
+    );
+    assert.equal(
+      shouldShowWorkshopUnlock({ kind: "win", multiparty: true, tutorialGraduation: true }),
+      false
+    );
+    assert.equal(
+      shouldShowWorkshopUnlock({ kind: "win", multiparty: false, tutorialGraduation: false }),
+      false
+    );
   });
 });
