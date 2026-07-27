@@ -6025,8 +6025,12 @@ async function poseScrutinyEncounters() {
     state.challengeQuestion = question;
     state.challengeAngle = enc.angleId;
 
-    state.scrutinyMoveMode = null;
+    // Ensure reveal lock is clear (finishChallengerDraw should have done this)
+    state.challengeRevealPending = false;
+    document.body.classList.remove("challenge-reveal-pending");
+    state.scrutinyMoveMode = "defend";
     setChallengePoseBusy(false);
+    // Restore combat chrome (lockChallengeCombatChrome may have hidden submit/fix/sidestep)
     paintActiveEncounter();
     renderScrutinyEncounters();
     renderChallengeHud();
@@ -6508,16 +6512,17 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
   const m = mode === "fix" || mode === "sidestep" ? mode : "defend";
   state.scrutinyMoveMode = m;
   const sidestepUsed = Boolean(state.scrutiny?.pivotUsed || state.elegancePivotPenalty);
+  const busy = Boolean(opts.spectator) || isChallengePosePending() || challengeCombatBusy;
   const moves = $("#scrutiny-moves");
   if (moves) {
     moves.hidden = false;
     moves.removeAttribute("hidden");
+    moves.classList.remove("is-pose-pending");
   }
   $$(".scrutiny-move-btn").forEach((btn) => {
     const on = btn.dataset.mode === m;
     btn.classList.toggle("is-selected", on);
     btn.setAttribute("aria-checked", on ? "true" : "false");
-    const busy = Boolean(opts.spectator) || isChallengePosePending() || challengeCombatBusy;
     if (btn.dataset.mode === "sidestep") {
       btn.disabled = busy || sidestepUsed;
     } else {
@@ -6527,13 +6532,50 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
   const defend = $("#mode-panel-defend");
   const fix = $("#mode-panel-fix");
   const side = $("#mode-panel-sidestep");
-  if (defend) defend.hidden = m !== "defend";
-  if (fix) fix.hidden = m !== "fix";
-  if (side) side.hidden = m !== "sidestep";
-  // Combat defend button label (essay path uses setupEssayChallengeChrome)
+  // Show the active panel; clear attribute-based hidden left by essay lock / lockChallengeCombatChrome
+  if (defend) {
+    defend.hidden = m !== "defend";
+    if (m === "defend") defend.removeAttribute("hidden");
+    else defend.setAttribute("hidden", "");
+  }
+  if (fix) {
+    fix.hidden = m !== "fix";
+    if (m === "fix") fix.removeAttribute("hidden");
+    else fix.setAttribute("hidden", "");
+  }
+  if (side) {
+    side.hidden = m !== "sidestep";
+    if (m === "sidestep") side.removeAttribute("hidden");
+    else side.setAttribute("hidden", "");
+  }
+
+  // Action buttons: lockChallengeCombatChrome may have set hidden=true — always restore for combat
   const submit = $("#btn-challenge-submit");
-  if (submit && m === "defend" && !opts.spectator) {
-    submit.textContent = apEnabled() ? "Submit defense (1 AP)" : "Submit defense";
+  if (submit) {
+    submit.hidden = m !== "defend";
+    if (m === "defend") submit.removeAttribute("hidden");
+    else submit.setAttribute("hidden", "");
+    submit.disabled = busy;
+    if (m === "defend" && !opts.spectator) {
+      submit.textContent = apEnabled() ? "Submit defense (1 AP)" : "Submit defense";
+      submit.title = apEnabled()
+        ? "Submit written defense (costs 1 AP)"
+        : "Submit written defense";
+    }
+  }
+  const applyFix = $("#btn-challenge-apply-fix");
+  if (applyFix) {
+    applyFix.hidden = m !== "fix";
+    if (m === "fix") applyFix.removeAttribute("hidden");
+    else applyFix.setAttribute("hidden", "");
+    applyFix.disabled = busy;
+  }
+  const confirmSide = $("#btn-challenge-confirm-sidestep");
+  if (confirmSide) {
+    confirmSide.hidden = m !== "sidestep";
+    if (m === "sidestep") confirmSide.removeAttribute("hidden");
+    else confirmSide.setAttribute("hidden", "");
+    confirmSide.disabled = busy || sidestepUsed;
   }
 
   if (m === "fix") {
@@ -6544,6 +6586,10 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
         howEdit.readOnly = true;
         howEdit.classList.add("is-locked");
         howEdit.title = "Read-only — watching the active player";
+      } else if (!busy) {
+        howEdit.readOnly = false;
+        howEdit.classList.remove("is-locked");
+        howEdit.title = "";
       }
     }
   }
@@ -6556,6 +6602,12 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
         ? `${opts.activeName || "Player"} is defending against ${crit}`
         : `Write your defense against ${crit}`;
     }
+    const ans = $("#challenge-answer");
+    if (ans && !opts.spectator && !busy) {
+      ans.readOnly = false;
+      ans.classList.remove("is-locked", "is-evaluating");
+      ans.title = "";
+    }
   }
   if (m === "sidestep") {
     const lead = $("#mode-panel-sidestep .mode-panel-lead");
@@ -6564,10 +6616,10 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
       if (sc.ok) {
         lead.innerHTML = `You dodge this challenger without answering. Cost equals <strong>remaining resolve</strong>: <strong>${sc.hearts}♥</strong> → <strong>${escapeHtml(
           formatSidestepCostShort(sc)
-        )}</strong>. Only once per mission. Lobby on Invent if you need more Will.`;
+        )}</strong>. Only once per mission. Lobby on Invent if you need more Support.`;
       } else {
         lead.innerHTML =
-          "You dodge this challenger without answering. Cost equals remaining resolve hearts (e.g. 2♥ → 2 AP · 2 Will). Only once per mission.";
+          "You dodge this challenger without answering. Cost equals remaining resolve hearts (e.g. 2♥ → 2 AP · 2 Support). Only once per mission.";
       }
     }
     // status line for spectators
@@ -7476,6 +7528,7 @@ function canFightChallengeCombat() {
 /**
  * Hide / freeze Defend·Fix·Sidestep panels and answer box (no extra HUD text).
  * Used on Deploy, fielded invent, and non-owner views.
+ * Note: paintScrutinyMoveModeChrome must unhide action buttons when combat unlocks again.
  */
 function lockChallengeCombatChrome(opts = {}) {
   const reason =
@@ -7485,18 +7538,21 @@ function lockChallengeCombatChrome(opts = {}) {
   const moves = $("#scrutiny-moves");
   if (moves) {
     moves.hidden = true;
+    moves.setAttribute("hidden", "");
     moves.classList.add("is-pose-pending");
   }
   const submit = $("#btn-challenge-submit");
   if (submit) {
     submit.disabled = true;
     submit.hidden = true;
+    submit.setAttribute("hidden", "");
   }
   ["#btn-challenge-apply-fix", "#btn-challenge-confirm-sidestep"].forEach((sel) => {
     const el = $(sel);
     if (el) {
       el.disabled = true;
       el.hidden = true;
+      el.setAttribute("hidden", "");
     }
   });
   ["#btn-scrutiny-argue", "#btn-scrutiny-patch", "#btn-scrutiny-pivot"].forEach((sel) => {
