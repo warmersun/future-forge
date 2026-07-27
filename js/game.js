@@ -41,7 +41,10 @@ import {
   visionStageIdForDeployStage,
   successChancePct,
   rollDeploySuccess,
+  worstLevel,
+  scaleRollLevel,
 } from "./sim/deploy.js";
+import { assessSustainable } from "./sim/sustainable.js";
 import {
   isWin as simIsWin,
   isWin,
@@ -350,8 +353,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v3: curated seed packs for all themes (invalidates old AI/local caches) */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v3";
+/** v5: plain-English crisis meter labels on regenerated packs */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v5";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -2307,10 +2310,12 @@ function maybeBudgetGameOver(meta = {}) {
 }
 
 function loadPersistedProgress() {
-  // Drop pre-v3 scenario caches (weak AI / incomplete theme packs)
+  // Drop older scenario caches when pack/prompt logic changes
   try {
     localStorage.removeItem("future-forge:scenarioCache");
     localStorage.removeItem("future-forge:scenarioCache:v2");
+    localStorage.removeItem("future-forge:scenarioCache:v3");
+    localStorage.removeItem("future-forge:scenarioCache:v4");
   } catch {
     /* ignore */
   }
@@ -3039,8 +3044,14 @@ async function ensureScenarios(global, { force = false } = {}) {
           forceRegen: force,
           availableTechs: TECHS.map((t) => techForAi(t, GAME.startYear)),
           year: GAME.startYear,
+          depthCharacter: global.depthCharacter || undefined,
           guidance:
-            "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk. Keep each Challenge concrete and inventable with emerging tech.",
+            "Quests are local crisis episodes under this theme. Each quest scene MUST include: (1) lived local harm in a concrete place, (2) a local driver of the theme problem (not only how people shelter from it). " +
+            "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
+            "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
+            "Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
+            "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
+            "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk.",
         },
       }),
     });
@@ -3063,23 +3074,48 @@ function normalizeMission(raw, globalId) {
   const id =
     String(raw.id || "").trim() ||
     `gen-${globalId}-${Math.random().toString(36).slice(2, 8)}`;
-  const pressure =
+  const pressureRaw =
     raw.pressure && typeof raw.pressure === "object" && Object.keys(raw.pressure).length
       ? Object.fromEntries(
           Object.entries(raw.pressure)
             .slice(0, 4)
-            .map(([k, v]) => [String(k).slice(0, 24), Math.min(5, Math.max(0, Number(v) || 2))])
+            .map(([k, v]) => [String(k).slice(0, 40), Math.min(5, Math.max(0, Number(v) || 2))])
         )
       : { Pressure: 2, Capacity: 2, Trust: 1 };
+  // Humanize AI camelCase keys so HUD never shows BenzeneSpikes-style ids
+  const pressure = remapMeterKeyedObject(pressureRaw);
   const keys = Object.keys(pressure);
-  const pressureRise =
+  const riseRaw =
     raw.pressureRise && typeof raw.pressureRise === "object"
-      ? Object.fromEntries(keys.map((k) => [k, Math.min(2, Math.max(0, Number(raw.pressureRise[k]) || 1))]))
-      : Object.fromEntries(keys.map((k, i) => [k, i === keys.length - 1 ? 0 : 1]));
-  const winMax =
-    raw.winMax && typeof raw.winMax === "object"
-      ? Object.fromEntries(keys.map((k) => [k, Math.min(3, Math.max(0, Number(raw.winMax[k]) ?? 1))]))
-      : Object.fromEntries(keys.map((k) => [k, 1]));
+      ? remapMeterKeyedObject(raw.pressureRise)
+      : {};
+  const winRaw =
+    raw.winMax && typeof raw.winMax === "object" ? remapMeterKeyedObject(raw.winMax) : {};
+  const pressureRise = Object.fromEntries(
+    keys.map((k, i) => [
+      k,
+      Math.min(
+        2,
+        Math.max(
+          0,
+          Number(riseRaw[k] ?? raw.pressureRise?.[Object.keys(pressureRaw)[i]] ?? (i === keys.length - 1 ? 0 : 1)) ||
+            0
+        )
+      ),
+    ])
+  );
+  const winMax = Object.fromEntries(
+    keys.map((k, i) => [
+      k,
+      Math.min(
+        3,
+        Math.max(
+          0,
+          Number(winRaw[k] ?? raw.winMax?.[Object.keys(pressureRaw)[i]] ?? 1) || 0
+        )
+      ),
+    ])
+  );
   const validTech = new Set(allTechIds());
   const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
     .map(String)
@@ -3228,12 +3264,14 @@ function startMission(mission) {
     return;
   }
 
-  state.mission = mission;
-  state.global = globalById(mission.globalId) || state.global;
-  state.year = mission.startYear;
+  // Normalize so AI camelCase meter ids become human labels (Benzene Spikes, not BenzeneSpikes)
+  const normalized = normalizeMission(mission, mission.globalId || state.global?.id);
+  state.mission = { ...mission, ...normalized, id: mission.id || normalized.id };
+  state.global = globalById(state.mission.globalId) || state.global;
+  state.year = state.mission.startYear;
   state.turn = 0;
   state.waits = 0;
-  state.pressure = clonePressure(mission.pressure);
+  state.pressure = clonePressure(state.mission.pressure);
   state.selectedTechIds = [];
   state.learnOrder = [];
   state.inventionName = "";
@@ -3813,32 +3851,64 @@ function assessFeasibility() {
   }
   dims.push({ id: "scale", name: "Scale", level: scaleLevel, note: scaleNote });
 
-  // Overall: any critical red → red; else any yellow → yellow; else green
-  // Includes Scale so deploy risk shows on the invent traffic light.
-  const levels = dims.map((d) => d.level);
-  let overall = "green";
-  if (levels.includes("red")) overall = "red";
-  else if (levels.includes("yellow")) overall = "yellow";
+  // Sustainable — does the invent address why the problem keeps happening?
+  // Used for Scale odds only; never blocks Challenge by itself.
+  const sustain = assessSustainable({
+    global: state.global || globalById(state.mission?.globalId),
+    mission: state.mission,
+    techs,
+    inventionHow: state.inventionHow,
+    inventionImpact: state.inventionImpact,
+    inventionName: state.inventionName,
+  });
+  const sustainableLevel = sustain.level;
+  dims.push({
+    id: "sustainable",
+    name: "Sustainable",
+    level: sustainableLevel,
+    note: sustain.note,
+  });
 
-  const pilotPct = successChancePct(overall);
-  const scalePct = successChancePct(scaleLevel);
+  // Pilot odds: local dims only (not Scale, not Sustainable)
+  const pilotDimLevels = [timingLevel, storyLevel, fitLevel, stackLevel];
+  if (budgetWillEnabled()) {
+    const resDim = dims.find((d) => d.id === "resources");
+    if (resDim) pilotDimLevels.push(resDim.level);
+  }
+  const pilotLevel = worstLevel(pilotDimLevels);
+
+  // Scale attempt roll: Scale dim + Sustainable (worse of the two)
+  const scaleAttemptLevel = scaleRollLevel(scaleLevel, sustainableLevel);
+
+  // Panel traffic light: honest worst of everything shown
+  const overall = worstLevel(dims.map((d) => d.level));
+
+  const pilotPct = successChancePct(pilotLevel);
+  const scalePct = successChancePct(scaleAttemptLevel);
+
+  // Challenge: only pilot-local reds block (Sustainable red is OK)
+  const canChallenge = pilotLevel !== "red" && !collapsed();
 
   const summaries = {
-    red: `Not ready for the challenge yet — fix red items. Pilot success ~${pilotPct}% if you forced fielding; Scale ~${scalePct}%.`,
-    yellow: `Risky but challengeable. Pilot success ~${pilotPct}% · Scale ~${scalePct}% (Scale dim alone).`,
-    green: `Looks feasible — still not certain. Pilot success ~${pilotPct}% · Scale ~${scalePct}%.`,
+    red: `Fix red Pilot items before the hard question. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`,
+    yellow: `Risky but playable. Pilot ~${pilotPct}% (local fit) · Scale ~${scalePct}% (Scale + Sustainable).`,
+    green: `Looks solid. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`,
   };
 
   return {
     overall,
     summary: summaries[overall],
     dims,
-    canChallenge: overall !== "red" && !collapsed(),
-    /** Used for Pilot roll */
-    pilotLevel: overall,
+    canChallenge,
+    /** Used for Pilot roll — local dims only */
+    pilotLevel,
     pilotChancePct: pilotPct,
-    /** Used for Scale roll (Scale dim only, not overall aggregate) */
+    /** Scale dim alone (display) */
     scaleLevel,
+    /** Sustainable dim */
+    sustainableLevel,
+    /** Used for Scale roll — worse(Scale, Sustainable) */
+    scaleRollLevel: scaleAttemptLevel,
     scaleChancePct: scalePct,
   };
 }
@@ -3882,9 +3952,9 @@ function renderFeasibility() {
   }
   if (foot) {
     foot.textContent =
-      f.overall === "red"
-        ? "Green or yellow to face the challenge. Timing red usually means the how-it-works over-claims what is possible this year — revise claims or use Art of the possible."
-        : "Any emTech category is pickable. Timing judges whether your how-it-works over-claims the present.";
+      f.pilotLevel === "red"
+        ? "Fix red Pilot items (timing, story, local fit, stack) to face the hard question. Sustainable red does not block Challenge — it weakens Scale."
+        : `Pilot ~${f.pilotChancePct}% uses timing · story · local fit · stack. Scale ~${f.scaleChancePct}% uses Scale + Sustainable (does it fix why the crisis keeps happening?).`;
   }
 }
 
@@ -4498,8 +4568,14 @@ function challengeBlockReason() {
   // continue with existing body below
   const f = assessFeasibility();
   if (collapsed()) return "Too late — mission collapsed.";
-  if (f.overall === "red") {
-    const reds = f.dims.filter((d) => d.level === "red");
+  // Sustainable red does not block Challenge — only Pilot-local reds do
+  if (f.pilotLevel === "red") {
+    const reds = f.dims.filter(
+      (d) =>
+        d.level === "red" &&
+        d.id !== "sustainable" &&
+        d.id !== "scale"
+    );
     if (reds.length) return `Feasibility red: ${reds.map((d) => d.note).join(" · ")}`;
     return f.summary;
   }
@@ -6373,12 +6449,46 @@ async function poseChallenge(angleMeta) {
 }
 
 /**
+ * Turn camelCase / PascalCase / snake_case meter ids into spaced labels.
+ * BenzeneSpikes → Benzene Spikes · CorridorPM → Corridor PM
+ */
+function humanizeMeterKey(key) {
+  const s = String(key || "").trim();
+  if (!s) return "";
+  if (/\s/.test(s)) return s;
+  let spaced = s.replace(/[_-]+/g, " ");
+  spaced = spaced.replace(/([a-z\d])([A-Z])/g, "$1 $2");
+  spaced = spaced.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  return spaced
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => {
+      if (/^[A-Z0-9]{2,}$/.test(w)) return w; // PM, CO2-style tokens
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/**
  * Display label for a crisis meter key (logic keys unchanged).
  * Trust → Public confidence for players.
  */
 function crisisMeterDisplayLabel(key) {
   if (key === "Trust") return "Public confidence";
-  return String(key || "");
+  return humanizeMeterKey(key);
+}
+
+/** Remap pressure / rise / winMax object keys to humanized labels (stable for UI). */
+function remapMeterKeyedObject(obj) {
+  if (!obj || typeof obj !== "object") return {};
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const label = k === "Trust" ? "Trust" : humanizeMeterKey(k);
+    if (!label) continue;
+    // Prefer first value if two keys humanize the same
+    if (out[label] == null) out[label] = v;
+  }
+  return out;
 }
 
 /**
@@ -9442,13 +9552,15 @@ function renderDeployBay() {
     if (next === "pilot") {
       const pilotAmt = Math.min(remaining, Math.max(1, Math.ceil(pool / 2)) || 0);
       status.textContent =
-        `Try Pilot (~${feas.pilotChancePct}% chance). Success drops −${pilotAmt} crisis.${
+        `Try Pilot (~${feas.pilotChancePct}% — timing, story, local fit, stack). ` +
+        `Local try: success drops −${pilotAmt} crisis.${
           pilotBits.length ? ` Cost: ${pilotBits.join(" · ")}.` : ""
         }${lastLine}`;
     } else if (next === "scale") {
       status.textContent =
-        `Pilot landed (−${state.dropPilotApplied}). Try Scale (~${feas.scaleChancePct}% chance). ` +
-        `Success spends remaining −${remaining} and reaches New normal.${
+        `Pilot landed (−${state.dropPilotApplied}). Try Scale (~${feas.scaleChancePct}% — Scale + Sustainable). ` +
+        `Success spends remaining −${remaining} and reaches New normal. ` +
+        `Weak on Sustainable if you only shelter people and never touch why the crisis keeps happening.${
           scaleBits.length ? ` Cost: ${scaleBits.join(" · ")}.` : ""
         }${lastLine}`;
     } else {
@@ -9475,7 +9587,7 @@ function renderDeployBay() {
         ? state.challengeSpectator
           ? "Read-only — watching the active player"
           : "Not your turn to Pilot this invent"
-        : `About ${feas.pilotChancePct}% chance. Succeeds or fails.`;
+        : `About ${feas.pilotChancePct}% chance (local feasibility). Succeeds or fails.`;
     } else if (next === "scale") {
       primary.hidden = false;
       primary.disabled = !canField;
@@ -9486,7 +9598,7 @@ function renderDeployBay() {
         ? state.challengeSpectator
           ? "Read-only — watching the active player"
           : "Not your turn to Scale this invent"
-        : `About ${feas.scaleChancePct}% chance. Success → New normal.`;
+        : `About ${feas.scaleChancePct}% chance (Scale + Sustainable). Success → New normal.`;
     } else {
       primary.hidden = true;
     }
@@ -9726,7 +9838,8 @@ function attemptDeployStage(stage) {
       roomBridge.send({
         type: stage === "pilot" ? "attempt_pilot" : "attempt_scale",
         payload: {
-          feasibilityLevel: stage === "pilot" ? feas.pilotLevel : feas.scaleLevel,
+          feasibilityLevel:
+            stage === "pilot" ? feas.pilotLevel : feas.scaleRollLevel || feas.scaleLevel,
           targetSeatId,
         },
       });
@@ -9760,7 +9873,7 @@ function attemptDeployStage(stage) {
       renderDeployBay();
       return;
     }
-    const roll = rollDeploySuccess(feas.pilotLevel);
+    const roll = rollDeploySuccess(feas.pilotLevel); // local dims only
     state.lastDeployRoll = { stage: "pilot", ok: roll.ok, pct: roll.pct, level: roll.level };
     if (!roll.ok) {
       state.lastNews = `Pilot failed in ${state.year}.`;
@@ -9848,7 +9961,7 @@ function attemptDeployStage(stage) {
       renderDeployBay();
       return;
     }
-    const roll = rollDeploySuccess(feas.scaleLevel);
+    const roll = rollDeploySuccess(feas.scaleRollLevel || feas.scaleLevel);
     state.lastDeployRoll = { stage: "scale", ok: roll.ok, pct: roll.pct, level: roll.level };
     if (!roll.ok) {
       state.lastNews = `Scale failed. Pilot still stands — retry Scale or return to Invent.`;

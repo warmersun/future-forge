@@ -10,6 +10,9 @@ import {
   visionStageIdForDeployStage,
   successChancePct,
   rollDeploySuccess,
+  worseLevel,
+  worstLevel,
+  scaleRollLevel,
   FEASIBILITY_SUCCESS_PCT,
 } from "./deploy.js";
 
@@ -72,6 +75,12 @@ describe("staged deploy pool", () => {
     assert.equal(visionStageIdForDeployStage("pilot"), "prototype");
     assert.equal(visionStageIdForDeployStage("scale"), "transition");
     assert.equal(visionStageIdForDeployStage("new_normal"), "transformed");
+  });
+
+  it("worseLevel / scaleRollLevel pick redder light", () => {
+    assert.equal(worseLevel("green", "red"), "red");
+    assert.equal(worstLevel(["green", "yellow"]), "yellow");
+    assert.equal(scaleRollLevel("green", "yellow"), "yellow");
   });
 
   it("computeDeployDrop still returns positive base", () => {

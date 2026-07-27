@@ -258,11 +258,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Air: 3, Health: 2, Traffic: 2 },
-    pressureRise: { Air: 1, Health: 1, Traffic: 0 },
-    winMax: { Air: 1, Health: 1, Traffic: 1 },
+    pressure: { AsthmaDays: 3, ParentTrust: 2, CorridorPM: 3 },
+    pressureRise: { AsthmaDays: 1, ParentTrust: 0, CorridorPM: 1 },
+    winMax: { AsthmaDays: 1, ParentTrust: 1, CorridorPM: 1 },
     scene:
-      "Asthma days close classrooms along the truck route. Parents have sensor photos; industry has lobbyists. A local fix must cut emissions and protect kids now.",
+      "Asthma days close classrooms along the truck route. Parents have sensor photos of the haze — and the corridor still runs diesel at rush hour. A local fix must protect kids and cut corridor exhaust.",
     stakeholder: "Priya, parent coalition",
     suggested: ["iot", "ai", "solar", "battery", "self-driving", "networks", "materials"],
     visionTheme: "energy-city",
@@ -1080,6 +1080,9 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
   return out.slice(0, count);
 }
 
+/** Bump when seed scenes change so generated ids never collide with old caches. */
+const SCENARIO_PACK_REV = "d6";
+
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
   const suggestedDefault = DEFAULT_SUGGESTED_BY_KIND[g.kind] || DEFAULT_SUGGESTED_BY_KIND.now;
@@ -1102,7 +1105,7 @@ function buildLocalScenarioVariants(g, count, salt) {
     });
     const collapseYear = 2032 + ((i + salt) % 3) * 2;
     out.push({
-      id: `gen-${g.id}-${i}-${salt}`,
+      id: `gen-${g.id}-${i}-${salt}-${SCENARIO_PACK_REV}`,
       globalId: g.id,
       title,
       place,

@@ -93,6 +93,44 @@ export function successChancePct(level) {
   return FEASIBILITY_SUCCESS_PCT[key] ?? FEASIBILITY_SUCCESS_PCT.yellow;
 }
 
+const LEVEL_RANK = { red: 0, yellow: 1, green: 2 };
+
+/**
+ * Worse (more red) of two traffic-light levels.
+ * @param {"red"|"yellow"|"green"|string} a
+ * @param {"red"|"yellow"|"green"|string} b
+ * @returns {"red"|"yellow"|"green"}
+ */
+export function worseLevel(a, b) {
+  const la = String(a || "yellow").toLowerCase();
+  const lb = String(b || "yellow").toLowerCase();
+  const ra = LEVEL_RANK[la] ?? 1;
+  const rb = LEVEL_RANK[lb] ?? 1;
+  return ra <= rb ? (LEVEL_RANK[la] != null ? la : "yellow") : LEVEL_RANK[lb] != null ? lb : "yellow";
+}
+
+/**
+ * Worst level in a list (for Pilot: local dims only).
+ * @param {Array<"red"|"yellow"|"green"|string>} levels
+ * @returns {"red"|"yellow"|"green"}
+ */
+export function worstLevel(levels) {
+  let out = "green";
+  for (const lv of levels || []) {
+    out = worseLevel(out, lv);
+  }
+  return out;
+}
+
+/**
+ * Scale attempt uses Scale dim and Sustainable dim together.
+ * @param {"red"|"yellow"|"green"|string} scaleLevel
+ * @param {"red"|"yellow"|"green"|string} sustainableLevel
+ */
+export function scaleRollLevel(scaleLevel, sustainableLevel) {
+  return worseLevel(scaleLevel, sustainableLevel);
+}
+
 /**
  * Roll success against a traffic-light level.
  * @param {"red"|"yellow"|"green"|string} level

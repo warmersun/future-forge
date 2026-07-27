@@ -9,6 +9,8 @@
     "serve": "node server.mjs",
     "check:briefs": "node scripts/check-problem-briefs.mjs",
     "check:vision-prompts": "node scripts/check-vision-prompts.mjs",
+    "generate:quests": "node scripts/generate-scenario-seeds.mjs",
+    "generate:quests:local": "node scripts/generate-scenario-seeds.mjs --local-only",
     "check:syntax": "node --check server.mjs && node --check js/main.js && node --check js/game.js && node --check js/sim/market-news.js && node --check js/sim/actions.js && node --check js/sim/mp-session.js && node --check js/multiplayer/ui.js",
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
