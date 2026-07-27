@@ -9,6 +9,12 @@ import {
   normalizeShareTechs,
   isUsableVisionUrl,
   MAX_PINS,
+  importQuestToLibrary,
+  loadQuestLibrary,
+  getFocusedQuest,
+  clearDailyFocus,
+  removeQuestFromLibrary,
+  saveQuestLibrary,
 } from "./meta.js";
 
 describe("meta dailies", () => {
@@ -77,5 +83,44 @@ describe("meta dailies", () => {
     assert.equal(isUsableVisionUrl("https://cdn.example/vision.png"), true);
     assert.equal(isUsableVisionUrl(""), false);
     assert.equal(isUsableVisionUrl("not-a-url"), false);
+  });
+});
+
+describe("quest library (memory localStorage shim)", () => {
+  const store = new Map();
+  const mem = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+
+  it("import sets focus by default and clear restores", () => {
+    globalThis.localStorage = mem;
+    store.clear();
+    saveQuestLibrary([]);
+    clearDailyFocus();
+    const mission = {
+      id: "imp-test-1",
+      globalId: "climate",
+      title: "Test",
+      place: "Here",
+      scene: "Lede",
+      briefMd: "## Hi",
+      suggested: ["solar"],
+      source: "imported",
+      spotlight: { techId: "solar" },
+      pressure: { Heat: 2 },
+    };
+    const r = importQuestToLibrary({
+      tile: { placement: { mode: "replace-daily" } },
+      mission,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.focused, true);
+    assert.equal(loadQuestLibrary().length, 1);
+    assert.equal(getFocusedQuest()?.mission?.id, "imp-test-1");
+    removeQuestFromLibrary("imp-test-1");
+    assert.equal(loadQuestLibrary().length, 0);
+    assert.equal(getFocusedQuest(), null);
   });
 });

@@ -84,7 +84,15 @@ import {
   kindLabelForOutcome,
   isUsableVisionUrl,
   visionUrlFromImg,
+  loadQuestLibrary,
+  importQuestToLibrary,
+  removeQuestFromLibrary,
+  getFocusedQuest,
+  clearDailyFocus,
+  setDailyFocus,
 } from "./meta.js";
+import { parseQuestTileJson, validateQuestTile } from "./quest-tile.js";
+import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import { initFriendsUi } from "./multiplayer/ui.js";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js";
 import { createRoomBridge } from "./multiplayer/room-bridge.js";
@@ -253,6 +261,10 @@ const state = {
   playMode: null,
   /** True only while a Play-tutorial mission is active */
   tutorialRun: false,
+  /** @type {object[]} Quests loaded from server `quests/` folder via GET /api/quests */
+  hostedQuests: [],
+  hostedQuestsDir: "",
+  hostedQuestsLoaded: false,
   year: GAME.startYear,
   turn: 0,
   waits: 0,
@@ -2364,10 +2376,12 @@ function persistScenarioCache() {
         pressureRise: m.pressureRise,
         winMax: m.winMax,
         scene: m.scene,
+        briefMd: m.briefMd || "",
         stakeholder: m.stakeholder,
         suggested: m.suggested,
         visionTheme: m.visionTheme,
         source: m.source,
+        spotlight: m.spotlight || null,
       }));
     }
     localStorage.setItem(STORAGE_SCENARIOS, JSON.stringify(slim));
@@ -2612,6 +2626,139 @@ function renderTitleMeta() {
   renderTitleCtas();
   renderDailyCard();
   renderPinsPanel();
+  renderHostedQuestsPanel();
+  // Refresh folder catalog in background (server re-scans on each GET)
+  void refreshHostedQuests({ silent: true }).then(() => {
+    if (state.screen === "title") renderHostedQuestsPanel();
+    if (state.screen === "global") renderGlobals();
+  });
+}
+
+/**
+ * Load External Quests from the server's designated `quests/` folder.
+ * @param {{ silent?: boolean }} [opts]
+ */
+async function refreshHostedQuests(opts = {}) {
+  try {
+    const res = await fetch("/api/quests");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
+      if (!opts.silent) flashToast("Could not load server Quests folder.");
+      state.hostedQuests = [];
+      state.hostedQuestsLoaded = true;
+      return [];
+    }
+    state.hostedQuests = Array.isArray(data.quests) ? data.quests : [];
+    state.hostedQuestsDir = String(data.dir || "quests");
+    state.hostedQuestsLoaded = true;
+    return state.hostedQuests;
+  } catch {
+    if (!opts.silent) flashToast("Could not reach /api/quests.");
+    state.hostedQuests = [];
+    state.hostedQuestsLoaded = true;
+    return [];
+  }
+}
+
+/**
+ * @param {object} entry — catalog entry from /api/quests
+ */
+function playHostedQuest(entry) {
+  if (!entry?.mission) {
+    flashToast("External Quest missing mission data.");
+    return;
+  }
+  const m = normalizeMission(
+    { ...entry.mission, source: "hosted" },
+    entry.mission.globalId || entry.globalId
+  );
+  clearMissionPickSession();
+  leaveHotseat?.();
+  state.tutorialRun = false;
+  state.playMode = "workshop";
+  state.global = globalById(m.globalId) || state.global;
+  startMission(m);
+}
+
+/**
+ * Select hosted quest during multiplayer mission pick (or solo from theme screen).
+ * @param {object} entry
+ */
+function selectHostedQuest(entry) {
+  if (!entry?.mission) return;
+  const m = normalizeMission(
+    { ...entry.mission, source: "hosted" },
+    entry.mission.globalId || entry.globalId
+  );
+  state.global = globalById(m.globalId) || state.global;
+  // startMission intercepts missionPickSession for multiplayer
+  startMission(m);
+}
+
+function focusHostedAsDaily(entry) {
+  if (!entry?.mission) return;
+  const m = normalizeMission(
+    { ...entry.mission, source: "hosted" },
+    entry.mission.globalId || entry.globalId
+  );
+  importQuestToLibrary(
+    { tile: entry.tile || { placement: { mode: "replace-daily" } }, mission: m },
+    { setFocus: true }
+  );
+  renderDailyCard();
+  flashToast("External Quest set as daily on this device.");
+}
+
+function renderHostedQuestsPanel() {
+  const panel = $("#hosted-quests-panel");
+  const list = $("#hosted-quests-list");
+  const meta = $("#hosted-quests-meta");
+  if (!panel || !list) return;
+  const items = state.hostedQuests || [];
+  if (!items.length) {
+    panel.hidden = true;
+    list.innerHTML = "";
+    if (meta) meta.textContent = "";
+    return;
+  }
+  panel.hidden = false;
+  if (meta) {
+    meta.textContent = `${items.length} in server folder · drop JSON into quests/`;
+  }
+  list.innerHTML = items
+    .map((e) => {
+      const tech = e.spotlightTechId ? techById(e.spotlightTechId) : null;
+      const ex = e.mission?.briefMd
+        ? excerptFromBrief(e.mission.briefMd, 140)
+        : String(e.mission?.scene || e.summary || "").slice(0, 140);
+      const g = globalById(e.globalId);
+      return `<div class="quest-lib-row quest-external-row" data-hosted-id="${escapeHtml(e.id)}">
+        <div class="quest-lib-copy">
+          <span class="quest-external-badge">External${
+            tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
+          }</span>
+          <strong>${escapeHtml(e.title || e.mission?.title || "Quest")}</strong>
+          <span class="muted">${escapeHtml(g?.title || e.globalId || "")} · ${escapeHtml(
+            e.place || e.mission?.place || ""
+          )}</span>
+          <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
+        </div>
+        <div class="quest-lib-actions">
+          <button type="button" class="btn btn-primary btn-sm hosted-play">Play</button>
+          <button type="button" class="btn btn-ghost btn-sm hosted-focus" title="Use as daily on this device">
+            As daily
+          </button>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  list.querySelectorAll(".quest-lib-row").forEach((row) => {
+    const id = row.dataset.hostedId;
+    const entry = items.find((x) => x.id === id);
+    row.querySelector(".hosted-play")?.addEventListener("click", () => playHostedQuest(entry));
+    row.querySelector(".hosted-focus")?.addEventListener("click", () => focusHostedAsDaily(entry));
+  });
 }
 
 /** Show Play tutorial again (clears local completion flag). */
@@ -2650,34 +2797,187 @@ function startSparkPortsideMission() {
 function renderDailyCard() {
   const card = $("#daily-card");
   if (!card) return;
-  const daily = pickDailyMission(GLOBALS, localScenariosForGlobal, dailySeedString());
-  state.dailyPick = daily;
-  if (!daily?.mission) {
+
+  const focused = getFocusedQuest();
+  const restoreBtn = $("#btn-restore-daily");
+  const hintEl = $("#daily-hint");
+  const badgeEl = $("#daily-badge-text");
+  const spotlightEl = $("#daily-spotlight");
+
+  /** @type {{ seed?: string, global: object, mission: object, isFocus?: boolean }} */
+  let pick = null;
+
+  if (focused?.mission) {
+    const g = globalById(focused.globalId) || {
+      id: focused.globalId,
+      title: focused.globalId,
+    };
+    const mission = normalizeMission(focused.mission, focused.globalId);
+    pick = { global: g, mission, isFocus: true, seed: "imported" };
+    state.dailyPick = pick;
+  } else {
+    const daily = pickDailyMission(GLOBALS, localScenariosForGlobal, dailySeedString());
+    state.dailyPick = daily;
+    pick = daily;
+  }
+
+  if (!pick?.mission) {
     card.hidden = true;
     return;
   }
   card.hidden = false;
+
   const seedEl = $("#daily-seed-label");
   const titleEl = $("#daily-title");
   const metaEl = $("#daily-meta");
   const sceneEl = $("#daily-scene");
   const pinBtn = $("#btn-daily-pin");
-  if (seedEl) seedEl.textContent = daily.seed;
-  if (titleEl) titleEl.textContent = daily.mission.title;
+
+  if (pick.isFocus) {
+    if (badgeEl) badgeEl.textContent = "Imported";
+    if (seedEl) seedEl.textContent = "focus";
+    if (hintEl) {
+      hintEl.textContent = "Replaces stock daily on this device";
+    }
+    if (restoreBtn) restoreBtn.hidden = false;
+  } else {
+    if (badgeEl) badgeEl.textContent = "Daily";
+    if (seedEl) seedEl.textContent = pick.seed || dailySeedString();
+    if (hintEl) hintEl.textContent = "Same seed for everyone today";
+    if (restoreBtn) restoreBtn.hidden = true;
+  }
+
+  if (titleEl) titleEl.textContent = pick.mission.title;
   if (metaEl) {
-    metaEl.textContent = `${daily.global.title} · ${daily.mission.place} · ${
-      daily.mission.startYear || GAME.startYear
+    metaEl.textContent = `${pick.global.title} · ${pick.mission.place} · ${
+      pick.mission.startYear || GAME.startYear
     }`;
   }
   if (sceneEl) {
-    const s = daily.mission.scene || "";
-    sceneEl.textContent = s.length > 220 ? `${s.slice(0, 220)}…` : s;
+    if (pick.mission.briefMd) {
+      sceneEl.textContent = excerptFromBrief(pick.mission.briefMd, 220);
+    } else {
+      const s = pick.mission.scene || "";
+      sceneEl.textContent = s.length > 220 ? `${s.slice(0, 220)}…` : s;
+    }
+  }
+  if (spotlightEl) {
+    const sp = pick.mission.spotlight;
+    if (sp?.techId) {
+      const tech = techById(sp.techId);
+      spotlightEl.hidden = false;
+      spotlightEl.textContent = `Spotlight · ${tech?.name || sp.techId}`;
+    } else {
+      spotlightEl.hidden = true;
+      spotlightEl.textContent = "";
+    }
   }
   if (pinBtn) {
-    const pinned = isPinned(daily.mission.id);
+    const pinned = isPinned(pick.mission.id);
     pinBtn.textContent = pinned ? "Pinned ✓" : "Pin";
     pinBtn.classList.toggle("is-pinned", pinned);
   }
+  renderQuestLibraryPanel();
+}
+
+function renderQuestLibraryPanel() {
+  const panel = $("#quest-library-panel");
+  const list = $("#quest-library-list");
+  if (!panel || !list) return;
+  const library = loadQuestLibrary();
+  if (!library.length) {
+    panel.hidden = true;
+    list.innerHTML = "";
+    return;
+  }
+  panel.hidden = false;
+  const focus = getFocusedQuest();
+  list.innerHTML = library
+    .map((e) => {
+      const m = e.mission;
+      const tech = m.spotlight?.techId ? techById(m.spotlight.techId) : null;
+      const isFocus = focus?.mission?.id === m.id;
+      const ex = m.briefMd
+        ? excerptFromBrief(m.briefMd, 120)
+        : String(m.scene || "").slice(0, 120);
+      return `<div class="quest-lib-row" data-mission-id="${escapeHtml(m.id)}">
+        <div class="quest-lib-copy">
+          <strong>${escapeHtml(m.title)}</strong>
+          <span class="muted">${escapeHtml(m.place || "")}${
+            tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
+          }${isFocus ? " · Focus" : ""}</span>
+          <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
+        </div>
+        <div class="quest-lib-actions">
+          <button type="button" class="btn btn-primary btn-sm quest-lib-play">Play</button>
+          <button type="button" class="btn btn-ghost btn-sm quest-lib-focus" title="Use as daily">${
+            isFocus ? "Focused" : "Focus"
+          }</button>
+          <button type="button" class="btn btn-ghost btn-sm quest-lib-remove" title="Remove">×</button>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  list.querySelectorAll(".quest-lib-row").forEach((row) => {
+    const id = row.dataset.missionId;
+    row.querySelector(".quest-lib-play")?.addEventListener("click", () => {
+      playLibraryQuest(id);
+    });
+    row.querySelector(".quest-lib-focus")?.addEventListener("click", () => {
+      setDailyFocus(id);
+      renderDailyCard();
+      flashToast("Daily card now shows this Quest.");
+    });
+    row.querySelector(".quest-lib-remove")?.addEventListener("click", () => {
+      removeQuestFromLibrary(id);
+      renderDailyCard();
+      flashToast("Removed from library.");
+    });
+  });
+}
+
+function playLibraryQuest(missionId) {
+  const entry = loadQuestLibrary().find((e) => e.id === missionId);
+  if (!entry?.mission) {
+    flashToast("Quest not found in library.");
+    return;
+  }
+  clearMissionPickSession();
+  leaveHotseat();
+  const m = normalizeMission(entry.mission, entry.mission.globalId);
+  state.global = globalById(m.globalId) || state.global;
+  state.tutorialRun = false;
+  state.playMode = "workshop";
+  startMission(m);
+}
+
+/**
+ * @param {string|ArrayBuffer} text
+ */
+function handleQuestTileFileText(text) {
+  const parsed = parseQuestTileJson(String(text || ""));
+  if (!parsed.ok) {
+    flashToast("Could not parse Quest JSON.");
+    return;
+  }
+  const v = validateQuestTile(parsed.value);
+  if (!v.ok) {
+    const detail = (v.details || []).slice(0, 3).join(", ");
+    flashToast(`Invalid Quest tile: ${v.error}${detail ? ` (${detail})` : ""}`);
+    return;
+  }
+  const r = importQuestToLibrary({ tile: v.tile, mission: v.mission });
+  if (!r.ok) {
+    flashToast("Import failed.");
+    return;
+  }
+  renderDailyCard();
+  flashToast(
+    r.focused
+      ? "Quest imported — replaces daily on this device."
+      : "Quest imported into library."
+  );
 }
 
 function renderPinsPanel() {
@@ -2731,6 +3031,14 @@ function renderPinsPanel() {
 async function playPinnedMission(row) {
   const missionId = row?.dataset?.missionId;
   const globalId = row?.dataset?.globalId;
+  const pin = loadPins().find((p) => p.missionId === missionId);
+  if (pin?.missionSnapshot) {
+    const snap = pin.missionSnapshot;
+    const g = globalById(snap.globalId || globalId);
+    if (g) state.global = g;
+    startMission(normalizeMission(snap, snap.globalId || globalId));
+    return;
+  }
   const g = globalById(globalId);
   if (!g) {
     flashToast("Pinned theme missing.");
@@ -2741,7 +3049,6 @@ async function playPinnedMission(row) {
   let m = list.find((x) => x.id === missionId);
   if (!m) {
     // Rebuild from seeds with pin metadata
-    const pin = loadPins().find((p) => p.missionId === missionId);
     const pack = localScenariosForGlobal(g, { count: 4, salt: 0 });
     m = pack.find((x) => x.id === missionId) || {
       id: missionId,
@@ -2827,7 +3134,28 @@ function renderGlobals() {
   const shelved = new Set(GLOBALS.filter((g) => g.shelf).map((g) => g.id));
   const orphans = GLOBALS.filter((g) => !shelved.has(g.id));
 
+  const hosted = state.hostedQuests || [];
+  const mpPick = Boolean(missionPickSession);
+
   let html = "";
+  if (hosted.length) {
+    html += `
+      <section class="theme-shelf theme-shelf-external" aria-labelledby="theme-shelf-external">
+        <h2 id="theme-shelf-external" class="theme-shelf-title">
+          External Quests
+          <span class="theme-shelf-external-pill">From server folder</span>
+        </h2>
+        <p class="theme-shelf-blurb muted">
+          ${
+            mpPick
+              ? "Pick an External Quest for this friends game — stands out from catalog themes."
+              : "Quests loaded from the server <code>quests/</code> folder. Or choose a theme below."
+          }
+        </p>
+        <div class="challenge-grid">${hosted.map(hostedQuestCardHtml).join("")}</div>
+      </section>`;
+  }
+
   if (startThemes.length) {
     html += `
       <section class="theme-shelf theme-shelf-start" aria-labelledby="theme-shelf-start">
@@ -2854,12 +3182,62 @@ function renderGlobals() {
   }
 
   root.innerHTML = html;
-  root.querySelectorAll(".challenge-card").forEach((btn) => {
+  root.querySelectorAll(".challenge-card[data-id]").forEach((btn) => {
+    if (btn.dataset.hostedId) return;
     btn.addEventListener("click", () => {
       state.global = globalById(btn.dataset.id);
       showScreen("mission");
     });
   });
+  root.querySelectorAll(".challenge-card[data-hosted-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const entry = hosted.find((x) => x.id === btn.dataset.hostedId);
+      if (entry) selectHostedQuest(entry);
+    });
+  });
+
+  // Ensure catalog is fresh when opening pick (esp. multiplayer)
+  if (!state.hostedQuestsLoaded) {
+    void refreshHostedQuests({ silent: true }).then(() => {
+      if (state.screen === "global") renderGlobals();
+    });
+  }
+}
+
+/** Card HTML for a server-folder External Quest (theme pick screen). */
+function hostedQuestCardHtml(entry) {
+  const tech = entry.spotlightTechId ? techById(entry.spotlightTechId) : null;
+  const g = globalById(entry.globalId);
+  const img = problemVisualUrl(entry.globalId || "climate");
+  const scene = entry.mission?.briefMd
+    ? excerptFromBrief(entry.mission.briefMd, 140)
+    : String(entry.mission?.scene || entry.summary || "").slice(0, 140);
+  return `
+      <button type="button" class="challenge-card challenge-card-visual quest-card-external" data-hosted-id="${escapeHtml(
+        entry.id
+      )}">
+        <span class="card-visual" aria-hidden="true">
+          <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
+        </span>
+        <span class="card-body">
+          <span class="num">
+            <span class="scenario-tag external-tag">External</span>
+            ${
+              tech
+                ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
+                : ""
+            }
+          </span>
+          <h3>${escapeHtml(entry.title || entry.mission?.title || "Quest")}</h3>
+          <p class="muted">${escapeHtml(g?.title || entry.globalId || "")} · ${escapeHtml(
+            entry.place || entry.mission?.place || ""
+          )}</p>
+          <p>${escapeHtml(scene)}</p>
+          <span class="cta">${
+            missionPickSession ? "Use for friends game →" : "Play this Quest →"
+          }</span>
+        </span>
+      </button>`;
 }
 
 function setMissionStatus(text, { loading = false } = {}) {
@@ -2927,6 +3305,32 @@ function paintMissionSkeletons(count = SCENARIO_COUNT) {
   }).join("");
 }
 
+/** Hosted folder missions for a theme, normalized, for mission pick grids. */
+function hostedMissionsForGlobal(globalId) {
+  if (!globalId) return [];
+  return (state.hostedQuests || [])
+    .filter((e) => e.globalId === globalId || e.mission?.globalId === globalId)
+    .map((e) =>
+      normalizeMission(
+        { ...e.mission, source: "hosted" },
+        e.mission?.globalId || e.globalId
+      )
+    );
+}
+
+/**
+ * Prepend External Quests for this theme so they stand out first.
+ * @param {object[]} list
+ * @param {string} [globalId]
+ */
+function mergeHostedIntoMissionList(list, globalId) {
+  const hosted = hostedMissionsForGlobal(globalId || state.global?.id);
+  if (!hosted.length) return list || [];
+  const seen = new Set((list || []).map((m) => m.id));
+  const front = hosted.filter((m) => !seen.has(m.id));
+  return [...front, ...(list || [])];
+}
+
 function paintMissionCards(list, { disabled = false } = {}) {
   const grid = $("#mission-grid");
   if (!grid) return;
@@ -2937,19 +3341,44 @@ function paintMissionCards(list, { disabled = false } = {}) {
   }
   grid.innerHTML = list
     .map((m) => {
-      const tag = m.source === "curated" ? "curated" : "generated";
-      const tagLabel = m.source === "curated" ? "Curated" : "Challenge";
+      const isExternal = m.source === "hosted" || m.source === "imported";
+      const tag =
+        m.source === "hosted"
+          ? "external"
+          : m.source === "imported"
+            ? "imported"
+            : m.source === "curated"
+              ? "curated"
+              : "generated";
+      const tagLabel =
+        m.source === "hosted"
+          ? "External"
+          : m.source === "imported"
+            ? "Imported"
+            : m.source === "curated"
+              ? "Curated"
+              : "Challenge";
+      const spotTechId =
+        m.spotlight?.techId || (m.suggested?.length === 1 ? m.suggested[0] : null);
+      const tech = spotTechId ? techById(spotTechId) : null;
       const solved = isMissionSolved(m.id);
       const pinned = isPinned(m.id);
-      const scene = (m.scene || "").slice(0, 180);
-      const ellipsis = (m.scene || "").length > 180 ? "…" : "";
+      const scene = m.briefMd
+        ? excerptFromBrief(m.briefMd, 180)
+        : (m.scene || "").slice(0, 180);
+      const ellipsis = !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
       return `
     <div class="mission-card-wrap">
       <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
         solved ? "solved" : ""
-      }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
+      } ${isExternal ? "quest-card-external" : ""}" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
         <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
           <span class="scenario-tag ${tag}">${tagLabel}</span>
+          ${
+            tech && isExternal
+              ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
+              : ""
+          }
           ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
         </span>
         <h3>${escapeHtml(m.title)}</h3>
@@ -3119,10 +3548,41 @@ function normalizeMission(raw, globalId) {
     ])
   );
   const validTech = new Set(allTechIds());
-  const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
+  let suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
     .map(String)
     .filter((t) => validTech.has(t))
     .slice(0, 8);
+
+  let spotlight = null;
+  if (raw.spotlight && typeof raw.spotlight === "object" && raw.spotlight.techId) {
+    const techId = String(raw.spotlight.techId);
+    if (validTech.has(techId)) {
+      spotlight = {
+        techId,
+        advanceTitle: String(raw.spotlight.advanceTitle || "").slice(0, 200),
+        advanceSummary: String(raw.spotlight.advanceSummary || "").slice(0, 600),
+        asOf: String(raw.spotlight.asOf || "").slice(0, 32),
+        encourageCopy: String(raw.spotlight.encourageCopy || "").slice(0, 280),
+      };
+      // Spotlight Quests: keep suggested as the single teaching tech
+      if (raw.source === "imported" || suggested.length === 1) {
+        suggested = [techId];
+      }
+    }
+  }
+
+  const briefMd = String(raw.briefMd || "").slice(0, 12_000);
+  const source =
+    raw.source === "curated"
+      ? "curated"
+      : raw.source === "imported"
+        ? "imported"
+        : raw.source === "hosted"
+          ? "hosted"
+          : raw.source === "daily"
+            ? "daily"
+            : "generated";
+
   return {
     id,
     globalId,
@@ -3134,11 +3594,16 @@ function normalizeMission(raw, globalId) {
     pressure,
     pressureRise,
     winMax,
-    scene: String(raw.scene || "").slice(0, 800),
+    scene: String(raw.scene || "").slice(
+      0,
+      source === "imported" || source === "hosted" ? 500 : 800
+    ),
+    briefMd,
     stakeholder: String(raw.stakeholder || "").slice(0, 120),
     suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
-    source: raw.source === "curated" ? "curated" : "generated",
+    source,
+    spotlight,
   };
 }
 
@@ -3167,16 +3632,17 @@ async function renderMissions({ force = false } = {}) {
 
   // Ready cache (last 4): clickable immediately — no network wait
   if (!needsGenerate) {
-    const list = cached.slice(0, SCENARIO_COUNT);
+    const list = mergeHostedIntoMissionList(cached.slice(0, SCENARIO_COUNT), g.id);
     state.missionChoices = list;
     state.scenariosLoading = false;
     paintMissionCards(list, { disabled: false });
     renderProblemBrief(g, { drafting: false });
+    const hostedN = list.filter((m) => m.source === "hosted").length;
     const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
     setMissionStatus(
       solvedN
-        ? `${list.length} cached Challenges (${solvedN} solved — still playable). Generate new to replace the set.`
-        : `${list.length} cached Challenges. Pick one, or generate a new set.`
+        ? `${list.length} Quests (${hostedN ? `${hostedN} external · ` : ""}${solvedN} solved — still playable). Generate new to replace the set.`
+        : `${list.length} Quests${hostedN ? ` (${hostedN} external from server folder)` : ""}. Pick one, or generate a new set.`
     );
     if (regenBtn) {
       regenBtn.disabled = false;
@@ -3197,13 +3663,14 @@ async function renderMissions({ force = false } = {}) {
   if (regenBtn) regenBtn.disabled = true;
 
   try {
-    const list = await ensureScenarios(g, { force });
+    const rawList = await ensureScenarios(g, { force });
     if (state.global?.id !== g.id) return;
+    const list = mergeHostedIntoMissionList(rawList, g.id);
     state.missionChoices = list;
     paintMissionCards(list, { disabled: false });
     renderProblemBrief(g, { drafting: false });
     const curated = list.filter((m) => m.source === "curated").length;
-    const gen = list.length - curated;
+    const gen = list.filter((m) => m.source === "generated").length;
     const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
     let msg = curated
       ? `${list.length} Challenges (${curated} curated · ${gen} generated). Pick one to invent for.`
@@ -3238,6 +3705,10 @@ function beginMissionPick(handler) {
   state.global = null;
   state.missionChoices = [];
   state.scenariosLoading = false;
+  // Refresh External Quests so multiplayer host always sees the server folder
+  void refreshHostedQuests({ silent: true }).then(() => {
+    if (state.screen === "global") renderGlobals();
+  });
   showScreen("global");
 }
 
@@ -3378,8 +3849,47 @@ function renderWorkshop() {
     : "Mission";
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
-  $("#ws-mission-scene").textContent = m.scene || m.problem || "";
+  const sceneEl = $("#ws-mission-scene");
+  if (sceneEl) {
+    if (m.briefMd) {
+      sceneEl.classList.add("quest-brief");
+      sceneEl.innerHTML = renderMarkdownSafe(m.briefMd);
+    } else {
+      sceneEl.classList.remove("quest-brief");
+      sceneEl.textContent = m.scene || m.problem || "";
+    }
+  }
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
+  const spotChip = $("#ws-spotlight-chip");
+  const spotEncourage = $("#ws-spotlight-encourage");
+  if (spotChip) {
+    if (m.spotlight?.techId) {
+      const tech = techById(m.spotlight.techId);
+      spotChip.hidden = false;
+      spotChip.textContent = `Spotlight · ${tech?.name || m.spotlight.techId}`;
+      if (m.spotlight.advanceSummary) {
+        spotChip.title = m.spotlight.advanceSummary;
+      }
+    } else {
+      spotChip.hidden = true;
+      spotChip.textContent = "";
+    }
+  }
+  if (spotEncourage) {
+    if (m.spotlight?.encourageCopy) {
+      spotEncourage.hidden = false;
+      spotEncourage.textContent = m.spotlight.encourageCopy;
+    } else if (m.spotlight?.techId) {
+      const tech = techById(m.spotlight.techId);
+      spotEncourage.hidden = false;
+      spotEncourage.textContent = `This Quest is built to practice ${
+        tech?.name || m.spotlight.techId
+      } — invent with it honestly.`;
+    } else {
+      spotEncourage.hidden = true;
+      spotEncourage.textContent = "";
+    }
+  }
   renderMarketBanner();
   renderMpChrome();
 
@@ -4185,12 +4695,13 @@ function renderDomainFilterHint() {
 
 function renderTechList() {
   const suggested = new Set(state.mission?.suggested || []);
+  const spotlightId = state.mission?.spotlight?.techId || null;
   let list = techsForTray();
   if (state.domainFilter !== "all") list = list.filter((t) => t.domain === state.domainFilter);
   list.sort((a, b) => {
-    const ar = suggested.has(a.id) ? 0 : 1;
-    const br = suggested.has(b.id) ? 0 : 1;
-    if (ar !== br) return ar - br;
+    const as = a.id === spotlightId ? 0 : suggested.has(a.id) ? 1 : 2;
+    const bs = b.id === spotlightId ? 0 : suggested.has(b.id) ? 1 : 2;
+    if (as !== bs) return as - bs;
     return a.name.localeCompare(b.name);
   });
 
@@ -4199,6 +4710,7 @@ function renderTechList() {
     .map((t) => {
       const sel = state.selectedTechIds.includes(t.id);
       const sug = suggested.has(t.id);
+      const isSpot = spotlightId && t.id === spotlightId;
       const afford = sel ? { ok: true } : canAffordTech(t);
       const unaffordable = !sel && !afford.ok;
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
@@ -4253,14 +4765,14 @@ function renderTechList() {
       return `
         <button type="button" class="tech-card ${sel ? "selected" : ""} ${
           sug ? "recommended" : ""
-        } ${unaffordable ? "unaffordable" : ""}"
+        } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}"
           data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
           <span class="tech-icon">${t.icon}</span>
           <span class="tech-meta">
-            <h4>${escapeHtml(t.name)}</h4>
+            <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
             <p>${escapeHtml(t.summary)}</p>
             <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-              sug ? " · suggested" : ""
+              isSpot ? " · spotlight" : sug ? " · suggested" : ""
             }${unaffordable ? " · can't afford" : ""}</span>
             ${costHtml}
           </span>
@@ -12027,33 +12539,46 @@ function ensureCoInventor() {
   const messages = state.coInventor?.messages || [];
   const onChallenge = state.screen === "challenge-step";
   state.coInventor = new CoInventor({
-    getContext: () => ({
-      challenge: state.mission
-        ? {
-            id: state.mission.id,
-            title: state.mission.title,
-            problem: state.mission.scene,
-            stakes: state.mission.place,
-            prompt: `Invent a local solution for ${state.mission.place} in ${state.year}.`,
-            recommended: state.mission.suggested,
-            successLens: "Local fit + timing + clear mechanism",
-            flag: state.global?.kind === "before" ? "prevention" : "present",
-          }
-        : null,
-      selectedTechIds: [...state.selectedTechIds],
-      inventionName: state.inventionName,
-      inventionHow: state.inventionHow,
-      inventionImpact: state.inventionImpact,
-      storyFace: state.storyFace,
-      year: state.year,
-      turn: state.turn,
-      pressure: state.pressure,
-      place: state.mission?.place,
-      availableTechs: TECHS.map((t) => techForAi(t, state.year)),
-      challengeAngle: state.challengeAngle,
-      challengeSpeech: state.challengeText,
-      challengeQuestion: state.challengeQuestion,
-    }),
+    getContext: () => {
+      const briefPlain = state.mission?.briefMd
+        ? plainTextFromMarkdown(state.mission.briefMd).slice(0, 2800)
+        : "";
+      const problem = briefPlain
+        ? `${state.mission.scene || ""}\n\n${briefPlain}`.trim()
+        : state.mission?.scene;
+      return {
+        challenge: state.mission
+          ? {
+              id: state.mission.id,
+              title: state.mission.title,
+              problem,
+              stakes: state.mission.place,
+              prompt: `Invent a local solution for ${state.mission.place} in ${state.year}.`,
+              recommended: state.mission.suggested,
+              successLens: "Local fit + timing + clear mechanism",
+              flag: state.global?.kind === "before" ? "prevention" : "present",
+            }
+          : null,
+        selectedTechIds: [...state.selectedTechIds],
+        inventionName: state.inventionName,
+        inventionHow: state.inventionHow,
+        inventionImpact: state.inventionImpact,
+        storyFace: state.storyFace,
+        year: state.year,
+        turn: state.turn,
+        pressure: state.pressure,
+        place: state.mission?.place,
+        availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+        challengeAngle: state.challengeAngle,
+        challengeSpeech: state.challengeText,
+        challengeQuestion: state.challengeQuestion,
+        spotlightTechId: state.mission?.spotlight?.techId || null,
+        spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
+        guidance: state.mission?.spotlight?.techId
+          ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
+          : undefined,
+      };
+    },
     applyProposals: applyCoInventorProposals,
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
@@ -14306,14 +14831,56 @@ function bind() {
     }
     state.tutorialRun = false;
     state.playMode = "workshop";
-    state.global = daily.global;
-    startMission(normalizeMission(daily.mission, daily.global.id));
+    state.global = daily.global?.id
+      ? daily.global
+      : globalById(daily.mission.globalId) || daily.global;
+    startMission(
+      normalizeMission(daily.mission, daily.global?.id || daily.mission.globalId)
+    );
   });
   $("#btn-daily-pin")?.addEventListener("click", () => {
     const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
     if (!daily?.mission) return;
-    pinMission(daily.mission, daily.global);
+    pinMission(
+      normalizeMission(daily.mission, daily.global?.id || daily.mission.globalId),
+      daily.global
+    );
   });
+  $("#btn-restore-daily")?.addEventListener("click", () => {
+    clearDailyFocus();
+    renderDailyCard();
+    flashToast("Stock daily restored.");
+  });
+  $("#quest-file-input")?.addEventListener("change", async (e) => {
+    const file = e.target?.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      handleQuestTileFileText(text);
+    } catch {
+      flashToast("Could not read file.");
+    }
+  });
+  // Drag-drop Quest JSON onto title screen
+  const titleScreen = $("#screen-title");
+  if (titleScreen) {
+    titleScreen.addEventListener("dragover", (ev) => {
+      if ([...ev.dataTransfer.types].includes("Files")) {
+        ev.preventDefault();
+      }
+    });
+    titleScreen.addEventListener("drop", async (ev) => {
+      const file = ev.dataTransfer?.files?.[0];
+      if (!file || !/\.json$/i.test(file.name)) return;
+      ev.preventDefault();
+      try {
+        handleQuestTileFileText(await file.text());
+      } catch {
+        flashToast("Could not read dropped file.");
+      }
+    });
+  }
   $("#btn-global-back").addEventListener("click", () => {
     if (missionPickSession) {
       const session = missionPickSession;

@@ -81,9 +81,12 @@
 
         <article id="daily-card" class="daily-card" hidden>
           <div class="daily-card-head">
-            <span class="daily-badge">Daily · <span id="daily-seed-label">—</span></span>
-            <span class="daily-hint muted">Same seed for everyone today</span>
+            <span class="daily-badge"
+              ><span id="daily-badge-text">Daily</span> · <span id="daily-seed-label">—</span></span
+            >
+            <span class="daily-hint muted" id="daily-hint">Same seed for everyone today</span>
           </div>
+          <p id="daily-spotlight" class="daily-spotlight" hidden></p>
           <h3 id="daily-title">Today’s Quest</h3>
           <p id="daily-meta" class="daily-meta muted"></p>
           <p id="daily-scene" class="daily-scene"></p>
@@ -92,8 +95,43 @@
             <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-pin" title="Pin up to 3 missions">
               Pin
             </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              id="btn-restore-daily"
+              hidden
+              title="Show the stock shared daily again"
+            >
+              Restore stock daily
+            </button>
           </div>
         </article>
+
+        <div class="quest-import-row form-actions" style="justify-content: center; margin-top: 0.75rem">
+          <label class="btn btn-secondary btn-sm" for="quest-file-input" id="btn-import-quest-label">
+            Import Quest…
+            <input
+              type="file"
+              id="quest-file-input"
+              accept="application/json,.json"
+              hidden
+            />
+          </label>
+        </div>
+
+        <section id="hosted-quests-panel" class="hosted-quests-panel pins-panel" hidden>
+          <h3 class="pins-heading">
+            External Quests
+            <span class="theme-shelf-external-pill">Server folder</span>
+          </h3>
+          <p id="hosted-quests-meta" class="muted" style="margin: 0 0 0.5rem; font-size: 0.85rem"></p>
+          <div id="hosted-quests-list" class="pins-list"></div>
+        </section>
+
+        <section id="quest-library-panel" class="quest-library-panel pins-panel" hidden>
+          <h3 class="pins-heading">Imported Quests</h3>
+          <div id="quest-library-list" class="pins-list"></div>
+        </section>
 
         <section id="pins-panel" class="pins-panel" hidden>
           <h3 class="pins-heading">Pinned missions <span class="muted">(max 3)</span></h3>
@@ -387,7 +425,8 @@
         <div class="panel room-lobby-mission">
           <h2>Mission</h2>
           <p id="room-mission-summary" class="muted room-mission-summary">
-            Host picks a crisis, then a Quest — same screens as solo play.
+            Host picks a crisis &amp; Quest — including <strong>External Quests</strong> from the
+            server <code>quests/</code> folder (highlighted first).
           </p>
           <article id="room-scenario-brief" class="mp-scenario-brief" hidden></article>
           <div id="room-host-controls" hidden>
@@ -779,7 +818,9 @@
             <div class="label" id="ws-global-label">Global theme</div>
             <h2 id="ws-mission-title">—</h2>
             <p id="ws-mission-place" class="mission-place"></p>
-            <p id="ws-mission-scene"></p>
+            <p id="ws-spotlight-chip" class="ws-spotlight-chip" hidden></p>
+            <div id="ws-mission-scene" class="ws-mission-scene"></div>
+            <p id="ws-spotlight-encourage" class="ws-spotlight-encourage muted" hidden></p>
             <p id="ws-stakeholder" class="stakeholder"></p>
             <div id="wait-report" class="wait-report" hidden></div>
             <div id="market-news-banner" class="market-news-banner" hidden></div>

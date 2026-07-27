@@ -12,11 +12,13 @@
     "check:vision-prompts": "node scripts/check-vision-prompts.mjs",
     "generate:quests": "node scripts/generate-scenario-seeds.mjs",
     "generate:quests:local": "node scripts/generate-scenario-seeds.mjs --local-only",
-    "check:syntax": "node --check server.mjs && node --check js/main.js && node --check js/game.js && node --check js/sim/market-news.js && node --check js/sim/actions.js && node --check js/sim/mp-session.js && node --check js/multiplayer/ui.js",
+    "validate:quest": "node scripts/validate-quest.mjs",
+    "author:quest": "node scripts/author-quest.mjs",
+    "check:syntax": "node --check server.mjs && node --check js/main.js && node --check js/game.js && node --check js/sim/market-news.js && node --check js/sim/actions.js && node --check js/sim/mp-session.js && node --check js/multiplayer/ui.js && node --check js/quest-tile.js && node --check js/md-lite.js && node --check js/meta.js",
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "foresight:build": "node scripts/build-world-foresight.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/quest-tile.test.js js/md-lite.test.js js/quests-folder.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js"
   },
   "dependencies": {
     "openai": "^6.16.0",

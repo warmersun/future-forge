@@ -107,6 +107,8 @@ export function cloneMission(m) {
     pressureRise: { ...(m.pressureRise || {}) },
     winMax: { ...(m.winMax || {}) },
     suggested: [...(m.suggested || [])],
+    briefMd: m.briefMd ? String(m.briefMd) : "",
+    spotlight: m.spotlight && typeof m.spotlight === "object" ? { ...m.spotlight } : null,
   };
 }
 

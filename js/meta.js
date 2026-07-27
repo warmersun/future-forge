@@ -1,6 +1,10 @@
 /**
- * G4 solo meta — dailies, pins, share cards (client-only, no server).
+ * G4 solo meta — dailies, pins, share cards, quest library (client-only, no server).
  */
+
+const QUEST_LIBRARY_KEY = "future-forge:questLibrary:v1";
+const DAILY_FOCUS_KEY = "future-forge:dailyFocus";
+export const MAX_QUEST_LIBRARY = 50;
 
 /** @param {Date} [d] */
 export function dailySeedString(d = new Date()) {
@@ -61,6 +65,10 @@ export function loadPins() {
         place: String(p.place || "").slice(0, 80),
         globalTitle: String(p.globalTitle || "").slice(0, 80),
         pinnedAt: Number(p.pinnedAt) || Date.now(),
+        missionSnapshot:
+          p.missionSnapshot && typeof p.missionSnapshot === "object"
+            ? p.missionSnapshot
+            : null,
       }));
   } catch {
     return [];
@@ -94,6 +102,15 @@ export function togglePin(mission, global, pins = loadPins()) {
   if (pins.length >= MAX_PINS) {
     return { pins, ok: false, error: "pins_full" };
   }
+  /** Snapshot so imported / spotlight Quests replay without seed packs */
+  let missionSnapshot = null;
+  if (mission.source === "imported" || mission.briefMd || mission.spotlight) {
+    try {
+      missionSnapshot = JSON.parse(JSON.stringify(mission));
+    } catch {
+      missionSnapshot = null;
+    }
+  }
   const next = [
     {
       missionId: id,
@@ -102,11 +119,146 @@ export function togglePin(mission, global, pins = loadPins()) {
       place: String(mission.place || "").slice(0, 80),
       globalTitle: String(global?.title || "").slice(0, 80),
       pinnedAt: Date.now(),
+      missionSnapshot,
     },
     ...pins,
   ].slice(0, MAX_PINS);
   savePins(next);
   return { pins: next, ok: true, added: true };
+}
+
+/**
+ * @returns {object[]} library entries { tile, mission, importedAt, id }
+ */
+export function loadQuestLibrary() {
+  try {
+    const raw = localStorage.getItem(QUEST_LIBRARY_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((e) => e && e.mission && e.mission.id)
+      .slice(0, MAX_QUEST_LIBRARY)
+      .map((e) => ({
+        id: String(e.id || e.mission.id),
+        importedAt: Number(e.importedAt) || Date.now(),
+        tile: e.tile || null,
+        mission: e.mission,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @param {object[]} entries
+ */
+export function saveQuestLibrary(entries) {
+  try {
+    localStorage.setItem(
+      QUEST_LIBRARY_KEY,
+      JSON.stringify((entries || []).slice(0, MAX_QUEST_LIBRARY))
+    );
+  } catch {
+    /* quota */
+  }
+}
+
+/**
+ * Add or replace a validated tile entry. Returns { ok, library, entry?, error? }
+ * @param {{ tile: object, mission: object }} validated
+ * @param {{ setFocus?: boolean }} [opts]
+ */
+export function importQuestToLibrary(validated, opts = {}) {
+  if (!validated?.mission?.id) return { ok: false, error: "no_mission", library: loadQuestLibrary() };
+  const library = loadQuestLibrary();
+  const id = String(validated.mission.id);
+  const entry = {
+    id,
+    importedAt: Date.now(),
+    tile: validated.tile || null,
+    mission: validated.mission,
+  };
+  const next = [entry, ...library.filter((e) => e.id !== id)].slice(0, MAX_QUEST_LIBRARY);
+  if (next.length >= MAX_QUEST_LIBRARY && !library.some((e) => e.id === id)) {
+    // still ok — we sliced; oldest drop implicitly via slice after unshift pattern
+  }
+  saveQuestLibrary(next);
+  const placement = validated.tile?.placement?.mode || "replace-daily";
+  const shouldFocus =
+    opts.setFocus !== false && placement !== "alongside" && placement !== "library-only";
+  if (shouldFocus) {
+    setDailyFocus(id);
+  }
+  return { ok: true, library: next, entry, focused: shouldFocus };
+}
+
+/**
+ * @param {string} missionId
+ */
+export function removeQuestFromLibrary(missionId) {
+  const id = String(missionId || "");
+  const next = loadQuestLibrary().filter((e) => e.id !== id);
+  saveQuestLibrary(next);
+  const focus = loadDailyFocus();
+  if (focus?.missionId === id) clearDailyFocus();
+  return next;
+}
+
+/**
+ * @returns {{ missionId: string } | null}
+ */
+export function loadDailyFocus() {
+  try {
+    const raw = localStorage.getItem(DAILY_FOCUS_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o?.missionId) return null;
+    return { missionId: String(o.missionId) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {string} missionId
+ */
+export function setDailyFocus(missionId) {
+  try {
+    localStorage.setItem(
+      DAILY_FOCUS_KEY,
+      JSON.stringify({ missionId: String(missionId), at: Date.now() })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearDailyFocus() {
+  try {
+    localStorage.removeItem(DAILY_FOCUS_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Resolve focused imported mission for Daily card, if any.
+ * @returns {{ mission: object, globalId: string, entry: object } | null}
+ */
+export function getFocusedQuest() {
+  const focus = loadDailyFocus();
+  if (!focus?.missionId) return null;
+  const entry = loadQuestLibrary().find((e) => e.id === focus.missionId);
+  if (!entry?.mission) {
+    clearDailyFocus();
+    return null;
+  }
+  return {
+    mission: entry.mission,
+    globalId: entry.mission.globalId,
+    entry,
+  };
 }
 
 /**

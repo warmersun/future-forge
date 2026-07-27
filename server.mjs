@@ -34,9 +34,12 @@ import {
   extractTokenUsage,
   normalizeSessionId,
 } from "./js/usage-metrics.mjs";
+import { scanQuestsFolder, resolveQuestsDir, ensureQuestsDir } from "./js/quests-folder.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
+const QUESTS_DIR = resolveQuestsDir(ROOT);
+ensureQuestsDir(QUESTS_DIR);
 const GROK_HOME = process.env.GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
@@ -2093,6 +2096,27 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // —— External Quest tiles from designated folder (re-scan each request) ——
+  if (req.method === "GET" && (req.url === "/api/quests" || req.url?.startsWith("/api/quests?"))) {
+    try {
+      const scanned = await scanQuestsFolder(QUESTS_DIR);
+      return sendJson(res, 200, {
+        ok: true,
+        dir: scanned.dir,
+        count: scanned.quests.length,
+        quests: scanned.quests,
+        errors: scanned.errors,
+      });
+    } catch (e) {
+      return sendJson(res, 500, {
+        ok: false,
+        error: e.message || "quests_scan_failed",
+        dir: QUESTS_DIR,
+        quests: [],
+      });
+    }
+  }
+
   // —— Friends rooms (PR9) ——
   if (ROOMS_ENABLED && roomManager && req.method === "POST" && req.url === "/api/rooms") {
     try {
@@ -2368,6 +2392,20 @@ server.listen(PORT, HOST, async () => {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {
     console.log("Usage metrics OFF (pass --usage or set USAGE_ENABLED=1 to enable)");
+  }
+  try {
+    const scanned = await scanQuestsFolder(QUESTS_DIR);
+    console.log(
+      `External Quests: ${scanned.quests.length} tile(s) in ${scanned.dir} (GET /api/quests)`
+    );
+    if (scanned.errors.length) {
+      console.warn(
+        `  ${scanned.errors.length} file(s) skipped:`,
+        scanned.errors.map((e) => `${e.file} (${e.error})`).join(", ")
+      );
+    }
+  } catch (e) {
+    console.warn(`External Quests: scan failed for ${QUESTS_DIR}:`, e.message || e);
   }
   const urls = lanJoinUrls();
   if (urls.length) {

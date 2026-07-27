@@ -57,6 +57,21 @@ Open **http://127.0.0.1:8765**
 | `npm start` / `npm run serve` | Start the game server (`server.mjs`) |
 | `npm start -- --usage` | Start with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
+| `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
+| `npm run author:quest -- --tech gene-sequencing --local-only` | Scaffold a spotlight Quest tile |
+
+### Spotlight / External Quest tiles
+
+AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md` and the MIT skill package `skills/future-forge-quest/`.
+
+**Server folder (recommended for classrooms / multiplayer):**
+
+1. Put validated `.json` tiles in the **`quests/`** directory (next to `server.mjs`).
+2. `npm start` — the server scans that folder and logs how many tiles loaded.
+3. Players see **External Quests** on the home screen and **first** when choosing a theme/Quest (including friends multiplayer). Cards use a gold “External” badge.
+4. Override path: `QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
+
+**Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Replaces Daily on that device by default. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
 Default port: **8765** (override with `PORT`).
 

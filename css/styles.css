@@ -6772,6 +6772,211 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   border-radius: 999px;
 }
 
+/* —— External / hosted Quests (server quests/ folder) —— */
+.theme-shelf-external {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1rem 1.15rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 180, 100, 0.35);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 159, 67, 0.12),
+    rgba(12, 18, 32, 0.55)
+  );
+  box-shadow: 0 0 0 1px rgba(255, 180, 100, 0.08), 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+.theme-shelf-external .theme-shelf-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.theme-shelf-external-pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0b0a14;
+  background: linear-gradient(120deg, #ffd28a, #ff9f43);
+  vertical-align: middle;
+}
+.quest-card-external,
+.challenge-card.quest-card-external {
+  border: 1px solid rgba(255, 180, 100, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(255, 159, 67, 0.2), 0 0 24px rgba(255, 159, 67, 0.12);
+  background: linear-gradient(160deg, rgba(255, 180, 100, 0.08), rgba(18, 26, 43, 0.95));
+}
+.quest-card-external.is-selected,
+.challenge-card.quest-card-external.is-selected {
+  box-shadow: 0 0 0 2px rgba(255, 180, 100, 0.7), 0 0 28px rgba(255, 159, 67, 0.2);
+}
+.scenario-tag.external-tag,
+.scenario-tag.external {
+  background: linear-gradient(120deg, #ffd28a, #ff9f43);
+  color: #0b0a14;
+  font-weight: 700;
+}
+.scenario-tag.spotlight-tag {
+  background: rgba(255, 210, 138, 0.2);
+  color: #ffd28a;
+  border: 1px solid rgba(255, 180, 100, 0.4);
+}
+.scenario-tag.imported-tag,
+.scenario-tag.imported {
+  background: rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+}
+.quest-external-badge {
+  display: inline-block;
+  margin-bottom: 0.25rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0b0a14;
+  background: linear-gradient(120deg, #ffd28a, #ff9f43);
+}
+.quest-external-row {
+  border-left: 3px solid #ff9f43;
+  padding-left: 0.65rem;
+  margin-left: -0.15rem;
+}
+.hosted-quests-panel .pins-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* —— Quest briefs (Markdown) & spotlight imports —— */
+.quest-brief {
+  text-align: left;
+  max-height: min(42vh, 28rem);
+  overflow-y: auto;
+  padding: 0.65rem 0.85rem;
+  margin: 0.5rem 0 0.35rem;
+  border-radius: 12px;
+  background: rgba(12, 18, 32, 0.55);
+  border: 1px solid rgba(255, 180, 100, 0.14);
+  line-height: 1.55;
+  font-size: 0.95rem;
+  color: var(--text, #e8eef9);
+}
+.quest-brief h1,
+.quest-brief h2,
+.quest-brief h3 {
+  margin: 0.85em 0 0.35em;
+  font-weight: 700;
+  color: #fff4e6;
+  line-height: 1.25;
+}
+.quest-brief h1 {
+  font-size: 1.15rem;
+}
+.quest-brief h2 {
+  font-size: 1.05rem;
+}
+.quest-brief h3 {
+  font-size: 1rem;
+}
+.quest-brief p {
+  margin: 0.45em 0;
+}
+.quest-brief ul,
+.quest-brief ol {
+  margin: 0.4em 0 0.6em 1.2em;
+  padding: 0;
+}
+.quest-brief li {
+  margin: 0.25em 0;
+}
+.quest-brief a {
+  color: #ffd28a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.quest-brief strong {
+  color: #fff4e6;
+  font-weight: 650;
+}
+
+.ws-mission-scene:not(.quest-brief) {
+  margin: 0.35rem 0;
+}
+
+.ws-spotlight-chip {
+  display: inline-block;
+  margin: 0.35rem 0 0.15rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #0b0a14;
+  background: linear-gradient(120deg, #ffd28a, #ff9f43);
+}
+.ws-spotlight-encourage {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.88rem;
+}
+
+.daily-spotlight {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #ffd28a;
+}
+
+.quest-library-panel {
+  margin-top: 1rem;
+}
+.quest-lib-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+.quest-lib-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.quest-lib-excerpt {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.quest-lib-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.tech-card.spotlight-tech:not(.selected) {
+  box-shadow: 0 0 0 1px rgba(255, 180, 100, 0.45), 0 0 18px rgba(255, 159, 67, 0.12);
+}
+.tech-spotlight-tag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: #0b0a14;
+  background: #ffb347;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,

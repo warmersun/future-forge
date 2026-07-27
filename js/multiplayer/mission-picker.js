@@ -69,14 +69,32 @@ export function paintMissionGrid(grid, opts) {
   const thumb = globalId ? problemVisualUrl(globalId) : "";
   grid.innerHTML = missions
     .map((m) => {
+      const isExternal = m.source === "hosted" || m.source === "imported";
       const scene = String(m.scene || "").slice(0, 160);
       const ellipsis = String(m.scene || "").length > 160 ? "…" : "";
       const sel = m.id === selectedId ? "is-selected" : "";
-      const tag = m.source === "curated" ? "Curated" : "Challenge";
+      const tag =
+        m.source === "hosted"
+          ? "External"
+          : m.source === "imported"
+            ? "Imported"
+            : m.source === "curated"
+              ? "Curated"
+              : "Challenge";
+      const tagClass =
+        m.source === "hosted"
+          ? "external-tag"
+          : m.source === "imported"
+            ? "imported-tag"
+            : "curated";
+      const spot =
+        isExternal && m.spotlight?.techId
+          ? `<span class="scenario-tag spotlight-tag">Spotlight</span>`
+          : "";
       return `
-      <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel}" data-id="${escapeHtml(
-        m.id
-      )}">
+      <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel} ${
+        isExternal ? "quest-card-external" : ""
+      }" data-id="${escapeHtml(m.id)}">
         ${
           thumb
             ? `<span class="card-visual" aria-hidden="true">
@@ -86,7 +104,8 @@ export function paintMissionGrid(grid, opts) {
         }
         <span class="card-body">
           <span class="num">${escapeHtml(m.place || "")} · ${m.startYear || 2026}
-            <span class="scenario-tag curated">${tag}</span>
+            <span class="scenario-tag ${tagClass}">${escapeHtml(tag)}</span>
+            ${spot}
           </span>
           <h3>${escapeHtml(m.title)}</h3>
           <p>${escapeHtml(scene)}${ellipsis}</p>

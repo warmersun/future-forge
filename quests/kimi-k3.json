@@ -1,0 +1,79 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-ai-kimi-k3-tideworks-polytechnic-2026",
+  "version": 1,
+  "title": "Night shift at Tideworks Polytechnic's sealed yard labs",
+  "summary": "Sealed yard labs + open frontier AI rack. Invent the local learning system.",
+  "author": {
+    "name": "OOM Future Forge quest",
+    "note": "Research-backed Spotlight Quest for open 3T-class LLM advance (Kimi K3 weight day)"
+  },
+  "createdAt": "2026-07-27T20:00:00Z",
+  "tags": [
+    "spotlight",
+    "ai",
+    "open-weights",
+    "education",
+    "agentic-coding",
+    "kimi-k3"
+  ],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "ai",
+    "advanceTitle": "Open 3T-class AI weights for long-horizon work",
+    "advanceSummary": "Open near-frontier weights: sparse multi-trillion MoE, long context, multi-day coding agents \u2014 hostable if you have the cluster.",
+    "asOf": "2026-07",
+    "encourageCopy": "Invent with AI. Long-horizon + local control is the point."
+  },
+  "research": {
+    "topic": "Kimi K3 / first open 3T-class LLM weights (Moonshot AI, July 2026)",
+    "bullets": [
+      "Kimi K3: ~2.8T-parameter multimodal MoE model; open weights landed 2026-07-27; ~1M-token context; aimed at long-horizon coding and knowledge work.",
+      "Open weights shift control (self-host, inspect, fine-tune) more than consumer laptop access; recommended serving still needs large accelerator domains.",
+      "Capability that matters for this Quest: multi-day agentic engineering over whole repositories + manuals + screenshots without shipping protected IP to a foreign closed API."
+    ],
+    "sources": [
+      "https://www.kimi.com/blog/kimi-k3",
+      "https://huggingface.co/moonshotai/Kimi-K3",
+      "https://platform.kimi.ai/docs/guide/kimi-k3-quickstart",
+      "https://simonwillison.net/2026/Jul/16/kimi-k3/"
+    ],
+    "showToPlayer": false
+  },
+  "globalId": "education",
+  "mission": {
+    "id": "spotlight-ai-kimi-k3-tideworks-polytechnic-2026",
+    "globalId": "education",
+    "title": "Night shift at Tideworks Polytechnic's sealed yard labs",
+    "place": "Tideworks Polytechnic (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "Skills gap": 3,
+      "Outmigration": 2,
+      "Trust": 2
+    },
+    "pressureRise": {
+      "Skills gap": 1,
+      "Outmigration": 1,
+      "Trust": 1
+    },
+    "winMax": {
+      "Skills gap": 1,
+      "Outmigration": 1,
+      "Trust": 1
+    },
+    "scene": "Dry-dock cranes tick past the lab windows while apprentices wait on firmware they cannot send to a cloud chatbot \u2014 the yard's IP rules are absolute, and the curriculum is three seasons behind the ships.",
+    "briefMd": "## The place\n\n**Tideworks Polytechnic** (fictive port-city college). Yard partners opened a sealed lab corridor: real PLCs, redacted firmware trees, procedure PDFs, safety video. Graduates who can modernize this stack get jobs; toy-kit grads leave town.\n\nIT just racked accelerators after open frontier-scale AI weights became downloadable. Power is on. No learning system exists yet.\n\n## What's strained\n\n- **Skills gap** \u2014 manuals lag the ships; no multi-day debug practice on real code under local rules.\n- **Outmigration** \u2014 serious AI lives on foreign clouds their contracts forbid.\n- **Trust** \u2014 yard won't leak IP; students won't trust pinout hallucinations.\n\n## A capability that just became more real\n\nOpen-weight, near-frontier AI you can host yourself: huge total scale via sparse MoE, ~1M context, vision-in-the-loop, multi-day agentic coding over whole repos. Not a brand ad \u2014 the *kind* of advance.\n\n## Your brief\n\nInvent something here that uses that capability. Stakeholder: **Dean Marisol Okonkwo, Applied Engineering**.\n\n## Constraints\n\nLocal-only IP. Finite cluster (queue nights). Tests + human gates beat fluent lies. Students own commits. Pilot one track \u2014 not the whole port overnight.\n",
+    "stakeholder": "Dean Marisol Okonkwo, Applied Engineering",
+    "suggested": [
+      "ai"
+    ],
+    "visionTheme": "learning-city"
+  }
+}

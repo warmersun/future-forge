@@ -1,0 +1,64 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-gene-seq-border-clinic-2026",
+  "version": 1,
+  "title": "Fever samples waiting at Crossing Clinic 7",
+  "summary": "A border clinic can finally sequence on-site — if someone invents the workflow.",
+  "author": {
+    "name": "Future Forge example",
+    "note": "MIT skill example fixture"
+  },
+  "createdAt": "2026-07-27T12:00:00Z",
+  "tags": ["spotlight", "gene-sequencing", "infectious"],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "gene-sequencing",
+    "advanceTitle": "Rugged same-shift clinic sequencing",
+    "advanceSummary": "Portable and desktop sequencers have gotten cheaper and more field-rugged, so a small clinic can run pathogen reads without shipping every sample to a national lab — if the local workflow exists.",
+    "asOf": "2026-07",
+    "encourageCopy": "Build your invention around gene sequencing — the new on-site capability is the point of this Quest."
+  },
+  "research": {
+    "topic": "Clinic-grade / portable gene sequencing turnaround",
+    "bullets": [
+      "Field and clinic sequencing can shorten time from sample to provisional read versus distant central labs.",
+      "Workflow, power, training, and trust still gate real use — not the existence of sequencers alone."
+    ],
+    "sources": [],
+    "showToPlayer": false
+  },
+  "globalId": "infectious",
+  "mission": {
+    "id": "spotlight-gene-seq-border-clinic-2026",
+    "globalId": "infectious",
+    "title": "Fever samples waiting at Crossing Clinic 7",
+    "place": "Crossing Clinic 7 (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "Outbreak": 2,
+      "Capacity": 3,
+      "Fear": 1
+    },
+    "pressureRise": {
+      "Outbreak": 1,
+      "Capacity": 1,
+      "Fear": 1
+    },
+    "winMax": {
+      "Outbreak": 1,
+      "Capacity": 1,
+      "Fear": 1
+    },
+    "scene": "Samples stack in a cooler while a new fever pattern walks the border queue — the lab truck left at dawn and answers take days.",
+    "briefMd": "## The place\n\n**Crossing Clinic 7** is a fictive border health post: three nurses, one doctor on alternate days, a generator that coughs after midnight. Travelers, traders, and families share a waiting bench under a corrugated awning. This week a fever pattern is showing up that does not match the usual seasonal flu sheet the staff keep taped to the fridge.\n\nSamples sit labeled in a cooler. The weekly lab truck already left. By the time central results return, people have moved on — or the ward is full.\n\n## What’s strained\n\n**Capacity** is the daily crunch: swab, label, counsel, discharge. **Outbreak** risk rises when the pattern is real and invisible. **Fear** spreads when rumors outrun lab truth — a wrong whisper can empty markets or fill the wrong ward.\n\n## A capability that just became more real\n\nGene sequencing is no longer only a capital-city specialty for this kind of post. Rugged desktop and portable sequencers, cheaper reagents, and software that turns raw reads into provisional pathogen signals mean a small clinic *could* run a same-shift or next-morning workflow — **if** someone designs how samples move, who is trained, what gets shared upstream, and how patients hear results without panic.\n\nThis Quest is not asking you to invent sequencing from scratch. It is asking you to invent the **local application**: a system people here can run under heat, power cuts, and thin staffing.\n\n## Your brief\n\nDesign an invention for Crossing Clinic 7 that makes honest use of **gene sequencing** in this place and year. Name it. Write how it works here (not in a brochure). Show everyday life for nurses, patients, and whoever must trust the readout.\n\nStakeholder: **Dr. Okonkwo, clinic lead** — wants fewer blind days between swab and action, without promising magic.\n\n## Constraints\n\n- Power and cold chain are uneven after dusk.\n- Staff time is the scarcest resource; tools that need a full bioinformatics team will fail.\n- Public trust is fragile: a wrong headline is worse than a slow truth.\n- Pilot language is welcome; city-wide overnight guarantees are not honest for 2026.\n",
+    "stakeholder": "Dr. Okonkwo, clinic lead",
+    "suggested": ["gene-sequencing"],
+    "visionTheme": "care-city"
+  }
+}
