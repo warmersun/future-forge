@@ -96,6 +96,11 @@ import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./m
 import { initFriendsUi } from "./multiplayer/ui.js";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js";
 import { createRoomBridge } from "./multiplayer/room-bridge.js";
+import {
+  initTechDrawers,
+  updateTechDrawerCount,
+  workshopLayoutFor,
+} from "./tech-drawer.js";
 import { rankSurvivors } from "./sim/mp-rank.js";
 import {
   pickChallengeAngles,
@@ -4982,8 +4987,10 @@ function onTechClick(id) {
 function renderSelectedChips() {
   const box = $("#selected-techs");
   const techs = selectedTechs();
+  const layout = workshopLayoutFor(box);
+  updateTechDrawerCount(layout, techs.length);
   if (!techs.length) {
-    box.innerHTML = `<span class="empty-hint">Click technologies to add them to your invention.</span>`;
+    box.innerHTML = `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the left catalog on wide screens) to build your stack.</span>`;
     return;
   }
   box.innerHTML = techs
@@ -15480,5 +15487,6 @@ function bind() {
 export function init() {
   loadPersistedProgress();
   bind();
+  initTechDrawers();
   showScreen("title");
 }

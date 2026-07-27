@@ -25,6 +25,11 @@ import {
 } from "./tech-library.js";
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
+import {
+  initTechDrawers,
+  updateTechDrawerCount,
+  workshopLayoutFor,
+} from "../tech-drawer.js";
 
 /**
  * @param {{
@@ -887,8 +892,9 @@ export function initFriendsUi(api) {
       snap?.place?.status !== "won" &&
       snap?.place?.status !== "collapsed";
 
+    const stack = target?.stack || [];
     paintSelectedStack(box, {
-      stack: target?.stack || [],
+      stack,
       ownerSeatId: targetId,
       seatNames,
       disabled: !canEdit,
@@ -900,6 +906,7 @@ export function initFriendsUi(api) {
         });
       },
     });
+    updateTechDrawerCount(workshopLayoutFor(box), stack.length);
   }
 
   function paintTechTray(invent, place, mp, myId) {
@@ -1728,8 +1735,9 @@ export function initFriendsUi(api) {
     const targetInvent = hotseat.invents?.[targetId] || invent;
     const seatNames = Object.fromEntries((hotseat.seats || []).map((s) => [s.id, s.displayName]));
 
+    const hsStack = targetInvent?.stack || [];
     paintSelectedStack($("#hs-selected-techs"), {
-      stack: targetInvent?.stack || [],
+      stack: hsStack,
       ownerSeatId: targetId,
       seatNames,
       disabled: !canEdit,
@@ -1739,6 +1747,7 @@ export function initFriendsUi(api) {
         scheduleHsVision({ force: true, immediate: true });
       },
     });
+    updateTechDrawerCount(workshopLayoutFor($("#hs-selected-techs")), hsStack.length);
 
     paintTechFilters($("#hs-filter-row"), {
       domainFilter: hsDomainFilter,

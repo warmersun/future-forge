@@ -240,10 +240,20 @@
       </header>
       <!-- Play: same 3-column shell as solo workshop (mission pick uses solo global/mission screens) -->
       <div id="hs-play" class="workshop-layout mp-workshop" hidden>
-        <aside class="tech-library">
+        <aside class="tech-library" id="hs-tech-library">
           <div class="panel-header">
             <h2>Emerging tech</h2>
-            <span class="muted sm" id="hs-layer-hint">Add to your stack</span>
+            <div class="tech-library-header-actions">
+              <span class="muted sm" id="hs-layer-hint">Add to your stack</span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm tech-drawer-close"
+                data-tech-drawer-close
+                aria-label="Done choosing tech"
+              >
+                Done
+              </button>
+            </div>
           </div>
           <div class="field mp-layer-field">
             <label for="hs-layer-target">Stack target</label>
@@ -252,6 +262,7 @@
           <div id="hs-filter-row" class="filter-row"></div>
           <div id="hs-tech-list" class="tech-list" role="list"></div>
         </aside>
+        <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
           <div class="challenge-banner">
@@ -294,8 +305,20 @@
               <label for="hs-invention-name">Name your invention</label>
               <input id="hs-invention-name" type="text" maxlength="100" placeholder="Something people here could say out loud…" autocomplete="off" />
             </div>
-            <div class="field">
-              <label>Technologies in your stack</label>
+            <div class="field stack-field">
+              <div class="stack-field-header">
+                <label>Technologies in your stack</label>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-open"
+                  data-tech-drawer-open
+                  aria-expanded="false"
+                  aria-controls="hs-tech-library"
+                >
+                  + Add tech
+                  <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+                </button>
+              </div>
               <div id="hs-selected-techs" class="selected-techs"></div>
             </div>
             <div class="field">
@@ -485,10 +508,20 @@
       </header>
 
       <div id="mp-play" class="workshop-layout mp-workshop">
-        <aside class="tech-library">
+        <aside class="tech-library" id="mp-tech-library">
           <div class="panel-header">
             <h2>Emerging tech</h2>
-            <span class="muted sm" id="mp-layer-hint">Add to your stack</span>
+            <div class="tech-library-header-actions">
+              <span class="muted sm" id="mp-layer-hint">Add to your stack</span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm tech-drawer-close"
+                data-tech-drawer-close
+                aria-label="Done choosing tech"
+              >
+                Done
+              </button>
+            </div>
           </div>
           <div class="field mp-layer-field">
             <label for="mp-layer-target">Stack target</label>
@@ -499,6 +532,7 @@
           <!-- tray kept for paintTechTray fallback; list is primary -->
           <div id="mp-tech-tray" class="mp-tech-tray" hidden></div>
         </aside>
+        <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
           <div class="challenge-banner">
@@ -531,8 +565,20 @@
               />
               <span class="lock-hint" id="mp-lock-name"></span>
             </div>
-            <div class="field">
-              <label>Technologies in your stack</label>
+            <div class="field stack-field">
+              <div class="stack-field-header">
+                <label>Technologies in your stack</label>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-open"
+                  data-tech-drawer-open
+                  aria-expanded="false"
+                  aria-controls="mp-tech-library"
+                >
+                  + Add tech
+                  <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+                </button>
+              </div>
               <div id="mp-stack" class="selected-techs mp-stack"></div>
             </div>
             <div class="field">
@@ -801,17 +847,28 @@
       </div>
 
       <div class="workshop-layout">
-        <aside class="tech-library">
+        <aside class="tech-library" id="solo-tech-library">
           <div class="panel-header">
             <h2>Emerging tech</h2>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
-              Learn
-            </button>
+            <div class="tech-library-header-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
+                Learn
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm tech-drawer-close"
+                data-tech-drawer-close
+                aria-label="Done choosing tech"
+              >
+                Done
+              </button>
+            </div>
           </div>
           <div id="filter-row" class="filter-row"></div>
           <p id="filter-domain-hint" class="filter-domain-hint" hidden aria-live="polite"></p>
           <div id="tech-list" class="tech-list" role="list"></div>
         </aside>
+        <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
           <div class="challenge-banner">
@@ -833,8 +890,20 @@
               <input id="invention-name" type="text" maxlength="80" placeholder="Something people here could say out loud…" autocomplete="off" />
             </div>
 
-            <div class="field">
-              <label>Technologies in your stack</label>
+            <div class="field stack-field">
+              <div class="stack-field-header">
+                <label>Technologies in your stack</label>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-open"
+                  data-tech-drawer-open
+                  aria-expanded="false"
+                  aria-controls="solo-tech-library"
+                >
+                  + Add tech
+                  <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+                </button>
+              </div>
               <div id="selected-techs" class="selected-techs"></div>
             </div>
 

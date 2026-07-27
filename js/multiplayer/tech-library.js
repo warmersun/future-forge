@@ -145,7 +145,7 @@ export function paintSelectedStack(box, opts) {
     escapeHtml,
   } = opts;
   if (!stack.length) {
-    box.innerHTML = `<span class="empty-hint">Click technologies on the left to add them to your invention.</span>`;
+    box.innerHTML = `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the catalog on wide screens) to build your stack.</span>`;
     return;
   }
   box.innerHTML = stack
