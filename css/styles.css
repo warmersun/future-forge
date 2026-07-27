@@ -1591,6 +1591,81 @@ body.mp-hotseat .workshop-layout {
   color: var(--text);
 }
 
+/* Home hero: Future Forge by Warmer Sun (same mark as HUD product logo) */
+.title-logo {
+  --ws-sun: #ffe29a;
+  --ws-amber: #ff9f43;
+  --ws-coral: #ff6b4a;
+  --ws-cream: #fff4e6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.title-logo-sun {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #fff8e7 0%,
+    var(--ws-sun) 28%,
+    var(--ws-amber) 62%,
+    var(--ws-coral) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 180, 100, 0.35),
+    0 0 28px rgba(255, 159, 67, 0.55),
+    0 0 56px rgba(255, 107, 74, 0.22);
+}
+
+.title-logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+#screen-title h1 {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--ws-cream, #fff4e6);
+  text-shadow: 0 0 40px rgba(255, 159, 67, 0.18);
+}
+
+.title-logo-credit {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: rgba(247, 240, 230, 0.55);
+}
+
+.title-logo-link {
+  color: #ffd28a;
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.title-logo-link:hover {
+  color: #fff4e6;
+  border-bottom-color: rgba(255, 210, 138, 0.55);
+}
+
+.title-logo-link:focus-visible {
+  outline: 2px solid rgba(255, 159, 67, 0.7);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Legacy class kept for any residual refs */
 .logo-mark {
   display: inline-flex;
   align-items: center;
@@ -1598,22 +1673,19 @@ body.mp-hotseat .workshop-layout {
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(56, 189, 248, 0.25), rgba(167, 139, 250, 0.25));
-  border: 1px solid var(--border-strong);
-  font-size: 2rem;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #fff8e7 0%,
+    #ffe29a 28%,
+    #ff9f43 62%,
+    #ff6b4a 100%
+  );
+  border: 1px solid rgba(255, 180, 100, 0.35);
+  font-size: 0;
   margin-bottom: 1.25rem;
-  box-shadow: var(--glow);
-}
-
-#screen-title h1 {
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 0 0 0.5rem;
-  background: linear-gradient(120deg, #e0f2fe 0%, #a5b4fc 45%, #c4b5fd 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  box-shadow:
+    0 0 0 1px rgba(255, 180, 100, 0.28),
+    0 0 28px rgba(255, 159, 67, 0.45);
 }
 
 .tagline {
@@ -2495,6 +2567,11 @@ button.hud-year-btn.hud-year-pulse {
   line-height: 1.15;
 }
 
+/* Topbar brand slot: product logo replaces the old cyan brand-dot */
+.brand .hud-product {
+  padding-left: 0;
+}
+
 .hud-product-sun {
   width: 1.15rem;
   height: 1.15rem;
@@ -2554,8 +2631,8 @@ button.hud-year-btn.hud-year-pulse {
   border-radius: 2px;
 }
 
-/* Left brand slot is only the active-player chip on invent/challenge */
-.topbar-game .brand:not(:has(.mp-active-player:not([hidden]))) {
+/* Left brand slot on game topbars: show active-player chip and/or product logo */
+.topbar-game .brand:not(:has(.mp-active-player:not([hidden]))):not(:has(.hud-product)) {
   display: none;
 }
 

@@ -14787,7 +14787,7 @@ function bind() {
 
   $("#game-title").textContent = GAME.title;
   $("#game-tagline").textContent = GAME.tagline;
-  $$(".brand-name").forEach((el) => {
+  $$(".brand-name, .hud-product-title").forEach((el) => {
     el.textContent = GAME.title;
   });
 }
