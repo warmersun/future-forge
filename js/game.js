@@ -2190,6 +2190,22 @@ function enterRoomPlay(client, opts = {}) {
   }
 }
 
+/**
+ * Drop multiparty outcome / chrome leftovers so a later solo run
+ * does not paint Friends standings or suppress Workshop unlock UI.
+ */
+function clearMultipartyOutcomeResidue() {
+  state.mpOutcome = null;
+  const mpBox = $("#outcome-mp");
+  if (mpBox) {
+    mpBox.hidden = true;
+    mpBox.setAttribute("hidden", "");
+    const list = $("#outcome-mp-standings");
+    if (list) list.innerHTML = "";
+  }
+  document.body.classList.remove("mp-room", "mp-hotseat", "challenge-spectator");
+}
+
 function leaveRoomPlay(opts = {}) {
   if (roomUnsub) {
     roomUnsub();
@@ -2212,6 +2228,8 @@ function leaveRoomPlay(opts = {}) {
   }
   if (!hotseatBridge.isHotseat()) {
     state.mp = null;
+    state.mpOutcome = null;
+    clearMultipartyOutcomeResidue();
     const bar = $("#mp-workshop-bar");
     if (bar) bar.hidden = true;
     setMpContributionLock(false);
@@ -2244,6 +2262,8 @@ function leaveHotseat() {
   }
   if (!roomBridge.isRoom()) {
     state.mp = null;
+    state.mpOutcome = null;
+    clearMultipartyOutcomeResidue();
     document.body.classList.remove("mp-hotseat");
     const bar = $("#mp-workshop-bar");
     if (bar) bar.hidden = true;
@@ -2609,6 +2629,9 @@ function requestResetTutorialProgress() {
 function startSparkPortsideMission() {
   clearMissionPickSession();
   leaveHotseat();
+  leaveRoomPlay({ silent: true });
+  state.mp = null;
+  state.mpOutcome = null;
   state.tutorialRun = true;
   state.playMode = "spark";
   const raw = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
@@ -3262,6 +3285,11 @@ function startMission(mission) {
   } else {
     state.playMode = "workshop";
     state.tutorialRun = false;
+  }
+  // Never carry Friends standings into a solo mission outcome
+  if (!missionPickSession && !mpBridge()) {
+    state.mp = null;
+    state.mpOutcome = null;
   }
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
@@ -10403,10 +10431,22 @@ function finishOutcome(kind, meta = {}) {
       state.challengeClearMode ||
       (state.elegancePivotPenalty ? "sidestep" : null),
   };
+  // Only this call's meta marks multiparty — never inherit stale state.mpOutcome from a prior room
+  const thisMp =
+    enriched.mpOutcome?.multiparty
+      ? enriched.mpOutcome
+      : enriched.multiparty
+        ? enriched.mpOutcome || null
+        : null;
+  if (thisMp) enriched.mpOutcome = thisMp;
+  else {
+    delete enriched.mpOutcome;
+    delete enriched.multiparty;
+  }
+
   // Tutorial win: set local flag (hide Play tutorial on Home) + meta for outcome explainer
   // Snapshot graduation *before* clearing tutorialRun (renderOutcome needs the flag)
-  const solo =
-    !enriched.multiparty && !enriched.mpOutcome?.multiparty;
+  const solo = !thisMp?.multiparty && !enriched.multiparty;
   const tutorialGraduation =
     solo && kind === "win" && (state.tutorialRun || state.playMode === "spark");
   if (tutorialGraduation) {
@@ -10419,6 +10459,7 @@ function finishOutcome(kind, meta = {}) {
   }
   if (solo) {
     state.tutorialRun = false;
+    state.mpOutcome = null;
   }
   const report = features().runReport ? buildRunReport(kind, enriched) : null;
   state.runReport = report;
@@ -10440,9 +10481,10 @@ function finishOutcome(kind, meta = {}) {
     inventionName: String(state.inventionName || "").trim(),
     visionUrl: visionSnap.url || "",
     runReport: report,
-    mpOutcome: enriched.mpOutcome || state.mpOutcome || null,
+    // Solo: never fall back to leftover Friends mpOutcome
+    mpOutcome: thisMp,
   };
-  state.mpOutcome = state.outcome.mpOutcome;
+  state.mpOutcome = thisMp;
   showScreen("outcome");
   applyOutcomeNextChallengeChrome();
 }
@@ -10826,9 +10868,13 @@ function renderMpOutcomeStandings(mp) {
   if (!box) return;
   if (!mp?.multiparty) {
     box.hidden = true;
+    box.setAttribute("hidden", "");
+    const list = $("#outcome-mp-standings");
+    if (list) list.innerHTML = "";
     return;
   }
   box.hidden = false;
+  box.removeAttribute("hidden");
   const title = $("#outcome-mp-title");
   const lead = $("#outcome-mp-lead");
   const list = $("#outcome-mp-standings");
@@ -10993,7 +11039,15 @@ function paintWorkshopUnlockPanel(o, mp) {
 function renderOutcome() {
   const o = state.outcome;
   const m = state.mission;
-  const mp = o.mpOutcome || o.meta?.mpOutcome || state.mpOutcome || null;
+  // Prefer this outcome only — do not fall back to a stale room mpOutcome after leave
+  const mp =
+    o?.mpOutcome?.multiparty
+      ? o.mpOutcome
+      : o?.meta?.mpOutcome?.multiparty
+        ? o.meta.mpOutcome
+        : o?.meta?.multiparty
+          ? o.meta.mpOutcome || null
+          : null;
   const name =
     (mp?.inventName && String(mp.inventName).trim()) ||
     state.inventionName.trim() ||
