@@ -10,8 +10,62 @@ import {
   createUsageTracker,
   extractTokenUsage,
   normalizeSessionId,
+  resolveUsageEnabled,
+  usageTrackerFromEnv,
   utcDay,
 } from "./usage-metrics.mjs";
+
+describe("resolveUsageEnabled", () => {
+  it("defaults to off", () => {
+    assert.equal(resolveUsageEnabled([], {}), false);
+    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "" }), false);
+  });
+
+  it("enables with --usage CLI flag", () => {
+    assert.equal(resolveUsageEnabled(["--usage"], {}), true);
+    assert.equal(resolveUsageEnabled(["--usage-tracking"], {}), true);
+  });
+
+  it("--no-usage wins over env and --usage", () => {
+    assert.equal(
+      resolveUsageEnabled(["--usage", "--no-usage"], { USAGE_ENABLED: "1" }),
+      false
+    );
+  });
+
+  it("enables with USAGE_ENABLED=1 when no CLI", () => {
+    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "1" }), true);
+    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "true" }), true);
+    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "0" }), false);
+  });
+});
+
+describe("usageTrackerFromEnv default off", () => {
+  it("creates a disabled tracker without flags", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ff-usage-def-"));
+    const t = usageTrackerFromEnv({ USAGE_ENABLED: undefined }, dir, []);
+    try {
+      assert.equal(t.enabled, false);
+      t.record({ type: "ai_text", mode: "chat", source: "ai", totalTokens: 9 });
+      t.flush();
+      assert.equal(fs.existsSync(path.join(dir, "summary.json")), false);
+    } finally {
+      t.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("enables with --usage argv", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ff-usage-on-"));
+    const t = usageTrackerFromEnv({}, dir, ["--usage"]);
+    try {
+      assert.equal(t.enabled, true);
+    } finally {
+      t.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("extractTokenUsage", () => {
   it("reads Responses-style fields", () => {

@@ -74,8 +74,15 @@ const MODEL = process.env.XAI_MODEL || "grok-4.5";
 /** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
 
-/** Hosting-cost usage metrics (tokens, images, sessions). Set USAGE_ENABLED=0 to disable. */
-const usage = usageTrackerFromEnv(process.env, path.join(ROOT, "data", "usage"));
+/**
+ * Hosting-cost usage metrics (tokens, images, sessions).
+ * Off by default — enable with `node server.mjs --usage` or USAGE_ENABLED=1.
+ */
+const usage = usageTrackerFromEnv(
+  process.env,
+  path.join(ROOT, "data", "usage"),
+  process.argv.slice(2)
+);
 
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED
@@ -2073,13 +2080,15 @@ const server = http.createServer(async (req, res) => {
         rooms: ROOMS_ENABLED,
       },
       roomStats: roomManager ? roomManager.stats() : null,
-      usageDir: usage._dir,
+      usageEnabled: usage.enabled,
+      usageDir: usage.enabled ? usage._dir : null,
     });
   }
 
   if (req.method === "GET" && req.url?.startsWith("/api/usage")) {
     return sendJson(res, 200, {
       ok: true,
+      enabled: usage.enabled,
       ...usage.getSummary(),
     });
   }
@@ -2355,7 +2364,11 @@ process.on("beforeExit", () => {
 
 server.listen(PORT, HOST, async () => {
   console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
-  console.log(`Usage metrics → ${usage._dir}/summary.json (GET /api/usage)`);
+  if (usage.enabled) {
+    console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
+  } else {
+    console.log("Usage metrics OFF (pass --usage or set USAGE_ENABLED=1 to enable)");
+  }
   const urls = lanJoinUrls();
   if (urls.length) {
     console.log("LAN (same Wi‑Fi) — friends open one of:");

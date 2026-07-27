@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.mjs",
     "serve": "node server.mjs",
+    "start:usage": "node server.mjs --usage",
     "check:briefs": "node scripts/check-problem-briefs.mjs",
     "check:vision-prompts": "node scripts/check-vision-prompts.mjs",
     "generate:quests": "node scripts/generate-scenario-seeds.mjs",

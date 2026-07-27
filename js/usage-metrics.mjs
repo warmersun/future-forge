@@ -516,6 +516,8 @@ export function createUsageTracker(opts = {}) {
     getSummary,
     flush,
     close,
+    /** Whether disk writes / session tracking are active */
+    enabled,
     /** @internal test helpers */
     _dir: dir,
     _sessions: sessions,
@@ -525,16 +527,45 @@ export function createUsageTracker(opts = {}) {
 }
 
 /**
- * Parse optional env-based tracker config.
- * @param {object} [env]
- * @param {string} [defaultDir]
+ * Usage tracking is **off by default**.
+ *
+ * Enable with CLI `--usage` / `--usage-tracking`, or env `USAGE_ENABLED=1`.
+ * Force off with `--no-usage` (wins over env) or `USAGE_ENABLED=0`.
+ *
+ * @param {string[]} [argv] — typically `process.argv.slice(2)`
+ * @param {NodeJS.ProcessEnv|Record<string,string|undefined>} [env]
+ * @returns {boolean}
  */
-export function usageTrackerFromEnv(env = process.env, defaultDir) {
+export function resolveUsageEnabled(argv = [], env = process.env) {
+  const args = Array.isArray(argv) ? argv : [];
+  // Explicit CLI wins
+  if (args.includes("--no-usage")) return false;
+  if (args.includes("--usage") || args.includes("--usage-tracking")) return true;
+
+  const raw = env?.USAGE_ENABLED;
+  if (raw == null || raw === "") return false;
+  const v = String(raw).trim().toLowerCase();
+  if (v === "0" || v === "false" || v === "off" || v === "no") return false;
+  if (v === "1" || v === "true" || v === "on" || v === "yes") return true;
+  return false;
+}
+
+/**
+ * Parse CLI + env tracker config. Tracking defaults to **off**.
+ * @param {NodeJS.ProcessEnv|Record<string,string|undefined>} [env]
+ * @param {string} [defaultDir]
+ * @param {string[]} [argv] — defaults to `process.argv.slice(2)`
+ */
+export function usageTrackerFromEnv(
+  env = process.env,
+  defaultDir,
+  argv = process.argv.slice(2)
+) {
   const dir =
     env.USAGE_DIR ||
     defaultDir ||
     path.join(process.cwd(), "data", "usage");
-  const enabled = env.USAGE_ENABLED !== "0" && env.USAGE_ENABLED !== "false";
+  const enabled = resolveUsageEnabled(argv, env);
   const flushMs = env.USAGE_FLUSH_MS != null ? Number(env.USAGE_FLUSH_MS) : 5000;
   const sessionIdleMs =
     env.USAGE_SESSION_IDLE_MS != null

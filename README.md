@@ -55,6 +55,7 @@ Open **http://127.0.0.1:8765**
 | Command | Purpose |
 |--------|---------|
 | `npm start` / `npm run serve` | Start the game server (`server.mjs`) |
+| `npm start -- --usage` | Start with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 
 Default port: **8765** (override with `PORT`).
@@ -85,7 +86,19 @@ Auth is resolved **on the server** (tokens never go to the browser).
 
 ### Usage metrics (hosting cost estimates)
 
-The server writes operator metrics under **`data/usage/`** (gitignored):
+**Off by default.** Enable when you want token / image / session logs for cost estimates:
+
+```bash
+npm start -- --usage
+# or
+node server.mjs --usage
+# or (deploy-friendly)
+USAGE_ENABLED=1 npm start
+```
+
+Force off even if env is set: `node server.mjs --no-usage`.
+
+When enabled, the server writes under **`data/usage/`** (gitignored):
 
 | File | Contents |
 |------|----------|
@@ -98,11 +111,11 @@ Inspect live rollups:
 curl -s http://127.0.0.1:8765/api/usage | jq .
 ```
 
-Useful env vars (see `.env.example`):
-
-| Variable | Purpose |
-|----------|---------|
-| `USAGE_ENABLED=0` | Disable all writes |
+| Flag / env | Purpose |
+|------------|---------|
+| `--usage` / `--usage-tracking` | Enable metrics (CLI) |
+| `--no-usage` | Force disable (wins over env) |
+| `USAGE_ENABLED=1` | Enable via environment |
 | `USAGE_DIR` | Override metrics directory |
 | `USAGE_PRICE_TEXT_IN_PER_MTOK` / `USAGE_PRICE_TEXT_OUT_PER_MTOK` | Optional $ per 1M tokens |
 | `USAGE_PRICE_IMAGE` | Optional $ per live image generate/edit |
