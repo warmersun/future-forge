@@ -29,6 +29,11 @@ import {
   clipText as visionClip,
 } from "./js/vision-prompt.mjs";
 import { RoomManager } from "./js/rooms/room-manager.mjs";
+import {
+  usageTrackerFromEnv,
+  extractTokenUsage,
+  normalizeSessionId,
+} from "./js/usage-metrics.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -68,8 +73,72 @@ const HOST = process.env.HOST || "0.0.0.0";
 const MODEL = process.env.XAI_MODEL || "grok-4.5";
 /** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
+
+/** Hosting-cost usage metrics (tokens, images, sessions). Set USAGE_ENABLED=0 to disable. */
+const usage = usageTrackerFromEnv(process.env, path.join(ROOT, "data", "usage"));
+
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
-const roomManager = ROOMS_ENABLED ? new RoomManager() : null;
+const roomManager = ROOMS_ENABLED
+  ? new RoomManager({
+      onRoomStart: (code, meta) => usage.roomStart(code, meta),
+      onRoomEnd: (code, meta) => usage.roomEnd(code, meta),
+      onRoomPlayers: (code, n) => usage.roomTouchPlayers(code, n),
+    })
+  : null;
+
+/**
+ * @param {object|null|undefined} body
+ * @returns {string|null}
+ */
+function clientSessionFromBody(body) {
+  return normalizeSessionId(body?.clientSessionId || body?.clientId);
+}
+
+/**
+ * Record a co-inventor / director text call.
+ * @param {object} opts
+ */
+function recordAiText(opts) {
+  const tokens = extractTokenUsage(opts.usage);
+  usage.record({
+    type: "ai_text",
+    mode: opts.mode || "chat",
+    source: opts.source || "ai",
+    model: opts.model || MODEL,
+    inputTokens: tokens.inputTokens,
+    outputTokens: tokens.outputTokens,
+    totalTokens: tokens.totalTokens,
+    cachedInputTokens: tokens.cachedInputTokens || undefined,
+    latencyMs: opts.latencyMs ?? null,
+    ok: opts.ok !== false,
+    sessionId: opts.sessionId || null,
+    roomCode: opts.roomCode || null,
+  });
+}
+
+/**
+ * Record an image gen/edit/cache/follow event.
+ * @param {object} opts
+ */
+function recordAiImage(opts) {
+  const tokens = extractTokenUsage(opts.usage);
+  const source = opts.source || "live";
+  usage.record({
+    type: "ai_image",
+    kind: opts.kind || "vision",
+    mode: opts.mode || "generate",
+    source,
+    model: opts.model || IMAGE_MODEL,
+    imageCount: source === "live" ? opts.imageCount ?? 1 : 0,
+    inputTokens: tokens.inputTokens || null,
+    outputTokens: tokens.outputTokens || null,
+    totalTokens: tokens.totalTokens || null,
+    latencyMs: opts.latencyMs ?? null,
+    ok: opts.ok !== false,
+    sessionId: opts.sessionId || null,
+    roomCode: opts.roomCode || null,
+  });
+}
 
 /**
  * Private LAN IPv4 addresses for "join from another computer" display.
@@ -1349,11 +1418,12 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
   };
 }
 
-async function aiCoInvent(body, client) {
+async function aiCoInvent(body, client, meta = {}) {
   const mode = body.mode || "chat";
   const context = body.context || {};
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const availableIds = (context.availableTechs || []).map((t) => t.id);
+  const sessionId = meta.sessionId || clientSessionFromBody(body);
 
   const isPose = mode === "pose-challenge";
   const systemContent = isPose ? POSE_CHALLENGE_SYSTEM : SYSTEM_PROMPT;
@@ -1384,7 +1454,32 @@ async function aiCoInvent(body, client) {
     createOpts.max_output_tokens = 600;
   }
 
-  const response = await client.responses.create(createOpts);
+  const t0 = Date.now();
+  let response;
+  try {
+    response = await client.responses.create(createOpts);
+  } catch (e) {
+    recordAiText({
+      mode,
+      source: "error",
+      model: MODEL,
+      usage: null,
+      latencyMs: Date.now() - t0,
+      ok: false,
+      sessionId,
+    });
+    throw e;
+  }
+
+  recordAiText({
+    mode,
+    source: "ai",
+    model: MODEL,
+    usage: response.usage || null,
+    latencyMs: Date.now() - t0,
+    ok: true,
+    sessionId,
+  });
 
   const text = response.output_text || "";
   const parsed = extractJson(text);
@@ -1426,14 +1521,26 @@ async function handleCoInvent(body) {
   const context = body.context || {};
   const mode = body.mode || "chat";
   const messages = Array.isArray(body.messages) ? body.messages : [];
+  const sessionId = clientSessionFromBody(body);
+  if (sessionId) usage.touchSession(sessionId);
 
   let client = await getClient();
   if (!client) {
-    return localCoInvent({ mode, messages, context });
+    const local = localCoInvent({ mode, messages, context });
+    recordAiText({
+      mode,
+      source: "local",
+      model: null,
+      usage: null,
+      latencyMs: 0,
+      ok: true,
+      sessionId,
+    });
+    return local;
   }
 
   try {
-    return await aiCoInvent(body, client);
+    return await aiCoInvent(body, client, { sessionId });
   } catch (e) {
     const msg = String(e?.message || e);
     console.error("[co-invent ai]", msg.slice(0, 200));
@@ -1442,7 +1549,7 @@ async function handleCoInvent(body) {
     if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
       try {
         client = await getClient({ forceRefresh: true });
-        if (client) return await aiCoInvent(body, client);
+        if (client) return await aiCoInvent(body, client, { sessionId });
       } catch (e2) {
         console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
       }
@@ -1451,6 +1558,15 @@ async function handleCoInvent(body) {
     const local = localCoInvent({ mode, messages, context });
     local.message =
       `*(Co-inventor temporarily offline; local partner here.)*\n\n` + local.message;
+    recordAiText({
+      mode,
+      source: "local",
+      model: null,
+      usage: null,
+      latencyMs: 0,
+      ok: true,
+      sessionId,
+    });
     return local;
   }
 }
@@ -1509,8 +1625,10 @@ function extractImageDataUrl(data) {
 }
 
 async function runVisionImage(mode, prompt, prevDataUrl) {
+  const t0 = Date.now();
+  let data;
   if (mode === "edit") {
-    return xaiImageRequest("/images/edits", {
+    data = await xaiImageRequest("/images/edits", {
       model: IMAGE_MODEL,
       prompt,
       image: {
@@ -1520,14 +1638,20 @@ async function runVisionImage(mode, prompt, prevDataUrl) {
       response_format: "b64_json",
       aspect_ratio: "16:9",
     });
+  } else {
+    data = await xaiImageRequest("/images/generations", {
+      model: IMAGE_MODEL,
+      prompt,
+      n: 1,
+      response_format: "b64_json",
+      aspect_ratio: "16:9",
+    });
   }
-  return xaiImageRequest("/images/generations", {
-    model: IMAGE_MODEL,
-    prompt,
-    n: 1,
-    response_format: "b64_json",
-    aspect_ratio: "16:9",
-  });
+  // Attach latency for callers that want to log without a second timer
+  if (data && typeof data === "object") {
+    data._latencyMs = Date.now() - t0;
+  }
+  return data;
 }
 
 async function normalizeVisionDataUrl(data) {
@@ -1562,6 +1686,8 @@ function ensureWorldCard(sessionId, body, prev) {
 
 async function handleVision(body) {
   const sessionId = String(body.sessionId || "default").slice(0, 120);
+  const clientSessionId = clientSessionFromBody(body);
+  if (clientSessionId) usage.touchSession(clientSessionId);
   const fingerprint = visionFingerprint(body);
   const force = Boolean(body.force);
   /** Followers only consume the shared cache — never generate a divergent image */
@@ -1571,6 +1697,14 @@ async function handleVision(body) {
 
   // Multiplayer followers: return whatever the owner last generated for this session
   if (followOnly) {
+    recordAiImage({
+      kind: "vision",
+      mode: prev?.mode || "generate",
+      source: "follow",
+      imageCount: 0,
+      ok: true,
+      sessionId: clientSessionId,
+    });
     if (prev?.dataUrl) {
       return {
         ok: true,
@@ -1600,6 +1734,14 @@ async function handleVision(body) {
   }
 
   if (!force && prev?.fingerprint === fingerprint && prev.dataUrl) {
+    recordAiImage({
+      kind: "vision",
+      mode: prev.mode || "generate",
+      source: "cache",
+      imageCount: 0,
+      ok: true,
+      sessionId: clientSessionId,
+    });
     return {
       ok: true,
       cached: true,
@@ -1616,7 +1758,21 @@ async function handleVision(body) {
 
   const worldCard = ensureWorldCard(sessionId, body, prev);
   const client = await getClient().catch(() => null);
-  let shot = await resolveShot(body, prev, worldCard, { client, model: MODEL });
+  let shot = await resolveShot(body, prev, worldCard, {
+    client,
+    model: MODEL,
+    onAiTextUsage: (info) => {
+      recordAiText({
+        mode: info.mode || "vision-director",
+        source: info.source || "ai",
+        model: info.model || MODEL,
+        usage: info.usage,
+        latencyMs: info.latencyMs,
+        ok: info.ok !== false,
+        sessionId: clientSessionId,
+      });
+    },
+  });
 
   let mode = shot.mode === "edit" ? "edit" : "generate";
   if (mode === "edit" && !prev?.dataUrl?.startsWith("data:")) {
@@ -1648,11 +1804,43 @@ async function handleVision(body) {
       continuity = "new-shot";
       reason = `Edit failed — regenerate (${String(e.message || "error").slice(0, 80)})`;
       prompt = composeGeneratePrompt(worldCard, shot, stageId);
-      data = await runVisionImage("generate", prompt, null);
+      try {
+        data = await runVisionImage("generate", prompt, null);
+      } catch (e2) {
+        recordAiImage({
+          kind: "vision",
+          mode: usedMode,
+          source: "error",
+          imageCount: 0,
+          latencyMs: null,
+          ok: false,
+          sessionId: clientSessionId,
+        });
+        throw e2;
+      }
     } else {
+      recordAiImage({
+        kind: "vision",
+        mode,
+        source: "error",
+        imageCount: 0,
+        ok: false,
+        sessionId: clientSessionId,
+      });
       throw e;
     }
   }
+
+  recordAiImage({
+    kind: "vision",
+    mode: usedMode,
+    source: "live",
+    imageCount: 1,
+    usage: data?.usage || null,
+    latencyMs: data?._latencyMs ?? null,
+    ok: true,
+    sessionId: clientSessionId,
+  });
 
   const imageUrl = await normalizeVisionDataUrl(data);
 
@@ -1703,11 +1891,21 @@ async function handleVision(body) {
  */
 async function handleMarketImage(body) {
   const id = String(body?.id || "").slice(0, 80);
+  const clientSessionId = clientSessionFromBody(body);
+  if (clientSessionId) usage.touchSession(clientSessionId);
   if (!id) {
     return { ok: false, error: "missing_id" };
   }
   const cached = marketImageCache.get(id);
   if (cached?.imageUrl) {
+    recordAiImage({
+      kind: "market",
+      mode: "generate",
+      source: "cache",
+      imageCount: 0,
+      ok: true,
+      sessionId: clientSessionId,
+    });
     return {
       ok: true,
       cached: true,
@@ -1735,6 +1933,16 @@ async function handleMarketImage(body) {
       )[0];
       if (oldest) marketImageCache.delete(oldest[0]);
     }
+    recordAiImage({
+      kind: "market",
+      mode: "generate",
+      source: "live",
+      imageCount: 1,
+      usage: data?.usage || null,
+      latencyMs: data?._latencyMs ?? null,
+      ok: true,
+      sessionId: clientSessionId,
+    });
     return {
       ok: true,
       cached: false,
@@ -1744,6 +1952,14 @@ async function handleMarketImage(body) {
     };
   } catch (e) {
     console.warn("[market-image]", e.message || e);
+    recordAiImage({
+      kind: "market",
+      mode: "generate",
+      source: "error",
+      imageCount: 0,
+      ok: false,
+      sessionId: clientSessionId,
+    });
     return {
       ok: false,
       error: String(e.message || "generate_failed").slice(0, 200),
@@ -1857,6 +2073,14 @@ const server = http.createServer(async (req, res) => {
         rooms: ROOMS_ENABLED,
       },
       roomStats: roomManager ? roomManager.stats() : null,
+      usageDir: usage._dir,
+    });
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/usage")) {
+    return sendJson(res, 200, {
+      ok: true,
+      ...usage.getSummary(),
     });
   }
 
@@ -1864,6 +2088,8 @@ const server = http.createServer(async (req, res) => {
   if (ROOMS_ENABLED && roomManager && req.method === "POST" && req.url === "/api/rooms") {
     try {
       const body = await readBody(req);
+      const sid = clientSessionFromBody(body);
+      if (sid) usage.touchSession(sid);
       const ip = clientIp(req);
       const result = roomManager.createRoom({
         displayName: body.displayName,
@@ -1880,6 +2106,8 @@ const server = http.createServer(async (req, res) => {
     if (joinMatch) {
       try {
         const body = await readBody(req);
+        const sid = clientSessionFromBody(body);
+        if (sid) usage.touchSession(sid);
         const ip = clientIp(req);
         const result = roomManager.joinRoom(joinMatch[1].toUpperCase(), {
           displayName: body.displayName,
@@ -2012,6 +2240,8 @@ if (ROOMS_ENABLED && roomManager) {
         const found = roomManager.findByPlayerToken(msg.token);
         if (!found) return safeWs(socket, { type: "error", error: "unauthorized" });
         bound = found;
+        const sid = normalizeSessionId(msg.clientSessionId || msg.clientId);
+        if (sid) usage.touchSession(sid);
         roomManager.bindSocket(found.room, found.player, socket);
         return safeWs(socket, {
           type: "hello",
@@ -2098,8 +2328,34 @@ if (ROOMS_ENABLED && roomManager) {
   });
 }
 
+function shutdownUsage(signal) {
+  try {
+    usage.close();
+  } catch (e) {
+    console.warn("[usage] close failed:", e.message || e);
+  }
+  if (signal) {
+    // allow default exit after flush when signal handlers are used
+  }
+}
+
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.on(sig, () => {
+    shutdownUsage(sig);
+    process.exit(0);
+  });
+}
+process.on("beforeExit", () => {
+  try {
+    usage.flush();
+  } catch {
+    /* ignore */
+  }
+});
+
 server.listen(PORT, HOST, async () => {
   console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  console.log(`Usage metrics → ${usage._dir}/summary.json (GET /api/usage)`);
   const urls = lanJoinUrls();
   if (urls.length) {
     console.log("LAN (same Wi‑Fi) — friends open one of:");

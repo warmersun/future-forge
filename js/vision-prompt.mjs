@@ -329,7 +329,8 @@ export function sanitizeHappening(text, worldCard) {
  * Optional LLM shot director — returns null on failure.
  * Must produce positive happening only; world is fixed input.
  */
-export async function directShot(body, prev, worldCard, client, { model } = {}) {
+export async function directShot(body, prev, worldCard, client, opts = {}) {
+  const { model } = opts;
   if (!client) return null;
   const how = clipText(body.inventionHow, 500);
   const life = clipText(body.inventionImpact, 500);
@@ -372,12 +373,27 @@ export async function directShot(body, prev, worldCard, client, { model } = {}) 
     },
   ];
 
+  const t0 = Date.now();
   try {
     const response = await client.responses.create({
       model: model || "grok-4.5",
       input,
       temperature: 0.2,
     });
+    if (typeof opts.onAiTextUsage === "function") {
+      try {
+        opts.onAiTextUsage({
+          mode: "vision-director",
+          source: "ai",
+          model: model || "grok-4.5",
+          usage: response.usage || null,
+          latencyMs: Date.now() - t0,
+          ok: true,
+        });
+      } catch {
+        /* ignore metrics errors */
+      }
+    }
     const text = response.output_text || "";
     const parsed = extractJsonLoose(text);
     if (!parsed) return null;
@@ -433,7 +449,12 @@ function extractJsonLoose(text) {
 /**
  * Resolve shot: heuristic first; optional director when narrative is rich.
  */
-export async function resolveShot(body, prev, worldCard, { client, model } = {}) {
+export async function resolveShot(
+  body,
+  prev,
+  worldCard,
+  { client, model, onAiTextUsage } = {}
+) {
   const heuristic = decideShot(body, prev, worldCard);
   const nLen = narrativeLength(body);
 
@@ -462,7 +483,10 @@ export async function resolveShot(body, prev, worldCard, { client, model } = {})
     };
   }
 
-  const directed = await directShot(body, prev, worldCard, client, { model });
+  const directed = await directShot(body, prev, worldCard, client, {
+    model,
+    onAiTextUsage,
+  });
   return directed || heuristic;
 }
 

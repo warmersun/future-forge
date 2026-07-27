@@ -27,6 +27,7 @@ import {
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
+import { getClientSessionId } from "./client-session.js";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -3021,6 +3022,7 @@ async function ensureScenarios(global, { force = false } = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode: "generate-scenarios",
+        clientSessionId: getClientSessionId(),
         messages: [{ role: "user", content: "[Generate Quests]" }],
         context: {
           globalTheme: {
@@ -5829,6 +5831,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       mode,
+      clientSessionId: getClientSessionId(),
       messages: [{ role: "user", content: userContent }],
       context: {
         challenge: state.mission
@@ -12294,6 +12297,7 @@ async function judgeContributionAdditive({ field, before, after, baseline }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode: "judge-contribution",
+        clientSessionId: getClientSessionId(),
         messages: [
           {
             role: "user",
@@ -12773,6 +12777,7 @@ async function callCoInventMode(mode, userLabel) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mode,
+        clientSessionId: getClientSessionId(),
         messages: [{ role: "user", content: userLabel }],
         context: ctx,
       }),

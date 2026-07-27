@@ -50,6 +50,40 @@ export class RoomManager {
     this.maxPlayersDefault = opts.maxPlayers ?? MAX_PLAYERS;
     this.rate = new Map();
     this.coInventHandler = opts.coInventHandler || null;
+    /** Optional usage-metrics hooks (hosting cost tracking). */
+    this.onRoomStart = typeof opts.onRoomStart === "function" ? opts.onRoomStart : null;
+    this.onRoomEnd = typeof opts.onRoomEnd === "function" ? opts.onRoomEnd : null;
+    this.onRoomPlayers = typeof opts.onRoomPlayers === "function" ? opts.onRoomPlayers : null;
+  }
+
+  _emitRoomStart(room) {
+    try {
+      this.onRoomStart?.(room.code, { playerCount: room.players?.length || 1 });
+    } catch {
+      /* ignore metrics errors */
+    }
+  }
+
+  _emitRoomEnd(room) {
+    try {
+      const peak =
+        room._playerCountPeak ||
+        room.players?.length ||
+        1;
+      this.onRoomEnd?.(room.code, { playerCountPeak: peak });
+    } catch {
+      /* ignore metrics errors */
+    }
+  }
+
+  _emitRoomPlayers(room) {
+    try {
+      const n = room.players?.length || 0;
+      room._playerCountPeak = Math.max(room._playerCountPeak || 0, n);
+      this.onRoomPlayers?.(room.code, n);
+    } catch {
+      /* ignore metrics errors */
+    }
   }
 
   checkRate(key, limit, windowMs) {
@@ -66,7 +100,10 @@ export class RoomManager {
   sweep() {
     const now = Date.now();
     for (const [code, room] of this.rooms) {
-      if (now - room.updatedAt > this.roomTtlMs) this.rooms.delete(code);
+      if (now - room.updatedAt > this.roomTtlMs) {
+        this._emitRoomEnd(room);
+        this.rooms.delete(code);
+      }
     }
   }
 
@@ -125,8 +162,10 @@ export class RoomManager {
       sockets: new Set(),
       questMeta: null,
       aiQuota: createRoomAiQuotaState(),
+      _playerCountPeak: 1,
     };
     this.rooms.set(room.code, room);
+    this._emitRoomStart(room);
 
     return {
       ok: true,
@@ -217,6 +256,7 @@ export class RoomManager {
       role: "polymath",
     });
     room.updatedAt = Date.now();
+    this._emitRoomPlayers(room);
     this.broadcast(room, { type: "presence", players: publicPlayers(room) });
 
     return {
@@ -346,6 +386,7 @@ export class RoomManager {
         message: `${leftPlayer.displayName || "A player"} left. You're the only one still connected — you can keep playing alone or leave the room.`,
       });
     } else if (connected.length === 0) {
+      this._emitRoomEnd(room);
       this.rooms.delete(room.code);
     } else {
       this.broadcast(room, {
@@ -883,6 +924,7 @@ export class RoomManager {
       const body = {
         mode,
         messages,
+        clientSessionId: payload.clientSessionId || null,
         context: buildRoomAiContext(room, player, payload),
       };
       const result = await this.coInventHandler(body);

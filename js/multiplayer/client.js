@@ -3,6 +3,8 @@
  * Stores tokens in sessionStorage.
  */
 
+import { getClientSessionId } from "../client-session.js";
+
 const SS_KEY = "future-forge:roomSession";
 
 export function loadRoomSession() {
@@ -57,7 +59,10 @@ export class RoomClient {
     const res = await fetch("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ displayName }),
+      body: JSON.stringify({
+        displayName,
+        clientSessionId: getClientSessionId(),
+      }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "create_failed");
@@ -79,6 +84,7 @@ export class RoomClient {
     const prev = loadRoomSession();
     const body = {
       displayName,
+      clientSessionId: getClientSessionId(),
       playerToken:
         prev?.code === String(code).toUpperCase() ? prev.playerToken : undefined,
     };
@@ -129,7 +135,13 @@ export class RoomClient {
       }, 8000);
 
       ws.onopen = () => {
-        ws.send(JSON.stringify({ type: "auth", token: this.session.playerToken }));
+        ws.send(
+          JSON.stringify({
+            type: "auth",
+            token: this.session.playerToken,
+            clientSessionId: getClientSessionId(),
+          })
+        );
       };
 
       ws.onmessage = (ev) => {
@@ -360,6 +372,7 @@ export class RoomClient {
               mode: body.mode || "chat",
               messages: body.messages,
               context: body.context,
+              clientSessionId: body.clientSessionId || getClientSessionId(),
               reservedAp: body.reservedAp ?? 1,
               clientActionId,
               userLabel: body.userLabel,

@@ -4,6 +4,8 @@
  * opens a new scene of the same place (generate) when the story framing changes.
  */
 
+import { getClientSessionId } from "./client-session.js";
+
 /** Collect vision feature tags from selected tech objects */
 export function featuresFromTechs(techs) {
   const features = new Set();
@@ -355,6 +357,7 @@ export class VisionRenderer {
     try {
       const payload = {
         sessionId: this.sessionId,
+        clientSessionId: getClientSessionId(),
         force: Boolean(state.force) && !followOnly,
         followOnly,
         inventionName: state.inventionName || "",

@@ -9,6 +9,9 @@ node_modules/
 dist/
 coverage/
 
+# Runtime usage metrics (tokens, sessions — local operator data)
+data/
+
 # Local research notes (not game assets)
 problems/
 output/

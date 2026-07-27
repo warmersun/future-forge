@@ -2,6 +2,8 @@
  * AI Co-Inventor client — brainstorms with the learner via /api/co-invent
  */
 
+import { getClientSessionId } from "./client-session.js";
+
 const QUICK_ACTIONS = [
   { mode: "spark", label: "Spark ideas", hint: "Frame the local mission" },
   { mode: "suggest-stack", label: "Suggest stack", hint: "Tech combo for this place" },
@@ -207,6 +209,7 @@ export class CoInventor {
       const ctx = this.getContext();
       const requestBody = {
         mode,
+        clientSessionId: getClientSessionId(),
         messages: [
           ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
         ].map((m) => ({ role: m.role, content: m.content })),

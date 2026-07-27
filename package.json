@@ -15,7 +15,7 @@
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "foresight:build": "node scripts/build-world-foresight.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/rooms/*.test.js js/multiplayer/*.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js"
   },
   "dependencies": {
     "openai": "^6.16.0",
