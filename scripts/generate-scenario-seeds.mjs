@@ -149,12 +149,22 @@ async function resolveAccessToken() {
   return null;
 }
 
+/** Shared player-facing prose contract for quest scenes (seed gen + mirrors server). */
+const SCENE_PROSE =
+  "SCENE PROSE (player-facing): Write with Hemingway clarity — direct, concrete, easy to follow on first read. " +
+  "Audience: a smart high-school senior — sharp, not deeply technical, not a subject-matter expert. " +
+  "Prefer clear sentences over dense stacked clauses. " +
+  "If you use jargon, a concept, or an idea that reader would not already know, introduce it in plain words the first time it appears. " +
+  "Each scene must still cover (1) lived local harm people feel now and (2) a local driver that keeps the problem going — " +
+  "as readable prose, not a checklist dump or policy brief.";
+
 const MODE_INSTRUCTION =
   "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). " +
   "Return top-level scenarios: an array of 4 objects (or context.scenarioCount). " +
   "Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles. " +
-  "Each scene (2–4 vivid sentences) MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
-  "Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
+  "Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
+  SCENE_PROSE +
+  " Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
   "pressure (exactly 3 meters, values 0–5), pressureRise, winMax, " +
   "suggested (tech ids from availableTechs only — mix protection and abatement when relevant), " +
   "visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), " +
@@ -168,6 +178,7 @@ const SYSTEM = `You are the AI Co-Inventor in Future Forge.
 When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme.
 Return a single JSON object only (no markdown fences) with top-level "scenarios" array and "message".
 Hard rules: only use technology ids from availableTechs; stay local; concrete inventable places.
+Quest scene prose: Hemingway clarity for a smart high-school senior; introduce unfamiliar jargon on first use; never dense policy-brief stacking.
 Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.`;
 
 function extractJson(text) {
@@ -260,17 +271,18 @@ function localPackForTheme(g) {
 
 async function aiPackForTheme(client, g) {
   const depth = themeDepthFor(g);
+  // Place/title/stakeholder only — omit full scene so old dense prose cannot re-bias style.
   const seedMissions = localScenariosForGlobal(g, { count: SCENARIO_COUNT, salt: 0 }).map(
     (m) => ({
       id: m.id,
       title: m.title,
       place: m.place,
-      scene: m.scene,
       stakeholder: m.stakeholder,
       suggested: m.suggested,
       visionTheme: m.visionTheme,
       pressure: m.pressure,
       collapseYear: m.collapseYear,
+      sceneHint: "Rewrite with Hemingway clarity for a smart high-school senior; do not imitate dense brief style.",
     })
   );
   const guidance =
@@ -278,7 +290,9 @@ async function aiPackForTheme(client, g) {
     "(1) lived local harm in a concrete place, (2) a local driver of the theme problem " +
     "(not only how people shelter from it). Different geographies and stakeholders. " +
     "Inventable with emerging tech. Pure shelter-only framing is incomplete for source themes. " +
-    "Crisis meter names (pressure object keys) appear on the player HUD: plain English, 1–3 words " +
+    SCENE_PROSE +
+    " seedMissions are topic anchors only (place/title); invent fresh clear scene text — never copy prior dense style. " +
+    " Crisis meter names (pressure object keys) appear on the player HUD: plain English, 1–3 words " +
     "(Dirty air, Sick days, Truck exhaust) — never camelCase or opaque jargon. " +
     "Asteroid = civilization-class NEO; nuclear = strategic misjudgment risk.";
 
@@ -305,7 +319,7 @@ async function aiPackForTheme(client, g) {
 
   const response = await client.responses.create({
     model: MODEL,
-    temperature: 0.8,
+    temperature: 0.55,
     input: [
       { role: "system", content: SYSTEM },
       {
@@ -370,6 +384,7 @@ function writeSeedsFile(packsByTheme, meta) {
  * Source: ${meta.source}
  * Themes: ${keys.length}
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
+ * Prose: Hemingway clarity for a smart high-school senior; introduce jargon on first use.
  *
  * Re-run: node scripts/generate-scenario-seeds.mjs
  * Scale rule: existential themes (asteroid, nuclear, rogue SI, chem-bio…) are
@@ -507,7 +522,7 @@ async function main() {
   fs.writeFileSync(OUT, text);
   console.log(`Wrote ${path.relative(ROOT, OUT)}`);
   console.log(`Done. AI=${aiOk} local=${localOk} fail=${fail}`);
-  console.log("Next: hard-refresh the game (cache key v4 already invalidates old packs).");
+  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v9).");
 }
 
 main().catch((e) => {

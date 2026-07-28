@@ -371,8 +371,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v5: plain-English crisis meter labels on regenerated packs */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v5";
+/** v9: full seed regen — Hemingway clarity for smart HS senior */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v9";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -2334,6 +2334,10 @@ function loadPersistedProgress() {
     localStorage.removeItem("future-forge:scenarioCache:v2");
     localStorage.removeItem("future-forge:scenarioCache:v3");
     localStorage.removeItem("future-forge:scenarioCache:v4");
+    localStorage.removeItem("future-forge:scenarioCache:v5");
+    localStorage.removeItem("future-forge:scenarioCache:v6");
+    localStorage.removeItem("future-forge:scenarioCache:v7");
+    localStorage.removeItem("future-forge:scenarioCache:v8");
   } catch {
     /* ignore */
   }
@@ -3485,6 +3489,9 @@ async function ensureScenarios(global, { force = false } = {}) {
             "Quests are local crisis episodes under this theme. Each quest scene MUST include: (1) lived local harm in a concrete place, (2) a local driver of the theme problem (not only how people shelter from it). " +
             "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
+            "SCENE PROSE (player-facing): Hemingway clarity for a smart high-school senior — sharp, not deeply technical. " +
+            "Direct, concrete, easy on first read. Introduce unfamiliar jargon or concepts in plain words on first use. " +
+            "Prefer clear sentences over dense stacked clauses or policy-brief packing. " +
             "Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
             "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
             "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk.",
