@@ -146,6 +146,55 @@ button:disabled {
   width: 100%;
 }
 
+/* Language switcher (title + later HUD reuse) */
+.title-lang {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+}
+
+.title-lang-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, #94a3b8);
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.title-lang-switch {
+  display: inline-flex;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(7, 11, 20, 0.45);
+}
+
+.title-lang-btn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-family: var(--mono, ui-monospace, monospace);
+  color: var(--muted, #94a3b8);
+  background: transparent;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.title-lang-btn:hover {
+  color: var(--text, #e2e8f0);
+}
+
+.title-lang-btn[aria-pressed="true"] {
+  color: #0b1220;
+  background: linear-gradient(135deg, #38bdf8, #7c9cff);
+}
+
 .title-spark-reset-wrap {
   margin: 0.65rem 0 0;
   text-align: center;

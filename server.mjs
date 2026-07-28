@@ -403,6 +403,7 @@ Hard rules:
 - No tabletop jargon. No UI lectures.
 - Never say a category is locked until a year.
 - If context.grounding is set, treat it as the authoritative source of truth for this Quest along the chain: emTech enables product category → capabilities → trends → predictions → milestones unlock use cases → inventable applications (+ honest limits). Prefer product-category grain over generic tech-id encyclopedia when advising or assessing.
+- LANGUAGE: All player-facing strings (message, proposals text, teaching blurbs, timing.reason, challengeSpeech, challengeQuestion, scenario title/scene/stakeholder/pressure keys, draftAnswer, lesson, reason) MUST be written in the language named by context.outputLanguage (default English). JSON keys, tech ids, mode names, and angle ids stay ASCII English. Prefer invent/feltalál framing in Hungarian (MI for artificial intelligence), not "AI" or kitalálni.
 
 Respond with a single JSON object (no markdown fences):
 {
@@ -484,7 +485,8 @@ Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sha
 Return JSON only (no markdown):
 {"angle":"<same as challengeAngle>","angleLabel":"<name>","challengeSpeech":"<2-4 sentences>","challengeQuestion":"<one question>","message":"","proposals":{"addTechIds":[],"removeTechIds":[],"inventionName":null,"inventionHow":null,"inventionImpact":null,"scrutiny":null},"teaching":[]}
 Stay local and specific. No UN resolutions. No tabletop jargon.
-If context.grounding (or the grounding field in the user JSON) is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits). Stay hostile, but do not invent capability limits that contradict that grounding or reframe the quest as unlimited bare emTech.`;
+If context.grounding (or the grounding field in the user JSON) is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits). Stay hostile, but do not invent capability limits that contradict that grounding or reframe the quest as unlimited bare emTech.
+LANGUAGE: challengeSpeech, challengeQuestion, angleLabel, and message MUST be in context.outputLanguage (default English). angle id stays English (moloch|ethicist|stakeholder|nature).`;
 
 /** Appended to invent/challenge modeHints when capability truth matters. */
 const GROUNDING_HINT =
@@ -544,6 +546,46 @@ function groundingExcerpt(context, max = 500) {
   if (!g) return "";
   const oneLine = g.replace(/\s+/g, " ").trim();
   return oneLine.length > max ? `${oneLine.slice(0, max)}…` : oneLine;
+}
+
+/* —— Locale helpers for AI + local fallback —— */
+
+function resolveOutputLocale(context = {}, body = {}) {
+  const raw =
+    context.locale ||
+    context.hostLocale ||
+    body.locale ||
+    body.outputLanguage ||
+    "";
+  const s = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+  if (s === "hu" || s.startsWith("hu-") || s === "hungarian" || s === "magyar") {
+    return "hu";
+  }
+  return "en";
+}
+
+function outputLanguageLabel(locale) {
+  return locale === "hu" ? "Hungarian" : "English";
+}
+
+function languageDirective(locale) {
+  const lang = outputLanguageLabel(locale);
+  if (locale === "hu") {
+    return (
+      `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in Hungarian (${lang}). ` +
+      `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+      `Use MI for mesterséges intelligencia; prefer feltalálni/találmány (not kitalálni). ` +
+      `Pressure meter labels: 1–3 short Hungarian words, human, no camelCase.`
+    );
+  }
+  return (
+    `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in English. ` +
+    `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+    `Pressure meter labels: plain English, 1–3 words, Title Case with spaces.`
+  );
 }
 
 /* —— Local co-inventor (always available) —— */
@@ -1162,30 +1204,54 @@ function localCoInvent({ mode, messages, context }) {
   if (mode === "pose-challenge") {
     const place = context.place || "this place";
     const name = context.inventionName || "this invention";
+    const hu = resolveOutputLocale(context) === "hu";
     const angles = ["moloch", "ethicist", "stakeholder", "nature"];
     const angle = angles.includes(context.challengeAngle)
       ? context.challengeAngle
       : angles[Math.floor(Math.random() * angles.length)];
-    const labels = {
-      moloch: "Moloch",
-      ethicist: "Ethicist",
-      stakeholder: "Stakeholder",
-      nature: "Mother Nature",
-    };
+    const labels = hu
+      ? {
+          moloch: "Moloch",
+          ethicist: "Etikus",
+          stakeholder: "Érdekelt",
+          nature: "Anyatermészet",
+        }
+      : {
+          moloch: "Moloch",
+          ethicist: "Ethicist",
+          stakeholder: "Stakeholder",
+          nature: "Mother Nature",
+        };
     let speech;
     let question;
     if (angle === "nature") {
-      speech = `Mother Nature, ${place}: “${name} still burns energy and makes waste. Storms and scarcity do not care about your pitch deck.”`;
-      question = "What physical limit hits first — and how does the design absorb a bad week?";
+      speech = hu
+        ? `${labels.nature}, ${place}: „A(z) ${name} továbbra is energiát éget és hulladékot termel. A vihar és a szűkösség nem nézi a pitch decket.”`
+        : `Mother Nature, ${place}: “${name} still burns energy and makes waste. Storms and scarcity do not care about your pitch deck.”`;
+      question = hu
+        ? "Melyik fizikai határ üt először — és hogyan nyeli el a terv a rossz hetet?"
+        : "What physical limit hits first — and how does the design absorb a bad week?";
     } else if (angle === "ethicist") {
-      speech = `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity or opportunity is on the line — and both sides have a point.”`;
-      question = "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?";
+      speech = hu
+        ? `${labels.ethicist}, ${place}: „A(z) ${name} olyan választásra kényszerít, amit nem lehet optimalizálni. Valakinek a méltósága vagy lehetősége a tét — és mindkét oldalnak igaza van.”`
+        : `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity or opportunity is on the line — and both sides have a point.”`;
+      question = hu
+        ? "Nevezd meg a legnehezebb etikai kompromisszumot. Ki sérül bármelyik oldalon — és milyen korlátot nem lépsz át?"
+        : "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?";
     } else if (angle === "stakeholder") {
-      speech = `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public.”`;
-      question = "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?";
+      speech = hu
+        ? `${labels.stakeholder}, ${place}: „Én vagyok a polgármester, a klinika testülete és a szomszédsági gyűlés. Valakinek alá kell írnia, finanszíroznia és nyilvánosan védenie a(z) ${name} ötletet.”`
+        : `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public.”`;
+      question = hu
+        ? "Kinek kell igent mondania, ki fizet az 1. és az 5. évben, és hogyan nyersz támogatást anélkül, hogy kizárnád az embereket?"
+        : "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?";
     } else {
-      speech = `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`;
-      question = "What stops defection when neighbors can freeride — name the game mechanic you change?";
+      speech = hu
+        ? `${labels.moloch}, ${place}: „Nincs esély, hogy a(z) ${name} tartson. A potyázók megtartják a régi szokásokat, amíg a gondos emberek fizetnek. A mélybe tartó verseny felfalja a jó tervezést.”`
+        : `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`;
+      question = hu
+        ? "Mi állítja meg a defekciót, ha a szomszédok potyázhatnak — nevezd meg a játékszabályt, amit megváltoztatsz?"
+        : "What stops defection when neighbors can freeride — name the game mechanic you change?";
     }
     return {
       source: "local",
@@ -1638,12 +1704,18 @@ function buildUserPayload({ messages, context, mode }) {
     tutorMode && tutorModes.has(mode || "chat")
       ? baseHint + TUTOR_HINT
       : baseHint;
+  const locale = resolveOutputLocale(context);
+  const outputLanguage =
+    context?.outputLanguage || outputLanguageLabel(locale);
 
   // Fast path: minimal JSON for challenge pose (biggest latency win)
   if (mode === "pose-challenge") {
     const posePayload = {
       mode: "pose-challenge",
       modeInstruction: modeHints["pose-challenge"],
+      locale,
+      outputLanguage,
+      languageDirective: languageDirective(locale),
       challengeAngle: context?.challengeAngle || null,
       place: context?.place || null,
       year: context?.year || null,
@@ -1669,6 +1741,9 @@ function buildUserPayload({ messages, context, mode }) {
   const payload = {
     mode: mode || "chat",
     modeInstruction,
+    locale,
+    outputLanguage,
+    languageDirective: languageDirective(locale),
     challenge: context?.challenge || null,
     selectedTechIds: context?.selectedTechIds || [],
     inventionName: context?.inventionName || "",
@@ -1868,12 +1943,14 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
     context,
     techIds
   );
+  const locale = resolveOutputLocale(context);
+  const defaultMsg =
+    locale === "hu"
+      ? `Itt van ${scenarios.length} küldetés. Válassz egyet, amelyikhez feltalálsz.`
+      : `Here are ${scenarios.length} Quests. Pick one to invent for.`;
   return {
     source,
-    message: String(
-      parsed?.message ||
-        `Here are ${scenarios.length} Quests. Pick one to invent for.`
-    ).slice(0, 2000),
+    message: String(parsed?.message || defaultMsg).slice(0, 2000),
     scenarios,
     proposals: {
       addTechIds: [],
@@ -1893,21 +1970,27 @@ async function aiCoInvent(body, client, meta = {}) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const availableIds = (context.availableTechs || []).map((t) => t.id);
   const sessionId = meta.sessionId || clientSessionFromBody(body);
+  const locale = resolveOutputLocale(context, body);
+  // Normalize for local fallbacks + prompts
+  context.locale = locale;
+  context.outputLanguage = context.outputLanguage || outputLanguageLabel(locale);
 
   const isPose = mode === "pose-challenge";
   const isTutor = !isPose && isTutorMode(context) && mode !== "generate-scenarios";
-  const systemContent = isPose
-    ? POSE_CHALLENGE_SYSTEM
-    : isTutor
-      ? TUTOR_SYSTEM_PROMPT
-      : SYSTEM_PROMPT;
+  const systemContent =
+    (isPose
+      ? POSE_CHALLENGE_SYSTEM
+      : isTutor
+        ? TUTOR_SYSTEM_PROMPT
+        : SYSTEM_PROMPT) +
+    `\n\n${languageDirective(locale)}`;
   const userContent = isPose
-    ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
+    ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only. ${languageDirective(locale)}`
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only. One short core idea; full sentences; no quiz questions; answer the learner's questions.`
+        `Respond with the required JSON object only. ${languageDirective(locale)}`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only.`;
+        `Respond with the required JSON object only. ${languageDirective(locale)}`;
 
   const input = [
     { role: "system", content: systemContent },
@@ -2743,6 +2826,7 @@ const server = http.createServer(async (req, res) => {
       const result = roomManager.createRoom({
         displayName: body.displayName,
         ip,
+        locale: body.locale || body.hostLocale || null,
       });
       return sendJson(res, result.ok ? 200 : result.status || 400, result);
     } catch (e) {

@@ -1,0 +1,1203 @@
+{
+  "domains": {
+    "power": {
+      "label": "Power"
+    },
+    "automator": {
+      "label": "Automator"
+    },
+    "mover": {
+      "label": "Mover"
+    },
+    "lifeforce": {
+      "label": "LifeForce"
+    },
+    "link": {
+      "label": "Link"
+    },
+    "portal": {
+      "label": "Portal"
+    }
+  },
+  "shelves": {
+    "health": {
+      "title": "Health & care"
+    },
+    "climate": {
+      "title": "Climate, water & air"
+    },
+    "food": {
+      "title": "Food & land"
+    },
+    "learning": {
+      "title": "Learning & work"
+    },
+    "rights": {
+      "title": "Safety, rights & society"
+    },
+    "longterm": {
+      "title": "Long-term risks"
+    }
+  },
+  "globals": {
+    "rogue-si": {
+      "title": "Rogue SuperIntelligence",
+      "blurb": "Powerful AI without control or alignment."
+    },
+    "genocide": {
+      "title": "Prevent Genocide",
+      "blurb": "Mass atrocity risk and failed early warning."
+    },
+    "poverty": {
+      "title": "Extreme Poverty",
+      "blurb": "People locked out of income, services, and agency."
+    },
+    "chem-bio": {
+      "title": "Chemical and Biological Weapons",
+      "blurb": "Catastrophic dual-use and detection gaps."
+    },
+    "asteroid": {
+      "title": "Asteroid Impact",
+      "blurb": "Planetary defense and detection windows."
+    },
+    "weather": {
+      "title": "Extreme Weather Events",
+      "blurb": "Heat, flood, storm, drought shocks."
+    },
+    "mideast": {
+      "title": "Peace in the Middle East",
+      "blurb": "Conflict, trauma, and fragile livelihoods."
+    },
+    "nuclear": {
+      "title": "Nuclear Annihilation",
+      "blurb": "Misjudgment and launch fragility."
+    },
+    "slavery": {
+      "title": "Slavery",
+      "blurb": "Forced labor hidden in supply chains."
+    },
+    "women": {
+      "title": "Equal Rights for Women",
+      "blurb": "Safety, rights, education, economic agency."
+    },
+    "education": {
+      "title": "Lack of Education",
+      "blurb": "Talent universal; opportunity uneven."
+    },
+    "automation": {
+      "title": "Automation / UBI",
+      "blurb": "Jobs and meaning under automation."
+    },
+    "refugees": {
+      "title": "Refugees",
+      "blurb": "Displacement, shelter, papers, belonging."
+    },
+    "ag": {
+      "title": "Sustainable Agriculture",
+      "blurb": "Food systems that regenerate land."
+    },
+    "food": {
+      "title": "Food Security",
+      "blurb": "Reliable nutritious food for all."
+    },
+    "eco": {
+      "title": "Ecological Crises",
+      "blurb": "Biodiversity and ecosystem collapse."
+    },
+    "infectious": {
+      "title": "Infectious Diseases",
+      "blurb": "Outbreak detection and equitable response."
+    },
+    "climate": {
+      "title": "Climate Crises",
+      "blurb": "Emissions, heat, and long-term risk."
+    },
+    "cancer": {
+      "title": "Cure Cancer",
+      "blurb": "Earlier detection, better therapy, access."
+    },
+    "mental": {
+      "title": "Mental Health Crises",
+      "blurb": "Care access, connection, stigma."
+    },
+    "alzheimer": {
+      "title": "Alzheimer",
+      "blurb": "Dementia care, detection, dignity."
+    },
+    "ageing": {
+      "title": "Ageing as a Disease",
+      "blurb": "Healthspan and longer lives."
+    },
+    "water": {
+      "title": "Clean Water",
+      "blurb": "Safe, reliable water access."
+    },
+    "air": {
+      "title": "Air Pollution",
+      "blurb": "Dirty air from transport, industry, cooking."
+    },
+    "energy-access": {
+      "title": "Access to Energy",
+      "blurb": "Energy poverty blocking development."
+    },
+    "homeless": {
+      "title": "Homelessness",
+      "blurb": "Stable housing and services."
+    },
+    "cities": {
+      "title": "Cities / Urbanization",
+      "blurb": "Liveable, fair, climate-ready cities."
+    },
+    "child": {
+      "title": "Child Health",
+      "blurb": "Preventable disease and malnutrition."
+    },
+    "maternal": {
+      "title": "Maternal Health",
+      "blurb": "Safe birth and postpartum care."
+    },
+    "coord": {
+      "title": "Global Coordination Failure",
+      "blurb": "No shared early-warning or response fund across places that need each other."
+    },
+    "radicalization": {
+      "title": "Countering Radicalization",
+      "blurb": "Prejudice and extremism pipelines — rights-based off-ramps."
+    },
+    "fgm": {
+      "title": "Female Genital Mutilation (FGM)",
+      "blurb": "Harmful practice; community abandonment and survivor care."
+    },
+    "short-termism": {
+      "title": "Short-Term Needs vs Long-Term Future",
+      "blurb": "Survival and returns that liquidate tomorrow’s assets."
+    },
+    "misinfo": {
+      "title": "Misinformation & Epistemic Crises",
+      "blurb": "Shared truth erodes under deepfakes and weak institutions."
+    },
+    "totalitarianism": {
+      "title": "Totalitarianism",
+      "blurb": "Isolation, indoctrination, and tools for free association."
+    },
+    "women-stem": {
+      "title": "STEM for Women",
+      "blurb": "Girls and women underrepresented in STEM pathways."
+    },
+    "memory": {
+      "title": "Incomplete Memory",
+      "blurb": "We forget — document and preserve lived experience."
+    },
+    "rural-roads": {
+      "title": "Rural Road Connectivity",
+      "blurb": "Rural isolation far from all-season roads."
+    },
+    "smoking": {
+      "title": "Smoking",
+      "blurb": "Tobacco epidemic, cessation, and secondhand harm."
+    },
+    "sanitation": {
+      "title": "Sanitation",
+      "blurb": "Toilets, sewage, and hygiene — not drinking water alone."
+    },
+    "waste": {
+      "title": "Waste & Recycling",
+      "blurb": "Waste outruns recycling; circular systems lag."
+    },
+    "reproductive": {
+      "title": "Reproductive Health",
+      "blurb": "Safe sex life and reproductive freedom for all people."
+    },
+    "amr": {
+      "title": "Antimicrobial Resistance",
+      "blurb": "Superbugs and antibiotic failure — bacterial resistance."
+    }
+  },
+  "angles": {
+    "moloch": {
+      "label": "Moloch",
+      "subtitle": "System game mechanics",
+      "blurb": "The multipolar trap: races, freeriding, Goodhart’s law, and race-to-the-bottom dynamics that punish good design."
+    },
+    "ethicist": {
+      "label": "Ethicist",
+      "subtitle": "Hard tradeoffs",
+      "blurb": "Ethical dilemmas with no clean good/bad answer — dignity, bias, dual-use, who is harmed when you scale."
+    },
+    "stakeholder": {
+      "label": "Stakeholder",
+      "subtitle": "Officials & community",
+      "blurb": "City officials and community leaders: funding, permits, policy, and public support you must negotiate."
+    },
+    "nature": {
+      "label": "Mother Nature",
+      "subtitle": "The natural world",
+      "blurb": "Energy, materials, ecology, disease, storms — the physical world advances on its own terms."
+    }
+  },
+  "vision": {
+    "present": {
+      "name": "Today",
+      "blurb": "The place as it is — pressure building."
+    },
+    "prototype": {
+      "name": "Early build",
+      "blurb": "First pieces of your idea appear."
+    },
+    "transition": {
+      "name": "Scaling",
+      "blurb": "Systems take hold across the locale."
+    },
+    "transformed": {
+      "name": "New normal",
+      "blurb": "Everyday life has clearly changed."
+    }
+  },
+  "yearNews": [
+    {
+      "minYear": 2026,
+      "text": "Sensor kits get cheaper; community networks light up."
+    },
+    {
+      "minYear": 2028,
+      "text": "Battery packs for clinics drop in price again."
+    },
+    {
+      "minYear": 2028,
+      "text": "Local 3D print shops take municipal contracts."
+    },
+    {
+      "minYear": 2030,
+      "text": "Autonomy pilots expand on fixed routes."
+    },
+    {
+      "minYear": 2030,
+      "text": "Gene sequencing vans become almost routine."
+    },
+    {
+      "minYear": 2032,
+      "text": "Specialized quantum cloud jobs open for research partners."
+    },
+    {
+      "minYear": 2032,
+      "text": "Alternative proteins hit cafeteria budgets in pilot cities."
+    },
+    {
+      "minYear": 2034,
+      "text": "Long-horizon quantum links leave the lab in limited trials."
+    }
+  ],
+  "foresight": [
+    {
+      "i": 0,
+      "kind": "milestone",
+      "text": "Utility-scale solar and wind are already among the cheapest new electricity sources in much of the world when paired with storage."
+    },
+    {
+      "i": 1,
+      "kind": "trend",
+      "text": "Battery pack costs have fallen for over a decade, enabling local microgrids and evening power."
+    },
+    {
+      "i": 2,
+      "kind": "prediction",
+      "text": "Prediction: dense solid-state and next-gen packs further cut cost and fire risk this decade — still uncertain on exact year."
+    },
+    {
+      "i": 3,
+      "kind": "milestone",
+      "text": "AI copilots and assistive models are already in clinics, schools, and logistics software worldwide."
+    },
+    {
+      "i": 4,
+      "kind": "trend",
+      "text": "Inference is moving to the edge; smaller models get cheaper to run locally and offline."
+    },
+    {
+      "i": 5,
+      "kind": "prediction",
+      "text": "Prediction: clinical brain–computer interfaces expand from pilot trials to routine speech/motor restoration for narrow patient groups."
+    },
+    {
+      "i": 6,
+      "kind": "milestone",
+      "text": "Medical and inspection drone corridors already operate in several countries for blood, vaccines, and infrastructure checks."
+    },
+    {
+      "i": 7,
+      "kind": "trend",
+      "text": "Autonomy expands first on fixed routes and mapped sites, then into messier open environments."
+    },
+    {
+      "i": 8,
+      "kind": "prediction",
+      "text": "Prediction: driverless shuttles on geofenced corridors become normal in some cities before fully open-road robotaxis everywhere."
+    },
+    {
+      "i": 9,
+      "kind": "milestone",
+      "text": "Pathogen sequencing during outbreaks and early gene therapies are real clinical tools, not only lab demos."
+    },
+    {
+      "i": 10,
+      "kind": "trend",
+      "text": "Time from sample to sequence continues to shrink; AI helps interpret results for non-specialists."
+    },
+    {
+      "i": 11,
+      "kind": "prediction",
+      "text": "Prediction: alternative proteins reach price parity in more markets — adoption still depends on culture, regulation, and energy costs."
+    },
+    {
+      "i": 12,
+      "kind": "milestone",
+      "text": "Cities and utilities already deploy sensor networks for floods, leaks, air quality, and grid stress."
+    },
+    {
+      "i": 13,
+      "kind": "trend",
+      "text": "Sensing gets cheaper; the hard part is governance — who owns the data and who acts on alerts."
+    },
+    {
+      "i": 14,
+      "kind": "prediction",
+      "text": "Prediction: useful quantum applications stay narrow (materials, optimization niches) before general-purpose quantum networking."
+    },
+    {
+      "i": 15,
+      "kind": "milestone",
+      "text": "Additive manufacturing already produces tools, spare parts, and some medical devices at local workshops."
+    },
+    {
+      "i": 16,
+      "kind": "trend",
+      "text": "Design files travel as bits; local fabrication capacity spreads as materials and printers improve."
+    },
+    {
+      "i": 17,
+      "kind": "prediction",
+      "text": "Prediction: denser Earth-observation and connectivity constellations make near-real-time local environmental data routine for small towns."
+    },
+    {
+      "i": 18,
+      "kind": "milestone",
+      "text": "Nuclear and geothermal already supply firm low-carbon power in regions that built them; new advanced designs are still ramping."
+    },
+    {
+      "i": 19,
+      "kind": "trend",
+      "text": "Interest in firm clean power rises wherever grids hit renewable intermittency walls."
+    },
+    {
+      "i": 20,
+      "kind": "prediction",
+      "text": "Prediction: marine energy stays site-limited; winners are harbors and islands with strong resources and patient capital."
+    },
+    {
+      "i": 21,
+      "kind": "milestone",
+      "text": "Milestone: climate attribution science and local flood/heat early-warning systems are already used by cities."
+    },
+    {
+      "i": 22,
+      "kind": "trend",
+      "text": "Trend: electrification of transport and cooking continues where grids and wallets allow — uneven by district."
+    },
+    {
+      "i": 23,
+      "kind": "prediction",
+      "text": "Prediction: places that share sensors and response funds across jurisdictions will outpace those that wait for national programs."
+    },
+    {
+      "i": 24,
+      "kind": "milestone",
+      "text": "Milestone: genomic surveillance and telemedicine expanded rapidly after recent pandemics, then stalled where funding and trust failed."
+    },
+    {
+      "i": 25,
+      "kind": "trend",
+      "text": "Trend: hybrid human+AI teaching and training spreads first where teachers and workers are scarcest."
+    },
+    {
+      "i": 26,
+      "kind": "prediction",
+      "text": "Prediction: modular shelter + digital identity systems scale in crises only if local legitimacy and funding are solved first."
+    }
+  ],
+  "techs": {
+    "computing": {
+      "name": "Computing",
+      "summary": "Digital processing, memory, and simulation.",
+      "learn": "Substrate for AI, networks, and software systems.",
+      "inventionHint": "Run models and coordinate local systems.",
+      "risk": "energy use, concentration of power",
+      "scarcity": "What scarce capability could Computing help make more abundant here?",
+      "primer": "Computing is the substrate under almost every modern system: processors, memory, software, and simulation. Local inventions often need somewhere to run models, store records, or coordinate devices — even offline at the edge. Capability is abundant in the cloud; the hard local problem is access, energy, skills, and who controls the stack.",
+      "maturity": {
+        "now": "Cloud and edge compute, commodity GPUs/CPUs, and software platforms that scale from phones to data centers.",
+        "near": "Cheaper inference everywhere and tighter real-time local control loops for clinics, grids, and logistics.",
+        "frontier": "Ambient compute so cheap and ubiquitous that energy and cost almost drop out of design constraints."
+      },
+      "milestones": [
+        "On-device AI chips in phones and industrial controllers",
+        "Widespread cloud regions and open-source software stacks"
+      ],
+      "useCasesNow": [
+        "Local data platforms",
+        "Offline-capable clinic apps",
+        "Simulation for flood or traffic planning"
+      ],
+      "narrative": "Compute hums behind local decisions."
+    },
+    "energy": {
+      "name": "Energy",
+      "summary": "Physical power for work, heat, light, and industry.",
+      "learn": "How we generate and store energy shapes every other scale-up.",
+      "inventionHint": "Power clinics, pumps, and workshops.",
+      "risk": "emissions, unequal access",
+      "scarcity": "What scarce capability could Energy help make more abundant here?",
+      "primer": "Energy is the ability to do physical work — light, heat, motion, cold chain. Every local invention that pumps water, runs a clinic at night, or moves goods sits on an energy budget. The challenge is rarely “is electricity invented?”; it is reliability, cost, cleanliness, and who gets cut off first when the grid fails.",
+      "maturity": {
+        "now": "Mixed grids; diesel backup still common where reliability is poor.",
+        "near": "More firm clean options and smarter demand response at community scale.",
+        "frontier": "Energy scarcity largely exits everyday local design constraints."
+      },
+      "milestones": [
+        "Record renewable build-out in many markets",
+        "Falling costs for generation paired with smarter grids"
+      ],
+      "useCasesNow": [
+        "Clinic/microgrid planning",
+        "Load shifting",
+        "Hybrid backup that cuts diesel hours"
+      ],
+      "narrative": "Power is the backbone of every fix."
+    },
+    "crypto": {
+      "name": "Crypto-Currency",
+      "summary": "Shared ledgers, tokens, and programmable incentives.",
+      "learn": "Coordination and verification tools — with real scam risk.",
+      "inventionHint": "Transparent local funds or supply proofs.",
+      "risk": "scams, volatility, governance failure",
+      "scarcity": "What scarce capability could Crypto-Currency help make more abundant here?",
+      "primer": "Crypto-currency and shared ledgers are tools for recording agreements, transfers, and proofs without a single trusted intermediary. Used well, they can make local funds transparent or track supply chains; used badly, they enable scams and volatility. For local inventing, think coordination and verification — not get-rich speculation.",
+      "maturity": {
+        "now": "Public ledgers, stablecoins, and pilot public-good funds; UX and fraud remain hard.",
+        "near": "Clearer regulation and identity rails for procurement and aid.",
+        "frontier": "Programmable money as boring default infrastructure for municipal finance."
+      },
+      "milestones": [
+        "Tokenized aid and supply-proof pilots in several jurisdictions"
+      ],
+      "useCasesNow": [
+        "Transparent community funds",
+        "Supply-chain proofs",
+        "Shared savings pools with public rules"
+      ],
+      "narrative": "Shared records settle local agreements in the open."
+    },
+    "quantum": {
+      "name": "Quantum Computing",
+      "summary": "Quantum processors for hard simulation and optimization.",
+      "learn": "Early useful niches; not a laptop replacement.",
+      "inventionHint": "Hard local optimization / research partner (later years).",
+      "risk": "hype, access concentration",
+      "scarcity": "What scarce capability could Quantum Computing help make more abundant here?",
+      "primer": "Quantum computing uses quantum effects for certain hard calculations — materials, chemistry, some optimization — that classical machines struggle with. It is not a faster laptop for city hall. Honest local use today is research partnership, learning, and long-horizon planning, not “quantum runs the clinic.”",
+      "maturity": {
+        "now": "Research machines and cloud access for experiments; not general IT replacement.",
+        "near": "Niche hybrid quantum–classical jobs (materials, optimization pilots).",
+        "frontier": "Broad practical quantum advantage in everyday municipal systems."
+      },
+      "milestones": [
+        "Cloud quantum access and improving error-mitigation research"
+      ],
+      "useCasesNow": [
+        "R&D partnerships",
+        "Learning labs",
+        "Long-horizon planning studies"
+      ],
+      "narrative": "Specialized quantum jobs open new designs."
+    },
+    "geothermal": {
+      "name": "Geothermal Power",
+      "summary": "Heat from the Earth for steady power.",
+      "learn": "Baseload renewable where geology allows.",
+      "inventionHint": "Steady local clean power.",
+      "risk": "siting, cost, seismicity",
+      "scarcity": "What scarce capability could Geothermal Power help make more abundant here?",
+      "primer": "Geothermal draws heat from the Earth for steady electricity or district heat. Where geology works, it is firm, low-carbon power. Where it does not, drilling and siting costs dominate. Invent with local resource maps and long capital horizons, not universal geothermal everywhere.",
+      "maturity": {
+        "now": "Proven baseload where geology is good; drilling cost and siting dominate.",
+        "near": "Enhanced geothermal expanding viable sites.",
+        "frontier": "Cheap firm geothermal nearly everywhere."
+      },
+      "milestones": [
+        "New enhanced geothermal pilots",
+        "Expanded district heat projects"
+      ],
+      "useCasesNow": [
+        "Regional baseload where geology allows",
+        "District heat partnerships"
+      ],
+      "narrative": "Quiet heat becomes steady electricity."
+    },
+    "tidal": {
+      "name": "Tidal Power",
+      "summary": "Power from tidal flows.",
+      "learn": "Predictable but site-limited marine energy.",
+      "inventionHint": "Coastal baseload where tides run strong.",
+      "risk": "marine impact, capital cost",
+      "scarcity": "What scarce capability could Tidal Power help make more abundant here?",
+      "primer": "Tidal power converts predictable tidal flows into electricity. Resource is site-specific and capital-heavy, but the predictability is valuable for islands and harbors. Invent only where tides and environment allow — and pair with storage and grid planning.",
+      "maturity": {
+        "now": "A few commercial sites; capital cost and marine impact still high.",
+        "near": "More predictable coastal projects with better turbines.",
+        "frontier": "Cheap tidal power for any coast."
+      },
+      "milestones": [
+        "Operational tidal arrays in select strong-current channels"
+      ],
+      "useCasesNow": [
+        "Harbor and island baseload pilots",
+        "Research partnerships"
+      ],
+      "narrative": "Tides turn into coastal power."
+    },
+    "solar": {
+      "name": "Solar Power",
+      "summary": "Electricity from sunlight.",
+      "learn": "Fastest-scaling clean generation when paired with storage.",
+      "inventionHint": "Roofs, pumps, microgrids.",
+      "risk": "intermittency, materials",
+      "scarcity": "What scarce capability could Solar Power help make more abundant here?",
+      "primer": "Solar photovoltaic turns sunlight into electricity — now among the cheapest new generation options in much of the world when sites and policy allow. Night and cloudy reliability need storage or backup. Local inventing thrives on roofs, pumps, clinics, and microgrids with honest battery pairing.",
+      "maturity": {
+        "now": "Cheap PV for roofs, clinics, pumps; storage needed for night and reliability.",
+        "near": "Even cheaper packs and integrated microgrids.",
+        "frontier": "Energy abundance limited mostly by land and politics."
+      },
+      "milestones": [
+        "PV among cheapest new generation in much of the world"
+      ],
+      "useCasesNow": [
+        "Clinic power",
+        "Water pumping",
+        "School lighting",
+        "Microgrids"
+      ],
+      "narrative": "Roofs drink sunlight for local work."
+    },
+    "wind": {
+      "name": "Wind Power",
+      "summary": "Electricity from wind.",
+      "learn": "Mature renewable; needs grid flexibility.",
+      "inventionHint": "Community or coastal turbines.",
+      "risk": "siting, wildlife, intermittency",
+      "scarcity": "What scarce capability could Wind Power help make more abundant here?",
+      "primer": "Wind power converts wind into electricity at utility or community scale. It is mature but intermittent and politically local (siting, wildlife, views). Pair with storage, demand flexibility, or firm power for clinics and industry that cannot wait for the wind.",
+      "maturity": {
+        "now": "Mature onshore/offshore turbines; siting and grid flexibility are the fights.",
+        "near": "Better storage pairing and community ownership models.",
+        "frontier": "Wind plus storage as default cheap power with little friction."
+      },
+      "milestones": [
+        "Record capacity additions",
+        "Long multi-year cost declines in many markets"
+      ],
+      "useCasesNow": [
+        "Community turbines",
+        "Coastal wind with storage",
+        "Industrial offtake"
+      ],
+      "narrative": "Turbines stitch power into the landscape."
+    },
+    "wave": {
+      "name": "Wave Power",
+      "summary": "Energy from ocean waves.",
+      "learn": "High potential, hard engineering.",
+      "inventionHint": "Island and harbor power (later).",
+      "risk": "storms, cost, reliability",
+      "scarcity": "What scarce capability could Wave Power help make more abundant here?",
+      "primer": "Wave power harvests energy from ocean swells. Potential is large; surviving storms and hitting cost targets remains hard. Invent as harbor or island pilots with patient capital — not as a universal coastal default this decade.",
+      "maturity": {
+        "now": "Mostly pilots; storm survival and cost still hard.",
+        "near": "Harbor-scale arrays with better reliability.",
+        "frontier": "Cheap wave power along any energetic coast."
+      },
+      "milestones": [
+        "Multi-year pilot arrays surviving harsh sea states"
+      ],
+      "useCasesNow": [
+        "Island harbor pilots",
+        "Research co-location with ports"
+      ],
+      "narrative": "Swells feed coastal nodes."
+    },
+    "nuclear": {
+      "name": "Nuclear Power",
+      "summary": "Dense low-carbon baseload (fission / advanced reactors).",
+      "learn": "High capacity; trust and cost dominate.",
+      "inventionHint": "Regional firm power for industry and desal.",
+      "risk": "waste, accidents, cost",
+      "scarcity": "What scarce capability could Nuclear Power help make more abundant here?",
+      "primer": "Nuclear fission offers dense, firm low-carbon power. Large plants and emerging small modular reactors face cost, trust, waste, and schedule challenges. Local inventing is usually regional planning and industrial heat partnership — not a backyard reactor for one ward.",
+      "maturity": {
+        "now": "Large plants and some SMRs under construction or early operation; trust and cost dominate.",
+        "near": "More SMR deployments and factory-built modules.",
+        "frontier": "Plug-and-play firm nuclear for every city that wants it."
+      },
+      "milestones": [
+        "First commercial SMR projects",
+        "Life-extension of existing fleets"
+      ],
+      "useCasesNow": [
+        "Regional firm power planning",
+        "Industrial heat partnerships"
+      ],
+      "narrative": "Firm clean power anchors the region."
+    },
+    "battery": {
+      "name": "Battery Technology",
+      "summary": "Storing electricity for mobility and grids.",
+      "learn": "The partner that makes solar and wind local-real.",
+      "inventionHint": "Clinics, fleets, evening power.",
+      "risk": "mining, fire, recycling",
+      "scarcity": "What scarce capability could Battery Technology help make more abundant here?",
+      "primer": "Batteries store electricity for later — evening clinic lights, EV fleets, solar firming. They make intermittent renewables local and useful. Chemistries improve; mining, fire safety, and recycling remain design constraints. Invent for real kilowatt-hours and duty cycles, not infinite free storage.",
+      "maturity": {
+        "now": "Li-ion packs for EVs and home/clinic storage; density and cost still improving.",
+        "near": "Safer denser chemistries more common at local scale.",
+        "frontier": "Storage ceases to be the bottleneck for most local renewables."
+      },
+      "milestones": [
+        "Multi-year cost declines enabling home and grid storage pilots"
+      ],
+      "useCasesNow": [
+        "Evening clinic power",
+        "EV fleets",
+        "Solar firming"
+      ],
+      "narrative": "Power waits in packs until needed."
+    },
+    "ai": {
+      "name": "Artificial Intelligence",
+      "summary": "Systems that predict, recommend, generate, and decide from data.",
+      "learn": "Automates pattern-finding; still needs human accountability.",
+      "inventionHint": "Triage, tutoring, logistics, early warning.",
+      "risk": "bias, overtrust, opaque decisions",
+      "scarcity": "What scarce capability could Artificial Intelligence help make more abundant here?",
+      "primer": "Artificial intelligence finds patterns in data to predict, recommend, generate text or images, and support decisions. It is already a co-worker in many clinics, classrooms, and logistics desks — but it can be biased, overconfident, or opaque. Strong local inventions keep humans accountable and scope the model to a real workflow.",
+      "maturity": {
+        "now": "Assistive models, classification, forecasting, and copilots with human oversight.",
+        "near": "More reliable agents for narrow workflows; better local-language models.",
+        "frontier": "Broad autonomous judgment in high-stakes domains without humans — not honest for most missions yet."
+      },
+      "milestones": [
+        "Generative AI copilots in work, education, and some clinical tools"
+      ],
+      "useCasesNow": [
+        "Triage support",
+        "Tutoring aids",
+        "Document and logistics copilots",
+        "Early-warning scoring"
+      ],
+      "narrative": "Local assistants draft routes and lessons."
+    },
+    "robots": {
+      "name": "Robots",
+      "summary": "Machines that sense, move, build, care, or inspect.",
+      "learn": "Physical automation — bodies for intelligent software.",
+      "inventionHint": "Care assist, rebuild, hazardous work.",
+      "risk": "safety, jobs, accountability",
+      "scarcity": "What scarce capability could Robots help make more abundant here?",
+      "primer": "Robots are machines that sense and act in the physical world — carrying, inspecting, assisting care, or rebuilding. Software intelligence needs a body to move goods or people. Today’s wins are often supervised, mapped environments; open-world autonomy is still the stretch.",
+      "maturity": {
+        "now": "Warehouse, inspection, and limited care/assist robots under supervision.",
+        "near": "More reliable mobile manipulators in mapped indoor sites.",
+        "frontier": "General household robots that handle any chore unsupervised."
+      },
+      "milestones": [
+        "Hospital logistics robots and industrial cobots in daily use"
+      ],
+      "useCasesNow": [
+        "Clinic logistics",
+        "Hazard inspection",
+        "Rebuild assist with human lead"
+      ],
+      "narrative": "Machines share work; people keep judgment."
+    },
+    "networks": {
+      "name": "Networks",
+      "summary": "Moving information and coordination across distance.",
+      "learn": "The rails that let other tools reach people.",
+      "inventionHint": "Telemedicine, schooling, alerts.",
+      "risk": "exclusion, outages, cyber risk",
+      "scarcity": "What scarce capability could Networks help make more abundant here?",
+      "primer": "Networks move information and coordination across distance — fiber, cellular, mesh, satellite. Without them, sensors cannot alert, telemedicine cannot reach, and AI cannot sync. Local inventing often means last-mile connectivity, resilience in outages, and who is still excluded.",
+      "maturity": {
+        "now": "Cellular, fiber, mesh, and satellite links; coverage gaps remain intensely local.",
+        "near": "Cheaper community meshes and resilient failover for clinics and schools.",
+        "frontier": "Universal high-quality connectivity as default everywhere."
+      },
+      "milestones": [
+        "LEO satellite broadband and community mesh pilots expanding access"
+      ],
+      "useCasesNow": [
+        "Telemedicine links",
+        "School connectivity",
+        "Alert broadcasts"
+      ],
+      "narrative": "Links stitch distant rooms into one response."
+    },
+    "transportation": {
+      "name": "Transportation",
+      "summary": "Moving people, goods, and medicine physically.",
+      "learn": "Access is often a logistics problem.",
+      "inventionHint": "Corridors, last mile, emergency transit.",
+      "risk": "emissions, congestion, accidents",
+      "scarcity": "What scarce capability could Transportation help make more abundant here?",
+      "primer": "Transportation is how people, goods, and medicine move physically. Many “tech” crises are logistics crises: the vaccine, the midwife, the spare part is hours away. Invent for corridors, last mile, and reliability under weather and poverty — not only vehicles that look futuristic.",
+      "maturity": {
+        "now": "Buses, bikes, vans, ferries, and logistics software already move care and goods.",
+        "near": "Better demand-responsive transit and EV fleets on fixed corridors.",
+        "frontier": "Frictionless zero-emission mobility for every trip with no planning."
+      },
+      "milestones": [
+        "EV buses and optimized routing cutting cost on many urban routes"
+      ],
+      "useCasesNow": [
+        "Medical logistics corridors",
+        "Demand-responsive vans",
+        "Priority emergency lanes"
+      ],
+      "narrative": "Goods and care arrive with less waste."
+    },
+    "self-driving": {
+      "name": "Self-Driving Cars",
+      "summary": "Vehicles that navigate with limited human control.",
+      "learn": "Slow safety deployment; huge local mobility stakes.",
+      "inventionHint": "Shuttles, freight corridors, access for non-drivers.",
+      "risk": "edge cases, liability, jobs",
+      "scarcity": "What scarce capability could Self-Driving Cars help make more abundant here?",
+      "primer": "Self-driving vehicles aim to navigate with little or no human control. Progress is real in geofenced areas and advanced driver assistance, but open-road reliability, edge cases, and liability still limit scale. Local inventing often means shuttles and freight on mapped routes, not “all traffic is autonomous tomorrow.”",
+      "maturity": {
+        "now": "Geofenced robotaxi/shuttle pilots and ADAS; full open-road autonomy limited.",
+        "near": "Fixed-route shuttles and freight corridors more common.",
+        "frontier": "Universal driverless mobility in any weather and road."
+      },
+      "milestones": [
+        "Commercial robotaxi zones",
+        "Autonomous shuttles on mapped routes"
+      ],
+      "useCasesNow": [
+        "Campus/clinic shuttles",
+        "Mapped freight corridors",
+        "Access pilots for non-drivers"
+      ],
+      "narrative": "Coordinated vehicles free street space."
+    },
+    "drones": {
+      "name": "Drones",
+      "summary": "Uncrewed aircraft for delivery, sensing, response.",
+      "learn": "Already flying medical and inspection routes in places.",
+      "inventionHint": "Last-mile medicine, maps, search.",
+      "risk": "privacy, airspace, noise",
+      "scarcity": "What scarce capability could Drones help make more abundant here?",
+      "primer": "Drones are uncrewed aircraft for delivery, inspection, mapping, and search. Medical corridors already save time for blood and vaccines in several countries. Urban free-flight swarms are still constrained by airspace, noise, and safety rules — invent with corridors and missions, not unrestricted sky.",
+      "maturity": {
+        "now": "Mapped corridors for medical delivery, inspection, and mapping in many countries.",
+        "near": "Denser urban operations with clearer regulation.",
+        "frontier": "Fully free-roaming swarms as default logistics."
+      },
+      "milestones": [
+        "Operational medical drone corridors for blood and vaccines"
+      ],
+      "useCasesNow": [
+        "Last-mile medical logistics",
+        "Infrastructure inspection",
+        "Disaster search"
+      ],
+      "narrative": "Small craft deliver and watch overhead."
+    },
+    "quantum-internet": {
+      "name": "Quantum Internet",
+      "summary": "Networking quantum states for secure links.",
+      "learn": "Long-horizon infrastructure.",
+      "inventionHint": "Ultra-secure links for critical local nodes (late game).",
+      "risk": "timelines, cost",
+      "scarcity": "What scarce capability could Quantum Internet help make more abundant here?",
+      "primer": "Quantum internet aims to network quantum states for ultra-secure links and distributed quantum tasks. It is early research infrastructure, not a city ISP replacement. Local inventing may mean pilot secure links between critical sites with research partners — not entanglement for every household.",
+      "maturity": {
+        "now": "Lab and metro testbeds; not commodity city infrastructure.",
+        "near": "Limited secure links between specialized sites.",
+        "frontier": "Routine entanglement networking across regions."
+      },
+      "milestones": [
+        "Quantum key distribution and network experiments in research corridors"
+      ],
+      "useCasesNow": [
+        "Pilot secure links",
+        "Research consortia"
+      ],
+      "narrative": "Quiet secure links join critical sites."
+    },
+    "space": {
+      "name": "Space Exploration",
+      "summary": "Orbit and beyond for observation, comms, defense.",
+      "learn": "Satellites already shape weather and connectivity.",
+      "inventionHint": "Local use of orbital data and links.",
+      "risk": "debris, cost, militarization",
+      "scarcity": "What scarce capability could Space Exploration help make more abundant here?",
+      "primer": "Space systems — especially satellites — already deliver weather, imaging, and connectivity that towns use on the ground. Local inventing is about using orbital data and links for flood maps, crop stress, or backhaul — not building a launch pad in the mission place.",
+      "maturity": {
+        "now": "Earth observation, weather, and connectivity constellations already local-relevant.",
+        "near": "Cheaper revisit times and more direct-to-device links.",
+        "frontier": "Instant global sensing and connectivity with no gaps."
+      },
+      "milestones": [
+        "Dense LEO constellations for broadband and frequent imaging"
+      ],
+      "useCasesNow": [
+        "Flood and crop maps",
+        "Backhaul connectivity",
+        "Disaster situational awareness"
+      ],
+      "narrative": "Orbital eyes and relays serve the town."
+    },
+    "synbio": {
+      "name": "Synthetic Biology",
+      "summary": "Designing living systems as tools and factories.",
+      "learn": "Medicines, materials, environmental microbes — carefully.",
+      "inventionHint": "Local biotech capacity with guardrails.",
+      "risk": "biosecurity, ecology, ethics",
+      "scarcity": "What scarce capability could Synthetic Biology help make more abundant here?",
+      "primer": "Synthetic biology designs living systems — microbes, cells, genetic circuits — as tools for medicines, materials, diagnostics, and environmental work. It is a broad family, not one product. Much is tightly regulated; invent with partnerships, labs, and guardrails, not “programmable life runs the city” as if it were a mobile app.",
+      "maturity": {
+        "now": "Sequencing, some gene therapies, industrial enzymes, regulated biotech products.",
+        "near": "Broader biomanufacturing access; more agri and clinical apps under regulation.",
+        "frontier": "Programmable living systems as everyday municipal infrastructure."
+      },
+      "milestones": [
+        "Pathogen genomics in outbreaks",
+        "Approved gene therapies for select diseases"
+      ],
+      "useCasesNow": [
+        "Outbreak sequencing partnerships",
+        "Contract biomanufacturing",
+        "Lab diagnostics"
+      ],
+      "narrative": "Living tools enter the local toolkit."
+    },
+    "bci": {
+      "name": "Brain-Computer Interface",
+      "summary": "Direct links between neural signals and machines.",
+      "learn": "Clinical restoration first; broader use later.",
+      "inventionHint": "Restore speech or movement for specific patients.",
+      "risk": "privacy of mind, medical risk",
+      "scarcity": "What scarce capability could Brain-Computer Interface help make more abundant here?",
+      "primer": "Brain–computer interfaces translate neural signals into computer commands or stimulation — restoring communication or movement for people with severe disability in clinical settings. Consumer mind-apps are mostly hype for local missions. Invent with clinical pathways and consent, not mass surveillance of thoughts.",
+      "maturity": {
+        "now": "Clinical and research interfaces for severe paralysis and communication restoration.",
+        "near": "Broader clinical speech and motor prostheses.",
+        "frontier": "Consumer high-bandwidth brain apps as normal interfaces."
+      },
+      "milestones": [
+        "Trial participants communicating via advanced BCIs"
+      ],
+      "useCasesNow": [
+        "Clinical trial pathways",
+        "Assistive research partnerships"
+      ],
+      "narrative": "Thought becomes a careful interface."
+    },
+    "genetic-engineering": {
+      "name": "Genetic Engineering",
+      "summary": "Changing genomes for traits and therapies.",
+      "learn": "Crops, gene therapies, engineered microbes.",
+      "inventionHint": "Local health or crop resilience tools.",
+      "risk": "ecology, ethics, equity",
+      "scarcity": "What scarce capability could Genetic Engineering help make more abundant here?",
+      "primer": "Genetic engineering changes genomes for crops, therapies, or industrial microbes under regulation and ethics debates. Local inventing may mean resilience crops or clinical pathways with institutions — not open DIY editing of ecosystems.",
+      "maturity": {
+        "now": "Engineered crops, select gene therapies, industrial microbes under regulation.",
+        "near": "More therapies and climate-resilient crops with governance fights.",
+        "frontier": "Open local genome editing as everyday DIY infrastructure."
+      },
+      "milestones": [
+        "Approved CRISPR therapies",
+        "Widely planted engineered crops in some regions"
+      ],
+      "useCasesNow": [
+        "Specialty crop resilience",
+        "Clinical gene-therapy pathways",
+        "Industrial microbes"
+      ],
+      "narrative": "Careful genetic tools enter clinics and fields."
+    },
+    "gene-sequencing": {
+      "name": "Gene Sequencing",
+      "summary": "Reading DNA/RNA at scale.",
+      "learn": "Outbreak maps and personal diagnostics.",
+      "inventionHint": "Identify pathogens and risks quickly.",
+      "risk": "privacy, discrimination",
+      "scarcity": "What scarce capability could Gene Sequencing help make more abundant here?",
+      "primer": "Gene sequencing reads DNA/RNA to identify pathogens, risks, and sometimes guide care. Outbreak vans and wastewater surveillance already exist. Invent for speed-to-action and privacy — a sequence without response is only a file.",
+      "maturity": {
+        "now": "Portable and lab sequencers map pathogens and clinical panels routinely in capable systems.",
+        "near": "Faster bedside panels and lower-cost whole genomes.",
+        "frontier": "Instant full biological readout for any sample by anyone."
+      },
+      "milestones": [
+        "Outbreak sequencing vans",
+        "Wastewater genomic surveillance"
+      ],
+      "useCasesNow": [
+        "Pathogen ID",
+        "Wastewater surveillance",
+        "Targeted diagnostics"
+      ],
+      "narrative": "Genomes become readable maps for action."
+    },
+    "alt-proteins": {
+      "name": "Alternative Proteins",
+      "summary": "Plant, fermentation, and cultivated proteins.",
+      "learn": "Lower land and emissions intensity of protein.",
+      "inventionHint": "Local protein when supply chains break.",
+      "risk": "cost, culture, energy",
+      "scarcity": "What scarce capability could Alternative Proteins help make more abundant here?",
+      "primer": "Alternative proteins — plant, fermentation, cultivated — aim to deliver nutrition with less land and emissions intensity. Culture, cost, and energy still gate adoption. Invent for school and clinic menus or local fermentation, not overnight replacement of every diet.",
+      "maturity": {
+        "now": "Plant and fermentation proteins on shelves; cultivated meat mostly pilot/early market.",
+        "near": "Price parity in more categories; clearer labeling and energy costs.",
+        "frontier": "Default protein with negligible land and animal use everywhere."
+      },
+      "milestones": [
+        "Supermarket plant/fermentation proteins",
+        "Limited cultivated-meat approvals"
+      ],
+      "useCasesNow": [
+        "School/clinic protein menus",
+        "Local fermentation hubs",
+        "Supply-shock buffers"
+      ],
+      "narrative": "Protein is produced closer to plates."
+    },
+    "vr": {
+      "name": "Virtual Reality",
+      "summary": "Immersive training and remote presence (VR/AR family).",
+      "learn": "Practice and shared seeing without full travel.",
+      "inventionHint": "Train skills, rehearse disasters, remote expertise.",
+      "risk": "isolation, accessibility, manipulation",
+      "scarcity": "What scarce capability could Virtual Reality help make more abundant here?",
+      "primer": "Virtual and augmented reality create immersive or overlaid views for training, remote expertise, and rehearsal of high-risk work. They do not replace roads or clinics, but they can multiply scarce experts and let people practice before real storms or surgeries. Accessibility and motion sickness still limit who benefits.",
+      "maturity": {
+        "now": "VR/AR training, remote expert overlays, and simulation for high-risk skills.",
+        "near": "Lighter headsets and better multi-user local training rooms.",
+        "frontier": "Full sensory presence that replaces most physical co-location."
+      },
+      "milestones": [
+        "Surgical and disaster training and remote-assist AR in hospitals and utilities"
+      ],
+      "useCasesNow": [
+        "Skill rehearsal",
+        "Remote expert overlay",
+        "Public-risk walkthroughs"
+      ],
+      "narrative": "Practice worlds before real risk."
+    },
+    "print3d": {
+      "name": "3D Printing",
+      "summary": "Turning digital designs into physical objects on-site.",
+      "learn": "Local manufacturing of parts, tools, shelters.",
+      "inventionHint": "Print what you cannot wait to ship.",
+      "risk": "quality, waste, misuse",
+      "scarcity": "What scarce capability could 3D Printing help make more abundant here?",
+      "primer": "3D printing turns digital designs into physical parts on-site — tools, braces, fixtures, sometimes medical devices. It shortens supply chains when ships and trucks fail, but quality control, materials, and certification still matter. Invent for urgent local fabrication with clear SOPs, not magic printers of everything.",
+      "maturity": {
+        "now": "Local fabs print tools, spare parts, and some medical devices under quality limits.",
+        "near": "Broader certified materials and municipal print hubs.",
+        "frontier": "Any object on demand from digital files with perfect strength."
+      },
+      "milestones": [
+        "Workshop and hospital makerspaces producing spare parts under SOPs"
+      ],
+      "useCasesNow": [
+        "Urgent spare parts",
+        "Custom braces and tools",
+        "Prototype shelters"
+      ],
+      "narrative": "Neighborhood fabs print urgent parts."
+    },
+    "iot": {
+      "name": "Internet of Things",
+      "summary": "Sensors that make the physical world measurable.",
+      "learn": "See floods, air, machines, bodies — then act.",
+      "inventionHint": "Early warning and continuous monitoring.",
+      "risk": "privacy, false alarms, surveillance",
+      "scarcity": "What scarce capability could Internet of Things help make more abundant here?",
+      "primer": "The Internet of Things is sensors and actuators that make the physical world measurable and sometimes controllable — flood height, cold-chain temperature, air quality, machine vibration. The hardware is often cheap; the hard parts are power, maintenance, false alarms, privacy, and who acts on the data.",
+      "maturity": {
+        "now": "Cheap sensors for water, air, and assets; networks and maintenance are the bottleneck.",
+        "near": "Denser meshes with better battery life and analytics.",
+        "frontier": "Invisible continuous sensing of entire districts with perfect action loops."
+      },
+      "milestones": [
+        "City flood, air, and water sensor networks in production use"
+      ],
+      "useCasesNow": [
+        "Flood early warning",
+        "Cold-chain monitors",
+        "Leak detection"
+      ],
+      "narrative": "The place reports its own stress."
+    },
+    "materials": {
+      "name": "Material Science",
+      "summary": "New solids and surfaces — strength, filters, conductors.",
+      "learn": "Underwrites batteries, buildings, devices.",
+      "inventionHint": "Better barriers, lighter structures, filters.",
+      "risk": "toxicity unknowns, recycling",
+      "scarcity": "What scarce capability could Material Science help make more abundant here?",
+      "primer": "Material science designs solids and surfaces — strength, filtration, insulation, conductivity. Better materials make flood barriers, lighter rebuilds, cleaner water, and better batteries possible. Invent for what the place must withstand, with recycling and toxicity in the story.",
+      "maturity": {
+        "now": "Advanced composites, membranes, and coatings in industrial supply chains.",
+        "near": "Cheaper high-performance materials for local builders.",
+        "frontier": "Self-healing programmable materials as default building stock."
+      },
+      "milestones": [
+        "Commercial membranes",
+        "Lighter structures",
+        "Better thermal materials"
+      ],
+      "useCasesNow": [
+        "Flood barriers",
+        "Filters",
+        "Lighter rebuild materials"
+      ],
+      "narrative": "Surfaces adapt to weather and wear."
+    },
+    "nano": {
+      "name": "Nano-Technology",
+      "summary": "Engineering at nanometer scale for medicine and materials.",
+      "learn": "Delivery, sensors, coatings.",
+      "inventionHint": "Targeted filters or medical tools.",
+      "risk": "toxicity, dual-use",
+      "scarcity": "What scarce capability could Nano-Technology help make more abundant here?",
+      "primer": "Nanotechnology engineers matter at nanometer scale for drug delivery, sensors, and coatings. Regulated products already exist; general nanofactories do not. Invent with safety data and dual-use caution — especially for medical or environmental release.",
+      "maturity": {
+        "now": "Nanomedicine delivery, coatings, and sensors in regulated products.",
+        "near": "Broader clinical and filtration uses with clearer safety data.",
+        "frontier": "General-purpose nanofactories in every clinic."
+      },
+      "milestones": [
+        "Approved nanomedicine formulations",
+        "Commercial nano-coatings"
+      ],
+      "useCasesNow": [
+        "Targeted drug-delivery pilots",
+        "Water and air filters",
+        "Protective coatings"
+      ],
+      "narrative": "Tiny layers clean and deliver carefully."
+    }
+  },
+  "missions": {
+    "portside-floods": {
+      "title": "Portside Ward floods again",
+      "place": "Portside Ward",
+      "scene": "The school gym is the emergency shelter for the third time this decade. Fishers lose weeks of work when the quay goes under. Residents want something that works *here*, not a national slogan.",
+      "stakeholder": "Aisha, ward climate liaison"
+    },
+    "saline-well": {
+      "title": "The well turned saline",
+      "place": "Harran Wells",
+      "scene": "One town’s main well is brackish. Tanker prices spike every dry month. Kids miss school to haul water. A fix must be affordable and maintainable locally.",
+      "stakeholder": "Yusuf, co-op well keeper"
+    },
+    "border-fever": {
+      "title": "Fever cluster at the border clinic",
+      "place": "Crossing Clinic 7",
+      "scene": "A small clinic sees a new fever pattern among travelers. Staff are three nurses deep. They need detection, logistics, and trust — this week, not after a conference.",
+      "stakeholder": "Dr. Okonkwo, clinic lead"
+    },
+    "three-schools": {
+      "title": "One science teacher, three schools",
+      "place": "Ridge County schools",
+      "scene": "Three rural schools share one science teacher who drives 90 minutes between them. Labs are empty half the week. Students who can leave, leave.",
+      "stakeholder": "Ms. Reyes, the shared science teacher"
+    },
+    "arrival-city": {
+      "title": "Four thousand arrivals, one winter",
+      "place": "Northgate City",
+      "scene": "A mid-size city expects 4,000 new arrivals before spring. Gyms are full. Paperwork is chaos. Locals fear queues at clinics. Dignity has a deadline.",
+      "stakeholder": "Marta, reception coordinator"
+    },
+    "warehouse-shifts": {
+      "title": "The night shift disappeared",
+      "place": "Canal Logistics Park",
+      "scene": "Warehouse automation cut 30% of shifts in eighteen months. Rent didn’t fall. Workers want retraining that leads to real pay — not a pamphlet.",
+      "stakeholder": "Dev, shift steward"
+    },
+    "opaque-benefits": {
+      "title": "The benefits AI nobody can question",
+      "place": "Metro Benefits Office",
+      "scene": "City hall wants to deploy an opaque AI to decide benefits *this year* and cut costs. Caseworkers are already overruled by a black box pilot. Prevention means a better system, not a ban on tools.",
+      "stakeholder": "Len, casework supervisor"
+    },
+    "smog-corridor": {
+      "title": "School days lost to smog",
+      "place": "East Industrial Corridor",
+      "scene": "Asthma days close classrooms along the truck route. Parents have sensor photos of the haze — and the corridor still runs diesel at rush hour. A local fix must protect kids and cut corridor exhaust.",
+      "stakeholder": "Priya, parent coalition"
+    },
+    "dark-clinic": {
+      "title": "The clinic dies at dusk",
+      "place": "Riverbend Health Post",
+      "scene": "When the grid fails, vaccines warm and night births go dark. Diesel is expensive and late. Staff need first watts that stay on.",
+      "stakeholder": "Nurse Amara"
+    },
+    "empty-nets": {
+      "title": "Empty nets, angry quay",
+      "place": "Kelp Harbor",
+      "scene": "Fish stocks collapsed locally. Some boats still cheat night limits. Young people leave. Monitoring and alternatives have to work for this harbor.",
+      "stakeholder": "Captain Seo"
+    },
+    "memory-house": {
+      "title": "Who watches the watchers of memory",
+      "place": "Cedar Day Center",
+      "scene": "A day center for people with dementia has a waitlist of fourteen months. Families burn out. Staff need tools that preserve dignity — not just surveillance.",
+      "stakeholder": "Tomás, center director"
+    },
+    "maternal-road": {
+      "title": "Two hours to the next theater",
+      "place": "High Valley births",
+      "scene": "Complications mean a two-hour road trip if the rains haven’t washed the bridge. Midwives want backup that arrives in time.",
+      "stakeholder": "Lila, midwife network"
+    },
+    "shelter-winter": {
+      "title": "Winter count keeps rising",
+      "place": "Southbank streets",
+      "scene": "Encampments grow under the overpass each winter. Hotels are full. Building codes move slowly. People need warm, safe options *this* season and a path to stay housed.",
+      "stakeholder": "Kenji, outreach lead"
+    },
+    "food-desert": {
+      "title": "The last greengrocer closed",
+      "place": "Mile-Long Block",
+      "scene": "A dense neighborhood’s last fresh-food shop closed. Corner stores sell calories, not vegetables. Transit to a supermarket is two buses.",
+      "stakeholder": "Elena, community kitchen"
+    },
+    "five-coasts": {
+      "title": "Five coasts, no shared warning",
+      "place": "Alliance of five port towns",
+      "scene": "Five small coastal towns share a storm path but not a budget or data pipe. Each mayor waits for the other to buy sensors. Coordination *is* the invention.",
+      "stakeholder": "The inter-town working group"
+    },
+    "cancer-wait": {
+      "title": "Scan wait times hit nine months",
+      "place": "Regional Oncology Hub",
+      "scene": "Imaging backlog means late diagnoses. Rural patients miss appointments. Oncologists want triage and tools that find risk earlier without inventing a miracle drug overnight.",
+      "stakeholder": "Dr. Chen, oncology lead"
+    }
+  }
+}

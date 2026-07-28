@@ -219,7 +219,7 @@ export class RoomManager {
     return { ok: true, player, isHost };
   }
 
-  createRoom({ displayName, ip } = {}) {
+  createRoom({ displayName, ip, locale } = {}) {
     this.sweep();
     if (this.rooms.size >= this.maxRooms) {
       return { ok: false, error: "server_full", status: 503 };
@@ -235,11 +235,16 @@ export class RoomManager {
     const playerToken = randomToken(16);
     const playerId = randomToken(8);
     const now = Date.now();
+    const hostLocale = normalizeRoomLocale(locale);
 
     const room = {
       code: code.toUpperCase(),
       hostToken,
       hostPlayerId: playerId,
+      /** UI language of the host at create time; shared AI content uses this. */
+      hostLocale,
+      /** Frozen at race start (same as hostLocale unless host updates before start). */
+      locale: hostLocale,
       players: [
         {
           id: playerId,
@@ -1280,6 +1285,8 @@ function buildRoomAiContext(room, player, payload) {
   // AI feasibility / timing must use the invent owner's personal year
   const inventYear = f?.year != null ? f.year : mp?.place?.year;
   const mission = mp?.place?.mission;
+  const locale = room.locale || room.hostLocale || "en";
+  const outputLanguage = locale === "hu" ? "Hungarian" : "English";
   return {
     year: inventYear,
     place: mission?.place,
@@ -1295,8 +1302,27 @@ function buildRoomAiContext(room, player, payload) {
     playerId: player.id,
     displayName: player.displayName,
     openTable: mp?.openTable,
+    // Host/room language wins for shared AI (payload may still carry player UI locale)
+    locale,
+    hostLocale: room.hostLocale || locale,
+    outputLanguage,
     ...(payload.context || {}),
+    // Re-assert room locale after spread so client UI locale cannot override host
+    locale,
+    hostLocale: room.hostLocale || locale,
+    outputLanguage,
   };
+}
+
+function normalizeRoomLocale(raw) {
+  const s = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+  if (s === "hu" || s.startsWith("hu-") || s === "hungarian" || s === "magyar") {
+    return "hu";
+  }
+  return "en";
 }
 
 // silence unused in case techById needed later for host tools

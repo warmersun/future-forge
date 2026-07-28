@@ -1114,7 +1114,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-const SCENARIO_PACK_REV = "d6";
+const SCENARIO_PACK_REV = "d7";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
@@ -1123,7 +1123,10 @@ function buildLocalScenarioVariants(g, count, salt) {
   const n = Math.max(count, packs.length);
   const out = [];
   for (let i = 0; i < n; i++) {
-    const pack = packs[(i + salt) % packs.length];
+    const packIndex = (i + salt) % packs.length;
+    const pack = packs[packIndex];
+    const seedId =
+      pack.seedId || `${g.id}--${packIndex}-${SCENARIO_PACK_REV}`;
     const place = pickRot(pack.places, i + salt);
     const title = pack.title.replace("{place}", place);
     const scene = pack.scene.replace(/\{place\}/g, place).replace(/\{theme\}/g, g.title);
@@ -1154,7 +1157,9 @@ function buildLocalScenarioVariants(g, count, salt) {
     });
     const collapseYear = 2032 + ((i + salt) % 3) * 2;
     out.push({
+      // Runtime instance id (unique per salt/slot); seedId is stable for i18n overlays
       id: `gen-${g.id}-${i}-${salt}-${SCENARIO_PACK_REV}`,
+      seedId,
       globalId: g.id,
       title,
       place,
@@ -1261,94 +1266,166 @@ export const FRONTIER_CLAIM_PATTERNS = [
   /general[- ]purpose\s*quantum/i,
   /nanobot\s*(swarm|army).*(cure|clean|fix)/i,
   /replace\s*all\s*(doctors|teachers|drivers)/i,
+  // Hungarian frontier over-claims
+  /kvantum\s*internet/i,
+  /teljes(en)?\s*autonóm\s*(város|flotta|minden)/i,
+  /elme\s*feltölt|tudat\s*feltölt/i,
+  /korlátlan\s*energia|ingyen\s*energia/i,
+  /teleport/i,
+  /minden\s*rákot\s*egy\s*éjszaka/i,
+  /bci.*(mindenki|fogyasztói|tömeges)/i,
+  /programozható\s*(város|épület).*(nő|gyógyul|újjáép)/i,
+  /általános\s*célú\s*kvantum/i,
+  /nanobot.*(raj|hadsereg).*(gyógy|tisztít)/i,
+  /minden\s*(orvos|tanár|sofőr)\s*helyett/i,
 ];
 
-/** Pilot-honest language softens longer-horizon categories */
-const PILOT_LANGUAGE =
+/** Pilot-honest language softens longer-horizon categories (EN + HU) */
+const PILOT_LANGUAGE_EN =
   /\b(pilot|trial|partnership|partner with|lab|research|limited|mapped corridor|geofenced|supervised|clinical|opt[- ]in|phase\s*1|prototype|with oversight|human[- ]in[- ]the[- ]loop)\b/i;
 
-/** Exported for run scoring / honesty without leaking private regex imports elsewhere */
-export function hasPilotLanguage(text) {
-  return PILOT_LANGUAGE.test(String(text || ""));
+const PILOT_LANGUAGE_HU =
+  /\b(pilot|próbaüzem|próba|kísérleti|kísérlet|partner(ség)?|labor|kutatás|korlátozott|geokerített|felügyelt|klinikai|opt[- ]in|1\.\s*szakasz|prototípus|emberi\s*felügyelet|ember[- ]a[- ]hurokban|mintaprojekt|pilotprojekt|szűk\s*körű|korlátozott\s*körű)\b/i;
+
+/** Routine/universal claims that stretch "near" capabilities (EN + HU) */
+const ROUTINE_LANGUAGE_EN =
+  /\b(routine|every(one| resident)?|all residents|city[- ]wide|guarantees|always|overnight|fully automatic|no human|autonomous everywhere|municipal default)\b/i;
+
+const ROUTINE_LANGUAGE_HU =
+  /\b(rutin|mindenki|minden\s*lakos|város[- ]szintű|városszerte|garantál|mindig|egy\s*éjszaka|teljesen\s*automatikus|ember\s*nélkül|mindenütt\s*autonóm|önkormányzati\s*alapértelmezés)\b/i;
+
+const FRONTIER_WORDS_EN =
+  /\b(frontier|sci[- ]?fi|fully programmable life|general AGI|mind upload|unlimited clean power)\b/i;
+
+const FRONTIER_WORDS_HU =
+  /\b(határvidék|sci[- ]?fi|teljesen\s*programozható\s*élet|általános\s*AGI|elme\s*feltölt|korlátlan\s*tiszta\s*energia)\b/i;
+
+function claimLocale(locale) {
+  const s = String(locale || "").toLowerCase();
+  if (s === "hu" || s.startsWith("hu-") || s === "hungarian" || s === "magyar") return "hu";
+  return "en";
 }
 
-/** Routine/universal claims that stretch "near" capabilities */
-const ROUTINE_LANGUAGE =
-  /\b(routine|every(one| resident)?|all residents|city[- ]wide|guarantees|always|overnight|fully automatic|no human|autonomous everywhere|municipal default)\b/i;
+function pilotRegex(locale) {
+  return claimLocale(locale) === "hu"
+    ? new RegExp(
+        `(?:${PILOT_LANGUAGE_EN.source})|(?:${PILOT_LANGUAGE_HU.source})`,
+        "i"
+      )
+    : PILOT_LANGUAGE_EN;
+}
+
+function routineRegex(locale) {
+  return claimLocale(locale) === "hu"
+    ? new RegExp(
+        `(?:${ROUTINE_LANGUAGE_EN.source})|(?:${ROUTINE_LANGUAGE_HU.source})`,
+        "i"
+      )
+    : ROUTINE_LANGUAGE_EN;
+}
+
+function frontierWordsRegex(locale) {
+  return claimLocale(locale) === "hu"
+    ? new RegExp(
+        `(?:${FRONTIER_WORDS_EN.source})|(?:${FRONTIER_WORDS_HU.source})`,
+        "i"
+      )
+    : FRONTIER_WORDS_EN;
+}
+
+/** Exported for run scoring / honesty without leaking private regex imports elsewhere */
+export function hasPilotLanguage(text, locale = "en") {
+  return pilotRegex(locale).test(String(text || ""));
+}
 
 /**
  * Score timing of CLAIMS, not whether a category card is "unlocked".
  * Categories are always pickable; frontier/over-claim language is what goes red.
+ * @param {string} howText
+ * @param {object[]} techs
+ * @param {number} year
+ * @param {string} [locale] — "en" | "hu" (defaults en; pass UI locale so HU pilots score honestly)
  */
-export function detectClaimStretch(howText, techs, year) {
+export function detectClaimStretch(howText, techs, year, locale = "en") {
+  const loc = claimLocale(locale);
+  const hu = loc === "hu";
   const text = `${howText || ""}`.trim();
   if (text.length < 20) {
     return {
       level: "yellow",
-      reason: "Need a clearer how-it-works to judge whether claims match this year's capabilities.",
+      reason: hu
+        ? "Írd le egyértelműbben, hogyan működik, hogy megítélhessük, az állítások illenek-e ehhez az évhez."
+        : "Need a clearer how-it-works to judge whether claims match this year's capabilities.",
     };
   }
 
   if (FRONTIER_CLAIM_PATTERNS.some((re) => re.test(text))) {
     return {
       level: "red",
-      reason:
-        "How-it-works treats frontier capability as routine now — revise toward pilots, partnerships, or near-term tools.",
+      reason: hu
+        ? "A működés leírása a határon lévő képességet rutinként kezeli — írd át pilotokra, partnerségekre vagy közeli eszközökre."
+        : "How-it-works treats frontier capability as routine now — revise toward pilots, partnerships, or near-term tools.",
     };
   }
 
   const stack = techs || [];
   // Soft horizon: categories whose "near" use cases often get more common later
   const softHorizon = stack.filter((t) => (t.readyYear || year) > year + 2);
-  const hasPilot = PILOT_LANGUAGE.test(text);
-  const hasRoutine = ROUTINE_LANGUAGE.test(text);
+  const hasPilot = pilotRegex(loc).test(text);
+  const hasRoutine = routineRegex(loc).test(text);
 
-  // Explicit frontier maturity mentioned as already done
-  const frontierWords =
-    /\b(frontier|sci[- ]?fi|fully programmable life|general AGI|mind upload|unlimited clean power)\b/i;
-  if (frontierWords.test(text) && !hasPilot) {
+  if (frontierWordsRegex(loc).test(text) && !hasPilot) {
     return {
       level: "red",
-      reason: "Story leans on frontier outcomes without pilot framing for this year.",
+      reason: hu
+        ? "A történet határon lévő kimenetekre támaszkodik pilot-keretezés nélkül ebben az évben."
+        : "Story leans on frontier outcomes without pilot framing for this year.",
     };
   }
+
+  const names = softHorizon.map((t) => t.name).join(", ");
 
   if (softHorizon.length && hasRoutine && !hasPilot) {
     return {
       level: "yellow",
-      reason: `${softHorizon
-        .map((t) => t.name)
-        .join(", ")} can be in the stack, but city-wide/routine claims fit better as pilots this year.`,
+      reason: hu
+        ? `${names} lehet a stackben, de a város-szintű/rutin állítások idén jobban illenek pilotként.`
+        : `${names} can be in the stack, but city-wide/routine claims fit better as pilots this year.`,
     };
   }
 
   if (softHorizon.length && !hasPilot && text.length < 80) {
     return {
       level: "yellow",
-      reason: `Stack includes longer-horizon categories (${softHorizon
-        .map((t) => t.name)
-        .join(", ")}). Spell a near-term mechanism (pilot, partner, corridor) so timing stays honest.`,
+      reason: hu
+        ? `A stack hosszabb távú kategóriákat is tartalmaz (${names}). Írj közeli mechanizmust (pilot, partner, folyosó), hogy az időzítés őszinte maradjon.`
+        : `Stack includes longer-horizon categories (${names}). Spell a near-term mechanism (pilot, partner, corridor) so timing stays honest.`,
     };
   }
 
   if (softHorizon.length && hasPilot) {
     return {
       level: "green",
-      reason: `Near-term/pilot framing looks compatible with ${year} — longer-horizon categories used honestly.`,
+      reason: hu
+        ? `A közeli/pilot keretezés illeszkedik a(z) ${year} évhez — a hosszabb távú kategóriák őszintén használva.`
+        : `Near-term/pilot framing looks compatible with ${year} — longer-horizon categories used honestly.`,
     };
   }
 
-  // Check stack "now" use cases for vague totalizing claims on mature stacks
   if (hasRoutine && stack.some((t) => (t.curve || "") === "early")) {
     return {
       level: "yellow",
-      reason: "Universal claims on early-curve tech — prefer scoped pilots and named partners.",
+      reason: hu
+        ? "Egyetemes állítások korai görbéjű tech-en — inkább szűk pilotok és megnevezett partnerek."
+        : "Universal claims on early-curve tech — prefer scoped pilots and named partners.",
     };
   }
 
   return {
     level: "green",
-    reason: `Claims look compatible with near-term capabilities of this stack in ${year}.`,
+    reason: hu
+      ? `Az állítások illeszkednek a stack közeli képességeihez ${year}-ben.`
+      : `Claims look compatible with near-term capabilities of this stack in ${year}.`,
   };
 }
 

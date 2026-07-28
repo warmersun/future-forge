@@ -1,0 +1,18 @@
+{
+  "present": {
+    "name": "Ma",
+    "blurb": "A hely, ahogy van — a nyomás nő."
+  },
+  "prototype": {
+    "name": "Korai építés",
+    "blurb": "Az ötleted első darabjai megjelennek."
+  },
+  "transition": {
+    "name": "Méretezés",
+    "blurb": "A rendszerek átveszik a helyszínt."
+  },
+  "transformed": {
+    "name": "Új normális",
+    "blurb": "A mindennapi élet egyértelműen megváltozott."
+  }
+}

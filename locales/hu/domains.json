@@ -1,0 +1,20 @@
+{
+  "power": {
+    "label": "Erő"
+  },
+  "automator": {
+    "label": "Automatizáló"
+  },
+  "mover": {
+    "label": "Mozgató"
+  },
+  "lifeforce": {
+    "label": "Életerő"
+  },
+  "link": {
+    "label": "Kapcsolat"
+  },
+  "portal": {
+    "label": "Portál"
+  }
+}

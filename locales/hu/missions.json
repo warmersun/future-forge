@@ -1,0 +1,98 @@
+{
+  "portside-floods": {
+    "title": "A Portside Ward megint elönt",
+    "place": "Portside Ward",
+    "scene": "A dagály magasabb, mint a térképek ígérték. Az alagsorok tele vannak; a buszok megállnak a sós víznél. A lakók homokzsákokat és szivattyúkat akarnak, amelyek tényleg ide érkeznek — nem öt év múlva a fővárosban.",
+    "stakeholder": "Maya Chen, negyedképviselő"
+  },
+  "saline-well": {
+    "title": "A kút sós lett",
+    "place": "A partvidéki kútmező",
+    "scene": "A kutak, amelyek egy generáción át itatták a falut, sósak. A teherautós víz drága. A gazdák és az anyák ugyanazt a sort állják, mielőtt a nap felkel.",
+    "stakeholder": "A kútbizottság vezetője"
+  },
+  "border-fever": {
+    "title": "Lázklaszter a határrendészeti klinikán",
+    "place": "Határklinika 7",
+    "scene": "A minták a hűtőben várnak; a heti laborautó már elment. Mire a központi eredmény megjön, az emberek továbbmentek — vagy a kórterem tele van.",
+    "stakeholder": "Nővér a 7-es poszton"
+  },
+  "three-schools": {
+    "title": "Egy természettanár, három iskola",
+    "place": "Három vidéki iskola körzete",
+    "scene": "Egy tanár ingázik három épület között. A laborfelszerelés zárva van, amikor ő máshol van. A diákok elméletet kapnak, gyakorlat nélkül.",
+    "stakeholder": "Körzeti oktatási vezető"
+  },
+  "arrival-city": {
+    "title": "Négyezer érkező, egy tél",
+    "place": "Érkezőváros téli szállásai",
+    "scene": "A tornatermek megteltek. A papírok lassabbak, mint a fagy. A családok meleget, fordítást és munkát akarnak — nem csak egy matracot egy hétre.",
+    "stakeholder": "Önkormányzati befogadó koordinátor"
+  },
+  "warehouse-shifts": {
+    "title": "Az éjszakai műszak eltűnt",
+    "place": "A raktárnegyed",
+    "scene": "Az automatizálás elvitte a műszakot. A bérleti díjak nem estek. A dolgozók új készségeket akarnak, mielőtt a következő robotok is megérkeznek.",
+    "stakeholder": "Szakszervezeti képviselő"
+  },
+  "opaque-benefits": {
+    "title": "A juttatási MI, amit senki sem kérdőjelezhet meg",
+    "place": "Városi juttatási hivatal",
+    "scene": "A modell elutasít kérelmeket indoklás nélkül. A tisztviselők a képernyőre böknek. A családok a folyosón várnak, és nem tudják, mit javítsanak.",
+    "stakeholder": "Ügyféljogi ügyvéd"
+  },
+  "smog-corridor": {
+    "title": "Iskolai napok a szmog miatt elveszve",
+    "place": "A teherfolyosó iskolái",
+    "scene": "A gyerekek bent maradnak, amikor a levegő piros. A kamionok tovább gurulnak. A szülők maszkot és tiszta útvonalat akarnak, nem csak appot a rossz napról.",
+    "stakeholder": "Iskolaigazgató"
+  },
+  "dark-clinic": {
+    "title": "A klinika alkonyatkor meghal",
+    "place": "Vidéki klinika hálózat nélkül",
+    "scene": "Napnyugtakor a lámpák kialszanak. A hűtő melegszik. A szülés és a vakcina a sötétre és a dízelre vár.",
+    "stakeholder": "Klinikai vezető"
+  },
+  "empty-nets": {
+    "title": "Üres hálók, dühös rakpart",
+    "place": "A rakparti halászközösség",
+    "scene": "A fogás csökken. A fiatalok elmennek. A móló politikája hangosabb, mint a tudomány — de a hálók tényleg könnyebbek.",
+    "stakeholder": "Halászszövetkezeti elnök"
+  },
+  "memory-house": {
+    "title": "Ki figyeli az emlékezet őrzőit",
+    "place": "Közösségi emlékezet-ház",
+    "scene": "A történetek eltűnnek a túlélőkkel. A digitális archívum frissítésre vár. Ki dönti el, mi marad meg — és ki fér hozzá?",
+    "stakeholder": "Archívumgondnok"
+  },
+  "maternal-road": {
+    "title": "Két óra a következő szülőszobáig",
+    "place": "Hegyvidéki anyai útvonal",
+    "scene": "A mentő két órát vesz igénybe a sárban. A vérzés nem vár. A bábák rádiót és gyorsabb utat akarnak, nem plakátot.",
+    "stakeholder": "Közösségi bába"
+  },
+  "shelter-winter": {
+    "title": "A téli számlálás tovább nő",
+    "place": "Belvárosi menhelyhálózat",
+    "scene": "Minden éjszaka több ember a hidegben. Az ágyak tele vannak. A szolgáltatások szétszórva; a meleg és a papírok ugyanolyan sürgősek.",
+    "stakeholder": "Menhelyigazgató"
+  },
+  "food-desert": {
+    "title": "Bezárt az utolsó zöldséges",
+    "place": "Élelmiszer-sivatag negyed",
+    "scene": "A friss étel most három buszmegálló. A sarki bolt chips és üdítő. A szülők hosszabb napot akarnak a tápanyagért, nem csak tanácsot.",
+    "stakeholder": "Közösségi konyhavezető"
+  },
+  "five-coasts": {
+    "title": "Öt part, nincs közös figyelmeztetés",
+    "place": "Regionális parti hálózat",
+    "scene": "Mindegyik part saját szenzort és saját csendet tart. A vihar nem tiszteli a határokat. A polgármesterek ugyanazt a riasztást akarják ugyanabban a percben.",
+    "stakeholder": "Regionális vészhelyzeti koordinátor"
+  },
+  "cancer-wait": {
+    "title": "A vizsgálati várakozás elérte a kilenc hónapot",
+    "place": "Regionális onkológiai központ",
+    "scene": "A képalkotási sor késői diagnózist jelent. A vidéki betegek lekésik az időpontot. Az onkológusok triage-ot és korábbi kockázatkereső eszközöket akarnak — nem csodaszert egy éjszaka alatt.",
+    "stakeholder": "Dr. Chen, onkológiai vezető"
+  }
+}

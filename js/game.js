@@ -29,6 +29,35 @@ import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
 import {
+  initI18n,
+  setLocale,
+  getLocale,
+  t,
+  applyDomI18n,
+  SUPPORTED_LOCALES,
+  localeStorageKey,
+  aiLocaleContext,
+  outputLanguageName,
+} from "./i18n.js";
+import {
+  locGlobal,
+  locTech,
+  locTechById,
+  locShelf,
+  locChallengeAngle,
+  locVisionStage,
+  locYearNews,
+  locForesightPack,
+  locMission,
+  locScenario,
+  locProblemBrief,
+  locMarketEvent,
+  applyQuestLocale,
+  domainLabel,
+  localizedShelves,
+  localizedChallengeAngles,
+} from "./i18n/content.js";
+import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
   applyPressureDrop,
@@ -185,7 +214,7 @@ function applyEndTurnChrome() {
     if (!el) continue;
     // Always rewrite label so stale "Pass device" cannot stick after room entry
     if (!el.hidden) el.textContent = label;
-    else if (room) el.textContent = "End turn →";
+    else if (room) el.textContent = t("common.endTurnArrow", null, "End turn →");
   }
   const passDev = $("#btn-mp-pass-device");
   if (passDev) {
@@ -197,7 +226,7 @@ function applyEndTurnChrome() {
       passDev.hidden = false;
       passDev.removeAttribute("hidden");
       passDev.style.display = "";
-      passDev.textContent = "Pass device →";
+      passDev.textContent = t("common.passDevice", null, "Pass device →");
     }
   }
   // Never leave body in both modes
@@ -214,7 +243,7 @@ function applyEndTurnChrome() {
  */
 function mpFriendlyError(err) {
   const code = String(err || "rejected");
-  const map = {
+  const en = {
     pilot_required: "Pilot this invention successfully before Scale.",
     challenge_required: "This invent must pass Challenge before Pilot.",
     pilot_already_done: "Pilot is already done — try Scale.",
@@ -246,7 +275,8 @@ function mpFriendlyError(err) {
     wait_own_invent_only:
       "Wait is only for your own invent — switch to your seat tab first (not while helping someone else).",
   };
-  return map[code] || code;
+  if (!en[code]) return code;
+  return t(`mpError.${code}`, null, en[code]);
 }
 
 /**
@@ -392,7 +422,11 @@ const state = {
 };
 
 /** v10: design-challenge story craft for quest scenes (easy first read, not shorter-for-its-own-sake) */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v10";
+/** Base key; actual storage is locale-scoped via localeStorageKey(). */
+const STORAGE_SCENARIOS_BASE = "future-forge:scenarioCache:v10";
+function storageScenariosKey() {
+  return localeStorageKey(STORAGE_SCENARIOS_BASE);
+}
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -639,7 +673,8 @@ function mirrorSparkStoryImpact() {
 
 /** Active market card (solo state or shared place in multiplayer). */
 function currentMarketNews() {
-  return state.marketNews || null;
+  const raw = state.marketNews || null;
+  return raw ? locMarketEvent(raw) || raw : null;
 }
 
 /**
@@ -672,7 +707,7 @@ function flashUnaffordableTech(id, error) {
   const t = techById(id);
   const cost = techCost(t);
   if (error === "no_ap") {
-    flashToast("No AP left — End Turn or Wait.", { resource: "ap" });
+    flashToast(t("toast.noAp", null, "No AP left — End Turn or Wait."), { resource: "ap" });
   } else if (error === "no_budget") {
     flashToast(
       `Need ${cost.budget ?? 1}$ Budget to add ${t?.name || "this"} (you have ${state.budget ?? 0}$).`,
@@ -684,7 +719,7 @@ function flashUnaffordableTech(id, error) {
       { resource: "will" }
     );
   } else {
-    flashToast("Not enough resources to add this tech.");
+    flashToast(t("toast.noResourcesTech", null, "Not enough resources to add this tech."));
   }
 }
 
@@ -851,7 +886,7 @@ function setMpActivePlayerBadges(on, name, _opts = {}) {
     }
     badge.hidden = false;
     badge.removeAttribute("hidden");
-    badge.innerHTML = `<strong>${escapeHtml(name || "—")}</strong><span class="mp-active-label"> · turn</span>`;
+    badge.innerHTML = `<strong>${escapeHtml(name || "—")}</strong><span class="mp-active-label"> · ${escapeHtml(t("turnUi.turnSuffix", null, "turn"))}</span>`;
     badge.title = `${name || "Player"}'s turn`;
   }
 }
@@ -1027,16 +1062,25 @@ function isRoomSelfChallengeBusy() {
 
 function inventActionBusyReason() {
   if (isMpContributionLocked()) return mpContributionLockReason;
-  if (writeCommitInFlight) return "Still saving invent… wait a moment.";
+  if (writeCommitInFlight)
+    return t("toast.stillSaving", null, "Still saving invent… wait a moment.");
   if (isChallengeCombatBlocking()) {
     return challengeCombatBusy
-      ? "AI is evaluating your defense — wait for the result."
-      : "Challenger is still speaking — wait for the attack.";
+      ? t(
+          "toast.defenseEvaluating",
+          null,
+          "AI is evaluating your defense — wait for the result."
+        )
+      : t(
+          "toast.challengerSpeaking",
+          null,
+          "Challenger is still speaking — wait for the attack."
+        );
   }
   if (state.aiBusy) {
-    return "AI is still working — wait until it finishes.";
+    return t("toast.aiWorking", null, "AI is still working — wait until it finishes.");
   }
-  return "Wait — an invent action is still running.";
+  return t("toast.inventActionBusy", null, "Wait — an invent action is still running.");
 }
 
 /**
@@ -1103,7 +1147,7 @@ function applyMpContributionLockToDom() {
   const hint = $("#story-mode-hint");
   if (hint && locked) {
     hint.dataset.mpContribHint = hint.innerHTML;
-    hint.innerHTML = `<strong>Evaluating edit…</strong> ${escapeHtml(reason)}`;
+    hint.innerHTML = `<strong>${escapeHtml(t("toast.evaluatingEdit", null, "Evaluating edit…"))}</strong> ${escapeHtml(reason)}`;
     hint.hidden = false;
   } else if (hint && hint.dataset.mpContribHint != null) {
     hint.innerHTML = hint.dataset.mpContribHint;
@@ -1139,7 +1183,7 @@ function syncInventActionButtons() {
   const challengeBusy = isChallengeCombatBlocking();
   const busy = inventBusy || challengeBusy;
   const spectatorReason =
-    "Not your turn — you can browse and use Learn, but only the active player acts.";
+    t("challengeUi.spectator", null, "Not your turn — you can browse and use Learn, but only the active player acts.");
   const busyReason = busy ? inventActionBusyReason() : "";
 
   // —— Lobby (Workshop economy only; Spark keeps it hidden) ——
@@ -1470,7 +1514,7 @@ function bindMpSeatTabClicks(list, b) {
           // Leaving own fight is OK — invent keeps scrutinyPublic; rehydrate on return
           challengeCombatBusy = false;
           enterChallengeAsSpectator(f || {}, name);
-          flashToast(`Watching ${name} on Challenge`);
+          flashToast(t("toast.watchingChallenge", { name }, "Watching {name} on Challenge"));
           renderMpChrome();
           return;
         }
@@ -1497,7 +1541,7 @@ function bindMpSeatTabClicks(list, b) {
         // Re-apply interactive combat chrome after any spectator locks
         applyEndTurnChrome();
         renderMpChrome();
-        flashToast("Your Challenge");
+        flashToast(t("toast.yourChallenge", null, "Your Challenge"));
         scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
         return;
       }
@@ -1549,7 +1593,7 @@ function bindMpSeatTabClicks(list, b) {
         if (b.viewingOther?.()) {
           if (roomBridge.isRoom()) {
             enterDeployAsSpectator(f || {}, name, {});
-            flashToast(`Watching ${name}'s deploy bay`);
+            flashToast(t("toast.watchingDeploy", { name }, "Watching {name}'s deploy bay"));
             renderMpChrome();
             return;
           }
@@ -1559,7 +1603,7 @@ function bindMpSeatTabClicks(list, b) {
           helper: false,
           ownerName: "your invent",
         });
-        flashToast("Your deploy bay (wait for your turn to Pilot/Scale)");
+        flashToast(t("toast.yourDeployBay", null, "Your deploy bay (wait for your turn to Pilot/Scale)"));
         return;
       }
 
@@ -1567,13 +1611,13 @@ function bindMpSeatTabClicks(list, b) {
       // (was the bug: hydrate ran while stuck on Challenge/Deploy screen)
       openWorkshopForViewedInvent(b);
       if (!b.viewingOther?.()) {
-        flashToast(phase === "scaled" ? "Your scaled invent" : "Your invention");
+        flashToast(phase === "scaled" ? t("toast.yourScaledInvent", null, "Your scaled invent") : t("toast.yourInvention", null, "Your invention"));
       } else if (phase === "invent") {
         flashToast(
           "Viewing their invent — additive story & tech (you pay). Everyday life is theirs."
         );
       } else {
-        flashToast("This invent is locked (scaled or abandoned)");
+        flashToast(t("toast.inventLockedScaled", null, "This invent is locked (scaled or abandoned)"));
       }
     });
   });
@@ -1750,7 +1794,7 @@ function mpPassDevice() {
   // Online rooms never use Pass device — only hotseat
   if (!hotseatBridge.isHotseat()) {
     if (roomBridge.isRoom() || state.mp?.mode === "room") {
-      flashToast("Use End turn — this is an online room, not hotseat.");
+      flashToast(t("toast.useEndTurnRoom", null, "Use End turn — this is an online room, not hotseat."));
     }
     return;
   }
@@ -1800,7 +1844,7 @@ function enterHotseatPlay(names, mission, global) {
   leaveRoomPlay({ silent: true });
   const r = hotseatBridge.startFromPick(names, mission, global?.id || mission.globalId);
   if (!r.ok) {
-    flashToast(r.error || "Hotseat start failed");
+    flashToast(r.error || t("toast.hotseatStartFail", null, "Hotseat start failed"));
     return false;
   }
   state.global = global || globalById(mission.globalId) || state.global;
@@ -1977,7 +2021,7 @@ function handleRoomPlayEvent(client, evt) {
     (client.snapshot?.phase === "playing" || place?.status === "playing") &&
     place?.status === "playing"
   ) {
-    flashToast("Next Quest starting!");
+    flashToast(t("toast.nextQuest", null, "Next Quest starting!"));
     enterRoomPlay(client);
     return;
   }
@@ -2197,7 +2241,7 @@ function roomPlaySessionKey(client) {
  */
 function enterRoomPlay(client, opts = {}) {
   if (!client?.snapshot) {
-    flashToast("Room not ready");
+    flashToast(t("toast.roomNotReady", null, "Room not ready"));
     return false;
   }
   if (roomPlayEntering) return false;
@@ -2335,7 +2379,7 @@ function enterRoomPlay(client, opts = {}) {
       if (evt.type === "next_quest_started" || evt.type === "quest_started") {
         const nextKey = roomPlaySessionKey(client);
         if (nextKey !== roomPlayEnterKey) {
-          flashToast("Race starting!");
+          flashToast(t("toast.raceStarting", null, "Race starting!"));
           // Defer so we don't re-enter inside emit()
           setTimeout(() => enterRoomPlay(client, { force: true }), 0);
         }
@@ -2460,11 +2504,11 @@ function leaveRoomPlay(opts = {}) {
     setMpContributionLock(false);
     setMpActivePlayerBadges(false);
     const abandon = $("#btn-abandon");
-    if (abandon) abandon.textContent = "Abandon";
+    if (abandon) abandon.textContent = t("common.abandon", null, "Abandon");
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
-      endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      endBtn.textContent = t("common.endTurn", null, "End turn");
+      endBtn.title = t("workshop.endTurnTitle", null, "Refill AP and advance calendar +1 year (crisis meters unchanged)");
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -2496,16 +2540,16 @@ function leaveHotseat() {
     setMpContributionLock(false);
     setMpActivePlayerBadges(false);
     const abandon = $("#btn-abandon");
-    if (abandon) abandon.textContent = "Abandon";
+    if (abandon) abandon.textContent = t("common.abandon", null, "Abandon");
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
-      endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      endBtn.textContent = t("common.endTurn", null, "End turn");
+      endBtn.title = t("workshop.endTurnTitle", null, "Refill AP and advance calendar +1 year (crisis meters unchanged)");
     }
     const chEnd = $("#btn-challenge-end-turn");
     if (chEnd) {
-      chEnd.textContent = "End turn";
-      chEnd.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
+      chEnd.textContent = t("common.endTurn", null, "End turn");
+      chEnd.title = t("workshop.endTurnTitle", null, "Refill AP and advance calendar +1 year (crisis meters unchanged)");
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -2523,7 +2567,7 @@ function maybeBudgetGameOver(meta = {}) {
   if (state.screen === "outcome") return false;
   if (!state.mission) return false;
   if ((state.budget ?? 0) > 0) return false;
-  flashToast("Budget hit 0$ — game over. Capital ran out before the idea could field.");
+  flashToast(t("toast.budgetGameOver", null, "Budget hit 0$ — game over. Capital ran out before the idea could field."));
   finishOutcome("collapse", {
     bankrupt: true,
     reason: "budget",
@@ -2535,19 +2579,24 @@ function maybeBudgetGameOver(meta = {}) {
 function loadPersistedProgress() {
   // Drop older scenario caches when pack/prompt logic changes
   try {
-    localStorage.removeItem("future-forge:scenarioCache");
-    localStorage.removeItem("future-forge:scenarioCache:v2");
-    localStorage.removeItem("future-forge:scenarioCache:v3");
-    localStorage.removeItem("future-forge:scenarioCache:v4");
-    localStorage.removeItem("future-forge:scenarioCache:v5");
-    localStorage.removeItem("future-forge:scenarioCache:v6");
-    localStorage.removeItem("future-forge:scenarioCache:v7");
-    localStorage.removeItem("future-forge:scenarioCache:v8");
+    for (const k of [
+      "future-forge:scenarioCache",
+      "future-forge:scenarioCache:v2",
+      "future-forge:scenarioCache:v3",
+      "future-forge:scenarioCache:v4",
+      "future-forge:scenarioCache:v5",
+      "future-forge:scenarioCache:v6",
+      "future-forge:scenarioCache:v7",
+      "future-forge:scenarioCache:v8",
+      "future-forge:scenarioCache:v9",
+    ]) {
+      localStorage.removeItem(k);
+    }
   } catch {
     /* ignore */
   }
   try {
-    const raw = localStorage.getItem(STORAGE_SCENARIOS);
+    const raw = localStorage.getItem(storageScenariosKey());
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
@@ -2580,6 +2629,7 @@ function persistScenarioCache() {
       if (!Array.isArray(list) || !list.length) continue;
       slim[gid] = list.slice(0, SCENARIO_COUNT).map((m) => ({
         id: m.id,
+        seedId: m.seedId || undefined,
         globalId: m.globalId,
         title: m.title,
         place: m.place,
@@ -2598,7 +2648,7 @@ function persistScenarioCache() {
         spotlight: m.spotlight || null,
       }));
     }
-    localStorage.setItem(STORAGE_SCENARIOS, JSON.stringify(slim));
+    localStorage.setItem(storageScenariosKey(), JSON.stringify(slim));
   } catch {
     /* quota / private mode */
   }
@@ -2634,20 +2684,40 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 function selectedTechs() {
-  return state.selectedTechIds.map(techById).filter(Boolean);
+  return state.selectedTechIds.map((id) => locTechById(id)).filter(Boolean);
+}
+
+/** Challenge angle with localized player-facing strings. */
+function resolveAngle(idOrObj) {
+  let raw = idOrObj;
+  if (typeof idOrObj === "string" || !idOrObj) {
+    const id = typeof idOrObj === "string" ? idOrObj : state.challengeAngle;
+    raw = CHALLENGE_ANGLES.find((a) => a.id === id) || CHALLENGE_ANGLES[0];
+  } else if (idOrObj.id) {
+    raw = CHALLENGE_ANGLES.find((a) => a.id === idOrObj.id) || idOrObj;
+  }
+  return locChallengeAngle(raw) || raw;
+}
+
+/** Tech display helper (localized). */
+function displayTech(idOrTech) {
+  if (!idOrTech) return null;
+  if (typeof idOrTech === "string") return locTechById(idOrTech);
+  return locTech(idOrTech);
 }
 
 function currentStage() {
   if (deployStagesEnabled() && state.deployUnlocked) {
     const id = visionStageIdForDeployStage(state.deployStage || "none");
-    return VISION_STAGES.find((s) => s.id === id) || VISION_STAGES[0];
+    const raw = VISION_STAGES.find((s) => s.id === id) || VISION_STAGES[0];
+    return locVisionStage(raw);
   }
   const n = state.selectedTechIds.length;
   let stage = VISION_STAGES[0];
   for (const s of VISION_STAGES) {
     if (n >= s.minTechs) stage = s;
   }
-  return stage;
+  return locVisionStage(stage);
 }
 
 function clonePressure(p) {
@@ -2714,18 +2784,39 @@ function readinessIssues(techs, year) {
 }
 
 function newsForYear(year) {
-  const opts = YEAR_NEWS.filter((n) => year >= n.minYear);
+  const opts = YEAR_NEWS.map((n, i) => ({ n, i })).filter(({ n }) => year >= n.minYear);
   if (!opts.length) return "";
-  return opts[Math.floor(Math.random() * opts.length)].text;
+  const pick = opts[Math.floor(Math.random() * opts.length)];
+  return locYearNews(pick.n, pick.i).text;
 }
 
 function tips() {
   return [
-    "Mixing domains often helps — but only when the problem needs it, not as a rule.",
-    "Any emTech category is pickable. Feasibility judges whether your how-it-works over-claims this year.",
-    "Wait advances world conditions and raises crisis — not a card unlock.",
-    "Local inventing: name who benefits on *this* street, clinic, or quay.",
-    "Art of the possible on the co-inventor: milestones, capabilities, unlocked use cases.",
+    t(
+      "workshopUi.tipMix",
+      null,
+      "Mixing domains often helps — but only when the problem needs it, not as a rule."
+    ),
+    t(
+      "workshopUi.tipAnyCat",
+      null,
+      "Any emTech category is pickable. Feasibility judges whether your how-it-works over-claims this year."
+    ),
+    t(
+      "workshopUi.tipWait",
+      null,
+      "Wait advances world conditions and raises crisis — not a card unlock."
+    ),
+    t(
+      "workshopUi.tipLocal",
+      null,
+      "Local inventing: name who benefits on *this* street, clinic, or quay."
+    ),
+    t(
+      "workshopUi.tipArt",
+      null,
+      "Art of the possible on the co-inventor: milestones, capabilities, unlocked use cases."
+    ),
   ];
 }
 
@@ -2817,14 +2908,23 @@ function renderTitleCtas() {
   if (choose) {
     choose.hidden = false;
     choose.removeAttribute("hidden");
-    choose.textContent = done ? "Play a Quest →" : "Play a Quest";
-    choose.title = "Themes, sponsored, learning modules, or side-loaded Quests";
+    choose.textContent = done
+      ? t("title.chooseThemeDone", null, "Play a Quest →")
+      : t("title.chooseTheme", null, "Play a Quest");
+    choose.title = t(
+      "title.chooseThemeTitle",
+      null,
+      "Themes, sponsored, learning modules, or side-loaded Quests"
+    );
     choose.classList.toggle("btn-primary", done);
     choose.classList.toggle("btn-secondary", !done);
   }
   if (start) {
-    start.textContent = "Play tutorial →";
-    start.setAttribute("title", "Quiet guided run: Portside Ward floods");
+    start.textContent = t("title.playTutorial", null, "Play tutorial →");
+    start.setAttribute(
+      "title",
+      t("title.playTutorialTitle", null, "Quiet guided run: Portside Ward floods")
+    );
     start.hidden = done;
     if (done) start.setAttribute("hidden", "");
     else start.removeAttribute("hidden");
@@ -2835,7 +2935,96 @@ function renderTitleCtas() {
     resetBtn.hidden = !done;
     if (done) resetBtn.removeAttribute("hidden");
     else resetBtn.setAttribute("hidden", "");
-    resetBtn.textContent = "Reset tutorial";
+    resetBtn.textContent = t("title.resetTutorial", null, "Reset tutorial");
+  }
+}
+
+/** Sync EN/HU toggle pressed state with getLocale(). */
+function syncTitleLangSwitch() {
+  const loc = getLocale();
+  $$("#title-lang-switch .title-lang-btn, .title-lang-btn[data-locale]").forEach((btn) => {
+    const on = btn.getAttribute("data-locale") === loc;
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+
+/**
+ * Re-apply static i18n + dynamic chrome after locale change.
+ */
+function refreshLocaleUi() {
+  applyDomI18n(document);
+  syncTitleLangSwitch();
+  renderTitleCtas();
+  // Locale-scoped scenario cache: reload slim JSON for the new language
+  try {
+    state.scenarioCache = {};
+    const raw = localStorage.getItem(storageScenariosKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        for (const [gid, list] of Object.entries(parsed)) {
+          if (!Array.isArray(list)) continue;
+          state.scenarioCache[gid] = list
+            .slice(0, SCENARIO_COUNT)
+            .map((m) => normalizeMission(m, gid));
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    renderTitleMeta();
+  } catch {
+    /* init order */
+  }
+  try {
+    if (state.screen === "global") renderGlobals();
+    // Rebuild missions from seed packs (no AI) so HU overlays apply
+    if (state.screen === "mission" && state.global) {
+      delete state.scenarioCache[state.global.id];
+      void renderMissions({ force: false });
+    }
+    if (state.mission) {
+      const prevPressure = state.pressure || {};
+      const prevKeys = Object.keys(prevPressure);
+      state.mission = locScenario(state.mission) || state.mission;
+      // Keep meter values, remapped to localized pressure key labels
+      if (state.mission.pressure && prevKeys.length) {
+        const nextKeys = Object.keys(state.mission.pressure);
+        const remapped = {};
+        nextKeys.forEach((nk, i) => {
+          const ok = prevKeys[i];
+          remapped[nk] =
+            ok != null && prevPressure[ok] != null
+              ? prevPressure[ok]
+              : state.mission.pressure[nk];
+        });
+        state.pressure = remapped;
+      } else if (state.mission.pressure && !prevKeys.length) {
+        state.pressure = clonePressure(state.mission.pressure);
+      }
+    }
+    if (
+      state.screen === "workshop" ||
+      state.screen === "challenge-step" ||
+      state.screen === "deploy"
+    ) {
+      renderFilters?.();
+      renderTechList?.();
+      renderSelectedChips?.();
+      renderStoryFaceUI?.();
+      renderHud?.();
+      renderWorkshop?.();
+    }
+  } catch {
+    /* screens not ready */
+  }
+  // Co-inventor chrome (title, chips, status)
+  try {
+    state.coInventor?.remountChrome?.();
+  } catch {
+    /* optional */
   }
 }
 
@@ -2857,7 +3046,7 @@ async function refreshHostedQuests(opts = {}) {
     const res = await fetch("/api/quests");
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
-      if (!opts.silent) flashToast("Could not load Quests catalog.");
+      if (!opts.silent) flashToast(t("toast.questsLoadFail", null, "Could not load server Quests folder."));
       state.hostedQuests = [];
       state.localHostedQuests = [];
       state.remoteQuests = [];
@@ -2883,7 +3072,7 @@ async function refreshHostedQuests(opts = {}) {
     }
     return state.hostedQuests;
   } catch {
-    if (!opts.silent) flashToast("Could not reach /api/quests.");
+    if (!opts.silent) flashToast(t("toast.questsApiFail", null, "Could not reach /api/quests."));
     state.hostedQuests = [];
     state.localHostedQuests = [];
     state.remoteQuests = [];
@@ -3107,7 +3296,7 @@ function requestResetTutorialProgress() {
   state.tutorialRun = false;
   state.playMode = null;
   renderTitleMeta();
-  flashToast("Tutorial reset — Play tutorial when ready.");
+  flashToast(t("toast.tutorialReset", null, "Tutorial reset — Play tutorial when ready."));
 }
 
 /**
@@ -3121,10 +3310,11 @@ function startSparkPortsideMission() {
   state.mpOutcome = null;
   state.tutorialRun = true;
   state.playMode = "spark";
-  const raw = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
+  const raw0 = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
+  const raw = locMission(raw0) || raw0;
   const globalId = raw.globalId || "climate";
   const mission = normalizeMission({ ...raw, source: "curated" }, globalId);
-  state.global = globalById(globalId) || state.global;
+  state.global = locGlobal(globalById(globalId)) || state.global;
   startMission(mission);
 }
 
@@ -3701,16 +3891,24 @@ function renderQuestCatalog() {
 
 /** One theme card HTML for theme shelves. */
 function themeCardHtml(g) {
-  const tag = g.kind === "before" ? "Before it hits" : "Now";
+  const lg = locGlobal(g) || g;
+  const tag =
+    g.kind === "before"
+      ? t("global.kindBefore", null, "Before it hits")
+      : t("global.kindNow", null, "Now");
   const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
   const cachedList = state.scenarioCache[g.id] || [];
   const cached = cachedList.length;
   const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
   const hint = cached
     ? solvedOnTheme
-      ? `${cached} cached · ${solvedOnTheme} solved →`
-      : `${cached} cached Challenges →`
-    : "Generate Quests →";
+      ? t(
+          "global.cachedSolved",
+          { cached, solved: solvedOnTheme },
+          `${cached} cached · ${solvedOnTheme} solved →`
+        )
+      : t("global.cachedQuests", { cached }, `${cached} cached Challenges →`)
+    : t("global.generateQuests", null, "Generate Quests →");
   const img = problemVisualUrl(g.id);
   return `
       <button type="button" class="challenge-card challenge-card-visual" data-id="${g.id}">
@@ -3719,8 +3917,8 @@ function themeCardHtml(g) {
         </span>
         <span class="card-body">
           <span class="num"><span class="flag ${cls}">${tag}</span></span>
-          <h3>${escapeHtml(g.title)}</h3>
-          <p>${escapeHtml(g.blurb)}</p>
+          <h3>${escapeHtml(lg.title)}</h3>
+          <p>${escapeHtml(lg.blurb)}</p>
           <span class="cta">${hint}</span>
         </span>
       </button>`;
@@ -3739,9 +3937,9 @@ function renderGlobals() {
 
   const shelfSections = THEME_SHELVES.map((shelf) => {
     const themes = GLOBALS.filter((g) => g.shelf === shelf.id).sort((a, b) =>
-      a.title.localeCompare(b.title)
+      (locGlobal(a)?.title || a.title).localeCompare(locGlobal(b)?.title || b.title)
     );
-    return { shelf, themes };
+    return { shelf: locShelf(shelf), themes };
   }).filter((s) => s.themes.length);
 
   // Orphans (missing shelf) still appear so nothing is lost
@@ -3753,8 +3951,16 @@ function renderGlobals() {
   if (startThemes.length) {
     html += `
       <section class="theme-shelf theme-shelf-start" aria-labelledby="theme-shelf-start">
-        <h2 id="theme-shelf-start" class="theme-shelf-title">Start here</h2>
-        <p class="theme-shelf-blurb muted">Six solid first themes — or browse shelves below.</p>
+        <h2 id="theme-shelf-start" class="theme-shelf-title">${escapeHtml(
+          t("global.startHere", null, "Start here")
+        )}</h2>
+        <p class="theme-shelf-blurb muted">${escapeHtml(
+          t(
+            "global.startHereBlurb",
+            null,
+            "Six solid first themes — or browse shelves below."
+          )
+        )}</p>
         <div class="challenge-grid">${startThemes.map(themeCardHtml).join("")}</div>
       </section>`;
   }
@@ -3770,7 +3976,9 @@ function renderGlobals() {
   if (orphans.length) {
     html += `
       <section class="theme-shelf" aria-labelledby="theme-shelf-more">
-        <h2 id="theme-shelf-more" class="theme-shelf-title">More themes</h2>
+        <h2 id="theme-shelf-more" class="theme-shelf-title">${escapeHtml(
+          t("global.moreThemes", null, "More themes")
+        )}</h2>
         <div class="challenge-grid">${orphans.map(themeCardHtml).join("")}</div>
       </section>`;
   }
@@ -3808,7 +4016,10 @@ function setMissionStatus(text, { loading = false } = {}) {
 function renderProblemBrief(global, { drafting = false } = {}) {
   const root = $("#problem-brief");
   if (!root) return;
-  const brief = global ? briefForGlobal(global) : null;
+  const rawBrief = global ? briefForGlobal(global) : null;
+  const brief = rawBrief
+    ? locProblemBrief(rawBrief, global.id || global) || rawBrief
+    : null;
   if (!brief) {
     root.hidden = true;
     refreshReadAloud(root);
@@ -3821,11 +4032,23 @@ function renderProblemBrief(global, { drafting = false } = {}) {
   const stateEl = $("#problem-brief-state");
   const causesEl = $("#problem-brief-causes");
   const warnEl = $("#problem-brief-warnings");
-  if (title) title.textContent = global.title || "About this problem";
+  const lg = locGlobal(global) || global;
+  if (title) {
+    title.textContent =
+      lg.title || t("mission.aboutProblem", null, "About this problem");
+  }
   if (sub) {
     sub.textContent = drafting
-      ? "Read this while Quests draft — then pick one to invent for."
-      : "Context for this theme. Pick a Quest below to invent.";
+      ? t(
+          "mission.briefSubDrafting",
+          null,
+          "Read this while Quests draft — then pick one to invent for."
+        )
+      : t(
+          "mission.briefSubReady",
+          null,
+          "Context for this theme. Pick a Quest below to invent."
+        );
   }
   if (stateEl) stateEl.textContent = brief.currentState;
   if (causesEl) causesEl.textContent = brief.rootCauses;
@@ -3861,7 +4084,9 @@ function paintMissionCards(list, { disabled = false } = {}) {
   if (!grid) return;
   grid.classList.toggle("mission-grid-loading", disabled);
   if (!list.length) {
-    grid.innerHTML = `<p class="empty-hint">No Challenges yet — try Generate new Challenges.</p>`;
+    grid.innerHTML = `<p class="empty-hint">${escapeHtml(
+      t("missionUi.empty", null, "No Challenges yet — try Generate new Challenges.")
+    )}</p>`;
     return;
   }
   grid.innerHTML = list
@@ -3873,36 +4098,68 @@ function paintMissionCards(list, { disabled = false } = {}) {
             ? "generated"
             : m.source || "generated";
       const tagLabel =
-        m.source === "curated"
-          ? "Curated"
-          : m.source === "generated"
-            ? "Challenge"
-            : "Quest";
+        m.source === "hosted"
+          ? t("missionUi.tagExternal", null, "External")
+          : m.source === "imported"
+            ? t("missionUi.tagImported", null, "Imported")
+            : m.source === "curated"
+              ? t("missionUi.tagCurated", null, "Curated")
+              : t("missionUi.tagGenerated", null, "Challenge");
+      const spotTechId =
+        m.spotlight?.techId || (m.suggested?.length === 1 ? m.suggested[0] : null);
+      const tech = spotTechId ? displayTech(spotTechId) : null;
       const solved = isMissionSolved(m.id);
       const scene = m.briefMd
         ? excerptFromBrief(m.briefMd, 180)
         : (m.scene || "").slice(0, 180);
       const ellipsis = !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
+      const pinLabel = pinned
+        ? t("missionUi.pinned", null, "Pinned")
+        : t("missionUi.pin", null, "Pin");
+      const pinTitle = pinned
+        ? t("missionUi.unpinTitle", null, "Unpin")
+        : t("missionUi.pinTitle", { max: MAX_PINS }, `Pin (max ${MAX_PINS})`);
+      const cta = disabled
+        ? t("missionUi.ctaPreparing", null, "Preparing…")
+        : solved
+          ? t("missionUi.ctaAgain", null, "Play again →")
+          : t("missionUi.ctaInvent", null, "Invent here →");
       return `
     <div class="mission-card-wrap">
       <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
         solved ? "solved" : ""
       }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
         <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
-          <span class="scenario-tag ${tag}">${tagLabel}</span>
-          ${questMetaBadgesHtml(m)}
-          ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
+          <span class="scenario-tag ${tag}">${escapeHtml(tagLabel)}</span>
+          ${
+            tech && isExternal
+              ? `<span class="scenario-tag spotlight-tag">${escapeHtml(
+                  t("missionUi.spotlight", { name: tech.name }, `Spotlight · ${tech.name}`)
+                )}</span>`
+              : ""
+          }
+          ${
+            solved
+              ? `<span class="scenario-tag solved-tag" title="${escapeHtml(
+                  t("missionUi.solvedTitle", null, "You already deployed a solution here")
+                )}">${escapeHtml(t("missionUi.tagSolved", null, "Solved"))}</span>`
+              : ""
+          }
         </span>
         <h3>${escapeHtml(m.title)}</h3>
         <p>${escapeHtml(scene)}${ellipsis}</p>
         ${
           m.stakeholder
-            ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
+            ? `<p class="stakeholder-line">${escapeHtml(
+                t(
+                  "missionUi.stakeholder",
+                  { name: m.stakeholder },
+                  `Stakeholder: ${m.stakeholder}`
+                )
+              )}</p>`
             : ""
         }
-        <span class="cta">${
-          disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
-        }</span>
+        <span class="cta">${escapeHtml(cta)}</span>
       </button>
     </div>`;
     })
@@ -3948,27 +4205,31 @@ async function ensureScenarios(global, { force = false } = {}) {
         mode: "generate-scenarios",
         clientSessionId: getClientSessionId(),
         messages: [{ role: "user", content: "[Generate Quests]" }],
-        context: {
+        context: withAiLocale({
           globalTheme: {
             id: global.id,
-            title: global.title,
-            blurb: global.blurb,
+            title: locGlobal(global)?.title || global.title,
+            blurb: locGlobal(global)?.blurb || global.blurb,
             kind: global.kind,
           },
           scenarioCount: SCENARIO_COUNT,
-          seedMissions: localScenariosForGlobal(global, { count: SCENARIO_COUNT }).map((m) => ({
-            id: m.id,
-            title: m.title,
-            place: m.place,
-            scene: m.scene,
-            stakeholder: m.stakeholder,
-            suggested: m.suggested,
-            visionTheme: m.visionTheme,
-            pressure: m.pressure,
-            collapseYear: m.collapseYear,
-          })),
+          seedMissions: localScenariosForGlobal(global, { count: SCENARIO_COUNT }).map((m) => {
+            const lm = locScenario(m) || m;
+            return {
+              id: m.id,
+              seedId: m.seedId,
+              title: lm.title,
+              place: lm.place,
+              scene: lm.scene,
+              stakeholder: lm.stakeholder,
+              suggested: m.suggested,
+              visionTheme: m.visionTheme,
+              pressure: lm.pressure,
+              collapseYear: m.collapseYear,
+            };
+          }),
           forceRegen: force,
-          availableTechs: TECHS.map((t) => techForAi(t, GAME.startYear)),
+          availableTechs: TECHS.map((t) => techForAi(locTech(t), GAME.startYear)),
           year: GAME.startYear,
           depthCharacter: global.depthCharacter || undefined,
           guidance:
@@ -3976,10 +4237,10 @@ async function ensureScenarios(global, { force = false } = {}) {
             "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
             SCENE_PROSE +
-            " Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
+            " Crisis meter names (pressure keys) are shown on the HUD: in the player's output language, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
             "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
             "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk.",
-        },
+        }),
       }),
     });
     const data = await res.json();
@@ -4091,8 +4352,10 @@ function normalizeMission(raw, globalId) {
       ? raw.sponsorBanner.trim().slice(0, 200)
       : null;
 
-  return {
+  const seedId = String(raw.seedId || "").trim() || "";
+  const base = {
     id,
+    seedId: seedId || undefined,
     globalId,
     title: String(raw.title || "Local Challenge").slice(0, 100),
     place: String(raw.place || "Local place").slice(0, 80),
@@ -4125,6 +4388,8 @@ function normalizeMission(raw, globalId) {
     ...(sponsorName ? { sponsorName } : {}),
     ...(sponsorBanner ? { sponsorBanner } : {}),
   };
+  // Locale overlays (scenario-seeds / missions packs) — by seedId or baked mission id
+  return locScenario(base) || base;
 }
 
 /** HTML chip for non-default starting resources on selection cards. */
@@ -4187,10 +4452,17 @@ function questMetaBadgesHtml(mission) {
 
 async function renderMissions({ force = false } = {}) {
   const g = state.global;
-  $("#mission-global-title").textContent = g ? g.title : "Local Challenges";
-  $("#mission-global-blurb").textContent = g
-    ? `${g.blurb} — several concrete places living a piece of this. Pick one to invent for.`
-    : "Pick a concrete place.";
+  const lg = g ? locGlobal(g) : null;
+  $("#mission-global-title").textContent = lg
+    ? lg.title
+    : t("mission.questsHeading", null, "Local Challenges");
+  $("#mission-global-blurb").textContent = lg
+    ? t(
+        "mission.themeBlurb",
+        { blurb: lg.blurb },
+        `${lg.blurb} — several concrete places living a piece of this. Pick one to invent for.`
+      )
+    : t("mission.pickPlace", null, "Pick a concrete place.");
   const regenBtn = $("#btn-regen-scenarios");
   if (regenBtn) regenBtn.hidden = !g;
 
@@ -4218,12 +4490,32 @@ async function renderMissions({ force = false } = {}) {
     const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
     setMissionStatus(
       solvedN
-        ? `${list.length} Quests (${solvedN} solved — still playable). Generate new to replace the set.`
-        : `${list.length} Quests. Pick one, or generate a new set.`
+        ? t(
+            "missionUi.statusReadySolved",
+            {
+              n: list.length,
+              extra: hostedN
+                ? t("missionUi.statusHosted", { n: hostedN }, `${hostedN} external`) +
+                  " · "
+                : "",
+              solved: solvedN,
+            },
+            `${list.length} Quests (${hostedN ? `${hostedN} external · ` : ""}${solvedN} solved — still playable). Generate new to replace the set.`
+          )
+        : t(
+            "missionUi.statusReady",
+            {
+              n: list.length,
+              extra: hostedN
+                ? ` (${t("missionUi.statusHosted", { n: hostedN }, `${hostedN} external from server folder`)})`
+                : "",
+            },
+            `${list.length} Quests${hostedN ? ` (${hostedN} external from server folder)` : ""}. Pick one, or generate a new set.`
+          )
     );
     if (regenBtn) {
       regenBtn.disabled = false;
-      regenBtn.textContent = "Generate new Quests";
+      regenBtn.textContent = t("mission.generateNew", null, "Generate new Quests");
     }
     return;
   }
@@ -4234,7 +4526,9 @@ async function renderMissions({ force = false } = {}) {
   state.scenariosLoading = true;
   paintMissionSkeletons(SCENARIO_COUNT);
   setMissionStatus(
-    force ? "Generating a fresh set of Quests…" : "Drafting Quests…",
+    force
+      ? t("missionUi.statusFresh", null, "Generating a fresh set of Quests…")
+      : t("missionUi.statusDrafting", null, "Drafting Quests…"),
     { loading: true }
   );
   if (regenBtn) regenBtn.disabled = true;
@@ -4260,7 +4554,7 @@ async function renderMissions({ force = false } = {}) {
       state.scenariosLoading = false;
       if (regenBtn) {
         regenBtn.disabled = false;
-        regenBtn.textContent = "Generate new Quests";
+        regenBtn.textContent = t("mission.generateNew", null, "Generate new Quests");
       }
     }
   }
@@ -4295,7 +4589,7 @@ function clearMissionPickSession() {
 
 function startMission(mission) {
   if (state.scenariosLoading) {
-    flashToast("Challenges still drafting — wait a moment.");
+    flashToast(t("toast.stillDrafting", null, "Challenges still drafting — wait a moment."));
     return;
   }
   if (!mission) return;
@@ -4425,9 +4719,10 @@ function startMission(mission) {
     }
     syncCoInventorTutorUi();
     const tutor = isLearningTutorSessionActive();
-    const place = state.mission?.place || mission.place;
-    const year = state.mission?.startYear || mission.startYear;
-    const scene = state.mission?.scene || mission.scene;
+    const mLoc = locScenario(state.mission || mission) || state.mission || mission;
+    const place = mLoc.place || state.mission?.place || mission.place;
+    const year = mLoc.startYear || state.mission?.startYear || mission.startYear;
+    const scene = mLoc.scene || state.mission?.scene || mission.scene;
     const ypt = state.mission?.yearsPerTurn || mission.yearsPerTurn || GAME.yearsPerTurn;
     const welcome = tutor
       ? `**${place}**, ${year}. ${scene}\n\n` +
@@ -4472,8 +4767,12 @@ function renderWorkshop() {
   const g = state.global || globalById(m.globalId);
   $("#ws-global-label").textContent = g
     ? hotseatBridge.isHotseat()
-      ? `Hotseat · ${g.title}`
-      : `Global · ${g.title}`
+      ? `Hotseat · ${locGlobal(g)?.title || g.title}`
+      : t(
+          "workshop.globalThemeLine",
+          { title: locGlobal(g)?.title || g.title },
+          `Global · ${locGlobal(g)?.title || g.title}`
+        )
     : "Mission";
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
@@ -4835,9 +5134,13 @@ function renderStoryFaceUI() {
   }
   applyStoryFieldLocks();
   if (labelHow) {
-    labelHow.textContent = sparkSingle ? "What does it do here?" : "How does it work?";
+    labelHow.textContent = sparkSingle
+      ? t("workshop.sparkLabel", null, "What does it do here?")
+      : t("workshop.howLabel", null, "How does it work?");
   }
-  if (labelLife) labelLife.textContent = "Everyday life if it works";
+  if (labelLife) {
+    labelLife.textContent = t("workshop.lifeLabel", null, "Everyday life if it works");
+  }
 
   const setRole = (field, role) => {
     if (!field) return;
@@ -4874,19 +5177,30 @@ function renderStoryFaceUI() {
     if (noteHow) {
       noteHow.hidden = false;
       noteHow.removeAttribute("hidden");
-      noteHow.textContent = "Focus: write the mechanism. Fill other side drafts everyday life.";
+      noteHow.textContent = t(
+        "workshop.noteHow",
+        null,
+        "Focus: write the mechanism. Fill other side drafts everyday life."
+      );
     }
     if (noteLife) {
       noteLife.hidden = !state.inventionImpact.trim();
       if (noteLife.hidden) noteLife.setAttribute("hidden", "");
       else noteLife.removeAttribute("hidden");
       noteLife.textContent = state.inventionImpact.trim()
-        ? "Editable anytime — can be AI draft or your own words."
+        ? t(
+            "workshop.noteEditable",
+            null,
+            "Editable anytime — can be AI draft or your own words."
+          )
         : "";
     }
     if (hint) {
-      hint.innerHTML =
-        "Both boxes stay editable. <strong>Fill other side</strong> is on How it works and drafts Everyday life.";
+      hint.textContent = t(
+        "workshop.storyHint",
+        null,
+        "Both boxes stay editable. Fill other side sits on your focus and AI-drafts the other face."
+      );
     }
   } else {
     setRole(fieldHow, "other");
@@ -4894,19 +5208,30 @@ function renderStoryFaceUI() {
     if (noteLife) {
       noteLife.hidden = false;
       noteLife.removeAttribute("hidden");
-      noteLife.textContent = "Focus: write everyday life. Fill other side drafts how it works.";
+      noteLife.textContent = t(
+        "workshop.noteLife",
+        null,
+        "Focus: write everyday life. Fill other side drafts how it works."
+      );
     }
     if (noteHow) {
       noteHow.hidden = !state.inventionHow.trim();
       if (noteHow.hidden) noteHow.setAttribute("hidden", "");
       else noteHow.removeAttribute("hidden");
       noteHow.textContent = state.inventionHow.trim()
-        ? "Editable anytime — can be AI draft or your own words."
+        ? t(
+            "workshop.noteEditable",
+            null,
+            "Editable anytime — can be AI draft or your own words."
+          )
         : "";
     }
     if (hint) {
-      hint.innerHTML =
-        "Both boxes stay editable. <strong>Fill other side</strong> is on Everyday life and drafts How it works.";
+      hint.textContent = t(
+        "workshop.storyHintLife",
+        null,
+        "Both boxes stay editable. Fill other side is on Everyday life and drafts How it works."
+      );
     }
   }
 }
@@ -4980,15 +5305,20 @@ function assessFeasibility() {
 
   // Timing — how-it-works vs year (AI override when fresh)
   let timingLevel = "red";
-  let timingNote = "Add technologies, then write how it works — timing judges claims, not category cards.";
+  let timingNote = t(
+    "feasUi.timingNeedTech",
+    null,
+    "Add technologies, then write how it works — timing judges claims, not category cards."
+  );
   if (techs.length) {
     const key = timingCacheKey();
     if (state.aiTiming?.forKey === key && state.aiTiming.level) {
       timingLevel = state.aiTiming.level;
-      timingNote = state.aiTiming.reason || "AI timing assess.";
+      timingNote =
+        state.aiTiming.reason || t("feasUi.timingAi", null, "AI timing assess.");
     } else {
       const how = state.inventionHow.trim() || state.inventionImpact.trim();
-      const stretch = detectClaimStretch(how, techs, year);
+      const stretch = detectClaimStretch(how, techs, year, getLocale());
       const fCtx = foresightCapabilityContext(year, techs, {
         globalId: state.global?.id || state.mission?.globalId,
         seed: state.mission?.id,
@@ -5006,15 +5336,28 @@ function assessFeasibility() {
       const yearsWaited = year - (state.mission?.startYear || GAME.startYear);
       if (yearsWaited >= 6 && maxPressure() >= 3) {
         timingLevel = "yellow";
-        timingNote = `Claims look near-term, but you've waited until ${year} with rising crisis. Timing is tight.`;
+        timingNote = t(
+          "feasUi.timingWaited",
+          { year },
+          `Claims look near-term, but you've waited until ${year} with rising crisis. Timing is tight.`
+        );
       }
     }
   }
-  dims.push({ id: "timing", name: "Timing", level: timingLevel, note: timingNote });
+  dims.push({
+    id: "timing",
+    name: t("feasUi.dimTiming", null, "Timing"),
+    level: timingLevel,
+    note: timingNote,
+  });
 
   // Story completeness — both faces required before Challenge (same gate as Deploy)
   let storyLevel = "red";
-  let storyNote = "Need a name plus both story faces (write them, or fill one and use Fill other side).";
+  let storyNote = t(
+    "feasUi.storyNeedAll",
+    null,
+    "Need a name plus both story faces (write them, or fill one and use Fill other side)."
+  );
   const named = state.inventionName.trim().length >= 2;
   const howOk = state.inventionHow.trim().length >= 20;
   const lifeOk = state.inventionImpact.trim().length >= 20;
@@ -5023,82 +5366,174 @@ function assessFeasibility() {
     storyLevel = len >= 120 ? "green" : "yellow";
     storyNote =
       storyLevel === "green"
-        ? "Story faces are filled with enough detail to challenge."
-        : "Both faces exist but are thin — a clearer mechanism will help under attack.";
+        ? t(
+            "feasUi.storyGreen",
+            null,
+            "Story faces are filled with enough detail to challenge."
+          )
+        : t(
+            "feasUi.storyThin",
+            null,
+            "Both faces exist but are thin — a clearer mechanism will help under attack."
+          );
   } else if (!howOk && !lifeOk) {
     storyLevel = "red";
     storyNote = named
-      ? "Still need how it works and everyday life."
-      : "Incomplete: name + how it works + everyday life.";
+      ? t("feasUi.storyNeedBoth", null, "Still need how it works and everyday life.")
+      : t(
+          "feasUi.storyIncomplete",
+          null,
+          "Incomplete: name + how it works + everyday life."
+        );
   } else if (!howOk) {
     storyLevel = "red";
-    storyNote = "Still need how it works (write it or Fill other side).";
+    storyNote = t(
+      "feasUi.storyNeedHow",
+      null,
+      "Still need how it works (write it or Fill other side)."
+    );
   } else if (!lifeOk) {
     storyLevel = "red";
-    storyNote = "Still need everyday life if it works (write it or Fill other side).";
+    storyNote = t(
+      "feasUi.storyNeedLife",
+      null,
+      "Still need everyday life if it works (write it or Fill other side)."
+    );
   } else if (!named) {
     storyLevel = "red";
-    storyNote = "Name the invention before facing the challenge.";
+    storyNote = t(
+      "feasUi.storyNeedName",
+      null,
+      "Name the invention before facing the challenge."
+    );
   }
-  dims.push({ id: "story", name: "Story", level: storyLevel, note: storyNote });
+  dims.push({
+    id: "story",
+    name: t("feasUi.dimStory", null, "Story"),
+    level: storyLevel,
+    note: storyNote,
+  });
 
   // Local fit — suggested techs for this mission
   let fitLevel = "yellow";
-  let fitNote = "No stack yet — mission suggestions appear with a gold edge.";
+  let fitNote = t(
+    "feasUi.fitNoStack",
+    null,
+    "No stack yet — mission suggestions appear with a gold edge."
+  );
   if (techs.length) {
     const suggested = new Set(state.mission?.suggested || []);
-    const hits = techs.filter((t) => suggested.has(t.id)).length;
+    const hits = techs.filter((tech) => suggested.has(tech.id)).length;
     if (hits === 0 && suggested.size) {
       fitLevel = "yellow";
-      fitNote =
-        "None of the mission's suggested techs are in your stack — can still work, but check local fit.";
+      fitNote = t(
+        "feasUi.fitNoneSuggested",
+        null,
+        "None of the mission's suggested techs are in your stack — can still work, but check local fit."
+      );
     } else if (hits >= 2 || (hits >= 1 && techs.length === 1)) {
       fitLevel = "green";
-      fitNote = `Local fit: ${hits} suggested tech${hits === 1 ? "" : "s"} for this place.`;
+      fitNote = t(
+        "feasUi.fitHits",
+        { n: hits },
+        `Local fit: ${hits} suggested tech${hits === 1 ? "" : "s"} for this place.`
+      );
     } else {
       fitLevel = "green";
-      fitNote = "Stack may fit — gold-edge techs are hints, not requirements.";
+      fitNote = t(
+        "feasUi.fitOk",
+        null,
+        "Stack may fit — gold-edge techs are hints, not requirements."
+      );
     }
   } else {
     fitLevel = "red";
   }
-  dims.push({ id: "fit", name: "Local fit", level: fitLevel, note: fitNote });
+  dims.push({
+    id: "fit",
+    name: t("feasUi.dimFit", null, "Local fit"),
+    level: fitLevel,
+    note: fitNote,
+  });
 
   // Resources (G2) — at most yellow, never hard-blocks challenge alone
   if (budgetWillEnabled()) {
     const b = state.budget ?? 0;
     const w = state.will ?? 0;
     let resLevel = "green";
-    let resNote = `Budget ${b} · political will ${w}.`;
+    let resNote = t(
+      "feasUi.resBudgetWill",
+      { b, w },
+      `Budget ${b} · political will ${w}.`
+    );
     if (b === 0 && w === 0) {
       resLevel = "yellow";
-      resNote = "Out of Budget and will — stack is fixed unless you Wait/End turn and lobby later.";
+      resNote = t(
+        "feasUi.resOut",
+        null,
+        "Out of Budget and will — stack is fixed unless you Wait/End turn and lobby later."
+      );
     } else if (b <= 1 || w <= 1) {
       resLevel = "yellow";
-      resNote = `Thin capital (Budget ${b}, will ${w}) — lobby or clear a challenge for more.`;
+      resNote = t(
+        "feasUi.resThin",
+        { b, w },
+        `Thin capital (Budget ${b}, will ${w}) — lobby or clear a challenge for more.`
+      );
     }
-    dims.push({ id: "resources", name: "Resources", level: resLevel, note: resNote });
+    dims.push({
+      id: "resources",
+      name: t("feasUi.dimResources", null, "Resources"),
+      level: resLevel,
+      note: resNote,
+    });
   }
 
   // Stack shape (soft — never a hard red unless empty)
   let stackLevel = "red";
-  let stackNote = "Add at least one technology.";
+  let stackNote = t(
+    "feasUi.stackNeedTech",
+    null,
+    "Add at least one technology."
+  );
   if (techs.length === 1) {
     stackLevel = "yellow";
-    stackNote = "Single-tech focus is fine if the mechanism is clear for this crisis.";
+    stackNote = t(
+      "feasUi.stackSingle",
+      null,
+      "Single-tech focus is fine if the mechanism is clear for this crisis."
+    );
   } else if (techs.length >= 2) {
     const domains = domainsInStack(techs);
     stackLevel = "green";
     stackNote =
       domains.length >= 2
-        ? `Cross-domain mix (${domains.map((d) => DOMAINS[d]?.label || d).join(" + ")}).`
-        : `${techs.length} techs in ${DOMAINS[domains[0]]?.label || "one"} domain.`;
+        ? t(
+            "feasUi.stackCross",
+            {
+              domains: domains.map((d) => domainLabel(d) || d).join(" + "),
+            },
+            `Cross-domain mix (${domains.map((d) => domainLabel(d) || d).join(" + ")}).`
+          )
+        : t(
+            "feasUi.stackDomain",
+            {
+              n: techs.length,
+              domain: domainLabel(domains[0]) || "one",
+            },
+            `${techs.length} techs in ${domainLabel(domains[0]) || "one"} domain.`
+          );
   }
-  dims.push({ id: "stack", name: "Stack", level: stackLevel, note: stackNote });
+  dims.push({
+    id: "stack",
+    name: t("feasUi.dimStack", null, "Stack"),
+    level: stackLevel,
+    note: stackNote,
+  });
 
   // Scale — readiness to expand a pilot city-wide / program-wide (also used for Scale roll)
   let scaleLevel = "red";
-  let scaleNote = "No stack to scale.";
+  let scaleNote = t("feasUi.scaleNoStack", null, "No stack to scale.");
   if (techs.length) {
     const b = budgetWillEnabled() ? state.budget ?? 0 : 5;
     const w = budgetWillEnabled() ? state.will ?? 0 : 3;
@@ -5111,8 +5546,16 @@ function assessFeasibility() {
       scaleLevel = "red";
       scaleNote =
         timingLevel === "red"
-          ? "Claims look too stretched to scale — pilot may still be honest; city-wide is not."
-          : "Need a clear how-it-works before scale is realistic.";
+          ? t(
+              "feasUi.scaleStretched",
+              null,
+              "Claims look too stretched to scale — pilot may still be honest; city-wide is not."
+            )
+          : t(
+              "feasUi.scaleNeedHow",
+              null,
+              "Need a clear how-it-works before scale is realistic."
+            );
     } else if (
       techs.length >= 2 &&
       opsReady &&
@@ -5121,20 +5564,45 @@ function assessFeasibility() {
       storyLevel === "green"
     ) {
       scaleLevel = "green";
-      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Will ${w}).`;
+      scaleNote = t(
+        "feasUi.scaleReady",
+        { b, w },
+        `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Will ${w}).`
+      );
     } else if (capitalThin || techs.length === 1 || !opsReady || timingLevel === "yellow") {
       scaleLevel = "yellow";
       scaleNote = capitalThin
-        ? `Scale is thin on capital (Budget ${b}, Will ${w}) — expansion may stall.`
+        ? t(
+            "feasUi.scaleThinCapital",
+            { b, w },
+            `Scale is thin on capital (Budget ${b}, Will ${w}) — expansion may stall.`
+          )
         : techs.length === 1
-          ? "Single-tech pilot can scale, but ops breadth is limited."
-          : "Scale is possible but shaky — strengthen story, capital, or timing claims.";
+          ? t(
+              "feasUi.scaleSingle",
+              null,
+              "Single-tech pilot can scale, but ops breadth is limited."
+            )
+          : t(
+              "feasUi.scaleShaky",
+              null,
+              "Scale is possible but shaky — strengthen story, capital, or timing claims."
+            );
     } else {
       scaleLevel = "yellow";
-      scaleNote = "Scale looks middling — improve stack, story, or Resources before expanding.";
+      scaleNote = t(
+        "feasUi.scaleMiddling",
+        null,
+        "Scale looks middling — improve stack, story, or Resources before expanding."
+      );
     }
   }
-  dims.push({ id: "scale", name: "Scale", level: scaleLevel, note: scaleNote });
+  dims.push({
+    id: "scale",
+    name: t("feasUi.dimScale", null, "Scale"),
+    level: scaleLevel,
+    note: scaleNote,
+  });
 
   // Sustainable — does the invent address why the problem keeps happening?
   // Used for Scale odds only; never blocks Challenge by itself.
@@ -5149,7 +5617,7 @@ function assessFeasibility() {
   const sustainableLevel = sustain.level;
   dims.push({
     id: "sustainable",
-    name: "Sustainable",
+    name: t("feasUi.dimSustainable", null, "Sustainable"),
     level: sustainableLevel,
     note: sustain.note,
   });
@@ -5175,9 +5643,21 @@ function assessFeasibility() {
   const canChallenge = pilotLevel !== "red" && !collapsed();
 
   const summaries = {
-    red: `Fix red Pilot items before the hard question. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`,
-    yellow: `Risky but playable. Pilot ~${pilotPct}% (local fit) · Scale ~${scalePct}% (Scale + Sustainable).`,
-    green: `Looks solid. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`,
+    red: t(
+      "feasUi.summaryRed",
+      { pilot: pilotPct, scale: scalePct },
+      `Fix red Pilot items before the hard question. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`
+    ),
+    yellow: t(
+      "feasUi.summaryYellow",
+      { pilot: pilotPct, scale: scalePct },
+      `Risky but playable. Pilot ~${pilotPct}% (local fit) · Scale ~${scalePct}% (Scale + Sustainable).`
+    ),
+    green: t(
+      "feasUi.summaryGreen",
+      { pilot: pilotPct, scale: scalePct },
+      `Looks solid. Pilot ~${pilotPct}% · Scale ~${scalePct}% (Scale + Sustainable).`
+    ),
   };
 
   return {
@@ -5203,6 +5683,15 @@ function bothStoryFacesReady() {
   return (
     state.inventionHow.trim().length >= 20 && state.inventionImpact.trim().length >= 20
   );
+}
+
+/** Localized PASS / PARTIAL / FAIL badge for challenge feedback. */
+function challengeVerdictLabel(verdict) {
+  const v = String(verdict || "").toLowerCase();
+  if (v === "pass") return t("challengeUi.verdictPass", null, "PASS");
+  if (v === "partial") return t("challengeUi.verdictPartial", null, "PARTIAL");
+  if (v === "fail") return t("challengeUi.verdictFail", null, "FAIL");
+  return String(verdict || "").toUpperCase();
 }
 
 function inventReadyForChallenge() {
@@ -5254,8 +5743,16 @@ function renderFeasibility() {
   if (foot) {
     foot.textContent =
       f.pilotLevel === "red"
-        ? "Fix red Pilot items (timing, story, local fit, stack) to face the hard question. Sustainable red does not block Challenge — it weakens Scale."
-        : `Pilot ~${f.pilotChancePct}% uses timing · story · local fit · stack. Scale ~${f.scaleChancePct}% uses Scale + Sustainable (does it fix why the crisis keeps happening?).`;
+        ? t(
+            "feasUi.footRed",
+            null,
+            "Fix red Pilot items (timing, story, local fit, stack) to face the hard question. Sustainable red does not block Challenge — it weakens Scale."
+          )
+        : t(
+            "feasUi.footOk",
+            { pilot: f.pilotChancePct, scale: f.scaleChancePct },
+            `Pilot ~${f.pilotChancePct}% uses timing · story · local fit · stack. Scale ~${f.scaleChancePct}% uses Scale + Sustainable (does it fix why the crisis keeps happening?).`
+          );
   }
 }
 
@@ -5320,7 +5817,9 @@ function paintResourceChips(prefix) {
   if (apEnabled()) {
     showHudChip(apEl, true);
     if (apEl) {
-      apEl.textContent = `AP ${state.ap ?? 0}/${state.apMax ?? GAME.apMax ?? 3}`;
+      const cur = state.ap ?? 0;
+      const max = state.apMax ?? GAME.apMax ?? 3;
+      apEl.textContent = t("workshop.apHud", { cur, max }, `AP ${cur}/${max}`);
     }
   } else {
     showHudChip(apEl, false);
@@ -5328,8 +5827,14 @@ function paintResourceChips(prefix) {
   if (budgetWillEnabled()) {
     showHudChip(budgetEl, true);
     showHudChip(willEl, true);
-    if (budgetEl) budgetEl.textContent = `Budget ${state.budget ?? 0}$`;
-    if (willEl) willEl.textContent = `Support ${state.will ?? 0}`;
+    if (budgetEl) {
+      const n = state.budget ?? 0;
+      budgetEl.textContent = t("workshop.budgetHud", { n }, `Budget ${n}$`);
+    }
+    if (willEl) {
+      const n = state.will ?? 0;
+      willEl.textContent = t("workshop.supportHud", { n }, `Support ${n}`);
+    }
   } else {
     showHudChip(budgetEl, false);
     showHudChip(willEl, false);
@@ -5345,10 +5850,28 @@ function renderHud() {
   const waitsBit = state.waits ? ` · waits ${state.waits}` : "";
   const mp = Boolean(mpBridge() || state.mp);
   // Year is already the big number beside this — don't repeat it (keeps HUD one line)
-  $("#hud-turn").textContent = mp
-    ? `Invent${waitsBit} · R${state.turn || 1} · fail ${state.mission.collapseYear}`
-    : `Turn ${state.turn}${waitsBit} · fail at ${state.mission.collapseYear}`;
+  const turnEl = $("#hud-turn");
+  if (turnEl) {
+    turnEl.textContent = mp
+      ? `Invent${waitsBit} · R${state.turn || 1} · fail ${state.mission.collapseYear}`
+      : t(
+          "workshop.turnFail",
+          {
+            n: state.turn,
+            waits: waitsBit,
+            year: state.mission.collapseYear,
+          },
+          `Turn ${state.turn}${waitsBit} · fail at ${state.mission.collapseYear}`
+        );
+  }
+  // Mirror turn onto challenge/deploy HUDs when present
+  for (const id of ["#ch-hud-turn", "#dep-hud-turn"]) {
+    const el = $(id);
+    if (el && turnEl) el.textContent = turnEl.textContent;
+  }
   paintResourceChips("");
+  paintResourceChips("ch-");
+  paintResourceChips("dep-");
   const apEl = $("#hud-ap");
   if (apEl && apEnabled()) {
     apEl.title = "Action points this invent turn. Wait burns leftover AP; End Turn refills.";
@@ -5429,7 +5952,8 @@ function renderFilters() {
   const keys = ["all", ...Object.keys(DOMAINS)];
   row.innerHTML = keys
     .map((d) => {
-      const label = d === "all" ? "All" : DOMAINS[d].label;
+      const label =
+        d === "all" ? t("workshop.filterAll", null, "All") : domainLabel(d);
       const active = state.domainFilter === d ? "active" : "";
       return `<button type="button" class="filter-chip ${active}" data-domain="${d}">${label}</button>`;
     })
@@ -5450,18 +5974,36 @@ function renderFilters() {
  */
 function domainFilterHint(domainId) {
   const lines = {
-    power:
-      "Power — energy runs the world of atoms; computing runs the world of bits.",
-    automator:
-      "Automator — robots act in atoms; AI judges and decides in bits.",
-    mover:
-      "Mover — transport moves stuff in atoms; networks move information in bits.",
-    portal:
-      "Portal — IoT senses atoms into bits; making/printing turns bits into atoms.",
-    lifeforce:
-      "LifeForce — read and rewrite living systems (genes, biology) across both worlds.",
-    link:
-      "Link — AR/VR overlays bits onto atoms so the two worlds share a view.",
+    power: t(
+      "workshopUi.domainPower",
+      null,
+      "Power — energy runs the world of atoms; computing runs the world of bits."
+    ),
+    automator: t(
+      "workshopUi.domainAutomator",
+      null,
+      "Automator — robots act in atoms; AI judges and decides in bits."
+    ),
+    mover: t(
+      "workshopUi.domainMover",
+      null,
+      "Mover — transport moves stuff in atoms; networks move information in bits."
+    ),
+    portal: t(
+      "workshopUi.domainPortal",
+      null,
+      "Portal — IoT senses atoms into bits; making/printing turns bits into atoms."
+    ),
+    lifeforce: t(
+      "workshopUi.domainLifeforce",
+      null,
+      "LifeForce — read and rewrite living systems (genes, biology) across both worlds."
+    ),
+    link: t(
+      "workshopUi.domainLink",
+      null,
+      "Link — AR/VR overlays bits onto atoms so the two worlds share a view."
+    ),
   };
   return lines[domainId] || "";
 }
@@ -5485,7 +6027,7 @@ function renderDomainFilterHint() {
 function renderTechList() {
   const suggested = new Set(state.mission?.suggested || []);
   const spotlightId = state.mission?.spotlight?.techId || null;
-  let list = techsForTray();
+  let list = techsForTray().map((t) => locTech(t));
   if (state.domainFilter !== "all") list = list.filter((t) => t.domain === state.domainFilter);
   list.sort((a, b) => {
     const as = a.id === spotlightId ? 0 : suggested.has(a.id) ? 1 : 2;
@@ -5496,18 +6038,18 @@ function renderTechList() {
 
   const el = $("#tech-list");
   el.innerHTML = list
-    .map((t) => {
-      const sel = state.selectedTechIds.includes(t.id);
-      const sug = suggested.has(t.id);
-      const isSpot = spotlightId && t.id === spotlightId;
-      const afford = sel ? { ok: true } : canAffordTech(t);
+    .map((tech) => {
+      const sel = state.selectedTechIds.includes(tech.id);
+      const sug = suggested.has(tech.id);
+      const isSpot = spotlightId && tech.id === spotlightId;
+      const afford = sel ? { ok: true } : canAffordTech(tech);
       const unaffordable = !sel && !afford.ok;
-      const color = DOMAINS[t.domain]?.color || "#94a3b8";
-      const nowCap = t.useCasesNow?.[0] || t.maturity?.now || t.summary;
-      const cost = budgetWillEnabled() ? techCost(t) : null;
-      const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
+      const color = DOMAINS[tech.domain]?.color || "#94a3b8";
+      const nowCap = tech.useCasesNow?.[0] || tech.maturity?.now || tech.summary;
+      const cost = budgetWillEnabled() ? techCost(tech) : null;
+      const baseCost = budgetWillEnabled() ? techCostRaw(tech) : null;
       const marketHit =
-        budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
+        budgetWillEnabled() && marketAffectsTech(currentMarketNews(), tech);
       const costTitle = cost
         ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Will` : ""}${
             apEnabled() ? ", 1 AP" : ""
@@ -5526,7 +6068,7 @@ function renderTechList() {
         const bits = [
           `<span class="tech-cost-chip tech-cost-budget${
             bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
-          }" title="Budget to add this to your stack">${cost.budget}$${
+          }" title="${escapeHtml(t("workshopUi.costBudget", null, "Budget to add this to your stack"))}">${cost.budget}$${
             bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
           }</span>`,
         ];
@@ -5534,35 +6076,40 @@ function renderTechList() {
           bits.push(
             `<span class="tech-cost-chip tech-cost-will${
               wDelta > 0 ? " tech-cost-up" : wDelta < 0 ? " tech-cost-down" : ""
-            }" title="Support needed to adopt this">Support ${cost.will}${
+            }" title="${escapeHtml(t("workshopUi.costSupport", null, "Support needed to adopt this"))}">Support ${cost.will}${
               wDelta ? ` (${wDelta > 0 ? "+" : ""}${wDelta})` : ""
             }</span>`
           );
         }
         if (apEnabled()) {
           bits.push(
-            `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
+            `<span class="tech-cost-chip tech-cost-ap" title="${escapeHtml(t("workshopUi.costAp", null, "Attention this turn"))}">1 AP</span>`
           );
         }
-        costHtml = `<span class="tech-cost-row" aria-label="Cost to add">${bits.join("")}</span>`;
+        costHtml = `<span class="tech-cost-row" aria-label="${escapeHtml(t("workshopUi.costToAdd", null, "Cost to add"))}">${bits.join("")}</span>`;
       } else if (sel) {
-        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
+        costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">${escapeHtml(t("workshopUi.inStack", null, "In stack"))}</span></span>`;
       } else if (apEnabled()) {
         costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
       }
       // Only techs already on the stack get green + ✓. Unaffordable never looks selected.
+      // Note: loop var must not be named `t` — that shadows i18n `t()`.
       return `
         <button type="button" class="tech-card ${sel ? "selected" : ""} ${
           sug ? "recommended" : ""
         } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}"
-          data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
-          <span class="tech-icon">${t.icon}</span>
+          data-id="${tech.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
+          <span class="tech-icon">${tech.icon}</span>
           <span class="tech-meta">
-            <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
-            <p>${escapeHtml(t.summary)}</p>
-            <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-              isSpot ? " · spotlight" : sug ? " · suggested" : ""
-            }${unaffordable ? " · can't afford" : ""}</span>
+            <h4>${escapeHtml(tech.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
+            <p>${escapeHtml(tech.summary)}</p>
+            <span class="tech-domain">${escapeHtml(domainLabel(tech.domain) || tech.domain)}${
+              isSpot
+                ? ` · ${t("workshop.spotlightTag", null, "spotlight")}`
+                : sug
+                  ? ` · ${t("workshop.suggestedTag", null, "suggested")}`
+                  : ""
+            }${unaffordable ? ` · ${t("workshop.cantAfford", null, "can't afford")}` : ""}</span>
             ${costHtml}
           </span>
           <span class="tech-add">${sel ? "✓" : unaffordable ? "!" : "+"}</span>
@@ -5620,11 +6167,11 @@ function onTechClick(id) {
   // Online room: server-authoritative stack
   if (roomBridge.isRoom()) {
     if (!roomBridge.isMyTurn()) {
-      flashToast("Not your turn.");
+      flashToast(t("toast.notYourTurn", null, "Not your turn."));
       return;
     }
     if (!roomBridge.canEditStack()) {
-      flashToast("Can't change this stack right now (invent locked or not your turn).");
+      flashToast(t("toast.stackLockedNow", null, "Can't change this stack right now (invent locked or not your turn)."));
       return;
     }
     const onStack = state.selectedTechIds.includes(id);
@@ -5648,7 +6195,7 @@ function onTechClick(id) {
         }
         // Online rooms keep table cap (not Spark solo profile)
         if (state.selectedTechIds.length >= 8) {
-          flashToast("Stack full (8). Remove one first.");
+          flashToast(t("toast.stackFullRemove", null, "Stack full (8). Remove one first."));
           return;
         }
         if (targetSeatId === me) {
@@ -5674,7 +6221,7 @@ function onTechClick(id) {
       renderFeasibility();
       updateChallengeButton();
     } catch (e) {
-      flashToast(e.message || "Not connected");
+      flashToast(e.message || t("toast.notConnected", null, "Not connected"));
     }
     return;
   }
@@ -5682,17 +6229,17 @@ function onTechClick(id) {
   // Hotseat: tech actions go through bridge so layering on others works
   if (hotseatBridge.isHotseat()) {
     if (!hotseatBridge.isMyTurn()) {
-      flashToast("Not your turn — Pass device when ready.");
+      flashToast(t("toast.passDeviceWhenReady", null, "Not your turn — Pass device when ready."));
       return;
     }
     if (!hotseatBridge.canEditStack()) {
       const phase = hotseatBridge.viewedPhase?.() || "";
       if (phase === "challenge") {
-        flashToast("Can't change the stack during Challenge — help at Pilot/Scale instead.");
+        flashToast(t("toast.stackDuringChallenge", null, "Can't change the stack during Challenge — help at Pilot/Scale instead."));
       } else if (phase === "scaled" || phase === "locked") {
-        flashToast("This invent is locked.");
+        flashToast(t("toast.inventLocked", null, "This invent is locked."));
       } else {
-        flashToast("Can't change this stack right now.");
+        flashToast(t("toast.cantChangeStack", null, "Can't change this stack right now."));
       }
       return;
     }
@@ -5704,14 +6251,14 @@ function onTechClick(id) {
     if (!r.ok) {
       if (r.error === "no_ap" || r.error === "no_budget" || r.error === "no_will") {
         flashUnaffordableTech(id, r.error);
-      } else if (r.error === "stack_full" || r.error === "stack full") flashToast("Stack full.");
-      else if (r.error === "already_on_stack") flashToast("Already on that stack.");
-      else if (r.error === "not_your_layer") flashToast("You can only remove techs you layered.");
+      } else if (r.error === "stack_full" || r.error === "stack full") flashToast(t("toast.stackFull", null, "Stack full."));
+      else if (r.error === "already_on_stack") flashToast(t("toast.alreadyOnStack", null, "Already on that stack."));
+      else if (r.error === "not_your_layer") flashToast(t("toast.onlyRemoveLayered", null, "You can only remove techs you layered."));
       else if (r.error === "challenge_locked")
-        flashToast("Can't change the stack during Challenge — help at Pilot/Scale instead.");
+        flashToast(t("toast.stackDuringChallenge", null, "Can't change the stack during Challenge — help at Pilot/Scale instead."));
       else if (r.error === "stack_locked" || r.error === "already_scaled")
-        flashToast("This invent's stack is locked.");
-      else flashToast(r.error || "Cannot change stack.");
+        flashToast(t("toast.stackLocked", null, "This invent's stack is locked."));
+      else flashToast(r.error || t("toast.cannotChangeStack", null, "Cannot change stack."));
       // Do not mark selected — hydrate stays on last good session
       renderTechList();
       return;
@@ -5733,7 +6280,7 @@ function onTechClick(id) {
   } else {
     const cap = stackCapLimit();
     if (state.selectedTechIds.length >= cap) {
-      flashToast(`Stack full (${cap}). Remove one first.`);
+      flashToast(t("toast.stackFullNamed", { n: cap }, "Stack full ({n}). Remove one first."));
       return;
     }
     // Local pre-check so we never paint ✓ then roll back on failed spend
@@ -5747,7 +6294,7 @@ function onTechClick(id) {
       if (r.error === "no_ap" || r.error === "no_budget" || r.error === "no_will") {
         flashUnaffordableTech(id, r.error);
       } else if (r.error === "stack full") {
-        flashToast(`Stack full (${stackCapLimit()}). Remove one first.`);
+        flashToast(t("toast.stackFullNamed", { n: stackCapLimit() }, "Stack full ({n}). Remove one first."));
       }
       // dispatchSim does not apply slice on failure — selectedTechIds unchanged
       return;
@@ -5775,7 +6322,13 @@ function renderSelectedChips() {
   const layout = workshopLayoutFor(box);
   updateTechDrawerCount(layout, techs.length);
   if (!techs.length) {
-    box.innerHTML = `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the left catalog on wide screens) to build your stack.</span>`;
+    box.innerHTML = `<span class="empty-hint">${escapeHtml(
+      t(
+        "workshopUi.emptyStack",
+        null,
+        "Use + Add tech (or the left catalog on wide screens) to build your stack."
+      )
+    )}</span>`;
     return;
   }
   box.innerHTML = techs
@@ -5795,7 +6348,13 @@ function renderSynergy() {
   const domains = domainsInStack(techs);
   const pairs = computeSynergies(techs);
   if (!techs.length) {
-    box.innerHTML = `Pick tech that fits the local problem. Crossing domains can strengthen a solution — only when it makes sense.`;
+    box.innerHTML = escapeHtml(
+      t(
+        "workshopUi.pickTech",
+        null,
+        "Pick tech that fits the local problem. Crossing domains can strengthen a solution — only when it makes sense."
+      )
+    );
     return;
   }
   const dropInfo = computeDeployDrop({
@@ -5820,18 +6379,45 @@ function renderSynergy() {
       : ""
   }</div>`;
   if (techs.length === 1) {
-    box.innerHTML = `Stack: <strong>${escapeHtml(techs[0].name)}</strong> (${DOMAINS[domains[0]]?.label || domains[0]}). A single tool can be enough if the mechanism is clear.${dropNote}`;
+    const dom = domainLabel(domains[0]) || domains[0];
+    box.innerHTML =
+      `${escapeHtml(t("workshopUi.stackLabel", null, "Stack:"))} <strong>${escapeHtml(
+        techs[0].name
+      )}</strong> (${escapeHtml(dom)}). ${escapeHtml(
+        t(
+          "workshopUi.stackOneNote",
+          null,
+          "A single tool can be enough if the mechanism is clear."
+        )
+      )}${dropNote}`;
     return;
   }
   const pairText = pairs.length
-    ? ` Synergies: ${pairs.map(([a, b]) => `${techById(a).name} × ${techById(b).name}`).join(" · ")}.`
+    ? ` ${escapeHtml(t("workshopUi.synergiesLabel", null, "Synergies:"))} ${escapeHtml(
+        pairs
+          .map(([a, b]) => `${displayTech(a)?.name || a} × ${displayTech(b)?.name || b}`)
+          .join(" · ")
+      )}.`
     : "";
   if (domains.length >= 2) {
-    box.innerHTML = `<strong>Cross-domain mix:</strong> ${domains
-      .map((d) => DOMAINS[d]?.label || d)
-      .join(" + ")}.${pairText}${dropNote}`;
+    box.innerHTML =
+      `<strong>${escapeHtml(
+        t("workshopUi.crossDomainLabel", null, "Cross-domain mix:")
+      )}</strong> ${escapeHtml(
+        domains.map((d) => domainLabel(d) || d).join(" + ")
+      )}.${pairText}${dropNote}`;
   } else {
-    box.innerHTML = `Stack in <strong>${DOMAINS[domains[0]]?.label}</strong> (${techs.length} techs).${pairText} Fine to deploy — add another domain only if you need it.${dropNote}`;
+    const dom = domainLabel(domains[0]) || domains[0];
+    box.innerHTML =
+      `${escapeHtml(t("workshopUi.stackIn", null, "Stack in"))} <strong>${escapeHtml(
+        dom
+      )}</strong> (${techs.length}).${pairText} ${escapeHtml(
+        t(
+          "workshopUi.stackFine",
+          null,
+          "Fine to deploy — add another domain only if you need it."
+        )
+      )}${dropNote}`;
   }
 }
 
@@ -5841,39 +6427,84 @@ function renderTiming() {
   const step = state.mission?.yearsPerTurn || GAME.yearsPerTurn;
   const nextYear = state.year + step;
   const mp = Boolean(mpBridge() || state.mp);
+  const mpNote = mp
+    ? t("workshopUi.mpInvent", null, " (this invent)")
+    : "";
   const waitNote = mp
-    ? `Wait → invent year ${nextYear} for <em>this</em> invent only (other players keep their year; shared meters unchanged).`
-    : `Wait → ${nextYear} raises crisis.`;
+    ? t(
+        "workshopUi.waitNoteMp",
+        { year: nextYear },
+        `Wait → invent year ${nextYear} for this invent only (other players keep their year).`
+      )
+    : t(
+        "workshopUi.waitNoteSolo",
+        { year: nextYear },
+        `Wait → ${nextYear} raises crisis.`
+      );
   if (!techs.length) {
-    box.innerHTML = `Year <strong>${state.year}</strong>${mp ? " (this invent)" : ""}. Pick any emTech category. Feasibility judges whether your <em>how it works</em> over-claims this year. <strong>Wait</strong> ${
-      mp
-        ? "advances <em>your invent</em> calendar if you want later conditions for your claims — not the shared place clock."
-        : "advances the world (and crisis) if you want later conditions."
-    }`;
+    box.innerHTML = t(
+      "workshopUi.timingEmpty",
+      { year: state.year, mp: mpNote },
+      `Year ${state.year}${mpNote}. Pick any emTech category. Feasibility judges whether your how it works over-claims this year. Wait advances the calendar.`
+    );
+    // bold year
+    box.innerHTML = box.innerHTML.replace(
+      String(state.year),
+      `<strong>${state.year}</strong>`
+    );
     return;
   }
   const stretch = detectClaimStretch(
     state.inventionHow.trim() || state.inventionImpact.trim(),
     techs,
-    state.year
+    state.year,
+    getLocale()
   );
-  box.innerHTML = `Year <strong>${state.year}</strong>${mp ? " (this invent)" : ""} · timing signal: <strong>${stretch.level}</strong> — ${escapeHtml(
+  box.innerHTML = `${escapeHtml(
+    t("workshopUi.yearLabel", null, "Year")
+  )} <strong>${state.year}</strong>${escapeHtml(mpNote)} · ${escapeHtml(
+    t("workshopUi.timingSignal", null, "timing signal:")
+  )} <strong>${escapeHtml(stretch.level)}</strong> — ${escapeHtml(
     stretch.reason
-  )} Use <strong>Art of the possible</strong> on the co-inventor for milestones & capabilities. ${waitNote}`;
+  )} ${escapeHtml(
+    t(
+      "workshopUi.timingArt",
+      null,
+      "Use Art of the possible on the co-inventor for milestones & capabilities."
+    )
+  )} ${escapeHtml(waitNote)}`;
 }
 
 function challengeBlockReason() {
   const named = state.inventionName.trim().length >= 2;
   const howOk = state.inventionHow.trim().length >= 20;
   const lifeOk = state.inventionImpact.trim().length >= 20;
-  if (!named) return "Name your invention first.";
-  if (!howOk && !lifeOk) return "Write both story faces (how it works + everyday life), or fill one and use Fill other side.";
-  if (!howOk) return "Write how it works (or focus Everyday life and use Fill other side).";
-  if (!lifeOk) return "Write everyday life if it works (or focus How it works and use Fill other side).";
-  if (!state.selectedTechIds.length) return "Add at least one technology.";
+  if (!named)
+    return t("challengeUi.blockName", null, "Name your invention first.");
+  if (!howOk && !lifeOk)
+    return t(
+      "challengeUi.blockBothFaces",
+      null,
+      "Write both story faces (how it works + everyday life), or fill one and use Fill other side."
+    );
+  if (!howOk)
+    return t(
+      "challengeUi.blockHow",
+      null,
+      "Write how it works (or focus Everyday life and use Fill other side)."
+    );
+  if (!lifeOk)
+    return t(
+      "challengeUi.blockLife",
+      null,
+      "Write everyday life if it works (or focus How it works and use Fill other side)."
+    );
+  if (!state.selectedTechIds.length)
+    return t("challengeUi.blockTech", null, "Add at least one technology.");
   // continue with existing body below
   const f = assessFeasibility();
-  if (collapsed()) return "Too late — mission collapsed.";
+  if (collapsed())
+    return t("challengeUi.blockCollapsed", null, "Too late — mission collapsed.");
   // Sustainable red does not block Challenge — only Pilot-local reds do
   if (f.pilotLevel === "red") {
     const reds = f.dims.filter(
@@ -5882,7 +6513,12 @@ function challengeBlockReason() {
         d.id !== "sustainable" &&
         d.id !== "scale"
     );
-    if (reds.length) return `Feasibility red: ${reds.map((d) => d.note).join(" · ")}`;
+    if (reds.length)
+      return t(
+        "challengeUi.feasibilityRed",
+        { notes: reds.map((d) => d.note).join(" · ") },
+        `Feasibility red: ${reds.map((d) => d.note).join(" · ")}`
+      );
     return f.summary;
   }
   return "";
@@ -5893,14 +6529,22 @@ function updateChallengeButton() {
   if (!btn) return;
   const b = mpBridge();
   const spectator = isMpInventSpectator();
-  const spectatorReason =
-    "Not your turn — you can browse and use Learn, but only the active player acts.";
+  const answerHard = t(
+    "challengeUi.answerHard",
+    null,
+    "Answer the hard question →"
+  );
+  const spectatorReason = t(
+    "challengeUi.spectator",
+    null,
+    "Not your turn — you can browse and use Learn, but only the active player acts."
+  );
 
   // Multiplayer spectator (not your turn): never start the hard question
   if (spectator) {
     btn.disabled = true;
     btn.title = spectatorReason;
-    btn.textContent = "Answer the hard question →";
+    btn.textContent = answerHard;
     const hint = $("#challenge-ready-hint");
     if (hint) {
       hint.textContent = spectatorReason;
@@ -5921,38 +6565,62 @@ function updateChallengeButton() {
     if (fielded) {
       // Invent already scaled — no hard-question / no deploy re-entry from workshop
       btn.disabled = true;
-      btn.textContent = "Answer the hard question →";
-      btn.title = "This invent already Scaled — Quest continues or is held.";
+      btn.textContent = answerHard;
+      btn.title = t(
+        "challengeUi.alreadyScaled",
+        null,
+        "This invent already Scaled — Quest continues or is held."
+      );
       const hint = $("#challenge-ready-hint");
       if (hint) {
-        hint.textContent = "This invent is fielded (Scaled).";
+        hint.textContent = t(
+          "challengeUi.fieldedScaled",
+          null,
+          "This invent is fielded (Scaled)."
+        );
         hint.className = "challenge-ready-hint blocked";
       }
       return;
     }
     btn.disabled = !canDeploy;
-    btn.textContent = "Continue to Field →";
+    btn.textContent = t("workshopUi.continueField", null, "Continue to Field →");
     btn.title = inventBusy
       ? inventActionBusyReason()
       : canDeploy
-        ? "Open Pilot / Scale for this invent"
-        : "Not your turn, or this invent is not ready to field";
+        ? t(
+            "workshopUi.openPilotScale",
+            null,
+            "Open Pilot / Scale for this invent"
+          )
+        : t(
+            "workshopUi.notReadyField",
+            null,
+            "Not your turn, or this invent is not ready to field"
+          );
     const hint = $("#challenge-ready-hint");
     if (hint) {
       if (inventBusy) {
         hint.textContent = inventActionBusyReason();
         hint.className = "challenge-ready-hint blocked";
       } else if (canDeploy) {
-        hint.textContent = "Challenge cleared — continue to Field (Pilot → Scale).";
+        hint.textContent = t(
+          "workshopUi.challengeClearedField",
+          null,
+          "Challenge cleared — continue to Field (Pilot → Scale)."
+        );
         hint.className = "challenge-ready-hint ready";
       } else {
-        hint.textContent = "Only the active player can Pilot/Scale this invent.";
+        hint.textContent = t(
+          "workshopUi.onlyActivePilot",
+          null,
+          "Only the active player can Pilot/Scale this invent."
+        );
         hint.className = "challenge-ready-hint blocked";
       }
     }
     return;
   }
-  btn.textContent = "Answer the hard question →";
+  btn.textContent = answerHard;
   // Don't re-enable while Fill other side / co-inventor is still drafting
   if (isInventActionBusy()) {
     btn.disabled = true;
@@ -5982,15 +6650,27 @@ function updateChallengeButton() {
   let ok = f.canChallenge;
   let title = ok
     ? f.overall === "yellow"
-      ? "Feasibility yellow — you can still answer the hard question"
-      : "Feasibility green — answer a hard question next"
+      ? t(
+          "challengeUi.feasYellowOk",
+          null,
+          "Feasibility yellow — you can still answer the hard question"
+        )
+      : t(
+          "challengeUi.feasGreenOk",
+          null,
+          "Feasibility green — answer a hard question next"
+        )
     : reason;
   // Multiplayer: only owner faces Challenge on their invent
   if (b && !b.canFaceChallenge?.()) {
     ok = false;
     title = b.viewingOther?.()
-      ? "Only the owner can face Challenge on this invent"
-      : "Cannot challenge right now";
+      ? t(
+          "challengeUi.ownerOnly",
+          null,
+          "Only the owner can face Challenge on this invent"
+        )
+      : t("challengeUi.cannotChallenge", null, "Cannot challenge right now");
   }
   btn.disabled = !ok;
   btn.title = title;
@@ -5999,8 +6679,16 @@ function updateChallengeButton() {
     if (ok) {
       hint.textContent =
         f.overall === "green"
-          ? "Feasibility green — answer the hard question when ready."
-          : "Feasibility yellow — risky but allowed. Hard question next.";
+          ? t(
+              "challengeUi.feasGreenReady",
+              null,
+              "Feasibility green — answer the hard question when ready."
+            )
+          : t(
+              "challengeUi.feasYellowReady",
+              null,
+              "Feasibility yellow — risky but allowed. Hard question next."
+            );
       hint.className = "challenge-ready-hint ready";
     } else {
       hint.textContent = title;
@@ -6241,7 +6929,7 @@ function isDeployWatchOnly() {
 function updateDeployFooterButtons() {
   const abandon = $("#btn-deploy-abandon");
   if (!abandon) return;
-  abandon.textContent = "Abandon deployment";
+  abandon.textContent = t("deployUi.abandon", null, "Abandon deployment");
 
   if (state.screen !== "deploy") {
     abandon.hidden = true;
@@ -6309,7 +6997,7 @@ function endTurn() {
     state.screen === "deploy" &&
     (state.challengeSpectator || (mpBridge() && !mpBridge().isMyTurn?.()))
   ) {
-    flashToast("Watching only — leave via seat tabs when done.");
+    flashToast(t("toast.watchingOnlyLeave", null, "Watching only — leave via seat tabs when done."));
     updateDeployFooterButtons();
     return;
   }
@@ -6332,7 +7020,7 @@ function endTurn() {
       state.screen === "deploy")
   ) {
     if (!roomBridge.isMyTurn()) {
-      flashToast("Not your turn.");
+      flashToast(t("toast.notYourTurn", null, "Not your turn."));
       return;
     }
     try {
@@ -6374,7 +7062,7 @@ function endTurn() {
       state.screen !== "challenge-step" &&
       state.screen !== "deploy"
     ) {
-      flashToast("Do something this turn, or Wait.");
+      flashToast(t("toast.doSomethingOrWait", null, "Do something this turn, or Wait."));
       return;
     }
   }
@@ -6394,16 +7082,16 @@ function endTurn() {
         state.ap = state.apMax ?? 3;
         state.apSpentThisTurn = 0;
         state.writeCommitsThisTurn = 0;
-        flashToast(`End turn · AP refilled (${state.ap})`);
+        flashToast(t("toast.endTurnAp", { ap: state.ap, max: state.apMax ?? GAME.apMax ?? 3 }, "End turn · AP refilled ({ap}/{max})"));
         if (state.screen === "deploy") renderDeployHud();
         else renderChallengeHud();
         return;
       }
-      flashToast("Do something this turn, or Wait.");
+      flashToast(t("toast.doSomethingOrWait", null, "Do something this turn, or Wait."));
     }
     return;
   }
-  flashToast(`End turn · AP refilled (${state.ap})`);
+  flashToast(t("toast.endTurnAp", { ap: state.ap, max: state.apMax ?? GAME.apMax ?? 3 }, "End turn · AP refilled ({ap}/{max})"));
   // Solo end_turn advances world year +1 — re-assess timing (do not leave AI cache for prior year)
   if ((r.events || []).some((e) => e.type === "year_tick")) {
     onInventYearChangedForTiming();
@@ -6427,12 +7115,12 @@ function lobbyAction() {
     return;
   }
   if (isChallengeWatchOnly?.()) {
-    flashToast("Watching only — Lobby on your own invent turn.");
+    flashToast(t("toast.watchingOnlyLobby", null, "Watching only — Lobby on your own invent turn."));
     return;
   }
   const bridge = mpBridge();
   if (bridge && !bridge.isMyTurn?.()) {
-    flashToast("Not your turn.");
+    flashToast(t("toast.notYourTurn", null, "Not your turn."));
     return;
   }
 
@@ -6440,11 +7128,11 @@ function lobbyAction() {
   if (roomBridge.isRoom()) {
     syncRoomResourcesFromSnapshot();
     if (apEnabled() && getSpendableAp() < 1) {
-      flashToast("No AP to lobby — End turn or Wait first.", { resource: "ap" });
+      flashToast(t("toast.noApLobby", null, "No AP to lobby — End turn or Wait first."), { resource: "ap" });
       return;
     }
     if ((state.budget ?? 0) < 1) {
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
+      flashToast(t("toast.needBudgetLobby", null, "Need 1 Budget to lobby."), { resource: "budget" });
       return;
     }
     try {
@@ -6460,7 +7148,7 @@ function lobbyAction() {
     }
     state.budget = Math.max(0, (state.budget ?? 0) - 1);
     state.will = Math.min(GAME.maxWill ?? 5, (state.will ?? 0) + 1);
-    flashToast(`Lobbied · Budget ${state.budget} · Will ${state.will}`);
+    flashToast(t("toast.lobbied", { budget: state.budget, will: state.will }, "Lobbied · Budget {budget} · Will {will}"));
     renderWorkshop();
     return;
   }
@@ -6468,13 +7156,13 @@ function lobbyAction() {
   // Solo / hotseat: local sim (hotseat syncs invent via dispatchSim → mpSyncFromSolo)
   const r = dispatchSim("lobby");
   if (!r.ok) {
-    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.", { resource: "ap" });
+    if (r.error === "no_ap") flashToast(t("toast.noApEndWait", null, "No AP — End Turn or Wait."), { resource: "ap" });
     else if (r.error === "no_budget")
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
-    else flashToast("Cannot lobby now.");
+      flashToast(t("toast.needBudgetLobby", null, "Need 1 Budget to lobby."), { resource: "budget" });
+    else flashToast(t("toast.cannotLobby", null, "Cannot lobby now."));
     return;
   }
-  flashToast(`Lobbied · Budget ${state.budget} · Will ${state.will}`);
+  flashToast(t("toast.lobbied", { budget: state.budget, will: state.will }, "Lobbied · Budget {budget} · Will {will}"));
   renderWorkshop();
 }
 
@@ -6528,7 +7216,7 @@ function waitTurn(opts = {}) {
   // Online room: personal invent Wait on server (also ends your seat-turn)
   if (roomBridge.isRoom()) {
     if (!roomBridge.isMyTurn()) {
-      flashToast("Not your turn.");
+      flashToast(t("toast.notYourTurn", null, "Not your turn."));
       return;
     }
     try {
@@ -6567,7 +7255,8 @@ function waitTurn(opts = {}) {
     const stretch = detectClaimStretch(
       state.inventionHow.trim() || state.inventionImpact.trim(),
       techsNow,
-      state.year
+      state.year,
+      getLocale()
     );
     const waiterId = hotseatBridge.getActiveId();
     const yearBefore = state.year;
@@ -6621,10 +7310,11 @@ function waitTurn(opts = {}) {
 
   const techsNow = selectedTechs();
   const stretch = detectClaimStretch(
-    state.inventionHow.trim() || state.inventionImpact.trim(),
-    techsNow,
-    state.year
-  );
+      state.inventionHow.trim() || state.inventionImpact.trim(),
+      techsNow,
+      state.year,
+      getLocale()
+    );
   const r = dispatchSim("wait", {
     mission: m,
     techs: techsNow,
@@ -6665,7 +7355,7 @@ function waitTurn(opts = {}) {
     return;
   }
 
-  flashToast(`Clock → ${state.year} · crisis rose · AP refilled`);
+  flashToast(t("toast.clockCrisis", { year: state.year }, "Clock → {year} · crisis rose · AP refilled"));
   renderWorkshop();
   updateVision({ immediate: true });
   state.coInventor?.pushAssistant?.(
@@ -6734,15 +7424,25 @@ function setupEssayChallengeChrome() {
     defend.removeAttribute("hidden");
   }
   const label = $("#challenge-answer-label");
-  if (label) label.textContent = "Your answer";
+  if (label) label.textContent = t("challengeUi.yourAnswer", null, "Your answer");
   const submit = $("#btn-challenge-submit");
   if (submit) {
     submit.hidden = false;
     submit.removeAttribute("hidden");
-    submit.textContent = apEnabled() ? "Submit answer (1 AP)" : "Submit answer";
+    submit.textContent = apEnabled()
+      ? t("challengeUi.submitAnswerAp", null, "Submit answer (1 AP)")
+      : t("challengeUi.submitAnswer", null, "Submit answer");
     submit.title = apEnabled()
-      ? "Submit your written answer (costs 1 AP when judgment runs)"
-      : "Submit your written answer to this challenge";
+      ? t(
+          "challengeUi.submitAnswerTitleAp",
+          null,
+          "Submit your written answer (costs 1 AP when judgment runs)"
+        )
+      : t(
+          "challengeUi.submitAnswerTitle",
+          null,
+          "Submit your written answer to this challenge"
+        );
   }
   const box = $("#scrutiny-encounters");
   if (box) {
@@ -6761,28 +7461,58 @@ function setupEssayChallengeChrome() {
 function localPose(angle) {
   const place = state.mission?.place || "here";
   const name = state.inventionName || "this invention";
+  const hu = getLocale() === "hu";
+  const a = locChallengeAngle(angle) || angle;
   if (angle.id === "nature") {
-    return {
-      speech: `Mother Nature, ${place}: “${name} still runs on energy, materials, and waste. Storms, heat, and scarcity do not negotiate with your pitch.”`,
-      question: "What breaks first when the natural world pushes back — and how does the design absorb a bad week?",
-    };
+    return hu
+      ? {
+          speech: `${a.label || "Anyatermészet"}, ${place}: „A(z) ${name} továbbra is energiát, anyagot és hulladékot használ. A vihar, a hőség és a szűkösség nem alkuszik a pitch deckkel.”`,
+          question:
+            "Melyik fizikai határ üt először — és hogyan nyeli el a terv a rossz hetet?",
+        }
+      : {
+          speech: `Mother Nature, ${place}: “${name} still runs on energy, materials, and waste. Storms, heat, and scarcity do not negotiate with your pitch.”`,
+          question:
+            "What breaks first when the natural world pushes back — and how does the design absorb a bad week?",
+        };
   }
   if (angle.id === "ethicist") {
-    return {
-      speech: `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity, privacy, or opportunity is on the line — and both sides have a point.”`,
-      question: "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?",
-    };
+    return hu
+      ? {
+          speech: `${a.label || "Etikus"}, ${place}: „A(z) ${name} olyan választásra kényszerít, amit nem lehet optimalizálni. Valakinek a méltósága, magánélete vagy lehetősége a tét — és mindkét oldalnak igaza van.”`,
+          question:
+            "Nevezd meg a legnehezebb etikai kompromisszumot. Ki sérül bármelyik oldalon — és milyen korlátot nem lépsz át?",
+        }
+      : {
+          speech: `The Ethicist, ${place}: “${name} forces a choice you cannot optimize away. Someone’s dignity, privacy, or opportunity is on the line — and both sides have a point.”`,
+          question:
+            "Name the hardest ethical tradeoff. Who is harmed either way — and what constraint do you refuse to cross?",
+        };
   }
   if (angle.id === "stakeholder") {
-    return {
-      speech: `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public — or it dies as a pilot photo.”`,
-      question: "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?",
-    };
+    return hu
+      ? {
+          speech: `${a.label || "Érdekelt"}, ${place}: „Én vagyok a polgármester, a klinika testülete és a szomszédsági gyűlés. Valakinek alá kell írnia, finanszíroznia és nyilvánosan védenie a(z) ${name} ötletet — különben pilotfotó marad.”`,
+          question:
+            "Kinek kell igent mondania, ki fizet az 1. és az 5. évben, és hogyan nyersz támogatást anélkül, hogy kizárnád az embereket?",
+        }
+      : {
+          speech: `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public — or it dies as a pilot photo.”`,
+          question:
+            "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?",
+        };
   }
-  return {
-    speech: `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`,
-    question: "What stops defection when neighbors or vendors can freeride — name the game mechanic you change?",
-  };
+  return hu
+    ? {
+        speech: `${a.label || "Moloch"}, ${place}: „Nincs esély, hogy a(z) ${name} tartson. A potyázók megtartják a régi szokásokat, amíg a gondos emberek fizetnek. A mélybe tartó verseny felfalja a jó tervezést — így játszik a rendszer.”`,
+        question:
+          "Mi állítja meg a defekciót, ha a szomszédok vagy a beszállítók potyázhatnak — nevezd meg a játékszabályt, amit megváltoztatsz?",
+      }
+    : {
+        speech: `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`,
+        question:
+          "What stops defection when neighbors or vendors can freeride — name the game mechanic you change?",
+      };
 }
 
 function setChallengerVisual(angle) {
@@ -6810,6 +7540,7 @@ function setChallengerVisual(angle) {
     wrap.setAttribute("hidden", "");
     return;
   }
+  a = locChallengeAngle(a) || a;
   wrap.hidden = false;
   wrap.removeAttribute("hidden");
   wrap.dataset.challenger = a.id;
@@ -6856,7 +7587,9 @@ function hideChallengerBannerForReveal() {
   if (speech) {
     speech.hidden = true;
     speech.setAttribute("hidden", "");
-    speech.innerHTML = `<p class="muted">Summoning a challenger…</p>`;
+    speech.innerHTML = `<p class="muted">${escapeHtml(
+      t("challengeUi.summoning", null, "Summoning a challenger…")
+    )}</p>`;
   }
   const qEl = $("#challenge-question");
   if (qEl) {
@@ -6875,22 +7608,27 @@ function hideChallengerBannerForReveal() {
  * @param {number} [hp=2]
  */
 function challengerSlideHtml(a, hp = 2) {
+  const loc = resolveAngle(a) || a;
   const hearts = "♥".repeat(Math.max(0, hp)) + "♡".repeat(Math.max(0, 2 - hp));
-  const src = a.visual || `assets/challengers/${a.id}.jpg`;
+  const src = loc.visual || a.visual || `assets/challengers/${loc.id || a.id}.jpg`;
   return `
-    <div class="challenger-slide" data-id="${escapeHtml(a.id)}">
-      <div class="challenger-slide-panel" data-challenger="${escapeHtml(a.id)}">
+    <div class="challenger-slide" data-id="${escapeHtml(loc.id || a.id)}">
+      <div class="challenger-slide-panel" data-challenger="${escapeHtml(loc.id || a.id)}">
         <div class="challenger-portrait-wrap">
           <img src="${escapeHtml(src)}" alt="" width="160" height="160" />
         </div>
         <div class="challenger-slide-copy challenger-copy">
-          <div class="label">Challenger</div>
-          <h2>${escapeHtml(a.label)}</h2>
-          <p class="challenge-angle-sub">${escapeHtml(a.subtitle || "")} — ${escapeHtml(
-            a.blurb || ""
+          <div class="label">${escapeHtml(
+            t("challengeUi.challengerLabel", null, "Challenger")
+          )}</div>
+          <h2>${escapeHtml(loc.label)}</h2>
+          <p class="challenge-angle-sub">${escapeHtml(loc.subtitle || "")} — ${escapeHtml(
+            loc.blurb || ""
           )}</p>
           <p class="challenger-slide-resolve">
-            <span class="challenger-resolve-label">Their resolve</span>
+            <span class="challenger-resolve-label">${escapeHtml(
+              t("challengeUi.theirResolve", null, "Their resolve")
+            )}</span>
             <span class="challenger-resolve-hearts" aria-hidden="true">${hearts}</span>
           </p>
         </div>
@@ -6951,7 +7689,7 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   draw.removeAttribute("hidden");
   if (status) {
     status.classList.remove("is-landed");
-    status.textContent = "Summoning a challenger…";
+    status.textContent = t("challengeUi.summoning", null, "Summoning a challenger…");
   }
 
   const SLIDE_MS = 500;
@@ -7083,14 +7821,18 @@ function finishChallengerDraw(finalAngle) {
   // Clear reveal lock *before* painting the real banner (setChallengerVisual respects it)
   state.challengeRevealPending = false;
   document.body.classList.remove("challenge-reveal-pending");
-  const a =
-    CHALLENGE_ANGLES.find((x) => x.id === finalAngle?.id) || finalAngle;
+  const a = resolveAngle(finalAngle);
   if (!a) return;
   setChallengerVisual(a);
   const title = $("#challenge-angle-title");
   const sub = $("#challenge-angle-sub");
   const label = $("#challenge-angle-label");
-  if (label) label.textContent = "Your idea is under attack";
+  if (label)
+    label.textContent = t(
+      "challengeUi.underAttack",
+      null,
+      "Your idea is under attack"
+    );
   if (title) title.textContent = a.label;
   if (sub) sub.textContent = `${a.subtitle || ""} — ${a.blurb || ""}`;
   const banner = $("#challenger-visual");
@@ -7131,7 +7873,7 @@ function techsForCoInventMode(mode) {
     const selected = selectedTechs();
     const list = selected.length ? selected : [];
     return list.map((t) => {
-      const full = techForAi(t, state.year);
+      const full = techForAi(locTech(t), state.year);
       return {
         id: full.id,
         name: full.name,
@@ -7141,7 +7883,12 @@ function techsForCoInventMode(mode) {
       };
     });
   }
-  return TECHS.map((t) => techForAi(t, state.year));
+  return TECHS.map((t) => techForAi(locTech(t), state.year));
+}
+
+/** Merge AI locale fields into a co-invent context object. */
+function withAiLocale(ctx = {}) {
+  return { ...aiLocaleContext(), ...ctx };
 }
 
 async function apiCoInvent(mode, userContent, extra = {}) {
@@ -7152,7 +7899,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
       mode,
       clientSessionId: getClientSessionId(),
       messages: [{ role: "user", content: userContent }],
-      context: {
+      context: withAiLocale({
         challenge: state.mission
           ? {
               id: state.mission.id,
@@ -7175,7 +7922,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         aiTutorContext: state.mission?.aiTutorContext || null,
         tutorMode: isLearningTutorSessionActive(),
         ...extra,
-      },
+      }),
     }),
   });
   return res.json();
@@ -7305,8 +8052,8 @@ async function enterChallenge() {
     if (!b.canFaceChallenge?.()) {
       flashToast(
         b.viewingOther?.()
-          ? "Only the owner faces Challenge on this invent — use the seat tabs to open yours."
-          : "This invent can't enter Challenge right now."
+          ? t("toast.ownerFaceChallengeTabs", null, "Only the owner faces Challenge on this invent — use the seat tabs to open yours.")
+          : t("toast.cantEnterChallenge", null, "This invent can't enter Challenge right now.")
       );
       return;
     }
@@ -7334,14 +8081,14 @@ async function enterChallenge() {
     return;
   }
   if (!inventReadyForChallenge()) {
-    flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
+    flashToast(t("toast.finishInventFirst", null, "Finish the invention first (name, stack, both story faces; fix red feasibility)."));
     return;
   }
   // Online room: spend enter_challenge AP on the server, then use the same Challenge screen as solo/hotseat
   if (roomBridge.isRoom()) {
     const apNow = getSpendableAp();
     if (apEnabled() && apNow < 1) {
-      flashToast("No AP to face the challenge — End turn or Wait first.", { resource: "ap" });
+      flashToast(t("toast.noApFaceChallenge", null, "No AP to face the challenge — End turn or Wait first."), { resource: "ap" });
       return;
     }
     try {
@@ -7467,7 +8214,7 @@ async function poseScrutinyEncounters() {
   }
   if (status) {
     status.hidden = false;
-    status.textContent = "A challenger is being drawn…";
+    status.textContent = t("challengeUi.drawing", null, "A challenger is being drawn…");
   }
   if (moves) moves.hidden = true;
   if (essayBtn) essayBtn.hidden = true;
@@ -7656,13 +8403,15 @@ function paintActiveEncounter() {
     return;
   }
   // Prefer full CHALLENGE_ANGLES entry so portrait `visual` path is always present
-  const meta = CHALLENGE_ANGLES.find((a) => a.id === enc.angleId) || {
-    id: enc.angleId,
-    label: enc.label,
-    subtitle: enc.subtitle,
-    blurb: enc.blurb,
-    visual: enc.visual || `assets/challengers/${enc.angleId}.jpg`,
-  };
+  const meta = resolveAngle(
+    CHALLENGE_ANGLES.find((a) => a.id === enc.angleId) || {
+      id: enc.angleId,
+      label: enc.label,
+      subtitle: enc.subtitle,
+      blurb: enc.blurb,
+      visual: enc.visual || `assets/challengers/${enc.angleId}.jpg`,
+    }
+  );
   state.challengeAngle = enc.angleId;
   state.challengeText = enc.speech;
   state.challengeQuestion = enc.question;
@@ -7673,10 +8422,16 @@ function paintActiveEncounter() {
         ?.displayName || "Player";
     $("#challenge-angle-label").textContent = `Watching ${viewName}'s challenge`;
   } else {
-    $("#challenge-angle-label").textContent = "Your idea is under attack";
+    $("#challenge-angle-label").textContent = t(
+      "challenge.underAttack",
+      null,
+      "Your idea is under attack"
+    );
   }
   $("#challenge-angle-title").textContent = meta.label;
-  $("#challenge-angle-sub").textContent = `${meta.subtitle || ""} — ${meta.blurb || ""}`;
+  $("#challenge-angle-sub").textContent = `${meta.subtitle || ""}${
+    meta.blurb ? ` — ${meta.blurb}` : ""
+  }`;
   const speechPaint = $("#challenge-speech");
   if (speechPaint) {
     speechPaint.hidden = false;
@@ -7753,13 +8508,13 @@ function renderScrutinyEncounters() {
   }
   status.hidden = false;
   if (isChallengePosePending()) {
-    status.textContent = "Challenger is stepping in… actions unlock when the attack is ready.";
+    status.textContent = t("challengeUi.steppingIn", null, "Challenger is stepping in… actions unlock when the attack is ready.");
     return;
   }
   const misses = state.scrutiny.missCount || 0;
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
-    status.textContent = "Critic cleared — deploy when ready.";
+    status.textContent = t("challengeUi.criticCleared", null, "Critic cleared — deploy when ready.");
     paintChallengerResolve(state.scrutiny.encounters?.[0] || null);
     return;
   }
@@ -7772,7 +8527,7 @@ function renderScrutinyEncounters() {
 }
 
 async function poseChallenge(angleMeta) {
-  const angle = angleMeta || CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
+  const angle = resolveAngle(angleMeta || state.challengeAngle);
   setupEssayChallengeChrome();
   setChallengePoseBusy(true);
 
@@ -7889,7 +8644,8 @@ function humanizeMeterKey(key) {
  * Trust → Public confidence for players.
  */
 function crisisMeterDisplayLabel(key) {
-  if (key === "Trust") return "Public confidence";
+  if (key === "Trust" || key === "Bizalom")
+    return t("crisisUi.publicConfidence", null, "Public confidence");
   return humanizeMeterKey(key);
 }
 
@@ -7923,13 +8679,20 @@ function paintHudPressureMeters(box) {
       const label = crisisMeterDisplayLabel(k);
       const goalBit =
         goal != null && !Number.isNaN(Number(goal))
-          ? ` · goal ≤${Math.round(Number(goal))}`
+          ? t(
+              "crisisUi.goalBit",
+              { goal: Math.round(Number(goal)) },
+              ` · goal ≤${Math.round(Number(goal))}`
+            )
           : "";
+      const title = t(
+        "crisisUi.meterTitle",
+        { label, n, goalBit },
+        `${label}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers.`
+      );
       return `<span class="meter ${level}" title="${escapeHtml(
-        label
-      )}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers."><b>${escapeHtml(
-        label
-      )}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
+        title
+      )}"><b>${escapeHtml(label)}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
     })
     .join("");
 }
@@ -8111,10 +8874,20 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
     else submit.setAttribute("hidden", "");
     submit.disabled = busy;
     if (m === "defend" && !opts.spectator) {
-      submit.textContent = apEnabled() ? "Submit defense (1 AP)" : "Submit defense";
+      submit.textContent = apEnabled()
+        ? t("challenge.submitDefense", null, "Submit defense (1 AP)")
+        : t("challengeUi.submitDefense", null, "Submit defense");
       submit.title = apEnabled()
-        ? "Submit written defense (costs 1 AP)"
-        : "Submit written defense";
+        ? t(
+            "challengeUi.submitDefenseTitleAp",
+            null,
+            "Submit written defense (costs 1 AP)"
+          )
+        : t(
+            "challengeUi.submitDefenseTitle",
+            null,
+            "Submit written defense"
+          );
     }
   }
   const applyFix = $("#btn-challenge-apply-fix");
@@ -8196,15 +8969,15 @@ function setScrutinyMoveMode(mode) {
   if (blockIfMpTurnGate("choosing a challenge move")) return;
   if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
-    flashToast("Combat locked — only the invent owner can fight mid-Challenge.");
+    flashToast(t("toast.combatOwnerOnly", null, "Combat locked — only the invent owner can fight mid-Challenge."));
     return;
   }
   if (isChallengePosePending() && !challengeCombatBusy) {
-    flashToast("Wait for the challenger to finish loading.");
+    flashToast(t("toast.waitChallengerLoad", null, "Wait for the challenger to finish loading."));
     return;
   }
   if (mode === "sidestep" && state.scrutiny?.pivotUsed) {
-    flashToast("Sidestep already used this run.");
+    flashToast(t("toast.sidestepUsed", null, "Sidestep already used this run."));
     mode = "defend";
   }
   paintScrutinyMoveModeChrome(mode, { spectator: false });
@@ -8265,7 +9038,7 @@ function renderChallengeStep() {
   }
   // Essay fallback mode (Spark / scrutinyCombat off) — answer box only
   setupEssayChallengeChrome();
-  const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
+  const angle = resolveAngle(state.challengeAngle);
   if (angle) {
     $("#challenge-angle-title").textContent = angle.label;
     $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
@@ -8303,35 +9076,35 @@ async function scrutinyArgue() {
   if (blockIfMpTurnGate("submitting a defense")) return;
   if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
-    flashToast("Only the invent owner can submit a defense mid-Challenge.");
+    flashToast(t("toast.ownerSubmitDefense", null, "Only the invent owner can submit a defense mid-Challenge."));
     return;
   }
   if (challengeCombatBusy) {
-    flashToast("Wait — defense is still being evaluated.");
+    flashToast(t("toast.waitDefenseEval", null, "Wait — defense is still being evaluated."));
     return;
   }
   if (isChallengePosePending() && !challengeCombatBusy) {
-    flashToast("Wait for the challenger to finish loading.");
+    flashToast(t("toast.waitChallengerLoad", null, "Wait for the challenger to finish loading."));
     return;
   }
   if (state.scrutinyMoveMode !== "defend") {
     setScrutinyMoveMode("defend");
-    flashToast("Write your defense, then click Submit defense.");
+    flashToast(t("toast.writeDefenseSubmit", null, "Write your defense, then click Submit defense."));
     return;
   }
   const enc = activeEncounter(state.scrutiny);
   if (!enc) {
-    flashToast("Challenge cleared.");
+    flashToast(t("toast.challengeCleared", null, "Challenge cleared."));
     return;
   }
   // Two misses already failed this fight — do not hide controls mid-action again
   if ((state.scrutiny.missCount || 0) >= MISS_BUDGET) {
-    flashToast("Scrutiny already failed (2 misses). Return to Invent and strengthen the idea.");
+    flashToast(t("toast.scrutinyFailed", null, "Scrutiny already failed (2 misses). Return to Invent and strengthen the idea."));
     return;
   }
   const answer = ($("#challenge-answer")?.value || "").trim();
   if (answer.length < 20) {
-    flashToast("Write at least a short paragraph for your defense.");
+    flashToast(t("toast.writeShortParagraph", null, "Write at least a short paragraph for your defense."));
     return;
   }
 
@@ -8366,7 +9139,7 @@ async function scrutinyArgue() {
         clientActionId: `argue-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP to Argue — End turn on Invent first.", { resource: "ap" });
+        flashToast(t("toast.noApArgue", null, "No AP to Argue — End turn on Invent first."), { resource: "ap" });
         return;
       }
       usedReserveAi = true;
@@ -8431,7 +9204,7 @@ async function scrutinyArgue() {
       status.textContent =
         "Challenge failed — invent locked. Face challenge again, or Reopen invent to rework (helpers still locked out).";
     }
-    flashToast("Challenge failed — invent stays locked. Only you can try again.");
+    flashToast(t("toast.challengeFailedLocked", null, "Challenge failed — invent stays locked. Only you can try again."));
     // Sync fail to room server → challenge_locked (not invent)
     if (roomBridge.isRoom() && roomBridge.isMyTurn()) {
       try {
@@ -8507,8 +9280,8 @@ async function scrutinyArgue() {
     else renderDeployBay();
     flashToast(
       deployStagesEnabled()
-        ? "Challenge cleared — open the deploy bay (Pilot → Scale → New normal)."
-        : "Challenge cleared — deploy when ready."
+        ? t("toast.challengeClearedOpenBay", null, "Challenge cleared — open the deploy bay (Pilot → Scale → New normal).")
+        : t("toast.challengeClearedDeployReady", null, "Challenge cleared — deploy when ready.")
     );
   }
   // Unlock before paints so End turn / Sidestep greys apply correctly
@@ -8541,16 +9314,16 @@ function scrutinyPatch() {
   if (blockIfMpTurnGate("applying a fix")) return;
   if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
-    flashToast("Only the invent owner can fix mid-Challenge.");
+    flashToast(t("toast.onlyOwnerFix", null, "Only the invent owner can fix mid-Challenge."));
     return;
   }
   if (isChallengePosePending()) {
-    flashToast("Wait for the challenger to finish loading.");
+    flashToast(t("toast.waitChallengerLoad", null, "Wait for the challenger to finish loading."));
     return;
   }
   if (state.scrutinyMoveMode !== "fix") {
     setScrutinyMoveMode("fix");
-    flashToast("Edit how-it-works below, then click Apply fix.");
+    flashToast(t("toast.editHowApplyFix", null, "Edit how-it-works below, then click Apply fix."));
     return;
   }
   const enc = activeEncounter(state.scrutiny);
@@ -8562,7 +9335,7 @@ function scrutinyPatch() {
     return;
   }
   if (how === (state.inventionHow || "").trim()) {
-    flashToast("Change how-it-works to address this attack, then apply the fix.");
+    flashToast(t("toast.changeHowApplyFix", null, "Change how-it-works to address this attack, then apply the fix."));
     return;
   }
   if (apEnabled()) {
@@ -8592,7 +9365,7 @@ function scrutinyPatch() {
   let funded = Boolean($("#challenge-fund-patch")?.checked);
   if (funded && budgetWillEnabled()) {
     if ((state.budget ?? 0) < 1) {
-      flashToast("Not enough Budget for a funded fix — uncheck it or free up Budget.", { resource: "budget" });
+      flashToast(t("toast.noBudgetFundedFix", null, "Not enough Budget for a funded fix — uncheck it or free up Budget."), { resource: "budget" });
       funded = false;
     } else {
       state.budget -= 1;
@@ -8633,8 +9406,8 @@ function scrutinyPatch() {
     else renderDeployBay();
     flashToast(
       deployStagesEnabled()
-        ? "Challenge cleared — open the deploy bay (Pilot → Scale → New normal)."
-        : "Challenge cleared — deploy when ready."
+        ? t("toast.challengeClearedOpenBay", null, "Challenge cleared — open the deploy bay (Pilot → Scale → New normal).")
+        : t("toast.challengeClearedDeployReady", null, "Challenge cleared — deploy when ready.")
     );
   }
   roomSyncChallengeView({ scrutiny: state.scrutiny, verdict: state.challengeVerdict });
@@ -8645,11 +9418,11 @@ function scrutinyPivot() {
   if (blockIfMpTurnGate("sidestepping")) return;
   if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
-    flashToast("Only the invent owner can sidestep mid-Challenge.");
+    flashToast(t("toast.onlyOwnerSidestep", null, "Only the invent owner can sidestep mid-Challenge."));
     return;
   }
   if (isChallengePosePending()) {
-    flashToast("Wait for the challenger to finish loading.");
+    flashToast(t("toast.waitChallengerLoad", null, "Wait for the challenger to finish loading."));
     return;
   }
   if (state.scrutinyMoveMode !== "sidestep") {
@@ -8859,8 +9632,16 @@ function scrutinyPivot() {
     }
     flashToast(
       deployStagesEnabled()
-        ? "Sidestep cleared Challenge — deploy bay open (Pilot is optional; click when ready)."
-        : "Challenge cleared — deploy when ready."
+        ? t(
+            "toast.sidestepClearedBay",
+            null,
+            "Sidestep cleared Challenge — deploy bay open (Pilot is optional; click when ready)."
+          )
+        : t(
+            "toast.challengeClearedDeployReady",
+            null,
+            "Challenge cleared — deploy when ready."
+          )
     );
   }
   roomSyncChallengeView({
@@ -8881,7 +9662,7 @@ function showChallengeCoach(html) {
     if (!draft) return;
     state.challengeAnswer = draft;
     $("#challenge-answer").value = draft;
-    flashToast("Draft copied — edit it, then submit");
+    flashToast(t("toast.draftCopied", null, "Draft copied — edit it, then submit"));
   });
 }
 
@@ -8986,7 +9767,7 @@ function setChallengePoseBusy(busy, opts = {}) {
     } else if (state.challengeSpectator) {
       status.textContent = "Watching the active player face the challenge… (read-only)";
     } else {
-      status.textContent = "Challenger is stepping in… actions unlock when the attack is ready.";
+      status.textContent = t("challengeUi.steppingIn", null, "Challenger is stepping in… actions unlock when the attack is ready.");
     }
   } else if (status && !locked && !state.challengeSpectator) {
     // leave status for renderScrutinyEncounters / paintActiveEncounter
@@ -9548,7 +10329,7 @@ function paintSpectatorChallengerChrome(activeName) {
     state.challengeAngle ||
     state.scrutiny?.encounters?.[0]?.angleId ||
     null;
-  const angle = CHALLENGE_ANGLES.find((a) => a.id === angleId);
+  const angle = resolveAngle(angleId);
   if (angle) {
     setChallengerVisual(angle);
     $("#challenge-angle-label").textContent = `Watching ${activeName || "player"}`;
@@ -9917,40 +10698,77 @@ function enterDeployAsSpectator(invent, activeName, evt) {
   const fb = $("#deploy-feedback");
   if (fb) {
     fb.hidden = false;
+    const who = activeName || t("deployUi.player", null, "Player");
     if (lastDep?.type === "pilot_ok") {
       fb.className = "challenge-feedback pass";
-      fb.innerHTML = `<strong>PILOT OK</strong> — ${escapeHtml(
-        activeName || "Player"
-      )} piloted successfully. Scale is next.`;
+      fb.innerHTML = `<strong>${escapeHtml(
+        t("deployUi.pilotOk", null, "PILOT OK")
+      )}</strong> — ${escapeHtml(
+        t(
+          "deployUi.pilotOkDetail",
+          { name: who },
+          `${who} piloted successfully. Scale is next.`
+        )
+      )}`;
       state.lastDeployRoll = { stage: "pilot", ok: true };
     } else if (lastDep?.type === "pilot_fail") {
       fb.className = "challenge-feedback fail";
-      fb.innerHTML = `<strong>PILOT FAILED</strong> — ${escapeHtml(
-        activeName || "Player"
-      )} will need to retry next turn.`;
+      fb.innerHTML = `<strong>${escapeHtml(
+        t("deployUi.pilotFail", null, "PILOT FAILED")
+      )}</strong> — ${escapeHtml(
+        t(
+          "deployUi.pilotFailDetail",
+          { name: who },
+          `${who} will need to retry next turn.`
+        )
+      )}`;
       state.lastDeployRoll = { stage: "pilot", ok: false };
     } else if (lastDep?.type === "scale_ok") {
       fb.className = "challenge-feedback pass";
       const solved = Boolean(lastDep.solved);
       fb.innerHTML = solved
-        ? `<strong>SCALE WON</strong> — ${escapeHtml(
-            activeName || "Player"
-          )} Scaled and held the Quest!`
-        : `<strong>SCALE OK</strong> — ${escapeHtml(
-            activeName || "Player"
-          )} Scaled (partial). Quest improved.`;
+        ? `<strong>${escapeHtml(
+            t("deployUi.scaleWon", null, "SCALE WON")
+          )}</strong> — ${escapeHtml(
+            t(
+              "deployUi.scaleWonDetail",
+              { name: who },
+              `${who} Scaled and held the Quest!`
+            )
+          )}`
+        : `<strong>${escapeHtml(
+            t("deployUi.scaleOk", null, "SCALE OK")
+          )}</strong> — ${escapeHtml(
+            t(
+              "deployUi.scaleOkDetail",
+              { name: who },
+              `${who} Scaled (partial). Quest improved.`
+            )
+          )}`;
       state.lastDeployRoll = { stage: "scale", ok: true };
     } else if (lastDep?.type === "scale_fail") {
       fb.className = "challenge-feedback fail";
-      fb.innerHTML = `<strong>SCALE FAILED</strong> — ${escapeHtml(
-        activeName || "Player"
-      )} will need to retry next turn.`;
+      fb.innerHTML = `<strong>${escapeHtml(
+        t("deployUi.scaleFail", null, "SCALE FAILED")
+      )}</strong> — ${escapeHtml(
+        t(
+          "deployUi.scaleFailDetail",
+          { name: who },
+          `${who} will need to retry next turn.`
+        )
+      )}`;
       state.lastDeployRoll = { stage: "scale", ok: false };
     } else {
       fb.className = "challenge-feedback pass";
-      fb.innerHTML = `<strong>Deploy</strong> — ${escapeHtml(
-        activeName || "Player"
-      )} is fielding Pilot → Scale.`;
+      fb.innerHTML = `<strong>${escapeHtml(
+        t("deployUi.bayTitle", null, "Deploy")
+      )}</strong> — ${escapeHtml(
+        t(
+          "deployUi.deployFielding",
+          { name: who },
+          `${who} is fielding Pilot → Scale.`
+        )
+      )}`;
     }
   }
 
@@ -10161,7 +10979,7 @@ function roomFollowChallengePresenceInner(evt) {
     if (state.screen !== "challenge-step" || !state.challengeSpectator) {
       roomFollowKey = chKey;
       enterChallengeAsSpectator(roomBridge.invent(followId) || live || {}, activeName);
-      flashToast(`Watching ${activeName} on Challenge`);
+      flashToast(t("toast.watchingActiveChallenge", { name: activeName }, "Watching {name} on Challenge"));
     } else {
       // Already on challenge follow — paint only, no vision / full remount
       roomFollowKey = chKey;
@@ -10293,7 +11111,7 @@ function roomFollowChallengePresenceInner(evt) {
       const lead = $("#deploy-screen-lead");
       if (lead) {
         lead.textContent =
-          "Not your turn — your invent stays on Deploy. Others may Pilot/Scale it on their turns.";
+          t("toast.notYourTurnDeployStay", null, "Not your turn — your invent stays on Deploy. Others may Pilot/Scale it on their turns.");
       }
       return;
     }
@@ -10306,7 +11124,7 @@ function roomFollowChallengePresenceInner(evt) {
         fb.hidden = true;
         fb.innerHTML = "";
       }
-      flashToast("Not your turn — back to workshop. You'll follow if someone fields your invent.");
+      flashToast(t("toast.notYourTurnBackWorkshop", null, "Not your turn — back to workshop. You'll follow if someone fields your invent."));
       state.screen = "workshop";
       $$(".screen").forEach((el) =>
         el.classList.toggle("active", el.id === "screen-workshop")
@@ -10458,7 +11276,7 @@ async function coachChallenge(mode, userText) {
     return;
   }
   if (isChallengePosePending()) {
-    flashToast("Wait for the challenger to finish loading.");
+    flashToast(t("toast.waitChallengerLoad", null, "Wait for the challenger to finish loading."));
     return;
   }
   if (!state.challengeQuestion && !state.challengeText) {
@@ -10536,7 +11354,7 @@ async function coachChallenge(mode, userText) {
   } catch (e) {
     // local fallback — AP still spent (same as invent co-inventor on soft failure)
     requestOk = true;
-    const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle) || CHALLENGE_ANGLES[0];
+    const angle = resolveAngle(state.challengeAngle);
     const place = state.mission?.place || "this place";
     const name = state.inventionName || "your invention";
     if (mode === "draft-challenge") {
@@ -10586,22 +11404,22 @@ async function submitChallengeAnswer() {
   if (scrutinyCombatEnabled() && state.scrutiny) {
     if (!canFightChallengeCombat()) {
       lockChallengeCombatChrome();
-      flashToast("Only the invent owner can submit a defense mid-Challenge.");
+      flashToast(t("toast.ownerSubmitDefense", null, "Only the invent owner can submit a defense mid-Challenge."));
       return;
     }
   } else if (!canFightChallengeCombat() && state.screen === "challenge-step") {
     // Essay: allow solo / owner on challenge screen even if phase flags lag
     if (mpBridge() && !mpBridge().isMyTurn?.()) {
-      flashToast("Only the invent owner can submit an answer mid-Challenge.");
+      flashToast(t("toast.onlyOwnerAnswer", null, "Only the invent owner can submit an answer mid-Challenge."));
       return;
     }
   } else if (!canFightChallengeCombat()) {
     lockChallengeCombatChrome();
-    flashToast("Only the invent owner can submit a defense mid-Challenge.");
+    flashToast(t("toast.ownerSubmitDefense", null, "Only the invent owner can submit a defense mid-Challenge."));
     return;
   }
   if (challengeCombatBusy) {
-    flashToast("Wait — defense is still being evaluated.");
+    flashToast(t("toast.waitDefenseEval", null, "Wait — defense is still being evaluated."));
     return;
   }
   if (scrutinyCombatEnabled() && state.scrutiny) {
@@ -10613,7 +11431,7 @@ async function submitChallengeAnswer() {
   const answer = $("#challenge-answer").value.trim();
   state.challengeAnswer = answer;
   if (answer.length < 20) {
-    flashToast("Give a real answer — a short paragraph.");
+    flashToast(t("toast.giveRealAnswer", null, "Give a real answer — a short paragraph."));
     return;
   }
   if (apEnabled()) {
@@ -10623,7 +11441,7 @@ async function submitChallengeAnswer() {
       clientActionId: `judge-${Date.now()}`,
     });
     if (!reserve.ok) {
-      flashToast("No AP left to submit for judgment — return to Invent and End turn first.", { resource: "ap" });
+      flashToast(t("toast.noApSubmitJudge", null, "No AP left to submit for judgment — return to Invent and End turn first."), { resource: "ap" });
       return;
     }
     renderChallengeHud();
@@ -10637,7 +11455,9 @@ async function submitChallengeAnswer() {
   if (fbPending) {
     fbPending.hidden = false;
     fbPending.className = "challenge-feedback is-pending";
-    fbPending.innerHTML = aiPendingHtml("Judging your answer…");
+    fbPending.innerHTML = aiPendingHtml(
+      t("challengeUi.judgingAnswer", null, "Judging your answer…")
+    );
   }
   let requestOk = false;
   try {
@@ -10651,23 +11471,41 @@ async function submitChallengeAnswer() {
     state.challengeVerdict = ["pass", "partial", "fail"].includes(verdict) ? verdict : "partial";
     state.hadChallengeAttempt = true;
     state.lastChallengeVerdict = state.challengeVerdict;
-    state.challengeFeedback = `<strong>${state.challengeVerdict.toUpperCase()}</strong> — ${escapeHtml(
-      data.message || data.lesson || "Judged."
+    const verdictLabel = challengeVerdictLabel(state.challengeVerdict);
+    state.challengeFeedback = `<strong>${escapeHtml(verdictLabel)}</strong> — ${escapeHtml(
+      data.message || data.lesson || t("challengeUi.judged", null, "Judged.")
     )}${data.lesson ? `<br/><em>${escapeHtml(data.lesson)}</em>` : ""}`;
     if (state.challengeVerdict === "fail") {
       state.challengeFails += 1;
       state.challengePassed = false;
       state.challengeFeedback +=
         state.challengeFails >= 2
-          ? "<br/>Two fails — go back to Invent, strengthen the idea, then try again."
-          : "<br/>Not enough. Revise your answer, or return to Invent. Next challenge may use a different angle.";
+          ? `<br/>${escapeHtml(
+              t(
+                "challengeUi.failTwo",
+                null,
+                "Two fails — go back to Invent, strengthen the idea, then try again."
+              )
+            )}`
+          : `<br/>${escapeHtml(
+              t(
+                "challengeUi.failRevise",
+                null,
+                "Not enough. Revise your answer, or return to Invent. Next challenge may use a different angle."
+              )
+            )}`;
     } else if (!bothStoryFacesReady()) {
       // Never unlock deploy without both story faces (entry gate should have blocked this)
       state.challengePassed = false;
       state.challengeVerdict = "fail";
       state.challengeFails += 1;
-      state.challengeFeedback +=
-        "<br/>Both story faces are required (how it works + everyday life). Return to Invent and finish them.";
+      state.challengeFeedback += `<br/>${escapeHtml(
+        t(
+          "challengeUi.failNeedFaces",
+          null,
+          "Both story faces are required (how it works + everyday life). Return to Invent and finish them."
+        )
+      )}`;
     } else {
       state.challengePassed = true;
       state.challengeClearMode = state.challengeClearMode || "essay";
@@ -10686,10 +11524,28 @@ async function submitChallengeAnswer() {
     state.hadChallengeAttempt = true;
     state.lastChallengeVerdict = state.challengeVerdict;
     state.challengeFeedback = !bothStoryFacesReady()
-      ? "<strong>FAIL</strong> — Both story faces are required (how it works + everyday life)."
+      ? `<strong>${escapeHtml(challengeVerdictLabel("fail"))}</strong> — ${escapeHtml(
+          t(
+            "challengeUi.failNeedFacesShort",
+            null,
+            "Both story faces are required (how it works + everyday life)."
+          )
+        )}`
       : ok
-        ? "<strong>PARTIAL</strong> — Concrete enough to try a deploy."
-        : "<strong>FAIL</strong> — Too vague. Name who acts, who pays, or what limit you respect.";
+        ? `<strong>${escapeHtml(challengeVerdictLabel("partial"))}</strong> — ${escapeHtml(
+            t(
+              "challengeUi.partialDeploy",
+              null,
+              "Concrete enough to try a deploy."
+            )
+          )}`
+        : `<strong>${escapeHtml(challengeVerdictLabel("fail"))}</strong> — ${escapeHtml(
+            t(
+              "challengeUi.failVague",
+              null,
+              "Too vague. Name who acts, who pays, or what limit you respect."
+            )
+          )}`;
     if (!ok) state.challengeFails += 1;
     if (budgetWillEnabled()) {
       dispatchSim("challenge_income", { verdict: state.challengeVerdict });
@@ -10768,7 +11624,7 @@ function unlockDeployBay() {
   if (!bothStoryFacesReady()) {
     state.challengePassed = false;
     state.deployUnlocked = false;
-    flashToast("Finish both story faces (how it works + everyday life) before Deploy.");
+    flashToast(t("toast.finishBothFacesDeploy", null, "Finish both story faces (how it works + everyday life) before Deploy."));
     return;
   }
   state.challengePassed = true;
@@ -10783,7 +11639,7 @@ function unlockDeployBay() {
       roomBridge.send({
         type: "submit_challenge",
         payload: {
-          answer: state.challengeAnswer || "Challenge cleared in scrutiny combat.",
+          answer: state.challengeAnswer || t("toast.challengeClearedScrutiny", null, "Challenge cleared in scrutiny combat."),
           verdict: state.challengeVerdict || "pass",
           clearMode: state.challengeClearMode || "defend",
           sidestep: state.challengeClearMode === "sidestep",
@@ -10809,12 +11665,12 @@ function unlockDeployBay() {
     state.deployFieldPaid = false;
     state.stagedDropPool = 0;
     state.stagedDropRemaining = 0;
-    state.lastNews = "Challenge cleared · Field your invention when ready.";
+    state.lastNews = t("toast.challengeClearedLastNews", null, "Challenge cleared · Field your invention when ready.");
     enterDeployBayInteractive(inv, {
       helper: Boolean(b?.viewingOther?.()),
       ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
     });
-    flashToast("Challenge cleared — Field it when ready.");
+    flashToast(t("toast.challengeClearedField", null, "Challenge cleared — Field it when ready."));
     return;
   }
 
@@ -10841,7 +11697,7 @@ function unlockDeployBay() {
     helper: Boolean(b?.viewingOther?.()),
     ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
   });
-  flashToast("Challenge cleared — Deploy: Pilot → Scale.");
+  flashToast(t("toast.challengeClearedDeploy", null, "Challenge cleared — Deploy: Pilot → Scale."));
 }
 
 function nextDeployStageAction() {
@@ -10891,10 +11747,10 @@ function renderDeployBay() {
       pill.hidden = true;
       pill.classList.remove("is-done", "is-active");
     });
-    if (title) title.textContent = "Field your invention";
+    if (title) title.textContent = t("deployUi.fieldInvention", null, "Field your invention");
     if (lead) {
       lead.textContent =
-        "Challenge cleared. Field your invention into this place — one step, then see how the crisis responds.";
+        t("toast.challengeClearedFieldPlace", null, "Challenge cleared. Field your invention into this place — one step, then see how the crisis responds.");
     }
     const fieldCost = currentDeployFieldCost();
     const costBits = [];
@@ -10902,19 +11758,31 @@ function renderDeployBay() {
     if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
     if (status) {
       status.textContent = costBits.length
-        ? `One step: field the idea. Cost: ${costBits.join(" · ")}.`
-        : "One step: field the idea. Crisis drops if the hold works.";
+        ? t(
+            "deployUi.oneStepCost",
+            { cost: costBits.join(" · ") },
+            `One step: field the idea. Cost: ${costBits.join(" · ")}.`
+          )
+        : t(
+            "deployUi.oneStepFree",
+            null,
+            "One step: field the idea. Crisis drops if the hold works."
+          );
     }
     if (primary) {
       primary.hidden = false;
       primary.removeAttribute("hidden");
       primary.disabled = !canField;
-      primary.textContent = "Field it →";
+      primary.textContent = t("deployUi.fieldIt", null, "Field it →");
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
-          : "Not your turn to field this invent"
-        : "Deploy your invention and see how the crisis responds";
+          ? t("deployUi.readOnlyWatch", null, "Read-only — watching the active player")
+          : t("deployUi.notYourField", null, "Not your turn to field this invent")
+        : t(
+            "deployUi.fieldTitle",
+            null,
+            "Deploy your invention and see how the crisis responds"
+          );
     }
     if (backInvent) backInvent.hidden = true;
     updateDeployFooterButtons();
@@ -10926,10 +11794,10 @@ function renderDeployBay() {
     pills.hidden = false;
     pills.removeAttribute("hidden");
   }
-  if (title) title.textContent = "Deploy bay";
+  if (title) title.textContent = t("deployUi.bayTitle", null, "Deploy bay");
   if (lead) {
     lead.textContent =
-      "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
+      t("toast.challengeClearedFieldShared", null, "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.");
   }
 
   const next = nextDeployStageAction();
@@ -10960,7 +11828,10 @@ function renderDeployBay() {
   if (apEnabled() && (scaleCost.ap || 0) > 0) scaleBits.push(`${scaleCost.ap} AP`);
   if (budgetWillEnabled()) {
     scaleBits.push(`${scaleCost.budget}$`);
-    if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Will`);
+    if (scaleCost.will > 0)
+      scaleBits.push(
+        `${scaleCost.will} ${t("deployUi.willLabel", null, "Will")}`
+      );
   }
 
   if (status) {
@@ -10968,27 +11839,52 @@ function renderDeployBay() {
     const lastLine =
       last && last.ok === false
         ? last.stage === "scale"
-          ? " Last Scale failed — not a win; retry or rework."
-          : " Last Pilot failed — retry next turn or rework."
+          ? t(
+              "deployUi.lastScaleFail",
+              null,
+              " Last Scale failed — not a win; retry or rework."
+            )
+          : t(
+              "deployUi.lastPilotFail",
+              null,
+              " Last Pilot failed — retry next turn or rework."
+            )
         : last && last.ok
           ? last.stage === "scale"
-            ? " Last Scale succeeded."
-            : " Last Pilot succeeded."
+            ? t("deployUi.lastScaleOk", null, " Last Scale succeeded.")
+            : t("deployUi.lastPilotOk", null, " Last Pilot succeeded.")
           : "";
+    const costSuffix = (bits) =>
+      bits.length
+        ? t("deployUi.costPrefix", { cost: bits.join(" · ") }, ` Cost: ${bits.join(" · ")}.`)
+        : "";
     if (next === "pilot") {
       const pilotAmt = Math.min(remaining, Math.max(1, Math.ceil(pool / 2)) || 0);
-      status.textContent =
+      status.textContent = t(
+        "deployUi.statusPilot",
+        {
+          pct: feas.pilotChancePct,
+          drop: pilotAmt,
+          cost: costSuffix(pilotBits),
+          last: lastLine,
+        },
         `Try Pilot (~${feas.pilotChancePct}% — timing, story, local fit, stack). ` +
-        `Local try: success drops −${pilotAmt} crisis.${
-          pilotBits.length ? ` Cost: ${pilotBits.join(" · ")}.` : ""
-        }${lastLine}`;
+          `Local try: success drops −${pilotAmt} crisis.${costSuffix(pilotBits)}${lastLine}`
+      );
     } else if (next === "scale") {
-      status.textContent =
+      status.textContent = t(
+        "deployUi.statusScale",
+        {
+          drop: state.dropPilotApplied,
+          pct: feas.scaleChancePct,
+          remaining,
+          cost: costSuffix(scaleBits),
+          last: lastLine,
+        },
         `Pilot landed (−${state.dropPilotApplied}). Try Scale (~${feas.scaleChancePct}% — Scale + Sustainable). ` +
-        `Success spends remaining −${remaining} and reaches New normal. ` +
-        `Weak on Sustainable if you only shelter people and never touch why the crisis keeps happening.${
-          scaleBits.length ? ` Cost: ${scaleBits.join(" · ")}.` : ""
-        }${lastLine}`;
+          `Success spends remaining −${remaining} and reaches New normal. ` +
+          `Weak on Sustainable if you only shelter people and never touch why the crisis keeps happening.${costSuffix(scaleBits)}${lastLine}`
+      );
     } else {
       // Scaled invent — multiplayer race may still continue if place not fully held
       const raceOpen =
@@ -10997,8 +11893,16 @@ function renderDeployBay() {
           roomBridge.client?.()?.snapshot?.mp?.place?.status === "playing" ||
           roomBridge.client?.()?.snapshot?.phase === "playing");
       status.textContent = raceOpen
-        ? `This invent scaled.${lastLine} Shared crisis improved — race continues until the place is held.`
-        : `Deploy complete.${lastLine}`;
+        ? t(
+            "deployUi.statusScaledRace",
+            { last: lastLine },
+            `This invent scaled.${lastLine} Shared crisis improved — race continues until the place is held.`
+          )
+        : t(
+            "deployUi.statusComplete",
+            { last: lastLine },
+            `Deploy complete.${lastLine}`
+          );
     }
   }
 
@@ -11007,24 +11911,40 @@ function renderDeployBay() {
       primary.hidden = false;
       primary.disabled = !canField;
       primary.textContent = pilotBits.length
-        ? `Try Pilot (${pilotBits.join(" · ")}) →`
-        : "Try Pilot →";
+        ? t(
+            "deployUi.tryPilotCost",
+            { cost: pilotBits.join(" · ") },
+            `Try Pilot (${pilotBits.join(" · ")}) →`
+          )
+        : t("deployUi.tryPilot", null, "Try Pilot →");
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
-          : "Not your turn to Pilot this invent"
-        : `About ${feas.pilotChancePct}% chance (local feasibility). Succeeds or fails.`;
+          ? t("deployUi.readOnlyWatch", null, "Read-only — watching the active player")
+          : t("deployUi.notYourPilot", null, "Not your turn to Pilot this invent")
+        : t(
+            "deployUi.pilotChance",
+            { pct: feas.pilotChancePct },
+            `About ${feas.pilotChancePct}% chance (local feasibility). Succeeds or fails.`
+          );
     } else if (next === "scale") {
       primary.hidden = false;
       primary.disabled = !canField;
       primary.textContent = scaleBits.length
-        ? `Try Scale (${scaleBits.join(" · ")}) →`
-        : "Try Scale →";
+        ? t(
+            "deployUi.tryScaleCost",
+            { cost: scaleBits.join(" · ") },
+            `Try Scale (${scaleBits.join(" · ")}) →`
+          )
+        : t("deployUi.tryScale", null, "Try Scale →");
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
-          : "Not your turn to Scale this invent"
-        : `About ${feas.scaleChancePct}% chance (Scale + Sustainable). Success → New normal.`;
+          ? t("deployUi.readOnlyWatch", null, "Read-only — watching the active player")
+          : t("deployUi.notYourScale", null, "Not your turn to Scale this invent")
+        : t(
+            "deployUi.scaleChance",
+            { pct: feas.scaleChancePct },
+            `About ${feas.scaleChancePct}% chance (Scale + Sustainable). Success → New normal.`
+          );
     } else {
       primary.hidden = true;
     }
@@ -11124,13 +12044,13 @@ function payPilotAttempt() {
   });
   if (!pay.ok) {
     if (pay.error === "no_ap") {
-      flashToast("No AP to try Pilot — End turn, then try again.", { resource: "ap" });
+      flashToast(t("toast.noApPilot", null, "No AP to try Pilot — End turn, then try again."), { resource: "ap" });
     } else if (pay.error === "no_budget") {
       flashToast(`Need ¤${fieldCost.budget} Budget to try Pilot (you have ${state.budget ?? 0}).`, {
         resource: "budget",
       });
     } else {
-      flashToast("Cannot field Pilot right now.");
+      flashToast(t("toast.cannotPilot", null, "Cannot field Pilot right now."));
     }
     return { ok: false, fieldCost };
   }
@@ -11143,7 +12063,7 @@ function payScaleAttempt() {
   const techs = selectedTechs();
   const cost = currentScaleCost(techs);
   if (apEnabled() && (state.ap ?? 0) < cost.ap) {
-    flashToast("No AP to try Scale — End turn first.", { resource: "ap" });
+    flashToast(t("toast.noApScale", null, "No AP to try Scale — End turn first."), { resource: "ap" });
     return { ok: false, cost };
   }
   if (budgetWillEnabled()) {
@@ -11166,10 +12086,10 @@ function payScaleAttempt() {
       budgetCost: budgetWillEnabled() ? cost.budget : 0,
     });
     if (!pay.ok) {
-      if (pay.error === "no_ap") flashToast("No AP to try Scale.", { resource: "ap" });
+      if (pay.error === "no_ap") flashToast(t("toast.noApScale", null, "No AP to try Scale."), { resource: "ap" });
       else if (pay.error === "no_budget")
         flashToast("Not enough Budget for Scale.", { resource: "budget" });
-      else flashToast("Cannot scale right now.");
+      else flashToast(t("toast.cannotScale", null, "Cannot scale right now."));
       return { ok: false, cost };
     }
     if (budgetWillEnabled() && cost.will > 0) {
@@ -11185,7 +12105,7 @@ function snapshotTimingAtDeploy() {
   const timingSnap =
     state.aiTiming?.level && state.aiTiming?.forKey === timingCacheKey()
       ? state.aiTiming.level
-      : detectClaimStretch(state.inventionHow, techs, state.year).level;
+      : detectClaimStretch(state.inventionHow, techs, state.year, getLocale()).level;
   state.timingLevelAtDeploy = timingSnap;
   return timingSnap;
 }
@@ -11197,13 +12117,13 @@ function attemptDeployStage(stage) {
   }
   if (blockIfMpTurnGate(stage === "pilot" ? "Pilot" : "Scale")) return;
   if (!state.challengePassed || !state.deployUnlocked) {
-    flashToast("Clear the challenge first.");
+    flashToast(t("toast.clearChallengeFirst", null, "Clear the challenge first."));
     return;
   }
   // Multiplayer: invent locked after Challenge; active player may Pilot/Scale
   const b = mpBridge();
   if (b && !b.canRunDeploy?.()) {
-    flashToast("Not your turn to Pilot/Scale this invent (or retry locked this seat-turn).");
+    flashToast(t("toast.notYourTurnPilotScale", null, "Not your turn to Pilot/Scale this invent (or retry locked this seat-turn)."));
     return;
   }
   // Online room: server rolls Pilot/Scale on the *viewed* invent (helper pays AP + capital)
@@ -11289,11 +12209,11 @@ function attemptDeployStage(stage) {
   }
   const techs = selectedTechs();
   if (!techs.length) {
-    flashToast("Add at least one technology.");
+    flashToast(t("toast.addTechFirst", null, "Add at least one technology."));
     return;
   }
   if (state.inventionHow.trim().length < 20 || state.inventionImpact.trim().length < 20) {
-    flashToast("Need both story faces.");
+    flashToast(t("toast.needBothFaces", null, "Need both story faces."));
     return;
   }
 
@@ -11632,7 +12552,7 @@ function reopenInventToWorkshop(opts = {}) {
 
   // Must be owner's seat-turn in multiplayer
   if (b && !b.isMyTurn?.()) {
-    flashToast("Not your turn — wait to abandon Challenge on your invent.");
+    flashToast(t("toast.notYourTurnAbandonChallenge", null, "Not your turn — wait to abandon Challenge on your invent."));
     return;
   }
 
@@ -11764,7 +12684,7 @@ function attemptDeploy() {
   if (deployStagesEnabled()) {
     const next = nextDeployStageAction();
     if (next) attemptDeployStage(next);
-    else flashToast("Deploy finished.");
+    else flashToast(t("toast.deployFinished", null, "Deploy finished."));
     return;
   }
   attemptDeployLegacy();
@@ -11778,15 +12698,15 @@ function attemptDeployLegacy() {
   }
   const techs = selectedTechs();
   if (!techs.length) {
-    flashToast("Add at least one technology.");
+    flashToast(t("toast.addTechFirst", null, "Add at least one technology."));
     return;
   }
   if (state.inventionHow.trim().length < 20 || state.inventionImpact.trim().length < 20) {
-    flashToast("Need both story faces.");
+    flashToast(t("toast.needBothFaces", null, "Need both story faces."));
     return;
   }
   if (assessFeasibility().overall === "red") {
-    flashToast("Feasibility is red — revise how-it-works timing claims first.");
+    flashToast(t("toast.feasibilityRedFirst", null, "Feasibility is red — revise how-it-works timing claims first."));
     return;
   }
 
@@ -11798,11 +12718,11 @@ function attemptDeployLegacy() {
     });
     if (!pay.ok) {
       if (pay.error === "no_ap") {
-        flashToast("No AP to deploy — return to Invent and End turn, then come back.", { resource: "ap" });
+        flashToast(t("toast.noApDeploy", null, "No AP to deploy — return to Invent and End turn, then come back."), { resource: "ap" });
       } else if (pay.error === "no_budget") {
         flashToast(`Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, win challenge income, or simplify the stack.`, { resource: "budget" });
       } else {
-        flashToast("Cannot deploy right now.");
+        flashToast(t("toast.cannotDeploy", null, "Cannot deploy right now."));
       }
       renderChallengeHud();
       updateDeployButtonCost();
@@ -11857,7 +12777,7 @@ function buildRunReport(kind, meta = {}) {
       meta.timingLevel ||
       state.timingLevelAtDeploy ||
       state.aiTiming?.level ||
-      detectClaimStretch(state.inventionHow, techs, state.year).level,
+      detectClaimStretch(state.inventionHow, techs, state.year, getLocale()).level,
     inventionHow: state.inventionHow,
     synergyPairCount: pairs.length,
     domainCount: domains.length,
@@ -12118,11 +13038,11 @@ function applyOutcomeNextChallengeChrome() {
     // Hard-hide so solo labels never sit disabled next to Challenge-chooser controls
     if (retry) {
       retry.style.display = "none";
-      retry.textContent = "Continue this Quest";
+      retry.textContent = t("outcomeUi.continueQuest", null, "Continue this Quest");
     }
     if (neu) {
       neu.style.display = "none";
-      neu.textContent = "Leave Quest";
+      neu.textContent = t("outcomeUi.leaveQuest", null, "Leave Quest");
     }
   } else {
     if (retry) retry.style.display = "";
@@ -12131,7 +13051,7 @@ function applyOutcomeNextChallengeChrome() {
 
   if (roomMp) {
     setOutcomeBtnVisible(leave, true);
-    leave.textContent = "Leave room";
+    leave.textContent = t("outcomeUi.leaveRoom", null, "Leave room");
     leave.title = "Leave this room (others can choose the next Quest without you)";
     const iAmChooser = nextQuestChooserIsMe();
     const placeStatus =
@@ -12195,10 +13115,10 @@ function applyOutcomeNextChallengeChrome() {
   if (kind === "partial") {
     // Optional continue: crisis still hot, same Challenge
     setOutcomeBtnVisible(retry, true);
-    retry.textContent = "Continue this Quest";
+    retry.textContent = t("outcomeUi.continueQuest", null, "Continue this Quest");
     retry.title =
       "Same Challenge — crisis meters as left after deploy. Face Challenge again to field another step.";
-    neu.textContent = "Leave Quest";
+    neu.textContent = t("outcomeUi.leaveQuest", null, "Leave Quest");
     neu.title = "Pick another theme / Challenge";
     neu.classList.remove("btn-primary");
     neu.classList.add("btn-secondary");
@@ -12207,9 +13127,9 @@ function applyOutcomeNextChallengeChrome() {
     setHint("Not fully solved — keep working this Quest, or leave for another.");
   } else if (kind === "win") {
     setOutcomeBtnVisible(retry, true);
-    retry.textContent = "Review invent";
+    retry.textContent = t("outcomeUi.reviewInvent", null, "Review invent");
     retry.title = "Return to the workshop (Challenge already held)";
-    neu.textContent = "New Quest";
+    neu.textContent = t("outcomeUi.newQuest", null, "New Quest");
     neu.title = "Pick another theme / Challenge";
     neu.classList.add("btn-primary");
     neu.classList.remove("btn-secondary");
@@ -12219,9 +13139,9 @@ function applyOutcomeNextChallengeChrome() {
   } else if (kind === "collapse") {
     const bankrupt = Boolean(state.outcome?.meta?.bankrupt);
     setOutcomeBtnVisible(retry, true);
-    retry.textContent = "Retry this Quest";
+    retry.textContent = t("outcomeUi.retryQuest", null, "Retry this Quest");
     retry.title = "Restart this Quest from the beginning";
-    neu.textContent = "New Quest";
+    neu.textContent = t("outcomeUi.newQuest", null, "New Quest");
     neu.title = "Pick another theme / Challenge";
     neu.classList.add("btn-primary");
     neu.classList.remove("btn-secondary");
@@ -12230,12 +13150,12 @@ function applyOutcomeNextChallengeChrome() {
     setHint(
       bankrupt
         ? "Out of capital. Restart this Quest leaner, or try a different one."
-        : "Too late here. Retry this Quest or start a new one."
+        : t("toast.tooLateRetry", null, "Too late here. Retry this Quest or start a new one.")
     );
   } else {
     setOutcomeBtnVisible(retry, true);
-    retry.textContent = "Continue this Quest";
-    neu.textContent = "Leave Quest";
+    retry.textContent = t("outcomeUi.continueQuest", null, "Continue this Quest");
+    neu.textContent = t("outcomeUi.leaveQuest", null, "Leave Quest");
     setHint("");
   }
 }
@@ -12322,7 +13242,7 @@ function renderOutcomeResultBanner(o, m) {
         ? "Friends · Quest collapsed"
         : "Solo · too late";
     }
-    if (title) title.textContent = multiparty ? "Quest collapsed — no champion" : "Too late";
+    if (title) title.textContent = multiparty ? t("outcomeUi.collapsedNoChamp", null, "Quest collapsed — no champion") : t("outcomeUi.tooLate", null, "Too late");
     if (sub) {
       sub.textContent = multiparty
         ? "The shared crisis got too bad (a meter hit 5, or every invent waited past the fail year). Everyone loses — no player ranking."
@@ -12546,7 +13466,11 @@ function paintOutcomeVision(m, o) {
     // Leave prior frame if any; don't force-clear (share may still use payload)
     const status = $("#outcome-vision-status");
     if (status && !visionUrlFromImg(img)) {
-      status.textContent = "No invent vision captured for this run.";
+      status.textContent = t(
+        "outcomeUi.noVision",
+        null,
+        "No invent vision captured for this run."
+      );
     }
     return;
   }
@@ -12559,8 +13483,18 @@ function paintOutcomeVision(m, o) {
     const place = m?.place || state.mission?.place || "";
     const year = o?.year ?? state.year;
     status.textContent = place
-      ? `Vision of ${place}${year != null ? `, ${year}` : ""}`
-      : "Invention vision";
+      ? t(
+          "outcomeUi.visionOf",
+          {
+            place,
+            yearBit:
+              year != null
+                ? t("outcomeUi.visionYear", { year }, `, ${year}`)
+                : "",
+          },
+          `Vision of ${place}${year != null ? `, ${year}` : ""}`
+        )
+      : t("outcomeUi.inventionVision", null, "Invention vision");
   }
 }
 
@@ -12597,11 +13531,31 @@ function renderOutcome() {
   const name =
     (mp?.inventName && String(mp.inventName).trim()) ||
     state.inventionName.trim() ||
-    "Untitled invention";
+    t("outcomeUi.untitled", null, "Untitled invention");
   $("#outcome-name").textContent = name;
-  $("#outcome-meta").textContent = `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${
-    o.waits ?? state.waits ?? 0
-  } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
+  const storyLabel = $("#outcome-story-label");
+  if (storyLabel)
+    storyLabel.textContent = t("outcomeUi.whatHappened", null, "What happened");
+  const lessonsLabel = $("#outcome-lessons-label");
+  if (lessonsLabel)
+    lessonsLabel.textContent = t("outcomeUi.whatLearned", null, "What you learned");
+  const gTitle = state.global ? locGlobal(state.global)?.title || state.global.title : "";
+  $("#outcome-meta").textContent = t(
+    "outcomeUi.metaLine",
+    {
+      place: m?.place || "—",
+      year: o.year,
+      turn: o.turn,
+      waits: o.waits ?? state.waits ?? 0,
+      theme: gTitle || "",
+      friends: mp?.multiparty
+        ? t("outcomeUi.friendsBit", null, " · Friends / hotseat")
+        : "",
+    },
+    `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${
+      o.waits ?? state.waits ?? 0
+    } · ${gTitle || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`
+  );
 
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
@@ -12641,13 +13595,13 @@ function renderOutcome() {
   // AI invent vision → outcome panel + share card payload
   paintOutcomeVision(m, o);
 
-  let headline = "Holding the line";
+  let headline = t("outcomeUi.holding", null, "Holding the line");
   let story = "";
   const lessons = [];
 
   if (o.kind === "win" && mp?.multiparty) {
     const winner = mp.ranking?.rows?.[0];
-    headline = winner ? `${winner.displayName} leads — Quest held` : "Quest held";
+    headline = winner ? t("outcomeUi.leadsHeld", { name: winner.displayName }, "{name} leads — Quest held") : t("outcomeUi.questHeld", null, "Quest held");
     story =
       `In ${o.year}, “${name}” (${mp.inventOwnerName || "a player"}) Scaled in ${m.place}` +
       (mp.drop ? ` and cut crisis by ${mp.drop}` : "") +
@@ -12666,106 +13620,222 @@ function renderOutcome() {
     });
     lessons.push({
       type: "good",
-      text: "Player rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% race to Scale.",
+      text: t(
+        "outcomeUi.lessonRank",
+        null,
+        "Player rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% race to Scale."
+      ),
     });
     lessons.push({
       type: "grow",
-      text: "If the place had collapsed, there would be no champion — only a shared loss.",
+      text: t(
+        "outcomeUi.lessonNoChamp",
+        null,
+        "If the place had collapsed, there would be no champion — only a shared loss."
+      ),
     });
   } else if (o.kind === "win") {
-    headline = "Crisis eased";
+    headline = t("outcomeUi.crisisEased", null, "Crisis eased");
     const sidestepped = Boolean(o.meta?.sidestep);
-    story =
-      `In ${o.year}, ${name} landed in ${m.place}. Crisis meters fell enough for people to breathe. ` +
-      (sidestepped
-        ? `You sidestepped a ${o.meta?.angle || "challenge"} challenger (once per mission), then deployed. `
-        : `You faced a ${o.meta?.angle || "challenge"} attack, then deployed. `) +
-      (state.inventionImpact.trim()
-        ? `Everyday life: ${state.inventionImpact.trim()}`
-        : "A local face of a global problem got smaller.");
+    const angle = o.meta?.angle || "challenge";
+    const challengeBit = sidestepped
+      ? t(
+          "outcomeUi.storyWinSidestep",
+          { angle },
+          `You sidestepped a ${angle} challenger (once per mission), then deployed. `
+        )
+      : t(
+          "outcomeUi.storyWinFaced",
+          { angle },
+          `You faced a ${angle} attack, then deployed. `
+        );
+    const life = state.inventionImpact.trim();
+    const lifeBit = life
+      ? t("outcomeUi.storyWinLife", { life }, `Everyday life: ${life}`)
+      : t(
+          "outcomeUi.storyWinDefaultLife",
+          null,
+          "A local face of a global problem got smaller."
+        );
+    story = t(
+      "outcomeUi.storyWin",
+      {
+        year: o.year,
+        name,
+        place: m.place,
+        challengeBit,
+        lifeBit,
+      },
+      `In ${o.year}, ${name} landed in ${m.place}. Crisis meters fell enough for people to breathe. ${challengeBit}${lifeBit}`
+    );
     if (sidestepped) {
       lessons.push({
         type: "grow",
-        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Will). Deploy unlocked, but elegance softens.`,
+        text: t(
+          "outcomeUi.lessonSidestep",
+          { angle: o.meta?.angle || "stress-test" },
+          `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Will). Deploy unlocked, but elegance softens.`
+        ),
       });
     } else {
       lessons.push({
         type: "good",
-        text: `Challenge (${o.meta?.angle || "stress-test"}): ${state.challengeVerdict || "passed"}.`,
+        text: t(
+          "outcomeUi.lessonFaced",
+          { angle: o.meta?.angle || "stress-test" },
+          `You answered a ${o.meta?.angle || "stress-test"} challenge before deploying — that discipline matters.`
+        ),
       });
     }
     lessons.push({
       type: "good",
-      text: `Timing: deployed with feasible claims in ${o.year}, before fail year ${m.collapseYear}.`,
+      text: t(
+        "outcomeUi.lessonTiming",
+        { year: o.year, fail: m.collapseYear },
+        `Timing: deployed with feasible claims in ${o.year}, before fail year ${m.collapseYear}.`
+      ),
     });
     lessons.push({
       type: "good",
-      text: `Local → global: ${m.place} is one face of “${state.global?.title || "the larger problem"}”.`,
+      text: t(
+        "outcomeUi.lessonLocalGlobal",
+        {
+          place: m.place,
+          theme: gTitle || t("outcomeUi.largerProblem", null, "the larger problem"),
+        },
+        `Local → global: ${m.place} is one face of “${gTitle || "the larger problem"}”.`
+      ),
     });
   } else if (o.kind === "partial") {
-    headline = "Not fully solved";
-    story =
-      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its goal for a full win. ` +
-      `Continue this Quest to invent another step against the remaining crisis, or leave for a different Quest. ` +
-      `(In friends multiplayer, a partial Scale would not open this screen — the Challenge keeps going until every meter meets its goal.)`;
+    headline = t("outcomeUi.notFully", null, "Not fully solved");
+    story = t(
+      "outcomeUi.storyPartial",
+      {
+        year: o.year,
+        name,
+        place: m.place,
+        drop: o.meta?.drop || "?",
+      },
+      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its goal for a full win. Continue this Quest to invent another step against the remaining crisis, or leave for a different Quest. (In friends multiplayer, a partial Scale would not open this screen — the Challenge keeps going until every meter meets its goal.)`
+    );
     lessons.push({
       type: "grow",
-      text: "Solo partial: optional continue. Multiplayer: partial Scales accumulate on the shared crisis until someone fully holds the Challenge.",
+      text: t(
+        "outcomeUi.lessonPartialSolo",
+        null,
+        "Solo partial: optional continue. Multiplayer: partial Scales accumulate on the shared crisis until someone fully holds the Challenge."
+      ),
     });
     if (o.meta?.sidestep) {
       lessons.push({
         type: "grow",
-        text: `You sidestepped the ${o.meta.angle || "challenge"} challenger before deploying — a paid dodge (once per mission), not a defended answer.`,
+        text: t(
+          "outcomeUi.lessonSidestepPartial",
+          { angle: o.meta.angle || "challenge" },
+          `You sidestepped the ${o.meta.angle || "challenge"} challenger before deploying — a paid dodge (once per mission), not a defended answer.`
+        ),
       });
     } else if (o.meta?.angle) {
       lessons.push({
         type: "good",
-        text: `You answered a ${o.meta.angle} challenge before deploying — that discipline matters.`,
+        text: t(
+          "outcomeUi.lessonFaced",
+          { angle: o.meta.angle },
+          `You answered a ${o.meta.angle} challenge before deploying — that discipline matters.`
+        ),
       });
     }
   } else if (o.kind === "collapse" && o.meta?.bankrupt) {
-    headline = "Out of capital";
-    story =
-      `In ${o.year}, ${name || "the invention"} never got a real chance in ${m.place}: Budget hit 0$ and the project went broke. ` +
-      `Tech cards, Lobby, Pilot, and Scale all spend capital — save enough to field what you invent. ` +
-      `Clearing Challenge can restore a little Budget; over-buying the stack often cannot.`;
+    headline = t("outcomeUi.outOfCapital", null, "Out of capital");
+    story = t(
+      "outcomeUi.storyBankrupt",
+      {
+        year: o.year,
+        name: name || t("outcomeUi.theInvention", null, "the invention"),
+        place: m.place,
+      },
+      `In ${o.year}, ${name || "the invention"} never got a real chance in ${m.place}: Budget hit 0$ and the project went broke. Tech cards, Lobby, Pilot, and Scale all spend capital — save enough to field what you invent. Clearing Challenge can restore a little Budget; over-buying the stack often cannot.`
+    );
     lessons.push({
       type: "grow",
-      text: "Solo rule: Budget 0$ is game over. Keep cash for Pilot (and Scale), not only for shiny cards.",
+      text: t(
+        "outcomeUi.lessonBankrupt1",
+        null,
+        "Solo rule: Budget 0$ is game over. Keep cash for Pilot (and Scale), not only for shiny cards."
+      ),
     });
     lessons.push({
       type: "grow",
-      text: "Lean stacks, half-refunds on same-turn removes, and challenge wins (+1 Budget) are how you stay solvent.",
+      text: t(
+        "outcomeUi.lessonBankrupt2",
+        null,
+        "Lean stacks, half-refunds on same-turn removes, and challenge wins (+1 Budget) are how you stay solvent."
+      ),
     });
   } else if (o.kind === "collapse" && mp?.multiparty) {
-    headline = "Quest collapsed — no champion";
-    story =
+    headline = t("outcomeUi.collapsedNoChamp", null, "Quest collapsed — no champion");
+    story = t(
+      "outcomeUi.storyCollapseMp",
+      {
+        place: m.place,
+        yearBit: o.year
+          ? t(
+              "outcomeUi.yearBitEarliest",
+              { year: o.year },
+              ` (earliest invent year ${o.year})`
+            )
+          : "",
+      },
       `Crisis in ${m.place} broke the Challenge` +
-      (o.year ? ` (earliest invent year ${o.year})` : "") +
-      `. In friends play everyone loses when the *shared* crisis collapses — meters maxed, or every invent calendar past the fail year. ` +
-      `One player Waiting late does not end the Challenge alone while others still invent in the present. ` +
-      `There is no winner ranking, only what each invent learned before the end.`;
+        (o.year ? ` (earliest invent year ${o.year})` : "") +
+        `. In friends play everyone loses when the *shared* crisis collapses — meters maxed, or every invent calendar past the fail year. One player Waiting late does not end the Challenge alone while others still invent in the present. There is no winner ranking, only what each invent learned before the end.`
+    );
     lessons.push({
       type: "grow",
-      text: "Shared crisis meters still rise on any Wait — meters at 5 end the table for everyone.",
+      text: t(
+        "outcomeUi.lessonSharedMeters",
+        null,
+        "Shared crisis meters still rise on any Wait — meters at 5 end the table for everyone."
+      ),
     });
     lessons.push({
       type: "grow",
-      text: "Calendar fail is unanimous: the Challenge only times out when every invent has waited to the fail year. Late solo waits do not sink teammates still working in the present.",
+      text: t(
+        "outcomeUi.lessonCalendarFail",
+        null,
+        "Calendar fail is unanimous: the Challenge only times out when every invent has waited to the fail year. Late solo waits do not sink teammates still working in the present."
+      ),
     });
   } else if (o.kind === "collapse") {
-    headline = "Too late";
-    story =
-      `By ${o.year}, crisis in ${m.place} broke past what a late invention could fix. ` +
-      `Waiting can improve world conditions for your claims — but crisis meters rise. The clock cuts both ways.`;
-    lessons.push({ type: "grow", text: "Problems escalate on a clock. Waiting is never free." });
+    headline = t("outcomeUi.tooLate", null, "Too late");
+    story = t(
+      "outcomeUi.storyTooLate",
+      { year: o.year, place: m.place },
+      `By ${o.year}, crisis in ${m.place} broke past what a late invention could fix. Waiting can improve world conditions for your claims — but crisis meters rise. The clock cuts both ways.`
+    );
     lessons.push({
       type: "grow",
-      text: "Categories were always pickable — the skill is matching how-it-works claims to the year.",
+      text: t(
+        "outcomeUi.lessonClock",
+        null,
+        "Problems escalate on a clock. Waiting is never free."
+      ),
+    });
+    lessons.push({
+      type: "grow",
+      text: t(
+        "outcomeUi.lessonCategories",
+        null,
+        "Categories were always pickable — the skill is matching how-it-works claims to the year."
+      ),
     });
   } else {
-    headline = "Mission paused";
-    story = "You left the invent. The calendar in that place keeps moving without you.";
+    headline = t("outcomeUi.paused", null, "Mission paused");
+    story = t(
+      "outcomeUi.storyPaused",
+      null,
+      "You left the invent. The calendar in that place keeps moving without you."
+    );
   }
 
   $("#outcome-headline").textContent = headline;
@@ -12813,10 +13883,12 @@ function renderOutcome() {
   if (visionSnap.url) o.visionUrl = visionSnap.url;
 
   // Foresight: milestones, trends, predictions
-  const fs = foresightForStack(
-    (o.techs || []).map((t) => t.id),
-    state.global?.id || state.mission?.globalId,
-    o.year
+  const fs = locForesightPack(
+    foresightForStack(
+      (o.techs || []).map((t) => t.id),
+      state.global?.id || state.mission?.globalId,
+      o.year
+    )
   );
   const fg = $("#outcome-foresight");
   if (fg) {
@@ -12828,10 +13900,24 @@ function renderOutcome() {
       </article>`;
     };
     const html =
-      card("milestone", "Milestone (already real)", fs.milestone) +
-      card("trend", "Trend", fs.trend) +
-      card("prediction", "Prediction", fs.prediction);
-    fg.innerHTML = html || "<p class='empty-hint'>No foresight cards matched this stack.</p>";
+      card(
+        "milestone",
+        t("foresight.milestone", null, "Milestone (already real)"),
+        fs.milestone
+      ) +
+      card("trend", t("foresight.trend", null, "Trend"), fs.trend) +
+      card(
+        "prediction",
+        t("foresight.prediction", null, "Prediction"),
+        fs.prediction
+      );
+    fg.innerHTML =
+      html ||
+      `<p class='empty-hint'>${t(
+        "foresight.empty",
+        null,
+        "No foresight cards matched this stack."
+      )}</p>`;
   }
 
   $("#outcome-techs").innerHTML = (o.techs || [])
@@ -13192,7 +14278,7 @@ function buildChallengeVisionBeat() {
   const enc = activeEncounter(state.scrutiny);
   const angleId = enc?.angleId || state.challengeAngle;
   if (!angleId) return null;
-  const meta = CHALLENGE_ANGLES.find((a) => a.id === angleId);
+  const meta = resolveAngle(angleId);
   return {
     angle: angleId,
     label: meta?.label || enc?.label || angleId,
@@ -13495,7 +14581,7 @@ function ensureCoInventor() {
         turn: state.turn,
         pressure: state.pressure,
         place: state.mission?.place,
-        availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+        availableTechs: TECHS.map((t) => techForAi(locTech(t), state.year)),
         challengeAngle: state.challengeAngle,
         challengeSpeech: state.challengeText,
         challengeQuestion: state.challengeQuestion,
@@ -13508,6 +14594,7 @@ function ensureCoInventor() {
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
           : undefined,
+        ...aiLocaleContext(),
       };
     },
     applyProposals: applyCoInventorProposals,
@@ -13532,13 +14619,13 @@ function ensureCoInventor() {
     beforeRequest: (mode) => {
       if (isMpInventSpectator()) {
         flashToast(
-          "Not your turn — you can browse and use Learn, but only the active player acts."
+          t("challengeUi.spectator", null, "Not your turn — you can browse and use Learn, but only the active player acts.")
         );
         return false;
       }
       const bridge = mpBridge();
       if (bridge && !bridge.isMyTurn?.()) {
-        flashToast("Not your turn — you can browse and use Learn, but only the active player acts.");
+        flashToast(t("toast.notYourTurnBrowse", null, "Not your turn — you can browse and use Learn, but only the active player acts."));
         return false;
       }
       const cost = coInventorReserveAp();
@@ -13549,7 +14636,7 @@ function ensureCoInventor() {
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP left for co-inventor — End Turn or Wait.", { resource: "ap" });
+        flashToast(t("toast.noApCoInventor", null, "No AP left for co-inventor — End Turn or Wait."), { resource: "ap" });
         return false;
       }
       renderHud();
@@ -13574,7 +14661,7 @@ function ensureCoInventor() {
   // Fresh mount starts interactive; re-apply multiplayer spectator / busy locks
   const spect = isMpInventSpectator();
   const reason = spect
-    ? "Not your turn — you can browse and use Learn, but only the active player acts."
+    ? t("challengeUi.spectator", null, "Not your turn — you can browse and use Learn, but only the active player acts.")
     : isInventActionBusy()
       ? inventActionBusyReason()
       : "";
@@ -13607,7 +14694,7 @@ function applyCoInventorProposals(proposals) {
     if (state.selectedTechIds.includes(id)) continue;
     const cap = stackCapLimit();
     if (state.selectedTechIds.length >= cap) {
-      flashToast(`Stack full (${cap}). Remove one first.`);
+      flashToast(t("toast.stackFullNamed", { n: cap }, "Stack full ({n}). Remove one first."));
       break;
     }
     onTechClick(id);
@@ -13665,15 +14752,15 @@ function applyCoInventorProposals(proposals) {
       state.coInventor?.syncChipGates?.();
     }
     if (addedTechIds.length === 1) {
-      flashToast(`Added ${techById(addedTechIds[0])?.name || "tech"} to stack`);
+      flashToast(t("toast.addedTech", { name: techById(addedTechIds[0])?.name || "tech" }, "Added {name}"));
     } else if (addedTechIds.length > 1) {
-      flashToast(`Added ${addedTechIds.length} techs to stack`);
+      flashToast(t("toast.addedTechs", { n: addedTechIds.length }, "Added {n} techs to stack"));
     } else if (
       proposals.inventionName ||
       proposals.inventionHow ||
       proposals.inventionImpact
     ) {
-      flashToast("Co-inventor ideas applied");
+      flashToast(t("toast.coInventorApplied", null, "Co-inventor ideas applied"));
     }
   }
   return { changed, addedTechIds };
@@ -13772,7 +14859,7 @@ async function judgeContributionAdditive({ field, before, after, baseline }) {
             content: `Is this contribution additive or destructive on field ${field}? Prefer additive if it extends or complements the original rather than gutting it.`,
           },
         ],
-        context: {
+        context: withAiLocale({
           field,
           beforeText: before || "",
           afterText: after || "",
@@ -13784,7 +14871,7 @@ async function judgeContributionAdditive({ field, before, after, baseline }) {
           challenge: state.mission
             ? { id: state.mission.id, title: state.mission.title, problem: state.mission.scene }
             : null,
-        },
+        }),
       }),
     });
     const data = await res.json();
@@ -14181,7 +15268,7 @@ async function callCoInventMode(mode, userLabel) {
   if (apEnabled()) {
     const pay = spendContributionAp(mode);
     if (!pay.ok) {
-      flashToast("No AP left for AI — End Turn or Wait.", { resource: "ap" });
+      flashToast(t("toast.noApCoInventor", null, "No AP left for AI — End Turn or Wait."), { resource: "ap" });
       return;
     }
     reservedAp = true;
@@ -14236,7 +15323,7 @@ async function callCoInventMode(mode, userLabel) {
       turn: state.turn,
       place: state.mission?.place,
       pressure: state.pressure,
-      availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+      availableTechs: TECHS.map((t) => techForAi(locTech(t), state.year)),
       grounding: state.mission?.grounding || null,
       isLearningModule: Boolean(state.mission?.isLearningModule),
       aiTutorContext: state.mission?.aiTutorContext || null,
@@ -14251,7 +15338,7 @@ async function callCoInventMode(mode, userLabel) {
         mode,
         clientSessionId: getClientSessionId(),
         messages: [{ role: "user", content: userLabel }],
-        context: ctx,
+        context: withAiLocale(ctx),
       }),
     });
     const data = await res.json();
@@ -14550,7 +15637,7 @@ async function commitWriteIfNeeded() {
 
   const r = dispatchSim("write_commit", { changed: true });
   if (!r.ok && r.error === "no_ap_buffer") {
-    flashToast("No AP for more edits — End Turn or Wait (changes kept).", { resource: "ap" });
+    flashToast(t("toast.noApEndWait", null, "No AP for more edits — End Turn or Wait (changes kept)."), { resource: "ap" });
     state.lastWriteSnapshot = snap;
     mpSyncFromSolo();
     return;
@@ -14572,7 +15659,7 @@ function techLearnCardHtml(t, { newest = false } = {}) {
   if (!t) return "";
   const mat = t.maturity || {};
   const soft = techHorizonYear(t);
-  const domain = DOMAINS[t.domain]?.label || t.domain;
+  const domain = domainLabel(t.domain) || t.domain;
   const primer =
     t.primer ||
     t.learn ||
@@ -14637,16 +15724,19 @@ function techLearnCardHtml(t, { newest = false } = {}) {
 
 /** Right-click / single-tech learn peek */
 function openTechModal(id) {
-  const t = techById(id);
-  if (!t) return;
+  const tech = displayTech(id);
+  if (!tech) return;
   const title = $("#modal-title");
   const lead = $("#modal-lead");
   const body = $("#modal-body");
-  if (title) title.innerHTML = `${t.icon} ${escapeHtml(t.name)}`;
+  if (title) title.innerHTML = `${tech.icon} ${escapeHtml(tech.name)}`;
   if (lead) {
     lead.hidden = false;
-    lead.textContent =
-      "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
+    lead.textContent = t(
+      "workshop.learnLead",
+      null,
+      "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally."
+    );
   }
   if (body) {
     body.innerHTML = techLearnCardHtml(t, { newest: true });
@@ -14672,18 +15762,32 @@ function openLearnStack() {
   const body = $("#modal-body");
   if (title) {
     title.textContent =
-      ids.length === 1 ? "Learn · your selection" : `Learn · ${ids.length} techs (newest first)`;
+      ids.length === 1
+        ? t("workshop.learnTitleOne", null, "Learn · your selection")
+        : t(
+            "workshop.learnTitleMany",
+            { n: ids.length },
+            `Learn · ${ids.length} techs (newest first)`
+          );
   }
   if (lead) {
     lead.hidden = false;
     lead.textContent =
       ids.length === 1
-        ? "What this family can do, where the curve is going, and how to invent with it in this place."
-        : "Most recently selected on top. Scroll for earlier picks — same depth for each.";
+        ? t(
+            "workshop.learnLeadOne",
+            null,
+            "What this family can do, where the curve is going, and how to invent with it in this place."
+          )
+        : t(
+            "workshop.learnLeadMany",
+            null,
+            "Most recently selected on top. Scroll for earlier picks — same depth for each."
+          );
   }
   if (body) {
     body.innerHTML = ids
-      .map((id, i) => techLearnCardHtml(techById(id), { newest: i === 0 }))
+      .map((id, i) => techLearnCardHtml(displayTech(id), { newest: i === 0 }))
       .join("");
     syncReadAloud(body);
   }
@@ -15207,7 +16311,7 @@ function showYearBulletinModal(bulletin, opts = {}) {
   el.classList.add("is-open");
   document.body.classList.add("year-bulletin-open");
   try {
-    flashToast(`📅 World clock → ${toY}`, { durationMs: 2800 });
+    flashToast(t("toast.worldClock", { year: toY }, "📅 World clock → {year}"), { durationMs: 2800 });
   } catch {
     /* ignore */
   }
@@ -15296,7 +16400,13 @@ function showMarketNewsModal(news) {
 
   if (kicker) {
     kicker.textContent =
-      news.round != null ? `Breaking · Round ${news.round}` : "Breaking market news";
+      news.round != null
+        ? t("market.breakingRound", { n: news.round }, `Breaking · Round ${news.round}`)
+        : t("market.breaking", null, "Breaking market news");
+  }
+  if (headline) {
+    headline.textContent =
+      news.headline || t("market.shift", null, "Market shift");
   }
   if (headline) headline.textContent = news.headline || "Market shift";
   if (body) {
@@ -15322,7 +16432,7 @@ function showMarketNewsModal(news) {
 
   const desc = describeMarketEffects(news, {
     techName: (id) => techById(id)?.name || id,
-    domainLabel: (d) => DOMAINS[d]?.label || d,
+    domainLabel: (d) => domainLabel(d) || d,
   });
   if (effectsEl) {
     effectsEl.innerHTML = `
@@ -15374,9 +16484,16 @@ function showMarketNewsModal(news) {
   renderMarketBanner({ pulse: false });
 
   try {
-    flashToast(`📰 Market news · ${news.headline || "costs shifted"}`, {
-      durationMs: 3500,
-    });
+    flashToast(
+      t(
+        "market.toast",
+        { headline: news.headline || t("market.costsShifted", null, "costs shifted") },
+        `📰 Market news · ${news.headline || "costs shifted"}`
+      ),
+      {
+        durationMs: 3500,
+      }
+    );
   } catch {
     /* ignore */
   }
@@ -15436,7 +16553,7 @@ function renderMarketBanner(opts = {}) {
   }
   const desc = describeMarketEffects(news, {
     techName: (id) => techById(id)?.name || id,
-    domainLabel: (d) => DOMAINS[d]?.label || d,
+    domainLabel: (d) => domainLabel(d) || d,
   });
   const thumb = marketNewsImageUrl(news);
   const html = `
@@ -15590,21 +16707,21 @@ function showTurnStartNotice(opts = {}) {
     kicker.textContent = mode === "hotseat" ? "Hotseat" : "Friends multiplayer";
   }
   if (isYou) {
-    if (title) title.textContent = "It's your turn!";
+    if (title) title.textContent = t("turnUi.yourTurn", null, "It's your turn!");
     if (body) {
       body.textContent =
         mode === "hotseat"
           ? `${name}, the device is yours. Invent, help others, or Face the challenge.`
           : `${name}, you're the active player. Invent, help others, Face the challenge, or Pilot/Scale.`;
     }
-    if (okBtn) okBtn.textContent = "Let's go";
+    if (okBtn) okBtn.textContent = t("turnUi.letsGo", null, "Let's go");
   } else {
     if (title) title.textContent = `${name}'s turn`;
     if (body) {
       body.textContent =
         "You can browse and use Learn. Actions unlock when it becomes your turn.";
     }
-    if (okBtn) okBtn.textContent = "Got it";
+    if (okBtn) okBtn.textContent = t("turnUi.gotIt", null, "Got it");
   }
 
   el.hidden = false;
@@ -15778,7 +16895,7 @@ function bind() {
     leaveHotseat();
     state.tutorialRun = false;
     state.playMode = "workshop";
-    surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
+    surpriseMission().catch(() => flashToast(t("toast.surpriseFail", null, "Could not start a surprise mission")));
   });
   try {
     initFriendsUi({
@@ -16013,13 +17130,21 @@ function bind() {
     if (!hasPlayerFace()) {
       flashToast(
         face === "how"
-          ? "Write how it works first (a short paragraph), then Fill other side."
-          : "Write everyday life first (a short paragraph), then Fill other side."
+          ? t(
+              "toast.writeHowFirstFill",
+              null,
+              "Write how it works first (a short paragraph), then Fill other side."
+            )
+          : t(
+              "toast.writeLifeFirstFill",
+              null,
+              "Write everyday life first (a short paragraph), then Fill other side."
+            )
       );
       return;
     }
     if (!selectedTechs().length) {
-      flashToast("Add at least one technology first.");
+      flashToast(t("toast.addTechFirst", null, "Add at least one technology first."));
       return;
     }
     callCoInventMode("complete-picture", "[Fill other story face]");
@@ -16051,11 +17176,11 @@ function bind() {
     // Recovery: open Deploy for a challenge-passed invent (not a dual workshop bay)
     if (deployStagesEnabled() && state.deployUnlocked && state.challengePassed) {
       if (state.deployStage === "new_normal" || state.deployStage === "scale") {
-        flashToast("This invent is already Scaled.");
+        flashToast(t("toast.alreadyScaled", null, "This invent is already Scaled."));
         return;
       }
       if (b && !(b.canRunDeploy?.() || b.canOpenDeployBay?.())) {
-        flashToast("Not your turn, or this invent is not ready to deploy.");
+        flashToast(t("toast.notReadyDeploy", null, "Not your turn, or this invent is not ready to deploy."));
         return;
       }
       const inv =
@@ -16071,7 +17196,7 @@ function bind() {
     if (b && !b.canFaceChallenge?.()) {
       flashToast(
         b.viewingOther?.()
-          ? "Only the owner can face Challenge on this invent."
+          ? t("toast.ownerFaceChallenge", null, "Only the owner can face Challenge on this invent.")
           : "Cannot face Challenge on this invent."
       );
       return;
@@ -16081,7 +17206,7 @@ function bind() {
       return;
     }
     if (!inventReadyForChallenge()) {
-      flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
+      flashToast(t("toast.finishInventFirst", null, "Finish the invention first (name, stack, both story faces; fix red feasibility)."));
       return;
     }
     // Room: enter_challenge inside enterChallenge() (server AP)
@@ -16090,7 +17215,7 @@ function bind() {
     if (apEnabled() && !roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
       const r = dispatchSim("enter_challenge");
       if (!r.ok) {
-        if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
+        if (r.error === "no_ap") flashToast(t("toast.noApEndWait", null, "No AP — End Turn or Wait first."), { resource: "ap" });
         else flashToast(r.error || "Cannot enter challenge");
         return;
       }
@@ -16154,7 +17279,7 @@ function bind() {
     }
     const next = nextDeployStageAction();
     if (next) attemptDeployStage(next);
-    else flashToast("Deploy finished.");
+    else flashToast(t("toast.deployFinished", null, "Deploy finished."));
   });
   $("#btn-deploy-abandon")?.addEventListener("click", () => {
     const b = mpBridge();
@@ -16164,7 +17289,7 @@ function bind() {
       return;
     }
     if (b?.viewingOther?.()) {
-      flashToast("Only the invent owner can abandon deployment.");
+      flashToast(t("toast.onlyOwnerAbandonDeploy", null, "Only the invent owner can abandon deployment."));
       updateDeployFooterButtons();
       return;
     }
@@ -16174,7 +17299,7 @@ function bind() {
   $("#btn-deploy-end-turn")?.addEventListener("click", () => {
     const b = mpBridge();
     if (state.challengeSpectator || (b && !b.isMyTurn?.())) {
-      flashToast("Watching only — leave via seat tabs when done.");
+      flashToast(t("toast.watchingOnlyLeave", null, "Watching only — leave via seat tabs when done."));
       updateDeployFooterButtons();
       return;
     }
@@ -16206,14 +17331,14 @@ function bind() {
   });
   $("#btn-challenge-coach")?.addEventListener("click", () => {
     if (!canFightChallengeCombat()) {
-      flashToast("AI help is only for the invent owner mid-Challenge.");
+      flashToast(t("toast.aiHelpOwnerOnly", null, "AI help is only for the invent owner mid-Challenge."));
       return;
     }
     coachChallenge("coach-challenge");
   });
   $("#btn-challenge-draft")?.addEventListener("click", () => {
     if (!canFightChallengeCombat()) {
-      flashToast("AI help is only for the invent owner mid-Challenge.");
+      flashToast(t("toast.aiHelpOwnerOnly", null, "AI help is only for the invent owner mid-Challenge."));
       return;
     }
     coachChallenge("draft-challenge");
@@ -16223,7 +17348,7 @@ function bind() {
   $("#btn-scrutiny-patch")?.addEventListener("click", () => setScrutinyMoveMode("fix"));
   $("#btn-scrutiny-pivot")?.addEventListener("click", () => {
     if (state.scrutiny?.pivotUsed || $("#btn-scrutiny-pivot")?.disabled) {
-      flashToast("Sidestep already used this run.");
+      flashToast(t("toast.sidestepUsed", null, "Sidestep already used this run."));
       return;
     }
     setScrutinyMoveMode("sidestep");
@@ -16396,7 +17521,7 @@ function bind() {
         visionImage: live.image || undefined,
       });
       if (!url) {
-        flashToast("Could not build share card.");
+        flashToast(t("toast.shareCardFail", null, "Could not build share card."));
         return;
       }
       const slug = String(payload.inventionName || "run")
@@ -16440,16 +17565,41 @@ function bind() {
   });
 
   $("#game-title").textContent = GAME.title;
-  $("#game-tagline").textContent = GAME.tagline;
+  // Tagline comes from i18n (data-i18n); do not overwrite with English GAME.tagline.
+  applyDomI18n(document);
   $$(".brand-name, .hud-product-title").forEach((el) => {
     el.textContent = GAME.title;
   });
+
+  // Language switcher (title screen)
+  const onLangClick = async (e) => {
+    const btn = e.target.closest?.("[data-locale]");
+    if (!btn) return;
+    const next = btn.getAttribute("data-locale");
+    if (!next || !SUPPORTED_LOCALES.includes(next) || next === getLocale()) return;
+    try {
+      await setLocale(next);
+      refreshLocaleUi();
+    } catch (err) {
+      console.warn("[i18n] setLocale failed", err);
+      flashToast(
+        t("title.langSwitchError", null, "Could not switch language.")
+      );
+    }
+  };
+  $("#title-lang-switch")?.addEventListener("click", onLangClick);
+  document.addEventListener("localechange", () => {
+    syncTitleLangSwitch();
+  });
+  syncTitleLangSwitch();
 }
 
-export function init() {
+export async function init() {
+  await initI18n();
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();
   initTechDrawers();
   showScreen("title");
+  refreshLocaleUi();
 }

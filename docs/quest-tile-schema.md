@@ -216,6 +216,34 @@ Partial example (easier budget/will, default AP):
 
 When any value differs from the global default, selection UI (theme pick, daily/focus, External list, import library, multiplayer mission pick) shows a **Start · …** chip so learners see the adjusted start before they play.
 
+### Optional localization (`i18n`)
+
+Player-facing strings can include a locale map. English fields remain the default; Hungarian UI overlays when present:
+
+```json
+{
+  "title": "English title",
+  "mission": { "title": "English title", "place": "…", "scene": "…", "briefMd": "…" },
+  "i18n": {
+    "hu": {
+      "title": "Magyar cím",
+      "place": "…",
+      "scene": "…",
+      "briefMd": "…",
+      "stakeholder": "…",
+      "summary": "…",
+      "spotlight": {
+        "advanceTitle": "…",
+        "advanceSummary": "…",
+        "encourageCopy": "…"
+      }
+    }
+  }
+}
+```
+
+The game applies `i18n.hu` when the player language is Hungarian (`applyQuestLocale`). Tech ids and structure stay English.
+
 ## Markdown subset (rendered in-game)
 
 Headings `#`–`###`, paragraphs, `**bold**`, `*italic*`, lists, `https?` links. No raw HTML, images, or scripts.

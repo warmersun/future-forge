@@ -1,0 +1,22 @@
+{
+  "moloch": {
+    "label": "Moloch",
+    "subtitle": "Rendszerbeli játékszabályok",
+    "blurb": "A multipoláris csapda: versenyfutás, potyázás, Goodhart törvénye és a mélybe tartó verseny, amely bünteti a jó tervezést."
+  },
+  "ethicist": {
+    "label": "Etikus",
+    "subtitle": "Kemény kompromisszumok",
+    "blurb": "Etikai dilemmák tiszta jó/rossz válasz nélkül — méltóság, elfogultság, kettős felhasználás, ki sérül a skálázáskor."
+  },
+  "stakeholder": {
+    "label": "Érdekelt",
+    "subtitle": "Hivatalok és közösség",
+    "blurb": "Városi vezetők és közösségi vezetők: finanszírozás, engedélyek, politika és nyilvános támogatás, amiről tárgyalnod kell."
+  },
+  "nature": {
+    "label": "Anyatermészet",
+    "subtitle": "A természetes világ",
+    "blurb": "Energia, anyagok, ökológia, betegség, viharok — a fizikai világ a saját feltételei szerint lép."
+  }
+}

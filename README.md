@@ -54,6 +54,12 @@ npm start
 
 Open **http://127.0.0.1:8765**
 
+### Language
+
+The title screen has an **EN | HU** switcher. Choice is stored in `localStorage` (`future-forge:locale`). You can also force a locale with `?lang=hu` or `?lang=en`.
+
+Hungarian UI packs live under `locales/hu/`. Glossary for terms: `docs/i18n-glossary-hu.md`. Full content + AI localization is in progress (see plan: foundation → UI chrome → catalog → seeds → AI).
+
 | Command | Purpose |
 |--------|---------|
 | `npm start` / `npm run serve` | Start the game server (`server.mjs`) |
@@ -227,6 +233,9 @@ Typical approach:
 4. Terminate TLS with nginx, Caddy, or the platform’s HTTPS.
 
 Do not commit secrets. Do not put API keys in the client or the git repo.
+
+**Friends multiplayer over the Internet (session on your laptop):**  
+use **Tailscale Funnel** so remote friends only need a browser — see **[`docs/multiplayer-internet-tailscale-funnel.md`](docs/multiplayer-internet-tailscale-funnel.md)**. Same Wi‑Fi still works via the LAN URLs printed when you `npm start`.
 
 ---
 

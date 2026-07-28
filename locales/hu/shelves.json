@@ -1,0 +1,20 @@
+{
+  "health": {
+    "title": "Egészség és gondoskodás"
+  },
+  "climate": {
+    "title": "Klíma, víz és levegő"
+  },
+  "food": {
+    "title": "Élelmiszer és föld"
+  },
+  "learning": {
+    "title": "Tanulás és munka"
+  },
+  "rights": {
+    "title": "Biztonság, jogok és társadalom"
+  },
+  "longterm": {
+    "title": "Hosszú távú kockázatok"
+  }
+}

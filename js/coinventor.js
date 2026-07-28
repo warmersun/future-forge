@@ -4,34 +4,77 @@
 
 import { getClientSessionId } from "./client-session.js";
 import { renderChatMarkdown } from "./md-lite.js";
+import { t, aiLocaleContext } from "./i18n.js";
 
-const QUICK_ACTIONS = [
-  { mode: "spark", label: "Spark ideas", hint: "Frame the local mission" },
-  { mode: "suggest-stack", label: "Suggest stack", hint: "Tech combo for this place" },
-  {
-    mode: "art-of-the-possible",
-    label: "Art of the possible",
-    hint: "Milestones, capabilities, unlocked use cases for this stack & year",
-  },
-  {
-    mode: "sit",
-    label: "SIT invent",
-    hint: "Addition · subtraction · multiplication · division — thinking in a box",
-  },
-  {
-    mode: "scamper",
-    label: "SCAMPER invent",
-    hint: "Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse",
-  },
-  { mode: "draft-name", label: "Name it", hint: "Invention name" },
-  { mode: "push-further", label: "Timing check", hint: "Wait vs claim fit for this year" },
-  { mode: "explain-techs", label: "Teach me", hint: "Explain techs in the stack" },
-];
+/** @returns {{ mode: string, label: string, hint: string }[]} */
+function quickActions() {
+  return [
+    {
+      mode: "spark",
+      label: t("co.spark", null, "Spark ideas"),
+      hint: t("co.sparkHint", null, "Frame the local mission"),
+    },
+    {
+      mode: "suggest-stack",
+      label: t("co.suggestStack", null, "Suggest stack"),
+      hint: t("co.suggestStackHint", null, "Tech combo for this place"),
+    },
+    {
+      mode: "art-of-the-possible",
+      label: t("co.artPossible", null, "Art of the possible"),
+      hint: t(
+        "co.artPossibleHint",
+        null,
+        "Milestones, capabilities, unlocked use cases for this stack & year"
+      ),
+    },
+    {
+      mode: "sit",
+      label: t("co.sit", null, "SIT invent"),
+      hint: t(
+        "co.sitHint",
+        null,
+        "Addition · subtraction · multiplication · division — thinking in a box"
+      ),
+    },
+    {
+      mode: "scamper",
+      label: t("co.scamper", null, "SCAMPER invent"),
+      hint: t(
+        "co.scamperHint",
+        null,
+        "Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse"
+      ),
+    },
+    {
+      mode: "draft-name",
+      label: t("co.nameIt", null, "Name it"),
+      hint: t("co.nameItHint", null, "Invention name"),
+    },
+    {
+      mode: "push-further",
+      label: t("co.timingCheck", null, "Timing check"),
+      hint: t("co.timingCheckHint", null, "Wait vs claim fit for this year"),
+    },
+    {
+      mode: "explain-techs",
+      label: t("co.teachMe", null, "Teach me"),
+      hint: t("co.teachMeHint", null, "Explain techs in the stack"),
+    },
+  ];
+}
+
 
 /** Match invent howOk threshold — enough substance for SIT / SCAMPER to remake. */
 const HOW_IT_WORKS_MIN = 20;
 const HOW_GATED_MODES = new Set(["sit", "scamper"]);
-const HOW_GATED_DISABLED_TITLE = "Write how it works first (a short paragraph)";
+function howGatedDisabledTitle() {
+  return t(
+    "co.howGatedDisabled",
+    null,
+    "Write how it works first (a short paragraph)"
+  );
+}
 
 export class CoInventor {
   /**
@@ -59,10 +102,8 @@ export class CoInventor {
     this.afterRequest = opts.afterRequest || null;
     this.transport = opts.transport || null;
     this.showQuickActions = opts.showQuickActions !== false;
-    this.placeholder =
-      opts.placeholder ||
-      "Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”";
-    this.subtitle = opts.subtitle || "Your creative partner for this challenge";
+    this._placeholderOpt = opts.placeholder || null;
+    this._subtitleOpt = opts.subtitle || null;
     this.tutorMode = Boolean(opts.tutorMode);
     this.learningQuest = Boolean(opts.learningQuest);
     this.onEndTutoring = opts.onEndTutoring || null;
@@ -88,6 +129,24 @@ export class CoInventor {
   /** @returns {"tutor"|"coinventor"} */
   _historyKeyForState() {
     return this.learningQuest && this.tutorMode ? "tutor" : "coinventor";
+  }
+
+  get placeholder() {
+    return (
+      this._placeholderOpt ||
+      t(
+        "co.placeholder",
+        null,
+        "Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”"
+      )
+    );
+  }
+
+  get subtitle() {
+    return (
+      this._subtitleOpt ||
+      t("co.subtitle", null, "Your creative partner for this challenge")
+    );
   }
 
   /**
@@ -139,10 +198,11 @@ export class CoInventor {
 
   mount(root) {
     this.root = root;
+    const actionsList = quickActions();
     root.innerHTML = `
       <div class="co-header">
         <div class="co-header-text">
-          <div class="co-title">AI Co-Inventor</div>
+          <div class="co-title">${escapeHtml(t("co.title", null, "AI Co-Inventor"))}</div>
           <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
         </div>
         <div class="co-header-actions">
@@ -150,23 +210,25 @@ export class CoInventor {
             class="co-tutor-badge"
             id="co-tutor-badge"
             hidden
-            title="Tutoring"
-          >Tutoring</span>
+            title="${escapeHtml(t("co.tutoring", null, "Tutoring"))}"
+          >${escapeHtml(t("co.tutoring", null, "Tutoring"))}</span>
           <button
             type="button"
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-end-tutor"
             hidden
-            title="End free tutor mode — chat will cost 1 AP like a normal co-inventor"
-          >End tutoring</button>
+            title="${escapeHtml(t("co.endTutoringTitle", null, "End free tutor mode — chat will cost 1 AP like a normal co-inventor"))}"
+          >${escapeHtml(t("co.endTutoring", null, "End tutoring"))}</button>
           <button
             type="button"
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-resume-tutor"
             hidden
-            title="Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
-          >Resume tutoring</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
+            title="${escapeHtml(t("co.resumeTutoringTitle", null, "Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"))}"
+          >${escapeHtml(t("co.resumeTutoring", null, "Resume tutoring"))}</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="${escapeHtml(
+            t("common.clearChat", null, "Clear chat")
+          )}">${escapeHtml(t("co.clear", null, "Clear"))}</button>
         </div>
       </div>
       <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
@@ -177,17 +239,23 @@ export class CoInventor {
           rows="2"
           placeholder="${escapeHtml(this.placeholder)}"
         ></textarea>
-        <button type="submit" class="btn btn-primary btn-sm" id="co-send">Send</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="co-send">${escapeHtml(
+          t("co.send", null, "Send")
+        )}</button>
       </form>
     `;
 
     const actions = root.querySelector("#co-actions");
     if (this.showQuickActions && actions) {
       actions.hidden = false;
-      actions.innerHTML = QUICK_ACTIONS.map(
-        (a) =>
-          `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
-      ).join("");
+      actions.innerHTML = actionsList
+        .map(
+          (a) =>
+            `<button type="button" class="co-chip" data-mode="${a.mode}" title="${escapeHtml(
+              a.hint
+            )}">${escapeHtml(a.label)}</button>`
+        )
+        .join("");
       actions.querySelectorAll(".co-chip").forEach((btn) => {
         btn.addEventListener("click", () => this.runMode(btn.dataset.mode));
       });
@@ -336,9 +404,9 @@ export class CoInventor {
         if (this._lockReason) chip.title = this._lockReason;
         continue;
       }
-      const action = QUICK_ACTIONS.find((a) => a.mode === mode);
+      const action = quickActions().find((a) => a.mode === mode);
       chip.disabled = !howOk;
-      chip.title = howOk ? action?.hint || mode : HOW_GATED_DISABLED_TITLE;
+      chip.title = howOk ? action?.hint || mode : howGatedDisabledTitle();
     }
   }
 
@@ -351,20 +419,24 @@ export class CoInventor {
       this.aiLive = Boolean(data.ai);
       if (status) {
         if (!this.available) {
-          status.textContent = "Offline";
+          status.textContent = t("co.offline", null, "Offline");
           status.classList.add("co-offline");
           delete status.dataset.tutorOwned;
         } else if (this.tutorMode || this.learningQuest) {
           status.classList.remove("co-offline");
           this.applyTutorModeUi();
         } else if (this.aiLive && data.auth === "supergrok") {
-          status.textContent = "SuperGrok — invent with me";
+          status.textContent = t("co.supergrok", null, "SuperGrok — invent with me");
           status.classList.remove("co-offline");
         } else if (this.aiLive) {
-          status.textContent = "Grok online — invent with me";
+          status.textContent = t("co.grokOnline", null, "Grok online — invent with me");
           status.classList.remove("co-offline");
         } else {
-          status.textContent = "Local co-inventor — run grok login for SuperGrok";
+          status.textContent = t(
+            "co.localOnly",
+            null,
+            "Local co-inventor — run grok login for SuperGrok"
+          );
           status.classList.remove("co-offline");
         }
       }
@@ -372,7 +444,11 @@ export class CoInventor {
       this.available = false;
       this.aiLive = false;
       if (status) {
-        status.textContent = "Server unreachable — run npm start";
+        status.textContent = t(
+          "co.serverDown",
+          null,
+          "Server unreachable — run npm start"
+        );
         status.classList.add("co-offline");
         delete status.dataset.tutorOwned;
       }
@@ -417,15 +493,19 @@ export class CoInventor {
 
   seedWelcome() {
     const ctx = this.getContext();
-    const title = ctx.challenge?.title || "this mission";
+    const title =
+      ctx.challenge?.title || t("co.welcomeMission", null, "this mission");
     const year = ctx.year ? ` (${ctx.year})` : "";
     this.pushAssistant(
       {
-        message:
+        message: t(
+          "co.welcome",
+          { title, year },
           `I'm your co-inventor for **${title}**${year}. ` +
-          `Pick any emTech categories this place needs — nothing is locked by year. ` +
-          `Feasibility judges whether your *how it works* over-claims. ` +
-          `Use **Art of the possible** for milestones and current capabilities. You lead; I brainstorm, teach, and draft with you.`,
+            `Pick any emTech categories this place needs — nothing is locked by year. ` +
+            `Feasibility judges whether your *how it works* over-claims. ` +
+            `Use **Art of the possible** for milestones and current capabilities. You lead; I brainstorm, teach, and draft with you.`
+        ),
         proposals: emptyProposals(),
         teaching: [],
       },
@@ -437,6 +517,22 @@ export class CoInventor {
     this.reset(true);
   }
 
+  /** Re-apply chrome after locale change (keeps message history). */
+  remountChrome() {
+    if (!this.root) return;
+    const msgs = this.messages.slice();
+    const busy = this.busy;
+    const interactive = this.interactive;
+    const lockReason = this._lockReason || "";
+    this.mount(this.root);
+    this.messages = msgs;
+    this.busy = busy;
+    this.setInteractive(interactive, lockReason);
+    this.renderMessages();
+    this.setBusyUi(busy);
+    void this.checkHealth();
+  }
+
   async runMode(mode) {
     if (HOW_GATED_MODES.has(mode)) {
       const how = String(this.getContext?.()?.inventionHow || "").trim();
@@ -445,7 +541,7 @@ export class CoInventor {
         return;
       }
     }
-    const labels = Object.fromEntries(QUICK_ACTIONS.map((a) => [a.mode, a.label]));
+    const labels = Object.fromEntries(quickActions().map((a) => [a.mode, a.label]));
     const userText = `[${labels[mode] || mode}]`;
     await this.request({ mode, userText, showUser: mode === "chat" ? true : true, userDisplay: userText });
   }
@@ -459,7 +555,11 @@ export class CoInventor {
     await this.checkHealth();
     if (!this.available) {
       this.pushAssistant({
-        message: "Co-inventor is offline. Start the app with `npm start` from the project folder.",
+        message: t(
+          "co.offlineMsg",
+          null,
+          "Co-inventor is offline. Start the app with `npm start` from the project folder."
+        ),
         proposals: emptyProposals(),
         teaching: [],
       });
@@ -490,6 +590,7 @@ export class CoInventor {
           ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
         ].map((m) => ({ role: m.role, content: m.content })),
         context: {
+          ...aiLocaleContext(),
           challenge: ctx.challenge
             ? {
                 id: ctx.challenge.id,
@@ -616,7 +717,9 @@ export class CoInventor {
     const el = document.createElement("div");
     el.className = "co-msg assistant thinking";
     el.dataset.thinkId = id;
-    el.innerHTML = `<div class="co-bubble"><span class="ai-snake" aria-hidden="true"></span><span>Thinking with you…</span></div>`;
+    el.innerHTML = `<div class="co-bubble"><span class="ai-snake" aria-hidden="true"></span><span>${escapeHtml(
+      t("co.thinking", null, "Thinking with you…")
+    )}</span></div>`;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
     return id;
@@ -653,7 +756,7 @@ export class CoInventor {
       b.disabled = locked;
       if (locked && this._lockReason) b.title = this._lockReason;
       else if (!HOW_GATED_MODES.has(b.dataset.mode)) {
-        const action = QUICK_ACTIONS.find((a) => a.mode === b.dataset.mode);
+        const action = quickActions().find((a) => a.mode === b.dataset.mode);
         if (action) b.title = action.hint;
       }
     });

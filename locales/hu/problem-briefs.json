@@ -1,0 +1,217 @@
+{
+  "rogue-si": {
+    "currentState": "Az élvonalbeli mesterséges intelligencia (MI) rendszerek már sok szűk feladaton felülmúlják az embereket, és beépülnek a keresésbe, a kódírásba, a pénzügyekbe és kormányzati kísérleti programokba. A teljes „szuperintelligencia” még nincs itt, de a gyors képességnövekedés és a versenyszerű bevezetés miatt az irányítás és az emberi értékekhez igazítás sok intézményben lemarad a képességek mögött.",
+    "rootCauses": "A versenydinamika a sebességet jutalmazza a biztonság helyett; a nyílt végű rendszerek értékelése nehéz; az ösztönzők a termékbe vitelt részesítik előnyben; az irányítás széttöredezett a laborok, államok és nyílt forráskódú ökoszisztémák között; ha a rendszerek nagy léptékben működnek, a visszafordítás költséges.",
+    "warnings": "A helyi találmányok, amelyek nagy tétű döntéseket átláthatatlan modellekre bíznak, rögzíthetik a kárt, mielőtt a védőintézkedések létrejönnének. Részesítsd előnyben az embert a folyamatban, az ellenőrzési nyomvonalakat és a szűk hatóköröket. Ne találj fel úgy, mintha a teljesen autonóm általános MI már megbízható infrastruktúra lenne."
+  },
+  "genocide": {
+    "currentState": "A tömeges atrocitások kockázata több régióban továbbra is valós. Korai figyelmeztető hálózatok, műholdas megfigyelés és civil társadalmi riasztások léteznek, de a válasz gyakran késik, politizált vagy alulfinanszírozott. A megelőzés elméletben lehetséges; a gyakorlatban mégis kudarcot vall, ha hiányzik az akarat és az összehangolás.",
+    "rootCauses": "Identitáskonfliktus, embertelenítő propaganda, gyenge intézmények, fegyveráramlás és nemzetközi potyautasság. Az információ megérkezik, de a korai cselekvés ösztönzői gyengék, ha a költségek azonnaliak, az előnyök pedig elmosódottak.",
+    "warnings": "A megfigyelésre vagy célzásra szolgáló technológia kettős felhasználással elnyomássá válhat. Elsődleges a civilek védelme, az ellenőrzött információ és a közösségi legitimitás—ne pusztán automatizált „fenyegetettségi pontszámok”. A helyi találmányok ne váltsák fel a politikai felelősséget feketedoboz-riasztásokkal."
+  },
+  "poverty": {
+    "currentState": "Az extrém szegénység évtizedek alatt világszerte csökkent, de továbbra is koncentrált; több százmillió embernek még mindig nincs megbízható jövedelme, szolgáltatása és önrendelkezése. A haladás egyenetlen; a sokkok (konfliktus, klíma, betegség) gyorsan visszafordítják az eredményeket a legkiszolgáltatottabbaknál.",
+    "rootCauses": "Kirekesztés a piacokból és szolgáltatásokból, gyenge tulajdon- és munkajogok, egészségügyi és oktatási hiányosságok, földrajzi elszigeteltség, diszkrimináció és a politikai hang hiányosságai. A növekedés önmagában nem ér el mindenkit szándékos befogadás nélkül.",
+    "warnings": "A digitális vagy fintech „megoldások” kirekeszthetik azokat, akiknek nincs személyazonosítójuk, kapcsolódásuk vagy írástudásuk. Tervezz az utolsó kilométerre, készpénz plusz szolgáltatások ahol kell, és kerüld az adósságcsapdákat vagy a segítségnek álcázott adatkinyerést."
+  },
+  "chem-bio": {
+    "currentState": "A vegyi és biológiai fegyvereket nagy nemzetközi szerződések tiltják, mégis a kettős felhasználású kutatás, a laborbalesetek és a tiltott szándék kockázatot jelentenek. A felismerés, a felelősség megállapítása és a közegészségügyi felkészültség világszerte egyenetlen.",
+    "rootCauses": "A tudás és az eszközök a legitim tudománnyal terjednek; az ellenőrzés tökéletlen; a normák erodálódhatnak; a felkészültségi finanszírozás válságok után nő, majd elhalványul; kettős felhasználású ösztönzők a kutatásban és az iparban.",
+    "warnings": "Ne találj fel olyan rendszereket, amelyek megkönnyítik a magas kockázatú kórokozók vagy toxinok előállítását. Részesítsd előnyben a felismerést, az egyéni védőeszközöket, az orvosi ellenintézkedéseket és az átlátható irányítást. A kettős felhasználású állításokhoz szigorú piros vonalak kellenek a működés leírásában."
+  },
+  "asteroid": {
+    "currentState": "A Föld-közeli objektumok felmérése drámaian javult; rövid távon nincs ismert, civilizációt megsemmisítő becsapódás, de a hiányos katalógusok és a korlátozott eltérítési készenlét miatt a bolygóvédelem befejezetlen munka.",
+    "rootCauses": "Hatalmas keresési tér, történelmileg korlátozott távcső- és utánkövetési kapacitás, valamint a ritka események alulfinanszírozása. Az eltérítési technológia tesztekből érik, még nem állandó globális szolgáltatás.",
+    "warnings": "A helyi feltalálás általában az érzékelésről, a nyilvános figyelmeztetésről és a polgári ellenálló képességről szól—nem városméretű eltérítő sugarakról. Kerüld a sci-fi túlzásokat; koncentrálj a felismerési partnerségekre, gyakorlatokra és a helyreállítási logisztikára, ha ez a témád kerete."
+  },
+  "weather": {
+    "currentState": "A hőhullámok, árvizek, viharok és aszályok gyakoribbak vagy erősebbek sok régióban a klímaváltozás miatt. A korai figyelmeztetés javult, de az utolsó kilométeres riasztások, az infrastruktúra és a helyreállítási alapok továbbra is először a legszegényebb kerületeknél vallanak kudarcot.",
+    "rootCauses": "A melegebb légkör és óceánok a szélsőségek felé billentik a kockát; a kitettség nő a parti és városi terjeszkedéssel; alulfinanszírozott a rugalmas infrastruktúra és a szociális védőhálók.",
+    "warnings": "Az érzékelők választervek nélkül színház. Találj fel a figyelmeztetéstől a cselekvésig tartó hurkokra, hűtő- és árvízi menedékekre, valamint méltányosságra—ne csak szebb irányítópultokra. Az időzítés számít: telepíts használható kísérleti megoldásokat a következő szezon előtt, ne tökéletes modelleket utána."
+  },
+  "mideast": {
+    "currentState": "A Közel-Kelet rétegzett konfliktusokat, megszállási dinamikákat, traumát és törékeny megélhetést hordoz, élénk civil társadalom, kereskedelem és diplomáciai erőfeszítések mellett. Az erőszak és az elűzetés ismétlődik; a békefolyamatok szakaszosak és vitatottak.",
+    "rootCauses": "Történelmi sérelmek, határok és erőforrás-verseny, külső beavatkozások, autoriter és frakciós politika, valamint gazdasági kirekesztés, amely a toborzást és a kétségbeesést táplálja.",
+    "warnings": "A helyi találmányoknak a megélhetésre, a trauma-tudatos ellátásra és a közös infrastruktúrára kell összpontosítaniuk — ne „oldják meg a geopolitikát” egy szerkezettel. Kerüld az egyoldalú technológiát, amely a béke címkéje alatt növeli a megfigyelést vagy a katonai aszimmetriát."
+  },
+  "nuclear": {
+    "currentState": "A nukleáris fegyverrel rendelkező államok megtartják arzenáljaikat; a modernizáció folytatódik; a fegyverzet-ellenőrzés rendszere kopott. A kockázat kevésbé „filmes visszaszámlálás”, mint félrekalkulálás, baleset vagy válság eszkalációja szűk döntési idők alatt.",
+    "rootCauses": "Biztonsági dilemmák, presztízs, az arzenálok belpolitikája, tökéletlen korai figyelmeztető és parancsnoki rendszerek, valamint a szerződések és normák eróziója.",
+    "warnings": "A helyi feltalálás szinte soha nem jelent fegyverépítést. Összpontosíts a válságkommunikáció ellenálló képességére, a polgári védelmi műveltségre és a feszültségoldó eszközökre. Ne dicsőítsd az indítórendszereket, és ne találj fel úgy, mintha önkormányzati szereplők irányítanák a nukleáris gombot."
+  },
+  "slavery": {
+    "currentState": "A tulajdoni rabszolgaság szinte mindenütt tilos, de a kényszermunka, az adósságrabszolgaság, az emberkereskedelem és a gyermekmunka tovább él az ellátási láncokban, a háztartási munkában, a halászatban és a konfliktuszónákban — gyakran elrejtve a fogyasztók elől.",
+    "rootCauses": "Haszon az olcsó kényszermunkából, gyenge érvényesítés, migrációs sebezhetőség, korrupció, és átláthatatlan, többszintű ellátási láncok, amelyek felhígítják a felelősséget.",
+    "warnings": "A „megfelelésként” hirdetett munkásmegfigyelés árthat azoknak, akiket állítólag véd. Tervezz a munkások hangjával, biztonságos bejelentéssel és orvoslással — ne csak blokklánc-bizonyítékokkal a márkáknak."
+  },
+  "women": {
+    "currentState": "A jogi egyenlőség sok országban előrehaladt, mégis maradtak szakadékok a biztonság, a bér, a politikai hatalom, az oktatáshoz jutás és a reproduktív jogok terén. Visszacsapás és egyenlőtlen érvényesítés néhány helyen visszafordítja az eredményeket.",
+    "rootCauses": "Patriarchális normák, gazdasági függőség, erőszak és jogi akadályok, alulreprezentáltság az intézményekben, és alulberuházás a gondoskodási infrastruktúrába, ami aránytalanul a nőkre hárul.",
+    "warnings": "A biztonságot figyelmen kívül hagyó tech (pl. nyilvános helymegosztás kontrollok nélkül) növelheti a kárt. Középpontba az önrendelkezést, a magánéletet és a helyi női vezetést — ne máshol tervezett megmentő szerkezeteket."
+  },
+  "education": {
+    "currentState": "Az iskolai beiratkozás világszerte nőtt, de a tanulási eredmények, a tanárhiány és a digitális szakadékok hatalmas tehetséget hagynak kihasználatlanul. A válságok és a szegénység még mindig kihúzza a gyerekeket az osztálytermekből.",
+    "rootCauses": "Alulfinanszírozott iskolák, egyenlőtlen tanári minőség és bér, nyelvi és fogyatékossági akadályok, kapcsolódási hiányok, valamint a gyermekmunka vagy gondozómunka lehetőségköltségei.",
+    "warnings": "A tanárok nélküli MI-tutorok szélesíthetik a szakadékokat, ha csak a jól kapcsolódók járnak jól. Részesítsd előnyben az oktatókat támogató, offline használható és helyi tanterveket szolgáló eszközöket — ne a tiszta helyettesítési fantáziákat."
+  },
+  "automation": {
+    "currentState": "Az automatizáció és a mesterséges intelligencia (MI) már átformálja a raktárakat, irodákat, közlekedést és ügyfélszolgálatot. Egyes állások eltűnnek vagy késztszegényebbé válnak; újak egyenetlenül jelennek meg. Az egyetemes alapjövedelemről (UBI), az átképzésről és a rövidebb munkahétről szóló viták élő politikai harcok.",
+    "rootCauses": "A tőke helyettesíti a rutinszerű munkát, ahol nyereséges; a készségutánpótlás lemarad; a társadalombiztosítást a 20. századi foglalkoztatásra építették; a cégek lefölözik a termelékenységi nyereséget megosztás nélkül.",
+    "warnings": "A „képezd át mindenkit egy applikációval” kudarc valós bérek és elhelyezés nélkül. Találj fel a méltóságért, a hordozható készségekért és a jövedelmi hidakért — ne csak a tulajdonosok hatékonyságáért."
+  },
+  "refugees": {
+    "currentState": "Több tízmillió embert kényszerítenek el. A befogadó városok a már amúgy is megterhelt lakhatásba, iskolákba és rendelőkbe veszik fel az érkezőket. A jogi státusz, a munkavállalási jogok és az integrációs utak nagyon eltérőek, és a politikával együtt változnak.",
+    "rootCauses": "Konfliktus, üldöztetés, klímastressz és kudarcot vallott menedékjogi rendszerek. A befogadó országok alulfinanszírozzák a fogadást, miközben a származási válságok fennmaradnak.",
+    "warnings": "A biometrikus azonosítás és a követés a kirekesztés eszközeivé válhatnak. Tervezz méltóságra, nyelvi hozzáférésre, lakhatásra és munkára — ne beleegyezés nélküli adatraktárakra."
+  },
+  "ag": {
+    "currentState": "Az ipari mezőgazdaság milliárdokat táplál, de sok régióban rontja a talajt, a vizet és a biodiverzitást. A regeneratív és precíziós gyakorlatok terjednek, de még a globális termőterület kisebb részét adják.",
+    "rootCauses": "Rövid távú hozamösztönzők, inputokhoz kötöttség, földegyenlőtlenség, klímastressz, és piacok, amelyek alulárazzák az ökológiai kárt.",
+    "warnings": "A high-tech gazdálkodás, ami csak nagy tőkével működik, kizárhatja a kisgazdákat. Illeszd a találmányokat a helyi talajhoz, vízhez és a gazdák tudásához — ne egycsomagos exportmegoldásokhoz."
+  },
+  "food": {
+    "currentState": "A világ összességében elegendő kalóriát termel, mégis az éhezés és az alultápláltság fennmarad a szegénység, a konfliktus, a pazarlás és a gyenge elosztás miatt. Az ársokkok először az alacsony jövedelmű háztartásokat érik.",
+    "rootCauses": "Hozzáférés és megfizethetőség, nem csupán a teljes termelés; az ellátási lánc törékenysége; konfliktus; klímaütések a termésre; és olcsó, ultraprocesszált kalóriák által torzított étrendek.",
+    "warnings": "Az élelmiszer-tech, ami kiárazza az éhezőket, csak fotózási alkalom. Elsődleges a hűtőlánc, a helyi termelés és a megfizethetőség — ne csak új fehérjék a gazdag piacoknak."
+  },
+  "eco": {
+    "currentState": "A biodiverzitás-vesztés, az erdőirtás, az óceánromlás és a szennyezés olyan ütemben folyik, ami veszélyezteti azokat az ökoszisztéma-szolgáltatásokat, amelyektől az emberek függenek. A védett területek és a helyreállítási erőfeszítések bővülnek, de lemaradnak a veszteség hajtóerőitől.",
+    "rootCauses": "Élőhely-átalakítás, túlzott kitermelés, invazív fajok, szennyezés és klímaváltozás — olyan gazdasági rendszerek hajtják, amelyek externalizálják a természet értékét.",
+    "warnings": "A „zöld” találmányok zöldre moshatják a kitermelő projekteket. Mérj valódi élőhely- és közösségi eredményeket. Kerüld a teljes ökoszisztéma-helyreállítás állítását rövid játékidővonalakon."
+  },
+  "infectious": {
+    "currentState": "A járványkészültség javult az eszközökben (szekvenálás, vakcinaplatformok) a COVID-19 után, de a finanszírozás, a bizalom és a hozzáférés méltányossága törékeny marad. Az endémiás betegségek továbbra is évente milliókat ölnek meg ott, ahol a rendszerek gyengék.",
+    "rootCauses": "Állatról emberre terjedés, sűrű utazás, gyenge alapellátás, antimikrobiális rezisztencia, félretájékoztatás és alulfinanszírozott megfigyelés a magas kockázatú régiókban.",
+    "warnings": "A járványtech bizalom nélkül megbukik. Párosítsd a felismerést kommunikációval és ellátási kapacitással. Ne találj fel kényszerkarantén fekete dobozokat, amelyek tönkreteszik a legitimitást."
+  },
+  "climate": {
+    "currentState": "A globális hőmérséklet és az extrém időjárási trendek emelkednek a felhalmozódó kibocsátásokkal. A tiszta energia sok piacon gyorsan skálázódik, mégis a fosszilis rendszerek, a bezártság és az alkalmazkodási hiányok nagyok maradnak.",
+    "rootCauses": "Fosszilis alapú energia és ipar, földhasználat-változás, és késleltetett kollektív cselekvés a potyautas ösztönzők miatt. Az alkalmazkodás alulfinanszírozott a mérséklésről szóló beszédhez képest.",
+    "warnings": "A helyi klímamegoldásoknak valós kitettséget vagy kibocsátást kell csökkenteniük helyben — ne kompenzációs színházat. Időzítés: telepíts rövid távú ellenállóképességet, amíg a hosszabb átmenetek futnak."
+  },
+  "cancer": {
+    "currentState": "A túlélés javult sok rákfajtánál, ahol elérhető a szűrés és a terápia; a késői diagnózis és az egyenlőtlen hozzáférés továbbra is megelőzhető haláleseteket okoz, különösen az alacsonyabb erőforrású régiókban.",
+    "rootCauses": "A kontrollálatlan sejtnövekedés biológiája, az öregedő népesség, kockázati tényezők (dohányzás, fertőzések, szennyezés), valamint az egészségügyi rendszer szűk keresztmetszetei a képalkotásban, a patológiában és a kezelési kapacitásban.",
+    "warnings": "Ne találj fel „egy éjszaka alatt minden rákot gyógyító” megoldást. Részesítsd előnyben a korai felismerést, a triázst, a navigációt és a hozzáférést. A klinikai állításokhoz őszinte pilotok és partnerek kellenek."
+  },
+  "mental": {
+    "currentState": "A depresszió, a szorongás és a kapcsolódó állapotok a rokkantság vezető okai világszerte. A gondozás iránti igény meghaladja a klinikusok kínálatát; a stigma sok közösségben még mindig akadályozza a segítségkérést.",
+    "rootCauses": "Társadalmi elszigeteltség, gazdasági stressz, trauma, szerhasználat, alulfinanszírozott szolgáltatások, és olyan gondozási modellek, amelyek klinikaközpontúak ahelyett, hogy a közösségbe ágyazódnának.",
+    "warnings": "A chatbotok nem teljes klinikai rendszer. Tervezz kríziseszkalációs útvonalakra, adatvédelemre és emberi gondozásra—ne elszigeteltségre egy olyan appban, amely nem tud biztonságosan beavatkozni."
+  },
+  "alzheimer": {
+    "currentState": "Az Alzheimer-kór és a kapcsolódó demenciák nőnek az öregedő népességgel. A betegséget módosító lehetőségek korlátozottak és drágák; a gondozás nagy részét a család és a közösség viseli magas terhelés mellett.",
+    "rootCauses": "Összetett neurodegeneratív biológia, késői diagnózis, korlátozott terápiák, és olyan gondozási rendszerek, amelyek nincsenek felkészülve a hosszú, progresszív betegségre.",
+    "warnings": "A „biztonságként” keretezett megfigyelés megfoszthat a méltóságtól. Találj fel gondozótámogatást, navigációt és tiszteletteljes segítséget—ne csak nyomkövető eszközöket."
+  },
+  "ageing": {
+    "currentState": "Az élettartam meghosszabbodott; az egészségben töltött évek nem mindig tartottak lépést. A hosszúélet-tudomány aktív, de a legtöbb nyereség még mindig a közegészségügyből, a krónikus betegségek gondozásából és a társadalmi meghatározókból jön—nem csodapillerekből.",
+    "rootCauses": "Biológiai öregedési folyamatok, életmód és környezet, valamint olyan rendszerek, amelyek rövidebb életekre és akut ellátásra épültek, nem pedig a hosszú, több betegséggel járó állapotokra.",
+    "warnings": "Az öregedés elleni hype megelőzi a bizonyítékokat. A helyi feltalálás a funkciót, a mobilitást és a gondozáshoz való hozzáférést célozza—ne azt állítsd, hogy egy évtizeden belül visszafordítod az öregedést egy egész városra."
+  },
+  "water": {
+    "currentState": "Milliárdok még mindig nem jutnak biztonságosan kezelt ivóvízhez vagy szennyvízelvezetéshez. Az éghajlati stressz, a szennyezés és a túlzott kitermelés a kutakat és a közműveket éri; a tartálykocsi-gazdaságok magas költséggel töltik be a réseket.",
+    "rootCauses": "Infrastruktúra-alulberuházás, szennyezés, víztartó rétegek kimerülése, a közös vizek gyenge kormányzása, és szegénység, amely a háztartásokat kiszorítja a biztonságos ellátásból.",
+    "warnings": "A karbantartási költségvetés nélküli szivattyúk elromlanak. Tervezz helyi javításra, a kezeléshez szükséges energiára és méltányos elosztásra—ne egyszeri hardverlerakásokra."
+  },
+  "air": {
+    "currentState": "A környezeti és háztartási légszennyezés nagy betegségterhet okoz, különösen a forgalom, az ipar és a szilárd tüzelőanyagú főzés közelében. A monitorozás javult; a tiszta átmenetek egyenetlenek.",
+    "rootCauses": "Fosszilis égetés, ipari kibocsátások, por és beltéri szilárd tüzelőanyagok—plusz gyenge szabályozás és a kitettség egyenlőtlensége a negyed jövedelme szerint.",
+    "warnings": "Az érzékelők önmagukban nem tisztítják a levegőt. Kapcsold a mérést érvényesíthető forráscsökkentésekhez, tiszta főzéshez és olyan mobilitási váltásokhoz, amelyeket az emberek ténylegesen használhatnak."
+  },
+  "energy-access": {
+    "currentState": "Több százmillió embernek nincs villamos energiája vagy megbízható ellátása; még többen drága, szakaszos árammal küzdenek. A napenergia és a mini-hálózatok bővítik a hozzáférést, de még hiányos a termelő célú használathoz és a klinikákhoz.",
+    "rootCauses": "Magas hálózat-kiterjesztési költségek, gyenge közművek, szegénység, valamint piszkos vagy a határon drága üzemanyagok. A politika és a finanszírozás gyakran lemarad a technikai lehetőségektől.",
+    "warnings": "Az első wattok, amelyek napnyugtakor elhalnak, cserbenhagyják a klinikákat. Párosítsd a termelést tárolással, karbantartási képzéssel és reális terhelési prioritásokkal."
+  },
+  "homeless": {
+    "currentState": "A látható hajléktalanság és a lakhatási bizonytalanság sok városban nő, még a gazdag országokban is. A menedékrendszerek túlterheltek; a stabil lakhatásba való kilépés lemarad a beáramlástól.",
+    "rootCauses": "A lakhatási költségek megelőzik a béreket, mentális egészségügyi és szerhasználati hiányok, gyenge bérlővédelem és alulépített szociális lakások — plusz intézményekből való kibocsátás lakhatási terv nélkül.",
+    "warnings": "A kiürítés és a tiszta tech-követés lakáskínálat nélkül súlyosbítja a kárt. Találj fel a menedék minőségére, a szolgáltatások összekapcsolására és a lakhatásban maradás útjaira."
+  },
+  "cities": {
+    "currentState": "Az emberek többsége városi területeken fog élni. A városok koncentrálják a lehetőséget és az egyenlőtlenséget, a hőszigeteket, a torlódást és a szolgáltatási stresszt — miközben az innovációs kapacitást is otthon adják.",
+    "rootCauses": "Gyors urbanizáció, föld- és közlekedéspolitikai kudarcok, töredezett kormányzás a metróövezetek peremén, és az infrastruktúra lemaradása a népességnövekedéstől.",
+    "warnings": "Az okosváros-rendszerek demokratikus felügyelet nélkül megfigyeléssé válnak. Előnyben részesítsd a közjavakat, a mobilitást és a lakhatási egyenlőséget a kütyüműszerfalakkal szemben."
+  },
+  "child": {
+    "currentState": "A gyermekhalandóság drámaian csökkent, mégis a tüdőgyulladás, hasmenés, malária és alultápláltság miatti megelőzhető halálesetek folytatódnak ott, ahol az alapellátás és a védőoltások lemaradnak. A táplálkozási és korai fejlődési hiányok egész életen át formálják a kimenetelt.",
+    "rootCauses": "Szegénység, gyenge alapellátás, védőoltás- és táplálkozási hozzáférési hiányok, víz- és szennyvízkezelési kudarcok, valamint anyai egészségügyi összefüggések, amelyek a születés előtt kezdődnek.",
+    "warnings": "A családok felé irányuló találmányoknak szükségük van a gondozók bizalmára és a hideglánc valóságára. Kerüld az adatgyűjtést anélkül, hogy lenne ellátási kapacitás az eredményekre cselekedni."
+  },
+  "maternal": {
+    "currentState": "Az anyai halálesetek többsége megelőzhető szakképzett ellátással, sürgősségi szállítással és alapvető készletekkel — mégis hatalmasak az egyenlőtlenségek az országok között és azokon belül.",
+    "rootCauses": "Távolság az intézményekhez, bábák és vér/vérkészítmények hiánya, szegénység, serdülőkori terhesség, valamint ellátásminőségi hiányok, beleértve a tiszteletlen bánásmódot, amely elriaszt a használattól.",
+    "warnings": "Az appok mentők és vérbankok nélkül kudarcot vallanak. Találj fel a beutalásra, a szállításra és a tiszteletteljes szakképzett szülészeti ellátásra — nem csak terhességkövetőkre."
+  },
+  "coord": {
+    "currentState": "A határokon és városokon átnyúló problémák (viharok, járványok, ellátási sokkok) még mindig töredezett költségvetésekkel, adatokkal és válaszalapokkal találkoznak. A kísérleti projektek együttműködnek; az állandó megosztott kapacitás ritka.",
+    "rootCauses": "Szuverenitási ösztönök, potyautas-ösztönzők, összeférhetetlen rendszerek és rövid politikai horizontok, amelyek alulfinanszírozzák a megosztott korai figyelmeztetést és az összevont választ.",
+    "warnings": "Egy megosztott műszerfal megosztott alap vagy döntési jogok nélkül csak színház. Tervezd a kormányzást és az ösztönzőket ugyanolyan gondosan, mint az érzékelőket."
+  },
+  "radicalization": {
+    "currentState": "Az erőszakos szélsőségesség és a radikalizáció továbbra is előítéleteken, online csatornákon és offline sérelmeken keresztül toboroz. Megelőző programok vannak iskolákban és közösségekben, de a lefedettség egyenlőtlen, és gyakran csak a kár után reagálnak, ahelyett hogy korán elvágnák az utakat.",
+    "rootCauses": "Identitáskonfliktus, embertelenítő propaganda, társadalmi kirekesztés, gyenge jogállamiság, és platformok, amelyek gyorsabban erősítik a sérelmet, mint a párbeszédet. A fiatalokat korán célozzák meg – iskolapadban és online –, még az offline erőszak előtt.",
+    "warnings": "A radikalizáció lefegyverzése az emberi jogokkal, a határokon átnyúló párbeszéddel és a fiatalok megerősítésével kezdődik – nem tömeges megfigyeléssel vagy prediktív „terrorpontszámokkal”. A kettős felhasználású figyelőlisták diszkrimináció eszközévé válhatnak. Részesítsd előnyben a kiutakat, a médiatudatosságot és a közösségi legitimitást."
+  },
+  "fgm": {
+    "currentState": "Ma több mint 200 millió élő lány és nő esett át női genitális csonkításon (FGM); évente további milliók maradnak veszélyben. A gyakoriság sok országban csökkent – egy lány körülbelül egyharmaddal kisebb eséllyel esik át FGM-en, mint harminc évvel ezelőtt –, de a haladás egyenlőtlen, és a COVID-korszak zavarai visszavetették a programokat.",
+    "rootCauses": "Társadalmi normák, házasodhatósági nyomás, a gyakorlók megélhetése, gyenge érvényesítés, és határokon átnyúló „vágási szezon” mobilitás. A hozzáállás sok helyen változik, ahol a lányok és nők, akik ismerik az FGM-et, azt mondják, véget kell vetni neki, de a gyakorlat lemaradhat a meggyőződés mögött.",
+    "warnings": "Találj fel közösségvezérelt felhagyásra, lányok oktatására és védelmére, valamint túlélők gondozására – soha ne grafikus „mentő” színházra vagy megszégyenítő kütyükre. Ne medicalizáld az FGM-et klinikai fejlesztésként. Tedd középpontba a helyi nők vezetését, a titoktartást és a méltóságot."
+  },
+  "short-termism": {
+    "currentState": "A nyomás alatt lévő háztartások és közösségek továbbra is felszámolják a hosszú távú javakat az azonnali túlélésért: a gazdák leölik a tejelő teheneket éhínségben; erdőket égetnek el az idei mezőért. Ugyanez a minta megjelenik a politikában és a cégeknél, amelyek a jövőt fosztogatják rövid hozamokért.",
+    "rootCauses": "Szegénységi csapdák és hiányzó védőhálók magas diszkontrátákat kényszerítenek ki; bizonytalan föld- és erőforrásjogok; piacok és politika, amelyek az idei negyedév hozamát jutalmazzák a talaj, erdő és ellenállóképesség tőkéjének évtizedei helyett.",
+    "warnings": "Kapcsolódik a szegénységhez, de a lényeg az időbeli kompromisszum. Találj fel ösztönzőket és puffereket, amelyek ma ésszerűvé teszik a holnap védelmét – ne előadásokat, amelyek figyelmen kívül hagyják az üres gyomrokat. Kerüld a „zöld” sémákat, amelyek alternatívák nélkül zárják ki a szegényeket a megélhetésből."
+  },
+  "misinfo": {
+    "currentState": "A közös tények és az intézményi bizalom nyomás alatt van az algoritmikus felerősítéstől, az olcsó szintetikus médiától és a kiüresedett helyi újságírástól. A hazugságok gyorsabban terjednek a helyreigazításoknál; a válságok (egészség, választások, katasztrófák) tudásbeli vészhelyzetekké is válnak, nem csak fizikaiakká.",
+    "rootCauses": "A figyelemgazdaságok jutalmazzák a felháborodást; az ellenőrzés költséges; a MI csökkenti a meggyőző hamisítványok költségét; a polarizáció és a gyenge médiatudatosság erodálja a közös talajt; az alulfinanszírozott közérdekű média kihívás nélkül hagyja a pletykát.",
+    "warnings": "Ne találj fel „MI törli a helytelen gondolatot” tiszta győzelemként. Részesítsd előnyben az eredetmegjelölést, a helyi megbízható közvetítőket és a felhasználói döntési szabadságot. A dezinformáció elleni küzdelemként keretezett megfigyelés elhallgattathatja a legitim beszédet. Tervezz a helyreigazítás sebességére és a méltóságra, ne tisztasági rendőrségre."
+  },
+  "totalitarianism": {
+    "currentState": "A szigorú totalitárius rendszerek továbbra is elszigetelik a lakosságot elnyomással, indoktrinációval és információs monopóliummal. A tágabb autokrácia terjeszkedett; az eszközök, amelyek segítenek szabad médiához jutni, kommunikálni és szerveződni, szűkösek ott, ahol a leginkább kellenek.",
+    "rootCauses": "Koncentrált kényszerítő hatalom, állami médiamonopóliumok, cenzúra-infrastruktúra, az egyesüléstől való félelem, és nemzetközi potyázás, amikor az elszigetelt lakosságokat nem lehet biztonságosan elérni.",
+    "warnings": "Az embereknek szabad médiára, nyelvi hidakra, cenzúra-megkerülésre és biztonságosabb közös cselekvésre van szükségük – nem jobb állami megfigyelésre. A kettős felhasználás szélsőséges: az eszközöket elkobozhatják. Részesítsd előnyben az alulról jövő megfigyelést (sousveillance) és a kölcsönös segélyterveket, amelyek nem igényelnek barátságos rezsimet."
+  },
+  "women-stem": {
+    "currentState": "Globálisan a felsőoktatásban a STEM (természettudomány, technológia, mérnöki tudományok, matematika) hallgatóknak csak körülbelül 35%-a nő. A lányok gyakran jól teljesítenek korán, majd elhagyják a matek- és természettudományi utakat a közép- és felsőoktatási átmeneteknél; a munkahelyi megtartás laborokban és tech szerepekben egyenlőtlen marad.",
+    "rootCauses": "Sztereotípiák, nem biztonságos vagy távoli iskolák, háztartási munka, ellenséges laborkultúrák, hiányzó mentorok és példaképek, valamint a diplomák után a nőkre háruló gondozási infrastruktúra. Ez STEM-csővezeték probléma – nem az egyenlő jogok egésze.",
+    "warnings": "Ne találj fel „egy inspiráló appot” mint a teljes megoldást. Részesítsd előnyben a biztonságos közlekedést, a laborkultúrát, az elhelyezéssel járó ösztöndíjakat és a munkahelyek közeli gondozást. Eltér az általános női jogok feltalálásától (biztonság, törvény, politikai hang) – tartsd a fókuszt a tudományos és mérnöki utakon."
+  },
+  "memory": {
+    "currentState": "Az emberi emlékezet hiányos és megbízhatatlan még az egészséges embereknél is. Először fordul elő, hogy hétköznapi emberek gazdag multimédiás feljegyzéseket készíthetnek megélt élményeikről – mégis az élet nagy része továbbra is rögzítetlen, kereshetetlen, vagy olyan formátumokban reked, amelyek elromlanak.",
+    "rootCauses": "Biológiai felejtés; megfizethető, privát rögzítőeszközök hiánya; szervezeti változások, amelyek törlik az intézményi tudást; kulturális veszteség, amikor az idősek történetei soha nincsenek felvéve; a média és formátumok digitális elavulása.",
+    "warnings": "Ez nem Alzheimer-kór vagy demencia ellátása. Találj fel megoldásokat az élmények dokumentálására és megőrzésére – személyes, közösségi és intézményi szinten –, beleegyezéssel és magánélet védelmével. Az irányítás nélküli életnaplózás megfigyeléssé válik. Részesítsd előnyben a felhasználó tulajdonában lévő archívumokat és a méltóságteljes örökséget, ne a kényszerített teljes felidézést."
+  },
+  "rural-roads": {
+    "currentState": "Nagyjából egymilliárd vidéki ember él több mint körülbelül 2 km-re egy egész évszakban járható úttól. A piacoktól, rendelőktől és iskoláktól való elszigeteltség a szegénységi csapda alapvető jellemzője – „szegénynek lenni annyi, mint elszigeteltnek lenni.” Az esős évszakok és a terep tovább nehezíti a hozzáférést.",
+    "rootCauses": "Alulberuházás a vidéki infrastruktúrába, gyenge karbantartás az átadóünnepség után, nehéz terep és éghajlat, valamint politikai elfogultság a látható városi projektek javára az utolsó kilométeres összeköttetés helyett.",
+    "warnings": "A karbantartás nélküli út ideiglenes ígéret. Találj fel megoldásokat az egész időjárásban járható hozzáférésre, a rendelői és piaci logisztikára, valamint a fenntartási ösztönzőkre – ne csak egyszeri építési színházra. Figyelj a kitelepítésre és a földkisajátításokra, amelyeket „folyosófejlesztésként” tálalnak."
+  },
+  "smoking": {
+    "currentState": "Több mint egymilliárd ember használ rendszeresen dohányterméket; a dohányzás évente milliókat öl meg, és továbbra is az alacsonyabb jövedelmű országokban koncentrálódik, miközben a magas jövedelmű országokban az arány csökken. A passzív dohányzás és a fiatalok nikotinfogyasztása (beleértve az új termékeket) életben tartja a járványt.",
+    "rootCauses": "A függőség biológiája, az ipar marketingje, a bolthálózat sűrűsége, gyenge leszokástámogató szolgáltatások, és lemaradó szabályozás ott, ahol a végrehajtás gyenge. A társadalmi normák és a stressz néhány helyen magasan tartja a dohányzás elkezdését a fiatalok körében.",
+    "warnings": "A csak szégyenre épülő kampányok kudarcot vallanak azoknál, akiknek a legkevesebb hozzáférésük van a leszokáshoz. Találj fel megoldásokat a kezdés megelőzésére, a megfizethető leszokástámogatásra és a passzív dohányzás elleni védelemre – ne a dohányosok gondoskodás nélküli megfigyelésére. Kerüld az ipar által kisajátított „megoldásokat.”"
+  },
+  "sanitation": {
+    "currentState": "Milliárdok még mindig nem rendelkeznek biztonságosan kezelt szennyvízelvezetéssel; több mint egymilliárdnak még alapvető magán WC-je vagy latrinája sincs, és több százmillió gyakorolja a szabadban történő ürítést. A városi csatornák lemaradnak az informális növekedés mögött; az iskolai WC-k és a fekáliásiszap-rendszerek továbbra is gyenge láncszemek.",
+    "rootCauses": "A WC-k és csatornák költsége, alulfinanszírozott közművek, stigma, földtulajdoni akadályok az informális településeken, és a teljes lánc elhanyagolása a latrinától a biztonságos kezelésig.",
+    "warnings": "Ez WC-kről, szennyvízről és higiéniáról szól – nem csak ivóvízszűrésről (lásd: Tiszta víz). Az ürítés és kezelés nélküli szenzorok színház. Részesítsd előnyben a méltóságot, a nemek szempontjából biztonságos iskolai létesítményeket és a biztonságos iszapgazdaságokat a már ellátottaknak szóló luxus okos-WC-felhajtás helyett."
+  },
+  "waste": {
+    "currentState": "A városok évente nagyjából kétmilliárd tonna települési szilárd hulladékot termelnek, plusz hatalmas mennyiségű e-hulladékot és veszélyes hulladékáramot. Az újrahasznosítás és a körforgásos rendszerek nőnek, de lemaradnak a termelés mögött; a hulladéklerakók, nyílt szemétlerakók és műanyaggal eltömődött lefolyók még mindig sok helyen dominálnak.",
+    "rootCauses": "Lineáris termelés, olcsó egyszer használatos csomagolás, gyenge gyűjtés, az informális szektor kizárása a formális tervekből, és globális hulladékkereskedelem, amely a kárt a szegényebb régiókra hárítja.",
+    "warnings": "Ne találj fel „exportáld a szemetet” megoldást helyi sikernek. Tervezz az informális gyűjtők megélhetésével, valódi anyagvisszanyeréssel és a forrásnál történő csökkentéssel. Az e-hulladék égetése és a műanyaggal eldugult áradások rendszereket igényelnek, ne egyszeri tengerparti takarításokat az egész találmányként."
+  },
+  "reproductive": {
+    "currentState": "A szexuális és reproduktív egészség azt jelenti, hogy az embereknek biztonságos szexuális életük lehet, és eldönthetik, hogy akarnak-e gyermeket, mikor és milyen gyakran. A fogamzásgátláshoz való hozzáférés világszerte javult, de sok régióban továbbra is alacsony; a nemi úton terjedő fertőzések (STI-k), a meddőségi ellátás és a bizalmas szolgáltatások minden nem számára lemaradnak.",
+    "rootCauses": "Készlethiányok, stigma, szolgáltatói elfogultság, költség, korlátozó politika, és csak a terhesség köré tervezett szolgáltatások – nem a férfiakra, partnerekre, serdülőkre vagy a termékenységi ellátásra. A női nemi szervek megcsonkítása (FGM) és a kényszerházasság kapcsolódó károk, de nem a teljes reproduktív egészség (RH).",
+    "warnings": "Ez a téma minden embernek szól – nem csak nőknek és gyermekeknek. Az anyai sürgősségi szülészeti ellátás saját téma; az FGM saját téma. Találj fel megoldásokat az önrendelkezésre, a magánéletre, az STI-ellátásra (beleértve a férfiakat), a fogamzásgátlási választásra és a termékenységi hozzáférésre – soha ne kényszerítő termékenységszabályozásra, amelyet jónak állítanak be."
+  },
+  "amr": {
+    "currentState": "A baktériumok és más mikrobák rezisztenciát fejlesztenek ki az antibiotikumok és antimikrobiális szerek ellen. A gyakori fertőzések és a műtétek nehezebben kezelhetők; az utolsó vonalbeli gyógyszerek csődöt mondanak a kórházakban, miközben a lakossági helytelen használat és az állattartásban való alkalmazás gyorsítja a rezisztenciát. Ez nem vírusjárvány-téma – az antimikrobiális hatékonyság eróziója.",
+    "rootCauses": "Az antibiotikumok túlhasználata és helytelen használata embereknél és állatoknál, gyenge diagnosztika, amely vakon történő kezelésre kényszerít, gyenge fertőzéskontroll, valamint alulberuházás az új antimikrobiális szerekbe és a felelős használatba (stewardship).",
+    "warnings": "Ne találj fel itt „újabb vírusjárvány-appot”. Részesítsd előnyben a felelős használatot (stewardship), a gyors bakteriális diagnosztikát, a farm- és gyógyszertári gyakorlat változását, és a megfelelő gyógyszerhez való hozzáférést – nem a korlátlan antibiotikum-árusítást. Őrizd meg a hatékonyságot; ne találj fel olyan rendszereket, amelyek több vak felírást ösztönöznek."
+  }
+}

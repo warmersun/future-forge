@@ -49,7 +49,8 @@ export function scoreRun(input) {
   );
 
   let honestyScore = timing === "green" ? 90 : timing === "red" ? 40 : 60;
-  if (hasPilotLanguage(input.inventionHow || "")) honestyScore = Math.min(100, honestyScore + 10);
+  if (hasPilotLanguage(input.inventionHow || "", input.locale || "en"))
+    honestyScore = Math.min(100, honestyScore + 10);
 
   let eleganceScore = 0;
   eleganceScore += Math.min(50, 25 * (Number(input.synergyPairCount) || 0));

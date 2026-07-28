@@ -1,0 +1,490 @@
+{
+  "ram-shortage": {
+    "headline": "RAM-hiány sújtja az ellátási láncokat",
+    "body": "A memóriachipek szűkösek és drágák. A számítási projekteknek mélyebb zseb kell, mielőtt kilépnek a laborból."
+  },
+  "ai-datacenter-backlash": {
+    "headline": "Megoszlik a közvélemény az MI-adatközpontokról",
+    "body": "Senki sem akar adatközpontot a saját államában. Az MI és a nehéz számítás több politikai akaratot igényel."
+  },
+  "solar-glut": {
+    "headline": "Napelem-túlkínálat vágja az árakat",
+    "body": "Túlépített gyárak. Napelem- és akkukészletek árasztják el a katalógusokat — a tőkeköltség enyhül."
+  },
+  "nuclear-permit-wave": {
+    "headline": "Gyorsabban jönnek a nukleáris engedélyek",
+    "body": "Regionális megállapodás egyszerűsíti a kisreaktor-vizsgálatokat. Nő a nukleáris politikai akarat."
+  },
+  "drone-airspace-clamp": {
+    "headline": "Szigorodnak a drón légtérszabályok",
+    "body": "Új folyosók és biztosítási kötelezettségek emelik a lécet. Az autonóm projekteknek költségvetés és támogatás kell."
+  },
+  "gene-sequencing-boom": {
+    "headline": "Olcsóbbak a hordozható szekvenálók",
+    "body": "Árháború a terepi genomikában. Kórokozó- és biotech-stackek kevesebb tőkéből felhúzhatók."
+  },
+  "biotech-scare": {
+    "headline": "Labor-szivárgás riadalom szítja a biotech-félelmet",
+    "body": "A címlapok megelőzik a bizonyítékokat. A szintetikus biológia keményebb politikai klímába kerül."
+  },
+  "grid-congestion": {
+    "headline": "Megugranak a hálózati torlódási díjak",
+    "body": "Átviteli szűkületek drágítják az energiaprojektek bekötését — főleg a nagy termelést."
+  },
+  "open-source-models": {
+    "headline": "Nyílt modellek árasztják el a piacot",
+    "body": "Erős ingyenes súlyok csökkentik a küszöböt. Helyi MI-asszisztensek olcsóbban állíthatók fel."
+  },
+  "robot-labor-pushback": {
+    "headline": "Szakszervezetek állnak ellen a gondozó robotoknak",
+    "body": "Gondozási és logisztikai automatizáció szervezett ellenállásba ütközik. A politikai akarat a szűkös erőforrás."
+  },
+  "chip-export-thaw": {
+    "headline": "Enyhülnek az edge-chip exportkorlátozások",
+    "body": "Ideiglenes olvadás. Edge computing és IoT-készletek olcsóbbak a civil projekteknek."
+  },
+  "privacy-backlash": {
+    "headline": "Érzékelős megfigyelés ellenreakció",
+    "body": "A közösségek elutasítják a folyamatos kamerákat és mérőket. Az IoT-nek több politikai fedezet kell."
+  },
+  "print-shop-grants": {
+    "headline": "Önkormányzati 3D-nyomda támogatások",
+    "body": "Városok finanszíroznak helyi fab shopokat. Additív gyártás és anyagok tőkekönnyítést kapnak."
+  },
+  "rare-earth-squeeze": {
+    "headline": "Ritka földfém-szorítás üti a hardvert",
+    "body": "Mágnesek, akkuk és fejlett anyagok drágulnak. Hardvernehéz stackek megérzik."
+  },
+  "climate-fund-surge": {
+    "headline": "Alkalmazkodási alapok korán nyílnak",
+    "body": "Klímaablak helyi ellenálló techre. Zöld stackek politikai akarata enyhül."
+  },
+  "vr-training-fad": {
+    "headline": "VR-képzési büdzsék vágva",
+    "body": "Cégek visszavonják headset-programjaikat. Link-domain projekteknek több tőke kell."
+  },
+  "quantum-hype-cycle": {
+    "headline": "Kvantum-hype hűl — pilotok állnak",
+    "body": "Befektetők tisztább résekre várnak. Kvantummunkának több akarat kell a szponzorokhoz."
+  },
+  "community-broadband": {
+    "headline": "Közösségi sávszélesség nyer szavazást",
+    "body": "Optikai szövetkezetek átmennek. Hálózatok és koordinációs toolok kevesebb súrlódással."
+  },
+  "crypto-winter-thaw": {
+    "headline": "Főkönyvi toolok mint polgári sínek",
+    "body": "Kevesebb hype, több közbeszerzés. Kripto-főkönyvek kicsit olcsóbb politikai tőkével."
+  },
+  "battery-fire-scare": {
+    "headline": "Raktári akkutűz uralja a híreket",
+    "body": "Biztonsági félelmek emelik a biztosítást és compliance-t akkuprojekteknél."
+  },
+  "wind-siting-wars": {
+    "headline": "Széltelepítési háborúk fokozódnak",
+    "body": "Parti és gerinc-közösségek harcolnak turbinák ellen. Szélprojekteknek több politikai akarat kell."
+  },
+  "offshore-wind-subsidy": {
+    "headline": "Tengeri szél támogatási csomag",
+    "body": "Regionális csomag fedezi a tengeri szelet. Tőkeköltség enyhül a szél-stackeknek."
+  },
+  "geothermal-drill-boom": {
+    "headline": "Geotermikus fúrási költségek zuhannak",
+    "body": "Új fúrófejek és közös riggek vágják a baseload hőprojekteket. Geotermia olcsóbb start."
+  },
+  "seismic-permit-freeze": {
+    "headline": "Szeizmikus félelem fagyasztja a geo-engedélyeket",
+    "body": "Kiváltott rengés-hírek állítják a helyi engedélyeket. Geotermiának több politikai fedezet kell."
+  },
+  "tidal-pilot-success": {
+    "headline": "Árapály-pilot felülmúlja a várakozásokat",
+    "body": "Egy kikötői pilot stabil teljesítményt hoz. Az árapály- és hullámtech finanszírozhatóbbnak tűnik."
+  },
+  "marine-storm-damage": {
+    "headline": "Vihar rongálja a tengeri energiakészletet",
+    "body": "Rossz szezon utáni biztosítás tőkét emel az árapály- és hullámprojektekhez."
+  },
+  "nuclear-waste-standoff": {
+    "headline": "Nukleáris hulladék-patthelyzet visszatér",
+    "body": "A tárolási politika fellángol. Az atomnak több akaratra van szüksége ott is, ahol a reaktor papíron oké."
+  },
+  "smr-factory-discount": {
+    "headline": "SMR-gyár mennyiségi árat ad",
+    "body": "A moduláris reaktorosok vágják az első egység felárát. Az atomtőke kissé enyhül."
+  },
+  "oil-price-spike": {
+    "headline": "Olajár-ugrás hozza az azonnali villamosítást",
+    "body": "A fosszilis volatilitás politikailag eladhatóbbá teszi a tiszta energia stackeket."
+  },
+  "gas-lobby-blitz": {
+    "headline": "Gázlobby-roham a tiszta energia ellen",
+    "body": "A bejáratott üzenetek lassítják a tiszta termelést. Az energia-tech költségei nőhetnek."
+  },
+  "microgrid-standard": {
+    "headline": "Mikrogrid szabvány elfogadva",
+    "body": "Közös szabvány vágja az integrációs költséget energia-, akku- és háló stackeknél."
+  },
+  "utility-monopoly-fee": {
+    "headline": "Közműmonopólium-díj a peremeszközökre",
+    "body": "Elosztási díjak sújtják a helyi termelést és tárolást. Az energia-hardver drágul."
+  },
+  "copper-shortage": {
+    "headline": "Rézhiány sújtja a vezetékezést",
+    "body": "Kábelek és motorok drágulnak. Energia- és mozgató-hardver büdzséje nő."
+  },
+  "lithium-price-crash": {
+    "headline": "Lítiumár-összeomlás",
+    "body": "Az akkucsomagok újra olcsóbbak a túlkínálat után."
+  },
+  "hydrogen-hype-tax": {
+    "headline": "Hidrogén-hype adó az energiabüdzséken",
+    "body": "Döntéshozók forrást visznek éretlen H2-sémákra. Helyi energia-pilotok drágábban versenyeznek."
+  },
+  "community-solar-law": {
+    "headline": "Közösségi napelem-törvény átmegy",
+    "body": "Megosztott napelem-szövetkezetek könnyű szabályokat kapnak. A napelem akaratköltsége esik."
+  },
+  "night-storage-mandate": {
+    "headline": "Éjszakai tárolási kötelezettség",
+    "body": "Új szabályok kötik a termelést a tároláshoz. Akkutőke nő; a napelem-politika kicsit enyhül."
+  },
+  "blackout-week": {
+    "headline": "Áramszünet-hét élesít",
+    "body": "Többnapos kimaradások után nő a politikai akarat a helyi energia és akkuk iránt."
+  },
+  "ai-chip-tax": {
+    "headline": "MI-chip importadó",
+    "body": "A speciális gyorsítók drágulnak. Az MI- és számítási stackeknek több tőke kell."
+  },
+  "teacher-ai-grants": {
+    "headline": "Tanári MI-copilot támogatások",
+    "body": "Oktatási alapok finanszírozzák a tantermi MI-t. Akarat és tőke enyhül az MI-projekteknél."
+  },
+  "deepfake-scandal": {
+    "headline": "Deepfake-botrány hét",
+    "body": "A bizalom bezuhan. Az MI-projekteknek több politikai akarat kell a szűréshez."
+  },
+  "robot-lease-deals": {
+    "headline": "Robot-szolgáltatás bérleti dealek",
+    "body": "A gyártók havi díjra finanszírozzák a testeket. Kevesebb előzetes tőke a robotokra."
+  },
+  "robot-injury-lawsuit": {
+    "headline": "Robot-sérülés per virális",
+    "body": "Felelősségi félelmek növelik a robotok megfelelési költését."
+  },
+  "warehouse-robot-boom": {
+    "headline": "Raktárrobot-boom olcsó alkatrészek",
+    "body": "Túltermelt logisztikai robotok olcsóbban ömlenek a civil piacokra."
+  },
+  "ai-energy-backlash": {
+    "headline": "MI-energiahasználat ellenreakció",
+    "body": "A közösségek az MI-t az áramterheléshez kötik. Az MI-akarat drágul."
+  },
+  "open-robotics-kit": {
+    "headline": "Nyílt robotikai készlet a polcokon",
+    "body": "Megosztott tervek és alkatrészek csökkentik a robotépítés költségét."
+  },
+  "automation-tax-talk": {
+    "headline": "Automatizálási adóvita visszatér",
+    "body": "Politikusok robotadókat emlegetnek. Az automatizáló stackeknek több akarat kell."
+  },
+  "ai-safety-fund": {
+    "headline": "Nemzeti MI-biztonsági alap",
+    "body": "Megfelelési és eval eszközök támogatást kapnak. Az MI-tőke enyhül, ha szabályosan játszol."
+  },
+  "ev-charger-glut": {
+    "headline": "EV-töltő túlkínálat",
+    "body": "A töltőhardver olcsó. Közlekedés és önvezetés támogatási költségei esnek."
+  },
+  "road-pricing-fight": {
+    "headline": "Útdíj-harc",
+    "body": "A dugódíjak tiltakozást szítanak. Önvezetésnek és közlekedésnek több akarat kell."
+  },
+  "autonomy-corridor-opens": {
+    "headline": "Autonómiafolyosó nyílik",
+    "body": "Egy város feltérképezett shuttle-folyosót nyit. Önvezetési tőke és akarat enyhül."
+  },
+  "drone-crash-ban": {
+    "headline": "Drónbaleset ideiglenes tilalmat hoz",
+    "body": "Nagy horderejű incidens leföldi a helyi drónokat, amíg a szabályok szigorodnak."
+  },
+  "medical-drone-lane": {
+    "headline": "Orvosi drónfolyosó jóváhagyva",
+    "body": "Vér- és vakcinafolyosók állandó státuszt kapnak. A drónok politikailag könnyebbek."
+  },
+  "satellite-bandwidth-sale": {
+    "headline": "Műholdas sávszélesség-kiárusítás",
+    "body": "Űrkapcsolati cégek kapacitást dobnak piacra. Űr és hálózatok olcsóbban vezetékezhetők."
+  },
+  "space-debris-scare": {
+    "headline": "Űrszemét-riadó",
+    "body": "Indítási biztosítás megugrik. Űrprojekteknek több tőke kell."
+  },
+  "fiber-cut-wave": {
+    "headline": "Optikai kábelvágási hullám",
+    "body": "Kábellopás növeli a hálózati ellenállóképesség költségeit."
+  },
+  "mesh-radio-legalized": {
+    "headline": "Mesh rádió legalizálva",
+    "body": "Közösségi mesh hálózatok tiszta spektrumszabályokat kapnak. Hálózatok és IoT enyhülnek."
+  },
+  "quantum-link-pilot": {
+    "headline": "Kvantumkapcsolat-pilot finanszírozva",
+    "body": "Kutatási folyosó kvantumhálózati próbákat finanszíroz. Kvantuminternet tőke enyhül."
+  },
+  "transport-strike": {
+    "headline": "Közlekedési sztrájk zavarja a pilotokat",
+    "body": "Munkásakció lefagyasztja a mobilitási próbákat. Mozgató stackeknek több akarat kell."
+  },
+  "bike-lane-data-deal": {
+    "headline": "Kerékpársáv-szenzor üzlet",
+    "body": "Városok tömegesen vesznek IoT-t mobilitásra. Hálózatok és IoT hardver olcsóbb lesz."
+  },
+  "lidar-price-war": {
+    "headline": "Lidar árharc",
+    "body": "Autonómia- és drónszenzorok olcsóbbak lesznek."
+  },
+  "gps-jamming-zone": {
+    "headline": "GPS-zavarási zóna nő",
+    "body": "Navigációs kockázat drágítja a drón-, űr- és önvezető műveleteket."
+  },
+  "gene-therapy-approval": {
+    "headline": "Génterápia-engedélyhullám",
+    "body": "Hatóságok több terápiát engedélyeznek. A génsebészet akarata enyhül."
+  },
+  "clinic-sequencer-rebate": {
+    "headline": "Klinikai szekvenáló-kedvezmény",
+    "body": "Népegészségügyi kedvezmény hordozható szekvenálókra."
+  },
+  "gmo-crop-ban-talk": {
+    "headline": "GMO-növénytilalom-beszéd terjed",
+    "body": "Agrárpolitika keményedik. Szinbio és génsebészet több akaratot igényel."
+  },
+  "alt-protein-price-parity": {
+    "headline": "Alt-fehérje árparitás",
+    "body": "Növényi és fermentációs fehérjék árparitást hoznak több menzán."
+  },
+  "cultured-meat-ban": {
+    "headline": "Laborhús-tilalom kulcspiacon",
+    "body": "A tilalom növeli az alternatív fehérjék politikai költségét."
+  },
+  "bci-trial-success": {
+    "headline": "BCI-kísérlet visszaadja a beszédet",
+    "body": "Pozitív hírek csökkentik az agy-gép interfészek politikai súrlódását."
+  },
+  "bci-ethics-probe": {
+    "headline": "BCI etikai vizsgálat indul",
+    "body": "Beleegyezés- és adatfélelmek növelik az idegi interfészek akaratköltségét."
+  },
+  "pandemic-stockpile": {
+    "headline": "Járványkészlet-feltöltés",
+    "body": "Állami vevők diagnosztikát rendelnek. Génszekvenálás tőkéje enyhül."
+  },
+  "synbio-ip-thicket": {
+    "headline": "Szinbio IP-bozót",
+    "body": "Licencharcok növelik a szintetikus biológia építések tőkéjét."
+  },
+  "crispr-tool-drop": {
+    "headline": "CRISPR-eszközárak zuhannak",
+    "body": "Génszerkesztő reagensek olcsóbbak a helyi laboknak."
+  },
+  "blood-sample-privacy": {
+    "headline": "Vérminta-adatvédelmi törvény",
+    "body": "Biobank-szabályok szigorodnak. Szekvenálás és BCI projekteknek több akarat kell."
+  },
+  "school-lunch-proteins": {
+    "headline": "Iskolai menza fehérje-pilotok",
+    "body": "Közkonyhák alt fehérjéket tesztelnek — politikai út nyílik."
+  },
+  "vr-headset-clearance": {
+    "headline": "VR-headset kiárusítás",
+    "body": "Vállalati visszáruk elárasztják a piacot. VR-tőke zuhan."
+  },
+  "ar-workplace-mandate": {
+    "headline": "AR munkahelyi biztonsági kötelezettség",
+    "body": "Gyárak AR-képzést finanszíroznak — Link domain akarat enyhül."
+  },
+  "motion-sickness-report": {
+    "headline": "Mozgásbetegség-jelentés virális",
+    "body": "VR-elfogadási politika romlik egy szezonra."
+  },
+  "metaverse-budget-purge": {
+    "headline": "Metaverzum költségvetés-tisztogatás",
+    "body": "Big tech vágások sértik a headset-láncokat; rövid távon árak megugranak."
+  },
+  "medical-vr-therapy": {
+    "headline": "Orvosi VR-terápia támogatott",
+    "body": "Biztosítók térítik a VR-terápia modulokat. Akarat és tőke enyhül."
+  },
+  "iot-chip-shortage": {
+    "headline": "IoT-chip hiány visszatér",
+    "body": "Szenzorcsomópontok drágulnak a városi építésekhez."
+  },
+  "smart-city-grant": {
+    "headline": "Okosváros-szenzor pályázat",
+    "body": "Szövetségi program IoT-t finanszíroz víz-, levegő- és árvízmérőkhöz."
+  },
+  "nano-hype-funding": {
+    "headline": "Nanoanyag-hype finanszírozás",
+    "body": "Anyag-sprint csökkenti a nano és fejlett anyagok tőkéjét."
+  },
+  "nano-toxicity-study": {
+    "headline": "Nano-toxicitás tanulmány riadó",
+    "body": "Biztonsági vizsgálatok emelik az akaratköltséget nano projekteknél."
+  },
+  "recycled-filaments": {
+    "headline": "Újrahasznosított 3D filament özön",
+    "body": "Nyomtatási alapanyag olcsóbb a helyi fabnak."
+  },
+  "printer-fire-recall": {
+    "headline": "3D nyomtató tűzvisszahívás",
+    "body": "Biztosítás és megfelelés emeli a print3d tőkét."
+  },
+  "materials-tariff": {
+    "headline": "Fejlett anyagok vámja",
+    "body": "Importvámok sújtják a speciális anyagokat és nano-alapanyagokat."
+  },
+  "open-hardware-license": {
+    "headline": "Nyílt hardver licenchullám",
+    "body": "Megosztott tervek vágják az anyag- és print3d projekt tőkét."
+  },
+  "right-to-repair-win": {
+    "headline": "Javítási jog győzelem",
+    "body": "Helyi javítási törvények a karbantartható IoT és print stackeket hozzák helyzetbe."
+  },
+  "e-waste-crackdown": {
+    "headline": "E-hulladék szigorítás",
+    "body": "Ártalmatlanítási díjak emelik a hardverigényes portal stackek tőkéjét."
+  },
+  "interest-rate-hike": {
+    "headline": "Kamatemelés",
+    "body": "Tőkepiacok szűkülnek. Szinte minden hardver stack drágább finanszírozni."
+  },
+  "stimulus-tech-window": {
+    "headline": "Stimulus tech ablak",
+    "body": "Rövid költési ablak enyhíti a helyi tech pilotok tőkéjét."
+  },
+  "election-year-caution": {
+    "headline": "Választási év óvatosság",
+    "body": "Hivatalnokok kerülik a vitatott tech-et. Akarat nő a frontier stackeken."
+  },
+  "mayors-innovation-pact": {
+    "headline": "Polgármesterek innovációs paktuma",
+    "body": "Városok megosztják a beszerzési sablonokat. Politikai akarat enyhül a többdomaines pilotokra."
+  },
+  "cyberattack-week": {
+    "headline": "Kibertámadás-hét",
+    "body": "Biztonsági előírások emelik a hálózatok, IoT, MI és kripto költségeit."
+  },
+  "open-data-law": {
+    "headline": "Nyílt adat törvény átmegy",
+    "body": "Városok API-kat publikálnak. Hálózatok és IoT projektek kevesebb politikai súrlódással."
+  },
+  "talent-visa-freeze": {
+    "headline": "Tehetségvízum-befagyasztás",
+    "body": "Szakképzett munkaerőhiány emeli a computing, MI és quantum költségeit."
+  },
+  "university-lab-share": {
+    "headline": "Egyetemi labormegosztás",
+    "body": "Közös eszközök csökkentik a tőkét gén-, kvantum- és anyagmunkához."
+  },
+  "insurance-premium-spike": {
+    "headline": "Tech-pilóta biztosítási ugrás",
+    "body": "Biztosítók emelik a díjakat drónokra, robotokra és nukleáris közeli munkákra."
+  },
+  "philanthropy-sprint": {
+    "headline": "Filantrópia-sprint helyi techért",
+    "body": "Alapítványok párosítják az önkormányzati innovációs alapokat. Tőke enyhül mindenütt."
+  },
+  "disinfo-wave": {
+    "headline": "Dezinfo-hullám tech-pilótákról",
+    "body": "Pletykák extra közösségi folyamatot kényszerítenek. Akarat nő a látható stackekhez."
+  },
+  "youth-climate-march": {
+    "headline": "Ifjúsági klímamenet",
+    "body": "Utcai nyomás puhítja az akaratot tiszta energia és anyag stackekhez."
+  },
+  "crypto-crash": {
+    "headline": "Kripto-összeomlás",
+    "body": "Spekulatív láz elhal; a civikus ledger kevesebb akaratot, több óvatos tőkét igényel."
+  },
+  "stablecoin-payroll": {
+    "headline": "Stablecoin bérpilóták",
+    "body": "Városok átlátható helyi alapokat tesztelnek. Kripto-tőke kissé enyhül."
+  },
+  "bci-data-breach": {
+    "headline": "BCI-szállító adatlopás",
+    "body": "Neurális adatfélelmek megemelik az akarat költségét BCI-hez."
+  },
+  "space-earth-obs-deal": {
+    "headline": "Földmegfigyelési deal városoknak",
+    "body": "Olcsó műholdadat táplálja a helyi tervezést. Űr- és MI-tőke enyhül."
+  },
+  "self-driving-pedestrian-incident": {
+    "headline": "Önvezető gyalogos-baleset",
+    "body": "Nagy port kavaró crash befagyasztja az akaratot az autonómiához."
+  },
+  "drone-delivery-holiday": {
+    "headline": "Drónkézbesítés ünnepi roham",
+    "body": "Szezonális túlkészlet után esnek a drón hardverárak."
+  },
+  "materials-breakthrough": {
+    "headline": "Laboranyag-áttörés",
+    "body": "Publikált eljárás vágja a speciális anyagok költségét."
+  },
+  "quantum-error-milestone": {
+    "headline": "Kvantumhiba-javítási mérföldkő",
+    "body": "A hype tartalommal tér vissza; kvantum-akarat enyhül, tőke még magas."
+  },
+  "network-neutrality-fight": {
+    "headline": "Hálózatsemlegességi harc",
+    "body": "ISP-k és városok ütköznek. Hálózati akaratköltség nő."
+  },
+  "fab-lab-franchise": {
+    "headline": "Fab lab franchise-hullám",
+    "body": "Sztenderd nyomdák csökkentik a print3d indítótőkét."
+  },
+  "robot-nurse-pilot": {
+    "headline": "Robotápoló pilot dicsérve",
+    "body": "Ápolási eredmények enyhítik a robotok politikai ellenállását."
+  },
+  "energy-poverty-fund": {
+    "headline": "Energiaszegénységi alap",
+    "body": "Célzott alapok vágják a napelem-, akku- és energiahozzáférés-tőkét."
+  },
+  "storm-rebuild-surge": {
+    "headline": "Vihar-újjáépítési roham",
+    "body": "Kereslet felhajtja az anyagokat és drónokat; rövid távú tőke nő."
+  },
+  "public-trust-rebound": {
+    "headline": "Közbizalom-visszapattanás",
+    "body": "Csendes győzelmek után az akarat enyhén csökken az automator és mover techben."
+  },
+  "global-shipping-jam": {
+    "headline": "Globális szállítási torlódás",
+    "body": "Hardverátfutás nyúlik; power- és portalbüdzsék emelkednek."
+  },
+  "local-currency-pilot": {
+    "headline": "Helyi valuta- és ledgerpilot",
+    "body": "Önkormányzati ledgerpilotok normalizálják a kriptoeszközöket."
+  },
+  "ai-exam-cheating-panic": {
+    "headline": "MI-vizsgacsalás pánik",
+    "body": "Iskolák korlátozzák a MI-t; akaratköltség nő az oktatási MI-nél."
+  },
+  "flood-sensor-rebate": {
+    "headline": "Árvízérzékelő-támogatás",
+    "body": "Vízügyi kerületek IoT-csomagokat támogatnak nedves szezon után."
+  },
+  "heatwave-grid-alert": {
+    "headline": "Hőhullám hálózati riasztás",
+    "body": "Csúcskereslet-politika akkukat és kereslet-tech-et favorizál."
+  },
+  "venture-winter": {
+    "headline": "Venture-tél a deep techben",
+    "body": "Magántőke menekül a hosszú távú stackekből; kvantum- és űrbüdzsé nő."
+  },
+  "co-op-procurement": {
+    "headline": "Városok közös beszerzése",
+    "body": "Városok együtt vesznek szenzorokat és paneleket. Könnyebb tőke IoT-re és napra."
+  }
+}

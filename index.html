@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
+      id="meta-description"
+      data-i18n-content="meta.description"
       content="Future Forge — invent local solutions with emerging technologies, combine disciplines, and race the exponential clock with an AI co-inventor."
     />
-    <title>Future Forge — Invent Tomorrow</title>
+    <title data-i18n="meta.documentTitle" data-i18n-default="Future Forge — Invent Tomorrow"
+      >Future Forge — Invent Tomorrow</title
+    >
     <link rel="stylesheet" href="css/styles.css?v=spotlight-hidden-1" />
   </head>
   <body>
@@ -15,12 +19,35 @@
     <section id="screen-title" class="screen active">
       <div class="title-orb" aria-hidden="true"></div>
       <div class="title-card">
+        <div class="title-lang" role="group" aria-labelledby="title-lang-label">
+          <span class="title-lang-label" id="title-lang-label" data-i18n="title.langLabel">Language</span>
+          <div class="title-lang-switch" id="title-lang-switch">
+            <button
+              type="button"
+              class="title-lang-btn"
+              data-locale="en"
+              id="btn-lang-en"
+              aria-pressed="true"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              class="title-lang-btn"
+              data-locale="hu"
+              id="btn-lang-hu"
+              aria-pressed="false"
+            >
+              HU
+            </button>
+          </div>
+        </div>
         <div class="title-logo" aria-label="Future Forge by Warmer Sun">
           <span class="title-logo-sun" aria-hidden="true"></span>
           <div class="title-logo-text">
             <h1 id="game-title">Future Forge</h1>
             <p class="title-logo-credit">
-              by
+              <span data-i18n="title.by">by</span>
               <a
                 class="title-logo-link"
                 href="https://warmersun.com"
@@ -31,37 +58,63 @@
             </p>
           </div>
         </div>
-        <p class="tagline" id="game-tagline">
+        <p class="tagline" id="game-tagline" data-i18n="title.tagline">
           Invent local solutions with emerging tech — beat the clock as the future arrives.
         </p>
         <div class="pitch">
-          <h2>How you play</h2>
+          <h2 data-i18n="title.howYouPlay">How you play</h2>
           <ol>
             <li>
-              <strong>Pick a Quest</strong> — several concrete places living a piece of a global problem.
+              <strong data-i18n="title.pitch1Lead">Pick a Quest</strong
+              ><span data-i18n="title.pitch1">
+                — several concrete places living a piece of a global problem.</span
+              >
             </li>
             <li>
-              <strong>Invent with AI</strong> — pick emerging technologies that fit the local problem
-              (mix domains when it helps — not as a rule).
+              <strong data-i18n="title.pitch2Lead">Invent with AI</strong
+              ><span data-i18n="title.pitch2">
+                — pick emerging technologies that fit the local problem (mix domains when it helps —
+                not as a rule).</span
+              >
             </li>
             <li>
-              <strong>Watch the years tick</strong> — world conditions shift; the crisis gets worse if you wait.
+              <strong data-i18n="title.pitch3Lead">Watch the years tick</strong
+              ><span data-i18n="title.pitch3">
+                — world conditions shift; the crisis gets worse if you wait.</span
+              >
             </li>
             <li>
-              <strong>Deploy in time</strong> — intercept the future: not too early, not too late — then see that world painted.
+              <strong data-i18n="title.pitch4Lead">Deploy in time</strong
+              ><span data-i18n="title.pitch4">
+                — intercept the future: not too early, not too late — then see that world
+                painted.</span
+              >
             </li>
           </ol>
         </div>
         <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
-          <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
-          <button type="button" class="btn btn-secondary" id="btn-friends">Play with friends</button>
-          <button type="button" class="btn btn-secondary" id="btn-choose-theme">
+          <button type="button" class="btn btn-secondary" id="btn-surprise" data-i18n="title.surprise">
+            Surprise mission
+          </button>
+          <button type="button" class="btn btn-secondary" id="btn-friends" data-i18n="title.friends">
+            Play with friends
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="btn-choose-theme"
+            data-i18n="title.chooseTheme"
+            data-i18n-title="title.chooseThemeTitle"
+            title="Themes, sponsored, learning modules, or side-loaded Quests"
+          >
             Play a Quest
           </button>
           <button
             type="button"
             class="btn btn-primary"
             id="btn-start"
+            data-i18n="title.playTutorial"
+            data-i18n-title="title.playTutorialTitle"
             title="Quiet guided run: Portside Ward floods"
           >
             Play tutorial →
@@ -73,6 +126,8 @@
             class="btn btn-ghost btn-sm"
             id="btn-reset-spark"
             hidden
+            data-i18n="title.resetTutorial"
+            data-i18n-title="title.resetTutorialTitle"
             title="Show Play tutorial again"
           >
             Reset tutorial
@@ -166,27 +221,27 @@
             <div class="hud-product-text">
               <span class="hud-product-title">Future Forge</span>
               <span class="hud-product-credit">
-                by
+                <span data-i18n="brand.by">by</span>
                 <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
               </span>
             </div>
           </div>
         </div>
         <div class="progress-pills">
-          <span class="pill active">Friends</span>
+          <span class="pill active" data-i18n="friends.pill">Friends</span>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-friends-back">← Home</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-friends-back" data-i18n="common.backHome">← Home</button>
       </header>
       <div class="content friends-content">
         <div class="section-intro">
-          <h1>Play with friends</h1>
-          <p class="friends-vs-solo muted">
+          <h1 data-i18n="friends.heading">Play with friends</h1>
+          <p class="friends-vs-solo muted" data-i18n="friends.vsSolo">
             Solo teaches the invent loop. Friends is a race: personal inventions, one shared place.
           </p>
           <ul class="friends-rules">
-            <li>Each player builds their own invention.</li>
-            <li>You share one crisis — if the place falls, everyone loses.</li>
-            <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
+            <li data-i18n="friends.rule1">Each player builds their own invention.</li>
+            <li data-i18n="friends.rule2">You share one crisis — if the place falls, everyone loses.</li>
+            <li data-i18n="friends.rule3">Field ideas to ease the shared crisis; rank only if the place holds.</li>
           </ul>
           <p class="muted sm">
             Create a room and share the <strong>room code</strong> plus the host’s
@@ -195,38 +250,38 @@
         </div>
         <div class="friends-hub-grid">
           <article class="panel friends-panel">
-            <h2>Create room</h2>
+            <h2 data-i18n="friends.createRoom">Create room</h2>
             <form id="friends-create-form" class="friends-panel-form">
               <div class="field">
-                <label for="friends-create-name">Your name</label>
+                <label for="friends-create-name" data-i18n="friends.yourName">Your name</label>
                 <input id="friends-create-name" type="text" maxlength="24" placeholder="Alex" autocomplete="nickname" />
               </div>
-              <button type="submit" class="btn btn-primary" id="btn-friends-create">Create room →</button>
+              <button type="submit" class="btn btn-primary" id="btn-friends-create" data-i18n="friends.createArrow">Create room →</button>
             </form>
           </article>
           <article class="panel friends-panel">
-            <h2>Join room</h2>
+            <h2 data-i18n="friends.joinRoom">Join room</h2>
             <form id="friends-join-form" class="friends-panel-form">
               <div class="field">
-                <label for="friends-join-name">Your name</label>
+                <label for="friends-join-name" data-i18n="friends.yourName">Your name</label>
                 <input id="friends-join-name" type="text" maxlength="24" placeholder="Bea" autocomplete="nickname" />
               </div>
               <div class="field">
-                <label for="friends-join-code">Room code</label>
+                <label for="friends-join-code" data-i18n="friends.roomCode">Room code</label>
                 <input id="friends-join-code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" class="code-input" />
               </div>
-              <button type="submit" class="btn btn-secondary" id="btn-friends-join">Join →</button>
+              <button type="submit" class="btn btn-secondary" id="btn-friends-join" data-i18n="friends.joinArrow">Join →</button>
             </form>
           </article>
           <article class="panel friends-panel friends-panel-wide">
-            <h2>Hotseat (one device)</h2>
+            <h2 data-i18n="friends.hotseat">Hotseat (one device)</h2>
             <p class="muted">Pass-and-play race: personal inventions, shared crisis. Scale updates the place. No server required.</p>
             <form id="friends-hotseat-form" class="friends-panel-form">
               <div class="field">
-                <label for="hotseat-names">Seat names (comma-separated)</label>
+                <label for="hotseat-names" data-i18n="friends.seatNames">Seat names (comma-separated)</label>
                 <input id="hotseat-names" type="text" placeholder="Alex, Bea" value="Alex, Bea" />
               </div>
-              <button type="submit" class="btn btn-secondary" id="btn-hotseat-start">Start hotseat →</button>
+              <button type="submit" class="btn btn-secondary" id="btn-hotseat-start" data-i18n="friends.startHotseat">Start hotseat →</button>
             </form>
           </article>
         </div>
@@ -250,7 +305,7 @@
           <div class="hud-product-text">
             <span class="hud-product-title">Future Forge</span>
             <span class="hud-product-credit">
-              by
+              <span data-i18n="brand.by">by</span>
               <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
             </span>
           </div>
@@ -420,7 +475,7 @@
             <div class="hud-product-text">
               <span class="hud-product-title">Future Forge</span>
               <span class="hud-product-credit">
-                by
+                <span data-i18n="brand.by">by</span>
                 <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
               </span>
             </div>
@@ -509,7 +564,7 @@
           <div class="hud-product-text">
             <span class="hud-product-title">Future Forge</span>
             <span class="hud-product-credit">
-              by
+              <span data-i18n="brand.by">by</span>
               <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
             </span>
           </div>
@@ -721,16 +776,16 @@
             <div class="hud-product-text">
               <span class="hud-product-title">Future Forge</span>
               <span class="hud-product-credit">
-                by
+                <span data-i18n="brand.by">by</span>
                 <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
               </span>
             </div>
           </div>
         </div>
         <div class="progress-pills">
-          <span class="pill active">1 · Theme</span>
-          <span class="pill">2 · Mission</span>
-          <span class="pill">3 · Invent</span>
+          <span class="pill active" data-i18n="pills.theme">1 · Theme</span>
+          <span class="pill" data-i18n="pills.mission">2 · Mission</span>
+          <span class="pill" data-i18n="pills.invent">3 · Invent</span>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-global-back">← Quests</button>
       </header>
@@ -756,48 +811,48 @@
             <div class="hud-product-text">
               <span class="hud-product-title">Future Forge</span>
               <span class="hud-product-credit">
-                by
+                <span data-i18n="brand.by">by</span>
                 <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
               </span>
             </div>
           </div>
         </div>
         <div class="progress-pills">
-          <span class="pill done">1 · Theme</span>
-          <span class="pill active">2 · Mission</span>
-          <span class="pill">3 · Invent</span>
+          <span class="pill done" data-i18n="pills.theme">1 · Theme</span>
+          <span class="pill active" data-i18n="pills.mission">2 · Mission</span>
+          <span class="pill" data-i18n="pills.invent">3 · Invent</span>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-mission-back">← Themes</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-mission-back" data-i18n="common.backThemes">← Themes</button>
       </header>
       <div class="content">
         <div class="section-intro mission-intro">
           <div class="mission-intro-text">
-            <h1 id="mission-global-title">Quests</h1>
-            <p id="mission-global-blurb">Several concrete places living a piece of this problem — pick one to invent for.</p>
+            <h1 id="mission-global-title" data-i18n="mission.questsHeading">Quests</h1>
+            <p id="mission-global-blurb" data-i18n="mission.defaultBlurb">Several concrete places living a piece of this problem — pick one to invent for.</p>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-regen-scenarios" hidden>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-regen-scenarios" hidden data-i18n="mission.generateNew">
             Generate new Quests
           </button>
         </div>
         <div id="mission-status" class="mission-status" hidden aria-live="polite"></div>
         <article id="problem-brief" class="problem-brief" hidden aria-live="polite">
           <header class="problem-brief-head">
-            <h2 id="problem-brief-title">About this problem</h2>
-            <p class="problem-brief-sub" id="problem-brief-sub">
+            <h2 id="problem-brief-title" data-i18n="mission.aboutProblem">About this problem</h2>
+            <p class="problem-brief-sub" id="problem-brief-sub" data-i18n="mission.briefSub">
               Read while Quests draft.
             </p>
           </header>
           <div class="problem-brief-grid">
             <section class="problem-brief-block">
-              <h3>Current state</h3>
+              <h3 data-i18n="mission.currentState">Current state</h3>
               <p id="problem-brief-state"></p>
             </section>
             <section class="problem-brief-block">
-              <h3>Root causes</h3>
+              <h3 data-i18n="mission.rootCauses">Root causes</h3>
               <p id="problem-brief-causes"></p>
             </section>
             <section class="problem-brief-block problem-brief-warn">
-              <h3>Warnings for inventors</h3>
+              <h3 data-i18n="mission.warnings">Warnings for inventors</h3>
               <p id="problem-brief-warnings"></p>
             </section>
           </div>
@@ -812,18 +867,18 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
-          <span class="pill active" data-step="invent">1 · Invent</span>
-          <span class="pill" data-step="challenge">2 · Challenge</span>
-          <span class="pill" data-step="deploy">3 · Field</span>
+        <div class="progress-pills invent-steps" data-i18n-aria-label="common.missionSteps" aria-label="Mission steps">
+          <span class="pill active" data-step="invent" data-i18n="pills.stepInvent">1 · Invent</span>
+          <span class="pill" data-step="challenge" data-i18n="pills.stepChallenge">2 · Challenge</span>
+          <span class="pill" data-step="deploy" data-i18n="pills.stepField">3 · Field</span>
         </div>
-        <div class="hud-clock" id="hud-clock" title="Mission calendar">
-          <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
+        <div class="hud-clock" id="hud-clock" data-i18n-title="common.calendar" title="Mission calendar">
+          <button type="button" class="hud-year hud-year-btn" id="hud-year" data-i18n-title="common.yearForesight" title="Year foresight">2026</button>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
           <span class="hud-resources" id="hud-resources">
-            <span class="hud-ap" id="hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-ap" id="hud-ap" hidden data-i18n-title="common.actionPoints" title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="hud-budget" hidden data-i18n-title="common.budget" title="Budget">Budget 5$</span>
+            <span class="hud-will" id="hud-will" hidden data-i18n-title="common.support" title="Support">Support 3</span>
           </span>
         </div>
         <div class="hud-product" aria-label="Future Forge by Warmer Sun">
@@ -831,7 +886,7 @@
           <div class="hud-product-text">
             <span class="hud-product-title">Future Forge</span>
             <span class="hud-product-credit">
-              by
+              <span data-i18n="brand.by">by</span>
               <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
             </span>
           </div>
@@ -841,15 +896,17 @@
           id="hud-crisis-wrap"
           title="Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the mission ends. More in ?"
         >
-          <span class="hud-crisis-label">Crisis</span>
+          <span class="hud-crisis-label" data-i18n="common.crisis">Crisis</span>
           <div class="hud-pressure" id="hud-pressure"></div>
         </div>
         <div class="hud-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon">Abandon</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-abandon" data-i18n="common.abandon">Abandon</button>
           <button
             type="button"
             class="btn-help"
             id="btn-help"
+            data-i18n-title="common.helpTitle"
+            data-i18n-aria-label="common.help"
             title="How Future Forge works"
             aria-label="Help: how this works"
           >
@@ -865,7 +922,7 @@
             Room <strong>————</strong>
           </div>
           <div id="mp-seat-tabs" class="mp-seat-tabs" aria-label="Players and invents"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden data-i18n="common.passDevice">
             Pass device →
           </button>
         </div>
@@ -875,15 +932,17 @@
       <div class="workshop-layout">
         <aside class="tech-library" id="solo-tech-library">
           <div class="panel-header">
-            <h2>Emerging tech</h2>
+            <h2 data-i18n="workshop.emergingTech">Emerging tech</h2>
             <div class="tech-library-header-actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled data-i18n="common.learn" data-i18n-title="workshop.learnTitle" title="Select techs in your stack to learn about them">
                 Learn
               </button>
               <button
                 type="button"
                 class="btn btn-secondary btn-sm tech-drawer-close"
                 data-tech-drawer-close
+                data-i18n="common.done"
+                data-i18n-aria-label="workshop.doneTech"
                 aria-label="Done choosing tech"
               >
                 Done
@@ -898,7 +957,7 @@
 
         <main class="invent-center">
           <div class="challenge-banner">
-            <div class="label" id="ws-global-label">Global theme</div>
+            <div class="label" id="ws-global-label" data-i18n="workshop.globalTheme">Global theme</div>
             <h2 id="ws-mission-title">—</h2>
             <p id="ws-mission-place" class="mission-place"></p>
             <div id="ws-lesson-progress" class="lesson-progress-slot" hidden style="display:none"></div>
@@ -917,13 +976,13 @@
 
           <div class="invent-form">
             <div class="field">
-              <label for="invention-name">Name your invention</label>
-              <input id="invention-name" type="text" maxlength="80" placeholder="Something people here could say out loud…" autocomplete="off" />
+              <label for="invention-name" data-i18n="workshop.nameInvention">Name your invention</label>
+              <input id="invention-name" type="text" maxlength="80" data-i18n-placeholder="workshop.namePlaceholder" placeholder="Something people here could say out loud…" autocomplete="off" />
             </div>
 
             <div class="field stack-field">
               <div class="stack-field-header">
-                <label>Technologies in your stack</label>
+                <label data-i18n="workshop.stackLabel">Technologies in your stack</label>
                 <button
                   type="button"
                   class="btn btn-secondary btn-sm tech-drawer-open"
@@ -931,7 +990,7 @@
                   aria-expanded="false"
                   aria-controls="solo-tech-library"
                 >
-                  + Add tech
+                  <span data-i18n="workshop.addTech">+ Add tech</span>
                   <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
                 </button>
               </div>
@@ -945,8 +1004,8 @@
               <div class="feasibility-head">
                 <div class="feasibility-light" id="feasibility-light" data-level="red" title="Feasibility"></div>
                 <div>
-                  <div class="feasibility-title">Feasibility <span id="feasibility-level-label">red</span></div>
-                  <p class="feasibility-summary" id="feasibility-summary">Add tech and a story to assess.</p>
+                  <div class="feasibility-title"><span data-i18n="workshop.feasibility">Feasibility</span> <span id="feasibility-level-label">red</span></div>
+                  <p class="feasibility-summary" id="feasibility-summary" data-i18n="workshop.feasibilityEmpty">Add tech and a story to assess.</p>
                 </div>
               </div>
               <ul class="feasibility-dims" id="feasibility-dims"></ul>
@@ -955,16 +1014,16 @@
 
             <!-- Workshop: Focus + both faces. Spark (singleStoryFace): JS hides Focus/life/fill; label becomes "What does it do here?" -->
             <div class="story-mode" id="story-mode" role="group" aria-label="Primary story face">
-              <span class="story-mode-label">Focus:</span>
-              <button type="button" class="story-mode-btn active" data-face="how" id="face-how" aria-pressed="true">
+              <span class="story-mode-label" data-i18n="workshop.focus">Focus:</span>
+              <button type="button" class="story-mode-btn active" data-face="how" id="face-how" aria-pressed="true" data-i18n="workshop.howItWorks">
                 How it works
               </button>
-              <button type="button" class="story-mode-btn" data-face="life" id="face-life" aria-pressed="false">
+              <button type="button" class="story-mode-btn" data-face="life" id="face-life" aria-pressed="false" data-i18n="workshop.everydayLife">
                 Everyday life
               </button>
             </div>
-            <p class="story-mode-hint" id="story-mode-hint">
-              Both boxes stay editable. <strong>Fill other side</strong> sits on your focus and AI-drafts the other face.
+            <p class="story-mode-hint" id="story-mode-hint" data-i18n="workshop.storyHint">
+              Both boxes stay editable. Fill other side sits on your focus and AI-drafts the other face.
             </p>
 
             <!-- Hotseat contribution result — floats above story boxes, auto-dismisses -->
@@ -979,12 +1038,13 @@
             <!-- Both faces editable in Workshop; Spark shows only #field-how -->
             <div class="field story-face-field" id="field-how" data-face="how">
               <div class="story-face-header" id="header-how">
-                <label for="invention-how" id="label-how">How does it work?</label>
+                <label for="invention-how" id="label-how" data-i18n="workshop.howLabel">How does it work?</label>
               </div>
               <div class="story-textarea-shell" id="shell-how">
                 <textarea
                   id="invention-how"
                   rows="4"
+                  data-i18n-placeholder="workshop.howPlaceholder"
                   placeholder="What acts, what decides, how the pieces connect for *this* place…"
                 ></textarea>
               </div>
@@ -993,12 +1053,13 @@
 
             <div class="field story-face-field" id="field-life" data-face="life">
               <div class="story-face-header" id="header-life">
-                <label for="invention-impact" id="label-life">Everyday life if it works</label>
+                <label for="invention-impact" id="label-life" data-i18n="workshop.lifeLabel">Everyday life if it works</label>
               </div>
               <div class="story-textarea-shell" id="shell-life">
                 <textarea
                   id="invention-impact"
                   rows="4"
+                  data-i18n-placeholder="workshop.lifePlaceholder"
                   placeholder="A Tuesday here after your invention lands…"
                 ></textarea>
               </div>
@@ -1010,6 +1071,7 @@
               class="btn btn-secondary btn-sm"
               id="btn-fill-other"
               hidden
+              data-i18n="workshop.fillOther"
             >
               Fill other side
             </button>
@@ -1017,12 +1079,14 @@
             <div class="prompt-tip" id="prompt-tip"></div>
 
             <div class="form-actions game-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor" data-i18n="workshop.openCoInventor">✦ Co-inventor</button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
                 id="btn-lobby"
                 hidden
+                data-i18n="workshop.lobby"
+                data-i18n-title="workshop.lobbyTitle"
                 title="Spend 1 Budget and 1 AP for +1 political will"
               >
                 Lobby
@@ -1032,14 +1096,16 @@
                 class="btn btn-ghost btn-sm"
                 id="btn-end-turn"
                 hidden
+                data-i18n="common.endTurn"
+                data-i18n-title="workshop.endTurnTitle"
                 title="Refill AP and advance calendar +1 year (crisis meters unchanged)"
               >
                 End turn
               </button>
-              <button type="button" class="btn btn-secondary" id="btn-wait" title="Wait +2 years — confirm first; advances invent calendar (and crisis in solo).">
+              <button type="button" class="btn btn-secondary" id="btn-wait" data-i18n="common.waitYears" data-i18n-title="workshop.waitTitle" title="Wait +2 years — confirm first; advances invent calendar (and crisis in solo).">
                 Wait +2 years
               </button>
-              <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
+              <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled data-i18n="workshop.toChallenge">
                 Answer the hard question →
               </button>
             </div>
@@ -1047,31 +1113,30 @@
             <div id="deploy-bay-workshop" class="deploy-bay deploy-bay-workshop" hidden>
               <p class="deploy-bay-status" id="deploy-bay-workshop-status"></p>
               <div class="deploy-bay-actions form-actions game-actions">
-                <button type="button" class="btn btn-primary btn-sm" id="btn-workshop-to-deploy">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-workshop-to-deploy" data-i18n="workshop.openDeploy">
                   Open deploy bay →
                 </button>
               </div>
             </div>
-            <p class="foot-hint">
-              Invent · hard question · field — before the crisis wins.
-              Use <strong>Art of the possible</strong> on the co-inventor for milestones &amp; capabilities.
+            <p class="foot-hint" data-i18n="workshop.footHint">
+              Invent · hard question · field — before the crisis wins. Use Art of the possible on the co-inventor for milestones &amp; capabilities.
             </p>
           </div>
         </main>
 
         <aside class="vision-panel side-panel">
           <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-tab="vision" role="tab">Future vision</button>
-            <button type="button" class="side-tab" data-tab="coinventor" role="tab">AI co-inventor</button>
+            <button type="button" class="side-tab active" data-tab="vision" role="tab" data-i18n="workshop.futureVision">Future vision</button>
+            <button type="button" class="side-tab" data-tab="coinventor" role="tab" data-i18n="workshop.coInventorTab">AI co-inventor</button>
           </div>
 
           <div id="side-vision" class="side-pane" role="tabpanel">
             <div class="vision-stage-bar">
               <div>
-                <div class="vision-stage-name" id="vision-stage-name">Today</div>
-                <div class="vision-stage-blurb" id="vision-stage-blurb">The place as it is.</div>
+                <div class="vision-stage-name" id="vision-stage-name" data-i18n="workshop.visionToday">Today</div>
+                <div class="vision-stage-blurb" id="vision-stage-blurb" data-i18n="workshop.visionTodayBlurb">The place as it is.</div>
               </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision">↻</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision" data-i18n-title="common.regenerate" title="Regenerate">↻</button>
             </div>
             <div class="vision-canvas-wrap" id="vision-root">
               <img class="vision-image" alt="Vision of this place" hidden />
@@ -1079,10 +1144,10 @@
                 <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining this place…</span>
+                  <span class="vision-loading-text" data-i18n="workshop.imagining">Imagining this place…</span>
                 </div>
               </div>
-              <div class="vision-placeholder">Add technologies or describe your idea — the image follows</div>
+              <div class="vision-placeholder" data-i18n="workshop.visionPlaceholder">Add technologies or describe your idea — the image follows</div>
               <div class="vision-status" aria-live="polite"></div>
             </div>
             <div id="vision-narratives" class="vision-narratives"></div>
@@ -1101,18 +1166,18 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player-ch" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
-          <span class="pill done" data-step="invent">1 · Invent</span>
-          <span class="pill active" data-step="challenge">2 · Challenge</span>
-          <span class="pill" data-step="deploy">3 · Field</span>
+        <div class="progress-pills invent-steps" data-i18n-aria-label="common.missionSteps" aria-label="Mission steps">
+          <span class="pill done" data-step="invent" data-i18n="pills.stepInvent">1 · Invent</span>
+          <span class="pill active" data-step="challenge" data-i18n="pills.stepChallenge">2 · Challenge</span>
+          <span class="pill" data-step="deploy" data-i18n="pills.stepField">3 · Field</span>
         </div>
-        <div class="hud-clock" id="ch-hud-clock" title="Mission calendar and resources">
-          <button type="button" class="hud-year hud-year-btn" id="ch-hud-year" title="Year foresight">2026</button>
+        <div class="hud-clock" id="ch-hud-clock" data-i18n-title="common.calendar" title="Mission calendar and resources">
+          <button type="button" class="hud-year hud-year-btn" id="ch-hud-year" data-i18n-title="common.yearForesight" title="Year foresight">2026</button>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
           <span class="hud-resources">
-            <span class="hud-ap" id="ch-hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="ch-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="ch-hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-ap" id="ch-hud-ap" hidden data-i18n-title="common.actionPoints" title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="ch-hud-budget" hidden data-i18n-title="common.budget" title="Budget">Budget 5$</span>
+            <span class="hud-will" id="ch-hud-will" hidden data-i18n-title="common.support" title="Support">Support 3</span>
           </span>
         </div>
         <div class="hud-product" aria-label="Future Forge by Warmer Sun">
@@ -1120,7 +1185,7 @@
           <div class="hud-product-text">
             <span class="hud-product-title">Future Forge</span>
             <span class="hud-product-credit">
-              by
+              <span data-i18n="brand.by">by</span>
               <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
             </span>
           </div>
@@ -1130,15 +1195,17 @@
           id="ch-hud-crisis-wrap"
           title="Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the mission ends. More in ?"
         >
-          <span class="hud-crisis-label">Crisis</span>
+          <span class="hud-crisis-label" data-i18n="common.crisis">Crisis</span>
           <div class="hud-pressure" id="ch-hud-pressure"></div>
         </div>
         <div class="hud-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-challenge-back">← Invent</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-challenge-back" data-i18n="common.backInvent">← Invent</button>
           <button
             type="button"
             class="btn-help"
             id="btn-challenge-help"
+            data-i18n-title="common.helpTitle"
+            data-i18n-aria-label="common.help"
             title="How Future Forge works"
             aria-label="Help: how this works"
           >
@@ -1162,8 +1229,8 @@
           <div class="challenge-step-card panel">
             <!-- Challenger carousel: slides while AI pose loads, lands on chosen critic -->
             <div id="challenger-draw" class="challenger-draw" hidden aria-live="polite">
-              <p class="challenger-draw-kicker">Who challenges your invent?</p>
-              <p class="challenger-draw-status" id="challenger-draw-status">Summoning a challenger…</p>
+              <p class="challenger-draw-kicker" data-i18n="challenge.whoChallenges">Who challenges your invent?</p>
+              <p class="challenger-draw-status" id="challenger-draw-status" data-i18n="challenge.summoning">Summoning a challenger…</p>
               <div class="challenger-draw-viewport">
                 <div class="challenger-draw-track" id="challenger-draw-reel"></div>
               </div>
@@ -1179,7 +1246,7 @@
                 />
               </div>
               <div class="challenger-copy">
-                <div class="label" id="challenge-angle-label">Your idea is under attack</div>
+                <div class="label" id="challenge-angle-label" data-i18n="challenge.underAttack">Your idea is under attack</div>
                 <h1 id="challenge-angle-title">Moloch</h1>
                 <p class="challenge-angle-sub" id="challenge-angle-sub"></p>
                 <p class="challenger-name-tag">Challenger · <span id="challenger-name">Moloch</span></p>
@@ -1191,7 +1258,7 @@
             <p id="scrutiny-status" class="scrutiny-status muted" hidden></p>
 
             <div class="challenge-speech" id="challenge-speech">
-              <p class="muted">Loading challenge…</p>
+              <p class="muted" data-i18n="challenge.loading">Loading challenge…</p>
             </div>
             <p class="challenge-question" id="challenge-question"></p>
 
@@ -1200,8 +1267,7 @@
             <!-- Workshop combat: mode picker (Argue/Patch/Pivot). Spark essay: JS keeps this hidden. -->
             <div id="scrutiny-moves" class="scrutiny-moves" hidden>
               <p class="scrutiny-moves-lead">
-                <strong>How will you respond?</strong> One critic. Hearts are <em>their</em> resolve —
-                empty them with Defend or Fix, or Sidestep once. Pick a mode, then finish the step below.
+                <strong data-i18n="challenge.howRespond">How will you respond?</strong><span data-i18n="challenge.movesLead"> One critic. Hearts are their resolve — empty them with Defend or Fix, or Sidestep once. Pick a mode, then finish the step below.</span>
               </p>
               <div class="scrutiny-move-grid" role="radiogroup" aria-label="Response strategy">
                 <button
@@ -1212,11 +1278,10 @@
                   aria-checked="false"
                   data-mode="defend"
                 >
-                  <span class="scrutiny-move-title">1 · Defend in writing</span>
-                  <span class="scrutiny-move-cost">then 1 AP to submit</span>
-                  <span class="scrutiny-move-blurb">
-                    Write a defense that answers their question. You stay on this screen and click
-                    <em>Submit defense</em>. Strong answers chip more of their resolve.
+                  <span class="scrutiny-move-title" data-i18n="challenge.defendTitle">1 · Defend in writing</span>
+                  <span class="scrutiny-move-cost" data-i18n="challenge.defendCost">then 1 AP to submit</span>
+                  <span class="scrutiny-move-blurb" data-i18n="challenge.defendBlurb">
+                    Write a defense that answers their question. You stay on this screen and click Submit defense. Strong answers chip more of their resolve.
                   </span>
                 </button>
                 <button
@@ -1227,11 +1292,10 @@
                   aria-checked="false"
                   data-mode="fix"
                 >
-                  <span class="scrutiny-move-title">2 · Fix the invention</span>
-                  <span class="scrutiny-move-cost">then 1 AP (+ optional ¤1)</span>
-                  <span class="scrutiny-move-blurb">
-                    <strong>You</strong> edit how-it-works here (not the AI alone). Strengthen the design
-                    under fire, then click <em>Apply fix</em>. That chips their resolve.
+                  <span class="scrutiny-move-title" data-i18n="challenge.fixTitle">2 · Fix the invention</span>
+                  <span class="scrutiny-move-cost" data-i18n="challenge.fixCost">then 1 AP (+ optional ¤1)</span>
+                  <span class="scrutiny-move-blurb" data-i18n="challenge.fixBlurb">
+                    You edit how-it-works here (not the AI alone). Strengthen the design under fire, then click Apply fix. That chips their resolve.
                   </span>
                 </button>
                 <button
@@ -1242,11 +1306,10 @@
                   aria-checked="false"
                   data-mode="sidestep"
                 >
-                  <span class="scrutiny-move-title">3 · Sidestep once</span>
-                  <span class="scrutiny-move-cost">cost = remaining ♥ · softens elegance</span>
-                  <span class="scrutiny-move-blurb">
-                    Skip without winning — once per run. Cost equals remaining resolve hearts
-                    (2♥ → 2 AP · 2 Will; 1♥ → 1 AP · 1 Will). Softens elegance. Confirm below.
+                  <span class="scrutiny-move-title" data-i18n="challenge.sidestepTitle">3 · Sidestep once</span>
+                  <span class="scrutiny-move-cost" data-i18n="challenge.sidestepCost">cost = remaining ♥ · softens elegance</span>
+                  <span class="scrutiny-move-blurb" data-i18n="challenge.sidestepBlurb">
+                    Skip without winning — once per run. Cost equals remaining resolve hearts (2♥ → 2 AP · 2 Will; 1♥ → 1 AP · 1 Will). Softens elegance. Confirm below.
                   </span>
                 </button>
               </div>
@@ -1255,48 +1318,46 @@
             <!-- Essay answer (Spark) + combat Defend panel (Workshop); label/button text set in JS -->
             <div id="mode-panel-defend" class="mode-panel" hidden>
               <div class="field">
-                <label for="challenge-answer" id="challenge-answer-label">Your written defense</label>
+                <label for="challenge-answer" id="challenge-answer-label" data-i18n="challenge.writtenDefense">Your written defense</label>
                 <textarea
                   id="challenge-answer"
                   rows="5"
+                  data-i18n-placeholder="challenge.answerPlaceholder"
                   placeholder="Name who acts, who pays, or what hard limit you respect — vague hope will miss."
                 ></textarea>
               </div>
               <div class="form-actions game-actions challenge-footer-actions">
-                <button type="button" class="btn btn-primary" id="btn-challenge-submit">
+                <button type="button" class="btn btn-primary" id="btn-challenge-submit" data-i18n="challenge.submitAnswer">
                   Submit defense (1 AP)
                 </button>
               </div>
             </div>
 
             <div id="mode-panel-fix" class="mode-panel" hidden>
-              <p class="mode-panel-lead">
-                Edit <strong>how it works</strong> yourself to address this attack (add metering, funding,
-                a hard limit, etc.). The AI on the right can coach, but you apply the fix.
+              <p class="mode-panel-lead" data-i18n="challenge.fixLead">
+                Edit how it works yourself to address this attack (add metering, funding, a hard limit, etc.). The AI on the right can coach, but you apply the fix.
               </p>
               <div class="field">
-                <label for="challenge-how-edit">How it works (editable now)</label>
-                <textarea id="challenge-how-edit" rows="5" placeholder="Revise the mechanism…"></textarea>
+                <label for="challenge-how-edit" data-i18n="challenge.howEditable">How it works (editable now)</label>
+                <textarea id="challenge-how-edit" rows="5" data-i18n-placeholder="challenge.howEditPlaceholder" placeholder="Revise the mechanism…"></textarea>
               </div>
               <label class="mode-check">
                 <input type="checkbox" id="challenge-fund-patch" />
-                Funded fix (+1 Budget, chips 2 resolve instead of 1)
+                <span data-i18n="challenge.fundedFix">Funded fix (+1 Budget, chips 2 resolve instead of 1)</span>
               </label>
               <div class="form-actions game-actions challenge-footer-actions">
-                <button type="button" class="btn btn-primary" id="btn-challenge-apply-fix">
+                <button type="button" class="btn btn-primary" id="btn-challenge-apply-fix" data-i18n="challenge.applyFix">
                   Apply fix to invention (1 AP)
                 </button>
               </div>
             </div>
 
             <div id="mode-panel-sidestep" class="mode-panel" hidden>
-              <p class="mode-panel-lead">
-                You dodge this challenger without answering. Cost equals
-                <strong>remaining resolve hearts</strong> (2♥ → 2 AP · 2 Will; after a partial
-                defense 1♥ → 1 AP · 1 Will). Only once per mission. Lobby if you need more Will.
+              <p class="mode-panel-lead" data-i18n="challenge.sidestepLead">
+                You dodge this challenger without answering. Cost equals remaining resolve hearts. Only once per mission. Lobby if you need more Will.
               </p>
               <div class="form-actions game-actions challenge-footer-actions">
-                <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep">
+                <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep" data-i18n="challenge.confirmSidestep">
                   Confirm sidestep
                 </button>
               </div>
@@ -1309,6 +1370,8 @@
                 class="btn btn-ghost btn-sm"
                 id="btn-challenge-abandon"
                 hidden
+                data-i18n="challenge.abandonChallenge"
+                data-i18n-title="challenge.abandonChallengeTitle"
                 title="Leave Challenge and unlock invent for rework — helpers can contribute again. Facing again costs AP."
               >
                 Abandon the challenge
@@ -1318,6 +1381,8 @@
                 class="btn btn-ghost btn-sm"
                 id="btn-challenge-end-turn"
                 hidden
+                data-i18n="common.endTurn"
+                data-i18n-title="workshop.endTurnTitle"
                 title="Refill AP and advance calendar +1 year (crisis meters unchanged)"
               >
                 End turn
@@ -1337,7 +1402,7 @@
               role="tab"
               aria-selected="true"
             >
-              Future vision
+              <span data-i18n="workshop.futureVision">Future vision</span>
             </button>
             <button
               type="button"
@@ -1346,15 +1411,15 @@
               role="tab"
               aria-selected="false"
             >
-              AI co-inventor
+              <span data-i18n="workshop.coInventorTab">AI co-inventor</span>
             </button>
           </div>
 
           <div id="side-challenge-vision" class="side-pane" role="tabpanel">
             <div class="vision-stage-bar">
               <div>
-                <div class="vision-stage-name" id="challenge-vision-stage-name">Under challenge</div>
-                <div class="vision-stage-blurb" id="challenge-vision-stage-blurb">
+                <div class="vision-stage-name" id="challenge-vision-stage-name" data-i18n="challenge.underChallenge">Under challenge</div>
+                <div class="vision-stage-blurb" id="challenge-vision-stage-blurb" data-i18n="challenge.underChallengeBlurb">
                   How the place looks while this critic presses the idea.
                 </div>
               </div>
@@ -1362,6 +1427,7 @@
                 type="button"
                 class="btn btn-ghost btn-sm"
                 id="btn-regen-challenge-vision"
+                data-i18n-title="common.regenerate"
                 title="Regenerate challenge vision"
               >
                 ↻
@@ -1373,31 +1439,31 @@
                 <div class="vision-loading-frame" aria-hidden="true"></div>
                 <div class="vision-loading-inner">
                   <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining the challenge…</span>
+                  <span class="vision-loading-text" data-i18n="challenge.imaginingChallenge">Imagining the challenge…</span>
                 </div>
               </div>
-              <div class="vision-placeholder">
+              <div class="vision-placeholder" data-i18n="challenge.visionPlaceholder">
                 The critic steps in — the image follows the challenge and your response
               </div>
               <div class="vision-status" aria-live="polite"></div>
             </div>
-            <p class="challenge-vision-hint muted">
-              Same place as Invent. Updates when the critic poses, and again when you Defend, Fix, or
-              Sidestep.
+            <p class="challenge-vision-hint muted" data-i18n="challenge.visionHint">
+              Same place as Invent. Updates when the critic poses, and again when you Defend, Fix, or Sidestep.
             </p>
           </div>
 
           <div id="side-challenge-coinventor" class="side-pane" role="tabpanel" hidden>
             <div id="ch-co-inventor-root" class="co-inventor-root"></div>
-            <div class="challenge-side-hint muted">
-              Coach, draft, or ask — <strong>1 AP each</strong> (same as invent co-inventor). You still choose
-              Defend / Fix / Sidestep on the left.
+            <div class="challenge-side-hint muted" data-i18n="challenge.sideHint">
+              Coach, draft, or ask — 1 AP each (same as invent co-inventor). You still choose Defend / Fix / Sidestep on the left.
             </div>
             <div class="challenge-help-actions challenge-side-actions">
               <button
                 type="button"
                 class="btn btn-secondary btn-sm"
                 id="btn-challenge-coach"
+                data-i18n="challenge.coach"
+                data-i18n-title="challenge.coachTitle"
                 title="1 AP — coaching tips for this critic"
               >
                 Coach me (1 AP)
@@ -1406,6 +1472,8 @@
                 type="button"
                 class="btn btn-secondary btn-sm"
                 id="btn-challenge-draft"
+                data-i18n="challenge.draftDefense"
+                data-i18n-title="challenge.draftTitle"
                 title="1 AP — draft a defense paragraph you can edit"
               >
                 Draft a defense (1 AP)
@@ -1416,10 +1484,11 @@
               <input
                 type="text"
                 id="challenge-help-input"
+                data-i18n-placeholder="challenge.askPlaceholder"
                 placeholder="Ask… e.g. “What would a good Moloch answer mention?”"
                 autocomplete="off"
               />
-              <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
+              <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask" data-i18n="challenge.ask">Ask</button>
             </form>
           </div>
         </aside>
@@ -1432,18 +1501,18 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player-dep" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
-          <span class="pill done" data-step="invent">1 · Invent</span>
-          <span class="pill done" data-step="challenge">2 · Challenge</span>
-          <span class="pill active" data-step="deploy">3 · Field</span>
+        <div class="progress-pills invent-steps" data-i18n-aria-label="common.missionSteps" aria-label="Mission steps">
+          <span class="pill done" data-step="invent" data-i18n="pills.stepInvent">1 · Invent</span>
+          <span class="pill done" data-step="challenge" data-i18n="pills.stepChallenge">2 · Challenge</span>
+          <span class="pill active" data-step="deploy" data-i18n="pills.stepField">3 · Field</span>
         </div>
-        <div class="hud-clock" id="dep-hud-clock" title="Mission calendar and resources">
-          <button type="button" class="hud-year hud-year-btn" id="dep-hud-year" title="Year foresight">2026</button>
+        <div class="hud-clock" id="dep-hud-clock" data-i18n-title="common.calendar" title="Mission calendar and resources">
+          <button type="button" class="hud-year hud-year-btn" id="dep-hud-year" data-i18n-title="common.yearForesight" title="Year foresight">2026</button>
           <span class="hud-turn" id="dep-hud-turn">Turn 0</span>
           <span class="hud-resources">
-            <span class="hud-ap" id="dep-hud-ap" hidden title="Action points">AP 3/3</span>
-            <span class="hud-budget" id="dep-hud-budget" hidden title="Budget">Budget 5$</span>
-            <span class="hud-will" id="dep-hud-will" hidden title="Support">Support 3</span>
+            <span class="hud-ap" id="dep-hud-ap" hidden data-i18n-title="common.actionPoints" title="Action points">AP 3/3</span>
+            <span class="hud-budget" id="dep-hud-budget" hidden data-i18n-title="common.budget" title="Budget">Budget 5$</span>
+            <span class="hud-will" id="dep-hud-will" hidden data-i18n-title="common.support" title="Support">Support 3</span>
           </span>
         </div>
         <div class="hud-product" aria-label="Future Forge by Warmer Sun">
@@ -1451,7 +1520,7 @@
           <div class="hud-product-text">
             <span class="hud-product-title">Future Forge</span>
             <span class="hud-product-credit">
-              by
+              <span data-i18n="brand.by">by</span>
               <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
             </span>
           </div>
@@ -1461,17 +1530,19 @@
           id="dep-hud-crisis-wrap"
           title="Crisis meters 0–5: how bad things are. Wait raises them; Scale after Pilot lowers them. Hit 5 on any meter or the fail year and the mission ends."
         >
-          <span class="hud-crisis-label">Crisis</span>
+          <span class="hud-crisis-label" data-i18n="common.crisis">Crisis</span>
           <div class="hud-pressure" id="dep-hud-pressure"></div>
         </div>
         <div class="hud-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-deploy-to-invent" title="Browse Invent without reopening Challenge">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-deploy-to-invent" data-i18n="common.backInvent" data-i18n-title="deploy.backInventTitle" title="Browse Invent without reopening Challenge">
             ← Invent
           </button>
           <button
             type="button"
             class="btn-help"
             id="btn-deploy-help"
+            data-i18n-title="common.helpTitle"
+            data-i18n-aria-label="common.help"
             title="How Future Forge works"
             aria-label="Help: how this works"
           >
@@ -1491,7 +1562,7 @@
       <div class="challenge-layout deploy-layout">
         <main class="challenge-main deploy-main">
           <div class="challenge-step-card panel">
-            <p class="deploy-screen-lead muted" id="deploy-screen-lead">
+            <p class="deploy-screen-lead muted" id="deploy-screen-lead" data-i18n="deploy.lead">
               Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.
             </p>
             <div id="deploy-feedback" class="challenge-feedback" hidden></div>
@@ -1499,16 +1570,16 @@
             <!-- Workshop: Pilot/Scale pills. Spark (deployStages off): JS hides pills; primary = Field it → -->
             <div id="deploy-bay" class="deploy-bay">
               <div class="deploy-bay-head">
-                <h2 class="deploy-bay-title">Deploy bay</h2>
+                <h2 class="deploy-bay-title" data-i18n="deploy.bayTitle">Deploy bay</h2>
                 <ol class="deploy-stage-pills" aria-label="Deploy stages">
-                  <li class="deploy-stage-pill" data-stage="pilot">Pilot</li>
-                  <li class="deploy-stage-pill" data-stage="scale">Scale</li>
-                  <li class="deploy-stage-pill" data-stage="new_normal">New normal</li>
+                  <li class="deploy-stage-pill" data-stage="pilot" data-i18n="deploy.pilot">Pilot</li>
+                  <li class="deploy-stage-pill" data-stage="scale" data-i18n="deploy.scale">Scale</li>
+                  <li class="deploy-stage-pill" data-stage="new_normal" data-i18n="deploy.newNormal">New normal</li>
                 </ol>
               </div>
               <p id="deploy-bay-status" class="deploy-bay-status muted"></p>
               <div class="deploy-bay-actions form-actions game-actions">
-                <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary">
+                <button type="button" class="btn btn-primary" id="btn-deploy-stage-primary" data-i18n="deploy.tryPilot">
                   Try Pilot →
                 </button>
               </div>
@@ -1519,6 +1590,8 @@
                 type="button"
                 class="btn btn-ghost btn-sm"
                 id="btn-deploy-abandon"
+                data-i18n="deploy.abandonDeploy"
+                data-i18n-title="deploy.abandonDeployTitle"
                 title="Owner only — unlock invent for rework; clears Challenge and Pilot progress. Facing Challenge again costs AP."
               >
                 Abandon deployment
@@ -1527,6 +1600,8 @@
                 type="button"
                 class="btn btn-ghost btn-sm"
                 id="btn-deploy-end-turn"
+                data-i18n="common.endTurn"
+                data-i18n-title="deploy.endTurnTitle"
                 title="End your seat-turn (needs at least one action this turn)"
               >
                 End turn
@@ -1612,17 +1687,17 @@
             <div class="hud-product-text">
               <span class="hud-product-title">Future Forge</span>
               <span class="hud-product-credit">
-                by
+                <span data-i18n="brand.by">by</span>
                 <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
               </span>
             </div>
           </div>
         </div>
         <div class="progress-pills">
-          <span class="pill done">Invent</span>
-          <span class="pill done">Challenge</span>
-          <span class="pill done">Field</span>
-          <span class="pill active">Learn</span>
+          <span class="pill done" data-i18n="outcome.invent">Invent</span>
+          <span class="pill done" data-i18n="outcome.challenge">Challenge</span>
+          <span class="pill done" data-i18n="outcome.field">Field</span>
+          <span class="pill active" data-i18n="outcome.learn">Learn</span>
         </div>
         <div style="width: 5rem"></div>
       </header>
@@ -1634,7 +1709,7 @@
             <p class="outcome-result-sub" id="outcome-result-sub"></p>
             <ul class="outcome-meter-gaps" id="outcome-meter-gaps" hidden></ul>
           </div>
-          <h1 id="outcome-headline">Outcome</h1>
+          <h1 id="outcome-headline" data-i18n="outcome.heading">Outcome</h1>
           <div class="invention-name" id="outcome-name">—</div>
           <div id="outcome-stars" class="outcome-stars" hidden></div>
           <p id="outcome-meta" style="color: var(--text-dim)"></p>
@@ -1656,11 +1731,11 @@
         </div>
 
         <div class="future-story">
-          <h3 id="outcome-story-label">What happened</h3>
+          <h3 id="outcome-story-label" data-i18n="outcomeUi.whatHappened">What happened</h3>
           <p id="outcome-story"></p>
         </div>
 
-        <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
+        <h3 id="outcome-lessons-label" style="margin: 0 0 0.65rem; font-size: 1rem" data-i18n="outcomeUi.whatLearned">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>
 
         <!-- Solo tutorial win only: what Workshop unlocks (hidden otherwise) -->
@@ -1670,8 +1745,8 @@
           hidden
           aria-labelledby="outcome-workshop-unlock-title"
         >
-          <p class="outcome-workshop-unlock-kicker">Tutorial complete</p>
-          <h2 id="outcome-workshop-unlock-title" class="outcome-workshop-unlock-title">
+          <p class="outcome-workshop-unlock-kicker" data-i18n="outcome.tutorialComplete">Tutorial complete</p>
+          <h2 id="outcome-workshop-unlock-title" class="outcome-workshop-unlock-title" data-i18n="outcome.workshopUnlocked">
             Workshop is unlocked
           </h2>
           <p class="outcome-workshop-unlock-lead">
@@ -1679,31 +1754,31 @@
             more systems on the board.
           </p>
           <ul class="outcome-workshop-unlock-list">
-            <li>
+            <li data-i18n="outcome.unlockAp">
               <strong>AP · Budget · Support</strong> — spend attention and capital; End turn refills AP and advances
               the calendar +1 year.
             </li>
-            <li>
+            <li data-i18n="outcome.unlockEndWait">
               <strong>End turn vs Wait</strong> — End turn refills AP and advances +1 year (crisis meters unchanged);
               Wait +2 years moves the calendar further and raises crisis meters.
             </li>
-            <li>
+            <li data-i18n="outcome.unlockLobby">
               <strong>Lobby</strong> — spend to raise Support (public and policy backing) before fielding.
             </li>
-            <li>
+            <li data-i18n="outcome.unlockStory">
               <strong>Story</strong> — two faces: How it works + Everyday life (tutorial used one box).
             </li>
-            <li>
-              <strong>Hard question</strong> — may open Defend / Fix / Sidestep against a critic’s resolve
-              (tutorial was essay-only).
+            <li data-i18n="outcome.unlockHard">
+              <strong>Hard question</strong> — may open Defend / Fix / Sidestep against a critic’s resolve (tutorial was
+              essay-only).
             </li>
-            <li>
+            <li data-i18n="outcome.unlockField">
               <strong>Field</strong> — Pilot → Scale → New normal with odds and costs (tutorial was one Field it).
             </li>
-            <li>
+            <li data-i18n="outcome.unlockTech">
               <strong>Tech tray</strong> — full catalog and larger stack (tutorial: starters, smaller stack).
             </li>
-            <li>
+            <li data-i18n="outcome.unlockThemes">
               <strong>Themes</strong> — many places and problems, not only the tutorial mission.
             </li>
           </ul>
@@ -1768,11 +1843,11 @@
     <!-- Tech learn modal (single card or stack, newest first) -->
     <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
       <div class="modal modal-learn">
-        <h3 id="modal-title">Learn</h3>
+        <h3 id="modal-title" data-i18n="modal.learn">Learn</h3>
         <p id="modal-lead" class="modal-lead" hidden></p>
         <div id="modal-body" class="modal-body"></div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-primary btn-sm" id="modal-close">Close</button>
+          <button type="button" class="btn btn-primary btn-sm" id="modal-close" data-i18n="modal.close">Close</button>
         </div>
       </div>
     </div>
@@ -1787,11 +1862,11 @@
       hidden
     >
       <div class="modal wait-confirm-modal">
-        <h3 id="wait-confirm-title">Wait +2 years?</h3>
+        <h3 id="wait-confirm-title" data-i18n="wait.title">Wait +2 years?</h3>
         <div id="wait-confirm-body" class="modal-body wait-confirm-body"></div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="wait-confirm-cancel">Cancel</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="wait-confirm-ok">Wait +2 years</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="wait-confirm-cancel" data-i18n="wait.cancel">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="wait-confirm-ok" data-i18n="wait.confirm">Wait +2 years</button>
         </div>
       </div>
     </div>
@@ -1800,64 +1875,60 @@
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
         <header class="help-header">
-          <h3 id="help-title">How Future Forge works</h3>
-          <p class="help-intro">
+          <h3 id="help-title" data-i18n="help.title">How Future Forge works</h3>
+          <p class="help-intro" data-i18n="help.intro">
             Pick a place in trouble. Build an honest invention from emerging tech. Answer one hard question.
-            Field it before the crisis wins. The <strong>AI co-inventor</strong> advises — you lead.
+            Field it before the crisis wins. The AI co-inventor advises — you lead.
           </p>
         </header>
 
         <div class="help-body">
           <section class="help-block">
-            <h4 class="help-block-title">Three steps</h4>
+            <h4 class="help-block-title" data-i18n="help.threeSteps">Three steps</h4>
             <ol class="help-steps">
               <li>
                 <span class="help-step-num">1</span>
                 <span class="help-step-body">
-                  <strong>The place is in trouble</strong>
-                  <span>Watch crisis meters and the year. Wait raises the crisis; stall and the place can fall.</span>
+                  <strong data-i18n="help.step1Title">The place is in trouble</strong>
+                  <span data-i18n="help.step1Body">Watch crisis meters and the year. Wait raises the crisis; stall and the place can fall.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">2</span>
                 <span class="help-step-body">
-                  <strong>Invent something honest</strong>
-                  <span>Pick emerging tools for this place. Write what it does here — claims must fit this year.</span>
+                  <strong data-i18n="help.step2Title">Invent something honest</strong>
+                  <span data-i18n="help.step2Body">Pick emerging tools for this place. Write what it does here — claims must fit this year.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">3</span>
                 <span class="help-step-body">
-                  <strong>Answer a hard question, then field it</strong>
-                  <span
-                    >Face one challenge, then <strong>Field it</strong> before meters max or the fail year.</span
-                  >
+                  <strong data-i18n="help.step3Title">Answer a hard question, then field it</strong>
+                  <span data-i18n="help.step3Body">Face one challenge, then Field it before meters max or the fail year.</span>
                 </span>
               </li>
             </ol>
-            <p class="help-note" style="margin-top: 0.85rem; margin-bottom: 0">
-              Loop: <strong>Invent · Challenge · Field</strong>. Feasibility is honesty about timing and fit —
-              not a card unlock gate. <strong>Pilot</strong> asks if it works here for people;
-              <strong>Scale</strong> also asks if it can last (Sustainable — not only sheltering symptoms).
+            <p class="help-note" style="margin-top: 0.85rem; margin-bottom: 0" data-i18n="help.loopNote">
+              Loop: Invent · Challenge · Field. Feasibility is honesty about timing and fit — not a card unlock gate. Pilot asks if it works here for people; Scale also asks if it can last (Sustainable — not only sheltering symptoms).
             </p>
           </section>
 
           <details class="help-more">
-            <summary class="help-more-summary">More detail (Workshop systems)</summary>
+            <summary class="help-more-summary" data-i18n="help.moreDetail">More detail (Workshop systems)</summary>
             <div class="help-more-body">
               <section class="help-block">
                 <div class="help-block-head">
-                  <h4 class="help-block-title">Resources</h4>
-                  <p class="help-note">Full Workshop HUD. Only AP refills on End turn (Budget and Support do not). First-run Spark hides most of this.</p>
+                  <h4 class="help-block-title" data-i18n="help.resources">Resources</h4>
+                  <p class="help-note" data-i18n="help.resourcesNote">Full Workshop HUD. Only AP refills on End turn (Budget and Support do not). First-run Spark hides most of this.</p>
                 </div>
                 <div class="help-tiles help-tiles-4">
                   <article class="help-tile">
-                    <h5>Year &amp; turn</h5>
-                    <p><strong>End turn</strong> advances the calendar +1 year. <strong>Wait</strong> +2 years. Turn advances on either.</p>
+                    <h5 data-i18n="help.yearTurn">Year &amp; turn</h5>
+                    <p data-i18n="help.yearTurnBody"><strong>End turn</strong> advances the calendar +1 year. <strong>Wait</strong> +2 years. Turn advances on either.</p>
                   </article>
                   <article class="help-tile">
-                    <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
-                    <p>
+                    <h5><span data-i18n="help.apTile">AP</span> <span class="help-tile-meta" data-i18n="help.apMeta">3 / turn</span></h5>
+                    <p data-i18n="help.apBody">
                       Attention for tech, Lobby, hard question, scrutiny moves, Field, and the
                       <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request;
                       <strong>learning modules</strong>: free while the <strong>Tutoring</strong> badge is on —
@@ -1867,34 +1938,31 @@
                     </p>
                   </article>
                   <article class="help-tile">
-                    <h5>Budget <span class="help-tile-meta">start 5</span></h5>
-                    <p>
-                      Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
-                      Not refilled by End turn. Solo: <strong>Budget 0$ is game over</strong> — keep cash to field.
+                    <h5><span data-i18n="help.budgetTile">Budget</span> <span class="help-tile-meta" data-i18n="help.budgetMeta">start 5</span></h5>
+                    <p data-i18n="help.budgetBody">
+                      Capital for techs and Pilot / Scale. Same-turn remove refunds half. Not refilled by End turn. Solo: Budget 0$ is game over — keep cash to field.
                     </p>
                   </article>
                   <article class="help-tile">
-                    <h5>Support <span class="help-tile-meta">start 3</span></h5>
-                    <p>
-                      Public + policy support — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Support.
-                      ≥4 boosts fielding; 0 hurts it. Sidestep costs Support equal to remaining resolve hearts.
+                    <h5><span data-i18n="help.supportTile">Support</span> <span class="help-tile-meta" data-i18n="help.supportMeta">start 3</span></h5>
+                    <p data-i18n="help.supportBody">
+                      Public + policy support — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Support. ≥4 boosts fielding; 0 hurts it. Sidestep costs Support equal to remaining resolve hearts.
                     </p>
                   </article>
                 </div>
               </section>
 
               <section class="help-block">
-                <h4 class="help-block-title">End turn vs Wait</h4>
+                <h4 class="help-block-title" data-i18n="help.endVsWait">End turn vs Wait</h4>
                 <div class="help-tiles help-tiles-2">
                   <article class="help-tile help-tile-accent">
-                    <h5>End turn</h5>
-                    <p>Next invent/challenge beat. AP → full. Calendar <strong>+1 year</strong>. Crisis meters unchanged.</p>
+                    <h5 data-i18n="help.endTurnTile">End turn</h5>
+                    <p data-i18n="help.endTurnBody">Next invent/challenge beat. AP → full. Calendar <strong>+1 year</strong>. Crisis meters unchanged.</p>
                   </article>
                   <article class="help-tile help-tile-warn">
-                    <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
-                    <p>
-                      Later world conditions (tech and readiness can mature). Crisis meters <strong>rise</strong>.
-                      Leftover AP burned, then refilled. Preview shows the rise.
+                    <h5><span data-i18n="help.waitTile">Wait</span> <span class="help-tile-meta" data-i18n="help.waitMeta">+2 years</span></h5>
+                    <p data-i18n="help.waitBody">
+                      Later world conditions (tech and readiness can mature). Crisis meters rise. Leftover AP burned, then refilled. Preview shows the rise.
                     </p>
                   </article>
                 </div>
@@ -2047,7 +2115,7 @@
         </div>
 
         <div class="modal-actions help-footer">
-          <button type="button" class="btn btn-primary" id="help-close">Got it</button>
+          <button type="button" class="btn btn-primary" id="help-close" data-i18n="help.gotIt">Got it</button>
         </div>
       </div>
     </div>

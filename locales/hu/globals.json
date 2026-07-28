@@ -1,0 +1,174 @@
+{
+  "rogue-si": {
+    "title": "Elszabadult szuperintelligencia",
+    "blurb": "Erős MI kontroll vagy igazítás nélkül."
+  },
+  "genocide": {
+    "title": "Népirtás megelőzése",
+    "blurb": "Tömeges atrocitás kockázata és elbukó korai figyelmeztetés."
+  },
+  "poverty": {
+    "title": "Szélsőséges szegénység",
+    "blurb": "Emberek kizárva a jövedelemből, szolgáltatásokból és a döntési hatalomból."
+  },
+  "chem-bio": {
+    "title": "Vegy- és biológiai fegyverek",
+    "blurb": "Katasztrofális kettős felhasználás és észlelési hiányok."
+  },
+  "asteroid": {
+    "title": "Aszteroida-becsapódás",
+    "blurb": "Bolygóvédelem és észlelési ablakok."
+  },
+  "weather": {
+    "title": "Szélsőséges időjárás",
+    "blurb": "Hőség, árvíz, vihar, aszály sokkok."
+  },
+  "mideast": {
+    "title": "Béke a Közel-Keleten",
+    "blurb": "Konfliktus, trauma és törékeny megélhetés."
+  },
+  "nuclear": {
+    "title": "Nukleáris pusztulás",
+    "blurb": "Tévedés és indítási törékenység."
+  },
+  "slavery": {
+    "title": "Rabszolgaság",
+    "blurb": "Kényszermunka elrejtve az ellátási láncokban."
+  },
+  "women": {
+    "title": "Nők egyenlő jogai",
+    "blurb": "Biztonság, jogok, oktatás, gazdasági ügynökség."
+  },
+  "education": {
+    "title": "Oktatás hiánya",
+    "blurb": "A tehetség egyetemes; a lehetőség egyenetlen."
+  },
+  "automation": {
+    "title": "Automatizáció / UBI",
+    "blurb": "Munka és jelentés az automatizáció alatt."
+  },
+  "refugees": {
+    "title": "Menekültek",
+    "blurb": "Kiszorítás, menedék, papírok, tartozás."
+  },
+  "ag": {
+    "title": "Fenntartható mezőgazdaság",
+    "blurb": "Élelmiszerrendszerek, amelyek regenerálják a földet."
+  },
+  "food": {
+    "title": "Élelmiszer-biztonság",
+    "blurb": "Megbízható, tápláló étel mindenkinek."
+  },
+  "eco": {
+    "title": "Ökológiai válságok",
+    "blurb": "Biodiverzitás és ökoszisztéma-összeomlás."
+  },
+  "infectious": {
+    "title": "Fertőző betegségek",
+    "blurb": "Járványészlelés és méltányos válasz."
+  },
+  "climate": {
+    "title": "Klímaválságok",
+    "blurb": "Kibocsátás, hőség és hosszú távú kockázat."
+  },
+  "cancer": {
+    "title": "Rák gyógyítása",
+    "blurb": "Korábbi felismerés, jobb terápia, hozzáférés."
+  },
+  "mental": {
+    "title": "Mentális egészségügyi válságok",
+    "blurb": "Ellátáshoz jutás, kapcsolódás, stigma."
+  },
+  "alzheimer": {
+    "title": "Alzheimer",
+    "blurb": "Demenciagondozás, felismerés, méltóság."
+  },
+  "ageing": {
+    "title": "Az öregedés mint betegség",
+    "blurb": "Egészséges élettartam és hosszabb élet."
+  },
+  "water": {
+    "title": "Tiszta víz",
+    "blurb": "Biztonságos, megbízható vízhozzáférés."
+  },
+  "air": {
+    "title": "Levegőszennyezés",
+    "blurb": "Szennyezett levegő közlekedésből, iparból, főzésből."
+  },
+  "energy-access": {
+    "title": "Energiahozzáférés",
+    "blurb": "Energiaszegénység, amely blokkolja a fejlődést."
+  },
+  "homeless": {
+    "title": "Hajléktalanság",
+    "blurb": "Stabil lakhatás és szolgáltatások."
+  },
+  "cities": {
+    "title": "Városok / urbanizáció",
+    "blurb": "Élhető, igazságos, klímára kész városok."
+  },
+  "child": {
+    "title": "Gyermekegészség",
+    "blurb": "Megelőzhető betegség és alultápláltság."
+  },
+  "maternal": {
+    "title": "Anyai egészség",
+    "blurb": "Biztonságos szülés és gyermekágyi gondozás."
+  },
+  "coord": {
+    "title": "Globális koordinációs kudarc",
+    "blurb": "Nincs közös korai figyelmeztetés vagy válaszalap a helyek között."
+  },
+  "radicalization": {
+    "title": "Radikalizáció ellen",
+    "blurb": "Előítélet és szélsőség csatornái — jogalapú kijáratok."
+  },
+  "fgm": {
+    "title": "Női nemi szerv megcsonkítása (FGM)",
+    "blurb": "Káros gyakorlat; közösségi felhagyás és túlélőgondozás."
+  },
+  "short-termism": {
+    "title": "Rövid távú szükségletek vs hosszú távú jövő",
+    "blurb": "Túlélés és hozamok, amelyek holnap eszközeit felélik."
+  },
+  "misinfo": {
+    "title": "Dezinformáció és episztemikus válságok",
+    "blurb": "A közös igazság erodálódik deepfake-ek és gyenge intézmények alatt."
+  },
+  "totalitarianism": {
+    "title": "Totalitarizmus",
+    "blurb": "Elszigetelés, indoktrináció és a szabad társulás eszközei."
+  },
+  "women-stem": {
+    "title": "Nők a STEM-ben",
+    "blurb": "Lányok és nők alulreprezentáltak a STEM utakon."
+  },
+  "memory": {
+    "title": "Hiányos emlékezet",
+    "blurb": "Elfelejtünk — dokumentáld és őrizd meg az átélt tapasztalatot."
+  },
+  "rural-roads": {
+    "title": "Vidéki útkapcsolatok",
+    "blurb": "Vidéki elszigeteltség messze az egész évszakos utaktól."
+  },
+  "smoking": {
+    "title": "Dohányzás",
+    "blurb": "Dohányjárvány, leszokás és passzív ártalom."
+  },
+  "sanitation": {
+    "title": "Szanitáció",
+    "blurb": "WC, szennyvíz és higiénia — nem csak ivóvíz."
+  },
+  "waste": {
+    "title": "Hulladék és újrahasznosítás",
+    "blurb": "A hulladék megelőzi az újrahasznosítást; a körforgás lemarad."
+  },
+  "reproductive": {
+    "title": "Reproduktív egészség",
+    "blurb": "Biztonságos szexuális élet és reproduktív szabadság mindenkinek."
+  },
+  "amr": {
+    "title": "Antimikrobiális rezisztencia",
+    "blurb": "Szuperbaktériumok és antibiotikum-kudarc — bakteriális ellenállás."
+  }
+}

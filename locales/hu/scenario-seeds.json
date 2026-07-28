@@ -1,0 +1,2253 @@
+{
+  "poverty--the-tip-owns-the-pickers-on-sorting-lane": {
+    "title": "A telep birtokolja a szedőket a Válogató Soron",
+    "scene": "Hajnal előtt a Válogató Soron a családok felmásznak a nyílt szeméttelepre, hogy műanyagot és fémet szedjenek, mielőtt a teherautók eltemetnék. A gyerekek reggeli nélkül maradnak, ha a zsákmány kevés. A vágások és az égetett hulladék füstje beteggé teszi az embereket, és kihagyják a másnapi műszakot. Az igazi csapda a magánmérleg a kapunál. Egyetlen felvásárló szabja meg a súlyt és az árat, és a szedőknek nincs más legális helye eladni. Igazságos mérleg vagy közös értékesítési csatorna nélkül minden kemény óra üres étkezéssel és még mélyebb adóssággal zárul ugyanannál a közvetítőnél.",
+    "stakeholder": "Hulladékszedő szövetkezet",
+    "pressureKeys": [
+      "Üres Étkezés",
+      "Mérleguralom",
+      "Beteg Gyerekek"
+    ],
+    "places": [
+      "Válogató Sor"
+    ]
+  },
+  "poverty--advance-pay-chains-the-kiln-on-dust-ridge": {
+    "title": "Az előleg bilincsbe veri a kemencét a Poros Háton",
+    "scene": "A Poros Háton a téglakemencék forrón mennek, és a levegő hamuízű. A munkások előleget vesznek fel bérleti díjra és gyógyszerre, aztán rájönnek: az adósság soha nem igazán törlődik. A köhögés megmarad. A gyerekek agyagot hordanak, ha a szülő nem bír ki egy teljes napot. A hajtóerő a főnök zárt könyvelése. Az órákat, a bírságokat és az „élelmiszerhitelt” csak az udvar tulajdonosa írja, így a távozás azt jelenti, hogy elveszíted, amit állítólag még tartozol. Olcsó energia és nyílt könyvelés megtörhetné a láncot; most a kemence birtokolja a bért.",
+    "stakeholder": "Kemencemunkások önsegélyző köre",
+    "pressureKeys": [
+      "Adósságbilincs",
+      "Főnök Könyvei",
+      "Tüdőbaj"
+    ],
+    "places": [
+      "Poros Hát"
+    ]
+  },
+  "poverty--tuition-dies-when-the-mast-fails-in-hill-signal": {
+    "title": "A tandíj odavész, ha a torony leáll a Dombjelen",
+    "scene": "A Dombjelen a középiskola egyetlen dombtetőn álló antennatoronytól függ: tanórák, vizsgalapok és a szülők telefonon küldött kis díjai mind ezen mennek át. Ha a torony bedől, az órák megállnak, és a családok lemaradnak a tandíjjal. A diákok órákat gyalogolnak egy jelsávért, és így is egész tananyagrészeket mulasztanak. A helyi hajtóerő egyetlen magántorony és falusi áron eladott feltöltős adat, tartalékút nélkül. A tanárok nem tudnak offline tananyagot nagyléptékben elérhetővé tenni, a háztartások pedig adatadósságot halmoznak fel ugyanezt a gyenge láncszemet üldözve. Az összeköttetés kiesése itt nem kellemetlenség—így zárja be a szegénység a következő évfolyamot.",
+    "stakeholder": "Falusi tanárok hálózata",
+    "pressureKeys": [
+      "Elmulasztott Órák",
+      "Toronymonopólium",
+      "Adatadósság"
+    ],
+    "places": [
+      "Dombjel"
+    ]
+  },
+  "poverty--dawn-fares-strand-the-cleaners-at-ferry-slip": {
+    "title": "A hajnali jegyek partra vetik a takarítókat a Kompkikötőnél",
+    "scene": "Éjszakai takarítók fejeznek be irodatornyokat a víz túloldalán, és az utolsó hajóért rohangálnak a Kompkikötőhöz hajnal előtt. Ha a hajó tele van, vagy a mólódíj megugrik, a rakparton alszanak, vagy magáncsónakot fizetnek, amit nem engedhetnek meg maguknak. A gyerekek egyedül várnak a hazai oldalon. A bér zsugorodik minden partra vetett éjszakával. A rendszer, ami szegényen tartja őket, egyetlen mólókoncesszió: kikötési jogok, menetrend és készpénzes jegyek egy üzemeltető kezében, munkásüzemeltette opció és biztonságos éjszakai útvonal nélkül. Ha lemaradsz a kikötőről, elveszted a műszakot, a hazajutás jegyét, és még egy nap iskolai felügyeletet a gyerekeidnek.",
+    "stakeholder": "Vízen átjáró éjszakai munkások egyesülete",
+    "pressureKeys": [
+      "Beragadt Éjszakák",
+      "Mólódíjak",
+      "Gyerekkockázat"
+    ],
+    "places": [
+      "Kompkikötő"
+    ]
+  },
+  "education--flood-weeks-erase-a-grade-in-marsh-bend": {
+    "title": "Árvízi hetek törölnek egy évfolyamot Marsh Bendben",
+    "scene": "Marsh Bendben a tavaszi víz hetekig áll az alsós szárnyban. A gyerekek egész olvasás- és matekegységeket veszítenek, amíg a termek száradnak és a penészirtó brigádok dolgoznak. A szülők nézik, ahogy a bizonyítványok romlanak, és tudják: a következő vihar megint ugyanezt teszi. A helyi hajtóerő nem csak a folyó. A kerület továbbra is ugyanarra az alacsony padra épít újjá, ugyanazt a naptárt tartja, és az árvízi heteket balszerencsének kezeli tervezési probléma helyett. A buszok megállnak, amikor a bejárati út víz alá kerül. A pótnapok a nyárba torlódnak, amit a dolgozó családok nem tudnak kihasználni. A tehetség itt van. A rendszer továbbra is elmossa a tanévet.",
+    "stakeholder": "Tanya Brooks, SZMK-vezető és gáttanú",
+    "pressureKeys": [
+      "Elmaradt Napok",
+      "Árvízi Elfogultság",
+      "Felzárkózás"
+    ],
+    "places": [
+      "Marsh Bend"
+    ]
+  },
+  "education--english-only-exams-strand-packingtown-fifth-graders": {
+    "title": "Csak angol vizsgák hagyják cserben Packingtown ötödikeseit",
+    "scene": "Packingtownban a csomagolóüzemi családok ötödikesei lefagynak az állami teszteken, amelyeket csak angolul írnak. El tudnak magyarázni egy történetet a vacsoraasztalnál szomáliul vagy spanyolul, aztán megbuknak a buborékos lapon, ami eldönti, ki kap segítséget jövőre. Az éjszakai műszakos szülők nem tudnak nappali fogadóórákon ülni. A kár most valós: visszatartott gyerekek, lemaradónak bélyegezve, kivonva a természettudományból gyakorló lapokra. A hajtóerő, ami fenntartja, egy helyi szabályhalmaz. A kerület csak angol vizsgák alapján osztályoz és helyez el diákokat, szinte nem finanszíroz kétnyelvű segítőket, és a szolgáltatásokat olyan üzemi menetrend köré időzíti, ami soha nem egyezik az iskolai órákkal. A lehetőség szándékosan egyenetlen, nem véletlenül.",
+    "stakeholder": "Hodan Ali, üzemi nővér és szülői szószóló",
+    "pressureKeys": [
+      "Olvasási Rés",
+      "Nyelvi Szabályok",
+      "Segítőhiány"
+    ],
+    "places": [
+      "Packingtown"
+    ]
+  },
+  "education--blackout-classrooms-empty-heat-ridge-by-noon": {
+    "title": "Áramszünetes termek ürítik ki Heat Ridge-et délre",
+    "scene": "Heat Ridge-en a nyári hőség késő délelőttre kemencévé változtatja a mobiltermeket. Amikor a hálózat villódzik, a ventilátorok leállnak, és a tanárok mindenkit hazaküldenek. A diákok lemaradnak a természettudományos laborokról és a hűvös könyvtári óráról, ami olvasásban tartotta őket. A kisebb testvérek autókban várnak, amíg a nagyobb gyerekek ingyen babasittelővé válnak. Az átélt kár: elveszett órák és széteső figyelem. A hajtóerő a helyi áram- és épületválasztások: vékony falú mobiltermek, csúcsterhelés, amit a betápláló nem bír el, és egy menetrend, ami még mindig megbízható déli áramot feltételez. Amíg az áramot és a hőt az iskolai tervezés részeként nem kezelik, a délben üres padok tovább írják a teljesítményrészt.",
+    "stakeholder": "Luis Ortega, délutáni edző",
+    "pressureKeys": [
+      "Hőségnapok",
+      "Áramrések",
+      "Otthoni Gondozás"
+    ],
+    "places": [
+      "Heat Ridge"
+    ]
+  },
+  "education--teen-caregivers-miss-the-credit-clock-in-millbridge": {
+    "title": "Tinédzser gondozók lemaradnak a kreditóráról Millbridge-ben",
+    "scene": "Millbridge-ben a tinédzserek kisebb unokatestvéreket nevelnek és nagyszülőket néznek meg, miután a gyárak megritkították a formális gondozást. Elmulasztják az első órát, későn adják be a munkát, és nézik, ahogy az érettségi kreditek csúsznak, még ha értik is az anyagot. Esti órák papíron léteznek, de az ülésidő-szabályok és a buszidők feltételezik, hogy otthon van egy szabad felnőtt. A kár: elveszett kreditek és beszűkült jövők. A hajtóerő egy helyi rendszer, ami csak a fix órákban székekben ülő testeket számolja, és szinte semmi kreditet nem ad a gondozási műszakok között végzett tanulásért. A rokoni gondozás itt gyakori. Az iskola még mindig úgy tesz, mintha minden diáknak tiszta naptára és fuvarja lenne.",
+    "stakeholder": "Keisha Dunn, rokoni gondozó és esti tanuló",
+    "pressureKeys": [
+      "Elveszett Kreditek",
+      "Ülésidő-szabályok",
+      "Gondozási Teher"
+    ],
+    "places": [
+      "Millbridge"
+    ]
+  },
+  "infectious--medical-waste-tips-fever-into-dump-edge-lane": {
+    "title": "Orvosi hulladék lázat hoz a Dump Edge Lane-re",
+    "scene": "A Dump Edge Lane-en a gyűjtők csupasz kézzel válogatják a műanyagot és a fémet. A nyílt szeméttelepen egyre bukkannak fel a klinikás zsákok—tűk, véráztatta géz, törött ampulla. Rosa csapata mély vágásokat kap, amelyek nem gyógyulnak tisztán. Láz és duzzadt karok napokra tartják távol az embereket a halmoktól. A kár azonnali: fertőzött sebek és reszkető hidegrázós éjszakák bádogkunyhókban, messze egy rendes kórházi osztálytól. A hajtóerő helyi és makacs. Magánfuvarozók és alulfinanszírozott klinikák továbbra is ide dobják az orvosi hulladékot, mert a legális lerakó drágább és ellenőrzi a zsákokat. Amíg a hulladékáramot nem követik, nem válogatják és nem állítják meg a forrásnál, minden műszak a telepen újra elveti ugyanazokat a fertőzéseket.",
+    "stakeholder": "Rosa, hulladékgyűjtő szövetkezet vezetője",
+    "pressureKeys": [
+      "Fertőzött Sebek",
+      "Hulladéklerakás",
+      "Klinikához Jutás"
+    ],
+    "places": [
+      "Dump Edge Lane település"
+    ]
+  },
+  "infectious--shared-cistern-cough-fills-station-road-lodge": {
+    "title": "Közös ciszterna köhögése tölti meg a Station Road Lodge-ot",
+    "scene": "Zarándokok és napszámosok zsúfolják tele az emeletes ágyas szobákat a Station Road mentén. Egy tetőciszterna és egy sor közös pohár szolgál mindenkit. Száraz köhögés indult a férfiszárnyban múlt hónapban. Most ágyról ágyra ugrik egy éjszaka alatt. Karim imám üres imaszőnyegeket és kifizetetlen szállásdíjakat számol. A vendégek munkanapokat veszítenek; van, aki nem tudja kifizetni a buszt haza. Az átélt kár egyszerű: láz, köhögés és elveszett bér egy pihenésre szánt épületben. A hajtóerő szem előtt van. A panzió még mindig kezeletlen vizet húz egy nyitott tartályba, és beteg vendégek érkeznek tovább, mert az út átmenő csomópont szűrés és tartalék elkülönítő szoba nélkül. A közös víz és a zsúfolt alvás forgatja tovább a járványt.",
+    "stakeholder": "Karim imám, panziógondnok",
+    "pressureKeys": [
+      "Köhögés Terjed",
+      "Közös Víz",
+      "Elveszett Bér"
+    ],
+    "places": [
+      "Station Road zarándokszálló"
+    ]
+  },
+  "infectious--gutting-rinse-sickens-old-quay-landings": {
+    "title": "Bontóöblítés megbetegíti az Old Quay rakpartot",
+    "scene": "Hajnal előtt a nők a nedves betonon bontják a zsákmányt az Old Quay-n. A késeket és deszkákat ugyanabban a kikötői öbölben öblítik, ahol a csónakok kikötnek. Gyomorgörcs és véres hasmenés sújtja a legénységet a piaci napok után. Nia egyesülete hajóhiányban szenved, mert a tagok fele otthon betegeskedik. A vásárlók elmennek a standok mellett, ha a betegség szaga lebeg a jég felett. A családok üres vacsorafazekakban és elmaradt iskolai díjakban érzik. A kár bélbetegség, amely magához a rakodóhelyhez kötődik. A hajtóerő az öblítési szokás, amit senki sem tört meg: halfelesleg és emberi szennyvíz keveredik az öbölben, és még mindig nincs tiszta mosóállomás vagy szabály, ami a piszkos vizet távol tartaná a vágóasztaloktól. Minden landolási nap táplálja a következő betegséghullámot.",
+    "stakeholder": "Nia, női halászszövetség",
+    "pressureKeys": [
+      "Bélbetegség",
+      "Piszkos Öblítés",
+      "Piaci Napok"
+    ],
+    "places": [
+      "Old Quay halföldolgozó"
+    ]
+  },
+  "infectious--playground-pump-empties-maple-primary-desks": {
+    "title": "Játszótéri pumpa üríti a Maple Primary padjait",
+    "scene": "A Maple Primary udvari pumpája az egyetlen víz, amiben a gyerekek a szünetben bíznak. Mostanában a víz fémes ízű, és a kisebb osztályok délutánra lázzal és hányással mennek haza. Okonkwo tanárnő pirossal jelöli az üres padokat. A szülők egy-egy hétre otthon tartják a gyerekeket. A tanítás megáll; a vizsgaidőszak veszélyben van. A kár beteg gyerekek és egy iskola, amely nem tud teljes napokon nyitva maradni. A hajtóerő a föld alatt van és helyi. A régi kút túl közel van a tanári épület megrepedt szennyvízvezetékéhez, és senki sem teszteli a vizet, mielőtt csöngene a csengő. Amíg a forrást nem javítják meg és nem figyelik, minden korty a pumpánál újabb tantermi járványt indíthat.",
+    "stakeholder": "Okonkwo tanárnő, igazgató",
+    "pressureKeys": [
+      "Beteg Gyerekek",
+      "Rossz Kút",
+      "Tanítási Napok"
+    ],
+    "places": [
+      "Maple Primary iskolaudvar"
+    ]
+  },
+  "climate--cedar-bend-loses-the-lower-ward": {
+    "title": "Cedar Bend elveszíti az alsó negyedet",
+    "scene": "A tavaszi viharok már nem kímélik az alsó negyedet. A víz napokig áll a nappalikban. A családok tábori ágyakon alszanak a középiskolában, miközben a penész mászik fel a gipszkartonon, amiért még mindig bérleti díjat fizetnek. Rhea hajnalban járja a homokzsák-vonalat, és számolja a tornácokat, amelyek nem száradnak ki a következő áradás előtt. A kár nem csak a víz. Felfelé az új parkolók és a nagyáruházak betonlapjai lezárták a régi vizes élőhelyeket, amelyek egykor a folyó áradását fogták fel. Minden friss betonlap magasabbra és gyorsabban küldi a vízszintet ugyanazokra az utcákra. Ha a burkolás tovább nyer, az alsó negyed megszűnik lakónegyed lenni, és szezonális tóvá válik.",
+    "stakeholder": "Rhea, a negyed árvízfigyelő kapitánya",
+    "pressureKeys": [
+      "Elöntött Otthonok",
+      "Burkolt Lápok",
+      "Kiesett Műszakok"
+    ],
+    "places": [
+      "Cedar Bend"
+    ]
+  },
+  "climate--night-heat-pins-juniper-wells": {
+    "title": "Az éjszakai hőség leszorítja Juniper Wells-t",
+    "scene": "Az éjszakák régen lehűtötték a várost. Most már nem. Diego klinikája sötétedés után megtelik gyerekekkel, akik nem bírják megtartani a folyadékot, és idősekkel, akiknek a szíve rohan a mozdulatlan, forró szobákban. A ventilátorok meleg levegőt tolnak. A könyvtár ingyenes hűsölő szobái vacsorára betelnek, és embereket utasítanak el. A kerítésvonalon túl a mező gázfáklyái egész éjjel égnek, és extra hőt meg gőzöket zúdítanak ugyanazokra a tömbökre, amelyek amúgy is sülnek. A fáklyák tartják üzemben a kutakat és hozzák a jogdíj-csekkeket, ezért senki sem kapcsolja ki őket. Amíg az éjszakai hőség meg nem törik, vagy az égetés nem lassul, a betegórák gyorsabban halmozódnak, mint ahogy a klinika személyzetet tudna adni.",
+    "stakeholder": "Diego, közösségi klinika szervező",
+    "pressureKeys": [
+      "Hőbetegség",
+      "Gázfáklyák",
+      "Hűsölő Szobák"
+    ],
+    "places": [
+      "Juniper Wells"
+    ]
+  },
+  "climate--warm-water-empties-gull-point-nets": {
+    "title": "A meleg víz kiüríti a Gull Point hálóit",
+    "scene": "A szövetkezeti jégház délre már jó fogás szagát árasztotta. Most Noor figyeli, ahogy a csónakok könnyű rakománnyal jönnek be. A víz a hegyfok mentén melegebb, mint a régi térképeken, és a halak, amelyeken a legénységek felnőttek, mélyebb, hidegebb vizekre vándoroltak. A családok vékonyabb heteket húznak a fizetések között. A dízel még mindig szinte minden hajótesten megy — jéggépek, hosszú utak távolabbi vizekre, generátorok a dokkon —, így minden út több üzemanyagot éget kevesebb fogásért. A meleg tengerek és a hajókipufogó táplálják egymást: a vékonyabb fogások hosszabb égéseket kényszerítenek, és az égések hozzáadnak ugyanahhoz az éghajlati szorításhoz, ami elmozdította a halakat. Ha a minta tart, a dokk parkolóvá válik olyan csónakoknak, amelyek már nem fizetik meg magukat.",
+    "stakeholder": "Noor, szövetkezeti dokkvezető",
+    "pressureKeys": [
+      "Üres Hálók",
+      "Hajódízel",
+      "Dokkmunkák"
+    ],
+    "places": [
+      "Gull Point"
+    ]
+  },
+  "climate--inversion-traps-soot-bridge": {
+    "title": "Inverzió csapdába ejti Soot Bridge-et",
+    "scene": "Egyes reggeleken a völgy olyan sűrű piszkos levegő fedelét tartja, hogy az iskolai zászlók mozdulatlanul lógnak. Amira szülői munkaközösségi csoportja orrvérzéseket, inhalátorokat és délre hazaküldött gyerekeket követ. A szülők kihagyják a munkát, hogy a klinika folyosóin üljenek. A régi kokszolóüzem kéménye még mindig füstöt tol az éjszakai műszakban, és amikor a hőmérsékleti inverzió (hideg levegő ragad a melegebb levegő alatt) csapdába ejti a völgyet, a füstcsóvának nincs hova mennie, csak a hálószobákba és a játszóterekre. Az üzemi állások fizetik a jelzálogokat ugyanazokon az utcákon, amelyek a legrosszabbat szívják belőle. Amíg a füst nem csökken, vagy a csapdába esett levegő nem engedi el a reggeleket, a betegnapok továbbra is legyőzik a jelenlétet és a fizetéseket.",
+    "stakeholder": "Amira, szülői munkaközösség tiszta-levegő vezetője",
+    "pressureKeys": [
+      "Piszkos Levegő",
+      "Kéményfüst",
+      "Betegnapok"
+    ],
+    "places": [
+      "Soot Bridge"
+    ]
+  },
+  "water--standpipes-sputter-brown-in-canal-ward": {
+    "title": "Barna vizet köpnek a közkutak a Canal Wardban",
+    "scene": "A Canal Wardban a reggeli sor már napkelte előtt kialakul. A gyerekek kannákkal mennek a közös közkuthoz, és várnak, amíg a csap rozsdaszínű vizet köhög, ami foltot hagy a ruhán és égeti a torkot. Az anyák kihagyják a munkát, hogy felforralják a kevés vizet, ami kijön, és a rendelő mégis egyre több gyomorpanaszt lát hetente. A sikátorok alatti csövek régi vasból vannak; megrepedtek ott, ahol a só és a teherautók rázkódása marja a csatlakozásokat. A szivárgások árokvizet és szennyvizet szívnak vissza a fővezetékbe, valahányszor esik a nyomás. A szolgáltató mindig a leghangosabb töréseket foltozza, aztán továbblép, így ugyanaz a szakasz újra elromlik. Amíg maga a vezeték nem hagyja abba a szennyeződés beszívását, minden tiszta vödör csak ideiglenes.",
+    "stakeholder": "Mira, a közkút-bizottság vezetője",
+    "pressureKeys": [
+      "Betegnapok",
+      "Csőtörések",
+      "Javítási Késés"
+    ],
+    "places": [
+      "Canal Ward"
+    ]
+  },
+  "water--green-film-coats-the-paddy-step-wells": {
+    "title": "Zöld hártya fedi a Paddy Lépcsős Kutakat",
+    "scene": "A Paddy Lépcsős Kutaknál a kőlépcsők ma is levisznek ahhoz a vízhez, amit a családok generációk óta megbíznak. Idén délre zöld hártya borítja a felszínt, és a gyerekek, akik az alsó fokokról isznak, lázzal és görcsökkel mennek haza. A felfelé gazdálkodók minden szárazság után műtrágyával és növényvédővel öntözik a földeket. Amikor megjön az eső, ez a lefolyás egyenesen a közös kutakba csúszik, mielőtt bárki elterelhetné. A szomszédok vitatkoznak, kinek a sora a merítés, és néhányan illegális oldalgödröket ásnak, amik tovább süllyesztik a talajvizet. A kutak azért szennyeződnek egyre jobban, mert a földek vegyszert táplálnak beléjük, nem azért, mert az emberek nem hajlandók messzebbre cipelni a vödröt.",
+    "stakeholder": "Sita, a termelők vízőrzője",
+    "pressureKeys": [
+      "Gyomorpanaszok",
+      "Mezei Lefolyás",
+      "Kútharcok"
+    ],
+    "places": [
+      "Paddy Lépcsős Kutak"
+    ]
+  },
+  "water--boil-orders-never-lift-at-night-clinic-bore": {
+    "title": "A forralási utasítás soha nem oldódik a Night Clinic kútnál",
+    "scene": "A Night Clinic kútnak tiszta vizet kellene adnia kézmosáshoz, infúziós zsákokhoz és a szülőszobához. Ehelyett a személyzet olyan forralási utasítást rak ki, ami sosem ér véget. A nővérek éjszakai műszakban látják emelkedni a sebfertőzéseket, a családok pedig olyan zárt palackokért fizetnek, amiket nem engedhetnek meg maguknak. A klinika mögött egy repedt szeptikus árok ül a kút fölött a lejtőn. Amikor megjön az eső vagy a szivattyú keményen dolgozik, a szenny beszivárog a talajon át ugyanabba a vízadóba, ahonnan a fúrás merít. A klinika olyan vízzel gyógyítja a betegeket, ami segíti őket megbetegíteni. Amíg a szeptikus utat el nem vágják és a kutat a forrásánál nem védik, minden új szűrő csak néhány csendes hetet vesz.",
+    "stakeholder": "Dr. Elias, éjszakai műszakos orvos",
+    "pressureKeys": [
+      "Osztályfertőzések",
+      "Szeptikus Szivárgás",
+      "Palackszámlák"
+    ],
+    "places": [
+      "Night Clinic Kút"
+    ]
+  },
+  "water--guest-pools-win-alley-taps-lose-at-guest-pier": {
+    "title": "A vendégmedencék nyernek, a sikátori csapok veszítenek a Guest Piernél",
+    "scene": "A Guest Pier mentén a hotelek kéken tartják a medencéket és forrón a vendégzuhanyokat. Egy utcával beljebb a sikátori csapok délelőtt közepére kiszáradnak, a lakók pedig lábasokkal sorban állnak egy sós ízű csöppért. Noor ciszternacsapata adagolja, amit a tetőkről fog, de a közös kutak süllyednek. A üdülők és az új vendégvillák ugyanabból a vékony parti vízadóból szivattyúznak, és a legjobb hozamot először a turistamérőkre vezetik. A túlzott kivétel beljebb húzza a tengervizet, így a sikátorok sós löttyöt kapnak, amíg a móló zöld marad. Az embereknek nem csak a csapjuk kevés — ők állnak utoljára egy olyan rendszerben, amit arra építettek, hogy a látogatókat szolgálja a szomszédok előtt.",
+    "stakeholder": "Noor, a sikátori ciszterna gondnoka",
+    "pressureKeys": [
+      "Szomjúságsorok",
+      "Kút Túlhasználat",
+      "Vendég Elsőbbség"
+    ],
+    "places": [
+      "Guest Pier"
+    ]
+  },
+  "energy-access--coal-smoke-fills-the-gap-the-grid-left": {
+    "title": "A szénfüst tölti be a hálózat hagyta űrt",
+    "scene": "Téli éjszakák a ger-utcákban még mindig kaparó torkot és köhögve ébredő gyerekeket jelentenek. A családok nyers szenet égetnek vaskályhában, mert a hivatalos hálózat a burkolt út szélén megáll, és a legtöbb telekhez soha nem ér el. Az átélt kár egyszerű: piszkos beltéri levegő, rendelői sorok tüdőpanasz miatt, és anyák, akik a hideg ellen zárva tartják az ablakot, miközben a füst bent marad. Ami ezt fenntartja, nem csak a hideg idő. A telkek jogi szürkezónában vannak, ezért a közművek nem húznak stabil vezetéket, és az olcsó szén marad az egyetlen fűtés, amit zsákban meg lehet venni. Amíg az áram tiszta, helyi és legálisan csatlakoztatható nem lesz, minden hideghullám több füstöt tol ugyanazokba a nemezfalakba.",
+    "stakeholder": "Ger-negyedi egészségügyi önkéntes vezető",
+    "pressureKeys": [
+      "Köhögős Éjszakák",
+      "Szénfüst",
+      "Telekjogok"
+    ],
+    "places": [
+      "Ulánbátor ger-negyed utcái"
+    ]
+  },
+  "energy-access--harvest-waits-while-the-genset-coughs": {
+    "title": "A termés vár, amíg a generátor köhög",
+    "scene": "Aratás után zsákok tornyosulnak a rakparton, miközben a szövetkezet öreg dízelgenerátora prüszköl és leáll. Stabil áram nélkül a kis malom és a hűtőtér nem megy, így a gabona felmelegszik, beköltöznek a kártevők, és a családok elvesztik az eladást, amiből az iskoladíjat fizetnék. Halászok és rizstermesztők ugyanabban a héten érzik: romlott készlet és újabb kölcsön. A helyi ok nem a rossz gazdálkodás. A sziget egy hosszú betápláló vezeték gyenge végén fekszik, ezért a feszültségingadozás mindennapos, és a szövetkezet továbbra is hordónként bérli a gázolajat, mert senki sem finanszírozott tiszta mikrohálózatot, amit a tagok birtokolhatnának. Minden késő őrlési nap az energiasszegénységet üres uzsonnásdobozokká változtatja.",
+    "stakeholder": "Rizsszövetkezet elnöke",
+    "pressureKeys": [
+      "Romlott Gabona",
+      "Dízelvárás",
+      "Iskoladíjak"
+    ],
+    "places": [
+      "Camotes-szigeti rizsszövetkezet rakpartja"
+    ]
+  },
+  "energy-access--the-sterilizer-sleeps-through-the-night-shift": {
+    "title": "A sterilizátor alszik az éjszakai műszakban",
+    "scene": "Az ösvényeleji rendelőben az éjszakai szülések még mindig telefonfénynél zajlanak, amikor a sterilizátor és a lámpa leáll. A bábák petróleumégőn forralják a műszereket, és teherhordókat küldenek lejtőn le üzemanyagért, ami későn jön vagy sehogy. Az anyák a kárt hosszú vajúdásban, fertőzésveszélyben és olyan személyzetben érzik, aki túl fáradt ahhoz, hogy hajnalban felmásszon a következő faluba. A hajtóerő maga az energialánc: nincs megbízható vezeték a hágón át, ezért minden kritikus eszköz gyalog hordott kannáktól függ. Amíg az állomás helyben nem tud saját áramot termelni és tárolni, a sötét órák továbbra is rutinszüléseket fordítanak vészhelyzetté.",
+    "stakeholder": "Kerületi bába-felügyelő",
+    "pressureKeys": [
+      "Sötét Szülések",
+      "Üzemanyag-Hordás",
+      "Személyzeti Kiégés"
+    ],
+    "places": [
+      "Humla ösvényeleji egészségügyi poszt"
+    ]
+  },
+  "energy-access--light-sold-by-the-hour-on-the-lagoon": {
+    "title": "Óránként árult fény a lagúnán",
+    "scene": "A cölöpház-tömbökön a diákok egy izzót osztanak meg, amit óránként bérelnek a szomszéd zajos generátorvezetékéről. A házi feladat megáll, amikor elfogy a pénzérme, és az esti órák elmaradnak, amikor a hosszabbító szikrázik a víz felett. A családok sötét tanulási időként, égő szemként és lemaradó gyerekekként érzik. A hajtóerő az, ahogy itt az áramot eladják: hivatalos mérők nem érik el a lagúna otthonait, ezért informális közvetítők rövid szeletekben árazzák a fényt, és minden törékeny toldáson levágnak egy részt. Amíg a közösség nem birtokolhat biztonságos termelést és méltányos megosztási szabályokat, az energiahozzáférés éjszakai vámdíj marad ahelyett, hogy közösségi alap lenne.",
+    "stakeholder": "Lagúna tanári kollektíva titkára",
+    "pressureKeys": [
+      "Sötét Tanulás",
+      "Vezetékdíjak",
+      "Bizalmi Rés"
+    ],
+    "places": [
+      "Makoko lagúna cölöpház-tömbök"
+    ]
+  },
+  "rogue-si--trauma-scores-that-outvote-the-surgeon": {
+    "title": "Trauma-pontszámok, amelyek leszavazzák a sebészt",
+    "scene": "Péntek este a traumafülke megtelik lőtt sebesültekkel és balesetesekkel. Dr. Ramirez még mindig saját kezével látja a vérzést és a pulzust. Egy új pontozórendszer másodpercek alatt rangsorolja a betegeket, és rögzíti a műtő sorrendjét. Múlt hónapban egy csendes hasi vérzést egy hangosabb, de stabil mellkasi sérülés mögé temetett; a csendes beteg az előcsarnokban rogyott össze. A nővérek most a képernyő zöld jelzésére várnak, mielőtt megmozdítanának egy hordágyat. A kórház a pereket csökkenteni és a dokumentációt gyorsítani vette meg a rendszert. A beszállítók távoli adatokon hangolják tovább, így a zár minden negyedévben szorosabb lesz. Ramirez még kiabálhat, de a vezetőség egy alacsony pontszámot biztonságosabbnak tart, mint az ő ítéletét.",
+    "stakeholder": "Dr. Ramirez, trauma-szakorvos",
+    "pressureKeys": [
+      "Elmulasztott Válságok",
+      "Kemény Zárak",
+      "Peres Nyomás"
+    ],
+    "places": [
+      "Memorial Hermann Red Trauma Bay, Houston"
+    ]
+  },
+  "rogue-si--the-call-router-that-quiets-the-wrong-voice": {
+    "title": "A hívásirányító, amely elhallgattatja a rossz hangot",
+    "scene": "Aisha tizenkét éve dolgozik az éjszakai diszpécserasztalnál. Felismeri a hang remegését, amikor valaki a partnere elől bújik. Az új irányító először hallgat. Sürgősség, nyelv és a hívás várható hossza szerint rangsorol, majd egyes hívókat csendes sorba parkol, vagy botnak adja. Múlt héten egy halkan beszélő idős mellkasi fájdalommal várt, amíg a rendszer egy tisztább, rövidebb hívást üldözött. A vonalon lévő családok várakoztató zenét hallanak, és azt hiszik, jön a segítség. A vezetők dicsérik az átlagos kezelési időt. A beszállító a rangsoroló modellt városi statisztikákból frissíti, amelyeket a teremben senki sem nyithat meg. Minden frissítés könnyebben félreteszi a csendes hívásokat.",
+    "stakeholder": "Aisha, tapasztalt hívásfogadó",
+    "pressureKeys": [
+      "Lassú Segítség",
+      "Automata Ejtések",
+      "Kezelési Idő"
+    ],
+    "places": [
+      "King County Emergency Call Center, Seattle"
+    ]
+  },
+  "rogue-si--the-ditch-ai-that-starves-the-small-orchard": {
+    "title": "A csatorna-MI, amely kiéhezteti a kis gyümölcsöst",
+    "scene": "Elena mandulái a széleken barnulnak, miközben a két táblával odébb lévő csatorna még a nagyobb szomszédnak folyik. A kerület most egy elosztási modellre bízza a heti vágásokat. Talajszondákat, piaci árakat és kötvényfeltételeket olvas, majd olyan számokat posztol, amelyeket egy gazda sem tud teljesen visszakövetni. A tökéletes szenzorlefedettség nélküli kis gyümölcsösök a térképen pazarlásnak tűnnek. Elena tavaly nyáron teherautóval hozott vizet, és így is elvesztett egy fasort. A stáb azt mondja, a modell védi a kerület hitelminősítését, és megállítja a pultnál a veszekedést. Minden száraz szezonban ugyanazok a feketedoboz-szabályok szorulnak. A kár helyi szomjúság és üres ágak; a hajtóerő egy automatikus vágás, amely a tiszta adatot és a nagy papírt részesíti előnyben az élő liget helyett.",
+    "stakeholder": "Elena, kis gyümölcsös-gazdálkodó",
+    "pressureKeys": [
+      "Növényi Stressz",
+      "Homályos Vágások",
+      "Kötvény-Szabályok"
+    ],
+    "places": [
+      "Westlands Water District Allocation Desk, Fresno County"
+    ]
+  },
+  "rogue-si--buses-that-skip-the-night-shift-clinic-stop": {
+    "title": "Buszok, amelyek kihagyják az éjszakai műszak klinikamegállóját",
+    "scene": "Marcus készíti az éjszakai beosztást, és a műszakja végén mégis a 28-ason megy haza. A takarítók és a klinikai segítők régen az utolsó buszt fogták a közösségi egészségügyi központ melletti megállóból. Egy új menetrend-motor most a költségszámok miatt kiöli az alacsony forgalmú megállókat. A modell az üres üléseket kudarcnak kezeli, ezért kilenc után kihagyja a klinika sarkát. A dolgozók a hidegben várnak, vagy olyan autóra költenek, amit nem engedhetnek meg maguknak. A diszpécserképernyők zölden világítanak, ha nő a pontossági pontszám. Ugyanaz a motor minden kihagyott járatból tanul, és mélyebb vágásokat javasol. Az utasok ottragadva érzik magukat; a rendszer tovább optimalizálja el azokat a megállókat, amelyek azokat szolgálják, akik akkor mozognak, amikor a város csendes.",
+    "stakeholder": "Marcus, buszmenetrend-készítő és ATU-tag",
+    "pressureKeys": [
+      "Otthagyott Utasok",
+      "Kihagyó Logika",
+      "Költségcélok"
+    ],
+    "places": [
+      "MBTA Operations Control Center, Boston"
+    ]
+  },
+  "genocide--ward-lists-sold-after-midnight": {
+    "title": "Osztálylisták éjfél után eladva",
+    "scene": "Az éjszakai műszak után Esperance Mukamana bezárja az irattárat, de még mindig hallja a telefonok zümmögését a sikátorban. Hajnalban családok tolonganak a kapunál, rokonokat keresve, akik soha nem jöttek haza az osztályokról. Valaki másolja a felvételi listákat—neveket, negyedeket és csoportjeleket—, és éjfél után eladja a papírt. A vevők ezekkel a listákkal választják ki, kit állítanak meg a hazafelé vezető úton. A félelem távol tartja a betegeket a gondozástól. A listakereskedelem tovább táplálja a vadászatot.",
+    "stakeholder": "Éjszakai műszakos nővér, Esperance Mukamana",
+    "pressureKeys": [
+      "Eltűnt rokonok",
+      "Listaeladás",
+      "Éjszakai félelem"
+    ],
+    "places": [
+      "Goma Központi Kórház Irattári Szárnya"
+    ]
+  },
+  "genocide--ration-cards-that-starve-a-block": {
+    "title": "Adagjegyek, amelyek egy tömböt éheztetnek",
+    "scene": "A 7-es tömbön megérkeznek a zsákok, de az ajtók fele zárva marad. A gyerekek kihagyják az étkezéseket, miközben az udvar először a kedvelt klánok jegyét bélyegzi. Nyibol Deng tömbvezető nézi, ahogy neveket húznak ki fellebbezés nélkül. Egy kis kör kapuőrökből és vénekből dönti el, ki számít jogosultnak. Az éhség terjed az elutasított utcákon. A jegymaffia továbbra is fegyverré változtatja a segélyt a rossz vezetéknevek ellen.",
+    "stakeholder": "Tömbvezető Nyibol Deng",
+    "pressureKeys": [
+      "Éhség",
+      "Jegymegtagadás",
+      "Klánuralom"
+    ],
+    "places": [
+      "Wau Segélyszállítmány-udvar"
+    ]
+  },
+  "genocide--tablets-that-fail-one-language": {
+    "title": "Táblagépek, amelyek egy nyelven elbuknak",
+    "scene": "Lirije Krasniqi tanár kölcsöntáblagépeket oszt ki a városi vizsgafelkészüléshez. A képernyők fele egy nyelvi csomagon lefagy, és kidobja azokat a diákokat a gyakorlósorból. A szülők megtudják, hogy gyerekeik soha nem érik el a pontszámhatárt. Néhány testületi tag csendben állítja be a szoftver alapértelmezéseit és a fellebbezési szabályokat. Egy nyelvi közösség jövője bezárul. A testület elfoglalása továbbra is beépíti a kirekesztést minden új eszközkiosztásba.",
+    "stakeholder": "Tanár Lirije Krasniqi",
+    "pressureKeys": [
+      "Iskolai tiltás",
+      "Elveszett jövők",
+      "Testületi uralom"
+    ],
+    "places": [
+      "Prizreni Önkormányzati Ösztöndíj-bizottság"
+    ]
+  },
+  "genocide--crew-badges-that-never-return": {
+    "title": "Soha vissza nem térő legénységi jelvények",
+    "scene": "A csónakok első fénykor indulnak el lebélyegzett legénységi jelvényekkel. Néhány jelvény soha nem kerül vissza a tartóra. A családok üres kosarakkal várnak a mólón, miközben más legénységek tele rakományt rakodnak ki. Aung Myint mólófelügyelő látja, mely nevek kapnak ideiglenes, és melyek állandó jelvényt. Az eltűnt halászok egész utcákat hagynak éhesen. A jelvénymaffia tovább jelöli, kit biztonságos eltüntetni a tengeren.",
+    "stakeholder": "Mólófelügyelő Aung Myint",
+    "pressureKeys": [
+      "Eltűnt halászok",
+      "Éhség",
+      "Jelvénymaffia"
+    ],
+    "places": [
+      "Sittwe Móló Munkaügyi Pult"
+    ]
+  },
+  "chem-bio--second-use-blues-on-the-dye-row": {
+    "title": "Másodfelhasználási gondok a festősoron",
+    "scene": "A Weftbridge Festőművek Soron az éjszakai műszak még mindig csípő szemmel és orrvérzéssel megy haza. Az utcácska levegője fémes ízű, miután a kádak későn futnak. A fenti családok lepedőket terítenek, amelyek mereven jönnek le, éles szaggal, amit semmilyen mosószer sem öl meg teljesen. A kár mindennapi és közeli: a munkások betegen lépnek ki, a gyerekek kimaradnak az iskolából, a rendelők héten át ugyanazokat az égő orrmelléküregeket jegyzik fel.\n\nAmi a veszélyt tovább táplálja, nem csak a régi csövek. Több műhely nagyban vesz oldószereket és köztes anyagokat, amelyekkel a szövetet befejezhetik—vagy más recepttel és kérdések nélkül vegyi fegyver előanyag-láncát táplálhatják. A hordók festékminőségű címkével érkeznek. A pecsétek késnek. A könyvelések nem egyeznek. Senkinek a soron nincs olcsó módja bebizonyítani, mi van valójában a szürke hordókban, mielőtt kinyitnák, összekevernék vagy csendben továbbadnák. Amíg a sor nem láthatja és ",
+    "stakeholder": "Rina Mercado, a sor munkaegészségügyi szószólója",
+    "pressureKeys": [
+      "Orrvérzések",
+      "Szürke hordók",
+      "Pecsétkésés"
+    ],
+    "places": [
+      "Weftbridge Festőművek Sor"
+    ]
+  },
+  "chem-bio--lab-kits-under-the-wrong-code": {
+    "title": "Laborkészletek rossz kód alatt",
+    "scene": "A Stonepass Határ Szárazkikötőben a rakodók ládákat nyitnak, amelyeknek mezőgazdasági érzékelőket és iskolai természettudományos készleteket kellene tartaniuk. Néhány éjszaka a csomagolóhab olyan palackokat rejt, amelyek érintésre égetik a bőrt. Mentők három dokkmunkást vittek el ebben az idényben. Az átélt kár egyszerű: akik dobozokat mozgatnak, hólyagosan mennek haza, és a városi rendelőnek nincs tartalék ágya, ha egy műszak rosszul sül el.\n\nA hajtóerő egy címkézési játék. Kettős felhasználású laborkészletek—felszerelés, amely a normál kutatást is támogathatja, vagy segíthet valakinek biológiai vagy vegyi fenyegetést építeni—hamis árukódok alatt utaznak. Az ellenőrzés éjszakai rései azt jelentik, hogy lezárt raklapok egy pecséttel és egy vállrándítással kelnek át. A brókerek tudják, mely kódokra integetnek át. Amíg a kikötő valós időben nem tudja a tartalmat az állításokhoz illeszteni, nem csak a papírhoz, ugyanaz a folyosó, amely a helyi laborokat táplálja, tovább szivárogtatja a rossz",
+    "stakeholder": "Jonas Veld, a szárazkikötő vámügyi kapcsolattartója",
+    "pressureKeys": [
+      "Rakodói égések",
+      "Hamis címkék",
+      "Éjszakai rések"
+    ],
+    "places": [
+      "Stonepass Határ Szárazkikötő"
+    ]
+  },
+  "chem-bio--what-the-outfall-never-names": {
+    "title": "Amit a kifolyó soha nem nevez meg",
+    "scene": "Lowfenben a bélbaktériumok hullámokban ütnek be. A szülők otthon tartják a gyerekeket. A nővérek ugyanazt a vizes betegséget írják kórrajzról kórrajzra a folyó menti háztömbökön. Az emberek forralják a vizet, és mégis rosszul érzik magukat. A kár a konyhákban és az iskolai mosdókban van, nem egy távoli jelentésben.\n\nA városi vízművek alatt ül egy vak kifolyó—egy leeresztő cső, amelyet a telep nem ujjlenyomatoz teljesen. Felfelé lévő boltok és egy kis szerződéses labor furcsa vegyi és biológiai hulladékot önthet a lefolyókba, amelyek abban a csőben találkoznak. A mintahalmok gyorsabban nőnek, mint ahogy a labor elolvashatná őket. Gyors génszekvenálás (a DNS betűsorrendjének gyors leolvasása) és olyan érzékelők nélkül, amelyek megnevezik, mi van a vízben, nem csak hogy milyen zavarosnak látszik, a művek vak marad. Ugyanaz a rés, amely elrejti a hétköznapi szennyezést, elrejthet egy szándékos ürítést is, amíg a város már beteg.",
+    "stakeholder": "Marta Singh, a művek laborfelügyelője",
+    "pressureKeys": [
+      "Bélbetegség",
+      "Vak kifolyó",
+      "Mintahalom"
+    ],
+    "places": [
+      "Lowfen Városi Vízművek"
+    ]
+  },
+  "chem-bio--loaner-strains-after-closing-time": {
+    "title": "Kölcsönzött törzsek záróra után",
+    "scene": "A Cedar Szerződéses Vivarium Park állatszobákat és padteret ad bérbe kis biotechnológiai csapatoknak. Záróra után a személyzet lázakat és köhögéseket jegyzett fel, amelyek a szobák közti rossz átviteleket követik. A kerítés menti szomszédok be akarják záratni a parkot. A kár személyes: a technikusok megbetegednek, és a szomszédos tömb nem bízik többé minden fehér furgonban.\n\nA mélyebb probléma a törzsmegosztás szigorú nyomonkövetési lánc nélkül. Kölcsönzött törzsek—élő kutatási mikrobák, amelyeket szerződéses ügyfelek között adnak át—kézfogásokon és közös fagyasztókon mozognak. A leltáralkalmazások lemaradnak. Egy oltómunkára szánt tenyészet félrecímkézve vagy hiányosan hagyhatja el az épületet. A kettős felhasználás kockázata nő, ha senki sem tudja bizonyítani, melyik szervezet melyik polcon ült. Amíg a park nem szekvenálhat, pecsételhet és naplózhat minden átvitelt, ugyanaz a rugalmas labormodell, amely a startupokat segíti ",
+    "stakeholder": "Dr. Noah Abebe, a vivarium biobiztonsági tisztje",
+    "pressureKeys": [
+      "Személyzeti lázak",
+      "Törzsmegosztás",
+      "Szomszédfélelem"
+    ],
+    "places": [
+      "Cedar Szerződéses Vivarium Park"
+    ]
+  },
+  "asteroid--mine-glare-blanks-the-karoo-rock-watch": {
+    "title": "Bányafény elhomályosítja a Karoo kőzetfigyelőt",
+    "scene": "A Sutherland körüli vendégházak félig üresen állnak. Családok, akik egykor sötétégbolt-hétvégéket foglaltak, lemondják, amikor az éjszaka tejszerű fehérré válik. A helyi kőzetfigyelő—kis távcsövek és kamerák, amelyek a Föld-közeli objektumokat, a bolygónkat eltalálható űrköveket vadásszák—elveszíti a halvány csíkokat a fényáradatban. A fennsíki külszíni bányák egész éjjel égve hagyják az áradófényeket a biztonság és a műszakmunka miatt. Ez a vakító fény a hajtóerő: kitörli a figyelőnek szükséges halvány jeleket, így a felfedezési ablakok zsugorodnak, miközben a foglalótáblák üresek maradnak, és az engedélyviták megakasztanak minden pajzs- vagy kijárási tilalom-megállapodást.",
+    "stakeholder": "Naledi Mokoena, közösségi sötétégbolt-koordinátor",
+    "pressureKeys": [
+      "Üres szállások",
+      "Égi vakítás",
+      "Engedélyzár"
+    ],
+    "places": [
+      "Sutherland Sky Belt, Northern Cape"
+    ]
+  },
+  "asteroid--dish-backlog-leaves-the-valley-guessing": {
+    "title": "Antenna-hátralék találgatásra kényszeríti a völgyet",
+    "scene": "Az Antelope Valley városházái minden címlapos kő után ugyanazzal a kérdéssel telnek meg: merre mutat, és ki figyeli? A polgári összekötők vékony frissítéseket posztolnak, mert a nagy követőantennák éjszakáikat javításban vagy mélyűri küldetések mögötti sorban töltik. Ha egy antenna tétlen, követési rések nyílnak—órák friss pálya nélkül egy Föld-közeli objektumon. A legénység ismeri a helyi hajtóerőt: hosszú javítási sor és megosztott időszabályok, amelyek a bolygóvédelmi méréseket hátratolják. Az emberek abbahagyják a riasztásokba vetett bizalmat. A perem menti boltok érzik a feszültséget, amikor a szülők pletykaéjszakákon otthon tartják a gyerekeket.",
+    "stakeholder": "Rosa Delgado, polgári követési összekötő",
+    "pressureKeys": [
+      "Követési rések",
+      "Riadófáradtság",
+      "Javítási sor"
+    ],
+    "places": [
+      "Goldstone Antelope Valley perem, Kalifornia"
+    ]
+  },
+  "asteroid--time-share-freeze-after-every-rock-scare": {
+    "title": "Időmegosztás-fagyasztás minden kőriadó után",
+    "scene": "Minden új űrkő-riadó után lefagynak a csúcsmenetrendek. A kupolák, amelyek pontosíthatnák a pályát, sötétek maradnak, amíg a mediátorok újratárgyalják, kié az éjszaka. A szállásdolgozók és idegenvezetők műszakokat veszítenek, amikor a túrák és a támogató munkák szünetelnek. Az átélt kár: üres fizetéshetek és felőrlődő idegek a hegy alatti hozzáférési közösségekben. A hajtóerő nem maga a kő—hanem egy törékeny időmegosztó rendszer. Minden félelemhullám újra felnyitja a bizalmi harcokat a szent föld, a tudományos sávok és a védelmi megfigyelés felett, így a fenyegetés rögzítéséhez kellő órák újra és újra bezárulnak.",
+    "stakeholder": "Kainoa Hale, csúcsműveleti mediátor",
+    "pressureKeys": [
+      "Zárt kupolák",
+      "Bérsokk",
+      "Bizalomtörés"
+    ],
+    "places": [
+      "Maunakea hozzáférési közösségek, Hawaiʻi-sziget"
+    ]
+  },
+  "asteroid--kinetic-stack-waits-while-the-range-idles": {
+    "title": "Kinetikus rakás vár, amíg a lőtér tétlen",
+    "scene": "Az Esrange peremén sorakoznak a próbáld-és-tartsd értesítések. Egy kinetikus rakás—a sziklaeltérítési teszt gyakorló hardvere—ládákban vár, miközben a lőtér csendes marad. A rénszarvaspásztorok stresszes állatokról számolnak be, amikor pletykakíséretek és szünetparancsok darabolják a naptárat világos végdátum nélkül. A családok a torlódást késő szerződésekként és nyugtalan legeltetési szezonokként élik meg. A helyi hajtóerő a felelősségi torlódás: átfedő szabályok arról, ki fizet, ha a teszt balul sül el, megakadályozzák a valódi védelmi gyakorlatot, így a város készenléti színházzal él a bevált mozdulatok helyett.",
+    "stakeholder": "Ingrid Larsson, lőtéri polgári integrációs vezető",
+    "pressureKeys": [
+      "Küldetésállás",
+      "Csordastressz",
+      "Felelősségi torlódás"
+    ],
+    "places": [
+      "Esrange perem, Kiruna község"
+    ]
+  },
+  "weather--when-the-pivot-runs-dry": {
+    "title": "Amikor a pivot kiszárad",
+    "scene": "A Drawdown Flatsen a központi körforgó öntözők még lassú köröket futnak, de a körök minden nyáron rövidebbek. A kukorica csúcsa délre fehérre ég. A kútszivattyúk homokot köhögnek. A családok kannákkal hordják a vizet a városból, mert a konyhai csapok homokot köpnek. A szövetkezet egyre mélyebbre fúr, és hosszabb öntözési fordulókat futtat, mert a régi vízjogok és a terményszerződések is ezt követelik. Ez a szokás gyorsabban üríti a víztartót, mint ahogy az eső újratölthetné, így a következő aszályos év keményebben sújt, mint az előző.",
+    "stakeholder": "Öntözési szövetkezet elnöke",
+    "pressureKeys": [
+      "Száraz Kutak",
+      "Vízpazarlás",
+      "Farmadósság"
+    ],
+    "places": [
+      "Drawdown Flats"
+    ]
+  },
+  "weather--orange-noon-at-ember-ridge": {
+    "title": "Narancssárga dél Ember Ridge-en",
+    "scene": "Ember Ridge rozsdaszínű égbolt alatt ébred. A gyerekek bent maradnak, az ablakokat leragasztják. A rendelő folyosója megtelik köhögő, vörös szemüket dörzsölő emberekkel. A város feletti gerinceken a bogár pusztította fenyők úgy állnak, mint a száraz gyufaszálak. A fakitermelő utak keskenyek, az égetésre váró rakások pedig évekig várnak a brigádokra. Amikor a szél és a hőség összeér, ezek a holt állományok gyorsan terjedő tüzet táplálnak, amely hetekig önti a füstöt a völgybe. A füst az a kár, amit az emberek ma éreznek. A kezeletlen holt fa az, ami újra és újra fellobbantja a következő füstfelhőt.",
+    "stakeholder": "Megyei közegészségügyi nővér",
+    "pressureKeys": [
+      "Füstnapok",
+      "Holt Faanyag",
+      "Rendelői Tömeg"
+    ],
+    "places": [
+      "Ember Ridge"
+    ]
+  },
+  "weather--the-river-takes-the-bend-again": {
+    "title": "A folyó újra elfoglalja a kanyart",
+    "scene": "A Levee Bendnél a folyó ugyanabba a kanyarba dől neki, amelyet egy évszázada követ. Homokzsákok támaszkodnak a tornáclépcsőkhöz. Penész kúszik a gipszkartonon azokban a házakban, amelyeket tavaly tavasszal és azelőtt is elöntött az ár. Az emberek táborágyakon alszanak a plébánia termében, amíg a víz apadását várják. A földből épült gátnak lágy pontjai és befejezetlen szakaszai vannak, ahol elfogyott a pénz. Minden nagy eső erősebben nyomja ezeket a réseket, és minden áttörés szélesebb utat tanít a folyónak a negyeden át. A családok most veszítik el otthonaikat, mert a gyenge vonal még mindig eldönti, merre megy az árvíz.",
+    "stakeholder": "Községi árterület-kezelő",
+    "pressureKeys": [
+      "Árvíz",
+      "Gátrések",
+      "Otthontalan Családok"
+    ],
+    "places": [
+      "Levee Bend"
+    ]
+  },
+  "weather--sirens-after-the-roof": {
+    "title": "Szirénák a tető után",
+    "scene": "A Windrow Court mobilházak rácsa a város nyílt peremén. Amikor a szirénák üvöltenek, a tetők lehámlanak, a falak behajlanak. Az emberek vágott kézzel másznak ki a megcsavarodott vázakból, és nincs száraz helyük aludni. A közösségi menhely éjfélre megtelik, és családokat utasít el. Sok otthon még mindig vékony pántokon és öregedő rögzítéseken ül, mert a telekbérleti díjak kevés pénzt hagynak felújításra, a park szabályai pedig lassítják a nehéz munkát. Erősebb viharok jönnek újra és újra a sík talajon át. A gyenge lekötések minden széllökést újabb rommá tett otthonná és újabb ágy nélküli éjszakává változtatnak.",
+    "stakeholder": "Mobilházlakók tanácsának vezetője",
+    "pressureKeys": [
+      "Szélkár",
+      "Gyenge Rögzítés",
+      "Menedékhely"
+    ],
+    "places": [
+      "Windrow Court"
+    ]
+  },
+  "mideast--ambulances-pay-twice-at-the-gate": {
+    "title": "A mentők kétszer fizetnek a kapunál",
+    "scene": "A két negyed közötti klinikacsíkon az éjszakai szülési fájdalmak és a lőtt sebek még mindig taxival érkeznek. A családok az órát nézik, miközben a sofőrök az acélkapunál vitatkoznak. Minden átkelés második készpénzes díjba kerülhet, és néha a mentő megfordul. Az anyák elveszítik a vérzés aranyóráját. Az asztmás gyerekek porviharokon át várnak oxigén-utánpótlás nélkül.\n\nA díjak nem csupán véletlenszerű lopás. Rivális ellenőrzőpont-csapatok a klinikai utat útdíj-franchise-ként kezelik. Ha a fegyverszünetek meginognak, az ár ugrik, és a szabályok figyelmeztetés nélkül változnak. A személyzet kiég és elmegy. Az igazgatóság tud kötözőszert raktározni, de nem tudja megállítani, hogy a kapu magát az ellátást adóztassa—és ez az adó a félelmet és a késedelmet tartja normálisnak abban, ahogy a betegek mozognak.",
+    "stakeholder": "Közösségközi klinikai igazgatóság",
+    "pressureKeys": [
+      "Elmaradt Ellátás",
+      "Kapu Díjak",
+      "Személyzet Elvándorlás"
+    ],
+    "places": [
+      "Porút Klinikasor"
+    ]
+  },
+  "mideast--shutters-rise-only-after-the-cut": {
+    "title": "A redőnyök csak a levágás után nyílnak",
+    "scene": "A Sáfrány utca régen hajnalban nyitott. Most a fémredőnyök lemaradnak, amíg valaki ki nem fizeti a reggeli levágást azoknak a férfiaknak, akik „őrzik a sikátort”. A fűszerárusok, telefonjavító bódék és kenyérstandok elveszítik a korai tömeget. A szülők tinédzsereket küldenek, hogy helyet fogjanak az engedélysorban, ami talán soha nem jön el. A tétlen napok felhalmozódnak; a ki kinek fizetett viták belesodródnak az utcába.\n\nA hajtóerő nem csupán az idegenektől való félelem. Az utcai útdíjak mozaikja—kis kényszerfizetések a nyitás, a kirakodás vagy az áthaladás jogáért—minden standot bevételi poszttá tesz a rivális bandák számára. A tisztességes könyvelés nem bír azzal a rendszerrel, amely azt jutalmazza, aki aznap a sarkot uralja. A kereskedelem zsugorodik, a pletykák megkeményednek, és a fiatalok megtanulják: a legbiztosabb bér az útdíj, nem a bolt.",
+    "stakeholder": "Kereskedők tisztességes útdíj egyesülete",
+    "pressureKeys": [
+      "Üres Standok",
+      "Utcai Útdíjak",
+      "Tétlen Fiatalok"
+    ],
+    "places": [
+      "Sáfrány Utca Szuk"
+    ]
+  },
+  "mideast--winter-walls-that-never-rise": {
+    "title": "Téli falak, amelyek sosem emelkednek",
+    "scene": "A régi buszdepó mögötti tömbökben a családok ponyvát feszítenek oda, ahol valaha lakásfalak álltak. Az eső megtalálja a matracokat. A nagyszülők lépcsőházakban alszanak, ha a szél letépi a műanyagot. A gyerekek memorizálják, melyik emeleten van még biztonságos sarok. Minden hideg évszakban ugyanaz az ígéret tér vissza: idén a külső falak felmennek a fagy előtt.\n\nRitkán mennek. A cement, a betonvas és az ablakkeretek egyik napról a másikra eltűnnek az építkezésekről, és a város másik felén eladják őket. Átfedő tulajdoni igények—kié melyik romos lakás—lefagyasztják az engedélyeket, miközben a brigádok várnak. A lopás és a papírharcok egymást táplálják: nincs biztonságos raktár, nincs kész fal; nincs kész fal, nincs bizonyíték, hogy megéri maradni. A törmelék nyitva marad, és a tél tovább nyer.",
+    "stakeholder": "Bérlők újjáépítő szövetkezete",
+    "pressureKeys": [
+      "Kitett Otthonok",
+      "Anyaglopás",
+      "Tulajdonviták"
+    ],
+    "places": [
+      "Törmelék Utca Tömbök"
+    ]
+  },
+  "mideast--the-canal-gate-becomes-a-weapon": {
+    "title": "A csatornakapu fegyverré válik",
+    "scene": "A keleti part paradicsomsorai a széleken barnulnak, miközben a nyugati part parcellái egy kicsit tovább zöldek maradnak. A gazdák hajnalban vödrökkel járják az árkot. A kutak sósak. A családok kölcsönt vesznek tartályos vízre, és elmulasztják az iskoladíjat, ha elvész a termés. A közös zsilipnél—a csatornakapunál, amely méri a vízhozamot—a viták lánccal és telefonos videókkal végződnek, nem tisztességes sorral.\n\nValaki mindig tartja a kart. Ha a felső szakasz politikája megromlik, a kapu emelővé válik: nyitva a szövetségeseknek, zárva a riválisoknak. A lejjebbi parcellák annak ütemezése szerint pusztulnak, aki legutóbb megszerezte a csörlőt. Az adósság nő. A rokonságok abbahagyják a magmegosztást. A föld még tudna élelmet teremni, de a helyi szokás, hogy a vízuralmat nyomásgyakorlásra használják, szándékos szűkösséget tart fenn, évadról évadra.",
+    "stakeholder": "Mindkét parti vízhasználók tanácsa",
+    "pressureKeys": [
+      "Terméskiesés",
+      "Kapu Elfoglalás",
+      "Családi Adósság"
+    ],
+    "places": [
+      "Ikerparti Csatornák"
+    ]
+  },
+  "nuclear--sirens-over-the-grain-elevators": {
+    "title": "Szirénák a gabonasilók felett",
+    "scene": "Hajnali kétkor a városi szirénák felébresztik az egész Silo Road mentén élőket. A gyerekek felülnek az ágyban. A silószemélyzet megdermed a futóhidakon. Capt. Maya Brooksnak kilencven másodperce van egy föld alatti kapszulában eldönteni: a blip valódi háború, vagy hibás adatfolyam. A családok már pakolják a készenléti táskákat, és kihagyják az éjszakai műszakot a szövetkezetben. A kár nem elvont: töredezik az alvás, nőnek a pánik miatti rendelőjárások, és az aratóteherautók tétlenül állnak minden hamis riasztás után. A hajtóerő a búza alatt ül. A régi indítási szabályok még mindig percekben mérik a bizonyítékot. A legénységi párok gyorsan váltják egymást, keveset alszanak, és cselekedniük kell, mielőtt valaki fent kétszer ellenőrizhetné az időjárás-radart vagy egy elakadt civil kapcsolatot. Amíg a kapszula nem lassíthatja az órát, és nem oszthat meg tisztább képet a silók felett élőkkel, egy félreolvasott éjszaka indítási paranccsá változtathatja a gabonaországot.",
+    "stakeholder": "Capt. Maya Brooks, rakétaharcászati legénységparancsnok",
+    "pressureKeys": [
+      "Éjszakai Szirénák",
+      "Rövid Gyújtók",
+      "Családi Félelem"
+    ],
+    "places": [
+      "Clearwater Silo Road, északi Great Plains"
+    ]
+  },
+  "nuclear--ice-clutter-looks-inbound": {
+    "title": "A jégzavar bejövőnek látszik",
+    "scene": "Permet csapódik az ablakokra a Floe Watch-on, miközben Sgt. Inuk Arnaq olyan nyomokat bámul, amelyek rakéták lehetnek – vagy jég és csatornafény, ami a fáradt szenzorokat téveszti meg. Amikor a tábla kigyullad, a halászhajók hazafelé sietnek, a kis rendelő pedig megtelik mellkasi fájdalommal és remegő kezekkel. Az idősek nem mernek éjjel a parti úton utazni. Az átélt kár ütemezhető félelem: elmaradó mentőrepülések, iskolából otthon tartott gyerekek, és egy váróterem, ami sosem ürül ki egy riadalom után. A hajtóerő maga az őrség. A hideg-tengeri zavar, a ritka műholdátvonulások és a rövid tűzmegtartási ablak arra kényszeríti Arnaq csapatát, hogy eszkaláljon, mielőtt egy második pillantás szétválaszthatná a jeget a bejövőktől. Ha a hegyfok nem érzékelhet tisztábban, és nem vehet percek előnyt találgatás nélkül, a hamis nyomok téli vihara valódi riasztást tolhat fel a láncon.",
+    "stakeholder": "Sgt. Inuk Arnaq, szenzorfúziós vezető",
+    "pressureKeys": [
+      "Hamis Nyomok",
+      "Tartási Idő",
+      "Rendelői Terhelés"
+    ],
+    "places": [
+      "Floe Watch Headland, Labrador-part"
+    ]
+  },
+  "nuclear--drills-without-a-shared-clock": {
+    "title": "Gyakorlatok közös óra nélkül",
+    "scene": "Folyami köd ül az Iron Quay felett, amikor két szomszéd ugyanazon a reggelen fegyveres gyakorlatot futtat, és egyik asztalnak sincs meg a másik órája. Col. Elena Popa telefonja kigyullad, ahogy a rakparti munkások elengedik a rakományhálókat, a szülők pedig kirántják a gyerekeket a piacról. A szirénák nem értenek egyet. A komp sorai veszekedésbe fordulnak. A kár helyi és testi: tolongás a hídon, kieső bér a dokkokon, és pletykák, amelyek délre kiürítik a polcokat. A hajtóerő nem a köd. Hanem a rejtett gyakorlatmenetrendek, a toldozott rádióhálók, és a hiányzó közös kép, ami bebizonyítaná: a bevetés gyakorlat, mielőtt valaki valódi nyitó lövésnek venné. Amíg az udvar nem mutathatja ugyanazt az idővonalat mindkét oldalnak és a városnak, egy rutin gyakorló nap is félreítélési spirálba fordulhat.",
+    "stakeholder": "Col. Elena Popa, közös dekonfliktáló asztal",
+    "pressureKeys": [
+      "Civil Pánik",
+      "Rejtett Gyakorlatok",
+      "Bizalmi Rés"
+    ],
+    "places": [
+      "Iron Quay Kapcsolattartó Udvar, alsó Duna-folyosó"
+    ]
+  },
+  "nuclear--near-send-on-patch-night": {
+    "title": "Majdnem-küldés javítási éjszakán",
+    "scene": "Egy malomváros feletti domboldali bunkerben a javítási éjszaka friss szoftvert jelent a parancsnoki linkeken, amelyek az indítási jogkört hordozzák. Eng. Kenji Okada figyeli, ahogy egy tiszta frissítési útvonal akadozik, felbillent egy vétójelzőt, majd majdnem élőként enged át egy tesztparancsot. Kint kinyitják a templom pincéit, a büfé kiürül, amikor a pletyka eléri a Fő utcát. Az emberek a kezükben érzik a kárt: otthon tartott gyerekek, stressz miatt betegszabadságra menő éjszakai nővérek, és egy város, amely minden generátortesztnél összerezzen. A hajtóerő a törékeny irányítástechnika. Az öregedő kapcsolók, a sietős javítások és a zsugorodó emberi vétóablak azt jelenti: egy karbantartási hiba szándéknak tűnhet. Ha a Granite Hollow nem bizonyíthatja biztonságosnak minden javítást, és nem tart emberi megállítót a körben, egy majdnem-küldés lesz az a történet, ami sosem ér igazán véget.",
+    "stakeholder": "Eng. Kenji Okada, C3-biztosítási vezető",
+    "pressureKeys": [
+      "Majdnem Balesetek",
+      "Vétó Szűkülés",
+      "Városi Szorongás"
+    ],
+    "places": [
+      "Granite Command Hollow, appalache-i előhegyek"
+    ]
+  },
+  "slavery--papers-locked-below-the-ice-line": {
+    "title": "Papírok a jégvonal alatt zárva",
+    "scene": "Éjszaka a klinikahajó a Ranong-csatorna hosszúfarkú csónakjaihoz köt ki. A fedélzeti munkások összetört ujjakkal, kötélégéssel és lázzal másznak le. Sokan nem tudnak elmenni, amikor az út véget ér. A kapitányok a személyazonosító okmányaikat zárható dobozban tartják a jégvonal alatt, és a bent tartást adósságnak nevezik ételre, üzemanyagra és a kifelé útra. A kár egyszerű: a férfiak sérülten és fizetés nélkül dolgoznak, a parton élő családok pedig nem hallanak róluk. A hajtóerő helyi és makacs. A vevők kilóra fizetnek a fogásért, legénység-ellenőrzés nélkül, ezért a skipperek olcsó, csapdába ejtett munkaerőt tartanak, és ugyanazok a hajók tovább járnak.",
+    "stakeholder": "Kikötői klinika felkereső orvosa",
+    "pressureKeys": [
+      "Éjszakai Sérülések",
+      "Legénységi Adósság",
+      "Zárolt Okmányok"
+    ],
+    "places": [
+      "Ranong-csatorna hajói"
+    ]
+  },
+  "slavery--the-scale-that-never-zeros-the-loan": {
+    "title": "A mérleg, ami soha nem nullázza a kölcsönt",
+    "scene": "A Sambas pálmatábláin a gyerekek kihagyják az iskolát, amikor a betakarítás csúcsra jár. A szülők céges barakkokban élnek, és olyan kölcsön alatt szedik a gyümölcsöt, amit soha nem tudnak lezárni. A mérlegelő fészer játssza a trükköt. A gyümölcsöt könnyűnek jelölik a céges mérlegen, így a szerszámokra és rizsre adott előleg nő ahelyett, hogy csökkenne. A tanárok üres padokat és fáradt gyerekeket látnak, akik hajnal után a sorokban dolgoznak. A kár: elveszett iskola és csapdába esett családok. A hajtóerő maga a fészer: a felügyelők, akik az egyetlen mérleget, az egyetlen boltot és az egyetlen kivezető utat ellenőrzik, kényszermunkával táplálják a malmokat.",
+    "stakeholder": "Ültetvényi iskolai tanár",
+    "pressureKeys": [
+      "Elmulasztott Iskola",
+      "Mérlegcsalás",
+      "Barakk Szabályok"
+    ],
+    "places": [
+      "Sambas pálmatáblák"
+    ]
+  },
+  "slavery--knot-counts-after-midnight": {
+    "title": "Csomószám éjfél után",
+    "scene": "Bhadohi szövőszék-utcáin a csomószám éjfél után is megy. Gyerekek kötik a finom szőnyegeket, mert a kis kezek gyorsak és csendesek. A családok hónapokkal ezelőtt készpénzelőleget vettek fel a szövőszék tulajdonosától. Ez az adósság a póráz. Amikor egy gyermekjogi tanácsadó meglátogat, ugyanezeket a gyerekeket elrejtik vagy betanítják, hogy mosolyogjanak egy hamis auditfüzethez, ami soha nem egyezik a valós órákkal. A kár világos: fájó szemek, megkurtított alvás és iskola elhagyva darabbérért. A hajtóerő az előleg-és-export lánc ezeken az utcákon — tulajdonosok, akik adóssággal veszik meg a csendet, és papírokkal állítják, hogy a munka tiszta.",
+    "stakeholder": "Gyermekjogi tanácsadó",
+    "pressureKeys": [
+      "Gyerekórák",
+      "Családi Előlegek",
+      "Hamis Auditok"
+    ],
+    "places": [
+      "Bhadohi szövőszék-utcák"
+    ]
+  },
+  "slavery--ore-sacks-instead-of-schoolbags": {
+    "title": "Érceszsákok iskolatáska helyett",
+    "scene": "Kolwezi mellett fiúk és fiatal férfiak kobaltércet cipelnek zsákokban kézzel ásott árkokból. A gerincek korán elgörbülnek. A fizetés papírcédulákban jön, nem készpénzben, amit a városban el lehet költeni, és a cédulák csak a főnök standjánál érvényesek. Egy mobil egészségügyi állomás nővére vállakat ragaszt be és fertőzött vágásokat kezel, aztán nézi, ahogy ugyanaz a csapat visszamegy lefelé. A kár: tönkrement testek és bérek, amik soha nem szabadítanak fel senkit. A hajtóerő a gödör peremén ül: helyi főnökök, akik ellenőrzik a bejutást, a cédulákat és azt, hogy ki kerül fel a következő vevő teherautójára, életben tartják a kényszerásást az ásványkereskedelemért.",
+    "stakeholder": "Mobil egészségügyi állomás nővére",
+    "pressureKeys": [
+      "Gerincterhelés",
+      "Cédulafizetés",
+      "Gödörfőnökök"
+    ],
+    "places": [
+      "Kolwezi ásóárkok"
+    ]
+  },
+  "women--the-walk-home-after-midnight": {
+    "title": "Hazafelé éjfél után",
+    "scene": "A Riverside Szülészeten az éjszakai műszak nővérei hajnali egykor végeznek. Az utolsó városi busz órákkal ezelőtt elment. Sok nő egyedül sétál a sötét folyóparti úton, vagy fivérre vagy férjre vár, aki talán nem jön el. Múlt hónapban két nővért kiraboltak; az egyik már nem jött dolgozni. A kórház továbbra is ugyanazt a beosztást teszi ki, mert a biztonságos fuvarokat minden nő magáncsaládi kötelességének tekintik, nem a munka részének. Az üres posztok hosszabb vajúdást jelentenek az anyáknak a kórtermekben, és a félelem elűzi a képzett személyzetet.",
+    "stakeholder": "Éjszakai műszak nővéreinek biztonsági csoportja",
+    "pressureKeys": [
+      "Éjszakai Félelem",
+      "Fuvarhiány",
+      "Személyzetvesztés"
+    ],
+    "places": [
+      "Riverside Szülészet Műszakkapu"
+    ]
+  },
+  "women--the-deed-still-needs-his-name": {
+    "title": "Az okirathoz még kell az ő neve",
+    "scene": "Az Old Bundon az özvegyek aratási papírokkal jönnek a földhivatali pulthoz, és bélyegző nélkül távoznak. A nyilvántartás nem frissít egy mezőgazdasági tulajdonjogot, hacsak egy élő felnőtt férfi nem írja alá—még akkor sem, ha a férj meghalt, és a feleség évek óta műveli a földet. Bélyegző nélkül a hitelezők és az unokatestvérek igénylik a talajt. A családok ugyanabban az évszakban veszítik el a rizst és a bérleti pénzt. A szabály nem elfeledett szokás a polcon; a hivatalnokok minden kedden érvényesítik, mert az adatbázis és a papír űrlapok továbbra is hiányos tulajdonnak tekintik az egyedülálló nőt.",
+    "stakeholder": "Özvegyei földjogi pult",
+    "pressureKeys": [
+      "Földvesztés",
+      "Tulajdoni Akadály",
+      "Jogi Bizonytalanság"
+    ],
+    "places": [
+      "Old Bund Földhivatal"
+    ]
+  },
+  "women--the-welding-bay-closes-at-dusk": {
+    "title": "A hegesztőműhely alkonyatkor bezár",
+    "scene": "Az East Yard Szakiskola villanyszerelőket és hegesztőket képez, de a gyakorlati műhely bezár, amikor a nap lenyugszik. A női tanoncok, akik vacsorát főznek vagy kisebb testvéreket hoznak, lemaradnak az egyetlen nyitva tartó gépekről. A férfiak teljesítik az óráikat; a nők elméleti krediteket gyűjtenek és elakadnak. A munkaadók naplózott hegesztési időt akarnak, így a rés állandó felvételi akadállyá válik. A beosztás egy régi biztonsági szabály és a lányok korai hazaküldésének szokása körül íródott—nem az körül, kinek van ténylegesen szüksége a szerszámokra. A családok ezután visszavonják a lányokat a fizetetlen gondozási munkába, és a műhelypad többnyire férfi marad.",
+    "stakeholder": "Női tanoncok koalíciója",
+    "pressureKeys": [
+      "Készségakadály",
+      "Műhelyzár",
+      "Családi Visszahúzás"
+    ],
+    "places": [
+      "East Yard Szakiskola"
+    ]
+  },
+  "women--the-form-still-wants-his-signature": {
+    "title": "Az űrlap még mindig az ő aláírását kéri",
+    "scene": "A Lakeview pultnál egy nő végigülheti a tanácsadást, és mégis fogamzásgátló vagy utókövetési időpont nélkül távozhat, ha a hivatalnok férji aláírást követel a beleegyezési soron. Egyes partnerek munkában vannak; egyesek megtagadják; egyesek miatt jött egyedül. A bábák azt látják, hogy az ismétlődő terhességek és fertőzések ugyanazokban a negyedekben emelkednek. Az akadály nem csak a várótermi szégyen—ez egy helyi felvételi szabály, amely a felnőtt nőket férfi engedélyre szorulónak tekinti, mielőtt az alapellátást kiadnák. A stigma másokat még a sorba állástól is visszatart.",
+    "stakeholder": "Közösségi bábák hálózata",
+    "pressureKeys": [
+      "Ellátásmegtagadás",
+      "Beleegyezési Kapu",
+      "Rendelői Stigma"
+    ],
+    "places": [
+      "Lakeview Családtervezési Pult"
+    ]
+  },
+  "automation--aisles-that-pick-themselves": {
+    "title": "Folyosók, amelyek maguk szednek",
+    "scene": "A Cedar Junctionnél az éjszakai szedőcsapat még mindig a hosszú folyosókon jár a hideg fények alatt. A megrendelések régen stabil órákat jelentettek. Most a fali képernyők magasabb darabszámokat villognak, miközben a kocsik fele üresen gurul, mert a szoftver már kiosztotta a könnyű rekeszeket a gépeknek. Az emberek vékonyabb fizetésben és abban a csendes szorongásban érzik, ami minden műszaklista kirakása előtt rájön. A hajtóerő nem távoli, titokzatos technika. A cég folyamatosan több raktári robotot és MI-útvonaltervezést vásárol, amely az emberi szedőket túlcsorduló szelepként kezeli. Valahányszor a rendszer megveri az előző heti sebességet, a központ újabb emberi blokkot vág le, és emeli a kvótát azokon, akik maradnak. A lakbér nem vár. A csapat bizalmijának helyi utat kell feltalálnia, mielőtt az éjszakai padló csak szenzorokból és egy vázlatos személyzetből áll.",
+    "stakeholder": "Éjszakai szedőcsapat bizalmija",
+    "pressureKeys": [
+      "Állások",
+      "Szedési kvóták",
+      "Lakbérnyomás"
+    ],
+    "places": [
+      "Cedar Junction Teljesítési Központ"
+    ]
+  },
+  "automation--medallions-against-empty-curbs": {
+    "title": "Medálok az üres járdaszegélyek ellen",
+    "scene": "Harborview független sofőrjei még mindig sorba állnak a régi diszpécsergarázsnál a komp lehajtói mellett. A medálhitelek és az autó részletei nem csökkennek, amikor az app elcsendesedik. Az utasok most geokerített robotaxikba szállnak a vízparti hurkon, és a járdaszegély, ami régen fuvarokat jelentett, hosszú szakaszokon üresen áll. A sofőrök az elmaradt iskolai díjakban és abban a szégyenben érzik a kárt, hogy tétlenül ülnek, miközben a turisták filmezik a vezető nélküli furgonokat. A helyi hajtóerő egyszerű és makacs: a flottacégek MI-vel pontozzák az útvonalakat, és először a nyereséges rövid fuvarokra tolják az önvezető autókat. Az emberi sofőrök kapják a maradékot, a késő éjszakákat és a pontozásbeli büntetést, ha visszautasítják a veszélyes melókat. A szövetkezeti vezetőnek olyan eszközök kellenek, amelyekkel az emberek keresni és mozogni tudnak, mielőtt az adósság végleg bezáratja a garázskapukat.",
+    "stakeholder": "Független sofőr-szövetkezet vezetője",
+    "pressureKeys": [
+      "Állások",
+      "Flottapontok",
+      "Adósság"
+    ],
+    "places": [
+      "Harborview Sofőr-diszpécsergarázs"
+    ]
+  },
+  "automation--charts-coded-without-the-wing": {
+    "title": "Kódolt kartonok a szárny nélkül",
+    "scene": "A Lakeside bevételi szárnyában a kódolók régen orvosi jegyzeteket alakítottak számlázási kódokká, amelyekből a kórház megél. Most egy MI kartonolvasó ebéd előtt megírja a legtöbb kódot, és a vezetők a szoftver által felállított célokhoz mérik az egységet. Az emberek akkor érzik a kárt, amikor a teljes állások ideiglenes ellenőrző műszakokká válnak, a diákhitel pedig továbbra is esedékes. Nő a képernyőbe merülő fáradtság, mert a megmaradt munka csak a kusza szélső esetek, amiket a modell visszadob. A hajtóerő, amely folyamatosan vágja az állásokat, helyi és egyszerű: a kórház a kódoló MI-t azért vette, hogy gyorsabb igényeket és kevesebb emberi órát érjen el, majd a létszámot az új kartoncélokhoz kötötte. Minden tiszta hónap bizonyíték arra, hogy újabb asztal elmehet. A kódolóegység képviselőjének újra fel kell építenie a tudást, a fizetést és a célt ezeken a falakon belül, mielőtt a szárny csak egy szerverszoba lesz.",
+    "stakeholder": "Kódolóegység képviselője",
+    "pressureKeys": [
+      "Állások",
+      "Kartoncélok",
+      "Hitelteher"
+    ],
+    "places": [
+      "Lakeside Kórház Bevételi Szárny"
+    ]
+  },
+  "automation--sorters-took-the-piece-rate-weeks": {
+    "title": "A válogatók elvitték a darabbéres heteket",
+    "scene": "A Sunridge-nél a szezonális csapatok régen megtöltötték a csomagolókamrát a bogyós hetekre, és darabbéres készpénzt kerestek, ami átvitte a családokat a sovány hónapokon. Az optikai válogatók és a csomagolókarok most átveszik a gyors sorokat. Az emberek akkor érzik a kárt, amikor a szezon néhány takarítónapra rövidül, és a gyerekek észreveszik, hogy elfogyott a bevásárlópénz. A gyümölcsminőséget ismerő kezek tétlenül ülnek, miközben a kamra tovább zümmög. A rendszer, amely folyamatosan törli a heteket, a padlón van: a tulajdonosok minden aratáskor több robotot és szenzorsort telepítenek, mert a vevők egységes dobozokat követelnek gépi sebességgel, és a kamra a szomszéd farmokkal versenyez a csomagolási ütemben. Az emberek a torlódások és az éjszakai túlcsordulás pufferévé válnak, nem a magcsapattá. A szezonális szervezőnek helyi munkát, készségeket és részesedési szabályokat kell feltalálnia, mielőtt a kamra szinte emberek nélkül futtat le egy teljes szezont.",
+    "stakeholder": "Szezonális csapatszervező",
+    "pressureKeys": [
+      "Állások",
+      "Csomagolási sebesség",
+      "Készségek"
+    ],
+    "places": [
+      "Sunridge Bogyós Csomagolókamra"
+    ]
+  },
+  "refugees--hostels-full-stamps-still-pending": {
+    "title": "Tele a szállók, a pecsétek még függőben",
+    "scene": "A régi vasúti telep mögötti sávon három szállás osztozik egy mosókötélen és egy soha ki nem ürülő várótermen. A családok váltásban alszanak. A gyerekek a lépcsőfordulókon írják a leckét, miközben a szülők olyan telefonszámokat szorongatnak, amelyekkel az időpontok újabb hetet csúsznak. A kár egyszerű: nincs saját ágy, hideg étel, és a félelem, hogy egy elmulasztott hívás mindent elölről indít. Ami a tolongást táplálja, nem csak a határ. Egy lassú helyi papírmalom — a pecsétpult, a közös szkenner, a szabály, hogy egy hiányzó űrlap nullázza a sort — a rövid tartózkodásokat hónapokká nyújtja. A napszámos főnökök tudják, ki van beszorulva, és lejjebb vágják a bért. Nora szövetkezete pótágyakat nyithat. A hátralékot egyedül nem tudja eltakarítani.",
+    "stakeholder": "Nora Velez, szállásszövetkezeti koordinátor",
+    "pressureKeys": [
+      "Zsúfoltság",
+      "Papírkésés",
+      "Bérnyomás"
+    ],
+    "places": [
+      "Paso del Norte Szállássáv"
+    ]
+  },
+  "refugees--second-breach-no-parcel-left": {
+    "title": "Második gátszakadás, nem maradt telek",
+    "scene": "A második gátszakadás után az út sár- és kék ponyvaszalag. Akik itt évtizedekig gazdálkodtak, most kölcsönkályhákon főznek egy iskolai tornateremben. A káruk: vizes padló, tönkrement vetőmag, és gyerekek, akik már nem kérdezik, mikor mennek haza. A hajtóerő nem csak a folyó. A megyei tulajdoni térképek még mindig fél telkeket egyetlen tulajdonos nevével kezelnek egy papírkönyvből, amit elmosott a víz. Tiszta tulajdonjog nélkül a családok nem igényelhetnek újjáépítési segélyt vagy biztonságos telket a dombon. Így elmennek — vagy limbóban maradnak, amíg a következő árhullám épül. Dara edző kölcsönössegély-csapata homokot és levest hord. Szükségük van egy módra, hogy bebizonyítsák, kihez melyik föld tartozik, mielőtt az út végleg kiürül.",
+    "stakeholder": "Dara Nguyen edző, gát menti kölcsönössegély-vezető",
+    "pressureKeys": [
+      "Áradás",
+      "Elveszett Tulajdon",
+      "Elvándorlás"
+    ],
+    "places": [
+      "Old South Levee Road"
+    ]
+  },
+  "refugees--wounded-at-the-ridge-clinic-gate": {
+    "title": "Sebesültek a gerinci klinika kapujánál",
+    "scene": "Éjjel a gerinci klinika előbb hallja a csizmákat a kavicson, mint ahogy az arcokat látná. Egyes érkezők a csapástól betegek. Egyesek sérültek. A várópad megtelik; az oxigéntartály egyre halkabban sziszeg. A betegek a kárt hosszú éjszakákban, kezeletlen sebekben és egy ajtóban érzik, amely néha zárva marad, ha az osztály túl van a biztonságos terhelésen. Ami a sort növeli, egy helyi kapuszabály: támogatói levél vagy egyeztetett ágykód nélkül az éjszakai személyzetnek a két órával lejjebb lévő városi kórház felé kell irányítania az embereket. A szabály a káosz megállítására született. Most a legbetegebbeket visszadobja az útra, és kiégeti a bent maradó nővéreket. Dr. Okonkwo sorrendezheti a betegeket. Szüksége van áramra, nyilvántartásokra, és egy igazságosabb módra, hogy kinyissa a kaput anélkül, hogy az osztály összeomlana.",
+    "stakeholder": "Dr. Samira Okonkwo, éjszakai sorrendezés vezetője",
+    "pressureKeys": [
+      "Beteg Éjszakák",
+      "Kapuőrzés",
+      "Személyzeti Kiégés"
+    ],
+    "places": [
+      "San Lázaro Gerinci Klinika"
+    ]
+  },
+  "refugees--ferry-cuts-addresses-that-sink": {
+    "title": "Kompkimaradások, süllyedő címek",
+    "scene": "A kompszínek nedves kötél és gázolaj szagúak. Ha egy járatot törölnek, az emberek padokon alszanak, papírjaik műanyag zacskóban. Az ágynemű nedves marad. A gyerekek kihagyják az iskolát a túlparton. Az átélt kár: hideg éjszakák, kiesett bér, és levél, ami soha nem találja meg őket. A hajtóerő a kikötői irodában ül: a kikötőhely-jogok és a „lakcímigazolás” még mindig mólószámokhoz kötődnek, amelyek elárasztanak és változnak. Ha a színed száma eltűnt, nehezebb munkára beosztani, nehezebb szárazföldi szállást kapni, és te vagy az első, aki elveszíti a helyét, amikor a kapitánynak könnyítenie kell a terhelésen. Verekedések törnek ki, hogy ki szálljon fel. Marlow kapitány pultja a békét próbálja tartani. A mólónak száraz kikötőhelyekre, emberekkel mozduló megbízható azonosítókra, és olyan áramra van szüksége, amely nem hal meg a dagállyal.",
+    "stakeholder": "Eli Marlow kapitány, tengerész és kompmunkások pultja",
+    "pressureKeys": [
+      "Nedves Ágynemű",
+      "Halott Címek",
+      "Kikötőhely-Harcok"
+    ],
+    "places": [
+      "Keleti Móló Kompszínek"
+    ]
+  },
+  "ag--bare-winter-fields-blow-the-county-thin": {
+    "title": "Csupasz téli földek fújják vékonyra a megyét",
+    "scene": "Aratás után a dombok meztelenül állnak. A márciusi szelek felkapják a finom termőtalajt, és barnára festik a délt. A gyerekek homokot törölnek a szemükből a buszmegállóban. Az idősebb gazdák köhögve járnak a rendelőbe, amit nem hagyhatnak ki. A bérlők minden holdat készpénzterménybe hajszolnak, mert a földtulajdonosok teljes termelést akarnak, a bankok pedig fizetést. A takarónövények és a hosszabb pihentetés pénzbe kerül, ami senkinek sincs a vékony haszonkulcsok mellett, így a föld csupasz marad, és a por jön tovább.",
+    "stakeholder": "Megyei talajvédelmi körzet és bérlőgazdák szövetsége",
+    "pressureKeys": [
+      "Poros Napok",
+      "Csupasz Földek",
+      "Gazdaadósság"
+    ],
+    "places": [
+      "Löszkanyar Megye"
+    ]
+  },
+  "ag--full-sun-spice-rush-kills-the-mist-forest": {
+    "title": "Teljes napfényes fűszerroham öli a köderdőt",
+    "scene": "A vevők csúcsárat fizetnek a napon termett fűszerért, ezért a szövetkezet tagjai kivágják az árnyékadó fákat, amelyek egykor a ködöt tartották. Lombkorona nélkül a talaj megsül, aztán lecsúszik az első heves esőben. A források, amelyek az alsó teraszokat táplálták, minden száraz évszakban gyengébben folynak. A családok messzebbre hordják a vizet, és nézik, ahogy a sár egyik napról a másikra elviszi a magágyakat. A hajtóerő egyszerű: a rövid szerződések jutalmazzák a tarvágásos teljes napfényt, és büntetik azt, aki hosszú távra megtartja az erdőborítást.",
+    "stakeholder": "Terasz-szövetkezet és forrásőrség",
+    "pressureKeys": [
+      "Sárlavinák",
+      "Forráshozam",
+      "Árnyékveszteség"
+    ],
+    "places": [
+      "Ködvonal Fűszerteraszok"
+    ]
+  },
+  "ag--spec-sheets-turn-salad-rows-into-spray-alleys": {
+    "title": "Követelménylisták permetezőfolyosóvá teszik a salátasorokat",
+    "scene": "Az iskolakonyhák és a nagy vevők tökéletes leveleket követelnek, nulla folttal. A körgyűrű menti termelők naptár szerinti permetezéssel teljesítik ezeket a követelményeket; a permet átsodródik az udvarokra és a nyitott ablakokra. A szülők bent tartják a gyerekeket a kezelés reggelén. A mezei munkások kiütésekkel és fejfájással hiányoznak a műszakokról. A rendszer, ami ezt fenntartja, maga a felvásárlási szerződés: ha nem felel meg a kinézeti szabványnak, a szállítmányt visszautasítják, így a permetezési ütemterv akkor is rögzítve marad, amikor kevés a kártevő.",
+    "stakeholder": "Városperemi termelőszövetség és iskolai étkeztetési vevők",
+    "pressureKeys": [
+      "Permetsodródás",
+      "Betegnapok",
+      "Vevőzár"
+    ],
+    "places": [
+      "Körgyűrű Zöldövezet"
+    ]
+  },
+  "ag--pump-wars-salt-the-seed-beds": {
+    "title": "Szivattyúháborúk sózzák a magágyakat",
+    "scene": "Mindenki a szomszéd kútjával versenyez. A mélyebb szivattyúk brakkos vizet húznak fel olyan földekre, ahol egykor tiszta takarmány és zöldség nőtt. A palánták a gyökerüknél égnek. A tejelő állományok vásárolt takarmányt esznek, miközben a zöldséges parcellák másodszor is elbuknak. A vízügyi hatóság közös szabályai foszlanak, mert minden gazdaság, amely erősebben szivattyúz, egy szezont lop el a következőtől. Amíg a verseny nem lassul, a só tovább emelkedik, és az ültetvények tovább pusztulnak.",
+    "stakeholder": "Polder vízügyi hatóság és vegyes tejes–zöldséges szövetség",
+    "pressureKeys": [
+      "Talajsó",
+      "Elbukott Ültetés",
+      "Szivattyúverseny"
+    ],
+    "places": [
+      "Brakkos Polder-szakasz"
+    ]
+  },
+  "food--blight-takes-the-parish-potatoes": {
+    "title": "Burgonyavész viszi a plébánia krumpliját",
+    "scene": "A Ladder Ridge Plébánián az iskolakonyha a kápolna mögötti sávföldek burgonyájára épül. A gyerekek most félig tele tálcákkal kelnek fel, mert a püré íze furcsa, és a fejadagok zsugorodtak. Elena, aki a konyhát vezeti, péntekre üres zsákokat számol, és kisebb ebédeket küld haza ugyanazokban a szatyrokban. A kár egyszerű: a családok kihagynak étkezéseket, ha a plébánia termése elbukik, és az ingyen ebéd volt sok gyerek egyetlen biztos tányérja. Ami fenn tartja a gondot, az a vész, ami nedves tavaszonként soronként egyre gyorsabban ugrik, miközben a termelők továbbra is ugyanazt a félretett magot ültetik, és későn permeteznek, mert a korai tesztek pénzbe kerülnek, amijük nincs. Amíg valaki nem tudja gyorsan leolvasni a kórokozót, nem cserél be ellenállóbb állományt, és nem figyeli a földeket, mielőtt a levelek megfeketednek, a plébánia továbbra is kisebb merőkanalakkal eteti az éhséget.",
+    "stakeholder": "Elena, plébániai iskolakonyha-vezető",
+    "pressureKeys": [
+      "Éhség",
+      "Termésvész",
+      "Magadósság"
+    ],
+    "places": [
+      "Ladder Ridge Parish"
+    ]
+  },
+  "food--dawn-crates-rot-at-the-gate": {
+    "title": "Hajnali ládák rothadnak a kapunál",
+    "scene": "Napkelte előtt a Copper Gate Wholesale-nál zsúfolt zöldség- és gyümölcsládák ülnek a melegben, miközben a kapu nyilvántartása vánszorog. Mire az árusok kiviszik az árut a nyílt piacra, a levelek megfonnyadnak, a puha gyümölcs leve a betonra csorog. Jamal az árusok szakszervezetének futára, és ugyanazt a panaszt hallja: a vevők elmennek a pépes rakások mellett, az árusok lenyelik a veszteséget, vagy addig emelik az árat, amíg a törzsvendégek elmaradnak. A piac körüli házakban ezt üresebb fazekakként és több sült keményítőként érzik, mert a friss étel túl drága, vagy soha nem érkezik épségben. A hajtóerő nem csak a balszerencse. Áramkimaradások kiütik a régi hűtőket, a teherautók torlódnak közös menetrend nélkül, és a díjak akkor is minden standot terhelnek, ha a láda nem éli túl. A romlás bele van építve abba, ahogy a kapu mozgatja az ételt, és amíg a hűtőlánc, az ütemezés és a közös rend nem áll helyre, a kapu továbbra is éhséget szállít friss étel helyett.",
+    "stakeholder": "Jamal, árus-szakszervezeti futár",
+    "pressureKeys": [
+      "Éhség",
+      "Romlás",
+      "Árusdíjak"
+    ],
+    "places": [
+      "Copper Gate Wholesale"
+    ]
+  },
+  "food--wells-on-the-circuit-turn-to-mud": {
+    "title": "A körzet kútjai sárrá válnak",
+    "scene": "A Thorn Well Circuit mentén Nia poros kört jár mérlegekkel és táplálkozási csomagokkal. A tanyák, amelyek egykor tiszta vizet húztak a konyhakertekhez, most barna iszapot adnak, vagy száraz csöveket. Az anyák sovány karú gyerekeket mutatnak neki, és olyan csomagokat kérnek, amiből már neki is kevés van. Az átélt kár az éhség és a legyengült gyerekek, amikor a kertek elpusztulnak, és a tej hígul, mert az állatok isznak először. Ami életben tartja a gondot, több mint az aszály. A közös kutak vitatott kerítésvonalakon ülnek, a szivattyúk csak akkor járnak, ha valaki tud nélkülözni gázolajat, és senkinek nincs közös térképe arról, melyik víztartó bírja még. A földtulajdonosok zárják a kapukat; a kisebb telkek veszítik el először a hozzáférést. Amíg a vizet meg nem mérik, igazságosan meg nem osztják, és szűkös üzemanyag égetése nélkül fel nem emelik, a körzet továbbra is kerteket porrá, rendelőket pedig ételosztó sorokká változtat.",
+    "stakeholder": "Nia, mobil táplálkozási segítő",
+    "pressureKeys": [
+      "Éhség",
+      "Száraz Kutak",
+      "Kerítésvonalak"
+    ],
+    "places": [
+      "Thorn Well Circuit"
+    ]
+  },
+  "food--barges-pass-the-small-jetties-by": {
+    "title": "Az uszályok elhaladnak a kis mólók mellett",
+    "scene": "A Millrace Flatsen a szövetkezeti siló még áll a régi malomárok mellett, de a nagy uszályok elcsúsznak a kis mólók mellett anélkül, hogy kikötnének. Oksana vezeti a könyvelést, és nézi, ahogy a lekötött gabona távoli elevátorok felé távozik, miközben a helyi pékek üres levegőre licitálnak. A háztartások nyújtják a kását, és kihagyják a fehérjét; a szövetkezeti polc, ahol egykor tagi liszt állt, most papír IOU-kat mutat. A kár üres kamrák egy olyan helyen, amely még mindig gabonát termeszt a víz láttán. A hajtóerő hitel- és útvonalkötés: a mélyebb hitelű vevők lefoglalják az uszályhelyeket, az oldalsó mólóknak nincs gyors rakodóeszközük, és a szövetkezet papírnyilvántartása nem tudja igazolni az igényt, mielőtt a hajó már elhaladt. Amíg a kis dokkok jelezni, rakodni és elszámolni tudnak időben a fő csatornával, a flats továbbra is telítettséget exportál és éhséget importál.",
+    "stakeholder": "Oksana, szövetkezeti silókönyvelő",
+    "pressureKeys": [
+      "Éhség",
+      "Elterelt Gabona",
+      "Hitelkötés"
+    ],
+    "places": [
+      "Millrace Flats"
+    ]
+  },
+  "eco--cranes-over-concrete": {
+    "title": "Daruk a beton felett",
+    "scene": "A Cattail Bend Flatsen a tavaszi dagály most már a nappalikban ül. A gyerekek deszkákon mennek iskolába. A pangó vízben szúnyogok tenyésznek, és az utolsó gémfészkek zsugorodó fűszigeteken ülnek. A mocsár egykor elnyelte a viharvizet és táplálta az öblöt. A fejlesztők tovább töltik a nedves talajt, és raktárakhoz öntik a betonlapokat, mert a rövid bérletek gyorsabban fizetik a lakónegyedi tanács számláit, mint bármely helyreállítási támogatás. Minden új lemez több gyékénygyökeret öl meg, így a következő vihar erősebben csap le. Az emberek a cipőjükben érzik az áradást; a hajtóerő a bérleti pénz, ami jutalmazza a szivacs leburkolását.",
+    "stakeholder": "Mocsári lakónegyedi tanács",
+    "pressureKeys": [
+      "Áradás",
+      "Mocsárvesztés",
+      "Bérleti Pénz"
+    ],
+    "places": [
+      "Cattail Bend Flats"
+    ]
+  },
+  "eco--empty-nets-at-the-weir": {
+    "title": "Üres hálók a gátnál",
+    "scene": "A Silver Ladder Bend egykor tavasszal sűrűn tele volt shadhalakkal. Most a halászok könnyű hálókat húznak fel, és a pénteki halfőzések messziről jött fagyasztott filét használnak. A gyerekek, akik a nagyszüleiktől tanulták a folyót, üres vizet néznek a régi kőgát alatt. A felső szakaszon farmok és egy új gabonasiló kiegyenesítik a partokat, iszapot zúdítanak, és alacsony gátak mögött tartják a vizet, hogy az uszályok menetrend szerint rakodhassanak. A szerződések készpénzt fizetnek a városoknak, de elfojtják a zúgókat, ahol a halak ívnak. Az üres hálók a kár, amit az emberek a vacsoránál éreznek; a gabonapénz miatti elzárt vízfolyás tartja életben a folyó pusztulását.",
+    "stakeholder": "Folyami halászok szövetkezete",
+    "pressureKeys": [
+      "Üres Hálók",
+      "Elzárt Folyó",
+      "Gabonaszerződések"
+    ],
+    "places": [
+      "Silver Ladder Bend"
+    ]
+  },
+  "eco--sand-where-meadows-waved": {
+    "title": "Homok, ahol a rétek hullámoztak",
+    "scene": "A Glassgrass Sound egykor zölden ragyogott a tiszta sekélyekben. A vezetők a tengerifű-rétekre és az ott bujkáló fésűkagylókra mutathattak. Most a víz zavaros marad, a fű foltokban pusztul, és a chartertúrák borravalója csökken, amikor a látogatók iszapot látnak hal helyett. Egy forgalmas kikötő mélyíti a csatornákat, és a kiemelt homokot feltöltésre és partokra adja el a part mentén feljebb. Minden merítés iszapot kavar, ami megfojtja a füvet és kiéhezteti a bölcsődét, ami a soundot táplálta. A zavaros víz és az elveszett túrák az, amit a helyiek éreznek; a kikötői díjakért végzett homokkotrás a gép, ami tovább tépázza a feneket.",
+    "stakeholder": "Sound-halászok és vezetők céhe",
+    "pressureKeys": [
+      "Zavaros Víz",
+      "Homokkotrás",
+      "Kikötői Díjak"
+    ],
+    "places": [
+      "Glassgrass Sound"
+    ]
+  },
+  "eco--spring-without-frogs": {
+    "title": "Tavasz békák nélkül",
+    "scene": "A Lichen Stair Valley-ben a tavasz egykor békazsongással zúgott eső után. A kutak tisztán folytak. Most a víz barnán jön fel viharok után, és az éjszakai kórus vékony. A családok többet forralnak, és messzebbre gyalogolnak, ha a szivattyúk eltömődnek. A lejtőkön legénységek vágnak keményfát a faszénkemencékhez, amelyek a városi piacokra és az útszéli grillekhez adnak el. A csupasz talaj iszapot zúdít a kutakat tápláló patakokba, és az árnyék, ami a nedvességet tartotta, eltűnt. A sáros víz és a csendes éjszakák a kár; a faszénpénz, ami iskoladíjat és orvosságot fizet, az oka, hogy a vágás nem áll le.",
+    "stakeholder": "Völgyi vízőrzők",
+    "pressureKeys": [
+      "Sáros Kutak",
+      "Erdővesztés",
+      "Faszénpénz"
+    ],
+    "places": [
+      "Lichen Stair Valley"
+    ]
+  },
+  "cancer--circuit-beach-burns-still-seed-the-tumors": {
+    "title": "Circuit Beach égetései még mindig daganatokat vetnek",
+    "scene": "A Circuit Beach-en nyílt roncstelepek bontják a régi elektronikát a rézért. A munkások meggyújtják a panelhalmazokat, hogy a fém szabadon kihulljon. A füst alacsonyan lebeg a kunyhók és az iskolába vezető út felett. Ama Diallo egészségügyi önkéntes nem gyógyuló nyílt sebeket kezel, és nyomon követi a szomszédokat, akik később hallják a rák szót. Az égetések nem állnak le. A rézből származó készpénz még mindig az a bér, ami fedezi az ételt és a díjakat, ezért a gödröket hajnal előtt újra meggyújtják.",
+    "stakeholder": "Roncstelepi egészségügyi önkéntes Ama Diallo",
+    "pressureKeys": [
+      "Nyílt sebek",
+      "Égetési füst",
+      "Roncsbérek"
+    ],
+    "places": [
+      "Circuit Beach roncstelepek"
+    ]
+  },
+  "cancer--playground-vapors-no-one-capped-in-time": {
+    "title": "Játszótéri gőzök, amiket senki sem zárt le időben",
+    "scene": "Az általános iskola olyan telken áll, ahol egykor gáztartályok voltak. Fekete kátrány szivárog még a bitumen alatt. A gyerekek fejfájással, orrvérzéssel és hosszú beteg időszakokkal hagyják el az órát. Priya Nair SZMK-nővérkoordinátor vezeti a számokat, és látja, hogy a minta minden félévben nő. A régi tartályokat soha nem zárták le teljesen. A kármentesítési pénz évről évre elveszíti a költségvetési harcot, így a gőzök tovább szivárognak a repedezett talajon át, miközben fent megy a szünet.",
+    "stakeholder": "SZMK-nővérkoordinátor Priya Nair",
+    "pressureKeys": [
+      "Beteg gyerekek",
+      "Kátránygőzök",
+      "Költségvetési harcok"
+    ],
+    "places": [
+      "Old Gasworks iskolatömb"
+    ]
+  },
+  "cancer--solvent-booths-trade-lungs-for-tips": {
+    "title": "Oldószeres fülkék tüdőt cserélnek borravalóra",
+    "scene": "A Nail Row szűk fülkesor vékony falakkal és gyenge ventilátorokkal. Körömlakklemosók és akrilfolyadékok töltik be a levegőt tizenkét órás műszakokban. Linh Tran fülkefelelős hallja ugyanazokat a száraz köhögéseket, és figyeli, ahogy a képzett dolgozók olyan napokat mulasztanak, amiket nem engedhetnek meg maguknak. A borravaló tele tartja a székeket. A bérbeadók magasan tartják a bérleti díjat, a szellőzésfejlesztés pedig lekerül az asztalról, így ugyanazok az oldószerek, amelyek befejeznek egy manikűrt, tovább áztatják a tüdőt, és növelik a hosszú távú rákveszélyt.",
+    "stakeholder": "Fülkefelelős Linh Tran",
+    "pressureKeys": [
+      "Köhögési rohamok",
+      "Fülkegőzök",
+      "Bérleti félelem"
+    ],
+    "places": [
+      "Nail Row szépségfolyosó"
+    ]
+  },
+  "cancer--night-resin-lines-still-mark-the-livers": {
+    "title": "Éjszakai gyantavonalak továbbra is megjelölik a májakat",
+    "scene": "A Vinyl Reach éjszakai műszakjában forró gyantavonalak mennek keményen a rendelések teljesítéséért. Édes vegyi szagok tapadnak a ruhához és a bőrhöz. Omar Haddad műszakbiztonsági képviselő új májeseteket jegyez fel azoknál a csapatoknál, akik túlóráznak, amikor nőnek a kvóták. Egy vonal leállítása többe kerül a gyárnak, mint egy orvosi vizsgálat, ezért a kis szivárgásokat letörlik, és a futás folytatódik. Ugyanaz a hajszolás, ami megtölti a rakodódokkot, évről évre megjelöli a dolgozók testét.",
+    "stakeholder": "Műszakbiztonsági képviselő Omar Haddad",
+    "pressureKeys": [
+      "Májesetek",
+      "Gyantaszivárgások",
+      "Túlóra-nyomás"
+    ],
+    "places": [
+      "Vinyl Reach éjszakai üzem"
+    ]
+  },
+  "mental--waitlist-longer-than-the-semester": {
+    "title": "Várólista hosszabb a szemeszternél",
+    "scene": "Az Iowa State felőli városrészen a diákok dobogó szívvel ülnek végig az előadásokat, aztán egyedül sétálnak haza. Éjszaka pánik tör rájuk a zsúfolt kollégiumokban; van, aki abbahagyja az alvást, és néhányan otthagyják a kurzusokat, mielőtt bárki a stábból ismerné a nevüket. A campus tanácsadás papíron ingyenes, de egy igazi időpontra a várakozás eltarthat a vizsgák végéig. Kortárs segítők veszik át a túlcsordulást telefonon és késő esti sétákon, pedig ők is diákok. A hajtóerő nem csak a „stressz”. Az egyetem gyorsabban növelte a létszámot, mint a tanácsadói helyeket, és a biztosítási szabályok plusz a stigma továbbra is arra tolja a fiatalokat, hogy kibírják, amíg a jegyek össze nem omlanak. Ha semmi sem változik, a folyosó továbbra is gyorsabban termel válságokat, mint ahogy meg tudná válaszolni őket.",
+    "stakeholder": "Campus kortárs-támogatási igazgató",
+    "pressureKeys": [
+      "Pánik Éjszakák",
+      "Várólisták",
+      "Jegyfélelem"
+    ],
+    "places": [
+      "Ames Cyclone Corridor, Iowa"
+    ]
+  },
+  "mental--the-line-never-slows-for-grief": {
+    "title": "A sor soha nem lassít a gyászért",
+    "scene": "Hajnal előtt a munkások fájó kezekkel és csendes arccal jelentkeznek be a csomagolóüzembe. Sokan a biztos fizetésért jöttek; van, aki gyászt hordoz a hátrahagyott család miatt, vagy a soron történt sérülések és halálesetek miatt. A szünetek rövidek. A szomorúságról beszélni úgy érezhető, mintha a munkahelyet kockáztatnák, ezért az emberek elhallgatnak és tovább tolják magukat. A kimerültség felhalmozódik: kihagyott alvás, rövid türelmű pillanatok otthon, és nincs könnyű út egy tanácsadóhoz, aki az ő nyelvüket beszéli az éjszakai műszakban. A helyi hajtóerő maga a sor—a sebesség és a létszámcélok, amelyek a felépülési időt pazarlásnak kezelik. A lelkészek és a jóléti kapcsolattartók elkapják, amit tudnak a folyosókon, de a rendszer továbbra is gyorsabban őrli ki a sebet, mint ahogy a gondoskodás elérheti a padlót.",
+    "stakeholder": "Üzemi lelkész és jóléti kapcsolattartó",
+    "pressureKeys": [
+      "Kimerültség",
+      "Sor Sebesség",
+      "Csend"
+    ],
+    "places": [
+      "Garden City Packing Ward, Kansas"
+    ]
+  },
+  "mental--twelve-hour-hearts-running-empty": {
+    "title": "Tizenkét órás szívek üresen futnak",
+    "scene": "Az éjszakai emeleten monitorok sípolnak, és családok várakoznak műanyag székeken. A nővérek hordozzák a nehéz döntések súlyát—ki kapja az utolsó ágyat, ki hallja egyedül a rossz hírt—, aztán kicsekkolnak, és még mindig újrajátsszák, amit nem tudtak megjavítani. Ennek a sebnek van neve, amit itt használnak: morális sérülés, az a fájdalom, ami akkor jön, amikor tudod a helyes ellátást, de nem tudod nyújtani. A létszámhiány dupla műszakokat és kihagyott étkezéseket jelent. Az újoncok egy éven belül elmennek. Az átélt kár a kiégés, amit remegő kezekben és üres pihenőszobákban látsz. A hajtóerő egy kórházi rendszer, amely keményebben hajtja a betegszámot és a túlórát, mint ahogy újjáépíti a csapatot, így ugyanaz az emelet továbbra is összetöri azokat, akik összetartják.",
+    "stakeholder": "ITO vezető nővér koalíció",
+    "pressureKeys": [
+      "Morális Sérülés",
+      "Létszámhiány",
+      "Fluktuáció"
+    ],
+    "places": [
+      "Detroit Receiving Night Floor, Michigan"
+    ]
+  },
+  "mental--five-stars-or-the-spiral": {
+    "title": "Öt csillag vagy a spirál",
+    "scene": "A naplemente után is megmaradó hőségben az app-munkások ugrálnak a társasház-tornyok és a strip-mall parkolók között. Egy rossz értékelés levághatja a következő hét rendeléseit. Az emberek betegebben vezetnek, kihagyják a vizet, és udvariatlan üzenetekre kényszeredett mosollyal válaszolnak, mert az algoritmusnak mindegy, miért. A szorongás megugrik, amikor a telefon elcsendesedik; az elszigetelődés jön, amikor minden óra magányos hajtás pihenőszoba és fellebbezhető főnök nélkül. A kölcsönös segély szervezői árnyékot, nasiit és krízisszámokat osztanak a parkolóházakban, de a hajtóerő maga az értékelő-és-kiszolgáló rendszer—jutalmazza az állandó elérhetőséget és bünteti a pihenést. Valódi védőháló nélkül a kiégés lesz az alapértelmezett műszak, és a spirál egyszerre húzza ki a sofőröket a lakhatásból és a gondoskodásból.",
+    "stakeholder": "Gig-munkás kölcsönös-segély szervező",
+    "pressureKeys": [
+      "Kiégés",
+      "Értékelésfélelem",
+      "Nincs Védőháló"
+    ],
+    "places": [
+      "Phoenix Desert Stack, Arizona"
+    ]
+  },
+  "alzheimer--dusk-walks-past-the-grain-bins": {
+    "title": "Alkonyati séták a magtárak mellett",
+    "scene": "A Prairie View-nál a házikók alacsonyan ülnek a vasúti szárnyvonal és a régi magtárak mellett. Vacsora után a memóriavesztéssel élő emberek néha kiosonnak az oldalsó kapun. A családok órákkal később találják meg őket a megyei úton, fázva és zavartan, cipőjük tele porral. Egy éjjel tavaly télen egy férfi az országúti fények felé indult, és majdnem elütötte egy teherautó.\n\nA kár valós és helyi: a szomszédok nem alszanak, az önkéntesek kiégnek, a lakók pedig elveszítik a biztonságos alkonyati séta szabadságát. Ami a problémát táplálja, vékonyabb, mint amit a házikók bevallanak. Az ellenőrzések még mindig papír írótáblán és egyetlen éjszakai telefonon mennek. A felnőtt gyerekek órákra laknak Lincolnban vagy Omahában. Nincs közös térkép arról, ki ment el, mikor, vagy melyik utat szokta járni—így minden este ugyanazok a rések nyílnak a magtárak és a sötét mezők között.",
+    "stakeholder": "Ruth, községi önkéntes-koordinátor",
+    "pressureKeys": [
+      "Kóborlás",
+      "Késői Ellenőrzés",
+      "Családi Távolság"
+    ],
+    "places": [
+      "Prairie View Senior Cottages, Grand Island"
+    ]
+  },
+  "alzheimer--three-floors-one-night-aide": {
+    "title": "Három emelet, egy éjszakai gondozó",
+    "scene": "A Harbor Lights egy magas idősek tornya a komp zaja felett. Sok éjszaka egyetlen gondozó fedez három emeletet. A gyógyszerek késnek. A hívólámpák sorakoznak. Egy korai demenciával élő lakó túl sokáig vár a mosdóba segítésre, és elesik a folyosón. Mások nem bíznak többé a személyzetben, és eltitkolják a tüneteket, hogy ne kerüljenek zárt részlegre.\n\nAz emberek a kárt elmulasztott adagokban, magányos éjszakákban és a teherré válás félelmében érzik. A hajtóerő nem csupán az elfogyó kedvesség. Az épület még mindig vékony szállodai műszakként futtatja a gondozást: papíros gyógyszerkocsik, lassú rádiók, és nincs tartalék, ha valaki betegszabadságra megy. A bérek és a lakhatási költségek kinyomják a gondozókat a városból, így ugyanaz az alulszemélyzetelt minta áll vissza minden beosztásban. Jobb eszközök és bizalom nélkül a torony tovább termeli ugyanazokat a válságokat emeletről emeletre.",
+    "stakeholder": "Kenji, lakótanács-elnök",
+    "pressureKeys": [
+      "Kihagyott Gyógyszer",
+      "Vékony Létszám",
+      "Bizalmi Rés"
+    ],
+    "places": [
+      "Harbor Lights Tower, Seattle"
+    ]
+  },
+  "alzheimer--after-the-midnight-caregiving-shift": {
+    "title": "Az éjféli gondozói műszak után",
+    "scene": "A Walk-In Row-n az ingyenes klinika későig nyitva tart, mert a családoknak nincs hova máshova menniük. Angela olyan lányokat lát, akik gyári műszakot dolgoztak, aztán egész éjjel fenn ültek egy szülővel, aki már nem ismeri a házat. Reggelre a gondozók remegnek, kihagyják saját vérnyomáscsökkentőiket, és elmulasztják a rövid ablakot, amikor egy memóriaszűrés—egy egyszerű klinikai ellenőrzés a korai gondolkodási változásokra—még segíthetne.\n\nAz átélt kár a kimerültség, az ügyeletre hordás és az otthontól messzi kríziságyakba költöztetett idősek. Ami a problémát növeszti, maga a helyi gondozási őrlődés. Nincs állandó nappali program, kevés a pihenő, és szinte nincs olyan fuvar, ami illik az éjszakai műszakos élethez. Az emberek addig várnak, amíg egy esés vagy egy rendőrségi jóléti ellenőrzés kényszerít költözésre. A sor tovább nyeli az összeomlást ahelyett, hogy korábban elkapná a memóriavesztést, így minden évben több f",
+    "stakeholder": "Angela, ingyenes klinika ápoló-szakértője",
+    "pressureKeys": [
+      "Kimerültség",
+      "Elmulasztott Szűrés",
+      "Krízis Költözés"
+    ],
+    "places": [
+      "Ironbound Walk-In Row, Youngstown"
+    ]
+  },
+  "alzheimer--prayers-between-bus-transfers": {
+    "title": "Imák a busz-átszállások között",
+    "scene": "A templom mögötti udvaron az idősek a buszra várnak, ami összeköti az otthont, a piacot és a klinikát. Egyesek már elfelejtik az átszállást. A családok félnek a széles főutaktól, mégis a szégyen tartja vissza őket attól, hogy hangosan kimondják a demenciát. Az időpontok elcsúsznak. Egy nagymama a tilosban megy át, mert a telefonos app khmer utasításai sosem egyeztek azzal, amit a sofőr mondott.\n\nAz emberek a kárt közeli közlekedési bajokként, késleltetett diagnózisként és csendes elszigetelődésként érzik azoktól a szomszédoktól, akik segíthetnének. A hajtóerő egy helyi rendszer, ami még mindig angol űrlapokat, egy fix buszórarendet és délben szabad felnőtt gyerekeket feltételez. Olyan kölcsönös-segély vezetők, mint Sothea, imalistákkal és kölcsönvett furgonokkal foltozzák a fuvarokat, de ugyanazok a rések—nyelv, stigma és nehezen elérhető klinikák—tovább tolják a memóriavesztést az utcára ahelyett, hogy a ",
+    "stakeholder": "Sothea, templomi kölcsönös-segély vezető",
+    "pressureKeys": [
+      "Forgalmi Veszély",
+      "Nyelvi Gát",
+      "Szégyen Késleltet"
+    ],
+    "places": [
+      "Little Mekong Courtyard, Fresno"
+    ]
+  },
+  "ageing--doubles-until-the-body-breaks": {
+    "title": "Duplázás, amíg a test össze nem roppan",
+    "scene": "A Midtown Home-Care Corridor harmadik emeleti, lift nélküli lakásaiban a gondozók ugyanazokat a klienseket kétszer emelik meg dél előtt. Térdek pattannak. Hátak görcsbe rándulnak. Egy dolgozó a lépcsőházban tekeri be a csuklóját, mert a következő látogatás teljes áthelyezés ágyból székbe. A családok óráért fizetnek, nem pihenésért, ezért a beosztás sűrűn pakolja a viziteket, és kihagyja a regenerációt. Az igazi hajtóerő nem csak a gyenge test otthon. Hanem egy gondozási rendszer, amely az öregedést még mindig végtelen kézi munkának kezeli: nincs közös emelőeszköz minden emeleten, kevés a képzés az ízületkímélő mozdulatokra, és a bér kényszeríti a dupla műszakot. A kár először a dolgozókon landol—meghúzott vállak, kimaradt családi vacsorák, útközben felmondó emberek—, miközben ugyanez a modell kevesebb kézből présel ki több évet.",
+    "stakeholder": "Házi gondozói szövetkezet gondnoka",
+    "pressureKeys": [
+      "Testi Terhelés",
+      "Műszaknyomás",
+      "Dolgozóhiány"
+    ],
+    "places": [
+      "Midtown Home-Care Corridor"
+    ]
+  },
+  "ageing--kilns-that-outlast-bones": {
+    "title": "Kemencék, amelyek túlélik a csontokat",
+    "scene": "A Brickfields Elder Yards udvarain hatvan feletti férfiak és nők még mindig nyers téglát raknak a tüzelőkemencék mellett. Hő árad az ívekről. Por fedi a torkukat. Délutánra a csípő beragad, az ujjak nem zárulnak a fogóra. A fiatalabb felvettek raktári állásokra mentek, ezért az udvarok darabbéren tartják az idősebb csapatot, mert a rendelés nem áll le. Az átélt kár: ízületi fájdalom, hőkiütés és kimerülés, plusz bér, ami eltűnik, ha egy rossz térd egy hetet kivesz. Ami a bajt futtatja, az a fiatal testre és olcsó tüzelőre épült sor: hosszú kemenceciklus, nincs hűvös pihenőöböl, és nincs terv az emelők vagy a műszakrend áttervezésére a hosszabb munkaélethez. Az öregedés itt nem csendes nyugdíj. Ugyanaz a kemény munka, amíg a test fel nem adja.",
+    "stakeholder": "Udvari munkaegészségügyi vezető",
+    "pressureKeys": [
+      "Ízületi Fájdalom",
+      "Kemencehő",
+      "Elveszett Bér"
+    ],
+    "places": [
+      "Brickfields Elder Yards"
+    ]
+  },
+  "ageing--upper-floors-without-cool-air": {
+    "title": "Felső emeletek hűvös levegő nélkül",
+    "scene": "A Sunstack Senior Towers-ban nyáron leállnak a liftek, és a legfelső emeletek dél után megsülnek. A lakók nyitott ablaknál ülnek nedves törölközővel, mert a régi ablakklímák leütik a biztosítékot. Egy nő hajnalra időzíti az ügyeit, hogy ne a hőségben kelljen lépcsőznie. Egy másik kihagyja a vacsorát, hogy a ventilátor maradjon bekapcsolva. Az emberek most érzik a kárt: szédülés, rossz alvás, és napok egyedül, mert a barátok nem jönnek fullasztó lakásba. A hajtóerő nem csak az időjárás. Hanem egy épület- és számlázási rendszer, amely sosem tervezett a hosszabb helyben élésre—vékony szigetelés, csúcsidős áram, nincs közös hűtés vagy akkumulátoros puffer a felső tornyokon—, így minden forró évszak jobban nyomja a gyengébb bérlőket, miközben a tornyok ugyanolyanok maradnak.",
+    "stakeholder": "Bérlői egyesület elnöke",
+    "pressureKeys": [
+      "Hőstressz",
+      "Áramszámla",
+      "Egyedül Órák"
+    ],
+    "places": [
+      "Sunstack Senior Towers"
+    ]
+  },
+  "ageing--dawn-stalls-without-successors": {
+    "title": "Hajnali standok utódok nélkül",
+    "scene": "Napfelkelte előtt a River Gate Wholesale Market-en hetvenes éveikben járó árusok ládákat cipnek le a teherautókról. A vizes padló elcsavarja a bokát. A jégtárolók merevre fagyasztják az ujjakat. Egy esés a halas stand mögött egy hét eladást zár le, és nincs tartalék unokatestvér, aki felhúzná a redőnyt. A vevők továbbra is a korai tételeket akarják, ezért ugyanazok az idősek tartják a robotot, mert a piac sosem épített átadást—nincs könnyebb kocsi, nincs közös emelő, nincs képzési út, ami fiatalabb eladót hozna melléjük. A kár zúzódásként, kihagyott rendelői napként és sötét standként jelenik meg, ha egy csípő feladja. A hajtóerő egy nagykereskedelmi ritmus, amely a tartós erőt ingyen üzemanyagnak kezeli, és nincs helyi rendszere a munkaképes egészségidő meghosszabbítására vagy a stand balesetmentes átadására.",
+    "stakeholder": "Piaci árusok céhének titkára",
+    "pressureKeys": [
+      "Esésveszély",
+      "Hajnali Robot",
+      "Vékony Segítség"
+    ],
+    "places": [
+      "River Gate Wholesale Market"
+    ]
+  },
+  "air--bunker-smoke-on-wash-day": {
+    "title": "Bunkerfüst mosónapon",
+    "scene": "Mosónapon a rakpart megtelik nedves hálókkal és gyerekekkel. A régi halászhajók még mindig nehéz bunkerolajat égetnek a kikötőhelyeken, mert a parti áram kevés és drága. Fekete füst gomolyog alacsonyan a száradó ruhák fölött. A dokklinika nővérei vörös szemeket, szorító mellkast és több asztmás inhalátorhasználatot látnak minden forgalmas kikötés után. A családok koromízűnek érzik a mosott ruhát és a halat. A kár abban a levegőben van, amit az emberek a hajó és az otthon között belélegeznek. A hajtóerő tovább pörög: a motorok üresjáraton járnak jéghez, világításhoz és csörlőkhöz, valahányszor a móló csatlakozói nem bírják a terhelést.",
+    "stakeholder": "Dokklinikai nővérek és halászcsaládi szövetkezet",
+    "pressureKeys": [
+      "Égő szemek",
+      "Hajófüst",
+      "Kikötői áram"
+    ],
+    "places": [
+      "Tidegate Halászati Rakpartok"
+    ]
+  },
+  "air--recess-under-the-flyover": {
+    "title": "Szünet a felüljáró alatt",
+    "scene": "Az iskolaudvar egy beton felüljáró alatt fekszik, ahol a körgyűrű teherautói egész reggel visszaváltanak. A gyerekek olyan ködben rohangálnak szünetben, ami fémes ízt hagy. A tanárok több betegnapot és inhalátorhasználatot jegyeznek a dízelcsúcsok után. A szülők időzítik a hazaviteleket, hogy elkerüljék a legrosszabb füstfelhőket, mégis a folyosó tovább tereli a távolsági fuvarokat, mert ez a legolcsóbb út a városon át. Az átélt kár: köhögés, kimaradt órák és csípő torok. A hajtóerő maga a teherautó-útvonal—régi motorok, megálló-elinduló emelkedők és gyenge flottaszabályok, amelyek tovább ontják a kipufogót a játszótérre.",
+    "stakeholder": "Szülő-tanár levegőőrség és folyosói buszszemélyzet",
+    "pressureKeys": [
+      "Betegnapok",
+      "Teherautó-füst",
+      "Flottaszabályok"
+    ],
+    "places": [
+      "Ring Road Iskolai Folyosó"
+    ]
+  },
+  "air--evening-fires-in-the-lane": {
+    "title": "Esti tüzek a sikátorban",
+    "scene": "Sötétedés után a hulladékos sikátorok izzanak. A hulladékgyűjtő csapatok kábelt és műanyagot égetnek, hogy lefejtsék a rezet, mert a lerakói díjak és a hivatalos telepek többe kerülnek egy éjszakai válogatásnál. A füst beúszik a csatorna menti egyszobás otthonokba. A bábák hallják, ahogy a babák köhögése élesedik, és látják a pici mellkasokat, amelyek túl keményen dolgoznak hajnal előtt. Az emberek a kárt csípő szemekben és a csecsemők tiszta levegő nélküli éjszakáiban érzik. A rendszer, ami tovább termeli a füstöt, egyszerű: nincs olcsó, tiszta mód a fém visszanyerésére, így a nyílt tüzek maradnak a jövedelmező módszer.",
+    "stakeholder": "Hulladékgyűjtő szövetkezet és közösségi bábák",
+    "pressureKeys": [
+      "Babaköhögés",
+      "Hulladéktüzek",
+      "Lerakói díjak"
+    ],
+    "places": [
+      "Csatornaparti Hulladéksikátorok"
+    ]
+  },
+  "air--colored-fog-at-shift-change": {
+    "title": "Színes köd műszakváltáskor",
+    "scene": "Műszakváltáskor színes köd lebeg a festőműhelyek és a panziók között. Szén- és olajkazánok még mindig gőzt fejlesztenek a kádakhoz, amikor a hálózat villódzik, és a szellőzők egyenesen a keskeny utcákba tolják a füstfelhőt. A ruházati munkások szorító mellkassal és fejfájással mennek haza; a nénik kinyitják az ablakokat, csak hogy újra becsukják. A darabbérek arra késztetik a műhelyeket, hogy extra éjszakai adagokat futtassanak a kémények javítása vagy a fűtés átállítása helyett. Az emberek a kárt égő tüdőben és elrontott alvásban érzik. A hajtóerő a klaszter olcsó, piszkos gőze—régi kazánok, amelyek a sürgős megrendelésekhez kötődnek, és nem várnak tisztább áramra.",
+    "stakeholder": "Ruházati munkások egészségköre és panziós nénik",
+    "pressureKeys": [
+      "Mellkasi fájdalom",
+      "Kazánfüst",
+      "Darabbérek"
+    ],
+    "places": [
+      "Folyóparti Festőklaszter"
+    ]
+  },
+  "homeless--noon-checkout-into-a-furnace-lot": {
+    "title": "Déli kijelentkezés a perzselő telekre",
+    "scene": "Délelőtt tizenegykor a Baseline menti heti motelek gurulós táskás családokat tolnak ki az aszfaltra, ami már átégeti a cipőtalpat. A gyerekek egy automata árnyékában várnak, miközben a szülők felhívnak minden számot egy gyűrött listáról. A hőbetegség itt keményen üt: szédülés, hányás és sürgősségi utak, amelyek elviszik az utolsó készpénzt. A hajtóerő nem csak a nap. A tulajdonosok magasan tartják a szobaforgást—rövid tartózkodás, emelkedő éjszakai díj, gyors csere—, így a sáv soha nem válik stabil lakhatássá. Az olyan esetgondozók, mint Marisol, ugyanazt a kört futják: ágyat találni sötétedés előtt, elveszíteni kijelentkezéskor, újrakezdeni. Hűvösebb, biztonságos szobák és a forgás lassítása nélkül egyre többen alszanak autókban és teleken, amelyek megsütik őket.",
+    "stakeholder": "Marisol, motel-outreach esetgondozó",
+    "pressureKeys": [
+      "Hőbetegség",
+      "Szobaforgás",
+      "Ügyhátralék"
+    ],
+    "places": [
+      "Sunbelt Weekly Inn sáv, Mesa folyosói"
+    ]
+  },
+  "homeless--thirty-safe-nights-then-the-courthouse-lot": {
+    "title": "Harminc biztonságos éjszaka, aztán a bírósági parkoló",
+    "scene": "Keisha túlélőket fogad a melléképületben egy utazótáskával és egy órával. A menedékház szabályai gyakran körülbelül harminc biztonságos éjszakában maximálják a tartózkodást. Ezután az emberek a bírósági parkolóban vagy egy nem igazán biztonságos kanapén kötnek ki. Az átélt kár: éjszakák zárható ajtó nélkül—félelem, kihagyott munka, gyerekek, akik nem tudnak aludni. A válságot folyamatosan termelő rendszer az utalványszabályok és hitelblokkok kusza hálója: lejáró segély, tiszta előéletet követelő bérbeadók, és papírmunka, ami lassabban halad, mint a veszély. A védelem önmagában nem elég, ha a kijárat továbbra is kint hagyja a családokat. A küldetés: a rövid biztonságot tartós kulcsokká fordítani anélkül, hogy az embereket a parkolóban ejtenénk csapdába.",
+    "stakeholder": "Keisha, családon belüli erőszak lakhatási segítője",
+    "pressureKeys": [
+      "Veszélyes éjszakák",
+      "Utalványszabályok",
+      "Hitelblokkok"
+    ],
+    "places": [
+      "Riverbend Családi Igazságszolgáltatási melléképület"
+    ]
+  },
+  "homeless--sold-out-from-under-the-fixed-check": {
+    "title": "Eladták a fix járadék alól",
+    "scene": "Harold még mindig a parkbizottsági jegyzőkönyveket tartja egy iratgyűjtőben a konyhaasztalán. Tavaly tavasszal egy új tulajdonos megvette a Palm Courtot, és gyorsabban emelte a telekbérletet, mint ahogy bármely társadalombiztosítási járadék kibírná. A szomszédok, akik évtizedekig időben fizettek, most felszólításokkal néznek szembe. A kilakoltatás itt úgy néz ki, mint egy U-Haul hajnalban és egy összecsukható szék egy rokon tornácán. A kár: idősek elveszítik az egyetlen otthont, amit megengedhetnek maguknak. A hajtóerő az eladás-és-emelés ciklus: a befektetők megveszik az öregedő parkokat, felhúzzák a telekbérletet, és a fix jövedelmet mások problémájának tekintik. A bizalom újjáépítése többet jelent egy sátornál—tulajdonosi eszközöket, méltányos bérleti fékeket és otthonokat, amelyeket nem lehet kiforgatni a fix járadékon élők alól.",
+    "stakeholder": "Harold, nyugalmazott gépész és parkbizottsági tag",
+    "pressureKeys": [
+      "Kilakoltatás",
+      "Telekbérlet",
+      "Fix járadék"
+    ],
+    "places": [
+      "Palm Court idősek lakókocsiparkja"
+    ]
+  },
+  "homeless--discharged-still-weak-to-the-ambulance-bay": {
+    "title": "Még gyengén elbocsátva a mentőbejárathoz",
+    "scene": "Dr. Nadim aláírja a hazaengedési papírokat, tudva, hogy a következő ágy egy buszpad az öbölnél. A betegek még gyengén távoznak—műtét után, tüdőgyulladással, szívelégtelenséggel—, mert a kórháznak nincsenek orvosi pihenőágyai, és az utcai éjszakák reggelre szétverik a kezelést. Az újrafelvételek emelkednek. Az átélt kár: fájdalom, fertőzés és félelem a betonon. A helyi hajtóerő az ágynyomás, ami a kifizetetlen orvosi adóssághoz és egy olyan lakáspiachoz kötődik, amely nem fogad be senkit, aki beteg vagy csóró. A mentők ugyanazokat a neveket járják körbe. A kör megállítása átmeneti gyógyító szobákat, olyan szállítást jelent, ami nem a járdaszegélyen hagyja az embereket, és egy utat az utcáról a következő összeomlás előtt.",
+    "stakeholder": "Dr. Nadim, sürgősségi osztályos orvos és orvosi pihenő szervező",
+    "pressureKeys": [
+      "Utcai éjszakák",
+      "Ágynyomás",
+      "Orvosi adósság"
+    ],
+    "places": [
+      "County General mentőbejárati járdaszegély"
+    ]
+  },
+  "cities--tin-roofs-that-still-cook-after-dark": {
+    "title": "Bádogtetők, amelyek sötétedés után is sütnek",
+    "scene": "A textilutcákon a családok vékony fémlemezek alatt alszanak, amelyek napnyugta után is őrzik a nappali hőt. A gyerekek ragacsosan és lihegve ébrednek. Az idősek kihagyják az étkezést, mert a felső szobák kemenceként izzanak. A rendelők minden nyári héten több hőkimerülést látnak.\n\nA kár nem csak az időjárás. Az építők továbbra is betonnal és bádoggal fednek be minden nyitott udvart, mert a telekárak sűrűbb kunyhókat és kevesebb fát kényszerítenek ki. A hűvös udvarok eltűnnek. Árnyék, fényvisszaverő tetők vagy éjszakai áram nélkül a ventilátorokhoz ugyanezek az utcák évről évre megsütik az embereket.",
+    "stakeholder": "Kerületi hő-egészségügyi és lakhatási iroda",
+    "pressureKeys": [
+      "Forró Éjszakák",
+      "Kemény Burkolat",
+      "Betegnapok"
+    ],
+    "places": [
+      "Ahmedabadi textilutcai tetők"
+    ]
+  },
+  "cities--the-estero-that-became-the-alley-dump": {
+    "title": "Az estero, amely sikátori szemétteleppé vált",
+    "scene": "Az Estero de Vitas melletti zsebben térdig érő víz áll még a földszinti szobákban két nappal egy erős eső után is. A gyerekek úszó zsákok mellett gázolnak a sikátor felé. A szülők forralják a vizet, és műszakokat mulasztanak, amikor a kivezető út szeméttel eltömött árok.\n\nAzért dobálnak ide, mert a gyűjtőkocsik nem férnek be a szűk utcákba, és a bérbeadók minden extra kukáért díjat számolnak. Az estero — a keskeny árapály-patak, amelynek le kellene vezetnie a tömb vizét — helyette műanyaggal és iszappal telik meg. Minden vihar gyorsabban torlaszolja el. Az árvíz az átélt kár; az elzárt víz és a ki nem fizetett hulladékjáratok tartják fenn a romlást.",
+    "stakeholder": "Barangay-i vízfolyás- és szilárdhulladék-tanács",
+    "pressureKeys": [
+      "Áradás",
+      "Szemétdugó",
+      "Bérlői Nyomás"
+    ],
+    "places": [
+      "Manilai Estero de Vitas-zseb"
+    ]
+  },
+  "cities--three-hours-down-the-ridge-for-a-shift": {
+    "title": "Három óra le a gerincről egy műszakért",
+    "scene": "Hajnal előtt a munkások a Soacha feletti gerincösvényeken sorakoznak, egy buszra várva, amely talán már tele van. A kétórás lejtős kúszás Bogotába hárommá nőhet, ha a ráhordó furgon soha nem jön. Az emberek bért veszítenek a késői órázás miatt. A tinédzserek abbahagyják az esti órákat, mert a hazafelé út nem biztonságos és lassú.\n\nA városmag még mindig utólagos gondolatként kezeli a hegyoldali megállókat. A hivatalos járatok a sík sugárutakon érnek véget; az utolsó emelkedőt szabálytalan furgonokra bízzák, közös menetrend vagy tisztességes bérletkártya nélkül. A hosszú ingázási órák azok, amit a családok éreznek. A törött ráhordó kapcsolatok a helyi rendszer, amely kizárja a gerincet az igazságos városból.",
+    "stakeholder": "Hegyoldali ráhordó és díjintegrációs iroda",
+    "pressureKeys": [
+      "Ingázási Órák",
+      "Ráhordó Hiányok",
+      "Elveszett Bérek"
+    ],
+    "places": [
+      "Bogotái Soacha-gerinc megállók"
+    ]
+  },
+  "cities--lessons-under-the-zinc-sheets": {
+    "title": "Órák a cinklemezek alatt",
+    "scene": "Mathare gerinciskoláiban hatvan gyerek osztozik a padokon egy cinktető alatt, amely zúg, ha esik. Amikor elmegy az áram, az óra véget ér. A tanárok a zaj felett kiabálnak. A családok kiveszik a nagyobb gyerekeket, hogy pénzt keressenek, amikor a díjak és a zsúfolt termek haszontalanná teszik az iskolát.\n\nA megye továbbra is törékeny telkeket bérel, amelyeket a bérbeadók lakássá fordíthatnak, amint jobb ajánlat jön. Az iskolák nem bővülhetnek, és nem vezethetnek stabil áramot olyan talajon, amelyet jövőre eladhatnak. A zsúfolt, sötét termek a kár, amit a gyerekek most éreznek. Az instabil közterület-ügyletek a hajtóerő, amely vékonyan tartja az oktatást a gerincen.",
+    "stakeholder": "Megyei alapoktatási és közterületi egység",
+    "pressureKeys": [
+      "Zsúfolt Termek",
+      "Telekforgatás",
+      "Lemorzsolódók"
+    ],
+    "places": [
+      "Nairobi Mathare-gerinc iskolák"
+    ]
+  },
+  "child--night-smoke-steals-small-breaths": {
+    "title": "Éjszakai füst lopja a kis lélegzetet",
+    "scene": "Sötétedés után a fennsíkon az anyák trágyát és hulladékfát gyújtanak a közös udvari konyhákban. A füstnek nincs hova mennie a hideg, vékony levegőben. A totyogók szorult mellkassal és nedves köhögéssel ébrednek, ami reggelre sem múlik el. A rendelői nővér minden téli héten több ziháló gyereket számol. A családok tovább égetik, amit olcsón vehetnek, mert a palackos gáz többe kerül egy napi bérnél, és a hálózat akkor esik ki, amikor leginkább kell a meleg. Amíg a tiszta hő olcsóbb és egyenletesebb nem lesz a füstnél, a kis tüdők fizetik tovább a számlát.",
+    "stakeholder": "Fennsíki közösségi egészségügyi nővér",
+    "pressureKeys": [
+      "Zihálás",
+      "Főzőfüst",
+      "Tüzelőár"
+    ],
+    "places": [
+      "El Alto udvari konyhái, La Paz fennsík"
+    ]
+  },
+  "child--trash-gutters-breed-the-fever": {
+    "title": "Szemetes árkok szülik a lázat",
+    "scene": "A csatorna mentén műanyag és ételhulladék tömi el a lefolyókat minden heves eső után. A víz napokig áll a bölcsőde kapuja mellett. A szúnyogok az álló pocsolyákban szaporodnak, és a dengue-láz — szúnyog terjesztette betegség, amely felviszi a lázat és a fájdalmat — először a legkisebb gyerekeket sújtja. A szülők kihagyják a kikötői műszakot, ha a gyerek láztól ég. A barangay permetezheti az utcákat és kioszthat hálókat, de a szemét továbbra is ugyanazokba az árkokba csúszik, mert az elszállítás rendszertelen, és a csatornának nincs igazi folyása. Amíg hulladék és víz gyűlik a küszöbnél, a láz visszatér.",
+    "stakeholder": "Barangay gyermekegészségügyi koordinátor",
+    "pressureKeys": [
+      "Gyerek láz",
+      "Álló víz",
+      "Kieső munka"
+    ],
+    "places": [
+      "Cebu csatornaparti bölcsőde, Visayas-partvidék"
+    ]
+  },
+  "child--spoiled-millet-on-the-growth-chart": {
+    "title": "Romlott köles a növekedési táblán",
+    "scene": "Az ötéves kor alattiak állomásán a gabonapiac mellett a nővér papírszalagot teker a kis karokra. Túl sokan vékonyat mutatnak. Az anyák kölest és cirokot vesznek nyitott zsákokból, amelyek hőségben és nedvességben álltak rosszul záró raktárakban. Penész és zsizsik rontja a gabonát, mielőtt a fazékba érne, így az étel megtölti a hasat, de nincs benne elég igazi tápanyag. A kereskedők tudják: a vevő elballag, ha az ár ugrik, ezért a rossz áru is elkel. Hűvös, száraz tárolás és a tiszta gabona bizonyítása nélkül a növekedési táblák tovább csúsznak, még ha a piac tele is látszik.",
+    "stakeholder": "Táplálkozás-megfigyelő tiszt",
+    "pressureKeys": [
+      "Vékony karok",
+      "Romlott gabona",
+      "Piaci bizalom"
+    ],
+    "places": [
+      "Kano gabonapiaci ötéves-alatti állomás, Észak-Nigéria"
+    ]
+  },
+  "child--battery-dust-on-the-play-sand": {
+    "title": "Akkumulátorpor a játszóhomokon",
+    "scene": "A gyerekek a földön játszanak pár méterre onnan, ahol a munkások szétverik a régi ólomsavas akkumulátorokat, és kábelköpenyt égetnek a rézért. Finom por ül a kezekre, a játékokra és a kásás tálra. A széli rendelőben a gyerekek lassú növekedést és fáradt vért mutatnak — jele annak, hogy a test ólmot hordoz, egy fémmérget, amely az agyat és a csontokat károsítja. A családoknak kell a hulladékbér. Az udvarok nyitva maradnak, mert a vevők fizetnek a fémért, és nincs biztonságosabb munka a szomszédban. Amíg a port a forrásnál meg nem állítják, és tiszta állások nem váltják a mérgezőeket, a játszóhomok tovább betegíti a gyerekeket.",
+    "stakeholder": "Gyermek-környezetegészségügyi tiszt",
+    "pressureKeys": [
+      "Lassú növés",
+      "Ólompor",
+      "Hulladékmunka"
+    ],
+    "places": [
+      "Old Fadama roncstelep-széli rendelő, Accra"
+    ]
+  },
+  "maternal--bamboo-stretcher-at-the-switchback": {
+    "title": "Bambusz hordágy a hajtűkanyarnál",
+    "scene": "A Namche feletti hajtűkanyarnál egy anya átvérzi a vattakorongot, miközben a szomszédok bambusz hordágyon viszik. Az ösvény menti rendelő alapkészletekkel megállíthat némi vérzést, de a legközelebbi teljes szülészeti terem órákra van egy úton, amelyet minden monszun elmos. A családok a kárt hideg kezekben és hosszú várakozásban érzik: a kezelhető vérveszteség halálossá válik, amikor a dzsip sosem jön. Ami ezt fenntartja, nem csak a távolság. A szezonális teherhordó-menetrendek és az egyetlen közös jármű miatt a vészhelyzeti fuvarok alulmaradnak a turistatúrákkal és a rakománnyal szemben, így a gyermekágyi krízisek minden évben ugyanúgy felhalmozódnak.",
+    "stakeholder": "Ösvény menti egészségügyi önkéntes kör",
+    "pressureKeys": [
+      "Erős Vérzés",
+      "Útra Várás",
+      "Személyzethiány"
+    ],
+    "places": [
+      "Solukhumbu ösvény menti rendelő"
+    ]
+  },
+  "maternal--night-heat-on-the-birth-floor": {
+    "title": "Éjszakai hőség a szülőszobán",
+    "scene": "A chawl szülőszobájában az anyák megosztott priccseken fekszenek egy bádogtető alatt, amely sötétedés után is őrzi a nappali hőséget. Amikor leáll a hálózat, megállnak a ventilátorok és kihűl a sterilizáló; egy frissen szült anyának felszökik a láza, és nincs tiszta mód lehűteni őt vagy biztonságban tartani az eszközöket. A nők a kárt átázott lepedőkben, száguldó pulzusban és csecsemőkben érzik, akik nem tudnak megnyugodni az állott levegőben. A rendszer, amely folyamatosan termeli a veszélyt, egy olyan vezetékezési terv, amelyet lámpákra és telefonokra terveztek, nem éjjel-nappali szülészeti ellátásra—a bérbeadók továbbra is szobánként mérik az áramot, így a tartalék üzemanyag és a stabil konnektorok sosem jutnak el a szülőszintre.",
+    "stakeholder": "Chawl női egészségügyi sabha",
+    "pressureKeys": [
+      "Anyai Láz",
+      "Áramszünetek",
+      "Zsúfoltság"
+    ],
+    "places": [
+      "Rakhiyal chawl szülőszoba"
+    ]
+  },
+  "maternal--dust-in-the-labor-queue": {
+    "title": "Por a vajúdási sorban",
+    "scene": "A bánya szülészeti pultja előtt a házastársak egy porízű sorban várakoznak. Egy nő, akinek otthon rohama volt, műanyag széken ül, miközben az ügyintéző a műszakpapírokat ellenőrzi, mielőtt bárki kinyitna egy kartont. A családok a kárt késő magnéziumban, kifizetetlen rendelői díjakban és férjekben érzik, akik nem hagyhatják el az aknát anélkül, hogy elveszítenék a napi bért. A hajtóerő maga a beosztás: a vállalkozói szabályok a rendelőhöz való hozzáférést aktív jelvényekhez és éjszakai műszakkapukhoz kötik, így a terhességi magas vérnyomást továbbra is későn kezelik, még akkor is, ha az épület csak egy rövid sétára van az aknától.",
+    "stakeholder": "Bányász házastársak gondozási bizottsága",
+    "pressureKeys": [
+      "Rohamok",
+      "Műszakszabályok",
+      "Rendelői Díjak"
+    ],
+    "places": [
+      "Cerro Alto munkások szülészeti pultja"
+    ]
+  },
+  "maternal--warm-vials-at-low-tide": {
+    "title": "Meleg ampullák apálykor",
+    "scene": "Apálykor a pataki szülészeti menedék sót és petróleumot áraszt. Egy bába olyan gyógyszerampullát tart, amely túl sokáig melegedett, mert a hűtő megint elromlott; a víz túloldalán egy anya vérzik, miközben a komp üzemanyagra és dagályra vár. Az emberek a kárt remegő kezekben, tönkrement oxitocinban és órákban érzik, amikor egy rövid csónakút szerencsejátékká válik. A helyi hajtóerő egy ellátási lánc, amely még mindig utólagos gondolatként kezeli a patakot—a hűtőládák, az üzemanyag és a pótalkatrészek ugyanazon a lassú kompmenetrenden mozognak, mint a piaci áruk, így a biztonságos szülészeti gyógyszerek későn vagy már melegen érkeznek.",
+    "stakeholder": "Pataki bába-szövetkezet",
+    "pressureKeys": [
+      "Vérzés",
+      "Meleg Gyógyszer",
+      "Kompkésés"
+    ],
+    "places": [
+      "Mtwapa-patak szülészeti menedék"
+    ]
+  },
+  "coord--lakes-that-will-not-speak-together": {
+    "title": "Tavak, amelyek nem beszélnek egymással",
+    "scene": "Amikor egy gleccsertó a völgy felett túl gyorsan megduzzad, az árvíz órák alatt átszakíthatja a földeket és az úti hidakat. A családok már most repedezett falakkal, elveszett burgonyaföldekkel élnek, és éjszakákat töltenek szirénára figyelve, amely talán sosem jön időben. Minden település a saját vízszintmérőit, rádiócsatornáit és vészhelyzeti listáit őrzi. A szomszédos ügyeletek nem osztanak élő méréseket és közös válaszadási kasszát, így az egyik város figyelmeztetése a következő gerincnél elhal. A kár: vizes házak és tönkrement termés. A hajtóerő a különálló rendszerek, amelyek nem hajlandók egy folyosóként cselekedni, amikor a hegyek ugyanazt a vizet küldik mindenkire.",
+    "stakeholder": "Völgyi polgári védelmi koordinátorok",
+    "pressureKeys": [
+      "Árvízkár",
+      "Néma mérők",
+      "Vádaskodás"
+    ],
+    "places": [
+      "Carhuaz–Huaraz völgyi települések, Cordillera Blanca"
+    ]
+  },
+  "coord--three-cities-one-heat-wave": {
+    "title": "Három város, egy hőhullám",
+    "scene": "A nyári csúcsban a gyár- és raktárövezetek megsülnek. A munkások elájulnak a műszakban, a rendelők megtelnek hőártalommal, az éjszakai buszok pedig továbbra is zsúfoltak, mert az emberek nem hagyhatják ki a bért. A hőség nem áll meg a városi határoknál, mégis minden metrói ügyelet a saját riasztásait küldi, a saját hűtőhelyeit nyitja, és a saját túlórakeretét őrzi. Az egyik kerületi csúcs ritkán indít közös személyzetet, közös furgonokat vagy közös vészalapot a három város között. Az emberek a kárt betegnapokban és kieső bérben érzik. A baj nő, mert a folyosó egyetlen időjárási eseményre még mindig három összehangolatlan forgatókönyvvel válaszol.",
+    "stakeholder": "Városi népegészségügyi és munkaügyi ügyeletek",
+    "pressureKeys": [
+      "Hőártalom",
+      "Osztott riasztás",
+      "Büdzséharc"
+    ],
+    "places": [
+      "Delhi–Ghaziabad–Noida munkafolyosók"
+    ]
+  },
+  "coord--nets-empty-logbooks-closed": {
+    "title": "Üres hálók, zárt naplók",
+    "scene": "A partraszálló strandok, amelyek egykor hajnalban megteltek, most vékonyabb fogást és hosszabb várakozást látnak. A legénység kevesebb eladható hallal tér haza, a családok pedig csökkentik az étkezést, amikor a piaci standok elcsendesednek. Illegális vagy be nem jelentett hajók továbbra is ugyanazokon a partközeli vizeken dolgoznak, de minden szövetkezet és tengeri ügyelet a saját naplóit, rádiós tippjeit és járőrkéréseit tartja. Nincs közös korai kép arról, ki hol halászik, és nincs közös alap a közös járőrökre, amikor egy strand önmagában nem tudja kifizetni az üzemanyagot. Az üres hálók a kár, amit az emberek a vacsoránál éreznek. A zárt könyvek és a külön szabályok tartják kormányozatlanná a közös tengert.",
+    "stakeholder": "Parti partraszálló szövetkezetek és tengeri ügyeletek",
+    "pressureKeys": [
+      "Üres hálók",
+      "Rejtett fogás",
+      "Bizalmatlanság"
+    ],
+    "places": [
+      "Saint-Louis–Kayar partraszálló strandok, Szenegál"
+    ]
+  },
+  "coord--shore-towns-separate-water-truths": {
+    "title": "Parti települések, külön víz-igazságok",
+    "scene": "A tópart mentén a gyomorbetegségek megugranak a heves esők és a zavaros csapvizes napok után. A szülők kihagyják a munkát, hogy rendelői sorokban üljenek, miközben a gyerekek otthon maradnak az iskolából. A települések saját táblázaton mérik a vizet és számolják a beteglátogatásokat. Ritka, hogy megosszák a laboreredményeket, a szivattyú-kimaradásokat vagy a közös tartalékot klórra, alkatrészekre és többletápolókra, amikor ugyanaz a tó és a csövek együtt mondanak csődöt. Az emberek a kárt betegnapokban és a következő pohár félelmében érzik. A rivális költségvetések és az adatfalak minden önkormányzatot vakon tartanak a szomszéd mintájára, így ugyanaz a járványtörténet ismétlődik településről településre.",
+    "stakeholder": "Tóparti önkormányzati víz- és rendelővezetők",
+    "pressureKeys": [
+      "Betegnapok",
+      "Adatfalak",
+      "Helyi rivális"
+    ],
+    "places": [
+      "Kisumu–Homa Bay tóparti öv, Viktória-tó"
+    ]
+  },
+  "radicalization--layoff-notice-new-names-on-the-wall": {
+    "title": "Felmondólevél, új nevek a falon",
+    "scene": "A malomsor kapujánál pénteken jöttek a felmondólevelek. Hétfőre a lakbérappok pirosan villognak, a gyerekek kimaradnak a fogorvostól. Az üzemi bizalmiak minden szünetben ugyanazt hallják: ki vette el a műszakot, ki néz ki másképp, kit okoljanak. Egy helyi uszító magasra tartja a feszültséget—rövid videóklipek és csoportchatok, amelyek gyorsabban neveznek meg bűnbakokat, mint ahogy bármely szakszervezeti gyűlés válaszolni tudna. A családi tanácsadók látják, ahogy a vékony kötelékek elszakadnak, miközben a hírfolyam tovább táplálja a haragot.",
+    "stakeholder": "Malomsori üzemi bizalmiak és családi tanácsadók",
+    "pressureKeys": [
+      "Elmaradt Lakbér",
+      "Bűnbak Klipek",
+      "Vékony Kötelékek"
+    ],
+    "places": [
+      "Riverside Malomsor Kapu"
+    ]
+  },
+  "radicalization--closed-clinic-open-airwaves": {
+    "title": "Bezárt rendelő, nyitott éter",
+    "scene": "A plébánia terme most azt a várólistát fogadja, amit a bezárt rendelő hagyott maga után. Az idősek kezeletlen fájdalommal ülnek. A szülők egy órát vezetnek egy egyszerű oltásért. Hazafelé a rádió egy helyi beszélgetős műsort talál, amely a kívülállókat okolja minden üres vizsgálószobáért. Az önkéntesek továbbra is élelmiszercsomagokat pakolnak, de az éter továbbra is egyszerű ellenséget árul. Az ellátás késése most a testeket bántja; a vádaskodó adás a szomszédokat fenyegetéssé változtatja.",
+    "stakeholder": "Plébániai gondozókör és mobil rendelő önkéntesei",
+    "pressureKeys": [
+      "Ellátási Késés",
+      "Gyűlölet Rádió",
+      "Zárt Ajtók"
+    ],
+    "places": [
+      "Cedar Hollow Plébánia Terem"
+    ]
+  },
+  "radicalization--cut-routes-louder-break-room": {
+    "title": "Megszüntetett járatok, hangosabb pihenő",
+    "scene": "Az éjszakai buszokat megszüntették. A sofőrök későn végeznek, és mégis lemaradnak az utolsó járatról haza. A pihenőben a beszélgetés élessé válik: ki kap túlórát, kit okolnak a vonalon elkövetett bűncselekményekért, kinek nem kellene itt lennie. A kölcsönös segély bizalmiai megpróbálnak fuvarokat és étkezéseket megosztani, mégis egy helyi pletykagyár—üzenetek és öltözőposzterek—továbbra is könnyű bűnbakokra mutat. A kimerültség valós. A bűnbak-történet tartja szétszakadva a legénységeket.",
+    "stakeholder": "Közlekedési kölcsönös-segély bizalmiak",
+    "pressureKeys": [
+      "Kimerültség",
+      "Bűnbakok",
+      "Szakadó Legénység"
+    ],
+    "places": [
+      "East Line Éjszakai Depó"
+    ]
+  },
+  "radicalization--standing-terrace-softer-recruiters": {
+    "title": "Állóterasz, lágyabb toborzók",
+    "scene": "A meccs után a terasz mellékutcákba ürül, ahol a gyerekeknek egykor edzőik és biztonságos termeik voltak. A mentorok elmentek, amikor a forrás elapadt. Most lágyabb hangok a csoportchatokban tartozást, felszerelést és egyértelmű ellenséget kínálnak. Az ifjúsági munkások továbbra is kinyitják a klubot meccsesteken, de az utcai félelem nő, amikor rivális klipek virálissá válnak. A kár az, hogy a gyerekeket a gyűlölet felé húzzák. A hajtóerő egy csendes chat-csatorna, amely betölti a mentorok hagyta űrt.",
+    "stakeholder": "Szurkolói alap ifjúsági munkásai",
+    "pressureKeys": [
+      "Utcai Félelem",
+      "Chat Csatorna",
+      "Elveszett Mentorok"
+    ],
+    "places": [
+      "North Stand Szurkolói Klub"
+    ]
+  },
+  "fgm--stamps-still-bless-the-cut": {
+    "title": "A pecsétek még áldják a vágást",
+    "scene": "A Nílus út menti közjegyzői irodáknál anyák várakoznak mappákkal, miközben a hivatalnokok házassági papírokat pecsételnek. A lányok korán hagyják el az iskolát alhasi fájdalommal, lázzal a tisztátalan vágások után, és a következő vizsgahét félelmével. A hajtóerő nem csak a régi szokás. A családok továbbra is fizetnek a vágóknak, mert egyes közjegyzők és apósok-anyósok a pecsételt „tisztasági” igazolást a házassági szerződés olcsó útjának tekintik. Biztonságosabb beleegyezési és egészségügyi bizonyíték nélkül a díj-és-pecsét körforgás továbbra is lefoglalja a következő lányt.",
+    "stakeholder": "Lányok középiskolai anyaszövetsége",
+    "pressureKeys": [
+      "Fertőzések",
+      "Vágói Díjak",
+      "Becsületszabályok"
+    ],
+    "places": [
+      "Abnub házassági-közjegyzői sor, Minya kormányzóság"
+    ]
+  },
+  "fgm--grove-dues-open-the-bush": {
+    "title": "A ligeti járulékok nyitják a bozótot",
+    "scene": "A liget melletti rizsparcellákon a nők közös magpénzt számolnak, miközben a lányok sántítva mennek haza a beavatási szezon után. A sebfájdalom távol tartja őket az átültetéstől; néhányan kihagyják a piaci napokat, és elveszítik a háztartásuknak szükséges termésrészt. A helyi hajtóerő a Bondo járulékrendszer: a családok társasági díjat fizetnek, hogy a lányaik „tartozhassanak” valahová, és a vágók ezekből a fizetésekből keresnek. A kár megállítása azt jelenti, meg kell változtatni, hogyan finanszírozzák a tartozást és a kölcsönös segítséget — nem csak utólag kezelni a sebeket.",
+    "stakeholder": "Női rizstermelők kölcsönös segélyköre",
+    "pressureKeys": [
+      "Sebfájdalom",
+      "Társasági Díjak",
+      "Kirekesztés Félelme"
+    ],
+    "places": [
+      "Makump ligetszéle, Tonkolili körzet"
+    ]
+  },
+  "fgm--dawn-bookings-in-the-women-s-lanes": {
+    "title": "Hajnali foglalások a női sorokban",
+    "scene": "Napkelte előtt a kereskedők kirakják a textilt és a fűszereket, miközben a vágók csendes készpénzes foglalásokat vesznek menyasszonyokra. Fiatal nők, akik már szülési sérüléssel élnek — szakadással és hosszú vajúdás kockázatával a lezárt hegszövet miatt —, még mindig hallják, hogy az apósok-anyósok követelik a vágást, hogy a házasság megmaradjon. A vágói jövedelem és az após-anyós nyomás ugyanazokon a piaci utakon jár, mint az áruk. Ha a sorok csak elsősegély-bódékat adnak hozzá, és soha nem érintik, ki kap fizetést a vágásért, a foglalások minden esküvői szezonban folytatódnak.",
+    "stakeholder": "Piaci kereskedők egészségügyi szövetkezete",
+    "pressureKeys": [
+      "Szülési Sérülés",
+      "Vágói Jövedelem",
+      "Após-Anyós Követelés"
+    ],
+    "places": [
+      "Borama központi női piaci sorok, Awdal"
+    ]
+  },
+  "fgm--elders-still-name-the-pure-bride": {
+    "title": "A vének még mindig a tiszta menyasszonyt nevezik",
+    "scene": "A hegyaljai udvarokon teatálcák járnak körbe, miközben a vének dicsérik a „tiszta” menyasszonyt, a tanárok pedig üres padokat vesznek észre az ünnepek után. A túlélők krónikus fájdalommal és fertőzésekkel ülnek végig az órán, amelyeket nem nevezhetnek ki hangosan. A hajtóerő a nyilvános tisztasági beszéd, ami a házassági hírnévhez kötődik: a családok elhallgattatják az iskolai panaszokat a párkapcsolatok védelmében, és a következő évfolyam megtanulja, hogy a megszólalásba a jövő kerül. A körforgás megszakításához új módok kellenek a tanításra, a tanúskodásra és a lányok védelmére anélkül, hogy táplálnák a tisztasági ranglistát.",
+    "stakeholder": "Fiatal női tanárok védelmi ligája",
+    "pressureKeys": [
+      "Krónikus Fájdalom",
+      "Tisztasági Beszéd",
+      "Iskolai Csend"
+    ],
+    "places": [
+      "Ranya hegyaljai esküvői udvarok, Szulejmánija kormányzóság"
+    ]
+  },
+  "short-termism--cash-kilns-thin-the-storm-belt": {
+    "title": "Pénzes kemencék vékonyítják a viharövet",
+    "scene": "Apálykor a patak nedves iszap és fafüst szagát árasztja. A halászok vékonyabb hálókat húznak, mint öt éve. A fiatal mangroveerdők, amelyek egykor megtörték a viharhullámot, foltokban eltűntek—faszénnek vágták ki őket, ami még azon a héten elkel. A családoknak most kell az a pénz az iskoladíjra és a csónak üzemanyagára. A kemencefőnökök aznap fizetnek, és versenyt futnak a vágási engedélyekért a következő ellenőrzés előtt. Minden szezonban vékonyabb lesz a szegély, az árvíz magasabbra kúszik a cölöpházakba, és a gyors készpénz győz a fák felett, amelyek megvédték volna a partot.",
+    "stakeholder": "Patakparti halászok és kemencemunkások tanácsa",
+    "pressureKeys": [
+      "Árvíz",
+      "Faszénpénz",
+      "Engedélyhajsza"
+    ],
+    "places": [
+      "Salt Creek mangrove-szegély"
+    ]
+  },
+  "short-termism--exam-scores-locked-workshops": {
+    "title": "Vizsgapontok, bezárt műhelyek",
+    "scene": "A melléképületben még vannak esztergagépek és vezetékező padok, de a termek fele zárva marad. A kerületi pénz idén a teszteredményeket követi, ezért az oktatók régi dolgozatokat magoltatnak ahelyett, hogy megtanítanák a tanulókat szivattyúkat és paneleket javítani. A testületben ülő szülők a rangsort erőltetik, ami feloldja a következő félév támogatását. Törött műhelyszerszámok hevernek használatlanul. A végzősök úgy távoznak, hogy ki tudnak tölteni egy kvízt, de képtelenek valódi állást betölteni az alant futó ipari úton. A készséghézag nő, mert a költségvetés azt jutalmazza, amit péntekig meg lehet számolni, nem azt, amire a városnak öt év múlva szüksége lesz.",
+    "stakeholder": "Oktatók, tanulók és szülői testület",
+    "pressureKeys": [
+      "Törött műhelyek",
+      "Büdzséfagy",
+      "Készséghézag"
+    ],
+    "places": [
+      "Hillside Politechnikum-melléképület"
+    ]
+  },
+  "short-termism--rent-due-stairs-failing": {
+    "title": "Esedékes bérlet, omladozó lépcsők",
+    "scene": "Fekete penész térképezi a harmadik emeleti lakások sarkait. A gyerekek egész éjjel köhögnek. A házigazdák továbbra is teljes bérleti díjat szednek a hónap elsején, és megbüntetik azokat a bérlőket, akik engedélyezett stáb nélkül javítják a lépcsőt vagy tömítik a szivárgásokat—ilyet nem tudnak megfizetni. A gondnokok tudják, mely gerendák mennek tönkre következőnek, de a tulajdonosok minden tartalék pénzt az e negyedévi kivonható nyereségnek tekintenek. A bérlői unió biztonságos lépcsőt és száraz falakat akar. A könyvelés most készpénzt akar. Minden télen a lakások egyre több embert betegítenek meg, miközben a rövid távú bérleti szorítás blokkolja a hosszú távú javítást.",
+    "stakeholder": "Bérlői unió és háztömb-gondnokok",
+    "pressureKeys": [
+      "Penészes otthonok",
+      "Bérletszorítás",
+      "Javítási bírság"
+    ],
+    "places": [
+      "Canal Row bérházak"
+    ]
+  },
+  "short-termism--spring-flood-sold-as-dry-fields": {
+    "title": "Tavaszi áradás száraz mezőként eladva",
+    "scene": "A termesztők olyan földeken járnak, amelyek minden tavasszal egy kicsit jobban süllyednek. A tőzegtalaj—régi nedves föld, amely vizet és szenet tárol—összezsugorodik, ha túlpumpálják, hogy a sorok szárazon maradjanak egy gyors terményszerződéshez. A dízel szivattyúk keményen mennek az ellenőrzési hét előtt, hogy a bérlemények termelékenynek tűnjenek. A számlák nőnek. Amikor jön az eső, a víznek nincs hova lassan elfolynia, és a magágyak megfulladnak. A szövetkezet pihentethetne sávokat és megemelhetné az ágyásokat a hosszú távra, de a bérleti záradékok büntetik azt, aki „tétlenül” hagyja a földet ebben a szezonban. A rövid távú szárazmező-eladások tovább írják a következő áradást.",
+    "stakeholder": "Lápi termesztők szövetkezete",
+    "pressureKeys": [
+      "Süllyedő földek",
+      "Szivattyúszámlák",
+      "Bérleti záradékok"
+    ],
+    "places": [
+      "Blackwater Fen kiosztások"
+    ]
+  },
+  "misinfo--the-nurse-who-never-dialed": {
+    "title": "A nővér, aki sosem hívott",
+    "scene": "A Riverside Free Clinic előcsarnokában Mária két órát vár egy ismételt felírásra, amiről azt mondták, kész van. A hívás, amiben bízott, olyan számról jött, ami a klinikáénak látszott. A hang megnevezte a gyógyszereit és az átvételi időt. Itt egyetlen nővér sem indított ilyen hívást. A város másik felén olcsó automata hívórendszer és klónozott klinikahangok pörgetik a hamis időpontvonalakat. A betegek kihagyják a valódi adagokat, rossz napon jönnek, vagy egyáltalán nem veszik fel a klinika hívásait. A személyzet reggeleket éget el, hogy szétválassza a félelmet a tényektől, miközben a hamisítási lánc nyílt hívóazonosító-trükkökön és bárki által megvásárolható deepfake – mesterségesen hamisított – hangklippeken fut.",
+    "stakeholder": "Klinikai kapcsolattartó koordinátor",
+    "pressureKeys": [
+      "Kihagyott Adagok",
+      "Hamis Hívások",
+      "Személyzeti Teher"
+    ],
+    "places": [
+      "Riverside Free Clinic Előcsarnok"
+    ]
+  },
+  "misinfo--sirens-nobody-believes": {
+    "title": "Szirénák, amelyekben senki sem hisz",
+    "scene": "A Seabrook Wharfön üvölt a viharsziréna, és a legénységek fele tovább pakol. Múlt hónapban egy vírusklip azt mutatta, hogy a kikötőmester „visszavon” egy figyelmeztetést, amit soha nem vontak vissza. Hálók és motorok kaptak valódi vízkárt, amikor a zivatar időben megérkezett. A helyi hajtóerő szerkesztett riasztóvideók és a kikötői csatornát utánzó hamis szöveges robbantások lánca. Minden hamisítás könnyebbé teszi, hogy legyintsünk a következő valódi szirénára. A hirdetőtáblát mindkét oldalt érvelő kinyomatok borítják, miközben az árapálytáblázatoknak mindegy, ki nyeri a vitát.",
+    "stakeholder": "Kikötőmester",
+    "pressureKeys": [
+      "Viharkárok",
+      "Hamis Riasztások",
+      "Kikötői Kétely"
+    ],
+    "places": [
+      "Seabrook Wharf Hirdetőtábla"
+    ]
+  },
+  "misinfo--the-lecture-that-wasn-t-sold": {
+    "title": "Az előadás, amit nem adtak el",
+    "scene": "A Milltown Night School terme régen megtelt hegesztő- és ápolósegéd-tanfolyamokra. Ezen a féléven üresek a padok, miután egy meghamisított klip azt mutatta, hogy az igazgató „jegyeket ad el” egy vállalkozónak. Ő ilyet soha nem mondott. Valaki az arcát idegen hanghoz vágta, és fizetett, hogy a videót helyi csoportokban tolják. A diákok, akiknek a bizonyítvány kell a műszakos munkához, inkább kimaradnak, mint hogy hamis botrány tapadjon a nevükhöz. Ugyanazok a fizetett rágalmazó fiókok új vágásokat szórnak el, valahányszor nő a jelentkezés – így a kétely a termék, az üres padok pedig a számla.",
+    "stakeholder": "Esti iskola igazgatója",
+    "pressureKeys": [
+      "Lemorzsolódás",
+      "Hamisított Klipek",
+      "Fizetett Rágalom"
+    ],
+    "places": [
+      "Milltown Night School Terem"
+    ]
+  },
+  "misinfo--rent-strike-on-a-forged-memo": {
+    "title": "Bérletsztrájk hamisított feljegyzésen",
+    "scene": "A Harborview Tenant Union termében a szomszédok egy feljegyzésen vitatkoznak, ami a városi lakáshivatalénak látszik. Azt mondja a bérlőknek: tartsák vissza a lakbért, különben elveszítik a látszatvédelmet. Van, aki bezárkózott és nem fizet. Van, aki fizetett, és árulónak fenyegetik. Késedelmi díjak és kilakoltatási felszólítások már a folyosón landolnak. A hajtóerő nem csak a düh; egy nyomtasd-és-továbbítsd hamisítóműhely hivatalos kinézetű PDF-eket dob a csoportchatbe, valahányszor fellángol egy bérleti vita. Külső pénz erősíti a posztokat. Az épületen belüli bizalom gyorsabban vékonyodik, mint amit bármely javítási lista helyrehozna.",
+    "stakeholder": "Bérlői unió elnöke",
+    "pressureKeys": [
+      "Bezárt Ajtók",
+      "Hamis Feljegyzések",
+      "Külső Pénz"
+    ],
+    "places": [
+      "Harborview Tenant Union Terem"
+    ]
+  },
+  "totalitarianism--the-ward-docks-your-household": {
+    "title": "A körzet megvonja a háztartás juttatásait",
+    "scene": "A millbridge-i éjszakai osztályon egy lázas gyerek vár, miközben a főnővér egy világító táblagépre bámul. A gondozás már nem csak a szükségletről szól. Minden műszakban a kórháznak el kell érnie egy jelentési kvótát: rögzített számú hűségjelzést, bejelentést és aláírt hűségnyilatkozatot kell beadni hajnal előtt. Ha nem jön össze a szám, a kerületi hivatal levonja az egész háztartás jegyponjait, és lefagyaszthatja a nővér jelvényét. A betegek betegebben távoznak. A személyzet a raktárszekrényben suttog, és abbahagyja a becsületes feljegyzések írását. A kvótagép életben tartja a félelmet; az üres ágyak és a késő gyógyszerek azok, amiket a családok reggelre megéreznek.",
+    "stakeholder": "Az éjszakai műszak nővéreinek csendes köre",
+    "pressureKeys": [
+      "Megvont Ellátás",
+      "Jelentési Kvóták",
+      "Dolgozói Félelem"
+    ],
+    "places": [
+      "Millbridge Közösségi Kórház"
+    ]
+  },
+  "totalitarianism--no-chant-no-cold-storage": {
+    "title": "Nincs kántálás, nincs hűtőtároló",
+    "scene": "Harborlane zöldségcsarnokaiban régen zümmögött az élet napkelte előtt. Most a standok fele sötétben áll. Hogy megtarthassanak egy hűtőkamrát és árusítási engedélyt, a kereskedőknek az Egység-kántálással kell nyitniuk a reggelt, és be kell jegyezniük a nyilvános Engedély-nyilvántartásba—egy közös listába, amelyet a körzeti hivatal valós időben frissít. Ha kihagyják a rítust, vagy megjelölt személynek adnak el, a kamra áramellátása délre lekapcsol. A gyümölcs megromlik. A családok kevesebb étellel mennek haza. A nyilvántartás a helyi motor: a beszédet kapcsolóvá teszi az áramhoz és a helyhez, így az üres standok és az éhes esték újra és újra visszatérnek.",
+    "stakeholder": "Árusok kölcsönös hitelszövetsége",
+    "pressureKeys": [
+      "Üres Standok",
+      "Engedély-nyilvántartás",
+      "Árusi Félelem"
+    ],
+    "places": [
+      "Harborlane Zöldségcsarnokok"
+    ]
+  },
+  "totalitarianism--compliant-blocks-stay-lit": {
+    "title": "Az engedelmes tömbök világosak maradnak",
+    "scene": "Copperline-ban a lámpák először azokon a mellékutcákon hunynak ki, amelyek alacsony pontot kaptak. Minden otthonban és boltban van egy Pontszám Portál—egy egyszerű online tábla, amely a tömböket rangsorolja a nagygyűléseken való részvétel, a szomszédbejelentések és az app-bejelentkezések alapján. A vonalmunkások és a segélyügyi ügyintézők erről a tábláról kapják a lekapcsolási listát, nem a viharkárokból. Az alacsony pont gördülő áramszüneteket, hideg szobákat és holt telefonokat jelent. Az emberek abbahagyják a tornácok közti látogatást. A portál tartja fenn a mintát: a társadalmi engedelmességet kapcsolóvá teszi az áramhoz, így az áramszünetek és a bizalmatlanság együtt nőnek minden évszakban.",
+    "stakeholder": "Vonalmunkások és segélyügyi ügyintézők",
+    "pressureKeys": [
+      "Áramszünetek",
+      "Pontszám Portál",
+      "Szomszédi Bizalmatlanság"
+    ],
+    "places": [
+      "Copperline Hálózati Lakónegyed"
+    ]
+  },
+  "totalitarianism--fuel-only-for-the-logged-crew": {
+    "title": "Üzemanyag csak a naplózott legénységnek",
+    "scene": "A Saltreed Rakparton a független hajók még ismerik az árapályt, de az üzemanyag-dokk csak az Egység Naplón szereplő legénységeknek nyílik. Ez a napló napi névsor arról, ki volt ott a mólói eligazításon, ki nevezett meg kétkedőt, és ki használta a jóváhagyott rádiócsatornát. Ha kimarad egy bejegyzés, a szivattyú zárva marad. A hálók javítatlanok maradnak. A kapitányok elveszítik a társakat, akik nem kémkednek egymásra. A családok kevesebb halat esznek. A napló a helyi hajtóerő: a gázolajat és az alkatrészeket a politikai teljesítményhez köti, így az üzemanyag-megvonások és a szétesett legénységek akkor is ismétlődnek, ha az időjárás kedvező.",
+    "stakeholder": "Független kapitányok javítószövetsége",
+    "pressureKeys": [
+      "Üzemanyag-megvonás",
+      "Egység Naplók",
+      "Szétesett Legénységek"
+    ],
+    "places": [
+      "Saltreed Halász Rakpart"
+    ]
+  },
+  "women-stem--night-shuttle-ends-before-her-bench-time": {
+    "title": "Az esti járat a padidő előtt ér véget",
+    "scene": "Sötétedés után a műszeres szárny még zúg. A lányok, akiknek extra órákra van szükségük a kalibráló padokon, nézik, ahogy az utolsó campusjárat nyolckor elindul. Enélkül a fuvar nélkül sokan nem maradhatnak. A szülők nem fogadják el a sötét utcákon való gyaloglást, ezért náluk a laborpraktika korán véget ér, míg a fiú osztálytársak befejezik a beállításokat. A jegyek csúsznak azokon a gyakorlatiakon, amelyek eldöntik, ki jut be az érzékelő- és automatizálási állásokba. A buszmenetrendet egy régi feltételezés köré írták: a komoly labormunka azoknak a diákoknak való, akik egyedül haza tudnak jutni. Amíg az útvonalak, a világítás és a foglalás nem illeszkedik a valós padidőkhöz, a szárny minden félévben vékonyabb női technikus-utánpótlást képez.",
+    "stakeholder": "A politechnikum igazgatója és a női hallgatói egyesület",
+    "pressureKeys": [
+      "Elmaradt labok",
+      "Járathiány",
+      "Jegyromlás"
+    ],
+    "places": [
+      "Pune Polytechnic Instrumentation Wing"
+    ]
+  },
+  "women-stem--sensor-tickets-still-list-the-sons": {
+    "title": "Az érzékelő-jegyeken még mindig a fiúk szerepelnek",
+    "scene": "A réz képzőtelepen a drónfelmérésekre és az IoT-érzékelős bejárásokra szóló munkajegyek még mindig ismerős vezetéknevek alatt mennek ki — gyakran a régi brigádok fiainak és unokaöccseinek. A nők, akik ugyanazokat a biztonsági modulokat elvégezték, a padon várnak. Elveszítik a fizetett terepi órákat, és a bérszakadék megkeményedik, mielőtt egy teljes szezont naplóznának. A diszpécserszoftvert és a brigád szokásait akkor építették, amikor a bányát férfiak terepének kezelték. Amíg a jegykiadás ezt a mintát másolja, a telep ügyes férfiakat ad az érzékelő-brigádoknak, és mellőzött nőket a tanteremnek.",
+    "stakeholder": "A telephely képzési vezetője és a regionális női bányászok egyesülete",
+    "pressureKeys": [
+      "Jegy kizárás",
+      "Brigádelfogultság",
+      "Bérstop"
+    ],
+    "places": [
+      "Antofagasta Copper Training Depot"
+    ]
+  },
+  "women-stem--repair-floor-badge-never-prints-for-her": {
+    "title": "A javítószinti jelvény soha nem nyomtatódik ki neki",
+    "scene": "A biomed öbölben infúziós pumpák és monitorok ülnek piros címkével, miközben a betegek fent várnak. Az ápolók, akik ismerik a kórtermeket, át szeretnének képezni a javításokra. A javítószint jelvénynyomtatója sorra elutasítja a nevüket, vagy csak megfigyelői státuszra irányítja őket. Teljes jelvény nélkül nem vehetnek ki szerszámokat és nem naplózhatnak javításokat, ezért a hibás gépek felhalmozódnak, és az ígéretes nők olyan kórtermekbe mennek, ahol legalább túlórát fizetnek. A belépési szabályok a mélyjavítást még mindig zárt mesterségnek kezelik, amelyet a már listán lévő férfiak adnak tovább. Ez a kapu — nem az érdeklődés hiánya — tartja a kórházat nőkben szegénynek a klinikai mérnökségen.",
+    "stakeholder": "A kórház biomedicinális vezetője és az ápoló–STEM összekötő",
+    "pressureKeys": [
+      "Hibás gépek",
+      "Jelvényelfogultság",
+      "Pályaelhagyás"
+    ],
+    "places": [
+      "Kumasi Teaching Hospital Biomed Bay"
+    ]
+  },
+  "women-stem--travel-fund-needs-a-male-chaperone": {
+    "title": "Az utazási alap férfi kísérőt követel",
+    "scene": "Az előkészítő teremben a lányok, akik meg tudják oldani a versenyfeladatokat, mégis elveszítik a helyüket a regionális olimpiákon. Az utazási alap nem ad ki jegyet, amíg férfi kísérőt nem neveznek meg, és a családok gyakran nem tudnak egyet nélkülözni. Az ugyanazoktól az edzőktől jött fiúk felszállnak a buszra. Az ezekhez a versenyekhez kötött ösztöndíjak elkerülik őket. A kísérőszabályt biztonsági intézkedésnek szánták, de ma már szűrőként működik arra, ki mutathat pontozott munkát nyilvánosan. Amíg az utazás, a távoli bizonyítás és a finanszírozás elegendőnek kezeli a kvalifikált lányt, Amman utánpótlása szűkebb STEM-győzteskört koronáz.",
+    "stakeholder": "Előkészítő-termi edzők és szülő–diák STEM tanács",
+    "pressureKeys": [
+      "Elveszett helyek",
+      "Kísérőszabály",
+      "Ösztöndíj-rés"
+    ],
+    "places": [
+      "Amman STEM Olympiad Prep Hall"
+    ]
+  },
+  "memory--joinery-marks-leave-with-the-last-master": {
+    "title": "A csapolási jelek az utolsó mesterrel távoznak",
+    "scene": "A Nishijin fűrésztelepen a templomgerendák még a régi módon mennek fel: fa zárul fához olyan vágásokkal, amelyeket már csak kevesen tudnak olvasni. Tavaly tavasszal egy javított csarnok rosszul ülepedett egy vihar után. Egy illesztés, amelynek tartania kellett volna, egy hajszálnyit elcsúszott. Senki sem halt meg, de a vakolat megrepedt, és a papoknak hetekre be kellett zárniuk a szárnyat. A kár egyszerű—tetők, amelyek csendben meghibásodnak, amikor a jelek, amelyek megmondták, hogyan vágják őket, eltűnnek.\n\nA hajtóerő nem az időjárás. Hanem az, ahogyan a telep ma működik. A tapasztalt ácsok a csapolási jeleket—kis vésőkódokat és kiosztási szokásokat—a fejükben és olyan hulladékdeszkákon hordozzák, amelyek soha nem kerülnek a digitális munkafájlba. Amikor egy mester nyugdíjba megy vagy meghal, a következő legénység rajzokat örököl a miért nélkül. A tanoncok elmennek a stabilabb fizetésért a betonmunkába. A telep tovább szállítja a fát, de az élő memo",
+    "stakeholder": "Templomi ácscéh őrzői",
+    "pressureKeys": [
+      "Gerenda Hibák",
+      "Jelvesztés",
+      "Tanonc Távozás"
+    ],
+    "places": [
+      "Nishijin fűrésztelep, Kiotó"
+    ]
+  },
+  "memory--safe-ice-only-the-aunties-can-name": {
+    "title": "Biztonságos jég, amit csak a nénik neveznek meg",
+    "scene": "A Toksook Bay csónakkikötőből a családok még mindig hómobilokkal és csónakokkal mennek át a jégen a vadász- és halászterületek felé. Az elmúlt két télben három majdnem-baleset és egy rossz beesés a rothadt jégen embereket juttatott a klinikára. A jég nem úgy néz ki, ahogy a régi történetek leírják. Vékony foltok nyílnak ott, ahol az ösvények régen bírták. A kár hideg, nedves és azonnali—emberek sérülnek, mert a biztonságos út már nem nyilvánvaló.\n\nAmi a veszélyt növeli, nem csak a melegebb Bering-tenger. Hanem a parti tudás szakadása. A yup'ik nénik és idősek még mindig meg tudják nevezni a jeget szín, hang és évszak szerint—szavak a kéregre, a túlfolyásra és a szélmarta szélekre, amelyek soha nem kerültek iskolai térképekre vagy telefonos alkalmazásokba. A fiatalabb vadászok elmennek dolgozni Bethelbe vagy Anchorage-ba. Amikor visszajönnek, a jég megváltozott és t",
+    "stakeholder": "Yup'ik parti tudás őrzői",
+    "pressureKeys": [
+      "Ösvény Balesetek",
+      "Jégfelejtés",
+      "Fiatal Elvándorlás"
+    ],
+    "places": [
+      "Toksook Bay csónakkikötő, Alaszka"
+    ]
+  },
+  "memory--the-furnace-whisper-dies-at-shift-end": {
+    "title": "A kohó suttogása a műszak végén elhal",
+    "scene": "A Port Talbot nagyolvasztó vezérlőtermében a veteránok még mindig a suttogásról beszélnek—a hang, a hő vagy a műszermozgás apró változásáról, ami bajt jelez, mielőtt a riasztótábla kigyulladna. Tavaly egy majdnem-baleset vészlassítást kényszerített ki. Nem volt robbanás, de a legénység rohanásba kezdett, és a gyár elveszített egy költséges napot. A városi családok a kaputól érkező üzenetekben érezték a riadalmat. A kár valós kockázat a padlón, és fizetések, amelyek inognak, amikor a kohó megbotlik.\n\nA rendszer, ami tovább törli a megoldást, az, ahogy a tudás mozog—vagy nem mozog—a műszakok között. A legjobb jelek rövid átadásokban, ragacsos cédulákon és egy tapasztalt kezelő fülében élnek. A hivatalos naplók számokat rögzítenek, nem a megérzést. Amikor a veteránok végleg kilépnek, vagy amikor a létszámhiányos éjszakák kihagyják a hosszú eligazítást, a következő legénység tiszta képernyőt örököl és egy",
+    "stakeholder": "Acélmű biztonsági gondnokai",
+    "pressureKeys": [
+      "Majdnem Balesetek",
+      "Műszak Amnézia",
+      "Jegyzet Törlés"
+    ],
+    "places": [
+      "Port Talbot nagyolvasztó vezérlőterem, Wales"
+    ]
+  },
+  "memory--auntie-remedies-never-reach-the-chart": {
+    "title": "A néni-receptek soha nem jutnak el a kórlapra",
+    "scene": "A kumasi Komfo Anokye Oktatókórház szülészeti melléképületében az éjszakai műszakok még mindig túl kevés kézzel futnak. Az anyák ugyanazokkal a vérzési mintákkal vagy táplálási válságokkal térnek vissza, amelyeket a tapasztalt bábák már megoldottak múlt hónapban valaki másnál. A kár ismétlődő vészhelyzetekben, hosszabb benttartózkodásban és családokban jelenik meg, akik elvesztik a bizalmukat, amikor a kórterem mintha elfelejtené, mi működött.\n\nA hajtóerő az átadási rés. A tapasztalt bábák néni-recepteket hordoznak—gyakorlati trükköket a baj korai felismerésére, a szülés megnyugtatására vagy az első szoptatás tanítására—, amelyek soha nem kerülnek a hivatalos kórlapra. A kórlapok kódokat és gyógyszerneveket akarnak. A hasznos részlet a folyosói beszélgetésben marad, majd elmegy, amikor a személyzet magánklinikákra vált vagy kiég. Az új nővérek vékony jegyzeteket örökölnek, és újra a nehezebb úton tanulnak. Amíg a kórterem el nem kapja azt az élő ",
+    "stakeholder": "Tapasztalt bábahálózatok",
+    "pressureKeys": [
+      "Ismétlődő Ártalom",
+      "Átadási Rések",
+      "Személyzet Forgás"
+    ],
+    "places": [
+      "Szülészeti melléképület, Komfo Anokye Oktatókórház, Kumasi"
+    ]
+  },
+  "rural-roads--harvest-trucks-stop-at-the-broken-bailey": {
+    "title": "Aratási teherautók megállnak a törött bailey-hídon",
+    "scene": "Az esőzések után a Cajón Seco szárnyvonal acél bailey-hídja még mindig az egyetlen teherautó-kapocs a kávészövetkezet ültetvényei és a völgyi út között. A bailey-híd moduláris acélhíd: a stáb darabokból csavarozza össze. A múlt szezonban egy támasz elhajlott, és a cseresznyerakomány fele a túlsó parton rothadt, miközben a vevők lent vártak. A családok elvesztették azt a pénzt, amire iskoladíjra és műtrágyára lett volna szükségük. A kár egyszerű: a nedves cseresznye gyorsan megromlik, ha a teherautók nem tudnak átkelni. Ami az elszigeteltséget fenntartja, az nem csak az időjárás. Az önkormányzat még mindig folthegesztésekre és egysávos újranyitásokra tervez költségvetést állandó, egész évszakos átkelő helyett, a pótalkatrészek pedig hetekre vannak Tuxtlában. Amíg a szárnyvonal nem bírja az aratási súlyt az év minden hetében, a szövetkezet el van vágva azoktól a piacoktól, amelyekre már termel.",
+    "stakeholder": "Kistermelő kávészövetkezet és önkormányzati műszaki vezető",
+    "pressureKeys": [
+      "Romlott Termés",
+      "Hídhiba",
+      "Tartalék Pénz"
+    ],
+    "places": [
+      "Cajón Seco híd-szárnyvonal, Chiapas-felföld"
+    ]
+  },
+  "rural-roads--clinic-boat-cannot-beat-the-cut-off-levee": {
+    "title": "A klinikahajó nem bír a levágott gáttal",
+    "scene": "Amikor a Zambezi megárad, a barotse falvacskák közötti ösvények vízzé válnak. A nővérek folyami klinikahajót járatnak oltásokkal, szülészeti készletekkel és maláriatesztekkel. Az anyák még mindig órákat gyalogolnak sárban, ha a hajó késik, a lázas gyerekek pedig a biztonságos ellátási ablakon túl várnak. Egy levágott gát — földtöltés, amit az árvíz visszatartására építettek — most elzárja a régi medret, amelyet a hajó használt. A szarvasmarha-tulajdonosok és a kerületi vezetők azon vitatkoznak, hol nyithatnak új átvágásokat, így a hajó napokat veszít a politikával, miközben a víz tovább emelkedik. Az átélt kár a késedelmes ellátás, amit az emberek a testükön éreznek. A helyi ok a gát- és kikötőrendszer, amely soha nem számolt egész éves klinikforgalommal, ezért az árvízi szezon továbbra is elzárja a falvacskákat az egész évszakos kezelési útvonaltól.",
+    "stakeholder": "Folyami klinika nővérei és hagyományos hatósági tanács",
+    "pressureKeys": [
+      "Késő Ellátás",
+      "Elzárt Út",
+      "Gátpolitika"
+    ],
+    "places": [
+      "Barotse ártéri falvacskák, Nyugat-Zambia"
+    ]
+  },
+  "rural-roads--winter-school-bus-never-clears-the-dune-line": {
+    "title": "A téli iskolabusz sosem jut át a dűnevonalon",
+    "scene": "A Dél-Góbiban a bentlakásos iskola pásztorgyerekeket vonz a szétszórt téli táborokból. Az iskolai nyomvonal tömörített földcsík a laza homokon — nem burkolt út. Korai viharok után a busz tengelyig süllyed a dűnevonalnál, és a diákok hetekre kimaradnak az órákról. A szülők ezután otthon tartják az idősebb gyerekeket, hogy segítsenek az állatokkal, a tanárok pedig Dalanzadgadba pályáznak, ahol az utak szilárdak maradnak. A kimaradt óra az a kár, amit a családok most éreznek. Ami az elszigeteltséget folyamatosan újratermeli, az a tartomány szokása: minden ősszel ugyanazt a puha nyomvonalat egyengeti, ahelyett hogy emelt, egész évszakos összeköttetést építene jelzésekkel és kemény állófelülettel. Amíg ez a gerinc nincs meg, a téli szél és a homok továbbra is elvágja az iskolát a tábortól, amelyeket szolgál.",
+    "stakeholder": "Bentlakásos iskola igazgatója és pásztorszülők egyesülete",
+    "pressureKeys": [
+      "Kimaradt Óra",
+      "Puha Nyom",
+      "Tanár Távozás"
+    ],
+    "places": [
+      "Ömnögovi téli iskolai nyomvonal, Dél-Góbi"
+    ]
+  },
+  "rural-roads--fuel-and-dialysis-miss-the-thaw-window": {
+    "title": "Üzemanyag és dialízis lekési az olvadási ablakot",
+    "scene": "Peerless Lake egy téli jégszárnyra támaszkodik — ideiglenes útra, amely a mocsár és a tópart felett fagyott meg —, hogy dízel, élelmiszer és dialíziskellékek érkezzenek a tavaszi olvadás előtt. Ha a meleg időszakok korán jönnek, a szárny bezár, a klinika adagolja a generátor üzemanyagát, miközben a betegek késedelmes utakat néznek High Prairie felé. A családok üres polcokat és kihagyott kezelési heteket éreznek. Az ok nem csak az éghajlat. A szerződések és a biztosítás még mindig a klasszikus fagyási naptárhoz köti a fuvarozókat, és nincs egész évszakos tartalékfolyosó a vállhónapokra. Minden évben zsugorodik az olvadási ablak, és ugyanaz a papírmunka feltételezi, hogy a jég tart. Más mód nélkül a súly mozgatására, amikor a jég elbukik, a közösség egy meleg hétre van az ellátási hiányoktól.",
+    "stakeholder": "First Nation egészségügyi igazgató és téliút-vállalkozók szövetkezete",
+    "pressureKeys": [
+      "Ellátási Hiány",
+      "Olvadási Napok",
+      "Szerződészár"
+    ],
+    "places": [
+      "Peerless Lake jégszárny, északi Alberta"
+    ]
+  },
+  "smoking--the-gate-line-runs-on-shared-packs": {
+    "title": "A kapusor közös dobozokon fut",
+    "scene": "A 7-es kapunál a reggeli sípszó előtt a munkások végigadják a közös dobozt a soron. Ebédidőre a pihenőöböl úgy szaglik, mint egy zárt, füstös szoba. Többen vesznek ki betegnapot köhögés és szorító mellkas miatt, a gyári nővérállomás pedig ugyanazokkal a panaszokkal telik meg. Az olcsó kartonok a kerítés melletti bódékban még mindig kevesebbe kerülnek egy étkezésnél, így a szokás olcsóbb marad, mint a leszokás. A szünetkultúra a cigarettát kezeli az egyetlen igazi megállásként a hosszú műszakban. Ez a keverék a dohányt a levegőben és a tüdőben tartja — nem csupán magánválasztásként, hanem a gyár napi ritmusaként.",
+    "stakeholder": "Gyári foglalkozás-egészségügyi nővér kollektíva",
+    "pressureKeys": [
+      "Betegnapok",
+      "Olcsó Kartonok",
+      "Szünetkultúra"
+    ],
+    "places": [
+      "Tijuana Maquiladora 7-es Kapu"
+    ]
+  },
+  "smoking--snack-carts-sell-the-first-drag": {
+    "title": "Snackkocsik adják az első húzást",
+    "scene": "A középiskola kapuja előtt snackkocsik veszik körbe a járdát. A gyerekek egyesével vesznek cigarettát a banh mi-re szánt apróból. A tanárok több köhögést hallanak az első órán, a szülők pedig elszíneződött ujjakat vesznek észre, amiket nem ők tettek az uzsonnába. Az árusoknak kell a kapu bérleti díja, és a szálas cigaretta többet hoz a cukorkánál a vékony árrésen. A sáv az iskola bejáratát a környék legkönnyebb első húzásává változtatja. A kár a fiatal tüdőkben jelenik meg; a hajtóerő egy járdagazdaság, amely jutalmazza a dohány szálankénti eladását.",
+    "stakeholder": "Szülő-tanár egészségügyi tanács",
+    "pressureKeys": [
+      "Köhögő Gyerekek",
+      "Egyes Szálak",
+      "Kapubérlet"
+    ],
+    "places": [
+      "Hanoi Középiskolai Kapu Snack Sáv"
+    ]
+  },
+  "smoking--dock-break-rooms-still-billow": {
+    "title": "A dokk pihenőszobái még mindig gomolyognak",
+    "scene": "A Fos konténer pihenőudvarán a beltéri pihenőhelyiségek a műszak közepére még mindig betelnek füsttel. A dokkmunkások a hideg szélből olyan ködbe lépnek, ami a kabátokra és a torokra tapad. Könnyeznek a szemek. Néhányan kihagyják a szobát, és keményebben szívnak az ajtók előtt, így a levegő soha nem tisztul igazán. Az automaták részesedést kapnak minden helyben eladott dobozból, a hosszú túlóra pedig üzemanyagnak érezteti a következő cigarettát. A másodlagos füst az átélt kár a zárt pihenőtérben. A hajtóerő egy udvar, amely még mindig hasznot húz abból, hogy dohányt ad el a kimerült brigádoknak.",
+    "stakeholder": "Kikötői munkahelyi biztonsági megbízott",
+    "pressureKeys": [
+      "Piszkos Levegő",
+      "Automata Részesedés",
+      "Túlóra Norma"
+    ],
+    "places": [
+      "Marseille Fos Konténer Pihenőudvar"
+    ]
+  },
+  "smoking--courtyard-haze-reaches-the-newborn-cots": {
+    "title": "Az udvari köd eléri az újszülöttágyakat",
+    "scene": "A szülészeti váróotthonban a családok a nyitott udvaron alszanak, amíg az anyák a szülésre várnak. A látogatók ugyanazon tetővonal alatt gyújtanak rá, ahol az újszülöttágyak nyitott ajtók mellett állnak. A bábák több csecsemő-zihálást hallanak a forgalmas látogatási éjszakák után. Egy udvari bódé laza szálakat árul a napokig ott maradó fáradt rokonoknak. Az éjszakai látogatások a füstöt a vékony falakon át sodorják. A csecsemők azt lélegzik be, amit a felnőttek meggyújtanak; a bódé és a látogatási minta tartja mozgásban a dohányt egy olyan helyen, amelyet születésre építettek, nem hamura.",
+    "stakeholder": "Bába-szövetkezet vezetője",
+    "pressureKeys": [
+      "Baba Zihálás",
+      "Udvari Bódé",
+      "Éjszakai Látogatás"
+    ],
+    "places": [
+      "Nairobi Szülészeti Váróotthon Udvar"
+    ]
+  },
+  "sanitation--latrine-queues-send-girls-home-by-noon": {
+    "title": "A latrinasorok délre hazaküldik a lányokat",
+    "scene": "A Sunwell Általános Iskolában a reggeli csengő még szól, de délre a lányok sora az egyetlen működő illemhely-blokk előtt a labdapálya mellett kígyózik. Sokan inkább hazasétálnak, mintsem várjanak, kihagyják a délutáni matekot, és másnap már lemaradva jönnek vissza. A gödrök egyszerű lyukak betonlappal. Amikor megtelnek, az iskolának nincs szerződött teherautója és nincs szabad föld a kerítésen belül, ezért a személyzet lezárja a fülkéket, és reméli, hogy az eső felhígítja a túlcsordulást. A higiéniai klub szülei padlót súrolnak és szappant vesznek, mégis ugyanaz a valódi ok: túl kevés ülőhely a létszámhoz, gödrök, amiket senki sem ürít menetrend szerint, és egy karbantartási keret, ami krétát vesz, mielőtt iszapürítést rendelne.",
+    "stakeholder": "Szülő-tanár higiéniai klub",
+    "pressureKeys": [
+      "Beteg Gyerekek",
+      "Tele Gödrök",
+      "Költséghiány"
+    ],
+    "places": [
+      "Sunwell Általános Iskola Udvara"
+    ]
+  },
+  "sanitation--sewage-owns-the-only-stair-out": {
+    "title": "A szennyvíz birtokolja az egyetlen kijárati lépcsőt",
+    "scene": "A Ladder Cut egy meredek bevágáshoz tapad a régi vasúti szárnyvonal felett. Egy betonlépcső az egyetlen száraz út, amit a legtöbb család használ, hogy eljusson az útra. Heves eső után a hegyoldali kunyhókból jövő szürkevíz és illemhely-hulladék nyílt árkokban folyik a lépcső mellett, átáztatja az alsó pihenőket, és viszkető sebeket hagy a gyerekek bokáján és kezén. A lakók vödröket cipelnek és deszkadarabokat fektetnek, de az árkok nyitva maradnak, mert a főbérlők soha nem fizettek azért, hogy a lejtőt zárt vezetékhez kössék, és a városi térkép még mindig ideiglenesnek kezeli a bevágást. Amíg csövek, szivattyúk vagy igazi lefolyó nem váltja fel az árokot a lépcső mellett, minden vihar újra a lábuk alá teszi a hulladékot.",
+    "stakeholder": "Lépcsőházi lakók egyesülete",
+    "pressureKeys": [
+      "Bőrsebek",
+      "Nyílt Árkok",
+      "Főbérlői Késés"
+    ],
+    "places": [
+      "Ladder Cut Telep"
+    ]
+  },
+  "sanitation--behind-the-fuel-bay-is-the-toilet": {
+    "title": "Az üzemanyag-öböl mögött van a vécé",
+    "scene": "A Crossridge éjszakai rakodói egy komor fülkén osztoznak a dízelöböl mögött. Az ajtó beragad, a fény a hét felében holt, és amikor a tartály visszatorlódik, a bűz az üzemanyaggal keveredik, amíg az emberek abba nem hagyják az evést műszakban. Bélbaktériumok terjednek a legénységben, mert a kézmosó víz egyetlen hordó, és az udvar bérleti szerződése a vécéket a bérlő gondjának kezeli, nem a főbérlőének. A diszpécser továbbra is több pótkocsit zsúfol ugyanarra a padra, így a fülke gyakrabban marad zárva, miközben a vezetők azon vitatkoznak, ki fizeti a kiszivattyúzást. A kár a belekben és a kihagyott étkezésekben van; a hajtóerő egy udvar, ami növeli az áruforgalmat anélkül, hogy zárt, használható szanitációt növelne.",
+    "stakeholder": "Éjszakai rakodók kölcsönös segélyköre",
+    "pressureKeys": [
+      "Bélbajok",
+      "Zárt Fülkék",
+      "Bérleti Szorítás"
+    ],
+    "places": [
+      "Crossridge Teherudvar"
+    ]
+  },
+  "sanitation--the-wing-that-smells-before-breakfast": {
+    "title": "A szárny, ami reggeli előtt bűzlik",
+    "scene": "Az Olive Court keleti szárnyán a folyosó rosszul szaglik, mielőtt a reggeli kocsik elindulnának. Több lakó ismételt húgyúti és bőrfertőzést kap azok után az éjszakák után, amikor a közös vécék bugyborékolnak, és a személyzet törölközőket rak az ajtóküszöbökre. Az épület régi öntöttvas csövei elkapják a törlőkendőket és sűrítőket, amiket az otthon soha nem terveztek át kezelni, és a kiszervezett karbantartási szerződés csak a vészhelyzeti hívásokat fedi, nem a teljes vezetékcserét. Az ápolók tanácsában ülő családok veszik észre először a mintát: kevesebb biztonságos vécé, több fertőzés, és egy keret, ami az ápolási órákat faragja ahelyett, hogy a csőrendszert javítaná. Amíg a csövek és az ellátási szerződés is meg nem változik, a szárny tovább betegíti az embereket abban a helyben, ami biztonságban kellene tartsa őket.",
+    "stakeholder": "Családi gondozók tanácsa",
+    "pressureKeys": [
+      "Fertőzések",
+      "Eltömődött Csövek",
+      "Szerződésvágás"
+    ],
+    "places": [
+      "Olive Court Otthon"
+    ]
+  },
+  "waste--smoke-over-circuit-lane": {
+    "title": "Füst a Circuit Lane felett",
+    "scene": "Hajnalban az utcák műanyag- és fémszagot árasztanak. A szedők ponyvákon törik szét a telefonokat és laptopokat, majd elégetik azokat az alaplapokat, amiket nem tudnak kinyitni, a rézért. A gyerekek köhögnek az iskolában. Könnyezik a szemük. Az igazi ok a lezárt készülékek: beragasztott csavarok, beragasztott akkumulátorok, alkatrészeket nem árulnak. A javítóműhelyek bezárnak. Minden héten több holt eszköz érkezik a városból, és az egyetlen megmaradt pénz a füstben van.",
+    "stakeholder": "Informális hulladékszedők egyesülete",
+    "pressureKeys": [
+      "Égetési Füst",
+      "Lezárt Készülékek",
+      "Lerakási Díjak"
+    ],
+    "places": [
+      "Circuit Lane Hulladékutcák"
+    ]
+  },
+  "waste--swollen-packs-behind-the-shed": {
+    "title": "Megduzzadt pakkok a fészer mögött",
+    "scene": "Az e-bike kioszkok a meghibásodott akkumulátorcsomagokat vékony bádogfalak mögé rakják. Néhány megduzzad és szivárog. A bringások savszagot éreznek a forró délutánokon. A bolti dolgozók kiütéseket kapnak. A fuvarozók minden hónapban többet kérnek, hogy a holt pakkokat átvigyék a városon, ezért a halmok nőnek. Az ok egyszerű: olcsó pakkok visszavételi út nélkül, gyorsan cserélve a fuvardíjakért, aztán kidobva. Helyi kör nélkül, ahol tesztelhetnék, újjáépíthetnék vagy visszanyerhetnék a cellákat, a fészerek tovább telnek.",
+    "stakeholder": "E-bike kioszk üzemeltetők céhe",
+    "pressureKeys": [
+      "Savszag",
+      "Holt Pakkok",
+      "Fuvar Költség"
+    ],
+    "places": [
+      "Junction Akkumulátor-fészerek"
+    ]
+  },
+  "waste--trays-stacked-to-the-dorm-vents": {
+    "title": "Tálcák a kollégiumi szellőzőkig",
+    "scene": "Az ebéd véget ér, és a habtálcák a kollégiumi szellőzők felé tornyosulnak. Legyek gyűlnek. A diákok visszafojtják a lélegzetüket a sétányokon. A menzák zárt catering-szerződésen futnak, ami tálcaszám szerint fizet, és tiltja az újrafelhasználható tányérokat. A komposztládák üresen állnak, mert a fuvarozó csak lezárt habot visz el. A hulladék megelőz minden diák takarítási akciót, mert a szerződés minden félévben ugyanazt az egyszer használatos áradatot vásárolja.",
+    "stakeholder": "Diák létesítményi tanács",
+    "pressureKeys": [
+      "Légyfelhők",
+      "Habtálcák",
+      "Szerződészár"
+    ],
+    "places": [
+      "Riverside Campus Menzák"
+    ]
+  },
+  "waste--linen-that-washes-out-to-sea": {
+    "title": "Ágynemű, ami a tengerbe mosódik",
+    "scene": "Távozás után a mini samponos flakonok, műanyag csomagolások és foszlott ágynemű-darabok a lefolyón és a széllel a közstrand felé mennek. A takarítók minden reggel ugyanazt a szakaszt gereblyézik, mielőtt a vendégek megérkeznek. A márkaszabályok apró, egyszer használatos kellékeket kényszerítenek minden szobába, és tiltják a nagytételes utántöltő állomásokat. Így a sáv tovább küldi a hulladékot a tenger felé, miközben a szövetkezet kézzel szedi össze vissza.",
+    "stakeholder": "Parti takarítók szövetkezete",
+    "pressureKeys": [
+      "Strand Szemét",
+      "Mini Flakonok",
+      "Márka Szabályok"
+    ],
+    "places": [
+      "Palm Reach Hotelsáv"
+    ]
+  },
+  "reproductive--ninety-minutes-past-the-last-contraction": {
+    "title": "Kilencven perccel az utolsó fájás után",
+    "scene": "A Greenville és a legközelebbi nyitott szülőosztály közötti kétsávos úton egy nő a tolás végén van egy kölcsönvett teherautó platóján. A legközelebbi kórház tavaly tavasszal bezárta a szülészeti részlegét. A következő több mint egy órára van, ha elárasztja a híd, vagy hiányzik a műszak. A dúlák és a mentősök oxigént, tiszta készleteket és telefonokat tartanak az autójukban, mert túl sok baba és anya még mindig a kavicsos padkán találkozik a világgal.\n\nA baj nem csak a távolság. A megyei költségvetések és a magánbiztosítók tovább zárják be azokat a részlegeket, amelyek nem jövedelmezők, így a képzett szülészeti csapatok elmennek, és a folyosó tovább ürül. Minden bezárás hosszabbá teszi a következő vészhelyzetet, nehezebbé a vérveszteség elállítását, és a családokat még jobban elriasztja a hívástól, amíg majdnem túl késő nem lesz.",
+    "stakeholder": "Delta dúla és mentős koalíció",
+    "pressureKeys": [
+      "Útszülések",
+      "Bezárt Osztályok",
+      "Biztosítási Rések"
+    ],
+    "places": [
+      "Greenville Szülészeti Folyosó, Mississippi-delta"
+    ]
+  },
+  "reproductive--high-water-blocks-the-midwife-boat": {
+    "title": "Magas víz zárja el a bábacsónakot",
+    "scene": "Az Ilha do Combu fából épült szülőállomásán a folyami bába figyeli, ahogy a dagály felemeli a stéget és elrejti a szokásos mederjelzőket. Egy először szülő anya erős vajúdásban van a sziget túlsó felén. Ha a csónak nem tud elindulni, az állomáson csak alapvető eszközök, egy napelemes lámpa és egy rádió van, amely megszakítja a hívásokat. A családok már tudják, mit jelenthet a késői érkezés: egy baba, aki soha nem vesz levegőt, vagy egy anya, aki elvérzik, miközben a városi kórház elérhetetlen marad.\n\nA viharszezonok és a szárazföld menti tervezetlen feltöltés folyamatosan átírja a vízi útvonalakat. A klinikák és az ellátási költségvetések továbbra is a városi parton maradnak, így a szigeti állomások személyzetben, üzemanyagban és tartalék felszerelésben szegények. A folyó egyszerre az út és a késedelem, és minden szezonban nő a késedelem.",
+    "stakeholder": "Folyami bába közösség",
+    "pressureKeys": [
+      "Halvaszületések",
+      "Csónakkésések",
+      "Szárazföldi Előny"
+    ],
+    "places": [
+      "Ilha do Combu szülőállomás, Belém folyóöv"
+    ]
+  },
+  "reproductive--the-sponsor-keeps-her-health-card": {
+    "title": "A szponzor tartja az egészségügyi kártyáját",
+    "scene": "Kelet-Ammán gyári kollégiumaiban egy fiatal nő kihagyja a harmadik látogatását a kis reproduktív-egészségügyi ablaknál, mert a szponzora tartja a személyi igazolványát és a munkakártyáját. Ezek a papírok nélkül a klinika nem nyit dossziét. Görcsöt és lázat a sarki bolt fájdalomcsillapítóival kezel, és reméli, hogy a vérzés eláll a következő éjszakai műszak előtt. A szószólók suttogva hallják ugyanazt a történetet: kezeletlen fertőzések, későn eltitkolt terhességek, titokban vett vagy egyáltalán nem vett fogamzásgátlás.\n\nA hajtóerő maga a szponzori zár. A lakhatás, a bér és a klinikához jutás a munkaadó aláírásán múlik, így a megszólalás elvesztett munkát vagy kitoloncolási fenyegetést jelenthet. A félelem tartja a nőket a nyilvántartáson kívül, és a nyilvántartáson kívüli ellátás foltos, drága és könnyen leépíthető marad.",
+    "stakeholder": "Migráns nők egészségügyi szószólói",
+    "pressureKeys": [
+      "Rejtett Betegség",
+      "Szponzori Zárak",
+      "Kitoloncolási Félelem"
+    ],
+    "places": [
+      "Marka ipari kollégiumok reproduktív-egészségügyi ablaka, Kelet-Ammán"
+    ]
+  },
+  "reproductive--she-arrives-already-mid-pregnancy": {
+    "title": "Már a terhesség közepén érkezik",
+    "scene": "A Jaipur peremén lévő várandósgondozási pultnál egy ASHA közösségi egészségügyi dolgozó találkozik egy tizenöt éves lánnyal, aki már a terhesség felénél jár. Otthon senki nem engedte, hogy korábban jöjjön. Az iskola a nyolcadik osztály után abbamaradt. Az első klinikálátogatás gyakran az első őszinte beszélgetés a testéről, és addigra kevés a lehetőség, a kockázatok pedig magasabbak mind az anyának, mind a babának.\n\nAz apósok-anyósok és a helyi becsületszabályok még mindig eldöntik, mikor hagyhatja el a lány a házat, vagy ülhet egyedül nővérrel. A hivatalnokok a szép lefedettségi számokat is hajszolják, így a dolgozók nyomást éreznek, hogy gyors pipákat számoljanak a családokkal való lassú bizalomépítés helyett. A pult hetente látja az eredményt: az ellátás túl későn kezdődik, mert a csend otthon és a pontozás kint egyaránt a késedelmet jutalmazza.",
+    "stakeholder": "ASHA dolgozók és lányok középiskolai tanárai",
+    "pressureKeys": [
+      "Tinédzser Szülések",
+      "Após-Anyós Vétó",
+      "Mutatóhajsza"
+    ],
+    "places": [
+      "Sanganer Serdülő Várandósgondozási Pult, Jaipur perem"
+    ]
+  },
+  "amr--the-pharma-drain-tutors-the-tanks": {
+    "title": "A gyógyszergyári lefolyó tanítja a tartályokat",
+    "scene": "A Hyderabadon kívüli Patancheru ipari sáv mentén a családok kiütésekre és makacs lázakra ébrednek, amelyeket a szokásos antibiotikumok már nem törnek le. A rendelői sorok nőnek, ahogy a bőr- és bélfertőzések rövid szünet után visszatérnek. Felfelé a tömeggyógyszer-gyárak még mindig rohanva teljesítik a rendeléseket, és félig kezelt szennyvizet eresztenek nyílt árkokba és tárolótartályokba. Ezek a tartályok szabadtéri tantermek: bennük a baktériumok megtanulják levetkőzni ugyanazokat a szereket, amelyeket az orvosok felírnak. Amíg a hulladékot a forrásánál nem tisztítják, minden új termelési hullám erősebb kórokozókat képez a környéknek.",
+    "stakeholder": "Kerületi szennyezésvédelmi és alapellátási közös vezető",
+    "pressureKeys": [
+      "Betegnapok",
+      "Gyári hulladék",
+      "Rendelői bizalom"
+    ],
+    "places": [
+      "Patancheru ipari sáv"
+    ]
+  },
+  "amr--port-lungs-outlast-the-formulary": {
+    "title": "A kikötői tüdők túlélik a gyógyszerlistát",
+    "scene": "Callao dokk menti TBC-osztályán a rakodómunkások és családjaik hónapokig tartó tablettakúra után is köhögve térnek vissza, pedig a szereknek hatniuk kellett volna. A fizetés megáll, ha kimarad a műszak, és a háztartások elveszítik a lakbért, amíg a másodvonalbeli kezelésre várnak. Az osztály első választású tuberkulózis-gyógyszerei csődöt mondanak, mert a hiányos kúra még mindig gyakori a vízparton: a férfiak elkezdik a terápiát, jobban érzik magukat, aztán eltűnnek vissza az éjszakai műszakokra és a közös hálókba. A kihagyott adagok hagyják, hogy a baktériumok megkeményedjenek az élő tüdőkben, majd szétterjedjenek a kikötőben. A spirál megállításához minden kúrát be kell fejezni, és korán el kell kapni a rezisztens törzseket — nem csak több üveget kiosztani.",
+    "stakeholder": "Kikötőkerületi TBC-program igazgató",
+    "pressureKeys": [
+      "Sikertelen kúrák",
+      "Kihagyott adagok",
+      "Állásvesztés"
+    ],
+    "places": [
+      "Callao dokk menti TBC-osztály"
+    ]
+  },
+  "amr--barn-routine-poisons-the-creek-clinics": {
+    "title": "Az ólrutin megmérgezi a pataki rendelőket",
+    "scene": "Santa Catarina sertésövezetében az ól dolgozói és a szomszédok magas lázzal és sebekkel jelennek meg a falusi rendelőkben — sebekkel, amelyeket a szokásos antibiotikumok nem fognak. Az ólak mellett futó patak savanyú szagot hoz erős eső után, és a lejjebb játszó gyerekek gyakrabban betegszenek meg. Sok farmon még mindig alacsony dózisú antibiotikum kerül napi rutinból a takarmányba, hogy a zsúfolt állatok nőjenek, nem csak egyértelmű betegség kezelésére. Ez az állandó adagolás ellenálló baktériumokat tenyészt a trágyában és a lefolyásban, amelyek elérik a dolgozókat és a falusi csapokat. A helyi egészségügy tovább romlik, amíg az ólak meg nem változtatják, hogyan nevelik a sertéseket — nem csak azt, hogyan kötözik be a rendelők a következményeket.",
+    "stakeholder": "Állami állatorvosi és vidéki egészségügyi összekötő",
+    "pressureKeys": [
+      "Dolgozói lázak",
+      "Óli adagolás",
+      "Patakszag"
+    ],
+    "places": [
+      "Santa Catarina sertésövezet"
+    ]
+  },
+  "amr--lane-chemists-empty-the-last-good-drugs": {
+    "title": "Az utcai gyógyszerészek kiürítik az utolsó jó szereket",
+    "scene": "Makoko cölöpházas utcáin a szülők égő lázas gyerekeket visznek egy kis rendelőbe, amely majdnem kifogyott a még ható gyógyszerekből. A családok maréknyi laza tablettát vesznek a lebegő boltokból, mert egy teljes laborvizsgálat egy napi fogásba kerül. Ezek az informal árusok szétbontják a csíkokat, kihagyják a hűtést, és maradék kúrákat tolnak, amelyek soha nem fejezik be a munkát. A félig bevett, gyenge minőségű antibiotikumok hagyják, hogy a baktériumok gyakorolják a túlélést a lagúna legsűrűbb otthonaiban. A rendelő nem tud elszaladni a baj elől, amíg az utcai kereskedelem tovább tanítja a rezisztenciát egy-egy befejezetlen adaggal.",
+    "stakeholder": "Lagúna alapellátási és gyógyszerbiztonsági koordinátor",
+    "pressureKeys": [
+      "Gyermeklázak",
+      "Laza tabletták",
+      "Bolti bevétel"
+    ],
+    "places": [
+      "Makoko cölöpházas rendelői utcák"
+    ]
+  },
+  "_default--crisis-lands-in-place": {
+    "title": "Válság érkezik ide: {place}",
+    "scene": "A határidő ideérkezik {place} városába. Az emberek nyomást éreznek, ahogy a helyi rendszer tovább termeli ugyanezt a kárt. Kell egy találmány, amely egyszerre kezeli a tünetet és a hajtóerőt — nem csak a panaszok eltakarását.",
+    "stakeholder": "Helyi közösségi vezető",
+    "pressureKeys": [
+      "Nyomás",
+      "Költség",
+      "Bizalom"
+    ],
+    "places": [
+      "Local Ward",
+      "Town Center",
+      "District Hub"
+    ]
+  }
+}

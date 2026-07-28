@@ -660,6 +660,50 @@ export function validateQuestTile(tile, opts = {}) {
   if (sponsorName) mission.sponsorName = sponsorName;
   if (sponsorBanner) mission.sponsorBanner = sponsorBanner;
 
+  // Optional per-locale player strings: tile.i18n.hu = { title, place, scene, briefMd, … }
+  let i18n = null;
+  if (tile.i18n && typeof tile.i18n === "object") {
+    i18n = {};
+    for (const [loc, pack] of Object.entries(tile.i18n)) {
+      if (!pack || typeof pack !== "object") continue;
+      const code = String(loc || "")
+        .trim()
+        .toLowerCase()
+        .split("-")[0];
+      if (!code) continue;
+      i18n[code] = {
+        title: pack.title != null ? String(pack.title).slice(0, CAPS.title) : undefined,
+        summary:
+          pack.summary != null ? String(pack.summary).slice(0, CAPS.summary) : undefined,
+        place: pack.place != null ? String(pack.place).slice(0, CAPS.place) : undefined,
+        scene: pack.scene != null ? String(pack.scene).slice(0, CAPS.scene) : undefined,
+        briefMd:
+          pack.briefMd != null ? String(pack.briefMd).slice(0, CAPS.briefMd) : undefined,
+        stakeholder:
+          pack.stakeholder != null
+            ? String(pack.stakeholder).slice(0, CAPS.stakeholder)
+            : undefined,
+        spotlight:
+          pack.spotlight && typeof pack.spotlight === "object"
+            ? {
+                advanceTitle:
+                  pack.spotlight.advanceTitle != null
+                    ? String(pack.spotlight.advanceTitle).slice(0, CAPS.advanceTitle)
+                    : undefined,
+                advanceSummary:
+                  pack.spotlight.advanceSummary != null
+                    ? String(pack.spotlight.advanceSummary).slice(0, CAPS.advanceSummary)
+                    : undefined,
+                encourageCopy:
+                  pack.spotlight.encourageCopy != null
+                    ? String(pack.spotlight.encourageCopy).slice(0, CAPS.encourageCopy)
+                    : undefined,
+              }
+            : undefined,
+      };
+    }
+  }
+
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
     kind: "quest",
@@ -676,6 +720,7 @@ export function validateQuestTile(tile, opts = {}) {
     research,
     globalId,
     mission,
+    ...(i18n && Object.keys(i18n).length ? { i18n } : {}),
   };
   if (grounding) {
     normalizedTile.grounding = grounding;

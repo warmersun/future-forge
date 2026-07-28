@@ -4,6 +4,7 @@
  */
 
 import { getClientSessionId } from "../client-session.js";
+import { getLocale } from "../i18n.js";
 
 const SS_KEY = "future-forge:roomSession";
 
@@ -62,6 +63,8 @@ export class RoomClient {
       body: JSON.stringify({
         displayName,
         clientSessionId: getClientSessionId(),
+        // Shared AI / mission generation follow host UI language
+        locale: getLocale(),
       }),
     });
     const data = await res.json();

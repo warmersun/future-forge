@@ -1,0 +1,678 @@
+{
+  "computing": {
+    "name": "Számítástechnika",
+    "summary": "Digitális feldolgozás, memória és szimuláció.",
+    "learn": "Alap a MI, a hálózatok és a szoftverrendszerek alatt.",
+    "inventionHint": "Futtass modelleket és koordinálj helyi rendszereket.",
+    "risk": "energiafelhasználás, hatalomkoncentráció",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Számítástechnika?",
+    "primer": "A számítástechnika a modern rendszerek alapja: processzorok, memória, szoftver és szimuláció. A helyi találmányoknak gyakran kell hely, ahol modellek futnak, adatok tárolódnak vagy eszközök koordinálódnak — akár offline a peremen. A felhőben bőséges a kapacitás; a helyi nehézség a hozzáférés, az energia, a készség és az, ki irányítja a stacket.",
+    "maturity": {
+      "now": "Felhő és perem-számítás, közönséges GPU/CPU és skálázható szoftver.",
+      "near": "Olcsóbb következtetés és szorosabb helyi vezérlőhurkok.",
+      "frontier": "Olyan mindennapi számítás, hogy az energia/költség szinte kiesik a tervezésből."
+    },
+    "milestones": [
+      "On-device MI chipek telefonokban és ipari vezérlőkben",
+      "Széles felhőrégiók és nyílt szoftverstackek"
+    ],
+    "useCasesNow": [
+      "Helyi adatplatformok",
+      "Offline-képes klinikai appok",
+      "Árvíz- vagy forgalomszimuláció"
+    ],
+    "narrative": "A számítás zümmög a helyi döntések mögött."
+  },
+  "energy": {
+    "name": "Energia",
+    "summary": "Fizikai erő munka, hő, fény és ipar számára.",
+    "learn": "Hogyan termelünk és tárolunk energiát, az minden más skálázását formálja.",
+    "inventionHint": "Láss el klinikákat, szivattyúkat és műhelyeket.",
+    "risk": "kibocsátás, egyenlőtlen hozzáférés",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Energia?",
+    "primer": "Az energia a fizikai munka képessége — fény, hő, mozgás, hideglánc. Minden helyi találmány, amely vizet szivattyúz, éjjel klinikát futtat vagy árut mozgat, energia-költségvetésen ül. A kérdés ritkán az, hogy „feltalálták-e az áramot”; a megbízhatóság, a költség, a tisztaság és az, kit vágnak le először, ha a hálózat elbukik.",
+    "maturity": {
+      "now": "Vegyes hálózatok; dízel tartalék gyenge megbízhatóságnál.",
+      "near": "Több tiszta, stabil opció és okosabb keresletválasz.",
+      "frontier": "Az energiaszűkösség kiesik a mindennapi helyi tervezésből."
+    },
+    "milestones": [
+      "Rekord megújuló építés sok piacon",
+      "Csökkenő termelési költségek okosabb hálózatokkal"
+    ],
+    "useCasesNow": [
+      "Klinika/mikrohálózat tervezés",
+      "Terheléseltolás",
+      "Hibrid tartalék kevesebb dízellel"
+    ],
+    "narrative": "Az energia minden javítás gerince."
+  },
+  "crypto": {
+    "name": "Kriptovaluta",
+    "summary": "Megosztott főkönyvek, tokenek és programozható ösztönzők.",
+    "learn": "Koordinációs és ellenőrző eszközök — valódi csaláskockázattal.",
+    "inventionHint": "Átlátható helyi alapok vagy ellátási bizonyítékok.",
+    "risk": "csalás, volatilitás, kormányzási kudarc",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Kriptovaluta?",
+    "primer": "A kriptovaluta és a megosztott főkönyvek eszközök megállapodások, átutalások és bizonyítékok rögzítésére egyetlen megbízható közvetítő nélkül. Jól használva átláthatóvá tehetik a helyi alapokat vagy az ellátási láncot; rosszul csalást és volatilitást hoznak. Helyi feltaláláskor koordinációra és ellenőrzésre gondolj — ne meggazdagodási spekulációra.",
+    "maturity": {
+      "now": "Nyilvános főkönyvek, stablecoinok, közjó-alap pilotok; az UX és a csalás nehéz.",
+      "near": "Tisztább szabályozás és személyazonosság a beszerzéshez és a segélyhez.",
+      "frontier": "Programozható pénz unalmas alapinfrastruktúraként az önkormányzati pénzügyben."
+    },
+    "milestones": [
+      "Tokenizált segély- és ellátásbizonyíték-pilotok több joghatóságban"
+    ],
+    "useCasesNow": [
+      "Átlátható közösségi alapok",
+      "Ellátási lánc bizonyítékok",
+      "Megosztott megtakarítási poolok nyilvános szabályokkal"
+    ],
+    "narrative": "Shared records settle local agreements in the open."
+  },
+  "quantum": {
+    "name": "Kvantumszámítás",
+    "summary": "Kvantumprocesszorok nehéz szimulációra és optimalizálásra.",
+    "learn": "Korai hasznos fülkék; nem laptopcsere.",
+    "inventionHint": "Nehéz helyi optimalizálás / kutatási partner (későbbi évek).",
+    "risk": "hype, hozzáférés-koncentráció",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Kvantumszámítás?",
+    "primer": "A kvantumszámítás speciális processzorokkal old meg bizonyos nehéz szimulációs és optimalizálási feladatokat. Nem helyettesíti a laptopot; korai hasznos fülkéket nyit, ha a partner és a költségvetés engedi.",
+    "maturity": {
+      "now": "Korai hasznos fülkék felhő-hozzáféréssel; nem általános csere.",
+      "near": "Több optimalizálási és anyagszimulációs partnerkapcsolat.",
+      "frontier": "Általános célú kvantum a mindennapi tervezésben — még nem."
+    },
+    "milestones": [
+      "Cloud quantum access and improving error-mitigation research"
+    ],
+    "useCasesNow": [
+      "R&D partnerships",
+      "Learning labs",
+      "Long-horizon planning studies"
+    ],
+    "narrative": "Specialized quantum jobs open new designs."
+  },
+  "geothermal": {
+    "name": "Geotermikus energia",
+    "summary": "A Föld hője stabil áramra.",
+    "learn": "Alapterhelésű megújuló, ahol a geológia engedi.",
+    "inventionHint": "Stabil helyi tiszta áram.",
+    "risk": "telepítés, költség, szeizmicitás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Geotermikus energia?",
+    "primer": "A geotermia a Föld hőjét alakítja stabil árammá, ahol a kőzet és a politika engedi. Alapterhelésű tiszta opció, de a fúrás, a költség és a szeizmicitás valós korlát.",
+    "maturity": {
+      "now": "Működő mezők jó geológiánál; fúrás és engedély a gát.",
+      "near": "Olcsóbb fúrás és több közösségi projekt.",
+      "frontier": "Széles körű, csendes alapterhelés sok régióban."
+    },
+    "milestones": [
+      "New enhanced geothermal pilots",
+      "Expanded district heat projects"
+    ],
+    "useCasesNow": [
+      "Regional baseload where geology allows",
+      "District heat partnerships"
+    ],
+    "narrative": "Quiet heat becomes steady electricity."
+  },
+  "tidal": {
+    "name": "Árapály-energia",
+    "summary": "Áram az árapály áramlásaiból.",
+    "learn": "Megjósolható, de helyhez kötött tengeri energia.",
+    "inventionHint": "Parti alapterhelés, ahol erős az árapály.",
+    "risk": "tengeri hatás, tőkeköltség",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Árapály-energia?",
+    "primer": "Az árapály-energia a tengeri áramlások kiszámítható ritmusát használja. Erős árapálynál parti alapterhelés lehet; máshol a tőke és a tengeri hatás megállítja.",
+    "maturity": {
+      "now": "Néhány erős árapályú helyszín működik vagy pilotban van.",
+      "near": "Több parti alapterhelés, ahol a tőke türelmes.",
+      "frontier": "Széles tengeri alapterhelés — helyhez kötött marad."
+    },
+    "milestones": [
+      "Operational tidal arrays in select strong-current channels"
+    ],
+    "useCasesNow": [
+      "Harbor and island baseload pilots",
+      "Research partnerships"
+    ],
+    "narrative": "Tides turn into coastal power."
+  },
+  "solar": {
+    "name": "Napenergia",
+    "summary": "Áram a napfényből.",
+    "learn": "A leggyorsabban skálázódó tiszta termelés tárolással párosítva.",
+    "inventionHint": "Tetők, szivattyúk, mikrohálózatok.",
+    "risk": "szakaszosság, anyagok",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Napenergia?",
+    "primer": "A napenergia a leggyorsabban terjedő tiszta termelés sok piacon, ha tárolással párosul. Tető, szivattyú, mikrohálózat — a helyi munka gerince lehet.",
+    "maturity": {
+      "now": "Gyorsan terjedő tiszta termelés tárolással sok piacon.",
+      "near": "Még olcsóbb modulok és integrált tárolás.",
+      "frontier": "Nappal/éjjel rés szinte eltűnik a helyi tervezésből."
+    },
+    "milestones": [
+      "Utility-napelem a legolcsóbb új termelések között sok piacon"
+    ],
+    "useCasesNow": [
+      "Tető a klinikán és a szivattyún",
+      "Közösségi napelem",
+      "Hibrid mikrohálózat",
+      "Microgrids"
+    ],
+    "narrative": "A tetők napfényt isznak a helyi munkához."
+  },
+  "wind": {
+    "name": "Szélenergia",
+    "summary": "Áram a szélből.",
+    "learn": "Érett megújuló; rugalmas hálózat kell hozzá.",
+    "inventionHint": "Közösségi vagy parti turbinák.",
+    "risk": "telepítés, élővilág, szakaszosság",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Szélenergia?",
+    "primer": "A szél érett megújuló; a rugalmas hálózat és a telepítési konfliktus a kemény rész. Közösségi és parti projektek már valósak.",
+    "maturity": {
+      "now": "Érett megújuló; a rugalmasság és a telepítés a nehéz.",
+      "near": "Jobb előrejelzés és hálózati rugalmasság.",
+      "frontier": "A szél „láthatatlan alapterhelés” jó hálózatokon."
+    },
+    "milestones": [
+      "Record capacity additions",
+      "Long multi-year cost declines in many markets"
+    ],
+    "useCasesNow": [
+      "Community turbines",
+      "Coastal wind with storage",
+      "Industrial offtake"
+    ],
+    "narrative": "Turbines stitch power into the landscape."
+  },
+  "wave": {
+    "name": "Hullámenergia",
+    "summary": "Energia az óceánhullámokból.",
+    "learn": "Nagy potenciál, kemény mérnöki feladat.",
+    "inventionHint": "Sziget- és kikötői áram (később).",
+    "risk": "viharok, költség, megbízhatóság",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Hullámenergia?",
+    "primer": "A hullámenergia nagy potenciál, kemény mérnöki és vihartűrés. Szigetek és kikötők későbbi győztesei lehetnek.",
+    "maturity": {
+      "now": "Korai berendezések; vihar és költség a gát.",
+      "near": "Megbízhatóbb sziget- és kikötői rendszerek.",
+      "frontier": "Széles óceáni alapterhelés — még húzódás."
+    },
+    "milestones": [
+      "Multi-year pilot arrays surviving harsh sea states"
+    ],
+    "useCasesNow": [
+      "Island harbor pilots",
+      "Research co-location with ports"
+    ],
+    "narrative": "Swells feed coastal nodes."
+  },
+  "nuclear": {
+    "name": "Nukleáris energia",
+    "summary": "Sűrű, alacsony szén-dioxidú alapterhelés (hasadás / fejlett reaktorok).",
+    "learn": "Nagy kapacitás; a bizalom és a költség dominál.",
+    "inventionHint": "Tiszta alapterhelés, ahol a politika engedi.",
+    "risk": "hulladék, baleset, bizalom",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Nukleáris energia?",
+    "primer": "A nukleáris sűrű, alacsony szén-dioxidú alapterhelést ad, ahol a bizalom, a költség és a hulladékkezelés megoldott. Új fejlett tervek még felfutóban vannak.",
+    "maturity": {
+      "now": "Működő flották egyes régiókban; új tervek lassan jönnek.",
+      "near": "SMR és gyorsabb engedély egyes országokban.",
+      "frontier": "Olcsó, széles tiszta alapterhelés sok városnak."
+    },
+    "milestones": [
+      "First commercial SMR projects",
+      "Life-extension of existing fleets"
+    ],
+    "useCasesNow": [
+      "Regional firm power planning",
+      "Industrial heat partnerships"
+    ],
+    "narrative": "Firm clean power anchors the region."
+  },
+  "battery": {
+    "name": "Akkumulátor-technológia",
+    "summary": "Áram tárolása mobilitáshoz és hálózatokhoz.",
+    "learn": "A mikrohálózatok és az esti áram kulcsa.",
+    "inventionHint": "Tárold a napot és a szelet a sötét órákra.",
+    "risk": "anyagok, tűz, költség",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Akkumulátor-technológia?",
+    "primer": "Az akkumulátor a napot és a szelet esti és tartalék árammá teszi. A mikrohálózatok és az elektromos mobilitás kulcsa; az anyagok és a tűzbiztonság számít.",
+    "maturity": {
+      "now": "Packek mobilitásra és hálózatra; a költség esik.",
+      "near": "Sűrűbb, biztonságosabb packek, közösségi hubok.",
+      "frontier": "Olyan olcsó tárolás, hogy a szakaszos megújuló alapterhelésnek hat."
+    },
+    "milestones": [
+      "Évtizedes pack-költségcsökkenés a mikrohálózatokhoz"
+    ],
+    "useCasesNow": [
+      "Esti klinikai áram",
+      "EV és hálózati szolgáltatás",
+      "Dízelórák csökkentése"
+    ],
+    "narrative": "A tárolt fény átíveli az éjszakát."
+  },
+  "ai": {
+    "name": "Mesterséges intelligencia",
+    "summary": "Rendszerek, amelyek adatból jósolnak, javasolnak, generálnak és döntenek.",
+    "learn": "Már társmunkás sok klinikán, iskolában és logisztikában — de lehet elfogult vagy átláthatatlan.",
+    "inventionHint": "Emberi felelősséggel tartsd a modellt egy valós munkafolyamatra.",
+    "risk": "elfogultság, túlzott magabiztosság, elszámoltathatóság",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Mesterséges intelligencia?",
+    "primer": "A mesterséges intelligencia mintázatokat talál az adatokban: jósol, javasol, szöveget vagy képet generál, döntést támogat. Már társmunkás sok helyen — de lehet elfogult, túl magabiztos vagy átláthatatlan. Erős helyi találmányok emberi felelősséget tartanak és valós munkafolyamatra szűkítik a modellt.",
+    "maturity": {
+      "now": "Támogató modellek és copilotok emberi felügyelettel.",
+      "near": "Megbízhatóbb szűk ügynökök; jobb helyi nyelvű modellek.",
+      "frontier": "Széles autonóm ítélet magas tétnél ember nélkül — nem őszinte most."
+    },
+    "milestones": [
+      "Generatív MI copilotok a munkában, oktatásban és egyes klinikai eszközökben"
+    ],
+    "useCasesNow": [
+      "Triage-támogatás",
+      "Tutorálási segédek",
+      "Dokumentum- és logisztikai copilotok",
+      "Korai figyelmeztető pontozás"
+    ],
+    "narrative": "Az emberek vezetnek; a modellek javasolnak."
+  },
+  "robots": {
+    "name": "Robotok",
+    "summary": "Gépek, amelyek érzékelnek, mozognak, építenek, gondoznak vagy ellenőriznek.",
+    "learn": "A szoftverintelligenciának teste kell az áru vagy ember mozgatásához.",
+    "inventionHint": "Felügyelt logisztika, ellenőrzés, gondozási segítség.",
+    "risk": "munkahely, biztonság, felügyelet",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Robotok?",
+    "primer": "A robotok érzékelnek és cselekszenek a fizikai világban. A szoftvernek teste kell az áru, a gondozás vagy az újjáépítéshez. A mai győzelmek gyakran felügyelt, térképezett terek; a nyílt világ még feszített.",
+    "maturity": {
+      "now": "Raktár, ellenőrzés és korlátozott gondozási robotok felügyelettel.",
+      "near": "Több feltérképezett helyszíni autonómia.",
+      "frontier": "Nyílt világú, felügyelet nélküli robotika — húzódás."
+    },
+    "milestones": [
+      "Kórházi logisztikai robotok és ipari cobotok napi használatban"
+    ],
+    "useCasesNow": [
+      "Klinikai logisztika",
+      "Veszélyes ellenőrzés",
+      "Újjáépítési segítség emberi vezetéssel"
+    ],
+    "narrative": "Felügyelt gépek viszik a súlyt."
+  },
+  "networks": {
+    "name": "Hálózatok",
+    "summary": "Információ és koordináció mozgatása távolságon át.",
+    "learn": "Összeköti a klinikákat, iskolákat, szenzorokat és embereket.",
+    "inventionHint": "Telemedicina, riasztások, közösségi háló.",
+    "risk": "kizárás, megfigyelés, kimaradás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Hálózatok?",
+    "primer": "A hálózatok információt és koordinációt mozgatnak. Összekötik a klinikát, az iskolát, a szenzort és a családot — a kimaradás és a megfigyelés a kockázat.",
+    "maturity": {
+      "now": "Széles sáv és mobil sok helyen; a perem lemarad.",
+      "near": "Olcsóbb mesh és műhold a fehér foltokra.",
+      "frontier": "Univerzális, megfizethető, ellenálló összeköttetés."
+    },
+    "milestones": [
+      "LEO műholdas széles sáv és közösségi mesh pilotok"
+    ],
+    "useCasesNow": [
+      "Telemedicina-linkek",
+      "Iskolai összeköttetés",
+      "Riasztás-sugárzás"
+    ],
+    "narrative": "A jelek összekötik a gondozást és a figyelmeztetést."
+  },
+  "transportation": {
+    "name": "Közlekedés",
+    "summary": "Emberek, áruk és gyógyszer fizikai mozgatása.",
+    "learn": "A helyi logisztika gyakran a szűk keresztmetszet.",
+    "inventionHint": "Orvosi folyosók, igényalapú furgonok.",
+    "risk": "kibocsátás, torlódás, egyenlőtlenség",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Közlekedés?",
+    "primer": "A közlekedés embert, árut és gyógyszert mozgat. A helyi logisztika gyakran a szűk keresztmetszet a „jó ötlet” és a „működik kedden” között.",
+    "maturity": {
+      "now": "Vegyes flották; az optimalizálás és az EV terjed.",
+      "near": "Több elektromos és igényalapú helyi járat.",
+      "frontier": "Tiszta, olcsó, megbízható mozgás mindenkinek."
+    },
+    "milestones": [
+      "EV buses and optimized routing cutting cost on many urban routes"
+    ],
+    "useCasesNow": [
+      "Orvosi logisztikai folyosók",
+      "Igényalapú furgonok",
+      "Elsőbbségi vészhelyzeti sávok"
+    ],
+    "narrative": "Goods and care arrive with less waste."
+  },
+  "self-driving": {
+    "name": "Önvezető autók",
+    "summary": "Járművek, amelyek korlátozott emberi irányítással navigálnak.",
+    "learn": "Először térképezett folyosókon; a nyílt út még feszített.",
+    "inventionHint": "Geokerített shuttle-ök és teherfolyosók.",
+    "risk": "baleset, felelősség, munkahely",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Önvezető autók?",
+    "primer": "Az önvezetés korlátozott emberi irányítással navigál. Először geokerített folyosókon érik; a teljesen nyílt út még nem a mindennapi ígéret.",
+    "maturity": {
+      "now": "Geokerített shuttle-ök és telephelyi robotaxi-pilotok.",
+      "near": "Több városi folyosó felügyelettel.",
+      "frontier": "Teljesen nyílt úti robotaxi mindenütt — még nem."
+    },
+    "milestones": [
+      "Commercial robotaxi zones",
+      "Autonomous shuttles on mapped routes"
+    ],
+    "useCasesNow": [
+      "Geokerített shuttle-ök",
+      "Telephelyi robotaxi",
+      "Rögzített teherfolyosók"
+    ],
+    "narrative": "Coordinated vehicles free street space."
+  },
+  "drones": {
+    "name": "Drónok",
+    "summary": "Személyzet nélküli repülők szállításra, érzékelésre, válaszra.",
+    "learn": "Már vér, vakcina és ellenőrzés folyosóin repülnek.",
+    "inventionHint": "Orvosi szállítás, katasztrófa-érzékelés.",
+    "risk": "légtér, magánélet, zaj",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Drónok?",
+    "primer": "A drónok szállításra, érzékelésre és válaszra repülnek. Vér, vakcina és ellenőrzés folyosói már valósak több országban.",
+    "maturity": {
+      "now": "Orvosi és ellenőrző folyosók több országban.",
+      "near": "Sűrűbb városi logisztika szabályokkal.",
+      "frontier": "Univerzális drónlogisztika zaj és légtér konfliktus nélkül."
+    },
+    "milestones": [
+      "Orvosi és ellenőrző drónfolyosók több országban"
+    ],
+    "useCasesNow": [
+      "Vér/vakcina szállítás",
+      "Infrastruktúra-ellenőrzés",
+      "Katasztrófa-felmérés"
+    ],
+    "narrative": "Kis gépek a levegőben, amikor az út lassú."
+  },
+  "quantum-internet": {
+    "name": "Kvantuminternet",
+    "summary": "Kvantumállapotok hálózása biztonságos kapcsolatokhoz.",
+    "learn": "Korai kísérletek; nem a mai alapértelmezett.",
+    "inventionHint": "Későbbi biztonságos összeköttetés (húzódás).",
+    "risk": "hype, hozzáférés",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Kvantuminternet?",
+    "primer": "A kvantuminternet kvantumállapotokat hálóz biztonságos kapcsolatokhoz. Korai kísérlet; nem a mai alapértelmezett infrastruktúra.",
+    "maturity": {
+      "now": "Labor- és városi kísérleti linkek.",
+      "near": "Korlátozott biztonságos kvantumlinkek partnerek között.",
+      "frontier": "Mindennapi kvantumbiztos hálózat — távoli."
+    },
+    "milestones": [
+      "Quantum key distribution and network experiments in research corridors"
+    ],
+    "useCasesNow": [
+      "Pilot secure links",
+      "Research consortia"
+    ],
+    "narrative": "Quiet secure links join critical sites."
+  },
+  "space": {
+    "name": "Űrkutatás",
+    "summary": "Pálya és azon túl megfigyelésre, kommunikációra, védelemre.",
+    "learn": "Földmegfigyelés és összeköttetés már helyi eszköz.",
+    "inventionHint": "Árvíz/aszály megfigyelés, vészhelyzeti sávszélesség.",
+    "risk": "költség, törmelék, irányítás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Űrkutatás?",
+    "primer": "Az űr eszközei megfigyelést, összeköttetést és védelmet adnak. A Föld-megfigyelés és a sávszélesség már helyi klíma- és vészhelyzeti eszköz lehet.",
+    "maturity": {
+      "now": "Földmegfigyelés és LEO sávszélesség elérhető szolgáltatásként.",
+      "near": "Sűrűbb, olcsóbb helyi környezeti adat.",
+      "frontier": "Valós idejű bolygóérzékelés minden településnek."
+    },
+    "milestones": [
+      "Dense LEO constellations for broadband and frequent imaging"
+    ],
+    "useCasesNow": [
+      "Flood and crop maps",
+      "Backhaul connectivity",
+      "Disaster situational awareness"
+    ],
+    "narrative": "Orbital eyes and relays serve the town."
+  },
+  "synbio": {
+    "name": "Szintetikus biológia",
+    "summary": "Élő rendszerek tervezése eszközként és gyárként.",
+    "learn": "Valós a labortól a mezőig; a biobiztonság nem opcionális.",
+    "inventionHint": "Szűk, ellenőrzött biotech a helyi szükségletre.",
+    "risk": "biobiztonság, etika, szabályozás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Szintetikus biológia?",
+    "primer": "A szintetikus biológia élő rendszereket tervez eszközként. Valós a labor és a mező között; a biobiztonság és az etika nem opcionális.",
+    "maturity": {
+      "now": "Labor- és mezőpilotok szűk alkalmazásokra.",
+      "near": "Több szabályozott helyi biotech eszköz.",
+      "frontier": "Programozható élet mindennapi infrastruktúraként — óvatosan."
+    },
+    "milestones": [
+      "Pathogen genomics in outbreaks",
+      "Approved gene therapies for select diseases"
+    ],
+    "useCasesNow": [
+      "Outbreak sequencing partnerships",
+      "Contract biomanufacturing",
+      "Lab diagnostics"
+    ],
+    "narrative": "Living tools enter the local toolkit."
+  },
+  "bci": {
+    "name": "Agy–számítógép interfész",
+    "summary": "Közvetlen kapcsolat idegi jelek és gépek között.",
+    "learn": "Klinikai helyreállítás szűk csoportoknak; nem tömeges elme-app.",
+    "inventionHint": "Klinikai útvonalak és beleegyezés.",
+    "risk": "magánélet, beleegyezés, hype",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Agy–számítógép interfész?",
+    "primer": "Az agy–számítógép interfész idegi jeleket köt gépekhez — klinikai helyreállítás szűk csoportoknak. A fogyasztói „elme-app” többnyire hype a helyi küldetésekhez.",
+    "maturity": {
+      "now": "Klinikai pilotok beszéd/motor helyreállításra szűk csoportoknak.",
+      "near": "Több rutinszerű klinikai helyreállítás.",
+      "frontier": "Fogyasztói elme-appok — nem őszinte a legtöbb küldetéshez."
+    },
+    "milestones": [
+      "Trial participants communicating via advanced BCIs"
+    ],
+    "useCasesNow": [
+      "Clinical trial pathways",
+      "Assistive research partnerships"
+    ],
+    "narrative": "Thought becomes a careful interface."
+  },
+  "genetic-engineering": {
+    "name": "Genetikai mérnökség",
+    "summary": "Genomok megváltoztatása tulajdonságokhoz és terápiákhoz.",
+    "learn": "Valós terápiák és mezőgazdasági eszközök; a hatókör számít.",
+    "inventionHint": "Szűk terápiás vagy mezőgazdasági beavatkozás.",
+    "risk": "etika, egyenlőtlenség, nem szándékolt hatás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Genetikai mérnökség?",
+    "primer": "A genetikai mérnökség genomokat változtat terápiához vagy tulajdonsághoz. A hatókör, a beleegyezés és a méltányosság dönt.",
+    "maturity": {
+      "now": "Jóváhagyott terápiák és szabályozott mezőgazdasági eszközök.",
+      "near": "Szélesebb, de még szűk terápiás hozzáférés.",
+      "frontier": "Olcsó, mindennapi genomszerkesztés — etika és méltányosság dönt."
+    },
+    "milestones": [
+      "Approved CRISPR therapies",
+      "Widely planted engineered crops in some regions"
+    ],
+    "useCasesNow": [
+      "Specialty crop resilience",
+      "Clinical gene-therapy pathways",
+      "Industrial microbes"
+    ],
+    "narrative": "Careful genetic tools enter clinics and fields."
+  },
+  "gene-sequencing": {
+    "name": "Génsorrendezés",
+    "summary": "DNS/RNS olvasása nagy léptékben.",
+    "learn": "Járvány- és diagnosztikai eszköz, nem csak laborjáték.",
+    "inventionHint": "Helyi kórokozó-figyelés és tanácsadás.",
+    "risk": "adatvédelem, téves riasztás, kapacitás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Génsorrendezés?",
+    "primer": "A génsorrendezés DNS/RNS-t olvas nagy léptékben. Járványfigyelés és diagnosztika eszköze, ha a személyzet és a tanácsadás megvan.",
+    "maturity": {
+      "now": "Járvány- és klinikai szekvenálás valós eszköz.",
+      "near": "Gyorsabb, olcsóbb asztali/terepi gépek.",
+      "frontier": "Azonnali, mindenütt jelenlévő genom-igazság — kapacitás és magánélet kell."
+    },
+    "milestones": [
+      "Járvány alatti kórokozó-szekvenálás valós klinikai eszköz",
+      "Wastewater genomic surveillance"
+    ],
+    "useCasesNow": [
+      "Járványfigyelés",
+      "Célzott kezelés támogatása",
+      "Helyi laborkapacitás"
+    ],
+    "narrative": "A minta igazságot mond, mielőtt a pletyka terjed."
+  },
+  "alt-proteins": {
+    "name": "Alternatív fehérjék",
+    "summary": "Növényi, erjesztett és tenyésztett fehérjék.",
+    "learn": "Ár, kultúra és szabályozás dönti el a befogadást.",
+    "inventionHint": "Helyi fehérje, ha a költség és a bizalom engedi.",
+    "risk": "elfogadás, energia, szabályozás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Alternatív fehérjék?",
+    "primer": "Az alternatív fehérjék növényi, erjesztett vagy tenyésztett források. Az ár, a kultúra és a szabályozás dönt a befogadásról.",
+    "maturity": {
+      "now": "Növényi és erjesztett opciók; a tenyésztett hús korai.",
+      "near": "Jobb árparitás több piacon.",
+      "frontier": "Alapértelmezett olcsó fehérje minden konyhában."
+    },
+    "milestones": [
+      "Supermarket plant/fermentation proteins",
+      "Limited cultivated-meat approvals"
+    ],
+    "useCasesNow": [
+      "School/clinic protein menus",
+      "Local fermentation hubs",
+      "Supply-shock buffers"
+    ],
+    "narrative": "Protein is produced closer to plates."
+  },
+  "vr": {
+    "name": "Virtuális valóság",
+    "summary": "Magával ragadó tréning és távoli jelenlét (VR/AR család).",
+    "learn": "Képzés és távoli segítség már a kórházakban és a közműveknél.",
+    "inventionHint": "Képzés, távoli szakértelem, biztonságos gyakorlás.",
+    "risk": "költség, szédülés, kizárás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Virtuális valóság?",
+    "primer": "A virtuális és kiterjesztett valóság magával ragadó tréninget és távoli jelenlétet ad. Kórházi és közműves képzésben már használt.",
+    "maturity": {
+      "now": "Képzés és távoli segítség kórházakban és közműveknél.",
+      "near": "Olcsóbb headsetek és jobb AR a terepen.",
+      "frontier": "Teljes jelenlét távolról — még nem a mindennap."
+    },
+    "milestones": [
+      "Surgical and disaster training and remote-assist AR in hospitals and utilities"
+    ],
+    "useCasesNow": [
+      "Sebészeti/ katasztrófa tréning",
+      "Távoli szakértői segítség",
+      "Biztonságos gyakorlás"
+    ],
+    "narrative": "Practice worlds before real risk."
+  },
+  "print3d": {
+    "name": "3D nyomtatás",
+    "summary": "Digitális tervek helyszíni fizikai tárggyá alakítása.",
+    "learn": "Alkatrészek és eszközök a műhelyben, SOP-ok alatt.",
+    "inventionHint": "Sürgős alkatrészek, egyedi eszközök, prototípusok.",
+    "risk": "minőség, anyag, szabályozás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) 3D nyomtatás?",
+    "primer": "A 3D nyomtatás digitális tervből helyszíni tárgyat készít. Alkatrész, sín, prototípus — minőségi SOP-ok alatt.",
+    "maturity": {
+      "now": "Műhelyek és kórházak alkatrészt és eszközt nyomtatnak SOP alatt.",
+      "near": "Több helyi gyártási kapacitás és anyag.",
+      "frontier": "Bármi nyomtatása igény szerint — minőség és szabályozás a gát."
+    },
+    "milestones": [
+      "Műhely- és kórházi makerspace-ek alkatrészt gyártanak SOP alatt"
+    ],
+    "useCasesNow": [
+      "Sürgős alkatrészek",
+      "Egyedi sínek és eszközök",
+      "Prototípus menedékek"
+    ],
+    "narrative": "A bitekből helyi alkatrész lesz."
+  },
+  "iot": {
+    "name": "Dolgok internete",
+    "summary": "Szenzorok, amelyek mérhetővé teszik a fizikai világot.",
+    "learn": "A mérés olcsó; a kormányzás a nehéz rész.",
+    "inventionHint": "Árvíz-, hideglánc-, szivárgásriasztás.",
+    "risk": "magánélet, zaj, ki adja a riasztást",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Dolgok internete?",
+    "primer": "A dolgok internete szenzorokkal mérhetővé teszi a világot. A mérés olcsó; az a kérdés, ki birtokolja az adatot és ki cselekszik a riasztásra.",
+    "maturity": {
+      "now": "Városi és közműves szenzorhálózatok árvízre, levegőre, hálózatra.",
+      "near": "Olcsóbb szenzorok; a kormányzás a nehéz.",
+      "frontier": "Teljes városi érzékelés zaj és visszaélés nélkül."
+    },
+    "milestones": [
+      "Városi árvíz-, levegő- és vízérzékelő hálózatok termelésben"
+    ],
+    "useCasesNow": [
+      "Árvíz korai figyelmeztetés",
+      "Hideglánc-monitorok",
+      "Szivárgásérzékelés"
+    ],
+    "narrative": "A szenzorok korán szólítanak, nem későn."
+  },
+  "materials": {
+    "name": "Anyagtudomány",
+    "summary": "Új szilárd anyagok és felületek — szilárdság, szűrők, vezetők.",
+    "learn": "Csendes enabler a szűrők, akkumulátorok és épületek mögött.",
+    "inventionHint": "Jobb szűrők, könnyebb szerkezetek, helyi gyártás.",
+    "risk": "költség, ellátási lánc, toxicitás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Anyagtudomány?",
+    "primer": "Az anyagtudomány új szilárd anyagokat és felületeket ad — szűrők, akkumulátorok, könnyű szerkezetek csendes enablerei.",
+    "maturity": {
+      "now": "Új szűrők, könnyű szerkezetek, jobb vezetők a laborból a piacra.",
+      "near": "Gyorsabb átültetés helyi gyártásba.",
+      "frontier": "Programozható anyagok a mindennapi infrastruktúrában."
+    },
+    "milestones": [
+      "Commercial membranes",
+      "Lighter structures",
+      "Better thermal materials"
+    ],
+    "useCasesNow": [
+      "Flood barriers",
+      "Filters",
+      "Lighter rebuild materials"
+    ],
+    "narrative": "Surfaces adapt to weather and wear."
+  },
+  "nano": {
+    "name": "Nanotechnológia",
+    "summary": "Mérnökség nanométeres skálán orvosláshoz és anyagokhoz.",
+    "learn": "Valós fülkék; a „nanobot-raj” gyakran hype.",
+    "inventionHint": "Szűk orvosi vagy szűrési alkalmazás.",
+    "risk": "toxicitás, hype, szabályozás",
+    "scarcity": "Milyen szűkös képességet tehetne bőségesebbé itt a(z) Nanotechnológia?",
+    "primer": "A nanotechnológia nanométeres skálán tervez. Valós orvosi és anyagi fülkék; a „nanobot-raj mindent meggyógyít” gyakran hype.",
+    "maturity": {
+      "now": "Szűk orvosi és anyagi alkalmazások.",
+      "near": "Több ellenőrzött nanogyógyszer és bevonat.",
+      "frontier": "Nanobot-rajok a mindennapban — többnyire hype most."
+    },
+    "milestones": [
+      "Approved nanomedicine formulations",
+      "Commercial nano-coatings"
+    ],
+    "useCasesNow": [
+      "Targeted drug-delivery pilots",
+      "Water and air filters",
+      "Protective coatings"
+    ],
+    "narrative": "Tiny layers clean and deliver carefully."
+  }
+}
