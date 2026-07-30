@@ -12,10 +12,25 @@ const QUICK_ACTIONS = [
     label: "Art of the possible",
     hint: "Milestones, capabilities, unlocked use cases for this stack & year",
   },
+  {
+    mode: "sit",
+    label: "SIT invent",
+    hint: "Addition · subtraction · multiplication · division — thinking in a box",
+  },
+  {
+    mode: "scamper",
+    label: "SCAMPER invent",
+    hint: "Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse",
+  },
   { mode: "draft-name", label: "Name it", hint: "Invention name" },
   { mode: "push-further", label: "Timing check", hint: "Wait vs claim fit for this year" },
   { mode: "explain-techs", label: "Teach me", hint: "Explain techs in the stack" },
 ];
+
+/** Match invent howOk threshold — enough substance for SIT / SCAMPER to remake. */
+const HOW_IT_WORKS_MIN = 20;
+const HOW_GATED_MODES = new Set(["sit", "scamper"]);
+const HOW_GATED_DISABLED_TITLE = "Write how it works first (a short paragraph)";
 
 export class CoInventor {
   /**
@@ -105,7 +120,37 @@ export class CoInventor {
 
     root.querySelector("#co-clear").addEventListener("click", () => this.reset());
 
+    this.syncChipGates();
     this.checkHealth();
+  }
+
+  /**
+   * Enable/disable chips that need draft state (SIT / SCAMPER need how-it-works).
+   * Composes with busy / interactive locks from setBusyUi.
+   */
+  syncChipGates() {
+    if (!this.root || !this.showQuickActions) return;
+    const locked = Boolean(this.busy) || !this.interactive;
+    const ctx = (() => {
+      try {
+        return this.getContext?.() || {};
+      } catch {
+        return {};
+      }
+    })();
+    const howOk = String(ctx.inventionHow || "").trim().length >= HOW_IT_WORKS_MIN;
+    for (const mode of HOW_GATED_MODES) {
+      const chip = this.root.querySelector(`.co-chip[data-mode="${mode}"]`);
+      if (!chip) continue;
+      if (locked) {
+        chip.disabled = true;
+        if (this._lockReason) chip.title = this._lockReason;
+        continue;
+      }
+      const action = QUICK_ACTIONS.find((a) => a.mode === mode);
+      chip.disabled = !howOk;
+      chip.title = howOk ? action?.hint || mode : HOW_GATED_DISABLED_TITLE;
+    }
   }
 
   async checkHealth() {
@@ -169,6 +214,13 @@ export class CoInventor {
   }
 
   async runMode(mode) {
+    if (HOW_GATED_MODES.has(mode)) {
+      const how = String(this.getContext?.()?.inventionHow || "").trim();
+      if (how.length < HOW_IT_WORKS_MIN) {
+        this.syncChipGates();
+        return;
+      }
+    }
     const labels = Object.fromEntries(QUICK_ACTIONS.map((a) => [a.mode, a.label]));
     const userText = `[${labels[mode] || mode}]`;
     await this.request({ mode, userText, showUser: mode === "chat" ? true : true, userDisplay: userText });
@@ -270,10 +322,18 @@ export class CoInventor {
       }
 
       // Store plain text for conversation history
+      // SIT / SCAMPER are inspiration only — never surface Apply how-it-works
+      let proposals = data.proposals || emptyProposals();
+      if (mode === "sit" || mode === "scamper") {
+        proposals = {
+          ...emptyProposals(),
+          // keep teaching-related empty; strip all applyable story/stack proposals
+        };
+      }
       this.messages.push({
         role: "assistant",
         content: data.message || "",
-        proposals: data.proposals,
+        proposals,
         teaching: data.teaching,
       });
       this.renderMessages();
@@ -293,6 +353,7 @@ export class CoInventor {
       } catch {
         /* host cleanup must not break chat */
       }
+      this.syncChipGates();
     }
   }
 
@@ -347,10 +408,16 @@ export class CoInventor {
     }
     if (clear) clear.disabled = locked;
     this.root?.querySelectorAll(".co-chip").forEach((b) => {
+      // How-gated chips (SIT / SCAMPER) re-applied in syncChipGates after the bulk pass
       b.disabled = locked;
       if (locked && this._lockReason) b.title = this._lockReason;
+      else if (!HOW_GATED_MODES.has(b.dataset.mode)) {
+        const action = QUICK_ACTIONS.find((a) => a.mode === b.dataset.mode);
+        if (action) b.title = action.hint;
+      }
     });
     this.root?.classList.toggle("co-locked", locked && !busy);
+    this.syncChipGates();
   }
 
   renderMessages() {

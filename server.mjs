@@ -324,6 +324,8 @@ Role:
 - emTech categories are ALWAYS pickable. Timing is about CLAIMS in how-it-works vs the calendar year — never "you cannot pick Synthetic Biology until 2029".
 - readyYear / softHorizon on a tech is only a soft hint that near-scale use cases get more common later — not a lock.
 - When mode is art-of-the-possible: teach milestones, current capabilities (now), use cases unlocked, near vs frontier stretch for the selected stack (or recommended if empty) and year/place. Use maturity/milestones/useCasesNow from availableTechs as baseline; enrich with real-world knowledge when confident. Label uncertainty. Do not invent fake paper titles.
+- When mode is sit: Systematic Inventive Thinking ("thinking in a box", TRIZ-inspired). Remix context.inventionHow with four closed-world lenses — Subtraction, Division, Multiplication, Addition. Prefer elements already in how-it-works + stack; do not invent a new mission. Structure message with those four headings. Brainstorm only — leave proposals empty (no inventionHow apply; the learner rewrites their own how-it-works if they like an idea).
+- When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
@@ -441,6 +443,141 @@ function localArtOfThePossible(context, selected, stack, map, base) {
       `\n\nWant a claim that fits this year? Draft how-it-works around a pilot, partnership, or mapped corridor — then I'll stress-test timing.`,
     proposals: base,
     teaching,
+  };
+}
+
+/**
+ * Local SIT (Systematic Inventive Thinking) — four closed-world lenses on how-it-works.
+ */
+function localSitInvent(context, selected, stack, map, base) {
+  const how = String(context.inventionHow || "").trim();
+  const place = context.place || "this place";
+  const name = context.inventionName || "your invention";
+  const year = context.year || 2026;
+  const focus = (selected.length ? selected : stack).slice(0, 4);
+  const techNames = focus.map((id) => map.get(id)?.name || id).filter(Boolean);
+  const techPhrase = techNames.length
+    ? techNames.slice(0, 3).join(", ")
+    : "the pieces already in your draft";
+  const snip = how.length
+    ? how.slice(0, 160) + (how.length > 160 ? "…" : "")
+    : "the mechanism you wrote";
+
+  if (how.length < 20) {
+    return {
+      source: "local",
+      message:
+        `**SIT invent** needs a how-it-works draft first (at least a short paragraph). ` +
+        `Write the mechanism, then hit **SIT invent** again — we'll remake it with subtraction, division, multiplication, and addition.`,
+      proposals: base,
+      teaching: [],
+    };
+  }
+
+  const subtractionHow =
+    `In ${place}, strip the most “obvious” middle step from the current design and let remaining actors + ${techPhrase} carry the function. ` +
+    `What you remove is treated as optional scaffolding, not the core value — neighbors still get the outcome without that piece.`;
+  const divisionHow =
+    `In ${place}, split what was one end-to-end system into modular parts that run on different schedules or blocks: sense here, decide there, act only where the crisis is hottest. ` +
+    `${techPhrase} stay in play, but no single site must host the whole stack.`;
+  const multiplicationHow =
+    `In ${place}, keep the core loop but run a second, changed copy of one component — a cheaper twin, a slower twin, or a community-operated twin — so the original design and its variant cover different users. ` +
+    `Same family as ${techPhrase}, deliberately not identical.`;
+  const additionHow =
+    `In ${place}, assign a new job to something already in the system (a sensor, a clerk, a spare channel, a quiet hour) so it also does coordination or access work. ` +
+    `Closed-world addition: no new magic tech — only roles and links already latent in your how-it-works and ${techPhrase}.`;
+
+  return {
+    source: "local",
+    message:
+      `**SIT invent** — thinking in a box for **${name}** (${place}, ${year}).\n` +
+      `Starting from your how-it-works: “${snip}”\n\n` +
+      `**Subtraction** — remove an essential-looking step and still deliver the outcome:\n${subtractionHow}\n` +
+      `_Why it might win:_ fewer moving parts, cheaper pilot, harder to freeride on complexity.\n\n` +
+      `**Division** — split whole into parts in time, space, or scale:\n${divisionHow}\n` +
+      `_Why it might win:_ starts small, matches uneven streets or clinics, fails gracefully.\n\n` +
+      `**Multiplication** — copy a component and change the copy:\n${multiplicationHow}\n` +
+      `_Why it might win:_ serves two realities (rich/poor blocks, day/night, skilled/novice) without a second invention.\n\n` +
+      `**Addition** — new job for something already inside the system:\n${additionHow}\n` +
+      `_Why it might win:_ closed-world; reuses trust and infrastructure you already named.\n\n` +
+      `These are sparks, not a paste-in draft — rewrite your own how-it-works if one of them clicks.`,
+    proposals: base,
+    teaching: teachingFor(focus.length ? focus : stack, map, 2),
+  };
+}
+
+/**
+ * Local SCAMPER — seven checklist remakes of how-it-works.
+ */
+function localScamperInvent(context, selected, stack, map, base) {
+  const how = String(context.inventionHow || "").trim();
+  const place = context.place || "this place";
+  const name = context.inventionName || "your invention";
+  const year = context.year || 2026;
+  const focus = (selected.length ? selected : stack).slice(0, 4);
+  const techNames = focus.map((id) => map.get(id)?.name || id).filter(Boolean);
+  const techPhrase = techNames.length
+    ? techNames.slice(0, 3).join(", ")
+    : "the pieces already in your draft";
+  const snip = how.length
+    ? how.slice(0, 160) + (how.length > 160 ? "…" : "")
+    : "the mechanism you wrote";
+
+  if (how.length < 20) {
+    return {
+      source: "local",
+      message:
+        `**SCAMPER invent** needs a how-it-works draft first (at least a short paragraph). ` +
+        `Write the mechanism, then hit **SCAMPER invent** again — we'll remake it with Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, and Reverse.`,
+      proposals: base,
+      teaching: [],
+    };
+  }
+
+  const substituteHow =
+    `In ${place}, swap one actor or channel in the current design — e.g. a community radio or clinic clerk stands in for a step that currently depends on a scarcer part of ${techPhrase}. ` +
+    `Same outcome, different substitute in the chain.`;
+  const combineHow =
+    `In ${place}, merge two jobs that your draft treats separately (sense + alert, pay + enroll, map + dispatch) so one pass through ${techPhrase} does both. ` +
+    `Fewer handoffs, one combined loop.`;
+  const adaptHow =
+    `In ${place}, borrow a pattern that already works nearby — school lunch logistics, mutual-aid WhatsApp trees, pharmacy refill reminders — and adapt it onto your mechanism with ${techPhrase}. ` +
+    `Not a new category; a familiar social pattern wearing your stack.`;
+  const modifyHow =
+    `In ${place}, change scale or intensity: run a minified block pilot first (one street, one clinic day) or magnify coverage on crisis hours only. ` +
+    `${techPhrase} stays, but cadence and footprint shift.`;
+  const putToUseHow =
+    `In ${place}, keep the same machinery but aim it at a second job on quiet days — training, inventory, neighbor check-ins — so idle capacity from ${techPhrase} is not wasted. ` +
+    `Primary crisis use remains; off-peak is the new use.`;
+  const eliminateHow =
+    `In ${place}, cut the step users skip anyway and redesign so the outcome still lands without it. ` +
+    `Remaining actors + ${techPhrase} carry a simpler path.`;
+  const reverseHow =
+    `In ${place}, flip the sequence: act or enroll first, measure after — or let neighbors request before the system pushes. ` +
+    `Rearrange who moves first while keeping ${techPhrase} in the loop.`;
+
+  return {
+    source: "local",
+    message:
+      `**SCAMPER invent** — checklist remakes for **${name}** (${place}, ${year}).\n` +
+      `Starting from your how-it-works: “${snip}”\n\n` +
+      `**Substitute** — replace a part of the chain:\n${substituteHow}\n` +
+      `_Why it might win:_ uses what this place already trusts.\n\n` +
+      `**Combine** — merge steps or functions:\n${combineHow}\n` +
+      `_Why it might win:_ fewer handoffs, clearer pilot story.\n\n` +
+      `**Adapt** — borrow a working pattern:\n${adaptHow}\n` +
+      `_Why it might win:_ adoption rides on a familiar habit.\n\n` +
+      `**Modify** — change scale or intensity:\n${modifyHow}\n` +
+      `_Why it might win:_ honest pilot size or peak-hour focus.\n\n` +
+      `**Put to other uses** — same kit, second job:\n${putToUseHow}\n` +
+      `_Why it might win:_ justifies cost between crises.\n\n` +
+      `**Eliminate** — remove a step and still deliver:\n${eliminateHow}\n` +
+      `_Why it might win:_ cheaper, less freeride surface.\n\n` +
+      `**Reverse / Rearrange** — flip order or roles:\n${reverseHow}\n` +
+      `_Why it might win:_ matches how people already move here.\n\n` +
+      `These are sparks, not a paste-in draft — rewrite your own how-it-works if one of them clicks.`,
+    proposals: base,
+    teaching: teachingFor(focus.length ? focus : stack, map, 2),
   };
 }
 
@@ -1065,6 +1202,14 @@ function localCoInvent({ mode, messages, context }) {
     return localArtOfThePossible(context, selected, stack, map, base);
   }
 
+  if (mode === "sit") {
+    return localSitInvent(context, selected, stack, map, base);
+  }
+
+  if (mode === "scamper") {
+    return localScamperInvent(context, selected, stack, map, base);
+  }
+
   if (mode === "assess-feasibility") {
     return localAssessFeasibility(context, selected, map, base);
   }
@@ -1181,6 +1326,23 @@ function buildUserPayload({ messages, context, mode }) {
       "Teach the currently selected technologies (or recommended ones if none).",
     "art-of-the-possible":
       "Capability literacy for selected stack (or recommended if empty) at context.year in context.place. Structure message with: recent milestones, what works NOW, use cases unlocked, near (2–5y), frontier stretch. Use maturity/milestones/useCasesNow on availableTechs as baseline; enrich carefully. Never imply a category is locked. teaching blurbs welcome. proposals usually empty.",
+    sit:
+      "Systematic Inventive Thinking (SIT) — Soviet TRIZ-inspired 'thinking in a box'. The learner already wrote context.inventionHow; remix THAT idea (plus name/stack/place), not a blank-slate invent. Produce FOUR short variants, one per lens:\n" +
+      "1) **Subtraction** — remove an essential component/step and re-solve the function with what remains.\n" +
+      "2) **Division** — split product/process in time, space, or scale (parts that were whole).\n" +
+      "3) **Multiplication** — copy a component/step and change the copy in a useful way.\n" +
+      "4) **Addition** — add a closed-world element already present in the system, or assign a new job to an existing part (task unification as addition).\n" +
+      "Closed world: prefer recombining elements already named in how-it-works and the stack; avoid open-ended blue-sky tech. Stay local to place/year. Message structure: one-line SIT framing, then the four headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked.",
+    scamper:
+      "SCAMPER invent (Osborn/Eberle checklist) — more open than SIT, but still remix the learner's context.inventionHow (plus name/stack/place), not a blank-slate invent. Produce SEVEN short variants, one per letter:\n" +
+      "1) **Substitute** — replace a material, actor, step, or channel.\n" +
+      "2) **Combine** — merge functions, audiences, or steps.\n" +
+      "3) **Adapt** — borrow a pattern from a nearby domain or familiar local practice.\n" +
+      "4) **Modify** — change scale, intensity, frequency (magnify or minify).\n" +
+      "5) **Put to other uses** — same system, second job or audience.\n" +
+      "6) **Eliminate** — remove a step/component and still deliver value.\n" +
+      "7) **Reverse / Rearrange** — flip sequence, roles, or cause-effect.\n" +
+      "Stay local to place/year. Message structure: one-line SCAMPER framing, then the seven headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked. Do not confuse with SIT closed-world templates — SCAMPER may Adapt from outside the draft.",
     "assess-feasibility":
       "Judge claim timing only. Read inventionHow/inventionImpact and selected stack vs context.year. Return top-level timing: { level: red|yellow|green, reason: one sentence }. green = near-term/pilot-honest; yellow = stretch/vague; red = frontier as routine. Selecting synbio/quantum/BCI never forces red by itself. message can briefly echo the reason. proposals empty.",
     "complete-picture":
@@ -1308,8 +1470,10 @@ function sanitizeScrutiny(raw) {
   };
 }
 
-function sanitizeResult(parsed, availableIds, source = "ai") {
+function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
   const ids = new Set(availableIds);
+  // SIT / SCAMPER are brainstorm sparks — never offer Apply how-it-works (or other story applies)
+  const brainstormOnly = mode === "sit" || mode === "scamper";
   const empty = {
     source,
     message: "I'm with you — tell me what you want to invent, or pick a quick action.",
@@ -1326,12 +1490,16 @@ function sanitizeResult(parsed, availableIds, source = "ai") {
   if (!parsed || typeof parsed !== "object") return empty;
 
   const proposals = parsed.proposals || {};
-  const addTechIds = (Array.isArray(proposals.addTechIds) ? proposals.addTechIds : [])
-    .map(String)
-    .filter((id) => ids.has(id));
-  const removeTechIds = (Array.isArray(proposals.removeTechIds) ? proposals.removeTechIds : [])
-    .map(String)
-    .filter((id) => ids.has(id));
+  const addTechIds = brainstormOnly
+    ? []
+    : (Array.isArray(proposals.addTechIds) ? proposals.addTechIds : [])
+        .map(String)
+        .filter((id) => ids.has(id));
+  const removeTechIds = brainstormOnly
+    ? []
+    : (Array.isArray(proposals.removeTechIds) ? proposals.removeTechIds : [])
+        .map(String)
+        .filter((id) => ids.has(id));
 
   const teaching = (Array.isArray(parsed.teaching) ? parsed.teaching : [])
     .filter((t) => t && ids.has(String(t.techId)))
@@ -1344,19 +1512,22 @@ function sanitizeResult(parsed, availableIds, source = "ai") {
     proposals: {
       addTechIds,
       removeTechIds,
-      inventionName:
-        proposals.inventionName != null && String(proposals.inventionName).trim()
+      inventionName: brainstormOnly
+        ? null
+        : proposals.inventionName != null && String(proposals.inventionName).trim()
           ? String(proposals.inventionName).trim().slice(0, 80)
           : null,
-      inventionHow:
-        proposals.inventionHow != null && String(proposals.inventionHow).trim()
+      inventionHow: brainstormOnly
+        ? null
+        : proposals.inventionHow != null && String(proposals.inventionHow).trim()
           ? String(proposals.inventionHow).trim().slice(0, 2500)
           : null,
-      inventionImpact:
-        proposals.inventionImpact != null && String(proposals.inventionImpact).trim()
+      inventionImpact: brainstormOnly
+        ? null
+        : proposals.inventionImpact != null && String(proposals.inventionImpact).trim()
           ? String(proposals.inventionImpact).trim().slice(0, 2500)
           : null,
-      scrutiny: sanitizeScrutiny(proposals.scrutiny),
+      scrutiny: brainstormOnly ? null : sanitizeScrutiny(proposals.scrutiny),
     },
     teaching,
   };
@@ -1524,7 +1695,7 @@ async function aiCoInvent(body, client, meta = {}) {
   if (mode === "generate-scenarios") {
     return sanitizeScenariosResult(parsed, context, "ai");
   }
-  return sanitizeResult(parsed, availableIds, "ai");
+  return sanitizeResult(parsed, availableIds, "ai", mode);
 }
 
 async function handleCoInvent(body) {

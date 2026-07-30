@@ -1023,7 +1023,10 @@ export function initFriendsUi(api) {
           /* ignore */
         }
       });
-      el.addEventListener("input", () => scheduleBuffer(field, el.value));
+      el.addEventListener("input", () => {
+        scheduleBuffer(field, el.value);
+        if (field === "inventionHow") roomSide?.co?.syncChipGates?.();
+      });
       el.addEventListener("blur", () => {
         try {
           client.sendAction({
@@ -1034,6 +1037,7 @@ export function initFriendsUi(api) {
         } catch {
           /* ignore */
         }
+        if (field === "inventionHow") roomSide?.co?.syncChipGates?.();
       });
     }
     const layerSel = $("#mp-layer-target");
@@ -1920,6 +1924,7 @@ export function initFriendsUi(api) {
         }
         hotseat = r.session;
         scheduleHsVision();
+        if (field === "inventionHow") hsSide?.co?.syncChipGates?.();
       });
       el.addEventListener("blur", () => {
         if (!hotseat?.place) return;
@@ -1931,6 +1936,7 @@ export function initFriendsUi(api) {
           hotseat = r.session;
           scheduleHsVision({ force: true });
         }
+        if (field === "inventionHow") hsSide?.co?.syncChipGates?.();
       });
     }
     $("#hs-layer-target")?.addEventListener("change", () => {

@@ -4009,6 +4009,8 @@ function syncStoryFieldsToDom(opts = {}) {
   ) {
     impEl.value = state.inventionImpact;
   }
+  // SIT chip gates on how-it-works length
+  state.coInventor?.syncChipGates?.();
 }
 
 function syncHiddenStoryFields() {
@@ -12734,6 +12736,7 @@ function applyCoInventorProposals(proposals) {
       updateVision();
       scheduleAiTimingAssess();
       mpSyncFromSolo?.();
+      state.coInventor?.syncChipGates?.();
     }
     if (addedTechIds.length === 1) {
       flashToast(`Added ${techById(addedTechIds[0])?.name || "tech"} to stack`);
@@ -15005,6 +15008,7 @@ function bind() {
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
+    state.coInventor?.syncChipGates?.();
   });
   $("#invention-impact")?.addEventListener("input", (e) => {
     if (inventInputBlocked()) {

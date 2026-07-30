@@ -6242,6 +6242,14 @@ button.linkish:hover {
   border-color: rgba(167, 139, 250, 0.55);
 }
 
+.co-chip:disabled {
+  opacity: 0.45;
+  color: var(--muted, #94a3b8);
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.06);
+  cursor: not-allowed;
+}
+
 .co-messages {
   flex: 1;
   overflow-y: auto;

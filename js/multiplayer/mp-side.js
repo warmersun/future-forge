@@ -87,6 +87,7 @@ export class MpSidePanel {
         transport: this.opts.transport || null,
       });
       this.co.mount(coRoot);
+      this.co.syncChipGates?.();
     }
     if (tabBar && !this.wired) {
       this.wired = true;
@@ -115,6 +116,11 @@ export class MpSidePanel {
     const invent = this.opts.getInvent?.() || null;
     const mission = place?.mission;
     const stackIds = (invent?.stack || []).map((x) => x.techId);
+    // Prefer live workshop textareas so SIT gate tracks typing before commit
+    const prefix = this.opts.mode === "room" ? "mp" : "hs";
+    const liveHow = document.querySelector(`#${prefix}-invention-how`)?.value ?? null;
+    const liveImpact = document.querySelector(`#${prefix}-invention-impact`)?.value ?? null;
+    const liveName = document.querySelector(`#${prefix}-invention-name`)?.value ?? null;
     return {
       challenge: mission
         ? {
@@ -128,9 +134,9 @@ export class MpSidePanel {
           }
         : null,
       selectedTechIds: stackIds,
-      inventionName: invent?.inventionName || "",
-      inventionHow: invent?.inventionHow || "",
-      inventionImpact: invent?.inventionImpact || "",
+      inventionName: liveName != null ? liveName : invent?.inventionName || "",
+      inventionHow: liveHow != null ? liveHow : invent?.inventionHow || "",
+      inventionImpact: liveImpact != null ? liveImpact : invent?.inventionImpact || "",
       storyFace: "how",
       writeBoth: true,
       year: invent?.year != null ? invent.year : place?.year,
@@ -145,11 +151,13 @@ export class MpSidePanel {
     if (!proposals) return;
     if (this.opts.applyProposals) {
       this.opts.applyProposals(proposals);
+      this.co?.syncChipGates?.();
       return;
     }
     if (proposals.inventionName) this.opts.applyField("inventionName", proposals.inventionName);
     if (proposals.inventionHow) this.opts.applyField("inventionHow", proposals.inventionHow);
     if (proposals.inventionImpact) this.opts.applyField("inventionImpact", proposals.inventionImpact);
+    this.co?.syncChipGates?.();
   }
 
   /**
