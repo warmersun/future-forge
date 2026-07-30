@@ -13824,7 +13824,7 @@ let marketNewsOpenId = null;
 /** Auto-dismiss timer for market bulletin (cleared on manual Got it) */
 let marketNewsAutoCloseT = null;
 /** Default ms before market bulletin auto-closes if not dismissed (read headline + body + effects) */
-const MARKET_NEWS_AUTO_CLOSE_MS = 7000;
+const MARKET_NEWS_AUTO_CLOSE_MS = 4000;
 /** @type {{ name?: string, isYou?: boolean, mode?: string } | null} */
 let deferredTurnNotice = null;
 /** Year advance banner/HUD pulse is on-screen — hold turn popup so it isn't covered */
