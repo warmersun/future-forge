@@ -239,6 +239,27 @@ export function decideShot(body, prev, worldCard) {
     };
   }
 
+  // Substantial story → new camera, same world (place-safe default).
+  // Must run before present/no-tech baseline so learner writing updates the image
+  // even before they pick a stack (common in Spark tutorial).
+  if (narrative.length >= 40) {
+    const bits = [];
+    if (how) bits.push(how);
+    // Spark mirrors how→impact; avoid pasting the same sentence twice into the shot
+    if (life && life !== how) bits.push(life);
+    return {
+      mode: "generate",
+      continuity: "new-shot",
+      reason: "Learner story frames the shot",
+      happening: groundInPlace(
+        place,
+        `${bits.join(" ")} All of this unfolds in ${place}, with the terrain, climate, and sky of the setting.`
+      ),
+      subjects: names,
+    };
+  }
+
+  // Empty / thin story + no stack → keep present-day place baseline
   if (stageId === "present" && techs.length === 0) {
     return {
       mode: "generate",
@@ -258,23 +279,6 @@ export function decideShot(body, prev, worldCard) {
       happening: names.length
         ? `The same view of ${place}, with ${names.join(", ")} visible as real local tools or infrastructure that fit this terrain and climate.`
         : `The same view of ${place}, with subtle local progress.`,
-      subjects: names,
-    };
-  }
-
-  // Substantial story → new camera, same world (place-safe default)
-  if (narrative.length >= 40) {
-    const bits = [];
-    if (how) bits.push(how);
-    if (life) bits.push(life);
-    return {
-      mode: "generate",
-      continuity: "new-shot",
-      reason: "Learner story frames the shot",
-      happening: groundInPlace(
-        place,
-        `${bits.join(" ")} All of this unfolds in ${place}, with the terrain, climate, and sky of the setting.`
-      ),
       subjects: names,
     };
   }

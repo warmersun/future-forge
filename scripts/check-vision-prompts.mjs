@@ -76,6 +76,59 @@ const editPrompt = composeEditPrompt(world1, shotEdit);
 assert(/Atacama|same place/i.test(editPrompt), "edit prompt anchors place");
 assert(!/\bmarina\b/i.test(editPrompt), "edit prompt has no marina");
 
+// Story-only (no stack, present stage, prior baseline) — learner writing must win
+// (Spark tutorial often writes before picking tech; used to be stuck on place baseline)
+const storyOnlyBody = {
+  place: "Portside Ward",
+  year: 2026,
+  challenge: {
+    id: "portside-floods",
+    title: "Portside floods",
+    scene: "Low streets flood after storms; pump houses struggle.",
+    problem: "Low streets flood after storms; pump houses struggle.",
+  },
+  stage: { id: "present" },
+  techs: [],
+  inventionHow:
+    "Neighbors share a mesh of cheap water sensors that trigger street-level diversion boards before the tide peaks.",
+  inventionImpact:
+    "Neighbors share a mesh of cheap water sensors that trigger street-level diversion boards before the tide peaks.",
+};
+const storyWorld = buildWorldCard(storyOnlyBody);
+const storyShot = decideShot(
+  storyOnlyBody,
+  { dataUrl: "data:image/jpeg;base64,xx" },
+  storyWorld
+);
+assert(storyShot.mode === "generate", "story-only uses generate");
+assert(
+  storyShot.reason === "Learner story frames the shot",
+  "story-only reason is learner story"
+);
+assert(
+  /water sensors|diversion boards/i.test(storyShot.happening),
+  "story-only happening includes learner text"
+);
+assert(
+  !/Ordinary present-day life/i.test(storyShot.happening),
+  "story-only does not fall back to empty present baseline"
+);
+
+// Still empty present → baseline (no stack, no story)
+const emptyPresent = decideShot(
+  {
+    ...storyOnlyBody,
+    inventionHow: "",
+    inventionImpact: "",
+  },
+  { dataUrl: "data:image/jpeg;base64,xx" },
+  storyWorld
+);
+assert(
+  emptyPresent.reason === "Present-day baseline",
+  "empty present stays on place baseline"
+);
+
 // Coastal scene may include harbor language from mission only
 const coastalBody = {
   place: "Valparaíso, Chile",
