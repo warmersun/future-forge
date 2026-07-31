@@ -9,6 +9,7 @@
  * Usage:
  *   node scripts/generate-scenario-seeds.mjs
  *   node scripts/generate-scenario-seeds.mjs --themes air,climate
+ *   node scripts/generate-scenario-seeds.mjs --themes=air,climate
  *   node scripts/generate-scenario-seeds.mjs --local-only
  *   node scripts/generate-scenario-seeds.mjs --dry-run
  *
@@ -27,6 +28,14 @@ import {
   techForAi,
 } from "../js/data.js";
 import { themeDepthFor } from "../js/sim/sustainable.js";
+import {
+  SCENE_PROSE,
+  SCENE_PROSE_CAPSULE,
+  SCENE_HINT_REWRITE,
+  SCENE_CHAR_CAP,
+  assertSceneReadable,
+  sceneRepairInstruction,
+} from "../js/scene-prose.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -37,17 +46,63 @@ const XAI_BASE = "https://api.x.ai/v1";
 const MODEL = process.env.XAI_MODEL || "grok-4.5";
 const SCENARIO_COUNT = 4;
 
+/**
+ * Parse CLI args. Supports:
+ *   --themes=a,b
+ *   --themes a,b
+ *   --themes a --themes b
+ * Unknown flags are ignored except a missing value after --themes errors.
+ * @param {string[]} argv process.argv.slice(2)
+ * @returns {{ localOnly: boolean, dryRun: boolean, themeFilter: string[] | null }}
+ */
+export function parseSeedArgs(argv) {
+  const localOnly = argv.includes("--local-only");
+  const dryRun = argv.includes("--dry-run");
+  /** @type {string[]} */
+  const themeIds = [];
+  let sawThemesFlag = false;
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--local-only" || a === "--dry-run") continue;
+    if (a.startsWith("--themes=")) {
+      sawThemesFlag = true;
+      themeIds.push(
+        ...a
+          .slice("--themes=".length)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      );
+      continue;
+    }
+    if (a === "--themes") {
+      sawThemesFlag = true;
+      const next = argv[i + 1];
+      if (!next || next.startsWith("--")) {
+        throw new Error("--themes requires a value (e.g. --themes maternal,food or --themes=maternal,food)");
+      }
+      themeIds.push(
+        ...next
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      );
+      i += 1;
+      continue;
+    }
+  }
+
+  if (sawThemesFlag && themeIds.length === 0) {
+    throw new Error("--themes was set but no theme ids parsed");
+  }
+
+  const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
+  return { localOnly, dryRun, themeFilter };
+}
+
 const args = process.argv.slice(2);
-const localOnly = args.includes("--local-only");
-const dryRun = args.includes("--dry-run");
-const themesArg = args.find((a) => a.startsWith("--themes="));
-const themeFilter = themesArg
-  ? themesArg
-      .slice("--themes=".length)
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-  : null;
+const { localOnly, dryRun, themeFilter } = parseSeedArgs(args);
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -149,15 +204,6 @@ async function resolveAccessToken() {
   return null;
 }
 
-/** Shared player-facing prose contract for quest scenes (seed gen + mirrors server). */
-const SCENE_PROSE =
-  "SCENE PROSE (player-facing): Write with Hemingway clarity — direct, concrete, easy to follow on first read. " +
-  "Audience: a smart high-school senior — sharp, not deeply technical, not a subject-matter expert. " +
-  "Prefer clear sentences over dense stacked clauses. " +
-  "If you use jargon, a concept, or an idea that reader would not already know, introduce it in plain words the first time it appears. " +
-  "Each scene must still cover (1) lived local harm people feel now and (2) a local driver that keeps the problem going — " +
-  "as readable prose, not a checklist dump or policy brief.";
-
 const MODE_INSTRUCTION =
   "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). " +
   "Return top-level scenarios: an array of 4 objects (or context.scenarioCount). " +
@@ -178,7 +224,7 @@ const SYSTEM = `You are the AI Co-Inventor in Future Forge.
 When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme.
 Return a single JSON object only (no markdown fences) with top-level "scenarios" array and "message".
 Hard rules: only use technology ids from availableTechs; stay local; concrete inventable places.
-Quest scene prose: Hemingway clarity for a smart high-school senior; introduce unfamiliar jargon on first use; never dense policy-brief stacking.
+${SCENE_PROSE_CAPSULE}
 Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.`;
 
 function extractJson(text) {
@@ -248,7 +294,7 @@ function normalizeScenario(raw, globalId) {
   return {
     places: [place],
     title,
-    scene: String(raw.scene || "").slice(0, 800),
+    scene: String(raw.scene || "").slice(0, SCENE_CHAR_CAP),
     stakeholder: String(raw.stakeholder || "Local working group").slice(0, 120),
     pressureKeys: keys,
     suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
@@ -269,6 +315,61 @@ function localPackForTheme(g) {
   }));
 }
 
+function parseScenarioList(text) {
+  const parsed = extractJson(text);
+  const list = Array.isArray(parsed?.scenarios)
+    ? parsed.scenarios
+    : Array.isArray(parsed?.missions)
+      ? parsed.missions
+      : [];
+  return list;
+}
+
+/**
+ * @param {import("openai").default} client
+ * @param {object} g
+ * @param {object} payload
+ * @param {string} [extraUser]
+ */
+async function callScenarioModel(client, payload, extraUser = "") {
+  const response = await client.responses.create({
+    model: MODEL,
+    temperature: 0.55,
+    input: [
+      { role: "system", content: SYSTEM },
+      {
+        role: "user",
+        content:
+          `Co-invention session state (JSON):\n${JSON.stringify(payload, null, 2)}\n\n` +
+          (extraUser ? `${extraUser}\n\n` : "") +
+          `Respond with the required JSON object only.`,
+      },
+    ],
+  });
+  return response.output_text || "";
+}
+
+/**
+ * @param {object[]} packs normalized packs
+ * @returns {{ ok: boolean, reasons: string[], failedIndexes: number[] }}
+ */
+function scorePackReadability(packs) {
+  /** @type {string[]} */
+  const reasons = [];
+  /** @type {number[]} */
+  const failedIndexes = [];
+  packs.forEach((p, i) => {
+    const r = assertSceneReadable(p.scene);
+    if (!r.ok) {
+      failedIndexes.push(i);
+      for (const reason of r.reasons) {
+        reasons.push(`[${i}]${reason}`);
+      }
+    }
+  });
+  return { ok: failedIndexes.length === 0, reasons, failedIndexes };
+}
+
 async function aiPackForTheme(client, g) {
   const depth = themeDepthFor(g);
   // Place/title/stakeholder only — omit full scene so old dense prose cannot re-bias style.
@@ -282,7 +383,7 @@ async function aiPackForTheme(client, g) {
       visionTheme: m.visionTheme,
       pressure: m.pressure,
       collapseYear: m.collapseYear,
-      sceneHint: "Rewrite with Hemingway clarity for a smart high-school senior; do not imitate dense brief style.",
+      sceneHint: SCENE_HINT_REWRITE,
     })
   );
   const guidance =
@@ -291,7 +392,7 @@ async function aiPackForTheme(client, g) {
     "(not only how people shelter from it). Different geographies and stakeholders. " +
     "Inventable with emerging tech. Pure shelter-only framing is incomplete for source themes. " +
     SCENE_PROSE +
-    " seedMissions are topic anchors only (place/title); invent fresh clear scene text — never copy prior dense style. " +
+    " seedMissions are topic anchors only (place/title); invent fresh scene text with story craft — never copy prior dense style. " +
     " Crisis meter names (pressure object keys) appear on the player HUD: plain English, 1–3 words " +
     "(Dirty air, Sick days, Truck exhaust) — never camelCase or opaque jargon. " +
     "Asteroid = civilization-class NEO; nuclear = strategic misjudgment risk.";
@@ -317,31 +418,49 @@ async function aiPackForTheme(client, g) {
     conversation: [{ role: "user", content: "[Generate Quests]" }],
   };
 
-  const response = await client.responses.create({
-    model: MODEL,
-    temperature: 0.55,
-    input: [
-      { role: "system", content: SYSTEM },
-      {
-        role: "user",
-        content:
-          `Co-invention session state (JSON):\n${JSON.stringify(payload, null, 2)}\n\n` +
-          `Respond with the required JSON object only.`,
-      },
-    ],
-  });
-
-  const text = response.output_text || "";
-  const parsed = extractJson(text);
-  const list = Array.isArray(parsed?.scenarios)
-    ? parsed.scenarios
-    : Array.isArray(parsed?.missions)
-      ? parsed.missions
-      : [];
+  let text = await callScenarioModel(client, payload);
+  let list = parseScenarioList(text);
   if (list.length < 2) {
     throw new Error(`AI returned ${list.length} scenarios`);
   }
-  return list.slice(0, SCENARIO_COUNT).map((raw) => normalizeScenario(raw, g.id));
+  let packs = list.slice(0, SCENARIO_COUNT).map((raw) => normalizeScenario(raw, g.id));
+  let score = scorePackReadability(packs);
+
+  if (!score.ok) {
+    process.stdout.write(`craft-retry (${score.failedIndexes.length})… `);
+    const repairPayload = {
+      ...payload,
+      seedMissions: packs.map((p, i) => ({
+        title: p.title,
+        place: (p.places && p.places[0]) || "",
+        stakeholder: p.stakeholder,
+        sceneDraft: p.scene,
+        needsRhythmFix: score.failedIndexes.includes(i),
+        suggested: p.suggested,
+        visionTheme: p.visionTheme,
+      })),
+      conversation: [
+        { role: "user", content: "[Generate Quests]" },
+        {
+          role: "user",
+          content: sceneRepairInstruction(score.reasons),
+        },
+      ],
+    };
+    text = await callScenarioModel(client, repairPayload, sceneRepairInstruction(score.reasons));
+    list = parseScenarioList(text);
+    if (list.length >= 2) {
+      packs = list.slice(0, SCENARIO_COUNT).map((raw) => normalizeScenario(raw, g.id));
+      score = scorePackReadability(packs);
+      if (!score.ok) {
+        process.stdout.write(`craft-warn (${score.reasons.slice(0, 3).join(";")})… `);
+      } else {
+        process.stdout.write("craft-ok… ");
+      }
+    }
+  }
+
+  return packs;
 }
 
 function jsString(s) {
@@ -384,7 +503,7 @@ function writeSeedsFile(packsByTheme, meta) {
  * Source: ${meta.source}
  * Themes: ${keys.length}
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
- * Prose: Hemingway clarity for a smart high-school senior; introduce jargon on first use.
+ * Prose: design-challenge story craft (hook → mechanism → open challenge); easy first read, not shorter-for-its-own-sake.
  *
  * Re-run: node scripts/generate-scenario-seeds.mjs
  * Scale rule: existential themes (asteroid, nuclear, rogue SI, chem-bio…) are
@@ -429,8 +548,24 @@ async function loadExistingPacks() {
 }
 
 async function main() {
+  if (themeFilter) {
+    const known = new Set(GLOBALS.map((g) => g.id));
+    const unknown = themeFilter.filter((id) => !known.has(id));
+    if (unknown.length) {
+      throw new Error(
+        `Unknown theme id(s): ${unknown.join(", ")}. Known: ${[...known].join(", ")}`
+      );
+    }
+  }
+
   const themes = GLOBALS.filter((g) => !themeFilter || themeFilter.includes(g.id));
-  console.log(`Generating quest packs for ${themes.length} themes…`);
+  if (themeFilter) {
+    console.log(
+      `Generating quest packs for ${themes.length} theme(s): ${themes.map((g) => g.id).join(", ")}`
+    );
+  } else {
+    console.log(`Generating quest packs for ALL ${themes.length} themes (no --themes filter)…`);
+  }
 
   let client = null;
   let source = "local";
@@ -522,10 +657,16 @@ async function main() {
   fs.writeFileSync(OUT, text);
   console.log(`Wrote ${path.relative(ROOT, OUT)}`);
   console.log(`Done. AI=${aiOk} local=${localOk} fail=${fail}`);
-  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v9).");
+  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v10).");
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+const isMain =
+  process.argv[1] &&
+  path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]);
+
+if (isMain) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

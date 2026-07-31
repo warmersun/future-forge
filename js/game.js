@@ -92,6 +92,7 @@ import {
   setDailyFocus,
 } from "./meta.js";
 import { parseQuestTileJson, validateQuestTile } from "./quest-tile.js";
+import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import { initFriendsUi } from "./multiplayer/ui.js";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js";
@@ -371,8 +372,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v9: full seed regen — Hemingway clarity for smart HS senior */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v9";
+/** v10: design-challenge story craft for quest scenes (easy first read, not shorter-for-its-own-sake) */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v10";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -3489,10 +3490,8 @@ async function ensureScenarios(global, { force = false } = {}) {
             "Quests are local crisis episodes under this theme. Each quest scene MUST include: (1) lived local harm in a concrete place, (2) a local driver of the theme problem (not only how people shelter from it). " +
             "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
-            "SCENE PROSE (player-facing): Hemingway clarity for a smart high-school senior — sharp, not deeply technical. " +
-            "Direct, concrete, easy on first read. Introduce unfamiliar jargon or concepts in plain words on first use. " +
-            "Prefer clear sentences over dense stacked clauses or policy-brief packing. " +
-            "Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
+            SCENE_PROSE +
+            " Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
             "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
             "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk.",
         },
@@ -3608,7 +3607,7 @@ function normalizeMission(raw, globalId) {
     winMax,
     scene: String(raw.scene || "").slice(
       0,
-      source === "imported" || source === "hosted" ? 500 : 800
+      source === "imported" || source === "hosted" ? 500 : SCENE_CHAR_CAP
     ),
     briefMd,
     stakeholder: String(raw.stakeholder || "").slice(0, 120),
