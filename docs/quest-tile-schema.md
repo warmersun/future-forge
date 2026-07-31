@@ -31,7 +31,7 @@ Required:
 | `spotlight.techId` | Must match `TECHS` id |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
 | `mission.briefMd` | Non-empty Markdown brief |
-| `mission.title`, `mission.place`, `mission.scene` | Scene = short plain lede |
+| `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
 Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`.
 

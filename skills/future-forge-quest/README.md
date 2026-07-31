@@ -13,15 +13,16 @@ The skill lives at `skills/future-forge-quest/` so it works with Grok, Claude Co
 ## Quick start (any agent)
 
 1. Open and follow **`SKILL.md`**.
-2. Read `references/` as needed.
-3. Write `output/quests/<slug>/quest.json` (or a path the user chooses).
-4. Validate:
+2. Read **`references/scene-prose.md`** before drafting `mission.scene` or the brief’s place section (same design-challenge craft as in-game seeds).
+3. Read other `references/` as needed (brief template, schema, sensitivity, tech ids).
+4. Write `output/quests/<slug>/quest.json` (or a path the user chooses).
+5. Validate:
 
 ```bash
 npm run validate:quest -- output/quests/<slug>/quest.json
 ```
 
-5. Hand-off options:
+6. Hand-off options:
    - **Server folder (classrooms / multiplayer):** copy the JSON into the game’s **`quests/`** directory, restart or refresh — External Quests appear for everyone on that server (including friends lobby pick).
    - **Per-browser:** Future Forge title screen → **Import Quest…** → select the JSON (replaces Daily on that device by default).
 

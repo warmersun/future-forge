@@ -10,8 +10,8 @@ Required highlights:
 - `globalId` — valid theme id
 - `spotlight.techId` — valid tech id
 - `mission.suggested: [<same techId>]`
-- `mission.briefMd` — non-empty Markdown
-- `mission.scene` — short lede
+- `mission.briefMd` — non-empty Markdown (place section: design-challenge story craft — `references/scene-prose.md`)
+- `mission.scene` — plain-text lede ≤500 chars; same story craft (spine + easy rhythm), not a dense compound sentence
 - `placement.mode` — default `replace-daily`
 
 Validate: `npm run validate:quest -- path.json`
