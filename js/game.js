@@ -10002,7 +10002,7 @@ function renderDeployBay() {
     }
     const fieldCost = currentDeployFieldCost();
     const costBits = [];
-    if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
+    if (apEnabled() && (fieldCost.ap || 0) > 0) costBits.push(`${fieldCost.ap} AP`);
     if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
     if (status) {
       status.textContent = costBits.length
@@ -10058,10 +10058,10 @@ function renderDeployBay() {
   const fieldCost = currentDeployFieldCost();
   const scaleCost = currentScaleCost();
   const pilotBits = [];
-  if (apEnabled()) pilotBits.push(`${fieldCost.ap} AP`);
+  if (apEnabled() && (fieldCost.ap || 0) > 0) pilotBits.push(`${fieldCost.ap} AP`);
   if (budgetWillEnabled()) pilotBits.push(`${fieldCost.budget}$`);
   const scaleBits = [];
-  if (apEnabled()) scaleBits.push(`${scaleCost.ap} AP`);
+  if (apEnabled() && (scaleCost.ap || 0) > 0) scaleBits.push(`${scaleCost.ap} AP`);
   if (budgetWillEnabled()) {
     scaleBits.push(`${scaleCost.budget}$`);
     if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Will`);
@@ -10170,7 +10170,7 @@ function renderDeployHud() {
   paintResourceChips("dep-");
   const apEl = $("#dep-hud-ap");
   if (apEl && apEnabled()) {
-    apEl.title = "Action points. Pilot, Scale, and AI help cost AP.";
+    apEl.title = "Action points. Scale and AI help cost AP; Pilot is free attention.";
   }
   const budgetEl = $("#dep-hud-budget");
   if (budgetEl && budgetWillEnabled()) {
@@ -10320,9 +10320,10 @@ function attemptDeployStage(stage) {
       const techs = selectedTechs();
       if (stage === "pilot") {
         const c = currentDeployFieldCost(techs);
-        if (apEnabled() && getSpendableAp() < (c.ap || 1)) {
+        const apCost = Number.isFinite(c.ap) ? Math.max(0, c.ap) : 0;
+        if (apEnabled() && apCost > 0 && getSpendableAp() < apCost) {
           flashToast(
-            `No AP to try Pilot (have ${getSpendableAp()}, need ${c.ap || 1}).`,
+            `No AP to try Pilot (have ${getSpendableAp()}, need ${apCost}).`,
             { resource: "ap" }
           );
           return;
@@ -10333,15 +10334,21 @@ function attemptDeployStage(stage) {
         }
         // Optimistic local spend (server is authority; patch re-syncs)
         if (apEnabled()) {
-          state.ap = Math.max(0, getSpendableAp() - (c.ap || 1));
-          state.apSpentThisTurn = (state.apSpentThisTurn || 0) + (c.ap || 1);
+          if (apCost > 0) {
+            state.ap = Math.max(0, getSpendableAp() - apCost);
+            state.apSpentThisTurn = (state.apSpentThisTurn || 0) + apCost;
+          } else {
+            // 0-AP Pilot still counts as engagement for end_turn
+            state.apSpentThisTurn = Math.max(state.apSpentThisTurn || 0, 1);
+          }
         }
         if (budgetWillEnabled()) state.budget = Math.max(0, (state.budget ?? 0) - c.budget);
       } else {
         const c = currentScaleCost(techs);
-        if (apEnabled() && getSpendableAp() < (c.ap || 1)) {
+        const apCost = Number.isFinite(c.ap) ? Math.max(0, c.ap) : 1;
+        if (apEnabled() && apCost > 0 && getSpendableAp() < apCost) {
           flashToast(
-            `No AP to try Scale (have ${getSpendableAp()}, need ${c.ap || 1}).`,
+            `No AP to try Scale (have ${getSpendableAp()}, need ${apCost}).`,
             { resource: "ap" }
           );
           return;
@@ -10354,9 +10361,9 @@ function attemptDeployStage(stage) {
           flashToast(`Need ${c.will} Will to try Scale.`, { resource: "will" });
           return;
         }
-        if (apEnabled()) {
-          state.ap = Math.max(0, getSpendableAp() - (c.ap || 1));
-          state.apSpentThisTurn = (state.apSpentThisTurn || 0) + (c.ap || 1);
+        if (apEnabled() && apCost > 0) {
+          state.ap = Math.max(0, getSpendableAp() - apCost);
+          state.apSpentThisTurn = (state.apSpentThisTurn || 0) + apCost;
         }
         if (budgetWillEnabled()) {
           state.budget = Math.max(0, (state.budget ?? 0) - c.budget);
@@ -10915,7 +10922,7 @@ function attemptDeployLegacy() {
   state.pressure = applyPressureDrop(state.pressure, drop);
 
   const costBits = [];
-  if (apEnabled()) costBits.push(`${fieldCost.ap} AP`);
+  if (apEnabled() && (fieldCost.ap || 0) > 0) costBits.push(`${fieldCost.ap} AP`);
   if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
   const costNote = costBits.length ? ` Cost: ${costBits.join(" · ")}.` : "";
 

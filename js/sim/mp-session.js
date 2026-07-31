@@ -1114,15 +1114,20 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
 
     const techs = stackTechs(target);
-    // Same costs as solo: deployActionCost (typically 1 AP + Budget)
+    // Same costs as solo: deployActionCost (0 AP + Budget)
     const cost = deployActionCost(techs, { will: actor.will });
-    if (!spendAp(actor, cost.ap || 1)) {
+    const apCost = Number.isFinite(cost.ap) ? Math.max(0, cost.ap) : 0;
+    if (!spendAp(actor, apCost)) {
       return { ok: false, error: "no_ap", session };
     }
     if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
     actor.budget -= cost.budget;
-    if (targetSeatId !== activeId) {
-      actor.contributionApSpent = (actor.contributionApSpent || 0) + (cost.ap || 1);
+    // 0-AP Pilot still counts as engagement so end_turn is allowed
+    if (apCost === 0) {
+      actor.apSpentThisTurn = Math.max(actor.apSpentThisTurn || 0, 1);
+    }
+    if (targetSeatId !== activeId && apCost > 0) {
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + apCost;
     }
 
     const level = payload.feasibilityLevel || "yellow";
@@ -1197,18 +1202,19 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       return { ok: false, error: "race_over", session };
     }
 
-    // Same costs as solo: scaleActionCost (typically 1 AP + Budget + optional Will)
+    // Same costs as solo: scaleActionCost (1 AP + Budget + optional Will)
     const techsForCost = stackTechs(target);
     const cost = scaleActionCost(techsForCost, { will: actor.will });
-    if (!spendAp(actor, cost.ap || 1)) {
+    const apCost = Number.isFinite(cost.ap) ? Math.max(0, cost.ap) : 1;
+    if (!spendAp(actor, apCost)) {
       return { ok: false, error: "no_ap", session };
     }
     if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
     if ((actor.will ?? 0) < (cost.will || 0)) return { ok: false, error: "no_will", session };
     actor.budget -= cost.budget;
     if (cost.will > 0) actor.will = Math.max(0, (actor.will ?? 0) - cost.will);
-    if (targetSeatId !== activeId) {
-      actor.contributionApSpent = (actor.contributionApSpent || 0) + (cost.ap || 1);
+    if (targetSeatId !== activeId && apCost > 0) {
+      actor.contributionApSpent = (actor.contributionApSpent || 0) + apCost;
     }
 
     const targetName = target.displayName || targetSeatId;

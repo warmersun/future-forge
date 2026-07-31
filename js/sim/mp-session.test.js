@@ -404,7 +404,7 @@ describe("mp-session challenge pilot scale", () => {
         verdict: "pass",
       },
     }).session;
-    // Techs + enter_challenge spend the invent AP bar. Pilot/Scale also cost 1 AP each.
+    // Techs + enter_challenge spend the invent AP bar. Pilot is 0 AP; Scale is 1 AP.
     // Real play: End turn to refill. Tests top up so deploy can be exercised same seat-turn.
     const aid = activeSeatId(s);
     if (s.invents[aid]) s.invents[aid].ap = s.invents[aid].apMax;
@@ -576,8 +576,8 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(s.invents["seat-0"].deployStage, "pilot_ok");
     assert.equal(s.invents["seat-1"].deployStage, "none"); // Bea's invent untouched
     assert.ok(s.invents["seat-1"].budget < beaBudget);
-    // Helper pays AP for Pilot (same as solo deploy cost)
-    assert.ok(s.invents["seat-1"].ap < beaAp, "pilot should spend AP");
+    // Helper pays Budget for Pilot; Pilot is free attention (0 AP) but marks engagement
+    assert.equal(s.invents["seat-1"].ap, beaAp, "pilot should not spend AP");
     assert.ok((s.invents["seat-1"].apSpentThisTurn || 0) >= 1);
 
     // Scale without pilot on *target* still fails if we wipe pilot stage
@@ -764,7 +764,7 @@ describe("mp-session challenge pilot scale", () => {
     s = prepForPilot(s);
     const apBefore = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
-    assert.ok(s.invents["seat-0"].ap < apBefore, "pilot spends AP");
+    assert.equal(s.invents["seat-0"].ap, apBefore, "pilot does not spend AP");
     const apAfterPilot = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
     assert.ok(s.invents["seat-0"].ap < apAfterPilot, "scale spends AP");
@@ -774,14 +774,26 @@ describe("mp-session challenge pilot scale", () => {
     assert.equal(s.place.solverSeatId, "seat-0");
   });
 
-  it("pilot and scale spend AP like solo", () => {
+  it("pilot is 0 AP; scale spends 1 AP", () => {
     let s = prepForPilot(started());
     const ap0 = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
-    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].ap, ap0);
+    assert.ok((s.invents["seat-0"].apSpentThisTurn || 0) >= 1, "pilot marks engagement");
     const ap1 = s.invents["seat-0"].ap;
     s = applyMpAction(s, { type: "attempt_scale" }, null, { rng: alwaysOk }).session;
     assert.equal(s.invents["seat-0"].ap, ap1 - 1);
+  });
+
+  it("end_turn allowed after 0-AP pilot success alone", () => {
+    let s = prepForPilot(started());
+    // Fresh AP bar with no prior spends this seat-turn
+    s.invents["seat-0"].ap = s.invents["seat-0"].apMax;
+    s.invents["seat-0"].apSpentThisTurn = 0;
+    s = applyMpAction(s, { type: "attempt_pilot" }, null, { rng: alwaysOk }).session;
+    assert.equal(s.invents["seat-0"].ap, s.invents["seat-0"].apMax);
+    const r = applyMpAction(s, { type: "end_turn" });
+    assert.equal(r.ok, true, r.error);
   });
 });
 

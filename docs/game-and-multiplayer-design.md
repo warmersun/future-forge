@@ -450,7 +450,8 @@ Rules:
 | `abandon_scrutiny` | sync | 0 | Free retreat to invent; **does not** increment `challengeFails` or miss budget |
 | `challenge_submit` | async | reserve 1 | G0–G2 single essay judge; G3 superseded by moves |
 | `scrutiny_move` | async or sync | 1 (Pivot also costs will in G2+) | G3 only |
-| `deploy` / `deploy_stage` | sync | **0** | Deploy is the reward for clearing scrutiny, not an AP sink |
+| `deploy` / Pilot | sync | **0** | Pilot is free attention (reward after scrutiny); Budget still applies |
+| Scale | sync | **1** | Scale commits the place update; 1 AP + Budget (+ optional Will) |
 | `wait` | sync | **burns all remaining AP** (must have ≥0; always allowed if not collapsed; does not require prior spends) | Full crisis + year; turn++. **Blocked** in `scrutiny` and `between_stages` |
 | `end_turn` | sync | 0 | Requires `apSpentThisTurn >= 1` **or** phase in `scrutiny`/`between_stages`; else blocked with “Do something or Wait” |
 
@@ -1510,7 +1511,8 @@ Alerting only in hosted context.
 13. **Async AI is reserve → resolve/reject with AP refund on failure; pure `applyAction` stays sync.**  
 14. ~~Friends MVP = soft locks on one shared invention~~ **Superseded (rev 6)** → personal invention boards + shared place.  
 15. **Auth = 128-bit player/host tokens; room code is only a locator.**  
-16. **Deploy stage actions cost 0 AP.**  
+16. **Pilot costs 0 AP; Scale costs 1 AP.** (Pilot is the post-scrutiny reward; Scale is the commitment sink.)  
+
 17. **Wait burns unspent AP (intentional).**  
 18. **`js/sim/**` must be DOM-free.**  
 19. **Staged deploy total relief ≤ one frozen `stagedDropPool` (~one baseline drop); New normal is win-check only (+optional 1 mandate).**  
@@ -1628,7 +1630,7 @@ Mission: `portside-floods`. Start year 2026, pressure Floods 2 / Livelihoods 2 /
 3. **End Turn** → turn=1, waits=0, year=2026, pressure **unchanged** (2,2,1), AP=3.  
 4. Scout art-of-the-possible (1 AP). Lobby (1 AP, −1 Budget, +1 Will). End Turn → turn=2.  
 5. `enter_challenge` (1 AP). Submit / scrutiny moves over this and next End Turns as needed; Wait blocked while in scrutiny.  
-6. Pilot deploy (0 AP): apply drop; `markMissionSolved`; optional continue Scale.  
+6. Pilot deploy (0 AP): apply drop; `markMissionSolved`; optional continue Scale (1 AP + Budget/Will).  
 7. Stars: with waits=0 and year=2026 and pass+green → ★★★ candidate.
 
 ## Appendix B — Friends party session (~60–90 min example, rev 6)

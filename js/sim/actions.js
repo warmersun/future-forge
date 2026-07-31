@@ -323,11 +323,15 @@ export function applyAction(sim, action, opts = {}) {
   }
 
   if (type === "deploy") {
-    // payload: { apCost, budgetCost } — computed by host via deployActionCost
+    // payload: { apCost, budgetCost } — computed by host via deployActionCost / scaleActionCost
     const apCost = action.payload?.apCost ?? 1;
     const budgetCost = action.payload?.budgetCost ?? 1;
     if (apOn && apCost > 0 && !spendAp(apCost)) {
       return { ok: false, error: "no_ap", sim };
+    }
+    // 0-AP deploy (Pilot) still counts as engagement so end_turn is allowed
+    if (apOn && apCost === 0) {
+      next.apSpentThisTurn = Math.max(next.apSpentThisTurn || 0, 1);
     }
     if (bwOn) {
       if ((next.budget ?? 0) < budgetCost) {

@@ -16,7 +16,7 @@ import {
 } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
-import { techCost, applyG2DeployDeltas, deployActionCost } from "./economy.js";
+import { techCost, applyG2DeployDeltas, deployActionCost, scaleActionCost } from "./economy.js";
 import { GAME, TECHS } from "../data.js";
 
 describe("pressure", () => {
@@ -404,6 +404,26 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 1);
     assert.equal(r.sim.budget, 1);
   });
+
+  it("0-AP deploy marks engagement for end_turn without burning AP", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    s.budget = 5;
+    const r = applyAction(
+      s,
+      { type: "deploy", payload: { apCost: 0, budgetCost: 1 } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.ap, 3);
+    assert.equal(r.sim.budget, 4);
+    assert.equal(r.sim.apSpentThisTurn, 1);
+    const end = applyAction(r.sim, { type: "end_turn" }, {
+      features: { actionPoints: true, budgetWill: true },
+    });
+    assert.equal(end.ok, true, end.error);
+  });
 });
 
 describe("economy", () => {
@@ -420,7 +440,7 @@ describe("economy", () => {
 
   it("deploy field cost scales with stack and discounts high will", () => {
     const one = deployActionCost([{ id: "a", readyYear: 2026, curve: "mature" }], { will: 2 });
-    assert.equal(one.ap, 1);
+    assert.equal(one.ap, 0); // Pilot is free attention
     assert.equal(one.budget, 1);
 
     const three = deployActionCost(
@@ -432,6 +452,7 @@ describe("economy", () => {
       { will: 2 }
     );
     assert.equal(three.budget, 2);
+    assert.equal(three.ap, 0);
 
     const threeMandate = deployActionCost(
       [
@@ -442,5 +463,11 @@ describe("economy", () => {
       { will: 4 }
     );
     assert.equal(threeMandate.budget, 1);
+  });
+
+  it("scale costs 1 AP; pilot fielding costs 0 AP", () => {
+    const techs = [{ id: "a", readyYear: 2026, curve: "mature" }];
+    assert.equal(deployActionCost(techs, { will: 2 }).ap, 0);
+    assert.equal(scaleActionCost(techs, { will: 2 }).ap, 1);
   });
 });

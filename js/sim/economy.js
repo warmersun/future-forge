@@ -103,7 +103,8 @@ export function deployActionCost(techs = [], opts = {}) {
   }
 
   return {
-    ap: 1,
+    // Pilot is free attention (reward after scrutiny); Budget still applies.
+    ap: 0,
     budget: Math.max(1, budget),
     parts,
   };
