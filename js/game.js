@@ -637,6 +637,17 @@ let mpVisionRefreshTimer = null;
 /** Circuit breaker: if hydrate runs too often, skip vision + heavy work */
 let mpHydrateCountWindow = { t: 0, n: 0 };
 
+/**
+ * AI timing assess for feasibility light: debounce + in-flight flags.
+ * While pending, #feasibility-light keeps lastFeasibilityLightLevel and spins.
+ */
+let _aiTimingTimer = null;
+let _aiTimingGen = 0;
+let _aiTimingPending = false;
+let _aiTimingInFlight = false;
+/** Last settled traffic-light color (red|yellow|green) for the panel circle */
+let lastFeasibilityLightLevel = "red";
+
 function mpHydrateAndRender(opts = {}) {
   const b = mpBridge();
   if (!b) return;
@@ -674,6 +685,7 @@ function mpHydrateAndRender(opts = {}) {
     // Personal invent calendar / seat switch — re-run feasibility timing for this invent year
     if (state.year !== yearBefore || state.mp?.viewSeatId !== viewBefore) {
       state.aiTiming = null;
+      // Schedule before later paint paths so light freezes + spins when eligible
       if (state.screen === "workshop") scheduleAiTimingAssess();
     }
     // Multiplayer: full seat-round wrap ships new market news on the place
@@ -1084,6 +1096,27 @@ function syncInventActionButtons() {
 
   // —— Face the challenge ——
   updateChallengeButton();
+
+  // —— Abandon / Leave Quest / Leave room (topbar)
+  // Contribution lock disables this via MP_LOCK_CONTROL_IDS; we must re-enable
+  // here on unlock. syncInventActionButtons is the only unlock path that restores
+  // Wait / End turn / Lobby — Abandon was missing and stayed disabled forever
+  // after Fill other side / co-inventor / contribution eval in solo.
+  const abandon = $("#btn-abandon");
+  if (abandon) {
+    // Leaving the quest/room is allowed while spectating (not your turn); only
+    // block while invent AI / contribution lock / write-commit is in flight.
+    abandon.disabled = inventBusy;
+    if (inventBusy) {
+      abandon.title = busyReason;
+    } else if (isOnlineRoomMp() || document.body.classList.contains("mp-room")) {
+      abandon.title = "Leave the room";
+    } else if (hotseatBridge.isHotseat() || document.body.classList.contains("mp-hotseat")) {
+      abandon.title = "Leave hotseat";
+    } else {
+      abandon.title = "Leave this Quest and pick another theme";
+    }
+  }
 
   // —— Co-inventor open button + side panel ——
   const openCo = $("#btn-open-coinventor");
@@ -1935,6 +1968,9 @@ function handleRoomPlayEvent(client, evt) {
     return;
   }
   if (selfChallengeBusy) {
+    // Chrome only — seat bar / room chip must stay painted during pose/carousel.
+    // Full invent hydrate stays skipped above so local challenge state is not wiped.
+    renderMpChrome();
     renderChallengeHud();
     maybeNotifyMpTurnStart();
     return;
@@ -3834,6 +3870,13 @@ function startMission(mission) {
   state.outcome = null;
   state.runReport = null;
   state.aiTiming = null;
+  // Drop any prior invent's assess spinner / debounce
+  clearTimeout(_aiTimingTimer);
+  _aiTimingTimer = null;
+  _aiTimingPending = false;
+  _aiTimingInFlight = false;
+  _aiTimingGen += 1;
+  lastFeasibilityLightLevel = "red";
   state.timingLevelAtDeploy = null;
   state.apMax = GAME.apMax ?? 3;
   state.ap = state.apMax;
@@ -4511,8 +4554,20 @@ function renderFeasibility() {
   const summary = $("#feasibility-summary");
   const dims = $("#feasibility-dims");
   const foot = $("#feasibility-foot");
-  if (light) light.dataset.level = f.overall;
-  if (label) label.textContent = f.overall;
+  const pending = isAiTimingAssessPending();
+  // While re-assess is queued/in flight, freeze the traffic light on the last
+  // settled color and spin — do not flash the interim local heuristic color.
+  if (!pending) {
+    lastFeasibilityLightLevel = f.overall;
+  }
+  const lightLevel = pending ? lastFeasibilityLightLevel : f.overall;
+  if (light) {
+    light.dataset.level = lightLevel;
+    light.classList.toggle("is-pending", pending);
+    light.setAttribute("aria-busy", pending ? "true" : "false");
+    light.title = pending ? "Re-evaluating feasibility…" : "Feasibility";
+  }
+  if (label) label.textContent = lightLevel;
   if (summary) summary.textContent = f.summary;
   if (dims) {
     dims.innerHTML = f.dims
@@ -5029,6 +5084,8 @@ function onTechClick(id) {
     if (!state.learnOrder.includes(id)) pushLearnOrder(id);
   }
   state.aiTiming = null;
+  // Schedule before paint so the light freezes on last color + spins
+  scheduleAiTimingAssess();
   renderTechList();
   renderSelectedChips();
   renderSynergy();
@@ -5038,7 +5095,6 @@ function onTechClick(id) {
   updateChallengeButton();
   updateVision();
   renderHud();
-  scheduleAiTimingAssess();
 }
 
 function renderSelectedChips() {
@@ -5914,6 +5970,7 @@ function waitTurn(opts = {}) {
     <span class="muted">${escapeHtml(news)}</span>`;
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
   state.aiTiming = null; // re-evaluate claims in new year
+  scheduleAiTimingAssess(); // pending before workshop paint freezes light color
 
   if (collapsed()) {
     renderWorkshop();
@@ -5924,7 +5981,6 @@ function waitTurn(opts = {}) {
   flashToast(`Clock → ${state.year} · crisis rose · AP refilled`);
   renderWorkshop();
   updateVision({ immediate: true });
-  scheduleAiTimingAssess();
   state.coInventor?.pushAssistant?.(
     {
       message:
@@ -6434,24 +6490,79 @@ async function apiCoInvent(mode, userContent, extra = {}) {
   return res.json();
 }
 
-/** Debounced AI timing assess — feeds state.aiTiming into feasibility light */
-let _aiTimingTimer = null;
+/**
+ * Debounced AI timing assess — feeds state.aiTiming into feasibility light.
+ * While queued or in flight, #feasibility-light keeps the last settled color
+ * and shows a spinner (.is-pending).
+ */
+function isAiTimingAssessPending() {
+  return Boolean(_aiTimingPending || _aiTimingInFlight);
+}
+
+function eligibleForAiTimingAssess() {
+  if (!selectedTechs().length) return false;
+  if (state.inventionHow.trim().length < 40) return false;
+  return true;
+}
+
+/**
+ * Clear pending spinner if nothing is queued or in flight for this generation.
+ * @param {number} gen
+ */
+function settleAiTimingAssessIfCurrent(gen) {
+  if (gen !== _aiTimingGen) return;
+  if (_aiTimingTimer || _aiTimingInFlight) return;
+  if (!_aiTimingPending) return;
+  _aiTimingPending = false;
+  renderFeasibility();
+  renderTiming();
+  updateChallengeButton();
+}
+
 function scheduleAiTimingAssess() {
   clearTimeout(_aiTimingTimer);
+  _aiTimingTimer = null;
+  if (!eligibleForAiTimingAssess()) {
+    if (!_aiTimingInFlight) {
+      const was = _aiTimingPending;
+      _aiTimingPending = false;
+      if (was) renderFeasibility();
+    }
+    return;
+  }
+  const key = timingCacheKey();
+  if (state.aiTiming?.forKey === key) {
+    if (!_aiTimingInFlight) {
+      const was = _aiTimingPending;
+      _aiTimingPending = false;
+      if (was) renderFeasibility();
+    }
+    return;
+  }
+  // Mark pending before any caller re-paints so the light freezes on last color
+  _aiTimingPending = true;
+  const gen = ++_aiTimingGen;
   _aiTimingTimer = setTimeout(() => {
-    runAiTimingAssess().catch(() => {});
+    _aiTimingTimer = null;
+    runAiTimingAssess(gen).catch(() => {});
   }, 1600);
 }
 
-async function runAiTimingAssess() {
-  const techs = selectedTechs();
-  if (!techs.length) return;
-  const how = state.inventionHow.trim();
-  if (how.length < 40) return;
+async function runAiTimingAssess(gen = _aiTimingGen) {
+  if (!eligibleForAiTimingAssess()) {
+    settleAiTimingAssessIfCurrent(gen);
+    return;
+  }
   const key = timingCacheKey();
-  if (state.aiTiming?.forKey === key) return;
+  if (state.aiTiming?.forKey === key) {
+    settleAiTimingAssessIfCurrent(gen);
+    return;
+  }
+  _aiTimingInFlight = true;
+  _aiTimingPending = true;
   try {
     const data = await apiCoInvent("assess-feasibility", "[Assess claim timing]", {});
+    if (gen !== _aiTimingGen) return;
     const level = data.timing?.level || data.timingLevel;
     const reason = data.timing?.reason || data.timingNote || data.message;
     if (level && ["red", "yellow", "green"].includes(level)) {
@@ -6460,12 +6571,17 @@ async function runAiTimingAssess() {
         reason: String(reason || "").slice(0, 400),
         forKey: key,
       };
+    }
+  } catch {
+    /* client heuristic remains */
+  } finally {
+    _aiTimingInFlight = false;
+    if (gen === _aiTimingGen && !_aiTimingTimer) {
+      _aiTimingPending = false;
       renderFeasibility();
       renderTiming();
       updateChallengeButton();
     }
-  } catch {
-    /* client heuristic remains */
   }
 }
 
@@ -7396,6 +7512,9 @@ function hideAllModePanels() {
 }
 
 function renderChallengeStep() {
+  // Parity with workshop / deploy: unhide seat bar + room chip on every Challenge paint
+  // (including mid-carousel early return). showScreen alone never called renderMpChrome.
+  renderMpChrome();
   renderChallengeHud();
   // Mid carousel: never paint the final challenger under the reel
   if (state.challengeRevealPending) {
@@ -12784,12 +12903,12 @@ function applyCoInventorProposals(proposals) {
       proposals.inventionHow ||
       proposals.inventionImpact
     ) {
+      scheduleAiTimingAssess(); // pending before paint freezes light color
       syncLearnOrderWithSelection();
       renderStoryFaceUI();
       renderFeasibility();
       updateChallengeButton();
       updateVision();
-      scheduleAiTimingAssess();
       mpSyncFromSolo?.();
       state.coInventor?.syncChipGates?.();
     }
@@ -15008,10 +15127,10 @@ function bind() {
   };
   const bumpClaimTiming = () => {
     state.aiTiming = null;
+    scheduleAiTimingAssess(); // pending before paint freezes light color
     renderTiming();
     renderFeasibility();
     updateChallengeButton();
-    scheduleAiTimingAssess();
   };
 
   $$(".story-mode-btn").forEach((btn) => {

@@ -2380,6 +2380,7 @@ button.btn[hidden] {
 }
 
 .feasibility-light {
+  position: relative;
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 50%;
@@ -2387,21 +2388,99 @@ button.btn[hidden] {
   margin-top: 0.15rem;
   box-shadow: 0 0 12px currentColor;
   border: 2px solid rgba(255, 255, 255, 0.15);
+  box-sizing: border-box;
 }
 
+/* Idle: solid traffic light (color = last / current level) */
 .feasibility-light[data-level="red"] {
   background: #ef4444;
   color: rgba(239, 68, 68, 0.55);
+  --feas-ring: #ef4444;
 }
 
 .feasibility-light[data-level="yellow"] {
   background: #eab308;
   color: rgba(234, 179, 8, 0.55);
+  --feas-ring: #eab308;
 }
 
 .feasibility-light[data-level="green"] {
   background: #22c55e;
   color: rgba(34, 197, 94, 0.5);
+  --feas-ring: #22c55e;
+}
+
+/*
+ * Pending re-assess: hollow center; spinning ring in the last evaluated color.
+ * No white frame — only the colored arc spins.
+ */
+.feasibility-light.is-pending {
+  background: transparent !important;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.feasibility-light.is-pending::before {
+  /* Soft dim track in the level color (static) so the hole reads as a ring */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid color-mix(in srgb, var(--feas-ring) 28%, transparent);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.feasibility-light.is-pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* Arc of last-evaluated color only — rest transparent */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 200deg,
+    color-mix(in srgb, var(--feas-ring) 15%, transparent) 240deg,
+    color-mix(in srgb, var(--feas-ring) 70%, transparent) 300deg,
+    var(--feas-ring) 335deg,
+    color-mix(in srgb, var(--feas-ring) 90%, #fff) 350deg,
+    transparent 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
+  animation: feasibility-light-sweep 0.9s linear infinite;
+  pointer-events: none;
+  box-sizing: border-box;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--feas-ring) 65%, transparent));
+}
+
+@keyframes feasibility-light-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feasibility-light.is-pending::after {
+    animation: none;
+    /* Static arc in level color */
+    background: conic-gradient(
+      from 40deg,
+      transparent 0deg,
+      transparent 200deg,
+      var(--feas-ring) 320deg,
+      transparent 360deg
+    );
+  }
 }
 
 .feasibility-title {
