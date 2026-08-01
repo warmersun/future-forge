@@ -1067,13 +1067,16 @@ body.mp-hotseat .workshop-layout {
   color: var(--text-dim);
 }
 
-/* Local scenario scene — always readable in hotseat banner */
+/* Local scenario scene — full text; long copy scrolls (see .ws-mission-scene rules) */
 .mp-mission-scene {
   margin: 0.55rem 0 0.45rem !important;
   color: var(--text) !important;
   font-size: 0.95rem !important;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+.mp-mission-scene.quest-brief {
+  white-space: normal;
 }
 
 .mp-play-problem-brief {
@@ -5586,20 +5589,10 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     overflow: hidden;
   }
 
-  /* Compact mission chrome so invent + vision fit.
-     Plain scene blurbs may clamp; spotlight / Quest markdown briefs must scroll. */
-  .challenge-banner .mp-mission-scene:not(.quest-brief),
-  .challenge-banner .ws-mission-scene:not(.quest-brief) {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    overflow: hidden;
-  }
-
-  /* Spotlight Quest brief (under the Spotlight tag): keep readable + touch-scrollable */
-  .challenge-banner .ws-mission-scene.quest-brief,
-  .challenge-banner .mp-mission-scene.quest-brief,
+  /* Compact mission chrome: full quest text stays readable in a scroll area
+     (no line-clamp ellipsis — invent left column needs the whole brief). */
+  .challenge-banner .ws-mission-scene,
+  .challenge-banner .mp-mission-scene,
   .challenge-banner .quest-brief {
     display: block;
     -webkit-line-clamp: unset;
@@ -5611,7 +5604,6 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
-    /* Visible scroll affordance on iPad */
     scrollbar-gutter: stable;
   }
 
@@ -7226,7 +7218,12 @@ button.linkish:hover {
 .quest-brief {
   text-align: left;
   max-height: min(42vh, 28rem);
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
   padding: 0.65rem 0.85rem;
   margin: 0.5rem 0 0.35rem;
   border-radius: 12px;
@@ -7274,8 +7271,22 @@ button.linkish:hover {
   font-weight: 650;
 }
 
-.ws-mission-scene:not(.quest-brief) {
+/* Plain scene blurb (no markdown brief): still full text, scroll when long */
+.ws-mission-scene:not(.quest-brief),
+.mp-mission-scene:not(.quest-brief) {
+  display: block;
   margin: 0.35rem 0;
+  max-height: min(42vh, 28rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--text-dim);
+  font-size: 0.9rem;
 }
 
 .ws-spotlight-chip {

@@ -25,6 +25,7 @@ import {
 } from "./tech-library.js";
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
+import { renderMarkdownSafe } from "../md-lite.js";
 import {
   initTechDrawers,
   updateTechDrawerCount,
@@ -85,6 +86,25 @@ export function initFriendsUi(api) {
   function setHubStatus(msg) {
     const el = $("#friends-hub-status");
     if (el) el.textContent = msg || "";
+  }
+
+  /**
+   * Invent left column: full quest text (markdown brief when present), scrollable via CSS.
+   * Mirrors solo workshop `#ws-mission-scene` rendering.
+   * @param {HTMLElement} sceneEl
+   * @param {object|null|undefined} mission
+   */
+  function paintMissionScene(sceneEl, mission) {
+    if (!sceneEl) return;
+    const brief = mission?.briefMd && String(mission.briefMd).trim();
+    if (brief) {
+      sceneEl.classList.add("quest-brief");
+      sceneEl.innerHTML = renderMarkdownSafe(brief);
+      return;
+    }
+    sceneEl.classList.remove("quest-brief");
+    sceneEl.textContent =
+      mission?.scene || mission?.problem || mission?.description || "";
   }
 
   /**
@@ -527,7 +547,7 @@ export function initFriendsUi(api) {
       ? `${mission.place} · collapse ${mission.collapseYear}`
       : "";
     const sceneEl = $("#mp-mission-scene");
-    if (sceneEl) sceneEl.textContent = mission?.scene || "";
+    if (sceneEl) paintMissionScene(sceneEl, mission);
     const gLabel = $("#mp-play-global-label");
     if (gLabel) {
       gLabel.textContent = place?.globalId
@@ -1626,12 +1646,14 @@ export function initFriendsUi(api) {
     );
     setText("hs-play-mission-title", m?.title || "Hotseat race");
     setText("hs-play-mission-place", m?.place || "");
-    // Quest description (solo workshop uses m.scene here)
+    // Quest description (solo workshop: briefMd scrollable, else full scene)
     const sceneEl = $("#hs-play-mission-scene");
     if (sceneEl) {
-      const scene = m?.scene || m?.problem || m?.description || "";
-      sceneEl.textContent = scene;
-      sceneEl.hidden = !scene;
+      const has =
+        !!(m?.briefMd && String(m.briefMd).trim()) ||
+        !!(m?.scene || m?.problem || m?.description);
+      paintMissionScene(sceneEl, m);
+      sceneEl.hidden = !has;
     }
     setText(
       "hs-play-stakeholder",
