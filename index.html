@@ -179,32 +179,38 @@
         <div class="friends-hub-grid">
           <article class="panel friends-panel">
             <h2>Create room</h2>
-            <div class="field">
-              <label for="friends-create-name">Your name</label>
-              <input id="friends-create-name" type="text" maxlength="24" placeholder="Alex" autocomplete="nickname" />
-            </div>
-            <button type="button" class="btn btn-primary" id="btn-friends-create">Create room →</button>
+            <form id="friends-create-form" class="friends-panel-form">
+              <div class="field">
+                <label for="friends-create-name">Your name</label>
+                <input id="friends-create-name" type="text" maxlength="24" placeholder="Alex" autocomplete="nickname" />
+              </div>
+              <button type="submit" class="btn btn-primary" id="btn-friends-create">Create room →</button>
+            </form>
           </article>
           <article class="panel friends-panel">
             <h2>Join room</h2>
-            <div class="field">
-              <label for="friends-join-name">Your name</label>
-              <input id="friends-join-name" type="text" maxlength="24" placeholder="Bea" autocomplete="nickname" />
-            </div>
-            <div class="field">
-              <label for="friends-join-code">Room code</label>
-              <input id="friends-join-code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" class="code-input" />
-            </div>
-            <button type="button" class="btn btn-secondary" id="btn-friends-join">Join →</button>
+            <form id="friends-join-form" class="friends-panel-form">
+              <div class="field">
+                <label for="friends-join-name">Your name</label>
+                <input id="friends-join-name" type="text" maxlength="24" placeholder="Bea" autocomplete="nickname" />
+              </div>
+              <div class="field">
+                <label for="friends-join-code">Room code</label>
+                <input id="friends-join-code" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" class="code-input" />
+              </div>
+              <button type="submit" class="btn btn-secondary" id="btn-friends-join">Join →</button>
+            </form>
           </article>
           <article class="panel friends-panel friends-panel-wide">
             <h2>Hotseat (one device)</h2>
             <p class="muted">Pass-and-play race: personal inventions, shared crisis. Scale updates the place. No server required.</p>
-            <div class="field">
-              <label for="hotseat-names">Seat names (comma-separated)</label>
-              <input id="hotseat-names" type="text" placeholder="Alex, Bea" value="Alex, Bea" />
-            </div>
-            <button type="button" class="btn btn-secondary" id="btn-hotseat-start">Start hotseat →</button>
+            <form id="friends-hotseat-form" class="friends-panel-form">
+              <div class="field">
+                <label for="hotseat-names">Seat names (comma-separated)</label>
+                <input id="hotseat-names" type="text" placeholder="Alex, Bea" value="Alex, Bea" />
+              </div>
+              <button type="submit" class="btn btn-secondary" id="btn-hotseat-start">Start hotseat →</button>
+            </form>
           </article>
         </div>
         <p id="friends-hub-status" class="friends-status muted" aria-live="polite"></p>
@@ -838,6 +844,9 @@
       <!-- Multiplayer chrome: invent tabs (same hotseat + room) + pass device (hotseat only) -->
       <div id="mp-workshop-bar" class="mp-workshop-bar" hidden>
         <div class="mp-workshop-bar-row">
+          <div class="room-code-chip sm" data-mp-room-code hidden title="Room code">
+            Room <strong>————</strong>
+          </div>
           <div id="mp-seat-tabs" class="mp-seat-tabs" aria-label="Players and invents"></div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-pass-device" hidden>
             Pass device →
@@ -1118,6 +1127,9 @@
       <!-- Multiplayer: who has the turn + whose invent you're watching (same seats as workshop) -->
       <div id="mp-challenge-bar" class="mp-workshop-bar mp-challenge-bar" hidden>
         <div class="mp-workshop-bar-row">
+          <div class="room-code-chip sm" data-mp-room-code hidden title="Room code">
+            Room <strong>————</strong>
+          </div>
           <div id="mp-seat-tabs-ch" class="mp-seat-tabs" aria-label="Players and invent phases"></div>
         </div>
         <p id="mp-challenge-view-hint" class="mp-view-hint muted" hidden></p>
@@ -1447,6 +1459,9 @@
       </header>
       <div id="mp-deploy-bar" class="mp-workshop-bar mp-challenge-bar" hidden>
         <div class="mp-workshop-bar-row">
+          <div class="room-code-chip sm" data-mp-room-code hidden title="Room code">
+            Room <strong>————</strong>
+          </div>
           <div id="mp-seat-tabs-dep" class="mp-seat-tabs" aria-label="Players and invent phases"></div>
         </div>
         <p id="mp-deploy-view-hint" class="mp-view-hint muted" hidden></p>

@@ -1221,7 +1221,9 @@ export function initFriendsUi(api) {
     clearMissionPickSession?.();
     showScreen("title");
   });
-  $("#btn-friends-create")?.addEventListener("click", async () => {
+  // Forms so Enter in name/code fields activates the primary button
+  $("#friends-create-form")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
     const name = $("#friends-create-name")?.value?.trim() || "Host";
     setHubStatus("Creating room…");
     try {
@@ -1235,7 +1237,8 @@ export function initFriendsUi(api) {
       flashToast(e.message || "Create failed");
     }
   });
-  $("#btn-friends-join")?.addEventListener("click", async () => {
+  $("#friends-join-form")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
     const name = $("#friends-join-name")?.value?.trim() || "Player";
     const code = $("#friends-join-code")?.value?.trim() || "";
     if (!code) {
@@ -1966,7 +1969,8 @@ export function initFriendsUi(api) {
     });
   }
 
-  $("#btn-hotseat-start")?.addEventListener("click", () => {
+  $("#friends-hotseat-form")?.addEventListener("submit", (ev) => {
+    ev.preventDefault();
     // Solo crisis → Quest screens, then real workshop via hotseat bridge
     launchHotseatMissionPick();
   });

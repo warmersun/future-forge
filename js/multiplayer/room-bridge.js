@@ -217,6 +217,15 @@ export function createRoomBridge() {
     const s = snap();
     const m = mp();
     const place = s?.place || m?.place;
+    // Always stamp room mode + code when we know them (chrome must not lose Room chip)
+    const roomCode = s?.code || client?.session?.code || state.mp?.code || "";
+    if (roomCode || s || m) {
+      state.mp = {
+        ...(state.mp || {}),
+        mode: "room",
+        code: roomCode || state.mp?.code || "",
+      };
+    }
     if (!place) return;
     const vId = getViewId();
     const aId = getActiveId();
@@ -227,7 +236,7 @@ export function createRoomBridge() {
     const phase = forgePhase(vId);
     state.mp = {
       mode: "room",
-      code: s.code,
+      code: s.code || roomCode || state.mp?.code,
       viewSeatId: vId,
       activeSeatId: aId,
       mySeatId: myId(),

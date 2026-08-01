@@ -1151,11 +1151,11 @@ function mpSeatFocusMode(s, b) {
 }
 
 /**
- * Seat tabs: invent picker only.
+ * Seat tabs: invent picker + turn cue.
  * - Color = ownership (green = yours, neutral = someone else's)
  * - Red = player left / disconnected
- * - Tag on focused tab = editing | viewing
- * Turn lives in the upper-left badge, not here.
+ * - Tag on focused tab = editing | viewing (open invent on screen)
+ * - is-turn (green pulse light before name) = whose turn — same cue as upper-left badge
  * @param {object[]} seats
  * @param {object|null} [bridge]
  */
@@ -1167,10 +1167,12 @@ function renderMpSeatTabsHtml(seats, bridge) {
       const mine = mpSeatIsMine(s, b);
       // Room presence: false when they disconnected / left
       const left = s.connected === false;
+      const theirTurn = Boolean(s.active);
       const cls = [
         "mp-seat-tab",
         left ? "is-left" : mine ? "is-mine" : "is-other",
         s.viewing ? "is-focused" : "",
+        theirTurn ? "is-turn" : "",
         focus === "editing" ? "is-editing" : "",
         focus === "viewing" ? "is-look-only" : "",
         s.abandoned ? "is-abandoned" : "",
@@ -1181,9 +1183,10 @@ function renderMpSeatTabsHtml(seats, bridge) {
       ]
         .filter(Boolean)
         .join(" ");
-      const label = s.inventionName
-        ? `${s.displayName}: ${s.inventionName.slice(0, 18)}`
-        : s.displayName;
+      // Player name is its own span so turn highlight only paints the name, not ": invention"
+      const inventSuffix = s.inventionName
+        ? `<span class="mp-seat-tab-invent">: ${escapeHtml(s.inventionName.slice(0, 18))}</span>`
+        : "";
       const phaseTag =
         s.phase === "challenge"
           ? '<span class="tag">challenge</span>'
@@ -1194,7 +1197,7 @@ function renderMpSeatTabsHtml(seats, bridge) {
               : s.phase === "scaled"
                 ? '<span class="tag">scaled</span>'
                 : "";
-      // Only the invent on screen gets editing/viewing — not a turn badge
+      // Only the invent on screen gets editing/viewing — turn is green light on name, not a tag
       const focusTag =
         focus === "editing"
           ? '<span class="tag tag-editing">editing</span>'
@@ -1212,8 +1215,11 @@ function renderMpSeatTabsHtml(seats, bridge) {
                 ? "— viewing only"
                 : "— click to open",
           ];
+      if (theirTurn && !left) {
+        titleParts.push(mine ? "— your turn" : "— their turn");
+      }
       return `<button type="button" class="${cls}" data-seat="${escapeHtml(s.id)}" title="${escapeHtml(titleParts.join(" "))}">
-          <span class="mp-seat-tab-name">${escapeHtml(label)}</span>
+          <span class="mp-seat-tab-name"><span class="mp-seat-tab-player">${escapeHtml(s.displayName)}</span>${inventSuffix}</span>
           ${leftTag}
           ${focusTag}
           ${phaseTag}
@@ -1447,6 +1453,61 @@ function isChallengeOrDeployScreen() {
   return state.screen === "challenge-step" || state.screen === "deploy";
 }
 
+/**
+ * Online room code for chrome (Invent / Challenge / Deploy bars).
+ * Prefer hydrated state, then live snapshot, then session.
+ */
+function mpRoomCode() {
+  const c = roomBridge.client?.();
+  return String(
+    state.mp?.code || c?.snapshot?.code || c?.session?.code || ""
+  ).trim();
+}
+
+/**
+ * Online room play chrome (broader than roomBridge.isRoom() so snap flaps
+ * do not drop the Room code chip / body.mp-room mid-race).
+ */
+function isRoomPlayChrome() {
+  if (hotseatBridge.isHotseat() && !roomBridge.isRoom() && state.mp?.mode !== "room") {
+    return false;
+  }
+  if (roomBridge.isRoom() || state.mp?.mode === "room") return true;
+  const c = roomBridge.client?.();
+  if (!c?.session) return false;
+  const phase = c.snapshot?.phase;
+  return (
+    phase === "playing" ||
+    phase === "outcome" ||
+    Boolean(c.snapshot?.mp?.place || c.snapshot?.place)
+  );
+}
+
+/**
+ * Paint static [data-mp-room-code] chips on workshop / challenge / deploy bars.
+ * Keep visible in online room play; empty code → placeholder, not hide.
+ */
+function updateMpRoomCodeChips() {
+  const chips = document.querySelectorAll("[data-mp-room-code]");
+  if (!chips.length) return;
+  const roomShow = isRoomPlayChrome();
+  const code = mpRoomCode();
+  const label = code || "————";
+  for (const chip of chips) {
+    if (!roomShow) {
+      chip.hidden = true;
+      chip.setAttribute("hidden", "");
+      continue;
+    }
+    chip.hidden = false;
+    chip.removeAttribute("hidden");
+    chip.title = code ? `Room code ${code}` : "Room code";
+    const strong = chip.querySelector("strong");
+    if (strong) strong.textContent = label;
+    else chip.innerHTML = `Room <strong>${escapeHtml(label)}</strong>`;
+  }
+}
+
 function renderMpChrome() {
   const bar = $("#mp-workshop-bar");
   const chBar = $("#mp-challenge-bar");
@@ -1457,7 +1518,10 @@ function renderMpChrome() {
   if (chBar) chBar.hidden = !on || state.screen !== "challenge-step";
   if (depBar) depBar.hidden = !on || state.screen !== "deploy";
   document.body.classList.toggle("mp-hotseat", on && hotseatBridge.isHotseat() && !roomBridge.isRoom());
-  document.body.classList.toggle("mp-room", on && (roomBridge.isRoom() || state.mp?.mode === "room"));
+  // Do not require mpBridge()/isRoom() alone — keep class across brief snap flaps
+  document.body.classList.toggle("mp-room", isRoomPlayChrome());
+  // Room code chips on all three bars — update even when bridge is briefly off
+  updateMpRoomCodeChips();
   if (!on) {
     setMpActivePlayerBadges(false);
     setMpContributionLock(false);
@@ -1469,22 +1533,6 @@ function renderMpChrome() {
   const seats = b.seatSummaries?.() || [];
   // Upper left: whose turn only (no editing/viewing clutter)
   setMpActivePlayerBadges(true, active?.displayName || "—");
-
-  // Room code chip in workshop bar (online only)
-  let codeChip = $("#mp-room-code-chip");
-  if (roomBridge.isRoom() && bar) {
-    if (!codeChip) {
-      codeChip = document.createElement("div");
-      codeChip.id = "mp-room-code-chip";
-      codeChip.className = "room-code-chip sm";
-      bar.querySelector(".mp-workshop-bar-row")?.prepend(codeChip);
-    }
-    const code = state.mp?.code || roomBridge.client?.()?.session?.code || "";
-    codeChip.hidden = false;
-    codeChip.innerHTML = `Room <strong>${escapeHtml(code)}</strong>`;
-  } else if (codeChip) {
-    codeChip.hidden = true;
-  }
 
   const seatHtml = renderMpSeatTabsHtml(seats, b);
   const list = $("#mp-seat-tabs");
@@ -2254,6 +2302,7 @@ function leaveRoomPlay(opts = {}) {
     clearMultipartyOutcomeResidue();
     const bar = $("#mp-workshop-bar");
     if (bar) bar.hidden = true;
+    updateMpRoomCodeChips();
     setMpContributionLock(false);
     setMpActivePlayerBadges(false);
     const abandon = $("#btn-abandon");

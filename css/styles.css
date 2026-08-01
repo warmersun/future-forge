@@ -342,7 +342,8 @@ button:disabled {
 }
 
 /* Space action buttons off the field above (Create / Join / Hotseat) */
-.friends-panel > .btn {
+.friends-panel > .btn,
+.friends-panel .friends-panel-form > .btn {
   margin-top: 1rem;
 }
 
@@ -938,6 +939,27 @@ body.mp-contrib-evaluating .story-mode-btn {
   box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.4);
   background: rgba(153, 27, 27, 0.5);
   color: #fee2e2;
+}
+
+/*
+ * Whose turn — same green pulse light as the upper-left .mp-active-player badge.
+ * On player name only; independent of focus ring / ownership fill.
+ */
+.mp-seat-tab.is-turn .mp-seat-tab-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.mp-seat-tab.is-turn .mp-seat-tab-player::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.28);
+  flex-shrink: 0;
+  animation: mp-active-pulse 1.6s ease-in-out infinite;
 }
 
 .mp-seat-tab .tag-editing {
