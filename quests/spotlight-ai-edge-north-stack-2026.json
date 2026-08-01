@@ -1,0 +1,80 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-ai-edge-north-stack-2026",
+  "version": 1,
+  "title": "Night school under the filter at North Stack",
+  "summary": "Open-weight edge AI could tutor offline — if someone invents a kit the night school can trust when the backbone listens.",
+  "author": {
+    "name": "Future Forge Spotlight",
+    "note": "Research-backed quest: small/open-weight edge AI for privacy under information control"
+  },
+  "createdAt": "2026-07-31T15:11:11Z",
+  "tags": [
+    "spotlight",
+    "ai",
+    "open-weights",
+    "edge",
+    "privacy",
+    "totalitarianism",
+    "surveillance"
+  ],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "ai",
+    "advanceTitle": "Open-weight and edge-runnable AI that need not phone home",
+    "advanceSummary": "Capable open-weight models (including efficient MoE ‘Flash’ tiers and smaller distilled models) plus mature local runtimes mean useful assistance can run on locked laptops, phones, and mini PCs — offline or air-gapped — if the local workflow, power, and update path exist.",
+    "asOf": "2026-07",
+    "encourageCopy": "Build your invention around AI that stays on local hardware — private inference is the point of this Quest."
+  },
+  "research": {
+    "topic": "Open-weight / small LLMs for local and edge private inference (2026)",
+    "bullets": [
+      "DeepSeek-V4-Flash (preview 2026): open-weight MoE ~284B total / ~13B active, long context, positioned as a fast efficient open tier competitive with much larger closed systems on many tasks.",
+      "Broader 2025–2026 wave: quantized small and mid models, on-device runtimes, and edge accelerators make offline chat, tutoring, and drafting newly practical without cloud APIs.",
+      "Privacy and control are the product when prompts must not cross a monitored gateway — capability alone does not invent the classroom kit, trust model, or update path."
+    ],
+    "sources": [
+      "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash",
+      "https://api-docs.deepseek.com/news/news260424/",
+      "https://artificialanalysis.ai/articles/deepseek-is-back-among-the-leading-open-weights-models-with-v4-pro-and-v4-flash",
+      "https://openrouter.ai/blog/insights/the-open-weight-models-that-matter-june-2026/",
+      "https://v-chandra.github.io/on-device-llms/",
+      "https://www.darkreading.com/cyber-risk/open-weight-chinese-ai-models-drive-privacy-innovation-llm"
+    ],
+    "showToPlayer": false
+  },
+  "globalId": "totalitarianism",
+  "mission": {
+    "id": "spotlight-ai-edge-north-stack-2026",
+    "globalId": "totalitarianism",
+    "title": "Night school under the filter at North Stack",
+    "place": "North Stack Night School (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "Learning": 3,
+      "Fear": 2,
+      "Burnout": 2
+    },
+    "pressureRise": {
+      "Learning": 1,
+      "Fear": 1,
+      "Burnout": 1
+    },
+    "winMax": {
+      "Learning": 1,
+      "Fear": 1,
+      "Burnout": 1
+    },
+    "scene": "Omar locks the stairwell door before he powers the secondhand laptop. On North Stack's third floor, adults wait for exam help the public filter just killed mid-sentence. Last month a rights question flagged a shared cloud account. Three learners stopped coming. The only smart tutor still phones the ministry's pipes. Who designs help that never leaves this room?",
+    "briefMd": "## The place\n\nOmar locks the stairwell door before he powers the secondhand laptop. The bulb in the North Stack corridor hums. On the third floor of a fictive high-rise block, twelve adults unfold cheap chairs around two folding tables. This is night school — exam prep, job forms, and the plain language of rights that the daytime curriculum skips.\n\nHe opens the browser tutor the city library still recommends. The page spins. Then it dies mid-sentence on a history prompt. The public filter won again.\n\nLast month someone typed a careful question about assembly law into a free cloud chatbot on the shared account. The session froze. Two days later a block warden asked why the community room was “studying politics.” Three learners stopped coming. They still need the certificate. They will not risk another flag.\n\nOmar prints worksheets when the toner lasts. He answers what he can from memory. The queue is longer than one volunteer. Learners who can pay for private tutors leave the stack. Everyone else learns to ask smaller questions.\n\nThe driver is not a lack of curiosity. It is a learning stack that only gets “smart” by shipping every prompt through pipes the ministry can watch, throttle, or stain. Convenience still points at the cloud. Fear teaches silence faster than any lesson plan.\n\nWho designs help that stays useful when the backbone lies, listens, or simply fails — without turning night school into a louder target?\n\n## What’s strained\n\n**Learning** stalls when tools cut out on the exact topics adults need for exams and work. Worksheets cannot explain a stuck algebra step at midnight. Cloud tutors that vanish mid-answer waste the only free hours people have after shifts.\n\n**Fear** rises when a prompt can become evidence. Shared accounts, logged wifi, and “helpful” cloud copilots turn ordinary study into risk. People self-censor. The room gets quieter. The certificate gets further away.\n\n**Burnout** hits Omar and the two other volunteers first. They are translators, proctors, and tech support with no spare devices and no safe smart layer. When enrollment drops, funders call the program “low demand.” The demand went underground or went silent.\n\nIf nothing changes, North Stack keeps a room and loses a generation of adult learners who will not type the truth into a box that phones home.\n\n## A capability that just became more real\n\n**Artificial intelligence** here means software that can draft, explain, translate, and quiz in natural language. For years the strong versions lived behind cloud APIs. That meant every sensitive sentence left the building.\n\nWhat shifted is the **open-weight and edge** wave. Open-weight models publish the learned parameters so a community can run them on hardware it controls. Efficient tiers — including large sparse models that only activate a smaller slice of weights per token, and smaller distilled models — plus quantization and local runtimes make serious help runnable on locked laptops, phones, and mini PCs. Some setups work offline. Some stay on a single room network with no outbound model calls.\n\nThe advance is not a brand you must buy. It is a **capability class**: private inference good enough for tutoring and form help, without renting a distant brain that logs the prompt.\n\nThat capability does nothing for North Stack until someone invents the kit, the rules, the update path, and the human gates around it.\n\n## Your brief\n\nDesign an invention for **North Stack Night School** that makes honest use of **AI** in this place and year — especially local, open-weight, edge-runnable assistance.\n\nStakeholder: **Omar, volunteer tutor lead**, who must face learners after every outage and every rumor of a flagged account. He will not deploy a toy that gets someone hurt. He also cannot keep serving twelve adults with worksheets alone.\n\nName your invention. Write how it works on a bad connectivity night. Show who holds the device keys, how models get updated without a reckless open pipe, how wrong answers get caught, and how a nervous first-time learner starts a session without feeling watched.\n\nYou are not asked to topple a regime or build a surveillance counter-weapon. You are asked to invent **learning infrastructure that keeps custody of people’s words** while still raising Learning and lowering Fear and Burnout.\n\nEnd on the choice this room forces: smart help that leaves, or smart help that stays — and what you build so “stays” is real.\n\n## Constraints\n\n- **No mandatory cloud round-trip for core tutoring.** Optional sync must be explicit, rare, and stripable.\n- **Cheap, repairable, shared hardware** beats a lab full of unobtainium. Think secondhand laptops, phones, a mini PC under the table, battery or building power that fails.\n- **Finite volunteer skill.** Omar can learn a runbook. He cannot become a full-time ML ops team.\n- **Trust over fluency.** A confident wrong answer on legal or exam content is worse than a slow human. Human gates and clear “not legal advice / check the syllabus” beats magic.\n- **Low signature.** A flashing “dissident AI lab” brand makes the stairwell lock pointless. Design for ordinary night-school cover: study tools, language practice, form help.\n- **Dignity.** Learners are adults with jobs and fear, not props. No real-world victim names; no gore; no revenge plot — invent the system of help.\n- **Pilot honesty.** One room, one certificate track, or one device cart first — not a national underground network on turn one.\n",
+    "stakeholder": "Omar, volunteer tutor lead",
+    "suggested": ["ai"],
+    "visionTheme": "social-city"
+  }
+}
