@@ -305,12 +305,14 @@ export function createRoomBridge() {
     state.mpVisionRev = view.visionRev || 0;
     state.mpVisionSessionId = view.visionSessionId || "";
     state.deployStage = inventToSoloDeployStage(view.deployStage);
-    // Always derive from *viewed* invent — never leave sticky unlock across seats
+    // Always derive from *viewed* invent — never leave sticky unlock / Pilot pool across seats
     state.deployUnlocked = Boolean(
       view.challengePassed ||
         (view.deployStage && view.deployStage !== "none")
     );
-    state.stagedDropPool = view.stagedDropPool || state.stagedDropPool || 0;
+    // Do not fall back to state.stagedDropPool — that kept another invent's Pilot
+    // pool when switching view seats (wrong Scale drop).
+    state.stagedDropPool = view.stagedDropPool || 0;
     state.stagedDropRemaining =
       view.deployStage === "pilot_ok"
         ? view.stagedDropPool || 0

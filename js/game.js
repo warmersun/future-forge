@@ -12321,13 +12321,14 @@ function enterDeployBayInteractive(invent, opts = {}) {
   state.scrutinyMoveMode = null;
   if (invent) {
     state.deployStage = soloDeployStageFromChallenge(invent.deployStage);
-    if (invent.stagedDropPool != null) state.stagedDropPool = invent.stagedDropPool;
+    // Always take pool from *this* invent — never keep another invent's Pilot pool
+    state.stagedDropPool = invent.stagedDropPool || 0;
     state.stagedDropRemaining =
       invent.deployStage === "pilot_ok"
-        ? invent.stagedDropPool || state.stagedDropRemaining || 0
+        ? invent.stagedDropPool || 0
         : invent.deployStage === "scaled" || invent.deployStage === "new_normal"
           ? 0
-          : invent.stagedDropPool || state.stagedDropRemaining || 0;
+          : invent.stagedDropPool || 0;
     state.dropPilotApplied =
       invent.deployStage === "pilot_ok" ||
       invent.deployStage === "scaled" ||
