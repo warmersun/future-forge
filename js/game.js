@@ -2346,7 +2346,7 @@ function leaveRoomPlay(opts = {}) {
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
       endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP without advancing the calendar or crisis";
+      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -2381,12 +2381,12 @@ function leaveHotseat() {
     const endBtn = $("#btn-end-turn");
     if (endBtn) {
       endBtn.textContent = "End turn";
-      endBtn.title = "Refill AP without advancing the calendar or crisis";
+      endBtn.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
     }
     const chEnd = $("#btn-challenge-end-turn");
     if (chEnd) {
       chEnd.textContent = "End turn";
-      chEnd.title = "Refill AP without advancing the calendar or crisis";
+      chEnd.title = "Refill AP and advance calendar +1 year (crisis meters unchanged)";
     }
     ["#invention-name", "#invention-how", "#invention-impact"].forEach((sel) => {
       const el = $(sel);
@@ -5529,7 +5529,7 @@ function updateEndTurnButton() {
         ? isOnlineRoomMp()
           ? "End your seat-turn (next player becomes active)"
           : "End your seat-turn and pass to the next player"
-        : "Refill AP without advancing the calendar or crisis"
+        : "Refill AP and advance calendar +1 year (crisis meters unchanged)"
       : "Spend AP on an action first (Pilot, Scale, tech, write…), then End turn";
   }
   if (challengeWatch) applyChallengeWatchOnlyLock();

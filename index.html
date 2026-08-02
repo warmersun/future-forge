@@ -1010,7 +1010,7 @@
                 class="btn btn-ghost btn-sm"
                 id="btn-end-turn"
                 hidden
-                title="Refill AP without advancing the calendar or crisis"
+                title="Refill AP and advance calendar +1 year (crisis meters unchanged)"
               >
                 End turn
               </button>
@@ -1296,7 +1296,7 @@
                 class="btn btn-ghost btn-sm"
                 id="btn-challenge-end-turn"
                 hidden
-                title="Refill AP without advancing the calendar or crisis"
+                title="Refill AP and advance calendar +1 year (crisis meters unchanged)"
               >
                 End turn
               </button>
@@ -1658,11 +1658,12 @@
           </p>
           <ul class="outcome-workshop-unlock-list">
             <li>
-              <strong>AP · Budget · Support</strong> — spend attention and capital; End turn refills AP only.
+              <strong>AP · Budget · Support</strong> — spend attention and capital; End turn refills AP and advances
+              the calendar +1 year.
             </li>
             <li>
-              <strong>End turn vs Wait</strong> — End turn refreshes AP without advancing the crisis year; Wait +2
-              years moves the calendar and raises crisis meters.
+              <strong>End turn vs Wait</strong> — End turn refills AP and advances +1 year (crisis meters unchanged);
+              Wait +2 years moves the calendar further and raises crisis meters.
             </li>
             <li>
               <strong>Lobby</strong> — spend to raise Support (public and policy backing) before fielding.
@@ -1825,19 +1826,20 @@
               <section class="help-block">
                 <div class="help-block-head">
                   <h4 class="help-block-title">Resources</h4>
-                  <p class="help-note">Full Workshop HUD. Only AP refills on End turn. First-run Spark hides most of this.</p>
+                  <p class="help-note">Full Workshop HUD. Only AP refills on End turn (Budget and Support do not). First-run Spark hides most of this.</p>
                 </div>
                 <div class="help-tiles help-tiles-4">
                   <article class="help-tile">
                     <h5>Year &amp; turn</h5>
-                    <p>Year moves only on <strong>Wait</strong>. Turn advances on Wait or End turn.</p>
+                    <p><strong>End turn</strong> advances the calendar +1 year. <strong>Wait</strong> +2 years. Turn advances on either.</p>
                   </article>
                   <article class="help-tile">
                     <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
                     <p>
                       Attention for tech, Lobby, hard question, scrutiny moves, Field, and the
                       <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request).
-                      <strong>End turn</strong> refills AP. <strong>Wait</strong> burns leftover AP, then refills.
+                      <strong>End turn</strong> refills AP and advances the calendar +1 year.
+                      <strong>Wait</strong> burns leftover AP, then refills.
                     </p>
                   </article>
                   <article class="help-tile">
@@ -1862,7 +1864,7 @@
                 <div class="help-tiles help-tiles-2">
                   <article class="help-tile help-tile-accent">
                     <h5>End turn</h5>
-                    <p>Next invent/challenge beat. AP → full. Year and crisis meters <strong>unchanged</strong>.</p>
+                    <p>Next invent/challenge beat. AP → full. Calendar <strong>+1 year</strong>. Crisis meters unchanged.</p>
                   </article>
                   <article class="help-tile help-tile-warn">
                     <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
@@ -2010,7 +2012,7 @@
                 <h4 class="help-block-title">Stars &amp; tips</h4>
                 <ul class="help-list">
                   <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
-                  <li>Stay local. End turn to refill AP; Wait when later years are worth the crisis cost.</li>
+                  <li>Stay local. End turn to refill AP (+1 year); Wait when later years are worth the crisis cost.</li>
                   <li>Lobby toward Support 4 before Pilot when economy is on.</li>
                   <li>Feasibility judges <em>claims</em>, not card unlocks.</li>
                   <li>Solo: <strong>Budget 0$ is game over</strong> when Budget is active.</li>
