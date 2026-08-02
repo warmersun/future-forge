@@ -283,6 +283,8 @@ function createInvent(seat, settings, mission = null) {
     pilotFailedThisTurn: false,
     scaleFailedThisTurn: false,
     waitedThisTurn: false,
+    /** True if this invent Waited during the current seat-round (cleared on table wrap). */
+    waitedThisRound: false,
     stagedDropPool: 0,
     impactDropTotal: 0,
     successfulScales: 0,
@@ -501,15 +503,24 @@ function passToNext(session, opts = {}) {
   let marketNewsEvent = null;
   if (wrapped) {
     next.round = (next.round || 1) + 1;
-    // Full seat-round completed → shared year +1 (all invent calendars) + market news
+    // Full seat-round completed → shared place.year +1 + market news.
+    // Invent calendars +1 only if that invent did *not* Wait this round: Wait already
+    // applied yearsPerTurn, and stacking wrap on top gave the last seat +3 in one action
+    // (yearsPerTurn 2 + wrap 1) while mid-round Waits only showed +2 until later.
     const yearBefore = next.place?.year ?? GAME.startYear ?? 2026;
     const yearAfter = yearBefore + 1;
     if (next.place) next.place.year = yearAfter;
     for (const id of next.seatOrder || Object.keys(next.invents || {})) {
       const f = next.invents[id];
       if (!f) continue;
+      if (f.waitedThisRound) {
+        // Already advanced personal invent calendar on Wait this round — no double-count.
+        f.waitedThisRound = false;
+        continue;
+      }
       if (f.year != null && Number.isFinite(Number(f.year))) f.year = Number(f.year) + 1;
       else f.year = yearAfter;
+      f.waitedThisRound = false;
     }
     const news = rollRoundMarketNews({
       round: next.round,
@@ -1472,6 +1483,9 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     // while others were still inventing in the present year.
     s.place.waits = (s.place.waits || 0) + 1; // total Wait actions taken in the run (audit)
     actor.waitedThisTurn = true;
+    // Marks invent for wrap skip: table wrap must not also +1 this invent calendar
+    // (otherwise last seat Wait stacks yearsPerTurn + wrap → +3 unfair vs other seats).
+    actor.waitedThisRound = true;
     // Counts as engagement (even though Wait burns leftover AP by ending the seat-turn)
     actor.apSpentThisTurn = (actor.apSpentThisTurn || 0) + 1;
     s.place.lastNews = `${actor.displayName} waited for their invent — year ${actor.year} (from ${prevYear}). Other invents keep their own invent year; shared crisis meters unchanged.`;

@@ -156,17 +156,18 @@ describe("mp-session turns", () => {
     assert.notEqual(s.place.status, "collapsed");
     assert.equal(s.invents["seat-0"].year, 2028);
 
-    // Bea ends turn → wrap adds +1 to every invent year (market round year tick)
+    // Bea ends turn → wrap +1 only invents that did not Wait this round (Alex waited)
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "dike" },
     }).session;
     s = applyMpAction(s, { type: "end_turn" }).session;
     assert.equal(activeSeatId(s), "seat-0");
-    assert.equal(s.invents["seat-0"].year, 2029);
-    assert.equal(s.invents["seat-1"].year, 2027);
+    assert.equal(s.invents["seat-0"].year, 2028); // Wait already applied yearsPerTurn — no wrap stack
+    assert.equal(s.invents["seat-1"].year, 2027); // Bea end-turn only → wrap +1
+    assert.equal(s.place.year, 2027); // shared place clock still ticks on wrap
 
-    // Alex second wait → +2 invent only (2031); partner stays earlier
+    // Alex second wait → +2 invent only (2030); partner stays earlier
     s = applyMpAction(s, {
       type: "buffer_write",
       payload: { field: "inventionHow", value: "pump v2" },
@@ -174,7 +175,7 @@ describe("mp-session turns", () => {
     r = applyMpAction(s, { type: "wait" });
     assert.equal(r.ok, true, r.error);
     s = r.session;
-    assert.equal(s.invents["seat-0"].year, 2031);
+    assert.equal(s.invents["seat-0"].year, 2030);
     assert.ok(s.invents["seat-1"].year < s.invents["seat-0"].year);
     assert.equal(
       s.place.status,
@@ -277,12 +278,86 @@ describe("mp-session turns", () => {
         s = applyMpAction(s, { type: "end_turn" }).session;
       }
     }
-    // Alex waited +2 twice (→ +4) and two full seat-wraps each +1 everyone's invent year
+    // Alex waited +2 twice (→ +4). Wrap no longer double-counts Wait invents, so Bea
+    // (end-turn only) gets the two wrap +1 ticks; Alex stays at Wait totals only.
     // (Alex wait→Bea end wrap #1, Alex wait→Bea end wrap #2)
-    assert.equal(s.invents["seat-0"].year, 2032);
+    assert.equal(s.invents["seat-0"].year, 2030);
     assert.equal(s.invents["seat-1"].year, 2028); // two wrap ticks only (no personal Wait)
     assert.equal(s.place.status, "playing");
     assert.equal(s.place.pressure.Floods, 4, "Wait must not raise shared meters");
+  });
+
+  it("last seat Wait does not stack yearsPerTurn + wrap into +3 invent years", () => {
+    // Regression: Wait (+2) then table-wrap (+1 all invents) stacked for the last seat
+    // in a round → unfair +3 in one action vs mid-round seats who only saw +2.
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpQuest(
+      s,
+      {
+        ...mission,
+        startYear: 2026,
+        yearsPerTurn: 2,
+        collapseYear: 2099,
+        pressure: { Floods: 1, Trust: 1 },
+        pressureRise: { Floods: 0, Trust: 0 },
+      },
+      "climate"
+    );
+    s = startMpQuest(s).session;
+    const y0 = s.invents["seat-0"].year;
+    const y1 = s.invents["seat-1"].year;
+    assert.equal(y0, 2026);
+    assert.equal(y1, 2026);
+
+    // Alex ends without Wait → Bea is last seat of the round
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "a" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(activeSeatId(s), "seat-1");
+    assert.equal(s.round, 1);
+    assert.equal(s.invents["seat-0"].year, y0);
+    assert.equal(s.invents["seat-1"].year, y1);
+
+    // Bea Wait should advance her invent by yearsPerTurn only (not +3 with wrap)
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "b" },
+    }).session;
+    const r = applyMpAction(s, { type: "wait" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.equal(s.round, 2, "last seat Wait wraps the table");
+    assert.ok(r.events.some((e) => e.type === "year_tick"));
+    assert.equal(s.place.year, 2027, "shared place year still +1 on wrap");
+    // Bea: Wait +2 only (wrap must not also +1 her invent calendar)
+    assert.equal(s.invents["seat-1"].year, y1 + 2);
+    // Alex: did not Wait this round → receives wrap invent +1
+    assert.equal(s.invents["seat-0"].year, y0 + 1);
+    // Same-round Waits stay fair: if both Waited, both get +yearsPerTurn and neither wrap stack
+  });
+
+  it("both seats Wait once per round advance invent calendars equally (no last-seat bonus)", () => {
+    let s = started();
+    // Alex Wait → +2
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "a" },
+    }).session;
+    s = applyMpAction(s, { type: "wait" }).session;
+    assert.equal(s.invents["seat-0"].year, 2028);
+    assert.equal(s.invents["seat-1"].year, 2026);
+    // Bea Wait → +2 and wrap; neither invent gets wrap +1 (both waited this round)
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "b" },
+    }).session;
+    s = applyMpAction(s, { type: "wait" }).session;
+    assert.equal(s.round, 2);
+    assert.equal(s.place.year, 2027);
+    assert.equal(s.invents["seat-0"].year, 2028);
+    assert.equal(s.invents["seat-1"].year, 2028);
   });
 });
 
