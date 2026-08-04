@@ -11,8 +11,11 @@ import {
   successChancePct,
   rollDeploySuccess,
   worseLevel,
+  betterLevel,
   worstLevel,
   scaleRollLevel,
+  claimTimingFingerprint,
+  clampTimingForYearAdvance,
   FEASIBILITY_SUCCESS_PCT,
 } from "./deploy.js";
 
@@ -81,6 +84,66 @@ describe("staged deploy pool", () => {
     assert.equal(worseLevel("green", "red"), "red");
     assert.equal(worstLevel(["green", "yellow"]), "yellow");
     assert.equal(scaleRollLevel("green", "yellow"), "yellow");
+  });
+
+  it("betterLevel picks greener light", () => {
+    assert.equal(betterLevel("green", "red"), "green");
+    assert.equal(betterLevel("yellow", "red"), "yellow");
+    assert.equal(betterLevel("yellow", "green"), "green");
+  });
+
+  it("clampTimingForYearAdvance: same claims cannot worsen after year+", () => {
+    const fp = claimTimingFingerprint("A supervised pilot partnership for clinics.", ["ai", "solar"]);
+    assert.equal(
+      clampTimingForYearAdvance({
+        newLevel: "red",
+        priorLevel: "yellow",
+        fingerprint: fp,
+        priorFingerprint: fp,
+        year: 2027,
+        priorYear: 2026,
+      }),
+      "yellow"
+    );
+    assert.equal(
+      clampTimingForYearAdvance({
+        newLevel: "yellow",
+        priorLevel: "green",
+        fingerprint: fp,
+        priorFingerprint: fp,
+        year: 2028,
+        priorYear: 2026,
+      }),
+      "green"
+    );
+    // Can still improve
+    assert.equal(
+      clampTimingForYearAdvance({
+        newLevel: "green",
+        priorLevel: "yellow",
+        fingerprint: fp,
+        priorFingerprint: fp,
+        year: 2027,
+        priorYear: 2026,
+      }),
+      "green"
+    );
+  });
+
+  it("clampTimingForYearAdvance: claim change allows red", () => {
+    const prior = claimTimingFingerprint("A supervised pilot partnership.", ["ai"]);
+    const next = claimTimingFingerprint("Fully autonomous AGI overnight for everyone.", ["ai"]);
+    assert.equal(
+      clampTimingForYearAdvance({
+        newLevel: "red",
+        priorLevel: "yellow",
+        fingerprint: next,
+        priorFingerprint: prior,
+        year: 2027,
+        priorYear: 2026,
+      }),
+      "red"
+    );
   });
 
   it("computeDeployDrop still returns positive base", () => {

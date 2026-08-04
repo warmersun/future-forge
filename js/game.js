@@ -44,6 +44,8 @@ import {
   rollDeploySuccess,
   worstLevel,
   scaleRollLevel,
+  claimTimingFingerprint,
+  clampTimingForYearAdvance,
 } from "./sim/deploy.js";
 import { assessSustainable } from "./sim/sustainable.js";
 import {
@@ -647,6 +649,12 @@ let _aiTimingPending = false;
 let _aiTimingInFlight = false;
 /** Last settled traffic-light color (red|yellow|green) for the panel circle */
 let lastFeasibilityLightLevel = "red";
+/**
+ * Last settled Timing dim — used so same claims cannot go harsher after year advance
+ * (AI→local handoff or non-deterministic re-assess).
+ * @type {{ level: string, fingerprint: string, year: number } | null }
+ */
+let lastSettledTiming = null;
 
 function mpHydrateAndRender(opts = {}) {
   const b = mpBridge();
@@ -684,9 +692,9 @@ function mpHydrateAndRender(opts = {}) {
     reapplyFocusedInventDrafts(drafts);
     // Personal invent calendar / seat switch — re-run feasibility timing for this invent year
     if (state.year !== yearBefore || state.mp?.viewSeatId !== viewBefore) {
-      state.aiTiming = null;
-      // Schedule before later paint paths so light freezes + spins when eligible
-      if (state.screen === "workshop") scheduleAiTimingAssess();
+      // Seat switch: other invent's claims — drop prior settle so we don't clamp across invents
+      if (state.mp?.viewSeatId !== viewBefore) lastSettledTiming = null;
+      onInventYearChangedForTiming();
     }
     // Multiplayer: full seat-round wrap ships new market news on the place
     if (state.marketNews?.id && state.marketNews.id !== marketBeforeId) {
@@ -3877,6 +3885,7 @@ function startMission(mission) {
   _aiTimingInFlight = false;
   _aiTimingGen += 1;
   lastFeasibilityLightLevel = "red";
+  lastSettledTiming = null;
   state.timingLevelAtDeploy = null;
   state.apMax = GAME.apMax ?? 3;
   state.ap = state.apMax;
@@ -4307,6 +4316,51 @@ function timingCacheKey() {
   return `${state.year}|${state.selectedTechIds.join(",")}|${how}`;
 }
 
+function currentClaimTimingFingerprint() {
+  return claimTimingFingerprint(state.inventionHow, state.selectedTechIds);
+}
+
+/**
+ * Capability clock only advances: same claims must not score harsher after year+.
+ * @param {string} level
+ * @returns {"red"|"yellow"|"green"}
+ */
+function applyTimingYearMonotonicity(level) {
+  if (!lastSettledTiming) return level;
+  return clampTimingForYearAdvance({
+    newLevel: level,
+    priorLevel: lastSettledTiming.level,
+    fingerprint: currentClaimTimingFingerprint(),
+    priorFingerprint: lastSettledTiming.fingerprint,
+    year: state.year,
+    priorYear: lastSettledTiming.year,
+  });
+}
+
+/**
+ * Record settled Timing once assess is not mid-flight (AI or local-final).
+ * @param {string} level
+ */
+function recordSettledTimingLevel(level) {
+  if (!level || !["red", "yellow", "green"].includes(level)) return;
+  if (!selectedTechs().length) return;
+  lastSettledTiming = {
+    level,
+    fingerprint: currentClaimTimingFingerprint(),
+    year: state.year,
+  };
+}
+
+/**
+ * Year advanced (End turn +1, Wait +N, MP invent calendar) — drop AI cache and re-assess.
+ * Keeps lastSettledTiming so monotonic clamp applies across the handoff.
+ */
+function onInventYearChangedForTiming() {
+  state.aiTiming = null;
+  // Schedule before paint so light freezes + spins when eligible
+  scheduleAiTimingAssess();
+}
+
 /**
  * Feasibility assessment (traffic light) — timing scores CLAIMS, not card locks.
  * red = cannot go to challenge; yellow = risky but allowed; green = solid.
@@ -4332,9 +4386,14 @@ function assessFeasibility() {
         seed: state.mission?.id,
       });
       const adj = applyForesightToClaimStretch(stretch, how, fCtx);
-      timingLevel = adj.level;
-      timingNote = adj.reason;
+      const rawLevel = adj.level;
+      timingLevel = applyTimingYearMonotonicity(rawLevel);
+      timingNote =
+        timingLevel !== rawLevel && lastSettledTiming
+          ? `${adj.reason} (kept ${timingLevel}: same claims cannot get harsher after the calendar advances).`
+          : adj.reason;
     }
+    // Intentional sole exception: long wait + high pressure can soften green → yellow
     if (timingLevel === "green") {
       const yearsWaited = year - (state.mission?.startYear || GAME.startYear);
       if (yearsWaited >= 6 && maxPressure() >= 3) {
@@ -4538,6 +4597,8 @@ function bothStoryFacesReady() {
 }
 
 function inventReadyForChallenge() {
+  // Wait for AI timing (and light) to settle before Challenge — matches traffic light pending
+  if (isAiTimingAssessPending()) return false;
   // Hard gate: name + both story faces + stack — same floor Deploy uses for story faces
   const named = state.inventionName.trim().length >= 2;
   const hasStack = state.selectedTechIds.length >= 1;
@@ -4559,6 +4620,8 @@ function renderFeasibility() {
   // settled color and spin — do not flash the interim local heuristic color.
   if (!pending) {
     lastFeasibilityLightLevel = f.overall;
+    const timingDim = f.dims?.find((d) => d.id === "timing");
+    if (timingDim) recordSettledTimingLevel(timingDim.level);
   }
   const lightLevel = pending ? lastFeasibilityLightLevel : f.overall;
   if (light) {
@@ -5292,7 +5355,19 @@ function updateChallengeButton() {
     }
     return;
   }
+  // Keep light + button in lockstep: no Challenge while AI timing is re-evaluating
   renderFeasibility();
+  if (isAiTimingAssessPending()) {
+    const busy = feasibilityAssessBusyReason();
+    btn.disabled = true;
+    btn.title = busy;
+    const hint = $("#challenge-ready-hint");
+    if (hint) {
+      hint.textContent = busy;
+      hint.className = "challenge-ready-hint blocked";
+    }
+    return;
+  }
   const f = assessFeasibility();
   const reason = challengeBlockReason();
   let ok = f.canChallenge;
@@ -5720,6 +5795,10 @@ function endTurn() {
     return;
   }
   flashToast(`End turn · AP refilled (${state.ap})`);
+  // Solo end_turn advances world year +1 — re-assess timing (do not leave AI cache for prior year)
+  if ((r.events || []).some((e) => e.type === "year_tick")) {
+    onInventYearChangedForTiming();
+  }
   if (state.screen === "challenge-step") {
     renderChallengeHud();
     return;
@@ -5969,8 +6048,7 @@ function waitTurn(opts = {}) {
     <span class="bad">Crisis rose:</span> ${escapeHtml(crisisLine)}${riskLine}<br/>
     <span class="muted">${escapeHtml(news)}</span>`;
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
-  state.aiTiming = null; // re-evaluate claims in new year
-  scheduleAiTimingAssess(); // pending before workshop paint freezes light color
+  onInventYearChangedForTiming(); // re-evaluate claims in new year (monotonic vs last settle)
 
   if (collapsed()) {
     renderWorkshop();
@@ -6493,10 +6571,14 @@ async function apiCoInvent(mode, userContent, extra = {}) {
 /**
  * Debounced AI timing assess — feeds state.aiTiming into feasibility light.
  * While queued or in flight, #feasibility-light keeps the last settled color
- * and shows a spinner (.is-pending).
+ * and shows a spinner (.is-pending). Challenge is blocked until this settles.
  */
 function isAiTimingAssessPending() {
   return Boolean(_aiTimingPending || _aiTimingInFlight);
+}
+
+function feasibilityAssessBusyReason() {
+  return "Re-evaluating feasibility… wait for the traffic light.";
 }
 
 function eligibleForAiTimingAssess() {
@@ -6561,16 +6643,26 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
   _aiTimingInFlight = true;
   _aiTimingPending = true;
   try {
-    const data = await apiCoInvent("assess-feasibility", "[Assess claim timing]", {});
+    const data = await apiCoInvent("assess-feasibility", "[Assess claim timing]", {
+      priorTiming: lastSettledTiming
+        ? {
+            level: lastSettledTiming.level,
+            year: lastSettledTiming.year,
+            fingerprint: lastSettledTiming.fingerprint,
+          }
+        : null,
+    });
     if (gen !== _aiTimingGen) return;
-    const level = data.timing?.level || data.timingLevel;
+    const rawLevel = data.timing?.level || data.timingLevel;
     const reason = data.timing?.reason || data.timingNote || data.message;
-    if (level && ["red", "yellow", "green"].includes(level)) {
+    if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
+      const level = applyTimingYearMonotonicity(rawLevel);
       state.aiTiming = {
         level,
         reason: String(reason || "").slice(0, 400),
         forKey: key,
       };
+      recordSettledTimingLevel(level);
     }
   } catch {
     /* client heuristic remains */
@@ -6589,6 +6681,10 @@ async function enterChallenge() {
   if (blockIfMpTurnGate("facing the challenge")) return;
   if (isInventActionBusy()) {
     flashToast(inventActionBusyReason());
+    return;
+  }
+  if (isAiTimingAssessPending()) {
+    flashToast(feasibilityAssessBusyReason());
     return;
   }
   const b = mpBridge();
@@ -6618,6 +6714,11 @@ async function enterChallenge() {
     softPersistInventDrafts();
     await commitWriteIfNeeded();
     mpSyncFromSolo();
+  }
+  if (isAiTimingAssessPending()) {
+    // Soft persist / hydrate may have re-queued timing assess
+    flashToast(feasibilityAssessBusyReason());
+    return;
   }
   if (!inventReadyForChallenge()) {
     flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
@@ -15302,6 +15403,10 @@ function bind() {
           ? "Only the owner can face Challenge on this invent."
           : "Cannot face Challenge on this invent."
       );
+      return;
+    }
+    if (isAiTimingAssessPending()) {
+      flashToast(feasibilityAssessBusyReason());
       return;
     }
     if (!inventReadyForChallenge()) {

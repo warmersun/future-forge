@@ -96,17 +96,36 @@ export function successChancePct(level) {
 const LEVEL_RANK = { red: 0, yellow: 1, green: 2 };
 
 /**
+ * @param {string} level
+ * @returns {"red"|"yellow"|"green"}
+ */
+function normalizeLevel(level) {
+  const k = String(level || "yellow").toLowerCase();
+  return LEVEL_RANK[k] != null ? k : "yellow";
+}
+
+/**
  * Worse (more red) of two traffic-light levels.
  * @param {"red"|"yellow"|"green"|string} a
  * @param {"red"|"yellow"|"green"|string} b
  * @returns {"red"|"yellow"|"green"}
  */
 export function worseLevel(a, b) {
-  const la = String(a || "yellow").toLowerCase();
-  const lb = String(b || "yellow").toLowerCase();
-  const ra = LEVEL_RANK[la] ?? 1;
-  const rb = LEVEL_RANK[lb] ?? 1;
-  return ra <= rb ? (LEVEL_RANK[la] != null ? la : "yellow") : LEVEL_RANK[lb] != null ? lb : "yellow";
+  const la = normalizeLevel(a);
+  const lb = normalizeLevel(b);
+  return LEVEL_RANK[la] <= LEVEL_RANK[lb] ? la : lb;
+}
+
+/**
+ * Better (more green) of two traffic-light levels.
+ * @param {"red"|"yellow"|"green"|string} a
+ * @param {"red"|"yellow"|"green"|string} b
+ * @returns {"red"|"yellow"|"green"}
+ */
+export function betterLevel(a, b) {
+  const la = normalizeLevel(a);
+  const lb = normalizeLevel(b);
+  return LEVEL_RANK[la] >= LEVEL_RANK[lb] ? la : lb;
 }
 
 /**
@@ -120,6 +139,53 @@ export function worstLevel(levels) {
     out = worseLevel(out, lv);
   }
   return out;
+}
+
+/**
+ * Fingerprint of claims + stack (no year) for timing monotonicity.
+ * @param {string} howText
+ * @param {string[]} techIds
+ */
+export function claimTimingFingerprint(howText, techIds = []) {
+  const how = String(howText || "")
+    .trim()
+    .slice(0, 240);
+  const ids = (techIds || []).map(String).join(",");
+  return `${ids}|${how}`;
+}
+
+/**
+ * Same claims at a later year must not score worse (capability clock only advances).
+ * When claims/stack change, returns newLevel unchanged.
+ *
+ * @param {object} opts
+ * @param {"red"|"yellow"|"green"|string} opts.newLevel
+ * @param {"red"|"yellow"|"green"|string|null|undefined} opts.priorLevel
+ * @param {string} opts.fingerprint
+ * @param {string|null|undefined} opts.priorFingerprint
+ * @param {number} opts.year
+ * @param {number|null|undefined} opts.priorYear
+ * @returns {"red"|"yellow"|"green"}
+ */
+export function clampTimingForYearAdvance(opts = {}) {
+  const newLevel = normalizeLevel(opts.newLevel);
+  const priorLevel = opts.priorLevel != null ? normalizeLevel(opts.priorLevel) : null;
+  const fingerprint = String(opts.fingerprint || "");
+  const priorFingerprint =
+    opts.priorFingerprint != null ? String(opts.priorFingerprint) : null;
+  const year = Number(opts.year);
+  const priorYear =
+    opts.priorYear != null && Number.isFinite(Number(opts.priorYear))
+      ? Number(opts.priorYear)
+      : null;
+
+  if (!priorLevel || !priorFingerprint || !fingerprint) return newLevel;
+  if (fingerprint !== priorFingerprint) return newLevel;
+  if (priorYear == null || !Number.isFinite(year)) return newLevel;
+  // Only clamp when the calendar moved forward (or re-settled at same/later year
+  // with identical claims after a year-tick handoff).
+  if (year < priorYear) return newLevel;
+  return betterLevel(newLevel, priorLevel);
 }
 
 /**

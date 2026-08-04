@@ -49,4 +49,29 @@ describe("world-foresight bank", () => {
     const adj = applyForesightToClaimStretch(base, how, ctx);
     assert.notEqual(adj.level, "red");
   });
+
+  it("local claim stretch does not worsen for same claims one year later", () => {
+    const techs = [TECHS.find((t) => t.id === "ai"), TECHS.find((t) => t.id === "solar")].filter(
+      Boolean
+    );
+    const how =
+      "A community solar + supervised AI pilot partnership schedules clinic loads with human oversight.";
+    const rank = { red: 0, yellow: 1, green: 2 };
+    for (const y of [2026, 2028, 2030]) {
+      const a = applyForesightToClaimStretch(
+        detectClaimStretch(how, techs, y),
+        how,
+        foresightCapabilityContext(y, techs)
+      );
+      const b = applyForesightToClaimStretch(
+        detectClaimStretch(how, techs, y + 1),
+        how,
+        foresightCapabilityContext(y + 1, techs)
+      );
+      assert.ok(
+        (rank[b.level] ?? 1) >= (rank[a.level] ?? 1),
+        `year ${y}→${y + 1}: ${a.level} → ${b.level}`
+      );
+    }
+  });
 });
