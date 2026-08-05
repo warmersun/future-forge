@@ -1,0 +1,24 @@
+{
+  "schema": "future-forge.module-pack/v1",
+  "kind": "module",
+  "id": "sample-free",
+  "version": 1,
+  "title": "Sample free module",
+  "summary": "Minimal fixture pack for module-pack schema validation.",
+  "access": "free",
+  "theme": "ai-automators",
+  "estimatedWeeks": 1,
+  "tags": ["fixture", "sample"],
+  "author": {
+    "name": "Future Forge",
+    "note": "Test fixture only"
+  },
+  "weeks": [
+    {
+      "week": 1,
+      "title": "Judgment first",
+      "questFile": "quests/week-01.json",
+      "primerMd": "Optional short primer: invent with AI under your judgment."
+    }
+  ]
+}

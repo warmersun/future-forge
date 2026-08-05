@@ -1,0 +1,34 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "sample-free-week-01",
+  "version": 1,
+  "title": "Inbox under water",
+  "summary": "A small team needs AI under judgment, not autopilot.",
+  "globalId": "climate",
+  "placement": { "mode": "library-only" },
+  "spotlight": {
+    "techId": "ai",
+    "advanceTitle": "Capable workplace assistants",
+    "advanceSummary": "Assistants draft, sort, and suggest — humans still own outcomes.",
+    "asOf": "2026-08",
+    "encourageCopy": "Invent a workflow where AI helps and people still lead."
+  },
+  "mission": {
+    "id": "sample-free-week-01",
+    "globalId": "climate",
+    "title": "Inbox under water",
+    "place": "Harbor Works (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": { "Backlog": 3, "Trust": 2, "Burnout": 2 },
+    "pressureRise": { "Backlog": 1, "Trust": 1, "Burnout": 1 },
+    "winMax": { "Backlog": 1, "Trust": 1, "Burnout": 1 },
+    "scene": "The shared inbox is a storm. Tools promise relief. Who designs judgment into the loop?",
+    "briefMd": "## The place\n\n**Harbor Works** is a fictive coastal co-op. The inbox never sleeps.\n\n## Your brief\n\nInvent a local workflow that uses **AI** under human judgment — not a black box that owns the outcome.",
+    "stakeholder": "Sam, operations lead",
+    "suggested": ["ai"],
+    "visionTheme": "rebuild-city"
+  }
+}
