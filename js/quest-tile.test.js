@@ -5,6 +5,8 @@ import {
   parseQuestTileJson,
   validateQuestTile,
   humanizeMeterKey,
+  resourceOverrideLabel,
+  parseResourceOverrides,
 } from "./quest-tile.js";
 
 const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
@@ -125,5 +127,114 @@ describe("quest-tile", () => {
     const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
     assert.equal(r.ok, true);
     assert.equal(r.tile.placement.mode, "replace-daily");
+  });
+
+  it("accepts optional resources and copies them onto mission", () => {
+    const r = validateQuestTile(
+      baseTile({
+        resources: { startingBudget: 9, startingWill: 5 },
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.mission.resources, {
+      startingBudget: 9,
+      startingWill: 5,
+    });
+    assert.equal(r.mission.resources.apMax, undefined);
+  });
+
+  it("accepts full resources overrides", () => {
+    const r = validateQuestTile(
+      baseTile({
+        resources: { apMax: 4, startingBudget: 8, startingWill: 5 },
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.mission.resources, {
+      apMax: 4,
+      startingBudget: 8,
+      startingWill: 5,
+    });
+  });
+
+  it("omits resources when absent or empty", () => {
+    const noRes = validateQuestTile(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(noRes.ok, true);
+    assert.equal(noRes.mission.resources, undefined);
+
+    const empty = validateQuestTile(baseTile({ resources: {} }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(empty.ok, true);
+    assert.equal(empty.mission.resources, undefined);
+  });
+
+  it("accepts resources nested under mission when top-level absent", () => {
+    const t = baseTile();
+    t.mission.resources = { apMax: 2 };
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.mission.resources, { apMax: 2 });
+  });
+
+  it("rejects invalid resource values", () => {
+    const neg = validateQuestTile(
+      baseTile({ resources: { startingBudget: -1 } }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(neg.ok, false);
+    assert.ok(neg.details.some((d) => d.includes("bad_resource_startingBudget")));
+
+    const str = validateQuestTile(
+      baseTile({ resources: { apMax: "3" } }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(str.ok, false);
+
+    const float = validateQuestTile(
+      baseTile({ resources: { startingWill: 2.5 } }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(float.ok, false);
+
+    const arr = validateQuestTile(baseTile({ resources: [] }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(arr.ok, false);
+    assert.ok(arr.details.includes("resources_not_object"));
+  });
+
+  it("resourceOverrideLabel shows only non-default fields", () => {
+    assert.equal(resourceOverrideLabel(null), null);
+    assert.equal(resourceOverrideLabel({}), null);
+    assert.equal(
+      resourceOverrideLabel({
+        apMax: 3,
+        startingBudget: 5,
+        startingWill: 3,
+      }),
+      null
+    );
+    assert.equal(
+      resourceOverrideLabel({ startingBudget: 9, startingWill: 5 }),
+      "Budget 9 · Will 5"
+    );
+    assert.equal(
+      resourceOverrideLabel({ apMax: 4, startingBudget: 8, startingWill: 5 }),
+      "AP 4 · Budget 8 · Will 5"
+    );
+  });
+
+  it("parseResourceOverrides allows zero", () => {
+    const r = parseResourceOverrides({ startingBudget: 0, startingWill: 0 });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.value, { startingBudget: 0, startingWill: 0 });
   });
 });

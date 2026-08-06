@@ -32,6 +32,11 @@
     "showToPlayer": false
   },
   "globalId": "infectious",
+  "resources": {
+    "apMax": 4,
+    "startingBudget": 8,
+    "startingWill": 4
+  },
   "mission": {
     "id": "spotlight-gene-seq-border-clinic-2026",
     "globalId": "infectious",

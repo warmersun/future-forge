@@ -23,6 +23,68 @@ export const CAPS = {
 
 const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);
 
+/** Known starting-resource override keys (match GAME / startMission). */
+export const RESOURCE_OVERRIDE_KEYS = ["apMax", "startingBudget", "startingWill"];
+
+/**
+ * Pick valid resource override fields from a raw object.
+ * @param {unknown} raw
+ * @returns {{ ok: true, value: object|null } | { ok: false, details: string[] }}
+ */
+export function parseResourceOverrides(raw) {
+  if (raw == null) return { ok: true, value: null };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, details: ["resources_not_object"] };
+  }
+  const details = [];
+  /** @type {Record<string, number>} */
+  const out = {};
+  for (const key of RESOURCE_OVERRIDE_KEYS) {
+    if (!(key in raw) || raw[key] === undefined) continue;
+    const n = raw[key];
+    if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+      details.push(`bad_resource_${key}`);
+      continue;
+    }
+    out[key] = n;
+  }
+  if (details.length) return { ok: false, details };
+  return { ok: true, value: Object.keys(out).length ? out : null };
+}
+
+/**
+ * Short label for non-default resource overrides (selection UI).
+ * @param {object|null|undefined} resources
+ * @param {{ apMax?: number, startingBudget?: number, startingWill?: number }} [defaults]
+ * @returns {string|null}
+ */
+export function resourceOverrideLabel(resources, defaults = GAME) {
+  if (!resources || typeof resources !== "object") return null;
+  const parts = [];
+  if (
+    resources.apMax != null &&
+    Number.isFinite(resources.apMax) &&
+    resources.apMax !== (defaults.apMax ?? 3)
+  ) {
+    parts.push(`AP ${resources.apMax}`);
+  }
+  if (
+    resources.startingBudget != null &&
+    Number.isFinite(resources.startingBudget) &&
+    resources.startingBudget !== (defaults.startingBudget ?? 5)
+  ) {
+    parts.push(`Budget ${resources.startingBudget}`);
+  }
+  if (
+    resources.startingWill != null &&
+    Number.isFinite(resources.startingWill) &&
+    resources.startingWill !== (defaults.startingWill ?? 3)
+  ) {
+    parts.push(`Will ${resources.startingWill}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 /**
  * @param {string} key
  */
@@ -135,6 +197,15 @@ export function validateQuestTile(tile, opts = {}) {
     }
   }
 
+  const resourcesRaw =
+    tile.resources !== undefined && tile.resources !== null
+      ? tile.resources
+      : missionIn.resources;
+  const resourcesParsed = parseResourceOverrides(resourcesRaw);
+  if (!resourcesParsed.ok) {
+    details.push(...resourcesParsed.details);
+  }
+
   if (details.length) {
     return { ok: false, error: "validation_failed", details };
   }
@@ -190,6 +261,9 @@ export function validateQuestTile(tile, opts = {}) {
     source: "imported",
     spotlight,
   };
+  if (resourcesParsed.value) {
+    mission.resources = resourcesParsed.value;
+  }
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,

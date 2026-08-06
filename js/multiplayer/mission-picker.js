@@ -4,6 +4,7 @@
  */
 
 import { GLOBALS, localScenariosForGlobal } from "../data.js";
+import { resourceOverrideLabel } from "../quest-tile.js";
 
 export function problemVisualUrl(globalId) {
   return `assets/problems/${globalId}.jpg`;
@@ -91,6 +92,12 @@ export function paintMissionGrid(grid, opts) {
         isExternal && m.spotlight?.techId
           ? `<span class="scenario-tag spotlight-tag">Spotlight</span>`
           : "";
+      const resLabel = resourceOverrideLabel(m.resources);
+      const resTag = resLabel
+        ? `<span class="scenario-tag resources-tag" title="Starting resources for this Quest">Start · ${escapeHtml(
+            resLabel
+          )}</span>`
+        : "";
       return `
       <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel} ${
         isExternal ? "quest-card-external" : ""
@@ -106,6 +113,7 @@ export function paintMissionGrid(grid, opts) {
           <span class="num">${escapeHtml(m.place || "")} · ${m.startYear || 2026}
             <span class="scenario-tag ${tagClass}">${escapeHtml(tag)}</span>
             ${spot}
+            ${resTag}
           </span>
           <h3>${escapeHtml(m.title)}</h3>
           <p>${escapeHtml(scene)}${ellipsis}</p>

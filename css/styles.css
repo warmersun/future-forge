@@ -7287,6 +7287,17 @@ button.linkish:hover {
   color: #ffd28a;
   border: 1px solid rgba(255, 180, 100, 0.4);
 }
+.scenario-tag.resources-tag {
+  background: rgba(94, 184, 196, 0.18);
+  color: #9fd8e0;
+  border: 1px solid rgba(94, 184, 196, 0.4);
+  font-weight: 600;
+}
+.quest-lib-copy .scenario-tag.resources-tag {
+  display: inline-block;
+  margin: 0.2rem 0.35rem 0.15rem 0;
+  font-size: 0.72rem;
+}
 .scenario-tag.imported-tag,
 .scenario-tag.imported {
   background: rgba(148, 163, 184, 0.25);

@@ -236,15 +236,16 @@ export function inventWaits(invent, place = null) {
 
 /** Create a personal invent seat for one player in a Challenge. */
 function createInvent(seat, settings, mission = null) {
-  const apMax = settings.apMax ?? 3;
+  const res = mission?.resources || {};
+  const apMax = res.apMax ?? settings.apMax ?? GAME.apMax ?? 3;
   const startYear = mission?.startYear ?? GAME.startYear ?? 2026;
   return {
     seatId: seat.id,
     displayName: seat.displayName,
     ap: apMax,
     apMax,
-    budget: GAME.startingBudget ?? 5,
-    will: GAME.startingWill ?? 3,
+    budget: res.startingBudget ?? GAME.startingBudget ?? 5,
+    will: res.startingWill ?? GAME.startingWill ?? 3,
     apSpentThisTurn: 0,
     writeCommitsThisTurn: 0,
     techAddedThisTurn: {}, // techId -> { cost, targetSeatId }

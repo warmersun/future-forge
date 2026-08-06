@@ -93,7 +93,12 @@ import {
   clearDailyFocus,
   setDailyFocus,
 } from "./meta.js";
-import { parseQuestTileJson, validateQuestTile } from "./quest-tile.js";
+import {
+  parseQuestTileJson,
+  validateQuestTile,
+  parseResourceOverrides,
+  resourceOverrideLabel,
+} from "./quest-tile.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import { initFriendsUi } from "./multiplayer/ui.js";
@@ -2835,11 +2840,13 @@ function renderHostedQuestsPanel() {
         ? excerptFromBrief(e.mission.briefMd, 140)
         : String(e.mission?.scene || e.summary || "").slice(0, 140);
       const g = globalById(e.globalId);
+      const resBadge = resourceOverrideBadgeHtml(e.mission?.resources);
       return `<div class="quest-lib-row quest-external-row" data-hosted-id="${escapeHtml(e.id)}">
         <div class="quest-lib-copy">
           <span class="quest-external-badge">External${
             tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
           }</span>
+          ${resBadge}
           <strong>${escapeHtml(e.title || e.mission?.title || "Quest")}</strong>
           <span class="muted">${escapeHtml(g?.title || e.globalId || "")} · ${escapeHtml(
             e.place || e.mission?.place || ""
@@ -2966,10 +2973,16 @@ function renderDailyCard() {
   }
   if (spotlightEl) {
     const sp = pick.mission.spotlight;
+    const resLabel = resourceOverrideLabel(pick.mission.resources);
+    const parts = [];
     if (sp?.techId) {
       const tech = techById(sp.techId);
+      parts.push(`Spotlight · ${tech?.name || sp.techId}`);
+    }
+    if (resLabel) parts.push(`Start · ${resLabel}`);
+    if (parts.length) {
       spotlightEl.hidden = false;
-      spotlightEl.textContent = `Spotlight · ${tech?.name || sp.techId}`;
+      spotlightEl.textContent = parts.join(" · ");
     } else {
       spotlightEl.hidden = true;
       spotlightEl.textContent = "";
@@ -3003,12 +3016,14 @@ function renderQuestLibraryPanel() {
       const ex = m.briefMd
         ? excerptFromBrief(m.briefMd, 120)
         : String(m.scene || "").slice(0, 120);
+      const resBadge = resourceOverrideBadgeHtml(m.resources);
       return `<div class="quest-lib-row" data-mission-id="${escapeHtml(m.id)}">
         <div class="quest-lib-copy">
           <strong>${escapeHtml(m.title)}</strong>
           <span class="muted">${escapeHtml(m.place || "")}${
             tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
           }${isFocus ? " · Focus" : ""}</span>
+          ${resBadge}
           <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
         </div>
         <div class="quest-lib-actions">
@@ -3482,6 +3497,7 @@ function paintMissionCards(list, { disabled = false } = {}) {
               ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
               : ""
           }
+          ${resourceOverrideBadgeHtml(m.resources)}
           ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
         </span>
         <h3>${escapeHtml(m.title)}</h3>
@@ -3687,6 +3703,10 @@ function normalizeMission(raw, globalId) {
             ? "daily"
             : "generated";
 
+  const resourcesParsed = parseResourceOverrides(raw.resources);
+  const resources =
+    resourcesParsed.ok && resourcesParsed.value ? resourcesParsed.value : null;
+
   return {
     id,
     globalId,
@@ -3708,7 +3728,17 @@ function normalizeMission(raw, globalId) {
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
     source,
     spotlight,
+    ...(resources ? { resources } : {}),
   };
+}
+
+/** HTML chip for non-default starting resources on selection cards. */
+function resourceOverrideBadgeHtml(resources) {
+  const label = resourceOverrideLabel(resources);
+  if (!label) return "";
+  return `<span class="scenario-tag resources-tag" title="Starting resources for this Quest">Start · ${escapeHtml(
+    label
+  )}</span>`;
 }
 
 async function renderMissions({ force = false } = {}) {
@@ -3887,7 +3917,8 @@ function startMission(mission) {
   lastFeasibilityLightLevel = "red";
   lastSettledTiming = null;
   state.timingLevelAtDeploy = null;
-  state.apMax = GAME.apMax ?? 3;
+  const res = state.mission?.resources || mission.resources || {};
+  state.apMax = res.apMax ?? GAME.apMax ?? 3;
   state.ap = state.apMax;
   state.apSpentThisTurn = 0;
   state.writeCommitsThisTurn = 0;
@@ -3895,8 +3926,8 @@ function startMission(mission) {
   state.turnPhase = "act";
   state.pendingAi = null;
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
-  state.budget = GAME.startingBudget ?? 5;
-  state.will = GAME.startingWill ?? 3;
+  state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
+  state.will = res.startingWill ?? GAME.startingWill ?? 3;
   state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;

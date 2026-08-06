@@ -46,4 +46,7 @@ console.log(`  globalId: ${r.mission.globalId}`);
 console.log(`  spotlight: ${r.mission.spotlight?.techId}`);
 console.log(`  briefMd: ${r.mission.briefMd.length} chars`);
 console.log(`  placement: ${r.tile.placement?.mode}`);
+if (r.mission.resources) {
+  console.log(`  resources: ${JSON.stringify(r.mission.resources)}`);
+}
 process.exit(0);

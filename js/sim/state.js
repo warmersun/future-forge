@@ -109,6 +109,9 @@ export function cloneMission(m) {
     suggested: [...(m.suggested || [])],
     briefMd: m.briefMd ? String(m.briefMd) : "",
     spotlight: m.spotlight && typeof m.spotlight === "object" ? { ...m.spotlight } : null,
+    ...(m.resources && typeof m.resources === "object"
+      ? { resources: { ...m.resources } }
+      : {}),
   };
 }
 

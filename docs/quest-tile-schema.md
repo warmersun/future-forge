@@ -33,7 +33,38 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`.
+Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`.
+
+### Optional `resources` (starting player resources)
+
+Override solo (and multiplayer invent) starting resources for this Quest only. Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
+
+| Field | Notes |
+|-------|--------|
+| `apMax` | Action points per turn (integer ≥ 0) |
+| `startingBudget` | Starting budget (integer ≥ 0) |
+| `startingWill` | Starting political will / goodwill (integer ≥ 0) |
+
+All three fields are optional. Only present keys override. Negative values, non-numbers, and non-integers are rejected by validation.
+
+```json
+"resources": {
+  "apMax": 4,
+  "startingBudget": 8,
+  "startingWill": 5
+}
+```
+
+Partial example (easier budget/will, default AP):
+
+```json
+"resources": {
+  "startingBudget": 9,
+  "startingWill": 5
+}
+```
+
+When any value differs from the global default, selection UI (theme pick, daily/focus, External list, import library, multiplayer mission pick) shows a **Start · …** chip so learners see the adjusted start before they play.
 
 ## Markdown subset (rendered in-game)
 
