@@ -7450,16 +7450,29 @@ button.linkish:hover {
   font-size: 0.9rem;
 }
 
+/* Invent banner Spotlight chip — warm “lit” pill (glow + deep amber), not solid gold.
+   Higher specificity so .challenge-banner p { color: var(--text-dim) } cannot wash the label out.
+   Cream text on dark amber keeps contrast; outer glow sells the spotlight without glare. */
+.challenge-banner .ws-spotlight-chip,
 .ws-spotlight-chip {
   display: inline-block;
-  margin: 0.35rem 0 0.15rem;
-  padding: 0.2rem 0.65rem;
+  margin: 0.4rem 0 0.2rem;
+  padding: 0.3rem 0.85rem;
   border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  color: #0b0a14;
-  background: linear-gradient(120deg, #ffd28a, #ff9f43);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff4df;
+  background:
+    radial-gradient(120% 140% at 20% 0%, rgba(255, 220, 150, 0.35), transparent 55%),
+    linear-gradient(145deg, rgba(92, 58, 18, 0.95), rgba(42, 28, 10, 0.98));
+  border: 1px solid rgba(255, 196, 110, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 170, 70, 0.12),
+    0 0 16px rgba(255, 170, 60, 0.32),
+    0 0 32px rgba(255, 140, 40, 0.14),
+    inset 0 1px 0 rgba(255, 236, 190, 0.28);
+  text-shadow: 0 0 14px rgba(255, 200, 110, 0.4);
 }
 .ws-spotlight-encourage {
   margin: 0.25rem 0 0.5rem;
