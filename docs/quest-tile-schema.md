@@ -1,6 +1,11 @@
 # Quest tile schema (`future-forge.quest-tile/v1`)
 
-Portable **Spotlight Quest** files for Future Forge. Learners import JSON or drop files in the server `quests/` folder; the game surfaces them under **Play a Quest** (Sponsored / Learning / Library).
+Portable **Spotlight Quest** files for Future Forge.
+
+| Channel | How tiles get in |
+|---------|------------------|
+| **Sponsored / Learning** | Official catalog on **warmersun.com** (`/future-forge/quests/catalog.json`); game server downloads them |
+| **Library** | Local game `quests/` folder or browser **Import Quest…** |
 
 ## Pedagogy
 

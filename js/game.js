@@ -268,9 +268,15 @@ const state = {
   playMode: null,
   /** True only while a Play-tutorial mission is active */
   tutorialRun: false,
-  /** @type {object[]} Quests loaded from server `quests/` folder via GET /api/quests */
+  /** @type {object[]} Merged quests from GET /api/quests (compat) */
   hostedQuests: [],
+  /** @type {object[]} Local `quests/` folder — Library side-load */
+  localHostedQuests: [],
+  /** @type {object[]} Remote warmersun catalog — Sponsored / Learning */
+  remoteQuests: [],
   hostedQuestsDir: "",
+  remoteQuestsUrl: null,
+  remoteQuestsOk: true,
   hostedQuestsLoaded: false,
   year: GAME.startYear,
   turn: 0,
@@ -2736,7 +2742,7 @@ function renderTitleMeta() {
 }
 
 /**
- * Load Quests from the server's designated `quests/` folder.
+ * Load quests: local folder (Library) + remote warmersun catalog (Sponsored/Learning).
  * @param {{ silent?: boolean }} [opts]
  */
 async function refreshHostedQuests(opts = {}) {
@@ -2744,18 +2750,37 @@ async function refreshHostedQuests(opts = {}) {
     const res = await fetch("/api/quests");
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
-      if (!opts.silent) flashToast("Could not load server Quests folder.");
+      if (!opts.silent) flashToast("Could not load Quests catalog.");
       state.hostedQuests = [];
+      state.localHostedQuests = [];
+      state.remoteQuests = [];
+      state.remoteQuestsOk = false;
       state.hostedQuestsLoaded = true;
       return [];
     }
-    state.hostedQuests = Array.isArray(data.quests) ? data.quests : [];
+    const local = Array.isArray(data.local)
+      ? data.local
+      : Array.isArray(data.quests)
+        ? data.quests.filter((q) => q?.mission?.source !== "remote" && q?.source !== "remote")
+        : [];
+    const remote = Array.isArray(data.remote) ? data.remote : [];
+    state.localHostedQuests = local;
+    state.remoteQuests = remote;
+    state.hostedQuests = Array.isArray(data.quests) ? data.quests : [...local, ...remote];
     state.hostedQuestsDir = String(data.dir || "quests");
+    state.remoteQuestsUrl = data.remoteUrl ?? null;
+    state.remoteQuestsOk = data.remoteOk !== false;
     state.hostedQuestsLoaded = true;
+    if (!opts.silent && data.remoteUrl && data.remoteOk === false) {
+      flashToast("Could not reach Warmer Sun quest catalog — Sponsored/Learning may be empty.");
+    }
     return state.hostedQuests;
   } catch {
     if (!opts.silent) flashToast("Could not reach /api/quests.");
     state.hostedQuests = [];
+    state.localHostedQuests = [];
+    state.remoteQuests = [];
+    state.remoteQuestsOk = false;
     state.hostedQuestsLoaded = true;
     return [];
   }
@@ -2773,47 +2798,76 @@ function isSponsoredMission(m) {
 }
 
 /**
- * Unified catalog entries from server folder + browser import library.
- * Hosted wins when ids collide.
- * @returns {object[]}
+ * Normalize a catalog API entry into a hub entry.
+ * @param {object} e
+ * @param {"remote"|"hosted"|"imported"} source
+ * @param {{ canRemove?: boolean }} [opts]
  */
-function collectCatalogEntries() {
-  const out = [];
-  const seen = new Set();
+function catalogEntryFromApi(e, source, opts = {}) {
+  if (!e?.mission) return null;
+  const id = String(e.id || e.mission.id || "");
+  if (!id) return null;
+  const globalId = e.globalId || e.mission.globalId;
+  const mission = normalizeMission(
+    { ...e.mission, source: source || e.mission.source || "hosted" },
+    globalId
+  );
+  return {
+    id,
+    source: source || mission.source,
+    mission,
+    title: e.title || mission.title || "Quest",
+    place: e.place || mission.place || "",
+    globalId: mission.globalId || globalId,
+    summary: e.summary || "",
+    spotlightTechId: e.spotlightTechId || mission.spotlight?.techId || null,
+    canRemove: Boolean(opts.canRemove),
+  };
+}
 
-  for (const e of state.hostedQuests || []) {
-    if (!e?.mission) continue;
-    const id = String(e.id || e.mission.id || "");
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    const globalId = e.globalId || e.mission.globalId;
-    const mission = normalizeMission(
-      { ...e.mission, source: "hosted" },
-      globalId
-    );
-    out.push({
-      id,
-      source: "hosted",
-      mission,
-      title: e.title || mission.title || "Quest",
-      place: e.place || mission.place || "",
-      globalId: mission.globalId || globalId,
-      summary: e.summary || "",
-      spotlightTechId: e.spotlightTechId || mission.spotlight?.techId || null,
-      canRemove: false,
-    });
+/**
+ * Build hub entries.
+ * Official Sponsored/Learning come from remote; Library from local folder + import.
+ * @returns {{
+ *   remote: object[],
+ *   local: object[],
+ *   imported: object[],
+ * }}
+ */
+function collectCatalogBuckets() {
+  /** @type {object[]} */
+  const remote = [];
+  /** @type {object[]} */
+  const local = [];
+  /** @type {object[]} */
+  const imported = [];
+  const seenRemote = new Set();
+  const seenLocal = new Set();
+
+  for (const e of state.remoteQuests || []) {
+    const entry = catalogEntryFromApi(e, "remote");
+    if (!entry || seenRemote.has(entry.id)) continue;
+    seenRemote.add(entry.id);
+    remote.push(entry);
+  }
+
+  for (const e of state.localHostedQuests || []) {
+    const entry = catalogEntryFromApi(e, "hosted");
+    if (!entry || seenLocal.has(entry.id)) continue;
+    seenLocal.add(entry.id);
+    local.push(entry);
   }
 
   for (const e of loadQuestLibrary()) {
     if (!e?.mission) continue;
     const id = String(e.id || e.mission.id || "");
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
+    if (!id || seenLocal.has(id)) continue;
+    seenLocal.add(id);
     const mission = normalizeMission(
       { ...e.mission, source: "imported" },
       e.mission.globalId
     );
-    out.push({
+    imported.push({
       id,
       source: "imported",
       mission,
@@ -2825,19 +2879,21 @@ function collectCatalogEntries() {
       canRemove: true,
     });
   }
-  return out;
+
+  return { remote, local, imported };
 }
 
 /**
+ * Official channels = remote only. Library = local folder + browser import only.
  * @returns {{ all: object[], sponsored: object[], learning: object[], library: object[] }}
  */
 function partitionCatalogQuests() {
-  const all = collectCatalogEntries();
-  const sponsored = all.filter((e) => isSponsoredMission(e.mission));
-  const learning = all.filter((e) => isLearningMission(e.mission));
-  const library = all.filter(
-    (e) => !isSponsoredMission(e.mission) && !isLearningMission(e.mission)
-  );
+  const { remote, local, imported } = collectCatalogBuckets();
+  const sponsored = remote.filter((e) => isSponsoredMission(e.mission));
+  const learning = remote.filter((e) => isLearningMission(e.mission));
+  // Library: every local/import tile (including side-loaded sponsored/learning for classroom)
+  const library = [...local, ...imported];
+  const all = [...remote, ...library];
   return { all, sponsored, learning, library };
 }
 
@@ -3010,7 +3066,7 @@ function renderQuestHub() {
       id: "library",
       title: "Library",
       blurb:
-        "Other side-loaded Quests from the server folder or Import — not learning, not sponsored.",
+        "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs).",
       meta: library.length
         ? `${library.length} Quest${library.length === 1 ? "" : "s"}`
         : "Import or drop JSON in quests/",
@@ -3291,7 +3347,7 @@ function renderQuestCatalog() {
     if (titleEl) titleEl.textContent = "Sponsored Quests";
     if (blurbEl) {
       blurbEl.textContent =
-        "Grouped by spotlight technology. Attribution only — invent a local application.";
+        "From warmersun.com — grouped by spotlight technology. Attribution only; invent a local application.";
     }
     entries = parts.sponsored;
     groupBy = "emTech";
@@ -3299,7 +3355,7 @@ function renderQuestCatalog() {
     if (titleEl) titleEl.textContent = "Library";
     if (blurbEl) {
       blurbEl.textContent =
-        "Side-loaded Quests grouped by theme. Drop JSON into quests/ or Import.";
+        "Local side-load only (quests/ folder or Import), grouped by theme.";
     }
     entries = parts.library;
     groupBy = "theme";
@@ -3320,7 +3376,7 @@ function renderQuestCatalog() {
       if (titleEl) titleEl.textContent = "Learning modules";
       if (blurbEl) {
         blurbEl.textContent =
-          "Curriculum paths with tutor-mode co-inventor. Open a module, then a lesson.";
+          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson.";
       }
       const groups = groupLearningModules(parts.learning);
       if (!groups.length) {
@@ -3722,9 +3778,11 @@ function normalizeMission(raw, globalId) {
         ? "imported"
         : raw.source === "hosted"
           ? "hosted"
-          : raw.source === "daily"
-            ? "daily"
-            : "generated";
+          : raw.source === "remote"
+            ? "remote"
+            : raw.source === "daily"
+              ? "daily"
+              : "generated";
 
   const resourcesParsed = parseResourceOverrides(raw.resources);
   const resources =
@@ -3765,7 +3823,9 @@ function normalizeMission(raw, globalId) {
     winMax,
     scene: String(raw.scene || "").slice(
       0,
-      source === "imported" || source === "hosted" ? 500 : SCENE_CHAR_CAP
+      source === "imported" || source === "hosted" || source === "remote"
+        ? 500
+        : SCENE_CHAR_CAP
     ),
     briefMd,
     stakeholder: String(raw.stakeholder || "").slice(0, 120),

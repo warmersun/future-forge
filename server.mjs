@@ -35,12 +35,17 @@ import {
   normalizeSessionId,
 } from "./js/usage-metrics.mjs";
 import { scanQuestsFolder, resolveQuestsDir, ensureQuestsDir } from "./js/quests-folder.mjs";
+import {
+  fetchRemoteQuestCatalog,
+  resolveQuestsRemoteUrl,
+} from "./js/quests-remote.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "./js/scene-prose.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
+const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
 const GROK_HOME = process.env.GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
@@ -2485,22 +2490,42 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // —— External Quest tiles from designated folder (re-scan each request) ——
+  // —— Quest tiles: local folder (Library) + remote catalog (Sponsored/Learning) ——
   if (req.method === "GET" && (req.url === "/api/quests" || req.url?.startsWith("/api/quests?"))) {
     try {
-      const scanned = await scanQuestsFolder(QUESTS_DIR);
+      const forceRemote =
+        typeof req.url === "string" && /[?&]refresh=1(?:&|$)/.test(req.url);
+      const [scanned, remote] = await Promise.all([
+        scanQuestsFolder(QUESTS_DIR),
+        fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: forceRemote }),
+      ]);
+      const local = scanned.quests || [];
+      const remoteQuests = remote.quests || [];
+      // Merge for backward compat: remote wins on id
+      const byId = new Map();
+      for (const q of local) byId.set(q.id, q);
+      for (const q of remoteQuests) byId.set(q.id, q);
+      const quests = [...byId.values()];
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
-        count: scanned.quests.length,
-        quests: scanned.quests,
-        errors: scanned.errors,
+        remoteUrl: remote.url,
+        remoteOk: remote.ok,
+        remoteCached: remote.cached,
+        local,
+        remote: remoteQuests,
+        count: quests.length,
+        quests,
+        errors: [...(scanned.errors || []), ...(remote.errors || [])],
       });
     } catch (e) {
       return sendJson(res, 500, {
         ok: false,
         error: e.message || "quests_scan_failed",
         dir: QUESTS_DIR,
+        remoteUrl: QUESTS_REMOTE_URL,
+        local: [],
+        remote: [],
         quests: [],
       });
     }
@@ -2785,16 +2810,40 @@ server.listen(PORT, HOST, async () => {
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR);
     console.log(
-      `External Quests: ${scanned.quests.length} tile(s) in ${scanned.dir} (GET /api/quests)`
+      `Local Quests (Library): ${scanned.quests.length} tile(s) in ${scanned.dir}`
     );
     if (scanned.errors.length) {
       console.warn(
-        `  ${scanned.errors.length} file(s) skipped:`,
+        `  ${scanned.errors.length} local file(s) skipped:`,
         scanned.errors.map((e) => `${e.file} (${e.error})`).join(", ")
       );
     }
   } catch (e) {
-    console.warn(`External Quests: scan failed for ${QUESTS_DIR}:`, e.message || e);
+    console.warn(`Local Quests: scan failed for ${QUESTS_DIR}:`, e.message || e);
+  }
+  if (QUESTS_REMOTE_URL) {
+    console.log(`Remote Quests catalog: ${QUESTS_REMOTE_URL}`);
+    try {
+      const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);
+      console.log(
+        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
+        }`
+      );
+      if (remote.errors.length) {
+        console.warn(
+          `  ${remote.errors.length} remote issue(s):`,
+          remote.errors
+            .slice(0, 5)
+            .map((e) => `${e.file} (${e.error})`)
+            .join(", ")
+        );
+      }
+    } catch (e) {
+      console.warn(`  Remote catalog failed:`, e.message || e);
+    }
+  } else {
+    console.log("Remote Quests catalog: OFF (QUESTS_REMOTE_URL empty/off)");
   }
   const urls = lanJoinUrls();
   if (urls.length) {

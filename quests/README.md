@@ -1,31 +1,45 @@
-# Server Quest folder
+# Local Quest folder (Library)
 
-Drop Future Forge **Quest tile** JSON files here. When the game server starts (and on each `GET /api/quests`), it scans this directory.
+Drop Future Forge **Quest tile** JSON files here for the in-game **Library** (side-loaded Quests).
 
-## How to use
+Official **Sponsored** and **Learning** tiles are **not** served from this folder. They download from Warmer Sun:
+
+`https://warmersun.com/future-forge/quests/catalog.json`
+
+Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish with the marketing site).
+
+## How to use (Library / classroom side-load)
 
 1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest`).
-2. Copy the `.json` into this folder (or set `QUESTS_DIR` to another path).
-3. Start the server: `npm start`
-4. Open the game → **Play a Quest** — tiles appear under the matching hub path:
-   - **Sponsored** — has `sponsorName`
-   - **Learning** — `isLearningModule` / module·lesson fields (grouped by module)
-   - **Library** — other side-loaded tiles (not learning, not sponsored)
-   - **Themes** is separate: generate up to 4 local Quests per problem theme
+2. Validate: `npm run validate:quest -- path.json`
+3. Copy into this folder (or set `QUESTS_DIR`).
+4. Start the server: `npm start` — Library lists local tiles; Import still works in the hub.
 
-## Rules
+## Official sponsored / learning
+
+1. Put the validated JSON in the warmersun repo under `future-forge/quests/`.
+2. Add `{ "id", "file" }` to `catalog.json`.
+3. Publish warmersun.com.
+4. Future Forge server fetches the catalog (override with `QUESTS_REMOTE_URL`).
+
+| Env | Effect |
+|-----|--------|
+| `QUESTS_REMOTE_URL` unset | Local `~/dev/warmersun/.../catalog.json` if present, else warmersun.com, else here.now CDN fallback |
+| `QUESTS_REMOTE_URL=off` | Disable remote (Sponsored/Learning empty) |
+| `QUESTS_REMOTE_URL=/path/to/catalog.json` | Local path (dev/offline) |
+| `QUESTS_REMOTE_URL=https://…/catalog.json` | Explicit remote catalog |
+| `QUESTS_DIR` | Override this local Library folder |
+
+**CDN note:** Full warmersun.com republish can fail on large trees; an interim permanent catalog lives at `https://russet-waffle-sx4j.here.now/catalog.json` (same tiles). Prefer publishing `future-forge/quests/` onto warmersun.com when the full-site publish pipeline can handle it.
+
+## Rules (local folder)
 
 - Only `*.json` files in **this folder** (not subfolders).
 - Must pass `npm run validate:quest -- path.json`.
-- Invalid files are skipped (logged in `/api/quests` as errors); they do not crash the server.
-- **Crisis meters** use structured `mission.pressure` with optional roles `local`, `global`, `support` (each `{ label, pressure, pressureRise, winMax }`). Omit a role to hide that HUD meter. See `docs/quest-tile-schema.md`.
+- Invalid files are skipped (logged in `/api/quests` as errors).
+- **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`.
 
-## Example
+## Sample library tiles
 
-`spotlight-gene-seq.json` is a sample Spotlight Quest (gene sequencing).
-
-## Override path
-
-```bash
-QUESTS_DIR=/path/to/my-quests npm start
-```
+- `spotlight-gene-seq.json` — Spotlight gene sequencing
+- `spotlight-ai-edge-north-stack-2026.json` — AI edge sample (not sponsored)
