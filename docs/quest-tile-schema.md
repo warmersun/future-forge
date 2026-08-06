@@ -44,7 +44,7 @@ For sponsored Quests. **Text only** — no images. Does not change scoring, feas
 | `sponsorName` | string | Organization or product line shown as “Sponsored by …” |
 | `sponsorBanner` | string | Optional short **tagline** under the label (plain text, not a URL/image) |
 
-Sponsors should put technology capability, milestone, and use-case facts in **`grounding`** (AI source of truth). Players must still invent a local solution; **simply naming a sponsored product is not a valid solution**.
+Sponsors should put capability truth in **`grounding`** along the chain (product category, milestones, unlocks → applications). A named product may evidence a **product-category milestone**; unlocks stay category-level. Players must still invent a local **application**; **simply naming a sponsored product is not a valid solution**.
 
 ```json
 "sponsorName": "Acme Robotics",
@@ -86,19 +86,33 @@ When `isLearningModule` is absent or false, Co-Inventor stays in normal inventio
 
 ### Optional `grounding` (AI source of truth)
 
-Free-text (Markdown OK) that supplies **authoritative context** for this Quest. When present, Future Forge passes it to AI paths that need capability truth — **co-inventor** (chat, spark, stack, drafts, art-of-the-possible, SIT/SCAMPER, fill other side), **claim-timing assess**, and **challenge pose / coach / draft / judge** — which should treat it as source-of-truth for capabilities, milestones, and unlocked use cases.
+Free-text (Markdown OK) that supplies **authoritative context** for this Quest. When present, Future Forge passes it to AI paths that need capability truth — **co-inventor** (chat, spark, stack, drafts, art-of-the-possible, SIT/SCAMPER, fill other side), **claim-timing assess**, and **challenge pose / coach / draft / judge** — which should treat it as source-of-truth along the grounding chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → inventable applications).
 
 - Optional — omit for unchanged AI behavior.
 - Type: string. Non-strings are rejected by validation.
 - No product length limit (a large safety ceiling may still apply in code).
+- **Guidance only — not schema-enforced.** Full authoring guide: `skills/future-forge-quest/references/grounding-template.md`.
 
-Recommended lightweight structure (guidance only — not schema-enforced):
+Causal chain:
+
+```
+emTech → product category → capabilities → trends → predictions
+  → milestones → use cases → applications
+```
+
+emTech alone is usually too broad; scope unlocks and applications to a **product category** the emTech enables. Learner invent = **apply** those use cases in the fictive place.
+
+Recommended structure (omit thin sections; may merge Trends+Predictions or Unlocks+Applications):
 
 ```markdown
 ## Technology
-…
+- **emTech:** …
+- **Product category:** …
 
 ## Capabilities
+…
+
+## Trends & predictions
 …
 
 ## Milestone
@@ -106,12 +120,18 @@ Recommended lightweight structure (guidance only — not schema-enforced):
 
 ## Unlocks Use Case(s)
 …
+
+## Applications
+…
+
+## Honest limits
+…
 ```
 
 Example:
 
 ```json
-"grounding": "## Technology\nGene sequencing (clinic / portable)\n\n## Capabilities\nSame-shift provisional pathogen reads on rugged desktop sequencers when workflow, power, and trained staff exist.\n\n## Milestone\nField and clinic sequencing cost/time improvements (~2024–2026) make on-site reads realistic for small posts.\n\n## Unlocks Use Case(s)\nLocal sample-to-read workflows; triage and isolation decisions without waiting on a capital lab truck."
+"grounding": "## Technology\n- **emTech:** gene-sequencing\n- **Product category:** Portable / clinic-rugged same-shift pathogen sequencers\n\n## Capabilities\nSame-shift provisional pathogen reads on rugged desktop sequencers when workflow, power, and trained staff exist.\n\n## Trends & predictions\nTime-to-read and ruggedness improve; reagent cost falls. Forecast (not lock): same-shift reads become more routine at small posts through the late 2020s where power and training hold.\n\n## Milestone\nField and clinic sequencing cost/time improvements (~2024–2026) make on-site reads realistic for small posts.\n\n## Unlocks Use Case(s)\nLocal sample-to-read workflows; triage and isolation decisions without waiting on a capital lab truck.\n\n## Applications\nClinic sample-to-isolation protocols; shift-handoff pathogen boards — invent the local system.\n\n## Honest limits\nPower and cold chain after dusk; thin staffing; pilot language only for 2026."
 ```
 
 May sit at tile top level or under `mission`; both are accepted. Copied onto the runtime mission as `mission.grounding`.

@@ -13,7 +13,7 @@ It does **not** relicense the Future Forge game engine. Only this skill tree (an
 | **Core spotlight** | One tech, fictive place, design-challenge prose |
 | **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus) |
 | **Resources** | Optional starting AP / Budget / Will |
-| **Grounding** | Markdown AI source-of-truth (capabilities, milestones, unlocks) |
+| **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
 | **Learning modules** | Tutor mode, hidden `aiTutorContext`, progress `Module X Lesson Y/Z` |
 | **Multi-lesson sets** | Multiple JSON files with shared module/totalLessons (display-only; no engine unlock yet) |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |
@@ -24,6 +24,7 @@ All optional features may be **combined** on one tile (see `examples/spotlight-s
 |-----|---------|
 | **`SKILL.md`** | Procedure + hard rules |
 | **`references/schema.md`** | Full field reference |
+| **`references/grounding-template.md`** | Capability SoT chain (authoring guidance) |
 | **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson, sponsor recipes |
 | **`references/output-contract.md`** | Skeleton + recipes A–D |
 | **`references/scene-prose.md`** | Player-facing lede craft |
@@ -36,7 +37,7 @@ Works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” wo
 
 1. Follow **`SKILL.md`**.
 2. Read **`references/scene-prose.md`** before drafting scene / place.
-3. Read **`references/schema.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
+3. Read **`references/schema.md`** and **`grounding-template.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
 4. Write the JSON; **omit** unused optional keys.
 5. Validate:
 

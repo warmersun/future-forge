@@ -2,7 +2,7 @@
 
 1. Write UTF-8 JSON (pretty-printed OK).
 2. Prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
-3. Schema: `references/schema.md`. Learning/sponsor recipes: `references/learning-and-sponsor.md`.
+3. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
 4. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 5. Run `npm run validate:quest -- <file>` until `OK:`.
 6. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
@@ -40,7 +40,7 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
     "showToPlayer": false
   },
   "globalId": "<themeId>",
-  "grounding": "## Technology\n…\n\n## Capabilities\n…\n\n## Milestone\n…\n\n## Unlocks Use Case(s)\n…\n\n## Honest limits\n…",
+  "grounding": "## Technology\n- **emTech:** …\n- **Product category:** …\n\n## Capabilities\n…\n\n## Trends & predictions\n…\n\n## Milestone\n…\n\n## Unlocks Use Case(s)\n…\n\n## Applications\n…\n\n## Honest limits\n…",
   "mission": {
     "id": "spotlight-<tech>-<place-slug>-2026",
     "globalId": "<themeId>",
@@ -107,7 +107,7 @@ Add:
 "aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) …\n2) …\n3) …\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player."
 ```
 
-Keep `grounding` for capability truth. UI: invent opens on Co-Inventor; **Learn · Module 1 Lesson 1/3**.
+Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Module 1 Lesson 1/3**.
 
 **Multi-lesson set:** N files, same `module` + `totalLessons`, `lesson` = 1…N, unique `id`s. No engine unlock — host orders files.
 
@@ -122,7 +122,7 @@ Add:
 "sponsorBanner": "Open edge kit — invent the local application"
 ```
 
-**Always** pair with strong `grounding`. Player text must not require naming the product. UI: **Sponsored · Acme Robotics**.
+**Always** pair with strong `grounding` (chain; product may evidence Milestone). Player text must not require naming the product. UI: **Sponsored · Acme Robotics**.
 
 ---
 

@@ -91,19 +91,37 @@ Selection UI shows **Start · …** when values differ from defaults. Tile top-l
 
 Free-text / Markdown for **authoritative capability context**. When present, Future Forge injects it into co-inventor, claim-timing assess, challenge pose/coach/judge, art-of-the-possible, etc. Prefer over generic model assumptions.
 
-Recommended structure (not schema-enforced):
+**Guidance only — not schema-enforced.** Full writing guide: **`grounding-template.md`**.
+
+Causal chain (meaning, not required field order):
+
+```
+emTech → product category → capabilities → trends → predictions
+  → milestones → use cases → applications
+```
+
+emTech alone is usually too broad; **product category** is the focus unit. Unlocks and applications sit under that category. Learner invent = **apply** those use cases locally.
+
+Recommended structure (omit thin sections; may merge Trends+Predictions or Unlocks+Applications):
 
 ```markdown
 ## Technology
-…
+- **emTech:** …
+- **Product category:** …
 
 ## Capabilities
+…
+
+## Trends & predictions
 …
 
 ## Milestone
 …
 
 ## Unlocks Use Case(s)
+…
+
+## Applications
 …
 
 ## Honest limits
@@ -113,6 +131,7 @@ Recommended structure (not schema-enforced):
 - Type: string. Non-strings rejected.
 - Tile top-level or under `mission`.
 - Soft safety ceiling ~50k chars.
+- Sponsors may name a product under Milestone as category evidence; invent still targets category-level applications (see `learning-and-sponsor.md`).
 
 ## Optional learning module + AI tutor mode
 
@@ -130,7 +149,7 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 
 - One idea at a time; short explanations; check understanding.
 - Scaffold inventing; do not dump full solutions.
-- Use `aiTutorContext` as hidden teaching plan; use `grounding` for capability truth.
+- Use `aiTutorContext` as hidden teaching plan; use `grounding` for capability truth (product-category chain; see `grounding-template.md`).
 - No full module unlock/sequencing yet — progress is display-only.
 
 ```json
@@ -149,8 +168,8 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 | `sponsorBanner` | string | Plain-text **tagline** only — **not** an image URL |
 
 - Display-only: no scoring, feasibility, or AI behavior change.
-- Put tech capability / milestone / use cases in **`grounding`**.
-- Players must invent; **naming a sponsored product is not a valid solution**.
+- Put capability truth in **`grounding`** (product category chain; product may evidence Milestone).
+- Players invent an **application** of unlocked use cases; **naming a sponsored product is not a valid solution**.
 
 ```json
 "sponsorName": "Moonshot.ai",

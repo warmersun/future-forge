@@ -38,6 +38,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 | Doc | Purpose |
 |-----|---------|
 | **`references/schema.md`** | Full field reference |
+| **`references/grounding-template.md`** | Capability SoT chain (emTech → product category → … → applications) |
 | **`references/learning-and-sponsor.md`** | Tutor + sponsor recipes, multi-lesson sets |
 | **`references/output-contract.md`** | Skeleton + omit rules + recipes |
 | **`references/scene-prose.md`** | Player-facing lede craft |
@@ -63,7 +64,7 @@ All of these may appear on **one** tile:
 | Feature | Fields | When to use |
 |---------|--------|-------------|
 | **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Classroom pacing |
-| **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — tech, capabilities, milestone, unlocks, honest limits |
+| **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
 
@@ -82,7 +83,11 @@ Details and templates: **`references/learning-and-sponsor.md`**.
 - What changed? Near-term honest use? Constraints?
 - `research.sources`: `https` only; no invented stats.
 - Fill `spotlight.advanceTitle`, `advanceSummary`, `asOf`.
-- Draft **`grounding`** (technology / capabilities / milestone / unlocks / limits).
+- Draft **`grounding`** per **`references/grounding-template.md`**:
+  - emTech **enables** a **product category** (not bare tray id alone)
+  - capabilities → **trends** → **predictions**
+  - **milestone** unlocks **use cases** → **applications** the learner will invent
+  - honest limits; sponsor product only as milestone evidence when sponsored
 
 ### 3. Invent the fictive Quest
 
@@ -115,7 +120,7 @@ Follow **`references/learning-and-sponsor.md`**.
 Follow **`references/learning-and-sponsor.md`**.
 
 - `sponsorName` + optional text `sponsorBanner` (tagline, not image).
-- Strong **`grounding`** required in practice.
+- Strong **`grounding`** required in practice (product category chain; product may appear under Milestone).
 - Scene/brief stay open invent invitations — not “use Product X”.
 
 ### 7. Emit JSON + validate
@@ -142,9 +147,11 @@ npm run validate:quest -- <file>
 - [ ] Scene craft ≤500; place story craft  
 - [ ] Open invent tension — no prescribed solution  
 - [ ] `grounding` present for AI consistency (recommended always)  
+- [ ] Grounding follows chain at **product-category** grain (not bare emTech unlocks)  
+- [ ] Invent framed as **application** of unlocked use cases; open tension  
 - [ ] Unused optionals **omitted** (not empty strings)  
 - [ ] Learning: solid `aiTutorContext`; progress integers ≥ 1; no fake unlocks  
-- [ ] Sponsor: text-only; invent still required; capability in `grounding`  
+- [ ] Sponsor: text-only; invent still required; capability chain in `grounding`  
 - [ ] Combinations validated if used together  
 - [ ] `npm run validate:quest` → `OK:`  
 

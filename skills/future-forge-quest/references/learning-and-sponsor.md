@@ -20,7 +20,7 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 | `module` | Recommended | Integer ≥ 1 — UI: **Module N** |
 | `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y** |
 | `totalLessons` | Recommended with `lesson` | Shared across all lessons in the set |
-| `grounding` | Strongly recommended | Capability truth (milestones, limits) — separate from pedagogy |
+| `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md` |
 
 Progress chip format: **`Module 1 Lesson 1/3`** (module first). Selection: **Learn · Module 1 Lesson 1/3**.
 
@@ -33,8 +33,8 @@ LESSON GOAL: <one sentence — what the learner should invent/understand>
 
 SEQUENCE (one idea at a time; do not dump all at once):
 1) <constraint / situation first>
-2) <capability / tech honesty>
-3) <local invent move>
+2) <product category capability honesty (not whole emTech)>
+3) <map unlocked use case → local application category>
 4) <scope / pilot limits>
 
 MISCONCEPTIONS TO CATCH:
@@ -84,14 +84,15 @@ Multiplayer / hotseat do **not** switch to tutor mode.
 |-------|--------|
 | `sponsorName` | Display: **Sponsored by {name}** / chip **Sponsored · {name}** |
 | `sponsorBanner` | **Plain text tagline** under the label — **not** an image URL |
-| `grounding` | **Required in practice** — technology, capabilities, milestone, unlocks, honest limits |
+| `grounding` | **Required in practice** — full chain at **product-category** grain (`grounding-template.md`) |
 
 ### Hard copy rules
 
-1. Player-facing invent invitation stays **open** — invite the **capability class**, not “use Product X”.
+1. Player-facing invent invitation stays **open** — invite **application categories** unlocked by the product-category milestone, not “use Product X”.
 2. Naming a brand/product is **not** a valid solution; invent must be local, pilot-honest.
 3. Capability claims live in **`grounding`** (and research), not only in the sponsor banner.
-4. Attribution is **display-only** — no scoring bonus, no forced tech tray, no AI “sell mode”.
+4. Under **Milestone**, the sponsor product may appear as the **instance** that hit the category threshold; **Unlocks / Applications** stay category-level.
+5. Attribution is **display-only** — no scoring bonus, no forced tech tray, no AI “sell mode”.
 
 ### Sponsor + learning module (recommended showcase pattern)
 
@@ -124,5 +125,6 @@ Example in monorepo: `quests/kimi-k3.json`. Portable skill example: `examples/sp
 - Empty strings for unused optionals (`"sponsorName": ""`) — **omit the keys**  
 - Learning module without `aiTutorContext` (tutor has nothing to teach)  
 - Sponsor without `grounding` (AI has no capability SoT)  
+- Bare-emTech unlocks (“AI unlocks education”) instead of product-category grain  
 - Product theater in scene/brief (“only Brand Y works”)  
 - Claiming lesson unlocks that the game does not enforce  
