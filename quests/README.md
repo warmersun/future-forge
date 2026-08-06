@@ -14,6 +14,7 @@ Drop Future Forge **Quest tile** JSON files here. When the game server starts (a
 - Only `*.json` files in **this folder** (not subfolders).
 - Must pass `npm run validate:quest -- path.json`.
 - Invalid files are skipped (logged in `/api/quests` as errors); they do not crash the server.
+- **Crisis meters** use structured `mission.pressure` with optional roles `local`, `global`, `support` (each `{ label, pressure, pressureRise, winMax }`). Omit a role to hide that HUD meter. See `docs/quest-tile-schema.md`.
 
 ## Example
 

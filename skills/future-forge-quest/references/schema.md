@@ -15,3 +15,17 @@ Required highlights:
 - `placement.mode` — default `replace-daily`
 
 Validate: `npm run validate:quest -- path.json`
+
+## Crisis meters (`mission.pressure`) — structured (required)
+
+```json
+"pressure": {
+  "local":   { "label": "Outbreak", "pressure": 2, "pressureRise": 1, "winMax": 1 },
+  "global":  { "label": "Capacity", "pressure": 3, "pressureRise": 1, "winMax": 1 },
+  "support": { "label": "Fear",     "pressure": 1, "pressureRise": 1, "winMax": 1 }
+}
+```
+
+- Keys: only `local`, `global`, `support` (omit any role to hide that meter).
+- Each entry: `label` (HUD name), `pressure` 0–5, `pressureRise` 0–3, `winMax` 0–5.
+- Do **not** use flat maps or separate top-level `pressureRise` / `winMax`.

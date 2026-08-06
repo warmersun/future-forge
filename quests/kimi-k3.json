@@ -25,7 +25,7 @@
   "spotlight": {
     "techId": "ai",
     "advanceTitle": "Open 3T-class AI weights for long-horizon work",
-    "advanceSummary": "Open near-frontier weights: sparse multi-trillion MoE, long context, multi-day coding agents \u2014 hostable if you have the cluster.",
+    "advanceSummary": "Open near-frontier weights: sparse multi-trillion MoE, long context, multi-day coding agents — hostable if you have the cluster.",
     "asOf": "2026-07",
     "encourageCopy": "Invent with AI. Long-horizon + local control is the point."
   },
@@ -54,22 +54,27 @@
     "collapseYear": 2032,
     "yearsPerTurn": 2,
     "pressure": {
-      "Skills gap": 3,
-      "Outmigration": 2,
-      "Trust": 2
+      "local": {
+        "label": "Skills gap",
+        "pressure": 3,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "global": {
+        "label": "Outmigration",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "support": {
+        "label": "Trust",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      }
     },
-    "pressureRise": {
-      "Skills gap": 1,
-      "Outmigration": 1,
-      "Trust": 1
-    },
-    "winMax": {
-      "Skills gap": 1,
-      "Outmigration": 1,
-      "Trust": 1
-    },
-    "scene": "Dry-dock cranes tick past the lab windows while apprentices wait on firmware they cannot send to a cloud chatbot \u2014 the yard's IP rules are absolute, and the curriculum is three seasons behind the ships.",
-    "briefMd": "## The place\n\n**Tideworks Polytechnic** (fictive port-city college). Yard partners opened a sealed lab corridor: real PLCs, redacted firmware trees, procedure PDFs, safety video. Graduates who can modernize this stack get jobs; toy-kit grads leave town.\n\nIT just racked accelerators after open frontier-scale AI weights became downloadable. Power is on. No learning system exists yet.\n\n## What's strained\n\n- **Skills gap** \u2014 manuals lag the ships; no multi-day debug practice on real code under local rules.\n- **Outmigration** \u2014 serious AI lives on foreign clouds their contracts forbid.\n- **Trust** \u2014 yard won't leak IP; students won't trust pinout hallucinations.\n\n## A capability that just became more real\n\nOpen-weight, near-frontier AI you can host yourself: huge total scale via sparse MoE, ~1M context, vision-in-the-loop, multi-day agentic coding over whole repos. Not a brand ad \u2014 the *kind* of advance.\n\n## Your brief\n\nInvent something here that uses that capability. Stakeholder: **Dean Marisol Okonkwo, Applied Engineering**.\n\n## Constraints\n\nLocal-only IP. Finite cluster (queue nights). Tests + human gates beat fluent lies. Students own commits. Pilot one track \u2014 not the whole port overnight.\n",
+    "scene": "Dry-dock cranes tick past the lab windows while apprentices wait on firmware they cannot send to a cloud chatbot — the yard's IP rules are absolute, and the curriculum is three seasons behind the ships.",
+    "briefMd": "## The place\n\n**Tideworks Polytechnic** (fictive port-city college). Yard partners opened a sealed lab corridor: real PLCs, redacted firmware trees, procedure PDFs, safety video. Graduates who can modernize this stack get jobs; toy-kit grads leave town.\n\nIT just racked accelerators after open frontier-scale AI weights became downloadable. Power is on. No learning system exists yet.\n\n## What's strained\n\n- **Skills gap** — manuals lag the ships; no multi-day debug practice on real code under local rules.\n- **Outmigration** — serious AI lives on foreign clouds their contracts forbid.\n- **Trust** — yard won't leak IP; students won't trust pinout hallucinations.\n\n## A capability that just became more real\n\nOpen-weight, near-frontier AI you can host yourself: huge total scale via sparse MoE, ~1M context, vision-in-the-loop, multi-day agentic coding over whole repos. Not a brand ad — the *kind* of advance.\n\n## Your brief\n\nInvent something here that uses that capability. Stakeholder: **Dean Marisol Okonkwo, Applied Engineering**.\n\n## Constraints\n\nLocal-only IP. Finite cluster (queue nights). Tests + human gates beat fluent lies. Students own commits. Pilot one track — not the whole port overnight.\n",
     "stakeholder": "Dean Marisol Okonkwo, Applied Engineering",
     "suggested": [
       "ai"

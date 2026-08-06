@@ -97,7 +97,9 @@ import {
   parseQuestTileJson,
   validateQuestTile,
   parseResourceOverrides,
+  normalizeMissionPressure,
   resourceOverrideLabel,
+  crisisRolesLabel,
 } from "./quest-tile.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
@@ -2840,13 +2842,13 @@ function renderHostedQuestsPanel() {
         ? excerptFromBrief(e.mission.briefMd, 140)
         : String(e.mission?.scene || e.summary || "").slice(0, 140);
       const g = globalById(e.globalId);
-      const resBadge = resourceOverrideBadgeHtml(e.mission?.resources);
+      const metaBadges = questMetaBadgesHtml(e.mission);
       return `<div class="quest-lib-row quest-external-row" data-hosted-id="${escapeHtml(e.id)}">
         <div class="quest-lib-copy">
           <span class="quest-external-badge">External${
             tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
           }</span>
-          ${resBadge}
+          ${metaBadges}
           <strong>${escapeHtml(e.title || e.mission?.title || "Quest")}</strong>
           <span class="muted">${escapeHtml(g?.title || e.globalId || "")} · ${escapeHtml(
             e.place || e.mission?.place || ""
@@ -2974,12 +2976,14 @@ function renderDailyCard() {
   if (spotlightEl) {
     const sp = pick.mission.spotlight;
     const resLabel = resourceOverrideLabel(pick.mission.resources);
+    const crisisLabel = crisisRolesLabel(pick.mission.crisisRoles);
     const parts = [];
     if (sp?.techId) {
       const tech = techById(sp.techId);
       parts.push(`Spotlight · ${tech?.name || sp.techId}`);
     }
     if (resLabel) parts.push(`Start · ${resLabel}`);
+    if (crisisLabel) parts.push(`Crisis · ${crisisLabel}`);
     if (parts.length) {
       spotlightEl.hidden = false;
       spotlightEl.textContent = parts.join(" · ");
@@ -3016,14 +3020,14 @@ function renderQuestLibraryPanel() {
       const ex = m.briefMd
         ? excerptFromBrief(m.briefMd, 120)
         : String(m.scene || "").slice(0, 120);
-      const resBadge = resourceOverrideBadgeHtml(m.resources);
+      const metaBadges = questMetaBadgesHtml(m);
       return `<div class="quest-lib-row" data-mission-id="${escapeHtml(m.id)}">
         <div class="quest-lib-copy">
           <strong>${escapeHtml(m.title)}</strong>
           <span class="muted">${escapeHtml(m.place || "")}${
             tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
           }${isFocus ? " · Focus" : ""}</span>
-          ${resBadge}
+          ${metaBadges}
           <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
         </div>
         <div class="quest-lib-actions">
@@ -3497,7 +3501,7 @@ function paintMissionCards(list, { disabled = false } = {}) {
               ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
               : ""
           }
-          ${resourceOverrideBadgeHtml(m.resources)}
+          ${questMetaBadgesHtml(m)}
           ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
         </span>
         <h3>${escapeHtml(m.title)}</h3>
@@ -3625,48 +3629,29 @@ function normalizeMission(raw, globalId) {
   const id =
     String(raw.id || "").trim() ||
     `gen-${globalId}-${Math.random().toString(36).slice(2, 8)}`;
-  const pressureRaw =
-    raw.pressure && typeof raw.pressure === "object" && Object.keys(raw.pressure).length
-      ? Object.fromEntries(
-          Object.entries(raw.pressure)
-            .slice(0, 4)
-            .map(([k, v]) => [String(k).slice(0, 40), Math.min(5, Math.max(0, Number(v) || 2))])
-        )
-      : { Pressure: 2, Capacity: 2, Trust: 1 };
-  // Humanize AI camelCase keys so HUD never shows BenzeneSpikes-style ids
-  const pressure = remapMeterKeyedObject(pressureRaw);
-  const keys = Object.keys(pressure);
-  const riseRaw =
-    raw.pressureRise && typeof raw.pressureRise === "object"
-      ? remapMeterKeyedObject(raw.pressureRise)
-      : {};
-  const winRaw =
-    raw.winMax && typeof raw.winMax === "object" ? remapMeterKeyedObject(raw.winMax) : {};
-  const pressureRise = Object.fromEntries(
-    keys.map((k, i) => [
-      k,
-      Math.min(
-        2,
-        Math.max(
-          0,
-          Number(riseRaw[k] ?? raw.pressureRise?.[Object.keys(pressureRaw)[i]] ?? (i === keys.length - 1 ? 0 : 1)) ||
-            0
-        )
-      ),
-    ])
-  );
-  const winMax = Object.fromEntries(
-    keys.map((k, i) => [
-      k,
-      Math.min(
-        3,
-        Math.max(
-          0,
-          Number(winRaw[k] ?? raw.winMax?.[Object.keys(pressureRaw)[i]] ?? 1) || 0
-        )
-      ),
-    ])
-  );
+
+  // Structured { local|global|support: { label, pressure, … } } or legacy flat maps
+  const meters = normalizeMissionPressure(raw.pressure, raw.pressureRise, raw.winMax);
+  let pressure;
+  let pressureRise;
+  let winMax;
+  let crisisRoles = null;
+  if (meters.ok) {
+    pressure = meters.pressure;
+    pressureRise = meters.pressureRise;
+    winMax = meters.winMax;
+    crisisRoles = meters.crisisRoles;
+  } else {
+    // Fallback (should not happen for valid data)
+    pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
+    pressureRise = { Pressure: 1, Capacity: 1, Trust: 0 };
+    winMax = { Pressure: 1, Capacity: 1, Trust: 1 };
+  }
+  // Prefer explicit crisisRoles already on a pre-normalized mission
+  if (Array.isArray(raw.crisisRoles) && raw.crisisRoles.length) {
+    crisisRoles = raw.crisisRoles.map(String);
+  }
+
   const validTech = new Set(allTechIds());
   let suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
     .map(String)
@@ -3729,6 +3714,7 @@ function normalizeMission(raw, globalId) {
     source,
     spotlight,
     ...(resources ? { resources } : {}),
+    ...(crisisRoles?.length ? { crisisRoles } : {}),
   };
 }
 
@@ -3739,6 +3725,24 @@ function resourceOverrideBadgeHtml(resources) {
   return `<span class="scenario-tag resources-tag" title="Starting resources for this Quest">Start · ${escapeHtml(
     label
   )}</span>`;
+}
+
+/** HTML chip when a Quest enables only a subset of crisis roles (local/global/support). */
+function crisisRolesBadgeHtml(crisisRoles) {
+  const label = crisisRolesLabel(crisisRoles);
+  if (!label) return "";
+  return `<span class="scenario-tag crisis-tag" title="Crisis meters on this Quest (only these perspectives)">Crisis · ${escapeHtml(
+    label
+  )}</span>`;
+}
+
+/** Resource + crisis chips for selection cards / lists. */
+function questMetaBadgesHtml(mission) {
+  if (!mission || typeof mission !== "object") return "";
+  return (
+    resourceOverrideBadgeHtml(mission.resources) +
+    crisisRolesBadgeHtml(mission.crisisRoles)
+  );
 }
 
 async function renderMissions({ force = false } = {}) {
@@ -4473,7 +4477,8 @@ function assessFeasibility() {
     const hits = techs.filter((t) => suggested.has(t.id)).length;
     if (hits === 0 && suggested.size) {
       fitLevel = "yellow";
-      fitNote = "None of the mission's suggested techs are in your stack — can still work, but check local fit.";
+      fitNote =
+        "None of the mission's suggested techs are in your stack — can still work, but check local fit.";
     } else if (hits >= 2 || (hits >= 1 && techs.length === 1)) {
       fitLevel = "green";
       fitNote = `Local fit: ${hits} suggested tech${hits === 1 ? "" : "s"} for this place.`;
@@ -6820,7 +6825,7 @@ async function enterChallenge() {
     const feas = assessFeasibility();
     // One critic only — Defend / Fix / Sidestep vs their resolve (no gauntlet).
     const angles = pickChallengeAngles(
-      CHALLENGE_ANGLES,
+      challengeAnglePool(),
       encounterCountForFeasibility(feas.overall),
       null
     );

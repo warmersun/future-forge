@@ -7,6 +7,9 @@ import {
   humanizeMeterKey,
   resourceOverrideLabel,
   parseResourceOverrides,
+  normalizeMissionPressure,
+  isStructuredPressure,
+  crisisRolesLabel,
 } from "./quest-tile.js";
 
 const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
@@ -41,9 +44,11 @@ function baseTile(over = {}) {
       startYear: 2026,
       collapseYear: 2032,
       yearsPerTurn: 2,
-      pressure: { Outbreak: 2, Capacity: 3, Fear: 1 },
-      pressureRise: { Outbreak: 1, Capacity: 1, Fear: 1 },
-      winMax: { Outbreak: 1, Capacity: 1, Fear: 1 },
+      pressure: {
+        local: { label: "Outbreak", pressure: 2, pressureRise: 1, winMax: 1 },
+        global: { label: "Capacity", pressure: 3, pressureRise: 1, winMax: 1 },
+        support: { label: "Fear", pressure: 1, pressureRise: 1, winMax: 1 },
+      },
       scene: "Samples stack up while fear spreads at the border clinic.",
       briefMd:
         "## The place\n\nA **fictive** clinic waits on samples.\n\n## Your brief\n\nInvent a workflow that uses sequencing *here*.",
@@ -236,5 +241,90 @@ describe("quest-tile", () => {
     const r = parseResourceOverrides({ startingBudget: 0, startingWill: 0 });
     assert.equal(r.ok, true);
     assert.deepEqual(r.value, { startingBudget: 0, startingWill: 0 });
+  });
+
+  it("accepts structured pressure with subset of roles", () => {
+    const t = baseTile();
+    t.mission.pressure = {
+      local: { label: "Outbreak", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Fear", pressure: 1, pressureRise: 1, winMax: 1 },
+    };
+    delete t.mission.pressureRise;
+    delete t.mission.winMax;
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.mission.crisisRoles, ["local", "support"]);
+    assert.deepEqual(r.mission.pressure, { Outbreak: 2, Fear: 1 });
+    assert.deepEqual(r.mission.pressureRise, { Outbreak: 1, Fear: 1 });
+    assert.deepEqual(r.mission.winMax, { Outbreak: 1, Fear: 1 });
+    assert.equal(Object.keys(r.mission.pressure).length, 2);
+  });
+
+  it("rejects legacy flat pressure on quest tiles", () => {
+    const t = baseTile();
+    t.mission.pressure = { Outbreak: 2, Capacity: 3, Fear: 1 };
+    t.mission.pressureRise = { Outbreak: 1, Capacity: 1, Fear: 1 };
+    t.mission.winMax = { Outbreak: 1, Capacity: 1, Fear: 1 };
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, false);
+    assert.ok(r.details.includes("pressure_must_be_structured"));
+  });
+
+  it("rejects structured pressure with bad values", () => {
+    const bad = baseTile();
+    bad.mission.pressure = {
+      local: { label: "Outbreak", pressure: -1, pressureRise: 1, winMax: 1 },
+    };
+    assert.equal(
+      validateQuestTile(bad, { techIds: TECHS, globalIds: GLOBALS }).ok,
+      false
+    );
+  });
+
+  it("full three-role structured pressure has no subset badge roles omit", () => {
+    const r = validateQuestTile(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.mission.crisisRoles, ["local", "global", "support"]);
+    assert.equal(crisisRolesLabel(r.mission.crisisRoles), null);
+  });
+
+  it("isStructuredPressure detects role map", () => {
+    assert.equal(
+      isStructuredPressure({
+        local: { label: "A", pressure: 1 },
+      }),
+      true
+    );
+    assert.equal(isStructuredPressure({ Outbreak: 2 }), false);
+  });
+
+  it("normalizeMissionPressure expands structured and legacy", () => {
+    const s = normalizeMissionPressure({
+      local: { label: "Floods", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Trust", pressure: 2, pressureRise: 0, winMax: 1 },
+    });
+    assert.equal(s.ok, true);
+    assert.deepEqual(s.crisisRoles, ["local", "global"]);
+    assert.equal(s.pressure.Floods, 3);
+    assert.equal(s.pressure.Trust, 2);
+
+    const leg = normalizeMissionPressure(
+      { Outbreak: 2 },
+      { Outbreak: 1 },
+      { Outbreak: 1 }
+    );
+    assert.equal(leg.ok, true);
+    assert.equal(leg.crisisRoles, null);
+    assert.equal(leg.pressure.Outbreak, 2);
+  });
+
+  it("crisisRolesLabel only for non-default subsets", () => {
+    assert.equal(crisisRolesLabel(null), null);
+    assert.equal(crisisRolesLabel(["local", "global", "support"]), null);
+    assert.equal(crisisRolesLabel(["local"]), "Local");
+    assert.equal(crisisRolesLabel(["support", "local"]), "Local · Support");
   });
 });

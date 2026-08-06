@@ -622,28 +622,78 @@ function sanitizeScenarioList(rawList, context, techIds) {
     if (seen.has(key)) return;
     seen.add(key);
 
+    const roles = ["local", "global", "support"];
+    /** @type {Record<string, { label: string, pressure: number, pressureRise: number, winMax: number }>} */
     let pressure = {};
-    if (raw.pressure && typeof raw.pressure === "object") {
-      for (const [k, v] of Object.entries(raw.pressure).slice(0, 4)) {
-        pressure[String(k).slice(0, 24)] = Math.min(5, Math.max(0, Number(v) || 2));
+    const rawP = raw.pressure && typeof raw.pressure === "object" ? raw.pressure : null;
+    const isStructured =
+      rawP &&
+      Object.keys(rawP).some((k) => roles.includes(k)) &&
+      Object.keys(rawP).every(
+        (k) =>
+          !roles.includes(k) ||
+          (rawP[k] && typeof rawP[k] === "object" && !Array.isArray(rawP[k]))
+      );
+
+    if (isStructured) {
+      for (const role of roles) {
+        if (!rawP[role] || typeof rawP[role] !== "object") continue;
+        const e = rawP[role];
+        const label = String(e.label || role).trim().slice(0, 40) || role;
+        pressure[role] = {
+          label,
+          pressure: Math.min(5, Math.max(0, Math.round(Number(e.pressure) || 2))),
+          pressureRise: Math.min(
+            3,
+            Math.max(0, Math.round(Number(e.pressureRise ?? 1) || 0))
+          ),
+          winMax: Math.min(5, Math.max(0, Math.round(Number(e.winMax ?? 1) || 0))),
+        };
       }
+    } else if (rawP) {
+      // Legacy flat → map first three keys to local/global/support
+      const entries = Object.entries(rawP).slice(0, 3);
+      entries.forEach(([k, v], i) => {
+        const role = roles[i];
+        const label = String(k).slice(0, 40);
+        const n = typeof v === "object" && v != null ? Number(v.pressure) : Number(v);
+        pressure[role] = {
+          label,
+          pressure: Math.min(5, Math.max(0, Math.round(n || 2))),
+          pressureRise: Math.min(
+            3,
+            Math.max(
+              0,
+              Math.round(
+                Number(
+                  (typeof v === "object" && v?.pressureRise) ??
+                    raw.pressureRise?.[k] ??
+                    (i === entries.length - 1 ? 0 : 1)
+                ) || 0
+              )
+            )
+          ),
+          winMax: Math.min(
+            5,
+            Math.max(
+              0,
+              Math.round(
+                Number(
+                  (typeof v === "object" && v?.winMax) ?? raw.winMax?.[k] ?? 1
+                ) || 0
+              )
+            )
+          ),
+        };
+      });
     }
-    if (!Object.keys(pressure).length) pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
-    const keys = Object.keys(pressure);
-    const pressureRise = {};
-    const winMax = {};
-    keys.forEach((k, i) => {
-      pressureRise[k] =
-        raw.pressureRise && raw.pressureRise[k] != null
-          ? Math.min(2, Math.max(0, Number(raw.pressureRise[k]) || 1))
-          : i === keys.length - 1
-            ? 0
-            : 1;
-      winMax[k] =
-        raw.winMax && raw.winMax[k] != null
-          ? Math.min(3, Math.max(0, Number(raw.winMax[k]) ?? 1))
-          : 1;
-    });
+    if (!Object.keys(pressure).length) {
+      pressure = {
+        local: { label: "Pressure", pressure: 2, pressureRise: 1, winMax: 1 },
+        global: { label: "Capacity", pressure: 2, pressureRise: 1, winMax: 1 },
+        support: { label: "Trust", pressure: 1, pressureRise: 0, winMax: 1 },
+      };
+    }
     const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
       .map(String)
       .filter((id) => validTech.has(id))
@@ -663,8 +713,6 @@ function sanitizeScenarioList(rawList, context, techIds) {
       collapseYear: Number(raw.collapseYear) || GAME.startYear + 8,
       yearsPerTurn: Number(raw.yearsPerTurn) || GAME.yearsPerTurn,
       pressure,
-      pressureRise,
-      winMax,
       scene: String(raw.scene || "").trim().slice(0, 800),
       stakeholder: String(raw.stakeholder || "").trim().slice(0, 120),
       suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
@@ -1363,7 +1411,7 @@ function buildUserPayload({ messages, context, mode }) {
     "generate-scenarios":
       "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms (e.g. air pollution: name trucks/cookfuel/stacks, not only indoor filters). " +
       SCENE_PROSE +
-      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (exactly 3 meters, values 0–5), pressureRise, winMax, suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). CRITICAL — pressure meter KEYS are player-facing HUD labels: plain English, 1–3 words, Title Case with spaces (e.g. \"Dirty air\", \"Sick days\", \"Truck exhaust\", \"Cook smoke\", \"Flooding\", \"Jobs\"). NEVER camelCase, NEVER internal ids, NEVER jargon or opaque acronyms (bad: AlleyPM, BenzeneSpikes, GensetHours, StackUpsets, NosebleedNights, CorridorPM). Prefer one felt-harm meter, one cause/driver meter, one social/constraint meter. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
+      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). CRITICAL — pressure is an object with up to three role keys: local, global, support. Omit a role to hide that crisis meter on the HUD. Each present role: { \"label\": \"plain English HUD name 1–3 words Title Case\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. local = lived local harm; global = systemic/driver; support = trust/legitimacy/fear. NEVER camelCase jargon labels (bad: AlleyPM, BenzeneSpikes, CorridorPM). Default full Quest uses all three roles. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
   };
 
   // Prefer selected techs with full capability seeds for literacy modes

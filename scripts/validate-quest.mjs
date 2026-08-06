@@ -49,4 +49,8 @@ console.log(`  placement: ${r.tile.placement?.mode}`);
 if (r.mission.resources) {
   console.log(`  resources: ${JSON.stringify(r.mission.resources)}`);
 }
+if (r.mission.crisisRoles) {
+  console.log(`  crisisRoles: ${JSON.stringify(r.mission.crisisRoles)}`);
+}
+console.log(`  pressure: ${JSON.stringify(r.mission.pressure)}`);
 process.exit(0);

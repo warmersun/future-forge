@@ -27,6 +27,154 @@ const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);
 export const RESOURCE_OVERRIDE_KEYS = ["apMax", "startingBudget", "startingWill"];
 
 /**
+ * Structured crisis meters on a quest tile: optional perspectives.
+ * Only keys present are active on the HUD and in win/collapse checks.
+ */
+export const CRISIS_ROLES = ["local", "global", "support"];
+const CRISIS_ROLE_SET = new Set(CRISIS_ROLES);
+
+/** Player-facing names for selection chips. */
+export const CRISIS_ROLE_LABELS = {
+  local: "Local",
+  global: "Global",
+  support: "Support",
+};
+
+/**
+ * True when `pressure` uses role keys with object entries
+ * (`local` / `global` / `support` → { label, pressure, pressureRise, winMax }).
+ * @param {unknown} raw
+ */
+export function isStructuredPressure(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  const keys = Object.keys(raw);
+  if (!keys.length) return false;
+  // Prefer structured when every present key is a known role with an object value
+  return keys.every(
+    (k) =>
+      CRISIS_ROLE_SET.has(k) &&
+      raw[k] != null &&
+      typeof raw[k] === "object" &&
+      !Array.isArray(raw[k])
+  );
+}
+
+/**
+ * Expand structured or legacy-flat pressure into runtime maps.
+ * Structured: only listed roles become meters (omit a role = inactive).
+ * Legacy flat: numeric values keyed by label (existing missions / seeds).
+ *
+ * @param {unknown} pressureRaw
+ * @param {unknown} [riseRaw] — legacy flat pressureRise
+ * @param {unknown} [winRaw] — legacy flat winMax
+ * @returns {{
+ *   ok: true,
+ *   pressure: Record<string, number>,
+ *   pressureRise: Record<string, number>,
+ *   winMax: Record<string, number>,
+ *   crisisRoles: string[]|null,
+ * } | { ok: false, details: string[] }}
+ */
+export function normalizeMissionPressure(pressureRaw, riseRaw = null, winRaw = null) {
+  if (isStructuredPressure(pressureRaw)) {
+    /** @type {Record<string, number>} */
+    const pressure = {};
+    /** @type {Record<string, number>} */
+    const pressureRise = {};
+    /** @type {Record<string, number>} */
+    const winMax = {};
+    /** @type {string[]} */
+    const crisisRoles = [];
+    const details = [];
+    const usedLabels = new Set();
+
+    for (const role of CRISIS_ROLES) {
+      if (!(role in pressureRaw) || pressureRaw[role] == null) continue;
+      const entry = pressureRaw[role];
+      if (typeof entry !== "object" || Array.isArray(entry)) {
+        details.push(`pressure_${role}_not_object`);
+        continue;
+      }
+      const labelRaw = entry.label != null ? String(entry.label).trim() : "";
+      const label =
+        humanizeMeterKey(labelRaw) ||
+        humanizeMeterKey(role) ||
+        role;
+      if (!label) {
+        details.push(`pressure_${role}_missing_label`);
+        continue;
+      }
+      if (usedLabels.has(label.toLowerCase())) {
+        details.push(`pressure_duplicate_label:${label}`);
+        continue;
+      }
+      usedLabels.add(label.toLowerCase());
+
+      const p = Number(entry.pressure);
+      const r =
+        entry.pressureRise !== undefined && entry.pressureRise !== null
+          ? Number(entry.pressureRise)
+          : 1;
+      const w =
+        entry.winMax !== undefined && entry.winMax !== null
+          ? Number(entry.winMax)
+          : 1;
+
+      if (!Number.isFinite(p) || p < 0 || p > 5) {
+        details.push(`pressure_${role}_bad_pressure`);
+        continue;
+      }
+      if (!Number.isFinite(r) || r < 0 || r > 3) {
+        details.push(`pressure_${role}_bad_pressureRise`);
+        continue;
+      }
+      if (!Number.isFinite(w) || w < 0 || w > 5) {
+        details.push(`pressure_${role}_bad_winMax`);
+        continue;
+      }
+
+      pressure[label] = Math.min(5, Math.max(0, Math.round(p)));
+      pressureRise[label] = Math.min(3, Math.max(0, Math.round(r)));
+      winMax[label] = Math.min(5, Math.max(0, Math.round(w)));
+      crisisRoles.push(role);
+    }
+
+    if (details.length) return { ok: false, details };
+    if (!crisisRoles.length) {
+      return { ok: false, details: ["pressure_no_active_roles"] };
+    }
+    return { ok: true, pressure, pressureRise, winMax, crisisRoles };
+  }
+
+  // Legacy flat maps: { "Outbreak": 2, ... } + optional pressureRise / winMax
+  const pressure = normalizePressure(pressureRaw);
+  const keys = Object.keys(pressure);
+  const pressureRise = normalizeMeterMap(riseRaw, keys, (i) =>
+    i === keys.length - 1 ? 0 : 1
+  );
+  const winMax = normalizeMeterMap(winRaw, keys, () => 1);
+  return {
+    ok: true,
+    pressure,
+    pressureRise,
+    winMax,
+    crisisRoles: null, // unknown roles in legacy shape
+  };
+}
+
+/**
+ * Selection-UI label when only a subset of crisis roles is active.
+ * @param {string[]|null|undefined} crisisRoles
+ * @returns {string|null}
+ */
+export function crisisRolesLabel(crisisRoles) {
+  if (!Array.isArray(crisisRoles) || !crisisRoles.length) return null;
+  const roles = CRISIS_ROLES.filter((r) => crisisRoles.includes(r));
+  if (!roles.length || roles.length === CRISIS_ROLES.length) return null;
+  return roles.map((id) => CRISIS_ROLE_LABELS[id] || id).join(" · ");
+}
+
+/**
  * Pick valid resource override fields from a raw object.
  * @param {unknown} raw
  * @returns {{ ok: true, value: object|null } | { ok: false, details: string[] }}
@@ -206,16 +354,25 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...resourcesParsed.details);
   }
 
+  // Breaking: quest tiles must use structured pressure (local|global|support entries).
+  // Legacy flat maps are no longer accepted on imported/hosted tiles.
+  if (!isStructuredPressure(missionIn.pressure)) {
+    details.push("pressure_must_be_structured");
+  }
+  const metersParsed = normalizeMissionPressure(
+    missionIn.pressure,
+    missionIn.pressureRise,
+    missionIn.winMax
+  );
+  if (!metersParsed.ok) {
+    details.push(...metersParsed.details);
+  }
+
   if (details.length) {
     return { ok: false, error: "validation_failed", details };
   }
 
-  const pressure = normalizePressure(missionIn.pressure);
-  const keys = Object.keys(pressure);
-  const pressureRise = normalizeMeterMap(missionIn.pressureRise, keys, (i) =>
-    i === keys.length - 1 ? 0 : 1
-  );
-  const winMax = normalizeMeterMap(missionIn.winMax, keys, () => 1);
+  const { pressure, pressureRise, winMax, crisisRoles } = metersParsed;
 
   const id =
     slugId(tile.id || missionIn.id || title) ||
@@ -263,6 +420,9 @@ export function validateQuestTile(tile, opts = {}) {
   };
   if (resourcesParsed.value) {
     mission.resources = resourcesParsed.value;
+  }
+  if (crisisRoles?.length) {
+    mission.crisisRoles = crisisRoles;
   }
 
   const normalizedTile = {

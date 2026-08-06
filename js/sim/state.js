@@ -112,6 +112,9 @@ export function cloneMission(m) {
     ...(m.resources && typeof m.resources === "object"
       ? { resources: { ...m.resources } }
       : {}),
+    ...(Array.isArray(m.crisisRoles) && m.crisisRoles.length
+      ? { crisisRoles: [...m.crisisRoles] }
+      : {}),
   };
 }
 

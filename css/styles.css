@@ -7293,7 +7293,14 @@ button.linkish:hover {
   border: 1px solid rgba(94, 184, 196, 0.4);
   font-weight: 600;
 }
-.quest-lib-copy .scenario-tag.resources-tag {
+.scenario-tag.crisis-tag {
+  background: rgba(167, 139, 250, 0.18);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  font-weight: 600;
+}
+.quest-lib-copy .scenario-tag.resources-tag,
+.quest-lib-copy .scenario-tag.crisis-tag {
   display: inline-block;
   margin: 0.2rem 0.35rem 0.15rem 0;
   font-size: 0.72rem;

@@ -127,8 +127,9 @@ export const GLOBALS = [
 ];
 
 /**
- * Local missions — small concrete instances of global problems
- * pressure keys are free-form labels; values 0–5
+ * Local missions — small concrete instances of global problems.
+ * Crisis meters use structured roles: local | global | support
+ * (each: { label, pressure, pressureRise, winMax }). Omit a role to hide that meter.
  */
 export const MISSIONS = [
   {
@@ -139,9 +140,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2036,
     yearsPerTurn: 2,
-    pressure: { Floods: 2, Livelihoods: 2, Trust: 1 },
-    pressureRise: { Floods: 1, Livelihoods: 1, Trust: 0 },
-    winMax: { Floods: 1, Livelihoods: 1, Trust: 2 },
+    pressure: {
+      local: { label: "Floods", pressure: 2, pressureRise: 1, winMax: 1 },
+      global: { label: "Livelihoods", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Trust", pressure: 1, pressureRise: 0, winMax: 2 }
+    },
     scene:
       "The school gym is the emergency shelter for the third time this decade. Fishers lose weeks of work when the quay goes under. Residents want something that works *here*, not a national slogan.",
     stakeholder: "Aisha, ward climate liaison",
@@ -156,9 +159,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Thirst: 3, Cost: 2, Health: 1 },
-    pressureRise: { Thirst: 1, Cost: 1, Health: 1 },
-    winMax: { Thirst: 1, Cost: 1, Health: 1 },
+    pressure: {
+      local: { label: "Thirst", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Cost", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Health", pressure: 1, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "One town’s main well is brackish. Tanker prices spike every dry month. Kids miss school to haul water. A fix must be affordable and maintainable locally.",
     stakeholder: "Yusuf, co-op well keeper",
@@ -173,9 +178,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Outbreak: 2, Capacity: 2, Fear: 1 },
-    pressureRise: { Outbreak: 1, Capacity: 1, Fear: 1 },
-    winMax: { Outbreak: 1, Capacity: 1, Fear: 1 },
+    pressure: {
+      local: { label: "Outbreak", pressure: 2, pressureRise: 1, winMax: 1 },
+      global: { label: "Capacity", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Fear", pressure: 1, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "A small clinic sees a new fever pattern among travelers. Staff are three nurses deep. They need detection, logistics, and trust — this week, not after a conference.",
     stakeholder: "Dr. Okonkwo, clinic lead",
@@ -190,9 +197,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Learning: 3, Burnout: 2, Equity: 2 },
-    pressureRise: { Learning: 1, Burnout: 1, Equity: 0 },
-    winMax: { Learning: 1, Burnout: 1, Equity: 1 },
+    pressure: {
+      local: { label: "Learning", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Burnout", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Equity", pressure: 2, pressureRise: 0, winMax: 1 }
+    },
     scene:
       "Three rural schools share one science teacher who drives 90 minutes between them. Labs are empty half the week. Students who can leave, leave.",
     stakeholder: "Ms. Reyes, the shared science teacher",
@@ -207,9 +216,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Shelter: 3, Services: 2, Tension: 2 },
-    pressureRise: { Shelter: 1, Services: 1, Tension: 1 },
-    winMax: { Shelter: 1, Services: 1, Tension: 1 },
+    pressure: {
+      local: { label: "Shelter", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Services", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Tension", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "A mid-size city expects 4,000 new arrivals before spring. Gyms are full. Paperwork is chaos. Locals fear queues at clinics. Dignity has a deadline.",
     stakeholder: "Marta, reception coordinator",
@@ -224,9 +235,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Jobs: 3, Skills: 2, Dignity: 2 },
-    pressureRise: { Jobs: 1, Skills: 1, Dignity: 1 },
-    winMax: { Jobs: 1, Skills: 1, Dignity: 1 },
+    pressure: {
+      local: { label: "Jobs", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Skills", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Dignity", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "Warehouse automation cut 30% of shifts in eighteen months. Rent didn’t fall. Workers want retraining that leads to real pay — not a pamphlet.",
     stakeholder: "Dev, shift steward",
@@ -241,9 +254,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Opacity: 2, Harm: 1, Protest: 1 },
-    pressureRise: { Opacity: 1, Harm: 1, Protest: 1 },
-    winMax: { Opacity: 0, Harm: 0, Protest: 1 },
+    pressure: {
+      local: { label: "Opacity", pressure: 2, pressureRise: 1, winMax: 0 },
+      global: { label: "Harm", pressure: 1, pressureRise: 1, winMax: 0 },
+      support: { label: "Protest", pressure: 1, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "City hall wants to deploy an opaque AI to decide benefits *this year* and cut costs. Caseworkers are already overruled by a black box pilot. Prevention means a better system, not a ban on tools.",
     stakeholder: "Len, casework supervisor",
@@ -258,9 +273,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { AsthmaDays: 3, ParentTrust: 2, CorridorPM: 3 },
-    pressureRise: { AsthmaDays: 1, ParentTrust: 0, CorridorPM: 1 },
-    winMax: { AsthmaDays: 1, ParentTrust: 1, CorridorPM: 1 },
+    pressure: {
+      local: { label: "AsthmaDays", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "ParentTrust", pressure: 2, pressureRise: 0, winMax: 1 },
+      support: { label: "CorridorPM", pressure: 3, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "Asthma days close classrooms along the truck route. Parents have sensor photos of the haze — and the corridor still runs diesel at rush hour. A local fix must protect kids and cut corridor exhaust.",
     stakeholder: "Priya, parent coalition",
@@ -275,9 +292,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Power: 3, Care: 2, ColdChain: 2 },
-    pressureRise: { Power: 1, Care: 1, ColdChain: 1 },
-    winMax: { Power: 1, Care: 1, ColdChain: 1 },
+    pressure: {
+      local: { label: "Power", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Care", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "ColdChain", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "When the grid fails, vaccines warm and night births go dark. Diesel is expensive and late. Staff need first watts that stay on.",
     stakeholder: "Nurse Amara",
@@ -292,9 +311,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Stocks: 3, Habitat: 2, Conflict: 1 },
-    pressureRise: { Stocks: 1, Income: 1, Conflict: 1 },
-    winMax: { Stocks: 1, Income: 1, Conflict: 1 },
+    pressure: {
+      local: { label: "Stocks", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Habitat", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Conflict", pressure: 1, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "Fish stocks collapsed locally. Some boats still cheat night limits. Young people leave. Monitoring and alternatives have to work for this harbor.",
     stakeholder: "Captain Seo",
@@ -309,9 +330,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Care: 3, Safety: 2, Families: 2 },
-    pressureRise: { Care: 1, Safety: 1, Families: 1 },
-    winMax: { Care: 1, Safety: 1, Families: 1 },
+    pressure: {
+      local: { label: "Care", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Safety", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Families", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "A day center for people with dementia has a waitlist of fourteen months. Families burn out. Staff need tools that preserve dignity — not just surveillance.",
     stakeholder: "Tomás, center director",
@@ -326,9 +349,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Access: 3, Risk: 2, Trust: 1 },
-    pressureRise: { Access: 1, Risk: 1, Trust: 0 },
-    winMax: { Access: 1, Risk: 1, Trust: 1 },
+    pressure: {
+      local: { label: "Access", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Risk", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Trust", pressure: 1, pressureRise: 0, winMax: 1 }
+    },
     scene:
       "Complications mean a two-hour road trip if the rains haven’t washed the bridge. Midwives want backup that arrives in time.",
     stakeholder: "Lila, midwife network",
@@ -343,9 +368,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2032,
     yearsPerTurn: 2,
-    pressure: { Shelter: 3, Cold: 2, Services: 2 },
-    pressureRise: { Shelter: 1, Cold: 1, Services: 1 },
-    winMax: { Shelter: 1, Cold: 1, Services: 1 },
+    pressure: {
+      local: { label: "Shelter", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Cold", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Services", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "Encampments grow under the overpass each winter. Hotels are full. Building codes move slowly. People need warm, safe options *this* season and a path to stay housed.",
     stakeholder: "Kenji, outreach lead",
@@ -360,9 +387,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Nutrition: 3, Price: 2, Access: 2 },
-    pressureRise: { Nutrition: 1, Price: 1, Access: 0 },
-    winMax: { Nutrition: 1, Price: 1, Access: 1 },
+    pressure: {
+      local: { label: "Nutrition", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Price", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Access", pressure: 2, pressureRise: 0, winMax: 1 }
+    },
     scene:
       "A dense neighborhood’s last fresh-food shop closed. Corner stores sell calories, not vegetables. Transit to a supermarket is two buses.",
     stakeholder: "Elena, community kitchen",
@@ -377,9 +406,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Blindspots: 3, Delay: 2, Trust: 2 },
-    pressureRise: { Blindspots: 1, Delay: 1, Trust: 1 },
-    winMax: { Blindspots: 1, Delay: 1, Trust: 1 },
+    pressure: {
+      local: { label: "Blindspots", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "Delay", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Trust", pressure: 2, pressureRise: 1, winMax: 1 }
+    },
     scene:
       "Five small coastal towns share a storm path but not a budget or data pipe. Each mayor waits for the other to buy sensors. Coordination *is* the invention.",
     stakeholder: "The inter-town working group",
@@ -394,9 +425,11 @@ export const MISSIONS = [
     startYear: 2026,
     collapseYear: 2034,
     yearsPerTurn: 2,
-    pressure: { Wait: 3, LateStage: 2, Equity: 2 },
-    pressureRise: { Wait: 1, LateStage: 1, Equity: 0 },
-    winMax: { Wait: 1, LateStage: 1, Equity: 1 },
+    pressure: {
+      local: { label: "Wait", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: "LateStage", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: "Equity", pressure: 2, pressureRise: 0, winMax: 1 }
+    },
     scene:
       "Imaging backlog means late diagnoses. Rural patients miss appointments. Oncologists want triage and tools that find risk earlier without inventing a miracle drug overnight.",
     stakeholder: "Dr. Chen, oncology lead",
@@ -1094,14 +1127,30 @@ function buildLocalScenarioVariants(g, count, salt) {
     const place = pickRot(pack.places, i + salt);
     const title = pack.title.replace("{place}", place);
     const scene = pack.scene.replace(/\{place\}/g, place).replace(/\{theme\}/g, g.title);
-    const pressureKeys = pack.pressureKeys || ["Pressure", "Cost", "Trust"];
+    // Explicit crisis perspectives (local harm / global-systemic / support-social)
+    const meters =
+      pack.crisisMeters && typeof pack.crisisMeters === "object"
+        ? pack.crisisMeters
+        : null;
+    // Legacy packs used pressureKeys[0/1/2] — still accept if any remain
+    const legacyKeys = Array.isArray(pack.pressureKeys) ? pack.pressureKeys : null;
+    const roles = ["local", "global", "support"];
+    const defaults = ["Pressure", "Cost", "Trust"];
     const pressure = {};
-    const pressureRise = {};
-    const winMax = {};
-    pressureKeys.forEach((k, ki) => {
-      pressure[k] = 2 + ((i + ki + salt) % 2);
-      pressureRise[k] = ki === 2 ? 0 : 1;
-      winMax[k] = 1;
+    roles.forEach((role, ki) => {
+      const labelRaw =
+        (meters && meters[role] != null ? meters[role] : null) ??
+        legacyKeys?.[ki] ??
+        defaults[ki];
+      if (labelRaw == null || labelRaw === false) return; // omit role if pack sets null
+      const label = String(labelRaw).slice(0, 40);
+      if (!label) return;
+      pressure[role] = {
+        label,
+        pressure: 2 + ((i + ki + salt) % 2),
+        pressureRise: ki === 2 ? 0 : 1,
+        winMax: 1,
+      };
     });
     const collapseYear = 2032 + ((i + salt) % 3) * 2;
     out.push({
@@ -1113,8 +1162,6 @@ function buildLocalScenarioVariants(g, count, salt) {
       collapseYear,
       yearsPerTurn: GAME.yearsPerTurn,
       pressure,
-      pressureRise,
-      winMax,
       scene,
       stakeholder: pack.stakeholder,
       suggested: pack.suggested || suggestedDefault,

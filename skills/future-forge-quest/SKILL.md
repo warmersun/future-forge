@@ -60,7 +60,7 @@ Schema details: `docs/quest-tile-schema.md` (game repo) and `references/schema.m
 - Concrete place + lived harm + local driver (as **story**, not checklist labels).
 - Problem shape that an **application** of the new capability can address (pilot-honest).
 - Pick `globalId` from game themes.
-- Meters: plain English, 1–3 words, values 0–5.
+- Meters: structured `mission.pressure` with roles `local` / `global` / `support` (omit any role to hide that meter). Each: `{ label, pressure, pressureRise, winMax }` — labels plain English 1–3 words; values 0–5 (rise 0–3).
 - Stakeholder: named role (also ground the scene hook in a person when possible).
 
 ### 4. Write player-facing prose (style first)

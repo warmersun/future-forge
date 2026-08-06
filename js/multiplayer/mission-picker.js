@@ -4,7 +4,10 @@
  */
 
 import { GLOBALS, localScenariosForGlobal } from "../data.js";
-import { resourceOverrideLabel } from "../quest-tile.js";
+import {
+  resourceOverrideLabel,
+  crisisRolesLabel,
+} from "../quest-tile.js";
 
 export function problemVisualUrl(globalId) {
   return `assets/problems/${globalId}.jpg`;
@@ -98,6 +101,12 @@ export function paintMissionGrid(grid, opts) {
             resLabel
           )}</span>`
         : "";
+      const crisisLabel = crisisRolesLabel(m.crisisRoles);
+      const crisisTag = crisisLabel
+        ? `<span class="scenario-tag crisis-tag" title="Crisis meters on this Quest">Crisis · ${escapeHtml(
+            crisisLabel
+          )}</span>`
+        : "";
       return `
       <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel} ${
         isExternal ? "quest-card-external" : ""
@@ -114,6 +123,7 @@ export function paintMissionGrid(grid, opts) {
             <span class="scenario-tag ${tagClass}">${escapeHtml(tag)}</span>
             ${spot}
             ${resTag}
+            ${crisisTag}
           </span>
           <h3>${escapeHtml(m.title)}</h3>
           <p>${escapeHtml(scene)}${ellipsis}</p>

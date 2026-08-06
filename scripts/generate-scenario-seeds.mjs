@@ -211,14 +211,18 @@ const MODE_INSTRUCTION =
   "Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
   SCENE_PROSE +
   " Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
-  "pressure (exactly 3 meters, values 0–5), pressureRise, winMax, " +
+  "pressure (structured crisis meters — see CRITICAL), " +
   "suggested (tech ids from availableTechs only — mix protection and abatement when relevant), " +
   "visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), " +
   "source ('generated'). message: one short invite line. proposals empty. Follow context.guidance when present. " +
-  "CRITICAL — pressure KEYS are player HUD labels: plain English, 1–3 words, Title Case with spaces. " +
-  "Good: \"Dirty air\", \"Sick days\", \"Truck exhaust\", \"Cook smoke\", \"Flooding\", \"Jobs\". " +
-  "BAD (never use): AlleyPM, BenzeneSpikes, GensetHours, StackUpsets, NosebleedNights, CorridorPM, VendorSickness. " +
-  "Use one harm meter, one cause/driver meter, one social/constraint meter.";
+  "CRITICAL — pressure is an object with up to three role keys: local, global, support. " +
+  "Omit a role to leave that crisis meter off the HUD. " +
+  "Each present role is { \"label\": \"plain English HUD name\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. " +
+  "local = lived local harm; global = systemic/driver pressure; support = trust/legitimacy/public fear. " +
+  "label: plain English, 1–3 words, Title Case with spaces. " +
+  "Good labels: \"Dirty air\", \"Sick days\", \"Truck exhaust\", \"Flooding\", \"Jobs\". " +
+  "BAD labels: AlleyPM, BenzeneSpikes, GensetHours, CorridorPM. " +
+  "Default full Quest uses all three roles.";
 
 const SYSTEM = `You are the AI Co-Inventor in Future Forge.
 When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme.
@@ -266,26 +270,73 @@ function humanizeMeterKey(key) {
     .join(" ");
 }
 
-function normalizeScenario(raw, globalId) {
-  const place = String(raw.place || "Local place").slice(0, 80);
-  const title = String(raw.title || "Local Quest").slice(0, 100);
-  let pressure = {};
-  if (raw.pressure && typeof raw.pressure === "object") {
-    for (const [k, v] of Object.entries(raw.pressure).slice(0, 4)) {
-      const label = k === "Trust" ? "Trust" : humanizeMeterKey(k) || String(k).slice(0, 40);
-      if (pressure[label] == null) {
-        pressure[label] = Math.min(5, Math.max(0, Number(v) || 2));
+const CRISIS_ROLES = ["local", "global", "support"];
+
+/**
+ * Extract crisisMeters { local, global, support } labels from AI / legacy scenario JSON.
+ * @returns {Record<string, string>}
+ */
+function extractCrisisMeters(raw) {
+  /** @type {Record<string, string>} */
+  const meters = {};
+  const p = raw?.pressure;
+  const cm = raw?.crisisMeters;
+  if (cm && typeof cm === "object" && !Array.isArray(cm)) {
+    for (const role of CRISIS_ROLES) {
+      if (cm[role] == null) continue;
+      if (typeof cm[role] === "string") {
+        const lab = humanizeMeterKey(cm[role]) || String(cm[role]).trim();
+        if (lab) meters[role] = lab;
+      } else if (typeof cm[role] === "object" && cm[role].label) {
+        const lab = humanizeMeterKey(cm[role].label) || String(cm[role].label);
+        if (lab) meters[role] = lab;
       }
     }
   }
-  if (!Object.keys(pressure).length) {
-    pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
+  if (Object.keys(meters).length) return meters;
+
+  if (p && typeof p === "object" && !Array.isArray(p)) {
+    const structured =
+      Object.keys(p).some((k) => CRISIS_ROLES.includes(k)) &&
+      Object.keys(p).every(
+        (k) =>
+          !CRISIS_ROLES.includes(k) ||
+          (p[k] && typeof p[k] === "object" && !Array.isArray(p[k]))
+      );
+    if (structured) {
+      for (const role of CRISIS_ROLES) {
+        if (!p[role]) continue;
+        const lab =
+          humanizeMeterKey(p[role].label || role) || String(p[role].label || role);
+        if (lab) meters[role] = lab;
+      }
+      if (Object.keys(meters).length) return meters;
+    }
+    // Flat legacy: first three keys → local, global, support
+    Object.keys(p)
+      .slice(0, 3)
+      .forEach((k, i) => {
+        const role = CRISIS_ROLES[i];
+        const v = p[k];
+        const lab =
+          v && typeof v === "object" && v.label
+            ? humanizeMeterKey(v.label) || String(v.label)
+            : k === "Trust"
+              ? "Trust"
+              : humanizeMeterKey(k) || String(k).slice(0, 40);
+        if (lab) meters[role] = lab;
+      });
   }
-  const keys = Object.keys(pressure);
-  const pressureRise = Object.fromEntries(
-    keys.map((k, i) => [k, i === keys.length - 1 ? 0 : 1])
-  );
-  const winMax = Object.fromEntries(keys.map((k) => [k, 1]));
+  if (!Object.keys(meters).length) {
+    return { local: "Pressure", global: "Capacity", support: "Trust" };
+  }
+  return meters;
+}
+
+function normalizeScenario(raw, globalId) {
+  const place = String(raw.place || "Local place").slice(0, 80);
+  const title = String(raw.title || "Local Quest").slice(0, 100);
+  const crisisMeters = extractCrisisMeters(raw);
   const valid = new Set(TECHS.map((t) => t.id));
   const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
     .map(String)
@@ -296,7 +347,7 @@ function normalizeScenario(raw, globalId) {
     title,
     scene: String(raw.scene || "").slice(0, SCENE_CHAR_CAP),
     stakeholder: String(raw.stakeholder || "Local working group").slice(0, 120),
-    pressureKeys: keys,
+    crisisMeters,
     suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
   };
@@ -304,15 +355,32 @@ function normalizeScenario(raw, globalId) {
 
 function localPackForTheme(g) {
   const list = localScenariosForGlobal(g, { count: SCENARIO_COUNT, salt: 0 });
-  return list.map((m) => ({
-    places: [m.place],
-    title: m.title,
-    scene: m.scene,
-    stakeholder: m.stakeholder || "Local working group",
-    pressureKeys: Object.keys(m.pressure || { Pressure: 2 }),
-    suggested: m.suggested || ["ai", "iot", "networks"],
-    visionTheme: m.visionTheme || "rebuild-city",
-  }));
+  return list.map((m) => {
+    /** @type {Record<string, string>} */
+    const crisisMeters = {};
+    const p = m.pressure;
+    if (p && typeof p === "object") {
+      for (const role of CRISIS_ROLES) {
+        if (p[role]?.label) crisisMeters[role] = String(p[role].label);
+      }
+    }
+    if (!Object.keys(crisisMeters).length) {
+      Object.assign(crisisMeters, {
+        local: "Pressure",
+        global: "Capacity",
+        support: "Trust",
+      });
+    }
+    return {
+      places: [m.place],
+      title: m.title,
+      scene: m.scene,
+      stakeholder: m.stakeholder || "Local working group",
+      crisisMeters,
+      suggested: m.suggested || ["ai", "iot", "networks"],
+      visionTheme: m.visionTheme || "rebuild-city",
+    };
+  });
 }
 
 function parseScenarioList(text) {
@@ -468,7 +536,10 @@ function jsString(s) {
 }
 
 function packToJs(pack, indent = "    ") {
-  const pk = pack.pressureKeys.map((k) => jsString(k)).join(", ");
+  const cm = pack.crisisMeters || {};
+  const meterParts = CRISIS_ROLES.filter((r) => cm[r])
+    .map((r) => `${r}: ${jsString(cm[r])}`)
+    .join(", ");
   const sug = (pack.suggested || []).map((k) => jsString(k)).join(", ");
   const places = (pack.places || []).map((p) => jsString(p)).join(", ");
   return (
@@ -477,7 +548,7 @@ function packToJs(pack, indent = "    ") {
     `${indent}  title: ${jsString(pack.title)},\n` +
     `${indent}  scene:\n${indent}    ${jsString(pack.scene)},\n` +
     `${indent}  stakeholder: ${jsString(pack.stakeholder)},\n` +
-    `${indent}  pressureKeys: [${pk}],\n` +
+    `${indent}  crisisMeters: { ${meterParts} },\n` +
     `${indent}  suggested: [${sug}],\n` +
     `${indent}  visionTheme: ${jsString(pack.visionTheme)},\n` +
     `${indent}}`
@@ -504,6 +575,8 @@ function writeSeedsFile(packsByTheme, meta) {
  * Themes: ${keys.length}
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
  * Prose: design-challenge story craft (hook → mechanism → open challenge); easy first read, not shorter-for-its-own-sake.
+ * Crisis meters: crisisMeters: { local, global, support } — HUD labels per perspective.
+ *   (buildLocalScenarioVariants expands to structured mission.pressure with levels.)
  *
  * Re-run: node scripts/generate-scenario-seeds.mjs
  * Scale rule: existential themes (asteroid, nuclear, rogue SI, chem-bio…) are
@@ -521,7 +594,7 @@ ${body},
       scene:
         "People in {place} feel this global problem in daily life. A local driver keeps it going — invent for this place and year, not a slogan.",
       stakeholder: "Local working group",
-      pressureKeys: ["Pressure", "Capacity", "Trust"],
+      crisisMeters: { local: "Pressure", global: "Capacity", support: "Trust" },
       suggested: ["ai", "iot", "networks", "solar", "battery"],
       visionTheme: "rebuild-city",
     },
