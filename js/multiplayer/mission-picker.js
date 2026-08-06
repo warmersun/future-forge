@@ -116,6 +116,15 @@ export function paintMissionGrid(grid, opts) {
         : m.isLearningModule
           ? `<span class="scenario-tag learning-tag" title="Learning module">Learning module</span>`
           : "";
+      const sponsorName = String(m.sponsorName || "").trim();
+      const sponsorBanner = String(m.sponsorBanner || "").trim();
+      const sponsorTag = sponsorName
+        ? `<span class="scenario-tag sponsor-tag" title="${escapeHtml(
+            sponsorBanner
+              ? `Sponsored by ${sponsorName} — ${sponsorBanner}`
+              : `Sponsored by ${sponsorName}`
+          )}">Sponsored · ${escapeHtml(sponsorName)}</span>`
+        : "";
       return `
       <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel} ${
         isExternal ? "quest-card-external" : ""
@@ -131,6 +140,7 @@ export function paintMissionGrid(grid, opts) {
           <span class="num">${escapeHtml(m.place || "")} · ${m.startYear || 2026}
             <span class="scenario-tag ${tagClass}">${escapeHtml(tag)}</span>
             ${spot}
+            ${sponsorTag}
             ${learnTag}
             ${resTag}
             ${crisisTag}

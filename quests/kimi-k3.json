@@ -45,6 +45,8 @@
     "showToPlayer": false
   },
   "globalId": "education",
+  "sponsorName": "Moonshot.ai",
+  "sponsorBanner": "Kimi K3 open weights — invent the local application",
   "isLearningModule": true,
   "module": 1,
   "lesson": 1,

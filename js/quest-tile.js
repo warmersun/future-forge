@@ -23,6 +23,8 @@ export const CAPS = {
   grounding: 50_000,
   /** Soft safety ceiling for hidden AI tutor context. */
   aiTutorContext: 50_000,
+  sponsorName: 120,
+  sponsorBanner: 200,
 };
 
 /**
@@ -455,6 +457,29 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...learningParsed.details);
   }
 
+  /** @type {string|null} */
+  let sponsorName = null;
+  /** @type {string|null} */
+  let sponsorBanner = null;
+  const sponsorNameRaw = pickTileOrMissionField(tile, missionIn, "sponsorName");
+  if (sponsorNameRaw !== undefined) {
+    if (typeof sponsorNameRaw !== "string") {
+      details.push("sponsorName_not_string");
+    } else {
+      const s = sponsorNameRaw.trim();
+      if (s) sponsorName = s.slice(0, CAPS.sponsorName);
+    }
+  }
+  const sponsorBannerRaw = pickTileOrMissionField(tile, missionIn, "sponsorBanner");
+  if (sponsorBannerRaw !== undefined) {
+    if (typeof sponsorBannerRaw !== "string") {
+      details.push("sponsorBanner_not_string");
+    } else {
+      const s = sponsorBannerRaw.trim();
+      if (s) sponsorBanner = s.slice(0, CAPS.sponsorBanner);
+    }
+  }
+
   // Breaking: quest tiles must use structured pressure (local|global|support entries).
   // Legacy flat maps are no longer accepted on imported/hosted tiles.
   if (!isStructuredPressure(missionIn.pressure)) {
@@ -534,6 +559,8 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.module != null) mission.module = learning.module;
   if (learning.lesson != null) mission.lesson = learning.lesson;
   if (learning.totalLessons != null) mission.totalLessons = learning.totalLessons;
+  if (sponsorName) mission.sponsorName = sponsorName;
+  if (sponsorBanner) mission.sponsorBanner = sponsorBanner;
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -560,6 +587,8 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.module != null) normalizedTile.module = learning.module;
   if (learning.lesson != null) normalizedTile.lesson = learning.lesson;
   if (learning.totalLessons != null) normalizedTile.totalLessons = learning.totalLessons;
+  if (sponsorName) normalizedTile.sponsorName = sponsorName;
+  if (sponsorBanner) normalizedTile.sponsorBanner = sponsorBanner;
 
   return { ok: true, tile: normalizedTile, mission };
 }

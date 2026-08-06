@@ -39,3 +39,9 @@ Free-text / Markdown string for authoritative Quest context (technology, capabil
 - `isLearningModule` (boolean) — activates solo AI **tutor** mode + opens Co-Inventor tab
 - `aiTutorContext` (string) — hidden tutor notes for the AI only
 - `module` / `lesson` / `totalLessons` (positive integers) — progress label only; no unlock sequencing yet
+
+## Optional sponsor attribution (display only)
+
+- `sponsorName` (string) — “Sponsored by …”
+- `sponsorBanner` (string) — plain-text tagline only (not an image URL)
+- Put capability/milestone/use cases in `grounding`. Players must invent; naming a product is not enough.

@@ -70,5 +70,9 @@ if (r.mission.isLearningModule) {
   }
   console.log(`  ${bits.join(" · ")}`);
 }
+if (r.mission.sponsorName) {
+  const ban = r.mission.sponsorBanner ? ` — ${r.mission.sponsorBanner}` : "";
+  console.log(`  sponsor: ${r.mission.sponsorName}${ban}`);
+}
 console.log(`  pressure: ${JSON.stringify(r.mission.pressure)}`);
 process.exit(0);

@@ -2984,6 +2984,9 @@ function renderDailyCard() {
       const tech = techById(sp.techId);
       parts.push(`Spotlight · ${tech?.name || sp.techId}`);
     }
+    if (pick.mission.sponsorName) {
+      parts.push(`Sponsored · ${pick.mission.sponsorName}`);
+    }
     if (learnLabel) parts.push(`Learn · ${learnLabel}`);
     else if (pick.mission.isLearningModule) parts.push("Learning module");
     if (resLabel) parts.push(`Start · ${resLabel}`);
@@ -3709,6 +3712,14 @@ function normalizeMission(raw, globalId) {
   const moduleN = posInt(raw.module);
   const lessonN = posInt(raw.lesson);
   const totalLessonsN = posInt(raw.totalLessons);
+  const sponsorName =
+    typeof raw.sponsorName === "string" && raw.sponsorName.trim()
+      ? raw.sponsorName.trim().slice(0, 120)
+      : null;
+  const sponsorBanner =
+    typeof raw.sponsorBanner === "string" && raw.sponsorBanner.trim()
+      ? raw.sponsorBanner.trim().slice(0, 200)
+      : null;
 
   return {
     id,
@@ -3739,6 +3750,8 @@ function normalizeMission(raw, globalId) {
     ...(moduleN != null ? { module: moduleN } : {}),
     ...(lessonN != null ? { lesson: lessonN } : {}),
     ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
+    ...(sponsorName ? { sponsorName } : {}),
+    ...(sponsorBanner ? { sponsorBanner } : {}),
   };
 }
 
@@ -3775,10 +3788,25 @@ function learningModuleBadgeHtml(mission) {
   return "";
 }
 
-/** Resource + crisis + learning chips for selection cards / lists. */
+/** Sponsor attribution chip (text only). */
+function sponsorBadgeHtml(mission) {
+  if (!mission || typeof mission !== "object") return "";
+  const name = String(mission.sponsorName || "").trim();
+  if (!name) return "";
+  const banner = String(mission.sponsorBanner || "").trim();
+  const title = banner
+    ? `Sponsored by ${name} — ${banner}`
+    : `Sponsored by ${name}`;
+  return `<span class="scenario-tag sponsor-tag" title="${escapeHtml(
+    title
+  )}">Sponsored · ${escapeHtml(name)}</span>`;
+}
+
+/** Resource + crisis + learning + sponsor chips for selection cards / lists. */
 function questMetaBadgesHtml(mission) {
   if (!mission || typeof mission !== "object") return "";
   return (
+    sponsorBadgeHtml(mission) +
     learningModuleBadgeHtml(mission) +
     resourceOverrideBadgeHtml(mission.resources) +
     crisisRolesBadgeHtml(mission.crisisRoles)
@@ -4061,6 +4089,38 @@ function renderWorkshop() {
     } else {
       progressEl.hidden = true;
       progressEl.textContent = "";
+    }
+  }
+  const sponsorEl = $("#ws-sponsor");
+  const sponsorLabelEl = $("#ws-sponsor-label");
+  const sponsorBannerEl = $("#ws-sponsor-banner");
+  if (sponsorEl) {
+    const sName = String(m.sponsorName || "").trim();
+    const sBanner = String(m.sponsorBanner || "").trim();
+    if (sName || sBanner) {
+      sponsorEl.hidden = false;
+      if (sponsorLabelEl) {
+        if (sName) {
+          sponsorLabelEl.hidden = false;
+          sponsorLabelEl.textContent = `Sponsored by ${sName}`;
+        } else {
+          sponsorLabelEl.hidden = true;
+          sponsorLabelEl.textContent = "";
+        }
+      }
+      if (sponsorBannerEl) {
+        if (sBanner) {
+          sponsorBannerEl.hidden = false;
+          sponsorBannerEl.textContent = sBanner;
+        } else {
+          sponsorBannerEl.hidden = true;
+          sponsorBannerEl.textContent = "";
+        }
+      }
+    } else {
+      sponsorEl.hidden = true;
+      if (sponsorLabelEl) sponsorLabelEl.textContent = "";
+      if (sponsorBannerEl) sponsorBannerEl.textContent = "";
     }
   }
   const sceneEl = $("#ws-mission-scene");

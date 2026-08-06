@@ -2899,6 +2899,24 @@ body.mp-hotseat .hud-product {
   color: #fdba74;
 }
 
+.ws-sponsor {
+  margin: 0 0 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.08);
+}
+.ws-sponsor-label {
+  margin: 0 !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+.ws-sponsor-banner {
+  margin: 0.15rem 0 0 !important;
+  font-size: 0.78rem;
+}
+
 .stakeholder {
   font-size: 0.85rem;
   color: var(--text-mute);
@@ -7314,9 +7332,17 @@ button.linkish:hover {
   border: 1px solid rgba(251, 146, 60, 0.45);
   font-weight: 600;
 }
+/* Sponsor chips: slate — display-only attribution */
+.scenario-tag.sponsor-tag {
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  font-weight: 600;
+}
 .quest-lib-copy .scenario-tag.resources-tag,
 .quest-lib-copy .scenario-tag.crisis-tag,
-.quest-lib-copy .scenario-tag.learning-tag {
+.quest-lib-copy .scenario-tag.learning-tag,
+.quest-lib-copy .scenario-tag.sponsor-tag {
   display: inline-block;
   margin: 0.2rem 0.35rem 0.15rem 0;
   font-size: 0.72rem;

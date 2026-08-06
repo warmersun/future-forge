@@ -33,7 +33,26 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields below.
+Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields, sponsor fields below.
+
+### Optional sponsor attribution (display only)
+
+For sponsored Quests. **Text only** — no images. Does not change scoring, feasibility, win conditions, or AI prompts.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `sponsorName` | string | Organization or product line shown as “Sponsored by …” |
+| `sponsorBanner` | string | Optional short **tagline** under the label (plain text, not a URL/image) |
+
+Sponsors should put technology capability, milestone, and use-case facts in **`grounding`** (AI source of truth). Players must still invent a local solution; **simply naming a sponsored product is not a valid solution**.
+
+```json
+"sponsorName": "Acme Robotics",
+"sponsorBanner": "Open edge autonomy kit — invent the local application",
+"grounding": "## Technology\n…"
+```
+
+Shows on invent banner and as a **Sponsored · …** chip on selection UIs.
 
 ### Optional learning module + AI tutor mode
 

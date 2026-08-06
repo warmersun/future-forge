@@ -443,4 +443,44 @@ describe("quest-tile", () => {
     assert.equal(r.ok, true);
     assert.equal(r.value.isLearningModule, undefined);
   });
+
+  it("accepts optional sponsor text fields", () => {
+    const r = validateQuestTile(
+      baseTile({
+        sponsorName: "Acme Robotics",
+        sponsorBanner: "Open edge kit — invent locally",
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.sponsorName, "Acme Robotics");
+    assert.equal(r.mission.sponsorBanner, "Open edge kit — invent locally");
+    assert.equal(r.tile.sponsorName, "Acme Robotics");
+  });
+
+  it("rejects non-string sponsor fields", () => {
+    assert.equal(
+      validateQuestTile(baseTile({ sponsorName: 12 }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ sponsorBanner: { url: "x" } }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+  });
+
+  it("omits blank sponsor fields", () => {
+    const r = validateQuestTile(baseTile({ sponsorName: "  " }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.sponsorName, undefined);
+  });
 });

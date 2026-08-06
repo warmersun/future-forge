@@ -125,6 +125,12 @@ export function cloneMission(m) {
     ...(typeof m.module === "number" ? { module: m.module } : {}),
     ...(typeof m.lesson === "number" ? { lesson: m.lesson } : {}),
     ...(typeof m.totalLessons === "number" ? { totalLessons: m.totalLessons } : {}),
+    ...(typeof m.sponsorName === "string" && m.sponsorName
+      ? { sponsorName: String(m.sponsorName) }
+      : {}),
+    ...(typeof m.sponsorBanner === "string" && m.sponsorBanner
+      ? { sponsorBanner: String(m.sponsorBanner) }
+      : {}),
   };
 }
 
