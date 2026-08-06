@@ -52,5 +52,8 @@ if (r.mission.resources) {
 if (r.mission.crisisRoles) {
   console.log(`  crisisRoles: ${JSON.stringify(r.mission.crisisRoles)}`);
 }
+if (r.mission.grounding) {
+  console.log(`  grounding: ${r.mission.grounding.length} chars`);
+}
 console.log(`  pressure: ${JSON.stringify(r.mission.pressure)}`);
 process.exit(0);

@@ -19,6 +19,8 @@ export const CAPS = {
   encourageCopy: 280,
   researchTotal: 8_000,
   meterKey: 40,
+  /** Soft safety ceiling for optional AI grounding (not a product length limit). */
+  grounding: 50_000,
 };
 
 const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);
@@ -354,6 +356,22 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...resourcesParsed.details);
   }
 
+  const groundingRaw =
+    tile.grounding !== undefined && tile.grounding !== null
+      ? tile.grounding
+      : missionIn.grounding;
+  let grounding = null;
+  if (groundingRaw !== undefined && groundingRaw !== null) {
+    if (typeof groundingRaw !== "string") {
+      details.push("grounding_not_string");
+    } else {
+      const g = groundingRaw.trim();
+      if (g) {
+        grounding = g.slice(0, CAPS.grounding);
+      }
+    }
+  }
+
   // Breaking: quest tiles must use structured pressure (local|global|support entries).
   // Legacy flat maps are no longer accepted on imported/hosted tiles.
   if (!isStructuredPressure(missionIn.pressure)) {
@@ -424,6 +442,9 @@ export function validateQuestTile(tile, opts = {}) {
   if (crisisRoles?.length) {
     mission.crisisRoles = crisisRoles;
   }
+  if (grounding) {
+    mission.grounding = grounding;
+  }
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -442,6 +463,9 @@ export function validateQuestTile(tile, opts = {}) {
     globalId,
     mission,
   };
+  if (grounding) {
+    normalizedTile.grounding = grounding;
+  }
 
   return { ok: true, tile: normalizedTile, mission };
 }

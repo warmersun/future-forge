@@ -29,3 +29,7 @@ Validate: `npm run validate:quest -- path.json`
 - Keys: only `local`, `global`, `support` (omit any role to hide that meter).
 - Each entry: `label` (HUD name), `pressure` 0–5, `pressureRise` 0–3, `winMax` 0–5.
 - Do **not** use flat maps or separate top-level `pressureRise` / `winMax`.
+
+## Optional `grounding` (AI source of truth)
+
+Free-text / Markdown string for authoritative Quest context (technology, capabilities, milestone, unlocked use cases). Passed to the co-inventor and feasibility assessor when present. Omit for default AI behavior.

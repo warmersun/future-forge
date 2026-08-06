@@ -327,7 +327,7 @@ Role:
 - When mode is art-of-the-possible: teach milestones, current capabilities (now), use cases unlocked, near vs frontier stretch for the selected stack (or recommended if empty) and year/place. Use maturity/milestones/useCasesNow from availableTechs as baseline; enrich with real-world knowledge when confident. Label uncertainty. Do not invent fake paper titles.
 - When mode is sit: Systematic Inventive Thinking ("thinking in a box", TRIZ-inspired). Remix context.inventionHow with four closed-world lenses — Subtraction, Division, Multiplication, Addition. Prefer elements already in how-it-works + stack; do not invent a new mission. Structure message with those four headings. Brainstorm only — leave proposals empty (no inventionHow apply; the learner rewrites their own how-it-works if they like an idea).
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
-- When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year (never yellow→red or green→red solely because the calendar moved). Prefer yellow over red when pilot/partner/trial language is present and claims are borderline. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year.
+- When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year (never yellow→red or green→red solely because the calendar moved). Prefer yellow over red when pilot/partner/trial language is present and claims are borderline. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, treat it as authoritative Quest source-of-truth (tech capabilities, milestones, unlocked use cases) and judge claims against that grounding plus year — do not invent contradicting capability facts.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
 - When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
@@ -345,6 +345,7 @@ Hard rules:
 - Stay local: this place/year, not UN resolutions.
 - No tabletop jargon. No UI lectures.
 - Never say a category is locked until a year.
+- If context.grounding is set, treat it as the authoritative source of truth for this Quest (technology, capabilities, milestones, unlocked use cases). Prefer it over generic assumptions when advising or assessing.
 
 Respond with a single JSON object (no markdown fences):
 {
@@ -380,7 +381,38 @@ Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethici
 Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sharp question.
 Return JSON only (no markdown):
 {"angle":"<same as challengeAngle>","angleLabel":"<name>","challengeSpeech":"<2-4 sentences>","challengeQuestion":"<one question>","message":"","proposals":{"addTechIds":[],"removeTechIds":[],"inventionName":null,"inventionHow":null,"inventionImpact":null,"scrutiny":null},"teaching":[]}
-Stay local and specific. No UN resolutions. No tabletop jargon.`;
+Stay local and specific. No UN resolutions. No tabletop jargon.
+If context.grounding (or the grounding field in the user JSON) is present, treat it as authoritative Quest source-of-truth for tech capabilities, milestones, and unlocked use cases. Stay hostile, but do not invent capability limits that contradict that grounding.`;
+
+/** Appended to invent/challenge modeHints when capability truth matters. */
+const GROUNDING_HINT =
+  " If context.grounding is present, treat it as authoritative Quest source-of-truth (technology, capabilities, milestones, unlocked use cases); do not invent contradicting facts.";
+
+/**
+ * Resolve optional Quest grounding string from request context.
+ * @param {object|null|undefined} context
+ * @returns {string|null}
+ */
+function resolveGrounding(context) {
+  if (typeof context?.grounding === "string" && context.grounding.trim()) {
+    return String(context.grounding).trim().slice(0, 50_000);
+  }
+  if (
+    typeof context?.mission?.grounding === "string" &&
+    context.mission.grounding.trim()
+  ) {
+    return String(context.mission.grounding).trim().slice(0, 50_000);
+  }
+  return null;
+}
+
+/** Short excerpt for local (offline) fallback messages. */
+function groundingExcerpt(context, max = 500) {
+  const g = resolveGrounding(context);
+  if (!g) return "";
+  const oneLine = g.replace(/\s+/g, " ").trim();
+  return oneLine.length > max ? `${oneLine.slice(0, max)}…` : oneLine;
+}
 
 /* —— Local co-inventor (always available) —— */
 
@@ -388,13 +420,18 @@ function localArtOfThePossible(context, selected, stack, map, base) {
   const year = context.year || 2026;
   const place = context.place || "this place";
   const focus = (selected.length ? selected : stack).slice(0, 5);
+  const groundNote = groundingExcerpt(context, 500);
+  const groundBlock = groundNote
+    ? `\n\n**Quest grounding (authoritative):** ${groundNote}\n`
+    : "";
   if (!focus.length) {
     return {
       source: "local",
       message:
         `**Art of the possible** (${year}, ${place}):\n\n` +
         `Pick at least one emTech category first — then I can map milestones, current capabilities, and unlocked use cases for this year. ` +
-        `Remember: categories are always pickable; we judge *claims*, not cards.`,
+        `Remember: categories are always pickable; we judge *claims*, not cards.` +
+        groundBlock,
       proposals: base,
       teaching: [],
     };
@@ -439,7 +476,9 @@ function localArtOfThePossible(context, selected, stack, map, base) {
     source: "local",
     message:
       `**Art of the possible** — ${place}, **${year}**\n\n` +
-      `Categories below are always choosable. Invent with *now* / pilot language for green timing; frontier-as-routine goes red on feasibility.\n\n` +
+      `Categories below are always choosable. Invent with *now* / pilot language for green timing; frontier-as-routine goes red on feasibility.` +
+      groundBlock +
+      `\n\n` +
       lines.join("\n\n") +
       `\n\nWant a claim that fits this year? Draft how-it-works around a pilot, partnership, or mapped corridor — then I'll stress-test timing.`,
     proposals: base,
@@ -793,10 +832,16 @@ function localAssessFeasibility(context, selected, map, base) {
   }
 
   const names = techs.map((t) => t.name).join(", ") || "empty stack";
+  const groundNote = groundingExcerpt(context, 400);
+  const reasonOut = groundNote
+    ? `${reason} (Quest grounding on file — treat as capability source-of-truth.)`
+    : reason;
   return {
     source: "local",
-    message: `Timing assess (${year}): **${level}** — ${reason}\n\nStack: ${names}. Categories are never locked; only claims are judged.`,
-    timing: { level, reason },
+    message:
+      `Timing assess (${year}): **${level}** — ${reasonOut}\n\nStack: ${names}. Categories are never locked; only claims are judged.` +
+      (groundNote ? `\n\n**Quest grounding (excerpt):** ${groundNote}` : ""),
+    timing: { level, reason: reasonOut },
     proposals: base,
     teaching: [],
   };
@@ -1358,30 +1403,40 @@ function buildUserPayload({ messages, context, mode }) {
   });
 
   const modeHints = {
-    chat: "Respond to the learner's latest message as co-inventor. Never say a category is locked until a year.",
+    chat:
+      "Respond to the learner's latest message as co-inventor. Never say a category is locked until a year." +
+      GROUNDING_HINT,
     spark:
-      "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable.",
+      "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable." +
+      GROUNDING_HINT,
     "suggest-stack":
-      "Propose a coherent technology stack for this challenge. Explain why each piece matters. Put ids in proposals.addTechIds (and removeTechIds if swapping).",
+      "Propose a coherent technology stack for this challenge. Explain why each piece matters. Put ids in proposals.addTechIds (and removeTechIds if swapping)." +
+      GROUNDING_HINT,
     "draft-name":
       "Propose 2–3 invention name options in message, and put your single best pick in proposals.inventionName.",
     "draft-how":
-      "Co-draft how the invention works using their current stack. Put the draft in proposals.inventionHow. Teach how the techs connect. Prefer pilot-honest near-term claims for the current year.",
+      "Co-draft how the invention works using their current stack. Put the draft in proposals.inventionHow. Teach how the techs connect. Prefer pilot-honest near-term claims for the current year." +
+      GROUNDING_HINT,
     "draft-impact":
-      "Co-draft everyday life in a world where this works. Put draft in proposals.inventionImpact. Make it sensory and specific.",
+      "Co-draft everyday life in a world where this works. Put draft in proposals.inventionImpact. Make it sensory and specific." +
+      GROUNDING_HINT,
     "push-further":
-      "Timing and fit check on CLAIMS vs year (not category locks): wait for better world conditions vs revise how-it-works. Missing capability if any. Do not force multi-domain.",
+      "Timing and fit check on CLAIMS vs year (not category locks): wait for better world conditions vs revise how-it-works. Missing capability if any. Do not force multi-domain." +
+      GROUNDING_HINT,
     "explain-techs":
-      "Teach the currently selected technologies (or recommended ones if none).",
+      "Teach the currently selected technologies (or recommended ones if none)." +
+      GROUNDING_HINT,
     "art-of-the-possible":
-      "Capability literacy for selected stack (or recommended if empty) at context.year in context.place. Structure message with: recent milestones, what works NOW, use cases unlocked, near (2–5y), frontier stretch. Use maturity/milestones/useCasesNow on availableTechs as baseline; enrich carefully. Never imply a category is locked. teaching blurbs welcome. proposals usually empty.",
+      "Capability literacy for selected stack (or recommended if empty) at context.year in context.place. Structure message with: recent milestones, what works NOW, use cases unlocked, near (2–5y), frontier stretch. Use maturity/milestones/useCasesNow on availableTechs as baseline; when context.grounding is present, prefer it as the Quest source-of-truth for milestones/capabilities/unlocks and align teaching to it. Enrich carefully. Never imply a category is locked. teaching blurbs welcome. proposals usually empty." +
+      GROUNDING_HINT,
     sit:
       "Systematic Inventive Thinking (SIT) — Soviet TRIZ-inspired 'thinking in a box'. The learner already wrote context.inventionHow; remix THAT idea (plus name/stack/place), not a blank-slate invent. Produce FOUR short variants, one per lens:\n" +
       "1) **Subtraction** — remove an essential component/step and re-solve the function with what remains.\n" +
       "2) **Division** — split product/process in time, space, or scale (parts that were whole).\n" +
       "3) **Multiplication** — copy a component/step and change the copy in a useful way.\n" +
       "4) **Addition** — add a closed-world element already present in the system, or assign a new job to an existing part (task unification as addition).\n" +
-      "Closed world: prefer recombining elements already named in how-it-works and the stack; avoid open-ended blue-sky tech. Stay local to place/year. Message structure: one-line SIT framing, then the four headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked.",
+      "Closed world: prefer recombining elements already named in how-it-works and the stack; avoid open-ended blue-sky tech. Stay local to place/year. Message structure: one-line SIT framing, then the four headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked." +
+      GROUNDING_HINT,
     scamper:
       "SCAMPER invent (Osborn/Eberle checklist) — more open than SIT, but still remix the learner's context.inventionHow (plus name/stack/place), not a blank-slate invent. Produce SEVEN short variants, one per letter:\n" +
       "1) **Substitute** — replace a material, actor, step, or channel.\n" +
@@ -1391,23 +1446,31 @@ function buildUserPayload({ messages, context, mode }) {
       "5) **Put to other uses** — same system, second job or audience.\n" +
       "6) **Eliminate** — remove a step/component and still deliver value.\n" +
       "7) **Reverse / Rearrange** — flip sequence, roles, or cause-effect.\n" +
-      "Stay local to place/year. Message structure: one-line SCAMPER framing, then the seven headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked. Do not confuse with SIT closed-world templates — SCAMPER may Adapt from outside the draft.",
+      "Stay local to place/year. Message structure: one-line SCAMPER framing, then the seven headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked. Do not confuse with SIT closed-world templates — SCAMPER may Adapt from outside the draft." +
+      GROUNDING_HINT,
     "assess-feasibility":
-      "Judge claim timing only. Read inventionHow/inventionImpact and selected stack vs context.year. Return top-level timing: { level: red|yellow|green, reason: one sentence }. green = near-term/pilot-honest; yellow = stretch/vague; red = frontier as routine. Selecting synbio/quantum/BCI never forces red by itself. Same claims at a later year must not score worse than priorTiming (if provided). Prefer yellow over red when borderline with pilot language. message can briefly echo the reason. proposals empty.",
+      "Judge claim timing only. Read inventionHow/inventionImpact and selected stack vs context.year. If context.grounding is present, treat it as authoritative capability facts for this Quest (do not invent contradicting milestones). Return top-level timing: { level: red|yellow|green, reason: one sentence }. green = near-term/pilot-honest; yellow = stretch/vague; red = frontier as routine. Selecting synbio/quantum/BCI never forces red by itself. Same claims at a later year must not score worse than priorTiming (if provided). Prefer yellow over red when borderline with pilot language. message can briefly echo the reason. proposals empty.",
     "complete-picture":
-      "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack. If context.contributingToOther, extend their invent additively — never replace their core idea.",
+      "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack. If context.contributingToOther, extend their invent additively — never replace their core idea." +
+      GROUNDING_HINT,
     "judge-contribution":
       "Multiplayer contribution check. Context has field, beforeText, afterText (and optional full invent). Decide if afterText is ADDITIVE vs DESTRUCTIVE relative to beforeText. Additive keeps original actors/mechanisms/intent and adds detail; destructive rewrites, clears, or strips core meaning. Return JSON with top-level additive (boolean) and reason (one sentence). message may echo the reason. proposals empty.",
     "pose-challenge":
-      "Speak ONLY as context.challengeAngle (moloch|ethicist|stakeholder|nature). Attack this invent in 2–4 sentences; one question. Return angle, angleLabel, challengeSpeech, challengeQuestion. Keep speech under ~120 words.",
+      "Speak ONLY as context.challengeAngle (moloch|ethicist|stakeholder|nature). Attack this invent in 2–4 sentences; one question. Return angle, angleLabel, challengeSpeech, challengeQuestion. Keep speech under ~120 words." +
+      GROUNDING_HINT +
+      " Stay hostile but do not invent capability limits that contradict grounding.",
     "judge-scrutiny-move":
-      "The learner Argues against a fixed challenger (context.challengeAngle, challengeSpeech, challengeQuestion, playerAnswer). Score their argument as quality: hit | glance | miss. hit = concrete actors/costs/limits/mechanics that answer the question; glance = partial substance; miss = vague hope or off-topic. Return top-level: quality, message (1-2 sentences feedback), damage (hit=2, glance=1, miss=0). Be fair but strict on freeriding and handwaving.",
+      "The learner Argues against a fixed challenger (context.challengeAngle, challengeSpeech, challengeQuestion, playerAnswer). Score their argument as quality: hit | glance | miss. hit = concrete actors/costs/limits/mechanics that answer the question; glance = partial substance; miss = vague hope or off-topic. Return top-level: quality, message (1-2 sentences feedback), damage (hit=2, glance=1, miss=0). Be fair but strict on freeriding and handwaving." +
+      GROUNDING_HINT,
     "judge-challenge":
-      "Judge the learner's answer to the challenge (context has challengeSpeech, challengeQuestion, playerAnswer, challengeAngle). Return top-level verdict: pass | partial | fail, message (feedback), lesson (one teaching sentence). Be fair: concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail.",
+      "Judge the learner's answer to the challenge (context has challengeSpeech, challengeQuestion, playerAnswer, challengeAngle). Return top-level verdict: pass | partial | fail, message (feedback), lesson (one teaching sentence). Be fair: concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail." +
+      GROUNDING_HINT,
     "coach-challenge":
-      "The learner is stuck on the challenge step. Context has challengeAngle, challengeSpeech, challengeQuestion, invention details. Coach them: explain what this angle cares about, give 2–4 concrete hint bullets for THIS local invention (not generic theory). Do NOT write a full ready-to-submit answer unless they clearly asked to draft. Put coaching in message. Optional top-level field draftAnswer only if mode intent is draft (see draft-challenge).",
+      "The learner is stuck on the challenge step. Context has challengeAngle, challengeSpeech, challengeQuestion, invention details. Coach them: explain what this angle cares about, give 2–4 concrete hint bullets for THIS local invention (not generic theory). Do NOT write a full ready-to-submit answer unless they clearly asked to draft. Put coaching in message. Optional top-level field draftAnswer only if mode intent is draft (see draft-challenge)." +
+      GROUNDING_HINT,
     "draft-challenge":
-      "Write a solid draft answer the learner can edit and submit to the challenge. Context has challengeAngle, challengeSpeech, challengeQuestion, invention how/impact, techs, place. Draft must be specific to their invention: name actors, costs or physical limits, anti-defection or affordability moves as relevant. Put full draft in top-level draftAnswer AND a short coaching note in message. Do not auto-judge.",
+      "Write a solid draft answer the learner can edit and submit to the challenge. Context has challengeAngle, challengeSpeech, challengeQuestion, invention how/impact, techs, place. Draft must be specific to their invention: name actors, costs or physical limits, anti-defection or affordability moves as relevant. Put full draft in top-level draftAnswer AND a short coaching note in message. Do not auto-judge." +
+      GROUNDING_HINT,
     "generate-scenarios":
       "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms (e.g. air pollution: name trucks/cookfuel/stacks, not only indoor filters). " +
       SCENE_PROSE +
@@ -1417,6 +1480,8 @@ function buildUserPayload({ messages, context, mode }) {
   // Prefer selected techs with full capability seeds for literacy modes
   const selectedIds = new Set(context?.selectedTechIds || []);
   const focusTechs = available.filter((t) => selectedIds.has(t.id));
+
+  const grounding = resolveGrounding(context);
 
   // Fast path: minimal JSON for challenge pose (biggest latency win)
   if (mode === "pose-challenge") {
@@ -1431,6 +1496,7 @@ function buildUserPayload({ messages, context, mode }) {
       inventionImpact: String(context?.inventionImpact || "").slice(0, 800),
       selectedTechIds: context?.selectedTechIds || [],
       stack: focusTechs.length ? focusTechs : available.slice(0, 6),
+      grounding,
       mission: context?.challenge
         ? {
             title: context.challenge.title || null,
@@ -1467,8 +1533,12 @@ function buildUserPayload({ messages, context, mode }) {
     forceRegen: Boolean(context?.forceRegen),
     guidance: context?.guidance || null,
     depthCharacter: context?.depthCharacter || null,
+    grounding,
     designRule:
-      "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year.",
+      "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year." +
+      (grounding
+        ? " When grounding is present, treat it as authoritative Quest source-of-truth."
+        : ""),
   };
 
   return JSON.stringify(payload, null, 2);

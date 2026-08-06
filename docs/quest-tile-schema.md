@@ -33,7 +33,39 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`.
+Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`.
+
+### Optional `grounding` (AI source of truth)
+
+Free-text (Markdown OK) that supplies **authoritative context** for this Quest. When present, Future Forge passes it to AI paths that need capability truth — **co-inventor** (chat, spark, stack, drafts, art-of-the-possible, SIT/SCAMPER, fill other side), **claim-timing assess**, and **challenge pose / coach / draft / judge** — which should treat it as source-of-truth for capabilities, milestones, and unlocked use cases.
+
+- Optional — omit for unchanged AI behavior.
+- Type: string. Non-strings are rejected by validation.
+- No product length limit (a large safety ceiling may still apply in code).
+
+Recommended lightweight structure (guidance only — not schema-enforced):
+
+```markdown
+## Technology
+…
+
+## Capabilities
+…
+
+## Milestone
+…
+
+## Unlocks Use Case(s)
+…
+```
+
+Example:
+
+```json
+"grounding": "## Technology\nGene sequencing (clinic / portable)\n\n## Capabilities\nSame-shift provisional pathogen reads on rugged desktop sequencers when workflow, power, and trained staff exist.\n\n## Milestone\nField and clinic sequencing cost/time improvements (~2024–2026) make on-site reads realistic for small posts.\n\n## Unlocks Use Case(s)\nLocal sample-to-read workflows; triage and isolation decisions without waiting on a capital lab truck."
+```
+
+May sit at tile top level or under `mission`; both are accepted. Copied onto the runtime mission as `mission.grounding`.
 
 ### Crisis meters (`mission.pressure`) — required structured form
 

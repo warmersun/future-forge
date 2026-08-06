@@ -327,4 +327,48 @@ describe("quest-tile", () => {
     assert.equal(crisisRolesLabel(["local"]), "Local");
     assert.equal(crisisRolesLabel(["support", "local"]), "Local · Support");
   });
+
+  it("accepts optional grounding string on tile or mission", () => {
+    const top = validateQuestTile(
+      baseTile({
+        grounding:
+          "## Technology\nGene sequencing\n\n## Capabilities\nSame-shift reads.",
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(top.ok, true);
+    assert.match(top.mission.grounding, /Gene sequencing/);
+    assert.match(top.tile.grounding, /Gene sequencing/);
+
+    const nested = baseTile();
+    nested.mission.grounding = "Milestone: portable sequencers 2026.";
+    const r = validateQuestTile(nested, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.grounding, "Milestone: portable sequencers 2026.");
+  });
+
+  it("omits grounding when absent or blank", () => {
+    const none = validateQuestTile(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(none.ok, true);
+    assert.equal(none.mission.grounding, undefined);
+
+    const blank = validateQuestTile(baseTile({ grounding: "   " }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(blank.ok, true);
+    assert.equal(blank.mission.grounding, undefined);
+  });
+
+  it("rejects non-string grounding", () => {
+    const r = validateQuestTile(baseTile({ grounding: { tech: "ai" } }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(r.ok, false);
+    assert.ok(r.details.includes("grounding_not_string"));
+  });
 });

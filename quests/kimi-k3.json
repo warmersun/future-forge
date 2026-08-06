@@ -45,6 +45,7 @@
     "showToPlayer": false
   },
   "globalId": "education",
+  "grounding": "Pricing: Kimi K3 costs $15 per 1M tokens generated; Inference costs are getting 10X cheaper every year.",
   "mission": {
     "id": "spotlight-ai-kimi-k3-tideworks-polytechnic-2026",
     "globalId": "education",

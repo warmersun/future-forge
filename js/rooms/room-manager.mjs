@@ -1163,16 +1163,18 @@ function buildRoomAiContext(room, player, payload) {
   const f = mp?.invents?.[player.id];
   // AI feasibility / timing must use the invent owner's personal year
   const inventYear = f?.year != null ? f.year : mp?.place?.year;
+  const mission = mp?.place?.mission;
   return {
     year: inventYear,
-    place: mp?.place?.mission?.place,
+    place: mission?.place,
     globalTheme: { id: mp?.place?.globalId },
-    mission: mp?.place?.mission,
+    mission,
     inventionName: f?.inventionName,
     inventionHow: f?.inventionHow,
     inventionImpact: f?.inventionImpact,
     selectedTechIds: (f?.stack || []).map((x) => x.techId),
     pressure: mp?.place?.pressure,
+    grounding: mission?.grounding || null,
     roomCode: room.code,
     playerId: player.id,
     displayName: player.displayName,

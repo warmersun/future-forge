@@ -115,6 +115,9 @@ export function cloneMission(m) {
     ...(Array.isArray(m.crisisRoles) && m.crisisRoles.length
       ? { crisisRoles: [...m.crisisRoles] }
       : {}),
+    ...(typeof m.grounding === "string" && m.grounding
+      ? { grounding: String(m.grounding) }
+      : {}),
   };
 }
 

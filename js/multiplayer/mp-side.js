@@ -144,6 +144,12 @@ export class MpSidePanel {
       place: mission?.place || "",
       pressure: place?.pressure || {},
       availableTechs: stackIds.map(techById).filter(Boolean),
+      grounding: mission?.grounding || null,
+      spotlightTechId: mission?.spotlight?.techId || null,
+      spotlightAdvance: mission?.spotlight?.advanceSummary || null,
+      guidance: mission?.spotlight?.techId
+        ? `This is a Spotlight Quest for tech "${mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
+        : undefined,
     };
   }
 

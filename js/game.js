@@ -3691,6 +3691,10 @@ function normalizeMission(raw, globalId) {
   const resourcesParsed = parseResourceOverrides(raw.resources);
   const resources =
     resourcesParsed.ok && resourcesParsed.value ? resourcesParsed.value : null;
+  const grounding =
+    typeof raw.grounding === "string" && raw.grounding.trim()
+      ? raw.grounding.trim().slice(0, 50_000)
+      : null;
 
   return {
     id,
@@ -3715,6 +3719,7 @@ function normalizeMission(raw, globalId) {
     spotlight,
     ...(resources ? { resources } : {}),
     ...(crisisRoles?.length ? { crisisRoles } : {}),
+    ...(grounding ? { grounding } : {}),
   };
 }
 
@@ -6597,6 +6602,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         place: state.mission?.place,
         pressure: state.pressure,
         availableTechs: techsForCoInventMode(mode),
+        grounding: state.mission?.grounding || null,
         ...extra,
       },
     }),
@@ -12902,6 +12908,7 @@ function ensureCoInventor() {
         challengeQuestion: state.challengeQuestion,
         spotlightTechId: state.mission?.spotlight?.techId || null,
         spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
+        grounding: state.mission?.grounding || null,
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
           : undefined,
@@ -13623,6 +13630,7 @@ async function callCoInventMode(mode, userLabel) {
       place: state.mission?.place,
       pressure: state.pressure,
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+      grounding: state.mission?.grounding || null,
       contributingToOther: contributingOther,
     };
 

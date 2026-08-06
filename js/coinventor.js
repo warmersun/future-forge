@@ -288,6 +288,10 @@ export class CoInventor {
           place: ctx.place,
           pressure: ctx.pressure,
           availableTechs: ctx.availableTechs,
+          grounding: ctx.grounding || null,
+          guidance: ctx.guidance || null,
+          spotlightTechId: ctx.spotlightTechId || null,
+          spotlightAdvance: ctx.spotlightAdvance || null,
         },
       };
 
