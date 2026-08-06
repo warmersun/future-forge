@@ -184,9 +184,8 @@ export function importQuestToLibrary(validated, opts = {}) {
     // still ok — we sliced; oldest drop implicitly via slice after unshift pattern
   }
   saveQuestLibrary(next);
-  const placement = validated.tile?.placement?.mode || "replace-daily";
-  const shouldFocus =
-    opts.setFocus !== false && placement !== "alongside" && placement !== "library-only";
+  // Daily/focus placement removed from product UI — only focus when callers opt in.
+  const shouldFocus = opts.setFocus === true;
   if (shouldFocus) {
     setDailyFocus(id);
   }

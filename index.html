@@ -56,7 +56,7 @@
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
           <button type="button" class="btn btn-secondary" id="btn-friends">Play with friends</button>
           <button type="button" class="btn btn-secondary" id="btn-choose-theme">
-            Choose a theme
+            Play a Quest
           </button>
           <button
             type="button"
@@ -78,65 +78,82 @@
             Reset tutorial
           </button>
         </p>
+      </div>
+    </section>
 
-        <article id="daily-card" class="daily-card" hidden>
-          <div class="daily-card-head">
-            <span class="daily-badge"
-              ><span id="daily-badge-text">Daily</span> · <span id="daily-seed-label">—</span></span
-            >
-            <span class="daily-hint muted" id="daily-hint">Same seed for everyone today</span>
+    <!-- QUEST HUB — Themes / Sponsored / Learning / Library -->
+    <section id="screen-quest-hub" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+              <span class="hud-product-credit">
+                by
+                <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+              </span>
+            </div>
           </div>
-          <p id="daily-spotlight" class="daily-spotlight" hidden></p>
-          <h3 id="daily-title">Today’s Quest</h3>
-          <p id="daily-meta" class="daily-meta muted"></p>
-          <p id="daily-scene" class="daily-scene"></p>
-          <div class="form-actions daily-actions">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-daily-play">Play daily →</button>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-pin" title="Pin up to 3 missions">
-              Pin
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost btn-sm"
-              id="btn-restore-daily"
-              hidden
-              title="Show the stock shared daily again"
-            >
-              Restore stock daily
-            </button>
-          </div>
-        </article>
-
-        <div class="quest-import-row form-actions" style="justify-content: center; margin-top: 0.75rem">
-          <label class="btn btn-secondary btn-sm" for="quest-file-input" id="btn-import-quest-label">
-            Import Quest…
-            <input
-              type="file"
-              id="quest-file-input"
-              accept="application/json,.json"
-              hidden
-            />
-          </label>
         </div>
+        <div class="progress-pills">
+          <span class="pill active">Quest</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-quest-hub-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>Play a Quest</h1>
+          <p>
+            Pick how you want to enter: generate local challenges from a <strong>theme</strong>,
+            open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other
+            side-loaded Quests.
+          </p>
+        </div>
+        <div id="quest-hub-grid" class="quest-hub-grid"></div>
+      </div>
+    </section>
 
-        <section id="hosted-quests-panel" class="hosted-quests-panel pins-panel" hidden>
-          <h3 class="pins-heading">
-            External Quests
-            <span class="theme-shelf-external-pill">Server folder</span>
-          </h3>
-          <p id="hosted-quests-meta" class="muted" style="margin: 0 0 0.5rem; font-size: 0.85rem"></p>
-          <div id="hosted-quests-list" class="pins-list"></div>
-        </section>
-
-        <section id="quest-library-panel" class="quest-library-panel pins-panel" hidden>
-          <h3 class="pins-heading">Imported Quests</h3>
-          <div id="quest-library-list" class="pins-list"></div>
-        </section>
-
-        <section id="pins-panel" class="pins-panel" hidden>
-          <h3 class="pins-heading">Pinned missions <span class="muted">(max 3)</span></h3>
-          <div id="pins-list" class="pins-list"></div>
-        </section>
+    <!-- QUEST CATALOG — sponsored / learning / library lists -->
+    <section id="screen-quest-catalog" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+              <span class="hud-product-credit">
+                by
+                <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-pills">
+          <span class="pill active" id="quest-catalog-pill">Quest</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-quest-catalog-back">← Quests</button>
+      </header>
+      <div class="content">
+        <div class="section-intro catalog-intro">
+          <div class="mission-intro-text">
+            <h1 id="quest-catalog-title">Quests</h1>
+            <p id="quest-catalog-blurb" class="muted"></p>
+          </div>
+          <div class="catalog-intro-actions">
+            <label class="btn btn-secondary btn-sm" for="quest-file-input" id="btn-import-quest-label" hidden>
+              Import Quest…
+              <input
+                type="file"
+                id="quest-file-input"
+                accept="application/json,.json"
+                hidden
+              />
+            </label>
+          </div>
+        </div>
+        <div id="quest-catalog-status" class="mission-status" hidden aria-live="polite"></div>
+        <div id="quest-catalog-grid" class="quest-catalog-grid"></div>
       </div>
     </section>
 
@@ -454,8 +471,8 @@
         <div class="panel room-lobby-mission">
           <h2>Mission</h2>
           <p id="room-mission-summary" class="muted room-mission-summary">
-            Host picks a crisis &amp; Quest — including <strong>External Quests</strong> from the
-            server <code>quests/</code> folder (highlighted first).
+            Host picks a Quest via <strong>Themes</strong>, <strong>Sponsored</strong>,
+            <strong>Learning</strong>, or the side-loaded <strong>Library</strong>.
           </p>
           <article id="room-scenario-brief" class="mp-scenario-brief" hidden></article>
           <div id="room-host-controls" hidden>
@@ -715,17 +732,17 @@
           <span class="pill">2 · Mission</span>
           <span class="pill">3 · Invent</span>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-global-back">← Home</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-global-back">← Quests</button>
       </header>
       <div class="content">
         <div class="section-intro">
           <h1>What kind of problem?</h1>
           <p>
-            Global problems are huge. You’ll get <strong>several Quests</strong> — towns, clinics, districts —
-            so invention stays real. Start with a short list, or browse by shelf.
+            Global problems are huge. You’ll get <strong>up to four Quests</strong> — towns, clinics, districts —
+            so invention stays real. Start with a short list, browse by shelf, or generate a new set.
           </p>
         </div>
-        <!-- Filled by renderGlobals(): Start here + theme shelves -->
+        <!-- Filled by renderGlobals(): Start here + theme shelves (no external catalog) -->
         <div id="global-grid" class="theme-shelves"></div>
       </div>
     </section>
@@ -1658,7 +1675,7 @@
             Workshop is unlocked
           </h2>
           <p class="outcome-workshop-unlock-lead">
-            You finished the quiet run. <strong>Choose a theme</strong> opens the full game — same loop,
+            You finished the quiet run. <strong>Play a Quest</strong> opens the full game — same loop,
             more systems on the board.
           </p>
           <ul class="outcome-workshop-unlock-list">
@@ -1692,7 +1709,7 @@
           </ul>
           <div class="form-actions outcome-workshop-unlock-actions">
             <button type="button" class="btn btn-primary" id="btn-outcome-workshop-themes">
-              Choose a theme →
+              Play a Quest →
             </button>
           </div>
         </section>
@@ -2005,10 +2022,10 @@
               </section>
 
               <section class="help-block">
-                <h4 class="help-block-title">Daily · Pins · Share</h4>
+                <h4 class="help-block-title">Play a Quest · Share</h4>
                 <ul class="help-list">
-                  <li><strong>Daily</strong> on home — same seed for everyone today.</li>
-                  <li><strong>Pins</strong> (max 3) save missions for later.</li>
+                  <li><strong>Themes</strong> — pick a global problem, get up to 4 local Quests, or generate a new set.</li>
+                  <li><strong>Sponsored / Learning / Library</strong> — side-loaded tiles from the server folder or Import.</li>
                   <li><strong>Share card</strong> on outcome downloads a PNG of your run.</li>
                 </ul>
               </section>

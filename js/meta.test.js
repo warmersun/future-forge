@@ -94,7 +94,7 @@ describe("quest library (memory localStorage shim)", () => {
     removeItem: (k) => store.delete(k),
   };
 
-  it("import sets focus by default and clear restores", () => {
+  it("import does not focus by default; setFocus opts in", () => {
     globalThis.localStorage = mem;
     store.clear();
     saveQuestLibrary([]);
@@ -116,8 +116,15 @@ describe("quest library (memory localStorage shim)", () => {
       mission,
     });
     assert.equal(r.ok, true);
-    assert.equal(r.focused, true);
+    assert.equal(r.focused, false);
     assert.equal(loadQuestLibrary().length, 1);
+    assert.equal(getFocusedQuest(), null);
+
+    const r2 = importQuestToLibrary(
+      { tile: { placement: { mode: "replace-daily" } }, mission },
+      { setFocus: true }
+    );
+    assert.equal(r2.focused, true);
     assert.equal(getFocusedQuest()?.mission?.id, "imp-test-1");
     removeQuestFromLibrary("imp-test-1");
     assert.equal(loadQuestLibrary().length, 0);

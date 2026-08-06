@@ -1,6 +1,6 @@
 # Quest tile schema (`future-forge.quest-tile/v1`)
 
-Portable **Spotlight Quest** files for Future Forge. Learners import JSON; the game can replace the Daily Quest on that device.
+Portable **Spotlight Quest** files for Future Forge. Learners import JSON or drop files in the server `quests/` folder; the game surfaces them under **Play a Quest** (Sponsored / Learning / Library).
 
 ## Pedagogy
 
@@ -33,7 +33,7 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields, sponsor fields below.
+Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields, sponsor fields below.
 
 ### Optional sponsor attribution (display only)
 
@@ -72,7 +72,7 @@ When `isLearningModule` is true:
 
 - Tutor prompt: one idea at a time, short explanations, check understanding, guide inventing without dumping full solutions.
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
-- Progress fields, when present, render as e.g. `Module 1 Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (theme pick, External list, import library, daily/focus, multiplayer mission pick).
+- Progress fields, when present, render as e.g. `Module 1 Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (Learning catalog, multiplayer mission pick).
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode.
 

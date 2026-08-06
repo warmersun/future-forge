@@ -132,11 +132,14 @@ try {
           hasStart: !!document.getElementById('btn-start'),
           hasSurprise: !!document.getElementById('btn-surprise'),
           hasFriends: !!document.getElementById('btn-friends'),
+          hasPlayQuest: !!document.getElementById('btn-choose-theme'),
+          hasQuestHub: !!document.getElementById('screen-quest-hub'),
         };
-        document.getElementById('btn-start')?.click();
-        result.afterStart = active();
-        document.getElementById('btn-global-back')?.click();
-        result.afterGlobalBack = active();
+        document.getElementById('btn-choose-theme')?.click();
+        result.afterPlayQuest = active();
+        result.hubCards = document.querySelectorAll('#quest-hub-grid .quest-hub-card').length;
+        document.getElementById('btn-quest-hub-back')?.click();
+        result.afterHubBack = active();
         document.getElementById('btn-friends')?.click();
         result.afterFriends = active();
         document.getElementById('btn-friends-back')?.click();
@@ -152,11 +155,17 @@ try {
   console.log(JSON.stringify({ value, exceptions, consoleLogs: consoleLogs.slice(0, 30) }, null, 2));
 
   const fail = [];
-  if (!value?.hasStart || !value?.hasSurprise || !value?.hasFriends) {
-    fail.push("missing title buttons in DOM");
+  if (!value?.hasPlayQuest || !value?.hasSurprise || !value?.hasFriends || !value?.hasQuestHub) {
+    fail.push("missing title/hub controls in DOM");
   }
-  if (value?.afterStart !== "screen-global") {
-    fail.push(`Choose a theme did not open global (got ${value?.afterStart})`);
+  if (value?.afterPlayQuest !== "screen-quest-hub") {
+    fail.push(`Play a Quest did not open hub (got ${value?.afterPlayQuest})`);
+  }
+  if ((value?.hubCards || 0) < 4) {
+    fail.push(`Quest hub missing cards (got ${value?.hubCards})`);
+  }
+  if (value?.afterHubBack !== "screen-title") {
+    fail.push(`Hub back did not return home (got ${value?.afterHubBack})`);
   }
   if (value?.afterFriends !== "screen-friends") {
     fail.push(`Play with friends did not open friends (got ${value?.afterFriends})`);

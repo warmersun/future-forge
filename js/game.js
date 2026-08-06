@@ -75,12 +75,6 @@ import {
   foresightForYear,
 } from "./sim/world-foresight.js";
 import {
-  dailySeedString,
-  pickDailyMission,
-  loadPins,
-  togglePin,
-  isPinned,
-  MAX_PINS,
   renderShareCard,
   downloadDataUrl,
   kindLabelForOutcome,
@@ -89,9 +83,6 @@ import {
   loadQuestLibrary,
   importQuestToLibrary,
   removeQuestFromLibrary,
-  getFocusedQuest,
-  clearDailyFocus,
-  setDailyFocus,
 } from "./meta.js";
 import {
   parseQuestTileJson,
@@ -2636,6 +2627,8 @@ function showScreen(id) {
     state.playMode = null;
     renderTitleMeta();
   }
+  if (id === "quest-hub") renderQuestHub();
+  if (id === "quest-catalog") renderQuestCatalog();
   if (id === "global") renderGlobals();
   if (id === "mission") renderMissions();
   if (id === "workshop") {
@@ -2699,8 +2692,8 @@ function shuffleCopy(arr) {
 
 /**
  * Home CTAs.
- * - Tutorial not done: primary Play tutorial → (Spark); Choose a theme secondary (Workshop).
- * - Tutorial done: Play tutorial hidden; primary Choose a theme →; Reset tutorial in small text.
+ * - Tutorial not done: primary Play tutorial → (Spark); Play a Quest secondary.
+ * - Tutorial done: Play tutorial hidden; primary Play a Quest →; Reset tutorial in small text.
  */
 function renderTitleCtas() {
   const done = readHasCompletedSpark();
@@ -2711,8 +2704,8 @@ function renderTitleCtas() {
   if (choose) {
     choose.hidden = false;
     choose.removeAttribute("hidden");
-    choose.textContent = done ? "Choose a theme →" : "Choose a theme";
-    choose.title = "Full game — all themes and systems";
+    choose.textContent = done ? "Play a Quest →" : "Play a Quest";
+    choose.title = "Themes, sponsored, learning modules, or side-loaded Quests";
     choose.classList.toggle("btn-primary", done);
     choose.classList.toggle("btn-secondary", !done);
   }
@@ -2735,18 +2728,15 @@ function renderTitleCtas() {
 
 function renderTitleMeta() {
   renderTitleCtas();
-  renderDailyCard();
-  renderPinsPanel();
-  renderHostedQuestsPanel();
-  // Refresh folder catalog in background (server re-scans on each GET)
+  // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {
-    if (state.screen === "title") renderHostedQuestsPanel();
-    if (state.screen === "global") renderGlobals();
+    if (state.screen === "quest-hub") renderQuestHub();
+    if (state.screen === "quest-catalog") renderQuestCatalog();
   });
 }
 
 /**
- * Load External Quests from the server's designated `quests/` folder.
+ * Load Quests from the server's designated `quests/` folder.
  * @param {{ silent?: boolean }} [opts]
  */
 async function refreshHostedQuests(opts = {}) {
@@ -2771,107 +2761,139 @@ async function refreshHostedQuests(opts = {}) {
   }
 }
 
-/**
- * @param {object} entry — catalog entry from /api/quests
- */
-function playHostedQuest(entry) {
-  if (!entry?.mission) {
-    flashToast("External Quest missing mission data.");
-    return;
-  }
-  const m = normalizeMission(
-    { ...entry.mission, source: "hosted" },
-    entry.mission.globalId || entry.globalId
-  );
-  clearMissionPickSession();
-  leaveHotseat?.();
-  state.tutorialRun = false;
-  state.playMode = "workshop";
-  state.global = globalById(m.globalId) || state.global;
-  startMission(m);
+function isLearningMission(m) {
+  if (!m || typeof m !== "object") return false;
+  if (m.isLearningModule) return true;
+  if (m.module != null || m.lesson != null) return true;
+  return false;
+}
+
+function isSponsoredMission(m) {
+  return Boolean(String(m?.sponsorName || "").trim());
 }
 
 /**
- * Select hosted quest during multiplayer mission pick (or solo from theme screen).
- * @param {object} entry
+ * Unified catalog entries from server folder + browser import library.
+ * Hosted wins when ids collide.
+ * @returns {object[]}
  */
-function selectHostedQuest(entry) {
-  if (!entry?.mission) return;
-  const m = normalizeMission(
-    { ...entry.mission, source: "hosted" },
-    entry.mission.globalId || entry.globalId
-  );
-  state.global = globalById(m.globalId) || state.global;
-  // startMission intercepts missionPickSession for multiplayer
-  startMission(m);
+function collectCatalogEntries() {
+  const out = [];
+  const seen = new Set();
+
+  for (const e of state.hostedQuests || []) {
+    if (!e?.mission) continue;
+    const id = String(e.id || e.mission.id || "");
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const globalId = e.globalId || e.mission.globalId;
+    const mission = normalizeMission(
+      { ...e.mission, source: "hosted" },
+      globalId
+    );
+    out.push({
+      id,
+      source: "hosted",
+      mission,
+      title: e.title || mission.title || "Quest",
+      place: e.place || mission.place || "",
+      globalId: mission.globalId || globalId,
+      summary: e.summary || "",
+      spotlightTechId: e.spotlightTechId || mission.spotlight?.techId || null,
+      canRemove: false,
+    });
+  }
+
+  for (const e of loadQuestLibrary()) {
+    if (!e?.mission) continue;
+    const id = String(e.id || e.mission.id || "");
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const mission = normalizeMission(
+      { ...e.mission, source: "imported" },
+      e.mission.globalId
+    );
+    out.push({
+      id,
+      source: "imported",
+      mission,
+      title: mission.title || "Quest",
+      place: mission.place || "",
+      globalId: mission.globalId,
+      summary: "",
+      spotlightTechId: mission.spotlight?.techId || null,
+      canRemove: true,
+    });
+  }
+  return out;
 }
 
-function focusHostedAsDaily(entry) {
-  if (!entry?.mission) return;
-  const m = normalizeMission(
-    { ...entry.mission, source: "hosted" },
-    entry.mission.globalId || entry.globalId
+/**
+ * @returns {{ all: object[], sponsored: object[], learning: object[], library: object[] }}
+ */
+function partitionCatalogQuests() {
+  const all = collectCatalogEntries();
+  const sponsored = all.filter((e) => isSponsoredMission(e.mission));
+  const learning = all.filter((e) => isLearningMission(e.mission));
+  const library = all.filter(
+    (e) => !isSponsoredMission(e.mission) && !isLearningMission(e.mission)
   );
-  importQuestToLibrary(
-    { tile: entry.tile || { placement: { mode: "replace-daily" } }, mission: m },
-    { setFocus: true }
-  );
-  renderDailyCard();
-  flashToast("External Quest set as daily on this device.");
+  return { all, sponsored, learning, library };
 }
 
-function renderHostedQuestsPanel() {
-  const panel = $("#hosted-quests-panel");
-  const list = $("#hosted-quests-list");
-  const meta = $("#hosted-quests-meta");
-  if (!panel || !list) return;
-  const items = state.hostedQuests || [];
-  if (!items.length) {
-    panel.hidden = true;
-    list.innerHTML = "";
-    if (meta) meta.textContent = "";
-    return;
+/**
+ * Group learning entries by module number.
+ * @param {object[]} learningEntries
+ * @returns {{ module: number|null, key: string, entries: object[] }[]}
+ */
+function groupLearningModules(learningEntries) {
+  const map = new Map();
+  for (const e of learningEntries) {
+    const mod = Number(e.mission?.module);
+    const key = Number.isFinite(mod) && mod >= 1 ? String(mod) : "other";
+    if (!map.has(key)) {
+      map.set(key, {
+        module: key === "other" ? null : Number(key),
+        key,
+        entries: [],
+      });
+    }
+    map.get(key).entries.push(e);
   }
-  panel.hidden = false;
-  if (meta) {
-    meta.textContent = `${items.length} in server folder · drop JSON into quests/`;
+  for (const g of map.values()) {
+    g.entries.sort(
+      (a, b) => (Number(a.mission?.lesson) || 0) - (Number(b.mission?.lesson) || 0)
+    );
   }
-  list.innerHTML = items
-    .map((e) => {
-      const tech = e.spotlightTechId ? techById(e.spotlightTechId) : null;
-      const ex = e.mission?.briefMd
-        ? excerptFromBrief(e.mission.briefMd, 140)
-        : String(e.mission?.scene || e.summary || "").slice(0, 140);
-      const g = globalById(e.globalId);
-      const metaBadges = questMetaBadgesHtml(e.mission);
-      return `<div class="quest-lib-row quest-external-row" data-hosted-id="${escapeHtml(e.id)}">
-        <div class="quest-lib-copy">
-          <span class="quest-external-badge">External${
-            tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
-          }</span>
-          ${metaBadges}
-          <strong>${escapeHtml(e.title || e.mission?.title || "Quest")}</strong>
-          <span class="muted">${escapeHtml(g?.title || e.globalId || "")} · ${escapeHtml(
-            e.place || e.mission?.place || ""
-          )}</span>
-          <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
-        </div>
-        <div class="quest-lib-actions">
-          <button type="button" class="btn btn-primary btn-sm hosted-play">Play</button>
-          <button type="button" class="btn btn-ghost btn-sm hosted-focus" title="Use as daily on this device">
-            As daily
-          </button>
-        </div>
-      </div>`;
-    })
-    .join("");
-
-  list.querySelectorAll(".quest-lib-row").forEach((row) => {
-    const id = row.dataset.hostedId;
-    const entry = items.find((x) => x.id === id);
-    row.querySelector(".hosted-play")?.addEventListener("click", () => playHostedQuest(entry));
-    row.querySelector(".hosted-focus")?.addEventListener("click", () => focusHostedAsDaily(entry));
+  return [...map.values()].sort((a, b) => {
+    if (a.module == null) return 1;
+    if (b.module == null) return -1;
+    return a.module - b.module;
   });
+}
+
+/**
+ * Play a catalog entry (solo or multiplayer pick intercept via startMission).
+ * @param {object} entry
+ * @param {{ clearPick?: boolean }} [opts]
+ */
+function playCatalogEntry(entry, opts = {}) {
+  if (!entry?.mission) {
+    flashToast("Quest missing mission data.");
+    return;
+  }
+  const m = normalizeMission(
+    { ...entry.mission, source: entry.source || entry.mission.source || "hosted" },
+    entry.mission.globalId || entry.globalId
+  );
+  if (opts.clearPick !== false && !missionPickSession) {
+    clearMissionPickSession();
+    leaveHotseat?.();
+    state.tutorialRun = false;
+    state.playMode = "workshop";
+  }
+  state.global = globalById(m.globalId) || state.global;
+  startMission(m);
 }
 
 /** Show Play tutorial again (clears local completion flag). */
@@ -2879,7 +2901,7 @@ function requestResetTutorialProgress() {
   const ok = confirm(
     "Reset tutorial progress?\n\n" +
       "Play tutorial will show again on the home screen.\n" +
-      "This does not delete pinned missions or theme caches."
+      "This does not delete theme caches or imported Quests."
   );
   if (!ok) return;
   resetSparkProgress();
@@ -2907,180 +2929,6 @@ function startSparkPortsideMission() {
   startMission(mission);
 }
 
-function renderDailyCard() {
-  const card = $("#daily-card");
-  if (!card) return;
-
-  const focused = getFocusedQuest();
-  const restoreBtn = $("#btn-restore-daily");
-  const hintEl = $("#daily-hint");
-  const badgeEl = $("#daily-badge-text");
-  const spotlightEl = $("#daily-spotlight");
-
-  /** @type {{ seed?: string, global: object, mission: object, isFocus?: boolean }} */
-  let pick = null;
-
-  if (focused?.mission) {
-    const g = globalById(focused.globalId) || {
-      id: focused.globalId,
-      title: focused.globalId,
-    };
-    const mission = normalizeMission(focused.mission, focused.globalId);
-    pick = { global: g, mission, isFocus: true, seed: "imported" };
-    state.dailyPick = pick;
-  } else {
-    const daily = pickDailyMission(GLOBALS, localScenariosForGlobal, dailySeedString());
-    state.dailyPick = daily;
-    pick = daily;
-  }
-
-  if (!pick?.mission) {
-    card.hidden = true;
-    return;
-  }
-  card.hidden = false;
-
-  const seedEl = $("#daily-seed-label");
-  const titleEl = $("#daily-title");
-  const metaEl = $("#daily-meta");
-  const sceneEl = $("#daily-scene");
-  const pinBtn = $("#btn-daily-pin");
-
-  if (pick.isFocus) {
-    if (badgeEl) badgeEl.textContent = "Imported";
-    if (seedEl) seedEl.textContent = "focus";
-    if (hintEl) {
-      hintEl.textContent = "Replaces stock daily on this device";
-    }
-    if (restoreBtn) restoreBtn.hidden = false;
-  } else {
-    if (badgeEl) badgeEl.textContent = "Daily";
-    if (seedEl) seedEl.textContent = pick.seed || dailySeedString();
-    if (hintEl) hintEl.textContent = "Same seed for everyone today";
-    if (restoreBtn) restoreBtn.hidden = true;
-  }
-
-  if (titleEl) titleEl.textContent = pick.mission.title;
-  if (metaEl) {
-    metaEl.textContent = `${pick.global.title} · ${pick.mission.place} · ${
-      pick.mission.startYear || GAME.startYear
-    }`;
-  }
-  if (sceneEl) {
-    if (pick.mission.briefMd) {
-      sceneEl.textContent = excerptFromBrief(pick.mission.briefMd, 220);
-    } else {
-      const s = pick.mission.scene || "";
-      sceneEl.textContent = s.length > 220 ? `${s.slice(0, 220)}…` : s;
-    }
-  }
-  if (spotlightEl) {
-    const sp = pick.mission.spotlight;
-    const resLabel = resourceOverrideLabel(pick.mission.resources);
-    const crisisLabel = crisisRolesLabel(pick.mission.crisisRoles);
-    const learnLabel = learningProgressLabel(pick.mission);
-    const parts = [];
-    if (sp?.techId) {
-      const tech = techById(sp.techId);
-      parts.push(`Spotlight · ${tech?.name || sp.techId}`);
-    }
-    if (pick.mission.sponsorName) {
-      parts.push(`Sponsored · ${pick.mission.sponsorName}`);
-    }
-    if (learnLabel) parts.push(`Learn · ${learnLabel}`);
-    else if (pick.mission.isLearningModule) parts.push("Learning module");
-    if (resLabel) parts.push(`Start · ${resLabel}`);
-    if (crisisLabel) parts.push(`Crisis · ${crisisLabel}`);
-    if (parts.length) {
-      spotlightEl.hidden = false;
-      spotlightEl.textContent = parts.join(" · ");
-    } else {
-      spotlightEl.hidden = true;
-      spotlightEl.textContent = "";
-    }
-  }
-  if (pinBtn) {
-    const pinned = isPinned(pick.mission.id);
-    pinBtn.textContent = pinned ? "Pinned ✓" : "Pin";
-    pinBtn.classList.toggle("is-pinned", pinned);
-  }
-  renderQuestLibraryPanel();
-}
-
-function renderQuestLibraryPanel() {
-  const panel = $("#quest-library-panel");
-  const list = $("#quest-library-list");
-  if (!panel || !list) return;
-  const library = loadQuestLibrary();
-  if (!library.length) {
-    panel.hidden = true;
-    list.innerHTML = "";
-    return;
-  }
-  panel.hidden = false;
-  const focus = getFocusedQuest();
-  list.innerHTML = library
-    .map((e) => {
-      const m = e.mission;
-      const tech = m.spotlight?.techId ? techById(m.spotlight.techId) : null;
-      const isFocus = focus?.mission?.id === m.id;
-      const ex = m.briefMd
-        ? excerptFromBrief(m.briefMd, 120)
-        : String(m.scene || "").slice(0, 120);
-      const metaBadges = questMetaBadgesHtml(m);
-      return `<div class="quest-lib-row" data-mission-id="${escapeHtml(m.id)}">
-        <div class="quest-lib-copy">
-          <strong>${escapeHtml(m.title)}</strong>
-          <span class="muted">${escapeHtml(m.place || "")}${
-            tech ? ` · Spotlight · ${escapeHtml(tech.name)}` : ""
-          }${isFocus ? " · Focus" : ""}</span>
-          ${metaBadges}
-          <p class="quest-lib-excerpt muted">${escapeHtml(ex)}</p>
-        </div>
-        <div class="quest-lib-actions">
-          <button type="button" class="btn btn-primary btn-sm quest-lib-play">Play</button>
-          <button type="button" class="btn btn-ghost btn-sm quest-lib-focus" title="Use as daily">${
-            isFocus ? "Focused" : "Focus"
-          }</button>
-          <button type="button" class="btn btn-ghost btn-sm quest-lib-remove" title="Remove">×</button>
-        </div>
-      </div>`;
-    })
-    .join("");
-
-  list.querySelectorAll(".quest-lib-row").forEach((row) => {
-    const id = row.dataset.missionId;
-    row.querySelector(".quest-lib-play")?.addEventListener("click", () => {
-      playLibraryQuest(id);
-    });
-    row.querySelector(".quest-lib-focus")?.addEventListener("click", () => {
-      setDailyFocus(id);
-      renderDailyCard();
-      flashToast("Daily card now shows this Quest.");
-    });
-    row.querySelector(".quest-lib-remove")?.addEventListener("click", () => {
-      removeQuestFromLibrary(id);
-      renderDailyCard();
-      flashToast("Removed from library.");
-    });
-  });
-}
-
-function playLibraryQuest(missionId) {
-  const entry = loadQuestLibrary().find((e) => e.id === missionId);
-  if (!entry?.mission) {
-    flashToast("Quest not found in library.");
-    return;
-  }
-  clearMissionPickSession();
-  leaveHotseat();
-  const m = normalizeMission(entry.mission, entry.mission.globalId);
-  state.global = globalById(m.globalId) || state.global;
-  state.tutorialRun = false;
-  state.playMode = "workshop";
-  startMission(m);
-}
-
 /**
  * @param {string|ArrayBuffer} text
  */
@@ -3096,125 +2944,435 @@ function handleQuestTileFileText(text) {
     flashToast(`Invalid Quest tile: ${v.error}${detail ? ` (${detail})` : ""}`);
     return;
   }
-  const r = importQuestToLibrary({ tile: v.tile, mission: v.mission });
+  const r = importQuestToLibrary({ tile: v.tile, mission: v.mission }, { setFocus: false });
   if (!r.ok) {
     flashToast("Import failed.");
     return;
   }
-  renderDailyCard();
-  flashToast(
-    r.focused
-      ? "Quest imported — replaces daily on this device."
-      : "Quest imported into library."
+  flashToast("Quest imported into Library.");
+  const m = v.mission;
+  if (isLearningMission(m)) openQuestCatalog("learning");
+  else if (isSponsoredMission(m)) openQuestCatalog("sponsored");
+  else openQuestCatalog("library");
+}
+
+function openQuestHub() {
+  showScreen("quest-hub");
+}
+
+/**
+ * @param {"sponsored"|"learning"|"library"} kind
+ * @param {{ moduleKey?: string|null }} [opts]
+ */
+function openQuestCatalog(kind, opts = {}) {
+  state.questCatalogKind = kind;
+  state.questCatalogModuleKey = opts.moduleKey ?? null;
+  showScreen("quest-catalog");
+}
+
+function renderQuestHub() {
+  const grid = $("#quest-hub-grid");
+  if (!grid) return;
+  const { sponsored, learning, library } = partitionCatalogQuests();
+  const learningGroups = groupLearningModules(learning);
+  const mpPick = Boolean(missionPickSession);
+  const cards = [
+    {
+      id: "themes",
+      title: "Themes",
+      blurb:
+        "Global problems as local places. Up to 4 Quests per theme — generate a fresh set anytime.",
+      meta: "Catalog themes",
+      cta: mpPick ? "Pick a theme →" : "Browse themes →",
+    },
+    {
+      id: "sponsored",
+      title: "Sponsored",
+      blurb:
+        "Partner and product-attributed Spotlight Quests. Attribution only — you still invent the local application.",
+      meta: sponsored.length
+        ? `${sponsored.length} Quest${sponsored.length === 1 ? "" : "s"}`
+        : "None loaded yet",
+      cta: "Open sponsored →",
+    },
+    {
+      id: "learning",
+      title: "Learning",
+      blurb: "Modules and lessons with AI tutor mode. Progress chips show Module · Lesson.",
+      meta: learning.length
+        ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
+            learning.length
+          } lesson${learning.length === 1 ? "" : "s"}`
+        : "None loaded yet",
+      cta: "Open learning →",
+    },
+    {
+      id: "library",
+      title: "Library",
+      blurb:
+        "Other side-loaded Quests from the server folder or Import — not learning, not sponsored.",
+      meta: library.length
+        ? `${library.length} Quest${library.length === 1 ? "" : "s"}`
+        : "Import or drop JSON in quests/",
+      cta: "Open library →",
+    },
+  ];
+  grid.innerHTML = cards
+    .map(
+      (c) => `
+    <button type="button" class="quest-hub-card" data-hub="${escapeHtml(c.id)}">
+      <span class="quest-hub-card-meta">${escapeHtml(c.meta)}</span>
+      <h2>${escapeHtml(c.title)}</h2>
+      <p>${escapeHtml(c.blurb)}</p>
+      <span class="cta">${escapeHtml(c.cta)}</span>
+    </button>`
+    )
+    .join("");
+  grid.querySelectorAll(".quest-hub-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const hub = btn.dataset.hub;
+      if (hub === "themes") showScreen("global");
+      else if (hub === "sponsored") openQuestCatalog("sponsored");
+      else if (hub === "learning") openQuestCatalog("learning");
+      else if (hub === "library") openQuestCatalog("library");
+    });
+  });
+  if (!state.hostedQuestsLoaded) {
+    void refreshHostedQuests({ silent: true }).then(() => {
+      if (state.screen === "quest-hub") renderQuestHub();
+    });
+  }
+}
+
+/**
+ * Spotlight tech id for catalog grouping / labels.
+ * @param {object} entry
+ */
+function catalogSpotlightTechId(entry) {
+  return (
+    entry.spotlightTechId ||
+    entry.mission?.spotlight?.techId ||
+    (Array.isArray(entry.mission?.suggested) ? entry.mission.suggested[0] : null) ||
+    null
   );
 }
 
-function renderPinsPanel() {
-  const panel = $("#pins-panel");
-  const list = $("#pins-list");
-  if (!panel || !list) return;
-  const pins = loadPins();
-  state.pins = pins;
-  if (!pins.length) {
-    panel.hidden = true;
-    list.innerHTML = "";
-    return;
+/**
+ * Group catalog entries by emTech (spotlight / first suggested).
+ * @param {object[]} entries
+ * @returns {{ techId: string, title: string, entries: object[] }[]}
+ */
+function groupCatalogByEmTech(entries) {
+  const map = new Map();
+  for (const e of entries) {
+    const techId = catalogSpotlightTechId(e) || "other";
+    if (!map.has(techId)) map.set(techId, []);
+    map.get(techId).push(e);
   }
-  panel.hidden = false;
-  list.innerHTML = pins
-    .map(
-      (p) => `
-    <div class="pin-row" data-mission-id="${escapeHtml(p.missionId)}" data-global-id="${escapeHtml(
-        p.globalId
-      )}">
-      <div class="pin-copy">
-        <strong>${escapeHtml(p.title)}</strong>
-        <span class="muted">${escapeHtml(p.place)}${
-          p.globalTitle ? ` · ${escapeHtml(p.globalTitle)}` : ""
-        }</span>
-      </div>
-      <div class="pin-actions">
-        <button type="button" class="btn btn-primary btn-sm pin-play">Play</button>
-        <button type="button" class="btn btn-ghost btn-sm pin-remove" title="Unpin">×</button>
-      </div>
-    </div>`
-    )
-    .join("");
-  list.querySelectorAll(".pin-row").forEach((row) => {
-    row.querySelector(".pin-play")?.addEventListener("click", () => playPinnedMission(row));
-    row.querySelector(".pin-remove")?.addEventListener("click", () => {
-      const missionId = row.dataset.missionId;
-      const pin = pins.find((p) => p.missionId === missionId);
-      if (!pin) return;
-      togglePin(
-        { id: pin.missionId, globalId: pin.globalId, title: pin.title, place: pin.place },
-        { id: pin.globalId, title: pin.globalTitle }
+  return [...map.entries()]
+    .map(([techId, items]) => {
+      const tech = techId !== "other" ? techById(techId) : null;
+      return {
+        techId,
+        title: tech?.name || (techId === "other" ? "Other" : techId),
+        entries: items,
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
+ * Group catalog entries by problem theme (globalId).
+ * @param {object[]} entries
+ * @returns {{ globalId: string, title: string, entries: object[] }[]}
+ */
+function groupCatalogByTheme(entries) {
+  const map = new Map();
+  for (const e of entries) {
+    const globalId = e.globalId || e.mission?.globalId || "other";
+    if (!map.has(globalId)) map.set(globalId, []);
+    map.get(globalId).push(e);
+  }
+  return [...map.entries()]
+    .map(([globalId, items]) => {
+      const g = globalId !== "other" ? globalById(globalId) : null;
+      return {
+        globalId,
+        title: g?.title || (globalId === "other" ? "Other" : globalId),
+        entries: items,
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
+ * Badge chips for catalog cards — lean labels per browse kind.
+ * @param {object} entry
+ * @param {"sponsored"|"learning"|"library"} kind
+ */
+function catalogBadgesHtml(entry, kind) {
+  const m = entry.mission;
+  if (!m) return "";
+  const parts = [];
+  if (kind === "sponsored") {
+    // Grouped by emTech — no Server / Spotlight chips; keep sponsor name only.
+    parts.push(sponsorBadgeHtml(m));
+  } else if (kind === "learning") {
+    // No Server / Spotlight / Learn progress chips — sponsor only if present.
+    parts.push(sponsorBadgeHtml(m));
+  } else if (kind === "library") {
+    // No source tags; optional Sponsored + Spotlight · emTech.
+    parts.push(sponsorBadgeHtml(m));
+    const techId = catalogSpotlightTechId(entry);
+    const tech = techId ? techById(techId) : null;
+    if (tech) {
+      parts.push(
+        `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
       );
-      renderPinsPanel();
-      renderDailyCard();
-      flashToast("Unpinned.");
+    }
+  }
+  return parts.filter(Boolean).join("");
+}
+
+/**
+ * @param {object} entry
+ * @param {"sponsored"|"learning"|"library"} kind
+ */
+function catalogCardHtml(entry, kind) {
+  const m = entry.mission;
+  const g = globalById(entry.globalId);
+  const img = problemVisualUrl(entry.globalId || "climate");
+  const scene = m?.briefMd
+    ? excerptFromBrief(m.briefMd, 140)
+    : String(m?.scene || entry.summary || "").slice(0, 140);
+  const badges = catalogBadgesHtml(entry, kind);
+  // Meta line: place only when grouped by theme (theme is the section header);
+  // when grouped by emTech, show theme · place.
+  const place = entry.place || m?.place || "";
+  const metaLine =
+    kind === "library"
+      ? place
+      : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
+  return `
+    <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
+      <button type="button" class="challenge-card challenge-card-visual catalog-play-card">
+        <span class="card-visual" aria-hidden="true">
+          <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
+        </span>
+        <span class="card-body">
+          ${
+            badges
+              ? `<span class="num">${badges}</span>`
+              : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
+          }
+          <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
+          ${metaLine ? `<p class="muted">${escapeHtml(metaLine)}</p>` : ""}
+          <p>${escapeHtml(scene)}</p>
+          <span class="cta">${
+            missionPickSession ? "Use for friends game →" : "Play this Quest →"
+          }</span>
+        </span>
+      </button>
+      ${
+        entry.canRemove
+          ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
+          : ""
+      }
+    </div>`;
+}
+
+function moduleCardHtml(group) {
+  const n = group.entries.length;
+  const label = group.module != null ? `Module ${group.module}` : "Learning path";
+  const first = group.entries[0];
+  const total =
+    first?.mission?.totalLessons ||
+    group.entries.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
+    n;
+  return `
+    <button type="button" class="challenge-card quest-module-card" data-module-key="${escapeHtml(
+      group.key
+    )}">
+      <h3>${escapeHtml(label)}</h3>
+      <p>${n} lesson${n === 1 ? "" : "s"}${
+        total ? ` · up to ${total} in set` : ""
+      }. Open to pick a lesson.</p>
+      <span class="cta">View lessons →</span>
+    </button>`;
+}
+
+/**
+ * Paint flat or sectioned catalog cards and wire play/remove.
+ * @param {HTMLElement} grid
+ * @param {object[]} entries
+ * @param {"sponsored"|"learning"|"library"} kind
+ * @param {{ groupBy?: "emTech"|"theme"|null }} [opts]
+ */
+function paintCatalogEntries(grid, entries, kind, opts = {}) {
+  const groupBy = opts.groupBy || null;
+  /** @type {object[]} */
+  let flat = entries;
+
+  if (groupBy === "emTech") {
+    const sections = groupCatalogByEmTech(entries);
+    grid.innerHTML = sections
+      .map(
+        (sec) => `
+      <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
+        <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
+        <div class="challenge-grid">${sec.entries
+          .map((e) => catalogCardHtml(e, kind))
+          .join("")}</div>
+      </section>`
+      )
+      .join("");
+    flat = sections.flatMap((s) => s.entries);
+  } else if (groupBy === "theme") {
+    const sections = groupCatalogByTheme(entries);
+    grid.innerHTML = sections
+      .map(
+        (sec) => `
+      <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
+        <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
+        <div class="challenge-grid">${sec.entries
+          .map((e) => catalogCardHtml(e, kind))
+          .join("")}</div>
+      </section>`
+      )
+      .join("");
+    flat = sections.flatMap((s) => s.entries);
+  } else {
+    grid.innerHTML = `<div class="challenge-grid">${entries
+      .map((e) => catalogCardHtml(e, kind))
+      .join("")}</div>`;
+  }
+
+  grid.querySelectorAll(".catalog-card-wrap").forEach((wrap) => {
+    const id = wrap.dataset.catalogId;
+    const entry = flat.find((e) => e.id === id);
+    wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
+      playCatalogEntry(entry);
+    });
+    wrap.querySelector(".catalog-remove")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (!entry?.canRemove) return;
+      removeQuestFromLibrary(entry.id);
+      flashToast("Removed from library.");
+      renderQuestCatalog();
     });
   });
 }
 
-async function playPinnedMission(row) {
-  const missionId = row?.dataset?.missionId;
-  const globalId = row?.dataset?.globalId;
-  const pin = loadPins().find((p) => p.missionId === missionId);
-  if (pin?.missionSnapshot) {
-    const snap = pin.missionSnapshot;
-    const g = globalById(snap.globalId || globalId);
-    if (g) state.global = g;
-    startMission(normalizeMission(snap, snap.globalId || globalId));
+function renderQuestCatalog() {
+  const kind = state.questCatalogKind || "library";
+  const moduleKey = state.questCatalogModuleKey;
+  const titleEl = $("#quest-catalog-title");
+  const blurbEl = $("#quest-catalog-blurb");
+  const grid = $("#quest-catalog-grid");
+  const status = $("#quest-catalog-status");
+  const importLabel = $("#btn-import-quest-label");
+  const backBtn = $("#btn-quest-catalog-back");
+  if (!grid) return;
+
+  const parts = partitionCatalogQuests();
+  if (importLabel) importLabel.hidden = false;
+
+  if (backBtn) {
+    backBtn.textContent =
+      kind === "learning" && moduleKey != null ? "← Modules" : "← Quests";
+  }
+
+  let entries = [];
+  /** @type {"emTech"|"theme"|null} */
+  let groupBy = null;
+
+  if (kind === "sponsored") {
+    if (titleEl) titleEl.textContent = "Sponsored Quests";
+    if (blurbEl) {
+      blurbEl.textContent =
+        "Grouped by spotlight technology. Attribution only — invent a local application.";
+    }
+    entries = parts.sponsored;
+    groupBy = "emTech";
+  } else if (kind === "library") {
+    if (titleEl) titleEl.textContent = "Library";
+    if (blurbEl) {
+      blurbEl.textContent =
+        "Side-loaded Quests grouped by theme. Drop JSON into quests/ or Import.";
+    }
+    entries = parts.library;
+    groupBy = "theme";
+  } else if (kind === "learning") {
+    if (moduleKey != null) {
+      const groups = groupLearningModules(parts.learning);
+      const group = groups.find((g) => g.key === String(moduleKey));
+      if (titleEl) {
+        titleEl.textContent =
+          group?.module != null ? `Module ${group.module}` : "Learning lessons";
+      }
+      if (blurbEl) {
+        blurbEl.textContent = "Pick a lesson to invent with AI tutor mode.";
+      }
+      entries = group?.entries || [];
+      groupBy = null;
+    } else {
+      if (titleEl) titleEl.textContent = "Learning modules";
+      if (blurbEl) {
+        blurbEl.textContent =
+          "Curriculum paths with tutor-mode co-inventor. Open a module, then a lesson.";
+      }
+      const groups = groupLearningModules(parts.learning);
+      if (!groups.length) {
+        grid.innerHTML = `<p class="empty-hint muted">No learning Quests loaded. Drop lesson JSON into <code>quests/</code> or Import.</p>`;
+        if (status) {
+          status.hidden = true;
+          status.textContent = "";
+        }
+        return;
+      }
+      if (groups.length === 1) {
+        state.questCatalogModuleKey = groups[0].key;
+        renderQuestCatalog();
+        return;
+      }
+      grid.innerHTML = `<div class="challenge-grid">${groups.map(moduleCardHtml).join("")}</div>`;
+      grid.querySelectorAll(".quest-module-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          openQuestCatalog("learning", { moduleKey: btn.dataset.moduleKey });
+        });
+      });
+      if (status) {
+        status.hidden = false;
+        status.textContent = `${groups.length} modules · ${parts.learning.length} lessons`;
+      }
+      return;
+    }
+  }
+
+  if (!entries.length) {
+    grid.innerHTML = `<p class="empty-hint muted">Nothing here yet. Drop Quest JSON into the server <code>quests/</code> folder or use Import.</p>`;
+    if (status) {
+      status.hidden = true;
+      status.textContent = "";
+    }
     return;
   }
-  const g = globalById(globalId);
-  if (!g) {
-    flashToast("Pinned theme missing.");
-    return;
+
+  paintCatalogEntries(grid, entries, kind, { groupBy });
+  if (status) {
+    status.hidden = false;
+    status.textContent = `${entries.length} Quest${entries.length === 1 ? "" : "s"}`;
   }
-  state.global = g;
-  const list = await ensureScenarios(g, { force: false });
-  let m = list.find((x) => x.id === missionId);
-  if (!m) {
-    // Rebuild from seeds with pin metadata
-    const pack = localScenariosForGlobal(g, { count: 4, salt: 0 });
-    m = pack.find((x) => x.id === missionId) || {
-      id: missionId,
-      globalId,
-      title: pin?.title || "Pinned mission",
-      place: pin?.place || g.title,
-      startYear: GAME.startYear,
-      collapseYear: GAME.startYear + 8,
-      yearsPerTurn: GAME.yearsPerTurn,
-      pressure: { Pressure: 2, Capacity: 2, Trust: 1 },
-      pressureRise: { Pressure: 1, Capacity: 1, Trust: 0 },
-      winMax: { Pressure: 1, Capacity: 1, Trust: 1 },
-      scene: `Pinned Quest for ${g.title}.`,
-      stakeholder: "Local working group",
-      suggested: ["ai", "iot", "networks"],
-      visionTheme: "rebuild-city",
-      source: "curated",
-    };
-    m = normalizeMission(m, globalId);
+
+  if (!state.hostedQuestsLoaded) {
+    void refreshHostedQuests({ silent: true }).then(() => {
+      if (state.screen === "quest-catalog") renderQuestCatalog();
+    });
   }
-  startMission(m);
 }
 
-function pinMission(mission, global) {
-  const r = togglePin(mission, global || state.global || globalById(mission?.globalId));
-  if (!r.ok && r.error === "pins_full") {
-    flashToast(`Pin list full (max ${MAX_PINS}). Unpin one first.`);
-    return r;
-  }
-  if (r.added) flashToast("Pinned — find it on the home screen.");
-  if (r.removed) flashToast("Unpinned.");
-  renderPinsPanel();
-  renderDailyCard();
-  return r;
-}
-
-/** One theme card HTML for Choose a theme shelves. */
+/** One theme card HTML for theme shelves. */
 function themeCardHtml(g) {
   const tag = g.kind === "before" ? "Before it hits" : "Now";
   const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
@@ -3263,27 +3421,7 @@ function renderGlobals() {
   const shelved = new Set(GLOBALS.filter((g) => g.shelf).map((g) => g.id));
   const orphans = GLOBALS.filter((g) => !shelved.has(g.id));
 
-  const hosted = state.hostedQuests || [];
-  const mpPick = Boolean(missionPickSession);
-
   let html = "";
-  if (hosted.length) {
-    html += `
-      <section class="theme-shelf theme-shelf-external" aria-labelledby="theme-shelf-external">
-        <h2 id="theme-shelf-external" class="theme-shelf-title">
-          External Quests
-          <span class="theme-shelf-external-pill">From server folder</span>
-        </h2>
-        <p class="theme-shelf-blurb muted">
-          ${
-            mpPick
-              ? "Pick an External Quest for this friends game — stands out from catalog themes."
-              : "Quests loaded from the server <code>quests/</code> folder. Or choose a theme below."
-          }
-        </p>
-        <div class="challenge-grid">${hosted.map(hostedQuestCardHtml).join("")}</div>
-      </section>`;
-  }
 
   if (startThemes.length) {
     html += `
@@ -3312,61 +3450,11 @@ function renderGlobals() {
 
   root.innerHTML = html;
   root.querySelectorAll(".challenge-card[data-id]").forEach((btn) => {
-    if (btn.dataset.hostedId) return;
     btn.addEventListener("click", () => {
       state.global = globalById(btn.dataset.id);
       showScreen("mission");
     });
   });
-  root.querySelectorAll(".challenge-card[data-hosted-id]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const entry = hosted.find((x) => x.id === btn.dataset.hostedId);
-      if (entry) selectHostedQuest(entry);
-    });
-  });
-
-  // Ensure catalog is fresh when opening pick (esp. multiplayer)
-  if (!state.hostedQuestsLoaded) {
-    void refreshHostedQuests({ silent: true }).then(() => {
-      if (state.screen === "global") renderGlobals();
-    });
-  }
-}
-
-/** Card HTML for a server-folder External Quest (theme pick screen). */
-function hostedQuestCardHtml(entry) {
-  const tech = entry.spotlightTechId ? techById(entry.spotlightTechId) : null;
-  const g = globalById(entry.globalId);
-  const img = problemVisualUrl(entry.globalId || "climate");
-  const scene = entry.mission?.briefMd
-    ? excerptFromBrief(entry.mission.briefMd, 140)
-    : String(entry.mission?.scene || entry.summary || "").slice(0, 140);
-  return `
-      <button type="button" class="challenge-card challenge-card-visual quest-card-external" data-hosted-id="${escapeHtml(
-        entry.id
-      )}">
-        <span class="card-visual" aria-hidden="true">
-          <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
-        </span>
-        <span class="card-body">
-          <span class="num">
-            <span class="scenario-tag external-tag">External</span>
-            ${
-              tech
-                ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
-                : ""
-            }
-          </span>
-          <h3>${escapeHtml(entry.title || entry.mission?.title || "Quest")}</h3>
-          <p class="muted">${escapeHtml(g?.title || entry.globalId || "")} · ${escapeHtml(
-            entry.place || entry.mission?.place || ""
-          )}</p>
-          <p>${escapeHtml(scene)}</p>
-          <span class="cta">${
-            missionPickSession ? "Use for friends game →" : "Play this Quest →"
-          }</span>
-        </span>
-      </button>`;
 }
 
 function setMissionStatus(text, { loading = false } = {}) {
@@ -3434,32 +3522,6 @@ function paintMissionSkeletons(count = SCENARIO_COUNT) {
   }).join("");
 }
 
-/** Hosted folder missions for a theme, normalized, for mission pick grids. */
-function hostedMissionsForGlobal(globalId) {
-  if (!globalId) return [];
-  return (state.hostedQuests || [])
-    .filter((e) => e.globalId === globalId || e.mission?.globalId === globalId)
-    .map((e) =>
-      normalizeMission(
-        { ...e.mission, source: "hosted" },
-        e.mission?.globalId || e.globalId
-      )
-    );
-}
-
-/**
- * Prepend External Quests for this theme so they stand out first.
- * @param {object[]} list
- * @param {string} [globalId]
- */
-function mergeHostedIntoMissionList(list, globalId) {
-  const hosted = hostedMissionsForGlobal(globalId || state.global?.id);
-  if (!hosted.length) return list || [];
-  const seen = new Set((list || []).map((m) => m.id));
-  const front = hosted.filter((m) => !seen.has(m.id));
-  return [...front, ...(list || [])];
-}
-
 function paintMissionCards(list, { disabled = false } = {}) {
   const grid = $("#mission-grid");
   if (!grid) return;
@@ -3470,28 +3532,19 @@ function paintMissionCards(list, { disabled = false } = {}) {
   }
   grid.innerHTML = list
     .map((m) => {
-      const isExternal = m.source === "hosted" || m.source === "imported";
       const tag =
-        m.source === "hosted"
-          ? "external"
-          : m.source === "imported"
-            ? "imported"
-            : m.source === "curated"
-              ? "curated"
-              : "generated";
+        m.source === "curated"
+          ? "curated"
+          : m.source === "generated"
+            ? "generated"
+            : m.source || "generated";
       const tagLabel =
-        m.source === "hosted"
-          ? "External"
-          : m.source === "imported"
-            ? "Imported"
-            : m.source === "curated"
-              ? "Curated"
-              : "Challenge";
-      const spotTechId =
-        m.spotlight?.techId || (m.suggested?.length === 1 ? m.suggested[0] : null);
-      const tech = spotTechId ? techById(spotTechId) : null;
+        m.source === "curated"
+          ? "Curated"
+          : m.source === "generated"
+            ? "Challenge"
+            : "Quest";
       const solved = isMissionSolved(m.id);
-      const pinned = isPinned(m.id);
       const scene = m.briefMd
         ? excerptFromBrief(m.briefMd, 180)
         : (m.scene || "").slice(0, 180);
@@ -3500,14 +3553,9 @@ function paintMissionCards(list, { disabled = false } = {}) {
     <div class="mission-card-wrap">
       <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
         solved ? "solved" : ""
-      } ${isExternal ? "quest-card-external" : ""}" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
+      }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
         <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
           <span class="scenario-tag ${tag}">${tagLabel}</span>
-          ${
-            tech && isExternal
-              ? `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
-              : ""
-          }
           ${questMetaBadgesHtml(m)}
           ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
         </span>
@@ -3522,13 +3570,6 @@ function paintMissionCards(list, { disabled = false } = {}) {
           disabled ? "Preparing…" : solved ? "Play again →" : "Invent here →"
         }</span>
       </button>
-      <button
-        type="button"
-        class="btn-pin ${pinned ? "is-pinned" : ""}"
-        data-pin-id="${escapeHtml(m.id)}"
-        title="${pinned ? "Unpin" : `Pin (max ${MAX_PINS})`}"
-        ${disabled ? "disabled" : ""}
-      >${pinned ? "Pinned" : "Pin"}</button>
     </div>`;
     })
     .join("");
@@ -3538,16 +3579,6 @@ function paintMissionCards(list, { disabled = false } = {}) {
       if (state.scenariosLoading) return;
       const mission = state.missionChoices.find((m) => m.id === btn.dataset.id);
       if (mission) startMission(mission);
-    });
-  });
-  grid.querySelectorAll(".btn-pin").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const mission = state.missionChoices.find((m) => m.id === btn.dataset.pinId);
-      if (!mission) return;
-      pinMission(mission, state.global);
-      paintMissionCards(state.missionChoices, { disabled: false });
     });
   });
 }
@@ -3838,17 +3869,16 @@ async function renderMissions({ force = false } = {}) {
 
   // Ready cache (last 4): clickable immediately — no network wait
   if (!needsGenerate) {
-    const list = mergeHostedIntoMissionList(cached.slice(0, SCENARIO_COUNT), g.id);
+    const list = cached.slice(0, SCENARIO_COUNT);
     state.missionChoices = list;
     state.scenariosLoading = false;
     paintMissionCards(list, { disabled: false });
     renderProblemBrief(g, { drafting: false });
-    const hostedN = list.filter((m) => m.source === "hosted").length;
     const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
     setMissionStatus(
       solvedN
-        ? `${list.length} Quests (${hostedN ? `${hostedN} external · ` : ""}${solvedN} solved — still playable). Generate new to replace the set.`
-        : `${list.length} Quests${hostedN ? ` (${hostedN} external from server folder)` : ""}. Pick one, or generate a new set.`
+        ? `${list.length} Quests (${solvedN} solved — still playable). Generate new to replace the set.`
+        : `${list.length} Quests. Pick one, or generate a new set.`
     );
     if (regenBtn) {
       regenBtn.disabled = false;
@@ -3871,7 +3901,7 @@ async function renderMissions({ force = false } = {}) {
   try {
     const rawList = await ensureScenarios(g, { force });
     if (state.global?.id !== g.id) return;
-    const list = mergeHostedIntoMissionList(rawList, g.id);
+    const list = rawList;
     state.missionChoices = list;
     paintMissionCards(list, { disabled: false });
     renderProblemBrief(g, { drafting: false });
@@ -3911,11 +3941,11 @@ function beginMissionPick(handler) {
   state.global = null;
   state.missionChoices = [];
   state.scenariosLoading = false;
-  // Refresh External Quests so multiplayer host always sees the server folder
   void refreshHostedQuests({ silent: true }).then(() => {
-    if (state.screen === "global") renderGlobals();
+    if (state.screen === "quest-hub") renderQuestHub();
+    if (state.screen === "quest-catalog") renderQuestCatalog();
   });
-  showScreen("global");
+  showScreen("quest-hub");
 }
 
 function clearMissionPickSession() {
@@ -15253,10 +15283,9 @@ function bind() {
   $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Full Workshop always
     state.tutorialRun = false;
     state.playMode = "workshop";
-    showScreen("global");
+    openQuestHub();
   });
   $("#btn-reset-spark")?.addEventListener("click", () => {
     requestResetTutorialProgress();
@@ -15289,36 +15318,6 @@ function bind() {
   }
 
   $("#btn-mp-pass-device")?.addEventListener("click", () => mpPassDevice());
-  $("#btn-daily-play")?.addEventListener("click", () => {
-    clearMissionPickSession();
-    leaveHotseat();
-    const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
-    if (!daily?.mission) {
-      flashToast("Daily mission unavailable.");
-      return;
-    }
-    state.tutorialRun = false;
-    state.playMode = "workshop";
-    state.global = daily.global?.id
-      ? daily.global
-      : globalById(daily.mission.globalId) || daily.global;
-    startMission(
-      normalizeMission(daily.mission, daily.global?.id || daily.mission.globalId)
-    );
-  });
-  $("#btn-daily-pin")?.addEventListener("click", () => {
-    const daily = state.dailyPick || pickDailyMission(GLOBALS, localScenariosForGlobal);
-    if (!daily?.mission) return;
-    pinMission(
-      normalizeMission(daily.mission, daily.global?.id || daily.mission.globalId),
-      daily.global
-    );
-  });
-  $("#btn-restore-daily")?.addEventListener("click", () => {
-    clearDailyFocus();
-    renderDailyCard();
-    flashToast("Stock daily restored.");
-  });
   $("#quest-file-input")?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0];
     e.target.value = "";
@@ -15330,15 +15329,16 @@ function bind() {
       flashToast("Could not read file.");
     }
   });
-  // Drag-drop Quest JSON onto title screen
-  const titleScreen = $("#screen-title");
-  if (titleScreen) {
-    titleScreen.addEventListener("dragover", (ev) => {
+  // Drag-drop Quest JSON onto catalog (or hub)
+  for (const screenId of ["screen-quest-catalog", "screen-quest-hub"]) {
+    const dropScreen = $(`#${screenId}`);
+    if (!dropScreen) continue;
+    dropScreen.addEventListener("dragover", (ev) => {
       if ([...ev.dataTransfer.types].includes("Files")) {
         ev.preventDefault();
       }
     });
-    titleScreen.addEventListener("drop", async (ev) => {
+    dropScreen.addEventListener("drop", async (ev) => {
       const file = ev.dataTransfer?.files?.[0];
       if (!file || !/\.json$/i.test(file.name)) return;
       ev.preventDefault();
@@ -15349,7 +15349,7 @@ function bind() {
       }
     });
   }
-  $("#btn-global-back").addEventListener("click", () => {
+  $("#btn-quest-hub-back")?.addEventListener("click", () => {
     if (missionPickSession) {
       const session = missionPickSession;
       missionPickSession = null;
@@ -15357,6 +15357,19 @@ function bind() {
       return;
     }
     showScreen("title");
+  });
+  $("#btn-quest-catalog-back")?.addEventListener("click", () => {
+    if (state.questCatalogKind === "learning" && state.questCatalogModuleKey != null) {
+      const groups = groupLearningModules(partitionCatalogQuests().learning);
+      if (groups.length > 1) {
+        openQuestCatalog("learning");
+        return;
+      }
+    }
+    showScreen("quest-hub");
+  });
+  $("#btn-global-back").addEventListener("click", () => {
+    showScreen("quest-hub");
   });
   $("#btn-mission-back").addEventListener("click", () => showScreen("global"));
   $("#btn-regen-scenarios")?.addEventListener("click", () => {
@@ -15383,8 +15396,8 @@ function bind() {
       }
       return;
     }
-    if (confirm("Leave this Quest? You can pick another theme.")) {
-      showScreen("global");
+    if (confirm("Leave this Quest? You can pick another Quest.")) {
+      openQuestHub();
     }
   });
 
@@ -15798,16 +15811,16 @@ function bind() {
       );
       return;
     }
-    // Leave Quest → theme / Challenge picker (game continues)
+    // Leave Quest → quest hub (game continues)
     state.tutorialRun = false;
     state.playMode = "workshop";
-    showScreen("global");
+    openQuestHub();
   });
   $("#btn-outcome-workshop-themes")?.addEventListener("click", () => {
-    // Graduation CTA → same path as Home “Choose a theme →” (Workshop)
+    // Graduation CTA → same path as Home “Play a Quest →”
     state.tutorialRun = false;
     state.playMode = "workshop";
-    showScreen("global");
+    openQuestHub();
   });
   $("#btn-outcome-retry").addEventListener("click", () => {
     if (isMultipartyOutcome()) {

@@ -7,7 +7,11 @@ Drop Future Forge **Quest tile** JSON files here. When the game server starts (a
 1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest`).
 2. Copy the `.json` into this folder (or set `QUESTS_DIR` to another path).
 3. Start the server: `npm start`
-4. Open the game — **External Quests** appear on the home screen and when picking a Quest for multiplayer.
+4. Open the game → **Play a Quest** — tiles appear under the matching hub path:
+   - **Sponsored** — has `sponsorName`
+   - **Learning** — `isLearningModule` / module·lesson fields (grouped by module)
+   - **Library** — other side-loaded tiles (not learning, not sponsored)
+   - **Themes** is separate: generate up to 4 local Quests per problem theme
 
 ## Rules
 
