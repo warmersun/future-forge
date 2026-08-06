@@ -5,6 +5,8 @@ description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
   tile (JSON). Portable multi-harness skill — not tied to a single agent product.
   Player-facing scene and place prose use design-challenge story craft (easy first read).
+  Supports structured crisis meters, optional resources, grounding, learning-module
+  tutor mode, multi-lesson sets (display-only progress), and sponsor attribution.
 ---
 
 # Future Forge Spotlight Quest author
@@ -19,87 +21,137 @@ Player-facing narrative (`mission.scene` and especially **The place** in `briefM
 
 - “Write a Future Forge quest about drones / gene sequencing / solar…”
 - “Teach this week’s emTech advance as a quest”
+- “Lesson 2 of 5 in a module on open-weight AI…”
+- “Sponsored quest for Company X’s capability (still inventable)…”
+- “Sponsored learning module on …”
 - Research → classroom-ready invent scenario
 
 ## Deliverable
 
-One JSON file conforming to `future-forge.quest-tile/v1`:
+One JSON file (or a **set** of files for multi-lesson modules) conforming to `future-forge.quest-tile/v1`:
 
-- Prefer path: `output/quests/<slug>/quest.json`
+- Prefer path: `output/quests/<slug>/quest.json` (or `…/lesson-N.json` for sequences)
 - Browser import: **JSON only**
 - Default `placement.mode`: `replace-daily`
+- Class/server: game repo **`quests/`** folder
 
-Schema details: `docs/quest-tile-schema.md` (game repo) and `references/schema.md`.
+| Doc | Purpose |
+|-----|---------|
+| **`references/schema.md`** | Full field reference |
+| **`references/learning-and-sponsor.md`** | Tutor + sponsor recipes, multi-lesson sets |
+| **`references/output-contract.md`** | Skeleton + omit rules + recipes |
+| **`references/scene-prose.md`** | Player-facing lede craft |
+| **`references/brief-template.md`** | `briefMd` headings |
 
 ## Hard rules
 
-1. **`spotlight.techId`** = one valid Future Forge tech id (see `references/tech-ids.md` or `js/data.js` `TECHS`).
+1. **`spotlight.techId`** = one valid Future Forge tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
 2. **`mission.suggested`** = exactly `[spotlight.techId]`.
-3. **`mission.briefMd`** = long Markdown brief (target **600–1500 words**; max 12 000 chars). Use headings from `references/brief-template.md`. **The place** section is story craft (see `references/scene-prose.md`), not a memo.
-4. **`mission.scene`** = plain-text design-challenge lede following `references/scene-prose.md` (≤**500** chars schema cap). Hook → complication → mechanism → stakes → open challenge; short breaths + punch-lines. Not a single dense compound sentence.
-5. Scenario is **fictive**; research notes go in `research` (usually not player-facing).
-6. Do **not** force a single correct invention; invite the capability class. End the scene/place story on the open design tension — no solution theater.
-7. Sensitive themes: follow `references/sensitivity.md`.
-8. After writing, run: `npm run validate:quest -- <file>` and fix until OK.
+3. **`mission.briefMd`** = long Markdown brief (target **600–1500 words**; max 12 000 chars). Headings: `brief-template.md`. **The place** = story craft, not a memo.
+4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars).
+5. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }`. **Flat maps rejected.**
+6. Scenario is **fictive**; research notes go in `research` (usually not player-facing).
+7. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
+8. Sensitive themes: `references/sensitivity.md`.
+9. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
+10. Validate: `npm run validate:quest -- <file>` until `OK:`.
+
+## Optional extensions (combinable)
+
+All of these may appear on **one** tile:
+
+| Feature | Fields | When to use |
+|---------|--------|-------------|
+| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Classroom pacing |
+| **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — tech, capabilities, milestone, unlocks, honest limits |
+| **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt |
+| **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
+
+Details and templates: **`references/learning-and-sponsor.md`**.
 
 ## Procedure
 
 ### 1. Intake
 
-- Target emTech (name or id), optional global theme, audience, year (~2026 default).
-- Map free text → catalog **tech id**.
+- emTech (name → tech id), theme, audience, year (~2026).
+- Ask (or infer): learning module? multi-lesson set? sponsor? resource difficulty?
+- If multi-lesson: which `module`, which `lesson` / `totalLessons`?
 
 ### 2. Research the advance
 
-- What recently changed? Near-term honest use? Constraints?
-- Sources in `research.sources` (`https` URLs only). Do not invent statistics.
+- What changed? Near-term honest use? Constraints?
+- `research.sources`: `https` only; no invented stats.
 - Fill `spotlight.advanceTitle`, `advanceSummary`, `asOf`.
+- Draft **`grounding`** (technology / capabilities / milestone / unlocks / limits).
 
 ### 3. Invent the fictive Quest
 
-- Concrete place + lived harm + local driver (as **story**, not checklist labels).
-- Problem shape that an **application** of the new capability can address (pilot-honest).
-- Pick `globalId` from game themes.
-- Meters: structured `mission.pressure` with roles `local` / `global` / `support` (omit any role to hide that meter). Each: `{ label, pressure, pressureRise, winMax }` — labels plain English 1–3 words; values 0–5 (rise 0–3).
-- Stakeholder: named role (also ground the scene hook in a person when possible).
+- Place + lived harm + local driver as **story**.
+- Inventable application of the capability (pilot-honest).
+- `globalId`, stakeholder, structured **`pressure`** (1–3 roles).
+- Optional **`resources`**.
 
-### 4. Write player-facing prose (style first)
+### 4. Player-facing prose
 
-**Read `references/scene-prose.md` before drafting.**
+**Read `references/scene-prose.md` first.**
 
-1. Write **`mission.scene`** (≤500 chars) with the full spine and easy rhythm.  
-2. Expand **`briefMd` → The place** with the same craft at fuller length.  
-3. Complete remaining brief headings (strained / capability / invent invitation / constraints) in the same voice — scannable, still concrete.
+1. `mission.scene` (≤500 chars)  
+2. `briefMd` → **The place** (same craft)  
+3. Remaining brief headings  
 
-Quick capsule (not a substitute for the full reference):
+Spine: hook → complication → mechanism → stakes → **open** design challenge. No product theater.
 
-- Spine: hook → complication → mechanism through action → human stakes → **open** design challenge  
-- Voice: third person, plain-but-not-flat, no meta / workshop jargon  
-- Rhythm: vary sentence length; **2–4 short punch-lines**; one idea per breath  
-- Must include lived harm + local driver as story  
-- Do **not** shorten for its own sake; do **not** stack dense clauses  
+### 5. Learning module (if applicable)
 
-### 5. Emit JSON + validate
+Follow **`references/learning-and-sponsor.md`**.
 
-Use structure in `references/output-contract.md`. Validate with the CLI.
+- Set `isLearningModule: true`.
+- Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste into player text.
+- Set `module`, `lesson`, `totalLessons` (UI: **Module N Lesson X/Y**).
+- Multi-lesson set: separate JSON files; same module/totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
 
-### 6. Hand off
+### 6. Sponsor (if applicable)
 
-Tell the user how to import and that Daily is replaced on-device until they restore stock daily.
+Follow **`references/learning-and-sponsor.md`**.
+
+- `sponsorName` + optional text `sponsorBanner` (tagline, not image).
+- Strong **`grounding`** required in practice.
+- Scene/brief stay open invent invitations — not “use Product X”.
+
+### 7. Emit JSON + validate
+
+Use **`references/output-contract.md`** (base skeleton + recipes). Run:
+
+```bash
+npm run validate:quest -- <file>
+```
+
+### 8. Hand off
+
+- Path(s) to file(s)  
+- Copy into **`quests/`** or Import Quest…  
+- Spotlight tech + invent invitation  
+- UI chips expected: Sponsored / Learn / Start / Crisis as applicable  
+- If multi-lesson: list all files and intended order (host-managed for now)  
 
 ## Quality checklist
 
-- [ ] Advance real enough to cite; place fictive  
+- [ ] Advance citable; place fictive  
 - [ ] Exactly one suggested tech  
-- [ ] `mission.scene` uses design-challenge craft (spine + punch rhythm; ≤500 chars)  
-- [ ] **The place** in `briefMd` is lived story, not a brief dump  
-- [ ] Ends on open invent tension — no prescribed solution  
-- [ ] Brief is Markdown, inventable, not a lecture only  
-- [ ] Meters human-readable  
-- [ ] `npm run validate:quest` passes  
+- [ ] Structured `pressure` (roles only)  
+- [ ] Scene craft ≤500; place story craft  
+- [ ] Open invent tension — no prescribed solution  
+- [ ] `grounding` present for AI consistency (recommended always)  
+- [ ] Unused optionals **omitted** (not empty strings)  
+- [ ] Learning: solid `aiTutorContext`; progress integers ≥ 1; no fake unlocks  
+- [ ] Sponsor: text-only; invent still required; capability in `grounding`  
+- [ ] Combinations validated if used together  
+- [ ] `npm run validate:quest` → `OK:`  
 
 ## Non-goals
 
-- Multi-quest packs (v1 UI rejects packs)
-- Hard-locking the tech tray in the game
-- Requiring any single vendor’s `.grok/` skill path
+- Multi-quest packs (`quest-pack` rejected)  
+- Hard-locking the tech tray  
+- Module unlock graphs / auto-advance  
+- Sponsor scoring bonuses or forced product usage  
+- Requiring any single vendor’s `.grok/` skill path  

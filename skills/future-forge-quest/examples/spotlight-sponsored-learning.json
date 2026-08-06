@@ -1,0 +1,89 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-ai-learning-demo-harborside-2026",
+  "version": 1,
+  "title": "Night class on the sealed pier network",
+  "summary": "Learning-module demo: open-weight AI under local IP rules — invent the pier lab workflow.",
+  "author": {
+    "name": "Future Forge skill example",
+    "note": "Portable learning + sponsor sample"
+  },
+  "createdAt": "2026-08-05T00:00:00Z",
+  "tags": [
+    "spotlight",
+    "ai",
+    "learning-module",
+    "sponsored",
+    "education"
+  ],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "ai",
+    "advanceTitle": "Hostable near-frontier open-weight models",
+    "advanceSummary": "Open weights and long-context agents make local institutional hosting realistic when a cluster exists — if the learning workflow is invented.",
+    "asOf": "2026-07",
+    "encourageCopy": "Invent with AI for this sealed pier lab — local control is the point."
+  },
+  "research": {
+    "topic": "Open-weight institutional hosting for education",
+    "bullets": [
+      "Open weights shift control toward self-host when accelerators and ops exist.",
+      "Sealed labs need workflows that keep IP on-prem and human-gated."
+    ],
+    "sources": [
+      {
+        "title": "Example",
+        "url": "https://example.com",
+        "accessed": "2026-08-05"
+      }
+    ],
+    "showToPlayer": false
+  },
+  "globalId": "education",
+  "sponsorName": "Example Labs",
+  "sponsorBanner": "Open weights for classrooms — invent the local use",
+  "isLearningModule": true,
+  "module": 1,
+  "lesson": 1,
+  "totalLessons": 2,
+  "aiTutorContext": "LESSON GOAL: Learner invents a pier-lab AI learning workflow that stays on-prem.\n\nSEQUENCE:\n1) Ask why public cloud chat breaks sealed IP.\n2) Open weights + college cluster enable local agents — not a laptop.\n3) Tests and human gates before trusting pinouts.\n4) Pilot one course track only.\n\nMISCONCEPTIONS:\n- Cloud API is fine if the prompt is careful.\n- City-wide overnight deploy.\n\nINVENT GATE:\n- Name stack + pilot-honest how-it-works for one sealed lab corridor.\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player.",
+  "grounding": "## Technology\nOpen-weight near-frontier AI (category id: ai).\n\n## Capabilities\nLocal serving of long-context coding agents when a cluster exists; inspect and fine-tune under institutional policy.\n\n## Milestone\nOpen near-frontier weights for institutional download (~2026).\n\n## Unlocks Use Case(s)\nSealed-lab tutoring and multi-day exercises without shipping protected repos to a foreign API.\n\n## Honest limits\nNot consumer-laptop ready; hallucinations need tests; pilot one track first.",
+  "resources": {
+    "startingBudget": 8,
+    "startingWill": 4
+  },
+  "mission": {
+    "id": "spotlight-ai-learning-demo-harborside-2026",
+    "globalId": "education",
+    "title": "Night class on the sealed pier network",
+    "place": "Harborside Trade School (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "local": {
+        "label": "Skills gap",
+        "pressure": 3,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "support": {
+        "label": "Trust",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      }
+    },
+    "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard firmware on the bench cannot leave this room. Students still need multi-day practice. Who designs a local AI learning path that never phones home?",
+    "briefMd": "## The place\n\n**Harborside Trade School** (fictive). Night class. Real yard manuals. A small GPU rack hums. Cloud chat is forbidden by contract.\n\n## What's strained\n\n**Skills gap** and **Trust** — practice is thin, and wrong answers in a sealed lab are costly.\n\n## A capability that just became more real\n\nOpen-weight near-frontier AI can be hosted on-site when the school has a cluster. The invent is the **workflow**, not the brochure.\n\n## Your brief\n\nInvent a local system for this pier lab that uses **AI** honestly. Stakeholder: **Ms. Okonkwo**.\n\n## Constraints\n\n- On-prem only. Pilot one track. Human gates. No overnight whole-port claims.\n",
+    "stakeholder": "Ms. Okonkwo, night instructor",
+    "suggested": [
+      "ai"
+    ],
+    "visionTheme": "learn-city"
+  }
+}

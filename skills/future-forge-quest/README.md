@@ -6,32 +6,61 @@ This package teaches **any** AI agent harness how to research a recent emerging-
 
 It does **not** relicense the Future Forge game engine. Only this skill tree (and example tiles) are MIT.
 
+## What the skill supports
+
+| Area | Summary |
+|------|---------|
+| **Core spotlight** | One tech, fictive place, design-challenge prose |
+| **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus) |
+| **Resources** | Optional starting AP / Budget / Will |
+| **Grounding** | Markdown AI source-of-truth (capabilities, milestones, unlocks) |
+| **Learning modules** | Tutor mode, hidden `aiTutorContext`, progress `Module X Lesson Y/Z` |
+| **Multi-lesson sets** | Multiple JSON files with shared module/totalLessons (display-only; no engine unlock yet) |
+| **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |
+
+All optional features may be **combined** on one tile (see `examples/spotlight-sponsored-learning.json`).
+
+| Doc | Purpose |
+|-----|---------|
+| **`SKILL.md`** | Procedure + hard rules |
+| **`references/schema.md`** | Full field reference |
+| **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson, sponsor recipes |
+| **`references/output-contract.md`** | Skeleton + recipes A–D |
+| **`references/scene-prose.md`** | Player-facing lede craft |
+
 ## Not under `.grok/`
 
-The skill lives at `skills/future-forge-quest/` so it works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” workflows. Optional: symlink into your harness’s skills directory locally — never required.
+Works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” workflows. Optional: symlink into a harness skills directory — never required.
 
-## Quick start (any agent)
+## Quick start
 
-1. Open and follow **`SKILL.md`**.
-2. Read **`references/scene-prose.md`** before drafting `mission.scene` or the brief’s place section (same design-challenge craft as in-game seeds).
-3. Read other `references/` as needed (brief template, schema, sensitivity, tech ids).
-4. Write `output/quests/<slug>/quest.json` (or a path the user chooses).
+1. Follow **`SKILL.md`**.
+2. Read **`references/scene-prose.md`** before drafting scene / place.
+3. Read **`references/schema.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
+4. Write the JSON; **omit** unused optional keys.
 5. Validate:
 
 ```bash
 npm run validate:quest -- output/quests/<slug>/quest.json
 ```
 
-6. Hand-off options:
-   - **Server folder (classrooms / multiplayer):** copy the JSON into the game’s **`quests/`** directory, restart or refresh — External Quests appear for everyone on that server (including friends lobby pick).
-   - **Per-browser:** Future Forge title screen → **Import Quest…** → select the JSON (replaces Daily on that device by default).
+6. Hand-off:
+   - Copy into game **`quests/`** and refresh (External Quests), or  
+   - **Import Quest…** on the title screen (per browser).
 
-## Local template without AI research
+## Examples
+
+| File | Demonstrates |
+|------|----------------|
+| `examples/spotlight-gene-seq.json` | Structured pressure (local+support), resources, grounding |
+| `examples/spotlight-sponsored-learning.json` | Sponsor + learning module + tutor context + grounding + resources |
+
+Monorepo also has richer classroom tiles under `quests/` (e.g. `kimi-k3.json`).
+
+## Local CLI scaffold
 
 ```bash
 npm run author:quest -- --tech gene-sequencing --local-only
 ```
 
-## Example fixture
-
-`examples/spotlight-gene-seq.json` (same as `test/fixtures/quests/spotlight-gene-seq.json` in the game repo).
+CLI output is a **stub** — re-check against `references/schema.md`, add `grounding` / learning / sponsor as needed, and re-validate.
