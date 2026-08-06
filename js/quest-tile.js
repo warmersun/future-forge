@@ -21,7 +21,85 @@ export const CAPS = {
   meterKey: 40,
   /** Soft safety ceiling for optional AI grounding (not a product length limit). */
   grounding: 50_000,
+  /** Soft safety ceiling for hidden AI tutor context. */
+  aiTutorContext: 50_000,
 };
+
+/**
+ * Pick tile- or mission-level optional field (tile wins when set).
+ * @param {object} tile
+ * @param {object} missionIn
+ * @param {string} key
+ */
+function pickTileOrMissionField(tile, missionIn, key) {
+  if (tile && tile[key] !== undefined && tile[key] !== null) return tile[key];
+  if (missionIn && missionIn[key] !== undefined && missionIn[key] !== null) {
+    return missionIn[key];
+  }
+  return undefined;
+}
+
+/**
+ * Validate optional learning-module fields.
+ * @returns {{ ok: true, value: object } | { ok: false, details: string[] }}
+ *   value keys only set when present/valid: isLearningModule, aiTutorContext, module, lesson, totalLessons
+ */
+export function parseLearningModuleFields(tile, missionIn = {}) {
+  const details = [];
+  /** @type {Record<string, unknown>} */
+  const out = {};
+
+  const isLm = pickTileOrMissionField(tile, missionIn, "isLearningModule");
+  if (isLm !== undefined) {
+    if (typeof isLm !== "boolean") {
+      details.push("isLearningModule_not_boolean");
+    } else if (isLm === true) {
+      out.isLearningModule = true;
+    }
+  }
+
+  const tutorRaw = pickTileOrMissionField(tile, missionIn, "aiTutorContext");
+  if (tutorRaw !== undefined) {
+    if (typeof tutorRaw !== "string") {
+      details.push("aiTutorContext_not_string");
+    } else {
+      const t = tutorRaw.trim();
+      if (t) out.aiTutorContext = t.slice(0, CAPS.aiTutorContext);
+    }
+  }
+
+  for (const key of ["module", "lesson", "totalLessons"]) {
+    const raw = pickTileOrMissionField(tile, missionIn, key);
+    if (raw === undefined) continue;
+    if (typeof raw !== "number" || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 1) {
+      details.push(`learning_${key}_not_positive_integer`);
+      continue;
+    }
+    out[key] = raw;
+  }
+
+  if (details.length) return { ok: false, details };
+  return { ok: true, value: out };
+}
+
+/**
+ * Player-facing progress label, or null if nothing to show.
+ * Module first, then lesson — e.g. "Module 1 Lesson 1/3".
+ * @param {{ module?: number, lesson?: number, totalLessons?: number }|null|undefined} m
+ */
+export function learningProgressLabel(m) {
+  if (!m || typeof m !== "object") return null;
+  const parts = [];
+  if (m.module != null) parts.push(`Module ${m.module}`);
+  if (m.lesson != null && m.totalLessons != null) {
+    parts.push(`Lesson ${m.lesson}/${m.totalLessons}`);
+  } else if (m.lesson != null) {
+    parts.push(`Lesson ${m.lesson}`);
+  } else if (m.totalLessons != null) {
+    parts.push(`${m.totalLessons} lessons`);
+  }
+  return parts.length ? parts.join(" ") : null;
+}
 
 const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);
 
@@ -372,6 +450,11 @@ export function validateQuestTile(tile, opts = {}) {
     }
   }
 
+  const learningParsed = parseLearningModuleFields(tile, missionIn);
+  if (!learningParsed.ok) {
+    details.push(...learningParsed.details);
+  }
+
   // Breaking: quest tiles must use structured pressure (local|global|support entries).
   // Legacy flat maps are no longer accepted on imported/hosted tiles.
   if (!isStructuredPressure(missionIn.pressure)) {
@@ -445,6 +528,12 @@ export function validateQuestTile(tile, opts = {}) {
   if (grounding) {
     mission.grounding = grounding;
   }
+  const learning = learningParsed.ok ? learningParsed.value : {};
+  if (learning.isLearningModule) mission.isLearningModule = true;
+  if (learning.aiTutorContext) mission.aiTutorContext = learning.aiTutorContext;
+  if (learning.module != null) mission.module = learning.module;
+  if (learning.lesson != null) mission.lesson = learning.lesson;
+  if (learning.totalLessons != null) mission.totalLessons = learning.totalLessons;
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -466,6 +555,11 @@ export function validateQuestTile(tile, opts = {}) {
   if (grounding) {
     normalizedTile.grounding = grounding;
   }
+  if (learning.isLearningModule) normalizedTile.isLearningModule = true;
+  if (learning.aiTutorContext) normalizedTile.aiTutorContext = learning.aiTutorContext;
+  if (learning.module != null) normalizedTile.module = learning.module;
+  if (learning.lesson != null) normalizedTile.lesson = learning.lesson;
+  if (learning.totalLessons != null) normalizedTile.totalLessons = learning.totalLessons;
 
   return { ok: true, tile: normalizedTile, mission };
 }

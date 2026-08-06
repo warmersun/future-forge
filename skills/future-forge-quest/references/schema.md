@@ -33,3 +33,9 @@ Validate: `npm run validate:quest -- path.json`
 ## Optional `grounding` (AI source of truth)
 
 Free-text / Markdown string for authoritative Quest context (technology, capabilities, milestone, unlocked use cases). Passed to the co-inventor and feasibility assessor when present. Omit for default AI behavior.
+
+## Optional learning module / tutor mode
+
+- `isLearningModule` (boolean) — activates solo AI **tutor** mode + opens Co-Inventor tab
+- `aiTutorContext` (string) — hidden tutor notes for the AI only
+- `module` / `lesson` / `totalLessons` (positive integers) — progress label only; no unlock sequencing yet

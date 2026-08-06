@@ -33,7 +33,37 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`.
+Optional: `placement.mode` (`replace-daily` default | `alongside` | `library-only`), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields below.
+
+### Optional learning module + AI tutor mode
+
+Marks a Quest as part of a learning path and switches the solo **AI Co-Inventor** into **tutor mode**. Full module packs, unlocking, and auto-sequencing are **not** in this version — only flags, hidden tutor notes, and progress labels.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `isLearningModule` | boolean | When `true`, invent starts on the Co-Inventor tab and the server uses the **tutor** system prompt |
+| `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown in the player UI |
+| `module` | integer ≥ 1 | Module index for display |
+| `lesson` | integer ≥ 1 | Lesson index for display |
+| `totalLessons` | integer ≥ 1 | Denominator for “Lesson X/Y” |
+
+All fields optional. Tile top-level or under `mission` (same as `grounding`).
+
+When `isLearningModule` is true:
+
+- Tutor prompt: one idea at a time, short explanations, check understanding, guide inventing without dumping full solutions.
+- `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
+- Progress fields, when present, render as e.g. `Module 1 Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (theme pick, External list, import library, daily/focus, multiplayer mission pick).
+
+When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode.
+
+```json
+"isLearningModule": true,
+"aiTutorContext": "Lesson goal: local sensors before full AI stack. Check they name power and trust constraints before suggesting models.",
+"module": 3,
+"lesson": 2,
+"totalLessons": 5
+```
 
 ### Optional `grounding` (AI source of truth)
 

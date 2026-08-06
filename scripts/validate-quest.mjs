@@ -55,5 +55,20 @@ if (r.mission.crisisRoles) {
 if (r.mission.grounding) {
   console.log(`  grounding: ${r.mission.grounding.length} chars`);
 }
+if (r.mission.isLearningModule) {
+  const bits = ["learning module"];
+  if (r.mission.lesson != null || r.mission.totalLessons != null) {
+    bits.push(
+      `lesson ${r.mission.lesson ?? "?"}${
+        r.mission.totalLessons != null ? `/${r.mission.totalLessons}` : ""
+      }`
+    );
+  }
+  if (r.mission.module != null) bits.push(`module ${r.mission.module}`);
+  if (r.mission.aiTutorContext) {
+    bits.push(`tutorContext ${r.mission.aiTutorContext.length} chars`);
+  }
+  console.log(`  ${bits.join(" · ")}`);
+}
 console.log(`  pressure: ${JSON.stringify(r.mission.pressure)}`);
 process.exit(0);

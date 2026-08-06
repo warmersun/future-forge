@@ -118,6 +118,13 @@ export function cloneMission(m) {
     ...(typeof m.grounding === "string" && m.grounding
       ? { grounding: String(m.grounding) }
       : {}),
+    ...(m.isLearningModule === true ? { isLearningModule: true } : {}),
+    ...(typeof m.aiTutorContext === "string" && m.aiTutorContext
+      ? { aiTutorContext: String(m.aiTutorContext) }
+      : {}),
+    ...(typeof m.module === "number" ? { module: m.module } : {}),
+    ...(typeof m.lesson === "number" ? { lesson: m.lesson } : {}),
+    ...(typeof m.totalLessons === "number" ? { totalLessons: m.totalLessons } : {}),
   };
 }
 

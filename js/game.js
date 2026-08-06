@@ -100,6 +100,7 @@ import {
   normalizeMissionPressure,
   resourceOverrideLabel,
   crisisRolesLabel,
+  learningProgressLabel,
 } from "./quest-tile.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
@@ -2977,11 +2978,14 @@ function renderDailyCard() {
     const sp = pick.mission.spotlight;
     const resLabel = resourceOverrideLabel(pick.mission.resources);
     const crisisLabel = crisisRolesLabel(pick.mission.crisisRoles);
+    const learnLabel = learningProgressLabel(pick.mission);
     const parts = [];
     if (sp?.techId) {
       const tech = techById(sp.techId);
       parts.push(`Spotlight · ${tech?.name || sp.techId}`);
     }
+    if (learnLabel) parts.push(`Learn · ${learnLabel}`);
+    else if (pick.mission.isLearningModule) parts.push("Learning module");
     if (resLabel) parts.push(`Start · ${resLabel}`);
     if (crisisLabel) parts.push(`Crisis · ${crisisLabel}`);
     if (parts.length) {
@@ -3695,6 +3699,16 @@ function normalizeMission(raw, globalId) {
     typeof raw.grounding === "string" && raw.grounding.trim()
       ? raw.grounding.trim().slice(0, 50_000)
       : null;
+  const isLearningModule = raw.isLearningModule === true;
+  const aiTutorContext =
+    typeof raw.aiTutorContext === "string" && raw.aiTutorContext.trim()
+      ? raw.aiTutorContext.trim().slice(0, 50_000)
+      : null;
+  const posInt = (v) =>
+    typeof v === "number" && Number.isInteger(v) && v >= 1 ? v : null;
+  const moduleN = posInt(raw.module);
+  const lessonN = posInt(raw.lesson);
+  const totalLessonsN = posInt(raw.totalLessons);
 
   return {
     id,
@@ -3720,6 +3734,11 @@ function normalizeMission(raw, globalId) {
     ...(resources ? { resources } : {}),
     ...(crisisRoles?.length ? { crisisRoles } : {}),
     ...(grounding ? { grounding } : {}),
+    ...(isLearningModule ? { isLearningModule: true } : {}),
+    ...(aiTutorContext ? { aiTutorContext } : {}),
+    ...(moduleN != null ? { module: moduleN } : {}),
+    ...(lessonN != null ? { lesson: lessonN } : {}),
+    ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
   };
 }
 
@@ -3741,10 +3760,26 @@ function crisisRolesBadgeHtml(crisisRoles) {
   )}</span>`;
 }
 
-/** Resource + crisis chips for selection cards / lists. */
+/** Learning-module progress chip on selection cards (module / lesson metadata). */
+function learningModuleBadgeHtml(mission) {
+  if (!mission || typeof mission !== "object") return "";
+  const progress = learningProgressLabel(mission);
+  if (progress) {
+    return `<span class="scenario-tag learning-tag" title="Learning module progress">Learn · ${escapeHtml(
+      progress
+    )}</span>`;
+  }
+  if (mission.isLearningModule) {
+    return `<span class="scenario-tag learning-tag" title="Learning module">Learning module</span>`;
+  }
+  return "";
+}
+
+/** Resource + crisis + learning chips for selection cards / lists. */
 function questMetaBadgesHtml(mission) {
   if (!mission || typeof mission !== "object") return "";
   return (
+    learningModuleBadgeHtml(mission) +
     resourceOverrideBadgeHtml(mission.resources) +
     crisisRolesBadgeHtml(mission.crisisRoles)
   );
@@ -3905,7 +3940,8 @@ function startMission(mission) {
   state.hadChallengeAttempt = false;
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
-  state.sideTab = "vision";
+  // Learning modules open on Co-Inventor (tutor); normal Quests keep Future vision.
+  state.sideTab = state.mission?.isLearningModule ? "coinventor" : "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
   state.lastNews = "";
@@ -3957,19 +3993,34 @@ function startMission(mission) {
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
+  setSideTab(state.sideTab || "vision");
+  // Learning modules land on co-inventor; ensure root exists before welcome.
+  if (state.sideTab === "coinventor") ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
-  // Seed co-inventor welcome with mission context
+  // Seed co-inventor / tutor welcome with mission context
   if (state.coInventor) {
     state.coInventor.reset(false);
+    const tutor = Boolean(state.mission?.isLearningModule);
+    const place = state.mission?.place || mission.place;
+    const year = state.mission?.startYear || mission.startYear;
+    const scene = state.mission?.scene || mission.scene;
+    const ypt = state.mission?.yearsPerTurn || mission.yearsPerTurn || GAME.yearsPerTurn;
+    const welcome = tutor
+      ? `**${place}**, ${year}. ${scene}\n\n` +
+        `I'm your **AI tutor** for this lesson — we'll go **one idea at a time**. ` +
+        `I'll explain what you need when you need it, and ask short questions to check understanding.\n\n` +
+        `You still invent: pick techs, write how it works, and keep claims honest for this year. ` +
+        `I won't dump the whole solution at once.\n\n` +
+        `What's one thing you already notice about this place or problem?`
+      : `**${place}**, ${year}. ${scene}\n\n` +
+        `I'm your co-inventor. Pick any tech stack that fits **this place** — categories are never locked by year. ` +
+        `Feasibility (red/yellow/green) judges whether your *how it works* over-claims what is possible this year.\n\n` +
+        `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
+        `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
+        `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
     state.coInventor.pushAssistant(
       {
-        message:
-          `**${mission.place}**, ${mission.startYear}. ${mission.scene}\n\n` +
-          `I'm your co-inventor. Pick any tech stack that fits **this place** — categories are never locked by year. ` +
-          `Feasibility (red/yellow/green) judges whether your *how it works* over-claims what is possible this year.\n\n` +
-          `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
-          `**Wait** advances the world (+${mission.yearsPerTurn || GAME.yearsPerTurn} years) and raises crisis — not to unlock cards.\n\n` +
-          `What's the first constraint you care about — cost, trust, speed, or who's left out?`,
+        message: welcome,
         proposals: emptyProps(),
         teaching: [],
       },
@@ -4001,6 +4052,17 @@ function renderWorkshop() {
     : "Mission";
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
+  const progressEl = $("#ws-lesson-progress");
+  if (progressEl) {
+    const label = learningProgressLabel(m);
+    if (label) {
+      progressEl.hidden = false;
+      progressEl.textContent = label;
+    } else {
+      progressEl.hidden = true;
+      progressEl.textContent = "";
+    }
+  }
   const sceneEl = $("#ws-mission-scene");
   if (sceneEl) {
     if (m.briefMd) {
@@ -6603,6 +6665,9 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         pressure: state.pressure,
         availableTechs: techsForCoInventMode(mode),
         grounding: state.mission?.grounding || null,
+        isLearningModule: Boolean(state.mission?.isLearningModule),
+        aiTutorContext: state.mission?.aiTutorContext || null,
+        tutorMode: Boolean(state.mission?.isLearningModule),
         ...extra,
       },
     }),
@@ -12909,6 +12974,9 @@ function ensureCoInventor() {
         spotlightTechId: state.mission?.spotlight?.techId || null,
         spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
         grounding: state.mission?.grounding || null,
+        isLearningModule: Boolean(state.mission?.isLearningModule),
+        aiTutorContext: state.mission?.aiTutorContext || null,
+        tutorMode: Boolean(state.mission?.isLearningModule),
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
           : undefined,
@@ -13631,6 +13699,9 @@ async function callCoInventMode(mode, userLabel) {
       pressure: state.pressure,
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
       grounding: state.mission?.grounding || null,
+      isLearningModule: Boolean(state.mission?.isLearningModule),
+      aiTutorContext: state.mission?.aiTutorContext || null,
+      tutorMode: Boolean(state.mission?.isLearningModule),
       contributingToOther: contributingOther,
     };
 

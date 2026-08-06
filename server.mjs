@@ -375,6 +375,31 @@ scrutiny when used:
 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
+/** Tutor mode — learning-module Quests (isLearningModule). Same JSON contract as SYSTEM_PROMPT. */
+const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech).
+
+Role:
+- Patient tutor and guide — NOT a free-form co-inventor that dumps full solutions.
+- The learner still invents; you scaffold understanding step by step.
+- Teach from context.aiTutorContext when present: that is HIDDEN instructor context (curriculum notes). Never quote it as "secret notes" or paste it wholesale. Use it to decide what to introduce next.
+- If context.grounding is present, treat it as authoritative capability truth (tech, milestones, unlocks) for this Quest.
+- Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
+
+Tutor style (hard rules for teaching):
+- Introduce **one idea at a time**.
+- Explain only what the learner needs for the current step.
+- Prefer short, clear explanations and a single check-for-understanding question.
+- Avoid long lectures, multi-topic dumps, or jumping straight to a finished invention.
+- Guide research and invention (next small action, what to try, what to notice) rather than solving the design for them.
+- When they ask for a full solution, give a partial scaffold and ask them to take the next step.
+
+Modes:
+- chat / spark / explain / drafts / art-of-the-possible / sit / scamper / complete-picture: tutor style above; keep proposals sparse and pilot-honest.
+- assess-feasibility: same timing JSON as co-inventor (red|yellow|green + reason); still honor grounding; do not lecture in message beyond a short reason.
+- Never invent fake paper titles. Never say a category is locked until a year.
+
+Respond with the same single JSON object as the co-inventor (message, proposals, teaching, timing). For assess-feasibility set timing; otherwise timing may be null.`;
+
 /** Compact system prompt for challenge pose — keeps TTFT low vs full co-inventor prompt. */
 const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local invention game).
 Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
@@ -387,6 +412,10 @@ If context.grounding (or the grounding field in the user JSON) is present, treat
 /** Appended to invent/challenge modeHints when capability truth matters. */
 const GROUNDING_HINT =
   " If context.grounding is present, treat it as authoritative Quest source-of-truth (technology, capabilities, milestones, unlocked use cases); do not invent contradicting facts.";
+
+/** Appended to invent modeHints when tutor mode is active. */
+const TUTOR_HINT =
+  " Tutor mode: one idea at a time; short explanations; check understanding; do not dump full solutions; use context.aiTutorContext as hidden curriculum guidance without pasting it to the player.";
 
 /**
  * Resolve optional Quest grounding string from request context.
@@ -404,6 +433,28 @@ function resolveGrounding(context) {
     return String(context.mission.grounding).trim().slice(0, 50_000);
   }
   return null;
+}
+
+/**
+ * Hidden AI tutor curriculum notes (never for player UI).
+ * @param {object|null|undefined} context
+ * @returns {string|null}
+ */
+function resolveTutorContext(context) {
+  if (typeof context?.aiTutorContext === "string" && context.aiTutorContext.trim()) {
+    return String(context.aiTutorContext).trim().slice(0, 50_000);
+  }
+  if (
+    typeof context?.mission?.aiTutorContext === "string" &&
+    context.mission.aiTutorContext.trim()
+  ) {
+    return String(context.mission.aiTutorContext).trim().slice(0, 50_000);
+  }
+  return null;
+}
+
+function isTutorMode(context) {
+  return context?.isLearningModule === true || context?.tutorMode === true;
 }
 
 /** Short excerpt for local (offline) fallback messages. */
@@ -1314,7 +1365,11 @@ function localCoInvent({ mode, messages, context }) {
 
   // free chat — heuristic reply
   const lower = lastUser.toLowerCase();
+  const tutorPrefix = isTutorMode(context)
+    ? `**Tutor:** Let's take this one step at a time. `
+    : "";
   let message =
+    tutorPrefix +
     `I'm with you on **${challengeTitle}**. ` +
     (selected.length
       ? `Your stack so far: ${selected.map((id) => map.get(id)?.name || id).join(", ")}. `
@@ -1482,6 +1537,26 @@ function buildUserPayload({ messages, context, mode }) {
   const focusTechs = available.filter((t) => selectedIds.has(t.id));
 
   const grounding = resolveGrounding(context);
+  const tutorMode = isTutorMode(context);
+  const aiTutorContext = tutorMode ? resolveTutorContext(context) : null;
+  const tutorModes = new Set([
+    "chat",
+    "spark",
+    "suggest-stack",
+    "draft-how",
+    "draft-impact",
+    "push-further",
+    "explain-techs",
+    "art-of-the-possible",
+    "sit",
+    "scamper",
+    "complete-picture",
+  ]);
+  const baseHint = modeHints[mode] || modeHints.chat;
+  const modeInstruction =
+    tutorMode && tutorModes.has(mode || "chat")
+      ? baseHint + TUTOR_HINT
+      : baseHint;
 
   // Fast path: minimal JSON for challenge pose (biggest latency win)
   if (mode === "pose-challenge") {
@@ -1512,7 +1587,7 @@ function buildUserPayload({ messages, context, mode }) {
 
   const payload = {
     mode: mode || "chat",
-    modeInstruction: modeHints[mode] || modeHints.chat,
+    modeInstruction,
     challenge: context?.challenge || null,
     selectedTechIds: context?.selectedTechIds || [],
     inventionName: context?.inventionName || "",
@@ -1534,10 +1609,16 @@ function buildUserPayload({ messages, context, mode }) {
     guidance: context?.guidance || null,
     depthCharacter: context?.depthCharacter || null,
     grounding,
+    isLearningModule: tutorMode,
+    tutorMode,
+    aiTutorContext,
     designRule:
       "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year." +
       (grounding
         ? " When grounding is present, treat it as authoritative Quest source-of-truth."
+        : "") +
+      (tutorMode
+        ? " Tutor mode: one idea at a time; use aiTutorContext as hidden curriculum guidance."
         : ""),
   };
 
@@ -1728,11 +1809,19 @@ async function aiCoInvent(body, client, meta = {}) {
   const sessionId = meta.sessionId || clientSessionFromBody(body);
 
   const isPose = mode === "pose-challenge";
-  const systemContent = isPose ? POSE_CHALLENGE_SYSTEM : SYSTEM_PROMPT;
+  const isTutor = !isPose && isTutorMode(context) && mode !== "generate-scenarios";
+  const systemContent = isPose
+    ? POSE_CHALLENGE_SYSTEM
+    : isTutor
+      ? TUTOR_SYSTEM_PROMPT
+      : SYSTEM_PROMPT;
   const userContent = isPose
     ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
-    : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-      `Respond with the required JSON object only.`;
+    : isTutor
+      ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
+        `Respond with the required JSON object only. Teach one idea at a time.`
+      : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
+        `Respond with the required JSON object only.`;
 
   const input = [
     { role: "system", content: systemContent },

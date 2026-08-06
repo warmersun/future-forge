@@ -10,6 +10,8 @@ import {
   normalizeMissionPressure,
   isStructuredPressure,
   crisisRolesLabel,
+  parseLearningModuleFields,
+  learningProgressLabel,
 } from "./quest-tile.js";
 
 const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
@@ -370,5 +372,75 @@ describe("quest-tile", () => {
     });
     assert.equal(r.ok, false);
     assert.ok(r.details.includes("grounding_not_string"));
+  });
+
+  it("accepts learning module fields", () => {
+    const r = validateQuestTile(
+      baseTile({
+        isLearningModule: true,
+        aiTutorContext: "Introduce sensors before models.",
+        module: 3,
+        lesson: 2,
+        totalLessons: 5,
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.isLearningModule, true);
+    assert.equal(r.mission.aiTutorContext, "Introduce sensors before models.");
+    assert.equal(r.mission.module, 3);
+    assert.equal(r.mission.lesson, 2);
+    assert.equal(r.mission.totalLessons, 5);
+    assert.equal(r.tile.isLearningModule, true);
+  });
+
+  it("rejects invalid learning module types", () => {
+    assert.equal(
+      validateQuestTile(baseTile({ isLearningModule: "yes" }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ aiTutorContext: { a: 1 } }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ lesson: 0 }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ totalLessons: 2.5 }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+  });
+
+  it("learningProgressLabel formats progress", () => {
+    assert.equal(learningProgressLabel(null), null);
+    assert.equal(
+      learningProgressLabel({ lesson: 2, totalLessons: 5, module: 3 }),
+      "Module 3 Lesson 2/5"
+    );
+    assert.equal(
+      learningProgressLabel({ lesson: 1, totalLessons: 3, module: 1 }),
+      "Module 1 Lesson 1/3"
+    );
+    assert.equal(learningProgressLabel({ module: 1 }), "Module 1");
+  });
+
+  it("parseLearningModuleFields ignores false isLearningModule", () => {
+    const r = parseLearningModuleFields({ isLearningModule: false }, {});
+    assert.equal(r.ok, true);
+    assert.equal(r.value.isLearningModule, undefined);
   });
 });

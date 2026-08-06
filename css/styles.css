@@ -2891,6 +2891,14 @@ body.mp-hotseat .hud-product {
   margin: 0 0 0.35rem !important;
 }
 
+.lesson-progress {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.45rem !important;
+  color: #fdba74;
+}
+
 .stakeholder {
   font-size: 0.85rem;
   color: var(--text-mute);
@@ -7299,8 +7307,16 @@ button.linkish:hover {
   border: 1px solid rgba(167, 139, 250, 0.45);
   font-weight: 600;
 }
+/* Learning chips: amber — distinct from resources teal and crisis purple */
+.scenario-tag.learning-tag {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fdba74;
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  font-weight: 600;
+}
 .quest-lib-copy .scenario-tag.resources-tag,
-.quest-lib-copy .scenario-tag.crisis-tag {
+.quest-lib-copy .scenario-tag.crisis-tag,
+.quest-lib-copy .scenario-tag.learning-tag {
   display: inline-block;
   margin: 0.2rem 0.35rem 0.15rem 0;
   font-size: 0.72rem;

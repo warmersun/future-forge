@@ -7,6 +7,7 @@ import { GLOBALS, localScenariosForGlobal } from "../data.js";
 import {
   resourceOverrideLabel,
   crisisRolesLabel,
+  learningProgressLabel,
 } from "../quest-tile.js";
 
 export function problemVisualUrl(globalId) {
@@ -107,6 +108,14 @@ export function paintMissionGrid(grid, opts) {
             crisisLabel
           )}</span>`
         : "";
+      const learnProgress = learningProgressLabel(m);
+      const learnTag = learnProgress
+        ? `<span class="scenario-tag learning-tag" title="Learning module progress">Learn · ${escapeHtml(
+            learnProgress
+          )}</span>`
+        : m.isLearningModule
+          ? `<span class="scenario-tag learning-tag" title="Learning module">Learning module</span>`
+          : "";
       return `
       <button type="button" class="challenge-card challenge-card-visual mp-pick-card mp-mission-card ${sel} ${
         isExternal ? "quest-card-external" : ""
@@ -122,6 +131,7 @@ export function paintMissionGrid(grid, opts) {
           <span class="num">${escapeHtml(m.place || "")} · ${m.startYear || 2026}
             <span class="scenario-tag ${tagClass}">${escapeHtml(tag)}</span>
             ${spot}
+            ${learnTag}
             ${resTag}
             ${crisisTag}
           </span>
