@@ -56,7 +56,7 @@ const DEFAULT_TIMEOUT_MS = 12_000;
  * @returns {string|null}
  */
 export function resolveQuestsRemoteUrl() {
-  const raw = process.env.QUESTS_REMOTE_URL;
+  const raw = process.env.FF_QUESTS_REMOTE_URL;
   if (raw !== undefined) {
     const s = String(raw).trim();
     if (!s || s === "0" || /^off$/i.test(s) || /^false$/i.test(s)) return null;
@@ -72,7 +72,7 @@ export function resolveQuestsRemoteUrl() {
  */
 export function resolveQuestsRemoteUrlCandidates(primary = resolveQuestsRemoteUrl()) {
   if (!primary) return [];
-  const raw = process.env.QUESTS_REMOTE_URL;
+  const raw = process.env.FF_QUESTS_REMOTE_URL;
   // Explicit env: only that target
   if (raw !== undefined) return [primary];
   const out = [primary];
@@ -344,7 +344,7 @@ export async function fetchRemoteQuestCatalog(url = resolveQuestsRemoteUrl(), op
     return { url: null, ok: true, quests: [], errors: [], cached: false };
   }
 
-  const tryFallbacks = opts.tryFallbacks !== false && process.env.QUESTS_REMOTE_URL === undefined;
+  const tryFallbacks = opts.tryFallbacks !== false && process.env.FF_QUESTS_REMOTE_URL === undefined;
   const candidates = tryFallbacks
     ? resolveQuestsRemoteUrlCandidates(url)
     : [url];

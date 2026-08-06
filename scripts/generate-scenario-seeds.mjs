@@ -13,7 +13,7 @@
  *   node scripts/generate-scenario-seeds.mjs --local-only
  *   node scripts/generate-scenario-seeds.mjs --dry-run
  *
- * Requires SuperGrok session (~/.grok/auth.json) or XAI_API_KEY for AI packs.
+ * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -40,10 +40,10 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "js/scenario-seeds.js");
-const GROK_HOME = process.env.GROK_HOME || path.join(os.homedir(), ".grok");
+const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
-const MODEL = process.env.XAI_MODEL || "grok-4.5";
+const MODEL = process.env.FF_XAI_MODEL || "grok-4.5";
 const SCENARIO_COUNT = 4;
 
 /**
@@ -198,7 +198,7 @@ async function resolveAccessToken() {
       console.warn("[auth]", e.message);
     }
   }
-  const apiKey = process.env.XAI_API_KEY || "";
+  const apiKey = process.env.FF_XAI_API_KEY || "";
   if (apiKey && !apiKey.startsWith("eyJ")) return apiKey;
   if (session?.entry?.key) return session.entry.key;
   return null;
@@ -649,7 +649,7 @@ async function main() {
       source = "ai";
       console.log(`AI: ${MODEL}`);
     } else {
-      console.warn("No SuperGrok session / XAI_API_KEY — using local packs only.");
+      console.warn("No SuperGrok session / FF_XAI_API_KEY — using local packs only.");
     }
   } else {
     console.log("Local-only mode.");

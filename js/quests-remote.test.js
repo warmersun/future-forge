@@ -56,24 +56,24 @@ describe("quests-remote", () => {
   });
 
   it("resolveQuestsRemoteUrl defaults and disables", () => {
-    const prev = process.env.QUESTS_REMOTE_URL;
+    const prev = process.env.FF_QUESTS_REMOTE_URL;
     try {
-      delete process.env.QUESTS_REMOTE_URL;
+      delete process.env.FF_QUESTS_REMOTE_URL;
       const resolved = resolveQuestsRemoteUrl();
       // Local warmersun checkout if present, else public CDN URL
       assert.ok(
         resolved === DEFAULT_QUESTS_REMOTE_URL ||
           (typeof resolved === "string" && resolved.endsWith("catalog.json"))
       );
-      process.env.QUESTS_REMOTE_URL = "off";
+      process.env.FF_QUESTS_REMOTE_URL = "off";
       assert.equal(resolveQuestsRemoteUrl(), null);
-      process.env.QUESTS_REMOTE_URL = "0";
+      process.env.FF_QUESTS_REMOTE_URL = "0";
       assert.equal(resolveQuestsRemoteUrl(), null);
-      process.env.QUESTS_REMOTE_URL = "https://example.com/c.json";
+      process.env.FF_QUESTS_REMOTE_URL = "https://example.com/c.json";
       assert.equal(resolveQuestsRemoteUrl(), "https://example.com/c.json");
     } finally {
-      if (prev === undefined) delete process.env.QUESTS_REMOTE_URL;
-      else process.env.QUESTS_REMOTE_URL = prev;
+      if (prev === undefined) delete process.env.FF_QUESTS_REMOTE_URL;
+      else process.env.FF_QUESTS_REMOTE_URL = prev;
     }
   });
 

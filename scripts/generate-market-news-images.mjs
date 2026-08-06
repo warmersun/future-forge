@@ -1,6 +1,6 @@
 /**
  * Pre-generate market news illustrations into assets/market-news/{id}.jpg
- * Uses SuperGrok session (~/.grok/auth.json) or XAI_API_KEY — same as server.mjs.
+ * Uses SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY — same as server.mjs.
  *
  * Usage:
  *   node scripts/generate-market-news-images.mjs
@@ -18,11 +18,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const MANIFEST = path.join(ROOT, "assets/market-news/manifest.json");
 const OUT_DIR = path.join(ROOT, "assets/market-news");
-const GROK_HOME = process.env.GROK_HOME || path.join(os.homedir(), ".grok");
+const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
 const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
-const IMAGE_MODEL = process.env.XAI_IMAGE_MODEL || "grok-imagine-image";
+const IMAGE_MODEL = process.env.FF_XAI_IMAGE_MODEL || "grok-imagine-image";
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -146,7 +146,7 @@ async function resolveAccessToken({ forceRefresh = false } = {}) {
     }
   }
 
-  const apiKey = process.env.XAI_API_KEY || "";
+  const apiKey = process.env.FF_XAI_API_KEY || "";
   if (apiKey && !apiKey.startsWith("eyJ")) {
     if (!session) return apiKey;
   }
@@ -156,7 +156,7 @@ async function resolveAccessToken({ forceRefresh = false } = {}) {
 
 async function xaiImageGenerate(prompt) {
   let token = await resolveAccessToken();
-  if (!token) throw new Error("No SuperGrok session or XAI_API_KEY");
+  if (!token) throw new Error("No SuperGrok session or FF_XAI_API_KEY");
 
   const doFetch = async (tok) =>
     fetch(`${XAI_BASE}/images/generations`, {
@@ -238,7 +238,7 @@ async function main() {
 
   const tok = await resolveAccessToken();
   if (!tok) {
-    console.error("Not signed in. Use SuperGrok (~/.grok/auth.json) or set XAI_API_KEY.");
+    console.error("Not signed in. Use SuperGrok (~/.grok/auth.json) or set FF_XAI_API_KEY.");
     process.exit(1);
   }
   console.log("Auth OK — generating…");

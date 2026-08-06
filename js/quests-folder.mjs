@@ -12,11 +12,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
 /**
- * Resolve quests directory (env QUESTS_DIR or <repo>/quests).
+ * Resolve quests directory (env FF_QUESTS_DIR or <repo>/quests).
  * @param {string} [root=ROOT]
  */
 export function resolveQuestsDir(root = ROOT) {
-  const env = process.env.QUESTS_DIR;
+  const env = process.env.FF_QUESTS_DIR;
   if (env && String(env).trim()) {
     return path.isAbsolute(env) ? env : path.join(root, env);
   }

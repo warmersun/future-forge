@@ -35,7 +35,7 @@ Future Forge is a solo learning game. You pick a global problem, land in a concr
 - **Node.js** 18+ (ES modules)
 - Optional but recommended for full AI + vision:
   - **SuperGrok** session via Grok CLI (`grok login`), **or**
-  - An **xAI API key** (`XAI_API_KEY`)
+  - An **xAI API key** (`FF_XAI_API_KEY`)
 
 Without either auth path, the game still runs: static UI + a **local** co-inventor fallback (weaker, no live Grok).
 
@@ -69,11 +69,11 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 1. Put validated `.json` tiles in the **`quests/`** directory (next to `server.mjs`).
 2. `npm start` — the server scans that folder and logs how many tiles loaded.
 3. Players see **External Quests** on the home screen and **first** when choosing a theme/Quest (including friends multiplayer). Cards use a gold “External” badge.
-4. Override path: `QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
+4. Override path: `FF_QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
 
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Replaces Daily on that device by default. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
-Default port: **8765** (override with `PORT`).
+Default port: **8765** (override with `FF_PORT`).
 
 ### Optional environment
 
@@ -81,9 +81,9 @@ Copy `.env.example` to `.env` if you want overrides:
 
 ```bash
 # .env
-PORT=8765
-XAI_MODEL=grok-4.5
-# XAI_API_KEY=xai-...   # see auth below
+FF_PORT=8765
+FF_XAI_MODEL=grok-4.5
+# FF_XAI_API_KEY=xai-...   # see auth below
 ```
 
 ---
@@ -108,7 +108,7 @@ npm start -- --usage
 # or
 node server.mjs --usage
 # or (deploy-friendly)
-USAGE_ENABLED=1 npm start
+FF_USAGE_ENABLED=1 npm start
 ```
 
 Force off even if env is set: `node server.mjs --no-usage`.
@@ -130,12 +130,12 @@ curl -s http://127.0.0.1:8765/api/usage | jq .
 |------------|---------|
 | `--usage` / `--usage-tracking` | Enable metrics (CLI) |
 | `--no-usage` | Force disable (wins over env) |
-| `USAGE_ENABLED=1` | Enable via environment |
-| `USAGE_DIR` | Override metrics directory |
-| `USAGE_PRICE_TEXT_IN_PER_MTOK` / `USAGE_PRICE_TEXT_OUT_PER_MTOK` | Optional $ per 1M tokens |
-| `USAGE_PRICE_IMAGE` | Optional $ per live image generate/edit |
+| `FF_USAGE_ENABLED=1` | Enable via environment |
+| `FF_USAGE_DIR` | Override metrics directory |
+| `FF_USAGE_PRICE_TEXT_IN_PER_MTOK` / `FF_USAGE_PRICE_TEXT_OUT_PER_MTOK` | Optional $ per 1M tokens |
+| `FF_USAGE_PRICE_IMAGE` | Optional $ per live image generate/edit |
 
-**Notes:** Cached vision frames and multiplayer follow-only peeks are counted but **not** billed as live images. Local co-inventor fallback records calls with **zero** tokens. Prompts and player text are never stored. Assumes a single Node process (set distinct `USAGE_DIR` per instance if you scale out).
+**Notes:** Cached vision frames and multiplayer follow-only peeks are counted but **not** billed as live images. Local co-inventor fallback records calls with **zero** tokens. Prompts and player text are never stored. Assumes a single Node process (set distinct `FF_USAGE_DIR` per instance if you scale out).
 
 ### Option A — SuperGrok OAuth (default for local dev)
 
@@ -145,7 +145,7 @@ Use the same login as the Grok CLI:
 grok login
 ```
 
-This stores a session under `~/.grok/auth.json` (or `$GROK_HOME/auth.json`). Future Forge reads and refreshes that session automatically.
+This stores a session under `~/.grok/auth.json` (or `$FF_GROK_HOME/auth.json`). Future Forge reads and refreshes that session automatically.
 
 **Best for:** local development on a machine where you already use SuperGrok.
 
@@ -154,7 +154,7 @@ This stores a session under `~/.grok/auth.json` (or `$GROK_HOME/auth.json`). Fut
 Create a key in the [xAI console](https://console.x.ai/) and set:
 
 ```bash
-export XAI_API_KEY=xai-...
+export FF_XAI_API_KEY=xai-...
 # or put it in .env (never commit .env)
 ```
 
@@ -201,7 +201,7 @@ Typical approach:
 
 1. Host the repo on a VPS or PaaS (Fly, Railway, Render, etc.).
 2. `npm install --omit=dev` and `npm start`.
-3. Set `PORT` and **`XAI_API_KEY`** in the host environment (prefer API key over SuperGrok OAuth on servers).
+3. Set `FF_PORT` and **`FF_XAI_API_KEY`** in the host environment (prefer API key over SuperGrok OAuth on servers).
 4. Terminate TLS with nginx, Caddy, or the platform’s HTTPS.
 
 Do not commit secrets. Do not put API keys in the client or the git repo.

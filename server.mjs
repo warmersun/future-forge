@@ -1,7 +1,7 @@
 /**
  * Future Forge server — static files + Grok co-inventor
  * Auth: SuperGrok session from ~/.grok/auth.json (same login as Grok CLI).
- * Optional fallback: XAI_API_KEY. Local co-inventor if nothing works.
+ * Optional fallback: FF_XAI_API_KEY. Local co-inventor if nothing works.
  */
 
 import http from "node:http";
@@ -46,7 +46,7 @@ const ROOT = __dirname;
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
 const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
-const GROK_HOME = process.env.GROK_HOME || path.join(os.homedir(), ".grok");
+const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
 const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
@@ -76,16 +76,16 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const PORT = Number(process.env.PORT) || 8765;
+const PORT = Number(process.env.FF_PORT) || 8765;
 /** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
-const HOST = process.env.HOST || "0.0.0.0";
-const MODEL = process.env.XAI_MODEL || "grok-4.5";
-/** Friends co-op rooms (PR9). Default on; set ENABLE_ROOMS=0 to disable. */
-const ROOMS_ENABLED = process.env.ENABLE_ROOMS !== "0";
+const HOST = process.env.FF_HOST || "0.0.0.0";
+const MODEL = process.env.FF_XAI_MODEL || "grok-4.5";
+/** Friends co-op rooms (PR9). Default on; set FF_ENABLE_ROOMS=0 to disable. */
+const ROOMS_ENABLED = process.env.FF_ENABLE_ROOMS !== "0";
 
 /**
  * Hosting-cost usage metrics (tokens, images, sessions).
- * Off by default — enable with `node server.mjs --usage` or USAGE_ENABLED=1.
+ * Off by default — enable with `node server.mjs --usage` or FF_USAGE_ENABLED=1.
  */
 const usage = usageTrackerFromEnv(
   process.env,
@@ -280,9 +280,9 @@ async function resolveAccessToken({ forceRefresh = false } = {}) {
     }
   }
 
-  const apiKey = process.env.XAI_API_KEY || "";
+  const apiKey = process.env.FF_XAI_API_KEY || "";
   // Intentionally ignore bare GROK_API_KEY env noise when SuperGrok session is preferred;
-  // only XAI_API_KEY is treated as an explicit console key override.
+  // only FF_XAI_API_KEY is treated as an explicit console key override.
   if (apiKey && !apiKey.startsWith("eyJ")) {
     // If it looks like a console key (xai-...), use it only when no session worked
     if (!session) {
@@ -1977,7 +1977,7 @@ async function handleCoInvent(body) {
 
 /* —— Future vision (Imagine) —— */
 
-const IMAGE_MODEL = process.env.XAI_IMAGE_MODEL || "grok-imagine-image";
+const IMAGE_MODEL = process.env.FF_XAI_IMAGE_MODEL || "grok-imagine-image";
 /** @type {Map<string, object>} */
 const visionSessions = new Map();
 /** Cache market news illustrations by event id (no invent context). */
@@ -2805,7 +2805,7 @@ server.listen(PORT, HOST, async () => {
   if (usage.enabled) {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {
-    console.log("Usage metrics OFF (pass --usage or set USAGE_ENABLED=1 to enable)");
+    console.log("Usage metrics OFF (pass --usage or set FF_USAGE_ENABLED=1 to enable)");
   }
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR);
@@ -2843,7 +2843,7 @@ server.listen(PORT, HOST, async () => {
       console.warn(`  Remote catalog failed:`, e.message || e);
     }
   } else {
-    console.log("Remote Quests catalog: OFF (QUESTS_REMOTE_URL empty/off)");
+    console.log("Remote Quests catalog: OFF (FF_QUESTS_REMOTE_URL empty/off)");
   }
   const urls = lanJoinUrls();
   if (urls.length) {
@@ -2853,7 +2853,7 @@ server.listen(PORT, HOST, async () => {
     console.log("LAN: no private IPv4 found — check Wi‑Fi / ethernet");
   }
   if (ROOMS_ENABLED) {
-    console.log(`Friends rooms: ON · WS /ws/rooms (ENABLE_ROOMS=0 to disable)`);
+    console.log(`Friends rooms: ON · WS /ws/rooms (FF_ENABLE_ROOMS=0 to disable)`);
   } else {
     console.log("Friends rooms: OFF");
   }

@@ -141,7 +141,7 @@ const tile = {
   },
 };
 
-if (!localOnly && process.env.XAI_API_KEY) {
+if (!localOnly && process.env.FF_XAI_API_KEY) {
   console.warn(
     "AI authoring polish is not fully wired in this stub — writing research-shaped template. Pass --local-only to silence this note, or edit briefMd after research."
   );

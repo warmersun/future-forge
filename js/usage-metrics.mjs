@@ -529,8 +529,8 @@ export function createUsageTracker(opts = {}) {
 /**
  * Usage tracking is **off by default**.
  *
- * Enable with CLI `--usage` / `--usage-tracking`, or env `USAGE_ENABLED=1`.
- * Force off with `--no-usage` (wins over env) or `USAGE_ENABLED=0`.
+ * Enable with CLI `--usage` / `--usage-tracking`, or env `FF_USAGE_ENABLED=1`.
+ * Force off with `--no-usage` (wins over env) or `FF_USAGE_ENABLED=0`.
  *
  * @param {string[]} [argv] — typically `process.argv.slice(2)`
  * @param {NodeJS.ProcessEnv|Record<string,string|undefined>} [env]
@@ -542,7 +542,7 @@ export function resolveUsageEnabled(argv = [], env = process.env) {
   if (args.includes("--no-usage")) return false;
   if (args.includes("--usage") || args.includes("--usage-tracking")) return true;
 
-  const raw = env?.USAGE_ENABLED;
+  const raw = env?.FF_USAGE_ENABLED;
   if (raw == null || raw === "") return false;
   const v = String(raw).trim().toLowerCase();
   if (v === "0" || v === "false" || v === "off" || v === "no") return false;
@@ -562,19 +562,19 @@ export function usageTrackerFromEnv(
   argv = process.argv.slice(2)
 ) {
   const dir =
-    env.USAGE_DIR ||
+    env.FF_USAGE_DIR ||
     defaultDir ||
     path.join(process.cwd(), "data", "usage");
   const enabled = resolveUsageEnabled(argv, env);
-  const flushMs = env.USAGE_FLUSH_MS != null ? Number(env.USAGE_FLUSH_MS) : 5000;
+  const flushMs = env.FF_USAGE_FLUSH_MS != null ? Number(env.FF_USAGE_FLUSH_MS) : 5000;
   const sessionIdleMs =
-    env.USAGE_SESSION_IDLE_MS != null
-      ? Number(env.USAGE_SESSION_IDLE_MS)
+    env.FF_USAGE_SESSION_IDLE_MS != null
+      ? Number(env.FF_USAGE_SESSION_IDLE_MS)
       : 30 * 60 * 1000;
   const prices = {
-    textInPerMTok: numOrNull(env.USAGE_PRICE_TEXT_IN_PER_MTOK),
-    textOutPerMTok: numOrNull(env.USAGE_PRICE_TEXT_OUT_PER_MTOK),
-    image: numOrNull(env.USAGE_PRICE_IMAGE),
+    textInPerMTok: numOrNull(env.FF_USAGE_PRICE_TEXT_IN_PER_MTOK),
+    textOutPerMTok: numOrNull(env.FF_USAGE_PRICE_TEXT_OUT_PER_MTOK),
+    image: numOrNull(env.FF_USAGE_PRICE_IMAGE),
   };
   return createUsageTracker({
     dir,

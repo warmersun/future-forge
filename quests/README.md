@@ -12,7 +12,7 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 
 1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest`).
 2. Validate: `npm run validate:quest -- path.json`
-3. Copy into this folder (or set `QUESTS_DIR`).
+3. Copy into this folder (or set `FF_QUESTS_DIR`).
 4. Start the server: `npm start` — Library lists local tiles; Import still works in the hub.
 
 ## Official sponsored / learning
@@ -20,15 +20,15 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 1. Put the validated JSON in the warmersun repo under `future-forge/quests/`.
 2. Add `{ "id", "file" }` to `catalog.json`.
 3. Publish warmersun.com.
-4. Future Forge server fetches the catalog (override with `QUESTS_REMOTE_URL`).
+4. Future Forge server fetches the catalog (override with `FF_QUESTS_REMOTE_URL`).
 
 | Env | Effect |
 |-----|--------|
-| `QUESTS_REMOTE_URL` unset | Local `~/dev/warmersun/.../catalog.json` if present, else warmersun.com, else here.now CDN fallback |
-| `QUESTS_REMOTE_URL=off` | Disable remote (Sponsored/Learning empty) |
-| `QUESTS_REMOTE_URL=/path/to/catalog.json` | Local path (dev/offline) |
-| `QUESTS_REMOTE_URL=https://…/catalog.json` | Explicit remote catalog |
-| `QUESTS_DIR` | Override this local Library folder |
+| `FF_QUESTS_REMOTE_URL` unset | Local `~/dev/warmersun/.../catalog.json` if present, else warmersun.com, else here.now CDN fallback |
+| `FF_QUESTS_REMOTE_URL=off` | Disable remote (Sponsored/Learning empty) |
+| `FF_QUESTS_REMOTE_URL=/path/to/catalog.json` | Local path (dev/offline) |
+| `FF_QUESTS_REMOTE_URL=https://…/catalog.json` | Explicit remote catalog |
+| `FF_QUESTS_DIR` | Override this local Library folder |
 
 **CDN note:** Full warmersun.com republish can fail on large trees; an interim permanent catalog lives at `https://russet-waffle-sx4j.here.now/catalog.json` (same tiles). Prefer publishing `future-forge/quests/` onto warmersun.com when the full-site publish pipeline can handle it.
 

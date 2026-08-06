@@ -2,7 +2,7 @@
  * Coverage check: every GLOBALS id has a non-empty brief with required fields.
  * Also verifies mission loading path surfaces the brief and keeps cards blocked.
  * Run: node scripts/check-problem-briefs.mjs
- * Optional: BRIEF_CHECK_OUT=/path node scripts/check-problem-briefs.mjs
+ * Optional: FF_BRIEF_CHECK_OUT=/path node scripts/check-problem-briefs.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -100,7 +100,7 @@ const lines = [
 const text = lines.join("\n") + "\n";
 console.log(text);
 
-const scratch = process.env.BRIEF_CHECK_OUT;
+const scratch = process.env.FF_BRIEF_CHECK_OUT;
 if (scratch) {
   fs.mkdirSync(scratch, { recursive: true });
   fs.writeFileSync(path.join(scratch, "brief-coverage.txt"), text);

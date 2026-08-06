@@ -18,7 +18,7 @@ import {
 describe("resolveUsageEnabled", () => {
   it("defaults to off", () => {
     assert.equal(resolveUsageEnabled([], {}), false);
-    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "" }), false);
+    assert.equal(resolveUsageEnabled([], { FF_USAGE_ENABLED: "" }), false);
   });
 
   it("enables with --usage CLI flag", () => {
@@ -28,22 +28,22 @@ describe("resolveUsageEnabled", () => {
 
   it("--no-usage wins over env and --usage", () => {
     assert.equal(
-      resolveUsageEnabled(["--usage", "--no-usage"], { USAGE_ENABLED: "1" }),
+      resolveUsageEnabled(["--usage", "--no-usage"], { FF_USAGE_ENABLED: "1" }),
       false
     );
   });
 
-  it("enables with USAGE_ENABLED=1 when no CLI", () => {
-    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "1" }), true);
-    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "true" }), true);
-    assert.equal(resolveUsageEnabled([], { USAGE_ENABLED: "0" }), false);
+  it("enables with FF_USAGE_ENABLED=1 when no CLI", () => {
+    assert.equal(resolveUsageEnabled([], { FF_USAGE_ENABLED: "1" }), true);
+    assert.equal(resolveUsageEnabled([], { FF_USAGE_ENABLED: "true" }), true);
+    assert.equal(resolveUsageEnabled([], { FF_USAGE_ENABLED: "0" }), false);
   });
 });
 
 describe("usageTrackerFromEnv default off", () => {
   it("creates a disabled tracker without flags", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ff-usage-def-"));
-    const t = usageTrackerFromEnv({ USAGE_ENABLED: undefined }, dir, []);
+    const t = usageTrackerFromEnv({ FF_USAGE_ENABLED: undefined }, dir, []);
     try {
       assert.equal(t.enabled, false);
       t.record({ type: "ai_text", mode: "chat", source: "ai", totalTokens: 9 });

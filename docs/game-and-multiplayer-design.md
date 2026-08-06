@@ -1219,7 +1219,7 @@ Client stores `playerToken` in `sessionStorage`; show copyable recovery token on
 
 **Rate limits:** join 10/min/IP; create 5/hour/IP; WS auth fails 20/min/IP; AI quotas below.
 
-**v1 topology:** single Node process (`ENABLE_ROOMS=1`).
+**v1 topology:** single Node process (`FF_ENABLE_ROOMS=1`).
 
 #### Live protocol (WebSocket)
 
@@ -1475,7 +1475,7 @@ Alerting only in hosted context.
 | G1 | `actionPoints` | Free actions; Wait-only year/crisis (today) |
 | G2 | **`budgetWill`** | Ignore costs |
 | G3 | `scrutinyCombat` + `deployStages` | Single essay + single deploy |
-| Rooms (friends) | server `ENABLE_ROOMS=1` | Disable routes — **first MP product flag** |
+| Rooms (friends) | server `FF_ENABLE_ROOMS=1` | Disable routes — **first MP product flag** |
 | Hotseat | `hotseat` | Hide menu — optional |
 
 ---
