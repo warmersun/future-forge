@@ -122,7 +122,9 @@ export function cloneMission(m) {
     ...(typeof m.aiTutorContext === "string" && m.aiTutorContext
       ? { aiTutorContext: String(m.aiTutorContext) }
       : {}),
-    ...(typeof m.module === "number" ? { module: m.module } : {}),
+    ...(typeof m.module === "string" && m.module.trim()
+      ? { module: String(m.module).trim() }
+      : {}),
     ...(typeof m.lesson === "number" ? { lesson: m.lesson } : {}),
     ...(typeof m.totalLessons === "number" ? { totalLessons: m.totalLessons } : {}),
     ...(typeof m.sponsorName === "string" && m.sponsorName

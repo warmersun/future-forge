@@ -379,7 +379,7 @@ describe("quest-tile", () => {
       baseTile({
         isLearningModule: true,
         aiTutorContext: "Introduce sensors before models.",
-        module: 3,
+        module: "Sensors before models",
         lesson: 2,
         totalLessons: 5,
       }),
@@ -388,7 +388,7 @@ describe("quest-tile", () => {
     assert.equal(r.ok, true);
     assert.equal(r.mission.isLearningModule, true);
     assert.equal(r.mission.aiTutorContext, "Introduce sensors before models.");
-    assert.equal(r.mission.module, 3);
+    assert.equal(r.mission.module, "Sensors before models");
     assert.equal(r.mission.lesson, 2);
     assert.equal(r.mission.totalLessons, 5);
     assert.equal(r.tile.isLearningModule, true);
@@ -404,6 +404,27 @@ describe("quest-tile", () => {
     );
     assert.equal(
       validateQuestTile(baseTile({ aiTutorContext: { a: 1 } }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ module: 3 }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ module: "" }), {
+        techIds: TECHS,
+        globalIds: GLOBALS,
+      }).ok,
+      false
+    );
+    assert.equal(
+      validateQuestTile(baseTile({ module: "   " }), {
         techIds: TECHS,
         globalIds: GLOBALS,
       }).ok,
@@ -428,14 +449,26 @@ describe("quest-tile", () => {
   it("learningProgressLabel formats progress", () => {
     assert.equal(learningProgressLabel(null), null);
     assert.equal(
-      learningProgressLabel({ lesson: 2, totalLessons: 5, module: 3 }),
-      "Module 3 Lesson 2/5"
+      learningProgressLabel({
+        lesson: 2,
+        totalLessons: 5,
+        module: "Sensors before models",
+      }),
+      "Sensors before models · Lesson 2/5"
     );
     assert.equal(
-      learningProgressLabel({ lesson: 1, totalLessons: 3, module: 1 }),
-      "Module 1 Lesson 1/3"
+      learningProgressLabel({
+        lesson: 1,
+        totalLessons: 3,
+        module: "Open-weight AI",
+      }),
+      "Open-weight AI · Lesson 1/3"
     );
-    assert.equal(learningProgressLabel({ module: 1 }), "Module 1");
+    assert.equal(learningProgressLabel({ module: "Open-weight AI" }), "Open-weight AI");
+    assert.equal(
+      learningProgressLabel({ lesson: 1, totalLessons: 3 }),
+      "Lesson 1/3"
+    );
   });
 
   it("parseLearningModuleFields ignores false isLearningModule", () => {

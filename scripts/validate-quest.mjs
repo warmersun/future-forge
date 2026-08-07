@@ -64,7 +64,7 @@ if (r.mission.isLearningModule) {
       }`
     );
   }
-  if (r.mission.module != null) bits.push(`module ${r.mission.module}`);
+  if (r.mission.module != null) bits.push(`module "${r.mission.module}"`);
   if (r.mission.aiTutorContext) {
     bits.push(`tutorContext ${r.mission.aiTutorContext.length} chars`);
   }

@@ -25,6 +25,8 @@ export const CAPS = {
   aiTutorContext: 50_000,
   sponsorName: 120,
   sponsorBanner: 200,
+  /** Learning-module title (display + catalog group key). */
+  moduleTitle: 80,
 };
 
 /**
@@ -70,7 +72,21 @@ export function parseLearningModuleFields(tile, missionIn = {}) {
     }
   }
 
-  for (const key of ["module", "lesson", "totalLessons"]) {
+  const moduleRaw = pickTileOrMissionField(tile, missionIn, "module");
+  if (moduleRaw !== undefined) {
+    if (typeof moduleRaw !== "string") {
+      details.push("learning_module_not_nonempty_string");
+    } else {
+      const title = moduleRaw.trim();
+      if (!title) {
+        details.push("learning_module_not_nonempty_string");
+      } else {
+        out.module = title.slice(0, CAPS.moduleTitle);
+      }
+    }
+  }
+
+  for (const key of ["lesson", "totalLessons"]) {
     const raw = pickTileOrMissionField(tile, missionIn, key);
     if (raw === undefined) continue;
     if (typeof raw !== "number" || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 1) {
@@ -86,13 +102,14 @@ export function parseLearningModuleFields(tile, missionIn = {}) {
 
 /**
  * Player-facing progress label, or null if nothing to show.
- * Module first, then lesson — e.g. "Module 1 Lesson 1/3".
- * @param {{ module?: number, lesson?: number, totalLessons?: number }|null|undefined} m
+ * Module title first, then lesson — e.g. "Open-weight AI · Lesson 1/3".
+ * @param {{ module?: string, lesson?: number, totalLessons?: number }|null|undefined} m
  */
 export function learningProgressLabel(m) {
   if (!m || typeof m !== "object") return null;
   const parts = [];
-  if (m.module != null) parts.push(`Module ${m.module}`);
+  const title = typeof m.module === "string" ? m.module.trim() : "";
+  if (title) parts.push(title);
   if (m.lesson != null && m.totalLessons != null) {
     parts.push(`Lesson ${m.lesson}/${m.totalLessons}`);
   } else if (m.lesson != null) {
@@ -100,7 +117,7 @@ export function learningProgressLabel(m) {
   } else if (m.totalLessons != null) {
     parts.push(`${m.totalLessons} lessons`);
   }
-  return parts.length ? parts.join(" ") : null;
+  return parts.length ? parts.join(" · ") : null;
 }
 
 const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);

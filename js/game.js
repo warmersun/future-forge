@@ -87,6 +87,7 @@ import {
 import {
   parseQuestTileJson,
   validateQuestTile,
+  CAPS,
   parseResourceOverrides,
   normalizeMissionPressure,
   resourceOverrideLabel,
@@ -2898,18 +2899,19 @@ function partitionCatalogQuests() {
 }
 
 /**
- * Group learning entries by module number.
+ * Group learning entries by module title string.
  * @param {object[]} learningEntries
- * @returns {{ module: number|null, key: string, entries: object[] }[]}
+ * @returns {{ module: string|null, key: string, entries: object[] }[]}
  */
 function groupLearningModules(learningEntries) {
   const map = new Map();
   for (const e of learningEntries) {
-    const mod = Number(e.mission?.module);
-    const key = Number.isFinite(mod) && mod >= 1 ? String(mod) : "other";
+    const title =
+      typeof e.mission?.module === "string" ? e.mission.module.trim() : "";
+    const key = title || "other";
     if (!map.has(key)) {
       map.set(key, {
-        module: key === "other" ? null : Number(key),
+        module: title || null,
         key,
         entries: [],
       });
@@ -2924,7 +2926,7 @@ function groupLearningModules(learningEntries) {
   return [...map.values()].sort((a, b) => {
     if (a.module == null) return 1;
     if (b.module == null) return -1;
-    return a.module - b.module;
+    return a.module.localeCompare(b.module, undefined, { sensitivity: "base" });
   });
 }
 
@@ -3054,7 +3056,7 @@ function renderQuestHub() {
     {
       id: "learning",
       title: "Learning",
-      blurb: "Modules and lessons with AI tutor mode. Progress chips show Module · Lesson.",
+      blurb: "Modules and lessons with AI tutor mode. Progress chips show title · Lesson.",
       meta: learning.length
         ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
             learning.length
@@ -3239,7 +3241,10 @@ function catalogCardHtml(entry, kind) {
 
 function moduleCardHtml(group) {
   const n = group.entries.length;
-  const label = group.module != null ? `Module ${group.module}` : "Learning path";
+  const label =
+    typeof group.module === "string" && group.module.trim()
+      ? group.module.trim()
+      : "Learning path";
   const first = group.entries[0];
   const total =
     first?.mission?.totalLessons ||
@@ -3365,7 +3370,9 @@ function renderQuestCatalog() {
       const group = groups.find((g) => g.key === String(moduleKey));
       if (titleEl) {
         titleEl.textContent =
-          group?.module != null ? `Module ${group.module}` : "Learning lessons";
+          typeof group?.module === "string" && group.module.trim()
+            ? group.module.trim()
+            : "Learning lessons";
       }
       if (blurbEl) {
         blurbEl.textContent = "Pick a lesson to invent with AI tutor mode.";
@@ -3798,7 +3805,10 @@ function normalizeMission(raw, globalId) {
       : null;
   const posInt = (v) =>
     typeof v === "number" && Number.isInteger(v) && v >= 1 ? v : null;
-  const moduleN = posInt(raw.module);
+  const moduleTitle =
+    typeof raw.module === "string" && raw.module.trim()
+      ? raw.module.trim().slice(0, CAPS.moduleTitle)
+      : null;
   const lessonN = posInt(raw.lesson);
   const totalLessonsN = posInt(raw.totalLessons);
   const sponsorName =
@@ -3838,7 +3848,7 @@ function normalizeMission(raw, globalId) {
     ...(grounding ? { grounding } : {}),
     ...(isLearningModule ? { isLearningModule: true } : {}),
     ...(aiTutorContext ? { aiTutorContext } : {}),
-    ...(moduleN != null ? { module: moduleN } : {}),
+    ...(moduleTitle ? { module: moduleTitle } : {}),
     ...(lessonN != null ? { lesson: lessonN } : {}),
     ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
     ...(sponsorName ? { sponsorName } : {}),

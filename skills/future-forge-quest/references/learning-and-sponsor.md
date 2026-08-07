@@ -17,12 +17,12 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 |-------|---------------------|--------|
 | `isLearningModule` | **Yes** (`true`) | Opens Co-Inventor tab; server uses tutor system prompt (solo) |
 | `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only |
-| `module` | Recommended | Integer ≥ 1 — UI: **Module N** |
+| `module` | Recommended | Non-empty **title** string — UI + catalog group key |
 | `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y** |
 | `totalLessons` | Recommended with `lesson` | Shared across all lessons in the set |
 | `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md` |
 
-Progress chip format: **`Module 1 Lesson 1/3`** (module first). Selection: **Learn · Module 1 Lesson 1/3**.
+Progress chip format: **`Open-weight AI · Lesson 1/3`** (module title first). Selection: **Learn · Open-weight AI · Lesson 1/3**.
 
 ### `aiTutorContext` template
 
@@ -53,9 +53,9 @@ TEACHING STYLE:
 
 There is **no engine unlock graph** yet. Author a set manually:
 
-1. Same `module` and same `totalLessons` on every lesson file.
+1. Same `module` **title string** and same `totalLessons` on every lesson file.
 2. `lesson`: `1`, `2`, … `totalLessons`.
-3. Distinct `id` / `mission.id` per lesson (e.g. `…-mod1-lesson-2`).
+3. Distinct `id` / `mission.id` per lesson (e.g. `…-open-weight-lesson-2`).
 4. Distinct place angle or invent gate per lesson; may share theme `globalId` and spotlight tech.
 5. Each file is a full valid quest tile (own `pressure`, `scene`, `briefMd`).
 6. Do **not** invent fake “must complete lesson 1 first” mechanics in prose unless the host enforces them outside the game.
@@ -114,7 +114,7 @@ Example in monorepo: `quests/kimi-k3.json`. Portable skill example: `examples/sp
 | Chip | Cause |
 |------|--------|
 | **Sponsored · …** | `sponsorName` |
-| **Learn · Module X Lesson Y/Z** | progress fields / learning module |
+| **Learn · {title} · Lesson Y/Z** | progress fields / learning module |
 | **Start · Budget …** | non-default `resources` |
 | **Crisis · Local · Support** | subset of pressure roles |
 

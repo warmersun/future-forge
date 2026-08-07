@@ -67,7 +67,7 @@ Marks a Quest as part of a learning path and switches the solo **AI Co-Inventor*
 |-------|------|--------|
 | `isLearningModule` | boolean | When `true`, invent starts on the Co-Inventor tab and the server uses the **tutor** system prompt |
 | `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown in the player UI |
-| `module` | integer ≥ 1 | Module index for display |
+| `module` | non-empty string | Module **title** for display and catalog grouping (max 80 chars) |
 | `lesson` | integer ≥ 1 | Lesson index for display |
 | `totalLessons` | integer ≥ 1 | Denominator for “Lesson X/Y” |
 
@@ -77,14 +77,14 @@ When `isLearningModule` is true:
 
 - Tutor prompt: one idea at a time, short explanations, check understanding, guide inventing without dumping full solutions.
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
-- Progress fields, when present, render as e.g. `Module 1 Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (Learning catalog, multiplayer mission pick).
+- Progress fields, when present, render as e.g. `Open-weight AI · Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (Learning catalog, multiplayer mission pick).
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode.
 
 ```json
 "isLearningModule": true,
 "aiTutorContext": "Lesson goal: local sensors before full AI stack. Check they name power and trust constraints before suggesting models.",
-"module": 3,
+"module": "Sensors before models",
 "lesson": 2,
 "totalLessons": 5
 ```

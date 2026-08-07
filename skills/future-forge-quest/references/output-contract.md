@@ -101,15 +101,15 @@ Add:
 
 ```json
 "isLearningModule": true,
-"module": 1,
+"module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3,
 "aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) …\n2) …\n3) …\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player."
 ```
 
-Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Module 1 Lesson 1/3**.
+Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Open-weight AI for classrooms · Lesson 1/3**.
 
-**Multi-lesson set:** N files, same `module` + `totalLessons`, `lesson` = 1…N, unique `id`s. No engine unlock — host orders files.
+**Multi-lesson set:** N files, same `module` title string + `totalLessons`, `lesson` = 1…N, unique `id`s. No engine unlock — host orders files.
 
 ---
 
@@ -134,7 +134,7 @@ Combine base + B + C (+ A if needed). Example:
 "sponsorName": "Moonshot.ai",
 "sponsorBanner": "Open weights — invent the local application",
 "isLearningModule": true,
-"module": 1,
+"module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3,
 "aiTutorContext": "…",

@@ -139,11 +139,11 @@ Recommended structure (omit thin sections; may merge Trends+Predictions or Unloc
 |-------|------|--------|
 | `isLearningModule` | boolean | `true` → solo invent opens **Co-Inventor** tab and uses **tutor** system prompt |
 | `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown to the player |
-| `module` | integer ≥ 1 | Module index (display) |
+| `module` | non-empty string | Module **title** (display + catalog group key; max 80 chars) |
 | `lesson` | integer ≥ 1 | Lesson index (display) |
 | `totalLessons` | integer ≥ 1 | Denominator for `Lesson X/Y` |
 
-Progress UI label format: **`Module 1 Lesson 1/3`** (module first). Selection chip: **Learn · Module 1 Lesson 1/3**.
+Progress UI label format: **`Open-weight AI · Lesson 1/3`** (module title first). Selection chip: **Learn · Open-weight AI · Lesson 1/3**.
 
 Tutor style (enforced by server prompt when `isLearningModule` is true):
 
@@ -155,7 +155,7 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 ```json
 "isLearningModule": true,
 "aiTutorContext": "Lesson goal: … SEQUENCE: 1) … 2) … Never paste this to the player.",
-"module": 1,
+"module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3
 ```
@@ -199,5 +199,6 @@ Optional fields (`resources`, `grounding`, learning fields, sponsor fields) may 
 - Multi-tech `suggested` arrays  
 - Non-string `grounding` / `aiTutorContext` / sponsor fields  
 - Non-boolean `isLearningModule`  
-- Non-positive-integer `module` / `lesson` / `totalLessons`  
+- Non-string or empty `module` (must be a non-empty title string)
+- Non-positive-integer `lesson` / `totalLessons`  
 - `kind: "quest-pack"`  

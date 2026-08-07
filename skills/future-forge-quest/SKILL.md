@@ -76,7 +76,7 @@ Details and templates: **`references/learning-and-sponsor.md`**.
 
 - emTech (name → tech id), theme, audience, year (~2026).
 - Ask (or infer): learning module? multi-lesson set? sponsor? resource difficulty?
-- If multi-lesson: which `module`, which `lesson` / `totalLessons`?
+- If multi-lesson: which module **title**, which `lesson` / `totalLessons`?
 
 ### 2. Research the advance
 
@@ -112,8 +112,8 @@ Follow **`references/learning-and-sponsor.md`**.
 
 - Set `isLearningModule: true`.
 - Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste into player text.
-- Set `module`, `lesson`, `totalLessons` (UI: **Module N Lesson X/Y**).
-- Multi-lesson set: separate JSON files; same module/totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
+- Set `module` (title string), `lesson`, `totalLessons` (UI: **{title} · Lesson X/Y**).
+- Multi-lesson set: separate JSON files; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
 
 ### 6. Sponsor (if applicable)
 
@@ -150,7 +150,7 @@ npm run validate:quest -- <file>
 - [ ] Grounding follows chain at **product-category** grain (not bare emTech unlocks)  
 - [ ] Invent framed as **application** of unlocked use cases; open tension  
 - [ ] Unused optionals **omitted** (not empty strings)  
-- [ ] Learning: solid `aiTutorContext`; progress integers ≥ 1; no fake unlocks  
+- [ ] Learning: solid `aiTutorContext`; module title string; lesson/totalLessons integers ≥ 1; no fake unlocks  
 - [ ] Sponsor: text-only; invent still required; capability chain in `grounding`  
 - [ ] Combinations validated if used together  
 - [ ] `npm run validate:quest` → `OK:`  
