@@ -472,7 +472,7 @@
           <h2>Mission</h2>
           <p id="room-mission-summary" class="muted room-mission-summary">
             Host picks a Quest via <strong>Themes</strong>, <strong>Sponsored</strong>,
-            <strong>Learning</strong>, or the side-loaded <strong>Library</strong>.
+            or the side-loaded <strong>Library</strong>. Learning modules are solo only.
           </p>
           <article id="room-scenario-brief" class="mp-scenario-brief" hidden></article>
           <div id="room-host-controls" hidden>
@@ -901,7 +901,7 @@
             <div class="label" id="ws-global-label">Global theme</div>
             <h2 id="ws-mission-title">—</h2>
             <p id="ws-mission-place" class="mission-place"></p>
-            <p id="ws-lesson-progress" class="lesson-progress muted" hidden></p>
+            <div id="ws-lesson-progress" class="lesson-progress-slot" hidden></div>
             <div id="ws-sponsor" class="ws-sponsor" hidden>
               <p id="ws-sponsor-label" class="ws-sponsor-label"></p>
               <p id="ws-sponsor-banner" class="ws-sponsor-banner muted" hidden></p>
@@ -1859,7 +1859,9 @@
                     <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
                     <p>
                       Attention for tech, Lobby, hard question, scrutiny moves, Field, and the
-                      <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request).
+                      <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request;
+                      <strong>learning modules</strong>: free while the <strong>Tutoring</strong> badge is on —
+                      End / Resume tutoring anytime).
                       <strong>End turn</strong> refills AP and advances the calendar +1 year.
                       <strong>Wait</strong> burns leftover AP, then refills.
                     </p>
@@ -1911,10 +1913,10 @@
                     </ul>
                   </article>
                   <article class="help-tile">
-                    <h5>AI co-inventor <span class="help-tile-meta">1 AP each</span></h5>
-                    <p class="help-cost">Not free — every AI request spends 1 Action Point.</p>
+                    <h5>AI co-inventor <span class="help-tile-meta">1 AP each*</span></h5>
+                    <p class="help-cost">Usually 1 AP per AI request. *Learning quests: tutor chat is free while Tutoring is on (End / Resume in the panel; the AI may also end tutoring).</p>
                     <ul class="help-list">
-                      <li><strong>Invent:</strong> chips, chat, Fill other side — 1 AP each.</li>
+                      <li><strong>Invent:</strong> chips, chat, Fill other side — 1 AP each (tutor session free on learning lessons).</li>
                       <li>
                         <strong>SIT invent:</strong> remakes your how-it-works via addition · subtraction ·
                         multiplication · division (needs how-it-works first; greyed until then).
@@ -2025,7 +2027,7 @@
                 <h4 class="help-block-title">Play a Quest · Share</h4>
                 <ul class="help-list">
                   <li><strong>Themes</strong> — pick a global problem, get up to 4 local Quests, or generate a new set.</li>
-                  <li><strong>Sponsored / Learning / Library</strong> — side-loaded tiles from the server folder or Import.</li>
+                  <li><strong>Sponsored / Library</strong> — remote and side-loaded tiles. <strong>Learning</strong> modules are solo only (not for multiplayer).</li>
                   <li><strong>Share card</strong> on outcome downloads a PNG of your run.</li>
                 </ul>
               </section>

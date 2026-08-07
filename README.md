@@ -189,7 +189,7 @@ future-forge/
   scripts/            # e.g. check-problem-briefs.mjs
 ```
 
-Browser state (scenario cache, solved missions) lives in **localStorage**.
+Browser state lives in **localStorage** on the player’s device: scenario cache, **solved mission ids** (including learning-module completion for the segment progress bar), quest library imports, and related UI prefs. Nothing is synced to warmersun.com by default — see [Privacy](https://warmersun.com/privacy/).
 
 ---
 

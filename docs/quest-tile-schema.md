@@ -61,7 +61,7 @@ Shows on invent banner and as a **Sponsored · …** chip on selection UIs.
 
 ### Optional learning module + AI tutor mode
 
-Marks a Quest as part of a learning path and switches the solo **AI Co-Inventor** into **tutor mode**. Full module packs, unlocking, and auto-sequencing are **not** in this version — only flags, hidden tutor notes, and progress labels.
+Marks a Quest as part of a learning path and switches the solo **AI Co-Inventor** into **tutor mode**. Full module packs, unlocking, and auto-sequencing are **not** in this version — only flags, hidden tutor notes, ordered lessons, and **local** completion progress (browser `localStorage`; segment bar UI).
 
 | Field | Type | Notes |
 |-------|------|--------|
@@ -77,7 +77,8 @@ When `isLearningModule` is true:
 
 - Tutor prompt: one idea at a time, short explanations, check understanding, guide inventing without dumping full solutions.
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
-- Progress fields, when present, render as e.g. `Open-weight AI · Lesson 1/3` on the invent screen **and** as a **Learn · …** chip on selection UIs (Learning catalog, multiplayer mission pick).
+- Progress fields, when present, drive a **module title + segment bar** on the invent screen and Learning catalog (one segment per lesson; filled segments = completed on this device). Selection chips show **Learn · {module title}**.
+- Learning quests start in a free-AP **tutor session** (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode.
 

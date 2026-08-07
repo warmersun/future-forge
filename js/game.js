@@ -92,7 +92,7 @@ import {
   normalizeMissionPressure,
   resourceOverrideLabel,
   crisisRolesLabel,
-  learningProgressLabel,
+  learningProgressBarHtml,
 } from "./quest-tile.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
@@ -329,6 +329,11 @@ const state = {
   /** Mission ids the player has already deployed/solved (still replayable) */
   solvedMissionIds: new Set(),
   /**
+   * Learning-module tutor session (free co-inventor AP). Only meaningful when
+   * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
+   */
+  tutorSessionActive: false,
+  /**
    * Learn stack: selected tech ids, most recently selected first.
    * Push on select, remove on deselect; Learn modal shows this order.
    */
@@ -408,6 +413,82 @@ function features() {
     return featuresForPlayMode("spark", base);
   }
   return featuresForPlayMode("workshop", base);
+}
+
+/** Learning quest with tutor session currently on (free co-inventor chat AP). */
+function isLearningTutorSessionActive() {
+  return Boolean(state.mission?.isLearningModule) && state.tutorSessionActive === true;
+}
+
+/** AP to reserve for invent co-inventor panel; 0 while tutoring on a learning quest. */
+function coInventorReserveAp() {
+  if (!apEnabled()) return 0;
+  if (isLearningTutorSessionActive()) return 0;
+  return 1;
+}
+
+/**
+ * End free tutor session (learner or AI). Learning quests can Resume.
+ * @param {"learner"|"ai"} [who]
+ */
+function endTutorSession(who = "learner") {
+  if (!state.mission?.isLearningModule) return;
+  if (!state.tutorSessionActive) return;
+  state.tutorSessionActive = false;
+  // Swaps to co-inventor chat history (tutor transcript stays in the other lane)
+  syncCoInventorTutorUi();
+  const msg =
+    who === "ai"
+      ? "Tutoring ended — you're inventing with the co-inventor now (**1 AP** per AI request). **Resume tutoring** anytime on this lesson (your tutor chat is kept)."
+      : "Tutoring ended — co-inventor chat costs **1 AP** per request. **Resume tutoring** anytime; your tutor chat is kept separately.";
+  flashToast(who === "ai" ? "Tutor signed off — AP applies again" : "Tutoring ended — AP applies again");
+  // Local note only on the co-inventor lane (active after switch)
+  if (state.coInventor) {
+    state.coInventor.pushAssistant(
+      {
+        message: msg,
+        proposals: emptyProps(),
+        teaching: [],
+      },
+      { local: true }
+    );
+  }
+}
+
+/** Resume free tutor session (learning quests only). */
+function resumeTutorSession() {
+  if (!state.mission?.isLearningModule) return;
+  if (state.tutorSessionActive) return;
+  state.tutorSessionActive = true;
+  // Swaps back to tutor chat history
+  syncCoInventorTutorUi();
+  flashToast("Tutoring resumed — free AP");
+  // Only seed a resume line if tutor history was empty (avoid spam every toggle)
+  if (state.coInventor && state.coInventor.historyLength?.("tutor") === 0) {
+    state.coInventor.pushAssistant(
+      {
+        message:
+          "Tutoring is **on** — free AP, one idea at a time. Stack picks and fielding still cost resources. Say when you want to invent on your own.",
+        proposals: emptyProps(),
+        teaching: [],
+      },
+      { local: true }
+    );
+  }
+}
+
+function syncCoInventorTutorUi() {
+  const learning = Boolean(state.mission?.isLearningModule);
+  const active = isLearningTutorSessionActive();
+  state.coInventor?.setTutorSession?.({
+    learningQuest: learning,
+    tutorMode: active,
+    subtitle: active
+      ? "Free AP · one idea at a time — stack picks and fielding still cost resources"
+      : learning
+        ? "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime"
+        : undefined,
+  });
 }
 
 function apEnabled() {
@@ -2944,6 +3025,11 @@ function playCatalogEntry(entry, opts = {}) {
     { ...entry.mission, source: entry.source || entry.mission.source || "hosted" },
     entry.mission.globalId || entry.globalId
   );
+  // Learning modules are solo-only (tutor session) — never for multiplayer pick
+  if (missionPickSession && isLearningMission(m)) {
+    flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
+    return;
+  }
   if (opts.clearPick !== false && !missionPickSession) {
     clearMissionPickSession();
     leaveHotseat?.();
@@ -3023,6 +3109,12 @@ function openQuestHub() {
  * @param {{ moduleKey?: string|null }} [opts]
  */
 function openQuestCatalog(kind, opts = {}) {
+  // Learning catalog is solo-only
+  if (kind === "learning" && missionPickSession) {
+    flashToast("Learning modules are solo only.");
+    openQuestHub();
+    return;
+  }
   state.questCatalogKind = kind;
   state.questCatalogModuleKey = opts.moduleKey ?? null;
   showScreen("quest-catalog");
@@ -3034,6 +3126,27 @@ function renderQuestHub() {
   const { sponsored, learning, library } = partitionCatalogQuests();
   const learningGroups = groupLearningModules(learning);
   const mpPick = Boolean(missionPickSession);
+
+  // Multiplayer host pick: Themes / Sponsored / Library only (no Learning)
+  const sponsoredForHub = mpPick
+    ? sponsored.filter((e) => !isLearningMission(e.mission))
+    : sponsored;
+  const libraryForHub = mpPick
+    ? library.filter((e) => !isLearningMission(e.mission))
+    : library;
+
+  const intro = document.querySelector("#screen-quest-hub .section-intro p");
+  if (intro) {
+    intro.innerHTML = mpPick
+      ? "Pick a Quest for the party: a <strong>theme</strong>, <strong>sponsored</strong> Spotlight, or side-loaded <strong>Library</strong> tile. <strong>Learning</strong> modules are solo only."
+      : "Pick how you want to enter: generate local challenges from a <strong>theme</strong>, open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other side-loaded Quests.";
+  }
+  const h1 = document.querySelector("#screen-quest-hub .section-intro h1");
+  if (h1) {
+    h1.textContent = mpPick ? "Pick a Quest for the party" : "Play a Quest";
+  }
+
+  /** @type {object[]} */
   const cards = [
     {
       id: "themes",
@@ -3048,33 +3161,36 @@ function renderQuestHub() {
       title: "Sponsored",
       blurb:
         "Partner and product-attributed Spotlight Quests. Attribution only — you still invent the local application.",
-      meta: sponsored.length
-        ? `${sponsored.length} Quest${sponsored.length === 1 ? "" : "s"}`
+      meta: sponsoredForHub.length
+        ? `${sponsoredForHub.length} Quest${sponsoredForHub.length === 1 ? "" : "s"}`
         : "None loaded yet",
       cta: "Open sponsored →",
     },
-    {
+  ];
+  if (!mpPick) {
+    cards.push({
       id: "learning",
       title: "Learning",
-      blurb: "Modules and lessons with AI tutor mode. Progress chips show title · Lesson.",
+      blurb:
+        "Solo modules and lessons with AI tutor mode. Progress stays on this device.",
       meta: learning.length
         ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
             learning.length
           } lesson${learning.length === 1 ? "" : "s"}`
         : "None loaded yet",
       cta: "Open learning →",
-    },
-    {
-      id: "library",
-      title: "Library",
-      blurb:
-        "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs).",
-      meta: library.length
-        ? `${library.length} Quest${library.length === 1 ? "" : "s"}`
-        : "Import or drop JSON in quests/",
-      cta: "Open library →",
-    },
-  ];
+    });
+  }
+  cards.push({
+    id: "library",
+    title: "Library",
+    blurb:
+      "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs).",
+    meta: libraryForHub.length
+      ? `${libraryForHub.length} Quest${libraryForHub.length === 1 ? "" : "s"}`
+      : "Import or drop JSON in quests/",
+    cta: "Open library →",
+  });
   grid.innerHTML = cards
     .map(
       (c) => `
@@ -3176,7 +3292,24 @@ function catalogBadgesHtml(entry, kind) {
     // Grouped by emTech — no Server / Spotlight chips; keep sponsor name only.
     parts.push(sponsorBadgeHtml(m));
   } else if (kind === "learning") {
-    // No Server / Spotlight / Learn progress chips — sponsor only if present.
+    const lesson = Number(m.lesson);
+    const total = Number(m.totalLessons);
+    if (Number.isFinite(lesson) && lesson >= 1) {
+      const lessonLabel =
+        Number.isFinite(total) && total >= 1
+          ? `Lesson ${lesson}/${total}`
+          : `Lesson ${lesson}`;
+      parts.push(
+        `<span class="scenario-tag learning-tag" title="Lesson order in this module">${escapeHtml(
+          lessonLabel
+        )}</span>`
+      );
+    }
+    if (isMissionSolved(m.id || entry.id)) {
+      parts.push(
+        `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>`
+      );
+    }
     parts.push(sponsorBadgeHtml(m));
   } else if (kind === "library") {
     // No source tags; optional Sponsored + Spotlight · emTech.
@@ -3204,6 +3337,8 @@ function catalogCardHtml(entry, kind) {
     ? excerptFromBrief(m.briefMd, 140)
     : String(m?.scene || entry.summary || "").slice(0, 140);
   const badges = catalogBadgesHtml(entry, kind);
+  const solved =
+    kind === "learning" && isMissionSolved(m?.id || entry.id);
   // Meta line: place only when grouped by theme (theme is the section header);
   // when grouped by emTech, show theme · place.
   const place = entry.place || m?.place || "";
@@ -3211,9 +3346,17 @@ function catalogCardHtml(entry, kind) {
     kind === "library"
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
+  const cta =
+    missionPickSession
+      ? "Use for friends game →"
+      : solved
+        ? "Play again →"
+        : "Play this Quest →";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
-      <button type="button" class="challenge-card challenge-card-visual catalog-play-card">
+      <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
+        solved ? "solved" : ""
+      }">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
         </span>
@@ -3226,9 +3369,7 @@ function catalogCardHtml(entry, kind) {
           <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
           ${metaLine ? `<p class="muted">${escapeHtml(metaLine)}</p>` : ""}
           <p>${escapeHtml(scene)}</p>
-          <span class="cta">${
-            missionPickSession ? "Use for friends game →" : "Play this Quest →"
-          }</span>
+          <span class="cta">${cta}</span>
         </span>
       </button>
       ${
@@ -3237,6 +3378,43 @@ function catalogCardHtml(entry, kind) {
           : ""
       }
     </div>`;
+}
+
+/**
+ * How many lessons in a module group the player has already solved.
+ * @param {{ entries?: object[] }} group
+ */
+function learningCompletedInGroup(group) {
+  const entries = group?.entries || [];
+  let n = 0;
+  for (const e of entries) {
+    const id = e?.mission?.id || e?.id;
+    if (id && isMissionSolved(id)) n += 1;
+  }
+  return n;
+}
+
+/**
+ * @param {object} group
+ * @param {{ compact?: boolean }} [opts]
+ */
+function learningModuleProgressHtml(group, opts = {}) {
+  const label =
+    typeof group?.module === "string" && group.module.trim()
+      ? group.module.trim()
+      : "";
+  const first = group?.entries?.[0];
+  const total =
+    Number(first?.mission?.totalLessons) ||
+    group?.entries?.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
+    group?.entries?.length ||
+    0;
+  return learningProgressBarHtml({
+    module: label,
+    totalLessons: total,
+    completedCount: learningCompletedInGroup(group),
+    compact: opts.compact !== false,
+  });
 }
 
 function moduleCardHtml(group) {
@@ -3250,14 +3428,23 @@ function moduleCardHtml(group) {
     first?.mission?.totalLessons ||
     group.entries.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
     n;
+  const done = learningCompletedInGroup(group);
+  const progress = learningModuleProgressHtml(group);
+  const status =
+    done >= total && total > 0
+      ? "Complete — open to replay a lesson."
+      : done > 0
+        ? `${done} of ${total || n} completed · open to pick a lesson.`
+        : `${n} lesson${n === 1 ? "" : "s"}${
+            total ? ` · ${total} in set` : ""
+          }. Open to pick a lesson.`;
   return `
     <button type="button" class="challenge-card quest-module-card" data-module-key="${escapeHtml(
       group.key
     )}">
       <h3>${escapeHtml(label)}</h3>
-      <p>${n} lesson${n === 1 ? "" : "s"}${
-        total ? ` · up to ${total} in set` : ""
-      }. Open to pick a lesson.</p>
+      ${progress}
+      <p>${escapeHtml(status)}</p>
       <span class="cta">View lessons →</span>
     </button>`;
 }
@@ -3354,17 +3541,26 @@ function renderQuestCatalog() {
       blurbEl.textContent =
         "From warmersun.com — grouped by spotlight technology. Attribution only; invent a local application.";
     }
-    entries = parts.sponsored;
+    entries = missionPickSession
+      ? parts.sponsored.filter((e) => !isLearningMission(e.mission))
+      : parts.sponsored;
     groupBy = "emTech";
   } else if (kind === "library") {
     if (titleEl) titleEl.textContent = "Library";
     if (blurbEl) {
-      blurbEl.textContent =
-        "Local side-load only (quests/ folder or Import), grouped by theme.";
+      blurbEl.textContent = missionPickSession
+        ? "Side-loaded Quests for this party (learning modules hidden — solo only)."
+        : "Local side-load only (quests/ folder or Import), grouped by theme.";
     }
-    entries = parts.library;
+    entries = missionPickSession
+      ? parts.library.filter((e) => !isLearningMission(e.mission))
+      : parts.library;
     groupBy = "theme";
   } else if (kind === "learning") {
+    if (missionPickSession) {
+      openQuestHub();
+      return;
+    }
     if (moduleKey != null) {
       const groups = groupLearningModules(parts.learning);
       const group = groups.find((g) => g.key === String(moduleKey));
@@ -3375,15 +3571,23 @@ function renderQuestCatalog() {
             : "Learning lessons";
       }
       if (blurbEl) {
-        blurbEl.textContent = "Pick a lesson to invent with AI tutor mode.";
+        const bar = group ? learningModuleProgressHtml(group, { compact: true }) : "";
+        blurbEl.innerHTML = `${bar}<span class="catalog-blurb-note">Lessons in order · progress stays on this device.</span>`;
       }
-      entries = group?.entries || [];
+      entries = [...(group?.entries || [])].sort((a, b) => {
+        const la = Number(a.mission?.lesson) || 0;
+        const lb = Number(b.mission?.lesson) || 0;
+        if (la !== lb) return la - lb;
+        return String(a.title || a.mission?.title || "").localeCompare(
+          String(b.title || b.mission?.title || "")
+        );
+      });
       groupBy = null;
     } else {
       if (titleEl) titleEl.textContent = "Learning modules";
       if (blurbEl) {
         blurbEl.textContent =
-          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson.";
+          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
       }
       const groups = groupLearningModules(parts.learning);
       if (!groups.length) {
@@ -3405,9 +3609,14 @@ function renderQuestCatalog() {
           openQuestCatalog("learning", { moduleKey: btn.dataset.moduleKey });
         });
       });
+      const completedLessons = parts.learning.filter((e) =>
+        isMissionSolved(e.mission?.id || e.id)
+      ).length;
       if (status) {
         status.hidden = false;
-        status.textContent = `${groups.length} modules · ${parts.learning.length} lessons`;
+        status.textContent = `${groups.length} modules · ${parts.learning.length} lessons${
+          completedLessons ? ` · ${completedLessons} completed` : ""
+        }`;
       }
       return;
     }
@@ -3874,13 +4083,13 @@ function crisisRolesBadgeHtml(crisisRoles) {
   )}</span>`;
 }
 
-/** Learning-module progress chip on selection cards (module / lesson metadata). */
+/** Learning-module chip on selection cards (module title; bar lives on catalog/invent). */
 function learningModuleBadgeHtml(mission) {
   if (!mission || typeof mission !== "object") return "";
-  const progress = learningProgressLabel(mission);
-  if (progress) {
-    return `<span class="scenario-tag learning-tag" title="Learning module progress">Learn · ${escapeHtml(
-      progress
+  const title = typeof mission.module === "string" ? mission.module.trim() : "";
+  if (title) {
+    return `<span class="scenario-tag learning-tag" title="Learning module">Learn · ${escapeHtml(
+      title
     )}</span>`;
   }
   if (mission.isLearningModule) {
@@ -4031,6 +4240,10 @@ function startMission(mission) {
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
+    if (isLearningMission(mission)) {
+      flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
+      return;
+    }
     const session = missionPickSession;
     missionPickSession = null;
     const global = globalById(mission.globalId) || state.global;
@@ -4069,6 +4282,7 @@ function startMission(mission) {
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
   // Learning modules open on Co-Inventor (tutor); normal Quests keep Future vision.
+  state.tutorSessionActive = Boolean(state.mission?.isLearningModule);
   state.sideTab = state.mission?.isLearningModule ? "coinventor" : "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
@@ -4127,18 +4341,25 @@ function startMission(mission) {
   state.coInventor?.onChallengeStart?.();
   // Seed co-inventor / tutor welcome with mission context
   if (state.coInventor) {
-    state.coInventor.reset(false);
-    const tutor = Boolean(state.mission?.isLearningModule);
+    // New mission: wipe both tutor and co-inventor chat lanes
+    if (typeof state.coInventor.clearAllHistories === "function") {
+      state.coInventor.clearAllHistories(false);
+    } else {
+      state.coInventor.reset(false);
+    }
+    syncCoInventorTutorUi();
+    const tutor = isLearningTutorSessionActive();
     const place = state.mission?.place || mission.place;
     const year = state.mission?.startYear || mission.startYear;
     const scene = state.mission?.scene || mission.scene;
     const ypt = state.mission?.yearsPerTurn || mission.yearsPerTurn || GAME.yearsPerTurn;
     const welcome = tutor
       ? `**${place}**, ${year}. ${scene}\n\n` +
-        `I'm your **AI tutor** for this lesson — we'll go **one idea at a time**. ` +
+        `I'm your **AI tutor** for this lesson — we'll go **one idea at a time** (**free AP** while tutoring). ` +
         `I'll explain what you need when you need it, and ask short questions to check understanding.\n\n` +
         `You still invent: pick techs, write how it works, and keep claims honest for this year. ` +
         `I won't dump the whole solution at once.\n\n` +
+        `Use **End tutoring** when you want to invent on your own (chat then costs AP). I may also end tutoring when the invent gate is met.\n\n` +
         `What's one thing you already notice about this place or problem?`
       : `**${place}**, ${year}. ${scene}\n\n` +
         `I'm your co-inventor. Pick any tech stack that fits **this place** — categories are never locked by year. ` +
@@ -4182,13 +4403,28 @@ function renderWorkshop() {
   $("#ws-mission-place").textContent = `${m.place}`;
   const progressEl = $("#ws-lesson-progress");
   if (progressEl) {
-    const label = learningProgressLabel(m);
-    if (label) {
+    const title = typeof m.module === "string" ? m.module.trim() : "";
+    const totalLessons = Number(m.totalLessons);
+    const lesson = Number(m.lesson);
+    if (title || (Number.isFinite(totalLessons) && totalLessons >= 1)) {
+      let completedCount;
+      if (title) {
+        const group = groupLearningModules(partitionCatalogQuests().learning).find(
+          (g) => g.key === title
+        );
+        if (group) completedCount = learningCompletedInGroup(group);
+      }
       progressEl.hidden = false;
-      progressEl.textContent = label;
+      progressEl.innerHTML = learningProgressBarHtml({
+        module: title,
+        lesson: Number.isFinite(lesson) ? lesson : undefined,
+        totalLessons: Number.isFinite(totalLessons) ? totalLessons : undefined,
+        completedCount,
+        currentLesson: Number.isFinite(lesson) ? lesson : undefined,
+      });
     } else {
       progressEl.hidden = true;
-      progressEl.textContent = "";
+      progressEl.innerHTML = "";
     }
   }
   const sponsorEl = $("#ws-sponsor");
@@ -6827,7 +7063,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
-        tutorMode: Boolean(state.mission?.isLearningModule),
+        tutorMode: isLearningTutorSessionActive(),
         ...extra,
       },
     }),
@@ -13093,11 +13329,19 @@ function ensureCoInventor() {
   const root = coInventorRootEl();
   if (!root) return state.coInventor;
   // Remount when switching Invent ↔ Challenge ↔ Deploy so the panel lives on the active screen
-  if (state.coInventor && state.coInventor.root === root) return state.coInventor;
+  if (state.coInventor && state.coInventor.root === root) {
+    syncCoInventorTutorUi();
+    return state.coInventor;
+  }
 
-  const messages = state.coInventor?.messages || [];
+  const prevHistories = state.coInventor?.exportHistories?.() || null;
   const onChallenge = state.screen === "challenge-step";
+  const learning = Boolean(state.mission?.isLearningModule);
+  const tutorOn = isLearningTutorSessionActive();
   state.coInventor = new CoInventor({
+    histories: prevHistories
+      ? { tutor: prevHistories.tutor, coinventor: prevHistories.coinventor }
+      : undefined,
     getContext: () => {
       const briefPlain = state.mission?.briefMd
         ? plainTextFromMarkdown(state.mission.briefMd).slice(0, 2800)
@@ -13136,7 +13380,7 @@ function ensureCoInventor() {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
-        tutorMode: Boolean(state.mission?.isLearningModule),
+        tutorMode: isLearningTutorSessionActive(),
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
           : undefined,
@@ -13146,12 +13390,21 @@ function ensureCoInventor() {
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
     showQuickActions: !onChallenge,
-    subtitle: onChallenge
-      ? "Help with this challenger — you still own Defend / Fix / Sidestep"
-      : "Your creative partner for this challenge",
+    learningQuest: learning,
+    tutorMode: tutorOn,
+    subtitle: tutorOn
+      ? "Free AP · one idea at a time — stack picks and fielding still cost resources"
+      : learning
+        ? "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime"
+        : onChallenge
+          ? "Help with this challenger — you still own Defend / Fix / Sidestep"
+          : "Your creative partner for this challenge",
     placeholder: onChallenge
       ? "Ask about this attack… e.g. “What would a solid Moloch answer name?”"
       : undefined,
+    onEndTutoring: () => endTutorSession("learner"),
+    onResumeTutoring: () => resumeTutorSession(),
+    onTutorSessionEnded: () => endTutorSession("ai"),
     beforeRequest: (mode) => {
       if (isMpInventSpectator()) {
         flashToast(
@@ -13164,11 +13417,11 @@ function ensureCoInventor() {
         flashToast("Not your turn — you can browse and use Learn, but only the active player acts.");
         return false;
       }
-      if (!apEnabled()) return true;
-      // First free coach already handled in coachChallenge; co-inventor chat always costs
+      const cost = coInventorReserveAp();
+      if (cost <= 0) return true;
       const r = dispatchSim("reserve_ai", {
         mode,
-        reservedAp: 1,
+        reservedAp: cost,
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
@@ -13181,6 +13434,8 @@ function ensureCoInventor() {
     },
     afterRequest: (_mode, ok) => {
       if (!apEnabled()) return;
+      // Only resolve/refund when we actually reserved AP this request
+      if (!state.pendingAi) return;
       if (ok) dispatchSim("resolve_ai");
       else dispatchSim("reject_ai");
       renderHud();
@@ -13188,10 +13443,10 @@ function ensureCoInventor() {
     },
   });
   state.coInventor.mount(root);
-  if (messages.length) {
-    state.coInventor.messages = messages;
-    state.coInventor.renderMessages();
+  if (prevHistories) {
+    state.coInventor.importHistories(prevHistories);
   }
+  syncCoInventorTutorUi();
   // Fresh mount starts interactive; re-apply multiplayer spectator / busy locks
   const spect = isMpInventSpectator();
   const reason = spect
@@ -13861,7 +14116,7 @@ async function callCoInventMode(mode, userLabel) {
       grounding: state.mission?.grounding || null,
       isLearningModule: Boolean(state.mission?.isLearningModule),
       aiTutorContext: state.mission?.aiTutorContext || null,
-      tutorMode: Boolean(state.mission?.isLearningModule),
+      tutorMode: isLearningTutorSessionActive(),
       contributingToOther: contributingOther,
     };
 

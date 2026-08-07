@@ -44,6 +44,11 @@ export class CoInventor {
    * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
    * @param {string} [opts.placeholder] — compose box placeholder
    * @param {string} [opts.subtitle] — header subtitle default before health check
+   * @param {boolean} [opts.tutorMode=false] — active tutor session (free AP + badge)
+   * @param {boolean} [opts.learningQuest=false] — learning module (can resume tutoring)
+   * @param {() => void} [opts.onEndTutoring] — learner ends tutor session
+   * @param {() => void} [opts.onResumeTutoring] — learner resumes tutor session
+   * @param {(reason?: string) => void} [opts.onTutorSessionEnded] — after AI signals endTutoring
    */
   constructor(opts) {
     this.getContext = opts.getContext;
@@ -57,7 +62,21 @@ export class CoInventor {
       opts.placeholder ||
       "Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”";
     this.subtitle = opts.subtitle || "Your creative partner for this challenge";
-    this.messages = [];
+    this.tutorMode = Boolean(opts.tutorMode);
+    this.learningQuest = Boolean(opts.learningQuest);
+    this.onEndTutoring = opts.onEndTutoring || null;
+    this.onResumeTutoring = opts.onResumeTutoring || null;
+    this.onTutorSessionEnded = opts.onTutorSessionEnded || null;
+    /** Separate full transcripts: tutor session vs regular co-inventor. */
+    this.histories = {
+      tutor: Array.isArray(opts.histories?.tutor) ? [...opts.histories.tutor] : [],
+      coinventor: Array.isArray(opts.histories?.coinventor)
+        ? [...opts.histories.coinventor]
+        : [],
+    };
+    this.activeHistoryKey = this._historyKeyForState();
+    /** Active lane — always the same array as histories[activeHistoryKey]. */
+    this.messages = this.histories[this.activeHistoryKey];
     this.busy = false;
     /** When false (e.g. multiplayer spectator), chips/send stay disabled. */
     this.interactive = true;
@@ -65,15 +84,89 @@ export class CoInventor {
     this.root = null;
   }
 
+  /** @returns {"tutor"|"coinventor"} */
+  _historyKeyForState() {
+    return this.learningQuest && this.tutorMode ? "tutor" : "coinventor";
+  }
+
+  /**
+   * Snapshot both histories for remount (Invent ↔ Challenge).
+   * @returns {{ tutor: object[], coinventor: object[], activeHistoryKey: string }}
+   */
+  exportHistories() {
+    return {
+      tutor: [...(this.histories.tutor || [])],
+      coinventor: [...(this.histories.coinventor || [])],
+      activeHistoryKey: this.activeHistoryKey,
+    };
+  }
+
+  /**
+   * Restore both histories after remount.
+   * @param {{ tutor?: object[], coinventor?: object[], activeHistoryKey?: string }|null} data
+   */
+  importHistories(data) {
+    if (!data || typeof data !== "object") return;
+    this.histories = {
+      tutor: Array.isArray(data.tutor) ? [...data.tutor] : [],
+      coinventor: Array.isArray(data.coinventor) ? [...data.coinventor] : [],
+    };
+    const key =
+      data.activeHistoryKey === "tutor" || data.activeHistoryKey === "coinventor"
+        ? data.activeHistoryKey
+        : this._historyKeyForState();
+    this.activeHistoryKey = key;
+    this.messages = this.histories[key];
+    this.renderMessages();
+  }
+
+  /**
+   * Switch active transcript when tutor session toggles.
+   * @param {"tutor"|"coinventor"} nextKey
+   */
+  _switchHistoryLane(nextKey) {
+    if (nextKey !== "tutor" && nextKey !== "coinventor") return;
+    if (nextKey === this.activeHistoryKey) {
+      this.messages = this.histories[nextKey];
+      return;
+    }
+    // messages is already a reference into histories[old]; nothing to flush
+    this.activeHistoryKey = nextKey;
+    this.messages = this.histories[nextKey];
+    this.renderMessages();
+  }
+
   mount(root) {
     this.root = root;
     root.innerHTML = `
       <div class="co-header">
-        <div>
+        <div class="co-header-text">
           <div class="co-title">AI Co-Inventor</div>
           <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
+        <div class="co-header-actions">
+          <span
+            class="co-tutor-badge"
+            id="co-tutor-badge"
+            hidden
+            title="Tutoring"
+          >Tutoring</span>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm co-tutor-toggle"
+            id="co-end-tutor"
+            hidden
+            title="End free tutor mode — chat will cost 1 AP like a normal co-inventor"
+          >End tutoring</button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm co-tutor-toggle"
+            id="co-resume-tutor"
+            hidden
+            title="Resume AI tutor mode — free AP, one idea at a time (learning quests only)"
+          >Resume tutoring</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
+        </div>
       </div>
       <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
       <div class="co-messages" id="co-messages" role="log" aria-live="polite"></div>
@@ -118,10 +211,105 @@ export class CoInventor {
       }
     });
 
-    root.querySelector("#co-clear").addEventListener("click", () => this.reset());
+    root.querySelector("#co-clear").addEventListener("click", () => {
+      if (this.learningQuest && this.tutorMode) return;
+      this.reset(true);
+    });
+    root.querySelector("#co-end-tutor")?.addEventListener("click", () => {
+      if (this.busy) return;
+      try {
+        this.onEndTutoring?.();
+      } catch {
+        /* host */
+      }
+    });
+    root.querySelector("#co-resume-tutor")?.addEventListener("click", () => {
+      if (this.busy) return;
+      try {
+        this.onResumeTutoring?.();
+      } catch {
+        /* host */
+      }
+    });
 
     this.syncChipGates();
+    this.applyTutorModeUi();
     this.checkHealth();
+  }
+
+  /**
+   * Sync tutor session chrome (badge, End/Resume, free-AP subtitle) and swap chat lane.
+   * @param {{ tutorMode?: boolean, learningQuest?: boolean, subtitle?: string }} [opts]
+   */
+  setTutorSession(opts = {}) {
+    if (opts.tutorMode != null) this.tutorMode = Boolean(opts.tutorMode);
+    if (opts.learningQuest != null) this.learningQuest = Boolean(opts.learningQuest);
+    if (opts.subtitle != null) this.subtitle = String(opts.subtitle);
+    const nextKey = this._historyKeyForState();
+    this._switchHistoryLane(nextKey);
+    this.applyTutorModeUi();
+  }
+
+  /** @deprecated use setTutorSession */
+  setTutorMode(on, opts = {}) {
+    this.setTutorSession({ tutorMode: on, ...opts });
+  }
+
+  applyTutorModeUi() {
+    if (!this.root) return;
+    const badge = this.root.querySelector("#co-tutor-badge");
+    const endBtn = this.root.querySelector("#co-end-tutor");
+    const resumeBtn = this.root.querySelector("#co-resume-tutor");
+    // Learning quests always show "Tutoring"; highlight only while session is active
+    if (badge) {
+      badge.hidden = !this.learningQuest;
+      badge.classList.toggle("is-active", Boolean(this.tutorMode));
+      badge.classList.toggle("is-idle", Boolean(this.learningQuest && !this.tutorMode));
+      badge.title = this.tutorMode
+        ? "Tutor mode on — co-inventor chat does not cost AP"
+        : "Tutor mode off — co-inventor chat costs 1 AP · Resume tutoring to turn free help back on";
+      badge.setAttribute("aria-pressed", this.tutorMode ? "true" : "false");
+    }
+    if (endBtn) endBtn.hidden = !(this.learningQuest && this.tutorMode);
+    if (resumeBtn) resumeBtn.hidden = !(this.learningQuest && !this.tutorMode);
+    this.root.classList.toggle("is-tutor-mode", this.tutorMode);
+    this.root.classList.toggle("is-learning-quest", this.learningQuest);
+    this.syncClearButton();
+    const status = this.root.querySelector("#co-status");
+    if (!status || status.classList.contains("co-offline")) return;
+    if (this.tutorMode) {
+      status.textContent =
+        this.subtitle ||
+        "Free AP · one idea at a time — stack picks and fielding still cost resources";
+      status.dataset.tutorOwned = "1";
+    } else if (this.learningQuest) {
+      status.textContent =
+        this.subtitle ||
+        "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime";
+      status.dataset.tutorOwned = "1";
+    } else {
+      delete status.dataset.tutorOwned;
+    }
+  }
+
+  /**
+   * Clear: disabled while tutoring; otherwise respects busy/spectator lock.
+   */
+  syncClearButton() {
+    const clear = this.root?.querySelector("#co-clear");
+    if (!clear) return;
+    const tutorLock = Boolean(this.learningQuest && this.tutorMode);
+    const busyLock = Boolean(this.busy) || !this.interactive;
+    clear.disabled = tutorLock || busyLock;
+    clear.setAttribute("aria-disabled", clear.disabled ? "true" : "false");
+    clear.classList.toggle("is-tutor-locked", tutorLock);
+    if (tutorLock) {
+      clear.title = "Chat is kept while tutoring — End tutoring to clear the co-inventor thread";
+    } else if (busyLock && this._lockReason) {
+      clear.title = this._lockReason;
+    } else {
+      clear.title = "Clear chat";
+    }
   }
 
   /**
@@ -164,6 +352,10 @@ export class CoInventor {
         if (!this.available) {
           status.textContent = "Offline";
           status.classList.add("co-offline");
+          delete status.dataset.tutorOwned;
+        } else if (this.tutorMode || this.learningQuest) {
+          status.classList.remove("co-offline");
+          this.applyTutorModeUi();
         } else if (this.aiLive && data.auth === "supergrok") {
           status.textContent = "SuperGrok — invent with me";
           status.classList.remove("co-offline");
@@ -181,14 +373,45 @@ export class CoInventor {
       if (status) {
         status.textContent = "Server unreachable — run npm start";
         status.classList.add("co-offline");
+        delete status.dataset.tutorOwned;
       }
     }
   }
 
+  /**
+   * Clear the **co-inventor** chat lane only. No-op while tutoring (Clear disabled).
+   * @param {boolean} [seedWelcome=true]
+   */
   reset(seedWelcome = true) {
-    this.messages = [];
+    if (this.learningQuest && this.tutorMode) return;
+    this.histories.coinventor = [];
+    if (this.activeHistoryKey === "coinventor") {
+      this.messages = this.histories.coinventor;
+      this.renderMessages();
+    }
+    if (seedWelcome) this.seedWelcome();
+  }
+
+  /**
+   * Wipe both lanes (new mission). Always allowed.
+   * @param {boolean} [seedWelcome=false]
+   */
+  clearAllHistories(seedWelcome = false) {
+    this.histories = { tutor: [], coinventor: [] };
+    this.activeHistoryKey = this._historyKeyForState();
+    this.messages = this.histories[this.activeHistoryKey];
     this.renderMessages();
     if (seedWelcome) this.seedWelcome();
+  }
+
+  /** Active lane message count (for Resume spam control). */
+  activeHistoryLength() {
+    return this.messages?.length || 0;
+  }
+
+  /** Length of a named lane. */
+  historyLength(key) {
+    return this.histories?.[key]?.length || 0;
   }
 
   seedWelcome() {
@@ -291,7 +514,8 @@ export class CoInventor {
           grounding: ctx.grounding || null,
           isLearningModule: Boolean(ctx.isLearningModule),
           aiTutorContext: ctx.aiTutorContext || null,
-          tutorMode: Boolean(ctx.isLearningModule || ctx.tutorMode),
+          // Active tutor session only (not merely "this is a learning quest")
+          tutorMode: Boolean(ctx.tutorMode),
           guidance: ctx.guidance || null,
           spotlightTechId: ctx.spotlightTechId || null,
           spotlightAdvance: ctx.spotlightAdvance || null,
@@ -342,9 +566,19 @@ export class CoInventor {
         content: data.message || "",
         proposals,
         teaching: data.teaching,
+        endTutoring: Boolean(data.endTutoring),
       });
       this.renderMessages();
       requestOk = true;
+
+      // AI tutor can end the free tutoring session (learning quests)
+      if (data.endTutoring && this.tutorMode && this.learningQuest) {
+        try {
+          this.onTutorSessionEnded?.("ai");
+        } catch {
+          /* host */
+        }
+      }
     } catch (e) {
       this.removeThinking(thinkingId);
       this.pushAssistant({
@@ -406,14 +640,13 @@ export class CoInventor {
     const locked = Boolean(busy) || !this.interactive;
     const send = this.root?.querySelector("#co-send");
     const input = this.root?.querySelector("#co-input");
-    const clear = this.root?.querySelector("#co-clear");
     if (send) send.disabled = locked;
     if (input) {
       input.disabled = locked;
       if (locked && this._lockReason) input.title = this._lockReason;
       else input.removeAttribute("title");
     }
-    if (clear) clear.disabled = locked;
+    this.syncClearButton();
     this.root?.querySelectorAll(".co-chip").forEach((b) => {
       // How-gated chips (SIT / SCAMPER) re-applied in syncChipGates after the bulk pass
       b.disabled = locked;
@@ -422,6 +655,10 @@ export class CoInventor {
         const action = QUICK_ACTIONS.find((a) => a.mode === b.dataset.mode);
         if (action) b.title = action.hint;
       }
+    });
+    // End / Resume still usable unless busy (not spectator-locked? keep enabled when only spectator - actually spectator locks all)
+    this.root?.querySelectorAll(".co-tutor-toggle").forEach((b) => {
+      b.disabled = Boolean(busy) || !this.interactive;
     });
     this.root?.classList.toggle("co-locked", locked && !busy);
     this.syncChipGates();

@@ -304,6 +304,24 @@ describe("actions", () => {
     assert.equal(rejected.sim.turnPhase, "scrutiny");
   });
 
+  it("reserve_ai with reservedAp 0 does not spend AP (tutor free chat)", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const reserved = applyAction(
+      s,
+      {
+        type: "reserve_ai",
+        payload: { mode: "chat", reservedAp: 0, clientActionId: "tutor" },
+      },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(reserved.ok, true);
+    assert.equal(reserved.sim.ap, 3);
+    assert.equal(reserved.sim.apSpentThisTurn, 0);
+    assert.equal(reserved.sim.pendingAi?.reservedAp, 0);
+  });
+
   it("end_turn does not raise pressure (year +1 market round)", () => {
     const s = base();
     s.apSpentThisTurn = 1;

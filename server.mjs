@@ -380,8 +380,8 @@ scrutiny when used:
 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
-/** Tutor mode — learning-module Quests (isLearningModule). Same JSON contract as SYSTEM_PROMPT. */
-const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech).
+/** Tutor mode — active tutor session on a learning-module Quest. Same JSON contract as SYSTEM_PROMPT + endTutoring. */
+const TUTOR_SYSTEM_PROMPT = `You are the AI Tutor in Future Forge for a LEARNING MODULE quest (local invent + emerging tech). Tutor session is ACTIVE (free AP for the learner while tutoring).
 
 Role:
 - Patient tutor and guide — NOT a free-form co-inventor that dumps full solutions.
@@ -399,12 +399,27 @@ Tutor style (hard rules for teaching):
 - Guide research and invention (next small action, what to try, what to notice) rather than solving the design for them.
 - When they ask for a full solution, give a partial scaffold and ask them to take the next step.
 
+Ending tutoring (important):
+- You MAY end the tutor session by setting top-level **endTutoring: true** when:
+  (1) the invent gate in aiTutorContext is substantially met (learner can invent pilot-honest on their own), OR
+  (2) the learner clearly asks to invent alone / stop tutoring / "I've got it".
+- Do **not** set endTutoring on every turn. Default is endTutoring: false or omit the field.
+- When ending: say so briefly in message (they can Resume tutoring later on this lesson). Keep proposals sparse.
+
 Modes:
 - chat / spark / explain / drafts / art-of-the-possible / sit / scamper / complete-picture: tutor style above; keep proposals sparse and pilot-honest.
 - assess-feasibility: same timing JSON as co-inventor (red|yellow|green + reason); still honor grounding; do not lecture in message beyond a short reason.
 - Never invent fake paper titles. Never say a category is locked until a year.
 
-Respond with the same single JSON object as the co-inventor (message, proposals, teaching, timing). For assess-feasibility set timing; otherwise timing may be null.`;
+Respond with a single JSON object (no markdown fences) like the co-inventor, plus optional endTutoring:
+{
+  "message": "string",
+  "proposals": { "addTechIds": [], "removeTechIds": [], "inventionName": null, "inventionHow": null, "inventionImpact": null, "scrutiny": null },
+  "teaching": [],
+  "timing": null,
+  "endTutoring": false
+}
+For assess-feasibility set timing; otherwise timing may be null.`;
 
 /** Compact system prompt for challenge pose — keeps TTFT low vs full co-inventor prompt. */
 const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local invention game).
@@ -460,7 +475,11 @@ function resolveTutorContext(context) {
 }
 
 function isTutorMode(context) {
-  return context?.isLearningModule === true || context?.tutorMode === true;
+  // Active tutor session only — learning quests may turn tutoring off mid-play.
+  if (context?.tutorMode === true) return true;
+  // Backward compat: older clients sent only isLearningModule
+  if (context?.tutorMode === false) return false;
+  return context?.isLearningModule === true;
 }
 
 /** Short excerpt for local (offline) fallback messages. */
@@ -1739,6 +1758,11 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
     },
     teaching,
   };
+
+  // Tutor session exit signal (learning modules)
+  if (parsed.endTutoring === true || parsed.endTutoring === "true") {
+    out.endTutoring = true;
+  }
 
   // Challenge step fields (pose / judge)
   if (parsed.angle) out.angle = String(parsed.angle);

@@ -22,7 +22,7 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 | `totalLessons` | Recommended with `lesson` | Shared across all lessons in the set |
 | `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md` |
 
-Progress chip format: **`Open-weight AI · Lesson 1/3`** (module title first). Selection: **Learn · Open-weight AI · Lesson 1/3**.
+UI: invent and Learning catalog show **module title + segment bar** (one segment per lesson; filled = completed on the device via `localStorage`). Selection chip: **Learn · {module title}**.
 
 ### `aiTutorContext` template
 

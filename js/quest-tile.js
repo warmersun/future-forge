@@ -100,9 +100,17 @@ export function parseLearningModuleFields(tile, missionIn = {}) {
   return { ok: true, value: out };
 }
 
+function escapeLearningHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
- * Player-facing progress label, or null if nothing to show.
- * Module title first, then lesson — e.g. "Open-weight AI · Lesson 1/3".
+ * Player-facing progress label (a11y / chips), or null if nothing to show.
+ * Module title first; lesson details only when needed for text contexts.
  * @param {{ module?: string, lesson?: number, totalLessons?: number }|null|undefined} m
  */
 export function learningProgressLabel(m) {
@@ -118,6 +126,79 @@ export function learningProgressLabel(m) {
     parts.push(`${m.totalLessons} lessons`);
   }
   return parts.length ? parts.join(" · ") : null;
+}
+
+/**
+ * Visual module progress: title + segmented bar (one segment per lesson).
+ * Prefer this over plain "Title · Lesson n/m" text in UI.
+ *
+ * @param {{
+ *   module?: string,
+ *   lesson?: number,
+ *   totalLessons?: number,
+ *   completedCount?: number,
+ *   currentLesson?: number,
+ *   compact?: boolean,
+ *   className?: string,
+ * }|null|undefined} opts
+ * @returns {string} HTML or ""
+ */
+export function learningProgressBarHtml(opts) {
+  if (!opts || typeof opts !== "object") return "";
+  const title = typeof opts.module === "string" ? opts.module.trim() : "";
+  const totalRaw = Number(opts.totalLessons);
+  const lessonRaw = Number(opts.currentLesson ?? opts.lesson);
+  let total =
+    Number.isFinite(totalRaw) && totalRaw >= 1 ? Math.min(Math.floor(totalRaw), 24) : 0;
+  if (!total && Number.isFinite(lessonRaw) && lessonRaw >= 1) {
+    total = Math.min(Math.floor(lessonRaw), 24);
+  }
+  if (!title && !total) return "";
+
+  let completed = Number(opts.completedCount);
+  if (!Number.isFinite(completed) || completed < 0) {
+    // Without an explicit count, treat prior lessons as done when we know current index.
+    completed =
+      Number.isFinite(lessonRaw) && lessonRaw >= 1 ? Math.max(0, Math.floor(lessonRaw) - 1) : 0;
+  }
+  completed = Math.max(0, Math.min(Math.floor(completed), total || 0));
+
+  const current =
+    Number.isFinite(lessonRaw) && lessonRaw >= 1 ? Math.floor(lessonRaw) : null;
+  const allDone = total > 0 && completed >= total;
+
+  let aria = title || "Learning module";
+  if (total > 0) {
+    aria = allDone
+      ? `${title || "Module"}: all ${total} lessons completed`
+      : `${title || "Module"}: ${completed} of ${total} lessons completed${
+          current != null && !allDone ? `, on lesson ${current}` : ""
+        }`;
+  }
+
+  const segs = [];
+  for (let i = 1; i <= total; i++) {
+    let cls = "lesson-progress-seg";
+    if (i <= completed) cls += " is-filled";
+    else if (current != null && i === current && !allDone) cls += " is-current";
+    segs.push(`<span class="${cls}"></span>`);
+  }
+
+  const classes = ["lesson-progress"];
+  if (opts.compact) classes.push("lesson-progress--compact");
+  if (allDone) classes.push("is-complete");
+  if (opts.className) classes.push(String(opts.className));
+
+  const titleHtml = title
+    ? `<div class="lesson-progress-title">${escapeLearningHtml(title)}</div>`
+    : "";
+  const barHtml = total
+    ? `<div class="lesson-progress-bar" aria-hidden="true">${segs.join("")}</div>`
+    : "";
+
+  return `<div class="${classes.join(" ")}" role="img" aria-label="${escapeLearningHtml(
+    aria
+  )}">${titleHtml}${barHtml}</div>`;
 }
 
 const PLACEMENT_MODES = new Set(["replace-daily", "alongside", "library-only"]);

@@ -12,6 +12,7 @@ import {
   crisisRolesLabel,
   parseLearningModuleFields,
   learningProgressLabel,
+  learningProgressBarHtml,
 } from "./quest-tile.js";
 
 const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
@@ -469,6 +470,38 @@ describe("quest-tile", () => {
       learningProgressLabel({ lesson: 1, totalLessons: 3 }),
       "Lesson 1/3"
     );
+  });
+
+  it("learningProgressBarHtml builds title + segments", () => {
+    assert.equal(learningProgressBarHtml(null), "");
+    const html = learningProgressBarHtml({
+      module: "Automator",
+      lesson: 1,
+      totalLessons: 2,
+      completedCount: 0,
+    });
+    assert.match(html, /Automator/);
+    assert.match(html, /lesson-progress-bar/);
+    assert.match(html, /is-current/);
+    assert.equal((html.match(/lesson-progress-seg/g) || []).length, 2);
+    assert.doesNotMatch(html, /Lesson 1\/2/);
+
+    const half = learningProgressBarHtml({
+      module: "Automator",
+      totalLessons: 2,
+      completedCount: 1,
+      currentLesson: 2,
+    });
+    assert.match(half, /is-filled/);
+    assert.match(half, /1 of 2 lessons completed/);
+
+    const done = learningProgressBarHtml({
+      module: "Automator",
+      totalLessons: 2,
+      completedCount: 2,
+    });
+    assert.match(done, /is-complete/);
+    assert.match(done, /all 2 lessons completed/);
   });
 
   it("parseLearningModuleFields ignores false isLearningModule", () => {
