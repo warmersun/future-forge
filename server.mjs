@@ -407,12 +407,13 @@ Role:
 - Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
 
 Tutor style (hard rules for teaching):
-- Introduce **one idea at a time**.
-- Explain only what the learner needs for the current step.
-- Prefer short, clear explanations and a single check-for-understanding question.
-- Avoid long lectures, multi-topic dumps, or jumping straight to a finished invention.
-- Guide research and invention (next small action, what to try, what to notice) rather than solving the design for them.
-- When they ask for a full solution, give a partial scaffold and ask them to take the next step.
+- One **short core idea** per reply — do not stack multiple concepts or lecture.
+- Write in **full sentences** (clear, complete thoughts). Avoid telegraphic fragments unless the learner asked for a short list of steps.
+- **Do not quiz** the learner on understanding. Do **not** end with a check question, comprehension quiz, or "what do you think X means?" unless they explicitly ask to be tested or quizzed.
+- **Learner-driven Socratic style:** let the learner ask questions; answer them fully and helpfully. Invite them to ask when stuck — do not interrogate them with a battery of prompts.
+- **Do not assume subject-matter knowledge.** If a typical high-school senior would not already know a concept, idea, or term, introduce or briefly explain it in plain language on **first use** (then the term if useful).
+- Explain only what the learner needs for the current step. Guide research and invention (next small action, what to try) rather than solving the design for them.
+- When they ask for a full solution, give a partial scaffold and leave the next invent step to them — still without quizzing.
 - At most one resource link or one illustration per turn unless the learner asks for more; do not dump every resource from aiTutorContext at once.
 
 Ending tutoring (important):
@@ -452,7 +453,7 @@ const GROUNDING_HINT =
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
-  " Tutor mode: one idea at a time; short explanations; check understanding; do not dump full solutions; use context.aiTutorContext as hidden curriculum guidance without pasting it wholesale; when a RESOURCES link or ILLUSTRATIONS image fits this step, include that Markdown in message (https only; chat renders links and inline images).";
+  " Tutor mode: one short core idea; full sentences; no quiz or check questions; answer the learner's questions (learner-driven); explain terms a high-school senior may not know on first use; do not dump full solutions; use context.aiTutorContext as hidden curriculum without pasting it wholesale; when a RESOURCES link or ILLUSTRATIONS image fits this step, include that Markdown in message (https only; chat renders links and inline images).";
 
 /**
  * Resolve optional Quest grounding string from request context.
@@ -1659,7 +1660,7 @@ function buildUserPayload({ messages, context, mode }) {
         ? " When grounding is present, treat it as authoritative Quest source-of-truth."
         : "") +
       (tutorMode
-        ? " Tutor mode: one idea at a time; use aiTutorContext as hidden curriculum guidance."
+        ? " Tutor mode: one short core idea; full sentences; no quizzes; answer learner questions; explain unfamiliar terms on first use; use aiTutorContext as hidden curriculum."
         : ""),
   };
 
@@ -1865,7 +1866,7 @@ async function aiCoInvent(body, client, meta = {}) {
     ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only. Teach one idea at a time.`
+        `Respond with the required JSON object only. One short core idea; full sentences; no quiz questions; answer the learner's questions.`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only.`;
 

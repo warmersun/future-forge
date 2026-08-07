@@ -164,7 +164,7 @@ export class CoInventor {
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-resume-tutor"
             hidden
-            title="Resume AI tutor mode — free AP, one idea at a time (learning quests only)"
+            title="Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
           >Resume tutoring</button>
           <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
         </div>
@@ -281,7 +281,7 @@ export class CoInventor {
     if (this.tutorMode) {
       status.textContent =
         this.subtitle ||
-        "Free AP · one idea at a time — stack picks and fielding still cost resources";
+        "Free AP · one short idea at a time — stack picks and fielding still cost resources";
       status.dataset.tutorOwned = "1";
     } else if (this.learningQuest) {
       status.textContent =

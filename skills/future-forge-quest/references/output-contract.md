@@ -104,7 +104,7 @@ Add:
 "module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3,
-"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) …\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- One idea at a time.\n- Surface a resource link or illustration in chat only when the current micro-step needs it.\n- Never paste this wholesale to the player."
+"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) …\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- App default: one short core idea; full sentences; no quizzes; answer learner questions; explain unfamiliar terms on first use.\n- Surface a resource link or illustration in chat only when the current micro-step needs it.\n- Never paste this wholesale to the player."
 ```
 
 Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).

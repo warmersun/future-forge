@@ -474,7 +474,7 @@ function resumeTutorSession() {
     state.coInventor.pushAssistant(
       {
         message:
-          "Tutoring is **on** — free AP, one idea at a time. Stack picks and fielding still cost resources. Say when you want to invent on your own.",
+          "Tutoring is **on** — free AP, one short idea at a time. Stack picks and fielding still cost resources. Ask questions anytime; say when you want to invent on your own.",
         proposals: emptyProps(),
         teaching: [],
       },

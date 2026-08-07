@@ -75,7 +75,7 @@ All fields optional. Tile top-level or under `mission` (same as `grounding`).
 
 When `isLearningModule` is true:
 
-- Tutor prompt: one idea at a time, short explanations, check understanding, guide inventing without dumping full solutions.
+- Tutor prompt: one short core idea per reply, full sentences, no default quizzes, learner-driven questions, explain high-school-unfamiliar terms on first use; guide inventing without dumping full solutions.
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
 - Tutor chat bubbles render safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Authors stock readings/diagrams in `aiTutorContext`; the tutor surfaces them in `message` when a micro-step needs them (not a first-turn dump).
 - Progress fields, when present, drive a **module title + segment bar** on the invent screen and Learning catalog (one segment per lesson; filled segments = completed on this device). Selection chips show **Learn · {module title}**.

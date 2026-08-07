@@ -147,7 +147,9 @@ Progress UI label format: **`Open-weight AI · Lesson 1/3`** (module title first
 
 Tutor style (enforced by server prompt when `isLearningModule` is true):
 
-- One idea at a time; short explanations; check understanding.
+- One short core idea per reply; full sentences.
+- Do not quiz the learner; let them ask questions (learner-driven Socratic).
+- Explain concepts/terms a typical high-school senior may not know on first use.
 - Scaffold inventing; do not dump full solutions.
 - Use `aiTutorContext` as hidden teaching plan; use `grounding` for capability truth (product-category chain; see `grounding-template.md`).
 - Player-facing tutor messages support safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Stock materials in `aiTutorContext`; surface them sparingly in `message`.

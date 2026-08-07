@@ -51,9 +51,11 @@ MISCONCEPTIONS TO CATCH:
 INVENT GATE:
 - Learner must <name stack + pilot-honest how-it-works> before celebrating.
 
-TEACHING STYLE:
-- Short explanation → one check question → next micro-step only.
-- When a RESOURCE or ILLUSTRATION fits the current micro-step, put the Markdown link or image in your **player-facing message** so the chat UI can render it (clickable link / inline image). Do not dump every resource at once.
+TEACHING STYLE (optional lesson notes — app default is already non-quizzing):
+- One short core idea per reply; full sentences.
+- Do not quiz; let the learner ask questions.
+- Explain terms a high-school senior may not know on first use.
+- When a RESOURCE or ILLUSTRATION fits the current micro-step, put the Markdown link or image in your **player-facing message**. Do not dump every resource at once.
 - Never paste this tutor context wholesale to the player.
 ```
 
@@ -96,7 +98,7 @@ There is **no engine unlock graph** yet. Author a set manually:
 ### What tutor mode does (solo)
 
 - Invent opens on **AI co-inventor** (not Future vision).
-- Tutor prompt: one idea at a time; scaffold inventing; no full solution dump.
+- Built-in tutor style (server): **one short core idea** per reply; **full sentences**; **no default quizzes**; **learner-driven** (answer their questions); explain concepts a **high-school senior** may not know on first use; scaffold inventing; no full solution dump.
 - `grounding` still used for capability assess / advice when present.
 - Tutor messages can include Markdown **links** and **images** drawn from `aiTutorContext` resources (see above).
 
