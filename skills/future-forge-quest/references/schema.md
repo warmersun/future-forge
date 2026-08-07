@@ -138,7 +138,7 @@ Recommended structure (omit thin sections; may merge Trends+Predictions or Unloc
 | Field | Type | Notes |
 |-------|------|--------|
 | `isLearningModule` | boolean | `true` → solo invent opens **Co-Inventor** tab and uses **tutor** system prompt |
-| `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown to the player |
+| `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown wholesale to the player. May include Markdown **resource links** and **illustration** URLs for the tutor to re-emit in chat (see `learning-and-sponsor.md`) |
 | `module` | non-empty string | Module **title** (display + catalog group key; max 80 chars) |
 | `lesson` | integer ≥ 1 | Lesson index (display) |
 | `totalLessons` | integer ≥ 1 | Denominator for `Lesson X/Y` |
@@ -150,11 +150,12 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 - One idea at a time; short explanations; check understanding.
 - Scaffold inventing; do not dump full solutions.
 - Use `aiTutorContext` as hidden teaching plan; use `grounding` for capability truth (product-category chain; see `grounding-template.md`).
+- Player-facing tutor messages support safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Stock materials in `aiTutorContext`; surface them sparingly in `message`.
 - No full module unlock/sequencing yet — progress is display-only.
 
 ```json
 "isLearningModule": true,
-"aiTutorContext": "Lesson goal: … SEQUENCE: 1) … 2) … Never paste this to the player.",
+"aiTutorContext": "LESSON GOAL: …\nSEQUENCE: 1) …\nRESOURCES:\n- [Primer](https://example.org/primer)\nILLUSTRATIONS:\n- ![Stack diagram](https://example.org/diagram.png)\nNever paste this wholesale to the player.",
 "module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3

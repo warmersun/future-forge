@@ -1,7 +1,8 @@
 /**
- * Safe Markdown subset for Quest briefs.
+ * Safe Markdown subset for Quest briefs and chat bubbles.
  * Allows: headings (#–###), paragraphs, **bold**, *italic*, lists, https? links.
- * No raw HTML, images, tables, or scripts.
+ * Optional (chat): images ![alt](https://…), bare-URL autolink.
+ * No raw HTML, tables, or scripts.
  */
 
 /**
@@ -48,11 +49,18 @@ export function excerptFromBrief(md, maxLen = 220) {
 }
 
 /**
+ * @typedef {{ allowImages?: boolean, autolink?: boolean }} MdRenderOpts
+ */
+
+/**
  * Render a safe HTML string from markdown subset.
  * @param {string} md
+ * @param {MdRenderOpts} [opts]
  * @returns {string}
  */
-export function renderMarkdownSafe(md) {
+export function renderMarkdownSafe(md, opts = {}) {
+  const allowImages = Boolean(opts.allowImages);
+  const autolink = Boolean(opts.autolink);
   const src = String(md || "").replace(/\r\n/g, "\n");
   if (!src.trim()) return "";
 
@@ -62,6 +70,8 @@ export function renderMarkdownSafe(md) {
   const lines = cleaned.split("\n");
   const blocks = [];
   let i = 0;
+
+  const inline = (text) => inlineFormat(text, { allowImages, autolink });
 
   while (i < lines.length) {
     const line = lines[i];
@@ -75,7 +85,14 @@ export function renderMarkdownSafe(md) {
     const heading = /^(#{1,3})\s+(.+)$/.exec(trimmed);
     if (heading) {
       const level = heading[1].length;
-      blocks.push(`<h${level}>${inlineFormat(heading[2])}</h${level}>`);
+      blocks.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+      i += 1;
+      continue;
+    }
+
+    // Standalone image line → block wrap (chat)
+    if (allowImages && /^!\[[^\]]*\]\([^)]+\)$/.test(trimmed)) {
+      blocks.push(`<p class="md-img-wrap">${inline(trimmed)}</p>`);
       i += 1;
       continue;
     }
@@ -83,7 +100,9 @@ export function renderMarkdownSafe(md) {
     if (/^[-*+]\s+/.test(trimmed)) {
       const items = [];
       while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
-        items.push(`<li>${inlineFormat(lines[i].trim().replace(/^[-*+]\s+/, ""))}</li>`);
+        items.push(
+          `<li>${inline(lines[i].trim().replace(/^[-*+]\s+/, ""))}</li>`
+        );
         i += 1;
       }
       blocks.push(`<ul>${items.join("")}</ul>`);
@@ -93,7 +112,9 @@ export function renderMarkdownSafe(md) {
     if (/^\d+\.\s+/.test(trimmed)) {
       const items = [];
       while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
-        items.push(`<li>${inlineFormat(lines[i].trim().replace(/^\d+\.\s+/, ""))}</li>`);
+        items.push(
+          `<li>${inline(lines[i].trim().replace(/^\d+\.\s+/, ""))}</li>`
+        );
         i += 1;
       }
       blocks.push(`<ol>${items.join("")}</ol>`);
@@ -105,12 +126,15 @@ export function renderMarkdownSafe(md) {
     while (i < lines.length) {
       const t = lines[i].trim();
       if (!t) break;
-      if (/^#{1,3}\s+/.test(t) || /^[-*+]\s+/.test(t) || /^\d+\.\s+/.test(t)) break;
+      if (/^#{1,3}\s+/.test(t) || /^[-*+]\s+/.test(t) || /^\d+\.\s+/.test(t)) {
+        break;
+      }
+      if (allowImages && /^!\[[^\]]*\]\([^)]+\)$/.test(t)) break;
       para.push(t);
       i += 1;
     }
     if (para.length) {
-      blocks.push(`<p>${inlineFormat(para.join(" "))}</p>`);
+      blocks.push(`<p>${inline(para.join(" "))}</p>`);
     }
   }
 
@@ -118,61 +142,160 @@ export function renderMarkdownSafe(md) {
 }
 
 /**
- * @param {string} text
+ * Chat bubbles: links + images + bare URL autolink.
+ * @param {string} md
  */
-function inlineFormat(text) {
+export function renderChatMarkdown(md) {
+  return renderMarkdownSafe(md, { allowImages: true, autolink: true });
+}
+
+/**
+ * Safe http(s) URL for href/src (input may already be HTML-escaped).
+ * @param {string} url
+ */
+export function isSafeHttpUrl(url) {
+  const u = String(url || "").trim();
+  if (!/^https?:\/\//i.test(u)) return false;
+  // After escapeHtml, quotes become entities; still reject raw dangerous chars
+  if (/[\s<>"']/.test(u)) return false;
+  // Reject obvious non-http after decoding common entities
+  const decoded = u
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"');
+  if (!/^https?:\/\//i.test(decoded)) return false;
+  if (/[\s<>"']/.test(decoded)) return false;
+  if (/^(javascript|data|vbscript):/i.test(decoded)) return false;
+  return true;
+}
+
+/**
+ * @param {string} text
+ * @param {MdRenderOpts} [opts]
+ */
+function inlineFormat(text, opts = {}) {
   let s = escapeHtml(text);
 
-  s = rewriteMarkdownLinks(s);
+  s = rewriteMarkdownMedia(s, opts);
 
   // Bold **text**
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   // Italic *text* (simple; avoid list markers already handled)
   s = s.replace(/(^|[\s(])\*([^*]+)\*(?=[\s).,!?]|$)/g, "$1<em>$2</em>");
 
+  if (opts.autolink) {
+    s = autolinkBareUrls(s);
+  }
+
   return s;
 }
 
 /**
- * Convert or strip [label](url) with balanced parentheses in the URL.
- * @param {string} s already HTML-escaped text
+ * Convert markdown images and links (already HTML-escaped text).
+ * Images: ![alt](url) when allowImages; otherwise alt text only.
+ * Links: [label](url) with https? only.
+ * @param {string} s
+ * @param {MdRenderOpts} [opts]
  */
-function rewriteMarkdownLinks(s) {
+function rewriteMarkdownMedia(s, opts = {}) {
+  const allowImages = Boolean(opts.allowImages);
   let out = "";
   let i = 0;
   while (i < s.length) {
-    if (s[i] !== "[") {
-      out += s[i];
-      i += 1;
-      continue;
+    // Image: ![alt](url)
+    if (s[i] === "!" && s[i + 1] === "[") {
+      const parsed = parseMdLinkAt(s, i + 1);
+      if (parsed) {
+        if (allowImages && isSafeHttpUrl(parsed.url)) {
+          const safe = sanitizeUrlAttr(parsed.url);
+          const alt = parsed.label;
+          out += `<img class="md-img" src="${safe}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />`;
+        } else {
+          // No image: show alt text only (never javascript:/data: as src)
+          out += parsed.label;
+        }
+        i = parsed.end;
+        continue;
+      }
     }
-    const closeLabel = s.indexOf("]", i + 1);
-    if (closeLabel < 0 || s[closeLabel + 1] !== "(") {
-      out += s[i];
-      i += 1;
-      continue;
+
+    // Link: [label](url)
+    if (s[i] === "[") {
+      const parsed = parseMdLinkAt(s, i);
+      if (parsed) {
+        if (isSafeHttpUrl(parsed.url)) {
+          const safe = sanitizeUrlAttr(parsed.url);
+          out += `<a href="${safe}" target="_blank" rel="noopener noreferrer">${parsed.label}</a>`;
+        } else {
+          out += parsed.label;
+        }
+        i = parsed.end;
+        continue;
+      }
     }
-    const label = s.slice(i + 1, closeLabel);
-    let j = closeLabel + 2;
-    let depth = 1;
-    while (j < s.length && depth > 0) {
-      if (s[j] === "(") depth += 1;
-      else if (s[j] === ")") depth -= 1;
-      j += 1;
-    }
-    if (depth !== 0) {
-      out += s[i];
-      i += 1;
-      continue;
-    }
-    const url = s.slice(closeLabel + 2, j - 1).trim();
-    if (/^https?:\/\//i.test(url) && !/[\s<>"]/.test(url)) {
-      const safe = url.replace(/"/g, "%22");
-      out += `<a href="${safe}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-    } else {
-      out += label;
-    }
-    i = j;
+
+    out += s[i];
+    i += 1;
   }
   return out;
+}
+
+/**
+ * Parse [label](url) starting at index of `[`.
+ * @param {string} s
+ * @param {number} openBracket
+ * @returns {{ label: string, url: string, end: number }|null}
+ */
+function parseMdLinkAt(s, openBracket) {
+  if (s[openBracket] !== "[") return null;
+  const closeLabel = s.indexOf("]", openBracket + 1);
+  if (closeLabel < 0 || s[closeLabel + 1] !== "(") return null;
+  const label = s.slice(openBracket + 1, closeLabel);
+  let j = closeLabel + 2;
+  let depth = 1;
+  while (j < s.length && depth > 0) {
+    if (s[j] === "(") depth += 1;
+    else if (s[j] === ")") depth -= 1;
+    j += 1;
+  }
+  if (depth !== 0) return null;
+  const url = s.slice(closeLabel + 2, j - 1).trim();
+  return { label, url, end: j };
+}
+
+/**
+ * @param {string} url already escaped-ish
+ */
+function sanitizeUrlAttr(url) {
+  return String(url).replace(/"/g, "%22");
+}
+
+/**
+ * Turn bare https?:// URLs into links; skip text already inside tags/attributes.
+ * @param {string} s HTML fragment
+ */
+function autolinkBareUrls(s) {
+  // Split on tags so we only touch text nodes
+  const parts = s.split(/(<[^>]+>)/g);
+  return parts
+    .map((part) => {
+      if (!part || part[0] === "<") return part;
+      return part.replace(
+        /(https?:\/\/[^\s<]+)/gi,
+        (raw) => {
+          // Peel trailing punctuation common in prose
+          let url = raw;
+          let trail = "";
+          while (url.length && /[.,);:!?]$/.test(url)) {
+            trail = url.slice(-1) + trail;
+            url = url.slice(0, -1);
+          }
+          if (!isSafeHttpUrl(url)) return raw;
+          const safe = sanitizeUrlAttr(url);
+          return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${url}</a>${trail}`;
+        }
+      );
+    })
+    .join("");
 }

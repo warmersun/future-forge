@@ -16,7 +16,7 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 | Field | Required for tutor? | Notes |
 |-------|---------------------|--------|
 | `isLearningModule` | **Yes** (`true`) | Opens Co-Inventor tab; server uses tutor system prompt (solo) |
-| `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only |
+| `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only (may include resource links + illustration URLs; see below) |
 | `module` | Recommended | Non-empty **title** string — UI + catalog group key |
 | `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y** |
 | `totalLessons` | Recommended with `lesson` | Shared across all lessons in the set |
@@ -37,6 +37,13 @@ SEQUENCE (one idea at a time; do not dump all at once):
 3) <map unlocked use case → local application category>
 4) <scope / pilot limits>
 
+RESOURCES (optional — for the tutor to surface in chat when helpful):
+- Reading: [Short title](https://…stable-url…) — when to offer (e.g. after step 2)
+- Reading: [Short title](https://…) — deeper dive; do not open with this
+ILLUSTRATIONS (optional — https images the tutor can show inline):
+- ![One-line caption](https://…/diagram.png) — use when explaining <concept>
+- ![…](https://…) — only if the image clarifies a mechanism or place-scale idea
+
 MISCONCEPTIONS TO CATCH:
 - <e.g. cloud API when IP is sealed>
 - <e.g. overnight city-wide claims>
@@ -46,8 +53,34 @@ INVENT GATE:
 
 TEACHING STYLE:
 - Short explanation → one check question → next micro-step only.
-- Never paste this tutor context to the player.
+- When a RESOURCE or ILLUSTRATION fits the current micro-step, put the Markdown link or image in your **player-facing message** so the chat UI can render it (clickable link / inline image). Do not dump every resource at once.
+- Never paste this tutor context wholesale to the player.
 ```
+
+### Tutor chat: links and images (player-facing)
+
+Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies** are rendered as safe Markdown in the Co-Inventor panel. Authors should stock the context with materials the tutor can **selectively re-emit** when teaching.
+
+| In `aiTutorContext` (hidden) | In tutor `message` (player sees) | UI |
+|------------------------------|----------------------------------|-----|
+| `[Reading title](https://…)` | Same Markdown link when relevant | **Clickable** link (new tab) |
+| Bare `https://…` resource URL | May include in message | Autolinked when safe |
+| `![Caption](https://…image…)` | Same image Markdown when relevant | **Inline image** in the bubble |
+
+**Author rules**
+
+1. **https only** — no `javascript:`, `data:`, or relative paths. Prefer stable, citable pages and diagrams.
+2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS; the tutor should introduce **one** helpful link or image per micro-step, not a resource dump.
+3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**).
+4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.
+5. **Never** treat a sponsored product URL as a required solution path; invent stays open and pilot-honest.
+6. Chat still refuses raw HTML — use Markdown only.
+
+**What the game does (solo tutor session)**
+
+- Assistant bubbles use chat Markdown: headings, lists, bold/italic, **links**, **inline images**.
+- User messages stay plain text.
+- Quest `briefMd` rendering is separate (links yes; images remain off by default for briefs).
 
 ### Multi-lesson set (several JSON files)
 
@@ -65,6 +98,7 @@ There is **no engine unlock graph** yet. Author a set manually:
 - Invent opens on **AI co-inventor** (not Future vision).
 - Tutor prompt: one idea at a time; scaffold inventing; no full solution dump.
 - `grounding` still used for capability assess / advice when present.
+- Tutor messages can include Markdown **links** and **images** drawn from `aiTutorContext` resources (see above).
 
 Multiplayer / hotseat do **not** switch to tutor mode.
 
@@ -124,6 +158,9 @@ Example in monorepo: `quests/kimi-k3.json`. Portable skill example: `examples/sp
 
 - Empty strings for unused optionals (`"sponsorName": ""`) — **omit the keys**  
 - Learning module without `aiTutorContext` (tutor has nothing to teach)  
+- Resource dump in the first tutor turn (list every link/image at once)  
+- Broken or non-https media URLs in `aiTutorContext`  
+- Putting pedagogy-only images into `briefMd` instead of tutor context + chat  
 - Sponsor without `grounding` (AI has no capability SoT)  
 - Bare-emTech unlocks (“AI unlocks education”) instead of product-category grain  
 - Product theater in scene/brief (“only Brand Y works”)  

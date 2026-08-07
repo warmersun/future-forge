@@ -111,7 +111,8 @@ Spine: hook → complication → mechanism → stakes → **open** design challe
 Follow **`references/learning-and-sponsor.md`**.
 
 - Set `isLearningModule: true`.
-- Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste into player text.
+- Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste wholesale into player text.
+- Optionally stock **RESOURCES** (Markdown `https` links to readings) and **ILLUSTRATIONS** (`![caption](https://…)` diagrams) in `aiTutorContext` so the tutor can show **clickable links** and **inline images** in chat when a micro-step needs them — see **`references/learning-and-sponsor.md`**.
 - Set `module` (title string), `lesson`, `totalLessons` (UI: **{title} · Lesson X/Y**).
 - Multi-lesson set: separate JSON files; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
 
@@ -151,6 +152,7 @@ npm run validate:quest -- <file>
 - [ ] Invent framed as **application** of unlocked use cases; open tension  
 - [ ] Unused optionals **omitted** (not empty strings)  
 - [ ] Learning: solid `aiTutorContext`; module title string; lesson/totalLessons integers ≥ 1; no fake unlocks  
+- [ ] Learning media (if any): https-only resource links / illustrations in `aiTutorContext`; paced for tutor chat, not a first-turn dump  
 - [ ] Sponsor: text-only; invent still required; capability chain in `grounding`  
 - [ ] Combinations validated if used together  
 - [ ] `npm run validate:quest` → `OK:`  

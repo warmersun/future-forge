@@ -3,6 +3,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { renderChatMarkdown } from "./md-lite.js";
 
 const QUICK_ACTIONS = [
   { mode: "spark", label: "Spark ideas", hint: "Frame the local mission" },
@@ -795,11 +796,11 @@ export class CoInventor {
         .join("")}</div>`;
     }
 
-    // light markdown: **bold** only
+    // Tutor / co-inventor: safe markdown (links, images, lists, bold)
     const html = formatMessage(m.content || "");
 
     return `<div class="co-msg assistant">
-      <div class="co-bubble">${html}${teach}${actions}</div>
+      <div class="co-bubble co-bubble-md">${html}${teach}${actions}</div>
     </div>`;
   }
 
@@ -862,7 +863,5 @@ function escapeHtml(s) {
 }
 
 function formatMessage(text) {
-  return escapeHtml(text)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n/g, "<br>");
+  return renderChatMarkdown(text || "");
 }

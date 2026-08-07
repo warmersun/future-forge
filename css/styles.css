@@ -6656,6 +6656,56 @@ button.linkish:hover {
   border-bottom-left-radius: 4px;
 }
 
+/* Markdown in assistant / tutor bubbles (links, images, compact structure) */
+.co-bubble-md {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.co-bubble-md a {
+  color: #9ecbff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.co-bubble-md a:hover {
+  color: #c5e3ff;
+}
+.co-bubble-md .md-img,
+.co-bubble-md img.md-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+.co-bubble-md .md-img-wrap {
+  margin: 0.35rem 0;
+}
+.co-bubble-md h1,
+.co-bubble-md h2,
+.co-bubble-md h3 {
+  font-size: 0.95rem;
+  font-weight: 650;
+  margin: 0.55em 0 0.3em;
+  color: var(--text, #e8eef9);
+  line-height: 1.3;
+}
+.co-bubble-md p {
+  margin: 0.35em 0;
+}
+.co-bubble-md ul,
+.co-bubble-md ol {
+  margin: 0.35em 0 0.35em 1.15em;
+  padding: 0;
+}
+.co-bubble-md li {
+  margin: 0.2em 0;
+}
+.co-bubble-md strong {
+  color: var(--text, #e8eef9);
+  font-weight: 650;
+}
+
 .co-msg.thinking .co-bubble {
   display: flex;
   align-items: center;
