@@ -7621,6 +7621,73 @@ button.linkish:hover {
   gap: 0.45rem;
 }
 
+/* —— Read out loud (long narrative text) —— */
+/* Icon control sits under the host block, lower-right */
+.read-aloud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0.4rem;
+  min-height: 0;
+  width: 100%;
+}
+.read-aloud-bar[hidden] {
+  display: none !important;
+}
+.btn-read-aloud {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 180, 100, 0.22);
+  border-radius: 999px;
+  color: var(--text-dim, #a8b4c8);
+  background: rgba(12, 18, 32, 0.45);
+  line-height: 0;
+}
+.btn-read-aloud .read-aloud-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: block;
+  flex-shrink: 0;
+}
+.btn-read-aloud:hover:not(:disabled) {
+  color: #fff4e6;
+  border-color: rgba(255, 200, 120, 0.4);
+  background: rgba(30, 24, 18, 0.55);
+}
+.btn-read-aloud[aria-pressed="true"] {
+  color: #fff4e6;
+  border-color: rgba(255, 180, 100, 0.45);
+  box-shadow: 0 0 0 1px rgba(255, 180, 100, 0.15);
+}
+.btn-read-aloud:disabled,
+.btn-read-aloud.is-loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+.btn-read-aloud.is-loading .read-aloud-icon {
+  animation: read-aloud-pulse 0.9s ease-in-out infinite;
+}
+@keyframes read-aloud-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-read-aloud.is-loading .read-aloud-icon {
+    animation: none;
+  }
+}
+
 /* —— Quest briefs (Markdown) & spotlight imports —— */
 .quest-brief {
   text-align: left;

@@ -40,6 +40,11 @@ import {
   resolveQuestsRemoteUrl,
 } from "./js/quests-remote.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "./js/scene-prose.js";
+import {
+  normalizeTtsText,
+  ttsCacheKey,
+  createTtsCache,
+} from "./js/tts-cache.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -80,6 +85,14 @@ const PORT = Number(process.env.FF_PORT) || 8765;
 /** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
 const HOST = process.env.FF_HOST || "0.0.0.0";
 const MODEL = process.env.FF_XAI_MODEL || "grok-4.5";
+/** Default xAI TTS voice (https://docs.x.ai — Text to Speech). */
+const TTS_VOICE = process.env.FF_TTS_VOICE || "eve";
+/** xAI TTS input character limit. */
+const TTS_MAX_CHARS = 15_000;
+/** Shared TTS audio cache (disk + memory) so all users share one file per text. */
+const TTS_CACHE_DIR =
+  process.env.FF_TTS_CACHE_DIR || path.join(ROOT, "data", "tts-cache");
+const ttsCache = createTtsCache({ dir: TTS_CACHE_DIR, maxMemory: 64 });
 /** Friends co-op rooms (PR9). Default on; set FF_ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.FF_ENABLE_ROOMS !== "0";
 
@@ -2397,6 +2410,167 @@ async function handleMarketImage(body) {
   }
 }
 
+/* —— Text-to-speech (xAI) —— */
+
+/**
+ * Proxy browser "Read out loud" to xAI TTS with shared server cache.
+ * Same text+voice+language → one file for all users (memory + data/tts-cache/).
+ * @param {object} body
+ * @returns {Promise<{ buffer: Buffer, contentType: string, voice: string, charCount: number, latencyMs: number, cache: "hit"|"miss", key: string }>}
+ */
+async function handleTts(body) {
+  const raw = normalizeTtsText(body?.text);
+  if (!raw) {
+    const err = new Error("text is required");
+    err.status = 400;
+    throw err;
+  }
+  if (raw.length > TTS_MAX_CHARS) {
+    const err = new Error(`text exceeds ${TTS_MAX_CHARS} characters`);
+    err.status = 400;
+    throw err;
+  }
+
+  const voice =
+    String(body?.voice_id || body?.voice || TTS_VOICE)
+      .trim()
+      .slice(0, 64) || TTS_VOICE;
+  const language = String(body?.language || "en").trim().slice(0, 16) || "en";
+  const sessionId = clientSessionFromBody(body);
+  const key = ttsCacheKey({ text: raw, voice, language, fingerprint: "norm=1" });
+  const t0 = Date.now();
+
+  // Fast path: shared cache (no AI auth required)
+  const cached = ttsCache.get(key);
+  if (cached) {
+    const latencyMs = Date.now() - t0;
+    usage.record({
+      type: "ai_tts",
+      source: "cache",
+      voice: cached.voice || voice,
+      charCount: cached.charCount || raw.length,
+      bytes: cached.buffer.length,
+      latencyMs,
+      ok: true,
+      sessionId,
+    });
+    return {
+      buffer: cached.buffer,
+      contentType: cached.contentType || "audio/mpeg",
+      voice: cached.voice || voice,
+      charCount: cached.charCount || raw.length,
+      latencyMs,
+      cache: "hit",
+      key,
+    };
+  }
+
+  let entry;
+  let cache;
+  try {
+    ({ entry, cache } = await ttsCache.getOrCreate(key, async () => {
+      let token = await resolveAccessToken();
+      if (!token) {
+        const err = new Error(
+          "AI not configured — sign in with SuperGrok or set FF_XAI_API_KEY"
+        );
+        err.status = 503;
+        throw err;
+      }
+
+      const payload = {
+        text: raw,
+        voice_id: voice,
+        language,
+        text_normalization: true,
+      };
+
+      let res = await fetch(`${XAI_BASE}/tts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        token = await resolveAccessToken({ forceRefresh: true });
+        if (token) {
+          res = await fetch(`${XAI_BASE}/tts`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
+
+      if (!res.ok) {
+        let detail = "";
+        try {
+          detail = (await res.text()).slice(0, 240);
+        } catch {
+          /* ignore */
+        }
+        const err = new Error(
+          detail
+            ? `TTS upstream ${res.status}: ${detail}`
+            : `TTS upstream ${res.status}`
+        );
+        err.status = res.status >= 400 && res.status < 600 ? res.status : 502;
+        throw err;
+      }
+
+      const ab = await res.arrayBuffer();
+      const buffer = Buffer.from(ab);
+      return {
+        buffer,
+        contentType: res.headers.get("content-type") || "audio/mpeg",
+        voice,
+        language,
+        charCount: raw.length,
+      };
+    }));
+  } catch (e) {
+    usage.record({
+      type: "ai_tts",
+      source: "error",
+      voice,
+      charCount: raw.length,
+      latencyMs: Date.now() - t0,
+      ok: false,
+      sessionId,
+    });
+    throw e;
+  }
+
+  const latencyMs = Date.now() - t0;
+
+  usage.record({
+    type: "ai_tts",
+    source: cache === "miss" ? "ai" : "cache",
+    voice: entry.voice || voice,
+    charCount: entry.charCount || raw.length,
+    bytes: entry.buffer.length,
+    latencyMs,
+    ok: true,
+    sessionId,
+  });
+
+  return {
+    buffer: entry.buffer,
+    contentType: entry.contentType || "audio/mpeg",
+    voice: entry.voice || voice,
+    charCount: entry.charCount || raw.length,
+    latencyMs,
+    cache,
+    key,
+  };
+}
+
 /* —— HTTP —— */
 
 function sendJson(res, status, data) {
@@ -2499,6 +2673,9 @@ const server = http.createServer(async (req, res) => {
         actionPoints: Boolean(GAME.features?.actionPoints),
         budgetWill: Boolean(GAME.features?.budgetWill),
         rooms: ROOMS_ENABLED,
+        /** Cloud TTS available when AI auth is configured */
+        tts: ai,
+        ttsVoice: TTS_VOICE,
       },
       roomStats: roomManager ? roomManager.stats() : null,
       usageEnabled: usage.enabled,
@@ -2650,6 +2827,31 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Market image generation failed",
+      });
+    }
+  }
+
+  if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
+    try {
+      const body = await readBody(req);
+      const result = await handleTts(body);
+      res.writeHead(200, {
+        "Content-Type": result.contentType || "audio/mpeg",
+        "Content-Length": result.buffer.length,
+        "Cache-Control": "private, max-age=3600",
+        "Access-Control-Allow-Origin": "*",
+        "X-TTS-Voice": result.voice,
+        "X-TTS-Chars": String(result.charCount),
+        "X-TTS-Cache": result.cache || "miss",
+        "X-TTS-Key": result.key || "",
+      });
+      return res.end(result.buffer);
+    } catch (e) {
+      console.error("[tts]", e.message || e);
+      const status = e.status || 500;
+      return sendJson(res, status, {
+        ok: false,
+        error: e.message || "TTS failed",
       });
     }
   }

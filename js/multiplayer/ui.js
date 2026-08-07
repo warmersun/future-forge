@@ -26,6 +26,7 @@ import {
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { renderMarkdownSafe } from "../md-lite.js";
+import { attachReadAloud } from "../read-aloud.js";
 import {
   initTechDrawers,
   updateTechDrawerCount,
@@ -100,11 +101,12 @@ export function initFriendsUi(api) {
     if (brief) {
       sceneEl.classList.add("quest-brief");
       sceneEl.innerHTML = renderMarkdownSafe(brief);
-      return;
+    } else {
+      sceneEl.classList.remove("quest-brief");
+      sceneEl.textContent =
+        mission?.scene || mission?.problem || mission?.description || "";
     }
-    sceneEl.classList.remove("quest-brief");
-    sceneEl.textContent =
-      mission?.scene || mission?.problem || mission?.description || "";
+    attachReadAloud(sceneEl);
   }
 
   /**
@@ -281,11 +283,13 @@ export function initFriendsUi(api) {
 
     const briefMission = roomPick.mission || snap.questMeta?.mission || null;
     const briefGid = roomPick.globalId || snap.questMeta?.globalId || briefMission?.globalId;
-    paintScenarioBrief($("#room-scenario-brief"), briefMission, {
+    const roomBrief = $("#room-scenario-brief");
+    paintScenarioBrief(roomBrief, briefMission, {
       escapeHtml,
       globalId: briefGid,
       heading: briefMission ? "Selected Quest" : "Quest",
     });
+    if (roomBrief) attachReadAloud(roomBrief);
 
     const summary = $("#room-mission-summary");
     if (summary) {
@@ -575,11 +579,13 @@ export function initFriendsUi(api) {
         .join("");
     }
 
-    paintScenarioBrief($("#mp-scenario-brief"), mission, {
+    const mpBrief = $("#mp-scenario-brief");
+    paintScenarioBrief(mpBrief, mission, {
       escapeHtml,
       globalId: place?.globalId || mission?.globalId || snap?.mp?.place?.globalId,
       heading: "Challenge",
     });
+    if (mpBrief) attachReadAloud(mpBrief);
 
     const plist = $("#mp-player-list");
     if (plist) {
@@ -1678,6 +1684,12 @@ export function initFriendsUi(api) {
         setText("hs-brief-state", brief.currentState || "");
         setText("hs-brief-causes", brief.rootCauses || "");
         setText("hs-brief-warnings", brief.warnings || "");
+        attachReadAloud(briefRoot, {
+          getText: () =>
+            [brief.currentState, brief.rootCauses, brief.warnings]
+              .filter(Boolean)
+              .join("\n\n"),
+        });
       } else {
         briefRoot.hidden = true;
       }

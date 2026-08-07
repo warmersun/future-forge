@@ -96,6 +96,12 @@ import {
 } from "./quest-tile.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
+import {
+  attachReadAloud,
+  refreshReadAloud,
+  stopReadAloud,
+  setReadAloudToast,
+} from "./read-aloud.js";
 import { initFriendsUi } from "./multiplayer/ui.js";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js";
 import { createRoomBridge } from "./multiplayer/room-bridge.js";
@@ -2707,6 +2713,7 @@ function tips() {
 
 /* —— Screens —— */
 function showScreen(id) {
+  stopReadAloud();
   state.screen = id;
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
   if (id === "title") {
@@ -3756,6 +3763,7 @@ function renderProblemBrief(global, { drafting = false } = {}) {
   const brief = global ? briefForGlobal(global) : null;
   if (!brief) {
     root.hidden = true;
+    refreshReadAloud(root);
     return;
   }
   root.hidden = false;
@@ -3774,6 +3782,12 @@ function renderProblemBrief(global, { drafting = false } = {}) {
   if (stateEl) stateEl.textContent = brief.currentState;
   if (causesEl) causesEl.textContent = brief.rootCauses;
   if (warnEl) warnEl.textContent = brief.warnings;
+  attachReadAloud(root, {
+    getText: () =>
+      [brief.currentState, brief.rootCauses, brief.warnings]
+        .filter(Boolean)
+        .join("\n\n"),
+  });
 }
 
 /** Neutral loading shells — no draft titles that get replaced when AI finishes */
@@ -4468,6 +4482,7 @@ function renderWorkshop() {
       sceneEl.classList.remove("quest-brief");
       sceneEl.textContent = m.scene || m.problem || "";
     }
+    attachReadAloud(sceneEl);
   }
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
   const spotChip = $("#ws-spotlight-chip");
@@ -4518,7 +4533,11 @@ function renderWorkshop() {
     if (state.waitReport) {
       wr.hidden = false;
       wr.innerHTML = state.waitReport;
-    } else wr.hidden = true;
+      attachReadAloud(wr);
+    } else {
+      wr.hidden = true;
+      refreshReadAloud(wr);
+    }
   }
 
   const nameEl = $("#invention-name");
@@ -7484,6 +7503,7 @@ function paintActiveEncounter() {
       speechEl.innerHTML = deployStagesEnabled()
         ? "<p><strong>Challenge cleared.</strong> Field a <strong>Pilot</strong>, then Scale, then declare the new normal — or hold the line after Pilot.</p>"
         : "<p><strong>Challenge cleared.</strong> You may deploy when ready.</p>";
+      syncReadAloud(speechEl);
     }
     const qClear = $("#challenge-question");
     if (qClear) {
@@ -7573,6 +7593,7 @@ function paintActiveEncounter() {
     speechPaint.innerHTML = enc.speech
       ? `<p>${escapeHtml(enc.speech || "").replace(/\n/g, "<br>")}</p>`
       : aiPendingHtml("Waiting for the challenger speech…");
+    syncReadAloud(speechPaint);
   }
   const qPaint = $("#challenge-question");
   if (qPaint) {
@@ -7712,10 +7733,14 @@ async function poseChallenge(angleMeta) {
     setChallengerVisual(angle);
     $("#challenge-angle-title").textContent = angle.label;
     $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
-    $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(
-      /\n/g,
-      "<br>"
-    )}</p>`;
+    const speechPose = $("#challenge-speech");
+    if (speechPose) {
+      speechPose.innerHTML = `<p>${escapeHtml(state.challengeText).replace(
+        /\n/g,
+        "<br>"
+      )}</p>`;
+      syncReadAloud(speechPose);
+    }
     $("#challenge-question").textContent = state.challengeQuestion;
 
     refreshChallengeVision(
@@ -8156,7 +8181,11 @@ function renderChallengeStep() {
     setChallengerVisual(angle);
   }
   if (state.challengeText) {
-    $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
+    const essaySpeech = $("#challenge-speech");
+    if (essaySpeech) {
+      essaySpeech.innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
+      syncReadAloud(essaySpeech);
+    }
   }
   $("#challenge-question").textContent = state.challengeQuestion || "";
   if ($("#challenge-answer") && state.challengeAnswer != null) {
@@ -9438,10 +9467,14 @@ function paintSpectatorChallengerChrome(activeName) {
     setChallengerVisual(null);
   }
   if (state.challengeText) {
-    $("#challenge-speech").innerHTML = `<p>${escapeHtml(state.challengeText).replace(
-      /\n/g,
-      "<br>"
-    )}</p>`;
+    const specSpeech = $("#challenge-speech");
+    if (specSpeech) {
+      specSpeech.innerHTML = `<p>${escapeHtml(state.challengeText).replace(
+        /\n/g,
+        "<br>"
+      )}</p>`;
+      syncReadAloud(specSpeech);
+    }
   }
   if (state.challengeQuestion) {
     $("#challenge-question").textContent = state.challengeQuestion;
@@ -14524,7 +14557,10 @@ function openTechModal(id) {
     lead.textContent =
       "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
   }
-  if (body) body.innerHTML = techLearnCardHtml(t, { newest: true });
+  if (body) {
+    body.innerHTML = techLearnCardHtml(t, { newest: true });
+    syncReadAloud(body);
+  }
   $("#modal-backdrop").classList.add("open");
 }
 
@@ -14558,15 +14594,28 @@ function openLearnStack() {
     body.innerHTML = ids
       .map((id, i) => techLearnCardHtml(techById(id), { newest: i === 0 }))
       .join("");
+    syncReadAloud(body);
   }
   $("#modal-backdrop").classList.add("open");
 }
 
 function closeModal() {
+  stopReadAloud();
   $("#modal-backdrop").classList.remove("open");
 }
 
 /* —— Utils —— */
+
+/**
+ * Attach / refresh Read out loud on a long-text host (no-op if missing).
+ * @param {HTMLElement|null|undefined} el
+ * @param {Parameters<typeof attachReadAloud>[1]} [opts]
+ */
+function syncReadAloud(el, opts) {
+  if (!el) return;
+  attachReadAloud(el, opts);
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -14758,6 +14807,7 @@ function queueMarketNewsModal(news, opts = {}) {
 function closeMarketNewsModal(opts = {}) {
   const el = document.getElementById("market-news-modal");
   if (!el) return;
+  stopReadAloud();
   if (marketNewsAutoCloseT) {
     clearTimeout(marketNewsAutoCloseT);
     marketNewsAutoCloseT = null;
@@ -14931,6 +14981,7 @@ function armYearFlashHold(ms) {
 function closeYearBulletinModal() {
   const el = document.getElementById("year-bulletin-modal");
   if (!el) return;
+  stopReadAloud();
   yearBulletinOpen = false;
   document.body.classList.remove("year-bulletin-open");
   el.hidden = true;
@@ -15042,6 +15093,16 @@ function showYearBulletinModal(bulletin, opts = {}) {
           .join("")
       : `<li class="year-bulletin-item"><strong>Quiet year</strong><span class="year-bulletin-detail">No major curated highlights — keep claims pilot-honest.</span></li>`;
   }
+  // Read aloud: title + intro + highlight list
+  if (body) {
+    syncReadAloud(body, {
+      getText: () => {
+        const intro = body.textContent || "";
+        const items = list?.innerText || "";
+        return [title?.textContent, intro, items].filter(Boolean).join("\n");
+      },
+    });
+  }
   if (okBtn) {
     okBtn.onclick = (ev) => {
       ev.preventDefault();
@@ -15147,7 +15208,13 @@ function showMarketNewsModal(news) {
       news.round != null ? `Breaking · Round ${news.round}` : "Breaking market news";
   }
   if (headline) headline.textContent = news.headline || "Market shift";
-  if (body) body.textContent = news.body || "";
+  if (body) {
+    body.textContent = news.body || "";
+    syncReadAloud(body, {
+      getText: () =>
+        [news.headline, news.body].filter(Boolean).join(". "),
+    });
+  }
   if (fallback) {
     fallback.hidden = false;
     fallback.textContent = news.icon || "📰";
@@ -16290,6 +16357,7 @@ function bind() {
 
 export function init() {
   loadPersistedProgress();
+  setReadAloudToast(flashToast);
   bind();
   initTechDrawers();
   showScreen("title");

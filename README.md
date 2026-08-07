@@ -84,6 +84,7 @@ Copy `.env.example` to `.env` if you want overrides:
 FF_PORT=8765
 FF_XAI_MODEL=grok-4.5
 # FF_XAI_API_KEY=xai-...   # see auth below
+# FF_TTS_VOICE=eve         # optional default for Read out loud
 ```
 
 ---
@@ -94,6 +95,7 @@ The Node server serves static files and exposes:
 
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
 - `POST /api/vision` — Imagine-based future vision images  
+- `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
 - `GET /api/health` — co-inventor / auth status  
 - `GET /api/usage` — AI token / image / session rollups (hosting cost estimates)
 
