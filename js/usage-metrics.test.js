@@ -121,6 +121,7 @@ describe("createUsageTracker", () => {
         textInPerMTok: 1,
         textOutPerMTok: 2,
         image: 0.05,
+        ttsPerMChar: 1,
       },
       warn: () => {},
     });
@@ -212,6 +213,59 @@ describe("createUsageTracker", () => {
     assert.equal(s.lifetime.estimatedCostUsd, 0.05);
   });
 
+  it("records ai_tts live chars and cost; cache not billed", () => {
+    tracker.record({
+      type: "ai_tts",
+      source: "ai",
+      voice: "eve",
+      charCount: 1000,
+      bytes: 50_000,
+      latencyMs: 1200,
+      ok: true,
+    });
+    tracker.record({
+      type: "ai_tts",
+      source: "cache",
+      voice: "eve",
+      charCount: 1000,
+      bytes: 50_000,
+      latencyMs: 5,
+      ok: true,
+    });
+    tracker.record({
+      type: "ai_tts",
+      source: "error",
+      voice: "ara",
+      charCount: 400,
+      latencyMs: 800,
+      ok: false,
+    });
+    const s = tracker.getSummary();
+    assert.equal(s.lifetime.ttsLive, 1);
+    assert.equal(s.lifetime.ttsCacheHits, 1);
+    assert.equal(s.lifetime.ttsErrors, 1);
+    assert.equal(s.lifetime.ttsChars, 1000);
+    assert.equal(s.lifetime.ttsBytes, 100_000);
+    assert.equal(s.byTtsVoice.eve.live, 1);
+    assert.equal(s.byTtsVoice.eve.cache, 1);
+    assert.equal(s.byTtsVoice.eve.chars, 1000);
+    assert.equal(s.byTtsVoice.ara.errors, 1);
+    // cost: 1000/1e6 * 1 = 0.001 (cache/error not billed)
+    assert.equal(s.lifetime.estimatedCostUsd, 0.001);
+    assert.equal(s.prices.ttsPerMChar, 1);
+
+    const day = utcDay(clock);
+    const lines = fs
+      .readFileSync(path.join(tmp, `events-${day}.jsonl`), "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
+    const tts = lines.filter((e) => e.type === "ai_tts");
+    assert.equal(tts.length, 3);
+    assert.equal(tts[0].source, "ai");
+    assert.equal(tts[0].charCount, 1000);
+  });
+
   it("session touch + idle close accumulates duration", () => {
     tracker.touchSession("client-abc-001");
     clock += 5000;
@@ -234,6 +288,14 @@ describe("createUsageTracker", () => {
       totalTokens: 600,
       ok: true,
     });
+    tracker.record({
+      type: "ai_tts",
+      source: "ai",
+      voice: "eve",
+      charCount: 2500,
+      bytes: 100_000,
+      ok: true,
+    });
     tracker.flush();
     tracker.close();
 
@@ -248,8 +310,13 @@ describe("createUsageTracker", () => {
       const s = tracker2.getSummary();
       assert.equal(s.lifetime.aiTextCalls, 1);
       assert.equal(s.lifetime.totalTokens, 600);
+      assert.equal(s.lifetime.ttsLive, 1);
+      assert.equal(s.lifetime.ttsChars, 2500);
+      assert.equal(s.byTtsVoice.eve.live, 1);
+      assert.equal(s.byTtsVoice.eve.chars, 2500);
       assert.equal(s.today.date, utcDay(clock));
       assert.equal(s.today.totalTokens, 600);
+      assert.equal(s.today.ttsChars, 2500);
     } finally {
       tracker2.close();
     }

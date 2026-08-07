@@ -97,13 +97,13 @@ The Node server serves static files and exposes:
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
 - `GET /api/health` — co-inventor / auth status  
-- `GET /api/usage` — AI token / image / session rollups (hosting cost estimates)
+- `GET /api/usage` — AI token / image / TTS / session rollups (hosting cost estimates)
 
 Auth is resolved **on the server** (tokens never go to the browser).
 
 ### Usage metrics (hosting cost estimates)
 
-**Off by default.** Enable when you want token / image / session logs for cost estimates:
+**Off by default.** Enable when you want token / image / TTS / session logs for cost estimates:
 
 ```bash
 npm start -- --usage
@@ -119,7 +119,7 @@ When enabled, the server writes under **`data/usage/`** (gitignored):
 
 | File | Contents |
 |------|----------|
-| `events-YYYY-MM-DD.jsonl` | Append-only events (text tokens, image gens, sessions, rooms) |
+| `events-YYYY-MM-DD.jsonl` | Append-only events (text tokens, image gens, TTS, sessions, rooms) |
 | `summary.json` | Lifetime + UTC-day rollups, active sessions/rooms, optional `$` estimate |
 
 Inspect live rollups:
@@ -136,8 +136,9 @@ curl -s http://127.0.0.1:8765/api/usage | jq .
 | `FF_USAGE_DIR` | Override metrics directory |
 | `FF_USAGE_PRICE_TEXT_IN_PER_MTOK` / `FF_USAGE_PRICE_TEXT_OUT_PER_MTOK` | Optional $ per 1M tokens |
 | `FF_USAGE_PRICE_IMAGE` | Optional $ per live image generate/edit |
+| `FF_USAGE_PRICE_TTS_PER_MCHAR` | Optional $ per 1M live TTS characters |
 
-**Notes:** Cached vision frames and multiplayer follow-only peeks are counted but **not** billed as live images. Local co-inventor fallback records calls with **zero** tokens. Prompts and player text are never stored. Assumes a single Node process (set distinct `FF_USAGE_DIR` per instance if you scale out).
+**Notes:** Cached vision frames, multiplayer follow-only peeks, and TTS cache hits are counted but **not** billed as live usage. Local co-inventor fallback records calls with **zero** tokens. Prompts and player text are never stored. Assumes a single Node process (set distinct `FF_USAGE_DIR` per instance if you scale out).
 
 ### Option A — SuperGrok OAuth (default for local dev)
 

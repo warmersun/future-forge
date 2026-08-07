@@ -20,6 +20,11 @@ import crypto from "node:crypto";
  *   imageCacheHits: number,
  *   imageFollow: number,
  *   imageErrors: number,
+ *   ttsLive: number,
+ *   ttsCacheHits: number,
+ *   ttsErrors: number,
+ *   ttsChars: number,
+ *   ttsBytes: number,
  *   sessions: number,
  *   sessionDurationMs: number,
  *   rooms: number,
@@ -33,7 +38,7 @@ import crypto from "node:crypto";
  * @param {boolean} [opts.enabled]
  * @param {number} [opts.flushMs]
  * @param {number} [opts.sessionIdleMs]
- * @param {{ textInPerMTok?: number, textOutPerMTok?: number, image?: number }} [opts.prices]
+ * @param {{ textInPerMTok?: number, textOutPerMTok?: number, image?: number, ttsPerMChar?: number }} [opts.prices]
  * @param {() => number} [opts.now] — inject clock for tests
  * @param {(msg: string) => void} [opts.warn]
  */
@@ -48,6 +53,7 @@ export function createUsageTracker(opts = {}) {
     textInPerMTok: numOrNull(opts.prices?.textInPerMTok),
     textOutPerMTok: numOrNull(opts.prices?.textOutPerMTok),
     image: numOrNull(opts.prices?.image),
+    ttsPerMChar: numOrNull(opts.prices?.ttsPerMChar),
   };
   const nowFn = typeof opts.now === "function" ? opts.now : () => Date.now();
   const warn =
@@ -71,6 +77,8 @@ export function createUsageTracker(opts = {}) {
   let byMode = Object.create(null);
   /** @type {Record<string, { live: number, cache: number, follow: number, errors: number }>} */
   let byImageKind = Object.create(null);
+  /** @type {Record<string, { live: number, cache: number, errors: number, chars: number }>} */
+  let byTtsVoice = Object.create(null);
 
   let flushTimer = null;
   let sweepTimer = null;
@@ -126,6 +134,9 @@ export function createUsageTracker(opts = {}) {
       }
       if (raw?.byImageKind && typeof raw.byImageKind === "object") {
         byImageKind = { ...raw.byImageKind };
+      }
+      if (raw?.byTtsVoice && typeof raw.byTtsVoice === "object") {
+        byTtsVoice = { ...raw.byTtsVoice };
       }
     } catch (e) {
       warn(`load summary failed: ${e.message || e}`);
@@ -240,6 +251,39 @@ export function createUsageTracker(opts = {}) {
       return;
     }
 
+    if (type === "ai_tts") {
+      const voice = String(event.voice || "unknown").slice(0, 64);
+      if (!byTtsVoice[voice]) {
+        byTtsVoice[voice] = { live: 0, cache: 0, errors: 0, chars: 0 };
+      }
+      const src = event.source || "ai";
+      const chars = n(event.charCount);
+      const bytes = n(event.bytes);
+      if (src === "ai") {
+        lifetime.ttsLive += 1;
+        today.ttsLive += 1;
+        byTtsVoice[voice].live += 1;
+        lifetime.ttsChars += chars;
+        today.ttsChars += chars;
+        byTtsVoice[voice].chars += chars;
+        lifetime.ttsBytes += bytes;
+        today.ttsBytes += bytes;
+      } else if (src === "cache") {
+        lifetime.ttsCacheHits += 1;
+        today.ttsCacheHits += 1;
+        byTtsVoice[voice].cache += 1;
+        lifetime.ttsBytes += bytes;
+        today.ttsBytes += bytes;
+      } else if (src === "error") {
+        lifetime.ttsErrors += 1;
+        today.ttsErrors += 1;
+        byTtsVoice[voice].errors += 1;
+      }
+      recomputeCost(lifetime);
+      recomputeCost(today);
+      return;
+    }
+
     if (type === "session_end") {
       lifetime.sessions += 1;
       today.sessions += 1;
@@ -262,7 +306,8 @@ export function createUsageTracker(opts = {}) {
     const hasAny =
       prices.textInPerMTok != null ||
       prices.textOutPerMTok != null ||
-      prices.image != null;
+      prices.image != null ||
+      prices.ttsPerMChar != null;
     if (!hasAny) {
       counters.estimatedCostUsd = null;
       return;
@@ -276,6 +321,9 @@ export function createUsageTracker(opts = {}) {
     }
     if (prices.image != null) {
       cost += counters.imageLive * prices.image;
+    }
+    if (prices.ttsPerMChar != null) {
+      cost += (counters.ttsChars / 1e6) * prices.ttsPerMChar;
     }
     counters.estimatedCostUsd = Math.round(cost * 1e6) / 1e6;
   }
@@ -448,12 +496,14 @@ export function createUsageTracker(opts = {}) {
       today: { ...today },
       byMode: { ...byMode },
       byImageKind: { ...byImageKind },
+      byTtsVoice: { ...byTtsVoice },
       activeSessions: sessions.size,
       activeRooms: rooms.size,
       prices: {
         textInPerMTok: prices.textInPerMTok,
         textOutPerMTok: prices.textOutPerMTok,
         image: prices.image,
+        ttsPerMChar: prices.ttsPerMChar,
       },
     };
   }
@@ -575,6 +625,7 @@ export function usageTrackerFromEnv(
     textInPerMTok: numOrNull(env.FF_USAGE_PRICE_TEXT_IN_PER_MTOK),
     textOutPerMTok: numOrNull(env.FF_USAGE_PRICE_TEXT_OUT_PER_MTOK),
     image: numOrNull(env.FF_USAGE_PRICE_IMAGE),
+    ttsPerMChar: numOrNull(env.FF_USAGE_PRICE_TTS_PER_MCHAR),
   };
   return createUsageTracker({
     dir,
@@ -636,6 +687,11 @@ function emptyCounters() {
     imageCacheHits: 0,
     imageFollow: 0,
     imageErrors: 0,
+    ttsLive: 0,
+    ttsCacheHits: 0,
+    ttsErrors: 0,
+    ttsChars: 0,
+    ttsBytes: 0,
     sessions: 0,
     sessionDurationMs: 0,
     rooms: 0,

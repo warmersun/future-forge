@@ -97,7 +97,7 @@ const ttsCache = createTtsCache({ dir: TTS_CACHE_DIR, maxMemory: 64 });
 const ROOMS_ENABLED = process.env.FF_ENABLE_ROOMS !== "0";
 
 /**
- * Hosting-cost usage metrics (tokens, images, sessions).
+ * Hosting-cost usage metrics (tokens, images, TTS, sessions).
  * Off by default — enable with `node server.mjs --usage` or FF_USAGE_ENABLED=1.
  */
 const usage = usageTrackerFromEnv(
