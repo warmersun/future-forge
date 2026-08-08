@@ -2635,7 +2635,13 @@ function serveStatic(req, res) {
       return res.end("Not found");
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+    /** @type {Record<string, string>} */
+    const headers = { "Content-Type": MIME[ext] || "application/octet-stream" };
+    // HTML/JS/CSS: avoid sticky caches hiding UI fixes (lesson progress, etc.)
+    if (ext === ".html" || ext === ".js" || ext === ".css" || ext === ".mjs") {
+      headers["Cache-Control"] = "no-store";
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }

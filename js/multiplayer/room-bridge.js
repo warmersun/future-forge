@@ -255,6 +255,14 @@ export function createRoomBridge() {
     };
 
     state.mission = cloneMission(place.mission);
+    // Theme / non-learning quests: never carry module lesson chrome into invent
+    if (state.mission && state.mission.isLearningModule !== true) {
+      delete state.mission.module;
+      delete state.mission.lesson;
+      delete state.mission.totalLessons;
+      delete state.mission.aiTutorContext;
+      delete state.mission.isLearningModule;
+    }
     state.global = opts.global || state.global;
     if (!state.global && place.globalId) {
       state.global = { id: place.globalId };

@@ -2903,22 +2903,31 @@ function isLearningMission(m) {
 /**
  * Invent-screen module progress bar: Learning catalog lessons only.
  * Theme / sponsored / ordinary library quests never show this chrome.
+ * Requires the explicit quest-tile flag — do not infer from stray module/lesson fields.
  * @param {object|null|undefined} m
  */
 function shouldShowInventLessonProgress(m) {
   if (!m || typeof m !== "object") return false;
+  if (m.isLearningModule !== true) return false;
   const title = typeof m.module === "string" ? m.module.trim() : "";
   const total = Number(m.totalLessons);
   const lesson = Number(m.lesson);
   const hasTotal = Number.isFinite(total) && total >= 1;
   const hasLesson = Number.isFinite(lesson) && lesson >= 1;
-  // Authoritative flag from quest tile
-  if (m.isLearningModule === true) {
-    return Boolean(title || hasTotal || hasLesson);
-  }
-  // Legacy imports: module title plus ordered lesson metadata (no bare totalLessons)
-  if (title && (hasTotal || hasLesson)) return true;
-  return false;
+  return Boolean(title || hasTotal || hasLesson);
+}
+
+/**
+ * Hide invent lesson progress chrome (theme / sponsored / non-learning quests).
+ * @param {HTMLElement|null} [el]
+ */
+function hideInventLessonProgress(el) {
+  const progressEl = el || $("#ws-lesson-progress");
+  if (!progressEl) return;
+  progressEl.hidden = true;
+  progressEl.setAttribute("hidden", "");
+  progressEl.style.display = "none";
+  progressEl.innerHTML = "";
 }
 
 function isSponsoredMission(m) {
@@ -4314,14 +4323,18 @@ function startMission(mission) {
   // Prefer normalized learning fields; strip stray module/lesson metadata from raw mission
   // so theme/sponsored quests never paint invent lesson progress by accident.
   const merged = { ...mission, ...normalized, id: mission.id || normalized.id };
-  if (!normalized.isLearningModule) {
-    if (normalized.module == null) delete merged.module;
-    if (normalized.lesson == null) delete merged.lesson;
-    if (normalized.totalLessons == null) delete merged.totalLessons;
-    if (normalized.aiTutorContext == null) delete merged.aiTutorContext;
+  if (normalized.isLearningModule !== true) {
+    delete merged.module;
+    delete merged.lesson;
+    delete merged.totalLessons;
+    delete merged.aiTutorContext;
     delete merged.isLearningModule;
   }
   state.mission = merged;
+  // Clear invent progress immediately (before first paint) for non-learning quests
+  if (!shouldShowInventLessonProgress(merged)) {
+    hideInventLessonProgress();
+  }
   state.global = globalById(state.mission.globalId) || state.global;
   state.year = state.mission.startYear;
   state.turn = 0;
@@ -4487,19 +4500,24 @@ function renderWorkshop() {
           }
         }
       }
-      progressEl.hidden = false;
-      progressEl.removeAttribute("hidden");
-      progressEl.innerHTML = learningProgressBarHtml({
+      const html = learningProgressBarHtml({
         module: title,
         lesson: Number.isFinite(lesson) ? lesson : undefined,
         totalLessons: Number.isFinite(totalLessons) && totalLessons >= 1 ? totalLessons : undefined,
         completedCount,
         currentLesson: Number.isFinite(lesson) ? lesson : undefined,
       });
+      // Never leave an empty/half-painted slot visible on invent
+      if (!html) {
+        hideInventLessonProgress(progressEl);
+      } else {
+        progressEl.innerHTML = html;
+        progressEl.hidden = false;
+        progressEl.removeAttribute("hidden");
+        progressEl.style.display = "";
+      }
     } else {
-      progressEl.hidden = true;
-      progressEl.setAttribute("hidden", "");
-      progressEl.innerHTML = "";
+      hideInventLessonProgress(progressEl);
     }
   }
   const sponsorEl = $("#ws-sponsor");

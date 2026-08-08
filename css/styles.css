@@ -2991,8 +2991,13 @@ body.mp-hotseat .hud-product {
 }
 
 /* Force hide when attribute is set (author display rules elsewhere must not leak a bar) */
-.lesson-progress-slot[hidden] {
+.lesson-progress-slot[hidden],
+#ws-lesson-progress[hidden] {
   display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
 }
 
 .lesson-progress {
