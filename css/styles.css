@@ -428,6 +428,11 @@ button:disabled {
   color: var(--text-dim);
 }
 
+/* display:inline-flex beats UA [hidden] — force hide when attribute is set */
+.room-code-chip[hidden] {
+  display: none !important;
+}
+
 .room-code-chip.sm {
   font-size: 0.78rem;
 }

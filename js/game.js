@@ -1618,27 +1618,44 @@ function isRoomPlayChrome() {
 }
 
 /**
+ * Whether multiplayer chrome should show a hotseat mode chip (not online room).
+ */
+function isHotseatPlayChrome() {
+  if (isRoomPlayChrome()) return false;
+  return Boolean(
+    hotseatBridge.isHotseat() ||
+      state.mp?.mode === "hotseat" ||
+      document.body.classList.contains("mp-hotseat")
+  );
+}
+
+/**
  * Paint static [data-mp-room-code] chips on workshop / challenge / deploy bars.
- * Keep visible in online room play; empty code → placeholder, not hide.
+ * Online room → "Room {code}"; hotseat → "HOTSEAT"; solo → hide.
+ * Always rewrite full chip HTML so mode switches cannot leave stale "Room …" text.
  */
 function updateMpRoomCodeChips() {
   const chips = document.querySelectorAll("[data-mp-room-code]");
   if (!chips.length) return;
   const roomShow = isRoomPlayChrome();
+  const hotseatShow = !roomShow && isHotseatPlayChrome();
   const code = mpRoomCode();
-  const label = code || "————";
+  const roomLabel = code || "————";
   for (const chip of chips) {
-    if (!roomShow) {
+    if (!roomShow && !hotseatShow) {
       chip.hidden = true;
       chip.setAttribute("hidden", "");
       continue;
     }
     chip.hidden = false;
     chip.removeAttribute("hidden");
-    chip.title = code ? `Room code ${code}` : "Room code";
-    const strong = chip.querySelector("strong");
-    if (strong) strong.textContent = label;
-    else chip.innerHTML = `Room <strong>${escapeHtml(label)}</strong>`;
+    if (hotseatShow) {
+      chip.title = "Hotseat — one device";
+      chip.innerHTML = `<strong>HOTSEAT</strong>`;
+    } else {
+      chip.title = code ? `Room code ${code}` : "Room code";
+      chip.innerHTML = `Room <strong>${escapeHtml(roomLabel)}</strong>`;
+    }
   }
 }
 
@@ -2475,6 +2492,7 @@ function leaveHotseat() {
     document.body.classList.remove("mp-hotseat");
     const bar = $("#mp-workshop-bar");
     if (bar) bar.hidden = true;
+    updateMpRoomCodeChips();
     setMpContributionLock(false);
     setMpActivePlayerBadges(false);
     const abandon = $("#btn-abandon");
