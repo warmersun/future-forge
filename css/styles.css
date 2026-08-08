@@ -7852,9 +7852,23 @@ button.linkish:hover {
     inset 0 1px 0 rgba(255, 236, 190, 0.28);
   text-shadow: 0 0 14px rgba(255, 200, 110, 0.4);
 }
+/* .challenge-banner .ws-spotlight-chip { display:inline-block } beats UA [hidden]
+   → empty gold pill leaked under place name on non-Spotlight theme quests */
+.challenge-banner .ws-spotlight-chip[hidden],
+.ws-spotlight-chip[hidden] {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
 .ws-spotlight-encourage {
   margin: 0.25rem 0 0.5rem;
   font-size: 0.88rem;
+}
+.ws-spotlight-encourage[hidden] {
+  display: none !important;
 }
 
 .daily-spotlight {

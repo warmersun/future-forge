@@ -4570,27 +4570,39 @@ function renderWorkshop() {
     if (m.spotlight?.techId) {
       const tech = techById(m.spotlight.techId);
       spotChip.hidden = false;
+      spotChip.removeAttribute("hidden");
+      spotChip.style.display = "";
       spotChip.textContent = `Spotlight · ${tech?.name || m.spotlight.techId}`;
       if (m.spotlight.advanceSummary) {
         spotChip.title = m.spotlight.advanceSummary;
       }
     } else {
+      // Must beat .challenge-banner .ws-spotlight-chip { display:inline-block }
       spotChip.hidden = true;
+      spotChip.setAttribute("hidden", "");
+      spotChip.style.display = "none";
       spotChip.textContent = "";
+      spotChip.removeAttribute("title");
     }
   }
   if (spotEncourage) {
     if (m.spotlight?.encourageCopy) {
       spotEncourage.hidden = false;
+      spotEncourage.removeAttribute("hidden");
+      spotEncourage.style.display = "";
       spotEncourage.textContent = m.spotlight.encourageCopy;
     } else if (m.spotlight?.techId) {
       const tech = techById(m.spotlight.techId);
       spotEncourage.hidden = false;
+      spotEncourage.removeAttribute("hidden");
+      spotEncourage.style.display = "";
       spotEncourage.textContent = `This Quest is built to practice ${
         tech?.name || m.spotlight.techId
       } — invent with it honestly.`;
     } else {
       spotEncourage.hidden = true;
+      spotEncourage.setAttribute("hidden", "");
+      spotEncourage.style.display = "none";
       spotEncourage.textContent = "";
     }
   }
