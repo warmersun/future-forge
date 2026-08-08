@@ -45,6 +45,19 @@ import {
   ttsCacheKey,
   createTtsCache,
 } from "./js/tts-cache.mjs";
+import { RateLimiter } from "./js/server/rate-limit.mjs";
+import { clientIp, isLoopbackSocket } from "./js/server/client-ip.mjs";
+import { canSeeAdmin } from "./js/server/admin-gate.mjs";
+import { serveStatic } from "./js/server/static.mjs";
+import {
+  readBody,
+  sendJson,
+  errorStatus,
+} from "./js/server/read-body.mjs";
+import {
+  CostPolicy,
+  checkApiSecret,
+} from "./js/server/cost-policy.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -55,6 +68,18 @@ const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
 const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
+/** Optional shared secret for expensive APIs when exposed beyond loopback. */
+const API_SECRET = String(process.env.FF_API_SECRET || "").trim();
+/** Max concurrent rooms (DoS). */
+const MAX_ROOMS = Math.max(
+  1,
+  Number(process.env.FF_MAX_ROOMS) || 200
+);
+/** Max WebSocket text message size (bytes). */
+const WS_MAX_PAYLOAD = Math.max(
+  1024,
+  Number(process.env.FF_WS_MAX_PAYLOAD) || 256 * 1024
+);
 
 function loadEnvFile() {
   const candidates = [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")];
@@ -96,6 +121,10 @@ const ttsCache = createTtsCache({ dir: TTS_CACHE_DIR, maxMemory: 64 });
 /** Friends co-op rooms (PR9). Default on; set FF_ENABLE_ROOMS=0 to disable. */
 const ROOMS_ENABLED = process.env.FF_ENABLE_ROOMS !== "0";
 
+/** Shared rate limiter for HTTP cost policy + room manager. */
+const rateLimiter = new RateLimiter();
+const costPolicy = new CostPolicy({ limiter: rateLimiter });
+
 /**
  * Hosting-cost usage metrics (tokens, images, TTS, sessions).
  * Off by default — enable with `node server.mjs --usage` or FF_USAGE_ENABLED=1.
@@ -109,11 +138,31 @@ const usage = usageTrackerFromEnv(
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED
   ? new RoomManager({
+      maxRooms: MAX_ROOMS,
+      rateLimiter,
       onRoomStart: (code, meta) => usage.roomStart(code, meta),
       onRoomEnd: (code, meta) => usage.roomEnd(code, meta),
       onRoomPlayers: (code, n) => usage.roomTouchPlayers(code, n),
     })
   : null;
+
+/**
+ * Gate expensive AI POST routes: rate limit + optional FF_API_SECRET.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {'co-invent'|'vision'|'market-image'|'tts'} route
+ * @param {object|null} [body]
+ */
+function gateExpensive(req, route, body = null) {
+  const ip = clientIp(req);
+  const rate = costPolicy.allowExpensive(route, ip);
+  if (!rate.ok) return rate;
+  const secret = checkApiSecret(req, body, {
+    secret: API_SECRET,
+    isLoopback: isLoopbackSocket(req),
+  });
+  if (!secret.ok) return secret;
+  return { ok: true, ip };
+}
 
 /**
  * @param {object|null|undefined} body
@@ -322,18 +371,7 @@ async function getClient(opts) {
   });
 }
 
-const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".ico": "image/x-icon",
-  ".woff2": "font/woff2",
-};
+// MIME lives in js/server/static.mjs (imported above).
 
 const SYSTEM_PROMPT = `You are the AI Co-Inventor in Future Forge: a solo learning game about emerging technologies, local invention, and timing.
 
@@ -2577,81 +2615,13 @@ async function handleTts(body) {
 
 /* —— HTTP —— */
 
-function sendJson(res, status, data) {
-  const body = JSON.stringify(data);
-  res.writeHead(status, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
-  });
-  res.end(body);
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let size = 0;
-    req.on("data", (c) => {
-      size += c.length;
-      if (size > 4_000_000) {
-        reject(Object.assign(new Error("Payload too large"), { status: 413 }));
-        req.destroy();
-        return;
-      }
-      chunks.push(c);
-    });
-    req.on("end", () => {
-      const raw = Buffer.concat(chunks).toString("utf8");
-      if (!raw) return resolve({});
-      try {
-        resolve(JSON.parse(raw));
-      } catch {
-        reject(Object.assign(new Error("Invalid JSON"), { status: 400 }));
-      }
-    });
-    req.on("error", reject);
-  });
-}
-
-function safePath(urlPath) {
-  const decoded = decodeURIComponent(urlPath.split("?")[0]);
-  const cleaned = path.normalize(decoded).replace(/^(\.\.[/\\])+/, "");
-  const full = path.join(ROOT, cleaned);
-  if (!full.startsWith(ROOT)) return null;
-  return full;
-}
-
-function serveStatic(req, res) {
-  let urlPath = req.url === "/" ? "/index.html" : req.url.split("?")[0];
-  const filePath = safePath(urlPath);
-  if (!filePath) {
-    res.writeHead(403);
-    return res.end("Forbidden");
-  }
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404);
-      return res.end("Not found");
-    }
-    const ext = path.extname(filePath);
-    /** @type {Record<string, string>} */
-    const headers = { "Content-Type": MIME[ext] || "application/octet-stream" };
-    // HTML/JS/CSS: avoid sticky caches hiding UI fixes (lesson progress, etc.)
-    if (ext === ".html" || ext === ".js" || ext === ".css" || ext === ".mjs") {
-      headers["Cache-Control"] = "no-store";
-    }
-    res.writeHead(200, headers);
-    res.end(data);
-  });
-}
-
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization, X-Admin-Token, X-FF-Secret",
     });
     return res.end();
   }
@@ -2665,35 +2635,55 @@ const server = http.createServer(async (req, res) => {
     } catch {
       ai = false;
     }
-    const lanIps = listLanIpv4();
-    return sendJson(res, 200, {
+    /** Public health — no LAN IPs / paths / room counts (Funnel-safe). */
+    const publicHealth = {
       ok: true,
       coInventor: true,
       vision: ai,
       ai,
-      auth: authInfo.source,
-      model: MODEL,
-      imageModel: IMAGE_MODEL,
+      auth: authInfo.source ? "configured" : null,
       rooms: ROOMS_ENABLED,
-      port: PORT,
-      /** Private LAN IPs / join URLs for friends on the same network */
-      lanIps,
-      lanUrls: lanIps.map((ip) => `http://${ip}:${PORT}`),
       features: {
         actionPoints: Boolean(GAME.features?.actionPoints),
         budgetWill: Boolean(GAME.features?.budgetWill),
         rooms: ROOMS_ENABLED,
-        /** Cloud TTS available when AI auth is configured */
         tts: ai,
         ttsVoice: TTS_VOICE,
       },
-      roomStats: roomManager ? roomManager.stats() : null,
       usageEnabled: usage.enabled,
+    };
+    const admin = canSeeAdmin(req, {
+      url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
+    });
+    if (!admin.ok) {
+      return sendJson(res, 200, publicHealth);
+    }
+    const lanIps = listLanIpv4();
+    return sendJson(res, 200, {
+      ...publicHealth,
+      auth: authInfo.source,
+      model: MODEL,
+      imageModel: IMAGE_MODEL,
+      port: PORT,
+      lanIps,
+      lanUrls: lanIps.map((ip) => `http://${ip}:${PORT}`),
+      roomStats: roomManager ? roomManager.stats() : null,
       usageDir: usage.enabled ? usage._dir : null,
+      trustProxy: process.env.FF_TRUST_PROXY === "1",
+      apiSecretRequired: Boolean(API_SECRET),
+      maxRooms: MAX_ROOMS,
     });
   }
 
   if (req.method === "GET" && req.url?.startsWith("/api/usage")) {
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    const admin = canSeeAdmin(req, { url });
+    if (!admin.ok) {
+      return sendJson(res, admin.status || 403, {
+        ok: false,
+        error: admin.error || "admin_forbidden",
+      });
+    }
     return sendJson(res, 200, {
       ok: true,
       enabled: usage.enabled,
@@ -2755,7 +2745,10 @@ const server = http.createServer(async (req, res) => {
       });
       return sendJson(res, result.ok ? 200 : result.status || 400, result);
     } catch (e) {
-      return sendJson(res, 500, { ok: false, error: e.message || "create_failed" });
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e.message || "create_failed",
+      });
     }
   }
 
@@ -2774,7 +2767,10 @@ const server = http.createServer(async (req, res) => {
         });
         return sendJson(res, result.ok ? 200 : result.status || 400, result);
       } catch (e) {
-        return sendJson(res, 500, { ok: false, error: e.message || "join_failed" });
+        return sendJson(res, errorStatus(e), {
+          ok: false,
+          error: e.message || "join_failed",
+        });
       }
     }
     const hostMatch = req.url?.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/host\/?$/);
@@ -2783,12 +2779,22 @@ const server = http.createServer(async (req, res) => {
         const body = await readBody(req);
         const room = roomManager.rooms.get(hostMatch[1].toUpperCase());
         if (!room) return sendJson(res, 404, { ok: false, error: "room_not_found" });
-        const found = roomManager.findByPlayerToken(body.playerToken);
-        const player = found?.player || null;
+        // Only resolve playerToken inside this room (no cross-room host privilege)
+        const player = roomManager.playerInRoom(room, body.playerToken);
         const result = roomManager.hostCommand(room, player, body.cmd, body);
-        return sendJson(res, result.ok ? 200 : 400, result);
+        const status = result.ok
+          ? 200
+          : result.error === "unauthorized"
+            ? 401
+            : result.error === "not_host" || result.error === "not_quest_chooser"
+              ? 403
+              : 400;
+        return sendJson(res, status, result);
       } catch (e) {
-        return sendJson(res, 500, { ok: false, error: e.message || "host_failed" });
+        return sendJson(res, errorStatus(e), {
+          ok: false,
+          error: e.message || "host_failed",
+        });
       }
     }
   }
@@ -2800,13 +2806,13 @@ const server = http.createServer(async (req, res) => {
       if (!room) return sendJson(res, 404, { ok: false, error: "room_not_found" });
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
       const token = url.searchParams.get("token") || "";
-      const found = roomManager.findByPlayerToken(token);
-      if (!found || found.room.code !== room.code) {
+      const player = roomManager.playerInRoom(room, token);
+      if (!player) {
         return sendJson(res, 401, { ok: false, error: "unauthorized" });
       }
       return sendJson(res, 200, {
         ok: true,
-        snapshot: roomManager.snapshotFor(room, found.player.id),
+        snapshot: roomManager.snapshotFor(room, player.id),
       });
     }
   }
@@ -2814,11 +2820,18 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/vision")) {
     try {
       const body = await readBody(req);
+      const gate = gateExpensive(req, "vision", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          ok: false,
+          error: gate.error || "rate_limited",
+        });
+      }
       const result = await handleVision(body);
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[vision]", e.message || e);
-      const status = e.status || 500;
+      const status = errorStatus(e);
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Vision generation failed",
@@ -2829,11 +2842,18 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
     try {
       const body = await readBody(req);
+      const gate = gateExpensive(req, "market-image", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          ok: false,
+          error: gate.error || "rate_limited",
+        });
+      }
       const result = await handleMarketImage(body);
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[market-image]", e.message || e);
-      const status = e.status || 500;
+      const status = errorStatus(e);
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Market image generation failed",
@@ -2844,6 +2864,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
     try {
       const body = await readBody(req);
+      const gate = gateExpensive(req, "tts", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          ok: false,
+          error: gate.error || "rate_limited",
+        });
+      }
       const result = await handleTts(body);
       res.writeHead(200, {
         "Content-Type": result.contentType || "audio/mpeg",
@@ -2858,7 +2885,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(result.buffer);
     } catch (e) {
       console.error("[tts]", e.message || e);
-      const status = e.status || 500;
+      const status = errorStatus(e);
       return sendJson(res, status, {
         ok: false,
         error: e.message || "TTS failed",
@@ -2869,11 +2896,30 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
     try {
       const body = await readBody(req);
+      const gate = gateExpensive(req, "co-invent", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          error: gate.error || "rate_limited",
+          source: "error",
+          message:
+            gate.error === "api_secret_required"
+              ? "This server requires an API secret for co-inventor calls."
+              : "Too many co-inventor requests — wait a moment and try again.",
+          proposals: {
+            addTechIds: [],
+            removeTechIds: [],
+            inventionName: null,
+            inventionHow: null,
+            inventionImpact: null,
+          },
+          teaching: [],
+        });
+      }
       const result = await handleCoInvent(body);
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
-      const status = e.status || 500;
+      const status = errorStatus(e);
       return sendJson(res, status, {
         error: e.message || "Co-inventor failed",
         source: "error",
@@ -2890,7 +2936,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  if (req.method === "GET") return serveStatic(req, res);
+  if (req.method === "GET") return serveStatic(ROOT, req, res);
 
   res.writeHead(405);
   res.end("Method not allowed");
@@ -2903,12 +2949,19 @@ if (roomManager) {
 
 // WebSocket for friends rooms
 if (ROOMS_ENABLED && roomManager) {
-  const wss = new WebSocketServer({ server, path: "/ws/rooms" });
+  const wss = new WebSocketServer({
+    server,
+    path: "/ws/rooms",
+    maxPayload: WS_MAX_PAYLOAD,
+  });
   wss.on("connection", (socket, req) => {
     let bound = null; // { room, player }
     const ip = clientIp(req);
 
     socket.on("message", (raw) => {
+      if (raw != null && Buffer.byteLength(String(raw)) > WS_MAX_PAYLOAD) {
+        return safeWs(socket, { type: "error", error: "payload_too_large" });
+      }
       let msg;
       try {
         msg = JSON.parse(String(raw));
@@ -2917,7 +2970,7 @@ if (ROOMS_ENABLED && roomManager) {
       }
 
       if (msg.type === "auth") {
-        if (!roomManager.checkRate(`ws-auth:${ip}`, 20, 60 * 1000)) {
+        if (!costPolicy.allow("ws-auth", ip).ok) {
           return safeWs(socket, { type: "error", error: "rate_limited" });
         }
         const found = roomManager.findByPlayerToken(msg.token);
@@ -2935,11 +2988,24 @@ if (ROOMS_ENABLED && roomManager) {
       if (!bound) return safeWs(socket, { type: "error", error: "auth_required" });
 
       const { room, player } = bound;
+      // Token still belongs to this room seat
+      if (!room.players.includes(player) || !roomManager.rooms.has(room.code)) {
+        bound = null;
+        return safeWs(socket, { type: "error", error: "room_gone" });
+      }
 
       if (msg.type === "action") {
         const action = msg.action || msg;
         const aType = action?.type || "?";
         const t0 = Date.now();
+        const actionKey = `${room.code}:${player.id}`;
+        if (!costPolicy.allow("ws-action", actionKey).ok) {
+          return safeWs(socket, {
+            type: "reject",
+            error: "rate_limited",
+            actionType: aType,
+          });
+        }
         // Rate-log spammy actions (vision thrash freezes clients)
         if (!room._actionLog) room._actionLog = { n: 0, byType: Object.create(null), windowStart: t0 };
         if (t0 - room._actionLog.windowStart > 2000) {
@@ -2973,6 +3039,9 @@ if (ROOMS_ENABLED && roomManager) {
       }
 
       if (msg.type === "request_ai") {
+        if (!costPolicy.allow("ws-request-ai", `${room.code}:${player.id}`).ok) {
+          return safeWs(socket, { type: "reject", error: "rate_limited" });
+        }
         // Async — do not block the socket handler on await chain failures
         roomManager
           .requestAi(room, player, msg.payload || msg)
@@ -3089,9 +3158,19 @@ server.listen(PORT, HOST, async () => {
     console.log("LAN: no private IPv4 found — check Wi‑Fi / ethernet");
   }
   if (ROOMS_ENABLED) {
-    console.log(`Friends rooms: ON · WS /ws/rooms (FF_ENABLE_ROOMS=0 to disable)`);
+    console.log(
+      `Friends rooms: ON · WS /ws/rooms · maxRooms=${MAX_ROOMS} (FF_ENABLE_ROOMS=0 to disable)`
+    );
   } else {
     console.log("Friends rooms: OFF");
+  }
+  if (process.env.FF_TRUST_PROXY === "1") {
+    console.log("Trust proxy: ON (X-Forwarded-For used for rate limits)");
+  } else {
+    console.log("Trust proxy: OFF (socket IP only — set FF_TRUST_PROXY=1 behind a reverse proxy)");
+  }
+  if (API_SECRET) {
+    console.log("API secret: ON (expensive POST routes require FF_API_SECRET)");
   }
   try {
     const token = await resolveAccessToken();
@@ -3108,12 +3187,6 @@ server.listen(PORT, HOST, async () => {
     console.log("Co-inventor: local only —", e.message);
   }
 });
-
-function clientIp(req) {
-  const xf = req.headers["x-forwarded-for"];
-  if (typeof xf === "string" && xf.length) return xf.split(",")[0].trim();
-  return req.socket?.remoteAddress || "unknown";
-}
 
 function safeWs(socket, obj) {
   try {

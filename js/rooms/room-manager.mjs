@@ -22,8 +22,12 @@ import {
   resolveRoomAiJob,
   rejectRoomAiJob,
 } from "../sim/ai_jobs.js";
+import { RateLimiter } from "../server/rate-limit.mjs";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/** Hard cap on concurrent rooms per process (DoS / memory). */
+export const DEFAULT_MAX_ROOMS = 200;
 
 export function randomToken(bytes = 16) {
   return crypto.randomBytes(bytes).toString("hex");
@@ -36,19 +40,56 @@ export function randomRoomCode(len = 6) {
   return out;
 }
 
+/**
+ * Clamp host-settable room settings to known domains.
+ * @param {object} payload
+ * @param {object} [current]
+ * @returns {object} partial settings to merge
+ */
+export function normalizeRoomSettings(payload = {}, current = {}) {
+  const out = {};
+  if (payload.maxPlayers !== undefined) {
+    const n = Number(payload.maxPlayers);
+    if (Number.isFinite(n)) {
+      out.maxPlayers = Math.min(
+        MAX_PLAYERS,
+        Math.max(MIN_PLAYERS, Math.floor(n))
+      );
+    }
+  }
+  if (payload.apMax !== undefined) {
+    const n = Number(payload.apMax);
+    if (Number.isFinite(n)) {
+      out.apMax = Math.min(10, Math.max(1, Math.floor(n)));
+    }
+  }
+  if (payload.scrutinyCombat !== undefined) {
+    out.scrutinyCombat = Boolean(payload.scrutinyCombat);
+  }
+  if (payload.deployStages !== undefined) {
+    out.deployStages = Boolean(payload.deployStages);
+  }
+  // preserve unused current for callers that want merge preview
+  void current;
+  return out;
+}
+
 export class RoomManager {
   /**
    * @param {object} [opts]
    * @param {(body: object) => Promise<object>} [opts.coInventHandler]
    * @param {number} [opts.roomTtlMs]
    * @param {number} [opts.maxPlayers]
+   * @param {number} [opts.maxRooms]
+   * @param {RateLimiter} [opts.rateLimiter]
    */
   constructor(opts = {}) {
     /** @type {Map<string, object>} */
     this.rooms = new Map();
     this.roomTtlMs = opts.roomTtlMs ?? 4 * 60 * 60 * 1000;
     this.maxPlayersDefault = opts.maxPlayers ?? MAX_PLAYERS;
-    this.rate = new Map();
+    this.maxRooms = opts.maxRooms ?? DEFAULT_MAX_ROOMS;
+    this.rateLimiter = opts.rateLimiter || new RateLimiter();
     this.coInventHandler = opts.coInventHandler || null;
     /** Optional usage-metrics hooks (hosting cost tracking). */
     this.onRoomStart = typeof opts.onRoomStart === "function" ? opts.onRoomStart : null;
@@ -87,28 +128,102 @@ export class RoomManager {
   }
 
   checkRate(key, limit, windowMs) {
-    const now = Date.now();
-    let e = this.rate.get(key);
-    if (!e || now >= e.resetAt) {
-      e = { count: 0, resetAt: now + windowMs };
-      this.rate.set(key, e);
-    }
-    e.count += 1;
-    return e.count <= limit;
+    return this.rateLimiter.check(key, limit, windowMs);
   }
 
   sweep() {
     const now = Date.now();
     for (const [code, room] of this.rooms) {
       if (now - room.updatedAt > this.roomTtlMs) {
-        this._emitRoomEnd(room);
-        this.rooms.delete(code);
+        this.destroyRoom(room, "ttl");
       }
     }
   }
 
+  /**
+   * Tear down a room: close sockets, emit metrics once, remove from map.
+   * Idempotent if room already gone.
+   * @param {object} room
+   * @param {string} [reason]
+   * @param {object} [opts]
+   * @param {boolean} [opts.notify] send room_ended to sockets (default false for ttl/empty)
+   * @param {boolean} [opts.emitEnd] metrics hook (default true)
+   */
+  destroyRoom(room, reason = "ended", opts = {}) {
+    if (!room?.code) return false;
+    const code = room.code;
+    if (!this.rooms.has(code) && reason !== "force") {
+      // Still try to close sockets if caller holds a stale ref that was already deleted
+    }
+    const notify = opts.notify === true;
+    const emitEnd = opts.emitEnd !== false;
+
+    for (const p of room.players || []) {
+      if (p._socket) {
+        if (notify) safeSend(p._socket, { type: "room_ended", reason });
+        try {
+          p._socket.close();
+        } catch {
+          /* ignore */
+        }
+        p._socket = null;
+      }
+      p.connected = false;
+    }
+    room.sockets?.clear?.();
+    if (emitEnd && this.rooms.has(code)) {
+      this._emitRoomEnd(room);
+    }
+    this.rooms.delete(code);
+    return true;
+  }
+
+  /**
+   * Resolve a player token only inside a specific room (no cross-room privilege).
+   * @param {object} room
+   * @param {string} token
+   * @returns {object|null} player
+   */
+  playerInRoom(room, token) {
+    if (!room || !token) return null;
+    return room.players.find((p) => p.playerToken === token) || null;
+  }
+
+  /**
+   * Authorize host-level commands for a room.
+   * Host powers require either:
+   * - playerToken of a player in THIS room with isHost, or
+   * - hostToken matching this room's hostToken
+   * Never grants host because the player is host of a different room.
+   *
+   * @param {object} room
+   * @param {{ playerToken?: string, hostToken?: string, player?: object|null }} creds
+   * @returns {{ ok: true, player: object|null, isHost: boolean } | { ok: false, error: string, status?: number }}
+   */
+  authorizeHost(room, creds = {}) {
+    if (!room) return { ok: false, error: "room_not_found", status: 404 };
+    let player = creds.player || null;
+    if (!player && creds.playerToken) {
+      player = this.playerInRoom(room, creds.playerToken);
+    }
+    // Reject players that belong to another room object
+    if (player && !room.players.includes(player)) {
+      player = null;
+    }
+    const hostTokenOk =
+      Boolean(creds.hostToken) && creds.hostToken === room.hostToken;
+    const isHost = Boolean(player?.isHost) || hostTokenOk;
+    if (!isHost && !player) {
+      return { ok: false, error: "unauthorized", status: 401 };
+    }
+    return { ok: true, player, isHost };
+  }
+
   createRoom({ displayName, ip } = {}) {
     this.sweep();
+    if (this.rooms.size >= this.maxRooms) {
+      return { ok: false, error: "server_full", status: 503 };
+    }
     if (ip && !this.checkRate(`create:${ip}`, 5, 60 * 60 * 1000)) {
       return { ok: false, error: "rate_limited", status: 429 };
     }
@@ -386,8 +501,7 @@ export class RoomManager {
         message: `${leftPlayer.displayName || "A player"} left. You're the only one still connected — you can keep playing alone or leave the room.`,
       });
     } else if (connected.length === 0) {
-      this._emitRoomEnd(room);
-      this.rooms.delete(room.code);
+      this.destroyRoom(room, "empty");
     } else {
       this.broadcast(room, {
         type: "player_left",
@@ -504,9 +618,23 @@ export class RoomManager {
   }
 
   hostCommand(room, player, cmd, payload = {}) {
-    const isHost =
-      Boolean(player?.isHost) ||
-      (payload?.hostToken && payload.hostToken === room.hostToken);
+    // Re-bind player to this room only (blocks cross-room host privilege)
+    let boundPlayer = player || null;
+    if (boundPlayer && !room.players.includes(boundPlayer)) {
+      boundPlayer = null;
+    }
+    if (!boundPlayer && payload?.playerToken) {
+      boundPlayer = this.playerInRoom(room, payload.playerToken);
+    }
+    const auth = this.authorizeHost(room, {
+      player: boundPlayer,
+      hostToken: payload?.hostToken,
+      playerToken: payload?.playerToken,
+    });
+    const isHost = Boolean(auth.ok && auth.isHost);
+    if (auth.ok && auth.player) boundPlayer = auth.player;
+    player = boundPlayer;
+
     const outcome = this.isQuestOutcome(room);
     const chooserId = this.nextQuestChooserId(room);
     const isRematchChooser = Boolean(player?.id && chooserId && player.id === chooserId);
@@ -629,10 +757,8 @@ export class RoomManager {
 
     if (cmd === "set_settings") {
       if (room.mp) return { ok: false, error: "already_started" };
-      const allowed = ["maxPlayers", "scrutinyCombat", "deployStages", "apMax"];
-      for (const k of allowed) {
-        if (payload[k] !== undefined) room.settings[k] = payload[k];
-      }
+      const patch = normalizeRoomSettings(payload, room.settings);
+      Object.assign(room.settings, patch);
       room.updatedAt = Date.now();
       this.broadcast(room, { type: "settings", settings: room.settings });
       return { ok: true, settings: room.settings };
@@ -662,17 +788,7 @@ export class RoomManager {
     }
 
     if (cmd === "end_room") {
-      for (const p of room.players) {
-        if (p._socket) {
-          safeSend(p._socket, { type: "room_ended" });
-          try {
-            p._socket.close();
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      this.rooms.delete(room.code);
+      this.destroyRoom(room, "host_end", { notify: true, emitEnd: true });
       return { ok: true, ended: true };
     }
 

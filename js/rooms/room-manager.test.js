@@ -1,7 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { RoomManager, randomRoomCode } from "./room-manager.mjs";
+import {
+  RoomManager,
+  randomRoomCode,
+  normalizeRoomSettings,
+} from "./room-manager.mjs";
 import { TECHS } from "../data.js";
+import { MIN_PLAYERS, MAX_PLAYERS } from "../sim/mp-session.js";
 
 const T0 = TECHS[0]?.id || "solar";
 
@@ -430,5 +435,102 @@ describe("RoomManager", () => {
     assert.equal(blocked.ok, false);
     assert.equal(blocked.error, "player_rate_quota");
     assert.equal(room.mp.invents[host.id].ap, ap);
+  });
+
+  it("does not grant host powers across rooms via player.isHost", () => {
+    const rm = new RoomManager();
+    const a = rm.createRoom({ displayName: "HostA" });
+    const b = rm.createRoom({ displayName: "HostB" });
+    const roomA = rm.rooms.get(a.code);
+    const roomB = rm.rooms.get(b.code);
+    const hostA = roomA.players[0];
+
+    // Host of A must not kick / end room B just because isHost is true
+    const kick = rm.hostCommand(roomB, hostA, "kick", {
+      playerId: roomB.hostPlayerId,
+      playerToken: a.playerToken,
+    });
+    assert.equal(kick.ok, false);
+    assert.ok(
+      kick.error === "not_host" || kick.error === "unauthorized" || kick.error === "cannot_kick"
+    );
+
+    const end = rm.hostCommand(roomB, hostA, "end_room", {
+      playerToken: a.playerToken,
+    });
+    assert.equal(end.ok, false);
+    assert.equal(end.error, "not_host");
+    assert.ok(rm.rooms.has(b.code));
+
+    // Correct host token for B still works
+    const endOk = rm.hostCommand(roomB, null, "end_room", {
+      hostToken: b.hostToken,
+    });
+    assert.equal(endOk.ok, true);
+    assert.equal(rm.rooms.has(b.code), false);
+  });
+
+  it("playerInRoom only resolves tokens for that room", () => {
+    const rm = new RoomManager();
+    const a = rm.createRoom({ displayName: "A" });
+    const b = rm.createRoom({ displayName: "B" });
+    const roomA = rm.rooms.get(a.code);
+    const roomB = rm.rooms.get(b.code);
+    assert.ok(rm.playerInRoom(roomA, a.playerToken));
+    assert.equal(rm.playerInRoom(roomB, a.playerToken), null);
+  });
+
+  it("clamps set_settings values", () => {
+    const rm = new RoomManager();
+    const created = rm.createRoom({ displayName: "Host" });
+    const room = rm.rooms.get(created.code);
+    const host = room.players[0];
+    const r = rm.hostCommand(room, host, "set_settings", {
+      hostToken: created.hostToken,
+      maxPlayers: 9999,
+      apMax: -5,
+      scrutinyCombat: 1,
+      deployStages: 0,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(room.settings.maxPlayers, MAX_PLAYERS);
+    assert.equal(room.settings.apMax, 1);
+    assert.equal(room.settings.scrutinyCombat, true);
+    assert.equal(room.settings.deployStages, false);
+  });
+
+  it("normalizeRoomSettings clamps domains", () => {
+    const p = normalizeRoomSettings({
+      maxPlayers: 1,
+      apMax: 100,
+      scrutinyCombat: "yes",
+    });
+    assert.equal(p.maxPlayers, MIN_PLAYERS);
+    assert.equal(p.apMax, 10);
+    assert.equal(p.scrutinyCombat, true);
+  });
+
+  it("enforces maxRooms", () => {
+    const rm = new RoomManager({ maxRooms: 2 });
+    assert.equal(rm.createRoom({ displayName: "1" }).ok, true);
+    assert.equal(rm.createRoom({ displayName: "2" }).ok, true);
+    const third = rm.createRoom({ displayName: "3" });
+    assert.equal(third.ok, false);
+    assert.equal(third.error, "server_full");
+  });
+
+  it("destroyRoom removes room and is idempotent for metrics", () => {
+    const ended = [];
+    const rm = new RoomManager({
+      onRoomEnd: (code) => ended.push(code),
+    });
+    const created = rm.createRoom({ displayName: "Host" });
+    const room = rm.rooms.get(created.code);
+    rm.destroyRoom(room, "test", { notify: false });
+    assert.equal(rm.rooms.has(created.code), false);
+    assert.equal(ended.length, 1);
+    // second destroy on stale ref should not double-emit
+    rm.destroyRoom(room, "test", { notify: false });
+    assert.equal(ended.length, 1);
   });
 });

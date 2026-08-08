@@ -96,10 +96,25 @@ The Node server serves static files and exposes:
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
-- `GET /api/health` — co-inventor / auth status  
-- `GET /api/usage` — AI token / image / TTS / session rollups (hosting cost estimates)
+- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token)  
+- `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
 Auth is resolved **on the server** (tokens never go to the browser).
+
+### Server hardening (static, rates, admin)
+
+The process only serves **allowlisted public assets** (`index.html`, `css/`, client `js/`, `assets/`). It will not serve `.env`, `server.mjs`, `data/`, or other repo files over HTTP.
+
+| Env | Purpose |
+|-----|---------|
+| `FF_TRUST_PROXY=1` | Use `X-Forwarded-For` for rate-limit keys (**only** behind a reverse proxy you control; off by default) |
+| `FF_API_SECRET` | If set, expensive POST routes require `Authorization: Bearer …` or `X-FF-Secret` (loopback exempt) |
+| `FF_ADMIN_TOKEN` | Non-loopback access to `/api/usage` and detailed `/api/health` |
+| `FF_MAX_ROOMS` | Cap concurrent friends rooms (default 200) |
+| `FF_WS_MAX_PAYLOAD` | Max WebSocket message bytes (default 256KiB) |
+| `FF_RATE_*` | Optional overrides for solo AI / WS action rate limits (see `.env.example`) |
+
+Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 
 ### Usage metrics (hosting cost estimates)
 
@@ -125,7 +140,9 @@ When enabled, the server writes under **`data/usage/`** (gitignored):
 Inspect live rollups:
 
 ```bash
+# loopback only by default; from elsewhere pass admin token:
 curl -s http://127.0.0.1:8765/api/usage | jq .
+# curl -s -H "Authorization: Bearer $FF_ADMIN_TOKEN" https://your-host/api/usage | jq .
 ```
 
 | Flag / env | Purpose |

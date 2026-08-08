@@ -14,11 +14,11 @@
     "generate:quests:local": "node scripts/generate-scenario-seeds.mjs --local-only",
     "validate:quest": "node scripts/validate-quest.mjs",
     "author:quest": "node scripts/author-quest.mjs",
-    "check:syntax": "node --check server.mjs && node --check js/main.js && node --check js/game.js && node --check js/sim/market-news.js && node --check js/sim/actions.js && node --check js/sim/mp-session.js && node --check js/multiplayer/ui.js && node --check js/quest-tile.js && node --check js/md-lite.js && node --check js/read-aloud.js && node --check js/tts-cache.mjs && node --check js/meta.js && node --check js/quests-remote.mjs",
+    "check:syntax": "node --check server.mjs && node --check js/main.js && node --check js/game.js && node --check js/sim/market-news.js && node --check js/sim/actions.js && node --check js/sim/mp-session.js && node --check js/multiplayer/ui.js && node --check js/quest-tile.js && node --check js/md-lite.js && node --check js/read-aloud.js && node --check js/tts-cache.mjs && node --check js/meta.js && node --check js/quests-remote.mjs && node --check js/server/static.mjs && node --check js/server/rate-limit.mjs && node --check js/server/cost-policy.mjs && node --check js/server/admin-gate.mjs && node --check js/server/client-ip.mjs && node --check js/server/read-body.mjs && node --check js/rooms/room-manager.mjs",
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "foresight:build": "node scripts/build-world-foresight.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/quest-tile.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/quest-tile.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js"
   },
   "dependencies": {
     "openai": "^6.16.0",
