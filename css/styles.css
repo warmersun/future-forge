@@ -2990,6 +2990,11 @@ body.mp-hotseat .hud-product {
   margin: 0 0 0.55rem;
 }
 
+/* Force hide when attribute is set (author display rules elsewhere must not leak a bar) */
+.lesson-progress-slot[hidden] {
+  display: none !important;
+}
+
 .lesson-progress {
   display: flex;
   flex-direction: column;

@@ -502,6 +502,15 @@ describe("quest-tile", () => {
     });
     assert.match(done, /is-complete/);
     assert.match(done, /all 2 lessons completed/);
+
+    // No fake "1 of 1" bar from lesson index alone (missing totalLessons)
+    const titleOnly = learningProgressBarHtml({
+      module: "Automator",
+      lesson: 1,
+    });
+    assert.match(titleOnly, /Automator/);
+    assert.doesNotMatch(titleOnly, /lesson-progress-bar/);
+    assert.doesNotMatch(titleOnly, /lesson-progress-seg/);
   });
 
   it("parseLearningModuleFields ignores false isLearningModule", () => {

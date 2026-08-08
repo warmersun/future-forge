@@ -2900,6 +2900,27 @@ function isLearningMission(m) {
   return false;
 }
 
+/**
+ * Invent-screen module progress bar: Learning catalog lessons only.
+ * Theme / sponsored / ordinary library quests never show this chrome.
+ * @param {object|null|undefined} m
+ */
+function shouldShowInventLessonProgress(m) {
+  if (!m || typeof m !== "object") return false;
+  const title = typeof m.module === "string" ? m.module.trim() : "";
+  const total = Number(m.totalLessons);
+  const lesson = Number(m.lesson);
+  const hasTotal = Number.isFinite(total) && total >= 1;
+  const hasLesson = Number.isFinite(lesson) && lesson >= 1;
+  // Authoritative flag from quest tile
+  if (m.isLearningModule === true) {
+    return Boolean(title || hasTotal || hasLesson);
+  }
+  // Legacy imports: module title plus ordered lesson metadata (no bare totalLessons)
+  if (title && (hasTotal || hasLesson)) return true;
+  return false;
+}
+
 function isSponsoredMission(m) {
   return Boolean(String(m?.sponsorName || "").trim());
 }
@@ -4290,7 +4311,17 @@ function startMission(mission) {
 
   // Normalize so AI camelCase meter ids become human labels (Benzene Spikes, not BenzeneSpikes)
   const normalized = normalizeMission(mission, mission.globalId || state.global?.id);
-  state.mission = { ...mission, ...normalized, id: mission.id || normalized.id };
+  // Prefer normalized learning fields; strip stray module/lesson metadata from raw mission
+  // so theme/sponsored quests never paint invent lesson progress by accident.
+  const merged = { ...mission, ...normalized, id: mission.id || normalized.id };
+  if (!normalized.isLearningModule) {
+    if (normalized.module == null) delete merged.module;
+    if (normalized.lesson == null) delete merged.lesson;
+    if (normalized.totalLessons == null) delete merged.totalLessons;
+    if (normalized.aiTutorContext == null) delete merged.aiTutorContext;
+    delete merged.isLearningModule;
+  }
+  state.mission = merged;
   state.global = globalById(state.mission.globalId) || state.global;
   state.year = state.mission.startYear;
   state.turn = 0;
@@ -4435,27 +4466,39 @@ function renderWorkshop() {
   $("#ws-mission-place").textContent = `${m.place}`;
   const progressEl = $("#ws-lesson-progress");
   if (progressEl) {
-    const title = typeof m.module === "string" ? m.module.trim() : "";
-    const totalLessons = Number(m.totalLessons);
-    const lesson = Number(m.lesson);
-    if (title || (Number.isFinite(totalLessons) && totalLessons >= 1)) {
+    if (shouldShowInventLessonProgress(m)) {
+      const title = typeof m.module === "string" ? m.module.trim() : "";
+      let totalLessons = Number(m.totalLessons);
+      const lesson = Number(m.lesson);
       let completedCount;
       if (title) {
         const group = groupLearningModules(partitionCatalogQuests().learning).find(
           (g) => g.key === title
         );
-        if (group) completedCount = learningCompletedInGroup(group);
+        if (group) {
+          completedCount = learningCompletedInGroup(group);
+          // Prefer explicit totalLessons; else derive from sibling lessons in the catalog group
+          if (!Number.isFinite(totalLessons) || totalLessons < 1) {
+            totalLessons =
+              group.entries.reduce(
+                (max, e) => Math.max(max, Number(e.mission?.lesson) || 0),
+                0
+              ) || group.entries.length;
+          }
+        }
       }
       progressEl.hidden = false;
+      progressEl.removeAttribute("hidden");
       progressEl.innerHTML = learningProgressBarHtml({
         module: title,
         lesson: Number.isFinite(lesson) ? lesson : undefined,
-        totalLessons: Number.isFinite(totalLessons) ? totalLessons : undefined,
+        totalLessons: Number.isFinite(totalLessons) && totalLessons >= 1 ? totalLessons : undefined,
         completedCount,
         currentLesson: Number.isFinite(lesson) ? lesson : undefined,
       });
     } else {
       progressEl.hidden = true;
+      progressEl.setAttribute("hidden", "");
       progressEl.innerHTML = "";
     }
   }

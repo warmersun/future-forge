@@ -148,11 +148,11 @@ export function learningProgressBarHtml(opts) {
   const title = typeof opts.module === "string" ? opts.module.trim() : "";
   const totalRaw = Number(opts.totalLessons);
   const lessonRaw = Number(opts.currentLesson ?? opts.lesson);
+  // Segment count requires explicit totalLessons (or catalog completedCount path
+  // that already computed total). Do not invent total from lesson index alone —
+  // that paints a fake "1 of 1" bar on non-module quests with stray lesson: 1.
   let total =
     Number.isFinite(totalRaw) && totalRaw >= 1 ? Math.min(Math.floor(totalRaw), 24) : 0;
-  if (!total && Number.isFinite(lessonRaw) && lessonRaw >= 1) {
-    total = Math.min(Math.floor(lessonRaw), 24);
-  }
   if (!title && !total) return "";
 
   let completed = Number(opts.completedCount);
