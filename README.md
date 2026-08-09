@@ -4,6 +4,8 @@
 
 Future Forge is a solo learning game. You pick a global problem, land in a concrete place, invent with a stack of emerging tech, defend the idea under challenge, and deploy before the local crisis collapses.
 
+**About & learning goals:** Future Forge is an [inventing practice](docs/what-is-future-forge.md) — origin (6Ps tabletop), design contradiction, Progress and Predictions, and what learners practice today.
+
 ![Future Forge workshop — invent with emerging tech, feasibility light, and AI co-inventor](docs/future-forge-workshop.jpg)
 
 *Invent screen: tech tray, mission story, feasibility (red/yellow/green), dual story faces, future vision, and AI co-inventor.*
