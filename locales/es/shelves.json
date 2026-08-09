@@ -1,0 +1,20 @@
+{
+  "health": {
+    "title": "Cuidado de la salud"
+  },
+  "climate": {
+    "title": "Clima, agua y aire"
+  },
+  "food": {
+    "title": "Comida y tierra"
+  },
+  "learning": {
+    "title": "Aprendizaje y trabajo"
+  },
+  "rights": {
+    "title": "Seguridad, derechos y sociedad"
+  },
+  "longterm": {
+    "title": "Riesgos a largo plazo"
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "rogue-si": {
+    "title": "Superinteligencia rebelde",
+    "blurb": "Potente IA sin control ni alineación."
+  },
+  "genocide": {
+    "title": "Prevenir el genocidio",
+    "blurb": "Riesgo de atrocidades masivas y alerta temprana fallida."
+  },
+  "poverty": {
+    "title": "Pobreza extrema",
+    "blurb": "Las personas quedaron privadas de ingresos, servicios y agencia."
+  },
+  "chem-bio": {
+    "title": "Armas químicas y biológicas",
+    "blurb": "Catastróficas brechas de detección y doble uso."
+  },
+  "asteroid": {
+    "title": "Impacto de asteroide",
+    "blurb": "Ventanas de defensa y detección planetarias."
+  },
+  "weather": {
+    "title": "Eventos climáticos extremos",
+    "blurb": "Calor, inundaciones, tormentas, crisis de sequía."
+  },
+  "mideast": {
+    "title": "Paz en el Medio Oriente",
+    "blurb": "Conflictos, traumas y medios de vida frágiles."
+  },
+  "nuclear": {
+    "title": "Aniquilación nuclear",
+    "blurb": "Error de juicio y fragilidad del lanzamiento."
+  },
+  "slavery": {
+    "title": "Esclavitud",
+    "blurb": "Trabajo forzoso oculto en las cadenas de suministro."
+  },
+  "women": {
+    "title": "Igualdad de derechos para las mujeres",
+    "blurb": "Seguridad, derechos, educación, agencia económica."
+  },
+  "education": {
+    "title": "Falta de educación",
+    "blurb": "Talento universal; oportunidad desigual."
+  },
+  "automation": {
+    "title": "Automatización / RBU",
+    "blurb": "Empleos y significado bajo la automatización."
+  },
+  "refugees": {
+    "title": "Refugiados",
+    "blurb": "Desplazamiento, refugio, papeles, pertenencia."
+  },
+  "ag": {
+    "title": "Agricultura Sostenible",
+    "blurb": "Sistemas alimentarios que regeneran la tierra."
+  },
+  "food": {
+    "title": "Seguridad alimentaria",
+    "blurb": "Alimentos nutritivos confiables para todos."
+  },
+  "eco": {
+    "title": "Crisis ecológicas",
+    "blurb": "Biodiversidad y colapso de los ecosistemas."
+  },
+  "infectious": {
+    "title": "Enfermedades infecciosas",
+    "blurb": "Detección de brotes y respuesta equitativa."
+  },
+  "climate": {
+    "title": "Crisis climáticas",
+    "blurb": "Emisiones, calor y riesgo a largo plazo."
+  },
+  "cancer": {
+    "title": "curar el cáncer",
+    "blurb": "Detección más temprana, mejor terapia, acceso."
+  },
+  "mental": {
+    "title": "Crisis de salud mental",
+    "blurb": "Acceso a la atención, conexión, estigma."
+  },
+  "alzheimer": {
+    "title": "Alzheimer",
+    "blurb": "Atención, detección, dignidad de la demencia."
+  },
+  "ageing": {
+    "title": "El envejecimiento como enfermedad",
+    "blurb": "Esperanza de vida y vida más larga."
+  },
+  "water": {
+    "title": "Agua Limpia",
+    "blurb": "Acceso seguro y confiable al agua."
+  },
+  "air": {
+    "title": "Contaminación del aire",
+    "blurb": "Aire sucio del transporte, la industria, la cocina."
+  },
+  "energy-access": {
+    "title": "Acceso a la energía",
+    "blurb": "La pobreza energética bloquea el desarrollo."
+  },
+  "homeless": {
+    "title": "Personas sin hogar",
+    "blurb": "Vivienda y servicios estables."
+  },
+  "cities": {
+    "title": "Ciudades / Urbanización",
+    "blurb": "Ciudades habitables, justas y preparadas para el clima."
+  },
+  "child": {
+    "title": "Salud infantil",
+    "blurb": "Enfermedades prevenibles y desnutrición."
+  },
+  "maternal": {
+    "title": "Salud Materna",
+    "blurb": "Atención segura del parto y posparto."
+  },
+  "coord": {
+    "title": "Fracaso de coordinación global",
+    "blurb": "No hay un fondo compartido de alerta temprana o respuesta entre lugares que se necesitan unos a otros."
+  },
+  "radicalization": {
+    "title": "Contrarrestar la radicalización",
+    "blurb": "Tuberías de prejuicios y extremismo: rampas de salida basadas en derechos."
+  },
+  "fgm": {
+    "title": "Mutilación genital femenina (MGF)",
+    "blurb": "Práctica nociva; Abandono comunitario y atención a supervivientes."
+  },
+  "short-termism": {
+    "title": "Necesidades a corto plazo versus futuro a largo plazo",
+    "blurb": "Supervivencia y rentabilidad que liquidan los activos del mañana."
+  },
+  "misinfo": {
+    "title": "Desinformación y crisis epistémicas",
+    "blurb": "La verdad compartida se erosiona bajo los deepfakes y las instituciones débiles."
+  },
+  "totalitarianism": {
+    "title": "totalitarismo",
+    "blurb": "Aislamiento, adoctrinamiento y herramientas para la libre asociación."
+  },
+  "women-stem": {
+    "title": "STEM para mujeres",
+    "blurb": "Niñas y mujeres subrepresentadas en las vías STEM."
+  },
+  "memory": {
+    "title": "Memoria incompleta",
+    "blurb": "Olvidamos: documentamos y preservamos la experiencia vivida."
+  },
+  "rural-roads": {
+    "title": "Conectividad de caminos rurales",
+    "blurb": "Aislamiento rural lejos de carreteras transitables durante todo el año."
+  },
+  "smoking": {
+    "title": "De fumar",
+    "blurb": "Epidemia de tabaco, cesación y daños indirectos."
+  },
+  "sanitation": {
+    "title": "Saneamiento",
+    "blurb": "Sanitarios, alcantarillado e higiene, no sólo agua potable."
+  },
+  "waste": {
+    "title": "Residuos y Reciclaje",
+    "blurb": "Los residuos superan al reciclaje; retraso de los sistemas circulares."
+  },
+  "reproductive": {
+    "title": "Salud reproductiva",
+    "blurb": "Vida sexual segura y libertad reproductiva para todas las personas."
+  },
+  "amr": {
+    "title": "Resistencia a los antimicrobianos",
+    "blurb": "Superbacterias y fracaso de los antibióticos: resistencia bacteriana."
+  }
+}

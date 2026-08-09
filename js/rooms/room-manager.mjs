@@ -1285,8 +1285,8 @@ function buildRoomAiContext(room, player, payload) {
   // AI feasibility / timing must use the invent owner's personal year
   const inventYear = f?.year != null ? f.year : mp?.place?.year;
   const mission = mp?.place?.mission;
-  const locale = room.locale || room.hostLocale || "en";
-  const outputLanguage = locale === "hu" ? "Hungarian" : "English";
+  const locale = normalizeRoomLocale(room.locale || room.hostLocale || "en");
+  const outputLanguage = roomOutputLanguageName(locale);
   return {
     year: inventYear,
     place: mission?.place,
@@ -1314,15 +1314,46 @@ function buildRoomAiContext(room, player, payload) {
   };
 }
 
+/** Keep in sync with js/i18n.js SUPPORTED_LOCALES / outputLanguageName. */
+const ROOM_SUPPORTED_LOCALES = new Set(["en", "hu", "fr", "es", "he"]);
+const ROOM_OUTPUT_LANGUAGE_NAMES = {
+  en: "English",
+  hu: "Hungarian",
+  fr: "French",
+  es: "Spanish",
+  he: "Hebrew",
+};
+const ROOM_LOCALE_ALIASES = {
+  hungarian: "hu",
+  magyar: "hu",
+  french: "fr",
+  francais: "fr",
+  français: "fr",
+  spanish: "es",
+  espanol: "es",
+  español: "es",
+  hebrew: "he",
+  ivrit: "he",
+  english: "en",
+};
+
 function normalizeRoomLocale(raw) {
   const s = String(raw || "")
     .trim()
     .toLowerCase()
     .replace(/_/g, "-");
-  if (s === "hu" || s.startsWith("hu-") || s === "hungarian" || s === "magyar") {
-    return "hu";
-  }
+  if (!s) return "en";
+  if (ROOM_SUPPORTED_LOCALES.has(s)) return s;
+  const base = s.split("-")[0];
+  if (ROOM_SUPPORTED_LOCALES.has(base)) return base;
+  if (ROOM_LOCALE_ALIASES[s]) return ROOM_LOCALE_ALIASES[s];
+  if (ROOM_LOCALE_ALIASES[base]) return ROOM_LOCALE_ALIASES[base];
   return "en";
+}
+
+function roomOutputLanguageName(locale) {
+  const code = normalizeRoomLocale(locale);
+  return ROOM_OUTPUT_LANGUAGE_NAMES[code] || "English";
 }
 
 // silence unused in case techById needed later for host tools

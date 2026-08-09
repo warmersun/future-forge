@@ -56,9 +56,9 @@ Open **http://127.0.0.1:8765**
 
 ### Language
 
-The title screen has an **EN | HU** switcher. Choice is stored in `localStorage` (`future-forge:locale`). You can also force a locale with `?lang=hu` or `?lang=en`.
+The title screen has an **EN | HU | FR | ES | HE** switcher. Choice is stored in `localStorage` (`future-forge:locale`). You can also force a locale with `?lang=hu`, `?lang=fr`, `?lang=es`, `?lang=he`, or `?lang=en`. Hebrew sets `dir="rtl"` on the document.
 
-Hungarian UI packs live under `locales/hu/`. Glossary for terms: `docs/i18n-glossary-hu.md`. Full content + AI localization is in progress (see plan: foundation → UI chrome → catalog → seeds → AI).
+Locale packs live under `locales/{code}/` (UI chrome + content overlays). Hungarian glossary: `docs/i18n-glossary-hu.md`. First-pass French, Spanish, and Hebrew packs ship with the same file layout; missing keys fall back to English. Rebuild drafts with `node scripts/i18n-build-locale-packs.mjs`.
 
 | Command | Purpose |
 |--------|---------|

@@ -1,0 +1,678 @@
+{
+  "computing": {
+    "name": "Computación",
+    "summary": "Procesamiento digital, memoria y simulación.",
+    "learn": "Sustrato para IA, redes y sistemas de software.",
+    "inventionHint": "Ejecutar modelos y coordinar sistemas locales.",
+    "risk": "uso de energía, concentración de poder",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la informática a hacer más abundante aquí?",
+    "primer": "La informática es el sustrato de casi todos los sistemas modernos: procesadores, memoria, software y simulación. Los inventos locales a menudo necesitan un lugar donde ejecutar modelos, almacenar registros o coordinar dispositivos, incluso fuera de línea en el borde. La capacidad es abundante en la nube; El difícil problema local es el acceso, la energía, las habilidades y quién controla la pila.",
+    "maturity": {
+      "now": "Computación en la nube y en el borde, GPU/CPU de productos básicos y plataformas de software que escalan desde teléfonos hasta centros de datos.",
+      "near": "Inferencia más barata en todas partes y circuitos de control local en tiempo real más estrictos para clínicas, redes y logística.",
+      "frontier": "La computación ambiental es tan barata y ubicua que la energía y el costo casi quedan fuera de las restricciones de diseño."
+    },
+    "milestones": [
+      "Chips de IA integrados en teléfonos y controladores industriales",
+      "Regiones de nube generalizadas y pilas de software de código abierto"
+    ],
+    "useCasesNow": [
+      "Plataformas de datos locales",
+      "Aplicaciones clínicas sin conexión",
+      "Simulación para planificación de inundaciones o tráfico."
+    ],
+    "narrative": "Los cálculos resuenan detrás de las decisiones locales."
+  },
+  "energy": {
+    "name": "Energía",
+    "summary": "Energía física para el trabajo, el calor, la luz y la industria.",
+    "learn": "La forma en que generamos y almacenamos energía influye en cualquier otra ampliación.",
+    "inventionHint": "Clínicas de energía, bombas y talleres.",
+    "risk": "emisiones, acceso desigual",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía a hacer más abundante aquí?",
+    "primer": "La energía es la capacidad de realizar trabajo físico: luz, calor, movimiento, cadena de frío. Cada invento local que bombea agua, administra una clínica por la noche o mueve mercancías depende de un presupuesto de energía. El desafío rara vez es “¿se ha inventado la electricidad?”; es confiabilidad, costo, limpieza y quién se corta primero cuando falla la red.",
+    "maturity": {
+      "now": "Rejillas mixtas; El respaldo diésel sigue siendo común cuando la confiabilidad es deficiente.",
+      "near": "Opciones limpias más firmes y una respuesta más inteligente a la demanda a escala comunitaria.",
+      "frontier": "La escasez de energía escapa en gran medida a las limitaciones cotidianas del diseño local."
+    },
+    "milestones": [
+      "Crecimiento récord de energías renovables en muchos mercados",
+      "La caída de los costos de generación se combina con redes más inteligentes"
+    ],
+    "useCasesNow": [
+      "Planificación clínica/microrred",
+      "Cambio de carga",
+      "Respaldo híbrido que reduce las horas de diésel"
+    ],
+    "narrative": "La energía es la columna vertebral de todas las reparaciones."
+  },
+  "crypto": {
+    "name": "Criptomoneda",
+    "summary": "Libros de contabilidad compartidos, tokens e incentivos programables.",
+    "learn": "Herramientas de coordinación y verificación, con riesgo real de estafa.",
+    "inventionHint": "Fondos locales transparentes o comprobantes de suministro.",
+    "risk": "estafas, volatilidad, fallas de gobernanza",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la criptomoneda a hacer más abundante aquí?",
+    "primer": "Las criptomonedas y los libros de contabilidad compartidos son herramientas para registrar acuerdos, transferencias y pruebas sin un único intermediario de confianza. Si se utilizan bien, pueden hacer que los fondos locales sean transparentes o realizar un seguimiento de las cadenas de suministro; mal utilizados, permiten estafas y volatilidad. Para la invención local, piense en la coordinación y la verificación, no en la especulación sobre el enriquecimiento.",
+    "maturity": {
+      "now": "Libros de contabilidad públicos, monedas estables y fondos piloto de bienes públicos; La experiencia de usuario y el fraude siguen siendo difíciles.",
+      "near": "Regulación más clara y barreras de identidad para la contratación y las ayudas.",
+      "frontier": "El dinero programable como aburrida infraestructura predeterminada para las finanzas municipales."
+    },
+    "milestones": [
+      "Ayuda tokenizada y pilotos a prueba de suministro en varias jurisdicciones"
+    ],
+    "useCasesNow": [
+      "Fondos comunitarios transparentes",
+      "Pruebas de la cadena de suministro",
+      "Fondos de ahorro compartidos con reglas públicas"
+    ],
+    "narrative": "Los registros compartidos resuelven abiertamente los acuerdos locales."
+  },
+  "quantum": {
+    "name": "Computación cuántica",
+    "summary": "Procesadores cuánticos para simulación y optimización duras.",
+    "learn": "Nichos útiles tempranos; No es un reemplazo de computadora portátil.",
+    "inventionHint": "Socio de investigación/optimización local difícil (años posteriores).",
+    "risk": "exageración, concentración de acceso",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la Computación Cuántica a hacer más abundante aquí?",
+    "primer": "La computación cuántica utiliza efectos cuánticos para ciertos cálculos difíciles (materiales, química, cierta optimización) con los que las máquinas clásicas tienen dificultades. No es un portátil más rápido para el ayuntamiento. El uso local honesto hoy en día es una asociación de investigación, aprendizaje y planificación a largo plazo, no “lo cuántico dirige la clínica”.",
+    "maturity": {
+      "now": "Máquinas de investigación y acceso a la nube para experimentos; no un reemplazo general de TI.",
+      "near": "Trabajos de nicho híbridos cuánticos-clásicos (materiales, pilotos de optimización).",
+      "frontier": "Amplia ventaja cuántica práctica en los sistemas municipales cotidianos."
+    },
+    "milestones": [
+      "Acceso cuántico a la nube y mejora de la investigación sobre mitigación de errores"
+    ],
+    "useCasesNow": [
+      "Asociaciones de I+D",
+      "Laboratorios de aprendizaje",
+      "Estudios de planificación a largo plazo"
+    ],
+    "narrative": "Los trabajos cuánticos especializados abren nuevos diseños."
+  },
+  "geothermal": {
+    "name": "Energía geotérmica",
+    "summary": "Calor de la Tierra para energía constante.",
+    "learn": "Carga base renovable donde la geología lo permita.",
+    "inventionHint": "Energía limpia local constante.",
+    "risk": "Ubicación, costo, sismicidad.",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía geotérmica a hacer más abundante aquí?",
+    "primer": "La geotermia extrae calor de la Tierra para obtener electricidad constante o calefacción urbana. Donde funciona la geología, es energía firme y con bajas emisiones de carbono. Donde no es así, dominan los costos de perforación y emplazamiento. Inventar con mapas de recursos locales y amplios horizontes de capital, no con geotermia universal en todas partes.",
+    "maturity": {
+      "now": "Carga base probada donde la geología es buena; dominan el costo de perforación y el emplazamiento.",
+      "near": "Geotermia mejorada expandiendo sitios viables.",
+      "frontier": "Geotermia firme y barata en casi todas partes."
+    },
+    "milestones": [
+      "Nuevos pilotos geotérmicos mejorados",
+      "Proyectos ampliados de calefacción urbana"
+    ],
+    "useCasesNow": [
+      "Carga base regional donde la geología lo permita",
+      "Asociaciones de calefacción urbana"
+    ],
+    "narrative": "El calor silencioso se convierte en electricidad constante."
+  },
+  "tidal": {
+    "name": "Energía mareomotriz",
+    "summary": "Energía procedente de corrientes de marea.",
+    "learn": "Energía marina predecible pero limitada al sitio.",
+    "inventionHint": "Carga base costera donde las mareas son fuertes.",
+    "risk": "impacto marino, costo de capital",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía mareomotriz a hacer más abundante aquí?",
+    "primer": "La energía mareomotriz convierte los flujos de marea predecibles en electricidad. El recurso es específico del sitio y requiere mucho capital, pero la previsibilidad es valiosa para las islas y los puertos. Invente sólo cuando las mareas y el entorno lo permitan, y combínelo con el almacenamiento y la planificación de la red.",
+    "maturity": {
+      "now": "Algunos sitios comerciales; el coste de capital y el impacto marino siguen siendo elevados.",
+      "near": "Proyectos costeros más predecibles con mejores turbinas.",
+      "frontier": "Energía maremotriz barata para cualquier costa."
+    },
+    "milestones": [
+      "Conjuntos de mareas operativos en canales selectos de corrientes fuertes"
+    ],
+    "useCasesNow": [
+      "Pilotos de carga base de puertos e islas",
+      "Asociaciones de investigación"
+    ],
+    "narrative": "Las mareas se convierten en energía costera."
+  },
+  "solar": {
+    "name": "energía solar",
+    "summary": "Electricidad de la luz solar.",
+    "learn": "Generación limpia de más rápido crecimiento cuando se combina con almacenamiento.",
+    "inventionHint": "Techos, bombas, microrredes.",
+    "risk": "intermitencia, materiales",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía solar a hacer más abundante aquí?",
+    "primer": "La energía solar fotovoltaica convierte la luz solar en electricidad, una de las opciones de nueva generación más baratas en gran parte del mundo cuando los sitios y las políticas lo permiten. La confiabilidad nocturna y nublada necesita almacenamiento o respaldo. La invención local prospera en tejados, bombas, clínicas y microrredes con una combinación honesta de baterías.",
+    "maturity": {
+      "now": "Fotovoltaica barata para tejados, clínicas, bombas; Almacenamiento necesario para la noche y la fiabilidad.",
+      "near": "Packs aún más económicos y microrredes integradas.",
+      "frontier": "Abundancia de energía limitada principalmente por la tierra y la política."
+    },
+    "milestones": [
+      "La energía fotovoltaica se encuentra entre la nueva generación más barata en gran parte del mundo"
+    ],
+    "useCasesNow": [
+      "poder clínico",
+      "bombeo de agua",
+      "iluminación escolar",
+      "Microrredes"
+    ],
+    "narrative": "Los techos beben la luz del sol para el trabajo local."
+  },
+  "wind": {
+    "name": "Energía eólica",
+    "summary": "Electricidad del viento.",
+    "learn": "Renovables maduros; necesita flexibilidad de red.",
+    "inventionHint": "Turbinas comunitarias o costeras.",
+    "risk": "emplazamiento, fauna, intermitencia",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía eólica a hacer más abundante aquí?",
+    "primer": "La energía eólica convierte el viento en electricidad a escala de servicios públicos o comunitaria. Es maduro pero intermitente y políticamente local (ubicación, vida silvestre, vistas). Combínelo con almacenamiento, flexibilidad de demanda o energía firme para clínicas e industrias que no pueden esperar a que llegue el viento.",
+    "maturity": {
+      "now": "Turbinas terrestres y marinas maduras; la ubicación y la flexibilidad de la red son las peleas.",
+      "near": "Mejor combinación de almacenamiento y modelos de propiedad comunitaria.",
+      "frontier": "Viento más almacenamiento como energía barata por defecto con poca fricción."
+    },
+    "milestones": [
+      "Adiciones récord de capacidad",
+      "Largas caídas de costos de varios años en muchos mercados"
+    ],
+    "useCasesNow": [
+      "Turbinas comunitarias",
+      "Viento costero con almacenamiento",
+      "Toma industrial"
+    ],
+    "narrative": "Las turbinas aportan energía al paisaje."
+  },
+  "wave": {
+    "name": "Energía de las olas",
+    "summary": "Energía de las olas del océano.",
+    "learn": "Alto potencial, ingeniería dura.",
+    "inventionHint": "Poder insular y portuario (más tarde).",
+    "risk": "tormentas, costo, confiabilidad",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía de las olas a hacer más abundante aquí?",
+    "primer": "La energía de las olas recolecta energía de las olas del océano. El potencial es grande; Sobrevivir a las tormentas y alcanzar los objetivos de costos sigue siendo difícil. Invente como pilotos de puertos o islas con capital paciente, no como una opción costera universal en esta década.",
+    "maturity": {
+      "now": "Principalmente pilotos; La supervivencia y el coste de la tormenta siguen siendo difíciles.",
+      "near": "Conjuntos a escala de puerto con mayor confiabilidad.",
+      "frontier": "Energía undimotriz barata en cualquier costa energética."
+    },
+    "milestones": [
+      "Conjuntos piloto de varios años que sobreviven a los duros estados del mar"
+    ],
+    "useCasesNow": [
+      "Prácticos de puertos insulares",
+      "Ubicación compartida de la investigación con los puertos"
+    ],
+    "narrative": "El oleaje alimenta los nudos costeros."
+  },
+  "nuclear": {
+    "name": "Energía nuclear",
+    "summary": "Carga base densa y baja en carbono (fisión/reactores avanzados).",
+    "learn": "Alta capacidad; la confianza y el costo dominan.",
+    "inventionHint": "Poder firme regional para la industria y la desalinización.",
+    "risk": "desperdicios, accidentes, costos",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la energía nuclear a hacer más abundante aquí?",
+    "primer": "La fisión nuclear ofrece energía densa, firme y con bajas emisiones de carbono. Las grandes plantas y los pequeños reactores modulares emergentes enfrentan desafíos de costos, confianza, desperdicio y cronograma. La invención local suele ser una planificación regional y una asociación para el calor industrial, no un reactor doméstico para una sola sala.",
+    "maturity": {
+      "now": "Grandes plantas y algunas SMR en construcción o en fase inicial de operación; la confianza y el costo dominan.",
+      "near": "Más implementaciones de SMR y módulos construidos en fábrica.",
+      "frontier": "Nuclear firme plug-and-play para cada ciudad que lo desee."
+    },
+    "milestones": [
+      "Primeros proyectos comerciales SMR",
+      "Ampliación de vida de flotas existentes"
+    ],
+    "useCasesNow": [
+      "Planificación energética regional firme",
+      "Asociaciones de calor industrial"
+    ],
+    "narrative": "Un poder limpio y firme ancla la región."
+  },
+  "battery": {
+    "name": "Tecnología de batería",
+    "summary": "Almacenamiento de electricidad para movilidad y redes.",
+    "learn": "El socio que hace que la energía solar y eólica sea local y real.",
+    "inventionHint": "Clínicas, flotas, energía nocturna.",
+    "risk": "minería, fuego, reciclaje",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la tecnología de baterías a hacer más abundante aquí?",
+    "primer": "Las baterías almacenan electricidad para más tarde: luces clínicas nocturnas, flotas de vehículos eléctricos, refuerzo solar. Hacen que las energías renovables intermitentes sean locales y útiles. La química mejora; la minería, la seguridad contra incendios y el reciclaje siguen siendo limitaciones de diseño. Invente para kilovatios-hora y ciclos de trabajo reales, no para almacenamiento gratuito infinito.",
+    "maturity": {
+      "now": "Paquetes de iones de litio para vehículos eléctricos y almacenamiento en el hogar o en la clínica; La densidad y el costo siguen mejorando.",
+      "near": "Químicas más densas y seguras son más comunes a escala local.",
+      "frontier": "El almacenamiento deja de ser el cuello de botella para la mayoría de las energías renovables locales."
+    },
+    "milestones": [
+      "Reducciones de costos de varios años que permiten implementar pilotos de almacenamiento en el hogar y en la red"
+    ],
+    "useCasesNow": [
+      "Poder de la clínica nocturna",
+      "Flotas de vehículos eléctricos",
+      "Reafirmante solar"
+    ],
+    "narrative": "La luz almacenada abarca la noche."
+  },
+  "ai": {
+    "name": "Inteligencia artificial",
+    "summary": "Sistemas que predicen, recomiendan, generan y deciden a partir de datos.",
+    "learn": "Automatiza la búsqueda de patrones; todavía necesita responsabilidad humana.",
+    "inventionHint": "Triaje, tutoría, logística, alerta temprana.",
+    "risk": "parcialidad, exceso de confianza, decisiones opacas",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la Inteligencia Artificial a hacer más abundante aquí?",
+    "primer": "La inteligencia artificial encuentra patrones en los datos para predecir, recomendar, generar texto o imágenes y respaldar decisiones. Ya es un compañero de trabajo en muchas clínicas, aulas y mostradores de logística, pero puede ser parcial, demasiado confiado u opaco. Los inventos locales sólidos mantienen a los humanos responsables y adaptan el modelo a un flujo de trabajo real.",
+    "maturity": {
+      "now": "Modelos de asistencia, clasificación, previsión y copilotos con supervisión humana.",
+      "near": "Agentes más confiables para flujos de trabajo reducidos; mejores modelos en el idioma local.",
+      "frontier": "Un juicio amplio y autónomo en dominios de alto riesgo sin humanos, algo que todavía no es honesto para la mayoría de las misiones."
+    },
+    "milestones": [
+      "Copilotos de IA generativa en el trabajo, la educación y algunas herramientas clínicas"
+    ],
+    "useCasesNow": [
+      "Apoyo de triaje",
+      "Ayudas de tutoría",
+      "Copilotos de documentos y logística",
+      "Puntuación de alerta temprana"
+    ],
+    "narrative": "Az emberek vezetnek; un modelo javasolnak."
+  },
+  "robots": {
+    "name": "Robots",
+    "summary": "Máquinas que detectan, mueven, construyen, cuidan o inspeccionan.",
+    "learn": "Automatización física: cuerpos para software inteligente.",
+    "inventionHint": "Asistencia asistencial, reconstrucción, trabajos peligrosos.",
+    "risk": "seguridad, empleos, responsabilidad",
+    "scarcity": "¿Qué capacidad escasa podrían ayudar los robots a hacer más abundante aquí?",
+    "primer": "Los robots son máquinas que detectan y actúan en el mundo físico: transportan, inspeccionan, ayudan en el cuidado o reconstruyen. La inteligencia del software necesita un cuerpo para mover bienes o personas. Las victorias de hoy suelen ser entornos mapeados y supervisados; La autonomía en un mundo abierto sigue siendo difícil.",
+    "maturity": {
+      "now": "Robots de almacén, inspección y asistencia/cuidado limitado bajo supervisión.",
+      "near": "Manipuladores móviles más fiables en sitios interiores mapeados.",
+      "frontier": "Robots domésticos generales que realizan cualquier tarea sin supervisión."
+    },
+    "milestones": [
+      "Robots de logística hospitalaria y cobots industriales en el uso diario"
+    ],
+    "useCasesNow": [
+      "Logística clínica",
+      "Inspección de peligros",
+      "Ayuda para la reconstrucción con liderazgo humano"
+    ],
+    "narrative": "El peso lo llevan máquinas supervisadas."
+  },
+  "networks": {
+    "name": "Redes",
+    "summary": "Transferir información y coordinación a través de la distancia.",
+    "learn": "Los rieles que permiten que otras herramientas lleguen a las personas.",
+    "inventionHint": "Telemedicina, escolarización, alertas.",
+    "risk": "exclusión, cortes, riesgo cibernético",
+    "scarcity": "¿Qué capacidad escasa podrían ayudar las Redes a hacer más abundante aquí?",
+    "primer": "Las redes mueven información y coordinación a través de la distancia: fibra, celular, malla, satélite. Sin ellos, los sensores no pueden alertar, la telemedicina no puede llegar y la IA no puede sincronizarse. La invención local a menudo significa conectividad de última milla, resiliencia ante cortes y quién sigue excluido.",
+    "maturity": {
+      "now": "Enlaces celulares, de fibra, de malla y satelitales; las brechas de cobertura siguen siendo intensamente locales.",
+      "near": "Mallas comunitarias más baratas y conmutación por error resiliente para clínicas y escuelas.",
+      "frontier": "Conectividad universal de alta calidad por defecto en todas partes."
+    },
+    "milestones": [
+      "Pilotos de banda ancha satelital LEO y malla comunitaria que amplían el acceso"
+    ],
+    "useCasesNow": [
+      "Enlaces de telemedicina",
+      "Conectividad escolar",
+      "Transmisiones de alerta"
+    ],
+    "narrative": "Las señales conectan atención y advertencia."
+  },
+  "transportation": {
+    "name": "Transporte",
+    "summary": "Trasladar físicamente personas, bienes y medicinas.",
+    "learn": "El acceso es a menudo un problema logístico.",
+    "inventionHint": "Corredores, última milla, tránsito de emergencia.",
+    "risk": "emisiones, congestión, accidentes",
+    "scarcity": "¿Qué capacidad escasa podría ayudar el transporte a hacer más abundante aquí?",
+    "primer": "El transporte es la forma en que se mueven físicamente las personas, los bienes y los medicamentos. Muchas crisis “tecnológicas” son crisis logísticas: la vacuna, la partera, el repuesto están a horas de distancia. Invente para corredores, última milla y confiabilidad en condiciones climáticas y de pobreza, no solo vehículos que parecen futuristas.",
+    "maturity": {
+      "now": "Autobuses, bicicletas, furgonetas, ferries y software de logística ya transportan cuidados y mercancías.",
+      "near": "Flotas de vehículos eléctricos y de transporte público que respondan mejor a la demanda en corredores fijos.",
+      "frontier": "Movilidad sin fricciones y sin emisiones para cada viaje sin planificación."
+    },
+    "milestones": [
+      "Autobuses eléctricos y rutas optimizadas que reducen los costos en muchas rutas urbanas"
+    ],
+    "useCasesNow": [
+      "Corredores de logística médica",
+      "Furgonetas adaptadas a la demanda",
+      "Carriles de emergencia prioritarios"
+    ],
+    "narrative": "Los bienes y la atención llegan con menos desperdicio."
+  },
+  "self-driving": {
+    "name": "Coches autónomos",
+    "summary": "Vehículos que navegan con control humano limitado.",
+    "learn": "Despliegue de seguridad lento; Hay enormes riesgos en materia de movilidad local.",
+    "inventionHint": "Lanzaderas, corredores de mercancías, accesos para no conductores.",
+    "risk": "casos extremos, responsabilidad, trabajos",
+    "scarcity": "¿Qué capacidad escasa podrían ayudar a hacer más abundante aquí los coches autónomos?",
+    "primer": "Los vehículos autónomos pretenden navegar con poco o ningún control humano. El progreso es real en áreas geocercadas y asistencia avanzada al conductor, pero la confiabilidad en carreteras abiertas, los casos extremos y la responsabilidad aún limitan la escala. La invención local a menudo significa transporte y carga en rutas mapeadas, no “todo el tráfico será autónomo mañana”.",
+    "maturity": {
+      "now": "Pilotos de robotaxi/transbordador geocercados y ADAS; Autonomía total en carretera abierta limitada.",
+      "near": "Los transbordadores de ruta fija y los corredores de mercancías son más comunes.",
+      "frontier": "Movilidad universal sin conductor en cualquier clima y carretera."
+    },
+    "milestones": [
+      "Zonas comerciales de robotaxi",
+      "Lanzaderas autónomas en rutas mapeadas"
+    ],
+    "useCasesNow": [
+      "Transporte al campus/clínica",
+      "Corredores de mercancías mapeados",
+      "Acceso a pilotos para no conductores"
+    ],
+    "narrative": "Vehículos coordinados liberan espacio en la calle."
+  },
+  "drones": {
+    "name": "Drones",
+    "summary": "Aviones no tripulados para entrega, detección y respuesta.",
+    "learn": "Ya hay rutas médicas y de inspección en algunos lugares.",
+    "inventionHint": "Medicina de última milla, mapas, búsqueda.",
+    "risk": "privacidad, espacio aéreo, ruido",
+    "scarcity": "¿Qué capacidad escasa podrían ayudar los drones a hacer más abundante aquí?",
+    "primer": "Los drones son aviones no tripulados para entrega, inspección, mapeo y búsqueda. Los corredores médicos ya ahorran tiempo para la sangre y las vacunas en varios países. Los enjambres urbanos de vuelo libre todavía están limitados por el espacio aéreo, el ruido y las reglas de seguridad: inventen corredores y misiones, no cielo sin restricciones.",
+    "maturity": {
+      "now": "Corredores mapeados para entrega médica, inspección y mapeo en muchos países.",
+      "near": "Operaciones urbanas más densas y con una regulación más clara.",
+      "frontier": "Enjambres totalmente libres como logística predeterminada."
+    },
+    "milestones": [
+      "Corredores operativos de drones médicos para sangre y vacunas"
+    ],
+    "useCasesNow": [
+      "Logística médica de última milla",
+      "Inspección de infraestructura",
+      "búsqueda de desastres"
+    ],
+    "narrative": "Avionetas en el aire cuando la carretera está lenta."
+  },
+  "quantum-internet": {
+    "name": "Internet cuántica",
+    "summary": "Red de estados cuánticos para enlaces seguros.",
+    "learn": "Infraestructura de largo horizonte.",
+    "inventionHint": "Enlaces ultraseguros para nodos locales críticos (tarde del juego).",
+    "risk": "cronogramas, costo",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la Internet Cuántica a hacer más abundante aquí?",
+    "primer": "Internet cuántica tiene como objetivo conectar estados cuánticos en red para enlaces ultraseguros y tareas cuánticas distribuidas. Se trata de una infraestructura de investigación temprana, no de un sustituto del ISP de la ciudad. La invención local puede significar establecer vínculos piloto seguros entre sitios críticos con socios de investigación, no un enredo para todos los hogares.",
+    "maturity": {
+      "now": "Bancos de pruebas de laboratorio y metro; no infraestructura urbana de productos básicos.",
+      "near": "Enlaces seguros limitados entre sitios especializados.",
+      "frontier": "Redes de entrelazamiento de rutina entre regiones."
+    },
+    "milestones": [
+      "Distribución de claves cuánticas y experimentos de redes en corredores de investigación."
+    ],
+    "useCasesNow": [
+      "Enlaces seguros piloto",
+      "Consorcios de investigación"
+    ],
+    "narrative": "Enlaces silenciosos y seguros unen sitios críticos."
+  },
+  "space": {
+    "name": "Exploración espacial",
+    "summary": "Órbita y más allá para observación, comunicaciones y defensa.",
+    "learn": "Los satélites ya dan forma al clima y la conectividad.",
+    "inventionHint": "Uso local de datos y enlaces orbitales.",
+    "risk": "escombros, costo, militarización",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la exploración espacial a hacer más abundante aquí?",
+    "primer": "Los sistemas espaciales, especialmente los satélites, ya ofrecen información meteorológica, imágenes y conectividad que las ciudades utilizan en tierra. La invención local consiste en utilizar datos orbitales y enlaces para mapas de inundaciones, estrés en los cultivos o retorno, no en construir una plataforma de lanzamiento en el lugar de la misión.",
+    "maturity": {
+      "now": "Las constelaciones de observación de la Tierra, clima y conectividad ya tienen relevancia local.",
+      "near": "Tiempos de revisita más económicos y más enlaces directos al dispositivo.",
+      "frontier": "Detección global instantánea y conectividad sin brechas."
+    },
+    "milestones": [
+      "Constelaciones LEO densas para banda ancha e imágenes frecuentes"
+    ],
+    "useCasesNow": [
+      "Mapas de inundaciones y cultivos",
+      "Conectividad de retorno",
+      "Conciencia situacional de desastres"
+    ],
+    "narrative": "Ojos orbitales y relés sirven a la ciudad."
+  },
+  "synbio": {
+    "name": "Biología sintética",
+    "summary": "Diseñar sistemas vivos como herramientas y fábricas.",
+    "learn": "Medicamentos, materiales, microbios ambientales... con cuidado.",
+    "inventionHint": "Capacidad biotecnológica local con barreras de seguridad.",
+    "risk": "bioseguridad, ecología, ética",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la biología sintética a hacerla más abundante aquí?",
+    "primer": "La biología sintética diseña sistemas vivos (microbios, células, circuitos genéticos) como herramientas para medicamentos, materiales, diagnósticos y trabajo ambiental. Es una familia amplia, no un solo producto. Mucho está estrictamente regulado; inventar con asociaciones, laboratorios y barreras de seguridad, no con “la vida programable gobierna la ciudad” como si fuera una aplicación móvil.",
+    "maturity": {
+      "now": "Secuenciación, algunas terapias genéticas, enzimas industriales, productos biotecnológicos regulados.",
+      "near": "Acceso más amplio a la biofabricación; Más aplicaciones agrícolas y clínicas bajo regulación.",
+      "frontier": "Sistemas de vida programables como infraestructura municipal cotidiana."
+    },
+    "milestones": [
+      "Genómica de patógenos en brotes.",
+      "Terapias génicas aprobadas para enfermedades seleccionadas"
+    ],
+    "useCasesNow": [
+      "Asociaciones para la secuenciación de brotes",
+      "Biofabricación por contrato",
+      "Diagnóstico de laboratorio"
+    ],
+    "narrative": "Las herramientas vivas entran en el conjunto de herramientas locales."
+  },
+  "bci": {
+    "name": "Interfaz cerebro-computadora",
+    "summary": "Vínculos directos entre señales neuronales y máquinas.",
+    "learn": "Primero la restauración clínica; uso más amplio posteriormente.",
+    "inventionHint": "Restaurar el habla o el movimiento para pacientes específicos.",
+    "risk": "privacidad mental, riesgo médico",
+    "scarcity": "¿Qué capacidad escasa podría ayudar a hacer más abundante aquí la interfaz cerebro-computadora?",
+    "primer": "Las interfaces cerebro-computadora traducen señales neuronales en comandos o estimulación de computadora, restableciendo la comunicación o el movimiento de personas con discapacidad grave en entornos clínicos. Las aplicaciones mentales para consumidores son en su mayoría exageraciones para las misiones locales. Inventar con vías clínicas y consentimiento, no con una vigilancia masiva de pensamientos.",
+    "maturity": {
+      "now": "Interfaces clínicas y de investigación para parálisis severa y restauración de la comunicación.",
+      "near": "Prótesis clínicas más amplias del habla y motoras.",
+      "frontier": "Aplicaciones cerebrales de consumo de gran ancho de banda como interfaces normales."
+    },
+    "milestones": [
+      "Participantes del ensayo que se comunican a través de BCI avanzadas"
+    ],
+    "useCasesNow": [
+      "Vías de ensayos clínicos",
+      "Asociaciones de investigación de asistencia"
+    ],
+    "narrative": "El pensamiento se convierte en una interfaz cuidadosa."
+  },
+  "genetic-engineering": {
+    "name": "Ingeniería genética",
+    "summary": "Cambio de genomas para rasgos y terapias.",
+    "learn": "Cultivos, terapias genéticas, microbios diseñados.",
+    "inventionHint": "Herramientas locales de salud o resiliencia de cultivos.",
+    "risk": "ecología, ética, equidad",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la ingeniería genética a hacer más abundante aquí?",
+    "primer": "La ingeniería genética cambia los genomas para cultivos, terapias o microbios industriales bajo debates sobre regulación y ética. La invención local puede significar cultivos de resiliencia o vías clínicas con instituciones, no una edición abierta de ecosistemas por iniciativa propia.",
+    "maturity": {
+      "now": "Cultivos modificados genéticamente, terapias genéticas selectas, microbios industriales bajo regulación.",
+      "near": "Más terapias y cultivos resilientes al clima con luchas de gobernanza.",
+      "frontier": "Abra la edición local del genoma como infraestructura de bricolaje cotidiana."
+    },
+    "milestones": [
+      "Terapias CRISPR aprobadas",
+      "Cultivos transgénicos ampliamente plantados en algunas regiones"
+    ],
+    "useCasesNow": [
+      "Resiliencia de cultivos especiales",
+      "Vías clínicas de terapia génica.",
+      "Microbios industriales"
+    ],
+    "narrative": "Herramientas genéticas cuidadosas entran en las clínicas y los campos."
+  },
+  "gene-sequencing": {
+    "name": "Secuenciación de genes",
+    "summary": "Lectura de ADN/ARN a escala.",
+    "learn": "Mapas de brotes y diagnósticos personales.",
+    "inventionHint": "Identifique patógenos y riesgos rápidamente.",
+    "risk": "privacidad, discriminación",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la secuenciación de genes a hacerla más abundante aquí?",
+    "primer": "La secuenciación de genes lee ADN/ARN para identificar patógenos, riesgos y, a veces, guiar la atención. Ya existen furgonetas contra brotes y vigilancia de aguas residuales. Invente para lograr velocidad de acción y privacidad: una secuencia sin respuesta es solo un archivo.",
+    "maturity": {
+      "now": "Los secuenciadores portátiles y de laboratorio mapean patógenos y paneles clínicos de forma rutinaria en sistemas capaces.",
+      "near": "Paneles de cabecera más rápidos y genomas completos de menor costo.",
+      "frontier": "Lectura biológica completa instantánea de cualquier muestra por parte de cualquier persona."
+    },
+    "milestones": [
+      "Furgonetas de secuenciación de brotes",
+      "Vigilancia genómica de aguas residuales."
+    ],
+    "useCasesNow": [
+      "Identificación de patógenos",
+      "Vigilancia de aguas residuales",
+      "Diagnóstico dirigido"
+    ],
+    "narrative": "La muestra dice la verdad antes de que se propague el rumor."
+  },
+  "alt-proteins": {
+    "name": "Proteínas alternativas",
+    "summary": "Proteínas vegetales, de fermentación y cultivadas.",
+    "learn": "Menor intensidad de tierra y emisiones de proteínas.",
+    "inventionHint": "Proteína local cuando se rompen las cadenas de suministro.",
+    "risk": "costo, cultura, energía",
+    "scarcity": "¿Qué capacidad escasa podrían ayudar las proteínas alternativas a hacer más abundante aquí?",
+    "primer": "Las proteínas alternativas (vegetales, de fermentación y cultivadas) tienen como objetivo brindar nutrición con menos tierra y menos intensidad de emisiones. La cultura, el costo y la energía aún impulsan la adopción. Inventar menús escolares y clínicos o fermentación local, no reemplazar todas las dietas de la noche a la mañana.",
+    "maturity": {
+      "now": "Proteínas vegetales y de fermentación en estanterías; carne cultivada en su mayoría mercado piloto/temprano.",
+      "near": "Paridad de precios en más categorías; etiquetado y costes energéticos más claros.",
+      "frontier": "Proteína predeterminada con uso insignificante de tierra y animales en todas partes."
+    },
+    "milestones": [
+      "Proteínas vegetales/de fermentación de supermercado",
+      "Aprobaciones limitadas para carne cultivada"
+    ],
+    "useCasesNow": [
+      "Menús proteicos escolares/clínicas",
+      "Centros de fermentación locales",
+      "Amortiguadores de shock de oferta"
+    ],
+    "narrative": "La proteína se produce más cerca de los platos."
+  },
+  "vr": {
+    "name": "Realidad virtual",
+    "summary": "Entrenamiento inmersivo y presencia remota (familia VR/AR).",
+    "learn": "Práctica y visión compartida sin desplazamiento completo.",
+    "inventionHint": "Entrenar habilidades, ensayar desastres, experiencia remota.",
+    "risk": "aislamiento, accesibilidad, manipulación",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la Realidad Virtual a hacer más abundante aquí?",
+    "primer": "La realidad virtual y aumentada crea vistas inmersivas o superpuestas para capacitación, experiencia remota y ensayo de trabajos de alto riesgo. No reemplazan las carreteras ni las clínicas, pero pueden multiplicar los escasos expertos y permitir que la gente practique antes de tormentas o cirugías reales. La accesibilidad y el mareo todavía limitan quién se beneficia.",
+    "maturity": {
+      "now": "Capacitación en VR/AR, superposiciones remotas de expertos y simulación de habilidades de alto riesgo.",
+      "near": "Auriculares más ligeros y mejores salas de formación locales para múltiples usuarios.",
+      "frontier": "Presencia sensorial completa que reemplaza la mayor parte de la coubicación física."
+    },
+    "milestones": [
+      "Capacitación quirúrgica y en desastres y AR con asistencia remota en hospitales y servicios públicos"
+    ],
+    "useCasesNow": [
+      "ensayo de habilidad",
+      "Superposición remota de expertos",
+      "Tutoriales de riesgo público"
+    ],
+    "narrative": "Practica mundos ante el riesgo real."
+  },
+  "print3d": {
+    "name": "Impresión 3D",
+    "summary": "Convertir diseños digitales en objetos físicos in situ.",
+    "learn": "Fabricación local de repuestos, herramientas, refugios.",
+    "inventionHint": "Imprime lo que no puedas esperar para enviar.",
+    "risk": "calidad, desperdicio, mal uso",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la impresión 3D a hacer más abundante aquí?",
+    "primer": "La impresión 3D convierte los diseños digitales en piezas físicas in situ: herramientas, aparatos ortopédicos, accesorios y, a veces, dispositivos médicos. Acorta las cadenas de suministro cuando fallan los barcos y camiones, pero el control de calidad, los materiales y la certificación siguen siendo importantes. Invente para la fabricación local urgente con SOP claros, no con impresoras mágicas de todo.",
+    "maturity": {
+      "now": "Las fábricas locales imprimen herramientas, repuestos y algunos dispositivos médicos bajo límites de calidad.",
+      "near": "Materiales certificados más amplios y centros de impresión municipales.",
+      "frontier": "Cualquier objeto bajo demanda a partir de archivos digitales con perfecta solidez."
+    },
+    "milestones": [
+      "Espacios de fabricación de talleres y hospitales que producen repuestos según los SOP"
+    ],
+    "useCasesNow": [
+      "Repuestos urgentes",
+      "Tirantes y herramientas personalizados",
+      "Refugios prototipo"
+    ],
+    "narrative": "Los bits se convierten en una parte local."
+  },
+  "iot": {
+    "name": "Internet de las cosas",
+    "summary": "Sensores que hacen mensurable el mundo físico.",
+    "learn": "Vea inundaciones, aire, máquinas, cuerpos y luego actúe.",
+    "inventionHint": "Alerta temprana y seguimiento continuo.",
+    "risk": "privacidad, falsas alarmas, vigilancia",
+    "scarcity": "¿Qué capacidad escasa podría ayudar el Internet de las cosas a hacer más abundante aquí?",
+    "primer": "El Internet de las cosas consiste en sensores y actuadores que hacen que el mundo físico sea medible y, a veces, controlable: altura de las inundaciones, temperatura de la cadena de frío, calidad del aire, vibración de las máquinas. El hardware suele ser barato; las partes difíciles son la energía, el mantenimiento, las falsas alarmas, la privacidad y quién actúa sobre los datos.",
+    "maturity": {
+      "now": "Sensores baratos para agua, aire y activos; las redes y el mantenimiento son el cuello de botella.",
+      "near": "Una mayor densidad se combina con una mejor duración de la batería y análisis.",
+      "frontier": "Detección continua invisible de distritos enteros con bucles de acción perfectos."
+    },
+    "milestones": [
+      "Redes urbanas de sensores de inundaciones, aire y agua en uso de producción"
+    ],
+    "useCasesNow": [
+      "Alerta temprana de inundaciones",
+      "Monitores de cadena de frío",
+      "Detección de fugas"
+    ],
+    "narrative": "Los sensores te llaman temprano, no tarde."
+  },
+  "materials": {
+    "name": "Ciencia de los materiales",
+    "summary": "Nuevos sólidos y superficies: resistencia, filtros, conductores.",
+    "learn": "Suscribe baterías, edificios, dispositivos.",
+    "inventionHint": "Mejores barreras, estructuras más ligeras, filtros.",
+    "risk": "toxicidad desconocida, reciclaje",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la ciencia de materiales a hacer más abundante aquí?",
+    "primer": "La ciencia de los materiales diseña sólidos y superficies: resistencia, filtración, aislamiento, conductividad. Mejores materiales hacen posibles barreras contra inundaciones, reconstrucciones más ligeras, agua más limpia y mejores baterías. Inventa lo que debe resistir el lugar, con el reciclaje y la toxicidad en la historia.",
+    "maturity": {
+      "now": "Compuestos, membranas y recubrimientos avanzados en cadenas de suministro industriales.",
+      "near": "Materiales de alto rendimiento más baratos para constructores locales.",
+      "frontier": "Materiales programables con autorreparación como material de construcción predeterminado."
+    },
+    "milestones": [
+      "Membranas comerciales",
+      "Estructuras más ligeras",
+      "Mejores materiales térmicos"
+    ],
+    "useCasesNow": [
+      "Barreras contra inundaciones",
+      "Filtros",
+      "Materiales de reconstrucción más ligeros"
+    ],
+    "narrative": "Las superficies se adaptan al clima y al desgaste."
+  },
+  "nano": {
+    "name": "Nanotecnología",
+    "summary": "Ingeniería a escala nanométrica para medicina y materiales.",
+    "learn": "Entrega, sensores, recubrimientos.",
+    "inventionHint": "Filtros específicos o herramientas médicas.",
+    "risk": "toxicidad, de doble uso",
+    "scarcity": "¿Qué capacidad escasa podría ayudar la nanotecnología a hacer más abundante aquí?",
+    "primer": "Los ingenieros en nanotecnología son importantes a escala nanométrica para la administración de fármacos, sensores y recubrimientos. Ya existen productos regulados; las nanofábricas generales no lo hacen. Invente con datos de seguridad y precaución de doble uso, especialmente para emisiones médicas o ambientales.",
+    "maturity": {
+      "now": "Entrega de nanomedicina, recubrimientos y sensores en productos regulados.",
+      "near": "Usos clínicos y de filtración más amplios con datos de seguridad más claros.",
+      "frontier": "Nanofábricas de uso general en cada clínica."
+    },
+    "milestones": [
+      "Formulaciones de nanomedicina aprobadas",
+      "Nanorrecubrimientos comerciales"
+    ],
+    "useCasesNow": [
+      "Pilotos de entrega de medicamentos específicos",
+      "Filtros de agua y aire.",
+      "Recubrimientos protectores"
+    ],
+    "narrative": "Pequeñas capas se limpian y se entregan con cuidado."
+  }
+}

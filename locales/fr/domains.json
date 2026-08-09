@@ -1,0 +1,20 @@
+{
+  "power": {
+    "label": "Pouvoir"
+  },
+  "automator": {
+    "label": "Automate"
+  },
+  "mover": {
+    "label": "Déménageur"
+  },
+  "lifeforce": {
+    "label": "Force de vie"
+  },
+  "link": {
+    "label": "Lien"
+  },
+  "portal": {
+    "label": "Portail"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "present": {
+    "name": "Hoy",
+    "blurb": "El lugar tal como es: la presión aumenta."
+  },
+  "prototype": {
+    "name": "Construcción temprana",
+    "blurb": "Aparecen las primeras piezas de tu idea."
+  },
+  "transition": {
+    "name": "Escalada",
+    "blurb": "Los sistemas se afianzan en todo el lugar."
+  },
+  "transformed": {
+    "name": "Nueva normalidad",
+    "blurb": "La vida cotidiana ha cambiado claramente."
+  }
+}

@@ -20,6 +20,10 @@ describe("static allowlist", () => {
     assert.equal(isPublicRel("js/game.js"), true);
     assert.equal(isPublicRel("js/multiplayer/ui.js"), true);
     assert.equal(isPublicRel("assets/problems/x.jpg"), true);
+    assert.equal(isPublicRel("locales/hu/ui.json"), true);
+    assert.equal(isPublicRel("locales/fr/ui.json"), true);
+    assert.equal(isPublicRel("locales/es/domains.json"), true);
+    assert.equal(isPublicRel("locales/he/scenario-seeds.json"), true);
   });
 
   it("blocks secrets and server source", () => {

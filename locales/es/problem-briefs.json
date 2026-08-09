@@ -1,0 +1,217 @@
+{
+  "rogue-si": {
+    "currentState": "Los sistemas de inteligencia artificial de Frontier ya superan a los humanos en muchas tareas específicas y se están integrando en proyectos piloto de búsqueda, codificación, finanzas y gobierno. Aquí no existe una “superinteligencia” total, pero las rápidas ganancias de capacidad y el despliegue competitivo significan que el control y la alineación van a la zaga de la capacidad en muchas instituciones.",
+    "rootCauses": "La dinámica de carrera premia la velocidad por encima de la seguridad; la evaluación de sistemas abiertos es difícil; los incentivos favorecen la productización; la gobernanza está fragmentada entre laboratorios, estados y ecosistemas de código abierto; una vez que los sistemas actúan a escala, lo contrario resulta costoso.",
+    "warnings": "Las invenciones locales que entregan decisiones de alto riesgo a modelos opacos pueden provocar daños antes de que existan salvaguardas. Prefiera la presencia humana, pistas de auditoría y alcances limitados. No invente como si la AGI totalmente autónoma ya fuera una infraestructura confiable."
+  },
+  "genocide": {
+    "currentState": "El riesgo de atrocidades masivas sigue siendo real en varias regiones. Existen redes de alerta temprana, monitoreo satelital y alertas de la sociedad civil, pero la respuesta suele ser tardía, politizada o insuficientemente financiada. La prevención es posible en teoría; La práctica todavía falla cuando fallan la voluntad y la coordinación.",
+    "rootCauses": "Conflicto de identidad, propaganda deshumanizante, instituciones débiles, flujos de armas y parasitismo internacional. La información llega, pero los incentivos para actuar tempranamente son débiles cuando los costos son inmediatos y los beneficios difusos.",
+    "warnings": "La tecnología para vigilancia o focalización puede tener un doble uso en la opresión. Priorizar la protección civil, la información verificada y la legitimidad de la comunidad, no “puntuaciones de amenazas” puramente automatizadas. Las invenciones locales no deberían reemplazar la responsabilidad política con alertas de caja negra."
+  },
+  "poverty": {
+    "currentState": "La pobreza extrema ha disminuido a nivel mundial durante décadas, pero sigue concentrada; cientos de millones todavía carecen de ingresos, servicios y agencia confiables. El progreso es desigual; Las crisis (conflictos, clima, enfermedades) revierten rápidamente los avances de los más vulnerables.",
+    "rootCauses": "Exclusión de mercados y servicios, derechos laborales y de propiedad débiles, brechas en salud y educación, aislamiento geográfico, discriminación y brechas de voz política. El crecimiento por sí solo no llega a todos sin una inclusión deliberada.",
+    "warnings": "Las “soluciones” digitales o fintech pueden excluir a personas sin documentos de identidad, conectividad o alfabetización. Diseñe para la última milla, efectivo + servicios cuando sea necesario y evite trampas de deuda o extracción de datos enmarcada como ayuda."
+  },
+  "chem-bio": {
+    "currentState": "Las armas químicas y biológicas están prohibidas en los principales tratados, pero la investigación de doble uso, los accidentes de laboratorio y las intenciones ilícitas siguen siendo riesgos. La detección, la atribución y la preparación de la salud pública son desiguales en todo el mundo.",
+    "rootCauses": "El conocimiento y las herramientas se difunden con la ciencia legítima; la verificación es imperfecta; las normas pueden erosionarse; la financiación para la preparación aumenta después de las crisis y luego disminuye; incentivos de doble uso en la investigación y la industria.",
+    "warnings": "No inventar sistemas que faciliten la producción de patógenos o toxinas de alto riesgo. Prefiera detección, EPP, contramedidas médicas y gobernanza transparente. Las reclamaciones de doble uso necesitan líneas rojas estrictas en su funcionamiento."
+  },
+  "asteroid": {
+    "currentState": "Los estudios de objetos cercanos a la Tierra han mejorado espectacularmente; ningún impacto conocido que ponga fin a la civilización es inminente en escalas de tiempo cortas, pero los catálogos incompletos y la preparación limitada para la desviación significan que la defensa planetaria es un trabajo inacabado.",
+    "rootCauses": "Amplio espacio de búsqueda, telescopio y capacidad de seguimiento históricamente limitados, y una inversión insuficiente en casos raros. La tecnología de desviación está madurando a partir de las pruebas, pero aún no es un servicio global permanente.",
+    "warnings": "La invención local suele tener que ver con sensores, alertas públicas y resiliencia civil, no con rayos de desviación a escala de ciudad. Evite las exageraciones de ciencia ficción; concéntrese en asociaciones de detección, simulacros y logística de recuperación si este tema es su marco."
+  },
+  "weather": {
+    "currentState": "Las olas de calor, inundaciones, tormentas y sequías son más frecuentes o intensas en muchas regiones afectadas por el cambio climático. La alerta temprana ha mejorado, pero las alertas de último tramo, la infraestructura y los fondos de recuperación siguen fallando primero en los distritos más pobres.",
+    "rootCauses": "La atmósfera y los océanos más cálidos cargan los dados en busca de extremos; la exposición crece con la expansión costera y urbana; inversión insuficiente en infraestructuras resilientes y redes de seguridad social.",
+    "warnings": "Los sensores sin planes de respuesta son un teatro. Invente bucles de advertencia a acción, refrigeración/refugio contra inundaciones y equidad, no solo paneles de control más bonitos. El tiempo importa: desplegar pilotos utilizables antes de la próxima temporada, no modelos perfectos después."
+  },
+  "mideast": {
+    "currentState": "Oriente Medio alberga conflictos estratificados, dinámicas de ocupación, traumas y medios de vida frágiles junto con vibrantes esfuerzos de la sociedad civil, el comercio y la diplomacia. La violencia y el desplazamiento se repiten; Los procesos de paz son intermitentes y controvertidos.",
+    "rootCauses": "Agravios históricos, fronteras y competencia por recursos, intervenciones externas, políticas autoritarias y faccionales y exclusión económica que alimenta el reclutamiento y la desesperación.",
+    "warnings": "Las invenciones locales deberían centrarse en los medios de vida, la atención consciente del trauma y la infraestructura compartida, no “resolver la geopolítica” con un dispositivo. Evite la tecnología unilateral que aumenta la vigilancia o la asimetría militar bajo una etiqueta de paz."
+  },
+  "nuclear": {
+    "currentState": "Los estados con armas nucleares retienen arsenales; la modernización continúa; La arquitectura del control de armamentos está deshilachada. El riesgo es menos una “cuenta regresiva de película” que un error de cálculo, un accidente o una escalada de crisis en tiempos de decisión comprimidos.",
+    "rootCauses": "Dilemas de seguridad, prestigio, políticas internas de arsenales, sistemas de mando y alerta temprana imperfectos y erosión de tratados y normas.",
+    "warnings": "La invención local casi nunca significa construir armas. Centrarse en la resiliencia de la comunicación de crisis, la alfabetización en materia de protección civil y las herramientas de reducción de tensiones. No enaltezcan los sistemas de lanzamiento ni inventen como si los actores municipales controlaran el botón nuclear."
+  },
+  "slavery": {
+    "currentState": "La esclavitud es ilegal en casi todas partes, pero el trabajo forzoso, la servidumbre por deudas, la trata y el trabajo infantil persisten en las cadenas de suministro, el trabajo doméstico, la pesca y las zonas de conflicto, a menudo ocultos a los consumidores.",
+    "rootCauses": "Beneficiarse de la mano de obra barata bajo coerción, la débil aplicación de la ley, la vulnerabilidad migratoria, la corrupción y las opacas cadenas de suministro de múltiples niveles que diluyen la rendición de cuentas.",
+    "warnings": "La vigilancia de los trabajadores comercializada como “cumplimiento” puede dañar a las personas que dice proteger. Diseñe con la voz de los trabajadores, informes seguros y soluciones, no solo pruebas de blockchain para las marcas."
+  },
+  "women": {
+    "currentState": "La igualdad legal ha avanzado en muchos países, pero persisten brechas en seguridad, salario, poder político, acceso a la educación y derechos reproductivos. Las reacciones adversas y la aplicación desigual de la ley revierten los avances en algunos lugares.",
+    "rootCauses": "Normas patriarcales, dependencia económica, violencia y barreras legales, subrepresentación en las instituciones y falta de inversión en infraestructura de cuidados que recae desproporcionadamente sobre las mujeres.",
+    "warnings": "La tecnología que ignora la seguridad (por ejemplo, compartir ubicaciones públicas sin controles) puede aumentar el daño. Centro de agencia, privacidad y liderazgo de las mujeres locales, no dispositivos salvadores diseñados en otros lugares."
+  },
+  "education": {
+    "currentState": "La matrícula escolar aumentó en todo el mundo, pero los resultados del aprendizaje, la escasez de docentes y las brechas digitales dejan a grandes talentos sin explotar. Las crisis y la pobreza siguen sacando a los niños de las aulas.",
+    "rootCauses": "Escuelas con fondos insuficientes, calidad y remuneración desigual de los docentes, barreras lingüísticas y de discapacidad, brechas de conectividad y costos de oportunidad del trabajo infantil o de cuidados.",
+    "warnings": "Los tutores de IA sin profesores pueden ampliar las brechas aunque solo se beneficien los bien conectados. Prefiera herramientas que apoyen a los educadores, el uso fuera de línea y los planes de estudio locales, no puras fantasías de reemplazo."
+  },
+  "automation": {
+    "currentState": "La automatización y la IA ya están remodelando los almacenes, las oficinas, el transporte y el servicio al cliente. Algunos trabajos desaparecen o pierden habilidades; los nuevos aparecen de manera desigual. Los debates sobre la RBU, la reconversión profesional y las semanas laborales más cortas son luchas políticas vivas.",
+    "rootCauses": "El capital sustituye al trabajo rutinario cuando es rentable; los canales de habilidades están retrasados; el seguro social se creó para el empleo del siglo XX; las empresas capturan ganancias de productividad sin compartirlas.",
+    "warnings": "“Volver a capacitar a todos con una aplicación” fracasa sin salarios y colocación reales. Invente para lograr dignidad, habilidades transferibles y puentes de ingresos, no solo para lograr eficiencia para los propietarios."
+  },
+  "refugees": {
+    "currentState": "Decenas de millones se ven desplazados por la fuerza. Las ciudades anfitrionas absorben a las llegadas en viviendas, escuelas y clínicas en condiciones de escasez. El estatus legal, los derechos laborales y las vías de integración varían ampliamente y cambian con la política.",
+    "rootCauses": "Conflictos, persecución, estrés climático y sistemas de asilo fallidos. Los países receptores no financian suficientemente la recepción mientras persisten las crisis de origen.",
+    "warnings": "La identificación biométrica y el seguimiento pueden convertirse en herramientas de exclusión. Diseño para la dignidad, el acceso al idioma y la vivienda/trabajo, no almacenes de datos sin consentimiento."
+  },
+  "ag": {
+    "currentState": "La agricultura industrial alimenta a miles de millones de personas, pero degrada los suelos, el agua y la biodiversidad en muchas regiones. Las prácticas regenerativas y de precisión se están extendiendo, siendo todavía una participación minoritaria en la superficie mundial.",
+    "rootCauses": "Incentivos de rendimiento a corto plazo, bloqueo de insumos, desigualdad de tierras, estrés climático y mercados que subestiman el daño ecológico.",
+    "warnings": "La agricultura de alta tecnología que sólo funciona para grandes capitales puede dejar fuera a los pequeños agricultores. Adaptar los inventos a los suelos, el agua y el conocimiento de los agricultores locales, no a paquetes de exportación de un solo tamaño."
+  },
+  "food": {
+    "currentState": "El mundo produce suficientes calorías en general, pero el hambre y la desnutrición persisten a través de la pobreza, los conflictos, el desperdicio y la mala distribución. Los shocks de precios afectan primero a los hogares de bajos ingresos.",
+    "rootCauses": "Acceso y asequibilidad, no sólo producción total; fragilidad de la cadena de suministro; conflicto; golpes climáticos a las cosechas; y dietas sesgadas por calorías ultraprocesadas baratas.",
+    "warnings": "La tecnología alimentaria que pone precios a los hambrientos es una sesión fotográfica. Priorizar la cadena de frío, la producción local y la asequibilidad, no solo proteínas novedosas para los mercados ricos."
+  },
+  "eco": {
+    "currentState": "La pérdida de biodiversidad, la deforestación, la degradación de los océanos y la contaminación continúan a un ritmo que amenaza los servicios ecosistémicos de los que dependen los seres humanos. Las áreas protegidas y los esfuerzos de restauración se expanden pero retrasan los factores de pérdida.",
+    "rootCauses": "La conversión de hábitat, la sobreexplotación, las especies invasoras, la contaminación y el cambio climático, impulsados ​​por sistemas económicos que externalizan el valor de la naturaleza.",
+    "warnings": "Las invenciones “verdes” pueden maquillar de verde los proyectos extractivos. Medir los resultados reales del hábitat y la comunidad. Evite reclamar la recuperación total del ecosistema en plazos de juego cortos."
+  },
+  "infectious": {
+    "currentState": "La preparación para una pandemia mejoró en las herramientas (secuenciación, plataformas de vacunas) después de la COVID-19, pero la financiación, la confianza y la equidad en el acceso siguen siendo frágiles. Las enfermedades endémicas todavía matan a millones de personas cada año cuando los sistemas son débiles.",
+    "rootCauses": "Desbordamiento zoonótico, viajes densos, atención primaria deficiente, resistencia a los antimicrobianos, información errónea y vigilancia insuficiente en regiones de alto riesgo.",
+    "warnings": "La tecnología contra brotes sin confianza falla. Emparejar detección con capacidad de comunicación y atención. No inventemos cajas negras de cuarentena forzosa que destruyen la legitimidad."
+  },
+  "climate": {
+    "currentState": "Las temperaturas globales y las tendencias climáticas extremas están aumentando con las emisiones acumulativas. La energía limpia está creciendo rápidamente en muchos mercados, pero los sistemas fósiles, el bloqueo y las brechas de adaptación siguen siendo grandes.",
+    "rootCauses": "Energía e industria basadas en fósiles, cambio de uso de la tierra y acción colectiva retrasada bajo incentivos para los aprovechados. La adaptación no cuenta con fondos suficientes en comparación con los discursos sobre mitigación.",
+    "warnings": "Las invenciones climáticas locales deberían reducir la exposición real o las emisiones a nivel local, no compensar el teatro. Momento: desplegar resiliencia a corto plazo mientras se llevan a cabo transiciones más largas."
+  },
+  "cancer": {
+    "currentState": "La supervivencia ha mejorado en muchos tipos de cáncer en los que se dispone de pruebas de detección y tratamiento; El diagnóstico tardío y el acceso desigual siguen provocando muertes evitables, especialmente en las regiones de menores recursos.",
+    "rootCauses": "Biología del crecimiento celular descontrolado, el envejecimiento de las poblaciones, los factores de riesgo (tabaco, infecciones, contaminación) y los cuellos de botella del sistema de salud en materia de imágenes, patología y capacidad de tratamiento.",
+    "warnings": "No inventes “curar todos los cánceres de la noche a la mañana”. Prefiere detección, clasificación, navegación y acceso más tempranos. Las afirmaciones clínicas necesitan socios y honestidad del piloto."
+  },
+  "mental": {
+    "currentState": "La depresión, la ansiedad y las afecciones relacionadas son las principales causas de discapacidad en todo el mundo. La demanda de atención supera la oferta de médicos; El estigma todavía bloquea la búsqueda de ayuda en muchas comunidades.",
+    "rootCauses": "Aislamiento social, estrés económico, trauma, uso de sustancias, servicios con financiación insuficiente y modelos de atención centrados en la clínica en lugar de integrados en la comunidad.",
+    "warnings": "Los chatbots no son un sistema clínico completo. Diseñe rutas de escalada de crisis, privacidad y atención humana, no aislamiento en una aplicación que no puede intervenir de manera segura."
+  },
+  "alzheimer": {
+    "currentState": "El Alzheimer y las demencias relacionadas crecen con el envejecimiento de la población. Las opciones modificadoras de enfermedades son limitadas y costosas; la mayor parte de la atención corre a cargo de la familia y la comunidad, con una carga elevada.",
+    "rootCauses": "Biología neurodegenerativa compleja, diagnóstico tardío, terapias limitadas y sistemas de atención no preparados para enfermedades progresivas prolongadas.",
+    "warnings": "La vigilancia enmarcada como “seguridad” puede despojar a la dignidad. Invente para brindar apoyo, navegación y asistencia respetuosa a los cuidadores, no solo para dispositivos de seguimiento."
+  },
+  "ageing": {
+    "currentState": "La esperanza de vida se alargó; La esperanza de vida no siempre siguió el ritmo. La ciencia de la longevidad está activa, pero la mayoría de los avances aún provienen de la salud pública, la atención de enfermedades crónicas y los determinantes sociales, no de píldoras milagrosas.",
+    "rootCauses": "Procesos de envejecimiento biológico, estilo de vida y medio ambiente, y sistemas construidos para vidas más cortas y cuidados intensivos en lugar de multimorbilidad prolongada.",
+    "warnings": "La publicidad anti-envejecimiento supera a la evidencia. La invención local debería centrarse en la función, la movilidad y el acceso a la atención, no en pretender revertir el envejecimiento de toda una ciudad en esta década."
+  },
+  "water": {
+    "currentState": "Miles de millones de personas todavía carecen de agua potable o saneamiento gestionados de forma segura. El estrés climático, la contaminación y la sobreextracción afectan a los pozos y a los servicios públicos; Las economías de petroleros llenan vacíos a un alto costo.",
+    "rootCauses": "Inversión insuficiente en infraestructura, contaminación, agotamiento de los acuíferos, gobernanza débil de las aguas compartidas y pobreza que priva a los hogares del suministro seguro.",
+    "warnings": "Las bombas sin presupuestos de mantenimiento fallan. Diseñe para reparación local, energía para tratamiento y asignación justa, no para caídas de hardware de una sola vez."
+  },
+  "air": {
+    "currentState": "La contaminación del aire ambiente y doméstico genera grandes cargas de enfermedades, especialmente cerca del tráfico, la industria y la cocina con combustibles sólidos. Se mejoró el seguimiento; las transiciones limpias son desiguales.",
+    "rootCauses": "La quema de fósiles, las emisiones industriales, el polvo y los combustibles sólidos en interiores, además de una regulación débil y una desigualdad de exposición según los ingresos de los vecindarios.",
+    "warnings": "Los sensores por sí solos no limpian el aire. Combine la medición con recortes de recursos exigibles, cocina limpia y turnos de movilidad que las personas realmente puedan utilizar."
+  },
+  "energy-access": {
+    "currentState": "Cientos de millones carecen de electricidad o de un suministro fiable; muchos más enfrentan energía costosa e intermitente. La energía solar y las minirredes amplían el acceso, aún incompleto, para usos productivos y clínicas.",
+    "rootCauses": "Altos costos de extensión de la red, servicios públicos débiles, pobreza y combustibles sucios o caros en el margen. Las políticas y las finanzas a menudo van por detrás de las posibilidades técnicas.",
+    "warnings": "Los primeros vatios que mueren al anochecer fracasan en las clínicas. Generación de pares con almacenamiento, capacitación en mantenimiento y prioridades de carga realistas."
+  },
+  "homeless": {
+    "currentState": "La visible falta de vivienda y la inseguridad habitacional están aumentando en muchas ciudades, incluso en los países ricos. Los sistemas de refugio están sobrecargados; las salidas a viviendas estables retrasan la entrada.",
+    "rootCauses": "Los costos de la vivienda superan los salarios, las brechas de salud mental y sustancias, las débiles protecciones de arrendamiento y las viviendas sociales insuficientemente construidas, además de las bajas de instituciones sin planes de vivienda.",
+    "warnings": "La liquidación y el seguimiento puramente tecnológico sin oferta de vivienda empeoran el daño. Inventar calidad de alojamiento, vinculación de servicios y caminos para permanecer alojado."
+  },
+  "cities": {
+    "currentState": "La mayoría de los humanos vivirán en áreas urbanas. Las ciudades concentran oportunidades y desigualdad, islas de calor, congestión y estrés en los servicios, al tiempo que albergan capacidad de innovación.",
+    "rootCauses": "Rápida urbanización, fallas en las políticas de suelo y transporte, gobernanza fragmentada en los bordes metropolitanos e infraestructura que va a la zaga del crecimiento demográfico.",
+    "warnings": "Las pilas de ciudades inteligentes sin supervisión democrática se convierten en vigilancia. Prefiera los bienes públicos, la movilidad y el valor de la vivienda a los paneles de control de dispositivos."
+  },
+  "child": {
+    "currentState": "La mortalidad infantil cayó drásticamente, pero las muertes evitables por neumonía, diarrea, malaria y desnutrición continúan donde la atención primaria y las vacunas están rezagadas. Las brechas en nutrición y desarrollo temprano determinan los resultados a lo largo de la vida.",
+    "rootCauses": "Pobreza, atención primaria deficiente, brechas en el acceso a vacunas y nutrición, fallas en el agua y el saneamiento y vínculos con la salud materna que comienzan antes del nacimiento.",
+    "warnings": "Los inventos orientados a la familia necesitan la confianza de los cuidadores y una realidad de cadena de frío. Evitar la recolección de datos sin capacidad de atención para actuar sobre los resultados."
+  },
+  "maternal": {
+    "currentState": "La mayoría de las muertes maternas se pueden prevenir con atención especializada, transporte de emergencia y suministros básicos; sin embargo, las disparidades siguen siendo enormes entre los países y dentro de ellos.",
+    "rootCauses": "Distancia a las instalaciones, escasez de parteras y sangre/productos, pobreza, embarazo adolescente y brechas en la calidad de la atención, incluido el trato irrespetuoso que disuade su uso.",
+    "warnings": "Las aplicaciones sin ambulancias y bancos de sangre fracasan. Invente para derivaciones, transporte y asistencia respetuosa y calificada en el parto, no solo para rastreadores de embarazos."
+  },
+  "coord": {
+    "currentState": "Los problemas transfronterizos y entre ciudades (tormentas, brotes, crisis de oferta) todavía enfrentan presupuestos, datos y fondos de respuesta fragmentados. Los pilotos cooperan; La capacidad compartida permanente es rara.",
+    "rootCauses": "Instintos de soberanía, incentivos para los aprovechados, sistemas incompatibles y horizontes políticos cortos que no financian adecuadamente la alerta temprana compartida y la respuesta conjunta.",
+    "warnings": "Un tablero compartido sin un fondo compartido o derechos de decisión es un teatro. Diseñe la gobernanza y los incentivos con el mismo cuidado que los sensores."
+  },
+  "radicalization": {
+    "currentState": "El extremismo violento y la radicalización todavía reclutan a través de prejuicios, canales en línea y agravios fuera de línea. Existen programas de prevención en escuelas y comunidades, pero la cobertura es desigual y a menudo reacciona después del daño en lugar de desarmar las vías tempranamente.",
+    "rootCauses": "Conflictos de identidad, propaganda deshumanizante, exclusión social, estado de derecho débil y plataformas que amplifican los agravios más rápido que el diálogo. Los jóvenes son atacados desde el principio (en las escuelas y en línea) antes que la violencia fuera de línea.",
+    "warnings": "El desarme de la radicalización comienza con los derechos humanos, el diálogo transfronterizo y el empoderamiento de los jóvenes, no con la vigilancia masiva ni con “puntajes de terror” predictivos. Las listas de vigilancia de doble uso pueden convertirse en herramientas de discriminación. Prefiere rampas de salida, alfabetización mediática y legitimidad comunitaria."
+  },
+  "fgm": {
+    "currentState": "Más de 200 millones de niñas y mujeres vivas hoy han sido sometidas a mutilación genital femenina; Millones más siguen en riesgo cada año. La prevalencia ha disminuido en muchos países (una niña tiene aproximadamente un tercio menos de probabilidades de ser sometida a una mutilación genital femenina que hace treinta años), pero el progreso es desigual y las interrupciones de la era de la COVID hacen retroceder los programas.",
+    "rootCauses": "Normas sociales, presión para contraer matrimonio, medios de vida de los practicantes, aplicación débil de la ley y movilidad transfronteriza en “temporada de corte”. Las actitudes están cambiando en muchos lugares donde las niñas y mujeres que conocen la mutilación genital femenina dicen que debería terminar, pero la práctica puede retrasar la creencia.",
+    "warnings": "Invente para el abandono liderado por la comunidad, la educación y protección de las niñas y la atención a las sobrevivientes; nunca teatro gráfico de “rescate” ni dispositivos vergonzosos. No medicalizar la mutilación genital femenina como una mejora clínica. Centrar el liderazgo, la confidencialidad y la dignidad de las mujeres locales."
+  },
+  "short-termism": {
+    "currentState": "Los hogares y comunidades bajo presión todavía liquidan activos a largo plazo para sobrevivir inmediata: los agricultores sacrifican vacas lecheras en caso de hambruna; Se queman bosques para el campo de esta temporada. El mismo patrón aparece en la política y en las empresas que asaltan el futuro en busca de retornos cortos.",
+    "rootCauses": "Las trampas de la pobreza y la falta de redes de seguridad obligan a aplicar altas tasas de descuento; derechos inseguros sobre la tierra y los recursos; mercados y políticas que recompensen el rendimiento de este trimestre a través de décadas de suelo, bosques y capital de resiliencia.",
+    "warnings": "Está relacionado con la pobreza, pero el problema central es el equilibrio temporal. Inventar incentivos y amortiguadores que hagan que proteger el mañana sea racional hoy, no sermones que ignoren los estómagos vacíos. Evitar esquemas “verdes” que excluyen a los pobres de medios de vida sin alternativas."
+  },
+  "misinfo": {
+    "currentState": "Los hechos compartidos y la confianza institucional están bajo la presión de la amplificación algorítmica, los medios sintéticos baratos y el periodismo local vacío. Las falsedades viajan más rápido que las correcciones; las crisis (salud, elecciones, desastres) se convierten en emergencias epistémicas además de físicas.",
+    "rootCauses": "Las economías de atención recompensan la indignación; la verificación es costosa; La IA reduce el coste de las falsificaciones convincentes; la polarización y la escasa alfabetización mediática erosionan los puntos en común; Los medios de comunicación de interés público que carecen de fondos suficientes dejan los rumores sin respuesta.",
+    "warnings": "No invente \"La IA elimina los pensamientos erróneos\" como una victoria limpia. Prefiera procedencia, intermediarios locales de confianza y agencia de usuarios. La vigilancia enmarcada como antidesinfo puede silenciar el discurso legítimo. Diseño para la velocidad y la dignidad de la corrección, no para la policía de la pureza."
+  },
+  "totalitarianism": {
+    "currentState": "Los sistemas totalitarios estrictos todavía aíslan a las poblaciones mediante la represión, el adoctrinamiento y el monopolio de la información. Se ha expandido una autocracia más amplia; Las herramientas que ayudan a las personas a acceder a medios gratuitos, comunicarse y organizarse son escasas donde más se necesitan.",
+    "rootCauses": "Poder coercitivo concentrado, monopolios estatales de los medios de comunicación, infraestructura de censura, miedo a la asociación y parasitismo internacional cuando no se puede llegar de forma segura a poblaciones aisladas.",
+    "warnings": "La gente necesita medios de comunicación libres, puentes lingüísticos, elusión de la censura y acciones colectivas más seguras, no una mejor vigilancia estatal. El doble uso es extremo: las herramientas pueden ser incautadas. Prefieren diseños de subvigilancia y ayuda mutua que no requieran un régimen amistoso."
+  },
+  "women-stem": {
+    "currentState": "Sólo alrededor del 35% de los estudiantes STEM en educación superior a nivel mundial son mujeres. Las niñas suelen tener un buen desempeño temprano y luego abandonan las carreras de matemáticas y ciencias en la transición a la secundaria y terciaria; La retención en el lugar de trabajo en laboratorios y roles tecnológicos sigue siendo desigual.",
+    "rootCauses": "Estereotipos, escuelas inseguras o distantes, trabajo doméstico, culturas de laboratorio hostiles, falta de mentores y modelos a seguir, e infraestructura de atención que recae sobre las mujeres después de obtener un título. Este es un problema del canal STEM, no de la igualdad de derechos en su conjunto.",
+    "warnings": "No invente “una aplicación inspiradora” como solución completa. Prefiere tránsito seguro, cultura de laboratorio, becas con colocación y atención cerca de los lugares de trabajo. Distinto de la invención general de los derechos de las mujeres (seguridad, derecho, voz política): mantenga el enfoque en los caminos de la ciencia y la ingeniería."
+  },
+  "memory": {
+    "currentState": "La memoria humana es incompleta y poco fiable incluso en personas sanas. Por primera vez, la gente corriente puede crear ricos registros multimedia de experiencias vividas; sin embargo, la mayor parte de la vida sigue sin ser capturada, inescrutable o encerrada en formatos que se pudrirán.",
+    "rootCauses": "Olvido biológico; falta de herramientas de captura privadas y asequibles; rotación organizacional que borra el conocimiento institucional; pérdida cultural cuando las historias de los mayores nunca se registran; Obsolescencia digital de soportes y formatos.",
+    "warnings": "Esto no es atención para el Alzheimer o la demencia. Inventar para documentar y preservar la experiencia (personal, comunitaria e institucional) con consentimiento y privacidad. El registro de vida sin control se convierte en vigilancia. Prefiere archivos propiedad de los usuarios y un legado digno, no una recuperación total forzada."
+  },
+  "rural-roads": {
+    "currentState": "Alrededor de mil millones de habitantes del medio rural viven a más de 2 kilómetros de una carretera transitable durante todo el año. El aislamiento de los mercados, las clínicas y las escuelas es una característica central de la trampa de la pobreza: “ser pobre es estar aislado”. Las temporadas de lluvias y el terreno restringen aún más el acceso.",
+    "rootCauses": "Inversión insuficiente en infraestructura rural, mantenimiento deficiente después de la inauguración, terreno y clima difíciles y sesgo político hacia proyectos urbanos visibles sobre la conectividad de última milla.",
+    "warnings": "Una carretera sin mantenimiento es una promesa temporal. Invente para acceso en todo clima, logística clínica y de mercado, e incentivos de mantenimiento, no solo un teatro de construcción único. Observen el desplazamiento y el acaparamiento de tierras enmarcados como “desarrollo de corredores”."
+  },
+  "smoking": {
+    "currentState": "Más de mil millones de personas todavía consumen tabaco con regularidad; El tabaquismo mata a millones de personas cada año y sigue concentrado en los países de bajos ingresos, incluso cuando las tasas de ingresos altos caen. El humo de segunda mano y el consumo de nicotina entre los jóvenes (incluidos los nuevos productos) mantienen viva la epidemia.",
+    "rootCauses": "Biología de la adicción, marketing industrial, densidad minorista, servicios débiles para dejar de fumar y regulación rezagada donde la aplicación es escasa. Las normas sociales y el estrés mantienen alta la iniciación entre los jóvenes en algunos lugares.",
+    "warnings": "Las campañas orientadas únicamente a la vergüenza fallan a las personas que tienen menos acceso a dejar de fumar. Invente para la prevención del inicio, apoyo asequible para dejar de fumar y protección de segunda mano, no para la vigilancia de los fumadores sin atención. Evite las “soluciones” que capturan la industria."
+  },
+  "sanitation": {
+    "currentState": "Miles de millones todavía carecen de servicios de saneamiento gestionados de forma segura; más de mil millones carecen incluso de retretes o letrinas privadas básicas, y cientos de millones practican la defecación al aire libre. El alcantarillado urbano va a la zaga del crecimiento informal; Los sanitarios escolares y los sistemas de lodos fecales siguen siendo eslabones débiles.",
+    "rootCauses": "Costo de los sanitarios y alcantarillados, servicios públicos insuficientemente financiados, estigma, barreras a la tenencia de la tierra en asentamientos informales y descuido de toda la cadena, desde las letrinas hasta el tratamiento seguro.",
+    "warnings": "Se trata de sanitarios, alcantarillado e higiene, no sólo de filtración de agua potable (ver Agua Limpia). Los sensores sin vaciado y tratamiento son teatro. Preferir dignidad, instalaciones escolares seguras para el género y economías de lodos seguras a la exageración de los lujosos baños inteligentes para quienes ya reciben servicios."
+  },
+  "waste": {
+    "currentState": "Las ciudades generan alrededor de dos mil millones de toneladas de desechos sólidos municipales al año, además de enormes flujos de desechos electrónicos y peligrosos. El reciclaje y los sistemas circulares crecen pero van a la zaga de la producción; Los vertederos, los vertederos a cielo abierto y los desagües obstruidos por plástico todavía dominan muchos lugares.",
+    "rootCauses": "Producción lineal, envases baratos de un solo uso, recolección deficiente, exclusión del sector informal de los planes formales y comercio global de residuos que traslada el daño a las regiones más pobres.",
+    "warnings": "No inventen “exportar la basura” como un éxito local. Diseñar teniendo en cuenta los medios de vida de los recolectores informales, la recuperación real de materiales y la reducción en origen. La quema de desechos electrónicos y las inundaciones ahogadas por plástico necesitan sistemas, no limpiezas puntuales de playas como toda una invención."
+  },
+  "reproductive": {
+    "currentState": "La salud sexual y reproductiva significa que las personas pueden tener una vida sexual segura y decidir si reproducirse, cuándo y con qué frecuencia. El acceso a anticonceptivos ha mejorado a nivel mundial, pero sigue siendo bajo en muchas regiones; Las ITS, la atención de la infertilidad y los servicios confidenciales para todos los géneros están rezagados.",
+    "rootCauses": "Desabastecimientos, estigma, sesgo de los proveedores, costos, políticas restrictivas y servicios diseñados únicamente para el embarazo, no para hombres, parejas, adolescentes o atención de fertilidad. La mutilación genital femenina y el matrimonio forzado son daños relacionados, pero no toda la salud reproductiva.",
+    "warnings": "Este tema es para todas las personas, no sólo para mujeres y niños. La atención obstétrica de emergencia materna es su propio tema; La mutilación genital femenina es su propio tema. Invente para la agencia, la privacidad, la atención de las ITS (incluidos los hombres), la elección de anticonceptivos y el acceso a la fertilidad; nunca el control coercitivo de la fertilidad se presenta como algo bueno."
+  },
+  "amr": {
+    "currentState": "Las bacterias y otros microbios están desarrollando resistencia a los antibióticos y antimicrobianos. Las infecciones comunes y la cirugía se vuelven más difíciles de tratar; Los medicamentos de última línea fracasan en los hospitales, mientras que el mal uso comunitario y agrícola acelera la resistencia. Este no es un tema de brote de virus, sino de la erosión de la eficacia antimicrobiana.",
+    "rootCauses": "Uso excesivo y mal uso de antibióticos en humanos y animales, diagnósticos débiles que obligan a un tratamiento a ciegas, control deficiente de infecciones y falta de inversión en nuevos antimicrobianos y gestión.",
+    "warnings": "No inventen aquí “otra aplicación para una pandemia viral”. Prefiera la administración, el diagnóstico bacteriano rápido, el cambio en las prácticas agrícolas y farmacéuticas y el acceso al medicamento adecuado, no la venta ilimitada de antibióticos. Preservar la eficacia; No inventemos sistemas que fomenten una mayor prescripción a ciegas."
+  }
+}

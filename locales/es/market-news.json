@@ -1,0 +1,490 @@
+{
+  "ram-shortage": {
+    "headline": "La escasez de RAM afecta las cadenas de suministro",
+    "body": "Los chips de memoria son escasos y caros. Los proyectos informáticos necesitan recursos más profundos antes de salir del laboratorio."
+  },
+  "ai-datacenter-backlash": {
+    "headline": "Público dividido por los centros de datos de IA",
+    "body": "La gente no quiere que se construya un centro de datos en su estado. Para implementar la IA y la computación pesada se necesita más voluntad política."
+  },
+  "solar-glut": {
+    "headline": "El exceso de paneles solares hace caer los precios",
+    "body": "Fábricas sobreconstruidas. Los kits solares y de baterías inundan los catálogos municipales: los costos de capital disminuyen."
+  },
+  "nuclear-permit-wave": {
+    "headline": "Los permisos nucleares avanzan más rápido",
+    "body": "Un pacto regional agiliza las revisiones de reactores pequeños. La voluntad política para la energía nuclear aumenta."
+  },
+  "drone-airspace-clamp": {
+    "headline": "Se endurecen las normas sobre el espacio aéreo de drones",
+    "body": "Los nuevos corredores y los mandatos de seguros elevan el listón. Los proyectos de autonomía necesitan presupuesto y aceptación."
+  },
+  "gene-sequencing-boom": {
+    "headline": "Los secuenciadores portátiles se vuelven más baratos",
+    "body": "Una guerra de precios en la genómica de campo. Las pilas de patógenos y biotecnología cuestan menos capital para mantenerse en pie."
+  },
+  "biotech-scare": {
+    "headline": "Las fugas de laboratorio asustan a los fanáticos del miedo a la biotecnología",
+    "body": "Los titulares superan a la evidencia. La biología sintética y el trabajo genético enfrentan un clima político más duro."
+  },
+  "grid-congestion": {
+    "headline": "Aumentan las tarifas por congestión de la red",
+    "body": "Los cuellos de botella en la transmisión hacen que los proyectos energéticos sean más costosos de conectar, especialmente los de generación de gran tamaño."
+  },
+  "open-source-models": {
+    "headline": "Los modelos de código abierto inundan el mercado",
+    "body": "Las pesas libres capaces bajan la barrera. Los asistentes de IA se vuelven más baratos para trabajar localmente."
+  },
+  "robot-labor-pushback": {
+    "headline": "Los sindicatos rechazan los robots asistenciales",
+    "body": "La automatización de la atención y la logística se encuentra con la resistencia organizada. La voluntad política es el recurso escaso."
+  },
+  "chip-export-thaw": {
+    "headline": "Se facilitan los controles de exportación de chips de borde",
+    "body": "Un deshielo temporal. Los kits de IoT y Edge Computing bajan de precio para proyectos cívicos."
+  },
+  "privacy-backlash": {
+    "headline": "Reacción de vigilancia del sensor",
+    "body": "Las comunidades rechazan las cámaras y los medidores siempre encendidos. La IoT y las redes necesitan más cobertura política."
+  },
+  "print-shop-grants": {
+    "headline": "La impresión 3D municipal cede terrenos",
+    "body": "Las ciudades financian fabulosas tiendas locales. La fabricación y los materiales aditivos obtienen un gran respiro."
+  },
+  "rare-earth-squeeze": {
+    "headline": "La compresión de las tierras raras afecta al hardware",
+    "body": "Los imanes, las baterías y los materiales avanzados cuestan más. Las pilas con mucho hardware lo sienten."
+  },
+  "climate-fund-surge": {
+    "headline": "Los fondos de adaptación abren temprano",
+    "body": "Una ventana climática financia tecnología de resiliencia local. La voluntad política a favor de las pilas verdes se suaviza."
+  },
+  "vr-training-fad": {
+    "headline": "Se recortan los presupuestos para la formación en realidad virtual",
+    "body": "Las empresas retroceden en los programas de auriculares. Los proyectos de dominio de enlace necesitan más capital para justificarse."
+  },
+  "quantum-hype-cycle": {
+    "headline": "La exageración cuántica se enfría: los pilotos hacen una pausa",
+    "body": "Los inversores esperan nichos más claros. El trabajo cuántico necesita más voluntad para mantener el interés de los patrocinadores."
+  },
+  "community-broadband": {
+    "headline": "La banda ancha comunitaria gana una votación",
+    "body": "Pasan las cooperativas de fibra. Las redes y las herramientas de coordinación enfrentan menos fricciones políticas."
+  },
+  "crypto-winter-thaw": {
+    "headline": "Las herramientas de contabilidad cambian de nombre a rieles cívicos",
+    "body": "Menos publicidad, más adquisiciones. Los libros de contabilidad de estilo criptográfico cuestan un poco menos de capital político."
+  },
+  "battery-fire-scare": {
+    "headline": "El incendio de la batería del almacén domina las noticias",
+    "body": "Los temores sobre la seguridad aumentan los costos de seguro y cumplimiento para los proyectos de baterías."
+  },
+  "wind-siting-wars": {
+    "headline": "Se intensifican las guerras por la ubicación del viento",
+    "body": "Las comunidades costeras y montañosas luchan contra las nuevas turbinas. Los proyectos eólicos necesitan más voluntad política."
+  },
+  "offshore-wind-subsidy": {
+    "headline": "Paquete de subvenciones a la energía eólica marina",
+    "body": "Un paquete regional respalda la energía eólica marina. Los costos de capital se alivian para las pilas de viento."
+  },
+  "geothermal-drill-boom": {
+    "headline": "Caen los costos de perforación geotérmica",
+    "body": "Las nuevas brocas y las plataformas compartidas reducen los proyectos de calefacción de carga básica. La geotermia se vuelve más barata para empezar."
+  },
+  "seismic-permit-freeze": {
+    "headline": "Los temores sísmicos congelan los permisos geotérmicos",
+    "body": "Las historias de terremotos inducidos paralizan los permisos locales. La geotermia necesita más cobertura política."
+  },
+  "tidal-pilot-success": {
+    "headline": "El piloto de mareas supera las previsiones",
+    "body": "Un práctico de puerto publica resultados fiables. La tecnología de mareas y olas parece más financiable."
+  },
+  "marine-storm-damage": {
+    "headline": "Tormenta daña kit de energía marina",
+    "body": "Los seguros después de una mala temporada recaudan capital para proyectos de mareas y olas."
+  },
+  "nuclear-waste-standoff": {
+    "headline": "Vuelve el enfrentamiento por residuos nucleares",
+    "body": "La política de almacenamiento estalla. La energía nuclear necesita más voluntad incluso cuando los reactores son bienvenidos sobre el papel."
+  },
+  "smr-factory-discount": {
+    "headline": "La fábrica SMR ofrece precios al por mayor",
+    "body": "Los proveedores de reactores modulares reducen las primas de la primera unidad. El capital nuclear disminuye ligeramente."
+  },
+  "oil-price-spike": {
+    "headline": "El aumento del precio del petróleo revive la electrificación ahora",
+    "body": "La volatilidad de los fósiles hace que las energías limpias sean más fáciles de vender políticamente."
+  },
+  "gas-lobby-blitz": {
+    "headline": "El lobby del gas golpea a la energía limpia",
+    "body": "La mensajería tradicional ralentiza la generación limpia. ¿Aumentarán los costes para las tecnologías energéticas?"
+  },
+  "microgrid-standard": {
+    "headline": "Se adopta el estándar de microrred",
+    "body": "Un estándar compartido reduce el costo de integración de pilas de energía, baterías y redes."
+  },
+  "utility-monopoly-fee": {
+    "headline": "Tarifas de monopolio de servicios públicos para dispositivos perimetrales",
+    "body": "Los cargos de distribución afectan la generación y el almacenamiento locales. El hardware eléctrico cuesta más."
+  },
+  "copper-shortage": {
+    "headline": "La escasez de cobre afecta el cableado",
+    "body": "Los cables y motores se vuelven caros. Los presupuestos de energía y hardware de mudanzas aumentan."
+  },
+  "lithium-price-crash": {
+    "headline": "Caída del precio del litio",
+    "body": "Los paquetes de baterías vuelven a ser más baratos después de un exceso de oferta."
+  },
+  "hydrogen-hype-tax": {
+    "headline": "Impuesto exagerado sobre el hidrógeno en los presupuestos energéticos",
+    "body": "Las autoridades desvían fondos hacia planes H2 que no están preparados. Los pilotos locales pagan más para competir."
+  },
+  "community-solar-law": {
+    "headline": "Se aprueba la ley solar comunitaria",
+    "body": "Las cooperativas solares compartidas tienen reglas sencillas. La energía solar costará menos."
+  },
+  "night-storage-mandate": {
+    "headline": "Mandato de almacenamiento nocturno",
+    "body": "Las nuevas reglas combinan la generación con el almacenamiento. Aumenta el capital de las baterías; La política solar se relaja un poco."
+  },
+  "blackout-week": {
+    "headline": "La semana de apagón enfoca las mentes",
+    "body": "Después de apagones de varios días, aumenta la voluntad política a favor de la energía y las baterías locales."
+  },
+  "ai-chip-tax": {
+    "headline": "Impuesto de importación de chips AI",
+    "body": "Los aceleradores especializados se vuelven más caros. Las pilas de IA y computación necesitan más capital."
+  },
+  "teacher-ai-grants": {
+    "headline": "Becas de copiloto de IA para profesores",
+    "body": "Los fondos para educación financian la IA en las aulas. Facilidad de voluntad y capital para proyectos de IA."
+  },
+  "deepfake-scandal": {
+    "headline": "Semana del escándalo de los deepfake",
+    "body": "La confianza colapsa. Los proyectos de IA necesitan más voluntad política para superar el escrutinio."
+  },
+  "robot-lease-deals": {
+    "headline": "Ofertas de arrendamiento de robot como servicio",
+    "body": "Los vendedores financian a los organismos mensualmente. Los robots cuestan menos capital inicial."
+  },
+  "robot-injury-lawsuit": {
+    "headline": "La demanda por lesiones robóticas se vuelve viral",
+    "body": "Los temores de responsabilidad aumentan el gasto en cumplimiento de los robots."
+  },
+  "warehouse-robot-boom": {
+    "headline": "Descuentos en el brazo del robot de almacén en repuestos",
+    "body": "Los robots logísticos sobreconstruidos llegan a los mercados cívicos más baratos."
+  },
+  "ai-energy-backlash": {
+    "headline": "Reacción contra el uso de energía de la IA",
+    "body": "Las comunidades vinculan la IA con la tensión eléctrica. La IA aumentará los costos."
+  },
+  "open-robotics-kit": {
+    "headline": "El kit de robótica abierto llega a los estantes",
+    "body": "Los diseños y piezas compartidos reducen los costos de construcción de robots."
+  },
+  "automation-tax-talk": {
+    "headline": "Devoluciones de charlas sobre impuestos de automatización",
+    "body": "Los políticos plantean impuestos a los robots. Las pilas de automatizadores necesitan más voluntad."
+  },
+  "ai-safety-fund": {
+    "headline": "Fondo nacional de seguridad de la IA",
+    "body": "Las herramientas de cumplimiento y evaluación reciben subsidios. El capital de la IA disminuye si se siguen las reglas."
+  },
+  "ev-charger-glut": {
+    "headline": "Exceso de cargadores para vehículos eléctricos",
+    "body": "El hardware de carga es barato. Los costos de transporte y apoyo a la conducción autónoma caen."
+  },
+  "road-pricing-fight": {
+    "headline": "Lucha por el precio de las carreteras",
+    "body": "Las tasas de congestión provocan protestas. La conducción autónoma y el transporte necesitan más voluntad."
+  },
+  "autonomy-corridor-opens": {
+    "headline": "Se abre corredor de autonomía",
+    "body": "Una ciudad abre un corredor de transporte cartografiado. Capital autónomo y facilidad."
+  },
+  "drone-crash-ban": {
+    "headline": "El accidente de un dron provoca una prohibición temporal",
+    "body": "Un incidente de alto perfil deja en tierra a los drones locales hasta que las reglas se endurezcan."
+  },
+  "medical-drone-lane": {
+    "headline": "Carril médico para drones aprobado",
+    "body": "Los corredores de sangre y vacunas adquieren estatus permanente. Los drones se vuelven más fáciles políticamente."
+  },
+  "satellite-bandwidth-sale": {
+    "headline": "Venta de ancho de banda satelital",
+    "body": "Los proveedores de conectividad espacial descargan capacidad. El espacio y las redes se vuelven más baratos de cablear."
+  },
+  "space-debris-scare": {
+    "headline": "El miedo a los desechos espaciales",
+    "body": "Lanzar picos de seguros. Los proyectos espaciales necesitan más capital."
+  },
+  "fiber-cut-wave": {
+    "headline": "Ola de criminalidad cortada en fibra",
+    "body": "El robo de cables aumenta los costos de resiliencia de la red."
+  },
+  "mesh-radio-legalized": {
+    "headline": "Radio malla legalizada",
+    "body": "Las redes comunitarias en malla obtienen reglas de espectro claras. Las redes y el IoT se relajarán."
+  },
+  "quantum-link-pilot": {
+    "headline": "Piloto de enlace cuántico financiado",
+    "body": "Un corredor de investigación financia pruebas de redes cuánticas. El capital de Internet cuántico disminuye."
+  },
+  "transport-strike": {
+    "headline": "La huelga del transporte perturba a los pilotos",
+    "body": "Acción laboral congela los juicios de movilidad. Las pilas de mudanzas necesitan más voluntad."
+  },
+  "bike-lane-data-deal": {
+    "headline": "Oferta de sensores para carriles bici",
+    "body": "Las ciudades compran al por mayor IoT para la movilidad. Las redes y el hardware de IoT se abaratan."
+  },
+  "lidar-price-war": {
+    "headline": "Guerra de precios Lidar",
+    "body": "Los sensores de autonomía y los drones se abaratan."
+  },
+  "gps-jamming-zone": {
+    "headline": "Se amplía la zona de interferencia de GPS",
+    "body": "El riesgo de navegación aumenta el costo de los drones, el espacio y las operaciones de conducción autónoma."
+  },
+  "gene-therapy-approval": {
+    "headline": "Ola de aprobación de terapia génica",
+    "body": "Los reguladores autorizan más terapias. La ingeniería genética facilitará."
+  },
+  "clinic-sequencer-rebate": {
+    "headline": "Reembolso por secuenciador clínico",
+    "body": "La salud pública reembolsa los kits de secuenciación portátiles."
+  },
+  "gmo-crop-ban-talk": {
+    "headline": "Se difunde la discusión sobre la prohibición de cultivos transgénicos",
+    "body": "La política agrícola se endurece. Synbio y la ingeniería genética necesitan más voluntad."
+  },
+  "alt-protein-price-parity": {
+    "headline": "Paridad de precios de las proteínas alternativas",
+    "body": "Las proteínas vegetales y de fermentación alcanzan la paridad de costes en más cafeterías."
+  },
+  "cultured-meat-ban": {
+    "headline": "Prohibición de la carne cultivada en un mercado clave",
+    "body": "Una prohibición aumenta el costo político de las proteínas alternativas."
+  },
+  "bci-trial-success": {
+    "headline": "El juicio de BCI restablece el habla",
+    "body": "La cobertura positiva de los ensayos reduce la fricción política en torno a las interfaces cerebro-computadora."
+  },
+  "bci-ethics-probe": {
+    "headline": "Se abre investigación de ética de BCI",
+    "body": "Los temores sobre el consentimiento y los datos aumentan el costo de las interfaces neuronales."
+  },
+  "pandemic-stockpile": {
+    "headline": "Reabastecimiento de reservas pandémicas",
+    "body": "Diagnóstico de pedidos al por mayor de compradores públicos. Se facilita el capital de secuenciación genética."
+  },
+  "synbio-ip-thicket": {
+    "headline": "Matorral Synbio IP",
+    "body": "Las luchas por las licencias recaudan capital para la construcción de biología sintética."
+  },
+  "crispr-tool-drop": {
+    "headline": "Los precios de las herramientas CRISPR caen",
+    "body": "Los reactivos de edición genética se vuelven más baratos para los laboratorios locales."
+  },
+  "blood-sample-privacy": {
+    "headline": "Ley de privacidad de muestras de sangre",
+    "body": "Las reglas del biobanco se endurecen. Los proyectos de secuenciación y BCI necesitan más voluntad."
+  },
+  "school-lunch-proteins": {
+    "headline": "Pilotos de proteínas para el almuerzo escolar",
+    "body": "Las cocinas públicas prueban proteínas alternativas: se abre el camino político."
+  },
+  "vr-headset-clearance": {
+    "headline": "Venta de liquidación de auriculares VR",
+    "body": "Los rendimientos empresariales inundan el mercado. El capital de la realidad virtual cae."
+  },
+  "ar-workplace-mandate": {
+    "headline": "Mandato de seguridad laboral de AR",
+    "body": "Las fábricas financian la capacitación en AR: el dominio de enlace se facilitará."
+  },
+  "motion-sickness-report": {
+    "headline": "El informe sobre el mareo se vuelve viral",
+    "body": "La política de adopción de la realidad virtual empeora durante una temporada."
+  },
+  "metaverse-budget-purge": {
+    "headline": "Purga presupuestaria metaversa",
+    "body": "Los grandes recortes en tecnología perjudican las cadenas de suministro de auriculares; los precios se disparan a corto plazo."
+  },
+  "medical-vr-therapy": {
+    "headline": "Terapia médica de realidad virtual cubierta",
+    "body": "Las aseguradoras reembolsan los módulos de terapia de realidad virtual. La voluntad y el capital se relajan."
+  },
+  "iot-chip-shortage": {
+    "headline": "Vuelve la escasez de chips de IoT",
+    "body": "Los nodos sensores se vuelven más caros para las construcciones cívicas."
+  },
+  "smart-city-grant": {
+    "headline": "Subvención para sensores de ciudad inteligente",
+    "body": "Un programa federal financia IoT para medidores de agua, aire e inundaciones."
+  },
+  "nano-hype-funding": {
+    "headline": "Financiación exagerada de nanomateriales",
+    "body": "Un sprint de materiales arroja capital de materiales nano y avanzados."
+  },
+  "nano-toxicity-study": {
+    "headline": "Un estudio de nanotoxicidad alarma al público",
+    "body": "Las revisiones de seguridad aumentan el costo de los nanoproyectos."
+  },
+  "recycled-filaments": {
+    "headline": "Los filamentos 3D reciclados inundan el mercado",
+    "body": "La materia prima de impresión se vuelve más barata para las fábricas locales."
+  },
+  "printer-fire-recall": {
+    "headline": "Retiro de incendio de impresora 3D",
+    "body": "Los seguros y el cumplimiento aumentan el capital de print3d."
+  },
+  "materials-tariff": {
+    "headline": "Tarifa de materiales avanzados",
+    "body": "Los derechos de importación afectan a los materiales especiales y las nano materias primas."
+  },
+  "open-hardware-license": {
+    "headline": "Ola de licencias de hardware abiertas",
+    "body": "Diseños compartidos, materiales cortados e impresión de capital para proyectos 3D."
+  },
+  "right-to-repair-win": {
+    "headline": "Victoria por derecho a reparación",
+    "body": "Las leyes de reparación locales favorecen el mantenimiento de las pilas de impresión y de IoT."
+  },
+  "e-waste-crackdown": {
+    "headline": "Medidas enérgicas contra los desechos electrónicos",
+    "body": "Las tarifas de eliminación generan capital para pilas de portales con mucho hardware."
+  },
+  "interest-rate-hike": {
+    "headline": "Subida de tipos de interés",
+    "body": "Los mercados de capitales se tensan. Casi todas las pilas de hardware cuestan más financiarlas."
+  },
+  "stimulus-tech-window": {
+    "headline": "Ventana de tecnología de estímulo",
+    "body": "Una ventana de gasto corta suaviza el capital para los pilotos tecnológicos locales."
+  },
+  "election-year-caution": {
+    "headline": "Precaución en el año electoral",
+    "body": "Los funcionarios evitan la tecnología controvertida. Will se eleva a través de pilas fronterizas."
+  },
+  "mayors-innovation-pact": {
+    "headline": "Pacto de innovación de los alcaldes",
+    "body": "Las ciudades comparten plantillas de adquisiciones. La voluntad política disminuye para los pilotos multidominio."
+  },
+  "cyberattack-week": {
+    "headline": "Semana del ciberataque",
+    "body": "Los mandatos de seguridad aumentan los costos de las redes, la IoT, la IA y las criptomonedas."
+  },
+  "open-data-law": {
+    "headline": "Se aprueba la ley de datos abiertos",
+    "body": "Las ciudades publican APIs. Las redes y los proyectos de IoT enfrentan menos fricciones políticas."
+  },
+  "talent-visa-freeze": {
+    "headline": "Congelación de visas de talento",
+    "body": "La escasez de mano de obra calificada eleva los costos de la informática, la inteligencia artificial y la tecnología cuántica."
+  },
+  "university-lab-share": {
+    "headline": "Programa de laboratorio compartido universitario",
+    "body": "Los equipos compartidos reducen el capital para el trabajo genético, cuántico y de materiales."
+  },
+  "insurance-premium-spike": {
+    "headline": "Aumento del seguro del piloto tecnológico",
+    "body": "Los aseguradores aumentan las primas de los drones, los robots y los trabajos adyacentes a la energía nuclear."
+  },
+  "philanthropy-sprint": {
+    "headline": "Carrera de filantropía para la tecnología local",
+    "body": "Las fundaciones igualan los fondos municipales de inventos. El capital disminuye en todos los ámbitos."
+  },
+  "disinfo-wave": {
+    "headline": "Ola de desinformación sobre pilotos tecnológicos",
+    "body": "Los rumores obligan a un proceso más comunitario. Will aumenta para las pilas visibles."
+  },
+  "youth-climate-march": {
+    "headline": "Marcha juvenil por el clima",
+    "body": "La presión de la calle suaviza la voluntad de acumular energía y materiales limpios."
+  },
+  "crypto-crash": {
+    "headline": "Accidente criptográfico",
+    "body": "El calor especulativo muere; El resto del trabajo de contabilidad cívica necesita menos voluntad y más capital cuidadoso."
+  },
+  "stablecoin-payroll": {
+    "headline": "Pilotos de nómina de stablecoins",
+    "body": "Las ciudades prueban fondos locales transparentes. El capital criptográfico disminuye ligeramente."
+  },
+  "bci-data-breach": {
+    "headline": "Violación de datos de proveedores de BCI",
+    "body": "Los datos neuronales temen que el aumento suponga un coste para BCI."
+  },
+  "space-earth-obs-deal": {
+    "headline": "Acuerdo de observación de la Tierra para ciudades",
+    "body": "Los datos satelitales baratos alimentan la planificación local. Facilidad de capital espacial y de IA."
+  },
+  "self-driving-pedestrian-incident": {
+    "headline": "Incidente de peatón autónomo",
+    "body": "Un accidente de alto perfil congela la voluntad de autonomía."
+  },
+  "drone-delivery-holiday": {
+    "headline": "La fiebre de las fiestas de entrega con drones",
+    "body": "La demanda estacional hace caer los precios del hardware de drones después del exceso de existencias."
+  },
+  "materials-breakthrough": {
+    "headline": "Avance en materiales de laboratorio",
+    "body": "Un proceso publicado reduce el costo de los materiales especiales."
+  },
+  "quantum-error-milestone": {
+    "headline": "Hito de corrección de errores cuánticos",
+    "body": "La exageración regresa con sustancia; La voluntad cuántica disminuye, el capital sigue siendo alto."
+  },
+  "network-neutrality-fight": {
+    "headline": "Lucha por la neutralidad de la red",
+    "body": "Los ISP y las ciudades chocan. Las redes costarán subidas."
+  },
+  "fab-lab-franchise": {
+    "headline": "Ola de franquicias de laboratorios fabulosos",
+    "body": "Las imprentas estandarizadas reducen el capital inicial de print3d."
+  },
+  "robot-nurse-pilot": {
+    "headline": "Elogian a la piloto enfermera robot",
+    "body": "Los resultados de la atención suavizan la resistencia política a los robots."
+  },
+  "energy-poverty-fund": {
+    "headline": "Fondo de pobreza energética",
+    "body": "Los fondos específicos recortan el capital para pilas de energía solar, baterías y acceso a la energía."
+  },
+  "storm-rebuild-surge": {
+    "headline": "Oleada de reconstrucción por tormentas",
+    "body": "La demanda aumenta de materiales y drones; aumentos de capital a corto plazo."
+  },
+  "public-trust-rebound": {
+    "headline": "Encuesta de recuperación de la confianza pública",
+    "body": "Después de victorias silenciosas, la voluntad disminuye ligeramente en las tecnologías de automatización y mudanzas."
+  },
+  "global-shipping-jam": {
+    "headline": "Atasco de envío global",
+    "body": "Los plazos de entrega del hardware se alargan; Los presupuestos de energía y portales aumentan."
+  },
+  "local-currency-pilot": {
+    "headline": "Piloto de moneda local y libro mayor",
+    "body": "Los pilotos de contabilidad municipal normalizan las herramientas criptográficas."
+  },
+  "ai-exam-cheating-panic": {
+    "headline": "Pánico por hacer trampa en el examen de IA",
+    "body": "Las escuelas restringen la IA; aumentarán los costos de la IA orientada a la educación."
+  },
+  "flood-sensor-rebate": {
+    "headline": "Reembolso por sensor de inundación",
+    "body": "Los distritos de agua reembolsan los kits de IoT después de una temporada de lluvias."
+  },
+  "heatwave-grid-alert": {
+    "headline": "Alerta de red por ola de calor",
+    "body": "Las políticas de demanda máxima favorecen las baterías y exigen tecnología."
+  },
+  "venture-winter": {
+    "headline": "Aventúrate en el invierno para la tecnología profunda",
+    "body": "El capital privado huye de los horizontes a largo plazo; Los presupuestos cuánticos y espaciales aumentan."
+  },
+  "co-op-procurement": {
+    "headline": "Adquisición cooperativa de varias ciudades",
+    "body": "Las ciudades compran sensores y paneles al por mayor juntas. Aliviaciones de capital para IoT y energía solar."
+  }
+}

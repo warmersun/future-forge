@@ -550,6 +550,32 @@ function groundingExcerpt(context, max = 500) {
 
 /* —— Locale helpers for AI + local fallback —— */
 
+/** Supported UI/AI locales (keep in sync with js/i18n.js SUPPORTED_LOCALES). */
+const AI_SUPPORTED_LOCALES = new Set(["en", "hu", "fr", "es", "he"]);
+
+const AI_OUTPUT_LANGUAGE_NAMES = {
+  en: "English",
+  hu: "Hungarian",
+  fr: "French",
+  es: "Spanish",
+  he: "Hebrew",
+};
+
+const AI_LOCALE_ALIASES = {
+  hungarian: "hu",
+  magyar: "hu",
+  french: "fr",
+  francais: "fr",
+  français: "fr",
+  spanish: "es",
+  espanol: "es",
+  español: "es",
+  castilian: "es",
+  hebrew: "he",
+  ivrit: "he",
+  english: "en",
+};
+
 function resolveOutputLocale(context = {}, body = {}) {
   const raw =
     context.locale ||
@@ -561,19 +587,31 @@ function resolveOutputLocale(context = {}, body = {}) {
     .trim()
     .toLowerCase()
     .replace(/_/g, "-");
-  if (s === "hu" || s.startsWith("hu-") || s === "hungarian" || s === "magyar") {
-    return "hu";
-  }
+  if (!s) return "en";
+  if (AI_SUPPORTED_LOCALES.has(s)) return s;
+  const base = s.split("-")[0];
+  if (AI_SUPPORTED_LOCALES.has(base)) return base;
+  if (AI_LOCALE_ALIASES[s]) return AI_LOCALE_ALIASES[s];
+  if (AI_LOCALE_ALIASES[base]) return AI_LOCALE_ALIASES[base];
   return "en";
 }
 
 function outputLanguageLabel(locale) {
-  return locale === "hu" ? "Hungarian" : "English";
+  const code = resolveOutputLocale({ locale });
+  return AI_OUTPUT_LANGUAGE_NAMES[code] || "English";
 }
 
 function languageDirective(locale) {
-  const lang = outputLanguageLabel(locale);
-  if (locale === "hu") {
+  const code = resolveOutputLocale({ locale });
+  const lang = outputLanguageLabel(code);
+  if (code === "en") {
+    return (
+      `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in English. ` +
+      `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+      `Pressure meter labels: plain English, 1–3 words, Title Case with spaces.`
+    );
+  }
+  if (code === "hu") {
     return (
       `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in Hungarian (${lang}). ` +
       `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
@@ -581,10 +619,34 @@ function languageDirective(locale) {
       `Pressure meter labels: 1–3 short Hungarian words, human, no camelCase.`
     );
   }
+  if (code === "he") {
+    return (
+      `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in Hebrew (${lang}). ` +
+      `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+      `Use natural modern Hebrew; prefer המצאה/להמציא for invent; AI as בינה מלאכותית when written out. ` +
+      `Pressure meter labels: 1–3 short Hebrew words, human, no camelCase.`
+    );
+  }
+  if (code === "fr") {
+    return (
+      `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in French (${lang}). ` +
+      `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+      `Prefer inventer/invention; AI as IA when abbreviated. ` +
+      `Pressure meter labels: 1–3 short French words, human, no camelCase.`
+    );
+  }
+  if (code === "es") {
+    return (
+      `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in Spanish (${lang}). ` +
+      `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
+      `Prefer inventar/invención; AI as IA when abbreviated. ` +
+      `Pressure meter labels: 1–3 short Spanish words, human, no camelCase.`
+    );
+  }
   return (
-    `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in English. ` +
+    `OUTPUT LANGUAGE (mandatory): Write ALL player-facing text in ${lang}. ` +
     `JSON keys, technology ids, mode names, and challenge angle ids remain English ASCII. ` +
-    `Pressure meter labels: plain English, 1–3 words, Title Case with spaces.`
+    `Pressure meter labels: 1–3 short words in that language, human, no camelCase.`
   );
 }
 
@@ -1944,10 +2006,15 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
     techIds
   );
   const locale = resolveOutputLocale(context);
-  const defaultMsg =
-    locale === "hu"
-      ? `Itt van ${scenarios.length} küldetés. Válassz egyet, amelyikhez feltalálsz.`
-      : `Here are ${scenarios.length} Quests. Pick one to invent for.`;
+  const n = scenarios.length;
+  const defaultMsgByLocale = {
+    en: `Here are ${n} Quests. Pick one to invent for.`,
+    hu: `Itt van ${n} küldetés. Válassz egyet, amelyikhez feltalálsz.`,
+    fr: `Voici ${n} quêtes. Choisis-en une pour inventer.`,
+    es: `Aquí hay ${n} misiones. Elige una para inventar.`,
+    he: `הנה ${n} משימות. בחר אחת להמציא עבורן.`,
+  };
+  const defaultMsg = defaultMsgByLocale[locale] || defaultMsgByLocale.en;
   return {
     source,
     message: String(parsed?.message || defaultMsg).slice(0, 2000),

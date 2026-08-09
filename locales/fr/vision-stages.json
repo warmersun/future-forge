@@ -1,0 +1,18 @@
+{
+  "present": {
+    "name": "Aujourd'hui",
+    "blurb": "L’endroit tel qu’il est – la pression monte."
+  },
+  "prototype": {
+    "name": "Première construction",
+    "blurb": "Les premiers éléments de votre idée apparaissent."
+  },
+  "transition": {
+    "name": "Mise à l'échelle",
+    "blurb": "Les systèmes s’implantent dans toute la région."
+  },
+  "transformed": {
+    "name": "Nouvelle normalité",
+    "blurb": "La vie quotidienne a clairement changé."
+  }
+}

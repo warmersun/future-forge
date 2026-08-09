@@ -1,0 +1,22 @@
+{
+  "moloch": {
+    "label": "Moloch",
+    "subtitle": "Mecánica del juego del sistema.",
+    "blurb": "La trampa multipolar: carreras, freeride, la ley de Goodhart y dinámicas de carrera hasta el fondo que castigan el buen diseño."
+  },
+  "ethicist": {
+    "label": "ético",
+    "subtitle": "Compensaciones difíciles",
+    "blurb": "Dilemas éticos sin una respuesta clara, buena o mala: dignidad, prejuicios, doble uso, quién resulta perjudicado cuando se escala."
+  },
+  "stakeholder": {
+    "label": "Tenedor de apuestas",
+    "subtitle": "Funcionarios y comunidad",
+    "blurb": "Funcionarios de la ciudad y líderes comunitarios: financiación, permisos, políticas y apoyo público que deben negociar."
+  },
+  "nature": {
+    "label": "Madre Naturaleza",
+    "subtitle": "el mundo natural",
+    "blurb": "Energía, materiales, ecología, enfermedades, tormentas: el mundo físico avanza según sus propios términos."
+  }
+}

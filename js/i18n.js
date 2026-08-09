@@ -3,9 +3,12 @@
  * English defaults live in call-site fallbacks / HTML; locale packs override via JSON.
  */
 
-export const SUPPORTED_LOCALES = ["en", "hu"];
+export const SUPPORTED_LOCALES = ["en", "hu", "fr", "es", "he"];
 export const DEFAULT_LOCALE = "en";
 export const LOCALE_STORAGE_KEY = "future-forge:locale";
+
+/** Locales that use right-to-left document direction. */
+export const RTL_LOCALES = ["he"];
 
 /** @type {string} */
 let locale = DEFAULT_LOCALE;
@@ -21,6 +24,9 @@ let debugMissing = false;
 const OUTPUT_LANGUAGE_NAMES = {
   en: "English",
   hu: "Hungarian",
+  fr: "French",
+  es: "Spanish",
+  he: "Hebrew",
 };
 
 /**
@@ -131,6 +137,33 @@ export function isLocale(code) {
 export function outputLanguageName(code = locale) {
   const n = normalizeLocale(code);
   return OUTPUT_LANGUAGE_NAMES[n] || n;
+}
+
+/**
+ * Whether this locale should present UI right-to-left.
+ * @param {string} [code]
+ * @returns {boolean}
+ */
+export function isRtlLocale(code = locale) {
+  return RTL_LOCALES.includes(normalizeLocale(code));
+}
+
+/**
+ * Document direction for a locale (`rtl` or `ltr`).
+ * @param {string} [code]
+ * @returns {"rtl"|"ltr"}
+ */
+export function documentDirection(code = locale) {
+  return isRtlLocale(code) ? "rtl" : "ltr";
+}
+
+/**
+ * BCP-47 language tag for `<html lang>` (maps our codes 1:1 for supported locales).
+ * @param {string} [code]
+ * @returns {string}
+ */
+export function htmlLang(code = locale) {
+  return normalizeLocale(code);
 }
 
 /**
@@ -250,13 +283,16 @@ export async function setLocale(code, opts = {}) {
   locale = loc;
   persistLocale(loc);
   if (typeof document !== "undefined") {
-    document.documentElement.lang = loc === "hu" ? "hu" : "en";
+    document.documentElement.lang = htmlLang(loc);
+    document.documentElement.dir = documentDirection(loc);
     if (!opts.skipDom) {
       applyDomI18n(opts.root || document);
     }
     try {
       document.dispatchEvent(
-        new CustomEvent("localechange", { detail: { locale: loc } })
+        new CustomEvent("localechange", {
+          detail: { locale: loc, dir: documentDirection(loc) },
+        })
       );
     } catch {
       /* non-DOM */

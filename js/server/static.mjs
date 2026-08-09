@@ -28,7 +28,7 @@ export const MIME = {
 const ROOT_FILES = new Set(["index.html", "favicon.ico"]);
 
 /** Top-level directories that may be served. */
-const PUBLIC_DIRS = new Set(["css", "js", "assets"]);
+const PUBLIC_DIRS = new Set(["css", "js", "assets", "locales"]);
 
 /** Extensions never served from the public tree. */
 const BLOCKED_EXT = new Set([

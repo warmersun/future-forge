@@ -7,11 +7,16 @@ import {
   localeStorageKey,
   getLocale,
   outputLanguageName,
+  aiLocaleContext,
+  isRtlLocale,
+  documentDirection,
+  htmlLang,
   _setCatalogForTests,
   _setContentCatalogForTests,
   _resetI18nForTests,
   DEFAULT_LOCALE,
   SUPPORTED_LOCALES,
+  RTL_LOCALES,
 } from "./i18n.js";
 
 describe("i18n core", () => {
@@ -24,12 +29,20 @@ describe("i18n core", () => {
     assert.equal(normalizeLocale("HU"), "hu");
     assert.equal(normalizeLocale("hu-HU"), "hu");
     assert.equal(normalizeLocale("en-US"), "en");
+    assert.equal(normalizeLocale("fr"), "fr");
+    assert.equal(normalizeLocale("FR-fr"), "fr");
+    assert.equal(normalizeLocale("es-MX"), "es");
+    assert.equal(normalizeLocale("he"), "he");
+    assert.equal(normalizeLocale("he-IL"), "he");
     assert.equal(normalizeLocale("xx"), DEFAULT_LOCALE);
     assert.equal(normalizeLocale(""), DEFAULT_LOCALE);
   });
 
   it("lists supported locales", () => {
-    assert.deepEqual(SUPPORTED_LOCALES, ["en", "hu"]);
+    assert.deepEqual(SUPPORTED_LOCALES, ["en", "hu", "fr", "es", "he"]);
+    assert.ok(SUPPORTED_LOCALES.includes("fr"));
+    assert.ok(SUPPORTED_LOCALES.includes("es"));
+    assert.ok(SUPPORTED_LOCALES.includes("he"));
   });
 
   it("t falls back to defaultEn when pack missing", () => {
@@ -71,11 +84,26 @@ describe("i18n core", () => {
   it("outputLanguageName for prompts", () => {
     assert.equal(outputLanguageName("en"), "English");
     assert.equal(outputLanguageName("hu"), "Hungarian");
+    assert.equal(outputLanguageName("fr"), "French");
+    assert.equal(outputLanguageName("es"), "Spanish");
+    assert.equal(outputLanguageName("he"), "Hebrew");
   });
 
-  it("aiLocaleContext carries locale for co-invent API", async () => {
-    const { aiLocaleContext, _setCatalogForTests, _resetI18nForTests } =
-      await import("./i18n.js");
+  it("marks Hebrew as RTL and others as LTR", () => {
+    assert.deepEqual(RTL_LOCALES, ["he"]);
+    assert.equal(isRtlLocale("he"), true);
+    assert.equal(isRtlLocale("he-IL"), true);
+    assert.equal(isRtlLocale("fr"), false);
+    assert.equal(isRtlLocale("es"), false);
+    assert.equal(isRtlLocale("en"), false);
+    assert.equal(isRtlLocale("hu"), false);
+    assert.equal(documentDirection("he"), "rtl");
+    assert.equal(documentDirection("fr"), "ltr");
+    assert.equal(htmlLang("he"), "he");
+    assert.equal(htmlLang("fr"), "fr");
+  });
+
+  it("aiLocaleContext carries locale for co-invent API", () => {
     _resetI18nForTests();
     _setCatalogForTests({}, "hu");
     assert.deepEqual(aiLocaleContext(), {
@@ -86,6 +114,18 @@ describe("i18n core", () => {
     assert.deepEqual(aiLocaleContext("en"), {
       locale: "en",
       outputLanguage: "English",
+    });
+    assert.deepEqual(aiLocaleContext("fr"), {
+      locale: "fr",
+      outputLanguage: "French",
+    });
+    assert.deepEqual(aiLocaleContext("es"), {
+      locale: "es",
+      outputLanguage: "Spanish",
+    });
+    assert.deepEqual(aiLocaleContext("he"), {
+      locale: "he",
+      outputLanguage: "Hebrew",
     });
   });
 });

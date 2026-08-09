@@ -165,10 +165,20 @@ button:disabled {
 
 .title-lang-switch {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 999px;
   overflow: hidden;
   background: rgba(7, 11, 20, 0.45);
+}
+
+/* Hebrew (and any future RTL locale): flip document flow when html[dir=rtl] */
+html[dir="rtl"] body {
+  direction: rtl;
+}
+html[dir="rtl"] .title-lang-switch {
+  flex-direction: row-reverse;
 }
 
 .title-lang-btn {

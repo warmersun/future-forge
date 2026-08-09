@@ -23,7 +23,9 @@
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "foresight:build": "node scripts/build-world-foresight.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/quest-tile.test.js js/module-pack.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/i18n.test.js js/i18n/content.test.js js/data.claim-locale.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/meta.test.js js/quest-tile.test.js js/module-pack.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/i18n.test.js js/i18n/content.test.js js/i18n/packs-fr-es-he.test.js js/data.claim-locale.test.js",
+    "i18n:build:packs": "node scripts/i18n-build-locale-packs.mjs",
+    "i18n:export:review": "node scripts/i18n-export-review-md.mjs"
   },
   "dependencies": {
     "openai": "^6.16.0",

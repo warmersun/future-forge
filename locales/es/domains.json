@@ -1,0 +1,20 @@
+{
+  "power": {
+    "label": "Fuerza"
+  },
+  "automator": {
+    "label": "automatizador"
+  },
+  "mover": {
+    "label": "Agente de mudanzas"
+  },
+  "lifeforce": {
+    "label": "fuerza vital"
+  },
+  "link": {
+    "label": "Enlace"
+  },
+  "portal": {
+    "label": "Portal"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "moloch": {
+    "label": "Moloch",
+    "subtitle": "Mécanismes de jeu système",
+    "blurb": "Le piège multipolaire : courses, freeride, loi de Goodhart et dynamique de nivellement par le bas qui punissent le bon design."
+  },
+  "ethicist": {
+    "label": "Éthicien",
+    "subtitle": "Des compromis difficiles",
+    "blurb": "Dilemmes éthiques sans bonne/mauvaise réponse claire : dignité, préjugés, double usage, qui est lésé lorsque vous évoluez."
+  },
+  "stakeholder": {
+    "label": "Partie prenante",
+    "subtitle": "Fonctionnaires et communauté",
+    "blurb": "Fonctionnaires municipaux et dirigeants communautaires : financement, permis, politique et soutien public que vous devez négocier."
+  },
+  "nature": {
+    "label": "Mère Nature",
+    "subtitle": "Le monde naturel",
+    "blurb": "Énergie, matériaux, écologie, maladies, tempêtes : le monde physique avance selon ses propres conditions."
+  }
+}

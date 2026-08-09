@@ -1,0 +1,98 @@
+{
+  "portside-floods": {
+    "title": "Le quartier Portside est à nouveau inondé",
+    "place": "Quartier bâbord",
+    "scene": "Le gymnase de l’école devient le refuge d’urgence pour la troisième fois cette décennie. Les pêcheurs perdent des semaines de travail lorsque le quai coule. Les résidents veulent quelque chose qui fonctionne *ici*, pas un slogan national.",
+    "stakeholder": "Aisha, agente de liaison climatique du quartier"
+  },
+  "saline-well": {
+    "title": "La solution saline bien tournée",
+    "place": "Harran Wells",
+    "scene": "Le puits principal d’une ville est saumâtre. Les prix des pétroliers augmentent chaque mois sec. Les enfants manquent l'école pour transporter de l'eau. Un correctif doit être abordable et maintenable localement.",
+    "stakeholder": "Yusuf, gardien de puits de coopérative"
+  },
+  "border-fever": {
+    "title": "Cluster de fièvre à la clinique frontalière",
+    "place": "Clinique de passage 7",
+    "scene": "Une petite clinique constate une nouvelle tendance à la fièvre chez les voyageurs. Le personnel est composé de trois infirmières. Ils ont besoin de détection, de logistique et de confiance – cette semaine, pas après une conférence.",
+    "stakeholder": "Dr Okonkwo, responsable de la clinique"
+  },
+  "three-schools": {
+    "title": "Un professeur de sciences, trois écoles",
+    "place": "Écoles du comté de Ridge",
+    "scene": "Trois écoles rurales se partagent un professeur de sciences qui conduit à elles deux 90 minutes. Les laboratoires sont vides la moitié de la semaine. Les étudiants qui peuvent partir, partent.",
+    "stakeholder": "Mme Reyes, la professeure de sciences partagée"
+  },
+  "arrival-city": {
+    "title": "Quatre mille arrivées, un hiver",
+    "place": "Ville de Northgate",
+    "scene": "Une ville de taille moyenne attend 4 000 nouveaux arrivants avant le printemps. Les gymnases sont pleins. La paperasse est le chaos. Les habitants craignent les files d’attente dans les cliniques. La dignité a une date limite.",
+    "stakeholder": "Marta, coordinatrice de l'accueil"
+  },
+  "warehouse-shifts": {
+    "title": "L'équipe de nuit a disparu",
+    "place": "Parc Logistique du Canal",
+    "scene": "L'automatisation des entrepôts a supprimé 30 % des équipes en dix-huit mois. Le loyer n’a pas baissé. Les travailleurs veulent une reconversion professionnelle qui mène à un salaire réel – et non à une brochure.",
+    "stakeholder": "Développeur, responsable d'équipe"
+  },
+  "opaque-benefits": {
+    "title": "Les avantages de l'IA que personne ne peut remettre en question",
+    "place": "Bureau des avantages sociaux Metro",
+    "scene": "La mairie souhaite déployer une IA opaque pour décider des avantages *cette année* et réduire les coûts. Les travailleurs sociaux sont déjà rejetés par un projet pilote de boîte noire. La prévention signifie un meilleur système, pas une interdiction des outils.",
+    "stakeholder": "Len, superviseur des dossiers"
+  },
+  "smog-corridor": {
+    "title": "Journées d'école perdues à cause du smog",
+    "place": "Corridor industriel Est",
+    "scene": "Les journées d’asthme ferment les salles de classe le long de la route des camions. Les parents ont des photos de la brume grâce à des capteurs – et le couloir fonctionne toujours au diesel aux heures de pointe. Une solution locale doit protéger les enfants et réduire les gaz d’échappement des couloirs.",
+    "stakeholder": "Priya, coalition de parents"
+  },
+  "dark-clinic": {
+    "title": "La clinique meurt au crépuscule",
+    "place": "Poste de santé de Riverbend",
+    "scene": "Lorsque la grille tombe en panne, les vaccins se réchauffent et les accouchements nocturnes deviennent sombres. Le diesel est cher et tardif. Le personnel a besoin de premiers watts qui restent allumés.",
+    "stakeholder": "Infirmière Amara"
+  },
+  "empty-nets": {
+    "title": "Filets vides, quai en colère",
+    "place": "Port de varech",
+    "scene": "Les stocks de poissons se sont effondrés localement. Certains bateaux trichent encore aux limites de nuit. Les jeunes partent. La surveillance et les alternatives doivent fonctionner pour ce port.",
+    "stakeholder": "Capitaine Seo"
+  },
+  "memory-house": {
+    "title": "Qui surveille les observateurs de la mémoire",
+    "place": "Centre de jour des Cèdres",
+    "scene": "Un centre de jour pour personnes atteintes de démence a une liste d'attente de quatorze mois. Les familles s'épuisent. Le personnel a besoin d’outils qui préservent la dignité, et pas seulement de surveillance.",
+    "stakeholder": "Tomas, directeur du centre"
+  },
+  "maternal-road": {
+    "title": "Deux heures avant le prochain théâtre",
+    "place": "Naissances en Haute Vallée",
+    "scene": "Les complications signifient un voyage de deux heures si les pluies n’ont pas emporté le pont. Les sages-femmes veulent un renfort qui arrive à temps.",
+    "stakeholder": "Lila, réseau de sages-femmes"
+  },
+  "shelter-winter": {
+    "title": "Le décompte hivernal continue d’augmenter",
+    "place": "Rues de la rive sud",
+    "scene": "Les campements s'agrandissent sous le viaduc chaque hiver. Les hôtels sont pleins. Les codes du bâtiment évoluent lentement. Les gens ont besoin d'options chaleureuses et sûres *cette* saison et d'un moyen de rester logés.",
+    "stakeholder": "Kenji, responsable de la sensibilisation"
+  },
+  "food-desert": {
+    "title": "Le dernier marchand de légumes fermé",
+    "place": "Bloc d'un kilomètre de long",
+    "scene": "Le dernier magasin de produits frais d’un quartier dense a fermé ses portes. Les dépanneurs vendent des calories, pas des légumes. Le transit vers un supermarché se fait par deux bus.",
+    "stakeholder": "Elena, cuisine communautaire"
+  },
+  "five-coasts": {
+    "title": "Cinq côtes, pas d'avertissement partagé",
+    "place": "Alliance de cinq villes portuaires",
+    "scene": "Cinq petites villes côtières partagent une trajectoire de tempête mais pas de budget ni de canal de données. Chaque maire attend que l'autre achète des capteurs. La coordination *est* l’invention.",
+    "stakeholder": "Le groupe de travail intercommunal"
+  },
+  "cancer-wait": {
+    "title": "Les délais d'attente pour les analyses ont atteint neuf mois",
+    "place": "Centre régional d'oncologie",
+    "scene": "Un retard d’imagerie signifie des diagnostics tardifs. Les patients ruraux manquent leurs rendez-vous. Les oncologues veulent un triage et des outils permettant de détecter les risques plus tôt sans inventer un médicament miracle du jour au lendemain.",
+    "stakeholder": "Dr Chen, responsable de l'oncologie"
+  }
+}

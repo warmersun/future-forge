@@ -1,0 +1,98 @@
+{
+  "portside-floods": {
+    "title": "El barrio portuario vuelve a inundarse",
+    "place": "Sala de babor",
+    "scene": "El gimnasio de la escuela es el refugio de emergencia por tercera vez en esta década. Los pescadores pierden semanas de trabajo cuando el muelle se hunde. Los residentes quieren algo que funcione *aquí*, no un eslogan nacional.",
+    "stakeholder": "Aisha, enlace climático del barrio"
+  },
+  "saline-well": {
+    "title": "La solución salina bien torneada",
+    "place": "Harran Wells",
+    "scene": "El pozo principal de una ciudad es salobre. Los precios de los buques cisterna aumentan cada mes seco. Los niños faltan a la escuela para acarrear agua. Una solución debe ser asequible y mantenible localmente.",
+    "stakeholder": "Yusuf, guardián del pozo de la cooperativa"
+  },
+  "border-fever": {
+    "title": "Grupo de fiebre en la clínica fronteriza",
+    "place": "Clínica Cruce 7",
+    "scene": "Una pequeña clínica detecta un nuevo patrón de fiebre entre los viajeros. El personal está formado por tres enfermeras. Necesitan detección, logística y confianza, esta semana, no después de una conferencia.",
+    "stakeholder": "Dr. Okonkwo, líder de la clínica"
+  },
+  "three-schools": {
+    "title": "Un profesor de ciencias, tres escuelas",
+    "place": "Escuelas del condado de Ridge",
+    "scene": "Tres escuelas rurales comparten un profesor de ciencias que conduce 90 minutos entre ellas. Los laboratorios están vacíos la mitad de la semana. Los estudiantes que puedan irse, que se vayan.",
+    "stakeholder": "Sra. Reyes, la profesora de ciencias compartida"
+  },
+  "arrival-city": {
+    "title": "Cuatro mil llegadas, un invierno",
+    "place": "Ciudad de puerta norte",
+    "scene": "Una ciudad de tamaño medio espera 4.000 nuevas llegadas antes de la primavera. Los gimnasios están llenos. El papeleo es un caos. Los lugareños temen las colas en las clínicas. La dignidad tiene una fecha límite.",
+    "stakeholder": "Marta, coordinadora de recepción"
+  },
+  "warehouse-shifts": {
+    "title": "El turno de noche desapareció",
+    "place": "Parque Logístico del Canal",
+    "scene": "La automatización de almacenes redujo el 30% de los turnos en dieciocho meses. El alquiler no bajó. Los trabajadores quieren una recapacitación que conduzca a un salario real, no un panfleto.",
+    "stakeholder": "Desarrollador, azafato de turno"
+  },
+  "opaque-benefits": {
+    "title": "Los beneficios de la IA nadie puede cuestionarlos",
+    "place": "Oficina de Beneficios Metro",
+    "scene": "El ayuntamiento quiere implementar una IA opaca para decidir los beneficios *este año* y reducir costes. Los trabajadores sociales ya están anulados por un piloto de caja negra. La prevención significa un mejor sistema, no una prohibición de herramientas.",
+    "stakeholder": "Len, supervisor de casos"
+  },
+  "smog-corridor": {
+    "title": "Días escolares perdidos por el smog",
+    "place": "Corredor Industrial Este",
+    "scene": "Los días de asma cierran aulas a lo largo de la ruta de los camiones. Los padres tienen fotografías de la neblina con sensores, y el corredor todavía funciona con diésel en las horas pico. Una solución local debe proteger a los niños y reducir las emisiones de los pasillos.",
+    "stakeholder": "Priya, coalición de padres"
+  },
+  "dark-clinic": {
+    "title": "La clínica muere al anochecer",
+    "place": "Puesto de salud de Riverbend",
+    "scene": "Cuando falla la red, las vacunas se calientan y los partos nocturnos se oscurecen. El diésel es caro y llega tarde. El personal necesita primeros vatios que permanezcan encendidos.",
+    "stakeholder": "enfermera amara"
+  },
+  "empty-nets": {
+    "title": "Redes vacías, muelle enojado",
+    "place": "Puerto de algas",
+    "scene": "Las poblaciones de peces colapsaron a nivel local. Algunos barcos todavía superan los límites nocturnos. Los jóvenes se van. El seguimiento y las alternativas tienen que funcionar para este puerto.",
+    "stakeholder": "Capitán Seo"
+  },
+  "memory-house": {
+    "title": "¿Quién observa a los observadores de la memoria?",
+    "place": "Centro de día cedro",
+    "scene": "Un centro de día para personas con demencia tiene una lista de espera de catorce meses. Las familias se agotan. El personal necesita herramientas que preserven la dignidad, no sólo vigilancia.",
+    "stakeholder": "Tomás, director del centro"
+  },
+  "maternal-road": {
+    "title": "Dos horas para el próximo teatro.",
+    "place": "Nacimientos del Alto Valle",
+    "scene": "Las complicaciones significan un viaje por carretera de dos horas si las lluvias no han arrasado el puente. Las parteras quieren refuerzos que lleguen a tiempo.",
+    "stakeholder": "Lila, red de matronas"
+  },
+  "shelter-winter": {
+    "title": "El recuento de invierno sigue aumentando",
+    "place": "Calles de Southbank",
+    "scene": "Los campamentos crecen bajo el paso elevado cada invierno. Los hoteles están llenos. Los códigos de construcción avanzan lentamente. La gente necesita opciones cálidas y seguras *esta* temporada y un camino para permanecer en casa.",
+    "stakeholder": "Kenji, líder de divulgación"
+  },
+  "food-desert": {
+    "title": "La última frutería cerró",
+    "place": "Bloque de una milla de largo",
+    "scene": "La última tienda de alimentos frescos de un barrio denso cerró. Las tiendas de la esquina venden calorías, no verduras. El tránsito a un supermercado son dos autobuses.",
+    "stakeholder": "Elena, cocina comunitaria"
+  },
+  "five-coasts": {
+    "title": "Cinco costas, sin aviso compartido",
+    "place": "Alianza de cinco ciudades portuarias",
+    "scene": "Cinco pequeñas ciudades costeras comparten una trayectoria de tormenta, pero no un presupuesto ni una tubería de datos. Cada alcalde espera que el otro compre sensores. La coordinación *es* la invención.",
+    "stakeholder": "El grupo de trabajo interurbano"
+  },
+  "cancer-wait": {
+    "title": "Los tiempos de espera de escaneo llegan a nueve meses",
+    "place": "Centro Regional de Oncología",
+    "scene": "La acumulación de imágenes significa diagnósticos tardíos. Los pacientes rurales faltan a las citas. Los oncólogos quieren triaje y herramientas que detecten el riesgo antes sin tener que inventar un fármaco milagroso de la noche a la mañana.",
+    "stakeholder": "Dr. Chen, líder de oncología"
+  }
+}
