@@ -22,9 +22,11 @@
     "startYear": 2026,
     "collapseYear": 2032,
     "yearsPerTurn": 2,
-    "pressure": { "Backlog": 3, "Trust": 2, "Burnout": 2 },
-    "pressureRise": { "Backlog": 1, "Trust": 1, "Burnout": 1 },
-    "winMax": { "Backlog": 1, "Trust": 1, "Burnout": 1 },
+    "pressure": {
+      "local": { "label": "Backlog", "pressure": 3, "pressureRise": 1, "winMax": 1 },
+      "global": { "label": "Trust", "pressure": 2, "pressureRise": 1, "winMax": 1 },
+      "support": { "label": "Burnout", "pressure": 2, "pressureRise": 1, "winMax": 1 }
+    },
     "scene": "The shared inbox is a storm. Tools promise relief. Who designs judgment into the loop?",
     "briefMd": "## The place\n\n**Harbor Works** is a fictive coastal co-op. The inbox never sleeps.\n\n## Your brief\n\nInvent a local workflow that uses **AI** under human judgment — not a black box that owns the outcome.",
     "stakeholder": "Sam, operations lead",
