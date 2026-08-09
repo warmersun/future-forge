@@ -68,18 +68,6 @@ const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
 const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
-/** Optional shared secret for expensive APIs when exposed beyond loopback. */
-const API_SECRET = String(process.env.FF_API_SECRET || "").trim();
-/** Max concurrent rooms (DoS). */
-const MAX_ROOMS = Math.max(
-  1,
-  Number(process.env.FF_MAX_ROOMS) || 200
-);
-/** Max WebSocket text message size (bytes). */
-const WS_MAX_PAYLOAD = Math.max(
-  1024,
-  Number(process.env.FF_WS_MAX_PAYLOAD) || 256 * 1024
-);
 
 function loadEnvFile() {
   const candidates = [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")];
@@ -104,9 +92,22 @@ function loadEnvFile() {
   }
 }
 
+// Must run before reading FF_* config from process.env
 loadEnvFile();
 
 const PORT = Number(process.env.FF_PORT) || 8765;
+/** Optional shared secret for expensive APIs when exposed beyond loopback. */
+const API_SECRET = String(process.env.FF_API_SECRET || "").trim();
+/** Max concurrent rooms (DoS). */
+const MAX_ROOMS = Math.max(
+  1,
+  Number(process.env.FF_MAX_ROOMS) || 200
+);
+/** Max WebSocket text message size (bytes). */
+const WS_MAX_PAYLOAD = Math.max(
+  1024,
+  Number(process.env.FF_WS_MAX_PAYLOAD) || 256 * 1024
+);
 /** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
 const HOST = process.env.FF_HOST || "0.0.0.0";
 const MODEL = process.env.FF_XAI_MODEL || "grok-4.5";
