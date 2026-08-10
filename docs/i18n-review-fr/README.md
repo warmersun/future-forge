@@ -26,6 +26,10 @@ Tell the agent something like:
 
 It should parse the FR fields and write back into `locales/fr/*.json` (and re-run i18n tests).
 
+## Glossary
+
+Canonical terminology: [`../i18n-glossary-fr.md`](../i18n-glossary-fr.md)
+
 ## Notes
 
 - First-pass packs may be machine-translated — edit freely for natural French.

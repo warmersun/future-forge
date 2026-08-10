@@ -75,7 +75,7 @@ Un juicio amplio y autónomo en dominios de alto riesgo sin humanos, algo que to
 
 **EN:** _(missing)_
 
-**ES:** Az emberek vezetnek; un modelo javasolnak.
+**ES:** Las personas lideran; los modelos proponen.
 
 ---
 ### `ai.primer`
@@ -86,14 +86,14 @@ Artificial intelligence finds patterns in data to predict, recommend, generate t
 
 **ES:**
 
-La inteligencia artificial encuentra patrones en los datos para predecir, recomendar, generar texto o imágenes y respaldar decisiones. Ya es un compañero de trabajo en muchas clínicas, aulas y mostradores de logística, pero puede ser parcial, demasiado confiado u opaco. Los inventos locales sólidos mantienen a los humanos responsables y adaptan el modelo a un flujo de trabajo real.
+La inteligencia artificial encuentra patrones en los datos para predecir, recomendar, generar texto o imágenes y respaldar decisiones. Ya es compañera de trabajo en muchas clínicas, aulas y mesas de logística, pero puede ser sesgada, excesivamente confiada u opaca. Los inventos locales sólidos mantienen a las personas responsables y limitan el modelo a un flujo de trabajo real.
 
 ---
 ### `ai.risk`
 
 **EN:** bias, overtrust, opaque decisions
 
-**ES:** parcialidad, exceso de confianza, decisiones opacas
+**ES:** sesgo, exceso de confianza, decisiones opacas
 
 ---
 ### `ai.scarcity`

@@ -5,7 +5,7 @@
     "stakeholder": "Dr. Ramirez, trauma ügyeletes",
     "pressureKeys": [
       "Elmulasztott Krízisek",
-      "Kemény Zárak",
+      "Kemény",
       "Felelősségi Nyomás"
     ],
     "places": [
@@ -61,7 +61,7 @@
       "Éjszakai Félelem"
     ],
     "places": [
-      "Goma Központi Kórház Nyilvántartási Szárnya"
+      "Goma Central Hospital Records Wing"
     ]
   },
   "genocide--ration-cards-that-starve-a-block": {
@@ -74,7 +74,7 @@
       "Klánuralom"
     ],
     "places": [
-      "Wau Segélyszállítmány Udvar"
+      "Wau Relief Consignment Yard"
     ]
   },
   "genocide--tablets-that-fail-one-language": {
@@ -87,7 +87,7 @@
       "Bizottsági Elfogás"
     ],
     "places": [
-      "Prizren Önkormányzati Ösztöndíjbizottság"
+      "Prizren Municipal Scholarship Board"
     ]
   },
   "genocide--crew-badges-that-never-return": {
@@ -100,11 +100,11 @@
       "Jelvénycsalások"
     ],
     "places": [
-      "Sittwe Móló Munkaügyi Pult"
+      "Sittwe Jetty Labor Desk"
     ]
   },
   "poverty--the-tip-owns-the-pickers-on-sorting-lane": {
-    "title": "A telep birtokolja a szedőket a Válogató Utcán",
+    "title": "A telep birtokolja a szedőket a Sorting Lane-en",
     "scene": "Napfelkelte előtt Meena egy zsák vizes kartont cipelt fel a Válogató Utcán, és a mérlegre vár. A hivatalnok szándékosan lassan mér. Levon egy kilót a terhéből, és a rövidebb számot írja a telep könyvébe. A gyerekei tegnap este sima rizst ettek. Ma este is ugyanezt eszik, ha ez a zsák megint kevesebbet fizet. A telep szabja meg az egyetlen felvásárlási árat a kerületben. A közvetítők nagy tételben veszik a tiszta műanyagot és fémet, aztán bezárják az utca kapuit, ha a szedők máshol akarnak eladni. Meena szövetkezete gyorsabban és tisztábban tud válogatni, mint bármelyik magányos kocsi, mégis minden rúpia ugyanazon a hivatalnokon megy át. Egy tag fiának köhögése van a telep porától, és nem maradt pénz a rendelőre. Ha a mérleg továbbra is birtokolja a reggelt, a szövetkezet kiürül, és az utca csapda marad. Ki tervezi újra az eladást úgy, hogy a hulladékot emelő emberek birtokolhassák az árat?",
     "stakeholder": "Hulladékszedő szövetkezet",
     "pressureKeys": [
@@ -113,11 +113,11 @@
       "Beteg Gyerekek"
     ],
     "places": [
-      "Válogató Utca"
+      "Sorting Lane"
     ]
   },
   "poverty--advance-pay-chains-the-kiln-on-dust-ridge": {
-    "title": "Az előleg bilincsbe veri a kemencét a Porgerincen",
+    "title": "Az előleg bilincsbe veri a kemencét a Dust Ridge-en",
     "scene": "Rafi a ujjába köhög, és mégis újabb téglát rak a kocsira. A kemencefőnök már két hónappal előre kifizette a tandíjat és a gyógyszert. Az az előleg láncként ül a főnök főkönyvében. Ha elmegy, az adósság ugrik, és a következő munka szájhagyomány útján eltűnik. Délre por fedi a gerincet. A feleségek fekete vizet mosnak a gyerekek szeméből a közös csapnál. A kölcsönös segélykör aprópénzt gyűjt inhalátorokra, mégis minden gyógyulási hét mélyebbre tol egy munkást ugyanabba az előlegkönyvbe. A főnök a darabbéreket a tűz meggyújtása után szabja meg, nem előtte. Senki sem látja a teljes számadást, amíg a fizetésnap össze nem zsugorodik. Rafi lányának újabb rendelői látogatás kell. Nem hagyhat ki egy műszakot anélkül, hogy a főkönyv duzzadna. Hogyan töröd meg a bért, ami csapdaként érkezik, még mielőtt a munka el is kezdődne?",
     "stakeholder": "Kemencemunkások kölcsönös segélyköre",
     "pressureKeys": [
@@ -126,11 +126,11 @@
       "Tüdőgond"
     ],
     "places": [
-      "Porgerinc"
+      "Dust Ridge"
     ]
   },
   "poverty--tuition-dies-when-the-mast-fails-in-hill-signal": {
-    "title": "A tandíj elhal, ha az árbóc meghibásodik a Dombjelzőn",
+    "title": "A tandíj elhal, ha az árbóc meghibásodik a Hill Signal-on",
     "scene": "Lila tanárnő hétkor kinyitja a közös táblagépet, és üres képernyőt talál. A dombi árbóc megint leállt. Három diák, akik egy órát gyalogolnak a reggeli időpontra, nedves könyvekkel fordulnak vissza. A szüleik hitelre vettek adatcsomagokat az egyetlen viszonteladón keresztül, aki birtokolja a toronybérletet. Amikor a jel elhal, a csomagok tovább ürülnek. A kihagyott órák megbukott vizsgákká halmozódnak. A megbukott vizsgák véget vetnek az ösztöndíj-útnak a völgyből. A tanárok hálózata munkalapokat nyomtat, amíg tart a papír, mégis a vizsgabizottság csak időzített online gyakorlatokat fogad el. A viszonteladó nem osztja meg az árbóc-hozzáférést egy falusi hálóval. Azt mondja, a szerződés kizárólagos. Lila nézi, ahogy egy okos lány abbahagyja a járást, miután az anyja rizst választott egy újabb feltöltés helyett. Ki épít olyan tanulást, ami nem omlik össze minden alkalommal, amikor egy lezárt árbóc elsötétül?",
     "stakeholder": "Falusi tanárok hálózata",
     "pressureKeys": [
@@ -139,11 +139,11 @@
       "Adatadósság"
     ],
     "places": [
-      "Dombjelző"
+      "Hill Signal"
     ]
   },
   "poverty--dawn-fares-strand-the-cleaners-at-ferry-slip": {
-    "title": "A hajnali díjak parton hagyják a takarítókat a Kompkikötőnél",
+    "title": "A hajnali díjak parton hagyják a takarítókat a Ferry Slip-nél",
     "scene": "Nisha hajnali négykor befejezi az irodatornyot, és az első hajóhoz rohan. A mólóhivatalnok megint felemelte a hajnali díjat. Csak készpénz. Nincs havi bérlet az éjszakai takarítóknak. Egy perccel lemarad a feljáróról, és nézi, ahogy a komp kifut, ülések fele üresen. A következő hajó két órával később jön. A szomszéd gyereke egyedül vár a telek kapujánál, amíg vissza nem tér. Múlt hónapban az egyesület egyik lányát kirabolták azon a hosszú várakozáson. A mólódíjak finanszírozzák a kikötési jogokat, amiket a hajótulajdonosok minden szezonban megújítanak. A munkások, akik napfelkelte előtt súrolják a várost, soha nem ülnek azon a megújító tanácson. Az egyesület megpróbált egy közös furgont. A hídvám a második hétre megette a megtakarítást. Nisha üzen a nővérének, hogy tartsa a gyereket, és érzi, hogy a munka a lehetetlen felé billen. Ki tervezi meg az átkelést úgy, hogy a városképet tisztító emberek hazaérjenek, mielőtt a kockázat?",
     "stakeholder": "Vízi átkelő éjszakai munkások egyesülete",
     "pressureKeys": [
@@ -152,7 +152,7 @@
       "Gyerekveszély"
     ],
     "places": [
-      "Kompkikötő"
+      "Ferry Slip"
     ]
   },
   "chem-bio--second-use-blues-on-the-dye-row": {
@@ -165,7 +165,7 @@
       "Pecsételtérés"
     ],
     "places": [
-      "Weftbridge Festőüzem-sor"
+      "Weftbridge Dyeworks Row"
     ]
   },
   "chem-bio--lab-kits-under-the-wrong-code": {
@@ -178,7 +178,7 @@
       "Éjszakai rések"
     ],
     "places": [
-      "Stonepass Határi Szárazkikötő"
+      "Stonepass Border Dry Port"
     ]
   },
   "chem-bio--what-the-outfall-never-names": {
@@ -191,7 +191,7 @@
       "Mintahalom"
     ],
     "places": [
-      "Lowfen Önkormányzati Vízművek"
+      "Lowfen Municipal Waterworks"
     ]
   },
   "chem-bio--loaner-strains-after-closing-time": {
@@ -204,7 +204,7 @@
       "Szomszédfélelem"
     ],
     "places": [
-      "Cedar Szerződéses Viváriumpark"
+      "Cedar Contract Vivarium Park"
     ]
   },
   "asteroid--mine-glare-blanks-the-karoo-rock-watch": {
@@ -217,7 +217,7 @@
       "Engedélyzár"
     ],
     "places": [
-      "Sutherland Sky Belt, Észak-Fokföld"
+      "Sutherland Sky Belt, Northern Cape"
     ]
   },
   "asteroid--dish-backlog-leaves-the-valley-guessing": {
@@ -230,7 +230,7 @@
       "Javítási Sor"
     ],
     "places": [
-      "Goldstone Antelope Valley pereme, Kalifornia"
+      "Goldstone Antelope Valley rim, California"
     ]
   },
   "asteroid--time-share-freeze-after-every-rock-scare": {
@@ -243,7 +243,7 @@
       "Bizalomtörés"
     ],
     "places": [
-      "Maunakea megközelítési közösségek, Hawaiʻi-sziget"
+      "Maunakea access communities, Hawaiʻi Island"
     ]
   },
   "asteroid--kinetic-stack-waits-while-the-range-idles": {
@@ -253,10 +253,10 @@
     "pressureKeys": [
       "Küldetés-Állás",
       "Csordastressz",
-      "Felelősségi Zsákutca"
+      "Felelősségi"
     ],
     "places": [
-      "Esrange pereme, Kiruna önkormányzat"
+      "Esrange fringe, Kiruna municipality"
     ]
   },
   "weather--when-the-pivot-runs-dry": {
@@ -321,7 +321,7 @@
       "Személyzet Távozás"
     ],
     "places": [
-      "Porút Klinikasor"
+      "Dust Road Clinic Row"
     ]
   },
   "mideast--shutters-rise-only-after-the-cut": {
@@ -334,7 +334,7 @@
       "Tétlen Fiatalok"
     ],
     "places": [
-      "Sáfrány Utcai Szuk"
+      "Saffron Lane Souk"
     ]
   },
   "mideast--winter-walls-that-never-rise": {
@@ -347,7 +347,7 @@
       "Tulajdonviták"
     ],
     "places": [
-      "Rom Utcai Tömbök"
+      "Rubble Lane Blocks"
     ]
   },
   "mideast--the-canal-gate-becomes-a-weapon": {
@@ -360,7 +360,7 @@
       "Családi Adósság"
     ],
     "places": [
-      "Ikerparti Csatornák"
+      "Twin Bank Canals"
     ]
   },
   "nuclear--sirens-over-the-grain-elevators": {
@@ -373,7 +373,7 @@
       "Családi Félelem"
     ],
     "places": [
-      "Clearwater Silo Road, északi Nagy-síkság"
+      "Clearwater Silo Road, northern Great Plains"
     ]
   },
   "nuclear--ice-clutter-looks-inbound": {
@@ -386,7 +386,7 @@
       "Klinikai Terhelés"
     ],
     "places": [
-      "Floe Watch Headland, Labrador-part"
+      "Floe Watch Headland, Labrador coast"
     ]
   },
   "nuclear--drills-without-a-shared-clock": {
@@ -399,7 +399,7 @@
       "Bizalmi Rés"
     ],
     "places": [
-      "Iron Quay Összekötő Udvar, alsó Duna-folyosó"
+      "Iron Quay Liaison Yard, lower Danube corridor"
     ]
   },
   "nuclear--near-send-on-patch-night": {
@@ -408,11 +408,11 @@
     "stakeholder": "Eng. Kenji Okada, C3 biztosítéki vezető",
     "pressureKeys": [
       "Majdnem Balesetek",
-      "Vétó Zsugorodás",
+      "Vétó",
       "Városi Szorongás"
     ],
     "places": [
-      "Granite Command Hollow, Appalache-előhegység"
+      "Granite Command Hollow, Appalachian foothills"
     ]
   },
   "slavery--papers-locked-below-the-ice-line": {
@@ -425,7 +425,7 @@
       "Zárolt Papírok"
     ],
     "places": [
-      "Ranong-csatorna hajói"
+      "Ranong Channel Boats"
     ]
   },
   "slavery--the-scale-that-never-zeros-the-loan": {
@@ -438,7 +438,7 @@
       "Barakkszabályok"
     ],
     "places": [
-      "Sambas pálmatömbök"
+      "Sambas Palm Blocks"
     ]
   },
   "slavery--knot-counts-after-midnight": {
@@ -451,7 +451,7 @@
       "Hamis Auditok"
     ],
     "places": [
-      "Bhadohi szövősikátorok"
+      "Bhadohi Loom Lanes"
     ]
   },
   "slavery--ore-sacks-instead-of-schoolbags": {
@@ -464,7 +464,7 @@
       "Gödörfőnökök"
     ],
     "places": [
-      "Kolwezi ásóárkok"
+      "Kolwezi Dig Trenches"
     ]
   },
   "women--the-walk-home-after-midnight": {
@@ -490,7 +490,7 @@
       "Jogi Holtpont"
     ],
     "places": [
-      "Old Bund Földhivatal"
+      "Old Bund Land Registry"
     ]
   },
   "women--the-welding-bay-closes-at-dusk": {
@@ -503,7 +503,7 @@
       "Családi Húzás"
     ],
     "places": [
-      "East Yard Szakiskola"
+      "East Yard Trade School"
     ]
   },
   "women--the-form-still-wants-his-signature": {
@@ -516,13 +516,13 @@
       "Rendelői Stigma"
     ],
     "places": [
-      "Lakeview Családtervezési Pult"
+      "Lakeview Family Planning Counter"
     ]
   },
   "education--flood-weeks-erase-a-grade-in-marsh-bend": {
     "title": "Árvízi hetek törlik az évfolyamot Marsh Bendben",
     "scene": "Tanya Brooks hajnalban áll a gát parkolójában egy tejesládányi száraz munkafüzettel. A folyó két lábbal apadt. Az iskola még mindig vizes szőnyegszagú. Papírórarendet ragaszt a tornaterem ajtajára, hogy a szülők lássák, mely napok számítanak. A kerületi óra nem áll meg a víz miatt. A jelenlét ülésidő vagy semmi. Tavaly tavasszal három árvízi hét után a fia osztálya egész anyagrészeket ugrott át, és soha nem kapták vissza. A tanárok a maradékot a száraz hónapokra tolják. A gyerekek, akik lemaradtak az alapokról, csendben ülnek hátul. A buszjáratok papíron újraindulnak, miközben a mellékutak puhaak maradnak. Tanya ugyanazokat a családokat kíséri az ideiglenes terembe, és nézi, ahogy a jelenléti ívek hiányzásokkal telnek, amiket a rendszer kudarcnak kezel. A finanszírozás azokhoz a napokhoz igazodik, amikor a gyerekeket jelenlévőnek jelölik egy épületben, amit a folyó folyamatosan követel. Ki tervez olyan tanulási időt, ami túléli azokat a heteket, amikor a víz birtokolja az utat?",
-    "stakeholder": "Tanya Brooks, SZMK-vezető és gáttanú",
+    "stakeholder": "Tanya Brooks, S",
     "pressureKeys": [
       "Hiányzó Napok",
       "Árvízi Előítélet",
@@ -581,7 +581,7 @@
       "Lakbérnyomás"
     ],
     "places": [
-      "Cedar Junction Teljesítési Központ"
+      "Cedar Junction Fulfillment Hub"
     ]
   },
   "automation--medallions-against-empty-curbs": {
@@ -594,7 +594,7 @@
       "Adósság"
     ],
     "places": [
-      "Harborview Sofőr-diszpécser Garázs"
+      "Harborview Driver Dispatch Garage"
     ]
   },
   "automation--charts-coded-without-the-wing": {
@@ -607,7 +607,7 @@
       "Hitelyomás"
     ],
     "places": [
-      "Lakeside Kórház Bevételi Szárny"
+      "Lakeside Hospital Revenue Wing"
     ]
   },
   "automation--sorters-took-the-piece-rate-weeks": {
@@ -620,7 +620,7 @@
       "Készségek"
     ],
     "places": [
-      "Sunridge Bogyós Csomagoló Fészer"
+      "Sunridge Berry Packing Shed"
     ]
   },
   "refugees--hostels-full-stamps-still-pending": {
@@ -677,20 +677,20 @@
   },
   "ag--bare-winter-fields-blow-the-county-thin": {
     "title": "Csupasz téli földek vékonyra fújják a megyét",
-    "scene": "Mara hajnal előtt kirúgja a kapuzárat, és a szél már homokízű. A bérleménye a patakkanyartól nyugatra fut. Az éjszakai fagy csupaszon és porfinoman hagyta a talajt. Délelőtt közepére az ég régi papír színűre vált. Por emelkedik minden nyitott holdról, és két mérfölddel szélirányban az iskolaudvarba ömlik. A gyerekek ujjászukkal törlik a szemüket. A nővér újabb délutánnyi köhögést jegyez fel.\n\nA talajvédelmi körzet takarónövény-magos teherautója félig üresen áll a szövetkezetnél. A készpénzes bérleti díj novemberben volt esedékes. A legtöbb bérlő eladta az utolsó babpénzt is, hogy fizetőképes maradjon, aztán csupaszon hagyta a földet egész télen, mert az élő talajtakaró nem fizeti a törlesztőt. A földesurak továbbra is a beszállított termésmennyiség alapján értékelik a bérleteket, nem a hátrahagyott tarlómaradvány alapján. Így ismétlődik a minta: keményen aratni, tisztára tárcsázni, remélni, hogy a márciusi esők szelídek lesznek.\n\nRitkán azok. Mara nézi, ahogy a termőtalaj vékony lemezekben hagyja el a sorait, és a szomszéd tornácbútoraira ülepszik. A legkisebbje megint vörös torokkal jön haza. A megye számolhatja a poros napokat. Számolhatja az útról a csupasz holdakat. Amit nem tervezett meg, az egy olyan tél, amely megtartja a talajt, amikor a bérleti naptár és a szélnaptár nem akar egyezni. Ki épít olyan bérleti és magrendszert, amely akkor is működik, amikor a földnek már nincs mit eladnia?",
+    "scene": "Mara hajnal előtt kirúgja a kapuzárat, és a szél már homokízű. A bérleménye a patakkanyartól nyugatra fut. Az éjszakai fagy csupaszon és porfinoman hagyta a talajt. Délelőtt közepére az ég régi papír színűre vált. Por emelkedik minden nyitott holdról, és két mérfölddel szélirányban az iskolaudvarba ömlik. A gyerekek ujjukkal törlik a szemüket. A nővér újabb délutánnyi köhögést jegyez fel.\n\nA talajvédelmi körzet takarónövény-magos teherautója félig üresen áll a szövetkezetnél. A készpénzes bérleti díj novemberben volt esedékes. A legtöbb bérlő eladta az utolsó babpénzt is, hogy fizetőképes maradjon, aztán csupaszon hagyta a földet egész télen, mert az élő talajtakaró nem fizeti a törlesztőt. A földesurak továbbra is a beszállított termésmennyiség alapján értékelik a bérleteket, nem a hátrahagyott tarlómaradvány alapján. Így ismétlődik a minta: keményen aratni, tisztára tárcsázni, remélni, hogy a márciusi esők szelídek lesznek.\n\nRitkán azok. Mara nézi, ahogy a termőtalaj vékony lemezekben hagyja el a sorait, és a szomszéd tornácbútoraira ülepszik. A legkisebbje megint vörös torokkal jön haza. A megye számolhatja a poros napokat. Számolhatja az útról a csupasz holdakat. Amit nem tervezett meg, az egy olyan tél, amely megtartja a talajt, amikor a bérleti naptár és a szélnaptár nem akar egyezni. Ki épít olyan bérleti és magrendszert, amely akkor is működik, amikor a földnek már nincs mit eladnia?",
     "stakeholder": "Megyei talajvédelmi körzet és bérlőtermelők szövetsége",
     "pressureKeys": [
       "Poros Napok",
       "Csupasz Földek",
-      "Farmadósság"
+      "Mezőgazdasági adósság"
     ],
     "places": [
-      "Loess Bend Megye"
+      "Loess Bend County"
     ]
   },
   "ag--full-sun-spice-rush-kills-the-mist-forest": {
     "title": "Teljes napfényes fűszerroham öli a köderdőt",
-    "scene": "Hajnalban Öreg Ren bádogpohárral járja a felső forrásösvényt. Megáll ott, ahol a moha régen dél után is nedves maradt. A pohár zavarosan jön fel. Alatta új kardamom- és borsirtások ragyognak, mint nyílt sebek a gerincen. A munkások sávokban vágták ki az utolsó árnyékadó fákat, hogy a fűszer teljes napot kapjon, és gyorsabban elérje az exportminőséget.\n\nA szövetkezet a múlt szezonban igent szavazott. A spotárak magasak voltak. A szerződések a száraz súlyt és a színt fizették, nem azt, hogy a köd még kialakul-e hajnalban. A lombkorona nélkül a reggeli köd elvékonyodik. A meredekebb lépcsőkön a talaj meglazul az éjszakai eső után. Egy sárnyelv kedden elvitte a gyaloghidat a Harmadik Kerület felett. A falusi tartálynál a forrás hozama annyira csökkent, hogy a délutáni töltősor már nem ér el az utolsó házakig.\n\nRen unokája messzebbre hordja a vizet, mint egy évvel ezelőtt. Az őrök rámutathatnak minden új teraszra, és megnevezhetik, ki írta alá. A hajtóerő egyszerű és helyi: a teljes napfényes fűszer idén fizet; az árnyék nem. A köderdő főkönyvi sorokká válik. A gerincnek továbbra is embereket, vizet és gyökereket kell egyszerre tartania. Ki tervez olyan fűszeres megélhetést, amely megtartja a ködöt és a lejtőt, amikor a vevő csak a napot árazza?",
+    "scene": "Hajnalban Öreg Ren bádogpohárral járja a felső forrásösvényt. Megáll ott, ahol a moha régen dél után is nedves maradt. A pohár zavarosan jön fel. Alatta új kardamom- és borsirtások ragyognak, mint nyílt sebek a gerincen. A munkások sávokban vágták ki az utolsó árnyékadó fákat, hogy a fűszer teljes napot kapjon, és gyorsabban elérje az exportminőséget.\n\nA szövetkezet a múlt szezonban igent szavazott. A spotárak magasak voltak. A szerződések a száraz súlyt és a színt fizették, nem azt, hogy a köd még kialakul-e hajnalban. A lombkorona nélkül a reggeli köd elvékonyodik. A meredekebb lépcsőkön a talaj meglazul az éjszakai eső után. Egy sárnyelv kedden elvitte a gyaloghidat a Ward Three felett. A falusi tartálynál a forrás hozama annyira csökkent, hogy a délutáni töltősor már nem ér el az utolsó házakig.\n\nRen unokája messzebbre hordja a vizet, mint egy évvel ezelőtt. Az őrök rámutathatnak minden új teraszra, és megnevezhetik, ki írta alá. A hajtóerő egyszerű és helyi: a teljes napfényes fűszer idén fizet; az árnyék nem. A köderdő főkönyvi sorokká válik. A gerincnek továbbra is embereket, vizet és gyökereket kell egyszerre tartania. Ki tervez olyan fűszeres megélhetést, amely megtartja a ködöt és a lejtőt, amikor a vevő csak a napot árazza?",
     "stakeholder": "Teraszszövetkezet és forrásőrök",
     "pressureKeys": [
       "Sárcsuszamlások",
@@ -698,7 +698,7 @@
       "Árnyékvesztés"
     ],
     "places": [
-      "Ködvonal Fűszerteraszok"
+      "Fogline Spice Terraces"
     ]
   },
   "ag--spec-sheets-turn-salad-rows-into-spray-alleys": {
@@ -711,7 +711,7 @@
       "Vevőzár"
     ],
     "places": [
-      "Körgyűrű Zöldövezet"
+      "Ringroad Greens Belt"
     ]
   },
   "ag--pump-wars-salt-the-seed-beds": {
@@ -724,7 +724,7 @@
       "Szivattyúverseny"
     ],
     "places": [
-      "Brakkos Polder-szakasz"
+      "Brackish Polder Reach"
     ]
   },
   "food--blight-takes-the-parish-potatoes": {
@@ -737,7 +737,7 @@
       "Magadósság"
     ],
     "places": [
-      "Ladder Ridge Plébánia"
+      "Ladder Ridge Parish"
     ]
   },
   "food--dawn-crates-rot-at-the-gate": {
@@ -750,7 +750,7 @@
       "Standdíj"
     ],
     "places": [
-      "Copper Gate Nagyker"
+      "Copper Gate Wholesale"
     ]
   },
   "food--wells-on-the-circuit-turn-to-mud": {
@@ -763,7 +763,7 @@
       "Kerítések"
     ],
     "places": [
-      "Thorn Well Körút"
+      "Thorn Well Circuit"
     ]
   },
   "food--barges-pass-the-small-jetties-by": {
@@ -776,7 +776,7 @@
       "Hitelcsapda"
     ],
     "places": [
-      "Millrace Lakótelep"
+      "Millrace Flats"
     ]
   },
   "eco--cranes-over-concrete": {
@@ -789,7 +789,7 @@
       "Bérleti Pénz"
     ],
     "places": [
-      "Gyékénykanyar-síkság"
+      "Cattail Bend Flats"
     ]
   },
   "eco--empty-nets-at-the-weir": {
@@ -802,7 +802,7 @@
       "Gabonaszerződések"
     ],
     "places": [
-      "Ezüstlétra-kanyar"
+      "Silver Ladder Bend"
     ]
   },
   "eco--sand-where-meadows-waved": {
@@ -815,7 +815,7 @@
       "Kikötői Díjak"
     ],
     "places": [
-      "Üvegfű-öböl"
+      "Glassgrass Sound"
     ]
   },
   "eco--spring-without-frogs": {
@@ -828,7 +828,7 @@
       "Faszén Pénz"
     ],
     "places": [
-      "Zuzmólépcső-völgy"
+      "Lichen Stair Valley"
     ]
   },
   "infectious--medical-waste-tips-fever-into-dump-edge-lane": {
@@ -841,7 +841,7 @@
       "Klinikai Elérés"
     ],
     "places": [
-      "Dump Edge Lane Település"
+      "Dump Edge Lane Settlement"
     ]
   },
   "infectious--shared-cistern-cough-fills-station-road-lodge": {
@@ -854,7 +854,7 @@
       "Elveszett Bér"
     ],
     "places": [
-      "Station Road Zarándok Lodge"
+      "Station Road Pilgrim Lodge"
     ]
   },
   "infectious--gutting-rinse-sickens-old-quay-landings": {
@@ -867,7 +867,7 @@
       "Piaci Napok"
     ],
     "places": [
-      "Old Quay Halkirakodó"
+      "Old Quay Fish Landing"
     ]
   },
   "infectious--playground-pump-empties-maple-primary-desks": {
@@ -880,7 +880,7 @@
       "Iskolai Napok"
     ],
     "places": [
-      "Maple Primary Iskolaudvar"
+      "Maple Primary School Yard"
     ]
   },
   "climate--cedar-bend-loses-the-lower-ward": {
@@ -945,20 +945,20 @@
       "Hulladékbérek"
     ],
     "places": [
-      "Circuit Beach hulladékudvarok"
+      "Circuit Beach scrap yards"
     ]
   },
   "cancer--playground-vapors-no-one-capped-in-time": {
     "title": "Játszótéri gőzök, amiket senki sem zárt le időben",
     "scene": "Priya Nair az Old Gasworks School nővéri szekrényében áll, és három újabb hiányzást jelöl. Orrvérzések. Gyomorfájás. Kinyitja az ablakot, és elkapja az édes kátrányillatot, amely akkor száll fel, amikor a nap ráüt a játszótér alatti régi kokszolótelepre. A kerület évekkel ezelőtt lezárt egy sarkot. A többi még mindig lélegzik a repedezett aszfalton át matekóra és szünet között. A szülők el akarják mozdítani a mobil tantermeket a szennyezőcsóváról. A költségvetési bizottság azt mondja, egy telekcsere levágná a művészeti szárnyat és az ingyenebéd-bővítést. Priya egy engedélyező lapot tart egy mobil szűrőbuszhoz. Stabil cím kell hozzá, és egy szülőbajnok, aki nem veszít el egy műszakot. A gőzök tovább emelkednek. A betegnapok tovább tornyosulnak. Ki tervez olyan iskolaudvart, amely nem kezeli ezeket a napokat normálisnak?",
-    "stakeholder": "SZMK nővérkoordinátor Priya Nair",
+    "stakeholder": "S",
     "pressureKeys": [
       "Beteg Gyerekek",
       "Kátránygőzök",
       "Költségvetési Harcok"
     ],
     "places": [
-      "Old Gasworks School tömb"
+      "Old Gasworks School block"
     ]
   },
   "cancer--solvent-booths-trade-lungs-for-tips": {
@@ -971,7 +971,7 @@
       "Bérleti Félelem"
     ],
     "places": [
-      "Nail Row szépségfolyosó"
+      "Nail Row beauty corridor"
     ]
   },
   "cancer--night-resin-lines-still-mark-the-livers": {
@@ -984,7 +984,7 @@
       "Túlóra Nyomás"
     ],
     "places": [
-      "Vinyl Reach éjszakai üzem"
+      "Vinyl Reach night plant"
     ]
   },
   "mental--waitlist-longer-than-the-semester": {
@@ -1094,19 +1094,19 @@
   "ageing--doubles-until-the-body-breaks": {
     "title": "Duplázódik, amíg a test össze nem roppan",
     "scene": "Rosa reggel 5:40-kor friss útvonallapotot ragaszt a szövetkezeti táblára. Tizenkét név. Tegnap még tíz volt. Chen néninek még teljes mosdatás és biztonságos áthelyezés kell a székbe a dialízisszállítás előtt. Okonkwo úr fia megint lemondta a reggeli időpontot. Rosa jobb válla már ég a múlt heti emelésektől. A táblagép kétszer is jelez: a kórházi elbocsátás ma két új otthonmaradási felvételt kér ugyanarra a folyosóra. A város és az ügynökségek a teljesített látogatás után fizetnek, nem a gondos perc után. A családok nem tudnak bentlakó segítséget venni, ezért az ágyak gyorsabban ürülnek, az útvonal sűrűsödik. Rosa megdupláz egy emelést egy kolléganővel, akinek a saját listája vár a lépcsőházban. Valaki dél előtt lemarad egy gyógyszerkiosztásról. A szövetkezet visszautasíthatja az új ügyfeleket és elveszítheti a szerződéses folyosót—vagy tovább fogadhatja a hosszabb életeket, amelyek túlélik a hátakat, amelyek cipelnek. Ki tervezi újra az otthoni gondozást úgy, hogy a hozzáadott évek ne törjék össze azokat, akik hajnalban megjelennek?",
-    "stakeholder": "Otthonápolói szövetkezet gondnoka",
+    "stakeholder": "Otthonápolói szövetkezet képviselője",
     "pressureKeys": [
       "Testi Megterhelés",
       "Műsakterhelés",
       "Dolgozóhiány"
     ],
     "places": [
-      "Midtown Otthonápolási Folyosó"
+      "Midtown Home-Care Corridor"
     ]
   },
   "ageing--kilns-that-outlast-bones": {
     "title": "Kemencék, amelyek túlélik a csontokat",
-    "scene": "Kamal leguggol, hogy ellenőrizze a nedves formákat, mielőtt a nap átbukik a fészer tetején. Ötvennyolc éves. A térdei ropognak, ahogy leereszkedik. A kemencefőnök még egy égetést akar dél előtt. A darabbér csak a kész, felhalmozott és lepecsételt téglákat számolja. A fiatalabb hordárok raktári műszakokra mentek a körgyűrűn túlra. Az udvar még mindig ugyanazt a hajolás-csavarás-cipelés ciklust futtatja, amely Kamal apját is elkoptatta. Hő árad a kemence nyitott szájából. Délelőttre a csuklói megduzzadnak, és a számláló rövid rakományt jelöl. Jégcsomagok ülnek az egészségügyi fészerben egy tartáspóster mellett, amelyet senkinek nincs ideje elolvasni. A sor az öregedő izmot magánbalsorsnak kezeli, nem tervezési bemenetnek. Kamal erőltetheti a tempót és kockáztathat egy esést az agyagárokba—vagy kiléphet, és elveszítheti a bért, amely még fedezi anyja gyógyszerét. Mit talál fel egy udvar, amikor a kemencék túlélik a csontokat, amelyek táplálják őket?",
+    "scene": "Kamal leguggol, hogy ellenőrizze a nedves formákat, mielőtt a nap átbukik a fészer tetején. Ötvennyolc éves. A térdei ropognak, ahogy leereszkedik. A kemencefőnök még egy égetést akar dél előtt. A darabbér csak a kész, felhalmozott és lepecsételt téglákat számolja. A fiatalabb hordárok raktári műszakokra mentek a körgyűrűn túlra. Az udvar még mindig ugyanazt a hajolás-csavarás-cipelés ciklust futtatja, amely Kamal apját is elkoptatta. Hő árad a kemence nyitott szájából. Délelőttre a csuklói megduzzadnak, és a számláló rövid rakományt jelöl. Jégcsomagok ülnek az egészségügyi fészerben egy tartáspóster mellett, amelyet senkinek nincs ideje elolvasni. A sor az öregedő izmot magánbalsorsnak kezeli, nem tervezési bemenetnek. Kamal erőltetheti a tempót és kockáztathat egy esést az agyagárokba—vagy kiléphet, és elveszítheti a bért, amely még fedezi anyja gyógyszerét. Mit tervez újra egy udvar, amikor a kemencék túlélik a csontokat, amelyek táplálják őket?",
     "stakeholder": "Udvari munkaegészségügyi vezető",
     "pressureKeys": [
       "Ízületi Fájdalom",
@@ -1114,7 +1114,7 @@
       "Elmaradt Bér"
     ],
     "places": [
-      "Brickfields Idős Udvarok"
+      "Brickfields Elder Yards"
     ]
   },
   "ageing--upper-floors-without-cool-air": {
@@ -1127,20 +1127,20 @@
       "Egyedül Órák"
     ],
     "places": [
-      "Sunstack Idős Tornyok"
+      "Sunstack Senior Towers"
     ]
   },
   "ageing--dawn-stalls-without-successors": {
     "title": "Hajnali standok utódok nélkül",
-    "scene": "Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az első ládát keserű tökkel a nedves betonra. Hatvanegy éves. A csípője beakad a forduláskor. Az aukciós harang negyven perc múlva szól. A vevők csak a telinek és korainak látszó rakásokat tisztelik. Unokaöccse futárszolgálati app-munkát vállalt a város másik felén. A céh fiatal kezek listája üres ebben a szezonban. A piaci szabályok még mindig azt az árust részesítik előnyben, aki hajnali 3-tól áll és segítség nélkül emel—ugyanaz a minta, amely felépítette ezeket a standokat, és most utódok nélkül hagyja őket. A múlt havi esés két piaci napjába és egy hét fájdalomba került, amit nem írt le. A vékony segítség azt jelenti, hogy vagy lassít és elveszíti a rendszeres séfeket, vagy tartja a hajnali robotot a következő megcsúszásig. Mit talál fel egy élelmiszerkapu, amikor a hosszabb munkaéletek találkoznak egy piaccal, amely sosem tanulta meg átadni a ládát?",
+    "scene": "Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az első ládát keserű tökkel a nedves betonra. Hatvanegy éves. A csípője beakad a forduláskor. Az aukciós harang negyven perc múlva szól. A vevők csak a telinek és korainak látszó rakásokat tisztelik. Unokaöccse futárszolgálati app-munkát vállalt a város másik felén. A céh fiatal kezek listája üres ebben a szezonban. A piaci szabályok még mindig azt az árust részesítik előnyben, aki hajnali 3-tól áll és segítség nélkül emel—ugyanaz a minta, amely felépítette ezeket a standokat, és most utódok nélkül hagyja őket. A múlt havi esés két piaci napjába és egy hét fájdalomba került, amit nem írt le. A vékony segítség azt jelenti, hogy vagy lassít és elveszíti a rendszeres séfeket, vagy tartja a hajnali robotot a következő megcsúszásig. Hogyan tervezi újra egy élelmiszerkapu a munkát, amikor a hosszabb munkaéletek találkoznak egy piaccal, amely sosem tanulta meg átadni a ládát?",
     "stakeholder": "Piaci árusok céhének titkára",
     "pressureKeys": [
       "Esések",
       "Hajnali Robot",
-      "Vékony Segítség"
+      "Kevesebb segítség"
     ],
     "places": [
-      "River Gate Nagykereskedelmi Piac"
+      "River Gate Wholesale Market"
     ]
   },
   "water--standpipes-sputter-brown-in-canal-ward": {
@@ -1205,7 +1205,7 @@
       "Rakhelyi áram"
     ],
     "places": [
-      "Tidegate Halászrakpartok"
+      "Tidegate Fishing Quays"
     ]
   },
   "air--recess-under-the-flyover": {
@@ -1218,7 +1218,7 @@
       "Flottaszabályok"
     ],
     "places": [
-      "Ring Road Iskolai Folyosó"
+      "Ring Road School Corridor"
     ]
   },
   "air--evening-fires-in-the-lane": {
@@ -1231,7 +1231,7 @@
       "Lerakói díjak"
     ],
     "places": [
-      "Csatornaparti Hulladékutcák"
+      "Canal-Side Scrap Lanes"
     ]
   },
   "air--colored-fog-at-shift-change": {
@@ -1244,7 +1244,7 @@
       "Darabbérek"
     ],
     "places": [
-      "Folyóparti Festőklaszter"
+      "Riverside Dye Cluster"
     ]
   },
   "energy-access--coal-smoke-fills-the-gap-the-grid-left": {
@@ -1257,7 +1257,7 @@
       "Telekjog"
     ],
     "places": [
-      "Ulánbátor Ger-negyedi utcák"
+      "Ulaanbaatar Ger District Lanes"
     ]
   },
   "energy-access--harvest-waits-while-the-genset-coughs": {
@@ -1270,7 +1270,7 @@
       "Iskoladíjak"
     ],
     "places": [
-      "Camotes-szigeti rizsszövetkezeti rakpart"
+      "Camotes Island Rice Co-op Wharf"
     ]
   },
   "energy-access--the-sterilizer-sleeps-through-the-night-shift": {
@@ -1283,7 +1283,7 @@
       "Személyzeti Kimerülés"
     ],
     "places": [
-      "Humla ösvényeleji egészségügyi állomás"
+      "Humla Trailhead Health Post"
     ]
   },
   "energy-access--light-sold-by-the-hour-on-the-lagoon": {
@@ -1296,7 +1296,7 @@
       "Bizalmi Rés"
     ],
     "places": [
-      "Makoko lagúnai cölöpház-tömbök"
+      "Makoko Lagoon Stilt Blocks"
     ]
   },
   "homeless--noon-checkout-into-a-furnace-lot": {
@@ -1309,7 +1309,7 @@
       "Ügyhátralék"
     ],
     "places": [
-      "Sunbelt Weekly Inn sáv, Mesa folyosók"
+      "Sunbelt Weekly Inn strip, Mesa corridors"
     ]
   },
   "homeless--thirty-safe-nights-then-the-courthouse-lot": {
@@ -1322,7 +1322,7 @@
       "Hitelakadályok"
     ],
     "places": [
-      "Riverbend Family Justice melléképület"
+      "Riverbend Family Justice annex"
     ]
   },
   "homeless--sold-out-from-under-the-fixed-check": {
@@ -1335,7 +1335,7 @@
       "Fix járadékok"
     ],
     "places": [
-      "Palm Court idősek lakókocsiparkja"
+      "Palm Court senior trailer park"
     ]
   },
   "homeless--discharged-still-weak-to-the-ambulance-bay": {
@@ -1348,7 +1348,7 @@
       "Gyógyszeradósság"
     ],
     "places": [
-      "County General mentőöböl járdaszegélye"
+      "County General ambulance bay curb"
     ]
   },
   "cities--tin-roofs-that-still-cook-after-dark": {
@@ -1361,7 +1361,7 @@
       "Betegnapok"
     ],
     "places": [
-      "Ahmedabadi Textilsikátor Tetők"
+      "Ahmedabad Textile Lane Roofs"
     ]
   },
   "cities--the-estero-that-became-the-alley-dump": {
@@ -1374,7 +1374,7 @@
       "Bérlői Szorítás"
     ],
     "places": [
-      "Manilai Estero de Vitas Zseb"
+      "Manila Estero de Vitas Pocket"
     ]
   },
   "cities--three-hours-down-the-ridge-for-a-shift": {
@@ -1387,7 +1387,7 @@
       "Elveszett Bérek"
     ],
     "places": [
-      "Bogotá Soacha Gerinc Megállók"
+      "Bogotá Soacha Ridge Stops"
     ]
   },
   "cities--lessons-under-the-zinc-sheets": {
@@ -1400,7 +1400,7 @@
       "Lemorzsolódók"
     ],
     "places": [
-      "Nairobi Mathare Gerinc Iskolák"
+      "Nairobi Mathare Ridge Schools"
     ]
   },
   "child--night-smoke-steals-small-breaths": {
@@ -1413,7 +1413,7 @@
       "Tüzelőár"
     ],
     "places": [
-      "El Alto udvarkonyhái, La Paz fennsík"
+      "El Alto compound kitchens, La Paz highlands"
     ]
   },
   "child--trash-gutters-breed-the-fever": {
@@ -1426,7 +1426,7 @@
       "Kieső Munka"
     ],
     "places": [
-      "Cebu csatornaparti bölcsőde, Visayas vízpart"
+      "Cebu canal-edge daycare, Visayas waterfront"
     ]
   },
   "child--spoiled-millet-on-the-growth-chart": {
@@ -1439,7 +1439,7 @@
       "Piaci Bizalom"
     ],
     "places": [
-      "Kano gabonapiaci ötéves alatti poszt, Észak-Nigéria"
+      "Kano grain-market under-fives post, northern Nigeria"
     ]
   },
   "child--battery-dust-on-the-play-sand": {
@@ -1452,7 +1452,7 @@
       "Roncsmunka"
     ],
     "places": [
-      "Old Fadama roncstelep-széli klinika, Accra"
+      "Old Fadama scrap-yard edge clinic, Accra"
     ]
   },
   "maternal--bamboo-stretcher-at-the-switchback": {
@@ -1465,7 +1465,7 @@
       "Személyzet Hiány"
     ],
     "places": [
-      "Solukhumbu ösvényklinika"
+      "Solukhumbu trail clinic"
     ]
   },
   "maternal--night-heat-on-the-birth-floor": {
@@ -1478,7 +1478,7 @@
       "Zsúfoltság"
     ],
     "places": [
-      "Rakhiyal chawl szülőszoba"
+      "Rakhiyal chawl maternity room"
     ]
   },
   "maternal--dust-in-the-labor-queue": {
@@ -1491,7 +1491,7 @@
       "Klinikai Díjak"
     ],
     "places": [
-      "Cerro Alto munkás szülészeti pult"
+      "Cerro Alto workers’ maternity desk"
     ]
   },
   "maternal--warm-vials-at-low-tide": {
@@ -1504,7 +1504,7 @@
       "Komp Késés"
     ],
     "places": [
-      "Mtwapa pataki szülőmenedék"
+      "Mtwapa creek birth shelter"
     ]
   },
   "coord--lakes-that-will-not-speak-together": {
@@ -1517,7 +1517,7 @@
       "Vádaskodás"
     ],
     "places": [
-      "Carhuaz–Huaraz völgyi városok, Cordillera Blanca"
+      "Carhuaz–Huaraz valley towns, Cordillera Blanca"
     ]
   },
   "coord--three-cities-one-heat-wave": {
@@ -1530,7 +1530,7 @@
       "Költségvetési Harcok"
     ],
     "places": [
-      "Delhi–Ghaziabad–Noida munkafolyosók"
+      "Delhi–Ghaziabad–Noida work corridors"
     ]
   },
   "coord--nets-empty-logbooks-closed": {
@@ -1543,7 +1543,7 @@
       "Bizalmatlanság"
     ],
     "places": [
-      "Saint-Louis-tól Kayarig kikötőpartok, Szenegál"
+      "Saint-Louis to Kayar landing beaches, Senegal"
     ]
   },
   "coord--shore-towns-separate-water-truths": {
@@ -1556,7 +1556,7 @@
       "Helyi Rivalizálás"
     ],
     "places": [
-      "Kisumu–Homa Bay tóparti övezet, Viktória-tó"
+      "Kisumu–Homa Bay lakeshore belt, Lake Victoria"
     ]
   },
   "radicalization--layoff-notice-new-names-on-the-wall": {
@@ -1569,7 +1569,7 @@
       "Gyenge Kötelékek"
     ],
     "places": [
-      "Riverside Malomsori Kapu"
+      "Riverside Mill Row Gate"
     ]
   },
   "radicalization--closed-clinic-open-airwaves": {
@@ -1621,7 +1621,7 @@
       "Becsület Szabályok"
     ],
     "places": [
-      "Abnub házassági-közjegyzői sor, Minya kormányzóság"
+      "Abnub marriage-notary row, Minya Governorate"
     ]
   },
   "fgm--grove-dues-open-the-bush": {
@@ -1634,7 +1634,7 @@
       "Tartozás Félelme"
     ],
     "places": [
-      "Makump liget széle, Tonkolili kerület"
+      "Makump grove edge, Tonkolili District"
     ]
   },
   "fgm--dawn-bookings-in-the-women-s-lanes": {
@@ -1647,7 +1647,7 @@
       "Apósok Követelése"
     ],
     "places": [
-      "Borama központi női piaci sorok, Awdal"
+      "Borama central women’s market lanes, Awdal"
     ]
   },
   "fgm--elders-still-name-the-pure-bride": {
@@ -1660,7 +1660,7 @@
       "Iskolai Csend"
     ],
     "places": [
-      "Ranya domblábi esküvői udvarok, Sulaymaniyah kormányzóság"
+      "Ranya foothill wedding courtyards, Sulaymaniyah Governorate"
     ]
   },
   "short-termism--cash-kilns-thin-the-storm-belt": {
@@ -1673,7 +1673,7 @@
       "Engedély Hajsza"
     ],
     "places": [
-      "Salt Creek Mangrove-szegély"
+      "Salt Creek Mangrove Fringe"
     ]
   },
   "short-termism--exam-scores-locked-workshops": {
@@ -1686,7 +1686,7 @@
       "Készséghiány"
     ],
     "places": [
-      "Hillside Politechnikum Melléképület"
+      "Hillside Polytechnic Annex"
     ]
   },
   "short-termism--rent-due-stairs-failing": {
@@ -1699,7 +1699,7 @@
       "Foltozás Bírság"
     ],
     "places": [
-      "Canal Row Bérházak"
+      "Canal Row Tenements"
     ]
   },
   "short-termism--spring-flood-sold-as-dry-fields": {
@@ -1709,10 +1709,10 @@
     "pressureKeys": [
       "Süllyedő Földek",
       "Szivattyú Számlák",
-      "Bérleti Záradékok"
+      "Bérleti"
     ],
     "places": [
-      "Blackwater Fen Kiosztott Földek"
+      "Blackwater Fen Allotments"
     ]
   },
   "misinfo--the-nurse-who-never-dialed": {
@@ -1725,7 +1725,7 @@
       "Személyzeti Terhelés"
     ],
     "places": [
-      "Riverside Ingyenes Klinika Előcsarnoka"
+      "Riverside Free Clinic Lobby"
     ]
   },
   "misinfo--sirens-nobody-believes": {
@@ -1738,7 +1738,7 @@
       "Kikötői Kétely"
     ],
     "places": [
-      "Seabrook Rakpart Hirdetőtáblája"
+      "Seabrook Wharf Notice Board"
     ]
   },
   "misinfo--the-lecture-that-wasn-t-sold": {
@@ -1751,7 +1751,7 @@
       "Fizetett Rágalmak"
     ],
     "places": [
-      "Milltown Esti Iskola Terme"
+      "Milltown Night School Hall"
     ]
   },
   "misinfo--rent-strike-on-a-forged-memo": {
@@ -1764,7 +1764,7 @@
       "Külső Pénz"
     ],
     "places": [
-      "Harborview Bérlői Unió Terme"
+      "Harborview Tenant Union Hall"
     ]
   },
   "totalitarianism--the-ward-docks-your-household": {
@@ -1777,7 +1777,7 @@
       "Személyzeti Félelem"
     ],
     "places": [
-      "Millbridge Közösségi Kórház"
+      "Millbridge Community Hospital"
     ]
   },
   "totalitarianism--no-chant-no-cold-storage": {
@@ -1790,7 +1790,7 @@
       "Árusi Hallgatás"
     ],
     "places": [
-      "Harborlane Terményárkádok"
+      "Harborlane Produce Arcades"
     ]
   },
   "totalitarianism--compliant-blocks-stay-lit": {
@@ -1803,7 +1803,7 @@
       "Szomszédfigyelés"
     ],
     "places": [
-      "Copperline Hálózati Falucska"
+      "Copperline Grid Hamlet"
     ]
   },
   "totalitarianism--fuel-only-for-the-logged-crew": {
@@ -1816,7 +1816,7 @@
       "Csendes Csatorna"
     ],
     "places": [
-      "Saltreed Halászrakpart"
+      "Saltreed Fisher Quay"
     ]
   },
   "women-stem--night-shuttle-ends-before-her-bench-time": {
@@ -1881,7 +1881,7 @@
       "Tanonc Távozás"
     ],
     "places": [
-      "Nishijin fatelep, Kiotó"
+      "Nishijin timber yard, Kyoto"
     ]
   },
   "memory--safe-ice-only-the-aunties-can-name": {
@@ -1894,7 +1894,7 @@
       "Fiatalok Elvándorlása"
     ],
     "places": [
-      "Toksook Bay csónakkikötő, Alaszka"
+      "Toksook Bay boat launch, Alaska"
     ]
   },
   "memory--the-furnace-whisper-dies-at-shift-end": {
@@ -1907,7 +1907,7 @@
       "Jegyzet Törlések"
     ],
     "places": [
-      "Port Talbot nagyolvasztó irányítóterem, Wales"
+      "Port Talbot blast furnace control room, Wales"
     ]
   },
   "memory--auntie-remedies-never-reach-the-chart": {
@@ -1920,12 +1920,12 @@
       "Személyzet Fluktuáció"
     ],
     "places": [
-      "Szülészeti melléképület, Komfo Anokye Oktatókórház, Kumasi"
+      "Maternity annex, Komfo Anokye Teaching Hospital, Kumasi"
     ]
   },
   "rural-roads--harvest-trucks-stop-at-the-broken-bailey": {
     "title": "Aratási teherautók megállnak a törött Bailey-hídon",
-    "scene": "Rosa hajnalban tolatja az első kisteherautót a Bailey-hídhoz. Zöld kávécseresznye, még nedves az éjszakától. Az acélpálya, amely egykor óránként három teherautót bírt el, most a szakadék felé dől. Egy lemez elnyíródott a legutóbbi viharban. Leállítja a motort, és hallgatja a patakot. A vevők a túlsó parton várnak mérleggel és készpénzzel. Mögötte a szövetkezet tagjai zsákokat raknak, amelyek délutánra megsavanyodnak, ha ott maradnak. A községi műszaki vezető megérkezik irattartóval, daru nélkül. A költségvetési sorok továbbra is a burkolt leágazást részesítik előnyben, amely a völgyben lejjebb fekvő turistaszállót szolgálja ki. A pótalkatrészek két gerincvonulattal odébb egy raktárban várnak, egy vállalkozó nevére írva, aki csak akkor dolgozik, ha az út már járható. Rosa tétele veszít a minőségéből, amíg a papírmunka a száraz időre vár, amely soha nem igazán jön el. Ki tervezi újra a hegyi átkelőt, hogy az aratás elindulhasson, mielőtt a gyümölcs megromlik?",
+    "scene": "Rosa hajnalban tolatja az első kisteherautót a Bailey-hídhoz.",
     "stakeholder": "Kistermelői kávészövetkezet és községi műszaki vezető",
     "pressureKeys": [
       "Romlott Termés",
@@ -1933,7 +1933,7 @@
       "Szűkös Pénz"
     ],
     "places": [
-      "Cajón Seco híd-leágazás, chiapasi felföld"
+      "Cajón Seco bridge spur, Chiapas highlands"
     ]
   },
   "rural-roads--clinic-boat-cannot-beat-the-cut-off-levee": {
@@ -1959,7 +1959,7 @@
       "Tanár Távozás"
     ],
     "places": [
-      "Ömnögovi téli iskolai nyom, Dél-Góbi"
+      "Ömnögovi winter school trace, South Gobi"
     ]
   },
   "rural-roads--fuel-and-dialysis-miss-the-thaw-window": {
@@ -1972,7 +1972,7 @@
       "Szerződészár"
     ],
     "places": [
-      "Peerless Lake jégleágazás, északi Alberta"
+      "Peerless Lake ice spur, northern Alberta"
     ]
   },
   "smoking--the-gate-line-runs-on-shared-packs": {
@@ -1985,7 +1985,7 @@
       "Szünetkultúra"
     ],
     "places": [
-      "Tijuana Maquiladora 7-es Kapu"
+      "Tijuana Maquiladora Gate 7"
     ]
   },
   "smoking--snack-carts-sell-the-first-drag": {
@@ -1998,7 +1998,7 @@
       "Kapubér"
     ],
     "places": [
-      "Hanoi Középiskolai Kapu Snacksor"
+      "Hanoi Secondary Gate Snack Strip"
     ]
   },
   "smoking--dock-break-rooms-still-billow": {
@@ -2011,7 +2011,7 @@
       "Túlóra Norma"
     ],
     "places": [
-      "Marseille Fos Konténer Szünetudvar"
+      "Marseille Fos Container Break Yard"
     ]
   },
   "smoking--courtyard-haze-reaches-the-newborn-cots": {
@@ -2024,7 +2024,7 @@
       "Éjszakai Látogatás"
     ],
     "places": [
-      "Nairobi Szülészeti Váróotthon Udvara"
+      "Nairobi Maternity Waiting Home Courtyard"
     ]
   },
   "sanitation--latrine-queues-send-girls-home-by-noon": {
@@ -2037,7 +2037,7 @@
       "Költséghiány"
     ],
     "places": [
-      "Sunwell Általános Iskola Udvara"
+      "Sunwell Primary Compound"
     ]
   },
   "sanitation--sewage-owns-the-only-stair-out": {
@@ -2050,7 +2050,7 @@
       "Főbérlői Halogatás"
     ],
     "places": [
-      "Ladder Cut Település"
+      "Ladder Cut Settlement"
     ]
   },
   "sanitation--behind-the-fuel-bay-is-the-toilet": {
@@ -2063,7 +2063,7 @@
       "Bérleti Nyomás"
     ],
     "places": [
-      "Crossridge Teherudvar"
+      "Crossridge Freight Yard"
     ]
   },
   "sanitation--the-wing-that-smells-before-breakfast": {
@@ -2076,7 +2076,7 @@
       "Szerződésvágások"
     ],
     "places": [
-      "Olive Court Otthon"
+      "Olive Court Rest Home"
     ]
   },
   "waste--smoke-over-circuit-lane": {
@@ -2089,7 +2089,7 @@
       "Kapudíjak"
     ],
     "places": [
-      "Circuit Lane Hulladékutcái"
+      "Circuit Lane Scrap Alleys"
     ]
   },
   "waste--swollen-packs-behind-the-shed": {
@@ -2102,7 +2102,7 @@
       "Fuvar költség"
     ],
     "places": [
-      "Junction Akkumulátor-fészerek"
+      "Junction Battery Sheds"
     ]
   },
   "waste--trays-stacked-to-the-dorm-vents": {
@@ -2115,7 +2115,7 @@
       "Szerződészár"
     ],
     "places": [
-      "Riverside Campus Étkezdék"
+      "Riverside Campus Canteens"
     ]
   },
   "waste--linen-that-washes-out-to-sea": {
@@ -2128,7 +2128,7 @@
       "Márkaszabályok"
     ],
     "places": [
-      "Palm Reach Hotelsáv"
+      "Palm Reach Hotel Strip"
     ]
   },
   "reproductive--ninety-minutes-past-the-last-contraction": {
@@ -2141,7 +2141,7 @@
       "Biztosítási Rések"
     ],
     "places": [
-      "Greenville Szülési Folyosó, Mississippi-delta"
+      "Greenville Birth Corridor, Mississippi Delta"
     ]
   },
   "reproductive--high-water-blocks-the-midwife-boat": {
@@ -2163,7 +2163,7 @@
     "stakeholder": "Migráns nők egészségügyi érdekvédői",
     "pressureKeys": [
       "Rejtett Betegség",
-      "Szponzor Zárak",
+      "Szponzor",
       "Kitoloncolási Félelem"
     ],
     "places": [
@@ -2180,12 +2180,12 @@
       "Létszámcsalás"
     ],
     "places": [
-      "Sanganer Serdülő ANC Pult, Jaipur perem"
+      "Sanganer Adolescent ANC Desk, Jaipur fringe"
     ]
   },
   "amr--the-pharma-drain-tutors-the-tanks": {
     "title": "A gyógyszergyári lefolyó tanítja a tartályokat",
-    "scene": "Hajnal előtt Ramesh kinyitja a szelepet a tömeggyógyszer-csarnokok mögötti tisztítólagúnán. Hab úszik az árokban a falusi kutak felé. Délre a lánya iskolája hazaküldi égő torokkal és egy feljegyzéssel, amit a rendelő nem tud elolvasni. Az éjszakai műszak nővére már felhasználta az utolsó tenyésztőpalackot, ami még egyezik a régi táblázattal. Lefelé a folyáson a városi labor újabb csúcsot regisztrál a rezisztens (gyógyszernek ellenálló) E. coli-ból a tartályvízben, amit a családok isznak, amikor a városi vezeték felmondja a szolgálatot. A gyárak továbbra is leöblítik a maradék antibiotikumokat, mert az engedély mérői csak a színt és a szagot mérik, nem a hatóanyag-molekulákat, és a vevők a sebességért fizetnek. Ramesh mozgásban tartja a lagúnát, hogy az üzem ne álljon le, és a csapata ne veszítse el a bérét. A felesége az alapellátó szoba előtt vár egy gyerekkel, aki már nem reagál az olcsó szirupra. Ki tervezi meg a lefolyót és a rendelőt egyetlen rendszerként, mielőtt a víz minden háztartásnak ugyanazt a kemény leckét tanítaná?",
+    "scene": "Hajnal előtt Ramesh kinyitja a szelepet a tömeggyógyszer-csarnokok mögötti tisztítólagúnán. Hab úszik az árokban a falusi kutak felé. Délre a lánya iskolája hazaküldi égő torokkal és egy feljegyzéssel, amit a rendelő nem tud elolvasni. Az éjszakai műszak nővére már felhasználta az utolsó tenyésztőpalackot, ami még egyezik a régi kartonnal. Lefelé a folyáson a városi labor újabb csúcsot regisztrál a rezisztens (gyógyszernek ellenálló) E. coli-ból a tartályvízben, amit a családok isznak, amikor a városi vezeték felmondja a szolgálatot. A gyárak továbbra is leöblítik a maradék antibiotikumokat, mert az engedély mérői csak a színt és a szagot mérik, nem a hatóanyag-molekulákat, és a vevők a sebességért fizetnek. Ramesh mozgásban tartja a lagúnát, hogy az üzem ne álljon le, és a csapata ne veszítse el a bérét. A felesége az alapellátó szoba előtt vár egy gyerekkel, aki már nem reagál az olcsó szirupra. Ki tervezi meg a lefolyót és a rendelőt egyetlen rendszerként, mielőtt a víz minden háztartásnak ugyanazt a kemény leckét tanítaná?",
     "stakeholder": "Kerületi szennyezés-ellenőrzési és alapellátási közös vezető",
     "pressureKeys": [
       "Betegnapok",
@@ -2193,7 +2193,7 @@
       "Rendelői bizalom"
     ],
     "places": [
-      "Patancheru Ipari Szakasz"
+      "Patancheru Industrial Stretch"
     ]
   },
   "amr--port-lungs-outlast-the-formulary": {
@@ -2206,7 +2206,7 @@
       "Állásvesztés"
     ],
     "places": [
-      "Callao Kikötői TBC-osztály"
+      "Callao Dockside TB Ward"
     ]
   },
   "amr--barn-routine-poisons-the-creek-clinics": {
@@ -2219,7 +2219,7 @@
       "Patakszag"
     ],
     "places": [
-      "Santa Catarina Sertésöv"
+      "Santa Catarina Hog Belt"
     ]
   },
   "amr--lane-chemists-empty-the-last-good-drugs": {
@@ -2232,7 +2232,22 @@
       "Boltbevétel"
     ],
     "places": [
-      "Makoko Cölöpös Rendelő Utcái"
+      "Makoko Stilt Clinic Lanes"
+    ]
+  },
+  "_default--crisis-lands-in-place": {
+    "title": "A válság {place} helyére érkezik",
+    "stakeholder": "Helyi munkacsoport",
+    "scene": "{place} emberei a mindennapokban érzik ezt a globális bajt. Egy helyi hajtóerő tartja életben — találj fel erre a helyre és évre, ne szlogent.",
+    "places": [
+      "Helyi kerület",
+      "Városközpont",
+      "Kerületi csomópont"
+    ],
+    "pressureKeys": [
+      "Nyomás",
+      "Kapacitás",
+      "Bizalom"
     ]
   }
 }

@@ -17,7 +17,7 @@
   },
   "asteroid": {
     "title": "Impacto de asteroide",
-    "blurb": "Ventanas de defensa y detección planetarias."
+    "blurb": "Defensa planetaria y ventanas de detección."
   },
   "weather": {
     "title": "Eventos climáticos extremos",
@@ -45,7 +45,7 @@
   },
   "automation": {
     "title": "Automatización / RBU",
-    "blurb": "Empleos y significado bajo la automatización."
+    "blurb": "Empleo y sentido ante la automatización."
   },
   "refugees": {
     "title": "Refugiados",
@@ -72,7 +72,7 @@
     "blurb": "Emisiones, calor y riesgo a largo plazo."
   },
   "cancer": {
-    "title": "curar el cáncer",
+    "title": "Curar el cáncer",
     "blurb": "Detección más temprana, mejor terapia, acceso."
   },
   "mental": {
@@ -85,7 +85,7 @@
   },
   "ageing": {
     "title": "El envejecimiento como enfermedad",
-    "blurb": "Esperanza de vida y vida más larga."
+    "blurb": "Esperanza de vida saludable y vidas más largas."
   },
   "water": {
     "title": "Agua Limpia",
@@ -93,7 +93,7 @@
   },
   "air": {
     "title": "Contaminación del aire",
-    "blurb": "Aire sucio del transporte, la industria, la cocina."
+    "blurb": "Aire sucio del transporte, la industria y la cocina."
   },
   "energy-access": {
     "title": "Acceso a la energía",

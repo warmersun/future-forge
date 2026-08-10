@@ -18,203 +18,203 @@
 
 **EN:** AI chip import tax
 
-**HE:** מס יבוא שבב AI
+**HE:** מס יבוא על שבבי AI
 
 ---
 ### `ai-chip-tax.body`
 
 **EN:** Specialized accelerators get pricier. AI and computing stacks need more capital.
 
-**HE:** מאיצים מיוחדים מתייקרים יותר. AI וערימות מחשוב זקוקות ליותר הון.
+**HE:** מאיצים ייעודיים מתייקרים. ערימות AI ומחשוב זקוקות ליותר הון.
 
 ---
 ### `ai-datacenter-backlash.headline`
 
 **EN:** Public divided over AI data centers
 
-**HE:** הציבור חלוק על מרכזי נתונים בינה מלאכותית
+**HE:** הציבור חלוק על מרכזי נתונים של AI
 
 ---
 ### `ai-datacenter-backlash.body`
 
 **EN:** People don't want a data center built in their state. Fielding AI and heavy compute needs more political will.
 
-**HE:** אנשים לא רוצים מרכז נתונים שנבנה במדינה שלהם. שדה בינה מלאכותית ומחשוב כבד דורש יותר רצון פוליטי.
+**HE:** אנשים לא רוצים מרכז נתונים במדינה שלהם. לפרוס AI ומחשוב כבד דורש יותר תמיכה פוליטית.
 
 ---
 ### `ai-energy-backlash.headline`
 
 **EN:** AI energy use backlash
 
-**HE:** תגובה נגד שימוש באנרגיה בינה מלאכותית
+**HE:** תגובת נגד לצריכת האנרגיה של AI
 
 ---
 ### `ai-energy-backlash.body`
 
 **EN:** Communities link AI to power strain. AI will cost rises.
 
-**HE:** קהילות מקשרות בינה מלאכותית למתח כוח. AI יעלה בעלויות.
+**HE:** קהילות מקשרות AI לעומס על הרשת. עלות התמיכה ב-AI עולה.
 
 ---
 ### `ai-exam-cheating-panic.headline`
 
 **EN:** AI exam cheating panic
 
-**HE:** בהלת בגידה בבחינת בינה מלאכותית
+**HE:** בהלה מפני רמאות בבחינות בעזרת AI
 
 ---
 ### `ai-exam-cheating-panic.body`
 
 **EN:** Schools restrict AI; will cost rises for education-facing AI.
 
-**HE:** בתי ספר מגבילים בינה מלאכותית; יעלה עליות עבור AI הפונה לחינוך.
+**HE:** בתי ספר מגבילים AI; עלות התמיכה עולה ל-AI בחינוך.
 
 ---
 ### `ai-safety-fund.headline`
 
 **EN:** National AI safety fund
 
-**HE:** הקרן הלאומית לבטיחות בינה מלאכותית
+**HE:** קרן לאומית לבטיחות AI
 
 ---
 ### `ai-safety-fund.body`
 
 **EN:** Compliance and eval tools get subsidies. AI capital eases if you play by the book.
 
-**HE:** כלי ציות והערכה מקבלים סובסידיות. הון AI מקל אם אתה משחק לפי הספר.
+**HE:** כלי ציות והערכה מקבלים סובסידיות. הון AI מתרכך אם משחקים לפי הכללים.
 
 ---
 ### `alt-protein-price-parity.headline`
 
 **EN:** Alt-protein price parity
 
-**HE:** שוויון מחיר חלבון אלט
+**HE:** שוויון מחירים לחלבון חלופי
 
 ---
 ### `alt-protein-price-parity.body`
 
 **EN:** Plant and fermentation proteins hit cost parity in more cafeterias.
 
-**HE:** חלבוני צמחים ותסיסה פוגעים בשוויון העלות בקפיטריות רבות יותר.
+**HE:** חלבוני צמח ותסיסה מגיעים לשוויון עלות בעוד קפיטריות.
 
 ---
 ### `ar-workplace-mandate.headline`
 
 **EN:** AR workplace safety mandate
 
-**HE:** מנדט בטיחות במקום העבודה של AR
+**HE:** חובת בטיחות בעבודה עם מציאות רבודה
 
 ---
 ### `ar-workplace-mandate.body`
 
 **EN:** Factories fund AR training — Link domain will eases.
 
-**HE:** המפעלים מממנים אימון AR - תחום הקישור יקל.
+**HE:** מפעלים מממנים הדרכת AR — תמיכת תחום הקישור מתרכך.
 
 ---
 ### `automation-tax-talk.headline`
 
 **EN:** Automation tax talk returns
 
-**HE:** אוטומציה החזרי מס
+**HE:** חוזרים הדיבורים על מס אוטומציה
 
 ---
 ### `automation-tax-talk.body`
 
 **EN:** Politicians float robot taxes. Automator stacks need more will.
 
-**HE:** פוליטיקאים מרחפים מיסי רובוטים. ערימות אוטומטיות זקוקות ליותר רצון.
+**HE:** פוליטיקאים מציעים מסים על רובוטים. ערימות אוטומטור זקוקות ליותר תמיכה.
 
 ---
 ### `autonomy-corridor-opens.headline`
 
 **EN:** Autonomy corridor opens
 
-**HE:** מסדרון אוטונומיה נפתח
+**HE:** נפתח מסדרון אוטונומיה
 
 ---
 ### `autonomy-corridor-opens.body`
 
 **EN:** A city opens a mapped shuttle corridor. Self-driving capital and will ease.
 
-**HE:** עיר פותחת מסדרון הסעות ממופה. הון לנהיגה עצמית ויקל.
+**HE:** עיר פותחת מסדרון שאטלים ממופה. הון ותמיכה של נהיגה עצמית מתרככים.
 
 ---
 ### `battery-fire-scare.headline`
 
 **EN:** Warehouse battery fire dominates news
 
-**HE:** שריפת סוללות במחסן שולטת בחדשות
+**HE:** שריפת סוללות במחסן שולטת בכותרות
 
 ---
 ### `battery-fire-scare.body`
 
 **EN:** Safety fears raise insurance and compliance costs for battery projects.
 
-**HE:** חששות בטיחות מעלים את עלויות הביטוח והציות לפרויקטים של סוללות.
+**HE:** חששות בטיחות מעלים עלויות ביטוח וציות לפרויקטי סוללות.
 
 ---
 ### `bci-data-breach.headline`
 
 **EN:** BCI vendor data breach
 
-**HE:** הפרת נתונים של ספקי BCI
+**HE:** דליפת נתונים אצל ספק BCI
 
 ---
 ### `bci-data-breach.body`
 
 **EN:** Neural data fears spike will cost for BCI.
 
-**HE:** נתונים עצביים חוששים שספייק יעלה ל-BCI.
+**HE:** פחד מנתונים עצביים מזניק את עלות התמיכה ל-BCI.
 
 ---
 ### `bci-ethics-probe.headline`
 
 **EN:** BCI ethics probe opens
 
-**HE:** חקירת אתיקה של BCI נפתחת
+**HE:** נפתחת חקירה אתית על BCI
 
 ---
 ### `bci-ethics-probe.body`
 
 **EN:** Consent and data fears raise will cost for neural interfaces.
 
-**HE:** הסכמה וחששות נתונים יעלו עלות עבור ממשקים עצביים.
+**HE:** הסכמה וחשש לנתונים מעלים את עלות התמיכה לממשקים עצביים.
 
 ---
 ### `bci-trial-success.headline`
 
 **EN:** BCI trial restores speech
 
-**HE:** ניסוי BCI משחזר דיבור
+**HE:** ניסוי BCI מחזיר דיבור
 
 ---
 ### `bci-trial-success.body`
 
 **EN:** Positive trial coverage lowers political friction for brain-computer interfaces.
 
-**HE:** סיקור ניסוי חיובי מוריד את החיכוך הפוליטי עבור ממשקי מוח-מחשב.
+**HE:** סיקור ניסוי חיובי מוריד חיכוך פוליטי לממשקי מוח-מחשב.
 
 ---
 ### `bike-lane-data-deal.headline`
 
 **EN:** Bike-lane sensor deal
 
-**HE:** עסקת חיישן נתיב אופניים
+**HE:** עסקת חיישנים לנתיבי אופניים
 
 ---
 ### `bike-lane-data-deal.body`
 
 **EN:** Cities bulk-buy IoT for mobility. Networks and IoT hardware get cheaper.
 
-**HE:** ערים קונות בכמות גדולה של IoT לניידות. רשתות וחומרת IoT זולות יותר.
+**HE:** ערים קונות IoT בכמות לניידות. רשתות וחומרת IoT זולות יותר.
 
 ---
 ### `biotech-scare.headline`
 
 **EN:** Lab-leak scare fans biotech fear
 
-**HE:** אוהדי ביוטכנולוגיה מפחידים דליפת מעבדה
+**HE:** בהלת דליפת מעבדה מלבבת פחד מביוטק
 
 ---
 ### `biotech-scare.body`
@@ -235,7 +235,7 @@
 
 **EN:** After multi-day outages, political will for local energy and batteries rises.
 
-**HE:** לאחר הפסקות ארוכות, הרצון הפוליטי לאנרגיה מקומית ולסוללות עולה.
+**HE:** לאחר הפסקות ארוכות, התמיכה הפוליטית לאנרגיה מקומית ולסוללות עולה.
 
 ---
 ### `blood-sample-privacy.headline`
@@ -249,7 +249,7 @@
 
 **EN:** Biobank rules tighten. Sequencing and BCI projects need more will.
 
-**HE:** כללי הביובנק מתהדקים. פרויקטים של רצף ו-BCI זקוקים ליותר רצון.
+**HE:** כללי הביובנק מתהדקים. פרויקטים של רצף ו-BCI זקוקים ליותר תמיכה.
 
 ---
 ### `chip-export-thaw.headline`
@@ -277,7 +277,7 @@
 
 **EN:** A climate window funds local resilience tech. Political will for green stacks softens.
 
-**HE:** חלון אקלים מממן טכנולוגיית חוסן מקומית. הרצון הפוליטי לערימות ירוקות מתרכך.
+**HE:** חלון אקלים מממן טכנולוגיית חוסן מקומית. התמיכה הפוליטית לערימות ירוקות מתרככת.
 
 ---
 ### `clinic-sequencer-rebate.headline`
@@ -333,7 +333,7 @@
 
 **EN:** Shared solar co-ops get easy rules. Solar will cost drops.
 
-**HE:** שיתופי פעולה סולאריים משותפים מקבלים כללים קלים. סולארי יעלה טיפות.
+**HE:** שיתופי פעולה סולאריים קהילתיים מקבלים כללים פשוטים. עלות התמיכה הסולארית יורדת.
 
 ---
 ### `copper-shortage.headline`
@@ -347,7 +347,7 @@
 
 **EN:** Cables and motors get pricey. Energy and mover hardware budgets climb.
 
-**HE:** כבלים ומנועים עולים ביוקר. תקציבי האנרגיה והחומרה מטפסים.
+**HE:** כבלים ומנועים מתייקרים. תקציבי אנרגיה וחומרת מניע מטפסים.
 
 ---
 ### `crispr-tool-drop.headline`
@@ -375,14 +375,14 @@
 
 **EN:** Speculative heat dies; remaining civic ledger work needs less will, more careful capital.
 
-**HE:** חום ספקולטיבי מת; עבודת ספר אזרחית שנותרה צריכה פחות רצון, יותר הון זהיר.
+**HE:** החום הספקולטיבי דועך; עבודת הפנקס האזרחי שנותרה צריכה פחות תמיכה ויותר הון זהיר.
 
 ---
 ### `crypto-winter-thaw.headline`
 
 **EN:** Ledger tools rebrand as civic rails
 
-**HE:** כלי לדג'ר מיתוג מחדש כמסילות אזרחיות
+**HE:** כלי פנקס ממותגים מחדש כמסילות אזרחיות
 
 ---
 ### `crypto-winter-thaw.body`
@@ -431,21 +431,21 @@
 
 **EN:** Trust crashes. AI projects need more political will to clear scrutiny.
 
-**HE:** אמון קורס. פרויקטים של AI זקוקים ליותר רצון פוליטי כדי לנקות את הבדיקה.
+**HE:** אמון קורס. פרויקטי AI זקוקים ליותר תמיכה פוליטית כדי לעבור את הבקרה.
 
 ---
 ### `disinfo-wave.headline`
 
 **EN:** Disinfo wave about tech pilots
 
-**HE:** גל דיסאינפורמציה על טייסים טכנולוגיים
+**HE:** גל דיסאינפורמציה על טייסי Pilot טכנולוגיים
 
 ---
 ### `disinfo-wave.body`
 
 **EN:** Rumors force extra community process. Will rises for visible stacks.
 
-**HE:** שמועות מאלצות תהליך קהילתי נוסף. וויל עולה עבור ערימות גלויות.
+**HE:** שמועות מאלצות תהליך קהילתי נוסף. עלות התמיכה עולה לערימות גלויות.
 
 ---
 ### `drone-airspace-clamp.headline`
@@ -515,7 +515,7 @@
 
 **EN:** Officials avoid controversial tech. Will rises across frontier stacks.
 
-**HE:** גורמים רשמיים נמנעים מטכנולוגיה שנויה במחלוקת. וויל עולה על פני ערימות גבול.
+**HE:** גורמים רשמיים נמנעים מטכנולוגיה שנויה במחלוקת. עלות התמיכה עולה בערימות החזית.
 
 ---
 ### `energy-poverty-fund.headline`
@@ -669,7 +669,7 @@
 
 **EN:** Farm politics harden. Synbio and genetic engineering need more will.
 
-**HE:** Farm politics harden. סינביו והנדסה גנטית זקוקים ליותר רצון.
+**HE:** הפוליטיקה החקלאית מתקשחת. סינביו והנדסה גנטית זקוקים ליותר תמיכה.
 
 ---
 ### `gps-jamming-zone.headline`
@@ -725,14 +725,14 @@
 
 **EN:** Policymakers divert funds to unready H2 schemes. Local power pilots pay more to compete.
 
-**HE:** קובעי המדיניות מפנים כספים לתוכניות H2 לא מוכנות. טייסי כוח מקומיים משלמים יותר כדי להתחרות.
+**HE:** קובעי המדיניות מפנים כספים לתוכניות H2 לא מוכנות. טייסי כוח מקומיים (Pilot) משלמים יותר כדי להתחרות.
 
 ---
 ### `insurance-premium-spike.headline`
 
 **EN:** Tech pilot insurance spike
 
-**HE:** זינוק ביטוח טייס טכני
+**HE:** זינוק בביטוח טייסי טכנולוגיה
 
 ---
 ### `insurance-premium-spike.body`
@@ -802,14 +802,14 @@
 
 **EN:** Local currency and ledger pilot
 
-**HE:** טייס מטבע מקומי ופנקס חשבונות
+**HE:** Pilot מטבע מקומי ופנקס
 
 ---
 ### `local-currency-pilot.body`
 
 **EN:** Municipal ledger pilots normalize crypto tooling.
 
-**HE:** טייסי ספרי חשבונות עירוניים מנרמלים כלי קריפטו.
+**HE:** טייסי פנקס עירוניים מנרמלים כלי קריפטו.
 
 ---
 ### `marine-storm-damage.headline`
@@ -851,7 +851,7 @@
 
 **EN:** Import duties hit specialty materials and nano feedstocks.
 
-**HE:** חובות היבוא פגעו בחומרים מיוחדים ובחומרי ננו.
+**HE:** מכסי יבוא פוגעים בחומרים מיוחדים ובחומרי גלם ננו.
 
 ---
 ### `mayors-innovation-pact.headline`
@@ -865,7 +865,7 @@
 
 **EN:** Cities share procurement templates. Political will eases for multi-domain pilots.
 
-**HE:** ערים חולקות תבניות רכש. רצון פוליטי מקל על טייסים מרובי תחומים.
+**HE:** ערים חולקות תבניות רכש. התמיכה הפוליטית מקלה על טייסי Pilot רב-תחומיים.
 
 ---
 ### `medical-drone-lane.headline`
@@ -879,7 +879,7 @@
 
 **EN:** Blood and vaccine corridors get permanent status. Drones get easier politically.
 
-**HE:** Blood and vaccine corridors get permanent status. מזל"טים נהיים קלים יותר מבחינה פוליטית.
+**HE:** מסדרונות דם וחיסונים מקבלים מעמד קבוע. מזל״טים נהיים קלים יותר פוליטית.
 
 ---
 ### `medical-vr-therapy.headline`
@@ -893,7 +893,7 @@
 
 **EN:** Insurers reimburse VR therapy modules. Will and capital ease.
 
-**HE:** מבטחים מחזירים מודולי טיפול ב-VR. רצון וקלות הון.
+**HE:** מבטחים מחזירים מודולי טיפול ב-VR. התמיכה וההון מתרככים.
 
 ---
 ### `mesh-radio-legalized.headline`
@@ -907,7 +907,7 @@
 
 **EN:** Community mesh networks get clear spectrum rules. Networks and IoT will ease.
 
-**HE:** Community mesh networks get clear spectrum rules. רשתות ו-IoT יקלו.
+**HE:** רשתות mesh קהילתיות מקבלות כללי ספקטרום ברורים. רשתות ו-IoT מתרככות.
 
 ---
 ### `metaverse-budget-purge.headline`
@@ -977,7 +977,7 @@
 
 **EN:** Safety reviews raise will cost for nano projects.
 
-**HE:** סקירות בטיחות עולות יעלה עבור פרויקטי ננו.
+**HE:** בדיקות בטיחות מעלות את עלות התמיכה לפרויקטי ננו.
 
 ---
 ### `network-neutrality-fight.headline`
@@ -991,7 +991,7 @@
 
 **EN:** ISPs and cities clash. Networks will cost rises.
 
-**HE:** ספקיות אינטרנט וערים מתנגשות. רשתות יעלו עלויות.
+**HE:** ספקיות אינטרנט וערים מתנגשות. עלות התמיכה לרשתות עולה.
 
 ---
 ### `night-storage-mandate.headline`
@@ -1005,7 +1005,7 @@
 
 **EN:** New rules couple generation with storage. Battery capital rises; solar politics ease a bit.
 
-**HE:** כללים חדשים דור זוגי עם אחסון. הון הסוללה עולה; הפוליטיקה הסולארית נרגעת קצת.
+**HE:** כללים חדשים מקשרים ייצור לאחסון. הון הסוללות עולה; הפוליטיקה הסולארית נרגעת מעט.
 
 ---
 ### `nuclear-permit-wave.headline`
@@ -1019,21 +1019,21 @@
 
 **EN:** A regional compact streamlines small-reactor reviews. Political will for nuclear ticks up.
 
-**HE:** קומפקט אזורי מייעל ביקורות על כורים קטנים. הרצון הפוליטי לגרעין מתגבר.
+**HE:** הסכם אזורי מייעל ביקורות על כורים קטנים. התמיכה הפוליטית לגרעין עולה.
 
 ---
 ### `nuclear-waste-standoff.headline`
 
 **EN:** Nuclear waste standoff returns
 
-**HE:** הפסולת הגרעינית חוזרת
+**HE:** עימות פסולת גרעינית חוזר
 
 ---
 ### `nuclear-waste-standoff.body`
 
 **EN:** Storage politics flare. Nuclear needs more will even where reactors are welcome on paper.
 
-**HE:** התלקחות פוליטיקת אחסון. הצרכים הגרעיניים יגדלו אפילו היכן שכורים יתקבלו בברכה על הנייר.
+**HE:** פוליטיקת האחסון מתלקחת. הגרעין זקוק ליותר תמיכה גם במקומות שבהם כורים מתקבלים על הנייר.
 
 ---
 ### `offshore-wind-subsidy.headline`
@@ -1194,14 +1194,14 @@
 
 **EN:** Public trust rebound poll
 
-**HE:** סקר ריבאונד של אמון הציבור
+**HE:** סקר התאוששות אמון הציבור
 
 ---
 ### `public-trust-rebound.body`
 
 **EN:** After quiet wins, will eases slightly across automator and mover tech.
 
-**HE:** לאחר ניצחונות שקטים, הקלות קלות על פני טכנולוגיית האוטומט והמניע.
+**HE:** לאחר ניצחונות שקטים, התמיכה מתרככת מעט בטכנולוגיות אוטומטור ומניע.
 
 ---
 ### `quantum-error-milestone.headline`
@@ -1215,21 +1215,21 @@
 
 **EN:** Hype returns with substance; quantum will eases, capital still high.
 
-**HE:** ההייפ חוזר עם חומר; הקוואנטום יקל, ההון עדיין גבוה.
+**HE:** ההייפ חוזר עם תוכן; עלות התמיכה הקוונטית מתרככת, ההון עדיין גבוה.
 
 ---
 ### `quantum-hype-cycle.headline`
 
 **EN:** Quantum hype cools — pilots pause
 
-**HE:** ההייפ הקוונטי מתקרר - הטייסים עוצרים
+**HE:** ההייפ הקוונטי מתקרר — טייסי Pilot נעצרים
 
 ---
 ### `quantum-hype-cycle.body`
 
 **EN:** Investors wait for clearer niches. Quantum work needs more will to keep sponsors interested.
 
-**HE:** המשקיעים מחכים לנישות ברורות יותר. עבודה קוונטית זקוקה ליותר רצון כדי להשאיר את נותני החסות מתעניינים.
+**HE:** המשקיעים מחכים לנישות ברורות יותר. עבודה קוונטית זקוקה ליותר תמיכה כדי להשאיר את נותני החסות מתעניינים.
 
 ---
 ### `quantum-link-pilot.headline`
@@ -1313,7 +1313,7 @@
 
 **EN:** Congestion charges spark protests. Self-driving and transport need more will.
 
-**HE:** חיובי גודש מעוררים הפגנות. נהיגה עצמית ותחבורה צריך יותר רצון.
+**HE:** חיובי גודש מעוררים הפגנות. נהיגה עצמית ותחבורה צריך יותר תמיכה.
 
 ---
 ### `robot-injury-lawsuit.headline`
@@ -1341,7 +1341,7 @@
 
 **EN:** Care and logistics automation meets organized resistance. Political will is the scarce resource.
 
-**HE:** אוטומציה של טיפול ולוגיסטיקה פוגשת התנגדות מאורגנת. הרצון הפוליטי הוא המשאב הדל.
+**HE:** אוטומציה של טיפול ולוגיסטיקה פוגשת התנגדות מאורגנת. התמיכה הפוליטית היא המשאב הדל.
 
 ---
 ### `robot-lease-deals.headline`
@@ -1362,7 +1362,7 @@
 
 **EN:** Robot nurse pilot praised
 
-**HE:** טייס אחות רובוט שיבח
+**HE:** Pilot אחות-רובוט זוכה לשבחים
 
 ---
 ### `robot-nurse-pilot.body`
@@ -1390,7 +1390,7 @@
 
 **EN:** School lunch protein pilots
 
-**HE:** טייסי חלבון בצהריים בבית הספר
+**HE:** טייסי חלבון בארוחות צהריים בבית הספר
 
 ---
 ### `school-lunch-proteins.body`
@@ -1425,7 +1425,7 @@
 
 **EN:** A high-profile crash freezes will for autonomy.
 
-**HE:** התרסקות בפרופיל גבוה מקפיאה את הרצון לאוטונומיה.
+**HE:** התרסקות בפרופיל גבוה מקפיאה את התמיכה באוטונומיה.
 
 ---
 ### `smart-city-grant.headline`
@@ -1502,14 +1502,14 @@
 
 **EN:** Stablecoin payroll pilots
 
-**HE:** טייסי שכר של Stablecoin
+**HE:** טייסי שכר Stablecoin
 
 ---
 ### `stablecoin-payroll.body`
 
 **EN:** Cities trial transparent local funds. Crypto capital eases slightly.
 
-**HE:** ערים בודקות קרנות מקומיות שקופות. הון קריפטו מקל מעט.
+**HE:** ערים בודקות קרנות מקומיות שקופות. הון הקריפטו מתרכך מעט.
 
 ---
 ### `stimulus-tech-window.headline`
@@ -1579,7 +1579,7 @@
 
 **EN:** Education funds underwrite classroom AI. Will and capital ease for AI projects.
 
-**HE:** קרנות חינוך מחתמות בינה מלאכותית בכיתה. רצון והקלות הון עבור פרויקטים של AI.
+**HE:** קרנות חינוך מחתמות בינה מלאכותית בכיתה. תמיכה והקלת הון לפרויקטי AI.
 
 ---
 ### `tidal-pilot-success.headline`
@@ -1607,7 +1607,7 @@
 
 **EN:** Labor action freezes mobility trials. Mover stacks need more will.
 
-**HE:** פעולת העבודה מקפיאה את ניסיונות הניידות. ערימות מעבירות זקוקות ליותר רצון.
+**HE:** פעולת העבודה מקפיאה את ניסיונות הניידות. ערימות מניע זקוקות ליותר תמיכה.
 
 ---
 ### `university-lab-share.headline`
@@ -1705,7 +1705,7 @@
 
 **EN:** Coastal and ridge communities fight new turbines. Wind projects need more political will.
 
-**HE:** קהילות חוף ורכס נלחמות בטורבינות חדשות. פרויקטי רוח זקוקים ליותר רצון פוליטי.
+**HE:** קהילות חוף ורכס נלחמות בטורבינות חדשות. פרויקטי רוח זקוקים ליותר תמיכה פוליטית.
 
 ---
 ### `youth-climate-march.headline`
@@ -1719,6 +1719,6 @@
 
 **EN:** Street pressure softens will for clean power and materials stacks.
 
-**HE:** לחץ הרחוב מרכך את הרצון לקבלת ערימות כוח וחומרים נקיות.
+**HE:** לחץ הרחוב מרכך את התמיכה בערימות כוח וחומרים נקיות.
 
 ---

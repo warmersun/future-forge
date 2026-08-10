@@ -3,10 +3,12 @@
     "title": "Santé et soins"
   },
   "climate": {
-    "title": "Climat, eau et air"
+    "title": "Crises climatiques",
+    "blurb": "Émissions, chaleur et risque à long terme."
   },
   "food": {
-    "title": "Nourriture et terre"
+    "title": "Sécurité alimentaire",
+    "blurb": "Des aliments nutritifs fiables pour tous."
   },
   "learning": {
     "title": "Apprentissage et travail"

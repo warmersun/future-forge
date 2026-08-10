@@ -55,7 +55,7 @@ Lifespans lengthened; healthspan did not always keep pace. Longevity science is 
 
 **HE:**
 
-תוחלת החיים התארכה; healthspan לא תמיד עמד בקצב. מדע אריכות הימים פעיל, אבל רוב הרווחים עדיין מגיעים מבריאות הציבור, טיפול במחלות כרוניות ומגורמים חברתיים - לא כדורי פלא.
+תוחלת החיים התארכה; תוחלת הבריאות לא תמיד עמדה בקצב. מדע אריכות הימים פעיל, אבל רוב הרווחים עדיין מגיעים מבריאות הציבור, טיפול במחלות כרוניות ומגורמים חברתיים — לא מכדורי פלא.
 
 ---
 ### `ageing.rootCauses`
@@ -110,7 +110,7 @@ Sensors alone do not clean air. Couple measurement with enforceable sources cuts
 
 **HE:**
 
-חיישנים לבדם אינם מנקים אוויר. Couple measurement with enforceable sources cuts, clean cooking, and mobility shifts people can actually use.
+חיישנים לבדם לא מנקים אוויר. חברו מדידה לצמצום מקורות בר-אכיפה, בישול נקי ושינויי ניידות שאנשים באמת יכולים להשתמש בהם.
 
 ---
 ### `alzheimer.currentState`
@@ -143,7 +143,7 @@ Surveillance framed as “safety” can strip dignity. Invent for caregiver supp
 
 **HE:**
 
-מעקבים המוגדרים כ"בטיחות" יכולים להפשיט את הכבוד. המציא עבור תמיכה, ניווט וסיוע מכבד - לא רק מכשירי מעקב.
+מעקב שממוסגר כ«בטיחות» יכול לשלול כבוד. המציאו תמיכה במטפלים, ניווט וסיוע מכבד — לא רק מכשירי מעקב.
 
 ---
 ### `amr.currentState`
@@ -187,7 +187,7 @@ Near-Earth object surveys have improved dramatically; no known civilization-endi
 
 **HE:**
 
-סקרי אובייקטים קרובים לכדור הארץ השתפרו באופן דרמטי; שום השפעה ידועה על סיומה של הציוויליזציה קרובה לטווחי זמן קצרים, אבל קטלוגים לא שלמים ומוכנות להסטה מוגבלת פירושם שההגנה הפלנטרית היא עבודה לא גמורה.
+סקרים של עצמים קרובי-ארץ השתפרו דרמטית; אין פגיעה ידועה שמסכנת את הציוויליזציה בטווחים קצרים, אבל קטלוגים חלקיים ומוכנות הסטה מוגבלת אומרים שההגנה הפלנטרית עדיין לא גמורה.
 
 ---
 ### `asteroid.rootCauses`
@@ -198,7 +198,7 @@ Vast search space, limited telescope and follow-up capacity historically, and ra
 
 **HE:**
 
-שטח חיפוש עצום, טלסקופ מוגבל ויכולת מעקב היסטורית, ותת-השקעה באירועים נדירים. טכנולוגיית Deflection מבשילה מבדיקות, עדיין לא שירות גלובלי קבוע.
+מרחב חיפוש עצום, קיבולת טלסקופ ומעקב מוגבלת היסטורית, ותת-השקעה באירועים נדירים. טכנולוגיית הסטה מבשילה מבדיקות — עדיין לא שירות גלובלי קבוע.
 
 ---
 ### `asteroid.warnings`
@@ -242,7 +242,7 @@ Capital substitutes for routine labor where profitable; skills pipelines lag; so
 
 **HE:**
 
-"להכשיר את כולם עם אפליקציה" נכשל ללא שכר והשמה של ממש. המציא לכבוד, כישורים ניידים וגשרי הכנסה - לא רק יעילות לבעלים.
+«להכשיר את כולם עם אפליקציה» נכשל בלי שכר והשמה אמיתיים. המציאו כבוד, כישורים ניידים וגשרי הכנסה — לא רק יעילות לבעלים.
 
 ---
 ### `cancer.currentState`
@@ -418,7 +418,7 @@ Cross-border and cross-city problems (storms, outbreaks, supply shocks) still me
 
 **HE:**
 
-Cross-border and cross-city problems (storms, outbreaks, supply shocks) still meet fragmented budgets, data, and response funds. טייסים משתפים פעולה; יכולת עמידה משותפת היא נדירה.
+בעיות חוצות גבול וחוצות עיר (סערות, התפרצויות, זעזועי אספקה) עדיין פוגשות תקציבים, נתונים וקרנות תגובה מפוצלים. טייסים משתפים פעולה; יכולת משותפת קבועה היא נדירה.
 
 ---
 ### `coord.rootCauses`
@@ -517,7 +517,7 @@ Hundreds of millions lack electricity or reliable supply; many more face costly,
 
 **HE:**
 
-Hundreds of millions lack electricity or reliable supply; רבים יותר מתמודדים עם כוח יקר, לסירוגין. Solar and mini-grids expand access, still incomplete for productive uses and clinics.
+מאות מיליונים חסרים חשמל או אספקה אמינה; רבים יותר מתמודדים עם כוח יקר ולסירוגין. סולארי ורשתות־מיני מרחיבים גישה, עדיין לא שלמים לשימושים יצרניים ולמרפאות.
 
 ---
 ### `energy-access.rootCauses`
@@ -550,7 +550,7 @@ More than 200 million girls and women alive today have undergone FGM; millions m
 
 **HE:**
 
-More than 200 million girls and women alive today have undergone FGM; מיליונים נוספים נשארים בסיכון מדי שנה. השכיחות ירדה במדינות רבות - הסיכוי שלילדה לחלות ב-FGM נמוך כשליש מאשר לפני שלושים שנה - אך ההתקדמות אינה אחידה והשיבושים מתקופת ה-COVID החזירו את התוכניות לאחור.
+יותר מ־200 מיליון בנות ונשים החיות היום עברו FGM; מיליונים נוספים נשארים בסיכון מדי שנה. השכיחות ירדה במדינות רבות — הסיכוי שלילדה לעבור FGM נמוך בכשליש מאשר לפני שלושים שנה — אך ההתקדמות אינה אחידה והשיבושים מתקופת ה־COVID החזירו תוכניות לאחור.
 
 ---
 ### `fgm.rootCauses`
@@ -572,7 +572,7 @@ Invent for community-led abandonment, girls’ education and protection, and sur
 
 **HE:**
 
-המציאה לנטישה בהנהגת הקהילה, חינוך והגנה על בנות וטיפול בניצולים - לעולם אל תאטרון "הצלה" גרפי או גאדג'טים שיימינג. אל תעשה רפואי של FGM כשדרוג קליני. מרכז מנהיגות נשים מקומיות, סודיות וכבוד.
+המציאו נטישה בהובלת הקהילה, חינוך והגנה על בנות וטיפול בניצולות — לעולם לא תיאטרון «הצלה» גרפי או גאדג'טים של השפלה. אל תהפכו FGM לשדרוג קליני. שימו במרכז מנהיגות נשים מקומיות, סודיות וכבוד.
 
 ---
 ### `food.currentState`
@@ -594,7 +594,7 @@ Access and affordability, not only total production; supply-chain fragility; con
 
 **HE:**
 
-גישה ובמחיר סביר, לא רק ייצור כולל; שבריריות שרשרת האספקה; סְתִירָה; פגיעות אקלים ביבול; ודיאטות מוטות על ידי קלוריות זולות מעובדות במיוחד.
+גישה והישגיות, לא רק ייצור כולל; שבריריות שרשרת אספקה; סכסוך; פגיעות אקלים ביבולים; ותזונה מוטה לקלוריות זולות מעובדות במיוחד.
 
 ---
 ### `food.warnings`
@@ -605,7 +605,7 @@ Food-tech that prices out the hungry is a photo-op. Prioritize cold chain, local
 
 **HE:**
 
-טכנולוגיית מזון שמתמחרת את הרעבים היא צילום אופ. לתת עדיפות לשרשרת הקירור, לייצור מקומי ולמחיר סביר - לא רק חלבונים חדשים לשווקים עשירים.
+טכנולוגיית מזון שמוציאה את הרעבים מהשוק היא צילום יח״צ. תעדפו שרשרת קור, ייצור מקומי והישגיות — לא רק חלבונים חדשים לשווקים עשירים.
 
 ---
 ### `genocide.currentState`
@@ -616,7 +616,7 @@ Mass atrocity risk remains real in several regions. Early-warning networks, sate
 
 **HE:**
 
-הסיכון לזוועות המוני נותר אמיתי במספר אזורים. קיימות רשתות אזהרה מוקדמות, ניטור לוויינים והתרעות מהחברה האזרחית, אך התגובה היא לרוב מאוחרת, פוליטית או ממומנת בחסר. מניעה אפשרית בתיאוריה; התרגול עדיין נכשל כאשר הרצון והקואורדינציה נכשלים.
+הסיכון לזוועות המוניות נותר אמיתי במספר אזורים. קיימות רשתות אזהרה מוקדמות, ניטור לוויינים והתרעות מהחברה האזרחית, אך התגובה היא לרוב מאוחרת, פוליטית או ממומנת בחסר. מניעה אפשרית בתיאוריה; התרגול עדיין נכשל כאשר הרצון הפוליטי והתיאום נכשלים.
 
 ---
 ### `genocide.rootCauses`
@@ -649,7 +649,7 @@ Visible homelessness and housing insecurity are rising in many cities even in we
 
 **HE:**
 
-Visible homelessness and housing insecurity are rising in many cities even in wealthy countries. מערכות המקלט נמתחות יתר על המידה; יציאות לכניסת דיור יציבה בפיגור.
+חוסר בית גלוי וחוסר ביטחון דיור עולים בערים רבות גם במדינות עשירות. מערכות המקלט נמתחות יתר על המידה; יציאות לדיור יציב מפגרות אחרי הכניסות.
 
 ---
 ### `homeless.rootCauses`
@@ -671,7 +671,7 @@ Clearance and pure tech tracking without housing supply worsen harm. Invent for 
 
 **HE:**
 
-פינוי ומעקב טכנולוגי טהור ללא היצע דיור מחמירים את הנזק. המציא עבור איכות מחסה, קישור שירותים ושבילים להישאר בבית.
+פינוי ומעקב טכנולוגי טהור בלי היצע דיור מחמירים נזק. המציאו איכות מקלט, קישור לשירותים ונתיבים להישאר בדיור.
 
 ---
 ### `infectious.currentState`
@@ -737,7 +737,7 @@ Apps without ambulances and blood banks fail. Invent for referral, transport, an
 
 **HE:**
 
-אפליקציות ללא אמבולנסים ובנקי דם נכשלות. Invent for referral, transport, and respectful skilled birth attendance—not only pregnancy trackers.
+אפליקציות בלי אמבולנסים ובנקי דם נכשלות. המציאו הפניה, הובלה וליווי לידה מקצועי מכבד — לא רק מעקבי הריון.
 
 ---
 ### `memory.currentState`
@@ -869,7 +869,7 @@ Do not invent “AI deletes wrongthink” as a clean win. Prefer provenance, loc
 
 **HE:**
 
-Do not invent “AI deletes wrongthink” as a clean win. העדיפו מוצא, מתווכים מהימנים מקומיים וסוכנות משתמשים. מעקבים המוגדרים כאנטי-דיס-אינפורמציה יכולים להשתיק דיבור לגיטימי. Design for correction speed and dignity, not purity police.
+אל תמציאו «AI מוחק מחשבות שגויות» כניצחון נקי. העדיפו מוצא, מתווכים מקומיים מהימנים וסוכנות משתמשים. מעקב שממוסגר כאנטי־דיסאינפורמציה יכול להשתיק דיבור לגיטימי. עצבו למהירות תיקון ולכבוד, לא למשטרת טוהר.
 
 ---
 ### `nuclear.currentState`
@@ -935,7 +935,7 @@ Digital or fintech “solutions” can exclude people without IDs, connectivity,
 
 **HE:**
 
-"פתרונות" דיגיטליים או פינטק יכולים להוציא אנשים ללא תעודות זהות, קישוריות או אוריינות. עצב עבור המייל האחרון, מזומן + שירותים במידת הצורך, והימנע ממלכודות חובות או חילוץ נתונים המוגדרים כעזרה.
+«פתרונות» דיגיטליים או פינטק יכולים להוציא אנשים בלי תעודות זהות, קישוריות או אוריינות. עצבו לקילומטר האחרון, מזומן + שירותים כשצריך, והימנעו ממלכודות חוב או חילוץ נתונים שממוסגרים כעזרה.
 
 ---
 ### `radicalization.currentState`
@@ -1243,7 +1243,7 @@ Strict totalitarian systems still isolate populations through repression, indoct
 
 **HE:**
 
-Strict totalitarian systems still isolate populations through repression, indoctrination, and information monopoly. אוטוקרטיה רחבה יותר התרחבה; tools that help people access free media, communicate, and organize are scarce where they are needed most.
+מערכות טוטליטריות קשוחות עדיין מבודדות אוכלוסיות בדיכוי, אינדוקטרינציה ומונופול מידע. אוטוקרטיה רחבה יותר התרחבה; כלים שעוזרים לאנשים לגשת למדיה חופשית, לתקשר ולהתארגן נדירים במקום שהם הכי נחוצים.
 
 ---
 ### `totalitarianism.rootCauses`
@@ -1265,7 +1265,7 @@ People need free media, language bridges, censorship circumvention, and safer co
 
 **HE:**
 
-People need free media, language bridges, censorship circumvention, and safer collective action—not better state surveillance. שימוש כפול הוא קיצוני: ניתן לתפוס כלים. Prefer sousveillance and mutual aid designs that do not require a friendly regime.
+אנשים צריכים מדיה חופשית, גשרי שפה, עקיפת צנזורה ופעולה קולקטיבית בטוחה יותר — לא מעקב מדינה טוב יותר. שימוש כפול קיצוני: אפשר לתפוס כלים. העדיפו עיצובים של sousveillance ועזרה הדדית שלא דורשים משטר ידידותי.
 
 ---
 ### `waste.currentState`

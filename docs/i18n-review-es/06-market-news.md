@@ -18,21 +18,21 @@
 
 **EN:** AI chip import tax
 
-**ES:** Impuesto de importación de chips AI
+**ES:** Impuesto de importación a chips de IA
 
 ---
 ### `ai-chip-tax.body`
 
 **EN:** Specialized accelerators get pricier. AI and computing stacks need more capital.
 
-**ES:** Los aceleradores especializados se vuelven más caros. Las pilas de IA y computación necesitan más capital.
+**ES:** Los aceleradores especializados se encarecen. Las pilas de IA y computación necesitan más capital.
 
 ---
 ### `ai-datacenter-backlash.headline`
 
 **EN:** Public divided over AI data centers
 
-**ES:** Público dividido por los centros de datos de IA
+**ES:** Opinión dividida sobre los centros de datos de IA
 
 ---
 ### `ai-datacenter-backlash.body`
@@ -43,35 +43,35 @@ People don't want a data center built in their state. Fielding AI and heavy comp
 
 **ES:**
 
-La gente no quiere que se construya un centro de datos en su estado. Para implementar la IA y la computación pesada se necesita más voluntad política.
+La gente no quiere un centro de datos en su estado. Desplegar IA y cómputo pesado exige más apoyo político.
 
 ---
 ### `ai-energy-backlash.headline`
 
 **EN:** AI energy use backlash
 
-**ES:** Reacción contra el uso de energía de la IA
+**ES:** Reacción contra el uso energético de la IA
 
 ---
 ### `ai-energy-backlash.body`
 
 **EN:** Communities link AI to power strain. AI will cost rises.
 
-**ES:** Las comunidades vinculan la IA con la tensión eléctrica. La IA aumentará los costos.
+**ES:** Las comunidades vinculan la IA a la tensión eléctrica. Sube el coste de Apoyo de la IA.
 
 ---
 ### `ai-exam-cheating-panic.headline`
 
 **EN:** AI exam cheating panic
 
-**ES:** Pánico por hacer trampa en el examen de IA
+**ES:** Pánico por trampas con IA en exámenes
 
 ---
 ### `ai-exam-cheating-panic.body`
 
 **EN:** Schools restrict AI; will cost rises for education-facing AI.
 
-**ES:** Las escuelas restringen la IA; aumentarán los costos de la IA orientada a la educación.
+**ES:** Las escuelas restringen la IA; sube el coste de Apoyo para la IA educativa.
 
 ---
 ### `ai-safety-fund.headline`
@@ -85,112 +85,112 @@ La gente no quiere que se construya un centro de datos en su estado. Para implem
 
 **EN:** Compliance and eval tools get subsidies. AI capital eases if you play by the book.
 
-**ES:** Las herramientas de cumplimiento y evaluación reciben subsidios. El capital de la IA disminuye si se siguen las reglas.
+**ES:** Las herramientas de cumplimiento y evaluación reciben subvenciones. El capital de IA se alivia si sigues las reglas.
 
 ---
 ### `alt-protein-price-parity.headline`
 
 **EN:** Alt-protein price parity
 
-**ES:** Paridad de precios de las proteínas alternativas
+**ES:** Paridad de precios de proteínas alternativas
 
 ---
 ### `alt-protein-price-parity.body`
 
 **EN:** Plant and fermentation proteins hit cost parity in more cafeterias.
 
-**ES:** Las proteínas vegetales y de fermentación alcanzan la paridad de costes en más cafeterías.
+**ES:** Las proteínas vegetales y de fermentación alcanzan paridad de coste en más comedores.
 
 ---
 ### `ar-workplace-mandate.headline`
 
 **EN:** AR workplace safety mandate
 
-**ES:** Mandato de seguridad laboral de AR
+**ES:** Mandato de seguridad laboral con RA
 
 ---
 ### `ar-workplace-mandate.body`
 
 **EN:** Factories fund AR training — Link domain will eases.
 
-**ES:** Las fábricas financian la capacitación en AR: el dominio de enlace se facilitará.
+**ES:** Las fábricas financian formación en RA — el Apoyo del dominio Enlace se alivia.
 
 ---
 ### `automation-tax-talk.headline`
 
 **EN:** Automation tax talk returns
 
-**ES:** Devoluciones de charlas sobre impuestos de automatización
+**ES:** Vuelve el debate sobre un impuesto a la automatización
 
 ---
 ### `automation-tax-talk.body`
 
 **EN:** Politicians float robot taxes. Automator stacks need more will.
 
-**ES:** Los políticos plantean impuestos a los robots. Las pilas de automatizadores necesitan más voluntad.
+**ES:** Los políticos proponen impuestos a los robots. Las pilas Automatizador necesitan más Apoyo.
 
 ---
 ### `autonomy-corridor-opens.headline`
 
 **EN:** Autonomy corridor opens
 
-**ES:** Se abre corredor de autonomía
+**ES:** Se abre un corredor de autonomía
 
 ---
 ### `autonomy-corridor-opens.body`
 
 **EN:** A city opens a mapped shuttle corridor. Self-driving capital and will ease.
 
-**ES:** Una ciudad abre un corredor de transporte cartografiado. Capital autónomo y facilidad.
+**ES:** Una ciudad abre un corredor de lanzaderas mapeado. Capital y Apoyo de la conducción autónoma se alivian.
 
 ---
 ### `battery-fire-scare.headline`
 
 **EN:** Warehouse battery fire dominates news
 
-**ES:** El incendio de la batería del almacén domina las noticias
+**ES:** Un incendio de baterías en un almacén domina las noticias
 
 ---
 ### `battery-fire-scare.body`
 
 **EN:** Safety fears raise insurance and compliance costs for battery projects.
 
-**ES:** Los temores sobre la seguridad aumentan los costos de seguro y cumplimiento para los proyectos de baterías.
+**ES:** Los temores de seguridad suben el seguro y el cumplimiento de los proyectos de baterías.
 
 ---
 ### `bci-data-breach.headline`
 
 **EN:** BCI vendor data breach
 
-**ES:** Violación de datos de proveedores de BCI
+**ES:** Filtración de datos de un proveedor de BCI
 
 ---
 ### `bci-data-breach.body`
 
 **EN:** Neural data fears spike will cost for BCI.
 
-**ES:** Los datos neuronales temen que el aumento suponga un coste para BCI.
+**ES:** El miedo a los datos neurales dispara el coste de Apoyo de la BCI.
 
 ---
 ### `bci-ethics-probe.headline`
 
 **EN:** BCI ethics probe opens
 
-**ES:** Se abre investigación de ética de BCI
+**ES:** Se abre una investigación ética sobre BCI
 
 ---
 ### `bci-ethics-probe.body`
 
 **EN:** Consent and data fears raise will cost for neural interfaces.
 
-**ES:** Los temores sobre el consentimiento y los datos aumentan el costo de las interfaces neuronales.
+**ES:** El consentimiento y el miedo a los datos suben el coste de Apoyo de las interfaces neurales.
 
 ---
 ### `bci-trial-success.headline`
 
 **EN:** BCI trial restores speech
 
-**ES:** El juicio de BCI restablece el habla
+**ES:** Un ensayo de BCI restaura el habla
 
 ---
 ### `bci-trial-success.body`
@@ -218,14 +218,14 @@ La gente no quiere que se construya un centro de datos en su estado. Para implem
 
 **EN:** Lab-leak scare fans biotech fear
 
-**ES:** Las fugas de laboratorio asustan a los fanáticos del miedo a la biotecnología
+**ES:** Un susto de fuga de laboratorio aviva el miedo a la biotecnología
 
 ---
 ### `biotech-scare.body`
 
 **EN:** Headlines outrun evidence. Synthetic biology and genetic work face a tougher political climate.
 
-**ES:** Los titulares superan a la evidencia. La biología sintética y el trabajo genético enfrentan un clima político más duro.
+**ES:** Los titulares van por delante de la evidencia. La biología sintética y el trabajo genético enfrentan un clima político más duro.
 
 ---
 ### `blackout-week.headline`
@@ -239,7 +239,7 @@ La gente no quiere que se construya un centro de datos en su estado. Para implem
 
 **EN:** After multi-day outages, political will for local energy and batteries rises.
 
-**ES:** Después de apagones de varios días, aumenta la voluntad política a favor de la energía y las baterías locales.
+**ES:** Después de apagones de varios días, aumenta el Apoyo político a favor de la energía y las baterías locales.
 
 ---
 ### `blood-sample-privacy.headline`
@@ -253,7 +253,7 @@ La gente no quiere que se construya un centro de datos en su estado. Para implem
 
 **EN:** Biobank rules tighten. Sequencing and BCI projects need more will.
 
-**ES:** Las reglas del biobanco se endurecen. Los proyectos de secuenciación y BCI necesitan más voluntad.
+**ES:** Las reglas del biobanco se endurecen. Los proyectos de secuenciación y BCI necesitan más Apoyo.
 
 ---
 ### `chip-export-thaw.headline`
@@ -285,7 +285,7 @@ A climate window funds local resilience tech. Political will for green stacks so
 
 **ES:**
 
-Una ventana climática financia tecnología de resiliencia local. La voluntad política a favor de las pilas verdes se suaviza.
+Una ventana climática financia tecnología de resiliencia local. El Apoyo político a favor de las pilas verdes se suaviza.
 
 ---
 ### `clinic-sequencer-rebate.headline`
@@ -341,7 +341,7 @@ Una ventana climática financia tecnología de resiliencia local. La voluntad po
 
 **EN:** Shared solar co-ops get easy rules. Solar will cost drops.
 
-**ES:** Las cooperativas solares compartidas tienen reglas sencillas. La energía solar costará menos.
+**ES:** Las cooperativas solares compartidas obtienen reglas sencillas. Baja el coste de Apoyo solar.
 
 ---
 ### `copper-shortage.headline`
@@ -355,7 +355,7 @@ Una ventana climática financia tecnología de resiliencia local. La voluntad po
 
 **EN:** Cables and motors get pricey. Energy and mover hardware budgets climb.
 
-**ES:** Los cables y motores se vuelven caros. Los presupuestos de energía y hardware de mudanzas aumentan.
+**ES:** Los cables y motores se encarecen. Suben los presupuestos de energía y hardware Motor.
 
 ---
 ### `crispr-tool-drop.headline`
@@ -387,7 +387,7 @@ Speculative heat dies; remaining civic ledger work needs less will, more careful
 
 **ES:**
 
-El calor especulativo muere; El resto del trabajo de contabilidad cívica necesita menos voluntad y más capital cuidadoso.
+El calor especulativo se apaga; el trabajo de registro cívico que queda necesita menos Apoyo y más capital prudente.
 
 ---
 ### `crypto-winter-thaw.headline`
@@ -447,7 +447,7 @@ Menos publicidad, más adquisiciones. Los libros de contabilidad de estilo cript
 
 **EN:** Trust crashes. AI projects need more political will to clear scrutiny.
 
-**ES:** La confianza colapsa. Los proyectos de IA necesitan más voluntad política para superar el escrutinio.
+**ES:** La confianza colapsa. Los proyectos de IA necesitan más Apoyo político para superar el escrutinio.
 
 ---
 ### `disinfo-wave.headline`
@@ -697,7 +697,7 @@ Las nuevas brocas y las plataformas compartidas reducen los proyectos de calefac
 
 **EN:** Farm politics harden. Synbio and genetic engineering need more will.
 
-**ES:** La política agrícola se endurece. Synbio y la ingeniería genética necesitan más voluntad.
+**ES:** La política agrícola se endurece. Synbio y la ingeniería genética necesitan más Apoyo.
 
 ---
 ### `gps-jamming-zone.headline`
@@ -897,7 +897,7 @@ Los cuellos de botella en la transmisión hacen que los proyectos energéticos s
 
 **EN:** Cities share procurement templates. Political will eases for multi-domain pilots.
 
-**ES:** Las ciudades comparten plantillas de adquisiciones. La voluntad política disminuye para los pilotos multidominio.
+**ES:** Las ciudades comparten plantillas de adquisiciones. El Apoyo político se alivia para los Pilot multidominio.
 
 ---
 ### `medical-drone-lane.headline`
@@ -925,7 +925,7 @@ Los cuellos de botella en la transmisión hacen que los proyectos energéticos s
 
 **EN:** Insurers reimburse VR therapy modules. Will and capital ease.
 
-**ES:** Las aseguradoras reembolsan los módulos de terapia de realidad virtual. La voluntad y el capital se relajan.
+**ES:** Las aseguradoras reembolsan los módulos de terapia de realidad virtual. El Apoyo y el capital se relajan.
 
 ---
 ### `mesh-radio-legalized.headline`
@@ -999,7 +999,7 @@ Los grandes recortes en tecnología perjudican las cadenas de suministro de auri
 
 **EN:** A materials sprint drops nano and advanced materials capital.
 
-**ES:** Un sprint de materiales arroja capital de materiales nano y avanzados.
+**ES:** Un sprint de materiales baja el capital de nano y materiales avanzados.
 
 ---
 ### `nano-toxicity-study.headline`
@@ -1013,7 +1013,7 @@ Los grandes recortes en tecnología perjudican las cadenas de suministro de auri
 
 **EN:** Safety reviews raise will cost for nano projects.
 
-**ES:** Las revisiones de seguridad aumentan el costo de los nanoproyectos.
+**ES:** Las revisiones de seguridad suben el coste de Apoyo de los proyectos nano.
 
 ---
 ### `network-neutrality-fight.headline`
@@ -1027,7 +1027,7 @@ Los grandes recortes en tecnología perjudican las cadenas de suministro de auri
 
 **EN:** ISPs and cities clash. Networks will cost rises.
 
-**ES:** Los ISP y las ciudades chocan. Las redes costarán subidas.
+**ES:** Los ISP y las ciudades chocan. Sube el coste de Apoyo de las redes.
 
 ---
 ### `night-storage-mandate.headline`
@@ -1059,7 +1059,7 @@ Las nuevas reglas combinan la generación con el almacenamiento. Aumenta el capi
 
 **EN:** A regional compact streamlines small-reactor reviews. Political will for nuclear ticks up.
 
-**ES:** Un pacto regional agiliza las revisiones de reactores pequeños. La voluntad política para la energía nuclear aumenta.
+**ES:** Un pacto regional agiliza las revisiones de reactores pequeños. El Apoyo político para la energía nuclear aumenta.
 
 ---
 ### `nuclear-waste-standoff.headline`
@@ -1077,7 +1077,7 @@ Storage politics flare. Nuclear needs more will even where reactors are welcome 
 
 **ES:**
 
-La política de almacenamiento estalla. La energía nuclear necesita más voluntad incluso cuando los reactores son bienvenidos sobre el papel.
+La política de almacenamiento estalla. La energía nuclear necesita más Apoyo incluso cuando los reactores son bienvenidos sobre el papel.
 
 ---
 ### `offshore-wind-subsidy.headline`
@@ -1249,7 +1249,7 @@ Las comunidades rechazan las cámaras y los medidores siempre encendidos. La IoT
 
 **EN:** After quiet wins, will eases slightly across automator and mover tech.
 
-**ES:** Después de victorias silenciosas, la voluntad disminuye ligeramente en las tecnologías de automatización y mudanzas.
+**ES:** Tras victorias silenciosas, el Apoyo se alivia un poco en tech Automatizador y Motor.
 
 ---
 ### `quantum-error-milestone.headline`
@@ -1263,14 +1263,14 @@ Las comunidades rechazan las cámaras y los medidores siempre encendidos. La IoT
 
 **EN:** Hype returns with substance; quantum will eases, capital still high.
 
-**ES:** La exageración regresa con sustancia; La voluntad cuántica disminuye, el capital sigue siendo alto.
+**ES:** La exageración regresa con sustancia; el Apoyo cuántico se alivia, el capital sigue alto.
 
 ---
 ### `quantum-hype-cycle.headline`
 
 **EN:** Quantum hype cools — pilots pause
 
-**ES:** La exageración cuántica se enfría: los pilotos hacen una pausa
+**ES:** La exageración cuántica se enfría — los Pilot hacen una pausa
 
 ---
 ### `quantum-hype-cycle.body`
@@ -1281,7 +1281,7 @@ Investors wait for clearer niches. Quantum work needs more will to keep sponsors
 
 **ES:**
 
-Los inversores esperan nichos más claros. El trabajo cuántico necesita más voluntad para mantener el interés de los patrocinadores.
+Los inversores esperan nichos más claros. El trabajo cuántico necesita más Apoyo para mantener el interés de los patrocinadores.
 
 ---
 ### `quantum-link-pilot.headline`
@@ -1369,7 +1369,7 @@ Los chips de memoria son escasos y caros. Los proyectos informáticos necesitan 
 
 **EN:** Congestion charges spark protests. Self-driving and transport need more will.
 
-**ES:** Las tasas de congestión provocan protestas. La conducción autónoma y el transporte necesitan más voluntad.
+**ES:** Las tasas de congestión provocan protestas. La conducción autónoma y el transporte necesitan más Apoyo.
 
 ---
 ### `robot-injury-lawsuit.headline`
@@ -1401,7 +1401,7 @@ Care and logistics automation meets organized resistance. Political will is the 
 
 **ES:**
 
-La automatización de la atención y la logística se encuentra con la resistencia organizada. La voluntad política es el recurso escaso.
+La automatización de la atención y la logística se encuentra con la resistencia organizada. El Apoyo político es el recurso escaso.
 
 ---
 ### `robot-lease-deals.headline`
@@ -1485,7 +1485,7 @@ La automatización de la atención y la logística se encuentra con la resistenc
 
 **EN:** A high-profile crash freezes will for autonomy.
 
-**ES:** Un accidente de alto perfil congela la voluntad de autonomía.
+**ES:** Un accidente de alto perfil congela el Apoyo a la autonomía.
 
 ---
 ### `smart-city-grant.headline`
@@ -1651,7 +1651,7 @@ La escasez de mano de obra calificada eleva los costos de la informática, la in
 
 **EN:** Education funds underwrite classroom AI. Will and capital ease for AI projects.
 
-**ES:** Los fondos para educación financian la IA en las aulas. Facilidad de voluntad y capital para proyectos de IA.
+**ES:** Los fondos para educación financian la IA en las aulas. Se facilitan el Apoyo y el capital para proyectos de IA.
 
 ---
 ### `tidal-pilot-success.headline`
@@ -1679,7 +1679,7 @@ La escasez de mano de obra calificada eleva los costos de la informática, la in
 
 **EN:** Labor action freezes mobility trials. Mover stacks need more will.
 
-**ES:** Acción laboral congela los juicios de movilidad. Las pilas de mudanzas necesitan más voluntad.
+**ES:** Acción laboral congela los ensayos de movilidad. Las pilas Motor necesitan más Apoyo.
 
 ---
 ### `university-lab-share.headline`
@@ -1785,7 +1785,7 @@ Coastal and ridge communities fight new turbines. Wind projects need more politi
 
 **ES:**
 
-Las comunidades costeras y montañosas luchan contra las nuevas turbinas. Los proyectos eólicos necesitan más voluntad política.
+Las comunidades costeras y montañosas luchan contra las nuevas turbinas. Los proyectos eólicos necesitan más Apoyo político.
 
 ---
 ### `youth-climate-march.headline`
@@ -1799,6 +1799,6 @@ Las comunidades costeras y montañosas luchan contra las nuevas turbinas. Los pr
 
 **EN:** Street pressure softens will for clean power and materials stacks.
 
-**ES:** La presión de la calle suaviza la voluntad de acumular energía y materiales limpios.
+**ES:** La presión de la calle suaviza el Apoyo a las pilas de energía y materiales limpios.
 
 ---

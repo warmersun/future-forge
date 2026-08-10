@@ -198,7 +198,7 @@ Source pack: `locales/hu/globals.json`
 
 **EN:** Jobs and meaning under automation.
 
-**HU:** Munka és jelentés az automatizáció alatt.
+**HU:** Munkahelyek és értelem az automatizáció korában.
 
 ---
 ### `automation.title`

@@ -22,42 +22,42 @@ Source pack: `locales/he/domains.json`
 
 **EN:** Automator
 
-**HE:** אוטומט
+**HE:** אוטומטור
 
 ---
 ### `lifeforce.label`
 
 **EN:** LifeForce
 
-**HE:** LifeForce
+**HE:** כוח חיים
 
 ---
 ### `link.label`
 
 **EN:** Link
 
-**HE:** לְקַשֵׁר
+**HE:** קישור
 
 ---
 ### `mover.label`
 
 **EN:** Mover
 
-**HE:** מעביר
+**HE:** מניע
 
 ---
 ### `portal.label`
 
 **EN:** Portal
 
-**HE:** שַׁעַר
+**HE:** פורטל
 
 ---
 ### `power.label`
 
 **EN:** Power
 
-**HE:** כּוֹחַ
+**HE:** אנרגיה
 
 ---
 ## Shelves
@@ -75,7 +75,7 @@ Source pack: `locales/he/shelves.json`
 
 **EN:** Food & land
 
-**HE:** אוכל ואדמה
+**HE:** מזון וקרקע
 
 ---
 ### `health.title`
@@ -142,7 +142,7 @@ Source pack: `locales/he/globals.json`
 
 **EN:** Dirty air from transport, industry, cooking.
 
-**HE:** אוויר מלוכלך מתחבורה, תעשייה, בישול.
+**HE:** אוויר מזוהם מתחבורה, תעשייה ובישול.
 
 ---
 ### `air.title`
@@ -184,21 +184,21 @@ Source pack: `locales/he/globals.json`
 
 **EN:** Planetary defense and detection windows.
 
-**HE:** חלונות הגנה וזיהוי פלנטריים.
+**HE:** הגנה פלנטרית וחלונות זיהוי.
 
 ---
 ### `asteroid.title`
 
 **EN:** Asteroid Impact
 
-**HE:** השפעת אסטרואידים
+**HE:** פגיעת אסטרואיד
 
 ---
 ### `automation.blurb`
 
 **EN:** Jobs and meaning under automation.
 
-**HE:** משרות ומשמעות תחת אוטומציה.
+**HE:** משרות ומשמעות בעידן האוטומציה.
 
 ---
 ### `automation.title`

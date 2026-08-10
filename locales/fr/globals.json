@@ -1,6 +1,6 @@
 {
   "rogue-si": {
-    "title": "SuperIntelligence Rogue",
+    "title": "Superintelligence incontrôlée",
     "blurb": "IA puissante sans contrôle ni alignement."
   },
   "genocide": {
@@ -9,7 +9,7 @@
   },
   "poverty": {
     "title": "Extrême pauvreté",
-    "blurb": "Les gens sont privés de revenus, de services et d’agence."
+    "blurb": "Des personnes privées de revenus, de services et de capacité d'agir."
   },
   "chem-bio": {
     "title": "Armes chimiques et biologiques",
@@ -17,7 +17,7 @@
   },
   "asteroid": {
     "title": "Impact d'astéroïde",
-    "blurb": "Fenêtres de défense et de détection planétaires."
+    "blurb": "Défense planétaire et fenêtres de détection."
   },
   "weather": {
     "title": "Événements météorologiques extrêmes",
@@ -37,7 +37,7 @@
   },
   "women": {
     "title": "Droits égaux pour les femmes",
-    "blurb": "Sécurité, droits, éducation, agence économique."
+    "blurb": "Sécurité, droits, éducation, capacité d'agir économique."
   },
   "education": {
     "title": "Manque d'éducation",
@@ -45,7 +45,7 @@
   },
   "automation": {
     "title": "Automatisation / UBI",
-    "blurb": "Emplois et sens sous l'automatisation."
+    "blurb": "Emplois et sens face à l'automatisation."
   },
   "refugees": {
     "title": "Réfugiés",
@@ -85,7 +85,7 @@
   },
   "ageing": {
     "title": "Le vieillissement comme maladie",
-    "blurb": "Durée de vie et vie plus longue."
+    "blurb": "Espérance de vie en bonne santé et vies plus longues."
   },
   "water": {
     "title": "Eau propre",
@@ -93,7 +93,7 @@
   },
   "air": {
     "title": "Pollution atmosphérique",
-    "blurb": "Air sale des transports, de l'industrie, de la cuisine."
+    "blurb": "Air pollué par les transports, l'industrie et la cuisine."
   },
   "energy-access": {
     "title": "Accès à l'énergie",
@@ -121,7 +121,7 @@
   },
   "radicalization": {
     "title": "Lutter contre la radicalisation",
-    "blurb": "Pipelines de préjugés et d’extrémisme – rampes de sortie basées sur les droits."
+    "blurb": "Filières de préjugés et d'extrémisme — sorties fondées sur les droits."
   },
   "fgm": {
     "title": "Mutilation génitale féminine (MGF)",
@@ -152,11 +152,11 @@
     "blurb": "Isolement rural loin des routes toutes saisons."
   },
   "smoking": {
-    "title": "Fumeur",
+    "title": "Tabagisme",
     "blurb": "Épidémie de tabagisme, sevrage et méfaits indirects."
   },
   "sanitation": {
-    "title": "Sanitaire",
+    "title": "Assainissement",
     "blurb": "Toilettes, eaux usées et hygiène – pas seulement l’eau potable."
   },
   "waste": {

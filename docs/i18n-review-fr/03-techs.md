@@ -75,7 +75,7 @@ Un large jugement autonome dans des domaines à enjeux élevés sans humains –
 
 **EN:** _(missing)_
 
-**FR:** Az emberek vezetnek; un modèle javasolnak.
+**FR:** Les humains dirigent ; les modèles proposent.
 
 ---
 ### `ai.primer`
@@ -86,7 +86,7 @@ Artificial intelligence finds patterns in data to predict, recommend, generate t
 
 **FR:**
 
-L'intelligence artificielle trouve des modèles dans les données pour prédire, recommander, générer du texte ou des images et soutenir les décisions. Il est déjà un collaborateur de nombreuses cliniques, salles de classe et bureaux logistiques, mais il peut être partial, trop confiant ou opaque. Des inventions locales fortes responsabilisent les humains et étendent le modèle à un véritable flux de travail.
+L'intelligence artificielle trouve des modèles dans les données pour prédire, recommander, générer du texte ou des images et soutenir les décisions. Elle est déjà une collègue dans de nombreuses cliniques, salles de classe et postes de logistique — mais elle peut être biaisée, trop confiante ou opaque. Les bonnes inventions locales gardent les humains responsables et bornent le modèle à un vrai flux de travail.
 
 ---
 ### `ai.risk`
@@ -114,7 +114,7 @@ L'intelligence artificielle trouve des modèles dans les données pour prédire,
 
 **EN:** Triage support
 
-**FR:** Prise en charge du tri
+**FR:** Soutien au triage
 
 ---
 ### `ai.useCasesNow.1`

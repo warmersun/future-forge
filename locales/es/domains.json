@@ -1,15 +1,15 @@
 {
   "power": {
-    "label": "Fuerza"
+    "label": "Energía"
   },
   "automator": {
-    "label": "automatizador"
+    "label": "Automatizador"
   },
   "mover": {
-    "label": "Agente de mudanzas"
+    "label": "Motor"
   },
   "lifeforce": {
-    "label": "fuerza vital"
+    "label": "Fuerza vital"
   },
   "link": {
     "label": "Enlace"

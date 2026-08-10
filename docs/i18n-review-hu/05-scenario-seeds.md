@@ -16,7 +16,7 @@ EN seedIds: 173 · HU overlays: 172 · missing HU: 1 · extra HU: 0
 
 ## Missing HU overlays (1)
 
-- `_default--crisis-lands-in-place`
+- `_default--crisis-lands-in-place` — **filled below**
 
 ## Seed `_default--crisis-lands-in-place`
 
@@ -24,14 +24,14 @@ EN seedIds: 173 · HU overlays: 172 · missing HU: 1 · extra HU: 0
 
 **EN:** Crisis lands in {place}
 
-**HU:** _(missing)_
+**HU:** A válság {place} helyére érkezik
 
 ---
 ### `_default--crisis-lands-in-place.stakeholder`
 
 **EN:** Local working group
 
-**HU:** _(missing)_
+**HU:** Helyi munkacsoport
 
 ---
 ### `_default--crisis-lands-in-place.scene`
@@ -42,49 +42,49 @@ People in {place} feel this global problem in daily life. A local driver keeps i
 
 **HU:**
 
-_(missing)_
+{place} emberei a mindennapokban érzik ezt a globális bajt. Egy helyi hajtóerő tartja életben — találj fel erre a helyre és évre, ne szlogent.
 
 ---
 ### `_default--crisis-lands-in-place.places.0`
 
 **EN:** Local Ward
 
-**HU:** _(missing)_
+**HU:** Helyi kerület
 
 ---
 ### `_default--crisis-lands-in-place.places.1`
 
 **EN:** Town Center
 
-**HU:** _(missing)_
+**HU:** Városközpont
 
 ---
 ### `_default--crisis-lands-in-place.places.2`
 
 **EN:** District Hub
 
-**HU:** _(missing)_
+**HU:** Kerületi csomópont
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.0`
 
 **EN:** Pressure
 
-**HU:** _(missing)_
+**HU:** Nyomás
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.1`
 
 **EN:** Capacity
 
-**HU:** _(missing)_
+**HU:** Kapacitás
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.2`
 
 **EN:** Trust
 
-**HU:** _(missing)_
+**HU:** Bizalom
 
 ---
 ## Seed `ag--bare-winter-fields-blow-the-county-thin`
@@ -115,7 +115,7 @@ They rarely are. Mara watches topsoil leave her rows in thin sheets and settle o
 
 **HU:**
 
-Mara hajnal előtt kirúgja a kapuzárat, és a szél már homokízű. A bérleménye a patakkanyartól nyugatra fut. Az éjszakai fagy csupaszon és porfinoman hagyta a talajt. Délelőtt közepére az ég régi papír színűre vált. Por emelkedik minden nyitott holdról, és két mérfölddel szélirányban az iskolaudvarba ömlik. A gyerekek ujjászukkal törlik a szemüket. A nővér újabb délutánnyi köhögést jegyez fel.
+Mara hajnal előtt kirúgja a kapuzárat, és a szél már homokízű. A bérleménye a patakkanyartól nyugatra fut. Az éjszakai fagy csupaszon és porfinoman hagyta a talajt. Délelőtt közepére az ég régi papír színűre vált. Por emelkedik minden nyitott holdról, és két mérfölddel szélirányban az iskolaudvarba ömlik. A gyerekek ujjukkal törlik a szemüket. A nővér újabb délutánnyi köhögést jegyez fel.
 
 A talajvédelmi körzet takarónövény-magos teherautója félig üresen áll a szövetkezetnél. A készpénzes bérleti díj novemberben volt esedékes. A legtöbb bérlő eladta az utolsó babpénzt is, hogy fizetőképes maradjon, aztán csupaszon hagyta a földet egész télen, mert az élő talajtakaró nem fizeti a törlesztőt. A földesurak továbbra is a beszállított termésmennyiség alapján értékelik a bérleteket, nem a hátrahagyott tarlómaradvány alapján. Így ismétlődik a minta: keményen aratni, tisztára tárcsázni, remélni, hogy a márciusi esők szelídek lesznek.
 
@@ -126,7 +126,7 @@ Ritkán azok. Mara nézi, ahogy a termőtalaj vékony lemezekben hagyja el a sor
 
 **EN:** Loess Bend County
 
-**HU:** Loess Bend Megye
+**HU:** Loess Bend County
 
 ---
 ### `ag--bare-winter-fields-blow-the-county-thin.pressureKeys.0`
@@ -147,7 +147,7 @@ Ritkán azok. Mara nézi, ahogy a termőtalaj vékony lemezekben hagyja el a sor
 
 **EN:** Farm Debt
 
-**HU:** Farmadósság
+**HU:** Mezőgazdasági adósság
 
 ---
 ## Seed `ag--full-sun-spice-rush-kills-the-mist-forest`
@@ -180,7 +180,7 @@ Ren’s granddaughter carries water farther than she did a year ago. The wardens
 
 Hajnalban Öreg Ren bádogpohárral járja a felső forrásösvényt. Megáll ott, ahol a moha régen dél után is nedves maradt. A pohár zavarosan jön fel. Alatta új kardamom- és borsirtások ragyognak, mint nyílt sebek a gerincen. A munkások sávokban vágták ki az utolsó árnyékadó fákat, hogy a fűszer teljes napot kapjon, és gyorsabban elérje az exportminőséget.
 
-A szövetkezet a múlt szezonban igent szavazott. A spotárak magasak voltak. A szerződések a száraz súlyt és a színt fizették, nem azt, hogy a köd még kialakul-e hajnalban. A lombkorona nélkül a reggeli köd elvékonyodik. A meredekebb lépcsőkön a talaj meglazul az éjszakai eső után. Egy sárnyelv kedden elvitte a gyaloghidat a Harmadik Kerület felett. A falusi tartálynál a forrás hozama annyira csökkent, hogy a délutáni töltősor már nem ér el az utolsó házakig.
+A szövetkezet a múlt szezonban igent szavazott. A spotárak magasak voltak. A szerződések a száraz súlyt és a színt fizették, nem azt, hogy a köd még kialakul-e hajnalban. A lombkorona nélkül a reggeli köd elvékonyodik. A meredekebb lépcsőkön a talaj meglazul az éjszakai eső után. Egy sárnyelv kedden elvitte a gyaloghidat a Ward Three felett. A falusi tartálynál a forrás hozama annyira csökkent, hogy a délutáni töltősor már nem ér el az utolsó házakig.
 
 Ren unokája messzebbre hordja a vizet, mint egy évvel ezelőtt. Az őrök rámutathatnak minden új teraszra, és megnevezhetik, ki írta alá. A hajtóerő egyszerű és helyi: a teljes napfényes fűszer idén fizet; az árnyék nem. A köderdő főkönyvi sorokká válik. A gerincnek továbbra is embereket, vizet és gyökereket kell egyszerre tartania. Ki tervez olyan fűszeres megélhetést, amely megtartja a ködöt és a lejtőt, amikor a vevő csak a napot árazza?
 
@@ -189,7 +189,7 @@ Ren unokája messzebbre hordja a vizet, mint egy évvel ezelőtt. Az őrök rám
 
 **EN:** Fogline Spice Terraces
 
-**HU:** Ködvonal Fűszerteraszok
+**HU:** Fogline Spice Terraces
 
 ---
 ### `ag--full-sun-spice-rush-kills-the-mist-forest.pressureKeys.0`
@@ -252,7 +252,7 @@ Joren partnere számolja, hogy újraültessen-e vagy eladjon egy tehenet. A test
 
 **EN:** Brackish Polder Reach
 
-**HU:** Brakkos Polder-szakasz
+**HU:** Brackish Polder Reach
 
 ---
 ### `ag--pump-wars-salt-the-seed-beds.pressureKeys.0`
@@ -315,7 +315,7 @@ Lilának szüksége van az iskolai megrendelésre. Nélküle a földbér összeo
 
 **EN:** Ringroad Greens Belt
 
-**HU:** Körgyűrű Zöldövezet
+**HU:** Ringroad Greens Belt
 
 ---
 ### `ag--spec-sheets-turn-salad-rows-into-spray-alleys.pressureKeys.0`
@@ -363,14 +363,14 @@ Before first light Lata unlocks her stall at River Gate and hauls the first crat
 
 **HU:**
 
-Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az első ládát keserű tökkel a nedves betonra. Hatvanegy éves. A csípője beakad a forduláskor. Az aukciós harang negyven perc múlva szól. A vevők csak a telinek és korainak látszó rakásokat tisztelik. Unokaöccse futárszolgálati app-munkát vállalt a város másik felén. A céh fiatal kezek listája üres ebben a szezonban. A piaci szabályok még mindig azt az árust részesítik előnyben, aki hajnali 3-tól áll és segítség nélkül emel—ugyanaz a minta, amely felépítette ezeket a standokat, és most utódok nélkül hagyja őket. A múlt havi esés két piaci napjába és egy hét fájdalomba került, amit nem írt le. A vékony segítség azt jelenti, hogy vagy lassít és elveszíti a rendszeres séfeket, vagy tartja a hajnali robotot a következő megcsúszásig. Mit talál fel egy élelmiszerkapu, amikor a hosszabb munkaéletek találkoznak egy piaccal, amely sosem tanulta meg átadni a ládát?
+Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az első ládát keserű tökkel a nedves betonra. Hatvanegy éves. A csípője beakad a forduláskor. Az aukciós harang negyven perc múlva szól. A vevők csak a telinek és korainak látszó rakásokat tisztelik. Unokaöccse futárszolgálati app-munkát vállalt a város másik felén. A céh fiatal kezek listája üres ebben a szezonban. A piaci szabályok még mindig azt az árust részesítik előnyben, aki hajnali 3-tól áll és segítség nélkül emel—ugyanaz a minta, amely felépítette ezeket a standokat, és most utódok nélkül hagyja őket. A múlt havi esés két piaci napjába és egy hét fájdalomba került, amit nem írt le. A vékony segítség azt jelenti, hogy vagy lassít és elveszíti a rendszeres séfeket, vagy tartja a hajnali robotot a következő megcsúszásig. Hogyan tervezi újra egy élelmiszerkapu a munkát, amikor a hosszabb munkaéletek találkoznak egy piaccal, amely sosem tanulta meg átadni a ládát?
 
 ---
 ### `ageing--dawn-stalls-without-successors.places.0`
 
 **EN:** River Gate Wholesale Market
 
-**HU:** River Gate Nagykereskedelmi Piac
+**HU:** River Gate Wholesale Market
 
 ---
 ### `ageing--dawn-stalls-without-successors.pressureKeys.0`
@@ -391,7 +391,7 @@ Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az e
 
 **EN:** Thin help
 
-**HU:** Vékony Segítség
+**HU:** Kevesebb segítség
 
 ---
 ## Seed `ageing--doubles-until-the-body-breaks`
@@ -407,7 +407,7 @@ Első fény előtt Lata kinyitja standját a River Gate-nél, és felhúzza az e
 
 **EN:** Home-care workers cooperative steward
 
-**HU:** Otthonápolói szövetkezet gondnoka
+**HU:** Otthonápolói szövetkezet képviselője
 
 ---
 ### `ageing--doubles-until-the-body-breaks.scene`
@@ -425,7 +425,7 @@ Rosa reggel 5:40-kor friss útvonallapotot ragaszt a szövetkezeti táblára. Ti
 
 **EN:** Midtown Home-Care Corridor
 
-**HU:** Midtown Otthonápolási Folyosó
+**HU:** Midtown Home-Care Corridor
 
 ---
 ### `ageing--doubles-until-the-body-breaks.pressureKeys.0`
@@ -473,14 +473,14 @@ Kamal crouches to check the wet molds before the sun clears the shed roof. He is
 
 **HU:**
 
-Kamal leguggol, hogy ellenőrizze a nedves formákat, mielőtt a nap átbukik a fészer tetején. Ötvennyolc éves. A térdei ropognak, ahogy leereszkedik. A kemencefőnök még egy égetést akar dél előtt. A darabbér csak a kész, felhalmozott és lepecsételt téglákat számolja. A fiatalabb hordárok raktári műszakokra mentek a körgyűrűn túlra. Az udvar még mindig ugyanazt a hajolás-csavarás-cipelés ciklust futtatja, amely Kamal apját is elkoptatta. Hő árad a kemence nyitott szájából. Délelőttre a csuklói megduzzadnak, és a számláló rövid rakományt jelöl. Jégcsomagok ülnek az egészségügyi fészerben egy tartáspóster mellett, amelyet senkinek nincs ideje elolvasni. A sor az öregedő izmot magánbalsorsnak kezeli, nem tervezési bemenetnek. Kamal erőltetheti a tempót és kockáztathat egy esést az agyagárokba—vagy kiléphet, és elveszítheti a bért, amely még fedezi anyja gyógyszerét. Mit talál fel egy udvar, amikor a kemencék túlélik a csontokat, amelyek táplálják őket?
+Kamal leguggol, hogy ellenőrizze a nedves formákat, mielőtt a nap átbukik a fészer tetején. Ötvennyolc éves. A térdei ropognak, ahogy leereszkedik. A kemencefőnök még egy égetést akar dél előtt. A darabbér csak a kész, felhalmozott és lepecsételt téglákat számolja. A fiatalabb hordárok raktári műszakokra mentek a körgyűrűn túlra. Az udvar még mindig ugyanazt a hajolás-csavarás-cipelés ciklust futtatja, amely Kamal apját is elkoptatta. Hő árad a kemence nyitott szájából. Délelőttre a csuklói megduzzadnak, és a számláló rövid rakományt jelöl. Jégcsomagok ülnek az egészségügyi fészerben egy tartáspóster mellett, amelyet senkinek nincs ideje elolvasni. A sor az öregedő izmot magánbalsorsnak kezeli, nem tervezési bemenetnek. Kamal erőltetheti a tempót és kockáztathat egy esést az agyagárokba—vagy kiléphet, és elveszítheti a bért, amely még fedezi anyja gyógyszerét. Mit tervez újra egy udvar, amikor a kemencék túlélik a csontokat, amelyek táplálják őket?
 
 ---
 ### `ageing--kilns-that-outlast-bones.places.0`
 
 **EN:** Brickfields Elder Yards
 
-**HU:** Brickfields Idős Udvarok
+**HU:** Brickfields Elder Yards
 
 ---
 ### `ageing--kilns-that-outlast-bones.pressureKeys.0`
@@ -535,7 +535,7 @@ Mei a lassú lifttel megy a huszonharmadik emeletre egy törülközőbe csavart 
 
 **EN:** Sunstack Senior Towers
 
-**HU:** Sunstack Idős Tornyok
+**HU:** Sunstack Senior Towers
 
 ---
 ### `ageing--upper-floors-without-cool-air.pressureKeys.0`
@@ -590,7 +590,7 @@ Amara nővér a klinika ágyneműjét a rakparti zsinórra akasztja az első fé
 
 **EN:** Tidegate Fishing Quays
 
-**HU:** Tidegate Halászrakpartok
+**HU:** Tidegate Fishing Quays
 
 ---
 ### `air--bunker-smoke-on-wash-day.pressureKeys.0`
@@ -645,7 +645,7 @@ Műszakváltáskor Kamala néni a panzióból nedves törölközőkkel várja a 
 
 **EN:** Riverside Dye Cluster
 
-**HU:** Folyóparti Festőklaszter
+**HU:** Riverside Dye Cluster
 
 ---
 ### `air--colored-fog-at-shift-change.pressureKeys.0`
@@ -700,7 +700,7 @@ Meena rezet válogat a műanyag burkolattól egy ponyván, miközben szomszédja
 
 **EN:** Canal-Side Scrap Lanes
 
-**HU:** Csatornaparti Hulladékutcák
+**HU:** Canal-Side Scrap Lanes
 
 ---
 ### `air--evening-fires-in-the-lane.pressureKeys.0`
@@ -755,7 +755,7 @@ Rina edző befújja a sípot a szabadtéri nyújtóra a felüljáró alatt, mert
 
 **EN:** Ring Road School Corridor
 
-**HU:** Ring Road Iskolai Folyosó
+**HU:** Ring Road School Corridor
 
 ---
 ### `air--recess-under-the-flyover.pressureKeys.0`
@@ -1078,7 +1078,7 @@ Első fénynél Marta végigsétál a malacóvodán, az adagolási táblázat a 
 
 **EN:** Santa Catarina Hog Belt
 
-**HU:** Santa Catarina Sertésöv
+**HU:** Santa Catarina Hog Belt
 
 ---
 ### `amr--barn-routine-poisons-the-creek-clinics.pressureKeys.0`
@@ -1133,7 +1133,7 @@ Ada evez a keskeny utcán a cölöpös rendelőhöz, forró gyerekkel a mellkas�
 
 **EN:** Makoko Stilt Clinic Lanes
 
-**HU:** Makoko Cölöpös Rendelő Utcái
+**HU:** Makoko Stilt Clinic Lanes
 
 ---
 ### `amr--lane-chemists-empty-the-last-good-drugs.pressureKeys.0`
@@ -1188,7 +1188,7 @@ Rosa bejelentkezik a kikötői TBC-osztályra, miközben az éjszakai daru még 
 
 **EN:** Callao Dockside TB Ward
 
-**HU:** Callao Kikötői TBC-osztály
+**HU:** Callao Dockside TB Ward
 
 ---
 ### `amr--port-lungs-outlast-the-formulary.pressureKeys.0`
@@ -1236,14 +1236,14 @@ Before dawn, Ramesh opens the valve on the treatment lagoon behind the bulk-drug
 
 **HU:**
 
-Hajnal előtt Ramesh kinyitja a szelepet a tömeggyógyszer-csarnokok mögötti tisztítólagúnán. Hab úszik az árokban a falusi kutak felé. Délre a lánya iskolája hazaküldi égő torokkal és egy feljegyzéssel, amit a rendelő nem tud elolvasni. Az éjszakai műszak nővére már felhasználta az utolsó tenyésztőpalackot, ami még egyezik a régi táblázattal. Lefelé a folyáson a városi labor újabb csúcsot regisztrál a rezisztens (gyógyszernek ellenálló) E. coli-ból a tartályvízben, amit a családok isznak, amikor a városi vezeték felmondja a szolgálatot. A gyárak továbbra is leöblítik a maradék antibiotikumokat, mert az engedély mérői csak a színt és a szagot mérik, nem a hatóanyag-molekulákat, és a vevők a sebességért fizetnek. Ramesh mozgásban tartja a lagúnát, hogy az üzem ne álljon le, és a csapata ne veszítse el a bérét. A felesége az alapellátó szoba előtt vár egy gyerekkel, aki már nem reagál az olcsó szirupra. Ki tervezi meg a lefolyót és a rendelőt egyetlen rendszerként, mielőtt a víz minden háztartásnak ugyanazt a kemény leckét tanítaná?
+Hajnal előtt Ramesh kinyitja a szelepet a tömeggyógyszer-csarnokok mögötti tisztítólagúnán. Hab úszik az árokban a falusi kutak felé. Délre a lánya iskolája hazaküldi égő torokkal és egy feljegyzéssel, amit a rendelő nem tud elolvasni. Az éjszakai műszak nővére már felhasználta az utolsó tenyésztőpalackot, ami még egyezik a régi kartonnal. Lefelé a folyáson a városi labor újabb csúcsot regisztrál a rezisztens (gyógyszernek ellenálló) E. coli-ból a tartályvízben, amit a családok isznak, amikor a városi vezeték felmondja a szolgálatot. A gyárak továbbra is leöblítik a maradék antibiotikumokat, mert az engedély mérői csak a színt és a szagot mérik, nem a hatóanyag-molekulákat, és a vevők a sebességért fizetnek. Ramesh mozgásban tartja a lagúnát, hogy az üzem ne álljon le, és a csapata ne veszítse el a bérét. A felesége az alapellátó szoba előtt vár egy gyerekkel, aki már nem reagál az olcsó szirupra. Ki tervezi meg a lefolyót és a rendelőt egyetlen rendszerként, mielőtt a víz minden háztartásnak ugyanazt a kemény leckét tanítaná?
 
 ---
 ### `amr--the-pharma-drain-tutors-the-tanks.places.0`
 
 **EN:** Patancheru Industrial Stretch
 
-**HU:** Patancheru Ipari Szakasz
+**HU:** Patancheru Industrial Stretch
 
 ---
 ### `amr--the-pharma-drain-tutors-the-tanks.pressureKeys.0`
@@ -1298,7 +1298,7 @@ Rosa Delgado a 14-es antenna alatt áll egy vágólappal, amely már nem egyezik
 
 **EN:** Goldstone Antelope Valley rim, California
 
-**HU:** Goldstone Antelope Valley pereme, Kalifornia
+**HU:** Goldstone Antelope Valley rim, California
 
 ---
 ### `asteroid--dish-backlog-leaves-the-valley-guessing.pressureKeys.0`
@@ -1353,7 +1353,7 @@ Ingrid Larsson a lőtéri út hószélén sétál, ahol a rénszarvasnyomok meg�
 
 **EN:** Esrange fringe, Kiruna municipality
 
-**HU:** Esrange pereme, Kiruna önkormányzat
+**HU:** Esrange fringe, Kiruna municipality
 
 ---
 ### `asteroid--kinetic-stack-waits-while-the-range-idles.pressureKeys.0`
@@ -1408,7 +1408,7 @@ Naledi Mokoena leoltja a panzió tornácvilágítását 02:10-kor, és még mind
 
 **EN:** Sutherland Sky Belt, Northern Cape
 
-**HU:** Sutherland Sky Belt, Észak-Fokföld
+**HU:** Sutherland Sky Belt, Northern Cape
 
 ---
 ### `asteroid--mine-glare-blanks-the-karoo-rock-watch.pressureKeys.0`
@@ -1463,7 +1463,7 @@ Kainoa Hale a bejárati kapunál találkozik az éjszakai legénységgel friss r
 
 **EN:** Maunakea access communities, Hawaiʻi Island
 
-**HU:** Maunakea megközelítési közösségek, Hawaiʻi-sziget
+**HU:** Maunakea access communities, Hawaiʻi Island
 
 ---
 ### `asteroid--time-share-freeze-after-every-rock-scare.pressureKeys.0`
@@ -1518,7 +1518,7 @@ Maya 22:47-kor lebélyegez, és azt találja, hogy a zónája már félig üres.
 
 **EN:** Cedar Junction Fulfillment Hub
 
-**HU:** Cedar Junction Teljesítési Központ
+**HU:** Cedar Junction Fulfillment Hub
 
 ---
 ### `automation--aisles-that-pick-themselves.pressureKeys.0`
@@ -1573,7 +1573,7 @@ Priya megnyitja a sort reggel 7:10-kor, és negyven kartont lát már „előre 
 
 **EN:** Lakeside Hospital Revenue Wing
 
-**HU:** Lakeside Kórház Bevételi Szárny
+**HU:** Lakeside Hospital Revenue Wing
 
 ---
 ### `automation--charts-coded-without-the-wing.pressureKeys.0`
@@ -1628,7 +1628,7 @@ Luis letörli a sót a garázs fehértáblájáról, és számolja a szabad hely
 
 **EN:** Harborview Driver Dispatch Garage
 
-**HU:** Harborview Sofőr-diszpécser Garázs
+**HU:** Harborview Driver Dispatch Garage
 
 ---
 ### `automation--medallions-against-empty-curbs.pressureKeys.0`
@@ -1683,7 +1683,7 @@ Rosa végigsétál a soron hajnal előtt, és hallja az új látórendszerű vá
 
 **EN:** Sunridge Berry Packing Shed
 
-**HU:** Sunridge Bogyós Csomagoló Fészer
+**HU:** Sunridge Berry Packing Shed
 
 ---
 ### `automation--sorters-took-the-piece-rate-weeks.pressureKeys.0`
@@ -1738,7 +1738,7 @@ Ama Diallo hajnalban térdel egy válogatóösvény mellett, és felemeli egy fi
 
 **EN:** Circuit Beach scrap yards
 
-**HU:** Circuit Beach hulladékudvarok
+**HU:** Circuit Beach scrap yards
 
 ---
 ### `cancer--circuit-beach-burns-still-seed-the-tumors.pressureKeys.0`
@@ -1793,7 +1793,7 @@ Omar Haddad végigsétál az éjszakai gyantavonalon a Vinyl Reach-en, zseblámp
 
 **EN:** Vinyl Reach night plant
 
-**HU:** Vinyl Reach éjszakai üzem
+**HU:** Vinyl Reach night plant
 
 ---
 ### `cancer--night-resin-lines-still-mark-the-livers.pressureKeys.0`
@@ -1848,7 +1848,7 @@ Priya Nair az Old Gasworks School nővéri szekrényében áll, és három újab
 
 **EN:** Old Gasworks School block
 
-**HU:** Old Gasworks School tömb
+**HU:** Old Gasworks School block
 
 ---
 ### `cancer--playground-vapors-no-one-capped-in-time.pressureKeys.0`
@@ -1903,7 +1903,7 @@ Linh Tran kitámasztja a sikátorajtót a Nail Row-n, és számolja a még pörg
 
 **EN:** Nail Row beauty corridor
 
-**HU:** Nail Row szépségfolyosó
+**HU:** Nail Row beauty corridor
 
 ---
 ### `cancer--solvent-booths-trade-lungs-for-tips.pressureKeys.0`
@@ -1958,7 +1958,7 @@ Jonas Veld feltöri a tanítási reagensekkel jelölt ládát, és még izzadó 
 
 **EN:** Stonepass Border Dry Port
 
-**HU:** Stonepass Határi Szárazkikötő
+**HU:** Stonepass Border Dry Port
 
 ---
 ### `chem-bio--lab-kits-under-the-wrong-code.pressureKeys.0`
@@ -2013,7 +2013,7 @@ Dr. Noah Abebe megtalálja a közös inkubátor naplóját, amit egy hatkor kiü
 
 **EN:** Cedar Contract Vivarium Park
 
-**HU:** Cedar Szerződéses Viváriumpark
+**HU:** Cedar Contract Vivarium Park
 
 ---
 ### `chem-bio--loaner-strains-after-closing-time.pressureKeys.0`
@@ -2068,7 +2068,7 @@ Rina Mercado vattapálcát tart egy festő felső ajkához műszakváltáskor. A
 
 **EN:** Weftbridge Dyeworks Row
 
-**HU:** Weftbridge Festőüzem-sor
+**HU:** Weftbridge Dyeworks Row
 
 ---
 ### `chem-bio--second-use-blues-on-the-dye-row.pressureKeys.0`
@@ -2123,7 +2123,7 @@ Marta Singh mintásüveget emel fel a kifolyó létrájáról, és a labor előt
 
 **EN:** Lowfen Municipal Waterworks
 
-**HU:** Lowfen Önkormányzati Vízművek
+**HU:** Lowfen Municipal Waterworks
 
 ---
 ### `chem-bio--what-the-outfall-never-names.pressureKeys.0`
@@ -2178,7 +2178,7 @@ Dr. Mensah szürke port töröl le egy totyogó tenyeréről, mielőtt vért veh
 
 **EN:** Old Fadama scrap-yard edge clinic, Accra
 
-**HU:** Old Fadama roncstelep-széli klinika, Accra
+**HU:** Old Fadama scrap-yard edge clinic, Accra
 
 ---
 ### `child--battery-dust-on-the-play-sand.pressureKeys.0`
@@ -2233,7 +2233,7 @@ Hajnalban Mamani nővér hideg sztetoszkópot szorít egy hároméves mellkasár
 
 **EN:** El Alto compound kitchens, La Paz highlands
 
-**HU:** El Alto udvarkonyhái, La Paz fennsík
+**HU:** El Alto compound kitchens, La Paz highlands
 
 ---
 ### `child--night-smoke-steals-small-breaths.pressureKeys.0`
@@ -2288,7 +2288,7 @@ Bello tiszt kigöngyöli a növekedési táblát, és a piros tinta már vár. A
 
 **EN:** Kano grain-market under-fives post, northern Nigeria
 
-**HU:** Kano gabonapiaci ötéves alatti poszt, Észak-Nigéria
+**HU:** Kano grain-market under-fives post, northern Nigeria
 
 ---
 ### `child--spoiled-millet-on-the-growth-chart.pressureKeys.0`
@@ -2343,7 +2343,7 @@ Reyes koordinátor fejeket számol a csatornaparti bölcsődében, és megáll a
 
 **EN:** Cebu canal-edge daycare, Visayas waterfront
 
-**HU:** Cebu csatornaparti bölcsőde, Visayas vízpart
+**HU:** Cebu canal-edge daycare, Visayas waterfront
 
 ---
 ### `child--trash-gutters-breed-the-fever.pressureKeys.0`
@@ -2406,7 +2406,7 @@ Amina három üres padot jelöl be a hét közepére. Ismeri azokat a neveket. A
 
 **EN:** Nairobi Mathare Ridge Schools
 
-**HU:** Nairobi Mathare Gerinc Iskolák
+**HU:** Nairobi Mathare Ridge Schools
 
 ---
 ### `cities--lessons-under-the-zinc-sheets.pressureKeys.0`
@@ -2469,7 +2469,7 @@ Liza felemeli a matracot, és penészt talál az alján. Újabb mosónapot mulas
 
 **EN:** Manila Estero de Vitas Pocket
 
-**HU:** Manilai Estero de Vitas Zseb
+**HU:** Manila Estero de Vitas Pocket
 
 ---
 ### `cities--the-estero-that-became-the-alley-dump.pressureKeys.0`
@@ -2532,7 +2532,7 @@ Andrés késve pecsételi be magát, és elveszíti a reggeli pótlékot. Megint
 
 **EN:** Bogotá Soacha Ridge Stops
 
-**HU:** Bogotá Soacha Gerinc Megállók
+**HU:** Bogotá Soacha Ridge Stops
 
 ---
 ### `cities--three-hours-down-the-ridge-for-a-shift.pressureKeys.0`
@@ -2595,7 +2595,7 @@ Meena újabb reggeli műszakot mulaszt el, amikor apja láza megint felugrik. Az
 
 **EN:** Ahmedabad Textile Lane Roofs
 
-**HU:** Ahmedabadi Textilsikátor Tetők
+**HU:** Ahmedabad Textile Lane Roofs
 
 ---
 ### `cities--tin-roofs-that-still-cook-after-dark.pressureKeys.0`
@@ -2934,7 +2934,7 @@ Hajnalban Rosa zsírceruzával jelöli az új repedést a Laguna Palcacocha fele
 
 **EN:** Carhuaz–Huaraz valley towns, Cordillera Blanca
 
-**HU:** Carhuaz–Huaraz völgyi városok, Cordillera Blanca
+**HU:** Carhuaz–Huaraz valley towns, Cordillera Blanca
 
 ---
 ### `coord--lakes-that-will-not-speak-together.pressureKeys.0`
@@ -2989,7 +2989,7 @@ Awa hét zsákot számol, ahol tavaly húszat. A szövetkezeti tanács a reggeli
 
 **EN:** Saint-Louis to Kayar landing beaches, Senegal
 
-**HU:** Saint-Louis-tól Kayarig kikötőpartok, Szenegál
+**HU:** Saint-Louis to Kayar landing beaches, Senegal
 
 ---
 ### `coord--nets-empty-logbooks-closed.pressureKeys.0`
@@ -3044,7 +3044,7 @@ Otieno nővér zacskóba teszi egy véres hasmenéses gyerek székletmintáját,
 
 **EN:** Kisumu–Homa Bay lakeshore belt, Lake Victoria
 
-**HU:** Kisumu–Homa Bay tóparti övezet, Viktória-tó
+**HU:** Kisumu–Homa Bay lakeshore belt, Lake Victoria
 
 ---
 ### `coord--shore-towns-separate-water-truths.pressureKeys.0`
@@ -3099,7 +3099,7 @@ Reggel tízre Meera táblagépe három különböző hőségjelzést mutat az NH
 
 **EN:** Delhi–Ghaziabad–Noida work corridors
 
-**HU:** Delhi–Ghaziabad–Noida munkafolyosók
+**HU:** Delhi–Ghaziabad–Noida work corridors
 
 ---
 ### `coord--three-cities-one-heat-wave.pressureKeys.0`
@@ -3154,7 +3154,7 @@ Mira a sétányon jár hajnal első fényénél mérőrúddal és jegyzetfüzett
 
 **EN:** Cattail Bend Flats
 
-**HU:** Gyékénykanyar-síkság
+**HU:** Cattail Bend Flats
 
 ---
 ### `eco--cranes-over-concrete.pressureKeys.0`
@@ -3209,7 +3209,7 @@ Jonas felhúzza az utolsó hálót a régi gátnál, és hat sovány halat szám
 
 **EN:** Silver Ladder Bend
 
-**HU:** Ezüstlétra-kanyar
+**HU:** Silver Ladder Bend
 
 ---
 ### `eco--empty-nets-at-the-weir.pressureKeys.0`
@@ -3264,7 +3264,7 @@ Elena leállítja a motort ott, ahol a tengerifűnek sötétítenie kellene a se
 
 **EN:** Glassgrass Sound
 
-**HU:** Üvegfű-öböl
+**HU:** Glassgrass Sound
 
 ---
 ### `eco--sand-where-meadows-waved.pressureKeys.0`
@@ -3319,7 +3319,7 @@ Tomas a forrásnál térdel, és megtölt egy üveget. A víz zavarosan folyik a
 
 **EN:** Lichen Stair Valley
 
-**HU:** Zuzmólépcső-völgy
+**HU:** Lichen Stair Valley
 
 ---
 ### `eco--spring-without-frogs.pressureKeys.0`
@@ -3594,7 +3594,7 @@ Hajnal előtt Bayarmaa felemeli a kályha fedelét a filc gerben, és újabb nye
 
 **EN:** Ulaanbaatar Ger District Lanes
 
-**HU:** Ulánbátor Ger-negyedi utcák
+**HU:** Ulaanbaatar Ger District Lanes
 
 ---
 ### `energy-access--coal-smoke-fills-the-gap-the-grid-left.pressureKeys.0`
@@ -3649,7 +3649,7 @@ Rosa számolja a rakpart előtetője alatt rakott zsákokat, és a generátort f
 
 **EN:** Camotes Island Rice Co-op Wharf
 
-**HU:** Camotes-szigeti rizsszövetkezeti rakpart
+**HU:** Camotes Island Rice Co-op Wharf
 
 ---
 ### `energy-access--harvest-waits-while-the-genset-coughs.pressureKeys.0`
@@ -3704,7 +3704,7 @@ Chinedu lekapcsolja az előre fizetett kábelt a tanterem gerendájáról, amiko
 
 **EN:** Makoko Lagoon Stilt Blocks
 
-**HU:** Makoko lagúnai cölöpház-tömbök
+**HU:** Makoko Lagoon Stilt Blocks
 
 ---
 ### `energy-access--light-sold-by-the-hour-on-the-lagoon.pressureKeys.0`
@@ -3759,7 +3759,7 @@ Dolma vizet forral egyetlen égőn, és nézi, hogy az autokláv mutatója holta
 
 **EN:** Humla Trailhead Health Post
 
-**HU:** Humla ösvényeleji egészségügyi állomás
+**HU:** Humla Trailhead Health Post
 
 ---
 ### `energy-access--the-sterilizer-sleeps-through-the-night-shift.pressureKeys.0`
@@ -3814,7 +3814,7 @@ Mielőtt a fűszerbódék kinyitnának, Hawa kinyitja az egészségügyi szövet
 
 **EN:** Borama central women’s market lanes, Awdal
 
-**HU:** Borama központi női piaci sorok, Awdal
+**HU:** Borama central women’s market lanes, Awdal
 
 ---
 ### `fgm--dawn-bookings-in-the-women-s-lanes.pressureKeys.0`
@@ -3869,7 +3869,7 @@ Sara letörli a táblát az utolsó óra után, és dobokat hall egy udvarból a
 
 **EN:** Ranya foothill wedding courtyards, Sulaymaniyah Governorate
 
-**HU:** Ranya domblábi esküvői udvarok, Sulaymaniyah kormányzóság
+**HU:** Ranya foothill wedding courtyards, Sulaymaniyah Governorate
 
 ---
 ### `fgm--elders-still-name-the-pure-bride.pressureKeys.0`
@@ -3924,7 +3924,7 @@ Aminata rizseszsákokat számol a kölcsönös segély raktárában, miközben a
 
 **EN:** Makump grove edge, Tonkolili District
 
-**HU:** Makump liget széle, Tonkolili kerület
+**HU:** Makump grove edge, Tonkolili District
 
 ---
 ### `fgm--grove-dues-open-the-bush.pressureKeys.0`
@@ -3979,7 +3979,7 @@ Nour a közjegyzői sorban áll a lánya iskolai igazolványával és egy össze
 
 **EN:** Abnub marriage-notary row, Minya Governorate
 
-**HU:** Abnub házassági-közjegyzői sor, Minya kormányzóság
+**HU:** Abnub marriage-notary row, Minya Governorate
 
 ---
 ### `fgm--stamps-still-bless-the-cut.pressureKeys.0`
@@ -4046,7 +4046,7 @@ Ki tervez folyami logisztikát úgy, hogy egy szövetkezeti stég továbbra is e
 
 **EN:** Millrace Flats
 
-**HU:** Millrace Lakótelep
+**HU:** Millrace Flats
 
 ---
 ### `food--barges-pass-the-small-jetties-by.pressureKeys.0`
@@ -4113,7 +4113,7 @@ Ki tervez mag- és konyharendszereket úgy, hogy egy gerinci iskola etethesse a 
 
 **EN:** Ladder Ridge Parish
 
-**HU:** Ladder Ridge Plébánia
+**HU:** Ladder Ridge Parish
 
 ---
 ### `food--blight-takes-the-parish-potatoes.pressureKeys.0`
@@ -4180,7 +4180,7 @@ Ki tervezi újra a kaput úgy, hogy a friss étel túlélje az órát a teheraut
 
 **EN:** Copper Gate Wholesale
 
-**HU:** Copper Gate Nagyker
+**HU:** Copper Gate Wholesale
 
 ---
 ### `food--dawn-crates-rot-at-the-gate.pressureKeys.0`
@@ -4247,7 +4247,7 @@ Ki tervez vizet és élelmiszer-útvonalakat együtt úgy, hogy egy mobil segít
 
 **EN:** Thorn Well Circuit
 
-**HU:** Thorn Well Körút
+**HU:** Thorn Well Circuit
 
 ---
 ### `food--wells-on-the-circuit-turn-to-mud.pressureKeys.0`
@@ -4302,7 +4302,7 @@ Aung Myint legénységi jelvényeket bélyegez a mólópultnál, ahogy a dagály
 
 **EN:** Sittwe Jetty Labor Desk
 
-**HU:** Sittwe Móló Munkaügyi Pult
+**HU:** Sittwe Jetty Labor Desk
 
 ---
 ### `genocide--crew-badges-that-never-return.pressureKeys.0`
@@ -4357,7 +4357,7 @@ Nyibol Deng hajnalban számolja a zsákokat, és tizenkettővel kevesebbet kap a
 
 **EN:** Wau Relief Consignment Yard
 
-**HU:** Wau Segélyszállítmány Udvar
+**HU:** Wau Relief Consignment Yard
 
 ---
 ### `genocide--ration-cards-that-starve-a-block.pressureKeys.0`
@@ -4412,7 +4412,7 @@ Lirije Krasniqi a hosszú asztalra rakja az ösztöndíj-táblagépeket, mielőt
 
 **EN:** Prizren Municipal Scholarship Board
 
-**HU:** Prizren Önkormányzati Ösztöndíjbizottság
+**HU:** Prizren Municipal Scholarship Board
 
 ---
 ### `genocide--tablets-that-fail-one-language.pressureKeys.0`
@@ -4467,7 +4467,7 @@ Esperance Mukamana 1:10-kor bezárja a nyilvántartási szárnyat, de a pulton m
 
 **EN:** Goma Central Hospital Records Wing
 
-**HU:** Goma Központi Kórház Nyilvántartási Szárnya
+**HU:** Goma Central Hospital Records Wing
 
 ---
 ### `genocide--ward-lists-sold-after-midnight.pressureKeys.0`
@@ -4538,7 +4538,7 @@ Ki tervezi meg az elbocsátás utáni órákat úgy, hogy a gyógyulás ne legye
 
 **EN:** County General ambulance bay curb
 
-**HU:** County General mentőöböl járdaszegélye
+**HU:** County General ambulance bay curb
 
 ---
 ### `homeless--discharged-still-weak-to-the-ambulance-bay.pressureKeys.0`
@@ -4609,7 +4609,7 @@ Ki tervezi meg a következő órákat úgy, hogy egy családot ne bocsássanak k
 
 **EN:** Sunbelt Weekly Inn strip, Mesa corridors
 
-**HU:** Sunbelt Weekly Inn sáv, Mesa folyosók
+**HU:** Sunbelt Weekly Inn strip, Mesa corridors
 
 ---
 ### `homeless--noon-checkout-into-a-furnace-lot.pressureKeys.0`
@@ -4680,7 +4680,7 @@ Ki tervezi meg a birtoklást úgy, hogy egy kifizetett otthon bérelt földön n
 
 **EN:** Palm Court senior trailer park
 
-**HU:** Palm Court idősek lakókocsiparkja
+**HU:** Palm Court senior trailer park
 
 ---
 ### `homeless--sold-out-from-under-the-fixed-check.pressureKeys.0`
@@ -4751,7 +4751,7 @@ Ki tervezi meg a biztonságos folytonosságot, amikor a menedék órája és az 
 
 **EN:** Riverbend Family Justice annex
 
-**HU:** Riverbend Family Justice melléképület
+**HU:** Riverbend Family Justice annex
 
 ---
 ### `homeless--thirty-safe-nights-then-the-courthouse-lot.pressureKeys.0`
@@ -4806,7 +4806,7 @@ Nia felhasít egy makrélát a nedves deszkán, és ugyanabban a vödörben öbl
 
 **EN:** Old Quay Fish Landing
 
-**HU:** Old Quay Halkirakodó
+**HU:** Old Quay Fish Landing
 
 ---
 ### `infectious--gutting-rinse-sickens-old-quay-landings.pressureKeys.0`
@@ -4861,7 +4861,7 @@ Rosa bottal emel fel egy szakadt infúziós zsákot, mielőtt a reggeli vásárl
 
 **EN:** Dump Edge Lane Settlement
 
-**HU:** Dump Edge Lane Település
+**HU:** Dump Edge Lane Settlement
 
 ---
 ### `infectious--medical-waste-tips-fever-into-dump-edge-lane.pressureKeys.0`
@@ -4916,7 +4916,7 @@ Okonkwo tanárnő megszámolja az üres helyeket a szünet után, és tizenkett�
 
 **EN:** Maple Primary School Yard
 
-**HU:** Maple Primary Iskolaudvar
+**HU:** Maple Primary School Yard
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.pressureKeys.0`
@@ -4971,7 +4971,7 @@ Karim imám hajnal előtt kinyitja az udvar kapuját, és három férfit talál,
 
 **EN:** Station Road Pilgrim Lodge
 
-**HU:** Station Road Zarándok Lodge
+**HU:** Station Road Pilgrim Lodge
 
 ---
 ### `infectious--shared-cistern-cough-fills-station-road-lodge.pressureKeys.0`
@@ -5026,7 +5026,7 @@ Pasang stabilizálja a bambuszrudakat, ahogy a hordágy beveszi az utolsó szerp
 
 **EN:** Solukhumbu trail clinic
 
-**HU:** Solukhumbu ösvényklinika
+**HU:** Solukhumbu trail clinic
 
 ---
 ### `maternal--bamboo-stretcher-at-the-switchback.pressureKeys.0`
@@ -5081,7 +5081,7 @@ Rosa még poros ujjakkal írja alá a műszaknaplót, és leül a klinika folyos
 
 **EN:** Cerro Alto workers’ maternity desk
 
-**HU:** Cerro Alto munkás szülészeti pult
+**HU:** Cerro Alto workers’ maternity desk
 
 ---
 ### `maternal--dust-in-the-labor-queue.pressureKeys.0`
@@ -5136,7 +5136,7 @@ Meena már meleg ruhával törli húga homlokát. Az éjszaka bent tartja a napp
 
 **EN:** Rakhiyal chawl maternity room
 
-**HU:** Rakhiyal chawl szülőszoba
+**HU:** Rakhiyal chawl maternity room
 
 ---
 ### `maternal--night-heat-on-the-birth-floor.pressureKeys.0`
@@ -5191,7 +5191,7 @@ Amina kinyitja a kis hűtőt, és megérzi a levegőt benne. Csak hűvös, nem h
 
 **EN:** Mtwapa creek birth shelter
 
-**HU:** Mtwapa pataki szülőmenedék
+**HU:** Mtwapa creek birth shelter
 
 ---
 ### `maternal--warm-vials-at-low-tide.pressureKeys.0`
@@ -5246,7 +5246,7 @@ Ama gyömbéres vízben kicsavart ruhával hűti az új anya csuklóit, ahogy a 
 
 **EN:** Maternity annex, Komfo Anokye Teaching Hospital, Kumasi
 
-**HU:** Szülészeti melléképület, Komfo Anokye Oktatókórház, Kumasi
+**HU:** Maternity annex, Komfo Anokye Teaching Hospital, Kumasi
 
 ---
 ### `memory--auntie-remedies-never-reach-the-chart.pressureKeys.0`
@@ -5301,7 +5301,7 @@ Kenji végighúzza hüvelykujját egy cédrusgerendán, és megáll egy sekély 
 
 **EN:** Nishijin timber yard, Kyoto
 
-**HU:** Nishijin fatelep, Kiotó
+**HU:** Nishijin timber yard, Kyoto
 
 ---
 ### `memory--joinery-marks-leave-with-the-last-master.pressureKeys.0`
@@ -5356,7 +5356,7 @@ Mary hajnalban kilép a szürke peremre, és úgy nevezi meg a jeget, ahogy anyj
 
 **EN:** Toksook Bay boat launch, Alaska
 
-**HU:** Toksook Bay csónakkikötő, Alaszka
+**HU:** Toksook Bay boat launch, Alaska
 
 ---
 ### `memory--safe-ice-only-the-aunties-can-name.pressureKeys.0`
@@ -5411,7 +5411,7 @@ Davies hallja a változást, mielőtt a riasztótábla kigyulladna. A kéményha
 
 **EN:** Port Talbot blast furnace control room, Wales
 
-**HU:** Port Talbot nagyolvasztó irányítóterem, Wales
+**HU:** Port Talbot blast furnace control room, Wales
 
 ---
 ### `memory--the-furnace-whisper-dies-at-shift-end.pressureKeys.0`
@@ -5698,7 +5698,7 @@ Mire a furgon eléri a Klinikasort, az anya vérzése megváltozott. Layla keze 
 
 **EN:** Dust Road Clinic Row
 
-**HU:** Porút Klinikasor
+**HU:** Dust Road Clinic Row
 
 ---
 ### `mideast--ambulances-pay-twice-at-the-gate.pressureKeys.0`
@@ -5765,7 +5765,7 @@ Yusuf sáfrányt mér, amit nem tud eladni, és inasokat számol, akiket nem tud
 
 **EN:** Saffron Lane Souk
 
-**HU:** Sáfrány Utcai Szuk
+**HU:** Saffron Lane Souk
 
 ---
 ### `mideast--shutters-rise-only-after-the-cut.pressureKeys.0`
@@ -5832,7 +5832,7 @@ Hassan lánya megkérdezi, ültetnek-e újra. Van magja, de nincs biztos folyás
 
 **EN:** Twin Bank Canals
 
-**HU:** Ikerparti Csatornák
+**HU:** Twin Bank Canals
 
 ---
 ### `mideast--the-canal-gate-becomes-a-weapon.pressureKeys.0`
@@ -5899,7 +5899,7 @@ Amira legkisebbje köhög a nedvességben. A szövetkezet tud alapot önteni. Ne
 
 **EN:** Rubble Lane Blocks
 
-**HU:** Rom Utcai Tömbök
+**HU:** Rubble Lane Blocks
 
 ---
 ### `mideast--winter-walls-that-never-rise.pressureKeys.0`
@@ -5954,7 +5954,7 @@ Ade, a bérlői unió elnöke bérleti nyugtáknak a kötegével sétál be a te
 
 **EN:** Harborview Tenant Union Hall
 
-**HU:** Harborview Bérlői Unió Terme
+**HU:** Harborview Tenant Union Hall
 
 ---
 ### `misinfo--rent-strike-on-a-forged-memo.pressureKeys.0`
@@ -6009,7 +6009,7 @@ Ellis kikötőmester viharlapot tűz ki a rakpart táblájára első fényben. A
 
 **EN:** Seabrook Wharf Notice Board
 
-**HU:** Seabrook Rakpart Hirdetőtáblája
+**HU:** Seabrook Wharf Notice Board
 
 ---
 ### `misinfo--sirens-nobody-believes.pressureKeys.0`
@@ -6064,7 +6064,7 @@ Ruiz igazgató kinyitja a termet a hegesztői bizonyítvány-felülvizsgálatra,
 
 **EN:** Milltown Night School Hall
 
-**HU:** Milltown Esti Iskola Terme
+**HU:** Milltown Night School Hall
 
 ---
 ### `misinfo--the-lecture-that-wasn-t-sold.pressureKeys.0`
@@ -6119,7 +6119,7 @@ Marisol a lobby pultnál áll egy papírlistával a kimaradt inzulinátvételekr
 
 **EN:** Riverside Free Clinic Lobby
 
-**HU:** Riverside Ingyenes Klinika Előcsarnoka
+**HU:** Riverside Free Clinic Lobby
 
 ---
 ### `misinfo--the-nurse-who-never-dialed.pressureKeys.0`
@@ -6186,7 +6186,7 @@ Elena lefagyaszthatja a saját oldalát és gyengének tűnhet, vagy hagyhatja b
 
 **EN:** Iron Quay Liaison Yard, lower Danube corridor
 
-**HU:** Iron Quay Összekötő Udvar, alsó Duna-folyosó
+**HU:** Iron Quay Liaison Yard, lower Danube corridor
 
 ---
 ### `nuclear--drills-without-a-shared-clock.pressureKeys.0`
@@ -6253,7 +6253,7 @@ Inuk hüvelykujja a fokozás gomb felett lebeg, miközben unokatestvére mentőr
 
 **EN:** Floe Watch Headland, Labrador coast
 
-**HU:** Floe Watch Headland, Labrador-part
+**HU:** Floe Watch Headland, Labrador coast
 
 ---
 ### `nuclear--ice-clutter-looks-inbound.pressureKeys.0`
@@ -6320,7 +6320,7 @@ Kenji lefagyaszthat minden javítást és nézheti, ahogy a stack rohad, vagy ta
 
 **EN:** Granite Command Hollow, Appalachian foothills
 
-**HU:** Granite Command Hollow, Appalache-előhegység
+**HU:** Granite Command Hollow, Appalachian foothills
 
 ---
 ### `nuclear--near-send-on-patch-night.pressureKeys.0`
@@ -6387,7 +6387,7 @@ Maya keze tovább marad a megerősítő kapcsolón, mint amennyit az ellenőrző
 
 **EN:** Clearwater Silo Road, northern Great Plains
 
-**HU:** Clearwater Silo Road, északi Nagy-síkság
+**HU:** Clearwater Silo Road, northern Great Plains
 
 ---
 ### `nuclear--sirens-over-the-grain-elevators.pressureKeys.0`
@@ -6417,7 +6417,7 @@ Maya keze tovább marad a megerősítő kapcsolón, mint amennyit az ellenőrző
 
 **EN:** Advance pay chains the kiln on Dust Ridge
 
-**HU:** Az előleg bilincsbe veri a kemencét a Porgerincen
+**HU:** Az előleg bilincsbe veri a kemencét a Dust Ridge-en
 
 ---
 ### `poverty--advance-pay-chains-the-kiln-on-dust-ridge.stakeholder`
@@ -6442,7 +6442,7 @@ Rafi a ujjába köhög, és mégis újabb téglát rak a kocsira. A kemencefőn�
 
 **EN:** Dust Ridge
 
-**HU:** Porgerinc
+**HU:** Dust Ridge
 
 ---
 ### `poverty--advance-pay-chains-the-kiln-on-dust-ridge.pressureKeys.0`
@@ -6472,7 +6472,7 @@ Rafi a ujjába köhög, és mégis újabb téglát rak a kocsira. A kemencefőn�
 
 **EN:** Dawn fares strand the cleaners at Ferry Slip
 
-**HU:** A hajnali díjak parton hagyják a takarítókat a Kompkikötőnél
+**HU:** A hajnali díjak parton hagyják a takarítókat a Ferry Slip-nél
 
 ---
 ### `poverty--dawn-fares-strand-the-cleaners-at-ferry-slip.stakeholder`
@@ -6497,7 +6497,7 @@ Nisha hajnali négykor befejezi az irodatornyot, és az első hajóhoz rohan. A 
 
 **EN:** Ferry Slip
 
-**HU:** Kompkikötő
+**HU:** Ferry Slip
 
 ---
 ### `poverty--dawn-fares-strand-the-cleaners-at-ferry-slip.pressureKeys.0`
@@ -6527,7 +6527,7 @@ Nisha hajnali négykor befejezi az irodatornyot, és az első hajóhoz rohan. A 
 
 **EN:** The tip owns the pickers on Sorting Lane
 
-**HU:** A telep birtokolja a szedőket a Válogató Utcán
+**HU:** A telep birtokolja a szedőket a Sorting Lane-en
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.stakeholder`
@@ -6552,7 +6552,7 @@ Napfelkelte előtt Meena egy zsák vizes kartont cipelt fel a Válogató Utcán,
 
 **EN:** Sorting Lane
 
-**HU:** Válogató Utca
+**HU:** Sorting Lane
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.pressureKeys.0`
@@ -6582,7 +6582,7 @@ Napfelkelte előtt Meena egy zsák vizes kartont cipelt fel a Válogató Utcán,
 
 **EN:** Tuition dies when the mast fails in Hill Signal
 
-**HU:** A tandíj elhal, ha az árbóc meghibásodik a Dombjelzőn
+**HU:** A tandíj elhal, ha az árbóc meghibásodik a Hill Signal-on
 
 ---
 ### `poverty--tuition-dies-when-the-mast-fails-in-hill-signal.stakeholder`
@@ -6607,7 +6607,7 @@ Lila tanárnő hétkor kinyitja a közös táblagépet, és üres képernyőt ta
 
 **EN:** Hill Signal
 
-**HU:** Dombjelző
+**HU:** Hill Signal
 
 ---
 ### `poverty--tuition-dies-when-the-mast-fails-in-hill-signal.pressureKeys.0`
@@ -6772,7 +6772,7 @@ Marta a rózsaszín felmondólevelet a malomsori kapuhoz hajtja, mielőtt megsz�
 
 **EN:** Riverside Mill Row Gate
 
-**HU:** Riverside Malomsori Kapu
+**HU:** Riverside Mill Row Gate
 
 ---
 ### `radicalization--layoff-notice-new-names-on-the-wall.pressureKeys.0`
@@ -7157,7 +7157,7 @@ Keisha Jackson a rádión hív a 14-es kilométerkőnél, miközben az eső lepe
 
 **EN:** Greenville Birth Corridor, Mississippi Delta
 
-**HU:** Greenville Szülési Folyosó, Mississippi-delta
+**HU:** Greenville Birth Corridor, Mississippi Delta
 
 ---
 ### `reproductive--ninety-minutes-past-the-last-contraction.pressureKeys.0`
@@ -7212,7 +7212,7 @@ Sunita Devi kinyitja a terhesgondozási nyilvántartást, és új nevet ír be a
 
 **EN:** Sanganer Adolescent ANC Desk, Jaipur fringe
 
-**HU:** Sanganer Serdülő ANC Pult, Jaipur perem
+**HU:** Sanganer Adolescent ANC Desk, Jaipur fringe
 
 ---
 ### `reproductive--she-arrives-already-mid-pregnancy.pressureKeys.0`
@@ -7542,7 +7542,7 @@ Mwale nővér rúddal tolja a klinikacsónakot a bevágás felé, ahol egykor a 
 
 **EN:** Barotse floodplain hamlets, Western Zambia
 
-**HU:** Barotse ártéri tanyák, Nyugat-Zambia
+**HU:** Barotse floodplain hamlets, Western Zambia
 
 ---
 ### `rural-roads--clinic-boat-cannot-beat-the-cut-off-levee.pressureKeys.0`
@@ -7597,7 +7597,7 @@ Leanne Cardinal egészségügyi igazgató nézi, ahogy a vállalkozó hóeke vis
 
 **EN:** Peerless Lake ice spur, northern Alberta
 
-**HU:** Peerless Lake jégleágazás, északi Alberta
+**HU:** Peerless Lake ice spur, northern Alberta
 
 ---
 ### `rural-roads--fuel-and-dialysis-miss-the-thaw-window.pressureKeys.0`
@@ -7652,7 +7652,7 @@ Rosa hajnalban tolatja az első kisteherautót a Bailey-hídhoz. Zöld kávécse
 
 **EN:** Cajón Seco bridge spur, Chiapas highlands
 
-**HU:** Cajón Seco híd-leágazás, chiapasi felföld
+**HU:** Cajón Seco bridge spur, Chiapas highlands
 
 ---
 ### `rural-roads--harvest-trucks-stop-at-the-broken-bailey.pressureKeys.0`
@@ -7707,7 +7707,7 @@ Batbold igazgató a beszállókapunál áll termossszal és névsorral. A busz s
 
 **EN:** Ömnögovi winter school trace, South Gobi
 
-**HU:** Ömnögovi téli iskolai nyom, Dél-Góbi
+**HU:** Ömnögovi winter school trace, South Gobi
 
 ---
 ### `rural-roads--winter-school-bus-never-clears-the-dune-line.pressureKeys.0`
@@ -7762,7 +7762,7 @@ Műszakváltáskor Devi a fülkét keresi az üzemanyagbázis mögött. A lámpa
 
 **EN:** Crossridge Freight Yard
 
-**HU:** Crossridge Teherudvar
+**HU:** Crossridge Freight Yard
 
 ---
 ### `sanitation--behind-the-fuel-bay-is-the-toilet.pressureKeys.0`
@@ -7817,7 +7817,7 @@ Az első csengőre Amina a lányok tömbje előtt áll, húga kezét fogva. A so
 
 **EN:** Sunwell Primary Compound
 
-**HU:** Sunwell Általános Iskola Udvara
+**HU:** Sunwell Primary Compound
 
 ---
 ### `sanitation--latrine-queues-send-girls-home-by-noon.pressureKeys.0`
@@ -7872,7 +7872,7 @@ Rafi egy óvatos lépéssel a másik után cipeli le anyját a közös lépcsőn
 
 **EN:** Ladder Cut Settlement
 
-**HU:** Ladder Cut Település
+**HU:** Ladder Cut Settlement
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.pressureKeys.0`
@@ -7927,7 +7927,7 @@ Mielőtt a tálcakocsik elindulnának, Okonkwo nővér ablakot nyit a B szárnyb
 
 **EN:** Olive Court Rest Home
 
-**HU:** Olive Court Otthon
+**HU:** Olive Court Rest Home
 
 ---
 ### `sanitation--the-wing-that-smells-before-breakfast.pressureKeys.0`
@@ -7982,7 +7982,7 @@ Hajnal előtt Amina legereblyézi az utolsó hűvös faszént a családja kemenc
 
 **EN:** Salt Creek Mangrove Fringe
 
-**HU:** Salt Creek Mangrove-szegély
+**HU:** Salt Creek Mangrove Fringe
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.pressureKeys.0`
@@ -8037,7 +8037,7 @@ Okello úr kinyitja az elméleti szárnyat, és a műhely láncát a helyén hag
 
 **EN:** Hillside Polytechnic Annex
 
-**HU:** Hillside Politechnikum Melléképület
+**HU:** Hillside Polytechnic Annex
 
 ---
 ### `short-termism--exam-scores-locked-workshops.pressureKeys.0`
@@ -8092,7 +8092,7 @@ Beszedési pénteken Sita gondnok krétával jelöl egy újabb megrepedt lépcs�
 
 **EN:** Canal Row Tenements
 
-**HU:** Canal Row Bérházak
+**HU:** Canal Row Tenements
 
 ---
 ### `short-termism--rent-due-stairs-failing.pressureKeys.0`
@@ -8147,7 +8147,7 @@ Hari első fényben járja a gátat, és azt találja, hogy a szivattyú még mi
 
 **EN:** Blackwater Fen Allotments
 
-**HU:** Blackwater Fen Kiosztott Földek
+**HU:** Blackwater Fen Allotments
 
 ---
 ### `short-termism--spring-flood-sold-as-dry-fields.pressureKeys.0`
@@ -8210,7 +8210,7 @@ Meera felajánlhat egy menhelyi ágyat. Nem tudja törölni a kölcsönt, amely 
 
 **EN:** Bhadohi Loom Lanes
 
-**HU:** Bhadohi szövősikátorok
+**HU:** Bhadohi Loom Lanes
 
 ---
 ### `slavery--knot-counts-after-midnight.pressureKeys.0`
@@ -8273,7 +8273,7 @@ Amina leragasztja Tatu izomhúzódását, és olyan tanáccsal küldi haza, amel
 
 **EN:** Kolwezi Dig Trenches
 
-**HU:** Kolwezi ásóárkok
+**HU:** Kolwezi Dig Trenches
 
 ---
 ### `slavery--ore-sacks-instead-of-schoolbags.pressureKeys.0`
@@ -8336,7 +8336,7 @@ Som a következő fogást olyan kötéssel dolgozza le, amely nem tart. Ha a mó
 
 **EN:** Ranong Channel Boats
 
-**HU:** Ranong-csatorna hajói
+**HU:** Ranong Channel Boats
 
 ---
 ### `slavery--papers-locked-below-the-ice-line.pressureKeys.0`
@@ -8399,7 +8399,7 @@ Rina legokosabb tanítványa, Dewi óra közben elalszik, csuklóján még ott a
 
 **EN:** Sambas Palm Blocks
 
-**HU:** Sambas pálmatömbök
+**HU:** Sambas Palm Blocks
 
 ---
 ### `slavery--the-scale-that-never-zeros-the-loan.pressureKeys.0`
@@ -8454,7 +8454,7 @@ Amina megtöröl egy újszülött arcát, és hallja, hogy a sípolás újra kez
 
 **EN:** Nairobi Maternity Waiting Home Courtyard
 
-**HU:** Nairobi Szülészeti Váróotthon Udvara
+**HU:** Nairobi Maternity Waiting Home Courtyard
 
 ---
 ### `smoking--courtyard-haze-reaches-the-newborn-cots.pressureKeys.0`
@@ -8509,7 +8509,7 @@ Marc kinyitja a szünetszoba ajtaját egy dupla darus műszak után, és belép 
 
 **EN:** Marseille Fos Container Break Yard
 
-**HU:** Marseille Fos Konténer Szünetudvar
+**HU:** Marseille Fos Container Break Yard
 
 ---
 ### `smoking--dock-break-rooms-still-billow.pressureKeys.0`
@@ -8564,7 +8564,7 @@ Lan a sulikapunál vár, fia inhalátorát a markában szorítva. A snacksor a c
 
 **EN:** Hanoi Secondary Gate Snack Strip
 
-**HU:** Hanoi Középiskolai Kapu Snacksor
+**HU:** Hanoi Secondary Gate Snack Strip
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.pressureKeys.0`
@@ -8619,7 +8619,7 @@ Rosa a 7-es kapunál méri fel a sort a második műszakkürt előtt. A nők egy
 
 **EN:** Tijuana Maquiladora Gate 7
 
-**HU:** Tijuana Maquiladora 7-es Kapu
+**HU:** Tijuana Maquiladora Gate 7
 
 ---
 ### `smoking--the-gate-line-runs-on-shared-packs.pressureKeys.0`
@@ -8686,7 +8686,7 @@ Rosa követheti a portált és tisztán vághat. Csempészhet egy áthidalót é
 
 **EN:** Copperline Grid Hamlet
 
-**HU:** Copperline Hálózati Falucska
+**HU:** Copperline Grid Hamlet
 
 ---
 ### `totalitarianism--compliant-blocks-stay-lit.pressureKeys.0`
@@ -8753,7 +8753,7 @@ Nila elküldheti a harmadik kezet és megtöltheti a tartályt. Üresjáraton á
 
 **EN:** Saltreed Fisher Quay
 
-**HU:** Saltreed Halászrakpart
+**HU:** Saltreed Fisher Quay
 
 ---
 ### `totalitarianism--fuel-only-for-the-logged-crew.pressureKeys.0`
@@ -8820,7 +8820,7 @@ Kei kántálhat és járathatja a motort. Hallgathat és nézheti, ahogy a kész
 
 **EN:** Harborlane Produce Arcades
 
-**HU:** Harborlane Terményárkádok
+**HU:** Harborlane Produce Arcades
 
 ---
 ### `totalitarianism--no-chant-no-cold-storage.pressureKeys.0`
@@ -8887,7 +8887,7 @@ Ha Amira mégis felveszi, a jelvénye holnap talán nem nyitja a raktárszekrén
 
 **EN:** Millbridge Community Hospital
 
-**HU:** Millbridge Közösségi Kórház
+**HU:** Millbridge Community Hospital
 
 ---
 ### `totalitarianism--the-ward-docks-your-household.pressureKeys.0`
@@ -8942,7 +8942,7 @@ Lila egy hálós zsák nedves törlőkendőt és miniatűr palackot húz le a re
 
 **EN:** Palm Reach Hotel Strip
 
-**HU:** Palm Reach Hotelsáv
+**HU:** Palm Reach Hotel Strip
 
 ---
 ### `waste--linen-that-washes-out-to-sea.pressureKeys.0`
@@ -8997,7 +8997,7 @@ Rina vajkéssel feszít fel egy repedt telefont, mielőtt megérkezne a reggeli 
 
 **EN:** Circuit Lane Scrap Alleys
 
-**HU:** Circuit Lane Hulladékutcái
+**HU:** Circuit Lane Scrap Alleys
 
 ---
 ### `waste--smoke-over-circuit-lane.pressureKeys.0`
@@ -9052,7 +9052,7 @@ Dev bottal görget ki egy duzzadt e-bike akkucsomagot a kioszk árnyékából. A
 
 **EN:** Junction Battery Sheds
 
-**HU:** Junction Akkumulátor-fészerek
+**HU:** Junction Battery Sheds
 
 ---
 ### `waste--swollen-packs-behind-the-shed.pressureKeys.0`
@@ -9107,7 +9107,7 @@ Maya vállal nekimegy a B Étkezde hátsó ajtajának és megdermed. Habtálcák
 
 **EN:** Riverside Campus Canteens
 
-**HU:** Riverside Campus Étkezdék
+**HU:** Riverside Campus Canteens
 
 ---
 ### `waste--trays-stacked-to-the-dorm-vents.pressureKeys.0`
@@ -9650,7 +9650,7 @@ Meera leteszi a halotti anyakönyvi kivonatot a pultra, és a saját nevén kér
 
 **EN:** Old Bund Land Registry
 
-**HU:** Old Bund Földhivatal
+**HU:** Old Bund Land Registry
 
 ---
 ### `women--the-deed-still-needs-his-name.pressureKeys.0`
@@ -9705,7 +9705,7 @@ Nita odacsúsztatja a kártyáját a pulton, és az implantátum utántöltést 
 
 **EN:** Lakeview Family Planning Counter
 
-**HU:** Lakeview Családtervezési Pult
+**HU:** Lakeview Family Planning Counter
 
 ---
 ### `women--the-form-still-wants-his-signature.pressureKeys.0`
@@ -9815,7 +9815,7 @@ Asha felhajtja a sisakját, amikor a műhelycsengő 17:15-kor megszólal. A hege
 
 **EN:** East Yard Trade School
 
-**HU:** East Yard Szakiskola
+**HU:** East Yard Trade School
 
 ---
 ### `women--the-welding-bay-closes-at-dusk.pressureKeys.0`

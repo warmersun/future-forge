@@ -22,14 +22,14 @@ Source pack: `locales/es/domains.json`
 
 **EN:** Automator
 
-**ES:** automatizador
+**ES:** Automatizador
 
 ---
 ### `lifeforce.label`
 
 **EN:** LifeForce
 
-**ES:** fuerza vital
+**ES:** Fuerza vital
 
 ---
 ### `link.label`
@@ -43,7 +43,7 @@ Source pack: `locales/es/domains.json`
 
 **EN:** Mover
 
-**ES:** Agente de mudanzas
+**ES:** Motor
 
 ---
 ### `portal.label`
@@ -57,7 +57,7 @@ Source pack: `locales/es/domains.json`
 
 **EN:** Power
 
-**ES:** Fuerza
+**ES:** Energía
 
 ---
 ## Shelves
@@ -75,14 +75,14 @@ Source pack: `locales/es/shelves.json`
 
 **EN:** Food & land
 
-**ES:** Comida y tierra
+**ES:** Alimentos y tierra
 
 ---
 ### `health.title`
 
 **EN:** Health & care
 
-**ES:** Cuidado de la salud
+**ES:** Salud y cuidados
 
 ---
 ### `learning.title`
@@ -128,7 +128,7 @@ Source pack: `locales/es/globals.json`
 
 **EN:** Healthspan and longer lives.
 
-**ES:** Esperanza de vida y vida más larga.
+**ES:** Esperanza de vida saludable y vidas más largas.
 
 ---
 ### `ageing.title`
@@ -142,7 +142,7 @@ Source pack: `locales/es/globals.json`
 
 **EN:** Dirty air from transport, industry, cooking.
 
-**ES:** Aire sucio del transporte, la industria, la cocina.
+**ES:** Aire sucio del transporte, la industria y la cocina.
 
 ---
 ### `air.title`
@@ -184,7 +184,7 @@ Source pack: `locales/es/globals.json`
 
 **EN:** Planetary defense and detection windows.
 
-**ES:** Ventanas de defensa y detección planetarias.
+**ES:** Defensa planetaria y ventanas de detección.
 
 ---
 ### `asteroid.title`
@@ -198,7 +198,7 @@ Source pack: `locales/es/globals.json`
 
 **EN:** Jobs and meaning under automation.
 
-**ES:** Empleos y significado bajo la automatización.
+**ES:** Empleo y sentido ante la automatización.
 
 ---
 ### `automation.title`
@@ -219,7 +219,7 @@ Source pack: `locales/es/globals.json`
 
 **EN:** Cure Cancer
 
-**ES:** curar el cáncer
+**ES:** Curar el cáncer
 
 ---
 ### `chem-bio.blurb`

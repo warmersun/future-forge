@@ -33,7 +33,7 @@ Short-term yield incentives, input lock-in, land inequality, climate stress, and
 
 **FR:**
 
-Incitations aux rendements à court terme, blocage des intrants, inégalités foncières, stress climatique et marchés qui sous-évaluent les dommages écologiques.
+Incitations aux rendements à court terme, dépendance aux intrants, inégalités foncières, stress climatique et marchés qui sous-évaluent les dommages écologiques.
 
 ---
 ### `ag.warnings`
@@ -44,7 +44,7 @@ High-tech farming that only works for large capital can lock out smallholders. F
 
 **FR:**
 
-Une agriculture de haute technologie qui ne fonctionne que pour le grand capital peut exclure les petits exploitants. Adaptez les inventions aux sols, à l’eau et aux connaissances des agriculteurs locaux – et non à des packages d’exportation de taille unique.
+Une agriculture high-tech qui ne marche que pour le grand capital peut exclure les petits exploitants. Adaptez les inventions aux sols, à l'eau et au savoir des agriculteurs locaux — pas à des packages d'export universels.
 
 ---
 ### `ageing.currentState`
@@ -55,7 +55,7 @@ Lifespans lengthened; healthspan did not always keep pace. Longevity science is 
 
 **FR:**
 
-Durée de vie allongée ; La durée de vie n'a pas toujours suivi le rythme. La science de la longévité est active, mais la plupart des gains proviennent toujours de la santé publique, des soins aux maladies chroniques et des déterminants sociaux – et non de pilules miracles.
+L'espérance de vie s'allonge ; l'espérance de vie en bonne santé n'a pas toujours suivi. La science de la longévité est active, mais la plupart des gains viennent encore de la santé publique, des soins aux maladies chroniques et des déterminants sociaux — pas de pilules miracles.
 
 ---
 ### `ageing.rootCauses`
@@ -143,7 +143,7 @@ Surveillance framed as “safety” can strip dignity. Invent for caregiver supp
 
 **FR:**
 
-La surveillance présentée comme « sécurité » peut détruire la dignité. Inventez le soutien aux soignants, la navigation et l’assistance respectueuse, et pas seulement les dispositifs de suivi.
+La surveillance présentée comme « sécurité » peut détruire la dignité. Inventez pour le soutien aux aidants, l’orientation et l’assistance respectueuse — pas seulement des dispositifs de suivi.
 
 ---
 ### `amr.currentState`
@@ -165,7 +165,7 @@ Overuse and misuse of antibiotics in humans and animals, weak diagnostics that f
 
 **FR:**
 
-Surutilisation et mauvaise utilisation des antibiotiques chez les humains et les animaux, diagnostics faibles qui obligent à un traitement à l’aveugle, mauvais contrôle des infections et sous-investissement dans les nouveaux antimicrobiens et dans la gestion.
+Surutilisation et mauvaise utilisation des antibiotiques chez les humains et les animaux, diagnostics faibles qui forcent un traitement à l’aveugle, mauvais contrôle des infections et sous-investissement dans les nouveaux antimicrobiens et la bonne gestion (stewardship).
 
 ---
 ### `amr.warnings`
@@ -187,7 +187,7 @@ Near-Earth object surveys have improved dramatically; no known civilization-endi
 
 **FR:**
 
-Les enquêtes sur les objets géocroiseurs se sont considérablement améliorées ; aucun impact connu sur la fin de la civilisation n’est imminent à court terme, mais des catalogues incomplets et une préparation à la déviation limitée signifient que la défense planétaire est un travail inachevé.
+Les enquêtes sur les objets géocroiseurs se sont considérablement améliorées ; aucun impact connu capable de mettre fin à la civilisation n’est imminent à court terme, mais des catalogues incomplets et une préparation limitée à la déviation signifient que la défense planétaire reste un travail inachevé.
 
 ---
 ### `asteroid.rootCauses`
@@ -220,7 +220,7 @@ Automation and AI already reshape warehouses, offices, transport, and customer s
 
 **FR:**
 
-L'automatisation et l'IA remodèlent déjà les entrepôts, les bureaux, les transports et le service client. Certains emplois disparaissent ou déqualifient ; les nouveaux apparaissent de manière inégale. Les débats sur l’UBI, la reconversion professionnelle et la réduction des semaines de travail sont des combats politiques en direct.
+L'automatisation et l'IA remodèlent déjà les entrepôts, les bureaux, les transports et le service client. Certains emplois disparaissent ou se déqualifient ; de nouveaux apparaissent de façon inégale. Les débats sur le revenu universel (UBI), la reconversion et les semaines plus courtes sont des combats politiques vivants.
 
 ---
 ### `automation.rootCauses`
@@ -275,7 +275,7 @@ Do not invent “cure all cancer overnight.” Prefer earlier detection, triage,
 
 **FR:**
 
-N’inventez pas « guérir tous les cancers du jour au lendemain ». Préférez une détection, un tri, une navigation et un accès plus précoces. Les allégations cliniques nécessitent l’honnêteté du pilote et des partenaires.
+N’inventez pas « guérir tous les cancers du jour au lendemain ». Préférez une détection plus précoce, le triage, l’orientation et l’accès. Les allégations cliniques exigent l’honnêteté du **Pilot** et des partenaires.
 
 ---
 ### `chem-bio.currentState`
@@ -605,7 +605,7 @@ Food-tech that prices out the hungry is a photo-op. Prioritize cold chain, local
 
 **FR:**
 
-La technologie alimentaire qui met le prix sur les affamés est une séance de photos. Donner la priorité à la chaîne du froid, à la production locale et à un prix abordable – et pas seulement aux nouvelles protéines destinées aux marchés riches.
+La tech alimentaire qui exclut les affamés par le prix n’est qu’une opération de com. Priorisez la chaîne du froid, la production locale et l’accessibilité — pas seulement de nouvelles protéines pour les marchés aisés.
 
 ---
 ### `genocide.currentState`
@@ -616,7 +616,7 @@ Mass atrocity risk remains real in several regions. Early-warning networks, sate
 
 **FR:**
 
-Le risque d’atrocités de masse reste réel dans plusieurs régions. Des réseaux d’alerte précoce, une surveillance par satellite et des alertes de la société civile existent, mais la réponse est souvent tardive, politisée ou sous-financée. La prévention est possible en théorie ; la pratique échoue toujours lorsque la volonté et la coordination échouent.
+Le risque d’atrocités de masse reste réel dans plusieurs régions. Des réseaux d’alerte précoce, une surveillance par satellite et des alertes de la société civile existent, mais la réponse est souvent tardive, politisée ou sous-financée. La prévention est possible en théorie ; la pratique échoue encore lorsque la volonté politique et la coordination font défaut.
 
 ---
 ### `genocide.rootCauses`
@@ -649,7 +649,7 @@ Visible homelessness and housing insecurity are rising in many cities even in we
 
 **FR:**
 
-Le sans-abrisme visible et l’insécurité du logement augmentent dans de nombreuses villes, même dans les pays riches. Les systèmes de refuges sont débordés ; les sorties vers des logements stables accusent un retard dans l’afflux.
+Le sans-abrisme visible et l’insécurité du logement augmentent dans de nombreuses villes, même riches. Les systèmes d’hébergement d’urgence sont saturés ; les sorties vers un logement stable restent en retard sur les entrées.
 
 ---
 ### `homeless.rootCauses`
@@ -671,7 +671,7 @@ Clearance and pure tech tracking without housing supply worsen harm. Invent for 
 
 **FR:**
 
-Le dédouanement et le suivi technologique pur sans offre de logements aggravent les dommages. Inventez la qualité des abris, les liens entre les services et les moyens de rester logé.
+Les expulsions « de propreté » et le simple suivi technologique sans offre de logements aggravent le mal. Inventez pour la qualité des abris, le lien vers les services et les parcours pour rester logé.
 
 ---
 ### `infectious.currentState`
@@ -693,7 +693,7 @@ Zoonotic spillover, dense travel, weak primary care, antimicrobial resistance, m
 
 **FR:**
 
-Répercussions zoonotiques, déplacements denses, soins primaires faibles, résistance aux antimicrobiens, désinformation et surveillance sous-financée dans les régions à haut risque.
+Franchissements zoonotiques, voyages denses, soins primaires faibles, résistance aux antimicrobiens, désinformation et surveillance sous-financée dans les régions à haut risque.
 
 ---
 ### `infectious.warnings`
@@ -726,7 +726,7 @@ Distance to facilities, shortages of midwives and blood/products, poverty, adole
 
 **FR:**
 
-Distance des établissements, pénurie de sages-femmes et de produits sanguins/produits sanguins, pauvreté, grossesses chez les adolescentes et écarts de qualité des soins, y compris un traitement irrespectueux qui dissuade leur utilisation.
+Distance des établissements, pénurie de sages-femmes et de produits sanguins, pauvreté, grossesses adolescentes et écarts de qualité des soins, y compris un traitement irrespectueux qui dissuade d’y recourir.
 
 ---
 ### `maternal.warnings`
@@ -759,7 +759,7 @@ Biological forgetting; lack of affordable, private capture tools; organizational
 
 **FR:**
 
-Oubli biologique ; manque d'outils de capture privés et abordables ; un désabonnement organisationnel qui efface les connaissances institutionnelles ; perte culturelle lorsque les histoires des aînés ne sont jamais enregistrées ; obsolescence numérique des supports et des formats.
+Oubli biologique ; manque d'outils de capture privés et abordables ; rotation organisationnelle qui efface le savoir institutionnel ; perte culturelle lorsque les histoires des aînés ne sont jamais enregistrées ; obsolescence numérique des supports et formats.
 
 ---
 ### `memory.warnings`
@@ -803,7 +803,7 @@ Chatbots are not a full clinical system. Design for crisis escalation paths, pri
 
 **FR:**
 
-Les chatbots ne constituent pas un système clinique complet. Concevoir des voies d'escalade de crise, de confidentialité et de soins humains, et non l'isolement dans une application qui ne peut pas intervenir en toute sécurité.
+Les chatbots ne constituent pas un système clinique complet. Concevez des voies d'escalade de crise, de confidentialité et de soins humains — pas l'isolement dans une application qui ne peut pas intervenir en sécurité.
 
 ---
 ### `mideast.currentState`
@@ -858,7 +858,7 @@ Attention economies reward outrage; verification is costly; AI lowers the cost o
 
 **FR:**
 
-Attention, les économies récompensent l’indignation ; la vérification est coûteuse ; L’IA réduit le coût des contrefaçons convaincantes ; la polarisation et la faible éducation aux médias érodent les terrains d’entente ; Les médias d’intérêt public sous-financés laissent la rumeur sans contestation.
+Les économies de l’attention récompensent l’indignation ; la vérification est coûteuse ; l’IA réduit le coût des faux convaincants ; la polarisation et la faible éducation aux médias érodent le terrain d’entente ; les médias d’intérêt public sous-financés laissent la rumeur sans réponse.
 
 ---
 ### `misinfo.warnings`
@@ -869,7 +869,7 @@ Do not invent “AI deletes wrongthink” as a clean win. Prefer provenance, loc
 
 **FR:**
 
-N’inventez pas « l’IA supprime les idées fausses » comme une victoire nette. Préférez la provenance, les intermédiaires locaux de confiance et l’agence utilisatrice. La surveillance présentée comme anti-désinformation peut faire taire les discours légitimes. Conçu pour la rapidité et la dignité de la correction, pas pour la police de la pureté.
+N’inventez pas « l’IA supprime la mauvaise pensée » comme une victoire nette. Préférez la provenance, les intermédiaires locaux de confiance et le pouvoir d’agir des usagers. La surveillance présentée comme anti-désinformation peut faire taire des discours légitimes. Concevez pour la vitesse et la dignité de la correction, pas pour une police de la pureté.
 
 ---
 ### `nuclear.currentState`
@@ -913,7 +913,7 @@ Extreme poverty has fallen globally over decades but remains concentrated; hundr
 
 **FR:**
 
-L’extrême pauvreté a diminué à l’échelle mondiale au fil des décennies, mais reste concentrée ; des centaines de millions de personnes manquent toujours de revenus, de services et d’agences fiables. Les progrès sont inégaux ; les chocs (conflits, climat, maladie) annulent rapidement les acquis pour les plus vulnérables.
+L’extrême pauvreté a diminué à l’échelle mondiale au fil des décennies, mais reste concentrée ; des centaines de millions de personnes manquent encore de revenus fiables, de services et de capacité d’agir. Les progrès sont inégaux ; les chocs (conflits, climat, maladie) effacent vite les acquis pour les plus vulnérables.
 
 ---
 ### `poverty.rootCauses`
@@ -946,7 +946,7 @@ Violent extremism and radicalization still recruit through prejudice, online pip
 
 **FR:**
 
-L’extrémisme violent et la radicalisation continuent de recruter par le biais de préjugés, de réseaux en ligne et de griefs hors ligne. Des programmes de prévention existent dans les écoles et les communautés, mais leur couverture est inégale et ils réagissent souvent après un incident plutôt que de désarmer rapidement les voies de recours.
+L’extrémisme violent et la radicalisation continuent de recruter par le biais de préjugés, de filières en ligne et de griefs hors ligne. Des programmes de prévention existent dans les écoles et les communautés, mais leur couverture est inégale et ils réagissent souvent après le dommage plutôt que de désarmer tôt les parcours.
 
 ---
 ### `radicalization.rootCauses`
@@ -968,7 +968,7 @@ Disarming radicalization starts with human rights, dialogue across boundaries, a
 
 **FR:**
 
-Désarmer la radicalisation commence par les droits de l’homme, le dialogue au-delà des frontières et l’autonomisation des jeunes – et non par la surveillance de masse ou les « scores de terrorisme » prédictifs. Les listes de surveillance à double usage peuvent devenir des outils de discrimination. Préférez les sorties, l’éducation aux médias et la légitimité communautaire.
+Désarmer la radicalisation commence par les droits humains, le dialogue au-delà des frontières et l’autonomisation des jeunes — pas par la surveillance de masse ni les « scores de terreur » prédictifs. Les listes de surveillance à double usage peuvent devenir des outils de discrimination. Préférez les sorties de filière, l’éducation aux médias et la légitimité communautaire.
 
 ---
 ### `refugees.currentState`
@@ -1001,7 +1001,7 @@ Biometric ID and tracking can become tools of exclusion. Design for dignity, lan
 
 **FR:**
 
-L’identification biométrique et le suivi peuvent devenir des outils d’exclusion. Concevoir pour la dignité, l’accès aux langues et le logement/travail – et non pour des entrepôts de données sans consentement.
+L’identification biométrique et le suivi peuvent devenir des outils d’exclusion. Concevez pour la dignité, l’accès linguistique et le logement/travail — pas des entrepôts de données sans consentement.
 
 ---
 ### `reproductive.currentState`
@@ -1034,7 +1034,7 @@ This theme is for all people—not only women and children. Maternal emergency o
 
 **FR:**
 
-Ce thème s’adresse à tous, pas seulement aux femmes et aux enfants. Les soins obstétricaux maternels d’urgence constituent un thème à part entière ; Les MGF constituent un thème à part entière. Inventez pour le libre arbitre, la vie privée, les soins des IST (y compris les hommes), le choix de la contraception et l’accès à la fécondité – sans jamais considérer le contrôle coercitif de la fécondité comme étant une bonne chose.
+Ce thème s’adresse à tous, pas seulement aux femmes et aux enfants. Les soins obstétricaux d’urgence maternels sont un thème à part ; les MGF aussi. Inventez pour le pouvoir d’agir, la vie privée, les soins IST (y compris pour les hommes), le choix contraceptif et l’accès à la fertilité — jamais un contrôle coercitif de la fécondité présenté comme un bien.
 
 ---
 ### `rogue-si.currentState`
@@ -1045,7 +1045,7 @@ Frontier AI systems already outperform humans on many narrow tasks and are being
 
 **FR:**
 
-Les systèmes Frontier AI surpassent déjà les humains dans de nombreuses tâches spécifiques et sont intégrés à des projets pilotes de recherche, de code, de finance et gouvernementaux. La « superintelligence » à part entière n’est pas là, mais les gains rapides de capacités et le déploiement compétitif signifient que le contrôle et l’alignement sont en retard par rapport aux capacités de nombreuses institutions.
+Les systèmes d’IA de frontière surpassent déjà les humains sur de nombreuses tâches étroites et s’intègrent à des pilotes de recherche, de code, de finance et d’État. La « superintelligence » complète n’est pas là, mais les gains rapides de capacité et le déploiement compétitif font que le contrôle et l’alignement traînent derrière la capacité dans bien des institutions.
 
 ---
 ### `rogue-si.rootCauses`
@@ -1056,7 +1056,7 @@ Race dynamics reward speed over safety; evaluation of open-ended systems is hard
 
 **FR:**
 
-La dynamique de course récompense la vitesse plutôt que la sécurité ; l’évaluation des systèmes ouverts est difficile ; les incitations favorisent la production ; la gouvernance est fragmentée entre les laboratoires, les États et les écosystèmes open source ; une fois que les systèmes fonctionnent à grande échelle, l’inverse est coûteux.
+La dynamique de course récompense la vitesse plutôt que la sécurité ; l’évaluation des systèmes ouverts est difficile ; les incitations favorisent la mise en produit ; la gouvernance est fragmentée entre laboratoires, États et écosystèmes open source ; une fois les systèmes à l’échelle, faire marche arrière coûte cher.
 
 ---
 ### `rogue-si.warnings`
@@ -1133,7 +1133,7 @@ This is toilets, sewage, and hygiene—not drinking-water filtration alone (see 
 
 **FR:**
 
-Il s’agit des toilettes, des eaux usées et de l’hygiène, et non pas uniquement de la filtration de l’eau potable (voir Eau propre). Les capteurs sans vidange ni traitement sont du théâtre. Préférez la dignité, des installations scolaires sans danger pour les hommes et les femmes et des économies de boues sûres au battage médiatique de luxe sur les toilettes intelligentes pour ceux qui sont déjà servis.
+Il s’agit des toilettes, des eaux usées et de l’hygiène — pas seulement de la filtration d’eau potable (voir Eau propre). Les capteurs sans vidange ni traitement sont du théâtre. Préférez la dignité, des installations scolaires sûres pour les filles et les garçons, et des filières de boues sûres au battage médiatique des toilettes intelligentes de luxe pour ceux déjà desservis.
 
 ---
 ### `short-termism.currentState`
@@ -1155,7 +1155,7 @@ Poverty traps and missing safety nets force high discount rates; insecure land a
 
 **FR:**
 
-Les pièges de la pauvreté et l’absence de filets de sécurité imposent des taux d’actualisation élevés ; l'insécurité des droits fonciers et des ressources ; des marchés et des politiques qui récompensent le rendement de ce trimestre au fil de décennies de capital en matière de sols, de forêts et de résilience.
+Les pièges de la pauvreté et l’absence de filets de sécurité imposent des taux d’actualisation élevés ; droits fonciers et sur les ressources peu sûrs ; marchés et politiques qui récompensent le rendement de ce trimestre plutôt que des décennies de capital sols, forêts et résilience.
 
 ---
 ### `short-termism.warnings`
@@ -1177,7 +1177,7 @@ Chattel slavery is illegal nearly everywhere, but forced labor, debt bondage, tr
 
 **FR:**
 
-L’esclavage mobilier est illégal presque partout, mais le travail forcé, la servitude pour dettes, la traite et le travail des enfants persistent dans les chaînes d’approvisionnement, le travail domestique, la pêche et les zones de conflit, souvent à l’abri des consommateurs.
+L’esclavage chattel est illégal presque partout, mais le travail forcé, la servitude pour dettes, la traite et le travail des enfants persistent dans les chaînes d’approvisionnement, le travail domestique, la pêche et les zones de conflit — souvent cachés aux consommateurs.
 
 ---
 ### `slavery.rootCauses`
@@ -1188,7 +1188,7 @@ Profit from cheap coerced labor, weak enforcement, migration vulnerability, corr
 
 **FR:**
 
-Profitez d’une main d’œuvre forcée et bon marché, d’une application peu rigoureuse, de la vulnérabilité migratoire, de la corruption et de chaînes d’approvisionnement opaques à plusieurs niveaux qui diluent la responsabilité.
+Le profit tiré d’une main-d’œuvre forcée et bon marché, une application faible, la vulnérabilité migratoire, la corruption et des chaînes d’approvisionnement opaques à plusieurs niveaux qui diluent la responsabilité.
 
 ---
 ### `slavery.warnings`
@@ -1232,7 +1232,7 @@ Shame-only campaigns fail people with least access to cessation. Invent for init
 
 **FR:**
 
-Les campagnes axées uniquement sur la honte échouent auprès des personnes ayant le moins accès au sevrage. Inventez pour la prévention de l’initiation, une aide abordable pour arrêter de fumer et une protection de seconde main – et non pour la surveillance des fumeurs sans soins. Évitez les « solutions » de capture de l’industrie.
+Les campagnes axées uniquement sur la honte échouent auprès de ceux qui ont le moins d’accès au sevrage. Inventez pour la prévention de l’initiation, une aide abordable à l’arrêt et la protection contre le tabagisme passif — pas pour la surveillance des fumeurs sans soins. Évitez les « solutions » capturées par l’industrie.
 
 ---
 ### `totalitarianism.currentState`
@@ -1298,7 +1298,7 @@ Do not invent “export the trash” as local success. Design with informal pick
 
 **FR:**
 
-N’inventez pas « l’exportation des déchets » comme une réussite locale. Concevoir en tenant compte des moyens de subsistance des cueilleurs informels, d’une véritable récupération des matériaux et d’une réduction à la source. L’incinération des déchets électroniques et les inondations étouffées par le plastique nécessitent des systèmes, et non des nettoyages ponctuels des plages comme l’ensemble l’invente.
+N’inventez pas « l’exportation des déchets » comme réussite locale. Concevez avec les moyens de subsistance des ramasseurs informels, une vraie récupération matière et la réduction à la source. L’incinération des DEEE et les inondations étouffées par le plastique demandent des systèmes, pas des nettoyages de plage ponctuels comme tout l’invent.
 
 ---
 ### `water.currentState`
@@ -1309,7 +1309,7 @@ Billions still lack safely managed drinking water or sanitation. Climate stress,
 
 **FR:**
 
-Des milliards de personnes manquent toujours d’eau potable ou d’assainissement gérés en toute sécurité. Le stress climatique, la pollution et la surexploitation frappent les puits et les services publics ; les économies de pétroliers comblent les lacunes à un coût élevé.
+Des milliards de personnes manquent encore d’eau potable ou d’assainissement gérés en sécurité. Le stress climatique, la pollution et la surexploitation frappent puits et services ; les économies de camions-citernes comblent les trous à prix fort.
 
 ---
 ### `water.rootCauses`
@@ -1331,7 +1331,7 @@ Pumps without maintenance budgets fail. Design for local repair, energy for trea
 
 **FR:**
 
-Les pompes sans budget de maintenance tombent en panne. Concevez pour une réparation locale, de l'énergie pour le traitement et une allocation équitable, et non pour des chutes de matériel ponctuelles.
+Les pompes sans budget d’entretien tombent en panne. Concevez pour la réparation locale, l’énergie de traitement et une allocation équitable — pas des dépôts de matériel ponctuels.
 
 ---
 ### `weather.currentState`
@@ -1342,7 +1342,7 @@ Heat waves, floods, storms, and droughts are more frequent or intense in many re
 
 **FR:**
 
-Les vagues de chaleur, les inondations, les tempêtes et les sécheresses sont plus fréquentes ou plus intenses dans de nombreuses régions soumises au changement climatique. L’alerte précoce s’est améliorée, mais les alertes du dernier kilomètre, les infrastructures et les fonds de relance ne parviennent toujours pas à cibler en priorité les districts les plus pauvres.
+Les vagues de chaleur, les inondations, les tempêtes et les sécheresses sont plus fréquentes ou plus intenses dans de nombreuses régions sous le changement climatique. L’alerte précoce s’est améliorée, mais les alertes du dernier kilomètre, les infrastructures et les fonds de relance laissent encore d’abord tomber les districts les plus pauvres.
 
 ---
 ### `weather.rootCauses`
@@ -1364,7 +1364,7 @@ Sensors without response plans are theater. Invent for warning-to-action loops, 
 
 **FR:**
 
-Les capteurs sans plan de réponse sont du théâtre. Inventez des boucles d'alerte à l'action, des abris contre les inondations et le refroidissement et l'équité, et pas seulement des tableaux de bord plus jolis. Le timing compte : déployez des pilotes utilisables avant la saison prochaine, pas des modèles parfaits après.
+Inventez des boucles alerte→action, des abris fraîcheur/inondation et l’équité — pas seulement de jolis tableaux de bord. Le timing compte : déployez des Pilots utilisables avant la prochaine saison, pas des modèles parfaits après.
 
 ---
 ### `women.currentState`
@@ -1397,7 +1397,7 @@ Tech that ignores safety (e.g., public location sharing without controls) can in
 
 **FR:**
 
-Les technologies qui ignorent la sécurité (par exemple, le partage d’un emplacement public sans contrôle) peuvent accroître les dommages. L’agence, la vie privée et le leadership des femmes locales – pas des gadgets salvateurs conçus ailleurs.
+Les technologies qui ignorent la sécurité (p. ex. partage public de position sans contrôles) peuvent aggraver le mal. Centrez le pouvoir d’agir, la vie privée et le leadership des femmes locales — pas des gadgets sauveurs conçus ailleurs.
 
 ---
 ### `women-stem.currentState`

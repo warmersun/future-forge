@@ -259,9 +259,9 @@
     "summary": "Sistemas que predicen, recomiendan, generan y deciden a partir de datos.",
     "learn": "Automatiza la búsqueda de patrones; todavía necesita responsabilidad humana.",
     "inventionHint": "Triaje, tutoría, logística, alerta temprana.",
-    "risk": "parcialidad, exceso de confianza, decisiones opacas",
+    "risk": "sesgo, exceso de confianza, decisiones opacas",
     "scarcity": "¿Qué capacidad escasa podría ayudar la Inteligencia Artificial a hacer más abundante aquí?",
-    "primer": "La inteligencia artificial encuentra patrones en los datos para predecir, recomendar, generar texto o imágenes y respaldar decisiones. Ya es un compañero de trabajo en muchas clínicas, aulas y mostradores de logística, pero puede ser parcial, demasiado confiado u opaco. Los inventos locales sólidos mantienen a los humanos responsables y adaptan el modelo a un flujo de trabajo real.",
+    "primer": "La inteligencia artificial encuentra patrones en los datos para predecir, recomendar, generar texto o imágenes y respaldar decisiones. Ya es compañera de trabajo en muchas clínicas, aulas y mesas de logística, pero puede ser sesgada, excesivamente confiada u opaca. Los inventos locales sólidos mantienen a las personas responsables y limitan el modelo a un flujo de trabajo real.",
     "maturity": {
       "now": "Modelos de asistencia, clasificación, previsión y copilotos con supervisión humana.",
       "near": "Agentes más confiables para flujos de trabajo reducidos; mejores modelos en el idioma local.",
@@ -276,7 +276,7 @@
       "Copilotos de documentos y logística",
       "Puntuación de alerta temprana"
     ],
-    "narrative": "Az emberek vezetnek; un modelo javasolnak."
+    "narrative": "Las personas lideran; los modelos proponen."
   },
   "robots": {
     "name": "Robots",

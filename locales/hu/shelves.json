@@ -3,10 +3,12 @@
     "title": "Egészség és gondoskodás"
   },
   "climate": {
-    "title": "Klíma, víz és levegő"
+    "title": "Klímaválságok",
+    "blurb": "Kibocsátás, hőség és hosszú távú kockázat."
   },
   "food": {
-    "title": "Élelmiszer és föld"
+    "title": "Élelmiszer-biztonság",
+    "blurb": "Megbízható, tápláló étel mindenkinek."
   },
   "learning": {
     "title": "Tanulás és munka"

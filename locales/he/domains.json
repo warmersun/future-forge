@@ -1,20 +1,20 @@
 {
   "power": {
-    "label": "כּוֹחַ"
+    "label": "אנרגיה"
   },
   "automator": {
-    "label": "אוטומט"
+    "label": "אוטומטור"
   },
   "mover": {
-    "label": "מעביר"
+    "label": "מניע"
   },
   "lifeforce": {
-    "label": "LifeForce"
+    "label": "כוח חיים"
   },
   "link": {
-    "label": "לְקַשֵׁר"
+    "label": "קישור"
   },
   "portal": {
-    "label": "שַׁעַר"
+    "label": "פורטל"
   }
 }

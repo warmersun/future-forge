@@ -33,7 +33,7 @@ Short-term yield incentives, input lock-in, land inequality, climate stress, and
 
 **ES:**
 
-Incentivos de rendimiento a corto plazo, bloqueo de insumos, desigualdad de tierras, estrés climático y mercados que subestiman el daño ecológico.
+Incentivos de rendimiento a corto plazo, dependencia de insumos, desigualdad de la tierra, estrés climático y mercados que subestiman el daño ecológico.
 
 ---
 ### `ag.warnings`
@@ -55,7 +55,7 @@ Lifespans lengthened; healthspan did not always keep pace. Longevity science is 
 
 **ES:**
 
-La esperanza de vida se alargó; La esperanza de vida no siempre siguió el ritmo. La ciencia de la longevidad está activa, pero la mayoría de los avances aún provienen de la salud pública, la atención de enfermedades crónicas y los determinantes sociales, no de píldoras milagrosas.
+La esperanza de vida se alargó; la esperanza de vida saludable no siempre siguió el ritmo. La ciencia de la longevidad está activa, pero la mayoría de los avances aún vienen de la salud pública, la atención a crónicos y los determinantes sociales — no de píldoras milagrosas.
 
 ---
 ### `ageing.rootCauses`
@@ -66,7 +66,7 @@ Biological aging processes, lifestyle and environment, and systems built for sho
 
 **ES:**
 
-Procesos de envejecimiento biológico, estilo de vida y medio ambiente, y sistemas construidos para vidas más cortas y cuidados intensivos en lugar de multimorbilidad prolongada.
+Procesos de envejecimiento biológico, estilo de vida y entorno, y sistemas pensados para vidas más cortas y atención aguda en lugar de multimorbilidad prolongada.
 
 ---
 ### `ageing.warnings`
@@ -110,7 +110,7 @@ Sensors alone do not clean air. Couple measurement with enforceable sources cuts
 
 **ES:**
 
-Los sensores por sí solos no limpian el aire. Combine la medición con recortes de recursos exigibles, cocina limpia y turnos de movilidad que las personas realmente puedan utilizar.
+Los sensores solos no limpian el aire. Acoplen la medición a recortes exigibles en las fuentes, cocina limpia y cambios de movilidad que la gente pueda usar de verdad.
 
 ---
 ### `alzheimer.currentState`
@@ -143,7 +143,7 @@ Surveillance framed as “safety” can strip dignity. Invent for caregiver supp
 
 **ES:**
 
-La vigilancia enmarcada como “seguridad” puede despojar a la dignidad. Invente para brindar apoyo, navegación y asistencia respetuosa a los cuidadores, no solo para dispositivos de seguimiento.
+La vigilancia enmarcada como “seguridad” puede quitar dignidad. Inventen apoyo a cuidadores, orientación y asistencia respetuosa — no solo dispositivos de seguimiento.
 
 ---
 ### `amr.currentState`
@@ -165,7 +165,7 @@ Overuse and misuse of antibiotics in humans and animals, weak diagnostics that f
 
 **ES:**
 
-Uso excesivo y mal uso de antibióticos en humanos y animales, diagnósticos débiles que obligan a un tratamiento a ciegas, control deficiente de infecciones y falta de inversión en nuevos antimicrobianos y gestión.
+Uso excesivo y mal uso de antibióticos en humanos y animales, diagnósticos débiles que obligan a tratar a ciegas, control deficiente de infecciones y subinversión en nuevos antimicrobianos y en la gestión prudente (stewardship).
 
 ---
 ### `amr.warnings`
@@ -176,7 +176,7 @@ Do not invent “another viral pandemic app” here. Prefer stewardship, rapid b
 
 **ES:**
 
-No inventen aquí “otra aplicación para una pandemia viral”. Prefiera la administración, el diagnóstico bacteriano rápido, el cambio en las prácticas agrícolas y farmacéuticas y el acceso al medicamento adecuado, no la venta ilimitada de antibióticos. Preservar la eficacia; No inventemos sistemas que fomenten una mayor prescripción a ciegas.
+No inventen aquí “otra aplicación para una pandemia viral”. Prefieran la administración prudente (stewardship), el diagnóstico bacteriano rápido, el cambio de prácticas agrícolas y farmacéuticas y el acceso al medicamento adecuado, no la venta ilimitada de antibióticos. Preserven la eficacia; no inventen sistemas que fomenten más prescripción a ciegas.
 
 ---
 ### `asteroid.currentState`
@@ -275,7 +275,7 @@ Do not invent “cure all cancer overnight.” Prefer earlier detection, triage,
 
 **ES:**
 
-No inventes “curar todos los cánceres de la noche a la mañana”. Prefiere detección, clasificación, navegación y acceso más tempranos. Las afirmaciones clínicas necesitan socios y honestidad del piloto.
+No inventen “curar todos los cánceres de la noche a la mañana”. Prefieran detección más temprana, triaje, orientación y acceso. Las afirmaciones clínicas necesitan honestidad de **Pilot** y socios.
 
 ---
 ### `chem-bio.currentState`
@@ -561,7 +561,7 @@ Social norms, marriageability pressure, practitioner livelihoods, weak enforceme
 
 **ES:**
 
-Normas sociales, presión para contraer matrimonio, medios de vida de los practicantes, aplicación débil de la ley y movilidad transfronteriza en “temporada de corte”. Las actitudes están cambiando en muchos lugares donde las niñas y mujeres que conocen la mutilación genital femenina dicen que debería terminar, pero la práctica puede retrasar la creencia.
+Normas sociales, presión de casabilidad, medios de vida de quienes practican el corte, aplicación débil y movilidad transfronteriza en “temporada de corte”. Las actitudes cambian en muchos lugares donde niñas y mujeres que conocen la MGF dicen que debería acabar, pero la práctica puede ir a la zaga de la creencia.
 
 ---
 ### `fgm.warnings`
@@ -572,7 +572,7 @@ Invent for community-led abandonment, girls’ education and protection, and sur
 
 **ES:**
 
-Invente para el abandono liderado por la comunidad, la educación y protección de las niñas y la atención a las sobrevivientes; nunca teatro gráfico de “rescate” ni dispositivos vergonzosos. No medicalizar la mutilación genital femenina como una mejora clínica. Centrar el liderazgo, la confidencialidad y la dignidad de las mujeres locales.
+Inventen para el abandono impulsado por la comunidad, la educación y protección de las niñas y la atención a supervivientes; nunca teatro gráfico de “rescate” ni gadgets que avergüencen. No medicalicen la MGF como mejora clínica. Centren el liderazgo, la confidencialidad y la dignidad de las mujeres locales.
 
 ---
 ### `food.currentState`
@@ -605,7 +605,7 @@ Food-tech that prices out the hungry is a photo-op. Prioritize cold chain, local
 
 **ES:**
 
-La tecnología alimentaria que pone precios a los hambrientos es una sesión fotográfica. Priorizar la cadena de frío, la producción local y la asequibilidad, no solo proteínas novedosas para los mercados ricos.
+La tecnología alimentaria que deja fuera a los hambrientos por precio es una foto de campaña. Prioricen la cadena de frío, la producción local y la asequibilidad — no solo proteínas novedosas para mercados ricos.
 
 ---
 ### `genocide.currentState`
@@ -616,7 +616,7 @@ Mass atrocity risk remains real in several regions. Early-warning networks, sate
 
 **ES:**
 
-El riesgo de atrocidades masivas sigue siendo real en varias regiones. Existen redes de alerta temprana, monitoreo satelital y alertas de la sociedad civil, pero la respuesta suele ser tardía, politizada o insuficientemente financiada. La prevención es posible en teoría; La práctica todavía falla cuando fallan la voluntad y la coordinación.
+El riesgo de atrocidades masivas sigue siendo real en varias regiones. Existen redes de alerta temprana, monitoreo satelital y alertas de la sociedad civil, pero la respuesta suele ser tardía, politizada o insuficientemente financiada. La prevención es posible en teoría; la práctica aún falla cuando faltan la voluntad política y la coordinación.
 
 ---
 ### `genocide.rootCauses`
@@ -649,7 +649,7 @@ Visible homelessness and housing insecurity are rising in many cities even in we
 
 **ES:**
 
-La visible falta de vivienda y la inseguridad habitacional están aumentando en muchas ciudades, incluso en los países ricos. Los sistemas de refugio están sobrecargados; las salidas a viviendas estables retrasan la entrada.
+La falta de vivienda visible y la inseguridad habitacional crecen en muchas ciudades, también en países ricos. Los sistemas de albergue están desbordados; las salidas a vivienda estable van a la zaga de las entradas.
 
 ---
 ### `homeless.rootCauses`
@@ -671,7 +671,7 @@ Clearance and pure tech tracking without housing supply worsen harm. Invent for 
 
 **ES:**
 
-La liquidación y el seguimiento puramente tecnológico sin oferta de vivienda empeoran el daño. Inventar calidad de alojamiento, vinculación de servicios y caminos para permanecer alojado.
+Los desalojos “de limpieza” y el seguimiento solo tecnológico sin oferta de vivienda empeoran el daño. Inventen calidad de albergue, enlace a servicios y caminos para permanecer alojado.
 
 ---
 ### `infectious.currentState`
@@ -693,7 +693,7 @@ Zoonotic spillover, dense travel, weak primary care, antimicrobial resistance, m
 
 **ES:**
 
-Desbordamiento zoonótico, viajes densos, atención primaria deficiente, resistencia a los antimicrobianos, información errónea y vigilancia insuficiente en regiones de alto riesgo.
+Salto zoonótico, viajes densos, atención primaria débil, resistencia antimicrobiana, desinformación y vigilancia infrafinanciada en regiones de alto riesgo.
 
 ---
 ### `infectious.warnings`
@@ -704,7 +704,7 @@ Outbreak tech without trust fails. Pair detection with communication and care ca
 
 **ES:**
 
-La tecnología contra brotes sin confianza falla. Emparejar detección con capacidad de comunicación y atención. No inventemos cajas negras de cuarentena forzosa que destruyen la legitimidad.
+La tecnología contra brotes sin confianza falla. Emparejen detección con capacidad de comunicación y atención. No inventen cajas negras de cuarentena forzosa que destruyen la legitimidad.
 
 ---
 ### `maternal.currentState`
@@ -737,7 +737,7 @@ Apps without ambulances and blood banks fail. Invent for referral, transport, an
 
 **ES:**
 
-Las aplicaciones sin ambulancias y bancos de sangre fracasan. Invente para derivaciones, transporte y asistencia respetuosa y calificada en el parto, no solo para rastreadores de embarazos.
+Las aplicaciones sin ambulancias ni bancos de sangre fracasan. Inventen para derivación, transporte y asistencia respetuosa y cualificada al parto — no solo rastreadores de embarazo.
 
 ---
 ### `memory.currentState`
@@ -748,7 +748,7 @@ Human memory is incomplete and unreliable even in healthy people. For the first 
 
 **ES:**
 
-La memoria humana es incompleta y poco fiable incluso en personas sanas. Por primera vez, la gente corriente puede crear ricos registros multimedia de experiencias vividas; sin embargo, la mayor parte de la vida sigue sin ser capturada, inescrutable o encerrada en formatos que se pudrirán.
+La memoria humana es incompleta y poco fiable incluso en personas sanas. Por primera vez, la gente corriente puede crear ricos registros multimedia de la experiencia vivida; sin embargo, la mayor parte de la vida sigue sin capturarse, sin poderse buscar o encerrada en formatos que se pudrirán.
 
 ---
 ### `memory.rootCauses`
@@ -770,7 +770,7 @@ This is not Alzheimer or dementia care. Invent for documenting and preserving ex
 
 **ES:**
 
-Esto no es atención para el Alzheimer o la demencia. Inventar para documentar y preservar la experiencia (personal, comunitaria e institucional) con consentimiento y privacidad. El registro de vida sin control se convierte en vigilancia. Prefiere archivos propiedad de los usuarios y un legado digno, no una recuperación total forzada.
+Esto no es atención de Alzheimer o demencia. Inventen para documentar y preservar la experiencia —personal, comunitaria e institucional— con consentimiento y privacidad. El registro vital sin control se convierte en vigilancia. Prefieran archivos de propiedad del usuario y un legado digno, no una recuperación total forzada.
 
 ---
 ### `mental.currentState`
@@ -803,7 +803,7 @@ Chatbots are not a full clinical system. Design for crisis escalation paths, pri
 
 **ES:**
 
-Los chatbots no son un sistema clínico completo. Diseñe rutas de escalada de crisis, privacidad y atención humana, no aislamiento en una aplicación que no puede intervenir de manera segura.
+Los chatbots no son un sistema clínico completo. Diseñen rutas de escalada de crisis, privacidad y atención humana — no aislamiento en una app que no puede intervenir con seguridad.
 
 ---
 ### `mideast.currentState`
@@ -858,7 +858,7 @@ Attention economies reward outrage; verification is costly; AI lowers the cost o
 
 **ES:**
 
-Las economías de atención recompensan la indignación; la verificación es costosa; La IA reduce el coste de las falsificaciones convincentes; la polarización y la escasa alfabetización mediática erosionan los puntos en común; Los medios de comunicación de interés público que carecen de fondos suficientes dejan los rumores sin respuesta.
+Las economías de la atención recompensan la indignación; la verificación es costosa; la IA abarata las falsificaciones convincentes; la polarización y la escasa alfabetización mediática erosionan el terreno común; los medios de interés público infrafinanciados dejan el rumor sin contestación.
 
 ---
 ### `misinfo.warnings`
@@ -869,7 +869,7 @@ Do not invent “AI deletes wrongthink” as a clean win. Prefer provenance, loc
 
 **ES:**
 
-No invente "La IA elimina los pensamientos erróneos" como una victoria limpia. Prefiera procedencia, intermediarios locales de confianza y agencia de usuarios. La vigilancia enmarcada como antidesinfo puede silenciar el discurso legítimo. Diseño para la velocidad y la dignidad de la corrección, no para la policía de la pureza.
+No inventen “la IA borra el pensamiento incorrecto” como victoria limpia. Prefieran procedencia, intermediarios locales de confianza y agencia del usuario. La vigilancia enmarcada como antidesinformación puede silenciar el discurso legítimo. Diseñen para velocidad y dignidad de la corrección, no para policía de pureza.
 
 ---
 ### `nuclear.currentState`
@@ -902,7 +902,7 @@ Local inventing almost never means building weapons. Focus on crisis communicati
 
 **ES:**
 
-La invención local casi nunca significa construir armas. Centrarse en la resiliencia de la comunicación de crisis, la alfabetización en materia de protección civil y las herramientas de reducción de tensiones. No enaltezcan los sistemas de lanzamiento ni inventen como si los actores municipales controlaran el botón nuclear.
+La invención local casi nunca significa fabricar armas. Céntrense en la resiliencia de la comunicación en crisis, la alfabetización en protección civil y herramientas de desescalada. No enaltezcan los sistemas de lanzamiento ni inventen como si los actores municipales controlaran el botón nuclear.
 
 ---
 ### `poverty.currentState`
@@ -913,7 +913,7 @@ Extreme poverty has fallen globally over decades but remains concentrated; hundr
 
 **ES:**
 
-La pobreza extrema ha disminuido a nivel mundial durante décadas, pero sigue concentrada; cientos de millones todavía carecen de ingresos, servicios y agencia confiables. El progreso es desigual; Las crisis (conflictos, clima, enfermedades) revierten rápidamente los avances de los más vulnerables.
+La pobreza extrema ha bajado a escala mundial en décadas, pero sigue concentrada; cientos de millones siguen sin ingresos fiables, servicios ni capacidad de actuar. El progreso es desigual; los shocks (conflicto, clima, enfermedad) revierten rápido los avances de los más vulnerables.
 
 ---
 ### `poverty.rootCauses`
@@ -935,7 +935,7 @@ Digital or fintech “solutions” can exclude people without IDs, connectivity,
 
 **ES:**
 
-Las “soluciones” digitales o fintech pueden excluir a personas sin documentos de identidad, conectividad o alfabetización. Diseñe para la última milla, efectivo + servicios cuando sea necesario y evite trampas de deuda o extracción de datos enmarcada como ayuda.
+Las “soluciones” digitales o fintech pueden excluir a personas sin documentos, conectividad o alfabetización. Diseñen para la última milla, efectivo + servicios cuando haga falta, y eviten trampas de deuda o extracción de datos disfrazada de ayuda.
 
 ---
 ### `radicalization.currentState`
@@ -968,7 +968,7 @@ Disarming radicalization starts with human rights, dialogue across boundaries, a
 
 **ES:**
 
-El desarme de la radicalización comienza con los derechos humanos, el diálogo transfronterizo y el empoderamiento de los jóvenes, no con la vigilancia masiva ni con “puntajes de terror” predictivos. Las listas de vigilancia de doble uso pueden convertirse en herramientas de discriminación. Prefiere rampas de salida, alfabetización mediática y legitimidad comunitaria.
+El desarme de la radicalización empieza con derechos humanos, diálogo entre fronteras y empoderamiento juvenil — no con vigilancia masiva ni “puntuaciones de terror” predictivas. Las listas de vigilancia de doble uso pueden volverse herramientas de discriminación. Prefieran salidas de la vía, alfabetización mediática y legitimidad comunitaria.
 
 ---
 ### `refugees.currentState`
@@ -1001,7 +1001,7 @@ Biometric ID and tracking can become tools of exclusion. Design for dignity, lan
 
 **ES:**
 
-La identificación biométrica y el seguimiento pueden convertirse en herramientas de exclusión. Diseño para la dignidad, el acceso al idioma y la vivienda/trabajo, no almacenes de datos sin consentimiento.
+La identificación biométrica y el seguimiento pueden volverse herramientas de exclusión. Diseñen para dignidad, acceso lingüístico y vivienda/trabajo — no almacenes de datos sin consentimiento.
 
 ---
 ### `reproductive.currentState`
@@ -1034,7 +1034,7 @@ This theme is for all people—not only women and children. Maternal emergency o
 
 **ES:**
 
-Este tema es para todas las personas, no sólo para mujeres y niños. La atención obstétrica de emergencia materna es su propio tema; La mutilación genital femenina es su propio tema. Invente para la agencia, la privacidad, la atención de las ITS (incluidos los hombres), la elección de anticonceptivos y el acceso a la fertilidad; nunca el control coercitivo de la fertilidad se presenta como algo bueno.
+Este tema es para todas las personas, no solo mujeres y niños. La atención obstétrica de emergencia materna es un tema aparte; la MGF también. Inventen para agencia, privacidad, atención de ITS (también hombres), elección anticonceptiva y acceso a fertilidad — nunca control coercitivo de la fertilidad presentado como algo bueno.
 
 ---
 ### `rogue-si.currentState`
@@ -1045,7 +1045,7 @@ Frontier AI systems already outperform humans on many narrow tasks and are being
 
 **ES:**
 
-Los sistemas de inteligencia artificial de Frontier ya superan a los humanos en muchas tareas específicas y se están integrando en proyectos piloto de búsqueda, codificación, finanzas y gobierno. Aquí no existe una “superinteligencia” total, pero las rápidas ganancias de capacidad y el despliegue competitivo significan que el control y la alineación van a la zaga de la capacidad en muchas instituciones.
+Los sistemas de IA de frontera ya superan a los humanos en muchas tareas estrechas y se cablean en pilotos de búsqueda, código, finanzas y gobierno. La “superinteligencia” plena no está aquí, pero las ganancias rápidas de capacidad y el despliegue competitivo hacen que el control y la alineación vayan a la zaga de la capacidad en muchas instituciones.
 
 ---
 ### `rogue-si.rootCauses`
@@ -1056,7 +1056,7 @@ Race dynamics reward speed over safety; evaluation of open-ended systems is hard
 
 **ES:**
 
-La dinámica de carrera premia la velocidad por encima de la seguridad; la evaluación de sistemas abiertos es difícil; los incentivos favorecen la productización; la gobernanza está fragmentada entre laboratorios, estados y ecosistemas de código abierto; una vez que los sistemas actúan a escala, lo contrario resulta costoso.
+La dinámica de carrera premia la velocidad por encima de la seguridad; evaluar sistemas abiertos es difícil; los incentivos favorecen la productización; la gobernanza se fragmenta entre labs, Estados y ecosistemas open source; una vez los sistemas actúan a escala, dar marcha atrás es costoso.
 
 ---
 ### `rogue-si.warnings`
@@ -1067,7 +1067,7 @@ Local inventions that hand high-stakes decisions to opaque models can lock in ha
 
 **ES:**
 
-Las invenciones locales que entregan decisiones de alto riesgo a modelos opacos pueden provocar daños antes de que existan salvaguardas. Prefiera la presencia humana, pistas de auditoría y alcances limitados. No invente como si la AGI totalmente autónoma ya fuera una infraestructura confiable.
+Las invenciones locales que entregan decisiones de alto riesgo a modelos opacos pueden fijar el daño antes de que existan salvaguardas. Prefieran humano en el bucle, pistas de auditoría y alcances estrechos. No inventen como si la AGI plenamente autónoma ya fuera infraestructura fiable.
 
 ---
 ### `rural-roads.currentState`
@@ -1133,7 +1133,7 @@ This is toilets, sewage, and hygiene—not drinking-water filtration alone (see 
 
 **ES:**
 
-Se trata de sanitarios, alcantarillado e higiene, no sólo de filtración de agua potable (ver Agua Limpia). Los sensores sin vaciado y tratamiento son teatro. Preferir dignidad, instalaciones escolares seguras para el género y economías de lodos seguras a la exageración de los lujosos baños inteligentes para quienes ya reciben servicios.
+Se trata de retretes, alcantarillado e higiene — no solo filtración de agua potable (ver Agua limpia). Sensores sin vaciado y tratamiento son teatro. Prefieran dignidad, instalaciones escolares seguras por género y economías de lodos seguras al bombo de baños inteligentes de lujo para quienes ya están servidos.
 
 ---
 ### `short-termism.currentState`
@@ -1177,7 +1177,7 @@ Chattel slavery is illegal nearly everywhere, but forced labor, debt bondage, tr
 
 **ES:**
 
-La esclavitud es ilegal en casi todas partes, pero el trabajo forzoso, la servidumbre por deudas, la trata y el trabajo infantil persisten en las cadenas de suministro, el trabajo doméstico, la pesca y las zonas de conflicto, a menudo ocultos a los consumidores.
+La esclavitud de personas como propiedad es ilegal casi en todas partes, pero el trabajo forzoso, la servidumbre por deudas, la trata y el trabajo infantil persisten en cadenas de suministro, trabajo doméstico, pesca y zonas de conflicto — a menudo ocultos a los consumidores.
 
 ---
 ### `slavery.rootCauses`
@@ -1188,7 +1188,7 @@ Profit from cheap coerced labor, weak enforcement, migration vulnerability, corr
 
 **ES:**
 
-Beneficiarse de la mano de obra barata bajo coerción, la débil aplicación de la ley, la vulnerabilidad migratoria, la corrupción y las opacas cadenas de suministro de múltiples niveles que diluyen la rendición de cuentas.
+El beneficio del trabajo barato coercionado, la aplicación débil, la vulnerabilidad migratoria, la corrupción y las cadenas de suministro opacas de varios niveles que diluyen la rendición de cuentas.
 
 ---
 ### `slavery.warnings`
@@ -1232,7 +1232,7 @@ Shame-only campaigns fail people with least access to cessation. Invent for init
 
 **ES:**
 
-Las campañas orientadas únicamente a la vergüenza fallan a las personas que tienen menos acceso a dejar de fumar. Invente para la prevención del inicio, apoyo asequible para dejar de fumar y protección de segunda mano, no para la vigilancia de los fumadores sin atención. Evite las “soluciones” que capturan la industria.
+Las campañas solo de vergüenza fallan a quienes menos acceso tienen a dejar de fumar. Inventen para prevención del inicio, apoyo asequible para dejar de fumar y protección del humo ajeno — no vigilancia de fumadores sin atención. Eviten “soluciones” capturadas por la industria.
 
 ---
 ### `totalitarianism.currentState`
@@ -1298,7 +1298,7 @@ Do not invent “export the trash” as local success. Design with informal pick
 
 **ES:**
 
-No inventen “exportar la basura” como un éxito local. Diseñar teniendo en cuenta los medios de vida de los recolectores informales, la recuperación real de materiales y la reducción en origen. La quema de desechos electrónicos y las inundaciones ahogadas por plástico necesitan sistemas, no limpiezas puntuales de playas como toda una invención.
+No inventen “exportar la basura” como éxito local. Diseñen con los medios de vida de recolectores informales, recuperación real de materiales y reducción en origen. La quema de e-waste y las inundaciones ahogadas de plástico necesitan sistemas, no limpiezas de playa puntuales como todo el invento.
 
 ---
 ### `water.currentState`
@@ -1309,7 +1309,7 @@ Billions still lack safely managed drinking water or sanitation. Climate stress,
 
 **ES:**
 
-Miles de millones de personas todavía carecen de agua potable o saneamiento gestionados de forma segura. El estrés climático, la contaminación y la sobreextracción afectan a los pozos y a los servicios públicos; Las economías de petroleros llenan vacíos a un alto costo.
+Miles de millones siguen sin agua potable o saneamiento gestionados con seguridad. El estrés climático, la contaminación y la sobreextracción golpean pozos y servicios; las economías de camiones cisterna cubren huecos a alto coste.
 
 ---
 ### `water.rootCauses`
@@ -1331,7 +1331,7 @@ Pumps without maintenance budgets fail. Design for local repair, energy for trea
 
 **ES:**
 
-Las bombas sin presupuestos de mantenimiento fallan. Diseñe para reparación local, energía para tratamiento y asignación justa, no para caídas de hardware de una sola vez.
+Las bombas sin presupuestos de mantenimiento fallan. Diseñen para reparación local, energía de tratamiento y asignación justa — no entregas de hardware de un solo tiro.
 
 ---
 ### `weather.currentState`
@@ -1364,7 +1364,7 @@ Sensors without response plans are theater. Invent for warning-to-action loops, 
 
 **ES:**
 
-Los sensores sin planes de respuesta son un teatro. Invente bucles de advertencia a acción, refrigeración/refugio contra inundaciones y equidad, no solo paneles de control más bonitos. El tiempo importa: desplegar pilotos utilizables antes de la próxima temporada, no modelos perfectos después.
+Los sensores sin planes de respuesta son teatro. Inventen bucles de alerta→acción, refugio de fresco/inundación y equidad — no solo paneles más bonitos. El tiempo importa: desplieguen Pilots usables antes de la próxima temporada, no modelos perfectos después.
 
 ---
 ### `women.currentState`
@@ -1397,7 +1397,7 @@ Tech that ignores safety (e.g., public location sharing without controls) can in
 
 **ES:**
 
-La tecnología que ignora la seguridad (por ejemplo, compartir ubicaciones públicas sin controles) puede aumentar el daño. Centro de agencia, privacidad y liderazgo de las mujeres locales, no dispositivos salvadores diseñados en otros lugares.
+La tecnología que ignora la seguridad (p. ej. compartir ubicación pública sin controles) puede aumentar el daño. Centren agencia, privacidad y liderazgo de mujeres locales — no gadgets salvadores diseñados en otro sitio.
 
 ---
 ### `women-stem.currentState`
@@ -1430,6 +1430,6 @@ Do not invent “one inspirational app” as the whole solution. Prefer safe tra
 
 **ES:**
 
-No invente “una aplicación inspiradora” como solución completa. Prefiere tránsito seguro, cultura de laboratorio, becas con colocación y atención cerca de los lugares de trabajo. Distinto de la invención general de los derechos de las mujeres (seguridad, derecho, voz política): mantenga el enfoque en los caminos de la ciencia y la ingeniería.
+No inventen “una app inspiradora” como solución completa. Prefieran tránsito seguro, cultura de laboratorio, becas con colocación y cuidados cerca del trabajo. Distinto de inventar derechos de las mujeres en general (seguridad, ley, voz política): mantengan el foco en las vías de ciencia e ingeniería.
 
 ---

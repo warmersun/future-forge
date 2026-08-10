@@ -50,14 +50,14 @@ Source pack: `locales/he/techs.json`
 
 **EN:** Assistive models, classification, forecasting, and copilots with human oversight.
 
-**HE:** מודלים מסייעים, סיווג, חיזוי וטייסי משנה עם פיקוח אנושי.
+**HE:** מודלים מסייעים, סיווג, חיזוי וקופיילוטים עם פיקוח אנושי.
 
 ---
 ### `ai.milestones.0`
 
 **EN:** Generative AI copilots in work, education, and some clinical tools
 
-**HE:** טייסי משנה גנרטיביים בינה מלאכותית בעבודה, בחינוך ובכמה כלים קליניים
+**HE:** קופיילוטים גנרטיביים של AI בעבודה, בחינוך ובכמה כלים קליניים
 
 ---
 ### `ai.name`
@@ -71,7 +71,7 @@ Source pack: `locales/he/techs.json`
 
 **EN:** _(missing)_
 
-**HE:** Az emberek vezetnek; דגם Javasolnak.
+**HE:** בני אדם מובילים; מודלים מציעים.
 
 ---
 ### `ai.primer`
@@ -82,7 +82,7 @@ Artificial intelligence finds patterns in data to predict, recommend, generate t
 
 **HE:**
 
-בינה מלאכותית מוצאת דפוסים בנתונים כדי לחזות, להמליץ, ליצור טקסט או תמונות ולתמוך בהחלטות. זה כבר עמית לעבודה בהרבה מרפאות, כיתות ושולחנות לוגיסטיים - אבל זה יכול להיות מוטה, בטוח מדי או אטום. המצאות מקומיות חזקות שומרות על בני אדם אחראיות ומקיפות את המודל לזרימת עבודה אמיתית.
+בינה מלאכותית מוצאת דפוסים בנתונים כדי לחזות, להמליץ, ליצור טקסט או תמונות ולתמוך בהחלטות. היא כבר עמיתה לעבודה בהרבה מרפאות, כיתות ושולחנות לוגיסטיקה — אבל היא יכולה להיות מוטה, בטוחה מדי או אטומה. המצאות מקומיות חזקות משאירות בני אדם אחראים ומצמצמות את המודל לזרימת עבודה אמיתית.
 
 ---
 ### `ai.risk`
@@ -96,7 +96,7 @@ Artificial intelligence finds patterns in data to predict, recommend, generate t
 
 **EN:** What scarce capability could Artificial Intelligence help make more abundant here?
 
-**HE:** איזו יכולת דלה יכולה בינה מלאכותית לעזור לעשות כאן בשפע?
+**HE:** איזו יכולת נדירה יכולה בינה מלאכותית לעזור להרבות כאן?
 
 ---
 ### `ai.summary`
@@ -124,7 +124,7 @@ Artificial intelligence finds patterns in data to predict, recommend, generate t
 
 **EN:** Document and logistics copilots
 
-**HE:** טייסי משנה ולוגיסטיקה
+**HE:** קופיילוטים למסמכים ולוגיסטיקה
 
 ---
 ### `ai.useCasesNow.3`

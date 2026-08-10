@@ -26,6 +26,10 @@ Tell the agent something like:
 
 It should parse the ES fields and write back into `locales/es/*.json` (and re-run i18n tests).
 
+## Glossary
+
+Canonical terminology: [`../i18n-glossary-es.md`](../i18n-glossary-es.md)
+
 ## Notes
 
 - First-pass packs may be machine-translated — edit freely for natural Spanish.

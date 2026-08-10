@@ -26,6 +26,10 @@ Tell the agent something like:
 
 It should parse the HE fields and write back into `locales/he/*.json` (and re-run i18n tests).
 
+## Glossary
+
+Canonical terminology: [`../i18n-glossary-he.md`](../i18n-glossary-he.md)
+
 ## Notes
 
 - First-pass packs may be machine-translated — edit freely for natural Hebrew.

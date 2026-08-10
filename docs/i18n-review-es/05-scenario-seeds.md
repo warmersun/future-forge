@@ -16,7 +16,7 @@ EN seedIds: 173 · ES overlays: 172 · missing ES: 1 · extra ES: 0
 
 ## Missing ES overlays (1)
 
-- `_default--crisis-lands-in-place`
+- `_default--crisis-lands-in-place` — **filled below**
 
 ## Seed `_default--crisis-lands-in-place`
 
@@ -24,14 +24,14 @@ EN seedIds: 173 · ES overlays: 172 · missing ES: 1 · extra ES: 0
 
 **EN:** Crisis lands in {place}
 
-**ES:** _(missing)_
+**ES:** La crisis aterriza en {place}
 
 ---
 ### `_default--crisis-lands-in-place.stakeholder`
 
 **EN:** Local working group
 
-**ES:** _(missing)_
+**ES:** Grupo de trabajo local
 
 ---
 ### `_default--crisis-lands-in-place.scene`
@@ -42,49 +42,49 @@ People in {place} feel this global problem in daily life. A local driver keeps i
 
 **ES:**
 
-_(missing)_
+La gente de {place} siente este problema global en la vida diaria. Un motor local lo mantiene — inventa para este lugar y este año, no un eslogan.
 
 ---
 ### `_default--crisis-lands-in-place.places.0`
 
 **EN:** Local Ward
 
-**ES:** _(missing)_
+**ES:** Barrio local
 
 ---
 ### `_default--crisis-lands-in-place.places.1`
 
 **EN:** Town Center
 
-**ES:** _(missing)_
+**ES:** Centro del pueblo
 
 ---
 ### `_default--crisis-lands-in-place.places.2`
 
 **EN:** District Hub
 
-**ES:** _(missing)_
+**ES:** Centro del distrito
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.0`
 
 **EN:** Pressure
 
-**ES:** _(missing)_
+**ES:** Presión
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.1`
 
 **EN:** Capacity
 
-**ES:** _(missing)_
+**ES:** Capacidad
 
 ---
 ### `_default--crisis-lands-in-place.pressureKeys.2`
 
 **EN:** Trust
 
-**ES:** _(missing)_
+**ES:** Confianza
 
 ---
 ## Seed `ag--bare-winter-fields-blow-the-county-thin`
@@ -115,11 +115,11 @@ They rarely are. Mara watches topsoil leave her rows in thin sheets and settle o
 
 **ES:**
 
-Mara abre el pestillo de la puerta de una patada antes del amanecer y el viento ya sabe a arena. Su franja de inquilinos corre al oeste de la curva del arroyo. La helada de anoche dejó el suelo desnudo y fino como un polvo. A media mañana el cielo adquiere el color del papel viejo. El polvo se levanta de cada acre abierto y se vierte en el patio de la escuela tres kilómetros a favor del viento. Los niños se limpian los ojos con las mangas. La enfermera registra otra tarde de tos.
+Mara patea el pestillo del portón antes del alba y el viento ya sabe a polvo. Su franja arrendada corre al oeste de la curva del arroyo. La helada de anoche dejó el suelo desnudo y fino como harina. A media mañana el cielo toma el color del papel viejo. El polvo se levanta de cada acre abierto y se vierte en el patio escolar a unos tres kilómetros a favor del viento. Los niños se limpian los ojos con el borde de las mangas. La enfermera anota otra tarde de tos.
 
-El camión de semillas de cobertura del distrito de suelos está medio vacío en la cooperativa. El alquiler en efectivo vencía en noviembre. La mayoría de los inquilinos vendieron lo último que quedaba del dinero de los frijoles para mantenerse al día y luego dejaron el suelo desnudo durante el invierno porque un mantillo vivo no paga la nota. Los propietarios todavía obtienen contratos de arrendamiento por fanegas entregadas, no por los residuos que quedan. Entonces el patrón se repite: cosechar con fuerza, disco limpio, esperar que las lluvias de marzo sean suaves.
+El camión de semillas de cobertura del distrito de suelos está medio vacío en la cooperativa. El alquiler en efectivo venció en noviembre. La mayoría de los arrendatarios vendieron lo último del dinero de los frijoles para mantenerse al día y dejaron el suelo desnudo todo el invierno porque un mantillo vivo no paga la cuota. Los dueños siguen puntuando los arriendos por fanegas entregadas, no por rastrojo dejado. El patrón se repite: cosechar duro, discar limpio, esperar lluvias de marzo suaves.
 
-Rara vez lo son. Mara observa cómo la capa superior del suelo abandona sus hileras en finas láminas y se deposita en los muebles del porche del vecino. El hijo menor vuelve a casa con la garganta roja. El condado puede contar los días de polvo. Puede contar acres desnudos desde la carretera. Lo que no ha diseñado es un invierno que mantenga el terreno cuando el calendario de alquileres y el calendario de vientos se niegan a coincidir. ¿Quién construye un sistema de arrendamiento y de semillas que aún funciona cuando al campo ya no le queda nada que vender?
+Rara vez lo son. Mara ve la capa fértil dejar sus hileras en láminas finas y posarse en los muebles del porche del vecino. Su hijo menor vuelve otra vez con la garganta roja. El condado puede contar días de polvo. Puede contar acres desnudos desde la carretera. Lo que no ha diseñado es un invierno que sujete el suelo cuando el calendario del arriendo y el del viento se niegan a coincidir. ¿Quién arma un arriendo y un sistema de semillas que aún funcione cuando al campo ya no le queda nada que vender?
 
 ---
 ### `ag--bare-winter-fields-blow-the-county-thin.places.0`
@@ -163,7 +163,7 @@ Rara vez lo son. Mara observa cómo la capa superior del suelo abandona sus hile
 
 **EN:** Terrace cooperative and spring wardens
 
-**ES:** Cooperativa de terrazas y guardianes de manantiales.
+**ES:** Cooperativa de terrazas y guardianes de manantiales
 
 ---
 ### `ag--full-sun-spice-rush-kills-the-mist-forest.scene`
@@ -178,11 +178,11 @@ Ren’s granddaughter carries water farther than she did a year ago. The wardens
 
 **ES:**
 
-Con las primeras luces del día, el viejo Ren camina por el sendero superior del manantial con una taza de hojalata. Se detiene donde el musgo solía permanecer húmedo después del mediodía. La copa sale turbia. Debajo de él, nuevos claros de cardamomo y pimienta brillan como heridas abiertas en la cresta. Los equipos cortan los últimos árboles de sombra en tiras para que la especia pueda tomar pleno sol y alcanzar el grado de exportación más rápido.
+Con las primeras luces, el viejo Ren camina el sendero alto del manantial con una taza de hojalata. Se detiene donde el musgo solía seguir húmedo después del mediodía. La taza sale turbia. Debajo, nuevos claros de cardamomo y pimienta brillan como heridas abiertas en la cresta. Las cuadrillas cortan los últimos árboles de sombra en franjas para que la especia tome sol pleno y llegue antes al grado de exportación.
 
-La cooperativa votó sí la temporada pasada. Los precios al contado eran altos. Los contratos se pagaban en función del peso seco y del color, no en función de si todavía se formaba niebla al amanecer. Sin el dosel, la niebla matinal se disipa. La tierra de los escalones más empinados se afloja después de la lluvia nocturna. Una lengua de barro se apoderó del puente peatonal sobre el pabellón tres el martes. El flujo de primavera en el tanque del pueblo disminuyó lo suficiente como para que la línea de llenado de la tarde ahora no llegue a las últimas casas.
+La cooperativa votó sí la temporada pasada. Los precios spot estaban altos. Los contratos pagaban peso seco y color, no si la niebla aún se formaba al alba. Sin dosel, la niebla matinal se adelgaza. En los peldaños más empinados la tierra se suelta tras la lluvia nocturna. El martes una lengua de barro se llevó el puente peatonal sobre el barrio Tres. El caudal del manantial en el tanque del pueblo bajó tanto que la línea de llenado de la tarde ya no llega a las últimas casas.
 
-La nieta de Ren lleva agua a más distancia que hace un año. Los guardianes pueden señalar cada nueva terraza y nombrar quién firmó. El conductor es simple y local: las especias a pleno sol dan sus frutos este año; la sombra no. El bosque de niebla se convierte en líneas de libro mayor. La cresta todavía tiene que contener personas, agua y raíces al mismo tiempo. ¿Quién diseña una vida especiada que mantenga la niebla y la pendiente cuando el comprador sólo valora el sol?
+La nieta de Ren carga agua más lejos que hace un año. Los guardianes pueden señalar cada terraza nueva y nombrar quién firmó. El motor es simple y local: la especia a pleno sol paga este año; la sombra, no. El bosque de niebla se vuelve líneas de contabilidad. La cresta aún debe sostener a la vez gente, agua y raíces. ¿Quién diseña un modo de vida con especias que conserve la niebla y la ladera cuando el comprador solo cotiza el sol?
 
 ---
 ### `ag--full-sun-spice-rush-kills-the-mist-forest.places.0`
@@ -203,7 +203,7 @@ La nieta de Ren lleva agua a más distancia que hace un año. Los guardianes pue
 
 **EN:** Spring Flow
 
-**ES:** Flujo de primavera
+**ES:** Caudal del manantial
 
 ---
 ### `ag--full-sun-spice-rush-kills-the-mist-forest.pressureKeys.2`
@@ -241,18 +241,18 @@ Joren’s partner calculates whether to replant or sell a cow. The board can rat
 
 **ES:**
 
-Joren se arrodilla en el semillero del sur y frota una costra entre los dedos. La línea blanca no estaba en el momento de la siembra. Durante la noche la zanja se quedó baja y la filtración se volvió intensa. Sus vecinos de productos lácteos y vegetales pusieron en marcha sus bombas una hora antes de la ranura de la junta de agua, persiguiendo la caída del nivel freático antes de que el siguiente hombre pudiera hacerlo. Al mediodía, las espinacas empiezan a verse chamuscadas en las puntas.
+Joren se arrodilla en el semillero sur y frota una costra entre los dedos. La línea blanca no estaba al sembrar. Por la noche la zanja bajó y la filtración se volvió ácida. Sus vecinos lácteos-hortalizas arrancaron las bombas una hora antes del turno de la junta de aguas, persiguiendo la napa que cae antes de que el siguiente pueda. Al mediodía sus plantines de espinaca se ven chamuscados en las puntas.
 
-El pólder se encuentra entre un canal salobre y pastos que todavía producen litros de leche. Los lentes nuevos se adelgazan cuando todos los levantan a la vez. Las reglas existen en papel. La aplicación de la ley llega después de que el daño se muestra en la zona raíz. Cada plantación fallida empuja a un hogar a bombear con más fuerza en el siguiente ciclo para recuperar efectivo. La sal sube. El crédito se endurece. La alianza mixta discute en la sala de bombas mientras las rejillas de entrada se obstruyen con limo fino.
+El pólder queda entre un canal salobre y pastos que aún pagan por litros de leche. Las lentes de agua dulce se adelgazan cuando todos bombean a la vez. Las reglas existen en el papel. La fiscalización llega después de que el daño se ve en la zona de raíces. Cada siembra fallida empuja a un hogar a bombear más fuerte el ciclo siguiente para recuperar efectivo. La sal sube. El crédito se aprieta. La alianza mixta discute en la caseta de bombas mientras las rejillas de toma se tapan de limo fino.
 
-El socio de Joren calcula si replantar o vender una vaca. La junta puede racionar las horas. No puede, por sí solo, romper la carrera que convierte el agua compartida en una urgencia privada. La tierra todavía tiene que alimentar a los rebaños y a los surcos sin enseñarle al suelo a saber a canal. ¿Quién diseña turnos de agua y cultivos que ponen fin a la carrera en lugar de premiar el primer encendido?
+La pareja de Joren calcula si resembrar o vender una vaca. La junta puede racionar horas. No puede, sola, romper la carrera que convierte el agua compartida en urgencia privada. La tierra aún tiene que alimentar rebaños y hileras sin enseñar al suelo a saber a canal. ¿Quién diseña turnos de agua y cultivos que terminen la carrera en vez de premiar el primer interruptor encendido?
 
 ---
 ### `ag--pump-wars-salt-the-seed-beds.places.0`
 
 **EN:** Brackish Polder Reach
 
-**ES:** Alcance del pólder salobre
+**ES:** Tramo de pólder salobre
 
 ---
 ### `ag--pump-wars-salt-the-seed-beds.pressureKeys.0`
@@ -304,11 +304,11 @@ Lila needs the school purchase order. Without it the land rent collapses. The me
 
 **ES:**
 
-Antes de que aumente el ruido de la autopista, Lila camina por la fila del borde con un paño tapándose la boca. El rocío sobre la lechuga todavía tiene un leve toque químico del paso de ayer. Su equipo empieza a empacar a las seis para los camiones de comida escolar. A las nueve, dos recolectores se han salido de la línea con los ojos ardientes y el pecho oprimido. La junta sindical registra los días de enfermedad en un cuaderno manchado porque el portal del comprador sólo rastrea las tasas de rechazo.
+Antes de que suba el ruido de la autopista, Lila camina la hilera del borde con un paño sobre la boca. El rocío en la lechuga aún trae un leve mordisco químico del pase de ayer. Su cuadrilla empieza a embolsar a las seis para los camiones de comida escolar. A las nueve, dos recolectores han salido de la línea con los ojos ardiendo y el pecho apretado. La junta del sindicato anota días de baja en un cuaderno manchado porque el portal del comprador solo rastrea tasas de rechazo.
 
-La hoja del contrato es clara. La hoja debe estar libre de imperfecciones, ser uniforme y entregarse en un reloj al que no le importe la deriva del viento. Si se pierde el grado cosmético, el lote rebota. Por eso, los productores rocían primero un calendario que proteja la apariencia. Las banderas de zona de influencia se hunden entre parcelas pequeñas. Drift no lee las líneas de propiedad. Los niños de la escuela primaria del lado este comen la misma ensalada que produce el cinturón y luego se sientan en aulas con ventanas que dan a las horas de pulverización.
+La hoja del contrato es clara. La hoja debe ir sin mancha, uniforme y entregada en un reloj al que no le importa la deriva del viento. Falla el grado cosmético y el lote se devuelve. Así que los productores rocían en un calendario que protege primero la apariencia. Las banderas de zona de amortiguación cuelgan entre parcelas chicas. La deriva no lee linderos. Los niños de la primaria del este comen la misma ensalada que produce el cinturón y luego se sientan en aulas cuyas ventanas miran las horas de pulverización.
 
-Lila necesita la orden de compra de la escuela. Sin ello, la renta de la tierra se desploma. Los compradores de alimentos necesitan auditorías limpias y cero puntos visibles. El sistema que mantiene ambos lados firmados es el mismo sistema que mantiene los callejones mojados con producto. ¿Quién rediseña la variedad y el cultivo para que una bandeja de almuerzo no requiera un día de enfermedad seguido?
+Lila necesita la orden de compra de la escuela. Sin ella se cae el arriendo de la tierra. Los compradores de comidas quieren auditorías limpias y cero puntos visibles. El sistema que mantiene firmados a ambos lados es el mismo que mantiene los callejones mojados de producto. ¿Quién rediseña el grado y el cultivo para que una bandeja de almuerzo no exija un día de baja en la hilera?
 
 ---
 ### `ag--spec-sheets-turn-salad-rows-into-spray-alleys.places.0`
@@ -345,14 +345,14 @@ Lila necesita la orden de compra de la escuela. Sin ello, la renta de la tierra 
 
 **EN:** Dawn stalls without successors
 
-**ES:** El amanecer se estanca sin sucesores
+**ES:** Puestos del alba sin sucesores
 
 ---
 ### `ageing--dawn-stalls-without-successors.stakeholder`
 
 **EN:** Market vendors guild secretary
 
-**ES:** secretaria del gremio de vendedores del mercado
+**ES:** Secretaria del gremio de vendedores del mercado
 
 ---
 ### `ageing--dawn-stalls-without-successors.scene`
@@ -363,7 +363,7 @@ Before first light Lata unlocks her stall at River Gate and hauls the first crat
 
 **ES:**
 
-Antes del amanecer, Lata abre su puesto en River Gate y arrastra la primera caja de calabaza amarga sobre el cemento húmedo. Ella tiene sesenta y un años. Su cadera se engancha en el giro. La campana de la subasta suena dentro de cuarenta minutos. Los compradores sólo respetan las pilas que parecen llenas y tempranas. Su sobrino consiguió un trabajo en una aplicación de entrega al otro lado de la ciudad. La lista de jóvenes del gremio está vacía esta temporada. Las reglas del mercado todavía favorecen al vendedor que se levanta desde las 3 de la mañana y levanta sin ayuda, el mismo patrón que construyó estos puestos y ahora los deja sin sucesores. La caída del mes pasado le costó dos días de mercado y una semana de dolores que no anotó. Una ayuda escasa significa que o frena y pierde a los chefs habituales o mantiene el trabajo del amanecer hasta el siguiente desliz. ¿Qué se rediseña una puerta de entrada de alimentos cuando vidas laborales más largas se encuentran con un mercado que nunca aprendió a pasar la caja?
+Antes del primer rayo Lata abre su puesto en River Gate y carga la primera caja de calabaza amarga sobre el concreto mojado. Tiene sesenta y un años. La cadera se traba al girar. La campana de la subasta suena en cuarenta minutos. Los compradores solo respetan pilas que se ven llenas y tempranas. Su sobrino tomó un trabajo de app de entregas al otro lado de la ciudad. La lista de manos jóvenes del gremio está vacía esta temporada. Las reglas del mercado siguen favoreciendo al vendedor que está de pie desde las 3 a.m. y levanta sin ayuda — el mismo patrón que construyó estos puestos y ahora los deja sin sucesores. La caída del mes pasado le costó dos días de mercado y una semana de dolor que no anotó. Poca ayuda significa o ralentizar y perder a los chefs habituales o sostener la molienda del alba hasta el próximo resbalón. ¿Qué rediseña una puerta de alimentos cuando vidas laborales más largas se topan con un mercado que nunca aprendió a pasar la caja?
 
 ---
 ### `ageing--dawn-stalls-without-successors.places.0`
@@ -400,7 +400,7 @@ Antes del amanecer, Lata abre su puesto en River Gate y arrastra la primera caja
 
 **EN:** Doubles until the body breaks
 
-**ES:** Se duplica hasta que el cuerpo se rompe.
+**ES:** Dobles de ruta hasta que el cuerpo se rompe
 
 ---
 ### `ageing--doubles-until-the-body-breaks.stakeholder`
@@ -418,7 +418,7 @@ Rosa tapes a fresh route sheet to the co-op board at 5:40 a.m. Twelve names. Yes
 
 **ES:**
 
-Rosa pega con cinta adhesiva una nueva hoja de ruta en el tablero de la cooperativa a las 5:40 a. m. Doce nombres. Ayer eran las diez. La señora Chen todavía necesita un lavado completo y un traslado seguro a la silla antes del traslado para diálisis. El hijo del Sr. Okonkwo volvió a cancelar el horario de la mañana. El hombro derecho de Rosa ya arde por los levantamientos de la semana pasada. La tableta suena dos veces más: el alta hospitalaria quiere hoy dos nuevos ingresos en el mismo pasillo. La ciudad y las agencias pagan por visita realizada, no por minuto de atención. Las familias no pueden contratar ayuda doméstica, por lo que las camas se vacían más rápido y la ruta se densifica. Rosa dobla un elevador con una compañera de trabajo que tiene su propia lista esperando en el hueco de la escalera. Alguien perderá su pase médico antes del mediodía. La cooperativa puede rechazar a los nuevos clientes y perder el corredor de contratos, o seguir aceptando vidas más largas que duren más que las espaldas que los soportan. ¿Quién rediseña la atención domiciliaria para que los años añadidos no rompan a las personas que llegan de madrugada?
+Rosa pega una hoja de ruta nueva al tablero de la cooperativa a las 5:40. Doce nombres. Ayer eran diez. La Sra. Chen aún necesita un baño completo y un traslado seguro a la silla antes del transporte a diálisis. El hijo del Sr. Okonkwo canceló otra vez el turno de la mañana. El hombro derecho de Rosa ya arde por las cargas de la semana pasada. La tableta suena dos veces más: el alta hospitalaria quiere hoy dos nuevas admisiones de envejecimiento en casa en el mismo corredor. La ciudad y las agencias pagan por visita completada, no por minuto cuidadoso. Las familias no pueden comprar ayuda de planta, así que las camas se vacían más rápido y la ruta se densifica. Rosa dobla un elevador con una compañera que tiene su propia lista esperando en la escalera. Alguien se saltará un pase de medicación antes del mediodía. La cooperativa puede rechazar a los clientes nuevos y perder el corredor del contrato — o seguir aceptando vidas más largas que superan las espaldas que las cargan. ¿Quién rediseña la atención domiciliaria para que los años añadidos no rompan a quienes llegan al alba?
 
 ---
 ### `ageing--doubles-until-the-body-breaks.places.0`
@@ -432,7 +432,7 @@ Rosa pega con cinta adhesiva una nueva hoja de ruta en el tablero de la cooperat
 
 **EN:** Body strain
 
-**ES:** tensión corporal
+**ES:** Tensión corporal
 
 ---
 ### `ageing--doubles-until-the-body-breaks.pressureKeys.1`
@@ -473,21 +473,21 @@ Kamal crouches to check the wet molds before the sun clears the shed roof. He is
 
 **ES:**
 
-Kamal se agacha para comprobar los mohos húmedos antes de que el sol aclare el techo del cobertizo. Tiene cincuenta y ocho años. Sus rodillas crujen al caer. El jefe del horno quiere volver a cocer antes del mediodía. Las tarifas por pieza solo cuentan los ladrillos terminados, apilados y estampados. Los transportistas más jóvenes partieron para hacer turnos en el almacén al otro lado de la carretera de circunvalación. El patio todavía sigue el mismo ciclo de agacharse, girar y transportar que agotó al padre de Kamal. El calor sale por la boca abierta del horno. A media mañana se le hinchan las muñecas y el contable marca una carga corta. Las bolsas de hielo se encuentran en el cobertizo de salud junto a un cartel de postura que nadie tiene tiempo de leer. La línea trata el envejecimiento del músculo como un fracaso privado en lugar de un aporte de diseño. Kamal puede acelerar el paso y arriesgarse a caer en la zanja de arcilla, o bajarse y perder el salario que aún cubre los medicamentos de su madre. ¿Qué inventa un astillero cuando los hornos duran más que los huesos que los alimentan?
+Kamal se agacha a revisar los moldes húmedos antes de que el sol limpie el techo del cobertizo. Tiene cincuenta y ocho años. Las rodillas crujen al bajar. El jefe del horno quiere otra cocción antes del mediodía. La tarifa por pieza solo cuenta ladrillos terminados apilados y sellados. Los acarreadores más jóvenes se fueron a turnos de almacén del otro lado de la circunvalación. El patio sigue el mismo ciclo de agacharse, girar y cargar que desgastó al padre de Kamal. El calor sale de la boca abierta del horno. A media mañana se le hinchan las muñecas y el apuntador marca una carga corta. Las bolsas de hielo están en el cobertizo de salud junto a un afiche de postura que nadie tiene tiempo de leer. La línea trata el músculo que envejece como un fracaso privado, no como un dato de diseño. Kamal puede forzar el ritmo y arriesgarse a caer en la zanja de arcilla — o bajarse y perder el sueldo que aún paga la medicina de su madre. ¿Qué inventa un patio cuando los hornos sobreviven a los huesos que los alimentan?
 
 ---
 ### `ageing--kilns-that-outlast-bones.places.0`
 
 **EN:** Brickfields Elder Yards
 
-**ES:** Yardas mayores de Brickfields
+**ES:** Patios de mayores de Brickfields
 
 ---
 ### `ageing--kilns-that-outlast-bones.pressureKeys.0`
 
 **EN:** Joint pain
 
-**ES:** dolor en las articulaciones
+**ES:** Dolor articular
 
 ---
 ### `ageing--kilns-that-outlast-bones.pressureKeys.1`
@@ -510,7 +510,7 @@ Kamal se agacha para comprobar los mohos húmedos antes de que el sol aclare el 
 
 **EN:** Upper floors without cool air
 
-**ES:** Pisos superiores sin aire fresco
+**ES:** Pisos altos sin aire fresco
 
 ---
 ### `ageing--upper-floors-without-cool-air.stakeholder`
@@ -528,7 +528,7 @@ Mei rides the slow elevator to the twenty-third floor with a bag of frozen bottl
 
 **ES:**
 
-Mei toma el lento ascensor hasta el piso veintitrés con una bolsa de botellas congeladas envuelta en una toalla. El pasillo superior todavía conserva el calor de ayer. El señor Ruiz dejó su puerta con el pestillo; Dormía en la silla junto a la ventana porque el dormitorio parecía un horno cerrado. Los enfriadores del edificio pierden carga cuando llega la tarifa máxima. La gestión mide el enfriamiento común por el elevador. Las facturas aumentan debido a las pensiones fijas, por lo que muchos inquilinos cierran sus unidades de ventana después del segundo aviso y esperan la noche. Mei llama a tres puertas todas las tardes. Dos se quedan callados hasta que ella golpea más fuerte. Las horas solas se acumulan con el calor. La asociación de inquilinos puede luchar por una planta de respaldo que siga dando servicio a los pisos superiores, o seguir observando a los vecinos elegir entre dinero para la compra y una hora fresca. ¿Quién diseña potencia y presencia para los suelos donde el envejecimiento se encuentra con el sol de la tarde?
+Mei sube el ascensor lento al piso veintitrés con una bolsa de botellas congeladas envuelta en una toalla. El pasillo de arriba aún guarda el calor de ayer. El Sr. Ruiz dejó la puerta al pestillo; durmió en la silla junto a la ventana porque el dormitorio era un horno cerrado. Los chillers del edificio se descargan cuando pega la tarifa pico. La administración mide el frío común por montante. Las facturas suben sobre pensiones fijas, así que muchos inquilinos apagan los aparatos de ventana tras el segundo aviso y esperan la noche. Mei golpea tres puertas cada tarde. Dos se quedan en silencio hasta que golpea más fuerte. Las horas a solas se apilan con el calor. La asociación de inquilinos puede pelear por una planta de respaldo que aún sirva los pisos altos al final — o seguir viendo a los vecinos elegir entre dinero de la compra y una hora fresca. ¿Quién diseña energía y presencia para los pisos donde el envejecimiento se topa con el sol de la tarde?
 
 ---
 ### `ageing--upper-floors-without-cool-air.places.0`
@@ -556,7 +556,7 @@ Mei toma el lento ascensor hasta el piso veintitrés con una bolsa de botellas c
 
 **EN:** Alone hours
 
-**ES:** horas solas
+**ES:** Horas a solas
 
 ---
 ## Seed `air--bunker-smoke-on-wash-day`
@@ -583,7 +583,7 @@ Nurse Amara hangs the clinic linen on the quay line at first light. Salt wind sh
 
 **ES:**
 
-La enfermera Amara cuelga la ropa de la clínica en el muelle con las primeras luces del día. El viento salado debería limpiar la tela. En cambio, la columna de combustible de un barco frigorífico en el atracadero 4 deposita una película gris sobre las láminas antes de que se sequen. Los niños de la cooperativa de pescadores se frotan los ojos de camino a la escuela y tosen en las mangas. La hora pico de la clínica del muelle comienza temprano el día de lavado. El puerto todavía vende combustible residual barato a buques que no utilizan el almacenamiento en frío mientras esperan hielo y compradores. La energía costera existe en el papel en el nuevo muelle, sin embargo, los atracaderos más antiguos solo miden cargas livianas, por lo que los capitanes mantienen las pilas auxiliares funcionando durante la subasta de la mañana. Amara limpia la arena de las pestañas de un niño pequeño y marca otro ojo rojo en el registro. La cooperativa necesita los barcos. Los barcos necesitan bodegas frías. El aire el día del lavado sigue marcando los mismos cuerpos. ¿Quién rediseña el poder del atraque para que la pesca se mantenga fría sin enseñar a los niños a respirar humo?
+La enfermera Amara cuelga la ropa de la clínica en el tendedero del muelle con la primera luz. El viento salado debería airear la tela. En cambio, la pluma de fuel de un reefer en el atracadero 4 deja una película gris sobre las sábanas antes de que sequen. Los niños de la cooperativa de pescadores se frotan los ojos camino a la escuela y tosen en las mangas. La hora pico de la clínica del muelle empieza temprano el día de lavado. El puerto aún vende fuel residual barato a barcos que dejan el frío al ralentí mientras esperan hielo y compradores. Hay energía de muelle en el papel en el muelle nuevo, pero los atracaderos viejos solo miden cargas livianas, así que los capitanes dejan las generadoras auxiliares encendidas durante la subasta de la mañana. Amara limpia polvo de las pestañas de un niño y anota otro ojo rojo en el registro. La cooperativa necesita los barcos. Los barcos necesitan bodegas frías. El aire el día de lavado sigue marcando los mismos cuerpos. ¿Quién rediseña la energía de atracadero para que la captura se quede fría sin enseñar a los niños a respirar humo?
 
 ---
 ### `air--bunker-smoke-on-wash-day.places.0`
@@ -597,7 +597,7 @@ La enfermera Amara cuelga la ropa de la clínica en el muelle con las primeras l
 
 **EN:** Burning eyes
 
-**ES:** ojos ardientes
+**ES:** Ojos ardientes
 
 ---
 ### `air--bunker-smoke-on-wash-day.pressureKeys.1`
@@ -638,7 +638,7 @@ At shift change, boarding-house auntie Kamala meets the garment line at the alle
 
 **ES:**
 
-En el cambio de turno, la tía Kamala de la pensión se encuentra con la fila de ropa en el grifo del callejón con toallas mojadas por cara. Las pequeñas calderas del grupo de tintes expulsan una niebla de colores que flota a baja altura cuando la brisa del río amaina. Los trabajadores prueban el metal en el camino a casa y se presionan el esternón con los puños antes de cenar. El círculo de la salud registra dolores de pecho en las semanas de trabajo a destajo, cuando los talleres disparan lotes adicionales para alcanzar los límites de exportación y evitar la quema limpia más lenta. Los propietarios dicen que las fregadoras paran el ciclo del tambor. Los compradores siguen pagando por el kilo terminado, no por la hora en que la pila se ensucia. Kamala hierve jengibre para las mujeres que respiran con dificultad en las escaleras y mantiene un catre libre para quienes no pueden subir. Una joven cortadora pierde una mañana y pierde su lote de mangas. La niebla regresa con la siguiente orden urgente. ¿Quién rediseña el calor y los incentivos para que el color abandone la tela sin pintar el aire del callejón a la hora de salir?
+En el cambio de turno, la tía Kamala de la pensión recibe a la línea de confección en el grifo del callejón con toallas mojadas para las caras. Las calderas chicas del clúster de tintes ventilan una niebla de color que se queda baja cuando muere la brisa del río. Las trabajadoras prueban metal en el camino a casa y aprietan los puños contra el esternón antes de la cena. El círculo de salud anota dolor de pecho en las semanas a destajo, cuando los talleres disparan lotes extra para los cortes de exportación y saltan la quema limpia, más lenta. Los dueños dicen que los scrubbers traban el ciclo del tambor. Los compradores aún pagan por el kilo terminado, no por la hora en que la chimenea corre sucia. Kamala hierve jengibre para las mujeres que jadean en la escalera y guarda un catre libre para quien no puede subir. Una cortadora joven falta una mañana y pierde su lote de mangas. La niebla vuelve con el siguiente pedido urgente. ¿Quién rediseña calor e incentivos para que el color salga de la tela sin pintar el aire del callejón a la hora de salida?
 
 ---
 ### `air--colored-fog-at-shift-change.places.0`
@@ -675,7 +675,7 @@ En el cambio de turno, la tía Kamala de la pensión se encuentra con la fila de
 
 **EN:** Evening fires in the lane
 
-**ES:** Incendios nocturnos en el carril
+**ES:** Fuegos de la tarde en el callejón
 
 ---
 ### `air--evening-fires-in-the-lane.stakeholder`
@@ -693,7 +693,7 @@ Meena sorts copper from plastic sheathing on a tarp while her neighbor’s baby 
 
 **ES:**
 
-Meena separa el cobre del revestimiento de plástico sobre una lona mientras el bebé de su vecina se despierta con una tos seca. La tarde es tiempo de quemar en los carriles de chatarra que bordean el canal. Lo que no se vende por peso va a los tambores cuando las tarifas de descarga aumentan y el vertedero autorizado rechaza las cargas después del anochecer. La cooperativa probó un carro compartido hasta la estación de transferencia más alejada. El carro espera las piezas y la ventana de pago se cierra antes del último transporte. Las parteras de la cuadra limpian la arena de la nariz de los bebés y cuentan las noches en que el carril huele a alambre derretido. Los recolectores todavía necesitan el dinero metálico por la mañana. Los propietarios cierran con candado el lote vacío que alguna vez albergó fardos clasificados. Flame es el libro de contabilidad sobrante. Meena cubre la cara del bebé con un paño húmedo y sigue pelando cables porque los compradores al amanecer pagan en efectivo. ¿Quién construye un camino de materiales que pague el camino sin convertir el aire de la cena en humo?
+Meena separa cobre de forro plástico sobre una lona mientras el bebé de la vecina despierta con tos seca. La tarde es hora de quemar en los callejones de chatarra junto al canal. Lo que no se vende por peso va a los tambores cuando suben las tasas del basurero y el vertedero con licencia rechaza cargas después del anochecer. La cooperativa probó un carro compartido hasta la estación de transferencia lejana. El carro espera repuestos y la ventana de tarifas se cierra antes del último viaje. Las parteras de la cuadra limpian polvo de narices de bebés y cuentan las noches en que el callejón huele a alambre derretido. Los recolectores aún necesitan el dinero del metal para la mañana. Los dueños cierran con candado el lote vacío que antes tenía fardos clasificados. La llama es el libro sobrante. Meena cubre la cara del bebé con un paño húmedo y sigue pelando cable porque los compradores del alba pagan en efectivo. ¿Quién arma un camino de materiales que pague el callejón sin convertir el aire de la cena en humo?
 
 ---
 ### `air--evening-fires-in-the-lane.places.0`
@@ -707,7 +707,7 @@ Meena separa el cobre del revestimiento de plástico sobre una lona mientras el 
 
 **EN:** Baby cough
 
-**ES:** tos de bebé
+**ES:** Tos de bebé
 
 ---
 ### `air--evening-fires-in-the-lane.pressureKeys.1`
@@ -737,7 +737,7 @@ Meena separa el cobre del revestimiento de plástico sobre una lona mientras el 
 
 **EN:** Parent-teacher air watch and corridor bus crews
 
-**ES:** Vigilancia aérea de padres y maestros y equipos de autobuses de pasillo
+**ES:** Vigilancia del aire padres-maestros y equipos de buses del corredor
 
 ---
 ### `air--recess-under-the-flyover.scene`
@@ -748,7 +748,7 @@ Coach Rina blows the whistle for outdoor stretch under the flyover because the y
 
 **ES:**
 
-La entrenadora Rina hace sonar el silbato para hacer estiramientos al aire libre bajo el paso elevado porque al mediodía el patio es la única sombra. El diésel procedente de la subida a la circunvalación llega en oleadas a la valla. Dos estudiantes se sientan con el pecho apretado antes de la segunda vuelta. La vigilancia aérea de padres y maestros fija un sensor barato en la puerta trasera y observa cómo el número salta cada vez que un camión cargado baja de marcha en la pendiente. Las reglas de flota todavía empujan mercancías pesadas a través de este corredor durante el horario escolar; el peaje de circunvalación es más alto y los despachadores mantienen el antiguo ascenso para ahorrar un giro. Los equipos de autobuses permanecen inactivos en la puerta para recogerlos, añadiendo su propia columna al aire del recreo. Rina mueve la práctica detrás de la pared de la biblioteca, luego pierde el espacio cuando la lluvia convierte la franja en barro. Una semana más de picos y el reloj cancelará los juegos al aire libre durante el trimestre. Un niño que necesita correr se sienta con un inhalador en una escalera. ¿Quién remodela la sincronización y la energía de los pasillos para que el recreo no sea una elección entre el calor, el barro y los gases de escape de los camiones?
+La coach Rina silba para el estiramiento al aire libre bajo el paso elevado porque el patio es la única sombra al mediodía. El diésel de la subida de la circunvalación pega en la valla por oleadas. Dos alumnos se sientan con el pecho apretado antes de la segunda vuelta. La vigilancia del aire padres-maestros clava un sensor barato en el portón trasero y ve el número saltar cada vez que un camión cargado baja de marcha en la pendiente. Las reglas de flota aún empujan carga pesada por este corredor en horario escolar; el peaje del bypass es más alto y los despachadores guardan la subida vieja para ahorrar un giro. Los buses quedan al ralentí en la puerta para el recojo, sumando su propia pluma al aire del recreo. Rina mueve la práctica detrás del muro de la biblioteca y luego pierde el espacio cuando la lluvia vuelve barro la franja. Una semana más de picos y la vigilancia cancelará los juegos al aire libre del trimestre. Un niño que necesita correr se sienta con un inhalador en la escalera. ¿Quién remodela el timing y la energía del corredor para que el recreo no sea elegir entre calor, barro y escape de camiones?
 
 ---
 ### `air--recess-under-the-flyover.places.0`
@@ -762,14 +762,14 @@ La entrenadora Rina hace sonar el silbato para hacer estiramientos al aire libre
 
 **EN:** Sick days
 
-**ES:** dias de enfermedad
+**ES:** Días de enfermedad
 
 ---
 ### `air--recess-under-the-flyover.pressureKeys.1`
 
 **EN:** Truck exhaust
 
-**ES:** escape de camión
+**ES:** Escape de camión
 
 ---
 ### `air--recess-under-the-flyover.pressureKeys.2`
@@ -809,13 +809,13 @@ Marcus asks if forgetting names means the disease has already won. Angela has no
 
 **ES:**
 
-Ángela abre la clínica gratuita a las 7:10 con un café que ya se ha vuelto amargo. Marcus es el primero en la fila. Pasó la noche en un sillón reclinable junto a su padre, que ya no duerme más de noventa minutos seguidos. La placa de Marcus todavía dice mantenimiento del molino. El molino es un caparazón. El turno de noche no es remunerado y es interminable.
+Ángela abre la clínica gratuita a las 7:10 con un café que ya amarga. Marcus es el primero en la fila. Pasó la noche en un reclinable junto a su padre, que ya no duerme más de noventa minutos seguidos. La credencial de Marcus aún dice mantenimiento de la fábrica. La fábrica es un cascarón. El turno de noche de cuidado no se paga y no termina.
 
-Quiere veinte minutos de tranquilidad para una pantalla cognitiva. La sala de espera se llena de toses, formularios de trabajo y un vecino que necesita atención de heridas antes de una entrevista de trabajo. Los controles cognitivos pasan a "la próxima vez". La próxima vez suele ser una sala de emergencias después de un incendio en una estufa o una llamada de bienestar de la policía.
+Quiere veinte minutos tranquilos para un cribado cognitivo. La sala de espera se llena de toses, formularios de trabajo y un vecino que necesita cura de herida antes de una entrevista de empleo. Los controles cognitivos se deslizan a «la próxima vez». La próxima vez suele ser un box de urgencias tras un fuego de cocina o una llamada policial de bienestar.
 
-Este bloque sigue produciendo movimientos de crisis porque el cambio temprano no tiene ningún lugar barato donde aterrizar. Los hijos adultos hacen malabarismos con las horas de concierto y pasar la noche sentados. Faltan meses para las plazas de atención primaria. La clínica atrapa a quien entra después de la peor noche, no antes. El agotamiento es el combustible local. Las pantallas perdidas son el hábito que enseña el sistema.
+Esta cuadra sigue produciendo movimientos de crisis porque el cambio temprano no tiene un lugar barato donde aterrizar. Los hijos adultos hacen malabares con horas de gig y veladas de noche. Los turnos de atención primaria están a meses. La clínica atrapa a quien entra después de la peor noche, no antes. El agotamiento es el combustible local. Los cribados perdidos son el hábito que enseña el sistema.
 
-Marcus pregunta si olvidar nombres significa que la enfermedad ya ganó. Ángela no tiene una respuesta clara y tiene una agenda completa a las ocho. ¿Quién integra la detección en las horas que ya viven los cuidadores, para que un hijo cansado no sea el último sensor antes de que la casa se desmorone?
+Marcus pregunta si olvidar nombres significa que la enfermedad ya ganó. Ángela no tiene una respuesta limpia y una agenda llena a las ocho. ¿Quién mete la detección en las horas que los cuidadores ya viven — para que un hijo cansado no sea el último sensor antes de que se rompa un hogar?
 
 ---
 ### `alzheimer--after-the-midnight-caregiving-shift.places.0`
@@ -852,7 +852,7 @@ Marcus pregunta si olvidar nombres significa que la enfermedad ya ganó. Ángela
 
 **EN:** Dusk walks past the grain bins
 
-**ES:** El anochecer pasa junto a los contenedores de grano
+**ES:** Paseos al anochecer junto a los silos
 
 ---
 ### `alzheimer--dusk-walks-past-the-grain-bins.stakeholder`
@@ -876,34 +876,34 @@ Harold’s daughter will hear about tonight tomorrow. Ruth will hear the catch i
 
 **ES:**
 
-Ruth cierra la oficina de la cabaña a las 6:40 y todavía ve la silla vacía de Harold en el porche. El camino de grava hacia los depósitos de grano ya está oscuro. Lo encuentra a dos cuadras de distancia, con el abrigo abierto, nombrando el viejo ascensor como si el equipo todavía trabajara en el turno de noche. Él no pelea con ella. Simplemente no sabe el camino a casa.
+Ruth cierra la oficina del cottage a las 6:40 y aún ve la silla vacía de Harold en el porche. El camino de grava hacia los silos ya está oscuro. Lo encuentra a dos cuadras, abrigo abierto, nombrando el elevador viejo como si el turno de noche aún trabajara. No pelea. Solo no sabe el camino a casa.
 
-Cuando ella lo devuelve, la hoja de verificación de voluntarios lleva media hora de retraso. Otras tres puertas aún necesitan ser tocadas. El municipio funciona gracias a la buena voluntad de los vecinos y a una lista en papel que Ruth imprime todos los lunes. Los niños se mudaron a Lincoln y Omaha hace años. Los árboles telefónicos se detienen cuando alguien está en una cosecha o en un doble turno en la planta empacadora.
+Cuando lo trae de vuelta, la hoja de control de voluntarios lleva media hora de retraso. Otras tres puertas aún necesitan un golpe. El municipio corre con buena voluntad de vecinos y una lista en papel que Ruth imprime cada lunes. Los hijos se mudaron a Lincoln y Omaha hace años. Los árboles telefónicos se traban cuando alguien está en cosecha o en doble turno en la planta empacadora.
 
-Deambular no es un susto raro aquí. Es la hora después de la cena, cuando la luz cae rápidamente sobre el terreno llano y la memoria pierde su dominio sobre los nombres de las calles. Las familias viven demasiado lejos para cubrir cada anochecer. Las cabañas fueron construidas para una vida independiente, no para una vigilancia continua. Los cheques tardíos se acumulan porque los mismos seis voluntarios cubren doce unidades y una carretera del condado que parece más larga después del anochecer.
+Deambular no es un susto raro aquí. Es la hora después de la cena, cuando la luz cae rápido en el terreno plano y la memoria suelta los nombres de las calles. Las familias viven demasiado lejos para cubrir cada anochecer. Los cottages se hicieron para vida independiente, no para vigilancia continua. Los controles tardíos se acumulan porque los mismos seis voluntarios cubren doce unidades y un camino del condado que se siente más largo después del oscurecer.
 
-La hija de Harold se enterará mañana por la noche. Ruth notará el tono entrecortado de su voz. ¿Quién rediseña la vigilancia rural para que un hombre pueda caminar al anochecer sin desaparecer en los contenedores y sin quemar al último vecino dispuesto a mirar?
+La hija de Harold oirá de esta noche mañana. Ruth oirá el nudo en su voz. ¿Quién rediseña la vigilancia rural para que un hombre pueda caminar al anochecer sin desaparecer en los silos — y sin quemar al último vecino dispuesto a mirar?
 
 ---
 ### `alzheimer--dusk-walks-past-the-grain-bins.places.0`
 
 **EN:** Prairie View Senior Cottages, Grand Island
 
-**ES:** Prairie View Senior Cottages, Grand Island
+**ES:** Cabañas senior Prairie View, Grand Island
 
 ---
 ### `alzheimer--dusk-walks-past-the-grain-bins.pressureKeys.0`
 
 **EN:** Wandering
 
-**ES:** Errante
+**ES:** Deambulación
 
 ---
 ### `alzheimer--dusk-walks-past-the-grain-bins.pressureKeys.1`
 
 **EN:** Late Checks
 
-**ES:** Cheques tardíos
+**ES:** Controles tardíos
 
 ---
 ### `alzheimer--dusk-walks-past-the-grain-bins.pressureKeys.2`
@@ -919,7 +919,7 @@ La hija de Harold se enterará mañana por la noche. Ruth notará el tono entrec
 
 **EN:** Prayers between bus transfers
 
-**ES:** Oraciones entre traslados en autobús.
+**ES:** Oraciones entre transbordos de bus
 
 ---
 ### `alzheimer--prayers-between-bus-transfers.stakeholder`
@@ -943,13 +943,13 @@ Sothea can arrange one ride. She cannot be every transfer. How do you design mem
 
 **ES:**
 
-Sothea se encuentra con la tía Vanna bajo la sombra del patio después del servicio del templo. Las manos de Vanna agarran un hilo de cuentas de oración. Ella volvió a extrañar la clínica. El autobús que cruza la ciudad necesita dos transbordos. En la segunda parada no podía nombrar la calle en el papel que llevaba en el bolso. Un extraño la ayudó a invertir el camino a casa.
+Sothea se reúne con la tía Vanna bajo la sombra del patio después del servicio del templo. Las manos de Vanna preocupan un hilo de cuentas de oración. Volvió a faltar a la clínica. El bus de un lado a otro de la ciudad pide dos transbordos. En la segunda parada ya no podía nombrar la calle del papel en su bolso. Un extraño la ayudó a invertir la ruta a casa.
 
-El grupo de ayuda mutua mantiene una lista de viajes en una pizarra. Los conductores son primos con trabajos diurnos. Los exámenes de inglés en la clínica de la memoria parecen paredes. Los parientes más jóvenes traducen cuando pueden. El orgullo impide que muchos ancianos pronuncien la palabra demencia en voz alta. El retraso no es pereza. Es una vergüenza entrelazada con la logística.
+El grupo de ayuda mutua mantiene una lista de viajes en una pizarra. Los conductores son primos con trabajo de día. Los formularios en inglés de la clínica de memoria se sienten como muros. Los parientes más jóvenes traducen cuando pueden. El orgullo impide a muchos ancianos decir en voz alta la palabra demencia. El retraso no es pereza. Es vergüenza trenzada con logística.
 
-El riesgo de tráfico es real en esos viajes largos cuando la confusión aumenta a mitad de la ruta. La barrera del idioma convierte una simple cita en una negociación familiar. El sistema que mantiene el daño en movimiento es ordinario: clínicas ubicadas lejos del corredor, admisión que supone un inglés fluido y un automóvil privado, y una comunidad que protege la cara hasta que una crisis obliga a que la historia salga a la luz.
+El riesgo de tráfico es real en esos viajes largos cuando la confusión sube a mitad de ruta. La barrera del idioma convierte una cita simple en una negociación familiar. El sistema que mantiene el daño en movimiento es ordinario: clínicas lejos del corredor, ingreso que asume inglés fluido y auto privado, y una comunidad que protege la cara hasta que una crisis fuerza la historia a salir.
 
-Sothea puede organizar un viaje. Ella no puede ser todas las transferencias. ¿Cómo se diseña el acceso al cuidado de la memoria para que un anciano pueda buscar ayuda sin apostar por la geografía del autobús o esperar hasta que la vergüenza finalmente pierda el paso al miedo?
+Sothea puede armar un viaje. No puede ser cada transbordo. ¿Cómo se diseña el acceso al cuidado de la memoria para que una anciana llegue a la ayuda sin apostar a la geografía del bus — ni esperar a que la vergüenza pierda por fin ante el miedo?
 
 ---
 ### `alzheimer--prayers-between-bus-transfers.places.0`
@@ -986,7 +986,7 @@ Sothea puede organizar un viaje. Ella no puede ser todas las transferencias. ¿C
 
 **EN:** Three floors, one night aide
 
-**ES:** Tres pisos, un asistente nocturno.
+**ES:** Tres pisos, una auxiliar de noche
 
 ---
 ### `alzheimer--three-floors-one-night-aide.stakeholder`
@@ -1010,13 +1010,13 @@ Mrs. Park knows Kenji’s face tonight. Tomorrow she may not. He is resident cou
 
 **ES:**
 
-Kenji sube en el lento ascensor hasta las doce con una lista médica impresa y un llavero que suena demasiado fuerte en el pasillo. La puerta de la señora Park está entreabierta. Sus pastillas nocturnas permanecen intactas junto a una taza de té fría. El asistente nocturno todavía está en nueve, respondiendo a una alarma de caída que resultó ser un control remoto caído.
+Kenji sube el ascensor lento al doce con una lista de medicación impresa y un llavero que tintinea demasiado en el pasillo. La puerta de la Sra. Park está entreabierta. Sus pastillas de la noche siguen intactas junto a un té frío. La auxiliar de noche sigue en el nueve, atendiendo una alarma de caída que resultó ser un mando caído.
 
-Un asistente autorizado cubre tres pisos después de las ocho. El edificio se vende vivienda independiente con complemento de cuidado ligero. La demencia llegó más rápido que el modelo de dotación de personal. Las familias que participan en videollamadas ven vestíbulos ordenados. No ven el intervalo entre las rondas programadas y el momento en que un residente olvida para qué sirve el blister.
+Una auxiliar licenciada cubre tres pisos después de las ocho. El edificio vendió vida independiente con un extra de cuidados ligeros. La demencia llegó más rápido que el modelo de personal. Las familias en videollamada ven lobbies ordenados. No ven el hueco entre las rondas programadas y el momento en que un residente olvida para qué es el blister.
 
-Kenji llama suavemente y espera. El mes pasado, un piloto de sensores bien intencionado murió en el comité. Los residentes temían una vigilancia constante. Los niños adultos querían pruebas de que alguien notaría una dosis omitida. La confianza se divide en esa línea. Sin confianza, las herramientas se quedan en cajas. Sin herramientas, el asistente sigue subiendo escaleras mientras los medicamentos se enfrían en las mesas de noche.
+Kenji llama suave y espera. El mes pasado un Pilot de sensores bien intencionado murió en comité. Los residentes temían vigilancia constante. Los hijos adultos querían prueba de que alguien notaría una dosis perdida. La confianza se partió en esa línea. Sin confianza, las herramientas se quedan en cajas. Sin herramientas, la auxiliar sigue corriendo escaleras mientras la medicación se enfría en las mesitas.
 
-La señora Park conoce el rostro de Kenji esta noche. Mañana puede que no. Él es el consejo de residentes, no el personal clínico, pero él es quien tiene la lista. ¿Cómo se diseña la atención nocturna en una torre de modo que la dignidad y la seguridad compartan la misma ronda, sin pedirle a un asistente exhausto que esté en todas partes al mismo tiempo?
+La Sra. Park reconoce la cara de Kenji esta noche. Mañana quizá no. Él es del consejo de residentes, no personal clínico, y sin embargo es quien sostiene la lista. ¿Cómo se diseña el cuidado nocturno en una torre para que dignidad y seguridad compartan la misma ronda — sin pedir a una auxiliar exhausta que esté en todas partes a la vez?
 
 ---
 ### `alzheimer--three-floors-one-night-aide.places.0`
@@ -1053,7 +1053,7 @@ La señora Park conoce el rostro de Kenji esta noche. Mañana puede que no. Él 
 
 **EN:** Barn routine poisons the creek clinics
 
-**ES:** La rutina del granero envenena las clínicas de Creek
+**ES:** La rutina del establo envenena las clínicas del arroyo
 
 ---
 ### `amr--barn-routine-poisons-the-creek-clinics.stakeholder`
@@ -1071,7 +1071,7 @@ At first light Marta walks the nursery barn with the dosing chart clipped to her
 
 **ES:**
 
-Con las primeras luces del día, Marta camina por la guardería con la tabla de dosificación sujeta a su tabla. Los lechones reciben la misma combinación preventiva que el integrador escribió en el contrato la temporada pasada. Por la tarde, el arroyo debajo de la laguna lleva un dulce olor químico al pueblo donde su prima dirige el puesto rural. Dos peones llaman con fiebres en la piel que no desaparecen con las pastillas habituales. En el pequeño frigorífico de la clínica sólo hay lo que dejó el camión estatal el mes pasado. Los integradores todavía valoran el peso saludable mediante piensos continuos en dosis bajas, y los inspectores cuentan los animales muertos, no los medicamentos residuales en el escurrimiento. Marta firma la hoja porque una línea en blanco significa una multa y una semana de salario perdido para toda la tripulación. Su prima le envía un mensaje de texto diciéndole que otro niño de la carretera del arroyo necesita una droga más fuerte que el correo no tiene. ¿Quién diseña el contrato del granero y la clínica del arroyo para que el crecimiento no enseñe resistencia a todos los hogares río abajo?
+Con la primera luz Marta recorre la nave de cría con la tabla de dosis sujeta a su tablero. Los lechones reciben la misma mezcla preventiva que el integrador escribió en el contrato la temporada pasada. Por la tarde el arroyo bajo la laguna lleva un olor químico dulce al pueblo donde su primo lleva el puesto rural. Dos peones llaman con fiebres de piel que no ceden con las pastillas de siempre. El frigorífico chico de la clínica solo tiene lo que dejó el camión estatal el mes pasado. Los integradores aún valoran el peso sano con pienso continuo a dosis baja, y los inspectores cuentan animales muertos, no residuos en la escorrentía. Marta firma la hoja porque una línea en blanco es multa y una semana de sueldo perdida para toda la cuadrilla. Su primo escribe que otro niño del camino del arroyo necesita un fármaco más fuerte que el puesto no tiene. ¿Quién diseña el contrato del establo y la clínica del arroyo para que el crecimiento no enseñe resistencia a cada casa río abajo?
 
 ---
 ### `amr--barn-routine-poisons-the-creek-clinics.places.0`
@@ -1108,7 +1108,7 @@ Con las primeras luces del día, Marta camina por la guardería con la tabla de 
 
 **EN:** Lane chemists empty the last good drugs
 
-**ES:** Los químicos de Lane vacían las últimas drogas buenas
+**ES:** Los boticarios del callejón vacían los últimos buenos fármacos
 
 ---
 ### `amr--lane-chemists-empty-the-last-good-drugs.stakeholder`
@@ -1126,14 +1126,14 @@ Ada paddles the narrow lane to the stilt clinic with a child hot against her che
 
 **ES:**
 
-Ada rema por el estrecho camino hasta la clínica sobre zancos con un niño caliente contra su pecho. La enfermera abre una lata y sólo encuentra comprimidos blancos sueltos que se venden sin tira ni nombre. La semana pasada el mismo vendedor del malecón prometió un curso completo; la fiebre volvió al cabo de cuatro días. Ada pagó lo que tenía porque la farmacia formal al otro lado de la laguna cobra más que la pesca de un día. Los químicos de Lane se abastecen de sacos rotos para igualar el dinero que una madre puede gastar, y nadie rastrea qué molécula llegó realmente al niño. Sólo esta mañana el registro clínico muestra tres tratamientos más a medio terminar. El vecino de Ada todavía envía clientes al mismo puesto porque el puesto otorga crédito cuando las redes se quedan vacías. La enfermera sostiene las pastillas sin etiqueta y la muñeca del niño y no sabe cuál falla nombrar primero. ¿Quién diseña la seguridad de los medicamentos en el agua para que el dinero de una madre y la cura de un niño no se vendan como apuestas separadas?
+Ada rema por el callejón estrecho hasta la clínica sobre pilotes con un niño caliente contra el pecho. La enfermera abre una lata y solo halla pastillas blancas sueltas vendidas sin tira ni nombre. La semana pasada el mismo vendedor del malecón prometió un curso completo; la fiebre volvió en cuatro días. Ada pagó lo que tenía porque la farmacia formal al otro lado de la laguna cobra más que la pesca de un día. Los boticarios del callejón reponen con sacos a granel partidos para cuadrar el efectivo que una madre puede sacar, y nadie rastrea qué molécula llegó de verdad al niño. El registro de la clínica muestra tres tratamientos a medias más solo esta mañana. La vecina de Ada sigue mandando clientes al mismo puesto porque da crédito cuando las redes salen vacías. La enfermera sostiene las pastillas sin etiqueta y la muñeca del niño y no sabe qué fallo nombrar primero. ¿Quién diseña seguridad de medicamentos en el agua para que el dinero de una madre y la cura de un niño no se vendan como apuestas separadas?
 
 ---
 ### `amr--lane-chemists-empty-the-last-good-drugs.places.0`
 
 **EN:** Makoko Stilt Clinic Lanes
 
-**ES:** Carriles de la clínica Makoko Stilt
+**ES:** Callejones de la clínica sobre pilotes Makoko
 
 ---
 ### `amr--lane-chemists-empty-the-last-good-drugs.pressureKeys.0`
@@ -1163,7 +1163,7 @@ Ada rema por el estrecho camino hasta la clínica sobre zancos con un niño cali
 
 **EN:** Port lungs outlast the formulary
 
-**ES:** Los pulmones del puerto duran más que el formulario
+**ES:** Los pulmones del puerto sobreviven al formulario
 
 ---
 ### `amr--port-lungs-outlast-the-formulary.stakeholder`
@@ -1181,7 +1181,7 @@ Rosa clocks in at the dockside TB ward as the night crane still swings container
 
 **ES:**
 
-Rosa ficha en la sala de tuberculosis del muelle mientras la grúa nocturna todavía mueve contenedores. Un estibador llamado Luis se sienta en el borde del catre, con la mascarilla suelta, y le dice que la tos volvió después de tres meses de tomar pastillas. El documento de laboratorio muestra que la cepa ya no se adapta al paquete estándar que tiene la clínica del puerto. Luis no puede faltar a un turno más sin perder la placa que alimenta a su madre. Rosa camina por el pasillo y encuentra a dos hombres más que comparten la misma pensión y las mismas botellas a medio terminar. El formulario todavía envía los viejos medicamentos de primera línea porque la licitación nacional premia el volumen, no el mapa de resistencia que crece a lo largo de los muelles. Los supervisores registran las horas según la pasarela, no según el resultado del esputo. Luis le pregunta en voz baja si debería ocultar la fiebre y seguir cargando. ¿Quién rediseña la atención y el trabajo para que la cura pueda terminar antes de que zarpe el próximo barco?
+Rosa ficha en la sala de TB del muelle mientras la grúa de noche aún mueve contenedores. Un estibador llamado Luis se sienta al borde del catre, mascarilla floja, y le dice que la tos volvió tras tres meses de pastillas. El parte de laboratorio muestra que la cepa ya no cede al paquete estándar que stockea la clínica del puerto. Luis no puede faltar a otro turno sin perder la credencial que alimenta a su madre. Rosa recorre el pasillo y halla a dos hombres más que comparten la misma pensión y las mismas botellas a medias. El formulario aún envía los viejos fármacos de primera línea porque el concurso nacional premia el volumen, no el mapa de resistencia que crece en los muelles. Los supervisores fichan horas en la pasarela, no por el resultado del esputo. Luis le pregunta en voz baja si debe ocultar la fiebre y seguir cargando. ¿Quién rediseña cuidado y trabajo para que una cura pueda terminar antes de que zarpe el próximo barco?
 
 ---
 ### `amr--port-lungs-outlast-the-formulary.places.0`
@@ -1218,7 +1218,7 @@ Rosa ficha en la sala de tuberculosis del muelle mientras la grúa nocturna toda
 
 **EN:** The pharma drain tutors the tanks
 
-**ES:** El drenaje farmacéutico tutoriza los tanques.
+**ES:** El desagüe farma enseña a los tanques
 
 ---
 ### `amr--the-pharma-drain-tutors-the-tanks.stakeholder`
@@ -1236,7 +1236,7 @@ Before dawn, Ramesh opens the valve on the treatment lagoon behind the bulk-drug
 
 **ES:**
 
-Antes del amanecer, Ramesh abre la válvula de la laguna de tratamiento detrás de los cobertizos de medicamentos a granel. La espuma recorre la zanja hacia los pozos del pueblo. Al mediodía, la escuela de su hija la envía a casa con ardor en la garganta y una nota que la clínica no puede leer. La enfermera del turno de noche ya ha utilizado el último frasco de cultivo que todavía coincide con el gráfico anterior. Río abajo, el laboratorio municipal registra otro aumento de E. coli resistente en el agua del tanque que beben las familias después de que falla la línea municipal. Las fábricas todavía eliminan los antibióticos residuales porque los medidores de permisos sólo colorean y huelen, no moléculas activas, y los compradores pagan por la velocidad. Ramesh mantiene la laguna en movimiento para que la planta no cierre y su equipo no pierda salario. Su esposa espera afuera de la sala de atención primaria con un niño que ya no responde al jarabe barato. ¿Quién diseña el drenaje y la clínica como un solo sistema antes de que el agua enseñe a todos los hogares la misma dura lección?
+Antes del alba, Ramesh abre la válvula de la laguna de tratamiento detrás de los cobertizos de fármacos a granel. La espuma corre por la zanja hacia los pozos del pueblo. Al mediodía la escuela manda a su hija a casa con ardor de garganta y una nota que la clínica no puede leer. La enfermera del turno de noche ya usó el último frasco de cultivo que aún coincide con la ficha vieja. Río abajo, el lab municipal registra otro pico de E. coli resistente en el agua de tanque que beben las familias cuando falla la línea municipal. Las fábricas aún descargan antibióticos residuales porque el permiso mide solo color y olor, no moléculas activas, y los compradores pagan la velocidad. Ramesh mantiene la laguna en movimiento para que la planta no cierre y su cuadrilla no pierda el sueldo. Su esposa espera fuera de la sala de atención primaria con un niño que ya no responde al jarabe barato. ¿Quién diseña el desagüe y la clínica como un solo sistema antes de que el agua enseñe a cada hogar la misma lección dura?
 
 ---
 ### `amr--the-pharma-drain-tutors-the-tanks.places.0`
@@ -1250,7 +1250,7 @@ Antes del amanecer, Ramesh abre la válvula de la laguna de tratamiento detrás 
 
 **EN:** Sick days
 
-**ES:** dias de enfermedad
+**ES:** Días de enfermedad
 
 ---
 ### `amr--the-pharma-drain-tutors-the-tanks.pressureKeys.1`
@@ -1273,7 +1273,7 @@ Antes del amanecer, Ramesh abre la válvula de la laguna de tratamiento detrás 
 
 **EN:** Dish backlog leaves the valley guessing
 
-**ES:** La acumulación de platos deja al valle en duda
+**ES:** La cola de antenas deja al valle adivinando
 
 ---
 ### `asteroid--dish-backlog-leaves-the-valley-guessing.stakeholder`
@@ -1291,7 +1291,7 @@ Rosa Delgado stands under Dish 14 with a clipboard that no longer matches the sk
 
 **ES:**
 
-Rosa Delgado está debajo del plato 14 con un portapapeles que ya no coincide con el cielo. Un gemido detuvo el plato a medio girar antes del amanecer. El repuesto se encuentra en un depósito a tres condados de distancia. Los socios de Alerta Civil siguen pidiendo una pista refinada sobre una roca que rozó los catálogos matutinos. Ella sólo tiene un arco rancio y una línea de espera educada. Las familias campesinas en el borde del valle ya ignoran los árboles telefónicos. El tono falso del mes pasado vació los lotes de las escuelas para nada. Las tripulaciones solucionan primero los trabajos en el espacio profundo porque la junta de trabajos pendientes clasifica los contratos científicos por encima del seguimiento civil. Las horas se desvanecen mientras el camino de la roca se ensancha sobre el papel. El sobrino de Rosa pregunta durante la cena si la próxima sirena significa hacer la maleta o volver a los deberes. ¿Quién rediseña la cola de reparaciones para que el cielo civil no se oscurezca entre las prioridades de los contratos?
+Rosa Delgado se para bajo la antena Dish 14 con un portapapeles que ya no coincide con el cielo. Un chillido de rodamiento detuvo la antena a mitad de barrido antes del amanecer. El repuesto está en un depósito a tres condados. Los socios de alerta civil siguen pidiendo una trayectoria refinada de una roca que rozó los catálogos de la mañana. Solo tiene un arco viejo y una línea de espera educada. Las familias de rancho en el borde del valle ya ignoran los árboles telefónicos. El tono falso del mes pasado vació los estacionamientos de la escuela por nada. Las cuadrillas arreglan primero los trabajos de espacio profundo porque el tablero de atrasos pone los contratos científicos por encima del seguimiento civil. Las horas se van mientras el camino de la roca se ensancha en el papel. El sobrino de Rosa pregunta en la cena si la próxima sirena significa hacer una maleta o volver a los deberes. ¿Quién rediseña la cola de reparación para que un cielo civil no se apague entre prioridades de contrato?
 
 ---
 ### `asteroid--dish-backlog-leaves-the-valley-guessing.places.0`
@@ -1305,7 +1305,7 @@ Rosa Delgado está debajo del plato 14 con un portapapeles que ya no coincide co
 
 **EN:** Track gaps
 
-**ES:** Seguimiento de brechas
+**ES:** Lagunas de seguimiento
 
 ---
 ### `asteroid--dish-backlog-leaves-the-valley-guessing.pressureKeys.1`
@@ -1328,7 +1328,7 @@ Rosa Delgado está debajo del plato 14 con un portapapeles que ya no coincide co
 
 **EN:** Kinetic stack waits while the range idles
 
-**ES:** La pila cinética espera mientras la estufa está inactiva
+**ES:** La pila cinética espera mientras el campo de pruebas está en ralentí
 
 ---
 ### `asteroid--kinetic-stack-waits-while-the-range-idles.stakeholder`
@@ -1346,7 +1346,7 @@ Ingrid Larsson walks the snow edge of the range road where the reindeer tracks s
 
 **ES:**
 
-Ingrid Larsson camina por el borde nevado de la carretera de montaña, donde las huellas de los renos se detienen antes de llegar a la nueva valla. Una pila de interceptores cinéticos se encuentra embalada en el hangar, despejada en papel, inactiva en la práctica. Los pastores trasladaron a los animales dos veces este mes para realizar taladros que nunca se encendieron. El café de la ciudad redujo el horario de invierno. Las autoridades de responsabilidad de tres agencias aún no están de acuerdo sobre qué seguro cubre una prueba de desvío fallida sobre tierras de pastoreo compartidas. Hasta que las firmas se alineen, el rango no puede ejecutar la secuencia completa que demostraría que una roca podría ser empujada fuera de una línea con destino a la ciudad. Cada retraso deja el hardware frío y las rutas de pastoreo inciertas. La contraparte de Ingrid en el mismo pueblo no se reunirá sin un mapa que muestre tanto el corredor como el lugar del parto. ¿Quién diseña un campo de pruebas que pueda suponer un empujón planetario sin congelar los medios de vida que ya viven bajo la trayectoria de vuelo?
+Ingrid Larsson camina el borde nevado del camino del campo donde las huellas de renos se detienen antes de la cerca nueva. Una pila de interceptores cinéticos está embalada en el hangar, aprobada en papel, inactiva en la práctica. Los pastores movieron los animales dos veces este mes para ejercicios que nunca se encendieron. El café del pueblo cortó el horario de invierno. Las carpetas de responsabilidad de tres agencias aún no coinciden en qué seguro cubre una prueba de desvío fallida sobre pastos compartidos. Hasta que las firmas se alineen, el campo no puede correr la secuencia completa que probaría que una roca puede empujarse fuera de una línea hacia la ciudad. Cada retraso deja el hardware frío y las rutas de pastoreo inciertas. La contraparte de Ingrid en el pueblo sami no se reunirá sin un mapa que muestre el corredor y el área de cría. ¿Quién diseña un campo de prueba que pueda probar un empujón planetario sin congelar los medios de vida que ya viven bajo la trayectoria de vuelo?
 
 ---
 ### `asteroid--kinetic-stack-waits-while-the-range-idles.places.0`
@@ -1360,7 +1360,7 @@ Ingrid Larsson camina por el borde nevado de la carretera de montaña, donde las
 
 **EN:** Mission stall
 
-**ES:** Puesto de misión
+**ES:** Estancamiento de misión
 
 ---
 ### `asteroid--kinetic-stack-waits-while-the-range-idles.pressureKeys.1`
@@ -1383,7 +1383,7 @@ Ingrid Larsson camina por el borde nevado de la carretera de montaña, donde las
 
 **EN:** Mine glare blanks the Karoo rock watch
 
-**ES:** El resplandor de la mina deja en blanco el reloj de roca Karoo
+**ES:** El resplandor de la mina borra la vigilancia Karoo
 
 ---
 ### `asteroid--mine-glare-blanks-the-karoo-rock-watch.stakeholder`
@@ -1401,7 +1401,7 @@ Naledi Mokoena kills the lodge porch light at 02:10 and still cannot see the sou
 
 **ES:**
 
-Naledi Mokoena apaga la luz del porche del albergue a las 02:10 y todavía no puede ver el barrido sur. El polvo del camino de transporte nocturno cuelga como un segundo cielo. Los telescopios voluntarios en la cresta sólo captan estrellas lavadas. Una débil huella de roca que debería haberse registrado antes del amanecer ha desaparecido bajo el resplandor. Las habitaciones de huéspedes permanecen vacías. Las furgonetas turísticas se cancelan. El cocinero envía a la mitad del personal a casa sin paga. Los reflectores de las minas a cielo abierto y el polvo de las nuevas concesiones mineras brillan toda la noche en los permisos provinciales emitidos para el mineral, no para la oscuridad. Esos mismos permisos tratan la oscuridad del cielo como opcional. Sin arcos limpios, la pequeña red Karoo no puede alimentar las primeras posiciones a la guardia más amplia. El teléfono de Naledi contiene tres mensajes enojados de propietarios de albergues y una nota tranquila de un estudiante que condujo cuatro horas durante una noche que nunca abrió. ¿Quién diseña un mapa de reclamo que mantenga tanto el mineral en movimiento como el cielo lo suficientemente oscuro como para atrapar una roca mientras todavía hay tiempo?
+Naledi Mokoena apaga la luz del porche del lodge a las 02:10 y aún no puede ver el barrido sur. El polvo del camino de acarreo nocturno cuelga como un segundo cielo. Los telescopios voluntarios en la cresta solo captan estrellas lavadas. Una traza débil de roca que debió registrarse antes del alba se fue en el resplandor. Las habitaciones quedan vacías. Las vans de tour cancelan. El cocinero manda a casa a la mitad del personal sin paga. Reflectores de mina a cielo abierto y polvo de nuevas concesiones corren toda la noche con permisos provinciales escritos para mineral, no para oscuridad. Esos mismos permisos tratan la oscuridad del cielo como opcional. Sin arcos limpios, la pequeña red Karoo no puede alimentar posiciones tempranas a la vigilancia más amplia. El teléfono de Naledi guarda tres mensajes enojados de dueños de lodges y una nota quieta de un estudiante que condujo cuatro horas para una noche que nunca abrió. ¿Quién diseña un mapa de concesiones que mantenga el mineral en movimiento y el cielo lo bastante oscuro para atrapar una roca mientras aún hay tiempo?
 
 ---
 ### `asteroid--mine-glare-blanks-the-karoo-rock-watch.places.0`
@@ -1438,7 +1438,7 @@ Naledi Mokoena apaga la luz del porche del albergue a las 02:10 y todavía no pu
 
 **EN:** Time-share freeze after every rock scare
 
-**ES:** Congelación del tiempo compartido después de cada susto de roca
+**ES:** Congelación del reparto de tiempo tras cada susto de roca
 
 ---
 ### `asteroid--time-share-freeze-after-every-rock-scare.stakeholder`
@@ -1456,7 +1456,7 @@ Kainoa Hale meets the night crew at the access gate with fresh bad news. Another
 
 **ES:**
 
-Kainoa Hale se encuentra con el equipo nocturno en la puerta de acceso con nuevas malas noticias. Otro titular lejano del rock ha congelado el consejo de multipropiedad hasta nuevo aviso. Las cúpulas que deberían girar permanecen bloqueadas. Los guías pierden el salario semanal antes del desayuno. Los Kupuna que bendijeron el camino se sienten acostumbrados cuando los cierres llegan sin mesa compartida. Los operadores de la cumbre persiguen cada nueva alerta durante períodos de bloqueo más prolongados porque el software de programación trata las noches comunitarias como el bloqueo más fácil de eliminar. Peleas de confianza en el estacionamiento. Un joven técnico que creció en Waimea gira su camión en lugar de cruzar una línea de protesta silenciosa. Kainoa tiene tanto la radio de operaciones como la lista comunitaria y no puede cumplir con ninguna de las dos en el mismo calendario. ¿Quién escribe un cronograma del cielo que mantiene vivo el tiempo de visualización sin tratar los medios de vida locales como el primer interruptor en activarse?
+Kainoa Hale se reúne con el equipo de noche en la puerta de acceso con malas noticias frescas. Otro titular lejano de roca ha congelado el tablero de reparto de tiempo hasta nuevo aviso. Las cúpulas que deberían girar se quedan cerradas. Los guías pierden el sueldo de la semana antes del desayuno. Los kupuna que bendijeron el camino se sienten usados cuando los cierres llegan sin una mesa compartida. Los operadores de la cumbre empujan cada alerta nueva a ventanas de apagón más largas porque el software de horario trata las noches comunitarias como el bloque más fácil de cortar. La confianza se deshilacha en el aparcamiento. Un técnico joven criado en Waimea da la vuelta al camión en vez de cruzar una línea de protesta silenciosa. Kainoa sostiene la radio de operaciones y la lista comunitaria y no puede satisfacer a ninguna en el mismo calendario. ¿Quién escribe un horario del cielo que mantenga vivo el tiempo de vigilancia sin tratar los medios de vida locales como el primer interruptor a voltear?
 
 ---
 ### `asteroid--time-share-freeze-after-every-rock-scare.places.0`
@@ -1493,14 +1493,14 @@ Kainoa Hale se encuentra con el equipo nocturno en la puerta de acceso con nueva
 
 **EN:** Aisles that pick themselves
 
-**ES:** Pasillos que se eligen solos
+**ES:** Pasillos que se recogen solos
 
 ---
 ### `automation--aisles-that-pick-themselves.stakeholder`
 
 **EN:** Night pick crew steward
 
-**ES:** Mayordomo de tripulación de recogida nocturna
+**ES:** Delegado del equipo de picking nocturno
 
 ---
 ### `automation--aisles-that-pick-themselves.scene`
@@ -1511,14 +1511,14 @@ Maya clocks in at 10:47 p.m. and finds her bay already half-empty. The new aisle
 
 **ES:**
 
-Maya llega a las 10:47 p.m. y encuentra su bahía ya medio vacía. Los nuevos robots de pasillo han rematado las estanterías fáciles. Lo que queda son los casos incómodos: frutos rojos, de tamaños impares, los que atascan las pinzas. Su computadora de mano muestra una tasa de selección más alta que la semana pasada. Misma duración del turno. Menos manos humanas en el suelo. La junta de delegados junto a la sala de descanso enumera tres nombres más trasladados al “grupo flexible”, lo que significa que no hay horas garantizadas. Las empresas todavía pagan por unidades liquidadas por hora. El algoritmo que establece el ritmo aprende de las carreras limpias de los robots y luego aplica ese ritmo a las personas. El alquiler de Maya vence el viernes. Puede mantener la cuota esta noche si se salta el tramo de seguridad y toma ella misma el pesado estante superior. ¿Quién diseña el suelo para que la velocidad no borre al equipo que todavía tiene que terminar lo que las máquinas rechazan?
+Maya ficha a las 22:47 y encuentra su bahía ya medio vacía. Los nuevos robots de pasillo han terminado las estanterías fáciles. Quedan los casos incómodos: fruta blanda, tamaños raros, los que atascan las pinzas. Su terminal muestra un ritmo de picking más alto que la semana pasada. Misma duración de turno. Menos manos humanas en el suelo. El tablero de delegados junto a la sala de descanso lista tres nombres más pasados al “flex pool”, sin horas garantizadas. La empresa aún paga por unidades despejadas por hora. El algoritmo que fija el ritmo aprende de las pasadas limpias de los robots y luego aplica ese ritmo a la gente. El alquiler de Maya vence el viernes. Puede mantener la cuota esta noche si se salta el estiramiento de seguridad y toma ella misma el estante alto y pesado. ¿Quién diseña el suelo para que la velocidad no borre al equipo que aún tiene que terminar lo que las máquinas rechazan?
 
 ---
 ### `automation--aisles-that-pick-themselves.places.0`
 
 **EN:** Cedar Junction Fulfillment Hub
 
-**ES:** Centro de cumplimiento de Cedar Junction
+**ES:** Centro de fulfillment Cedar Junction
 
 ---
 ### `automation--aisles-that-pick-themselves.pressureKeys.0`
@@ -1548,7 +1548,7 @@ Maya llega a las 10:47 p.m. y encuentra su bahía ya medio vacía. Los nuevos ro
 
 **EN:** Charts coded without the wing
 
-**ES:** Cartas codificadas sin el ala.
+**ES:** Historias clínicas codificadas sin el ala
 
 ---
 ### `automation--charts-coded-without-the-wing.stakeholder`
@@ -1566,7 +1566,7 @@ Priya opens the queue at 7:10 a.m. and sees forty charts already “pre-coded”
 
 **ES:**
 
-Priya abre la cola a las 7:10 a. m. y ve cuarenta gráficos ya “precodificados” en verde. La modelo llenó cadenas de diagnóstico de la noche a la mañana a partir de notas que no ha revisado. Dos de ellos enumeran la lateralidad incorrecta en un caso quirúrgico. Si lo anula, su rendimiento disminuye y el tablero señala su bahía. Si acepta, la factura sale mal y el paciente recibe una llamada de cobro por una atención que nunca tuvo. El hospital compró la herramienta para reducir las tasas de denegación y reducir la unidad de codificación. Los gerentes todavía publican objetivos en los gráficos diarios junto a la máquina de café. El administrador de préstamos estudiantiles de Priya quiere una actualización del plan de pago esta semana. Puede reducir el ritmo y luchar contra cada línea verde, o despejar el tablero y esperar que las apelaciones reparen el daño más adelante. ¿Quién diseña herramientas de ingresos para que la precisión no sea un impuesto para el codificador que aún firma el gráfico?
+Priya abre la cola a las 7:10 y ve cuarenta historias ya “pre-codificadas” en verde. El modelo rellenó cadenas de diagnóstico por la noche a partir de notas que no ha revisado. Dos de ellas ponen la lateralidad equivocada en un caso quirúrgico. Si anula, su rendimiento cae y el tablero marca su bahía. Si acepta, la factura sale mal y un paciente recibe una llamada de cobro por una atención que nunca tuvo. El hospital compró la herramienta para bajar denegaciones y encoger la unidad de codificación. Los jefes aún cuelgan objetivos diarios de historias junto a la cafetera. El gestor del préstamo estudiantil de Priya quiere una actualización del plan de pago esta semana. Puede frenar y pelear cada línea verde, o limpiar el tablero y esperar que las apelaciones atrapen el daño después. ¿Quién diseña herramientas de ingresos para que la exactitud no sea un impuesto al codificador que aún firma la historia?
 
 ---
 ### `automation--charts-coded-without-the-wing.places.0`
@@ -1587,7 +1587,7 @@ Priya abre la cola a las 7:10 a. m. y ve cuarenta gráficos ya “precodificados
 
 **EN:** Chart targets
 
-**ES:** Objetivos del gráfico
+**ES:** Objetivos de historias
 
 ---
 ### `automation--charts-coded-without-the-wing.pressureKeys.2`
@@ -1621,7 +1621,7 @@ Luis wipes salt off the garage whiteboard and counts the open slots. Six medalli
 
 **ES:**
 
-Luis limpia la sal de la pizarra del garaje y cuenta los espacios abiertos. Seis medallistas todavía esperan los vuelos matutinos al aeropuerto. Dos módulos de robotaxi urbanos inactivos en la acera, ya reservados a través de la aplicación del puerto. Un pasajero cancela el auto de Luis a mitad de carga porque el pod es tres minutos más barato. Al préstamo de la cooperativa sobre la flota no le importa la cancelación. Dispatch todavía clasifica a los conductores según su puntuación de aceptación y porcentaje de puntualidad. El marcador alimenta la misma aplicación que dirige a los pasajeros hacia los módulos en los bloques mapeados frente al mar. El socio de Luis le envía un mensaje de texto diciendo que el depósito de la guardería rebotó. Puede perseguir la larga tarifa suburbana que ningún grupo quiere, o sentarse en la acera y ver caer la puntuación. ¿Quién escribe las reglas de acera para que los conductores humanos no sean expulsados ​​del puerto que construyeron?
+Luis limpia la sal de la pizarra del garaje y cuenta las plazas abiertas. Seis titulares de medallón aún esperan las carreras matinales al aeropuerto. Dos pods robotaxi de la ciudad están al ralentí en la acera, ya reservados por la app del puerto. Un pasajero cancela el coche de Luis a media carga porque el pod es tres minutos más barato. El préstamo de la cooperativa sobre la flota no se ocupa de la cancelación. El despacho aún clasifica a los conductores por puntuación de aceptación y puntualidad. El marcador alimenta la misma app que dirige a los pasajeros hacia los pods en las manzanas mapeadas del muelle. Su pareja escribe que el depósito de la guardería rebotó. Puede perseguir la larga tarifa suburbana que ningún pod quiere, o quedarse en la acera y ver caer la puntuación. ¿Quién escribe las reglas de la acera para que los conductores humanos no sean puntuados fuera del puerto que construyeron?
 
 ---
 ### `automation--medallions-against-empty-curbs.places.0`
@@ -1676,7 +1676,7 @@ Rosa walks the line before dawn and hears the soft clack of the new vision sorte
 
 **ES:**
 
-Rosa camina por la fila antes del amanecer y escucha el suave ruido de los nuevos clasificadores de visión. Las clamshells que antes necesitaban seis pares de manos ahora pasan por una cámara y una bocanada de aire. El tablero de piezas muestra los números de la temporada pasada en un marcador descolorido. La hoja de esta semana tiene menos nombres. Los productores todavía pagan el cobertizo por pisos llenos por hora. Cuando el clasificador se acelera, las matemáticas del contrato eliminan primero las horas humanas. El equipo de Rosa incluye adolescentes que aprendieron a trabajar con bandejas de sus padres y empacadores mayores que nunca recibieron capacitación digital. Un supervisor ofrece “módulos de mejora de habilidades” en una tableta sin cuidado de niños y sin pago por hora. Rosa puede dividir los trabajos restantes de clasificación manual o enviar a la gente a casa antes de que el calor llegue a su punto máximo. ¿Quién construye el cobertizo para que la velocidad de la máquina no deje varadas las manos que todavía conocen la fruta al tacto?
+Rosa recorre la línea antes del alba y oye el suave clac de los nuevos clasificadores por visión. Las clamshells que pedían seis pares de manos ahora pasan una cámara y un soplo de aire. El tablero a destajo muestra los números de la temporada pasada con rotulador desvaído. La hoja de esta semana tiene menos nombres. Los productores aún pagan el cobertizo por bandejas empacadas por hora. Cuando el clasificador acelera, la cuenta del contrato baja primero las horas humanas. El equipo de Rosa incluye adolescentes que aprendieron el trabajo de bandeja de sus padres y empacadoras mayores sin formación digital. Un supervisor ofrece “módulos de upskill” en una tablet sin guardería y sin pago por la hora. Rosa puede repartir más fino los trabajos de tri manual que quedan, o mandar a casa a la gente antes del pico de calor. ¿Quién arma el cobertizo para que la velocidad de la máquina no deje varadas las manos que aún conocen la fruta al tacto?
 
 ---
 ### `automation--sorters-took-the-piece-rate-weeks.places.0`
@@ -1697,7 +1697,7 @@ Rosa camina por la fila antes del amanecer y escucha el suave ruido de los nuevo
 
 **EN:** Pack speed
 
-**ES:** Velocidad del paquete
+**ES:** Velocidad de empaque
 
 ---
 ### `automation--sorters-took-the-piece-rate-weeks.pressureKeys.2`
@@ -1731,7 +1731,7 @@ Ama Diallo kneels beside a sorting path at first light and lifts a boy’s wrist
 
 **ES:**
 
-Ama Diallo se arrodilla junto a un camino de clasificación con las primeras luces del día y levanta la muñeca de un niño. La llaga abierta no ha cerrado en tres semanas. Se venda una gasa que compró con su propio dinero. El viento sopla desde los pozos de quema. El humo negro se desliza sobre las pilas de cobre donde los niños pelan los cables para obtener los billetes de peso. Los astilleros siguen pagando por kilos despojados. Al anochecer, los jefes encienden chaquetas de plástico porque el fuego abierto es más rápido que las lentas trituradoras que nadie financia para seguir funcionando. La garganta de Ama arde al mediodía. El mes pasado, la clínica encontró un bulto en el cuello de su vecina, la misma que le enseñó qué tablas contienen oro en polvo. El humo sigue sembrando el camino. Las entradas siguen llegando. ¿Quién diseña una economía chatarra que no escriba tumores en las manos que la alimentan?
+Ama Diallo se arrodilla junto a un camino de tri con la primera luz y levanta la muñeca de un niño. La llaga abierta no ha cerrado en tres semanas. Pega gasa que compró con su propio dinero. El viento viene de los pozos de quema. Humo negro se desliza sobre las pilas de cobre donde niños pelan cable por tickets de peso. Los patios aún pagan por kilos pelados. Después del oscurecer los jefes encienden fundas de plástico porque el fuego abierto es más rápido que las trituradoras lentas que nadie financia para mantener en marcha. La garganta de Ama arde al mediodía. El mes pasado la clínica halló un bulto en el cuello de su vecina —la misma que le enseñó qué placas llevan polvo de oro. El humo sigue sembrando el camino. Los tickets siguen llegando. ¿Quién diseña una economía de chatarra que no escriba tumores en las manos que la alimentan?
 
 ---
 ### `cancer--circuit-beach-burns-still-seed-the-tumors.places.0`
@@ -1786,7 +1786,7 @@ Omar Haddad walks the night resin line at Vinyl Reach with a flashlight taped to
 
 **ES:**
 
-Omar Haddad camina por la línea nocturna de resina en Vinyl Reach con una linterna pegada a su casco. De nuevo sale un dulce olor químico por la brida 17. Cuelga una etiqueta roja. El supervisor nocturno se encoge de hombros. Los pedidos de compuestos para tuberías han aumentado y el equipo de día ya utilizó el juego de juntas de repuesto. Los trabajadores todavía almuerzan en las mesas de descanso a veinte pasos de los reactores. El primo de Omar se fue el año pasado después de que el panel del hígado salió mal. La enfermera de planta sólo puede repartir referencias en toda la ciudad. Las horas extras son la forma en que las familias liquidan las facturas médicas que generan esas derivaciones. La empresa realiza un seguimiento de la producción por turno. No realiza un seguimiento de las horas de disolvente acumuladas de la misma manera. ¿Quién diseña un turno de noche que no escriba cáncer en el hígado antes de que se cancele la hipoteca?
+Omar Haddad recorre la línea de resina nocturna en Vinyl Reach con una linterna pegada al casco. Un olor químico dulce vuelve a salir de la brida 17. Cuelga una etiqueta roja. El supervisor de noche se encoge de hombros. Suben los pedidos de compound para tubería y el turno de día ya usó el juego de juntas de repuesto. Los trabajadores aún almuerzan a veinte pasos de los reactores. El primo de Omar se fue el año pasado tras un panel hepático malo. La enfermera de planta solo puede dar derivaciones al otro lado de la ciudad. Las horas extras son cómo las familias pagan las facturas médicas que crean esas derivaciones. La empresa rastrea la producción por turno. No rastrea las horas acumuladas de solvente igual. ¿Quién diseña un turno de noche que no escriba cáncer en el hígado antes de terminar la hipoteca?
 
 ---
 ### `cancer--night-resin-lines-still-mark-the-livers.places.0`
@@ -1823,7 +1823,7 @@ Omar Haddad camina por la línea nocturna de resina en Vinyl Reach con una linte
 
 **EN:** Playground vapors no one capped in time
 
-**ES:** Los vapores del patio de recreo nadie los tapó a tiempo
+**ES:** Vapores del patio que nadie tapó a tiempo
 
 ---
 ### `cancer--playground-vapors-no-one-capped-in-time.stakeholder`
@@ -1841,7 +1841,7 @@ Priya Nair stands in the nurse closet at Old Gasworks School and marks three mor
 
 **ES:**
 
-Priya Nair está en el armario de enfermeras de Old Gasworks School y marca tres ausencias más. Sangrados nasales. Dolor de estómago. Abre la ventana y percibe el dulce olor a alquitrán que se eleva cuando el sol golpea la vieja tierra de coque debajo del patio de recreo. El distrito selló una esquina hace años. El resto todavía respira por el asfalto agrietado entre matemáticas y recreo. Los padres quieren que las aulas portátiles se retiren del penacho. El comité de presupuesto dice que un intercambio de tierras eliminaría el bloque de artes y la extensión del almuerzo gratuito. Priya sostiene una hoja de permiso para una camioneta de inspección móvil. Necesita una dirección estable y un padre defensor que no pierda un turno. Los vapores siguen subiendo. Los días de enfermedad se siguen acumulando. ¿Quién diseña un patio de colegio que deje de tratar esos días como normales?
+Priya Nair está en el armario de enfermería de Old Gasworks School y marca tres ausencias más. Sangrados de nariz. Dolor de estómago. Abre un poco la ventana y captura el olor dulce a alquitrán que sube cuando el sol pega al viejo suelo de cokefacción bajo el patio. El distrito selló una esquina hace años. El resto aún respira por asfalto agrietado entre mates y recreo. Los padres quieren mover las aulas portátiles fuera del penacho. El comité de presupuesto dice que un canje de tierra cortaría el bloque de artes y la extensión del almuerzo gratis. Priya sostiene un permiso para una van de cribado móvil. Necesita una dirección estable y un padre campeón que no pierda un turno. Los vapores siguen subiendo. Los días de enfermedad se apilan. ¿Quién diseña un patio escolar que deje de tratar esos días como normales?
 
 ---
 ### `cancer--playground-vapors-no-one-capped-in-time.places.0`
@@ -1855,7 +1855,7 @@ Priya Nair está en el armario de enfermeras de Old Gasworks School y marca tres
 
 **EN:** Sick kids
 
-**ES:** niños enfermos
+**ES:** Niños enfermos
 
 ---
 ### `cancer--playground-vapors-no-one-capped-in-time.pressureKeys.1`
@@ -1885,7 +1885,7 @@ Priya Nair está en el armario de enfermeras de Old Gasworks School y marca tres
 
 **EN:** Booth steward Linh Tran
 
-**ES:** Auxiliar de stand Linh Tran
+**ES:** Linh Tran, delegada de cabinas
 
 ---
 ### `cancer--solvent-booths-trade-lungs-for-tips.scene`
@@ -1896,7 +1896,7 @@ Linh Tran props the alley door on Nail Row and counts the booth fans still spinn
 
 **ES:**
 
-Linh Tran sostiene la puerta del callejón en Nail Row y cuenta los ventiladores de la cabina que aún giran. Dos están muertos. Acetona y metacrilato flotan en el aire como una segunda piel. Mei, en el stand cuatro, tapa la tos con el codo y sigue archivando. Las propinas pagan el arrendamiento. El propietario mide cada cabina y multa a cualquiera que haga pasar una unidad de ventana por el interruptor compartido. Linh una vez colgó un filtro de carbón barato. Se atascó en una semana. La casa proveedora se rió del precio al por mayor. Una clínica móvil ofreció chequeos gratuitos la primavera pasada. La mitad de los trabajadores se quedó en casa; los inquilinos de puestos sin papeles temen cualquier carpeta en el pasillo. La tos se prolonga. El esmalte todavía tiene que secarse antes de la hora punta de la cena. ¿Quién diseña trabajos de belleza que no cambian los pulmones por el alquiler?
+Linh Tran apuntala la puerta del callejón en Nail Row y cuenta los ventiladores de cabina que aún giran. Dos están muertos. Acetona y metacrilato cuelgan en el aire como una segunda piel. Mei en la cabina cuatro tapa una tos con el codo y sigue limando. Las propinas pagan el alquiler. El casero mide cada cabina y multa a quien enciende un aire de ventana más allá del interruptor compartido. Linh colgó una vez un filtro de carbón barato. Se tapó en una semana. El proveedor se rió del precio al por mayor. Una clínica móvil ofreció chequeos gratis la primavera pasada. La mitad de las trabajadoras se quedó en casa: las inquilinas de cabina sin papeles temen cualquier portapapeles en el pasillo. Las toses se alargan. El esmalte aún tiene que secar antes del rush de la cena. ¿Quién diseña trabajo de belleza que no cambie pulmones por el alquiler?
 
 ---
 ### `cancer--solvent-booths-trade-lungs-for-tips.places.0`
@@ -1910,7 +1910,7 @@ Linh Tran sostiene la puerta del callejón en Nail Row y cuenta los ventiladores
 
 **EN:** Cough spells
 
-**ES:** ataques de tos
+**ES:** Ataques de tos
 
 ---
 ### `cancer--solvent-booths-trade-lungs-for-tips.pressureKeys.1`
@@ -1924,7 +1924,7 @@ Linh Tran sostiene la puerta del callejón en Nail Row y cuenta los ventiladores
 
 **EN:** Lease fear
 
-**ES:** miedo al arrendamiento
+**ES:** Miedo al arrendamiento
 
 ---
 ## Seed `chem-bio--lab-kits-under-the-wrong-code`
@@ -1951,7 +1951,7 @@ Jonas Veld cracks a crate marked teaching reagents and finds cold packs still sw
 
 **ES:**
 
-Jonas Veld abre una caja marcada con reactivos didácticos y encuentra compresas frías todavía sudando. El manifiesto enumera los kits escolares. Las etiquetas internas enumeran los medios de crecimiento y un código de cepa que no se necesita en el aula. Su guante se pega donde lloró un frasco. La línea de quemados se eleva antes de que llegue el carro de materiales peligrosos. El turno de noche funciona con dos oficiales y una computadora de mano que solo marca los códigos que ya están en el libro. Los corredores conocen la brecha. Dividen el material de laboratorio de doble uso en paletas mixtas y programan la entrada para la hora en que la cola de escáner es más larga. Por la mañana, la caja se limpia o desaparece en un cobertizo. Jonas puede sostener una caja. No puede atender cada hora oscura ni reescribir cada etiqueta falsa por sí solo. El próximo encargado será el hijo de alguien con una insignia temporal. ¿Quién diseña un puerto seco que capte la intención sin congelar el comercio del que vive una ciudad fronteriza?
+Jonas Veld abre un cajón marcado reactivos didácticos y halla cold packs aún sudando. El manifiesto lista kits escolares. Las etiquetas interiores listan medios de cultivo y un código de cepa que ninguna aula necesita. Su guante se pega donde lloró un vial. La línea de quemadura sube antes de que llegue el carro hazmat. El turno de noche corre con dos oficiales y un handheld que solo marca los códigos ya en el libro. Los brokers conocen el hueco. Parten material de lab de doble uso en palés mixtos y cronometran la puerta a la hora en que la cola del escáner es más larga. Por la mañana el cajón está desaduanado o desaparecido en un cobertizo bajo fianza. Jonas puede retener una caja. No puede dotar cada hora oscura ni reescribir cada etiqueta falsa solo. El próximo manipulador será el hijo de alguien con una placa temporal. ¿Quién diseña un puerto seco que atrape la intención sin congelar el comercio del que vive un pueblo fronterizo?
 
 ---
 ### `chem-bio--lab-kits-under-the-wrong-code.places.0`
@@ -1965,7 +1965,7 @@ Jonas Veld abre una caja marcada con reactivos didácticos y encuentra compresas
 
 **EN:** Handler burns
 
-**ES:** El manejador se quema
+**ES:** Quemaduras del manipulador
 
 ---
 ### `chem-bio--lab-kits-under-the-wrong-code.pressureKeys.1`
@@ -1988,14 +1988,14 @@ Jonas Veld abre una caja marcada con reactivos didácticos y encuentra compresas
 
 **EN:** Loaner strains after closing time
 
-**ES:** El préstamo se tensa después del cierre
+**ES:** Cepas en préstamo tras el cierre
 
 ---
 ### `chem-bio--loaner-strains-after-closing-time.stakeholder`
 
 **EN:** Dr. Noah Abebe, vivarium biosafety officer
 
-**ES:** Dr. Noah Abebe, oficial de bioseguridad del vivero
+**ES:** Dr. Noah Abebe, oficial de bioseguridad del vivario
 
 ---
 ### `chem-bio--loaner-strains-after-closing-time.scene`
@@ -2006,7 +2006,7 @@ Dr. Noah Abebe finds the shared incubator log signed out to a contract bay that 
 
 **ES:**
 
-El Dr. Noah Abebe encuentra el registro compartido de la incubadora firmado en una bahía de contrato que se vació a las seis. La identificación de la cepa en la nota adhesiva no coincide con la lista aprobada del parque. Dos técnicos llamaron con fiebre después de una transferencia tardía que ningún supervisor registró. La bahía de al lado alquila por meses y subarrienda tiempo en la banca a nuevas empresas que buscan la velocidad por encima del papeleo. Los viales prestados se transportan en bolsas nevera entre edificios porque el formulario oficial de transferencia tarda tres días y el cliente quiere los datos mañana. Los vecinos que pasan la valla ya preguntan por qué las ambulancias se detienen en la puerta. Noah puede cerrar una puerta y limpiar un capó. No puede vigilar un parque cuyo modelo de negocio vende como característica la flexibilidad fuera del horario de atención. La próxima fiebre puede ser una falsa alarma. Puede que no. ¿Quién diseña el espacio animal compartido para que el ajetreo de la investigación no pueda convertirse silenciosamente en una ruta de patógenos no rastreada?
+El Dr. Noah Abebe encuentra el registro del incubador compartido firmado a una bahía de contrato vaciada a las seis. El ID de cepa en el post-it no coincide con la lista aprobada del parque. Dos técnicos llamaron con fiebre tras una transferencia tardía que ningún supervisor registró. La bahía de al lado alquila por mes y subarrienda tiempo de bancada a startups que priorizan la velocidad sobre el papeleo. Los viales en préstamo se mueven en bolsas nevera entre edificios porque el formulario oficial tarda tres días y un cliente quiere datos mañana. Los vecinos más allá de la valla ya preguntan por qué las ambulancias paran en la puerta. Noah puede cerrar una puerta y hisopar una campana. No puede vigilar un parque cuyo modelo vende la flexibilidad fuera de horario como feature. La próxima fiebre puede ser falsa alarma. O no. ¿Quién diseña un espacio animal compartido para que la prisa de la investigación no se vuelva en silencio una ruta de patógenos sin rastro?
 
 ---
 ### `chem-bio--loaner-strains-after-closing-time.places.0`
@@ -2061,7 +2061,7 @@ Rina Mercado holds a cotton swab to a dyer’s upper lip at shift change. The sw
 
 **ES:**
 
-Rina Mercado sostiene un hisopo de algodón sobre el labio superior de un tintorero durante el cambio de turno. El hisopo sale rosado. Tres puestos más abajo, se observa el mismo patrón en un adolescente que sólo mezcla mordientes. La junta clínica ya considera que las hemorragias nasales son rutinarias. Nadie llama rutina cuando la sangre sigue saliendo después de que se arreglan los ventiladores. Detrás de la tintorería hay un tambor gris con una plantilla rayada y un sello que no coincide con la factura. El corredor que lo dejó se fue antes del amanecer. Los propietarios de viviendas todavía compran productos intermedios del lote más barato y el papeleo se detiene en la solidez del color. A nadie en la sala se le paga para preguntar en qué más puede convertirse la misma química cuando un tambor sale del patio sin etiquetar. Rina puede acolcharse la nariz y registrar las noches. No puede sellar una cadena de suministro que trate las existencias de doble uso como inventario ordinario. ¿Quién diseña la fila para que el cuerpo de un tintorero no sea el primer sensor para un segundo uso?
+Rina Mercado sostiene un hisopo de algodón en el labio superior de un tintorero al cambio de turno. El hisopo sale rosa. Tres puestos más abajo, el mismo patrón en un adolescente que solo mezcla mordientes. El tablero de la clínica ya lista las hemorragias nasales como rutina. Nadie lo llama rutina cuando la sangre sigue después de arreglar los ventiladores. Un bidón gris está detrás de la tintorería con plantilla rayada y un sello que no coincide con la factura. El broker que lo dejó se fue antes del alba. Los caseros de la fila aún compran intermedios por el lote más barato, y el papeleo se detiene en la solidez del color. Nadie en el piso cobra por preguntar en qué más puede convertirse la misma química cuando un bidón sale del patio sin etiqueta. Rina puede taponar narices y registrar las noches. No puede sellar una cadena que trata el stock de doble uso como inventario ordinario. ¿Quién diseña la fila para que el cuerpo de un tintorero no sea el primer sensor de un segundo uso?
 
 ---
 ### `chem-bio--second-use-blues-on-the-dye-row.places.0`
@@ -2075,7 +2075,7 @@ Rina Mercado sostiene un hisopo de algodón sobre el labio superior de un tintor
 
 **EN:** Nosebleeds
 
-**ES:** hemorragias nasales
+**ES:** Hemorragias nasales
 
 ---
 ### `chem-bio--second-use-blues-on-the-dye-row.pressureKeys.1`
@@ -2105,7 +2105,7 @@ Rina Mercado sostiene un hisopo de algodón sobre el labio superior de un tintor
 
 **EN:** Marta Singh, works lab supervisor
 
-**ES:** Marta Singh, supervisora ​​de laboratorio de obra.
+**ES:** Marta Singh, supervisora del laboratorio de la planta
 
 ---
 ### `chem-bio--what-the-outfall-never-names.scene`
@@ -2116,7 +2116,7 @@ Marta Singh lifts a sample bottle from the outfall ladder and smells the sweet s
 
 **ES:**
 
-Marta Singh levanta una botella de muestra de la escalera del emisario y huele la dulce nota del disolvente antes de que lo haga el laboratorio. Las clínicas río arriba volvieron a registrar enfermedades intestinales después de la lluvia del fin de semana. Los niños en el camino de sirga faltaron a la escuela. El panel de rutina de la planta aún regresa limpio para los metales y coliformes habituales. Lo que sea que haya impulsado la oleada no está en la lista impresa. El parque industrial encima de la obra presenta permisos generales de descarga, y el emisario no tiene nombre para un pico que el ensayo nunca buscó. El banco de Marta apila muestras en una cámara frigorífica que ya está llena. Puede hervir avisos y repartir agua embotellada. No puede ver una amenaza para la cual el programa de monitoreo nunca fue diseñado. Un padre espera en la puerta un número que indique que el grifo es seguro. ¿Quién diseña sistemas de abastecimiento de agua que detectan una sorpresa química o biológica antes que el estómago de un vecindario?
+Marta Singh levanta una botella de muestra de la escalera del emisario y huele la nota dulce de solvente antes que el lab. Las clínicas río arriba registraron otra vez malestar intestinal tras la lluvia del fin de semana. Los niños del camino de sirga faltaron a clase. El panel rutinario de la planta sigue saliendo limpio para metales y coliformes habituales. Lo que montó la crecida no está en la lista impresa. El parque industrial sobre la planta declara descargas bajo permisos blanket, y la tubería del emisario no tiene nombre para un pico que el ensayo nunca buscó. El banco de Marta apila muestras en una cámara fría ya llena. Puede hervir avisos y repartir agua embotellada. No puede ver una amenaza que el calendario de monitoreo nunca se diseñó para leer. Un padre espera en la puerta un número que diga que el grifo es seguro. ¿Quién diseña una planta de agua que note una sorpresa química o biológica antes que el estómago del barrio?
 
 ---
 ### `chem-bio--what-the-outfall-never-names.places.0`
@@ -2130,7 +2130,7 @@ Marta Singh levanta una botella de muestra de la escalera del emisario y huele l
 
 **EN:** Gut sickness
 
-**ES:** enfermedad intestinal
+**ES:** Malestar intestinal
 
 ---
 ### `chem-bio--what-the-outfall-never-names.pressureKeys.1`
@@ -2144,7 +2144,7 @@ Marta Singh levanta una botella de muestra de la escalera del emisario y huele l
 
 **EN:** Sample pile
 
-**ES:** Pila de muestra
+**ES:** Pila de muestras
 
 ---
 ## Seed `child--battery-dust-on-the-play-sand`
@@ -2171,7 +2171,7 @@ Dr. Mensah wipes gray grit from a toddler’s palms before she can take a blood 
 
 **ES:**
 
-La Dra. Mensah limpia la arena gris de las palmas de las manos de un niño pequeño antes de que pueda tomar una gota de sangre. El niño ha estado jugando en la franja de arena entre la pared de la clínica y el carril de chatarra. Los disyuntores abren baterías de plomo-ácido con martillos unas puertas más abajo. El polvo se levanta cuando el viento cambia. Se posa en los tendederos, en las ollas, en la misma arena donde los niños cavan. Los padres y los hermanos mayores ganan el dinero de la semana con esa pila. Cerrar un astillero sin otro salario es una sentencia que el bloque no aceptará. Las tarjetas de crecimiento de Mensah muestran niños que ganan altura demasiado lentamente y se cansan demasiado rápido. La quelación es una esperanza de los hospitales de la ciudad, no una opción de martes aquí. Sabe lavarse las manos y predicar el trapeado húmedo. No puede evitar que el próximo camión con baterías agotadas pague mejor que un trabajo limpio. La clínica se encuentra donde la economía chatarra se encuentra con el espacio de juego. ¿Quién rediseña la recuperación en este borde del jardín para que la arena de un niño no sea un cheque de pago escrito con plomo?
+La Dra. Mensah limpia la grit gris de las palmas de un toddler antes de poder tomar una gota de sangre. El niño ha jugado en la franja de arena entre el muro de la clínica y el callejón de chatarra. Rompedores abren baterías de plomo-ácido a martillazos unas puertas más abajo. El polvo se levanta cuando gira el viento. Se posa en tendederos, ollas y la misma arena donde cavan los niños. Padres y hermanos mayores sacan el efectivo de la semana de ese montón. Cerrar un patio sin otro salario es una sentencia que la manzana no aceptará. Las tarjetas de crecimiento de Mensah muestran niños que ganan altura demasiado lento y se cansan demasiado rápido. La quelación es una esperanza de hospital de ciudad, no una opción de martes aquí. Puede lavar manos y predicar el trapeado húmedo. No puede impedir que el próximo camión de baterías muertas pague mejor que un trabajo limpio. La clínica está donde la economía de chatarra encuentra el espacio de juego. ¿Quién rediseña la recuperación en este borde de patio para que la arena de un niño no sea un cheque escrito en plomo?
 
 ---
 ### `child--battery-dust-on-the-play-sand.places.0`
@@ -2215,7 +2215,7 @@ La Dra. Mensah limpia la arena gris de las palmas de las manos de un niño peque
 
 **EN:** Highland community health nurse
 
-**ES:** enfermera de salud comunitaria de las tierras altas
+**ES:** Enfermera de salud comunitaria de altiplano
 
 ---
 ### `child--night-smoke-steals-small-breaths.scene`
@@ -2226,28 +2226,28 @@ At first light, nurse Mamani presses a cold stethoscope to a three-year-old’s 
 
 **ES:**
 
-Con las primeras luces del día, la enfermera Mamani presiona un estetoscopio frío contra el pecho de un niño de tres años en la cocina de un patio compartido. Las costillas del niño tiran con fuerza entre cada respiración. Su madre ha estado despierta desde el incendio de la noche, avivando una estufa de barro que todavía huele a la comida de anoche. La bombona de gasolina se acabó a mitad de semana. El precio de recarga volvió a subir, por lo que la familia volvió a utilizar estiércol y restos de madera como la mitad del complejo. El humo flota bajo el techo de zinc. No tiene ningún lugar limpio adonde ir. Los niños duermen en el mismo suelo donde se encuentran las macetas. Por la mañana, los más pequeños se despiertan con el pecho apretado y ojeras grises. Mamani marca otro silbido en su tarjeta de papel y sabe que la cola del nebulizador de la clínica se extenderá hasta después del mediodía. Los vendedores todavía venden combustible en la puerta en los únicos tamaños que las familias pueden comprar en un día de mercado. Las chimeneas nunca formaron parte de la construcción de estas habitaciones. El calor para la cena y el calor para los pulmones del niño son el mismo fuego. Si la estufa permanece sucia para que la cena sea barata, ¿quién rediseña la cocina compuesta de las tierras altas para que una cena nocturna no compre una semana de aliento robado?
+Con la primera luz, la enfermera Mamani apoya un estetoscopio frío en el pecho de un niño de tres años en una cocina de patio compartido. Las costillas del niño tiran fuerte entre cada respiración. Su madre está despierta desde el fuego de noche, avivando un fogón de barro que aún huele a la comida de anoche. La bombona de gas se acabó a media semana. El precio de recarga saltó otra vez, así que el hogar volvió al estiércol y a la leña de desecho como la mitad del compound. El humo cuelga bajo el techo de zinc. No tiene a dónde ir limpio. Los niños duermen en el mismo suelo que las ollas. Por la mañana los más pequeños despiertan con pecho apretado y ojeras grises. Mamani marca otra sibilancia en su ficha de papel y sabe que la cola del nebulizador de la clínica pasará del mediodía. Los vendedores aún venden combustible en la puerta en los únicos tamaños que las familias pueden comprar un día de mercado. Las chimeneas nunca formaron parte de cómo se construyeron estas habitaciones. El calor de la cena y el de los pulmones del niño son el mismo fuego. Si la estufa se queda sucia para mantener barata la cena, ¿quién rediseña la cocina de compound del altiplano para que una comida nocturna no compre una semana de aliento robado?
 
 ---
 ### `child--night-smoke-steals-small-breaths.places.0`
 
 **EN:** El Alto compound kitchens, La Paz highlands
 
-**ES:** Cocinas compuestas El Alto, Sierra de La Paz
+**ES:** Cocinas de compound El Alto, altiplano de La Paz
 
 ---
 ### `child--night-smoke-steals-small-breaths.pressureKeys.0`
 
 **EN:** Wheezing
 
-**ES:** sibilancias
+**ES:** Sibilancias
 
 ---
 ### `child--night-smoke-steals-small-breaths.pressureKeys.1`
 
 **EN:** Cook smoke
 
-**ES:** cocinar humo
+**ES:** Humo de cocinar
 
 ---
 ### `child--night-smoke-steals-small-breaths.pressureKeys.2`
@@ -2281,7 +2281,7 @@ Officer Bello unrolls the growth chart and finds the red ink already waiting. Am
 
 **ES:**
 
-El oficial Bello desenrolla la tabla de crecimiento y encuentra que la tinta roja ya está esperando. El peso de Amina ha bajado dos puntos desde la última semana de mercado. Su abuela deja un pequeño cuenco de gachas finas de mijo en el banco y no le mira a los ojos. El saco que compró parecía sano en el puesto. En casa, el grano se agriaba con el calor y los gorgojos se enroscaban en el medio donde nadie controlaba antes de la venta. Los comerciantes a lo largo de la fila todavía apilan bolsas en el suelo desnudo después de largos recorridos en camión sin sombra fresca y sin revestimientos sellados. Cuando un comprador se queja, el siguiente puesto se encoge de hombros y vende las mismas acciones con una nueva primicia. Bello puede repartir sobres de micronutrientes. No puede hacer que una madre confíe en el grano que llena el plato del niño. Amina se cansa antes del mediodía y deja de jugar con los otros menores de cinco años. El gráfico no miente. El deterioro no es un accidente aquí. Así es como se mueve el volumen de la estación húmeda cuando la velocidad vence al cuidado. ¿Quién rediseña el camino del camión al tazón para que una tabla de crecimiento deje de registrar el hambre evitable en este mercado?
+El oficial Bello desenrolla la tabla de crecimiento y encuentra la tinta roja ya esperando. El peso de Amina ha bajado dos marcas desde la última semana de mercado. Su abuela deja un pequeño cuenco de gachas finas de mijo en el banco y no le mira a los ojos. El saco que compró parecía sano en el puesto. En casa el grano se agriió con el calor, gorgojos hilando el medio donde nadie revisa antes de la venta. Los comerciantes a lo largo de la fila aún apilan sacos en suelo desnudo tras largos viajes en camión sin sombra fresca ni forros sellados. Cuando un comprador se queja, el siguiente puesto se encoge de hombros y vende el mismo stock con un cucharón nuevo. Bello puede repartir sobres de micronutrientes. No puede hacer que una madre confíe en el grano que llena el cuenco del niño. Amina se cansa antes del mediodía y deja de jugar con los otros menores de cinco. La tabla no miente. El deterioro no es un accidente aquí. Así se mueve el granel de estación húmeda cuando la velocidad gana al cuidado. ¿Quién rediseña el camino del camión al cuenco para que una tabla de crecimiento deje de registrar hambre evitable en este mercado?
 
 ---
 ### `child--spoiled-millet-on-the-growth-chart.places.0`
@@ -2318,7 +2318,7 @@ El oficial Bello desenrolla la tabla de crecimiento y encuentra que la tinta roj
 
 **EN:** Trash gutters breed the fever
 
-**ES:** Los canalones de basura generan fiebre
+**ES:** Los canalones de basura crían la fiebre
 
 ---
 ### `child--trash-gutters-breed-the-fever.stakeholder`
@@ -2336,7 +2336,7 @@ Coordinator Reyes counts heads at the canal-edge daycare and stops at the empty 
 
 **ES:**
 
-El coordinador Reyes cuenta las cabezas en la guardería a orillas del canal y se detiene junto al tapete vacío junto a la ventana. El pequeño Jun no vino. Su tía le envía por mensaje de texto una foto de un termómetro y de un niño inerte en una silla de plástico. La lluvia de la noche a la mañana volvió a llenar el canal detrás del edificio. Las bolsas de plástico y las cáscaras de frutas ralentizan el drenaje hasta que el agua queda negra y quieta. Los mosquitos salen de esa agua antes de que suene la campana de la mañana. Reyes barre las larvas de un balde junto al rincón de lavado y sabe que la misma agua regresará con la próxima marea de basura de la calle. Los equipos de recolección saltan el carril angosto cuando los camiones no pueden girar. Los dueños de tiendas empujan los desechos hacia el canal porque la tarifa del vertido es más dura que una multa que nunca ven aplicada. Los padres pierden turnos cuando la fiebre mantiene a un niño en casa. La guardería pierde tarifas y confianza en la misma semana. Reyes sabe hervir agua potable y colgar redes. No puede impedir que la alcantarilla se convierta en una guardería. ¿Quién rediseña el circuito de aguas residuales en este borde del canal para que una mañana en la guardería no sea un pase de lista de fiebre prevenible?
+La coordinadora Reyes cuenta cabezas en la guardería al borde del canal y se detiene en la estera vacía junto a la ventana. El pequeño Jun no vino. Su tía manda la foto de un termómetro y un niño flojo en una silla de plástico. La lluvia de la noche volvió a llenar el canalón detrás del edificio. Bolsas de plástico y cáscaras de fruta frenan el desagüe hasta que el agua queda negra y quieta. Los mosquitos suben de esa agua antes de la campana de la mañana. Reyes barre larvas de un cubo junto al rincón de lavado y sabe que la misma agua volverá con la próxima marea de basura callejera. Los equipos de recogida se saltan el callejón estrecho cuando los camiones no pueden girar. Los tenderos empujan residuos hacia el canal porque la tasa del vertedero pega más duro que una multa que nunca ven aplicada. Los padres pierden turnos cuando la fiebre deja a un niño en casa. La guardería pierde cuotas y confianza la misma semana. Reyes puede hervir agua potable y colgar mosquiteros. No puede impedir que el canalón se convierta en un criadero. ¿Quién rediseña el bucle de residuos y agua en este borde de canal para que una mañana de guardería no sea una lista de fiebre prevenible?
 
 ---
 ### `child--trash-gutters-breed-the-fever.places.0`
@@ -2357,14 +2357,14 @@ El coordinador Reyes cuenta las cabezas en la guardería a orillas del canal y s
 
 **EN:** Standing water
 
-**ES:** agua estancada
+**ES:** Agua estancada
 
 ---
 ### `child--trash-gutters-breed-the-fever.pressureKeys.2`
 
 **EN:** Missed work
 
-**ES:** trabajo perdido
+**ES:** Trabajo perdido
 
 ---
 ## Seed `cities--lessons-under-the-zinc-sheets`
@@ -2395,11 +2395,11 @@ Amina marks three empty desks by midweek. She knows those names. The county unit
 
 **ES:**
 
-La profesora Amina marca la fecha con tiza en una pizarra apoyada contra una pared de zinc. Cuarenta y dos alumnos comparten un espacio construido para veintiocho. La lluvia golpea el techo y ahoga a la última fila. Cuando el resplandor de la mañana golpea el metal, la habitación se convierte en un horno apagado. Dos niñas en el borde copian desde la pantalla de un teléfono porque el conjunto de libros de texto nunca llegó.
+La profesora Amina escribe la fecha con tiza en una pizarra apoyada en un muro de zinc. Cuarenta y dos alumnos comparten un espacio hecho para veintiocho. La lluvia golpea el techo y ahoga la última fila. Cuando el resplandor de la mañana pega al metal, la habitación se vuelve un horno bajo. Dos niñas al borde copian desde la pantalla de un teléfono porque el lote de libros de texto nunca llegó.
 
-El terreno debajo de la escuela se encuentra en régimen de arrendamiento por apretón de manos. Un corredor recorrió el camino el mes pasado con una cinta métrica y un comprador de fuera de la cresta. Los periódicos del condado enumeran el sitio como de uso público temporal. La temporalidad ha durado nueve años. Cada rumor de un cambio reduce la asistencia. Los padres obligan a los niños mayores a trabajar a destajo antes de que una puerta cerrada tome la decisión por ellos.
+El solar bajo la escuela descansa en un arriendo de apretón de manos. Un intermediario recorrió el sendero el mes pasado con una cinta métrica y un comprador de fuera de la cresta. Los papeles del condado listan el sitio como uso público temporal. Temporal lleva nueve años. Cada rumor de reventa adelgaza la asistencia. Los padres tiran a los mayores al trabajo a destajo antes de que una verja cerrada decida por ellos.
 
-Amina marca tres escritorios vacíos a mitad de semana. Ella conoce esos nombres. La unidad del condado puede enviar un paquete de lecciones digitales. No puede mantenerse firme cuando el precio de la tierra supera al de un aula. ¿Qué mantiene en pie una escuela de montaña cuando el suelo bajo ella es el verdadero plan de estudios?
+Amina marca tres pupitres vacíos a media semana. Conoce esos nombres. La unidad del condado puede enviar un paquete de lecciones digitales. No puede sostener el suelo cuando el precio del terreno supera al de un aula. ¿Qué mantiene en pie una escuela de cresta cuando el suelo debajo es el verdadero plan de estudios?
 
 ---
 ### `cities--lessons-under-the-zinc-sheets.places.0`
@@ -2420,7 +2420,7 @@ Amina marca tres escritorios vacíos a mitad de semana. Ella conoce esos nombres
 
 **EN:** Plot Flip
 
-**ES:** Cambio de trama
+**ES:** Volteo de parcela
 
 ---
 ### `cities--lessons-under-the-zinc-sheets.pressureKeys.2`
@@ -2458,11 +2458,11 @@ Liza lifts the mat and finds mold on the underside. She will miss another laundr
 
 **ES:**
 
-Antes del amanecer, Liza empuja una caña de bambú debajo de la pasarela y siente que la bolsa de plástico se engancha. El agua debe deslizarse por los pilotes. No es así. La lluvia de anoche se posa en el callejón como un estanque negro. Su habitación de la planta baja es la primera en recibir el olor. La colchoneta del bebé ya está húmeda.
+Antes del alba, Liza empuja un palo de bambú bajo la pasarela y siente que la bolsa de plástico se engancha. El agua debería deslizarse por los pilotes. No lo hace. La lluvia de anoche se queda en el callejón como un estanque negro. Su habitación de planta baja recibe el olor primero. La estera del bebé ya está húmeda.
 
-El camión del barangay llegó dos veces esta semana y salió medio lleno. Los inquilinos aguas arriba empaquetan los desechos de la cocina y los arrojan en la curva porque el contenedor formal se cierra con llave después del cambio de turno. Los propietarios aumentan el alquiler cuando aparece un equipo de limpieza y luego miran hacia otro lado cuando el canal se vuelve a obstruir. El estero se drena y se tira. Cada marea alta empuja el desorden hacia las puertas.
+El camión del barangay vino dos veces esta semana y se fue medio lleno. Los inquilinos río arriba embolsan basura de cocina y la tiran en la curva porque el contenedor formal se cierra tras el cambio de turno. Los caseros suben el alquiler cuando aparece un equipo de limpieza y miran a otro lado cuando el cauce se atasca otra vez. El estero es drenaje y basurero a la vez. Cada marea alta empuja el desorden de vuelta a las puertas.
 
-Liza levanta el tapete y encuentra moho en la parte inferior. Se perderá otro día de lavado si el agua no cae antes del mediodía. El consejo puede mapear los puntos críticos. Todavía no se puede decir quién es el dueño del hábito que los sigue llenando. ¿Qué haría que la vía fluvial valga la pena más clara que conveniente para obstruir?
+Liza levanta la estera y halla moho en el reverso. Perderá otro día de lavado si el agua no baja para el mediodía. El consejo puede mapear los cuellos de botella. Aún no puede decir de quién es el hábito que sigue llenándolos. ¿Qué haría que la vía de agua valiera más limpia que cómoda de ensuciar?
 
 ---
 ### `cities--the-estero-that-became-the-alley-dump.places.0`
@@ -2483,7 +2483,7 @@ Liza levanta el tapete y encuentra moho en la parte inferior. Se perderá otro d
 
 **EN:** Trash Backup
 
-**ES:** Copia de seguridad de la papelera
+**ES:** Atasco de basura
 
 ---
 ### `cities--the-estero-that-became-the-alley-dump.pressureKeys.2`
@@ -2521,11 +2521,11 @@ Andrés clocks in late and loses the breakfast premium. Again. His sister will c
 
 **ES:**
 
-Andrés llega a la plataforma de tierra a las 4:55 a.m. con sus blancos de cocina doblados en una bolsa. El comedero ya está lleno. El siguiente es un rumor escrito en una pizarra. Debajo de la cresta, el autobús troncal lleva un reloj que no podrá cumplir si espera. Empieza a recorrer las primeras curvas en la oscuridad.
+Andrés llega a la plataforma de tierra a las 4:55 con sus blancos de cocina doblados en una bolsa. La furgoneta feeder ya está llena. La siguiente es un rumor escrito en una pizarra. Bajo la cresta, el bus tronco lleva un reloj que no puede cumplir si espera. Empieza a caminar las primeras curvas en la oscuridad.
 
-Las tarifas no se integran en todos los límites del sistema formal. Los conductores se saltan las paradas superiores cuando el combustible se agota o cuando un punto de control reduce la velocidad del circuito. Las nuevas viviendas subieron la pendiente más rápido que el mapa de ruta. La oficina puede agregar un pin en la pantalla. No puede poner un asiento donde el camino se estrecha hasta convertirse en un carril de barro.
+Las tarifas no se integran al borde del sistema formal. Los conductores se saltan las paradas altas cuando el combustible escasea o un control ralentiza el bucle. Las nuevas viviendas subieron la ladera más rápido que el mapa de ruta. La oficina puede añadir un pin en una pantalla. No puede poner un asiento donde la carretera se estrecha a un solo carril de barro.
 
-Andrés llega tarde y pierde la prima del desayuno. De nuevo. Su hermana cubrirá el déficit esta semana y luego le pedirá a él que cubra el suyo. La ladera sigue creciendo. El comedero sigue adelgazando. ¿Quién diseña la primera y la última hora para que un turno en la llanura no cueste una noche en la cresta?
+Andrés ficha tarde y pierde la prima del desayuno. Otra vez. Su hermana cubrirá el agujero esta semana y luego le pedirá que cubra el suyo. La ladera sigue creciendo. El feeder sigue adelgazando. ¿Quién diseña la primera y la última hora para que un turno en la llanura no cueste una noche en la cresta?
 
 ---
 ### `cities--three-hours-down-the-ridge-for-a-shift.places.0`
@@ -2546,7 +2546,7 @@ Andrés llega tarde y pierde la prima del desayuno. De nuevo. Su hermana cubrir�
 
 **EN:** Feeder Gaps
 
-**ES:** Espacios de alimentación
+**ES:** Huecos de feeder
 
 ---
 ### `cities--three-hours-down-the-ridge-for-a-shift.pressureKeys.2`
@@ -2562,14 +2562,14 @@ Andrés llega tarde y pierde la prima del desayuno. De nuevo. Su hermana cubrir�
 
 **EN:** Tin roofs that still cook after dark
 
-**ES:** Techos de hojalata que aún se cocinan al anochecer
+**ES:** Techos de chapa que aún cocinan tras el anochecer
 
 ---
 ### `cities--tin-roofs-that-still-cook-after-dark.stakeholder`
 
 **EN:** Ward heat-health and housing desk
 
-**ES:** Mostrador de vivienda, calor, salud y vivienda
+**ES:** Mesa de calor-salud y vivienda del barrio
 
 ---
 ### `cities--tin-roofs-that-still-cook-after-dark.scene`
@@ -2584,11 +2584,11 @@ Meena misses another morning shift when her father’s fever spikes again. Lost 
 
 **ES:**
 
-A las 9:40 p. m., Meena sube la escalera hasta el techo del carril con un paño húmedo y una botella de SRO. Su padre todavía tose en el catre de abajo. La lata retiene el calor del día como una sartén. Los ventiladores en el piso se detienen cuando se activa el medidor compartido. Le pasa la tela por las muñecas y observa cómo el termómetro se sitúa por encima de la línea de seguridad.
+A las 21:40, Meena sube la escalera al techo del callejón con un paño húmedo y una botella de SRO. Su padre sigue tosiendo en el catre de abajo. La chapa retiene el calor del día como una sartén. Los ventiladores en el suelo se paran cuando salta el contador compartido. Escurre el paño sobre sus muñecas y mira el termómetro quedarse por encima de la línea segura.
 
-La oficina de calefacción de la sala puede emitir pintura para techos fríos y una red de sombra, pero solo si el propietario firma. Mide la energía por habitación y factura la carga adicional como “comercial”. El cableado se tendió para telares y bombillas, no para el enfriamiento nocturno de los pisos para dormir. Cada verano regresa el mismo patrón: el paisaje se expande, las franjas verdes se encogen y el carril atrapa el calor después del anochecer.
+La mesa de calor del barrio puede dar pintura cool-roof y una red de sombra, pero solo si firma el casero. Mide la luz por habitación y cobra la carga extra como “comercial”. El cableado se tendió para telares y bombillas, no para refrigerar de noche en pisos de dormir. Cada verano vuelve el mismo patrón: el hardscape se expande, las franjas verdes se encogen y el callejón atrapa calor tras el anochecer.
 
-Meena pierde otro turno de la mañana cuando la fiebre de su padre vuelve a aumentar. Los salarios perdidos se acumulan junto a los recibos de la clínica. El escritorio tiene una breve lista de tejados y una larga lista de habitaciones que aún cocinan. ¿Quién diseña la noche del carril para que un cuerpo pueda descansar sin mendigar el metro?
+Meena pierde otro turno de mañana cuando la fiebre de su padre vuelve a subir. Los salarios perdidos se apilan junto a los papeles de la clínica. La mesa tiene una lista corta de techos y una larga de habitaciones que aún cocinan. ¿Quién diseña la noche del callejón para que un cuerpo pueda descansar sin mendigar al contador?
 
 ---
 ### `cities--tin-roofs-that-still-cook-after-dark.places.0`
@@ -2609,7 +2609,7 @@ Meena pierde otro turno de la mañana cuando la fiebre de su padre vuelve a aume
 
 **EN:** Hardscape
 
-**ES:** paisaje duro
+**ES:** Hardscape
 
 ---
 ### `cities--tin-roofs-that-still-cook-after-dark.pressureKeys.2`
@@ -2625,7 +2625,7 @@ Meena pierde otro turno de la mañana cuando la fiebre de su padre vuelve a aume
 
 **EN:** Cedar Bend loses the lower ward
 
-**ES:** Cedar Bend pierde la sala inferior
+**ES:** Cedar Bend pierde el barrio bajo
 
 ---
 ### `climate--cedar-bend-loses-the-lower-ward.stakeholder`
@@ -2651,22 +2651,22 @@ Who redesigns the ground so a paved boom does not keep drowning the people downh
 
 **ES:**
 
-Rhea atraviesa el agua en los tobillos en Maple Court antes del amanecer. Ella marca otro porche donde el arroyo se desbordó durante la noche. La aplicación de sirena de su teléfono permaneció en silencio. El alcantarillado bajo el nuevo parque logístico volvió a obstruirse con sedimentos y bolsas de compras.
+Rhea avanza por el agua hasta los tobillos en Maple Court antes del alba. Marca otro porche donde el arroyo saltó la orilla por la noche. La app de sirena en su teléfono se quedó en silencio. El badén bajo el nuevo parque logístico se atasó otra vez con limo y bolsas de la compra.
 
-A media mañana, el autobús escolar del distrito inferior da la vuelta en la pendiente. Dos familias apilan muebles sobre bloques de cemento. Una enfermera del turno de noche no puede llegar a la calle de la clínica. El trabajo perdido se acumula rápidamente cuando la única ruta seca es un camino de una sola cresta.
+A media mañana el autobús escolar del barrio bajo da la vuelta en el bache. Dos familias apilan muebles sobre bloques de hormigón. Una enfermera del turno de noche no puede llegar a la carretera de la clínica. El trabajo perdido se apila rápido cuando la única ruta seca es un solo camino de cresta.
 
-Río arriba, hace cinco años se rellenó el antiguo pantano y se pavimentó para el estacionamiento de camiones. Las aguas pluviales no tardan en llegar a ninguna parte. Golpea la sala en una sábana. Las bombas del condado todavía apuntan primero al parque industrial. Los medidores voluntarios de Rhea cuentan una historia más real que el mapa oficial, y el mapa aun así gana la reunión de presupuesto.
+Río arriba, el viejo pantano se rellenó y pavimentó para dársenas de camiones hace cinco años. El agua de tormenta no tiene dónde ir despacio. Golpea el barrio en una lámina. Las bombas del condado aún apuntan primero al parque industrial. Los medidores voluntarios de Rhea cuentan una historia más cierta que el mapa oficial, y el mapa aún gana la reunión de presupuesto.
 
-El apartamento del sótano de la señora Cole se remoja por segunda vez este mes. Su concentrador de oxígeno se encuentra en una silla sobre la línea de flotación. Rhea ayuda a levantarlo y luego escribe otra dirección en el cuaderno mojado.
+El piso del sótano de la Sra. Cole se empapa por segunda vez este mes. Su concentrador de oxígeno está en una silla por encima de la línea de agua. Rhea ayuda a levantarlo y escribe otra dirección en el cuaderno mojado.
 
-¿Quién rediseña el terreno para que una barrera pavimentada no siga ahogando a la gente cuesta abajo?
+¿Quién rediseña el suelo para que un auge pavimentado no siga ahogando a la gente cuesta abajo?
 
 ---
 ### `climate--cedar-bend-loses-the-lower-ward.places.0`
 
 **EN:** Cedar Bend
 
-**ES:** Curva de cedro
+**ES:** Cedar Bend
 
 ---
 ### `climate--cedar-bend-loses-the-lower-ward.pressureKeys.0`
@@ -2722,15 +2722,15 @@ Who redesigns a town’s air when the stack, the bridge, and the schoolyard shar
 
 **ES:**
 
-Amira se encuentra en la puerta de la primaria con un monitor portátil que emite pitidos con demasiada frecuencia. Los niños tosen en las mangas mientras caminan desde el autobús. El cielo de la mañana se sienta como una tapa. Los molinos al otro lado del río dibujan líneas blancas rectas en el aire atrapado.
+Amira está en la puerta de la primaria con un monitor de mano que pita demasiado. Los niños tosen en las mangas al bajar del bus. El cielo de la mañana se sienta como una tapa. Las chimeneas del molino al otro lado del río trazan líneas blancas rectas en el aire atrapado.
 
-El recreo vuelve a pasar al interior. El fondo de aire limpio de la PTA compró filtros para seis aulas. Los pasillos todavía huelen a polvo caliente y a los gases de escape de la cola del puente. Los padres envían mensajes de texto con fotografías de hemorragias nasales. Los profesores marcan otra ronda de días de enfermedad que arruinan los planes de lecciones de la semana.
+El recreo vuelve a ir adentro. El fondo de aire limpio de la PTA compró filtros para seis aulas. Los pasillos aún huelen a polvo caliente y escape de la cola del puente. Los padres mandan fotos de sangrados de nariz. Los maestros marcan otra ronda de días de enfermedad que vacían los planes de la semana.
 
-Cuando la inversión se bloquea, la ventilación nocturna de la planta y el diésel que sube por el puente comparten el mismo recipiente de aire poco profundo. Los permisos cuentan promedios anuales. El monitor de Amira cuenta la hora antes de matemáticas. Las reuniones vecinales se dividen entre personas que necesitan controles en las fábricas y personas que necesitan que sus hijos respiren durante la práctica de fútbol.
+Cuando la inversión se cierra, la ventilación nocturna de la planta y la subida diésel por el puente comparten el mismo cuenco poco profundo de aire. Los permisos cuentan promedios anuales. El monitor de Amira cuenta la hora antes de mates. Las reuniones del barrio se parten entre quien necesita los cheques del molino y quien necesita que sus hijos respiren en el entrenamiento de fútbol.
 
-Su propia hija no participa en educación física con un inhalador de rescate en el calcetín. Amira firma el formulario de enfermera y siente que se le reduce la elección de filtrar cajas y abrir ventanas que dejen entrar el olor del río.
+Su propia hija se sienta fuera del PE con un inhalador de rescate en el calcetín. Amira firma el formulario de enfermería y siente que la elección se estrecha a cajas de filtros y ventanas abiertas que dejan entrar el olor del río.
 
-¿Quién rediseña el aire de una ciudad cuando la chimenea, el puente y el patio de la escuela comparten un cielo testarudo?
+¿Quién rediseña el aire de un pueblo cuando la chimenea, el puente y el patio de la escuela comparten un mismo cielo tozudo?
 
 ---
 ### `climate--inversion-traps-soot-bridge.places.0`
@@ -2744,14 +2744,14 @@ Su propia hija no participa en educación física con un inhalador de rescate en
 
 **EN:** Dirty Air
 
-**ES:** aire sucio
+**ES:** Aire sucio
 
 ---
 ### `climate--inversion-traps-soot-bridge.pressureKeys.1`
 
 **EN:** Stack Smoke
 
-**ES:** Pila de humo
+**ES:** Humo de chimenea
 
 ---
 ### `climate--inversion-traps-soot-bridge.pressureKeys.2`
@@ -2793,22 +2793,22 @@ How do you cut the heat people sleep in without pretending the flares and the ni
 
 **ES:**
 
-Diego abre la clínica comunitaria a las 9 p.m. porque las sillas de espera ya están llenas. Una abuela coloca un paño húmedo sobre el cuello de su nieto. El termómetro de pared todavía indica peligro después del anochecer. El refrigerador del pantano traquetea y pierde la pelea.
+Diego abre la clínica comunitaria a las 21:00 porque las sillas de espera ya están llenas. Una abuela sostiene un paño húmedo en el cuello de su nieto. El termómetro de pared sigue leyendo peligroso tras el anochecer. El swamp cooler traquetea y pierde la pelea.
 
-Al otro lado de la valla, el campo de gas sigue ardiendo. Lenguas anaranjadas lamen la neblina. La noche no refresca la cuenca como recuerdan los viejos. El calor almacenado en los techos de asfalto y metal regresa a los dormitorios. Las personas se despiertan con dolores de cabeza y dejan de sudar como deberían.
+Al otro lado de la valla, el campo de gas sigue flaring. Lenguas naranjas lamen la bruma. La noche no enfría la cuenca como recuerdan los viejos. El calor guardado en asfalto y techos de metal vuelve a los dormitorios. La gente despierta con dolores de cabeza y deja de sudar como debería.
 
-La clínica tiene una sala verdaderamente fresca. Diego rota a las familias en espacios de veinte minutos. Un camión cisterna prometió hielo esta tarde y nunca llegó. La energía de la red se apaga cuando todas las unidades de ventana se encienden a la vez. Los trabajadores de las plataformas todavía regresan a casa en camiones de la empresa que están parados afuera de la puerta.
+La clínica tiene una sola sala realmente fresca. Diego rota familias en turnos de veinte minutos. Un camión cisterna prometió hielo esta tarde y nunca llegó. La red hace brownout cuando cada aire de ventana se enciende a la vez. Los trabajadores de los pads aún vuelven a casa en camiones de empresa que quedan al ralentí fuera de la puerta.
 
-Marta, que limpia oficinas en el camino del campo, pierde su tercer turno esta semana después de un mareo en la cocina. Su nombre aparece en la pizarra de Diego bajo "seguimiento". El tablero se está llenando.
+Marta, que limpia oficinas en el camino del campo, pierde su tercer turno esta semana tras un mareo en la cocina. Su nombre está en la pizarra de Diego bajo “seguimiento”. El tablero se llena.
 
-¿Cómo se puede reducir el calor en el que la gente duerme sin pretender que las llamaradas y la noche son problema de otra persona?
+¿Cómo se corta el calor en el que la gente duerme sin pretender que los flares y la noche son problema de otro?
 
 ---
 ### `climate--night-heat-pins-juniper-wells.places.0`
 
 **EN:** Juniper Wells
 
-**ES:** pozos de enebro
+**ES:** Juniper Wells
 
 ---
 ### `climate--night-heat-pins-juniper-wells.pressureKeys.0`
@@ -2864,22 +2864,22 @@ What keeps a working harbor alive when warm seas and diesel bills empty the nets
 
 **ES:**
 
-Noor arrastra la última red por encima de la barandilla de la cooperativa y cuenta la plata que no está allí. La bodega huele a diésel y a hielo vacío. Dos marineros lavan escamas que apenas cubren un plato de almuerzo. La charla por radio de otros barcos es la misma historia en el canal.
+Noor iza la última red sobre la baranda de la cooperativa y cuenta la plata que no está. La bodega huele a diésel y a hielo vacío. Dos marineros de cubierta enjuagan escamas que apenas cubren un plato de almuerzo. El chat de radio de otros barcos es la misma historia río arriba del canal.
 
-Los paneles de temperatura del agua en la oficina del puerto indican otra semana cálida. La lengua fría que solía sujetar los peces como carnada en alta mar se ha adelgazado. Los barcos avanzan más y queman más combustible para obtener la misma captura escasa. Los precios del hielo aumentan. El equipo joven hace turnos de fin de semana en el gran almacén en lugar de salir al amanecer.
+Los tableros de temperatura del agua en la oficina del puerto muestran otra semana cálida. La lengua fría que solía retener el pez cebo mar adentro se adelgazó. Los barcos empujan más lejos y queman más combustible por la misma captura delgada. El costo del hielo sube. La tripulación joven toma turnos de fin de semana en el almacén big-box en lugar de salidas al alba.
 
-La cooperativa todavía funciona con un tanque de muelle de diesel compartido y un libro de registro de apretón de manos. Noor firma vales para combustible que sabe que algunas familias no pueden cubrir si el próximo viaje fracasa. Los procesadores del interior quieren un volumen que no pueden prometer. Un ferry turístico despierta los muelles mientras los barcos de trabajo permanecen a oscuras.
+La cooperativa sigue con un tanque de diésel de muelle compartido y un libro de apretón de manos. Noor firma vales de combustible que sabe que algunas familias no pueden cubrir si el próximo viaje falla. Los procesadores tierra adentro quieren un volumen que ella no puede prometer. Un ferry turístico despierta los atracaderos mientras los barcos de trabajo se quedan a oscuras.
 
-Su primo vende su parte del barco después de una semana más en blanco. Deja sus guantes en el clavo junto al congelador de cebo. Noor los mira más tiempo del que pretendía.
+Su primo vende su parte del barco tras otra semana en blanco. Deja los guantes en el clavo junto al congelador de cebo. Noor los mira más tiempo del que pretende.
 
-¿Qué mantiene vivo un puerto en funcionamiento cuando los mares cálidos y las facturas de diésel vacían las redes al mismo tiempo?
+¿Qué mantiene vivo un puerto de trabajo cuando mares cálidos y facturas de diésel vacían las redes juntos?
 
 ---
 ### `climate--warm-water-empties-gull-point-nets.places.0`
 
 **EN:** Gull Point
 
-**ES:** Punto de gaviota
+**ES:** Gull Point
 
 ---
 ### `climate--warm-water-empties-gull-point-nets.pressureKeys.0`
@@ -2927,7 +2927,7 @@ At first light, Rosa marks the new crack in the moraine wall above Laguna Palcac
 
 **ES:**
 
-Con las primeras luces del día, Rosa marca con un lápiz graso la nueva grieta en la pared de morrena sobre la Laguna Palcacocha. La radio que lleva en el cinturón permanece en silencio. Valle abajo, Huaraz todavía espera en una frecuencia diferente y en una hoja de cálculo diferente. El agua de deshielo subió durante la noche. Una boya sensora en la que confía parpadea en verde en su dispositivo portátil y luego la lectura se apaga en el límite municipal. La oficina de defensa civil de Carhuaz no puede introducir el nivel en vivo en el mapa de Huaraz sin una carta de datos firmada que demora tres días. La carta todavía está sobre un escritorio. Cuando el canal de salida salta, el equipo de Rosa tiene veinte minutos para despejar el sendero inferior. Lo limpian para su propio barrio. El siguiente pabellón no recibe la llamada a tiempo. Un puesto de mercado está bañado por la lluvia. Un niño pierde las patatas de la mañana y una semana de matrícula escolar. Cada ciudad compró sus propios medidores después del último susto. Cada ciudad mide su propio riesgo para que nadie más pueda reclamar el presupuesto. Los lagos se siguen llenando. ¿Quién construye la advertencia que cruza la cresta antes que el agua?
+Con la primera luz, Rosa marca la nueva grieta en el muro de morrena sobre Laguna Palcacocha con un lápiz graso. La radio en su cinturón se queda en silencio. Valle abajo, Huaraz aún espera en otra frecuencia y otra hoja de cálculo. El agua de deshielo subió por la noche. Una boya sensor en la que confía parpadea en verde en su portátil y luego la lectura muere en el límite municipal. La mesa de defensa civil de Carhuaz no puede empujar el nivel en vivo al mapa de Huaraz sin una carta de datos firmada que tarda tres días. La carta sigue en un escritorio. Cuando el canal de salida salta, el equipo de Rosa tiene veinte minutos para despejar el sendero bajo. Lo despejan para su propio barrio. El siguiente barrio no recibe la llamada a tiempo. Un puesto del mercado se va de lado. Un niño pierde las papas de la mañana y una semana de cuotas escolares. Cada pueblo compró sus propios medidores tras el último susto. Cada pueblo mide su propio riesgo para que nadie más pueda reclamar el presupuesto. Los lagos siguen llenándose. ¿Quién construye la alerta que cruza la cresta antes que el agua?
 
 ---
 ### `coord--lakes-that-will-not-speak-together.places.0`
@@ -2982,7 +2982,7 @@ Awa counts seven sacks where last season she counted twenty. The cooperative boa
 
 **ES:**
 
-Awa cuenta siete capturas donde la temporada pasada contó veinte. La junta directiva de la cooperativa quiere el total de la mañana para la cámara frigorífica compartida. Los capitanes de Kayar se encogen de hombros y cierran sus cuadernos. Los barcos de Saint-Louis desembarcan a pocos kilómetros al norte y sólo informan a su propio jefe de desembarco. Los arrastreros industriales que se encuentran más lejos no dejan ninguna huella local. Sin un libro de capturas común, cada playa adivina la población por sí sola y compite con la siguiente marea. El equipo de Awa trabaja más noches por un salario menor. Los niños en la orilla esperan peces que no llegan. El mostrador marítimo de Dakar solicita números que nunca llegan en un solo expediente. La confianza se adelgaza con las redes. Un joven capitán ofrece una foto de su bodega en un chat privado y luego la borra cuando una cooperativa rival podría verla. El mar es un sistema. Los cuadernos de bitácora son muchas habitaciones cerradas con llave. ¿Quién diseña la prueba de captura que las tripulaciones compartirán antes de que se calme el terreno?
+Awa cuenta siete sacos donde la temporada pasada contó veinte. La junta de la cooperativa quiere el total de la mañana para la cámara fría compartida. Los patrones de Kayar se encogen de hombros y cierran sus cuadernos. Los barcos de Saint-Louis desembarcan unos kilómetros al norte y solo informan a su propio jefe de desembarco. Los arrastreros industriales más afuera no dejan ninguna marca local. Sin un libro de capturas común, cada playa adivina el stock sola y corre la siguiente marea. La tripulación de Awa trabaja noches más largas por un sueldo más delgado. Los niños en la orilla esperan peces que no llegan. El escritorio marítimo en Dakar pide cifras que nunca llegan en un solo archivo. La confianza se adelgaza con las redes. Un joven capitán ofrece una foto de su bodega en un chat privado y luego la borra cuando una cooperativa rival podría verla. El mar es un sistema. Los cuadernos de bitácora son muchas habitaciones con llave. ¿Quién diseña la prueba de captura que las tripulaciones compartirán antes de que los caladeros se callen?
 
 ---
 ### `coord--nets-empty-logbooks-closed.places.0`
@@ -3003,7 +3003,7 @@ Awa cuenta siete capturas donde la temporada pasada contó veinte. La junta dire
 
 **EN:** Hidden catch
 
-**ES:** captura oculta
+**ES:** Captura oculta
 
 ---
 ### `coord--nets-empty-logbooks-closed.pressureKeys.2`
@@ -3026,7 +3026,7 @@ Awa cuenta siete capturas donde la temporada pasada contó veinte. La junta dire
 
 **EN:** Lakeshore municipal water and clinic leads
 
-**ES:** Cables municipales de agua y clínicas a orillas del lago
+**ES:** Responsables municipales de agua y clínicas del lakeshore
 
 ---
 ### `coord--shore-towns-separate-water-truths.scene`
@@ -3037,7 +3037,7 @@ Nurse Otieno bags a stool sample from a child with bloody diarrhea and walks it 
 
 **ES:**
 
-La enfermera Otieno empaqueta una muestra de heces de un niño con diarrea con sangre y la lleva al refrigerador de la clínica. La etiqueta del frigorífico dice sólo Kisumu. El servicio de agua de Homa Bay, a una hora de la costa, ejecuta sus propios registros de turbidez y no abre la alimentación al tablero de Kisumu. La floración de ayer se encontraba en la misma bahía de la que beben ambos pueblos. Las madres todavía llenan bidones al mismo borde del amanecer. La sala de Otieno llena los catres mientras el municipio vecino publica "agua normal" en un canal que sus pacientes nunca ven. Cada consejo compró sensores con dinero del proyecto que termina en la línea del distrito. Compartir lecturas sin procesar significaría admitir quién falló primero en la ingesta. La rivalidad por las subvenciones al turismo mantiene los expedientes cerrados. El niño necesita sales orales ahora. El próximo niño también los necesitará si la señal del lago permanece dividida. ¿Quién diseña la verdad sobre el agua sobre la que ambas orillas pueden actuar antes de que la clínica se quede sin camas?
+La enfermera Otieno embolsa una muestra de heces de un niño con diarrea sanguinolenta y la lleva al frigorífico de la clínica. La etiqueta del frigo dice solo Kisumu. El escritorio de agua de Homa Bay, una hora más abajo en la orilla, lleva sus propios registros de turbidez y no abre el feed al panel de Kisumu. La floración de ayer estaba en la misma bahía de la que beben ambos pueblos. Las madres aún llenan bidones en el mismo borde al alba. La sala de Otieno llena catres mientras el municipio vecino publica “agua normal” en un canal que sus pacientes nunca ven. Cada consejo compró sensores con dinero de proyecto que termina en la línea del barrio. Compartir lecturas crudas significaría admitir qué toma falló primero. La rivalidad por las subvenciones turísticas mantiene los expedientes cerrados. El niño necesita sales orales ahora. El próximo niño también las necesitará si la señal del lago sigue partida. ¿Quién diseña la verdad del agua sobre la que ambas orillas pueden actuar antes de que a la clínica se le acaben las camas?
 
 ---
 ### `coord--shore-towns-separate-water-truths.places.0`
@@ -3051,7 +3051,7 @@ La enfermera Otieno empaqueta una muestra de heces de un niño con diarrea con s
 
 **EN:** Sick days
 
-**ES:** dias de enfermedad
+**ES:** Días de enfermedad
 
 ---
 ### `coord--shore-towns-separate-water-truths.pressureKeys.1`
@@ -3065,7 +3065,7 @@ La enfermera Otieno empaqueta una muestra de heces de un niño con diarrea con s
 
 **EN:** Local rivalry
 
-**ES:** rivalidad local
+**ES:** Rivalidad local
 
 ---
 ## Seed `coord--three-cities-one-heat-wave`
@@ -3081,7 +3081,7 @@ La enfermera Otieno empaqueta una muestra de heces de un niño con diarrea con s
 
 **EN:** Metro public-health and labor desks
 
-**ES:** Mesas de trabajo y salud pública de Metro
+**ES:** Escritorios metro de salud pública y trabajo
 
 ---
 ### `coord--three-cities-one-heat-wave.scene`
@@ -3092,7 +3092,7 @@ By 10 a.m., Meera’s tablet shows three different heat flags for the same stret
 
 **ES:**
 
-A las 10 a. m., la tableta de Meera muestra tres señales de calor diferentes para el mismo tramo de NH-24. El escritorio de Delhi pinta el pasillo de color ámbar. Ghaziabad se mantiene verde. La línea laboral de Noida no se ha actualizado desde el amanecer. Un cargador llamado Imran está sentado en la acera frente a una puerta de logística, con el pulso acelerado y una botella de agua vacía. La camioneta de la clínica que puede enviar solo sirve el código PIN que financia su unidad. Al otro lado de la línea invisible de la ciudad, el mismo asfalto cocina a los mismos trabajadores. Al no haber un sistema de alerta temprana compartido, cada metro compra su propio envío de SMS y guarda la lista de contactos. Cuando Imran se desploma, la primera ambulancia es devuelta en una discusión de jurisdicción que dura más que su ventana de enfriamiento. Meera registra el incidente en su ciudad. Los otros dos nunca lo ven. Los turnos de noche siguen funcionando en umbrales divididos mientras el calor no respeta el mapa. ¿Quién diseña la alerta que trata a un organismo como tal en tres presupuestos?
+A las 10:00, la tableta de Meera muestra tres banderas de calor distintas para el mismo tramo de NH-24. El escritorio de Delhi pinta el corredor en ámbar. Ghaziabad se queda en verde. La línea laboral de Noida no se actualiza desde el alba. Un cargador llamado Imran se sienta en el bordillo fuera de una puerta logística, pulso alto, botella de agua vacía. La furgoneta clínica que puede despachar solo sirve el código postal que financia su unidad. Al otro lado de la línea invisible de ciudad, el mismo asfalto cocina a los mismos trabajadores. Sin un fondo compartido de alerta temprana, cada metro compra su propio envío de SMS y guarda la lista de contactos. Cuando Imran se desploma, la primera ambulancia es devuelta en una disputa de jurisdicción que dura más que su ventana de enfriamiento. Meera archiva el incidente bajo su ciudad. Las otras dos nunca lo ven. Los turnos de noche siguen con umbrales partidos mientras el calor no respeta el mapa. ¿Quién diseña la alerta que trata un cuerpo como un solo cuerpo a través de tres presupuestos?
 
 ---
 ### `coord--three-cities-one-heat-wave.places.0`
@@ -3136,7 +3136,7 @@ A las 10 a. m., la tableta de Meera muestra tres señales de calor diferentes pa
 
 **EN:** Marsh neighborhood council
 
-**ES:** consejo vecinal de marisma
+**ES:** Consejo vecinal de la marisma
 
 ---
 ### `eco--cranes-over-concrete.scene`
@@ -3147,14 +3147,14 @@ Mira walks the boardwalk at first light with a measuring stick and a notebook. L
 
 **ES:**
 
-Mira camina por el malecón con las primeras luces del día con una vara de medir y un cuaderno. La marea alta de anoche dejó un anillo marrón en los pilotes de la tienda de la esquina. Las botas de los niños todavía chapotean en el barro del callejón. La franja de espadaña que alguna vez recibió el golpe del río es ahora una franja delgada. Una grúa pasa sobre el siguiente paquete. Las apuestas de estudio marcan dónde el contrato de arrendamiento ubicará el relleno y el estacionamiento. El consejo puede votar sobre sacos de arena y pasarelas elevadas. No pueden votar en contra del pantano una vez que los camiones lleguen a raudales. Los desarrolladores pagan el dinero del arrendamiento que el vecindario necesita para los surtidores y el horario de la clínica. Cada almohadilla firmada elimina raíz y esponja que frenaron la inundación. La madre de Mira guarda un contenedor de plástico con fotografías en el estante alto para la próxima oleada. ¿Quién diseña un barrio que pueda comer y dormir sin vender el suelo que mantiene el agua limpia?
+Mira camina el boardwalk con la primera luz con una vara de medir y un cuaderno. El agua alta de anoche dejó un anillo marrón en los pilotes de la tienda de la esquina. Las botas de los niños aún chapotean en el barro del callejón. La franja de espadañas que una vez tomó el golpe del río es ahora una tira delgada. Una grúa se balancea sobre la siguiente parcela. Estacas de topografía marcan dónde el arriendo pondrá relleno y aparcamiento. El consejo puede votar sacos de arena y pasarelas elevadas. No pueden volver a votar la marisma una vez que los camiones vierten. Los promotores pagan dinero de arriendo que el barrio necesita para bombas y horas de clínica. Cada losa firmada quita raíz y esponja que frenaban la crecida. La madre de Mira guarda un cajón de plástico de fotos en el estante alto para la próxima oleada. ¿Quién diseña un barrio que pueda comer y dormir sin vender el suelo que mantiene el agua honesta?
 
 ---
 ### `eco--cranes-over-concrete.places.0`
 
 **EN:** Cattail Bend Flats
 
-**ES:** Pisos curvados de espadaña
+**ES:** Cattail Bend Flats
 
 ---
 ### `eco--cranes-over-concrete.pressureKeys.0`
@@ -3184,7 +3184,7 @@ Mira camina por el malecón con las primeras luces del día con una vara de medi
 
 **EN:** Empty nets at the weir
 
-**ES:** Redes vacías en el vertedero
+**ES:** Redes vacías en el azud
 
 ---
 ### `eco--empty-nets-at-the-weir.stakeholder`
@@ -3202,14 +3202,14 @@ Jonas hauls the last net at the old weir and counts six thin fish. His daughter 
 
 **ES:**
 
-Jonas arrastra la última red hasta la vieja presa y cuenta seis peces delgados. Su hija espera en la orilla con un cubo que irá ligero a casa. Río arriba, la nueva compuerta de entrada de la cooperativa de granos contiene agua para los contratos firmados en la cabecera del condado. La escalera que utilizó el salmón es una plataforma de piedra seca al mediodía. Los pescadores todavía reparan los aparejos y comparten la captura cuando la hay. El horario del río ahora sigue las cargas de los camiones, no el recorrido. El tío de Jonás solía ahumar suficiente pescado para el invierno y para el comercio. Esta primavera el ahumadero se mantiene frío. El dinero de los cereales mantiene abiertas las escuelas del valle. Las redes vacías mantienen a la cooperativa discutiendo sobre quién todavía pertenece a la mesa. ¿Cómo se diseña un río que alimente tanto a los campos como a las personas que conocen sus curvas a mano?
+Jonas iza la última red en el viejo azud y cuenta seis peces flacos. Su hija espera en la orilla con un cubo que volverá a casa ligero. Río arriba, la nueva compuerta de toma de la cooperativa cerealista retiene agua para contratos firmados en la capital del condado. La escala que usaba el salmón es un estante de piedra seca al mediodía. Los pescadores aún reparan el aparejo y comparten la captura cuando hay una. El horario del río ahora sigue las cargas de camiones, no la subida. El tío de Jonas ahumaba bastante pez para el invierno y el trueque. Esta primavera el ahumadero se queda frío. El dinero del grano mantiene abiertas las escuelas del valle. Las redes vacías mantienen a la cooperativa discutiendo quién aún pertenece a la mesa. ¿Cómo diseñas un río que alimente tanto los campos como a la gente que conoce sus curvas a mano?
 
 ---
 ### `eco--empty-nets-at-the-weir.places.0`
 
 **EN:** Silver Ladder Bend
 
-**ES:** Curva de escalera plateada
+**ES:** Silver Ladder Bend
 
 ---
 ### `eco--empty-nets-at-the-weir.pressureKeys.0`
@@ -3246,7 +3246,7 @@ Jonas arrastra la última red hasta la vieja presa y cuenta seis peces delgados.
 
 **EN:** Sound fishers and guides guild
 
-**ES:** Gremio de pescadores y guías del sonido.
+**ES:** Gremio de pescadores y guías del sound
 
 ---
 ### `eco--sand-where-meadows-waved.scene`
@@ -3257,14 +3257,14 @@ Elena cuts the motor where the eelgrass should darken the shallows. The pole fin
 
 **ES:**
 
-Elena apaga el motor donde la hierba marina debería oscurecer los bajíos. El poste encuentra arena. Hace una semana, en la pradera todavía se conservaban cangrejos y las guías de aguas claras que se vendían a los visitantes. La barcaza dragadora vuelve a trabajar en el canal antes de la siguiente ventana del carguero. Las tarifas portuarias pagan el arrendamiento del muelle del gremio y el combustible de la clínica. Cada pasada levanta el fondo y nubla la luz que necesita el césped. Elena marca otra zona muerta en una carta impermeable en la que los capitanes mayores confían más que en la aplicación. Los turistas cancelan cuando el agua adquiere el color del té suave. Los equipos todavía conocen cada corte y barra por su nombre. El calendario que mantiene abierto el puerto sigue aplastando la guardería. ¿Qué se construye para que los barcos y las praderas vivas puedan compartir un sonido sin borrar el suelo?
+Elena corta el motor donde la zostera debería oscurecer los bajos. La pértiga encuentra arena. Hace una semana el prado aún guardaba cangrejos y el agua clara que los guías vendían a los visitantes. La barcaza de dragado trabaja el canal otra vez antes de la siguiente ventana de freighter. Las tasas portuarias pagan el arriendo del muelle del gremio y el combustible de la clínica. Cada pasada levanta el fondo y enturbia la luz que la hierba necesita. Elena marca otro parche muerto en una carta impermeable en la que los capitanes mayores confían más que en la app. Los turistas cancelan cuando el agua se pone del color del té flojo. Las tripulaciones aún conocen cada corte y barra por su nombre. El horario que mantiene el puerto abierto sigue aplanando el criadero. ¿Qué construyes para que barcos y praderas vivas compartan un solo sound sin borrar el fondo?
 
 ---
 ### `eco--sand-where-meadows-waved.places.0`
 
 **EN:** Glassgrass Sound
 
-**ES:** Sonido de hierba de cristal
+**ES:** Glassgrass Sound
 
 ---
 ### `eco--sand-where-meadows-waved.pressureKeys.0`
@@ -3312,14 +3312,14 @@ Tomas kneels at the spring and fills a jar. The water runs cloudy after last wee
 
 **ES:**
 
-Tomás se arrodilla ante el manantial y llena una jarra. El agua está turbia después del corte de la cresta de la semana pasada. No hay ranas que canten desde los escalones de musgo al anochecer. Su tía hierve cada olla dos veces y todavía vigila a los niños para detectar calambres estomacales. Los sacos de carbón abandonan el valle antes del amanecer. El dinero que se saca de las bolsas cubre los gastos escolares y los viajes de la partera. Las cuadrillas toman primero las pendientes fáciles, las que sostenían las esteras de raíces sobre los pozos. Los azafatos pueden colocar carteles y transportar plántulas. No pueden superar un precio que convierte los bosques en pie en dinero de fin de semana. El mapa de filtraciones limpias de Tomas se reduce cada temporada. ¿Quién diseña la calefacción, la escuela y el agua para que un valle no tenga que quemar su propio filtro para seguir vivo?
+Tomás se arrodilla en el manantial y llena un tarro. El agua sale turbia tras el corte de la semana pasada en la cresta. Ninguna rana llama desde los peldaños de musgo al anochecer. Su tía hierve cada olla dos veces y sigue vigilando a los niños por calambres de estómago. Los sacos de carbón salen del valle antes del alba. El efectivo de las bolsas paga tasas escolares y el viaje de la partera. Las cuadrillas toman primero las laderas fáciles, las que sostenían las esteras de raíces sobre los pozos. Los guardianes pueden poner carteles y llevar plantones. No pueden superar un precio que convierte el bosque en pie en dinero de fin de semana. El mapa de filtraciones limpias de Tomás se encoge cada temporada. ¿Quién diseña calor, escuela y agua para que un valle no tenga que quemar su propio filtro para seguir vivo?
 
 ---
 ### `eco--spring-without-frogs.places.0`
 
 **EN:** Lichen Stair Valley
 
-**ES:** Valle de la escalera de líquenes
+**ES:** Lichen Stair Valley
 
 ---
 ### `eco--spring-without-frogs.pressureKeys.0`
@@ -3340,7 +3340,7 @@ Tomás se arrodilla ante el manantial y llena una jarra. El agua está turbia de
 
 **EN:** Charcoal Cash
 
-**ES:** efectivo de carbón
+**ES:** Efectivo del carbón
 
 ---
 ## Seed `education--blackout-classrooms-empty-heat-ridge-by-noon`
@@ -3367,14 +3367,14 @@ Luis Ortega unlocks the rec-center side door at 10:40 and finds half his after-s
 
 **ES:**
 
-Luis Ortega abre la puerta lateral del centro de recreación a las 10:40 y descubre que la mitad de su lista de actividades extraescolares ya se ha ido. La escuela secundaria volvió a salir temprano. Las aulas alcanzan los límites de calor cuando el circuito antiguo se dispara y las unidades de ventana mueren. Los fanáticos se quedan quietos. Los niños se ponen botellas de agua en el cuello y se van antes del mediodía. El calendario del distrito todavía cuenta un día corto como un día completo de instrucción si se abren las puertas. Luis hace ejercicios en el lote sombreado y observa cómo las carpetas de tareas permanecen cerradas porque la lección de la mañana nunca terminó. Las familias llevan a sus hermanos menores a casa cuando se corta la luz. La red se construyó para los picos nocturnos, no para una cresta de aulas portátiles que se cocinan durante julio. Los profesores pierden la hora en la que todavía es posible prestar atención. ¿Quién diseña el poder escolar para que un día de calor no sea un día perdido?
+Luis Ortega abre la puerta lateral del centro recreativo a las 10:40 y encuentra ya fuera a la mitad de su lista extraescolar. El instituto volvió a despedir temprano. Las aulas tocan límites de calor cuando salta el circuito viejo y mueren las unidades de ventana. Los ventiladores se quedan quietos. Los niños aprietan botellas de agua al cuello y se van antes del mediodía. El calendario del distrito aún cuenta un día corto como un día completo de instrucción si las puertas abrieron. Luis hace ejercicios en el solar sombreado y ve las carpetas de deberes cerradas porque la lección de la mañana nunca terminó. Las familias se llevan a los hermanos menores cuando parpadea la luz. La red se construyó para picos de tarde, no para una cresta de aulas portátiles cociéndose en julio. Los maestros pierden la hora en que la atención aún es posible. ¿Quién diseña la electricidad escolar para que un día de calor no sea un día perdido?
 
 ---
 ### `education--blackout-classrooms-empty-heat-ridge-by-noon.places.0`
 
 **EN:** Heat Ridge
 
-**ES:** Cresta de calor
+**ES:** Heat Ridge
 
 ---
 ### `education--blackout-classrooms-empty-heat-ridge-by-noon.pressureKeys.0`
@@ -3388,7 +3388,7 @@ Luis Ortega abre la puerta lateral del centro de recreación a las 10:40 y descu
 
 **EN:** Power Gaps
 
-**ES:** Brechas de poder
+**ES:** Brechas de electricidad
 
 ---
 ### `education--blackout-classrooms-empty-heat-ridge-by-noon.pressureKeys.2`
@@ -3411,7 +3411,7 @@ Luis Ortega abre la puerta lateral del centro de recreación a las 10:40 y descu
 
 **EN:** Hodan Ali, plant nurse and parent advocate
 
-**ES:** Hodan Ali, enfermero de plantas y defensor de los padres
+**ES:** Hodan Ali, enfermera de planta y defensora de padres
 
 ---
 ### `education--english-only-exams-strand-packingtown-fifth-graders.scene`
@@ -3422,14 +3422,14 @@ Hodan Ali pins a translated study sheet to the break-room corkboard before her p
 
 **ES:**
 
-Hodan Ali pega una hoja de estudio traducida al tablero de corcho de la sala de descanso antes de su turno en la planta. Los alumnos de quinto grado de las familias de las líneas de embalaje toman el mismo examen estatal que cualquier otra escuela. El folleto está sólo en inglés. Su hija puede explicar una idea científica en la mesa de la cocina en somalí y detenerse en la misma idea impresa. Los asistentes que podían cerrar la brecha fueron eliminados cuando el horario de la planta cambió por las noches. La escuela aún obtiene puntajes de promoción en ese único período de prueba. Los padres que trabajan horas de descanso no pueden sentarse en las noches de práctica. Hodan guía a los niños a través de listas de palabras entre rondas de saneamiento y observa a los estudiantes brillantes congelarse en instrucciones que aclararían si alguien los encontrara a mitad de camino. La norma trata el lenguaje como una puerta terminada, no como un camino. ¿Quién diseña la prueba del aprendizaje para que un quinto grado de una ciudad empacadora no se quede fuera de la puerta?
+Hodan Ali clava una hoja de estudio traducida en el corcho de la sala de descanso antes de su turno en la planta. Los quintos de las familias de las líneas de empaque hacen el mismo examen estatal que cualquier otra escuela. El cuadernillo es solo en inglés. Su hija puede explicar una idea de ciencias en la mesa de la cocina en somalí y trabarse en la misma idea impresa. Los ayudantes que podían cerrar la brecha se cortaron cuando el horario de la planta pasó a noches. La escuela aún puntúa el ascenso en esa sola ventana de examen. Los padres que trabajan horas de matadero no pueden asistir a las noches de práctica. Hodan repasa listas de palabras con los niños entre rondas de higiene y ve a alumnos brillantes congelarse en instrucciones que superarían si alguien los encontrara a mitad de camino. La regla trata la lengua como una puerta cerrada, no un camino. ¿Quién diseña la prueba de aprendizaje para que un quinto de un pueblo de empaque no se quede fuera de la puerta?
 
 ---
 ### `education--english-only-exams-strand-packingtown-fifth-graders.places.0`
 
 **EN:** Packingtown
 
-**ES:** embalajetown
+**ES:** Packingtown
 
 ---
 ### `education--english-only-exams-strand-packingtown-fifth-graders.pressureKeys.0`
@@ -3477,14 +3477,14 @@ Tanya Brooks stands in the levee parking lot at dawn with a milk crate of dry wo
 
 **ES:**
 
-Tanya Brooks se encuentra en el estacionamiento del dique al amanecer con una caja de leche llena de cuadernos secos. El río ha bajado dos metros. La escuela todavía huele a alfombra mojada. Pega un horario en papel en la puerta del gimnasio para que los padres puedan ver qué días cuentan. El reloj del distrito no se detiene para pedir agua. La asistencia es tiempo de asiento o nada. Después de tres semanas de inundaciones la primavera pasada, la clase de su hijo se saltó unidades enteras y nunca las recuperó. Los profesores empujan lo que queda a los meses secos. Los niños que se perdieron la fundación se sientan tranquilos atrás. Las rutas de autobús se reabren sobre el papel, mientras que las carreteras secundarias permanecen blandas. Tanya acompaña a las mismas familias a la sala temporal y observa cómo las actas se llenan de ausencias que el sistema considerará un fracaso. La financiación sigue los días en que los niños están marcados como presentes en un edificio que el río sigue reclamando. ¿Quién diseña un tiempo de aprendizaje que sobreviva las semanas en que el agua es dueña de la carretera?
+Tanya Brooks está en el aparcamiento del dique al alba con una caja de leche de cuadernos secos. El río ha bajado dos pies. La escuela aún huele a moqueta mojada. Pega un horario de papel en la puerta del gimnasio para que los padres vean qué días cuentan. El reloj del distrito no se detiene por el agua. La asistencia es tiempo de asiento o nada. Tras tres semanas de inundación la primavera pasada, la clase de su hijo se saltó unidades enteras y nunca las recuperó. Los maestros empujan lo que queda a los meses secos. Los niños que perdieron la base se sientan callados atrás. Las rutas de autobús reabren en papel mientras los caminos laterales siguen blandos. Tanya acompaña a las mismas familias a la sala temporal y ve las hojas de conteo llenarse de ausencias que el sistema tratará como fracaso. La financiación sigue los días en que los niños están marcados presentes en un edificio que el río sigue reclamando. ¿Quién diseña un tiempo de aprendizaje que sobreviva las semanas en que el agua es dueña del camino?
 
 ---
 ### `education--flood-weeks-erase-a-grade-in-marsh-bend.places.0`
 
 **EN:** Marsh Bend
 
-**ES:** Curva del pantano
+**ES:** Marsh Bend
 
 ---
 ### `education--flood-weeks-erase-a-grade-in-marsh-bend.pressureKeys.0`
@@ -3532,7 +3532,7 @@ Keisha Dunn signs her nephew into the clinic waiting room and checks the night-c
 
 **ES:**
 
-Keisha Dunn hace que su sobrino ingrese a la sala de espera de la clínica y revisa el portal de clases nocturnas en su teléfono. La barra de tiempo del asiento vuelve a estar roja. Tiene diecisiete años y cría a dos primos menores mientras su tía trabaja como doble en el molino. La recuperación de créditos se reúne sólo en el campus, tres noches a la semana, con las puertas cerradas al sonar el timbre. Cuando la fiebre mantiene a un niño en casa, Keisha también se queda en casa. El software la marca ausente sin un código de atención que cuente. Los consejeros le dicen que elija la escuela o la familia como si la elección fuera libre. Termina las hojas de trabajo en la mesa auxiliar de la clínica y todavía no cumple con las horas que exige el diploma. La regla supone que un estudiante puede salir de casa en un horario fijo. Millbridge sigue produciendo graduados que tuvieron que desaparecer para mantener seguros a los niños pequeños. ¿Quién diseña el crédito para que el cuidado no borre la transcripción?
+Keisha Dunn registra a su sobrino en la sala de espera de la clínica y revisa el portal de clases nocturnas en el teléfono. La barra de tiempo de asiento está roja otra vez. Tiene diecisiete años y cría a dos primos menores mientras su tía hace dobles en el molino. La recuperación de créditos solo se reúne en el campus, tres tardes a la semana, puertas cerradas al timbre. Cuando la fiebre retiene a un niño en casa, Keisha se queda también. El software la marca ausente sin un código de cuidado que cuente. Los orientadores le dicen que elija escuela o familia como si la elección fuera libre. Termina fichas en la mesa lateral de la clínica y aún se queda corta de las horas que exige el diploma. La regla supone un estudiante que puede salir de casa con un reloj fijo. Millbridge sigue produciendo graduados que tuvieron que desaparecer para mantener a los pequeños a salvo. ¿Quién diseña el crédito para que el cuidado no borre el expediente?
 
 ---
 ### `education--teen-caregivers-miss-the-credit-clock-in-millbridge.places.0`
@@ -3569,7 +3569,7 @@ Keisha Dunn hace que su sobrino ingrese a la sala de espera de la clínica y rev
 
 **EN:** Coal smoke fills the gap the grid left
 
-**ES:** El humo del carbón llena el hueco que dejó la rejilla
+**ES:** El humo del carbón llena el hueco que dejó la red
 
 ---
 ### `energy-access--coal-smoke-fills-the-gap-the-grid-left.stakeholder`
@@ -3587,7 +3587,7 @@ Before dawn, Bayarmaa lifts the stove lid in her felt ger and feeds another bric
 
 **ES:**
 
-Antes del amanecer, Bayarmaa levanta la tapa de la estufa con su fieltro y alimenta otro ladrillo de carbón crudo. La llama se prende. El humo se desliza por debajo de la trampilla de la puerta hacia el carril helado. Su menor comienza con la tos seca que no desaparece desde noviembre. A lo largo de los caminos de tierra, otras cien estufas hacen lo mismo a la misma hora. La cuadrícula central se detiene en el borde pavimentado de la ciudad formal. Los documentos de la trama aquí son temporales, por lo que la empresa de servicios públicos no establecerá líneas legales. Los camiones de carbón todavía llegan a crédito desde el mismo depósito que abastece a las centrales eléctricas. Las familias compran lo que arde, no lo que está limpio. Bayarmaa lleva el cuaderno de salud del carril. Ella marca otra hemorragia nasal, otra mañana perdida en la escuela, otro padre que no puede subir al andamio de la construcción porque tiene opresión en el pecho. El kit de voluntariado cuenta con mascarillas y suero salino. No tiene vatios. Si el invierno sigue superando a los cables, ¿quién diseña una calefacción que no cambie los pulmones de un niño por un suelo cálido?
+Antes del alba, Bayarmaa levanta la tapa de la estufa en su ger de fieltro y mete otro ladrillo de carbón crudo. La llama prende. El humo se desliza bajo la solapa de la puerta hacia el callejón helado. Su menor empieza la tos seca que no se ha ido desde noviembre. A lo largo de los caminos de tierra, otras cien estufas hacen lo mismo a la misma hora. La red central se detiene en el borde pavimentado de la ciudad formal. Los papeles de parcela aquí son temporales, así que la empresa no tenderá líneas legales. Los camiones de carbón aún entran a crédito desde el mismo depósito que abastece las centrales. Las familias compran lo que quema, no lo que es limpio. Bayarmaa lleva el cuaderno de salud del callejón. Marca otra hemorragia nasal, otra mañana de escuela perdida, otro padre que no puede subir al andamio porque el pecho está apretado. El kit de voluntarios tiene mascarillas y suero. No tiene vatios. Si el invierno sigue adelantando a los cables, ¿quién diseña calor que no cambie los pulmones de un niño por un suelo caliente?
 
 ---
 ### `energy-access--coal-smoke-fills-the-gap-the-grid-left.places.0`
@@ -3608,7 +3608,7 @@ Antes del amanecer, Bayarmaa levanta la tapa de la estufa con su fieltro y alime
 
 **EN:** Coal smoke
 
-**ES:** humo de carbón
+**ES:** Humo de carbón
 
 ---
 ### `energy-access--coal-smoke-fills-the-gap-the-grid-left.pressureKeys.2`
@@ -3631,7 +3631,7 @@ Antes del amanecer, Bayarmaa levanta la tapa de la estufa con su fieltro y alime
 
 **EN:** Rice co-op chair
 
-**ES:** Silla de cooperativa de arroz
+**ES:** Presidenta de la cooperativa de arroz
 
 ---
 ### `energy-access--harvest-waits-while-the-genset-coughs.scene`
@@ -3642,7 +3642,7 @@ Rosa counts the sacks stacked under the wharf awning and listens for the genset.
 
 **ES:**
 
-Rosa cuenta los sacos apilados bajo el toldo del muelle y escucha el grupo electrógeno. Tose, se contagia y luego muere de nuevo. El tambor de la secadora se detiene a mitad de vuelta. El grano que abandonaba los arrozales al amanecer ahora se encuentra húmedo bajo el calor de la costa. Mañana el olor cambiará. La asignación de diésel de la cooperativa se quedó corta este mes. El horario de las barcazas se atrasó y la bomba de la ciudad tomó el primer derecho sobre el combustible restante. Los miembros todavía pagan las tasas escolares con el peso molido. Cada saco estropeado es una tarifa impaga. Rosa recorre la fila de granjeros que esperan y escribe números que no quiere conservar. La rejilla de la isla parpadea con demasiada frecuencia como para hacer funcionar la secadora con la red eléctrica. Entonces la cooperativa alquila una máquina que sólo vive cuando lo hace el bidón de combustible. Nadie está inactivo. Todos esperan una combustión que no controlan. ¿Cómo se puede alimentar un reloj de cosecha cuando el barco de combustible es también el calendario escolar?
+Rosa cuenta los sacos apilados bajo el toldo del muelle y escucha el grupo electrógeno. Tose, prende y luego muere otra vez. El tambor del secador se detiene a mitad de vuelta. El grano que salió de los arrozales al alba ahora está húmedo en el calor costero. Para mañana el olor habrá cambiado. La asignación de diésel de la cooperativa llegó corta este mes. El horario de la barcaza se retrasó y la bomba del pueblo tomó el primer derecho sobre el combustible que queda. Los miembros aún pagan las tasas escolares con el peso molido. Cada saco estropeado es una tasa sin pagar. Rosa recorre la fila de agricultores que esperan y escribe números que no quiere guardar. La red de la isla parpadea demasiado a menudo para correr el secador con la red. Así que la cooperativa alquila una máquina que solo vive cuando vive el bidón de combustible. Nadie está ocioso. Todos esperan una combustión que no controlan. ¿Cómo alimentas un reloj de cosecha cuando el barco de combustible es también el calendario escolar?
 
 ---
 ### `energy-access--harvest-waits-while-the-genset-coughs.places.0`
@@ -3697,7 +3697,7 @@ Chinedu unhooks the prepaid cable from the classroom beam when the metered hour 
 
 **ES:**
 
-Chinedu desengancha el cable prepago de la viga del aula cuando finaliza la hora medida. Las bombillas se apagan mientras dieciséis estudiantes siguen copiando lecciones en cuadernos húmedos. Al otro lado del paseo marítimo, un barco generador está inactivo y vende cables de extensión por la noche. Las familias que pueden pagar permanecen encendidas. El colectivo de docentes no puede hacer flotar esa tarifa para cada escritorio. La empresa de servicios públicos formal trata los pilotes como agua temporal. No existe un título limpio para un transformador. Entonces el poder llega como un favor, un pago o un favor que se convierte en pago. Los padres llaman a la puerta de Chinedu preguntando por qué sus hijos estudian mientras el teléfono brilla mientras la siguiente cuadra tararea. La confianza se disputa entre hogares que comparten caminos pero no tarifas. Tiene un libro de contabilidad de quién contribuyó para el combustible y quién no. El libro de contabilidad se está convirtiendo en un mapa de quién tiene un futuro después del anochecer. Cuando la luz se vende por horas sobre el agua sin escritura, ¿quién diseña una parte que no parta la laguna?
+Chinedu desengancha el cable prepago de la viga del aula cuando termina la hora medida. Las bombillas se apagan sobre dieciséis alumnos que aún copian lecciones en cuadernos húmedos. Al otro lado del boardwalk, un barco generador ralenti y vende alargadores por la tarde. Las familias que pueden pagar se quedan iluminadas. El colectivo de docentes no puede absorber esa tarifa para cada pupitre. La empresa formal trata los bloques sobre pilotes como agua temporal. No hay título limpio para un transformador. Así que la electricidad llega como un favor, una tarifa, o un favor que se vuelve tarifa. Los padres llaman a la puerta de Chinedu preguntando por qué sus hijos estudian con el brillo del teléfono mientras el siguiente bloque zumba. La confianza se deshilacha entre hogares que comparten pasarelas pero no tarifas. Tiene un libro de quién aportó para el combustible y quién no pudo. El libro se está convirtiendo en un mapa de quién tiene futuro después del anochecer. Cuando la luz se vende por horas sobre el agua sin escritura, ¿quién diseña un reparto que no parta la laguna?
 
 ---
 ### `energy-access--light-sold-by-the-hour-on-the-lagoon.places.0`
@@ -3711,14 +3711,14 @@ Chinedu desengancha el cable prepago de la viga del aula cuando finaliza la hora
 
 **EN:** Dark study
 
-**ES:** estudio oscuro
+**ES:** Estudio en la oscuridad
 
 ---
 ### `energy-access--light-sold-by-the-hour-on-the-lagoon.pressureKeys.1`
 
 **EN:** Wire fees
 
-**ES:** Tarifas bancarias
+**ES:** Tarifas de cable
 
 ---
 ### `energy-access--light-sold-by-the-hour-on-the-lagoon.pressureKeys.2`
@@ -3752,7 +3752,7 @@ Dolma boils water on a single burner and watches the autoclave gauge stay dead. 
 
 **ES:**
 
-Dolma hierve agua en un solo quemador y observa cómo el indicador del autoclave permanece apagado. El parto nocturno se acerca rápidamente por el sendero que pasa por encima del poste. Necesita pinzas esterilizadas antes de medianoche. El portero de combustible que debería haber llegado al mediodía todavía está en algún lugar de las curvas. La nieve tomó el camino de la mañana. El presupuesto del distrito paga a los porteadores por kilo de diésel y queroseno, no por la hora en que llega una vida. Los paneles solares en el techo cargaban un pequeño banco para las luces y la radio. El esterilizador nunca estuvo en ese circuito. Tenía el tamaño adecuado para un generador que sólo funciona cuando funciona el combustible. Una partera joven sostiene una linterna entre los dientes y prepara el último kit de limpieza. Después de esto, se hierven y se esperan. Dolma ya ha cubierto dos turnos porque la última enfermera fue trasladada a una clínica conectada por carretera. Un parto oscuro más y tendrá que elegir qué regla romper. ¿Quién genera energía clínica para la cresta cuando la cadena de suministro todavía funciona?
+Dolma hierve agua en un solo quemador y observa el manómetro del autoclave muerto. El parto nocturno se acerca rápido por el sendero sobre el puesto. Necesita pinzas estériles antes de medianoche. El porteador de combustible que debía llegar a mediodía sigue en algún punto de las curvas en zigzag. La nieve se llevó el camino de la mañana. El presupuesto del distrito paga a los porteadores por kilo de diésel y queroseno, no por la hora en que llega una vida. Los paneles solares del techo cargaron un pequeño banco para luces y radio. El esterilizador nunca estuvo en ese circuito. Se dimensionó para un generador que solo corre cuando corre el combustible. Una partera junior sujeta una linterna con los dientes y dispone el último kit limpio. Después de esto, hierven y esperan. Dolma ya ha cubierto dos turnos porque la última enfermera se trasladó a una clínica conectada a la carretera. Un parto más en la oscuridad y tendrá que elegir qué regla romper. ¿Quién construye electricidad de clínica para la cresta cuando la cadena de suministro todavía camina?
 
 ---
 ### `energy-access--the-sterilizer-sleeps-through-the-night-shift.places.0`
@@ -3789,7 +3789,7 @@ Dolma hierve agua en un solo quemador y observa cómo el indicador del autoclave
 
 **EN:** Dawn bookings in the women’s lanes
 
-**ES:** Amanecer reservas en el carril femenino
+**ES:** Reservas al alba en las calles de mujeres
 
 ---
 ### `fgm--dawn-bookings-in-the-women-s-lanes.stakeholder`
@@ -3807,7 +3807,7 @@ Before the spice stalls open, Hawa unlocks the health cooperative kiosk and find
 
 **ES:**
 
-Antes de que se abran los puestos de especias, Hawa abre el quiosco de la cooperativa de salud y encuentra tres nuevos nombres en la pizarra del cortador escondida debajo de la caja de té. El amanecer es la hora de reservar. Las madres organizan visitas tranquilas a las casas mientras se descarga el ganado. La hija de un comerciante trabaja dos puestos con un desgarro de un viejo corte; La partera dice que el próximo parto podría ser más doloroso. Las lesiones de nacimiento no son abstractas en estos aspectos. Es sangre en una lámina de plástico detrás de una cortina. Los cortadores no son extraños. Son parientes que ganan entre los días de mercado cuando las ventas de telas disminuyen. Los suegros todavía exigen esta práctica antes de que la novia se mude, y una demanda rechazada puede congelar el crédito del puesto de una mujer joven. La cooperativa puede almacenar toallas sanitarias limpias y enseñar señales de peligro. Todavía no puede reemplazar la línea de ingresos que mantiene llena la agenda del amanecer. La propia sobrina de Hawa está en una lista de espera que ella no escribió. Una temporada dura de bajas ventas y las reservas suben. Cuidar el daño no es lo mismo que detener la cartera de pedidos. ¿Qué construye un mercado donde el crédito de una mujer y el cuerpo de una niña no se cotizan en la misma lista inicial?
+Antes de que abran los puestos de especias, Hawa abre el quiosco de la cooperativa de salud y encuentra tres nombres nuevos en la pizarra de la cortadora metida bajo la caja de té. El alba es la hora de las reservas. Las madres organizan visitas a casa en silencio mientras se descarga la mercancía. La hija de una comerciante da a luz dos puestos más abajo con un desgarro de un corte antiguo; la partera dice que el próximo parto podría desgarrar más. La lesión en el parto no es abstracta en estas calles. Es sangre en una sábana de plástico detrás de una cortina. Las cortadoras no son ajenas. Son parientes que ganan entre días de mercado cuando se adelgazan las ventas de tela. Los suegros aún exigen la práctica antes de que una novia se mude, y una exigencia rechazada puede congelar el crédito del puesto de una mujer joven. La cooperativa puede stockear compresas limpias y enseñar signos de peligro. Aún no puede reemplazar la línea de ingreso que mantiene llena la pizarra del alba. La propia sobrina de Hawa está en una lista de espera que ella no escribió. Una temporada dura de ventas bajas y suben las reservas. Cuidar después del daño no es lo mismo que parar el libro de pedidos. ¿Qué construye un mercado donde el crédito de una mujer y el cuerpo de una niña no se cotizan en la misma lista del alba?
 
 ---
 ### `fgm--dawn-bookings-in-the-women-s-lanes.places.0`
@@ -3828,7 +3828,7 @@ Antes de que se abran los puestos de especias, Hawa abre el quiosco de la cooper
 
 **EN:** Cutter Income
 
-**ES:** Ingresos del cortador
+**ES:** Ingresos de la cortadora
 
 ---
 ### `fgm--dawn-bookings-in-the-women-s-lanes.pressureKeys.2`
@@ -3862,7 +3862,7 @@ Sara erases the board after last period and hears drums from a courtyard below t
 
 **ES:**
 
-Sara borra la pizarra después del último período y escucha tambores en un patio debajo de la colina de la escuela. Un anciano vuelve a nombrar a la novia pura. Las niñas de su clase se quedan calladas cuando la palabra pureza entra en la lección sobre derechos cívicos. Un estudiante cambia de puesto en el banco cada pocos minutos; El dolor crónico hace que un bloque de examen completo sea más difícil que la prueba. A los profesores se les dice que no avergüencen a las familias. También se les dice que no mencionen el recorte en la sala de profesores si un padre forma parte del consejo de padres. Las conversaciones sobre pureza viajan desde los patios de bodas hasta las conversaciones sobre compromiso y luego hacia quién es elogiado como casadero. El silencio escolar mantiene la práctica sin contar. La liga de protección de Sara realiza estudios fuera de horario para las chicas que faltan días, pero los mismos mayores todavía bendicen los partidos por su reputación. Una estudiante prometedora acepta un compromiso temprano para detener los rumores. Se cierra su carpeta de formación. Sara puede ser tutora a través del dolor. No puede calificar una costumbre de patio que todavía certifique su valor. ¿Cuándo una escuela se convierte en un lugar que puede rechazar el guión de pureza sin dejar varada a la chica que debe vivir al lado de ella?
+Sara borra la pizarra después de la última hora y oye tambores de un patio bajo la cresta de la escuela. Un anciano nombra otra vez a la novia pura. Las chicas de su clase se callan cuando la palabra pureza entra en la lección de derechos cívicos. Una alumna se mueve en el banco cada pocos minutos; el dolor crónico hace un bloque de examen completo más duro que la prueba. A las docentes se les dice que no avergüencen a las familias. También se les dice que no nombren el corte en la sala de profesores si un padre sienta en el consejo de padres. La charla de pureza viaja de los patios de boda a las charlas de compromiso y luego a quién es elogiada como casadera. El silencio escolar deja la práctica sin contar. La liga de protección de Sara da estudio fuera de horario a las chicas que faltan días, y aun así los mismos ancianos bendicen emparejamientos por reputación. Una alumna prometedora acepta un compromiso temprano para parar los rumores. Su carpeta de formación se cierra. Sara puede tutorizar a través del dolor. No puede calificar una costumbre de patio que aún certifica el valor. ¿Cuándo una escuela se vuelve un lugar que puede rechazar el guion de pureza sin dejar varada a la chica que debe vivir al lado?
 
 ---
 ### `fgm--elders-still-name-the-pure-bride.places.0`
@@ -3899,7 +3899,7 @@ Sara borra la pizarra después del último período y escucha tambores en un pat
 
 **EN:** Grove dues open the bush
 
-**ES:** Las cuotas de Grove abren el monte
+**ES:** Las cuotas del bosquecillo abren el monte
 
 ---
 ### `fgm--grove-dues-open-the-bush.stakeholder`
@@ -3917,7 +3917,7 @@ Aminata counts rice sacks at the mutual-aid shed while the society drum starts b
 
 **ES:**
 
-Aminata cuenta sacos de arroz en el cobertizo de ayuda mutua mientras el tambor de la sociedad empieza a tocar más allá de la fila de mangos. Su sobrina tiene doce años. Las tías dicen que la tarifa de la arboleda debe pagarse antes de que las lluvias bloqueen el camino. Si se niega, el círculo que comparte la semilla y el trabajo de la cosecha se queda en silencio. La pertenencia es el salario aquí. Las niñas todavía regresan del monte con dolores de heridas que hacen que ponerse en cuclillas en el molino sea una prueba. Algunos pierden dos semanas de siembra. Las cuotas no son sólo dinero. Son el billete de entrada a la red laboral de las mujeres que mantiene los arrozales húmedos y las deudas pequeñas. Los cortadores e iniciadores cobran antes de la ceremonia y pasan una parte de la tarifa a la cadena de la sociedad. Las familias que se demoran pierden el turno en la trilladora compartida. Aminata puede ocultar a un niño durante una temporada detrás de la historia de un pariente enfermo. No puede cultivar sola si la ayuda mutua le da la espalda. El círculo del arroz necesita manos. The Grove todavía vende membresía a través del corte. ¿Quién rediseña la pertenencia para que cosechar solidaridad no requiera la sangre de un niño?
+Aminata cuenta sacos de arroz en el cobertizo de ayuda mutua mientras el tambor de la sociedad arranca más allá de la línea de mangos. Su sobrina tiene doce años. Las tías dicen que la cuota del bosquecillo vence antes de que las lluvias cierren el camino. Si se niega, el círculo que comparte semilla y trabajo de cosecha se queda en silencio. La pertenencia es el salario aquí. Las chicas aún vuelven del monte con dolor de herida que hace de ponerse en cuclillas en el molino una prueba. Algunas pierden dos semanas de siembra. Las cuotas no son solo dinero. Son el billete a la red laboral de las mujeres que mantiene los arrozales húmedos y las deudas pequeñas. Cortadoras e iniciadoras cobran antes de la ceremonia y pasan un recorte de la cuota por la cadena de la sociedad. Las familias que se retrasan pierden el turno en la trilladora compartida. Aminata puede esconder a un niño una temporada detrás de la historia de un pariente enfermo. No puede cultivar sola si la ayuda mutua le da la espalda. El círculo del arroz necesita manos. El bosquecillo aún vende membresía a través del corte. ¿Quién rediseña la pertenencia para que la solidaridad de cosecha no exija la sangre de un niño?
 
 ---
 ### `fgm--grove-dues-open-the-bush.places.0`
@@ -3931,7 +3931,7 @@ Aminata cuenta sacos de arroz en el cobertizo de ayuda mutua mientras el tambor 
 
 **EN:** Wound Pain
 
-**ES:** dolor de herida
+**ES:** Dolor de herida
 
 ---
 ### `fgm--grove-dues-open-the-bush.pressureKeys.1`
@@ -3945,7 +3945,7 @@ Aminata cuenta sacos de arroz en el cobertizo de ayuda mutua mientras el tambor 
 
 **EN:** Belonging Fear
 
-**ES:** Miedo de pertenencia
+**ES:** Miedo a la exclusión
 
 ---
 ## Seed `fgm--stamps-still-bless-the-cut`
@@ -3972,14 +3972,14 @@ Nour stands in the notary queue with her daughter’s school ID and a folded mar
 
 **ES:**
 
-Nour está en la cola del notario con la identificación escolar de su hija y un expediente matrimonial doblado. El sello del empleado cuelga sobre el mostrador como un pequeño veredicto. Un primo se inclina y dice que la familia del novio todavía quiere el documento de pureza antes de que se fije la fecha. Sin el corte, la cerilla se derrumba y el nombre de la niña recorre el carril como un problema. El sindicato de madres ya pagó la matrícula de secundaria y las lámparas de estudio nocturno. No pueden dejar atrás el sello. Los cortadores mantienen habitaciones laterales cerca de las oficinas matrimoniales. Las familias les pagan primero y luego traen la prueba silenciosa que el notario aceptará sin preguntas. Las reglas de honor van acompañadas del papeleo. Las infecciones siguen al trabajo apresurado: fiebre, dolor al orinar, semanas sin clase. Una madre pierde una semana de salario a destajo sentada afuera de una clínica que no tiene hora de examen privado para niñas. La hija de Nour pregunta si el sello puede esperar hasta después de los exámenes. El sindicato puede proteger a un niño durante una temporada. No puede rediseñar quién puede certificar a una novia. ¿Qué haría que se abriera un expediente matrimonial sin causar daño primero?
+Nour hace cola en el notario con el carné escolar de su hija y un expediente matrimonial doblado. El sello del escribano cuelga sobre el mostrador como un pequeño veredicto. Un primo se inclina y dice que la familia del novio aún quiere el papel de pureza antes de fijar la fecha. Sin el corte, el enlace se derrumba y el nombre de la chica recorre la calle como un problema. La unión de madres ya pagó las tasas del secundario y las lámparas de estudio nocturno. No pueden adelantarse al sello. Las cortadoras tienen cuartos laterales cerca de las oficinas de matrimonio. Las familias les pagan primero y luego traen la prueba callada que el notario aceptará sin preguntas. Las reglas de honor van sobre el papeleo. Las infecciones siguen al trabajo apresurado: fiebre, dolor al orinar, semanas fuera de clase. Una madre pierde una semana de salario a destajo sentada fuera de una clínica sin hora de examen privada para chicas. La hija de Nour pregunta si el sello puede esperar hasta después de los exámenes. La unión puede proteger a un niño una temporada. No puede rediseñar quién certifica a una novia. ¿Qué haría que un expediente matrimonial se abriera sin comprar daño primero?
 
 ---
 ### `fgm--stamps-still-bless-the-cut.places.0`
 
 **EN:** Abnub marriage-notary row, Minya Governorate
 
-**ES:** Disputa entre matrimonio y notario de Abnub, gobernación de Minya
+**ES:** Fila de notarios de matrimonio de Abnub, gobernación de Minya
 
 ---
 ### `fgm--stamps-still-bless-the-cut.pressureKeys.0`
@@ -4033,20 +4033,20 @@ Who designs river logistics so a co-op jetty still feeds the flats when capital 
 
 **ES:**
 
-Oksana se encuentra en el embarcadero de la cooperativa con el libro de cuentas abierto mientras la barcaza de grano se mantiene en mitad del canal. No frena. El capitán comunica por radio que el contrato ahora favorece la terminal profunda aguas abajo. Las tarifas de borrador y los términos de crédito cambiaron la temporada pasada. Los embarcaderos pequeños como el de ella ya no limpian el libro de contabilidad con la suficiente rapidez.
+Oksana está en el embarcadero de la cooperativa con el libro de cuentas abierto mientras la barcaza de grano se mantiene a mitad del canal. No frena. El capitán radio que el contrato ahora favorece la terminal profunda río abajo. Las tasas de calado y los términos de crédito se movieron la temporada pasada. Los embarcaderos pequeños como el suyo ya no liquidan el libro lo bastante rápido.
 
-El silo aún conserva la parte del mes pasado para las familias de pisos. Sin la parada de la barcaza, ese grano no puede llegar al molino a tiempo y la línea de crédito de la cooperativa se reduce. Los productores que entregaron de buena fe esperan el pago. Los armarios de la cocina se adelgazan mientras los espacios llenos se deslizan hacia los compradores que pueden pagar por adelantado.
+El silo aún guarda la parte del mes pasado para las familias de los flats. Sin la parada de la barcaza, ese grano no llega al molino a tiempo y la línea de crédito de la cooperativa se aprieta. Los productores que entregaron de buena fe esperan el pago. Las despensas se adelgazan mientras bodegas llenas pasan hacia compradores que pueden prepagar.
 
-El hambre aquí no es una cosecha fallida. Es una elección de ruta escrita en contratos y profundidad del canal. Oksana sabe contar sacos. No puede llamar a una barcaza a la que ya se le ha pagado para que ignore su muelle.
+El hambre aquí no es una cosecha fallida. Es una elección de ruta escrita en contratos y profundidad de canal. Oksana puede contar sacos. No puede llamar a una barcaza a la que ya se le pagó para ignorar su muelle.
 
-¿Quién diseña la logística fluvial para que un embarcadero cooperativo siga alimentando los apartamentos cuando el capital prefiere la terminal profunda?
+¿Quién diseña la logística fluvial para que un embarcadero cooperativo siga alimentando los flats cuando el capital prefiere la terminal profunda?
 
 ---
 ### `food--barges-pass-the-small-jetties-by.places.0`
 
 **EN:** Millrace Flats
 
-**ES:** Pisos Millrace
+**ES:** Millrace Flats
 
 ---
 ### `food--barges-pass-the-small-jetties-by.pressureKeys.0`
@@ -4100,13 +4100,13 @@ Who designs seed and kitchen systems so a ridge school can feed children when on
 
 **ES:**
 
-Elena abre la cocina de la escuela al amanecer y encuentra los sacos de patatas suaves bajo su palma. Los campos parroquiales encima de la cresta se volvieron negros en los bordes la semana pasada. El viernes los tubérculos huelen dulce y mal. El almuerzo consiste en media cucharada de puré con agua. Los niños raspan los tazones y todavía piden más.
+Elena abre la cocina de la escuela al alba y encuentra los sacos de patatas blandos bajo la palma. Los campos parroquiales sobre la cresta se volvieron negros en los bordes la semana pasada. Para el viernes los tubérculos huelen dulce y mal. El almuerzo es media cucharada de puré estirado con agua. Los niños raspan los cuencos y piden más.
 
-Ella revisa el libro de semillas con el empleado de la cooperativa. Las existencias resistentes del año pasado llegaron a crédito de un único proveedor situado dos valles más allá. Cuando esa tensión falló, la deuda permaneció. Los agricultores replantan las mismas líneas porque los documentos del préstamo mencionan la variedad. Nueva semilla significa papel nuevo. Nadie tiene efectivo para ambos.
+Recorre el libro de semillas con el empleado de la cooperativa. El stock resistente del año pasado llegó a crédito de un solo proveedor dos valles más allá. Cuando esa cepa falló, la deuda se quedó. Los agricultores replantan las mismas líneas porque los papeles del préstamo nombran la variedad. Semilla nueva significa papel nuevo. Nadie tiene efectivo para ambos.
 
-Blight cabalga las noches húmedas cuesta abajo. No le importa el calendario escolar. La cocina de Elena alimenta a ochenta niños cuyos padres trabajan en las mismas filas. Una cosecha corta significa platos vacíos a mediados del invierno, y la parroquia no tiene una segunda cosecha esperando entre bastidores.
+El tizón baja las noches húmedas por la ladera. No le importa el calendario escolar. La cocina de Elena alimenta a ochenta niños cuyos padres trabajan las mismas hileras. Una cosecha corta significa platos vacíos a mediados de invierno, y la parroquia no tiene un segundo cultivo esperando.
 
-¿Quién diseña sistemas de semillas y cocinas para que una escuela de montaña pueda alimentar a los niños cuando una variedad muere?
+¿Quién diseña sistemas de semilla y cocina para que una escuela de cresta alimente a los niños cuando una variedad muere?
 
 ---
 ### `food--blight-takes-the-parish-potatoes.places.0`
@@ -4134,7 +4134,7 @@ Blight cabalga las noches húmedas cuesta abajo. No le importa el calendario esc
 
 **EN:** Seed Debt
 
-**ES:** Deuda Semilla
+**ES:** Deuda de semillas
 
 ---
 ## Seed `food--dawn-crates-rot-at-the-gate`
@@ -4150,7 +4150,7 @@ Blight cabalga las noches húmedas cuesta abajo. No le importa el calendario esc
 
 **EN:** Jamal, stallholders union runner
 
-**ES:** Jamal, corredor del sindicato de vendedores ambulantes
+**ES:** Jamal, mensajero del sindicato de puestos
 
 ---
 ### `food--dawn-crates-rot-at-the-gate.scene`
@@ -4167,20 +4167,20 @@ Who redesigns the gate so fresh food survives the hour between truck and stall?
 
 **ES:**
 
-Jamal cuenta cajas en la puerta de venta al por mayor antes de que el sol aclare los techos de hojalata. Tres paletas de verduras llegaron suaves. La fría habitación volvió a calentarse pasada la medianoche. Los vendedores esperan con carritos vacíos y voces alzadas.
+Jamal cuenta cajas en la puerta mayorista antes de que el sol despeje los techos de chapa. Tres palés de verdes llegaron blandos. La cámara fría volvió a calentarse después de medianoche. Los puestos esperan con carretillas vacías y voces que suben.
 
-Los refrigeradores del mercado se encuentran en un medidor compartido que se activa cuando las panaderías nocturnas encienden sus hornos. Nadie es dueño de la copia de seguridad. Los conductores todavía bajan a las 4 de la mañana porque el peaje de la autopista baja a esa hora. Los productos se quedan expuestos al calor mientras el sindicato discute sobre quién paga por el hielo que nunca llega.
+Los enfriadores del mercado están en un contador compartido que salta cuando las panaderías nocturnas encienden los hornos. Nadie posee el respaldo. Los conductores aún descargan a las 4:00 porque el peaje de la autopista baja entonces. La mercancía se queda al calor mientras el sindicato discute quién paga el hielo que nunca llega.
 
-El deterioro no es un accidente aquí. Es el precio de una cancela construida para el volumen, no para el frío. Los miembros de Jamal pierden las existencias de la mañana y todavía deben pagar las tarifas de los puestos al mediodía. Una madre que compra por seis vuelve a casa con hojas marchitas y menos monedas de las que planeaba.
+El deterioro no es un accidente aquí. Es el precio de una puerta hecha para el volumen, no para el frío. Los miembros de Jamal pierden el stock de la mañana y aún deben las tasas del puesto al mediodía. Una madre que compra para seis vuelve a casa con hojas mustias y menos monedas de las que planeaba.
 
-¿Quién rediseña la puerta para que los alimentos frescos sobrevivan la hora entre el camión y el puesto?
+¿Quién rediseña la puerta para que la comida fresca sobreviva la hora entre el camión y el puesto?
 
 ---
 ### `food--dawn-crates-rot-at-the-gate.places.0`
 
 **EN:** Copper Gate Wholesale
 
-**ES:** Puerta de cobre al por mayor
+**ES:** Copper Gate Wholesale
 
 ---
 ### `food--dawn-crates-rot-at-the-gate.pressureKeys.0`
@@ -4234,20 +4234,20 @@ Who designs water and food routes together so a mobile aide is not left measurin
 
 **ES:**
 
-Nia estaciona la camioneta de nutrición en el tercer pozo de su circuito y baja el balde. Sale espeso. El agua que alguna vez llenó las jarras de la cocina ahora cubre el cazo con limo. Dos hogares ya han dejado de cocinar frijoles. Los niños beben menos y se cansan más rápido de camino a la escuela.
+Nia aparca la furgoneta de nutrición en el tercer pozo de su circuito y baja el cubo. Sale espeso. El agua que una vez llenó las jarras de cocina ahora cubre el cucharón de limo. Dos hogares ya han dejado de cocinar judías. Los niños beben menos y se cansan antes en el camino a la escuela.
 
-Río arriba, nuevas vallas cortan los antiguos caminos de recarga compartidos. Los pastores y los pequeños agricultores bombean con más fuerza desde pozos privados cuando los pozos públicos disminuyen. El acuífero no vota. Cada semana seca, otra familia se salta la ración de proteínas que Nia debe entregar porque no hay agua limpia para hervirla.
+Aguas arriba, nuevas líneas de valla cortan los viejos caminos de recarga compartidos. Pastores y pequeños cultivadores bombean más fuerte desde sondeos privados cuando los pozos públicos se ralentizan. El acuífero no vota. Cada semana seca, otra familia se salta la ración de proteína que Nia debe entregar porque no hay agua limpia para hervirla.
 
-Lleva bolsitas y tablas de crecimiento. No puede transportar un río. El circuito se trazó cuando los pozos eran marcadores confiables en un mapa. Ahora el mapa miente y el daño aterriza en las mismas cocinas en cada ronda.
+Lleva sobres y gráficos de crecimiento. No puede llevar un río. El circuito se trazó cuando los pozos eran marcas fiables en un mapa. Ahora el mapa miente, y el daño aterriza en las mismas cocinas en cada ronda.
 
-¿Quién diseña juntos rutas de agua y alimentos para que un asistente móvil no se quede midiendo el hambre en un pozo de barro?
+¿Quién diseña juntos rutas de agua y comida para que una ayudante móvil no se quede midiendo el hambre en un pozo de barro?
 
 ---
 ### `food--wells-on-the-circuit-turn-to-mud.places.0`
 
 **EN:** Thorn Well Circuit
 
-**ES:** Circuito del pozo de espinas
+**ES:** Thorn Well Circuit
 
 ---
 ### `food--wells-on-the-circuit-turn-to-mud.pressureKeys.0`
@@ -4284,7 +4284,7 @@ Lleva bolsitas y tablas de crecimiento. No puede transportar un río. El circuit
 
 **EN:** Jetty steward Aung Myint
 
-**ES:** Azafato del embarcadero Aung Myint
+**ES:** Steward del embarcadero Aung Myint
 
 ---
 ### `genocide--crew-badges-that-never-return.scene`
@@ -4295,7 +4295,7 @@ Aung Myint stamps crew badges at the jetty desk as the tide turns. Four badges f
 
 **ES:**
 
-Aung Myint estampa las insignias de la tripulación en el mostrador del embarcadero mientras cambia la marea. Cuatro insignias del esquife de ayer todavía cuelgan del gancho sin ser reclamadas. Las esposas esperan en la puerta con las ollas de arroz frías. La policía portuaria dice que los hombres abandonaron el barco. Nadie vio un salto. Las nuevas insignias se imprimen solo para los nombres de una lista preferida que el corredor actualiza desde un teléfono privado. Los hombres del trimestre equivocado pagan tarifas y aún navegan sin un rastro documental que pueda llamarlos de regreso. Los asientos vacíos durante el incendio de la tarde se extendieron primero por un carril. Aung puede rechazar un sello. No puede detener un sistema que hace que ciertos pescadores desaparezcan como papeleo. ¿Quién diseña las obras portuarias para que una insignia no se convierta en un borrado silencioso?
+Aung Myint sella las insignias de tripulación en el mostrador del embarcadero mientras cambia la marea. Cuatro insignias del skiff de ayer siguen colgadas del gancho sin reclamar. Las esposas esperan en la puerta con ollas de arroz ya frías. La policía del puerto dice que los hombres saltaron del barco. Nadie vio un salto. Las nuevas insignias se imprimen solo para nombres de una lista preferida que el intermediario actualiza desde un teléfono privado. Los hombres del barrio equivocado pagan tasas y aún zarpan sin un rastro de papel que pueda devolverlos. Los asientos vacíos en el fuego de la tarde se extienden primero por un callejón. Aung puede rechazar un sello. No puede detener un sistema que hace desaparecer a ciertos pescadores como papeleo. ¿Quién diseña el trabajo del puerto para que una insignia no se convierta en un borrado silencioso?
 
 ---
 ### `genocide--crew-badges-that-never-return.places.0`
@@ -4323,7 +4323,7 @@ Aung Myint estampa las insignias de la tripulación en el mostrador del embarcad
 
 **EN:** Badge rackets
 
-**ES:** Raquetas de insignias
+**ES:** Redes de insignias
 
 ---
 ## Seed `genocide--ration-cards-that-starve-a-block`
@@ -4350,7 +4350,7 @@ Nyibol Deng counts sacks at dawn and comes up twelve short for Block Seven. The 
 
 **ES:**
 
-Nyibol Deng cuenta los sacos al amanecer y le faltan doce para llegar al Bloque Siete. La imprenta del patio escupe cartillas de racionamiento con los códigos de clan ya rellenados. La tarjeta de su vecina muestra negada en rojo, aunque los niños todavía hacen cola con los lavabos vacíos. Un supervisor se encoge de hombros y señala la tablilla del manifiesto. Los nombres que coinciden con los jefes de sección equivocados simplemente no se cargan. Siguen llegando camiones. La comida sigue saliendo por una puerta lateral después del anochecer hacia los compuestos que ya comen. El hambre aprieta primero los bloques congelados del fichero de tarjetas. Nyibol puede mover un saco con la mano. No puede mover la lista que decide quién cuenta como alimentado. ¿Quién diseña la identidad en relieve para que un patio no pueda matar de hambre a una calle con una casilla de verificación?
+Nyibol Deng cuenta sacos al alba y le faltan doce para el Bloque Siete. La impresora del patio escupe cartillas de racionamiento con códigos de clan ya rellenos. La tarjeta de su vecina muestra denegada en rojo aunque los niños aún hacen cola con barreños vacíos. Un supervisor se encoge de hombros y señala la tableta del manifiesto. Los nombres que coinciden con los jefes de sección equivocados simplemente no cargan. Siguen llegando camiones. La comida sigue saliendo por una puerta lateral tras el anochecer hacia compuestos que ya comen. El hambre aprieta primero en los bloques excluidos del archivo de tarjetas. Nyibol puede mover un saco a mano. No puede mover la lista que decide quién cuenta como alimentado. ¿Quién diseña la identidad de la ayuda para que un patio no pueda matar de hambre una calle con una casilla?
 
 ---
 ### `genocide--ration-cards-that-starve-a-block.places.0`
@@ -4378,7 +4378,7 @@ Nyibol Deng cuenta los sacos al amanecer y le faltan doce para llegar al Bloque 
 
 **EN:** Clan capture
 
-**ES:** captura del clan
+**ES:** Captura del clan
 
 ---
 ## Seed `genocide--tablets-that-fail-one-language`
@@ -4405,7 +4405,7 @@ Lirije Krasniqi sets the scholarship tablets on the long table before the mornin
 
 **ES:**
 
-Lirije Krasniqi coloca las tabletas de las becas sobre la larga mesa antes de que se forme la cola de la mañana. La pantalla de inicio de sesión acepta sólo un script. Un padre desliza una transcripción en papel en el otro idioma y el empleado sacude la cabeza sin leerla. La primavera pasada, tres estudiantes de su calle aprobaron todos los exámenes y aun así recibieron rechazos silenciosos. La junta dice que el sistema es neutral. Los datos de entrenamiento nunca incluyeron el sello de su escuela. Los asientos se llenan con nombres en los que el software ya confía. El futuro se diluye en las cocinas donde los padres queman las formas rechazadas para calentarse. Lirije puede dar clases particulares hasta medianoche. No puede hacer que el portal vea a un niño para el que nunca fue construido. ¿Quién diseña una escalera pública que no borre una lengua al primer clic?
+Lirije Krasniqi coloca las tabletas de becas sobre la mesa larga antes de que se forme la cola de la mañana. La pantalla de inicio solo acepta una escritura. Un padre adelanta un expediente en papel en la otra lengua y el empleado niega con la cabeza sin leerlo. La primavera pasada tres alumnos de su calle aprobaron todos los exámenes y aun así recibieron rechazos silenciosos. La junta dice que el sistema es neutral. Los datos de entrenamiento nunca incluyeron el sello de su escuela. Los asientos se llenan de nombres en los que el software ya confía. Los futuros se adelgazan en cocinas donde los padres queman los formularios rechazados para calentarse. Lirije puede tutorizar hasta medianoche. No puede hacer que el portal vea a un niño que nunca fue construido para puntuar. ¿Quién diseña una escalera pública que no borre una lengua al primer clic?
 
 ---
 ### `genocide--tablets-that-fail-one-language.places.0`
@@ -4433,7 +4433,7 @@ Lirije Krasniqi coloca las tabletas de las becas sobre la larga mesa antes de qu
 
 **EN:** Board capture
 
-**ES:** captura de tablero
+**ES:** Captura del consejo
 
 ---
 ## Seed `genocide--ward-lists-sold-after-midnight`
@@ -4442,7 +4442,7 @@ Lirije Krasniqi coloca las tabletas de las becas sobre la larga mesa antes de qu
 
 **EN:** Ward lists sold after midnight
 
-**ES:** Listas de barrios vendidas después de medianoche
+**ES:** Listas de planta vendidas después de medianoche
 
 ---
 ### `genocide--ward-lists-sold-after-midnight.stakeholder`
@@ -4460,7 +4460,7 @@ Esperance Mukamana locks the records wing at 1:10 a.m. and still finds the intak
 
 **ES:**
 
-Esperance Mukamana cierra el ala de registros a la 1:10 a. m. y todavía encuentra la carpeta de admisión abierta en el mostrador. Ya están marcados con lápiz tres nuevos nombres del pabellón de quemados que no son el suyo. Ella revisa la tableta CCTV. La cámara del pasillo se congeló hace veinte minutos. Afuera, una motocicleta está al ralentí con los faros apagados. Las familias duermen en las escaleras esperando noticias de familiares que entraron sangrando y nunca salieron. Cuando una lista sale de esta ala, las puertas dejan de responder en ciertos bloques. Los secretarios todavía venden listas de distritos a hombres que pagan en efectivo y sólo preguntan por campos étnicos y direcciones de origen. El hospital necesita dinero adicional para comprar guantes. Los compradores necesitan los nombres. Esperance sostiene la única copia limpia de las confesiones de esta noche y oye botas en la escalera. ¿Quién diseña un registro de paciente que alimente la atención sin generar una caza?
+Esperance Mukamana cierra el ala de registros a la 1:10 y aún encuentra la carpeta de ingreso abierta en el mostrador. Tres nombres nuevos de la planta de quemados ya están rodeados a lápiz que no es el suyo. Revisa la tableta CCTV. La cámara del pasillo se congeló hace veinte minutos. Afuera, una moto ralenti con el faro apagado. Familias duermen en las escaleras esperando noticias de parientes que entraron sangrando y nunca salieron. Cuando una lista sale de este ala, las puertas dejan de contestar en ciertos bloques. Los empleados aún venden listados de planta a hombres que pagan en efectivo y solo piden campos de etnia y avenidas de casa. El hospital necesita el dinero extra para comprar guantes. Los compradores necesitan los nombres. Esperance sostiene la única copia limpia de los ingresos de esta noche y oye botas en la escalera. ¿Quién diseña un historial de paciente que alimente el cuidado sin alimentar una cacería?
 
 ---
 ### `genocide--ward-lists-sold-after-midnight.places.0`
@@ -4474,14 +4474,14 @@ Esperance Mukamana cierra el ala de registros a la 1:10 a. m. y todavía encuent
 
 **EN:** Missing kin
 
-**ES:** parientes desaparecidos
+**ES:** Parientes desaparecidos
 
 ---
 ### `genocide--ward-lists-sold-after-midnight.pressureKeys.1`
 
 **EN:** List sales
 
-**ES:** Listar ventas
+**ES:** Ventas de listas
 
 ---
 ### `genocide--ward-lists-sold-after-midnight.pressureKeys.2`
@@ -4497,14 +4497,14 @@ Esperance Mukamana cierra el ala de registros a la 1:10 a. m. y todavía encuent
 
 **EN:** Discharged still weak to the ambulance bay
 
-**ES:** Alta todavía débil a la bahía de ambulancias
+**ES:** Alta aún débil hacia el muelle de ambulancias
 
 ---
 ### `homeless--discharged-still-weak-to-the-ambulance-bay.stakeholder`
 
 **EN:** Dr. Nadim, ER attending and respite organizer
 
-**ES:** Dr. Nadim, asistente de urgencias y organizador de relevo
+**ES:** Dr. Nadim, médico de urgencias y organizador de respiro
 
 ---
 ### `homeless--discharged-still-weak-to-the-ambulance-bay.scene`
@@ -4523,13 +4523,13 @@ Who designs the hours after discharge so healing is not an eviction into the nig
 
 **ES:**
 
-El Dr. Nadim firma el alta a las 2:15 a. m. y acompaña a Marcus hasta las puertas automáticas con una bolsa de papel con medicamentos y una lista de pasos para el cuidado de la herida. Marcus todavía necesita un lugar limpio para elevar su pierna. La cama de hospitalización ya está prometida en el pasillo para la próxima admisión.
+El Dr. Nadim firma el alta a las 2:15 y acompaña a Marcus hasta las puertas automáticas con una bolsa de papel de medicamentos y una lista de pasos de cura de herida. Marcus aún necesita un lugar limpio para elevar la pierna. La cama de ingreso ya está prometida a la próxima admisión en el pasillo.
 
-El ala de relevo está llena. Los vales de taxi finalizaron a medianoche. El nombre de Marcus figura en una lista de refugios que no tiene retenciones médicas después de tres ausencias causadas por estadías hospitalarias anteriores. Billing ya lo ha codificado lo suficientemente estable como para irse. Estable sobre papel no es estable sobre hormigón.
+El ala de respiro está llena. Los vales de taxi terminaron a medianoche. El nombre de Marcus está en una lista de refugio que no guarda plazas médicas tras tres inasistencias por estancias hospitalarias previas. Facturación ya lo ha codificado lo bastante estable para irse. Estable en el papel no es estable en el hormigón.
 
-Nadim ha observado este bucle durante años. Los hospitales vacían camas bajo presión de ocupación. Los sistemas de calles y refugios tratan la recuperación post-aguda como el camino de otra persona. Sin una cama puente, el bordillo de la zona de ambulancias se convierte en la unidad de descenso. El riesgo de infección aumenta. El mismo paciente regresa más enfermo y el aviso de deuda llega antes de que se cierre la herida.
+Nadim ha visto este bucle durante años. Los hospitales vacían camas bajo presión de ocupación. Los sistemas de calle y refugio tratan la recuperación postaguda como el carril de otro. Sin una cama puente, el bordillo del muelle de ambulancias se convierte en la unidad de paso abajo. El riesgo de infección sube. El mismo paciente vuelve más enfermo, y el aviso de deuda llega antes de que cierre la herida.
 
-Marcus pregunta si puede sentarse en la sala de espera hasta el amanecer. La seguridad tiene órdenes. Nadim está junto a él bajo la luz del mirador y siente el fracaso del diseño en su propia firma.
+Marcus pregunta si puede sentarse en la sala de espera hasta el alba. Seguridad tiene órdenes. Nadim se queda con él bajo la luz del muelle y siente el fallo de diseño en su propia firma.
 
 ¿Quién diseña las horas posteriores al alta para que la curación no sea un desalojo hacia la noche?
 
@@ -4552,7 +4552,7 @@ Marcus pregunta si puede sentarse en la sala de espera hasta el amanecer. La seg
 
 **EN:** Bed pressure
 
-**ES:** Presión de la cama
+**ES:** Presión de camas
 
 ---
 ### `homeless--discharged-still-weak-to-the-ambulance-bay.pressureKeys.2`
@@ -4568,7 +4568,7 @@ Marcus pregunta si puede sentarse en la sala de espera hasta el amanecer. La seg
 
 **EN:** Noon checkout into a furnace lot
 
-**ES:** Salida al mediodía en un lote de calderas
+**ES:** Checkout al mediodía hacia un parking horno
 
 ---
 ### `homeless--noon-checkout-into-a-furnace-lot.stakeholder`
@@ -4594,13 +4594,13 @@ Who designs the next hours so a family is not discharged into a furnace while th
 
 **ES:**
 
-Marisol llama a la habitación 12 a las 11:40 con una compresa fría y un pase de autobús. La familia que está dentro tiene hasta el mediodía. Afuera el asfalto ya reluce. El niño más pequeño está sentado sobre una maleta a la sombra de una palmera muerta, con las mejillas sonrojadas, esperando una furgoneta que tal vez no llegue.
+Marisol llama a la habitación 12 a las 11:40 con una bolsa de frío y un pase de autobús. La familia dentro tiene hasta el mediodía. Afuera el asfalto ya reluce. El niño más pequeño se sienta sobre una maleta a la sombra de una palmera muerta, mejillas sonrojadas, esperando una furgoneta que tal vez no llegue.
 
-La recepción no se extenderá una noche más. La empresa establece un estricto reloj de rotación para que las mismas habitaciones puedan volver a venderse por la noche a viajeros y contratistas. El bono de Marisol solo cubre noches ya aprobadas. Las nuevas noches necesitan una forma nueva, una firma nueva y una espera que supere el calor del día.
+La recepción no prorrogará otra noche. La empresa fija un reloj de rotación duro para que las mismas habitaciones se vendan otra vez por la tarde a viajeros y contratistas. El vale de Marisol solo cubre noches ya aprobadas. Las noches nuevas necesitan un formulario fresco, una firma fresca y una espera que supera el calor del día.
 
-Trabaja el teléfono en el estacionamiento mientras la madre limpia el sudor del cuello del bebé. Las notas de casos viven en tres sistemas que no hablan. Las camas abren y cierran cada hora en una franja de semanarios que tratan a las familias como un inventario de estadías cortas. El lote se convierte en la sala de espera. La sombra es un objetivo en movimiento.
+Trabaja el teléfono en el parking mientras la madre limpia el sudor del cuello del bebé. Las notas del caso viven en tres sistemas que no se hablan. Las camas abren y cierran por hora a lo largo de una franja de moteles semanales que tratan a las familias como inventario de corta estancia. El solar se convierte en la sala de espera. La sombra es un objetivo móvil.
 
-A la una la respiración del niño se vuelve superficial. La enfermedad por calor no es una metáfora aquí. Es un niño en el pavimento caliente porque la salida es al mediodía y la vivienda es una puerta giratoria de tarifas nocturnas.
+A la una la respiración del niño se vuelve superficial. El golpe de calor no es una metáfora aquí. Es un niño sobre el pavimento caliente porque el checkout es al mediodía y la vivienda es una puerta giratoria de tarifas nocturnas.
 
 ¿Quién diseña las próximas horas para que una familia no sea echada a un horno mientras el papeleo se pone al día?
 
@@ -4639,7 +4639,7 @@ A la una la respiración del niño se vuelve superficial. La enfermedad por calo
 
 **EN:** Sold out from under the fixed check
 
-**ES:** Agotado por debajo del cheque fijo
+**ES:** Vendidos por debajo del cheque fijo
 
 ---
 ### `homeless--sold-out-from-under-the-fixed-check.stakeholder`
@@ -4665,15 +4665,15 @@ Who designs tenure so a paid-off home on rented ground does not become a ticket 
 
 **ES:**
 
-Harold fija un aviso en la junta directiva de la casa club con manos que aún tiemblan por la reunión de la mañana. El parque tiene nuevo dueño. El alquiler del lote aumenta en sesenta días. Su tráiler está pagado. El suelo debajo no lo es.
+Harold clava un aviso en el tablón del clubhouse con manos que aún tiemblan de la reunión de la mañana. El parque tiene nuevo dueño. El alquiler del solar salta en sesenta días. Su caravana está pagada. El suelo debajo no.
 
-Los vecinos se reúnen con café y calculadoras. La Seguridad Social no llega al nuevo número. Mover un doble ancho cuesta más de lo que la mayoría de ellos verá en un año. La carta del comprador habla de reurbanización y de un futuro de viviendas permanentes que ninguno de ellos puede comprar.
+Los vecinos se reúnen con café y calculadoras. La Seguridad Social no llega al nuevo importe. Mover un doble ancho cuesta más de lo que la mayoría verá en un año. La carta del comprador habla de reurbanización y un futuro de viviendas permanentes que ninguno puede comprar.
 
-Harold se sienta en el tablero del parque y ahora conoce el mecanismo por su nombre. La tierra bajo parques antiguos se comercializa como un activo, mientras que las casas siguen siendo propiedad personal. El alquiler puede aumentar más rápido que un cheque fijo. Cuando suficientes residentes se van, el resto pierde el quórum que alguna vez frenó los malos acuerdos. Las almohadillas vacías hacen que la venta esté más limpia para el próximo lanzamiento.
+Harold sienta en la junta del parque y ya conoce el mecanismo por su nombre. La tierra bajo parques envejecidos se negocia como activo mientras las casas siguen siendo propiedad personal. El alquiler puede subir más rápido que un cheque fijo. Cuando bastantes residentes se van, el resto pierde el quórum que una vez frenó los malos tratos. Las plazas vacías hacen la venta más limpia para el siguiente flip.
 
-Su vecina Ruth pregunta dónde se supone que debe enchufar su concentrador de oxígeno si el estacionamiento se queda a oscuras. Harold tiene una caja de herramientas y el título de una caja con ruedas. No tiene el terreno.
+Su vecina Ruth pregunta dónde se supone que enchufa el concentrador de oxígeno si el solar se apaga. Harold tiene una caja de herramientas y el título de una caja con ruedas. No tiene la tierra.
 
-¿Quién diseña la tenencia para que una casa amortizada en un terreno alquilado no se convierta en un billete de salida?
+¿Quién diseña la tenencia para que una casa pagada en suelo alquilado no se convierta en un billete de salida?
 
 ---
 ### `homeless--sold-out-from-under-the-fixed-check.places.0`
@@ -4736,22 +4736,22 @@ Who designs safe continuity when the clock on shelter and the clock on justice n
 
 **ES:**
 
-Keisha acompaña a Lena y a los dos niños desde la puerta del anexo hasta un sedán gris con una bolsa de lona y una carpeta de documentos judiciales. Treinta noches en el refugio confidencial terminan a medianoche. La orden de protección es real. La siguiente dirección no lo es.
+Keisha acompaña a Lena y a los dos niños desde la puerta del anexo hasta un sedán gris con una bolsa de lona y una carpeta de papeles del juzgado. Treinta noches en el refugio confidencial terminan a medianoche. La orden de protección es real. La siguiente dirección no.
 
-El bono de emergencia enumera hoteles que aún rechazan a cualquiera que no tenga una tarjeta de crédito registrada. La tarjeta de Lena fue cortada cuando ella se fue. La cama del refugio gira según un reloj fijo para que pueda entrar la siguiente familia. Keisha ya ha llamado a cuatro recepciones. Dos cuelgan cuando escuchan el nombre del programa.
+El vale de emergencia lista hoteles que aún rechazan a cualquiera sin tarjeta de crédito en el expediente. La tarjeta de Lena se cortó cuando se fue. La cama del refugio gira con un reloj fijo para que entre la siguiente familia. Keisha ya ha llamado a cuatro recepciones. Dos cuelgan al oír el nombre del programa.
 
-Las normas destinadas a ampliar la escasa ayuda siguen produciendo la misma brecha. Treinta noches, luego prueba de ingresos, luego una lista de espera para alojamiento más largo que no se abre antes de la primera audiencia de la orden. El solar del juzgado se convierte en el recurso alternativo. Lena dormirá en el auto con las puertas cerradas y los niños debajo de una manta si nada se aclara al oscurecer.
+Las reglas pensadas para estirar la ayuda escasa siguen produciendo el mismo hueco. Treinta noches, luego prueba de ingresos, luego una lista de espera para vivienda más larga que no se abre antes de la primera audiencia de la orden. El parking del juzgado se convierte en el plan B. Lena dormirá en el coche con las puertas cerradas y los niños bajo una manta si nada se despeja antes del anochecer.
 
-La confianza se deshilacha en el asiento del pasajero. Lena pregunta si contar la historia completa en el momento de la admisión es lo que cerró las puertas más tarde. Keisha no tiene una respuesta clara que se ajuste a la forma.
+La confianza se deshilacha en el asiento del pasajero. Lena pregunta si contar la historia completa en la admisión es lo que cerró las puertas después. Keisha no tiene una respuesta limpia que quepa en el formulario.
 
-¿Quién diseña una continuidad segura cuando el reloj de la vivienda y el reloj de la justicia nunca coinciden?
+¿Quién diseña una continuidad segura cuando el reloj del refugio y el de la justicia nunca coinciden?
 
 ---
 ### `homeless--thirty-safe-nights-then-the-courthouse-lot.places.0`
 
 **EN:** Riverbend Family Justice annex
 
-**ES:** Anexo de justicia familiar de Riverbend
+**ES:** Riverbend Family Justice annex
 
 ---
 ### `homeless--thirty-safe-nights-then-the-courthouse-lot.pressureKeys.0`
@@ -4772,7 +4772,7 @@ La confianza se deshilacha en el asiento del pasajero. Lena pregunta si contar l
 
 **EN:** Credit blocks
 
-**ES:** Bloques de crédito
+**ES:** Bloqueos de crédito
 
 ---
 ## Seed `infectious--gutting-rinse-sickens-old-quay-landings`
@@ -4799,14 +4799,14 @@ Nia slits a mackerel on the wet board and rinses her knife in the same bucket th
 
 **ES:**
 
-Nia corta una caballa en la tabla mojada y enjuaga su cuchillo en el mismo cubo que el barco usó en la barandilla. A media mañana se le revuelve el estómago. Otras dos mujeres de la asociación abandonan temprano las mesas, pálidas y temblorosas. El muelle no tiene línea de lavado separada. El hielo derretido, la sangre y el agua de sentina drenan en el abrevadero que todos sumergen para una limpieza rápida antes de que los compradores griten. Las normas portuarias siguen tratando el agua de enjuague como un problema de los barcos, no del mercado. Los capitanes ahorran tiempo bombeando por la borda hacia el canal compartido que alimenta las tablas de vaciado durante la marea baja. La asociación de Nia puede multar a sus miembros por cuchillos sucios y perder la venta de la mañana, o mantener el ritmo y ver cómo regresa la misma enfermedad intestinal cada semana calurosa. El pescado debe moverse antes del mediodía o el precio se desplomará. ¿Quién rediseña el aterrizaje para que la velocidad de comercialización no siga reciclando enfermedades en el mismo enjuague?
+Nia abre una caballa en la tabla mojada y enjuaga el cuchillo en el mismo cubo que usó el barco en la barandilla. A media mañana se le revuelve el estómago. Otras dos mujeres de la asociación dejan las mesas pronto, pálidas y temblando. El muelle no tiene línea de lavado aparte. Hielo derretido, sangre y agua de sentina drenan al canalón donde todos mojan para una limpieza rápida antes de que griten los compradores. Las normas del puerto siguen tratando el agua de enjuague como problema de los barcos, no del mercado. Los capitanes ahorran tiempo bombeando por la borda al canal compartido que alimenta las tablas de eviscerado en marea baja. La asociación de Nia puede multar a miembros por cuchillos sucios y perder la venta de la mañana, o seguir el ritmo y ver la misma enfermedad intestinal volver cada semana calurosa. El pescado debe moverse antes del mediodía o el precio se derrumba. ¿Quién rediseña el desembarco para que la velocidad al mercado no siga reciclando la enfermedad con el mismo enjuague?
 
 ---
 ### `infectious--gutting-rinse-sickens-old-quay-landings.places.0`
 
 **EN:** Old Quay Fish Landing
 
-**ES:** Desembarco de peces en el antiguo muelle
+**ES:** Old Quay Fish Landing
 
 ---
 ### `infectious--gutting-rinse-sickens-old-quay-landings.pressureKeys.0`
@@ -4854,14 +4854,14 @@ Rosa lifts a torn IV bag with a stick before the morning buyers arrive. The bag 
 
 **ES:**
 
-Rosa levanta una bolsa intravenosa rota con un palo antes de que lleguen los compradores de la mañana. La bolsa todavía contiene líquido turbio. Un chico de la choza de al lado ya tiene una línea roja a lo largo de su espinilla como la de ayer. Lava el corte con agua de un bidón que huele a plástico y humo. Al mediodía le sube la fiebre y no soporta la luz. Las bolsas del hospital de la ciudad siguen llegando en el mismo camión abierto que tira la basura doméstica. Sin sello. Sin manifiesto. Los recolectores los rompen en busca de restos de plástico y metal porque ese es el dinero del día. Las clínicas río arriba todavía pagan a los transportistas por peso, no por eliminación segura, por lo que la corriente infecciosa sigue tomando la ruta barata hacia el carril. La cooperativa de Rosa puede rechazar una carga y perder el dinero del arroz de la semana, o tomarlo y ver cómo más niños aumentan la fiebre por los mismos cortes. ¿Quién rediseña el camino de los desechos para que la vida dependa de manos limpias y no de abrir daños sellados?
+Rosa levanta con un palo una bolsa de suero rota antes de que lleguen los compradores de la mañana. La bolsa aún guarda líquido turbio. Un chico de la chabola de al lado ya tiene una línea roja a lo largo de la espinilla del triaje de ayer. Lava el corte con agua de un bidón que huele a plástico y humo. Al mediodía le sube la fiebre y no soporta la luz. Las bolsas del hospital de la ciudad siguen llegando en el mismo camión abierto que tira la basura doméstica. Sin sello. Sin manifiesto. Los recolectores las rasgan por el plástico y el metal de chatarra porque ese es el dinero del día. Las clínicas río arriba aún pagan a los transportistas por peso, no por eliminación segura, así que la corriente infecciosa sigue la ruta barata hacia el callejón. La cooperativa de Rosa puede rechazar una carga y perder el dinero del arroz de la semana, o tomarla y ver a más niños disparar fiebre por los mismos cortes. ¿Quién rediseña la ruta de residuos para que un sustento dependa de manos limpias, no de abrir un daño sellado?
 
 ---
 ### `infectious--medical-waste-tips-fever-into-dump-edge-lane.places.0`
 
 **EN:** Dump Edge Lane Settlement
 
-**ES:** Acuerdo sobre el carril del borde de descarga
+**ES:** Dump Edge Lane Settlement
 
 ---
 ### `infectious--medical-waste-tips-fever-into-dump-edge-lane.pressureKeys.0`
@@ -4891,7 +4891,7 @@ Rosa levanta una bolsa intravenosa rota con un palo antes de que lleguen los com
 
 **EN:** Playground pump empties Maple Primary desks
 
-**ES:** La bomba del patio de juegos vacía los escritorios de Maple Primary
+**ES:** La bomba del patio vacía los pupitres de Maple Primary
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.stakeholder`
@@ -4909,28 +4909,28 @@ Ms. Okonkwo counts empty seats after break and stops at twelve. The children who
 
 **ES:**
 
-La señora Okonkwo cuenta los asientos vacíos después del descanso y se detiene en doce. Los niños que bebían de la bomba del jardín después del fútbol son los que faltan. Una niña regresa con una nota: vomitando toda la noche, sin fuerzas para caminar. La bomba es la única agua que la escuela puede ofrecer entre lecciones. El pozo que se encuentra debajo se encuentra cuesta abajo desde las letrinas que el municipio nunca recubrió por completo. Después de una fuerte lluvia, el sabor se vuelve metálico y dulce. El mantenimiento del distrito todavía programa la escuela en el mismo circuito lento que los lotes baldíos, por lo que las reparaciones esperan mientras la asistencia disminuye. Los padres también tiran de sus hermanos sanos, temerosos de lo que sea que se maneje. Okonkwo puede bloquear la bomba y ver cómo falla la concentración con el calor, o dejarla abierta y seguir enviando a casa la misma enfermedad. Faltan tres semanas para la semana de exámenes. ¿Quién diseña el agua de la escuela para que una bebida en el patio deje de ser la razón silenciosa por la que los pupitres se quedan vacíos?
+La Sra. Okonkwo cuenta asientos vacíos tras el recreo y se detiene en doce. Los niños que bebieron de la bomba del patio tras el fútbol son los que faltan. Una niña vuelve con una nota: vómitos toda la noche, sin fuerza para el camino. La bomba es el único agua que la escuela puede ofrecer entre clases. El pozo debajo queda cuesta abajo de letrinas que el municipio nunca revistió del todo. Tras una lluvia fuerte el sabor se vuelve metálico y dulce. El mantenimiento del distrito aún programa la escuela en el mismo circuito lento que los solares vacíos, así que las reparaciones esperan mientras cae la asistencia. Los padres retiran también a hermanos sanos, temerosos de lo que viaje en el mango. Okonkwo puede cerrar la bomba y ver fallar la concentración con el calor, o dejarla abierta y seguir enviando a casa la misma enfermedad. La semana de exámenes es dentro de tres semanas. ¿Quién diseña el agua escolar para que una bebida del patio deje de ser la razón callada de que los pupitres se vacíen?
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.places.0`
 
 **EN:** Maple Primary School Yard
 
-**ES:** Patio de la escuela primaria de arce
+**ES:** Maple Primary School Yard
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.pressureKeys.0`
 
 **EN:** Sick Kids
 
-**ES:** niños enfermos
+**ES:** Niños enfermos
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.pressureKeys.1`
 
 **EN:** Bad Well
 
-**ES:** mal bien
+**ES:** Pozo malo
 
 ---
 ### `infectious--playground-pump-empties-maple-primary-desks.pressureKeys.2`
@@ -4953,7 +4953,7 @@ La señora Okonkwo cuenta los asientos vacíos después del descanso y se detien
 
 **EN:** Imam Karim, lodge warden
 
-**ES:** Imam Karim, guardián de la logia
+**ES:** Imam Karim, guardián del albergue
 
 ---
 ### `infectious--shared-cistern-cough-fills-station-road-lodge.scene`
@@ -4964,14 +4964,14 @@ Imam Karim unlocks the courtyard gate before dawn and finds three men already co
 
 **ES:**
 
-El Imam Karim abre la puerta del patio antes del amanecer y encuentra a tres hombres ya tosiendo en mangas junto al abrevadero. La cisterna debajo del albergue es la única agua para lavar, cocinar y enjuagar la oración nocturna. La semana pasada un viajero de la costa durmió dos noches, dejó una tos seca y siguió adelante. Ahora el cuarto de literas suena como un motor averiado. Karim quiere cerrar los grifos y comprar agua en tanques, pero el albergue funciona con tarifas de peregrino que apenas cubren el arroz y las esteras. La línea municipal tiene parada en la plaza de la estación. Los transportistas llenan el tanque subterráneo de fuentes mixtas cada vez que el precio baja, y nadie prueba lo que llega. Los hombres que no pueden permitirse una casa de huéspedes siguen viniendo porque el albergue es la confianza que conocen. Si Karim los rechaza, duermen en el andén y pierden el trabajo. Si deja la cisterna abierta, la tos regresa a casa con cada huésped que se marcha. ¿Quién diseña el agua y la acogida para que la fe y la hospitalidad no se conviertan en el silencioso amplificador de un brote?
+El imán Karim abre la puerta del patio antes del alba y encuentra a tres hombres ya tosiendo en las mangas junto a la pila de abluciones. La cisterna bajo el albergue es el único agua para lavar, cocinar y el enjuague de la oración nocturna. La semana pasada un viajero de la costa durmió dos noches, dejó una tos seca y siguió. Ahora el dormitorio suena como un motor roto. Karim quiere cerrar los grifos y comprar agua en cisterna, pero el albergue vive de las tasas de peregrinos que apenas cubren arroz y esteras. La línea municipal termina en la plaza de la estación. Los transportistas llenan el tanque subterráneo de fuentes mixtas cuando baja el precio, y nadie prueba lo que llega. Los hombres que no pueden pagar una casa de huéspedes siguen viniendo porque el albergue es la confianza que conocen. Si Karim los rechaza, duermen en el andén y pierden el trabajo. Si deja la cisterna abierta, la tos vuelve a casa con cada huésped que se va. ¿Quién diseña el agua y la bienvenida para que la hospitalidad de la fe no se convierta en el amplificador silencioso de un brote?
 
 ---
 ### `infectious--shared-cistern-cough-fills-station-road-lodge.places.0`
 
 **EN:** Station Road Pilgrim Lodge
 
-**ES:** Estación Road Pilgrim Lodge
+**ES:** Station Road Pilgrim Lodge
 
 ---
 ### `infectious--shared-cistern-cough-fills-station-road-lodge.pressureKeys.0`
@@ -5001,7 +5001,7 @@ El Imam Karim abre la puerta del patio antes del amanecer y encuentra a tres hom
 
 **EN:** Bamboo stretcher at the switchback
 
-**ES:** Camilla de bambú en la curva
+**ES:** Camilla de bambú en la herradura
 
 ---
 ### `maternal--bamboo-stretcher-at-the-switchback.stakeholder`
@@ -5019,7 +5019,7 @@ Pasang steadies the bamboo poles as the litter rounds the last switchback above 
 
 **ES:**
 
-Pasang estabiliza las cañas de bambú mientras la camilla dobla la última curva sobre Namche. La madre en la camilla ha sangrado a través de dos paños desde el caserío. La sala de partos única de la clínica Trail está iluminada y lista. La ambulancia de carretera no lo es. Espera en la cabecera del jeep, tres horas más abajo, donde termina la grava y comienzan los porteadores. La noche cae rápidamente sobre la cresta. El círculo de voluntarios tiene oxitocina en una hielera y una radio que chisporrotea cuando se levanta la nube. Lo que no tienen es una forma de mover a una paciente postparto que se estrella más rápido que las piernas humanas sobre piedra mojada. Las reglas del distrito todavía dirigen los vehículos de emergencia solo a puntos transitables. Los planes de parto aún asumen que la mujer puede caminar o ser cargada antes de que la hemorragia alcance su punto máximo. Un retraso más y esta madre pierde la oportunidad en la que los medicamentos simples todavía funcionan. ¿Quién diseña la última milla cuando el mapa se detiene y una vida no?
+Pasang estabiliza los postes de bambú mientras la camilla toma la última horquilla sobre Namche. La madre en la camilla ha sangrado a través de dos paños desde la aldea. La única sala de partos de la clínica del sendero está encendida y lista. La ambulancia de carretera no. Espera en la cabeza de jeep tres horas más abajo, donde termina la grava y empiezan los porteadores. La noche cae rápido en la cresta. El círculo de voluntarios tiene oxitocina en una nevera y una radio que chisporrotea cuando se levanta la nube. Lo que no tienen es forma de mover a una paciente posparto que se derrumba más rápido que piernas humanas sobre piedra mojada. Las reglas del distrito aún envían vehículos de emergencia solo a puntos transitables. Los planes de parto aún asumen que una mujer puede caminar o ser cargada antes del pico de la hemorragia. Un retraso más y esta madre pierde la ventana en la que los fármacos simples aún funcionan. ¿Quién diseña el último kilómetro cuando el mapa se detiene y una vida no?
 
 ---
 ### `maternal--bamboo-stretcher-at-the-switchback.places.0`
@@ -5056,14 +5056,14 @@ Pasang estabiliza las cañas de bambú mientras la camilla dobla la última curv
 
 **EN:** Dust in the labor queue
 
-**ES:** Polvo en la cola de trabajadores
+**ES:** Polvo en la cola de parto
 
 ---
 ### `maternal--dust-in-the-labor-queue.stakeholder`
 
 **EN:** Mine spouses’ care committee
 
-**ES:** Comité de atención a cónyuges míos
+**ES:** Comité de cuidado de esposas de mineros
 
 ---
 ### `maternal--dust-in-the-labor-queue.scene`
@@ -5074,7 +5074,7 @@ Rosa signs the shift log with dust still on her sleeves and takes a seat in the 
 
 **ES:**
 
-Rosa firma el registro de turnos con el polvo aún en las mangas y toma asiento en el pasillo de la clínica. Sus tobillos están hinchados. La enfermera controla su presión arterial dos veces. El número es lo suficientemente alto como para enviarla cuesta arriba hasta el hospital. La política de la empresa dice que un cónyuge puede salir a mitad de turno sólo con un sello del supervisor, y el mostrador de sellos se cierra cuando llegan los camiones de mineral. El riesgo de incautación no espera a que llegue el mineral. El comité de atención de cónyuges de las minas ha mapeado todos los casos que estuvieron a punto de ocurrir esta temporada: mujeres que se mantuvieron de pie porque un turno perdido significa una tarjeta de racionamiento descontada y un mes más difícil. Los honorarios de la clínica por referencias externas se encuentran fuera del paquete de la empresa. La hermana de Rosa perdió un bebé el año pasado después de un traslado retrasado. La cola avanza una silla a la vez. ¿Quién diseña horarios de atención que se ajusten al cuerpo, no al horario de boxes?
+Rosa firma el registro de turno con polvo aún en las mangas y se sienta en el pasillo de la clínica. Tiene los tobillos hinchados. La enfermera le toma la presión dos veces. El número es lo bastante alto para enviarla cuesta arriba al hospital. La política de la empresa dice que una esposa solo puede salir a mitad de turno con sello de supervisor, y el mostrador de sellos cierra cuando ruedan los camiones de mineral. El riesgo de convulsiones no espera al mineral. El comité de cuidado de esposas de mineros ha mapeado cada casi-accidente de la temporada: mujeres que se quedaron de pie porque un turno perdido significa una cartilla de ración recortada y un mes más duro. Las tasas de clínica por derivación externa quedan fuera del paquete de la empresa. La hermana de Rosa perdió un bebé el año pasado tras un traslado retrasado. La cola avanza una silla a la vez. ¿Quién diseña horas de cuidado que encajen con el cuerpo, no con el horario del pozo?
 
 ---
 ### `maternal--dust-in-the-labor-queue.places.0`
@@ -5102,7 +5102,7 @@ Rosa firma el registro de turnos con el polvo aún en las mangas y toma asiento 
 
 **EN:** Clinic Fees
 
-**ES:** Honorarios de la clínica
+**ES:** Tasas de clínica
 
 ---
 ## Seed `maternal--night-heat-on-the-birth-floor`
@@ -5111,14 +5111,14 @@ Rosa firma el registro de turnos con el polvo aún en las mangas y toma asiento 
 
 **EN:** Night heat on the birth floor
 
-**ES:** Calor nocturno en la sala de partos.
+**ES:** Calor nocturno en la planta de partos
 
 ---
 ### `maternal--night-heat-on-the-birth-floor.stakeholder`
 
 **EN:** Chawl women’s health sabha
 
-**ES:** Chawl salud de la mujer sabha
+**ES:** Sabha de salud de mujeres del chawl
 
 ---
 ### `maternal--night-heat-on-the-birth-floor.scene`
@@ -5129,7 +5129,7 @@ Meena wipes her sister’s brow with a cloth that is already warm. Night holds t
 
 **ES:**
 
-Meena limpia la frente de su hermana con un paño que ya está tibio. La noche guarda el calor del día bajo el techo de hojalata. Las madres comparten catres en la planta de parto. Cuando la red muere, los fanáticos se detienen. El esterilizador se enfría. A una nueva madre le sube la fiebre y no existe una forma limpia de refrescarla o mantener seguros los instrumentos. Los propietarios todavía miden la energía por habitación. El cableado fue construido para luces y teléfonos, no para atención de partos las 24 horas del día. Los refuerzos nunca llegan a este piso. El sabha de salud de la mujer ha pedido una línea dedicada y le han dicho que el chawl es un alojamiento temporal en el papel. De todos modos, los bebés siguen llegando con el calor. ¿Quién diseña el poder para la hora en que llega la vida?
+Meena limpia la frente de su hermana con un paño que ya está caliente. La noche guarda el calor del día bajo el techo de chapa. Las madres comparten catres en la planta de partos. Cuando la red muere, los ventiladores se paran. El esterilizador se enfría. Una madre nueva dispara fiebre, y no hay forma limpia de enfriarla ni de mantener seguros los instrumentos. Los caseros aún miden la electricidad por habitación. El cableado se hizo para luces y teléfonos, no para cuidados de parto día y noche. El respaldo nunca llega a esta planta. La sabha de salud de las mujeres ha pedido una línea dedicada y le han dicho que el chawl es vivienda temporal sobre el papel. Los bebés siguen llegando en el calor de todos modos. ¿Quién diseña la electricidad para la hora en que llega una vida?
 
 ---
 ### `maternal--night-heat-on-the-birth-floor.places.0`
@@ -5143,7 +5143,7 @@ Meena limpia la frente de su hermana con un paño que ya está tibio. La noche g
 
 **EN:** Mother Fever
 
-**ES:** fiebre madre
+**ES:** Fiebre materna
 
 ---
 ### `maternal--night-heat-on-the-birth-floor.pressureKeys.1`
@@ -5166,14 +5166,14 @@ Meena limpia la frente de su hermana con un paño que ya está tibio. La noche g
 
 **EN:** Warm vials at low tide
 
-**ES:** Viales calientes durante la marea baja.
+**ES:** Viales tibios en marea baja
 
 ---
 ### `maternal--warm-vials-at-low-tide.stakeholder`
 
 **EN:** Creek midwife cooperative
 
-**ES:** Cooperativa de parteras Creek
+**ES:** Cooperativa de parteras del creek
 
 ---
 ### `maternal--warm-vials-at-low-tide.scene`
@@ -5184,7 +5184,7 @@ Amina opens the small fridge and feels the air inside. It is only cool, not cold
 
 **ES:**
 
-Amina abre la pequeña nevera y siente el aire del interior. Sólo hace frío, no frío. Los viales de oxitocina han permanecido estacionados durante otra tarde de luz solar débil y un banco de nubes que interrumpió los paneles. La marea baja ha dejado en tierra el ferry del arroyo. El hospital de referencia está a un cruce y a un camino polvoriento. Una madre en el refugio todavía está sangrando después de la placenta. La cooperativa de matronas se sabe la dosis de memoria. También saben que la medicina caliente pierde su efecto. Los barcos de suministro siguen la tabla de mareas, no la tabla de mano de obra. Los fondos de la cadena de frío se detienen en el depósito del continente. Así, el refugio espera la altura del agua mientras una hemorragia prevenible marca su propio reloj. ¿Quién diseña una medicina que siga siendo potente cuando el propio arroyo sostiene la puerta?
+Amina abre la nevera pequeña y siente el aire de dentro. Solo está fresco, no frío. Los viales de oxitocina han pasado otra tarde de sol débil y un banco de nubes que acortó los paneles. La marea baja ha varado el ferry del creek. El hospital de referencia queda a un cruce y un camino polvoriento. Una madre en el refugio sigue sangrando tras la placenta. La cooperativa de parteras se sabe la dosis de memoria. También saben que la medicina tibia pierde fuerza. Los barcos de suministro siguen la tabla de mareas, no la de partos. Los fondos de cadena de frío se detienen en el depósito del continente. Así el refugio espera la altura del agua mientras una hemorragia prevenible escribe su propio reloj. ¿Quién diseña medicina que siga potente cuando el propio creek sostiene la puerta?
 
 ---
 ### `maternal--warm-vials-at-low-tide.places.0`
@@ -5198,14 +5198,14 @@ Amina abre la pequeña nevera y siente el aire del interior. Sólo hace frío, n
 
 **EN:** Bleeding
 
-**ES:** Sangría
+**ES:** Hemorragia
 
 ---
 ### `maternal--warm-vials-at-low-tide.pressureKeys.1`
 
 **EN:** Warm Medicine
 
-**ES:** Medicina caliente
+**ES:** Medicina tibia
 
 ---
 ### `maternal--warm-vials-at-low-tide.pressureKeys.2`
@@ -5221,7 +5221,7 @@ Amina abre la pequeña nevera y siente el aire del interior. Sólo hace frío, n
 
 **EN:** Auntie remedies never reach the chart
 
-**ES:** Los remedios de la tía nunca llegan a la tabla.
+**ES:** Los remedios de la tía nunca llegan a la historia clínica
 
 ---
 ### `memory--auntie-remedies-never-reach-the-chart.stakeholder`
@@ -5239,7 +5239,7 @@ Ama cools a new mother’s wrists with a cloth wrung in ginger water the way the
 
 **ES:**
 
-Ama enfría las muñecas de una nueva madre con un paño escurrido en agua de jengibre, como le mostró la partera principal hace años. La fiebre de la mujer había aumentado después de un largo parto. El cuadro electrónico enumera los antibióticos y los signos vitales. No hay espacio para la secuencia de sorbos, descanso y vigilancia de la tía que calmó el mismo patrón la última rotación de sala. Una enfermera junior se hace cargo del traspaso y sigue solo lo que muestra la pantalla. Por la mañana, la fiebre ha vuelto y se indica que la cama va a aumentar. El personal se desplaza por el anexo cada temporada. Los contratados aprenden a utilizar el software en un día. No saben en qué remedio de la abuela confiaba el antiguo equipo cuando los laboratorios funcionaban con lentitud. Las familias notan que los sustos se repiten. Algunos demoran en llegar porque temen que el barrio se pierda lo que sus propios mayores ya saben. Ama se interpone entre el carrito y la pantalla con un remedio que funciona y no hay ningún sitio oficial donde ponerlo. ¿Quién diseña un disco que pueda contener tanto la dosis como las manos que aún recuerdan por qué?
+Ama enfría las muñecas de una madre nueva con un paño escurrido en agua de jengibre, como le enseñó la partera mayor hace años. La fiebre de la mujer había subido tras un parto largo. La historia clínica electrónica lista antibióticos y constantes. No tiene campo para la secuencia de sorbos, reposo y vigilancia de la tía que calmó el mismo patrón en la última rotación de planta. Una enfermera junior toma el relevo en el cambio de turno y solo sigue lo que muestra la pantalla. Por la mañana la fiebre vuelve y la cama se marca para escalada. El personal rota por el anexo cada temporada. Los contratados aprenden el software en un día. No aprenden qué remedio de abuela confiaba el equipo antiguo cuando los labs iban lentos. Las familias notan los sustos repetidos. Algunas retrasan la llegada porque temen que la planta pierda lo que sus mayores ya saben. Ama se para entre el carrito y la pantalla con un remedio que funciona y ningún sitio oficial donde ponerlo. ¿Quién diseña un registro que pueda guardar la dosis y las manos que aún recuerdan por qué?
 
 ---
 ### `memory--auntie-remedies-never-reach-the-chart.places.0`
@@ -5253,7 +5253,7 @@ Ama enfría las muñecas de una nueva madre con un paño escurrido en agua de je
 
 **EN:** Repeat Harm
 
-**ES:** Repetir daño
+**ES:** Daño repetido
 
 ---
 ### `memory--auntie-remedies-never-reach-the-chart.pressureKeys.1`
@@ -5294,21 +5294,21 @@ Kenji runs his thumb along a cedar beam and stops at a shallow chisel nick no to
 
 **ES:**
 
-Kenji pasa el pulgar por una viga de cedro y se detiene en una muesca poco profunda de cincel que ningún turista notaría. La marca indica en qué dirección se torcerá el grano cuando aumente la humedad del verano. Llama al aprendiz que registró la reparación del templo el mes pasado. El niño se fue a trabajar a una fábrica en Osaka hace dos semanas. La etiqueta de papel en el estante nombra el árbol y la fecha. No menciona la sensación de la madera bajo carga. El propio maestro de Kenji mantuvo ese conocimiento en sus manos y en notas murmuradas al final de cada corte. Esas notas nunca entraron en el inventario digital del astillero. Los gerentes miden el progreso por piezas terminadas y horas facturadas. La transmisión lenta del conocimiento táctil parece un tiempo de inactividad en la hoja. El techo de un santuario en el lado este ya muestra un pequeño espacio donde una junta sustituida queda mal. Un rayo equivocado más y la próxima temporada de tifones abrirá la sala a la lluvia. ¿Quién diseña una forma de mantener viva la marca cuando la mano que la hizo haya desaparecido?
+Kenji pasa el pulgar por una viga de cedro y se detiene en una muesca poco profunda de formón que ningún turista notaría. La marca dice hacia dónde torcerá la veta cuando suba la humedad de verano. Llama al aprendiz que registró la reparación del templo del mes pasado. El chico se fue a una fábrica en Osaka hace dos semanas. La etiqueta de papel en el bastidor nombra el árbol y la fecha. No nombra el tacto de la madera bajo carga. El propio maestro de Kenji guardaba ese saber en las manos y en notas murmuradas al final de cada corte. Esas notas nunca entraron en el inventario digital del patio. Los jefes miden el progreso por piezas terminadas y horas facturadas. La transmisión lenta del saber táctil parece tiempo muerto en la hoja. El techo de un santuario al este ya muestra un hueco capilar donde una junta sustituida sienta mal. Una viga más equivocada y la próxima temporada de tifones abrirá la sala a la lluvia. ¿Quién diseña un modo de mantener viva la marca cuando la mano que la hizo se ha ido?
 
 ---
 ### `memory--joinery-marks-leave-with-the-last-master.places.0`
 
 **EN:** Nishijin timber yard, Kyoto
 
-**ES:** Astillero de madera de Nishijin, Kioto
+**ES:** Patio de madera Nishijin, Kioto
 
 ---
 ### `memory--joinery-marks-leave-with-the-last-master.pressureKeys.0`
 
 **EN:** Beam Failures
 
-**ES:** Fallos del haz
+**ES:** Fallos de vigas
 
 ---
 ### `memory--joinery-marks-leave-with-the-last-master.pressureKeys.1`
@@ -5349,14 +5349,14 @@ Mary steps onto the gray edge at dawn and names the ice the way her mother taugh
 
 **ES:**
 
-Mary sube al borde gris al amanecer y nombra el hielo como le enseñó su madre. Este tramo canta debajo de la bota. Esa veta oscura se abrirá al mediodía. Su sobrino espera con una unidad de GPS y un gráfico impreso de la escuela. El gráfico muestra la línea costera del año pasado. No muestra la bolsa blanda que puede oler cuando cambia el viento. La semana pasada dos cazadores pasaron cerca del antiguo sendero. Uno regresó empapado y temblando. El pueblo todavía imparte charlas de seguridad a partir de tarjetas laminadas escritas cuando las estaciones tenían patrones más estables. Los jóvenes se van a trabajar a Betel y Anchorage. Las tías que pueden leer el hielo por el sonido y el color son cada vez menos cada primavera. Los costos de los alimentos almacenados aumentan cuando los congeladores se agotan. Mary observa a su sobrino guardar el dispositivo en el bolsillo y mirar el agua como si la máquina fuera a hablar primero. ¿Quién diseña un camino que lleve adelante su nombramiento sin congelarlo en un mapa que yace?
+Mary pisa el borde gris al alba y nombra el hielo como le enseñó su madre. Este tramo canta bajo la bota. Esa costura oscura se abrirá al mediodía. Su sobrino espera con un GPS y un mapa impreso de la escuela. El mapa muestra la orilla del año pasado. No muestra el bolsillo blando que ella huele cuando cambia el viento. Dos cazadores se metieron cerca del viejo sendero la semana pasada. Uno volvió empapado y temblando. El pueblo sigue dando charlas de seguridad con tarjetas plastificadas escritas cuando las estaciones tenían patrones más estables. Los jóvenes se van a trabajos en Bethel y Anchorage. Las tías que leen el hielo por sonido y color son menos cada primavera. El costo de la comida de tienda sube cuando bajan los congeladores. Mary ve a su sobrino guardarse el aparato y mirar el agua como si la máquina hablara primero. ¿Quién diseña un camino que lleve adelante su nombrar sin congelarlo en un mapa que miente?
 
 ---
 ### `memory--safe-ice-only-the-aunties-can-name.places.0`
 
 **EN:** Toksook Bay boat launch, Alaska
 
-**ES:** Lanzamiento del barco en la Bahía Toksook, Alaska
+**ES:** Rampa de botes de Toksook Bay, Alaska
 
 ---
 ### `memory--safe-ice-only-the-aunties-can-name.pressureKeys.0`
@@ -5404,7 +5404,7 @@ Davies hears the change before the alarm board lights. A thin rise in the stack 
 
 **ES:**
 
-Davies escucha el cambio antes de que se encienda el tablero de alarma. Un ligero aumento en el billete de la pila significa que la carga cuelga mal sobre las toberas. Coge el trozo de lápiz que todavía guarda en el bolsillo. El registro digital quiere un código de un menú desplegable. No existe ningún código para ese silbido en particular. El turno de noche termina en doce minutos. El equipo de relevo llega recién salido de una rotación de contratistas y nunca ha soportado este horno durante un descenso pegajoso. La política de la empresa borra las notas de texto libre al final de cada trimestre para mantener el sistema ordenado. Los cuasi accidentes se archivan como cerrados una vez que se estabilizan los números. El mes pasado, un joven operador no escuchó el mismo susurro y abandonó tarde un yeso parcial. Nadie resultó herido. El suelo todavía habla del calor que rodaba hacia los corredores. Davies escribe un comentario vago y sabe que desaparecerá. ¿Quién diseña una memoria que sobreviva a un cambio cuando la planta sólo conserva lo que se ajusta a una forma?
+Davies oye el cambio antes de que se encienda el panel de alarma. Una subida fina en la nota de la chimenea significa que la carga cuelga mal sobre las toberas. Busca el trozo de lápiz que aún guarda en el bolsillo. El registro digital quiere un código de un menú desplegable. No hay código para ese silbido concreto. El turno de noche termina en doce minutos. El relevo llega fresco de una rotación de contratistas y nunca ha aguantado este horno en un descenso pegajoso. La política de la empresa borra las notas en texto libre al final de cada trimestre para mantener el sistema ordenado. Los casi-accidentes se archivan como cerrados cuando se estabilizan los números. El mes pasado un operador joven falló el mismo susurro y vació tarde una colada parcial. Nadie resultó herido. El taller sigue hablando del calor que volvió hacia las canales. Davies escribe un comentario vago y sabe que se desvanecerá. ¿Quién diseña una memoria que dure más que un turno cuando la planta solo guarda lo que cabe en un formulario?
 
 ---
 ### `memory--the-furnace-whisper-dies-at-shift-end.places.0`
@@ -5425,7 +5425,7 @@ Davies escucha el cambio antes de que se encienda el tablero de alarma. Un liger
 
 **EN:** Shift Amnesia
 
-**ES:** Amnesia de cambio
+**ES:** Amnesia de turno
 
 ---
 ### `memory--the-furnace-whisper-dies-at-shift-end.pressureKeys.2`
@@ -5448,7 +5448,7 @@ Davies escucha el cambio antes de que se encienda el tablero de alarma. Un liger
 
 **EN:** Gig worker mutual-aid organizer
 
-**ES:** Organizador de ayuda mutua para trabajadores autónomos
+**ES:** Organizador de ayuda mutua de trabajadores de plataformas
 
 ---
 ### `mental--five-stars-or-the-spiral.scene`
@@ -5459,21 +5459,21 @@ Luis sits in a shaded parking garage at 2 p.m. with the AC off to save charge. H
 
 **ES:**
 
-Luis se sienta en un estacionamiento sombreado a las 2 p.m. con el aire acondicionado apagado para ahorrar carga. Su teléfono emite un ping de entrega al otro lado de la ciudad. Ayer, un pasajero dejó una nota de una estrella por una maleta retrasada después de una interrupción del ascensor. Su puntaje de aceptación bajó. La aplicación redujo sus pedidos por la mañana. Pertenece a un chat de ayuda mutua que detecta a los miembros dinero en efectivo para neumáticos y malas semanas. Esta noche la conversación es tranquila porque todo el mundo está persiguiendo las oleadas de cena. Las plataformas clasifican a los trabajadores en público y ocultan las reglas que reducen las horas. No hay baja por enfermedad cuando la ansiedad aumenta después de una amenaza en la entrada de una casa. Luis acepta el ping con la boca seca. A Rent no le importa su calificación. La partitura es la correa que lo mantiene en movimiento mientras sus nervios se desgastan. ¿Quién diseña el trabajo para que un mal día no se convierta en una trampa sin salida?
+Luis se sienta en un aparcamiento sombreado a las 14:00 con el aire apagado para ahorrar batería. El teléfono vibra con un pedido de entrega al otro lado de la ciudad. Ayer un cliente dejó una nota de una estrella por una bolsa tarde tras un fallo del ascensor. Su puntuación de aceptación bajó. La app le adelgazó los pedidos por la mañana. Pertenece a un chat de ayuda mutua que adelanta efectivo a los miembros para neumáticos y malas semanas. Esta noche el chat está callado porque todos persiguen los picos de cena. Las plataformas clasifican a los trabajadores en público y ocultan las reglas que recortan horas. No hay baja por enfermedad cuando la ansiedad se dispara tras una amenaza en un camino de entrada. Luis acepta el ping con la boca seca. El alquiler no se preocupa por su nota. La puntuación es la correa que lo mantiene en movimiento mientras los nervios se deshilachan. ¿Quién diseña el trabajo de plataforma para que un mal día no se convierta en una trampa sin salida?
 
 ---
 ### `mental--five-stars-or-the-spiral.places.0`
 
 **EN:** Phoenix Desert Stack, Arizona
 
-**ES:** Pila del desierto de Phoenix, Arizona
+**ES:** Phoenix Desert Stack, Arizona
 
 ---
 ### `mental--five-stars-or-the-spiral.pressureKeys.0`
 
 **EN:** Burnout
 
-**ES:** agotamiento
+**ES:** Agotamiento
 
 ---
 ### `mental--five-stars-or-the-spiral.pressureKeys.1`
@@ -5496,7 +5496,7 @@ Luis se sienta en un estacionamiento sombreado a las 2 p.m. con el aire acondici
 
 **EN:** The line never slows for grief
 
-**ES:** La línea nunca se detiene por el dolor
+**ES:** La línea nunca se frena por el duelo
 
 ---
 ### `mental--the-line-never-slows-for-grief.stakeholder`
@@ -5514,14 +5514,14 @@ Father Ruiz stands by the break-room microwave as the second shift clocks in. Ma
 
 **ES:**
 
-El padre Ruiz está parado junto al microondas de la sala de descanso mientras el segundo turno entra. Los ojos de María están rojos. Su hermano murió en una línea diferente el mes pasado. Ella todavía tiene que hacer la tarifa. La oficina del capellán de la planta es un casillero reformado con una silla plegable. Los trabajadores toman sus descansos de diez minutos y luego regresan antes de que la cinta se dé cuenta. Un supervisor llama y señala el reloj. La velocidad de la línea no cambió cuando la ciudad enterró a tres hombres en una temporada. El pago de bonificaciones sigue rastreando los cadáveres por hora. Hablar sobre el duelo puede marcarlo como poco confiable en la próxima agenda. Ruiz acompaña a María de regreso al suelo. El zumbido de la cadena no cesa. El silencio es parte del plan de rendimiento. ¿Quién diseña una línea de alimentos que pueda mantener una pausa humana sin castigar a quien la necesita?
+El padre Ruiz está junto al microondas de la sala de descanso cuando entra el segundo turno. Los ojos de María están rojos. Su hermano murió en otra línea el mes pasado. Ella todavía tiene que cumplir el ritmo. La oficina del capellán de planta es un casillero reconvertido con una silla plegable. Los trabajadores vienen en sus descansos de diez minutos y vuelven antes de que la cinta se dé cuenta. Un supervisor llama y señala el reloj. La velocidad de línea no cambió cuando el pueblo enterró a tres hombres en una temporada. El bono sigue contando cadáveres por hora. Hablar del duelo puede marcarte como poco fiable en el próximo horario. Ruiz acompaña a María de vuelta al taller. El zumbido de la cadena no se detiene. El silencio forma parte del plan de rendimiento. ¿Quién diseña una línea alimentaria que pueda sostener una pausa humana sin castigar a quien la necesita?
 
 ---
 ### `mental--the-line-never-slows-for-grief.places.0`
 
 **EN:** Garden City Packing Ward, Kansas
 
-**ES:** Sala de embalaje de Garden City, Kansas
+**ES:** Garden City Packing Ward, Kansas
 
 ---
 ### `mental--the-line-never-slows-for-grief.pressureKeys.0`
@@ -5569,14 +5569,14 @@ Charge nurse Keisha counts badges at shift change and comes up two short again. 
 
 **ES:**
 
-La enfermera a cargo Keisha cuenta las insignias en el cambio de turno y nuevamente se queda con dos menos. El tablero muestra una UCI llena y una piscina flotante que ya dijo que no. Asigna habitaciones con un bolígrafo que ha escrito los mismos nombres demasiadas noches. A mitad de turno, un recién graduado se queda congelado afuera de una sala de codificación. La semana pasada, esa enfermera perdió a un paciente al que había menospreciado por miedo. Todavía le quedan seis horas. Keisha quiere invitarla a interrogarla en silencio. No hay tranquilidad ni cuerpo de repuesto para cubrir la bahía. El administrador realiza un seguimiento de las horas extras y las vacantes, no del peso de las muertes repetidas. Los contratos de viaje reparan los agujeros mientras el personal permanente se agota y se marcha. La escasez alimenta la próxima escasez. Keisha siente las matemáticas en su pecho antes de sentirlas en la lista. ¿Quién diseña las guarderías para que las personas que sostienen la vida de otras personas no se vacíen sin ser vistas?
+La enfermera jefa Keisha cuenta insignias en el cambio de turno y otra vez le faltan dos. El tablero muestra una UCI llena y un pool flotante que ya dijo que no. Asigna habitaciones con un bolígrafo que ha escrito los mismos nombres demasiadas noches. A mitad de turno, una recién graduada se queda paralizada fuera de una sala en código. La semana pasada esa enfermera perdió a una paciente a la que había calmado del miedo. Aún le quedan seis horas. Keisha quiere sacarla para un debrief silencioso. No hay silencio ni cuerpo de repuesto para cubrir la bahía. Administración sigue las horas extra y las vacantes, no el peso de las muertes repetidas. Los contratos de viaje tapan agujeros mientras el personal fijo se quema y se va. La escasez alimenta la siguiente escasez. Keisha siente la cuenta en el pecho antes de sentirla en el cuadrante. ¿Quién diseña la atención nocturna para que quienes sostienen la vida de otros no se vacíen sin ser vistos?
 
 ---
 ### `mental--twelve-hour-hearts-running-empty.places.0`
 
 **EN:** Detroit Receiving Night Floor, Michigan
 
-**ES:** Detroit recibe el piso nocturno, Michigan
+**ES:** Detroit Receiving Night Floor, Michigan
 
 ---
 ### `mental--twelve-hour-hearts-running-empty.pressureKeys.0`
@@ -5597,7 +5597,7 @@ La enfermera a cargo Keisha cuenta las insignias en el cambio de turno y nuevame
 
 **EN:** Turnover
 
-**ES:** Volumen de negocios
+**ES:** Rotación de personal
 
 ---
 ## Seed `mental--waitlist-longer-than-the-semester`
@@ -5613,7 +5613,7 @@ La enfermera a cargo Keisha cuenta las insignias en el cambio de turno y nuevame
 
 **EN:** Campus peer-support director
 
-**ES:** Director de apoyo entre pares del campus
+**ES:** Directora de apoyo entre pares del campus
 
 ---
 ### `mental--waitlist-longer-than-the-semester.scene`
@@ -5624,14 +5624,14 @@ Maya opens the peer-support office at 7:40 a.m. with three sticky notes already 
 
 **ES:**
 
-Maya abre la oficina de apoyo entre pares a las 7:40 a. m. con tres notas adhesivas debajo de la puerta. Uno es de un estudiante de segundo año que dejó de dormir después de los exámenes parciales. Pone su nombre en la pizarra junto a otros doce. La próxima admisión abierta de la clínica del campus es después de los exámenes finales. El semestre terminará primero. Los compañeros oyentes se ocupan del desbordamiento en una sala de estudio prestada con paredes delgadas. Están entrenados para un traspaso cálido, no para el pánico que dura hasta el amanecer. Cuando un asesor residente envía un mensaje de texto diciendo que un estudiante está dando vueltas en espiral en las escaleras de un dormitorio, Maya tiene que elegir quién tendrá el único espacio nocturno que le queda esta semana. El asesoramiento FTE se congeló mientras la inscripción aumentaba. El asesoramiento todavía les dice a los estudiantes que “usen la aplicación” y sigan adelante para obtener calificaciones. La lista de espera no es un efecto secundario. Así es como los presupuestos del campus se preocupan por las horas de crédito. Maya observa cómo el nombre del estudiante de segundo año permanece inmóvil en el tablero. ¿Quién diseña un apoyo que llegue antes de que ya se pierda la nota?
+Maya abre la oficina de apoyo entre pares a las 7:40 con tres notas adhesivas ya bajo la puerta. Una es de un estudiante de segundo año que dejó de dormir tras los parciales. Pone su nombre en la pizarra junto a otros doce. La próxima admisión abierta de la clínica del campus es después de los finales. El semestre terminará antes. Los oyentes pares atienden el desbordamiento en una sala de estudio prestada de paredes finas. Están formados para un traspaso cálido, no para un pánico que dura hasta el alba. Cuando un asesor de residencia escribe que un estudiante está en espiral en la escalera de un dormitorio, Maya tiene que elegir quién obtiene el único hueco de la tarde que queda esta semana. Los ETC de counseling se congelaron mientras subía la matrícula. Orientación sigue diciendo a los estudiantes que «usen la app» y aguanten por las notas. La lista de espera no es un efecto secundario. Así es como el campus presupuesta el cuidado frente a las horas de crédito. Maya mira el nombre del estudiante de segundo año quieto en la pizarra. ¿Quién diseña un apoyo que llegue antes de que la nota ya se haya perdido?
 
 ---
 ### `mental--waitlist-longer-than-the-semester.places.0`
 
 **EN:** Ames Cyclone Corridor, Iowa
 
-**ES:** Corredor ciclónico Ames, Iowa
+**ES:** Ames Cyclone Corridor, Iowa
 
 ---
 ### `mental--waitlist-longer-than-the-semester.pressureKeys.0`
@@ -5652,7 +5652,7 @@ Maya abre la oficina de apoyo entre pares a las 7:40 a. m. con tres notas adhesi
 
 **EN:** Grade Fear
 
-**ES:** Miedo de grado
+**ES:** Miedo a las notas
 
 ---
 ## Seed `mideast--ambulances-pay-twice-at-the-gate`
@@ -5661,7 +5661,7 @@ Maya abre la oficina de apoyo entre pares a las 7:40 a. m. con tres notas adhesi
 
 **EN:** Ambulances pay twice at the gate
 
-**ES:** Las ambulancias pagan dos veces en la puerta.
+**ES:** Las ambulancias pagan dos veces en la puerta
 
 ---
 ### `mideast--ambulances-pay-twice-at-the-gate.stakeholder`
@@ -5685,20 +5685,20 @@ By the time the van reaches Clinic Row, the mother’s bleeding has changed. Lay
 
 **ES:**
 
-Layla frena la furgoneta de la clínica en la barrera exterior antes del amanecer. Al fondo, una madre que da a luz se agarra a la barandilla y cuenta otra ola. El primer guardia toma el papel y les hace señas hacia una segunda cadena que cruza el mismo camino de polvo. El segundo stand pertenece a una facción diferente. Mismo corredor. Nuevo recibo.
+Layla frena la furgoneta de la clínica en la barrera exterior antes del alba. Detrás, una madre de parto se agarra a la barra y cuenta otra ola. El primer guardia toma la tasa en papel y les indica una segunda cadena en el mismo camino de polvo. El segundo puesto pertenece a otra facción. Mismo corredor. Nuevo recibo.
 
-La radio crepita con una segunda llamada desde la sala de partos. El esterilizador ya está caliente. La partera está esperando. Los minutos se extienden mientras ambas cabinas discuten quién tiene el sello válido hoy. Cash sale de la guantera dos veces. La bombona de oxígeno permanece atada y sin uso.
+La radio crepita con una segunda llamada desde la planta de partos. El esterilizador ya está caliente. La partera espera. Los minutos se alargan mientras ambos puestos discuten qué sello vale hoy. El efectivo sale dos veces de la guantera. La bombona de oxígeno sigue atada y sin usar.
 
-Los equipos de control rotan según la lista y mantienen libros de contabilidad en paquetes de cigarrillos. Las clínicas que rechazan el doble peaje quedan retenidas hasta el cambio de turno. Los conductores aprenden los precios de la misma manera que aprenden los baches. El camino por el que debería transitar el cuidado se convierte en una granja de peaje del miedo.
+Las cuadrillas del control rotan por lista y llevan cuentas en cajetillas de cigarrillos. Las clínicas que rechazan el doble peaje se retienen hasta el cambio de turno. Los conductores aprenden los precios como aprenden los baches. La carretera que debería mover el cuidado se convierte en una granja de peajes sobre el miedo.
 
-Cuando la camioneta llega a Clinic Row, el sangrado de la madre ha cambiado. Las manos de Layla están firmes sobre la camilla y su mente no. El personal que puede salir ya ha hecho turnos de noche al otro lado de la línea. ¿Quién diseña el paso para que un nacimiento no pague rescate por dos puertas?
+Cuando la furgoneta llega a Clinic Row, el sangrado de la madre ha cambiado. Las manos de Layla están firmes en la camilla y su mente no. El personal que puede irse ya cogió turnos de noche al otro lado de la línea. ¿Quién diseña el paso para que un parto no pague rescate a dos puertas?
 
 ---
 ### `mideast--ambulances-pay-twice-at-the-gate.places.0`
 
 **EN:** Dust Road Clinic Row
 
-**ES:** Fila de la clínica Dust Road
+**ES:** Dust Road Clinic Row
 
 ---
 ### `mideast--ambulances-pay-twice-at-the-gate.pressureKeys.0`
@@ -5719,7 +5719,7 @@ Cuando la camioneta llega a Clinic Row, el sangrado de la madre ha cambiado. Las
 
 **EN:** Staff Flight
 
-**ES:** Vuelo del personal
+**ES:** Fuga de personal
 
 ---
 ## Seed `mideast--shutters-rise-only-after-the-cut`
@@ -5728,7 +5728,7 @@ Cuando la camioneta llega a Clinic Row, el sangrado de la madre ha cambiado. Las
 
 **EN:** Shutters rise only after the cut
 
-**ES:** Las contraventanas se levantan sólo después del corte.
+**ES:** Las contraventanas suben solo después del corte
 
 ---
 ### `mideast--shutters-rise-only-after-the-cut.stakeholder`
@@ -5752,20 +5752,20 @@ Yusuf measures saffron he cannot sell and counts apprentices he cannot keep. Emp
 
 **ES:**
 
-Yusuf levanta la persiana metálica de su puesto de especias y vuelve a encontrar la calle medio vacía. El corte de la mañana llegó antes del primer autobús. Hombres con brazaletes caminaron por el callejón y pusieron un peaje en una calle para “proteger el comercio”. Los que pagaron temprano abrieron. Los que discutieron mantuvieron el acero bajo.
+Yusuf levanta la persiana metálica de su puesto de especias y encuentra el callejón otra vez medio vacío. El corte de la mañana llegó antes del primer autobús. Hombres con brazaletes recorrieron el callejón y nombraron un peaje de calle por la «protección del comercio». Quienes pagaron temprano abrieron. Quienes discutieron dejaron el acero bajado.
 
-El hijo de un vecino se apoya en una contraventana y observa. Solía ​​acarrear sacos para tres puestos. Hoy no hay ningún botín. Manos ociosas se reúnen cerca del carrito de té donde los rumores ponen precio a la próxima colección. Los compradores del siguiente barrio se detienen en la boca de la calle y dan media vuelta cuando ven los brazaletes.
+El hijo de un vecino se apoya en una persiana y mira. Antes acarreaba sacos para tres puestos. Hoy no hay acarreo. Manos ociosas se juntan junto al carrito de té donde los rumores ponen precio a la próxima recaudación. Compradores del barrio de al lado se detienen en la boca del callejón y se dan la vuelta al ver los brazaletes.
 
-La asociación de peaje justo lleva un libro en papel de quién pagó a quién. El libro no coincide con los hombres de la calle. Cada facción trata el zoco como un cajero automático vinculado al último estallido. La confianza se pelea en público. Un comerciante que comparte mesa con el primo equivocado pierde clientes sin decir una palabra.
+La asociación de peaje justo lleva un libro en papel de quién pagó a quién. El libro no coincide con los hombres de la calle. Cada facción trata el zoco como un cajero atado al último brote. La confianza se deshilacha en público. Un comerciante que comparte mesa con el primo equivocado pierde clientes sin una palabra.
 
-Yusuf mide el azafrán que no puede vender y cuenta los aprendices que no puede conservar. Los puestos vacíos enseñan una lección más dura que las fronteras cerradas. ¿Cómo diseñan los vecinos un carril de mercado que permanezca abierto sin alimentar el peaje que lo vacía?
+Yusuf mide azafrán que no puede vender y cuenta aprendices que no puede retener. Los puestos vacíos enseñan una lección más dura que las fronteras cerradas. ¿Cómo diseñan los vecinos un callejón de mercado que se quede abierto sin alimentar el peaje que lo vacía?
 
 ---
 ### `mideast--shutters-rise-only-after-the-cut.places.0`
 
 **EN:** Saffron Lane Souk
 
-**ES:** Zoco del carril del azafrán
+**ES:** Saffron Lane Souk
 
 ---
 ### `mideast--shutters-rise-only-after-the-cut.pressureKeys.0`
@@ -5819,20 +5819,20 @@ Hassan’s daughter asks if they will plant again. He has seed and no sure flow.
 
 **ES:**
 
-Hassan camina por la zanja con las primeras luces del día y descubre que sus hileras de tomates ya se están curvando. De la noche a la mañana, la puerta compartida del canal alto se cerró con una manivela en el lado de su orilla. Al otro lado del agua, el campo de un primo todavía brilla con la cabeza llena. Mismo apellido. Bandera de punto de control diferente pintada en la casa del cabrestante.
+Hassan camina la acequia a primera luz y encuentra sus hileras de tomate ya encogidas. Por la noche la compuerta compartida del canal alto se cerró a manivela del lado de su orilla. Al otro lado del agua, el campo de un primo aún brilla con cabeza llena. Mismo apellido. Otra bandera de control pintada en la caseta del cabrestante.
 
-Convoca al consejo de ambos bancos. Los teléfonos suenan durante las discusiones sobre a quién corresponde el turno indicado en el programa. A la rueda de hierro no le importa la lista de papel. Quien tiene el candado, se queda con la cosecha. Las tramas aguas abajo se resquebrajan mientras que las parcelas aguas arriba beben.
+Llama al consejo de ambas orillas. Los teléfonos suenan en discusiones sobre de quién era el turno del calendario. La rueda de hierro no se preocupa por la lista de papel. Quien tiene el candado tiene la cosecha. Las parcelas de abajo se resquebrajan mientras las de arriba beben.
 
-Los hombres fuertes locales aprendieron que una palanca compra lealtad más rápido que un discurso. La escasez de cada temporada se convierte en un libro de favores. Los agricultores hipotecan la próxima cosecha con tanques de agua en camiones. La deuda aumenta mientras el suelo se convierte en polvo a la vista de un canal lleno.
+Los fuertes locales aprendieron que una palanca de compuerta compra lealtad más rápido que un discurso. La escasez de cada temporada se convierte en un libro de favores. Los agricultores hipotecan la próxima cosecha para tanquear agua en camión. La deuda sube mientras el suelo se hace polvo a la vista de un canal lleno.
 
-La hija de Hassan pregunta si volverán a sembrar. Tiene semilla y no flujo seguro. El consejo puede reunirse hasta que oscurezca y aun así dejar el cabrestante en un puño. ¿Cómo diseñan ambas orillas un control del agua que alimente los campos en lugar de armar la próxima disputa?
+La hija de Hassan pregunta si volverán a plantar. Tiene semilla y no flujo seguro. El consejo puede reunirse hasta la noche y aún dejar el cabrestante en un solo puño. ¿Cómo diseñan ambas orillas un control del agua que alimente campos en vez de armar la próxima pelea?
 
 ---
 ### `mideast--the-canal-gate-becomes-a-weapon.places.0`
 
 **EN:** Twin Bank Canals
 
-**ES:** Canales de los bancos gemelos
+**ES:** Twin Bank Canals
 
 ---
 ### `mideast--the-canal-gate-becomes-a-weapon.pressureKeys.0`
@@ -5846,7 +5846,7 @@ La hija de Hassan pregunta si volverán a sembrar. Tiene semilla y no flujo segu
 
 **EN:** Gate Capture
 
-**ES:** Captura de puerta
+**ES:** Captura de compuerta
 
 ---
 ### `mideast--the-canal-gate-becomes-a-weapon.pressureKeys.2`
@@ -5886,20 +5886,20 @@ Amira’s youngest coughs through the damp. The cooperative can pour a footing. 
 
 **ES:**
 
-Amira traza con tiza un cuadrado en la losa donde debería estar la pared de su cocina antes de las primeras heladas. La cooperativa apiló barras de refuerzo y sacos al amanecer. Al mediodía se ha acabado la mitad de la pila. Las huellas de los neumáticos dibujan nuevas líneas en el polvo hacia la carretera de circunvalación.
+Amira traza con tiza un cuadrado en la losa donde el muro de su cocina debería estar para la primera helada. La cooperativa apiló ferralla y sacos al alba. Al mediodía la mitad de la pila ha desaparecido. Las huellas de neumáticos cortan líneas nuevas en el polvo hacia la ronda.
 
-Se suponía que la guardia nocturna rotaría. Dos familias discutieron sobre cuál de los mapas de escrituras era más antiguo y dejaron la esquina sin vigilancia. Por la mañana faltan los paneles buenos y quedan los baratos. Los niños duermen bajo lonas que se agitan con el viento. La lluvia encuentra cada costura.
+La guardia nocturna debía rotar. Dos familias discutieron sobre cuál mapa de escritura era más antiguo y dejaron la esquina sin vigilancia. Por la mañana faltan los paneles buenos y quedan los baratos. Los niños duermen bajo lonas que chasquean con el viento. La lluvia encuentra cada junta.
 
-Los proveedores solo realizarán entregas en la línea si alguien firma por pérdida. Nadie firma. Los documentos de reclamación de tres oficinas nombran a diferentes propietarios de la misma escalera. El dinero de la reconstrucción permanece en cuentas mientras que el robo convierte los materiales en un segundo mercado negro. Cada retraso endurece la historia de que aquí nada terminado queda.
+Los proveedores solo entregarán en el callejón si alguien firma la pérdida. Nadie firma. Los papeles de reclamación de tres oficinas nombran dueños distintos para la misma escalera. El dinero de reconstrucción se queda en cuentas mientras el robo convierte materiales en un segundo mercado negro. Cada retraso endurece la historia de que nada terminado aquí se queda.
 
-El hijo menor de Amira tose a través de la humedad. La cooperativa puede echar un pie. No puede depositar confianza en una pelea por el título. ¿Quién diseña una reconstrucción en la que los muros se levantan más rápido de lo que el robo y la disputa por la escritura pueden derribarlos?
+El más pequeño de Amira tose en la humedad. La cooperativa puede verter una zapata. No puede verter confianza en una pelea de título. ¿Quién diseña una reconstrucción en la que los muros suban más rápido de lo que el robo y la pelea de escrituras pueden derribarlos?
 
 ---
 ### `mideast--winter-walls-that-never-rise.places.0`
 
 **EN:** Rubble Lane Blocks
 
-**ES:** Bloques de carriles de escombros
+**ES:** Rubble Lane Blocks
 
 ---
 ### `mideast--winter-walls-that-never-rise.pressureKeys.0`
@@ -5936,7 +5936,7 @@ El hijo menor de Amira tose a través de la humedad. La cooperativa puede echar 
 
 **EN:** Tenant union chair
 
-**ES:** Presidente del sindicato de inquilinos
+**ES:** Presidenta del sindicato de inquilinos
 
 ---
 ### `misinfo--rent-strike-on-a-forged-memo.scene`
@@ -5947,7 +5947,7 @@ Union chair Ade walks into the hall with a stack of rent receipts and finds the 
 
 **ES:**
 
-La presidenta del sindicato, Ade, entra al pasillo con una pila de recibos de alquiler y encuentra la habitación ya dividida. Alguien pegó en la puerta un memorando del propietario: cambios masivos en las cerraduras el viernes, huelga nula, los líderes dieron sus frutos. El membrete coincide con el aviso real del año pasado. La firma no. Dos pisos ya han dejado de contribuir al fondo común de defensa. A una cuadra de distancia, una cuenta tranquila compra tiradas de memorandos “oficiales” cada vez que se organiza un edificio; el caos hace caer los precios de venta para los compradores externos. El teléfono de Ade se llena de vecinos que preguntan quién los vendió. Tiene el correo electrónico del verdadero propietario en su computadora portátil y no hay forma de ponerlo en todas las puertas antes del viernes. Un inquilino anciano se enfrentará solo a un cerrajero si la orden falsificada se mantiene. El fondo necesita unidad antes del anochecer. ¿Quién diseña pruebas que viajen tan rápido como una mentira escrita en un pasillo?
+La presidenta del sindicato Ade entra en el salón con una pila de recibos de alquiler y encuentra la sala ya dividida. Alguien pegó un memorando del casero en la puerta: cambios masivos de cerraduras el viernes, huelga nula, líderes sobornados. El membrete coincide con el aviso real del año pasado. La firma no. Dos plantas ya han dejado de aportar al fondo de defensa compartido. A una manzana, una cuenta discreta compra tiradas de memorandos «oficiales» cada vez que un edificio se organiza; el caos baja los precios de venta para compradores externos. El teléfono de Ade se llena de vecinos que preguntan quién los vendió. Tiene el correo real del casero en el portátil y ninguna forma de ponerlo en cada puerta antes del viernes. Una inquilina mayor se enfrentará sola a un cerrajero si se sostiene la orden falsificada. El fondo necesita unidad antes del anochecer. ¿Quién diseña una prueba que viaje tan rápido como una mentira en papel en un pasillo?
 
 ---
 ### `misinfo--rent-strike-on-a-forged-memo.places.0`
@@ -5961,7 +5961,7 @@ La presidenta del sindicato, Ade, entra al pasillo con una pila de recibos de al
 
 **EN:** Locked Doors
 
-**ES:** puertas cerradas
+**ES:** Puertas cerradas
 
 ---
 ### `misinfo--rent-strike-on-a-forged-memo.pressureKeys.1`
@@ -6002,7 +6002,7 @@ Harbor master Ellis pins a storm sheet to the wharf board at first light. The si
 
 **ES:**
 
-El capitán del puerto, Ellis, fija una sábana contra tormentas en el tablero del muelle con las primeras luces del día. La sirena resultó limpia hace una hora. Cuando la marea cambia, un vídeo ya se reproduce en los chats de la tripulación: su chaqueta, su voz, una orden de cancelación que nunca dio. Dos patrones dejan redes en el agua. Uno llega tarde y pierde el equipo de una temporada cuando el verdadero aumento llega a las pilas exteriores. La ciudad todavía envía alertas a través de un único puente de radio y una página social que cualquiera puede reflejar con un escudo robado. Un pequeño anillo publicitario paga los clips de pánico antes de cada tormenta con nombre; Los clics aumentan cuando los barcos se quedan afuera o se dirigen mal. Ellis camina sobre las tablas mojadas contando hojas vacías que deberían haberse movido. Los ajustadores de seguros preguntarán quién escuchó qué. La siguiente ventana es de doce horas. ¿Quién diseña una advertencia en la que el puerto seguirá confiando cuando el farsante ya lleva su cara?
+El capitán de puerto Ellis clava una hoja de tormenta en el tablón del muelle al primer rayo. La sirena probó limpia hace una hora. Cuando gira la marea, un vídeo ya da vueltas en los chats de tripulación: su chaqueta, su voz, una orden de cancelación que nunca dio. Dos patrones dejan redes en el agua. Uno iza tarde y pierde el equipo de una temporada cuando la verdadera marejada golpea los pilotes exteriores. El pueblo aún lanza alertas por un solo puente de radio y una página social que cualquiera puede copiar con un escudo robado. Un pequeño anillo publicitario paga clips de pánico antes de cada tormenta con nombre; los clics suben cuando los barcos se quedan fuera o entran mal. Ellis camina las tablas mojadas contando amarres vacíos que deberían haberse movido. Los peritos de seguros preguntarán quién oyó qué. La siguiente ventana es de doce horas. ¿Quién diseña un aviso en el que el puerto aún confíe cuando el falso ya lleva su cara?
 
 ---
 ### `misinfo--sirens-nobody-believes.places.0`
@@ -6046,7 +6046,7 @@ El capitán del puerto, Ellis, fija una sábana contra tormentas en el tablero d
 
 **EN:** Night-school director
 
-**ES:** Director de escuela nocturna
+**ES:** Directora de la escuela nocturna
 
 ---
 ### `misinfo--the-lecture-that-wasn-t-sold.scene`
@@ -6057,7 +6057,7 @@ Director Ruiz unlocks the hall for the welding cert review and finds half the se
 
 **ES:**
 
-El director Ruiz abre la sala para la revisión del certificado de soldadura y encuentra la mitad de los asientos vacíos. En su teléfono, un clip ya está acumulando acciones: ella en el podio, prometiendo un puesto de trabajo que nunca ofreció, luego un corte a una factura falsa por "contratación garantizada". La verdadera conferencia fue gratuita. Dos estudiantes renunciaron esa mañana, seguros de que la escuela vendió sus nombres. Un agente de formación rival siembra clips manipulados antes de cada semana de inscripción. Las herramientas de edición son económicas; el escudo de la escuela nocturna se encuentra en un volante público que cualquiera puede levantar. Ruiz todavía tiene que llenar el taller antes del viernes o perderá la subvención del condado. Conoce a los clientes habituales por su nombre. Uno de ellos no volverá si la mancha se pega. La confianza es la única matrícula que no puede reembolsar. ¿Cómo se prueba que un salón de clases es real cuando la mentira llega primero y parece terminada?
+La directora Ruiz abre la sala para el repaso del certificado de soldadura y encuentra la mitad de los asientos vacíos. En su teléfono un clip ya acumula compartidos: ella en el atril, prometiendo colocación laboral que nunca ofreció, luego un corte a una factura falsa de «contratación garantizada». La clase real era gratis. Dos estudiantes dejaron esa mañana, seguros de que la escuela vendió sus nombres. Un intermediario de formación rival siembra clips manipulados antes de cada semana de matrícula. Las herramientas de edición son baratas; el escudo de la escuela nocturna está en un flyer público que cualquiera puede copiar. Ruiz aún debe llenar el taller antes del viernes o pierde la subvención del condado. Conoce a los habituales por el nombre de pila. Uno de ellos no volverá si la calumnia se pega. La confianza es la única matrícula que no puede devolver. ¿Cómo demuestras que un aula es real cuando la mentira llega primero y parece terminada?
 
 ---
 ### `misinfo--the-lecture-that-wasn-t-sold.places.0`
@@ -6085,7 +6085,7 @@ El director Ruiz abre la sala para la revisión del certificado de soldadura y e
 
 **EN:** Paid Smears
 
-**ES:** Frotis pagados
+**ES:** Difamaciones pagadas
 
 ---
 ## Seed `misinfo--the-nurse-who-never-dialed`
@@ -6101,7 +6101,7 @@ El director Ruiz abre la sala para la revisión del certificado de soldadura y e
 
 **EN:** Clinic outreach coordinator
 
-**ES:** coordinadora de extensión clínica
+**ES:** Coordinadora de extensión clínica
 
 ---
 ### `misinfo--the-nurse-who-never-dialed.scene`
@@ -6112,7 +6112,7 @@ Marisol stands at the lobby desk with a paper list of missed insulin pickups. Sh
 
 **ES:**
 
-Marisol está parada en el mostrador del vestíbulo con una lista en papel de las dosis de insulina perdidas. Primero llama a la señora Chen. Una voz tranquila responde con el ritmo propio de la clínica, dice que el plazo de resurtido se trasladó al próximo mes y cuelga educadamente. La señora Chen nunca recibió esa llamada. Al mediodía, tres pacientes más juran que una enfermera ya les dijo que esperaran. Marisol revisa el registro. Nadie en su turno marcó esos números. La línea de devolución de llamadas de la clínica se encuentra en un árbol de voz barato que cualquier teléfono puede falsificar. Una empresa local vende paquetes de “limpieza de citas” en un chat de barrio: música de espera clonada, nombres de extensiones robados, guiones programados para recargarse una semana. Los pacientes que creen en lo falso se saltan el escritorio real. Los niveles de azúcar en la sangre suben en casa mientras las sillas del vestíbulo permanecen medio vacías. El presupuesto de divulgación sigue pagando los minutos de recordatorio en los que nadie confía. Marisol tiene una tarde libre y un montón de nombres reales. ¿Cómo se reconstruye una llamada que la gente responderá cuando la mentira ya suena a preocupación?
+Marisol está en el mostrador del vestíbulo con una lista en papel de recogidas de insulina fallidas. Primero marca a la Sra. Chen. Una voz tranquila responde con el propio ritmo de la clínica, dice que la ventana de recarga se movió al mes que viene y cuelga con educación. La Sra. Chen nunca recibió esa llamada. Al mediodía tres pacientes más juran que una enfermera ya les dijo que esperaran. Marisol revisa el registro. Nadie de su turno marcó esos números. La línea de devolución de la clínica vive en un árbol de voz barato que cualquier teléfono puede suplantar. Una empresa local vende packs de «limpiador de citas» en un chat del barrio: música de espera clonada, nombres de extensiones robados, guiones sincronizados con la semana de recarga. Los pacientes que creen lo falso se saltan el mostrador real. Los azúcares en sangre suben en casa mientras las sillas del vestíbulo se quedan a medio llenar. El presupuesto de extensión sigue pagando minutos de recordatorio en los que nadie confía. Marisol tiene una tarde libre y un montón de nombres reales. ¿Cómo reconstruyes una llamada a la que la gente conteste cuando la mentira ya suena a cuidado?
 
 ---
 ### `misinfo--the-nurse-who-never-dialed.places.0`
@@ -6140,7 +6140,7 @@ Marisol está parada en el mostrador del vestíbulo con una lista en papel de la
 
 **EN:** Staff Strain
 
-**ES:** tensión del personal
+**ES:** Tensión del personal
 
 ---
 ## Seed `nuclear--drills-without-a-shared-clock`
@@ -6173,20 +6173,20 @@ Elena can freeze her own side and look weak, or let the drill finish and watch t
 
 **ES:**
 
-La coronel Elena Popa fija una tira de papel en el mapa de cristal mientras la niebla del río se eleva desde Iron Quay. Una unidad asociada ha iniciado un simulacro de preparación en un reloj que su escritorio nunca recibió. Las barcazas frenan la marcha en la curva. Los trabajadores portuarios escuchan el ruido de los aviones y no saben a qué bandera pertenece el sonido.
+La coronel Elena Popa clava una tira de papel en el mapa de cristal mientras la niebla del río se levanta de Iron Quay. Una unidad socia ha empezado un ejercicio de preparación en un reloj que su mesa nunca recibió. Las barcazas frenan en la curva. Los estibadores oyen ruido de jets y no saben de qué bandera es el sonido.
 
-Su línea de enlace suena con tres versiones de la misma hora. Una parte jura que el aviso salió. El otro lado nunca abrió el canal. Los puestos de mercado a lo largo del muelle cierran las contraventanas temprano. Una madre le pregunta al guardia de la puerta si el puente se cerrará antes de que terminen las clases.
+Su línea de enlace suena con tres versiones de la misma hora. Un lado jura que salió el aviso. El otro nunca abrió el canal. Los puestos del mercado a lo largo del muelle bajan contraventanas pronto. Una madre pregunta al guardia de la puerta si el puente cerrará antes de que salga el colegio.
 
-La desconflictividad todavía se ejecuta en redes separadas, hábitos criptográficos separados y llamadas de cortesía que llegan después de que las ruedas están en marcha. Cada cuartel general protege su propia sorpresa. El tiempo compartido se trata como un favor, no como un pasatiempo. Los civiles interpretan cada rugido no anunciado como algo real.
+La desconflictión sigue en redes separadas, hábitos cripto separados y llamadas de cortesía que llegan cuando las ruedas ya están arriba. Cada cuartel protege su propia sorpresa. El tiempo compartido se trata como un favor, no como un raíl. Los civiles leen cada rugido no anunciado como lo real.
 
-Elena puede congelar su propio lado y parecer débil, o dejar que termine el ejercicio y ver cómo se quiebra la confianza en el muelle. Un ejercicio oculto más y la próxima advertencia verdadera pueden encontrarse con teléfonos vacíos. ¿Quién diseña un reloj compartido cuando el orgullo y el secretismo siguen escribiendo horas diferentes en el mismo río?
+Elena puede congelar su propio bando y parecer débil, o dejar que el ejercicio termine y ver cómo se resquebraja la confianza en el muelle. Un ejercicio oculto más y la próxima advertencia verdadera puede encontrarse con teléfonos vacíos. ¿Quién diseña un reloj compartido cuando el orgullo y el secreto siguen escribiendo horas distintas en el mismo río?
 
 ---
 ### `nuclear--drills-without-a-shared-clock.places.0`
 
 **EN:** Iron Quay Liaison Yard, lower Danube corridor
 
-**ES:** Patio de enlace de Iron Quay, corredor del bajo Danubio
+**ES:** Iron Quay Liaison Yard, corredor del bajo Danubio
 
 ---
 ### `nuclear--drills-without-a-shared-clock.pressureKeys.0`
@@ -6223,7 +6223,7 @@ Elena puede congelar su propio lado y parecer débil, o dejar que termine el eje
 
 **EN:** Sgt. Inuk Arnaq, sensor fusion lead
 
-**ES:** Sargento. Inuk Arnaq, cable de fusión del sensor
+**ES:** Sargento Inuk Arnaq, jefe de fusión de sensores
 
 ---
 ### `nuclear--ice-clutter-looks-inbound.scene`
@@ -6240,20 +6240,20 @@ Inuk’s thumb hovers over the escalate key while his cousin waits for a medic o
 
 **ES:**
 
-Sargento. Inuk Arnaq toca la pantalla de fusión mientras el hielo se desprende del promontorio. El radar costero pinta un duro regreso que camina como una pista de misil. El viento corta el rocío. La radio de la clínica de abajo ya está ocupada con un pescador que se retuerce en el hielo nocturno.
+El sargento Inuk Arnaq toca la pantalla de fusión mientras el hielo de pack se desprende del cabo. El radar costero pinta un eco duro que camina como una pista de misil. El viento corta la bruma. La radio de la clínica abajo ya está ocupada con un pescador torcido en el hielo nocturno.
 
-El tiempo de espera es la regla: espere un segundo sensor antes de que alguien levante un teléfono tierra adentro. El segundo sensor llega tarde. La niebla se asienta sobre el plato. Un recorrido con drones se ve afectado por el mismo vendaval que hace que el hielo parezca rápido. La pista no desaparece. Sólo se ablanda y vuelve a endurecerse.
+El tiempo de hold es la regla: esperar un segundo sensor antes de que alguien levante un teléfono tierra adentro. El segundo sensor llega tarde. La niebla se sienta en la antena. Un vuelo de dron queda en tierra por el mismo vendaval que hace que el hielo parezca rápido. La pista no desaparece. Solo se ablanda y se endurece otra vez.
 
-El piso de vigilancia todavía fusiona las puertas de acceso de la guerra fría con transmisiones más nuevas que no están de acuerdo con el desorden climático. Los operadores aprenden a confiar en la pintura más ruidosa. Los escritorios upstream quieren números limpios. Los equipos locales quieren otro minuto de verdad sobre el cielo. La clínica de abajo trata el pánico la misma noche que el tablero se ilumina en rojo.
+La sala de vigilancia aún fusiona puertas de alcance de guerra fría con feeds más nuevos que no se ponen de acuerdo sobre el clutter meteorológico. Los operadores aprenden a confiar en la pintura más ruidosa. Los escritorios de arriba quieren números limpios. Las tripulaciones locales quieren otro minuto de verdad del cielo. La clínica de abajo trata el pánico la misma noche que el tablero se enciende en rojo.
 
-El pulgar de Inuk se cierne sobre la tecla de escalera mientras su primo espera a un médico en la carretera de la costa. Una entrada en falso vacía el promontorio del sueño. Una llamada lenta no deja margen si la pintura es real. ¿Quién diseña la bodega cuando el hielo, la niebla y el miedo parecen rutas de vuelo?
+El pulgar de Inuk flota sobre la tecla de escalada mientras su primo espera a un médico en la carretera de la orilla. Una entrada falsa vacía el cabo de sueño. Una llamada lenta no deja margen si la pintura es real. ¿Quién diseña el hold cuando el hielo, la niebla y el miedo parecen todos rutas de vuelo?
 
 ---
 ### `nuclear--ice-clutter-looks-inbound.places.0`
 
 **EN:** Floe Watch Headland, Labrador coast
 
-**ES:** Mercedario de observación de témpanos, costa de Labrador
+**ES:** Floe Watch Headland, costa de Labrador
 
 ---
 ### `nuclear--ice-clutter-looks-inbound.pressureKeys.0`
@@ -6274,7 +6274,7 @@ El pulgar de Inuk se cierne sobre la tecla de escalera mientras su primo espera 
 
 **EN:** Clinic Strain
 
-**ES:** Cepa clínica
+**ES:** Tensión clínica
 
 ---
 ## Seed `nuclear--near-send-on-patch-night`
@@ -6307,13 +6307,13 @@ Kenji can freeze every patch and watch the stack rot, or keep the cadence and ga
 
 **ES:**
 
-Ing. Kenji Okada observa cómo la pared de estado parpadea en ámbar mientras el parche nocturno recorre Granite Command Hollow. En lo profundo de la cresta, un enlace de comando cae durante once segundos. La ruta de respaldo aparece sucia. Por un momento, el sistema ofrece una ruta de lanzamiento con un veto humano menos de lo que requiere la doctrina.
+El ing. Kenji Okada mira el muro de estado parpadear en ámbar mientras el parche nocturno recorre Granite Command Hollow. Bajo la cresta, un enlace de mando cae once segundos. La ruta de respaldo sube sucia. Un instante el sistema ofrece una vía de lanzamiento con un veto humano menos de lo que exige la doctrina.
 
-Mata el avance automático con una parada brusca. La habitación exhala. En la parte superior, la ciudad hueca ya sentía la sobrecarga del generador. Las luces del porche parpadearon. Un cocinero le envía un mensaje de texto a su hermano en el turno de noche: ¿Hace tiempo o algo peor?
+Mata el avance automático con una parada dura. La sala exhala. En la superficie, el pueblo del hueco ya sintió la sobretensión del generador. Las luces del porche parpadearon. Un cocinero de diner escribe a su hermano de noche: ¿tiempo o algo peor?
 
-Los parches todavía se envían según un calendario establecido por los proveedores y los presupuestos distantes. Los equipos cargan actualizaciones mientras el tráfico en vivo circula por los mismos rieles. La redundancia se dibuja en diapositivas. En el piso, la conmutación por error roba autoridad a las personas destinadas a ostentarla. Cada casi accidente entrena a los operadores para que hagan clic más rápido la próxima vez.
+Los parches aún salen en un calendario fijado por proveedores y presupuestos lejanos. Las tripulaciones cargan actualizaciones mientras el tráfico en vivo rueda por los mismos raíles. La redundancia se dibuja en diapositivas. En el piso, el failover roba autoridad a quienes debían retenerla. Cada casi-accidente entrena a los operadores a hacer clic más rápido la próxima vez.
 
-Kenji puede congelar cada parche y ver cómo se pudre la pila, o mantener la cadencia y apostar otro hoyo de once segundos. El recuento de la ciudad aumenta ahora. ¿Quién diseña el control de cambios cuando una noche de software puede encoger la mano humana en el último cambio?
+Kenji puede congelar cada parche y ver pudrirse la pila, o mantener la cadencia y apostar otro agujero de once segundos. El pueblo cuenta ahora las sobretensiones. ¿Quién diseña el control de cambios cuando una noche de software puede encoger la mano humana en el último interruptor?
 
 ---
 ### `nuclear--near-send-on-patch-night.places.0`
@@ -6374,13 +6374,13 @@ Maya’s hand stays on the confirm switch longer than the checklist likes. One w
 
 **ES:**
 
-La capitana Maya Brooks abre la escotilla de la cápsula a las 03:12 y la sirena nocturna todavía suena entre el trigo. En Silo Road los ascensores se destacan negros contra las estrellas. Sus auriculares llevan un segundo tono que no es el clima. Es la alerta de mecha corta la que significa que la tripulación tiene minutos, no horas, para distinguir lo real de lo fantasma.
+La capitana Maya Brooks abre la escotilla de la cápsula a las 03:12 y la sirena nocturna aún rueda sobre el trigo. En Silo Road los elevadores de grano se yerguen negros contra las estrellas. Sus auriculares llevan un segundo tono que no es el tiempo. Es la alerta de mecha corta: la tripulación tiene minutos, no horas, para separar lo real del fantasma.
 
-El tablero ilumina una pista que no debería estar ahí. Doctrine dice que ella se autentica y reporta. La cadena telefónica de las casas de campo va más lenta que el reloj de la pared. La casa de su hermana se encuentra a cinco kilómetros de la valla exterior. Los niños duermen bajo un techo en el que se han oído demasiados simulacros esta temporada.
+El tablero ilumina una pista que no debería estar ahí. La doctrina dice que autentica y reporta hacia arriba. El árbol telefónico a las granjas es más lento que el reloj de la pared. La casa de su hermana queda a cinco kilómetros pasada la valla exterior. Los niños duermen bajo un techo que ha oído demasiados simulacros esta temporada.
 
-El mantenimiento aún repara el viejo cableado de lanzamiento en una bicicleta construida para tiempos de paz. Las tripulaciones rotan para dormir profundamente. Los pasos de autenticación se acumulan mientras los camiones de granos están inactivos en la frontera del condado, los conductores observan el mismo cielo. La velocidad se trata como seguridad. La duda se trata como un retraso.
+El mantenimiento aún parchea el viejo cableado de lanzamiento en un ciclo hecho para la paz. Las tripulaciones rotan con poco sueño. Los pasos de autenticación se apilan mientras los camiones de grano hacen ralentí en la línea del condado, los conductores mirando el mismo cielo. La velocidad se trata como seguridad. La duda se trata como retraso.
 
-La mano de Maya permanece en el interruptor de confirmación más tiempo del que le gustaría a la lista de verificación. Un agarre incorrecto y el ala parece blanda. Un envío rápido y una familia en Silo Road despierta en un cielo que no perdona. ¿Quién diseña los minutos entre una sirena y un veto humano cuando los ascensores están llenos y las mechas se van acortando?
+La mano de Maya se queda en el interruptor de confirmación más de lo que le gusta a la lista. Un hold equivocado y el ala parece blanda. Un envío rápido y una familia en Silo Road despierta a un cielo que no perdona. ¿Quién diseña los minutos entre una sirena y un veto humano cuando los elevadores están llenos y las mechas se acortan?
 
 ---
 ### `nuclear--sirens-over-the-grain-elevators.places.0`
@@ -6394,14 +6394,14 @@ La mano de Maya permanece en el interruptor de confirmación más tiempo del que
 
 **EN:** Night Sirens
 
-**ES:** sirenas nocturnas
+**ES:** Sirenas nocturnas
 
 ---
 ### `nuclear--sirens-over-the-grain-elevators.pressureKeys.1`
 
 **EN:** Short Fuses
 
-**ES:** Fusibles cortos
+**ES:** Mechas cortas
 
 ---
 ### `nuclear--sirens-over-the-grain-elevators.pressureKeys.2`
@@ -6435,14 +6435,14 @@ Rafi coughs into his sleeve and still loads another brick onto the cart. The kil
 
 **ES:**
 
-Rafi tose en su manga y todavía carga otro ladrillo en el carro. El jefe del horno ya le había pagado con dos meses de antelación los gastos de estudios y las medicinas. Ese anticipo se encuentra en el libro de contabilidad del jefe como una cadena. Irse significa que la deuda aumenta y el siguiente trabajo desaparece de boca en boca. El polvo cubre la cresta al mediodía. Las esposas lavan el agua negra de los ojos de los niños en el grifo compartido. El círculo de ayuda mutua reúne monedas para los inhaladores, pero cada semana de recuperación empuja a un trabajador más hacia el mismo libro de anticipos. El jefe fija el salario a destajo después de encender el fuego, no antes. Nadie ve la cuenta completa hasta que el día de pago se reduce. La hija de Rafi necesita otra visita a la clínica. No puede faltar a un turno sin que el libro mayor se hinche. ¿Cómo se rompe un salario que llega como una trampa incluso antes de que comience el trabajo?
+Rafi tose en la manga y aún carga otro ladrillo en el carro. El jefe del horno ya le pagó dos meses por adelantado por tasas escolares y medicinas. Ese anticipo se sienta en el libro del jefe como una cadena. Irse significa que la deuda salta y el siguiente trabajo desaparece de boca en boca. El polvo cubre la cresta al mediodía. Las esposas lavan agua negra de los ojos de los niños en el grifo compartido. El círculo de ayuda mutua reúne monedas para inhaladores, pero cada semana de recuperación empuja a un trabajador más hondo en el mismo libro de anticipos. El jefe fija las tarifas a destajo después de encender el fuego, no antes. Nadie ve el recuento completo hasta que el día de pago se encoge. La hija de Rafi necesita otra visita a la clínica. No puede faltar a un turno sin que el libro se hinche. ¿Cómo rompes un salario que llega como trampa antes de que empiece el trabajo?
 
 ---
 ### `poverty--advance-pay-chains-the-kiln-on-dust-ridge.places.0`
 
 **EN:** Dust Ridge
 
-**ES:** Cresta de polvo
+**ES:** Dust Ridge
 
 ---
 ### `poverty--advance-pay-chains-the-kiln-on-dust-ridge.pressureKeys.0`
@@ -6456,7 +6456,7 @@ Rafi tose en su manga y todavía carga otro ladrillo en el carro. El jefe del ho
 
 **EN:** Boss Books
 
-**ES:** Libros de jefe
+**ES:** Libros del jefe
 
 ---
 ### `poverty--advance-pay-chains-the-kiln-on-dust-ridge.pressureKeys.2`
@@ -6479,7 +6479,7 @@ Rafi tose en su manga y todavía carga otro ladrillo en el carro. El jefe del ho
 
 **EN:** Cross-water night workers’ association
 
-**ES:** Asociación de trabajadores nocturnos de aguas cruzadas
+**ES:** Asociación de trabajadoras nocturnas de la otra orilla
 
 ---
 ### `poverty--dawn-fares-strand-the-cleaners-at-ferry-slip.scene`
@@ -6490,14 +6490,14 @@ Nisha finishes the office tower at four in the morning and runs for the first bo
 
 **ES:**
 
-Nisha termina la torre de oficinas a las cuatro de la mañana y corre hacia el primer barco. El empleado del muelle ha vuelto a subir la tarifa del amanecer. Solamente efectivo. Sin pase mensual para limpiadores nocturnos. Se pierde la pasarela por un minuto y observa cómo el ferry se aleja con la mitad de los asientos vacíos. El próximo barco llega dos horas más tarde. El hijo de su vecina espera solo en la puerta del recinto hasta que ella regresa. El mes pasado una chica de la asociación fue asaltada en esa larga espera. Las tarifas del muelle financian los derechos de desembarco que los propietarios de los barcos renuevan cada temporada. Los trabajadores que limpian la ciudad antes del amanecer nunca se sientan en esa junta de renovación. La asociación probó una furgoneta compartida. El peaje del puente se comió los ahorros en la segunda semana. Nisha le envía un mensaje de texto a su hermana para que cargue al niño y siente que el trabajo se vuelve imposible. ¿Quién diseña el cruce para que las personas que limpian el horizonte puedan llegar a casa antes de que lo haga el riesgo?
+Nisha termina la torre de oficinas a las cuatro de la mañana y corre al primer barco. El empleado del muelle ha subido otra vez la tarifa del alba. Solo efectivo. Sin abono mensual para limpiadoras nocturnas. Pierde la pasarela por un minuto y ve al ferry salir con la mitad de asientos vacíos. El siguiente barco es dos horas después. El niño de su vecina espera solo en la puerta del compound hasta que ella vuelve. El mes pasado una chica de la asociación fue asaltada en esa larga espera. Las tasas del muelle financian los derechos de atraque que los dueños de barcos renuevan cada temporada. Quienes friegan la ciudad antes del amanecer nunca se sientan en esa junta de renovación. La asociación probó una furgoneta compartida. El peaje del puente se comió el ahorro en la segunda semana. Nisha escribe a su hermana para que cuide al niño y siente que el trabajo se inclina hacia lo imposible. ¿Quién diseña el cruce para que quienes limpian el skyline lleguen a casa antes que el riesgo?
 
 ---
 ### `poverty--dawn-fares-strand-the-cleaners-at-ferry-slip.places.0`
 
 **EN:** Ferry Slip
 
-**ES:** Embarcadero de ferry
+**ES:** Ferry Slip
 
 ---
 ### `poverty--dawn-fares-strand-the-cleaners-at-ferry-slip.pressureKeys.0`
@@ -6527,7 +6527,7 @@ Nisha termina la torre de oficinas a las cuatro de la mañana y corre hacia el p
 
 **EN:** The tip owns the pickers on Sorting Lane
 
-**ES:** El consejo es dueño de los recolectores en Sorting Lane
+**ES:** El vertedero posee a los recolectores en Sorting Lane
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.stakeholder`
@@ -6545,14 +6545,14 @@ Before sunrise, Meena drags a sack of wet cardboard up Sorting Lane and waits fo
 
 **ES:**
 
-Antes del amanecer, Meena arrastra un saco de cartón mojado por Sorting Lane y espera la báscula. El empleado pesa lentamente a propósito. Le quita un kilo de la carga y escribe el número corto en el libro de información. Anoche sus hijos comieron arroz simple. Comerán lo mismo esta noche si esta bolsa vuelve a pagar menos. La propina fija el único precio de compra en el barrio. Los intermediarios compran plástico y metal limpios al por mayor y luego cierran las puertas de los carriles cuando los recolectores intentan vender afuera. La cooperativa de Meena puede clasificar más rápido y de forma más limpia que cualquier carrito solitario, pero cada rupia sigue pasando por el mismo empleado. El hijo de un miembro tiene tos por el polvo del basurero y no le quedan cuotas clínicas. Si la báscula sigue siendo dueña de la mañana, la cooperativa se vacía y el carril sigue siendo una trampa. ¿Quién rediseña la venta para que las personas que levantan los residuos sean dueñas del precio?
+Antes del amanecer, Meena arrastra un saco de cartón mojado por Sorting Lane y espera la báscula. El empleado pesa despacio a propósito. Le quita un kilo de la carga y escribe el número corto en el libro del vertedero. Anoche sus hijos comieron arroz solo. Comerán lo mismo esta noche si esta bolsa paga menos otra vez. El vertedero fija el único precio de compra del barrio. Los intermediarios compran plástico y metal limpios al por mayor y luego cierran las rejas del callejón cuando los recolectores intentan vender fuera. La cooperativa de Meena puede clasificar más rápido y limpio que cualquier carrito solo, pero cada rupia sigue pasando por el mismo empleado. El hijo de un miembro tose por el polvo del basurero y no queda cuota de clínica. Si la báscula sigue dueña de la mañana, la cooperativa se vacía y el callejón sigue siendo una trampa. ¿Quién rediseña la venta para que quienes levantan la basura sean dueños del precio?
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.places.0`
 
 **EN:** Sorting Lane
 
-**ES:** Carril de clasificación
+**ES:** Sorting Lane
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.pressureKeys.0`
@@ -6566,14 +6566,14 @@ Antes del amanecer, Meena arrastra un saco de cartón mojado por Sorting Lane y 
 
 **EN:** Scale Grip
 
-**ES:** Agarre de escala
+**ES:** Control de la báscula
 
 ---
 ### `poverty--the-tip-owns-the-pickers-on-sorting-lane.pressureKeys.2`
 
 **EN:** Sick Kids
 
-**ES:** niños enfermos
+**ES:** Niños enfermos
 
 ---
 ## Seed `poverty--tuition-dies-when-the-mast-fails-in-hill-signal`
@@ -6600,14 +6600,14 @@ Teacher Lila opens the shared tablet at seven and finds a blank screen. The hill
 
 **ES:**
 
-La profesora Lila abre la tableta compartida a las siete y encuentra una pantalla en blanco. El mástil de la colina vuelve a bajar. Tres estudiantes que caminan una hora durante el turno de la mañana regresan con libros mojados. Sus padres pagaron paquetes de datos a crédito a través del único revendedor propietario del arrendamiento de la torre. Cuando la señal muere, los paquetes aún se agotan. Las clases perdidas se acumulan en exámenes reprobados. Los exámenes reprobados ponen fin al camino de las becas para salir del valle. La red de profesores imprime hojas de trabajo cuando se agota el papel, pero la junta examinadora solo acepta ejercicios en línea cronometrados. El revendedor no compartirá el acceso al mástil con una malla de aldea. Dice que el contrato es exclusivo. Lila observa cómo una chica inteligente deja de venir después de que su madre prefirió el arroz en lugar de otro complemento. ¿Quién construye un aprendizaje que no colapse cada vez que un mástil bloqueado se apaga?
+La profesora Lila abre la tableta compartida a las siete y encuentra una pantalla en blanco. El mástil de la colina está caído otra vez. Tres alumnos que caminan una hora para el turno de la mañana se vuelven con libros mojados. Sus padres pagaron paquetes de datos a crédito con el único revendedor que posee el arrendamiento de la torre. Cuando muere la señal, los paquetes siguen gastándose. Las clases perdidas se apilan en exámenes fallidos. Los exámenes fallidos cierran el camino de beca fuera del valle. La red de profesores imprime fichas mientras dura el papel, pero el tribunal de exámenes solo acepta drills online cronometrados. El revendedor no compartirá el acceso al mástil con una malla del pueblo. Dice que el contrato es exclusivo. Lila ve a una chica brillante dejar de venir después de que su madre eligió el arroz antes que otra recarga. ¿Quién construye un aprendizaje que no se derrumba cada vez que un mástil bloqueado se apaga?
 
 ---
 ### `poverty--tuition-dies-when-the-mast-fails-in-hill-signal.places.0`
 
 **EN:** Hill Signal
 
-**ES:** Señal de colina
+**ES:** Hill Signal
 
 ---
 ### `poverty--tuition-dies-when-the-mast-fails-in-hill-signal.pressureKeys.0`
@@ -6655,14 +6655,14 @@ Deacon Ruth unlocks the parish hall and counts empty folding chairs. The mobile 
 
 **ES:**
 
-La diácono Ruth abre el salón parroquial y cuenta las sillas plegables vacías. La furgoneta de la clínica móvil no llegará este mes. El dinero del combustible se destinó a reparar el techo. En el estacionamiento, una camioneta está inactiva con el dial AM fijo en un anfitrión que nombra a la última enfermera de la clínica como prueba de que “los de afuera se hicieron cargo del cuidado”. Una madre con un niño pequeño con fiebre espera de todos modos. Ya la han rechazado dos veces en el mostrador del condado por falta de documentos. Los voluntarios todavía preparan café y mantienen una lista en papel de quién necesita transporte de insulina. La lista se reduce cuando las familias dejan de responder números desconocidos. Las conversaciones de odio llenan las horas que solía durar la sala de exámenes. Hay disputas de confianza entre los que ocupan los bancos desde hace mucho tiempo y los remolques más nuevos que pasan más allá del arroyo. El círculo de atención de Ruth puede ofrecer sopa y llevarla. No puede volver a abrir una puerta de examen cerrada. Un antibiótico omitido se convierte en una historia que otra persona posee en el aire. ¿Cómo se diseña una atención que permanezca abierta cuando el micrófono suena más fuerte que la sala de espera?
+La diácona Ruth abre el salón parroquial y cuenta sillas plegables vacías. La furgoneta de la clínica móvil no vendrá este mes. El dinero del combustible se fue a parchear el techo. En el solar, un pickup hace ralentí con el dial AM bloqueado en un locutor que nombra a la última enfermera de la clínica como prueba de que «los de fuera se llevaron el cuidado». Una madre con un niño febril espera de todos modos. Ya la han rechazado dos veces en el mostrador del condado por papeles faltantes. Los voluntarios siguen preparando café y llevan una lista en papel de quién necesita viajes de insulina. La lista se encoge cuando las familias dejan de contestar números desconocidos. El discurso de odio llena las horas que ocupaba la sala de exploración. La confianza se deshilacha entre quienes llevan años en los bancos y las caravanas más nuevas más allá del arroyo. El círculo de cuidados de Ruth puede ofrecer sopa y un viaje. No puede reabrir una puerta de exploración cerrada. Un antibiótico omitido se convierte en una historia que otro posee en antena. ¿Cómo diseñas un cuidado que se quede abierto cuando el micrófono es más fuerte que la sala de espera?
 
 ---
 ### `radicalization--closed-clinic-open-airwaves.places.0`
 
 **EN:** Cedar Hollow Parish Hall
 
-**ES:** Salón Parroquial Cedar Hollow
+**ES:** Cedar Hollow Parish Hall
 
 ---
 ### `radicalization--closed-clinic-open-airwaves.pressureKeys.0`
@@ -6676,14 +6676,14 @@ La diácono Ruth abre el salón parroquial y cuenta las sillas plegables vacías
 
 **EN:** Hate Radio
 
-**ES:** Odio la radio
+**ES:** Radio del odio
 
 ---
 ### `radicalization--closed-clinic-open-airwaves.pressureKeys.2`
 
 **EN:** Closed Doors
 
-**ES:** puertas cerradas
+**ES:** Puertas cerradas
 
 ---
 ## Seed `radicalization--cut-routes-louder-break-room`
@@ -6699,7 +6699,7 @@ La diácono Ruth abre el salón parroquial y cuenta las sillas plegables vacías
 
 **EN:** Transit mutual-aid stewards
 
-**ES:** Auxiliares de tránsito de ayuda mutua
+**ES:** Delegados de ayuda mutua del transporte
 
 ---
 ### `radicalization--cut-routes-louder-break-room.scene`
@@ -6710,14 +6710,14 @@ Jamal racks his punch card at the East Line night depot and hears the argument b
 
 **ES:**
 
-Jamal guarda su tarjeta perforada en el depósito nocturno de East Line y escucha el argumento antes de verlo. Dos rutas más de búhos murieron en el tablero esta semana. El televisor de la sala de descanso reproduce un clip que culpa a los “cambios suaves” y a los pasajeros de los estacionamientos del sur. Nadie recorre la hoja del presupuesto. Los conductores se dividen según las antiguas líneas de tripulación. Alguien pegó una caricatura sobre el volante de ayuda mutua. La caricatura tiene un objetivo. El cansancio se asienta en los hombros. Los cónyuges envían mensajes de texto sobre segundos trabajos. Un conductor en período de prueba pregunta quiénes se supone que son “ellos”. El círculo de administradores de Jamal todavía ofrece viajes compartidos para padres fallecidos y mantiene un fondo silencioso para el cuidado de niños perdidos. El fondo no puede dotar de personal a una línea de corte. Cada viaje cancelado se convierte en una prueba de la voz más fuerte en la sala. Un puño golpea un casillero. El supervisor nocturno mira hacia otro lado. ¿Quién diseña la confianza de la tripulación cuando el cronograma se reduce y el chivo expiatorio ya está elegido?
+Jamal cuelga su tarjeta de fichar en el depósito nocturno East Line y oye la pelea antes de verla. Dos rutas nocturnas más murieron en el tablero esta semana. La tele de la sala de descanso repite un clip que culpa a los «turnos blandos» y a los pasajeros de los aparcamientos del sur. Nadie pasa la hoja de presupuesto. Los conductores se dividen por viejas líneas de cuadrilla. Alguien pegó un dibujo sobre el flyer de ayuda mutua. El dibujo tiene un blanco. El agotamiento pesa en los hombros. Las parejas escriben sobre segundos empleos. Un conductor en prueba pregunta quiénes se supone que son «ellos». El círculo de delegados de Jamal aún gestiona viajes compartidos para padres que salen tarde y un fondo discreto para cuidados infantiles perdidos. El fondo no puede dotar una línea cortada. Cada viaje cancelado se convierte en prueba para la voz más alta de la sala. Un puño golpea un casillero. El supervisor nocturno mira a otro lado. ¿Quién diseña la confianza de la cuadrilla cuando el horario se encoge y el chivo expiatorio ya está dibujado?
 
 ---
 ### `radicalization--cut-routes-louder-break-room.places.0`
 
 **EN:** East Line Night Depot
 
-**ES:** Depósito nocturno de la línea este
+**ES:** East Line Night Depot
 
 ---
 ### `radicalization--cut-routes-louder-break-room.pressureKeys.0`
@@ -6765,14 +6765,14 @@ Marta folds the pink slip against the mill-row gate before the second shift horn
 
 **ES:**
 
-Marta dobla la hoja rosa contra la puerta del molino antes de que suene la bocina del segundo turno. La pintura del ladrillo todavía está húmeda. Alguien ha añadido tres apellidos debajo de una tosca flecha que apunta hacia el bloque de viviendas temporales. Su placa de azafata refleja la luz del reflector. Dentro de la sala sindical, los teléfonos se iluminan con el mismo clip de treinta segundos. Una voz en off culpa a “los nuevos empleados” por el cierre de la línea. Nadie filmó el libro de pedidos vacío. El alquiler ya está retrasado en la mitad de la fila. Los niños cenan cereales mientras los padres refrescan las charlas grupales que premian el insulto más agudo. Los viejos juegos de cartas después del turno de trabajo desaparecieron cuando murieron las horas extras. Los mentores fichan y regresan a casa cansados. Una prima le pregunta a Marta de qué lado están las azafatas. Tiene un montón de vales de asesoramiento y ninguna respuesta que pague la factura. El oleoducto no espera una historia mejor. ¿Quién construye una verdadera rampa de salida cuando llega el aviso y la pared ya tiene una lista?
+Marta dobla el papel rosa contra la verja de Mill Row antes de la bocina del segundo turno. La pintura del ladrillo aún está húmeda. Alguien ha añadido tres apellidos bajo una flecha tosca que apunta al bloque de viviendas temporales. Su placa de delegada captura el foco. Dentro de la sala sindical, los teléfonos se encienden con el mismo clip de treinta segundos. Una voz sobre imágenes temblorosas culpa a «los nuevos contratados» del cierre de la línea. Nadie filmó el libro de pedidos vacío. El alquiler ya va tarde en la mitad de la hilera. Los niños cenan cereales mientras los padres refrescan chats de grupo que premian el insulto más afilado. Los viejos juegos de cartas de después del turno se adelgazaron cuando murieron las horas extra. Los mentores fichan y se van a casa cansados. Un primo pregunta a Marta de qué lado están los delegados. Tiene un montón de vales de asesoramiento y ninguna respuesta que pague una factura. El pipeline no espera una historia mejor. ¿Quién construye una verdadera rampa de salida cuando cae el aviso y el muro ya tiene una lista?
 
 ---
 ### `radicalization--layoff-notice-new-names-on-the-wall.places.0`
 
 **EN:** Riverside Mill Row Gate
 
-**ES:** Puerta de Riverside Mill Row
+**ES:** Riverside Mill Row Gate
 
 ---
 ### `radicalization--layoff-notice-new-names-on-the-wall.pressureKeys.0`
@@ -6793,7 +6793,7 @@ Marta dobla la hoja rosa contra la puerta del molino antes de que suene la bocin
 
 **EN:** Thin Bonds
 
-**ES:** Enlaces finos
+**ES:** Lazos frágiles
 
 ---
 ## Seed `radicalization--standing-terrace-softer-recruiters`
@@ -6809,7 +6809,7 @@ Marta dobla la hoja rosa contra la puerta del molino antes de que suene la bocin
 
 **EN:** Supporters’ trust youth workers
 
-**ES:** Los aficionados confían en los trabajadores juveniles
+**ES:** Trabajadores juveniles del trust de aficionados
 
 ---
 ### `radicalization--standing-terrace-softer-recruiters.scene`
@@ -6820,14 +6820,14 @@ After the final whistle, Lena locks the supporters’ club kitchen and finds thr
 
 **ES:**
 
-Después del pitido final, Lena cierra con llave la cocina de la peña y encuentra a tres chicos todavía en las escaleras traseras. No hablan del partido. En una charla privada se escuchan tranquilos elogios por “ponerse de pie” durante el empujón de la terraza que se derramó hacia la calle. El mes pasado, un mentor coach se mudó de ciudad por motivos de trabajo. La noche de habilidades del martes perdió su ancla. El miedo callejero regresa a casa con los fanáticos más jóvenes que vieron el empujón y las sirenas. Los reclutadores no gritan. Envían memes de partidos y luego mensajes más lentos sobre quién pertenece a la tribuna norte. En el fondo de Lena todavía hay llaves, té y un botiquín de primeros auxilios destartalado. Puede prohibir una bufanda. No puede sentarse en todos los hilos a medianoche. Un niño se ríe demasiado de un chiste que nombra a una escuela rival como enemiga. El oleoducto suena a amistad hasta que deja de serlo. ¿Quién diseña pertenencias que superen la suave invitación después de que se apaguen las luces en la terraza?
+Después del silbato final, Lena cierra la cocina del club de aficionados y encuentra a tres chicos aún en los escalones de atrás. No hablan del partido. Un chat privado suena con elogios tranquilos por «ponerse de pie» durante el empujón de la grada que se derramó a la calle. El mes pasado un entrenador mentor se mudó de ciudad por trabajo. La noche de habilidades del martes perdió su ancla. El miedo callejero camina a casa con fans más jóvenes que vieron el empujón y las sirenas. Los reclutadores no gritan. Envían memes del partido y luego mensajes más lentos sobre quién pertenece a la North Stand. El trust de Lena aún guarda llaves, té y un botiquín golpeado. Puede prohibir una bufanda. No puede sentarse en cada hilo a medianoche. Un chico se ríe demasiado de un chiste que nombra una escuela rival como el enemigo. El pipeline suena a amistad hasta que deja de hacerlo. ¿Quién diseña una pertenencia que adelante a la invitación suave después de que mueran las luces en la grada?
 
 ---
 ### `radicalization--standing-terrace-softer-recruiters.places.0`
 
 **EN:** North Stand Supporters Club
 
-**ES:** Club de peñas de la tribuna norte
+**ES:** North Stand Supporters Club
 
 ---
 ### `radicalization--standing-terrace-softer-recruiters.pressureKeys.0`
@@ -6875,21 +6875,21 @@ Captain Eli Marlow ties up at the east jetty and finds the ferry sheds already a
 
 **ES:**
 
-El capitán Eli Marlow atraca en el embarcadero este y encuentra que los cobertizos del ferry ya están discutiendo sobre las marcas de tiza en los atracaderos. La lluvia de la noche a la mañana empujó la marea hacia las literas inferiores. La ropa de cama cuelga de las vigas y aún no se seca antes del próximo turno. Una familia que dormía en el tercer cobertizo le muestra una tarjeta plastificada con un número de muelle que la oficina del puerto eliminó después de la última tormenta. Sin una dirección reconocida no pueden renovar las hojas de trabajo para el recorrido matutino. Las listas de tripulantes se reducen. Los hombres luchan por las literas superiores secas porque una noche húmeda significa perder un turno y perder un sello. La compañía de ferry cortó dos travesías nocturnas para ahorrar combustible, por lo que más personas duermen en los cobertizos en lugar de llegar a albergues en el interior. El embarcadero sigue generando residentes que no pueden demostrar que viven en ningún lugar que el sistema todavía mapee. Eli puede asignar cuerdas y lonas. No puede inventar un nombre de lugar que el empleado acepte. ¿Quién diseña una dirección flotante que sobreviva a la marea y al horario?
+El capitán Eli Marlow amarra en el embarcadero este y encuentra los cobertizos del ferry ya discutiendo por las marcas de tiza de los camarotes. La lluvia nocturna empujó la marea a las literas inferiores. La ropa de cama cuelga de las vigas y aún no seca antes del siguiente turno. Una familia que durmió en el tercer cobertizo le muestra una tarjeta plastificada con un número de muelle que la oficina del puerto borró tras el último realineamiento por tormenta. Sin una dirección reconocida no pueden renovar vales de trabajo para la carrera de la mañana. Las listas de tripulación se encogen. Los hombres pelean por las literas altas secas porque una noche mojada significa un turno perdido y un sello perdido. La compañía de ferry cortó dos cruces de la tarde para ahorrar combustible, así que más gente duerme en los cobertizos en lugar de llegar a albergues tierra adentro. El embarcadero sigue fabricando residentes que no pueden probar que viven en ningún sitio que el sistema aún mapee. Eli puede asignar cuerda y lonas. No puede inventar un topónimo que el empleado acepte. ¿Quién diseña una dirección flotante que sobreviva a la marea y al horario?
 
 ---
 ### `refugees--ferry-cuts-addresses-that-sink.places.0`
 
 **EN:** East Jetty Ferry Sheds
 
-**ES:** Cobertizos de ferry de East Jetty
+**ES:** East Jetty Ferry Sheds
 
 ---
 ### `refugees--ferry-cuts-addresses-that-sink.pressureKeys.0`
 
 **EN:** Wet Bedding
 
-**ES:** ropa de cama mojada
+**ES:** Ropa de cama mojada
 
 ---
 ### `refugees--ferry-cuts-addresses-that-sink.pressureKeys.1`
@@ -6903,7 +6903,7 @@ El capitán Eli Marlow atraca en el embarcadero este y encuentra que los coberti
 
 **EN:** Berth Fights
 
-**ES:** Luchas de atraque
+**ES:** Peleas por literas
 
 ---
 ## Seed `refugees--hostels-full-stamps-still-pending`
@@ -6930,7 +6930,7 @@ Nora Velez unlocks the cooperative hostel before dawn and finds three families a
 
 **ES:**
 
-Nora Vélez abre el albergue cooperativo antes del amanecer y encuentra a tres familias durmiendo frente a la puerta principal. Tiene dos tapetes gratis. El autobús nocturno procedente del interior dejó a más personas de las que puede albergar la franja. A media mañana, la ventana de sellos al otro lado de la calle anuncia un nuevo retraso. Las tarjetas de trabajo no se imprimirán hasta que los archivos biométricos pasen de una cola central que nadie en este bloque pueda ver. Los propietarios a lo largo de la franja todavía alquilan por noches y rechazan contratos de arrendamiento más largos sin un sello. Los empleadores del distrito de almacenes hacen lo mismo. Los hombres aceptan jornaleros en efectivo a la mitad del precio publicado porque una cama esta noche cuesta más que el orgullo. Una madre llamada Luz pierde su cuna al no poder presentar los papeles en la caja. A su hijo le da fiebre en una silla de plástico en el vestíbulo. Nora puede abrir espacio en el piso. No puede acuñar el sello que la ciudad considera la única prueba de pertenencia. ¿Quién diseña un refugio que no se derrumbe cada vez que el sistema de papel se detiene?
+Nora Vélez abre el albergue cooperativo antes del alba y encuentra a tres familias ya dormidas contra la verja delantera. Tiene dos esteras libres. El autobús nocturno del interior dejó más gente de la que la franja puede aguantar. A media mañana el ventanilla de sellos de enfrente publica un nuevo retraso. Las tarjetas de trabajo no se imprimirán hasta que los archivos biométricos despejen una cola central que nadie en esta manzana puede ver. Los caseros a lo largo de la franja aún alquilan por noche y rechazan arrendamientos más largos sin sello. Los empleadores del distrito de almacenes hacen lo mismo. Los hombres cogen jornal en efectivo a la mitad de la tarifa publicada porque una cama esta noche cuesta más que el orgullo. Una madre llamada Luz pierde su catre cuando no puede mostrar papeles antes del checkout. Su niño empieza fiebre en una silla de plástico del vestíbulo. Nora puede abrir espacio en el suelo. No puede acuñar el sello que la ciudad trata como la única prueba de pertenencia. ¿Quién diseña un refugio que no se derrumbe cada vez que el sistema de papel se atasca?
 
 ---
 ### `refugees--hostels-full-stamps-still-pending.places.0`
@@ -6967,14 +6967,14 @@ Nora Vélez abre el albergue cooperativo antes del amanecer y encuentra a tres f
 
 **EN:** Second breach, no parcel left
 
-**ES:** Segunda infracción, no queda ningún paquete
+**ES:** Segunda brecha, sin parcela
 
 ---
 ### `refugees--second-breach-no-parcel-left.stakeholder`
 
 **EN:** Coach Dara Nguyen, levee mutual-aid lead
 
-**ES:** Entrenador Dara Nguyen, líder de ayuda mutua del dique
+**ES:** Entrenadora Dara Nguyen, líder de ayuda mutua del dique
 
 ---
 ### `refugees--second-breach-no-parcel-left.scene`
@@ -6985,14 +6985,14 @@ Coach Dara Nguyen walks the sandbag line at first light and counts the new gap w
 
 **ES:**
 
-La entrenadora Dara Nguyen camina por la línea de sacos de arena con las primeras luces del día y cuenta el nuevo espacio donde el dique se desplomó durante la noche. El agua del río se encuentra en la segunda fila de huertas. El cobertizo de ayuda mutua todavía contiene semillas de arroz, pero las parcelas que lo cultivaron están nuevamente bajo el agua. Las familias que huyeron de la última infracción regresaron con afirmaciones escritas a mano y fotografías telefónicas de antiguos pines de encuestas. El mapa del condado todavía enumera la mitad de esos lotes bajo propietarios que se fueron hace una década. Sin un título limpio, nadie obtiene un préstamo para la reconstrucción o un lugar en la lista de los más importantes. Los trabajadores jóvenes cargan furgonetas para la ciudad y no tienen previsto plantar la próxima temporada. El propio sobrino de Dara guarda sus herramientas después del turno de la mañana. El dique falla en la misma curva suave porque el dinero de mantenimiento sigue a la propiedad registrada, no a las personas que realmente cultivan el arcén. La comida se va con ellos. ¿Quién rediseña la protección del suelo para que un camino lavado no borre una cosecha y un hogar a la vez?
+La entrenadora Dara Nguyen camina la línea de sacos de arena al primer rayo y cuenta el nuevo hueco donde el dique se hundió por la noche. El agua del río está en la segunda fila de huertos. El cobertizo de ayuda mutua aún guarda arroz de semilla, pero las parcelas que lo crecieron están otra vez bajo el agua. Familias que huyeron de la última brecha volvieron con reclamaciones a mano y fotos de móvil de viejos hitos de catastro. El mapa del condado aún lista la mitad de esos lotes bajo dueños que se fueron hace una década. Sin un título limpio, nadie obtiene un préstamo de reconstrucción ni un lugar en la lista de terreno alto. Trabajadores jóvenes cargan furgonetas hacia la ciudad y no planean plantar la próxima temporada. El propio sobrino de Dara guarda sus herramientas tras el turno de la mañana. El dique falla en la misma curva blanda porque el dinero de mantenimiento sigue la propiedad registrada, no a la gente que de verdad cultiva el arcén. La comida se va con ellos. ¿Quién rediseña la prueba de tierra para que un camino lavado no borre a la vez una cosecha y un hogar?
 
 ---
 ### `refugees--second-breach-no-parcel-left.places.0`
 
 **EN:** Old South Levee Road
 
-**ES:** Antigua carretera del dique sur
+**ES:** Old South Levee Road
 
 ---
 ### `refugees--second-breach-no-parcel-left.pressureKeys.0`
@@ -7013,7 +7013,7 @@ La entrenadora Dara Nguyen camina por la línea de sacos de arena con las primer
 
 **EN:** Outmigration
 
-**ES:** emigración
+**ES:** Emigración
 
 ---
 ## Seed `refugees--wounded-at-the-ridge-clinic-gate`
@@ -7040,14 +7040,14 @@ Dr. Samira Okonkwo meets the pickup at the ridge gate with a headlamp and a trau
 
 **ES:**
 
-La Dra. Samira Okonkwo recibe a la camioneta en la puerta de la cresta con un faro y un kit de traumatología. La pierna del hombre está envuelta en una camisa oscura de sangre. Cruzó de noche y no tiene hoja de referencia. Las reglas de admisión nocturna dicen que las llegadas no registradas esperan al registrador de la mañana, incluso cuando la herida no lo haga. Samira lo empuja hacia adentro de todos modos. El turno de día la escribirá. Dos enfermeras ya han renunciado este mes antes de elegir entre el protocolo y la persona que sangra en el escalón. En lo alto de la colina, un puesto de control todavía canaliza a los heridos hacia esta única puerta porque otros puestos exigen primero los documentos y después la atención. El generador de la clínica tose; Las luces de la batería sostienen la bandeja de sutura. Samira ata el sangrado y escucha el siguiente camión en la grava. La puerta no sólo mantiene el orden. Sigue fabricando la multitud que quema a su personal. ¿Quién diseña una atención de urgencia que no castigue a las manos que abren la puerta?
+La Dra. Samira Okonkwo recibe la pickup en la verja de la cresta con un frontal y un kit de trauma. La pierna del hombre va envuelta en una camisa oscura de sangre. Cruzó de noche y no tiene hoja de derivación. Las reglas de ingreso nocturno dicen que las llegadas no registradas esperan al registrador de la mañana, aunque la herida no espere. Samira lo mete dentro de todos modos. El turno de día la sancionará. Dos enfermeras ya han renunciado este mes antes que elegir entre el protocolo y la persona que sangra en el escalón. Más arriba en la cresta, un control sigue canalizando a los heridos hacia esta única puerta porque otros puestos exigen primero papeles y después cuidados. El generador de la clínica tose; las luces de batería sostienen la bandeja de sutura. Samira ata el sangrado y oye el siguiente camión en la grava. La verja no solo mantiene el orden. Sigue fabricando la multitud que quema a su personal. ¿Quién diseña urgencias que no castiguen a las manos que abren la puerta?
 
 ---
 ### `refugees--wounded-at-the-ridge-clinic-gate.places.0`
 
 **EN:** San Lázaro Ridge Clinic
 
-**ES:** Clínica Cresta San Lázaro
+**ES:** San Lázaro Ridge Clinic
 
 ---
 ### `refugees--wounded-at-the-ridge-clinic-gate.pressureKeys.0`
@@ -7095,14 +7095,14 @@ Ana Ribeiro poles the skiff toward the birth post before dawn and finds the dock
 
 **ES:**
 
-Ana Ribeiro conduce el esquife hacia el lugar del nacimiento antes del amanecer y encuentra el muelle ya bajo agua marrón. Una madre primeriza espera en el suelo elevado con su hermana sosteniendo la luz de un teléfono. Los tonos del corazón fetal suenan débiles a través del antiguo Doppler. La marea alta ha bloqueado el barco habitual de parteras por tercera vez esta temporada. Los programadores del continente todavía envían los días de ultrasonido y análisis de sangre primero a la clínica de la ciudad. Los puestos insulares reciben lo que queda. Ana puede tener un parto normal en el palafito. No puede afrontar un parto estancado o una hemorragia sin una salida clara. El río sigue creciendo en un reloj sin sistema de citas. ¿Quién diseña una atención que se mueva con la marea y no en contra de ella?
+Ana Ribeiro impulsa el esquife hacia el puesto de parto antes del alba y encuentra el muelle ya bajo agua marrón. Una madre primeriza espera en el suelo de tablas elevado con su hermana sujetando la luz del teléfono. Los tonos cardíacos fetales suenan finos a través del viejo Doppler. La crecida ha bloqueado el barco habitual de parteras por tercera vez esta temporada. Los planificadores del continente aún envían primero los días de ecografía y análisis de sangre a la clínica de la ciudad. Los puestos de la isla reciben lo que sobra. Ana puede atender un parto normal en la casa sobre pilotes. No puede llevar un parto detenido o una hemorragia sin una vía de salida clara. El río sigue subiendo en un reloj que ningún sistema de citas sigue. ¿Quién diseña un cuidado que se mueva con la marea en lugar de contra ella?
 
 ---
 ### `reproductive--high-water-blocks-the-midwife-boat.places.0`
 
 **EN:** Ilha do Combu birth post, Belém river belt
 
-**ES:** Puesto de nacimiento de Ilha do Combu, cinturón fluvial de Belém
+**ES:** Ilha do Combu birth post, cinturón fluvial de Belém
 
 ---
 ### `reproductive--high-water-blocks-the-midwife-boat.pressureKeys.0`
@@ -7139,7 +7139,7 @@ Ana Ribeiro conduce el esquife hacia el lugar del nacimiento antes del amanecer 
 
 **EN:** Delta doula and EMT coalition
 
-**ES:** Coalición Delta Doula y EMT
+**ES:** Coalición de doulas del Delta y EMT
 
 ---
 ### `reproductive--ninety-minutes-past-the-last-contraction.scene`
@@ -7150,14 +7150,14 @@ Keisha Jackson keys the radio at mile marker 14 while rain sheets the highway. T
 
 **ES:**
 
-Keisha Jackson enciende la radio en la milla 14 mientras la lluvia cubre la carretera. La madre en el asiento trasero ha pasado noventa minutos de su última contracción fuerte y aún no ha coronado. La sala de partos abierta más cercana está a cuarenta y una millas más de lo que prometía el mapa esta mañana. El mes pasado, esa sala volvió a recortar la cobertura nocturna. El condado todavía factura las camas vacías como capacidad en papel. Las tarjetas de seguro rebotan entre tres redes antes de que alguien autorice un traslado en furgoneta. Keisha ha dado a luz a dos bebés sobre los hombros de grava este año. Mantiene un kit limpio y una voz tranquila. Lo que no puede tener es una habitación con personal a su alcance cuando el parto se vuelve difícil. Las carreteras fueron construidas para camiones algodoneros, no para traslados cronometrados. ¿Quién diseña un corredor de parto que siga funcionando después de que las salas se apaguen?
+Keisha Jackson pulsa la radio en el hito de la milla 14 mientras la lluvia lamina la carretera. La madre del asiento trasero lleva noventa minutos desde su última contracción fuerte y aún no corona. La sala de partos abierta más cercana está cuarenta y una millas más lejos de lo que el mapa prometía esta mañana. El mes pasado esa sala volvió a recortar la cobertura nocturna. El condado aún factura las camas vacías como capacidad en papel. Las tarjetas de seguro rebotan entre tres redes antes de que alguien autorice una furgoneta de traslado. Keisha ha atendido dos partos en arcenes de grava este año. Mantiene un kit limpio y una voz calmada. Lo que no puede mantener es una sala con personal al alcance cuando un parto se pone duro. Las carreteras se hicieron para camiones de algodón, no para traslados cronometrados. ¿Quién diseña un corredor de parto que siga funcionando después de que las salas se apaguen?
 
 ---
 ### `reproductive--ninety-minutes-past-the-last-contraction.places.0`
 
 **EN:** Greenville Birth Corridor, Mississippi Delta
 
-**ES:** Corredor de nacimiento de Greenville, delta del Mississippi
+**ES:** Greenville Birth Corridor, delta del Mississippi
 
 ---
 ### `reproductive--ninety-minutes-past-the-last-contraction.pressureKeys.0`
@@ -7205,14 +7205,14 @@ Sunita Devi opens the antenatal register and writes a new name in the afternoon 
 
 **ES:**
 
-Sunita Devi abre el registro prenatal y escribe un nuevo nombre en el calor de la tarde. La niña tiene quince años y ya está en pleno embarazo. Faltó tres días escolares de salud porque su suegra dijo que las visitas marcarían a la familia. Los profesores siguen contando a las niñas matriculadas para la hoja de becas, incluso cuando los pupitres quedan vacíos después del matrimonio. Los trabajadores de ASHA caminan por las calles con pastillas de hierro y preguntas en voz baja. Los suegros deciden quién abre la puerta. Cuando una niña llega a este escritorio, la ventana inicial para recibir asesoramiento y opciones seguras suele haberse cerrado. El recuento se ve bien en el gráfico mural. La chica no. ¿Quién diseña una atención a la adolescente que pueda atenderla antes de que el veto del hogar escriba el final?
+Sunita Devi abre el registro prenatal y escribe un nombre nuevo en el calor de la tarde. La chica tiene quince años y ya está a mitad del embarazo. Faltó a tres días de salud escolar porque su suegra dijo que las visitas marcarían a la familia. Las profesoras siguen contando a las chicas matriculadas para la hoja de subvención aunque los pupitres queden vacíos tras el matrimonio. Las trabajadoras ASHA recorren callejones con comprimidos de hierro y preguntas en voz baja. Los suegros deciden quién abre la puerta. Para cuando una chica llega a este escritorio, la ventana temprana de consejo y opciones seguras a menudo ya se cerró. El recuento se ve bien en el gráfico de la pared. La chica no. ¿Quién diseña una atención adolescente que pueda encontrarla antes de que el veto del hogar escriba el final?
 
 ---
 ### `reproductive--she-arrives-already-mid-pregnancy.places.0`
 
 **EN:** Sanganer Adolescent ANC Desk, Jaipur fringe
 
-**ES:** Escritorio del ANC para adolescentes Sanganer, franja de Jaipur
+**ES:** Sanganer Adolescent ANC Desk, franja de Jaipur
 
 ---
 ### `reproductive--she-arrives-already-mid-pregnancy.pressureKeys.0`
@@ -7233,7 +7233,7 @@ Sunita Devi abre el registro prenatal y escribe un nuevo nombre en el calor de l
 
 **EN:** Count Gaming
 
-**ES:** Contar juegos
+**ES:** Manipulación del recuento
 
 ---
 ## Seed `reproductive--the-sponsor-keeps-her-health-card`
@@ -7242,14 +7242,14 @@ Sunita Devi abre el registro prenatal y escribe un nuevo nombre en el calor de l
 
 **EN:** The sponsor keeps her health card
 
-**ES:** La patrocinadora conserva su tarjeta sanitaria.
+**ES:** El patrocinador guarda su tarjeta sanitaria
 
 ---
 ### `reproductive--the-sponsor-keeps-her-health-card.stakeholder`
 
 **EN:** Migrant women’s health advocates
 
-**ES:** Defensores de la salud de las mujeres inmigrantes
+**ES:** Defensoras de la salud de mujeres migrantes
 
 ---
 ### `reproductive--the-sponsor-keeps-her-health-card.scene`
@@ -7260,14 +7260,14 @@ Yasmin stands outside the factory clinic window at shift change with a folded pa
 
 **ES:**
 
-Yasmin se encuentra afuera de la ventana de la clínica de la fábrica durante el cambio de turno con una lista de síntomas en papel doblado que no quiere decir en voz alta. La enfermera pide la tarjeta sanitaria. El patrocinador volvió a conservarlo tras la disputa de horas extras del mes pasado. Sin la tarjeta no hay test de embarazo, ni pastillas, ni derivación tranquila. Las mujeres en los dormitorios comercializan nombres de farmacias que venden en efectivo y en silencio. Un compañero de trabajo se desangró durante un turno de noche el invierno pasado y aún así regresó al amanecer. Los contratos de fábrica vinculan el acceso a la clínica a la misma firma que puede poner fin a un permiso de trabajo. El miedo mantiene vacía la sala de espera incluso cuando la puerta está abierta. ¿Quién diseña cuidados reproductivos a los que una trabajadora pueda acceder sin preguntarle a la persona que tiene sus papeles?
+Yasmin está fuera de la ventana de la clínica de la fábrica en el cambio de turno con una lista de papel doblada de síntomas que no dirá en voz alta. La enfermera pide la tarjeta sanitaria. El patrocinador la volvió a guardar tras la disputa de horas extra del mes pasado. Sin la tarjeta no hay prueba de embarazo, ni pastillas, ni derivación discreta. Las mujeres en los dormitorios intercambian nombres de farmacias que venden en efectivo y en silencio. Una compañera sangró toda una noche de turno el invierno pasado y aun así volvió al alba. Los contratos de fábrica atan el acceso a la clínica a la misma firma que puede acabar un permiso de trabajo. El miedo mantiene vacía la sala de espera aunque la puerta esté abierta. ¿Quién diseña cuidados reproductivos a los que una trabajadora pueda llegar sin pedírselo a quien tiene sus papeles?
 
 ---
 ### `reproductive--the-sponsor-keeps-her-health-card.places.0`
 
 **EN:** Marka industrial dorms RH window, East Amman
 
-**ES:** Ventana derecha de dormitorios industriales Marka, este de Ammán
+**ES:** Marka industrial dorms RH window, este de Amán
 
 ---
 ### `reproductive--the-sponsor-keeps-her-health-card.pressureKeys.0`
@@ -7315,28 +7315,28 @@ Marcus watches the 28 pull past the clinic stop on the wall board. Three night-s
 
 **ES:**
 
-Marcus observa cómo el 28 pasa la parada de la clínica en el tablero de la pared. Tres enfermeras del turno de noche permanecen bajo la luz del refugio con las manos vacías. El optimizador marcó la parada como de bajo abordaje y alto riesgo de retraso después de las diez. Reconstruyó el camino para alcanzar los objetivos del centro de la ciudad a tiempo. Teclea una solicitud de retención. El sistema responde con un indicador de costo y una ruta de recuperación que borra la parada nuevamente. El software de programación ahora posee la lógica de recuperación después de cada viaje tardío. Recibió capacitación sobre el número de pasajeros, los minutos de mano de obra y el puntaje de confiabilidad publicado por la agencia. Las escasas paradas tardías parecen un desperdicio en ese conjunto de entrenamiento. Los conductores todavía saludan a caras conocidas y luego ruedan porque la tableta se vuelve roja si se detienen. Una enfermera se pierde el traspaso en el mostrador de noche. Marcus puede forzar un viaje con la mano. No puede obligar al modelo a valorar lo mismo una acera tranquila que una abarrotada. ¿Quién diseña el mapa nocturno para que las personas que mantienen despierta la ciudad puedan seguir viajando a casa?
+Marcus mira el 28 pasar la parada de la clínica en el tablero de la pared. Tres enfermeras del turno de noche están bajo la luz del refugio con las manos vacías. El optimizador marcó la parada como pocos abordajes y alto riesgo de retraso después de las diez. Reconstruyó el intervalo para cumplir objetivos de puntualidad en el centro. Teclea una petición de hold. El sistema responde con una bandera de coste y una ruta de recuperación que borra la parada otra vez. El software de horarios posee ahora la lógica de recuperación tras cada viaje tarde. Se entrenó con conteos de pasajeros, minutos de mano de obra y la puntuación de fiabilidad publicada de la agencia. Las paradas tardías escasas parecen desperdicio en ese conjunto de entrenamiento. Los conductores aún saludan caras conocidas y luego ruedan porque la tableta se pone roja si se detienen. Una enfermera pierde el relevo en el mostrador de noche. Marcus puede forzar un viaje a mano. No puede obligar al modelo a valorar un bordillo tranquilo igual que uno lleno. ¿Quién diseña el mapa nocturno para que quienes mantienen la ciudad despierta aún tengan viaje a casa?
 
 ---
 ### `rogue-si--buses-that-skip-the-night-shift-clinic-stop.places.0`
 
 **EN:** MBTA Operations Control Center, Boston
 
-**ES:** Centro de control de operaciones de MBTA, Boston
+**ES:** MBTA Operations Control Center, Boston
 
 ---
 ### `rogue-si--buses-that-skip-the-night-shift-clinic-stop.pressureKeys.0`
 
 **EN:** Stranded Riders
 
-**ES:** Jinetes varados
+**ES:** Pasajeros varados
 
 ---
 ### `rogue-si--buses-that-skip-the-night-shift-clinic-stop.pressureKeys.1`
 
 **EN:** Skip Logic
 
-**ES:** Saltar lógica
+**ES:** Lógica de salto
 
 ---
 ### `rogue-si--buses-that-skip-the-night-shift-clinic-stop.pressureKeys.2`
@@ -7359,7 +7359,7 @@ Marcus observa cómo el 28 pasa la parada de la clínica en el tablero de la par
 
 **EN:** Aisha, veteran call-taker
 
-**ES:** Aisha, veterana contestadora de llamadas
+**ES:** Aisha, operadora de llamadas veterana
 
 ---
 ### `rogue-si--the-call-router-that-quiets-the-wrong-voice.scene`
@@ -7370,14 +7370,14 @@ Aisha pins a caller on line four and hears wet breathing under traffic noise. Th
 
 **ES:**
 
-Aisha inmoviliza a una persona que llama en la línea cuatro y escucha una respiración húmeda bajo el ruido del tráfico. El enrutador divide la llamada en una breve etiqueta de prioridad antes de que la pantalla termine de cargarse. Urgencia baja. Guión sugerido: redirección que no sea de emergencia. Ella conoce esa etiqueta. Afecta más al habla con acento y a las llamadas que comienzan en medio del pánico. Ella mantiene la línea abierta de todos modos. El reloj de cola se vuelve ámbar en sus auriculares. Los supervisores miden el tiempo de gestión con respecto al pronóstico del modelo. El pronóstico se ajustó para eliminar el volumen y reducir las tasas de llamadas abandonadas en toda la ciudad. Sigue dirigiendo las voces confusas hacia abajo por la escalera lenta para que las limpias lleguen primero a los equipos. La anulación de Aisha todavía funciona, pero cada anulación se acumula en una pila semanal. Al otro lado de la ciudad, un hombre espera junto a una oscura parada de autobús mientras una llamada más tranquila, a dos cuadras de distancia, recibe la primera unidad. Ella tiene la dirección. El sistema ya ha decidido quién vale la pena. ¿Quién diseña el oído de la ciudad para que la voz asustada no sea la que aprenda a acallar?
+Aisha retiene a un llamante en la línea cuatro y oye respiración húmeda bajo el ruido del tráfico. El enrutador reduce la llamada a una etiqueta corta de prioridad antes de que su pantalla termine de cargar. Baja urgencia. Guion sugerido: redirección no urgente. Conoce esa etiqueta. Golpea más fuerte en el habla con acento y en llamadas que empiezan a mitad del pánico. Mantiene la línea abierta de todos modos. El reloj de cola se pone ámbar en sus auriculares. Los supervisores miden el tiempo de gestión contra la previsión del modelo. La previsión se ajustó para despejar volumen y bajar las tasas de llamadas abandonadas en toda la ciudad. Sigue enviando las voces confusas por la escalera lenta para que las limpias lleguen primero a las dotaciones. La anulación de Aisha aún funciona, pero cada anulación cae en una pila semanal. Al otro lado de la ciudad un hombre espera junto a una parada de autobús oscura mientras una llamada más calmada a dos manzanas recibe la primera unidad. Ella tiene la dirección. El sistema ya decidió quién suena merecedor del minuto. ¿Quién diseña el oído de la ciudad para que la voz asustada no sea la que aprende a silenciar?
 
 ---
 ### `rogue-si--the-call-router-that-quiets-the-wrong-voice.places.0`
 
 **EN:** King County Emergency Call Center, Seattle
 
-**ES:** Centro de llamadas de emergencia del condado de King, Seattle
+**ES:** King County Emergency Call Center, Seattle
 
 ---
 ### `rogue-si--the-call-router-that-quiets-the-wrong-voice.pressureKeys.0`
@@ -7391,14 +7391,14 @@ Aisha inmoviliza a una persona que llama en la línea cuatro y escucha una respi
 
 **EN:** Auto Drops
 
-**ES:** Gotas automáticas
+**ES:** Cortes auto
 
 ---
 ### `rogue-si--the-call-router-that-quiets-the-wrong-voice.pressureKeys.2`
 
 **EN:** Handle Time
 
-**ES:** Manejar el tiempo
+**ES:** Tiempo de gestión
 
 ---
 ## Seed `rogue-si--the-ditch-ai-that-starves-the-small-orchard`
@@ -7407,7 +7407,7 @@ Aisha inmoviliza a una persona que llama en la línea cuatro y escucha una respi
 
 **EN:** The ditch AI that starves the small orchard
 
-**ES:** La IA de zanja que mata de hambre al pequeño huerto
+**ES:** La IA de la acequia que ahoga de sed al pequeño huerto
 
 ---
 ### `rogue-si--the-ditch-ai-that-starves-the-small-orchard.stakeholder`
@@ -7425,14 +7425,14 @@ Elena opens the allocation app at dawn and finds her lateral cut again. The almo
 
 **ES:**
 
-Elena abre de madrugada la app de asignación y vuelve a encontrar su corte lateral. Las almendras dos filas más arriba todavía muestran una vuelta completa. Sus sondas de suelo ya leen secas a la profundidad de las raíces. Conduce hasta el mostrador del distrito con registros de contadores impresos. El empleado se encoge de hombros ante la pantalla. El motor de optimización estableció los lanzamientos de la semana de la noche a la mañana. Favorece las parcelas con un mayor rendimiento previsto por acre-pie y un historial de pago más limpio de los bonos distritales. Su pequeño bloque se considera de alto riesgo y baja rentabilidad. Puede apelar, pero el siguiente modelo llega antes de la audiencia. Los vecinos con propiedades más grandes alimentan los mismos sensores y prestan datos en los que confía el motor. Cada semana seca le enseña que los huertos pequeños tienen un rendimiento inferior. Sus árboles se vuelven marrones en las puntas mientras el canal todavía hace pasar agua por su puerta. Un corte más y pierde el contrato de la temporada. ¿Quién diseña el cerebro de la zanja para que un huerto viviente no sea sólo un residuo después de que finalicen las matemáticas de los bonos?
+Elena abre la app de asignación al alba y vuelve a hallar su corte lateral. Los almendros dos hileras más allá aún muestran un turno completo. Sus sondas de suelo ya leen seco a profundidad de raíz. Conduce al mostrador del distrito con registros de contador impresos. El empleado se encoge de hombros ante la pantalla. El motor de optimización fijó los sueltos de la semana por la noche. Favorece parcelas con mayor rendimiento previsto por acre-pie e historiales de pago más limpios en bonos del distrito. Su bloque pequeño puntúa alto riesgo y bajo retorno. Puede apelar, pero la siguiente corrida del modelo llega antes del hueco de audiencia. Vecinos con fincas mayores alimentan los mismos sensores y datos de préstamo en los que confía el motor. Cada semana seca le enseña que los huertos pequeños rinden menos. Sus árboles se tuestan en las puntas mientras el canal aún mueve agua por su compuerta. Un corte más y pierde el contrato de la temporada. ¿Quién diseña el cerebro de la acequia para que un huerto vivo no sea solo un residuo cuando acaba la matemática del bono?
 
 ---
 ### `rogue-si--the-ditch-ai-that-starves-the-small-orchard.places.0`
 
 **EN:** Westlands Water District Allocation Desk, Fresno County
 
-**ES:** Oficina de asignación del distrito de agua de Westlands, condado de Fresno
+**ES:** Westlands Water District Allocation Desk, condado de Fresno
 
 ---
 ### `rogue-si--the-ditch-ai-that-starves-the-small-orchard.pressureKeys.0`
@@ -7469,7 +7469,7 @@ Elena abre de madrugada la app de asignación y vuelve a encontrar su corte late
 
 **EN:** Dr. Ramirez, trauma attending
 
-**ES:** Dr. Ramírez, asistente de trauma
+**ES:** Dra. Ramírez, adjunta de trauma
 
 ---
 ### `rogue-si--trauma-scores-that-outvote-the-surgeon.scene`
@@ -7480,7 +7480,7 @@ Dr. Ramirez calls for the OR as the gurney hits the bay. The board lights green 
 
 **ES:**
 
-El Dr. Ramírez llama al quirófano cuando la camilla llega a la bahía. El tablero se ilumina en verde primero para un paciente diferente. El modelo de puntuación de trauma ya ha clasificado la habitación. Su caso ocupa el segundo lugar. El sangrador frente a ella es inestable. Conoce el patrón del turno de noche del mes pasado. El protocolo no desbloqueará la suite hasta que la puntuación esté de acuerdo. Ella anula una vez. El riesgo señala el gráfico en tiempo real. Legal verá la bandera antes de la mañana. El modelo se entrenó con años de datos de la bahía y resultados de las aseguradoras. Sigue aprendiendo de cada transferencia aceptada y de cada caso retrasado que aún se cerró limpiamente sobre el papel. El personal sigue el camino verde porque los caminos rojos colocan camas y atraen reseñas. La presión del purgador cae mientras el caso de mayor rango espera en una línea estable. A Ramírez le quedan noventa segundos de discusión antes de que la siguiente ambulancia llene la bahía. ¿Quién diseña la partitura para que la mano del cirujano siga contando cuando el modelo ya está seguro?
+La Dra. Ramírez pide quirófano cuando la camilla choca con la bahía. El tablero se enciende en verde primero para otro paciente. El modelo de puntuación de trauma ya ha clasificado la sala. Su caso queda segundo. El sangrante delante de ella es inestable. Conoce el patrón del turno de noche del mes pasado. El protocolo no desbloqueará la sala hasta que la puntuación esté de acuerdo. Anula una vez. Riesgo marca la historia en tiempo real. Legal verá la bandera antes del amanecer. El modelo se entrenó con años de datos de bahía y resultados de aseguradoras. Sigue aprendiendo de cada traslado aceptado y de cada caso retrasado que aun así se cerró limpio en el papel. El personal persigue la ruta verde porque las rojas atascan camas y atraen revisión. La presión del sangrante cae mientras el caso mejor clasificado espera en una línea estable. A Ramírez le quedan noventa segundos de argumento antes de que la siguiente ambulancia llene la bahía. ¿Quién diseña la puntuación para que la mano de un cirujano aún cuente cuando el modelo ya está seguro?
 
 ---
 ### `rogue-si--trauma-scores-that-outvote-the-surgeon.places.0`
@@ -7501,7 +7501,7 @@ El Dr. Ramírez llama al quirófano cuando la camilla llega a la bahía. El tabl
 
 **EN:** Hard Locks
 
-**ES:** Cerraduras duras
+**ES:** Bloqueos duros
 
 ---
 ### `rogue-si--trauma-scores-that-outvote-the-surgeon.pressureKeys.2`
@@ -7517,14 +7517,14 @@ El Dr. Ramírez llama al quirófano cuando la camilla llega a la bahía. El tabl
 
 **EN:** Clinic boat cannot beat the cut-off levee
 
-**ES:** El barco clínico no puede superar el dique de corte
+**ES:** El barco-clínica no puede ganar al dique de corte
 
 ---
 ### `rural-roads--clinic-boat-cannot-beat-the-cut-off-levee.stakeholder`
 
 **EN:** River clinic nurses and traditional authority council
 
-**ES:** Enfermeros de la clínica River y consejo de autoridades tradicionales
+**ES:** Enfermeras de la clínica fluvial y consejo de autoridades tradicionales
 
 ---
 ### `rural-roads--clinic-boat-cannot-beat-the-cut-off-levee.scene`
@@ -7535,14 +7535,14 @@ Nurse Mwale poles the clinic skiff toward the cut where the channel used to run.
 
 **ES:**
 
-La enfermera Mwale conduce el esquife de la clínica hacia el corte por donde solía correr el canal. El nuevo muro del dique se encuentra en bruto y alto. Protege el sistema arrocero aguas arriba. También sella el antiguo camino de agua que necesita el barco. Una madre en la otra orilla sostiene a un niño con una fiebre que no cesa. El consejo de la autoridad tradicional aprobó el muro después de que tres temporadas de lluvias arruinaran los campos. Nadie trazó la ruta de la clínica en el mismo plan. Mwale va a la playa sobre barro y camina el largo camino con un equipo seco. Cuando llega, el margen para un tratamiento sencillo se ha reducido. El combustible para un desvío más largo se raciona primero a las bombas de arroz. El camino que mantiene a la gente sana nunca fue una línea en los dibujos del dique. ¿Quién diseña obras contra inundaciones que aún permitan que la atención llegue a las aldeas cuando el agua sube?
+La enfermera Mwale impulsa el esquife de la clínica hacia el corte por donde solía correr el canal. El nuevo muro del dique está crudo y alto. Protege el esquema arrocero aguas arriba. También sella el viejo camino de agua que necesita el barco. Una madre en la orilla de enfrente sostiene a un niño con una fiebre que no cede. El consejo de la autoridad tradicional aprobó el muro después de que tres temporadas húmedas arruinaran los campos. Nadie cartografió la ruta de la clínica en el mismo plan. Mwale varía en el barro y camina el largo camino con un kit seco. Cuando llega, la ventana de un tratamiento simple se ha estrechado. El combustible para un desvío más largo se raciona primero a las bombas de arroz. El camino que mantiene a la gente bien nunca fue una línea en los planos del dique. ¿Quién diseña obras de inundación que aún dejen que el cuidado llegue a las aldeas cuando sube el agua?
 
 ---
 ### `rural-roads--clinic-boat-cannot-beat-the-cut-off-levee.places.0`
 
 **EN:** Barotse floodplain hamlets, Western Zambia
 
-**ES:** Aldeas de la llanura aluvial de Barotse, Zambia occidental
+**ES:** Barotse floodplain hamlets, Zambia occidental
 
 ---
 ### `rural-roads--clinic-boat-cannot-beat-the-cut-off-levee.pressureKeys.0`
@@ -7579,7 +7579,7 @@ La enfermera Mwale conduce el esquife de la clínica hacia el corte por donde so
 
 **EN:** First Nation health director and winter-road contractors’ co-op
 
-**ES:** Director de salud de las Primeras Naciones y cooperativa de contratistas de carreteras invernales
+**ES:** Directora de salud de las Primeras Naciones y cooperativa de contratistas de carreteras de invierno
 
 ---
 ### `rural-roads--fuel-and-dialysis-miss-the-thaw-window.scene`
@@ -7590,14 +7590,14 @@ Health director Leanne Cardinal watches the contractor’s plow turn back at the
 
 **ES:**
 
-La directora de salud, Leanne Cardinal, observa cómo el arado del contratista regresa a la cresta de presión. El camino de hielo que alimenta el lago Peerless ya está llorando por las costuras. El diésel para el generador de la clínica y el sistema de diálisis mensual se encuentra en la otra orilla. Los contratos limitan los camiones pesados ​​a un calendario de transporte fijo escrito para décadas más frías. Los períodos cálidos ahora consumen días libres en ambos extremos de la temporada. Un paciente que necesita tratamiento dos veces por semana no puede esperar a la próxima congelación que tal vez no se mantenga. Faltan meses para que lleguen las barcazas. Los vuelos chárter arruinan el presupuesto de salud en una sola tarde. El sistema sigue planificando como si el invierno fuera un puente fiable. ¿Quién rediseña la temporada de suministro para que la preocupación no desaparezca cuando el hielo se ablande antes de tiempo?
+La directora de salud Leanne Cardinal ve el arado del contratista dar la vuelta en la cresta de presión. El camino de hielo que alimenta Peerless Lake ya llora por las costuras. El diésel para el generador de la clínica y la ruta mensual de diálisis está en la orilla de enfrente. Los contratos amarran los camiones pesados a un calendario de acarreo fijo escrito para décadas más frías. Los deshielos ahora comen días en ambos extremos de la temporada. Un paciente que necesita tratamiento dos veces por semana no puede esperar al próximo hielo que quizá no aguante. Las barcazas están a meses. Los chárter aéreos vuelan el presupuesto de salud en una sola tarde. El sistema aún planifica como si el invierno fuera un puente fiable. ¿Quién rediseña la temporada de suministro para que el cuidado no desaparezca cuando el hielo se ablanda temprano?
 
 ---
 ### `rural-roads--fuel-and-dialysis-miss-the-thaw-window.places.0`
 
 **EN:** Peerless Lake ice spur, northern Alberta
 
-**ES:** Espolón de hielo del lago Peerless, norte de Alberta
+**ES:** Peerless Lake ice spur, norte de Alberta
 
 ---
 ### `rural-roads--fuel-and-dialysis-miss-the-thaw-window.pressureKeys.0`
@@ -7627,7 +7627,7 @@ La directora de salud, Leanne Cardinal, observa cómo el arado del contratista r
 
 **EN:** Harvest trucks stop at the broken bailey
 
-**ES:** Los camiones recolectores se detienen en el patio roto
+**ES:** Los camiones de cosecha se detienen en el Bailey roto
 
 ---
 ### `rural-roads--harvest-trucks-stop-at-the-broken-bailey.stakeholder`
@@ -7645,14 +7645,14 @@ Rosa backs the first pickup to the bailey at dawn. Green cherry still wet with n
 
 **ES:**
 
-Rosa hace retroceder la primera camioneta hasta el patio al amanecer. Cereza verde todavía mojada por la noche. La plataforma de acero que alguna vez requería tres camiones por hora ahora se inclina hacia el barranco. Un plato cortado en la última tormenta. Apaga el motor y escucha el riachuelo. Los compradores esperan en la otra orilla con balanzas y dinero en efectivo. Detrás de ella, los miembros de la cooperativa apilan sacos que se estropearán por la tarde si se quedan. El jefe de obras municipal llega con un portapapeles y sin grúa. Las líneas presupuestarias todavía favorecen el ramal pavimentado que sirve al albergue turístico valle abajo. Las piezas de repuesto se encuentran en un depósito a dos colinas de distancia y se facturan a un contratista que sólo trabaja cuando la carretera ya está abierta. El lote de Rosa pierde calificación mientras el papeleo espera un clima seco que nunca llega. ¿Quién rediseña un cruce de tierras altas para que la cosecha pueda avanzar antes de que gire la fruta?
+Rosa hace marcha atrás con el primer pickup hasta el Bailey al alba. Cereza verde aún mojada de la noche. El tablero de acero que antes aguantaba tres camiones por hora ahora se escora hacia el barranco. Una plancha se cizalló en la última tormenta. Apaga el motor y escucha el arroyo. Los compradores esperan en la orilla de enfrente con básculas y efectivo. Detrás de ella, miembros de la cooperativa apilan sacos que se agriarán por la tarde si se quedan. El jefe de obras municipales llega con un portapapeles y sin grúa. Las partidas presupuestarias aún favorecen el ramal asfaltado que sirve al lodge turístico valle abajo. Los recambios están en un depósito a dos crestas, facturados a un contratista que solo trabaja cuando la carretera ya está abierta. El lote de Rosa pierde grado mientras el papeleo espera un tiempo seco que nunca acaba de llegar. ¿Quién rediseña un cruce de altiplano para que la cosecha pueda moverse antes de que la fruta se eche a perder?
 
 ---
 ### `rural-roads--harvest-trucks-stop-at-the-broken-bailey.places.0`
 
 **EN:** Cajón Seco bridge spur, Chiapas highlands
 
-**ES:** Espolón del puente Cajón Seco, Sierra de Chiapas
+**ES:** Cajón Seco bridge spur, altiplano de Chiapas
 
 ---
 ### `rural-roads--harvest-trucks-stop-at-the-broken-bailey.pressureKeys.0`
@@ -7689,7 +7689,7 @@ Rosa hace retroceder la primera camioneta hasta el patio al amanecer. Cereza ver
 
 **EN:** Boarding-school head and herder parents’ association
 
-**ES:** Director de internado y asociación de padres de pastores
+**ES:** Directora del internado y asociación de padres pastores
 
 ---
 ### `rural-roads--winter-school-bus-never-clears-the-dune-line.scene`
@@ -7700,21 +7700,21 @@ Head teacher Batbold stands at the boarding gate with a thermos and a roster. Th
 
 **ES:**
 
-El director Batbold se encuentra en la puerta de embarque con un termo y una lista. El autobús es una forma oscura atrapada más allá de la primera línea de dunas. El viento ha llenado la pista abarrotada durante la noche. Los padres pastores comunican por radio que los niños están a salvo en el campamento de ger, pero las lecciones de la semana no comienzan. El presupuesto de la niveladora del año pasado se destinó al ramal de la mina que mantiene el mineral en movimiento. La vía escolar suave sigue siendo “temporal” en el mapa del distrito. Los profesores que viajan desde la ciudad pierden tres días seguidos y empiezan a buscar puestos más cerca de la carretera pavimentada. Batbold marca otra columna vacía en el libro de asistencia. El desierto no espera un mejor alineamiento. ¿Quién construye una ruta invernal que trate el aula de un niño tan en serio como un camión de transporte?
+La directora Batbold está en la puerta de embarque con un termo y una lista. El autobús es una forma oscura atascada más allá de la primera línea de dunas. El viento ha llenado la huella compactada durante la noche. Los padres pastores radio que los niños están a salvo en el campamento de ger, pero las lecciones de la semana no empezarán. El presupuesto de la niveladora del año pasado se fue al ramal de la mina que mantiene el mineral en movimiento. La pista escolar blanda sigue «temporal» en el mapa del distrito. Los maestros que van y vienen del pueblo pierden tres días seguidos y empiezan a mirar puestos más cerca de la carretera asfaltada. Batbold marca otra columna vacía en el libro de asistencia. El desierto no espera un mejor trazado. ¿Quién construye una ruta de invierno que tome el aula de un niño tan en serio como un camión de acarreo?
 
 ---
 ### `rural-roads--winter-school-bus-never-clears-the-dune-line.places.0`
 
 **EN:** Ömnögovi winter school trace, South Gobi
 
-**ES:** Trazo de la escuela de invierno de Ömnögovi, sur de Gobi
+**ES:** Ömnögovi winter school trace, Gobi Sur
 
 ---
 ### `rural-roads--winter-school-bus-never-clears-the-dune-line.pressureKeys.0`
 
 **EN:** Missed Class
 
-**ES:** clase perdida
+**ES:** Clase perdida
 
 ---
 ### `rural-roads--winter-school-bus-never-clears-the-dune-line.pressureKeys.1`
@@ -7755,21 +7755,21 @@ Shift change hits and Devi looks for the stall behind the fuel bay. The light is
 
 **ES:**
 
-Se produce el cambio de turno y Devi busca el puesto detrás del compartimento de combustible. La luz vuelve a estar muerta. La cerradura permanece abierta porque el último equipo la pateó cuando la puerta se atascó. Los cargadores nocturnos se sostienen unos a otros cuando pueden. Cuando no pueden, van detrás de la línea de camiones cisterna. Los insectos intestinales se mueven a través del círculo de ayuda mutua cada mes húmedo. El contrato de arrendamiento del patio coloca los baños en el lado de la tinta del inquilino, y la compañía de transporte subarrienda la bahía a tres equipos que dividen un solo bloque defectuoso. La dirección cuenta los camiones, no los puestos. Un cargador que abandona la plataforma para caminar hasta la garita de entrada pierde la bonificación de carga. Devi se enjuaga las manos con un bidón que ella misma compró. El círculo puede abastecerse de jabón y mantener una rotación clave. No puede reescribir un contrato de arrendamiento que trate el saneamiento como gastos generales opcionales en el transporte nocturno. ¿Quién diseña el patio para que el cuerpo que mueve la carga pueda hacer sus necesidades sin pedir reloj?
+Llega el cambio de turno y Devi busca el cubículo detrás de la bahía de combustible. La luz está muerta otra vez. El candado cuelga abierto porque el último equipo lo pateó cuando la puerta se atascó. Las cargadoras nocturnas se lo guardan unas a otras cuando pueden. Cuando no pueden, van detrás de la línea de cisternas. Los gérmenes intestinales recorren el círculo de ayuda mutua cada mes húmedo. El arrendamiento del patio pone los baños del lado del inquilino en el contrato, y la empresa de flete subarrienda la bahía a tres cuadrillas que se reparten un solo bloque que falla. La dirección cuenta camiones, no cubículos. Una cargadora que deja la plataforma para ir a la garita pierde la prima de carga. Devi se enjuaga las manos con un bidón que compró ella. El círculo puede abastecer jabón y llevar un turno de llaves. No puede reescribir un arrendamiento que trata el saneamiento como gasto opcional en el flete nocturno. ¿Quién diseña el patio para que el cuerpo que mueve la carga pueda aliviarse sin rogarle al reloj?
 
 ---
 ### `sanitation--behind-the-fuel-bay-is-the-toilet.places.0`
 
 **EN:** Crossridge Freight Yard
 
-**ES:** Patio de carga de Crossridge
+**ES:** Crossridge Freight Yard
 
 ---
 ### `sanitation--behind-the-fuel-bay-is-the-toilet.pressureKeys.0`
 
 **EN:** Gut Bugs
 
-**ES:** Insectos intestinales
+**ES:** Gérmenes intestinales
 
 ---
 ### `sanitation--behind-the-fuel-bay-is-the-toilet.pressureKeys.1`
@@ -7799,7 +7799,7 @@ Se produce el cambio de turno y Devi busca el puesto detrás del compartimento d
 
 **EN:** Parent-teacher hygiene club
 
-**ES:** Club de higiene para padres y profesores.
+**ES:** Club de higiene padres-docentes
 
 ---
 ### `sanitation--latrine-queues-send-girls-home-by-noon.scene`
@@ -7810,21 +7810,21 @@ At first bell, Amina stands outside the girls' block with her younger sister's h
 
 **ES:**
 
-Al primer timbre, Amina se encuentra afuera del bloque de niñas con la mano de su hermana menor en la suya. La línea ya pasa por el bidón de agua. Funcionan dos puestos. La tercera puerta está atada con alambre. A media mañana la cola no se había movido lo suficiente. Las niñas salen de la clase en parejas y luego se dirigen hacia la puerta cuando la espera se roba la lección. Los pozos fueron cavados para una escuela más pequeña. La inscripción se duplicó cuando se abrió el camino de acceso, y el distrito todavía presupuesta la eliminación de lodo una vez por trimestre. El camión aspirador llega tarde o no llega. Los profesores marcan las ausencias. Las madres mantienen a sus hijas en casa después de que un virus estomacal se propaga en un grado. La hermana de Amina se pierde dos días seguidos de aritmética porque no quiere arriesgarse al puesto. El club de higiene puede limpiar asientos y publicar listas de turnos. No puede vaciar lo que el calendario se niega a financiar. ¿Quién diseña el saneamiento escolar para el momento en que un niño elige entre la dignidad y un pupitre?
+Al primer timbre, Amina está fuera del bloque de niñas con la mano de su hermana menor en la suya. La fila ya rodea el bidón de agua. Dos cubículos funcionan. La tercera puerta está atada con alambre. A media mañana la cola no se ha movido lo bastante. Las chicas salen de clase en parejas y luego se deslizan hacia la verja cuando la espera roba la lección. Los pozos se cavaron para una escuela más pequeña. La matrícula se duplicó cuando se abrió el camino de acceso, y el distrito aún presupuesta el vaciado una vez por trimestre. El camión de vacío llega tarde o no llega. Las maestras marcan ausencias. Las madres dejan a las hijas en casa después de que un virus de estómago se extiende por un grado. La hermana de Amina pierde aritmética dos días seguidos porque no arriesgará el cubículo. El club de higiene puede fregar asientos y publicar turnos de servicio. No puede vaciar lo que el calendario se niega a financiar. ¿Quién diseña el saneamiento escolar para la hora en que un niño elige entre dignidad y pupitre?
 
 ---
 ### `sanitation--latrine-queues-send-girls-home-by-noon.places.0`
 
 **EN:** Sunwell Primary Compound
 
-**ES:** Compuesto primario de la Fuente del Sol
+**ES:** Sunwell Primary Compound
 
 ---
 ### `sanitation--latrine-queues-send-girls-home-by-noon.pressureKeys.0`
 
 **EN:** Sick Kids
 
-**ES:** niños enfermos
+**ES:** Niños enfermos
 
 ---
 ### `sanitation--latrine-queues-send-girls-home-by-noon.pressureKeys.1`
@@ -7847,14 +7847,14 @@ Al primer timbre, Amina se encuentra afuera del bloque de niñas con la mano de 
 
 **EN:** Sewage owns the only stair out
 
-**ES:** Las aguas residuales son propietarias de la única escalera de salida.
+**ES:** Las aguas residuales poseen la única escalera de salida
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.stakeholder`
 
 **EN:** Stair-block residents' union
 
-**ES:** Sindicato de residentes de escaleras
+**ES:** Unión de residentes del bloque de escaleras
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.scene`
@@ -7865,21 +7865,21 @@ Rafi carries his mother down the shared stair one careful step at a time. Gray w
 
 **ES:**
 
-Rafi baja con cuidado a su madre por la escalera compartida, paso a paso. El agua gris cubre las huellas. El retroceso de anoche dejó una mancha que huele a jabón y desechos. La única ruta seca para salir de las habitaciones superiores es este tramo estrecho, y se inunda cada vez que el canal de abajo se obstruye. Los propietarios cobran el alquiler por habitación y tratan el desagüe abierto como un problema público. Parchan paredes. No reconstruyen la línea que pasa por debajo del corte. Los residentes vierten cubos en el mismo canal después del anochecer porque la letrina compartida se llena por la noche. Las llagas en la piel florecen en los tobillos que rozan la barandilla mojada. Cuando la madre de Rafi falla, el sindicato la lleva a una clínica a una hora de distancia. El canal sigue recogiendo los residuos del asentamiento porque no hay escritura de cesión de la tubería, y el retraso es más barato que un nuevo tramo. ¿Quién diseña la escalera cuando las aguas residuales son el límite del propietario y la única salida para los residentes?
+Rafi baja a su madre por la escalera compartida, un paso cuidadoso cada vez. El agua gris cubre los peldaños. El reflujo de anoche dejó una película que huele a jabón y residuos. La única ruta seca fuera de las habitaciones de arriba es este tramo estrecho, y se inunda cada vez que el canal de abajo se atasca. Los caseros cobran el alquiler por habitación y tratan el desagüe abierto como un problema público. Parchan paredes. No reconstruyen la línea que corre bajo el corte. Los residentes vierten cubos al mismo canal después del anochecer porque la letrina compartida refluye al atardecer. Llagas en la piel brotan en tobillos que rozan la barandilla mojada. Cuando la madre de Rafi resbala, la unión la lleva a una clínica a una hora de distancia. El canal sigue tomando los residuos del asentamiento porque ningún título asigna la tubería, y el retraso es más barato que un tramo nuevo. ¿Quién diseña la escalera cuando las aguas residuales son el límite del casero y la única salida de los residentes?
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.places.0`
 
 **EN:** Ladder Cut Settlement
 
-**ES:** Acuerdo de corte de escalera
+**ES:** Ladder Cut Settlement
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.pressureKeys.0`
 
 **EN:** Skin Sores
 
-**ES:** llagas en la piel
+**ES:** Llagas en la piel
 
 ---
 ### `sanitation--sewage-owns-the-only-stair-out.pressureKeys.1`
@@ -7909,7 +7909,7 @@ Rafi baja con cuidado a su madre por la escalera compartida, paso a paso. El agu
 
 **EN:** Family caregivers' council
 
-**ES:** consejo de cuidadores familiares
+**ES:** Consejo de cuidadores familiares
 
 ---
 ### `sanitation--the-wing-that-smells-before-breakfast.scene`
@@ -7920,14 +7920,14 @@ Before tray carts roll, Nurse Okonkwo cracks a window in Wing B and still catche
 
 **ES:**
 
-Antes de que empiecen a rodar los carritos de bandejas, la enfermera Okonkwo abre una ventana en el ala B y todavía capta el borde amargo en el pasillo. El señor Salim no caminará hasta el salón social hasta que el ventilador del baño deje de sonar y el piso se seque. La pila retrocede primero en el ala vieja. Las tuberías fueron dimensionadas para menos camas y menos limpiezas. Los recortes de contrato redujeron el trabajo del limpiador nocturno y retrasaron al equipo de varillaje otro cuarto. Las familias notan el olor en las visitas matutinas. Una hija deja de dejar a su padre de la noche a la mañana. Las infecciones aumentan cuando la ropa de cama sucia se queda quieta y los baños compartidos permanecen mojados. El consejo de cuidadores registra cada copia de seguridad con marcas de tiempo y fotografías. La administración responde con un memorando sobre el personal de la agencia y una promesa de volver a licitar las tuberías cuando se abra el ciclo presupuestario. Okonkwo tiene un buen baño para un pasillo completo. ¿Quién diseña plomería para el momento en que una persona mayor necesita un camino limpio más que una hoja de cálculo equilibrada?
+Antes de que rueden los carros de bandejas, la enfermera Okonkwo entreabre una ventana en el ala B y aún capta el filo agrio del pasillo. El Sr. Salim no irá a la sala de día hasta que el ventilador del baño deje de traquetear y el suelo se seque. El bajante refluye primero en el ala vieja. Las tuberías se dimensionaron para menos camas y menos limpiezas. Los recortes de contrato recortaron al limpiador nocturno y retrasaron al equipo de desatasco otro trimestre. Las familias notan el olor en las visitas de la mañana. Una hija deja de dejar a su padre por la noche. Las infecciones suben cuando la ropa sucia se queda y los baños compartidos permanecen mojados. El consejo de cuidadores registra cada reflujo con marcas de tiempo y fotos. La administración responde con un memo sobre personal de agencia y una promesa de volver a licitar la fontanería cuando abra el ciclo presupuestario. Okonkwo tiene un buen baño para todo un pasillo. ¿Quién diseña la fontanería de cuidados para la hora en que un anciano necesita un camino limpio más que una hoja de cálculo equilibrada?
 
 ---
 ### `sanitation--the-wing-that-smells-before-breakfast.places.0`
 
 **EN:** Olive Court Rest Home
 
-**ES:** Casa de descanso Olive Court
+**ES:** Olive Court Rest Home
 
 ---
 ### `sanitation--the-wing-that-smells-before-breakfast.pressureKeys.0`
@@ -7941,7 +7941,7 @@ Antes de que empiecen a rodar los carritos de bandejas, la enfermera Okonkwo abr
 
 **EN:** Backed Pipes
 
-**ES:** Tuberías respaldadas
+**ES:** Tuberías con reflujo
 
 ---
 ### `sanitation--the-wing-that-smells-before-breakfast.pressureKeys.2`
@@ -7957,14 +7957,14 @@ Antes de que empiecen a rodar los carritos de bandejas, la enfermera Okonkwo abr
 
 **EN:** Cash kilns thin the storm belt
 
-**ES:** Los hornos de efectivo adelgazan el cinturón de tormentas
+**ES:** Los hornos de carbón adelgazan el cinturón anti-tormenta
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.stakeholder`
 
 **EN:** Creek-side fishers and kiln workers’ council
 
-**ES:** Consejo de pescadores y trabajadores de hornos de arroyos
+**ES:** Consejo de pescadores de la orilla del arroyo y trabajadores de hornos
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.scene`
@@ -7975,35 +7975,35 @@ Before dawn, Amina rakes the last cool charcoal from her family’s kiln and bag
 
 **ES:**
 
-Antes del amanecer, Amina recoge el último carbón fresco del horno de su familia y lo empaqueta para el camión del mercado. Las bolsas significan las cuotas escolares de este mes. Detrás de ella, la desembocadura del arroyo parece más estrecha que la última temporada de lluvias. Una marea viva avanza tierra adentro más allá de los antiguos marcadores. Las ollas para cangrejos se encuentran en el barro que solía contener raíces jóvenes de manglares. El ayuntamiento todavía paga por bolsa, no por los árboles que quedan en pie. Los equipos de los hornos hacen recortes porque el efectivo llega esta semana y el seguro contra tormentas no. Cada quema de la estación seca borra otra franja que alguna vez ralentizó el aumento. El tío de Amina perdió el cobertizo para su bote el año pasado cuando el agua subió a la orilla durante la noche. Sabe que el próximo gran golpe encontrará menos muro verde entre el arroyo y las casas. El empleado de permisos sella las hojas de corte más rápido que los planos de replantación. ¿Quién diseña una vida que pague hoy sin vender el cinturón que mantiene alejada la tormenta mañana?
+Antes del alba, Amina rastrilla el último carbón frío del horno familiar y lo ensaca para el camión del mercado. Los sacos son las cuotas escolares de este mes. Detrás de ella, la boca del arroyo se ve más delgada que la última temporada húmeda. Una marea viva empuja más tierra adentro que los viejos postes marcadores. Las nasas de cangrejo se asientan en barro que solía sostener raíces jóvenes de manglar. El consejo aún paga por saco, no por el rodal de árboles que quedan en pie. Las cuadrillas de hornos cortan la franja porque el efectivo llega esta semana y el seguro de tormenta no. Cada quema de estación seca borra otra tira que una vez frenó la marejada. El tío de Amina perdió su cobertizo de botes el año pasado cuando el agua subió la orilla de noche. Sabe que el próximo gran golpe encontrará menos muro verde entre el arroyo y las casas. El empleado de permisos sella boletas de tala más rápido que planes de replantación. ¿Quién diseña un sustento que pague hoy sin vender el cinturón que mantiene fuera la tormenta mañana?
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.places.0`
 
 **EN:** Salt Creek Mangrove Fringe
 
-**ES:** Franja de manglares de Salt Creek
+**ES:** Salt Creek Mangrove Fringe
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.pressureKeys.0`
 
 **EN:** Flood water
 
-**ES:** agua de inundación
+**ES:** Agua de inundación
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.pressureKeys.1`
 
 **EN:** Charcoal cash
 
-**ES:** efectivo de carbón
+**ES:** Efectivo del carbón
 
 ---
 ### `short-termism--cash-kilns-thin-the-storm-belt.pressureKeys.2`
 
 **EN:** Permit race
 
-**ES:** carrera de permisos
+**ES:** Carrera de permisos
 
 ---
 ## Seed `short-termism--exam-scores-locked-workshops`
@@ -8030,21 +8030,21 @@ Mr. Okello unlocks the theory wing and leaves the workshop chain in place. Today
 
 **ES:**
 
-El Sr. Okello abre el ala teórica y deja la cadena del taller en su lugar. La clase de hoy analiza exámenes anteriores para el examen de la junta. Los tornos se encuentran bajo cubiertas guardapolvo. El semestre pasado, una votación de la junta de padres congeló los presupuestos de las herramientas para que la escuela pudiera contratar dos entrenadores de exámenes más. Las puntuaciones aumentaron. Los empresarios todavía devuelven a aprendices que no pueden mantener una tolerancia sobre una parte real. El anexo obtiene su subvención según las tasas de aprobación que se publican cada primavera. Las horas de reparación y el stock de metal no aparecen en esa hoja. Ruth, una estudiante de segundo año, puede recitar los símbolos de soldadura y nunca ha trabajado un cordón que aguante la carga. Cuando el inspector de distrito nos visita, las puertas cerradas parecen ordenadas. Cuando una clínica local solicita una reparación de brackets, la tienda permanece cerrada. La madre de Ruth pagó honorarios por un intercambio. El calendario paga las notas. ¿Quién diseña un año escolar que mantenga las manos hábiles del mañana sin matar de hambre el marcador de este año?
+El Sr. Okello abre el ala de teoría y deja la cadena del taller en su sitio. La clase de hoy repasa exámenes viejos para el examen del board. Los tornos están bajo cubiertas antipolvo. El trimestre pasado un voto de la junta de padres congeló los presupuestos de herramientas para que la escuela contratara dos coaches de examen más. Subieron las notas. Los empleadores aún devuelven aprendices que no sostienen una tolerancia en una pieza real. El anexo gana su subvención con tasas de aprobado publicadas cada primavera. Las horas de reparación y el metal en stock no aparecen en esa hoja. Ruth, de segundo año, puede recitar los símbolos de soldadura y nunca ha corrido un cordón que aguante bajo carga. Cuando visita el inspector del distrito, las puertas cerradas se ven ordenadas. Cuando una clínica local pide reparar un soporte, el taller sigue cerrado. La madre de Ruth pagó tasas por un oficio. El calendario paga por las notas. ¿Quién diseña un curso escolar que mantenga hábiles las manos de mañana sin dejar en hambre el marcador de este año?
 
 ---
 ### `short-termism--exam-scores-locked-workshops.places.0`
 
 **EN:** Hillside Polytechnic Annex
 
-**ES:** Anexo Politécnico Hillside
+**ES:** Hillside Polytechnic Annex
 
 ---
 ### `short-termism--exam-scores-locked-workshops.pressureKeys.0`
 
 **EN:** Broken shops
 
-**ES:** Tiendas rotas
+**ES:** Talleres rotos
 
 ---
 ### `short-termism--exam-scores-locked-workshops.pressureKeys.1`
@@ -8085,21 +8085,21 @@ On collection Friday, caretaker Sita chalks another cracked stair tread and stil
 
 **ES:**
 
-El viernes, el viernes, la cuidadora Sita marca con tiza otro escalón agrietado y todavía llama para pedir el alquiler. El rellano del tercer piso se flexiona bajo su zapato. Los inquilinos entregan dinero en efectivo en sobres porque las notificaciones de desalojo llegan más rápido que los equipos de reparación. El agente del propietario transfiere dinero el mismo día para cubrir un préstamo a corto plazo en otra cuadra. Los trabajos de parcheo utilizan la placa más barata que pasará un vistazo rápido. El moho traza los rincones por donde la humedad del canal sube por el yeso. Un niño en el segundo piso falta a la escuela después de una caída con la nariz suelta. El sindicato de inquilinos mantiene un registro fotográfico. Las multas por parches de bricolaje no permitidos son más severas que la multa lenta por trabajos de estructura diferidos. Sita puede nombrar a cada familia detrás de cada puerta. No puede nombrar un fondo que espere escaleras sólidas antes de exigir el alquiler del mes. ¿Quién diseña el flujo de efectivo de la vivienda que mantiene a las personas alojadas sin gastar el edificio?
+El viernes de cobro, la conserje Sita marca con tiza otro peldaño agrietado y aún llama por el alquiler. El rellano del tercer piso cede bajo su zapato. Los inquilinos entregan efectivo en sobres porque los avisos de desahucio llegan antes que las cuadrillas de reparación. El agente del casero transfiere el dinero el mismo día para cubrir un préstamo a corto plazo en otro bloque. Los parches usan el tablero más barato que pase un vistazo rápido. El moho mapea las esquinas donde la humedad del canal sube el yeso. Un niño en el segundo falta a la escuela tras una caída en el canto de peldaño suelto. La unión de inquilinos lleva un registro fotográfico. Las multas por parches DIY sin permiso golpean más duro que la multa lenta por obra estructural aplazada. Sita puede nombrar a cada familia detrás de cada puerta. No puede nombrar un fondo que espere escaleras sanas antes de exigir el alquiler del mes. ¿Quién diseña un flujo de caja de vivienda que mantenga a la gente alojada sin gastarse el edificio debajo de ellos?
 
 ---
 ### `short-termism--rent-due-stairs-failing.places.0`
 
 **EN:** Canal Row Tenements
 
-**ES:** Viviendas de Canal Row
+**ES:** Canal Row Tenements
 
 ---
 ### `short-termism--rent-due-stairs-failing.pressureKeys.0`
 
 **EN:** Mold homes
 
-**ES:** Casas de molde
+**ES:** Viviendas con moho
 
 ---
 ### `short-termism--rent-due-stairs-failing.pressureKeys.1`
@@ -8129,7 +8129,7 @@ El viernes, el viernes, la cuidadora Sita marca con tiza otro escalón agrietado
 
 **EN:** Fen growers’ cooperative
 
-**ES:** Cooperativa de productores de pantanos
+**ES:** Cooperativa de cultivadores del fen
 
 ---
 ### `short-termism--spring-flood-sold-as-dry-fields.scene`
@@ -8140,14 +8140,14 @@ Hari walks the dike at first light and finds the pump still coughing diesel into
 
 **ES:**
 
-Hari camina por el dique con las primeras luces del día y descubre que la bomba todavía echa diésel hacia un campo que ya debería estar firme. Los catálogos de semillas prometían una ventana seca. El empleado del contrato de arrendamiento vendió esa ventana por escrito. La lluvia de la noche a la mañana se posó sobre la turba que se ha adelgazado durante años bajo profundos drenajes que corren con fuerza cada primavera. Los productores abren los surtidores temprano para cumplir con las fechas de contrato de las verduras tempranas. Los greens tempranos pagan. La turba que permanece húmeda por más tiempo sostendría la tierra. Cada secado forzado asienta las camas un poco más. El vecino de Hari perdió un terreno en una esquina debido al agua estancada que ya no drena a la antigua zanja. El oficial de préstamos de la cooperativa verifica los calendarios de cosecha, no las estacas de altura del suelo. Hari puede sentir la esponja del camino bajo sus botas por donde solían circular los carros limpios. La cláusula del contrato de arrendamiento todavía llama a la tierra cultivable sin nombrar lo que extraen las bombas. ¿Quién diseña la paga de una temporada que no gasta el terreno que necesita la próxima temporada?
+Hari camina el dique al primer rayo y encuentra la bomba aún tosiendo diésel a un campo que ya debería estar firme. Los catálogos de semillas prometían una ventana seca. El empleado del arrendamiento vendió esa ventana por escrito. La lluvia nocturna se posó en turba adelgazada durante años bajo drenajes profundos empujados fuerte cada primavera. Los cultivadores abren las bombas temprano para cumplir fechas de contrato de verdes tempranos. Los verdes tempranos pagan. La turba que se queda mojada más tiempo sostendría la tierra. Cada secado forzado asienta un poco más los bancales. El vecino de Hari perdió una parcela de esquina a agua estancada que ya no drena a la vieja línea de zanja. El oficial de préstamos de la cooperativa revisa calendarios de cosecha, no estacas de altura del suelo. Hari siente la esponja del camino bajo las botas donde los carros solían rodar limpios. La cláusula del arrendamiento aún llama arable al suelo sin nombrar lo que quitan las bombas. ¿Quién diseña la paga de una temporada que no gaste el suelo que la siguiente temporada necesita?
 
 ---
 ### `short-termism--spring-flood-sold-as-dry-fields.places.0`
 
 **EN:** Blackwater Fen Allotments
 
-**ES:** Asignaciones de Blackwater Fen
+**ES:** Blackwater Fen Allotments
 
 ---
 ### `short-termism--spring-flood-sold-as-dry-fields.pressureKeys.0`
@@ -8161,7 +8161,7 @@ Hari camina por el dique con las primeras luces del día y descubre que la bomba
 
 **EN:** Pump bills
 
-**ES:** facturas de bomba
+**ES:** Facturas de bomba
 
 ---
 ### `short-termism--spring-flood-sold-as-dry-fields.pressureKeys.2`
@@ -8184,7 +8184,7 @@ Hari camina por el dique con las primeras luces del día y descubre que la bomba
 
 **EN:** Child-rights counselor
 
-**ES:** Consejero de derechos del niño
+**ES:** Consejera de derechos del niño
 
 ---
 ### `slavery--knot-counts-after-midnight.scene`
@@ -8199,18 +8199,18 @@ Meera can offer a shelter bed. She cannot erase a loan that buys silence from pa
 
 **ES:**
 
-La consejera Meera entra en un taller callejero donde las bombillas zumban después de las diez. Un niño llamado Kabir hace nudos en un borde que se enviará como alfombra de lujo. Sus dedos son rápidos. Sus ojos están rojos. El tablero de pedidos todavía muestra dos mil nudos por recorrer.
+La consejera Meera entra en un taller de callejón donde las bombillas zumban después de las diez. Un niño llamado Kabir anuda nudos en un borde que saldrá como alfombra de lujo. Sus dedos son rápidos. Sus ojos están rojos. El tablero de pedidos aún muestra dos mil nudos por hacer.
 
-El contratista sonríe ante la tableta de control diurno y, cuando la furgoneta se marcha, envía a los niños de regreso. Las familias aprovecharon los avances del festival contra el telar. La deuda se encuentra en el libro de la casa, no en la etiqueta de la marca. Si Kabir se detiene, el avance se convierte en una amenaza en la puerta.
+El contratista sonríe para la tableta de auditoría diurna y luego devuelve a los niños cuando se va la furgoneta. Las familias tomaron anticipos de fiesta contra el telar. La deuda está en el libro del hogar, no en la etiqueta de marca. Si Kabir para, el anticipo se vuelve una amenaza en la puerta.
 
-Meera puede ofrecer una cama refugio. No puede borrar un préstamo que compra el silencio de unos padres que temen más a la calle que al turno de noche. La alfombra parece limpia en la sala de exposición. Las horas que lo hicieron no. ¿Quién diseña una cadena de pruebas que sigue al nudo, no a la visita escenificada?
+Meera puede ofrecer una cama de refugio. No puede borrar un préstamo que compra silencio de padres que temen la calle más que el turno de noche. La alfombra se ve limpia en la sala de exposición. Las horas que la hicieron, no. ¿Quién diseña una cadena de prueba que sigue el nudo, no la visita escenificada?
 
 ---
 ### `slavery--knot-counts-after-midnight.places.0`
 
 **EN:** Bhadohi Loom Lanes
 
-**ES:** Carriles de telar Bhadohi
+**ES:** Bhadohi Loom Lanes
 
 ---
 ### `slavery--knot-counts-after-midnight.pressureKeys.0`
@@ -8262,18 +8262,18 @@ Amina tapes Tatu’s strain and sends him home with advice he cannot take. Tomor
 
 **ES:**
 
-La enfermera Amina coloca un taburete plegable al borde de una zanja de cobalto y le indica al siguiente excavador que avance. Un adolescente llamado Tatu baja un saco y se agarra la espalda baja. El dolor es viejo para un cuerpo tan joven. El polvo cubre sus dientes.
+La enfermera Amina coloca un taburete plegable al borde de una zanja de cobalto y hace avanzar al siguiente excavador. Un adolescente llamado Tatu baja un saco y se agarra la espalda baja. El dolor es viejo para un cuerpo tan joven. El polvo le cubre los dientes.
 
-El pago es un vale de papel del jefe de sala, canjeable en un quiosco que recorta la tarifa por “herramientas” y “seguridad”. Sin placa, sin contrato, no hay forma de rechazar un recorte más profundo cuando el camión del comprador está esperando. Los niños se meten en la fila cuando fallan las cuotas escolares. El mineral todavía se mueve.
+El pago es un vale de papel del jefe de foso, canjeable en un quiosco que recorta la tarifa por «herramientas» y «seguridad». Sin placa, sin contrato, sin forma de rechazar un recorte más hondo cuando el camión del comprador espera. Los niños se cuelan en la fila cuando fallan las cuotas escolares. El mineral sigue moviéndose.
 
-Amina graba la tensión de Tatu y lo envía a casa con consejos que no puede seguir. Mañana el sistema de fichas le devolverá la llamada antes del amanecer. Las baterías brillarán en otro lugar. Esta trinchera seguirá llenando sacos de cadáveres que no tienen salida. ¿Quién diseña un camino mineral que le pague al excavador al aire libre, no al jefe en la sombra?
+Amina venda la distensión de Tatu y lo manda a casa con consejos que no puede seguir. Mañana el sistema de vales lo volverá a llamar antes del alba. Las baterías brillarán en otro sitio. Esta zanja seguirá llenando sacos con cuerpos sin salida. ¿Quién diseña una ruta mineral que pague al excavador a la luz, no al jefe a la sombra?
 
 ---
 ### `slavery--ore-sacks-instead-of-schoolbags.places.0`
 
 **EN:** Kolwezi Dig Trenches
 
-**ES:** Zanjas de excavación de Kolwezi
+**ES:** Kolwezi Dig Trenches
 
 ---
 ### `slavery--ore-sacks-instead-of-schoolbags.pressureKeys.0`
@@ -8287,7 +8287,7 @@ Amina graba la tensión de Tatu y lo envía a casa con consejos que no puede seg
 
 **EN:** Chit Pay
 
-**ES:** Pago de cheques
+**ES:** Pago por vales
 
 ---
 ### `slavery--ore-sacks-instead-of-schoolbags.pressureKeys.2`
@@ -8325,18 +8325,18 @@ Som works the next set with a bandage that will not hold. If he jumps at the pie
 
 **ES:**
 
-Antes del amanecer, el médico Arun sube a la borda de un long-tail que todavía huele a diésel y hielo de pescado. Un marinero llamado Som extiende una mano hinchada. El corte es profundo. Salt ya lo ha encontrado. Arun abre su kit en una caja y comienza a limpiar.
+Antes del alba, el sanitario Arun sube la borda de un long-tail que aún huele a diésel y hielo de pescado. Un marinero llamado Som extiende una mano hinchada. El corte es profundo. La sal ya lo ha encontrado. Arun abre su kit en un cajón y empieza a limpiar.
 
-El capitán bloquea la escalera. No hay salida a tierra, dice. El comprador quiere que la bodega esté llena antes del mediodía. El pasaporte de Som está en una bolsa con cierre en la timonera, bajo un candado que la tripulación no puede abrir. Los salarios se deducen de la comida, el combustible y las “tarifas de contratación” que nunca terminan. Cada viaje restablece la deuda un poco más.
+El patrón bloquea la escalera. Sin salida a tierra, dice. El comprador quiere la bodega llena al mediodía. El pasaporte de Som está en una bolsa con cierre en la caseta del timón, bajo un candado que la tripulación no puede abrir. Los salarios se cuentan contra comida, combustible y «tasas de reclutamiento» que nunca terminan. Cada viaje sube un poco más la deuda.
 
-Som trabaja la siguiente serie con una venda que no aguanta. Si salta al muelle, no tiene papel ni nombre que el puerto respete. Arun puede coser una mano. No puede desbloquear una vida ligada a una cuota de captura. ¿Quién diseña una prueba de libertad que viaja con la tripulación y no con el barco?
+Som trabaja el siguiente lance con una venda que no aguantará. Si salta en el muelle, no tiene papel ni nombre que el puerto honre. Arun puede suturar una mano. No puede desbloquear una vida atada a una cuota de captura. ¿Quién diseña una prueba de libertad que viaje con la tripulación, no con el barco?
 
 ---
 ### `slavery--papers-locked-below-the-ice-line.places.0`
 
 **EN:** Ranong Channel Boats
 
-**ES:** Barcos del canal Ranong
+**ES:** Ranong Channel Boats
 
 ---
 ### `slavery--papers-locked-below-the-ice-line.pressureKeys.0`
@@ -8373,7 +8373,7 @@ Som trabaja la siguiente serie con una venda que no aguanta. Si salta al muelle,
 
 **EN:** Plantation school teacher
 
-**ES:** maestro de escuela de plantación
+**ES:** Maestra de la escuela de la plantación
 
 ---
 ### `slavery--the-scale-that-never-zeros-the-loan.scene`
@@ -8388,18 +8388,18 @@ Rina’s brightest pupil, Dewi, falls asleep mid-lesson with sap still on her wr
 
 **ES:**
 
-La profesora Rina marca la asistencia con un teléfono roto bajo el techo de zinc de la escuela del bloque. Sólo nueve niños se sientan en la colchoneta. El resto ya está en las hileras, acarreando fruta suelta porque el pesaje de la mañana fue ligero.
+La maestra Rina marca la asistencia en un teléfono agrietado bajo el techo de zinc de la escuela del bloque. Solo nueve niños se sientan en la estera. El resto ya está en las hileras, acarreando fruta suelta porque el pesaje de la mañana salió bajo.
 
-En el cobertizo, el empleado escribe el peso húmedo con un lápiz y una balanza colocada sobre tablas irregulares. Las familias viven en barracones de la empresa. El alquiler, el arroz y las herramientas vienen como anticipos. El libro de contabilidad nunca se aclara del todo. Los padres que se quejan pierden su litera y la plaza escolar de sus hijos en la misma tarde.
+En el cobertizo, el empleado anota el peso húmedo con un lápiz y una balanza sobre tablas irregulares. Las familias viven en barracas de la compañía. Alquiler, arroz y herramientas llegan como anticipos. El libro mayor nunca se salda del todo. Los padres que se quejan pierden su litera y la plaza escolar del hijo la misma tarde.
 
-La alumna más brillante de Rina, Dewi, se queda dormida en mitad de la lección con savia todavía en sus muñecas. Un objetivo de cosecha es comerse la jornada escolar. La plantación no necesita cerrar una puerta con llave. El préstamo y la escala hacen el trabajo. ¿Quién diseña un registro de cosecha en el que los niños y los maestros puedan confiar cuando el patio es dueño tanto del peso como del techo?
+La alumna más brillante de Rina, Dewi, se duerme a mitad de la lección con savia aún en las muñecas. Un objetivo de cosecha se come el día escolar. La plantación no necesita cerrar una verja. El préstamo y la balanza hacen el trabajo. ¿Quién diseña un registro de cosecha en el que niños y maestras puedan confiar cuando el patio es dueño del peso y del techo?
 
 ---
 ### `slavery--the-scale-that-never-zeros-the-loan.places.0`
 
 **EN:** Sambas Palm Blocks
 
-**ES:** Bloques de palma Sambas
+**ES:** Sambas Palm Blocks
 
 ---
 ### `slavery--the-scale-that-never-zeros-the-loan.pressureKeys.0`
@@ -8413,7 +8413,7 @@ La alumna más brillante de Rina, Dewi, se queda dormida en mitad de la lección
 
 **EN:** Weigh Fraud
 
-**ES:** Pesar fraude
+**ES:** Fraude de pesaje
 
 ---
 ### `slavery--the-scale-that-never-zeros-the-loan.pressureKeys.2`
@@ -8447,14 +8447,14 @@ Amina wipes a newborn's face and hears the wheeze start again under the mosquito
 
 **ES:**
 
-Amina limpia la cara de un recién nacido y oye que el silbido vuelve a empezar bajo el mosquitero. Los padres y los tíos se reúnen en el patio después del anochecer. El quiosco del patio vende té, tiempo aire y cigarrillos sueltos a los hombres que no pueden entrar a la sala. El humo flota bajo los aleros donde las madres esperan las últimas semanas de embarazo. Las visitas nocturnas son la forma en que las familias comparten noticias y dinero. Amina pide al quiosco que se mueva. El vendedor paga a la casa una pequeña tarifa para comprar jabón y aceite para lámparas. Una madre se marcha temprano, con los pulmones apretados y el bebé aún pequeño. Amina puede cerrar una ventana. No puede cerrar el parentesco que financia el estante. ¿Quién diseña una noche de espera en casa que mantenga el parentesco sin enseñar a toser al catre?
+Amina limpia la cara de un recién nacido y oye que el silbido empieza otra vez bajo el mosquitero. Padres y tíos se reúnen en el patio tras el anochecer. El quiosco del patio vende té, saldo de móvil y cigarrillos sueltos a hombres que no pueden entrar en la sala. El humo se cuela bajo los aleros donde las madres esperan las últimas semanas de embarazo. Las visitas nocturnas son cómo las familias comparten noticias y dinero. Amina pide al quiosco que se mueva. El vendedor paga a la casa una pequeña tasa que compra jabón y aceite de lámpara. Una madre se va temprano, pulmones apretados, bebé aún pequeño. Amina puede cerrar una ventana. No puede cerrar el parentesco que financia el estante. ¿Quién diseña una noche de casa de espera que conserve el parentesco sin enseñar a toser a la cuna?
 
 ---
 ### `smoking--courtyard-haze-reaches-the-newborn-cots.places.0`
 
 **EN:** Nairobi Maternity Waiting Home Courtyard
 
-**ES:** Patio de la casa de espera de maternidad de Nairobi
+**ES:** Nairobi Maternity Waiting Home Courtyard
 
 ---
 ### `smoking--courtyard-haze-reaches-the-newborn-cots.pressureKeys.0`
@@ -8484,7 +8484,7 @@ Amina limpia la cara de un recién nacido y oye que el silbido vuelve a empezar 
 
 **EN:** Dock break rooms still billow
 
-**ES:** Las salas de descanso del muelle siguen ondeando
+**ES:** Las salas de descanso del muelle siguen humeando
 
 ---
 ### `smoking--dock-break-rooms-still-billow.stakeholder`
@@ -8502,28 +8502,28 @@ Marc opens the break-room door after a double crane shift and steps into a blue 
 
 **ES:**
 
-Marc abre la puerta de la sala de descanso después de un doble turno de grúa y se adentra en una neblina azul. El extractor suena y pierde. Los hombres trituran colillas en una lata de café porque el astillero todavía paga una parte de la máquina de cigarrillos según el reloj. Las horas extras son el salario real. Los humos marcan la espera entre las escalas de los barcos. Marc registra picos de partículas en una computadora portátil que finalmente compró el sindicato. El estibador con pulmones jóvenes se va temprano, con pocas horas y poco salario. Un memorando de seguridad pide una sala limpia. El contrato de concesión todavía necesita los ingresos por venta para financiar al portero nocturno. Marc puede mover sillas. No puede mover el corte que reabastece la máquina cada lunes. ¿Quién reconstruye el descanso para que el aire no facture dos veces a la tripulación?
+Marc abre la puerta de la sala de descanso tras un doble turno de grúa y entra en una niebla azul. El extractor traquetea y pierde. Los hombres aplastan colillas en una lata de café porque el patio aún cobra una comisión de la máquina de cigarrillos junto al reloj de fichar. Las horas extra son el salario real. Los cigarros marcan la espera entre llamadas de barcos. Marc registra picos de partículas en un terminal de mano que el sindicato por fin compró. El estibador de pulmones jóvenes se va temprano, corto de horas, corto de paga. Un memo de seguridad pide una sala limpia. El contrato de concesión aún necesita los ingresos de venta para financiar al portero nocturno. Marc puede mover sillas. No puede mover la comisión que reabastece la máquina cada lunes. ¿Quién reconstruye el descanso para que el aire no cobre dos veces a la tripulación?
 
 ---
 ### `smoking--dock-break-rooms-still-billow.places.0`
 
 **EN:** Marseille Fos Container Break Yard
 
-**ES:** Patio de descanso de contenedores de Marsella Fos
+**ES:** Marseille Fos Container Break Yard
 
 ---
 ### `smoking--dock-break-rooms-still-billow.pressureKeys.0`
 
 **EN:** Dirty Air
 
-**ES:** aire sucio
+**ES:** Aire sucio
 
 ---
 ### `smoking--dock-break-rooms-still-billow.pressureKeys.1`
 
 **EN:** Vending Cut
 
-**ES:** Corte de venta
+**ES:** Comisión de venta
 
 ---
 ### `smoking--dock-break-rooms-still-billow.pressureKeys.2`
@@ -8539,14 +8539,14 @@ Marc abre la puerta de la sala de descanso después de un doble turno de grúa y
 
 **EN:** Snack carts sell the first drag
 
-**ES:** Los carritos de bocadillos venden el primer trago
+**ES:** Los carritos de snacks venden la primera calada
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.stakeholder`
 
 **EN:** Parent-teacher health board
 
-**ES:** junta de salud de padres y maestros
+**ES:** Junta de salud padres-docentes
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.scene`
@@ -8557,28 +8557,28 @@ Lan waits at the school gate with her son's inhaler in her fist. The snack strip
 
 **ES:**
 
-Lan espera en la puerta de la escuela con el inhalador de su hijo en el puño. La tira de bocadillos se despierta antes de que suene la campana. Los carros abiertos con pan, té y palitos individuales se venden más baratos que los dulces. Los niños se agrupan donde la sombra golpea la pared. Un maestro confisca un palo. A la hora del almuerzo aparecen tres más. El alquiler de la puerta es en efectivo los viernes, y el margen del tabaco mantiene los carritos en su lugar cuando caen las ventas de fideos. Los padres de la junta de salud colocan un cartel de prohibido fumar. Los carros simplemente avanzan dos metros a lo largo de la valla. El hijo de Lan comienza a tener una tos seca que lo sigue hasta las matemáticas. Ella puede acompañarlo más allá del Strip. No puede acompañar a todos sus compañeros de clase más allá del alquiler que lo abastece. ¿Quién diseña un medio de vida en la puerta que no reclute al primer arrastre?
+Lan espera en la verja del colegio con el inhalador de su hijo en el puño. La franja de snacks despierta antes del timbre. Los carritos abren con pan, té y cigarrillos sueltos más baratos que los dulces. Los chicos se agrupan donde la sombra da en el muro. Un maestro confisca un cigarrillo. A la hora de comer aparecen tres más. El alquiler de la verja es en efectivo el viernes, y el margen del tabaco mantiene los carritos cuando caen las ventas de fideos. Los padres de la junta de salud cuelgan un cartel de no fumar. Los carritos solo ruedan dos metros a lo largo de la valla. El hijo de Lan empieza una tos seca que lo sigue a mates. Ella puede llevarlo más allá de la franja. No puede llevar a cada compañero más allá del alquiler que la abastece. ¿Quién diseña un sustento de verja que no reclute la primera calada?
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.places.0`
 
 **EN:** Hanoi Secondary Gate Snack Strip
 
-**ES:** Tira de refrigerios en la puerta secundaria de Hanoi
+**ES:** Hanoi Secondary Gate Snack Strip
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.pressureKeys.0`
 
 **EN:** Kids Coughing
 
-**ES:** niños tosiendo
+**ES:** Niños tosiendo
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.pressureKeys.1`
 
 **EN:** Single Sticks
 
-**ES:** Palos individuales
+**ES:** Cigarrillos sueltos
 
 ---
 ### `smoking--snack-carts-sell-the-first-drag.pressureKeys.2`
@@ -8594,14 +8594,14 @@ Lan espera en la puerta de la escuela con el inhalador de su hijo en el puño. L
 
 **EN:** The gate line runs on shared packs
 
-**ES:** La línea de puerta se ejecuta en paquetes compartidos.
+**ES:** La fila de la puerta funciona con cajetillas compartidas
 
 ---
 ### `smoking--the-gate-line-runs-on-shared-packs.stakeholder`
 
 **EN:** Plant occupational nurse collective
 
-**ES:** Colectivo de enfermeras ocupacionales de planta
+**ES:** Colectivo de enfermeras laborales de la fábrica
 
 ---
 ### `smoking--the-gate-line-runs-on-shared-packs.scene`
@@ -8612,14 +8612,14 @@ Rosa clocks the line at Gate 7 before the second shift horn. Women pass a single
 
 **ES:**
 
-Rosa marca la cola en la puerta 7 antes de que suene la bocina del segundo turno. Las mujeres pasan un solo paquete por la cadena para que nadie queme una caja completa antes del día de pago. La estación de enfermería de la planta registra otra semana de apreturas en el pecho y horas perdidas en el piso de soldadura. Un folleto publicado sobre cómo dejar de fumar se despega al sol. Nadie se detiene. El patio de descanso es el único lugar donde los supervisores no cronometran los viajes al baño, y el quiosco fuera de la cerca vende cajas de cartón más baratas que los parches en la clínica. Los paquetes compartidos mantienen la cola tranquila y el salario por pieza estable. Cuando Rosa lleva a tres mujeres aparte para una revisión pulmonar silenciosa, dos se niegan. Temen más una marca en la hoja de asistencia que la tos. Una técnica junior pierde su ventana de certificación después de una semana de sibilancias. Rosa aún debe despejar el piso para la exportación. ¿Quién rediseña la economía del descanso para que dejar de fumar no cueste el cambio?
+Rosa ficha la fila en la Puerta 7 antes de la bocina del segundo turno. Las mujeres pasan una sola cajetilla por la cadena para que nadie queme un cartón entero antes de la paga. El puesto de enfermería de la fábrica registra otra semana de pechos apretados y horas perdidas en el piso de soldadura. Un folleto de abandono se despega al sol. Nadie para. El patio de descanso es el único sitio donde los supervisores no cronometran los baños, y el quiosco fuera de la valla vende cartones más baratos de lo que la clínica vende parches. Las cajetillas compartidas mantienen la línea calmada y la tarifa a destajo estable. Cuando Rosa aparta a tres mujeres para una revisión discreta de pulmones, dos se niegan. Temen una marca en la hoja de asistencia más que la tos. Una técnica junior pierde su ventana de certificación tras una semana de sibilancias. Rosa aún debe liberar el piso para la exportación. ¿Quién rediseña la economía del descanso para que dejar de fumar no cueste el turno?
 
 ---
 ### `smoking--the-gate-line-runs-on-shared-packs.places.0`
 
 **EN:** Tijuana Maquiladora Gate 7
 
-**ES:** Tijuana Maquiladora Puerta 7
+**ES:** Tijuana Maquiladora Gate 7
 
 ---
 ### `smoking--the-gate-line-runs-on-shared-packs.pressureKeys.0`
@@ -8640,7 +8640,7 @@ Rosa marca la cola en la puerta 7 antes de que suene la bocina del segundo turno
 
 **EN:** Break Culture
 
-**ES:** Romper la cultura
+**ES:** Cultura del descanso
 
 ---
 ## Seed `totalitarianism--compliant-blocks-stay-lit`
@@ -8649,14 +8649,14 @@ Rosa marca la cola en la puerta 7 antes de que suene la bocina del segundo turno
 
 **EN:** Compliant blocks stay lit
 
-**ES:** Los bloques compatibles permanecen encendidos
+**ES:** Los bloques dóciles se quedan encendidos
 
 ---
 ### `totalitarianism--compliant-blocks-stay-lit.stakeholder`
 
 **EN:** Line workers and hardship clerks
 
-**ES:** Trabajadores de línea y empleados en situaciones difíciles
+**ES:** Trabajadores de línea y empleados de penurias
 
 ---
 ### `totalitarianism--compliant-blocks-stay-lit.scene`
@@ -8673,20 +8673,20 @@ Rosa can follow the portal and cut clean. She can bootleg a jumper and risk the 
 
 **ES:**
 
-Rosa, trabajadora de línea, sube al poste de Maple Spur. Abre el recorte local junto al libro. El libro ya no es sólo carga y clima. El portal de puntuación de su teléfono enumera qué porches albergaron grupos de estudio no registrados la semana pasada. Esos metros bajan primero cuando el alimentador se estrecha al anochecer.
+La trabajadora de línea Rosa sube el poste en Maple Spur. Abre el seccionador local según el libro. El libro ya no es solo carga y clima. El portal de puntuación en su teléfono lista qué porches alojaron grupos de estudio no registrados la semana pasada. Esos contadores caen primero cuando el alimentador se aprieta al anochecer.
 
-Empleados de dificultades en el cobertizo procesan boletos de restauración. Un billete se mueve más rápido si los vecinos han presentado suficiente armonía entre sí. La gente aprende a mirar las ventanas. Un cobertizo de herramientas compartido que alguna vez contenía fusibles de repuesto ahora está cerrado. Tres hogares firmaron la misma lista de reparaciones. Eso fue suficiente. El corte es sopa fría y escaleras oscuras. El portal es la razón por la que la oscuridad elige sus direcciones.
+Los empleados de penurias en el cobertizo procesan tickets de restablecimiento. Un ticket avanza más rápido si los vecinos han presentado suficientes confirmaciones de armonía entre sí. La gente aprende a vigilar ventanas. Un cobertizo de herramientas compartido que antes tenía fusibles de repuesto ahora está cerrado. Tres hogares firmaron la misma lista de reparación. Bastó. El apagón es sopa fría y escaleras oscuras. El portal es por qué la oscuridad elige sus direcciones.
 
-El equipo de Rosa todavía sabe cómo aislar un transformador y mantener viva el ala de una clínica. Lo que les falta es una forma de hacerlo sin que el portal registre a quienes estaban juntos en el callejón. El invierno pasado, un empleado restauró un bloque antes de tiempo y perdió las ofertas de turno durante un mes. La confianza se deshilacha de polo a polo. Los niños hacen sus tareas con el teléfono iluminado mientras el lado dócil de la calle mantiene las luces del porche.
+El equipo de Rosa aún sabe aislar un transformador y mantener viva un ala de clínica. Lo que les falta es una forma de hacerlo sin que el portal registre quién se juntó en el callejón. El invierno pasado un empleado restableció un bloque temprano y perdió pujas de turno durante un mes. La confianza se deshilacha de poste a poste. Los niños hacen deberes con el brillo del teléfono mientras el lado dócil de la calle mantiene las luces del porche.
 
-Rosa puede seguir el portal y cortar limpio. Puede contrabandear un jersey y arriesgar a la tripulación. Ninguno de los caminos responde todavía a cómo una aldea comparte electrones sin un sistema de clasificación que recompense el aislamiento. ¿Quién diseña una energía local que dure toda la noche sin que los vecinos sospechen del interruptor?
+Rosa puede seguir el portal y cortar limpio. Puede improvisar un puente y arriesgar al equipo. Ningún camino responde aún cómo un caserío comparte electrones sin un sistema de ranking que premia el aislamiento. ¿Quién diseña energía local que aguante la noche sin hacer de la sospecha vecinal el interruptor?
 
 ---
 ### `totalitarianism--compliant-blocks-stay-lit.places.0`
 
 **EN:** Copperline Grid Hamlet
 
-**ES:** aldea
+**ES:** Copperline Grid Hamlet
 
 ---
 ### `totalitarianism--compliant-blocks-stay-lit.pressureKeys.0`
@@ -8740,27 +8740,27 @@ Nila can dismiss the third hand and fill the tank. She can idle and lose the cat
 
 **ES:**
 
-El capitán Nila amarra en Saltreed con una manguera de achique rota. Su bodega está medio llena de hielo que se está ablandando. El escáner del quiosco de combustible rechaza su llavero. Los registros de Unity muestran que solo dos de sus tres tripulantes se registraron en la sesión informativa del amanecer. El tercero estaba remendando redes con su hermano en un esquife no catalogado. Sin registro completo, sin diésel.
+La patróna Nila amarra en Saltreed con una manguera de sentina rota. Su bodega está medio llena de hielo que se ablanda. El escáner del quiosco de combustible rechaza su llavero. Los Unity Logs muestran que solo dos de sus tres tripulantes ficharon en el briefing del alba. El tercero remendaba redes con su hermano en un esquife no listado. Sin registro completo, sin diésel.
 
-A lo largo del muelle, los bancos de la liga de reparación están medio vacíos. Las piezas solían pasar de mano en mano con una cuenta de tiza. Ahora cada impulsor prestado debe coincidir con una lista de tripulación registrada. Si se pierde el partido, el proveedor se arriesga a una auditoría en el muelle. Los barcos que alguna vez compartieron llamadas meteorológicas se quedan en silencio en el canal abierto. Los cortes de combustible dejan las redes secas en los bastidores. Los troncos siguen produciendo el silencio. Atan amarre, combustible y repuestos a quien aparece en el mismo cuadro oficial.
+A lo largo del muelle, los bancos de la liga de reparación están medio vacíos. Las piezas solían pasar de mano en mano con un conteo a tiza. Ahora cada impulsor prestado debe coincidir con una lista de tripulación registrada. Si no coincide, el chandler arriesga una auditoría en el muelle. Los barcos que antes compartían partes meteorológicos se callan en el canal abierto. Los cortes de combustible dejan las redes secas en los bastidores. Los registros siguen produciendo el silencio. Atan amarre, combustible y repuestos a quien aparece en el mismo marco oficial.
 
-La liga de Nila todavía sabe qué cascos necesitan el mismo tamaño de junta. Un joven marinero espera en el muelle con una brida impresa que podría salvar el día si alguien se atreve a estamparla fuera del tronco. Su tío ya se perdió una temporada tras una marca de deriva del equipo. Las familias se dividen entre barcos, por lo que ningún llavero tiene demasiados nombres.
+La liga de Nila aún sabe qué cascos necesitan el mismo tamaño de junta. Un joven marinero espera en el muelle con una brida impresa que podría salvar el día si alguien se atreve a sellarla fuera del registro. Su tío ya perdió una temporada tras una marca de deriva de tripulación. Las familias se reparten entre barcos para que ningún llavero lleve demasiados nombres.
 
-Nila puede despedir la tercera mano y llenar el tanque. Puede quedarse inactiva y perder la captura. Todavía no puede administrar un área común de reparación que el puerto considera un trabajo legítimo en lugar de un círculo no autorizado. ¿Quién diseña una coordinación en el muelle que mantenga a las tripulaciones enteras y a los motores alimentados sin un tronco que rompa a las mismas manos que trabajan juntas?
+Nila puede despedir la tercera mano y llenar el tanque. Puede hacer ralentí y perder la captura. Aún no puede llevar un común de reparación que el puerto trate como trabajo legítimo en vez de un círculo no sancionado. ¿Quién diseña una coordinación de muelle que mantenga tripulaciones enteras y motores alimentados sin un registro que rompa las mismas manos que tiran juntas?
 
 ---
 ### `totalitarianism--fuel-only-for-the-logged-crew.places.0`
 
 **EN:** Saltreed Fisher Quay
 
-**ES:** Muelle de pescadores de caña salada
+**ES:** Saltreed Fisher Quay
 
 ---
 ### `totalitarianism--fuel-only-for-the-logged-crew.pressureKeys.0`
 
 **EN:** Lost Catch
 
-**ES:** captura perdida
+**ES:** Captura perdida
 
 ---
 ### `totalitarianism--fuel-only-for-the-logged-crew.pressureKeys.1`
@@ -8790,7 +8790,7 @@ Nila puede despedir la tercera mano y llenar el tanque. Puede quedarse inactiva 
 
 **EN:** Vendor mutual-credit association
 
-**ES:** Asociación de crédito mutuo de proveedores
+**ES:** Asociación de crédito mutuo de vendedores
 
 ---
 ### `totalitarianism--no-chant-no-cold-storage.scene`
@@ -8807,20 +8807,20 @@ Kei can chant and keep the motor running. He can stay silent and watch stock die
 
 **ES:**
 
-Antes del amanecer, el vendedor Kei lleva un carrito de verduras hacia Arcade Bay 4. El pestillo del frigorífico está oscuro. La aplicación de permisos muestra un vacío. Se saltó el canto de unidad de ayer por la mañana en la puerta. Sin cánticos, sin horas de frío. La lechuga se marchitará al mediodía en un hielo abierto que no puede permitirse.
+Antes del alba, el vendedor Kei empuja un carrito de verdes hacia Arcade Bay 4. El pestillo del frigorífico está oscuro. La app de permisos muestra un hueco. Se saltó el cántico de unidad de ayer por la mañana en la verja. Sin cántico, sin horas de frío. La lechuga se marchitará al mediodía en hielo abierto que no puede pagar.
 
-A lo largo de la galería, el libro de permisos se actualiza en público. Los puestos se iluminan en verde solo cuando los propietarios registran la asistencia, los lemas aprobados y los nombres de cualquiera que ayudó a descargar. La ayuda de un primo que no figura en la lista se considera una asociación no declarada. La cuota de asociación no es dinero primero. Es una marca que vuelve a congelar el casillero. Los puestos vacíos son lo que ven los compradores. El libro mayor es lo que los vacía.
+A lo largo de la arcada, el libro de permisos se actualiza en público. Los puestos se encienden en verde solo cuando los dueños registran asistencia, eslóganes aprobados y los nombres de quien ayudó a descargar. Ayuda de un primo no listado cuenta como asociación no declarada. La cuota de asociación no es dinero primero. Es una marca que vuelve a congelar el frigorífico. Los puestos vacíos son lo que ven los compradores. El libro es lo que los vacía.
 
-El círculo de crédito mutuo de Kei solía equilibrar la deuda en un cuaderno debajo de las lonas. Ahora incluso el cuaderno es riesgoso. Una cámara que capture a tres proveedores firmando la misma página puede congelarlos a todos. Una viuda dos bahías más abajo ya vendió su báscula después de una semana sin refrigeración. Ella todavía saluda a Kei. Ella ya no está junto a él cuando los inspectores caminan por el pasillo.
+El círculo de crédito mutuo de Kei equilibraba la deuda en un cuaderno bajo las lonas. Ahora hasta el cuaderno es arriesgado. Una cámara que pille a tres vendedores firmando la misma página puede congelarlos a todos. Una viuda dos bahías más abajo ya vendió su báscula tras una semana sin frío. Aún saluda a Kei. Ya no se para a su lado cuando los inspectores recorren el pasillo.
 
-Kei puede cantar y mantener el motor en marcha. Puede permanecer en silencio y ver morir las acciones. Todavía no puede demostrar una ruta de entrega o una nevera compartida sin alimentar un libro de contabilidad que trate cada apretón de manos como un complot. ¿Quién diseña una confianza en el mercado que mantenga los alimentos fríos sin convertir a cada socio en una línea de pedido de lealtad?
+Kei puede cantar y mantener el motor. Puede callar y ver morir el stock. Aún no puede probar una ruta de entrega o un cooler compartido sin alimentar un libro que trata cada apretón de manos como un complot. ¿Quién diseña confianza de mercado que mantenga la comida fría sin convertir a cada socio en una línea de un rol de lealtad?
 
 ---
 ### `totalitarianism--no-chant-no-cold-storage.places.0`
 
 **EN:** Harborlane Produce Arcades
 
-**ES:** Arcades de productos Harborlane
+**ES:** Harborlane Produce Arcades
 
 ---
 ### `totalitarianism--no-chant-no-cold-storage.pressureKeys.0`
@@ -8850,7 +8850,7 @@ Kei puede cantar y mantener el motor en marcha. Puede permanecer en silencio y v
 
 **EN:** The ward docks your household
 
-**ES:** La sala atraca su hogar
+**ES:** El servicio penaliza a tu hogar
 
 ---
 ### `totalitarianism--the-ward-docks-your-household.stakeholder`
@@ -8874,20 +8874,20 @@ If Amira admits anyway, her badge may stop opening the supply closet tomorrow. I
 
 **ES:**
 
-A las 2:14 a. m., la enfermera Amira escanea una pulsera en la sala de maternidad. La pantalla parpadea en rojo. El paciente está estable. La puntuación del hogar no lo es. El mes pasado su hermano faltó a una reunión del bloque. El archivo ahora etiqueta a la familia como No confiable. Amira todavía tiene guantes limpios y una cuna gratis. Lo que no tiene es luz verde para admitir sin la firma de un supervisor. La contraseña nunca llega antes del amanecer.
+A las 2:14 a. m., la enfermera Amira escanea una pulsera en la sala de desborde de maternidad. La pantalla parpadea en rojo. La paciente está estable. La puntuación del hogar no. El mes pasado su hermano faltó a una reunión de bloque. El expediente ahora etiqueta a la familia como No confiable. Amira aún tiene guantes limpios y una cuna libre. Lo que no tiene es luz verde para ingresar sin el contrasigno de un supervisor. El contrasigno nunca llega antes del alba.
 
-En el escritorio de noche, el panel de cuotas de informes funciona. Cada turno debe presentar una cantidad mínima de banderas de lealtad, no presentaciones y notas de actitud. Si no se alcanza la cuota, los puntos de dotación de personal del propio barrio disminuyen. A las enfermeras que no reportan lo suficiente se les retiran las horas extras. Se llama a las enfermeras que sobreprotegen. La cuota no es un cartel. Es la razón por la que la impresora se atasca con los formularios antes que nadie con la gasa.
+En el escritorio nocturno, el tablero de cuotas de informes tictaquea. Cada turno debe presentar un mínimo de banderas de lealtad, no presentados y notas de actitud. Si se pierde la cuota, bajan los puntos de personal de la propia sala. A las enfermeras que infradeclaran se les quitan las horas extra. A las que sobreprotegen las llaman. La cuota no es un cartel. Es la razón por la que la impresora se atasca de formularios antes de que nadie se atasque de gasa.
 
-El círculo de Amira se reúne en la escalera entre rondas. Intercambian qué empleados todavía miran hacia otro lado. Intercambian qué pantallas todavía aceptan una anulación en papel. Intercambian qué familias son una señal de que se les niegan analgésicos. Una nueva madre abajo ya está esperando un antibiótico retrasado. Su dirección se encuentra en un edificio vigilado. El retraso es el daño que la gente siente en el cuerpo. El conductor es la cuota que paga al hospital por el cumplimiento del quirófano más que por las camas vacías llenas de atención.
+El círculo de Amira se reúne en la escalera entre rondas. Intercambian qué empleados aún miran a otro lado. Intercambian qué pantallas aún aceptan un override en papel. Intercambian qué familias están a una bandera de que se les nieguen analgésicos. Abajo una madre nueva ya espera un antibiótico retrasado. Su dirección está en un edificio vigilado. El retraso es el daño que la gente siente en el cuerpo. El motor es la cuota que paga al hospital por teatro de cumplimiento más que por camas vacías llenas de cuidado.
 
-Si Amira lo admite de todos modos, es posible que su placa deje de abrir el armario de suministros mañana. Si envía al paciente a casa, la fiebre vuelve a la misma puerta. ¿Quién diseña una coordinación de la atención que mantenga a las personas con vida sin alimentar la máquina que atraca un hogar para quienes conocen?
+Si Amira ingresa de todos modos, su placa puede dejar de abrir el armario de suministros mañana. Si envía a la paciente a casa, la fiebre vuelve a la misma puerta. ¿Quién diseña una coordinación de cuidados que mantenga a la gente viva sin alimentar la máquina que penaliza un hogar por a quién conoce?
 
 ---
 ### `totalitarianism--the-ward-docks-your-household.places.0`
 
 **EN:** Millbridge Community Hospital
 
-**ES:** Hospital Comunitario de Millbridge
+**ES:** Millbridge Community Hospital
 
 ---
 ### `totalitarianism--the-ward-docks-your-household.pressureKeys.0`
@@ -8935,14 +8935,14 @@ Lila drags a mesh bag of wet wipes and miniature bottles off the morning tide li
 
 **ES:**
 
-Lila arrastra una bolsa de malla con toallitas húmedas y botellas en miniatura fuera de la línea de marea de la mañana antes de que salgan las primeras sillas de playa. Las perlas de champú se le pegan a los guantes. Una toallita rasgada con un monograma está montada sobre la misma espuma. En la escalera de servicio, las amas de llaves reabastecen cada habitación con cajas estampadas con los estándares de la marca: solo plásticos pequeños, sin dispensadores a granel, con el logotipo frente al espejo. La cooperativa que lidera Lila puede limpiar la arena a las nueve. No puede detener el carro que llena los mismos estantes al mediodía. Un pescador de la punta encuentra la tapa de una botella en una red y maldice la franja, no la corriente. El equipo de Lila trabaja turnos dobles después de fines de semana de estadías prolongadas. El manual de la marca todavía llama a los minis una bienvenida exclusiva. ¿Quién diseña una hospitalidad que no entrene a la marea para que se lleve la bienvenida?
+Lila arrastra una bolsa de malla con toallitas húmedas y botellas miniatura de la línea de marea de la mañana antes de que salgan las primeras sillas de playa. Perlas de champú se le pegan a los guantes. Una toallita monogramada rota va en la misma espuma. Arriba por la escalera de servicio, las camareras reponen cada habitación desde cajas estampadas con normas de marca: solo plásticos pequeños, sin dispensadores a granel, logo frente al espejo. La cooperativa que lidera Lila puede limpiar la arena a las nueve. No puede detener el carro que rellena los mismos estantes al mediodía. Un pescador más abajo en la punta encuentra un tapón en una red y maldice la franja, no la corriente. El equipo de Lila hace turnos dobles tras fines de semana de estancias largas. El manual de marca sigue llamando a los minis una bienvenida de firma. ¿Quién diseña una hospitalidad que no entrene a la marea a llevarse la bienvenida?
 
 ---
 ### `waste--linen-that-washes-out-to-sea.places.0`
 
 **EN:** Palm Reach Hotel Strip
 
-**ES:** Franja hotelera de Palm Reach
+**ES:** Palm Reach Hotel Strip
 
 ---
 ### `waste--linen-that-washes-out-to-sea.pressureKeys.0`
@@ -8972,7 +8972,7 @@ Lila arrastra una bolsa de malla con toallitas húmedas y botellas en miniatura 
 
 **EN:** Smoke over Circuit Lane
 
-**ES:** Humo sobre el carril del circuito
+**ES:** Humo sobre Circuit Lane
 
 ---
 ### `waste--smoke-over-circuit-lane.stakeholder`
@@ -8990,21 +8990,21 @@ Rina pries a cracked phone open with a butter knife before the morning tip truck
 
 **ES:**
 
-Rina abre un teléfono roto con un cuchillo de mantequilla antes de que llegue el camión de propinas de la mañana. El tablero está pegado. Los tornillos se esconden debajo de las pegatinas. Necesita el cobre hoy, no la semana que viene. Cuando el cuchillo se resbala, arroja todo el aparato al fuego del callejón que ya humea entre los puestos cerrados. El olor a plástico sube por las escaleras de la vivienda. Un niño del segundo piso empieza a toser dentro de una camiseta del colegio. El vertedero de la ciudad volvió a aumentar la tarifa de entrada el mes pasado. Los dispositivos sellados no pagan nada en su totalidad y el depósito autorizado no acepta chatarra mixta sin un recibo que Rina no tiene. Entonces el carril quema lo que no puede abrir. Los ojos de Rina lloran al mediodía. Su asociación guarda un inhalador compartido en una lata de galletas. Los camiones todavía llegan con teléfonos construidos para no ser desmontados nunca. ¿Quién diseña el camino de desmontaje antes de que el callejón tenga que elegir entre alquiler y aire limpio?
+Rina fuerza un teléfono agrietado con un cuchillo de mantequilla antes de que llegue el camión del vertedero de la mañana. La placa está pegada. Los tornillos se esconden bajo pegatinas. Necesita el cobre hoy, no la semana que viene. Cuando el cuchillo resbala, echa todo el aparato al fuego del callejón que ya humea entre los puestos cerrados. El hedor a plástico sube las escaleras del bloque. Un niño dos pisos arriba empieza a toser en una camisa escolar. El vertedero municipal subió otra vez la tarifa de entrada el mes pasado. Los gadgets sellados no pagan nada enteros, y el patio con licencia no acepta chatarra mixta sin un recibo que Rina no tiene. Así que el callejón quema lo que no puede abrir. Los ojos de Rina lloran al mediodía. Su asociación guarda un inhalador compartido en una lata de galletas. Los camiones siguen llegando con teléfonos hechos para no desmontarse nunca. ¿Quién diseña la ruta de desmontaje antes de que el callejón tenga que elegir entre alquiler y aire limpio?
 
 ---
 ### `waste--smoke-over-circuit-lane.places.0`
 
 **EN:** Circuit Lane Scrap Alleys
 
-**ES:** Callejones de chatarra del carril del circuito
+**ES:** Circuit Lane Scrap Alleys
 
 ---
 ### `waste--smoke-over-circuit-lane.pressureKeys.0`
 
 **EN:** Burn Smoke
 
-**ES:** Quemar humo
+**ES:** Humo de quema
 
 ---
 ### `waste--smoke-over-circuit-lane.pressureKeys.1`
@@ -9018,7 +9018,7 @@ Rina abre un teléfono roto con un cuchillo de mantequilla antes de que llegue e
 
 **EN:** Tip Fees
 
-**ES:** Tarifas de propinas
+**ES:** Tarifas de vertedero
 
 ---
 ## Seed `waste--swollen-packs-behind-the-shed`
@@ -9045,14 +9045,14 @@ Dev rolls a swollen e-bike pack out of the kiosk shade with a stick. The case hi
 
 **ES:**
 
-Dev saca una bicicleta eléctrica hinchada de la sombra del quiosco con un palo. El caso silba. Una mordedura de ácido golpea el fondo de su garganta antes de que pueda alejarse. Los pasajeros todavía hacen cola para realizar cambios a la hora del almuerzo. Detrás del cobertizo, los paquetes de muertos se apoyan en una tienda de lona de plástico que crece cada semana. El reciclador autorizado se encuentra al otro lado de la carretera de circunvalación y cobra por kilo más un recargo por materiales peligrosos que el gremio no puede dividir limpiamente entre doce propietarios de quioscos. Entonces las manadas esperan. La lluvia encuentra una costura. El perro de un vecino cojea después de olfatear el escurrimiento. Dev lleva un registro con tiza en la pared del cobertizo (unidades dentro, unidades atascadas) y la columna atascada gana. Los paquetes baratos todavía llegan sellados, sin etiquetar y vendidos como productos desechables. ¿Quién diseña el circuito de retorno para que una mochila hinchada nunca se convierta en un charco detrás del cobertizo?
+Dev saca un pack hinchado de e-bike de la sombra del quiosco con un palo. La carcasa silba. Un mordisco ácido le pega en la garganta antes de que pueda alejarse. Los ciclistas aún hacen cola para cambios al mediodía. Detrás del cobertizo, packs muertos se apoyan en una tienda de lona plástica que crece cada semana. El reciclador con licencia está al otro lado del anillo y cobra por kilo más un recargo de materiales peligrosos que el gremio no puede repartir limpio entre doce dueños de quiosco. Así que los packs esperan. La lluvia encuentra una costura. El perro de un vecino cojea tras olfatear el escurrido. Dev lleva un conteo a tiza en la pared del cobertizo —unidades dentro, unidades atascadas— y gana la columna atascada. Packs baratos siguen llegando sellados, sin etiqueta y vendidos como autonomía desechable. ¿Quién diseña el bucle de devolución para que un pack hinchado nunca se convierta en un charco detrás del cobertizo?
 
 ---
 ### `waste--swollen-packs-behind-the-shed.places.0`
 
 **EN:** Junction Battery Sheds
 
-**ES:** Cobertizos para baterías de empalme
+**ES:** Junction Battery Sheds
 
 ---
 ### `waste--swollen-packs-behind-the-shed.pressureKeys.0`
@@ -9089,7 +9089,7 @@ Dev saca una bicicleta eléctrica hinchada de la sombra del quiosco con un palo.
 
 **EN:** Student facilities council
 
-**ES:** consejo de instalaciones estudiantiles
+**ES:** Consejo de instalaciones estudiantiles
 
 ---
 ### `waste--trays-stacked-to-the-dorm-vents.scene`
@@ -9100,21 +9100,21 @@ Maya shoulders the back door of Canteen B and freezes. Foam trays stand in tower
 
 **ES:**
 
-Maya se echa al hombro la puerta trasera de la Cantina B y se congela. Las bandejas de espuma se colocan en torres hasta las rejillas de ventilación de los dormitorios. Las moscas se levantan en una sábana oscura cuando cambia la brisa. El servicio de cena terminó hace una hora. La cocina por contrato todavía sirve cada arroz especial en bandejas de un solo uso porque la oferta del proveedor ganó por el costo unitario, no por lo que sale del muelle de carga. Los platos lavables necesitarían una cocina que el contrato de arrendamiento nunca financió. Los estudiantes cierran las ventanas con cinta adhesiva para protegerse del olor. Una estudiante de primer año con asma se salta la cena y come fideos instantáneos fríos en su habitación. El consejo de instalaciones de Maya puede multar la basura en el patio. No puede reescribir el candado de catering sin una cláusula que el tesorero teme abrir. Las bandejas siguen llegando por palés. ¿Quién rediseña la comida para que el respiradero no se convierta en vertedero?
+Maya empuja con el hombro la puerta trasera del Comedor B y se queda quieta. Las bandejas de espuma suben en torres hasta las rejillas de los dormitorios. Las moscas se levantan en una sábana oscura cuando cambia la brisa. El servicio de cena terminó hace una hora. La cocina contratada sigue emplatando cada especial de arroz en bandejas de un solo uso porque la oferta del proveedor ganó por coste unitario, no por lo que sale del muelle de carga. Los platos lavables necesitarían un fregadero que el arrendamiento nunca financió. Los estudiantes tapan las ventanas contra el olor. Una de primer año con asma se salta la cena y come fideos instantáneos fríos en su habitación. El consejo de instalaciones de Maya puede multar la basura en el patio. No puede reescribir el candado de catering sin una cláusula que el administrador teme abrir. Las bandejas siguen llegando por palés. ¿Quién rediseña la comida para que la rejilla no se convierta en el vertedero?
 
 ---
 ### `waste--trays-stacked-to-the-dorm-vents.places.0`
 
 **EN:** Riverside Campus Canteens
 
-**ES:** Comedores del campus de Riverside
+**ES:** Riverside Campus Canteens
 
 ---
 ### `waste--trays-stacked-to-the-dorm-vents.pressureKeys.0`
 
 **EN:** Fly Clouds
 
-**ES:** volar nubes
+**ES:** Nubes de moscas
 
 ---
 ### `waste--trays-stacked-to-the-dorm-vents.pressureKeys.1`
@@ -9137,7 +9137,7 @@ Maya se echa al hombro la puerta trasera de la Cantina B y se congela. Las bande
 
 **EN:** Boil orders never lift at Night Clinic Bore
 
-**ES:** Los pedidos de hervidos nunca aumentan en Night Clinic Bore
+**ES:** Las órdenes de hervir nunca se levantan en Night Clinic Bore
 
 ---
 ### `water--boil-orders-never-lift-at-night-clinic-bore.stakeholder`
@@ -9161,20 +9161,20 @@ What does care design when the clinic’s own water keeps writing the next chart
 
 **ES:**
 
-El Dr. Elías frota buscando una sutura tardía y el grifo tose aire antes de escupir. La orden de hervir en la pared tiene tres semanas. Todavía usa agua embotellada para enjuagar los instrumentos cuando termina el ciclo del esterilizador.
+El Dr. Elías se lava para una sutura tardía y el grifo tose aire antes de escupir. La orden de hervir en la pared tiene tres semanas. Sigue usando agua embotellada para enjuagar instrumentos cuando termina el ciclo del esterilizador.
 
-Detrás de la clínica, el pozo se encuentra a veinte metros de una línea séptica agrietada que el propietario no quiere abrir. Después de fuertes lluvias, las tiras de laboratorio muestran picos de coliformes. El turno de noche sigue trabajando. Los pacientes todavía llegan con heridas que no pueden esperar a que llegue un camión limpio.
+Detrás de la clínica, el pozo está a veinte metros de una línea séptica agrietada que el casero no abrirá. Tras lluvias fuertes, las tiras de laboratorio muestran picos de coliformes. El turno de noche sigue trabajando. Los pacientes siguen llegando con heridas que no pueden esperar un camión limpio.
 
-Una madre en el tribunal paga por dos cajas de jarras selladas que realmente no puede permitirse. Elías registra otra infección en la sala que no puede probar que haya provenido del grifo. Sólo sabe que el patrón regresa cada semana lluviosa.
+Una madre en el banco paga dos cajas de bidones sellados que realmente no puede permitirse. Elías anota otra infección de sala que no puede probar que vino del grifo. Solo sabe que el patrón vuelve cada semana húmeda.
 
-¿Qué diseña el cuidado cuando el propio agua de la clínica sigue escribiendo el siguiente cuadro?
+¿Qué diseña el cuidado cuando el propio agua de la clínica sigue escribiendo el siguiente historial?
 
 ---
 ### `water--boil-orders-never-lift-at-night-clinic-bore.places.0`
 
 **EN:** Night Clinic Bore
 
-**ES:** Agujero de la clínica nocturna
+**ES:** Night Clinic Bore
 
 ---
 ### `water--boil-orders-never-lift-at-night-clinic-bore.pressureKeys.0`
@@ -9195,7 +9195,7 @@ Una madre en el tribunal paga por dos cajas de jarras selladas que realmente no 
 
 **EN:** Bottle Bills
 
-**ES:** billetes de botella
+**ES:** Facturas de botellas
 
 ---
 ## Seed `water--green-film-coats-the-paddy-step-wells`
@@ -9204,7 +9204,7 @@ Una madre en el tribunal paga por dos cajas de jarras selladas que realmente no 
 
 **EN:** Green film coats the Paddy Step Wells
 
-**ES:** Una película verde cubre los pozos Paddy Step
+**ES:** Una película verde cubre los Paddy Step Wells
 
 ---
 ### `water--green-film-coats-the-paddy-step-wells.stakeholder`
@@ -9228,27 +9228,27 @@ How do you keep the well drinkable when the same water must feed the grain that 
 
 **ES:**
 
-Sita se arrodilla en el tercer escalón y coloca una película verde en un vaso de hojalata. El pozo que riega los arrozales inferiores huele dulce y desagradable. Ella inclina la taza. Las algas se adhieren al borde.
+Sita se arrodilla en el tercer escalón y espuma una película verde en una taza de hojalata. El pozo que riega los arrozales bajos huele dulce y mal. Inclina la taza. Las algas se pegan al borde.
 
-Los productores aguas arriba abrieron temprano las bolsas de fertilizante después de una breve lluvia. La escorrentía encontró los viejos canales de piedra antes de que el suelo pudiera contenerla. Los pozos son compartidos, pero el calendario de campo no. Cada guardián guarda su propio turno en la esclusa.
+Los cultivadores río arriba abrieron pronto los sacos de abono tras una lluvia corta. La escorrentía halló los viejos canales de piedra antes de que el suelo la retuviera. Los pozos se comparten; el calendario del campo, no. Cada guardiana defiende su turno en la compuerta.
 
-Al mediodía, el hijo de un vecino está en casa con diarrea. El teléfono de Sita se llena de mensajes sobre quién ensució los escalones. Nadie quiere cortar el próximo paso de nitrógeno. La cosecha todavía tiene que pagar el préstamo.
+Al mediodía el hijo de un vecino está en casa con diarrea. El teléfono de Sita se llena de mensajes sobre quién ensució los escalones. Nadie quiere recortar el siguiente pase de nitrógeno. El cultivo aún tiene que pagar el préstamo.
 
-¿Cómo se puede mantener potable el pozo cuando la misma agua debe alimentar el grano que alimenta al pueblo?
+¿Cómo se mantiene potable el pozo cuando la misma agua debe alimentar el grano que alimenta al pueblo?
 
 ---
 ### `water--green-film-coats-the-paddy-step-wells.places.0`
 
 **EN:** Paddy Step Wells
 
-**ES:** Pozos de arrozal
+**ES:** Paddy Step Wells
 
 ---
 ### `water--green-film-coats-the-paddy-step-wells.pressureKeys.0`
 
 **EN:** Tummy Bugs
 
-**ES:** Insectos estomacales
+**ES:** Gérmenes intestinales
 
 ---
 ### `water--green-film-coats-the-paddy-step-wells.pressureKeys.1`
@@ -9262,7 +9262,7 @@ Al mediodía, el hijo de un vecino está en casa con diarrea. El teléfono de Si
 
 **EN:** Well Fights
 
-**ES:** bien peleas
+**ES:** Peleas por el pozo
 
 ---
 ## Seed `water--guest-pools-win-alley-taps-lose-at-guest-pier`
@@ -9278,7 +9278,7 @@ Al mediodía, el hijo de un vecino está en casa con diarrea. El teléfono de Si
 
 **EN:** Noor, alley cistern steward
 
-**ES:** Noor, mayordomo de cisterna del callejón
+**ES:** Noor, guardiana de la cisterna del callejón
 
 ---
 ### `water--guest-pools-win-alley-taps-lose-at-guest-pier.scene`
@@ -9295,20 +9295,20 @@ Who sets the share when tourist water and household water pull from the same thi
 
 **ES:**
 
-Noor sube la escalera de la cisterna antes del amanecer y golpea la pared del tanque. El eco es hueco. En el callejón de abajo, los vecinos ya colocan cubos bajo un grifo seco. Al otro lado del malecón, todavía hay una fuente de hotel en busca de tumbonas vacías.
+Noor sube la escalera de la cisterna antes del alba y golpea la pared del tanque. El eco es hueco. En el callejón de abajo, los vecinos ya ponen cubos bajo un grifo seco. Al otro lado del malecón, una fuente de hotel sigue corriendo para tumbonas vacías.
 
-Los pozos del muelle responden primero a los contadores de huéspedes. Contratos garantizan presión a las piscinas y torres de lavandería. Cuando el acuífero cae, la línea del callejón se cierra sin previo aviso al público. El cuaderno de bitácora de Noor muestra el mismo recorte cada temporada alta.
+Los pozos del muelle responden primero a los contadores de huéspedes. Los contratos garantizan presión a las piscinas y torres de lavandería. Cuando cae el acuífero, la línea del callejón se cierra sin aviso público. El cuaderno de Noor muestra el mismo corte cada temporada alta.
 
-Su prima espera dos horas por un bidón y luego camina hasta un quiosco que cobra por litro. La sed se convierte en una cola y una tarifa. Los hoteles siguen registrando ocupación plena.
+Su prima espera dos horas por un bidón y luego camina a un quiosco que cobra por litro. La sed se vuelve cola y tarifa. Los hoteles siguen publicando ocupación completa.
 
-¿Quién fija la proporción cuando el agua para turistas y el agua para uso doméstico se extraen de la misma lente delgada debajo del muelle?
+¿Quién fija el reparto cuando el agua turística y el agua doméstica tiran de la misma lente delgada bajo el muelle?
 
 ---
 ### `water--guest-pools-win-alley-taps-lose-at-guest-pier.places.0`
 
 **EN:** Guest Pier
 
-**ES:** Muelle de invitados
+**ES:** Guest Pier
 
 ---
 ### `water--guest-pools-win-alley-taps-lose-at-guest-pier.pressureKeys.0`
@@ -9322,7 +9322,7 @@ Su prima espera dos horas por un bidón y luego camina hasta un quiosco que cobr
 
 **EN:** Well Overdraw
 
-**ES:** Bien sobregirado
+**ES:** Sobreextracción de pozos
 
 ---
 ### `water--guest-pools-win-alley-taps-lose-at-guest-pier.pressureKeys.2`
@@ -9338,14 +9338,14 @@ Su prima espera dos horas por un bidón y luego camina hasta un quiosco que cobr
 
 **EN:** Standpipes sputter brown in Canal Ward
 
-**ES:** Las fuentes de alimentación chisporrotean de color marrón en Canal Ward
+**ES:** Las bocas de riego escupen marrón en Canal Ward
 
 ---
 ### `water--standpipes-sputter-brown-in-canal-ward.stakeholder`
 
 **EN:** Mira, standpipe committee lead
 
-**ES:** Mira, líder del comité de fuente pública
+**ES:** Mira, jefa del comité de bocas de riego
 
 ---
 ### `water--standpipes-sputter-brown-in-canal-ward.scene`
@@ -9362,20 +9362,20 @@ Who designs the pipe and the queue so clean water reaches the jug before it reac
 
 **ES:**
 
-Mira abre el grifo con las primeras luces del día y el agua adquiere el color del té suave. Los niños ya sostienen jarras de plástico en línea torcida. Deja que el primer chorro corra hacia la alcantarilla, luego llena una botella transparente y la levanta hacia el cielo. La nube no se aclara.
+Mira abre la boca de riego al primer rayo y el agua sale color de té flojo. Los niños ya sostienen bidones de plástico en una fila torcida. Deja correr el primer chorro a la cuneta, luego llena una botella clara y la alza al cielo. La nube no se aclara.
 
-A media mañana la presión desciende hasta ser un goteo. Dos cuadras más allá, la bomba de un contratista todavía alimenta una nueva estructura de media altura. La tubería principal que da servicio al pabellón se tendió para una carga menor. En cada estación seca, los constructores recurren primero a las aguas arriba. Los equipos de reparación registran las fugas y luego esperan las piezas que se encuentran en un patio al otro lado de la ciudad.
+A media mañana la presión cae a un hilo. Dos manzanas más allá, la bomba de un contratista aún alimenta la carcasa de un edificio mediano nuevo. La red principal del barrio se tendió para una carga menor. Cada estación seca, los constructores captan primero aguas arriba. Los equipos de reparación anotan las fugas y luego esperan piezas que duermen en un patio al otro lado de la ciudad.
 
-El sobrino de Mira vuelve a faltar a la escuela por calambres estomacales. Lleva un registro con tiza en la junta del comité: días de enfermedad, articulaciones rotas, días desde la última descarga. La placa no mueve el calendario de válvulas.
+El sobrino de Mira falta otra vez al colegio con calambres de estómago. Lleva un conteo a tiza en el tablero del comité: días de baja, juntas rotas, días desde el último enjuague. El tablero no mueve el horario de válvulas.
 
-¿Quién diseña la tubería y la cola para que el agua limpia llegue a la jarra antes que a la grúa?
+¿Quién diseña la tubería y la cola para que el agua limpia llegue al bidón antes que a la grúa?
 
 ---
 ### `water--standpipes-sputter-brown-in-canal-ward.places.0`
 
 **EN:** Canal Ward
 
-**ES:** Barrio del canal
+**ES:** Canal Ward
 
 ---
 ### `water--standpipes-sputter-brown-in-canal-ward.pressureKeys.0`
@@ -9412,7 +9412,7 @@ El sobrino de Mira vuelve a faltar a la escuela por calambres estomacales. Lleva
 
 **EN:** County public health nurse
 
-**ES:** enfermera de salud pública del condado
+**ES:** Enfermera de salud pública del condado
 
 ---
 ### `weather--orange-noon-at-ember-ridge.scene`
@@ -9423,14 +9423,14 @@ Nurse Calder holds a paper mask over a six-year-old’s face while the clinic sk
 
 **ES:**
 
-La enfermera Calder sostiene una máscara de papel sobre la cara de un niño de seis años mientras el tragaluz de la clínica se vuelve de color óxido. Afuera, la cresta es una pared de pinos muertos. La madera que matan los escarabajos permanece sin aclarar a lo largo de kilómetros porque las ofertas de rescate colapsaron y los permisos de quema se estancaron en tres oficinas. Al mediodía, la aplicación de calidad del aire indica peligro y luego deja de actualizarse cuando la torre se queda sin energía. La sala de espera se llena de toses y ojos llorosos. El suministro de nebulizadores de Calder se ha reducido a ocho kits. La esposa de un maderero pregunta por qué el condado todavía permite quemar en días despejados durante la temporada media. Calder sabe que la respuesta es hábito y presupuesto: las cuadrillas limpian las carreteras, no los combustibles, y los propietarios reconstruyen con las mismas canaletas que atrapan las brasas. El humo es el daño que los niños respiran hoy. El conductor es un paisaje cargado de combustible gestionado para el incendio del siglo pasado, que aún produce la siguiente columna. ¿Quién rediseña la atención y la práctica de la tierra en conjunto para que una clínica en Ridge no sea el único pulmón que le queda al condado?
+La enfermera Calder sostiene una mascarilla de papel sobre la cara de un niño de seis años mientras el tragaluz de la clínica se vuelve color óxido. Afuera, la cresta es un muro de pinos muertos. La madera muerta por escarabajos sigue sin aclareo durante kilómetros porque las ofertas de salvamento se derrumbaron y los permisos de quema se atascan en tres oficinas. Al mediodía la app de calidad del aire marca peligroso y luego deja de actualizarse cuando la torre pierde energía. La sala de espera se llena de tos y ojos llorosos. El stock de nebulizadores de Calder baja a ocho kits. La mujer de un maderero pregunta por qué el condado aún permite quemas de pilas en días despejados en temporada intermedia. Calder sabe que la respuesta es hábito y presupuesto: las cuadrillas limpian carreteras, no combustibles de copa, y los dueños reconstruyen con las mismas canaletas que atrapan brasas. El humo es el daño que los niños respiran hoy. El motor es un paisaje cargado de combustible gestionado para el fuego del siglo pasado, que aún produce la siguiente columna. ¿Quién rediseña cuidado y práctica de tierras juntos para que una clínica de cresta no sea el único pulmón que le queda al condado?
 
 ---
 ### `weather--orange-noon-at-ember-ridge.places.0`
 
 **EN:** Ember Ridge
 
-**ES:** Cresta de ascuas
+**ES:** Ember Ridge
 
 ---
 ### `weather--orange-noon-at-ember-ridge.pressureKeys.0`
@@ -9478,14 +9478,14 @@ After the second siren, Tanya Cole counts units with blue tarps from the residen
 
 **ES:**
 
-Después de la segunda sirena, Tanya Cole cuenta las unidades con lonas azules desde el porche del consejo de residentes. Windrow Court se encuentra en el borde abierto de la ciudad, donde los vientos de derecho azotan a toda velocidad. Los amarres de la mitad de las casas son correas originales de los años noventa. El propietario del parque envía por correo avisos sobre zócalos y anclajes, luego aumenta el alquiler del lote cuando fallan las inspecciones. La ráfaga de anoche arrancó el techo del vecino de Tanya y arrojó una silla del porche contra el parabrisas. El gimnasio de la escuela ya les dijo que está lleno. La lista de Tanya tiene catorce nombres y no hay ningún lugar tranquilo donde dormir. Puede presionar para que se establezca un bono para los refugios comunitarios o puede luchar por fondos para mejoras que los propietarios puedan embolsarse sin reducir el riesgo. Metal roto y niños sin dormir son los daños en la corte esta noche. El factor determinante es la ubicación barata y las débiles reglas de amarre que siguen colocando casas livianas en el camino del viento sin las tormentas que ahora exigen. ¿Quién diseña la propiedad, los anclajes y el refugio para que una calle de casas móviles no sea una línea desechable en cada advertencia de clima severo?
+Después de la segunda sirena, Tanya Cole cuenta las unidades con lonas azules desde el porche del consejo de residentes. Windrow Court está en el borde abierto del pueblo, donde los vientos de derecho pegan a pleno. Los amarres de la mitad de las casas son las correas originales de los noventa. El dueño del parque envía avisos sobre faldones y anclajes, luego sube el alquiler del lote el mes en que fallan las inspecciones. La ráfaga de anoche arrancó el techo del vecino de Tanya y lanzó una silla de porche a través de un parabrisas. El gimnasio de la escuela ya les dijo que está lleno. La lista de Tanya tiene catorce nombres sin un sitio tranquilo donde dormir. Puede empujar un bono para refugios comunitarios, o pelear por fondos de mejora que los caseros pueden embolsarse sin bajar el riesgo. Metal rasgado y niños sin sueño son el daño en el parque esta noche. El motor es un emplazamiento barato y reglas de amarre débiles que siguen poniendo casas ligeras en el camino del viento sin el herraje que ahora exigen las tormentas. ¿Quién diseña propiedad, anclajes y refugio para que una calle de casas móviles no sea una línea desechable en cada aviso de tiempo severo?
 
 ---
 ### `weather--sirens-after-the-roof.places.0`
 
 **EN:** Windrow Court
 
-**ES:** Corte de hileras
+**ES:** Windrow Court
 
 ---
 ### `weather--sirens-after-the-roof.pressureKeys.0`
@@ -9533,14 +9533,14 @@ Parish floodplain manager Ellis stands in boot-deep water on what was Mrs. Fonte
 
 **ES:**
 
-Ellis, administrador parroquial de llanuras aluviales, se encuentra con el agua hasta las botas en lo que fue el porche de la señora Fontenot la primavera pasada. El río ha tomado el mismo recodo por tercera vez en seis años. Los sacos de arena del turno de noche se hunden donde la tierra del pozo de préstamo nunca se compacta. Río arriba, una nueva losa de almacén y una zanja de drenaje enderezada arrojan un flujo máximo más rápido de lo que la antigua geometría del dique puede girar. Los mapas de Ellis todavía muestran una línea de cien años trazada cuando la cuenca contenía más pantanos. Las no renovaciones de seguros fueron las primeras en llegar al bloque. Dos familias vuelven a dormir en el instituto. Ellis puede levantar un muro temporal para el viernes, o puede abogar por contratiempos que le cuesten a la base impositiva industrial de la parroquia. El agua en el pasillo es el daño que la gente siente ahora. El motor es el desarrollo y el trabajo de canales que siguen agudizando el pico de inundación hacia la misma curva de viviendas. ¿Qué construyes (y qué te niegas a reconstruir) para que Levee Bend deje de pagar por el mismo error en aguas más altas?
+Ellis, gestor parroquial de llanura de inundación, está con agua hasta las botas en lo que fue el porche de la Sra. Fontenot la primavera pasada. El río ha tomado el mismo recodo por tercera vez en seis años. Los sacos de arena del turno de noche se hunden donde la tierra del préstamo de material nunca se compactó. Río arriba, una nueva losa de almacén y una zanja de drenaje enderezada vierten el caudal punta más rápido de lo que la geometría antigua del dique puede girarlo. Los mapas de Ellis aún muestran una línea de cien años dibujada cuando la cuenca retenía más pantano. Las no renovaciones de seguro golpean primero la manzana. Dos familias duermen otra vez en el instituto. Ellis puede levantar un muro temporal para el viernes, o abogar por retranqueos que cuestan a la base fiscal industrial de la parroquia. El agua en el pasillo es el daño que la gente siente ahora. El motor es el desarrollo y la obra de cauce que siguen agudizando el pico de crecida hacia la misma curva de casas. ¿Qué construyes —y qué te niegas a reconstruir— para que Levee Bend deje de pagar el mismo error con el agua más alta?
 
 ---
 ### `weather--the-river-takes-the-bend-again.places.0`
 
 **EN:** Levee Bend
 
-**ES:** Curva del dique
+**ES:** Levee Bend
 
 ---
 ### `weather--the-river-takes-the-bend-again.pressureKeys.0`
@@ -9577,7 +9577,7 @@ Ellis, administrador parroquial de llanuras aluviales, se encuentra con el agua 
 
 **EN:** Irrigation co-op president
 
-**ES:** presidente de cooperativa de riego
+**ES:** Presidenta de la cooperativa de riego
 
 ---
 ### `weather--when-the-pivot-runs-dry.scene`
@@ -9588,14 +9588,14 @@ At 4:10 a.m., Rosa Mendez climbs the ladder on pivot seven and lays her palm on 
 
 **ES:**
 
-A las 4:10 am, Rosa Méndez sube la escalera del pivote siete y apoya la palma de su mano en la caja de cambios. El metal es genial. El brazo ya debería estar silbando agua a través del milo. No lo es. En la zanja de abajo, el último hilo muere contra el barro agrietado. Su teléfono muestra que la asignación de la cooperativa se redujo nuevamente durante la noche. El acuífero debajo de Drawdown Flats ha estado cayendo un pie por año, sin embargo, el condado todavía valora el agua como si la antigua capa de nieve regresara. Los vecinos siguen añadiendo laterales más largos y bombas más profundas para aprovechar lo que queda. Cada nuevo pozo le roba presión al siguiente. La junta directiva de Rosa se reúne al mediodía. Si vota para dejar inactivo un tercio de los círculos, tres familias no realizarán los pagos del préstamo antes de la cosecha. Si sigue bombeando, los pozos poco profundos del lado este se secarán en agosto. El daño ya está en la cocina: su hermana hierve agua para lavar la ropa y se salta los baños de los niños. El factor sigue girando: reglas de extracción escritas para décadas de lluvias, aplicadas en una cuenca cada vez más escasa. ¿Cómo se rediseñan los derechos y las herramientas de riego para que la cooperativa pueda cultivar alimentos sin extraer lo último del agua de debajo de sus propias casas?
+A las 4:10 a. m., Rosa Méndez sube la escalera del pivote siete y pone la palma en la caja de engranajes. El metal está frío. El brazo ya debería silbar agua sobre el milo. No lo hace. En la zanja de abajo, el último hilo muere contra el barro agrietado. Su teléfono muestra que la asignación de la cooperativa se cortó otra vez durante la noche. El acuífero bajo Drawdown Flats baja un pie al año, y aun así el condado tarifa el agua como si volviera el viejo manto de nieve. Los vecinos siguen añadiendo laterales más largos y bombas más profundas para perseguir lo que queda. Cada pozo nuevo roba presión al siguiente. La junta de Rosa se reúne al mediodía. Si vota por dejar en ralentí un tercio de los círculos, tres familias fallan pagos del préstamo antes de la cosecha. Si sigue bombeando, los pozos domésticos poco profundos del este se secan para agosto. El daño ya está en la cocina: su hermana hierve agua de la colada y se salta los baños de los niños. El motor sigue girando: reglas de extracción escritas para décadas húmedas, aplicadas en una cuenca que se adelgaza. ¿Cómo se rediseñan derechos y herramientas de riego para que la cooperativa cultive comida sin minar la última agua bajo sus propias casas?
 
 ---
 ### `weather--when-the-pivot-runs-dry.places.0`
 
 **EN:** Drawdown Flats
 
-**ES:** Pisos de reducción
+**ES:** Drawdown Flats
 
 ---
 ### `weather--when-the-pivot-runs-dry.pressureKeys.0`
@@ -9643,14 +9643,14 @@ Meera sets the death certificate on the counter and asks for the plot map in her
 
 **ES:**
 
-Meera deja el certificado de defunción sobre el mostrador y pide el mapa de la trama a su nombre. El empleado no levanta la vista. Aprovecha la vieja regla del libro mayor: la transferencia necesita la firma del marido o una orden judicial que lleva años. Su marido murió en las inundaciones de primavera. El campo de arroz todavía alimenta a sus dos hijos. Un primo ya cerca el bund lejano y les dice a los vecinos que la viuda venderá barato. Ha cultivado esa tierra desde que tenía dieciséis años. Sin el título no puede solicitar un préstamo de semillas. Sin el préstamo la próxima siembra se retrasa. El registro todavía se realiza en libros de papel asignados a los cabezas de familia varones porque así es como el distrito codificó la propiedad cuando se excavó el canal. Las mujeres esperan en el banco con carpetas. Los hombres salen con sellos. La hija de Meera pregunta si perderán el árbol de mango en el camino. La respuesta se encuentra en una línea de firma que ninguna mano viva puede llenar. ¿Quién rediseña la escritura para que una mujer que trabaja la tierra pueda conservarla cuando el nombre de la página desaparezca?
+Meera deja el certificado de defunción en el mostrador y pide el mapa de la parcela a su nombre. El empleado no levanta la vista. Toca la vieja regla del libro: la transferencia necesita la firma del marido o una orden judicial que tarda años. Su marido murió en las inundaciones de primavera. El arrozal aún alimenta a sus dos hijos. Un primo ya cerca el dique lejano y dice a los vecinos que la viuda venderá barato. Ha labrado esa tierra desde los dieciséis. Sin el título no puede abrir un préstamo de semillas. Sin el préstamo se resbala la siguiente siembra. El registro sigue en libros de papel indexados a jefes de familia varones porque así codificó el distrito la propiedad cuando se excavó el canal. Mujeres esperan en el banco con carpetas. Hombres salen con sellos. La hija de Meera pregunta si perderán el mango del camino. La respuesta está en una línea de firma que ninguna mano viva puede llenar. ¿Quién rediseña la escritura para que una mujer que trabaja la tierra pueda retenerla cuando el nombre de la página ya no está?
 
 ---
 ### `women--the-deed-still-needs-his-name.places.0`
 
 **EN:** Old Bund Land Registry
 
-**ES:** Antiguo Registro de la Propiedad Bund
+**ES:** Old Bund Land Registry
 
 ---
 ### `women--the-deed-still-needs-his-name.pressureKeys.0`
@@ -9664,7 +9664,7 @@ Meera deja el certificado de defunción sobre el mostrador y pide el mapa de la 
 
 **EN:** Title Block
 
-**ES:** Bloque de título
+**ES:** Bloqueo de título
 
 ---
 ### `women--the-deed-still-needs-his-name.pressureKeys.2`
@@ -9698,14 +9698,14 @@ Nita slides her card across the counter and asks for the implant refill. The cle
 
 **ES:**
 
-Nita desliza su tarjeta por el mostrador y pide la recarga del implante. El secretario saca un formulario con una casilla de consentimiento del cónyuge. Su marido trabaja a dos distritos de distancia y no quiere firmar. La última vez se fue sin atención y perdió tres semanas de salario cuando volvió a sangrar. La partera en la trastienda conoce su historia. La política todavía dirige los métodos de acción prolongada a través del nombre del marido porque el distrito copió un antiguo modelo ministerial y nunca reescribió la cola. Las mujeres que vienen solas reciben una nota de asesoramiento y una sonrisa. No reciben la bandeja. Una vecina susurra que la clínica marca “difícil” en los gráficos cuando las mujeres pujan. El hijo menor de Nita tiene dos años. No puede arriesgarse a otro embarazo y quedarse con el puesto del mercado. Ella está de pie con el formulario sin firmar mientras el reloj corre en la única tarde que pudo cerrar la tienda. ¿Quién diseña el camino del consentimiento para que el cuerpo de una mujer no quede retenido en el escritorio por una firma que no llegará?
+Nita desliza su tarjeta por el mostrador y pide la recarga del implante. El empleado saca un formulario con casilla de consentimiento del cónyuge. Su marido trabaja a dos distritos y no firmará. La última vez se fue sin atención y perdió tres semanas de sueldo cuando volvió el sangrado. La partera de la trastienda conoce su historia. La política aún encamina los métodos de larga duración por el nombre del marido porque el distrito copió una plantilla ministerial antigua y nunca reescribió la cola. Las mujeres que vienen solas reciben una ficha de consejo y una sonrisa. No reciben la bandeja. Una vecina susurra que la clínica marca «difícil» en los historiales cuando las mujeres insisten. El más pequeño de Nita tiene dos años. No puede arriesgar otro embarazo y conservar el puesto del mercado. Se queda con el formulario sin firmar mientras el reloj corre en la única tarde en que pudo cerrar la tienda. ¿Quién diseña la vía de consentimiento para que el cuerpo de una mujer no quede retenido en el mostrador por una firma que no llegará?
 
 ---
 ### `women--the-form-still-wants-his-signature.places.0`
 
 **EN:** Lakeview Family Planning Counter
 
-**ES:** Mostrador de planificación familiar de Lakeview
+**ES:** Lakeview Family Planning Counter
 
 ---
 ### `women--the-form-still-wants-his-signature.pressureKeys.0`
@@ -9753,14 +9753,14 @@ Priya clocks out at 12:40 a.m. and stands under the single working floodlight at
 
 **ES:**
 
-Priya sale a las 12:40 a. m. y se encuentra bajo el único reflector que funciona en la puerta de maternidad. El último transbordador del personal salió a las once. El cronograma todavía supone que alguien la recogerá. Nadie lo hace. Ella revisa el callejón hacia la parada de autobús. Dos scooters al ralentí con el motor bajo. El mes pasado, una colega fue seguida hasta su edificio y renunció la semana siguiente. El hospital coloca un folleto de seguridad junto al reloj. No mueve cuerpos después del anochecer. Los administradores de las salas llenan las listas nocturnas con las enfermeras que viven más lejos porque los turnos diurnos ya los ocupan las personas mayores con antigüedad y automóviles. El guardia de la puerta se encoge de hombros cuando le pregunta sobre una segunda carrera. El combustible está escaso. Los conductores rechazan el circuito tardío sin una paga por riesgos que el presupuesto nunca alcanza. Priya le envía un mensaje de texto a su hermana para que permanezca despierta en la línea hasta llegar a la carretera principal. Le tiemblan las manos al teléfono. Si el equipo nocturno sigue sangrando a la gente, la planta de partos pierde a las únicas manos que conocen el carro de emergencia. ¿Quién diseña el último kilómetro de un turno para que la enfermera que atrapó una vida pueda llegar a casa sin convertirse en la siguiente historia?
+Priya ficha la salida a las 12:40 a. m. y se queda bajo el único foco que funciona en la puerta de maternidad. El último traslado del personal salió a las once. El horario aún supone que alguien la recogerá. Nadie lo hace. Mira el callejón hacia la parada de autobús. Dos scooters al ralentí con el motor bajo. El mes pasado siguieron a una colega hasta su edificio y dimitió a la semana siguiente. El hospital cuelga un folleto de seguridad junto al reloj. No mueve cuerpos tras el anochecer. Los jefes de sala llenan las listas nocturnas con las enfermeras que viven más lejos porque los turnos de día ya los tienen las mayores con antigüedad y coche. El guardia de la puerta se encoge de hombros cuando pregunta por una segunda vuelta. El combustible escasea. Los conductores rechazan el bucle tarde sin plus de riesgo que el presupuesto nunca sostiene. Priya escribe a su hermana para que se quede despierta en la línea hasta la carretera principal. Le tiemblan las manos en el teléfono. Si el equipo de noche sigue sangrando gente, la planta de partos pierde las únicas manos que conocen el carro de parada. ¿Quién diseña el último kilómetro de un turno para que la enfermera que atrapó una vida llegue a casa sin convertirse en la siguiente historia?
 
 ---
 ### `women--the-walk-home-after-midnight.places.0`
 
 **EN:** Riverside Maternity Shift Gate
 
-**ES:** Puerta de turno de maternidad de Riverside
+**ES:** Riverside Maternity Shift Gate
 
 ---
 ### `women--the-walk-home-after-midnight.pressureKeys.0`
@@ -9808,21 +9808,21 @@ Asha lifts her helmet as the shop bell rings at 5:15. The welding bay goes dark.
 
 **ES:**
 
-Asha levanta su casco cuando suena el timbre de la tienda a las 5:15. La zona de soldadura se oscurece. Los aprendices varones se quedan a practicar por la noche porque el guardia nocturno conoce a sus tíos. Le dicen que se vaya con la luz del día. Su trabajo con cuentas está limpio. El instructor lo dice. Aún así, el bloque avanzado de la antorcha está programado para después de la cena, y la lista de puertas no incluye su nombre. En casa, su madre mantiene caliente el taburete de la tienda y dice que la familia la necesita en el mostrador a las seis. La escuela de oficios quiere más mujeres en el patio para los nuevos contratos ferroviarios. El cronograma se redactó en torno a hombres que pueden quedarse hasta tarde sin un segundo turno de atención. Asha falta a las horas de certificación. El contratista contrata de la lista nocturna. Sale del compartimento cerrado y cuenta las semanas que faltan para el examen. Un bloque perdido se convierte en una puerta cerrada. ¿Quién dedica el tiempo de práctica para que la habilidad, y no la hora en que se cierra la puerta, decida quién recibe el boleto?
+Asha levanta el casco cuando suena la campana del taller a las 5:15. La bahía de soldadura se apaga. Los aprendices varones se quedan a practicar por la noche porque el guardia nocturno conoce a sus tíos. A ella le dicen que se vaya con la luz del día. Su cordón de soldadura está limpio. El instructor lo dice. Aun así el bloque avanzado de antorcha está programado después de la cena, y la lista de la puerta no incluye su nombre. En casa su madre mantiene caliente el taburete de la tienda y dice que la familia la necesita en el mostrador a las seis. La escuela de oficios quiere más mujeres en el patio para los nuevos contratos ferroviarios. El horario se escribió en torno a hombres que pueden quedarse tarde sin un segundo turno de cuidados. Asha pierde las horas de certificación. El contratista contrata de la lista nocturna. Sale por la bahía cerrada y cuenta las semanas hasta el examen. Un bloque perdido se convierte en una puerta cerrada. ¿Quién construye tiempo de práctica para que la habilidad, y no la hora en que cierra la reja, decida quién obtiene el ticket?
 
 ---
 ### `women--the-welding-bay-closes-at-dusk.places.0`
 
 **EN:** East Yard Trade School
 
-**ES:** Escuela de Comercio East Yard
+**ES:** East Yard Trade School
 
 ---
 ### `women--the-welding-bay-closes-at-dusk.pressureKeys.0`
 
 **EN:** Skill Block
 
-**ES:** Bloque de habilidades
+**ES:** Bloqueo de habilidad
 
 ---
 ### `women--the-welding-bay-closes-at-dusk.pressureKeys.1`
@@ -9836,7 +9836,7 @@ Asha levanta su casco cuando suena el timbre de la tienda a las 5:15. La zona de
 
 **EN:** Family Pull
 
-**ES:** Tiro familiar
+**ES:** Tirón familiar
 
 ---
 ## Seed `women-stem--night-shuttle-ends-before-her-bench-time`
@@ -9845,7 +9845,7 @@ Asha levanta su casco cuando suena el timbre de la tienda a las 5:15. La zona de
 
 **EN:** Night shuttle ends before her bench time
 
-**ES:** El transporte nocturno termina antes de su hora de banquillo
+**ES:** El traslado nocturno termina antes de su hora de banco
 
 ---
 ### `women-stem--night-shuttle-ends-before-her-bench-time.stakeholder`
@@ -9863,28 +9863,28 @@ Meera locks the calibration jig at 7:40 p.m. and runs for the gate. The last wom
 
 **ES:**
 
-Meera bloquea la plantilla de calibración a las 7:40 p.m. y corre hacia la puerta. El último transbordador exclusivo para mujeres ya está parado con las puertas medio cerradas. Ella da el paso. Su pareja no. El laboratorio permanece abierto hasta las diez para la prueba final de sensores. La ruta a casa no. La seguridad del campus no firmará hojas de salida tardías para mujeres después de que salga el autobús. La regla está escrita como seguridad. En la práctica, reduce las horas en que los bancos, los visores y los kits compartidos están libres. Los chicos de la misma cohorte siguen trabajando bajo las luces fluorescentes. Terminan las pruebas de ruido. Publican las tramas. El grupo de Meera pierde otra noche calificada. La hoja de notas se inclina. El gremio ha contado el patrón durante todo el trimestre. Los laboratorios perdidos se acumulan en carteras más débiles. Las carteras más débiles mantienen a las mujeres fuera de las colocaciones de instrumentación de las que se jacta la politécnica. Un director puede agregar una camioneta más o una cámara más y aun así dejar el diseño real sin consultar. ¿Quién reconstruye el acceso al laboratorio para que la habilidad, y no el último autobús, decida quién termina el trabajo?
+Meera cierra la plantilla de calibración a las 7:40 p. m. y corre hacia la puerta. El último traslado solo para mujeres ya está al ralentí con las puertas a medio cerrar. Ella sube. Su compañera no. El laboratorio sigue abierto hasta las diez para el final de sensores. La ruta a casa no. La seguridad del campus no firmará salidas tardías para mujeres tras la salida del traslado. La regla está escrita como seguridad. En la práctica recorta las horas en que bancos, osciloscopios y kits compartidos están libres. Los chicos de la misma cohorte siguen bajo los fluorescentes. Terminan las pruebas de ruido. Publican los trazados. El grupo de Meera pierde otra noche calificada. La hoja de notas se inclina. El gremio ha contado el patrón todo el trimestre. Los labs perdidos se apilan en portfolios más débiles. Portfolios más débiles mantienen a las mujeres fuera de las colocaciones de instrumentación de las que se jacta el politécnico. Una directora puede añadir una furgoneta o una cámara más y dejar aún el diseño real sin preguntar. ¿Quién reconstruye el acceso al laboratorio para que la habilidad, y no el último autobús, decida quién termina el trabajo?
 
 ---
 ### `women-stem--night-shuttle-ends-before-her-bench-time.places.0`
 
 **EN:** Pune Polytechnic Instrumentation Wing
 
-**ES:** Ala de instrumentación del Politécnico de Pune
+**ES:** Pune Polytechnic Instrumentation Wing
 
 ---
 ### `women-stem--night-shuttle-ends-before-her-bench-time.pressureKeys.0`
 
 **EN:** Missed labs
 
-**ES:** laboratorios perdidos
+**ES:** Laboratorios perdidos
 
 ---
 ### `women-stem--night-shuttle-ends-before-her-bench-time.pressureKeys.1`
 
 **EN:** Last shuttle
 
-**ES:** último transbordador
+**ES:** Último traslado
 
 ---
 ### `women-stem--night-shuttle-ends-before-her-bench-time.pressureKeys.2`
@@ -9918,21 +9918,21 @@ Ama stands at the badge window with her nursing-STEM certificate still warm from
 
 **ES:**
 
-Ama está de pie junto a la ventanilla de la credencial con su certificado de enfermería STEM aún caliente de la impresora. El empleado revisa la lista dos veces. Su nombre no está en la lista del piso de reparación. Sólo el personal codificado como técnicos biomédicos tiene acceso a las máquinas abiertas. En la sala, las bombas de infusión fallan. Los monitores se desvían. Enfermeras como Ama ya solucionan problemas con manuales prestados después de los turnos. El hospital todavía dirige piezas formales, herramientas de torsión y autoridades de aprobación a través de una pista tecnológica dominada por hombres. Esa vía rara vez admite participantes laterales provenientes de enfermería. Puede ver un código de error del ventilador y aun así ser rechazada en la puerta de la bahía. Los colegas se agotan. Abandonan por completo los caminos clínicos STEM. El jefe biomédico puede pedir otra impresora y aún así mantener su habilidad en el lado equivocado de la cerradura. ¿Quién diseña las credenciales para que la persona que mantiene vivo un dispositivo pueda pisar el piso que posee la solución?
+Ama está en la ventanilla de credenciales con su certificado nursing-STEM aún caliente de la impresora. El empleado revisa la lista dos veces. Su nombre no está en el rol del piso de reparación. Solo el personal codificado como técnicos biomédicos tiene acceso a las máquinas abiertas. En la sala, fallan las bombas de infusión. Los monitores se desvían. Enfermeras como Ama ya solucionan con manuales prestados tras los turnos. El hospital aún encamina piezas formales, llaves dinamométricas y firma de autorización por una vía tech dominada por hombres. Esa vía rara vez admite laterales desde enfermería. Puede ver un código de error del ventilador y aun así la rechazan en la puerta de la bahía. Los colegas se queman. Abandonan del todo las vías STEM clínicas. El jefe biomédico puede pedir otra impresora y seguir dejando la habilidad al lado equivocado de la cerradura. ¿Quién diseña credenciales para que quien mantiene vivo un dispositivo pueda pisar el piso que posee la reparación?
 
 ---
 ### `women-stem--repair-floor-badge-never-prints-for-her.places.0`
 
 **EN:** Kumasi Teaching Hospital Biomed Bay
 
-**ES:** Bahía Biomédica del Hospital Universitario de Kumasi
+**ES:** Kumasi Teaching Hospital Biomed Bay
 
 ---
 ### `women-stem--repair-floor-badge-never-prints-for-her.pressureKeys.0`
 
 **EN:** Broken pumps
 
-**ES:** bombas rotas
+**ES:** Bombas rotas
 
 ---
 ### `women-stem--repair-floor-badge-never-prints-for-her.pressureKeys.1`
@@ -9973,14 +9973,14 @@ Rosa scans her card at the haul-truck simulator bay. The screen greets someone e
 
 **ES:**
 
-Rosa escanea su tarjeta en la bahía del simulador de camiones de transporte. La pantalla saluda el nombre de otra persona. Es el hijo de su prima, todavía en la antigua lista de la tripulación. Ha terminado todos los módulos de sensores de IoT que ofrece el depósito. A la cola de entradas no le importa. El software de despacho todavía completa automáticamente los espacios de campo a partir de un archivo de antigüedad masculina. Ese archivo se construyó cuando el foso contaba con un solo tipo de equipo. Los supervisores se encogen de hombros. Dicen que el sistema es justo porque es automático. Las mujeres que pasan los mismos simulacros esperan en días de espera no remunerados. El tablero se llena de apellidos familiares. Las bandas salariales se estancan. Los billetes de sensores subterráneos siguen siendo un libro de contabilidad de hombres en la práctica. La asociación regional puede entrenar a otra cohorte y aun así ver cómo las mujeres certificadas pierden horas frente a una plantilla que no las verá. El jefe de capacitación puede agregar auriculares y aun así dejar la puerta cerrada. ¿Quién rediseña la ruta del billete para que la competencia, y no un archivo de nombres heredado, abra la bahía?
+Rosa escanea su tarjeta en la bahía del simulador de camión de acarreo. La pantalla saluda el nombre de otra persona. Es el hijo de su prima, aún en la lista antigua de cuadrilla. Ha terminado cada módulo de sensores IoT que ofrece el depósito. A la cola de tickets no le importa. El software de despacho sigue rellenando huecos de campo desde un archivo de antigüedad masculina. Ese archivo se construyó cuando el tajo solo tenía un tipo de cuadrilla. Los supervisores se encogen de hombros. Dicen que el sistema es justo porque es automático. Las mujeres que pasan los mismos ejercicios esperan días de espera sin paga. El tablero se llena de apellidos familiares. Las bandas salariales se estancan. Los tickets de sensores subterráneos siguen siendo en la práctica un libro de hombres. La asociación regional puede formar otra cohorte y seguir viendo a mujeres certificadas perder horas ante un roster que no las ve. El jefe de formación puede añadir auriculares y dejar aún la puerta cerrada. ¿Quién rediseña la ruta del ticket para que la competencia, y no un archivo de nombres heredado, abra la bahía?
 
 ---
 ### `women-stem--sensor-tickets-still-list-the-sons.places.0`
 
 **EN:** Antofagasta Copper Training Depot
 
-**ES:** Depósito de Capacitación del Cobre de Antofagasta
+**ES:** Antofagasta Copper Training Depot
 
 ---
 ### `women-stem--sensor-tickets-still-list-the-sons.pressureKeys.0`
@@ -10028,14 +10028,14 @@ Lina pins her robotics bracket sheet to the prep-hall board and waits for the tr
 
 **ES:**
 
-Lina fija su hoja de soporte de robótica al tablero de la sala de preparación y espera al mostrador de viajes. Las finales regionales son dentro de dos semanas. El fondo escolar pagará su asiento sólo si un familiar varón firma como acompañante del autobús nocturno. Su padre trabaja de noche. Ningún tío puede tomarse los días. Los niños del mismo equipo envían los formularios solos y conservan sus espacios. Los entrenadores saben que el código de Lina gana los juegos de práctica. También saben que la regla de los acompañantes se encuentra en el estatuto de seguridad del consejo de padres. Casi nunca se dobla. Las chicas van saliendo de la lista de viajes una por una. Las becas vinculadas a los medalleros se dirigen hacia los estudiantes que pueden moverse. Una construcción brillante permanece en una computadora portátil en Ammán. La arena se llena sin ella. El ayuntamiento puede alquilar otro autobús y aun así dejar la puerta condicionada al nombre de un hombre. ¿Quién diseña los viajes de competición con tanto talento, y no la firma de un acompañante, reclama el asiento?
+Lina fija su hoja del cuadro de robótica al tablero de la sala de prep y espera el mostrador de viajes. Las finales regionales son en dos semanas. El fondo escolar solo pagará su asiento si un pariente varón firma como acompañante del autobús nocturno. Su padre trabaja de noche. Ningún tío puede tomarse los días. Los chicos del mismo equipo entregan formularios solos y conservan sus plazas. Los entrenadores saben que el código de Lina gana los scrimmages. También saben que la regla del acompañante está en la carta de seguridad del consejo de padres. Casi nunca cede. Las chicas caen de la lista de viaje una a una. Las becas ligadas a medalleros derivan hacia quienes pueden moverse. Una build brillante se queda en un portátil en Amán. La arena se llena sin ella. El consejo puede alquilar otro autobús y dejar aún la puerta condicionada al nombre de un hombre. ¿Quién diseña el viaje de competición para que el talento, y no la firma de un acompañante, reclame el asiento?
 
 ---
 ### `women-stem--travel-fund-needs-a-male-chaperone.places.0`
 
 **EN:** Amman STEM Olympiad Prep Hall
 
-**ES:** Sala de preparación para la Olimpiada STEM de Ammán
+**ES:** Amman STEM Olympiad Prep Hall
 
 ---
 ### `women-stem--travel-fund-needs-a-male-chaperone.pressureKeys.0`
@@ -10049,7 +10049,7 @@ Lina fija su hoja de soporte de robótica al tablero de la sala de preparación 
 
 **EN:** Chaperone rule
 
-**ES:** regla del acompañante
+**ES:** Regla del acompañante
 
 ---
 ### `women-stem--travel-fund-needs-a-male-chaperone.pressureKeys.2`

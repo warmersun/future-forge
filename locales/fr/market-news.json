@@ -4,8 +4,8 @@
     "body": "Les puces mémoire sont rares et coûteuses. Les projets informatiques ont besoin de poches plus profondes avant de quitter le laboratoire."
   },
   "ai-datacenter-backlash": {
-    "headline": "Le public divisé sur les centres de données IA",
-    "body": "Les gens ne veulent pas d’un centre de données construit dans leur État. La mise en œuvre de l’IA et du calcul intensif nécessite davantage de volonté politique."
+    "headline": "Opinion divisée sur les centres de données IA",
+    "body": "Personne ne veut un centre de données dans son État. Déployer l'IA et le calcul lourd exige plus de soutien politique."
   },
   "solar-glut": {
     "headline": "La surabondance de panneaux solaires fait baisser les prix",
@@ -13,7 +13,7 @@
   },
   "nuclear-permit-wave": {
     "headline": "Les permis nucléaires progressent plus rapidement",
-    "body": "Un pacte régional rationalise les examens des petits réacteurs. La volonté politique en faveur du nucléaire s’accentue."
+    "body": "Un pacte régional rationalise les examens des petits réacteurs. Le Soutien politique en faveur du nucléaire s’accentue."
   },
   "drone-airspace-clamp": {
     "headline": "Les règles relatives à l'espace aérien des drones se durcissent",
@@ -24,8 +24,8 @@
     "body": "Une guerre des prix en génomique de terrain. Les piles d'agents pathogènes et de biotechnologie coûtent moins d'argent pour résister."
   },
   "biotech-scare": {
-    "headline": "Une fuite en laboratoire effraie les fans des biotechnologies",
-    "body": "Les gros titres dépassent les preuves. La biologie synthétique et les travaux génétiques sont confrontés à un climat politique plus difficile."
+    "headline": "La panique d'une fuite de labo attise la peur du biotech",
+    "body": "Les titres devancent les preuves. La biologie synthétique et le travail génétique affrontent un climat politique plus dur."
   },
   "grid-congestion": {
     "headline": "Augmentation des frais de congestion du réseau",
@@ -37,11 +37,11 @@
   },
   "robot-labor-pushback": {
     "headline": "Les syndicats s’opposent aux robots de soins",
-    "body": "L’automatisation des soins et de la logistique rencontre une résistance organisée. La volonté politique est une ressource rare."
+    "body": "L’automatisation des soins et de la logistique rencontre une résistance organisée. Le Soutien politique est une ressource rare."
   },
   "chip-export-thaw": {
-    "headline": "Les contrôles à l'exportation sont assouplis pour les puces Edge",
-    "body": "Un dégel temporaire. Le prix des kits Edge Computing et IoT baisse pour les projets civiques."
+    "headline": "Assouplissement des contrôles d'export sur les puces edge",
+    "body": "Un dégel temporaire. Kits de calcul edge et IoT baissent pour les projets civiques."
   },
   "privacy-backlash": {
     "headline": "Jeu de surveillance des capteurs",
@@ -56,32 +56,32 @@
     "body": "Les aimants, les batteries et les matériaux avancés coûtent plus cher. Les piles lourdes en matériel le ressentent."
   },
   "climate-fund-surge": {
-    "headline": "Les fonds d’adaptation ouvrent tôt",
-    "body": "Une fenêtre climatique finance les technologies locales de résilience. La volonté politique en faveur des piles vertes s’adoucit."
+    "headline": "Les fonds d'adaptation s'ouvrent plus tôt",
+    "body": "Une fenêtre climat finance la tech de résilience locale. Le soutien politique aux piles vertes se détend."
   },
   "vr-training-fad": {
     "headline": "Les budgets de formation VR réduits",
     "body": "Les entreprises reviennent sur les programmes de casques. Les projets de domaine de liaison ont besoin de plus de capital pour être justifiés."
   },
   "quantum-hype-cycle": {
-    "headline": "Le battage médiatique quantique se refroidit – les pilotes font une pause",
-    "body": "Les investisseurs attendent des niches plus claires. Le travail quantique a besoin de plus de volonté pour maintenir l’intérêt des sponsors."
+    "headline": "Le battage médiatique quantique se refroidit — les Pilots font une pause",
+    "body": "Les investisseurs attendent des niches plus claires. Le travail quantique a besoin de plus de Soutien pour maintenir l’intérêt des sponsors."
   },
   "community-broadband": {
     "headline": "Le haut débit communautaire remporte un vote",
     "body": "Les coopératives de fibre optique sont acceptées. Les réseaux et les outils de coordination sont confrontés à moins de frictions politiques."
   },
   "crypto-winter-thaw": {
-    "headline": "Les outils Ledger sont rebaptisés Civic Rails",
+    "headline": "Les outils de registre sont rebaptisés rails civiques",
     "body": "Moins de battage publicitaire, plus d’achats. Les registres de type crypto coûtent un peu moins de capital politique."
   },
   "battery-fire-scare": {
-    "headline": "L’incendie d’un entrepôt domine l’actualité",
-    "body": "Les craintes en matière de sécurité augmentent les coûts d’assurance et de conformité des projets de batteries."
+    "headline": "Un incendie de batteries d'entrepôt domine l'actualité",
+    "body": "Les craintes de sécurité font monter assurance et conformité pour les projets de batteries."
   },
   "wind-siting-wars": {
     "headline": "Les guerres pour le choix des sites éoliens s'intensifient",
-    "body": "Les communautés côtières et de crête luttent contre les nouvelles éoliennes. Les projets éoliens ont besoin de plus de volonté politique."
+    "body": "Les communautés côtières et de crête luttent contre les nouvelles éoliennes. Les projets éoliens ont besoin de plus de Soutien politique."
   },
   "offshore-wind-subsidy": {
     "headline": "Programme de subventions à l'éolien offshore",
@@ -105,7 +105,7 @@
   },
   "nuclear-waste-standoff": {
     "headline": "L’impasse sur les déchets nucléaires revient",
-    "body": "La politique de stockage éclate. Le nucléaire aura davantage besoin, même là où les réacteurs sont les bienvenus sur le papier."
+    "body": "La politique de stockage s’enflamme. Le nucléaire a besoin de plus de Soutien même là où les réacteurs sont bienvenus sur le papier."
   },
   "smr-factory-discount": {
     "headline": "L'usine SMR propose des prix de gros",
@@ -129,7 +129,7 @@
   },
   "copper-shortage": {
     "headline": "La pénurie de cuivre frappe le câblage",
-    "body": "Les câbles et les moteurs deviennent chers. Les budgets en énergie et en matériel de déménagement grimpent."
+    "body": "Les câbles et les moteurs deviennent chers. Les budgets d'énergie et de matériel Moteur grimpent."
   },
   "lithium-price-crash": {
     "headline": "Chute du prix du lithium",
@@ -141,19 +141,19 @@
   },
   "community-solar-law": {
     "headline": "La loi solaire communautaire est adoptée",
-    "body": "Les coopératives solaires partagées ont des règles simples. L’énergie solaire coûtera des gouttes."
+    "body": "Les coopératives solaires partagées obtiennent des règles simples. Le coût du Soutien solaire baisse."
   },
   "night-storage-mandate": {
     "headline": "Mandat de stockage de nuit",
     "body": "De nouvelles règles associent génération et stockage. Le capital des batteries augmente ; la politique solaire s’assouplit un peu."
   },
   "blackout-week": {
-    "headline": "La semaine de panne d'électricité concentre les esprits",
-    "body": "Après des pannes de plusieurs jours, la volonté politique en faveur de l’énergie et des batteries locales augmente."
+    "headline": "Une semaine de black-out clarifie les esprits",
+    "body": "Après des pannes de plusieurs jours, le soutien politique à l'énergie locale et aux batteries monte."
   },
   "ai-chip-tax": {
     "headline": "Taxe d'importation sur les puces IA",
-    "body": "Les accélérateurs spécialisés deviennent de plus en plus chers. L’IA et les piles informatiques ont besoin de plus de capital."
+    "body": "Les accélérateurs spécialisés coûtent plus cher. Les piles IA et calcul ont besoin de plus de capital."
   },
   "teacher-ai-grants": {
     "headline": "Subventions de copilote d’IA pour enseignants",
@@ -161,7 +161,7 @@
   },
   "deepfake-scandal": {
     "headline": "Semaine du scandale Deepfake",
-    "body": "La confiance s’effondre. Les projets d’IA ont besoin de plus de volonté politique pour être soumis à un examen minutieux."
+    "body": "La confiance s’effondre. Les projets d’IA ont besoin de plus de Soutien politique pour passer l’épreuve de contrôle."
   },
   "robot-lease-deals": {
     "headline": "Offres de location de robots en tant que service",
@@ -176,20 +176,20 @@
     "body": "Les robots logistiques surconstruits se répandent sur les marchés civiques à moindre coût."
   },
   "ai-energy-backlash": {
-    "headline": "Contrecoup de la consommation d’énergie de l’IA",
-    "body": "Les communautés associent l’IA à la contrainte énergétique. Le coût de l’IA augmentera."
+    "headline": "Contrecoup sur la consommation d'énergie de l'IA",
+    "body": "Les communautés lient l'IA à la tension sur le réseau. Le coût en Soutien pour l'IA augmente."
   },
   "open-robotics-kit": {
     "headline": "Un kit de robotique ouvert arrive sur les étagères",
     "body": "Les conceptions et pièces partagées réduisent les coûts de construction des robots."
   },
   "automation-tax-talk": {
-    "headline": "Retours sur les discussions fiscales sur l'automatisation",
-    "body": "Les politiciens lancent des taxes sur les robots. Les piles d’automates ont besoin de plus de volonté."
+    "headline": "Retour des débats sur une taxe d'automatisation",
+    "body": "Les politiques évoquent des taxes sur les robots. Les piles Automateur ont besoin de plus de Soutien."
   },
   "ai-safety-fund": {
-    "headline": "Fonds national pour la sécurité de l'IA",
-    "body": "Les outils de conformité et d’évaluation bénéficient de subventions. Le capital de l’IA s’atténue si vous respectez les règles."
+    "headline": "Fonds national de sécurité de l'IA",
+    "body": "Les outils de conformité et d'évaluation sont subventionnés. Le capital IA se détend si vous jouez selon les règles."
   },
   "ev-charger-glut": {
     "headline": "Surabondance de chargeurs pour véhicules électriques",
@@ -197,11 +197,11 @@
   },
   "road-pricing-fight": {
     "headline": "Lutte contre la tarification routière",
-    "body": "Les péages urbains suscitent des protestations. La conduite autonome et les transports ont besoin de plus de volonté."
+    "body": "Les péages urbains suscitent des protestations. La conduite autonome et les transports ont besoin de plus de Soutien."
   },
   "autonomy-corridor-opens": {
-    "headline": "Ouverture du couloir d'autonomie",
-    "body": "Une ville ouvre un couloir de navette cartographié. Capital autonome et facilité."
+    "headline": "Ouverture d'un corridor d'autonomie",
+    "body": "Une ville ouvre un corridor de navettes cartographié. Capital et Soutien des véhicules autonomes se détendent."
   },
   "drone-crash-ban": {
     "headline": "Un crash de drone déclenche une interdiction temporaire",
@@ -233,11 +233,11 @@
   },
   "transport-strike": {
     "headline": "La grève des transports perturbe les pilotes",
-    "body": "L’action syndicale gèle les essais de mobilité. Les piles de déménageurs ont besoin de plus de volonté."
+    "body": "L'action syndicale gèle les essais de mobilité. Les piles Moteur ont besoin de plus de Soutien."
   },
   "bike-lane-data-deal": {
-    "headline": "Offre de capteurs de piste cyclable",
-    "body": "Les villes achètent en gros l’IoT pour la mobilité. Les réseaux et le matériel IoT deviennent moins chers."
+    "headline": "Marché de capteurs pour pistes cyclables",
+    "body": "Les villes achètent l'IoT en gros pour la mobilité. Réseaux et matériel IoT baissent."
   },
   "lidar-price-war": {
     "headline": "Guerre des prix lidar",
@@ -252,28 +252,28 @@
     "body": "Les régulateurs autorisent davantage de thérapies. Le génie génétique facilitera."
   },
   "clinic-sequencer-rebate": {
-    "headline": "Rabais sur le séquenceur clinique",
-    "body": "La santé publique accorde des remises aux kits de séquençage portables."
+    "headline": "Rabais sur séquenceurs cliniques",
+    "body": "La santé publique subventionne des kits de séquençage portables."
   },
   "gmo-crop-ban-talk": {
     "headline": "Les discussions sur l’interdiction des cultures OGM se propagent",
-    "body": "La politique agricole se durcit. Synbio et le génie génétique ont besoin de plus de volonté."
+    "body": "La politique agricole se durcit. Synbio et le génie génétique ont besoin de plus de Soutien."
   },
   "alt-protein-price-parity": {
-    "headline": "Parité des prix des protéines alternatives",
-    "body": "Les protéines végétales et de fermentation atteignent la parité des coûts dans un plus grand nombre de cafétérias."
+    "headline": "Parité de prix des protéines alternatives",
+    "body": "Les protéines végétales et de fermentation atteignent la parité de coût dans davantage de cantines."
   },
   "cultured-meat-ban": {
     "headline": "Interdiction de la viande cultivée sur un marché clé",
     "body": "Une interdiction augmente le coût politique des protéines alternatives."
   },
   "bci-trial-success": {
-    "headline": "L’essai BCI rétablit la parole",
-    "body": "Une couverture positive des essais réduit les frictions politiques concernant les interfaces cerveau-ordinateur."
+    "headline": "Un essai d'IBC rétablit la parole",
+    "body": "Une couverture d'essai positive réduit les frictions politiques sur les interfaces cerveau-ordinateur."
   },
   "bci-ethics-probe": {
-    "headline": "Ouverture d'une enquête éthique de la BCI",
-    "body": "Les craintes liées au consentement et aux données entraîneront un coût pour les interfaces neuronales."
+    "headline": "Ouverture d'une enquête éthique sur les IBC",
+    "body": "Consentement et peurs sur les données augmentent le coût en Soutien des interfaces neurales."
   },
   "pandemic-stockpile": {
     "headline": "Réapprovisionnement des stocks en cas de pandémie",
@@ -288,8 +288,8 @@
     "body": "Les réactifs d’édition génétique deviennent moins chers pour les laboratoires locaux."
   },
   "blood-sample-privacy": {
-    "headline": "Loi sur la confidentialité des échantillons de sang",
-    "body": "Les règles des biobanques se durcissent. Les projets de séquençage et de BCI ont besoin de plus de volonté."
+    "headline": "Loi sur la confidentialité des échantillons sanguins",
+    "body": "Les règles des biobanques se durcissent. Séquençage et projets d'IBC ont besoin de plus de Soutien."
   },
   "school-lunch-proteins": {
     "headline": "Projets pilotes sur les protéines des repas scolaires",
@@ -300,8 +300,8 @@
     "body": "Les rendements des entreprises inondent le marché. Le capital VR baisse."
   },
   "ar-workplace-mandate": {
-    "headline": "Mandat de sécurité au travail AR",
-    "body": "Les usines financent la formation AR – Le domaine de liaison facilitera."
+    "headline": "Obligation de sécurité au travail en réalité augmentée",
+    "body": "Les usines financent la formation AR — le Soutien du domaine Lien se détend."
   },
   "motion-sickness-report": {
     "headline": "Le rapport sur le mal des transports devient viral",
@@ -329,7 +329,7 @@
   },
   "nano-toxicity-study": {
     "headline": "Une étude de nanotoxicité alarme le public",
-    "body": "Les examens de sécurité augmenteront le coût des projets nano."
+    "body": "Les examens de sécurité font monter le coût en Soutien des projets nano."
   },
   "recycled-filaments": {
     "headline": "Le marché des filaments 3D recyclés inonde",
@@ -365,11 +365,11 @@
   },
   "election-year-caution": {
     "headline": "Prudence en cette année électorale",
-    "body": "Les responsables évitent les technologies controversées. La volonté s’élève au-delà des frontières."
+    "body": "Les responsables évitent les technologies controversées. Le Soutien monte sur les piles de frontière."
   },
   "mayors-innovation-pact": {
     "headline": "Pacte d'innovation des maires",
-    "body": "Les villes partagent des modèles de passation des marchés. La volonté politique s’assouplit pour les pilotes multi-domaines."
+    "body": "Les villes partagent des modèles de passation des marchés. Le Soutien politique s’assouplit pour les pilotes multi-domaines."
   },
   "cyberattack-week": {
     "headline": "Semaine des cyberattaques",
@@ -397,7 +397,7 @@
   },
   "disinfo-wave": {
     "headline": "Vague de désinformation sur les pilotes technologiques",
-    "body": "Les rumeurs obligent à un processus communautaire supplémentaire. La volonté augmente pour les piles visibles."
+    "body": "Les rumeurs obligent à un processus communautaire supplémentaire. Le Soutien augmente pour les piles visibles."
   },
   "youth-climate-march": {
     "headline": "Marche des jeunes pour le climat",
@@ -405,15 +405,15 @@
   },
   "crypto-crash": {
     "headline": "Crash de crypto",
-    "body": "La chaleur spéculative s’éteint ; Le reste du travail de comptabilité civique nécessite moins de volonté et des capitaux plus prudents."
+    "body": "La chaleur spéculative s’éteint ; le travail de registre civique qui reste demande moins de Soutien et plus de capital prudent."
   },
   "stablecoin-payroll": {
     "headline": "Pilotes de paie Stablecoin",
     "body": "Les villes testent des fonds locaux transparents. Le capital crypto diminue légèrement."
   },
   "bci-data-breach": {
-    "headline": "Violation de données du fournisseur BCI",
-    "body": "Les données neuronales craignent que le pic coûtera cher à BCI."
+    "headline": "Fuite de données chez un fournisseur d'IBC",
+    "body": "La peur des données neurales fait grimper le coût en Soutien pour les IBC."
   },
   "space-earth-obs-deal": {
     "headline": "Accord d'observation de la Terre pour les villes",
@@ -421,7 +421,7 @@
   },
   "self-driving-pedestrian-incident": {
     "headline": "Incident de piéton autonome",
-    "body": "Un crash très médiatisé gèle la volonté d’autonomie."
+    "body": "Un crash très médiatisé gèle le Soutien à l'autonomie."
   },
   "drone-delivery-holiday": {
     "headline": "Rush de vacances de livraison par drone",
@@ -433,11 +433,11 @@
   },
   "quantum-error-milestone": {
     "headline": "Jalon de correction d’erreurs quantiques",
-    "body": "Le battage médiatique revient avec de la substance ; la volonté quantique s'atténue, le capital reste élevé."
+    "body": "Le battage médiatique revient avec de la substance ; le Soutien quantique s'atténue, le capital reste élevé."
   },
   "network-neutrality-fight": {
     "headline": "Combat pour la neutralité des réseaux",
-    "body": "Les FAI et les villes s’affrontent. Les coûts des réseaux augmenteront."
+    "body": "Les FAI et les villes s’affrontent. Le coût en Soutien des réseaux monte."
   },
   "fab-lab-franchise": {
     "headline": "Vague de franchise des Fab Labs",
@@ -457,7 +457,7 @@
   },
   "public-trust-rebound": {
     "headline": "Sondage sur le rebond de la confiance du public",
-    "body": "Après des victoires tranquilles, la technologie des automates et des moteurs s'atténuera légèrement."
+    "body": "Après des victoires tranquilles, le Soutien se détend un peu sur les techs Automateur et Moteur."
   },
   "global-shipping-jam": {
     "headline": "Embouteillage mondial",
@@ -468,8 +468,8 @@
     "body": "Les pilotes de grand livre municipal normalisent les outils de cryptographie."
   },
   "ai-exam-cheating-panic": {
-    "headline": "Panique de tricherie aux examens d'IA",
-    "body": "Les écoles restreignent l’IA ; les coûts augmenteront pour l’IA destinée à l’éducation."
+    "headline": "Panique face à la triche aux examens avec l'IA",
+    "body": "Les écoles restreignent l'IA ; le coût en Soutien monte pour l'IA éducative."
   },
   "flood-sensor-rebate": {
     "headline": "Remise sur les capteurs d'inondation",

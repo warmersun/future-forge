@@ -261,7 +261,7 @@
     "inventionHint": "Triage, tutorat, logistique, alerte précoce.",
     "risk": "biais, excès de confiance, décisions opaques",
     "scarcity": "Quelle capacité rare l’intelligence artificielle pourrait-elle contribuer à rendre plus abondante ici ?",
-    "primer": "L'intelligence artificielle trouve des modèles dans les données pour prédire, recommander, générer du texte ou des images et soutenir les décisions. Il est déjà un collaborateur de nombreuses cliniques, salles de classe et bureaux logistiques, mais il peut être partial, trop confiant ou opaque. Des inventions locales fortes responsabilisent les humains et étendent le modèle à un véritable flux de travail.",
+    "primer": "L'intelligence artificielle trouve des modèles dans les données pour prédire, recommander, générer du texte ou des images et soutenir les décisions. Elle est déjà une collègue dans de nombreuses cliniques, salles de classe et postes de logistique — mais elle peut être biaisée, trop confiante ou opaque. Les bonnes inventions locales gardent les humains responsables et bornent le modèle à un vrai flux de travail.",
     "maturity": {
       "now": "Modèles d'assistance, classification, prévisions et copilotes sous surveillance humaine.",
       "near": "Agents plus fiables pour les flux de travail étroits ; de meilleurs modèles en langue locale.",
@@ -271,12 +271,12 @@
       "Copilotes d'IA générative dans le travail, l'éducation et certains outils cliniques"
     ],
     "useCasesNow": [
-      "Prise en charge du tri",
+      "Soutien au triage",
       "Aides au tutorat",
       "Copilotes documentaires et logistiques",
       "Notation d'alerte précoce"
     ],
-    "narrative": "Az emberek vezetnek; un modèle javasolnak."
+    "narrative": "Les humains dirigent ; les modèles proposent."
   },
   "robots": {
     "name": "Robots",

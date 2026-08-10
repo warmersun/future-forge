@@ -1,6 +1,6 @@
 # Agent handoff — Hungarian i18n review
 
-**Status (2026-08-09):** Review pack generated; human review **not started**. Do not invent bulk “improvements” unless the user asks. Apply only their edited HU text.
+**Status (2026-08-09):** Review pack generated; human + agent polish **in progress** on FR/ES/HE/HU review markdown (keys/EN left intact). Do not force-push. Apply locale JSON only when user asks.
 
 ## Branch / repo
 

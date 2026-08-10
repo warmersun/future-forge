@@ -1,12 +1,14 @@
 {
   "health": {
-    "title": "Cuidado de la salud"
+    "title": "Salud y cuidados"
   },
   "climate": {
-    "title": "Clima, agua y aire"
+    "title": "Crisis climáticas",
+    "blurb": "Emisiones, calor y riesgo a largo plazo."
   },
   "food": {
-    "title": "Comida y tierra"
+    "title": "Seguridad alimentaria",
+    "blurb": "Alimentos nutritivos confiables para todos."
   },
   "learning": {
     "title": "Aprendizaje y trabajo"

@@ -53,7 +53,7 @@
 
 **EN:** Communities link AI to power strain. AI will cost rises.
 
-**HU:** A közösségek az MI-t az áramterheléshez kötik. Az MI-akarat drágul.
+**HU:** A közösségek az MI-t az áramterheléshez kötik. Az MI támogatásköltsége nő.
 
 ---
 ### `ai-exam-cheating-panic.headline`
@@ -67,7 +67,7 @@
 
 **EN:** Schools restrict AI; will cost rises for education-facing AI.
 
-**HU:** Iskolák korlátozzák a MI-t; akaratköltség nő az oktatási MI-nél.
+**HU:** Iskolák korlátozzák az MI-t; támogatásköltség nő az oktatási MI-nél.
 
 ---
 ### `ai-safety-fund.headline`

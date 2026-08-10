@@ -22,14 +22,14 @@ Source pack: `locales/fr/domains.json`
 
 **EN:** Automator
 
-**FR:** Automate
+**FR:** Automateur
 
 ---
 ### `lifeforce.label`
 
 **EN:** LifeForce
 
-**FR:** Force de vie
+**FR:** Force vitale
 
 ---
 ### `link.label`
@@ -43,7 +43,7 @@ Source pack: `locales/fr/domains.json`
 
 **EN:** Mover
 
-**FR:** Déménageur
+**FR:** Moteur
 
 ---
 ### `portal.label`
@@ -57,7 +57,7 @@ Source pack: `locales/fr/domains.json`
 
 **EN:** Power
 
-**FR:** Pouvoir
+**FR:** Énergie
 
 ---
 ## Shelves
@@ -75,7 +75,7 @@ Source pack: `locales/fr/shelves.json`
 
 **EN:** Food & land
 
-**FR:** Nourriture et terre
+**FR:** Alimentation et terres
 
 ---
 ### `health.title`
@@ -128,7 +128,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Healthspan and longer lives.
 
-**FR:** Durée de vie et vie plus longue.
+**FR:** Espérance de vie en bonne santé et vies plus longues.
 
 ---
 ### `ageing.title`
@@ -142,7 +142,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Dirty air from transport, industry, cooking.
 
-**FR:** Air sale des transports, de l'industrie, de la cuisine.
+**FR:** Air pollué par les transports, l'industrie et la cuisine.
 
 ---
 ### `air.title`
@@ -184,7 +184,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Planetary defense and detection windows.
 
-**FR:** Fenêtres de défense et de détection planétaires.
+**FR:** Défense planétaire et fenêtres de détection.
 
 ---
 ### `asteroid.title`
@@ -198,7 +198,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Jobs and meaning under automation.
 
-**FR:** Emplois et sens sous l'automatisation.
+**FR:** Emplois et sens face à l'automatisation.
 
 ---
 ### `automation.title`
@@ -492,7 +492,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** People locked out of income, services, and agency.
 
-**FR:** Les gens sont privés de revenus, de services et d’agence.
+**FR:** Des personnes privées de revenus, de services et de capacité d'agir.
 
 ---
 ### `poverty.title`
@@ -506,7 +506,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Prejudice and extremism pipelines — rights-based off-ramps.
 
-**FR:** Pipelines de préjugés et d’extrémisme – rampes de sortie basées sur les droits.
+**FR:** Filières de préjugés et d'extrémisme — sorties fondées sur les droits.
 
 ---
 ### `radicalization.title`
@@ -555,7 +555,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Rogue SuperIntelligence
 
-**FR:** SuperIntelligence Rogue
+**FR:** Superintelligence incontrôlée
 
 ---
 ### `rural-roads.blurb`
@@ -583,7 +583,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Sanitation
 
-**FR:** Sanitaire
+**FR:** Assainissement
 
 ---
 ### `short-termism.blurb`
@@ -625,7 +625,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Smoking
 
-**FR:** Fumeur
+**FR:** Tabagisme
 
 ---
 ### `totalitarianism.blurb`
@@ -688,7 +688,7 @@ Source pack: `locales/fr/globals.json`
 
 **EN:** Safety, rights, education, economic agency.
 
-**FR:** Sécurité, droits, éducation, agence économique.
+**FR:** Sécurité, droits, éducation, capacité d'agir économique.
 
 ---
 ### `women.title`
