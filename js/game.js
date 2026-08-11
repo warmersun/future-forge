@@ -41,6 +41,7 @@ import {
 } from "./i18n.js";
 import {
   locGlobal,
+  locGlobalById,
   locTech,
   locTechById,
   locShelf,
@@ -2980,6 +2981,8 @@ function refreshLocaleUi() {
   }
   try {
     if (state.screen === "global") renderGlobals();
+    if (state.screen === "quest-hub") renderQuestHub();
+    if (state.screen === "quest-catalog") renderQuestCatalog();
     // Rebuild missions from seed packs (no AI) so HU overlays apply
     if (state.screen === "mission" && state.global) {
       delete state.scenarioCache[state.global.id];
@@ -3383,58 +3386,99 @@ function renderQuestHub() {
   const intro = document.querySelector("#screen-quest-hub .section-intro p");
   if (intro) {
     intro.innerHTML = mpPick
-      ? "Pick a Quest for the party: a <strong>theme</strong>, <strong>sponsored</strong> Spotlight, or side-loaded <strong>Library</strong> tile. <strong>Learning</strong> modules are solo only."
-      : "Pick how you want to enter: generate local challenges from a <strong>theme</strong>, open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other side-loaded Quests.";
+      ? t(
+          "questHub.introMp",
+          null,
+          "Pick a Quest for the party: a <strong>theme</strong>, <strong>sponsored</strong> Spotlight, or side-loaded <strong>Library</strong> tile. <strong>Learning</strong> modules are solo only."
+        )
+      : t(
+          "questHub.intro",
+          null,
+          "Pick how you want to enter: generate local challenges from a <strong>theme</strong>, open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other side-loaded Quests."
+        );
   }
   const h1 = document.querySelector("#screen-quest-hub .section-intro h1");
   if (h1) {
-    h1.textContent = mpPick ? "Pick a Quest for the party" : "Play a Quest";
+    h1.textContent = mpPick
+      ? t("questHub.headingMp", null, "Pick a Quest for the party")
+      : t("questHub.heading", null, "Play a Quest");
   }
+  const backBtn = $("#btn-quest-hub-back");
+  if (backBtn) backBtn.textContent = t("common.backHome", null, "← Home");
+  const pill = document.querySelector("#screen-quest-hub .progress-pills .pill");
+  if (pill) pill.textContent = t("questHub.pill", null, "Quest");
+
+  const questCountLabel = (n) =>
+    n === 1
+      ? t("questHub.questCountOne", { n }, "1 Quest")
+      : t("questHub.questCount", { n }, `${n} Quests`);
+  const noneYet = t("questHub.noneYet", null, "None loaded yet");
 
   /** @type {object[]} */
   const cards = [
     {
       id: "themes",
-      title: "Themes",
-      blurb:
-        "Global problems as local places. Up to 4 Quests per theme — generate a fresh set anytime.",
-      meta: "Catalog themes",
-      cta: mpPick ? "Pick a theme →" : "Browse themes →",
+      title: t("questHub.themesTitle", null, "Themes"),
+      blurb: t(
+        "questHub.themesBlurb",
+        null,
+        "Global problems as local places. Up to 4 Quests per theme — generate a fresh set anytime."
+      ),
+      meta: t("questHub.themesMeta", null, "Catalog themes"),
+      cta: mpPick
+        ? t("questHub.themesCtaMp", null, "Pick a theme →")
+        : t("questHub.themesCta", null, "Browse themes →"),
     },
     {
       id: "sponsored",
-      title: "Sponsored",
-      blurb:
-        "Partner and product-attributed Spotlight Quests. Attribution only — you still invent the local application.",
+      title: t("questHub.sponsoredTitle", null, "Sponsored"),
+      blurb: t(
+        "questHub.sponsoredBlurb",
+        null,
+        "Partner and product-attributed Spotlight Quests. Attribution only — you still invent the local application."
+      ),
       meta: sponsoredForHub.length
-        ? `${sponsoredForHub.length} Quest${sponsoredForHub.length === 1 ? "" : "s"}`
-        : "None loaded yet",
-      cta: "Open sponsored →",
+        ? questCountLabel(sponsoredForHub.length)
+        : noneYet,
+      cta: t("questHub.sponsoredCta", null, "Open sponsored →"),
     },
   ];
   if (!mpPick) {
     cards.push({
       id: "learning",
-      title: "Learning",
-      blurb:
-        "Solo modules and lessons with AI tutor mode. Progress stays on this device.",
+      title: t("questHub.learningTitle", null, "Learning"),
+      blurb: t(
+        "questHub.learningBlurb",
+        null,
+        "Solo modules and lessons with AI tutor mode. Progress stays on this device."
+      ),
       meta: learning.length
-        ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
-            learning.length
-          } lesson${learning.length === 1 ? "" : "s"}`
-        : "None loaded yet",
-      cta: "Open learning →",
+        ? t(
+            "questHub.learningMeta",
+            {
+              modules: learningGroups.length,
+              lessons: learning.length,
+            },
+            `${learningGroups.length} module${
+              learningGroups.length === 1 ? "" : "s"
+            } · ${learning.length} lesson${learning.length === 1 ? "" : "s"}`
+          )
+        : noneYet,
+      cta: t("questHub.learningCta", null, "Open learning →"),
     });
   }
   cards.push({
     id: "library",
-    title: "Library",
-    blurb:
-      "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs).",
+    title: t("questHub.libraryTitle", null, "Library"),
+    blurb: t(
+      "questHub.libraryBlurb",
+      null,
+      "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs)."
+    ),
     meta: libraryForHub.length
-      ? `${libraryForHub.length} Quest${libraryForHub.length === 1 ? "" : "s"}`
-      : "Import or drop JSON in quests/",
-    cta: "Open library →",
+      ? questCountLabel(libraryForHub.length)
+      : t("questHub.libraryEmpty", null, "Import or drop JSON in quests/"),
+    cta: t("questHub.libraryCta", null, "Open library →"),
   });
   grid.innerHTML = cards
     .map(
@@ -3490,10 +3534,14 @@ function groupCatalogByEmTech(entries) {
   }
   return [...map.entries()]
     .map(([techId, items]) => {
-      const tech = techId !== "other" ? techById(techId) : null;
+      const tech = techId !== "other" ? locTechById(techId) : null;
       return {
         techId,
-        title: tech?.name || (techId === "other" ? "Other" : techId),
+        title:
+          tech?.name ||
+          (techId === "other"
+            ? t("questCatalog.otherTheme", null, "Other")
+            : techId),
         entries: items,
       };
     })
@@ -3514,10 +3562,14 @@ function groupCatalogByTheme(entries) {
   }
   return [...map.entries()]
     .map(([globalId, items]) => {
-      const g = globalId !== "other" ? globalById(globalId) : null;
+      const g = globalId !== "other" ? locGlobalById(globalId) : null;
       return {
         globalId,
-        title: g?.title || (globalId === "other" ? "Other" : globalId),
+        title:
+          g?.title ||
+          (globalId === "other"
+            ? t("questCatalog.otherTheme", null, "Other")
+            : globalId),
         entries: items,
       };
     })
@@ -3542,17 +3594,23 @@ function catalogBadgesHtml(entry, kind) {
     if (Number.isFinite(lesson) && lesson >= 1) {
       const lessonLabel =
         Number.isFinite(total) && total >= 1
-          ? `Lesson ${lesson}/${total}`
-          : `Lesson ${lesson}`;
+          ? t(
+              "questCatalog.lessonOf",
+              { lesson, total },
+              `Lesson ${lesson}/${total}`
+            )
+          : t("questCatalog.lessonN", { lesson }, `Lesson ${lesson}`);
       parts.push(
-        `<span class="scenario-tag learning-tag" title="Lesson order in this module">${escapeHtml(
-          lessonLabel
-        )}</span>`
+        `<span class="scenario-tag learning-tag" title="${escapeHtml(
+          t("questCatalog.lessonOrderTitle", null, "Lesson order in this module")
+        )}">${escapeHtml(lessonLabel)}</span>`
       );
     }
     if (isMissionSolved(m.id || entry.id)) {
       parts.push(
-        `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>`
+        `<span class="scenario-tag solved-tag" title="${escapeHtml(
+          t("missionUi.solvedTitle", null, "You already deployed a solution here")
+        )}">${escapeHtml(t("missionUi.tagSolved", null, "Solved"))}</span>`
       );
     }
     parts.push(sponsorBadgeHtml(m));
@@ -3560,10 +3618,12 @@ function catalogBadgesHtml(entry, kind) {
     // No source tags; optional Sponsored + Spotlight · emTech.
     parts.push(sponsorBadgeHtml(m));
     const techId = catalogSpotlightTechId(entry);
-    const tech = techId ? techById(techId) : null;
+    const tech = techId ? locTechById(techId) || techById(techId) : null;
     if (tech) {
       parts.push(
-        `<span class="scenario-tag spotlight-tag">Spotlight · ${escapeHtml(tech.name)}</span>`
+        `<span class="scenario-tag spotlight-tag">${escapeHtml(
+          t("missionUi.spotlight", { name: tech.name }, `Spotlight · ${tech.name}`)
+        )}</span>`
       );
     }
   }
@@ -3576,7 +3636,7 @@ function catalogBadgesHtml(entry, kind) {
  */
 function catalogCardHtml(entry, kind) {
   const m = entry.mission;
-  const g = globalById(entry.globalId);
+  const g = locGlobalById(entry.globalId) || globalById(entry.globalId);
   const img = problemVisualUrl(entry.globalId || "climate");
   const scene = m?.briefMd
     ? excerptFromBrief(m.briefMd, 140)
@@ -3591,12 +3651,11 @@ function catalogCardHtml(entry, kind) {
     kind === "library"
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
-  const cta =
-    missionPickSession
-      ? "Use for friends game →"
-      : solved
-        ? "Play again →"
-        : "Play this Quest →";
+  const cta = missionPickSession
+    ? t("questCatalog.ctaFriends", null, "Use for friends game →")
+    : solved
+      ? t("missionUi.ctaAgain", null, "Play again →")
+      : t("questCatalog.ctaPlay", null, "Play this Quest →");
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
       <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
@@ -3609,17 +3668,23 @@ function catalogCardHtml(entry, kind) {
           ${
             badges
               ? `<span class="num">${badges}</span>`
-              : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
+              : `<span class="num muted">${escapeHtml(
+                  place || t("questHub.pill", null, "Quest")
+                )}</span>`
           }
-          <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
+          <h3>${escapeHtml(
+            entry.title || m?.title || t("questHub.pill", null, "Quest")
+          )}</h3>
           ${metaLine ? `<p class="muted">${escapeHtml(metaLine)}</p>` : ""}
           <p>${escapeHtml(scene)}</p>
-          <span class="cta">${cta}</span>
+          <span class="cta">${escapeHtml(cta)}</span>
         </span>
       </button>
       ${
         entry.canRemove
-          ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
+          ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="${escapeHtml(
+              t("missionUi.remove", null, "Remove")
+            )}">${escapeHtml(t("missionUi.remove", null, "Remove"))}</button>`
           : ""
       }
     </div>`;
@@ -3667,7 +3732,7 @@ function moduleCardHtml(group) {
   const label =
     typeof group.module === "string" && group.module.trim()
       ? group.module.trim()
-      : "Learning path";
+      : t("questCatalog.learningPath", null, "Learning path");
   const first = group.entries[0];
   const total =
     first?.mission?.totalLessons ||
@@ -3677,12 +3742,20 @@ function moduleCardHtml(group) {
   const progress = learningModuleProgressHtml(group);
   const status =
     done >= total && total > 0
-      ? "Complete — open to replay a lesson."
+      ? t("questCatalog.moduleComplete", null, "Complete — open to replay a lesson.")
       : done > 0
-        ? `${done} of ${total || n} completed · open to pick a lesson.`
-        : `${n} lesson${n === 1 ? "" : "s"}${
-            total ? ` · ${total} in set` : ""
-          }. Open to pick a lesson.`;
+        ? t(
+            "questCatalog.moduleProgress",
+            { done, total: total || n },
+            `${done} of ${total || n} completed · open to pick a lesson.`
+          )
+        : t(
+            "questCatalog.moduleLessons",
+            { n, total: total || n },
+            `${n} lesson${n === 1 ? "" : "s"}${
+              total ? ` · ${total} in set` : ""
+            }. Open to pick a lesson.`
+          );
   return `
     <button type="button" class="challenge-card quest-module-card" data-module-key="${escapeHtml(
       group.key
@@ -3690,7 +3763,9 @@ function moduleCardHtml(group) {
       <h3>${escapeHtml(label)}</h3>
       ${progress}
       <p>${escapeHtml(status)}</p>
-      <span class="cta">View lessons →</span>
+      <span class="cta">${escapeHtml(
+        t("questCatalog.viewLessons", null, "View lessons →")
+      )}</span>
     </button>`;
 }
 
@@ -3751,7 +3826,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       ev.stopPropagation();
       if (!entry?.canRemove) return;
       removeQuestFromLibrary(entry.id);
-      flashToast("Removed from library.");
+      flashToast(t("toast.removedLibrary", null, "Removed from library."));
       renderQuestCatalog();
     });
   });
@@ -3769,33 +3844,53 @@ function renderQuestCatalog() {
   if (!grid) return;
 
   const parts = partitionCatalogQuests();
-  if (importLabel) importLabel.hidden = false;
+  if (importLabel) {
+    importLabel.hidden = false;
+    const span = importLabel.querySelector("[data-i18n='questCatalog.import']");
+    const labelText = t("questCatalog.import", null, "Import Quest…");
+    if (span) span.textContent = labelText;
+  }
 
   if (backBtn) {
     backBtn.textContent =
-      kind === "learning" && moduleKey != null ? "← Modules" : "← Quests";
+      kind === "learning" && moduleKey != null
+        ? t("questCatalog.backModules", null, "← Modules")
+        : t("questCatalog.backQuests", null, "← Quests");
   }
+  const pill = $("#quest-catalog-pill");
+  if (pill) pill.textContent = t("questHub.pill", null, "Quest");
 
   let entries = [];
   /** @type {"emTech"|"theme"|null} */
   let groupBy = null;
 
   if (kind === "sponsored") {
-    if (titleEl) titleEl.textContent = "Sponsored Quests";
+    if (titleEl) titleEl.textContent = t("questCatalog.sponsoredTitle", null, "Sponsored Quests");
     if (blurbEl) {
-      blurbEl.textContent =
-        "From warmersun.com — grouped by spotlight technology. Attribution only; invent a local application.";
+      blurbEl.textContent = t(
+        "questCatalog.sponsoredBlurb",
+        null,
+        "From warmersun.com — grouped by spotlight technology. Attribution only; invent a local application."
+      );
     }
     entries = missionPickSession
       ? parts.sponsored.filter((e) => !isLearningMission(e.mission))
       : parts.sponsored;
     groupBy = "emTech";
   } else if (kind === "library") {
-    if (titleEl) titleEl.textContent = "Library";
+    if (titleEl) titleEl.textContent = t("questCatalog.libraryTitle", null, "Library");
     if (blurbEl) {
       blurbEl.textContent = missionPickSession
-        ? "Side-loaded Quests for this party (learning modules hidden — solo only)."
-        : "Local side-load only (quests/ folder or Import), grouped by theme.";
+        ? t(
+            "questCatalog.libraryBlurbMp",
+            null,
+            "Side-loaded Quests for this party (learning modules hidden — solo only)."
+          )
+        : t(
+            "questCatalog.libraryBlurb",
+            null,
+            "Local side-load only (quests/ folder or Import), grouped by theme."
+          );
     }
     entries = missionPickSession
       ? parts.library.filter((e) => !isLearningMission(e.mission))
@@ -3813,11 +3908,17 @@ function renderQuestCatalog() {
         titleEl.textContent =
           typeof group?.module === "string" && group.module.trim()
             ? group.module.trim()
-            : "Learning lessons";
+            : t("questCatalog.learningLessons", null, "Learning lessons");
       }
       if (blurbEl) {
         const bar = group ? learningModuleProgressHtml(group, { compact: true }) : "";
-        blurbEl.innerHTML = `${bar}<span class="catalog-blurb-note">Lessons in order · progress stays on this device.</span>`;
+        blurbEl.innerHTML = `${bar}<span class="catalog-blurb-note">${escapeHtml(
+          t(
+            "questCatalog.lessonsNote",
+            null,
+            "Lessons in order · progress stays on this device."
+          )
+        )}</span>`;
       }
       entries = [...(group?.entries || [])].sort((a, b) => {
         const la = Number(a.mission?.lesson) || 0;
@@ -3829,14 +3930,23 @@ function renderQuestCatalog() {
       });
       groupBy = null;
     } else {
-      if (titleEl) titleEl.textContent = "Learning modules";
+      if (titleEl) {
+        titleEl.textContent = t("questCatalog.learningTitle", null, "Learning modules");
+      }
       if (blurbEl) {
-        blurbEl.textContent =
-          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
+        blurbEl.textContent = t(
+          "questCatalog.learningBlurb",
+          null,
+          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device."
+        );
       }
       const groups = groupLearningModules(parts.learning);
       if (!groups.length) {
-        grid.innerHTML = `<p class="empty-hint muted">No learning Quests loaded. Drop lesson JSON into <code>quests/</code> or Import.</p>`;
+        grid.innerHTML = `<p class="empty-hint muted">${t(
+          "questCatalog.emptyLearning",
+          null,
+          "No learning Quests loaded. Drop lesson JSON into <code>quests/</code> or Import."
+        )}</p>`;
         if (status) {
           status.hidden = true;
           status.textContent = "";
@@ -3859,16 +3969,34 @@ function renderQuestCatalog() {
       ).length;
       if (status) {
         status.hidden = false;
-        status.textContent = `${groups.length} modules · ${parts.learning.length} lessons${
-          completedLessons ? ` · ${completedLessons} completed` : ""
-        }`;
+        status.textContent = t(
+          "questCatalog.learningStatus",
+          {
+            modules: groups.length,
+            lessons: parts.learning.length,
+            completed: completedLessons
+              ? t(
+                  "questCatalog.completedSuffix",
+                  { n: completedLessons },
+                  ` · ${completedLessons} completed`
+                )
+              : "",
+          },
+          `${groups.length} modules · ${parts.learning.length} lessons${
+            completedLessons ? ` · ${completedLessons} completed` : ""
+          }`
+        );
       }
       return;
     }
   }
 
   if (!entries.length) {
-    grid.innerHTML = `<p class="empty-hint muted">Nothing here yet. Drop Quest JSON into the server <code>quests/</code> folder or use Import.</p>`;
+    grid.innerHTML = `<p class="empty-hint muted">${t(
+      "questCatalog.empty",
+      null,
+      "Nothing here yet. Drop Quest JSON into the server <code>quests/</code> folder or use Import."
+    )}</p>`;
     if (status) {
       status.hidden = true;
       status.textContent = "";
@@ -3879,7 +4007,10 @@ function renderQuestCatalog() {
   paintCatalogEntries(grid, entries, kind, { groupBy });
   if (status) {
     status.hidden = false;
-    status.textContent = `${entries.length} Quest${entries.length === 1 ? "" : "s"}`;
+    status.textContent =
+      entries.length === 1
+        ? t("questHub.questCountOne", { n: 1 }, "1 Quest")
+        : t("questHub.questCount", { n: entries.length }, `${entries.length} Quests`);
   }
 
   if (!state.hostedQuestsLoaded) {
@@ -4104,21 +4235,14 @@ function paintMissionCards(list, { disabled = false } = {}) {
             ? t("missionUi.tagImported", null, "Imported")
             : m.source === "curated"
               ? t("missionUi.tagCurated", null, "Curated")
-              : t("missionUi.tagGenerated", null, "Challenge");
-      const spotTechId =
-        m.spotlight?.techId || (m.suggested?.length === 1 ? m.suggested[0] : null);
-      const tech = spotTechId ? displayTech(spotTechId) : null;
+              : m.source === "generated"
+                ? t("missionUi.tagGenerated", null, "Challenge")
+                : t("missionUi.tagQuest", null, "Quest");
       const solved = isMissionSolved(m.id);
       const scene = m.briefMd
         ? excerptFromBrief(m.briefMd, 180)
         : (m.scene || "").slice(0, 180);
       const ellipsis = !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
-      const pinLabel = pinned
-        ? t("missionUi.pinned", null, "Pinned")
-        : t("missionUi.pin", null, "Pin");
-      const pinTitle = pinned
-        ? t("missionUi.unpinTitle", null, "Unpin")
-        : t("missionUi.pinTitle", { max: MAX_PINS }, `Pin (max ${MAX_PINS})`);
       const cta = disabled
         ? t("missionUi.ctaPreparing", null, "Preparing…")
         : solved
@@ -4131,13 +4255,7 @@ function paintMissionCards(list, { disabled = false } = {}) {
       }" data-id="${escapeHtml(m.id)}" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>
         <span class="num">${escapeHtml(m.place)} · ${m.startYear || GAME.startYear}
           <span class="scenario-tag ${tag}">${escapeHtml(tagLabel)}</span>
-          ${
-            tech && isExternal
-              ? `<span class="scenario-tag spotlight-tag">${escapeHtml(
-                  t("missionUi.spotlight", { name: tech.name }, `Spotlight · ${tech.name}`)
-                )}</span>`
-              : ""
-          }
+          ${questMetaBadgesHtml(m)}
           ${
             solved
               ? `<span class="scenario-tag solved-tag" title="${escapeHtml(
@@ -4492,25 +4610,13 @@ async function renderMissions({ force = false } = {}) {
       solvedN
         ? t(
             "missionUi.statusReadySolved",
-            {
-              n: list.length,
-              extra: hostedN
-                ? t("missionUi.statusHosted", { n: hostedN }, `${hostedN} external`) +
-                  " · "
-                : "",
-              solved: solvedN,
-            },
-            `${list.length} Quests (${hostedN ? `${hostedN} external · ` : ""}${solvedN} solved — still playable). Generate new to replace the set.`
+            { n: list.length, extra: "", solved: solvedN },
+            `${list.length} Quests (${solvedN} solved — still playable). Generate new to replace the set.`
           )
         : t(
             "missionUi.statusReady",
-            {
-              n: list.length,
-              extra: hostedN
-                ? ` (${t("missionUi.statusHosted", { n: hostedN }, `${hostedN} external from server folder`)})`
-                : "",
-            },
-            `${list.length} Quests${hostedN ? ` (${hostedN} external from server folder)` : ""}. Pick one, or generate a new set.`
+            { n: list.length, extra: "" },
+            `${list.length} Quests. Pick one, or generate a new set.`
           )
     );
     if (regenBtn) {
@@ -4544,10 +4650,35 @@ async function renderMissions({ force = false } = {}) {
     const gen = list.filter((m) => m.source === "generated").length;
     const solvedN = list.filter((m) => isMissionSolved(m.id)).length;
     let msg = curated
-      ? `${list.length} Challenges (${curated} curated · ${gen} generated). Pick one to invent for.`
-      : `${list.length} Quests. Pick one to invent for.`;
-    if (solvedN) msg += ` ${solvedN} already solved — you can play them again.`;
-    if (force) msg = `New set ready (${list.length}). ` + msg;
+      ? t(
+          "missionUi.statusCuratedGen",
+          { n: list.length, curated, gen },
+          `${list.length} Challenges (${curated} curated · ${gen} generated). Pick one to invent for.`
+        )
+      : t(
+          "missionUi.statusReady",
+          { n: list.length, extra: "" },
+          `${list.length} Quests. Pick one to invent for.`
+        );
+    if (solvedN) {
+      msg +=
+        " " +
+        t(
+          "missionUi.statusSolvedAgain",
+          { n: solvedN },
+          `${solvedN} already solved — you can play them again.`
+        );
+    }
+    if (force) {
+      msg =
+        t(
+          "missionUi.statusNewSet",
+          { n: list.length },
+          `New set ready (${list.length}).`
+        ) +
+        " " +
+        msg;
+    }
     setMissionStatus(msg);
   } finally {
     if (state.global?.id === g.id) {
