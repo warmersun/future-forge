@@ -232,20 +232,23 @@ Do not commit secrets. Do not put API keys in the client or the git repo.
 
 ## License
 
-Future Forge is **source available**, **not** OSI open source.
+**Future Forge** by **Warmer Sun Education, a sole proprietorship by Tamas Simon** (© 2026) is licensed under  
+[**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International**](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0).
 
-**Copyright / Licensor:** Warmer Sun Education, a sole proprietorship in Vancouver, BC, Canada.
+| Use | Free? |
+|-----|--------|
+| **Non-commercial** copy, share, adapt (with attribution + share-alike) | **Yes** — CC BY-NC-SA 4.0 ([`LICENSE.md`](LICENSE.md)) |
+| **Host a meeting** (in person or online) where **you participate**; not charging for Future Forge | **Yes** — free grant in [`COMMERCIAL.md`](COMMERCIAL.md) |
+| **Run an online server** with **no commercial intent** and **not charging** | **Yes** — free grant in [`COMMERCIAL.md`](COMMERCIAL.md) |
+| **School / university / bootcamp / training org** | **No** — Education is commercial use; needs a paid license |
+| **Company / commercial / client work** | **No** — needs a paid commercial license |
+| **Paid cloud / multi-tenant / managed service** for others | **No** — needs a paid commercial license |
 
-| Use | Free under `LICENSE.md`? |
-|-----|------------------------|
-| **Personal** self-host (private hobby / own learning only) | **Yes** |
-| **School / university / training** | **No** — needs a paid license |
-| **Company / commercial / client work** | **No** — needs a paid license |
-| **Cloud / multi-tenant / managed service** for others | **No** — needs a paid license |
+- Public license text and attribution: **[`LICENSE.md`](LICENSE.md)**  
+- Deed: https://creativecommons.org/licenses/by-nc-sa/4.0/  
+- Free grants + paid tiers (Education / Commercial / Cloud): **[`COMMERCIAL.md`](COMMERCIAL.md)**  
+- Source: https://github.com/warmersun/future-forge  
 
-- Full free grant and restrictions: **[`LICENSE.md`](LICENSE.md)**  
-- Education, Commercial, and Cloud tiers: **[`COMMERCIAL.md`](COMMERCIAL.md)**  
-
-**Personal free use** means a natural person, non-commercial, on infrastructure they control, not offering the game as a product, service, or institutional classroom tool. If you are unsure, you need a commercial license — open a GitHub issue with subject **Commercial license**.
+If you are unsure, contact us — open a GitHub issue with subject **Commercial license**.
 
 Content and art are development-time static assets; scenario text may be generated via the co-inventor when AI is available. AI providers’ terms apply to any keys you use.

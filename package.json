@@ -3,6 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
+  "license": "CC-BY-NC-SA-4.0",
   "description": "Learning game: invent with emerging technologies and an AI co-inventor",
   "scripts": {
     "start": "node server.mjs",

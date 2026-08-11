@@ -210,7 +210,7 @@ Future Forge is that rethink made concrete: the inventing practice for the missi
 
 Anyone who wants practice connecting technology to human problems — especially high-school seniors through early career, and curious generalists, not only specialists already deep in tech.
 
-- Free personal self-host: [`LICENSE.md`](../LICENSE.md)  
+- Non-commercial use (CC BY-NC-SA 4.0): [`LICENSE.md`](../LICENSE.md)  
 - School, commercial, or hosted use: [`COMMERCIAL.md`](../COMMERCIAL.md)
 
 ---
