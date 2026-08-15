@@ -6436,6 +6436,15 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   color: var(--accent-3);
 }
 
+.idea-focus-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-mute);
+  font-style: italic;
+}
+
 .idea-deck {
   margin: 0.55rem 0 0;
   padding: 0;

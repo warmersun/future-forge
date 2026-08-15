@@ -894,6 +894,11 @@ const ideaSparkCache = new Map();
 const ideaSparkInflight = new Map();
 /** @type {Map<string, string[]>} picked idea ids per cache key */
 const ideaSparkPicked = new Map();
+/** True while a spark Ask/Refresh fetch is in flight (not image loads). */
+let ideaSparksBusy = false;
+let ideaSparkJobSeq = 0;
+/** @type {Map<string, number>} cache key → current fetch job id */
+const ideaSparkJobCurrent = new Map();
 
 /**
  * Capture invent fields the local player is actively editing so hydrates/re-renders
@@ -4367,6 +4372,8 @@ function startMission(mission) {
   ideaSparkCache.clear();
   ideaSparkInflight.clear();
   ideaSparkPicked.clear();
+  ideaSparkJobCurrent.clear();
+  ideaSparksBusy = false;
   focusedTechId = null;
   closeIdeaDeck();
   state.inventionName = "";
@@ -5864,6 +5871,7 @@ function ensureIdeaDeck() {
 }
 
 function closeIdeaDeck() {
+  if (ideaSparksBusy) return;
   if (!ideaDeck && !ideaDeckTechId) return;
   ideaDeckTechId = null;
   ideaDeck?.close();
@@ -5871,6 +5879,10 @@ function closeIdeaDeck() {
 
 function focusTech(techId) {
   if (!techId || !techById(techId)) return;
+  if (ideaSparksBusy && techId !== focusedTechId) {
+    flashToast("Ideas still generating.");
+    return;
+  }
   const switching = focusedTechId !== techId;
   focusedTechId = techId;
   if (switching && ideaDeck?.isOpen() && ideaDeckTechId !== techId) {
@@ -5881,10 +5893,12 @@ function focusTech(techId) {
   renderIdeaFocusBar();
 }
 
-function openIdeaDeck(techId) {
+async function openIdeaDeck(techId) {
   const id = techId || focusedTechId;
   const tech = techById(id);
   if (!tech) return;
+  if (ideaSparksBusy) return;
+  if (ideaDeckTechId === id && ideaDeck?.isOpen()) return;
   if (isViewedInventStoryLocked() || isMpContributionLocked()) {
     flashToast("Can't generate ideas right now.");
     return;
@@ -5892,30 +5906,40 @@ function openIdeaDeck(techId) {
   if (blockIfMpTurnGate("generating ideas")) return;
 
   focusedTechId = id;
-  if (ideaSparksWouldCostAp(id)) {
+  const paid = ideaSparksWouldCostAp(id);
+  if (paid) {
     const pay = chargeIdeaSparksAp();
     if (!pay.ok) {
       flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
       renderIdeaFocusBar();
       return;
     }
+    ideaSparksBusy = true;
   }
 
   const deck = ensureIdeaDeck();
-  if (!deck) return;
+  if (!deck) {
+    ideaSparksBusy = false;
+    return;
+  }
   ideaDeckTechId = id;
   const onStack = state.selectedTechIds.includes(id);
   renderTechList();
   renderSelectedChips();
   renderIdeaFocusBar();
-  deck.open(tech, {
-    hint: onStack
-      ? "Pick a spark to add to How it works, or close. Refresh gets a new set (1 AP)."
-      : "Close if none fit — nothing is added. Picking a spark adds this tech (normal costs) and a starter to How it works.",
-    pickLabel: onStack ? "Add to how it works" : "Add tech + how it works",
-    refreshLabel: apEnabled() ? "Refresh · 1 AP" : "Refresh",
-    selectedIds: ideaSparkPicked.get(ideaSparksKey(id)) || [],
-  });
+  try {
+    await deck.open(tech, {
+      hint: onStack
+        ? "Pick a spark to add to How it works, or close. Refresh gets a new set (1 AP)."
+        : "Close if none fit — nothing is added. Picking a spark adds this tech (normal costs) and a starter to How it works.",
+      pickLabel: onStack ? "Add to how it works" : "Add tech + how it works",
+      refreshLabel: apEnabled() ? "Refresh · 1 AP" : "Refresh",
+      selectedIds: ideaSparkPicked.get(ideaSparksKey(id)) || [],
+    });
+  } finally {
+    ideaSparksBusy = false;
+    renderIdeaFocusBar();
+  }
   $("#idea-panel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
 }
 
@@ -5927,6 +5951,7 @@ function openIdeaDeck(techId) {
 async function refreshIdeaDeck(techId, current = []) {
   const id = techId || focusedTechId || ideaDeckTechId;
   if (!id) return false;
+  if (ideaSparksBusy) return false;
   if (isViewedInventStoryLocked() || isMpContributionLocked()) {
     flashToast("Can't generate ideas right now.");
     return false;
@@ -5937,19 +5962,25 @@ async function refreshIdeaDeck(techId, current = []) {
     flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
     return false;
   }
+  ideaSparksBusy = true;
+  renderIdeaFocusBar();
   const key = ideaSparksKey(id);
   const prev = Array.isArray(current) && current.length ? current : ideaSparkCache.get(key) || [];
   const avoidTitles = prev.map((i) => i.title).filter(Boolean);
   ideaSparkCache.delete(key);
   ideaSparkPicked.delete(key);
-  const ideas = await fetchIdeaSparks(id, { force: true, avoidTitles });
-  if (!ideas?.length) {
-    if (prev.length) ideaSparkCache.set(key, prev);
-    flashToast("Could not refresh ideas — keeping the current set.");
-    return false;
+  try {
+    const ideas = await fetchIdeaSparks(id, { force: true, avoidTitles });
+    if (!ideas?.length) {
+      if (prev.length) ideaSparkCache.set(key, prev);
+      flashToast("Could not refresh ideas — keeping the current set.");
+      return false;
+    }
+    return ideas;
+  } finally {
+    ideaSparksBusy = false;
+    renderIdeaFocusBar();
   }
-  renderIdeaFocusBar();
-  return ideas;
 }
 
 function renderIdeaFocusBar() {
@@ -5965,19 +5996,26 @@ function renderIdeaFocusBar() {
   const onStack = state.selectedTechIds.includes(tech.id);
   const deckOpen = Boolean(ideaDeckTechId && ideaDeckTechId === tech.id);
   const askAp = ideaSparksWouldCostAp(tech.id);
+  const busy = ideaSparksBusy;
   if (panel) panel.hidden = false;
+  const busyHtml = busy
+    ? `<span class="idea-focus-busy" role="status"><span class="ai-snake" aria-hidden="true"></span> Generating ideas…</span>`
+    : "";
   bar.innerHTML = `
     <div class="idea-focus-id">${tech.icon || ""} <strong>${escapeHtml(tech.name)}</strong></div>
     <div class="idea-focus-actions">
+      ${busyHtml}
       ${
         deckOpen
-          ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar>${
-              apEnabled() ? "Refresh · 1 AP" : "Refresh"
-            }</button>
-             <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar>Close ideas</button>`
-          : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask>${
-              askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"
-            }</button>`
+          ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar ${
+              busy ? "disabled" : ""
+            }>${apEnabled() ? "Refresh · 1 AP" : "Refresh"}</button>
+             <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar ${
+               busy ? "disabled" : ""
+             }>Close ideas</button>`
+          : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask ${
+              busy ? "disabled" : ""
+            }>${askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"}</button>`
       }
       ${
         onStack
@@ -6034,6 +6072,13 @@ async function fetchIdeaSparks(techId, opts = {}) {
   if (!force && ideaSparkCache.has(key)) return ideaSparkCache.get(key);
   if (!force && ideaSparkInflight.has(key)) return ideaSparkInflight.get(key);
 
+  const jobId = ++ideaSparkJobSeq;
+  ideaSparkJobCurrent.set(key, jobId);
+  const writeIfCurrent = (ideas) => {
+    if (ideaSparkJobCurrent.get(key) !== jobId) return;
+    if (ideas?.length) ideaSparkCache.set(key, ideas);
+  };
+
   const pending = (async () => {
     try {
       const res = await fetch("/api/co-invent", {
@@ -6049,7 +6094,7 @@ async function fetchIdeaSparks(techId, opts = {}) {
       const data = await res.json();
       const ideas = ideasOrFallback(data.ideas, tech, ctx);
       if (ideas.length) {
-        ideaSparkCache.set(key, ideas);
+        writeIfCurrent(ideas);
         return ideas;
       }
     } catch {
@@ -6058,7 +6103,7 @@ async function fetchIdeaSparks(techId, opts = {}) {
     const local = force
       ? rotateLocalIdeaSparks(tech, ctx, ctx.avoidTitles)
       : localIdeaSparks(tech, ctx);
-    if (local.length) ideaSparkCache.set(key, local);
+    writeIfCurrent(local);
     return local;
   })();
 
@@ -6066,11 +6111,13 @@ async function fetchIdeaSparks(techId, opts = {}) {
   try {
     return await pending;
   } finally {
-    ideaSparkInflight.delete(key);
-    renderTechList();
-    renderSelectedChips();
-    renderIdeaFocusBar();
-    renderHud();
+    if (ideaSparkInflight.get(key) === pending) ideaSparkInflight.delete(key);
+    if (ideaSparkJobCurrent.get(key) === jobId) {
+      renderTechList();
+      renderSelectedChips();
+      renderIdeaFocusBar();
+      renderHud();
+    }
   }
 }
 

@@ -195,6 +195,7 @@ export class IdeaDeck {
     this.refreshLabel = "Refresh · 1 AP";
     this.gen = 0;
     this._refreshing = false;
+    this._opening = false;
     this._onClick = (e) => this._handleClick(e);
     host.addEventListener("click", this._onClick);
   }
@@ -203,12 +204,18 @@ export class IdeaDeck {
     return Boolean(this.techId) && !this.host.hidden;
   }
 
+  isBusy() {
+    return Boolean(this._refreshing || this._opening);
+  }
+
   /**
    * @param {object} tech
    * @param {{ hint?: string, pickLabel?: string, refreshLabel?: string, selectedIds?: string[] }} [opts]
    */
   async open(tech, opts = {}) {
     if (!tech?.id) return;
+    if (this._opening || this._refreshing) return;
+    this._opening = true;
     this.techId = tech.id;
     this.tech = tech;
     this.ideas = [];
@@ -225,6 +232,8 @@ export class IdeaDeck {
       ideas = await this.fetchSparks(tech.id);
     } catch {
       ideas = localIdeaSparks(tech, {});
+    } finally {
+      this._opening = false;
     }
     if (gen !== this.gen) return;
     this.ideas = Array.isArray(ideas) ? ideas.slice(0, 3) : [];
@@ -243,6 +252,7 @@ export class IdeaDeck {
     this.hint = "";
     this.pickLabel = "Add to how it works";
     this._refreshing = false;
+    this._opening = false;
     this.host.hidden = true;
     this.host.removeAttribute("data-tech");
     this.host.innerHTML = "";
