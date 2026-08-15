@@ -6118,7 +6118,7 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   background: var(--bg-2);
   transition: border-color 0.15s, background 0.15s;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   gap: 0.65rem;
   align-items: start;
 }
@@ -6252,6 +6252,33 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   color: var(--accent-3);
 }
 
+.tech-card-main {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  background: none;
+  padding: 0;
+}
+
+.tech-add-btn {
+  align-self: start;
+  padding: 0;
+  background: none;
+  line-height: 0;
+}
+
+.tech-card.is-focused {
+  border-color: rgba(56, 189, 248, 0.65);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+
+.tech-card.is-focused.selected {
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+}
+
 /* Center: challenge + invention form */
 .invent-center {
   display: flex;
@@ -6351,6 +6378,12 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tech-chip.is-focused {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25);
 }
 
 .tech-chip button {
@@ -6362,6 +6395,276 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
 
 .tech-chip button:hover {
   color: var(--danger);
+}
+
+.idea-panel {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.65rem 0.65rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.idea-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.idea-focus-id {
+  font-size: 0.88rem;
+}
+
+.idea-focus-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.idea-focus-instack {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent-3);
+}
+
+.idea-deck {
+  margin: 0.55rem 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.idea-deck-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.idea-deck-head-text {
+  min-width: 0;
+}
+
+.idea-deck-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.idea-deck-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+}
+
+.idea-deck-head-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.idea-deck-kicker {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+}
+
+.idea-deck-close {
+  flex: 0 0 auto;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.idea-deck-empty {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.idea-deck-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding-bottom: 0.15rem;
+}
+
+.idea-card {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  scroll-snap-align: start;
+  transition: border-color 0.2s, transform 0.2s var(--ease), box-shadow 0.2s;
+}
+
+.idea-card:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.idea-card.is-selected {
+  border-color: rgba(52, 211, 153, 0.7);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35), var(--glow);
+  transform: none;
+}
+
+.idea-card.is-selected:hover {
+  border-color: rgba(52, 211, 153, 0.85);
+  transform: none;
+}
+
+.idea-card-check {
+  display: none;
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  width: 1.55rem;
+  height: 1.55rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.95);
+  color: #06281c;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px rgba(6, 40, 28, 0.35);
+}
+
+.idea-card.is-selected .idea-card-check {
+  display: flex;
+}
+
+.idea-card.is-selected .idea-card-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 3px rgba(52, 211, 153, 0.85);
+}
+
+.idea-card.is-selected .idea-card-cta {
+  color: var(--accent-3);
+}
+
+.idea-card-visual {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #0f172a;
+  position: relative;
+}
+
+.idea-card-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s var(--ease);
+}
+
+.idea-card:hover .idea-card-visual img {
+  transform: scale(1.04);
+}
+
+.idea-card-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(80% 70% at 30% 20%, rgba(56, 189, 248, 0.28), transparent 60%),
+    radial-gradient(70% 80% at 80% 80%, rgba(167, 139, 250, 0.22), transparent 55%),
+    #0f172a;
+}
+
+.idea-card-skel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08) 0%,
+    rgba(148, 163, 184, 0.18) 45%,
+    rgba(148, 163, 184, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s ease-in-out infinite;
+}
+
+.idea-card-skel-line {
+  height: 0.7rem;
+  border-radius: 6px;
+  margin: 0.15rem 0;
+}
+
+.idea-card-skel-short {
+  width: 62%;
+}
+
+.idea-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0.7rem 0.75rem;
+  flex: 1;
+}
+
+.idea-card-body h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  letter-spacing: -0.01em;
+}
+
+.idea-card-body p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  flex: 1;
+}
+
+.idea-card-cta {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.idea-card-cta:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 719px) {
+  .idea-deck-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  .idea-card {
+    flex: 0 0 78%;
+    width: auto;
+  }
 }
 
 .empty-hint {

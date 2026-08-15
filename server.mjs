@@ -58,6 +58,7 @@ import {
   CostPolicy,
   checkApiSecret,
 } from "./js/server/cost-policy.mjs";
+import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "./js/idea-cards.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -150,7 +151,7 @@ const roomManager = ROOMS_ENABLED
 /**
  * Gate expensive AI POST routes: rate limit + optional FF_API_SECRET.
  * @param {import('node:http').IncomingMessage} req
- * @param {'co-invent'|'vision'|'market-image'|'tts'} route
+ * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
  * @param {object|null} [body]
  */
 function gateExpensive(req, route, body = null) {
@@ -386,6 +387,7 @@ Role:
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year (never yellow→red or green→red solely because the calendar moved). Prefer yellow over red when pilot/partner/trial language is present and claims are borderline. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits) and judge claims against that grounding plus year — do not invent contradicting capability facts or reframe the quest as unlimited bare emTech.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
+- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, imagePrompt}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. Not a finished invention — insertText is a 1–2 sentence starter the learner will rewrite. If context.refresh, do not repeat context.avoidTitles.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
 - When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
 - When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
@@ -416,11 +418,13 @@ Respond with a single JSON object (no markdown fences):
     "scrutiny": null
   },
   "teaching": [{ "techId": "id", "blurb": "one sentence" }],
-  "timing": null
+  "timing": null,
+  "ideas": null
 }
 
 For assess-feasibility set timing to { "level": "red"|"yellow"|"green", "reason": "one sentence" }.
-For other modes timing may be null.
+For idea-sparks set ideas to exactly 3 objects { id, title, blurb, insertText, imagePrompt } and keep proposals empty.
+For other modes timing and ideas may be null.
 
 scrutiny when used:
 "scrutiny": {
@@ -995,6 +999,34 @@ function techMap(context) {
   return map;
 }
 
+function resolveFocusTech(context) {
+  const map = techMap(context);
+  const focusId = String(context.focusTechId || (context.selectedTechIds || [])[0] || "");
+  return map.get(focusId) || null;
+}
+
+function localIdeaSparksResult(context, base) {
+  const tech = resolveFocusTech(context);
+  const empty = {
+    source: "local",
+    message: "Select a tech first, then open Ideas.",
+    proposals: { ...base },
+    teaching: [],
+    ideas: [],
+  };
+  if (!tech) return empty;
+  const ideas = context.refresh
+    ? rotateLocalIdeaSparks(tech, context, context.avoidTitles || [])
+    : localIdeaSparks(tech, context);
+  return {
+    source: "local",
+    message: `Three angles for **${tech.name || tech.id}** here. Pick one to seed how-it-works — then rewrite it so it's yours.`,
+    proposals: { ...base },
+    teaching: [],
+    ideas,
+  };
+}
+
 function resolveStack(context, targetCount = 4) {
   const selected = new Set(context.selectedTechIds || []);
   const recommended = context.challenge?.recommended || [];
@@ -1092,6 +1124,10 @@ function localCoInvent({ mode, messages, context }) {
     inventionImpact: null,
     scrutiny: null,
   };
+
+  if (mode === "idea-sparks") {
+    return localIdeaSparksResult(context, base);
+  }
 
   if (mode === "complete-picture") {
     const face = context.storyFace === "life" ? "life" : "how";
@@ -1545,6 +1581,9 @@ function buildUserPayload({ messages, context, mode }) {
     spark:
       "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable." +
       GROUNDING_HINT,
+    "idea-sparks":
+      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (≤60 chars), blurb (≤140), insertText (≤280, 1–2 sentences the learner can drop into how-it-works and rewrite), imagePrompt (≤400, visual scene only, no text/logos) }. Three DIFFERENT angles (not three wordings of one idea). Pilot-honest vs year; inventable application categories, not a named finished product. Leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do not prescribe the solution. Never say categories are year-locked. If context.refresh is true, produce a NEW trio that does not repeat titles in context.avoidTitles." +
+      GROUNDING_HINT,
     "suggest-stack":
       "Propose a coherent technology stack for this challenge. Explain why each piece matters. Put ids in proposals.addTechIds (and removeTechIds if swapping)." +
       GROUNDING_HINT,
@@ -1755,8 +1794,8 @@ function sanitizeScrutiny(raw) {
 
 function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
   const ids = new Set(availableIds);
-  // SIT / SCAMPER are brainstorm sparks — never offer Apply how-it-works (or other story applies)
-  const brainstormOnly = mode === "sit" || mode === "scamper";
+  // SIT / SCAMPER / idea-sparks are brainstorm sparks — never offer Apply how-it-works
+  const brainstormOnly = mode === "sit" || mode === "scamper" || mode === "idea-sparks";
   const empty = {
     source,
     message: "I'm with you — tell me what you want to invent, or pick a quick action.",
@@ -1814,6 +1853,10 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
     },
     teaching,
   };
+
+  if (mode === "idea-sparks") {
+    out.ideas = ideasOrFallback(parsed.ideas, null);
+  }
 
   // Tutor session exit signal (learning modules)
   if (parsed.endTutoring === true || parsed.endTutoring === "true") {
@@ -1895,7 +1938,9 @@ async function aiCoInvent(body, client, meta = {}) {
   const sessionId = meta.sessionId || clientSessionFromBody(body);
 
   const isPose = mode === "pose-challenge";
-  const isTutor = !isPose && isTutorMode(context) && mode !== "generate-scenarios";
+  const isIdeaSparks = mode === "idea-sparks";
+  const isTutor =
+    !isPose && !isIdeaSparks && isTutorMode(context) && mode !== "generate-scenarios";
   const systemContent = isPose
     ? POSE_CHALLENGE_SYSTEM
     : isTutor
@@ -1968,6 +2013,16 @@ async function aiCoInvent(body, client, meta = {}) {
   const text = response.output_text || "";
   const parsed = extractJson(text);
   if (!parsed) {
+    if (mode === "idea-sparks") {
+      return localIdeaSparksResult(context, {
+        addTechIds: [],
+        removeTechIds: [],
+        inventionName: null,
+        inventionHow: null,
+        inventionImpact: null,
+        scrutiny: null,
+      });
+    }
     if (mode === "generate-scenarios") {
       return localGenerateScenarios(context, {
         addTechIds: [],
@@ -1998,7 +2053,11 @@ async function aiCoInvent(body, client, meta = {}) {
   if (mode === "generate-scenarios") {
     return sanitizeScenariosResult(parsed, context, "ai");
   }
-  return sanitizeResult(parsed, availableIds, "ai", mode);
+  const out = sanitizeResult(parsed, availableIds, "ai", mode);
+  if (mode === "idea-sparks") {
+    out.ideas = ideasOrFallback(parsed.ideas, resolveFocusTech(context), context);
+  }
+  return out;
 }
 
 async function handleCoInvent(body) {
@@ -2062,6 +2121,8 @@ const IMAGE_MODEL = process.env.FF_XAI_IMAGE_MODEL || "grok-imagine-image";
 const visionSessions = new Map();
 /** Cache market news illustrations by event id (no invent context). */
 const marketImageCache = new Map();
+/** Cache idea-card thumbnails by client-provided id. */
+const ideaImageCache = new Map();
 
 async function xaiImageRequest(path, payload, { forceRefresh = false } = {}) {
   let token = await resolveAccessToken({ forceRefresh });
@@ -2438,6 +2499,89 @@ async function handleMarketImage(body) {
     console.warn("[market-image]", e.message || e);
     recordAiImage({
       kind: "market",
+      mode: "generate",
+      source: "error",
+      imageCount: 0,
+      ok: false,
+      sessionId: clientSessionId,
+    });
+    return {
+      ok: false,
+      error: String(e.message || "generate_failed").slice(0, 200),
+      imageUrl: null,
+      id,
+    };
+  }
+}
+
+/**
+ * Lightweight Imagine generate for idea-card thumbnails.
+ * Cached by client id (tech + idea + place + year hash).
+ */
+async function handleIdeaImage(body) {
+  const id = String(body?.id || "").slice(0, 80);
+  const clientSessionId = clientSessionFromBody(body);
+  if (clientSessionId) usage.touchSession(clientSessionId);
+  if (!id) {
+    return { ok: false, error: "missing_id" };
+  }
+  const cached = ideaImageCache.get(id);
+  if (cached?.imageUrl) {
+    recordAiImage({
+      kind: "idea",
+      mode: "generate",
+      source: "cache",
+      imageCount: 0,
+      ok: true,
+      sessionId: clientSessionId,
+    });
+    return {
+      ok: true,
+      cached: true,
+      imageUrl: cached.imageUrl,
+      model: IMAGE_MODEL,
+      id,
+    };
+  }
+
+  const rawPrompt = String(body?.prompt || "").slice(0, 700);
+  const prompt = [
+    "Photoreal 4:3 documentary still of a local emerging-tech application.",
+    "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+    rawPrompt || "People using a practical tool in a specific neighborhood.",
+  ].join(" ");
+
+  try {
+    const data = await runVisionImage("generate", prompt, null);
+    const imageUrl = await normalizeVisionDataUrl(data);
+    ideaImageCache.set(id, { imageUrl, prompt, updatedAt: Date.now() });
+    if (ideaImageCache.size > 80) {
+      const oldest = [...ideaImageCache.entries()].sort(
+        (a, b) => (a[1].updatedAt || 0) - (b[1].updatedAt || 0)
+      )[0];
+      if (oldest) ideaImageCache.delete(oldest[0]);
+    }
+    recordAiImage({
+      kind: "idea",
+      mode: "generate",
+      source: "live",
+      imageCount: 1,
+      usage: data?.usage || null,
+      latencyMs: data?._latencyMs ?? null,
+      ok: true,
+      sessionId: clientSessionId,
+    });
+    return {
+      ok: true,
+      cached: false,
+      imageUrl,
+      model: IMAGE_MODEL,
+      id,
+    };
+  } catch (e) {
+    console.warn("[idea-image]", e.message || e);
+    recordAiImage({
+      kind: "idea",
       mode: "generate",
       source: "error",
       imageCount: 0,
@@ -2836,6 +2980,28 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Vision generation failed",
+      });
+    }
+  }
+
+  if (req.method === "POST" && req.url?.startsWith("/api/idea-image")) {
+    try {
+      const body = await readBody(req);
+      const gate = gateExpensive(req, "idea-image", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          ok: false,
+          error: gate.error || "rate_limited",
+        });
+      }
+      const result = await handleIdeaImage(body);
+      return sendJson(res, 200, result);
+    } catch (e) {
+      console.error("[idea-image]", e.message || e);
+      const status = errorStatus(e);
+      return sendJson(res, status, {
+        ok: false,
+        error: e.message || "Idea image generation failed",
       });
     }
   }

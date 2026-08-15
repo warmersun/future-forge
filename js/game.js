@@ -29,6 +29,15 @@ import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
 import {
+  IdeaDeck,
+  ideaCacheKey,
+  ideaImageId,
+  appendHowText,
+  ideasOrFallback,
+  localIdeaSparks,
+  rotateLocalIdeaSparks,
+} from "./idea-cards.js";
+import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
   applyPressureDrop,
@@ -872,6 +881,19 @@ let writeCommitTimer = null;
 const INVENT_SOFT_SAVE_MS = 900;
 /** When true, invent blur handlers skip commit (seat switch already flushed / abandoned draft) */
 let suppressInventBlurCommit = false;
+/** @type {IdeaDeck|null} */
+let ideaDeck = null;
+/** @type {string|null} */
+let ideaDeckTechId = null;
+/** Focused catalog tech (highlight only — not necessarily on the stack). */
+/** @type {string|null} */
+let focusedTechId = null;
+/** @type {Map<string, object[]>} */
+const ideaSparkCache = new Map();
+/** @type {Map<string, Promise<object[]>>} */
+const ideaSparkInflight = new Map();
+/** @type {Map<string, string[]>} picked idea ids per cache key */
+const ideaSparkPicked = new Map();
 
 /**
  * Capture invent fields the local player is actively editing so hydrates/re-renders
@@ -1082,7 +1104,7 @@ function applyMpContributionLockToDom() {
   // Freeze story fields + focus toggles while evaluating
   applyStoryFieldLocks();
   // Soft block tech cards (clicks still toast via onTechClick if any slip through)
-  $$("#tech-list .tech-card, #selected-techs button, #selected-techs .tech-chip").forEach(
+  $$("#tech-list .tech-card button, #selected-techs button, #selected-techs .tech-chip").forEach(
     (el) => {
       if (locked) {
         el.dataset.mpContribDisabled = el.disabled ? "1" : "0";
@@ -4342,6 +4364,11 @@ function startMission(mission) {
   state.pressure = clonePressure(state.mission.pressure);
   state.selectedTechIds = [];
   state.learnOrder = [];
+  ideaSparkCache.clear();
+  ideaSparkInflight.clear();
+  ideaSparkPicked.clear();
+  focusedTechId = null;
+  closeIdeaDeck();
   state.inventionName = "";
   state.inventionHow = "";
   state.inventionImpact = "";
@@ -5550,31 +5577,50 @@ function renderTechList() {
       } else if (apEnabled()) {
         costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
       }
-      // Only techs already on the stack get green + ✓. Unaffordable never looks selected.
+      // Green ✓ = on stack. Accent outline = focused (ideas/add bar), independent of stack.
+      const focused = focusedTechId === t.id;
+      const cardClass = `tech-card ${sel ? "selected" : ""} ${
+        sug ? "recommended" : ""
+      } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}${
+        focused ? " is-focused" : ""
+      }`;
       return `
-        <button type="button" class="tech-card ${sel ? "selected" : ""} ${
-          sug ? "recommended" : ""
-        } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}"
-          data-id="${t.id}" style="--domain:${color}" title="${escapeHtml(nowCap)}${escapeHtml(costTitle)}">
-          <span class="tech-icon">${t.icon}</span>
-          <span class="tech-meta">
-            <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
-            <p>${escapeHtml(t.summary)}</p>
-            <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-              isSpot ? " · spotlight" : sug ? " · suggested" : ""
-            }${unaffordable ? " · can't afford" : ""}</span>
-            ${costHtml}
-          </span>
-          <span class="tech-add">${sel ? "✓" : unaffordable ? "!" : "+"}</span>
-        </button>`;
+        <div class="${cardClass}" data-id="${t.id}" style="--domain:${color}" role="listitem" tabindex="-1">
+          <button type="button" class="tech-card-main" data-tech-focus="${t.id}"
+            title="${escapeHtml(nowCap)}${escapeHtml(costTitle)} — click to focus">
+            <span class="tech-icon">${t.icon}</span>
+            <span class="tech-meta">
+              <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
+              <p>${escapeHtml(t.summary)}</p>
+              <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
+                isSpot ? " · spotlight" : sug ? " · suggested" : ""
+              }${unaffordable ? " · can't afford" : ""}</span>
+              ${costHtml}
+            </span>
+          </button>
+          <button type="button" class="tech-add-btn" data-tech-toggle="${t.id}"
+            aria-label="${sel ? `Remove ${t.name} from stack` : `Add ${t.name} to stack`}">
+            <span class="tech-add">${sel ? "✓" : unaffordable ? "!" : "+"}</span>
+          </button>
+        </div>`;
     })
     .join("");
 
-  el.querySelectorAll(".tech-card").forEach((btn) => {
-    btn.addEventListener("click", () => onTechClick(btn.dataset.id));
-    btn.addEventListener("contextmenu", (e) => {
+  el.querySelectorAll("[data-tech-focus]").forEach((btn) => {
+    btn.addEventListener("click", () => focusTech(btn.dataset.techFocus));
+  });
+  el.querySelectorAll("[data-tech-toggle]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
       e.preventDefault();
-      openTechModal(btn.dataset.id);
+      e.stopPropagation();
+      focusedTechId = btn.dataset.techToggle;
+      onTechClick(btn.dataset.techToggle);
+    });
+  });
+  el.querySelectorAll(".tech-card").forEach((card) => {
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openTechModal(card.dataset.id);
     });
   });
 }
@@ -5769,6 +5815,336 @@ function onTechClick(id) {
   renderHud();
 }
 
+function ideaSparksKey(techId) {
+  return ideaCacheKey({
+    missionId: state.mission?.id,
+    techId,
+    year: state.year,
+    place: state.mission?.place,
+  });
+}
+
+function ideaSparksCached(techId) {
+  return ideaSparkCache.has(ideaSparksKey(techId));
+}
+
+function ideaSparksWouldCostAp(techId) {
+  if (!apEnabled()) return false;
+  const key = ideaSparksKey(techId);
+  return !ideaSparkCache.has(key) && !ideaSparkInflight.has(key);
+}
+
+function chargeIdeaSparksAp() {
+  if (!apEnabled()) return { ok: true };
+  const pay = spendContributionAp("idea-sparks");
+  if (!pay.ok) return { ok: false };
+  if (!pay.roomPaid && state.pendingAi) dispatchSim("resolve_ai");
+  renderHud();
+  mpSyncFromSolo?.();
+  return { ok: true };
+}
+
+function ensureIdeaDeck() {
+  if (ideaDeck) return ideaDeck;
+  const host = $("#idea-deck");
+  if (!host) return null;
+  ideaDeck = new IdeaDeck(host, {
+    fetchSparks: (id) => fetchIdeaSparks(id),
+    fetchImage: fetchIdeaImage,
+    onPick: applyIdeaSpark,
+    onRefresh: refreshIdeaDeck,
+    onClose: () => {
+      ideaDeckTechId = null;
+      renderTechList();
+      renderSelectedChips();
+      renderIdeaFocusBar();
+    },
+  });
+  return ideaDeck;
+}
+
+function closeIdeaDeck() {
+  if (!ideaDeck && !ideaDeckTechId) return;
+  ideaDeckTechId = null;
+  ideaDeck?.close();
+}
+
+function focusTech(techId) {
+  if (!techId || !techById(techId)) return;
+  const switching = focusedTechId !== techId;
+  focusedTechId = techId;
+  if (switching && ideaDeck?.isOpen() && ideaDeckTechId !== techId) {
+    closeIdeaDeck();
+  }
+  renderTechList();
+  renderSelectedChips();
+  renderIdeaFocusBar();
+}
+
+function openIdeaDeck(techId) {
+  const id = techId || focusedTechId;
+  const tech = techById(id);
+  if (!tech) return;
+  if (isViewedInventStoryLocked() || isMpContributionLocked()) {
+    flashToast("Can't generate ideas right now.");
+    return;
+  }
+  if (blockIfMpTurnGate("generating ideas")) return;
+
+  focusedTechId = id;
+  if (ideaSparksWouldCostAp(id)) {
+    const pay = chargeIdeaSparksAp();
+    if (!pay.ok) {
+      flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
+      renderIdeaFocusBar();
+      return;
+    }
+  }
+
+  const deck = ensureIdeaDeck();
+  if (!deck) return;
+  ideaDeckTechId = id;
+  const onStack = state.selectedTechIds.includes(id);
+  renderTechList();
+  renderSelectedChips();
+  renderIdeaFocusBar();
+  deck.open(tech, {
+    hint: onStack
+      ? "Pick a spark to add to How it works, or close. Refresh gets a new set (1 AP)."
+      : "Close if none fit — nothing is added. Picking a spark adds this tech (normal costs) and a starter to How it works.",
+    pickLabel: onStack ? "Add to how it works" : "Add tech + how it works",
+    refreshLabel: apEnabled() ? "Refresh · 1 AP" : "Refresh",
+    selectedIds: ideaSparkPicked.get(ideaSparksKey(id)) || [],
+  });
+  $("#idea-panel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+}
+
+/**
+ * @param {string} techId
+ * @param {object[]} current
+ * @returns {Promise<object[]|false>}
+ */
+async function refreshIdeaDeck(techId, current = []) {
+  const id = techId || focusedTechId || ideaDeckTechId;
+  if (!id) return false;
+  if (isViewedInventStoryLocked() || isMpContributionLocked()) {
+    flashToast("Can't generate ideas right now.");
+    return false;
+  }
+  if (blockIfMpTurnGate("generating ideas")) return false;
+  const pay = chargeIdeaSparksAp();
+  if (!pay.ok) {
+    flashToast("No AP left for ideas — End Turn or Wait.", { resource: "ap" });
+    return false;
+  }
+  const key = ideaSparksKey(id);
+  const prev = Array.isArray(current) && current.length ? current : ideaSparkCache.get(key) || [];
+  const avoidTitles = prev.map((i) => i.title).filter(Boolean);
+  ideaSparkCache.delete(key);
+  ideaSparkPicked.delete(key);
+  const ideas = await fetchIdeaSparks(id, { force: true, avoidTitles });
+  if (!ideas?.length) {
+    if (prev.length) ideaSparkCache.set(key, prev);
+    flashToast("Could not refresh ideas — keeping the current set.");
+    return false;
+  }
+  renderIdeaFocusBar();
+  return ideas;
+}
+
+function renderIdeaFocusBar() {
+  const panel = $("#idea-panel");
+  const bar = $("#idea-focus");
+  if (!bar) return;
+  const tech = focusedTechId ? techById(focusedTechId) : null;
+  if (!tech) {
+    if (panel) panel.hidden = true;
+    bar.innerHTML = "";
+    return;
+  }
+  const onStack = state.selectedTechIds.includes(tech.id);
+  const deckOpen = Boolean(ideaDeckTechId && ideaDeckTechId === tech.id);
+  const askAp = ideaSparksWouldCostAp(tech.id);
+  if (panel) panel.hidden = false;
+  bar.innerHTML = `
+    <div class="idea-focus-id">${tech.icon || ""} <strong>${escapeHtml(tech.name)}</strong></div>
+    <div class="idea-focus-actions">
+      ${
+        deckOpen
+          ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar>${
+              apEnabled() ? "Refresh · 1 AP" : "Refresh"
+            }</button>
+             <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar>Close ideas</button>`
+          : `<button type="button" class="btn btn-secondary btn-sm" data-idea-ask>${
+              askAp ? "Ask for ideas · 1 AP" : "Ask for ideas"
+            }</button>`
+      }
+      ${
+        onStack
+          ? `<span class="idea-focus-instack">In stack</span>`
+          : `<button type="button" class="btn btn-primary btn-sm" data-idea-add>Add to stack</button>`
+      }
+    </div>`;
+  bar.querySelector("[data-idea-ask]")?.addEventListener("click", () => openIdeaDeck(tech.id));
+  bar.querySelector("[data-idea-refresh-bar]")?.addEventListener("click", () => {
+    ideaDeck?.refresh?.();
+  });
+  bar.querySelector("[data-idea-close-bar]")?.addEventListener("click", () => closeIdeaDeck());
+  bar.querySelector("[data-idea-add]")?.addEventListener("click", () => {
+    onTechClick(tech.id);
+    renderIdeaFocusBar();
+  });
+}
+
+function ideaSparksContext(techId) {
+  return {
+    challenge: state.mission
+      ? {
+          id: state.mission.id,
+          title: state.mission.title,
+          problem: state.mission.scene,
+          recommended: state.mission.suggested,
+        }
+      : null,
+    selectedTechIds: [...state.selectedTechIds],
+    focusTechId: techId,
+    inventionName: state.inventionName,
+    inventionHow: state.inventionHow,
+    inventionImpact: state.inventionImpact,
+    storyFace: state.storyFace,
+    year: state.year,
+    turn: state.turn,
+    place: state.mission?.place,
+    pressure: state.pressure,
+    availableTechs: TECHS.map((t) => techForAi(t, state.year)),
+    grounding: state.mission?.grounding || null,
+    isLearningModule: Boolean(state.mission?.isLearningModule),
+  };
+}
+
+async function fetchIdeaSparks(techId, opts = {}) {
+  const tech = techById(techId);
+  const force = Boolean(opts.force);
+  const ctx = {
+    ...ideaSparksContext(techId),
+    refresh: force,
+    avoidTitles: Array.isArray(opts.avoidTitles) ? opts.avoidTitles : [],
+  };
+  const key = ideaSparksKey(techId);
+  if (!force && ideaSparkCache.has(key)) return ideaSparkCache.get(key);
+  if (!force && ideaSparkInflight.has(key)) return ideaSparkInflight.get(key);
+
+  const pending = (async () => {
+    try {
+      const res = await fetch("/api/co-invent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "idea-sparks",
+          clientSessionId: getClientSessionId(),
+          messages: [{ role: "user", content: `Ideas for ${tech?.name || techId}` }],
+          context: ctx,
+        }),
+      });
+      const data = await res.json();
+      const ideas = ideasOrFallback(data.ideas, tech, ctx);
+      if (ideas.length) {
+        ideaSparkCache.set(key, ideas);
+        return ideas;
+      }
+    } catch {
+      // local fallback below
+    }
+    const local = force
+      ? rotateLocalIdeaSparks(tech, ctx, ctx.avoidTitles)
+      : localIdeaSparks(tech, ctx);
+    if (local.length) ideaSparkCache.set(key, local);
+    return local;
+  })();
+
+  ideaSparkInflight.set(key, pending);
+  try {
+    return await pending;
+  } finally {
+    ideaSparkInflight.delete(key);
+    renderTechList();
+    renderSelectedChips();
+    renderIdeaFocusBar();
+    renderHud();
+  }
+}
+
+async function fetchIdeaImage(idea) {
+  const id = ideaImageId({
+    techId: ideaDeckTechId || idea.id,
+    ideaId: idea.id,
+    place: state.mission?.place,
+    year: state.year,
+  });
+  try {
+    const res = await fetch("/api/idea-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        prompt: idea.imagePrompt || idea.title,
+        clientSessionId: getClientSessionId(),
+      }),
+    });
+    const data = await res.json();
+    return data?.ok && data.imageUrl ? data.imageUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+function applyIdeaSpark(idea) {
+  if (isViewedInventStoryLocked() || writeCommitInFlight || isMpContributionLocked()) {
+    flashToast("Can't edit how-it-works right now.");
+    return false;
+  }
+  const insert = String(idea?.insertText || "").trim();
+  if (!insert) return false;
+
+  const techId = ideaDeckTechId;
+  const tech = techId ? techById(techId) : null;
+  let addedTech = false;
+  if (techId && !state.selectedTechIds.includes(techId)) {
+    onTechClick(techId);
+    if (!state.selectedTechIds.includes(techId)) {
+      // onTechClick already toasted unaffordable / stack full / turn gate
+      return false;
+    }
+    addedTech = true;
+  }
+
+  state.inventionHow = appendHowText(state.inventionHow, insert);
+  if (singleStoryFaceEnabled()) mirrorSparkStoryImpact();
+  syncStoryFieldsToDom({ force: true });
+  state.aiTiming = null;
+  scheduleAiTimingAssess();
+  renderStoryFaceUI();
+  renderFeasibility();
+  updateChallengeButton();
+  updateVision();
+  mpSyncFromSolo?.();
+  state.coInventor?.syncChipGates?.();
+  const how = $("#invention-how");
+  how?.focus?.();
+  if (techId && idea?.id) {
+    const key = ideaSparksKey(techId);
+    const picked = ideaSparkPicked.get(key) || [];
+    if (!picked.includes(idea.id)) ideaSparkPicked.set(key, [...picked, idea.id]);
+  }
+  flashToast(
+    addedTech
+      ? `Added ${tech?.name || "the tech"} and a spark — edit it so it's yours.`
+      : "Added a spark — edit it so it's yours."
+  );
+  renderIdeaFocusBar();
+  return true;
+}
+
 function renderSelectedChips() {
   const box = $("#selected-techs");
   const techs = selectedTechs();
@@ -5776,17 +6152,26 @@ function renderSelectedChips() {
   updateTechDrawerCount(layout, techs.length);
   if (!techs.length) {
     box.innerHTML = `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the left catalog on wide screens) to build your stack.</span>`;
+    renderIdeaFocusBar();
     return;
   }
   box.innerHTML = techs
-    .map(
-      (t) =>
-        `<span class="tech-chip">${t.icon} ${escapeHtml(t.name)}<button type="button" data-remove="${t.id}">×</button></span>`
-    )
+    .map((t) => {
+      const focused = focusedTechId === t.id;
+      return `<span class="tech-chip${focused ? " is-focused" : ""}" data-tech-focus="${t.id}">${t.icon} ${escapeHtml(t.name)}<button type="button" data-remove="${t.id}" aria-label="Remove ${escapeHtml(t.name)}">×</button></span>`;
+    })
     .join("");
   box.querySelectorAll("[data-remove]").forEach((b) =>
-    b.addEventListener("click", () => onTechClick(b.dataset.remove))
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onTechClick(b.dataset.remove);
+    })
   );
+  box.querySelectorAll("[data-tech-focus]").forEach((el) =>
+    el.addEventListener("click", () => focusTech(el.dataset.techFocus))
+  );
+  renderIdeaFocusBar();
 }
 
 function renderSynergy() {

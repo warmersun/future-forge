@@ -29,6 +29,18 @@ describe("RateLimiter", () => {
 });
 
 describe("CostPolicy", () => {
+  it("rate-limits idea-image like other image routes", () => {
+    const policy = new CostPolicy({
+      windows: {
+        "idea-image": { limit: 2, windowMs: 60_000 },
+        "ai-global": { limit: 10, windowMs: 60_000 },
+      },
+    });
+    assert.equal(policy.allowExpensive("idea-image", "2.2.2.2").ok, true);
+    assert.equal(policy.allowExpensive("idea-image", "2.2.2.2").ok, true);
+    assert.equal(policy.allowExpensive("idea-image", "2.2.2.2").ok, false);
+  });
+
   it("rate-limits expensive routes and global budget", () => {
     const policy = new CostPolicy({
       windows: {

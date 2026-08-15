@@ -18,6 +18,8 @@ export const DEFAULT_COST_WINDOWS = {
   vision: { limit: 20, windowMs: 60_000 },
   /** Market news illustrations */
   "market-image": { limit: 20, windowMs: 60_000 },
+  /** Idea-card thumbnails */
+  "idea-image": { limit: 20, windowMs: 60_000 },
   /** Cloud TTS */
   tts: { limit: 30, windowMs: 60_000 },
   /** Global AI spend gate (all of the above share this) */
@@ -44,6 +46,7 @@ export function costWindowsFromEnv(env = process.env) {
     FF_RATE_CO_INVENT: "co-invent",
     FF_RATE_VISION: "vision",
     FF_RATE_MARKET_IMAGE: "market-image",
+    FF_RATE_IDEA_IMAGE: "idea-image",
     FF_RATE_TTS: "tts",
     FF_RATE_AI_GLOBAL: "ai-global",
     FF_RATE_WS_ACTION: "ws-action",
@@ -88,7 +91,7 @@ export class CostPolicy {
 
   /**
    * Solo AI routes: per-route + global AI budget.
-   * @param {'co-invent'|'vision'|'market-image'|'tts'} route
+   * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
    * @param {string} ip
    */
   allowExpensive(route, ip) {

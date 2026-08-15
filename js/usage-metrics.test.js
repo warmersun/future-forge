@@ -213,6 +213,20 @@ describe("createUsageTracker", () => {
     assert.equal(s.lifetime.estimatedCostUsd, 0.05);
   });
 
+  it("records idea-card images as kind idea", () => {
+    tracker.record({
+      type: "ai_image",
+      kind: "idea",
+      mode: "generate",
+      source: "live",
+      imageCount: 1,
+      ok: true,
+    });
+    const s = tracker.getSummary();
+    assert.equal(s.byImageKind.idea.live, 1);
+    assert.equal(s.byImageKind.idea.cache, 0);
+  });
+
   it("records ai_tts live chars and cost; cache not billed", () => {
     tracker.record({
       type: "ai_tts",
