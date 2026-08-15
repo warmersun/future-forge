@@ -111,7 +111,7 @@ const WS_MAX_PAYLOAD = Math.max(
 );
 /** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
 const HOST = process.env.FF_HOST || "0.0.0.0";
-const MODEL = process.env.FF_XAI_MODEL || "grok-4.5";
+const MODEL = process.env.FF_XAI_MODEL || "grok-4.6";
 /** Default xAI TTS voice (https://docs.x.ai — Text to Speech). */
 const TTS_VOICE = process.env.FF_TTS_VOICE || "eve";
 /** xAI TTS input character limit. */

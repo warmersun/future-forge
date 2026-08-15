@@ -84,7 +84,7 @@ Copy `.env.example` to `.env` if you want overrides:
 ```bash
 # .env
 FF_PORT=8765
-FF_XAI_MODEL=grok-4.5
+FF_XAI_MODEL=grok-4.6
 # FF_XAI_API_KEY=xai-...   # see auth below
 # FF_TTS_VOICE=eve         # optional default for Read out loud
 ```

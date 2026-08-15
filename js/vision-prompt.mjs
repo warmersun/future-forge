@@ -380,7 +380,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
   const t0 = Date.now();
   try {
     const response = await client.responses.create({
-      model: model || "grok-4.5",
+      model: model || "grok-4.6",
       input,
       temperature: 0.2,
     });
@@ -389,7 +389,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         opts.onAiTextUsage({
           mode: "vision-director",
           source: "ai",
-          model: model || "grok-4.5",
+          model: model || "grok-4.6",
           usage: response.usage || null,
           latencyMs: Date.now() - t0,
           ok: true,
