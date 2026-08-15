@@ -6876,6 +6876,11 @@ button.linkish:hover {
     box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
+/* display:inline-flex beats UA [hidden] — only learning modules show this badge */
+.co-tutor-badge[hidden] {
+  display: none !important;
+}
+
 /* Active tutor session — lit gold */
 .co-tutor-badge.is-active {
   color: #1c1917;
