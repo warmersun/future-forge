@@ -6982,10 +6982,21 @@ button.linkish:hover {
   border-bottom-right-radius: 4px;
 }
 
+.co-msg.assistant {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .co-msg.assistant .co-bubble {
   background: rgba(167, 139, 250, 0.08);
   border: 1px solid rgba(167, 139, 250, 0.22);
   border-bottom-left-radius: 4px;
+}
+
+.co-msg.assistant .read-aloud-bar {
+  width: auto;
+  align-self: flex-end;
+  margin: 0.15rem 0 0.1rem;
 }
 
 /* Markdown in assistant / tutor bubbles (links, images, compact structure) */

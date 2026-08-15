@@ -4,6 +4,14 @@
 
 import { getClientSessionId } from "./client-session.js";
 import { renderChatMarkdown } from "./md-lite.js";
+import {
+  attachReadAloud,
+  pruneDetachedReadAloud,
+  plainTextFromEl,
+} from "./read-aloud.js";
+
+/** Chat replies can be shorter than brief/scene hosts. */
+const CO_READ_MIN_CHARS = 40;
 
 const QUICK_ACTIONS = [
   { mode: "spark", label: "Spark ideas", hint: "Frame the local mission" },
@@ -727,6 +735,17 @@ export class CoInventor {
           b.classList.add("applied");
           b.disabled = true;
         });
+      });
+    });
+
+    pruneDetachedReadAloud();
+    box.querySelectorAll(".co-msg.assistant .co-bubble-md").forEach((el) => {
+      attachReadAloud(el, {
+        minChars: CO_READ_MIN_CHARS,
+        getText: () =>
+          plainTextFromEl(el, {
+            skipSelector: ".read-aloud-bar, .co-proposal-actions, script, style",
+          }),
       });
     });
 

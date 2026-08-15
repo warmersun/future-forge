@@ -194,6 +194,22 @@ export function attachReadAloud(contentEl, opts = {}) {
  * Re-evaluate visibility from current text; stop if active text changed.
  * @param {HTMLElement|null|undefined} contentEl
  */
+/**
+ * Drop hosts whose content node left the DOM (e.g. chat re-render).
+ */
+export function pruneDetachedReadAloud() {
+  for (const [el, rec] of hosts) {
+    if (el.isConnected) continue;
+    if (activeContent === el) stopReadAloud();
+    try {
+      rec.bar.remove();
+    } catch {
+      /* already gone with parent */
+    }
+    hosts.delete(el);
+  }
+}
+
 export function refreshReadAloud(contentEl) {
   const rec = contentEl && hosts.get(contentEl);
   if (!rec) return;
