@@ -1631,6 +1631,25 @@ body.mp-hotseat .workshop-layout {
   margin: 0 0 0.75rem;
 }
 
+.title-logo-mark {
+  display: block;
+  width: min(320px, 78vw);
+  height: auto;
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 1px rgba(180, 160, 255, 0.22),
+    0 18px 48px rgba(0, 0, 0, 0.4);
+}
+
+.title-ws-lockup {
+  display: block;
+  height: 28px;
+  width: auto;
+  aspect-ratio: 1655 / 594;
+  object-fit: cover;
+  object-position: 50% 47%;
+}
+
 .title-logo-sun {
   width: 4.25rem;
   height: 4.25rem;
@@ -1657,16 +1676,23 @@ body.mp-hotseat .workshop-layout {
 }
 
 #screen-title h1 {
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 0;
-  color: var(--ws-cream, #fff4e6);
-  text-shadow: 0 0 40px rgba(255, 159, 67, 0.18);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .title-logo-credit {
   margin: 0 0 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -2769,20 +2795,12 @@ button.hud-year-btn.hud-year-pulse {
 }
 
 .hud-product-sun {
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 50%;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 6px;
   flex-shrink: 0;
-  background: radial-gradient(
-    circle at 35% 35%,
-    #fff8e7 0%,
-    var(--ws-sun) 28%,
-    var(--ws-amber) 62%,
-    var(--ws-coral) 100%
-  );
-  box-shadow:
-    0 0 0 1px rgba(255, 180, 100, 0.28),
-    0 0 12px rgba(255, 159, 67, 0.45);
+  background: url("../assets/mascot/ff-mark.webp") center / cover no-repeat;
+  box-shadow: 0 0 0 1px rgba(180, 160, 255, 0.28);
 }
 
 .hud-product-text {
@@ -2925,8 +2943,8 @@ body.mp-hotseat .hud-product {
   }
 
   .hud-product-sun {
-    width: 1rem;
-    height: 1rem;
+    width: 1.45rem;
+    height: 1.45rem;
   }
 }
 

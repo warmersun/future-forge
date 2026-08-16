@@ -369,7 +369,7 @@ export async function renderShareCard(opts = {}) {
   ctx.fill();
 
   // —— Brand header ——
-  drawWarmerSun(ctx, 114, 118, 20);
+  drawBrandMark(ctx, 114, 118, 20);
   ctx.fillStyle = "#fff4e6";
   ctx.font = "700 34px system-ui, sans-serif";
   ctx.fillText("Future Forge", 148, 112);
@@ -470,7 +470,7 @@ export async function renderShareCard(opts = {}) {
   ctx.font = "400 20px system-ui, sans-serif";
   ctx.fillText("Invent local. Race the exponential clock.", padX, y);
   y += 36;
-  drawWarmerSun(ctx, padX + 12, y - 6, 12);
+  drawBrandMark(ctx, padX + 12, y - 6, 12);
   ctx.fillStyle = "#fff4e6";
   ctx.font = "600 20px system-ui, sans-serif";
   ctx.fillText("Future Forge by Warmer Sun", padX + 34, y);
@@ -673,6 +673,29 @@ function drawShareSection(ctx, { x, y, w, label, body, maxLines = 12, bodySize =
   ctx.font = `400 ${bodySize}px system-ui, sans-serif`;
   yy = wrapText(ctx, body, x, yy, w, lineHeight, maxLines);
   return yy + 10;
+}
+
+const brandMarkImg = new Image();
+brandMarkImg.decoding = "async";
+brandMarkImg.src = "assets/mascot/ff-mark.webp";
+
+/** Future Forge plate when loaded; otherwise the old sunrise disc. */
+function drawBrandMark(ctx, cx, cy, r) {
+  if (brandMarkImg.complete && brandMarkImg.naturalWidth > 0) {
+    const s = r * 2.2;
+    const x = cx - s / 2;
+    const y = cy - s / 2;
+    const rad = Math.max(3, s * 0.12);
+    ctx.save();
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, s, s, rad);
+    else ctx.rect(x, y, s, s);
+    ctx.clip();
+    ctx.drawImage(brandMarkImg, x, y, s, s);
+    ctx.restore();
+    return;
+  }
+  drawWarmerSun(ctx, cx, cy, r);
 }
 
 /** Warmer Sun logo mark (radial sunrise gold). */
