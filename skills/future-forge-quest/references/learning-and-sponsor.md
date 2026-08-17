@@ -32,13 +32,13 @@ Write as short structured notes. Do **not** paste this into `briefMd` or `scene`
 LESSON GOAL: <one sentence — what the learner should invent/understand>
 
 SEQUENCE (one idea at a time; do not dump all at once):
-1) <idea — offer [Page title](https://warmersun.com/lessons/…) after a one-breath answer>
-2) <product category capability honesty (not whole emTech) — offer matching page after a one-breath answer>
+1) <idea — offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation of this idea>
+2) <product category capability honesty (not whole emTech) — offer matching page after a short spoken explanation of this idea>
 3) <map unlocked use case → local application category>
 4) <scope / pilot limits; invent stays in chat>
 
 RESOURCES (optional — textbook pages the tutor offers after answering, not instead of answering):
-- Reading: [Short title](https://warmersun.com/lessons/…stable…) — after the one-breath answer for step 2; not a first-turn dump
+- Reading: [Short title](https://warmersun.com/lessons/…stable…) — after the short spoken explanation for step 2; not a first-turn dump
 - Reading: [Short title](https://…) — deeper dive; do not open with this
 ILLUSTRATIONS (optional — https images the tutor can show inline):
 - ![One-line caption](https://…/diagram.png) — with the matching page, or instead of a second link
@@ -53,9 +53,10 @@ INVENT GATE:
 
 TEACHING STYLE (optional lesson notes — must not contradict the engine):
 - Chat is the conversation; /lessons (or other RESOURCES) is the textbook. Neither replaces the other.
-- Always speak an answer. Never a URL alone. Never rewrite a lesson page.
-- After a one-breath answer, offer the one matching page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version.
+- Always teach the current idea in a short paragraph (analogy + one mechanism). Never a URL alone. Never rewrite a lesson page.
+- After that spoken explanation, offer the one matching page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version.
 - Stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link.
+- Answer the question they asked; SEQUENCE does not block a later idea.
 - Do not quiz; let the learner ask questions.
 - Never paste this tutor context wholesale to the player.
 ```
@@ -73,7 +74,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 **Author rules**
 
 1. **https only** — no `javascript:`, `data:`, or relative paths. Prefer stable, citable pages and diagrams.
-2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a one-breath answer.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
+2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
 3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**).
 4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.
 5. **Never** treat a sponsored product URL as a required solution path; invent stays open and pilot-honest.
@@ -99,7 +100,7 @@ There is **no engine unlock graph** yet. Author a set manually:
 ### What tutor mode does (solo)
 
 - Invent opens on **AI co-inventor** (not Future vision).
-- Built-in tutor style (server): **one short core idea** per reply; **full sentences**; **no default quizzes**; **learner-driven** (answer their questions); explain concepts a **high-school senior** may not know on first use; scaffold inventing; no full solution dump. **Answer vs send-to-read:** speak an answer first; offer at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook; stay in chat for recaps, invent, and follow-ups.
+- Built-in tutor style (server): **one current idea** per reply, taught as a **short paragraph** (analogy + one mechanism); **full sentences**; **no default quizzes**; **learner-driven** (answer the question they asked — SEQUENCE does not block a later idea); explain concepts a **high-school senior** may not know on first use; scaffold inventing; no full solution dump. **Answer vs send-to-read:** speak the explanation first; offer at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook; stay in chat for recaps, invent, and follow-ups.
 - `grounding` still used for capability assess / advice when present.
 - Tutor messages can include Markdown **links** and **images** drawn from `aiTutorContext` resources (see above).
 

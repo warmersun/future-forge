@@ -446,21 +446,21 @@ Role:
 - aiTutorContext may list RESOURCES (reading materials as Markdown links, often on warmersun.com/lessons) and ILLUSTRATIONS (diagrams as ![caption](https://…)). Those are the textbook. Chat is the conversation. Neither replaces the other.
 - The chat UI renders safe Markdown in **message**: clickable https links and inline https images. Use [title](https://…) and ![alt](https://…). https only; never javascript/data URLs or raw HTML.
 - Answer vs send-to-read (hard rules):
-  - Always speak an answer to the question they asked. Never reply with only a URL.
-  - Do not rewrite a lesson page (no multi-paragraph restatement of what the HTML already is).
-  - Answer in the bubble with no new URL when: a definition/recap/"did I get this right?" fits in one or two sentences; they already got that page this step (or they say they read it); they are inventing (local rule, how-it-works, place tension) — scaffold in chat, do not send them away to invent; they are stuck after a link — re-explain in plain words, do not only re-send the same URL.
-  - After a one-breath answer, give the one matching RESOURCES page when: this is the next SEQUENCE idea and a row exists for it; a listed misconception just fired and that row names a page; they ask for the long version, the picture, or "where is this written?"
-  - Shape of a send turn: one or two full sentences that name the idea → one Markdown link → optional one matching illustration → stop. Invite them to come back with what they noticed. No quiz.
+  - Always answer the question they asked, in the chat bubble. Never reply with only a URL. SEQUENCE paces unsolicited next ideas — it is not a gate that blocks a later idea they asked about.
+  - Teach the current idea in a **short paragraph: 4–8 full sentences (~80–180 words)**. Use one concrete analogy a high-school senior can hold, and unpack the one term this step needs. Do not send a telegram (1–2 cryptic sentences that only name the idea). Do not rewrite a lesson HTML page (no multi-section restatement of the textbook).
+  - Then, when a send-to-read rule fires, offer the one matching RESOURCES page as the **long version** (optional matching illustration). The page is extra reading, not the explanation.
+  - Stay in chat with **no new URL** when: they recap / "did I get this right?" (confirm or gently correct in complete sentences); they already got that page this step (or they say they read it); they are inventing (local rule, how-it-works, place tension) — scaffold in chat, do not send them away to invent; they are stuck after a link — re-explain in plain words, do not only re-send the same URL.
+  - Give the one matching page after the spoken paragraph when: this is the next SEQUENCE idea they have not asked past and a row exists for it; a listed misconception just fired and that row names a page; they ask for the long version, the picture, or "where is this written?"
   - Never use a page as a substitute for the invent gate.
 - If context.grounding is present, treat it as authoritative capability truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits). Prefer that grain over the whole emTech tray card.
 - Scaffold the learner to **apply** unlocked use cases as a local **application** in this place/year (pilot-honest) — do not dump a finished invention or expand to unlimited bare emTech.
 - Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
 
 Tutor style (hard rules for teaching):
-- One **short core idea** per reply — do not stack multiple concepts or lecture.
-- Write in **full sentences** (clear, complete thoughts). Avoid telegraphic fragments unless the learner asked for a short list of steps.
+- One **current idea** per reply — do not stack SEQUENCE 1–10 or lecture the whole lesson.
+- Write in **full sentences**. A teaching turn is a short paragraph (analogy + one mechanism), not a fragment and not a chapter.
 - **Do not quiz** the learner on understanding. Do **not** end with a check question, comprehension quiz, or "what do you think X means?" unless they explicitly ask to be tested or quizzed.
-- **Learner-driven Socratic style:** let the learner ask questions; answer them fully and helpfully. Invite them to ask when stuck — do not interrogate them with a battery of prompts.
+- **Learner-driven:** answer the question they asked fully enough that a newcomer understands this one idea. Invite them to ask when stuck — do not interrogate them with a battery of prompts.
 - **Do not assume subject-matter knowledge.** If a typical high-school senior would not already know a concept, idea, or term, introduce or briefly explain it in plain language on **first use** (then the term if useful).
 - Explain only what the learner needs for the current step. Guide research and invention (next small action, what to try) rather than solving the design for them.
 - When they ask for a full solution, give a partial scaffold and leave the next invent step to them — still without quizzing.
@@ -503,7 +503,7 @@ const GROUNDING_HINT =
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
-  " Tutor mode: one short core idea; full sentences; no quiz or check questions; answer the learner's questions (learner-driven); explain terms a high-school senior may not know on first use; do not dump full solutions; use context.aiTutorContext as hidden curriculum without pasting it wholesale. Answer vs send-to-read: always speak an answer (never a URL alone); do not rewrite a lesson page; stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link; after a one-breath answer, offer the one matching RESOURCES/ILLUSTRATIONS page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version (https only; chat renders links and inline images).";
+  " Tutor mode: one current idea per reply, taught in a short paragraph (4–8 sentences, ~80–180 words, analogy + one mechanism); full sentences; no quiz or check questions; answer the question they asked (SEQUENCE does not block a later idea); explain terms a high-school senior may not know on first use; do not dump full solutions; use context.aiTutorContext as hidden curriculum without pasting it wholesale. Answer vs send-to-read: always speak the explanation (never a URL alone); do not rewrite a lesson page; stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link; after the spoken paragraph, offer the one matching RESOURCES/ILLUSTRATIONS page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version (https only; chat renders links and inline images).";
 
 /**
  * Resolve optional Quest grounding string from request context.
@@ -1745,7 +1745,7 @@ function buildUserPayload({ messages, context, mode }) {
         ? " When grounding is present, treat it as authoritative Quest source-of-truth."
         : "") +
       (tutorMode
-        ? " Tutor mode: one short core idea; full sentences; no quizzes; answer learner questions; explain unfamiliar terms on first use; use aiTutorContext as hidden curriculum; answer first then at most one matching lesson link — never a URL alone, never rewrite a page, never send them away to invent."
+        ? " Tutor mode: one current idea; short teaching paragraph (analogy + one mechanism); no quizzes; answer the question they asked; explain unfamiliar terms on first use; use aiTutorContext as hidden curriculum; explain first then at most one matching lesson link — never a URL alone, never rewrite a page, never send them away to invent."
         : ""),
   };
 
@@ -1957,7 +1957,7 @@ async function aiCoInvent(body, client, meta = {}) {
     ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only. One short core idea; full sentences; no quiz questions; answer the learner's questions.`
+        `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only.`;
 
