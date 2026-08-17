@@ -11,6 +11,12 @@ export const MIN_CHARS = 100;
 /** xAI TTS hard limit. */
 export const TTS_MAX_CHARS = 15_000;
 
+/** Prefer this many chars per cloud request so first audio can start sooner. */
+export const SPEAK_CHUNK_TARGET = 280;
+
+/** Soft cap — never split mid-sentence unless a single sentence exceeds this. */
+export const SPEAK_CHUNK_MAX = 400;
+
 const LABEL_IDLE = "Read out loud";
 const LABEL_LOADING = "Preparing…";
 const LABEL_STOP = "Stop";
@@ -113,6 +119,104 @@ export function clampTtsText(text) {
   const t = normalizeSpeakText(text);
   if (t.length <= TTS_MAX_CHARS) return t;
   return t.slice(0, TTS_MAX_CHARS - 1).trimEnd() + "…";
+}
+
+/**
+ * Split speakable text so the first cloud TTS request is short.
+ * Breaks on sentence / paragraph ends; packs until ~target chars.
+ *
+ * @param {string} text
+ * @param {{ target?: number, max?: number }} [opts]
+ * @returns {string[]}
+ */
+export function splitSpeakChunks(text, opts = {}) {
+  const t = normalizeSpeakText(text);
+  const target = Number.isFinite(opts.target) ? opts.target : SPEAK_CHUNK_TARGET;
+  const max = Number.isFinite(opts.max) ? opts.max : SPEAK_CHUNK_MAX;
+  if (!t) return [];
+  if (t.length <= max) return [t];
+
+  const units = sentenceUnits(t);
+  if (!units.length) return [t];
+  const packed = [];
+  let start = units[0].start;
+  let end = units[0].end;
+
+  const flush = () => {
+    const piece = t.slice(start, end).trim();
+    if (piece) packed.push(piece);
+  };
+
+  for (let i = 1; i < units.length; i++) {
+    const u = units[i];
+    const currentLen = end - start;
+    const nextLen = u.end - start;
+    if (currentLen >= target || nextLen > max) {
+      flush();
+      start = u.start;
+      end = u.end;
+    } else {
+      end = u.end;
+    }
+  }
+  flush();
+
+  /** Oversized run-on with no punctuation — pack by words. */
+  const out = [];
+  for (const piece of packed) {
+    if (piece.length <= max) {
+      out.push(piece);
+    } else {
+      out.push(...packByWords(piece, target, max));
+    }
+  }
+  return out.length ? out : [t];
+}
+
+/**
+ * @param {string} t
+ * @returns {{ start: number, end: number }[]}
+ */
+function sentenceUnits(t) {
+  /** Sentence end or blank-line paragraph. */
+  const re = /[.!?](?:["')\]]*)(?=\s|$)|(?:\n\n)/g;
+  const ends = [];
+  let m;
+  while ((m = re.exec(t))) {
+    ends.push(m.index + m[0].length);
+  }
+  if (!ends.length || ends[ends.length - 1] < t.length) {
+    ends.push(t.length);
+  }
+  const units = [];
+  let start = 0;
+  for (const end of ends) {
+    if (t.slice(start, end).trim()) units.push({ start, end });
+    start = end;
+  }
+  return units;
+}
+
+/**
+ * @param {string} t
+ * @param {number} target
+ * @param {number} max
+ */
+function packByWords(t, target, max) {
+  const words = t.split(/\s+/).filter(Boolean);
+  const chunks = [];
+  let buf = "";
+  for (const w of words) {
+    const next = buf ? `${buf} ${w}` : w;
+    if (buf && (buf.length >= target || next.length > max)) {
+      chunks.push(buf);
+      buf = w;
+    } else {
+      buf = next;
+    }
+  }
+  if (buf) chunks.push(buf);
+  return chunks;
 }
 
 /**
@@ -313,93 +417,175 @@ async function onHostClick(contentEl) {
  * @param {HostRecord} rec
  */
 async function playCloudOrFallback(text, rec) {
-  const key = cacheKeyFor(text);
-  let url = audioCache.get(key);
+  const chunks = splitSpeakChunks(text);
+  if (!chunks.length) {
+    if (activeContent === rec.contentEl) {
+      setBtnState(rec, "idle");
+      activeContent = null;
+    }
+    return;
+  }
+  const ac = new AbortController();
+  inflight = ac;
 
-  if (!url) {
-    const ac = new AbortController();
-    inflight = ac;
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          language: "en",
-          clientSessionId: getClientSessionId(),
-        }),
-        signal: ac.signal,
+  /** @type {(string|undefined)[]} */
+  const urls = new Array(chunks.length);
+  /** @type {Map<number, Promise<string>>} */
+  const pending = new Map();
+
+  const fetchIdx = (i) => {
+    if (urls[i]) return Promise.resolve(urls[i]);
+    const existing = pending.get(i);
+    if (existing) return existing;
+    const job = fetchCloudAudioUrl(chunks[i], ac.signal)
+      .then((url) => {
+        urls[i] = url;
+        return url;
+      })
+      .finally(() => {
+        pending.delete(i);
       });
+    pending.set(i, job);
+    return job;
+  };
 
-      if (res.status === 503 || res.status === 401) {
-        // No cloud auth — browser fallback
-        await playBrowserSpeech(text, rec);
-        return;
-      }
+  const prefetchFrom = (i) => {
+    const last = Math.min(chunks.length, i + 3);
+    for (let n = i; n < last; n++) {
+      fetchIdx(n).catch(() => {
+        /* handled when that index is awaited */
+      });
+    }
+  };
 
-      if (!res.ok) {
-        let msg = `TTS failed (${res.status})`;
-        try {
-          const j = await res.json();
-          if (j?.error) msg = String(j.error);
-        } catch {
-          /* ignore */
-        }
-        // Try browser before giving up
-        if (typeof speechSynthesis !== "undefined") {
-          notify("Cloud voice unavailable — using device voice.");
-          await playBrowserSpeech(text, rec);
+  try {
+    prefetchFrom(0);
+    for (let i = 0; i < chunks.length; i++) {
+      if (activeContent !== rec.contentEl) return;
+      prefetchFrom(i);
+      let url;
+      try {
+        url = await fetchIdx(i);
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        const rest = chunks.slice(i).join(" ");
+        if (e?.code === "cloud_unavailable" || typeof speechSynthesis !== "undefined") {
+          if (i > 0 || e?.code !== "cloud_unavailable") {
+            notify("Cloud voice unavailable — using device voice.");
+          }
+          await playBrowserSpeech(rest, rec);
           return;
         }
-        throw new Error(msg);
+        throw e;
       }
+      if (activeContent !== rec.contentEl) return;
 
-      const blob = await res.blob();
-      url = URL.createObjectURL(blob);
-      // Bound cache size
-      if (audioCache.size > 24) {
-        const first = audioCache.keys().next().value;
-        const old = audioCache.get(first);
-        audioCache.delete(first);
-        if (old) {
-          try {
-            URL.revokeObjectURL(old);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      audioCache.set(key, url);
-    } finally {
-      if (inflight === ac) inflight = null;
-    }
-  }
-
-  if (activeContent !== rec.contentEl) return;
-
-  const audio = ensureAudio();
-  audio.src = url;
-  setBtnState(rec, "playing");
-
-  await new Promise((resolve, reject) => {
-    playWaitResolve = () => {
-      cleanup();
-      resolve();
-    };
-    const onEnded = () => {
-      cleanup();
-      playWaitResolve = null;
-      if (activeContent === rec.contentEl) {
+      setBtnState(rec, "playing");
+      const last = i === chunks.length - 1;
+      const outcome = await playAudioUrl(url);
+      if (outcome !== "ended") return;
+      if (last && activeContent === rec.contentEl) {
         setBtnState(rec, "idle");
         activeContent = null;
       }
-      resolve();
-    };
-    const onError = () => {
+    }
+  } finally {
+    if (inflight === ac) inflight = null;
+  }
+}
+
+/**
+ * Fetch one speakable chunk (client cache first).
+ * @param {string} text
+ * @param {AbortSignal} signal
+ */
+async function fetchCloudAudioUrl(text, signal) {
+  const key = cacheKeyFor(text);
+  const cached = audioCache.get(key);
+  if (cached) return cached;
+
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      language: "en",
+      clientSessionId: getClientSessionId(),
+    }),
+    signal,
+  });
+
+  if (res.status === 503 || res.status === 401) {
+    const err = new Error("Cloud TTS unavailable");
+    err.code = "cloud_unavailable";
+    throw err;
+  }
+
+  if (!res.ok) {
+    let msg = `TTS failed (${res.status})`;
+    try {
+      const j = await res.json();
+      if (j?.error) msg = String(j.error);
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  rememberAudioUrl(key, url);
+  return url;
+}
+
+/**
+ * @param {string} key
+ * @param {string} url
+ */
+function rememberAudioUrl(key, url) {
+  if (audioCache.size > 24) {
+    const first = audioCache.keys().next().value;
+    const old = audioCache.get(first);
+    audioCache.delete(first);
+    if (old) {
+      try {
+        URL.revokeObjectURL(old);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  audioCache.set(key, url);
+}
+
+/**
+ * Play one object-URL; resolves `"ended"` or `"stopped"`.
+ * @param {string} url
+ * @returns {Promise<"ended"|"stopped">}
+ */
+function playAudioUrl(url) {
+  const audio = ensureAudio();
+  audio.src = url;
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      playWaitResolve = null;
-      reject(new Error("Audio playback failed"));
+      if (playWaitResolve === stopNow) playWaitResolve = null;
+      resolve(value);
     };
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (playWaitResolve === stopNow) playWaitResolve = null;
+      reject(err);
+    };
+    const stopNow = () => finish("stopped");
+    playWaitResolve = stopNow;
+    const onEnded = () => finish("ended");
+    const onError = () => fail(new Error("Audio playback failed"));
     const cleanup = () => {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
@@ -408,11 +594,7 @@ async function playCloudOrFallback(text, rec) {
     audio.addEventListener("error", onError);
     const p = audio.play();
     if (p && typeof p.then === "function") {
-      p.catch((err) => {
-        cleanup();
-        playWaitResolve = null;
-        reject(err);
-      });
+      p.catch(fail);
     }
   });
 }

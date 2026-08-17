@@ -2624,7 +2624,7 @@ async function handleTts(body) {
       .slice(0, 64) || TTS_VOICE;
   const language = String(body?.language || "en").trim().slice(0, 16) || "en";
   const sessionId = clientSessionFromBody(body);
-  const key = ttsCacheKey({ text: raw, voice, language, fingerprint: "norm=1" });
+  const key = ttsCacheKey({ text: raw, voice, language, fingerprint: "norm=0" });
   const t0 = Date.now();
 
   // Fast path: shared cache (no AI auth required)
@@ -2669,7 +2669,7 @@ async function handleTts(body) {
         text: raw,
         voice_id: voice,
         language,
-        text_normalization: true,
+        text_normalization: false,
       };
 
       let res = await fetch(`${XAI_BASE}/tts`, {

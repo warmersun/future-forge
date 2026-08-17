@@ -32,7 +32,7 @@ export function ttsCacheKey(opts) {
   const voice = String(opts.voice || "eve").trim().toLowerCase() || "eve";
   const language = String(opts.language || "en").trim().toLowerCase() || "en";
   // fingerprint encodes synthesis options that affect output (normalize, speed, …)
-  const fingerprint = String(opts.fingerprint || "norm=1").slice(0, 64);
+  const fingerprint = String(opts.fingerprint || "norm=0").slice(0, 64);
   const material = `${text}\n|v=${voice}|lang=${language}|${fingerprint}`;
   return crypto.createHash("sha256").update(material, "utf8").digest("hex");
 }
