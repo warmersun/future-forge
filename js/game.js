@@ -4466,7 +4466,7 @@ function startMission(mission) {
     const welcome = tutor
       ? `**${place}**, ${year}. ${scene}\n\n` +
         `I'm your **AI tutor** for this lesson — we'll go **one idea at a time** (**free AP** while tutoring). ` +
-        `I'll explain what you need when you need it, and ask short questions to check understanding.\n\n` +
+        `I'll explain what you need when you need it. Readings on warmersun.com/lessons come one at a time when a step needs them.\n\n` +
         `You still invent: pick techs, write how it works, and keep claims honest for this year. ` +
         `I won't dump the whole solution at once.\n\n` +
         `Use **End tutoring** when you want to invent on your own (chat then costs AP). I may also end tutoring when the invent gate is met.\n\n` +

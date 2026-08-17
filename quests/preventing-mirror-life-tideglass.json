@@ -1,0 +1,105 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-synbio-tideglass-high-2026",
+  "version": 1,
+  "title": "The unposted rule at Tideglass High",
+  "summary": "A donated peptide bench arrives before anyone posts what a living opposite-handed cell would be. Invent the local cut.",
+  "author": {
+    "name": "OOM Future Forge quest",
+    "note": "Learning module from RAND RR-A4335-1 research + tutorial"
+  },
+  "createdAt": "2026-08-16",
+  "tags": [
+    "spotlight",
+    "synbio",
+    "mirror-life",
+    "biosecurity",
+    "learning"
+  ],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "synbio",
+    "advanceTitle": "A prevention strategy for unbuilt mirror life",
+    "advanceSummary": "RAND's 2026 strategy treats a self-replicating opposite-handed cell as a red line: useful mirror parts can stay; the living organism should stay unbuilt, in the open, among the few who could finish it.",
+    "asOf": "2026-07",
+    "encourageCopy": "Invent a local rule that keeps useful parts legal and a living cell unbuilt."
+  },
+  "research": {
+    "topic": "RAND U.S. strategy to prevent the creation of mirror life (RR-A4335-1)",
+    "bullets": [
+      "Mirror life would be a living organism of opposite-handed biomolecules; it does not exist.",
+      "Adamala et al. 2024 warned a mirror bacterium could evade many immune and ecological brakes; RAND 2026-07-31 built a U.S. prevention strategy on that assessment without claiming certainty of catastrophe.",
+      "Red line is self-replication, not all opposite-handed chemistry. Only a few scientific powers can finish a cell now.",
+      "Four principles: prevention over mitigation, universal restraint, transparency over secrecy, cooperation over coercion."
+    ],
+    "sources": [
+      {
+        "title": "A U.S. Strategy to Prevent the Creation of Mirror Life (RAND RR-A4335-1)",
+        "url": "https://www.rand.org/pubs/research_reports/RRA4335-1.html",
+        "accessed": "2026-08-16"
+      },
+      {
+        "title": "Confronting risks of mirror life (Science, 2024)",
+        "url": "https://doi.org/10.1126/science.ads9158",
+        "accessed": "2026-08-16"
+      },
+      {
+        "title": "UK GO-Science: Mirror life",
+        "url": "https://www.gov.uk/government/publications/mirror-life/mirror-life",
+        "accessed": "2026-08-16"
+      }
+    ],
+    "showToPlayer": false
+  },
+  "globalId": "chem-bio",
+  "isLearningModule": true,
+  "module": "Preventing Mirror Life",
+  "lesson": 1,
+  "totalLessons": 1,
+  "resources": {
+    "startingBudget": 8,
+    "startingWill": 4
+  },
+  "grounding": "## Technology\n- **emTech:** synbio\n- **Product category:** Mirror-image biomolecules (peptides, aptamers, short nucleic acids) — not a self-replicating mirror organism\n\n## Capabilities\nLabs can already make short opposite-handed peptides and snippets of opposite-handed DNA, and some enzymes that copy that DNA. Those parts can last longer in a body because ordinary digestive enzymes do not chew them. No living opposite-handed cell exists.\n\n## Trends & predictions\nConstruction is stepwise (missing genome-scale opposite-handed DNA, a working opposite-handed ribosome, a dividing chassis, and a general synthetic-cell platform), not a measured exponential. Forecast, not lock: with a crash program, a first cell might be attempted on a ~10-year clock; without one, 15–30 years. Adjacent tools (cheaper chemistry, design software) can shorten a step.\n\n## Milestone\nThe 2024 Science warning plus the 31 July 2026 RAND strategy make prevention-before-first-cell a named public policy object. The operational cut they circle is replication, not all opposite-handed chemistry.\n\n## Unlocks Use Case(s)\nLocal review rules for school, city, and journal work; funding and fair rules that keep useful parts legal; visible no-exception commitments so a prestige race does not start.\n\n## Applications\nPosted lab-door rules; youth-research-fund screens; science-fair eligibility cuts; journal/club publication screens — invent the local system. Not a factory organism. Not a planetary vaccine.\n\n## Honest limits\nA school cannot police the world. Kill switches can be edited out. A pill cannot cover a forest. Cleanup after a living cell is not a backup. Only a few scientific powers can finish the last machines today; a sloppy total ban on opposite-handed chemistry will be ignored.",
+  "aiTutorContext": "LESSON GOAL: Keep the living opposite-handed cell unbuilt; keep useful opposite-handed chemistry legal; invent a local rule that makes that cut visible.\n\nSEQUENCE (one idea at a time; do not dump all at once):\n1) Molecules have hands — offer [Page 01 — Molecules have hands](https://warmersun.com/lessons/preventing-mirror-life/01-handed-molecules.html) after a one-breath answer when the learner meets the place; before danger or policy.\n2) Mirror life is a living cell — offer [Page 02 — Mirror life is a living cell](https://warmersun.com/lessons/preventing-mirror-life/02-what-mirror-life-is.html) after a one-breath answer after chirality; before risk or red lines.\n3) Locks that no longer fit — offer [Page 03 — Locks that no longer fit](https://warmersun.com/lessons/preventing-mirror-life/03-lock-and-key-evasion.html) after a one-breath answer after the learner can name a mirror cell; before cleanup fantasies.\n4) Parts can stay — offer [Page 04 — Parts can stay](https://warmersun.com/lessons/preventing-mirror-life/04-parts-not-organisms.html) after a one-breath answer after the object is named; before timelines or local inventing.\n5) The last steps are machines — offer [Page 05 — The last steps are machines](https://warmersun.com/lessons/preventing-mirror-life/05-the-last-steps.html) after a one-breath answer after the red line is named; before cleanup or who-can-build-it.\n6) Cleanup is not a plan — offer [Page 06 — Cleanup is not a plan](https://warmersun.com/lessons/preventing-mirror-life/06-prevention-not-cleanup.html) after a one-breath answer after the learner has both the lock-and-key mechanism and the first-cell threshold.\n7) Only a few can build it — offer [Page 07 — Only a few can build it](https://warmersun.com/lessons/preventing-mirror-life/07-few-builders.html) after a one-breath answer after the last-steps staircase; before the four principles.\n8) Four filters for every tool — offer [Page 08 — Four filters for every tool](https://warmersun.com/lessons/preventing-mirror-life/08-four-principles.html) after a one-breath answer after both the cleanup failure and the few-builders map.\n9) Two jobs, in that order — offer [Page 09 — Two jobs, in that order](https://warmersun.com/lessons/preventing-mirror-life/09-two-jobs.html) after a one-breath answer after the four filters; before the local invent gate.\n10) Invent the local cut — stay in chat and scaffold a local rule. Offer [Page 10 — Invent the local cut](https://warmersun.com/lessons/preventing-mirror-life/10-invent-a-red-line.html) as a reminder, not as a substitute for inventing.\n\nRESOURCES (stock here; pace in chat — one per micro-step, after a spoken answer):\n- Reading: [Page 01 — Molecules have hands](https://warmersun.com/lessons/preventing-mirror-life/01-handed-molecules.html) — after a one-breath answer when the learner meets the place; before danger or policy.\n- Reading: [Page 02 — Mirror life is a living cell](https://warmersun.com/lessons/preventing-mirror-life/02-what-mirror-life-is.html) — after a one-breath answer after chirality.\n- Reading: [Page 03 — Locks that no longer fit](https://warmersun.com/lessons/preventing-mirror-life/03-lock-and-key-evasion.html) — after a one-breath answer after the object is named.\n- Reading: [Page 04 — Parts can stay](https://warmersun.com/lessons/preventing-mirror-life/04-parts-not-organisms.html) — after a one-breath answer before timelines or inventing.\n- Reading: [Page 05 — The last steps are machines](https://warmersun.com/lessons/preventing-mirror-life/05-the-last-steps.html) — after a one-breath answer after the red line.\n- Reading: [Page 06 — Cleanup is not a plan](https://warmersun.com/lessons/preventing-mirror-life/06-prevention-not-cleanup.html) — after a one-breath answer after mechanism + threshold.\n- Reading: [Page 07 — Only a few can build it](https://warmersun.com/lessons/preventing-mirror-life/07-few-builders.html) — after a one-breath answer after the staircase.\n- Reading: [Page 08 — Four filters for every tool](https://warmersun.com/lessons/preventing-mirror-life/08-four-principles.html) — after a one-breath answer after cleanup + builders.\n- Reading: [Page 09 — Two jobs, in that order](https://warmersun.com/lessons/preventing-mirror-life/09-two-jobs.html) — after a one-breath answer after the four filters.\n- Reading: [Page 10 — Invent the local cut](https://warmersun.com/lessons/preventing-mirror-life/10-invent-a-red-line.html) — invent-gate reminder; do not send them away to invent.\n\nILLUSTRATIONS (https; one media beat with the matching page):\n- ![A left glove will not fit a right hand](https://warmersun.com/lessons/preventing-mirror-life/illustrations/01-visual-handed-molecules.png) — when explaining handed molecules.\n- ![A living cell is more than a drawer of mirrored parts](https://warmersun.com/lessons/preventing-mirror-life/illustrations/02-visual-what-mirror-life-is.png) — when explaining what mirror life is.\n- ![A lock built for one hand misses the other](https://warmersun.com/lessons/preventing-mirror-life/illustrations/03-visual-lock-and-key-evasion.png) — when explaining lock-and-key evasion.\n- ![Allow small parts; stop at a dividing cell](https://warmersun.com/lessons/preventing-mirror-life/illustrations/04-visual-parts-not-organisms.png) — when explaining the red line.\n- ![A staircase of machines, then easier copies](https://warmersun.com/lessons/preventing-mirror-life/illustrations/05-visual-the-last-steps.png) — when explaining remaining barriers.\n- ![A pill that cannot cover a forest](https://warmersun.com/lessons/preventing-mirror-life/illustrations/06-visual-prevention-not-cleanup.png) — when explaining why cleanup fails.\n- ![A short list of builders, a long list of later copiers](https://warmersun.com/lessons/preventing-mirror-life/illustrations/07-visual-few-builders.png) — when explaining who can build it.\n- ![Four filters in front of a toolbox](https://warmersun.com/lessons/preventing-mirror-life/illustrations/08-visual-four-principles.png) — when explaining the four principles.\n- ![Share the picture, then raise the cost](https://warmersun.com/lessons/preventing-mirror-life/illustrations/09-visual-two-jobs.png) — when explaining the two lines of effort.\n- ![A posted rule: parts yes, living cell no](https://warmersun.com/lessons/preventing-mirror-life/illustrations/10-visual-invent-a-red-line.png) — when opening the invent gate.\n\nMISCONCEPTIONS TO CATCH:\n- A molecule is only a list of atoms; the mirror version is the same stuff. — offer page 01 after a one-breath correction.\n- Any opposite-handed chemical is already mirror life. — offer page 02.\n- The immune system will recognize any invader somehow. — offer page 03.\n- Preventing mirror life means banning all opposite-handed chemistry. — offer page 04.\n- Mirror life is either science fiction forever or arriving exponentially next year. — offer page 05.\n- We can invent a vaccine later, the way we did for a new virus. — offer page 06.\n- Any garage lab or cult could do this tomorrow. — offer page 07.\n- A secret crash program or an allies-only club would keep us safer. — offer pages 08 then 09 on later turns, not both at once.\n- Write a treaty first, or just fund a defense lab. — stay in chat; map to the local invent gate.\n- The assignment is to design a mirror-cell factory or a planetary vaccine. — stay in chat; scaffold a posted local rule.\n\nINVENT GATE:\n- The learner names a local rule (school lab, city fund, journal, or fair) that allows non-replicating opposite-handed parts with ordinary review and forbids a self-replicating mirror cell (genome-scale opposite-handed DNA, a mirror ribosome, a dividing chassis, or a project whose goal is a living cell).\n- The rule says why a kill switch or a later vaccine is not the backup.\n- The rule is visible; it does not keep a secret exception for our side.\n- The invent is not a factory organism and not a planetary cleanup device.\n- Do not bounce this turn to page 10 as the only reply.\n\nTEACHING STYLE:\n- Chat is the conversation; /lessons is the textbook. Neither replaces the other.\n- Always speak an answer. Never a URL alone. Never rewrite a lesson page.\n- After a one-breath answer, offer the one matching page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version.\n- Stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link.\n- Do not quiz. Let the learner ask.\n- Never paste this tutor context wholesale to the player.\n",
+  "mission": {
+    "id": "spotlight-synbio-tideglass-high-2026",
+    "globalId": "chem-bio",
+    "title": "The unposted rule at Tideglass High",
+    "place": "Tideglass High, Kettle Reach (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "local": {
+        "label": "Fair prestige",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "global": {
+        "label": "First-cell risk",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "support": {
+        "label": "Club trust",
+        "pressure": 1,
+        "pressureRise": 1,
+        "winMax": 1
+      }
+    },
+    "scene": "Nia tapes a donor plaque beside the new bench synthesizer. Tideglass High can finally make opposite-handed peptides. The city fair's grand prize is a summer lab seat. Principal Varga wants the plaque in the paper. The visiting fellow only says: do not finish a living cell. No one has posted what that means on the door. Who writes the rule before the fair?",
+    "briefMd": "## The place\n\nNia tapes the brass plaque crooked, then straight. The bench synthesizer still smells like packing foam. Tideglass High, on the windy side of Kettle Reach, has never owned a machine that can stitch opposite-handed peptides. A harbor startup donated it last Tuesday. The card says *for the next generation of medicines*.\n\nOpposite-handed means the other spatial hand of a molecule — a left glove that will not fit a right hand. Useful pills can be made that way. They last longer in a body.\n\nPrincipal Tomas Varga wants the plaque in the *Reach Ledger* before the city science fair. The grand prize is a summer seat at the regional university wet lab. Last year Tideglass sent a vinegar-battery poster and came home with a ribbon that said *participant*.\n\nDr. Kei Morrow, the visiting fellow, does not smile at the plaque. She puts one sentence on the whiteboard and leaves it there.\n\nDo not finish a living cell.\n\nNo one writes what that means on the lab door. The club already has three project titles in a shared doc. One is a short peptide for a plant-blight demo. One is “mirror life — full cell (ambitious!!!).” Nia did not type the third title. Someone did.\n\nThe synthesizer can make parts. It cannot make a bacterium. The danger is not that Tideglass will birth a planet-eater on a Thursday. The danger is a town that cannot tell a vial from a living thing, and a prize that rewards the blur.\n\nWho posts the cut before the judges arrive?\n\n## What’s strained\n\n**Fair prestige.** Varga has already invited the donor. If the club looks timid, the paper will say Tideglass wasted a gift. If the club looks reckless, parents will pull students from the room.\n\n**First-cell risk.** A living opposite-handed cell is still missing hard machines. After the first one exists anywhere, copies get easier. A school cannot finish that staircase. A school can still teach the wrong ambition, or panic-ban the useful chemistry that paid for the bench.\n\n**Club trust.** Nia can keep a secret exception for “our ambitious team.” That is how a small race starts. She can also freeze every opposite-handed molecule and lose the blight-peptide kids who did nothing wrong.\n\n## A capability that just became more real\n\nSynthetic biology can already make opposite-handed *parts*. A living opposite-handed *organism* is still unbuilt. In 2024 a large scientific group warned that such a bacterium might slip past many immune and ecological locks. In July 2026 a U.S. strategy paper said the job is to keep that organism unbuilt — in the open, among the few who could actually finish it — without declaring war on the chemistry.\n\nThe inventable unit here is not “use synbio.” It is a **local review cut**: what a school lab, a city youth fund, or a fair will allow, and what it will refuse.\n\n## Your brief\n\nStakeholder: **Nia Patel, Tideglass science-club lead**, with Principal Varga watching the paper and Dr. Morrow watching the whiteboard.\n\nInvent a rule this place can post. Allow non-replicating opposite-handed parts with ordinary review. Forbid a self-replicating opposite-handed cell — genome-scale opposite-handed DNA, a mirror ribosome, a dividing chassis, or a project whose goal is a living cell. Say why a kill switch or a later vaccine is not the backup. Make the rule visible. Do not keep a quiet exception for Tideglass.\n\nDo not invent a factory organism “for cheaper drugs.” Do not invent a planetary cleanup.\n\nThe door is still blank.\n\n## Constraints\n\nThe bench is already in the room. The fair is in six weeks. The donor wants a photo. The university seat is real. The club has fourteen students and one teacher who also coaches debate. Tideglass cannot inspect China. It can decide what this room is for.",
+    "stakeholder": "Nia Patel, Tideglass science-club lead",
+    "suggested": [
+      "synbio"
+    ],
+    "visionTheme": "learning-city"
+  }
+}

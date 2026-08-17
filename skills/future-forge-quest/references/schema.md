@@ -152,7 +152,7 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 - Explain concepts/terms a typical high-school senior may not know on first use.
 - Scaffold inventing; do not dump full solutions.
 - Use `aiTutorContext` as hidden teaching plan; use `grounding` for capability truth (product-category chain; see `grounding-template.md`).
-- Player-facing tutor messages support safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Stock materials in `aiTutorContext`; surface them sparingly in `message`.
+- Player-facing tutor messages support safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Stock materials in `aiTutorContext`. **Answer first**, then at most one matching lesson page — never a URL alone, never a page rewrite, never send the learner away to invent.
 - No full module unlock/sequencing yet — progress is display-only.
 
 ```json

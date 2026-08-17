@@ -104,7 +104,7 @@ Add:
 "module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3,
-"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) …\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- App default: one short core idea; full sentences; no quizzes; answer learner questions; explain unfamiliar terms on first use.\n- Surface a resource link or illustration in chat only when the current micro-step needs it.\n- Never paste this wholesale to the player."
+"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) … — offer [Page title](https://warmersun.com/lessons/…) after a one-breath answer\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://warmersun.com/lessons/…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- Chat is the conversation; /lessons is the textbook.\n- Always speak an answer; never a URL alone; never rewrite a page.\n- After a one-breath answer, offer the one matching page on the next SEQUENCE idea, a listed misconception, or a request for the long version.\n- Stay in chat for recaps, invent, and follow-ups after they already got that page.\n- Never paste this wholesale to the player."
 ```
 
 Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
@@ -162,4 +162,4 @@ Portable example file: `examples/spotlight-sponsored-learning.json`.
 
 - Optional fields may live under `mission` (validator accepts tile or mission).
 - `sponsorBanner` = **text tagline**, never image URL.
-- `aiTutorContext` never goes into player-facing prose wholesale; the tutor may re-emit selected Markdown links/images from it in chat.
+- `aiTutorContext` never goes into player-facing prose wholesale; the tutor may re-emit selected Markdown links/images from it in chat **after a spoken answer** (never a URL alone).
