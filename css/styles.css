@@ -2200,8 +2200,167 @@ button.btn[hidden] {
   flex-direction: column;
   gap: 0.4rem;
 }
+.quest-catalog-grid .catalog-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+.quest-catalog-grid .catalog-dev,
 .quest-catalog-grid .catalog-remove {
-  align-self: flex-end;
+  align-self: auto;
+}
+
+/* Developer inspect (catalog → modal) — near full-screen */
+.modal-backdrop.quest-dev-modal-open {
+  padding: 1.25rem clamp(0.75rem, 2.5vw, 2rem);
+  align-items: stretch;
+  justify-content: center;
+}
+.modal-backdrop.quest-dev-modal-open .modal {
+  width: min(96vw, 72rem);
+  max-width: 96vw;
+  height: min(94vh, 56rem);
+  max-height: 94vh;
+  padding: 1.35rem 1.5rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-backdrop.quest-dev-modal-open #modal-title {
+  flex: 0 0 auto;
+  margin-bottom: 0.35rem;
+}
+.modal-backdrop.quest-dev-modal-open #modal-lead {
+  flex: 0 0 auto;
+}
+.modal-backdrop.quest-dev-modal-open .modal-actions {
+  flex: 0 0 auto;
+  margin-top: 0.25rem;
+}
+.modal-body.quest-dev-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  gap: 1.35rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.45rem;
+  scrollbar-gutter: stable;
+}
+.quest-dev-section {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.28);
+}
+.quest-dev-section > h4,
+.quest-dev-json-head h4 {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+.quest-dev-section > h4 .muted {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  color: var(--text-mute);
+  font-size: 0.85em;
+}
+.quest-dev-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.quest-dev-dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+}
+.quest-dev-dl dt {
+  margin: 0;
+  color: var(--accent-2);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.quest-dev-dl dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-word;
+}
+.quest-dev-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.quest-dev-scene {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+.quest-dev-md {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.quest-dev-md h2,
+.quest-dev-md h3 {
+  margin: 0.85rem 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.quest-dev-md h2:first-child,
+.quest-dev-md h3:first-child {
+  margin-top: 0;
+}
+.quest-dev-md p {
+  margin: 0 0 0.55rem;
+  color: var(--text-dim);
+}
+.quest-dev-md strong {
+  color: var(--text);
+}
+.quest-dev-md a {
+  color: var(--accent);
+}
+.quest-dev-json-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+.quest-dev-json-head h4 {
+  margin: 0;
+}
+.quest-dev-json {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(2, 6, 14, 0.65);
+  overflow: auto;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  max-height: min(42vh, 22rem);
+  color: var(--text-dim);
+}
+.quest-dev-json code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+  color: inherit;
 }
 .catalog-section {
   display: flex;
@@ -7721,6 +7880,24 @@ button.linkish:hover {
 .modal.modal-learn {
   width: min(560px, 100%);
   max-height: 88vh;
+}
+
+/* Quest Developer inspect — beat .modal.modal-learn width/height */
+.modal-backdrop.quest-dev-modal-open .modal.modal-learn {
+  width: min(96vw, 72rem);
+  max-width: 96vw;
+  height: min(94vh, 56rem);
+  max-height: 94vh;
+  padding: 1.35rem 1.5rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-backdrop.quest-dev-modal-open .modal-body.quest-dev-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
 }
 
 .modal-lead {

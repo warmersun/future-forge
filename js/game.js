@@ -2986,6 +2986,9 @@ function catalogEntryFromApi(e, source, opts = {}) {
     summary: e.summary || "",
     spotlightTechId: e.spotlightTechId || mission.spotlight?.techId || null,
     canRemove: Boolean(opts.canRemove),
+    tile: e.tile && typeof e.tile === "object" ? e.tile : null,
+    file: e.file ? String(e.file) : null,
+    remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
   };
 }
 
@@ -3041,6 +3044,9 @@ function collectCatalogBuckets() {
       summary: "",
       spotlightTechId: mission.spotlight?.techId || null,
       canRemove: true,
+      tile: e.tile && typeof e.tile === "object" ? e.tile : null,
+      file: null,
+      remoteUrl: null,
     });
   }
 
@@ -3408,10 +3414,188 @@ function catalogBadgesHtml(entry, kind) {
 }
 
 /**
+ * Tile JSON for Developer inspect (prefer API/import tile; else synthesize from mission).
+ * @param {object} entry
+ * @returns {object}
+ */
+function catalogInspectTile(entry) {
+  if (entry?.tile && typeof entry.tile === "object") {
+    return entry.tile;
+  }
+  const m = entry?.mission || {};
+  /** @type {Record<string, unknown>} */
+  const out = {
+    schema: "future-forge.quest-tile/v1",
+    kind: "quest",
+    id: entry?.id || m.id,
+    title: entry?.title || m.title,
+    summary: entry?.summary || "",
+    globalId: entry?.globalId || m.globalId,
+    mission: m,
+  };
+  if (m.spotlight) out.spotlight = m.spotlight;
+  if (m.grounding) out.grounding = m.grounding;
+  if (m.resources) out.resources = m.resources;
+  if (m.isLearningModule) out.isLearningModule = true;
+  if (m.aiTutorContext) out.aiTutorContext = m.aiTutorContext;
+  if (m.module) out.module = m.module;
+  if (m.lesson != null) out.lesson = m.lesson;
+  if (m.totalLessons != null) out.totalLessons = m.totalLessons;
+  if (m.sponsorName) out.sponsorName = m.sponsorName;
+  if (m.sponsorBanner) out.sponsorBanner = m.sponsorBanner;
+  return out;
+}
+
+/**
+ * Developer inspect modal for a Sponsored / Learning / Library catalog entry.
+ * @param {object} entry
+ */
+function openQuestCatalogInspect(entry) {
+  if (!entry?.mission && !entry?.tile) {
+    flashToast("No quest data to inspect.");
+    return;
+  }
+  const m = entry.mission || entry.tile?.mission || {};
+  const tile = catalogInspectTile(entry);
+  const g = globalById(entry.globalId || m.globalId);
+  const techId =
+    entry.spotlightTechId ||
+    m.spotlight?.techId ||
+    (Array.isArray(m.suggested) ? m.suggested[0] : null);
+  const tech = techId ? techById(techId) : null;
+  const jsonText = JSON.stringify(tile, null, 2);
+
+  const pressureRows = Object.entries(m.pressure || {})
+    .map(([k, v]) => {
+      const n = typeof v === "object" && v != null ? v.pressure ?? v : v;
+      const label =
+        typeof v === "object" && v != null && v.label ? String(v.label) : k;
+      return `<li><strong>${escapeHtml(label)}</strong> · ${escapeHtml(
+        String(n)
+      )}</li>`;
+    })
+    .join("");
+
+  const overviewBits = [
+    ["id", entry.id || m.id],
+    ["source", entry.source || m.source || "—"],
+    ["file", entry.file || "—"],
+    ["remoteUrl", entry.remoteUrl || "—"],
+    ["globalId", `${entry.globalId || m.globalId || "—"}${g ? ` (${g.title})` : ""}`],
+    ["spotlight", tech ? `${tech.name} (${techId})` : techId || "—"],
+    ["sponsor", m.sponsorName || "—"],
+    [
+      "learning",
+      m.isLearningModule || m.module
+        ? `${m.module || "module"}${
+            m.lesson != null
+              ? ` · Lesson ${m.lesson}${
+                  m.totalLessons != null ? `/${m.totalLessons}` : ""
+                }`
+              : ""
+          }`
+        : "—",
+    ],
+    [
+      "resources",
+      m.resources ? JSON.stringify(m.resources) : "—",
+    ],
+    [
+      "tags",
+      Array.isArray(tile.tags) && tile.tags.length
+        ? tile.tags.map(String).join(", ")
+        : "—",
+    ],
+  ];
+
+  const mdOrNone = (md, emptyNote) => {
+    const s = String(md || "").trim();
+    if (!s) return `<p class="muted">${escapeHtml(emptyNote)}</p>`;
+    return `<div class="quest-dev-md">${renderMarkdownSafe(s, {
+      allowImages: true,
+      autolink: true,
+    })}</div>`;
+  };
+
+  const title = $("#modal-title");
+  const lead = $("#modal-lead");
+  const body = $("#modal-body");
+  if (title) {
+    title.textContent = entry.title || m.title || "Quest inspect";
+  }
+  if (lead) {
+    lead.hidden = false;
+    lead.textContent =
+      "Developer · full tile details (Markdown + JSON). Tutor context is hidden from players in normal play.";
+  }
+  if (body) {
+    body.classList.add("quest-dev-modal-body");
+    body.innerHTML = `
+      <section class="quest-dev-section">
+        <h4>Overview</h4>
+        <dl class="quest-dev-dl">
+          ${overviewBits
+            .map(
+              ([k, v]) =>
+                `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(
+                  String(v)
+                )}</dd></div>`
+            )
+            .join("")}
+        </dl>
+        ${
+          pressureRows
+            ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
+            : ""
+        }
+      </section>
+      <section class="quest-dev-section">
+        <h4>Scene</h4>
+        <p class="quest-dev-scene">${escapeHtml(m.scene || "(empty)")}</p>
+      </section>
+      <section class="quest-dev-section">
+        <h4>Player brief</h4>
+        ${mdOrNone(m.briefMd, "No briefMd")}
+      </section>
+      <section class="quest-dev-section">
+        <h4>Grounding</h4>
+        ${mdOrNone(m.grounding || tile.grounding, "No grounding")}
+      </section>
+      <section class="quest-dev-section">
+        <h4>Tutor context <span class="muted">(player-hidden)</span></h4>
+        ${mdOrNone(
+          m.aiTutorContext || tile.aiTutorContext,
+          "No aiTutorContext"
+        )}
+      </section>
+      <section class="quest-dev-section">
+        <div class="quest-dev-json-head">
+          <h4>Full JSON</h4>
+          <button type="button" class="btn btn-secondary btn-sm" id="quest-dev-copy-json">Copy JSON</button>
+        </div>
+        <pre class="quest-dev-json"><code>${escapeHtml(jsonText)}</code></pre>
+      </section>
+    `;
+    body.querySelector("#quest-dev-copy-json")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(jsonText);
+        flashToast("JSON copied.");
+      } catch {
+        flashToast("Could not copy JSON.");
+      }
+    });
+  }
+  const backdrop = $("#modal-backdrop");
+  backdrop?.classList.add("open");
+  backdrop?.classList.add("quest-dev-modal-open");
+}
+
+/**
  * @param {object} entry
  * @param {"sponsored"|"learning"|"library"} kind
+ * @param {{ groupBy?: "emTech"|"theme"|null }} [opts]
  */
-function catalogCardHtml(entry, kind) {
+function catalogCardHtml(entry, kind, opts = {}) {
   const m = entry.mission;
   const g = globalById(entry.globalId);
   const img = problemVisualUrl(entry.globalId || "climate");
@@ -3421,11 +3605,11 @@ function catalogCardHtml(entry, kind) {
   const badges = catalogBadgesHtml(entry, kind);
   const solved =
     kind === "learning" && isMissionSolved(m?.id || entry.id);
-  // Meta line: place only when grouped by theme (theme is the section header);
-  // when grouped by emTech, show theme · place.
+  // When grouped by theme, section title is the theme — card shows place only.
+  // Flat or emTech-grouped: show theme · place.
   const place = entry.place || m?.place || "";
   const metaLine =
-    kind === "library"
+    opts.groupBy === "theme"
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
   const cta =
@@ -3454,11 +3638,18 @@ function catalogCardHtml(entry, kind) {
           <span class="cta">${cta}</span>
         </span>
       </button>
-      ${
-        entry.canRemove
-          ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
-          : ""
-      }
+      <div class="catalog-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
+          entry.id
+        )}" title="Inspect tile JSON and Markdown">
+          Developer
+        </button>
+        ${
+          entry.canRemove
+            ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
+            : ""
+        }
+      </div>
     </div>`;
 }
 
@@ -3532,6 +3723,28 @@ function moduleCardHtml(group) {
 }
 
 /**
+ * Group catalog cards only when it helps scanability.
+ * Small lists (e.g. 3 sponsored) stay one flat row; one bucket never needs a section header.
+ * @param {object[]} entries
+ * @param {"emTech"|"theme"|null|undefined} mode
+ * @returns {"emTech"|"theme"|null}
+ */
+function catalogGroupByIfUseful(entries, mode) {
+  if (!mode || !Array.isArray(entries)) return null;
+  const n = entries.length;
+  // One row of cards (~3) or a short grid — keep flat
+  if (n < 6) return null;
+  const sections =
+    mode === "emTech"
+      ? groupCatalogByEmTech(entries)
+      : mode === "theme"
+        ? groupCatalogByTheme(entries)
+        : [];
+  if (sections.length < 2) return null;
+  return mode;
+}
+
+/**
  * Paint flat or sectioned catalog cards and wire play/remove.
  * @param {HTMLElement} grid
  * @param {object[]} entries
@@ -3539,9 +3752,10 @@ function moduleCardHtml(group) {
  * @param {{ groupBy?: "emTech"|"theme"|null }} [opts]
  */
 function paintCatalogEntries(grid, entries, kind, opts = {}) {
-  const groupBy = opts.groupBy || null;
+  const groupBy = catalogGroupByIfUseful(entries, opts.groupBy || null);
   /** @type {object[]} */
   let flat = entries;
+  const cardOpts = { groupBy };
 
   if (groupBy === "emTech") {
     const sections = groupCatalogByEmTech(entries);
@@ -3551,7 +3765,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
         <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
         <div class="challenge-grid">${sec.entries
-          .map((e) => catalogCardHtml(e, kind))
+          .map((e) => catalogCardHtml(e, kind, cardOpts))
           .join("")}</div>
       </section>`
       )
@@ -3565,7 +3779,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       <section class="catalog-section" aria-label="${escapeHtml(sec.title)}">
         <h2 class="catalog-section-title">${escapeHtml(sec.title)}</h2>
         <div class="challenge-grid">${sec.entries
-          .map((e) => catalogCardHtml(e, kind))
+          .map((e) => catalogCardHtml(e, kind, cardOpts))
           .join("")}</div>
       </section>`
       )
@@ -3573,7 +3787,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
     flat = sections.flatMap((s) => s.entries);
   } else {
     grid.innerHTML = `<div class="challenge-grid">${entries
-      .map((e) => catalogCardHtml(e, kind))
+      .map((e) => catalogCardHtml(e, kind, cardOpts))
       .join("")}</div>`;
   }
 
@@ -3582,6 +3796,11 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
     const entry = flat.find((e) => e.id === id);
     wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
       playCatalogEntry(entry);
+    });
+    wrap.querySelector(".catalog-dev")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (entry) openQuestCatalogInspect(entry);
     });
     wrap.querySelector(".catalog-remove")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -3621,7 +3840,7 @@ function renderQuestCatalog() {
     if (titleEl) titleEl.textContent = "Sponsored Quests";
     if (blurbEl) {
       blurbEl.textContent =
-        "From warmersun.com — grouped by spotlight technology. Attribution only; invent a local application.";
+        "From warmersun.com — partner Spotlight Quests. Attribution only; invent a local application.";
     }
     entries = missionPickSession
       ? parts.sponsored.filter((e) => !isLearningMission(e.mission))
@@ -3632,7 +3851,7 @@ function renderQuestCatalog() {
     if (blurbEl) {
       blurbEl.textContent = missionPickSession
         ? "Side-loaded Quests for this party (learning modules hidden — solo only)."
-        : "Local side-load only (quests/ folder or Import), grouped by theme.";
+        : "Local side-load only (quests/ folder or Import).";
     }
     entries = missionPickSession
       ? parts.library.filter((e) => !isLearningMission(e.mission))
@@ -15124,7 +15343,11 @@ function openLearnStack() {
 
 function closeModal() {
   stopReadAloud();
-  $("#modal-backdrop").classList.remove("open");
+  const backdrop = $("#modal-backdrop");
+  backdrop?.classList.remove("open");
+  backdrop?.classList.remove("quest-dev-modal-open");
+  const body = $("#modal-body");
+  body?.classList.remove("quest-dev-modal-body");
 }
 
 /* —— Utils —— */
