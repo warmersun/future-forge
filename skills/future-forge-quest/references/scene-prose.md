@@ -8,8 +8,8 @@ Use this for:
 | Field | How to apply |
 |-------|----------------|
 | `mission.scene` | Full spine in plain text. Schema max **500 characters**. Still craft-compliant: short breaths, punch-lines, open challenge. |
-| `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). Target a vivid multi-paragraph scene, not a policy memo. |
-| Rest of `briefMd` | Same voice; headings stay scannable. Invent invitation stays open (no solution theater). |
+| `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). A few tight paragraphs — not a novella or policy memo. |
+| Rest of `briefMd` | Same voice; headings stay scannable. **Your job** states the invent in plain words (see `brief-template.md`). |
 
 ---
 
@@ -22,6 +22,8 @@ Each piece is a **flight simulator for a design decision**. The reader should fi
 3. Feel the open design problem — not leave with a framework dump or a solution brief  
 
 **Core test:** *If the reader remembers only one thing, what decision becomes sharper?*
+
+**Plain-language test (Spotlight / learning tiles):** *Could a 14-year-old restate the invent job from title + summary alone?* Story craft does not replace that test.
 
 ---
 
@@ -47,7 +49,7 @@ Pick **one** plot type per scene: **Challenge** (obstacle vs grit/constraint), *
 - Confident and declarative. Plain but not flat. Warm but unsentimental.  
 - **Third person** by default.  
 - No meta, no workshop jargon, no “this case shows,” “as designers we must,” “the lesson here is.”  
-- Jargon on first use: **one plain definition → one concrete image → resume the scene.**
+- **Everyday words in player text.** If a lab or research term would fail a high-school first read, use the everyday phrase in scene / brief / title / summary. Put the lab term in **`grounding`** or **`aiTutorContext`**. Prefer not to resume the scene with the jargon after a one-line definition — that still hides the job.
 
 ---
 
@@ -79,12 +81,26 @@ Pick **one** plot type per scene: **Challenge** (obstacle vs grit/constraint), *
 - Sentences that tell the reader how to feel  
 - Policy-brief packing / framework dumps  
 - Solution theater  
+- Research or tutor curriculum dumped into player prose  
+
+---
+
+## Spotlight / learning extra (do not weaken catalog seed craft)
+
+Catalog theme seeds can stay in lived-harm story voice. **Spotlight and learning tiles** authored with this skill must also make the **invent job** unmistakable:
+
+1. **`summary` + `title` + brief “Your job”** state who is in trouble, what to invent (everyday words), and what not to invent.  
+2. Scene may still end on tension (*Who posts the rule before the fair?*). A **metaphor-only** closer (*Who designs the ditch brain…*) is **not** enough as the only invent invitation.  
+3. Capability lectures, product-category chains, and lesson SEQUENCE belong in **`grounding`** / **`aiTutorContext`** — not as the bulk of `briefMd`.  
+4. Ban insider shorthand in player fields: “local cut,” unexplained “open-weight,” “MoE,” “genome-scale opposite-handed DNA,” etc. Say what the learner must build in plain words.
 
 ---
 
 ## Bad vs good
 
-**BAD (dense stack — never write like this):**
+### Dense stack (never write like this)
+
+**BAD:**
 
 > In the chawl maternity room, mothers share cots under a tin roof that holds the day’s heat long after dark while the grid dies and fans stop and the sterilizer goes cold, so a new mother spikes a fever with no clean way to cool her because a wiring plan built for lights and phones—landlords still meter power by the room—never reaches the birth floor.
 
@@ -92,11 +108,27 @@ Pick **one** plot type per scene: **Challenge** (obstacle vs grit/constraint), *
 
 > Night holds the day’s heat under the tin roof. Mothers share cots on the birth floor. When the grid dies, fans stop. The sterilizer goes cold. A new mother spikes a fever, and there is no clean way to cool her or keep instruments safe. Landlords still meter power by the room. The wiring was built for lights and phones, not for round-the-clock birth care. Backup never reaches this floor. Who designs power for the hour a life arrives?
 
+### Learning / spotlight: jargon hides the job (never ship like this)
+
+**BAD (research voice in player fields):**
+
+- Title: *The unposted rule at Tideglass High*  
+- Summary: *Invent the local cut.*  
+- Scene: *…can finally make opposite-handed peptides… do not finish a living cell…*  
+- Brief opens on place poetry; invent invitation buried after a capability lecture.
+
+**GOOD (same fictive place; job first in everyday words):**
+
+- Title: *School lab rule before the science fair*  
+- Summary: *Invent a posted school-lab rule that allows useful mirror-molecule medicines and forbids building a living mirror cell.*  
+- Scene: Nia tapes a donor plaque beside the new bench machine. The club can make useful medicine parts. The fair prize is a summer lab seat. A visiting fellow wrote on the whiteboard: do not finish a living cell. No one has posted what that means on the door. Who writes the rule before the fair?  
+- Brief opens with **Your job** (plain invent + what not to invent). Lab terms (*chirality*, *opposite-handed*, *ribosome*) live in `grounding` / tutor notes.
+
 ---
 
 ## `mission.scene` under the 500-character cap
 
-Keep the full spine. Prefer **several short sentences** over one long lede. End on the open design tension (a sharp question or unfinished beat is fine).
+Keep the full spine. Prefer **several short sentences** over one long lede. End on the open design tension (a sharp question or unfinished beat is fine). Still use everyday words.
 
 **Shape to aim for (illustrative length, invent your own place):**
 
@@ -107,6 +139,7 @@ Keep the full spine. Prefer **several short sentences** over one long lede. End 
 ## Quality bar (ship only when true)
 
 - [ ] One-sentence Commander’s Intent is clear (decision becomes sharper)  
+- [ ] **Title + summary** pass the 14-year-old invent-job test (Spotlight / learning)  
 - [ ] Opens on a concrete scene (named person or clear role + action)  
 - [ ] Harm + local driver both visible as story  
 - [ ] Mechanism shown through action, not lecture  
@@ -114,4 +147,5 @@ Keep the full spine. Prefer **several short sentences** over one long lede. End 
 - [ ] Punch-line sentences used 2–4 times (scene or place section)  
 - [ ] Ends on open design challenge — not a solution  
 - [ ] Dense stacked clauses avoided; easy on first read  
+- [ ] Player text uses everyday words; lab jargon is not required to understand the job  
 - [ ] `mission.scene` ≤ 500 characters  

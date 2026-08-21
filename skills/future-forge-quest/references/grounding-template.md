@@ -2,7 +2,7 @@
 
 Optional free-text **`grounding`** (Markdown) is the Quest’s **capability truth** for co-inventor, tutor, claim-timing, and challenge. It is **guidance, not a schema** — omit thin sections rather than pad; validators only require a string when present.
 
-Player-facing invent invitation stays in `mission.scene` / `briefMd`. Grounding is for **AI consistency**, not a second brief.
+Player-facing invent invitation stays in `title` / `summary` / `briefMd` (**Your job** first) / `mission.scene`. Grounding is for **AI consistency**, not a second brief — do not paste this chain into player prose.
 
 ---
 
@@ -155,7 +155,7 @@ trust fragile — pilot language only for 2026.
 |----------|-----|
 | `grounding` | Capability truth along the chain (AI SoT) |
 | `research` | Citable notes (usually hidden) |
-| `briefMd` / `scene` | Lived place + invent invitation to **apply** |
+| `briefMd` / `scene` | **Your job** (plain invent) + lived place; apply unlocked use cases |
 | Learner invent | Concrete **application** in place/year |
 | `aiTutorContext` | Pedagogy sequence (hidden); may map unlocks → local application |
 | Sponsor fields | Attribution only |

@@ -1,8 +1,17 @@
 # Brief template (`mission.briefMd`)
 
-**Prose style:** All player-facing narrative follows `references/scene-prose.md` (design-challenge story craft). Especially **The place** — write a lived scene, not a policy memo.
+**Prose style:** All player-facing narrative follows `references/scene-prose.md` (design-challenge story craft + plain-language job). **Your job** comes first so the invent is clear before the story.
+
+**Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains belong in `aiTutorContext` / `grounding` — not here.
 
 ```markdown
+## Your job
+
+Plain invent invitation in everyday words. Name who is in trouble, what to invent, and what not to invent.
+No insider shorthand (“local cut,” unexplained lab terms).
+Stakeholder can appear here in one line.
+End on the open choice — not a solution checklist.
+
 ## The place
 
 Write a short design-challenge story (fictive place, real problem shape):
@@ -15,29 +24,21 @@ Write a short design-challenge story (fictive place, real problem shape):
 
 Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath.
 Lived local harm + local driver must both appear as story.
-Target: a few tight paragraphs (fuller than `mission.scene`; same craft).
+Target: a few tight paragraphs (fuller than `mission.scene`; same craft). Not a novella.
 
 ## What’s strained
 
 What fails if nothing changes (ties to crisis meters). Keep concrete and local — still plain declarative prose, not framework lists unless the meters need a short map.
 
-## A capability that just became more real
+## What just became possible
 
-Player-safe description of the *kind* of advance (not a product ad).
+One short paragraph, everyday words: the *kind* of advance that makes a new local invent realistic (not a product ad, not a research abstract).
 Do not prescribe a single brand or one-step “correct” invention.
-If you name jargon, define it once in plain words, then return to this place.
-
-## Your brief
-
-Clear invent invitation: design something that uses this capability *here*.
-Name the stakeholder in prose if helpful.
-End on what they must choose / invent — not a solution checklist.
+Prefer leaving lab terms in `grounding`; if you must name one here, use an everyday phrase the reader already met in **Your job**.
 
 ## Constraints (optional)
 
 Cost, trust, power, skills — inventable constraints (concrete, local).
 ```
 
-Target length: **600–1500 words**. Hard cap: 12 000 characters.
-
-Also write **`mission.scene`** as a plain-text lede (≤500 chars) with the same spine and rhythm — see `references/scene-prose.md`.
+Also write **`mission.scene`** as a plain-text lede (≤500 chars) with the same spine and rhythm — see `references/scene-prose.md`. Write **`summary`** / **`title`** / **`encourageCopy`** as the plain job *before* drafting this brief (see `SKILL.md` Procedure §4).

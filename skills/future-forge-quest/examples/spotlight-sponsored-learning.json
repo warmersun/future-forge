@@ -3,8 +3,8 @@
   "kind": "quest",
   "id": "spotlight-ai-learning-demo-harborside-2026",
   "version": 1,
-  "title": "Night class on the sealed pier network",
-  "summary": "Learning-module demo: open-weight AI under local IP rules — invent the pier lab workflow.",
+  "title": "Night-class AI that stays in the pier lab",
+  "summary": "Invent a pier-lab learning workflow so students practice for days without sending yard manuals to the cloud.",
   "author": {
     "name": "Future Forge skill example",
     "note": "Portable learning + sponsor sample"
@@ -26,7 +26,7 @@
     "advanceTitle": "Hostable near-frontier open-weight models",
     "advanceSummary": "Open weights and long-context agents make local institutional hosting realistic when a cluster exists — if the learning workflow is invented.",
     "asOf": "2026-07",
-    "encourageCopy": "Invent with AI for this sealed pier lab — local control is the point."
+    "encourageCopy": "Invent a night-class AI path that never phones home — local control is the point."
   },
   "research": {
     "topic": "Open-weight institutional hosting for education",
@@ -45,12 +45,12 @@
   },
   "globalId": "education",
   "sponsorName": "Example Labs",
-  "sponsorBanner": "Open weights for classrooms — invent the local use",
+  "sponsorBanner": "Classroom AI that stays on-site — invent the local use",
   "isLearningModule": true,
   "module": "Sealed pier AI lab",
   "lesson": 1,
   "totalLessons": 2,
-  "aiTutorContext": "LESSON GOAL: Learner invents a pier-lab AI learning workflow that stays on-prem.\n\nSEQUENCE:\n1) Ask why public cloud chat breaks sealed IP.\n2) Product category: open-weight long-context coding agents on an institutional cluster — not whole AI, not a laptop.\n3) Map unlocked use case (sealed multi-day tutoring) → local application (one course track workflow).\n4) Tests and human gates; pilot scope only.\n\nMISCONCEPTIONS:\n- Cloud API is fine if the prompt is careful.\n- City-wide overnight deploy.\n\nINVENT GATE:\n- Name stack + pilot-honest how-it-works for one sealed lab corridor.\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player.",
+  "aiTutorContext": "LESSON GOAL: Learner invents a pier-lab AI learning workflow that stays on-prem.\n\nSEQUENCE:\n1) Ask why public cloud chat breaks sealed IP.\n2) Product category: open-weight long-context coding agents on an institutional cluster — not whole AI, not a laptop.\n3) Map unlocked use case (safe multi-day tutoring) → local application (one course track workflow).\n4) Tests and human gates; pilot scope only.\n\nMISCONCEPTIONS:\n- Cloud API is fine if the prompt is careful.\n- City-wide overnight deploy.\n\nINVENT GATE:\n- Name stack + pilot-honest how-it-works for one sealed lab corridor.\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player.",
   "grounding": "## Technology\n- **emTech:** ai\n- **Product category:** Open-weight long-context coding agents for institutional hosting\n\n## Capabilities\nLocal serving of long-context coding agents when a cluster exists; inspect and fine-tune under institutional policy.\n\n## Trends & predictions\nAgent work horizon lengthens; serving cost per useful hour falls when open weights and ops mature. **Forecast (not lock):** more trade schools and labs host on-prem agents for sealed IP tracks through the late 2020s where GPUs and policy allow.\n\n## Milestone\nOpen near-frontier weights for institutional download (~2026) — Example Labs weights illustrate the category milestone (capability class, not a required brand).\n\n## Unlocks Use Case(s)\nSealed-lab tutoring and multi-day exercises without shipping protected repos to a foreign API.\n\n## Applications\nInstitutional on-prem tutor stacks; night-class multi-day debug practice with human-gated commits — invent the local pier-lab workflow.\n\n## Honest limits\nNot consumer-laptop ready; hallucinations need tests; pilot one track first.",
   "resources": {
     "startingBudget": 8,
@@ -59,7 +59,7 @@
   "mission": {
     "id": "spotlight-ai-learning-demo-harborside-2026",
     "globalId": "education",
-    "title": "Night class on the sealed pier network",
+    "title": "Night-class AI that stays in the pier lab",
     "place": "Harborside Trade School (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -78,8 +78,8 @@
         "winMax": 1
       }
     },
-    "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard firmware on the bench cannot leave this room. Students still need multi-day practice. Who designs a local AI learning path that never phones home?",
-    "briefMd": "## The place\n\n**Harborside Trade School** (fictive). Night class. Real yard manuals. A small GPU rack hums. Cloud chat is forbidden by contract.\n\n## What's strained\n\n**Skills gap** and **Trust** — practice is thin, and wrong answers in a sealed lab are costly.\n\n## A capability that just became more real\n\nOpen-weight near-frontier AI can be hosted on-site when the school has a cluster. The invent is the **workflow**, not the brochure.\n\n## Your brief\n\nInvent a local system for this pier lab that uses **AI** honestly. Stakeholder: **Ms. Okonkwo**.\n\n## Constraints\n\n- On-prem only. Pilot one track. Human gates. No overnight whole-port claims.\n",
+    "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard manuals on the bench cannot leave this room. Students still need multi-day practice. Cloud chat is forbidden by contract. Who designs help that never phones home?",
+    "briefMd": "## Your job\n\nInvent a **night-class learning workflow** for the pier lab that uses AI on the school’s own machines so students can practice for days without sending yard manuals to the cloud.\n\nStakeholder: **Ms. Okonkwo, night instructor**.\n\nPilot one course track. Keep a human gate on commits. Do not invent a whole-port overnight rollout. Do not require a public cloud chat for core practice.\n\n## The place\n\n**Harborside Trade School** (fictive). Night class. Real yard manuals. A small machine rack hums under the table. After the last ferry, Ms. Okonkwo locks the door. The firmware on the bench stays in the room — by contract.\n\nStudents still need multi-day debug practice. Worksheets do not explain a stuck step at midnight. Wrong answers in a sealed lab are costly.\n\n## What’s strained\n\n**Skills gap** — practice is thin. **Trust** — a leak or a confident wrong answer can end the program.\n\n## What just became possible\n\nSchools with a small on-site cluster can run serious tutoring software without shipping protected files to a distant chat service — **if** someone invents the classroom workflow, not only the brochure.\n\n## Constraints\n\n- On-prem only for core tutoring. Pilot one track. Human gates. No overnight whole-port claims.\n",
     "stakeholder": "Ms. Okonkwo, night instructor",
     "suggested": [
       "ai"

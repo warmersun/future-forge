@@ -10,7 +10,7 @@ It does **not** relicense the Future Forge game engine. Only this skill tree (an
 
 | Area | Summary |
 |------|---------|
-| **Core spotlight** | One tech, fictive place, design-challenge prose |
+| **Core spotlight** | One tech, fictive place, plain invent job + design-challenge prose |
 | **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus) |
 | **Resources** | Optional starting AP / Budget / Will |
 | **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
@@ -27,7 +27,7 @@ All optional features may be **combined** on one tile (see `examples/spotlight-s
 | **`references/grounding-template.md`** | Capability SoT chain (authoring guidance) |
 | **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson, sponsor recipes |
 | **`references/output-contract.md`** | Skeleton + recipes A–D |
-| **`references/scene-prose.md`** | Player-facing lede craft |
+| **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
 
 ## Not under `.grok/`
 
@@ -35,17 +35,18 @@ Works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” wo
 
 ## Quick start
 
-1. Follow **`SKILL.md`**.
-2. Read **`references/scene-prose.md`** before drafting scene / place.
-3. Read **`references/schema.md`** and **`grounding-template.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
-4. Write the JSON; **omit** unused optional keys.
-5. Validate:
+1. Follow **`SKILL.md`** — especially the **player-language job** pass (title + summary must pass the 14-year-old invent-job test).
+2. Read **`references/scene-prose.md`** before drafting scene / place (Spotlight extras: everyday words; job not hidden in jargon).
+3. Read **`references/brief-template.md`** (**Your job** first; ~250–600 words).
+4. Read **`references/schema.md`** and **`grounding-template.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
+5. Write the JSON; **omit** unused optional keys. Keep lab terms in `grounding` / `aiTutorContext`.
+6. Validate:
 
 ```bash
 npm run validate:quest -- output/quests/<slug>/quest.json
 ```
 
-6. Hand-off:
+7. Hand-off:
    - Copy into game **`quests/`** and refresh (External Quests), or  
    - **Import Quest…** on the title screen (per browser).
 

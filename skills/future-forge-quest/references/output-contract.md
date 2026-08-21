@@ -1,11 +1,12 @@
 # Output contract
 
 1. Write UTF-8 JSON (pretty-printed OK).
-2. Prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
-3. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
-4. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
-5. Run `npm run validate:quest -- <file>` until `OK:`.
-6. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
+2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
+3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words.
+4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
+5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
+6. Run `npm run validate:quest -- <file>` until `OK:`.
+7. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
 
 ---
 
@@ -69,14 +70,16 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
         "winMax": 1
       }
     },
-    "scene": "… ≤500 chars …",
-    "briefMd": "## The place\n\n…\n\n## What’s strained\n\n…\n\n## A capability that just became more real\n\n…\n\n## Your brief\n\n…\n\n## Constraints\n\n…\n",
+    "scene": "… ≤500 chars, everyday words …",
+    "briefMd": "## Your job\n\n…\n\n## The place\n\n…\n\n## What’s strained\n\n…\n\n## What just became possible\n\n…\n\n## Constraints\n\n…\n",
     "stakeholder": "…",
     "suggested": ["<techId>"],
     "visionTheme": "rebuild-city"
   }
 }
 ```
+
+`title` / `summary` / `encourageCopy`: plain invent job (see `SKILL.md` §4). Lab terms stay in `grounding`.
 
 ---
 

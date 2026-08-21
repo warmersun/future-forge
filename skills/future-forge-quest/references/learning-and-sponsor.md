@@ -28,6 +28,8 @@ UI: invent and Learning catalog show **module title + segment bar** (one segment
 
 Write as short structured notes. Do **not** paste this into `briefMd` or `scene`.
 
+**Player brief stays lean.** Capability lectures, product-category chains, SEQUENCE steps, readings, and misconceptions live here (and in `grounding`) — not as long sections in `briefMd`. The learner must understand the invent job from **title + summary + Your job** without reading the tutor notes.
+
 ```text
 LESSON GOAL: <one sentence — what the learner should invent/understand>
 
@@ -75,7 +77,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 
 1. **https only** — no `javascript:`, `data:`, or relative paths. Prefer stable, citable pages and diagrams.
 2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
-3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**).
+3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). Do not paste a capability lecture into **What just became possible** either — one short everyday paragraph max; the tutor teaches the rest.
 4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.
 5. **Never** treat a sponsored product URL as a required solution path; invent stays open and pilot-honest.
 6. Chat still refuses raw HTML — use Markdown only.
@@ -167,6 +169,8 @@ Example in monorepo: `quests/kimi-k3.json`. Portable skill example: `examples/sp
 - Link-only tutor turns, or rewriting a `/lessons` page in chat  
 - Broken or non-https media URLs in `aiTutorContext`  
 - Putting pedagogy-only images into `briefMd` instead of tutor context + chat  
+- Dumping capability lectures, SEQUENCE, or research into `briefMd` / `scene` / `summary`  
+- Title/summary that hide the job behind place poetry or insider jargon (“local cut,” unexplained “open-weight”)  
 - Sponsor without `grounding` (AI has no capability SoT)  
 - Bare-emTech unlocks (“AI unlocks education”) instead of product-category grain  
 - Product theater in scene/brief (“only Brand Y works”)  

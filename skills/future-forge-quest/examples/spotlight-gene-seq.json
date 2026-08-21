@@ -3,8 +3,8 @@
   "kind": "quest",
   "id": "spotlight-gene-seq-border-clinic-2026",
   "version": 1,
-  "title": "Fever samples waiting at Crossing Clinic 7",
-  "summary": "A border clinic can finally sequence on-site — if someone invents the workflow.",
+  "title": "Same-shift fever answers at Crossing Clinic 7",
+  "summary": "Invent a same-shift sample-to-answer workflow so a border clinic can act before the truck returns — without panic headlines.",
   "author": {
     "name": "Future Forge example",
     "note": "MIT skill example fixture"
@@ -20,7 +20,7 @@
     "advanceTitle": "Rugged same-shift clinic sequencing",
     "advanceSummary": "Portable and desktop sequencers have gotten cheaper and more field-rugged, so a small clinic can run pathogen reads without shipping every sample to a national lab — if the local workflow exists.",
     "asOf": "2026-07",
-    "encourageCopy": "Build your invention around gene sequencing — the new on-site capability is the point of this Quest."
+    "encourageCopy": "Invent the on-site sample-to-answer workflow — gene sequencing is the tool, not the brochure."
   },
   "research": {
     "topic": "Clinic-grade / portable gene sequencing turnaround",
@@ -41,7 +41,7 @@
   "mission": {
     "id": "spotlight-gene-seq-border-clinic-2026",
     "globalId": "infectious",
-    "title": "Fever samples waiting at Crossing Clinic 7",
+    "title": "Same-shift fever answers at Crossing Clinic 7",
     "place": "Crossing Clinic 7 (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -61,7 +61,7 @@
       }
     },
     "scene": "Nurse Amina seals another swab and slides it into the cooler. The fever does not match the sheet on the fridge. The lab truck left at dawn. Answers take days. By then the queue has moved on — or the ward is full. Who designs a same-shift truth for this bench?",
-    "briefMd": "## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7** — a fictive border post with three nurses, a doctor on alternate days, and a generator that coughs after midnight. Travelers and traders share one waiting bench. She checks the fever sheet taped to the fridge. The pattern does not match.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\nThe clinic can swab and counsel. It cannot yet turn a sample into a provisional read before the next queue arrives. The delay is the driver: a shipping calendar built for a capital lab, not for a border shift.\n\nWho designs a workflow that makes gene sequencing honest *here* — under heat, thin staffing, and fragile trust — without promising magic?\n\n## What’s strained\n\n**Capacity** is the daily crunch: swab, label, counsel, discharge. **Outbreak** risk rises when the pattern is real and invisible. **Fear** spreads when rumors outrun lab truth — a wrong whisper can empty markets or fill the wrong ward.\n\n## A capability that just became more real\n\nGene sequencing is no longer only a capital-city specialty for this kind of post. Rugged desktop and portable sequencers, cheaper reagents, and software that turns raw reads into provisional pathogen signals mean a small clinic *could* run a same-shift or next-morning workflow — **if** someone designs how samples move, who is trained, what gets shared upstream, and how patients hear results without panic.\n\nThis Quest is not asking you to invent sequencing from scratch. It is asking you to invent the **local application**: a system people here can run under heat, power cuts, and thin staffing.\n\n## Your brief\n\nDesign an invention for Crossing Clinic 7 that makes honest use of **gene sequencing** in this place and year. Name it. Write how it works here (not in a brochure). Show everyday life for nurses, patients, and whoever must trust the readout.\n\nStakeholder: **Dr. Okonkwo, clinic lead** — wants fewer blind days between swab and action, without promising magic.\n\n## Constraints\n\n- Power and cold chain are uneven after dusk.\n- Staff time is the scarcest resource; tools that need a full bioinformatics team will fail.\n- Public trust is fragile: a wrong headline is worse than a slow truth.\n- Pilot language is welcome; city-wide overnight guarantees are not honest for 2026.\n",
+    "briefMd": "## Your job\n\nInvent a **same-shift sample-to-answer workflow** for Crossing Clinic 7 that uses gene sequencing honestly here.\n\nStakeholder: **Dr. Okonkwo, clinic lead** — fewer blind days between swab and action, without promising magic.\n\nName the system. Show how samples move, who is trained, what gets shared upstream, and how patients hear results without panic. Do not invent sequencing from scratch. Do not promise a city-wide overnight guarantee.\n\n## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7** — a fictive border post with three nurses, a doctor on alternate days, and a generator that coughs after midnight. Travelers and traders share one waiting bench. She checks the fever sheet taped to the fridge. The pattern does not match.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\nThe clinic can swab and counsel. It cannot yet turn a sample into a provisional answer before the next queue arrives. The delay is the driver: a shipping calendar built for a capital lab, not for a border shift.\n\nWho designs a workflow that works *here* — under heat, thin staffing, and fragile trust?\n\n## What’s strained\n\n**Outbreak** risk rises when the pattern is real and invisible. **Fear** spreads when rumors outrun lab truth — a wrong whisper can empty markets or fill the wrong ward.\n\n## What just became possible\n\nSmall clinics can now run pathogen reads on-site with rugged machines — **if** someone designs the local workflow under heat, power cuts, and thin staffing.\n\n## Constraints\n\n- Power and cold chain are uneven after dusk.\n- Staff time is the scarcest resource; tools that need a full specialist team will fail.\n- Public trust is fragile: a wrong headline is worse than a slow truth.\n- Pilot language is welcome; city-wide overnight guarantees are not honest for 2026.\n",
     "stakeholder": "Dr. Okonkwo, clinic lead",
     "suggested": ["gene-sequencing"],
     "visionTheme": "care-city"

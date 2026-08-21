@@ -63,23 +63,23 @@ const advanceSummary =
   tech.summary ||
   `Capability in ${tech.name} is shifting — design a local application.`;
 
-const briefMd = `## The place
+const briefMd = `## Your job
 
-**${place}** is a fictive locale where people feel a concrete strain that ${tech.name} could honestly touch — if someone invents the local workflow, not a brochure claim.
+Invent a local system for this place that makes honest use of **${tech.name}** (${tech.id}) in year ${GAME.startYear}. Name it. Write how it works here. Show everyday life. Do not invent a brochure claim.
+
+## The place
+
+**${place}** is a fictive locale where people feel a concrete strain that ${tech.name} could honestly touch — if someone invents the local workflow.
 
 ## What’s strained
 
-Name three pressures the staff and residents feel this season. Tie them to meters the player will see.
+Name the pressures the staff and residents feel this season. Tie them to meters the player will see.
 
-## A capability that just became more real
+## What just became possible
 
 ${advanceSummary}
 
-Teach the *kind* of capability. Do not prescribe one branded product or a single correct invention.
-
-## Your brief
-
-Invent something for this place that makes honest use of **${tech.name}** (${tech.id}) in year ${GAME.startYear}. Name it. Write how it works here. Show everyday life.
+One short paragraph in everyday words. Do not prescribe one branded product or a single correct invention. Put lab detail in grounding.
 
 ## Constraints
 
@@ -93,8 +93,8 @@ const tile = {
   kind: "quest",
   id: slug,
   version: 1,
-  title: `${tech.name} under pressure at ${place}`,
-  summary: `Practice ${tech.name}: invent a local application of a recent capability.`.slice(
+  title: `Invent with ${tech.name} at this place`,
+  summary: `Invent a local workflow that uses ${tech.name} honestly here — pilot-sized, not a brochure.`.slice(
     0,
     160
   ),

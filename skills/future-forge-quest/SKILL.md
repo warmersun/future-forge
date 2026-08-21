@@ -4,9 +4,10 @@ license: MIT
 description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
   tile (JSON). Portable multi-harness skill — not tied to a single agent product.
-  Player-facing scene and place prose use design-challenge story craft (easy first read).
-  Supports structured crisis meters, optional resources, grounding, learning-module
-  tutor mode, multi-lesson sets (display-only progress), and sponsor attribution.
+  Player-facing prose states the invent job in everyday words first; story craft
+  follows. Supports structured crisis meters, optional resources, grounding,
+  learning-module tutor mode, multi-lesson sets (display-only progress), and
+  sponsor attribution.
 ---
 
 # Future Forge Spotlight Quest author
@@ -15,7 +16,7 @@ description: >
 
 You write a **portable Quest tile** so learners can invent with **one spotlight technology** after a **real recent capability advance**. The playable place is **fictive** but shaped so that tech is a strong, honest fit.
 
-Player-facing narrative (`mission.scene` and especially **The place** in `briefMd`) must follow the same **design-challenge story craft** as Future Forge scenario seeds. Full rules: **`references/scene-prose.md`**. Do not write dense policy-brief ledes or stacked megasentences.
+**Player clarity first.** Title, summary, and the first brief heading must state the invent job in everyday words. Story craft (scene / place) comes after. Full rules: **`references/scene-prose.md`**. Do not write dense policy-brief ledes, research jargon in player text, or stacked megasentences.
 
 ## When to use
 
@@ -41,21 +42,22 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 | **`references/grounding-template.md`** | Capability SoT chain (emTech → product category → … → applications) |
 | **`references/learning-and-sponsor.md`** | Tutor + sponsor recipes, multi-lesson sets |
 | **`references/output-contract.md`** | Skeleton + omit rules + recipes |
-| **`references/scene-prose.md`** | Player-facing lede craft |
-| **`references/brief-template.md`** | `briefMd` headings |
+| **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
+| **`references/brief-template.md`** | `briefMd` headings (job first) |
 
 ## Hard rules
 
 1. **`spotlight.techId`** = one valid Future Forge tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
 2. **`mission.suggested`** = exactly `[spotlight.techId]`.
-3. **`mission.briefMd`** = long Markdown brief (target **600–1500 words**; max 12 000 chars). Headings: `brief-template.md`. **The place** = story craft, not a memo.
-4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars).
-5. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }`. **Flat maps rejected.**
-6. Scenario is **fictive**; research notes go in `research` (usually not player-facing).
-7. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
-8. Sensitive themes: `references/sensitivity.md`.
-9. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
-10. Validate: `npm run validate:quest -- <file>` until `OK:`.
+3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. Do not dump research or tutor curriculum into the brief.
+4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
+5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4).
+6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }`. **Flat maps rejected.**
+7. Scenario is **fictive**; research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose.
+8. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
+9. Sensitive themes: `references/sensitivity.md`.
+10. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
+11. Validate: `npm run validate:quest -- <file>` until `OK:`.
 
 ## Optional extensions (combinable)
 
@@ -89,6 +91,8 @@ Details and templates: **`references/learning-and-sponsor.md`**.
   - **milestone** unlocks **use cases** → **applications** the learner will invent
   - honest limits; sponsor product only as milestone evidence when sponsored
 
+Research voice stays in `research` / `grounding`. Do **not** paste it into title, summary, scene, or brief.
+
 ### 3. Invent the fictive Quest
 
 - Place + lived harm + local driver as **story**.
@@ -96,17 +100,26 @@ Details and templates: **`references/learning-and-sponsor.md`**.
 - `globalId`, stakeholder, structured **`pressure`** (1–3 roles).
 - Optional **`resources`**.
 
-### 4. Player-facing prose
+### 4. Player-language job (before story prose)
 
-**Read `references/scene-prose.md` first.**
+**Pass this test before writing scene or place:** *Could a 14-year-old restate the invent job from title + summary alone?*
 
-1. `mission.scene` (≤500 chars)  
-2. `briefMd` → **The place** (same craft)  
-3. Remaining brief headings  
+1. **`summary`** (≤160 chars) — the plain job. Pattern: *Invent a [concrete thing] so [this person] can [everyday outcome].* No invented-place poetry, no “local cut,” no insider nouns (*opposite-handed peptides*, *open-weight*, *MoE*).
+2. **`title`** — names the **job or human situation**, not only the fictive place. Good: *School lab rule before the science fair*. Weak: *The unposted rule at Tideglass High* (place poetry without the job).
+3. **`spotlight.encourageCopy`** — same plain voice: what to invent, in everyday words.
+4. Then write story: if a term would fail a high-school first read, use the everyday phrase in player text; put the lab term only in `grounding` / `aiTutorContext`.
 
-Spine: hook → complication → mechanism → stakes → **open** design challenge. No product theater.
+### 5. Player-facing prose
 
-### 5. Learning module (if applicable)
+**Read `references/scene-prose.md` first** (including Spotlight / learning extras).
+
+1. `mission.scene` (≤500 chars) — story craft; everyday words  
+2. `briefMd` — headings from **`references/brief-template.md`**: **Your job** first, then **The place**, strained, what became possible, constraints  
+3. Keep brief lean (~250–600 words). Curriculum and deep capability lectures stay in `aiTutorContext` / `grounding`.
+
+Spine for scene/place: hook → complication → mechanism → stakes → **open** design challenge. No product theater. A metaphor-only closer is not enough — **summary + Your job** must state the invent in plain words.
+
+### 6. Learning module (if applicable)
 
 Follow **`references/learning-and-sponsor.md`**.
 
@@ -115,8 +128,9 @@ Follow **`references/learning-and-sponsor.md`**.
 - Optionally stock **RESOURCES** (Markdown `https` links to readings, often `https://warmersun.com/lessons/…`) and **ILLUSTRATIONS** (`![caption](https://…)` diagrams) in `aiTutorContext`. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. See **`references/learning-and-sponsor.md`**.
 - Set `module` (title string), `lesson`, `totalLessons` (UI: **{title} · Lesson X/Y**).
 - Multi-lesson set: separate JSON files; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
+- The tutor teaches jargon; the tile’s player text must not require it to understand the job.
 
-### 6. Sponsor (if applicable)
+### 7. Sponsor (if applicable)
 
 Follow **`references/learning-and-sponsor.md`**.
 
@@ -124,7 +138,7 @@ Follow **`references/learning-and-sponsor.md`**.
 - Strong **`grounding`** required in practice (product category chain; product may appear under Milestone).
 - Scene/brief stay open invent invitations — not “use Product X”.
 
-### 7. Emit JSON + validate
+### 8. Emit JSON + validate
 
 Use **`references/output-contract.md`** (base skeleton + recipes). Run:
 
@@ -132,7 +146,7 @@ Use **`references/output-contract.md`** (base skeleton + recipes). Run:
 npm run validate:quest -- <file>
 ```
 
-### 8. Hand off
+### 9. Hand off
 
 - Path(s) to file(s)  
 - Copy into **`quests/`** or Import Quest…  
@@ -145,7 +159,11 @@ npm run validate:quest -- <file>
 - [ ] Advance citable; place fictive  
 - [ ] Exactly one suggested tech  
 - [ ] Structured `pressure` (roles only)  
-- [ ] Scene craft ≤500; place story craft  
+- [ ] **Plain-language test:** a 14-year-old can restate the invent job from **title + summary** alone  
+- [ ] `encourageCopy` is everyday words (no research jargon)  
+- [ ] Scene craft ≤500; place story craft; everyday words in player text  
+- [ ] `briefMd`: **Your job** first; ~250–600 words; no capability/tutor lecture dump  
+- [ ] Lab/research terms live in `grounding` / `aiTutorContext`, not as the only way to understand the job  
 - [ ] Open invent tension — no prescribed solution  
 - [ ] `grounding` present for AI consistency (recommended always)  
 - [ ] Grounding follows chain at **product-category** grain (not bare emTech unlocks)  

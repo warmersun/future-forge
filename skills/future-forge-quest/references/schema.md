@@ -21,8 +21,9 @@ npm run validate:quest -- path/to/quest.json
 | `globalId` | Valid theme id from game `GLOBALS` / theme list |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
-| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** = design-challenge story craft |
-| `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; craft in `scene-prose.md` |
+| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **Your job** first, then **The place** (story craft); aim ~250–600 words |
+| `title`, `summary`, `spotlight.encourageCopy` | Plain invent job in everyday words (14-year-old test); see `scene-prose.md` Spotlight extras |
+| `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; craft in `scene-prose.md`; everyday words |
 | `mission.pressure` | **Structured** crisis meters (below) — flat maps are **rejected** |
 
 Also set: `id`, `title`, `placement`, `spotlight` fields, `research`, years, stakeholder, `visionTheme` as in the output contract.
