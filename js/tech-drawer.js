@@ -1,18 +1,14 @@
 /**
  * Compact-screen emTech drawer for workshop layouts (solo + multiplayer).
  * Desktop (≥1200px): catalog pins in the 3-column grid, or tucks like a Mac dock
- * (edge peek + hover reveal). Tablet/phone: overlay drawer via “+ Add tech”.
+ * (edge peek + sticky overlay). Tablet/phone: overlay drawer via “+ Add tech”.
  */
 
 const COMPACT_MQ = "(max-width: 1199px)";
 const RAIL_COLLAPSED_KEY = "future-forge:tech-rail-collapsed";
-const PEEK_LEAVE_MS = 350;
 
 /** @type {MediaQueryList|null} */
 let compactMql = null;
-
-/** @type {WeakMap<HTMLElement, ReturnType<typeof setTimeout>>} */
-const peekLeaveTimers = new WeakMap();
 
 /**
  * @returns {boolean}
@@ -106,8 +102,7 @@ function syncTechDockChrome(layout) {
 
   const body = layout.querySelector(".tech-library-body");
   if (body) {
-    // Never mark the catalog inert while it can be on-screen — peek auto-hide
-    // previously set aria-hidden=true while the panel was still visible.
+    // Keep catalog interactive whenever it can be on-screen (pinned or overlay).
     body.setAttribute("aria-hidden", "false");
   }
 
@@ -139,7 +134,8 @@ function syncTechDockChrome(layout) {
 }
 
 /**
- * Temporary hover reveal while the rail is tucked (does not persist).
+ * Overlay reveal while the rail is tucked (does not persist).
+ * Stays open until dismissed (outside click / Escape) or pinned.
  * @param {HTMLElement|null} layout
  * @param {boolean} peek
  */
@@ -152,71 +148,6 @@ export function setTechRailPeek(layout, peek) {
   }
   layout.classList.toggle("is-tech-peek", !!peek);
   syncTechDockChrome(layout);
-  // #region agent log
-  {
-    const lib = layout.querySelector(".tech-library");
-    const handle = layout.querySelector("[data-tech-dock-handle]");
-    const libCs = lib ? window.getComputedStyle(lib) : null;
-    fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-      body: JSON.stringify({
-        sessionId: "5bca9e",
-        runId: "post-fix",
-        hypothesisId: "H1-overflow-clip",
-        location: "tech-drawer.js:setTechRailPeek",
-        message: "peek state",
-        data: {
-          peek: !!peek,
-          classes: layout.className,
-          libRect: lib?.getBoundingClientRect?.(),
-          handleRect: handle?.getBoundingClientRect?.(),
-          transform: libCs?.transform,
-          position: libCs?.position,
-          width: libCs?.width,
-          zIndex: libCs?.zIndex,
-          layoutRect: layout.getBoundingClientRect?.(),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-}
-
-/**
- * @param {HTMLElement} layout
- */
-function clearPeekLeaveTimer(layout) {
-  const t = peekLeaveTimers.get(layout);
-  if (t != null) {
-    clearTimeout(t);
-    peekLeaveTimers.delete(layout);
-  }
-}
-
-/**
- * @param {HTMLElement} layout
- * @param {boolean} peek
- * @param {{ delay?: boolean }} [opts]
- */
-function scheduleTechRailPeek(layout, peek, opts = {}) {
-  if (peek) {
-    clearPeekLeaveTimer(layout);
-    setTechRailPeek(layout, true);
-    return;
-  }
-  if (!opts.delay) {
-    clearPeekLeaveTimer(layout);
-    setTechRailPeek(layout, false);
-    return;
-  }
-  clearPeekLeaveTimer(layout);
-  const id = setTimeout(() => {
-    peekLeaveTimers.delete(layout);
-    setTechRailPeek(layout, false);
-  }, PEEK_LEAVE_MS);
-  peekLeaveTimers.set(layout, id);
 }
 
 /**
@@ -230,56 +161,8 @@ export function setTechRailCollapsed(layout, collapsed, opts = {}) {
   const want = !!collapsed;
   layout.classList.toggle("is-tech-collapsed", want);
   if (!want) layout.classList.remove("is-tech-peek");
-  clearPeekLeaveTimer(layout);
 
   syncTechDockChrome(layout);
-
-  // #region agent log
-  {
-    const lib = layout.querySelector(".tech-library");
-    const handle = layout.querySelector("[data-tech-dock-handle]");
-    const edge = layout.querySelector("[data-tech-dock-edge]");
-    const libRect = lib?.getBoundingClientRect?.();
-    const handleRect = handle?.getBoundingClientRect?.();
-    let overflowAncestors = [];
-    let el = layout;
-    while (el && el !== document.documentElement) {
-      const cs = window.getComputedStyle(el);
-      if (cs.overflow !== "visible" || cs.overflowX !== "visible" || cs.overflowY !== "visible") {
-        overflowAncestors.push({
-          tag: el.id || el.className?.toString?.()?.slice?.(0, 60) || el.tagName,
-          overflow: cs.overflow,
-          overflowX: cs.overflowX,
-          overflowY: cs.overflowY,
-        });
-      }
-      el = el.parentElement;
-    }
-    fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-      body: JSON.stringify({
-        sessionId: "5bca9e",
-        runId: "pre-fix",
-        hypothesisId: "H1-overflow-clip",
-        location: "tech-drawer.js:setTechRailCollapsed",
-        message: "collapse applied",
-        data: {
-          want,
-          compact: isTechDrawerMode(),
-          classes: layout.className,
-          libRect,
-          handleRect,
-          handleHidden: handle?.hidden,
-          edgeHidden: edge?.hidden,
-          overflowAncestors,
-          innerWidth: window.innerWidth,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   if (opts.persist !== false) writeTechRailCollapsedPref(want);
 
@@ -418,27 +301,6 @@ export function wireTechDrawer(layout) {
     if (drawer.id) btn.setAttribute("aria-controls", drawer.id);
     btn.addEventListener("click", (e) => {
       e.preventDefault();
-      // #region agent log
-      fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-        body: JSON.stringify({
-          sessionId: "5bca9e",
-          runId: "pre-fix",
-          hypothesisId: "H3-toggle-wire",
-          location: "tech-drawer.js:rail-toggle-click",
-          message: "header pin clicked",
-          data: {
-            compact: isTechDrawerMode(),
-            wasCollapsed: isTechRailCollapsed(layout),
-            layoutId: layout.id || layout.className,
-            pinVisible: !!(btn.offsetWidth || btn.offsetHeight),
-            pinDisplay: window.getComputedStyle(btn).display,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (isTechDrawerMode()) return;
       // When tucked (possibly peeking), pin open; when pinned, tuck away
       setTechRailCollapsed(layout, !isTechRailCollapsed(layout));
@@ -451,27 +313,6 @@ export function wireTechDrawer(layout) {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       if (isTechDrawerMode()) return;
-      // #region agent log
-      fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-        body: JSON.stringify({
-          sessionId: "5bca9e",
-          runId: "post-fix",
-          hypothesisId: "H6-sticky-overlay",
-          location: "tech-drawer.js:dock-handle-click",
-          message: "dock handle clicked",
-          data: {
-            compact: isTechDrawerMode(),
-            collapsed: isTechRailCollapsed(layout),
-            peeking: isTechRailPeek(layout),
-            handleHidden: btn.hidden,
-            handleRect: btn.getBoundingClientRect?.(),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (!isTechRailCollapsed(layout)) return;
       if (isTechRailPeek(layout)) {
         setTechRailCollapsed(layout, false); // pin open
@@ -481,31 +322,13 @@ export function wireTechDrawer(layout) {
     });
   });
 
-  // Open overlay on hover/focus of edge or handle; stay open (no mouseleave auto-hide).
+  // Open overlay on hover of edge or handle; stay open (no mouseleave auto-hide).
   // Dismiss by clicking invent/vision or Escape — so tech cards stay usable.
   const openPeekTargets = [edge, ...layout.querySelectorAll("[data-tech-dock-handle]")];
   openPeekTargets.forEach((el) => {
     el.addEventListener("pointerenter", () => {
       if (isTechDrawerMode() || !isTechRailCollapsed(layout)) return;
-      // #region agent log
-      fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-        body: JSON.stringify({
-          sessionId: "5bca9e",
-          runId: "post-fix",
-          hypothesisId: "H6-sticky-overlay",
-          location: "tech-drawer.js:peek-enter",
-          message: "peek pointerenter",
-          data: {
-            target: el.className?.toString?.()?.slice?.(0, 40),
-            collapsed: true,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-      scheduleTechRailPeek(layout, true);
+      setTechRailPeek(layout, true);
     });
   });
 
@@ -514,50 +337,7 @@ export function wireTechDrawer(layout) {
     const t = e.target;
     if (!(t instanceof Element)) return;
     if (t.closest(".tech-library, [data-tech-dock-handle], [data-tech-dock-edge]")) return;
-    // #region agent log
-    fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-      body: JSON.stringify({
-        sessionId: "5bca9e",
-        runId: "post-fix",
-        hypothesisId: "H6-sticky-overlay",
-        location: "tech-drawer.js:outside-dismiss",
-        message: "dismiss peek outside click",
-        data: { tag: t.tagName },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    scheduleTechRailPeek(layout, false);
-  });
-
-  // Catalog interaction proof while overlay is open
-  drawer.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof Element)) return;
-    const card = t.closest(".tech-card, .filter-chip, button");
-    if (!card) return;
-    // #region agent log
-    fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-      body: JSON.stringify({
-        sessionId: "5bca9e",
-        runId: "post-fix",
-        hypothesisId: "H6-sticky-overlay",
-        location: "tech-drawer.js:catalog-click",
-        message: "catalog control clicked",
-        data: {
-          peeking: isTechRailPeek(layout),
-          collapsed: isTechRailCollapsed(layout),
-          ariaHidden: layout.querySelector(".tech-library-body")?.getAttribute("aria-hidden"),
-          control: card.className?.toString?.()?.slice?.(0, 60),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    setTechRailPeek(layout, false);
   });
 
   bd.addEventListener("click", close);
@@ -585,28 +365,6 @@ export function wireTechDrawer(layout) {
  */
 export function initTechDrawers(root = document) {
   const layouts = root.querySelectorAll?.(".workshop-layout") || [];
-  // #region agent log
-  fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5bca9e" },
-    body: JSON.stringify({
-      sessionId: "5bca9e",
-      runId: "pre-fix",
-      hypothesisId: "H2-compact-mode",
-      location: "tech-drawer.js:initTechDrawers",
-      message: "init tech drawers",
-      data: {
-        layoutCount: layouts.length,
-        compact: isTechDrawerMode(),
-        innerWidth: typeof window !== "undefined" ? window.innerWidth : null,
-        prefCollapsed: readTechRailCollapsedPref(),
-        pinCount: root.querySelectorAll?.("[data-tech-rail-toggle]")?.length ?? 0,
-        handleCount: root.querySelectorAll?.("[data-tech-dock-handle]")?.length ?? 0,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   layouts.forEach((el) => wireTechDrawer(/** @type {HTMLElement} */ (el)));
 
   if (document.body.dataset.techDrawerGlobal === "1") return;
@@ -633,7 +391,7 @@ export function initTechDrawers(root = document) {
     // Dismiss peek first
     if (isTechRailPeek(layout)) {
       e.preventDefault();
-      scheduleTechRailPeek(layout, false);
+      setTechRailPeek(layout, false);
       layout.querySelector("[data-tech-dock-handle]")?.focus?.();
       return;
     }
@@ -655,7 +413,6 @@ export function initTechDrawers(root = document) {
       document.querySelectorAll(".workshop-layout").forEach((layout) => {
         const el = /** @type {HTMLElement} */ (layout);
         el.classList.remove("is-tech-peek");
-        clearPeekLeaveTimer(el);
         if (!isTechDrawerMode()) {
           setTechDrawerOpen(el, false, { focus: false });
           el.querySelector(".tech-library")?.setAttribute("aria-hidden", "false");
