@@ -31,6 +31,8 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 | `FF_QUESTS_REMOTE_URL=https://…/catalog.json` | Explicit remote catalog |
 | `FF_QUESTS_DIR` | Override this local Library folder |
 
+Capability trends (Wait charts) use a separate catalog — see [`docs/capability-trends-remote.md`](../docs/capability-trends-remote.md) (`FF_TRENDS_REMOTE_URL`).
+
 **Dev note:** When the local warmersun checkout exists, unset `FF_QUESTS_REMOTE_URL` prefers that disk tree over the live site. To pull published warmersun.com tiles, set `FF_QUESTS_REMOTE_URL=https://warmersun.com/future-forge/quests/catalog.json`.
 
 **CDN note:** Full warmersun.com republish can fail on large trees; an interim permanent catalog lives at `https://russet-waffle-sx4j.here.now/catalog.json` (same tiles). Prefer publishing `future-forge/quests/` onto warmersun.com when the full-site publish pipeline can handle it.

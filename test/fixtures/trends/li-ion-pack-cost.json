@@ -1,0 +1,48 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "li-ion-pack-cost",
+  "techId": "battery",
+  "name": "Lithium-ion pack cost",
+  "summary": "EV and stationary pack costs have fallen steeply for over a decade; roughly a multi-year halving story with commodity bumps.",
+  "capability": "Affordable energy storage packs",
+  "unit": "USD / kWh",
+  "compounding": { "kind": "halving", "periodYears": 4 },
+  "anchor": { "date": "2015-01-01", "value": 350 },
+  "domain": { "start": "2010", "end": "2034" },
+  "milestones": [
+    {
+      "id": "pack-2015",
+      "label": "~$350/kWh pack era",
+      "date": "2015",
+      "value": 350,
+      "status": "reached"
+    },
+    {
+      "id": "pack-2020",
+      "label": "~$140/kWh volume packs",
+      "date": "2020",
+      "value": 140,
+      "status": "reached"
+    },
+    {
+      "id": "pack-100",
+      "label": "~$100/kWh class",
+      "date": "2024",
+      "value": 100,
+      "status": "reached"
+    },
+    {
+      "id": "pack-60-pred",
+      "label": "~$60/kWh class (forecast)",
+      "date": "2030",
+      "value": 60,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "BloombergNEF battery price surveys (overview)",
+      "url": "https://about.bnef.com/"
+    }
+  ]
+}

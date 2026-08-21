@@ -558,4 +558,72 @@ describe("quest-tile", () => {
     assert.equal(r.ok, true);
     assert.equal(r.mission.sponsorName, undefined);
   });
+
+  const sampleTrend = {
+    id: "gene-seq-cost-per-genome",
+    techId: "gene-sequencing",
+    name: "Cost per human genome",
+    summary: "Halving curve for sequencing cost.",
+    capability: "Affordable WGS",
+    unit: "USD / genome",
+    compounding: { kind: "halving", periodYears: 1.5 },
+    anchor: { date: "2015-01-01", value: 4000 },
+    milestones: [
+      {
+        label: "$1,000 genome",
+        date: "2014",
+        value: 1000,
+        status: "reached",
+      },
+    ],
+  };
+
+  it("accepts optional trends and spotlightTrends", () => {
+    const r = validateQuestTile(
+      baseTile({
+        trends: [sampleTrend],
+        spotlightTrends: ["gene-seq-cost-per-genome", "catalog-only-id"],
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.trends.length, 1);
+    assert.equal(r.mission.trends[0].id, "gene-seq-cost-per-genome");
+    assert.deepEqual(r.mission.spotlightTrends, [
+      "gene-seq-cost-per-genome",
+      "catalog-only-id",
+    ]);
+    assert.equal(r.tile.trends.length, 1);
+  });
+
+  it("accepts trends nested under mission", () => {
+    const tile = baseTile();
+    tile.mission.trends = [sampleTrend];
+    tile.mission.spotlightTrends = ["gene-seq-cost-per-genome"];
+    const r = validateQuestTile(tile, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.trends[0].techId, "gene-sequencing");
+  });
+
+  it("rejects bad trend techId and too many trends", () => {
+    const bad = validateQuestTile(
+      baseTile({
+        trends: [{ ...sampleTrend, techId: "not-a-tech" }],
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(bad.ok, false);
+
+    const many = validateQuestTile(
+      baseTile({
+        trends: Array.from({ length: 9 }, (_, i) => ({
+          ...sampleTrend,
+          id: `trend-${i}`,
+        })),
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(many.ok, false);
+    assert.ok(many.details.includes("too_many_trends"));
+  });
 });

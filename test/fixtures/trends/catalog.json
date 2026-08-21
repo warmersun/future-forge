@@ -1,0 +1,41 @@
+{
+  "schema": "future-forge.capability-trend-catalog/v1",
+  "updated": "2026-08-21",
+  "trends": [
+    {
+      "id": "gene-seq-cost-per-genome",
+      "techId": "gene-sequencing",
+      "file": "gene-seq-cost-per-genome.json"
+    },
+    {
+      "id": "pathogen-seq-turnaround-hours",
+      "techId": "gene-sequencing",
+      "file": "pathogen-seq-turnaround-hours.json"
+    },
+    {
+      "id": "ai-training-flops-frontier",
+      "techId": "ai",
+      "file": "ai-training-flops-frontier.json"
+    },
+    {
+      "id": "solar-utility-lcoe",
+      "techId": "solar",
+      "file": "solar-utility-lcoe.json"
+    },
+    {
+      "id": "li-ion-pack-cost",
+      "techId": "battery",
+      "file": "li-ion-pack-cost.json"
+    },
+    {
+      "id": "warehouse-robot-deployed",
+      "techId": "robots",
+      "file": "warehouse-robot-deployed.json"
+    },
+    {
+      "id": "leo-broadband-users",
+      "techId": "networks",
+      "file": "leo-broadband-users.json"
+    }
+  ]
+}

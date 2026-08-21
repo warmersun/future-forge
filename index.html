@@ -416,7 +416,7 @@
             </div>
             <div class="form-actions mp-actions">
               <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-end-turn">End turn</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-hs-wait">Wait +2 years</button>
+              <button type="button" class="btn btn-look-ahead btn-sm" id="btn-hs-wait">Look Ahead</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-abandon">Abandon my idea</button>
             </div>
             <div id="hs-outcome" class="hs-outcome" hidden>
@@ -724,8 +724,8 @@
               </button>
             </div>
             <div class="form-actions mp-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-mp-wait">
-                Wait +2 years
+              <button type="button" class="btn btn-look-ahead btn-sm" id="btn-mp-wait">
+                Look Ahead
               </button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-mp-abandon">
                 Abandon my idea
@@ -1144,8 +1144,8 @@
               >
                 End turn
               </button>
-              <button type="button" class="btn btn-secondary" id="btn-wait" title="Wait +2 years — confirm first; advances invent calendar (and crisis in solo).">
-                Wait +2 years
+              <button type="button" class="btn btn-look-ahead" id="btn-wait" title="Look Ahead — see how stack capabilities compound, then confirm Wait +2 years.">
+                Look Ahead
               </button>
               <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
                 Answer the hard question →
@@ -1885,17 +1885,20 @@
       </div>
     </div>
 
-    <!-- Wait +2 years confirmation -->
+    <!-- Wait +2 years confirmation (full-viewport trends + implications) -->
     <div
       id="wait-confirm-backdrop"
-      class="modal-backdrop"
+      class="modal-backdrop wait-confirm-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="wait-confirm-title"
       hidden
     >
       <div class="modal wait-confirm-modal">
-        <h3 id="wait-confirm-title">Wait +2 years?</h3>
+        <header class="wait-confirm-header">
+          <h3 id="wait-confirm-title">Look Ahead</h3>
+          <p id="wait-confirm-sub" class="wait-confirm-sub muted sm" hidden></p>
+        </header>
         <div id="wait-confirm-body" class="modal-body wait-confirm-body"></div>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="wait-confirm-cancel">Cancel</button>
@@ -2160,6 +2163,8 @@
       </div>
     </div>
 
+    <script src="js/vendor/chart.umd.min.js"></script>
+    <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
     <script type="module" src="js/main.js?v=idea-cards-9"></script>
   </body>
 </html>

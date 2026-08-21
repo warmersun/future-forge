@@ -103,6 +103,12 @@ import {
   crisisRolesLabel,
   learningProgressBarHtml,
 } from "./quest-tile.js";
+import { mergeTrendsForStack } from "./capability-trend.js";
+import {
+  mountTrendChart,
+  destroyTrendChart,
+  formatTrendValue,
+} from "./trend-chart.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
@@ -294,6 +300,11 @@ const state = {
   remoteQuestsUrl: null,
   remoteQuestsOk: true,
   hostedQuestsLoaded: false,
+  /** @type {object[]} Capability trends from GET /api/trends */
+  hostedTrends: [],
+  hostedTrendsLoaded: false,
+  hostedTrendsOk: true,
+  hostedTrendsUrl: null,
   year: GAME.startYear,
   turn: 0,
   waits: 0,
@@ -1193,7 +1204,7 @@ function syncInventActionButtons() {
     }
   }
 
-  // —— Wait +2 years (always available in Spark; crisis clock, not wallets) ——
+  // —— Look Ahead → Wait +2 years confirm (always available in Spark; crisis clock) ——
   const waitBtn = $("#btn-wait");
   if (waitBtn) {
     if (spectator) {
@@ -1206,15 +1217,15 @@ function syncInventActionButtons() {
         ? busyReason
         : !waitGate.ok
           ? mpFriendlyError(waitGate.error)
-          : "Wait +2 years on your invent — confirm to see details (feasibility year; ends seat-turn; others keep their year)";
+          : "Look Ahead — capability trends for your stack, then confirm Wait +2 years (ends seat-turn; others keep their year)";
     } else if (busy) {
       waitBtn.disabled = true;
       waitBtn.title = busyReason;
     } else {
       waitBtn.disabled = false;
       waitBtn.title = apEnabled()
-        ? "Wait +2 years — confirm first; advances calendar and raises crisis. Unspent AP are burned."
-        : "Wait +2 years — confirm first; advances calendar and raises crisis.";
+        ? "Look Ahead — see compounding trends, then confirm Wait +2 years (raises crisis; unspent AP burned)"
+        : "Look Ahead — see compounding trends, then confirm Wait +2 years (raises crisis)";
     }
   }
 
@@ -2873,6 +2884,7 @@ function renderTitleMeta() {
     if (state.screen === "quest-hub") renderQuestHub();
     if (state.screen === "quest-catalog") renderQuestCatalog();
   });
+  void refreshHostedTrends({ silent: true });
 }
 
 /**
@@ -2924,6 +2936,37 @@ async function refreshHostedQuests(opts = {}) {
     state.remoteQuests = [];
     state.remoteQuestsOk = false;
     state.hostedQuestsLoaded = true;
+    return [];
+  }
+}
+
+/**
+ * Load capability trends from warmersun catalog (GET /api/trends).
+ * @param {{ silent?: boolean, force?: boolean }} [opts]
+ */
+async function refreshHostedTrends(opts = {}) {
+  try {
+    const url = opts.force ? "/api/trends?refresh=1" : "/api/trends";
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
+      if (!opts.silent) flashToast("Could not load capability trends.");
+      state.hostedTrends = [];
+      state.hostedTrendsOk = false;
+      state.hostedTrendsLoaded = true;
+      return [];
+    }
+    state.hostedTrends = Array.isArray(data.trends) ? data.trends : [];
+    state.hostedTrendsUrl = data.url ?? null;
+    state.hostedTrendsOk = data.remoteOk !== false;
+    state.hostedTrendsLoaded = true;
+    if (_waitConfirmCtx) syncWaitTrendCharts();
+    return state.hostedTrends;
+  } catch {
+    if (!opts.silent) flashToast("Could not reach /api/trends.");
+    state.hostedTrends = [];
+    state.hostedTrendsOk = false;
+    state.hostedTrendsLoaded = true;
     return [];
   }
 }
@@ -3311,6 +3354,9 @@ function renderQuestHub() {
     void refreshHostedQuests({ silent: true }).then(() => {
       if (state.screen === "quest-hub") renderQuestHub();
     });
+  }
+  if (!state.hostedTrendsLoaded) {
+    void refreshHostedTrends({ silent: true });
   }
 }
 
@@ -3951,6 +3997,9 @@ function renderQuestCatalog() {
       if (state.screen === "quest-catalog") renderQuestCatalog();
     });
   }
+  if (!state.hostedTrendsLoaded) {
+    void refreshHostedTrends({ silent: true });
+  }
 }
 
 /** One theme card HTML for theme shelves. */
@@ -4345,6 +4394,13 @@ function normalizeMission(raw, globalId) {
       ? raw.sponsorBanner.trim().slice(0, 200)
       : null;
 
+  const trends = Array.isArray(raw.trends)
+    ? raw.trends.filter((t) => t && typeof t === "object" && t.id)
+    : null;
+  const spotlightTrends = Array.isArray(raw.spotlightTrends)
+    ? raw.spotlightTrends.map(String).filter(Boolean).slice(0, 8)
+    : null;
+
   return {
     id,
     globalId,
@@ -4378,6 +4434,8 @@ function normalizeMission(raw, globalId) {
     ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
     ...(sponsorName ? { sponsorName } : {}),
     ...(sponsorBanner ? { sponsorBanner } : {}),
+    ...(trends?.length ? { trends } : {}),
+    ...(spotlightTrends?.length ? { spotlightTrends } : {}),
   };
 }
 
@@ -4540,6 +4598,7 @@ function beginMissionPick(handler) {
     if (state.screen === "quest-hub") renderQuestHub();
     if (state.screen === "quest-catalog") renderQuestCatalog();
   });
+  void refreshHostedTrends({ silent: true });
   showScreen("quest-hub");
 }
 
@@ -6676,10 +6735,10 @@ function updateWaitPreview() {
 }
 
 /**
- * Build HTML explaining what Wait will do (solo vs multiplayer).
+ * Build implications HTML only (solo vs multiplayer).
  * @param {{ year?: number, waits?: number, pressure?: object, mission?: object, multiparty?: boolean }} [ctx]
  */
-function buildWaitConfirmHtml(ctx = {}) {
+function buildWaitImplicationsHtml(ctx = {}) {
   const m = ctx.mission || state.mission;
   if (!m) return "<p>No mission loaded.</p>";
   const mp = ctx.multiparty != null ? ctx.multiparty : Boolean(mpBridge() || state.mp);
@@ -6745,40 +6804,251 @@ function buildWaitConfirmHtml(ctx = {}) {
     </ul>`;
 }
 
+/** @deprecated use buildWaitImplicationsHtml — kept as alias for any callers */
+function buildWaitConfirmHtml(ctx = {}) {
+  return buildWaitImplicationsHtml(ctx);
+}
+
+function compoundingChipLabel(compounding) {
+  if (!compounding) return "";
+  if (compounding.kind === "halving") {
+    return `Halving · ${compounding.periodYears}y`;
+  }
+  if (compounding.kind === "doubling") {
+    return `Doubling · ${compounding.periodYears}y`;
+  }
+  if (compounding.kind === "cagr") {
+    const pct = Math.round(Number(compounding.annualRate) * 100);
+    return `CAGR · ${pct}%/y`;
+  }
+  return String(compounding.kind || "");
+}
+
+/**
+ * @param {object} trend
+ */
+function waitTrendCardHtml(trend) {
+  const spot = trend.spotlight
+    ? `<span class="wait-trend-spotlight">Spotlight</span>`
+    : "";
+  const chip = compoundingChipLabel(trend.compounding);
+  const milestones = (trend.milestones || [])
+    .map((m) => {
+      const st = m.status === "predicted" ? "predicted" : "reached";
+      return `<li class="wait-trend-ms-${st}"><strong>${escapeHtml(m.label)}</strong> · ${escapeHtml(
+        String(m.date)
+      )} · ${escapeHtml(formatTrendValue(m.value, trend.unit))} <span class="muted">(${st})</span></li>`;
+    })
+    .join("");
+  return `
+    <article class="wait-trend-card${trend.spotlight ? " is-spotlight" : ""}" data-trend-id="${escapeHtml(trend.id)}">
+      <header class="wait-trend-card-head">
+        ${spot}
+        <h4 class="wait-trend-name">${escapeHtml(trend.name)}</h4>
+        ${chip ? `<span class="wait-trend-chip">${escapeHtml(chip)}</span>` : ""}
+      </header>
+      <p class="wait-trend-summary muted sm">${escapeHtml(trend.summary || "")}</p>
+      <p class="wait-trend-meta muted sm">${escapeHtml(trend.capability || "")} · <em>${escapeHtml(trend.unit || "")}</em></p>
+      <div class="wait-trend-canvas-wrap">
+        <canvas class="wait-trend-canvas" aria-label="${escapeHtml(trend.name)} log-scale chart"></canvas>
+      </div>
+      <ul class="wait-trend-milestones" aria-label="Milestones">${milestones}</ul>
+    </article>`;
+}
+
+/**
+ * Read theme colors for Chart.js.
+ */
+function waitTrendChartCss() {
+  const root = typeof document !== "undefined" ? document.documentElement : null;
+  const g = (name, fallback) => {
+    if (!root) return fallback;
+    const v = getComputedStyle(root).getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  return {
+    text: g("--text", "#e2e8f0"),
+    textMute: g("--text-mute", "#94a3b8"),
+    accent: g("--accent", "#38bdf8"),
+    accent2: g("--accent-2", "#a78bfa"),
+    warn: g("--warn", "#fbbf24"),
+    grid: "rgba(148, 163, 184, 0.18)",
+    reached: g("--accent-3", "#34d399"),
+    predicted: g("--warn", "#fbbf24"),
+    nowLine: "rgba(56, 189, 248, 0.85)",
+    nextLine: "rgba(251, 191, 36, 0.85)",
+  };
+}
+
+/** @type {object[]} */
+let _waitTrendCharts = [];
+/** @type {object|null} */
+let _waitConfirmCtx = null;
 /** @type {null | (() => void)} */
 let _waitConfirmOnOk = null;
 
+function destroyWaitTrendCharts() {
+  for (const c of _waitTrendCharts) destroyTrendChart(c);
+  _waitTrendCharts = [];
+}
+
+/**
+ * Resolve trends for the Wait overlay from catalog + quest + stack.
+ * @param {object} [ctx]
+ */
+function trendsForWaitConfirm(ctx = {}) {
+  const m = ctx.mission || state.mission;
+  const techIds =
+    Array.isArray(ctx.techIds) && ctx.techIds.length
+      ? ctx.techIds.map(String)
+      : state.selectedTechIds || [];
+  return mergeTrendsForStack({
+    catalog: state.hostedTrends || [],
+    questTrends: m?.trends || [],
+    spotlightTrendIds: m?.spotlightTrends || [],
+    selectedTechIds: techIds,
+    spotlightTechId: m?.spotlight?.techId || null,
+  });
+}
+
+/**
+ * Mount Chart.js instances into the open Wait modal.
+ */
+function syncWaitTrendCharts() {
+  const host = $("#wait-trend-charts");
+  if (!host || !_waitConfirmCtx) return;
+  destroyWaitTrendCharts();
+
+  const ctx = _waitConfirmCtx;
+  const m = ctx.mission || state.mission;
+  const year = ctx.year != null ? ctx.year : state.year;
+  const step = m?.yearsPerTurn || GAME.yearsPerTurn || 2;
+  const nextYear = year + step;
+  const techIds =
+    Array.isArray(ctx.techIds) && ctx.techIds.length
+      ? ctx.techIds
+      : state.selectedTechIds || [];
+
+  const emptyEl = host.querySelector("[data-wait-trends-empty]");
+  const loadingEl = host.querySelector("[data-wait-trends-loading]");
+  const grid = host.querySelector(".wait-trend-grid");
+
+  if (!techIds.length) {
+    if (loadingEl) loadingEl.hidden = true;
+    if (emptyEl) {
+      emptyEl.hidden = false;
+      emptyEl.textContent =
+        "Add emTechs to your stack to see how their capabilities compound.";
+    }
+    if (grid) grid.innerHTML = "";
+    return;
+  }
+
+  if (!state.hostedTrendsLoaded && !(m?.trends?.length)) {
+    if (loadingEl) loadingEl.hidden = false;
+    if (emptyEl) emptyEl.hidden = true;
+    if (grid) grid.innerHTML = "";
+    void refreshHostedTrends({ silent: true }).then(() => {
+      if (_waitConfirmCtx) syncWaitTrendCharts();
+    });
+    return;
+  }
+
+  if (loadingEl) loadingEl.hidden = true;
+  const trends = trendsForWaitConfirm(ctx);
+  if (!trends.length) {
+    if (emptyEl) {
+      emptyEl.hidden = false;
+      emptyEl.textContent = "No plotted series for this stack yet.";
+    }
+    if (grid) grid.innerHTML = "";
+    return;
+  }
+
+  if (emptyEl) emptyEl.hidden = true;
+  if (!grid) return;
+  grid.innerHTML = trends.map(waitTrendCardHtml).join("");
+  const css = waitTrendChartCss();
+  const canvases = grid.querySelectorAll("canvas.wait-trend-canvas");
+  canvases.forEach((canvas, i) => {
+    const trend = trends[i];
+    if (!trend) return;
+    const chart = mountTrendChart(canvas, trend, {
+      yearNow: year,
+      yearNext: nextYear,
+      spotlight: Boolean(trend.spotlight),
+      css,
+    });
+    if (chart) _waitTrendCharts.push(chart);
+  });
+}
+
+/**
+ * Full Wait modal body: charts + implications.
+ * @param {object} [ctx]
+ */
+function buildWaitConfirmLayoutHtml(ctx = {}) {
+  const implications = buildWaitImplicationsHtml(ctx);
+  return `
+    <div class="wait-confirm-layout">
+      <section class="wait-trends-pane" id="wait-trend-charts" aria-label="Exponential capability trends">
+        <h4 class="wait-trends-heading">How stack capabilities compound</h4>
+        <p class="muted sm wait-trends-lede">Log-scale charts for emTechs already on your stack. Milestones are markers on each trend.</p>
+        <p class="muted sm" data-wait-trends-loading hidden>Loading trend catalog…</p>
+        <p class="muted sm" data-wait-trends-empty hidden></p>
+        <div class="wait-trend-grid"></div>
+      </section>
+      <aside class="wait-implications-pane" aria-label="Wait implications">
+        ${implications}
+      </aside>
+    </div>`;
+}
+
 function closeWaitConfirm() {
+  destroyWaitTrendCharts();
+  _waitConfirmCtx = null;
   const backdrop = $("#wait-confirm-backdrop");
   if (backdrop) {
     backdrop.classList.remove("open");
     backdrop.hidden = true;
   }
+  document.body.classList.remove("wait-confirm-open");
   _waitConfirmOnOk = null;
 }
 
 /**
  * Show Wait confirmation; runs onOk only if the player confirms.
  * @param {() => void} onOk
- * @param {{ year?: number, waits?: number, pressure?: object, mission?: object, multiparty?: boolean }} [ctx]
+ * @param {{ year?: number, waits?: number, pressure?: object, mission?: object, multiparty?: boolean, techIds?: string[] }} [ctx]
  */
 function openWaitConfirm(onOk, ctx = {}) {
   const backdrop = $("#wait-confirm-backdrop");
   const body = $("#wait-confirm-body");
   const title = $("#wait-confirm-title");
   if (!backdrop || !body) {
-    // Fallback if DOM missing
     if (confirm("Wait +2 years?")) onOk();
     return;
   }
+  const m = ctx.mission || state.mission;
   const mp = ctx.multiparty != null ? ctx.multiparty : Boolean(mpBridge() || state.mp);
+  const year = ctx.year != null ? ctx.year : state.year;
+  const step = m?.yearsPerTurn || GAME.yearsPerTurn || 2;
+  const nextYear = year + step;
   if (title) {
-    title.textContent = mp ? "Wait +2 years on your invent?" : "Wait +2 years?";
+    title.textContent = mp ? "Look Ahead on your invent?" : "Look Ahead";
   }
-  body.innerHTML = buildWaitConfirmHtml(ctx);
+  const sub = $("#wait-confirm-sub");
+  if (sub) {
+    sub.hidden = false;
+    sub.textContent = `${year} → ${nextYear} if you Wait`;
+  }
+  _waitConfirmCtx = { ...ctx, mission: m, year, multiparty: mp };
+  body.innerHTML = buildWaitConfirmLayoutHtml(_waitConfirmCtx);
   _waitConfirmOnOk = onOk;
   backdrop.hidden = false;
   backdrop.classList.add("open");
+  document.body.classList.add("wait-confirm-open");
+  syncWaitTrendCharts();
   $("#wait-confirm-ok")?.focus();
 }
 
@@ -16481,6 +16751,7 @@ function bind() {
     if (btn) btn.disabled = true;
     try {
       await refreshHostedQuests({ force: true });
+      await refreshHostedTrends({ force: true, silent: true });
       if (state.screen === "quest-hub") renderQuestHub();
       if (state.screen === "quest-catalog") renderQuestCatalog();
     } finally {

@@ -1824,6 +1824,29 @@ button.btn[hidden] {
   color: var(--text);
 }
 
+/* Look Ahead — foresight CTA (opens Wait overlay; confirm still Wait +2 years).
+   Violet (accent-2): not RYG traffic meaning, not primary blue. */
+.btn-look-ahead {
+  background: linear-gradient(160deg, #5b21b6 0%, #7c3aed 55%, #6d28d9 100%);
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  color: #f5f3ff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 20px rgba(109, 40, 217, 0.35);
+}
+
+.btn-look-ahead:hover:not(:disabled) {
+  border-color: rgba(221, 214, 254, 0.7);
+  color: #ffffff;
+  filter: brightness(1.08);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.45);
+}
+
+.btn-look-ahead:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 2px;
+}
+
 .btn-ghost {
   color: var(--text-dim);
   padding: 0.5rem 0.85rem;
@@ -4350,14 +4373,169 @@ body.challenge-pose-pending #challenge-help-form {
   display: none !important;
 }
 
-.wait-confirm-modal {
-  width: min(32rem, 100%);
+body.wait-confirm-open {
+  overflow: hidden;
 }
 
-.wait-confirm-body {
+.wait-confirm-backdrop.modal-backdrop.open {
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0.75rem var(--page-gutter);
+}
+
+.modal.wait-confirm-modal {
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 1.5rem);
+  max-height: calc(100vh - 1.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1rem 1.15rem 0.85rem;
+}
+
+.wait-confirm-header {
+  flex: 0 0 auto;
+  margin-bottom: 0.35rem;
+}
+
+.wait-confirm-header h3 {
+  margin: 0;
+}
+
+.wait-confirm-sub {
+  margin: 0.2rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal.wait-confirm-modal .wait-confirm-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--text-dim);
+}
+
+.wait-confirm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem);
+  gap: 1rem;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wait-trends-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  scrollbar-gutter: stable;
+}
+
+.wait-implications-pane {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.45);
+}
+
+.wait-trends-heading {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.wait-trends-lede {
+  margin: 0 0 0.75rem;
+}
+
+.wait-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 0.85rem;
+}
+
+.wait-trend-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(7, 11, 20, 0.4);
+  padding: 0.75rem 0.85rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wait-trend-card.is-spotlight {
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12);
+}
+
+.wait-trend-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.wait-trend-name {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  flex: 1 1 auto;
+}
+
+.wait-trend-spotlight {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.wait-trend-chip {
+  font-size: 0.72rem;
+  color: var(--accent);
+  background: rgba(56, 189, 248, 0.1);
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+}
+
+.wait-trend-summary,
+.wait-trend-meta {
+  margin: 0;
+}
+
+.wait-trend-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 11.5rem;
+  margin-top: 0.25rem;
+}
+
+.wait-trend-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.wait-trend-milestones {
+  margin: 0.35rem 0 0;
+  padding-left: 1.05rem;
+  font-size: 0.78rem;
+  color: var(--text-mute);
+}
+
+.wait-trend-milestones li {
+  margin: 0.15rem 0;
 }
 
 .wait-confirm-body p {
@@ -4383,6 +4561,32 @@ body.challenge-pose-pending #challenge-help-form {
 
 .wait-confirm-list .bad {
   color: #fca5a5;
+}
+
+.wait-confirm-modal .modal-actions {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  .wait-confirm-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow-y: auto;
+  }
+
+  .wait-trends-pane,
+  .wait-implications-pane {
+    overflow: visible;
+  }
+
+  .wait-confirm-body {
+    overflow-y: auto;
+  }
+
+  .wait-implications-pane {
+    max-height: none;
+  }
 }
 
 .wait-report {

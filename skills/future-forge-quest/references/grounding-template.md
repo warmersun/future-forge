@@ -78,6 +78,8 @@ Pilot scope, dual-use, cost, skills, power, provenance for this category.
 | Trends + Predictions → `## Trends & predictions` | Default for short groundings |
 | Unlocks + Applications → one section with both lists | When applications are obvious from use cases |
 
+**Plottable series:** when the Quest should show log-scale Wait charts, also emit structured **`trends`** / **`spotlightTrends`** (see `schema.md` and skill `future-forge-trends`). Grounding prose alone does not draw charts.
+
 ---
 
 ## Grain examples

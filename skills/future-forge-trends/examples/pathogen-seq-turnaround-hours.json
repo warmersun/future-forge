@@ -1,0 +1,48 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "pathogen-seq-turnaround-hours",
+  "techId": "gene-sequencing",
+  "name": "Sample-to-provisional read time",
+  "summary": "Clinic and field sequencing turnaround has shortened as instruments, kits, and analysis software improve — still gated by workflow and power.",
+  "capability": "Faster pathogen sequencing turnaround",
+  "unit": "hours (sample → provisional read)",
+  "compounding": { "kind": "halving", "periodYears": 3 },
+  "anchor": { "date": "2018-01-01", "value": 48 },
+  "domain": { "start": "2014", "end": "2034" },
+  "milestones": [
+    {
+      "id": "turn-2018",
+      "label": "~2-day class common",
+      "date": "2018",
+      "value": 48,
+      "status": "reached"
+    },
+    {
+      "id": "turn-2022",
+      "label": "Same-day / overnight pilots",
+      "date": "2022",
+      "value": 18,
+      "status": "reached"
+    },
+    {
+      "id": "turn-2026",
+      "label": "Same-shift clinic workflows",
+      "date": "2026",
+      "value": 8,
+      "status": "reached"
+    },
+    {
+      "id": "turn-2030-pred",
+      "label": "Sub-4h more routine (forecast)",
+      "date": "2030",
+      "value": 3,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "WHO pathogen genomics overview",
+      "url": "https://www.who.int/health-topics/genomics"
+    }
+  ]
+}

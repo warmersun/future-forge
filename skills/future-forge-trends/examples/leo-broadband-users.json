@@ -1,0 +1,48 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "leo-broadband-users",
+  "techId": "networks",
+  "name": "LEO broadband subscribers",
+  "summary": "Low-Earth-orbit consumer and enterprise broadband has grown quickly from early service years — coverage and terminals still uneven.",
+  "capability": "Satellite broadband reach",
+  "unit": "subscribers (millions)",
+  "compounding": { "kind": "doubling", "periodYears": 1.5 },
+  "anchor": { "date": "2022-01-01", "value": 0.5 },
+  "domain": { "start": "2020", "end": "2034" },
+  "milestones": [
+    {
+      "id": "leo-2022",
+      "label": "Early commercial millions",
+      "date": "2022",
+      "value": 0.5,
+      "status": "reached"
+    },
+    {
+      "id": "leo-2024",
+      "label": "Multi-million user class",
+      "date": "2024",
+      "value": 3,
+      "status": "reached"
+    },
+    {
+      "id": "leo-2026",
+      "label": "Tens of millions class",
+      "date": "2026",
+      "value": 8,
+      "status": "reached"
+    },
+    {
+      "id": "leo-2030-pred",
+      "label": "Broader rural default (forecast)",
+      "date": "2030",
+      "value": 40,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "ITU broadband / connectivity reports",
+      "url": "https://www.itu.int/"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "ai-training-flops-frontier",
+  "techId": "ai",
+  "name": "Frontier training compute",
+  "summary": "Largest published training runs have grown at roughly a 3–4× annual CAGR for a decade, with wide uncertainty on future rates.",
+  "capability": "Scale of frontier model training",
+  "unit": "FLOP (training run)",
+  "compounding": { "kind": "cagr", "annualRate": 3.4 },
+  "anchor": { "date": "2018-01-01", "value": 1e22 },
+  "domain": { "start": "2012", "end": "2034" },
+  "milestones": [
+    {
+      "id": "gpt3-era",
+      "label": "~1e23 FLOP class",
+      "date": "2020",
+      "value": 3e23,
+      "status": "reached"
+    },
+    {
+      "id": "1e25-class",
+      "label": "~1e25 FLOP class",
+      "date": "2024",
+      "value": 1e25,
+      "status": "reached"
+    },
+    {
+      "id": "1e27-pred",
+      "label": "~1e27 FLOP class (forecast)",
+      "date": "2028",
+      "value": 1e27,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "Epoch AI compute trends",
+      "url": "https://epoch.ai/trends"
+    }
+  ]
+}

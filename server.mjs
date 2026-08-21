@@ -39,6 +39,10 @@ import {
   fetchRemoteQuestCatalog,
   resolveQuestsRemoteUrl,
 } from "./js/quests-remote.mjs";
+import {
+  fetchRemoteTrendCatalog,
+  resolveTrendsRemoteUrl,
+} from "./js/trends-remote.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "./js/scene-prose.js";
 import {
   normalizeTtsText,
@@ -65,6 +69,7 @@ const ROOT = __dirname;
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
 const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
+const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
 const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
@@ -2884,6 +2889,34 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // —— Capability trends (warmersun catalog) ——
+  if (req.method === "GET" && (req.url === "/api/trends" || req.url?.startsWith("/api/trends?"))) {
+    try {
+      const forceRemote =
+        typeof req.url === "string" && /[?&]refresh=1(?:&|$)/.test(req.url);
+      const remote = await fetchRemoteTrendCatalog(TRENDS_REMOTE_URL, {
+        force: forceRemote,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        url: remote.url,
+        remoteOk: remote.ok,
+        cached: remote.cached,
+        count: (remote.trends || []).length,
+        trends: remote.trends || [],
+        errors: remote.errors || [],
+      });
+    } catch (e) {
+      return sendJson(res, 500, {
+        ok: false,
+        error: e.message || "trends_fetch_failed",
+        url: TRENDS_REMOTE_URL,
+        trends: [],
+        errors: [],
+      });
+    }
+  }
+
   // —— Friends rooms (PR9) ——
   if (ROOMS_ENABLED && roomManager && req.method === "POST" && req.url === "/api/rooms") {
     try {
@@ -3323,6 +3356,21 @@ server.listen(PORT, HOST, async () => {
     }
   } else {
     console.log("Remote Quests catalog: OFF (FF_QUESTS_REMOTE_URL empty/off)");
+  }
+  if (TRENDS_REMOTE_URL) {
+    console.log(`Remote Trends catalog: ${TRENDS_REMOTE_URL}`);
+    try {
+      const remote = await fetchRemoteTrendCatalog(TRENDS_REMOTE_URL);
+      console.log(
+        `  → ${remote.trends.length} trend(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
+        }`
+      );
+    } catch (e) {
+      console.warn(`  Trends catalog failed:`, e.message || e);
+    }
+  } else {
+    console.log("Remote Trends catalog: OFF (FF_TRENDS_REMOTE_URL empty/off)");
   }
   const urls = lanJoinUrls();
   if (urls.length) {

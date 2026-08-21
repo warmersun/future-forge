@@ -143,6 +143,36 @@ Example:
 
 May sit at tile top level or under `mission`; both are accepted. Copied onto the runtime mission as `mission.grounding`.
 
+### Optional capability trends (Wait charts)
+
+Quests may attach **plottable** exponential series for the Wait overlay, and spotlight some of them.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `trends` | array of capability-trend objects | Max 8; each validated as `future-forge.capability-trend/v1` (nested `schema` optional). Overrides catalog rows with the same `id`. |
+| `spotlightTrends` | string[] | Trend ids to badge as spotlighted. May refer to catalog ids **or** embedded `trends[]` ids (dangling catalog refs OK at validate time). |
+
+See `docs/capability-trend-schema.md`. Markdown `grounding` remains AI source-of-truth prose — it is **not** a substitute for chart data.
+
+```json
+"trends": [
+  {
+    "id": "gene-seq-cost-per-genome",
+    "techId": "gene-sequencing",
+    "name": "Cost per human genome",
+    "summary": "…",
+    "capability": "Affordable whole-genome sequencing",
+    "unit": "USD / genome",
+    "compounding": { "kind": "halving", "periodYears": 1.5 },
+    "anchor": { "date": "2015-01-01", "value": 4000 },
+    "milestones": [
+      { "label": "$1,000 genome", "date": "2014", "value": 1000, "status": "reached" }
+    ]
+  }
+],
+"spotlightTrends": ["gene-seq-cost-per-genome"]
+```
+
 ### Crisis meters (`mission.pressure`) — required structured form
 
 Quest tiles **must** use **structured** crisis meters (flat maps are rejected by `validate:quest`). Dictionary of up to three perspectives. **Only present keys are active** on the HUD and in win/collapse checks. Omit a key to leave that perspective off the board (easier / focused learning modules).

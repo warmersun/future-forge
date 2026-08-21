@@ -4,6 +4,10 @@
  */
 
 import { GAME, GLOBALS, allTechIds } from "./data.js";
+import {
+  TREND_CAPS,
+  validateCapabilityTrend,
+} from "./capability-trend.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -27,6 +31,7 @@ export const CAPS = {
   sponsorBanner: 200,
   /** Learning-module title (display + catalog group key). */
   moduleTitle: 80,
+  maxQuestTrends: TREND_CAPS.maxQuestTrends,
 };
 
 /**
@@ -41,6 +46,66 @@ function pickTileOrMissionField(tile, missionIn, key) {
     return missionIn[key];
   }
   return undefined;
+}
+
+/**
+ * Optional quest-embedded capability trends + spotlight trend ids.
+ * @param {object} tile
+ * @param {object} [missionIn]
+ * @param {{ techIds?: string[] }} [opts]
+ * @returns {{ ok: true, value: { trends?: object[], spotlightTrends?: string[] } } | { ok: false, details: string[] }}
+ */
+export function parseQuestTrendFields(tile, missionIn = {}, opts = {}) {
+  const details = [];
+  /** @type {{ trends?: object[], spotlightTrends?: string[] }} */
+  const out = {};
+
+  const trendsRaw = pickTileOrMissionField(tile, missionIn, "trends");
+  /** @type {object[]} */
+  const trends = [];
+  if (trendsRaw !== undefined) {
+    if (!Array.isArray(trendsRaw)) {
+      details.push("trends_not_array");
+    } else if (trendsRaw.length > CAPS.maxQuestTrends) {
+      details.push("too_many_trends");
+    } else {
+      for (let i = 0; i < trendsRaw.length; i++) {
+        const raw = trendsRaw[i];
+        const v = validateCapabilityTrend(raw, {
+          techIds: opts.techIds || allTechIds(),
+        });
+        if (!v.ok) {
+          details.push(`trend_${i}_${v.error || "invalid"}`);
+          if (v.details?.length) {
+            for (const d of v.details.slice(0, 6)) {
+              details.push(`trend_${i}_${d}`);
+            }
+          }
+          continue;
+        }
+        trends.push(v.trend);
+      }
+    }
+  }
+
+  const spotRaw = pickTileOrMissionField(tile, missionIn, "spotlightTrends");
+  /** @type {string[]} */
+  const spotlightTrends = [];
+  if (spotRaw !== undefined) {
+    if (!Array.isArray(spotRaw)) {
+      details.push("spotlightTrends_not_array");
+    } else {
+      for (const id of spotRaw.slice(0, CAPS.maxQuestTrends)) {
+        const s = String(id || "").trim();
+        if (s) spotlightTrends.push(s.slice(0, TREND_CAPS.id));
+      }
+    }
+  }
+
+  if (details.length) return { ok: false, details };
+  if (trends.length) out.trends = trends;
+  if (spotlightTrends.length) out.spotlightTrends = spotlightTrends;
+  return { ok: true, value: out };
 }
 
 /**
@@ -555,6 +620,13 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...learningParsed.details);
   }
 
+  const trendsParsed = parseQuestTrendFields(tile, missionIn, {
+    techIds: [...techIds],
+  });
+  if (!trendsParsed.ok) {
+    details.push(...trendsParsed.details);
+  }
+
   /** @type {string|null} */
   let sponsorName = null;
   /** @type {string|null} */
@@ -659,6 +731,11 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.totalLessons != null) mission.totalLessons = learning.totalLessons;
   if (sponsorName) mission.sponsorName = sponsorName;
   if (sponsorBanner) mission.sponsorBanner = sponsorBanner;
+  const trendFields = trendsParsed.ok ? trendsParsed.value : {};
+  if (trendFields.trends?.length) mission.trends = trendFields.trends;
+  if (trendFields.spotlightTrends?.length) {
+    mission.spotlightTrends = trendFields.spotlightTrends;
+  }
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -687,6 +764,10 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.totalLessons != null) normalizedTile.totalLessons = learning.totalLessons;
   if (sponsorName) normalizedTile.sponsorName = sponsorName;
   if (sponsorBanner) normalizedTile.sponsorBanner = sponsorBanner;
+  if (trendFields.trends?.length) normalizedTile.trends = trendFields.trends;
+  if (trendFields.spotlightTrends?.length) {
+    normalizedTile.spotlightTrends = trendFields.spotlightTrends;
+  }
 
   return { ok: true, tile: normalizedTile, mission };
 }

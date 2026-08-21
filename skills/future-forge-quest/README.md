@@ -14,6 +14,7 @@ It does **not** relicense the Future Forge game engine. Only this skill tree (an
 | **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus) |
 | **Resources** | Optional starting AP / Budget / Will |
 | **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
+| **Plottable trends** | Optional `trends` / `spotlightTrends` for Wait log-scale charts (see `future-forge-trends` skill) |
 | **Learning modules** | Tutor mode, hidden `aiTutorContext` (may stock resource links + illustrations for chat), progress `Module X Lesson Y/Z` |
 | **Multi-lesson sets** | Multiple JSON files with shared module/totalLessons (display-only; no engine unlock yet) |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |

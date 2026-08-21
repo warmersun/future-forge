@@ -1,0 +1,48 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "warehouse-robot-deployed",
+  "techId": "robots",
+  "name": "Warehouse robots in service",
+  "summary": "Mapped indoor logistics robots have scaled roughly on a strong CAGR as fulfillment automation spreads — still supervised sites, not general household robots.",
+  "capability": "Deployed warehouse mobile robots",
+  "unit": "robots (global fleet, index)",
+  "compounding": { "kind": "cagr", "annualRate": 0.35 },
+  "anchor": { "date": "2018-01-01", "value": 100000 },
+  "domain": { "start": "2015", "end": "2034" },
+  "milestones": [
+    {
+      "id": "fleet-2018",
+      "label": "Early large fleets online",
+      "date": "2018",
+      "value": 100000,
+      "status": "reached"
+    },
+    {
+      "id": "fleet-2022",
+      "label": "Major retailers scale AMRs",
+      "date": "2022",
+      "value": 300000,
+      "status": "reached"
+    },
+    {
+      "id": "fleet-2026",
+      "label": "Broader mid-market sites",
+      "date": "2026",
+      "value": 900000,
+      "status": "reached"
+    },
+    {
+      "id": "fleet-2030-pred",
+      "label": "Multi-million fleet class (forecast)",
+      "date": "2030",
+      "value": 3000000,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "IFR World Robotics (overview)",
+      "url": "https://ifr.org/worldrobotics/"
+    }
+  ]
+}

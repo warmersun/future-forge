@@ -37,6 +37,76 @@
     "startingBudget": 8,
     "startingWill": 4
   },
+  "trends": [
+    {
+      "id": "gene-seq-cost-per-genome",
+      "techId": "gene-sequencing",
+      "name": "Cost per human genome",
+      "summary": "Lab sequencing cost has fallen on a roughly 18-month halving curve since the end of the NIH-only era.",
+      "capability": "Affordable whole-genome sequencing",
+      "unit": "USD / genome",
+      "compounding": { "kind": "halving", "periodYears": 1.5 },
+      "anchor": { "date": "2015-01-01", "value": 4000 },
+      "domain": { "start": "2001", "end": "2036" },
+      "milestones": [
+        {
+          "id": "thousand-dollar",
+          "label": "$1,000 genome",
+          "date": "2014",
+          "value": 1000,
+          "status": "reached"
+        },
+        {
+          "id": "hundred-dollar",
+          "label": "$100 genome",
+          "date": "2027",
+          "value": 100,
+          "status": "predicted"
+        }
+      ],
+      "sources": [
+        {
+          "label": "NHGRI sequencing costs overview",
+          "url": "https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost"
+        }
+      ]
+    },
+    {
+      "id": "pathogen-seq-turnaround-hours",
+      "techId": "gene-sequencing",
+      "name": "Sample-to-provisional read time",
+      "summary": "Clinic and field sequencing turnaround has shortened as instruments, kits, and analysis software improve — still gated by workflow and power.",
+      "capability": "Faster pathogen sequencing turnaround",
+      "unit": "hours (sample → provisional read)",
+      "compounding": { "kind": "halving", "periodYears": 3 },
+      "anchor": { "date": "2018-01-01", "value": 48 },
+      "domain": { "start": "2014", "end": "2034" },
+      "milestones": [
+        {
+          "id": "turn-2018",
+          "label": "~2-day class common",
+          "date": "2018",
+          "value": 48,
+          "status": "reached"
+        },
+        {
+          "id": "turn-2026",
+          "label": "Same-shift clinic workflows",
+          "date": "2026",
+          "value": 8,
+          "status": "reached"
+        },
+        {
+          "id": "turn-2030-pred",
+          "label": "Sub-4h more routine (forecast)",
+          "date": "2030",
+          "value": 3,
+          "status": "predicted"
+        }
+      ]
+    }
+  ],
+  "spotlightTrends": ["gene-seq-cost-per-genome", "pathogen-seq-turnaround-hours"],
   "mission": {
     "id": "spotlight-gene-seq-border-clinic-2026",
     "globalId": "infectious",

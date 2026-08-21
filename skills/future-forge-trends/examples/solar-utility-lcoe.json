@@ -1,0 +1,48 @@
+{
+  "schema": "future-forge.capability-trend/v1",
+  "id": "solar-utility-lcoe",
+  "techId": "solar",
+  "name": "Utility-scale solar LCOE",
+  "summary": "Levelized cost of utility solar has fallen on a roughly multi-year cost-halving path in many markets since the mid-2010s.",
+  "capability": "Cheap bulk solar generation",
+  "unit": "USD / MWh",
+  "compounding": { "kind": "halving", "periodYears": 5 },
+  "anchor": { "date": "2015-01-01", "value": 80 },
+  "domain": { "start": "2010", "end": "2036" },
+  "milestones": [
+    {
+      "id": "lcoe-2015",
+      "label": "~$80/MWh class common",
+      "date": "2015",
+      "value": 80,
+      "status": "reached"
+    },
+    {
+      "id": "lcoe-2020",
+      "label": "~$40/MWh in strong markets",
+      "date": "2020",
+      "value": 40,
+      "status": "reached"
+    },
+    {
+      "id": "lcoe-2025",
+      "label": "Sub-$30/MWh auctions",
+      "date": "2025",
+      "value": 28,
+      "status": "reached"
+    },
+    {
+      "id": "lcoe-2030-pred",
+      "label": "Teens $/MWh more routine (forecast)",
+      "date": "2030",
+      "value": 16,
+      "status": "predicted"
+    }
+  ],
+  "sources": [
+    {
+      "label": "IRENA renewable power generation costs",
+      "url": "https://www.irena.org/Publications"
+    }
+  ]
+}

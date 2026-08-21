@@ -53,7 +53,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
 5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4).
 6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }`. **Flat maps rejected.**
-7. Scenario is **fictive**; research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose.
+7. Scenario is **fictive**;   research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
 8. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
 9. Sensitive themes: `references/sensitivity.md`.
 10. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
@@ -67,6 +67,7 @@ All of these may appear on **one** tile:
 |---------|--------|-------------|
 | **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Classroom pacing |
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md` |
+| **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
 

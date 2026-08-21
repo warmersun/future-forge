@@ -88,6 +88,36 @@ Override invent start values for this Quest only. Omitted keys keep game default
 
 Selection UI shows **Start · …** when values differ from defaults. Tile top-level or under `mission`.
 
+## Optional `trends` / `spotlightTrends` (Wait charts)
+
+Plottable exponential series for the Wait overlay. Full schema: game `docs/capability-trend-schema.md` or skill **`future-forge-trends`**.
+
+| Field | Notes |
+|-------|--------|
+| `trends` | Array (max 8) of capability-trend objects (`techId`, `name`, `summary`, `capability`, `unit`, `compounding`, `anchor`, `milestones`, …). Nested `schema` optional. Overrides catalog by `id`. |
+| `spotlightTrends` | String ids to badge. May refer to catalog or embedded ids (dangling catalog refs OK at validate time). |
+
+Markdown **`grounding`** stays AI SoT prose — it is **not** a substitute for chart data. Prefer authoring plottable tiles with `future-forge-trends`, then either publish to warmersun or embed here.
+
+```json
+"trends": [
+  {
+    "id": "gene-seq-cost-per-genome",
+    "techId": "gene-sequencing",
+    "name": "Cost per human genome",
+    "summary": "…",
+    "capability": "Affordable whole-genome sequencing",
+    "unit": "USD / genome",
+    "compounding": { "kind": "halving", "periodYears": 1.5 },
+    "anchor": { "date": "2015-01-01", "value": 4000 },
+    "milestones": [
+      { "label": "$1,000 genome", "date": "2014", "value": 1000, "status": "reached" }
+    ]
+  }
+],
+"spotlightTrends": ["gene-seq-cost-per-genome"]
+```
+
 ## Optional `grounding` (AI source of truth)
 
 Free-text / Markdown for **authoritative capability context**. When present, Future Forge injects it into co-inventor, claim-timing assess, challenge pose/coach/judge, art-of-the-possible, etc. Prefer over generic model assumptions.

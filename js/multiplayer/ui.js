@@ -738,7 +738,7 @@ export function initFriendsUi(api) {
           ? "Not your turn"
           : !waitOnOwn
             ? "Wait is only for your own invent — switch stack target to your stack first"
-            : "Wait +2 years on your invent (ends seat-turn; others keep their year)";
+            : "Look Ahead — trends for your stack, then confirm Wait +2 years (ends seat-turn; others keep their year)";
     }
     setDis("#btn-mp-ai", playing && isActive && invent && !invent.abandoned);
     setDis(
@@ -1365,12 +1365,16 @@ export function initFriendsUi(api) {
     const place = snap?.place || snap?.mp?.place;
     const run = () => mpSend({ type: "wait" });
     if (typeof openWaitConfirm === "function") {
+      const stackIds = (invent?.stack || [])
+        .map((x) => (typeof x === "string" ? x : x?.techId))
+        .filter(Boolean);
       openWaitConfirm(run, {
         multiparty: true,
         year: invent?.year ?? place?.year,
         waits: invent?.waits ?? 0,
         pressure: place?.pressure,
         mission: place?.mission,
+        techIds: stackIds,
       });
     } else run();
   });
@@ -1884,7 +1888,7 @@ export function initFriendsUi(api) {
     if (hsWaitBtn) {
       hsWaitBtn.title = !hsWaitOwn
         ? "Wait is only for your own invent — switch stack target to your stack first"
-        : "Wait +2 years on your invent (ends seat-turn)";
+        : "Look Ahead — trends for your stack, then confirm Wait +2 years (ends seat-turn)";
     }
 
     const phase = $("#hs-phase-hint");
@@ -2023,12 +2027,16 @@ export function initFriendsUi(api) {
     const run = () =>
       hsAct({ type: "wait" }, "Wait — your invent +2 years, turn passed");
     if (typeof openWaitConfirm === "function") {
+      const stackIds = (invent?.stack || [])
+        .map((x) => (typeof x === "string" ? x : x?.techId))
+        .filter(Boolean);
       openWaitConfirm(run, {
         multiparty: true,
         year: invent?.year ?? place?.year,
         waits: invent?.waits ?? 0,
         pressure: place?.pressure,
         mission: place?.mission,
+        techIds: stackIds,
       });
     } else run();
   });

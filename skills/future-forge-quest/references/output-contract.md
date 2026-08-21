@@ -98,6 +98,34 @@ Omit keys you do not want to override. UI chip when non-default: **Start · Budg
 
 ---
 
+## Recipe A2 — plottable Wait trends
+
+Add top-level (or under `mission`) when the Wait overlay should show exponential charts for this Quest:
+
+```json
+"trends": [
+  {
+    "id": "gene-seq-cost-per-genome",
+    "techId": "gene-sequencing",
+    "name": "Cost per human genome",
+    "summary": "Lab sequencing cost has fallen on a roughly 18-month halving curve.",
+    "capability": "Affordable whole-genome sequencing",
+    "unit": "USD / genome",
+    "compounding": { "kind": "halving", "periodYears": 1.5 },
+    "anchor": { "date": "2015-01-01", "value": 4000 },
+    "milestones": [
+      { "label": "$1,000 genome", "date": "2014", "value": 1000, "status": "reached" },
+      { "label": "$100 genome", "date": "2027", "value": 100, "status": "predicted" }
+    ]
+  }
+],
+"spotlightTrends": ["gene-seq-cost-per-genome"]
+```
+
+Author standalone trends with skill **`future-forge-trends`** (`npm run validate:trend`). Keep prose trends in `grounding`; put **numbers** in `trends`.
+
+---
+
 ## Recipe B — learning module (tutor lesson)
 
 Add:
