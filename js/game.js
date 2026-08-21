@@ -5600,7 +5600,7 @@ function renderTechList() {
               <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
               <p>${escapeHtml(t.summary)}</p>
               <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-                isSpot ? " · spotlight" : sug ? " · suggested" : ""
+                !isSpot && sug ? " · suggested" : ""
               }${unaffordable ? " · can't afford" : ""}</span>
               ${costHtml}
             </span>
