@@ -2214,15 +2214,15 @@ button.btn[hidden] {
 
 /* Developer inspect (catalog → modal) — near full-screen */
 .modal-backdrop.quest-dev-modal-open {
-  padding: 1.25rem clamp(0.75rem, 2.5vw, 2rem);
+  padding: 0.75rem clamp(0.5rem, 1.5vw, 1.25rem);
   align-items: stretch;
   justify-content: center;
 }
 .modal-backdrop.quest-dev-modal-open .modal {
-  width: min(96vw, 72rem);
-  max-width: 96vw;
-  height: min(94vh, 56rem);
-  max-height: 94vh;
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 1.5rem);
+  max-height: calc(100vh - 1.5rem);
   padding: 1.35rem 1.5rem 1.15rem;
   display: flex;
   flex-direction: column;
@@ -2354,7 +2354,7 @@ button.btn[hidden] {
   overflow: auto;
   font-size: 0.8rem;
   line-height: 1.45;
-  max-height: min(42vh, 22rem);
+  max-height: min(50vh, 28rem);
   color: var(--text-dim);
 }
 .quest-dev-json code {
@@ -7884,10 +7884,10 @@ button.linkish:hover {
 
 /* Quest Developer inspect — beat .modal.modal-learn width/height */
 .modal-backdrop.quest-dev-modal-open .modal.modal-learn {
-  width: min(96vw, 72rem);
-  max-width: 96vw;
-  height: min(94vh, 56rem);
-  max-height: 94vh;
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 1.5rem);
+  max-height: calc(100vh - 1.5rem);
   padding: 1.35rem 1.5rem 1.15rem;
   display: flex;
   flex-direction: column;
