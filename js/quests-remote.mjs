@@ -118,8 +118,31 @@ export function resolveTileUrl(catalogUrl, file) {
 }
 
 /**
+ * @param {string} url
+ * @param {number} [now]
+ * @returns {string}
+ */
+export function withCacheBust(url, now = Date.now()) {
+  const sep = String(url).includes("?") ? "&" : "?";
+  return `${url}${sep}_=${now}`;
+}
+
+/**
+ * Local catalog mtime (ms) when path exists; else 0.
+ * @param {string} catalogRef
+ */
+function localCatalogMtimeMs(catalogRef) {
+  try {
+    const p = localCatalogPath(catalogRef);
+    return fs.statSync(p).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * @param {string} urlOrPath
- * @param {{ timeoutMs?: number, local?: boolean }} [opts]
+ * @param {{ timeoutMs?: number, local?: boolean, force?: boolean, fetchImpl?: typeof fetch }} [opts]
  */
 async function fetchText(urlOrPath, opts = {}) {
   if (opts.local || isLocalCatalogPath(urlOrPath)) {
@@ -129,8 +152,10 @@ async function fetchText(urlOrPath, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  const fetchFn = opts.fetchImpl || fetch;
+  const requestUrl = opts.force ? withCacheBust(urlOrPath) : urlOrPath;
   try {
-    const res = await fetch(urlOrPath, {
+    const res = await fetchFn(requestUrl, {
       signal: ctrl.signal,
       headers: { Accept: "application/json" },
     });
@@ -158,31 +183,28 @@ async function fetchText(urlOrPath, opts = {}) {
 let cache = null;
 
 /**
- * @param {string|null} [url]
+ * Load one catalog URL (no multi-candidate fallback).
+ * @param {string} url
  * @param {{
  *   force?: boolean,
  *   ttlMs?: number,
  *   timeoutMs?: number,
  *   fetchImpl?: typeof fetch,
  * }} [opts]
- * @returns {Promise<{
- *   url: string|null,
- *   ok: boolean,
- *   quests: object[],
- *   errors: { file: string, error: string, details?: string[] }[],
- *   cached: boolean,
- * }>}
- */
-/**
- * Load one catalog URL (no multi-candidate fallback).
- * @param {string} url
- * @param {object} opts
  */
 async function fetchOneRemoteCatalog(url, opts = {}) {
   const ttlMs = opts.ttlMs ?? DEFAULT_TTL_MS;
   const now = Date.now();
+  const localMode = isLocalCatalogPath(url);
+  const localMtimeFresh =
+    localMode &&
+    cache &&
+    cache.url === url &&
+    localCatalogMtimeMs(url) > cache.at;
+
   if (
     !opts.force &&
+    !localMtimeFresh &&
     cache &&
     cache.url === url &&
     now - cache.at < cache.ttlMs &&
@@ -206,12 +228,13 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
   /** @type {{ file: string, error: string, details?: string[] }[]} */
   const errors = [];
 
-  const localMode = isLocalCatalogPath(url);
   let catalogRaw;
   try {
     catalogRaw = await fetchText(url, {
       timeoutMs: opts.timeoutMs,
       local: localMode,
+      force: opts.force,
+      fetchImpl: opts.fetchImpl,
     });
   } catch (e) {
     const err = {
@@ -257,6 +280,8 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
       raw = await fetchText(tileUrl, {
         timeoutMs: opts.timeoutMs,
         local: localMode,
+        force: opts.force,
+        fetchImpl: opts.fetchImpl,
       });
     } catch (e) {
       errors.push({
@@ -330,6 +355,7 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
  *   ttlMs?: number,
  *   timeoutMs?: number,
  *   tryFallbacks?: boolean,
+ *   fetchImpl?: typeof fetch,
  * }} [opts]
  * @returns {Promise<{
  *   url: string|null,

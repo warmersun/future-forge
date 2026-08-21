@@ -21,6 +21,7 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 2. Add `{ "id", "file" }` to `catalog.json`.
 3. Publish warmersun.com.
 4. Future Forge server fetches the catalog (override with `FF_QUESTS_REMOTE_URL`).
+5. In-game, open a Sponsored / Learning / Library catalog and tap **↻ Refresh** beside Import Quest… to revalidate (skips the process cache and cache-busts CDN URLs). Without Refresh, the server keeps a ~10-minute in-memory snapshot.
 
 | Env | Effect |
 |-----|--------|
@@ -29,6 +30,8 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 | `FF_QUESTS_REMOTE_URL=/path/to/catalog.json` | Local path (dev/offline) |
 | `FF_QUESTS_REMOTE_URL=https://…/catalog.json` | Explicit remote catalog |
 | `FF_QUESTS_DIR` | Override this local Library folder |
+
+**Dev note:** When the local warmersun checkout exists, unset `FF_QUESTS_REMOTE_URL` prefers that disk tree over the live site. To pull published warmersun.com tiles, set `FF_QUESTS_REMOTE_URL=https://warmersun.com/future-forge/quests/catalog.json`.
 
 **CDN note:** Full warmersun.com republish can fail on large trees; an interim permanent catalog lives at `https://russet-waffle-sx4j.here.now/catalog.json` (same tiles). Prefer publishing `future-forge/quests/` onto warmersun.com when the full-site publish pipeline can handle it.
 

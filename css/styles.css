@@ -1226,7 +1226,15 @@ body.mp-hotseat .workshop-layout {
   min-height: 0;
   overflow: hidden;
   display: flex;
+}
+
+#screen-room-play .tech-library-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 #screen-room-play .tech-list {
@@ -2188,7 +2196,10 @@ button.btn[hidden] {
   flex-wrap: wrap;
 }
 .catalog-intro-actions {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
 }
 .quest-catalog-grid {
   display: flex;
@@ -2311,6 +2322,21 @@ button.btn[hidden] {
   font-size: 0.95rem;
   line-height: 1.55;
   color: var(--text-dim);
+}
+.quest-dev-md .md-img,
+.quest-dev-md img.md-img {
+  display: block;
+  max-width: min(100%, 28rem);
+  max-height: 16rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+.quest-dev-md .md-img-wrap {
+  margin: 0.35rem 0;
 }
 .quest-dev-md h2,
 .quest-dev-md h3 {
@@ -5871,6 +5897,16 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   /* Light inset only — avoid a heavy framed slab */
   margin-inline: var(--page-gutter);
   width: calc(100% - 2 * var(--page-gutter));
+  position: relative;
+  transition: grid-template-columns 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Desktop dock tuck: invent|vision only. Catalog is abspos over the full grid
+   so its containing block is the workshop (not a skinny track — that made
+   max-width: calc(100% - …) collapse the panel to ~1px). */
+.workshop-layout.is-tech-collapsed {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 3fr);
+  grid-template-areas: "invent vision";
 }
 
 .workshop-layout > .tech-library {
@@ -5953,17 +5989,203 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   display: none;
 }
 
-/* Tech library */
+/* Tech library — desktop pinned: in-flow column */
 .tech-library {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   background: rgba(7, 11, 20, 0.5);
+}
+
+.tech-library-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .tech-library .panel-header {
   flex-shrink: 0;
+}
+
+/* Header pin/collapse chevron (desktop only) */
+.tech-rail-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  color: var(--muted, #94a3b8);
+}
+
+.tech-rail-pin:hover,
+.tech-rail-pin:focus-visible {
+  color: var(--accent, #38bdf8);
+}
+
+.tech-rail-pin-chevron {
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(135deg); /* points left = tuck away */
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workshop-layout.is-tech-collapsed .tech-rail-pin-chevron {
+  transform: rotate(-45deg); /* points right when tucked (shown on peek) */
+}
+
+/* Dock edge hit-zone + floating handle (tucked only) */
+.tech-dock-edge,
+.tech-dock-handle {
+  display: none;
+}
+
+.workshop-layout.is-tech-collapsed > .tech-library {
+  position: absolute;
+  /* Span the whole workshop grid → containing block is full layout, not a 10px track */
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: min(22rem, 30vw);
+  max-width: 22rem;
+  height: auto;
+  z-index: 50;
+  border-right: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.97);
+  box-shadow: none;
+  /* Keep the resting edge inside overflow:hidden ancestors */
+  transform: translateX(calc(-100% + 10px));
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease;
+  pointer-events: auto;
+}
+
+.workshop-layout.is-tech-collapsed.is-tech-peek > .tech-library {
+  transform: translateX(0);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+}
+
+.workshop-layout.is-tech-collapsed .tech-library-body {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.workshop-layout.is-tech-collapsed > .tech-dock-edge {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  z-index: 51;
+  cursor: pointer;
+}
+
+/* Overlay open: edge must not steal clicks from tech cards */
+.workshop-layout.is-tech-collapsed.is-tech-peek > .tech-dock-edge {
+  pointer-events: none;
+}
+
+.workshop-layout.is-tech-collapsed > .tech-dock-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 62;
+  transform: translate(0, -50%);
+  min-width: 2rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.4rem;
+  margin: 0;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 0 999px 999px 0;
+  background: rgba(12, 18, 32, 0.92);
+  color: var(--accent, #38bdf8);
+  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.workshop-layout.is-tech-collapsed > .tech-dock-handle:hover,
+.workshop-layout.is-tech-collapsed > .tech-dock-handle:focus-visible {
+  background: rgba(18, 28, 48, 0.98);
+  border-color: rgba(56, 189, 248, 0.55);
+  outline: none;
+}
+
+.workshop-layout.is-tech-collapsed.is-tech-peek > .tech-dock-handle {
+  transform: translate(0, -50%);
+  border-radius: 0 999px 999px 0;
+}
+
+/* Ear: “>” = slide in. When overlay open, show pin (click docks) — never “<”. */
+.tech-dock-handle-chevron {
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); /* points right = slide in */
+}
+
+.tech-dock-handle-pin {
+  display: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid currentColor;
+  border-radius: 0.15rem 0.15rem 0.35rem 0.35rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.tech-dock-handle-pin::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.28rem;
+  width: 2px;
+  height: 0.28rem;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.workshop-layout.is-tech-collapsed.is-tech-peek .tech-dock-handle-chevron {
+  display: none;
+}
+
+.workshop-layout.is-tech-collapsed.is-tech-peek .tech-dock-handle-pin {
+  display: block;
+}
+
+.tech-dock-handle .tech-drawer-count {
+  font-size: 0.65rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+}
+
+.tech-dock-edge[hidden],
+.tech-dock-handle[hidden] {
+  display: none !important;
 }
 
 /* —— Compact workshop: tablet (iPad) + phone ——
@@ -6062,10 +6284,51 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     background: rgba(7, 11, 20, 0.97);
     padding-top: env(safe-area-inset-top, 0);
     padding-bottom: env(safe-area-inset-bottom, 0);
+    flex-direction: column;
   }
 
-  .workshop-layout.is-tech-open > .tech-library {
+  /* Desktop dock tuck must not affect compact overlay geometry */
+  .workshop-layout.is-tech-collapsed {
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 1fr);
+    grid-template-areas: "invent vision";
+  }
+
+  .workshop-layout.is-tech-collapsed > .tech-library,
+  .workshop-layout.is-tech-collapsed.is-tech-peek > .tech-library {
+    position: fixed;
+    grid-column: auto;
+    grid-row: auto;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(22rem, 90vw);
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 120;
+    transform: translateX(-105%);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+    transition: transform 0.22s ease;
+  }
+
+  .workshop-layout.is-tech-open > .tech-library,
+  .workshop-layout.is-tech-collapsed.is-tech-open > .tech-library {
     transform: translateX(0);
+  }
+
+  .workshop-layout.is-tech-collapsed .tech-library-body {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    opacity: 1;
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .tech-rail-pin,
+  .tech-dock-handle,
+  .tech-dock-edge {
+    display: none !important;
   }
 
   .workshop-layout.is-tech-open > .tech-drawer-backdrop {
@@ -6232,7 +6495,15 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workshop-layout > .tech-library {
+  .workshop-layout {
+    transition: none;
+  }
+
+  .workshop-layout > .tech-library,
+  .tech-library-body,
+  .tech-rail-pin-chevron,
+  .tech-dock-handle,
+  .tech-dock-handle-chevron {
     transition: none;
   }
 }

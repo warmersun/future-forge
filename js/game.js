@@ -2877,11 +2877,12 @@ function renderTitleMeta() {
 
 /**
  * Load quests: local folder (Library) + remote warmersun catalog (Sponsored/Learning).
- * @param {{ silent?: boolean }} [opts]
+ * @param {{ silent?: boolean, force?: boolean }} [opts]
  */
 async function refreshHostedQuests(opts = {}) {
   try {
-    const res = await fetch("/api/quests");
+    const url = opts.force ? "/api/quests?refresh=1" : "/api/quests";
+    const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
       if (!opts.silent) flashToast("Could not load Quests catalog.");
@@ -2907,6 +2908,13 @@ async function refreshHostedQuests(opts = {}) {
     state.hostedQuestsLoaded = true;
     if (!opts.silent && data.remoteUrl && data.remoteOk === false) {
       flashToast("Could not reach Warmer Sun quest catalog — Sponsored/Learning may be empty.");
+    } else if (opts.force && !opts.silent) {
+      const n = state.hostedQuests.length;
+      flashToast(
+        `Quests refreshed — ${n} tile${n === 1 ? "" : "s"}${
+          data.remoteCached ? " (cached)" : ""
+        }.`
+      );
     }
     return state.hostedQuests;
   } catch {
@@ -16465,6 +16473,18 @@ function bind() {
       handleQuestTileFileText(text);
     } catch {
       flashToast("Could not read file.");
+    }
+  });
+  $("#btn-refresh-quests")?.addEventListener("click", async () => {
+    const btn = $("#btn-refresh-quests");
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    try {
+      await refreshHostedQuests({ force: true });
+      if (state.screen === "quest-hub") renderQuestHub();
+      if (state.screen === "quest-catalog") renderQuestCatalog();
+    } finally {
+      if (btn) btn.disabled = false;
     }
   });
   // Drag-drop Quest JSON onto catalog (or hub)

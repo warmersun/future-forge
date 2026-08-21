@@ -164,6 +164,15 @@
                 hidden
               />
             </label>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              id="btn-refresh-quests"
+              title="Refresh"
+              aria-label="Refresh quests"
+            >
+              ↻
+            </button>
           </div>
         </div>
         <div id="quest-catalog-status" class="mission-status" hidden aria-live="polite"></div>
@@ -278,27 +287,54 @@
       <!-- Play: same 3-column shell as solo workshop (mission pick uses solo global/mission screens) -->
       <div id="hs-play" class="workshop-layout mp-workshop" hidden>
         <aside class="tech-library" id="hs-tech-library">
-          <div class="panel-header">
-            <h2>Emerging tech</h2>
-            <div class="tech-library-header-actions">
-              <span class="muted sm" id="hs-layer-hint">Add to your stack</span>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm tech-drawer-close"
-                data-tech-drawer-close
-                aria-label="Done choosing tech"
-              >
-                Done
-              </button>
+          <div class="tech-library-body">
+            <div class="panel-header">
+              <h2>Emerging tech</h2>
+              <div class="tech-library-header-actions">
+                <span class="muted sm" id="hs-layer-hint">Add to your stack</span>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-close"
+                  data-tech-drawer-close
+                  aria-label="Done choosing tech"
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm tech-rail-pin"
+                  data-tech-rail-toggle
+                  aria-expanded="true"
+                  aria-controls="hs-tech-library"
+                  aria-label="Collapse Emerging tech"
+                  title="Hide tech catalog"
+                >
+                  <span class="tech-rail-pin-chevron" aria-hidden="true"></span>
+                </button>
+              </div>
             </div>
+            <div class="field mp-layer-field">
+              <label for="hs-layer-target">Stack target</label>
+              <select id="hs-layer-target"></select>
+            </div>
+            <div id="hs-filter-row" class="filter-row"></div>
+            <div id="hs-tech-list" class="tech-list" role="list"></div>
           </div>
-          <div class="field mp-layer-field">
-            <label for="hs-layer-target">Stack target</label>
-            <select id="hs-layer-target"></select>
-          </div>
-          <div id="hs-filter-row" class="filter-row"></div>
-          <div id="hs-tech-list" class="tech-list" role="list"></div>
         </aside>
+        <button
+          type="button"
+          class="tech-dock-handle"
+          data-tech-dock-handle
+          aria-expanded="false"
+          aria-controls="hs-tech-library"
+          aria-label="Emerging tech"
+          hidden
+        >
+          <span class="tech-dock-handle-chevron" aria-hidden="true"></span>
+          <span class="tech-dock-handle-pin" aria-hidden="true"></span>
+          <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+        </button>
+        <div class="tech-dock-edge" data-tech-dock-edge aria-hidden="true" hidden></div>
         <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
@@ -546,29 +582,56 @@
 
       <div id="mp-play" class="workshop-layout mp-workshop">
         <aside class="tech-library" id="mp-tech-library">
-          <div class="panel-header">
-            <h2>Emerging tech</h2>
-            <div class="tech-library-header-actions">
-              <span class="muted sm" id="mp-layer-hint">Add to your stack</span>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm tech-drawer-close"
-                data-tech-drawer-close
-                aria-label="Done choosing tech"
-              >
-                Done
-              </button>
+          <div class="tech-library-body">
+            <div class="panel-header">
+              <h2>Emerging tech</h2>
+              <div class="tech-library-header-actions">
+                <span class="muted sm" id="mp-layer-hint">Add to your stack</span>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-close"
+                  data-tech-drawer-close
+                  aria-label="Done choosing tech"
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm tech-rail-pin"
+                  data-tech-rail-toggle
+                  aria-expanded="true"
+                  aria-controls="mp-tech-library"
+                  aria-label="Collapse Emerging tech"
+                  title="Hide tech catalog"
+                >
+                  <span class="tech-rail-pin-chevron" aria-hidden="true"></span>
+                </button>
+              </div>
             </div>
+            <div class="field mp-layer-field">
+              <label for="mp-layer-target">Stack target</label>
+              <select id="mp-layer-target"></select>
+            </div>
+            <div id="mp-filter-row" class="filter-row"></div>
+            <div id="mp-tech-list" class="tech-list" role="list"></div>
+            <!-- tray kept for paintTechTray fallback; list is primary -->
+            <div id="mp-tech-tray" class="mp-tech-tray" hidden></div>
           </div>
-          <div class="field mp-layer-field">
-            <label for="mp-layer-target">Stack target</label>
-            <select id="mp-layer-target"></select>
-          </div>
-          <div id="mp-filter-row" class="filter-row"></div>
-          <div id="mp-tech-list" class="tech-list" role="list"></div>
-          <!-- tray kept for paintTechTray fallback; list is primary -->
-          <div id="mp-tech-tray" class="mp-tech-tray" hidden></div>
         </aside>
+        <button
+          type="button"
+          class="tech-dock-handle"
+          data-tech-dock-handle
+          aria-expanded="false"
+          aria-controls="mp-tech-library"
+          aria-label="Emerging tech"
+          hidden
+        >
+          <span class="tech-dock-handle-chevron" aria-hidden="true"></span>
+          <span class="tech-dock-handle-pin" aria-hidden="true"></span>
+          <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+        </button>
+        <div class="tech-dock-edge" data-tech-dock-edge aria-hidden="true" hidden></div>
         <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
@@ -888,26 +951,53 @@
 
       <div class="workshop-layout">
         <aside class="tech-library" id="solo-tech-library">
-          <div class="panel-header">
-            <h2>Emerging tech</h2>
-            <div class="tech-library-header-actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
-                Learn
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm tech-drawer-close"
-                data-tech-drawer-close
-                aria-label="Done choosing tech"
-              >
-                Done
-              </button>
+          <div class="tech-library-body">
+            <div class="panel-header">
+              <h2>Emerging tech</h2>
+              <div class="tech-library-header-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
+                  Learn
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm tech-drawer-close"
+                  data-tech-drawer-close
+                  aria-label="Done choosing tech"
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm tech-rail-pin"
+                  data-tech-rail-toggle
+                  aria-expanded="true"
+                  aria-controls="solo-tech-library"
+                  aria-label="Collapse Emerging tech"
+                  title="Hide tech catalog"
+                >
+                  <span class="tech-rail-pin-chevron" aria-hidden="true"></span>
+                </button>
+              </div>
             </div>
+            <div id="filter-row" class="filter-row"></div>
+            <p id="filter-domain-hint" class="filter-domain-hint" hidden aria-live="polite"></p>
+            <div id="tech-list" class="tech-list" role="list"></div>
           </div>
-          <div id="filter-row" class="filter-row"></div>
-          <p id="filter-domain-hint" class="filter-domain-hint" hidden aria-live="polite"></p>
-          <div id="tech-list" class="tech-list" role="list"></div>
         </aside>
+        <button
+          type="button"
+          class="tech-dock-handle"
+          data-tech-dock-handle
+          aria-expanded="false"
+          aria-controls="solo-tech-library"
+          aria-label="Emerging tech"
+          hidden
+        >
+          <span class="tech-dock-handle-chevron" aria-hidden="true"></span>
+          <span class="tech-dock-handle-pin" aria-hidden="true"></span>
+          <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
+        </button>
+        <div class="tech-dock-edge" data-tech-dock-edge aria-hidden="true" hidden></div>
         <div class="tech-drawer-backdrop" data-tech-drawer-backdrop hidden aria-hidden="true"></div>
 
         <main class="invent-center">
