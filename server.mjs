@@ -62,6 +62,7 @@ import {
   CostPolicy,
   checkApiSecret,
 } from "./js/server/cost-policy.mjs";
+import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
 import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "./js/idea-cards.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -140,6 +141,15 @@ const usage = usageTrackerFromEnv(
   process.env,
   path.join(ROOT, "data", "usage"),
   process.argv.slice(2)
+);
+
+/**
+ * Developer UI (quest / trend inspect). Off by default.
+ * Enable with `node server.mjs --developer` or FF_DEVELOPER=1.
+ */
+const DEVELOPER_MODE = resolveDeveloperEnabled(
+  process.argv.slice(2),
+  process.env
 );
 
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
@@ -2808,6 +2818,7 @@ const server = http.createServer(async (req, res) => {
         ttsVoice: TTS_VOICE,
       },
       usageEnabled: usage.enabled,
+      developer: DEVELOPER_MODE,
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3318,6 +3329,11 @@ server.listen(PORT, HOST, async () => {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {
     console.log("Usage metrics OFF (pass --usage or set FF_USAGE_ENABLED=1 to enable)");
+  }
+  if (DEVELOPER_MODE) {
+    console.log("Developer mode: ON (quest / trend inspect UI)");
+  } else {
+    console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
   }
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR);

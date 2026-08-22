@@ -4485,6 +4485,27 @@ body.wait-confirm-open {
   gap: 0.4rem 0.55rem;
 }
 
+.wait-trend-dev {
+  margin-left: auto;
+}
+
+.wait-trend-tech {
+  margin: 0;
+}
+
+.wait-trend-tech code {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.trend-dev-player-preview {
+  margin-top: 0.75rem;
+}
+
+.trend-dev-player-preview .wait-trend-card {
+  margin: 0;
+}
+
 .wait-trend-name {
   margin: 0;
   font-size: 0.95rem;

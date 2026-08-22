@@ -362,18 +362,22 @@ export function normalizeTrend(raw, opts = {}) {
  * @param {string[]} [opts.selectedTechIds]
  * @param {string|null} [opts.spotlightTechId]
  * @param {number} [opts.limit]
+ * @param {boolean} [opts.includeAll] — ignore stack filter and merge cap (developer mode)
  * @returns {object[]}
  */
 export function mergeTrendsForStack(opts = {}) {
+  const includeAll = Boolean(opts.includeAll);
   const selected = new Set(
     (opts.selectedTechIds || []).map(String).filter(Boolean)
   );
-  if (!selected.size) return [];
+  if (!includeAll && !selected.size) return [];
 
-  const limit = Math.max(
-    1,
-    Math.min(TREND_CAPS.mergeLimit, opts.limit ?? TREND_CAPS.mergeLimit)
-  );
+  const limit = includeAll
+    ? Number.POSITIVE_INFINITY
+    : Math.max(
+        1,
+        Math.min(TREND_CAPS.mergeLimit, opts.limit ?? TREND_CAPS.mergeLimit)
+      );
   const spotlightIds = new Set(
     (opts.spotlightTrendIds || []).map(String).filter(Boolean)
   );
@@ -385,18 +389,14 @@ export function mergeTrendsForStack(opts = {}) {
   const byId = new Map();
 
   for (const t of opts.catalog || []) {
-    if (!t || !t.id || !selected.has(t.techId)) continue;
+    if (!t || !t.id) continue;
+    if (!includeAll && !selected.has(t.techId)) continue;
     byId.set(t.id, { ...t, spotlight: false, source: t.source || "catalog" });
   }
 
   for (const t of opts.questTrends || []) {
     if (!t || !t.id) continue;
-    // Quest may add trends for stack techs (or override catalog)
-    if (!selected.has(t.techId) && !byId.has(t.id)) {
-      // Still allow if tech is on stack after override — skip if not selected
-      if (!selected.has(t.techId)) continue;
-    }
-    if (!selected.has(t.techId)) continue;
+    if (!includeAll && !selected.has(t.techId)) continue;
     byId.set(t.id, {
       ...t,
       spotlight: false,
@@ -417,5 +417,5 @@ export function mergeTrendsForStack(opts = {}) {
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
 
-  return rows.slice(0, limit);
+  return includeAll ? rows : rows.slice(0, limit);
 }

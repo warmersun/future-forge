@@ -134,5 +134,26 @@ describe("capability-trend", () => {
       limit: 8,
     });
     assert.equal(capped.length, 8);
+
+    const allEmptyStack = mergeTrendsForStack({
+      catalog: [gene, ai],
+      selectedTechIds: [],
+      includeAll: true,
+    });
+    assert.equal(allEmptyStack.length, 2);
+    assert.ok(allEmptyStack.some((t) => t.id === gene.id));
+    assert.ok(allEmptyStack.some((t) => t.id === ai.id));
+
+    const allUncapped = mergeTrendsForStack({
+      catalog: Array.from({ length: 12 }, (_, i) => ({
+        ...gene,
+        id: `all-${i}`,
+        name: `All ${String(i).padStart(2, "0")}`,
+      })),
+      selectedTechIds: [],
+      includeAll: true,
+      limit: 8,
+    });
+    assert.equal(allUncapped.length, 12);
   });
 });

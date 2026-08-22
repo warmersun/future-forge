@@ -118,6 +118,22 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 
 Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 
+### Developer mode (quest / trend inspect)
+
+**Off by default.** When on, the browser shows **Developer** buttons on quest catalog cards and on Wait / Look Ahead trend tiles (player chart + raw JSON). Production `npm start` must leave this off.
+
+```bash
+npm start -- --developer
+# or
+npm run start:developer
+# or
+node server.mjs --developer
+# or (deploy-friendly)
+FF_DEVELOPER=1 npm start
+```
+
+Force off even if env is set: `node server.mjs --no-developer`. The client reads `developer` from `GET /api/health` — there is no URL or localStorage override.
+
 ### Usage metrics (hosting cost estimates)
 
 **Off by default.** Enable when you want token / image / TTS / session logs for cost estimates:

@@ -290,6 +290,8 @@ const state = {
   playMode: null,
   /** True only while a Play-tutorial mission is active */
   tutorialRun: false,
+  /** Server developer mode from GET /api/health (CLI --developer). Off by default. */
+  developer: false,
   /** @type {object[]} Merged quests from GET /api/quests (compat) */
   hostedQuests: [],
   /** @type {object[]} Local `quests/` folder — Library side-load */
@@ -3693,11 +3695,15 @@ function catalogCardHtml(entry, kind, opts = {}) {
         </span>
       </button>
       <div class="catalog-card-actions">
-        <button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
-          entry.id
-        )}" title="Inspect tile JSON and Markdown">
+        ${
+          state.developer
+            ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
+                entry.id
+              )}" title="Inspect tile JSON and Markdown">
           Developer
-        </button>
+        </button>`
+            : ""
+        }
         ${
           entry.canRemove
             ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
@@ -6826,12 +6832,20 @@ function compoundingChipLabel(compounding) {
 
 /**
  * @param {object} trend
+ * @param {{ showTech?: boolean, showDevButton?: boolean }} [opts]
  */
-function waitTrendCardHtml(trend) {
+function waitTrendCardHtml(trend, opts = {}) {
   const spot = trend.spotlight
     ? `<span class="wait-trend-spotlight">Spotlight</span>`
     : "";
   const chip = compoundingChipLabel(trend.compounding);
+  const tech = trend.techId ? techById(trend.techId) : null;
+  const techLine =
+    opts.showTech && trend.techId
+      ? `<p class="wait-trend-tech muted sm">${escapeHtml(
+          tech?.name || trend.techId
+        )} <code>${escapeHtml(String(trend.techId))}</code></p>`
+      : "";
   const milestones = (trend.milestones || [])
     .map((m) => {
       const st = m.status === "predicted" ? "predicted" : "reached";
@@ -6840,13 +6854,21 @@ function waitTrendCardHtml(trend) {
       )} · ${escapeHtml(formatTrendValue(m.value, trend.unit))} <span class="muted">(${st})</span></li>`;
     })
     .join("");
+  const devBtn =
+    opts.showDevButton && state.developer
+      ? `<button type="button" class="btn btn-ghost btn-sm wait-trend-dev" data-trend-dev-id="${escapeHtml(
+          trend.id
+        )}" title="Inspect trend as players see it, plus JSON">Developer</button>`
+      : "";
   return `
     <article class="wait-trend-card${trend.spotlight ? " is-spotlight" : ""}" data-trend-id="${escapeHtml(trend.id)}">
       <header class="wait-trend-card-head">
         ${spot}
         <h4 class="wait-trend-name">${escapeHtml(trend.name)}</h4>
         ${chip ? `<span class="wait-trend-chip">${escapeHtml(chip)}</span>` : ""}
+        ${devBtn}
       </header>
+      ${techLine}
       <p class="wait-trend-summary muted sm">${escapeHtml(trend.summary || "")}</p>
       <p class="wait-trend-meta muted sm">${escapeHtml(trend.capability || "")} · <em>${escapeHtml(trend.unit || "")}</em></p>
       <div class="wait-trend-canvas-wrap">
@@ -6886,14 +6908,24 @@ let _waitTrendCharts = [];
 let _waitConfirmCtx = null;
 /** @type {null | (() => void)} */
 let _waitConfirmOnOk = null;
+/** @type {object|null} Chart.js instance in Developer trend inspect modal */
+let _trendInspectChart = null;
 
 function destroyWaitTrendCharts() {
   for (const c of _waitTrendCharts) destroyTrendChart(c);
   _waitTrendCharts = [];
 }
 
+function destroyTrendInspectChart() {
+  if (_trendInspectChart) {
+    destroyTrendChart(_trendInspectChart);
+    _trendInspectChart = null;
+  }
+}
+
 /**
  * Resolve trends for the Wait overlay from catalog + quest + stack.
+ * In developer mode: every hosted + quest trend (no stack filter / merge cap).
  * @param {object} [ctx]
  */
 function trendsForWaitConfirm(ctx = {}) {
@@ -6908,6 +6940,7 @@ function trendsForWaitConfirm(ctx = {}) {
     spotlightTrendIds: m?.spotlightTrends || [],
     selectedTechIds: techIds,
     spotlightTechId: m?.spotlight?.techId || null,
+    includeAll: Boolean(state.developer),
   });
 }
 
@@ -6928,12 +6961,20 @@ function syncWaitTrendCharts() {
     Array.isArray(ctx.techIds) && ctx.techIds.length
       ? ctx.techIds
       : state.selectedTechIds || [];
+  const showAll = Boolean(state.developer);
 
   const emptyEl = host.querySelector("[data-wait-trends-empty]");
   const loadingEl = host.querySelector("[data-wait-trends-loading]");
   const grid = host.querySelector(".wait-trend-grid");
+  const lede = host.querySelector(".wait-trends-lede");
 
-  if (!techIds.length) {
+  if (lede) {
+    lede.textContent = showAll
+      ? "Developer · all catalog and quest capability trends (player charts). Use Developer on a card for raw JSON."
+      : "Log-scale charts for emTechs already on your stack. Milestones are markers on each trend.";
+  }
+
+  if (!showAll && !techIds.length) {
     if (loadingEl) loadingEl.hidden = true;
     if (emptyEl) {
       emptyEl.hidden = false;
@@ -6959,7 +7000,9 @@ function syncWaitTrendCharts() {
   if (!trends.length) {
     if (emptyEl) {
       emptyEl.hidden = false;
-      emptyEl.textContent = "No plotted series for this stack yet.";
+      emptyEl.textContent = showAll
+        ? "No plotted series in the catalog yet."
+        : "No plotted series for this stack yet.";
     }
     if (grid) grid.innerHTML = "";
     return;
@@ -6967,7 +7010,14 @@ function syncWaitTrendCharts() {
 
   if (emptyEl) emptyEl.hidden = true;
   if (!grid) return;
-  grid.innerHTML = trends.map(waitTrendCardHtml).join("");
+  grid.innerHTML = trends
+    .map((t) =>
+      waitTrendCardHtml(t, {
+        showTech: showAll,
+        showDevButton: showAll,
+      })
+    )
+    .join("");
   const css = waitTrendChartCss();
   const canvases = grid.querySelectorAll("canvas.wait-trend-canvas");
   canvases.forEach((canvas, i) => {
@@ -6981,6 +7031,94 @@ function syncWaitTrendCharts() {
     });
     if (chart) _waitTrendCharts.push(chart);
   });
+  grid.querySelectorAll(".wait-trend-dev").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const id = btn.getAttribute("data-trend-dev-id");
+      const trend = trends.find((t) => t.id === id);
+      if (trend) openTrendCatalogInspect(trend, { year, nextYear });
+    });
+  });
+}
+
+/**
+ * Developer inspect: player-facing trend card + raw JSON.
+ * @param {object} trend
+ * @param {{ year?: number, nextYear?: number }} [opts]
+ */
+function openTrendCatalogInspect(trend, opts = {}) {
+  if (!trend?.id) {
+    flashToast("No trend data to inspect.");
+    return;
+  }
+  destroyTrendInspectChart();
+  const year = opts.year != null ? opts.year : state.year;
+  const step = state.mission?.yearsPerTurn || GAME.yearsPerTurn || 2;
+  const nextYear = opts.nextYear != null ? opts.nextYear : year + step;
+  const jsonText = JSON.stringify(trend, null, 2);
+  const tech = trend.techId ? techById(trend.techId) : null;
+
+  const title = $("#modal-title");
+  const lead = $("#modal-lead");
+  const body = $("#modal-body");
+  if (title) {
+    title.textContent = trend.name || "Trend inspect";
+  }
+  if (lead) {
+    lead.hidden = false;
+    lead.textContent =
+      "Developer · as players see this tile, plus JSON.";
+  }
+  if (body) {
+    body.classList.add("quest-dev-modal-body");
+    body.innerHTML = `
+      <section class="quest-dev-section">
+        <h4>Player view</h4>
+        <dl class="quest-dev-dl">
+          <div><dt>id</dt><dd>${escapeHtml(String(trend.id))}</dd></div>
+          <div><dt>techId</dt><dd>${escapeHtml(
+            tech
+              ? `${tech.name} (${trend.techId})`
+              : String(trend.techId || "—")
+          )}</dd></div>
+          <div><dt>source</dt><dd>${escapeHtml(
+            String(trend.source || "—")
+          )}</dd></div>
+        </dl>
+        <div class="trend-dev-player-preview">
+          ${waitTrendCardHtml(trend, { showTech: true, showDevButton: false })}
+        </div>
+      </section>
+      <section class="quest-dev-section">
+        <div class="quest-dev-json-head">
+          <h4>Full JSON</h4>
+          <button type="button" class="btn btn-secondary btn-sm" id="trend-dev-copy-json">Copy JSON</button>
+        </div>
+        <pre class="quest-dev-json"><code>${escapeHtml(jsonText)}</code></pre>
+      </section>
+    `;
+    const canvas = body.querySelector("canvas.wait-trend-canvas");
+    if (canvas) {
+      _trendInspectChart = mountTrendChart(canvas, trend, {
+        yearNow: year,
+        yearNext: nextYear,
+        spotlight: Boolean(trend.spotlight),
+        css: waitTrendChartCss(),
+      });
+    }
+    body.querySelector("#trend-dev-copy-json")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(jsonText);
+        flashToast("JSON copied.");
+      } catch {
+        flashToast("Could not copy JSON.");
+      }
+    });
+  }
+  const backdrop = $("#modal-backdrop");
+  backdrop?.classList.add("open");
+  backdrop?.classList.add("quest-dev-modal-open");
 }
 
 /**
@@ -15621,6 +15759,7 @@ function openLearnStack() {
 
 function closeModal() {
   stopReadAloud();
+  destroyTrendInspectChart();
   const backdrop = $("#modal-backdrop");
   backdrop?.classList.remove("open");
   backdrop?.classList.remove("quest-dev-modal-open");
@@ -17392,10 +17531,30 @@ function bind() {
   });
 }
 
+/**
+ * Load developer / public flags from GET /api/health (once at boot).
+ * Re-renders catalog when developer flips on so buttons do not flash late.
+ */
+async function refreshDeveloperModeFromHealth() {
+  try {
+    const res = await fetch("/api/health");
+    if (!res.ok) return;
+    const data = await res.json();
+    const next = Boolean(data?.developer);
+    if (next === state.developer) return;
+    state.developer = next;
+    if (state.screen === "quest-catalog") renderQuestCatalog();
+    if (_waitConfirmCtx) syncWaitTrendCharts();
+  } catch {
+    /* offline / static — leave developer false */
+  }
+}
+
 export function init() {
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();
   initTechDrawers();
   showScreen("title");
+  void refreshDeveloperModeFromHealth();
 }
