@@ -702,7 +702,7 @@ function flashUnaffordableTech(id, error) {
     );
   } else if (error === "no_will") {
     flashToast(
-      `Need ${cost.will ?? 1} Will to add ${t?.name || "this"} (you have ${state.will ?? 0}).`,
+      `Need ${cost.will ?? 1} Support to add ${t?.name || "this"} (you have ${state.will ?? 0}).`,
       { resource: "will" }
     );
   } else {
@@ -1202,7 +1202,7 @@ function syncInventActionButtons() {
       else if ((state.budget ?? 0) < 1) lobbyBtn.title = "Need 1 Budget to lobby";
       else if (apEnabled() && (state.ap ?? 0) < 1)
         lobbyBtn.title = "Need 1 AP to lobby";
-      else lobbyBtn.title = "Spend 1 AP + 1 Budget to gain Will";
+      else lobbyBtn.title = "Spend 1 AP + 1 Budget to gain Support";
     }
   }
 
@@ -5447,11 +5447,11 @@ function assessFeasibility() {
       storyLevel === "green"
     ) {
       scaleLevel = "green";
-      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Will ${w}).`;
+      scaleNote = `Scale-ready: multi-tech stack, solid story, capital (Budget ${b}, Support ${w}).`;
     } else if (capitalThin || techs.length === 1 || !opsReady || timingLevel === "yellow") {
       scaleLevel = "yellow";
       scaleNote = capitalThin
-        ? `Scale is thin on capital (Budget ${b}, Will ${w}) — expansion may stall.`
+        ? `Scale is thin on capital (Budget ${b}, Support ${w}) — expansion may stall.`
         : techs.length === 1
           ? "Single-tech pilot can scale, but ops breadth is limited."
           : "Scale is possible but shaky — strengthen story, capital, or timing claims.";
@@ -5835,7 +5835,7 @@ function renderTechList() {
       const marketHit =
         budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
       const costTitle = cost
-        ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Will` : ""}${
+        ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
             apEnabled() ? ", 1 AP" : ""
           }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}${
             marketHit ? " · market news active" : ""
@@ -7562,7 +7562,7 @@ function lobbyAction() {
     }
     state.budget = Math.max(0, (state.budget ?? 0) - 1);
     state.will = Math.min(GAME.maxWill ?? 5, (state.will ?? 0) + 1);
-    flashToast(`Lobbied · Budget ${state.budget} · Will ${state.will}`);
+    flashToast(`Lobbied · Budget ${state.budget} · Support ${state.will}`);
     renderWorkshop();
     return;
   }
@@ -7576,7 +7576,7 @@ function lobbyAction() {
     else flashToast("Cannot lobby now.");
     return;
   }
-  flashToast(`Lobbied · Budget ${state.budget} · Will ${state.will}`);
+  flashToast(`Lobbied · Budget ${state.budget} · Support ${state.will}`);
   renderWorkshop();
 }
 
@@ -9127,7 +9127,7 @@ function updateSidestepAvailability() {
     blurb.textContent = used
       ? "Already used this mission — Defend or Fix if you face Challenge again."
       : cost.ok
-        ? `Skip without winning. Cost equals remaining resolve (${hearts}♥ → ${costLabel}). Once per mission. Softens ★ elegance — not free. Lobby if you need more Will.`
+        ? `Skip without winning. Cost equals remaining resolve (${hearts}♥ → ${costLabel}). Once per mission. Softens ★ elegance — not free. Lobby if you need more Support.`
         : "Skip without winning the argument. Cost equals remaining resolve hearts. Once per mission.";
   }
   if (confirmBtn) {
@@ -9832,7 +9832,7 @@ function scrutinyPivot() {
           state.ap = Math.min(state.apMax ?? 3, (state.ap || 0) + roomApPaid);
           state.apSpentThisTurn = Math.max(0, (state.apSpentThisTurn || 0) - roomApPaid);
         }
-        flashToast(mpFriendlyError(e.message) || "Could not spend Will to sidestep");
+        flashToast(mpFriendlyError(e.message) || "Could not spend Support to sidestep");
         renderChallengeHud();
         return;
       }
@@ -12062,7 +12062,7 @@ function renderDeployBay() {
   if (apEnabled() && (scaleCost.ap || 0) > 0) scaleBits.push(`${scaleCost.ap} AP`);
   if (budgetWillEnabled()) {
     scaleBits.push(`${scaleCost.budget}$`);
-    if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Will`);
+    if (scaleCost.will > 0) scaleBits.push(`${scaleCost.will} Support`);
   }
 
   if (status) {
@@ -12256,7 +12256,7 @@ function payScaleAttempt() {
       return { ok: false, cost };
     }
     if ((state.will ?? 0) < cost.will) {
-      flashToast(`Need ${cost.will} Will to try Scale (you have ${state.will ?? 0}). Lobby first.`, {
+      flashToast(`Need ${cost.will} Support to try Scale (you have ${state.will ?? 0}). Lobby first.`, {
         resource: "will",
       });
       return { ok: false, cost };
@@ -12356,7 +12356,7 @@ function attemptDeployStage(stage) {
           return;
         }
         if (budgetWillEnabled() && (state.will ?? 0) < (c.will || 0)) {
-          flashToast(`Need ${c.will} Will to try Scale.`, { resource: "will" });
+          flashToast(`Need ${c.will} Support to try Scale.`, { resource: "will" });
           return;
         }
         if (apEnabled() && apCost > 0) {
@@ -13788,7 +13788,7 @@ function renderOutcome() {
     if (sidestepped) {
       lessons.push({
         type: "grow",
-        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Will). Deploy unlocked, but elegance softens.`,
+        text: `Challenge (${o.meta?.angle || "stress-test"}): sidestepped — you bought past the critic (1 AP + 1 Support). Deploy unlocked, but elegance softens.`,
       });
     } else {
       lessons.push({
