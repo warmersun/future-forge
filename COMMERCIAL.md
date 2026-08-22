@@ -23,9 +23,9 @@ You may run a Future Forge session as a **live meeting** — in person or online
 - You do **not charge** participants for access to Future Forge or for the meeting itself as a Future Forge product (optional tip jars / unrelated venue fees do not by themselves make this commercial for this grant); and  
 - You keep any required **attribution** reasonable (e.g. product name / link to the project).
 
-Examples that **are** covered: a friends co-op night on a shared call; a facilitator-led workshop where the host also plays; an online hangout you run and join.
+Examples that **are** covered: a friends co-op night on a shared call; a facilitator-led workshop where the host also participates; an online hangout you run and join.
 
-Examples that **are not** covered by this free grant alone: hiring out facilitation as a paid service, selling tickets primarily for Future Forge play, or any school / university / bootcamp / training-org use (Education is commercial — see below).
+Examples that **are not** covered by this free grant alone: hiring out facilitation as a paid service, selling tickets primarily for a Future Forge session, or any school / university / bootcamp / training-org use (Education is commercial — see below).
 
 ### 2. Run a free online server (no commercial intent)
 

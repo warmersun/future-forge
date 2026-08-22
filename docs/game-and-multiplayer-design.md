@@ -15,6 +15,8 @@
 
 These names are **binding** for all code, UI copy, flags, and this document. Do not invent synonyms in implementation sketches.
 
+**Player UI must not call Future Forge a game.** Prefer **inventing practice**, **session**, **Quest**, and **Friends**. Bind **Friends** (not “multiplayer”) and **Start Quest** (not “Start race”) in learner-facing copy. Internal code names (`js/game.js`, `js/multiplayer/`, `phase: "playing"`) may stay.
+
 ### Lifecycle hierarchy (player-facing — 2026-07-25)
 
 | Term | Meaning | Never call it (player UI) |
@@ -29,7 +31,7 @@ These names are **binding** for all code, UI copy, flags, and this document. Do 
 | **Leave Quest** | Exit current **Quest**; game continues | leave place, abandon mission, leave Challenge |
 | **Leave room** | Exit game + room entirely | leave Quest |
 
-**Product name:** the game remains **Future Forge**. Do not rename the title, brand, or license to “Quest” or “Challenge.”
+**Product name:** the product remains **Future Forge** (an inventing practice). Do not rename the title, brand, or license to “Quest” or “Challenge.” Do not call it a game in player UI.
 
 **Disambiguation (binding):**
 

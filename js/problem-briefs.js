@@ -134,7 +134,7 @@ export const PROBLEM_BRIEFS = {
     rootCauses:
       "Habitat conversion, overharvest, invasive species, pollution, and climate change—driven by economic systems that externalize nature’s value.",
     warnings:
-      "“Green” inventions can greenwash extractive projects. Measure real habitat and community outcomes. Avoid claiming full ecosystem recovery on short game timelines.",
+      "“Green” inventions can greenwash extractive projects. Measure real habitat and community outcomes. Avoid claiming full ecosystem recovery on short timelines.",
   },
   infectious: {
     currentState:

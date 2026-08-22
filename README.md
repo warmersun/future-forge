@@ -1,8 +1,8 @@
 # Future Forge
 
-**Invent local solutions with emerging technologies — race the crisis clock with an AI co-inventor.**
+**Invent local solutions with emerging technologies — field them as the future arrives with an AI co-inventor.**
 
-Future Forge is a solo learning game. You pick a global problem, land in a concrete place, invent with a stack of emerging tech, defend the idea under challenge, and deploy before the local crisis collapses.
+Future Forge is an inventing practice. You pick a global problem, land in a concrete place, invent with a stack of emerging tech, defend the idea under challenge, and deploy before the local crisis collapses.
 
 **About & learning goals:** Future Forge is an [inventing practice](docs/what-is-future-forge.md) — origin (6Ps tabletop), design contradiction, Progress and Predictions, and what learners practice today.
 
@@ -12,17 +12,17 @@ Future Forge is a solo learning game. You pick a global problem, land in a concr
 
 ---
 
-## How the game works
+## How it works
 
 1. **Theme** — Choose a global problem (climate, infectious disease, energy access, …).
-2. **Local scenarios** — Read a short problem brief while the game drafts several concrete places. Pick one mission (cached for next time; solved ones stay playable).
+2. **Local scenarios** — Read a short problem brief while Future Forge drafts several concrete places. Pick one mission (cached for next time; solved ones stay available).
 3. **Invent** — Build a tech stack from domains like Power, Automator, Mover, LifeForce, Link, and Portal. Name the invention and write two faces:
    - **How it works** — mechanism
    - **Everyday life** — impact on the ground  
    Use **Focus** + **Fill other side** so the AI drafts the face you are not writing. Both boxes stay editable.
 4. **Feasibility** — A traffic light judges whether your *claims* fit this year and place. EmTech categories are always pickable; over-claiming is what goes red.
 5. **Challenge** — Defend against a random challenger:
-   - **Moloch** — system game mechanics (freeriding, races to the bottom)
+   - **Moloch** — system incentives (freeriding, races to the bottom)
    - **Ethicist** — hard tradeoffs with no clean good/bad answer
    - **Stakeholder** — officials & community (funding, permits, public support)
    - **Mother Nature** — physical and ecological limits
@@ -39,7 +39,7 @@ Future Forge is a solo learning game. You pick a global problem, land in a concr
   - **SuperGrok** session via Grok CLI (`grok login`), **or**
   - An **xAI API key** (`FF_XAI_API_KEY`)
 
-Without either auth path, the game still runs: static UI + a **local** co-inventor fallback (weaker, no live Grok).
+Without either auth path, the practice still runs: static UI + a **local** co-inventor fallback (weaker, no live Grok).
 
 ---
 
@@ -56,7 +56,7 @@ Open **http://127.0.0.1:8765**
 
 | Command | Purpose |
 |--------|---------|
-| `npm start` / `npm run serve` | Start the game server (`server.mjs`) |
+| `npm start` / `npm run serve` | Start the server (`server.mjs`) |
 | `npm start -- --usage` | Start with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
@@ -66,11 +66,11 @@ Open **http://127.0.0.1:8765**
 
 AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md` and the MIT skill package `skills/future-forge-quest/`.
 
-**Server folder (recommended for classrooms / multiplayer):**
+**Server folder (recommended for classrooms / Friends):**
 
 1. Put validated `.json` tiles in the **`quests/`** directory (next to `server.mjs`).
 2. `npm start` — the server scans that folder and logs how many tiles loaded.
-3. Players see **External Quests** on the home screen and **first** when choosing a theme/Quest (including friends multiplayer). Cards use a gold “External” badge.
+3. Learners see **External Quests** on the home screen and **first** when choosing a theme/Quest (including Friends). Cards use a gold “External” badge.
 4. Override path: `FF_QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
 
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Replaces Daily on that device by default. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
@@ -176,7 +176,7 @@ curl -s http://127.0.0.1:8765/api/usage | jq .
 | `FF_USAGE_PRICE_IMAGE` | Optional $ per live image generate/edit |
 | `FF_USAGE_PRICE_TTS_PER_MCHAR` | Optional $ per 1M live TTS characters |
 
-**Notes:** Cached vision frames, multiplayer follow-only peeks, and TTS cache hits are counted but **not** billed as live usage. Local co-inventor fallback records calls with **zero** tokens. Prompts and player text are never stored. Assumes a single Node process (set distinct `FF_USAGE_DIR` per instance if you scale out).
+**Notes:** Cached vision frames, Friends follow-only peeks, and TTS cache hits are counted but **not** billed as live usage. Local co-inventor fallback records calls with **zero** tokens. Prompts and learner text are never stored. Assumes a single Node process (set distinct `FF_USAGE_DIR` per instance if you scale out).
 
 ### Option A — SuperGrok OAuth (default for local dev)
 
@@ -220,9 +220,9 @@ GET http://127.0.0.1:8765/api/health
 ```text
 future-forge/
   server.mjs          # static file server + /api/*
-  index.html          # game shell
+  index.html          # app shell
   css/ styles.css
-  js/                 # game, data, co-inventor client, vision, problem briefs
+  js/                 # workshop loop, data, co-inventor client, vision, problem briefs
   assets/
     problems/         # theme card art
     challengers/      # Moloch, Ethicist, Stakeholder, Mother Nature
@@ -230,7 +230,7 @@ future-forge/
   scripts/            # e.g. check-problem-briefs.mjs
 ```
 
-Browser state lives in **localStorage** on the player’s device: scenario cache, **solved mission ids** (including learning-module completion for the segment progress bar), quest library imports, and related UI prefs. Nothing is synced to warmersun.com by default — see [Privacy](https://warmersun.com/privacy/).
+Browser state lives in **localStorage** on the learner’s device: scenario cache, **solved mission ids** (including learning-module completion for the segment progress bar), quest library imports, and related UI prefs. Nothing is synced to warmersun.com by default — see [Privacy](https://warmersun.com/privacy/).
 
 ---
 

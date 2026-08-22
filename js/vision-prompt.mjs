@@ -347,7 +347,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
     {
       role: "system",
       content:
-        `You write shot briefs for a single documentary image in a learning game.\n` +
+        `You write shot briefs for a single documentary image in an inventing practice.\n` +
         `You receive a FIXED setting (place + visual description). The setting never changes.\n` +
         `Write what is VISIBLY happening in the frame, grounded in that setting.\n` +
         `If the invention involves rockets, networks, clinics, etc., describe them as they would appear ` +

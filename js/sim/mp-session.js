@@ -1508,7 +1508,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       s.place.status = "collapsed";
       s.place.lastNews =
         earliest != null && earliest >= failY
-          ? `Every invent calendar reached fail year ${failY}. The place collapsed — nobody wins.`
+          ? `Every invent calendar reached fail year ${failY}. The place collapsed — no ranking.`
           : "Shared crisis meters broke the place. Nobody wins.";
       s.ranking = null;
       events.push({

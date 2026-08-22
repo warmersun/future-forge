@@ -498,7 +498,7 @@ export class RoomManager {
         playerId: sole.id,
         displayName: sole.displayName,
         leftDisplayName: leftPlayer.displayName,
-        message: `${leftPlayer.displayName || "A player"} left. You're the only one still connected — you can keep playing alone or leave the room.`,
+        message: `${leftPlayer.displayName || "A player"} left. You're the only one still connected — you can keep going alone or leave the room.`,
       });
     } else if (connected.length === 0) {
       this.destroyRoom(room, "empty");

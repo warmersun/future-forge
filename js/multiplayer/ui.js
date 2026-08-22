@@ -231,7 +231,7 @@ export function initFriendsUi(api) {
       .join("");
     if (hint) {
       hint.textContent =
-        "Same local network only (not the public Internet). They open the link → Play with friends → Join → room code + name.";
+        "Same local network only (not the public Internet). They open the link → Invent with friends → Join → room code + name.";
     }
   }
 
@@ -245,7 +245,7 @@ export function initFriendsUi(api) {
       "On the same Wi‑Fi, open:",
       ...(urls.length ? urls : ["(ask host for their LAN IP and port)"]),
       "",
-      "Then: Play with friends → Join → enter code and your name.",
+      "Then: Invent with friends → Join → enter code and your name.",
     ];
     return lines.join("\n");
   }
@@ -546,7 +546,7 @@ export function initFriendsUi(api) {
       activePill.title = `${activeName}'s turn`;
     }
 
-    $("#mp-mission-title").textContent = mission?.title || "Friends race";
+    $("#mp-mission-title").textContent = mission?.title || "Friends";
     $("#mp-mission-place").textContent = mission
       ? `${mission.place} · collapse ${mission.collapseYear}`
       : "";
@@ -556,7 +556,7 @@ export function initFriendsUi(api) {
     if (gLabel) {
       gLabel.textContent = place?.globalId
         ? `Friends · ${place.globalId}`
-        : "Friends race";
+        : "Friends";
     }
     $("#mp-news").textContent = place?.lastNews || snap?.sim?.lastNews || "";
     paintMarketBanner(
@@ -798,11 +798,11 @@ export function initFriendsUi(api) {
       return;
     }
     if (place?.status === "collapsed") {
-      phase.textContent = "Collapsed — nobody wins.";
+      phase.textContent = "Collapsed — the place fell — no ranking.";
       return;
     }
     if (myId && activeId !== myId) {
-      phase.textContent = "Waiting for the active player…";
+      phase.textContent = "Waiting for the active seat…";
       return;
     }
     if (!invent) {
@@ -1143,8 +1143,8 @@ export function initFriendsUi(api) {
       }
       if (last?.type === "tech_added" || last?.type === "tech_layered") setPlayStatus("Stack updated.");
       if (last?.type === "scale_ok") setPlayStatus(last.solved ? "Place solved!" : "Scale landed (partial).");
-      if (last?.type === "quest_won") setPlayStatus("Race over — ranking ready.");
-      if (last?.type === "collapsed") setPlayStatus("Place collapsed — nobody wins.");
+      if (last?.type === "quest_won") setPlayStatus("Quest held — ranking ready.");
+      if (last?.type === "collapsed") setPlayStatus("Place collapsed — the place fell — no ranking.");
     }
     if (evt.type === "ai_pending") {
       setAiPending(true, `${evt.displayName || "Someone"} asked the co-inventor…`);
@@ -1193,7 +1193,7 @@ export function initFriendsUi(api) {
                         : err === "challenge_required"
                           ? "This invent must pass Challenge before Pilot."
                           : err === "not_active_seat"
-                            ? "Not your turn — wait for the active player."
+                            ? "Not your turn — wait for the active seat."
                             : err;
       flashToast(friendly);
       setPlayStatus(friendly);
@@ -1202,7 +1202,7 @@ export function initFriendsUi(api) {
     if (evt.type === "alone") {
       flashToast(
         evt.message ||
-          "You're the only one still connected — you can keep playing alone or leave the room."
+          "You're the only one still connected — you can keep going alone or leave the room."
       );
     }
     if (evt.type === "player_left" && evt.message) {
@@ -1295,7 +1295,7 @@ export function initFriendsUi(api) {
     showScreen("friends");
   });
   $("#btn-mp-leave")?.addEventListener("click", () => {
-    if (!confirm("Leave the room? Others can keep playing this game without you.")) return;
+    if (!confirm("Leave the room? Others can keep going without you.")) return;
     client.leaveLocal();
     roomSide?.destroy();
     roomSide = null;
@@ -1324,7 +1324,7 @@ export function initFriendsUi(api) {
   $("#btn-room-start")?.addEventListener("click", async () => {
     const n = client.snapshot?.players?.length || 0;
     if (n < 2) {
-      flashToast("Need at least 2 players to start");
+      flashToast("Need at least 2 people to start");
       return;
     }
     let meta = client.snapshot?.questMeta;
@@ -1655,9 +1655,9 @@ export function initFriendsUi(api) {
     };
     setText(
       "hs-play-global-label",
-      global ? `Global · ${global.title}` : "Hotseat race"
+      global ? `Global · ${global.title}` : "Hotseat"
     );
-    setText("hs-play-mission-title", m?.title || "Hotseat race");
+    setText("hs-play-mission-title", m?.title || "Hotseat");
     setText("hs-play-mission-place", m?.place || "");
     // Quest description (solo workshop: briefMd scrollable, else full scene)
     const sceneEl = $("#hs-play-mission-scene");
@@ -1894,7 +1894,7 @@ export function initFriendsUi(api) {
     const phase = $("#hs-phase-hint");
     if (phase && invent) {
       if (place.status === "won") phase.textContent = "Place held — see ranking.";
-      else if (place.status === "collapsed") phase.textContent = "Collapsed — nobody wins.";
+      else if (place.status === "collapsed") phase.textContent = "Collapsed — the place fell — no ranking.";
       else if (invent.abandoned) phase.textContent = "You abandoned — layer on others or Wait.";
       else if (!invent.challengePassed)
         phase.textContent = "Add emTech on the left → write story → Face challenge → Pilot → Scale.";

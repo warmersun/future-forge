@@ -1,5 +1,5 @@
 /**
- * Future Forge — polymath timing game
+ * Future Forge — polymath timing practice
  * Learn emTechs + cross-domain inventing + exponential readiness under a rising local crisis.
  */
 
@@ -7,7 +7,7 @@ import { SCENARIO_ANGLE_PACKS as SEED_ANGLE_PACKS } from "./scenario-seeds.js";
 
 export const GAME = {
   title: "Future Forge",
-  tagline: "Invent local solutions with emerging tech — beat the clock as the future arrives.",
+  tagline: "Invent local solutions with emerging tech — field it as the future arrives.",
   startYear: 2026,
   yearsPerTurn: 2,
   /** Solo / friends default action points per invent turn */
@@ -1452,7 +1452,7 @@ export const CHALLENGE_ANGLES = [
   {
     id: "moloch",
     label: "Moloch",
-    subtitle: "System game mechanics",
+    subtitle: "System incentives",
     blurb:
       "The multipolar trap: races, freeriding, Goodhart’s law, and race-to-the-bottom dynamics that punish good design.",
     visual: "assets/challengers/moloch.jpg",

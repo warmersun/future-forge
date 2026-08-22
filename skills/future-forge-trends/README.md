@@ -4,7 +4,7 @@
 
 This package teaches **any** AI agent harness how to research an exponential emerging-technology capability trend and write a portable **capability-trend** JSON file for [Future Forge](https://github.com/warmersun/future-forge) Wait charts.
 
-It does **not** relicense the Future Forge game engine. Only this skill tree (and example tiles) are MIT.
+It does **not** relicense the Future Forge app. Only this skill tree (and example tiles) are MIT.
 
 ## What the skill supports
 

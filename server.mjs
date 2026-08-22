@@ -390,7 +390,7 @@ async function getClient(opts) {
 
 // MIME lives in js/server/static.mjs (imported above).
 
-const SYSTEM_PROMPT = `You are the AI Co-Inventor in Future Forge: a solo learning game about emerging technologies, local invention, and timing.
+const SYSTEM_PROMPT = `You are the AI Co-Inventor in Future Forge: an inventing practice about emerging technologies, local invention, and timing.
 
 Role:
 - Creative partner for a LOCAL mission. Not sole inventor.
@@ -504,7 +504,7 @@ Respond with a single JSON object (no markdown fences) like the co-inventor, plu
 For assess-feasibility set timing; otherwise timing may be null.`;
 
 /** Compact system prompt for challenge pose — keeps TTFT low vs full co-inventor prompt. */
-const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local invention game).
+const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local inventing practice).
 Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
 Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sharp question.
 Return JSON only (no markdown):
@@ -1242,7 +1242,7 @@ function localCoInvent({ mode, messages, context }) {
       speech = `The Stakeholder, ${place}: “I am the mayor, the clinic board, and the neighborhood meeting. Someone must sign, fund, and defend ${name} in public.”`;
       question = "Who must say yes, who pays year 1 and year 5, and how do you win public support without pricing people out?";
     } else {
-      speech = `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system plays.”`;
+      speech = `Moloch, ${place}: “There’s no way ${name} holds. Free-riders keep old habits while careful people pay. The race to the bottom eats good design — that is how the system works.”`;
       question = "What stops defection when neighbors can freeride — name the game mechanic you change?";
     }
     return {

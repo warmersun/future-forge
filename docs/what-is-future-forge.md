@@ -57,7 +57,7 @@ Not every technology is “emerging.” Not every technology advances **exponent
 
 Hard problems almost never sit inside one department. Pathways usually **cross** families: sensing + networks + energy + something with a body in the world, or a life-science step, or a coordination layer.
 
-**Polymathy** here is not collecting trivia. It is **permission and skill to combine** domains when the place needs it — the Convergence Canvas made visual and playable.
+**Polymathy** here is not collecting trivia. It is **permission and skill to combine** domains when the place needs it — the Convergence Canvas made visual and workable.
 
 **Goal:** Learners invent *across* the canvas, not only deeper into one silo.
 
@@ -85,7 +85,7 @@ Ray Kurzweil, in the preface to *Danielle: Chronicles of a Superheroine*, names 
 > No matter what quandaries we face—business problems, health issues, relationship difficulties, the great social and cultural challenges of our time—there exists an idea that will enable us to prevail. We can and must find that idea. And when we find it, we need to implement it.
 
 - **Ideas have value.** Naming a mechanism, a beneficiary, a timing claim, and a tradeoff *is* work.
-- It is okay to **play pretend** — fantasize, imagine, brainstorm — when you are learning. Building a prototype is great. Implementation is hard and important when things are real. It is **perfectly okay to start with play and learning where it does not have to be real yet.**
+- It is okay to **imagine and brainstorm** — fantasize, invent on paper — when you are learning. Building a prototype is great. Implementation is hard and important when things are real. It is **perfectly okay to start with practice and learning where it does not have to be real yet.**
 - Values and ethics are in the room (challengers: systems, ethics, stakeholders, nature) — not bolted on after the “tech part.”
 
 **Goal:** Learners take imagination seriously without confusing a brainstorm with a shipped system — and without needing a lab to begin.
@@ -136,7 +136,7 @@ Local relief without a deeper lever is incomplete. A clever root-cause story wit
 
 ### With others: compete, but learn cooperation
 
-In multiplayer, learners can race personal invents — and still share **one** place and **one** crisis. If the challenge is not solved in time, **everybody loses**. So the practice is not only competition: it is learning that some stakes are shared, and **cooperation** is part of inventing well under pressure.
+In Friends, learners can race personal invents — and still share **one** place and **one** crisis. If the challenge is not solved in time, **everybody loses**. So the practice is not only competition: it is learning that some stakes are shared, and **cooperation** is part of inventing well under pressure.
 
 Optional paths: learning modules (tutor, one idea at a time), spotlight Quests on recent advances.
 
@@ -166,7 +166,7 @@ The **6Ps** were the structure of the invent:
 | **Prediction** | Major milestones we estimate on future timelines |
 | **Problem** | Something present to address now |
 | **Prevention** | A future harm we still have time to prepare for |
-| **Pathway** | What players invent — a build with emTechs that can ride exponential improvement |
+| **Pathway** | What people invent — a build with emTechs that can ride exponential improvement |
 | **Pun** | A nod to Diamandis’s **6Ds of exponentials** (digitized, deceptive, disruptive, demonetized, dematerialized, democratized) |
 
 The table’s job was the same as today’s practice: connect emerging tech to global problems, invent pathways, semi-cooperative stakes (if existential threats go unhandled, everyone loses). Impact was counted in **I$** — Impact Dollars — after the idea that the best way to make a million dollars is to impact a million people.
@@ -185,7 +185,7 @@ And most people simply **lacked knowledge of emTechs**. Without a map of categor
 
 ### Progress and Predictions — the literacy bridge that asked too much
 
-That gap produced the introductory course **Progress and Predictions**, written and put online at **[101.warmersun.com](https://101.warmersun.com)**. The hope was straightforward: learn the missing subject first, then as a **reward** play the tabletop inventing practice.
+That gap produced the introductory course **Progress and Predictions**, written and put online at **[101.warmersun.com](https://101.warmersun.com)**. The hope was straightforward: learn the missing subject first, then as a **reward** sit down at the tabletop inventing practice.
 
 In practice that funnel was **too much to ask**. A solid course is valuable. Making inventing contingent on finishing homework first is a wall, not a door — especially for a subject that is **not mandatory**. People will not climb a pre-calculus of exponentials for fun before they are allowed to invent.
 
@@ -198,7 +198,7 @@ In practice that funnel was **too much to ask**. A solid course is valuable. Mak
 | People don’t know enough emTech | Learn **on the fly** — primers, co-inventor, tutor modules |
 | Hard to get help mid-invent | A partner that proposes; **you still lead** |
 | Who judges “good” or feasible? | **Feasibility** and whether the invent **intercepts the curve** can be checked against capability and place — not only peer votes |
-| Course-then-play funnel | Invent and learn in the **same session** |
+| Course-then-practice funnel | Invent and learn in the **same session** |
 
 No system — human or AI — gets to claim it knows the future. What *can* be asked is whether a claim is honest for **today’s capability** and whether the pathway is built so that as emTechs improve, the whole thing can get better. That is enough to protect **invention** without killing it with ready-made moves.
 

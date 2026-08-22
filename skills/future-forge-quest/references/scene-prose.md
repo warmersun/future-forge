@@ -1,7 +1,7 @@
 # Quest prose style (design-challenge stories)
 
 **Source of truth for Future Forge player-facing quest writing.**  
-Same craft as in-game scenario seeds (`js/scene-prose.js`): nonfiction short stories that pose a **design challenge**. Easy first read — **not** shorter text for its own sake.
+Same craft as in-app scenario seeds (`js/scene-prose.js`): nonfiction short stories that pose a **design challenge**. Easy first read — **not** shorter text for its own sake.
 
 Use this for:
 

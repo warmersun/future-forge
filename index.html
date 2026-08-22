@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Future Forge — invent local solutions with emerging technologies, combine disciplines, and race the exponential clock with an AI co-inventor."
+      content="Future Forge — invent local solutions with emerging technologies, combine disciplines, and field them as the future arrives with an AI co-inventor."
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
@@ -46,10 +46,10 @@
           </div>
         </div>
         <p class="tagline" id="game-tagline">
-          Invent local solutions with emerging tech — beat the clock as the future arrives.
+          Invent local solutions with emerging tech — field it as the future arrives.
         </p>
         <div class="pitch">
-          <h2>How you play</h2>
+          <h2>How it works</h2>
           <ol>
             <li>
               <strong>Pick a Quest</strong> — several concrete places living a piece of a global problem.
@@ -68,9 +68,9 @@
         </div>
         <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
-          <button type="button" class="btn btn-secondary" id="btn-friends">Play with friends</button>
+          <button type="button" class="btn btn-secondary" id="btn-friends">Invent with friends</button>
           <button type="button" class="btn btn-secondary" id="btn-choose-theme">
-            Play a Quest
+            Start a Quest
           </button>
           <button
             type="button"
@@ -78,7 +78,7 @@
             id="btn-start"
             title="Quiet guided run: Portside Ward floods"
           >
-            Play tutorial →
+            Start tutorial →
           </button>
         </div>
         <p class="title-spark-reset-wrap">
@@ -87,7 +87,7 @@
             class="btn btn-ghost btn-sm"
             id="btn-reset-spark"
             hidden
-            title="Show Play tutorial again"
+            title="Show Start tutorial again"
           >
             Reset tutorial
           </button>
@@ -117,7 +117,7 @@
       </header>
       <div class="content">
         <div class="section-intro">
-          <h1>Play a Quest</h1>
+          <h1>Start a Quest</h1>
           <p>
             Pick how you want to enter: generate local challenges from a <strong>theme</strong>,
             open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other
@@ -202,12 +202,12 @@
       </header>
       <div class="content friends-content">
         <div class="section-intro">
-          <h1>Play with friends</h1>
+          <h1>Invent with friends</h1>
           <p class="friends-vs-solo muted">
-            Solo teaches the invent loop. Friends is a race: personal inventions, one shared place.
+            Solo teaches the invent loop. Friends: personal inventions, one shared place — field before the crisis wins.
           </p>
           <ul class="friends-rules">
-            <li>Each player builds their own invention.</li>
+            <li>Each person builds their own invention.</li>
             <li>You share one crisis — if the place falls, everyone loses.</li>
             <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
           </ul>
@@ -243,7 +243,7 @@
           </article>
           <article class="panel friends-panel friends-panel-wide">
             <h2>Hotseat (one device)</h2>
-            <p class="muted">Pass-and-play race: personal inventions, shared crisis. Scale updates the place. No server required.</p>
+            <p class="muted">One device, take turns: personal inventions, shared crisis. Scale updates the place. No server required.</p>
             <form id="friends-hotseat-form" class="friends-panel-form">
               <div class="field">
                 <label for="hotseat-names">Seat names (comma-separated)</label>
@@ -343,7 +343,7 @@
               <ul id="hs-seat-list-play" class="room-player-list mp-seat-inline"></ul>
               <div id="hs-pressure" class="hud-pressure"></div>
             </div>
-            <div class="label" id="hs-play-global-label">Hotseat race</div>
+            <div class="label" id="hs-play-global-label">Hotseat</div>
             <h2 id="hs-play-mission-title">—</h2>
             <p id="hs-play-mission-place" class="mission-place"></p>
             <div id="hs-play-mission-scene" class="mp-mission-scene"></div>
@@ -502,7 +502,7 @@
             </div>
           </div>
           <p class="muted sm room-connect-hint" id="room-connect-hint">
-            Then: Play with friends → Join → enter the room code and their name.
+            Then: Invent with friends → Join → enter the room code and their name.
           </p>
           <div class="form-actions room-connect-actions">
             <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-join-info">
@@ -530,7 +530,7 @@
               <button type="button" class="btn btn-secondary" id="btn-room-pick-mission">
                 Pick crisis &amp; Quest →
               </button>
-              <button type="button" class="btn btn-primary" id="btn-room-start" disabled>Start race →</button>
+              <button type="button" class="btn btn-primary" id="btn-room-start" disabled>Start Quest →</button>
             </div>
           </div>
           <div id="room-guest-mission" class="room-guest-mission" hidden>
@@ -640,7 +640,7 @@
               <ul id="mp-player-list" class="room-player-list mp-seat-inline"></ul>
               <div id="mp-pressure" class="hud-pressure"></div>
             </div>
-            <div class="label" id="mp-play-global-label">Friends race</div>
+            <div class="label" id="mp-play-global-label">Friends</div>
             <h2 id="mp-mission-title">—</h2>
             <p id="mp-mission-place" class="mission-place"></p>
             <div id="mp-mission-scene" class="mp-mission-scene"></div>
@@ -1783,7 +1783,7 @@
             Workshop is unlocked
           </h2>
           <p class="outcome-workshop-unlock-lead">
-            You finished the quiet run. <strong>Play a Quest</strong> opens the full game — same loop,
+            You finished the quiet run. <strong>Start a Quest</strong> opens the full Workshop — same loop,
             more systems on the board.
           </p>
           <ul class="outcome-workshop-unlock-list">
@@ -1817,7 +1817,7 @@
           </ul>
           <div class="form-actions outcome-workshop-unlock-actions">
             <button type="button" class="btn btn-primary" id="btn-outcome-workshop-themes">
-              Play a Quest →
+              Start a Quest →
             </button>
           </div>
         </section>
@@ -1864,7 +1864,7 @@
       aria-labelledby="mp-turn-title"
     >
       <div class="mp-turn-dialog">
-        <p class="mp-turn-kicker" id="mp-turn-kicker">Friends multiplayer</p>
+        <p class="mp-turn-kicker" id="mp-turn-kicker">Friends</p>
         <h3 id="mp-turn-title">Your turn</h3>
         <p id="mp-turn-body" class="mp-turn-body"></p>
         <button type="button" class="btn btn-primary" id="mp-turn-ok">
@@ -1907,7 +1907,7 @@
       </div>
     </div>
 
-    <!-- How to play help — three stepping-stones first; Workshop systems under More detail -->
+    <!-- How it works help — three stepping-stones first; Workshop systems under More detail -->
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
         <header class="help-header">
@@ -1981,7 +1981,7 @@
                     <h5>Budget <span class="help-tile-meta">start 5</span></h5>
                     <p>
                       Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
-                      Not refilled by End turn. Solo: <strong>Budget 0$ is game over</strong> — keep cash to field.
+                      Not refilled by End turn. Solo: <strong>Budget 0$ ends the Quest</strong> — keep cash to field.
                     </p>
                   </article>
                   <article class="help-tile">
@@ -2124,7 +2124,7 @@
               <section class="help-block">
                 <h4 class="help-block-title">Friends · hotseat</h4>
                 <ul class="help-list">
-                  <li>Each player builds their own invention.</li>
+                  <li>Each person builds their own invention.</li>
                   <li>You share one crisis — if the place falls, everyone loses.</li>
                   <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
                   <li>
@@ -2135,10 +2135,10 @@
               </section>
 
               <section class="help-block">
-                <h4 class="help-block-title">Play a Quest · Share</h4>
+                <h4 class="help-block-title">Start a Quest · Share</h4>
                 <ul class="help-list">
                   <li><strong>Themes</strong> — pick a global problem, get up to 4 local Quests, or generate a new set.</li>
-                  <li><strong>Sponsored / Library</strong> — remote and side-loaded tiles. <strong>Learning</strong> modules are solo only (not for multiplayer).</li>
+                  <li><strong>Sponsored / Library</strong> — remote and side-loaded tiles. <strong>Learning</strong> modules are solo only (Friends is not available).</li>
                   <li><strong>Share card</strong> on outcome downloads a PNG of your run.</li>
                 </ul>
               </section>
@@ -2150,7 +2150,7 @@
                   <li>Stay local. End turn to refill AP (+1 year); Wait when later years are worth the crisis cost.</li>
                   <li>Lobby toward Support 4 before Pilot when economy is on.</li>
                   <li>Feasibility judges <em>claims</em>, not card unlocks.</li>
-                  <li>Solo: <strong>Budget 0$ is game over</strong> when Budget is active.</li>
+                  <li>Solo: <strong>Budget 0$ ends the Quest</strong> when Budget is active.</li>
                 </ul>
               </section>
             </div>

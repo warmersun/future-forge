@@ -159,7 +159,7 @@ try {
     fail.push("missing title/hub controls in DOM");
   }
   if (value?.afterPlayQuest !== "screen-quest-hub") {
-    fail.push(`Play a Quest did not open hub (got ${value?.afterPlayQuest})`);
+    fail.push(`Start a Quest did not open hub (got ${value?.afterPlayQuest})`);
   }
   if ((value?.hubCards || 0) < 4) {
     fail.push(`Quest hub missing cards (got ${value?.hubCards})`);
@@ -168,7 +168,7 @@ try {
     fail.push(`Hub back did not return home (got ${value?.afterHubBack})`);
   }
   if (value?.afterFriends !== "screen-friends") {
-    fail.push(`Play with friends did not open friends (got ${value?.afterFriends})`);
+    fail.push(`Invent with friends did not open friends (got ${value?.afterFriends})`);
   }
   if (exceptions.length) {
     fail.push("JS exceptions: " + exceptions.join(" | "));

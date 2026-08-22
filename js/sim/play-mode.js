@@ -1,12 +1,12 @@
 /**
  * Spark / Workshop feature profiles + tutorial-completion storage.
  *
- * Spark = quiet tutorial (only "Play tutorial" runs).
- * Workshop = full solo game (theme / surprise / daily / everything else).
+ * Spark = quiet tutorial (only "Start tutorial" runs).
+ * Workshop = full Workshop solo loop (theme / surprise / daily / everything else).
  *
  * Storage (tutorial CTA only — not mode toggle):
  * - future-forge:hasCompletedSpark = "1" after finishing the tutorial once
- *   → hides "Play tutorial" until reset
+ *   → hides "Start tutorial" until reset
  */
 
 export const HAS_COMPLETED_SPARK_KEY = "future-forge:hasCompletedSpark";
@@ -68,7 +68,7 @@ export function readHasCompletedSpark(storage) {
 }
 
 /**
- * Tutorial finished once — hide "Play tutorial" until reset.
+ * Tutorial finished once — hide "Start tutorial" until reset.
  * @param {Storage} [storage]
  */
 export function markSparkCompleted(storage) {
@@ -78,7 +78,7 @@ export function markSparkCompleted(storage) {
 }
 
 /**
- * Show "Play tutorial" again (demo / replay).
+ * Show "Start tutorial" again (demo / replay).
  * @param {Storage} [storage]
  */
 export function resetSparkProgress(storage) {

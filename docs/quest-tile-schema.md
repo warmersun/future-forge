@@ -4,8 +4,8 @@ Portable **Spotlight Quest** files for Future Forge.
 
 | Channel | How tiles get in |
 |---------|------------------|
-| **Sponsored / Learning** | Official catalog on **warmersun.com** (`/future-forge/quests/catalog.json`); game server downloads them |
-| **Library** | Local game `quests/` folder or browser **Import Quest…** |
+| **Sponsored / Learning** | Official catalog on **warmersun.com** (`/future-forge/quests/catalog.json`); the server downloads them |
+| **Library** | Local `quests/` folder or browser **Import Quest…** |
 
 ## Pedagogy
 
@@ -217,7 +217,7 @@ Internal scenario seeds still store ordered `pressureKeys` labels (`[local, glob
 
 ### Optional `resources` (starting player resources)
 
-Override solo (and multiplayer invent) starting resources for this Quest only. Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
+Override solo (and Friends invent) starting resources for this Quest only. Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
 
 | Field | Notes |
 |-------|--------|
@@ -244,12 +244,12 @@ Partial example (easier budget/will, default AP):
 }
 ```
 
-When any value differs from the global default, selection UI (theme pick, daily/focus, External list, import library, multiplayer mission pick) shows a **Start · …** chip so learners see the adjusted start before they play.
+When any value differs from the global default, selection UI (theme pick, daily/focus, External list, import library, Friends mission pick) shows a **Start · …** chip so learners see the adjusted start before they start.
 
-## Markdown subset (rendered in-game)
+## Markdown subset (rendered in the Library / Quest UI)
 
 Headings `#`–`###`, paragraphs, `**bold**`, `*italic*`, lists, `https?` links. No raw HTML, images, or scripts.
 
 ## License note
 
-Example tiles and the portable authoring skill under `skills/future-forge-quest/` are **MIT**. The Future Forge game itself may use a different license.
+Example tiles and the portable authoring skill under `skills/future-forge-quest/` are **MIT**. The Future Forge app itself may use a different license.

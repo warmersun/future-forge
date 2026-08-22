@@ -1,6 +1,6 @@
 # Local Quest folder (Library)
 
-Drop Future Forge **Quest tile** JSON files here for the in-game **Library** (side-loaded Quests).
+Drop Future Forge **Quest tile** JSON files here for the in-app **Library** (side-loaded Quests).
 
 Official **Sponsored** and **Learning** tiles are **not** served from this folder. They download from Warmer Sun:
 
@@ -21,7 +21,7 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 2. Add `{ "id", "file" }` to `catalog.json`.
 3. Publish warmersun.com.
 4. Future Forge server fetches the catalog (override with `FF_QUESTS_REMOTE_URL`).
-5. In-game, open a Sponsored / Learning / Library catalog and tap **↻ Refresh** beside Import Quest… to revalidate (skips the process cache and cache-busts CDN URLs). Without Refresh, the server keeps a ~10-minute in-memory snapshot.
+5. In the app, open a Sponsored / Learning / Library catalog and tap **↻ Refresh** beside Import Quest… to revalidate (skips the process cache and cache-busts CDN URLs). Without Refresh, the server keeps a ~10-minute in-memory snapshot.
 
 | Env | Effect |
 |-----|--------|

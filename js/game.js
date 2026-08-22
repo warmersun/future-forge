@@ -1,5 +1,5 @@
 /**
- * Future Forge — solo polymath timing game with AI co-inventor
+ * Future Forge — solo polymath timing practice with AI co-inventor
  */
 
 import {
@@ -235,7 +235,7 @@ function mpFriendlyError(err) {
     pilot_already_done: "Pilot is already done — try Scale.",
     already_scaled: "This invent is already Scaled.",
     retry_next_turn: "Already tried this turn — End turn, then retry.",
-    not_active_seat: "Not your turn — wait for the active player.",
+    not_active_seat: "Not your turn — wait for the active seat.",
     invent_locked: "This invent is locked (Challenge started or finished).",
     owner_only: "Only the invent owner can reopen it for rework.",
     already_past_challenge: "This invent already cleared Challenge — open Deploy or reopen invent.",
@@ -286,7 +286,7 @@ const state = {
   mission: null,
   /** @type {null | object} multiplayer chrome flags (set by hotseatBridge.hydrateSoloState) */
   mp: null,
-  /** Solo mode for current run: "spark" (Play tutorial only) | "workshop" | null */
+  /** Solo mode for current run: "spark" (Start tutorial only) | "workshop" | null */
   playMode: null,
   /** True only while a Play-tutorial mission is active */
   tutorialRun: false,
@@ -420,7 +420,7 @@ const STORAGE_RUNS = "future-forge:runReports";
 
 /**
  * Friends room / hotseat keep today's full GAME.features (not Spark).
- * Solo: Workshop by default; Spark only while a "Play tutorial" run is active.
+ * Solo: Workshop by default; Spark only while a "Start tutorial" run is active.
  */
 function isRoomOrHotseatSession() {
   try {
@@ -436,7 +436,7 @@ function isRoomOrHotseatSession() {
 function features() {
   const base = GAME.features || {};
   if (isRoomOrHotseatSession()) return base;
-  // Only the home "Play tutorial" path sets tutorialRun / playMode spark
+  // Only the home "Start tutorial" path sets tutorialRun / playMode spark
   if (state.tutorialRun || state.playMode === "spark") {
     return featuresForPlayMode("spark", base);
   }
@@ -1179,7 +1179,7 @@ function syncInventActionButtons() {
   const challengeBusy = isChallengeCombatBlocking();
   const busy = inventBusy || challengeBusy;
   const spectatorReason =
-    "Not your turn — you can browse and use Learn, but only the active player acts.";
+    "Not your turn — you can browse and use Learn, but only the active seat acts.";
   const busyReason = busy ? inventActionBusyReason() : "";
 
   // —— Lobby (Workshop economy only; Spark keeps it hidden) ——
@@ -2359,7 +2359,7 @@ function enterRoomPlay(client, opts = {}) {
       if (evt.type === "alone") {
         flashToast(
           evt.message ||
-            "You're the only one still connected — you can keep playing alone or leave the room."
+            "You're the only one still connected — you can keep going alone or leave the room."
         );
         renderMpChrome();
         applyEndTurnChrome();
@@ -2563,7 +2563,7 @@ function maybeBudgetGameOver(meta = {}) {
   if (state.screen === "outcome") return false;
   if (!state.mission) return false;
   if ((state.budget ?? 0) > 0) return false;
-  flashToast("Budget hit 0$ — game over. Capital ran out before the idea could field.");
+  flashToast("Budget hit 0$ — the Quest ends. Capital ran out before the idea could field.");
   finishOutcome("collapse", {
     bankrupt: true,
     reason: "budget",
@@ -2845,8 +2845,8 @@ function shuffleCopy(arr) {
 
 /**
  * Home CTAs.
- * - Tutorial not done: primary Play tutorial → (Spark); Play a Quest secondary.
- * - Tutorial done: Play tutorial hidden; primary Play a Quest →; Reset tutorial in small text.
+ * - Tutorial not done: primary Start tutorial → (Spark); Start a Quest secondary.
+ * - Tutorial done: Start tutorial hidden; primary Start a Quest →; Reset tutorial in small text.
  */
 function renderTitleCtas() {
   const done = readHasCompletedSpark();
@@ -2857,13 +2857,13 @@ function renderTitleCtas() {
   if (choose) {
     choose.hidden = false;
     choose.removeAttribute("hidden");
-    choose.textContent = done ? "Play a Quest →" : "Play a Quest";
+    choose.textContent = done ? "Start a Quest →" : "Start a Quest";
     choose.title = "Themes, sponsored, learning modules, or side-loaded Quests";
     choose.classList.toggle("btn-primary", done);
     choose.classList.toggle("btn-secondary", !done);
   }
   if (start) {
-    start.textContent = "Play tutorial →";
+    start.textContent = "Start tutorial →";
     start.setAttribute("title", "Quiet guided run: Portside Ward floods");
     start.hidden = done;
     if (done) start.setAttribute("hidden", "");
@@ -3181,11 +3181,11 @@ function playCatalogEntry(entry, opts = {}) {
   startMission(m);
 }
 
-/** Show Play tutorial again (clears local completion flag). */
+/** Show Start tutorial again (clears local completion flag). */
 function requestResetTutorialProgress() {
   const ok = confirm(
     "Reset tutorial progress?\n\n" +
-      "Play tutorial will show again on the home screen.\n" +
+      "Start tutorial will show again on the home screen.\n" +
       "This does not delete theme caches or imported Quests."
   );
   if (!ok) return;
@@ -3193,11 +3193,11 @@ function requestResetTutorialProgress() {
   state.tutorialRun = false;
   state.playMode = null;
   renderTitleMeta();
-  flashToast("Tutorial reset — Play tutorial when ready.");
+  flashToast("Tutorial reset — Start tutorial when ready.");
 }
 
 /**
- * Play tutorial → Portside Ward with Spark profile for this run only.
+ * Start tutorial → Portside Ward with Spark profile for this run only.
  */
 function startSparkPortsideMission() {
   clearMissionPickSession();
@@ -3284,7 +3284,7 @@ function renderQuestHub() {
   }
   const h1 = document.querySelector("#screen-quest-hub .section-intro h1");
   if (h1) {
-    h1.textContent = mpPick ? "Pick a Quest for the party" : "Play a Quest";
+    h1.textContent = mpPick ? "Pick a Quest for the party" : "Start a Quest";
   }
 
   /** @type {object[]} */
@@ -4632,7 +4632,7 @@ function startMission(mission) {
       session.onSelect(mission, global);
     } catch (e) {
       console.error("[mission pick]", e);
-      flashToast(e.message || "Could not start multiplayer mission");
+      flashToast(e.message || "Could not start Friends mission");
     }
     return;
   }
@@ -4722,7 +4722,7 @@ function startMission(mission) {
   state.elegancePivotPenalty = false;
   state.challengeClearMode = null;
   state.scrutinyMoveMode = null;
-  // Solo mode for this run: spark only if Play tutorial set tutorialRun; else Workshop
+  // Solo mode for this run: spark only if Start tutorial set tutorialRun; else Workshop
   if (state.tutorialRun) {
     state.playMode = "spark";
   } else {
@@ -5682,7 +5682,7 @@ function renderHud() {
   const budgetEl = $("#hud-budget");
   if (budgetEl && budgetWillEnabled()) {
     budgetEl.title =
-      "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ is game over. Not refilled by End turn.";
+      "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ ends the Quest. Not refilled by End turn.";
   }
   const willEl = $("#hud-will");
   if (willEl && budgetWillEnabled()) {
@@ -6618,7 +6618,7 @@ function updateChallengeButton() {
   const b = mpBridge();
   const spectator = isMpInventSpectator();
   const spectatorReason =
-    "Not your turn — you can browse and use Learn, but only the active player acts.";
+    "Not your turn — you can browse and use Learn, but only the active seat acts.";
 
   // Multiplayer spectator (not your turn): never start the hard question
   if (spectator) {
@@ -6670,7 +6670,7 @@ function updateChallengeButton() {
         hint.textContent = "Challenge cleared — continue to Field (Pilot → Scale).";
         hint.className = "challenge-ready-hint ready";
       } else {
-        hint.textContent = "Only the active player can Pilot/Scale this invent.";
+        hint.textContent = "Only the active seat can Pilot/Scale this invent.";
         hint.className = "challenge-ready-hint blocked";
       }
     }
@@ -7296,7 +7296,7 @@ function updateEndTurnButton() {
     }
     if (notMyTurn) {
       btn.disabled = true;
-      btn.title = "Not your turn — wait for the active player";
+      btn.title = "Not your turn — wait for the active seat";
       continue;
     }
     if (gate) {
@@ -7375,7 +7375,7 @@ function updateDeployFooterButtons() {
     if (watching || !myTurn || (b?.viewingOther?.() && !b.canRunDeploy?.())) {
       primary.disabled = true;
       if (watching || !myTurn) {
-        primary.title = "Watching only — active player fields Pilot/Scale";
+        primary.title = "Watching only — active seat fields Pilot/Scale";
       }
     }
   }
@@ -7388,7 +7388,7 @@ function applyDeployWatchOnlyLock() {
   const primary = $("#btn-deploy-stage-primary");
   if (primary) {
     primary.disabled = true;
-    primary.title = "Watching only — active player fields Pilot/Scale";
+    primary.title = "Watching only — active seat fields Pilot/Scale";
   }
 }
 
@@ -9058,7 +9058,7 @@ function renderChallengeHud() {
   const budgetEl = $("#ch-hud-budget");
   if (budgetEl && budgetWillEnabled()) {
     budgetEl.title =
-      "Capital (same as invent). Solo: Budget 0$ is game over. Challenge wins can restore a little.";
+      "Capital (same as invent). Solo: Budget 0$ ends the Quest. Challenge wins can restore a little.";
   }
   const willEl = $("#ch-hud-will");
   if (willEl && budgetWillEnabled()) {
@@ -9109,7 +9109,7 @@ function updateSidestepAvailability() {
     pivotBtn.disabled = forceDisabled || used;
     pivotBtn.setAttribute("aria-disabled", pivotBtn.disabled ? "true" : "false");
     pivotBtn.title = spectating
-      ? "Read-only — watching the active player"
+      ? "Read-only — watching the active seat"
       : used
         ? "Sidestep already used this mission (once per run)"
         : cost.ok
@@ -9144,7 +9144,7 @@ function updateSidestepAvailability() {
       btn.disabled = true;
       btn.setAttribute("aria-disabled", "true");
       btn.classList.add("is-spectator-locked");
-      if (!btn.title) btn.title = "Read-only — watching the active player";
+      if (!btn.title) btn.title = "Read-only — watching the active seat";
     });
   } else {
     $$(".scrutiny-move-btn").forEach((btn) => {
@@ -9241,7 +9241,7 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
       if (opts.spectator) {
         howEdit.readOnly = true;
         howEdit.classList.add("is-locked");
-        howEdit.title = "Read-only — watching the active player";
+        howEdit.title = "Read-only — watching the active seat";
       } else if (!busy) {
         howEdit.readOnly = false;
         howEdit.classList.remove("is-locked");
@@ -10052,7 +10052,7 @@ function setChallengePoseBusy(busy, opts = {}) {
     if (challengeCombatBusy) {
       ans.title = opts.reason || "AI is evaluating your defense…";
     } else if (state.challengeSpectator) {
-      ans.title = "Read-only — watching the active player";
+      ans.title = "Read-only — watching the active seat";
     } else {
       ans.removeAttribute("title");
     }
@@ -10086,7 +10086,7 @@ function setChallengePoseBusy(busy, opts = {}) {
       status.textContent =
         opts.reason || "AI is evaluating the defense… locked until the result.";
     } else if (state.challengeSpectator) {
-      status.textContent = "Watching the active player face the challenge… (read-only)";
+      status.textContent = "Watching the active seat face the challenge… (read-only)";
     } else {
       status.textContent = "Challenger is stepping in… actions unlock when the attack is ready.";
     }
@@ -10282,7 +10282,7 @@ function applyChallengeWatchOnlyLock() {
     }
     if (!mpBridge()?.canRunDeploy?.()) {
       el.disabled = true;
-      el.title = "Watching only — active player fields Pilot/Scale";
+      el.title = "Watching only — active seat fields Pilot/Scale";
     }
   });
 }
@@ -10602,7 +10602,7 @@ function paintSpectatorDefensePanel(activeName) {
     ans.placeholder = state.challengeJudging
       ? "Defense submitted — AI is judging…"
       : `${who} is writing a defense…`;
-    ans.title = "Read-only — watching the active player";
+    ans.title = "Read-only — watching the active seat";
   }
 
   const howEdit = $("#challenge-how-edit");
@@ -10722,7 +10722,7 @@ function enterChallengeAsSpectator(activeInvent, activeName) {
   const status = $("#scrutiny-status");
   if (status) {
     status.hidden = false;
-    status.textContent = `Watching ${activeName || "the active player"} face the challenge… (read-only)`;
+    status.textContent = `Watching ${activeName || "the active seat"} face the challenge… (read-only)`;
   }
   const moves = $("#scrutiny-moves");
   if (moves) moves.hidden = false;
@@ -11556,7 +11556,7 @@ function clientSnapshotChallenge(seatId) {
 async function coachChallenge(mode, userText) {
   if (state.aiBusy) return;
   if (isChallengeSpectator()) {
-    flashToast("You're watching — only the active player can use AI help.");
+    flashToast("You're watching — only the active seat can use AI help.");
     return;
   }
   if (isChallengePosePending()) {
@@ -12014,7 +12014,7 @@ function renderDeployBay() {
       primary.textContent = "Field it →";
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
+          ? "Read-only — watching the active seat"
           : "Not your turn to field this invent"
         : "Deploy your invention and see how the crisis responds";
     }
@@ -12113,7 +12113,7 @@ function renderDeployBay() {
         : "Try Pilot →";
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
+          ? "Read-only — watching the active seat"
           : "Not your turn to Pilot this invent"
         : `About ${feas.pilotChancePct}% chance (local feasibility). Succeeds or fails.`;
     } else if (next === "scale") {
@@ -12124,7 +12124,7 @@ function renderDeployBay() {
         : "Try Scale →";
       primary.title = !canField
         ? state.challengeSpectator
-          ? "Read-only — watching the active player"
+          ? "Read-only — watching the active seat"
           : "Not your turn to Scale this invent"
         : `About ${feas.scaleChancePct}% chance (Scale + Sustainable). Success → New normal.`;
     } else {
@@ -12626,13 +12626,13 @@ function attemptDeployStage(stage) {
     const kind = wonMission() ? "win" : "partial";
     state.lastNews =
       kind === "win"
-        ? `Scale succeeded · New normal. Crisis −${totalDrop} total. Quest held — you win!`
+        ? `Scale succeeded · New normal. Crisis −${totalDrop} total. Quest held`
         : `Scale succeeded · New normal. Crisis −${totalDrop} total. Quest improved (partial).`;
     state.waitReport = "";
     // Clear, explicit win/lose feedback (was easy to miss)
     flashToast(
       kind === "win"
-        ? `Scale succeeded · crisis −${totalDrop} · Quest held — you win!`
+        ? `Scale succeeded · crisis −${totalDrop} · Quest held`
         : `Scale succeeded · crisis −${totalDrop} · Quest improved (partial)`
     );
     renderDeployBay();
@@ -13092,7 +13092,7 @@ function finishOutcome(kind, meta = {}) {
     delete enriched.multiparty;
   }
 
-  // Tutorial win: set local flag (hide Play tutorial on Home) + meta for outcome explainer
+  // Tutorial win: set local flag (hide Start tutorial on Home) + meta for outcome explainer
   // Snapshot graduation *before* clearing tutorialRun (renderOutcome needs the flag)
   const solo = !thisMp?.multiparty && !enriched.multiparty;
   const tutorialGraduation =
@@ -13283,7 +13283,7 @@ function applyOutcomeNextChallengeChrome() {
     setHint(
       kind === "collapse"
         ? "Quest collapsed — no champion. Start another Quest from Friends."
-        : "Quest complete. Return to Friends to play again."
+        : "Quest complete. Return to Friends to start another Quest."
     );
     return;
   }
@@ -13565,7 +13565,7 @@ function renderMpOutcomeStandings(mp) {
     lead.textContent =
       `${mp.place || "The place"} held · “${mp.inventName || "An invent"}” (${whoSolved}) landed the solving Scale` +
       (mp.drop ? ` (−${mp.drop} crisis)` : "") +
-      `.${fielded} Player ranking (40% impact · 25% craft · 20% help · 15% race):`;
+      `.${fielded} Ranking (40% impact · 25% craft · 20% help · 15% pace):`;
   }
   if (list) {
     list.innerHTML = rows
@@ -13731,7 +13731,7 @@ function renderOutcome() {
       starsEl.innerHTML = `<div class="run-stars outcome-mp-winner-line" aria-label="Winner">🥇 ${escapeHtml(
         w.displayName
       )} · ${w.score} pts</div>
-        <div class="run-scores muted">Player ranking for this race — full table below</div>`;
+        <div class="run-scores muted">Ranking for this Quest — full table below</div>`;
     } else {
       starsEl.hidden = true;
       starsEl.innerHTML = "";
@@ -13753,7 +13753,7 @@ function renderOutcome() {
     story =
       `In ${o.year}, “${name}” (${mp.inventOwnerName || "a player"}) Scaled in ${m.place}` +
       (mp.drop ? ` and cut crisis by ${mp.drop}` : "") +
-      `. Crisis meters are at their goals, so the Challenge is held and play ends for this crisis. Players are ranked by how they played (not story characters).` +
+      `. Crisis meters are at their goals, so the Challenge is held and this Quest ends. People are ranked by how they invented (not story characters).` +
       (mp.fieldedByName && mp.fieldedByName !== mp.inventOwnerName
         ? ` ${mp.fieldedByName} paid to field the solving Scale.`
         : "") +
@@ -13768,7 +13768,7 @@ function renderOutcome() {
     });
     lessons.push({
       type: "good",
-      text: "Player rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% race to Scale.",
+      text: "Rank = 40% crisis impact + 25% craft (challenge) + 20% help given + 15% pace to Scale.",
     });
     lessons.push({
       type: "grow",
@@ -13809,7 +13809,7 @@ function renderOutcome() {
     story =
       `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its goal for a full win. ` +
       `Continue this Quest to invent another step against the remaining crisis, or leave for a different Quest. ` +
-      `(In friends multiplayer, a partial Scale would not open this screen — the Challenge keeps going until every meter meets its goal.)`;
+      `(In Friends, a partial Scale would not open this screen — the Challenge keeps going until every meter meets its goal.)`;
     lessons.push({
       type: "grow",
       text: "Solo partial: optional continue. Multiplayer: partial Scales accumulate on the shared crisis until someone fully holds the Challenge.",
@@ -13833,7 +13833,7 @@ function renderOutcome() {
       `Clearing Challenge can restore a little Budget; over-buying the stack often cannot.`;
     lessons.push({
       type: "grow",
-      text: "Solo rule: Budget 0$ is game over. Keep cash for Pilot (and Scale), not only for shiny cards.",
+      text: "Solo rule: Budget 0$ ends the Quest. Keep cash for Pilot (and Scale), not only for shiny cards.",
     });
     lessons.push({
       type: "grow",
@@ -14634,13 +14634,13 @@ function ensureCoInventor() {
     beforeRequest: (mode) => {
       if (isMpInventSpectator()) {
         flashToast(
-          "Not your turn — you can browse and use Learn, but only the active player acts."
+          "Not your turn — you can browse and use Learn, but only the active seat acts."
         );
         return false;
       }
       const bridge = mpBridge();
       if (bridge && !bridge.isMyTurn?.()) {
-        flashToast("Not your turn — you can browse and use Learn, but only the active player acts.");
+        flashToast("Not your turn — you can browse and use Learn, but only the active seat acts.");
         return false;
       }
       const cost = coInventorReserveAp();
@@ -14676,7 +14676,7 @@ function ensureCoInventor() {
   // Fresh mount starts interactive; re-apply multiplayer spectator / busy locks
   const spect = isMpInventSpectator();
   const reason = spect
-    ? "Not your turn — you can browse and use Learn, but only the active player acts."
+    ? "Not your turn — you can browse and use Learn, but only the active seat acts."
     : isInventActionBusy()
       ? inventActionBusyReason()
       : "";
@@ -16695,7 +16695,7 @@ function showTurnStartNotice(opts = {}) {
   const title = el.querySelector("#mp-turn-title");
   const body = el.querySelector("#mp-turn-body");
   if (kicker) {
-    kicker.textContent = mode === "hotseat" ? "Hotseat" : "Friends multiplayer";
+    kicker.textContent = mode === "hotseat" ? "Hotseat" : "Friends";
   }
   if (isYou) {
     if (title) title.textContent = "It's your turn!";
@@ -16703,7 +16703,7 @@ function showTurnStartNotice(opts = {}) {
       body.textContent =
         mode === "hotseat"
           ? `${name}, the device is yours. Invent, help others, or Face the challenge.`
-          : `${name}, you're the active player. Invent, help others, Face the challenge, or Pilot/Scale.`;
+          : `${name}, you're the active seat. Invent, help others, Face the challenge, or Pilot/Scale.`;
     }
     if (okBtn) okBtn.textContent = "Let's go";
   } else {
@@ -17263,8 +17263,8 @@ function bind() {
     if (isDeployWatchOnly()) {
       flashToast(
         deployStagesEnabled()
-          ? "Watching only — active player fields Pilot/Scale."
-          : "Watching only — active player fields this invent."
+          ? "Watching only — active seat fields Pilot/Scale."
+          : "Watching only — active seat fields this invent."
       );
       return;
     }
@@ -17421,7 +17421,7 @@ function bind() {
     openQuestHub();
   });
   $("#btn-outcome-workshop-themes")?.addEventListener("click", () => {
-    // Graduation CTA → same path as Home “Play a Quest →”
+    // Graduation CTA → same path as Home “Start a Quest →”
     state.tutorialRun = false;
     state.playMode = "workshop";
     openQuestHub();

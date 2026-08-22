@@ -406,7 +406,7 @@ export async function renderShareCard(opts = {}) {
     .join(" · ");
   if (meta) y = wrapText(ctx, meta, padX, y, contentW, 32, 2) + 32;
 
-  // —— Crisis meters (same ●○○ language as the in-game HUD) ——
+  // —— Crisis meters (same ●○○ language as the workshop HUD) ——
   if (meters.length) {
     y = drawCrisisMeterPills(ctx, padX, y, contentW, meters);
   }
