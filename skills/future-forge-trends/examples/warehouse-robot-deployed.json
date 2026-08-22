@@ -3,7 +3,7 @@
   "id": "warehouse-robot-deployed",
   "techId": "robots",
   "name": "Warehouse robots in service",
-  "summary": "Mapped indoor logistics robots have scaled roughly on a strong CAGR as fulfillment automation spreads — still supervised sites, not general household robots.",
+  "summary": "These are mobile robots that move goods inside mapped warehouses and fulfillment centers — not general household robots. As more sites automate, the global fleet has grown quickly, on the order of tens of percent per year. People still supervise the sites. The chart is an index of robots in service worldwide — higher means more machines deployed.",
   "capability": "Deployed warehouse mobile robots",
   "unit": "robots (global fleet, index)",
   "compounding": { "kind": "cagr", "annualRate": 0.35 },
@@ -19,7 +19,7 @@
     },
     {
       "id": "fleet-2022",
-      "label": "Major retailers scale AMRs",
+      "label": "Major retailers scale fleets",
       "date": "2022",
       "value": 300000,
       "status": "reached"

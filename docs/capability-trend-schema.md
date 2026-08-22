@@ -22,7 +22,7 @@ See `test/fixtures/trends/gene-seq-cost-per-genome.json`.
 | `schema` | `"future-forge.capability-trend/v1"` (optional when nested in a quest) |
 | `id` | kebab-case, unique in catalog |
 | `techId` | Must match a `TECHS` id |
-| `name`, `summary`, `capability`, `unit` | Required strings (caps 80 / 280 / 80 / 40) |
+| `name`, `summary`, `capability`, `unit` | Required strings (caps 80 / 900 / 160 / 80). Summary is plain sentences; introduce terms. The 900-char summary cap is a safety ceiling, not a brevity goal. |
 | `compounding` | `{ kind: "doubling"\|"halving"\|"cagr", … }` |
 | `anchor` | `{ date, value }` — value must be **> 0** (log-Y) |
 | `milestones` | Non-empty array of `{ label, date, value, status }` |

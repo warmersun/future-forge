@@ -2,9 +2,10 @@
 
 1. Write UTF-8 JSON (pretty-printed OK).
 2. Schema: `references/schema.md`. Evidence: `references/research.md`.
-3. **Omit** unused optional keys.
-4. Run `npm run validate:trend -- <file>` until `OK:`.
-5. Hand off: warmersun `future-forge/trends/` + catalog entry, or quest `trends` / `spotlightTrends`.
+3. Player copy: full sentences; introduce terms; you do not have to be brief (`research.md` → Honest copy).
+4. **Omit** unused optional keys.
+5. Run `npm run validate:trend -- <file>` until `OK:`.
+6. Hand off: warmersun `future-forge/trends/` + catalog entry, or quest `trends` / `spotlightTrends`.
 
 ---
 

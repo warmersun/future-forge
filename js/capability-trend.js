@@ -12,9 +12,9 @@ export const CAPABILITY_TREND_CATALOG_SCHEMA =
 export const TREND_CAPS = {
   id: 80,
   name: 80,
-  summary: 280,
-  capability: 80,
-  unit: 40,
+  summary: 900,
+  capability: 160,
+  unit: 80,
   milestoneLabel: 80,
   sourceLabel: 120,
   maxMilestones: 24,

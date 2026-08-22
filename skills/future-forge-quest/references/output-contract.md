@@ -108,7 +108,7 @@ Add top-level (or under `mission`) when the Wait overlay should show exponential
     "id": "gene-seq-cost-per-genome",
     "techId": "gene-sequencing",
     "name": "Cost per human genome",
-    "summary": "Lab sequencing cost has fallen on a roughly 18-month halving curve.",
+    "summary": "It used to cost tens of thousands of dollars to read one person’s full DNA. After public labs were no longer the only buyers, that price has been dropping by about half every 18 months. The chart is US dollars per genome — lower means cheaper.",
     "capability": "Affordable whole-genome sequencing",
     "unit": "USD / genome",
     "compounding": { "kind": "halving", "periodYears": 1.5 },

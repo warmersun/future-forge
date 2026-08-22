@@ -1,6 +1,6 @@
 # Capability trend schema (`future-forge.capability-trend/v1`)
 
-Canonical name: **`future-forge.capability-trend/v1`**
+Canonical name: `future-forge.capability-trend/v1`
 
 In the game repo, full docs also live at `docs/capability-trend-schema.md`.
 
@@ -12,26 +12,34 @@ npm run validate:trend -- path/to/trend.json
 
 ## Required
 
-| Field | Notes |
-|-------|--------|
-| `schema` | `"future-forge.capability-trend/v1"` (optional when nested in a quest) |
-| `id` | kebab-case, unique in catalog |
-| `techId` | Valid Future Forge tech id |
-| `name` | ≤80 chars — chart title |
-| `summary` | ≤280 chars — one-line teaching copy |
-| `capability` | ≤80 chars — what is advancing |
-| `unit` | ≤40 chars — Y-axis unit |
-| `compounding` | See below |
-| `anchor` | `{ date, value }` with `value` > 0 |
-| `milestones` | Non-empty array |
+
+| Field         | Notes                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
+| `schema`      | `"future-forge.capability-trend/v1"` (optional when nested in a quest) |
+| `id`          | kebab-case, unique in catalog                                          |
+| `techId`      | Valid Future Forge tech id                                             |
+| `name`        | ≤80 chars — chart title (everyday words)                               |
+| `summary`     | ≤900 chars — teaching copy in full sentences; ceiling, not a target    |
+| `capability`  | ≤160 chars — what is advancing (everyday words)                        |
+| `unit`        | ≤80 chars — Y-axis unit (everyday words)                               |
+| `compounding` | See below                                                              |
+| `anchor`      | `{ date, value }` with `value` > 0                                     |
+| `milestones`  | Non-empty array                                                        |
+
+
+
 
 ## Compounding
 
-| `kind` | Extra | Curve |
-|--------|-------|--------|
-| `doubling` | `periodYears` > 0 | \(v = v_0 · 2^{Δt/T}\) |
-| `halving` | `periodYears` > 0 | \(v = v_0 · 2^{-Δt/T}\) |
-| `cagr` | `annualRate` (> −1) | \(v = v_0 · (1+r)^{Δt}\) |
+
+| `kind`     | Extra               | Curve                |
+| ---------- | ------------------- | -------------------- |
+| `doubling` | `periodYears` > 0   | v = v_0 · 2^{Δt/T}   |
+| `halving`  | `periodYears` > 0   | v = v_0 · 2^{-Δt/T}  |
+| `cagr`     | `annualRate` (> −1) | v = v_0 · (1+r)^{Δt} |
+
+
+
 
 ## Milestones
 
@@ -49,10 +57,14 @@ npm run validate:trend -- path/to/trend.json
 
 ## Optional
 
-| Field | Notes |
-|-------|--------|
-| `domain` | `{ start, end }` year or ISO — chart X range |
-| `sources` | `[{ label, url }]` with `https` only |
+
+| Field     | Notes                                        |
+| --------- | -------------------------------------------- |
+| `domain`  | `{ start, end }` year or ISO — chart X range |
+| `sources` | `[{ label, url }]` with `https` only         |
+
+
+
 
 ## Catalog
 
@@ -65,3 +77,4 @@ npm run validate:trend -- path/to/trend.json
   ]
 }
 ```
+

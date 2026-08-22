@@ -43,6 +43,7 @@ One JSON file conforming to `future-forge.capability-trend/v1`:
 5. **`sources`**: `https` only; no fake paper titles.
 6. **Omit** unused optional keys.
 7. Validate until `OK:`.
+8. **Player copy** — `summary`, `name`, `capability`, and `unit` must be readable without insider jargon (see Procedure §4 and `research.md` Honest copy).
 
 ## Procedure
 
@@ -62,13 +63,24 @@ One JSON file conforming to `future-forge.capability-trend/v1`:
 - Prefer `cagr` when sources quote annual growth/decline rates.
 - Curve is a **model**; milestones are observations — they need not sit exactly on the line.
 
-### 4. Emit JSON + validate
+### 4. Write player copy
+
+**You do not have to be brief.** Do not pad. Use as much of the 900-character `summary` ceiling as the learner needs.
+
+- **Normal sentences:** subject, verb, object. If it takes extra work to parse, rewrite.
+- **Introduce terms.** Do not assume the reader knows ARC, Guinness, CAGR, LCOE, “NIH-only era,” or chart jargon like “semi-private/public.” Say what the thing is, then use the name.
+- **`summary`** does the teaching. **`name` / `capability` / `unit`** stay short chart labels in everyday words.
+- **Fails:** arrow chains (`2018 → 2024 → 2026`), stacked scores with no sentence, unexplained acronyms, telegram packing.
+
+Full before/after: **`references/research.md`** → Honest copy.
+
+### 5. Emit JSON + validate
 
 ```bash
 npm run validate:trend -- output/trends/<id>.json
 ```
 
-### 5. Hand off
+### 6. Hand off
 
 - Add to warmersun `future-forge/trends/` + `catalog.json`, **or**
 - Embed on a Quest via `trends` / `spotlightTrends` (see `future-forge-quest` skill).

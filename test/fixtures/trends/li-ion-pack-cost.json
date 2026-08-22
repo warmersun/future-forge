@@ -3,7 +3,7 @@
   "id": "li-ion-pack-cost",
   "techId": "battery",
   "name": "Lithium-ion pack cost",
-  "summary": "EV and stationary pack costs have fallen steeply for over a decade; roughly a multi-year halving story with commodity bumps.",
+  "summary": "Lithium-ion packs are the battery packs in electric cars and grid storage. Their price per kilowatt-hour has fallen steeply for more than a decade — roughly halving every few years, with bumps when raw materials spike. Cheaper packs make EVs and storage easier to afford. The chart is US dollars per kilowatt-hour — lower means cheaper storage.",
   "capability": "Affordable energy storage packs",
   "unit": "USD / kWh",
   "compounding": { "kind": "halving", "periodYears": 4 },
