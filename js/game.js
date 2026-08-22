@@ -15481,7 +15481,8 @@ async function callCoInventMode(mode, userLabel) {
         impact: state.inventionImpact,
       };
     }
-    if (data.message && proposals) {
+    // Fill other side only writes the story face + toast — no Co-Inventor chat
+    if (data.message && proposals && !fillOther) {
       ensureCoInventor();
       state.coInventor?.pushAssistant?.(
         {
