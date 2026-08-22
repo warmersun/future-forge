@@ -6910,6 +6910,11 @@ let _waitConfirmCtx = null;
 let _waitConfirmOnOk = null;
 /** @type {object|null} Chart.js instance in Developer trend inspect modal */
 let _trendInspectChart = null;
+/**
+ * Session toggle: show all catalog trends in Wait (only available when state.developer).
+ * Default off — player stack view until "Developer view" is clicked.
+ */
+let _waitTrendsDevView = false;
 
 function destroyWaitTrendCharts() {
   for (const c of _waitTrendCharts) destroyTrendChart(c);
@@ -6925,7 +6930,7 @@ function destroyTrendInspectChart() {
 
 /**
  * Resolve trends for the Wait overlay from catalog + quest + stack.
- * In developer mode: every hosted + quest trend (no stack filter / merge cap).
+ * Developer view (session toggle, CLI-gated): every hosted + quest trend.
  * @param {object} [ctx]
  */
 function trendsForWaitConfirm(ctx = {}) {
@@ -6940,7 +6945,7 @@ function trendsForWaitConfirm(ctx = {}) {
     spotlightTrendIds: m?.spotlightTrends || [],
     selectedTechIds: techIds,
     spotlightTechId: m?.spotlight?.techId || null,
-    includeAll: Boolean(state.developer),
+    includeAll: Boolean(state.developer && _waitTrendsDevView),
   });
 }
 
@@ -6961,16 +6966,26 @@ function syncWaitTrendCharts() {
     Array.isArray(ctx.techIds) && ctx.techIds.length
       ? ctx.techIds
       : state.selectedTechIds || [];
-  const showAll = Boolean(state.developer);
+  const showAll = Boolean(state.developer && _waitTrendsDevView);
 
   const emptyEl = host.querySelector("[data-wait-trends-empty]");
   const loadingEl = host.querySelector("[data-wait-trends-loading]");
   const grid = host.querySelector(".wait-trend-grid");
   const lede = host.querySelector(".wait-trends-lede");
+  const viewBtn = host.querySelector("#wait-trends-dev-view");
+
+  if (viewBtn) {
+    viewBtn.hidden = !state.developer;
+    viewBtn.setAttribute("aria-pressed", showAll ? "true" : "false");
+    viewBtn.textContent = showAll ? "Player view" : "Developer view";
+    viewBtn.title = showAll
+      ? "Back to stack-only trends (as players see Look Ahead)"
+      : "Show every catalog and quest trend tile";
+  }
 
   if (lede) {
     lede.textContent = showAll
-      ? "Developer · all catalog and quest capability trends (player charts). Use Developer on a card for raw JSON."
+      ? "Developer view · all catalog and quest capability trends. Use Developer on a card for raw JSON."
       : "Log-scale charts for emTechs already on your stack. Milestones are markers on each trend.";
   }
 
@@ -7127,10 +7142,25 @@ function openTrendCatalogInspect(trend, opts = {}) {
  */
 function buildWaitConfirmLayoutHtml(ctx = {}) {
   const implications = buildWaitImplicationsHtml(ctx);
+  const showAll = Boolean(state.developer && _waitTrendsDevView);
   return `
     <div class="wait-confirm-layout">
       <section class="wait-trends-pane" id="wait-trend-charts" aria-label="Exponential capability trends">
-        <h4 class="wait-trends-heading">How stack capabilities compound</h4>
+        <div class="wait-trends-head">
+          <h4 class="wait-trends-heading">How stack capabilities compound</h4>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            id="wait-trends-dev-view"
+            ${state.developer ? "" : "hidden"}
+            aria-pressed="${showAll ? "true" : "false"}"
+            title="${
+              showAll
+                ? "Back to stack-only trends (as players see Look Ahead)"
+                : "Show every catalog and quest trend tile"
+            }"
+          >${showAll ? "Player view" : "Developer view"}</button>
+        </div>
         <p class="muted sm wait-trends-lede">Log-scale charts for emTechs already on your stack. Milestones are markers on each trend.</p>
         <p class="muted sm" data-wait-trends-loading hidden>Loading trend catalog…</p>
         <p class="muted sm" data-wait-trends-empty hidden></p>
@@ -7186,6 +7216,11 @@ function openWaitConfirm(onOk, ctx = {}) {
   backdrop.hidden = false;
   backdrop.classList.add("open");
   document.body.classList.add("wait-confirm-open");
+  body.querySelector("#wait-trends-dev-view")?.addEventListener("click", () => {
+    if (!state.developer) return;
+    _waitTrendsDevView = !_waitTrendsDevView;
+    syncWaitTrendCharts();
+  });
   syncWaitTrendCharts();
   $("#wait-confirm-ok")?.focus();
 }

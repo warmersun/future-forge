@@ -120,7 +120,10 @@ Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`
 
 ### Developer mode (quest / trend inspect)
 
-**Off by default.** When on, the browser shows **Developer** buttons on quest catalog cards and on Wait / Look Ahead trend tiles (player chart + raw JSON). Production `npm start` must leave this off.
+**Off by default.** When on, the browser unlocks developer chrome (not automatic dump of all tiles). Production `npm start` must leave this off.
+
+- **Quests:** **Developer** on catalog cards → inspect modal (markdown + JSON).
+- **Trends:** Look Ahead stays stack-only until you click **Developer view** (then all catalog tiles; per-card **Developer** opens player chart + JSON). **Player view** returns to the normal stack charts.
 
 ```bash
 npm start -- --developer

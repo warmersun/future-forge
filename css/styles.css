@@ -4453,6 +4453,19 @@ body.wait-confirm-open {
   color: var(--text);
 }
 
+.wait-trends-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.wait-trends-head .wait-trends-heading {
+  margin: 0;
+}
+
 .wait-trends-lede {
   margin: 0 0 0.75rem;
 }
