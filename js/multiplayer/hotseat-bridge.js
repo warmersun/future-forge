@@ -18,6 +18,7 @@ import {
   deriveInventPhase,
   inventPhaseToUiPhase,
   isInventContentFrozen,
+  isHexBoardFrozen,
   allowedActions,
 } from "../sim/invent-phase.js";
 
@@ -249,6 +250,13 @@ export function createHotseatBridge() {
     state.inventionName = view.inventionName || "";
     state.inventionHow = view.inventionHow || "";
     state.inventionImpact = view.inventionImpact || "";
+    if (view.hexBoard && typeof view.hexBoard === "object") {
+      try {
+        state.hexBoard = JSON.parse(JSON.stringify(view.hexBoard));
+      } catch {
+        state.hexBoard = view.hexBoard;
+      }
+    }
     state.selectedTechIds = (view.stack || []).map((x) => x.techId);
     state.challengePassed = Boolean(view.challengePassed);
     state.challengeLocked = Boolean(view.challengeLocked);
@@ -331,6 +339,15 @@ export function createHotseatBridge() {
       view.inventionName = state.inventionName || "";
       view.inventionHow = state.inventionHow || "";
       view.inventionImpact = state.inventionImpact || "";
+    }
+    // Hex board stays editable until pathway held / fielded
+    if (state.hexBoard && !isHexBoardFrozen(view)) {
+      try {
+        view.hexBoard = JSON.parse(JSON.stringify(state.hexBoard));
+        view.concernsSummoned = Boolean(state.hexBoard.concernsSummoned);
+      } catch {
+        view.hexBoard = state.hexBoard;
+      }
     }
 
     // Challenge progress: owner only (entering / resolving scrutiny on their idea)

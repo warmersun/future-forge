@@ -51,6 +51,12 @@ export function createSimState(mission, global = null, opts = {}) {
     inventionHow: "",
     inventionImpact: "",
     storyFace: "how",
+    /** Hex invent board — source of truth for pathway (see js/hex/board-state.js) */
+    hexBoard: {
+      tiles: {},
+      concernsSummoned: false,
+      evalSeq: 0,
+    },
     domainFilter: "all",
     ap: apMax,
     apMax,

@@ -6,6 +6,7 @@ export const STORY_LOCK_FIELDS = [
   ["inventionName", "mp-lock-name"],
   ["inventionHow", "mp-lock-how"],
   ["inventionImpact", "mp-lock-impact"],
+  ["hexBoard", "mp-lock-board"],
 ];
 
 /**

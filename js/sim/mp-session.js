@@ -31,7 +31,9 @@ import {
   applyInventPhaseEvent,
   deriveInventPhase,
   isInventContentFrozen,
+  isHexBoardFrozen,
 } from "./invent-phase.js";
+import { techIdsFromBoard } from "../hex/board-state.js";
 
 const MAX_PLAYERS = 6;
 const MIN_PLAYERS = 2;
@@ -255,11 +257,19 @@ function createInvent(seat, settings, mission = null) {
     inventionName: "",
     inventionHow: "",
     inventionImpact: "",
+    /** Hex invent board document (pathway source of truth) */
+    hexBoard: {
+      tiles: {},
+      concernsSummoned: false,
+      evalSeq: 0,
+    },
+    concernsSummoned: false,
+    pathwayHeld: false,
     /** @type {{ techId: string, addedBy: string }[]} */
     stack: [],
     abandoned: false,
     turnPhase: "act", // act | scrutiny | …
-    /** Lifecycle: invent | challenge | challenge_locked | deploy_ready | scale_ready | fielded | abandoned */
+    /** Lifecycle: invent | concerns | resolved | abandoned (+ legacy aliases) */
     inventPhase: "invent",
     /** True after challenge fail until reopen or re-enter challenge (content frozen) */
     challengeLocked: false,
@@ -753,6 +763,60 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       }
     }
     events.push({ type, field, seatId: activeId, targetSeatId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
+  // —— Hex board commit (drop / lift / mint) ——
+  if (type === "board_commit") {
+    if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    const targetSeatId = payload.targetSeatId || activeId;
+    const target = s.invents[targetSeatId];
+    if (!target) return { ok: false, error: "no_target", session };
+    if (target.abandoned) return { ok: false, error: "target_abandoned", session };
+    if (isHexBoardFrozen(target)) {
+      return { ok: false, error: "invent_locked", session };
+    }
+    // Owner or active seat on own invent
+    if (targetSeatId !== activeId && targetSeatId !== actor.seatId) {
+      return { ok: false, error: "not_owner", session };
+    }
+    if (payload.hexBoard && typeof payload.hexBoard === "object") {
+      target.hexBoard = payload.hexBoard;
+      target.concernsSummoned = Boolean(payload.hexBoard.concernsSummoned);
+      // Stack follows placed invention tiles on the hex field
+      try {
+        const placedIds = techIdsFromBoard(payload.hexBoard);
+        const prevById = new Map(
+          (target.stack || []).map((x) => [x.techId, x])
+        );
+        target.stack = placedIds.map(
+          (techId) =>
+            prevById.get(techId) || { techId, addedBy: activeId }
+        );
+      } catch {
+        /* ignore */
+      }
+      // Derive prose for consumers that still read inventionHow
+      try {
+        const tiles = Object.values(payload.hexBoard.tiles || {});
+        const inventions = tiles.filter((t) => t.kind === "invention");
+        target.inventionName =
+          inventions
+            .map((t) => t.name)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(" · ") || target.inventionName;
+        target.inventionHow = inventions
+          .map((t) => [t.name, t.howText].filter(Boolean).join(": "))
+          .filter(Boolean)
+          .join("\n\n")
+          .slice(0, 4000);
+      } catch {
+        /* ignore */
+      }
+    }
+    events.push({ type: "board_commit", seatId: activeId, targetSeatId });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }

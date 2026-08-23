@@ -116,11 +116,9 @@ A **Quest** usually takes a **global problem** and **instantiates** it: makes it
 
 ### Building a pathway
 
-You **invent**: stack emTech from the broad map; write **how it works** and **everyday life**. An **AI co-inventor** can teach, draft, and help check whether claims sit on the right part of the curve — **you lead**. The invent gate is never “AI invents for you.”
+You **invent** on a **hexagonal board**: mint emTech idea tiles (Ask for ideas, or write how it works), place them so **bits** and **atoms** faces dock honestly, and watch crisis meters and challenger concerns as traffic lights. An **AI co-inventor** can teach, draft tile ideas, and re-evaluate neighboring lights — **you lead**. The invent gate is never “AI invents for you.”
 
-You also practice the **Progress / Prediction** side of the map: what emTechs can be used for, what the **trends** are, and projecting **predictions** — so the pathway is not only a story about today, but a trajectory that rides improving capability.
-
-Claims face a feasibility light for *this year* and *this place* (categories stay pickable; over-claiming goes red). A hard question may still land (Moloch, Ethicist, Stakeholder, Mother Nature). Then you **field** it — pilot → scale — while the crisis can still win.
+Claims face a feasibility bar on each idea tile and cluster coverage on the pathway panel. When ready, you summon all four hard questions onto the board (Moloch, Ethicist, Stakeholder, Mother Nature). Hold the pathway when every active light is yellow or green — while the crisis can still win if you wait too long.
 
 ### Three perspectives on the invent (unless the Quest narrows them)
 

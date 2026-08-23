@@ -64,6 +64,10 @@ import {
 } from "./js/server/cost-policy.mjs";
 import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
 import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "./js/idea-cards.js";
+import {
+  sanitizeScrutiny,
+  localScrutinyProposals,
+} from "./js/scrutiny-shared.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -402,7 +406,8 @@ Role:
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
 - When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year (never yellow→red or green→red solely because the calendar moved). Prefer yellow over red when pilot/partner/trial language is present and claims are borderline. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits) and judge claims against that grounding plus year — do not invent contradicting capability facts or reframe the quest as unlimited bare emTech.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
-- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, imagePrompt}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. Not a finished invention — insertText is a 1–2 sentence starter the learner will rewrite. If context.refresh, do not repeat context.avoidTitles.
+- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. howText (or insertText) is a 1–2 sentence starter the learner places on a hex tile. If context.refresh, do not repeat context.avoidTitles.
+- When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern with neighboring invention tiles. Return top-level lights: [{ id, level: "red"|"yellow"|"green", reason }]. red = unanswered/hot; yellow = touching but not enough; green = honestly eased/addressed for this place and year. Do not require bits/atoms world-match for crisis/concern tiles. Honor grounding. Prefer yellow over green when claims are stretchy. Leave proposals empty.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
 - When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
 - When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
@@ -443,11 +448,12 @@ For other modes timing and ideas may be null.
 
 scrutiny when used:
 "scrutiny": {
-  "moloch": { "analysis": "...", "safeguard": "..." },
-  "ethicist": { "analysis": "...", "safeguard": "..." },
-  "stakeholder": { "analysis": "...", "safeguard": "..." },
-  "nature": { "analysis": "...", "safeguard": "..." }
+  "moloch": { "analysis": "...", "safeguard": "...", "imagePrompt": "..." },
+  "ethicist": { "analysis": "...", "safeguard": "...", "imagePrompt": "..." },
+  "stakeholder": { "analysis": "...", "safeguard": "...", "imagePrompt": "..." },
+  "nature": { "analysis": "...", "safeguard": "...", "imagePrompt": "..." }
 }
+Each imagePrompt is ≤400 chars: a photoreal documentary still of that concern pressing THIS place/pathway — no text, logos, or named real people.
 
 Use null or [] when empty. For complete-picture fill only the missing face. For scrutinize fill scrutiny and keep techs unless asked.`;
 
@@ -1151,6 +1157,33 @@ function localCoInvent({ mode, messages, context }) {
     return localIdeaSparksResult(context, base);
   }
 
+  if (mode === "evaluate-neighbors") {
+    const givens = context.hexEval?.givens || [];
+    const lights = givens.map((g) => {
+      const n = Array.isArray(g.neighbors) ? g.neighbors : [];
+      const mature = n.some((x) => x.mature);
+      let level = "red";
+      if (mature) level = g.kind === "concern" ? "yellow" : "green";
+      else if (n.length) level = "yellow";
+      return {
+        id: g.id,
+        level,
+        reason: mature
+          ? "A mature idea is touching this light."
+          : n.length
+            ? "An idea touches but may not be enough yet."
+            : "Still unanswered.",
+      };
+    });
+    return {
+      source: "local",
+      message: "Board lights updated from neighbors.",
+      proposals: base,
+      teaching: [],
+      lights,
+    };
+  }
+
   if (mode === "complete-picture") {
     const face = context.storyFace === "life" ? "life" : "how";
     const how = draftHow(context, selected.length ? selected : stack, map);
@@ -1253,6 +1286,18 @@ function localCoInvent({ mode, messages, context }) {
       challengeSpeech: speech,
       challengeQuestion: question,
       proposals: base,
+      teaching: [],
+    };
+  }
+
+  if (mode === "scrutinize") {
+    return {
+      source: "local",
+      message: "Four hard questions are on the table — ease their lights.",
+      proposals: {
+        ...base,
+        scrutiny: localScrutinyProposals(context),
+      },
       teaching: [],
     };
   }
@@ -1604,7 +1649,13 @@ function buildUserPayload({ messages, context, mode }) {
       "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable." +
       GROUNDING_HINT,
     "idea-sparks":
-      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (≤60 chars), blurb (≤140), insertText (≤280, 1–2 sentences the learner can drop into how-it-works and rewrite), imagePrompt (≤400, visual scene only, no text/logos) }. Three DIFFERENT angles (not three wordings of one idea). Pilot-honest vs year; inventable application categories, not a named finished product. Leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do not prescribe the solution. Never say categories are year-locked. If context.refresh is true, produce a NEW trio that does not repeat titles in context.avoidTitles." +
+      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (≤60 chars), blurb (≤140), insertText/howText (≤280), imagePrompt (≤400), year }. Three DIFFERENT angles. Pilot-honest. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
+      GROUNDING_HINT,
+    "evaluate-neighbors":
+      "Judge hex-board traffic lights for context.hexEval.givens. Return lights: [{id, level:red|yellow|green, reason}]. Crisis/concern tiles do not use bits/atoms docking. Leave proposals empty." +
+      GROUNDING_HINT,
+    scrutinize:
+      "Stress-test the pathway from FOUR angles: moloch, ethicist, stakeholder, nature. Read inventionHow and context.hexBoard (placed invention tiles) as the invent. Fill proposals.scrutiny with all four keys; each value is { analysis (2–4 sentences attacking THIS local invent), safeguard (one concrete move that would honestly address it), imagePrompt (≤400 chars, photoreal still of that concern in this place — no text/logos) }. Leave addTechIds/removeTechIds/inventionHow/name/impact empty/null. message: one short line that the hard questions are on the table." +
       GROUNDING_HINT,
     "suggest-stack":
       "Propose a coherent technology stack for this challenge. Explain why each piece matters. Put ids in proposals.addTechIds (and removeTechIds if swapping)." +
@@ -1754,6 +1805,24 @@ function buildUserPayload({ messages, context, mode }) {
     isLearningModule: tutorMode,
     tutorMode,
     aiTutorContext,
+    focusTechId: context?.focusTechId || null,
+    hexEval: context?.hexEval || null,
+    hexBoard: context?.hexBoard || null,
+    challengeAngle: context?.challengeAngle || null,
+    challengeSpeech: context?.challengeSpeech
+      ? String(context.challengeSpeech).slice(0, 800)
+      : null,
+    challengeQuestion: context?.challengeQuestion
+      ? String(context.challengeQuestion).slice(0, 400)
+      : null,
+    playerAnswer: context?.playerAnswer
+      ? String(context.playerAnswer).slice(0, 2000)
+      : null,
+    priorTiming: context?.priorTiming || null,
+    refresh: Boolean(context?.refresh),
+    avoidTitles: Array.isArray(context?.avoidTitles)
+      ? context.avoidTitles.slice(0, 12)
+      : null,
     designRule:
       "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year." +
       (grounding
@@ -1789,35 +1858,14 @@ function extractJson(text) {
   }
 }
 
-function sanitizeScrutinyAngle(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const analysis = String(raw.analysis || "").trim().slice(0, 1200);
-  const safeguard = String(raw.safeguard || "").trim().slice(0, 400);
-  if (!analysis && !safeguard) return null;
-  return { analysis, safeguard };
-}
-
-function sanitizeScrutiny(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const moloch = sanitizeScrutinyAngle(raw.moloch);
-  const ethicist = sanitizeScrutinyAngle(raw.ethicist);
-  const stakeholder = sanitizeScrutinyAngle(raw.stakeholder);
-  const nature = sanitizeScrutinyAngle(raw.nature);
-  // legacy alias
-  const policy = sanitizeScrutinyAngle(raw.policy);
-  if (!moloch && !ethicist && !stakeholder && !nature && !policy) return null;
-  return {
-    moloch,
-    ethicist,
-    stakeholder: stakeholder || policy,
-    nature,
-  };
-}
-
 function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
   const ids = new Set(availableIds);
   // SIT / SCAMPER / idea-sparks are brainstorm sparks — never offer Apply how-it-works
-  const brainstormOnly = mode === "sit" || mode === "scamper" || mode === "idea-sparks";
+  const brainstormOnly =
+    mode === "sit" ||
+    mode === "scamper" ||
+    mode === "idea-sparks" ||
+    mode === "evaluate-neighbors";
   const empty = {
     source,
     message: "I'm with you — tell me what you want to invent, or pick a quick action.",
@@ -2078,6 +2126,16 @@ async function aiCoInvent(body, client, meta = {}) {
   const out = sanitizeResult(parsed, availableIds, "ai", mode);
   if (mode === "idea-sparks") {
     out.ideas = ideasOrFallback(parsed.ideas, resolveFocusTech(context), context);
+  }
+  if (mode === "evaluate-neighbors") {
+    const raw = Array.isArray(parsed.lights) ? parsed.lights : [];
+    out.lights = raw
+      .filter((L) => L && L.id && ["red", "yellow", "green"].includes(String(L.level).toLowerCase()))
+      .map((L) => ({
+        id: String(L.id),
+        level: String(L.level).toLowerCase(),
+        reason: String(L.reason || "").slice(0, 280),
+      }));
   }
   return out;
 }
@@ -2567,11 +2625,20 @@ async function handleIdeaImage(body) {
   }
 
   const rawPrompt = String(body?.prompt || "").slice(0, 700);
-  const prompt = [
-    "Photoreal 4:3 documentary still of a local emerging-tech application.",
-    "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-    rawPrompt || "People using a practical tool in a specific neighborhood.",
-  ].join(" ");
+  const kind = String(body?.kind || "idea").toLowerCase();
+  const prompt =
+    kind === "challenger"
+      ? [
+          "Photoreal 4:3 documentary still of a local pressure or hard question facing a community pathway.",
+          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+          rawPrompt ||
+            "People and place under a concrete social, ethical, or natural-world pressure.",
+        ].join(" ")
+      : [
+          "Photoreal 4:3 documentary still of a local emerging-tech application.",
+          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+          rawPrompt || "People using a practical tool in a specific neighborhood.",
+        ].join(" ");
 
   try {
     const data = await runVisionImage("generate", prompt, null);
@@ -3321,6 +3388,20 @@ process.on("beforeExit", () => {
   } catch {
     /* ignore */
   }
+});
+
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use (${HOST}).\n` +
+        `Stop the other Future Forge process, e.g.:\n` +
+        `  fuser -k ${PORT}/tcp\n` +
+        `  # or: pkill -f "node server.mjs"\n` +
+        `Or start on another port: FF_PORT=8766 npm start`
+    );
+    process.exit(1);
+  }
+  throw err;
 });
 
 server.listen(PORT, HOST, async () => {

@@ -1,14 +1,16 @@
 # Future Forge
 
-**Invent local solutions with emerging technologies — field them as the future arrives with an AI co-inventor.**
+**Invent local pathways with emerging technologies — place them on a hex board as the future arrives with an AI co-inventor.**
 
-Future Forge is an inventing practice. You pick a global problem, land in a concrete place, invent with a stack of emerging tech, defend the idea under challenge, and deploy before the local crisis collapses.
+Future Forge is an inventing practice. You pick a global problem, land in a concrete place, invent with emerging tech on a hexagonal pathway board, summon the hard questions onto that board, and hold the pathway before the local crisis collapses.
 
 **About & learning goals:** Future Forge is an [inventing practice](docs/what-is-future-forge.md) — origin (6Ps tabletop), design contradiction, Progress and Predictions, and what learners practice today.
 
+**Hex invent surface:** [docs/workshop-hex-invent-surface.md](docs/workshop-hex-invent-surface.md)
+
 ![Future Forge workshop — invent with emerging tech, feasibility light, and AI co-inventor](docs/future-forge-workshop.jpg)
 
-*Invent screen: tech tray, mission story, feasibility (red/yellow/green), dual story faces, future vision, and AI co-inventor.*
+*Invent screen: emTech tray, hex pathway board, crisis/concern traffic lights, future vision, and AI co-inventor.*
 
 ---
 
@@ -16,19 +18,12 @@ Future Forge is an inventing practice. You pick a global problem, land in a conc
 
 1. **Theme** — Choose a global problem (climate, infectious disease, energy access, …).
 2. **Local scenarios** — Read a short problem brief while Future Forge drafts several concrete places. Pick one mission (cached for next time; solved ones stay available).
-3. **Invent** — Build a tech stack from domains like Power, Automator, Mover, LifeForce, Link, and Portal. Name the invention and write two faces:
-   - **How it works** — mechanism
-   - **Everyday life** — impact on the ground  
-   Use **Focus** + **Fill other side** so the AI drafts the face you are not writing. Both boxes stay editable.
-4. **Feasibility** — A traffic light judges whether your *claims* fit this year and place. EmTech categories are always pickable; over-claiming is what goes red.
-5. **Challenge** — Defend against a random challenger:
-   - **Moloch** — system incentives (freeriding, races to the bottom)
-   - **Ethicist** — hard tradeoffs with no clean good/bad answer
-   - **Stakeholder** — officials & community (funding, permits, public support)
-   - **Mother Nature** — physical and ecological limits
-6. **Deploy** — Crisis meters drop if you succeed. **Wait** advances the calendar and raises crisis. Fail if any meter hits 5 or the collapse year arrives.
+3. **Invent on the hex board** — Pick emTechs from domains like Power, Automator, Mover, LifeForce, Link, and Portal. **Ask for ideas** (or write how it works) to mint invention tiles with AI art. Drag them onto the board. **Bits** (blue) and **atoms** (orange) faces must match to dock; converters (IoT, print, …) bridge both.
+4. **Traffic lights** — Crisis meters start on the board. Neighboring inventions re-evaluate lamps (red / yellow / green). Looking at the board *is* the thinking.
+5. **Hard questions** — When ready, summon all four challengers onto the board at once: **Moloch**, **Ethicist**, **Stakeholder**, **Mother Nature**. Ease their lights with honest ideas.
+6. **Hold the pathway** — When every active light is yellow or green, declare the pathway holds. **Wait** advances the calendar and raises crisis. Fail if any meter hits 5 or the collapse year arrives.
 
-**Learn** (tech tray) opens primers for selected techs (newest first). **?** in the HUD explains the full loop. The **AI co-inventor** brainstorms stacks, names, Art of the possible, and challenge coaching — you lead; it proposes.
+**Learn** (tech tray) opens primers. The **AI co-inventor** brainstorms and tutors — you lead; it proposes.
 
 ---
 

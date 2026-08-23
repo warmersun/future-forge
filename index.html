@@ -46,48 +46,42 @@
           </div>
         </div>
         <p class="tagline" id="game-tagline">
-          Invent local solutions with emerging tech — field it as the future arrives.
+          Invent local pathways with emerging tech — place them on the board as the future arrives.
         </p>
         <div class="pitch">
           <h2>How it works</h2>
           <ol>
             <li>
-              <strong>Pick a Quest</strong> — several concrete places living a piece of a global problem.
+              <strong>Pick a Quest</strong> — a concrete place living a piece of a global problem.
             </li>
             <li>
-              <strong>Invent with AI</strong> — pick emerging technologies that fit the local problem
-              (mix domains when it helps — not as a rule).
+              <strong>Invent on the hex board</strong> — mint emTech idea tiles, dock worlds that match, ease the crisis lights.
             </li>
             <li>
-              <strong>Watch the years tick</strong> — world conditions shift; the crisis gets worse if you wait.
+              <strong>Watch the years tick</strong> — wait and the crisis heats; predictions land on the timeline.
             </li>
             <li>
-              <strong>Deploy in time</strong> — intercept the future: not too early, not too late — then see that world painted.
+              <strong>Hold the pathway</strong> — summon the hard questions, turn lights yellow or green before the place falls.
             </li>
           </ol>
         </div>
         <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
           <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
           <button type="button" class="btn btn-secondary" id="btn-friends">Invent with friends</button>
-          <button type="button" class="btn btn-secondary" id="btn-choose-theme">
-            Start a Quest
+          <button type="button" class="btn btn-primary" id="btn-choose-theme">
+            Start a Quest →
           </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            id="btn-start"
-            title="Quiet guided run: Portside Ward floods"
-          >
-            Start tutorial →
+          <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
+            Start a Quest →
           </button>
         </div>
-        <p class="title-spark-reset-wrap">
+        <p class="title-spark-reset-wrap" hidden>
           <button
             type="button"
             class="btn btn-ghost btn-sm"
             id="btn-reset-spark"
             hidden
-            title="Show Start tutorial again"
+            title="Legacy tutorial reset (removed)"
           >
             Reset tutorial
           </button>
@@ -890,9 +884,7 @@
           <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
         </div>
         <div class="progress-pills invent-steps" aria-label="Mission steps">
-          <span class="pill active" data-step="invent">1 · Invent</span>
-          <span class="pill" data-step="challenge">2 · Challenge</span>
-          <span class="pill" data-step="deploy">3 · Field</span>
+          <span class="pill active" data-step="invent">Invent</span>
         </div>
         <div class="hud-clock" id="hud-clock" title="Mission calendar">
           <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
@@ -1019,63 +1011,115 @@
             <div id="year-advance-banner" class="year-advance-banner" hidden aria-live="polite"></div>
           </div>
 
-          <div class="invent-form">
-            <div class="field">
-              <label for="invention-name">Name your invention</label>
-              <input id="invention-name" type="text" maxlength="80" placeholder="Something people here could say out loud…" autocomplete="off" />
-            </div>
+          <div class="invent-form invent-form-hex">
+            <!-- Hidden prose mirrors — derived from hexBoard for AI / MP / outcome -->
+            <input id="invention-name" type="hidden" value="" />
+            <textarea id="invention-how" hidden aria-hidden="true"></textarea>
+            <textarea id="invention-impact" hidden aria-hidden="true"></textarea>
+            <div id="synergy-box" class="synergy-box" hidden></div>
+            <div id="timing-box" class="timing-box" hidden></div>
+            <div id="story-mode" hidden></div>
+            <div id="field-how" hidden></div>
+            <div id="field-life" hidden></div>
+            <button type="button" id="btn-fill-other" hidden></button>
+            <button type="button" id="btn-open-coinventor" hidden></button>
+            <section id="idea-panel" hidden></section>
 
-            <div class="field stack-field">
-              <div class="stack-field-header">
-                <label>Technologies in your stack</label>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm tech-drawer-open"
-                  data-tech-drawer-open
-                  aria-expanded="false"
-                  aria-controls="solo-tech-library"
-                >
-                  + Add tech
-                  <span class="tech-drawer-count" data-tech-drawer-count hidden></span>
-                </button>
+            <section class="hex-tile-create" id="hex-tile-create" aria-label="Invent">
+              <div class="hex-tile-create-head">
+                <h3 class="hex-tile-create-title" id="hex-tile-create-title">Invent</h3>
+                <p class="muted hex-tile-create-hint" id="hex-tile-create-hint">Pick an emTech to invent.</p>
               </div>
-              <div id="selected-techs" class="selected-techs"></div>
-              <section id="idea-panel" class="idea-panel" hidden>
-                <div id="idea-focus" class="idea-focus"></div>
-                <div id="idea-deck" class="idea-deck" hidden></div>
-              </section>
-            </div>
+              <div id="selected-techs" class="selected-techs hex-invent-stack" aria-label="Tech stack"></div>
+              <div
+                id="hex-create-pending"
+                class="ai-pending hex-create-pending"
+                hidden
+                aria-live="polite"
+              >
+                <span class="ai-snake" aria-hidden="true"></span>
+                <span class="ai-pending-label" id="hex-create-pending-text">Working…</span>
+              </div>
+              <div class="hex-tile-create-body" id="hex-tile-create-body">
+                <div class="hex-tile-create-actions form-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-ask-ideas">Ask for ideas</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-ideas" hidden>Refresh</button>
+                </div>
+                <div class="field" id="field-hex-how">
+                  <label for="hex-how-text">How it works</label>
+                  <textarea
+                    id="hex-how-text"
+                    rows="3"
+                    placeholder="Describe your own idea for this place — then mint a tile…"
+                  ></textarea>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom" style="margin-top:.4rem">Mint tile</button>
+                </div>
+                <div
+                  class="hex-idea-cards"
+                  id="hex-idea-cards"
+                  aria-label="Invention ideas ready to place"
+                ></div>
+              </div>
+              <div class="hex-idea-tray" id="hex-idea-tray" hidden aria-hidden="true"></div>
+            </section>
 
-            <div id="synergy-box" class="synergy-box"></div>
-            <div id="timing-box" class="timing-box"></div>
+            <div class="hex-board-wrap">
+              <p class="hex-board-status" id="hex-board-status" aria-live="polite">Place ideas on the board. Looking at the board is the thinking.</p>
+              <div
+                id="hex-board-pending"
+                class="ai-pending hex-board-pending"
+                hidden
+                aria-live="polite"
+              >
+                <span class="ai-snake" aria-hidden="true"></span>
+                <span class="ai-pending-label" id="hex-board-pending-text">Challengers are reading your pathway…</span>
+              </div>
+              <div
+                id="hex-challenger-draw"
+                class="challenger-draw hex-challenger-draw"
+                hidden
+                aria-live="polite"
+              >
+                <p class="challenger-draw-kicker">Who challenges your invent?</p>
+                <p class="challenger-draw-status" id="hex-challenger-draw-status">Summoning the hard questions…</p>
+                <div class="challenger-draw-viewport">
+                  <div class="challenger-draw-track" id="hex-challenger-draw-reel"></div>
+                </div>
+              </div>
+              <div class="hex-board" id="hex-board">
+                <svg id="hex-board-svg" viewBox="0 0 1400 900" role="img" aria-label="Invention hex board"></svg>
+              </div>
+              <div
+                id="hex-tile-popup"
+                class="hex-tile-popup"
+                hidden
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="hex-tile-popup-title"
+              >
+                <div class="hex-tile-popup-card">
+                  <button type="button" class="hex-tile-popup-close" id="hex-tile-popup-close" aria-label="Close">×</button>
+                  <img id="hex-tile-popup-art" class="hex-tile-popup-art" alt="" hidden />
+                  <h3 class="hex-tile-popup-title" id="hex-tile-popup-title">Tile</h3>
+                  <p class="hex-tile-popup-meta muted" id="hex-tile-popup-meta"></p>
+                  <div class="hex-tile-popup-body" id="hex-tile-popup-body"></div>
+                </div>
+              </div>
+            </div>
 
             <div class="feasibility" id="feasibility" aria-live="polite">
               <div class="feasibility-head">
                 <div class="feasibility-light" id="feasibility-light" data-level="red" title="Feasibility"></div>
                 <div>
-                  <div class="feasibility-title">Feasibility <span id="feasibility-level-label">red</span></div>
-                  <p class="feasibility-summary" id="feasibility-summary">Add tech and a story to assess.</p>
+                  <div class="feasibility-title">Pathway <span id="feasibility-level-label">red</span></div>
+                  <p class="feasibility-summary" id="feasibility-summary">Place invention tiles and ease the crisis lights.</p>
                 </div>
               </div>
               <ul class="feasibility-dims" id="feasibility-dims"></ul>
               <p class="feasibility-foot" id="feasibility-foot"></p>
             </div>
 
-            <!-- Workshop: Focus + both faces. Spark (singleStoryFace): JS hides Focus/life/fill; label becomes "What does it do here?" -->
-            <div class="story-mode" id="story-mode" role="group" aria-label="Primary story face">
-              <span class="story-mode-label">Focus:</span>
-              <button type="button" class="story-mode-btn active" data-face="how" id="face-how" aria-pressed="true">
-                How it works
-              </button>
-              <button type="button" class="story-mode-btn" data-face="life" id="face-life" aria-pressed="false">
-                Everyday life
-              </button>
-            </div>
-            <p class="story-mode-hint" id="story-mode-hint">
-              Both boxes stay editable. <strong>Fill other side</strong> sits on your focus and AI-drafts the other face.
-            </p>
-
-            <!-- Hotseat contribution result — floats above story boxes, auto-dismisses -->
+            <!-- Hotseat contribution result -->
             <div
               id="mp-contrib-banner"
               class="mp-contrib-banner"
@@ -1084,48 +1128,9 @@
               hidden
             ></div>
 
-            <!-- Both faces editable in Workshop; Spark shows only #field-how -->
-            <div class="field story-face-field" id="field-how" data-face="how">
-              <div class="story-face-header" id="header-how">
-                <label for="invention-how" id="label-how">How does it work?</label>
-              </div>
-              <div class="story-textarea-shell" id="shell-how">
-                <textarea
-                  id="invention-how"
-                  rows="4"
-                  placeholder="What acts, what decides, how the pieces connect for *this* place…"
-                ></textarea>
-              </div>
-              <p class="story-face-note" id="note-how" hidden></p>
-            </div>
-
-            <div class="field story-face-field" id="field-life" data-face="life">
-              <div class="story-face-header" id="header-life">
-                <label for="invention-impact" id="label-life">Everyday life if it works</label>
-              </div>
-              <div class="story-textarea-shell" id="shell-life">
-                <textarea
-                  id="invention-impact"
-                  rows="4"
-                  placeholder="A Tuesday here after your invention lands…"
-                ></textarea>
-              </div>
-              <p class="story-face-note" id="note-life" hidden></p>
-            </div>
-
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm"
-              id="btn-fill-other"
-              hidden
-            >
-              Fill other side
-            </button>
-
             <div class="prompt-tip" id="prompt-tip"></div>
 
             <div class="form-actions game-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-coinventor">✦ Co-inventor</button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
@@ -1148,21 +1153,12 @@
                 Look Ahead
               </button>
               <button type="button" class="btn btn-primary" id="btn-to-challenge" disabled>
-                Answer the hard question →
+                Answer the hard questions →
               </button>
             </div>
             <p class="challenge-ready-hint" id="challenge-ready-hint" aria-live="polite"></p>
-            <div id="deploy-bay-workshop" class="deploy-bay deploy-bay-workshop" hidden>
-              <p class="deploy-bay-status" id="deploy-bay-workshop-status"></p>
-              <div class="deploy-bay-actions form-actions game-actions">
-                <button type="button" class="btn btn-primary btn-sm" id="btn-workshop-to-deploy">
-                  Open deploy bay →
-                </button>
-              </div>
-            </div>
             <p class="foot-hint">
-              Invent · hard question · field — before the crisis wins.
-              Use <strong>Art of the possible</strong> on the co-inventor for milestones &amp; capabilities.
+              Invent on the board · summon the hard questions · hold the pathway — before the crisis wins.
             </p>
           </div>
         </main>

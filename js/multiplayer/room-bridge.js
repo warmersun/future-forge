@@ -285,6 +285,9 @@ export function createRoomBridge() {
     state.inventionName = view.inventionName || "";
     state.inventionHow = view.inventionHow || "";
     state.inventionImpact = view.inventionImpact || "";
+    if (view.hexBoard && typeof view.hexBoard === "object") {
+      state.hexBoard = JSON.parse(JSON.stringify(view.hexBoard));
+    }
     state.selectedTechIds = (view.stack || []).map((x) => x.techId);
     state.challengePassed = Boolean(view.challengePassed);
     state.challengeLocked = Boolean(view.challengeLocked);

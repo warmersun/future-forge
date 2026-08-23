@@ -37,6 +37,17 @@ import {
   localIdeaSparks,
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
+import { createHexWorkshop } from "./hex/hex-workshop.js";
+import {
+  boardHolds,
+  deriveBoardProse,
+  techIdsFromBoard,
+  cloneBoard,
+  createEmptyBoard,
+  remainingConcernAngles,
+  concernAnglesOnBoard,
+} from "./hex/board-state.js";
+import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -315,7 +326,13 @@ const state = {
   inventionName: "",
   inventionHow: "",
   inventionImpact: "",
-  storyFace: "how", // focus: which face "Fill other side" attaches to (AI drafts the other)
+  storyFace: "how", // legacy focus (hex board is source of truth)
+  /** @type {object} Hex invent board document */
+  hexBoard: {
+    tiles: {},
+    concernsSummoned: false,
+    evalSeq: 0,
+  },
   challengePassed: false,
   challengeAngle: null,
   challengeText: "",
@@ -345,6 +362,8 @@ const state = {
   outcome: null,
   runReport: null,
   aiBusy: false,
+  /** True while hex workshop summons challenger tiles (scrutinize + art). */
+  hexSummonPending: false,
   /** @type {{ level: string, reason: string, forKey: string } | null} */
   aiTiming: null,
   /** Timing snapshot at deploy click for scoring */
@@ -436,10 +455,7 @@ function isRoomOrHotseatSession() {
 function features() {
   const base = GAME.features || {};
   if (isRoomOrHotseatSession()) return base;
-  // Only the home "Start tutorial" path sets tutorialRun / playMode spark
-  if (state.tutorialRun || state.playMode === "spark") {
-    return featuresForPlayMode("spark", base);
-  }
+  // Tutorial/Spark retired — Workshop only
   return featuresForPlayMode("workshop", base);
 }
 
@@ -705,9 +721,122 @@ function flashUnaffordableTech(id, error) {
       `Need ${cost.will ?? 1} Support to add ${t?.name || "this"} (you have ${state.will ?? 0}).`,
       { resource: "will" }
     );
+  } else if (error === "stack full" || error === "stack_full") {
+    flashToast(`Stack full (${stackCapLimit()}). Lift a tile off the board first.`);
   } else {
     flashToast("Not enough resources to add this tech.");
   }
+}
+
+/** Solo Workshop hex invent surface is active. */
+function isHexInventUi() {
+  return Boolean(document.querySelector(".invent-form-hex #hex-tile-create"));
+}
+
+/**
+ * Gate placing a tray invention onto the field.
+ * Moves of tiles already on the field, or techs already represented on-field, are free.
+ * @param {object|null|undefined} tile
+ * @returns {{ ok: boolean, error?: string }}
+ */
+function canPlaceInventionOnStack(tile) {
+  if (!tile?.techId) return { ok: true };
+  if (tile.q != null && tile.r != null) return { ok: true };
+  const board = state.hexBoard;
+  if (techIdsFromBoard(board).includes(tile.techId)) return { ok: true };
+  if ((state.selectedTechIds || []).includes(tile.techId)) return { ok: true };
+  const tech = techById(tile.techId);
+  const afford = canAffordTech(tech);
+  if (!afford.ok) return afford;
+  const cap = stackCapLimit();
+  if ((state.selectedTechIds || []).length >= cap) {
+    return { ok: false, error: "stack full" };
+  }
+  return { ok: true };
+}
+
+function paintAfterStackReconcile() {
+  renderTechList();
+  renderSelectedChips();
+  renderSynergy();
+  renderTiming();
+  renderFeasibility();
+  renderHud();
+  updateLearnButton();
+  updateChallengeButton();
+  updateVision();
+}
+
+/**
+ * Align selectedTechIds with placed invention tech ids (charge/refund via select/deselect).
+ * @param {string[]} nextIds
+ * @returns {{ ok: boolean, error?: string, techId?: string }}
+ */
+function reconcileStackFromBoard(nextIds) {
+  const wanted = [...new Set((nextIds || []).filter(Boolean))];
+  const wantedSet = new Set(wanted);
+  const prev = [...(state.selectedTechIds || [])];
+  if (
+    prev.length === wanted.length &&
+    prev.every((id) => wantedSet.has(id))
+  ) {
+    return { ok: true };
+  }
+
+  if (roomBridge.isRoom()) {
+    state.selectedTechIds = wanted;
+    syncLearnOrderWithSelection();
+    paintAfterStackReconcile();
+    return { ok: true };
+  }
+
+  if (hotseatBridge.isHotseat()) {
+    for (const id of prev) {
+      if (wantedSet.has(id)) continue;
+      if (!hotseatBridge.canEditStack?.()) continue;
+      const r = hotseatBridge.removeTechFromView(id);
+      if (r.ok) {
+        hotseatBridge.setSession(r.session);
+        removeFromLearnOrder(id);
+      }
+    }
+    for (const id of wanted) {
+      if (prev.includes(id) || (state.selectedTechIds || []).includes(id)) continue;
+      if (!hotseatBridge.canEditStack?.()) {
+        return { ok: false, error: "stack_locked", techId: id };
+      }
+      const r = hotseatBridge.layerTechOnView(id, techById(id));
+      if (!r.ok) {
+        flashUnaffordableTech(id, r.error);
+        return { ok: false, error: r.error, techId: id };
+      }
+      hotseatBridge.setSession(r.session);
+      pushLearnOrder(id);
+    }
+    hotseatBridge.hydrateSoloState(state, { global: state.global });
+    state.selectedTechIds = wanted;
+    paintAfterStackReconcile();
+    return { ok: true };
+  }
+
+  for (const id of prev) {
+    if (wantedSet.has(id)) continue;
+    const r = dispatchSim("deselect_tech", { techId: id });
+    if (r.ok) removeFromLearnOrder(id);
+  }
+  for (const id of wanted) {
+    if ((state.selectedTechIds || []).includes(id)) continue;
+    const r = dispatchSim("select_tech", { techId: id, tech: techById(id) });
+    if (!r.ok) {
+      flashUnaffordableTech(id, r.error);
+      return { ok: false, error: r.error, techId: id };
+    }
+    if (!state.learnOrder.includes(id)) pushLearnOrder(id);
+  }
+  state.aiTiming = null;
+  scheduleAiTimingAssess();
+  paintAfterStackReconcile();
+  return { ok: true };
 }
 
 function dispatchSim(type, payload = {}) {
@@ -901,6 +1030,118 @@ let ideaDeckTechId = null;
 /** Focused catalog tech (highlight only — not necessarily on the stack). */
 /** @type {string|null} */
 let focusedTechId = null;
+/** @type {ReturnType<typeof createHexWorkshop>|null} */
+let hexWorkshop = null;
+
+function ensureHexWorkshop() {
+  if (hexWorkshop) return hexWorkshop;
+  hexWorkshop = createHexWorkshop({
+    $: (sel) => $(sel),
+    getBoard: () => state.hexBoard || createEmptyBoard(),
+    setBoard: (b) => {
+      state.hexBoard = b;
+    },
+    getYear: () => state.year,
+    getPressure: () => state.pressure,
+    setPressure: (p) => {
+      state.pressure = p;
+      renderHud();
+    },
+    getWinMax: () => state.mission?.winMax || {},
+    getPressureRise: () => state.mission?.pressureRise || {},
+    getCollapseYear: () => state.mission?.collapseYear ?? null,
+    getPlace: () => state.mission?.place || "",
+    getMissionTitle: () => state.mission?.title || "",
+    getGrounding: () => state.mission?.grounding || null,
+    setDerivedProse: (prose) => {
+      state.inventionName = prose.inventionName || "";
+      state.inventionHow = prose.inventionHow || "";
+      state.inventionImpact = prose.inventionImpact || "";
+      const nameEl = $("#invention-name");
+      const howEl = $("#invention-how");
+      const impactEl = $("#invention-impact");
+      if (nameEl) nameEl.value = state.inventionName;
+      if (howEl) howEl.value = state.inventionHow;
+      if (impactEl) impactEl.value = state.inventionImpact;
+    },
+    /** @deprecated prefer reconcileStackFromBoard — kept for callers that only assign */
+    setSelectedTechIds: (ids) => {
+      state.selectedTechIds = ids;
+    },
+    canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    reconcileStackFromBoard: (ids) => reconcileStackFromBoard(ids),
+    flashUnaffordableTech: (id, error) => flashUnaffordableTech(id, error),
+    coInvent: (mode, content, extra) => apiCoInvent(mode, content, extra),
+    fetchIdeaImage: (opts) =>
+      fetchIdeaImage({
+        id: opts.ideaId,
+        ideaId: opts.ideaId,
+        techId: opts.techId,
+        imagePrompt: opts.imagePrompt,
+        title: opts.ideaId,
+        place: opts.place,
+        year: opts.year,
+        kind: opts.kind,
+      }),
+    setAiBusy: (on, opts = {}) => {
+      state.aiBusy = Boolean(on);
+      if (!on) state.hexSummonPending = false;
+      else if (opts.summon) state.hexSummonPending = true;
+      syncInventActionButtons();
+      applyEndTurnChrome?.();
+    },
+    playChallengerReel: (opts) => playChallengerReel(opts),
+    spendIdeaAp: () => {
+      if (!apEnabled()) return { ok: true };
+      return spendContributionAp("idea-sparks");
+    },
+    apEnabled: () => apEnabled(),
+    flashToast: (msg) => flashToast(msg),
+    commitBoard: (b) => {
+      try {
+        if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
+          roomBridge.send({
+            type: "board_commit",
+            payload: { hexBoard: b },
+          });
+        } else if (hotseatBridge.isHotseat()) {
+          // Hotseat syncs via hydrate push on next action; keep invent hexBoard live
+          const sess = hotseatBridge.getSession?.();
+          const view = sess?.invents?.[hotseatBridge.getViewId?.()];
+          if (view) {
+            view.hexBoard = b;
+            view.concernsSummoned = Boolean(b?.concernsSummoned);
+            try {
+              const placedIds = techIdsFromBoard(b);
+              const prevById = new Map(
+                (view.stack || []).map((x) => [x.techId, x])
+              );
+              view.stack = placedIds.map(
+                (techId) =>
+                  prevById.get(techId) || {
+                    techId,
+                    addedBy: hotseatBridge.getActiveId?.() || "local",
+                  }
+              );
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[board_commit]", e);
+      }
+    },
+    onBoardPainted: () => {
+      renderFeasibility();
+      updateChallengeButton();
+      renderHud();
+      updateLearnButton?.();
+    },
+  });
+  return hexWorkshop;
+}
+
 /** @type {Map<string, object[]>} */
 const ideaSparkCache = new Map();
 /** @type {Map<string, Promise<object[]>>} */
@@ -1072,6 +1313,9 @@ function inventActionBusyReason() {
     return challengeCombatBusy
       ? "AI is evaluating your defense — wait for the result."
       : "Challenger is still speaking — wait for the attack.";
+  }
+  if (state.hexSummonPending) {
+    return "Challengers are still reading your pathway — wait.";
   }
   if (state.aiBusy) {
     return "AI is still working — wait until it finishes.";
@@ -2759,6 +3003,41 @@ function newsForYear(year) {
   return opts[Math.floor(Math.random() * opts.length)].text;
 }
 
+/** Compact board snapshot for co-inventor / vision AI context. */
+function summarizeHexBoardForAi(board) {
+  if (!board?.tiles) return null;
+  const tiles = Object.values(board.tiles);
+  return {
+    concernsSummoned: Boolean(board.concernsSummoned),
+    inventions: tiles
+      .filter((t) => t.kind === "invention")
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        techId: t.techId,
+        polarity: t.polarity,
+        year: t.year,
+        howText: String(t.howText || "").slice(0, 400),
+        onBoard: t.q != null && t.r != null,
+        q: t.q,
+        r: t.r,
+        feasibilityPct: t.feasibilityPct,
+      })),
+    givens: tiles
+      .filter((t) => t.kind === "crisis" || t.kind === "concern")
+      .map((t) => ({
+        id: t.id,
+        kind: t.kind,
+        name: t.name,
+        role: t.role || null,
+        angle: t.angle || null,
+        lamp: t.lamp,
+        q: t.q,
+        r: t.r,
+      })),
+  };
+}
+
 function tips() {
   return [
     "Mixing domains often helps — but only when the problem needs it, not as a rule.",
@@ -2773,6 +3052,11 @@ function tips() {
 function showScreen(id) {
   stopReadAloud();
   state.screen = id;
+  if (id === "challenge-step" || id === "deploy") {
+    // Challenge / Deploy screens removed — hex board is the play
+    id = "workshop";
+    state.screen = "workshop";
+  }
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
   if (id === "title") {
     // Back on Home: clear tutorial session flag (storage not used)
@@ -2792,36 +3076,6 @@ function showScreen(id) {
       ensureVision();
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
       else updateVision({ immediate: true });
-    });
-  }
-  if (id === "challenge-step") {
-    renderChallengeStep();
-    ensureCoInventor();
-    setChallengeSideTab(state.challengeSideTab || "vision");
-    requestAnimationFrame(() => {
-      ensureVision();
-      const chRoot = $("#challenge-vision-root");
-      if (state.vision && chRoot) state.vision.addMirror(chRoot);
-      if (roomBridge.isRoom()) {
-        scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
-      } else {
-        updateVision({ immediate: true, context: "challenge" });
-      }
-    });
-  }
-  if (id === "deploy") {
-    renderDeployScreen();
-    ensureCoInventor();
-    setDeploySideTab(state.deploySideTab || "vision");
-    requestAnimationFrame(() => {
-      ensureVision();
-      const depRoot = $("#deploy-vision-root");
-      if (state.vision && depRoot) state.vision.addMirror(depRoot);
-      if (roomBridge.isRoom()) {
-        scheduleRoomVisionRefresh({ immediate: true, context: "deploy" });
-      } else {
-        updateVision({ immediate: true, context: "deploy" });
-      }
     });
   }
   if (id === "outcome") renderOutcome();
@@ -2849,7 +3103,6 @@ function shuffleCopy(arr) {
  * - Tutorial done: Start tutorial hidden; primary Start a Quest →; Reset tutorial in small text.
  */
 function renderTitleCtas() {
-  const done = readHasCompletedSpark();
   const start = $("#btn-start");
   const choose = $("#btn-choose-theme");
   const resetBtn = $("#btn-reset-spark");
@@ -2857,25 +3110,19 @@ function renderTitleCtas() {
   if (choose) {
     choose.hidden = false;
     choose.removeAttribute("hidden");
-    choose.textContent = done ? "Start a Quest →" : "Start a Quest";
+    choose.textContent = "Start a Quest →";
     choose.title = "Themes, sponsored, learning modules, or side-loaded Quests";
-    choose.classList.toggle("btn-primary", done);
-    choose.classList.toggle("btn-secondary", !done);
+    choose.classList.add("btn-primary");
+    choose.classList.remove("btn-secondary");
   }
   if (start) {
-    start.textContent = "Start tutorial →";
-    start.setAttribute("title", "Quiet guided run: Portside Ward floods");
-    start.hidden = done;
-    if (done) start.setAttribute("hidden", "");
-    else start.removeAttribute("hidden");
-    start.classList.toggle("btn-primary", !done);
-    start.classList.toggle("btn-secondary", done);
+    start.hidden = true;
+    start.setAttribute("hidden", "");
+    start.setAttribute("aria-hidden", "true");
   }
   if (resetBtn) {
-    resetBtn.hidden = !done;
-    if (done) resetBtn.removeAttribute("hidden");
-    else resetBtn.setAttribute("hidden", "");
-    resetBtn.textContent = "Reset tutorial";
+    resetBtn.hidden = true;
+    resetBtn.setAttribute("hidden", "");
   }
 }
 
@@ -4672,6 +4919,7 @@ function startMission(mission) {
   state.inventionHow = "";
   state.inventionImpact = "";
   state.storyFace = "how";
+  state.hexBoard = createEmptyBoard();
   state.challengePassed = false;
   state.challengeAngle = null;
   state.challengeText = "";
@@ -4738,6 +4986,12 @@ function startMission(mission) {
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
+  // Seed hex invent board with crisis meters
+  try {
+    ensureHexWorkshop().seedFromMission(state.mission);
+  } catch (e) {
+    console.warn("[hex board seed]", e);
+  }
   // Learning modules land on co-inventor; ensure root exists before welcome.
   if (state.sideTab === "coinventor") ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
@@ -4759,13 +5013,13 @@ function startMission(mission) {
       ? `**${place}**, ${year}. ${scene}\n\n` +
         `I'm your **AI tutor** for this lesson — we'll go **one idea at a time** (**free AP** while tutoring). ` +
         `I'll explain what you need when you need it. Readings on warmersun.com/lessons come one at a time when a step needs them.\n\n` +
-        `You still invent: pick techs, write how it works, and keep claims honest for this year. ` +
+        `You still invent: pick techs, place idea tiles on the hex board, and keep claims honest for this year. ` +
         `I won't dump the whole solution at once.\n\n` +
         `Use **End tutoring** when you want to invent on your own (chat then costs AP). I may also end tutoring when the invent gate is met.\n\n` +
         `What's one thing you already notice about this place or problem?`
       : `**${place}**, ${year}. ${scene}\n\n` +
-        `I'm your co-inventor. Pick any tech stack that fits **this place** — categories are never locked by year. ` +
-        `Feasibility (red/yellow/green) judges whether your *how it works* over-claims what is possible this year.\n\n` +
+        `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
+        `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
         `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
         `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
         `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
@@ -4973,6 +5227,11 @@ function renderWorkshop() {
   renderStoryFaceUI();
   // syncHiddenStoryFields also skips overwriting focused textareas
   syncHiddenStoryFields();
+  try {
+    ensureHexWorkshop().paint();
+  } catch (e) {
+    console.warn("[hex paint]", e);
+  }
   renderFeasibility();
   updateLearnButton();
   updateChallengeButton();
@@ -5526,49 +5785,89 @@ function assessFeasibility() {
 
 /** Both story faces long enough for Challenge / Deploy (matches Deploy min length). */
 function bothStoryFacesReady() {
+  // Hex invent: at least one invention tile with howText, or derived prose
+  const tiles = Object.values(state.hexBoard?.tiles || {}).filter(
+    (t) => t.kind === "invention"
+  );
+  if (tiles.some((t) => String(t.howText || "").trim().length >= 12)) return true;
   return (
     state.inventionHow.trim().length >= 20 && state.inventionImpact.trim().length >= 20
   );
 }
 
 function inventReadyForChallenge() {
-  // Wait for AI timing (and light) to settle before Challenge — matches traffic light pending
-  if (isAiTimingAssessPending()) return false;
-  // Hard gate: name + both story faces + stack — same floor Deploy uses for story faces
-  const named = state.inventionName.trim().length >= 2;
-  const hasStack = state.selectedTechIds.length >= 1;
-  if (!named || !bothStoryFacesReady() || !hasStack) return false;
-  return assessFeasibility().canChallenge;
+  // Hex path: need at least one invention on the board (or in tray) before summoning concerns
+  const inventions = Object.values(state.hexBoard?.tiles || {}).filter(
+    (t) => t.kind === "invention"
+  );
+  if (!inventions.length) return false;
+  if (collapsed()) return false;
+  // Allow summoning concerns even if some lamps are red — that is the point
+  return true;
+}
+
+function pathwayHoldsReady() {
+  return boardHolds(state.hexBoard);
 }
 
 function renderFeasibility() {
   const box = $("#feasibility");
   if (!box) return;
-  const f = assessFeasibility();
+  const board = state.hexBoard;
+  const inventions = Object.values(board?.tiles || {}).filter((t) => t.kind === "invention");
+  const givens = Object.values(board?.tiles || {}).filter(
+    (t) => t.kind === "crisis" || t.kind === "concern"
+  );
+  const reds = givens.filter((t) => t.lamp === "red").length;
+  const yellows = givens.filter((t) => t.lamp === "yellow").length;
+  const greens = givens.filter((t) => t.lamp === "green").length;
+  const onBoard = inventions.filter((t) => t.q != null && t.r != null).length;
+  let overall = "red";
+  if (givens.length && reds === 0 && yellows === 0) overall = "green";
+  else if (givens.length && reds === 0) overall = "yellow";
+  else if (onBoard > 0 && reds < givens.length) overall = "yellow";
+
   const light = $("#feasibility-light");
   const label = $("#feasibility-level-label");
   const summary = $("#feasibility-summary");
   const dims = $("#feasibility-dims");
   const foot = $("#feasibility-foot");
-  const pending = isAiTimingAssessPending();
-  // While re-assess is queued/in flight, freeze the traffic light on the last
-  // settled color and spin — do not flash the interim local heuristic color.
-  if (!pending) {
-    lastFeasibilityLightLevel = f.overall;
-    const timingDim = f.dims?.find((d) => d.id === "timing");
-    if (timingDim) recordSettledTimingLevel(timingDim.level);
-  }
-  const lightLevel = pending ? lastFeasibilityLightLevel : f.overall;
   if (light) {
-    light.dataset.level = lightLevel;
-    light.classList.toggle("is-pending", pending);
-    light.setAttribute("aria-busy", pending ? "true" : "false");
-    light.title = pending ? "Re-evaluating feasibility…" : "Feasibility";
+    light.dataset.level = overall;
+    light.classList.remove("is-pending");
+    light.title = "Pathway coverage";
   }
-  if (label) label.textContent = lightLevel;
-  if (summary) summary.textContent = f.summary;
+  if (label) label.textContent = overall;
+  if (summary) {
+    summary.textContent = board?.concernsSummoned
+      ? `${reds} red · ${yellows} yellow · ${greens} green among crisis & concerns`
+      : `${inventions.length} idea tile(s), ${onBoard} on the board · summon hard questions when ready`;
+  }
   if (dims) {
-    dims.innerHTML = f.dims
+    const coverage =
+      reds === 0 && givens.length
+        ? { level: greens === givens.length ? "green" : "yellow", note: "No red lights" }
+        : { level: "red", note: `${reds} light(s) still red` };
+    const bonds = { level: "green", note: "Illegal world docks are refused" };
+    const timingWorst = inventions.reduce((acc, t) => {
+      const p = t.feasibilityPct;
+      if (p == null) return acc;
+      if (p < 35) return "red";
+      if (p < 70 && acc !== "red") return "yellow";
+      return acc;
+    }, "green");
+    const rows = [
+      { name: "Coverage", level: coverage.level, note: coverage.note },
+      { name: "Bonds", level: bonds.level, note: bonds.note },
+      {
+        name: "Timing",
+        level: inventions.length ? timingWorst : "red",
+        note: inventions.length
+          ? "Worst invention honesty this year"
+          : "Mint an invention tile",
+      },
+    ];
+    dims.innerHTML = rows
       .map(
         (d) =>
           `<li><span class="dot ${d.level}"></span><span class="dim-name">${escapeHtml(
@@ -5578,10 +5877,11 @@ function renderFeasibility() {
       .join("");
   }
   if (foot) {
-    foot.textContent =
-      f.pilotLevel === "red"
-        ? "Fix red Pilot items (timing, story, local fit, stack) to face the hard question. Sustainable red does not block Challenge — it weakens Scale."
-        : `Pilot ~${f.pilotChancePct}% uses timing · story · local fit · stack. Scale ~${f.scaleChancePct}% uses Scale + Sustainable (does it fix why the crisis keeps happening?).`;
+    foot.textContent = board?.concernsSummoned
+      ? pathwayHoldsReady()
+        ? "All lights yellow or green — declare the pathway holds."
+        : "Ease remaining red lights by placing honest ideas against them."
+      : "Place ideas, then Answer the hard questions to summon the challengers.";
   }
 }
 
@@ -5835,13 +6135,13 @@ function renderTechList() {
       const marketHit =
         budgetWillEnabled() && marketAffectsTech(currentMarketNews(), t);
       const costTitle = cost
-        ? ` | To add: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
+        ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
             apEnabled() ? ", 1 AP" : ""
           }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}${
             marketHit ? " · market news active" : ""
           }${unaffordable ? " · cannot afford" : ""}`
         : apEnabled()
-          ? " | To add: 1 AP"
+          ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: 1 AP`
           : "";
       // Visible cost chips — not only in tooltip
       let costHtml = "";
@@ -5852,7 +6152,7 @@ function renderTechList() {
         const bits = [
           `<span class="tech-cost-chip tech-cost-budget${
             bDelta > 0 ? " tech-cost-up" : bDelta < 0 ? " tech-cost-down" : ""
-          }" title="Budget to add this to your stack">${cost.budget}$${
+          }" title="${isHexInventUi() ? "Budget when you place on the board" : "Budget to add this to your stack"}">${cost.budget}$${
             bDelta ? ` (${bDelta > 0 ? "+" : ""}${bDelta})` : ""
           }</span>`,
         ];
@@ -5870,19 +6170,36 @@ function renderTechList() {
             `<span class="tech-cost-chip tech-cost-ap" title="Attention this turn">1 AP</span>`
           );
         }
-        costHtml = `<span class="tech-cost-row" aria-label="Cost to add">${bits.join("")}</span>`;
+        costHtml = `<span class="tech-cost-row" aria-label="${isHexInventUi() ? "Cost when placed" : "Cost to add"}">${bits.join("")}</span>`;
       } else if (sel) {
         costHtml = `<span class="tech-cost-row tech-cost-in-stack"><span class="tech-cost-chip tech-cost-owned">In stack</span></span>`;
       } else if (apEnabled()) {
         costHtml = `<span class="tech-cost-row"><span class="tech-cost-chip tech-cost-ap">1 AP</span></span>`;
       }
-      // Green ✓ = on stack. Accent outline = focused (ideas/add bar), independent of stack.
+      // Green ✓ = on stack (placed). Accent outline = focused invent tech.
       const focused = focusedTechId === t.id;
+      const hex = isHexInventUi();
       const cardClass = `tech-card ${sel ? "selected" : ""} ${
         sug ? "recommended" : ""
       } ${isSpot ? "spotlight-tech" : ""} ${unaffordable ? "unaffordable" : ""}${
         focused ? " is-focused" : ""
       }`;
+      const toggleLabel = hex
+        ? focused
+          ? `Focused ${t.name}`
+          : `Focus ${t.name}`
+        : sel
+          ? `Remove ${t.name} from stack`
+          : `Add ${t.name} to stack`;
+      const toggleMark = hex
+        ? focused
+          ? "●"
+          : "+"
+        : sel
+          ? "✓"
+          : unaffordable
+            ? "!"
+            : "+";
       return `
         <div class="${cardClass}" data-id="${t.id}" style="--domain:${color}" role="listitem" tabindex="-1">
           <button type="button" class="tech-card-main" data-tech-focus="${t.id}"
@@ -5898,8 +6215,8 @@ function renderTechList() {
             </span>
           </button>
           <button type="button" class="tech-add-btn" data-tech-toggle="${t.id}"
-            aria-label="${sel ? `Remove ${t.name} from stack` : `Add ${t.name} to stack`}">
-            <span class="tech-add">${sel ? "✓" : unaffordable ? "!" : "+"}</span>
+            aria-label="${escapeHtml(toggleLabel)}">
+            <span class="tech-add">${toggleMark}</span>
           </button>
         </div>`;
     })
@@ -5912,6 +6229,10 @@ function renderTechList() {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (isHexInventUi()) {
+        focusTech(btn.dataset.techToggle);
+        return;
+      }
       focusedTechId = btn.dataset.techToggle;
       onTechClick(btn.dataset.techToggle);
     });
@@ -5957,6 +6278,11 @@ function updateLearnButton() {
 }
 
 function onTechClick(id) {
+  // Hex invent: catalog only focuses; stack comes from placing tiles on the board.
+  if (isHexInventUi()) {
+    focusTech(id);
+    return;
+  }
   if (blockIfMpTurnGate("changing the stack")) return;
   if (isMpContributionLocked() || writeCommitInFlight) {
     flashToast(mpContributionLockReason);
@@ -6103,6 +6429,12 @@ function onTechClick(id) {
   state.aiTiming = null;
   // Schedule before paint so the light freezes on last color + spins
   scheduleAiTimingAssess();
+  focusedTechId = id;
+  try {
+    ensureHexWorkshop().focusTech(id);
+  } catch {
+    /* ignore */
+  }
   renderTechList();
   renderSelectedChips();
   renderSynergy();
@@ -6179,6 +6511,11 @@ function focusTech(techId) {
   focusedTechId = techId;
   if (switching && ideaDeck?.isOpen() && ideaDeckTechId !== techId) {
     closeIdeaDeck();
+  }
+  try {
+    ensureHexWorkshop().focusTech(techId);
+  } catch {
+    /* ignore */
   }
   renderTechList();
   renderSelectedChips();
@@ -6415,20 +6752,22 @@ async function fetchIdeaSparks(techId, opts = {}) {
 
 async function fetchIdeaImage(idea) {
   const id = ideaImageId({
-    techId: ideaDeckTechId || idea.id,
-    ideaId: idea.id,
-    place: state.mission?.place,
-    year: state.year,
+    techId: idea.techId || ideaDeckTechId || idea.id,
+    ideaId: idea.ideaId || idea.id,
+    place: idea.place || state.mission?.place,
+    year: idea.year ?? state.year,
   });
   try {
+    const body = {
+      id,
+      prompt: idea.imagePrompt || idea.title,
+      clientSessionId: getClientSessionId(),
+    };
+    if (idea.kind) body.kind = idea.kind;
     const res = await fetch("/api/idea-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        prompt: idea.imagePrompt || idea.title,
-        clientSessionId: getClientSessionId(),
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     return data?.ok && data.imageUrl ? data.imageUrl : null;
@@ -6490,14 +6829,21 @@ function renderSelectedChips() {
   const layout = workshopLayoutFor(box);
   updateTechDrawerCount(layout, techs.length);
   if (!techs.length) {
-    box.innerHTML = `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the left catalog on wide screens) to build your stack.</span>`;
+    const hexEmpty = Boolean(box?.closest("#hex-tile-create"));
+    box.innerHTML = hexEmpty
+      ? `<span class="empty-hint">Pick an emTech to invent.</span>`
+      : `<span class="empty-hint">Use <button type="button" class="linkish" data-tech-drawer-open-hint>+ Add tech</button> (or the left catalog on wide screens) to build your stack.</span>`;
     renderIdeaFocusBar();
     return;
   }
   box.innerHTML = techs
     .map((t) => {
       const focused = focusedTechId === t.id;
-      return `<span class="tech-chip${focused ? " is-focused" : ""}" data-tech-focus="${t.id}">${t.icon} ${escapeHtml(t.name)}<button type="button" data-remove="${t.id}" aria-label="Remove ${escapeHtml(t.name)}">×</button></span>`;
+      const hex = Boolean(box?.closest("#hex-tile-create"));
+      const removeBtn = hex
+        ? ""
+        : `<button type="button" data-remove="${t.id}" aria-label="Remove ${escapeHtml(t.name)}">×</button>`;
+      return `<span class="tech-chip${focused ? " is-focused" : ""}" data-tech-focus="${t.id}" title="${hex ? "Focus — lift tiles off the board to remove from stack" : ""}">${t.icon} ${escapeHtml(t.name)}${removeBtn}</span>`;
     })
     .join("");
   box.querySelectorAll("[data-remove]").forEach((b) =>
@@ -6587,45 +6933,34 @@ function renderTiming() {
 }
 
 function challengeBlockReason() {
-  const named = state.inventionName.trim().length >= 2;
-  const howOk = state.inventionHow.trim().length >= 20;
-  const lifeOk = state.inventionImpact.trim().length >= 20;
-  if (!named) return "Name your invention first.";
-  if (!howOk && !lifeOk) return "Write both story faces (how it works + everyday life), or fill one and use Fill other side.";
-  if (!howOk) return "Write how it works (or focus Everyday life and use Fill other side).";
-  if (!lifeOk) return "Write everyday life if it works (or focus How it works and use Fill other side).";
-  if (!state.selectedTechIds.length) return "Add at least one technology.";
-  // continue with existing body below
-  const f = assessFeasibility();
+  const inventions = Object.values(state.hexBoard?.tiles || {}).filter(
+    (t) => t.kind === "invention"
+  );
+  if (!inventions.length) return "Mint at least one invention tile (Ask for ideas or write how it works).";
   if (collapsed()) return "Too late — mission collapsed.";
-  // Sustainable red does not block Challenge — only Pilot-local reds do
-  if (f.pilotLevel === "red") {
-    const reds = f.dims.filter(
-      (d) =>
-        d.level === "red" &&
-        d.id !== "sustainable" &&
-        d.id !== "scale"
-    );
-    if (reds.length) return `Feasibility red: ${reds.map((d) => d.note).join(" · ")}`;
-    return f.summary;
-  }
   return "";
 }
 
 function updateChallengeButton() {
   const btn = $("#btn-to-challenge");
   if (!btn) return;
-  const b = mpBridge();
   const spectator = isMpInventSpectator();
   const spectatorReason =
     "Not your turn — you can browse and use Learn, but only the active seat acts.";
+  const hint = $("#challenge-ready-hint");
+  const onBoard = concernAnglesOnBoard(state.hexBoard).length;
+  const remaining = remainingConcernAngles(state.hexBoard);
+  const left = remaining.length;
+  const midSummon = onBoard > 0 && left > 0;
 
-  // Multiplayer spectator (not your turn): never start the hard question
   if (spectator) {
     btn.disabled = true;
     btn.title = spectatorReason;
-    btn.textContent = "Answer the hard question →";
-    const hint = $("#challenge-ready-hint");
+    btn.textContent = state.hexBoard?.concernsSummoned
+      ? "The pathway holds →"
+      : midSummon
+        ? `Summon next challenger (${left} left) →`
+        : "Answer the hard questions →";
     if (hint) {
       hint.textContent = spectatorReason;
       hint.className = "challenge-ready-hint blocked";
@@ -6633,103 +6968,49 @@ function updateChallengeButton() {
     return;
   }
 
-  // Deploy-ready / scale-ready: do not park on Invent with a "back to bay" dual path.
-  // Recovery only — jump straight into Deploy (no permanent Open deploy banner).
-  if (deployStagesEnabled() && state.deployUnlocked && state.challengePassed) {
-    const inventBusy = isInventActionBusy();
-    const canDeploy =
-      !inventBusy &&
-      (!b || Boolean(b.canRunDeploy?.() || b.canOpenDeployBay?.()));
-    const fielded =
-      state.deployStage === "new_normal" || state.deployStage === "scale";
-    if (fielded) {
-      // Invent already scaled — no hard-question / no deploy re-entry from workshop
-      btn.disabled = true;
-      btn.textContent = "Answer the hard question →";
-      btn.title = "This invent already Scaled — Quest continues or is held.";
-      const hint = $("#challenge-ready-hint");
-      if (hint) {
-        hint.textContent = "This invent is fielded (Scaled).";
-        hint.className = "challenge-ready-hint blocked";
-      }
-      return;
-    }
-    btn.disabled = !canDeploy;
-    btn.textContent = "Continue to Field →";
-    btn.title = inventBusy
-      ? inventActionBusyReason()
-      : canDeploy
-        ? "Open Pilot / Scale for this invent"
-        : "Not your turn, or this invent is not ready to field";
-    const hint = $("#challenge-ready-hint");
+  if (state.hexBoard?.concernsSummoned) {
+    const ready = pathwayHoldsReady() && !collapsed();
+    btn.disabled = !ready || isInventActionBusy();
+    btn.textContent = "The pathway holds →";
+    btn.title = ready
+      ? "All active lights are yellow or green"
+      : "Ease remaining red lights on the board";
     if (hint) {
-      if (inventBusy) {
-        hint.textContent = inventActionBusyReason();
-        hint.className = "challenge-ready-hint blocked";
-      } else if (canDeploy) {
-        hint.textContent = "Challenge cleared — continue to Field (Pilot → Scale).";
-        hint.className = "challenge-ready-hint ready";
-      } else {
-        hint.textContent = "Only the active seat can Pilot/Scale this invent.";
-        hint.className = "challenge-ready-hint blocked";
-      }
+      hint.textContent = ready
+        ? "Ready — declare the pathway holds."
+        : "Place honest ideas against red lights.";
+      hint.className = ready
+        ? "challenge-ready-hint ready"
+        : "challenge-ready-hint blocked";
     }
     return;
   }
-  btn.textContent = "Answer the hard question →";
-  // Don't re-enable while Fill other side / co-inventor is still drafting
-  if (isInventActionBusy()) {
-    btn.disabled = true;
-    btn.title = inventActionBusyReason();
-    const hint = $("#challenge-ready-hint");
+
+  // Mid-summon: some roster concerns on board, more remaining
+  if (midSummon) {
+    btn.disabled = isInventActionBusy();
+    btn.textContent = `Summon next challenger (${left} left) →`;
+    btn.title = `${left} challenger${left === 1 ? "" : "s"} still to face`;
     if (hint) {
-      hint.textContent = inventActionBusyReason();
-      hint.className = "challenge-ready-hint blocked";
-    }
-    return;
-  }
-  // Keep light + button in lockstep: no Challenge while AI timing is re-evaluating
-  renderFeasibility();
-  if (isAiTimingAssessPending()) {
-    const busy = feasibilityAssessBusyReason();
-    btn.disabled = true;
-    btn.title = busy;
-    const hint = $("#challenge-ready-hint");
-    if (hint) {
-      hint.textContent = busy;
-      hint.className = "challenge-ready-hint blocked";
-    }
-    return;
-  }
-  const f = assessFeasibility();
-  const reason = challengeBlockReason();
-  let ok = f.canChallenge;
-  let title = ok
-    ? f.overall === "yellow"
-      ? "Feasibility yellow — you can still answer the hard question"
-      : "Feasibility green — answer a hard question next"
-    : reason;
-  // Multiplayer: only owner faces Challenge on their invent
-  if (b && !b.canFaceChallenge?.()) {
-    ok = false;
-    title = b.viewingOther?.()
-      ? "Only the owner can face Challenge on this invent"
-      : "Cannot challenge right now";
-  }
-  btn.disabled = !ok;
-  btn.title = title;
-  const hint = $("#challenge-ready-hint");
-  if (hint) {
-    if (ok) {
-      hint.textContent =
-        f.overall === "green"
-          ? "Feasibility green — answer the hard question when ready."
-          : "Feasibility yellow — risky but allowed. Hard question next.";
+      hint.textContent = `${left} hard question${left === 1 ? "" : "s"} still to summon.`;
       hint.className = "challenge-ready-hint ready";
-    } else {
-      hint.textContent = title;
-      hint.className = "challenge-ready-hint blocked";
     }
+    return;
+  }
+
+  const reason = challengeBlockReason();
+  const ready = !reason && inventReadyForChallenge();
+  btn.disabled = !ready || isInventActionBusy();
+  btn.textContent = "Answer the hard questions →";
+  btn.title =
+    reason ||
+    "Summon challengers one at a time — Mother Nature, Moloch, Ethicist, Stakeholder";
+  if (hint) {
+    hint.textContent =
+      reason || "Ready to be challenged — face each hard question, one by one.";
+    hint.className = reason
+      ? "challenge-ready-hint blocked"
+      : "challenge-ready-hint ready";
   }
 }
 
@@ -7509,6 +7790,11 @@ function endTurn() {
   // Solo end_turn advances world year +1 — re-assess timing (do not leave AI cache for prior year)
   if ((r.events || []).some((e) => e.type === "year_tick")) {
     onInventYearChangedForTiming();
+    try {
+      ensureHexWorkshop().refreshAfterYearChange();
+    } catch {
+      /* ignore */
+    }
   }
   if (state.screen === "challenge-step") {
     renderChallengeHud();
@@ -7768,6 +8054,11 @@ function waitTurn(opts = {}) {
   }
 
   flashToast(`Clock → ${state.year} · crisis rose · AP refilled`);
+  try {
+    ensureHexWorkshop().refreshAfterYearChange();
+  } catch {
+    /* ignore */
+  }
   renderWorkshop();
   updateVision({ immediate: true });
   state.coInventor?.pushAssistant?.(
@@ -7977,8 +8268,17 @@ function hideChallengerBannerForReveal() {
  * @param {number} [hp=2]
  */
 function challengerSlideHtml(a, hp = 2) {
-  const hearts = "♥".repeat(Math.max(0, hp)) + "♡".repeat(Math.max(0, 2 - hp));
+  const showResolve = Number(hp) > 0;
+  const hearts = showResolve
+    ? "♥".repeat(Math.max(0, hp)) + "♡".repeat(Math.max(0, 2 - hp))
+    : "";
   const src = a.visual || `assets/challengers/${a.id}.jpg`;
+  const resolveBlock = showResolve
+    ? `<p class="challenger-slide-resolve">
+            <span class="challenger-resolve-label">Their resolve</span>
+            <span class="challenger-resolve-hearts" aria-hidden="true">${hearts}</span>
+          </p>`
+    : "";
   return `
     <div class="challenger-slide" data-id="${escapeHtml(a.id)}">
       <div class="challenger-slide-panel" data-challenger="${escapeHtml(a.id)}">
@@ -7991,10 +8291,7 @@ function challengerSlideHtml(a, hp = 2) {
           <p class="challenge-angle-sub">${escapeHtml(a.subtitle || "")} — ${escapeHtml(
             a.blurb || ""
           )}</p>
-          <p class="challenger-slide-resolve">
-            <span class="challenger-resolve-label">Their resolve</span>
-            <span class="challenger-resolve-hearts" aria-hidden="true">${hearts}</span>
-          </p>
+          ${resolveBlock}
         </div>
       </div>
     </div>`;
@@ -8002,24 +8299,60 @@ function challengerSlideHtml(a, hp = 2) {
 
 /**
  * Horizontal carousel: one full challenger panel at a time, sliding R→L.
- * Random pick is already done; `until` is the AI pose promise — keep sliding until
- * it settles, then land on `finalAngle` (never stop on a wrong critic).
  *
- * @param {object} finalAngle — CHALLENGE_ANGLES entry (pre-selected)
- * @param {{ until?: Promise<any>, skip?: boolean, maxHp?: number }} [opts]
+ * Modes:
+ * - `pick` (default): `finalAngle` required; keep sliding until `until` settles, then land
+ *   on that critic. Challenge screen calls finishChallengerDraw unless `finishBanner: false`.
+ * - `roster`: no single winner; keep sliding until `until` settles + min spin, then hide reel.
+ *
+ * @param {object|null} finalAngle — CHALLENGE_ANGLES entry (required for pick)
+ * @param {{
+ *   until?: Promise<any>,
+ *   skip?: boolean,
+ *   maxHp?: number,
+ *   mode?: "pick"|"roster",
+ *   roster?: object[],
+ *   draw?: HTMLElement|null,
+ *   track?: HTMLElement|null,
+ *   status?: HTMLElement|null,
+ *   spinStatus?: string,
+ *   landStatus?: string,
+ *   finishBanner?: boolean,
+ *   lockReveal?: boolean,
+ * }} [opts]
  * @returns {Promise<any>} resolves with the `until` result (or undefined)
  */
 function playChallengerDrawAnimation(finalAngle, opts = {}) {
-  const draw = $("#challenger-draw");
-  const track = $("#challenger-draw-reel");
-  const status = $("#challenger-draw-status");
-  const banner = $("#challenger-visual");
-  const speech = $("#challenge-speech");
-  const moves = $("#scrutiny-moves");
-  if (!draw || !track || !finalAngle) {
-    state.challengeRevealPending = false;
-    document.body.classList.remove("challenge-reveal-pending");
-    return Promise.resolve(opts.until);
+  const mode = opts.mode === "roster" ? "roster" : "pick";
+  const finishBanner = opts.finishBanner !== false && mode === "pick";
+  const lockReveal =
+    opts.lockReveal != null ? Boolean(opts.lockReveal) : finishBanner;
+  const draw =
+    opts.draw ||
+    (opts.mount === "hex" || mode === "roster"
+      ? $("#hex-challenger-draw")
+      : $("#challenger-draw"));
+  const track =
+    opts.track ||
+    (opts.mount === "hex" || mode === "roster"
+      ? $("#hex-challenger-draw-reel")
+      : $("#challenger-draw-reel"));
+  const status =
+    opts.status ||
+    (opts.mount === "hex" || mode === "roster"
+      ? $("#hex-challenger-draw-status")
+      : $("#challenger-draw-status"));
+
+  if (!draw || !track || (mode === "pick" && !finalAngle)) {
+    if (lockReveal) {
+      state.challengeRevealPending = false;
+      document.body.classList.remove("challenge-reveal-pending");
+    }
+    return Promise.resolve(
+      opts.until && typeof opts.until.then === "function"
+        ? opts.until
+        : undefined
+    );
   }
 
   const preferReduced =
@@ -8032,32 +8365,43 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
       ? opts.until
       : Promise.resolve(undefined);
 
-  // Block room full-hydrate while the carousel runs (desync fix)
-  state.challengeRevealPending = true;
-  document.body.classList.add("challenge-reveal-pending");
-  // Only the carousel is visible — never the final banner underneath
-  hideChallengerBannerForReveal();
+  if (lockReveal) {
+    // Block room full-hydrate while the carousel runs (desync fix)
+    state.challengeRevealPending = true;
+    document.body.classList.add("challenge-reveal-pending");
+    hideChallengerBannerForReveal();
+  }
 
-  // Fixed roster; pick is independent. Append clone of first for seamless wrap 3→0.
-  const roster = CHALLENGE_ANGLES.slice();
+  // Roster may be a subset (remaining challengers). Append clone of first for wrap.
+  const roster =
+    Array.isArray(opts.roster) && opts.roster.length
+      ? opts.roster.slice()
+      : CHALLENGE_ANGLES.slice();
   const n = roster.length;
-  const winIdx = Math.max(
-    0,
-    roster.findIndex((a) => a.id === finalAngle.id)
-  );
+  const winIdx =
+    mode === "pick"
+      ? Math.max(
+          0,
+          roster.findIndex((a) => a.id === finalAngle.id)
+        )
+      : 0;
 
   track.innerHTML =
     roster.map((a) => challengerSlideHtml(a, maxHp)).join("") +
-    challengerSlideHtml(roster[0], maxHp); // clone for wrap animation
+    (n > 0 ? challengerSlideHtml(roster[0], maxHp) : "");
   draw.hidden = false;
   draw.removeAttribute("hidden");
   if (status) {
     status.classList.remove("is-landed");
-    status.textContent = "Summoning a challenger…";
+    status.textContent =
+      opts.spinStatus ||
+      (mode === "roster"
+        ? "Summoning the hard questions…"
+        : "Summoning a challenger…");
   }
 
   const SLIDE_MS = 500;
-  const MIN_SPIN_MS = 1400;
+  const MIN_SPIN_MS = n <= 1 ? 600 : 1400;
   const startedAt = Date.now();
 
   /** Logical index into roster (0..n-1); track may briefly sit on clone at n */
@@ -8075,11 +8419,16 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
       void track.offsetWidth;
       track.classList.remove("is-snap");
     }
-    const a = roster[i % n];
+    const a = roster[i % Math.max(n, 1)];
     if (status && a && !stopped) {
-      status.textContent = preferReduced
-        ? `${finalAngle.label} steps forward`
-        : `…${a.label}?`;
+      if (preferReduced && mode === "pick") {
+        status.textContent = `${finalAngle.label} steps forward`;
+      } else if (preferReduced && mode === "roster") {
+        status.textContent =
+          opts.landStatus || "The hard questions arrive";
+      } else {
+        status.textContent = `…${a.label}?`;
+      }
     }
   };
 
@@ -8097,34 +8446,60 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
     });
 
   const markWinnerSlide = () => {
+    if (mode !== "pick" || !finalAngle) return;
     track.querySelectorAll(".challenger-slide").forEach((el, i) => {
-      // Don't highlight the wrap clone as winner styling twice oddly
       const isWin = el.dataset.id === finalAngle.id && i === winIdx;
       el.classList.toggle("is-winner", isWin);
     });
   };
 
+  const hideReel = () => {
+    draw.hidden = true;
+    draw.setAttribute("hidden", "");
+    track.innerHTML = "";
+    track.style.transform = "";
+    track.classList.remove("is-snap");
+  };
+
   const finish = () => {
     stopped = true;
-    idx = winIdx;
-    setTrack(winIdx, { snap: true });
-    markWinnerSlide();
+    if (mode === "pick") {
+      idx = winIdx;
+      setTrack(winIdx, { snap: true });
+      markWinnerSlide();
+      if (status) {
+        status.classList.add("is-landed");
+        status.textContent =
+          opts.landStatus || `${finalAngle.label} steps forward`;
+      }
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          if (finishBanner) finishChallengerDraw(finalAngle);
+          else hideReel();
+          if (poseFailed) resolve(undefined);
+          else resolve(poseResult);
+        }, preferReduced ? 120 : 520);
+      });
+    }
     if (status) {
       status.classList.add("is-landed");
-      status.textContent = `${finalAngle.label} steps forward`;
+      status.textContent =
+        opts.landStatus || "The hard questions arrive";
     }
     return new Promise((resolve) => {
       setTimeout(() => {
-        finishChallengerDraw(finalAngle);
+        hideReel();
         if (poseFailed) resolve(undefined);
         else resolve(poseResult);
-      }, preferReduced ? 120 : 520);
+      }, preferReduced ? 120 : 420);
     });
   };
 
-  if (preferReduced) {
-    setTrack(winIdx, { snap: true });
-    markWinnerSlide();
+  if (preferReduced || n <= 1) {
+    if (mode === "pick") {
+      setTrack(winIdx, { snap: true });
+      markWinnerSlide();
+    }
     return untilPromise.then(() => finish()).catch(() => finish());
   }
 
@@ -8132,7 +8507,6 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   const slideOnce = () =>
     new Promise((resolve) => {
       if (idx === n - 1) {
-        // Animate onto clone of first (index n), then snap to 0
         setTrack(n);
         setTimeout(() => {
           idx = 0;
@@ -8149,6 +8523,7 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   const canStop = () => {
     if (!poseReady) return false;
     if (Date.now() - startedAt < MIN_SPIN_MS) return false;
+    if (mode === "roster") return true;
     return roster[idx]?.id === finalAngle.id;
   };
 
@@ -8157,19 +8532,58 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
     while (!canStop() && Date.now() < hardStop) {
       await slideOnce();
     }
-    // Guarantee we end on the randomly selected challenger
-    if (roster[idx]?.id !== finalAngle.id) {
-      // Keep sliding until winner (at most one full revolution)
-      for (let k = 0; k < n && roster[idx]?.id !== finalAngle.id; k++) {
-        await slideOnce();
-      }
+    if (mode === "pick") {
       if (roster[idx]?.id !== finalAngle.id) {
-        idx = winIdx;
-        setTrack(winIdx, { snap: true });
+        for (let k = 0; k < n && roster[idx]?.id !== finalAngle.id; k++) {
+          await slideOnce();
+        }
+        if (roster[idx]?.id !== finalAngle.id) {
+          idx = winIdx;
+          setTrack(winIdx, { snap: true });
+        }
       }
     }
     return finish();
   })();
+}
+
+/**
+ * Workshop summon reel on the hex mount.
+ * - roster mode: spin all four until until settles (legacy batch)
+ * - pick mode: land on finalAngle; visual roster defaults to all four CHALLENGE_ANGLES
+ *
+ * @param {{
+ *   until?: Promise<any>,
+ *   skip?: boolean,
+ *   mode?: "pick"|"roster",
+ *   finalAngle?: object|null,
+ *   roster?: object[],
+ * }} [opts]
+ */
+function playChallengerReel(opts = {}) {
+  const mode = opts.mode === "pick" ? "pick" : "roster";
+  const finalAngle = opts.finalAngle || null;
+  return playChallengerDrawAnimation(finalAngle, {
+    ...opts,
+    mode,
+    mount: "hex",
+    draw: $("#hex-challenger-draw"),
+    track: $("#hex-challenger-draw-reel"),
+    status: $("#hex-challenger-draw-status"),
+    finishBanner: false,
+    lockReveal: false,
+    maxHp: 0,
+    spinStatus:
+      opts.spinStatus ||
+      (mode === "pick"
+        ? "Summoning a challenger…"
+        : "Summoning the hard questions…"),
+    landStatus:
+      opts.landStatus ||
+      (mode === "pick" && finalAngle
+        ? `${finalAngle.label} steps forward`
+        : "The hard questions arrive"),
+  });
 }
 
 /**
@@ -14593,6 +15007,7 @@ function ensureCoInventor() {
         inventionHow: state.inventionHow,
         inventionImpact: state.inventionImpact,
         storyFace: state.storyFace,
+        hexBoard: summarizeHexBoardForAi(state.hexBoard),
         year: state.year,
         turn: state.turn,
         pressure: state.pressure,
@@ -16868,8 +17283,9 @@ function bind() {
   $("#btn-start")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    // Quiet tutorial (Spark) — Portside; hidden after tutorial win until reset
-    startSparkPortsideMission();
+    state.tutorialRun = false;
+    state.playMode = "workshop";
+    openQuestHub();
   });
   $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
@@ -17163,67 +17579,69 @@ function bind() {
   });
   $("#btn-end-turn")?.addEventListener("click", () => endTurn());
   $("#btn-lobby")?.addEventListener("click", () => lobbyAction());
-  $("#btn-to-challenge")?.addEventListener("click", () => {
+  $("#btn-to-challenge")?.addEventListener("click", async () => {
     if (isInventActionBusy()) {
       flashToast(inventActionBusyReason());
       return;
     }
-    const b = mpBridge();
-    // Recovery: open Deploy for a challenge-passed invent (not a dual workshop bay)
-    if (deployStagesEnabled() && state.deployUnlocked && state.challengePassed) {
-      if (state.deployStage === "new_normal" || state.deployStage === "scale") {
-        flashToast("This invent is already Scaled.");
+    if (isMpInventSpectator()) {
+      flashToast("Not your turn.");
+      return;
+    }
+    // Pathway holds → outcome (required challengers summoned)
+    if (state.hexBoard?.concernsSummoned) {
+      if (!pathwayHoldsReady()) {
+        flashToast("Ease remaining red lights first.");
         return;
       }
-      if (b && !(b.canRunDeploy?.() || b.canOpenDeployBay?.())) {
-        flashToast("Not your turn, or this invent is not ready to deploy.");
+      if (collapsed()) {
+        flashToast("The place already collapsed.");
         return;
       }
-      const inv =
-        (b?.getViewId && b.invent?.(b.getViewId())) ||
-        null;
-      enterDeployBayInteractive(inv, {
-        helper: Boolean(b?.viewingOther?.()),
-        ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
+      finishOutcome(wonMission() || pathwayHoldsReady() ? "win" : "partial", {
+        hexPathway: true,
       });
       return;
     }
-    // Multiplayer: only owner faces Challenge
-    if (b && !b.canFaceChallenge?.()) {
-      flashToast(
-        b.viewingOther?.()
-          ? "Only the owner can face Challenge on this invent."
-          : "Cannot face Challenge on this invent."
-      );
+
+    const isFirstDraw = concernAnglesOnBoard(state.hexBoard).length === 0;
+    const remaining = remainingConcernAngles(state.hexBoard);
+
+    if (isFirstDraw && !inventReadyForChallenge()) {
+      flashToast(challengeBlockReason() || "Mint an invention tile first.");
       return;
     }
-    if (isAiTimingAssessPending()) {
-      flashToast(feasibilityAssessBusyReason());
+    if (!isFirstDraw && !remaining.length) {
+      flashToast("All challengers are already on the board.");
       return;
     }
-    if (!inventReadyForChallenge()) {
-      flashToast("Finish the invention first (name, stack, both story faces; fix red feasibility).");
-      return;
-    }
-    // Room: enter_challenge inside enterChallenge() (server AP)
-    // Hotseat: enter_challenge via mp-session inside enterChallenge()
-    // Solo only: local sim spend here
-    if (apEnabled() && !roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
+
+    // Spend AP only on the first challenger draw
+    if (
+      isFirstDraw &&
+      apEnabled() &&
+      !roomBridge.isRoom() &&
+      !hotseatBridge.isHotseat()
+    ) {
       const r = dispatchSim("enter_challenge");
       if (!r.ok) {
-        if (r.error === "no_ap") flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
-        else flashToast(r.error || "Cannot enter challenge");
+        if (r.error === "no_ap")
+          flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
+        else flashToast(r.error || "Cannot summon concerns");
         return;
       }
       renderHud();
-    } else if (!roomBridge.isRoom() && !hotseatBridge.isHotseat()) {
-      state.turnPhase = "scrutiny";
     }
-    // Opens the dedicated Challenge screen (same as hotseat) — not invent inline
-    enterChallenge().catch((e) => {
+    try {
+      await ensureHexWorkshop().summonNextChallenger();
+      state.challengePassed = true;
+      state.turnPhase = "act";
+      renderWorkshop();
+      updateChallengeButton();
+    } catch (e) {
       console.error(e);
-      flashToast(e.message || "Challenge failed to open");
-    });
+      flashToast(e.message || "Could not summon challenger");
+    }
   });
   $("#btn-challenge-back")?.addEventListener("click", () => {
     // Deploy bay already open: cosmetic leave to invent (owner uses Back to Invent to reopen)
@@ -17591,6 +18009,11 @@ export function init() {
   setReadAloudToast(flashToast);
   bind();
   initTechDrawers();
+  try {
+    ensureHexWorkshop().wireDom();
+  } catch (e) {
+    console.warn("[hex wire]", e);
+  }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
 }

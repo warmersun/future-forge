@@ -1,12 +1,6 @@
 /**
- * Spark / Workshop feature profiles + tutorial-completion storage.
- *
- * Spark = quiet tutorial (only "Start tutorial" runs).
- * Workshop = full Workshop solo loop (theme / surprise / daily / everything else).
- *
- * Storage (tutorial CTA only — not mode toggle):
- * - future-forge:hasCompletedSpark = "1" after finishing the tutorial once
- *   → hides "Start tutorial" until reset
+ * Play-mode helpers. Spark/tutorial profile is retired — Workshop is the only solo path.
+ * Storage key kept for one-time migration / ignore.
  */
 
 export const HAS_COMPLETED_SPARK_KEY = "future-forge:hasCompletedSpark";
@@ -28,26 +22,12 @@ function resolveStorage(storage) {
 }
 
 /**
- * Feature profile for a play mode.
- * @param {"spark"|"workshop"} mode
+ * Feature profile for a play mode. Spark flags are ignored — always Workshop.
+ * @param {"spark"|"workshop"|string} _mode
  * @param {object} [baseFeatures]
  * @returns {object}
  */
-export function featuresForPlayMode(mode, baseFeatures = {}) {
-  if (mode === "spark") {
-    return {
-      ...baseFeatures,
-      actionPoints: false,
-      budgetWill: false,
-      scrutinyCombat: false,
-      deployStages: false,
-      runReport: true,
-      sparkPath: true,
-      starterTechOnly: true,
-      singleStoryFace: true,
-      stackCap: 3,
-    };
-  }
+export function featuresForPlayMode(_mode, baseFeatures = {}) {
   return {
     ...baseFeatures,
     sparkPath: false,
@@ -63,12 +43,11 @@ export function featuresForPlayMode(mode, baseFeatures = {}) {
  */
 export function readHasCompletedSpark(storage) {
   const s = resolveStorage(storage);
-  if (!s) return false;
-  return s.getItem(HAS_COMPLETED_SPARK_KEY) === "1";
+  if (!s) return true;
+  return s.getItem(HAS_COMPLETED_SPARK_KEY) === "1" || true;
 }
 
 /**
- * Tutorial finished once — hide "Start tutorial" until reset.
  * @param {Storage} [storage]
  */
 export function markSparkCompleted(storage) {
@@ -78,26 +57,17 @@ export function markSparkCompleted(storage) {
 }
 
 /**
- * Show "Start tutorial" again (demo / replay).
  * @param {Storage} [storage]
  */
 export function resetSparkProgress(storage) {
   const s = resolveStorage(storage);
   if (!s) return;
-  try {
-    s.removeItem(HAS_COMPLETED_SPARK_KEY);
-  } catch {
-    /* ignore */
-  }
+  s.removeItem(HAS_COMPLETED_SPARK_KEY);
 }
 
 /**
- * Outcome screen: show "Welcome to Workshop" only for this solo tutorial win.
- * @param {{ kind?: string, multiparty?: boolean, tutorialGraduation?: boolean }} opts
- * @returns {boolean}
+ * Workshop unlock banner — tutorial removed, never show.
  */
-export function shouldShowWorkshopUnlock(opts = {}) {
-  if (opts.kind !== "win") return false;
-  if (opts.multiparty) return false;
-  return Boolean(opts.tutorialGraduation);
+export function shouldShowWorkshopUnlock() {
+  return false;
 }

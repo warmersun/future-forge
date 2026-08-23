@@ -18,6 +18,9 @@ export const INVENT_PHASES = [
   "scale_ready",
   "fielded",
   "abandoned",
+  // Hex invent aliases
+  "concerns",
+  "resolved",
 ];
 
 /**
@@ -30,6 +33,9 @@ export function deriveInventPhase(f) {
   if (!f) return "invent";
   if (f.abandoned) return "abandoned";
 
+  // Hex pathway held → fielded/resolved
+  if (f.pathwayHeld || f.inventPhase === "resolved") return "fielded";
+
   const staged = f.deployStage || "none";
   if (staged === "scaled" || staged === "new_normal") return "fielded";
   if (staged === "pilot_ok" || staged === "pilot") return "scale_ready";
@@ -37,6 +43,13 @@ export function deriveInventPhase(f) {
   // Explicit written phase (server) for locked-after-fail
   if (f.inventPhase === "challenge_locked" || f.challengeLocked) {
     if (!f.challengePassed) return "challenge_locked";
+  }
+
+  // Hex: concerns summoned maps to deploy_ready (post-challenge play)
+  if (f.inventPhase === "concerns" || f.hexBoard?.concernsSummoned || f.concernsSummoned) {
+    if (f.challengePassed || f.concernsSummoned || f.hexBoard?.concernsSummoned) {
+      return "deploy_ready";
+    }
   }
 
   if (f.challengePassed) return "deploy_ready";
@@ -50,11 +63,21 @@ export function deriveInventPhase(f) {
 
 /**
  * Story + stack are frozen except in invent phase.
+ * Hex board stays editable through concerns/deploy_ready until resolved.
  * @param {object|null|undefined} f
  */
 export function isInventContentFrozen(f) {
   const p = deriveInventPhase(f);
   return p !== "invent";
+}
+
+/**
+ * Hex board edits allowed while inventing or after concerns (until fielded).
+ * @param {object|null|undefined} f
+ */
+export function isHexBoardFrozen(f) {
+  const p = deriveInventPhase(f);
+  return p === "fielded" || p === "abandoned";
 }
 
 /**
@@ -77,22 +100,38 @@ export function allowedActions(opts = {}) {
   const none = {
     editStory: false,
     editStack: false,
+    editBoard: false,
     faceChallenge: false,
     fightChallenge: false,
     reopenInvent: false,
     pilot: false,
     scale: false,
     abandon: false,
+    summonConcerns: false,
+    declareHold: false,
   };
   if (!placePlaying || phase === "abandoned") {
     return { ...none, browse: true };
   }
 
   const edit = isActive && phase === "invent";
+  const boardEdit =
+    isActive &&
+    isOwner &&
+    (phase === "invent" ||
+      phase === "deploy_ready" ||
+      phase === "concerns" ||
+      phase === "scale_ready");
   return {
     browse: true,
     editStory: edit,
     editStack: edit,
+    editBoard: boardEdit,
+    summonConcerns: isActive && isOwner && phase === "invent",
+    declareHold:
+      isActive &&
+      isOwner &&
+      (phase === "deploy_ready" || phase === "concerns" || phase === "scale_ready"),
     faceChallenge:
       isActive &&
       isOwner &&
@@ -288,6 +327,54 @@ export function applyInventPhaseEvent(invent, event, payload = {}) {
           abandoned: true,
           turnPhase: "act",
         },
+      };
+    }
+    case "summon_concerns": {
+      if (phase !== "invent" && phase !== "challenge_locked") {
+        return { ok: false, error: "cannot_summon", inventPhase: phase };
+      }
+      return {
+        ok: true,
+        inventPhase: "deploy_ready",
+        patch: {
+          inventPhase: "concerns",
+          concernsSummoned: true,
+          challengePassed: true,
+          challengeLocked: false,
+          turnPhase: "act",
+          ...(payload.hexBoard ? { hexBoard: payload.hexBoard } : {}),
+        },
+      };
+    }
+    case "declare_hold":
+    case "pathway_holds": {
+      if (
+        phase !== "deploy_ready" &&
+        phase !== "scale_ready" &&
+        phase !== "concerns"
+      ) {
+        return { ok: false, error: "not_ready", inventPhase: phase };
+      }
+      return {
+        ok: true,
+        inventPhase: "fielded",
+        patch: {
+          inventPhase: "resolved",
+          pathwayHeld: true,
+          deployStage: "scaled",
+          challengePassed: true,
+          ...(payload.hexBoard ? { hexBoard: payload.hexBoard } : {}),
+        },
+      };
+    }
+    case "board_commit": {
+      if (isHexBoardFrozen(f)) {
+        return { ok: false, error: "frozen", inventPhase: phase };
+      }
+      return {
+        ok: true,
+        inventPhase: phase,
+        patch: payload.hexBoard ? { hexBoard: payload.hexBoard } : {},
       };
     }
     default:

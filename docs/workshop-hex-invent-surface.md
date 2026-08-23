@@ -107,17 +107,6 @@ Only **invention** tiles have a bar, directly under the name.
 
 the bar reflects the feasibility - similar to the current percentage chance, expressed as progress bar
 
-## Timeline — where the exponential lives
-
-add a button that will work similar to "Ask for ideas": "ask for predictions". 
-this creates one or more emTech invention tiles and places them on a horizontal timeline at the corresponding year.
-e.g. Longevity Escape Velocity reached in the category of synbio is placed at 2030. the horizontal timeline start at the current year.
-
-```
--- 2026 -- -- 2030 -- 2032
-          < LEV tile>
-```
-
 ---
 
 
@@ -143,6 +132,7 @@ A quest is still a quest. No change there. How we solve it is what changes.
 - Co-inventor button
 - challenger screen with Defend in writing, Fix the invention, Sidestep once options
 - pilot, scale, new norm betting
+- Play Tutorial
 
 # buttons, panels, functionality that is new
 
@@ -150,4 +140,3 @@ A quest is still a quest. No change there. How we solve it is what changes.
 - emTech invention tile creation panel that uses AI generated images to make new tiles
 -- button "Ask for ideas" that creates three emTech invention tiles with AI
 -- "How it works" text area allowing the user to create their own
--- timeline with "Ask for prediction" button

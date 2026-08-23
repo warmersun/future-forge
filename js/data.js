@@ -12,6 +12,11 @@ export const GAME = {
   yearsPerTurn: 2,
   /** Solo / friends default action points per invent turn */
   apMax: 3,
+  /**
+   * How many hard-question (challenger) tiles a pathway must face.
+   * Clamped to 1..4. Default 1.
+   */
+  challengerCount: 1,
   features: {
     runReport: true,
     actionPoints: true,
@@ -27,6 +32,16 @@ export const GAME = {
   maxBudget: 10,
   maxWill: 5,
 };
+
+/**
+ * @param {unknown} n
+ * @returns {number} integer in [1, 4]
+ */
+export function clampChallengerCount(n) {
+  const v = Math.round(Number(n));
+  if (!Number.isFinite(v)) return 1;
+  return Math.max(1, Math.min(4, v));
+}
 
 /**
  * Domain filters for the tech tray
@@ -442,6 +457,39 @@ export const MISSIONS = [
  * emTech catalog — broad categories, always pickable.
  * readyYear = soft horizon hint only (when "near" use cases get more common), NOT a lock.
  */
+/** World polarity — bits | atoms | split (converter). See docs/workshop-hex-invent-surface.md */
+const TECH_WORLD = {
+  computing: "bits",
+  crypto: "bits",
+  quantum: "bits",
+  ai: "bits",
+  networks: "bits",
+  "quantum-internet": "bits",
+  "gene-sequencing": "bits",
+  energy: "atoms",
+  solar: "atoms",
+  wind: "atoms",
+  geothermal: "atoms",
+  tidal: "atoms",
+  wave: "atoms",
+  nuclear: "atoms",
+  battery: "atoms",
+  robots: "atoms",
+  transportation: "atoms",
+  "self-driving": "atoms",
+  drones: "atoms",
+  space: "atoms",
+  "alt-proteins": "atoms",
+  iot: "split",
+  print3d: "split",
+  materials: "split",
+  nano: "split",
+  synbio: "split",
+  "genetic-engineering": "split",
+  vr: "split",
+  bci: "split",
+};
+
 export const TECHS = [
   // —— Power: energy, crypto, computing ——
   tech("computing", "Computing", "01", "power", 2026, "mature",
@@ -686,6 +734,7 @@ function tech(id, name, icon, domain, readyYear, curve, summary, learn, inventio
     domain,
     readyYear, // soft horizon only
     curve,
+    polarity: TECH_WORLD[id] || "bits",
     summary,
     learn,
     inventionHint,
