@@ -6,6 +6,7 @@ import {
   mintInventionTile,
   placeTile,
   liftTile,
+  discardTile,
   summonConcerns,
   summonOneConcern,
   remainingConcernAngles,
@@ -15,12 +16,20 @@ import {
   neighborTiles,
   boardHolds,
   techIdsFromBoard,
+  unplacedInventionsForTech,
+  techIdsWithUnplacedInventions,
   deriveBoardProse,
   addTile,
   removeUnplacedTiles,
   applyLights,
+  setLampPending,
+  cloneBoard,
   TILE_KIND,
   CONCERN_ANGLES,
+  concernPoseText,
+  concernReplyText,
+  setConcernReply,
+  mintConcernTiles,
 } from "./board-state.js";
 import { clampChallengerCount } from "../data.js";
 import { polarityForTech, TECH_POLARITY } from "./polarity.js";
@@ -92,37 +101,51 @@ test("invention may always sit against crisis (curve)", () => {
   assert.equal(r.ok, true);
 });
 
-test("summonConcerns preserves scrutiny analysis, safeguard, and art", () => {
+test("summonConcerns preserves pose speech, question, and art", () => {
   let board = seedCrisisTiles({
     crisisRoles: ["local"],
     pressure: { Floods: 2 },
   });
   board = summonConcerns(board, null, {
     moloch: {
-      analysis: "Freeriders win.",
-      safeguard: "Align incentives.",
+      challengeSpeech: "Freeriders win.",
+      challengeQuestion: "Who defects when the pilot is free?",
       artUrl: "assets/challengers/moloch.jpg",
       imagePrompt: "street race to the bottom",
     },
     nature: {
-      analysis: "Storms do not care.",
-      safeguard: "Cap energy and monitor.",
+      challengeSpeech: "Storms do not care.",
+      challengeQuestion: "What breaks in a bad week?",
       artUrl: "assets/challengers/nature.jpg",
       imagePrompt: "storm over the quay",
     },
   });
   const moloch = board.tiles["concern-moloch"];
-  assert.equal(moloch.analysis, "Freeriders win.");
-  assert.equal(moloch.safeguard, "Align incentives.");
+  assert.equal(moloch.challengeSpeech, "Freeriders win.");
+  assert.equal(moloch.challengeQuestion, "Who defects when the pilot is free?");
   assert.equal(moloch.artUrl, "assets/challengers/moloch.jpg");
   assert.equal(moloch.imagePrompt, "street race to the bottom");
   const nature = board.tiles["concern-nature"];
-  assert.equal(nature.analysis, "Storms do not care.");
+  assert.equal(nature.challengeSpeech, "Storms do not care.");
   assert.equal(nature.artUrl, "assets/challengers/nature.jpg");
-  // Angles without enrich stay null art / analysis
-  assert.equal(board.tiles["concern-ethicist"].analysis, null);
+  // Angles without enrich stay null art / speech
+  assert.equal(board.tiles["concern-ethicist"].challengeSpeech, null);
   assert.equal(board.tiles["concern-ethicist"].artUrl, null);
   assert.equal(board.concernsSummoned, true);
+});
+
+test("concernPoseText reads speech/question and falls back from analysis", () => {
+  assert.deepEqual(
+    concernPoseText({
+      challengeSpeech: "Attack.",
+      challengeQuestion: "Why?",
+    }),
+    { speech: "Attack.", question: "Why?" }
+  );
+  assert.equal(
+    concernPoseText({ analysis: "Legacy attack." }).speech,
+    "Legacy attack."
+  );
 });
 
 test("summonOneConcern is one-by-one, isolated, and gates concernsSummoned", () => {
@@ -146,8 +169,8 @@ test("summonOneConcern is one-by-one, isolated, and gates concernsSummoned", () 
   assert.equal(board.concernsSummoned, false);
 
   let r = summonOneConcern(board, "moloch", {
-    analysis: "Freeriders.",
-    safeguard: "Align.",
+    challengeSpeech: "Freeriders.",
+    challengeQuestion: "Who defects?",
     artUrl: "assets/challengers/moloch.jpg",
   });
   assert.equal(r.ok, true);
@@ -155,7 +178,8 @@ test("summonOneConcern is one-by-one, isolated, and gates concernsSummoned", () 
   assert.equal(board.concernsSummoned, false);
   assert.equal(concernAnglesOnBoard(board).length, 1);
   assert.ok(board.tiles["concern-moloch"]);
-  assert.equal(board.tiles["concern-moloch"].analysis, "Freeriders.");
+  assert.equal(board.tiles["concern-moloch"].challengeSpeech, "Freeriders.");
+  assert.equal(board.tiles["concern-moloch"].challengeQuestion, "Who defects?");
   assert.equal(
     neighborTiles(board, "concern-moloch").length,
     0,
@@ -281,8 +305,10 @@ test("techIdsFromBoard counts only placed field inventions", () => {
   board = placeTile(board, "a", 0, 0).board;
   assert.deepEqual(techIdsFromBoard(board), ["ai"]);
   const prose = deriveBoardProse(board);
-  assert.match(prose.inventionName, /Desk/);
+  assert.match(prose.inventionName, /ai/);
   assert.match(prose.inventionHow, /Routes alerts/);
+  assert.equal(prose.inventionImpact.includes("green"), false);
+  assert.equal(prose.inventionImpact.includes("Board lights"), false);
 });
 
 test("removeUnplacedTiles drops tray tiles only", () => {
@@ -308,11 +334,120 @@ test("removeUnplacedTiles drops tray tiles only", () => {
   assert.equal(board.tiles["field1"].r, 1);
 });
 
+test("discardTile removes tray and placed inventions", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({ id: "tray1", techId: "ai", name: "A", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "field1", techId: "ai", name: "B", origin: "sparks" })
+  );
+  board = placeTile(board, "field1", 1, 1).board;
+  let r = discardTile(board, "tray1");
+  assert.equal(r.ok, true);
+  board = r.board;
+  assert.equal(board.tiles["tray1"], undefined);
+  assert.ok(board.tiles["field1"]);
+  r = discardTile(board, "field1");
+  assert.equal(r.ok, true);
+  board = r.board;
+  assert.equal(board.tiles["field1"], undefined);
+});
+
+test("discardTile refuses crisis, concern, and missing", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 2 },
+  });
+  board = summonConcerns(board, null, {
+    moloch: { challengeSpeech: "Freeriders win." },
+  });
+  const crisis = discardTile(board, "crisis-local");
+  assert.equal(crisis.ok, false);
+  assert.ok(crisis.board.tiles["crisis-local"]);
+  const concern = discardTile(board, "concern-moloch");
+  assert.equal(concern.ok, false);
+  assert.ok(concern.board.tiles["concern-moloch"]);
+  const missing = discardTile(board, "nope");
+  assert.equal(missing.ok, false);
+  assert.equal(missing.board, board);
+});
+
 test("mintInventionTile stores origin", () => {
   const spark = mintInventionTile({ techId: "ai", name: "S", origin: "sparks" });
   const custom = mintInventionTile({ techId: "ai", name: "C", origin: "custom" });
   assert.equal(spark.origin, "sparks");
   assert.equal(custom.origin, "custom");
+});
+
+test("unplacedInventionsForTech filters by tech and tray", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({ id: "d1", techId: "drones", name: "D1", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "d2", techId: "drones", name: "D2", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b1", techId: "batteries", name: "B1", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b2", techId: "batteries", name: "B2", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b3", techId: "batteries", name: "B3", origin: "custom" })
+  );
+  board = placeTile(board, "b1", 0, 0).board;
+
+  assert.deepEqual(
+    unplacedInventionsForTech(board, "drones").map((t) => t.id).sort(),
+    ["d1", "d2"]
+  );
+  assert.deepEqual(
+    unplacedInventionsForTech(board, "batteries").map((t) => t.id).sort(),
+    ["b2", "b3"]
+  );
+  assert.deepEqual(unplacedInventionsForTech(board, null), []);
+  assert.equal(
+    unplacedInventionsForTech(board, "batteries").some((t) => t.id === "b1"),
+    false
+  );
+
+  board = liftTile(board, "b1").board;
+  assert.deepEqual(
+    unplacedInventionsForTech(board, "batteries").map((t) => t.id).sort(),
+    ["b1", "b2", "b3"]
+  );
+});
+
+test("techIdsWithUnplacedInventions lists tray techs including custom", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({ id: "d1", techId: "drones", name: "D1", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b1", techId: "batteries", name: "B1", origin: "sparks" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b2", techId: "batteries", name: "B2", origin: "custom" })
+  );
+  assert.deepEqual(techIdsWithUnplacedInventions(board), ["drones", "batteries"]);
+
+  board = placeTile(board, "d1", 0, 0).board;
+  assert.deepEqual(techIdsWithUnplacedInventions(board), ["batteries"]);
+
+  board = liftTile(board, "d1").board;
+  assert.deepEqual(techIdsWithUnplacedInventions(board), ["drones", "batteries"]);
 });
 
 test("heuristic lights: untouched concern is red; mature touch yellow", () => {
@@ -361,6 +496,36 @@ test("ideaMature respects future year and low feasibility", () => {
   );
 });
 
+test("setLampPending freezes lamp color; applyLights clears pending", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 2 },
+  });
+  assert.equal(board.tiles["crisis-local"].lamp, "yellow");
+  assert.equal(board.tiles["crisis-local"].lampPending, false);
+
+  board = setLampPending(board, ["crisis-local"], true);
+  assert.equal(board.tiles["crisis-local"].lamp, "yellow");
+  assert.equal(board.tiles["crisis-local"].lampPending, true);
+
+  board = applyLights(board, [
+    { id: "crisis-local", level: "green", reason: "eased" },
+  ]);
+  assert.equal(board.tiles["crisis-local"].lamp, "green");
+  assert.equal(board.tiles["crisis-local"].lampPending, false);
+});
+
+test("setLampPending null ids marks all on-field givens", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local", "support"],
+    pressure: { Floods: 2, Trust: 2 },
+  });
+  board = setLampPending(board, null, true);
+  assert.equal(board.tiles["crisis-local"].lampPending, true);
+  assert.equal(board.tiles["crisis-support"].lampPending, true);
+  assert.equal(board.tiles["crisis-local"].lamp, "yellow");
+});
+
 test("normalizeNeighborLights filters junk", () => {
   const lights = normalizeNeighborLights({
     lights: [
@@ -371,6 +536,36 @@ test("normalizeNeighborLights filters junk", () => {
   });
   assert.equal(lights.length, 1);
   assert.equal(lights[0].level, "green");
+});
+
+test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", () => {
+  const board = seedCrisisTiles({
+    crisisRoles: ["local", "support"],
+    pressure: { Floods: 2, Trust: 3 },
+  });
+  assert.deepEqual(board.pressureBase, { Floods: 2, Trust: 3 });
+  assert.deepEqual(board.pathwayImpacts, {});
+
+  board.pathwayImpacts["a:ai:how:yellow"] = {
+    inventionIds: ["inv-1"],
+    crisisDelta: { local: -1, global: 0, support: 0 },
+    concerns: { moloch: { level: "yellow", reason: "Touching." } },
+    pending: false,
+  };
+  const copy = cloneBoard(board);
+  assert.deepEqual(copy.pressureBase, { Floods: 2, Trust: 3 });
+  assert.deepEqual(copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta, {
+    local: -1,
+    global: 0,
+    support: 0,
+  });
+  assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].concerns.moloch.level, "yellow");
+  assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].pending, false);
+  // Mutating clone must not touch original
+  copy.pressureBase.Floods = 9;
+  copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta.local = 0;
+  assert.equal(board.pressureBase.Floods, 2);
+  assert.equal(board.pathwayImpacts["a:ai:how:yellow"].crisisDelta.local, -1);
 });
 
 test("buildNeighborEvalContext lists neighbors", () => {
@@ -392,4 +587,90 @@ test("buildNeighborEvalContext lists neighbors", () => {
   assert.equal(ctx.givens.length, 1);
   assert.equal(ctx.givens[0].neighbors.length, 1);
   assert.equal(ctx.givens[0].neighbors[0].techId, "ai");
+  assert.equal(ctx.givens[0].neighbors[0].name, undefined);
+  assert.equal(ctx.givens[0].neighbors[0].direct, true);
+  assert.ok(ctx.givens[0].pathway);
+  assert.equal(ctx.givens[0].pathway.anyTouch, true);
+  assert.ok(ctx.givens[0].prior);
+  assert.ok(["red", "yellow", "green"].includes(ctx.givens[0].prior.level));
+});
+
+
+test("mintConcernTiles and setConcernReply keep playerAnswer and quality", () => {
+  const [tile] = mintConcernTiles({
+    moloch: {
+      challengeSpeech: "Freeriders.",
+      challengeQuestion: "Who defects?",
+      playerAnswer: "A bonded escrow pays only after proof.",
+      answerQuality: "hit",
+      answerFeedback: "Named the bond.",
+    },
+  }).filter((c) => c.angle === "moloch");
+  assert.equal(tile.playerAnswer.includes("escrow"), true);
+  assert.equal(tile.answerQuality, "hit");
+  const reply = concernReplyText(tile);
+  assert.equal(reply.quality, "hit");
+  assert.equal(reply.answer.includes("escrow"), true);
+
+  let board = seedCrisisTiles({ crisisRoles: ["local"], pressure: { Floods: 2 } });
+  board = summonConcerns(board);
+  board = setConcernReply(board, "concern-moloch", {
+    playerAnswer: "City hall co-signs the meter.",
+    answerQuality: "glance",
+    answerFeedback: "Partial.",
+    answerPending: false,
+  });
+  const saved = concernReplyText(board.tiles["concern-moloch"]);
+  assert.equal(saved.quality, "glance");
+  assert.equal(saved.answer.includes("co-signs"), true);
+  const copy = cloneBoard(board);
+  assert.equal(copy.tiles["concern-moloch"].playerAnswer, board.tiles["concern-moloch"].playerAnswer);
+});
+
+test("heuristic lights: written answer does not ease an undocked concern", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 4 },
+    winMax: { Floods: 2 },
+  });
+  board = summonConcerns(board);
+  board = setConcernReply(board, "concern-nature", {
+    playerAnswer: "We monitor runoff and cap the pump hours.",
+    answerQuality: "hit",
+    answerFeedback: "Solid.",
+  });
+  board = applyHeuristicLights(board, {
+    year: 2026,
+    pressure: { Floods: 4 },
+    winMax: { Floods: 2 },
+  });
+  assert.equal(board.tiles["concern-nature"].lamp, "red");
+
+  const inv = mintInventionTile({
+    id: "ai1",
+    techId: "ai",
+    name: "Help",
+    year: 2026,
+  });
+  board = addTile(board, inv);
+  const nature = board.tiles["concern-nature"];
+  board = placeTile(board, "ai1", nature.q - 1, nature.r).board;
+  board = applyHeuristicLights(board, {
+    year: 2026,
+    pressure: { Floods: 4 },
+    winMax: { Floods: 2 },
+  });
+  assert.equal(board.tiles["concern-nature"].lamp, "yellow");
+
+  board = liftTile(board, "ai1").board;
+  board = applyHeuristicLights(board, {
+    year: 2026,
+    pressure: { Floods: 4 },
+    winMax: { Floods: 2 },
+  });
+  assert.equal(board.tiles["concern-nature"].lamp, "red");
+  assert.equal(
+    concernReplyText(board.tiles["concern-nature"]).answer.includes("runoff"),
+    true
+  );
 });

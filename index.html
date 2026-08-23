@@ -947,7 +947,7 @@
             <div class="panel-header">
               <h2>Emerging tech</h2>
               <div class="tech-library-header-actions">
-                <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Select techs in your stack to learn about them">
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Pick an emTech to learn about it">
                   Learn
                 </button>
                 <button
@@ -1059,6 +1059,31 @@
                   id="hex-idea-cards"
                   aria-label="Invention ideas ready to place"
                 ></div>
+                <div
+                  class="hex-discard"
+                  id="hex-discard"
+                  role="region"
+                  aria-label="Discard. Drop a tile here to throw it away."
+                >
+                  <svg
+                    class="hex-discard-icon"
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7m3 4v6m4-6v6"
+                    />
+                  </svg>
+                  <span class="hex-discard-label">Discard</span>
+                </div>
               </div>
               <div class="hex-idea-tray" id="hex-idea-tray" hidden aria-hidden="true"></div>
             </section>
@@ -1098,7 +1123,6 @@
                 aria-labelledby="hex-tile-popup-title"
               >
                 <div class="hex-tile-popup-card">
-                  <button type="button" class="hex-tile-popup-close" id="hex-tile-popup-close" aria-label="Close">×</button>
                   <img id="hex-tile-popup-art" class="hex-tile-popup-art" alt="" hidden />
                   <h3 class="hex-tile-popup-title" id="hex-tile-popup-title">Tile</h3>
                   <p class="hex-tile-popup-meta muted" id="hex-tile-popup-meta"></p>

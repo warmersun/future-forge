@@ -110,6 +110,7 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | `FF_MAX_ROOMS` | Cap concurrent friends rooms (default 200) |
 | `FF_WS_MAX_PAYLOAD` | Max WebSocket message bytes (default 256KiB) |
 | `FF_RATE_*` | Optional overrides for solo AI / WS action rate limits (see `.env.example`) |
+| `FF_AI_SEARCH=1` | Live web + X search on timing assess and idea-sparks (off by default; also `--ai-search`) |
 
 Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 
@@ -131,6 +132,20 @@ FF_DEVELOPER=1 npm start
 ```
 
 Force off even if env is set: `node server.mjs --no-developer`. The client reads `developer` from `GET /api/health` — there is no URL or localStorage override.
+
+### AI search (web + X on timing and idea sparks)
+
+**Off by default.** When on, Grok may call xAI `web_search` and `x_search` for **timing assess** and **Ask for ideas** only (other co-invent modes stay closed-prompt). Search is slower and billed per tool call.
+
+```bash
+npm start -- --ai-search
+# or
+node server.mjs --ai-search
+# or (deploy-friendly)
+FF_AI_SEARCH=1 npm start
+```
+
+Force off even if env is set: `node server.mjs --no-ai-search`. `GET /api/health` reports `aiSearch`.
 
 ### Usage metrics (hosting cost estimates)
 

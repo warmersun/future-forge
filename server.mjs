@@ -63,11 +63,23 @@ import {
   checkApiSecret,
 } from "./js/server/cost-policy.mjs";
 import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
+import {
+  resolveAiSearchEnabled,
+  searchToolsForMode,
+  SEARCH_MAX_OUTPUT_TOKENS,
+  SEARCH_SYSTEM_LINE,
+} from "./js/server/ai-search.mjs";
 import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "./js/idea-cards.js";
 import {
   sanitizeScrutiny,
   localScrutinyProposals,
 } from "./js/scrutiny-shared.js";
+import {
+  FAST_EVAL_MODES,
+  isFastEvalMode,
+  fastEvalUserContent,
+  sanitizeFast,
+} from "./js/server/fast-eval.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -152,6 +164,15 @@ const usage = usageTrackerFromEnv(
  * Enable with `node server.mjs --developer` or FF_DEVELOPER=1.
  */
 const DEVELOPER_MODE = resolveDeveloperEnabled(
+  process.argv.slice(2),
+  process.env
+);
+
+/**
+ * Live web + X search on timing assess and idea-sparks. Off by default.
+ * Enable with `node server.mjs --ai-search` or FF_AI_SEARCH=1.
+ */
+const AI_SEARCH_ENABLED = resolveAiSearchEnabled(
   process.argv.slice(2),
   process.env
 );
@@ -404,10 +425,11 @@ Role:
 - When mode is art-of-the-possible: teach capability literacy along the chain when useful — product category (not bare emTech encyclopedia), current capabilities, how they advance (trends), labeled predictions, milestones, use cases unlocked, inventable application categories, near vs frontier stretch — for the selected stack (or recommended if empty) and year/place. Use maturity/milestones/useCasesNow from availableTechs as baseline; when context.grounding is present prefer its product category and chain. Enrich carefully. Label uncertainty. Do not invent fake paper titles.
 - When mode is sit: Systematic Inventive Thinking ("thinking in a box", TRIZ-inspired). Remix context.inventionHow with four closed-world lenses — Subtraction, Division, Multiplication, Addition. Prefer elements already in how-it-works + stack; do not invent a new mission. Structure message with those four headings. Brainstorm only — leave proposals empty (no inventionHow apply; the learner rewrites their own how-it-works if they like an idea).
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
-- When mode is assess-feasibility: judge ONLY whether inventionHow/inventionImpact over-claim what is possible in context.year for the stack. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. green = near-term/pilot-honest; yellow = stretch or vague; red = frontier treated as routine. Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year (never yellow→red or green→red solely because the calendar moved). Prefer yellow over red when pilot/partner/trial language is present and claims are borderline. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits) and judge claims against that grounding plus year — do not invent contradicting capability facts or reframe the quest as unlimited bare emTech.
+- When mode is assess-feasibility: judge ONLY whether the mechanism is possible or already demonstrated in context.year. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. Do not judge quest fit, clinic job, or whether the idea matches grounding's example applications (hoppers vs heavy-lift). green = architecture+payload exists or is demonstrated by year (no pilot tax; smaller grounding examples do not cap payload). yellow = vague, or after checking year the claimed scale is not yet demonstrated. red = only if grounding EXPLICITLY forbids / says not yet, or sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper". Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or "not yet". Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. howText (or insertText) is a 1–2 sentence starter the learner places on a hex tile. If context.refresh, do not repeat context.avoidTitles.
-- When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern with neighboring invention tiles. Return top-level lights: [{ id, level: "red"|"yellow"|"green", reason }]. red = unanswered/hot; yellow = touching but not enough; green = honestly eased/addressed for this place and year. Do not require bits/atoms world-match for crisis/concern tiles. Honor grounding. Prefer yellow over green when claims are stretchy. Leave proposals empty.
+- When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern. Judge from that given's FULL reachable invention pathway (neighbors[] = pathway tiles with techId + howText + timing; direct:true = shares an edge with this given; also pathway: combined howText/techIds). Read the pathway as ONE invent — a downstream mechanism can make a docked tile honest. Crisis (kind=crisis): judge against role — local = here-and-now relief / local fit; global = root cause / lasting driver; support = public buy-in AND scale-beyond-pilot. Honor prior; green allowed when honestly eased. Concern (kind=concern): judge against stored challengeSpeech/challengeQuestion plus playerAnswer if present. Judge the combination of ALL inventions in that given's reachable pathway AND the written answer. Nothing docked stays red even with an answer. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. red = unanswered/hot; yellow = touching but not enough; green = honestly eased for this place and year. Do not require bits/atoms world-match. Do not rewrite howText or art. Honor grounding. Leave proposals empty.
+- When mode is score-pathway: score ONE invention pathway (context.pathway.inventions: techId + howText + timing — no names) as a combination. Return top-level crisisDelta: { local, global, support } integers from -2 to +1 (negative = eases that crisis pressure if this pathway docks onto that meter). Also return concerns: { [angle]: { level: "red"|"yellow"|"green", reason } } for angles in context.concerns (judge ALL inventions in the pathway plus playerAnswer if present vs stored challengeSpeech/challengeQuestion). Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Leave proposals empty. Do not rewrite inventions.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
 - When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
 - When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
@@ -496,7 +518,7 @@ Ending tutoring (important):
 
 Modes:
 - chat / spark / explain / drafts / art-of-the-possible / sit / scamper / complete-picture: tutor style above; keep proposals sparse and pilot-honest.
-- assess-feasibility: same timing JSON as co-inventor (red|yellow|green + reason); still honor grounding; do not lecture in message beyond a short reason.
+- assess-feasibility: same timing JSON as co-inventor (red|yellow|green + reason); honor grounding only on explicit contradiction (limits, denials, not-yet) — examples are not a closed inventory; do not lecture in message beyond a short reason.
 - Never invent fake paper titles. Never say a category is locked until a year.
 
 Respond with a single JSON object (no markdown fences) like the co-inventor, plus optional endTutoring:
@@ -509,14 +531,7 @@ Respond with a single JSON object (no markdown fences) like the co-inventor, plu
 }
 For assess-feasibility set timing; otherwise timing may be null.`;
 
-/** Compact system prompt for challenge pose — keeps TTFT low vs full co-inventor prompt. */
-const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local inventing practice).
-Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
-Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sharp question.
-Return JSON only (no markdown):
-{"angle":"<same as challengeAngle>","angleLabel":"<name>","challengeSpeech":"<2-4 sentences>","challengeQuestion":"<one question>","message":"","proposals":{"addTechIds":[],"removeTechIds":[],"inventionName":null,"inventionHow":null,"inventionImpact":null,"scrutiny":null},"teaching":[]}
-Stay local and specific. No UN resolutions. No tabletop jargon.
-If context.grounding (or the grounding field in the user JSON) is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases, applications, honest limits). Stay hostile, but do not invent capability limits that contradict that grounding or reframe the quest as unlimited bare emTech.`;
+/** Compact pose prompt lives in js/server/fast-eval.mjs (FAST_EVAL_MODES). */
 
 /** Appended to invent/challenge modeHints when capability truth matters. */
 const GROUNDING_HINT =
@@ -995,19 +1010,13 @@ function localAssessFeasibility(context, selected, map, base) {
     }
   }
 
-  const names = techs.map((t) => t.name).join(", ") || "empty stack";
   const groundNote = groundingExcerpt(context, 400);
   const reasonOut = groundNote
     ? `${reason} (Quest grounding on file — treat as capability source-of-truth.)`
     : reason;
   return {
     source: "local",
-    message:
-      `Timing assess (${year}): **${level}** — ${reasonOut}\n\nStack: ${names}. Categories are never locked; only claims are judged.` +
-      (groundNote ? `\n\n**Quest grounding (excerpt):** ${groundNote}` : ""),
     timing: { level, reason: reasonOut },
-    proposals: base,
-    teaching: [],
   };
 }
 
@@ -1161,26 +1170,73 @@ function localCoInvent({ mode, messages, context }) {
     const givens = context.hexEval?.givens || [];
     const lights = givens.map((g) => {
       const n = Array.isArray(g.neighbors) ? g.neighbors : [];
+      const priorLv = String(g.prior?.level || "").toLowerCase();
+      const priorOk =
+        priorLv === "red" || priorLv === "yellow" || priorLv === "green";
+      if (!n.length) {
+        return {
+          id: g.id,
+          level: "red",
+          reason: g.prior?.note || "Still unanswered.",
+        };
+      }
+      let level = priorOk ? priorLv : "yellow";
+      // Concerns: offline never awards green
+      if (g.kind === "concern" && level === "green") level = "yellow";
       const mature = n.some((x) => x.mature);
-      let level = "red";
-      if (mature) level = g.kind === "concern" ? "yellow" : "green";
-      else if (n.length) level = "yellow";
+      if (!priorOk) {
+        if (mature) level = g.kind === "concern" ? "yellow" : "green";
+        else level = "yellow";
+      }
       return {
         id: g.id,
         level,
-        reason: mature
-          ? "A mature idea is touching this light."
-          : n.length
-            ? "An idea touches but may not be enough yet."
-            : "Still unanswered.",
+        reason:
+          g.prior?.note ||
+          (mature
+            ? "A mature idea is touching this light."
+            : "An idea touches but may not be enough yet."),
       };
     });
     return {
       source: "local",
-      message: "Board lights updated from neighbors.",
+      message: "Board lights updated from pathway clusters.",
       proposals: base,
       teaching: [],
       lights,
+    };
+  }
+
+  if (mode === "score-pathway") {
+    const invs = Array.isArray(context.pathway?.inventions)
+      ? context.pathway.inventions
+      : [];
+    const howLen = invs
+      .map((n) => String(n.howText || "").trim())
+      .join("\n").length;
+    const mature = invs.some((n) => n.mature || n.timingLevel === "green");
+    const crisisDelta = { local: 0, global: 0, support: 0 };
+    if (mature && howLen >= 40) {
+      crisisDelta.local = -1;
+      crisisDelta.support = -1;
+    } else if (howLen >= 20) {
+      crisisDelta.local = -1;
+    }
+    const concerns = {};
+    for (const c of context.concerns || []) {
+      const angle = c?.angle;
+      if (!angle) continue;
+      concerns[angle] = {
+        level: invs.length ? "yellow" : "red",
+        reason: invs.length
+          ? "Pathway may address this concern — confirm honesty."
+          : "Still unanswered.",
+      };
+    }
+    return {
+      source: "local",
+      crisisDelta,
+      concerns,
     };
   }
 
@@ -1652,7 +1708,10 @@ function buildUserPayload({ messages, context, mode }) {
       "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (≤60 chars), blurb (≤140), insertText/howText (≤280), imagePrompt (≤400), year }. Three DIFFERENT angles. Pilot-honest. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
       GROUNDING_HINT,
     "evaluate-neighbors":
-      "Judge hex-board traffic lights for context.hexEval.givens. Return lights: [{id, level:red|yellow|green, reason}]. Crisis/concern tiles do not use bits/atoms docking. Leave proposals empty." +
+      "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
+      GROUNDING_HINT,
+    "score-pathway":
+      "Score ONE invention pathway in context.pathway.inventions (techId + howText + timing; no names) as a combination. Return crisisDelta: {local, global, support} integers -2..+1 (negative eases pressure if pathway docks that meter). Return concerns: {[angle]: {level:red|yellow|green, reason}} for context.concerns angles vs their challengeSpeech/challengeQuestion plus playerAnswer if present. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. Leave proposals empty." +
       GROUNDING_HINT,
     scrutinize:
       "Stress-test the pathway from FOUR angles: moloch, ethicist, stakeholder, nature. Read inventionHow and context.hexBoard (placed invention tiles) as the invent. Fill proposals.scrutiny with all four keys; each value is { analysis (2–4 sentences attacking THIS local invent), safeguard (one concrete move that would honestly address it), imagePrompt (≤400 chars, photoreal still of that concern in this place — no text/logos) }. Leave addTechIds/removeTechIds/inventionHow/name/impact empty/null. message: one short line that the hard questions are on the table." +
@@ -1697,7 +1756,7 @@ function buildUserPayload({ messages, context, mode }) {
       "Stay local to place/year. Message structure: one-line SCAMPER framing, then the seven headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked. Do not confuse with SIT closed-world templates — SCAMPER may Adapt from outside the draft." +
       GROUNDING_HINT,
     "assess-feasibility":
-      "Judge claim timing only. Read inventionHow/inventionImpact and selected stack vs context.year. If context.grounding is present, treat it as authoritative capability facts along its chain (product category, capabilities, milestones, unlocks, applications, limits) — do not invent contradicting milestones or expand to unlimited bare emTech. Return top-level timing: { level: red|yellow|green, reason: one sentence }. green = near-term/pilot-honest; yellow = stretch/vague; red = frontier as routine. Selecting synbio/quantum/BCI never forces red by itself. Same claims at a later year must not score worse than priorTiming (if provided). Prefer yellow over red when borderline with pilot language. message can briefly echo the reason. proposals empty.",
+      "Judge claim timing only: is this mechanism possible or already demonstrated in context.year? Do not judge quest fit, clinic job, or hopper vs heavy-lift category. If grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or not-yet. Examples are not a closed inventory; smaller examples do not cap payload. Different category is not does-not-exist. Return timing: { level: red|yellow|green, reason: one sentence }. green = architecture+payload demonstrated by year (no pilot tax). yellow = vague or scale not yet demonstrated after checking year. red = only explicit grounding forbid/not-yet, or sci-fi as routine. Never red/yellow merely for different category or not a small hopper. Same claims at a later year must not score worse than priorTiming. message can briefly echo the reason. proposals empty.",
     "complete-picture":
       "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack. If context.contributingToOther, extend their invent additively — never replace their core idea." +
       GROUNDING_HINT,
@@ -1808,6 +1867,11 @@ function buildUserPayload({ messages, context, mode }) {
     focusTechId: context?.focusTechId || null,
     hexEval: context?.hexEval || null,
     hexBoard: context?.hexBoard || null,
+    pathway: context?.pathway || null,
+    pressureBase: context?.pressureBase || null,
+    winMax: context?.winMax || null,
+    crisisRoles: context?.crisisRoles || null,
+    concerns: context?.concerns || null,
     challengeAngle: context?.challengeAngle || null,
     challengeSpeech: context?.challengeSpeech
       ? String(context.challengeSpeech).slice(0, 800)
@@ -1865,7 +1929,8 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
     mode === "sit" ||
     mode === "scamper" ||
     mode === "idea-sparks" ||
-    mode === "evaluate-neighbors";
+    mode === "evaluate-neighbors" ||
+    mode === "score-pathway";
   const empty = {
     source,
     message: "I'm with you — tell me what you want to invent, or pick a quick action.",
@@ -2007,17 +2072,20 @@ async function aiCoInvent(body, client, meta = {}) {
   const availableIds = (context.availableTechs || []).map((t) => t.id);
   const sessionId = meta.sessionId || clientSessionFromBody(body);
 
-  const isPose = mode === "pose-challenge";
-  const isIdeaSparks = mode === "idea-sparks";
+  const fastSpec = FAST_EVAL_MODES[mode];
   const isTutor =
-    !isPose && !isIdeaSparks && isTutorMode(context) && mode !== "generate-scenarios";
-  const systemContent = isPose
-    ? POSE_CHALLENGE_SYSTEM
+    !fastSpec && isTutorMode(context) && mode !== "generate-scenarios";
+  const searchTools = searchToolsForMode(mode, AI_SEARCH_ENABLED);
+  let systemContent = fastSpec
+    ? fastSpec.system
     : isTutor
       ? TUTOR_SYSTEM_PROMPT
       : SYSTEM_PROMPT;
-  const userContent = isPose
-    ? `Pose this challenge (JSON state):\n${buildUserPayload({ messages, context, mode })}\n\nJSON only.`
+  if (searchTools) {
+    systemContent = `${systemContent}\n${SEARCH_SYSTEM_LINE}`;
+  }
+  const userContent = fastSpec
+    ? fastEvalUserContent(mode, context)
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
@@ -2033,24 +2101,22 @@ async function aiCoInvent(body, client, meta = {}) {
   const createOpts = {
     model: MODEL,
     input,
-    temperature:
-      mode === "assess-feasibility"
-        ? 0
-        : mode === "generate-scenarios"
-          ? 0.55
-          : isPose
-            ? 0.65
-            : 0.8,
+    temperature: fastSpec
+      ? fastSpec.temperature
+      : mode === "generate-scenarios"
+        ? 0.55
+        : 0.8,
   };
-  // Pose is short speech + one question — cap output for faster completion
-  if (isPose) createOpts.max_output_tokens = 450;
-  else if (
-    mode === "judge-scrutiny-move" ||
-    mode === "judge-challenge" ||
-    mode === "judge-contribution" ||
-    mode === "assess-feasibility"
-  ) {
-    createOpts.max_output_tokens = 600;
+  if (fastSpec) {
+    createOpts.max_output_tokens = fastSpec.maxOutputTokens;
+    // grok-4.6 defaults to high reasoning; eval JSON does not need it.
+    createOpts.reasoning = { effort: "low" };
+  }
+  if (searchTools) {
+    createOpts.tools = searchTools;
+    createOpts.include = ["no_inline_citations"];
+    const bump = SEARCH_MAX_OUTPUT_TOKENS[mode];
+    if (bump) createOpts.max_output_tokens = bump;
   }
 
   const t0 = Date.now();
@@ -2083,15 +2149,8 @@ async function aiCoInvent(body, client, meta = {}) {
   const text = response.output_text || "";
   const parsed = extractJson(text);
   if (!parsed) {
-    if (mode === "idea-sparks") {
-      return localIdeaSparksResult(context, {
-        addTechIds: [],
-        removeTechIds: [],
-        inventionName: null,
-        inventionHow: null,
-        inventionImpact: null,
-        scrutiny: null,
-      });
+    if (isFastEvalMode(mode)) {
+      return localCoInvent({ mode, messages, context });
     }
     if (mode === "generate-scenarios") {
       return localGenerateScenarios(context, {
@@ -2102,10 +2161,6 @@ async function aiCoInvent(body, client, meta = {}) {
         inventionImpact: null,
         scrutiny: null,
       });
-    }
-    // Pose fallback so the client always has speech if model returns non-JSON
-    if (isPose) {
-      return localCoInvent({ mode, messages, context });
     }
     return {
       source: "ai",
@@ -2120,13 +2175,13 @@ async function aiCoInvent(body, client, meta = {}) {
       teaching: [],
     };
   }
+  if (isFastEvalMode(mode)) {
+    return sanitizeFast(mode, parsed, "ai", context);
+  }
   if (mode === "generate-scenarios") {
     return sanitizeScenariosResult(parsed, context, "ai");
   }
   const out = sanitizeResult(parsed, availableIds, "ai", mode);
-  if (mode === "idea-sparks") {
-    out.ideas = ideasOrFallback(parsed.ideas, resolveFocusTech(context), context);
-  }
   if (mode === "evaluate-neighbors") {
     const raw = Array.isArray(parsed.lights) ? parsed.lights : [];
     out.lights = raw
@@ -2886,6 +2941,7 @@ const server = http.createServer(async (req, res) => {
       },
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
+      aiSearch: AI_SEARCH_ENABLED,
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3415,6 +3471,11 @@ server.listen(PORT, HOST, async () => {
     console.log("Developer mode: ON (quest / trend inspect UI)");
   } else {
     console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
+  }
+  if (AI_SEARCH_ENABLED) {
+    console.log("AI search: ON (web + X on timing assess and idea-sparks)");
+  } else {
+    console.log("AI search: OFF (pass --ai-search or set FF_AI_SEARCH=1 to enable)");
   }
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR);

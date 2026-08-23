@@ -11,10 +11,7 @@ import {
   localIdeaSparks,
   rotateLocalIdeaSparks,
 } from "../idea-cards.js";
-import {
-  sanitizeScrutiny,
-  localScrutinyProposals,
-} from "../scrutiny-shared.js";
+import { localPose } from "../challenge-pose.js";
 import {
   seedCrisisTiles,
   mintInventionTile,
@@ -25,22 +22,45 @@ import {
   ensureConcernRoster,
   boardHolds,
   techIdsFromBoard,
+  unplacedInventionsForTech,
   deriveBoardProse,
   cloneBoard,
-  applyLights,
   TILE_KIND,
   CRISIS_ROLE_DEFAULT_NAMES,
   CRISIS_ROLE_BLURBS,
   CONCERN_LABELS,
+  concernPoseText,
+  concernReplyText,
+  setConcernReply,
 } from "./board-state.js";
 import {
   applyHeuristicLights,
-  buildNeighborEvalContext,
-  normalizeNeighborLights,
-  pressureAfterCrisisLamp,
+  heuristicLamp,
 } from "./lights.js";
+import {
+  tileTimingCacheKey,
+  timingLevelToPct,
+  assessGivenPrior,
+  applyPathwayPressure,
+  heuristicPathwayScore,
+  normalizePathwayScore,
+  emptyCrisisDelta,
+  clampPressure,
+  bandToLamp,
+  diffPathwayScoreJobs,
+  clusterFromGiven,
+  invalidatePathwaysTouchingGiven,
+} from "./evaluate.js";
+import { crisisMeterLevel } from "../sim/collapse.js";
+import { applyPressureRise } from "../sim/pressure.js";
 import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
+import { detectClaimStretch } from "../data.js";
+import {
+  applyForesightToClaimStretch,
+  foresightCapabilityContext,
+} from "../sim/world-foresight.js";
+import { attachReadAloud, stopReadAloud } from "../read-aloud.js";
 
 /**
  * @param {object} api — callbacks into game.js
@@ -49,15 +69,28 @@ export function createHexWorkshop(api) {
   /** @type {ReturnType<typeof createHexBoardUi>|null} */
   let ui = null;
   let focusedTechId = null;
-  let evalTimer = null;
-  let evalGen = 0;
+  /** @type {Map<string, { abort: AbortController, timer: ReturnType<typeof setTimeout>|null }>} */
+  const pathwayJobs = new Map();
+  /** @type {Map<string, ReturnType<typeof setTimeout>>} */
+  const timingTimers = new Map();
+  /** @type {Map<string, number>} */
+  const timingGens = new Map();
+  /** @type {Map<string, { level: string, reason: string, forKey: string }>} */
+  const timingCache = new Map();
   let ideasBusy = false;
   let mintBusy = false;
   let summonBusy = false;
-  /** @type {Record<string, { analysis?: string, safeguard?: string, imagePrompt?: string }>|null} */
-  let scrutinyCache = null;
   /** @type {Map<string, { ids: string[], titles: string[] }>} */
   const sparkBatches = new Map();
+  /** @type {ReturnType<typeof setTimeout>|null} */
+  let inspectShowTimer = null;
+  /** @type {ReturnType<typeof setTimeout>|null} */
+  let inspectHideTimer = null;
+  /** @type {string|null} */
+  let inspectTileId = null;
+  /** @type {string|null} */
+  let concernAnswerRevisingId = null;
+  let concernAnswerBusy = false;
 
   const BUSY_LABELS = {
     ideas: "Generating ideas…",
@@ -67,6 +100,14 @@ export function createHexWorkshop(api) {
 
   function isCreateBusy() {
     return ideasBusy || mintBusy || summonBusy;
+  }
+
+  /** @returns {"ideas"|"mint"|"summon"|null} */
+  function createBusyKind() {
+    if (summonBusy) return "summon";
+    if (ideasBusy) return "ideas";
+    if (mintBusy) return "mint";
+    return null;
   }
 
   function setCreateBusy(kind, on) {
@@ -81,17 +122,59 @@ export function createHexWorkshop(api) {
     return api.apEnabled?.() ? "Refresh · 1 AP" : "Refresh";
   }
 
+  function unplacedSparksFor(techId) {
+    return unplacedInventionsForTech(board(), techId).filter(
+      (t) => t.origin === "sparks"
+    );
+  }
+
+  /** Restore last spark batch from tray tiles after reload (Map is session-only). */
+  function ensureSparkBatch(techId) {
+    if (!techId) return { ids: [], titles: [] };
+    const existing = sparkBatches.get(techId);
+    if (existing?.ids?.length) return existing;
+    const sparks = unplacedSparksFor(techId);
+    if (!sparks.length) return { ids: [], titles: [] };
+    const batch = {
+      ids: sparks.map((t) => t.id),
+      titles: sparks.map((t) => t.name),
+    };
+    sparkBatches.set(techId, batch);
+    return batch;
+  }
+
   function hasSparkBatch(techId) {
-    const batch = sparkBatches.get(techId || focusedTechId);
+    const id = techId || focusedTechId;
+    const batch = ensureSparkBatch(id);
     return Boolean(batch?.ids?.length);
+  }
+
+  function hasUnplacedSparks(techId) {
+    return unplacedSparksFor(techId || focusedTechId).length > 0;
+  }
+
+  function ideaCardsForFocus() {
+    const waiting = unplacedInventionsForTech(board(), focusedTechId);
+    const batchIds = ensureSparkBatch(focusedTechId).ids || [];
+    const rank = new Map(batchIds.map((id, i) => [id, i]));
+    return waiting.slice().sort((a, b) => {
+      const ai = rank.has(a.id) ? rank.get(a.id) : 1000;
+      const bi = rank.has(b.id) ? rank.get(b.id) : 1000;
+      if (ai !== bi) return ai - bi;
+      return String(a.id).localeCompare(String(b.id));
+    });
   }
 
   function syncCreateBusyUi(preferKind) {
     const panel = document.querySelector("#hex-tile-create");
     const pending = document.querySelector("#hex-create-pending");
     const pendingText = document.querySelector("#hex-create-pending-text");
+    const wrap = document.querySelector(".hex-board-wrap");
     const busy = isCreateBusy();
+    const inventWait = ideasBusy || mintBusy;
     panel?.classList.toggle("is-busy", busy);
+    wrap?.classList.toggle("is-invent-wait", inventWait);
+    document.body.classList.toggle("hex-create-busy", inventWait);
     if (pending) {
       pending.hidden = !busy;
       if (busy && pendingText) {
@@ -108,7 +191,11 @@ export function createHexWorkshop(api) {
     const refreshBtn = document.querySelector("#btn-refresh-ideas");
     const mintBtn = document.querySelector("#btn-mint-custom");
     const how = document.querySelector("#hex-how-text");
-    if (askBtn) askBtn.disabled = busy || !focusedTechId;
+    const traySparks = Boolean(focusedTechId && hasUnplacedSparks(focusedTechId));
+    if (askBtn) {
+      askBtn.hidden = traySparks;
+      askBtn.disabled = busy || !focusedTechId || traySparks;
+    }
     if (mintBtn) mintBtn.disabled = busy || !focusedTechId;
     if (how) how.disabled = busy || !focusedTechId;
     if (refreshBtn) {
@@ -166,16 +253,26 @@ export function createHexWorkshop(api) {
           el.classList.toggle("is-bad", Boolean(bad));
         }
       },
-      onBoardChange: (b, tileId, kind) => {
-        afterBoardChange(tileId, kind);
+      onBoardChange: (b, tileId, kind, extra = {}) => {
+        afterBoardChange(tileId, kind, extra);
         api.commitBoard?.(b);
       },
-      isInteractive: () => !summonBusy,
-      onSelect: (id) => {
-        if (summonBusy) return;
+      isInteractive: () => !isCreateBusy(),
+      onInspect: (id) => {
+        if (isCreateBusy()) return;
+        scheduleInspect(id);
+      },
+      onInspectEnd: () => {
+        scheduleInspectEnd();
+      },
+      onInspectCancel: () => {
+        hideTilePopup();
+        inspectTileId = null;
+      },
+      onPathwayToggle: (id, hl) => {
+        if (isCreateBusy()) return;
         const t = board()?.tiles?.[id];
-        showTilePopup(id);
-        if (t?.kind === TILE_KIND.invention && t.techId) {
+        if (t?.kind === TILE_KIND.invention && t.techId && hl) {
           focusTech(t.techId);
         }
       },
@@ -203,21 +300,64 @@ export function createHexWorkshop(api) {
     const popup = document.querySelector("#hex-tile-popup");
     if (!popup || popup.dataset.wired === "1") return popup;
     popup.dataset.wired = "1";
-    document
-      .querySelector("#hex-tile-popup-close")
-      ?.addEventListener("click", () => hideTilePopup());
-    popup.addEventListener("click", (e) => {
-      if (e.target === popup) hideTilePopup();
+    popup.classList.add("is-inspect");
+    const card = popup.querySelector(".hex-tile-popup-card");
+    card?.addEventListener("pointerenter", () => {
+      if (inspectHideTimer) {
+        clearTimeout(inspectHideTimer);
+        inspectHideTimer = null;
+      }
+    });
+    card?.addEventListener("pointerleave", () => {
+      scheduleInspectEnd();
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hideTilePopup();
+      if (e.key === "Escape") {
+        hideTilePopup();
+        ensureUi()?.clearHighlight?.();
+      }
     });
     return popup;
   }
 
+  function scheduleInspect(tileId) {
+    if (inspectHideTimer) {
+      clearTimeout(inspectHideTimer);
+      inspectHideTimer = null;
+    }
+    if (inspectShowTimer) clearTimeout(inspectShowTimer);
+    inspectTileId = tileId;
+    inspectShowTimer = setTimeout(() => {
+      inspectShowTimer = null;
+      if (inspectTileId === tileId) showTilePopup(tileId);
+    }, 450);
+  }
+
+  function scheduleInspectEnd() {
+    if (inspectShowTimer) {
+      clearTimeout(inspectShowTimer);
+      inspectShowTimer = null;
+    }
+    if (inspectHideTimer) clearTimeout(inspectHideTimer);
+    inspectHideTimer = setTimeout(() => {
+      inspectHideTimer = null;
+      hideTilePopup();
+      inspectTileId = null;
+    }, 150);
+  }
+
   function hideTilePopup() {
+    if (inspectShowTimer) {
+      clearTimeout(inspectShowTimer);
+      inspectShowTimer = null;
+    }
+    if (inspectHideTimer) {
+      clearTimeout(inspectHideTimer);
+      inspectHideTimer = null;
+    }
     const popup = document.querySelector("#hex-tile-popup");
     if (popup) popup.hidden = true;
+    stopReadAloud();
   }
 
   function findTileAnchor(tileId) {
@@ -232,32 +372,251 @@ export function createHexWorkshop(api) {
     );
   }
 
-  /** Place popup card near the tile (viewport-fixed), clamped into view. */
+  /**
+   * Place popup card near the tile without covering it (viewport-fixed).
+   * Prefer right → left → below → above; keep ≥12px gap from the anchor box.
+   */
   function positionPopupNearTile(tileId) {
     const popup = document.querySelector("#hex-tile-popup");
     const card = popup?.querySelector(".hex-tile-popup-card");
     if (!popup || !card || popup.hidden) return;
     const anchor = findTileAnchor(tileId);
     const pad = 10;
+    const gap = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const rect = anchor?.getBoundingClientRect?.() || {
-      left: window.innerWidth / 2,
-      top: window.innerHeight / 2,
+      left: vw / 2,
+      top: vh / 2,
       width: 0,
       height: 0,
-      bottom: window.innerHeight / 2,
-      right: window.innerWidth / 2,
+      bottom: vh / 2,
+      right: vw / 2,
     };
     const cw = card.offsetWidth || 320;
     const ch = card.offsetHeight || 200;
-    let left = rect.left + rect.width / 2 - cw / 2;
-    let top = rect.bottom + pad;
-    if (top + ch > window.innerHeight - pad) {
-      top = rect.top - ch - pad;
+    const ax = rect.left + rect.width / 2;
+    const ay = rect.top + rect.height / 2;
+
+    /** @type {Array<{ left: number, top: number, side: string }>} */
+    const candidates = [
+      {
+        side: "right",
+        left: rect.right + gap,
+        top: rect.top + rect.height / 2 - ch / 2,
+      },
+      {
+        side: "left",
+        left: rect.left - gap - cw,
+        top: rect.top + rect.height / 2 - ch / 2,
+      },
+      {
+        side: "below",
+        left: rect.left + rect.width / 2 - cw / 2,
+        top: rect.bottom + gap,
+      },
+      {
+        side: "above",
+        left: rect.left + rect.width / 2 - cw / 2,
+        top: rect.top - gap - ch,
+      },
+    ];
+
+    function fits(left, top) {
+      return (
+        left >= pad &&
+        top >= pad &&
+        left + cw <= vw - pad &&
+        top + ch <= vh - pad
+      );
     }
-    if (top < pad) top = pad;
-    left = Math.max(pad, Math.min(left, window.innerWidth - cw - pad));
-    card.style.left = `${Math.round(left)}px`;
-    card.style.top = `${Math.round(top)}px`;
+
+    /** Clamp along free axis only — never reduce the gap on the tile-facing edge. */
+    function clampPreserveGap(c) {
+      let { left, top, side } = c;
+      if (side === "right") {
+        left = Math.max(rect.right + gap, left);
+        top = Math.max(pad, Math.min(top, vh - pad - ch));
+      } else if (side === "left") {
+        left = Math.min(rect.left - gap - cw, left);
+        top = Math.max(pad, Math.min(top, vh - pad - ch));
+      } else if (side === "below") {
+        top = Math.max(rect.bottom + gap, top);
+        left = Math.max(pad, Math.min(left, vw - pad - cw));
+      } else {
+        // above
+        top = Math.min(rect.top - gap - ch, top);
+        left = Math.max(pad, Math.min(left, vw - pad - cw));
+      }
+      return { left, top, side };
+    }
+
+    function overlapsAnchor(left, top) {
+      const cardR = { left, top, right: left + cw, bottom: top + ch };
+      return !(
+        cardR.right + 0.5 < rect.left ||
+        cardR.left - 0.5 > rect.right ||
+        cardR.bottom + 0.5 < rect.top ||
+        cardR.top - 0.5 > rect.bottom
+      );
+    }
+
+    let chosen = null;
+    for (const c of candidates) {
+      if (fits(c.left, c.top) && !overlapsAnchor(c.left, c.top)) {
+        chosen = c;
+        break;
+      }
+    }
+
+    if (!chosen) {
+      // Most free space on each side
+      const space = {
+        right: vw - pad - (rect.right + gap),
+        left: rect.left - gap - pad,
+        below: vh - pad - (rect.bottom + gap),
+        above: rect.top - gap - pad,
+      };
+      const order = Object.keys(space).sort((a, b) => space[b] - space[a]);
+      for (const side of order) {
+        const base = candidates.find((c) => c.side === side);
+        if (!base) continue;
+        const clamped = clampPreserveGap(base);
+        if (!overlapsAnchor(clamped.left, clamped.top)) {
+          chosen = clamped;
+          break;
+        }
+      }
+    }
+
+    if (!chosen) {
+      // Last resort: viewport corner farthest from tile center
+      const corners = [
+        { left: pad, top: pad },
+        { left: vw - pad - cw, top: pad },
+        { left: pad, top: vh - pad - ch },
+        { left: vw - pad - cw, top: vh - pad - ch },
+      ];
+      let best = corners[0];
+      let bestDist = -1;
+      for (const c of corners) {
+        const cx = c.left + cw / 2;
+        const cy = c.top + ch / 2;
+        const d = (cx - ax) ** 2 + (cy - ay) ** 2;
+        if (d > bestDist) {
+          bestDist = d;
+          best = c;
+        }
+      }
+      chosen = best;
+    }
+
+    card.style.left = `${Math.round(chosen.left)}px`;
+    card.style.top = `${Math.round(chosen.top)}px`;
+  }
+
+
+  function mapConcernAnswerQuality(data) {
+    const q = String(data?.quality || "").toLowerCase();
+    if (q === "hit" || q === "glance" || q === "miss") return q;
+    const v = String(data?.verdict || "").toLowerCase();
+    if (v === "pass" || v === "hit") return "hit";
+    if (v === "partial" || v === "glance") return "glance";
+    if (v === "fail" || v === "miss") return "miss";
+    return "glance";
+  }
+
+  async function submitConcernAnswer(tileId) {
+    const ta = document.querySelector("#hex-concern-answer");
+    const text = String(ta?.value || "").trim();
+    if (text.length < 12) {
+      api.flashToast?.(
+        "Write a bit more — name who acts, who pays, or what limit you respect."
+      );
+      return;
+    }
+    if (concernAnswerBusy) return;
+    if (api.apEnabled?.()) {
+      const pay = api.spendChallengeAp?.() ?? api.spendIdeaAp?.();
+      if (pay && pay.ok === false) {
+        api.flashToast?.("Not enough AP.");
+        return;
+      }
+    }
+    concernAnswerBusy = true;
+    concernAnswerRevisingId = null;
+    let b = setConcernReply(board(), tileId, {
+      playerAnswer: text,
+      answerPending: true,
+    });
+    setBoard(b);
+    showTilePopup(tileId);
+
+    const t = board()?.tiles?.[tileId];
+    const pose = concernPoseText(t);
+    const year = api.getYear?.() || 2026;
+    const cluster = clusterFromGiven(board(), t, year);
+    const docked = Boolean(cluster?.anyTouch);
+    try {
+      let data = null;
+      if (api.coInvent) {
+        data = await api.coInvent("judge-challenge", text, {
+          challengeAngle: t?.angle || null,
+          challengeSpeech: pose.speech,
+          challengeQuestion: pose.question,
+          playerAnswer: text,
+          concernPathway: {
+            anyTouch: docked,
+            techIds: cluster?.techIds || [],
+            howText: String(cluster?.howText || "").slice(0, 1600),
+            inventions: (cluster?.inventions || []).map((n) => ({
+              techId: n.techId,
+              howText: String(n.howText || "").slice(0, 400),
+              timingLevel: n.timingLevel || null,
+            })),
+          },
+        });
+      }
+      const quality = data
+        ? mapConcernAnswerQuality(data)
+        : text.length >= 80
+          ? "glance"
+          : "miss";
+      const feedback = String(
+        data?.message || data?.lesson || ""
+      ).slice(0, 400);
+      b = setConcernReply(board(), tileId, {
+        playerAnswer: text,
+        answerQuality: quality,
+        answerFeedback: feedback,
+        answerPending: false,
+      });
+      if (docked) {
+        b = invalidatePathwaysTouchingGiven(b, tileId);
+      }
+      setBoard(b);
+      api.commitBoard?.(b);
+      if (docked) syncPathwayScores();
+      else {
+        ensureUi()?.render();
+      }
+      showTilePopup(tileId);
+    } catch (e) {
+      console.warn("[judge-challenge]", e?.message || e);
+      const quality = text.length >= 80 ? "glance" : "miss";
+      b = setConcernReply(board(), tileId, {
+        playerAnswer: text,
+        answerQuality: quality,
+        answerFeedback:
+          "Could not reach the judge — saved your draft. Dock a pathway so the light can move.",
+        answerPending: false,
+      });
+      setBoard(b);
+      api.commitBoard?.(b);
+      showTilePopup(tileId);
+    } finally {
+      concernAnswerBusy = false;
+    }
   }
 
   function showTilePopup(tileId) {
@@ -268,13 +627,23 @@ export function createHexWorkshop(api) {
     const meta = document.querySelector("#hex-tile-popup-meta");
     const body = document.querySelector("#hex-tile-popup-body");
     const art = document.querySelector("#hex-tile-popup-art");
-    if (title) title.textContent = t.name || "Tile";
+    if (title) {
+      if (t.kind === TILE_KIND.invention) {
+        const tech = t.techId ? techById(t.techId) : null;
+        title.textContent = tech?.name || t.techId || "emTech idea";
+      } else {
+        title.textContent = t.name || "Tile";
+      }
+    }
     if (art) {
       art.onload = null;
       if (t.artUrl) {
         art.onload = () => positionPopupNearTile(tileId);
         art.src = t.artUrl;
-        art.alt = t.name || "Tile art";
+        art.alt =
+          t.kind === TILE_KIND.invention
+            ? techById(t.techId)?.name || "Idea art"
+            : t.name || "Tile art";
         art.hidden = false;
       } else {
         art.removeAttribute("src");
@@ -300,7 +669,8 @@ export function createHexWorkshop(api) {
       } else {
         const tech = t.techId ? techById(t.techId) : null;
         const onField = t.q != null && t.r != null;
-        meta.textContent = `Invention · ${tech?.name || t.techId || "idea"} · ${t.polarity || ""} · year ${t.year || "?"}${onField ? "" : " · in tray"}`;
+        const pending = t.timingPending ? " · re-checking timing…" : "";
+        meta.textContent = `Invention · ${tech?.name || t.techId || "idea"} · ${t.polarity || ""} · year ${t.year || "?"}${onField ? "" : " · in tray"}${pending}`;
       }
     }
     if (body) {
@@ -327,6 +697,11 @@ export function createHexWorkshop(api) {
             : null;
         if (cur != null) {
           const curN = Math.max(0, Math.min(5, Math.round(Number(cur) || 0)));
+          const band = crisisMeterLevel(curN, goal);
+          const dots = `${"●".repeat(curN)}${"○".repeat(5 - curN)}`;
+          parts.push(
+            `<p class="hex-tile-popup-meter meter ${escapeHtml(band)}" title="${escapeHtml(String(curN))}/5"><b>${escapeHtml(String(curN))}/5</b> ${escapeHtml(dots)}</p>`
+          );
           let pressureLine = `Pressure <strong>${escapeHtml(String(curN))} of 5</strong>.`;
           if (goal != null && !Number.isNaN(Number(goal))) {
             const g = Math.max(0, Math.min(5, Math.round(Number(goal))));
@@ -373,7 +748,22 @@ export function createHexWorkshop(api) {
         parts.push(
           `<p class="muted">Here-and-now relief without a deeper lever is incomplete; a root-cause story with no support never leaves the notebook; support without a real fix is theater. The three meters together are the inventing discipline.</p>`
         );
-        parts.push(lampExplainHtml(t.lamp, t.lampReason, "crisis"));
+        if (cur != null) {
+          const curN = Math.max(0, Math.min(5, Math.round(Number(cur) || 0)));
+          const band = crisisMeterLevel(curN, goal);
+          const lamp = bandToLamp(band);
+          const status =
+            band === "cool"
+              ? "eased — this meter is at or under the win goal."
+              : band === "warm"
+                ? "strained — above the win goal; dock a pathway to ease it."
+                : "hot — near collapse; this meter needs relief.";
+          parts.push(
+            `<p><span class="hex-tile-popup-lamp ${escapeHtml(lamp)}"></span><strong>${escapeHtml(band)}</strong> — ${escapeHtml(status)}</p>`
+          );
+        } else {
+          parts.push(lampExplainHtml(t.lamp, t.lampReason, "crisis"));
+        }
       } else if (t.kind === TILE_KIND.concern) {
         const angleMeta = CHALLENGE_ANGLES.find((a) => a.id === t.angle);
         const angleLabel =
@@ -386,40 +776,97 @@ export function createHexWorkshop(api) {
             `<p class="muted">${escapeHtml(angleMeta.blurb)}</p>`
           );
         }
-        if (t.analysis) {
+        const pose = concernPoseText(t);
+        if (pose.speech) {
+          parts.push(`<p>${escapeHtml(pose.speech)}</p>`);
+        }
+        if (pose.question) {
           parts.push(
-            `<p><strong>The hard question</strong></p><p>${escapeHtml(t.analysis)}</p>`
+            `<p><strong>The hard question</strong></p><p>${escapeHtml(pose.question)}</p>`
           );
-        } else {
+        } else if (!pose.speech) {
           parts.push(
             `<p>This is a hard-question tile — <strong>${escapeHtml(angleLabel)}</strong> presses your pathway until an invention answers it.</p>`
           );
         }
-        if (t.safeguard) {
+        const reply = concernReplyText(t);
+        const year = api.getYear?.() || 2026;
+        const cluster = clusterFromGiven(board(), t, year);
+        const docked = Boolean(cluster?.anyTouch);
+        const revising = concernAnswerRevisingId === t.id;
+        const showForm = !reply.quality || revising || reply.pending;
+        parts.push(
+          `<p class="muted">Reply to this critic here. The light stays red until a pathway is docked. Once something is touching, the judge reads every connected invent and your answer.</p>`
+        );
+        if (showForm) {
           parts.push(
-            `<p><strong>What would address it</strong></p><p>${escapeHtml(t.safeguard)}</p>`
+            `<label class="hex-tile-popup-answer-label" for="hex-concern-answer">Your answer</label>` +
+              `<textarea id="hex-concern-answer" class="hex-tile-popup-answer" rows="5" maxlength="2000" ${
+                reply.pending || concernAnswerBusy ? "disabled" : ""
+              }>${escapeHtml(reply.answer)}</textarea>` +
+              `<p class="hex-tile-popup-answer-actions"><button type="button" class="btn btn-primary btn-sm" id="hex-concern-answer-submit" ${
+                reply.pending || concernAnswerBusy ? "disabled" : ""
+              }>Answer this critic</button></p>`
+          );
+          if (reply.pending || concernAnswerBusy) {
+            parts.push(`<p class="muted">Judging…</p>`);
+          }
+        } else {
+          const qLabel =
+            reply.quality === "hit"
+              ? "Hit"
+              : reply.quality === "miss"
+                ? "Miss"
+                : "Glance";
+          parts.push(`<p><strong>Your answer</strong></p><p>${escapeHtml(reply.answer)}</p>`);
+          parts.push(
+            `<p><strong>${escapeHtml(qLabel)}</strong>${
+              reply.feedback ? ` — ${escapeHtml(reply.feedback)}` : ""
+            }</p>`
+          );
+          parts.push(
+            `<p><button type="button" class="btn btn-ghost btn-sm" id="hex-concern-answer-revise">Revise answer</button></p>`
           );
         }
-        parts.push(lampExplainHtml(t.lamp, t.lampReason, "concern"));
+        parts.push(
+          lampExplainHtml(t.lamp, t.lampReason, "concern", {
+            answeredUndocked: Boolean(reply.answer) && !docked,
+          })
+        );
       } else {
         if (t.howText) {
           parts.push(`<p><strong>How it works</strong></p><p>${escapeHtml(t.howText)}</p>`);
         } else {
           parts.push(`<p class="muted">No how-it-works text yet.</p>`);
         }
-        if (t.feasibilityPct != null) {
+        if (t.timingPending) {
+          parts.push(`<p class="muted">Re-checking timing honesty…</p>`);
+        } else if (t.timingLevel || t.feasibilityPct != null) {
+          const pct =
+            t.feasibilityPct != null
+              ? Math.round(Number(t.feasibilityPct))
+              : timingLevelToPct(t.timingLevel);
+          const lvl = t.timingLevel || (pct < 35 ? "red" : pct < 70 ? "yellow" : "green");
           parts.push(
-            `<p>Feasibility bar: <strong>${Math.round(Number(t.feasibilityPct))}%</strong> honest this year.</p>`
+            `<p>Timing: <strong>${escapeHtml(lvl)}</strong> · <strong>${pct}%</strong> honest this year.</p>`
           );
+          if (t.timingReason) {
+            parts.push(`<p class="muted">${escapeHtml(t.timingReason)}</p>`);
+          }
         }
         parts.push(
           `<p class="muted">World rim: ${escapeHtml(t.polarity || "?")} (bits left, atoms right).</p>`
         );
+        const actions = [];
         if (t.q != null && t.r != null) {
-          parts.push(
-            `<p><button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button></p>`
+          actions.push(
+            `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button>`
           );
         }
+        actions.push(
+          `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
+        );
+        parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
       }
       body.innerHTML = parts.join("");
       body.querySelector("#hex-tile-popup-lift")?.addEventListener("click", () => {
@@ -430,20 +877,43 @@ export function createHexWorkshop(api) {
           api.flashToast?.("Lifted off the board — back in the tray.");
         }
       });
+      body.querySelector("#hex-tile-popup-discard")?.addEventListener("click", () => {
+        throwAwayTile(tileId);
+      });
+      body.querySelector("#hex-concern-answer-submit")?.addEventListener("click", () => {
+        submitConcernAnswer(tileId);
+      });
+      body.querySelector("#hex-concern-answer-revise")?.addEventListener("click", () => {
+        concernAnswerRevisingId = tileId;
+        showTilePopup(tileId);
+      });
+      if (t.kind === TILE_KIND.concern) {
+        const pose = concernPoseText(t);
+        attachReadAloud(body, {
+          getText: () => [pose.speech, pose.question].filter(Boolean).join("\n\n"),
+          minChars: 1,
+        });
+      } else {
+        attachReadAloud(body, { getText: () => "" });
+      }
     }
     popup.hidden = false;
-    requestAnimationFrame(() => positionPopupNearTile(tileId));
+    requestAnimationFrame(() => {
+      positionPopupNearTile(tileId);
+      // Second pass after layout settles (tall art / scrolled body)
+      requestAnimationFrame(() => positionPopupNearTile(tileId));
+    });
   }
 
   function seedFromMission(mission) {
-    scrutinyCache = null;
+    timingCache.clear();
+    sparkBatches.clear();
     const b = seedCrisisTiles(mission || {});
-    const lit = applyHeuristicLights(b, {
-      year: api.getYear(),
-      pressure: api.getPressure?.() || {},
+    const applied = applyPathwayPressure(b, {
       winMax: mission?.winMax || {},
     });
-    setBoard(lit);
+    setBoard(applied.board);
+    api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
     renderTray();
     updateCreatePanel();
@@ -451,8 +921,16 @@ export function createHexWorkshop(api) {
   }
 
   function focusTech(techId) {
+    if (isCreateBusy() && techId && techId !== focusedTechId) {
+      const kind = createBusyKind();
+      if (kind === "ideas") api.flashToast?.("Ideas still generating.");
+      else if (kind === "mint") api.flashToast?.("Tile still minting.");
+      else api.flashToast?.("Wait — still working.");
+      return;
+    }
     focusedTechId = techId || null;
     updateCreatePanel();
+    renderIdeaCards();
   }
 
   function updateCreatePanel() {
@@ -503,22 +981,27 @@ export function createHexWorkshop(api) {
     const host = document.querySelector("#hex-idea-cards");
     if (!host) return;
     const b = board();
-    const waiting = Object.values(b?.tiles || {}).filter(
-      (t) => t.kind === TILE_KIND.invention && (t.q == null || t.r == null)
-    );
+    const waiting = ideaCardsForFocus();
     host.innerHTML = "";
+    host.dataset.count = String(waiting.length);
     if (!waiting.length) {
       syncCreateBusyUi();
       return;
     }
+    const stackIds = new Set(techIdsFromBoard(b));
     const uiInst = ensureUi();
     for (const t of waiting) {
+      const tech = t.techId ? techById(t.techId) : null;
+      const inStack = Boolean(t.techId && stackIds.has(t.techId));
       const card = document.createElement("article");
-      card.className = "hex-idea-card";
+      card.className = `hex-idea-card ${inStack ? "is-instack" : "is-considering"}`;
       card.setAttribute("role", "listitem");
       card.dataset.tileId = t.id;
       card.dataset.id = t.id;
-      card.title = "Drag onto the board";
+      if (t.techId) card.dataset.techId = t.techId;
+      card.title = inStack
+        ? "In stack — drag onto the board"
+        : "Considering — drag onto the board to add to stack";
 
       const visual = document.createElement("div");
       visual.className = "hex-idea-card-visual";
@@ -537,6 +1020,22 @@ export function createHexWorkshop(api) {
 
       const body = document.createElement("div");
       body.className = "hex-idea-card-body";
+      const meta = document.createElement("p");
+      meta.className = "hex-idea-card-meta";
+      const techName = document.createElement("span");
+      techName.className = "hex-idea-card-tech";
+      techName.textContent = tech?.name || t.techId || "emTech";
+      meta.appendChild(techName);
+      const sep = document.createElement("span");
+      sep.className = "hex-idea-card-meta-sep";
+      sep.setAttribute("aria-hidden", "true");
+      sep.textContent = "·";
+      meta.appendChild(sep);
+      const status = document.createElement("span");
+      status.className = `tech-chip-status ${inStack ? "is-instack" : "is-considering"}`;
+      status.textContent = inStack ? "In stack" : "Considering";
+      meta.appendChild(status);
+      body.appendChild(meta);
       const title = document.createElement("h4");
       title.className = "hex-idea-card-title";
       title.textContent = t.name || "Idea";
@@ -546,6 +1045,23 @@ export function createHexWorkshop(api) {
       how.textContent = t.howText || "No description yet.";
       body.appendChild(how);
       card.appendChild(body);
+
+      const toss = document.createElement("button");
+      toss.type = "button";
+      toss.className = "hex-idea-card-discard";
+      toss.setAttribute("aria-label", "Throw away this idea");
+      toss.title = "Throw away";
+      toss.textContent = "×";
+      toss.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      toss.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        throwAwayTile(t.id);
+      });
+      card.appendChild(toss);
 
       const badge = document.createElement("div");
       badge.className = "hex-idea-card-badge";
@@ -577,80 +1093,426 @@ export function createHexWorkshop(api) {
     renderIdeaCards();
   }
 
-  function afterBoardChange(tileId, kind) {
-    const lit = applyHeuristicLights(board(), {
+  function heuristicCtx() {
+    const mission = api.getMission?.() || null;
+    return {
       year: api.getYear(),
       pressure: api.getPressure?.() || {},
-      winMax: api.getWinMax?.() || {},
-    });
-    setBoard(lit);
+      winMax: api.getWinMax?.() || mission?.winMax || {},
+      mission,
+      global: api.getGlobal?.() || null,
+      suggested: mission?.suggested || [],
+    };
+  }
+
+  function afterBoardChange(tileId, kind, extra = {}) {
     ensureUi()?.render();
     renderTray();
-    scheduleNeighborEval(tileId);
+    const moved = board()?.tiles?.[tileId];
+    if (moved?.kind === TILE_KIND.invention && moved.q != null && moved.r != null) {
+      scheduleTileTiming(tileId);
+    }
+    if (kind === "discard" && inspectTileId === tileId) {
+      hideTilePopup();
+    }
+    syncPathwayScores();
     api.onBoardPainted?.();
   }
 
-  function scheduleNeighborEval(tileId) {
-    clearTimeout(evalTimer);
-    const gen = ++evalGen;
-    evalTimer = setTimeout(() => {
-      runNeighborEval(tileId, gen).catch((e) => console.warn("[hex eval]", e));
-    }, 450);
+  function throwAwayTile(tileId) {
+    const ok = ensureUi()?.discardInvention(tileId);
+    if (ok) {
+      hideTilePopup();
+      renderTray();
+      api.flashToast?.("Thrown away.");
+    }
+    return ok;
   }
 
-  async function runNeighborEval(tileId, gen) {
-    if (!api.coInvent) return;
-    const ctx = buildNeighborEvalContext(board(), {
-      year: api.getYear(),
-      place: api.getPlace?.() || "",
-      missionTitle: api.getMissionTitle?.() || "",
-      grounding: api.getGrounding?.() || null,
-      pressure: api.getPressure?.() || {},
-      winMax: api.getWinMax?.() || {},
-    });
-    if (!ctx.givens.length) return;
+  /**
+   * Instant: re-apply cached pathway deltas → pressure + lamps.
+   * Then start score jobs only for new fingerprints; leave live in-flight
+   * scores running; abort fingerprints that left the board.
+   */
+  function syncPathwayScores() {
+    const mission = api.getMission?.() || null;
+    const winMax = api.getWinMax?.() || mission?.winMax || {};
+    const applied = applyPathwayPressure(board(), { winMax });
+    setBoard(applied.board);
+    api.setPressure?.(applied.displayPressure);
+    ensureUi()?.render();
+
+    const { start, abort } = diffPathwayScoreJobs(
+      applied.pathways,
+      pathwayJobs.keys()
+    );
+    for (const fp of abort) abortPathwayJob(fp);
+    for (const fp of start) schedulePathwayScore(fp);
+  }
+
+  function abortPathwayJob(fp) {
+    const job = pathwayJobs.get(fp);
+    if (!job) return;
+    if (job.timer) clearTimeout(job.timer);
     try {
-      const data = await api.coInvent("evaluate-neighbors", "[Evaluate board lights]", {
-        hexEval: ctx,
+      job.abort.abort();
+    } catch {
+      /* already aborted */
+    }
+    pathwayJobs.delete(fp);
+  }
+
+  function isAbortError(e) {
+    return Boolean(
+      e &&
+        (e.name === "AbortError" ||
+          e.code === 20 ||
+          /aborted|AbortError/i.test(String(e.message || e)))
+    );
+  }
+
+  /**
+   * After Wait: rise pressureBase, then re-apply deltas onto display pressure.
+   * @param {Record<string, number>} rise
+   * @param {{ meter?: string }|null} [frontierRisk]
+   */
+  function afterWaitPressureRise(rise, frontierRisk = null) {
+    let b = cloneBoard(board());
+    if (!b.pressureBase) {
+      b.pressureBase = { ...(api.getPressure?.() || {}) };
+    }
+    b.pressureBase = applyPressureRise(b.pressureBase, rise || {});
+    if (frontierRisk?.meter && b.pressureBase[frontierRisk.meter] != null) {
+      b.pressureBase[frontierRisk.meter] = clampPressure(
+        (b.pressureBase[frontierRisk.meter] || 0) + 1
+      );
+    }
+    setBoard(b);
+    syncPathwayScores();
+  }
+
+  function schedulePathwayScore(fp) {
+    if (!fp || pathwayJobs.has(fp)) return;
+    const abort = new AbortController();
+    const job = { abort, timer: null };
+    pathwayJobs.set(fp, job);
+    job.timer = setTimeout(() => {
+      job.timer = null;
+      runPathwayScore(fp, abort.signal).catch((e) => {
+        if (!isAbortError(e)) console.warn("[score-pathway]", e);
       });
-      if (gen !== evalGen) return;
-      const lights = normalizeNeighborLights(data);
-      if (!lights.length) return;
-      let next = applyLights(board(), lights);
-      // Pressure relief for green crisis lamps
-      let pressure = { ...(api.getPressure?.() || {}) };
-      let pressureChanged = false;
-      for (const L of lights) {
-        const t = next.tiles[L.id];
-        if (t?.kind === TILE_KIND.crisis) {
-          const before = pressure[t.meterKey || t.name];
-          pressure = pressureAfterCrisisLamp(
-            pressure,
-            t,
-            api.getWinMax?.() || {},
-            L.level
-          );
-          if (pressure[t.meterKey || t.name] !== before) pressureChanged = true;
+    }, 200);
+  }
+
+  function applySettledPathwayScore(fp, score) {
+    const mission = api.getMission?.() || null;
+    const winMax = api.getWinMax?.() || mission?.winMax || {};
+    const next = cloneBoard(board());
+    if (!next.pathwayImpacts[fp]) return;
+    next.pathwayImpacts[fp] = {
+      ...next.pathwayImpacts[fp],
+      crisisDelta: score.crisisDelta || emptyCrisisDelta(),
+      concerns: score.concerns || {},
+      pending: false,
+    };
+    setBoard(next);
+    const applied = applyPathwayPressure(board(), { winMax });
+    setBoard(applied.board);
+    api.setPressure?.(applied.displayPressure);
+    ensureUi()?.render();
+    api.onBoardPainted?.();
+  }
+
+  async function runPathwayScore(fp, signal) {
+    const year = api.getYear();
+    const mission = api.getMission?.() || null;
+    const winMax = api.getWinMax?.() || mission?.winMax || {};
+    const concernAngles = Object.values(board()?.tiles || {})
+      .filter((t) => t.kind === TILE_KIND.concern)
+      .map((t) => t.angle)
+      .filter(Boolean);
+
+    try {
+      if (signal?.aborted) return;
+      const b = board();
+      const impact = b.pathwayImpacts?.[fp];
+      if (!impact || !impact.pending) return;
+
+      const inventions = (impact.inventionIds || [])
+        .map((id) => b.tiles?.[id])
+        .filter((t) => t && t.kind === TILE_KIND.invention);
+
+      let score;
+      if (!api.coInvent) {
+        score = heuristicPathwayScore(inventions, year, { concernAngles });
+      } else {
+        try {
+          const data = await api.coInvent("score-pathway", "[Score pathway]", {
+            pathway: {
+              fingerprint: fp,
+              inventions: inventions.map((n) => ({
+                techId: n.techId,
+                year: n.year,
+                howText: n.howText,
+                feasibilityPct: n.feasibilityPct,
+                timingLevel: n.timingLevel || null,
+              })),
+            },
+            year,
+            place: api.getPlace?.() || "",
+            missionTitle: api.getMissionTitle?.() || "",
+            scene: String(mission?.scene || "").slice(0, 600),
+            grounding: api.getGrounding?.() || null,
+            pressureBase: b.pressureBase || {},
+            winMax,
+            crisisRoles: Object.values(b.tiles || {})
+              .filter((t) => t.kind === TILE_KIND.crisis)
+              .map((t) => ({
+                role: t.role,
+                name: t.name,
+                meterKey: t.meterKey || t.name,
+              })),
+            concerns: Object.values(b.tiles || {})
+              .filter((t) => t.kind === TILE_KIND.concern)
+              .map((t) => ({
+                angle: t.angle,
+                challengeSpeech: concernPoseText(t).speech || null,
+                challengeQuestion: concernPoseText(t).question || null,
+                playerAnswer: concernReplyText(t).answer || null,
+                answerQuality: concernReplyText(t).quality,
+              })),
+            signal,
+          });
+          if (signal?.aborted) return;
+          score = normalizePathwayScore(data);
+          if (
+            !score.crisisDelta ||
+            (score.crisisDelta.local === 0 &&
+              score.crisisDelta.global === 0 &&
+              score.crisisDelta.support === 0 &&
+              !Object.keys(score.concerns || {}).length)
+          ) {
+            const local = heuristicPathwayScore(inventions, year, {
+              concernAngles,
+            });
+            score = {
+              crisisDelta: score.crisisDelta || local.crisisDelta,
+              concerns: {
+                ...local.concerns,
+                ...(score.concerns || {}),
+              },
+            };
+          }
+        } catch (e) {
+          if (isAbortError(e) || signal?.aborted) return;
+          console.warn("[score-pathway]", e.message || e);
+          score = heuristicPathwayScore(inventions, year, { concernAngles });
         }
       }
-      setBoard(next);
-      if (pressureChanged) api.setPressure?.(pressure);
-      ensureUi()?.render();
-      api.onBoardPainted?.();
-    } catch (e) {
-      console.warn("[evaluate-neighbors]", e.message || e);
+      if (signal?.aborted) return;
+      applySettledPathwayScore(fp, score);
+    } finally {
+      const job = pathwayJobs.get(fp);
+      if (job && job.abort.signal === signal) {
+        pathwayJobs.delete(fp);
+      }
     }
+  }
+
+  /**
+   * Offline / empty-AI lights from cluster priors (legacy; prefer syncPathwayScores).
+   * @param {string[]|null} givenIds
+   */
+  function priorLightsForGivens(givenIds) {
+    const b = board();
+    const hctx = heuristicCtx();
+    const givens = Object.values(b?.tiles || {}).filter((t) => {
+      if (t.kind !== TILE_KIND.crisis && t.kind !== TILE_KIND.concern) return false;
+      if (t.q == null || t.r == null) return false;
+      if (givenIds && !givenIds.includes(t.id)) return false;
+      return true;
+    });
+    return givens.map((g) => {
+      const prior = assessGivenPrior(b, g, hctx);
+      let level = prior.level;
+      if (g.kind === TILE_KIND.concern && level === "green") level = "yellow";
+      const heur = heuristicLamp(b, g, hctx);
+      if (!prior.cluster?.anyTouch) level = heur;
+      return {
+        id: g.id,
+        level,
+        reason: prior.note || "heuristic",
+      };
+    });
+  }
+
+  function localTileTiming(tile, year) {
+    const tech = tile.techId ? techById(tile.techId) : null;
+    const techs = tech ? [tech] : [];
+    const how = String(tile.howText || "").trim();
+    const stretch = detectClaimStretch(how, techs, year);
+    const fCtx = foresightCapabilityContext(year, techs, {
+      globalId: api.getGlobal?.()?.id || api.getMission?.()?.globalId,
+      seed: api.getMission?.()?.id,
+    });
+    return applyForesightToClaimStretch(stretch, how, fCtx);
+  }
+
+  function applyTimingToTile(tileId, level, reason, forKey) {
+    const b = cloneBoard(board());
+    const t = b.tiles[tileId];
+    if (!t || t.kind !== TILE_KIND.invention) return b;
+    t.timingLevel = level;
+    t.timingReason = String(reason || "").slice(0, 400);
+    t.feasibilityPct = timingLevelToPct(level);
+    t.timingPending = false;
+    t.timingForKey = forKey;
+    timingCache.set(tileId, { level, reason: t.timingReason, forKey });
+    return b;
+  }
+
+  /** After timing settles, re-fingerprint pathways (timing is in content key). */
+  function afterTimingSettled(_tileId) {
+    syncPathwayScores();
+  }
+
+  function settleTileTiming(tileId, level, reason, forKey) {
+    setBoard(applyTimingToTile(tileId, level, reason, forKey));
+    ensureUi()?.render();
+    api.onBoardPainted?.();
+    afterTimingSettled(tileId);
+  }
+
+  function markTimingPending(tileId, on) {
+    const b = cloneBoard(board());
+    const t = b.tiles[tileId];
+    if (!t || t.kind !== TILE_KIND.invention) return;
+    t.timingPending = Boolean(on);
+    setBoard(b);
+    ensureUi()?.render();
+  }
+
+  function scheduleTileTiming(tileId) {
+    const tile = board()?.tiles?.[tileId];
+    if (!tile || tile.kind !== TILE_KIND.invention) return;
+    const year = api.getYear();
+    const key = tileTimingCacheKey(tile, year);
+    const cached = timingCache.get(tileId);
+    if (cached?.forKey === key || tile.timingForKey === key) {
+      return;
+    }
+
+    // Freeze last settled timing for the snake; only seed yellow on first assess
+    const hasSettled =
+      tile.timingLevel === "red" ||
+      tile.timingLevel === "yellow" ||
+      tile.timingLevel === "green" ||
+      tile.feasibilityPct != null;
+    if (!hasSettled) {
+      const local = localTileTiming(tile, year);
+      const b = cloneBoard(board());
+      const t = b.tiles[tileId];
+      if (t) {
+        t.timingLevel = local.level;
+        t.timingReason = String(local.reason || "").slice(0, 400);
+        t.feasibilityPct = timingLevelToPct(local.level);
+        t.timingPending = true;
+        t.timingForKey = null;
+      }
+      setBoard(b);
+    } else {
+      markTimingPending(tileId, true);
+    }
+    ensureUi()?.render();
+    api.onBoardPainted?.();
+
+    const prev = timingTimers.get(tileId);
+    if (prev) clearTimeout(prev);
+    const gen = (timingGens.get(tileId) || 0) + 1;
+    timingGens.set(tileId, gen);
+    timingTimers.set(
+      tileId,
+      setTimeout(() => {
+        timingTimers.delete(tileId);
+        runTileTiming(tileId, gen).catch((e) => console.warn("[hex timing]", e));
+      }, 500)
+    );
+  }
+
+  async function runTileTiming(tileId, gen) {
+    if (timingGens.get(tileId) !== gen) return;
+    const tile = board()?.tiles?.[tileId];
+    if (!tile || tile.kind !== TILE_KIND.invention) return;
+    const year = api.getYear();
+    const key = tileTimingCacheKey(tile, year);
+    if (!api.coInvent) {
+      const local = localTileTiming(tile, year);
+      if (timingGens.get(tileId) !== gen) return;
+      settleTileTiming(tileId, local.level, local.reason, key);
+      return;
+    }
+    try {
+      const data = await api.coInvent("assess-feasibility", "[Assess tile timing]", {
+        inventionHow: tile.howText || "",
+        inventionImpact: "",
+        inventionName: null,
+        selectedTechIds: tile.techId ? [tile.techId] : [],
+        year,
+        place: api.getPlace?.() || "",
+        grounding: api.getGrounding?.() || null,
+      });
+      if (timingGens.get(tileId) !== gen) return;
+      const rawLevel = data.timing?.level || data.timingLevel;
+      const reason = data.timing?.reason || data.timingNote || data.message || "";
+      if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
+        settleTileTiming(tileId, rawLevel, reason, key);
+      } else {
+        const local = localTileTiming(tile, year);
+        settleTileTiming(tileId, local.level, local.reason, key);
+      }
+    } catch {
+      const local = localTileTiming(tile, year);
+      if (timingGens.get(tileId) !== gen) return;
+      settleTileTiming(tileId, local.level, local.reason, key);
+    }
+  }
+
+  async function retimeOnBoardInventions() {
+    const onBoard = Object.values(board()?.tiles || {}).filter(
+      (t) => t.kind === TILE_KIND.invention && t.q != null && t.r != null
+    );
+    for (const t of onBoard) {
+      timingCache.delete(t.id);
+      markTimingPending(t.id, true);
+      const gen = (timingGens.get(t.id) || 0) + 1;
+      timingGens.set(t.id, gen);
+    }
+    ensureUi()?.render();
+    api.onBoardPainted?.();
+    await Promise.all(
+      onBoard.map((t) =>
+        runTileTiming(t.id, timingGens.get(t.id)).catch((e) =>
+          console.warn("[hex timing]", e)
+        )
+      )
+    );
   }
 
   async function askForIdeas({ refresh = false } = {}) {
     if (!focusedTechId || isCreateBusy()) return;
-    const tech = techById(focusedTechId);
+    const techId = focusedTechId;
+    if (!refresh && hasUnplacedSparks(techId)) {
+      renderIdeaCards();
+      return;
+    }
+    const tech = techById(techId);
     const year = api.getYear();
     const place = api.getPlace?.() || "";
-    const prevBatch = sparkBatches.get(focusedTechId) || { ids: [], titles: [] };
-    const isRefresh = Boolean(refresh || prevBatch.ids.length);
-    const avoidTitles = isRefresh ? prevBatch.titles.slice() : [];
+    const prevBatch = ensureSparkBatch(techId);
+    const isRefresh = Boolean(refresh);
+    const avoidTitles = prevBatch.titles.slice();
 
+    let ideasOk = false;
     setCreateBusy("ideas", true);
     paintIdeaCardSkeletons();
     try {
@@ -661,8 +1523,10 @@ export function createHexWorkshop(api) {
         return;
       }
 
+      api.openLearnWhileIdeas?.(techId);
+
       const ctx = {
-        focusTechId: focusedTechId,
+        focusTechId: techId,
         year,
         place,
         refresh: isRefresh,
@@ -678,12 +1542,12 @@ export function createHexWorkshop(api) {
           );
           ideas = ideasOrFallback(data?.ideas, tech, ctx);
         } catch {
-          ideas = isRefresh
+          ideas = isRefresh || avoidTitles.length
             ? rotateLocalIdeaSparks(tech, ctx, avoidTitles)
             : localIdeaSparks(tech, ctx);
         }
       } else {
-        ideas = isRefresh
+        ideas = isRefresh || avoidTitles.length
           ? rotateLocalIdeaSparks(tech, ctx, avoidTitles)
           : localIdeaSparks(tech, ctx);
       }
@@ -694,7 +1558,7 @@ export function createHexWorkshop(api) {
       }
 
       let b = board();
-      if (prevBatch.ids.length) {
+      if (isRefresh && prevBatch.ids.length) {
         b = removeUnplacedTiles(b, prevBatch.ids);
       }
 
@@ -705,7 +1569,7 @@ export function createHexWorkshop(api) {
         if (api.fetchIdeaImage) {
           try {
             artUrl = await api.fetchIdeaImage({
-              techId: focusedTechId,
+              techId,
               ideaId: idea.id,
               place,
               year,
@@ -716,23 +1580,24 @@ export function createHexWorkshop(api) {
           }
         }
         const tile = mintInventionTile({
-          techId: focusedTechId,
+          techId,
           name: idea.title || "Idea",
           howText: idea.howText || idea.insertText || idea.blurb || "",
           year: idea.year || year,
           artUrl,
           imagePrompt: idea.imagePrompt || null,
-          feasibilityPct: 70,
+          feasibilityPct: null,
           origin: "sparks",
         });
         b = addTile(b, tile);
         mintedIds.push(tile.id);
         mintedTitles.push(tile.name);
       }
-      sparkBatches.set(focusedTechId, { ids: mintedIds, titles: mintedTitles });
+      sparkBatches.set(techId, { ids: mintedIds, titles: mintedTitles });
       setBoard(b);
       renderIdeaCards();
       ensureUi()?.render();
+      ideasOk = true;
       api.flashToast?.(
         isRefresh
           ? `Refreshed ${ideas.length} idea tiles — drag them onto the board.`
@@ -741,6 +1606,7 @@ export function createHexWorkshop(api) {
       api.onBoardPainted?.();
       api.commitBoard?.(b);
     } finally {
+      api.finishLearnWhileIdeas?.({ succeeded: ideasOk });
       setCreateBusy("ideas", false);
     }
   }
@@ -751,6 +1617,7 @@ export function createHexWorkshop(api) {
       return;
     }
     if (isCreateBusy()) return;
+    const techId = focusedTechId;
     const ta = document.querySelector("#hex-how-text");
     const how = String(ta?.value || "").trim();
     if (how.length < 12) {
@@ -766,7 +1633,7 @@ export function createHexWorkshop(api) {
       if (api.fetchIdeaImage) {
         try {
           artUrl = await api.fetchIdeaImage({
-            techId: focusedTechId,
+            techId,
             ideaId: `custom-${Date.now()}`,
             place,
             year,
@@ -777,12 +1644,12 @@ export function createHexWorkshop(api) {
         }
       }
       const tile = mintInventionTile({
-        techId: focusedTechId,
+        techId,
         name,
         howText: how,
         year,
         artUrl,
-        feasibilityPct: 60,
+        feasibilityPct: null,
         origin: "custom",
       });
       const b = addTile(board(), tile);
@@ -800,7 +1667,7 @@ export function createHexWorkshop(api) {
 
   /**
    * Draw one unused roster challenger at random, spin the pick reel, place an isolated tile.
-   * Caches full four-angle scrutinize on the first draw.
+   * Poses only the drawn angle (speech + question) — not all four critics.
    */
   async function summonNextChallenger() {
     if (summonBusy) return board();
@@ -854,47 +1721,42 @@ export function createHexWorkshop(api) {
       const year = api.getYear?.() || 2026;
       const prose = deriveBoardProse(board());
       const hexBoard = summarizeBoardForScrutiny(board());
+      const local = localPose(pickAngle, {
+        place,
+        inventionName: prose.inventionName,
+      });
 
       const until = (async () => {
-        if (!scrutinyCache) {
-          let scrutiny = null;
-          try {
-            if (api.coInvent) {
-              const data = await api.coInvent(
-                "scrutinize",
-                "[Summon hard questions]",
-                {
-                  hexBoard,
-                  inventionName: prose.inventionName,
-                  inventionHow: prose.inventionHow,
-                  inventionImpact: prose.inventionImpact,
-                }
-              );
-              scrutiny =
-                sanitizeScrutiny(data?.proposals?.scrutiny) ||
-                sanitizeScrutiny(data?.scrutiny);
-            }
-          } catch (e) {
-            console.warn("[scrutinize]", e?.message || e);
+        let speech = local.speech;
+        let question = local.question;
+        try {
+          if (api.coInvent) {
+            const data = await api.coInvent(
+              "pose-challenge",
+              "[Pose challenge]",
+              {
+                challengeAngle: pickAngle,
+                hexBoard,
+                inventionName: prose.inventionName,
+                inventionHow: prose.inventionHow,
+                inventionImpact: prose.inventionImpact,
+              }
+            );
+            speech =
+              (data.challengeSpeech || data.message || "").trim() || local.speech;
+            question =
+              (data.challengeQuestion || "").trim() ||
+              local.question ||
+              "How does your invention survive this attack?";
           }
-          if (!scrutiny) {
-            scrutiny = localScrutinyProposals({
-              place,
-              inventionName: prose.inventionName,
-              inventionHow: prose.inventionHow,
-            });
-          }
-          scrutinyCache = scrutiny;
+        } catch (e) {
+          console.warn("[pose-challenge]", e?.message || e);
         }
-
-        const angleData = scrutinyCache[pickAngle] || {};
-        const imagePrompt =
-          angleData.imagePrompt ||
-          defaultChallengerImagePrompt(
-            pickAngle,
-            place,
-            prose.inventionName
-          );
+        const imagePrompt = defaultChallengerImagePrompt(
+          pickAngle,
+          place,
+          prose.inventionName
+        );
         let artUrl = null;
         if (api.fetchIdeaImage) {
           try {
@@ -912,8 +1774,8 @@ export function createHexWorkshop(api) {
         }
         if (!artUrl && finalMeta.visual) artUrl = finalMeta.visual;
         return {
-          analysis: angleData.analysis || null,
-          safeguard: angleData.safeguard || null,
+          challengeSpeech: speech,
+          challengeQuestion: question,
           imagePrompt,
           artUrl,
         };
@@ -940,15 +1802,14 @@ export function createHexWorkshop(api) {
         }
       }
       if (!enrich) {
-        const local = localScrutinyProposals({
-          place,
-          inventionName: prose.inventionName,
-          inventionHow: prose.inventionHow,
-        });
         enrich = {
-          analysis: local[pickAngle]?.analysis || null,
-          safeguard: local[pickAngle]?.safeguard || null,
-          imagePrompt: local[pickAngle]?.imagePrompt || null,
+          challengeSpeech: local.speech,
+          challengeQuestion: local.question,
+          imagePrompt: defaultChallengerImagePrompt(
+            pickAngle,
+            place,
+            prose.inventionName
+          ),
           artUrl: finalMeta.visual || null,
         };
       }
@@ -958,18 +1819,13 @@ export function createHexWorkshop(api) {
         api.flashToast?.(placed.error || "Could not place challenger");
         return board();
       }
-      const lit = applyHeuristicLights(placed.board, {
-        year: api.getYear(),
-        pressure: api.getPressure?.() || {},
-        winMax: api.getWinMax?.() || {},
-      });
-      setBoard(lit);
+      setBoard(placed.board);
       ensureUi()?.render();
-      scheduleNeighborEval(null);
+      syncPathwayScores();
       api.onBoardPainted?.();
-      api.commitBoard?.(lit);
+      api.commitBoard?.(placed.board);
 
-      const still = remainingConcernAngles(lit);
+      const still = remainingConcernAngles(placed.board);
       if (statusEl) {
         statusEl.textContent = still.length
           ? `${finalMeta.label} is on the board — ${still.length} challenger${still.length === 1 ? "" : "s"} still to face.`
@@ -980,7 +1836,7 @@ export function createHexWorkshop(api) {
           ? `${finalMeta.label} arrives. ${still.length} left.`
           : "Required challengers are on the board — ease their lights."
       );
-      return lit;
+      return placed.board;
     } finally {
       hideReel();
       setCreateBusy("summon", false);
@@ -998,14 +1854,9 @@ export function createHexWorkshop(api) {
   }
 
   function refreshAfterYearChange() {
-    const lit = applyHeuristicLights(board(), {
-      year: api.getYear(),
-      pressure: api.getPressure?.() || {},
-      winMax: api.getWinMax?.() || {},
-    });
-    setBoard(lit);
-    ensureUi()?.render();
-    scheduleNeighborEval(null);
+    retimeOnBoardInventions().catch((e) => console.warn("[hex retime]", e));
+    // Year is not in pathway fingerprint; timing re-score will invalidate via afterTimingSettled
+    syncPathwayScores();
     api.onBoardPainted?.();
   }
 
@@ -1039,7 +1890,11 @@ export function createHexWorkshop(api) {
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
     isSummonBusy: () => summonBusy,
+    isCreateBusy,
+    createBusyKind,
     afterBoardChange,
+    syncPathwayScores,
+    afterWaitPressureRise,
   };
 }
 
@@ -1050,7 +1905,7 @@ export function createHexWorkshop(api) {
  * @param {string|null|undefined} lampReason
  * @param {"crisis"|"concern"} kind
  */
-function lampExplainHtml(lamp, lampReason, kind) {
+function lampExplainHtml(lamp, lampReason, kind, opts = {}) {
   const level = lamp === "green" || lamp === "yellow" || lamp === "red" ? lamp : "red";
   const label = level.charAt(0).toUpperCase() + level.slice(1);
   const reason = String(lampReason || "").trim();
@@ -1059,23 +1914,27 @@ function lampExplainHtml(lamp, lampReason, kind) {
   if (kind === "crisis") {
     if (level === "green") {
       meaning =
-        "eased. Neighboring inventions are holding this pressure down.";
+        "eased. The connected invention pathway is holding this pressure down.";
     } else if (level === "yellow") {
       meaning =
-        "strained. An idea may be touching this tile, but it is not enough yet. Dock an invention against this hex to ease it.";
+        "strained. A pathway may be touching this tile, but it is not enough yet. Dock an invention against this hex to ease it.";
     } else {
       meaning =
         "hot — unanswered. Dock an invention against this hex to start easing it.";
     }
   } else {
     if (level === "green") {
-      meaning = "addressed. Evaluation judged a neighboring invention enough.";
+      meaning =
+        "addressed. Evaluation judged the connected pathway (and your written answer, if any) enough.";
     } else if (level === "yellow") {
       meaning =
-        "strained. An idea is touching this tile, but green only comes after evaluation confirms the answer.";
+        "strained. A pathway is touching; the judge reads every connected invent and your answer.";
+    } else if (opts.answeredUndocked) {
+      meaning =
+        "unanswered at the light. Your answer is on file; the light stays red until a pathway touches.";
     } else {
       meaning =
-        "unanswered. Dock an invention against this hex; green only comes after evaluation.";
+        "unanswered. Dock a pathway against this hex. You can write a reply first; the light stays red until something is touching.";
     }
   }
   const detail = showReason ? escapeHtml(reason) : meaning;

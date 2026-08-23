@@ -54,6 +54,18 @@ export function createEmptyBoard() {
     concernTargetCount: clampChallengerCount(GAME.challengerCount),
     concernRoster: null,
     evalSeq: 0,
+    /** Quest-start pressure (+ Wait rises). Invention relief lives in pathwayImpacts. */
+    pressureBase: null,
+    /**
+     * Cached AI scores per invention-component fingerprint.
+     * @type {Record<string, {
+     *   inventionIds: string[],
+     *   crisisDelta: { local: number, global: number, support: number },
+     *   concerns: Record<string, { level: string, reason: string }>,
+     *   pending: boolean,
+     * }>}
+     */
+    pathwayImpacts: {},
   };
 }
 
@@ -63,6 +75,8 @@ export function createEmptyBoard() {
  */
 export function cloneBoard(board) {
   if (!board) return createEmptyBoard();
+  const base = board.pressureBase;
+  const impacts = board.pathwayImpacts || {};
   return {
     tiles: Object.fromEntries(
       Object.entries(board.tiles || {}).map(([id, t]) => [id, { ...t }])
@@ -75,6 +89,40 @@ export function cloneBoard(board) {
       ? board.concernRoster.map(String)
       : null,
     evalSeq: Number(board.evalSeq) || 0,
+    pressureBase:
+      base && typeof base === "object"
+        ? Object.fromEntries(
+            Object.entries(base).map(([k, v]) => [k, Number(v) || 0])
+          )
+        : null,
+    pathwayImpacts: Object.fromEntries(
+      Object.entries(impacts).map(([fp, row]) => [
+        fp,
+        {
+          inventionIds: Array.isArray(row?.inventionIds)
+            ? row.inventionIds.map(String)
+            : [],
+          crisisDelta: {
+            local: Number(row?.crisisDelta?.local) || 0,
+            global: Number(row?.crisisDelta?.global) || 0,
+            support: Number(row?.crisisDelta?.support) || 0,
+          },
+          concerns:
+            row?.concerns && typeof row.concerns === "object"
+              ? Object.fromEntries(
+                  Object.entries(row.concerns).map(([a, c]) => [
+                    a,
+                    {
+                      level: String(c?.level || "red"),
+                      reason: String(c?.reason || "").slice(0, 280),
+                    },
+                  ])
+                )
+              : {},
+          pending: Boolean(row?.pending),
+        },
+      ])
+    ),
   };
 }
 
@@ -112,10 +160,20 @@ export function seedCrisisTiles(mission, opts = {}) {
       role,
       meterKey: name,
       lamp: "yellow",
+      lampPending: false,
+      lampEvalKey: null,
       artUrl: null,
       imagePrompt: null,
     };
   });
+  const pressure = mission?.pressure || {};
+  board.pressureBase = Object.fromEntries(
+    Object.entries(pressure).map(([k, v]) => [
+      k,
+      Math.max(0, Math.min(5, Math.round(Number(v) || 0))),
+    ])
+  );
+  board.pathwayImpacts = {};
   board.concernTargetCount = clampChallengerCount(
     opts.challengerCount ?? mission?.challengerCount ?? GAME.challengerCount
   );
@@ -160,23 +218,103 @@ export function mintInventionTile(opts = {}) {
     artUrl: opts.artUrl || null,
     imagePrompt: opts.imagePrompt || null,
     feasibilityPct: opts.feasibilityPct ?? null,
+    timingLevel: opts.timingLevel ?? null,
+    timingReason: opts.timingReason ?? null,
+    timingPending: false,
+    timingForKey: null,
     origin: opts.origin || null,
     lamp: null,
   };
 }
 
 /**
+ * Speech + question stored on a concern tile.
+ * Falls back to legacy `analysis` if an in-progress board still has it.
+ * @param {object|null|undefined} tile
+ * @returns {{ speech: string, question: string }}
+ */
+export function concernPoseText(tile) {
+  const speech = String(
+    tile?.challengeSpeech || tile?.analysis || ""
+  ).trim();
+  const question = String(tile?.challengeQuestion || "").trim();
+  return { speech, question };
+}
+
+const ANSWER_QUALITIES = new Set(["hit", "glance", "miss"]);
+
+/**
+ * Written reply stored on a concern tile (not spoken; does not move the lamp alone).
+ * @param {object|null|undefined} tile
+ * @returns {{ answer: string, quality: "hit"|"glance"|"miss"|null, feedback: string, pending: boolean }}
+ */
+export function concernReplyText(tile) {
+  const answer = String(tile?.playerAnswer || "").trim();
+  const q = String(tile?.answerQuality || "").toLowerCase();
+  return {
+    answer,
+    quality: ANSWER_QUALITIES.has(q) ? q : null,
+    feedback: String(tile?.answerFeedback || "").trim(),
+    pending: Boolean(tile?.answerPending),
+  };
+}
+
+/**
+ * Patch written-answer fields on a concern tile.
+ * @param {object} board
+ * @param {string} tileId
+ * @param {{ playerAnswer?: string|null, answerQuality?: string|null, answerFeedback?: string|null, answerPending?: boolean }} [patch]
+ */
+export function setConcernReply(board, tileId, patch = {}) {
+  const next = cloneBoard(board);
+  const t = next.tiles?.[tileId];
+  if (!t || t.kind !== TILE_KIND.concern) return next;
+  if (patch.playerAnswer !== undefined) {
+    const s = String(patch.playerAnswer || "").slice(0, 2000);
+    t.playerAnswer = s.trim() ? s : null;
+  }
+  if (patch.answerQuality !== undefined) {
+    const q = String(patch.answerQuality || "").toLowerCase();
+    t.answerQuality = ANSWER_QUALITIES.has(q) ? q : null;
+  }
+  if (patch.answerFeedback !== undefined) {
+    const s = String(patch.answerFeedback || "")
+      .trim()
+      .slice(0, 400);
+    t.answerFeedback = s || null;
+  }
+  if (patch.answerPending !== undefined) {
+    t.answerPending = Boolean(patch.answerPending);
+  }
+  return next;
+}
+
+/**
  * Mint the four concern tiles (off-board until placed by summonConcerns).
  * @param {Record<string, {
+ *   challengeSpeech?: string,
+ *   challengeQuestion?: string,
  *   analysis?: string,
- *   safeguard?: string,
  *   artUrl?: string|null,
  *   imagePrompt?: string|null,
- * }>} [byAngle] — optional per-angle scrutiny + art captured at summon
+ *   playerAnswer?: string|null,
+ *   answerQuality?: string|null,
+ *   answerFeedback?: string|null,
+ *   answerPending?: boolean,
+ * }>} [byAngle] — optional per-angle pose + art captured at summon
  */
 export function mintConcernTiles(byAngle = null) {
   return CONCERN_ANGLES.map((angle) => {
     const enrich = byAngle?.[angle] || {};
+    const speech = enrich.challengeSpeech || enrich.analysis;
+    const question = enrich.challengeQuestion;
+    const quality = String(enrich.answerQuality || "").toLowerCase();
+    const answer = enrich.playerAnswer
+      ? String(enrich.playerAnswer).slice(0, 2000)
+      : "";
+    const feedback = enrich.answerFeedback
+      ? String(enrich.answerFeedback).slice(0, 400)
+      : "";
     return {
       id: `concern-${angle}`,
       kind: TILE_KIND.concern,
@@ -186,14 +324,16 @@ export function mintConcernTiles(byAngle = null) {
       name: CONCERN_LABELS[angle] || angle,
       angle,
       lamp: "red",
+      lampPending: false,
+      lampEvalKey: null,
       artUrl: enrich.artUrl || null,
       imagePrompt: enrich.imagePrompt || null,
-      analysis: enrich.analysis
-        ? String(enrich.analysis).slice(0, 1200)
-        : null,
-      safeguard: enrich.safeguard
-        ? String(enrich.safeguard).slice(0, 400)
-        : null,
+      challengeSpeech: speech ? String(speech).slice(0, 1200) : null,
+      challengeQuestion: question ? String(question).slice(0, 500) : null,
+      playerAnswer: answer.trim() ? answer : null,
+      answerQuality: ANSWER_QUALITIES.has(quality) ? quality : null,
+      answerFeedback: feedback.trim() ? feedback : null,
+      answerPending: Boolean(enrich.answerPending),
     };
   });
 }
@@ -203,7 +343,7 @@ export function mintConcernTiles(byAngle = null) {
  * Prefers isolated slots (no shared edge with any tile).
  * @param {object} board
  * @param {Array<[number, number]>} [slots] — axial slots for the four angles
- * @param {Record<string, object>} [byAngle] — per-angle analysis / safeguard / art
+ * @param {Record<string, object>} [byAngle] — per-angle pose (speech / question) / art
  */
 export function summonConcerns(board, slots = null, byAngle = null) {
   let next = cloneBoard(board);
@@ -324,7 +464,7 @@ export function rosterComplete(board) {
  * Sets concernsSummoned when the board's concern roster is fully placed.
  * @param {object} board
  * @param {string} angle
- * @param {{ analysis?: string, safeguard?: string, artUrl?: string|null, imagePrompt?: string|null }} [enrich]
+ * @param {{ challengeSpeech?: string, challengeQuestion?: string, analysis?: string, artUrl?: string|null, imagePrompt?: string|null }} [enrich]
  */
 export function summonOneConcern(board, angle, enrich = null) {
   const a = String(angle || "");
@@ -547,6 +687,26 @@ export function liftTile(board, tileId, opts = {}) {
 }
 
 /**
+ * Delete a tile from the board dict (tray or field). Crisis/concern stay by default.
+ * @param {object} board
+ * @param {string} tileId
+ * @param {{ allowGiven?: boolean }} [opts]
+ */
+export function discardTile(board, tileId, opts = {}) {
+  const next = cloneBoard(board);
+  const tile = next.tiles[tileId];
+  if (!tile) return { ok: false, board };
+  if (
+    !opts.allowGiven &&
+    (tile.kind === TILE_KIND.crisis || tile.kind === TILE_KIND.concern)
+  ) {
+    return { ok: false, board };
+  }
+  delete next.tiles[tileId];
+  return { ok: true, board: next };
+}
+
+/**
  * Neighbor tile objects for a placed tile.
  * @param {object} board
  * @param {string} tileId
@@ -606,6 +766,46 @@ export function techIdsFromBoard(board) {
   return ids;
 }
 
+function isUnplaced(tile) {
+  return tile?.q == null || tile?.r == null;
+}
+
+/**
+ * Unplaced invention tiles for one emTech (tray / idea cards).
+ * Insertion order is preserved; callers may re-sort (spark batch first).
+ * @param {object} board
+ * @param {string|null|undefined} techId
+ * @returns {object[]}
+ */
+export function unplacedInventionsForTech(board, techId) {
+  if (!techId) return [];
+  return Object.values(board?.tiles || {}).filter(
+    (t) =>
+      t.kind === TILE_KIND.invention &&
+      t.techId === techId &&
+      isUnplaced(t)
+  );
+}
+
+/**
+ * Tech ids with at least one unplaced invention (tray / idea cards).
+ * Insertion order; sparks and custom mints both count.
+ * @param {object} board
+ * @returns {string[]}
+ */
+export function techIdsWithUnplacedInventions(board) {
+  const ids = [];
+  const seen = new Set();
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t.kind !== TILE_KIND.invention || !t.techId) continue;
+    if (!isUnplaced(t)) continue;
+    if (seen.has(t.techId)) continue;
+    seen.add(t.techId);
+    ids.push(t.techId);
+  }
+  return ids;
+}
+
 /**
  * Derive prose snapshot for co-inventor / vision / outcome.
  * @param {object} board
@@ -614,21 +814,18 @@ export function deriveBoardProse(board) {
   const inventions = Object.values(board?.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.invention
   );
-  const names = inventions.map((t) => t.name).filter(Boolean);
   const howParts = inventions
-    .map((t) => {
-      const bit = [t.name, t.howText].filter(Boolean).join(": ");
-      return bit;
-    })
+    .map((t) => String(t.howText || "").trim())
     .filter(Boolean);
-  const lamps = Object.values(board?.tiles || {})
-    .filter((t) => t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern)
-    .map((t) => `${t.name}: ${t.lamp || "?"}`)
-    .join("; ");
+  const techLabels = inventions
+    .map((t) => t.techId)
+    .filter(Boolean);
   return {
-    inventionName: names.slice(0, 3).join(" · ") || "Pathway",
+    // Pathway has no invention name — tech ids are a weak label for legacy callers
+    inventionName: techLabels.slice(0, 3).join(" · ") || "Pathway",
     inventionHow: howParts.join("\n\n") || "",
-    inventionImpact: lamps ? `Board lights — ${lamps}` : "",
+    // Never put lamp colors here — vision/image prompts read inventionImpact.
+    inventionImpact: "",
   };
 }
 
@@ -647,6 +844,7 @@ export function boardHolds(board) {
 
 /**
  * Apply lamp updates from AI or heuristic.
+ * Clears lampPending on every updated given so the snake stops when settled.
  * @param {object} board
  * @param {Array<{ id: string, level: string, reason?: string }>} lights
  */
@@ -659,10 +857,29 @@ export function applyLights(board, lights) {
     const level = String(L.level || "").toLowerCase();
     if (level === "red" || level === "yellow" || level === "green") {
       t.lamp = level;
+      t.lampPending = false;
       if (L.reason) t.lampReason = String(L.reason).slice(0, 280);
     }
   }
   next.evalSeq = (next.evalSeq || 0) + 1;
+  return next;
+}
+
+/**
+ * Mark crisis/concern tiles as pending evaluation without changing lamp color.
+ * @param {object} board
+ * @param {string[]|null} ids — null = all on-field givens
+ * @param {boolean} on
+ */
+export function setLampPending(board, ids, on) {
+  const next = cloneBoard(board);
+  const want = ids ? new Set(ids) : null;
+  for (const t of Object.values(next.tiles || {})) {
+    if (t.kind !== TILE_KIND.crisis && t.kind !== TILE_KIND.concern) continue;
+    if (t.q == null || t.r == null) continue;
+    if (want && !want.has(t.id)) continue;
+    t.lampPending = Boolean(on);
+  }
   return next;
 }
 

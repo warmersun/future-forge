@@ -20,9 +20,12 @@ import {
   TILE_KIND,
   placeTile,
   liftTile,
+  discardTile,
   tileAt,
   gridFromBoard,
 } from "./board-state.js";
+import { pathwayHighlight } from "./evaluate.js";
+import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
 const ATOMS_INK = "#fb923c";
@@ -78,8 +81,11 @@ export function defaultSlots() {
  * @param {(board: object) => void} opts.setBoard
  * @param {() => number} opts.getYear
  * @param {(msg: string, bad?: boolean) => void} [opts.onStatus]
- * @param {(board: object, tileId: string|null, kind: "place"|"lift") => void} [opts.onBoardChange]
- * @param {(tileId: string) => void} [opts.onSelect]
+ * @param {(board: object, tileId: string|null, kind: "place"|"lift"|"discard") => void} [opts.onBoardChange]
+ * @param {(tileId: string) => void} [opts.onInspect] — hover/focus tile details
+ * @param {() => void} [opts.onInspectEnd] — left tile (grace hide so user can reach card)
+ * @param {() => void} [opts.onInspectCancel] — immediate hide (pointerdown / drag)
+ * @param {(tileId: string, hl: object|null) => void} [opts.onPathwayToggle] — click toggles pathway highlight
  * @param {() => boolean} [opts.isInteractive] — when false, drag/place/select no-op
  * @param {Array<{q:number,r:number}>} [opts.slots]
  */
@@ -91,6 +97,8 @@ export function createHexBoardUi(opts) {
   let hover = null;
   let dragMoved = false;
   let dragStartXY = null;
+  /** @type {{ originId: string, inventionIds: string[], givenIds: string[] }|null} */
+  let highlight = null;
   const gridOpts = {
     size: HEX_BOARD_VIEW.size,
     origin: { ...HEX_BOARD_VIEW.origin },
@@ -111,6 +119,61 @@ export function createHexBoardUi(opts) {
 
   function setStatus(msg, bad) {
     opts.onStatus?.(msg, bad);
+  }
+
+  function isCoarsePointer() {
+    try {
+      return Boolean(window.matchMedia?.("(pointer: coarse)")?.matches);
+    } catch {
+      return false;
+    }
+  }
+
+  function highlightSet() {
+    if (!highlight) return null;
+    const ids = new Set([
+      highlight.originId,
+      ...(highlight.inventionIds || []),
+      ...(highlight.givenIds || []),
+    ]);
+    return ids;
+  }
+
+  function tileInHighlight(tileId) {
+    const set = highlightSet();
+    if (!set) return true; // no highlight → all full strength
+    return set.has(tileId);
+  }
+
+  function clearHighlight() {
+    if (!highlight) return;
+    highlight = null;
+    render();
+  }
+
+  function togglePathway(tileId) {
+    if (!interactive()) return;
+    const tile = board()?.tiles?.[tileId];
+    if (!tile || tile.q == null || tile.r == null) return;
+    if (highlight?.originId === tileId) {
+      highlight = null;
+    } else {
+      highlight = pathwayHighlight(board(), tileId);
+    }
+    opts.onPathwayToggle?.(tileId, highlight);
+    render();
+  }
+
+  function pruneHighlight() {
+    if (!highlight) return;
+    const b = board();
+    const origin = b?.tiles?.[highlight.originId];
+    if (!origin || origin.q == null || origin.r == null) {
+      highlight = null;
+      return;
+    }
+    // Refresh membership after place/lift
+    highlight = pathwayHighlight(b, highlight.originId);
   }
 
   function inventDockOk(tile, other, dir) {
@@ -147,8 +210,26 @@ export function createHexBoardUi(opts) {
     return { stroke: "#94a3b8", lamp: false, level: null };
   }
 
+  /**
+   * RYG level for the pending snake rim, or null if not spinning.
+   * Only crisis/concern tiles are evaluated — inventions never snake.
+   * @param {object} p
+   * @returns {"red"|"yellow"|"green"|null}
+   */
+  function pendingEvalLevel(p) {
+    if (p.kind !== TILE_KIND.crisis && p.kind !== TILE_KIND.concern) return null;
+    if (!p.lampPending) return null;
+    const lv = String(p.lamp || "red").toLowerCase();
+    return lv === "green" || lv === "yellow" || lv === "red" ? lv : "red";
+  }
+
   function paintTile(g, p, cx, cy, size) {
     const t = theme(p);
+    const dimmed = highlight && !tileInHighlight(p.id);
+    const isOrigin = highlight && highlight.originId === p.id;
+    if (dimmed) g.setAttribute("opacity", "0.28");
+    else if (highlight && tileInHighlight(p.id)) g.setAttribute("opacity", "1");
+    if (isOrigin) g.classList.add("hex-pathway-origin");
     const clip = `clip-${escapeXml(p.id)}-${Math.round(cx)}-${Math.round(cy)}`;
     const d = hexPath(cx, cy, size);
     if (t.level === "green" || t.level === "yellow") {
@@ -208,6 +289,15 @@ export function createHexBoardUi(opts) {
       "beforeend",
       `<path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1" pointer-events="none"/>`
     );
+    // Pending eval: snake arc on rim in last settled RYG color
+    const snakeLevel = pendingEvalLevel(p);
+    if (snakeLevel) {
+      const snakeCol = RYG[snakeLevel] || RYG.yellow;
+      g.insertAdjacentHTML(
+        "beforeend",
+        `<path class="hex-eval-snake" d="${d}" fill="none" stroke="${snakeCol}" stroke-width="4.5" stroke-linecap="round" pathLength="100" stroke-dasharray="22 78" pointer-events="none" style="filter:drop-shadow(0 0 4px ${snakeCol})"/>`
+      );
+    }
     if (t.lamp) {
       const lampY = cy - size * 0.38;
       g.insertAdjacentHTML(
@@ -216,30 +306,50 @@ export function createHexBoardUi(opts) {
           `<circle cx="${cx}" cy="${lampY}" r="5" fill="${t.stroke}" stroke="#fff" stroke-width="1.2"/>`
       );
     }
-    const label = escapeXml((p.name || "").slice(0, 22));
-    const fontSize = Math.max(15, Math.round(size * 0.2));
+    const hasBar = p.kind === TILE_KIND.invention;
+    const layout = layoutHexLabel(p.name || "", { size, hasBar, cy });
+    const tspans = layout.lines
+      .map(
+        (line, i) =>
+          `<tspan x="${cx}" y="${layout.lineYs[i]}">${escapeXml(line)}</tspan>`
+      )
+      .join("");
+    const titleEl = layout.truncated
+      ? `<title>${escapeXml(p.name || "")}</title>`
+      : "";
     g.insertAdjacentHTML(
       "beforeend",
-      `<text x="${cx}" y="${cy + size * 0.16}" text-anchor="middle" fill="#fff" font-size="${fontSize}" font-family="system-ui,sans-serif" font-weight="700" style="paint-order:stroke;stroke:#070b14;stroke-width:3.5px">${label}</text>`
+      `<text text-anchor="middle" fill="#fff" font-size="${layout.fontSize}" font-family="system-ui,sans-serif" font-weight="700" style="paint-order:stroke;stroke:#070b14;stroke-width:${layout.strokeWidth}px">${titleEl}${tspans}</text>`
     );
-    if (p.kind === TILE_KIND.invention) {
+    if (hasBar) {
+      const pending = Boolean(p.timingPending);
       const pct =
         p.feasibilityPct != null
           ? Math.max(0, Math.min(100, Number(p.feasibilityPct))) / 100
-          : p.year && p.year > year()
-            ? Math.max(0, (year() - 2026) / Math.max(1, p.year - 2026))
-            : 1;
+          : null;
       const bw = size * 1.05;
       const bh = 9;
       const bx = cx - bw / 2;
-      const by = cy + size * 0.28;
-      const fillW = Math.max(0, Math.min(1, pct)) * (bw - 2);
+      const by = layout.barY != null ? layout.barY : cy + size * 0.28;
+      const fillW =
+        pct == null ? 0 : Math.max(0, Math.min(1, pct)) * (bw - 2);
       const fillCol =
-        pct < 0.35 ? "#ef4444" : pct >= 0.99 ? "#22c55e" : "#eab308";
+        pct == null
+          ? "#64748b"
+          : pct < 0.35
+            ? "#ef4444"
+            : pct >= 0.99
+              ? "#22c55e"
+              : "#eab308";
       g.insertAdjacentHTML(
         "beforeend",
         `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="2" fill="#070b14" opacity=".72"/>` +
-          `<rect x="${bx + 1}" y="${by + 1}" width="${fillW}" height="${bh - 2}" rx="1.5" fill="${fillCol}"/>`
+          (fillW > 0
+            ? `<rect x="${bx + 1}" y="${by + 1}" width="${fillW}" height="${bh - 2}" rx="1.5" fill="${fillCol}"${pending ? ' opacity=".55"' : ""}/>`
+            : "") +
+          (pending
+            ? `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="2" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 2"/>`
+            : "")
       );
     }
   }
@@ -247,7 +357,9 @@ export function createHexBoardUi(opts) {
   function render() {
     const b = board();
     if (!b || !svg) return;
+    pruneHighlight();
     const gmath = makeGrid(gridOpts);
+    const hlSet = highlightSet();
     const parts = [
       `<defs><linearGradient id="hex-glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".34"/><stop offset=".4" stop-color="#ffffff" stop-opacity=".07"/><stop offset="1" stop-color="#ffffff" stop-opacity=".03"/></linearGradient></defs>`,
     ];
@@ -277,18 +389,23 @@ export function createHexBoardUi(opts) {
         bond.polarity === BITS ? "bits" : bond.polarity === ATOMS ? "atoms" : "fits";
       const mx = (pa.x + pb.x) / 2;
       const my = (pa.y + pb.y) / 2;
+      const bondHot =
+        !hlSet || (hlSet.has(bond.a.id) && hlSet.has(bond.b.id));
+      const bondOpacity = bondHot ? "1" : "0.2";
+      const strokeW = bondHot && hlSet ? "3.2" : "2";
       parts.push(
-        `<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${col}" stroke-width="2"/>`
+        `<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${col}" stroke-width="${strokeW}" opacity="${bondOpacity}"/>`
       );
       parts.push(
-        `<rect x="${mx - 18}" y="${my - 7}" width="36" height="14" rx="3" fill="#070b14" stroke="${col}"/>`
+        `<rect x="${mx - 18}" y="${my - 7}" width="36" height="14" rx="3" fill="#070b14" stroke="${col}" opacity="${bondOpacity}"/>`
       );
       parts.push(
-        `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${col}" font-size="9" font-family="system-ui">${verb}</text>`
+        `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${col}" font-size="9" font-family="system-ui" opacity="${bondOpacity}">${verb}</text>`
       );
     }
     svg.innerHTML = parts.join("");
     svg.setAttribute("viewBox", HEX_BOARD_VIEW.viewBox);
+    svg.classList.toggle("has-pathway-highlight", Boolean(highlight));
 
     for (const t of Object.values(b.tiles || {})) {
       if (t.q == null || t.r == null) continue;
@@ -296,23 +413,54 @@ export function createHexBoardUi(opts) {
       const { x, y } = gmath.pixel(t.q, t.r);
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.dataset.id = t.id;
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute(
+        "aria-label",
+        `${t.name || t.id}. Hover for details, click to highlight pathway.`
+      );
       paintTile(g, t, x, y, gmath.size - 2);
       g.style.cursor = interactive() ? "grab" : "default";
       g.addEventListener("pointerdown", (e) => startDrag(e, t.id));
-      g.addEventListener("click", () => {
+      g.addEventListener("pointerenter", () => {
+        if (!interactive() || dragId) return;
+        opts.onInspect?.(t.id);
+      });
+      g.addEventListener("pointerleave", () => {
+        if (dragId) return;
+        opts.onInspectEnd?.();
+      });
+      g.addEventListener("focus", () => {
         if (!interactive()) return;
-        opts.onSelect?.(t.id);
+        opts.onInspect?.(t.id);
+      });
+      g.addEventListener("keydown", (e) => {
+        if (!interactive()) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          togglePathway(t.id);
+        }
       });
       svg.appendChild(g);
     }
+
+    // Click empty board clears highlight
+    svg.onclick = (e) => {
+      if (!interactive()) return;
+      if (e.target === svg || e.target?.classList?.contains("hex-slot")) {
+        clearHighlight();
+        opts.onInspectEnd?.();
+      }
+    };
   }
 
   function occupy(id, q, r) {
     if (!interactive()) {
-      setStatus("Wait — challengers are still working.", true);
+      setStatus("Wait — still working.", true);
       return false;
     }
-    const tile = board()?.tiles?.[id];
+    const beforeBoard = board();
+    const tile = beforeBoard?.tiles?.[id];
     if (tile && opts.canPlaceInvention) {
       const gate = opts.canPlaceInvention(tile);
       if (gate && gate.ok === false) {
@@ -326,7 +474,7 @@ export function createHexBoardUi(opts) {
         return false;
       }
     }
-    const res = placeTile(board(), id, q, r);
+    const res = placeTile(beforeBoard, id, q, r);
     if (!res.ok) {
       const need = res.blockers?.[0]?.need;
       setStatus(
@@ -340,7 +488,7 @@ export function createHexBoardUi(opts) {
       return false;
     }
     opts.setBoard(res.board);
-    opts.onBoardChange?.(res.board, id, "place");
+    opts.onBoardChange?.(res.board, id, "place", { beforeBoard });
     setStatus("Placed.", false);
     render();
     return true;
@@ -348,7 +496,7 @@ export function createHexBoardUi(opts) {
 
   function startDrag(e, id, dragOpts = {}) {
     if (!interactive()) {
-      setStatus("Wait — challengers are still working.", true);
+      setStatus("Wait — still working.", true);
       return;
     }
     const tile = board()?.tiles?.[id];
@@ -360,6 +508,7 @@ export function createHexBoardUi(opts) {
     dragStartXY = { x: e.clientX, y: e.clientY };
     e.preventDefault();
     e.stopPropagation();
+    opts.onInspectCancel?.();
     hover = {
       id,
       dirs:
@@ -391,8 +540,15 @@ export function createHexBoardUi(opts) {
         }
         dragMoved = true;
       }
+      const overDiscard =
+        tile.kind === TILE_KIND.invention &&
+        pointerOverDiscard(ev.clientX, ev.clientY);
+      setDiscardHot(overDiscard);
+      if (overDiscard) {
+        setStatus("Release to throw away.", false);
+      }
       const over = pointerOverBoard(ev.clientX, ev.clientY);
-      const mode = over ? "hex" : "card";
+      const mode = over && !overDiscard ? "hex" : "card";
       // Crisis/concern never become cards — stay hex while dragging
       const effective =
         tile.kind === TILE_KIND.invention ? mode : "hex";
@@ -408,24 +564,43 @@ export function createHexBoardUi(opts) {
       pt.y = ev.clientY;
       const ctm = svg.getScreenCTM();
       let placedOrLifted = false;
-      if (ctm && moved) {
-        const loc = pt.matrixTransform(ctm.inverse());
-        const hex = makeGrid(gridOpts).atPixel(loc.x, loc.y);
-        if (slots.some((s) => s.q === hex.q && s.r === hex.r)) {
-          placedOrLifted = occupy(id, hex.q, hex.r);
-        } else if (
-          !fromTray &&
-          tile?.kind === TILE_KIND.invention &&
-          tile.q != null &&
-          tile.r != null
+      if (moved) {
+        if (
+          tile.kind === TILE_KIND.invention &&
+          pointerOverDiscard(ev.clientX, ev.clientY)
         ) {
-          placedOrLifted = liftInvention(id);
+          placedOrLifted = discardInvention(id);
           if (placedOrLifted) {
-            setStatus("Lifted off the board — back in the tray.", false);
+            setStatus("Thrown away.", false);
+          }
+        } else if (ctm) {
+          const loc = pt.matrixTransform(ctm.inverse());
+          const hex = makeGrid(gridOpts).atPixel(loc.x, loc.y);
+          if (slots.some((s) => s.q === hex.q && s.r === hex.r)) {
+            placedOrLifted = occupy(id, hex.q, hex.r);
+          } else if (
+            !fromTray &&
+            tile?.kind === TILE_KIND.invention &&
+            tile.q != null &&
+            tile.r != null
+          ) {
+            placedOrLifted = liftInvention(id);
+            if (placedOrLifted) {
+              setStatus("Lifted off the board — back in the tray.", false);
+            }
           }
         }
-      } else if (!moved) {
-        opts.onSelect?.(id);
+      } else if (!moved && !fromTray) {
+        // Clear drag before toggle so render includes this tile
+        destroyDragGhost();
+        if (cardEl && !placedOrLifted) cardEl.classList.remove("is-dragging");
+        dragId = null;
+        hover = null;
+        dragStartXY = null;
+        dragMoved = false;
+        togglePathway(id);
+        if (isCoarsePointer()) opts.onInspect?.(id);
+        return;
       }
       destroyDragGhost();
       if (cardEl && !placedOrLifted) cardEl.classList.remove("is-dragging");
@@ -459,10 +634,32 @@ export function createHexBoardUi(opts) {
     );
   }
 
+  function discardWell() {
+    return document.querySelector("#hex-discard");
+  }
+
+  function pointerOverDiscard(clientX, clientY) {
+    const el = discardWell();
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    );
+  }
+
+  function setDiscardHot(on) {
+    discardWell()?.classList.toggle("is-hot", Boolean(on));
+    dragGhostEl?.classList.toggle("is-discard", Boolean(on));
+  }
+
   /** @type {HTMLElement|null} */
   let dragGhostEl = null;
 
   function destroyDragGhost() {
+    setDiscardHot(false);
     if (dragGhostEl) {
       dragGhostEl.remove();
       dragGhostEl = null;
@@ -590,9 +787,12 @@ export function createHexBoardUi(opts) {
 
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     const prevHover = hover;
+    const prevHighlight = highlight;
     hover = null;
+    highlight = null;
     paintTile(g, tile, cx, cy, size);
     hover = prevHover;
+    highlight = prevHighlight;
     g.querySelectorAll("[fill='url(#hex-glass)']").forEach((el) => {
       el.setAttribute("fill", `url(#${uid})`);
     });
@@ -602,10 +802,26 @@ export function createHexBoardUi(opts) {
   }
 
   function liftInvention(id) {
-    const res = liftTile(board(), id);
+    const beforeBoard = board();
+    const res = liftTile(beforeBoard, id);
     if (!res.ok) return false;
     opts.setBoard(res.board);
-    opts.onBoardChange?.(res.board, id, "lift");
+    opts.onBoardChange?.(res.board, id, "lift", { beforeBoard });
+    render();
+    return true;
+  }
+
+  function discardInvention(id) {
+    if (!interactive()) {
+      setStatus("Wait — still working.", true);
+      return false;
+    }
+    const beforeBoard = board();
+    const res = discardTile(beforeBoard, id);
+    if (!res.ok) return false;
+    opts.setBoard(res.board);
+    opts.onBoardChange?.(res.board, id, "discard", { beforeBoard });
+    setStatus("Thrown away.", false);
     render();
     return true;
   }
@@ -614,9 +830,12 @@ export function createHexBoardUi(opts) {
     render,
     startTrayDrag,
     liftInvention,
+    discardInvention,
     occupy,
     refresh: render,
     createTrayTileElement,
     getDisplayedHexSizePx,
+    clearHighlight,
+    getHighlight: () => highlight,
   };
 }
