@@ -292,6 +292,7 @@ export class CoInventor {
     this.root.classList.toggle("is-tutor-mode", this.tutorMode);
     this.root.classList.toggle("is-learning-quest", this.learningQuest);
     this.syncClearButton();
+    this.syncChipGates();
     const status = this.root.querySelector("#co-status");
     if (!status || status.classList.contains("co-offline")) return;
     if (this.tutorMode) {
@@ -330,11 +331,12 @@ export class CoInventor {
   }
 
   /**
-   * Enable/disable chips that need draft state (SIT / SCAMPER need how-it-works).
-   * Composes with busy / interactive locks from setBusyUi.
+   * Enable/disable invent chips. Tutor session locks the whole row; otherwise
+   * busy / spectator, then SIT / SCAMPER how-it-works gates.
    */
   syncChipGates() {
     if (!this.root || !this.showQuickActions) return;
+    const tutorLock = Boolean(this.learningQuest && this.tutorMode);
     const locked = Boolean(this.busy) || !this.interactive;
     const ctx = (() => {
       try {
@@ -344,22 +346,33 @@ export class CoInventor {
       }
     })();
     const howOk = String(ctx.inventionHow || "").trim().length >= HOW_IT_WORKS_MIN;
-    for (const mode of HOW_GATED_MODES) {
-      const chip = this.root.querySelector(`.co-chip[data-mode="${mode}"]`);
-      if (!chip) continue;
+    this.root.querySelectorAll(".co-chip").forEach((chip) => {
+      const mode = chip.dataset.mode;
+      const action = QUICK_ACTIONS.find((a) => a.mode === mode);
+      if (tutorLock) {
+        chip.disabled = true;
+        chip.title = "End tutoring to use invent tools";
+        chip.classList.add("is-tutor-locked");
+        return;
+      }
+      chip.classList.remove("is-tutor-locked");
       if (locked) {
         chip.disabled = true;
         if (this._lockReason) chip.title = this._lockReason;
-        continue;
+        return;
       }
-      const action = QUICK_ACTIONS.find((a) => a.mode === mode);
-      chip.disabled = !howOk;
-      chip.title = howOk
-        ? action?.hint || mode
-        : this.surface === "hex"
-          ? HOW_GATED_DISABLED_TITLE_HEX
-          : HOW_GATED_DISABLED_TITLE;
-    }
+      if (HOW_GATED_MODES.has(mode)) {
+        chip.disabled = !howOk;
+        chip.title = howOk
+          ? action?.hint || mode
+          : this.surface === "hex"
+            ? HOW_GATED_DISABLED_TITLE_HEX
+            : HOW_GATED_DISABLED_TITLE;
+        return;
+      }
+      chip.disabled = false;
+      if (action) chip.title = action.hint;
+    });
   }
 
   async checkHealth() {
@@ -463,6 +476,10 @@ export class CoInventor {
   }
 
   async runMode(mode) {
+    if (this.learningQuest && this.tutorMode) {
+      this.syncChipGates();
+      return;
+    }
     if (HOW_GATED_MODES.has(mode)) {
       const how = String(this.getContext?.()?.inventionHow || "").trim();
       if (how.length < HOW_IT_WORKS_MIN) {
@@ -676,15 +693,6 @@ export class CoInventor {
       else input.removeAttribute("title");
     }
     this.syncClearButton();
-    this.root?.querySelectorAll(".co-chip").forEach((b) => {
-      // How-gated chips (SIT / SCAMPER) re-applied in syncChipGates after the bulk pass
-      b.disabled = locked;
-      if (locked && this._lockReason) b.title = this._lockReason;
-      else if (!HOW_GATED_MODES.has(b.dataset.mode)) {
-        const action = QUICK_ACTIONS.find((a) => a.mode === b.dataset.mode);
-        if (action) b.title = action.hint;
-      }
-    });
     // End / Resume still usable unless busy (not spectator-locked? keep enabled when only spectator - actually spectator locks all)
     this.root?.querySelectorAll(".co-tutor-toggle").forEach((b) => {
       b.disabled = Boolean(busy) || !this.interactive;

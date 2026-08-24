@@ -9343,6 +9343,40 @@ body.hex-board-expanded {
   display: none;
 }
 
+.hex-idea-cards.is-drop-armed {
+  border-radius: 10px;
+  border: 1px dashed rgba(56, 189, 248, 0.45);
+  background: rgba(15, 23, 42, 0.45);
+  pointer-events: auto;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.hex-idea-cards.is-drop-armed:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.7rem 0.85rem;
+  color: #7dd3fc;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hex-idea-cards.is-drop-armed:empty::before {
+  content: "Ideas";
+  pointer-events: none;
+}
+
+.hex-idea-cards.is-hot {
+  border-style: solid;
+  border-color: rgba(56, 189, 248, 0.9);
+  background: rgba(12, 74, 110, 0.62);
+  color: #e0f2fe;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+
 .hex-discard {
   margin-top: 0.85rem;
   min-height: 3.25rem;
@@ -9657,6 +9691,10 @@ body.hex-board-expanded {
 .hex-drag-ghost.is-discard {
   opacity: 0.72;
   filter: saturate(0.55);
+}
+
+.hex-drag-ghost.is-ideas {
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.5));
 }
 
 .hex-idea-tray {

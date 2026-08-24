@@ -599,15 +599,30 @@ export function createHexBoardUi(opts) {
         }
         dragMoved = true;
       }
+      if (
+        dragMoved &&
+        !fromTray &&
+        isPortableTile(tile) &&
+        ideasDropAvailable()
+      ) {
+        setIdeasDropArmed(true);
+      }
       const overDiscard =
         isPortableTile(tile) &&
         pointerOverDiscard(ev.clientX, ev.clientY);
       setDiscardHot(overDiscard);
+      const overIdeas =
+        !overDiscard &&
+        isPortableTile(tile) &&
+        pointerOverIdeas(ev.clientX, ev.clientY);
+      setIdeasHot(overIdeas);
       if (overDiscard) {
         setStatus("Release to throw away.", false);
+      } else if (overIdeas) {
+        setStatus("Release to return to Ideas.", false);
       }
       const over = pointerOverBoard(ev.clientX, ev.clientY);
-      const mode = over && !overDiscard ? "hex" : "card";
+      const mode = over && !overDiscard && !overIdeas ? "hex" : "card";
       // Crisis/concern never become cards — stay hex while dragging
       const effective =
         tile.kind === TILE_KIND.invention || tile.kind === TILE_KIND.rd
@@ -634,6 +649,17 @@ export function createHexBoardUi(opts) {
           if (placedOrLifted) {
             setStatus("Thrown away.", false);
           }
+        } else if (
+          !fromTray &&
+          isPortableTile(tile) &&
+          tile.q != null &&
+          tile.r != null &&
+          pointerOverIdeas(ev.clientX, ev.clientY)
+        ) {
+          placedOrLifted = liftInvention(id);
+          if (placedOrLifted) {
+            setStatus("Lifted off the board — back in Ideas.", false);
+          }
         } else if (ctm) {
           const loc = pt.matrixTransform(ctm.inverse());
           const hex = makeGrid(gridOpts).atPixel(loc.x, loc.y);
@@ -647,7 +673,7 @@ export function createHexBoardUi(opts) {
           ) {
             placedOrLifted = liftInvention(id);
             if (placedOrLifted) {
-              setStatus("Lifted off the board — back in the tray.", false);
+              setStatus("Lifted off the board — back in Ideas.", false);
             }
           }
         }
@@ -716,11 +742,45 @@ export function createHexBoardUi(opts) {
     dragGhostEl?.classList.toggle("is-discard", Boolean(on));
   }
 
+  function ideasWell() {
+    return document.querySelector("#hex-idea-cards");
+  }
+
+  function ideasDropAvailable() {
+    const el = ideasWell();
+    const body = document.querySelector("#hex-tile-create-body");
+    if (!el || !body || body.hidden) return false;
+    return true;
+  }
+
+  function setIdeasDropArmed(on) {
+    ideasWell()?.classList.toggle("is-drop-armed", Boolean(on));
+  }
+
+  function pointerOverIdeas(clientX, clientY) {
+    const el = ideasWell();
+    if (!el || !el.classList.contains("is-drop-armed")) return false;
+    const rect = el.getBoundingClientRect();
+    return (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    );
+  }
+
+  function setIdeasHot(on) {
+    ideasWell()?.classList.toggle("is-hot", Boolean(on));
+    dragGhostEl?.classList.toggle("is-ideas", Boolean(on));
+  }
+
   /** @type {HTMLElement|null} */
   let dragGhostEl = null;
 
   function destroyDragGhost() {
     setDiscardHot(false);
+    setIdeasHot(false);
+    setIdeasDropArmed(false);
     if (dragGhostEl) {
       dragGhostEl.remove();
       dragGhostEl = null;
