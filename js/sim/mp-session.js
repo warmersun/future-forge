@@ -832,6 +832,13 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     if (payload.hexBoard && typeof payload.hexBoard === "object") {
       target.hexBoard = boardForWire(payload.hexBoard);
       target.concernsSummoned = Boolean(target.hexBoard.concernsSummoned);
+      // Placing / minting hex tiles is the invent action — count as engagement
+      const hasInventTile = Object.values(target.hexBoard.tiles || {}).some(
+        (t) => t && t.kind === "invention"
+      );
+      if (hasInventTile) {
+        actor.apSpentThisTurn = Math.max(actor.apSpentThisTurn || 0, 1);
+      }
       // Stack follows placed invention tiles on the hex field
       try {
         const placedIds = techIdsFromBoard(payload.hexBoard);

@@ -929,43 +929,6 @@ export class RoomManager {
             console.log(`[rooms] patch ${room.code} -> ${p.displayName} ${bytes}B events=${(events||[]).map(e=>e.type).join(',')}`);
           }
           if (bytes > 200000) console.warn(`[rooms] HUGE patch ${bytes}B`);
-          // #region agent log
-          if (p === room.players[0]) {
-            const invents = payload.invents || {};
-            const boards = Object.entries(invents).map(([id, inv]) => {
-              const tiles = inv?.hexBoard?.tiles || {};
-              const art = Object.values(tiles).map((t) => String(t?.artUrl || ""));
-              return {
-                seat: String(id).slice(0, 8),
-                tiles: Object.keys(tiles).length,
-                dataImages: art.filter((u) => u.startsWith("data:")).length,
-                artUrlBytes: art.reduce((n, u) => n + u.length, 0),
-              };
-            });
-            fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Debug-Session-Id": "0655d1",
-              },
-              body: JSON.stringify({
-                sessionId: "0655d1",
-                hypothesisId: "D",
-                location: "room-manager.mjs:_commitMp",
-                message: "patch broadcast sizes",
-                data: {
-                  bytes,
-                  events: (events || []).map((e) => e.type),
-                  eventCount: (events || []).length,
-                  resultEventCount: (result.events || []).length,
-                  extraEventCount: extraEvents.length,
-                  boards,
-                },
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-          }
-          // #endregion
         } catch {}
         safeSend(p._socket, payload);
       }

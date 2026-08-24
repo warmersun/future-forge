@@ -1554,6 +1554,15 @@ export function createHexWorkshop(api) {
     const key = tileTimingCacheKey(tile, year);
     const cached = timingCache.get(tileId);
     if (cached?.forKey === key || tile.timingForKey === key) {
+      if (
+        cached &&
+        tile.timingLevel !== cached.level &&
+        (cached.level === "red" ||
+          cached.level === "yellow" ||
+          cached.level === "green")
+      ) {
+        settleTileTiming(tileId, cached.level, cached.reason, cached.forKey);
+      }
       return;
     }
 
@@ -2293,7 +2302,13 @@ export function createHexWorkshop(api) {
         changed = true;
       }
       if (changed) {
-        setBoard(next);
+        const live = cloneBoard(board());
+        for (const t of missing) {
+          const src = next.tiles?.[t.id];
+          const dest = live.tiles?.[t.id];
+          if (src?.artUrl && dest && !dest.artUrl) dest.artUrl = src.artUrl;
+        }
+        setBoard(live);
         ensureUi()?.render();
         renderTray();
       }

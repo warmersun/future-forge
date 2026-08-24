@@ -3361,38 +3361,6 @@ if (ROOMS_ENABLED && roomManager) {
       } catch {
         return safeWs(socket, { type: "error", error: "bad_json" });
       }
-      // #region agent log
-      {
-        const bytes = raw != null ? Buffer.byteLength(String(raw)) : 0;
-        const aType = msg?.action?.type || msg?.cmd || null;
-        const tiles = msg?.action?.payload?.hexBoard?.tiles || {};
-        const art = Object.values(tiles).map((t) => String(t?.artUrl || ""));
-        fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "0655d1",
-          },
-          body: JSON.stringify({
-            sessionId: "0655d1",
-            hypothesisId: "A",
-            location: "server.mjs:ws-message",
-            message: "ws inbound accepted",
-            data: {
-              type: msg?.type || "?",
-              actionType: aType,
-              bytes,
-              limit: WS_MAX_PAYLOAD,
-              tileCount: Object.keys(tiles).length,
-              dataImageCount: art.filter((u) => u.startsWith("data:")).length,
-              artUrlBytes: art.reduce((n, u) => n + u.length, 0),
-              player: bound?.player?.displayName || null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
 
       if (msg.type === "auth") {
         if (!costPolicy.allow("ws-auth", ip).ok) {
@@ -3502,35 +3470,11 @@ if (ROOMS_ENABLED && roomManager) {
     socket.on("close", () => {
       roomManager.unbindSocket(socket);
     });
-    // #region agent log
     socket.on("error", (err) => {
-      fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "0655d1",
-        },
-        body: JSON.stringify({
-          sessionId: "0655d1",
-          hypothesisId: "C",
-          location: "server.mjs:ws-error",
-          message: "ws socket error (would crash if unhandled)",
-          data: {
-            code: err?.code || null,
-            name: err?.name || null,
-            errMessage: String(err?.message || err).slice(0, 200),
-            limit: WS_MAX_PAYLOAD,
-            player: bound?.player?.displayName || null,
-            room: bound?.room?.code || null,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
       console.error(
         `[rooms] ws error ${bound?.room?.code || "?"} ${bound?.player?.displayName || "?"} ${err?.code || ""} ${err?.message || err}`
       );
     });
-    // #endregion
   });
 }
 

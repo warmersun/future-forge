@@ -1157,42 +1157,6 @@ function ensureHexWorkshop() {
     commitBoard: (b) => {
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
-          // #region agent log
-          {
-            const tiles = b?.tiles || {};
-            const art = Object.values(tiles).map((t) => String(t?.artUrl || ""));
-            let boardBytes = 0;
-            try {
-              boardBytes = JSON.stringify(b || {}).length;
-            } catch {
-              boardBytes = -1;
-            }
-            fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Debug-Session-Id": "0655d1",
-              },
-              body: JSON.stringify({
-                sessionId: "0655d1",
-                hypothesisId: "A",
-                location: "game.js:commitBoard",
-                message: "room board_commit about to send",
-                data: {
-                  boardBytes,
-                  tileCount: Object.keys(tiles).length,
-                  artUrlCount: art.filter(Boolean).length,
-                  dataImageCount: art.filter((u) => u.startsWith("data:")).length,
-                  artUrlBytes: art.reduce((n, u) => n + u.length, 0),
-                  artUrlPrefixes: art
-                    .filter(Boolean)
-                    .map((u) => u.slice(0, 24)),
-                },
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-          }
-          // #endregion
           roomBridge.send({
             type: "board_commit",
             payload: {
@@ -1200,6 +1164,13 @@ function ensureHexWorkshop() {
               targetSeatId: roomBridge.getViewId?.() || roomBridge.myId?.(),
             },
           });
+          const hasInvent = Object.values(b?.tiles || {}).some(
+            (t) => t && t.kind === "invention"
+          );
+          if (hasInvent && (state.apSpentThisTurn || 0) < 1) {
+            state.apSpentThisTurn = 1;
+            updateEndTurnButton();
+          }
         } else if (hotseatBridge.isHotseat()) {
           // Hotseat syncs via hydrate push on next action; keep invent hexBoard live
           const sess = hotseatBridge.getSession?.();

@@ -408,6 +408,19 @@ describe("mp-session hex board help", () => {
     );
   });
 
+  it("board_commit with an invention tile counts as end_turn engagement", () => {
+    let s = started();
+    assert.equal(s.invents["seat-0"].apSpentThisTurn, 0);
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.ok((r.session.invents["seat-0"].apSpentThisTurn || 0) >= 1);
+    const end = applyMpAction(r.session, { type: "end_turn" });
+    assert.equal(end.ok, true, end.error);
+  });
+
   it("helper cannot summon challenger tiles on another invent", () => {
     let s = started();
     s = applyMpAction(s, {

@@ -1119,6 +1119,22 @@ export function mergeBoardArt(incoming, local) {
       t.artUrl = prev.artUrl;
     }
     if (!t.artId && prev.artId) t.artId = prev.artId;
+    const inHasTiming =
+      t.timingLevel === "red" ||
+      t.timingLevel === "yellow" ||
+      t.timingLevel === "green";
+    const locHasTiming =
+      prev.timingLevel === "red" ||
+      prev.timingLevel === "yellow" ||
+      prev.timingLevel === "green";
+    if (!inHasTiming && locHasTiming) {
+      t.timingLevel = prev.timingLevel;
+      t.timingReason = prev.timingReason || t.timingReason || null;
+      t.feasibilityPct =
+        prev.feasibilityPct != null ? prev.feasibilityPct : t.feasibilityPct;
+      t.timingForKey = prev.timingForKey || t.timingForKey || null;
+    }
+    if (prev.timingPending && !t.timingPending) t.timingPending = true;
   }
   return next;
 }

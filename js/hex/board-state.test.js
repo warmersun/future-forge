@@ -115,6 +115,30 @@ test("mergeBoardArt restores local data URLs onto a stripped wire board", () => 
   assert.equal(merged.tiles.inv.q, 1);
 });
 
+test("mergeBoardArt keeps local timing when the wire board has none", () => {
+  const local = {
+    tiles: {
+      inv: {
+        id: "inv",
+        kind: "invention",
+        timingLevel: "green",
+        timingPending: true,
+        feasibilityPct: 85,
+        timingForKey: "inv|2026|ai|how",
+      },
+    },
+  };
+  const incoming = {
+    tiles: {
+      inv: { id: "inv", kind: "invention", timingLevel: null, timingPending: false },
+    },
+  };
+  const merged = mergeBoardArt(incoming, local);
+  assert.equal(merged.tiles.inv.timingLevel, "green");
+  assert.equal(merged.tiles.inv.timingPending, true);
+  assert.equal(merged.tiles.inv.feasibilityPct, 85);
+});
+
 test("preferIncomingHexBoard keeps a local field drop over a same-id tray snapshot", () => {
   const local = {
     tiles: {
