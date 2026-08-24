@@ -43,18 +43,20 @@ Each active entry:
 | Field | Notes |
 |-------|--------|
 | `label` | Short HUD name (plain English, 1–3 words, Title Case) |
+| `description` | Optional. 1–3 everyday sentences of what this meter means in this place. Omit or `""` on old tiles. Recommended on new tiles. |
 | `pressure` | Starting level 0–5 |
 | `pressureRise` | Rise per Wait 0–3 (default 1) |
 | `winMax` | Hold at or under this after deploy 0–5 (default 1) |
 
 ```json
 "pressure": {
-  "local": {
-    "label": "Outbreak",
-    "pressure": 2,
-    "pressureRise": 1,
-    "winMax": 1
-  },
+      "local": {
+        "label": "Outbreak",
+        "description": "The fever pattern is real and invisible while swabs wait on the weekly lab truck.",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
   "support": {
     "label": "Fear",
     "pressure": 1,
@@ -65,6 +67,8 @@ Each active entry:
 ```
 
 **Do not** use flat maps like `"Outbreak": 2` or separate top-level `pressureRise` / `winMax`.
+
+`description` is **optional and recommended**. Place-specific strain, not the generic local/global/support lecture. Old tiles without it remain valid.
 
 Subset of roles → selection UI shows a **Crisis · Local · Support** chip.
 

@@ -42,7 +42,7 @@ Capability trends (Wait charts) use a separate catalog — see [`docs/capability
 - Only `*.json` files in **this folder** (not subfolders).
 - Must pass `npm run validate:quest -- path.json`.
 - Invalid files are skipped (logged in `/api/quests` as errors).
-- **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`.
+- **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`. Optional `description` per role is recommended on new tiles; omitted is valid.
 
 ## Sample library tiles
 

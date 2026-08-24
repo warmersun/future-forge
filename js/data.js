@@ -144,7 +144,7 @@ export const GLOBALS = [
 /**
  * Local missions — small concrete instances of global problems.
  * Crisis meters use structured roles: local | global | support
- * (each: { label, pressure, pressureRise, winMax }). Omit a role to hide that meter.
+ * (each: { label, pressure, pressureRise, winMax, description? }). Omit a role to hide that meter.
  */
 export const MISSIONS = [
   {
@@ -1187,15 +1187,30 @@ function buildLocalScenarioVariants(g, count, salt) {
     const defaults = ["Pressure", "Cost", "Trust"];
     const pressure = {};
     roles.forEach((role, ki) => {
-      const labelRaw =
-        (meters && meters[role] != null ? meters[role] : null) ??
-        legacyKeys?.[ki] ??
-        defaults[ki];
+      const meterVal =
+        meters && meters[role] != null ? meters[role] : null;
+      let labelRaw = null;
+      let desc = "";
+      if (meterVal && typeof meterVal === "object" && !Array.isArray(meterVal)) {
+        labelRaw = meterVal.label ?? meterVal.name ?? null;
+        if (typeof meterVal.description === "string") {
+          desc = meterVal.description.trim();
+        }
+      } else {
+        labelRaw = meterVal;
+      }
+      if (labelRaw == null) {
+        labelRaw = legacyKeys?.[ki] ?? defaults[ki];
+      }
       if (labelRaw == null || labelRaw === false) return; // omit role if pack sets null
       const label = String(labelRaw).slice(0, 40);
       if (!label) return;
+      if (!desc && pack.crisisMeterDescs?.[role]) {
+        desc = String(pack.crisisMeterDescs[role]).trim();
+      }
       pressure[role] = {
         label,
+        description: desc.slice(0, 400),
         pressure: 2 + ((i + ki + salt) % 2),
         pressureRise: ki === 2 ? 0 : 1,
         winMax: 1,

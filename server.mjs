@@ -428,7 +428,7 @@ Role:
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
 - When mode is assess-feasibility: judge ONLY whether the mechanism is possible or already demonstrated in context.year. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. Do not judge quest fit, clinic job, or whether the idea matches grounding's example applications (hoppers vs heavy-lift). green = architecture+payload exists or is demonstrated by year (no pilot tax; smaller grounding examples do not cap payload). yellow = vague, or after checking year the claimed scale is not yet demonstrated. red = only if grounding EXPLICITLY forbids / says not yet, or sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper". Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or "not yet". Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
-- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. howText (or insertText) is a 1–2 sentence starter the learner places on a hex tile. If context.refresh, do not repeat context.avoidTitles.
+- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText (or insertText) is one clear mechanism sentence in everyday words, using the named person/place when known. If context.refresh, do not repeat context.avoidTitles.
 - When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern. Judge from that given's FULL reachable invention pathway (neighbors[] = pathway tiles with techId + howText + timing; direct:true = shares an edge with this given; also pathway: combined howText/techIds). Read the pathway as ONE invent — a downstream mechanism can make a docked tile honest. Crisis (kind=crisis): judge against role — local = here-and-now relief / local fit; global = root cause / lasting driver; support = public buy-in AND scale-beyond-pilot. Honor prior; green allowed when honestly eased. Concern (kind=concern): judge against stored challengeSpeech/challengeQuestion plus playerAnswer if present. Judge the combination of ALL inventions in that given's reachable pathway AND the written answer. Nothing docked stays red even with an answer. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. red = unanswered/hot; yellow = touching but not enough; green = honestly eased for this place and year. Do not require bits/atoms world-match. Do not rewrite howText or art. Honor grounding. Leave proposals empty.
 - When mode is score-pathway: score ONE invention pathway (context.pathway.inventions: techId + howText + timing — no names) as a combination. Return top-level crisisDelta: { local, global, support } integers from -2 to +1 (negative = eases that crisis pressure if this pathway docks onto that meter). Also return concerns: { [angle]: { level: "red"|"yellow"|"green", reason } } for angles in context.concerns (judge ALL inventions in the pathway plus playerAnswer if present vs stored challengeSpeech/challengeQuestion). Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Leave proposals empty. Do not rewrite inventions.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
@@ -537,6 +537,10 @@ For assess-feasibility set timing; otherwise timing may be null.`;
 /** Appended to invent/challenge modeHints when capability truth matters. */
 const GROUNDING_HINT =
   " If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits); prefer that grain over generic tech-id encyclopedia; do not invent contradicting facts.";
+
+/** Hex workshop: apply buttons focus emTech / fill mint-box, not essay/stack. */
+const HEX_INVENT_HINT =
+  " Hex invent: the learner mints invention tiles on a hex board. proposals.addTechIds means consider these emTech categories (they focus the picker — not add to a stack). proposals.inventionHow is a mint-box draft for ONE focused tech; the learner still hits Mint tile. Leave inventionName and inventionImpact empty/null. Do not tell them to Apply name or everyday life.";
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
@@ -1497,7 +1501,10 @@ function localCoInvent({ mode, messages, context }) {
           .map((id) => map.get(id)?.name || id)
           .join(" + ")}**. ` +
         `That combo gives you sensing, decision, and real-world action — the skeleton of most transformative systems.\n\n` +
-        `Your move: what constraint matters most — cost, equity, speed, or beauty? Or hit **Apply techs** and we'll build on them.`,
+        `Your move: what constraint matters most — cost, equity, speed, or beauty?` +
+        (context.hexInvent
+          ? ` Or hit **Invent with** on a suggested emTech, then Ask for ideas or write how it works.`
+          : ` Or hit **Apply techs** and we'll build on them.`),
       proposals: { ...base, addTechIds: selected.length ? [] : toAdd.slice(0, 3) },
       teaching: teachingFor(stack, map, 3),
     };
@@ -1515,7 +1522,9 @@ function localCoInvent({ mode, messages, context }) {
           })
           .join("\n") +
         `\n\nWhy this mix: coverage across domains beats a single shiny tool. ` +
-        `Apply the techs, then tell me what feels wrong — friction is where invention lives.`,
+        (context.hexInvent
+          ? `Hit **Invent with** on a category, then Ask for ideas or mint a tile — friction is where invention lives.`
+          : `Apply the techs, then tell me what feels wrong — friction is where invention lives.`),
       proposals: { ...base, addTechIds: toAdd },
       teaching: teachingFor(stack, map, 4),
     };
@@ -1536,7 +1545,7 @@ function localCoInvent({ mode, messages, context }) {
         `2. **${alt1}**\n` +
         `3. **${alt2}**\n\n` +
         `Apply the top pick, or type your own twist in the name field.`,
-      proposals: { ...base, inventionName: name },
+      proposals: { ...base, inventionName: context.hexInvent ? null : name },
       teaching: [],
     };
   }
@@ -1548,7 +1557,9 @@ function localCoInvent({ mode, messages, context }) {
       message:
         `Here's a draft mechanism you can steal, remix, or fight with:\n\n` +
         how +
-        `\n\nEdit it until it sounds like *your* invention. What's the one step only a human should still own?`,
+        (context.hexInvent
+          ? `\n\nHit **Use as how it works** to drop this in the mint box, then Mint tile if it feels like yours. What's the one step only a human should still own?`
+          : `\n\nEdit it until it sounds like *your* invention. What's the one step only a human should still own?`),
       proposals: {
         ...base,
         addTechIds: selected.length ? [] : toAdd.slice(0, 4),
@@ -1739,7 +1750,7 @@ function buildUserPayload({ messages, context, mode }) {
       "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable." +
       GROUNDING_HINT,
     "idea-sparks":
-      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (≤60 chars), blurb (≤140), insertText/howText (≤280), imagePrompt (≤400), year }. Three DIFFERENT angles. Pilot-honest. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
+      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year }. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
       GROUNDING_HINT,
     "evaluate-neighbors":
       "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
@@ -1815,8 +1826,14 @@ function buildUserPayload({ messages, context, mode }) {
     "generate-scenarios":
       "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms (e.g. air pollution: name trucks/cookfuel/stacks, not only indoor filters). " +
       SCENE_PROSE +
-      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). CRITICAL — pressure is an object with up to three role keys: local, global, support. Omit a role to hide that crisis meter on the HUD. Each present role: { \"label\": \"plain English HUD name 1–3 words Title Case\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. local = lived local harm; global = systemic/driver; support = trust/legitimacy/fear. NEVER camelCase jargon labels (bad: AlleyPM, BenzeneSpikes, CorridorPM). Default full Quest uses all three roles. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
+      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). CRITICAL — pressure is an object with up to three role keys: local, global, support. Omit a role to hide that crisis meter on the HUD. Each present role: { \"label\": \"plain English HUD name 1–3 words Title Case\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. local = lived local harm; global = systemic/driver; support = trust/legitimacy/fear. description is place-specific strain, not the generic role lecture. NEVER camelCase jargon labels (bad: AlleyPM, BenzeneSpikes, CorridorPM). Default full Quest uses all three roles. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
   };
+
+  if (context?.hexInvent) {
+    for (const key of ["chat", "spark", "suggest-stack", "draft-how", "draft-name"]) {
+      if (modeHints[key]) modeHints[key] += HEX_INVENT_HINT;
+    }
+  }
 
   // Prefer selected techs with full capability seeds for literacy modes
   const selectedIds = new Set(context?.selectedTechIds || []);
@@ -1899,6 +1916,7 @@ function buildUserPayload({ messages, context, mode }) {
     tutorMode,
     aiTutorContext,
     focusTechId: context?.focusTechId || null,
+    hexInvent: Boolean(context?.hexInvent),
     hexEval: context?.hexEval || null,
     hexBoard: context?.hexBoard || null,
     pathway: context?.pathway || null,

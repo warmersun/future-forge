@@ -52,6 +52,7 @@ describe("FAST_EVAL_MODES", () => {
     }
     assert.match(SCORE_PATHWAY_SYSTEM, /crisisDelta/);
     assert.match(SCORE_PATHWAY_SYSTEM, /challengeSpeech/);
+    assert.match(SCORE_PATHWAY_SYSTEM, /description/i);
     assert.match(ASSESS_FEASIBILITY_SYSTEM, /"timing"/);
     assert.match(IDEA_SPARKS_SYSTEM, /"ideas"/);
     assert.match(POSE_CHALLENGE_SYSTEM, /challengeSpeech/);
@@ -104,7 +105,14 @@ describe("buildFastPayload", () => {
       grounding: "x".repeat(5000),
       pressureBase: { Floods: 3 },
       winMax: { Floods: 2 },
-      crisisRoles: [{ role: "local", name: "Floods", meterKey: "Floods" }],
+      crisisRoles: [
+        {
+          role: "local",
+          name: "Floods",
+          meterKey: "Floods",
+          description: "The quay goes under every spring tide.",
+        },
+      ],
       concerns: [
         {
           angle: "moloch",
@@ -131,9 +139,33 @@ describe("buildFastPayload", () => {
     assert.ok(p.grounding.length <= 3000);
     assert.equal(json.includes("SecretName"), false);
     assert.equal(json.includes("should not appear"), false);
+    assert.equal(
+      p.crisisRoles[0].description,
+      "The quay goes under every spring tide."
+    );
     for (const k of ENVELOPE_KEYS) {
       assert.equal(json.includes(k), false, k);
     }
+  });
+
+  it("score-pathway clips and defaults crisis description", () => {
+    const long = buildFastPayload("score-pathway", {
+      pathway: { inventions: [] },
+      crisisRoles: [
+        {
+          role: "local",
+          name: "Floods",
+          meterKey: "Floods",
+          description: "y".repeat(500),
+        },
+      ],
+    });
+    assert.equal(long.crisisRoles[0].description.length, 400);
+    const empty = buildFastPayload("score-pathway", {
+      pathway: { inventions: [] },
+      crisisRoles: [{ role: "local", name: "Floods", meterKey: "Floods" }],
+    });
+    assert.equal(empty.crisisRoles[0].description, "");
   });
 
   it("assess-feasibility is how + stack only", () => {

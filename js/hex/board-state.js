@@ -239,6 +239,7 @@ export function seedCrisisTiles(mission, opts = {}) {
       lampEvalKey: null,
       artUrl: null,
       imagePrompt: null,
+      description: String(mission?.pressureDesc?.[name] || "").slice(0, 400),
     };
   });
   const pressure = mission?.pressure || {};

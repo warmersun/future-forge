@@ -188,18 +188,20 @@ Each active entry:
 | Field | Notes |
 |-------|--------|
 | `label` | Short HUD name (e.g. `"Outbreak"`) |
+| `description` | Optional. 1–3 everyday sentences of what this meter means *here* (same voice as brief **What’s strained**). Omitted / empty defaults to `""` — old tiles stay valid. Soft-clipped at ~400 chars. Shown on crisis tile details and passed to AI eval when non-empty. |
 | `pressure` | Starting level 0–5 |
 | `pressureRise` | Rise per Wait (0–3; default 1) |
 | `winMax` | Goal: hold at or under this after deploy (0–5; default 1) |
 
 ```json
 "pressure": {
-  "local": {
-    "label": "Outbreak",
-    "pressure": 2,
-    "pressureRise": 1,
-    "winMax": 1
-  },
+      "local": {
+        "label": "Outbreak",
+        "description": "The fever pattern is real and invisible while swabs wait on the weekly lab truck.",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
   "support": {
     "label": "Fear",
     "pressure": 1,

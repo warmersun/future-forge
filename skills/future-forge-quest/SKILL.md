@@ -52,7 +52,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. Do not dump research or tutor curriculum into the brief.
 4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
 5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4).
-6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }`. **Flat maps rejected.**
+6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid.
 7. Scenario is **fictive**;   research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
 8. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
 9. Sensitive themes: `references/sensitivity.md`.
@@ -159,7 +159,7 @@ npm run validate:quest -- <file>
 
 - [ ] Advance citable; place fictive  
 - [ ] Exactly one suggested tech  
-- [ ] Structured `pressure` (roles only)  
+- [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture)  
 - [ ] **Plain-language test:** a 14-year-old can restate the invent job from **title + summary** alone  
 - [ ] `encourageCopy` is everyday words (no research jargon)  
 - [ ] Scene craft ≤500; place story craft; everyday words in player text  

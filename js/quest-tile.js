@@ -285,9 +285,16 @@ export const CRISIS_ROLE_LABELS = {
   support: "Support",
 };
 
+/** Soft cap for optional per-meter description (popup + AI clip). */
+export const PRESSURE_DESC_MAX = 400;
+
+function clipPressureDesc(s) {
+  return String(s || "").trim().slice(0, PRESSURE_DESC_MAX);
+}
+
 /**
  * True when `pressure` uses role keys with object entries
- * (`local` / `global` / `support` → { label, pressure, pressureRise, winMax }).
+ * (`local` / `global` / `support` → { label, pressure, pressureRise, winMax, description? }).
  * @param {unknown} raw
  */
 export function isStructuredPressure(raw) {
@@ -317,6 +324,7 @@ export function isStructuredPressure(raw) {
  *   pressure: Record<string, number>,
  *   pressureRise: Record<string, number>,
  *   winMax: Record<string, number>,
+ *   pressureDesc: Record<string, string>,
  *   crisisRoles: string[]|null,
  * } | { ok: false, details: string[] }}
  */
@@ -328,6 +336,8 @@ export function normalizeMissionPressure(pressureRaw, riseRaw = null, winRaw = n
     const pressureRise = {};
     /** @type {Record<string, number>} */
     const winMax = {};
+    /** @type {Record<string, string>} */
+    const pressureDesc = {};
     /** @type {string[]} */
     const crisisRoles = [];
     const details = [];
@@ -378,9 +388,19 @@ export function normalizeMissionPressure(pressureRaw, riseRaw = null, winRaw = n
         continue;
       }
 
+      let desc = "";
+      if (entry.description != null && entry.description !== "") {
+        if (typeof entry.description !== "string") {
+          details.push(`pressure_${role}_bad_description`);
+          continue;
+        }
+        desc = clipPressureDesc(entry.description);
+      }
+
       pressure[label] = Math.min(5, Math.max(0, Math.round(p)));
       pressureRise[label] = Math.min(3, Math.max(0, Math.round(r)));
       winMax[label] = Math.min(5, Math.max(0, Math.round(w)));
+      pressureDesc[label] = desc;
       crisisRoles.push(role);
     }
 
@@ -388,7 +408,7 @@ export function normalizeMissionPressure(pressureRaw, riseRaw = null, winRaw = n
     if (!crisisRoles.length) {
       return { ok: false, details: ["pressure_no_active_roles"] };
     }
-    return { ok: true, pressure, pressureRise, winMax, crisisRoles };
+    return { ok: true, pressure, pressureRise, winMax, pressureDesc, crisisRoles };
   }
 
   // Legacy flat maps: { "Outbreak": 2, ... } + optional pressureRise / winMax
@@ -398,11 +418,14 @@ export function normalizeMissionPressure(pressureRaw, riseRaw = null, winRaw = n
     i === keys.length - 1 ? 0 : 1
   );
   const winMax = normalizeMeterMap(winRaw, keys, () => 1);
+  /** @type {Record<string, string>} */
+  const pressureDesc = Object.fromEntries(keys.map((k) => [k, ""]));
   return {
     ok: true,
     pressure,
     pressureRise,
     winMax,
+    pressureDesc,
     crisisRoles: null, // unknown roles in legacy shape
   };
 }
@@ -668,7 +691,8 @@ export function validateQuestTile(tile, opts = {}) {
     return { ok: false, error: "validation_failed", details };
   }
 
-  const { pressure, pressureRise, winMax, crisisRoles } = metersParsed;
+  const { pressure, pressureRise, winMax, crisisRoles, pressureDesc } =
+    metersParsed;
 
   const id =
     slugId(tile.id || missionIn.id || title) ||
@@ -706,6 +730,7 @@ export function validateQuestTile(tile, opts = {}) {
     pressure,
     pressureRise,
     winMax,
+    pressureDesc: pressureDesc || {},
     scene: (scene || plainLedeFromBrief(briefMd)).slice(0, CAPS.scene),
     briefMd: briefMd.slice(0, CAPS.briefMd),
     stakeholder: String(missionIn.stakeholder || "").slice(0, CAPS.stakeholder),

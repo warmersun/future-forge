@@ -40,6 +40,7 @@ const QUICK_ACTIONS = [
 const HOW_IT_WORKS_MIN = 20;
 const HOW_GATED_MODES = new Set(["sit", "scamper"]);
 const HOW_GATED_DISABLED_TITLE = "Write how it works first (a short paragraph)";
+const HOW_GATED_DISABLED_TITLE_HEX = "Mint at least one idea tile first";
 
 export class CoInventor {
   /**
@@ -51,6 +52,7 @@ export class CoInventor {
    * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
    * @param {(body: object) => Promise<object>} [opts.transport] — replace fetch /api/co-invent (e.g. room WS)
    * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
+   * @param {"hex"|"legacy"} [opts.surface="legacy"] — hex workshop vs essay/stack apply
    * @param {string} [opts.placeholder] — compose box placeholder
    * @param {string} [opts.subtitle] — header subtitle default before health check
    * @param {boolean} [opts.tutorMode=false] — active tutor session (free AP + badge)
@@ -67,6 +69,7 @@ export class CoInventor {
     this.afterRequest = opts.afterRequest || null;
     this.transport = opts.transport || null;
     this.showQuickActions = opts.showQuickActions !== false;
+    this.surface = opts.surface === "hex" ? "hex" : "legacy";
     this.placeholder =
       opts.placeholder ||
       "Brainstorm with your co-inventor… e.g. “What if we grew the seawalls instead of building them?”";
@@ -192,10 +195,15 @@ export class CoInventor {
     const actions = root.querySelector("#co-actions");
     if (this.showQuickActions && actions) {
       actions.hidden = false;
-      actions.innerHTML = QUICK_ACTIONS.map(
-        (a) =>
-          `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
-      ).join("");
+      const chips = QUICK_ACTIONS.filter(
+        (a) => !(this.surface === "hex" && a.mode === "draft-name")
+      );
+      actions.innerHTML = chips
+        .map(
+          (a) =>
+            `<button type="button" class="co-chip" data-mode="${a.mode}" title="${a.hint}">${a.label}</button>`
+        )
+        .join("");
       actions.querySelectorAll(".co-chip").forEach((btn) => {
         btn.addEventListener("click", () => this.runMode(btn.dataset.mode));
       });
@@ -346,7 +354,11 @@ export class CoInventor {
       }
       const action = QUICK_ACTIONS.find((a) => a.mode === mode);
       chip.disabled = !howOk;
-      chip.title = howOk ? action?.hint || mode : HOW_GATED_DISABLED_TITLE;
+      chip.title = howOk
+        ? action?.hint || mode
+        : this.surface === "hex"
+          ? HOW_GATED_DISABLED_TITLE_HEX
+          : HOW_GATED_DISABLED_TITLE;
     }
   }
 
@@ -427,13 +439,18 @@ export class CoInventor {
     const ctx = this.getContext();
     const title = ctx.challenge?.title || "this mission";
     const year = ctx.year ? ` (${ctx.year})` : "";
+    const hex = this.surface === "hex";
     this.pushAssistant(
       {
-        message:
-          `I'm your co-inventor for **${title}**${year}. ` +
-          `Pick any emTech categories this place needs — nothing is locked by year. ` +
-          `Feasibility judges whether your *how it works* over-claims. ` +
-          `Use **Art of the possible** for milestones and current capabilities. You lead; I brainstorm, teach, and draft with you.`,
+        message: hex
+          ? `I'm your co-inventor for **${title}**${year}. ` +
+            `Pick emTechs and mint invention tiles on the **hex board** — categories are never locked by year. ` +
+            `Feasibility judges whether a tile's *how it works* over-claims. ` +
+            `Use **Art of the possible** for milestones and current capabilities. You lead; I brainstorm, teach, and draft mint-box text with you.`
+          : `I'm your co-inventor for **${title}**${year}. ` +
+            `Pick any emTech categories this place needs — nothing is locked by year. ` +
+            `Feasibility judges whether your *how it works* over-claims. ` +
+            `Use **Art of the possible** for milestones and current capabilities. You lead; I brainstorm, teach, and draft with you.`,
         proposals: emptyProposals(),
         teaching: [],
       },
@@ -515,6 +532,9 @@ export class CoInventor {
           inventionImpact: ctx.inventionImpact,
           storyFace: ctx.storyFace,
           writeBoth: ctx.writeBoth,
+          hexInvent: Boolean(ctx.hexInvent),
+          focusTechId: ctx.focusTechId || null,
+          hexBoard: ctx.hexBoard || null,
           year: ctx.year,
           turn: ctx.turn,
           place: ctx.place,
@@ -691,22 +711,32 @@ export class CoInventor {
         const kind = btn.dataset.apply;
         const msg = this.messages[idx];
         if (!msg?.proposals) return;
-        // Per-tech: same as clicking that card in the library (AP / Budget / Will)
+        // Per-tech: hex workshop focuses the picker; legacy pays stack costs
         if (kind === "tech") {
           const techId = btn.dataset.techId;
           if (!techId) return;
           const result = this.applyPartial(msg.proposals, "tech", { techId });
+          const focused = result?.focusedTechIds?.includes(techId);
           const added = result?.addedTechIds?.includes(techId);
-          if (!added) return; // unaffordable / locked — leave button active
+          if (!focused && !added) return; // unaffordable / locked — leave button active
           btn.classList.add("applied");
-          btn.textContent = btn.textContent.replace(/^Add /, "Added ");
           btn.disabled = true;
+          if (this.surface === "hex") {
+            btn.textContent = btn.textContent.replace(/^Invent with /, "Inventing with ");
+          } else {
+            btn.textContent = btn.textContent.replace(/^Add /, "Added ");
+          }
           return;
         }
-        this.applyPartial(msg.proposals, kind);
+        const result = this.applyPartial(msg.proposals, kind);
+        if (kind === "how" && this.surface === "hex" && !result?.filledHow) return;
         btn.classList.add("applied");
-        btn.textContent = btn.textContent.replace(/^Apply/, "Applied");
         btn.disabled = true;
+        if (kind === "how" && this.surface === "hex") {
+          btn.textContent = "Used as how it works";
+        } else {
+          btn.textContent = btn.textContent.replace(/^Apply/, "Applied");
+        }
       });
     });
 
@@ -758,50 +788,62 @@ export class CoInventor {
     const teaching = m.teaching || [];
 
     let actions = "";
-    if (hasProps && !m.local) {
+    const hideApplies = this.surface !== "hex" && !this.showQuickActions;
+    const hex = this.surface === "hex";
+    if (hasProps && !m.local && !hideApplies) {
       const bits = [];
-      // One button per suggested emTech — each uses normal select-tech costs
+      // One button per suggested emTech
       for (const id of p.addTechIds || []) {
         const t = this.techById(id);
         if (!t) continue;
         const label = `${t.icon ? `${t.icon} ` : ""}${t.name || id}`;
-        bits.push(
-          `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Add to stack — pays AP, Budget, and Will like a manual pick">Add ${escapeHtml(label)}</button>`
-        );
+        if (hex) {
+          bits.push(
+            `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Focus this emTech so you can Ask for ideas or mint a tile">Invent with ${escapeHtml(label)}</button>`
+          );
+        } else {
+          bits.push(
+            `<button type="button" class="co-apply co-apply-tech" data-msg="${idx}" data-apply="tech" data-tech-id="${escapeHtml(id)}" title="Add to stack — pays AP, Budget, and Will like a manual pick">Add ${escapeHtml(label)}</button>`
+          );
+        }
       }
-      if (p.inventionName) {
+      if (!hex && p.inventionName) {
         bits.push(
           `<button type="button" class="co-apply" data-msg="${idx}" data-apply="name">Apply name</button>`
         );
       }
       if (p.inventionHow) {
         bits.push(
-          `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Apply how-it-works</button>`
+          hex
+            ? `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Use as how it works</button>`
+            : `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Apply how-it-works</button>`
         );
       }
-      if (p.inventionImpact) {
+      if (!hex && p.inventionImpact) {
         bits.push(
           `<button type="button" class="co-apply" data-msg="${idx}" data-apply="impact">Apply everyday life</button>`
         );
       }
-      if (p.scrutiny) {
+      if (!hex && p.scrutiny) {
         bits.push(
           `<button type="button" class="co-apply" data-msg="${idx}" data-apply="scrutiny">Apply scrutiny</button>`
         );
       }
-      // "Apply all" only when there are non-tech proposals too (name/how/life…).
-      // Never free bulk-add of a whole stack — techs stay one button each.
-      const nonTechCount =
-        (p.inventionName ? 1 : 0) +
-        (p.inventionHow ? 1 : 0) +
-        (p.inventionImpact ? 1 : 0) +
-        (p.scrutiny ? 1 : 0);
+      // "Apply all" only on legacy when there are non-tech proposals too.
+      const nonTechCount = hex
+        ? 0
+        : (p.inventionName ? 1 : 0) +
+          (p.inventionHow ? 1 : 0) +
+          (p.inventionImpact ? 1 : 0) +
+          (p.scrutiny ? 1 : 0);
       if (nonTechCount > 0 && bits.length > 1) {
         bits.unshift(
           `<button type="button" class="co-apply co-apply-all" data-apply-all="${idx}" title="Applies story fields; techs still charge normally one by one">Apply all suggestions</button>`
         );
       }
-      actions = `<div class="co-proposal-actions">${bits.join("")}</div>`;
+      actions = bits.length
+        ? `<div class="co-proposal-actions">${bits.join("")}</div>`
+        : "";
     }
 
     let teach = "";
@@ -842,6 +884,9 @@ export class CoInventor {
       partial.inventionName = proposals.inventionName;
     } else if (kind === "how") {
       partial.inventionHow = proposals.inventionHow;
+      if (this.surface === "hex" && proposals.addTechIds?.[0]) {
+        partial.howTechId = proposals.addTechIds[0];
+      }
     } else if (kind === "impact") {
       partial.inventionImpact = proposals.inventionImpact;
     } else if (kind === "scrutiny") {

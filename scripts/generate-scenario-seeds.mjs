@@ -217,8 +217,10 @@ const MODE_INSTRUCTION =
   "source ('generated'). message: one short invite line. proposals empty. Follow context.guidance when present. " +
   "CRITICAL — pressure is an object with up to three role keys: local, global, support. " +
   "Omit a role to leave that crisis meter off the HUD. " +
-  "Each present role is { \"label\": \"plain English HUD name\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. " +
+  "Each present role is { \"label\": \"plain English HUD name\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. " +
   "local = lived local harm; global = systemic/driver pressure; support = trust/legitimacy/public fear. " +
+  "label: plain English, 1–3 words, Title Case with spaces. " +
+  "description: place-specific strain (same voice as What's strained), not the generic local/global/support lecture. " +
   "label: plain English, 1–3 words, Title Case with spaces. " +
   "Good labels: \"Dirty air\", \"Sick days\", \"Truck exhaust\", \"Flooding\", \"Jobs\". " +
   "BAD labels: AlleyPM, BenzeneSpikes, GensetHours, CorridorPM. " +
@@ -229,7 +231,8 @@ When mode is generate-scenarios: invent MULTIPLE distinct local mission scenario
 Return a single JSON object only (no markdown fences) with top-level "scenarios" array and "message".
 Hard rules: only use technology ids from availableTechs; stay local; concrete inventable places.
 ${SCENE_PROSE_CAPSULE}
-Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.`;
+Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.
+Each present pressure role should include a short place-specific description of what that meter means here.`;
 
 function extractJson(text) {
   if (!text) return null;
@@ -333,10 +336,50 @@ function extractCrisisMeters(raw) {
   return meters;
 }
 
+/**
+ * Optional place-specific meter descriptions from AI / structured pressure.
+ * @returns {Record<string, string>}
+ */
+function extractCrisisMeterDescs(raw) {
+  /** @type {Record<string, string>} */
+  const descs = {};
+  const cm = raw?.crisisMeters;
+  const p = raw?.pressure;
+  if (cm && typeof cm === "object" && !Array.isArray(cm)) {
+    for (const role of CRISIS_ROLES) {
+      const v = cm[role];
+      if (v && typeof v === "object" && typeof v.description === "string") {
+        const d = v.description.trim().slice(0, 400);
+        if (d) descs[role] = d;
+      }
+    }
+  }
+  if (p && typeof p === "object" && !Array.isArray(p)) {
+    for (const role of CRISIS_ROLES) {
+      if (descs[role]) continue;
+      const d = p[role]?.description;
+      if (typeof d === "string" && d.trim()) {
+        descs[role] = d.trim().slice(0, 400);
+      }
+    }
+  }
+  if (raw?.crisisMeterDescs && typeof raw.crisisMeterDescs === "object") {
+    for (const role of CRISIS_ROLES) {
+      if (descs[role]) continue;
+      const d = raw.crisisMeterDescs[role];
+      if (typeof d === "string" && d.trim()) {
+        descs[role] = d.trim().slice(0, 400);
+      }
+    }
+  }
+  return descs;
+}
+
 function normalizeScenario(raw, globalId) {
   const place = String(raw.place || "Local place").slice(0, 80);
   const title = String(raw.title || "Local Quest").slice(0, 100);
   const crisisMeters = extractCrisisMeters(raw);
+  const crisisMeterDescs = extractCrisisMeterDescs(raw);
   const valid = new Set(TECHS.map((t) => t.id));
   const suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
     .map(String)
@@ -348,6 +391,7 @@ function normalizeScenario(raw, globalId) {
     scene: String(raw.scene || "").slice(0, SCENE_CHAR_CAP),
     stakeholder: String(raw.stakeholder || "Local working group").slice(0, 120),
     crisisMeters,
+    ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
     suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
   };
@@ -358,10 +402,15 @@ function localPackForTheme(g) {
   return list.map((m) => {
     /** @type {Record<string, string>} */
     const crisisMeters = {};
+    /** @type {Record<string, string>} */
+    const crisisMeterDescs = {};
     const p = m.pressure;
     if (p && typeof p === "object") {
       for (const role of CRISIS_ROLES) {
         if (p[role]?.label) crisisMeters[role] = String(p[role].label);
+        if (typeof p[role]?.description === "string" && p[role].description.trim()) {
+          crisisMeterDescs[role] = p[role].description.trim().slice(0, 400);
+        }
       }
     }
     if (!Object.keys(crisisMeters).length) {
@@ -377,6 +426,7 @@ function localPackForTheme(g) {
       scene: m.scene,
       stakeholder: m.stakeholder || "Local working group",
       crisisMeters,
+      ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
       suggested: m.suggested || ["ai", "iot", "networks"],
       visionTheme: m.visionTheme || "rebuild-city",
     };
@@ -537,8 +587,15 @@ function jsString(s) {
 
 function packToJs(pack, indent = "    ") {
   const cm = pack.crisisMeters || {};
+  const descs = pack.crisisMeterDescs || {};
   const meterParts = CRISIS_ROLES.filter((r) => cm[r])
-    .map((r) => `${r}: ${jsString(cm[r])}`)
+    .map((r) => {
+      const d = typeof descs[r] === "string" ? descs[r].trim() : "";
+      if (d) {
+        return `${r}: { label: ${jsString(cm[r])}, description: ${jsString(d)} }`;
+      }
+      return `${r}: ${jsString(cm[r])}`;
+    })
     .join(", ");
   const sug = (pack.suggested || []).map((k) => jsString(k)).join(", ");
   const places = (pack.places || []).map((p) => jsString(p)).join(", ");
@@ -576,6 +633,7 @@ function writeSeedsFile(packsByTheme, meta) {
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
  * Prose: design-challenge story craft (hook → mechanism → open challenge); easy first read, not shorter-for-its-own-sake.
  * Crisis meters: crisisMeters: { local, global, support } — HUD labels per perspective.
+ *   Optional description on a role: { label, description } (place-specific strain).
  *   (buildLocalScenarioVariants expands to structured mission.pressure with levels.)
  *
  * Re-run: node scripts/generate-scenario-seeds.mjs

@@ -720,6 +720,10 @@ export function createHexWorkshop(api) {
         parts.push(
           `<p>This tile tracks how bad <strong>${escapeHtml(name)}</strong> is here — ${escapeHtml(blurb)}.</p>`
         );
+        const desc = String(t.description || "").trim();
+        if (desc) {
+          parts.push(`<p>${escapeHtml(desc)}</p>`);
+        }
         const pressure = api.getPressure?.() || {};
         const winMax = api.getWinMax?.() || {};
         const pressureRise = api.getPressureRise?.() || {};
@@ -1152,6 +1156,18 @@ export function createHexWorkshop(api) {
         fb.setAttribute("aria-hidden", "true");
         visual.appendChild(fb);
       }
+      const badge = document.createElement("div");
+      badge.className = "hex-idea-card-badge";
+      badge.setAttribute("aria-hidden", "true");
+      const hexEl =
+        uiInst?.createTrayTileElement?.(t, { displayPx: { w: 40, h: 46 } }) ||
+        null;
+      if (hexEl) {
+        hexEl.tabIndex = -1;
+        hexEl.setAttribute("aria-hidden", "true");
+        badge.appendChild(hexEl);
+      }
+      visual.appendChild(badge);
       card.appendChild(visual);
 
       const body = document.createElement("div");
@@ -1198,19 +1214,6 @@ export function createHexWorkshop(api) {
         throwAwayTile(t.id);
       });
       card.appendChild(toss);
-
-      const badge = document.createElement("div");
-      badge.className = "hex-idea-card-badge";
-      badge.setAttribute("aria-hidden", "true");
-      const hexEl =
-        uiInst?.createTrayTileElement?.(t, { displayPx: { w: 40, h: 46 } }) ||
-        null;
-      if (hexEl) {
-        hexEl.tabIndex = -1;
-        hexEl.setAttribute("aria-hidden", "true");
-        badge.appendChild(hexEl);
-      }
-      card.appendChild(badge);
 
       card.addEventListener("pointerdown", (e) => {
         if (e.button != null && e.button !== 0) return;
@@ -1412,6 +1415,7 @@ export function createHexWorkshop(api) {
                 role: t.role,
                 name: t.name,
                 meterKey: t.meterKey || t.name,
+                description: String(t.description || "").slice(0, 400),
               })),
             concerns: Object.values(b.tiles || {})
               .filter((t) => t.kind === TILE_KIND.concern)

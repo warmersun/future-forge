@@ -81,6 +81,7 @@ export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future F
 Judge the combination (techId + howText + timing — no names) for this place and year.
 crisisDelta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain).
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
+If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
 concerns: for each listed angle, judge ALL inventions in that given's reachable pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Do not prefer yellow over an honest green.
 ${GROUNDING_LINE}
 Return JSON only (no markdown, no other keys):
@@ -109,7 +110,9 @@ Return JSON only:
 {"convergences":[{"neighborId":"...","converges":true,"title":"≤60 chars","reason":"2-3 teaching sentences"}]}`;
 
 export const IDEA_SPARKS_SYSTEM = `You return exactly 3 application SPARKS for focusTechId in this place and year.
-Different angles. Pilot-honest. howText/insertText is a 1–2 sentence starter for a hex tile.
+Different angles. Pilot-honest.
+title is a plain noun phrase a learner can say aloud — what the idea is, not a slogan. No coined slang or riddles.
+howText/insertText is one clear mechanism sentence in everyday words (named person/place when known).
 If refresh is true, do not repeat avoidTitles.
 ${GROUNDING_LINE}
 Return JSON only:
@@ -173,6 +176,7 @@ function buildScorePathwayPayload(context) {
       role: r?.role || null,
       name: r?.name || null,
       meterKey: r?.meterKey || r?.name || null,
+      description: clip(r?.description, 400),
     })),
     concerns: (context?.concerns || []).map((c) => ({
       angle: c?.angle || null,

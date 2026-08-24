@@ -9430,7 +9430,7 @@ body.hex-board-expanded {
 .hex-idea-card-visual {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #0f172a;
   position: relative;
@@ -9457,8 +9457,8 @@ body.hex-board-expanded {
 .hex-idea-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.65rem 0.7rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.8rem 0.85rem 0.95rem;
   flex: 1;
   min-height: 0;
 }
@@ -9469,12 +9469,12 @@ body.hex-board-expanded {
   align-items: baseline;
   gap: 0.35rem 0.45rem;
   margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.2;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .hex-idea-card-tech {
-  color: var(--text-mute, #94a3b8);
+  color: var(--text, #e8eef9);
   font-weight: 600;
 }
 
@@ -9484,24 +9484,25 @@ body.hex-board-expanded {
 
 .hex-idea-card-title {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 1rem;
   letter-spacing: -0.01em;
   font-weight: 700;
+  line-height: 1.25;
   color: var(--text, #e8eef9);
 }
 
 .hex-idea-card-how {
   margin: 0;
   flex: 1;
-  color: var(--text-dim, #94a3b8);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .hex-idea-card-badge {
   position: absolute;
-  right: 0.45rem;
-  bottom: 0.45rem;
+  left: 0.4rem;
+  bottom: 0.4rem;
   z-index: 2;
   width: 2.5rem;
   height: 2.85rem;

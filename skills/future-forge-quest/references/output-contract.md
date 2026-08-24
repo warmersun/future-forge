@@ -53,18 +53,21 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
     "pressure": {
       "local": {
         "label": "…",
+        "description": "…",
         "pressure": 2,
         "pressureRise": 1,
         "winMax": 1
       },
       "global": {
         "label": "…",
+        "description": "…",
         "pressure": 2,
         "pressureRise": 1,
         "winMax": 1
       },
       "support": {
         "label": "…",
+        "description": "…",
         "pressure": 1,
         "pressureRise": 1,
         "winMax": 1

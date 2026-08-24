@@ -98,6 +98,26 @@ test("seedCrisisTiles respects omitted roles", () => {
   assert.equal(board.tiles["crisis-global"], undefined);
 });
 
+test("seedCrisisTiles copies pressureDesc onto tiles", () => {
+  const board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Outbreak: 2 },
+    pressureDesc: { Outbreak: "The fever pattern is real and invisible." },
+  });
+  assert.equal(
+    board.tiles["crisis-local"].description,
+    "The fever pattern is real and invisible."
+  );
+});
+
+test("seedCrisisTiles defaults missing description to empty string", () => {
+  const board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Outbreak: 2 },
+  });
+  assert.equal(board.tiles["crisis-local"].description, "");
+});
+
 test("placeTile refuses bits against atoms", () => {
   let board = createEmptyBoard();
   const ai = mintInventionTile({ id: "ai1", techId: "ai", name: "Go" });

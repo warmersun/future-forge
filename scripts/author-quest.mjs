@@ -129,9 +129,9 @@ const tile = {
     collapseYear: GAME.startYear + 6,
     yearsPerTurn: GAME.yearsPerTurn,
     pressure: {
-      local: { label: "Pressure", pressure: 2, pressureRise: 1, winMax: 1 },
-      global: { label: "Capacity", pressure: 3, pressureRise: 1, winMax: 1 },
-      support: { label: "Trust", pressure: 1, pressureRise: 0, winMax: 1 },
+      local: { label: "Pressure", description: "Lived strain people feel here this season.", pressure: 2, pressureRise: 1, winMax: 1 },
+      global: { label: "Capacity", description: "The local driver that keeps producing the problem.", pressure: 3, pressureRise: 1, winMax: 1 },
+      support: { label: "Trust", description: "Whether neighbors will back a visible local fix.", pressure: 1, pressureRise: 0, winMax: 1 },
     },
     scene: `People at ${place} need a pilot-honest application of ${tech.name} before meters tip.`,
     briefMd,

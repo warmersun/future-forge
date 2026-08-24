@@ -260,6 +260,8 @@ describe("quest-tile", () => {
     assert.deepEqual(r.mission.pressure, { Outbreak: 2, Fear: 1 });
     assert.deepEqual(r.mission.pressureRise, { Outbreak: 1, Fear: 1 });
     assert.deepEqual(r.mission.winMax, { Outbreak: 1, Fear: 1 });
+    assert.equal(r.mission.pressureDesc.Outbreak, "");
+    assert.equal(r.mission.pressureDesc.Fear, "");
     assert.equal(Object.keys(r.mission.pressure).length, 2);
   });
 
@@ -313,6 +315,42 @@ describe("quest-tile", () => {
     assert.deepEqual(s.crisisRoles, ["local", "global"]);
     assert.equal(s.pressure.Floods, 3);
     assert.equal(s.pressure.Trust, 2);
+    assert.equal(s.pressureDesc.Floods, "");
+    assert.equal(s.pressureDesc.Trust, "");
+
+    const withDesc = normalizeMissionPressure({
+      local: {
+        label: "Floods",
+        description: "The quay goes under every spring tide.",
+        pressure: 3,
+        pressureRise: 1,
+        winMax: 1,
+      },
+    });
+    assert.equal(withDesc.ok, true);
+    assert.equal(
+      withDesc.pressureDesc.Floods,
+      "The quay goes under every spring tide."
+    );
+
+    const emptyDesc = normalizeMissionPressure({
+      local: { label: "Floods", description: "", pressure: 2 },
+    });
+    assert.equal(emptyDesc.ok, true);
+    assert.equal(emptyDesc.pressureDesc.Floods, "");
+
+    const badDesc = normalizeMissionPressure({
+      local: { label: "Floods", description: 12, pressure: 2 },
+    });
+    assert.equal(badDesc.ok, false);
+    assert.ok(badDesc.details.includes("pressure_local_bad_description"));
+
+    const long = "x".repeat(500);
+    const clipped = normalizeMissionPressure({
+      local: { label: "Floods", description: long, pressure: 2 },
+    });
+    assert.equal(clipped.ok, true);
+    assert.equal(clipped.pressureDesc.Floods.length, 400);
 
     const leg = normalizeMissionPressure(
       { Outbreak: 2 },
@@ -322,6 +360,7 @@ describe("quest-tile", () => {
     assert.equal(leg.ok, true);
     assert.equal(leg.crisisRoles, null);
     assert.equal(leg.pressure.Outbreak, 2);
+    assert.equal(leg.pressureDesc.Outbreak, "");
   });
 
   it("crisisRolesLabel only for non-default subsets", () => {

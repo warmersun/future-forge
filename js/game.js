@@ -2947,6 +2947,8 @@ function persistScenarioCache() {
         pressure: m.pressure,
         pressureRise: m.pressureRise,
         winMax: m.winMax,
+        pressureDesc: m.pressureDesc || {},
+        crisisRoles: m.crisisRoles || null,
         scene: m.scene,
         briefMd: m.briefMd || "",
         stakeholder: m.stakeholder,
@@ -4607,6 +4609,7 @@ async function ensureScenarios(global, { force = false } = {}) {
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
             SCENE_PROSE +
             " Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
+            "Each present pressure role should also include description: 1–3 everyday sentences of what that meter means in this place (not the generic local/global/support lecture). " +
             "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
             "Challenges must match the theme's true scale. Asteroid = civilization-class NEO / planetary defense, not a village siren. Nuclear = strategic misjudgment risk.",
         },
@@ -4638,11 +4641,14 @@ function normalizeMission(raw, globalId) {
   let pressureRise;
   let winMax;
   let crisisRoles = null;
+  /** @type {Record<string, string>} */
+  let pressureDesc = {};
   if (meters.ok) {
     pressure = meters.pressure;
     pressureRise = meters.pressureRise;
     winMax = meters.winMax;
     crisisRoles = meters.crisisRoles;
+    pressureDesc = { ...(meters.pressureDesc || {}) };
   } else {
     // Fallback (should not happen for valid data)
     pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
@@ -4652,6 +4658,19 @@ function normalizeMission(raw, globalId) {
   // Prefer explicit crisisRoles already on a pre-normalized mission
   if (Array.isArray(raw.crisisRoles) && raw.crisisRoles.length) {
     crisisRoles = raw.crisisRoles.map(String);
+  }
+  // Label-keyed descriptions survive flatten / cache round-trip
+  if (raw.pressureDesc && typeof raw.pressureDesc === "object") {
+    for (const k of Object.keys(pressure)) {
+      if (pressureDesc[k]) continue;
+      const d = raw.pressureDesc[k];
+      if (typeof d === "string" && d.trim()) {
+        pressureDesc[k] = d.trim().slice(0, 400);
+      }
+    }
+  }
+  for (const k of Object.keys(pressure)) {
+    if (pressureDesc[k] == null) pressureDesc[k] = "";
   }
 
   const validTech = new Set(allTechIds());
@@ -4739,6 +4758,7 @@ function normalizeMission(raw, globalId) {
     pressure,
     pressureRise,
     winMax,
+    pressureDesc,
     scene: String(raw.scene || "").slice(
       0,
       source === "imported" || source === "hosted" || source === "remote"
@@ -15213,11 +15233,16 @@ function coInventorRootEl() {
   return $("#co-inventor-root");
 }
 
+function hexInventSurface() {
+  return state.screen === "workshop" && isHexInventUi() ? "hex" : "legacy";
+}
+
 function ensureCoInventor() {
   const root = coInventorRootEl();
   if (!root) return state.coInventor;
   // Remount when switching Invent ↔ Challenge ↔ Deploy so the panel lives on the active screen
   if (state.coInventor && state.coInventor.root === root) {
+    state.coInventor.surface = hexInventSurface();
     syncCoInventorTutorUi();
     return state.coInventor;
   }
@@ -15227,6 +15252,7 @@ function ensureCoInventor() {
   const learning = Boolean(state.mission?.isLearningModule);
   const tutorOn = isLearningTutorSessionActive();
   state.coInventor = new CoInventor({
+    surface: hexInventSurface(),
     histories: prevHistories
       ? { tutor: prevHistories.tutor, coinventor: prevHistories.coinventor }
       : undefined,
@@ -15255,6 +15281,8 @@ function ensureCoInventor() {
         inventionHow: state.inventionHow,
         inventionImpact: state.inventionImpact,
         storyFace: state.storyFace,
+        hexInvent: state.screen === "workshop" && isHexInventUi(),
+        focusTechId: focusedTechId,
         hexBoard: summarizeHexBoardForAi(state.hexBoard),
         year: state.year,
         turn: state.turn,
@@ -15347,15 +15375,73 @@ function ensureCoInventor() {
   return state.coInventor;
 }
 
+function isHexWorkshopApply() {
+  return state.screen === "workshop" && isHexInventUi();
+}
+
+/**
+ * Hex invent: focus emTech / fill mint-box how-it-works. Do not add to stack or
+ * write the hidden essay fields (those are derived from placed tiles).
+ * @param {object} proposals
+ * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds: string[], filledHow: boolean }}
+ */
+function applyHexCoInventorProposals(proposals) {
+  let changed = false;
+  const focusedTechIds = [];
+  let filledHow = false;
+
+  for (const id of proposals.addTechIds || []) {
+    if (!techById(id)) continue;
+    focusTech(id);
+    if (focusedTechId !== id) continue;
+    focusedTechIds.push(id);
+    changed = true;
+  }
+
+  if (proposals.inventionHow) {
+    const hintId = proposals.howTechId || (proposals.addTechIds || [])[0] || null;
+    const techId = focusedTechId || hintId;
+    if (!techId || !techById(techId)) {
+      flashToast("Pick an emTech first.");
+    } else {
+      if (techId !== focusedTechId) focusTech(techId);
+      const howEl = $("#hex-how-text");
+      if (howEl) {
+        howEl.value = proposals.inventionHow;
+        filledHow = true;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    if (filledHow) {
+      flashToast("Draft in How it works — Mint tile when you're ready.");
+    } else if (focusedTechIds.length === 1) {
+      const name = techById(focusedTechIds[0])?.name || "this emTech";
+      flashToast(`Invent with ${name} — Ask for ideas or write how it works.`);
+    } else if (focusedTechIds.length > 1) {
+      flashToast("Focused suggested emTechs — Ask for ideas or write how it works.");
+    }
+  }
+  return { changed, addedTechIds: focusedTechIds, focusedTechIds, filledHow };
+}
+
 /**
  * Apply co-inventor proposals.
  * Techs go through onTechClick (same AP / Budget / Will as a manual library pick).
  * Never free bulk-add a whole suggested stack.
+ * Hex workshop: focus / mint-box instead of stack add and essay writes.
  * @param {object} proposals
- * @returns {{ changed: boolean, addedTechIds: string[] }}
+ * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds?: string[], filledHow?: boolean }}
  */
 function applyCoInventorProposals(proposals) {
-  if (!proposals) return { changed: false, addedTechIds: [] };
+  if (!proposals) {
+    return { changed: false, addedTechIds: [], focusedTechIds: [], filledHow: false };
+  }
+  if (isHexWorkshopApply()) {
+    return applyHexCoInventorProposals(proposals);
+  }
   let changed = false;
   const addedTechIds = [];
 
