@@ -1053,6 +1053,7 @@
                     placeholder="Describe your own idea for this place — then mint a tile…"
                   ></textarea>
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom" style="margin-top:.4rem">Mint tile</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-rd" style="margin-top:.4rem">Mint R&D</button>
                 </div>
                 <div
                   class="hex-idea-cards"
@@ -1088,8 +1089,29 @@
               <div class="hex-idea-tray" id="hex-idea-tray" hidden aria-hidden="true"></div>
             </section>
 
-            <div class="hex-board-wrap">
-              <p class="hex-board-status" id="hex-board-status" aria-live="polite">Place ideas on the board. Looking at the board is the thinking.</p>
+            <div class="hex-board-dock">
+              <div class="hex-board-wrap" id="hex-board-wrap">
+              <div class="hex-board-toolbar">
+                <p class="hex-board-status" id="hex-board-status" aria-live="polite">Place ideas on the board. Looking at the board is the thinking.</p>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm hex-board-expand"
+                  id="btn-hex-board-expand"
+                  aria-pressed="false"
+                  aria-label="Maximize hex board"
+                  title="Maximize hex board"
+                >
+                  <svg class="hex-board-expand-icon hex-board-expand-icon-max" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>
+                  </svg>
+                  <svg class="hex-board-expand-icon hex-board-expand-icon-restore" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 3v5H3M16 3v5h5M8 21v-5H3M16 21v-5h5"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="hex-board-lift" id="hex-board-lift" aria-hidden="true">
+                <p class="hex-board-lift-hint">Drop tiles here to lift them off the board.</p>
+              </div>
               <div
                 id="hex-board-pending"
                 class="ai-pending hex-board-pending"
@@ -1129,6 +1151,23 @@
                   <div class="hex-tile-popup-body" id="hex-tile-popup-body"></div>
                 </div>
               </div>
+              <div
+                id="hex-convergence-dialog"
+                class="hex-convergence-dialog"
+                hidden
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="hex-convergence-title"
+              >
+                <div class="hex-convergence-card">
+                  <h3 class="hex-convergence-title" id="hex-convergence-title">Convergence</h3>
+                  <p class="hex-convergence-meta muted" id="hex-convergence-meta"></p>
+                  <p class="hex-convergence-reason" id="hex-convergence-reason"></p>
+                  <p class="hex-convergence-pct" id="hex-convergence-pct"></p>
+                  <button type="button" class="btn btn-primary btn-sm" id="hex-convergence-ok">Got it</button>
+                </div>
+              </div>
+            </div>
             </div>
 
             <div class="feasibility" id="feasibility" aria-live="polite">

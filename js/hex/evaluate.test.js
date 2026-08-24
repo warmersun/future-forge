@@ -6,16 +6,25 @@ import assert from "node:assert/strict";
 import {
   seedCrisisTiles,
   mintInventionTile,
+  mintRdTile,
   addTile,
   placeTile,
   liftTile,
   createEmptyBoard,
+  putConvergence,
+  pruneStaleConvergences,
 } from "./board-state.js";
 import {
   timingLevelToPct,
   timingPctToLevel,
   pathwayTimingChance,
   boardWorstPathwayTiming,
+  tileTimingPct,
+  tileBaseTimingPct,
+  clampTimingPct,
+  rdFactorForPathway,
+  heuristicConverges,
+  pickEnhancedId,
   affectedGivenIds,
   assessLocalFitPrior,
   assessSupportScalePrior,
@@ -1139,5 +1148,143 @@ describe("invalidatePathwaysTouchingGiven", () => {
       applied.board.tiles["concern-moloch"].playerAnswer.includes("escrow"),
       true
     );
+  });
+});
+
+describe("R&D and convergence timing", () => {
+  function inv(id, opts = {}) {
+    return mintInventionTile({
+      id,
+      techId: opts.techId || "ai",
+      howText: `${id} how.`,
+      year: 2026,
+      feasibilityPct: opts.feasibilityPct ?? 50,
+      timingLevel: opts.timingLevel ?? "yellow",
+      polarity: opts.polarity,
+      ...opts,
+    });
+  }
+
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, `place ${id} at ${q},${r}`);
+    return res.board;
+  }
+
+  it("does not overwrite base feasibilityPct when applying convergence", () => {
+    let board = createEmptyBoard();
+    board = addTile(board, inv("a"));
+    board = addTile(board, inv("b"));
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", -1, 0);
+    board = putConvergence(board, "a", "b", {
+      enhancedId: "a",
+      factor: 1.25,
+      title: "Shared grid",
+      reason: "One unblocks the other.",
+    });
+    assert.equal(board.tiles.a.feasibilityPct, 50);
+    assert.equal(board.tiles.b.feasibilityPct, 50);
+    assert.equal(board.tiles.a.convergenceFactor, 1.25);
+    assert.equal(board.tiles.b.convergenceFactor, 1.25);
+    assert.equal(tileBaseTimingPct(board.tiles.a), 50);
+    assert.equal(tileTimingPct(board.tiles.a, board), 63);
+    assert.equal(tileTimingPct(board.tiles.b, board), 63);
+  });
+
+  it("stacks touching R&D as a product and clamps to 99", () => {
+    let board = createEmptyBoard();
+    board = addTile(board, inv("a"));
+    board = addTile(board, mintRdTile({ id: "rd1", factor: 2 }));
+    board = addTile(board, mintRdTile({ id: "rd2", factor: 1.5 }));
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "rd1", 1, 0);
+    board = placeOk(board, "rd2", 0, 1);
+    const path = listInventionPathways(board)[0];
+    assert.equal(
+      path.every((t) => t.kind === TILE_KIND.invention),
+      true
+    );
+    assert.equal(rdFactorForPathway(board, path), 3);
+    const ch = pathwayTimingChance(path, board);
+    assert.equal(ch.rdFactor, 3);
+    assert.equal(ch.pct, 99);
+    assert.equal(clampTimingPct(150), 99);
+    assert.equal(clampTimingPct(0), 1);
+  });
+
+  it("one R&D tile multiplies every cluster it touches", () => {
+    let board = createEmptyBoard();
+    board = addTile(board, inv("a"));
+    board = addTile(board, inv("b", { techId: "solar" }));
+    board = addTile(board, mintRdTile({ id: "rd", factor: 2 }));
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", 2, 0);
+    board = placeOk(board, "rd", 1, 0);
+    const paths = listInventionPathways(board);
+    assert.equal(paths.length, 2);
+    for (const path of paths) {
+      const ch = pathwayTimingChance(path, board);
+      assert.equal(ch.rdFactor, 2);
+      assert.equal(ch.pct, 99);
+    }
+  });
+
+  it("keeps the honesty bump after lift and does not stack on re-dock", () => {
+    let board = createEmptyBoard();
+    board = addTile(board, inv("a"));
+    board = addTile(board, inv("b"));
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", -1, 0);
+    board = putConvergence(board, "a", "b", {
+      factor: 1.25,
+    });
+    assert.equal(Object.keys(board.convergences).length, 1);
+    board = liftTile(board, "a").board;
+    board = liftTile(board, "b").board;
+    board = pruneStaleConvergences(board);
+    assert.equal(Object.keys(board.convergences).length, 1);
+    assert.equal(board.tiles.a.convergenceFactor, 1.25);
+    assert.equal(board.tiles.b.convergenceFactor, 1.25);
+    assert.equal(tileTimingPct(board.tiles.a, board), 63);
+    assert.equal(tileTimingPct(board.tiles.b, board), 63);
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", -1, 0);
+    board = putConvergence(board, "a", "b", {
+      factor: 1.25,
+    });
+    assert.equal(board.tiles.a.convergenceFactor, 1.25);
+    assert.equal(board.tiles.b.convergenceFactor, 1.25);
+    assert.equal(tileTimingPct(board.tiles.a, board), 63);
+    assert.equal(tileTimingPct(board.tiles.b, board), 63);
+  });
+
+  it("keeps the sticky 1.25x after a later timing re-score", () => {
+    let board = createEmptyBoard();
+    board = addTile(board, inv("a"));
+    board = addTile(board, inv("b"));
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", -1, 0);
+    board = putConvergence(board, "a", "b", {
+      enhancedId: "a",
+      factor: 1.25,
+    });
+    board.tiles.a.feasibilityPct = 80;
+    assert.equal(tileBaseTimingPct(board.tiles.a), 80);
+    assert.equal(tileTimingPct(board.tiles.a, board), 99);
+    assert.equal(tileTimingPct(board.tiles.b, board), 63);
+  });
+
+  it("heuristic converges on complementary polarity or distinct techs", () => {
+    const same = inv("a");
+    const clone = inv("b");
+    assert.equal(heuristicConverges(same, clone), false);
+    const otherTech = inv("c", { techId: "solar" });
+    assert.equal(heuristicConverges(same, otherTech), true);
+    const split = inv("d", { polarity: "split" });
+    assert.equal(heuristicConverges(same, split), true);
+    const placed = inv("low", { feasibilityPct: 40 });
+    const nabe = inv("high", { feasibilityPct: 80, techId: "solar" });
+    assert.equal(pickEnhancedId(placed, nabe), "low");
   });
 });

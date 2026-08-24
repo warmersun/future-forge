@@ -15,8 +15,16 @@ import { localPose } from "../challenge-pose.js";
 import {
   seedCrisisTiles,
   mintInventionTile,
+  mintRdTile,
   addTile,
   removeUnplacedTiles,
+  unplacedRdTiles,
+  inventionNeighbors,
+  pruneStaleConvergences,
+  putConvergence,
+  formatFactor,
+  CONVERGENCE_FACTOR,
+  convergencePairKey,
   summonOneConcern,
   remainingConcernAngles,
   ensureConcernRoster,
@@ -50,6 +58,10 @@ import {
   diffPathwayScoreJobs,
   clusterFromGiven,
   invalidatePathwaysTouchingGiven,
+  tileTimingPct,
+  tileBaseTimingPct,
+  clampTimingPct,
+  heuristicConverges,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRise } from "../sim/pressure.js";
@@ -122,6 +134,15 @@ export function createHexWorkshop(api) {
     return api.apEnabled?.() ? "Refresh · 1 AP" : "Refresh";
   }
 
+  function mintRdLabel() {
+    const ap = api.apEnabled?.();
+    const bw = api.budgetWillEnabled?.();
+    if (ap && bw) return "Mint R&D · 1 AP · 1$";
+    if (ap) return "Mint R&D · 1 AP";
+    if (bw) return "Mint R&D · 1$";
+    return "Mint R&D";
+  }
+
   function unplacedSparksFor(techId) {
     return unplacedInventionsForTech(board(), techId).filter(
       (t) => t.origin === "sparks"
@@ -154,15 +175,17 @@ export function createHexWorkshop(api) {
   }
 
   function ideaCardsForFocus() {
+    const rd = unplacedRdTiles(board());
     const waiting = unplacedInventionsForTech(board(), focusedTechId);
     const batchIds = ensureSparkBatch(focusedTechId).ids || [];
     const rank = new Map(batchIds.map((id, i) => [id, i]));
-    return waiting.slice().sort((a, b) => {
+    const inventions = waiting.slice().sort((a, b) => {
       const ai = rank.has(a.id) ? rank.get(a.id) : 1000;
       const bi = rank.has(b.id) ? rank.get(b.id) : 1000;
       if (ai !== bi) return ai - bi;
       return String(a.id).localeCompare(String(b.id));
     });
+    return [...rd, ...inventions];
   }
 
   function syncCreateBusyUi(preferKind) {
@@ -190,6 +213,7 @@ export function createHexWorkshop(api) {
     const askBtn = document.querySelector("#btn-ask-ideas");
     const refreshBtn = document.querySelector("#btn-refresh-ideas");
     const mintBtn = document.querySelector("#btn-mint-custom");
+    const rdBtn = document.querySelector("#btn-mint-rd");
     const how = document.querySelector("#hex-how-text");
     const traySparks = Boolean(focusedTechId && hasUnplacedSparks(focusedTechId));
     if (askBtn) {
@@ -197,6 +221,10 @@ export function createHexWorkshop(api) {
       askBtn.disabled = busy || !focusedTechId || traySparks;
     }
     if (mintBtn) mintBtn.disabled = busy || !focusedTechId;
+    if (rdBtn) {
+      rdBtn.disabled = busy;
+      rdBtn.textContent = mintRdLabel();
+    }
     if (how) how.disabled = busy || !focusedTechId;
     if (refreshBtn) {
       const show = Boolean(focusedTechId && hasSparkBatch(focusedTechId));
@@ -257,7 +285,11 @@ export function createHexWorkshop(api) {
         afterBoardChange(tileId, kind, extra);
         api.commitBoard?.(b);
       },
-      isInteractive: () => !isCreateBusy(),
+      isInteractive: () => {
+        if (isCreateBusy()) return false;
+        if (api.canEditBoard) return Boolean(api.canEditBoard());
+        return true;
+      },
       onInspect: (id) => {
         if (isCreateBusy()) return;
         scheduleInspect(id);
@@ -311,12 +343,6 @@ export function createHexWorkshop(api) {
     card?.addEventListener("pointerleave", () => {
       scheduleInspectEnd();
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        hideTilePopup();
-        ensureUi()?.clearHighlight?.();
-      }
-    });
     return popup;
   }
 
@@ -356,7 +382,10 @@ export function createHexWorkshop(api) {
       inspectHideTimer = null;
     }
     const popup = document.querySelector("#hex-tile-popup");
-    if (popup) popup.hidden = true;
+    if (popup) {
+      popup.hidden = true;
+      popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern");
+    }
     stopReadAloud();
   }
 
@@ -527,6 +556,10 @@ export function createHexWorkshop(api) {
   }
 
   async function submitConcernAnswer(tileId) {
+    if (api.canAnswerConcern && !api.canAnswerConcern()) {
+      api.flashToast?.("Only this invent's owner can answer the challenger.");
+      return;
+    }
     const ta = document.querySelector("#hex-concern-answer");
     const text = String(ta?.value || "").trim();
     if (text.length < 12) {
@@ -666,6 +699,9 @@ export function createHexWorkshop(api) {
           "Challenger";
         const sub = angleMeta?.subtitle ? ` · ${angleMeta.subtitle}` : "";
         meta.textContent = `Challenger · ${angleLabel}${sub}`;
+      } else if (t.kind === TILE_KIND.rd) {
+        const onField = t.q != null && t.r != null;
+        meta.textContent = `R&D · ${formatFactor(t.factor)}${onField ? " · on board" : " · in tray"}`;
       } else {
         const tech = t.techId ? techById(t.techId) : null;
         const onField = t.q != null && t.r != null;
@@ -794,11 +830,22 @@ export function createHexWorkshop(api) {
         const cluster = clusterFromGiven(board(), t, year);
         const docked = Boolean(cluster?.anyTouch);
         const revising = concernAnswerRevisingId === t.id;
-        const showForm = !reply.quality || revising || reply.pending;
-        parts.push(
-          `<p class="muted">Reply to this critic here. The light stays red until a pathway is docked. Once something is touching, the judge reads every connected invent and your answer.</p>`
-        );
-        if (showForm) {
+        const canAnswer =
+          !api.canAnswerConcern || Boolean(api.canAnswerConcern());
+        const showForm = canAnswer && (!reply.quality || revising || reply.pending);
+        if (!canAnswer) {
+          parts.push(
+            `<p class="muted">Only the invent owner can answer this challenger. You can still add idea tiles on their board.</p>`
+          );
+          if (reply.answer) {
+            parts.push(`<p><strong>Their answer</strong></p><p>${escapeHtml(reply.answer)}</p>`);
+          }
+        } else {
+          parts.push(
+            `<p class="muted">Reply to this critic here. The light stays red until a pathway is docked. Once something is touching, the judge reads every connected invent and your answer.</p>`
+          );
+        }
+        if (canAnswer && showForm) {
           parts.push(
             `<label class="hex-tile-popup-answer-label" for="hex-concern-answer">Your answer</label>` +
               `<textarea id="hex-concern-answer" class="hex-tile-popup-answer" rows="5" maxlength="2000" ${
@@ -811,7 +858,7 @@ export function createHexWorkshop(api) {
           if (reply.pending || concernAnswerBusy) {
             parts.push(`<p class="muted">Judging…</p>`);
           }
-        } else {
+        } else if (canAnswer) {
           const qLabel =
             reply.quality === "hit"
               ? "Hit"
@@ -833,6 +880,35 @@ export function createHexWorkshop(api) {
             answeredUndocked: Boolean(reply.answer) && !docked,
           })
         );
+      } else if (t.kind === TILE_KIND.rd) {
+        parts.push(
+          `<p>This is a research roll of <strong>${escapeHtml(formatFactor(t.factor))}</strong>. Dock it against an invention pathway to multiply that pathway's honesty chance.</p>`
+        );
+        const boosted = inventionNeighbors(board(), t.id).map(
+          (n) => n.name || n.techId || n.id
+        );
+        if (t.q != null && t.r != null) {
+          parts.push(
+            boosted.length
+              ? `<p>Currently boosting: ${boosted
+                  .map((n) => escapeHtml(n))
+                  .join(", ")}.</p>`
+              : `<p class="muted">Not touching a pathway yet — dock it against an invention.</p>`
+          );
+        }
+        parts.push(
+          `<p class="muted">R&D is a gamble: 0.75× can hurt, 2× can rescue a weak combined product. You already paid to mint it.</p>`
+        );
+        const actions = [];
+        if (t.q != null && t.r != null) {
+          actions.push(
+            `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button>`
+          );
+        }
+        actions.push(
+          `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
+        );
+        parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
       } else {
         if (t.howText) {
           parts.push(`<p><strong>How it works</strong></p><p>${escapeHtml(t.howText)}</p>`);
@@ -842,14 +918,20 @@ export function createHexWorkshop(api) {
         if (t.timingPending) {
           parts.push(`<p class="muted">Re-checking timing honesty…</p>`);
         } else if (t.timingLevel || t.feasibilityPct != null) {
-          const pct =
-            t.feasibilityPct != null
-              ? Math.round(Number(t.feasibilityPct))
-              : timingLevelToPct(t.timingLevel);
-          const lvl = t.timingLevel || (pct < 35 ? "red" : pct < 70 ? "yellow" : "green");
-          parts.push(
-            `<p>Timing: <strong>${escapeHtml(lvl)}</strong> · <strong>${pct}%</strong> honest this year.</p>`
-          );
+          const shown = tileTimingPct(t, board());
+          const base = tileBaseTimingPct(t);
+          const pct = shown != null ? shown : base;
+          const lvl =
+            t.timingLevel ||
+            (pct == null ? "yellow" : pct < 35 ? "red" : pct < 70 ? "yellow" : "green");
+          let line = `Timing: <strong>${escapeHtml(lvl)}</strong>`;
+          if (pct != null) {
+            line += ` · <strong>${escapeHtml(String(pct))}%</strong> honest this year.`;
+          }
+          if (base != null && shown != null && shown !== base) {
+            line += ` <span class="muted">(base ${escapeHtml(String(Math.round(base)))}%)</span>`;
+          }
+          parts.push(`<p>${line}</p>`);
           if (t.timingReason) {
             parts.push(`<p class="muted">${escapeHtml(t.timingReason)}</p>`);
           }
@@ -897,6 +979,9 @@ export function createHexWorkshop(api) {
         attachReadAloud(body, { getText: () => "" });
       }
     }
+    popup
+      .querySelector(".hex-tile-popup-card")
+      ?.classList.toggle("is-concern", t.kind === TILE_KIND.concern);
     popup.hidden = false;
     requestAnimationFrame(() => {
       positionPopupNearTile(tileId);
@@ -918,6 +1003,7 @@ export function createHexWorkshop(api) {
     renderTray();
     updateCreatePanel();
     api.onBoardPainted?.();
+    api.commitBoard?.(applied.board);
   }
 
   function focusTech(techId) {
@@ -991,6 +1077,56 @@ export function createHexWorkshop(api) {
     const stackIds = new Set(techIdsFromBoard(b));
     const uiInst = ensureUi();
     for (const t of waiting) {
+      if (t.kind === TILE_KIND.rd) {
+        const card = document.createElement("article");
+        card.className = "hex-idea-card is-rd";
+        card.setAttribute("role", "listitem");
+        card.dataset.tileId = t.id;
+        card.dataset.id = t.id;
+        card.title = "R&D — drag onto a pathway to apply this roll";
+        const visual = document.createElement("div");
+        visual.className = "hex-idea-card-visual hex-idea-card-visual-rd";
+        visual.textContent = formatFactor(t.factor);
+        card.appendChild(visual);
+        const body = document.createElement("div");
+        body.className = "hex-idea-card-body";
+        const meta = document.createElement("p");
+        meta.className = "hex-idea-card-meta";
+        meta.textContent = "R&D roll";
+        body.appendChild(meta);
+        const title = document.createElement("h4");
+        title.className = "hex-idea-card-title";
+        title.textContent = `R&D ${formatFactor(t.factor)}`;
+        body.appendChild(title);
+        const how = document.createElement("p");
+        how.className = "hex-idea-card-how";
+        how.textContent =
+          "Dock this against an invention pathway. The factor multiplies that pathway's honesty chance — including 0.75× misses.";
+        body.appendChild(how);
+        card.appendChild(body);
+        const toss = document.createElement("button");
+        toss.type = "button";
+        toss.className = "hex-idea-card-discard";
+        toss.setAttribute("aria-label", "Throw away this R&D tile");
+        toss.title = "Throw away";
+        toss.textContent = "×";
+        toss.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        toss.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          throwAwayTile(t.id);
+        });
+        card.appendChild(toss);
+        card.addEventListener("pointerdown", (e) => {
+          if (e.button != null && e.button !== 0) return;
+          ensureUi()?.startTrayDrag(e, t.id, { cardEl: card });
+        });
+        host.appendChild(card);
+        continue;
+      }
       const tech = t.techId ? techById(t.techId) : null;
       const inStack = Boolean(t.techId && stackIds.has(t.techId));
       const card = document.createElement("article");
@@ -1106,11 +1242,16 @@ export function createHexWorkshop(api) {
   }
 
   function afterBoardChange(tileId, kind, extra = {}) {
+    let b = pruneStaleConvergences(board());
+    setBoard(b);
     ensureUi()?.render();
     renderTray();
     const moved = board()?.tiles?.[tileId];
     if (moved?.kind === TILE_KIND.invention && moved.q != null && moved.r != null) {
       scheduleTileTiming(tileId);
+      evaluateConvergenceAfterPlace(tileId).catch((e) =>
+        console.warn("[hex convergence]", e)
+      );
     }
     if (kind === "discard" && inspectTileId === tileId) {
       hideTilePopup();
@@ -1500,6 +1641,10 @@ export function createHexWorkshop(api) {
 
   async function askForIdeas({ refresh = false } = {}) {
     if (!focusedTechId || isCreateBusy()) return;
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
     const techId = focusedTechId;
     if (!refresh && hasUnplacedSparks(techId)) {
       renderIdeaCards();
@@ -1617,6 +1762,10 @@ export function createHexWorkshop(api) {
       return;
     }
     if (isCreateBusy()) return;
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
     const techId = focusedTechId;
     const ta = document.querySelector("#hex-how-text");
     const how = String(ta?.value || "").trim();
@@ -1665,12 +1814,231 @@ export function createHexWorkshop(api) {
     }
   }
 
+  function mintRd() {
+    if (isCreateBusy()) return;
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
+    const pay = api.spendRdMint?.();
+    if (pay && pay.ok === false) {
+      api.flashToast?.(pay.reason || "Cannot mint R&D.");
+      return;
+    }
+    const tile = mintRdTile({ year: api.getYear?.() || 2026 });
+    const b = addTile(board(), tile);
+    setBoard(b);
+    renderIdeaCards();
+    ensureUi()?.render();
+    api.flashToast?.(
+      `R&D ${formatFactor(tile.factor)} — drag it onto a pathway.`
+    );
+    api.onBoardPainted?.();
+    api.commitBoard?.(b);
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return Boolean(
+        window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function convergenceTilePayload(t) {
+    return {
+      id: t.id,
+      name: t.name || null,
+      techId: t.techId || null,
+      techName: t.techId ? techById(t.techId)?.name || null : null,
+      howText: t.howText,
+      polarity: t.polarity,
+    };
+  }
+
+  function catalysisCopy(a, b) {
+    const na = techById(a?.techId)?.name || a?.name || "one field";
+    const nb = techById(b?.techId)?.name || b?.name || "the other";
+    const title = `${na} × ${nb}`.slice(0, 60);
+    return {
+      title,
+      reason: `Progress in ${na} honestly accelerates ${nb} — better capability, cost, or scale. More or better ${nb} then pulls demand back onto ${na}.`,
+    };
+  }
+
+  function showConvergenceDialog({ title, reason, nameA, nameB, lines }) {
+    const dlg = document.querySelector("#hex-convergence-dialog");
+    if (!dlg) return Promise.resolve();
+    const titleEl = document.querySelector("#hex-convergence-title");
+    const metaEl = document.querySelector("#hex-convergence-meta");
+    const reasonEl = document.querySelector("#hex-convergence-reason");
+    const pctEl = document.querySelector("#hex-convergence-pct");
+    const ok = document.querySelector("#hex-convergence-ok");
+    if (titleEl) titleEl.textContent = title || "Convergence";
+    if (metaEl) {
+      const a = nameA || "This idea";
+      const b = nameB || "that idea";
+      metaEl.textContent = `${a} and ${b} catalyze each other — each gets a ${formatFactor(CONVERGENCE_FACTOR)} honesty boost.`;
+    }
+    if (reasonEl) reasonEl.textContent = reason || "";
+    if (pctEl) {
+      pctEl.textContent = Array.isArray(lines) && lines.length ? lines.join(" ") : "";
+    }
+    dlg.hidden = false;
+    return new Promise((resolve) => {
+      const done = () => {
+        dlg.hidden = true;
+        ok?.removeEventListener("click", done);
+        dlg.removeEventListener("click", onBackdrop);
+        resolve();
+      };
+      const onBackdrop = (e) => {
+        if (e.target === dlg) done();
+      };
+      ok?.addEventListener("click", done);
+      dlg.addEventListener("click", onBackdrop);
+    });
+  }
+
+  async function presentConvergence(placedId, hit) {
+    const neighborId = hit.neighborId;
+    const b0 = board();
+    const placed = b0?.tiles?.[placedId];
+    const neighbor = b0?.tiles?.[neighborId];
+    if (!placed || !neighbor) return;
+    const key = convergencePairKey(placedId, neighborId);
+    if (b0.convergences?.[key]) return;
+    const factor = CONVERGENCE_FACTOR;
+    const pctLine = (tile) => {
+      const before = tileTimingPct(tile, b0);
+      if (before == null) return null;
+      const after = clampTimingPct(before * factor);
+      const label = tile?.name || "This idea";
+      return `${label} ${Math.round(before)}% → ${Math.round(after)}%.`;
+    };
+    const reduced = prefersReducedMotion();
+    if (!reduced) {
+      ensureUi()?.setPulsePair?.(placedId, neighborId);
+      await sleep(900);
+      ensureUi()?.setPulsePair?.(null, null);
+    }
+    if (!reduced) {
+      await showConvergenceDialog({
+        title: hit.title || "Convergence",
+        reason: hit.reason,
+        nameA: placed.name || "This idea",
+        nameB: neighbor.name || "That idea",
+        lines: [pctLine(placed), pctLine(neighbor)].filter(Boolean),
+      });
+    }
+    const next = putConvergence(board(), placedId, neighborId, {
+      factor,
+      title: hit.title,
+      reason: hit.reason,
+    });
+    setBoard(next);
+    api.commitBoard?.(next);
+    ensureUi()?.render();
+    api.onBoardPainted?.();
+  }
+
+  async function evaluateConvergenceAfterPlace(tileId) {
+    let b = pruneStaleConvergences(board());
+    setBoard(b);
+    const placed = board()?.tiles?.[tileId];
+    if (
+      !placed ||
+      placed.kind !== TILE_KIND.invention ||
+      placed.q == null ||
+      placed.r == null
+    ) {
+      return;
+    }
+    const nabes = inventionNeighbors(board(), tileId);
+    const fresh = nabes.filter((n) => {
+      const key = convergencePairKey(tileId, n.id);
+      return !board()?.convergences?.[key];
+    });
+    if (!fresh.length) return;
+
+    // One pair at a time (A–B, then B–C). Never highlight more than two tiles.
+    for (const n of fresh) {
+      const current = board()?.tiles?.[tileId];
+      const other = board()?.tiles?.[n.id] || n;
+      if (!current || !other) continue;
+      const key = convergencePairKey(tileId, other.id);
+      if (board()?.convergences?.[key]) continue;
+
+      ensureUi()?.setEvaluatingPairs?.([{ a: tileId, b: other.id }]);
+      let hit = null;
+      let usedAi = false;
+      try {
+        if (api.coInvent) {
+          try {
+            const data = await api.coInvent(
+              "evaluate-convergence",
+              "[Evaluate convergence]",
+              {
+                placed: convergenceTilePayload(current),
+                neighbors: [convergenceTilePayload(other)],
+                year: api.getYear?.(),
+                place: api.getPlace?.(),
+              }
+            );
+            usedAi = true;
+            const row = (Array.isArray(data?.convergences)
+              ? data.convergences
+              : []
+            ).find((c) => {
+              const neighborId = c?.neighborId || c?.neighborId;
+              const converges = c?.converges === true || c?.converges === true;
+              return Boolean(c && converges && neighborId === other.id);
+            });
+            if (row) {
+              hit = {
+                neighborId: other.id,
+                title: row.title,
+                reason: row.reason,
+              };
+            }
+          } catch (e) {
+            console.warn("[evaluate-convergence]", e);
+          }
+        }
+        if (!usedAi) {
+          if (heuristicConverges(current, other)) {
+            hit = {
+              neighborId: other.id,
+              ...catalysisCopy(current, other),
+            };
+          }
+          if (!prefersReducedMotion()) await sleep(400);
+        }
+      } finally {
+        ensureUi()?.setEvaluatingPairs?.(null);
+      }
+      if (hit) await presentConvergence(tileId, hit);
+    }
+  }
+
   /**
    * Draw one unused roster challenger at random, spin the pick reel, place an isolated tile.
    * Poses only the drawn angle (speech + question) — not all four critics.
    */
   async function summonNextChallenger() {
     if (summonBusy) return board();
+    if (api.canSummonChallengers && !api.canSummonChallengers()) {
+      api.flashToast?.(
+        "Only this invent's owner can summon challengers."
+      );
+      return board();
+    }
     let b = ensureConcernRoster(board());
     if (b !== board()) setBoard(b);
     const remaining = remainingConcernAngles(b);
@@ -1866,6 +2234,63 @@ export function createHexWorkshop(api) {
     updateCreatePanel();
   }
 
+  const EXPAND_LABEL = "Maximize hex board";
+  const RESTORE_LABEL = "Restore hex board";
+
+  function boardWrapEl() {
+    return document.querySelector("#hex-board-wrap") || document.querySelector(".hex-board-wrap");
+  }
+
+  function boardDockEl() {
+    return document.querySelector(".hex-board-dock");
+  }
+
+  function isBoardExpanded() {
+    return Boolean(boardWrapEl()?.classList.contains("is-expanded"));
+  }
+
+  function syncExpandButton() {
+    const btn = document.querySelector("#btn-hex-board-expand");
+    if (!btn) return;
+    const expanded = isBoardExpanded();
+    btn.setAttribute("aria-pressed", expanded ? "true" : "false");
+    btn.setAttribute("aria-label", expanded ? RESTORE_LABEL : EXPAND_LABEL);
+    btn.title = expanded ? RESTORE_LABEL : EXPAND_LABEL;
+  }
+
+  function setBoardExpanded(want) {
+    const wrap = boardWrapEl();
+    const dock = boardDockEl();
+    if (!wrap) return;
+    const expanded = Boolean(want);
+    if (expanded === isBoardExpanded()) {
+      syncExpandButton();
+      return;
+    }
+    if (expanded) {
+      if (dock) dock.style.minHeight = `${wrap.offsetHeight}px`;
+      wrap.classList.add("is-expanded");
+      document.body.classList.add("hex-board-expanded");
+    } else {
+      wrap.classList.remove("is-expanded");
+      document.body.classList.remove("hex-board-expanded");
+      if (dock) dock.style.minHeight = "";
+    }
+    syncExpandButton();
+  }
+
+  function watchWorkshopLeave() {
+    const ws = document.getElementById("screen-workshop");
+    if (!ws || ws.dataset.hexExpandWatch === "1") return;
+    ws.dataset.hexExpandWatch = "1";
+    const obs = new MutationObserver(() => {
+      if (!ws.classList.contains("active") && isBoardExpanded()) {
+        setBoardExpanded(false);
+      }
+    });
+    obs.observe(ws, { attributes: true, attributeFilter: ["class"] });
+  }
+
   function wireDom() {
     document.querySelector("#btn-ask-ideas")?.addEventListener("click", () => {
       askForIdeas({ refresh: false }).catch((e) => console.warn(e));
@@ -1876,6 +2301,28 @@ export function createHexWorkshop(api) {
     document.querySelector("#btn-mint-custom")?.addEventListener("click", () => {
       mintCustom().catch((e) => console.warn(e));
     });
+    document.querySelector("#btn-mint-rd")?.addEventListener("click", () => {
+      mintRd();
+    });
+    document.querySelector("#btn-hex-board-expand")?.addEventListener("click", () => {
+      setBoardExpanded(!isBoardExpanded());
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const popup = document.querySelector("#hex-tile-popup");
+      if (popup && !popup.hidden) {
+        hideTilePopup();
+        ensureUi()?.clearHighlight?.();
+        e.preventDefault();
+        return;
+      }
+      if (isBoardExpanded()) {
+        setBoardExpanded(false);
+        e.preventDefault();
+      }
+    });
+    watchWorkshopLeave();
+    syncExpandButton();
   }
 
   return {

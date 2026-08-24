@@ -33,7 +33,12 @@ import {
   isInventContentFrozen,
   isHexBoardFrozen,
 } from "./invent-phase.js";
-import { techIdsFromBoard } from "../hex/board-state.js";
+import {
+  techIdsFromBoard,
+  seedCrisisTiles,
+  createEmptyBoard,
+  cloneBoard,
+} from "../hex/board-state.js";
 
 const MAX_PLAYERS = 6;
 const MIN_PLAYERS = 2;
@@ -258,11 +263,7 @@ function createInvent(seat, settings, mission = null) {
     inventionHow: "",
     inventionImpact: "",
     /** Hex invent board document (pathway source of truth) */
-    hexBoard: {
-      tiles: {},
-      concernsSummoned: false,
-      evalSeq: 0,
-    },
+    hexBoard: mission ? seedCrisisTiles(mission) : createEmptyBoard(),
     concernsSummoned: false,
     pathwayHeld: false,
     /** @type {{ techId: string, addedBy: string }[]} */
@@ -397,12 +398,55 @@ export function questExitTally(session, opts = {}) {
   };
 }
 
+function tileIdsOfKind(board, kind) {
+  return Object.values(board?.tiles || {})
+    .filter((t) => t.kind === kind)
+    .map((t) => t.id)
+    .sort();
+}
+
+function sameIdList(a, b) {
+  if (a.length !== b.length) return false;
+  return a.every((id, i) => id === b[i]);
+}
+
+/**
+ * Helpers may add/move invention tiles on another invent.
+ * They may not summon, drop, or rewrite challenger tiles.
+ * @param {object|null|undefined} prev
+ * @param {object} next
+ */
+function concernReplyKey(board) {
+  return Object.values(board?.tiles || {})
+    .filter((t) => t.kind === "concern")
+    .map((t) => `${t.id}\0${t.playerAnswer || ""}\0${t.answerQuality || ""}`)
+    .sort()
+    .join("|");
+}
+
+function hexHelpChallengeGate(prev, next) {
+  if (Boolean(next?.concernsSummoned) !== Boolean(prev?.concernsSummoned)) {
+    return { ok: false, error: "owner_only_challenge" };
+  }
+  if (!sameIdList(tileIdsOfKind(prev, "concern"), tileIdsOfKind(next, "concern"))) {
+    return { ok: false, error: "owner_only_challenge" };
+  }
+  if (concernReplyKey(prev) !== concernReplyKey(next)) {
+    return { ok: false, error: "owner_only_challenge" };
+  }
+  if (!sameIdList(tileIdsOfKind(prev, "crisis"), tileIdsOfKind(next, "crisis"))) {
+    return { ok: false, error: "cannot_change_crisis" };
+  }
+  return { ok: true };
+}
+
 function cloneInvent(f) {
   if (!f) return null;
   return {
     ...f,
     stack: (f.stack || []).map((x) => ({ ...x })),
     techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
+    hexBoard: f.hexBoard ? cloneBoard(f.hexBoard) : createEmptyBoard(),
   };
 }
 
@@ -777,13 +821,15 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     if (isHexBoardFrozen(target)) {
       return { ok: false, error: "invent_locked", session };
     }
-    // Owner or active seat on own invent
-    if (targetSeatId !== activeId && targetSeatId !== actor.seatId) {
-      return { ok: false, error: "not_owner", session };
+    // Active seat may layer idea tiles on any unfrozen invent (old emTech help).
+    // Only the invent owner may summon / change challenger tiles.
+    if (targetSeatId !== activeId && payload.hexBoard) {
+      const gate = hexHelpChallengeGate(target.hexBoard, payload.hexBoard);
+      if (!gate.ok) return { ok: false, error: gate.error, session };
     }
     if (payload.hexBoard && typeof payload.hexBoard === "object") {
-      target.hexBoard = payload.hexBoard;
-      target.concernsSummoned = Boolean(payload.hexBoard.concernsSummoned);
+      target.hexBoard = cloneBoard(payload.hexBoard);
+      target.concernsSummoned = Boolean(target.hexBoard.concernsSummoned);
       // Stack follows placed invention tiles on the hex field
       try {
         const placedIds = techIdsFromBoard(payload.hexBoard);
@@ -826,6 +872,26 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
     if (n > 0 && !spendAp(actor, n)) return { ok: false, error: "no_ap", session };
     events.push({ type: "pay_ap", amount: n, seatId: activeId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+  if (type === "pay_budget") {
+    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
+    if (!bwOn) {
+      events.push({ type: "pay_budget", amount: 0, seatId: activeId, skipped: true });
+      s.version = (session.version || 0) + 1;
+      return { ok: true, session: s, events };
+    }
+    if (n > 0 && (actor.budget ?? 0) < n) {
+      return { ok: false, error: "no_budget", session };
+    }
+    if (n > 0) actor.budget = Math.max(0, (actor.budget ?? 0) - n);
+    events.push({
+      type: "pay_budget",
+      amount: n,
+      seatId: activeId,
+      budget: actor.budget,
+    });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }

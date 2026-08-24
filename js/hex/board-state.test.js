@@ -4,6 +4,14 @@ import {
   createEmptyBoard,
   seedCrisisTiles,
   mintInventionTile,
+  mintRdTile,
+  unplacedRdTiles,
+  putConvergence,
+  pruneStaleConvergences,
+  rollRdFactor,
+  RD_FACTORS,
+  formatFactor,
+  isPortableTile,
   placeTile,
   liftTile,
   discardTile,
@@ -20,6 +28,7 @@ import {
   techIdsWithUnplacedInventions,
   deriveBoardProse,
   addTile,
+  preferIncomingHexBoard,
   removeUnplacedTiles,
   applyLights,
   setLampPending,
@@ -47,6 +56,34 @@ test("polarity map covers catalog families", () => {
   assert.equal(polarityForTech("iot"), "split");
   assert.equal(TECH_POLARITY.synbio, "split");
   assert.equal(TECH_POLARITY["gene-sequencing"], BITS);
+});
+
+test("preferIncomingHexBoard keeps a richer local mint over a stale subset", () => {
+  const local = {
+    tiles: { a: { id: "a" }, b: { id: "b" }, c: { id: "c" } },
+  };
+  const incoming = { tiles: { a: { id: "a" }, b: { id: "b" } } };
+  assert.equal(preferIncomingHexBoard(local, incoming), false);
+  assert.equal(preferIncomingHexBoard(incoming, local), true);
+  assert.equal(preferIncomingHexBoard(local, incoming, { forceIncoming: true }), true);
+  assert.equal(preferIncomingHexBoard(incoming, local, { keepLocal: true }), false);
+});
+
+test("preferIncomingHexBoard keeps a local field drop over a same-id tray snapshot", () => {
+  const local = {
+    tiles: {
+      crisis: { id: "crisis", kind: "crisis", q: 0, r: 0 },
+      inv: { id: "inv", kind: "invention", techId: "drones", q: 1, r: 0 },
+    },
+  };
+  const incoming = {
+    tiles: {
+      crisis: { id: "crisis", kind: "crisis", q: 0, r: 0 },
+      inv: { id: "inv", kind: "invention", techId: "drones" },
+    },
+  };
+  assert.equal(preferIncomingHexBoard(local, incoming), false);
+  assert.equal(preferIncomingHexBoard(local, incoming, { forceIncoming: true }), true);
 });
 
 test("seedCrisisTiles respects omitted roles", () => {
@@ -673,4 +710,69 @@ test("heuristic lights: written answer does not ease an undocked concern", () =>
     concernReplyText(board.tiles["concern-nature"]).answer.includes("runoff"),
     true
   );
+});
+
+test("mintRdTile rolls a legal factor and stays in the tray", () => {
+  const factors = new Set();
+  for (let i = 0; i < 4; i++) {
+    factors.add(rollRdFactor(() => i / 4));
+  }
+  assert.deepEqual([...factors].sort((a, b) => a - b), [...RD_FACTORS]);
+  const tile = mintRdTile({ id: "rd1", factor: 1.5, rng: () => 0 });
+  assert.equal(tile.kind, TILE_KIND.rd);
+  assert.equal(tile.name, "R&D");
+  assert.equal(tile.factor, 1.5);
+  assert.equal(tile.polarity, "curve");
+  assert.equal(isPortableTile(tile), true);
+  assert.equal(formatFactor(0.75), "0.75×");
+  assert.equal(formatFactor(2), "2×");
+  let board = createEmptyBoard();
+  board = addTile(board, tile);
+  assert.equal(unplacedRdTiles(board).length, 1);
+  const placed = placeTile(board, "rd1", 0, 0);
+  assert.equal(placed.ok, true);
+  assert.equal(unplacedRdTiles(placed.board).length, 0);
+});
+
+test("pruneStaleConvergences keeps a judged pair after lift; drops it after discard", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({ id: "a", techId: "ai", howText: "A." })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "b", techId: "ai", howText: "B." })
+  );
+  let res = placeTile(board, "a", 0, 0);
+  assert.equal(res.ok, true);
+  board = res.board;
+  res = placeTile(board, "b", -1, 0);
+  assert.equal(res.ok, true);
+  board = res.board;
+  board = putConvergence(board, "a", "b", {
+    enhancedId: "a",
+    factor: 1.25,
+    title: "Shared grid",
+    reason: "One unblocks the other.",
+  });
+  assert.equal(Object.keys(board.convergences).length, 1);
+  assert.equal(board.tiles.a.convergenceFactor, 1.25);
+  assert.equal(board.tiles.b.convergenceFactor, 1.25);
+  board = liftTile(board, "a").board;
+  board = liftTile(board, "b").board;
+  board = pruneStaleConvergences(board);
+  assert.equal(Object.keys(board.convergences).length, 1);
+  assert.equal(board.tiles.a.convergenceFactor, 1.25);
+  assert.equal(board.tiles.b.convergenceFactor, 1.25);
+  board = placeTile(board, "a", 0, 0).board;
+  board = placeTile(board, "b", -1, 0).board;
+  board = putConvergence(board, "a", "b", { factor: 1.25 });
+  assert.equal(board.tiles.a.convergenceFactor, 1.25);
+  assert.equal(board.tiles.b.convergenceFactor, 1.25);
+  const tossed = discardTile(board, "b");
+  assert.equal(tossed.ok, true);
+  board = tossed.board;
+  assert.equal(Object.keys(board.convergences).length, 0);
+  assert.equal(board.tiles.a.convergenceFactor, 1.25);
 });

@@ -14,6 +14,10 @@ export const GROUNDING_LINE =
 export const ASSESS_GROUNDING_LINE =
   "If grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or \"not yet\" that the claim violates. Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction. \"Different category\" is not \"does not exist this year.\" Do not score quest fit, clinic job, preferred grain, or \"not a small hopper\" as timing.";
 
+/** Convergence: place/year may color a use; do not write a quest-feasibility brief. */
+export const CONVERGENCE_GROUNDING_LINE =
+  "If grounding is present, it may color one concrete use in this place and year. Do not write a quest-feasibility brief. Do not treat clinic job, pad-to-pad hops, or named Quest tasks as the definition of convergence. The story is how the two emerging technologies catalyze each other.";
+
 function clip(s, n) {
   const t = String(s || "").trim();
   return t ? t.slice(0, n) : "";
@@ -91,6 +95,18 @@ If priorTiming is set with the same claims, a later year must not score harsher.
 ${ASSESS_GROUNDING_LINE}
 Return JSON only:
 {"timing":{"level":"green","reason":"one sentence"}}`;
+
+export const EVALUATE_CONVERGENCE_SYSTEM = `You judge whether two edge-adjacent invention tiles in Future Forge CONVERGE.
+
+Convergence is the interplay of emerging technologies: progress in one accelerates, catalyzes, or propels the other — including a demand loop. True: A makes B better (range, cost, capability, scale), AND better or more B increases demand or pull for A. Shape: better light high-capacity batteries → better drones; more drones → more demand for those batteries.
+
+Reject generic synergy, "both are tech," and clinic-job honesty (this pack unblocks the named hop). Place/year may color one use but must not replace the tech-to-tech loop.
+
+title must name the two fields (not a local job). reason must state A → B and B → demand/scale for A in 2–3 sentences. Do not pick a single winner; both tiles are catalyzed.
+
+${CONVERGENCE_GROUNDING_LINE}
+Return JSON only:
+{"convergences":[{"neighborId":"...","converges":true,"title":"≤60 chars","reason":"2-3 teaching sentences"}]}`;
 
 export const IDEA_SPARKS_SYSTEM = `You return exactly 3 application SPARKS for focusTechId in this place and year.
 Different angles. Pilot-honest. howText/insertText is a 1–2 sentence starter for a hex tile.
@@ -266,9 +282,34 @@ function buildJudgePayload(mode, context) {
   };
 }
 
+function convergenceTileSlice(t) {
+  return {
+    id: t?.id || null,
+    name: clip(t?.name, 80) || null,
+    techId: t?.techId || null,
+    techName: clip(t?.techName, 80) || null,
+    howText: clip(t?.howText || t?.howText, 800),
+    polarity: t?.polarity || null,
+  };
+}
+
+function buildEvaluateConvergencePayload(context) {
+  const placed = context?.placed || {};
+  const neighbors = Array.isArray(context?.neighbors) ? context.neighbors : [];
+  return {
+    mode: "evaluate-convergence",
+    year: context?.year || null,
+    place: context?.place || null,
+    grounding: groundingOf(context),
+    placed: convergenceTileSlice(placed),
+    neighbors: neighbors.map((n) => convergenceTileSlice(n)),
+  };
+}
+
 export function buildFastPayload(mode, context = {}) {
   if (mode === "score-pathway") return buildScorePathwayPayload(context);
   if (mode === "assess-feasibility") return buildAssessFeasibilityPayload(context);
+  if (mode === "evaluate-convergence") return buildEvaluateConvergencePayload(context);
   if (mode === "idea-sparks") return buildIdeaSparksPayload(context);
   if (mode === "pose-challenge") return buildPosePayload(context);
   return buildJudgePayload(mode, context);
@@ -386,9 +427,38 @@ function sanitizeDraft(parsed, source) {
   };
 }
 
+function sanitizeEvaluateConvergence(parsed, source, context) {
+  const placedId = context?.placed?.id || null;
+  const nabeIds = new Set(
+    (Array.isArray(context?.neighbors) ? context.neighbors : []).map((n) => n?.id)
+  );
+  const out = [];
+  const raw = Array.isArray(parsed?.convergences) ? parsed.convergences : [];
+  for (const row of raw) {
+    const neighborId = String(row?.neighborId || "");
+    if (!neighborId || (nabeIds.size && !nabeIds.has(neighborId))) continue;
+    const converges = row?.converges === true || row?.converges === "true";
+    let enhancedId = String(row?.enhancedId || placedId || "");
+    if (enhancedId !== placedId && enhancedId !== neighborId) {
+      enhancedId = placedId || neighborId;
+    }
+    out.push({
+      neighborId,
+      converges,
+      enhancedId,
+      title: String(row?.title || "Convergence").slice(0, 80),
+      reason: String(row?.reason || "").slice(0, 400),
+    });
+  }
+  return { source, convergences: out };
+}
+
 export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
   if (mode === "score-pathway") return sanitizeScorePathway(parsed, source);
   if (mode === "assess-feasibility") return sanitizeTiming(parsed, source);
+  if (mode === "evaluate-convergence") {
+    return sanitizeEvaluateConvergence(parsed, source, context);
+  }
   if (mode === "idea-sparks") return sanitizeIdeas(parsed, source, context);
   if (mode === "pose-challenge") return sanitizePose(parsed, source);
   if (mode === "judge-scrutiny-move") return sanitizeJudgeScrutiny(parsed, source);
@@ -411,6 +481,12 @@ export const FAST_EVAL_MODES = {
     userPrefix: "Judge claim timing (JSON state):",
     temperature: 0,
     maxOutputTokens: 200,
+  },
+  "evaluate-convergence": {
+    system: EVALUATE_CONVERGENCE_SYSTEM,
+    userPrefix: "Judge invention-pair convergence (JSON state):",
+    temperature: 0,
+    maxOutputTokens: 400,
   },
   "idea-sparks": {
     system: IDEA_SPARKS_SYSTEM,

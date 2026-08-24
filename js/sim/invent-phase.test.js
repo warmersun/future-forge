@@ -182,6 +182,32 @@ describe("invent-phase", () => {
     assert.equal(pilotLocked.pilot, false);
   });
 
+  it("hex concerns stay inventable and do not open deploy", () => {
+    const summoned = {
+      inventPhase: "invent",
+      concernsSummoned: true,
+      hexBoard: { concernsSummoned: true, tiles: {} },
+      challengePassed: false,
+      deployStage: "none",
+    };
+    assert.equal(deriveInventPhase(summoned), "concerns");
+    assert.equal(isInventContentFrozen(summoned), false);
+    assert.equal(inventPhaseToUiPhase("concerns"), "invent");
+
+    const leakedPass = { ...summoned, challengePassed: true };
+    assert.equal(deriveInventPhase(leakedPass), "concerns");
+
+    const helper = allowedActions({
+      inventPhase: "concerns",
+      isOwner: false,
+      isActive: true,
+    });
+    assert.equal(helper.editBoard, true);
+    assert.equal(helper.editStack, true);
+    assert.equal(helper.pilot, false);
+    assert.equal(helper.faceChallenge, false);
+  });
+
   it("ui phase mapping keeps challenge_locked distinct from live challenge", () => {
     assert.equal(inventPhaseToUiPhase("challenge"), "challenge");
     assert.equal(inventPhaseToUiPhase("challenge_locked"), "challenge_locked");

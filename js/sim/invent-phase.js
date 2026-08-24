@@ -45,11 +45,14 @@ export function deriveInventPhase(f) {
     if (!f.challengePassed) return "challenge_locked";
   }
 
-  // Hex: concerns summoned maps to deploy_ready (post-challenge play)
-  if (f.inventPhase === "concerns" || f.hexBoard?.concernsSummoned || f.concernsSummoned) {
-    if (f.challengePassed || f.concernsSummoned || f.hexBoard?.concernsSummoned) {
-      return "deploy_ready";
-    }
+  // Hex challengers stay on the invent board — never the legacy Pilot bay
+  if (
+    (f.inventPhase === "concerns" ||
+      f.hexBoard?.concernsSummoned ||
+      f.concernsSummoned) &&
+    staged === "none"
+  ) {
+    return "concerns";
   }
 
   if (f.challengePassed) return "deploy_ready";
@@ -68,7 +71,7 @@ export function deriveInventPhase(f) {
  */
 export function isInventContentFrozen(f) {
   const p = deriveInventPhase(f);
-  return p !== "invent";
+  return p !== "invent" && p !== "concerns";
 }
 
 /**
@@ -114,20 +117,15 @@ export function allowedActions(opts = {}) {
     return { ...none, browse: true };
   }
 
-  const edit = isActive && phase === "invent";
-  const boardEdit =
-    isActive &&
-    isOwner &&
-    (phase === "invent" ||
-      phase === "deploy_ready" ||
-      phase === "concerns" ||
-      phase === "scale_ready");
+  const edit = isActive && (phase === "invent" || phase === "concerns");
+  const boardEdit = isActive && (phase === "invent" || phase === "concerns");
   return {
     browse: true,
     editStory: edit,
     editStack: edit,
     editBoard: boardEdit,
-    summonConcerns: isActive && isOwner && phase === "invent",
+    summonConcerns:
+      isActive && isOwner && (phase === "invent" || phase === "concerns"),
     declareHold:
       isActive &&
       isOwner &&
@@ -135,7 +133,9 @@ export function allowedActions(opts = {}) {
     faceChallenge:
       isActive &&
       isOwner &&
-      (phase === "invent" || phase === "challenge_locked"),
+      (phase === "invent" ||
+        phase === "concerns" ||
+        phase === "challenge_locked"),
     fightChallenge: isActive && isOwner && phase === "challenge",
     reopenInvent:
       isActive &&
@@ -330,16 +330,15 @@ export function applyInventPhaseEvent(invent, event, payload = {}) {
       };
     }
     case "summon_concerns": {
-      if (phase !== "invent" && phase !== "challenge_locked") {
+      if (phase !== "invent" && phase !== "challenge_locked" && phase !== "concerns") {
         return { ok: false, error: "cannot_summon", inventPhase: phase };
       }
       return {
         ok: true,
-        inventPhase: "deploy_ready",
+        inventPhase: "concerns",
         patch: {
           inventPhase: "concerns",
           concernsSummoned: true,
-          challengePassed: true,
           challengeLocked: false,
           turnPhase: "act",
           ...(payload.hexBoard ? { hexBoard: payload.hexBoard } : {}),
@@ -401,6 +400,7 @@ export function inventPhaseToUiPhase(inventPhase) {
       return "scaled";
     case "abandoned":
       return "locked";
+    case "concerns":
     case "invent":
     default:
       return "invent";

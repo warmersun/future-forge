@@ -54,6 +54,16 @@ describe("mp-session lobby & start", () => {
     assert.equal(activeSeatId(s), "seat-0");
   });
 
+  it("seeds crisis tiles on each personal hex board", () => {
+    const s = started();
+    for (const id of ["seat-0", "seat-1"]) {
+      const tiles = Object.values(s.invents[id].hexBoard.tiles || {});
+      const crises = tiles.filter((t) => t.kind === "crisis");
+      assert.equal(crises.length, 3, id);
+      assert.ok(s.invents[id].hexBoard.tiles["crisis-local"]);
+    }
+  });
+
   it("open table lists all invents", () => {
     let s = started();
     s = applyMpAction(s, {
@@ -358,6 +368,116 @@ describe("mp-session turns", () => {
     assert.equal(s.place.year, 2027);
     assert.equal(s.invents["seat-0"].year, 2028);
     assert.equal(s.invents["seat-1"].year, 2028);
+  });
+});
+
+describe("mp-session hex board help", () => {
+  function withIdeaTile(board, id = "inv-help") {
+    const next = JSON.parse(JSON.stringify(board));
+    next.tiles[id] = {
+      id,
+      kind: "invention",
+      techId: "ai",
+      name: "Local tutor",
+      howText: "On-device help at the night school",
+      q: null,
+      r: null,
+    };
+    return next;
+  }
+
+  it("active seat can commit idea tiles onto another invent", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: {
+        hexBoard: withIdeaTile(s.invents["seat-0"].hexBoard),
+        targetSeatId: "seat-0",
+      },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.ok(r.session.invents["seat-0"].hexBoard.tiles["inv-help"]);
+    assert.equal(
+      r.session.invents["seat-0"].hexBoard.tiles["inv-help"].name,
+      "Local tutor"
+    );
+  });
+
+  it("helper cannot summon challenger tiles on another invent", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const board = withIdeaTile(s.invents["seat-0"].hexBoard);
+    board.concernsSummoned = true;
+    board.tiles["concern-moloch"] = {
+      id: "concern-moloch",
+      kind: "concern",
+      angle: "moloch",
+      q: 4,
+      r: 2,
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board, targetSeatId: "seat-0" },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "owner_only_challenge");
+  });
+
+  it("owner can summon challenger tiles on own invent", () => {
+    let s = started();
+    const board = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    board.tiles["concern-moloch"] = {
+      id: "concern-moloch",
+      kind: "concern",
+      angle: "moloch",
+      q: 4,
+      r: 2,
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.ok(r.session.invents["seat-0"].hexBoard.tiles["concern-moloch"]);
+  });
+
+  it("helper cannot answer a challenger on another invent", () => {
+    let s = started();
+    const ownerBoard = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    ownerBoard.concernsSummoned = true;
+    ownerBoard.tiles["concern-moloch"] = {
+      id: "concern-moloch",
+      kind: "concern",
+      angle: "moloch",
+      q: 4,
+      r: 2,
+    };
+    s = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: ownerBoard },
+    }).session;
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const helped = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    helped.tiles["concern-moloch"].playerAnswer = "A bonded escrow after proof.";
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: helped, targetSeatId: "seat-0" },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "owner_only_challenge");
   });
 });
 
@@ -1012,6 +1132,21 @@ describe("mp-session pay_ap", () => {
     assert.equal(s.invents["seat-0"].ap, ap0 - 1);
     s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
     assert.equal(s.invents["seat-0"].ap, ap0);
+  });
+});
+
+describe("mp-session pay_budget", () => {
+  it("pays Budget on the active seat", () => {
+    let s = started();
+    const budget0 = s.invents["seat-0"].budget;
+    const r = applyMpAction(s, { type: "pay_budget", payload: { amount: 1 } });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.equal(s.invents["seat-0"].budget, budget0 - 1);
+    s.invents["seat-0"].budget = 0;
+    const broke = applyMpAction(s, { type: "pay_budget", payload: { amount: 1 } });
+    assert.equal(broke.ok, false);
+    assert.equal(broke.error, "no_budget");
   });
 });
 

@@ -413,12 +413,26 @@ export function timingPctToLevel(pct) {
   return "green";
 }
 
+/** Final displayed / gated honesty percent. */
+export const TIMING_PCT_MIN = 1;
+export const TIMING_PCT_MAX = 99;
+
 /**
- * Settled honesty chance for one invention tile, or null if not judged yet.
+ * Clamp a timing percent to the 1–99 band used by HUD and gates.
+ * @param {number|null|undefined} n
+ * @returns {number|null}
+ */
+export function clampTimingPct(n) {
+  if (n == null || Number.isNaN(Number(n))) return null;
+  return Math.max(TIMING_PCT_MIN, Math.min(TIMING_PCT_MAX, Math.round(Number(n))));
+}
+
+/**
+ * AI / heuristic honesty chance before R&D or convergence.
  * @param {object|null|undefined} tile
  * @returns {number|null}
  */
-export function tileTimingPct(tile) {
+export function tileBaseTimingPct(tile) {
   if (!tile || tile.kind !== TILE_KIND.invention) return null;
   if (tile.feasibilityPct != null && !Number.isNaN(Number(tile.feasibilityPct))) {
     return Math.max(0, Math.min(100, Number(tile.feasibilityPct)));
@@ -431,33 +445,141 @@ export function tileTimingPct(tile) {
 }
 
 /**
- * Combined chance for one bonded pathway = product of member chances.
- * @param {object[]} inventions
- * @returns {{ pct: number|null, level: "red"|"yellow"|"green", pending: boolean }}
+ * Sticky honesty multiplier on an invention (default 1).
+ * Prefers `tile.convergenceFactor`; falls back to judged-pair cache for
+ * in-progress boards minted before the field existed.
+ * @param {object|null|undefined} board
+ * @param {string} tileId
  */
-export function pathwayTimingChance(inventions) {
+export function convergenceFactorForTile(board, tileId) {
+  if (!tileId) return 1;
+  const tile = board?.tiles?.[tileId];
+  const sticky = Number(tile?.convergenceFactor);
+  if (tile?.convergenceFactor != null && Number.isFinite(sticky) && sticky > 0) {
+    return sticky;
+  }
+  let f = 1;
+  for (const row of Object.values(board?.convergences || {})) {
+    if (row?.enhancedId === tileId) {
+      const n = Number(row.factor);
+      if (Number.isFinite(n) && n > 0) f *= n;
+    }
+  }
+  return f;
+}
+
+/**
+ * Settled honesty chance for one invention tile, or null if not judged yet.
+ * Uses the tile's sticky convergenceFactor (survives lift). Board is unused
+ * for the bump except as a legacy fallback inside convergenceFactorForTile.
+ * @param {object|null|undefined} tile
+ * @param {object|null} [board]
+ * @returns {number|null}
+ */
+export function tileTimingPct(tile, board = null) {
+  const base = tileBaseTimingPct(tile);
+  if (base == null) return null;
+  const sticky = Number(tile?.convergenceFactor);
+  const fromTile =
+    Number.isFinite(sticky) && sticky > 0 ? sticky : null;
+  const factor =
+    fromTile != null
+      ? fromTile
+      : board
+        ? convergenceFactorForTile(board, tile.id)
+        : 1;
+  return clampTimingPct(base * factor);
+}
+
+/**
+ * Product of R&D factors that edge-touch this invention cluster.
+ * @param {object|null|undefined} board
+ * @param {object[]} inventions
+ */
+export function rdFactorForPathway(board, inventions) {
+  const ids = new Set((inventions || []).map((t) => t?.id).filter(Boolean));
+  if (!ids.size) return 1;
+  let f = 1;
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t.kind !== TILE_KIND.rd) continue;
+    if (t.q == null || t.r == null) continue;
+    const n = Number(t.factor);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const touches = neighborTiles(board, t.id).some(
+      (nb) => nb.kind === TILE_KIND.invention && ids.has(nb.id)
+    );
+    if (touches) f *= n;
+  }
+  return f;
+}
+
+/**
+ * Combined chance for one bonded pathway = product of member chances.
+ * Optional board applies convergences (per tile) then R&D (per cluster).
+ * @param {object[]} inventions
+ * @param {object|null} [board]
+ * @returns {{ pct: number|null, level: "red"|"yellow"|"green", pending: boolean, rdFactor: number }}
+ */
+export function pathwayTimingChance(inventions, board = null) {
   const list = (inventions || []).filter(
     (t) => t && t.kind === TILE_KIND.invention
   );
-  if (!list.length) return { pct: null, level: "red", pending: false };
+  if (!list.length) {
+    return { pct: null, level: "red", pending: false, rdFactor: 1 };
+  }
   const pcts = [];
   let pending = false;
   for (const t of list) {
     if (t.timingPending) pending = true;
-    const p = tileTimingPct(t);
+    const p = tileTimingPct(t, board);
     if (p == null) pending = true;
     else pcts.push(p);
   }
-  if (!pcts.length) return { pct: null, level: "yellow", pending: true };
-  const pct = Math.round(pcts.reduce((acc, p) => acc * (p / 100), 1) * 100);
-  return { pct, level: timingPctToLevel(pct), pending };
+  if (!pcts.length) {
+    return { pct: null, level: "yellow", pending: true, rdFactor: 1 };
+  }
+  const rdFactor = board ? rdFactorForPathway(board, list) : 1;
+  const raw = pcts.reduce((acc, p) => acc * (p / 100), 1) * 100 * rdFactor;
+  const pct = clampTimingPct(raw);
+  return { pct, level: timingPctToLevel(pct), pending, rdFactor };
+}
+
+/**
+ * Offline guess: complementary worlds (split converter) or distinct emTechs.
+ * @param {object} a
+ * @param {object} b
+ */
+export function heuristicConverges(a, b) {
+  if (!a || !b || a.id === b.id) return false;
+  if (a.kind !== TILE_KIND.invention || b.kind !== TILE_KIND.invention) {
+    return false;
+  }
+  const pa = String(a.polarity || "");
+  const pb = String(b.polarity || "");
+  if (pa === "split" || pb === "split") return true;
+  const ta = String(a.techId || "");
+  const tb = String(b.techId || "");
+  return Boolean(ta && tb && ta !== tb);
+}
+
+/**
+ * Which of two adjacent inventions is less ready (usually the newly placed one).
+ * @param {object} placed
+ * @param {object} neighbor
+ */
+export function pickEnhancedId(placed, neighbor) {
+  const pa = tileBaseTimingPct(placed);
+  const pb = tileBaseTimingPct(neighbor);
+  if (pa == null) return placed?.id;
+  if (pb == null) return neighbor?.id;
+  return pa <= pb ? placed.id : neighbor.id;
 }
 
 /**
  * Worst (lowest) on-board pathway product.
  * Empty field: yellow if tray has minted tiles, red if none minted.
  * @param {object|null|undefined} board
- * @returns {{ pct: number|null, level: "red"|"yellow"|"green", pending: boolean, count: number }}
+ * @returns {{ pct: number|null, level: "red"|"yellow"|"green", pending: boolean, count: number, rdFactor: number }}
  */
 export function boardWorstPathwayTiming(board) {
   const pathways = listInventionPathways(board);
@@ -470,16 +592,22 @@ export function boardWorstPathwayTiming(board) {
       level: minted.length ? "yellow" : "red",
       pending: false,
       count: 0,
+      rdFactor: 1,
     };
   }
   let worst = null;
   let pending = false;
   for (const invs of pathways) {
-    const ch = pathwayTimingChance(invs);
+    const ch = pathwayTimingChance(invs, board);
     pending = pending || ch.pending;
     if (ch.pct == null) continue;
     if (!worst || ch.pct < worst.pct) {
-      worst = { pct: ch.pct, level: ch.level, count: invs.length };
+      worst = {
+        pct: ch.pct,
+        level: ch.level,
+        count: invs.length,
+        rdFactor: ch.rdFactor,
+      };
     }
   }
   if (!worst) {
@@ -488,6 +616,7 @@ export function boardWorstPathwayTiming(board) {
       level: "yellow",
       pending: true,
       count: pathways[0]?.length || 0,
+      rdFactor: 1,
     };
   }
   return { ...worst, pending };
@@ -646,6 +775,25 @@ export function pathwayHighlight(board, tileId) {
       originId: tileId,
       inventionIds: invs.map((t) => t.id),
       givenIds,
+    };
+  }
+
+  if (tile.kind === TILE_KIND.rd) {
+    const seeds = neighborTiles(board, tileId).filter(
+      (n) => n.kind === TILE_KIND.invention && n.q != null
+    );
+    const invIds = new Set();
+    const givenIds = new Set();
+    for (const seed of seeds) {
+      for (const inv of inventionComponent(board, seed.id)) invIds.add(inv.id);
+      for (const gid of givensReachedFromInvention(board, seed.id)) {
+        givenIds.add(gid);
+      }
+    }
+    return {
+      originId: tileId,
+      inventionIds: [...invIds],
+      givenIds: [...givenIds],
     };
   }
 

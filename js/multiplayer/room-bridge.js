@@ -6,6 +6,7 @@
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js";
+import { preferIncomingHexBoard } from "../hex/board-state.js";
 import {
   deriveInventPhase,
   inventPhaseToUiPhase,
@@ -130,7 +131,12 @@ export function createRoomBridge() {
     if (!f || f.abandoned) return false;
     const phase = inventPhaseOf(getViewId());
     // Owner may Face from invent or after fail (challenge_locked); resume mid-challenge
-    return phase === "invent" || phase === "challenge_locked" || phase === "challenge";
+    return (
+      phase === "invent" ||
+      phase === "concerns" ||
+      phase === "challenge_locked" ||
+      phase === "challenge"
+    );
   }
 
   /** Owner may open deploy bay when invent is deploy_ready / scale_ready */
@@ -214,6 +220,7 @@ export function createRoomBridge() {
   }
 
   function hydrateSoloState(state, opts = {}) {
+    const prevViewSeatId = state.mp?.viewSeatId;
     const s = snap();
     const m = mp();
     const place = s?.place || m?.place;
@@ -286,7 +293,24 @@ export function createRoomBridge() {
     state.inventionHow = view.inventionHow || "";
     state.inventionImpact = view.inventionImpact || "";
     if (view.hexBoard && typeof view.hexBoard === "object") {
-      state.hexBoard = JSON.parse(JSON.stringify(view.hexBoard));
+      const seatChanged = Boolean(
+        prevViewSeatId && vId && prevViewSeatId !== vId
+      );
+      const takeIncoming = preferIncomingHexBoard(
+        state.hexBoard,
+        view.hexBoard,
+        {
+          forceIncoming: Boolean(opts.forceHexBoard || seatChanged),
+          keepLocal: Boolean(opts.keepLocalHexBoard),
+        }
+      );
+      if (takeIncoming) {
+        try {
+          state.hexBoard = JSON.parse(JSON.stringify(view.hexBoard));
+        } catch {
+          state.hexBoard = view.hexBoard;
+        }
+      }
     }
     state.selectedTechIds = (view.stack || []).map((x) => x.techId);
     state.challengePassed = Boolean(view.challengePassed);

@@ -117,6 +117,15 @@ export function applyAction(sim, action, opts = {}) {
     return { ok: true, events, sim: next };
   }
 
+  if (type === "mint_rd") {
+    if (apOn && (next.ap ?? 0) < 1) return { ok: false, error: "no_ap", sim };
+    if (bwOn && (next.budget ?? 0) < 1) return { ok: false, error: "no_budget", sim };
+    if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
+    if (bwOn) next.budget -= 1;
+    events.push({ type: "mint_rd", ap: next.ap, budget: next.budget });
+    return { ok: true, events, sim: next };
+  }
+
   if (type === "reserve_ai") {
     const cost = action.payload?.reservedAp ?? 1;
     if (apOn && cost > 0 && !spendAp(cost)) return { ok: false, error: "no_ap", sim };

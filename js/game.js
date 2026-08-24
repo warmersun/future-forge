@@ -48,6 +48,7 @@ import {
   createEmptyBoard,
   remainingConcernAngles,
   concernAnglesOnBoard,
+  formatFactor,
 } from "./hex/board-state.js";
 import { boardWorstPathwayTiming } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
@@ -264,6 +265,10 @@ function mpFriendlyError(err) {
     not_active_seat: "Not your turn — wait for the active seat.",
     invent_locked: "This invent is locked (Challenge started or finished).",
     owner_only: "Only the invent owner can reopen it for rework.",
+    owner_only_challenge:
+      "Only this invent's owner can summon challengers.",
+    cannot_change_crisis: "Crisis meters stay with the invent owner.",
+    not_owner: "You can add ideas on this board, but not take that action.",
     already_past_challenge: "This invent already cleared Challenge — open Deploy or reopen invent.",
     not_in_challenge:
       "Not mid-Challenge — combat actions only while facing a challenger on your invent.",
@@ -815,20 +820,29 @@ function reconcileStackFromBoard(nextIds) {
         removeFromLearnOrder(id);
       }
     }
+    const viewStackIds = () =>
+      (hotseatBridge.getSession?.()?.invents?.[hotseatBridge.getViewId?.()]?.stack || []).map(
+        (x) => x.techId
+      );
     for (const id of wanted) {
       if (prev.includes(id) || (state.selectedTechIds || []).includes(id)) continue;
+      if (viewStackIds().includes(id)) continue;
       if (!hotseatBridge.canEditStack?.()) {
         return { ok: false, error: "stack_locked", techId: id };
       }
       const r = hotseatBridge.layerTechOnView(id, techById(id));
       if (!r.ok) {
+        if (r.error === "already_on_stack") continue;
         flashUnaffordableTech(id, r.error);
         return { ok: false, error: r.error, techId: id };
       }
       hotseatBridge.setSession(r.session);
       pushLearnOrder(id);
     }
-    hotseatBridge.hydrateSoloState(state, { global: state.global });
+    hotseatBridge.hydrateSoloState(state, {
+      global: state.global,
+      keepLocalHexBoard: true,
+    });
     state.selectedTechIds = wanted;
     paintAfterStackReconcile();
     return { ok: true };
@@ -947,7 +961,10 @@ function mpHydrateAndRender(opts = {}) {
     const yearBefore = state.year;
     const viewBefore = state.mp?.viewSeatId;
     const marketBeforeId = state.marketNews?.id || null;
-    b.hydrateSoloState(state, { global: state.global });
+    b.hydrateSoloState(state, {
+      global: state.global,
+      keepLocalHexBoard: Boolean(hexWorkshop?.isCreateBusy?.()),
+    });
     reapplyFocusedInventDrafts(drafts);
     // Personal invent calendar / seat switch — re-run feasibility timing for this invent year
     if (state.year !== yearBefore || state.mp?.viewSeatId !== viewBefore) {
@@ -1117,13 +1134,33 @@ function ensureHexWorkshop() {
       return spendContributionAp("judge-challenge");
     },
     apEnabled: () => apEnabled(),
+    budgetWillEnabled: () => budgetWillEnabled(),
+    spendRdMint: () => spendRdMint(),
     flashToast: (msg) => flashToast(msg),
+    canEditBoard: () => {
+      const b = mpBridge();
+      if (!b) return true;
+      return Boolean(b.canEditStack?.());
+    },
+    canSummonChallengers: () => {
+      const b = mpBridge();
+      if (!b) return true;
+      return Boolean(b.canFaceChallenge?.());
+    },
+    canAnswerConcern: () => {
+      const b = mpBridge();
+      if (!b) return true;
+      return Boolean(b.canFaceChallenge?.());
+    },
     commitBoard: (b) => {
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
           roomBridge.send({
             type: "board_commit",
-            payload: { hexBoard: b },
+            payload: {
+              hexBoard: b,
+              targetSeatId: roomBridge.getViewId?.() || roomBridge.myId?.(),
+            },
           });
         } else if (hotseatBridge.isHotseat()) {
           // Hotseat syncs via hydrate push on next action; keep invent hexBoard live
@@ -1164,6 +1201,17 @@ function ensureHexWorkshop() {
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
   });
   return hexWorkshop;
+}
+
+/** Friends/hotseat invents created before hex seed — plant crisis meters if missing. */
+function ensureHexBoardSeededFromMission() {
+  const tiles = Object.values(state.hexBoard?.tiles || {});
+  if (tiles.some((t) => t.kind === "crisis") || !state.mission) return;
+  try {
+    ensureHexWorkshop().seedFromMission(state.mission);
+  } catch (e) {
+    console.warn("[hex board seed]", e);
+  }
 }
 
 /** @type {Map<string, object[]>} */
@@ -2121,6 +2169,7 @@ function enterHotseatPlay(names, mission, global) {
   state.coInventor?.reset?.(false);
   if (state.vision) state.vision.newSession();
   hotseatBridge.hydrateSoloState(state, { global: state.global });
+  ensureHexBoardSeededFromMission();
   // Ensure feature flags match solo workshop
   state.mpLastActiveSeatId = null;
   state.mpTurnNoticePrimed = false;
@@ -2683,6 +2732,7 @@ function enterRoomPlay(client, opts = {}) {
     const me = roomBridge.myId();
     if (me) roomBridge.setViewSeat(me);
     roomBridge.hydrateSoloState(state, { global: state.global });
+    ensureHexBoardSeededFromMission();
 
     state.mpLastActiveSeatId = null;
     state.mpTurnNoticePrimed = false;
@@ -5900,6 +5950,9 @@ function renderFeasibility() {
       const ideas =
         timing.count === 1 ? "1 idea" : `${timing.count} bonded ideas`;
       timingNote = `${n}% honest this year (${ideas})`;
+      if (timing.rdFactor && timing.rdFactor !== 1) {
+        timingNote += ` · ${formatFactor(timing.rdFactor)} R&D`;
+      }
     } else if (inventions.length) {
       timingNote = "Place an idea on the board to check timing";
     } else {
@@ -7074,6 +7127,24 @@ function updateChallengeButton() {
         : "Answer the hard questions →";
     if (hint) {
       hint.textContent = spectatorReason;
+      hint.className = "challenge-ready-hint blocked";
+    }
+    return;
+  }
+
+  const mp = mpBridge();
+  if (mp?.viewingOther?.()) {
+    const ownerName =
+      mp.invent?.(mp.getViewId?.())?.displayName || "the owner";
+    btn.disabled = true;
+    btn.title = `Only ${ownerName} can summon challengers on this invent`;
+    btn.textContent = state.hexBoard?.concernsSummoned
+      ? "The pathway holds →"
+      : midSummon
+        ? `Summon next challenger (${left} left) →`
+        : "Answer the hard questions →";
+    if (hint) {
+      hint.textContent = `You can add idea tiles on ${ownerName}'s board. Only they can ask to be challenged.`;
       hint.className = "challenge-ready-hint blocked";
     }
     return;
@@ -15650,7 +15721,51 @@ function spendContributionAp(mode = "contribution") {
   if (!res.ok) return { ok: false, roomPaid: false };
   renderHud();
   mpSyncFromSolo();
-  return { ok: true, roomPaid: false };
+    return { ok: true, roomPaid: false };
+}
+
+/**
+ * Pay 1 AP + 1 Budget to mint an R&D tile (Lobby-shaped cost).
+ * Room: pay_ap + pay_budget. Solo/hotseat: mint_rd sim action.
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+function spendRdMint() {
+  const apOn = apEnabled();
+  const bwOn = budgetWillEnabled();
+  if (apOn && getSpendableAp() < 1) {
+    return { ok: false, reason: "Not enough AP to mint R&D." };
+  }
+  if (bwOn && (state.budget ?? 0) < 1) {
+    return { ok: false, reason: "Need 1 Budget to mint R&D." };
+  }
+  if (roomBridge.isRoom()) {
+    try {
+      if (apOn) {
+        roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
+        state.ap = Math.max(0, (state.ap ?? 0) - 1);
+        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+      }
+      if (bwOn) {
+        roomBridge.send({ type: "pay_budget", payload: { amount: 1 } });
+        state.budget = Math.max(0, (state.budget ?? 0) - 1);
+      }
+      renderHud();
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: "Could not pay for R&D." };
+    }
+  }
+  const res = dispatchSim("mint_rd");
+  if (!res.ok) {
+    if (res.error === "no_ap") return { ok: false, reason: "Not enough AP to mint R&D." };
+    if (res.error === "no_budget") {
+      return { ok: false, reason: "Need 1 Budget to mint R&D." };
+    }
+    return { ok: false, reason: "Cannot mint R&D now." };
+  }
+  renderHud();
+  mpSyncFromSolo();
+  return { ok: true };
 }
 
 /**
@@ -17942,6 +18057,12 @@ function bind() {
     }
     if (isMpInventSpectator()) {
       flashToast("Not your turn.");
+      return;
+    }
+    if (mpBridge()?.viewingOther?.()) {
+      flashToast(
+        "Only this invent's owner can summon challengers — use the seat tabs to open yours."
+      );
       return;
     }
     // Pathway holds → outcome (required challengers summoned)

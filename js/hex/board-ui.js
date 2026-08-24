@@ -23,12 +23,16 @@ import {
   discardTile,
   tileAt,
   gridFromBoard,
+  neighborTiles,
+  isPortableTile,
+  formatFactor,
 } from "./board-state.js";
-import { pathwayHighlight } from "./evaluate.js";
+import { pathwayHighlight, tileTimingPct } from "./evaluate.js";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
-const ATOMS_INK = "#fb923c";
+const ATOMS_INK = "#f472b6";
+const RD_INK = "#a78bfa";
 const RYG = {
   red: "#ef4444",
   yellow: "#eab308",
@@ -99,6 +103,10 @@ export function createHexBoardUi(opts) {
   let dragStartXY = null;
   /** @type {{ originId: string, inventionIds: string[], givenIds: string[] }|null} */
   let highlight = null;
+  /** @type {{ a: string, b: string }|null} */
+  let pulsePair = null;
+  /** @type {{ a: string, b: string }[]} */
+  let evaluatingPairs = [];
   const gridOpts = {
     size: HEX_BOARD_VIEW.size,
     origin: { ...HEX_BOARD_VIEW.origin },
@@ -204,6 +212,9 @@ export function createHexBoardUi(opts) {
       const stroke = RYG[lv] || RYG.red;
       return { stroke, lamp: true, level: lv };
     }
+    if (p.kind === TILE_KIND.rd) {
+      return { stroke: RD_INK, lamp: false, level: null };
+    }
     if (p.polarity === BITS) return { stroke: BITS_INK, lamp: false, level: null };
     if (p.polarity === ATOMS) return { stroke: ATOMS_INK, lamp: false, level: null };
     if (p.polarity === "split") return { stroke: BITS_INK, lamp: false, level: null };
@@ -230,6 +241,15 @@ export function createHexBoardUi(opts) {
     if (dimmed) g.setAttribute("opacity", "0.28");
     else if (highlight && tileInHighlight(p.id)) g.setAttribute("opacity", "1");
     if (isOrigin) g.classList.add("hex-pathway-origin");
+    if (
+      pulsePair &&
+      (p.id === pulsePair.a || p.id === pulsePair.b)
+    ) {
+      g.classList.add("hex-tile-pulse");
+    }
+    if (evaluatingPairs.some((pair) => pair.a === p.id || pair.b === p.id)) {
+      g.classList.add("hex-tile-evaluating");
+    }
     const clip = `clip-${escapeXml(p.id)}-${Math.round(cx)}-${Math.round(cy)}`;
     const d = hexPath(cx, cy, size);
     if (t.level === "green" || t.level === "yellow") {
@@ -307,7 +327,11 @@ export function createHexBoardUi(opts) {
       );
     }
     const hasBar = p.kind === TILE_KIND.invention;
-    const layout = layoutHexLabel(p.name || "", { size, hasBar, cy });
+    const faceName =
+      p.kind === TILE_KIND.rd
+        ? `R&D ${formatFactor(p.factor)}`
+        : p.name || "";
+    const layout = layoutHexLabel(faceName, { size, hasBar, cy });
     const tspans = layout.lines
       .map(
         (line, i) =>
@@ -323,10 +347,9 @@ export function createHexBoardUi(opts) {
     );
     if (hasBar) {
       const pending = Boolean(p.timingPending);
+      const shown = tileTimingPct(p, board());
       const pct =
-        p.feasibilityPct != null
-          ? Math.max(0, Math.min(100, Number(p.feasibilityPct))) / 100
-          : null;
+        shown != null ? Math.max(0, Math.min(100, Number(shown))) / 100 : null;
       const bw = size * 1.05;
       const bh = 9;
       const bx = cx - bw / 2;
@@ -393,8 +416,23 @@ export function createHexBoardUi(opts) {
         !hlSet || (hlSet.has(bond.a.id) && hlSet.has(bond.b.id));
       const bondOpacity = bondHot ? "1" : "0.2";
       const strokeW = bondHot && hlSet ? "3.2" : "2";
+      const pulse =
+        pulsePair &&
+        ((pulsePair.a === ta.id && pulsePair.b === tb.id) ||
+          (pulsePair.a === tb.id && pulsePair.b === ta.id));
+      const evaluating = evaluatingPairs.some(
+        (pair) =>
+          (pair.a === ta.id && pair.b === tb.id) ||
+          (pair.a === tb.id && pair.b === ta.id)
+      );
+      const bondClass = pulse
+        ? ' class="hex-bond-pulse"'
+        : evaluating
+          ? ' class="hex-bond-evaluating"'
+          : "";
+      const bondW = pulse || evaluating ? "4.2" : strokeW;
       parts.push(
-        `<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${col}" stroke-width="${strokeW}" opacity="${bondOpacity}"/>`
+        `<line${bondClass} x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${col}" stroke-width="${bondW}" opacity="${bondOpacity}"/>`
       );
       parts.push(
         `<rect x="${mx - 18}" y="${my - 7}" width="36" height="14" rx="3" fill="#070b14" stroke="${col}" opacity="${bondOpacity}"/>`
@@ -402,6 +440,27 @@ export function createHexBoardUi(opts) {
       parts.push(
         `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${col}" font-size="9" font-family="system-ui" opacity="${bondOpacity}">${verb}</text>`
       );
+    }
+    // R&D touching an invention — show the rolled factor on the edge
+    for (const t of Object.values(b.tiles || {})) {
+      if (t.kind !== TILE_KIND.rd || t.q == null || t.r == null) continue;
+      for (const n of neighborTiles(b, t.id)) {
+        if (n.kind !== TILE_KIND.invention) continue;
+        const pa = gmath.pixel(t.q, t.r);
+        const pb = gmath.pixel(n.q, n.r);
+        const mx = (pa.x + pb.x) / 2;
+        const my = (pa.y + pb.y) / 2;
+        const label = formatFactor(t.factor);
+        parts.push(
+          `<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${RD_INK}" stroke-width="2.4" opacity="0.9"/>`
+        );
+        parts.push(
+          `<rect x="${mx - 18}" y="${my - 7}" width="36" height="14" rx="3" fill="#070b14" stroke="${RD_INK}"/>`
+        );
+        parts.push(
+          `<text x="${mx}" y="${my + 3}" text-anchor="middle" fill="${RD_INK}" font-size="9" font-family="system-ui">${label}</text>`
+        );
+      }
     }
     svg.innerHTML = parts.join("");
     svg.setAttribute("viewBox", HEX_BOARD_VIEW.viewBox);
@@ -461,7 +520,7 @@ export function createHexBoardUi(opts) {
     }
     const beforeBoard = board();
     const tile = beforeBoard?.tiles?.[id];
-    if (tile && opts.canPlaceInvention) {
+    if (tile && tile.kind === TILE_KIND.invention && opts.canPlaceInvention) {
       const gate = opts.canPlaceInvention(tile);
       if (gate && gate.ok === false) {
         opts.onUnaffordablePlace?.(tile, gate);
@@ -479,7 +538,7 @@ export function createHexBoardUi(opts) {
       const need = res.blockers?.[0]?.need;
       setStatus(
         need === "world"
-          ? "Blue will not dock on orange — worlds must match."
+          ? "Blue will not dock on pink — worlds must match."
           : need === "occupied"
             ? "That hex is taken."
             : "Cannot place there.",
@@ -541,7 +600,7 @@ export function createHexBoardUi(opts) {
         dragMoved = true;
       }
       const overDiscard =
-        tile.kind === TILE_KIND.invention &&
+        isPortableTile(tile) &&
         pointerOverDiscard(ev.clientX, ev.clientY);
       setDiscardHot(overDiscard);
       if (overDiscard) {
@@ -551,7 +610,9 @@ export function createHexBoardUi(opts) {
       const mode = over && !overDiscard ? "hex" : "card";
       // Crisis/concern never become cards — stay hex while dragging
       const effective =
-        tile.kind === TILE_KIND.invention ? mode : "hex";
+        tile.kind === TILE_KIND.invention || tile.kind === TILE_KIND.rd
+          ? mode
+          : "hex";
       setGhostMode(ghost, effective);
       positionGhost(ghost, ev.clientX, ev.clientY, effective);
     };
@@ -566,7 +627,7 @@ export function createHexBoardUi(opts) {
       let placedOrLifted = false;
       if (moved) {
         if (
-          tile.kind === TILE_KIND.invention &&
+          isPortableTile(tile) &&
           pointerOverDiscard(ev.clientX, ev.clientY)
         ) {
           placedOrLifted = discardInvention(id);
@@ -580,7 +641,7 @@ export function createHexBoardUi(opts) {
             placedOrLifted = occupy(id, hex.q, hex.r);
           } else if (
             !fromTray &&
-            tile?.kind === TILE_KIND.invention &&
+            isPortableTile(tile) &&
             tile.q != null &&
             tile.r != null
           ) {
@@ -837,5 +898,17 @@ export function createHexBoardUi(opts) {
     getDisplayedHexSizePx,
     clearHighlight,
     getHighlight: () => highlight,
+    setPulsePair: (a, b) => {
+      pulsePair = a && b ? { a, b } : null;
+      render();
+    },
+    setEvaluatingPairs: (pairs) => {
+      evaluatingPairs = Array.isArray(pairs)
+        ? pairs
+            .filter((p) => p && p.a && p.b)
+            .map((p) => ({ a: String(p.a), b: String(p.b) }))
+        : [];
+      render();
+    },
   };
 }

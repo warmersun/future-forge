@@ -7,10 +7,12 @@ import {
   FAST_EVAL_MODES,
   SCORE_PATHWAY_SYSTEM,
   ASSESS_FEASIBILITY_SYSTEM,
+  EVALUATE_CONVERGENCE_SYSTEM,
   IDEA_SPARKS_SYSTEM,
   POSE_CHALLENGE_SYSTEM,
   GROUNDING_LINE,
   ASSESS_GROUNDING_LINE,
+  CONVERGENCE_GROUNDING_LINE,
   buildFastPayload,
   sanitizeFast,
   isFastEvalMode,
@@ -23,6 +25,7 @@ describe("FAST_EVAL_MODES", () => {
     for (const m of [
       "score-pathway",
       "assess-feasibility",
+      "evaluate-convergence",
       "idea-sparks",
       "pose-challenge",
       "judge-scrutiny-move",
@@ -66,6 +69,9 @@ describe("FAST_EVAL_MODES", () => {
     assert.equal(SCORE_PATHWAY_SYSTEM.includes(GROUNDING_LINE), true);
     assert.equal(IDEA_SPARKS_SYSTEM.includes(GROUNDING_LINE), true);
     assert.equal(POSE_CHALLENGE_SYSTEM.includes(GROUNDING_LINE), true);
+    assert.equal(EVALUATE_CONVERGENCE_SYSTEM.includes(CONVERGENCE_GROUNDING_LINE), true);
+    assert.equal(EVALUATE_CONVERGENCE_SYSTEM.includes(GROUNDING_LINE), false);
+    assert.match(EVALUATE_CONVERGENCE_SYSTEM, /demand loop/i);
     // Regression: kettle-ford "small cargo hoppers" examples must not veto a
     // demonstrated 2026 cooperative 500 kg formation lift (not a contradiction).
     assert.match(ASSESS_FEASIBILITY_SYSTEM, /Omission is not a contradiction/);
@@ -171,6 +177,34 @@ describe("buildFastPayload", () => {
     assert.deepEqual(p.avoidTitles, ["Old Spark"]);
   });
 
+  it("evaluate-convergence payload includes names and tech names", () => {
+    const p = buildFastPayload("evaluate-convergence", {
+      placed: {
+        id: "a",
+        name: "Light pack",
+        techId: "batteries",
+        techName: "Batteries",
+        howText: "High capacity, light cells.",
+      },
+      neighbors: [
+        {
+          id: "b",
+          name: "Clinic drone",
+          techId: "drones",
+          techName: "Drones",
+          howText: "Blood hops.",
+        },
+      ],
+      year: 2026,
+      place: "Portside",
+    });
+    assert.equal(p.placed.name, "Light pack");
+    assert.equal(p.placed.techName, "Batteries");
+    assert.equal(p.neighbors[0].name, "Clinic drone");
+    assert.equal(p.neighbors[0].techName, "Drones");
+    assert.equal(p.neighbors[0].id, "b");
+  });
+
   it("pose payload has no proposals key", () => {
     const p = buildFastPayload("pose-challenge", {
       challengeAngle: "moloch",
@@ -241,6 +275,35 @@ describe("sanitizeFast", () => {
     );
     assert.equal(out.additive, true);
     assert.equal(out.reason, "Keeps the core.");
+    assert.equal(out.proposals, undefined);
+  });
+
+  it("evaluate-convergence keeps pair hits and drops extras", () => {
+    const out = sanitizeFast(
+      "evaluate-convergence",
+      {
+        convergences: [
+          {
+            neighborId: "b",
+            converges: true,
+            enhancedId: "b",
+            title: "Shared grid",
+            reason: "One unblocks the other.",
+            extra: true,
+          },
+          { neighborId: "ghost", converges: true, enhancedId: "ghost" },
+        ],
+        proposals: [],
+        message: "nope",
+      },
+      "ai",
+      { placed: { id: "a" }, neighbors: [{ id: "b" }] }
+    );
+    assert.equal(out.convergences.length, 1);
+    assert.equal(out.convergences[0].neighborId, "b");
+    assert.equal(out.convergences[0].converges, true);
+    assert.equal(out.convergences[0].enhancedId, "b");
+    assert.equal(out.convergences[0].extra, undefined);
     assert.equal(out.proposals, undefined);
   });
 });

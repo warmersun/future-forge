@@ -80,6 +80,7 @@ import {
   fastEvalUserContent,
   sanitizeFast,
 } from "./js/server/fast-eval.mjs";
+import { heuristicConverges } from "./js/hex/evaluate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -1238,6 +1239,39 @@ function localCoInvent({ mode, messages, context }) {
       crisisDelta,
       concerns,
     };
+  }
+
+  if (mode === "evaluate-convergence") {
+    const placed = context.placed || {};
+    const nabes = Array.isArray(context.neighbors) ? context.neighbors : [];
+    const convergences = nabes.map((n) => {
+      const a = {
+        id: placed.id,
+        kind: "invention",
+        techId: placed.techId,
+        polarity: placed.polarity,
+        howText: placed.howText || placed.howText,
+      };
+      const b = {
+        id: n.id,
+        kind: "invention",
+        techId: n.techId,
+        polarity: n.polarity,
+        howText: n.howText || n.howText,
+      };
+      const converges = heuristicConverges(a, b);
+      const na = String(placed.techName || a.techId || "one field");
+      const nb = String(n.techName || b.techId || "the other");
+      return {
+        neighborId: n.id,
+        converges,
+        title: converges ? `${na} × ${nb}`.slice(0, 60) : "",
+        reason: converges
+          ? `Progress in ${na} honestly accelerates ${nb} — better capability, cost, or scale. More or better ${nb} then pulls demand back onto ${na}.`
+          : "",
+      };
+    });
+    return { source: "local", convergences };
   }
 
   if (mode === "complete-picture") {

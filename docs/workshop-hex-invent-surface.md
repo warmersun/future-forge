@@ -75,15 +75,15 @@ Only **invention** tiles speak this language. Their six border segments say whic
 | Border                              | World     | Typical ideas                             |
 | ----------------------------------- | --------- | ----------------------------------------- |
 | All six **blue**                    | bits      | AI, networks, computing, gene sequencing… |
-| All six **orange**                  | atoms     | drones, energy, robots, transport…        |
-| **Split** — left blue, right orange | converter | IoT, 3D print, synbio, AR/VR…             |
+| All six **pink**                    | atoms     | drones, energy, robots, transport…        |
+| **Split** — left blue, right pink   | converter | IoT, 3D print, synbio, AR/VR…             |
 
 
 Two hexes **connect** only if the faces that touch are the same world.
 
 - Blue face to blue face — a bits bond. An AI idea may sit against another bits idea, or against the **left** half of IoT.
-- Orange face to orange face — an atoms bond. A drones idea may sit against another atoms idea, or against the **right** half of IoT.
-- Blue against orange — **refused**. Software does not grab a propeller. That refusal is the lesson.
+- Pink face to pink face — an atoms bond. A drones idea may sit against another atoms idea, or against the **right** half of IoT.
+- Blue against pink — **refused**. Software does not grab a propeller. That refusal is the lesson.
 
 The atoms vs bits worlds fo not apply to crises meter and challenger tiles. Whether a connection makes sense or not is reflected in the evaluation.
 

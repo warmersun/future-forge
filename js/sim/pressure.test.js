@@ -408,6 +408,34 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 2);
   });
 
+  it("mint_rd spends 1 AP + 1 Budget", () => {
+    const s = base();
+    s.budget = 5;
+    s.ap = 3;
+    const r = applyAction(
+      s,
+      { type: "mint_rd" },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.ap, 2);
+    assert.equal(r.sim.budget, 4);
+    const noAp = applyAction(
+      { ...r.sim, ap: 0 },
+      { type: "mint_rd" },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(noAp.ok, false);
+    assert.equal(noAp.error, "no_ap");
+    const noBudget = applyAction(
+      { ...r.sim, budget: 0 },
+      { type: "mint_rd" },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(noBudget.ok, false);
+    assert.equal(noBudget.error, "no_budget");
+  });
+
   it("deploy action spends AP and budget", () => {
     const s = base();
     s.ap = 2;

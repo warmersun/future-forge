@@ -19,7 +19,14 @@ export const TILE_KIND = {
   invention: "invention",
   crisis: "crisis",
   concern: "concern",
+  rd: "rd",
 };
+
+/** Equal-weight R&D mint rolls. */
+export const RD_FACTORS = [0.75, 1, 1.5, 2];
+
+/** Free invention-to-invention acceleration (smaller than a lucky 2× R&D). */
+export const CONVERGENCE_FACTOR = 1.25;
 
 export const CONCERN_ANGLES = ["nature", "moloch", "ethicist", "stakeholder"];
 
@@ -66,6 +73,17 @@ export function createEmptyBoard() {
      * }>}
      */
     pathwayImpacts: {},
+    /**
+     * Already-judged invention pairs. Key = sorted `idA|idB`.
+     * Rows persist after lift so a re-dock does not stack; dropped when a
+     * member is discarded.
+     * @type {Record<string, {
+     *   factor: number,
+     *   title: string,
+     *   reason: string,
+     * }>}
+     */
+    convergences: {},
   };
 }
 
@@ -123,7 +141,64 @@ export function cloneBoard(board) {
         },
       ])
     ),
+    convergences: cloneConvergences(board.convergences),
   };
+}
+
+/**
+ * @param {object|null|undefined} src
+ */
+function cloneConvergences(src) {
+  const out = {};
+  if (!src || typeof src !== "object") return out;
+  for (const [k, row] of Object.entries(src)) {
+    if (!row || typeof row !== "object") continue;
+    out[k] = {
+      enhancedId: String(row.enhancedId || ""),
+      factor: Number(row.factor) || CONVERGENCE_FACTOR,
+      title: String(row.title || "").slice(0, 80),
+      reason: String(row.reason || "").slice(0, 400),
+    };
+  }
+  return out;
+}
+
+/**
+ * Stable pair key for two invention ids.
+ * @param {string} idA
+ * @param {string} idB
+ */
+export function convergencePairKey(idA, idB) {
+  return [String(idA || ""), String(idB || "")].sort().join("|");
+}
+
+/**
+ * Format a multiplier for HUD / tile face (0.75 → "0.75×").
+ * @param {number} factor
+ */
+export function formatFactor(factor) {
+  const n = Number(factor);
+  if (!Number.isFinite(n)) return "1×";
+  const rounded = Math.round(n * 100) / 100;
+  const s = Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  return `${s}×`;
+}
+
+/**
+ * @param {() => number} [rng]
+ * @returns {number}
+ */
+export function rollRdFactor(rng = Math.random) {
+  const i = Math.floor(Number(rng()) * RD_FACTORS.length);
+  return RD_FACTORS[Math.max(0, Math.min(RD_FACTORS.length - 1, i))] ?? 1;
+}
+
+/**
+ * True if the tile can be lifted, discarded, or tray-dragged.
+ * @param {object|null|undefined} tile
+ */
+export function isPortableTile(tile) {
+  return tile?.kind === TILE_KIND.invention || tile?.kind === TILE_KIND.rd;
 }
 
 /**
@@ -224,7 +299,122 @@ export function mintInventionTile(opts = {}) {
     timingForKey: null,
     origin: opts.origin || null,
     lamp: null,
+    /** Sticky honesty multiplier from convergences (default 1). Survives lift. */
+    convergenceFactor:
+      opts.convergenceFactor != null &&
+      Number.isFinite(Number(opts.convergenceFactor)) &&
+      Number(opts.convergenceFactor) > 0
+        ? Number(opts.convergenceFactor)
+        : 1,
   };
+}
+
+/**
+ * Mint an R&D tile (tray unless q/r set). Pays off only while it edge-touches a pathway.
+ * @param {object} [opts]
+ */
+export function mintRdTile(opts = {}) {
+  const factor =
+    opts.factor != null && Number.isFinite(Number(opts.factor))
+      ? Number(opts.factor)
+      : rollRdFactor(opts.rng);
+  const id =
+    opts.id ||
+    `rd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  return {
+    id,
+    kind: TILE_KIND.rd,
+    q: opts.q ?? null,
+    r: opts.r ?? null,
+    polarity: CURVE,
+    name: "R&D",
+    factor,
+    year: Number(opts.year) || 2026,
+    artUrl: null,
+    imagePrompt: null,
+    lamp: null,
+  };
+}
+
+/**
+ * Unplaced R&D tiles (tray).
+ * @param {object|null|undefined} board
+ * @returns {object[]}
+ */
+export function unplacedRdTiles(board) {
+  return Object.values(board?.tiles || {}).filter(
+    (t) => t.kind === TILE_KIND.rd && (t.q == null || t.r == null)
+  );
+}
+
+/**
+ * On-field invention neighbors of a placed tile.
+ * @param {object} board
+ * @param {string} tileId
+ * @returns {object[]}
+ */
+export function inventionNeighbors(board, tileId) {
+  return neighborTiles(board, tileId).filter(
+    (n) => n.kind === TILE_KIND.invention && n.q != null && n.r != null
+  );
+}
+
+/**
+ * Drop judged-pair rows whose inventions are gone (discarded).
+ * Does **not** drop on lift/move — the honesty bump is sticky, and the key
+ * must remain so a later re-dock does not evaluate or multiply again.
+ * @param {object} board
+ */
+export function pruneStaleConvergences(board) {
+  const next = cloneBoard(board);
+  const conv = { ...(next.convergences || {}) };
+  for (const key of Object.keys(conv)) {
+    const [a, b] = String(key).split("|");
+    const ta = next.tiles[a];
+    const tb = next.tiles[b];
+    if (
+      !ta ||
+      !tb ||
+      ta.kind !== TILE_KIND.invention ||
+      tb.kind !== TILE_KIND.invention
+    ) {
+      delete conv[key];
+    }
+  }
+  next.convergences = conv;
+  return next;
+}
+
+/**
+ * Record a convergence for an invention pair and bake the factor onto
+ * both tiles. No-op if this pair was already judged (does not stack).
+ * @param {object} board
+ * @param {string} idA
+ * @param {string} idB
+ * @param {{ enhancedId?: string, factor?: number, title?: string, reason?: string }} row
+ */
+export function putConvergence(board, idA, idB, row) {
+  const next = cloneBoard(board);
+  const key = convergencePairKey(idA, idB);
+  if (next.convergences?.[key]) return next;
+  const factor = Number(row?.factor) || CONVERGENCE_FACTOR;
+  next.convergences = {
+    ...(next.convergences || {}),
+    [key]: {
+      factor,
+      title: String(row?.title || "Convergence").slice(0, 80),
+      reason: String(row?.reason || "").slice(0, 400),
+    },
+  };
+  for (const id of [idA, idB]) {
+    const tile = next.tiles[id];
+    if (tile && tile.kind === TILE_KIND.invention) {
+      const prev = Number(tile.convergenceFactor);
+      const base = Number.isFinite(prev) && prev > 0 ? prev : 1;
+      tile.convergenceFactor = base * factor;
+    }
+  }
+  return next;
 }
 
 /**
@@ -703,7 +893,7 @@ export function discardTile(board, tileId, opts = {}) {
     return { ok: false, board };
   }
   delete next.tiles[tileId];
-  return { ok: true, board: next };
+  return { ok: true, board: pruneStaleConvergences(next) };
 }
 
 /**
@@ -884,10 +1074,43 @@ export function setLampPending(board, ids, on) {
 }
 
 /**
- * Add a tile to the board dict (tray when q/r null).
- * @param {object} board
- * @param {object} tile
+ * True when incoming should replace a local hex board on MP hydrate.
+ * Keeps a richer local board (minted idea tiles, seeded meters) when the
+ * snapshot is a stale subset — Ask-for-ideas races the next WS patch.
+ * @param {object|null|undefined} local
+ * @param {object|null|undefined} incoming
+ * @param {{ forceIncoming?: boolean, keepLocal?: boolean }} [opts]
  */
+export function preferIncomingHexBoard(local, incoming, opts = {}) {
+  if (!incoming || typeof incoming !== "object") return false;
+  if (opts.forceIncoming) return true;
+  if (!local || typeof local !== "object") return true;
+  if (opts.keepLocal) return false;
+  const localTiles = local.tiles || {};
+  const incomingTiles = incoming.tiles || {};
+  const localIds = Object.keys(localTiles);
+  const incomingIds = Object.keys(incomingTiles);
+  if (!localIds.length) return true;
+  // Same tile id in the tray snapshot must not unplace a local field drop.
+  for (const id of localIds) {
+    const lt = localTiles[id];
+    const it = incomingTiles[id];
+    const localPlaced = lt && lt.q != null && lt.r != null;
+    const incomingPlaced = it && it.q != null && it.r != null;
+    if (localPlaced && !incomingPlaced) return false;
+  }
+  const localSet = new Set(localIds);
+  let incomingHasNew = false;
+  for (const id of incomingIds) {
+    if (!localSet.has(id)) {
+      incomingHasNew = true;
+      break;
+    }
+  }
+  if (incomingHasNew) return true;
+  return incomingIds.length >= localIds.length;
+}
+
 export function addTile(board, tile) {
   const next = cloneBoard(board);
   next.tiles[tile.id] = { ...tile };
