@@ -17,6 +17,7 @@ import {
   globalById,
   missionsForGlobal,
   localScenariosForGlobal,
+  SCENARIO_PACK_REV,
   allTechIds,
   techById,
   domainsInStack,
@@ -46,6 +47,7 @@ import {
   techIdsWithUnplacedInventions,
   cloneBoard,
   createEmptyBoard,
+  boardForWire,
   remainingConcernAngles,
   concernAnglesOnBoard,
   formatFactor,
@@ -452,8 +454,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v10: design-challenge story craft for quest scenes (easy first read, not shorter-for-its-own-sake) */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v10";
+/** v12: crisis-meter descriptions on seed packs; drop v11 caches minted without them */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v12";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 
@@ -1155,10 +1157,46 @@ function ensureHexWorkshop() {
     commitBoard: (b) => {
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
+          // #region agent log
+          {
+            const tiles = b?.tiles || {};
+            const art = Object.values(tiles).map((t) => String(t?.artUrl || ""));
+            let boardBytes = 0;
+            try {
+              boardBytes = JSON.stringify(b || {}).length;
+            } catch {
+              boardBytes = -1;
+            }
+            fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Debug-Session-Id": "0655d1",
+              },
+              body: JSON.stringify({
+                sessionId: "0655d1",
+                hypothesisId: "A",
+                location: "game.js:commitBoard",
+                message: "room board_commit about to send",
+                data: {
+                  boardBytes,
+                  tileCount: Object.keys(tiles).length,
+                  artUrlCount: art.filter(Boolean).length,
+                  dataImageCount: art.filter((u) => u.startsWith("data:")).length,
+                  artUrlBytes: art.reduce((n, u) => n + u.length, 0),
+                  artUrlPrefixes: art
+                    .filter(Boolean)
+                    .map((u) => u.slice(0, 24)),
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          }
+          // #endregion
           roomBridge.send({
             type: "board_commit",
             payload: {
-              hexBoard: b,
+              hexBoard: boardForWire(b),
               targetSeatId: roomBridge.getViewId?.() || roomBridge.myId?.(),
             },
           });
@@ -2503,6 +2541,18 @@ function handleRoomPlayEvent(client, evt) {
     renderFeasibility();
     updateChallengeButton();
     applyEndTurnChrome();
+    if (
+      events.some((e) => e?.type === "board_commit") ||
+      evt?.type === "snapshot" ||
+      evt?.type === "hello" ||
+      seatTurnChanged
+    ) {
+      try {
+        ensureHexWorkshop().paint();
+      } catch (e) {
+        console.warn("[room] hex paint", e);
+      }
+    }
   } catch (e) {
     console.warn("[room] light workshop paint", e);
   }
@@ -2901,6 +2951,9 @@ function loadPersistedProgress() {
     localStorage.removeItem("future-forge:scenarioCache:v6");
     localStorage.removeItem("future-forge:scenarioCache:v7");
     localStorage.removeItem("future-forge:scenarioCache:v8");
+    localStorage.removeItem("future-forge:scenarioCache:v9");
+    localStorage.removeItem("future-forge:scenarioCache:v10");
+    localStorage.removeItem("future-forge:scenarioCache:v11");
   } catch {
     /* ignore */
   }
@@ -4551,8 +4604,17 @@ function paintMissionCards(list, { disabled = false } = {}) {
 
 async function ensureScenarios(global, { force = false } = {}) {
   if (!global) return [];
-  // Prefer last cached set (unless user asked for a fresh generation)
-  if (!force && state.scenarioCache[global.id]?.length) {
+  // Prefer last cached set (unless user asked for a fresh generation).
+  // Ignore packs whose ids were minted under a different SCENARIO_PACK_REV.
+  const cachedList = !force && state.scenarioCache[global.id]?.length
+    ? state.scenarioCache[global.id]
+    : null;
+  const cacheRevOk =
+    Array.isArray(cachedList) &&
+    cachedList.every((m) =>
+      String(m?.id || "").endsWith(`-${SCENARIO_PACK_REV}`)
+    );
+  if (cacheRevOk) {
     return state.scenarioCache[global.id].slice(0, SCENARIO_COUNT);
   }
 
@@ -6906,12 +6968,14 @@ async function fetchIdeaSparks(techId, opts = {}) {
 }
 
 async function fetchIdeaImage(idea) {
-  const id = ideaImageId({
-    techId: idea.techId || ideaDeckTechId || idea.id,
-    ideaId: idea.ideaId || idea.id,
-    place: idea.place || state.mission?.place,
-    year: idea.year ?? state.year,
-  });
+  const id =
+    idea.artId ||
+    ideaImageId({
+      techId: idea.techId || ideaDeckTechId || idea.id,
+      ideaId: idea.ideaId || idea.id,
+      place: idea.place || state.mission?.place,
+      year: idea.year ?? state.year,
+    });
   try {
     const body = {
       id,

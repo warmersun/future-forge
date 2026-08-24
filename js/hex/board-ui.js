@@ -479,10 +479,16 @@ export function createHexBoardUi(opts) {
         `${t.name || t.id}. Hover for details, click to highlight pathway.`
       );
       paintTile(g, t, x, y, gmath.size - 2);
-      g.style.cursor = interactive() ? "grab" : "default";
-      g.addEventListener("pointerdown", (e) => startDrag(e, t.id));
+      g.style.cursor = interactive() ? "grab" : "pointer";
+      g.addEventListener("pointerdown", (e) => {
+        if (!interactive()) {
+          opts.onInspect?.(t.id);
+          return;
+        }
+        startDrag(e, t.id);
+      });
       g.addEventListener("pointerenter", () => {
-        if (!interactive() || dragId) return;
+        if (dragId) return;
         opts.onInspect?.(t.id);
       });
       g.addEventListener("pointerleave", () => {
@@ -490,14 +496,13 @@ export function createHexBoardUi(opts) {
         opts.onInspectEnd?.();
       });
       g.addEventListener("focus", () => {
-        if (!interactive()) return;
         opts.onInspect?.(t.id);
       });
       g.addEventListener("keydown", (e) => {
-        if (!interactive()) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          togglePathway(t.id);
+          if (interactive()) togglePathway(t.id);
+          else opts.onInspect?.(t.id);
         }
       });
       svg.appendChild(g);
@@ -505,9 +510,8 @@ export function createHexBoardUi(opts) {
 
     // Click empty board clears highlight
     svg.onclick = (e) => {
-      if (!interactive()) return;
       if (e.target === svg || e.target?.classList?.contains("hex-slot")) {
-        clearHighlight();
+        if (interactive()) clearHighlight();
         opts.onInspectEnd?.();
       }
     };

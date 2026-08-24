@@ -299,7 +299,38 @@ export class RoomClient {
 
   sendAction(action) {
     if (!this.ws || this.ws.readyState !== 1) throw new Error("not_connected");
-    this.ws.send(JSON.stringify({ type: "action", action }));
+    const envelope = { type: "action", action };
+    const raw = JSON.stringify(envelope);
+    // #region agent log
+    {
+      const tiles = action?.payload?.hexBoard?.tiles || {};
+      const art = Object.values(tiles).map((t) => String(t?.artUrl || ""));
+      fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "0655d1",
+        },
+        body: JSON.stringify({
+          sessionId: "0655d1",
+          hypothesisId: "A",
+          location: "client.js:sendAction",
+          message: "ws outbound action",
+          data: {
+            actionType: action?.type || "?",
+            bytes: raw.length,
+            tileCount: Object.keys(tiles).length,
+            artUrlCount: art.filter(Boolean).length,
+            dataImageCount: art.filter((u) => u.startsWith("data:")).length,
+            artUrlBytes: art.reduce((n, u) => n + u.length, 0),
+            hasDataImage: raw.includes("data:image"),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
+    this.ws.send(raw);
   }
 
   /**
@@ -311,12 +342,34 @@ export class RoomClient {
     if (!this.ws || this.ws.readyState !== 1) throw new Error("not_connected");
     const clientActionId =
       payload.clientActionId || `cli-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    this.ws.send(
-      JSON.stringify({
-        type: "request_ai",
-        payload: { ...payload, clientActionId },
-      })
-    );
+    const envelope = {
+      type: "request_ai",
+      payload: { ...payload, clientActionId },
+    };
+    const raw = JSON.stringify(envelope);
+    // #region agent log
+    fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "0655d1",
+      },
+      body: JSON.stringify({
+        sessionId: "0655d1",
+        hypothesisId: "B",
+        location: "client.js:requestAi",
+        message: "ws outbound request_ai",
+        data: {
+          bytes: raw.length,
+          mode: payload.mode || "chat",
+          hasMessages: Array.isArray(payload.messages),
+          hasDataImage: raw.includes("data:image"),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    this.ws.send(raw);
     return clientActionId;
   }
 
@@ -365,21 +418,42 @@ export class RoomClient {
         }
       });
       try {
-        this.ws.send(
-          JSON.stringify({
-            type: "request_ai",
-            payload: {
+        const envelope = {
+          type: "request_ai",
+          payload: {
+            mode: body.mode || "chat",
+            messages: body.messages,
+            context: body.context,
+            clientSessionId: body.clientSessionId || getClientSessionId(),
+            reservedAp: body.reservedAp ?? 1,
+            clientActionId,
+            userLabel: body.userLabel,
+            prompt: body.prompt,
+          },
+        };
+        const raw = JSON.stringify(envelope);
+        // #region agent log
+        fetch("http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "0655d1",
+          },
+          body: JSON.stringify({
+            sessionId: "0655d1",
+            hypothesisId: "B",
+            location: "client.js:requestAiAsync",
+            message: "ws outbound request_ai async",
+            data: {
+              bytes: raw.length,
               mode: body.mode || "chat",
-              messages: body.messages,
-              context: body.context,
-              clientSessionId: body.clientSessionId || getClientSessionId(),
-              reservedAp: body.reservedAp ?? 1,
-              clientActionId,
-              userLabel: body.userLabel,
-              prompt: body.prompt,
+              hasDataImage: raw.includes("data:image"),
             },
-          })
-        );
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        this.ws.send(raw);
       } catch (e) {
         clearTimeout(t);
         off();

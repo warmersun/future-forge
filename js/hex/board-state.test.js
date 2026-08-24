@@ -29,6 +29,8 @@ import {
   deriveBoardProse,
   addTile,
   preferIncomingHexBoard,
+  boardForWire,
+  mergeBoardArt,
   removeUnplacedTiles,
   applyLights,
   setLampPending,
@@ -67,6 +69,50 @@ test("preferIncomingHexBoard keeps a richer local mint over a stale subset", () 
   assert.equal(preferIncomingHexBoard(incoming, local), true);
   assert.equal(preferIncomingHexBoard(local, incoming, { forceIncoming: true }), true);
   assert.equal(preferIncomingHexBoard(incoming, local, { keepLocal: true }), false);
+});
+
+test("boardForWire strips inline data URLs and keeps artId", () => {
+  const board = {
+    tiles: {
+      inv: {
+        id: "inv",
+        kind: "invention",
+        artUrl: "data:image/jpeg;base64,/9j/aaaa",
+        artId: "idea-abc",
+        imagePrompt: "dock crane",
+      },
+      moloch: {
+        id: "concern-moloch",
+        kind: "concern",
+        artUrl: "assets/challengers/moloch.jpg",
+      },
+    },
+  };
+  const wire = boardForWire(board);
+  assert.equal(wire.tiles.inv.artUrl, null);
+  assert.equal(wire.tiles.inv.artId, "idea-abc");
+  assert.equal(wire.tiles.moloch.artUrl, "assets/challengers/moloch.jpg");
+  assert.equal(board.tiles.inv.artUrl.startsWith("data:"), true);
+});
+
+test("mergeBoardArt restores local data URLs onto a stripped wire board", () => {
+  const local = {
+    tiles: {
+      inv: {
+        id: "inv",
+        artUrl: "data:image/jpeg;base64,/9j/local",
+        artId: "idea-abc",
+      },
+    },
+  };
+  const incoming = {
+    tiles: {
+      inv: { id: "inv", artUrl: null, artId: "idea-abc", q: 1, r: 2 },
+    },
+  };
+  const merged = mergeBoardArt(incoming, local);
+  assert.equal(merged.tiles.inv.artUrl, "data:image/jpeg;base64,/9j/local");
+  assert.equal(merged.tiles.inv.q, 1);
 });
 
 test("preferIncomingHexBoard keeps a local field drop over a same-id tray snapshot", () => {

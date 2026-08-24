@@ -722,7 +722,7 @@ export function createHexWorkshop(api) {
         );
         const desc = String(t.description || "").trim();
         if (desc) {
-          parts.push(`<p>${escapeHtml(desc)}</p>`);
+          parts.push(`<p class="hex-tile-popup-scene">${escapeHtml(desc)}</p>`);
         }
         const pressure = api.getPressure?.() || {};
         const winMax = api.getWinMax?.() || {};
@@ -904,15 +904,20 @@ export function createHexWorkshop(api) {
           `<p class="muted">R&D is a gamble: 0.75× can hurt, 2× can rescue a weak combined product. You already paid to mint it.</p>`
         );
         const actions = [];
-        if (t.q != null && t.r != null) {
+        const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
+        if (canEdit && t.q != null && t.r != null) {
           actions.push(
             `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button>`
           );
         }
-        actions.push(
-          `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
-        );
-        parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
+        if (canEdit) {
+          actions.push(
+            `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
+          );
+        }
+        if (actions.length) {
+          parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
+        }
       } else {
         if (t.howText) {
           parts.push(`<p><strong>How it works</strong></p><p>${escapeHtml(t.howText)}</p>`);
@@ -944,15 +949,20 @@ export function createHexWorkshop(api) {
           `<p class="muted">World rim: ${escapeHtml(t.polarity || "?")} (bits left, atoms right).</p>`
         );
         const actions = [];
-        if (t.q != null && t.r != null) {
+        const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
+        if (canEdit && t.q != null && t.r != null) {
           actions.push(
             `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-lift" data-lift-id="${escapeHtml(t.id)}">Lift off board</button>`
           );
         }
-        actions.push(
-          `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
-        );
-        parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
+        if (canEdit) {
+          actions.push(
+            `<button type="button" class="btn btn-ghost btn-sm" id="hex-tile-popup-discard" data-discard-id="${escapeHtml(t.id)}">Throw away</button>`
+          );
+        }
+        if (actions.length) {
+          parts.push(`<p class="hex-tile-popup-actions">${actions.join("")}</p>`);
+        }
       }
       body.innerHTML = parts.join("");
       body.querySelector("#hex-tile-popup-lift")?.addEventListener("click", () => {
@@ -1715,11 +1725,18 @@ export function createHexWorkshop(api) {
       const mintedTitles = [];
       for (const idea of ideas) {
         let artUrl = null;
+        const artId = ideaImageId({
+          techId,
+          ideaId: idea.id,
+          place,
+          year,
+        });
         if (api.fetchIdeaImage) {
           try {
             artUrl = await api.fetchIdeaImage({
               techId,
               ideaId: idea.id,
+              artId,
               place,
               year,
               imagePrompt: idea.imagePrompt || idea.title,
@@ -1734,6 +1751,7 @@ export function createHexWorkshop(api) {
           howText: idea.howText || idea.insertText || idea.blurb || "",
           year: idea.year || year,
           artUrl,
+          artId,
           imagePrompt: idea.imagePrompt || null,
           feasibilityPct: null,
           origin: "sparks",
@@ -1782,12 +1800,15 @@ export function createHexWorkshop(api) {
       const year = api.getYear();
       const place = api.getPlace?.() || "";
       const name = how.split(/[.!?]/)[0].slice(0, 40) || "My idea";
+      const ideaId = `custom-${Date.now()}`;
+      const artId = ideaImageId({ techId, ideaId, place, year });
       let artUrl = null;
       if (api.fetchIdeaImage) {
         try {
           artUrl = await api.fetchIdeaImage({
             techId,
-            ideaId: `custom-${Date.now()}`,
+            ideaId,
+            artId,
             place,
             year,
             imagePrompt: how.slice(0, 400),
@@ -1802,6 +1823,7 @@ export function createHexWorkshop(api) {
         howText: how,
         year,
         artUrl,
+        artId,
         feasibilityPct: null,
         origin: "custom",
       });
@@ -2129,12 +2151,19 @@ export function createHexWorkshop(api) {
           place,
           prose.inventionName
         );
+        const artId = ideaImageId({
+          techId: `challenger-${pickAngle}`,
+          ideaId: `concern-${pickAngle}`,
+          place,
+          year,
+        });
         let artUrl = null;
         if (api.fetchIdeaImage) {
           try {
             artUrl = await api.fetchIdeaImage({
               techId: `challenger-${pickAngle}`,
               ideaId: `concern-${pickAngle}`,
+              artId,
               place,
               year,
               imagePrompt,
@@ -2149,6 +2178,7 @@ export function createHexWorkshop(api) {
           challengeSpeech: speech,
           challengeQuestion: question,
           imagePrompt,
+          artId,
           artUrl,
         };
       })();
@@ -2232,10 +2262,51 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
   }
 
+  let artResolveBusy = false;
+  async function resolveMissingTileArt() {
+    if (artResolveBusy || !api.fetchIdeaImage) return;
+    const b = board();
+    const missing = Object.values(b?.tiles || {}).filter(
+      (t) => t && t.artId && !t.artUrl
+    );
+    if (!missing.length) return;
+    artResolveBusy = true;
+    try {
+      let next = b;
+      let changed = false;
+      for (const t of missing) {
+        let url = null;
+        try {
+          url = await api.fetchIdeaImage({
+            artId: t.artId,
+            imagePrompt: t.imagePrompt,
+            techId: t.techId,
+            ideaId: t.id,
+            kind: t.kind === TILE_KIND.concern ? "challenger" : "idea",
+          });
+        } catch {
+          /* ignore */
+        }
+        if (!url || !next.tiles?.[t.id]) continue;
+        next = cloneBoard(next);
+        next.tiles[t.id].artUrl = url;
+        changed = true;
+      }
+      if (changed) {
+        setBoard(next);
+        ensureUi()?.render();
+        renderTray();
+      }
+    } finally {
+      artResolveBusy = false;
+    }
+  }
+
   function paint() {
     ensureUi()?.render();
     renderTray();
     updateCreatePanel();
+    resolveMissingTileArt();
   }
 
   const EXPAND_LABEL = "Maximize hex board";

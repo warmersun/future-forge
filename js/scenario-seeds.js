@@ -2,8 +2,8 @@
  * Curated local mission angle packs — one quality set per global theme.
  * Used by localScenariosForGlobal / ensureScenarios as the product seed.
  *
- * Regenerated: 2026-08-24T04:42:27.724Z
- * Source: mixed ai=11 local=32
+ * Regenerated: 2026-08-24T05:21:01.340Z
+ * Source: fill-descriptions filled=4 skipped=0
  * Themes: 43
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
  * Prose: design-challenge story craft (hook → mechanism → open challenge); easy first read, not shorter-for-its-own-sake.
@@ -713,7 +713,7 @@ export const SCENARIO_ANGLE_PACKS = {
       scene:
         "Rosa lifts a torn IV bag with a stick before the morning buyers arrive. The bag still holds cloudy fluid. A boy from the next shack already has a line of red along his shin from yesterday’s sort. She washes the cut with water from a jerrycan that smells of plastic and smoke. By noon his fever climbs and he cannot stand the light. The city hospital bags keep coming on the same open truck that dumps household trash. No seal. No manifest. Pickers tear them for scrap plastic and metal because that is the day’s cash. Clinics upstream still pay haulers by weight, not by safe disposal, so the infectious stream keeps riding the cheap route to the lane. Rosa’s cooperative can refuse a load and lose the week’s rice money, or take it and watch more kids spike fevers from the same cuts. Who redesigns the waste path so a living depends on clean hands, not on opening sealed harm?",
       stakeholder: "Rosa, waste-picker cooperative lead",
-      crisisMeters: { local: "Infected Cuts", global: "Waste Dumping", support: "Clinic Access" },
+      crisisMeters: { local: { label: "Infected Cuts", description: "A nick from a torn bag or a needle goes red by evening. Children hide the cuts under rags so they can keep sorting. Fever then walks the lane, and jerrycan water that smells of smoke is all they have to wash it." }, global: { label: "Waste Dumping", description: "Unsealed hospital bags ride the same open truck as kitchen trash. Clinics still pay haulers by the kilo, not by safe disposal. The infectious stream takes the cheap road straight to Dump Edge Lane." }, support: { label: "Clinic Access", description: "When a child cannot stand the light, the city hospital is a long walk and a longer wait. Rosa’s people handled the bags that hospital threw away. They arrive last and leave with little more than a glance." } },
       suggested: ["gene-sequencing", "iot", "ai", "materials", "networks", "drones", "robots"],
       visionTheme: "rebuild-city",
     },
@@ -723,7 +723,7 @@ export const SCENARIO_ANGLE_PACKS = {
       scene:
         "Imam Karim unlocks the courtyard gate before dawn and finds three men already coughing into their sleeves by the ablution trough. The cistern under the lodge is the only water for washing, cooking, and the night prayer rinse. Last week a traveler from the coast slept two nights, left a dry cough, and moved on. Now the bunk room sounds like a broken engine. Karim wants to close the taps and buy tanked water, but the lodge runs on pilgrim fees that barely cover rice and mats. The municipal line stops at the station plaza. Haulers fill the underground tank from mixed sources whenever the price dips, and no one tests what arrives. Men who cannot afford a guesthouse keep coming because the lodge is the trust they know. If Karim turns them away, they sleep on the platform and lose work. If he keeps the cistern open, the cough walks home with every departing guest. Who designs water and welcome so faith hospitality does not become the quiet amplifier of an outbreak?",
       stakeholder: "Imam Karim, lodge warden",
-      crisisMeters: { local: "Cough Spread", global: "Shared Water", support: "Lost Wages" },
+      crisisMeters: { local: { label: "Cough Spread", description: "Before dawn men already cough into their sleeves by the ablution trough. The bunk room rattles all night like a broken engine. Every departing guest carries that sound onto the train and into the next village." }, global: { label: "Shared Water", description: "The cistern under the lodge is the only water for washing, cooking, and the night prayer rinse. Haulers fill it from mixed sources whenever the price dips, and no one tests what arrives. The municipal line stops at the station plaza." }, support: { label: "Lost Wages", description: "Men who cannot afford a guesthouse keep coming because the lodge is the trust they know. If Karim turns them away they sleep on the platform and miss the morning shift. Fees barely cover rice and mats, so closing the taps costs wages they cannot spare." } },
       suggested: ["gene-sequencing", "iot", "ai", "networks", "materials", "computing", "solar"],
       visionTheme: "social-city",
     },
@@ -733,7 +733,7 @@ export const SCENARIO_ANGLE_PACKS = {
       scene:
         "Nia slits a mackerel on the wet board and rinses her knife in the same bucket the boat used at the rail. By mid-morning her stomach twists. Two other women from the association leave the tables early, pale and shaking. The quay has no separate wash line. Ice melt, blood, and bilge water drain into the trough that everyone dips for a quick clean before the buyers shout. Harbor rules still treat rinse water as the boats’ problem, not the market’s. Captains save time by pumping over the side into the shared channel that feeds the gutting boards at low tide. Nia’s association can fine members for dirty knives and lose the morning sale, or keep pace and watch the same gut illness return every hot week. The fish must move before noon or the price collapses. Who redesigns the landing so speed to market does not keep recycling sickness through the same rinse?",
       stakeholder: "Nia, women’s fishers association",
-      crisisMeters: { local: "Gut Illness", global: "Dirty Rinse", support: "Market Days" },
+      crisisMeters: { local: { label: "Gut Illness", description: "Women at the gutting boards double over before the first crate is sold. The same stomach sickness walks Old Quay every hot week. Nia’s association loses hands while the mackerel still wait." }, global: { label: "Dirty Rinse", description: "Ice melt, blood, and bilge drain into one trough everyone dips. Captains pump over the side into the channel that feeds the boards at low tide. The rinse never stays on one boat." }, support: { label: "Market Days", description: "Buyers shout and the price falls after noon. There is no time for a separate wash if the morning sale is to hold. Market day at the landing does not wait for clean knives." } },
       suggested: ["gene-sequencing", "iot", "synbio", "materials", "networks", "ai", "drones"],
       visionTheme: "ocean-city",
     },
@@ -743,7 +743,7 @@ export const SCENARIO_ANGLE_PACKS = {
       scene:
         "Ms. Okonkwo counts empty seats after break and stops at twelve. The children who drank from the yard pump after football are the ones missing. A girl returns with a note: vomiting through the night, no strength for the walk. The pump is the only water the school can offer between lessons. The well under it sits downhill from latrines the township never fully lined. After heavy rain the taste turns metallic and sweet. District maintenance still schedules the school on the same slow circuit as empty lots, so repairs wait while attendance drops. Parents pull healthy siblings too, afraid of whatever rides the handle. Okonkwo can lock the pump and watch concentration fail in the heat, or leave it open and keep sending homes the same sickness. Exam week is three weeks out. Who designs school water so a playground drink stops being the quiet reason desks go empty?",
       stakeholder: "Ms. Okonkwo, head teacher",
-      crisisMeters: { local: "Sick Kids", global: "Bad Well", support: "Class Days" },
+      crisisMeters: { local: { label: "Sick Kids", description: "After break the empty desks belong to the children who drank from the yard pump. Vomiting through the night leaves them too weak for the walk to Maple Primary. Healthy siblings stay home next, because parents fear whatever rides the handle." }, global: { label: "Bad Well", description: "The well under the playground pump sits downhill from latrines the township never fully lined. Heavy rain turns the only school water metallic and sweet. District crews still park Maple Primary on the same slow circuit as empty lots." }, support: { label: "Class Days", description: "Exam week sits three weeks out while attendance thins. Lock the pump and heat steals concentration between lessons. Leave it open and the same sickness keeps sending children home." } },
       suggested: ["iot", "gene-sequencing", "ai", "networks", "materials", "computing", "solar"],
       visionTheme: "learn-city",
     }

@@ -6,7 +6,7 @@
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js";
-import { preferIncomingHexBoard } from "../hex/board-state.js";
+import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js";
 import {
   deriveInventPhase,
   inventPhaseToUiPhase,
@@ -305,10 +305,11 @@ export function createRoomBridge() {
         }
       );
       if (takeIncoming) {
+        const merged = mergeBoardArt(view.hexBoard, state.hexBoard);
         try {
-          state.hexBoard = JSON.parse(JSON.stringify(view.hexBoard));
+          state.hexBoard = JSON.parse(JSON.stringify(merged));
         } catch {
-          state.hexBoard = view.hexBoard;
+          state.hexBoard = merged;
         }
       }
     }

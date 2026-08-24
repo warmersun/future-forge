@@ -12,6 +12,8 @@
  *   node scripts/generate-scenario-seeds.mjs --themes=air,climate
  *   node scripts/generate-scenario-seeds.mjs --local-only
  *   node scripts/generate-scenario-seeds.mjs --dry-run
+ *   node scripts/generate-scenario-seeds.mjs --fill-descriptions
+ *   node scripts/generate-scenario-seeds.mjs --fill-descriptions --themes infectious
  *
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
@@ -53,18 +55,19 @@ const SCENARIO_COUNT = 4;
  *   --themes a --themes b
  * Unknown flags are ignored except a missing value after --themes errors.
  * @param {string[]} argv process.argv.slice(2)
- * @returns {{ localOnly: boolean, dryRun: boolean, themeFilter: string[] | null }}
+ * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, themeFilter: string[] | null }}
  */
 export function parseSeedArgs(argv) {
   const localOnly = argv.includes("--local-only");
   const dryRun = argv.includes("--dry-run");
+  const fillDescriptions = argv.includes("--fill-descriptions");
   /** @type {string[]} */
   const themeIds = [];
   let sawThemesFlag = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--local-only" || a === "--dry-run") continue;
+    if (a === "--local-only" || a === "--dry-run" || a === "--fill-descriptions") continue;
     if (a.startsWith("--themes=")) {
       sawThemesFlag = true;
       themeIds.push(
@@ -98,11 +101,11 @@ export function parseSeedArgs(argv) {
   }
 
   const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
-  return { localOnly, dryRun, themeFilter };
+  return { localOnly, dryRun, fillDescriptions, themeFilter };
 }
 
 const args = process.argv.slice(2);
-const { localOnly, dryRun, themeFilter } = parseSeedArgs(args);
+const { localOnly, dryRun, fillDescriptions, themeFilter } = parseSeedArgs(args);
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -276,6 +279,38 @@ function humanizeMeterKey(key) {
 const CRISIS_ROLES = ["local", "global", "support"];
 
 /**
+ * Split a crisisMeters value (string label or { label, description }) plus optional sibling desc.
+ * @param {unknown} value
+ * @param {unknown} [extraDesc]
+ * @returns {{ label: string, description: string }}
+ */
+function meterLabelDesc(value, extraDesc) {
+  let label = "";
+  let description = typeof extraDesc === "string" ? extraDesc.trim() : "";
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    label = String(value.label ?? value.name ?? "").trim();
+    const nested =
+      value.description ?? value.desc ?? value.blurb ?? value.detail;
+    if (typeof nested === "string" && nested.trim() && !description) {
+      description = nested.trim();
+    }
+  } else if (value != null && value !== false) {
+    label = String(value).trim();
+  }
+  return {
+    label: label.slice(0, 40),
+    description: description.slice(0, 400),
+  };
+}
+
+function packHasMeterDescs(pack) {
+  const cm = pack?.crisisMeters || {};
+  const extra = pack?.crisisMeterDescs || {};
+  const roles = CRISIS_ROLES.filter((r) => meterLabelDesc(cm[r], extra[r]).label);
+  return roles.length > 0 && roles.every((r) => meterLabelDesc(cm[r], extra[r]).description);
+}
+
+/**
  * Extract crisisMeters { local, global, support } labels from AI / legacy scenario JSON.
  * @returns {Record<string, string>}
  */
@@ -347,20 +382,15 @@ function extractCrisisMeterDescs(raw) {
   const p = raw?.pressure;
   if (cm && typeof cm === "object" && !Array.isArray(cm)) {
     for (const role of CRISIS_ROLES) {
-      const v = cm[role];
-      if (v && typeof v === "object" && typeof v.description === "string") {
-        const d = v.description.trim().slice(0, 400);
-        if (d) descs[role] = d;
-      }
+      const { description } = meterLabelDesc(cm[role]);
+      if (description) descs[role] = description;
     }
   }
   if (p && typeof p === "object" && !Array.isArray(p)) {
     for (const role of CRISIS_ROLES) {
       if (descs[role]) continue;
-      const d = p[role]?.description;
-      if (typeof d === "string" && d.trim()) {
-        descs[role] = d.trim().slice(0, 400);
-      }
+      const { description } = meterLabelDesc(p[role]);
+      if (description) descs[role] = description;
     }
   }
   if (raw?.crisisMeterDescs && typeof raw.crisisMeterDescs === "object") {
@@ -578,6 +608,39 @@ async function aiPackForTheme(client, g) {
     }
   }
 
+  if (!packs.every(packHasMeterDescs)) {
+    process.stdout.write("desc-retry… ");
+    const missing = packs
+      .map((p, i) => (packHasMeterDescs(p) ? null : i))
+      .filter((i) => i != null);
+    const descFix =
+      "Each present pressure role MUST include description: 1-3 everyday sentences of place-specific strain (not the generic local/global/support lecture).";
+    const repairPayload = {
+      ...payload,
+      seedMissions: packs.map((p, i) => ({
+        title: p.title,
+        place: (p.places && p.places[0]) || "",
+        stakeholder: p.stakeholder,
+        sceneDraft: p.scene,
+        crisisMeters: p.crisisMeters,
+        crisisMeterDescs: p.crisisMeterDescs || {},
+        needsDescriptionFix: missing.includes(i),
+        suggested: p.suggested,
+        visionTheme: p.visionTheme,
+      })),
+      conversation: [
+        { role: "user", content: "[Generate Quests]" },
+        { role: "user", content: descFix },
+      ],
+    };
+    text = await callScenarioModel(client, repairPayload, descFix);
+    list = parseScenarioList(text);
+    if (list.length >= 2) {
+      const next = list.slice(0, SCENARIO_COUNT).map((raw) => normalizeScenario(raw, g.id));
+      if (next.some(packHasMeterDescs)) packs = next;
+    }
+  }
+
   return packs;
 }
 
@@ -588,13 +651,13 @@ function jsString(s) {
 function packToJs(pack, indent = "    ") {
   const cm = pack.crisisMeters || {};
   const descs = pack.crisisMeterDescs || {};
-  const meterParts = CRISIS_ROLES.filter((r) => cm[r])
+  const meterParts = CRISIS_ROLES.filter((r) => meterLabelDesc(cm[r], descs[r]).label)
     .map((r) => {
-      const d = typeof descs[r] === "string" ? descs[r].trim() : "";
-      if (d) {
-        return `${r}: { label: ${jsString(cm[r])}, description: ${jsString(d)} }`;
+      const { label, description } = meterLabelDesc(cm[r], descs[r]);
+      if (description) {
+        return `${r}: { label: ${jsString(label)}, description: ${jsString(description)} }`;
       }
-      return `${r}: ${jsString(cm[r])}`;
+      return `${r}: ${jsString(label)}`;
     })
     .join(", ");
   const sug = (pack.suggested || []).map((k) => jsString(k)).join(", ");
@@ -678,6 +741,117 @@ async function loadExistingPacks() {
   }
 }
 
+async function fillPackMeterDescs(client, g, pack) {
+  if (packHasMeterDescs(pack)) return pack;
+  const cm = pack.crisisMeters || {};
+  const extra = { ...(pack.crisisMeterDescs || {}) };
+  /** @type {Record<string, string>} */
+  const labels = {};
+  /** @type {string[]} */
+  const missing = [];
+  for (const r of CRISIS_ROLES) {
+    const { label, description } = meterLabelDesc(cm[r], extra[r]);
+    if (!label) continue;
+    labels[r] = label;
+    if (!description) missing.push(r);
+  }
+  if (!missing.length) return pack;
+
+  const extraUser =
+    "Write missing crisis-meter descriptions for this existing quest. " +
+    "Return JSON only with keys " +
+    JSON.stringify(missing) +
+    '. Each value is 1-3 everyday sentences of place-specific strain (same voice as the scene), not a generic local/global/support lecture. Example: { "local": "…", "global": "…", "support": "…" }';
+  const payload = {
+    mode: "fill-meter-descriptions",
+    globalTheme: { id: g.id, title: g.title },
+    quest: {
+      title: pack.title,
+      place: (pack.places && pack.places[0]) || "",
+      stakeholder: pack.stakeholder,
+      scene: pack.scene,
+      labels,
+      missingRoles: missing,
+    },
+  };
+  const text = await callScenarioModel(client, payload, extraUser);
+  const parsed = extractJson(text);
+  const src = parsed?.descriptions && typeof parsed.descriptions === "object" ? parsed.descriptions : parsed;
+  /** @type {Record<string, string>} */
+  const crisisMeters = {};
+  /** @type {Record<string, string>} */
+  const crisisMeterDescs = { ...extra };
+  for (const r of CRISIS_ROLES) {
+    const { label, description } = meterLabelDesc(cm[r], extra[r]);
+    if (!label) continue;
+    crisisMeters[r] = label;
+    if (description) crisisMeterDescs[r] = description;
+  }
+  if (src && typeof src === "object") {
+    for (const r of missing) {
+      const d = src[r];
+      if (typeof d === "string" && d.trim()) {
+        crisisMeterDescs[r] = d.trim().slice(0, 400);
+      }
+    }
+  }
+  return {
+    ...pack,
+    crisisMeters,
+    ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
+  };
+}
+
+async function fillMissingMeterDescriptions(client, themes) {
+  console.log("Fill-descriptions mode: keeping scenes, adding missing crisisMeters.description");
+  const packsByTheme = await loadExistingPacks();
+  let filled = 0;
+  let skipped = 0;
+  for (let i = 0; i < themes.length; i++) {
+    const g = themes[i];
+    const packs = packsByTheme[g.id];
+    if (!Array.isArray(packs) || !packs.length) {
+      console.log(`[${i + 1}/${themes.length}] ${g.id}… skip (no packs)`);
+      skipped += 1;
+      continue;
+    }
+    process.stdout.write(`[${i + 1}/${themes.length}] ${g.id}… `);
+    const next = [];
+    let themeFilled = 0;
+    for (const pack of packs) {
+      if (packHasMeterDescs(pack)) {
+        next.push(pack);
+        continue;
+      }
+      const updated = await fillPackMeterDescs(client, g, pack);
+      next.push(updated);
+      if (packHasMeterDescs(updated)) themeFilled += 1;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    packsByTheme[g.id] = next;
+    filled += themeFilled;
+    console.log(`filled ${themeFilled}/${packs.length}`);
+  }
+
+  const meta = {
+    generatedAt: new Date().toISOString(),
+    source: `fill-descriptions filled=${filled} skipped=${skipped}`,
+  };
+  const text = writeSeedsFile(packsByTheme, meta);
+  if (dryRun) {
+    console.log("\n--dry-run: not writing file.");
+    return;
+  }
+  if (fs.existsSync(OUT)) {
+    const bak = OUT.replace(/\.js$/, `.bak-${Date.now()}.js`);
+    fs.copyFileSync(OUT, bak);
+    console.log(`Backup: ${path.relative(ROOT, bak)}`);
+  }
+  fs.writeFileSync(OUT, text);
+  console.log(`Wrote ${path.relative(ROOT, OUT)}`);
+  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v12).");
+}
+
 async function main() {
   if (themeFilter) {
     const known = new Set(GLOBALS.map((g) => g.id));
@@ -711,6 +885,14 @@ async function main() {
     }
   } else {
     console.log("Local-only mode.");
+  }
+
+  if (fillDescriptions) {
+    if (!client) {
+      throw new Error("--fill-descriptions requires SuperGrok session or FF_XAI_API_KEY");
+    }
+    await fillMissingMeterDescriptions(client, themes);
+    return;
   }
 
   // When filtering themes, merge into existing packs so we don't wipe the file
@@ -788,7 +970,7 @@ async function main() {
   fs.writeFileSync(OUT, text);
   console.log(`Wrote ${path.relative(ROOT, OUT)}`);
   console.log(`Done. AI=${aiOk} local=${localOk} fail=${fail}`);
-  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v10).");
+  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v12).");
 }
 
 const isMain =

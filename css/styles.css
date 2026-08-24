@@ -9854,6 +9854,16 @@ body.hex-board-expanded {
   margin: 0 0 0.45rem;
 }
 
+.hex-tile-popup-scene {
+  margin: 0.55rem 0 0.75rem;
+  padding: 0.35rem 0 0.35rem 0.7rem;
+  border-left: 3px solid rgba(251, 191, 36, 0.75);
+  color: #f8fafc;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .hex-tile-popup-actions {
   display: flex;
   flex-wrap: wrap;

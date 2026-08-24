@@ -38,6 +38,7 @@ import {
   seedCrisisTiles,
   createEmptyBoard,
   cloneBoard,
+  boardForWire,
 } from "../hex/board-state.js";
 
 const MAX_PLAYERS = 6;
@@ -138,6 +139,7 @@ export function publicMpState(session) {
           ...f,
           stack: (f.stack || []).map((x) => ({ ...x })),
           techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
+          hexBoard: f.hexBoard ? boardForWire(f.hexBoard) : f.hexBoard,
         },
       ])
     ),
@@ -446,7 +448,7 @@ function cloneInvent(f) {
     ...f,
     stack: (f.stack || []).map((x) => ({ ...x })),
     techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
-    hexBoard: f.hexBoard ? cloneBoard(f.hexBoard) : createEmptyBoard(),
+    hexBoard: f.hexBoard ? boardForWire(f.hexBoard) : createEmptyBoard(),
   };
 }
 
@@ -828,7 +830,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       if (!gate.ok) return { ok: false, error: gate.error, session };
     }
     if (payload.hexBoard && typeof payload.hexBoard === "object") {
-      target.hexBoard = cloneBoard(payload.hexBoard);
+      target.hexBoard = boardForWire(payload.hexBoard);
       target.concernsSummoned = Boolean(target.hexBoard.concernsSummoned);
       // Stack follows placed invention tiles on the hex field
       try {

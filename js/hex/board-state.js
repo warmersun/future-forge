@@ -292,6 +292,7 @@ export function mintInventionTile(opts = {}) {
     howText: String(opts.howText || "").slice(0, 4000),
     year: Number(opts.year) || 2026,
     artUrl: opts.artUrl || null,
+    artId: opts.artId || null,
     imagePrompt: opts.imagePrompt || null,
     feasibilityPct: opts.feasibilityPct ?? null,
     timingLevel: opts.timingLevel ?? null,
@@ -518,6 +519,7 @@ export function mintConcernTiles(byAngle = null) {
       lampPending: false,
       lampEvalKey: null,
       artUrl: enrich.artUrl || null,
+      artId: enrich.artId || null,
       imagePrompt: enrich.imagePrompt || null,
       challengeSpeech: speech ? String(speech).slice(0, 1200) : null,
       challengeQuestion: question ? String(question).slice(0, 500) : null,
@@ -1082,6 +1084,45 @@ export function setLampPending(board, ids, on) {
  * @param {object|null|undefined} incoming
  * @param {{ forceIncoming?: boolean, keepLocal?: boolean }} [opts]
  */
+/** True when art is an inline data URL (too large for room WebSockets). */
+export function isInlineArtUrl(url) {
+  return String(url || "").startsWith("data:");
+}
+
+/**
+ * Clone a board for room sync — drop inline image payloads, keep artId.
+ * Asset paths and http(s) URLs stay (they are small).
+ * @param {object|null|undefined} board
+ */
+export function boardForWire(board) {
+  const next = cloneBoard(board);
+  for (const t of Object.values(next.tiles || {})) {
+    if (t && isInlineArtUrl(t.artUrl)) t.artUrl = null;
+  }
+  return next;
+}
+
+/**
+ * Restore local artUrl/artId onto an incoming board when the wire stripped them.
+ * @param {object|null|undefined} incoming
+ * @param {object|null|undefined} local
+ */
+export function mergeBoardArt(incoming, local) {
+  if (!incoming || typeof incoming !== "object") return incoming;
+  const next = cloneBoard(incoming);
+  const loc = local?.tiles || {};
+  for (const [id, t] of Object.entries(next.tiles || {})) {
+    if (!t) continue;
+    const prev = loc[id];
+    if (!prev) continue;
+    if ((!t.artUrl || isInlineArtUrl(t.artUrl)) && prev.artUrl) {
+      t.artUrl = prev.artUrl;
+    }
+    if (!t.artId && prev.artId) t.artId = prev.artId;
+  }
+  return next;
+}
+
 export function preferIncomingHexBoard(local, incoming, opts = {}) {
   if (!incoming || typeof incoming !== "object") return false;
   if (opts.forceIncoming) return true;
