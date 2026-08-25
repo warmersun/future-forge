@@ -510,3 +510,57 @@ export async function upsertDailyScore(input, betterFn) {
     client.release();
   }
 }
+
+/**
+ * @param {string} clerkUserId
+ */
+export async function listAchievements(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT code, run_id, unlocked_at FROM achievements
+     WHERE clerk_user_id = $1 ORDER BY unlocked_at ASC`,
+    [uid]
+  );
+  return r.rows.map((row) => ({
+    code: String(row.code),
+    runId: row.run_id,
+    unlockedAt: row.unlocked_at,
+  }));
+}
+
+/**
+ * @param {string} clerkUserId
+ * @param {string[]} codes
+ * @param {string|null} [runId]
+ */
+export async function insertAchievements(clerkUserId, codes, runId = null) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  const list = (codes || []).filter(Boolean);
+  if (!db || !uid || !list.length) return { inserted: 0 };
+  const r = await db.query(
+    `INSERT INTO achievements (clerk_user_id, code, run_id)
+     SELECT $1, x, $3
+     FROM unnest($2::text[]) AS x
+     ON CONFLICT DO NOTHING`,
+    [uid, list, runId]
+  );
+  return { inserted: r.rowCount || 0 };
+}
+
+/**
+ * @param {string} clerkUserId
+ * @returns {Promise<string[]>}
+ */
+export async function listUserDailyPeriods(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT period FROM daily_scores WHERE clerk_user_id = $1`,
+    [uid]
+  );
+  return r.rows.map((row) => String(row.period));
+}

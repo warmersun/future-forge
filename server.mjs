@@ -89,6 +89,9 @@ import {
   getRunForUser,
   listDailyScores,
   upsertDailyScore,
+  listAchievements,
+  insertAchievements,
+  listUserDailyPeriods,
 } from "./js/server/db.mjs";
 import {
   cloudWriteGate,
@@ -107,7 +110,9 @@ import {
   rankBoard,
   DAILY_SALT,
   WEEK_SALT,
+  isoWeekPeriod,
 } from "./js/server/daily.mjs";
+import { awardForRun, publicAchievement, countHoldsInWeek } from "./js/server/achievements.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -2361,6 +2366,33 @@ async function resolveOfficialDaily(dateRaw, opts = {}) {
   return { period, questId: questId || null, tile };
 }
 
+async function grantCloudAchievements(clerkUserId, run, extra = {}) {
+  if (!dbEnabled() || !clerkUserId || !run) return [];
+  try {
+    const have = await listAchievements(clerkUserId);
+    const periods = await listUserDailyPeriods(clerkUserId);
+    const week = isoWeekPeriod(new Date());
+    const codes = awardForRun(
+      {
+        outcome: run.outcome,
+        kind: run.kind,
+        techIds: run.techIds,
+        challengerCount: extra.challengerCount,
+      },
+      {
+        already: have.map((h) => h.code),
+        sponsored: Boolean(extra.sponsored),
+        dailyHoldsThisWeek: countHoldsInWeek(periods, week, isoWeekPeriod),
+      }
+    );
+    if (codes.length) await insertAchievements(clerkUserId, codes, extra.runId || run.id || null);
+    return codes.map((c) => publicAchievement(c)).filter(Boolean);
+  } catch (e) {
+    console.warn("[achievements]", e?.message || e);
+    return [];
+  }
+}
+
 function findQuestTile(pack, id) {
   if (!id || !pack) return null;
   if (pack.byId?.has(id)) return pack.byId.get(id);
@@ -3204,6 +3236,27 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (
+    req.method === "GET" &&
+    (req.url === "/api/me/achievements" || req.url?.startsWith("/api/me/achievements?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const rows = await listAchievements(gate.userId);
+      return sendJson(res, 200, {
+        ok: true,
+        achievements: rows.map((r) => publicAchievement(r.code, r.unlockedAt)).filter(Boolean),
+      });
+    } catch (e) {
+      console.warn("[cloud db] achievements", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
+    }
+  }
+
+  if (
     req.method === "POST" &&
     (req.url === "/api/me/import" || req.url?.startsWith("/api/me/import?"))
   ) {
@@ -3277,11 +3330,17 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: "invalid_run" });
       }
       const result = await insertRun({ clerkUserId: gate.userId, run });
+      const unlocked = await grantCloudAchievements(gate.userId, run, {
+        runId: result.id,
+        sponsored: Boolean(body?.sponsored),
+        challengerCount: body?.challengerCount,
+      });
       return sendJson(res, 200, {
         ok: true,
         stored: result.stored,
         id: result.id || null,
         questId: result.questId || run.questId,
+        unlocked,
       });
     } catch (e) {
       console.warn("[cloud db] insertRun", e?.message || e);

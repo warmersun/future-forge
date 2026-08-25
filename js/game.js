@@ -3101,11 +3101,19 @@ function postCloudRun(run) {
   void apiFetch("/api/me/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(run),
+    body: JSON.stringify({
+      ...run,
+      sponsored: Boolean(state.mission?.sponsorName),
+      challengerCount: GAME.challengerCount,
+    }),
   })
     .then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.id) state.cloudRunId = data.id;
+      if (res.ok && Array.isArray(data.unlocked) && data.unlocked.length) {
+        flashToast(data.unlocked.map((u) => u.title).filter(Boolean).join(" · "));
+        void loadAchievementsStrip();
+      }
     })
     .catch(() => {
       /* unsigned cache still holds */
@@ -3419,8 +3427,33 @@ function renderTitleCtas() {
   }
 }
 
+async function loadAchievementsStrip() {
+  const el = $("#cloud-achievements-strip");
+  if (!el) return;
+  if (!isClerkSignedIn()) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/achievements");
+    const data = await res.json().catch(() => ({}));
+    const list = res.ok && Array.isArray(data.achievements) ? data.achievements : [];
+    if (!list.length) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = list.map((a) => a.title).join(" · ");
+  } catch {
+    el.hidden = true;
+  }
+}
+
 function renderTitleMeta() {
   renderTitleCtas();
+  void loadAchievementsStrip();
   if (state.screen === "quest-log") void loadQuestLog();
   // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {

@@ -62,6 +62,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
 | [**D1**](#D1) Daily hold board | `GET /api/daily`, `POST /api/daily/submit`, `GET /api/daily/board` |
 | [**D2**](#D2) Seasonal / weekly board | `GET /api/weekly` + `period=YYYY-Www` on `daily_scores` |
+| [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -78,7 +79,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
 | [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
-| [**C2**](#C2) Achievements | Neon + rules file on run complete |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
 | [**E1**](#E1) Public inventor page (in-game) | Neon profile row; marketing URL is **todo** until a host |
 | [**E2**](#E2) Streaks | derived from `daily_scores` |
@@ -188,7 +188,7 @@ Write on start and on outcome (the same moment we write `STORAGE_SOLVED` / run r
 Do **not** upload full hex boards in v1 unless we need Continue ([C3](#C3)). A log row is enough for “what I took.”
 
 <a id="C2"></a>
-### C2. Achievements — **ready**
+### C2. Achievements — **implemented**
 
 **Idea.** Consumer badges, not transcripts. *Held a pathway. Held three Dailies in a week. Used a converter to dock bits to atoms. Summoned all four challengers. Invented on a sponsored spotlight. First Friends hold.* Flavor in the practice’s language.
 
