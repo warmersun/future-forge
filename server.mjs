@@ -17,7 +17,9 @@ import {
   allTechIds,
   VISION_THEME_IDS,
   GAME,
+  GLOBALS,
 } from "./js/data.js";
+
 import {
   buildWorldCard,
   resolveShot,
@@ -71,6 +73,7 @@ import {
 } from "./js/server/clerk-auth.mjs";
 import {
   applyCatalogGate,
+  publicCatalogTile,
   prepareTutorContext,
   questIdFromContext,
 } from "./js/server/cloud-gate.mjs";
@@ -83,6 +86,9 @@ import {
   insertRun,
   listRuns,
   startRun,
+  getRunForUser,
+  listDailyScores,
+  upsertDailyScore,
 } from "./js/server/db.mjs";
 import {
   cloudWriteGate,
@@ -90,6 +96,15 @@ import {
   sanitizeLastRun,
 } from "./js/server/cloud-save.mjs";
 import { parseRunsQuery } from "./js/server/quest-log.mjs";
+import {
+  dailyPeriod,
+  dailyPoolFromTiles,
+  pickFromPool,
+  hashSeed,
+  parseDailySubmit,
+  isBetterScore,
+  rankBoard,
+} from "./js/server/daily.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -2312,6 +2327,34 @@ async function loadMergedQuestTiles(opts = {}) {
   };
 }
 
+async function resolveOfficialDaily(dateRaw) {
+  const period = dailyPeriod(dateRaw);
+  const pack = await loadMergedQuestTiles();
+  const pool = dailyPoolFromTiles(pack.quests);
+  let tile = null;
+  let questId = null;
+  if (pool.length) {
+    tile = pickFromPool(pool, period);
+    questId = String(tile?.id || tile?.mission?.id || "");
+  } else if (GLOBALS.length) {
+    const h = hashSeed(`warmer-sun-daily:${period}`);
+    const g = GLOBALS[h % GLOBALS.length];
+    const list = localScenariosForGlobal(g, { count: 4, salt: (h >>> 8) % 1000 }) || [];
+    const mission = list.length ? list[(h >>> 16) % list.length] : null;
+    if (mission) {
+      questId = String(mission.id);
+      tile = {
+        id: questId,
+        title: mission.title,
+        place: mission.place,
+        mission: { ...mission, source: "daily" },
+        access: "account",
+      };
+    }
+  }
+  return { period, questId: questId || null, tile };
+}
+
 function findQuestTile(pack, id) {
   if (!id || !pack) return null;
   if (pack.byId?.has(id)) return pack.byId.get(id);
@@ -3240,6 +3283,93 @@ const server = http.createServer(async (req, res) => {
         ok: false,
         error: e?.status === 400 ? "invalid_run" : "run_failed",
       });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/daily" || req.url?.startsWith("/api/daily?"))) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const resolved = await resolveOfficialDaily(url.searchParams.get("date"));
+      if (!resolved.questId || !resolved.tile) {
+        return sendJson(res, 404, { ok: false, error: "no_daily" });
+      }
+      const tile = applyCatalogGate(resolved.tile, ident);
+      return sendJson(res, 200, {
+        ok: true,
+        date: resolved.period,
+        period: resolved.period,
+        questId: resolved.questId,
+        tile: publicCatalogTile(tile),
+      });
+    } catch (e) {
+      console.warn("[daily]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "daily_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/daily/board" || req.url?.startsWith("/api/daily/board?"))
+  ) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const period = dailyPeriod(url.searchParams.get("date"));
+      const ident = await authenticateClerkRequest(req);
+      const listed = await listDailyScores(period);
+      const board = rankBoard(listed.rows || [], {
+        userId: ident.signedIn ? ident.userId : null,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        date: period,
+        period,
+        top: board.top,
+        you: board.you,
+      });
+    } catch (e) {
+      console.warn("[daily board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/daily/submit" || req.url?.startsWith("/api/daily/submit?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const resolved = await resolveOfficialDaily(body.date || body.period);
+      const parsed = parseDailySubmit(body, {
+        expectedQuestId: resolved.questId,
+        period: resolved.period,
+      });
+      if (!parsed.ok) {
+        return sendJson(res, 400, { ok: false, error: parsed.error });
+      }
+      const owned = await getRunForUser(gate.userId, parsed.row.runId);
+      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
+        return sendJson(res, 400, { ok: false, error: "run_required" });
+      }
+      const result = await upsertDailyScore(
+        { ...parsed.row, clerkUserId: gate.userId },
+        isBetterScore
+      );
+      return sendJson(res, 200, {
+        ok: true,
+        stored: Boolean(result.stored),
+        kept: Boolean(result.kept),
+        period: resolved.period,
+      });
+    } catch (e) {
+      console.warn("[daily submit]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
     }
   }
 

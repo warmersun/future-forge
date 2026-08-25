@@ -27,7 +27,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 | Identity | Clerk (`user_…`). Optional. Sign in / UserButton / Sign out works. |
 | Play | Works unsigned. Self-host needs no Clerk. |
 | Progress | `localStorage` always (cache). Signed-in + `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). |
-| Daily | Client hash of the calendar day → one mission. Each device can disagree if clocks or catalogs differ. |
+| Daily | Server `GET /api/daily` picks one UTC-day tile ([D1](#D1)). Unsigned practice does not submit. |
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI. No paywall. No cloud progress. |
 | Friends | Rooms + WebSocket. Names are per room, not Clerk. |
 | Money | None in software. `COMMERCIAL.md` is a **license** conversation (self-host / education / commercial / cloud operator). Clerk Billing is unused. |
@@ -60,6 +60,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
 | SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
 | [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
+| [**D1**](#D1) Daily hold board | `GET /api/daily`, `POST /api/daily/submit`, `GET /api/daily/board` |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -78,7 +79,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
 | [**C2**](#C2) Achievements | Neon + rules file on run complete |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**D1**](#D1) Daily hold board | Neon + identity; server must pick the day’s tile (stop hashing only in the browser) |
 | [**D2**](#D2) Seasonal / weekly board | same as [D1](#D1) with a period key |
 | [**E1**](#E1) Public inventor page (in-game) | Neon profile row; marketing URL is **todo** until a host |
 | [**E2**](#E2) Streaks | derived from `daily_scores` |
@@ -219,7 +219,7 @@ Surface: UserButton menu → Achievements, and a strip on the title screen when 
 Leaderboards only work if **everyone got the same job**. That is Daily (or a named seasonal quest), not “any theme you picked.”
 
 <a id="D1"></a>
-### D1. Daily hold board — **ready**
+### D1. Daily hold board — **implemented**
 
 **Idea.** UTC day D: one official mission (server-picked, same tile for all Cloud players). Leaderboard: who held the pathway, how early (calendar year in-game), stars, maybe fewest Wait ticks. Reset next day. Yesterday’s board stays readable.
 
@@ -364,7 +364,7 @@ They need a paid **Education** license to self-host. We still **do not build cla
 Smallest path that makes Cloud *feel* real. Items 1–4 are **ready**. 5–8 wait on **todo** vendors or a host.
 
 1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **implemented**  
-2. **Server Daily + submit + 24h board** ([D1](#D1)) — **ready** ([E10](#E10) homepage is **todo**)  
+2. **Server Daily + submit + 24h board** ([D1](#D1)) — **implemented** ([E10](#E10) homepage is **todo**)  
 3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1), [E2](#E2)) — **ready**  
 4. **AI quota (free cap)** ([B2](#B2)) — **ready**; plan cap is **todo**  
 5. **Paid lesson entitlements** ([B1](#B1)) — **todo** Clerk Billing  

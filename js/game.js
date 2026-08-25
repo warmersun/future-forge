@@ -31,6 +31,7 @@ import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
 import {
   apiFetch,
+  getClerk,
   isClerkReady,
   isClerkSignedIn,
   openCloudSignIn,
@@ -116,6 +117,7 @@ import {
   loadQuestLibrary,
   importQuestToLibrary,
   removeQuestFromLibrary,
+  pickDailyMission,
 } from "./meta.js";
 import {
   parseQuestTileJson,
@@ -408,6 +410,9 @@ const state = {
   cloudRunId: null,
   questLogFilter: { outcome: null, kind: null },
   questLogRuns: [],
+  /** Official or practice Daily for this play */
+  dailyPlay: null,
+  dailyBoard: null,
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
    * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
@@ -3016,7 +3021,9 @@ function slimLastRunFromState() {
     ? "lesson"
     : isMultipartyOutcome()
       ? "friends"
-      : "theme";
+      : m.source === "daily" || state.dailyPlay
+        ? "daily"
+        : "theme";
   let outcome = String(o.kind || "");
   if (outcome === "win") outcome = "hold";
   if (!outcome) return null;
@@ -3110,7 +3117,9 @@ function postCloudRunStart(mission) {
     ? "lesson"
     : isRoomOrHotseatSession()
       ? "friends"
-      : "theme";
+      : mission.source === "daily" || state.dailyPlay
+        ? "daily"
+        : "theme";
   void apiFetch("/api/me/runs/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -3497,6 +3506,115 @@ function renderQuestLog() {
     meta.textContent = bits.join(" · ");
     li.append(title, meta);
     list.appendChild(li);
+  }
+}
+
+async function playTodayDaily() {
+  let official = null;
+  try {
+    const res = await apiFetch("/api/daily");
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.tile?.mission) official = data;
+  } catch {
+    /* fall through to local pick */
+  }
+  const signedIn = isClerkSignedIn();
+  if (official?.tile?.mission) {
+    const m = normalizeMission(
+      { ...official.tile.mission, source: "daily" },
+      official.tile.mission.globalId || official.tile.globalId
+    );
+    state.dailyPlay = {
+      period: official.period || official.date,
+      questId: String(official.questId || m.id),
+      official: signedIn,
+    };
+    if (!signedIn) {
+      flashToast("Practice Daily — Sign in to count it on the board.");
+    }
+    state.global = globalById(m.globalId) || state.global;
+    startMission(m);
+    return;
+  }
+  const picked = pickDailyMission(GLOBALS, localScenariosForGlobal);
+  if (!picked?.mission) {
+    flashToast("No Daily quest available today.");
+    return;
+  }
+  const m = normalizeMission({ ...picked.mission, source: "daily" }, picked.global?.id);
+  state.dailyPlay = { period: picked.seed, questId: String(m.id), official: false };
+  flashToast("Local Daily (this device). Sign in for the official board.");
+  state.global = picked.global || state.global;
+  startMission(m);
+}
+
+async function submitDailyIfCounted(run) {
+  const d = state.dailyPlay;
+  if (!d?.official || !isClerkSignedIn()) return;
+  if (run?.outcome !== "hold" && run?.outcome !== "partial") return;
+  const clerk = getClerk();
+  const displayName =
+    clerk?.user?.firstName || clerk?.user?.username || clerk?.user?.fullName || "Inventor";
+  try {
+    await apiFetch("/api/daily/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: d.period,
+        questId: d.questId,
+        runId: run.id || state.cloudRunId,
+        yearReached: run.yearReached,
+        stars: run.stars,
+        waits: run.waits,
+        displayName,
+      }),
+    });
+  } catch {
+    /* board is optional */
+  }
+}
+
+async function loadDailyBoard() {
+  try {
+    const res = await apiFetch("/api/daily/board");
+    const data = await res.json().catch(() => ({}));
+    state.dailyBoard = res.ok ? data : { top: [], you: null };
+  } catch {
+    state.dailyBoard = { top: [], you: null };
+  }
+  renderDailyBoard();
+}
+
+function openDailyBoard() {
+  showScreen("daily-board");
+  void loadDailyBoard();
+}
+
+function renderDailyBoard() {
+  const list = $("#daily-board-list");
+  const youEl = $("#daily-board-you");
+  const empty = $("#daily-board-empty");
+  const dateEl = $("#daily-board-date");
+  const data = state.dailyBoard || {};
+  if (dateEl) dateEl.textContent = data.period || data.date || "";
+  if (!list) return;
+  list.replaceChildren();
+  const top = Array.isArray(data.top) ? data.top : [];
+  if (empty) empty.hidden = top.length > 0;
+  for (const row of top) {
+    const li = document.createElement("li");
+    li.className = "quest-log-item";
+    li.textContent = `#${row.rank} ${row.displayName} · year ${row.yearReached} · ${row.stars}★ · ${row.waits} waits`;
+    list.appendChild(li);
+  }
+  if (youEl) {
+    if (data.you) {
+      youEl.hidden = false;
+      youEl.textContent = `You: #${data.you.rank} · year ${data.you.yearReached} · ${data.you.stars}★`;
+    } else {
+      youEl.hidden = true;
+      youEl.textContent = "";
+    }
   }
 }
 
@@ -3945,6 +4063,15 @@ function renderQuestHub() {
   /** @type {object[]} */
   const cards = [
     {
+      id: "daily",
+      title: "Today's Daily",
+      blurb: isClerkSignedIn()
+        ? "One official mission for everyone on this UTC day. Hold it to count on the board."
+        : "Play today’s place as practice. Sign in to count a hold on the official board.",
+      meta: "UTC day",
+      cta: isClerkSignedIn() ? "Play Daily →" : "Practice Daily →",
+    },
+    {
       id: "themes",
       title: "Themes",
       blurb:
@@ -4001,7 +4128,8 @@ function renderQuestHub() {
   grid.querySelectorAll(".quest-hub-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       const hub = btn.dataset.hub;
-      if (hub === "themes") showScreen("global");
+      if (hub === "daily") void playTodayDaily();
+      else if (hub === "themes") showScreen("global");
       else if (hub === "sponsored") openQuestCatalog("sponsored");
       else if (hub === "learning") openQuestCatalog("learning");
       else if (hub === "library") openQuestCatalog("library");
@@ -5336,6 +5464,7 @@ function startMission(mission) {
   }
   state.mission = merged;
   state.cloudRunId = null;
+  if (merged.source !== "daily") state.dailyPlay = null;
   postCloudRunStart(merged);
   // Clear invent progress immediately (before first paint) for non-learning quests
   if (!shouldShowInventLessonProgress(merged)) {
@@ -14168,6 +14297,7 @@ function finishOutcome(kind, meta = {}) {
   const slim = slimLastRunFromState();
   stashLastRun(slim);
   postCloudRun(slim);
+  void submitDailyIfCounted(slim);
   applyOutcomeNextChallengeChrome();
 }
 
@@ -18233,6 +18363,9 @@ function bind() {
     openQuestHub();
   });
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
+  $("#btn-daily-board")?.addEventListener("click", () => openDailyBoard());
+  $("#btn-daily-board-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-daily-board-play")?.addEventListener("click", () => void playTodayDaily());
   $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");

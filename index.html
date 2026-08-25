@@ -80,6 +80,9 @@
           <button type="button" class="btn btn-ghost" id="btn-quest-log" hidden>
             Quest log
           </button>
+          <button type="button" class="btn btn-ghost" id="btn-daily-board">
+            Daily board
+          </button>
           <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
             Start a Quest →
           </button>
@@ -135,6 +138,42 @@
         </div>
         <p id="quest-log-empty" class="muted" hidden>No quests on this account yet.</p>
         <ol id="quest-log-list" class="quest-log-list"></ol>
+      </div>
+    </section>
+
+    <section id="screen-daily-board" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+              <span class="hud-product-credit">
+                by
+                <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-pills">
+          <span class="pill active">Daily</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-board-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>Daily hold board</h1>
+          <p>
+            UTC day <span id="daily-board-date"></span> — same official job for everyone.
+            Unsigned practice does not count.
+          </p>
+        </div>
+        <p id="daily-board-you" class="quest-log-item-meta" hidden></p>
+        <p id="daily-board-empty" class="muted">No holds yet today. Be first.</p>
+        <ol id="daily-board-list" class="quest-log-list"></ol>
+        <div class="form-actions" style="margin-top: 1rem">
+          <button type="button" class="btn btn-primary" id="btn-daily-board-play">Play today’s Daily</button>
+        </div>
       </div>
     </section>
 
