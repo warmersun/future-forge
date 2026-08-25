@@ -71,6 +71,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**E4**](#E4) Friends rooms with Clerk names | room player `clerkUserId`; friends `runs` on hold |
 | [**E6**](#E6) Rematch / ghost | `?daily=&beat=&year=` same tile + target year |
 | [**E7**](#E7) Founding / season badges | first 100 accounts; Invent Night 2026 on Wednesday Friends |
+| [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -87,7 +88,7 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
 
-| [**E8**](#E8) Display name / hide email | Clerk already has name; extra flags in Neon |
+
 | Clerk → DB webhooks (`user.created/updated/deleted`) | `verifyWebhook` in `@clerk/backend`; local `clerk webhooks listen` |
 
 ### Todo (missing a pick or a later product)
@@ -298,7 +299,7 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 **How.** `achievements` codes granted by webhook on `user.created` if `created_at` before a cutoff, or by attending a tagged Friends room.
 
 <a id="E8"></a>
-### E8. Display name, age gate, block — **ready**
+### E8. Display name, age gate, block — **implemented**
 
 **Idea.** Young audience is in the mission of the practice. Cloud needs a chosen name, a way to hide email, a way to block a gallery item. Still not a school.
 

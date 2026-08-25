@@ -5,6 +5,7 @@ import {
   parseProfilePatch,
   publicInventorPage,
   parseShareBody,
+  parseReportBody,
 } from "./profile.mjs";
 
 describe("sanitizeUsername", () => {
@@ -38,6 +39,15 @@ describe("publicInventorPage", () => {
     assert.equal(page.username, "sic");
     assert.equal("email" in page, false);
     assert.equal(page.holds[0].place, "Accra");
+  });
+});
+
+describe("parseReportBody", () => {
+  it("requires a reason and never stores email", () => {
+    assert.equal(parseReportBody({ username: "sic" }).ok, false);
+    const r = parseReportBody({ username: "sic", reason: "off-topic", email: "x@y.z" });
+    assert.equal(r.ok, true);
+    assert.equal("email" in r, false);
   });
 });
 

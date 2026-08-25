@@ -3543,6 +3543,8 @@ async function openCloudProfile() {
     if (d) d.value = p.displayName || "";
     if (b) b.value = p.bio || "";
     if (pub) pub.checked = Boolean(p.isPublic);
+    const hide = $("#cloud-profile-hide-email");
+    if (hide) hide.checked = p.hideEmail !== false;
   } catch {
     /* ignore */
   }
@@ -3559,6 +3561,7 @@ async function saveCloudProfile() {
         displayName: $("#cloud-profile-display")?.value || "",
         bio: $("#cloud-profile-bio")?.value || "",
         public: Boolean($("#cloud-profile-public")?.checked),
+        hideEmail: Boolean($("#cloud-profile-hide-email")?.checked),
       }),
     });
     const data = await res.json().catch(() => ({}));

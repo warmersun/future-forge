@@ -41,6 +41,9 @@ export function parseProfilePatch(body) {
   if ("public" in src || "isPublic" in src) {
     out.isPublic = Boolean(src.public ?? src.isPublic);
   }
+  if ("hideEmail" in src || "hide_email" in src) {
+    out.hideEmail = Boolean(src.hideEmail ?? src.hide_email);
+  }
   if ("displayName" in src) {
     const n = String(src.displayName || "")
       .trim()
@@ -78,6 +81,18 @@ export function publicInventorPage(row, holds = []) {
 export function sanitizeRunId(runId) {
   const s = String(runId || "").trim();
   return /^[0-9a-f-]{36}$/i.test(s) ? s : null;
+}
+
+export function parseReportBody(body) {
+  const src = body && typeof body === "object" ? body : {};
+  const reason = String(src.reason || "").trim().slice(0, 500);
+  if (!reason) return { ok: false, error: "reason_required" };
+  return {
+    ok: true,
+    username: sanitizeUsername(src.username) || null,
+    questId: sanitizeQuestId(src.questId || src.quest_id),
+    reason,
+  };
 }
 
 export function parseShareBody(body) {

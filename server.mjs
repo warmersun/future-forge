@@ -109,6 +109,7 @@ import {
   parseProfilePatch,
   publicInventorPage,
   parseShareBody,
+  parseReportBody,
   sanitizeUsername,
 } from "./js/server/profile.mjs";
 import { dailyStreak } from "./js/server/streak.mjs";
@@ -3408,6 +3409,18 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, stored: result.stored });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "share_failed" });
+    }
+  }
+
+  if (req.method === "POST" && (req.url === "/api/report" || req.url?.startsWith("/api/report?"))) {
+    try {
+      const body = await readBody(req, { maxBytes: 4_000 });
+      const parsed = parseReportBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      console.warn("[cloud report]", parsed.username || parsed.questId, parsed.reason.slice(0, 80));
+      return sendJson(res, 200, { ok: true });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "report_failed" });
     }
   }
 
