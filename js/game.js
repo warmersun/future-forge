@@ -413,6 +413,7 @@ const state = {
   /** Official or practice Daily for this play */
   dailyPlay: null,
   dailyBoard: null,
+  boardKind: "daily",
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
    * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
@@ -3509,10 +3510,11 @@ function renderQuestLog() {
   }
 }
 
-async function playTodayDaily() {
+async function playTodayDaily(kind = "daily") {
+  const weekly = kind === "weekly";
   let official = null;
   try {
-    const res = await apiFetch("/api/daily");
+    const res = await apiFetch(weekly ? "/api/weekly" : "/api/daily");
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.tile?.mission) official = data;
   } catch {
@@ -3525,15 +3527,24 @@ async function playTodayDaily() {
       official.tile.mission.globalId || official.tile.globalId
     );
     state.dailyPlay = {
+      kind: weekly ? "weekly" : "daily",
       period: official.period || official.date,
       questId: String(official.questId || m.id),
       official: signedIn,
     };
     if (!signedIn) {
-      flashToast("Practice Daily — Sign in to count it on the board.");
+      flashToast(
+        weekly
+          ? "Practice week quest — Sign in to count it."
+          : "Practice Daily — Sign in to count it on the board."
+      );
     }
     state.global = globalById(m.globalId) || state.global;
     startMission(m);
+    return;
+  }
+  if (weekly) {
+    flashToast("No week quest available.");
     return;
   }
   const picked = pickDailyMission(GLOBALS, localScenariosForGlobal);
@@ -3542,7 +3553,7 @@ async function playTodayDaily() {
     return;
   }
   const m = normalizeMission({ ...picked.mission, source: "daily" }, picked.global?.id);
-  state.dailyPlay = { period: picked.seed, questId: String(m.id), official: false };
+  state.dailyPlay = { kind: "daily", period: picked.seed, questId: String(m.id), official: false };
   flashToast("Local Daily (this device). Sign in for the official board.");
   state.global = picked.global || state.global;
   startMission(m);
@@ -3556,7 +3567,7 @@ async function submitDailyIfCounted(run) {
   const displayName =
     clerk?.user?.firstName || clerk?.user?.username || clerk?.user?.fullName || "Inventor";
   try {
-    await apiFetch("/api/daily/submit", {
+    await apiFetch(d.kind === "weekly" ? "/api/weekly/submit" : "/api/daily/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -3575,8 +3586,9 @@ async function submitDailyIfCounted(run) {
 }
 
 async function loadDailyBoard() {
+  const weekly = state.boardKind === "weekly";
   try {
-    const res = await apiFetch("/api/daily/board");
+    const res = await apiFetch(weekly ? "/api/weekly/board" : "/api/daily/board");
     const data = await res.json().catch(() => ({}));
     state.dailyBoard = res.ok ? data : { top: [], you: null };
   } catch {
@@ -3585,7 +3597,8 @@ async function loadDailyBoard() {
   renderDailyBoard();
 }
 
-function openDailyBoard() {
+function openDailyBoard(kind = "daily") {
+  state.boardKind = kind === "weekly" ? "weekly" : "daily";
   showScreen("daily-board");
   void loadDailyBoard();
 }
@@ -3595,7 +3608,12 @@ function renderDailyBoard() {
   const youEl = $("#daily-board-you");
   const empty = $("#daily-board-empty");
   const dateEl = $("#daily-board-date");
+  const titleEl = $("#daily-board-title");
   const data = state.dailyBoard || {};
+  if (titleEl) {
+    titleEl.textContent =
+      state.boardKind === "weekly" ? "Week hold board" : "Daily hold board";
+  }
   if (dateEl) dateEl.textContent = data.period || data.date || "";
   if (!list) return;
   list.replaceChildren();
@@ -4063,6 +4081,13 @@ function renderQuestHub() {
   /** @type {object[]} */
   const cards = [
     {
+      id: "weekly",
+      title: "Quest of the week",
+      blurb: "One spotlight for seven days — Invent Night energy, a week board.",
+      meta: "ISO week",
+      cta: "Play this week →",
+    },
+    {
       id: "daily",
       title: "Today's Daily",
       blurb: isClerkSignedIn()
@@ -4128,7 +4153,8 @@ function renderQuestHub() {
   grid.querySelectorAll(".quest-hub-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       const hub = btn.dataset.hub;
-      if (hub === "daily") void playTodayDaily();
+      if (hub === "daily") void playTodayDaily("daily");
+      else if (hub === "weekly") void playTodayDaily("weekly");
       else if (hub === "themes") showScreen("global");
       else if (hub === "sponsored") openQuestCatalog("sponsored");
       else if (hub === "learning") openQuestCatalog("learning");
@@ -18363,9 +18389,11 @@ function bind() {
     openQuestHub();
   });
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
-  $("#btn-daily-board")?.addEventListener("click", () => openDailyBoard());
+  $("#btn-daily-board")?.addEventListener("click", () => openDailyBoard("daily"));
   $("#btn-daily-board-back")?.addEventListener("click", () => showScreen("title"));
-  $("#btn-daily-board-play")?.addEventListener("click", () => void playTodayDaily());
+  $("#btn-daily-board-play")?.addEventListener("click", () =>
+    void playTodayDaily(state.boardKind === "weekly" ? "weekly" : "daily")
+  );
   $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");

@@ -61,6 +61,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
 | [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
 | [**D1**](#D1) Daily hold board | `GET /api/daily`, `POST /api/daily/submit`, `GET /api/daily/board` |
+| [**D2**](#D2) Seasonal / weekly board | `GET /api/weekly` + `period=YYYY-Www` on `daily_scores` |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -79,7 +80,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
 | [**C2**](#C2) Achievements | Neon + rules file on run complete |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**D2**](#D2) Seasonal / weekly board | same as [D1](#D1) with a period key |
 | [**E1**](#E1) Public inventor page (in-game) | Neon profile row; marketing URL is **todo** until a host |
 | [**E2**](#E2) Streaks | derived from `daily_scores` |
 | [**E3**](#E3) Cloud pins | Neon; replace localStorage when signed in |
@@ -231,7 +231,7 @@ Leaderboards only work if **everyone got the same job**. That is Daily (or a nam
 - Unsigned can still play a *local* daily; it does not submit.
 
 <a id="D2"></a>
-### D2. Seasonal / weekly — **ready**
+### D2. Seasonal / weekly — **implemented**
 
 **Idea.** Invent Night already locks a Wednesday. Cloud can lock a **Quest of the week** — same spotlight for seven days, a week board, a champion strip on warmersun.com.
 

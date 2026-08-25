@@ -98,12 +98,15 @@ import {
 import { parseRunsQuery } from "./js/server/quest-log.mjs";
 import {
   dailyPeriod,
+  parseWeekPeriod,
   dailyPoolFromTiles,
   pickFromPool,
   hashSeed,
   parseDailySubmit,
   isBetterScore,
   rankBoard,
+  DAILY_SALT,
+  WEEK_SALT,
 } from "./js/server/daily.mjs";
 import {
   resolveAiSearchEnabled,
@@ -2327,17 +2330,20 @@ async function loadMergedQuestTiles(opts = {}) {
   };
 }
 
-async function resolveOfficialDaily(dateRaw) {
-  const period = dailyPeriod(dateRaw);
+async function resolveOfficialDaily(dateRaw, opts = {}) {
+  const salt = opts.salt || DAILY_SALT;
+  const period =
+    opts.period ||
+    (salt === WEEK_SALT ? parseWeekPeriod(dateRaw) : dailyPeriod(dateRaw));
   const pack = await loadMergedQuestTiles();
   const pool = dailyPoolFromTiles(pack.quests);
   let tile = null;
   let questId = null;
   if (pool.length) {
-    tile = pickFromPool(pool, period);
+    tile = pickFromPool(pool, period, salt);
     questId = String(tile?.id || tile?.mission?.id || "");
   } else if (GLOBALS.length) {
-    const h = hashSeed(`warmer-sun-daily:${period}`);
+    const h = hashSeed(`${salt}:${period}`);
     const g = GLOBALS[h % GLOBALS.length];
     const list = localScenariosForGlobal(g, { count: 4, salt: (h >>> 8) % 1000 }) || [];
     const mission = list.length ? list[(h >>> 16) % list.length] : null;
@@ -3369,6 +3375,93 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (e) {
       console.warn("[daily submit]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/weekly" || req.url?.startsWith("/api/weekly?"))) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const resolved = await resolveOfficialDaily(url.searchParams.get("period"), {
+        salt: WEEK_SALT,
+      });
+      if (!resolved.questId || !resolved.tile) {
+        return sendJson(res, 404, { ok: false, error: "no_weekly" });
+      }
+      const tile = applyCatalogGate(resolved.tile, ident);
+      return sendJson(res, 200, {
+        ok: true,
+        period: resolved.period,
+        questId: resolved.questId,
+        tile: publicCatalogTile(tile),
+      });
+    } catch (e) {
+      console.warn("[weekly]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "weekly_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/weekly/board" || req.url?.startsWith("/api/weekly/board?"))
+  ) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const period = parseWeekPeriod(url.searchParams.get("period"));
+      const ident = await authenticateClerkRequest(req);
+      const listed = await listDailyScores(period);
+      const board = rankBoard(listed.rows || [], {
+        userId: ident.signedIn ? ident.userId : null,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        period,
+        top: board.top,
+        you: board.you,
+      });
+    } catch (e) {
+      console.warn("[weekly board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/weekly/submit" || req.url?.startsWith("/api/weekly/submit?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const resolved = await resolveOfficialDaily(body.period, { salt: WEEK_SALT });
+      const parsed = parseDailySubmit(body, {
+        expectedQuestId: resolved.questId,
+        period: resolved.period,
+      });
+      if (!parsed.ok) {
+        return sendJson(res, 400, { ok: false, error: parsed.error });
+      }
+      const owned = await getRunForUser(gate.userId, parsed.row.runId);
+      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
+        return sendJson(res, 400, { ok: false, error: "run_required" });
+      }
+      const result = await upsertDailyScore(
+        { ...parsed.row, clerkUserId: gate.userId },
+        isBetterScore
+      );
+      return sendJson(res, 200, {
+        ok: true,
+        stored: Boolean(result.stored),
+        kept: Boolean(result.kept),
+        period: resolved.period,
+      });
+    } catch (e) {
+      console.warn("[weekly submit]", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
     }
   }

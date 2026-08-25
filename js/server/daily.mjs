@@ -17,6 +17,7 @@ export function hashSeed(str) {
 }
 
 export const DAILY_SALT = "warmer-sun-daily";
+export const WEEK_SALT = "warmer-sun-week";
 export const BOARD_LIMIT = 20;
 
 /**
@@ -57,6 +58,33 @@ export function parseDailyDate(raw, now = new Date()) {
  */
 export function dailyPeriod(raw, now = new Date()) {
   return parseDailyDate(raw, now);
+}
+
+/**
+ * ISO week period key, e.g. 2026-W35 (UTC).
+ * @param {Date|string|number} [d]
+ */
+export function isoWeekPeriod(d = new Date()) {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return isoWeekPeriod(new Date());
+  const date = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/**
+ * @param {unknown} raw
+ * @param {Date} [now]
+ */
+export function parseWeekPeriod(raw, now = new Date()) {
+  const s = String(raw || "")
+    .trim()
+    .toUpperCase();
+  if (/^\d{4}-W\d{2}$/.test(s)) return s;
+  return isoWeekPeriod(now);
 }
 
 /**

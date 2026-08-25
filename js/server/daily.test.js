@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   utcDayString,
   parseDailyDate,
+  isoWeekPeriod,
+  parseWeekPeriod,
   pickFromPool,
   dailyPoolFromTiles,
   isPlausibleYear,
@@ -10,6 +12,7 @@ import {
   sanitizeDisplayName,
   parseDailySubmit,
   rankBoard,
+  WEEK_SALT,
 } from "./daily.mjs";
 
 describe("utc / parseDailyDate", () => {
@@ -17,6 +20,22 @@ describe("utc / parseDailyDate", () => {
     assert.equal(utcDayString(new Date("2026-08-25T23:30:00Z")), "2026-08-25");
     assert.equal(parseDailyDate("2026-01-02"), "2026-01-02");
     assert.equal(parseDailyDate("nope", new Date("2026-08-25T00:00:00Z")), "2026-08-25");
+  });
+});
+
+describe("isoWeekPeriod", () => {
+  it("formats ISO week keys", () => {
+    assert.equal(isoWeekPeriod(new Date("2026-08-25T12:00:00Z")), "2026-W35");
+    assert.equal(parseWeekPeriod("2026-w34"), "2026-W34");
+    assert.equal(parseWeekPeriod("", new Date("2026-08-25T00:00:00Z")), "2026-W35");
+  });
+  it("weekly pick differs from daily salt on the same pool", () => {
+    const pool = ["a", "b", "c", "d", "e", "f", "g"];
+    const day = pickFromPool(pool, "2026-08-25");
+    const week = pickFromPool(pool, "2026-W35", WEEK_SALT);
+    assert.ok(pool.includes(week));
+    assert.equal(pickFromPool(pool, "2026-W35", WEEK_SALT), week);
+    assert.notEqual(week, pickFromPool(pool, "2026-W35"));
   });
 });
 
