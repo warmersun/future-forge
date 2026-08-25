@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseGhostQuery, ghostResult, ghostSharePath } from "./ghost.mjs";
+import { officialPeriodUrl } from "./daily.mjs";
 
 describe("parseGhostQuery", () => {
   it("reads daily + beat user + year", () => {
@@ -8,6 +9,12 @@ describe("parseGhostQuery", () => {
     assert.equal(g.daily, "2026-08-25");
     assert.equal(g.beat, "user_abc");
     assert.equal(g.year, 2034);
+  });
+
+  it("ghost date is the official Daily URL playTodayDaily fetches", () => {
+    const g = parseGhostQuery(new URLSearchParams("daily=2026-08-20&beat=user_abc&year=2034"));
+    assert.equal(officialPeriodUrl("daily", g), "/api/daily?date=2026-08-20");
+    assert.notEqual(officialPeriodUrl("daily", g), "/api/daily");
   });
 });
 

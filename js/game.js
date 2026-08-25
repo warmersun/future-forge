@@ -30,6 +30,8 @@ import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
 import { parseGhostQuery, ghostResult, ghostSharePath } from "./server/ghost.mjs";
+import { officialPeriodUrl } from "./server/daily.mjs";
+import { applyContinueSnapshot } from "./server/run-state.mjs";
 import {
   apiFetch,
   getClerk,
@@ -3251,9 +3253,7 @@ function continueCloudRun() {
     flashToast("Could not restore that quest on this device.");
     return;
   }
-  startMission(mission);
-  if (st.board && typeof st.board === "object") state.hexBoard = st.board;
-  if (st.year != null) state.year = st.year;
+  startMission(mission, { restore: st });
   flashToast("Continued from the cloud.");
 }
 
@@ -3711,7 +3711,9 @@ async function playTodayDaily(kind = "daily") {
   const weekly = kind === "weekly";
   let official = null;
   try {
-    const res = await apiFetch(weekly ? "/api/weekly" : "/api/daily");
+    const ghost = weekly ? null : state.ghostTarget;
+    const url = officialPeriodUrl(weekly ? "weekly" : "daily", ghost);
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.tile?.mission) official = data;
   } catch {
@@ -5648,7 +5650,7 @@ function clearMissionPickSession() {
   missionPickSession = null;
 }
 
-function startMission(mission) {
+function startMission(mission, opts = {}) {
   if (state.scenariosLoading) {
     flashToast("Challenges still drafting — wait a moment.");
     return;
@@ -5686,16 +5688,25 @@ function startMission(mission) {
     delete merged.isLearningModule;
   }
   state.mission = merged;
-  state.cloudRunId = null;
+  const restored = applyContinueSnapshot(
+    {
+      cloudRunId: null,
+      hexBoard: null,
+      year: merged.startYear,
+      tutorSessionActive: Boolean(merged.isLearningModule),
+    },
+    opts.restore || null
+  );
+  state.cloudRunId = restored.cloudRunId;
   if (merged.source !== "daily") state.dailyPlay = null;
-  postCloudRunStart(merged);
+  if (!restored.skipNewRun) postCloudRunStart(merged);
   scheduleCloudRunState();
   // Clear invent progress immediately (before first paint) for non-learning quests
   if (!shouldShowInventLessonProgress(merged)) {
     hideInventLessonProgress();
   }
   state.global = globalById(state.mission.globalId) || state.global;
-  state.year = state.mission.startYear;
+  state.year = restored.year != null ? restored.year : state.mission.startYear;
   state.turn = 0;
   state.waits = 0;
   state.pressure = clonePressure(state.mission.pressure);
@@ -5725,7 +5736,10 @@ function startMission(mission) {
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
   // Learning modules open on Co-Inventor (tutor); normal Quests keep Future vision.
-  state.tutorSessionActive = Boolean(state.mission?.isLearningModule);
+  state.tutorSessionActive =
+    restored.skipNewRun && typeof restored.tutorSessionActive === "boolean"
+      ? restored.tutorSessionActive
+      : Boolean(state.mission?.isLearningModule);
   state.sideTab = state.mission?.isLearningModule ? "coinventor" : "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
@@ -5779,9 +5793,17 @@ function startMission(mission) {
   if (state.vision) state.vision.newSession();
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
-  // Seed hex invent board with crisis meters
+  // Seed hex invent board with crisis meters — skip when Continue restored a board
   try {
-    ensureHexWorkshop().seedFromMission(state.mission);
+    const hex = ensureHexWorkshop();
+    if (restored.skipSeed && restored.hexBoard) {
+      state.hexBoard = restored.hexBoard;
+      hex.paint();
+      hex.syncPathwayScores?.();
+      if (restored.year != null) hex.refreshAfterYearChange?.();
+    } else {
+      hex.seedFromMission(state.mission);
+    }
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
@@ -19389,14 +19411,18 @@ export function init() {
   showScreen("title");
   void refreshDeveloperModeFromHealth();
   try {
-    const ghost = parseGhostQuery(new URLSearchParams(window.location.search));
-    if (ghost && (ghost.beat || ghost.year != null)) {
+    const params = new URLSearchParams(window.location.search);
+    const ghost = parseGhostQuery(params);
+    if (ghost && (ghost.beat || ghost.year != null || params.get("daily") || params.get("date"))) {
       state.ghostTarget = ghost;
       flashToast(
         ghost.year
           ? `Ghost challenge: beat year ${ghost.year}.`
-          : "Ghost challenge: play today’s Daily."
+          : "Ghost challenge: play that day’s Daily."
       );
+      if (params.get("daily") || params.get("date")) {
+        void playTodayDaily("daily");
+      }
     }
   } catch {
     /* ignore */

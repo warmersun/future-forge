@@ -13,6 +13,7 @@ import {
   parseDailySubmit,
   rankBoard,
   WEEK_SALT,
+  officialPeriodUrl,
 } from "./daily.mjs";
 
 describe("utc / parseDailyDate", () => {
@@ -20,6 +21,23 @@ describe("utc / parseDailyDate", () => {
     assert.equal(utcDayString(new Date("2026-08-25T23:30:00Z")), "2026-08-25");
     assert.equal(parseDailyDate("2026-01-02"), "2026-01-02");
     assert.equal(parseDailyDate("nope", new Date("2026-08-25T00:00:00Z")), "2026-08-25");
+  });
+});
+
+describe("officialPeriodUrl", () => {
+  it("puts ghost daily date on GET /api/daily", () => {
+    assert.equal(officialPeriodUrl("daily"), "/api/daily");
+    assert.equal(
+      officialPeriodUrl("daily", { daily: "2026-08-20" }),
+      "/api/daily?date=2026-08-20"
+    );
+  });
+  it("puts weekly period on GET /api/weekly", () => {
+    assert.equal(officialPeriodUrl("weekly"), "/api/weekly");
+    assert.equal(
+      officialPeriodUrl("weekly", { period: "2026-W34" }),
+      "/api/weekly?period=2026-W34"
+    );
   });
 });
 
