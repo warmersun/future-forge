@@ -104,7 +104,10 @@ import {
   incrementAiHits,
   listPins,
   replacePins,
+  getRunState,
+  putRunState,
 } from "./js/server/db.mjs";
+import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "./js/server/run-state.mjs";
 import { planClerkUserEvent } from "./js/server/clerk-webhooks.mjs";
 import { sanitizePinList } from "./js/server/pins.mjs";
 import { userQuotaDecision, freeDailyCapFromEnv } from "./js/server/ai-quota.mjs";
@@ -3363,6 +3366,44 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, pins: result.pins });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "pins_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/me/run-state" || req.url?.startsWith("/api/me/run-state?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const st = await getRunState(gate.userId);
+      return sendJson(res, 200, { ok: true, state: st });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+    }
+  }
+
+  if (
+    req.method === "PUT" &&
+    (req.url === "/api/me/run-state" || req.url?.startsWith("/api/me/run-state?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: RUN_STATE_MAX_BYTES });
+      const parsed = parseRunStateBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      await putRunState(gate.userId, parsed.state);
+      return sendJson(res, 200, { ok: true });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
     }
   }
 

@@ -73,6 +73,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**E7**](#E7) Founding / season badges | first 100 accounts; Invent Night 2026 on Wednesday Friends |
 | [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk → DB webhooks | `POST /api/webhooks/clerk` verifies Svix; user.deleted cascades Neon rows |
+| [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state`; strips data-URL art; Continue on title |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -82,12 +83,12 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 
 ### Ready (building blocks exist — write the feature)
 
-Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webhooks and remaining routes are still to type.
+All previously **ready** lettered IDs are implemented except this A1 row (already implemented; Daily **count** is D1). Webhooks ship.
 
 | Item | Why it is ready |
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
-| [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
+
 
 
 ### Todo (missing a pick or a later product)
@@ -199,7 +200,7 @@ Server awards on run complete from a small rules file (`js/server/achievements.m
 Surface: UserButton menu → Achievements, and a strip on the title screen when signed in.
 
 <a id="C3"></a>
-### C3. Continue the board — **ready** (v2; Neon can hold JSON)
+### C3. Continue the board — **implemented** (v2; Neon can hold JSON)
 
 **Idea.** Close the laptop mid-quest, open another device, board and crisis lights are still there.
 

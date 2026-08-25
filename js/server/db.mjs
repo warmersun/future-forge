@@ -763,3 +763,51 @@ export async function replacePins(clerkUserId, pins) {
     client.release();
   }
 }
+
+export async function getRunState(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return null;
+  const r = await db.query(
+    `SELECT run_id, quest_id, year_reached, tutor, board, updated_at
+     FROM run_state WHERE clerk_user_id = $1`,
+    [uid]
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    runId: row.run_id,
+    questId: row.quest_id,
+    year: row.year_reached,
+    tutor: Boolean(row.tutor),
+    board: row.board,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function putRunState(clerkUserId, state) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return { skipped: true };
+  await ensureUser(uid);
+  await db.query(
+    `INSERT INTO run_state (clerk_user_id, run_id, quest_id, year_reached, tutor, board)
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+     ON CONFLICT (clerk_user_id) DO UPDATE SET
+       run_id = EXCLUDED.run_id,
+       quest_id = EXCLUDED.quest_id,
+       year_reached = EXCLUDED.year_reached,
+       tutor = EXCLUDED.tutor,
+       board = EXCLUDED.board,
+       updated_at = now()`,
+    [
+      uid,
+      state.runId,
+      state.questId,
+      state.year,
+      Boolean(state.tutor),
+      state.board ? JSON.stringify(state.board) : null,
+    ]
+  );
+  return { skipped: false, stored: true };
+}

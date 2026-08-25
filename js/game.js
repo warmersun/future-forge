@@ -418,6 +418,7 @@ const state = {
   dailyBoard: null,
   boardKind: "daily",
   ghostTarget: null,
+  cloudContinue: null,
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
    * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
@@ -3198,6 +3199,62 @@ async function syncCloudProgress() {
     cloudImportDone = false;
   }
   void syncCloudPins();
+  void maybeOfferContinue();
+}
+
+let cloudRunStateTimer = null;
+function scheduleCloudRunState() {
+  if (!isClerkSignedIn() || !state.mission?.id) return;
+  clearTimeout(cloudRunStateTimer);
+  cloudRunStateTimer = setTimeout(() => {
+    void apiFetch("/api/me/run-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questId: state.mission.id,
+        year: state.year,
+        tutor: Boolean(state.tutorSessionActive),
+        runId: state.cloudRunId,
+        board: state.hexBoard,
+      }),
+    }).catch(() => {});
+  }, 2500);
+}
+
+async function maybeOfferContinue() {
+  const btn = $("#btn-cloud-continue");
+  if (!btn || !isClerkSignedIn()) {
+    if (btn) btn.hidden = true;
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/run-state");
+    const data = await res.json().catch(() => ({}));
+    const st = data.state;
+    state.cloudContinue = st && st.questId ? st : null;
+    btn.hidden = !state.cloudContinue;
+  } catch {
+    if (btn) btn.hidden = true;
+  }
+}
+
+function continueCloudRun() {
+  const st = state.cloudContinue;
+  if (!st?.questId) return;
+  const fromHosted = (state.hostedQuests || []).find(
+    (q) => q.id === st.questId || q.mission?.id === st.questId
+  );
+  const mission = fromHosted?.mission
+    ? normalizeMission(fromHosted.mission, fromHosted.mission.globalId)
+    : state.mission;
+  if (!mission?.id) {
+    flashToast("Could not restore that quest on this device.");
+    return;
+  }
+  startMission(mission);
+  if (st.board && typeof st.board === "object") state.hexBoard = st.board;
+  if (st.year != null) state.year = st.year;
+  flashToast("Continued from the cloud.");
 }
 
 async function syncCloudPins() {
@@ -3512,6 +3569,7 @@ function renderTitleMeta() {
   renderTitleCtas();
   void loadAchievementsStrip();
   void loadStreakChip();
+  void maybeOfferContinue();
   if (state.screen === "quest-log") void loadQuestLog();
   // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {
@@ -5631,6 +5689,7 @@ function startMission(mission) {
   state.cloudRunId = null;
   if (merged.source !== "daily") state.dailyPlay = null;
   postCloudRunStart(merged);
+  scheduleCloudRunState();
   // Clear invent progress immediately (before first paint) for non-learning quests
   if (!shouldShowInventLessonProgress(merged)) {
     hideInventLessonProgress();
@@ -18537,6 +18596,7 @@ function bind() {
     state.playMode = "workshop";
     openQuestHub();
   });
+  $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
   $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
   $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
