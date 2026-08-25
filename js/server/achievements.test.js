@@ -1,6 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { awardForRun, publicAchievement, countHoldsInWeek } from "./achievements.mjs";
+import {
+  awardForRun,
+  publicAchievement,
+  countHoldsInWeek,
+  foundingCodes,
+  FOUNDING_MAX,
+} from "./achievements.mjs";
 
 describe("awardForRun", () => {
   it("does not award on collapse", () => {
@@ -45,6 +51,21 @@ describe("countHoldsInWeek", () => {
     assert.equal(
       countHoldsInWeek(["2026-08-25", "2026-08-26", "2026-W35", "2026-08-01"], "2026-W35", weekOf),
       3
+    );
+  });
+});
+
+describe("foundingCodes", () => {
+  it("awards founding for first N accounts", () => {
+    assert.deepEqual(foundingCodes({ userCount: 1 }), ["founding"]);
+    assert.deepEqual(foundingCodes({ userCount: FOUNDING_MAX + 1 }), []);
+  });
+  it("awards Invent Night 2026 when tagged", () => {
+    assert.ok(foundingCodes({ inventNight: true }).includes("invent_night_2026"));
+  });
+  it("awards founding when created before cutoff", () => {
+    assert.ok(
+      foundingCodes({ createdAt: "2026-01-01", cutoff: "2026-12-31" }).includes("founding")
     );
   });
 });

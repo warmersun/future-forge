@@ -92,6 +92,7 @@ import {
   listAchievements,
   insertAchievements,
   listUserDailyPeriods,
+  countUsers,
   getProfileByUserId,
   getProfileByUsername,
   updateProfile,
@@ -131,7 +132,12 @@ import {
   isoWeekPeriod,
   utcDayString,
 } from "./js/server/daily.mjs";
-import { awardForRun, publicAchievement, countHoldsInWeek } from "./js/server/achievements.mjs";
+import {
+  awardForRun,
+  publicAchievement,
+  countHoldsInWeek,
+  foundingCodes,
+} from "./js/server/achievements.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -2422,6 +2428,14 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
         dailyHoldsThisWeek: countHoldsInWeek(periods, week, isoWeekPeriod),
       }
     );
+    const n = await countUsers();
+    const extraCodes = foundingCodes({
+      userCount: n,
+      inventNight: run.kind === "friends" && new Date().getUTCDay() === 3,
+    });
+    for (const c of extraCodes) {
+      if (!have.some((h) => h.code === c) && !codes.includes(c)) codes.push(c);
+    }
     if (codes.length) await insertAchievements(clerkUserId, codes, extra.runId || run.id || null);
     return codes.map((c) => publicAchievement(c)).filter(Boolean);
   } catch (e) {

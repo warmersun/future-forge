@@ -514,6 +514,13 @@ export async function upsertDailyScore(input, betterFn) {
 /**
  * @param {string} clerkUserId
  */
+export async function countUsers() {
+  const db = getPool();
+  if (!db) return 0;
+  const r = await db.query("SELECT COUNT(*)::int AS n FROM users");
+  return r.rows[0]?.n || 0;
+}
+
 export async function listAchievements(clerkUserId) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);

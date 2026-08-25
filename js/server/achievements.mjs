@@ -27,6 +27,14 @@ export const ACHIEVEMENT_DEFS = {
     title: "Bits to atoms",
     blurb: "Used a converter to dock bits to atoms.",
   },
+  founding: {
+    title: "Founding inventor",
+    blurb: "Among the first Cloud accounts.",
+  },
+  invent_night_2026: {
+    title: "Invent Night 2026",
+    blurb: "Showed up for Invent Night.",
+  },
 };
 
 /**
@@ -66,6 +74,29 @@ export function awardForRun(run, ctx = {}) {
     unlock("converter_dock");
   }
   return out;
+}
+
+export const FOUNDING_MAX = 100;
+
+/**
+ * E7 cosmetic founding / season codes. Never a certificate.
+ * @param {{ userCount?: number, createdAt?: string|Date, inventNight?: boolean, cutoff?: string }} ctx
+ */
+export function foundingCodes(ctx = {}) {
+  const codes = [];
+  const count = Number(ctx.userCount);
+  if (Number.isFinite(count) && count > 0 && count <= FOUNDING_MAX) {
+    codes.push("founding");
+  }
+  if (ctx.inventNight) codes.push("invent_night_2026");
+  if (ctx.createdAt && ctx.cutoff) {
+    const created = new Date(ctx.createdAt).getTime();
+    const cut = new Date(ctx.cutoff).getTime();
+    if (Number.isFinite(created) && Number.isFinite(cut) && created <= cut) {
+      if (!codes.includes("founding")) codes.push("founding");
+    }
+  }
+  return codes;
 }
 
 /**
