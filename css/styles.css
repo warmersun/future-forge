@@ -3665,7 +3665,13 @@ body.mp-turn-gate #btn-lobby,
 body.mp-turn-gate #btn-deploy-stage-primary,
 body.mp-turn-gate .scrutiny-move-btn,
 body.mp-turn-gate #btn-challenge-coach,
-body.mp-turn-gate #btn-challenge-draft {
+body.mp-turn-gate #btn-challenge-draft,
+body.mp-turn-gate #btn-ask-ideas,
+body.mp-turn-gate #btn-refresh-ideas,
+body.mp-turn-gate #btn-mint-custom,
+body.mp-turn-gate #btn-mint-rd,
+body.mp-turn-gate #hex-idea-cards .hex-idea-card,
+body.mp-turn-gate #hex-discard {
   opacity: 0.45;
   pointer-events: none;
   cursor: not-allowed;

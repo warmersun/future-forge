@@ -1139,11 +1139,7 @@ function ensureHexWorkshop() {
     budgetWillEnabled: () => budgetWillEnabled(),
     spendRdMint: () => spendRdMint(),
     flashToast: (msg) => flashToast(msg),
-    canEditBoard: () => {
-      const b = mpBridge();
-      if (!b) return true;
-      return Boolean(b.canEditStack?.());
-    },
+    canEditBoard: () => mpHexEditsAllowed(),
     canSummonChallengers: () => {
       const b = mpBridge();
       if (!b) return true;
@@ -1157,6 +1153,7 @@ function ensureHexWorkshop() {
     commitBoard: (b) => {
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
+          if (!mpHexEditsAllowed()) return;
           roomBridge.send({
             type: "board_commit",
             payload: {
@@ -1172,6 +1169,7 @@ function ensureHexWorkshop() {
             updateEndTurnButton();
           }
         } else if (hotseatBridge.isHotseat()) {
+          if (!mpHexEditsAllowed()) return;
           // Hotseat syncs via hydrate push on next action; keep invent hexBoard live
           const sess = hotseatBridge.getSession?.();
           const view = sess?.invents?.[hotseatBridge.getViewId?.()];
@@ -1682,10 +1680,8 @@ function renderMpSeatTabsHtml(seats, bridge) {
       ]
         .filter(Boolean)
         .join(" ");
-      // Player name is its own span so turn highlight only paints the name, not ": invention"
-      const inventSuffix = s.inventionName
-        ? `<span class="mp-seat-tab-invent">: ${escapeHtml(s.inventionName.slice(0, 18))}</span>`
-        : "";
+      const n = Number(s.stackCount) || 0;
+      const stackLabel = `${n} emTech${n === 1 ? "" : "s"} in stack`;
       const phaseTag =
         s.phase === "challenge"
           ? '<span class="tag">challenge</span>'
@@ -1718,11 +1714,11 @@ function renderMpSeatTabsHtml(seats, bridge) {
         titleParts.push(mine ? "— your turn" : "— their turn");
       }
       return `<button type="button" class="${cls}" data-seat="${escapeHtml(s.id)}" title="${escapeHtml(titleParts.join(" "))}">
-          <span class="mp-seat-tab-name"><span class="mp-seat-tab-player">${escapeHtml(s.displayName)}</span>${inventSuffix}</span>
+          <span class="mp-seat-tab-name"><span class="mp-seat-tab-player">${escapeHtml(s.displayName)}</span></span>
           ${leftTag}
           ${focusTag}
           ${phaseTag}
-          <span class="muted sm">${s.stackCount} tech</span>
+          <span class="muted sm">${stackLabel}</span>
         </button>`;
     })
     .join("");
@@ -2357,6 +2353,17 @@ function handleRoomPlayEvent(client, evt) {
 
   const events = evt?.events || [];
 
+  const seatTurnChanged = events.some(
+    (e) =>
+      e?.type === "end_turn" ||
+      e?.type === "seat_turn_start" ||
+      e?.type === "wait" // Wait ends the seat-turn and advances the active player
+  );
+  // Arm before hydrate/paint so hex cannot be dragged before “Let's go”
+  if (seatTurnChanged && roomBridge.isMyTurn()) {
+    setMpTurnGate(true);
+  }
+
   // Owner finished Imagine → re-peek shared cache if we're viewing that invent
   const visionEv = events.find((e) => e?.type === "vision_sync");
   if (visionEv?.targetSeatId) {
@@ -2368,13 +2375,6 @@ function handleRoomPlayEvent(client, evt) {
       scheduleRoomVisionRefresh({ immediate: true });
     }
   }
-
-  const seatTurnChanged = events.some(
-    (e) =>
-      e?.type === "end_turn" ||
-      e?.type === "seat_turn_start" ||
-      e?.type === "wait" // Wait ends the seat-turn and advances the active player
-  );
 
   // Preserve in-progress typing across server patches (buffer_write bounce, etc.)
   // Only reapply when still on the same viewed invent — never paste drafts across seats.
@@ -16900,6 +16900,21 @@ let yearFlashNeedsReplay = false;
  * behind market news / year flash — so Challenge cannot be clicked early.
  */
 let mpTurnGateActive = false;
+/** Seat whose “Let's go” we already acked this seat-turn (hex edits stay locked until then). */
+let mpTurnAckedSeatId = null;
+
+/**
+ * Hex board / tray edits: must be able to edit the stack AND have acked this seat-turn.
+ * Solo (no mp bridge) is always allowed.
+ */
+function mpHexEditsAllowed() {
+  const b = mpBridge();
+  if (!b) return true;
+  if (!b.canEditStack?.()) return false;
+  if (isMpTurnGateBlocking()) return false;
+  const activeId = b.getActiveId?.() || null;
+  return Boolean(activeId && mpTurnAckedSeatId === activeId);
+}
 
 function isMarketNewsModalOpen() {
   const el = document.getElementById("market-news-modal");
@@ -16927,6 +16942,7 @@ function setMpTurnGate(on) {
     updateEndTurnButton();
     if (state.screen === "challenge-step") renderChallengeHud();
     if (state.screen === "deploy") renderDeployHud();
+    hexWorkshop?.paint();
   } catch {
     /* ignore chrome refresh */
   }
@@ -17625,6 +17641,10 @@ function closeMpTurnModal() {
     /* ignore */
   }
   // Ack "your turn" — unlock invent / challenge spend actions
+  const b = mpBridge();
+  if (b?.isMyTurn?.()) {
+    mpTurnAckedSeatId = b.getActiveId?.() || null;
+  }
   setMpTurnGate(false);
 }
 
@@ -17790,6 +17810,7 @@ function maybeNotifyMpTurnStart() {
   if (!isYou) {
     // Seat moved to someone else — drop gate + dismiss any leftover turn modal
     // (do not call closeMpTurnModal before clearing gate flag — avoid re-entrancy)
+    mpTurnAckedSeatId = null;
     mpTurnGateActive = false;
     document.body.classList.remove("mp-turn-gate");
     const el = document.getElementById("mp-turn-modal");
@@ -17799,6 +17820,11 @@ function maybeNotifyMpTurnStart() {
       el.hidden = true;
       el.setAttribute("hidden", "");
       el.style.display = "none";
+    }
+    try {
+      hexWorkshop?.paint();
+    } catch {
+      /* ignore */
     }
     return;
   }
