@@ -9,9 +9,15 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=readable-idea-tiles-1" />
+    <link rel="stylesheet" href="css/styles.css?v=clerk-auth-1" />
   </head>
   <body>
+    <div id="ff-account" hidden>
+      <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signin">
+        Sign in
+      </button>
+      <div id="ff-account-user" hidden></div>
+    </div>
     <!-- TITLE -->
     <section id="screen-title" class="screen active">
       <div class="title-orb" aria-hidden="true"></div>
@@ -2224,6 +2230,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=idea-cards-9"></script>
+    <script type="module" src="js/main.js?v=clerk-auth-1"></script>
   </body>
 </html>

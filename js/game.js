@@ -29,6 +29,7 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
+import { apiFetch } from "./auth.js";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -4606,7 +4607,7 @@ async function ensureScenarios(global, { force = false } = {}) {
   }
 
   try {
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -6898,7 +6899,7 @@ async function fetchIdeaSparks(techId, opts = {}) {
 
   const pending = (async () => {
     try {
-      const res = await fetch("/api/co-invent", {
+      const res = await apiFetch("/api/co-invent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6954,7 +6955,7 @@ async function fetchIdeaImage(idea) {
       clientSessionId: getClientSessionId(),
     };
     if (idea.kind) body.kind = idea.kind;
-    const res = await fetch("/api/idea-image", {
+    const res = await apiFetch("/api/idea-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -8986,7 +8987,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         tutorMode: isLearningTutorSessionActive(),
         ...rest,
       };
-  const res = await fetch("/api/co-invent", {
+  const res = await apiFetch("/api/co-invent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -15646,7 +15647,7 @@ async function judgeContributionAdditive({ field, before, after, baseline }) {
   // (never let AI reject when we're unsure — wait, local already rejected;
   //  allow AI to rescue a borderline false reject)
   try {
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -16174,7 +16175,7 @@ async function callCoInventMode(mode, userLabel) {
       contributingToOther: contributingOther,
     };
 
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

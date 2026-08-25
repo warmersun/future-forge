@@ -4,6 +4,7 @@
  */
 
 import { getClientSessionId } from "../client-session.js";
+import { apiFetch } from "../auth.js";
 
 const SS_KEY = "future-forge:roomSession";
 
@@ -56,7 +57,7 @@ export class RoomClient {
   }
 
   async create(displayName) {
-    const res = await fetch("/api/rooms", {
+    const res = await apiFetch("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -88,7 +89,7 @@ export class RoomClient {
       playerToken:
         prev?.code === String(code).toUpperCase() ? prev.playerToken : undefined,
     };
-    const res = await fetch(`/api/rooms/${encodeURIComponent(code)}/join`, {
+    const res = await apiFetch(`/api/rooms/${encodeURIComponent(code)}/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -284,7 +285,7 @@ export class RoomClient {
   async resync() {
     if (!this.session) return;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/rooms/${this.session.code}/snapshot?token=${encodeURIComponent(this.session.playerToken)}`
       );
       const data = await res.json();
@@ -407,7 +408,7 @@ export class RoomClient {
       );
       return { ok: true, via: "ws" };
     }
-    const res = await fetch(`/api/rooms/${this.session.code}/host`, {
+    const res = await apiFetch(`/api/rooms/${this.session.code}/host`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

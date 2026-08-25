@@ -3,6 +3,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { apiFetch } from "./auth.js";
 import { renderChatMarkdown } from "./md-lite.js";
 import {
   attachReadAloud,
@@ -581,7 +582,7 @@ export class CoInventor {
           return;
         }
       } else {
-        const res = await fetch("/api/co-invent", {
+        const res = await apiFetch("/api/co-invent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),

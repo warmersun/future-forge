@@ -98,6 +98,21 @@ describe("admin gate", () => {
       headers: { authorization: "Bearer secret" },
     };
     assert.equal(canSeeAdmin(authed, { token: "secret" }).ok, true);
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1In0.sig";
+    const clerkJwt = {
+      socket: { remoteAddress: "10.0.0.2" },
+      headers: { authorization: `Bearer ${jwt}` },
+    };
+    assert.equal(canSeeAdmin(clerkJwt, { token: "secret" }).ok, false);
+    const both = {
+      socket: { remoteAddress: "10.0.0.2" },
+      headers: {
+        authorization: `Bearer ${jwt}`,
+        "x-admin-token": "secret",
+      },
+    };
+    assert.equal(canSeeAdmin(both, { token: "secret" }).ok, true);
   });
 
   it("timingSafeEqualStr compares", () => {
@@ -132,6 +147,40 @@ describe("checkApiSecret", () => {
     );
     assert.equal(
       checkApiSecret(req, { apiSecret: "s" }, { secret: "s", isLoopback: false }).ok,
+      true
+    );
+  });
+
+  it("ignores Clerk JWT Bearer and accepts X-FF-Secret", () => {
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1In0.sig";
+    assert.equal(
+      checkApiSecret(
+        { headers: { authorization: `Bearer ${jwt}` } },
+        null,
+        { secret: "s", isLoopback: false }
+      ).ok,
+      false
+    );
+    assert.equal(
+      checkApiSecret(
+        {
+          headers: {
+            authorization: `Bearer ${jwt}`,
+            "x-ff-secret": "s",
+          },
+        },
+        null,
+        { secret: "s", isLoopback: false }
+      ).ok,
+      true
+    );
+    assert.equal(
+      checkApiSecret(
+        { headers: { authorization: "Bearer s" } },
+        null,
+        { secret: "s", isLoopback: false }
+      ).ok,
       true
     );
   });

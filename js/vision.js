@@ -5,6 +5,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { apiFetch } from "./auth.js";
 
 /** Collect vision feature tags from selected tech objects */
 export function featuresFromTechs(techs) {
@@ -389,7 +390,7 @@ export class VisionRenderer {
         })),
       };
 
-      const res = await fetch("/api/vision", {
+      const res = await apiFetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

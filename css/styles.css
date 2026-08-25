@@ -74,6 +74,51 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Optional Clerk account chip — hidden unless GET /api/health clerk.enabled */
+#ff-account {
+  position: fixed;
+  top: 0.75rem;
+  right: var(--page-gutter);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+#ff-account[hidden] {
+  display: none !important;
+}
+
+#ff-account-user {
+  min-width: 2rem;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+}
+
+#ff-account-user[hidden] {
+  display: none !important;
+}
+
+#ff-account .cl-userButtonBox,
+#ff-account .cl-userButtonTrigger {
+  width: 2.15rem;
+  height: 2.15rem;
+}
+
+@media (max-width: 640px) {
+  #ff-account {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Leave room so Sign in / UserButton does not cover topbar actions */
+body.ff-accounts .topbar,
+body.ff-accounts .topbar-game {
+  padding-right: 6.75rem;
+}
+
 /* Screens */
 .screen {
   display: none;

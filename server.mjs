@@ -64,6 +64,12 @@ import {
 } from "./js/server/cost-policy.mjs";
 import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
 import {
+  publicClerkConfig,
+  authenticateClerkRequest,
+  runWithClerkIdentity,
+  clerkUserIdFromContext,
+} from "./js/server/clerk-auth.mjs";
+import {
   resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
@@ -234,6 +240,7 @@ function recordAiText(opts) {
     ok: opts.ok !== false,
     sessionId: opts.sessionId || null,
     roomCode: opts.roomCode || null,
+    clerkUserId: opts.clerkUserId || clerkUserIdFromContext(),
   });
 }
 
@@ -258,7 +265,20 @@ function recordAiImage(opts) {
     ok: opts.ok !== false,
     sessionId: opts.sessionId || null,
     roomCode: opts.roomCode || null,
+    clerkUserId: opts.clerkUserId || clerkUserIdFromContext(),
   });
+}
+
+/**
+ * @param {import('node:http').IncomingMessage} req
+ * @param {() => Promise<any>} fn
+ */
+async function withClerkIdentity(req, fn) {
+  const ident = await authenticateClerkRequest(req);
+  return runWithClerkIdentity(
+    ident.signedIn ? { userId: ident.userId, sessionId: ident.sessionId } : {},
+    fn
+  );
 }
 
 /**
@@ -2836,6 +2856,7 @@ async function handleTts(body) {
       latencyMs,
       ok: true,
       sessionId,
+      clerkUserId: clerkUserIdFromContext(),
     });
     return {
       buffer: cached.buffer,
@@ -2926,6 +2947,7 @@ async function handleTts(body) {
       latencyMs: Date.now() - t0,
       ok: false,
       sessionId,
+      clerkUserId: clerkUserIdFromContext(),
     });
     throw e;
   }
@@ -2941,6 +2963,7 @@ async function handleTts(body) {
     latencyMs,
     ok: true,
     sessionId,
+    clerkUserId: clerkUserIdFromContext(),
   });
 
   return {
@@ -2994,6 +3017,7 @@ const server = http.createServer(async (req, res) => {
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
+      clerk: publicClerkConfig(),
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3015,6 +3039,26 @@ const server = http.createServer(async (req, res) => {
       trustProxy: process.env.FF_TRUST_PROXY === "1",
       apiSecretRequired: Boolean(API_SECRET),
       maxRooms: MAX_ROOMS,
+    });
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me" || req.url?.startsWith("/api/me?"))) {
+    const ident = await authenticateClerkRequest(req);
+    if (!ident.enabled) {
+      return sendJson(res, 200, { ok: true, signedIn: false, clerk: false });
+    }
+    if (ident.missingToken) {
+      return sendJson(res, 200, { ok: true, signedIn: false, clerk: true });
+    }
+    if (ident.invalidToken || !ident.signedIn) {
+      return sendJson(res, 401, { ok: false, error: "invalid_token", clerk: true });
+    }
+    return sendJson(res, 200, {
+      ok: true,
+      signedIn: true,
+      clerk: true,
+      userId: ident.userId,
+      sessionId: ident.sessionId,
     });
   }
 
@@ -3198,7 +3242,7 @@ const server = http.createServer(async (req, res) => {
           error: gate.error || "rate_limited",
         });
       }
-      const result = await handleVision(body);
+      const result = await withClerkIdentity(req, () => handleVision(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[vision]", e.message || e);
@@ -3220,7 +3264,7 @@ const server = http.createServer(async (req, res) => {
           error: gate.error || "rate_limited",
         });
       }
-      const result = await handleIdeaImage(body);
+      const result = await withClerkIdentity(req, () => handleIdeaImage(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[idea-image]", e.message || e);
@@ -3242,7 +3286,7 @@ const server = http.createServer(async (req, res) => {
           error: gate.error || "rate_limited",
         });
       }
-      const result = await handleMarketImage(body);
+      const result = await withClerkIdentity(req, () => handleMarketImage(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[market-image]", e.message || e);
@@ -3264,7 +3308,7 @@ const server = http.createServer(async (req, res) => {
           error: gate.error || "rate_limited",
         });
       }
-      const result = await handleTts(body);
+      const result = await withClerkIdentity(req, () => handleTts(body));
       res.writeHead(200, {
         "Content-Type": result.contentType || "audio/mpeg",
         "Content-Length": result.buffer.length,
@@ -3308,7 +3352,7 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
-      const result = await handleCoInvent(body);
+      const result = await withClerkIdentity(req, () => handleCoInvent(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
@@ -3608,6 +3652,13 @@ server.listen(PORT, HOST, async () => {
   }
   if (API_SECRET) {
     console.log("API secret: ON (expensive POST routes require FF_API_SECRET)");
+  }
+  if (publicClerkConfig().enabled) {
+    console.log("Learner accounts: Clerk ON (optional sign-in)");
+  } else {
+    console.log(
+      "Learner accounts: OFF (set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY)"
+    );
   }
   try {
     const token = await resolveAccessToken();

@@ -29,7 +29,7 @@ Future Forge is an inventing practice. You pick a global problem, land in a conc
 
 ## Requirements
 
-- **Node.js** 18+ (ES modules)
+- **Node.js** 18+ (ES modules). **Node 20.9+** if you enable Clerk learner accounts (`@clerk/backend`)
 - Optional but recommended for full AI + vision:
   - **SuperGrok** session via Grok CLI (`grok login`), **or**
   - An **xAI API key** (`FF_XAI_API_KEY`)
@@ -72,6 +72,28 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 
 Default port: **8765** (override with `FF_PORT`).
 
+### Learner accounts (optional Clerk)
+
+Sign-in is **optional**. Future Forge stays fully playable without an account. Hosted [warmersun.com](https://warmersun.com) can turn Clerk on so learners have a stable identity (progress sync, achievements, and paid lessons come later).
+
+This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
+
+```bash
+# .env — both keys required to enable the Sign in chip
+CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+# Optional: CLERK_AUTHORIZED_PARTIES=http://127.0.0.1:8765,https://warmersun.com
+```
+
+| Endpoint | Behavior |
+|----------|----------|
+| `GET /api/health` | Public `clerk.enabled` + publishable key (never the secret) |
+| `GET /api/me` | `{ signedIn: false }` unsigned; `{ userId }` when the session JWT is valid; `401` on a bad token |
+
+In the Clerk Dashboard, add allowed origins for `http://localhost:8765`, `http://127.0.0.1:8765`, and the production host. If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
+
+Without these keys, `npm start` is unchanged (no account chip, no Clerk network).
+
 ### Optional environment
 
 Copy `.env.example` to `.env` if you want overrides:
@@ -93,10 +115,11 @@ The Node server serves static files and exposes:
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
-- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token)  
+- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token); includes `clerk` config when learner accounts are on  
+- `GET /api/me` — Clerk learner identity (optional; unsigned play still works)  
 - `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
-Auth is resolved **on the server** (tokens never go to the browser).
+**AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) are resolved **on the server** and never go to the browser. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
 
 ### Server hardening (static, rates, admin)
 
@@ -105,7 +128,8 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | Env | Purpose |
 |-----|---------|
 | `FF_TRUST_PROXY=1` | Use `X-Forwarded-For` for rate-limit keys (**only** behind a reverse proxy you control; off by default) |
-| `FF_API_SECRET` | If set, expensive POST routes require `Authorization: Bearer …` or `X-FF-Secret` (loopback exempt) |
+| `FF_API_SECRET` | If set, expensive POST routes require `X-FF-Secret` or non-JWT `Authorization: Bearer` (loopback exempt). Prefer `X-FF-Secret` when Clerk is on. |
+| `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` | Optional learner accounts. Both required. |
 | `FF_ADMIN_TOKEN` | Non-loopback access to `/api/usage` and detailed `/api/health` |
 | `FF_MAX_ROOMS` | Cap concurrent friends rooms (default 200) |
 | `FF_WS_MAX_PAYLOAD` | Max WebSocket message bytes (default 256KiB) |
