@@ -13,6 +13,7 @@ import {
   sanitizeLastRun,
   shouldStoreLastRun,
 } from "./cloud-save.mjs";
+import { parseStartBody, publicRunRow } from "./quest-log.mjs";
 
 const { Pool, Client } = pg;
 
@@ -250,7 +251,40 @@ export async function insertRun(input) {
   try {
     await client.query("BEGIN");
     await ensureUser(clerkUserId, client);
-    const row = await insertRunRow(client, clerkUserId, run, { imported: false });
+    let row;
+    if (run.id) {
+      const upd = await client.query(
+        `UPDATE runs SET
+           quest_id = $3, kind = $4, outcome = $5, stars = $6, year_reached = $7,
+           waits = $8, place = $9, tech_ids = $10, ended_at = now()
+         WHERE id = $1::uuid AND clerk_user_id = $2
+         RETURNING id`,
+        [
+          run.id,
+          clerkUserId,
+          run.questId,
+          run.kind,
+          run.outcome,
+          run.stars,
+          run.yearReached,
+          run.waits,
+          run.place,
+          run.techIds || [],
+        ]
+      );
+      if (upd.rowCount) {
+        row = { id: upd.rows[0].id };
+        if (run.outcome === "hold" || run.outcome === "partial") {
+          await client.query(
+            `INSERT INTO solved_quests (clerk_user_id, quest_id, source)
+             VALUES ($1, $2, 'play')
+             ON CONFLICT DO NOTHING`,
+            [clerkUserId, run.questId]
+          );
+        }
+      }
+    }
+    if (!row) row = await insertRunRow(client, clerkUserId, run, { imported: false });
     await client.query("COMMIT");
     return { skipped: false, stored: true, id: row.id, questId: run.questId };
   } catch (e) {
@@ -274,8 +308,9 @@ export async function insertRun(input) {
 async function insertRunRow(client, clerkUserId, run, opts = {}) {
   const r = await client.query(
     `INSERT INTO runs (
-       clerk_user_id, quest_id, kind, outcome, stars, year_reached, waits, place, imported
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       clerk_user_id, quest_id, kind, outcome, stars, year_reached, waits, place, imported,
+       started_at, tech_ids
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now(), $10)
      RETURNING id`,
     [
       clerkUserId,
@@ -287,6 +322,7 @@ async function insertRunRow(client, clerkUserId, run, opts = {}) {
       run.waits,
       run.place,
       Boolean(opts.imported),
+      Array.isArray(run.techIds) ? run.techIds : [],
     ]
   );
   if (run.outcome === "hold" || run.outcome === "partial") {
@@ -298,4 +334,65 @@ async function insertRunRow(client, clerkUserId, run, opts = {}) {
     );
   }
   return { id: r.rows[0]?.id || null };
+}
+
+/**
+ * @param {{ clerkUserId: string, kind?: string|null, outcome?: string|null, limit?: number }} input
+ */
+export async function listRuns(input) {
+  const db = getPool();
+  if (!db) return { skipped: true, runs: [] };
+  const clerkUserId = normalizeClerkUserId(input?.clerkUserId);
+  if (!clerkUserId) return { skipped: false, runs: [] };
+  const limit = Math.min(100, Math.max(1, Number(input?.limit) || 50));
+  const params = [clerkUserId];
+  let sql = `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place,
+                    tech_ids, started_at, ended_at, imported, created_at
+             FROM runs WHERE clerk_user_id = $1`;
+  if (input?.kind) {
+    params.push(input.kind);
+    sql += ` AND kind = $${params.length}`;
+  }
+  if (input?.outcome) {
+    params.push(input.outcome);
+    sql += ` AND outcome = $${params.length}`;
+  }
+  params.push(limit);
+  sql += ` ORDER BY COALESCE(ended_at, started_at, created_at) DESC LIMIT $${params.length}`;
+  const r = await db.query(sql, params);
+  return { skipped: false, runs: r.rows.map(publicRunRow).filter(Boolean) };
+}
+
+/**
+ * @param {{ clerkUserId: string, questId?: unknown, kind?: unknown, place?: unknown }} input
+ */
+export async function startRun(input) {
+  const db = getPool();
+  if (!db) return { ...SKIPPED, stored: false, id: null };
+  const clerkUserId = normalizeClerkUserId(input?.clerkUserId);
+  if (!clerkUserId) throw Object.assign(new Error("invalid_user"), { status: 401 });
+  const parsed = parseStartBody(input);
+  if (!parsed) throw Object.assign(new Error("invalid_run"), { status: 400 });
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureUser(clerkUserId, client);
+    const r = await client.query(
+      `INSERT INTO runs (clerk_user_id, quest_id, kind, outcome, place, started_at, imported)
+       VALUES ($1,$2,$3,NULL,$4, now(), false)
+       RETURNING id`,
+      [clerkUserId, parsed.questId, parsed.kind, parsed.place]
+    );
+    await client.query("COMMIT");
+    return { skipped: false, stored: true, id: r.rows[0]?.id || null, questId: parsed.questId };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
 }

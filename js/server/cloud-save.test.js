@@ -80,6 +80,17 @@ describe("mapOutcome / sanitizeLastRun", () => {
     assert.equal(sanitizeLastRun({ questId: "q1" }), null);
   });
 
+  it("keeps uuid id and techIds", () => {
+    const run = sanitizeLastRun({
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      questId: "q1",
+      outcome: "hold",
+      techIds: ["gene-seq", "bad id"],
+    });
+    assert.equal(run.id, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    assert.deepEqual(run.techIds, ["gene-seq"]);
+  });
+
   it("drops out-of-range stars and slices place", () => {
     assert.equal(sanitizeLastRun({ questId: "q1", outcome: "hold", stars: 9 }).stars, null);
     const long = sanitizeLastRun({

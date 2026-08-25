@@ -81,12 +81,15 @@ import {
   listSolvedIds,
   importProgress,
   insertRun,
+  listRuns,
+  startRun,
 } from "./js/server/db.mjs";
 import {
   cloudWriteGate,
   parseImportBody,
   sanitizeLastRun,
 } from "./js/server/cloud-save.mjs";
+import { parseRunsQuery } from "./js/server/quest-log.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -3129,6 +3132,28 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (req.method === "GET" && (req.url === "/api/me/runs" || req.url?.startsWith("/api/me/runs?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const q = parseRunsQuery(url.searchParams);
+      const result = await listRuns({
+        clerkUserId: gate.userId,
+        kind: q.kind,
+        outcome: q.outcome,
+        limit: q.limit,
+      });
+      return sendJson(res, 200, { ok: true, runs: result.runs || [] });
+    } catch (e) {
+      console.warn("[cloud db] listRuns", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "runs_failed" });
+    }
+  }
+
   if (
     req.method === "POST" &&
     (req.url === "/api/me/import" || req.url?.startsWith("/api/me/import?"))
@@ -3159,6 +3184,29 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, errorStatus(e), {
         ok: false,
         error: e?.status === 400 ? "invalid_json" : "import_failed",
+      });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs/start" || req.url?.startsWith("/api/me/runs/start?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const result = await startRun({ ...body, clerkUserId: gate.userId });
+      return sendJson(res, 200, { ok: true, stored: result.stored, id: result.id || null });
+    } catch (e) {
+      console.warn("[cloud db] startRun", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_run" : "run_failed",
       });
     }
   }

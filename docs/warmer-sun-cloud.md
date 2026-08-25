@@ -2,7 +2,7 @@
 
 **Status:** ideation plus a few locked building blocks. See **implemented / ready / todo** below.  
 **Clerk application:** `Warmer Sun Cloud`  
-**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest-log UI is still [C1](#C1).
+**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1).
 
 This note is a menu. Each item is: the **idea**, then a **short how**. Pick later. Do not build all of it.
 
@@ -26,7 +26,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 |--------|--------|
 | Identity | Clerk (`user_…`). Optional. Sign in / UserButton / Sign out works. |
 | Play | Works unsigned. Self-host needs no Clerk. |
-| Progress | `localStorage` always (cache). Signed-in + `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest-log UI still [C1](#C1). |
+| Progress | `localStorage` always (cache). Signed-in + `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). |
 | Daily | Client hash of the calendar day → one mission. Each device can disagree if clocks or catalogs differ. |
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI. No paywall. No cloud progress. |
 | Friends | Rooms + WebSocket. Names are per room, not Clerk. |
@@ -59,6 +59,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**A2**](#A2) save-at-pride / first sign-in import | `POST /api/me/import`, `POST /api/me/runs`; outcome Sign in CTA; union merge ([C4](#C4)) |
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
 | SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
+| [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -75,7 +76,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
 | [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
-| [**C1**](#C1) Quest log | Neon tables exist; still need `GET /api/me/runs` + profile list UI |
 | [**C2**](#C2) Achievements | Neon + rules file on run complete |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
 | [**D1**](#D1) Daily hold board | Neon + identity; server must pick the day’s tile (stop hashing only in the browser) |
@@ -176,7 +176,7 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 Replace “this laptop remembers” with “your account remembers.”
 
 <a id="C1"></a>
-### C1. Quest log — **ready**
+### C1. Quest log — **implemented**
 
 **Idea.** A list: what you started, what you held, what collapsed, which Daily dates, which lesson N/M. Open it on your phone tomorrow.
 
@@ -363,7 +363,7 @@ They need a paid **Education** license to self-host. We still **do not build cla
 
 Smallest path that makes Cloud *feel* real. Items 1–4 are **ready**. 5–8 wait on **todo** vendors or a host.
 
-1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **A2/C4 implemented**; C1 log UI still **ready**  
+1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **implemented**  
 2. **Server Daily + submit + 24h board** ([D1](#D1)) — **ready** ([E10](#E10) homepage is **todo**)  
 3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1), [E2](#E2)) — **ready**  
 4. **AI quota (free cap)** ([B2](#B2)) — **ready**; plan cap is **todo**  

@@ -119,6 +119,57 @@ body.ff-accounts .topbar-game {
   padding-right: 6.75rem;
 }
 
+.quest-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.quest-log-filters .chip {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: var(--text-dim, #cbd5e1);
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.quest-log-filters .chip.is-on {
+  border-color: rgba(167, 139, 250, 0.7);
+  background: rgba(167, 139, 250, 0.18);
+  color: #ede9fe;
+}
+
+.quest-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.quest-log-item {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.quest-log-item-title {
+  margin: 0 0 0.2rem;
+  font-weight: 650;
+}
+
+.quest-log-item-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-dim, #94a3b8);
+}
+
 /* Screens */
 .screen {
   display: none;

@@ -98,7 +98,23 @@ export function sanitizeLastRun(raw) {
   const outcome = mapOutcome(raw.outcome);
   if (!outcome) return null;
   const placeRaw = raw.place != null ? String(raw.place).trim() : "";
+  const techRaw = raw.techIds || raw.tech_ids;
+  const techIds = [];
+  if (Array.isArray(techRaw)) {
+    const seen = new Set();
+    for (const item of techRaw) {
+      if (techIds.length >= 16) break;
+      const id = sanitizeQuestId(item);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      techIds.push(id);
+    }
+  }
+  const runId = typeof raw.id === "string" && /^[0-9a-f-]{36}$/i.test(raw.id.trim())
+    ? raw.id.trim()
+    : null;
   return {
+    id: runId,
     questId,
     outcome,
     kind: mapKind(raw.kind),
@@ -106,6 +122,7 @@ export function sanitizeLastRun(raw) {
     yearReached: optionalInt(raw.yearReached ?? raw.year_reached, 0, 9999),
     waits: optionalInt(raw.waits, 0, 10_000),
     place: placeRaw ? placeRaw.slice(0, PLACE_MAX) : null,
+    techIds,
   };
 }
 
