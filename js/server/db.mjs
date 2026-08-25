@@ -514,6 +514,14 @@ export async function upsertDailyScore(input, betterFn) {
 /**
  * @param {string} clerkUserId
  */
+export async function deleteUser(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return { deleted: false };
+  const r = await db.query("DELETE FROM users WHERE clerk_user_id = $1", [uid]);
+  return { deleted: (r.rowCount || 0) > 0 };
+}
+
 export async function countUsers() {
   const db = getPool();
   if (!db) return 0;

@@ -93,6 +93,8 @@ import {
   insertAchievements,
   listUserDailyPeriods,
   countUsers,
+  deleteUser,
+  ensureUser,
   getProfileByUserId,
   getProfileByUsername,
   updateProfile,
@@ -103,6 +105,7 @@ import {
   listPins,
   replacePins,
 } from "./js/server/db.mjs";
+import { planClerkUserEvent } from "./js/server/clerk-webhooks.mjs";
 import { sanitizePinList } from "./js/server/pins.mjs";
 import { userQuotaDecision, freeDailyCapFromEnv } from "./js/server/ai-quota.mjs";
 import {
@@ -2410,6 +2413,14 @@ async function resolveOfficialDaily(dateRaw, opts = {}) {
   return { period, questId: questId || null, tile };
 }
 
+async function ensureUserFromWebhook(plan) {
+  if (!plan?.userId) return;
+  await ensureUser(plan.userId);
+  if (Array.isArray(plan.codes) && plan.codes.length) {
+    await insertAchievements(plan.userId, plan.codes);
+  }
+}
+
 async function grantCloudAchievements(clerkUserId, run, extra = {}) {
   if (!dbEnabled() || !clerkUserId || !run) return [];
   try {
@@ -3409,6 +3420,51 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, stored: result.stored });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "share_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/webhooks/clerk" || req.url?.startsWith("/api/webhooks/clerk?"))
+  ) {
+    const secret = String(process.env.CLERK_WEBHOOK_SECRET || "").trim();
+    if (!secret) {
+      req.resume();
+      return sendJson(res, 404, { ok: false, error: "webhooks_off" });
+    }
+    try {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const payload = Buffer.concat(chunks).toString("utf8");
+      let evt = null;
+      try {
+        const { verifyWebhook } = await import("@clerk/backend/webhooks");
+        evt = await verifyWebhook(
+          {
+            headers: req.headers,
+            rawBody: payload,
+          },
+          { signingSecret: secret }
+        );
+      } catch {
+        try {
+          evt = JSON.parse(payload);
+        } catch {
+          return sendJson(res, 400, { ok: false, error: "invalid_webhook" });
+        }
+        return sendJson(res, 401, { ok: false, error: "invalid_signature" });
+      }
+      const plan = planClerkUserEvent(evt);
+      if (!plan.ok) return sendJson(res, 400, { ok: false, error: plan.error });
+      if (plan.action === "delete") {
+        await deleteUser(plan.userId);
+      } else if (plan.action === "ensure" || plan.action === "touch") {
+        await ensureUserFromWebhook(plan);
+      }
+      return sendJson(res, 200, { ok: true, action: plan.action });
+    } catch (e) {
+      console.warn("[clerk webhook]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "webhook_failed" });
     }
   }
 
