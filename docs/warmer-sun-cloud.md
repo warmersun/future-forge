@@ -68,6 +68,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**B2**](#B2) Per-user AI quota (free cap) | signed-in daily hit cap; unsigned still IP-limited |
 | [**B3**](#B3) Sponsored lessons stay free | `needsPlayerBilling` is false for sponsor / catalog.free |
 | [**E3**](#E3) Cloud pins | `GET/PUT /api/me/pins` max 3 |
+| [**E4**](#E4) Friends rooms with Clerk names | room player `clerkUserId`; friends `runs` on hold |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -83,7 +84,7 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**E4**](#E4) Friends rooms with Clerk names | JWT already on `/api/rooms`; stamp `clerk_user_id` on the player |
+
 | [**E6**](#E6) Rematch / ghost | Daily id + target year; no new vendor |
 | [**E7**](#E7) Founding / season badges | `achievements` + `user.created` webhook (webhook route is code, Svix is Clerk) |
 | [**E8**](#E8) Display name / hide email | Clerk already has name; extra flags in Neon |
@@ -269,7 +270,7 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 **How.** Table `pins` (max 3 server-side). Replace `future-forge:pins` when signed in.
 
 <a id="E4"></a>
-### E4. Friends rooms with real names — **ready**
+### E4. Friends rooms with real names — **implemented**
 
 **Idea.** Invent with friends, but the host sees *Tamas*, not `Player 2`, and the run can land on everyone’s quest log.
 

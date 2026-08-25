@@ -3791,9 +3791,11 @@ const server = http.createServer(async (req, res) => {
       const sid = clientSessionFromBody(body);
       if (sid) usage.touchSession(sid);
       const ip = clientIp(req);
+      const ident = await authenticateClerkRequest(req);
       const result = roomManager.createRoom({
         displayName: body.displayName,
         ip,
+        clerkUserId: ident.signedIn ? ident.userId : null,
       });
       return sendJson(res, result.ok ? 200 : result.status || 400, result);
     } catch (e) {
@@ -3812,10 +3814,12 @@ const server = http.createServer(async (req, res) => {
         const sid = clientSessionFromBody(body);
         if (sid) usage.touchSession(sid);
         const ip = clientIp(req);
+        const ident = await authenticateClerkRequest(req);
         const result = roomManager.joinRoom(joinMatch[1].toUpperCase(), {
           displayName: body.displayName,
           playerToken: body.playerToken,
           ip,
+          clerkUserId: ident.signedIn ? ident.userId : null,
         });
         return sendJson(res, result.ok ? 200 : result.status || 400, result);
       } catch (e) {

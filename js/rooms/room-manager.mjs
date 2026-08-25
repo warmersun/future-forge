@@ -219,7 +219,7 @@ export class RoomManager {
     return { ok: true, player, isHost };
   }
 
-  createRoom({ displayName, ip } = {}) {
+  createRoom({ displayName, ip, clerkUserId } = {}) {
     this.sweep();
     if (this.rooms.size >= this.maxRooms) {
       return { ok: false, error: "server_full", status: 503 };
@@ -249,6 +249,7 @@ export class RoomManager {
           isHost: true,
           joinedAt: now,
           role: "host",
+          clerkUserId: clerkUserId || null,
         },
       ],
       settings: {
@@ -292,7 +293,7 @@ export class RoomManager {
     };
   }
 
-  joinRoom(code, { displayName, playerToken, ip } = {}) {
+  joinRoom(code, { displayName, playerToken, ip, clerkUserId } = {}) {
     this.sweep();
     const room = this.rooms.get(String(code || "").toUpperCase());
     if (!room) return { ok: false, error: "room_not_found", status: 404 };
@@ -336,6 +337,7 @@ export class RoomManager {
         seat.playerToken = randomToken(16);
         seat.connected = true;
         seat.displayName = name;
+        if (clerkUserId) seat.clerkUserId = clerkUserId;
         if (room.mp?.invents?.[seat.id]) {
           room.mp.invents[seat.id].connected = true;
         }
@@ -369,6 +371,7 @@ export class RoomManager {
       isHost: false,
       joinedAt: Date.now(),
       role: "polymath",
+      clerkUserId: clerkUserId || null,
     });
     room.updatedAt = Date.now();
     this._emitRoomPlayers(room);
