@@ -66,6 +66,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
 | [**E2**](#E2) Streaks | `GET /api/me/streak` from official daily_scores |
 | [**B2**](#B2) Per-user AI quota (free cap) | signed-in daily hit cap; unsigned still IP-limited |
+| [**B3**](#B3) Sponsored lessons stay free | `needsPlayerBilling` is false for sponsor / catalog.free |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -80,7 +81,7 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | Item | Why it is ready |
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
-| [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
+
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
 | [**E3**](#E3) Cloud pins | Neon; replace localStorage when signed in |
 | [**E4**](#E4) Friends rooms with Clerk names | JWT already on `/api/rooms`; stamp `clerk_user_id` on the player |
@@ -162,7 +163,7 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 **How.** We already have usage JSONL + per-IP rate limits. Add per-`clerk_user_id` daily counters in the DB. `gateExpensive` consults identity when present: unsigned IP limit (LAN/self-host); signed Cloud uses user quota by plan. Return `402` / `429` with a plain message: *Today’s co-inventor energy is spent — comes back at midnight, or upgrade.*
 
 <a id="B3"></a>
-### B3. Sponsored lessons stay free (with a name) — **ready**
+### B3. Sponsored lessons stay free (with a name) — **implemented**
 
 **Idea.** A company pays **us** to author a spotlight (already have `sponsorName`). Player does not pay. That is advertising / patronage, not a student license.
 

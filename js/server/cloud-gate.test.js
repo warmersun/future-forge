@@ -6,6 +6,7 @@ import {
   requireCloudAccount,
   publicCatalogTile,
   applyCatalogGate,
+  needsPlayerBilling,
   isTutorContext,
   questIdFromContext,
   prepareTutorContext,
@@ -39,6 +40,24 @@ describe("tileAccess", () => {
   it("honors explicit access", () => {
     assert.equal(tileAccess({ access: "paid", isLearningModule: true }), "paid");
     assert.equal(tileAccess({ access: "open", isLearningModule: true }), "open");
+  });
+});
+
+describe("needsPlayerBilling (B3)", () => {
+  it("sponsored and catalog.free never bill the player", () => {
+    assert.equal(
+      needsPlayerBilling({
+        access: "paid",
+        entitlement: "catalog.free",
+        sponsorName: "Acme",
+      }),
+      false
+    );
+    assert.equal(needsPlayerBilling({ access: "paid", sponsorName: "Acme" }), false);
+    assert.equal(needsPlayerBilling({ access: "account", isLearningModule: true }), false);
+  });
+  it("plain paid tiles would need Billing (todo B1)", () => {
+    assert.equal(needsPlayerBilling({ access: "paid" }), true);
   });
 });
 

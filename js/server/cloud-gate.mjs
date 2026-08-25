@@ -45,6 +45,33 @@ export function mayReadSecrets(ident, tile) {
  * @param {object|null|undefined} ident
  * @returns {{ ok: true } | { ok: false, status: number, error: string }}
  */
+export const ENTITLEMENT_FREE = "catalog.free";
+
+/**
+ * B3: sponsored / catalog.free tiles never ask the player for Billing.
+ * Paid access without a free entitlement is a Billing check (todo B1).
+ * @param {object|null|undefined} tile
+ */
+export function needsPlayerBilling(tile) {
+  if (!tile || typeof tile !== "object") return false;
+  const access = tileAccess(tile);
+  if (access !== ACCESS.PAID) return false;
+  const ent = String(tile.entitlement || tile.mission?.entitlement || "").trim();
+  if (ent === ENTITLEMENT_FREE || ent === "catalog.free") return false;
+  if (String(tile.sponsorName || tile.mission?.sponsorName || "").trim()) return false;
+  return true;
+}
+
+/**
+ * Optional campaign id for sponsor invent counts (not PII).
+ * @param {object|null|undefined} tile
+ */
+export function campaignIdFromTile(tile) {
+  const raw = tile?.campaignId || tile?.mission?.campaignId || tile?.sponsorCampaignId;
+  const s = String(raw || "").trim().slice(0, 80);
+  return /^[A-Za-z0-9._:-]+$/.test(s) ? s : null;
+}
+
 export function requireCloudAccount(ident) {
   if (!ident?.enabled) return { ok: true };
   if (ident.signedIn) return { ok: true };
