@@ -3988,6 +3988,40 @@ body.challenge-pose-pending #challenge-help-form {
   color: #fecaca;
 }
 
+.outcome-cloud-save {
+  width: 100%;
+  max-width: 28rem;
+  margin: 1.1rem auto 0.85rem;
+  padding: 1rem 1.15rem 1.1rem;
+  text-align: center;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  background: linear-gradient(
+    145deg,
+    rgba(167, 139, 250, 0.12),
+    rgba(15, 23, 42, 0.9)
+  );
+}
+
+.outcome-cloud-save[hidden] {
+  display: none !important;
+}
+
+.outcome-cloud-save-kicker {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+
+.outcome-cloud-save-copy {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text, #e8eef9);
+}
+
 .outcome-actions-hint {
   width: 100%;
   margin: 0 0 0.35rem;

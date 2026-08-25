@@ -2,7 +2,7 @@
 
 **Status:** ideation plus a few locked building blocks. See **implemented / ready / todo** below.  
 **Clerk application:** `Warmer Sun Cloud`  
-**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Player progress is still **this browser’s localStorage** until we write `runs`.
+**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest-log UI is still [C1](#C1).
 
 This note is a menu. Each item is: the **idea**, then a **short how**. Pick later. Do not build all of it.
 
@@ -26,7 +26,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 |--------|--------|
 | Identity | Clerk (`user_…`). Optional. Sign in / UserButton / Sign out works. |
 | Play | Works unsigned. Self-host needs no Clerk. |
-| Progress | `localStorage`: solved missions, scenario cache, run reports, pins, quest library, daily focus. Dies with the profile / device. |
+| Progress | `localStorage` always (cache). Signed-in + `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest-log UI still [C1](#C1). |
 | Daily | Client hash of the calendar day → one mission. Each device can disagree if clocks or catalogs differ. |
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI. No paywall. No cloud progress. |
 | Friends | Rooms + WebSocket. Names are per room, not Clerk. |
@@ -55,7 +55,10 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 |------|--------|
 | Optional Sign in / UserButton / Sign out | `feat/clerk-auth`, `js/auth.js` |
 | [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; hub lock |
-| `GET /api/health` `clerk` block, `GET /api/me`, JWT on expensive POSTs | `server.mjs`, `js/server/clerk-auth.mjs` |
+| `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `server.mjs`, `js/server/clerk-auth.mjs` |
+| [**A2**](#A2) save-at-pride / first sign-in import | `POST /api/me/import`, `POST /api/me/runs`; outcome Sign in CTA; union merge ([C4](#C4)) |
+| [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
+| SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -65,18 +68,16 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 
 ### Ready (building blocks exist — write the feature)
 
-Clerk user id + Neon are enough. Schema, webhooks, and routes are still to type.
+Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webhooks and remaining routes are still to type.
 
 | Item | Why it is ready |
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
-| [**A2**](#A2) Save-at-pride / first sign-in import | Clerk + Neon; `POST /api/me/import` is new code |
 | [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
-| [**C1**](#C1) Quest log | Neon; tables `users`, `runs` |
+| [**C1**](#C1) Quest log | Neon tables exist; still need `GET /api/me/runs` + profile list UI |
 | [**C2**](#C2) Achievements | Neon + rules file on run complete |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) |
 | [**D1**](#D1) Daily hold board | Neon + identity; server must pick the day’s tile (stop hashing only in the browser) |
 | [**D2**](#D2) Seasonal / weekly board | same as [D1](#D1) with a period key |
 | [**E1**](#E1) Public inventor page (in-game) | Neon profile row; marketing URL is **todo** until a host |
@@ -86,7 +87,6 @@ Clerk user id + Neon are enough. Schema, webhooks, and routes are still to type.
 | [**E6**](#E6) Rematch / ghost | Daily id + target year; no new vendor |
 | [**E7**](#E7) Founding / season badges | `achievements` + `user.created` webhook (webhook route is code, Svix is Clerk) |
 | [**E8**](#E8) Display name / hide email | Clerk already has name; extra flags in Neon |
-| SQL migrations `users` / `runs` | driver `pg` or `postgres` + `.sql` files |
 | Clerk → DB webhooks (`user.created/updated/deleted`) | `verifyWebhook` in `@clerk/backend`; local `clerk webhooks listen` |
 
 ### Todo (missing a pick or a later product)
@@ -129,11 +129,11 @@ Clerk user id + Neon are enough. Schema, webhooks, and routes are still to type.
 **Softer variant:** anyone can *play* Daily; you need an account to **count** it (streak, leaderboard, “I held the pathway”). Practice vs official.
 
 <a id="A2"></a>
-### A2. Soft account, hard save — **ready**
+### A2. Soft account, hard save — **implemented** (import + live run write; quest-log UI is [C1](#C1))
 
 **Idea.** Never block the first quest. After “pathway holds,” prompt: *Save this to your Warmer Sun Cloud account.* Conversion at the moment of pride, not at the door.
 
-**How.** Keep unsigned localStorage. On outcome screen, if Clerk is on and signed out, CTA Sign in. After `user.created` / first sign-in, `POST /api/me/import` uploads the local solved-ids + last run (size-capped). Then cloud is source of truth for that user.
+**How.** Keep unsigned localStorage. On outcome screen, if Clerk is on and signed out, CTA Sign in. After first sign-in, `POST /api/me/import` uploads the local solved-ids + last run (size-capped). Signed-in later holds `POST /api/me/runs`. Then cloud is source of truth for that user’s solved set. Merge rule: [C4](#C4). Clerk off or no `DATABASE_URL`: no-op.
 
 ---
 
@@ -205,11 +205,11 @@ Surface: UserButton menu → Achievements, and a strip on the title screen when 
 **How.** Harder. Snapshot `hex` board JSON (we already strip data-URL art for multiplayer wire). Table `run_state` (current run, board blob, mission id, year, tutor flag). Debounced `PUT` while playing; restore on load if signed in. Cap blob size; store Imagine images by cache key, not inline. v2.
 
 <a id="C4"></a>
-### C4. Merge on first sign-in — **ready**
+### C4. Merge on first sign-in — **implemented** (solved-id union + last completed run; board continue is [C3](#C3))
 
 **Idea.** People will invent unsigned, then Sign in. Don’t lose the local solved set.
 
-**How.** One-shot import ([A2](#A2)). Conflict rule: union of solved ids; cloud wins on the *active* run if both exist. Show a single toast: *Saved 4 quests to your account.*
+**How.** One-shot import ([A2](#A2)). Conflict rule: union of solved ids; cloud wins on the last completed run if both exist (skip local `lastRun` when the account already has a `runs` row). Show a single toast: *Saved N quests to your account.* Mid-quest board snapshots stay [C3](#C3).
 
 ---
 
@@ -363,7 +363,7 @@ They need a paid **Education** license to self-host. We still **do not build cla
 
 Smallest path that makes Cloud *feel* real. Items 1–4 are **ready**. 5–8 wait on **todo** vendors or a host.
 
-1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **ready**  
+1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **A2/C4 implemented**; C1 log UI still **ready**  
 2. **Server Daily + submit + 24h board** ([D1](#D1)) — **ready** ([E10](#E10) homepage is **todo**)  
 3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1), [E2](#E2)) — **ready**  
 4. **AI quota (free cap)** ([B2](#B2)) — **ready**; plan cap is **todo**  
@@ -395,7 +395,7 @@ If a feature’s main customer is a teacher, it does not belong in Warmer Sun Cl
 - Username required, or “Tamas S.” from Clerk?  
 - How brutal is the AI free cap? (This is a cost decision.)
 
-Identity is done. The next *useful* thing is probably **a quest log that survives the browser**, then **one shared Daily**.
+Identity and the first Neon write are done. The next *useful* thing is probably **the quest log UI** ([C1](#C1)), then **one shared Daily**.
 
 ---
 

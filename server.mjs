@@ -75,6 +75,19 @@ import {
   questIdFromContext,
 } from "./js/server/cloud-gate.mjs";
 import {
+  dbEnabled,
+  publicDbConfig,
+  migrate as migrateCloudDb,
+  listSolvedIds,
+  importProgress,
+  insertRun,
+} from "./js/server/db.mjs";
+import {
+  cloudWriteGate,
+  parseImportBody,
+  sanitizeLastRun,
+} from "./js/server/cloud-save.mjs";
+import {
   resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
@@ -3055,6 +3068,7 @@ const server = http.createServer(async (req, res) => {
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
       clerk: publicClerkConfig(),
+      db: publicDbConfig(),
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3082,13 +3096,27 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && (req.url === "/api/me" || req.url?.startsWith("/api/me?"))) {
     const ident = await authenticateClerkRequest(req);
     if (!ident.enabled) {
-      return sendJson(res, 200, { ok: true, signedIn: false, clerk: false });
+      return sendJson(res, 200, { ok: true, signedIn: false, clerk: false, db: false });
     }
     if (ident.missingToken) {
-      return sendJson(res, 200, { ok: true, signedIn: false, clerk: true });
+      return sendJson(res, 200, {
+        ok: true,
+        signedIn: false,
+        clerk: true,
+        db: dbEnabled(),
+      });
     }
     if (ident.invalidToken || !ident.signedIn) {
       return sendJson(res, 401, { ok: false, error: "invalid_token", clerk: true });
+    }
+    const dbOn = dbEnabled();
+    let solvedIds = [];
+    if (dbOn) {
+      try {
+        solvedIds = await listSolvedIds(ident.userId);
+      } catch (e) {
+        console.warn("[cloud db] listSolvedIds", e?.message || e);
+      }
     }
     return sendJson(res, 200, {
       ok: true,
@@ -3096,7 +3124,75 @@ const server = http.createServer(async (req, res) => {
       clerk: true,
       userId: ident.userId,
       sessionId: ident.sessionId,
+      db: dbOn,
+      solvedIds,
     });
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/import" || req.url?.startsWith("/api/me/import?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 32_000 });
+      const parsed = parseImportBody(body);
+      const result = await importProgress({
+        clerkUserId: gate.userId,
+        solvedIds: parsed.solvedIds,
+        lastRun: parsed.lastRun,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        inserted: result.inserted,
+        total: result.total,
+        lastRunStored: result.lastRunStored,
+        solvedIds: result.solvedIds,
+      });
+    } catch (e) {
+      console.warn("[cloud db] import", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_json" : "import_failed",
+      });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs" || req.url?.startsWith("/api/me/runs?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 16_000 });
+      const run = sanitizeLastRun(body?.run || body);
+      if (!run) {
+        return sendJson(res, 400, { ok: false, error: "invalid_run" });
+      }
+      const result = await insertRun({ clerkUserId: gate.userId, run });
+      return sendJson(res, 200, {
+        ok: true,
+        stored: result.stored,
+        id: result.id || null,
+        questId: result.questId || run.questId,
+      });
+    } catch (e) {
+      console.warn("[cloud db] insertRun", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_run" : "run_failed",
+      });
+    }
   }
 
   if (req.method === "GET" && req.url?.startsWith("/api/usage")) {
@@ -3645,6 +3741,17 @@ server.on("error", (err) => {
 
 server.listen(PORT, HOST, async () => {
   console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  if (dbEnabled()) {
+    try {
+      const mig = await migrateCloudDb();
+      const extra = mig.applied?.length ? ` applied ${mig.applied.join(", ")}` : " schema current";
+      console.log(`Cloud DB: Neon ready (${extra.trim()})`);
+    } catch (e) {
+      console.warn("Cloud DB: migrate failed — import/save disabled until fixed:", e?.message || e);
+    }
+  } else {
+    console.log("Cloud DB: off (no DATABASE_URL)");
+  }
   if (usage.enabled) {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {

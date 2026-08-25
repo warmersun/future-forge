@@ -465,6 +465,7 @@ const state = {
 const STORAGE_SCENARIOS = "future-forge:scenarioCache:v12";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
+const STORAGE_LAST_RUN = "future-forge:lastRun";
 
 /**
  * Friends room / hotseat keep today's full GAME.features (not Spark).
@@ -3000,6 +3001,138 @@ function persistSolvedMissions() {
     localStorage.setItem(STORAGE_SOLVED, JSON.stringify([...state.solvedMissionIds]));
   } catch {
     /* ignore */
+  }
+}
+
+function slimLastRunFromState() {
+  const o = state.outcome;
+  const m = state.mission;
+  if (!o || !m?.id) return null;
+  const kind = m.isLearningModule
+    ? "lesson"
+    : isMultipartyOutcome()
+      ? "friends"
+      : "theme";
+  let outcome = String(o.kind || "");
+  if (outcome === "win") outcome = "hold";
+  if (!outcome) return null;
+  return {
+    questId: String(m.id),
+    outcome,
+    kind,
+    stars: o.runReport?.stars ?? null,
+    yearReached: o.year ?? state.year ?? null,
+    waits: o.waits ?? 0,
+    place: m.place ? String(m.place) : "",
+  };
+}
+
+function stashLastRun(run) {
+  if (!run?.questId) return;
+  try {
+    sessionStorage.setItem(STORAGE_LAST_RUN, JSON.stringify(run));
+  } catch {
+    /* ignore */
+  }
+}
+
+function readStashedLastRun() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_LAST_RUN);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function unionSolvedIds(ids) {
+  if (!Array.isArray(ids) || !ids.length) return;
+  for (const id of ids) {
+    if (id) state.solvedMissionIds.add(String(id));
+  }
+  persistSolvedMissions();
+}
+
+let cloudImportDone = false;
+let cloudDbEnabled = null;
+
+async function refreshCloudDbFlag() {
+  try {
+    const res = await apiFetch("/api/health");
+    if (!res.ok) return cloudDbEnabled === true;
+    const data = await res.json();
+    cloudDbEnabled = Boolean(data?.db?.enabled);
+    return cloudDbEnabled;
+  } catch {
+    return cloudDbEnabled === true;
+  }
+}
+
+function applyOutcomeCloudSaveChrome() {
+  const panel = $("#outcome-cloud-save");
+  if (!panel) return;
+  const clerkOn = document.body.classList.contains("ff-accounts");
+  const signedIn = isClerkSignedIn();
+  const kind = state.outcome?.kind;
+  const pride = kind === "win" || kind === "partial";
+  const show =
+    clerkOn && !signedIn && pride && state.screen === "outcome" && !isMultipartyOutcome();
+  panel.hidden = !show;
+}
+
+function postCloudRun(run) {
+  if (!isClerkSignedIn() || !run?.questId) return;
+  void apiFetch("/api/me/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(run),
+  }).catch(() => {
+    /* unsigned cache still holds */
+  });
+}
+
+async function syncCloudProgress() {
+  applyOutcomeCloudSaveChrome();
+  if (!isClerkSignedIn()) {
+    cloudImportDone = false;
+    return;
+  }
+  const dbOn = await refreshCloudDbFlag();
+  if (!dbOn) return;
+  if (cloudImportDone) {
+    try {
+      const res = await apiFetch("/api/me");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.solvedIds)) unionSolvedIds(data.solvedIds);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  cloudImportDone = true;
+  try {
+    const res = await apiFetch("/api/me/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solvedIds: [...state.solvedMissionIds],
+        lastRun: readStashedLastRun(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 503) {
+      cloudImportDone = false;
+      return;
+    }
+    if (res.ok && Array.isArray(data.solvedIds)) unionSolvedIds(data.solvedIds);
+    const n = Number(data.inserted) || 0;
+    if (res.ok && n > 0) {
+      flashToast(`Saved ${n} quest${n === 1 ? "" : "s"} to your account.`);
+    }
+  } catch {
+    cloudImportDone = false;
   }
 }
 
@@ -13906,6 +14039,9 @@ function finishOutcome(kind, meta = {}) {
   };
   state.mpOutcome = thisMp;
   showScreen("outcome");
+  const slim = slimLastRunFromState();
+  stashLastRun(slim);
+  postCloudRun(slim);
   applyOutcomeNextChallengeChrome();
 }
 
@@ -13962,6 +14098,7 @@ function setOutcomeBtnVisible(el, on) {
 }
 
 function applyOutcomeNextChallengeChrome() {
+  applyOutcomeCloudSaveChrome();
   const retry = $("#btn-outcome-retry");
   const neu = $("#btn-outcome-new");
   const pick = $("#btn-outcome-rematch-pick");
@@ -18512,6 +18649,9 @@ function bind() {
     updateVision({ immediate: true, force: true, context: "deploy" });
   });
 
+  $("#btn-outcome-cloud-signin")?.addEventListener("click", () => {
+    openCloudSignIn();
+  });
   $("#btn-outcome-new").addEventListener("click", () => {
     if (isMultipartyOutcome()) {
       flashToast(
@@ -18709,5 +18849,6 @@ export function init() {
       if (state.screen === "quest-hub") renderQuestHub();
       if (state.screen === "quest-catalog") renderQuestCatalog();
     });
+    void syncCloudProgress();
   });
 }

@@ -1,7 +1,8 @@
 /**
  * Optional Clerk learner-account identity.
  * Off unless both publishable + secret keys are set. Missing tokens never
- * block play; invalid tokens are only rejected on GET /api/me.
+ * block play; invalid tokens are only rejected on GET /api/me and
+ * POST /api/me/import, POST /api/me/runs.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
