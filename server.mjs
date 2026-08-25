@@ -104,6 +104,7 @@ import {
   parseShareBody,
   sanitizeUsername,
 } from "./js/server/profile.mjs";
+import { dailyStreak } from "./js/server/streak.mjs";
 import {
   cloudWriteGate,
   parseImportBody,
@@ -122,6 +123,7 @@ import {
   DAILY_SALT,
   WEEK_SALT,
   isoWeekPeriod,
+  utcDayString,
 } from "./js/server/daily.mjs";
 import { awardForRun, publicAchievement, countHoldsInWeek } from "./js/server/achievements.mjs";
 import {
@@ -3264,6 +3266,22 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.warn("[cloud db] achievements", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/streak" || req.url?.startsWith("/api/me/streak?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const periods = await listUserDailyPeriods(gate.userId);
+      const today = utcDayString();
+      const days = dailyStreak(periods, today);
+      return sendJson(res, 200, { ok: true, days, today });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "streak_failed" });
     }
   }
 

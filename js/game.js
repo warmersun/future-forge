@@ -3434,6 +3434,30 @@ function renderTitleCtas() {
   }
 }
 
+async function loadStreakChip() {
+  const el = $("#cloud-streak-chip");
+  if (!el) return;
+  if (!isClerkSignedIn()) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/streak");
+    const data = await res.json().catch(() => ({}));
+    const n = Number(data.days) || 0;
+    if (n < 1) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = n === 1 ? "1 day" : `${n} days`;
+  } catch {
+    el.hidden = true;
+  }
+}
+
 async function loadAchievementsStrip() {
   const el = $("#cloud-achievements-strip");
   if (!el) return;
@@ -3461,6 +3485,7 @@ async function loadAchievementsStrip() {
 function renderTitleMeta() {
   renderTitleCtas();
   void loadAchievementsStrip();
+  void loadStreakChip();
   if (state.screen === "quest-log") void loadQuestLog();
   // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {

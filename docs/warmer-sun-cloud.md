@@ -64,6 +64,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**D2**](#D2) Seasonal / weekly board | `GET /api/weekly` + `period=YYYY-Www` on `daily_scores` |
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
+| [**E2**](#E2) Streaks | `GET /api/me/streak` from official daily_scores |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -81,7 +82,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**E2**](#E2) Streaks | derived from `daily_scores` |
 | [**E3**](#E3) Cloud pins | Neon; replace localStorage when signed in |
 | [**E4**](#E4) Friends rooms with Clerk names | JWT already on `/api/rooms`; stamp `clerk_user_id` on the player |
 | [**E6**](#E6) Rematch / ghost | Daily id + target year; no new vendor |
@@ -255,7 +255,7 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 **How.** `users.profile` (`username` unique, `bio`, `public` bool). Username via Clerk or our table. Only publish runs with `share: true` (outcome screen already has a share card — add “Publish to my page”).
 
 <a id="E2"></a>
-### E2. Streaks (the Daily habit) — **ready**
+### E2. Streaks (the Daily habit) — **implemented**
 
 **Idea.** A fire for consecutive official Dailies, not for logging in. Invent Night is weekly; Daily is the solo habit.
 

@@ -129,6 +129,13 @@ body.ff-accounts .topbar-game {
   color: var(--text-dim, #cbd5e1);
 }
 
+.cloud-streak-chip {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: #fbbf24;
+  text-align: center;
+}
+
 .cloud-achievements-strip {
   margin: 0.4rem 0 0.6rem;
   font-size: 0.82rem;
