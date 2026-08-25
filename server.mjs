@@ -99,7 +99,10 @@ import {
   setRunShare,
   getAiHits,
   incrementAiHits,
+  listPins,
+  replacePins,
 } from "./js/server/db.mjs";
+import { sanitizePinList } from "./js/server/pins.mjs";
 import { userQuotaDecision, freeDailyCapFromEnv } from "./js/server/ai-quota.mjs";
 import {
   parseProfilePatch,
@@ -3303,6 +3306,37 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, days, today });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "streak_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/pins" || req.url?.startsWith("/api/me/pins?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const pins = await listPins(gate.userId);
+      return sendJson(res, 200, { ok: true, pins });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "pins_failed" });
+    }
+  }
+
+  if (req.method === "PUT" && (req.url === "/api/me/pins" || req.url?.startsWith("/api/me/pins?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 48_000 });
+      const pins = sanitizePinList(body);
+      const result = await replacePins(gate.userId, pins);
+      return sendJson(res, 200, { ok: true, pins: result.pins });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "pins_failed" });
     }
   }
 

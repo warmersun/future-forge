@@ -118,6 +118,8 @@ import {
   importQuestToLibrary,
   removeQuestFromLibrary,
   pickDailyMission,
+  loadPins,
+  savePins,
 } from "./meta.js";
 import {
   parseQuestTileJson,
@@ -3192,6 +3194,28 @@ async function syncCloudProgress() {
     }
   } catch {
     cloudImportDone = false;
+  }
+  void syncCloudPins();
+}
+
+async function syncCloudPins() {
+  if (!isClerkSignedIn()) return;
+  try {
+    const res = await apiFetch("/api/me/pins");
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data.pins) && data.pins.length) {
+      savePins(data.pins);
+      return;
+    }
+    const local = loadPins();
+    if (!local.length) return;
+    await apiFetch("/api/me/pins", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pins: local }),
+    });
+  } catch {
+    /* local pins remain */
   }
 }
 

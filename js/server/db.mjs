@@ -687,3 +687,64 @@ export async function incrementAiHits(clerkUserId, day) {
   );
   return { skipped: false, hits: r.rows[0]?.hits || 1 };
 }
+
+export async function listPins(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT slot, mission_id, global_id, title, place, global_title, pinned_at, snapshot
+     FROM pins WHERE clerk_user_id = $1 ORDER BY slot ASC`,
+    [uid]
+  );
+  return r.rows.map((row) => ({
+    missionId: row.mission_id,
+    globalId: row.global_id,
+    title: row.title,
+    place: row.place,
+    globalTitle: row.global_title,
+    pinnedAt: row.pinned_at,
+    missionSnapshot: row.snapshot,
+  }));
+}
+
+export async function replacePins(clerkUserId, pins) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return { skipped: true, pins: [] };
+  const list = Array.isArray(pins) ? pins.slice(0, 3) : [];
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureUser(uid, client);
+    await client.query("DELETE FROM pins WHERE clerk_user_id = $1", [uid]);
+    let slot = 1;
+    for (const p of list) {
+      await client.query(
+        `INSERT INTO pins (clerk_user_id, slot, mission_id, global_id, title, place, global_title, snapshot)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
+        [
+          uid,
+          slot++,
+          p.missionId,
+          p.globalId,
+          p.title,
+          p.place,
+          p.globalTitle,
+          p.missionSnapshot ? JSON.stringify(p.missionSnapshot) : null,
+        ]
+      );
+    }
+    await client.query("COMMIT");
+    return { skipped: false, pins: list };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
