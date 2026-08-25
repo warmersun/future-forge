@@ -564,3 +564,93 @@ export async function listUserDailyPeriods(clerkUserId) {
   );
   return r.rows.map((row) => String(row.period));
 }
+
+function profileRow(row) {
+  if (!row) return null;
+  return {
+    clerkUserId: row.clerk_user_id,
+    username: row.username || null,
+    displayName: row.display_name || null,
+    bio: row.bio || "",
+    isPublic: Boolean(row.is_public),
+    hideEmail: row.hide_email !== false,
+  };
+}
+
+export async function getProfileByUserId(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return null;
+  const r = await db.query(
+    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email
+     FROM users WHERE clerk_user_id = $1`,
+    [uid]
+  );
+  return profileRow(r.rows[0]);
+}
+
+export async function getProfileByUsername(username) {
+  const db = getPool();
+  if (!db || !username) return null;
+  const r = await db.query(
+    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email
+     FROM users WHERE username = $1`,
+    [String(username)]
+  );
+  return profileRow(r.rows[0]);
+}
+
+export async function updateProfile(clerkUserId, patch) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return { skipped: true };
+  await ensureUser(uid);
+  const fields = [];
+  const params = [];
+  const add = (col, val) => {
+    params.push(val);
+    fields.push(`${col} = $${params.length}`);
+  };
+  if ("username" in patch) add("username", patch.username);
+  if ("displayName" in patch) add("display_name", patch.displayName);
+  if ("bio" in patch) add("bio", patch.bio);
+  if ("isPublic" in patch) add("is_public", Boolean(patch.isPublic));
+  if ("hideEmail" in patch) add("hide_email", Boolean(patch.hideEmail));
+  if (!fields.length) return { skipped: false, profile: await getProfileByUserId(uid) };
+  params.push(uid);
+  await db.query(
+    `UPDATE users SET ${fields.join(", ")}, last_seen_at = now() WHERE clerk_user_id = $${params.length}`,
+    params
+  );
+  return { skipped: false, profile: await getProfileByUserId(uid) };
+}
+
+export async function listSharedHolds(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT quest_id, place, year_reached, kind FROM runs
+     WHERE clerk_user_id = $1 AND share = true
+       AND outcome IN ('hold','partial')
+     ORDER BY ended_at DESC NULLS LAST LIMIT 8`,
+    [uid]
+  );
+  return r.rows.map((row) => ({
+    questId: row.quest_id,
+    place: row.place,
+    yearReached: row.year_reached,
+    kind: row.kind,
+  }));
+}
+
+export async function setRunShare(clerkUserId, runId, share) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid || !runId) return { stored: false };
+  const r = await db.query(
+    `UPDATE runs SET share = $3 WHERE id = $1::uuid AND clerk_user_id = $2 RETURNING id`,
+    [runId, uid, Boolean(share)]
+  );
+  return { stored: Boolean(r.rowCount) };
+}

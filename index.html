@@ -81,6 +81,9 @@
           <button type="button" class="btn btn-ghost" id="btn-quest-log" hidden>
             Quest log
           </button>
+          <button type="button" class="btn btn-ghost" id="btn-cloud-profile" hidden>
+            Profile
+          </button>
           <button type="button" class="btn btn-ghost" id="btn-daily-board">
             Daily board
           </button>
@@ -139,6 +142,43 @@
         </div>
         <p id="quest-log-empty" class="muted" hidden>No quests on this account yet.</p>
         <ol id="quest-log-list" class="quest-log-list"></ol>
+      </div>
+    </section>
+
+    <section id="screen-cloud-profile" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-profile-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>Inventor page</h1>
+          <p>Opt-in and private by default. Never shows your email.</p>
+        </div>
+        <form id="cloud-profile-form" class="panel" style="max-width: 28rem">
+          <label>Username
+            <input id="cloud-profile-username" name="username" maxlength="24" autocomplete="username" />
+          </label>
+          <label>Display name
+            <input id="cloud-profile-display" name="displayName" maxlength="40" />
+          </label>
+          <label>Bio
+            <textarea id="cloud-profile-bio" name="bio" maxlength="280" rows="3"></textarea>
+          </label>
+          <label class="outcome-publish">
+            <input type="checkbox" id="cloud-profile-public" />
+            Public inventor page
+          </label>
+          <button type="submit" class="btn btn-primary">Save</button>
+          <p id="cloud-profile-status" class="muted sm"></p>
+        </form>
       </div>
     </section>
 
@@ -1985,6 +2025,10 @@
             Sign in
           </button>
         </div>
+        <label id="outcome-publish-wrap" class="outcome-publish" hidden>
+          <input type="checkbox" id="outcome-publish" />
+          Publish this hold to my inventor page
+        </label>
         <p id="outcome-actions-hint" class="outcome-actions-hint muted sm" hidden></p>
         <div class="form-actions" style="justify-content: center; flex-wrap: wrap; gap: 0.65rem">
           <button

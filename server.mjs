@@ -92,7 +92,18 @@ import {
   listAchievements,
   insertAchievements,
   listUserDailyPeriods,
+  getProfileByUserId,
+  getProfileByUsername,
+  updateProfile,
+  listSharedHolds,
+  setRunShare,
 } from "./js/server/db.mjs";
+import {
+  parseProfilePatch,
+  publicInventorPage,
+  parseShareBody,
+  sanitizeUsername,
+} from "./js/server/profile.mjs";
 import {
   cloudWriteGate,
   parseImportBody,
@@ -3253,6 +3264,77 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.warn("[cloud db] achievements", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/profile" || req.url?.startsWith("/api/me/profile?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const profile = await getProfileByUserId(gate.userId);
+      return sendJson(res, 200, { ok: true, profile: profile || { isPublic: false, username: null } });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
+    }
+  }
+
+  if (req.method === "PUT" && (req.url === "/api/me/profile" || req.url?.startsWith("/api/me/profile?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const parsed = parseProfilePatch(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      const result = await updateProfile(gate.userId, parsed.patch);
+      return sendJson(res, 200, { ok: true, profile: result.profile });
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (/unique/i.test(msg) || e?.code === "23505") {
+        return sendJson(res, 409, { ok: false, error: "username_taken" });
+      }
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs/share" || req.url?.startsWith("/api/me/runs/share?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 4_000 });
+      const parsed = parseShareBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      const result = await setRunShare(gate.userId, parsed.runId, parsed.share);
+      return sendJson(res, 200, { ok: true, stored: result.stored });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "share_failed" });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/u/")) {
+    try {
+      const pathOnly = String(req.url).split("?")[0];
+      const slug = sanitizeUsername(decodeURIComponent(pathOnly.slice("/api/u/".length)));
+      if (!slug) return sendJson(res, 404, { ok: false, error: "not_found" });
+      const row = await getProfileByUsername(slug);
+      const page = publicInventorPage(row, row ? await listSharedHolds(row.clerkUserId) : []);
+      if (!page) return sendJson(res, 404, { ok: false, error: "not_found" });
+      return sendJson(res, 200, { ok: true, profile: page });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
     }
   }
 

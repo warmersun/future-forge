@@ -3094,6 +3094,11 @@ function applyOutcomeCloudSaveChrome() {
   const show =
     clerkOn && !signedIn && pride && state.screen === "outcome" && !isMultipartyOutcome();
   panel.hidden = !show;
+  const pub = $("#outcome-publish-wrap");
+  if (pub) {
+    const showPub = isClerkSignedIn() && pride && state.screen === "outcome" && !isMultipartyOutcome();
+    pub.hidden = !showPub;
+  }
 }
 
 function postCloudRun(run) {
@@ -3410,11 +3415,13 @@ function renderTitleCtas() {
     choose.classList.remove("btn-secondary");
   }
   const logBtn = $("#btn-quest-log");
-  if (logBtn) {
-    const showLog = isClerkSignedIn();
-    logBtn.hidden = !showLog;
-    if (showLog) logBtn.removeAttribute("hidden");
-    else logBtn.setAttribute("hidden", "");
+  const profBtn = $("#btn-cloud-profile");
+  const showLog = isClerkSignedIn();
+  for (const btn of [logBtn, profBtn]) {
+    if (!btn) continue;
+    btn.hidden = !showLog;
+    if (showLog) btn.removeAttribute("hidden");
+    else btn.setAttribute("hidden", "");
   }
   if (start) {
     start.hidden = true;
@@ -3469,6 +3476,51 @@ function questLogOutcomeLabel(outcome) {
   if (outcome === "collapse") return "Collapsed";
   if (outcome === "abandon") return "Left";
   return "In play";
+}
+
+async function openCloudProfile() {
+  showScreen("cloud-profile");
+  try {
+    const res = await apiFetch("/api/me/profile");
+    const data = await res.json().catch(() => ({}));
+    const p = data.profile || {};
+    const u = $("#cloud-profile-username");
+    const d = $("#cloud-profile-display");
+    const b = $("#cloud-profile-bio");
+    const pub = $("#cloud-profile-public");
+    if (u) u.value = p.username || "";
+    if (d) d.value = p.displayName || "";
+    if (b) b.value = p.bio || "";
+    if (pub) pub.checked = Boolean(p.isPublic);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function saveCloudProfile() {
+  const status = $("#cloud-profile-status");
+  try {
+    const res = await apiFetch("/api/me/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: $("#cloud-profile-username")?.value || "",
+        displayName: $("#cloud-profile-display")?.value || "",
+        bio: $("#cloud-profile-bio")?.value || "",
+        public: Boolean($("#cloud-profile-public")?.checked),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (status) {
+      status.textContent = res.ok
+        ? "Saved. Still hidden unless you turn on Public."
+        : data.error === "username_taken"
+          ? "That username is taken."
+          : "Could not save profile.";
+    }
+  } catch {
+    if (status) status.textContent = "Could not save profile.";
+  }
 }
 
 function openQuestLog() {
@@ -18422,6 +18474,22 @@ function bind() {
     openQuestHub();
   });
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
+  $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
+  $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
+  $("#cloud-profile-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveCloudProfile();
+  });
+  $("#outcome-publish")?.addEventListener("change", () => {
+    const on = Boolean($("#outcome-publish")?.checked);
+    const id = state.cloudRunId;
+    if (!on || !id || !isClerkSignedIn()) return;
+    void apiFetch("/api/me/runs/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ runId: id, share: true }),
+    }).catch(() => {});
+  });
   $("#btn-daily-board")?.addEventListener("click", () => openDailyBoard("daily"));
   $("#btn-daily-board-back")?.addEventListener("click", () => showScreen("title"));
   $("#btn-daily-board-play")?.addEventListener("click", () =>

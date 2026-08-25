@@ -63,6 +63,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**D1**](#D1) Daily hold board | `GET /api/daily`, `POST /api/daily/submit`, `GET /api/daily/board` |
 | [**D2**](#D2) Seasonal / weekly board | `GET /api/weekly` + `period=YYYY-Www` on `daily_scores` |
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
+| [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -80,7 +81,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-| [**E1**](#E1) Public inventor page (in-game) | Neon profile row; marketing URL is **todo** until a host |
 | [**E2**](#E2) Streaks | derived from `daily_scores` |
 | [**E3**](#E3) Cloud pins | Neon; replace localStorage when signed in |
 | [**E4**](#E4) Friends rooms with Clerk names | JWT already on `/api/rooms`; stamp `clerk_user_id` on the player |
@@ -248,7 +248,7 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 ## E. Other consumer things that fit
 
 <a id="E1"></a>
-### E1. Public inventor page — **ready** in-game; **todo** as `warmersun.com/u/…`
+### E1. Public inventor page — **implemented** in-game; **todo** as `warmersun.com/u/…`
 
 **Idea.** `warmersun.com/u/sic` — display name, badges, last few public holds, favorite emTech. Opt-in. Default private.
 
