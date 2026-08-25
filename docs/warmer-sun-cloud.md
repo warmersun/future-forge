@@ -69,6 +69,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**B3**](#B3) Sponsored lessons stay free | `needsPlayerBilling` is false for sponsor / catalog.free |
 | [**E3**](#E3) Cloud pins | `GET/PUT /api/me/pins` max 3 |
 | [**E4**](#E4) Friends rooms with Clerk names | room player `clerkUserId`; friends `runs` on hold |
+| [**E6**](#E6) Rematch / ghost | `?daily=&beat=&year=` same tile + target year |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -84,8 +85,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
-
-| [**E6**](#E6) Rematch / ghost | Daily id + target year; no new vendor |
 | [**E7**](#E7) Founding / season badges | `achievements` + `user.created` webhook (webhook route is code, Svix is Clerk) |
 | [**E8**](#E8) Display name / hide email | Clerk already has name; extra flags in Neon |
 | Clerk → DB webhooks (`user.created/updated/deleted`) | `verifyWebhook` in `@clerk/backend`; local `clerk webhooks listen` |
@@ -284,7 +283,7 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 **How.** Opt-in publish from outcome ([E1](#E1)). `GET /api/gallery` newest / daily-only. Report/hide button (young audience). No comments in v1 (moderation cost).
 
 <a id="E6"></a>
-### E6. Rematch / ghost — **ready**
+### E6. Rematch / ghost — **implemented**
 
 **Idea.** “Your friend held today’s Daily in year 2034. Try to beat that year.” Not a live spectator sport.
 

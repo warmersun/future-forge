@@ -29,6 +29,7 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./server/ghost.mjs";
 import {
   apiFetch,
   getClerk,
@@ -416,6 +417,7 @@ const state = {
   dailyPlay: null,
   dailyBoard: null,
   boardKind: "daily",
+  ghostTarget: null,
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
    * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
@@ -14458,6 +14460,16 @@ function finishOutcome(kind, meta = {}) {
   stashLastRun(slim);
   postCloudRun(slim);
   void submitDailyIfCounted(slim);
+  if (state.ghostTarget?.year != null && (slim.outcome === "hold" || slim.outcome === "partial")) {
+    const g = ghostResult({ yearReached: slim.yearReached }, state.ghostTarget.year);
+    if (g.ok) {
+      flashToast(
+        g.beat
+          ? `You beat the ghost (year ${g.held} vs ${g.target}).`
+          : `Ghost still ahead (year ${g.held} vs ${g.target}).`
+      );
+    }
+  }
   applyOutcomeNextChallengeChrome();
 }
 
@@ -18544,6 +18556,26 @@ function bind() {
   $("#btn-daily-board-play")?.addEventListener("click", () =>
     void playTodayDaily(state.boardKind === "weekly" ? "weekly" : "daily")
   );
+  $("#btn-daily-ghost-share")?.addEventListener("click", async () => {
+    const data = state.dailyBoard || {};
+    const you = data.you;
+    const clerk = getClerk();
+    const beat = clerk?.user?.id || null;
+    const year = you?.yearReached;
+    const daily = data.period || data.date;
+    if (!daily || year == null) {
+      flashToast("Hold today’s Daily first to share a ghost.");
+      return;
+    }
+    const path = ghostSharePath({ daily, beat, year });
+    const url = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      flashToast("Ghost link copied.");
+    } catch {
+      flashToast(url);
+    }
+  });
   $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");
@@ -19293,6 +19325,19 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
+  try {
+    const ghost = parseGhostQuery(new URLSearchParams(window.location.search));
+    if (ghost && (ghost.beat || ghost.year != null)) {
+      state.ghostTarget = ghost;
+      flashToast(
+        ghost.year
+          ? `Ghost challenge: beat year ${ghost.year}.`
+          : "Ghost challenge: play today’s Daily."
+      );
+    }
+  } catch {
+    /* ignore */
+  }
   onClerkSession(() => {
     renderTitleCtas();
     void refreshHostedQuests({ silent: true }).then(() => {
