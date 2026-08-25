@@ -65,6 +65,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
 | [**E2**](#E2) Streaks | `GET /api/me/streak` from official daily_scores |
+| [**B2**](#B2) Per-user AI quota (free cap) | signed-in daily hit cap; unsigned still IP-limited |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
@@ -79,7 +80,6 @@ Clerk user id + Neon are enough. `users` / `solved_quests` / `runs` exist. Webho
 | Item | Why it is ready |
 |------|-----------------|
 | [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
-| [**B2**](#B2) Per-user AI quota (free cap) | Usage tracker already sees `clerkUserId`; counters go in Neon. *Plan-based* caps wait on Billing (**todo**) |
 | [**B3**](#B3) Sponsored lessons stay free | `sponsorName` already on tiles |
 | [**C3**](#C3) Continue the board | Neon can store a JSON snapshot; large — treat as v2 of [C1](#C1) |
 | [**E3**](#E3) Cloud pins | Neon; replace localStorage when signed in |
@@ -155,7 +155,7 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 - Self-host without Clerk: all local `quests/` tiles playable (operator’s catalog, operator’s AI bill). Paywall is **Warmer Sun Cloud’s** catalog, not the engine.
 
 <a id="B2"></a>
-### B2. Meter the expensive bit (AI), not the hexes — **ready** (free cap); **todo** (plan cap)
+### B2. Meter the expensive bit (AI), not the hexes — **implemented** (free cap); **todo** (plan cap)
 
 **Idea.** Hex invent is cheap. Co-inventor, Imagine, TTS are not. Free account: daily AI budget. Paid: higher cap. Prevents “free Cloud” from becoming an xAI invoice.
 

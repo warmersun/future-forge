@@ -97,7 +97,10 @@ import {
   updateProfile,
   listSharedHolds,
   setRunShare,
+  getAiHits,
+  incrementAiHits,
 } from "./js/server/db.mjs";
+import { userQuotaDecision, freeDailyCapFromEnv } from "./js/server/ai-quota.mjs";
 import {
   parseProfilePatch,
   publicInventorPage,
@@ -258,7 +261,7 @@ const roomManager = ROOMS_ENABLED
  * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
  * @param {object|null} [body]
  */
-function gateExpensive(req, route, body = null) {
+async function gateExpensive(req, route, body = null) {
   const ip = clientIp(req);
   const rate = costPolicy.allowExpensive(route, ip);
   if (!rate.ok) return rate;
@@ -267,6 +270,24 @@ function gateExpensive(req, route, body = null) {
     isLoopback: isLoopbackSocket(req),
   });
   if (!secret.ok) return secret;
+  if (dbEnabled()) {
+    try {
+      const ident = await authenticateClerkRequest(req);
+      if (ident.signedIn && ident.userId) {
+        const day = utcDayString();
+        const used = await getAiHits(ident.userId, day);
+        const q = userQuotaDecision({
+          signedIn: true,
+          used,
+          cap: freeDailyCapFromEnv(),
+        });
+        if (!q.ok) return q;
+        await incrementAiHits(ident.userId, day);
+      }
+    } catch (e) {
+      console.warn("[ai quota]", e?.message || e);
+    }
+  }
   return { ok: true, ip };
 }
 
@@ -3817,11 +3838,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/vision")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "vision", body);
+      const gate = await gateExpensive(req, "vision", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
       const result = await withClerkIdentity(req, () => handleVision(body));
@@ -3839,11 +3861,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/idea-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "idea-image", body);
+      const gate = await gateExpensive(req, "idea-image", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
       const result = await withClerkIdentity(req, () => handleIdeaImage(body));
@@ -3861,11 +3884,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "market-image", body);
+      const gate = await gateExpensive(req, "market-image", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
       const result = await withClerkIdentity(req, () => handleMarketImage(body));
@@ -3883,11 +3907,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "tts", body);
+      const gate = await gateExpensive(req, "tts", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
       const result = await withClerkIdentity(req, () => handleTts(body));
@@ -3915,10 +3940,11 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "co-invent", body);
+      const gate = await gateExpensive(req, "co-invent", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
           source: "error",
           message:
             gate.error === "api_secret_required"

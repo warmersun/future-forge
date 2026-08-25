@@ -654,3 +654,36 @@ export async function setRunShare(clerkUserId, runId, share) {
   );
   return { stored: Boolean(r.rowCount) };
 }
+
+/**
+ * @param {string} clerkUserId
+ * @param {string} day YYYY-MM-DD
+ */
+export async function getAiHits(clerkUserId, day) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid || !day) return 0;
+  const r = await db.query(
+    `SELECT hits FROM ai_usage_daily WHERE clerk_user_id = $1 AND day = $2::date`,
+    [uid, day]
+  );
+  return r.rows[0]?.hits || 0;
+}
+
+/**
+ * @param {string} clerkUserId
+ * @param {string} day
+ */
+export async function incrementAiHits(clerkUserId, day) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid || !day) return { skipped: true, hits: 0 };
+  await ensureUser(uid);
+  const r = await db.query(
+    `INSERT INTO ai_usage_daily (clerk_user_id, day, hits) VALUES ($1, $2::date, 1)
+     ON CONFLICT (clerk_user_id, day) DO UPDATE SET hits = ai_usage_daily.hits + 1
+     RETURNING hits`,
+    [uid, day]
+  );
+  return { skipped: false, hits: r.rows[0]?.hits || 1 };
+}
