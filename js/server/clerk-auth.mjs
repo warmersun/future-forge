@@ -6,6 +6,9 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { normalizeClerkUserId } from "./clerk-id.mjs";
+
+export { normalizeClerkUserId };
 
 /** @typedef {{ enabled: boolean, publishableKey: string, secretKey: string }} ClerkKeys */
 /** @typedef {{
@@ -89,18 +92,6 @@ export function publicClerkConfig(env = process.env) {
   const keys = clerkKeysFromEnv(env);
   if (!keys.enabled) return { enabled: false };
   return { enabled: true, publishableKey: keys.publishableKey };
-}
-
-/**
- * @param {string|null|undefined} userId
- * @returns {string|null}
- */
-export function normalizeClerkUserId(userId) {
-  if (userId == null) return null;
-  const s = String(userId).trim().slice(0, 120);
-  if (!s) return null;
-  if (!/^[A-Za-z0-9._:-]+$/.test(s)) return null;
-  return s;
 }
 
 /**

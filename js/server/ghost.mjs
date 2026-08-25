@@ -3,7 +3,7 @@
  */
 
 import { parseDailyDate, sanitizeDisplayName } from "./daily.mjs";
-import { normalizeClerkUserId } from "./clerk-auth.mjs";
+import { normalizeClerkUserId } from "./clerk-id.mjs";
 
 /**
  * @param {URLSearchParams|Record<string, string>} raw
