@@ -29,7 +29,13 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { apiFetch } from "./auth.js";
+import {
+  apiFetch,
+  isClerkReady,
+  isClerkSignedIn,
+  openCloudSignIn,
+  onClerkSession,
+} from "./auth.js";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -3244,7 +3250,7 @@ function renderTitleMeta() {
 async function refreshHostedQuests(opts = {}) {
   try {
     const url = opts.force ? "/api/quests?refresh=1" : "/api/quests";
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
       if (!opts.silent) flashToast("Could not load Quests catalog.");
@@ -3500,19 +3506,63 @@ function groupLearningModules(learningEntries) {
   });
 }
 
+function catalogNeedsAccount(entry) {
+  if (!isClerkReady()) return false;
+  const access = entry?.access || entry?.mission?.access;
+  if (access === "open") return false;
+  if (access === "account" || access === "paid") return true;
+  return Boolean(entry?.isLearningModule || entry?.mission?.isLearningModule);
+}
+
+function promptCloudSignIn(msg) {
+  flashToast(msg || "Sign in to continue.");
+  openCloudSignIn();
+}
+
+async function fetchFullQuestTile(id) {
+  if (!id) return null;
+  try {
+    const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      promptCloudSignIn("Sign in to open this lesson.");
+      return null;
+    }
+    if (!res.ok || !data?.ok) return null;
+    return data.tile || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Play a catalog entry (solo or multiplayer pick intercept via startMission).
  * @param {object} entry
  * @param {{ clearPick?: boolean }} [opts]
  */
-function playCatalogEntry(entry, opts = {}) {
+async function playCatalogEntry(entry, opts = {}) {
   if (!entry?.mission) {
     flashToast("Quest missing mission data.");
     return;
   }
+  if (catalogNeedsAccount(entry) && !isClerkSignedIn()) {
+    promptCloudSignIn("Sign in to play this lesson.");
+    return;
+  }
+  let src = entry;
+  const learning = Boolean(entry.isLearningModule || entry.mission?.isLearningModule);
+  if (
+    learning &&
+    isClerkReady() &&
+    !entry.aiTutorContext &&
+    !entry.mission?.aiTutorContext
+  ) {
+    const full = await fetchFullQuestTile(entry.id);
+    if (full?.mission) src = { ...entry, ...full, mission: { ...entry.mission, ...full.mission } };
+  }
   const m = normalizeMission(
-    { ...entry.mission, source: entry.source || entry.mission.source || "hosted" },
-    entry.mission.globalId || entry.globalId
+    { ...src.mission, source: src.source || src.mission.source || "hosted" },
+    src.mission.globalId || src.globalId
   );
   // Learning modules are solo-only (tutor session) — never for multiplayer pick
   if (missionPickSession && isLearningMission(m)) {
@@ -4016,12 +4066,15 @@ function catalogCardHtml(entry, kind, opts = {}) {
     opts.groupBy === "theme"
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
+  const locked = catalogNeedsAccount(entry) && !isClerkSignedIn();
   const cta =
-    missionPickSession
-      ? "Use for friends game →"
-      : solved
-        ? "Play again →"
-        : "Play this Quest →";
+    locked
+      ? "Sign in to play →"
+      : missionPickSession
+        ? "Use for friends game →"
+        : solved
+          ? "Play again →"
+          : "Play this Quest →";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
       <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
@@ -6875,6 +6928,7 @@ function ideaSparksContext(techId) {
     availableTechs: TECHS.map((t) => techForAi(t, state.year)),
     grounding: state.mission?.grounding || null,
     isLearningModule: Boolean(state.mission?.isLearningModule),
+    questId: state.mission?.id || null,
   };
 }
 
@@ -15333,6 +15387,7 @@ function ensureCoInventor() {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
+        questId: state.mission?.id || null,
         tutorMode: isLearningTutorSessionActive(),
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
@@ -16171,6 +16226,7 @@ async function callCoInventMode(mode, userLabel) {
       grounding: state.mission?.grounding || null,
       isLearningModule: Boolean(state.mission?.isLearningModule),
       aiTutorContext: state.mission?.aiTutorContext || null,
+      questId: state.mission?.id || null,
       tutorMode: isLearningTutorSessionActive(),
       contributingToOther: contributingOther,
     };
@@ -18648,4 +18704,10 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
+  onClerkSession(() => {
+    void refreshHostedQuests({ silent: true }).then(() => {
+      if (state.screen === "quest-hub") renderQuestHub();
+      if (state.screen === "quest-catalog") renderQuestCatalog();
+    });
+  });
 }

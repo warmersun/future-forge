@@ -3,7 +3,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
-import { apiFetch } from "./auth.js";
+import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
 import { renderChatMarkdown } from "./md-lite.js";
 import {
   attachReadAloud,
@@ -561,6 +561,7 @@ export class CoInventor {
           grounding: ctx.grounding || null,
           isLearningModule: Boolean(ctx.isLearningModule),
           aiTutorContext: ctx.aiTutorContext || null,
+          questId: ctx.questId || ctx.challenge?.id || null,
           // Active tutor session only (not merely "this is a learning quest")
           tutorMode: Boolean(ctx.tutorMode),
           guidance: ctx.guidance || null,
@@ -590,6 +591,9 @@ export class CoInventor {
         data = await res.json();
         this.removeThinking(thinkingId);
         if (!res.ok && data.error) {
+          if (data.error === "sign_in_required" && isClerkReady()) {
+            openCloudSignIn();
+          }
           this.pushAssistant({
             message: data.message || data.error,
             proposals: emptyProposals(),

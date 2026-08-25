@@ -21,6 +21,8 @@ const CLERK_APPEARANCE = {
 /** @type {null | { load: Function, isSignedIn: boolean, session: any, addListener: Function, openSignIn: Function, mountUserButton: Function, unmountUserButton?: Function }} */
 let clerkInstance = null;
 let userButtonMounted = false;
+/** @type {Set<() => void>} */
+const sessionListeners = new Set();
 
 /**
  * Clerk publishable keys encode the Frontend API host in the third `_` segment.
@@ -43,6 +45,39 @@ export function clerkFrontendApiHost(publishableKey) {
 
 export function getClerk() {
   return clerkInstance;
+}
+
+export function isClerkReady() {
+  return Boolean(clerkInstance);
+}
+
+export function isClerkSignedIn() {
+  return Boolean(clerkInstance?.isSignedIn && clerkInstance.session);
+}
+
+export function openCloudSignIn() {
+  clerkInstance?.openSignIn?.({ appearance: CLERK_APPEARANCE });
+}
+
+/**
+ * Fires on Clerk session changes (including after Sign in / Sign out).
+ * @param {() => void} fn
+ */
+export function onClerkSession(fn) {
+  if (typeof fn !== "function") return () => {};
+  sessionListeners.add(fn);
+  return () => sessionListeners.delete(fn);
+}
+
+function emitClerkSession() {
+  renderAccountChip();
+  for (const fn of sessionListeners) {
+    try {
+      fn();
+    } catch (e) {
+      console.warn("[clerk listener]", e);
+    }
+  }
 }
 
 /**
@@ -108,7 +143,7 @@ export async function initAuth() {
     mount.hidden = false;
     bindSignIn(mount);
     renderAccountChip();
-    clerkInstance?.addListener?.(() => renderAccountChip());
+    clerkInstance?.addListener?.(() => emitClerkSession());
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
   }

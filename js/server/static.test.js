@@ -20,6 +20,7 @@ describe("static allowlist", () => {
     assert.equal(isPublicRel("js/game.js"), true);
     assert.equal(isPublicRel("js/auth.js"), true);
     assert.equal(isPublicRel("js/server/clerk-auth.mjs"), false);
+    assert.equal(isPublicRel("js/server/cloud-gate.mjs"), false);
     assert.equal(isPublicRel("js/multiplayer/ui.js"), true);
     assert.equal(isPublicRel("assets/problems/x.jpg"), true);
   });

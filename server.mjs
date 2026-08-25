@@ -70,6 +70,11 @@ import {
   clerkUserIdFromContext,
 } from "./js/server/clerk-auth.mjs";
 import {
+  applyCatalogGate,
+  prepareTutorContext,
+  questIdFromContext,
+} from "./js/server/cloud-gate.mjs";
+import {
   resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
@@ -2267,6 +2272,38 @@ async function aiCoInvent(body, client, meta = {}) {
   return out;
 }
 
+/**
+ * Local folder + remote catalog, merged by id (remote wins).
+ * @param {{ forceRemote?: boolean }} [opts]
+ */
+async function loadMergedQuestTiles(opts = {}) {
+  const [scanned, remote] = await Promise.all([
+    scanQuestsFolder(QUESTS_DIR),
+    fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: Boolean(opts.forceRemote) }),
+  ]);
+  const local = scanned.quests || [];
+  const remoteQuests = remote.quests || [];
+  const byId = new Map();
+  for (const q of local) byId.set(q.id, q);
+  for (const q of remoteQuests) byId.set(q.id, q);
+  return {
+    scanned,
+    remote,
+    local,
+    remoteQuests,
+    quests: [...byId.values()],
+    byId,
+  };
+}
+
+function findQuestTile(pack, id) {
+  if (!id || !pack) return null;
+  if (pack.byId?.has(id)) return pack.byId.get(id);
+  return (
+    pack.quests?.find((q) => q.id === id || q.mission?.id === id) || null
+  );
+}
+
 async function handleCoInvent(body) {
   const context = body.context || {};
   const mode = body.mode || "chat";
@@ -3079,31 +3116,50 @@ const server = http.createServer(async (req, res) => {
   }
 
   // —— Quest tiles: local folder (Library) + remote catalog (Sponsored/Learning) ——
-  if (req.method === "GET" && (req.url === "/api/quests" || req.url?.startsWith("/api/quests?"))) {
+  if (req.method === "GET" && req.url && (req.url === "/api/quests" || req.url.startsWith("/api/quests?") || req.url.startsWith("/api/quests/"))) {
     try {
-      const forceRemote =
-        typeof req.url === "string" && /[?&]refresh=1(?:&|$)/.test(req.url);
-      const [scanned, remote] = await Promise.all([
-        scanQuestsFolder(QUESTS_DIR),
-        fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: forceRemote }),
-      ]);
-      const local = scanned.quests || [];
-      const remoteQuests = remote.quests || [];
-      // Merge for backward compat: remote wins on id
-      const byId = new Map();
-      for (const q of local) byId.set(q.id, q);
-      for (const q of remoteQuests) byId.set(q.id, q);
-      const quests = [...byId.values()];
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const forceRemote = url.searchParams.get("refresh") === "1";
+      const pack = await loadMergedQuestTiles({ forceRemote });
+      const { scanned, remote, local, remoteQuests, quests } = pack;
+
+      const idParam =
+        url.searchParams.get("id") ||
+        (url.pathname.startsWith("/api/quests/") && url.pathname !== "/api/quests/"
+          ? decodeURIComponent(url.pathname.slice("/api/quests/".length))
+          : "");
+      const questId = String(idParam || "").trim();
+
+      if (questId) {
+        const tile = findQuestTile(pack, questId);
+        if (!tile) {
+          return sendJson(res, 404, { ok: false, error: "not_found", id: questId });
+        }
+        const gated = applyCatalogGate(tile, ident);
+        const stripped = gated !== tile;
+        if (stripped) {
+          return sendJson(res, 401, {
+            ok: false,
+            error: "sign_in_required",
+            id: questId,
+            tile: gated,
+          });
+        }
+        return sendJson(res, 200, { ok: true, tile });
+      }
+
+      const gateOne = (q) => applyCatalogGate(q, ident);
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
         remoteUrl: remote.url,
         remoteOk: remote.ok,
         remoteCached: remote.cached,
-        local,
-        remote: remoteQuests,
+        local: local.map(gateOne),
+        remote: remoteQuests.map(gateOne),
         count: quests.length,
-        quests,
+        quests: quests.map(gateOne),
         errors: [...(scanned.errors || []), ...(remote.errors || [])],
       });
     } catch (e) {
@@ -3352,7 +3408,33 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
-      const result = await withClerkIdentity(req, () => handleCoInvent(body));
+      const ident = await authenticateClerkRequest(req);
+      let pack = null;
+      try {
+        pack = await loadMergedQuestTiles();
+      } catch (e) {
+        console.warn("[quests catalog]", e.message || e);
+      }
+      const tile = findQuestTile(pack, questIdFromContext(body.context));
+      const prepared = prepareTutorContext(body.context, ident, tile);
+      if (!prepared.ok) {
+        return sendJson(res, prepared.status || 401, {
+          error: prepared.error || "sign_in_required",
+          source: "error",
+          message: "Sign in to use the tutor on this lesson.",
+          proposals: {
+            addTechIds: [],
+            removeTechIds: [],
+            inventionName: null,
+            inventionHow: null,
+            inventionImpact: null,
+          },
+          teaching: [],
+        });
+      }
+      const result = await withClerkIdentity(req, () =>
+        handleCoInvent({ ...body, context: prepared.context })
+      );
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);

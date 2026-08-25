@@ -11,6 +11,7 @@ import {
   isStructuredPressure,
   crisisRolesLabel,
   parseLearningModuleFields,
+  parseAccessField,
   learningProgressLabel,
   learningProgressBarHtml,
 } from "./quest-tile.js";
@@ -556,6 +557,23 @@ describe("quest-tile", () => {
     const r = parseLearningModuleFields({ isLearningModule: false }, {});
     assert.equal(r.ok, true);
     assert.equal(r.value.isLearningModule, undefined);
+  });
+
+  it("parseAccessField defaults learning to account, else open", () => {
+    assert.equal(parseAccessField({}, {}, { isLearningModule: true }).value, "account");
+    assert.equal(parseAccessField({}, {}, { isLearningModule: false }).value, "open");
+    assert.equal(parseAccessField({ access: "paid" }, {}).value, "paid");
+    assert.equal(parseAccessField({ access: "nope" }, {}).ok, false);
+  });
+
+  it("validateQuestTile stamps access on learning tiles", () => {
+    const r = validateQuestTile(
+      baseTile({ isLearningModule: true, aiTutorContext: "seq" }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.tile.access, "account");
+    assert.equal(r.mission.access, "account");
   });
 
   it("accepts optional sponsor text fields", () => {
