@@ -1,8 +1,8 @@
-// Query busts game.js (and its graph) — parent main.js?v= alone does not.
-// Load Clerk independently so a game-module failure still shows Sign in.
-void import("./auth.js?v=portal-2")
+// Same specifier as game.js (`./auth.js`) — a ?v= here would be a second Clerk module
+// and title CTAs would never see the session.
+void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));
-void import("./game.js?v=portal-2")
+void import("./game.js?v=portal-8")
   .then((m) => m.init())
   .catch((e) => console.error("[game]", e?.message || e));

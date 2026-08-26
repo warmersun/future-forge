@@ -769,7 +769,7 @@ export async function getRunState(clerkUserId) {
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid) return null;
   const r = await db.query(
-    `SELECT run_id, quest_id, year_reached, tutor, board, updated_at
+    `SELECT run_id, quest_id, year_reached, tutor, board, play, chats, updated_at
      FROM run_state WHERE clerk_user_id = $1`,
     [uid]
   );
@@ -781,6 +781,8 @@ export async function getRunState(clerkUserId) {
     year: row.year_reached,
     tutor: Boolean(row.tutor),
     board: row.board,
+    play: row.play || null,
+    chats: row.chats || null,
     updatedAt: row.updated_at,
   };
 }
@@ -791,14 +793,16 @@ export async function putRunState(clerkUserId, state) {
   if (!db || !uid) return { skipped: true };
   await ensureUser(uid);
   await db.query(
-    `INSERT INTO run_state (clerk_user_id, run_id, quest_id, year_reached, tutor, board)
-     VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+    `INSERT INTO run_state (clerk_user_id, run_id, quest_id, year_reached, tutor, board, play, chats)
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)
      ON CONFLICT (clerk_user_id) DO UPDATE SET
        run_id = EXCLUDED.run_id,
        quest_id = EXCLUDED.quest_id,
        year_reached = EXCLUDED.year_reached,
        tutor = EXCLUDED.tutor,
        board = EXCLUDED.board,
+       play = EXCLUDED.play,
+       chats = EXCLUDED.chats,
        updated_at = now()`,
     [
       uid,
@@ -807,6 +811,8 @@ export async function putRunState(clerkUserId, state) {
       state.year,
       Boolean(state.tutor),
       state.board ? JSON.stringify(state.board) : null,
+      state.play ? JSON.stringify(state.play) : null,
+      state.chats ? JSON.stringify(state.chats) : null,
     ]
   );
   return { skipped: false, stored: true };

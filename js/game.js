@@ -29,9 +29,9 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-2";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-2";
-import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-2";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-8";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-8";
+import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-8";
 import {
   apiFetch,
   getClerk,
@@ -1099,6 +1099,7 @@ function ensureHexWorkshop() {
     getBoard: () => state.hexBoard || createEmptyBoard(),
     setBoard: (b) => {
       state.hexBoard = b;
+      scheduleCloudRunState();
     },
     getYear: () => state.year,
     getPressure: () => state.pressure,
@@ -1124,6 +1125,7 @@ function ensureHexWorkshop() {
       if (nameEl) nameEl.value = state.inventionName;
       if (howEl) howEl.value = state.inventionHow;
       if (impactEl) impactEl.value = state.inventionImpact;
+      scheduleCloudRunState();
     },
     /** @deprecated prefer reconcileStackFromBoard — kept for callers that only assign */
     setSelectedTechIds: (ids) => {
@@ -1176,6 +1178,7 @@ function ensureHexWorkshop() {
       return Boolean(b.canFaceChallenge?.());
     },
     commitBoard: (b) => {
+      scheduleCloudRunState();
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
           if (!mpHexEditsAllowed()) return;
@@ -3205,22 +3208,70 @@ async function syncCloudProgress() {
 }
 
 let cloudRunStateTimer = null;
+function cloudRunStatePayload() {
+  if (!state.mission?.id) return null;
+  return {
+    questId: state.mission.id,
+    year: state.year,
+    tutor: Boolean(state.tutorSessionActive),
+    runId: state.cloudRunId,
+    board: state.hexBoard,
+    play: {
+      inventionName: state.inventionName,
+      inventionHow: state.inventionHow,
+      inventionImpact: state.inventionImpact,
+      selectedTechIds: [...state.selectedTechIds],
+      learnOrder: [...(state.learnOrder || [])],
+      domainFilter: state.domainFilter || "all",
+      sideTab: state.sideTab === "coinventor" ? "coinventor" : "vision",
+      waits: state.waits,
+      turn: state.turn,
+      pressure: state.pressure,
+      ap: state.ap,
+      apMax: state.apMax,
+      budget: state.budget,
+      will: state.will,
+      tutorSessionActive: Boolean(state.tutorSessionActive),
+    },
+    chats: state.coInventor?.exportHistories?.() || null,
+  };
+}
+
 function scheduleCloudRunState() {
   if (!isClerkSignedIn() || !state.mission?.id) return;
+  const body = cloudRunStatePayload();
+  if (!body) return;
   clearTimeout(cloudRunStateTimer);
   cloudRunStateTimer = setTimeout(() => {
     void apiFetch("/api/me/run-state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        questId: state.mission.id,
-        year: state.year,
-        tutor: Boolean(state.tutorSessionActive),
-        runId: state.cloudRunId,
-        board: state.hexBoard,
-      }),
+      body: JSON.stringify(body),
     }).catch(() => {});
   }, 2500);
+}
+
+function applyRestoredPlay(play) {
+  if (!play || typeof play !== "object") return;
+  if (play.inventionName != null) state.inventionName = String(play.inventionName);
+  if (play.inventionHow != null) state.inventionHow = String(play.inventionHow);
+  if (play.inventionImpact != null) state.inventionImpact = String(play.inventionImpact);
+  if (Array.isArray(play.selectedTechIds)) state.selectedTechIds = [...play.selectedTechIds];
+  if (Array.isArray(play.learnOrder)) state.learnOrder = [...play.learnOrder];
+  if (play.domainFilter) state.domainFilter = String(play.domainFilter);
+  if (play.sideTab === "coinventor" || play.sideTab === "vision") state.sideTab = play.sideTab;
+  if (play.waits != null) state.waits = play.waits;
+  if (play.turn != null) state.turn = play.turn;
+  if (play.pressure && typeof play.pressure === "object") {
+    state.pressure = clonePressure(play.pressure);
+  }
+  if (play.ap != null) state.ap = play.ap;
+  if (play.apMax != null) state.apMax = play.apMax;
+  if (play.budget != null) state.budget = play.budget;
+  if (play.will != null) state.will = play.will;
+  if (typeof play.tutorSessionActive === "boolean") {
+    state.tutorSessionActive = play.tutorSessionActive;
+  }
 }
 
 async function maybeOfferContinue() {
@@ -4280,22 +4331,6 @@ function renderQuestHub() {
   /** @type {object[]} */
   const cards = [
     {
-      id: "weekly",
-      title: "Quest of the week",
-      blurb: "One spotlight for seven days — Invent Night energy, a week board.",
-      meta: "ISO week",
-      cta: "Play this week →",
-    },
-    {
-      id: "daily",
-      title: "Today's Daily",
-      blurb: isClerkSignedIn()
-        ? "One official mission for everyone on this UTC day. Hold it to count on the board."
-        : "Play today’s place as practice. Sign in to count a hold on the official board.",
-      meta: "UTC day",
-      cta: isClerkSignedIn() ? "Play Daily →" : "Practice Daily →",
-    },
-    {
       id: "themes",
       title: "Themes",
       blurb:
@@ -4319,7 +4354,7 @@ function renderQuestHub() {
       id: "learning",
       title: "Learning",
       blurb:
-        "Solo modules and lessons with AI tutor mode. Progress stays on this device.",
+        "Modules of lessons. New lessons land here — pick a module and take the next one.",
       meta: learning.length
         ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
             learning.length
@@ -4352,9 +4387,7 @@ function renderQuestHub() {
   grid.querySelectorAll(".quest-hub-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       const hub = btn.dataset.hub;
-      if (hub === "daily") void playTodayDaily("daily");
-      else if (hub === "weekly") void playTodayDaily("weekly");
-      else if (hub === "themes") showScreen("global");
+      if (hub === "themes") showScreen("global");
       else if (hub === "sponsored") openQuestCatalog("sponsored");
       else if (hub === "learning") openQuestCatalog("learning");
       else if (hub === "library") openQuestCatalog("library");
@@ -5772,6 +5805,12 @@ function startMission(mission, opts = {}) {
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
   state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
   state.will = res.startingWill ?? GAME.startingWill ?? 3;
+  applyRestoredPlay(restored.play);
+  state.lastWriteSnapshot = {
+    name: state.inventionName || "",
+    how: state.inventionHow || "",
+    impact: state.inventionImpact || "",
+  };
   state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
@@ -5807,11 +5846,19 @@ function startMission(mission, opts = {}) {
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
-  // Learning modules land on co-inventor; ensure root exists before welcome.
-  if (state.sideTab === "coinventor") ensureCoInventor();
+  // Learning modules land on co-inventor; ensure root exists before welcome / restore.
+  const savedChats = restored.chats;
+  const hasSavedChats = Boolean(
+    savedChats &&
+      ((Array.isArray(savedChats.tutor) && savedChats.tutor.length) ||
+        (Array.isArray(savedChats.coinventor) && savedChats.coinventor.length))
+  );
+  if (state.sideTab === "coinventor" || hasSavedChats) ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
-  // Seed co-inventor / tutor welcome with mission context
-  if (state.coInventor) {
+  if (state.coInventor && hasSavedChats) {
+    state.coInventor.importHistories(savedChats);
+    syncCoInventorTutorUi();
+  } else if (state.coInventor) {
     // New mission: wipe both tutor and co-inventor chat lanes
     if (typeof state.coInventor.clearAllHistories === "function") {
       state.coInventor.clearAllHistories(false);
@@ -8727,6 +8774,7 @@ function endTurn() {
     } catch {
       /* ignore */
     }
+    scheduleCloudRunState();
   }
   if (state.screen === "challenge-step") {
     renderChallengeHud();
@@ -16044,6 +16092,7 @@ function ensureCoInventor() {
       };
     },
     applyProposals: applyCoInventorProposals,
+    onHistoryChange: () => scheduleCloudRunState(),
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
     showQuickActions: !onChallenge,
@@ -18870,6 +18919,7 @@ function bind() {
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
+    scheduleCloudRunState();
     state.coInventor?.syncChipGates?.();
   });
   $("#invention-impact")?.addEventListener("input", (e) => {
@@ -18889,6 +18939,7 @@ function bind() {
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
+    scheduleCloudRunState();
   });
   $("#invention-name")?.addEventListener("input", (e) => {
     if (inventInputBlocked()) {
@@ -18898,6 +18949,7 @@ function bind() {
     }
     state.inventionName = e.target.value;
     scheduleSoftInventSave();
+    scheduleCloudRunState();
   });
   ["#invention-how", "#invention-impact", "#invention-name"].forEach((sel) => {
     $(sel)?.addEventListener("blur", () => {
@@ -19428,12 +19480,7 @@ export function init() {
     /* ignore */
   }
   onClerkSession(() => {
-    renderTitleCtas();
-    void refreshHostedQuests({ silent: true }).then(() => {
-      if (state.screen === "quest-hub") renderQuestHub();
-      if (state.screen === "quest-catalog") renderQuestCatalog();
-    });
+    renderTitleMeta();
     void syncCloudProgress();
-    if (state.screen === "quest-log") void loadQuestLog();
   });
 }

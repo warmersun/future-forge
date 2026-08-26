@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-2" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-6" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -88,7 +88,7 @@
           <button type="button" class="btn btn-ghost" id="btn-cloud-profile" hidden>
             Profile
           </button>
-          <button type="button" class="btn btn-ghost" id="btn-daily-board">
+          <button type="button" class="btn btn-ghost" id="btn-daily-board" hidden>
             Daily board
           </button>
           <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
@@ -166,21 +166,24 @@
           <h1>Inventor page</h1>
           <p>Opt-in and private by default. Never shows your email.</p>
         </div>
-        <form id="cloud-profile-form" class="panel" style="max-width: 28rem">
-          <label>Username
-            <input id="cloud-profile-username" name="username" maxlength="24" autocomplete="username" />
-          </label>
-          <label>Display name
-            <input id="cloud-profile-display" name="displayName" maxlength="40" />
-          </label>
-          <label>Bio
-            <textarea id="cloud-profile-bio" name="bio" maxlength="280" rows="3"></textarea>
-          </label>
-          <label class="outcome-publish">
+        <form id="cloud-profile-form" class="panel cloud-profile-form">
+          <div class="field">
+            <label for="cloud-profile-username">Username</label>
+            <input id="cloud-profile-username" name="username" type="text" maxlength="24" autocomplete="username" placeholder="lowercase handle" />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-display">Display name</label>
+            <input id="cloud-profile-display" name="displayName" type="text" maxlength="40" autocomplete="nickname" placeholder="How you appear on the board" />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-bio">Bio</label>
+            <textarea id="cloud-profile-bio" name="bio" maxlength="280" rows="3" placeholder="Optional. Never includes your email."></textarea>
+          </div>
+          <label class="cloud-profile-check" for="cloud-profile-public">
             <input type="checkbox" id="cloud-profile-public" />
             Public inventor page
           </label>
-          <label class="outcome-publish">
+          <label class="cloud-profile-check" for="cloud-profile-hide-email">
             <input type="checkbox" id="cloud-profile-hide-email" checked />
             Hide email (always on for the public page)
           </label>
@@ -2375,6 +2378,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-2"></script>
+    <script type="module" src="js/main.js?v=portal-8"></script>
   </body>
 </html>

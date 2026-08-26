@@ -28,6 +28,21 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* Modest horizontal breathing room (not full-bleed, not huge margins) */
   --page-gutter: clamp(0.75rem, 2vw, 1.25rem);
+  /* Clerk Sign in / UserButton — match the workshop, not Clerk's light inputs */
+  --clerk-color-primary: #a78bfa;
+  --clerk-color-primary-foreground: #0c1220;
+  --clerk-color-background: #121a2b;
+  --clerk-color-foreground: #e8eef9;
+  --clerk-color-muted: #1a2438;
+  --clerk-color-muted-foreground: #94a3b8;
+  --clerk-color-input: #1a2438;
+  --clerk-color-input-foreground: #e8eef9;
+  --clerk-color-border: #2a3a58;
+  --clerk-color-modal-backdrop: rgba(7, 11, 20, 0.78);
+}
+
+html {
+  color-scheme: dark;
 }
 
 *,
@@ -127,6 +142,46 @@ body.ff-accounts .topbar-game {
   max-width: 28rem;
   font-size: 0.88rem;
   color: var(--text-dim, #cbd5e1);
+}
+
+.cloud-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 28rem;
+  padding: 1.15rem 1.25rem 1.35rem;
+}
+
+.cloud-profile-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.cloud-profile-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.cloud-profile-check input {
+  margin: 0.15rem 0 0;
+  flex: 0 0 auto;
+}
+
+.cloud-profile-form .btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.cloud-profile-form #cloud-profile-status {
+  margin: 0;
+  min-height: 1.2em;
 }
 
 .cloud-streak-chip {

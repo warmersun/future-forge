@@ -24,6 +24,30 @@ describe("parseRunStateBody", () => {
     const board = { tiles: { a: { id: "a", fluff: "x".repeat(RUN_STATE_MAX_BYTES) } } };
     assert.equal(parseRunStateBody({ questId: "q1", board }).ok, false);
   });
+
+  it("keeps invent panel and chat lanes, drops data: chat", () => {
+    const parsed = parseRunStateBody({
+      questId: "q1",
+      play: {
+        inventionHow: "A dock that cools the street.",
+        selectedTechIds: ["iot", "iot", "bad id!"],
+        sideTab: "coinventor",
+        tutorSessionActive: true,
+        ap: 2,
+      },
+      chats: {
+        tutor: [{ role: "user", content: "hello" }],
+        coinventor: [{ role: "assistant", content: "data:image/png;base64,xx" }],
+        activeHistoryKey: "tutor",
+      },
+    });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.state.play.inventionHow.includes("dock"), true);
+    assert.deepEqual(parsed.state.play.selectedTechIds, ["iot"]);
+    assert.equal(parsed.state.play.sideTab, "coinventor");
+    assert.equal(parsed.state.chats.tutor.length, 1);
+    assert.equal(parsed.state.chats.coinventor.length, 0);
+  });
 });
 
 describe("applyContinueSnapshot", () => {
@@ -57,5 +81,15 @@ describe("applyContinueSnapshot", () => {
     assert.equal(next.skipSeed, false);
     assert.equal(next.skipNewRun, true);
     assert.equal(next.hexBoard.tiles.fresh.kind, "crisis");
+  });
+
+  it("passes play and chats through", () => {
+    const next = applyContinueSnapshot(live, {
+      runId: "r1",
+      play: { inventionHow: "kept" },
+      chats: { tutor: [], coinventor: [{ role: "user", content: "hi" }] },
+    });
+    assert.equal(next.play.inventionHow, "kept");
+    assert.equal(next.chats.coinventor[0].content, "hi");
   });
 });

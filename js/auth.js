@@ -7,14 +7,36 @@
 const CLERK_APPEARANCE = {
   variables: {
     colorPrimary: "#a78bfa",
+    colorPrimaryForeground: "#0c1220",
     colorBackground: "#121a2b",
+    colorForeground: "#e8eef9",
+    colorMuted: "#1a2438",
+    colorMutedForeground: "#94a3b8",
+    colorNeutral: "#94a3b8",
+    colorInput: "#1a2438",
+    colorInputForeground: "#e8eef9",
+    colorBorder: "#2a3a58",
+    colorModalBackdrop: "rgba(7, 11, 20, 0.78)",
+    // Pre-2025 aliases (still sent so older clerk-js keeps the same palette)
     colorText: "#e8eef9",
     colorTextSecondary: "#94a3b8",
-    colorNeutral: "#94a3b8",
     colorInputBackground: "#1a2438",
     colorInputText: "#e8eef9",
+    colorTextOnPrimaryBackground: "#0c1220",
     borderRadius: "14px",
     fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
+  },
+  elements: {
+    formFieldInput: {
+      backgroundColor: "#1a2438",
+      color: "#e8eef9",
+      borderColor: "#2a3a58",
+    },
+    socialButtonsBlockButton: {
+      backgroundColor: "#1a2438",
+      color: "#e8eef9",
+      borderColor: "#2a3a58",
+    },
   },
 };
 
@@ -66,6 +88,14 @@ export function openCloudSignIn() {
 export function onClerkSession(fn) {
   if (typeof fn !== "function") return () => {};
   sessionListeners.add(fn);
+  // Clerk may already be signed in (listener registered after load).
+  if (clerkInstance) {
+    try {
+      fn();
+    } catch (e) {
+      console.warn("[clerk listener]", e);
+    }
+  }
   return () => sessionListeners.delete(fn);
 }
 
@@ -188,8 +218,8 @@ export async function initAuth() {
     document.body.classList.add("ff-accounts");
     mount.hidden = false;
     bindSignIn(mount);
-    renderAccountChip();
     clerkInstance?.addListener?.(() => emitClerkSession());
+    emitClerkSession();
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
   }

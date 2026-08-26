@@ -80,6 +80,7 @@ export class CoInventor {
     this.onEndTutoring = opts.onEndTutoring || null;
     this.onResumeTutoring = opts.onResumeTutoring || null;
     this.onTutorSessionEnded = opts.onTutorSessionEnded || null;
+    this.onHistoryChange = opts.onHistoryChange || null;
     /** Separate full transcripts: tutor session vs regular co-inventor. */
     this.histories = {
       tutor: Array.isArray(opts.histories?.tutor) ? [...opts.histories.tutor] : [],
@@ -517,6 +518,11 @@ export class CoInventor {
     if (showUser) {
       this.messages.push({ role: "user", content: userDisplay || userText });
       this.renderMessages();
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
     }
 
     this.busy = true;
@@ -621,6 +627,11 @@ export class CoInventor {
       });
       this.renderMessages();
       requestOk = true;
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
 
       // AI tutor can end the free tutoring session (learning quests)
       if (data.endTutoring && this.tutorMode && this.learningQuest) {
@@ -658,6 +669,13 @@ export class CoInventor {
       local: Boolean(local),
     });
     this.renderMessages();
+    if (!local) {
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
+    }
   }
 
   pushThinking() {
