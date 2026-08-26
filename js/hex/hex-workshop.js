@@ -1058,8 +1058,12 @@ export function createHexWorkshop(api) {
       }
     }
     if (body) {
-      const hasRd = unplacedRdTiles(board()).length > 0;
-      body.hidden = !focusedTechId && !hasRd;
+      const b = board();
+      const hasRd = unplacedRdTiles(b).length > 0;
+      const hasTrayInvent = Object.values(b?.tiles || {}).some(
+        (t) => t && t.kind === TILE_KIND.invention && (t.q == null || t.r == null)
+      );
+      body.hidden = !focusedTechId && !hasRd && !hasTrayInvent;
     }
     syncCreateBusyUi();
   }
@@ -2457,20 +2461,30 @@ export function createHexWorkshop(api) {
           });
         }
       }
-      if (!sparkBatches.size) {
-        const tiles = Object.values(board()?.tiles || {});
-        const byTech = new Map();
-        for (const t of tiles) {
-          if (t?.kind !== TILE_KIND.invention || t.origin !== "sparks") continue;
-          if (t.q != null && t.r != null) continue;
-          const tid = t.techId;
-          if (!tid) continue;
-          if (!byTech.has(tid)) byTech.set(tid, { ids: [], titles: [] });
-          const row = byTech.get(tid);
+      const tiles = Object.values(board()?.tiles || {});
+      const byTech = new Map();
+      for (const t of tiles) {
+        if (t?.kind !== TILE_KIND.invention) continue;
+        if (t.q != null && t.r != null) continue;
+        const tid = t.techId;
+        if (!tid) continue;
+        if (!byTech.has(tid)) byTech.set(tid, { ids: [], titles: [] });
+        const row = byTech.get(tid);
+        if (!row.ids.includes(t.id)) {
           row.ids.push(t.id);
           row.titles.push(t.name || "Idea");
         }
-        for (const [tid, batch] of byTech) sparkBatches.set(tid, batch);
+      }
+      for (const [tid, batch] of byTech) {
+        if (!sparkBatches.has(tid)) sparkBatches.set(tid, batch);
+        else {
+          const have = new Set(sparkBatches.get(tid).ids);
+          for (const id of batch.ids) {
+            if (have.has(id)) continue;
+            sparkBatches.get(tid).ids.push(id);
+            sparkBatches.get(tid).titles.push(batch.titles[batch.ids.indexOf(id)] || "Idea");
+          }
+        }
       }
     },
   };

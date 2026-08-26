@@ -6,6 +6,47 @@
  * when skipNewRun is true, then paint the hex workshop from live.hexBoard and overlay play/chats.
  */
 
+import { boardForWire } from "../hex/board-state.js";
+
+function isInlineDataString(s) {
+  if (typeof s !== "string" || !s) return false;
+  return s.startsWith("data:") || /data:image/i.test(s);
+}
+
+/** Drop data: / data:image strings so Continue PUT never sends Imagine stills. */
+export function stripInlineData(value) {
+  if (typeof value === "string") return isInlineDataString(value) ? "" : value;
+  if (Array.isArray(value)) return value.map(stripInlineData);
+  if (value && typeof value === "object") {
+    const out = Array.isArray(value) ? [] : {};
+    for (const [k, v] of Object.entries(value)) out[k] = stripInlineData(v);
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Client PUT body: wire-safe board (no data-URL art) + stripped play/chats.
+ * @param {object} raw
+ */
+export function snapshotForWire(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  let board = src.board && typeof src.board === "object" ? src.board : null;
+  if (board) {
+    try {
+      board = boardForWire(board);
+    } catch {
+      board = null;
+    }
+  }
+  return stripInlineData({
+    ...src,
+    board,
+    play: src.play && typeof src.play === "object" ? src.play : null,
+    chats: src.chats && typeof src.chats === "object" ? src.chats : null,
+  });
+}
+
 /**
  * @param {{ cloudRunId?: string|null, hexBoard?: object|null, year?: number, tutorSessionActive?: boolean }} live
  * @param {{ runId?: string|null, board?: object|null, year?: number|null, tutor?: boolean, play?: object|null, chats?: object|null }} snapshot

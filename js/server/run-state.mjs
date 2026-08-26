@@ -232,10 +232,24 @@ export function parseRunStateBody(body) {
     play: sanitizePlay(src.play),
     chats: sanitizeChats(src.chats),
   };
-  const raw = JSON.stringify(state);
+  const cleaned = stripDataDeep(state);
+  const raw = JSON.stringify(cleaned);
   if (raw.length > RUN_STATE_MAX_BYTES) return { ok: false, error: "too_large" };
-  if (looksInline(raw) || raw.includes("data:image")) return { ok: false, error: "inline_art" };
-  return { ok: true, state };
+  return { ok: true, state: cleaned };
+}
+
+function stripDataDeep(value) {
+  if (typeof value === "string") {
+    if (value.startsWith("data:") || /data:image/i.test(value)) return "";
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(stripDataDeep);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = stripDataDeep(v);
+    return out;
+  }
+  return value;
 }
 
 export { applyContinueSnapshot } from "../cloud/continue.js";

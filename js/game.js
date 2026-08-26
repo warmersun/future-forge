@@ -29,9 +29,9 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-10";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-10";
-import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-10";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-11";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-11";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-11";
 import {
   apiFetch,
   getClerk,
@@ -3210,7 +3210,7 @@ async function syncCloudProgress() {
 let cloudRunStateTimer = null;
 function cloudRunStatePayload() {
   if (!state.mission?.id) return null;
-  return {
+  return snapshotForWire({
     questId: state.mission.id,
     year: state.year,
     tutor: Boolean(state.tutorSessionActive),
@@ -3240,7 +3240,7 @@ function cloudRunStatePayload() {
       sparkBatches: hexWorkshop?.exportSparkBatches?.() || null,
     },
     chats: state.coInventor?.exportHistories?.() || null,
-  };
+  });
 }
 
 function slimMissionForContinue(m) {
@@ -3278,9 +3278,31 @@ function scheduleCloudRunState() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).catch(() => {});
+    })
+      .then((res) => {
+        if (res.ok) {
+          continueSaveWarned = false;
+          return;
+        }
+        if (!continueSaveWarned) {
+          continueSaveWarned = true;
+          flashToast(
+            res.status === 413
+              ? "Could not save Continue — snapshot too large."
+              : "Could not save Continue to Cloud."
+          );
+        }
+      })
+      .catch(() => {
+        if (!continueSaveWarned) {
+          continueSaveWarned = true;
+          flashToast("Could not save Continue to Cloud.");
+        }
+      });
   }, 2500);
 }
+
+let continueSaveWarned = false;
 
 function applyRestoredPlay(play) {
   if (!play || typeof play !== "object") return;
