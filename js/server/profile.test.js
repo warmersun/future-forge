@@ -64,6 +64,7 @@ describe("publicInventorPage", () => {
     );
     assert.equal(page.username, "sic");
     assert.equal("email" in page, false);
+    assert.equal("login" in page, false);
     assert.equal(page.holds[0].place, "Accra");
   });
 });

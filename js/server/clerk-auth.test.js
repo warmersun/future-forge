@@ -11,6 +11,9 @@ import {
   authenticateClerkRequest,
   runWithClerkIdentity,
   clerkUserIdFromContext,
+  clerkProviderLabel,
+  summarizeClerkLogin,
+  fetchClerkLoginSummary,
 } from "./clerk-auth.mjs";
 
 const SAMPLE_JWT =
@@ -194,5 +197,80 @@ describe("runWithClerkIdentity", () => {
       assert.equal(clerkUserIdFromContext(), "user_1");
     });
     assert.equal(clerkUserIdFromContext(), null);
+  });
+});
+
+describe("clerkProviderLabel", () => {
+  it("maps oauth ids to short labels", () => {
+    assert.equal(clerkProviderLabel("oauth_google"), "Google");
+    assert.equal(clerkProviderLabel("oauth_x"), "X");
+    assert.equal(clerkProviderLabel("twitter"), "X");
+    assert.equal(clerkProviderLabel(""), "");
+  });
+});
+
+describe("summarizeClerkLogin", () => {
+  const user = {
+    primaryEmailAddressId: "idn_2",
+    emailAddresses: [
+      { id: "idn_1", emailAddress: "alt@example.com" },
+      { id: "idn_2", emailAddress: "you@example.com" },
+    ],
+    firstName: "Legal",
+    lastName: "Name",
+    externalAccounts: [{ provider: "oauth_google" }, { provider: "oauth_google" }],
+  };
+
+  it("uses primary email and unique provider labels, never names", () => {
+    const login = summarizeClerkLogin(user);
+    assert.deepEqual(login, { email: "you@example.com", providers: ["Google"] });
+    assert.equal("firstName" in login, false);
+  });
+
+  it("falls back to first email and omits providers when email-only", () => {
+    assert.deepEqual(
+      summarizeClerkLogin({
+        emailAddresses: [{ emailAddress: "solo@example.com" }],
+        externalAccounts: [],
+      }),
+      { email: "solo@example.com", providers: [] }
+    );
+  });
+
+  it("returns null without a usable email", () => {
+    assert.equal(summarizeClerkLogin(null), null);
+    assert.equal(summarizeClerkLogin({ emailAddresses: [] }), null);
+    assert.equal(summarizeClerkLogin({ firstName: "Ada" }), null);
+  });
+});
+
+describe("fetchClerkLoginSummary", () => {
+  const env = {
+    CLERK_PUBLISHABLE_KEY: "pk_test_xx",
+    CLERK_SECRET_KEY: "sk_test_xx",
+  };
+
+  it("returns the summary when getUser succeeds", async () => {
+    const login = await fetchClerkLoginSummary("user_abc", {
+      env,
+      getUser: async () => ({
+        emailAddresses: [{ emailAddress: "you@example.com" }],
+        externalAccounts: [{ provider: "oauth_x" }],
+      }),
+    });
+    assert.deepEqual(login, { email: "you@example.com", providers: ["X"] });
+  });
+
+  it("omits login when Clerk is off or lookup fails", async () => {
+    assert.equal(await fetchClerkLoginSummary("user_abc", { env: {} }), null);
+    assert.equal(
+      await fetchClerkLoginSummary("user_abc", {
+        env,
+        getUser: async () => {
+          throw new Error("clerk down");
+        },
+      }),
+      null
+    );
   });
 });

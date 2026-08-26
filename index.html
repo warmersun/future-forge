@@ -9,12 +9,15 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-20" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-22" />
   </head>
   <body>
     <div id="ff-account" hidden>
       <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signin">
         Sign in
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ff-account-who" hidden>
+        Account
       </button>
       <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signout" hidden>
         Sign out
@@ -164,8 +167,9 @@
       <div class="content">
         <div class="section-intro">
           <h1>Inventor page</h1>
-          <p>Opt-in and private by default. Display name is how you appear on leaderboards — not your Google or Clerk name. Never shows your email.</p>
+          <p>Opt-in and private by default. Display name is how you appear on leaderboards — not your Google or Clerk name. Your public inventor page and streaming never show your email.</p>
         </div>
+        <p id="cloud-profile-login" class="muted sm cloud-profile-login" hidden></p>
         <form id="cloud-profile-form" class="panel cloud-profile-form">
           <div class="field">
             <label for="cloud-profile-username">Username</label>

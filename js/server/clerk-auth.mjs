@@ -203,3 +203,84 @@ async function defaultVerify(token, keys, env) {
     authorizedParties: authorizedPartiesFromEnv(env),
   });
 }
+
+const CLERK_PROVIDER_LABELS = {
+  oauth_google: "Google",
+  google: "Google",
+  oauth_x: "X",
+  x: "X",
+  oauth_twitter: "X",
+  twitter: "X",
+  oauth_github: "GitHub",
+  github: "GitHub",
+};
+
+/**
+ * @param {unknown} provider
+ */
+export function clerkProviderLabel(provider) {
+  const raw = String(provider || "")
+    .trim()
+    .toLowerCase();
+  if (!raw) return "";
+  if (CLERK_PROVIDER_LABELS[raw]) return CLERK_PROVIDER_LABELS[raw];
+  const stripped = raw.replace(/^oauth_/, "");
+  if (CLERK_PROVIDER_LABELS[stripped]) return CLERK_PROVIDER_LABELS[stripped];
+  return stripped
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Owner-only sign-in identity. Never legal names. Null if no usable email.
+ * @param {object|null|undefined} user Clerk user from Backend API
+ * @returns {{ email: string, providers: string[] }|null}
+ */
+export function summarizeClerkLogin(user) {
+  if (!user || typeof user !== "object") return null;
+  const emails = Array.isArray(user.emailAddresses) ? user.emailAddresses : [];
+  const primaryId = user.primaryEmailAddressId;
+  const primary =
+    emails.find((e) => e && e.id === primaryId) || user.primaryEmailAddress || null;
+  const email = String(
+    primary?.emailAddress || emails[0]?.emailAddress || ""
+  ).trim();
+  if (!email || !email.includes("@")) return null;
+  const accounts = Array.isArray(user.externalAccounts) ? user.externalAccounts : [];
+  const providers = [];
+  const seen = new Set();
+  for (const acc of accounts) {
+    const label = clerkProviderLabel(acc?.provider);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    providers.push(label);
+  }
+  return { email, providers };
+}
+
+/**
+ * Live Clerk lookup for GET /api/me/profile. Fail soft (returns null).
+ * @param {string} userId
+ * @param {object} [opts]
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [opts.env]
+ * @param {(id: string) => Promise<object>} [opts.getUser]
+ */
+export async function fetchClerkLoginSummary(userId, opts = {}) {
+  const uid = normalizeClerkUserId(userId);
+  const keys = clerkKeysFromEnv(opts.env || process.env);
+  if (!uid || !keys.enabled) return null;
+  try {
+    const getUser =
+      opts.getUser ||
+      (async (id) => {
+        const { createClerkClient } = await import("@clerk/backend");
+        const client = createClerkClient({ secretKey: keys.secretKey });
+        return client.users.getUser(id);
+      });
+    return summarizeClerkLogin(await getUser(uid));
+  } catch {
+    return null;
+  }
+}

@@ -145,6 +145,18 @@
         await complete(token);
         status.textContent = "Signed in. You can return to Future Forge.";
         btn.hidden = true;
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch {
+            /* ignore */
+          }
+        }, 1000);
         return true;
       }
 

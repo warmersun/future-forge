@@ -74,6 +74,7 @@ import {
   runWithClerkIdentity,
   clerkUserIdFromContext,
   clerkWebhookSecretFromEnv,
+  fetchClerkLoginSummary,
 } from "../js/server/clerk-auth.mjs";
 import { deviceAuth } from "../js/server/device-auth.mjs";
 import {
@@ -3497,10 +3498,12 @@ const server = http.createServer(async (req, res) => {
     try {
       const profile = await getProfileByUserId(gate.userId);
       const p = profile || { isPublic: false, username: null, displayName: null };
+      const login = await fetchClerkLoginSummary(gate.userId);
       return sendJson(res, 200, {
         ok: true,
         profile: p,
         needsDisplayName: profileNeedsDisplayName(p),
+        ...(login ? { login } : {}),
       });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });

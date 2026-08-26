@@ -51,17 +51,63 @@ export function getCloudProfileCache() {
 }
 
 export function setCloudProfileCache(profile) {
-  cloudProfileCache = profile && typeof profile === "object" ? profile : null;
+  if (!profile || typeof profile !== "object") {
+    cloudProfileCache = null;
+  } else {
+    const next = { ...profile };
+    delete next.login;
+    delete next.email;
+    cloudProfileCache = next;
+  }
+  renderAccountChip();
 }
 
 /** Chosen in-game name for rooms/boards. Never Clerk firstName. */
 export function cachedProfileDisplayName() {
-  const n = String(cloudProfileCache?.displayName || "")
+  return accountChipDisplayName(cloudProfileCache);
+}
+
+/**
+ * Chip label: display name, else username, else Account. Never an email.
+ * @param {object|null|undefined} profile
+ */
+export function accountChipLabel(profile = cloudProfileCache) {
+  const display = accountChipDisplayName(profile);
+  if (display) return display;
+  const user = String(profile?.username || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 24);
+  if (user && !user.includes("@")) return user;
+  return "Account";
+}
+
+/**
+ * Private Inventor page line. Empty if Clerk login is missing.
+ * @param {{ email?: string, providers?: unknown[] }|null|undefined} login
+ */
+export function formatClerkLoginLine(login) {
+  const email = String(login?.email || "").trim();
+  if (!email || !email.includes("@")) return "";
+  const providers = Array.isArray(login.providers)
+    ? login.providers.map((p) => String(p || "").trim()).filter(Boolean)
+    : [];
+  return providers.length
+    ? `Signed in as ${email} · ${providers.join(", ")}`
+    : `Signed in as ${email}`;
+}
+
+function accountChipDisplayName(profile) {
+  const n = String(profile?.displayName || "")
     .trim()
     .replace(/\s+/g, " ")
     .slice(0, 24);
   if (!n || n.includes("@")) return "";
   return n;
+}
+
+export function refreshAccountChip() {
+  renderAccountChip();
 }
 
 export function openCloudSignIn() {
@@ -89,12 +135,25 @@ function emitClerkSession() {
   document.body.classList.toggle("ff-signed-in", isClerkSignedIn());
   if (!isClerkSignedIn()) cloudProfileCache = null;
   renderAccountChip();
+  if (isClerkSignedIn()) void loadCloudProfileForChip();
   for (const fn of sessionListeners) {
     try {
       fn();
     } catch (e) {
       console.warn("[clerk listener]", e);
     }
+  }
+}
+
+async function loadCloudProfileForChip() {
+  if (!isClerkSignedIn()) return;
+  try {
+    const res = await apiFetch("/api/me/profile");
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) setCloudProfileCache(data.profile || null);
+    else renderAccountChip();
+  } catch {
+    renderAccountChip();
   }
 }
 
@@ -235,7 +294,7 @@ async function startDeviceHandshake() {
     console.warn("[clerk]", data?.error || "device_start_failed");
     return;
   }
-  window.open(data.signInUrl, "ff-cloud-signin", "width=480,height=720");
+  const popup = window.open(data.signInUrl, "ff-cloud-signin", "width=480,height=720");
   const deadline = Date.now() + 5 * 60 * 1000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 1000));
@@ -245,10 +304,24 @@ async function startDeviceHandshake() {
     const body = await st.json().catch(() => ({}));
     if (st.ok && body.pending === false && body.token) {
       writeStoredJwt(body.token);
+      closeHandshakePopup(popup);
       emitClerkSession();
       return;
     }
-    if (!st.ok && body.error === "unknown") return;
+    if (!st.ok && body.error === "unknown") {
+      closeHandshakePopup(popup);
+      return;
+    }
+  }
+  closeHandshakePopup(popup);
+}
+
+function closeHandshakePopup(win) {
+  if (!win || win.closed) return;
+  try {
+    win.close();
+  } catch {
+    /* ignore */
   }
 }
 
@@ -268,6 +341,13 @@ function bindAccountChip(mount) {
       void startDeviceHandshake();
     });
   }
+  const who = mount.querySelector("#ff-account-who");
+  if (who && who.dataset.bound !== "1") {
+    who.dataset.bound = "1";
+    who.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("ff-open-cloud-profile"));
+    });
+  }
   const out = mount.querySelector("#ff-account-signout");
   if (out && out.dataset.bound !== "1") {
     out.dataset.bound = "1";
@@ -276,11 +356,20 @@ function bindAccountChip(mount) {
 }
 
 function renderAccountChip() {
+  if (typeof document === "undefined") return;
   const mount = document.getElementById("ff-account");
   if (!mount) return;
   const signInBtn = mount.querySelector("#ff-account-signin");
+  const whoBtn = mount.querySelector("#ff-account-who");
   const signOutBtn = mount.querySelector("#ff-account-signout");
   const signedIn = isClerkSignedIn();
   if (signInBtn) signInBtn.hidden = signedIn;
+  if (whoBtn) {
+    whoBtn.hidden = !signedIn;
+    if (signedIn) {
+      whoBtn.textContent = accountChipLabel();
+      whoBtn.title = "Inventor page";
+    }
+  }
   if (signOutBtn) signOutBtn.hidden = !signedIn;
 }

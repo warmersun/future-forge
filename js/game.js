@@ -37,7 +37,9 @@ import {
   isClerkSignedIn,
   openCloudSignIn,
   onClerkSession,
+  refreshAccountChip,
   setCloudProfileCache,
+  formatClerkLoginLine,
 } from "./auth.js";
 import {
   IdeaDeck,
@@ -3715,14 +3717,24 @@ function questLogOutcomeLabel(outcome) {
 
 let askedForDisplayName = false;
 
+function paintCloudLogin(login) {
+  const el = $("#cloud-profile-login");
+  if (!el) return;
+  const line = formatClerkLoginLine(login);
+  el.textContent = line;
+  el.hidden = !line;
+}
+
 async function openCloudProfile(opts = {}) {
   showScreen("cloud-profile");
   const status = $("#cloud-profile-status");
+  paintCloudLogin(null);
   try {
     const res = await apiFetch("/api/me/profile");
     const data = await res.json().catch(() => ({}));
     const p = data.profile || {};
     setCloudProfileCache(p);
+    paintCloudLogin(data.login);
     const u = $("#cloud-profile-username");
     const d = $("#cloud-profile-display");
     const b = $("#cloud-profile-bio");
@@ -3741,7 +3753,7 @@ async function openCloudProfile(opts = {}) {
       status.textContent = "";
     }
   } catch {
-    /* ignore */
+    paintCloudLogin(null);
   }
 }
 
@@ -3791,7 +3803,10 @@ async function saveCloudProfile() {
       }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok) setCloudProfileCache(data.profile || null);
+    if (res.ok) {
+      setCloudProfileCache(data.profile || null);
+      refreshAccountChip();
+    }
     if (status) {
       status.textContent = res.ok
         ? "Saved. Still hidden unless you turn on Public."
@@ -18940,6 +18955,9 @@ function bind() {
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
   $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
+  window.addEventListener("ff-open-cloud-profile", () => {
+    void openCloudProfile();
+  });
   $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
   $("#cloud-profile-form")?.addEventListener("submit", (e) => {
     e.preventDefault();

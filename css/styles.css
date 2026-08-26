@@ -104,6 +104,19 @@ button:disabled {
   display: none !important;
 }
 
+#ff-account-who {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#ff-account-who[hidden],
+#ff-account-signout[hidden],
+#ff-account-signin[hidden] {
+  display: none !important;
+}
+
 @media (max-width: 640px) {
   #ff-account {
     top: 0.5rem;
@@ -111,10 +124,10 @@ button:disabled {
   }
 }
 
-/* Leave room so Sign in / Sign out does not cover topbar actions */
+/* Leave room so Sign in / name / Sign out does not cover topbar actions */
 body.ff-accounts .topbar,
 body.ff-accounts .topbar-game {
-  padding-right: 6.75rem;
+  padding-right: 12.5rem;
 }
 
 .outcome-publish {
@@ -131,8 +144,35 @@ body.ff-accounts .topbar-game {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
   max-width: 28rem;
+  margin-inline: auto;
   padding: 1.15rem 1.25rem 1.35rem;
+}
+
+#screen-cloud-profile .content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#screen-cloud-profile .section-intro {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+#screen-cloud-profile .section-intro p {
+  margin-inline: auto;
+}
+
+.cloud-profile-login {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto 0.85rem;
+  text-align: center;
+  word-break: break-word;
 }
 
 .cloud-profile-form .field {
