@@ -62,6 +62,11 @@ import {
   tileBaseTimingPct,
   clampTimingPct,
   heuristicConverges,
+  concernsReachedFromPathway,
+  pathwayConcernScoreKey,
+  pickConcernSpawn,
+  clampConcernLamp,
+  concernInventChanged,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRise } from "../sim/pressure.js";
@@ -846,7 +851,7 @@ export function createHexWorkshop(api) {
           }
         } else {
           parts.push(
-            `<p class="muted">Reply to this critic here. The light stays red until a pathway is docked. Once something is touching, the judge reads every connected invent and your answer.</p>`
+            `<p class="muted">This critic is a veto on the island it was raised against. Docking does not address it. Answer here, or change that touching pathway (edit how-it-works, add or lift invent tiles) so it honestly answers the question.</p>`
           );
         }
         if (canAnswer && showForm) {
@@ -1366,16 +1371,21 @@ export function createHexWorkshop(api) {
     }, 200);
   }
 
-  function applySettledPathwayScore(fp, score) {
+  function applySettledPathwayScore(fp, score, scoredConcernKey, opts = {}) {
     const mission = api.getMission?.() || null;
     const winMax = api.getWinMax?.() || mission?.winMax || {};
     const next = cloneBoard(board());
     if (!next.pathwayImpacts[fp]) return;
+    const prev = next.pathwayImpacts[fp];
     next.pathwayImpacts[fp] = {
-      ...next.pathwayImpacts[fp],
-      crisisDelta: score.crisisDelta || emptyCrisisDelta(),
+      ...prev,
+      crisisDelta: opts.keepCrisisDelta
+        ? prev.crisisDelta || emptyCrisisDelta()
+        : score.crisisDelta || emptyCrisisDelta(),
       concerns: score.concerns || {},
       pending: false,
+      concernsPending: false,
+      concernKey: scoredConcernKey ?? "",
     };
     setBoard(next);
     const applied = applyPathwayPressure(board(), { winMax });
@@ -1385,28 +1395,56 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
   }
 
+  function dockedConcernScoreOpts(board, inventions) {
+    const docked = concernsReachedFromPathway(board, inventions);
+    const concernAnswers = {};
+    const concernAngles = [];
+    const concerns = [];
+    for (const t of docked) {
+      if (!t.angle) continue;
+      concernAngles.push(t.angle);
+      const reply = concernReplyText(t);
+      const pose = concernPoseText(t);
+      concernAnswers[t.angle] = reply.answer || "";
+      concerns.push({
+        angle: t.angle,
+        challengeSpeech: pose.speech || null,
+        challengeQuestion: pose.question || null,
+        playerAnswer: reply.answer || null,
+        answerQuality: reply.quality,
+        priorLevel: t.lamp || "red",
+        inventChanged: concernInventChanged(t, inventions),
+        posedHowText: String(t.posedHowText || "").slice(0, 1600),
+      });
+    }
+    return { concernAngles, concernAnswers, concerns };
+  }
+
   async function runPathwayScore(fp, signal) {
     const year = api.getYear();
     const mission = api.getMission?.() || null;
     const winMax = api.getWinMax?.() || mission?.winMax || {};
-    const concernAngles = Object.values(board()?.tiles || {})
-      .filter((t) => t.kind === TILE_KIND.concern)
-      .map((t) => t.angle)
-      .filter(Boolean);
 
     try {
       if (signal?.aborted) return;
       const b = board();
       const impact = b.pathwayImpacts?.[fp];
-      if (!impact || !impact.pending) return;
+      if (!impact || !(impact.pending || impact.concernsPending)) return;
+      const keepCrisisDelta = !impact.pending && Boolean(impact.concernsPending);
 
       const inventions = (impact.inventionIds || [])
         .map((id) => b.tiles?.[id])
         .filter((t) => t && t.kind === TILE_KIND.invention);
 
+      const { concernAngles, concernAnswers, concerns } = dockedConcernScoreOpts(
+        b,
+        inventions
+      );
+      const heurOpts = { concernAngles, concernAnswers };
+
       let score;
       if (!api.coInvent) {
-        score = heuristicPathwayScore(inventions, year, { concernAngles });
+        score = heuristicPathwayScore(inventions, year, heurOpts);
       } else {
         try {
           const data = await api.coInvent("score-pathway", "[Score pathway]", {
@@ -1435,49 +1473,64 @@ export function createHexWorkshop(api) {
                 meterKey: t.meterKey || t.name,
                 description: String(t.description || "").slice(0, 400),
               })),
-            concerns: Object.values(b.tiles || {})
-              .filter((t) => t.kind === TILE_KIND.concern)
-              .map((t) => ({
-                angle: t.angle,
-                challengeSpeech: concernPoseText(t).speech || null,
-                challengeQuestion: concernPoseText(t).question || null,
-                playerAnswer: concernReplyText(t).answer || null,
-                answerQuality: concernReplyText(t).quality,
-              })),
+            concerns,
             signal,
           });
           if (signal?.aborted) return;
           score = normalizePathwayScore(data);
-          if (
-            !score.crisisDelta ||
-            (score.crisisDelta.local === 0 &&
-              score.crisisDelta.global === 0 &&
-              score.crisisDelta.support === 0 &&
-              !Object.keys(score.concerns || {}).length)
-          ) {
-            const local = heuristicPathwayScore(inventions, year, {
-              concernAngles,
-            });
-            score = {
-              crisisDelta: score.crisisDelta || local.crisisDelta,
-              concerns: {
-                ...local.concerns,
-                ...(score.concerns || {}),
-              },
-            };
-          }
+          const local = heuristicPathwayScore(inventions, year, heurOpts);
+          const cd = score.crisisDelta;
+          const cdEmpty =
+            !cd ||
+            (cd.local === 0 && cd.global === 0 && cd.support === 0);
+          score = {
+            crisisDelta: cdEmpty && !Object.keys(score.concerns || {}).length
+              ? local.crisisDelta
+              : cd || local.crisisDelta,
+            concerns: {
+              ...local.concerns,
+              ...(score.concerns || {}),
+            },
+          };
         } catch (e) {
           if (isAbortError(e) || signal?.aborted) return;
           console.warn("[score-pathway]", e.message || e);
-          score = heuristicPathwayScore(inventions, year, { concernAngles });
+          score = heuristicPathwayScore(inventions, year, heurOpts);
         }
       }
       if (signal?.aborted) return;
-      applySettledPathwayScore(fp, score);
+      const docked = concernsReachedFromPathway(b, inventions);
+      if (score?.concerns) {
+        for (const t of docked) {
+          const row = score.concerns[t.angle];
+          if (!row) continue;
+          const hasAnswer = Boolean(String(t.playerAnswer || "").trim());
+          const allowImprove =
+            hasAnswer || concernInventChanged(t, inventions);
+          const prior =
+            t.lamp === "yellow" || t.lamp === "green" || t.lamp === "red"
+              ? t.lamp
+              : "red";
+          row.level = clampConcernLamp(prior, row.level, allowImprove);
+        }
+      }
+      applySettledPathwayScore(
+        fp,
+        score,
+        pathwayConcernScoreKey(b, inventions),
+        { keepCrisisDelta }
+      );
     } finally {
       const job = pathwayJobs.get(fp);
       if (job && job.abort.signal === signal) {
         pathwayJobs.delete(fp);
+      }
+      const impact = board()?.pathwayImpacts?.[fp];
+      if (
+        (impact?.pending || impact?.concernsPending) &&
+        !pathwayJobs.has(fp)
+      ) {
+        schedulePathwayScore(fp);
       }
     }
   }
@@ -2130,8 +2183,30 @@ export function createHexWorkshop(api) {
     try {
       const place = api.getPlace?.() || "";
       const year = api.getYear?.() || 2026;
-      const prose = deriveBoardProse(board());
-      const hexBoard = summarizeBoardForScrutiny(board());
+      const spawn = pickConcernSpawn(board());
+      ensureUi()?.setHighlight?.({
+        originId: spawn.inventionIds[0] || null,
+        inventionIds: spawn.inventionIds.slice(),
+        givenIds: [],
+        spawnQ: spawn.q,
+        spawnR: spawn.r,
+      });
+      const posedTiles = spawn.inventionIds
+        .map((id) => board()?.tiles?.[id])
+        .filter((t) => t && t.kind === TILE_KIND.invention);
+      const prose = posedTiles.length
+        ? {
+            inventionName:
+              posedTiles
+                .map((t) => t.techId)
+                .filter(Boolean)
+                .slice(0, 3)
+                .join(" · ") || "Pathway",
+            inventionHow: spawn.howText || "",
+            inventionImpact: "",
+          }
+        : deriveBoardProse(board());
+      const hexBoard = summarizeBoardForScrutiny(board(), spawn.inventionIds);
       const local = localPose(pickAngle, {
         place,
         inventionName: prose.inventionName,
@@ -2233,12 +2308,20 @@ export function createHexWorkshop(api) {
         };
       }
 
-      const placed = summonOneConcern(board(), pickAngle, enrich);
+      const placed = summonOneConcern(board(), pickAngle, {
+        ...enrich,
+        spawnQ: spawn.q,
+        spawnR: spawn.r,
+        posedInventionIds: spawn.inventionIds,
+        posedFingerprints: spawn.fingerprints,
+        posedHowText: spawn.howText,
+      });
       if (!placed.ok) {
         api.flashToast?.(placed.error || "Could not place challenger");
         return board();
       }
       setBoard(placed.board);
+      ensureUi()?.setHighlight?.(null);
       ensureUi()?.render();
       syncPathwayScores();
       api.onBoardPainted?.();
@@ -2260,6 +2343,7 @@ export function createHexWorkshop(api) {
       hideReel();
       setCreateBusy("summon", false);
       api.setAiBusy?.(false);
+      ensureUi()?.setHighlight?.(null);
       ensureUi()?.render();
       if (statusEl && statusEl.textContent.includes("Summoning")) {
         statusEl.textContent = prevStatus;
@@ -2518,16 +2602,16 @@ function lampExplainHtml(lamp, lampReason, kind, opts = {}) {
   } else {
     if (level === "green") {
       meaning =
-        "addressed. Evaluation judged the connected pathway (and your written answer, if any) enough.";
+        "addressed. Your written answer and/or the connected pathway honestly hold this critic's question.";
     } else if (level === "yellow") {
       meaning =
-        "strained. A pathway is touching; the judge reads every connected invent and your answer.";
+        "partially addressed. The written answer or pathway change is on the table, but the critic is not fully answered yet.";
     } else if (opts.answeredUndocked) {
       meaning =
         "unanswered at the light. Your answer is on file; the light stays red until a pathway touches.";
     } else {
       meaning =
-        "unanswered. Dock a pathway against this hex. You can write a reply first; the light stays red until something is touching.";
+        "unanswered. This veto stays red until you answer the critic or change the touching invent. Docking alone does not move the light.";
     }
   }
   const detail = showReason ? escapeHtml(reason) : meaning;
@@ -2542,14 +2626,16 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-/** Compact board snapshot for scrutinize mode. */
-function summarizeBoardForScrutiny(board) {
+/** Compact board snapshot for scrutinize / pose. Optional inventionIds limits the invent. */
+function summarizeBoardForScrutiny(board, inventionIds = null) {
   if (!board?.tiles) return null;
   const tiles = Object.values(board.tiles);
+  const allow = inventionIds?.length ? new Set(inventionIds) : null;
   return {
     concernsSummoned: Boolean(board.concernsSummoned),
     inventions: tiles
       .filter((t) => t.kind === TILE_KIND.invention)
+      .filter((t) => !allow || allow.has(t.id))
       .map((t) => ({
         id: t.id,
         name: t.name,

@@ -138,6 +138,10 @@ export function cloneBoard(board) {
                 )
               : {},
           pending: Boolean(row?.pending),
+          concernsPending: Boolean(row?.concernsPending),
+          ...(row?.concernKey != null
+            ? { concernKey: String(row.concernKey) }
+            : {}),
         },
       ])
     ),
@@ -527,6 +531,17 @@ export function mintConcernTiles(byAngle = null) {
       answerQuality: ANSWER_QUALITIES.has(quality) ? quality : null,
       answerFeedback: feedback.trim() ? feedback : null,
       answerPending: Boolean(enrich.answerPending),
+      spawnQ: Number.isFinite(Number(enrich.spawnQ)) ? Number(enrich.spawnQ) : null,
+      spawnR: Number.isFinite(Number(enrich.spawnR)) ? Number(enrich.spawnR) : null,
+      posedInventionIds: Array.isArray(enrich.posedInventionIds)
+        ? enrich.posedInventionIds.map(String)
+        : [],
+      posedFingerprints: Array.isArray(enrich.posedFingerprints)
+        ? enrich.posedFingerprints.map(String)
+        : [],
+      posedHowText: enrich.posedHowText
+        ? String(enrich.posedHowText).slice(0, 4000)
+        : "",
     };
   });
 }
@@ -653,11 +668,13 @@ export function rosterComplete(board) {
 }
 
 /**
- * Mint + place one concern tile on an isolated hex.
+ * Mint + place one concern tile.
+ * If enrich.spawnQ/spawnR are set and empty, land there (may touch inventions).
+ * Otherwise fall back to an isolated slot.
  * Sets concernsSummoned when the board's concern roster is fully placed.
  * @param {object} board
  * @param {string} angle
- * @param {{ challengeSpeech?: string, challengeQuestion?: string, analysis?: string, artUrl?: string|null, imagePrompt?: string|null }} [enrich]
+ * @param {{ challengeSpeech?: string, challengeQuestion?: string, analysis?: string, artUrl?: string|null, imagePrompt?: string|null, spawnQ?: number, spawnR?: number, posedInventionIds?: string[], posedFingerprints?: string[], posedHowText?: string }} [enrich]
  */
 export function summonOneConcern(board, angle, enrich = null) {
   const a = String(angle || "");
@@ -677,9 +694,23 @@ export function summonOneConcern(board, angle, enrich = null) {
   const [tile] = mintConcernTiles({ [a]: enrich || {} }).filter(
     (c) => c.angle === a
   );
-  const seed = concernSeedSlot(next, a);
-  const slot = findIsolatedSlot(next, seed.q, seed.r);
-  next.tiles[tile.id] = { ...tile, q: slot.q, r: slot.r };
+  const spawnQ = Number(enrich?.spawnQ);
+  const spawnR = Number(enrich?.spawnR);
+  let slot;
+  if (Number.isFinite(spawnQ) && Number.isFinite(spawnR) && !tileAt(next, spawnQ, spawnR)) {
+    slot = { q: spawnQ, r: spawnR };
+  } else {
+    const seed = concernSeedSlot(next, a);
+    slot = findIsolatedSlot(next, seed.q, seed.r);
+  }
+  next.tiles[tile.id] = {
+    ...tile,
+    q: slot.q,
+    r: slot.r,
+    lamp: "red",
+    spawnQ: slot.q,
+    spawnR: slot.r,
+  };
   if (rosterComplete(next)) {
     next.concernsSummoned = true;
   }

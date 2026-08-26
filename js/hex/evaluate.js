@@ -7,9 +7,12 @@
 import { assessSustainable } from "../sim/sustainable.js";
 import { worseLevel } from "../sim/deploy.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
+import { neighbor } from "./hex-tile-grid.js";
 import {
   TILE_KIND,
   neighborTiles,
+  tileAt,
+  findIsolatedSlot,
   CRISIS_ROLE_BLURBS,
   cloneBoard,
   applyLights,
@@ -73,19 +76,164 @@ export function pathwayContentFingerprint(inventions) {
 }
 
 /**
+ * Empty hex where a challenger should land, plus the invention islands that hex can see.
+ * One island → a vacant neighbor. Several → a vacant cell touching the most islands.
+ * No inventions → isolated slot (legacy).
+ *
+ * @param {object|null|undefined} board
+ * @returns {{ q: number, r: number, inventionIds: string[], fingerprints: string[], howText: string }}
+ */
+export function pickConcernSpawn(board) {
+  const pathways = listInventionPathways(board);
+  if (!pathways.length) {
+    const slot = findIsolatedSlot(board, 3, 1);
+    return {
+      q: slot.q,
+      r: slot.r,
+      inventionIds: [],
+      fingerprints: [],
+      howText: "",
+    };
+  }
+
+  const islandOf = new Map();
+  pathways.forEach((invs, i) => {
+    for (const t of invs) islandOf.set(t.id, i);
+  });
+
+  const candidates = new Map();
+  for (const invs of pathways) {
+    for (const t of invs) {
+      if (t.q == null || t.r == null) continue;
+      for (let d = 0; d < 6; d++) {
+        const n = neighbor(t.q, t.r, d);
+        if (tileAt(board, n.q, n.r)) continue;
+        const k = `${n.q},${n.r}`;
+        if (!candidates.has(k)) {
+          candidates.set(k, { q: n.q, r: n.r, islands: new Set() });
+        }
+        candidates.get(k).islands.add(islandOf.get(t.id));
+      }
+    }
+  }
+
+  let best = null;
+  let bestSize = -1;
+  for (const c of candidates.values()) {
+    const score = c.islands.size;
+    const sizeSum = [...c.islands].reduce(
+      (s, i) => s + (pathways[i]?.length || 0),
+      0
+    );
+    if (
+      !best ||
+      score > best.islands.size ||
+      (score === best.islands.size && sizeSum > bestSize)
+    ) {
+      best = c;
+      bestSize = sizeSum;
+    }
+  }
+
+  if (!best) {
+    const slot = findIsolatedSlot(board, 3, 1);
+    const ids = pathways[0].map((t) => t.id);
+    return {
+      q: slot.q,
+      r: slot.r,
+      inventionIds: ids,
+      fingerprints: [pathwayContentFingerprint(pathways[0])],
+      howText: pathwayHowText(pathways[0]),
+    };
+  }
+
+  const indexes = [...best.islands].sort((a, b) => a - b);
+  const inventionIds = [];
+  const fingerprints = [];
+  const howParts = [];
+  for (const i of indexes) {
+    fingerprints.push(pathwayContentFingerprint(pathways[i]));
+    howParts.push(pathwayHowText(pathways[i]));
+    for (const t of pathways[i]) inventionIds.push(t.id);
+  }
+  return {
+    q: best.q,
+    r: best.r,
+    inventionIds,
+    fingerprints,
+    howText: howParts.filter(Boolean).join("\n\n"),
+  };
+}
+
+function pathwayHowText(inventions) {
+  return (inventions || [])
+    .map((n) => String(n.howText || "").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/**
+ * Rank red < yellow < green. Refuse an upgrade unless allowImprove.
+ * @param {"red"|"yellow"|"green"|string|null|undefined} prior
+ * @param {"red"|"yellow"|"green"|string} next
+ * @param {boolean} allowImprove
+ */
+export function clampConcernLamp(prior, next, allowImprove) {
+  const rank = { red: 0, yellow: 1, green: 2 };
+  const p = rank[prior] ?? 0;
+  const n = rank[String(next || "").toLowerCase()] ?? 0;
+  const lv = n === 0 ? "red" : n === 1 ? "yellow" : "green";
+  if (n > p && !allowImprove) {
+    return prior === "yellow" || prior === "green" || prior === "red"
+      ? prior
+      : "red";
+  }
+  return lv;
+}
+
+/**
+ * True when this island's content is not one of the islands posed at spawn.
+ * @param {object} concernTile
+ * @param {object[]} inventions
+ */
+export function concernInventChanged(concernTile, inventions) {
+  const posed = Array.isArray(concernTile?.posedFingerprints)
+    ? concernTile.posedFingerprints
+    : [];
+  if (!posed.length) return true;
+  const fp = pathwayContentFingerprint(inventions);
+  return !posed.includes(fp);
+}
+
+/**
  * Offline heuristic score for a pathway (no AI).
- * Mild −1 on roles with mature how-text; concerns yellow-max.
+ * Mild −1 on roles with mature how-text.
+ * Concerns stay red until a written answer exists (never green offline).
+ * Docking / mature how-text is not itself an address.
  * @param {object[]} inventions
  * @param {number} year
  * @param {object} [opts]
  * @param {string[]} [opts.concernAngles]
+ * @param {Record<string, string|null|undefined>} [opts.concernAnswers]
  */
 export function heuristicPathwayScore(inventions, year, opts = {}) {
   const howLen = inventions
     .map((n) => String(n.howText || "").trim())
     .join("\n")
     .length;
+  const howBlob = inventions
+    .map((n) => String(n.howText || "").trim())
+    .join("\n");
   const mature = inventions.some((n) => ideaMature(n, year));
+  const redTiming = inventions.some(
+    (n) =>
+      n.timingLevel === "red" ||
+      (n.feasibilityPct != null && Number(n.feasibilityPct) < 35)
+  );
+  const hostile =
+    /\b(nuclear|reactor|warhead|weapon|surveil|mass.?surveillance)\b/i.test(
+      howBlob
+    );
   const delta = emptyCrisisDelta();
   if (mature && howLen >= 40) {
     delta.local = -1;
@@ -93,13 +241,22 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
   } else if (howLen >= 20) {
     delta.local = -1;
   }
+  // Invent can make a meter worse (red timing, or a hostile stack).
+  if (redTiming || hostile) {
+    delta.support = Math.max(delta.support, 1);
+  }
+  const answers =
+    opts.concernAnswers && typeof opts.concernAnswers === "object"
+      ? opts.concernAnswers
+      : {};
   const concerns = {};
   for (const angle of opts.concernAngles || []) {
+    const hasAnswer = Boolean(String(answers[angle] || "").trim());
     concerns[angle] = {
-      level: mature ? "yellow" : inventions.length ? "yellow" : "red",
-      reason: mature
-        ? "Pathway touches this concern — confirm honesty."
-        : "Pathway may not be enough yet.",
+      level: hasAnswer ? "yellow" : "red",
+      reason: hasAnswer
+        ? "Written answer is on file — confirm the pathway honestly holds it."
+        : "Still unanswered — docking is not enough.",
     };
   }
   return { crisisDelta: delta, concerns };
@@ -135,15 +292,107 @@ export function normalizePathwayScore(raw) {
 }
 
 /**
- * Worst of red/yellow/green (red wins).
- * @param {"red"|"yellow"|"green"} a
- * @param {"red"|"yellow"|"green"} b
+ * Bonds row: union of invent islands vs on-field crisis + concern hexes.
+ * Green only if every given shares an edge-path with at least one island. Never yellow.
+ * @param {object|null|undefined} board
+ * @returns {{ level: "red"|"green", uncovered: number, note: string }}
  */
+export function boardBondsLevel(board) {
+  const givens = Object.values(board?.tiles || {}).filter(
+    (t) =>
+      (t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern) &&
+      t.q != null &&
+      t.r != null
+  );
+  if (!givens.length) {
+    return {
+      level: "red",
+      uncovered: 0,
+      note: "No crisis hexes on the board.",
+    };
+  }
+  const covered = new Set();
+  for (const invs of listInventionPathways(board)) {
+    const seedId = invs[0]?.id;
+    if (!seedId) continue;
+    for (const gid of givensReachedFromInvention(board, seedId)) {
+      covered.add(gid);
+    }
+  }
+  const uncovered = givens.filter((g) => !covered.has(g.id)).length;
+  if (uncovered) {
+    return {
+      level: "red",
+      uncovered,
+      note:
+        uncovered === 1
+          ? "1 hex is not touching any invent island"
+          : `${uncovered} hexes are not touching any invent island`,
+    };
+  }
+  return {
+    level: "green",
+    uncovered: 0,
+    note: "Every crisis and concern hex touches an invent island",
+  };
+}
+
 export function worseLamp(a, b) {
   const rank = { red: 2, yellow: 1, green: 0 };
   const ra = rank[a] ?? 2;
   const rb = rank[b] ?? 2;
   return ra >= rb ? a : b;
+}
+
+/**
+ * Coverage + Bonds + Timing for the invent panel. Overall is the worst of the three.
+ * @param {object|null|undefined} board
+ */
+export function hexPathwayPanel(board) {
+  const tiles = Object.values(board?.tiles || {});
+  const givens = tiles.filter(
+    (t) =>
+      (t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern) &&
+      t.q != null &&
+      t.r != null
+  );
+  const reds = givens.filter((t) => t.lamp === "red").length;
+  const yellows = givens.filter((t) => t.lamp === "yellow").length;
+  const greens = givens.filter((t) => t.lamp === "green").length;
+  const coverage =
+    reds === 0 && givens.length
+      ? {
+          level: greens === givens.length ? "green" : "yellow",
+          note: "No red lights",
+        }
+      : {
+          level: "red",
+          note: reds
+            ? `${reds} light(s) still red`
+            : "No crisis hexes on the board",
+        };
+  const bonds = boardBondsLevel(board);
+  const timing = boardWorstPathwayTiming(board);
+  const timingLevel = timing.pending
+    ? "yellow"
+    : timing.level === "red" || timing.level === "yellow" || timing.level === "green"
+      ? timing.level
+      : "red";
+  const overall = worseLevel(
+    worseLevel(coverage.level, bonds.level),
+    timingLevel
+  );
+  return {
+    coverage,
+    bonds,
+    timing,
+    timingLevel,
+    overall,
+    reds,
+    yellows,
+    greens,
+    givens,
+  };
 }
 
 /**
@@ -154,7 +403,7 @@ export function worseLamp(a, b) {
  * @param {object} opts
  * @param {Record<string, number>} [opts.winMax]
  * @param {Record<string, number>|null} [opts.pressureBase] — override board.pressureBase
- * @returns {{ board: object, displayPressure: Record<string, number>, pendingGivenIds: string[], pathways: Array<{ fingerprint: string, inventions: object[], needsScore: boolean }> }}
+ * @returns {{ board: object, displayPressure: Record<string, number>, pendingGivenIds: string[], pathways: Array<{ fingerprint: string, inventions: object[], needsScore: boolean, needsConcernScore: boolean }> }}
  */
 export function applyPathwayPressure(board, opts = {}) {
   const next = cloneBoard(board);
@@ -171,21 +420,49 @@ export function applyPathwayPressure(board, opts = {}) {
   const pathways = listInventionPathways(next).map((inventions) => {
     const fingerprint = pathwayContentFingerprint(inventions);
     const cached = next.pathwayImpacts[fingerprint];
-    const needsScore = !cached || cached.pending === true;
+    const concernKey = pathwayConcernScoreKey(next, inventions);
+    const keyMismatch =
+      Boolean(cached) && (cached.concernKey ?? "") !== concernKey;
+    const missingDocked = dockedConcernsNeedScore(next, inventions, cached);
+    const concernsStale = keyMismatch || missingDocked;
+    const answeredDocked = concernsReachedFromPathway(next, inventions).some(
+      (t) => String(t.playerAnswer || "").trim()
+    );
+    const inventionPending = !cached || Boolean(cached.pending);
+    const concernsPending =
+      !inventionPending &&
+      (Boolean(cached?.concernsPending) || (concernsStale && answeredDocked));
+    const needsScore = inventionPending || concernsPending;
     if (!cached) {
       next.pathwayImpacts[fingerprint] = {
         inventionIds: inventions.map((t) => t.id),
         crisisDelta: emptyCrisisDelta(),
         concerns: {},
         pending: true,
+        concernsPending: false,
       };
     } else {
+      let concerns = cached.concerns || {};
+      let nextKey = cached.concernKey;
+      if (concernsStale && !answeredDocked && !cached.pending) {
+        concerns = {};
+        nextKey = concernKey;
+      }
       next.pathwayImpacts[fingerprint] = {
         ...cached,
         inventionIds: inventions.map((t) => t.id),
+        concerns,
+        pending: Boolean(cached.pending),
+        concernsPending,
+        ...(nextKey != null ? { concernKey: nextKey } : {}),
       };
     }
-    return { fingerprint, inventions, needsScore: !cached || Boolean(cached.pending) };
+    return {
+      fingerprint,
+      inventions,
+      needsScore,
+      needsConcernScore: concernsPending,
+    };
   });
 
   // Drop impacts for fingerprints no longer on the board
@@ -243,27 +520,31 @@ export function applyPathwayPressure(board, opts = {}) {
         if (!seedId) continue;
         if (!givensReachedFromInvention(next, seedId).includes(t.id)) continue;
         touching = true;
-        if (impact.pending) {
+        if (impact.pending || impact.concernsPending) {
           pendingGivenIds.add(t.id);
           continue;
         }
         const row = impact.concerns?.[t.angle];
+        const scoredForDock = impact.concernKey != null;
         if (
-          row?.level === "red" ||
-          row?.level === "yellow" ||
-          row?.level === "green"
+          scoredForDock &&
+          (row?.level === "red" ||
+            row?.level === "yellow" ||
+            row?.level === "green")
         ) {
           lamp = lamp == null ? row.level : worseLamp(lamp, row.level);
           if (row.reason) reason = row.reason;
-        } else {
-          lamp = lamp == null ? "yellow" : worseLamp(lamp, "yellow");
         }
       }
       lights.push({
         id: t.id,
-        level: touching ? lamp || "yellow" : "red",
+        level: touching ? lamp || (hasAnswer ? "yellow" : "red") : "red",
         reason: touching
-          ? reason
+          ? lamp
+            ? reason
+            : hasAnswer
+              ? "Written answer is on file — confirm the pathway honestly holds it."
+              : "Still unanswered — docking is not enough."
           : hasAnswer
             ? "Answer is on file — the light stays red until a pathway docks."
             : "Still unanswered.",
@@ -273,11 +554,16 @@ export function applyPathwayPressure(board, opts = {}) {
 
   for (const { fingerprint, inventions } of pathways) {
     const impact = next.pathwayImpacts[fingerprint];
-    if (!impact?.pending) continue;
     const seedId = inventions[0]?.id;
     if (!seedId) continue;
-    for (const gid of givensReachedFromInvention(next, seedId)) {
-      pendingGivenIds.add(gid);
+    if (impact?.pending) {
+      for (const gid of givensReachedFromInvention(next, seedId)) {
+        pendingGivenIds.add(gid);
+      }
+    } else if (impact?.concernsPending) {
+      for (const gid of givensReachedFromInvention(next, seedId)) {
+        if (next.tiles[gid]?.kind === TILE_KIND.concern) pendingGivenIds.add(gid);
+      }
     }
   }
 
@@ -308,7 +594,7 @@ export function invalidatePathwaysTouchingGiven(board, givenId) {
     const seedId = impact?.inventionIds?.[0];
     if (!seedId) continue;
     if (givensReachedFromInvention(next, seedId).includes(givenId)) {
-      impacts[fp] = { ...impact, pending: true };
+      impacts[fp] = { ...impact, concernsPending: true };
     }
   }
   next.pathwayImpacts = impacts;
@@ -332,7 +618,7 @@ export function pathwayHasTimingPending(inventions) {
  * members are not timingPending. Abort jobs whose fingerprint is gone
  * (or already settled). Keep live in-flight scores.
  *
- * @param {Array<{ fingerprint: string, inventions: object[], needsScore: boolean }>} pathways
+ * @param {Array<{ fingerprint: string, inventions: object[], needsScore?: boolean, needsConcernScore?: boolean }>} pathways
  * @param {Iterable<string>} inflight
  * @returns {{ start: string[], abort: string[], keep: string[] }}
  */
@@ -346,15 +632,16 @@ export function diffPathwayScoreJobs(pathways, inflight) {
   const start = [];
   const keep = [];
   const abort = [];
+  const liveJob = (p) => Boolean(p?.needsScore || p?.needsConcernScore);
 
   for (const fp of inflightSet) {
     const p = byFp.get(fp);
-    if (!p || !p.needsScore) abort.push(fp);
+    if (!p || !liveJob(p)) abort.push(fp);
     else keep.push(fp);
   }
 
   for (const p of byFp.values()) {
-    if (!p.needsScore) continue;
+    if (!liveJob(p)) continue;
     if (inflightSet.has(p.fingerprint)) continue;
     if (pathwayHasTimingPending(p.inventions)) continue;
     start.push(p.fingerprint);
@@ -764,6 +1051,59 @@ export function givensReachedFromInvention(board, tileId) {
 }
 
 /**
+ * Concern tiles docked onto this invention pathway.
+ * @param {object|null|undefined} board
+ * @param {object[]} inventions
+ * @returns {object[]}
+ */
+export function concernsReachedFromPathway(board, inventions) {
+  const seedId = inventions?.[0]?.id;
+  if (!seedId) return [];
+  const out = [];
+  for (const gid of givensReachedFromInvention(board, seedId)) {
+    const t = board?.tiles?.[gid];
+    if (t?.kind === TILE_KIND.concern && t.angle) out.push(t);
+  }
+  return out;
+}
+
+/**
+ * Cache identity for which docked concerns (and answers) a pathway score covers.
+ * @param {object|null|undefined} board
+ * @param {object[]} inventions
+ * @returns {string}
+ */
+export function pathwayConcernScoreKey(board, inventions) {
+  return concernsReachedFromPathway(board, inventions)
+    .map((t) => `${t.angle}:${String(t.playerAnswer || "").trim()}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * True when a settled score is missing a docked concern angle (or predates concernKey).
+ * @param {object|null|undefined} board
+ * @param {object[]} inventions
+ * @param {object|null|undefined} impact
+ */
+export function dockedConcernsNeedScore(board, inventions, impact) {
+  const docked = concernsReachedFromPathway(board, inventions).filter((t) =>
+    String(t.playerAnswer || "").trim()
+  );
+  if (!docked.length) return false;
+  if (!impact || impact.concernKey == null) return true;
+  if ((impact.concernKey ?? "") !== pathwayConcernScoreKey(board, inventions)) {
+    return true;
+  }
+  for (const t of docked) {
+    const row = impact.concerns?.[t.angle];
+    const lv = String(row?.level || "").toLowerCase();
+    if (lv !== "red" && lv !== "yellow" && lv !== "green") return true;
+  }
+  return false;
+}
+
+/**
  * Highlight set for UI: origin + inventions + givens in the pathway.
  * @param {object|null|undefined} board
  * @param {string} tileId
@@ -1128,6 +1468,7 @@ export function assessGlobalSustainPrior(cluster, opts = {}) {
 /**
  * Concern prior — heuristic never awards green.
  * Nothing docked is always red, even with a saved written answer.
+ * Docking alone is not an address — stay red until a written answer exists.
  * @param {object} cluster
  * @param {object|null} [given]
  * @returns {{ level: "red"|"yellow"|"green", note: string }}
@@ -1139,22 +1480,18 @@ export function assessConcernPrior(cluster, given = null) {
       level: "red",
       note: hasAnswer
         ? "Answer is on file — the light stays red until a pathway docks against this critic."
-        : "Still unanswered — dock a pathway, or write a reply (the light stays red until something is docked).",
+        : "Still unanswered — dock a pathway, then answer the critic or change the pathway so it addresses this challenge.",
     };
   }
-  if (cluster.matureCount >= 1) {
+  if (!hasAnswer) {
     return {
-      level: "yellow",
-      note: hasAnswer
-        ? "A mature pathway touches this concern — evaluation will read the connected invent and your written answer."
-        : "A mature pathway touches this concern — AI must confirm it is honestly addressed.",
+      level: "red",
+      note: "Still unanswered — docking is not enough. Answer the critic or change the pathway so it addresses this challenge.",
     };
   }
   return {
     level: "yellow",
-    note: hasAnswer
-      ? "A pathway touches; evaluation will read it together with your written answer."
-      : "A pathway touches but may not be enough yet.",
+    note: "Written answer is on file — confirm the pathway honestly holds it.",
   };
 }
 

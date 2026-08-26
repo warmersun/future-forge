@@ -46,6 +46,11 @@ import {
   normalizePathwayScore,
   pathwayContentFingerprint,
   listInventionPathways,
+  pickConcernSpawn,
+  clampConcernLamp,
+  concernInventChanged,
+  boardBondsLevel,
+  hexPathwayPanel,
   bandToLamp,
   diffPathwayScoreJobs,
   pathwayHasTimingPending,
@@ -870,6 +875,95 @@ describe("pathway clusters (BFS)", () => {
   });
 });
 
+describe("pickConcernSpawn", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    return res.board;
+  }
+
+  it("one island picks a vacant neighbor of that island", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({ id: "a", techId: "ai", howText: "A", year: 2026 })
+    );
+    board = placeOk(board, "a", 0, 0);
+    const spawn = pickConcernSpawn(board);
+    const neighbors = [
+      [1, 0],
+      [1, -1],
+      [0, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+    ];
+    assert.ok(
+      neighbors.some(([q, r]) => spawn.q === q && spawn.r === r),
+      `spawn ${spawn.q},${spawn.r} should neighbor 0,0`
+    );
+    assert.deepEqual(spawn.inventionIds, ["a"]);
+    assert.ok(spawn.fingerprints[0].includes("a:"));
+  });
+
+  it("two islands pick a hex that sees both when one exists", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({ id: "a", techId: "ai", howText: "A", year: 2026 })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({ id: "b", techId: "drones", howText: "B", year: 2026 })
+    );
+    board = placeOk(board, "a", 0, 0);
+    board = placeOk(board, "b", 2, 0);
+    const spawn = pickConcernSpawn(board);
+    assert.equal(spawn.q, 1);
+    assert.equal(spawn.r, 0);
+    assert.ok(spawn.inventionIds.includes("a"));
+    assert.ok(spawn.inventionIds.includes("b"));
+    assert.equal(spawn.fingerprints.length, 2);
+  });
+
+  it("no inventions: isolated empty cell", () => {
+    const board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    const spawn = pickConcernSpawn(board);
+    assert.equal(spawn.inventionIds.length, 0);
+    assert.equal(board.tiles["crisis-local"].q === spawn.q && board.tiles["crisis-local"].r === spawn.r, false);
+  });
+});
+
+describe("clampConcernLamp", () => {
+  it("refuses an upgrade without allowImprove; always allows worsen", () => {
+    assert.equal(clampConcernLamp("red", "yellow", false), "red");
+    assert.equal(clampConcernLamp("red", "yellow", true), "yellow");
+    assert.equal(clampConcernLamp("green", "red", false), "red");
+  });
+
+  it("concernInventChanged is true when current island is not a posed snapshot", () => {
+    const invs = [{ id: "a", techId: "ai", howText: "New.", timingLevel: "green" }];
+    assert.equal(
+      concernInventChanged({ posedFingerprints: ["other"] }, invs),
+      true
+    );
+    const fp = pathwayContentFingerprint(invs);
+    assert.equal(
+      concernInventChanged({ posedFingerprints: [fp] }, invs),
+      false
+    );
+  });
+});
+
 describe("applyPathwayPressure (cached scores)", () => {
   function placeOk(board, id, q, r) {
     const res = placeTile(board, id, q, r);
@@ -1056,21 +1150,219 @@ describe("applyPathwayPressure (cached scores)", () => {
   });
 
   it("heuristicPathwayScore gives mild relief for mature how-text", () => {
+    const inventions = [
+      {
+        kind: "invention",
+        year: 2026,
+        howText: "A clear forty-character mechanism for local flood sensors.",
+        timingLevel: "green",
+        feasibilityPct: 85,
+      },
+    ];
+    const unanswered = heuristicPathwayScore(inventions, 2026, {
+      concernAngles: ["moloch"],
+    });
+    assert.equal(unanswered.crisisDelta.local, -1);
+    assert.equal(unanswered.concerns.moloch.level, "red");
+
+    const answered = heuristicPathwayScore(inventions, 2026, {
+      concernAngles: ["moloch"],
+      concernAnswers: { moloch: "A bonded escrow pays only after proof." },
+    });
+    assert.equal(answered.concerns.moloch.level, "yellow");
+  });
+
+  it("heuristicPathwayScore can worsen support for a hostile stack", () => {
     const score = heuristicPathwayScore(
       [
         {
           kind: "invention",
           year: 2026,
-          howText: "A clear forty-character mechanism for local flood sensors.",
+          howText:
+            "A neighborhood nuclear reactor runs the flood pumps at the quay.",
           timingLevel: "green",
           feasibilityPct: 85,
         },
       ],
-      2026,
-      { concernAngles: ["moloch"] }
+      2026
     );
     assert.equal(score.crisisDelta.local, -1);
-    assert.equal(score.concerns.moloch.level, "yellow");
+    assert.equal(score.crisisDelta.support, 1);
+  });
+});
+
+describe("ambient crisis lamps + Bonds coverage", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    return res.board;
+  }
+
+  it("undocking an easing island restores ambient pressure color", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    const winMax = { Floods: 2 };
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Sensors.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1]);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    let applied = applyPathwayPressure(board, { winMax });
+    assert.equal(applied.displayPressure.Floods, 2);
+    assert.equal(applied.board.tiles["crisis-local"].lamp, "green");
+
+    applied = applyPathwayPressure(liftTile(applied.board, "ai1").board, {
+      winMax,
+    });
+    assert.equal(applied.displayPressure.Floods, 3);
+    assert.equal(
+      applied.board.tiles["crisis-local"].lamp,
+      bandToLamp(crisisMeterLevel(3, 2))
+    );
+  });
+
+  it("Wait-risen ambient shows on an untouched crisis hex", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local", "support"],
+      pressure: { Floods: 2, Trust: 1 },
+    });
+    board.pressureBase = { Floods: 4, Trust: 1 };
+    const applied = applyPathwayPressure(board, {
+      winMax: { Floods: 2, Trust: 2 },
+    });
+    assert.equal(applied.displayPressure.Floods, 4);
+    assert.equal(applied.board.tiles["crisis-local"].lamp, "red");
+    assert.equal(applied.board.tiles["crisis-support"].lamp, "green");
+  });
+
+  it("positive support delta can heat a touching support hex", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["support"],
+      pressure: { Trust: 2 },
+    });
+    const support = board.tiles["crisis-support"];
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "rx",
+        techId: "energy",
+        howText: "Reactor.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    board = placeOk(board, "rx", support.q - 1, support.r);
+    const fp = pathwayContentFingerprint([board.tiles.rx]);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["rx"],
+      crisisDelta: { local: 0, global: 0, support: 1 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    const applied = applyPathwayPressure(board, { winMax: { Trust: 2 } });
+    assert.equal(applied.displayPressure.Trust, 3);
+    assert.equal(
+      applied.board.tiles["crisis-support"].lamp,
+      bandToLamp(crisisMeterLevel(3, 2))
+    );
+  });
+
+  it("Bonds is red until every crisis hex touches some island; union can cover", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local", "support"],
+      pressure: { Floods: 2, Trust: 2 },
+    });
+    assert.equal(boardBondsLevel(board).level, "red");
+
+    board = addTile(
+      board,
+      mintInventionTile({ id: "a", techId: "ai", howText: "A", year: 2026 })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    assert.equal(boardBondsLevel(board).level, "red");
+
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "b",
+        techId: "drones",
+        howText: "B",
+        year: 2026,
+      })
+    );
+    const support = board.tiles["crisis-support"];
+    board = placeOk(board, "b", support.q + 1, support.r);
+    assert.equal(boardBondsLevel(board).level, "green");
+  });
+
+  it("Bonds turns red if a concern is isolated from every island", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({ id: "a", techId: "ai", howText: "A", year: 2026 })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q, local.r - 1);
+    assert.equal(boardBondsLevel(board).level, "green");
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q + 4,
+      r: local.r,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+    });
+    assert.equal(boardBondsLevel(board).level, "red");
+    assert.match(boardBondsLevel(board).note, /1 hex/);
+  });
+
+  it("overall pathway is red when Bonds is red even if coverage is not", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local", "support"],
+      pressure: { Floods: 0, Trust: 0 },
+    });
+    board.tiles["crisis-local"].lamp = "green";
+    board.tiles["crisis-support"].lamp = "green";
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "a",
+        techId: "ai",
+        howText: "A",
+        year: 2026,
+        timingLevel: "green",
+        feasibilityPct: 85,
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    const panel = hexPathwayPanel(board);
+    assert.equal(panel.bonds.level, "red");
+    assert.equal(panel.overall, "red");
   });
 });
 
@@ -1131,7 +1423,7 @@ describe("diffPathwayScoreJobs", () => {
 
 
 describe("assessConcernPrior + written answers", () => {
-  it("undocked stays red even with a hit answer; touch is yellow", () => {
+  it("undocked stays red even with a hit answer; dock without answer stays red", () => {
     const empty = { anyTouch: false, matureCount: 0 };
     const answered = { playerAnswer: "Named the bond and who pays." };
     const red = assessConcernPrior(empty, answered);
@@ -1139,6 +1431,10 @@ describe("assessConcernPrior + written answers", () => {
     assert.match(red.note, /stays red/i);
 
     const touching = { anyTouch: true, matureCount: 1 };
+    const stillRed = assessConcernPrior(touching, {});
+    assert.equal(stillRed.level, "red");
+    assert.match(stillRed.note, /docking is not enough/i);
+
     const yellow = assessConcernPrior(touching, answered);
     assert.equal(yellow.level, "yellow");
   });
@@ -1186,7 +1482,8 @@ describe("invalidatePathwaysTouchingGiven", () => {
       pending: false,
     };
     board = invalidatePathwaysTouchingGiven(board, "concern-moloch");
-    assert.equal(board.pathwayImpacts[fp].pending, true);
+    assert.equal(board.pathwayImpacts[fp].pending, false);
+    assert.equal(board.pathwayImpacts[fp].concernsPending, true);
   });
 
   it("undocking after an answer returns the lamp to red", () => {
@@ -1227,6 +1524,244 @@ describe("invalidatePathwaysTouchingGiven", () => {
       applied.board.tiles["concern-moloch"].playerAnswer.includes("escrow"),
       true
     );
+  });
+
+  it("docking a concern onto a scored pathway without an answer stays red", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Shared ledger for flood sensors.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1]);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q - 1,
+      r: local.r + 1,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+    });
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+    assert.equal(applied.pathways[0].needsScore, false);
+    assert.equal(applied.board.pathwayImpacts[fp].pending, false);
+    assert.equal(applied.board.tiles["crisis-local"].lampPending, false);
+    assert.equal(applied.board.tiles["concern-moloch"].lampPending, false);
+  });
+
+  it("how-text change while concern is isolated does not score that concern", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Original.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q + 3,
+      r: local.r,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+    });
+    board.tiles.ai1.howText = "Revised mechanism for the quay.";
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+    assert.equal(applied.board.tiles["concern-moloch"].lampPending, false);
+    assert.equal(applied.pathways[0].needsScore, true);
+    assert.ok(applied.pendingGivenIds.includes("crisis-local"));
+    assert.ok(!applied.pendingGivenIds.includes("concern-moloch"));
+  });
+
+  it("lifting a pathway tile while a concern is docked rescores that island", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "a",
+        techId: "ai",
+        howText: "One.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "b",
+        techId: "ai",
+        howText: "Two.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q - 1,
+      r: local.r + 1,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+      posedFingerprints: ["old-snap"],
+    });
+    const chainFp = pathwayContentFingerprint([board.tiles.a, board.tiles.b]);
+    board.pathwayImpacts[chainFp] = {
+      inventionIds: ["a", "b"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "moloch:",
+    };
+    board = liftTile(board, "b").board;
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways[0].needsScore, true);
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+    assert.ok(applied.pendingGivenIds.includes("crisis-local"));
+    assert.ok(applied.pendingGivenIds.includes("concern-moloch"));
+  });
+
+  it("moving an unanswered concern does not re-pend crisis lamps", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Shared ledger for flood sensors.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1]);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q + 2,
+      r: local.r,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+    });
+    let applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.board.tiles["crisis-local"].lampPending, false);
+    assert.equal(applied.pathways[0].needsScore, false);
+
+    const concern = applied.board.tiles["concern-moloch"];
+    applied = applyPathwayPressure(
+      {
+        ...applied.board,
+        tiles: {
+          ...applied.board.tiles,
+          "concern-moloch": {
+            ...concern,
+            q: local.q - 1,
+            r: local.r + 1,
+          },
+        },
+      },
+      { winMax: { Floods: 2 } }
+    );
+    assert.equal(applied.pathways[0].needsScore, false);
+    assert.equal(applied.board.pathwayImpacts[fp].pending, false);
+    assert.equal(applied.board.tiles["crisis-local"].lampPending, false);
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+  });
+
+  it("settled docked concern score does not stay pending after clone", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Shared ledger for flood sensors.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    board = addTile(board, {
+      id: "concern-moloch",
+      kind: TILE_KIND.concern,
+      q: local.q - 1,
+      r: local.r + 1,
+      polarity: "curve",
+      name: "Moloch",
+      angle: "moloch",
+      lamp: "red",
+    });
+    const fp = pathwayContentFingerprint([board.tiles.ai1]);
+    const concernKey = "moloch:";
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: { moloch: { level: "red", reason: "Still unanswered — docking is not enough." } },
+      pending: false,
+      concernKey,
+    };
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways[0].needsScore, false);
+    assert.equal(applied.board.pathwayImpacts[fp].pending, false);
+    assert.equal(applied.board.pathwayImpacts[fp].concernKey, concernKey);
+    assert.equal(applied.board.tiles["concern-moloch"].lampPending, false);
+    assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
   });
 });
 

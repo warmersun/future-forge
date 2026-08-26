@@ -79,10 +79,10 @@ function missionSlice(context) {
 
 export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future Forge.
 Judge the combination (techId + howText + timing — no names) for this place and year.
-crisisDelta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain).
+crisisDelta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
-concerns: for each listed angle, judge ALL inventions in that given's reachable pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Do not prefer yellow over an honest green.
+concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green.
 ${GROUNDING_LINE}
 Return JSON only (no markdown, no other keys):
 {"crisisDelta":{"local":0,"global":0,"support":0},"concerns":{"moloch":{"level":"yellow","reason":"one sentence"}}}`;
@@ -186,6 +186,11 @@ function buildScorePathwayPayload(context) {
       answerQuality: ["hit", "glance", "miss"].includes(String(c?.answerQuality || ""))
         ? c.answerQuality
         : null,
+      priorLevel: ["red", "yellow", "green"].includes(String(c?.priorLevel || ""))
+        ? c.priorLevel
+        : "red",
+      inventChanged: Boolean(c?.inventChanged),
+      posedHowText: clip(c?.posedHowText, 1600),
     })),
     pathway: {
       inventions: invs.map((n) => ({

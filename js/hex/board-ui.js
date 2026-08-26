@@ -101,7 +101,7 @@ export function createHexBoardUi(opts) {
   let hover = null;
   let dragMoved = false;
   let dragStartXY = null;
-  /** @type {{ originId: string, inventionIds: string[], givenIds: string[] }|null} */
+  /** @type {{ originId?: string, inventionIds?: string[], givenIds?: string[], spawnQ?: number, spawnR?: number }|null} */
   let highlight = null;
   /** @type {{ a: string, b: string }|null} */
   let pulsePair = null;
@@ -144,7 +144,19 @@ export function createHexBoardUi(opts) {
       ...(highlight.inventionIds || []),
       ...(highlight.givenIds || []),
     ]);
+    ids.delete(undefined);
+    ids.delete(null);
+    ids.delete("");
     return ids;
+  }
+
+  function isSpawnSlot(q, r) {
+    return (
+      highlight &&
+      highlight.spawnQ != null &&
+      Number(highlight.spawnQ) === q &&
+      Number(highlight.spawnR) === r
+    );
   }
 
   function tileInHighlight(tileId) {
@@ -174,14 +186,21 @@ export function createHexBoardUi(opts) {
 
   function pruneHighlight() {
     if (!highlight) return;
+    if (highlight.spawnQ != null && highlight.spawnR != null && !highlight.originId) {
+      return;
+    }
     const b = board();
     const origin = b?.tiles?.[highlight.originId];
     if (!origin || origin.q == null || origin.r == null) {
-      highlight = null;
+      if (highlight.spawnQ == null) highlight = null;
       return;
     }
     // Refresh membership after place/lift
-    highlight = pathwayHighlight(b, highlight.originId);
+    highlight = {
+      ...pathwayHighlight(b, highlight.originId),
+      spawnQ: highlight.spawnQ,
+      spawnR: highlight.spawnR,
+    };
   }
 
   function inventDockOk(tile, other, dir) {
@@ -389,8 +408,26 @@ export function createHexBoardUi(opts) {
     for (const s of slots) {
       const { x, y } = gmath.pixel(s.q, s.r);
       const valid = dragId ? slotValid(dragId, s.q, s.r) : false;
+      const spawn = isSpawnSlot(s.q, s.r);
+      const fill = spawn
+        ? "rgba(239,68,68,.28)"
+        : valid
+          ? "rgba(56,189,248,.16)"
+          : "rgba(148,163,184,.05)";
+      const stroke = spawn ? "rgba(239,68,68,.85)" : "rgba(148,163,184,.18)";
+      const dash = spawn ? "0" : "3 3";
       parts.push(
-        `<path class="hex-slot" data-q="${s.q}" data-r="${s.r}" d="${hexPath(x, y, gmath.size - 1)}" fill="${valid ? "rgba(56,189,248,.16)" : "rgba(148,163,184,.05)"}" stroke="rgba(148,163,184,.18)" stroke-dasharray="3 3"/>`
+        `<path class="hex-slot${spawn ? " hex-spawn-slot" : ""}" data-q="${s.q}" data-r="${s.r}" d="${hexPath(x, y, gmath.size - 1)}" fill="${fill}" stroke="${stroke}" stroke-width="${spawn ? "2.4" : "1"}" stroke-dasharray="${dash}"/>`
+      );
+    }
+    if (
+      highlight?.spawnQ != null &&
+      highlight?.spawnR != null &&
+      !slots.some((s) => s.q === highlight.spawnQ && s.r === highlight.spawnR)
+    ) {
+      const { x, y } = gmath.pixel(highlight.spawnQ, highlight.spawnR);
+      parts.push(
+        `<path class="hex-slot hex-spawn-slot" data-q="${highlight.spawnQ}" data-r="${highlight.spawnR}" d="${hexPath(x, y, gmath.size - 1)}" fill="rgba(239,68,68,.28)" stroke="rgba(239,68,68,.85)" stroke-width="2.4"/>`
       );
     }
     // bonds between inventions
@@ -464,7 +501,10 @@ export function createHexBoardUi(opts) {
     }
     svg.innerHTML = parts.join("");
     svg.setAttribute("viewBox", HEX_BOARD_VIEW.viewBox);
-    svg.classList.toggle("has-pathway-highlight", Boolean(highlight));
+    svg.classList.toggle(
+      "has-pathway-highlight",
+      Boolean(highlight && (highlight.originId || highlight.inventionIds?.length))
+    );
 
     for (const t of Object.values(b.tiles || {})) {
       if (t.q == null || t.r == null) continue;
@@ -962,6 +1002,10 @@ export function createHexBoardUi(opts) {
     getDisplayedHexSizePx,
     clearHighlight,
     getHighlight: () => highlight,
+    setHighlight: (hl) => {
+      highlight = hl && typeof hl === "object" ? hl : null;
+      render();
+    },
     setPulsePair: (a, b) => {
       pulsePair = a && b ? { a, b } : null;
       render();

@@ -65,7 +65,11 @@ import {
   concernAnglesOnBoard,
   formatFactor,
 } from "./hex/board-state.js";
-import { boardWorstPathwayTiming, boardPathwayReevaluating } from "./hex/evaluate.js";
+import {
+  boardWorstPathwayTiming,
+  boardPathwayReevaluating,
+  hexPathwayPanel,
+} from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
@@ -6943,15 +6947,14 @@ function bothStoryFacesReady() {
 }
 
 function inventReadyForChallenge() {
-  // Hex path: need at least one invention on the board (or in tray) before summoning concerns
   const inventions = Object.values(state.hexBoard?.tiles || {}).filter(
     (t) => t.kind === "invention"
   );
   if (!inventions.length) return false;
   if (collapsed()) return false;
-  // Lamps may still be red — that is the point of summoning. Combined timing may not.
   if (!pathwayTimingAllowsAct()) return false;
-  return true;
+  const panel = hexPathwayPanel(state.hexBoard);
+  return panel.overall !== "red";
 }
 
 function pathwayHoldsReady() {
@@ -6977,17 +6980,10 @@ function renderFeasibility() {
   if (!box) return;
   const board = state.hexBoard;
   const inventions = Object.values(board?.tiles || {}).filter((t) => t.kind === "invention");
-  const givens = Object.values(board?.tiles || {}).filter(
-    (t) => t.kind === "crisis" || t.kind === "concern"
-  );
-  const reds = givens.filter((t) => t.lamp === "red").length;
-  const yellows = givens.filter((t) => t.lamp === "yellow").length;
-  const greens = givens.filter((t) => t.lamp === "green").length;
+  const panel = hexPathwayPanel(board);
+  const { reds, yellows, greens, coverage, bonds } = panel;
   const onBoard = inventions.filter((t) => t.q != null && t.r != null).length;
-  let overall = "red";
-  if (givens.length && reds === 0 && yellows === 0) overall = "green";
-  else if (givens.length && reds === 0) overall = "yellow";
-  else if (onBoard > 0 && reds < givens.length) overall = "yellow";
+  const overall = panel.overall;
 
   const light = $("#feasibility-light");
   const label = $("#feasibility-level-label");
@@ -7016,19 +7012,11 @@ function renderFeasibility() {
       : `${inventions.length} idea tile(s), ${onBoard} on the board · summon hard questions when ready`;
   }
   if (dims) {
-    const coverage =
-      reds === 0 && givens.length
-        ? { level: greens === givens.length ? "green" : "yellow", note: "No red lights" }
-        : { level: "red", note: `${reds} light(s) still red` };
-    const bonds = { level: "green", note: "Illegal world docks are refused" };
-    const onField = inventions.filter((t) => t.q != null && t.r != null);
-    const timing = boardWorstPathwayTiming(board);
-    let timingLevel = timing.level;
+    const timing = panel.timing;
     let timingNote;
     if (timing.pending) {
-      timingLevel = "yellow";
       timingNote = "re-checking timing…";
-    } else if (onField.length && timing.pct != null) {
+    } else if (onBoard && timing.pct != null) {
       const n = Math.round(timing.pct);
       const ideas =
         timing.count === 1 ? "1 idea" : `${timing.count} bonded ideas`;
@@ -7044,7 +7032,7 @@ function renderFeasibility() {
     const rows = [
       { name: "Coverage", level: coverage.level, note: coverage.note },
       { name: "Bonds", level: bonds.level, note: bonds.note },
-      { name: "Timing", level: timingLevel, note: timingNote },
+      { name: "Timing", level: panel.timingLevel, note: timingNote },
     ];
     dims.innerHTML = rows
       .map(
@@ -8188,7 +8176,15 @@ function challengeBlockReason() {
   );
   if (!inventions.length) return "Mint at least one invention tile (Ask for ideas or write how it works).";
   if (collapsed()) return "Too late — mission collapsed.";
-  return pathwayTimingBlockReason();
+  const timingBlock = pathwayTimingBlockReason();
+  if (timingBlock) return timingBlock;
+  const panel = hexPathwayPanel(state.hexBoard);
+  if (panel.overall !== "red") return "";
+  if (panel.bonds.level === "red") {
+    return `${panel.bonds.note}. Dock an invent island against every crisis hex before the hard questions.`;
+  }
+  if (panel.coverage.level === "red") return panel.coverage.note;
+  return "Pathway is red.";
 }
 
 function updateChallengeButton() {

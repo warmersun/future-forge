@@ -435,8 +435,8 @@ Role:
 - When mode is assess-feasibility: judge ONLY whether the mechanism is possible or already demonstrated in context.year. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. Do not judge quest fit, clinic job, or whether the idea matches grounding's example applications (hoppers vs heavy-lift). green = architecture+payload exists or is demonstrated by year (no pilot tax; smaller grounding examples do not cap payload). yellow = vague, or after checking year the claimed scale is not yet demonstrated. red = only if grounding EXPLICITLY forbids / says not yet, or sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper". Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or "not yet". Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
 - When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText (or insertText) is one clear mechanism sentence in everyday words, using the named person/place when known. If context.refresh, do not repeat context.avoidTitles.
-- When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern. Judge from that given's FULL reachable invention pathway (neighbors[] = pathway tiles with techId + howText + timing; direct:true = shares an edge with this given; also pathway: combined howText/techIds). Read the pathway as ONE invent — a downstream mechanism can make a docked tile honest. Crisis (kind=crisis): judge against role — local = here-and-now relief / local fit; global = root cause / lasting driver; support = public buy-in AND scale-beyond-pilot. Honor prior; green allowed when honestly eased. Concern (kind=concern): judge against stored challengeSpeech/challengeQuestion plus playerAnswer if present. Judge the combination of ALL inventions in that given's reachable pathway AND the written answer. Nothing docked stays red even with an answer. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. red = unanswered/hot; yellow = touching but not enough; green = honestly eased for this place and year. Do not require bits/atoms world-match. Do not rewrite howText or art. Honor grounding. Leave proposals empty.
-- When mode is score-pathway: score ONE invention pathway (context.pathway.inventions: techId + howText + timing — no names) as a combination. Return top-level crisisDelta: { local, global, support } integers from -2 to +1 (negative = eases that crisis pressure if this pathway docks onto that meter). Also return concerns: { [angle]: { level: "red"|"yellow"|"green", reason } } for angles in context.concerns (judge ALL inventions in the pathway plus playerAnswer if present vs stored challengeSpeech/challengeQuestion). Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Leave proposals empty. Do not rewrite inventions.
+- When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern. Judge from that given's FULL reachable invention pathway (neighbors[] = pathway tiles with techId + howText + timing; direct:true = shares an edge with this given; also pathway: combined howText/techIds). Read the pathway as ONE invent — a downstream mechanism can make a docked tile honest. Crisis (kind=crisis): judge against role — local = here-and-now relief / local fit; global = root cause / lasting driver; support = public buy-in AND scale-beyond-pilot. Honor prior; green allowed when honestly eased. Concern (kind=concern): judge against stored challengeSpeech/challengeQuestion plus playerAnswer if present. Judge the combination of ALL inventions in that given's reachable pathway AND the written answer. Nothing docked stays red even with an answer. Docking/touching is NOT addressing — a docked concern with no written answer and no pathway mechanism that honestly answers THIS challenge stays red. yellow = partial honest address via written answer and/or pathway how-text. Green only if the pathway honestly holds the answer. red = unanswered/hot; green = honestly eased for this place and year. Do not require bits/atoms world-match. Do not rewrite howText or art. Honor grounding. Leave proposals empty.
+- When mode is score-pathway: score ONE invention pathway (context.pathway.inventions: techId + howText + timing — no names) as a combination. Return top-level crisisDelta: { local, global, support } integers from -2 to +1 (negative eases that crisis if this pathway docks onto that meter; positive worsens it). An invent change may score worse than the prior fingerprint. Also return concerns: { [angle]: { level: "red"|"yellow"|"green", reason } } for angles in context.concerns (judge ALL inventions in the pathway plus playerAnswer if present vs stored challengeSpeech/challengeQuestion). Docking/touching is NOT addressing. A listed concern stays red unless the pathway how-text and/or written answer honestly respond to that challenge. yellow = partial; green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Leave proposals empty. Do not rewrite inventions.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
 - When mode is judge-contribution: decide if afterText is an ADDITIVE contribution to beforeText on context.field (inventionHow|inventionImpact|inventionName). Additive = keeps original substance and layers detail/extension. Destructive = rewrites, clears, or removes core meaning. Return top-level additive: true|false and reason: one sentence. Be fair but protect the original author's voice.
 - When mode is scrutinize: stress-test the idea from FOUR angles (see below). Put results in proposals.scrutiny.
@@ -1191,13 +1191,25 @@ function localCoInvent({ mode, messages, context }) {
           reason: g.prior?.note || "Still unanswered.",
         };
       }
+      if (g.kind === "concern") {
+        const hasAnswer = Boolean(String(g.playerAnswer || "").trim());
+        let level = hasAnswer ? (priorOk ? priorLv : "yellow") : "red";
+        if (level === "green") level = "yellow";
+        if (!hasAnswer) level = "red";
+        return {
+          id: g.id,
+          level,
+          reason:
+            g.prior?.note ||
+            (hasAnswer
+              ? "Written answer is on file — confirm the pathway honestly holds it."
+              : "Still unanswered — docking is not enough."),
+        };
+      }
       let level = priorOk ? priorLv : "yellow";
-      // Concerns: offline never awards green
-      if (g.kind === "concern" && level === "green") level = "yellow";
       const mature = n.some((x) => x.mature);
       if (!priorOk) {
-        if (mature) level = g.kind === "concern" ? "yellow" : "green";
-        else level = "yellow";
+        level = mature ? "green" : "yellow";
       }
       return {
         id: g.id,
@@ -1225,7 +1237,13 @@ function localCoInvent({ mode, messages, context }) {
     const howLen = invs
       .map((n) => String(n.howText || "").trim())
       .join("\n").length;
+    const howBlob = invs.map((n) => String(n.howText || "").trim()).join("\n");
     const mature = invs.some((n) => n.mature || n.timingLevel === "green");
+    const redTiming = invs.some(
+      (n) => n.timingLevel === "red" || (n.feasibilityPct != null && Number(n.feasibilityPct) < 35)
+    );
+    const hostile =
+      /\b(nuclear|reactor|warhead|weapon|surveil|mass.?surveillance)\b/i.test(howBlob);
     const crisisDelta = { local: 0, global: 0, support: 0 };
     if (mature && howLen >= 40) {
       crisisDelta.local = -1;
@@ -1233,15 +1251,19 @@ function localCoInvent({ mode, messages, context }) {
     } else if (howLen >= 20) {
       crisisDelta.local = -1;
     }
+    if (redTiming || hostile) {
+      crisisDelta.support = Math.max(crisisDelta.support, 1);
+    }
     const concerns = {};
     for (const c of context.concerns || []) {
       const angle = c?.angle;
       if (!angle) continue;
+      const hasAnswer = Boolean(String(c.playerAnswer || "").trim());
       concerns[angle] = {
-        level: invs.length ? "yellow" : "red",
-        reason: invs.length
-          ? "Pathway may address this concern — confirm honesty."
-          : "Still unanswered.",
+        level: hasAnswer ? "yellow" : "red",
+        reason: hasAnswer
+          ? "Written answer is on file — confirm the pathway honestly holds it."
+          : "Still unanswered — docking is not enough.",
       };
     }
     return {
@@ -1759,10 +1781,10 @@ function buildUserPayload({ messages, context, mode }) {
       "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year }. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
       GROUNDING_HINT,
     "evaluate-neighbors":
-      "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
+      "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docking/touching is NOT addressing. Docked with no answer and no pathway mechanism that answers THIS challenge stays red. yellow = partial honest address; green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
       GROUNDING_HINT,
     "score-pathway":
-      "Score ONE invention pathway in context.pathway.inventions (techId + howText + timing; no names) as a combination. Return crisisDelta: {local, global, support} integers -2..+1 (negative eases pressure if pathway docks that meter). Return concerns: {[angle]: {level:red|yellow|green, reason}} for context.concerns angles vs their challengeSpeech/challengeQuestion plus playerAnswer if present. Docked concerns may be red, yellow, or green. Green only if the pathway honestly holds the answer. Leave proposals empty." +
+      "Score ONE invention pathway in context.pathway.inventions (techId + howText + timing; no names) as a combination. Return crisisDelta: {local, global, support} integers -2..+1 (negative eases pressure if pathway docks that meter; positive worsens it — a reactor can raise support pressure). An invent change may score worse than the prior fingerprint. Return concerns: {[angle]: {level:red|yellow|green, reason}} for context.concerns angles vs their challengeSpeech/challengeQuestion plus playerAnswer if present. Docking/touching is NOT addressing. Stay red if inventChanged is false and there is no playerAnswer. posedHowText is the invent when this critic was raised — improve yellow/green only if the new pathway honestly answers this critic better than that snapshot. yellow = partial; green only if the pathway honestly holds the answer. Leave proposals empty." +
       GROUNDING_HINT,
     scrutinize:
       "Stress-test the pathway from FOUR angles: moloch, ethicist, stakeholder, nature. Read inventionHow and context.hexBoard (placed invention tiles) as the invent. Fill proposals.scrutiny with all four keys; each value is { analysis (2–4 sentences attacking THIS local invent), safeguard (one concrete move that would honestly address it), imagePrompt (≤400 chars, photoreal still of that concern in this place — no text/logos) }. Leave addTechIds/removeTechIds/inventionHow/name/impact empty/null. message: one short line that the hard questions are on the table." +

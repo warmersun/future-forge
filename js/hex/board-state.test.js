@@ -276,6 +276,36 @@ test("concernPoseText reads speech/question and falls back from analysis", () =>
   );
 });
 
+test("summonOneConcern with spawn lands on that hex and stores the posed snapshot", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 2 },
+  });
+  board = addTile(
+    board,
+    mintInventionTile({ id: "ai1", techId: "ai", howText: "Sensors on the quay." })
+  );
+  board = placeTile(board, "ai1", 0, 0).board;
+  board.concernRoster = ["moloch"];
+  board.concernTargetCount = 1;
+  const r = summonOneConcern(board, "moloch", {
+    challengeSpeech: "Freeriders.",
+    spawnQ: 1,
+    spawnR: 0,
+    posedInventionIds: ["ai1"],
+    posedFingerprints: ["snap"],
+    posedHowText: "Sensors on the quay.",
+  });
+  assert.equal(r.ok, true);
+  const t = r.board.tiles["concern-moloch"];
+  assert.equal(t.q, 1);
+  assert.equal(t.r, 0);
+  assert.equal(t.lamp, "red");
+  assert.deepEqual(t.posedInventionIds, ["ai1"]);
+  assert.equal(t.posedHowText, "Sensors on the quay.");
+  assert.ok(neighborTiles(r.board, "concern-moloch").some((n) => n.id === "ai1"));
+});
+
 test("summonOneConcern is one-by-one, isolated, and gates concernsSummoned", () => {
   let board = seedCrisisTiles({
     crisisRoles: ["local"],
@@ -627,7 +657,7 @@ test("techIdsWithUnplacedInventions lists tray techs including custom", () => {
   assert.deepEqual(techIdsWithUnplacedInventions(board), ["drones", "batteries"]);
 });
 
-test("heuristic lights: untouched concern is red; mature touch yellow", () => {
+test("heuristic lights: untouched concern is red; mature touch without answer stays red", () => {
   let board = seedCrisisTiles({
     crisisRoles: ["local"],
     pressure: { Floods: 4 },
@@ -655,7 +685,7 @@ test("heuristic lights: untouched concern is red; mature touch yellow", () => {
     pressure: { Floods: 4 },
     winMax: { Floods: 2 },
   });
-  assert.equal(board.tiles["concern-nature"].lamp, "yellow");
+  assert.equal(board.tiles["concern-nature"].lamp, "red");
 });
 
 test("ideaMature respects future year and low feasibility", () => {
@@ -728,6 +758,7 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
     crisisDelta: { local: -1, global: 0, support: 0 },
     concerns: { moloch: { level: "yellow", reason: "Touching." } },
     pending: false,
+    concernKey: "moloch:Bonded escrow",
   };
   const copy = cloneBoard(board);
   assert.deepEqual(copy.pressureBase, { Floods: 2, Trust: 3 });
@@ -738,6 +769,10 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
   });
   assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].concerns.moloch.level, "yellow");
   assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].pending, false);
+  assert.equal(
+    copy.pathwayImpacts["a:ai:how:yellow"].concernKey,
+    "moloch:Bonded escrow"
+  );
   // Mutating clone must not touch original
   copy.pressureBase.Floods = 9;
   copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta.local = 0;
