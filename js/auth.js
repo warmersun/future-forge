@@ -74,7 +74,17 @@ export function isClerkReady() {
 }
 
 export function isClerkSignedIn() {
-  return Boolean(clerkInstance?.isSignedIn && clerkInstance.session);
+  const c = clerkInstance;
+  if (!c) return false;
+  try {
+    if (c.session) return true;
+    if (c.user) return true;
+    if (c.isSignedIn === true) return true;
+    if (typeof c.isSignedIn === "function" && c.isSignedIn()) return true;
+  } catch {
+    /* clerk-js shape */
+  }
+  return false;
 }
 
 export function openCloudSignIn() {
@@ -100,6 +110,7 @@ export function onClerkSession(fn) {
 }
 
 function emitClerkSession() {
+  document.body.classList.toggle("ff-signed-in", isClerkSignedIn());
   renderAccountChip();
   for (const fn of sessionListeners) {
     try {
@@ -219,6 +230,7 @@ export async function initAuth() {
     mount.hidden = false;
     bindSignIn(mount);
     clerkInstance?.addListener?.(() => emitClerkSession());
+    await waitForClerkSession(clerkInstance);
     emitClerkSession();
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
@@ -243,6 +255,20 @@ async function loadClerkFromCdn(publishableKey) {
     appearance: CLERK_APPEARANCE,
   });
   clerkInstance = Clerk;
+}
+
+/** Cookie session can land a beat after Clerk.load() on refresh. */
+async function waitForClerkSession(clerk, ms = 3000) {
+  if (!clerk) return;
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    try {
+      if (clerk.session || clerk.user || clerk.isSignedIn === true) return;
+    } catch {
+      /* ignore */
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
 }
 
 /**
@@ -286,7 +312,7 @@ function renderAccountChip() {
   if (!mount || !clerkInstance) return;
   const signInBtn = mount.querySelector("#ff-account-signin");
   const userSlot = mount.querySelector("#ff-account-user");
-  const signedIn = Boolean(clerkInstance.isSignedIn && clerkInstance.session);
+  const signedIn = isClerkSignedIn();
 
   if (signInBtn) signInBtn.hidden = signedIn;
   if (!userSlot) return;

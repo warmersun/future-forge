@@ -205,9 +205,11 @@ export async function importProgress(input) {
     );
     const existingRuns = countR.rows[0]?.n || 0;
     let lastRunStored = false;
+    let lastRunId = null;
     if (shouldStoreLastRun(existingRuns, lastRun)) {
-      await insertRunRow(client, clerkUserId, lastRun, { imported: true });
+      const row = await insertRunRow(client, clerkUserId, lastRun, { imported: true });
       lastRunStored = true;
+      lastRunId = row.id || null;
     }
 
     const solvedR = await client.query(
@@ -221,6 +223,7 @@ export async function importProgress(input) {
       inserted,
       total: solvedIdsOut.length,
       lastRunStored,
+      lastRunId,
       solvedIds: solvedIdsOut,
     };
   } catch (e) {
@@ -405,11 +408,11 @@ export async function getRunForUser(clerkUserId, runId) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid || !runId) return null;
-  const r = await db.query(
-    `SELECT id, quest_id, kind, outcome FROM runs
+    const r = await db.query(
+      `SELECT id, quest_id, kind, outcome, stars, year_reached, waits FROM runs
      WHERE id = $1::uuid AND clerk_user_id = $2`,
-    [runId, uid]
-  );
+      [runId, uid]
+    );
   return r.rows[0] || null;
 }
 

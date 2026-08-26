@@ -1231,11 +1231,11 @@ export function initFriendsUi(api) {
   $("#friends-create-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const clerk = (await import("../auth.js")).getClerk?.();
+    const typed = $("#friends-create-name")?.value?.trim() || "";
     const clerkName = clerk?.user?.firstName || clerk?.user?.username || "";
-    const name =
-      clerkName || $("#friends-create-name")?.value?.trim() || "Host";
+    const name = typed || clerkName || "Host";
     const nameEl = $("#friends-create-name");
-    if (nameEl && clerkName && !nameEl.value) nameEl.value = clerkName;
+    if (nameEl && !nameEl.value && clerkName) nameEl.value = clerkName;
     setHubStatus("Creating room…");
     try {
       const data = await client.create(name);
@@ -1251,9 +1251,9 @@ export function initFriendsUi(api) {
   $("#friends-join-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const clerkJoin = (await import("../auth.js")).getClerk?.();
+    const typedJoin = $("#friends-join-name")?.value?.trim() || "";
     const clerkJoinName = clerkJoin?.user?.firstName || clerkJoin?.user?.username || "";
-    const name =
-      clerkJoinName || $("#friends-join-name")?.value?.trim() || "Player";
+    const name = typedJoin || clerkJoinName || "Player";
     const code = $("#friends-join-code")?.value?.trim() || "";
     if (!code) {
       flashToast("Enter a room code");

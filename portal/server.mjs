@@ -76,6 +76,7 @@ import {
   publicCatalogTile,
   prepareTutorContext,
   questIdFromContext,
+  tileIsSponsored,
 } from "../js/server/cloud-gate.mjs";
 import {
   dbEnabled,
@@ -129,6 +130,7 @@ import {
   pickFromPool,
   hashSeed,
   parseDailySubmit,
+  bindDailyScoreFromRun,
   isBetterScore,
   rankBoard,
   DAILY_SALT,
@@ -2309,16 +2311,22 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
     const have = await listAchievements(clerkUserId);
     const periods = await listUserDailyPeriods(clerkUserId);
     const week = isoWeekPeriod(new Date());
+    let sponsored = false;
+    try {
+      const pack = await loadMergedQuestTiles();
+      sponsored = tileIsSponsored(findQuestTile(pack, run.questId));
+    } catch {
+      sponsored = false;
+    }
     const codes = awardForRun(
       {
         outcome: run.outcome,
         kind: run.kind,
         techIds: run.techIds,
-        challengerCount: extra.challengerCount,
       },
       {
         already: have.map((h) => h.code),
-        sponsored: Boolean(extra.sponsored),
+        sponsored,
         dailyHoldsThisWeek: countHoldsInWeek(periods, week, isoWeekPeriod),
       }
     );
@@ -3437,6 +3445,7 @@ const server = http.createServer(async (req, res) => {
         inserted: result.inserted,
         total: result.total,
         lastRunStored: result.lastRunStored,
+        lastRunId: result.lastRunId || null,
         solvedIds: result.solvedIds,
       });
     } catch (e) {
@@ -3490,8 +3499,6 @@ const server = http.createServer(async (req, res) => {
       const result = await insertRun({ clerkUserId: gate.userId, run });
       const unlocked = await grantCloudAchievements(gate.userId, run, {
         runId: result.id,
-        sponsored: Boolean(body?.sponsored),
-        challengerCount: body?.challengerCount,
       });
       return sendJson(res, 200, {
         ok: true,
@@ -3577,11 +3584,12 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: parsed.error });
       }
       const owned = await getRunForUser(gate.userId, parsed.row.runId);
-      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
-        return sendJson(res, 400, { ok: false, error: "run_required" });
+      const bound = bindDailyScoreFromRun(parsed, owned);
+      if (!bound.ok) {
+        return sendJson(res, 400, { ok: false, error: bound.error });
       }
       const result = await upsertDailyScore(
-        { ...parsed.row, clerkUserId: gate.userId },
+        { ...bound.row, clerkUserId: gate.userId },
         isBetterScore
       );
       return sendJson(res, 200, {
@@ -3664,11 +3672,12 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: parsed.error });
       }
       const owned = await getRunForUser(gate.userId, parsed.row.runId);
-      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
-        return sendJson(res, 400, { ok: false, error: "run_required" });
+      const bound = bindDailyScoreFromRun(parsed, owned);
+      if (!bound.ok) {
+        return sendJson(res, 400, { ok: false, error: bound.error });
       }
       const result = await upsertDailyScore(
-        { ...parsed.row, clerkUserId: gate.userId },
+        { ...bound.row, clerkUserId: gate.userId },
         isBetterScore
       );
       return sendJson(res, 200, {

@@ -7,6 +7,7 @@ import {
   publicCatalogTile,
   applyCatalogGate,
   needsPlayerBilling,
+  tileIsSponsored,
   isTutorContext,
   questIdFromContext,
   prepareTutorContext,
@@ -58,6 +59,15 @@ describe("needsPlayerBilling (B3)", () => {
   });
   it("plain paid tiles would need Billing (todo B1)", () => {
     assert.equal(needsPlayerBilling({ access: "paid" }), true);
+  });
+});
+
+describe("tileIsSponsored", () => {
+  it("is true only when the catalog names a sponsor", () => {
+    assert.equal(tileIsSponsored({ sponsorName: "Acme" }), true);
+    assert.equal(tileIsSponsored({ mission: { sponsorName: "Acme" } }), true);
+    assert.equal(tileIsSponsored({ id: "q1" }), false);
+    assert.equal(tileIsSponsored(null), false);
   });
 });
 

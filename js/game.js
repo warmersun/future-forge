@@ -29,9 +29,9 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-11";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-11";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-11";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-12";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-12";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-12";
 import {
   apiFetch,
   getClerk,
@@ -3112,15 +3112,11 @@ function applyOutcomeCloudSaveChrome() {
 }
 
 function postCloudRun(run) {
-  if (!isClerkSignedIn() || !run?.questId) return;
-  void apiFetch("/api/me/runs", {
+  if (!isClerkSignedIn() || !run?.questId) return Promise.resolve(null);
+  return apiFetch("/api/me/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...run,
-      sponsored: Boolean(state.mission?.sponsorName),
-      challengerCount: GAME.challengerCount,
-    }),
+    body: JSON.stringify(run),
   })
     .then(async (res) => {
       const data = await res.json().catch(() => ({}));
@@ -3129,9 +3125,12 @@ function postCloudRun(run) {
         flashToast(data.unlocked.map((u) => u.title).filter(Boolean).join(" · "));
         void loadAchievementsStrip();
       }
+      applyOutcomeCloudSaveChrome();
+      return res.ok ? data.id || null : null;
     })
     .catch(() => {
       /* unsigned cache still holds */
+      return null;
     });
 }
 
@@ -3199,6 +3198,14 @@ async function syncCloudProgress() {
     const n = Number(data.inserted) || 0;
     if (res.ok && n > 0) {
       flashToast(`Saved ${n} quest${n === 1 ? "" : "s"} to your account.`);
+    }
+    if (res.ok) {
+      if (data.lastRunId) {
+        state.cloudRunId = String(data.lastRunId);
+      } else {
+        await postCloudRun(readStashedLastRun());
+      }
+      applyOutcomeCloudSaveChrome();
     }
   } catch {
     cloudImportDone = false;
@@ -3373,23 +3380,34 @@ function resolveContinueMission(st) {
   return null;
 }
 
+let continueInFlight = false;
 async function continueCloudRun() {
+  if (continueInFlight) return;
   const st = state.cloudContinue;
   if (!st?.questId) return;
-  if (!state.hostedQuestsLoaded) {
-    try {
-      await refreshHostedQuests({ silent: true });
-    } catch {
-      /* stub / cache may still restore */
+  const btn = $("#btn-cloud-continue");
+  continueInFlight = true;
+  if (btn) btn.disabled = true;
+  try {
+    if (!state.hostedQuestsLoaded) {
+      try {
+        await refreshHostedQuests({ silent: true });
+      } catch {
+        /* stub / cache may still restore */
+      }
     }
+    const mission = resolveContinueMission(st);
+    if (!mission?.id) {
+      flashToast("Could not restore that quest on this device.");
+      return;
+    }
+    if (startMission(mission, { restore: st })) {
+      flashToast("Continued from the cloud.");
+    }
+  } finally {
+    continueInFlight = false;
+    if (btn) btn.disabled = false;
   }
-  const mission = resolveContinueMission(st);
-  if (!mission?.id) {
-    flashToast("Could not restore that quest on this device.");
-    return;
-  }
-  startMission(mission, { restore: st });
-  flashToast("Continued from the cloud.");
 }
 
 async function syncCloudPins() {
@@ -3634,8 +3652,9 @@ function renderTitleCtas() {
   }
   const logBtn = $("#btn-quest-log");
   const profBtn = $("#btn-cloud-profile");
+  const dailyBtn = $("#btn-daily-board");
   const showLog = isClerkSignedIn();
-  for (const btn of [logBtn, profBtn]) {
+  for (const btn of [logBtn, profBtn, dailyBtn]) {
     if (!btn) continue;
     btn.hidden = !showLog;
     if (showLog) btn.removeAttribute("hidden");
@@ -5770,15 +5789,15 @@ function clearMissionPickSession() {
 function startMission(mission, opts = {}) {
   if (state.scenariosLoading) {
     flashToast("Challenges still drafting — wait a moment.");
-    return;
+    return false;
   }
-  if (!mission) return;
+  if (!mission) return false;
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
     if (isLearningMission(mission)) {
       flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
-      return;
+      return false;
     }
     const session = missionPickSession;
     missionPickSession = null;
@@ -5788,8 +5807,9 @@ function startMission(mission, opts = {}) {
     } catch (e) {
       console.error("[mission pick]", e);
       flashToast(e.message || "Could not start Friends mission");
+      return false;
     }
-    return;
+    return true;
   }
 
   // Normalize so AI camelCase meter ids become human labels (Benzene Spikes, not BenzeneSpikes)
@@ -5914,9 +5934,7 @@ function startMission(mission, opts = {}) {
   }
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
-  showScreen("workshop");
-  setSideTab(state.sideTab || "vision");
-  // Seed hex invent board with crisis meters — skip when Continue restored a board
+  // Seed hex invent board before the first workshop paint — skip when Continue restored a board
   try {
     const hex = ensureHexWorkshop();
     if (restored.skipSeed && restored.hexBoard) {
@@ -5948,6 +5966,8 @@ function startMission(mission, opts = {}) {
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
+  showScreen("workshop");
+  setSideTab(state.sideTab || "vision");
   // Learning modules land on co-inventor; ensure root exists before welcome / restore.
   const savedChats = restored.chats;
   const hasSavedChats = Boolean(
@@ -5996,6 +6016,7 @@ function startMission(mission, opts = {}) {
       { local: true }
     );
   }
+  return true;
 }
 
 function emptyProps() {
@@ -19585,4 +19606,11 @@ export function init() {
     renderTitleMeta();
     void syncCloudProgress();
   });
+  // Refresh: Clerk cookie session can arrive after the first title paint.
+  let ticks = 0;
+  const iv = setInterval(() => {
+    ticks += 1;
+    renderTitleMeta();
+    if (isClerkSignedIn() || ticks >= 40) clearInterval(iv);
+  }, 100);
 }

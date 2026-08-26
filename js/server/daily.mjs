@@ -156,26 +156,47 @@ export function parseDailySubmit(body, expected) {
   if (expected?.expectedQuestId && questId !== expected.expectedQuestId) {
     return { ok: false, error: "wrong_daily" };
   }
-  if (!isPlausibleYear(src.yearReached ?? src.year_reached)) {
-    return { ok: false, error: "impossible_year" };
-  }
   const runId =
     typeof src.runId === "string" && /^[0-9a-f-]{36}$/i.test(src.runId.trim())
       ? src.runId.trim()
       : null;
   if (!runId) return { ok: false, error: "run_required" };
-  const starsRaw = Number(src.stars);
-  const waitsRaw = Number(src.waits);
   return {
     ok: true,
     row: {
       period: expected.period,
       questId,
       runId,
-      yearReached: Math.trunc(Number(src.yearReached ?? src.year_reached)),
+      displayName: sanitizeDisplayName(src.displayName || src.display_name),
+    },
+  };
+}
+
+/**
+ * Copy year/stars/waits from the owned run. Ignore client score fields.
+ * @param {{ ok?: boolean, row?: object }} parsed
+ * @param {{ quest_id?: string, questId?: string, outcome?: string|null, year_reached?: number, yearReached?: number, stars?: number, waits?: number }|null} owned
+ */
+export function bindDailyScoreFromRun(parsed, owned) {
+  if (!parsed?.ok || !parsed.row) return { ok: false, error: "run_required" };
+  if (!owned) return { ok: false, error: "run_required" };
+  const questId = String(owned.quest_id || owned.questId || "");
+  if (questId !== parsed.row.questId) return { ok: false, error: "run_required" };
+  const outcome = String(owned.outcome || "");
+  if (outcome !== "hold" && outcome !== "partial") {
+    return { ok: false, error: "hold_required" };
+  }
+  const yearReached = owned.year_reached ?? owned.yearReached;
+  if (!isPlausibleYear(yearReached)) return { ok: false, error: "impossible_year" };
+  const starsRaw = Number(owned.stars);
+  const waitsRaw = Number(owned.waits);
+  return {
+    ok: true,
+    row: {
+      ...parsed.row,
+      yearReached: Math.trunc(Number(yearReached)),
       stars: Number.isFinite(starsRaw) ? Math.max(0, Math.min(5, Math.trunc(starsRaw))) : 0,
       waits: Number.isFinite(waitsRaw) ? Math.max(0, Math.min(10_000, Math.trunc(waitsRaw))) : 0,
-      displayName: sanitizeDisplayName(src.displayName || src.display_name),
     },
   };
 }

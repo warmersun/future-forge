@@ -11,6 +11,7 @@ import {
   isBetterScore,
   sanitizeDisplayName,
   parseDailySubmit,
+  bindDailyScoreFromRun,
   rankBoard,
   WEEK_SALT,
   officialPeriodUrl,
@@ -109,23 +110,54 @@ describe("parseDailySubmit", () => {
   const expected = { expectedQuestId: "q-today", period: "2026-08-25" };
   const runId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
-  it("requires matching quest, plausible year, run id", () => {
-    assert.equal(parseDailySubmit({ questId: "other", yearReached: 2030, runId }, expected).error, "wrong_daily");
-    assert.equal(
-      parseDailySubmit({ questId: "q-today", yearReached: 1999, runId }, expected).error,
-      "impossible_year"
-    );
-    assert.equal(
-      parseDailySubmit({ questId: "q-today", yearReached: 2030 }, expected).error,
-      "run_required"
-    );
+  it("requires matching quest and run id; ignores client score fields", () => {
+    assert.equal(parseDailySubmit({ questId: "other", runId }, expected).error, "wrong_daily");
+    assert.equal(parseDailySubmit({ questId: "q-today" }, expected).error, "run_required");
     const ok = parseDailySubmit(
-      { questId: "q-today", yearReached: 2034, stars: 3, waits: 2, runId, displayName: "Tamas" },
+      { questId: "q-today", yearReached: 2020, stars: 5, waits: 0, runId, displayName: "Tamas" },
       expected
     );
     assert.equal(ok.ok, true);
     assert.equal(ok.row.displayName, "Tamas");
-    assert.equal(ok.row.yearReached, 2034);
+    assert.equal("yearReached" in ok.row, false);
+    assert.equal("stars" in ok.row, false);
+    assert.equal("waits" in ok.row, false);
+  });
+
+  it("bindDailyScoreFromRun copies score from the owned run, not the body", () => {
+    const parsed = parseDailySubmit(
+      { questId: "q-today", yearReached: 2020, stars: 5, waits: 0, runId },
+      expected
+    );
+    assert.equal(
+      bindDailyScoreFromRun(parsed, { quest_id: "q-today", outcome: null, year_reached: 2034 }).error,
+      "hold_required"
+    );
+    assert.equal(
+      bindDailyScoreFromRun(parsed, { quest_id: "other", outcome: "hold", year_reached: 2034 }).error,
+      "run_required"
+    );
+    assert.equal(bindDailyScoreFromRun(parsed, null).error, "run_required");
+    const bound = bindDailyScoreFromRun(parsed, {
+      quest_id: "q-today",
+      outcome: "hold",
+      year_reached: 2034,
+      stars: 2,
+      waits: 4,
+    });
+    assert.equal(bound.ok, true);
+    assert.equal(bound.row.yearReached, 2034);
+    assert.equal(bound.row.stars, 2);
+    assert.equal(bound.row.waits, 4);
+    assert.equal(bound.row.runId, runId);
+    assert.equal(
+      bindDailyScoreFromRun(parsed, {
+        quest_id: "q-today",
+        outcome: "hold",
+        year_reached: 1999,
+      }).error,
+      "impossible_year"
+    );
   });
 
   it("strips email-like display names", () => {

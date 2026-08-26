@@ -38,8 +38,8 @@ export const ACHIEVEMENT_DEFS = {
 };
 
 /**
- * @param {{ outcome?: string|null, kind?: string, techIds?: string[], challengerCount?: number }} run
- * @param {{ sponsored?: boolean, dailyHoldsThisWeek?: number, already?: string[] }} [ctx]
+ * @param {{ outcome?: string|null, kind?: string, techIds?: string[] }} run
+ * @param {{ sponsored?: boolean, challengerCount?: number, dailyHoldsThisWeek?: number, already?: string[] }} [ctx]
  * @returns {string[]} newly unlocked codes
  */
 export function awardForRun(run, ctx = {}) {
@@ -63,7 +63,7 @@ export function awardForRun(run, ctx = {}) {
   if (Number(ctx.dailyHoldsThisWeek) >= 3) {
     unlock("daily_three_week");
   }
-  if ((run?.outcome === "hold" || run?.outcome === "partial") && Number(run?.challengerCount) >= 4) {
+  if ((run?.outcome === "hold" || run?.outcome === "partial") && Number(ctx.challengerCount) >= 4) {
     unlock("four_challengers");
   }
   const techs = Array.isArray(run?.techIds) ? run.techIds : [];

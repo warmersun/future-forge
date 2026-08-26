@@ -63,6 +63,15 @@ export function needsPlayerBilling(tile) {
 }
 
 /**
+ * C2: sponsored spotlight comes from the catalog tile, not the client body.
+ * @param {object|null|undefined} tile
+ */
+export function tileIsSponsored(tile) {
+  if (!tile || typeof tile !== "object") return false;
+  return Boolean(String(tile.sponsorName || tile.mission?.sponsorName || "").trim());
+}
+
+/**
  * Optional campaign id for sponsor invent counts (not PII).
  * @param {object|null|undefined} tile
  */

@@ -27,9 +27,8 @@ describe("awardForRun", () => {
         outcome: "hold",
         kind: "friends",
         techIds: ["split-converter"],
-        challengerCount: 4,
       },
-      { sponsored: true, dailyHoldsThisWeek: 3 }
+      { sponsored: true, challengerCount: 4, dailyHoldsThisWeek: 3 }
     );
     assert.ok(codes.includes("held_pathway"));
     assert.ok(codes.includes("first_friends_hold"));
@@ -42,6 +41,17 @@ describe("awardForRun", () => {
   it("never trusts a client-supplied code list as unlocks", () => {
     const codes = awardForRun({ outcome: "collapse" }, { already: [], claim: ["held_pathway"] });
     assert.deepEqual(codes, []);
+  });
+
+  it("does not award sponsored or four_challengers from run fields alone", () => {
+    const codes = awardForRun({
+      outcome: "hold",
+      kind: "theme",
+      sponsored: true,
+      challengerCount: 4,
+    });
+    assert.equal(codes.includes("sponsored_spotlight"), false);
+    assert.equal(codes.includes("four_challengers"), false);
   });
 });
 

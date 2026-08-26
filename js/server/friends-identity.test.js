@@ -3,9 +3,15 @@ import assert from "node:assert/strict";
 import { clerkRoomDisplayName, stampRoomPlayer } from "./friends-identity.mjs";
 
 describe("clerkRoomDisplayName", () => {
-  it("prefers Clerk first name over typed Player 2", () => {
+  it("prefers a typed display name over Clerk", () => {
     assert.equal(
-      clerkRoomDisplayName({ displayName: "Player 2", clerkFirstName: "Tamas" }),
+      clerkRoomDisplayName({ displayName: "Ada", clerkFirstName: "Tamas" }),
+      "Ada"
+    );
+  });
+  it("falls back to Clerk when the form is empty", () => {
+    assert.equal(
+      clerkRoomDisplayName({ displayName: "", clerkFirstName: "Tamas" }),
       "Tamas"
     );
   });
