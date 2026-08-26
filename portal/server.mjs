@@ -1,5 +1,7 @@
 /**
- * Future Forge server — static files + Grok co-inventor
+ * Warmer Sun Cloud (portal) — hosted Future Forge + Clerk + Neon.
+ * Render Web Service: listen on PORT (or FF_PORT), host 0.0.0.0.
+ * The self-host engine is ../server.mjs (game). Do not run both on one port.
  * Auth: SuperGrok session from ~/.grok/auth.json (same login as Grok CLI).
  * Optional fallback: FF_XAI_API_KEY. Local co-inventor if nothing works.
  */
@@ -17,7 +19,9 @@ import {
   allTechIds,
   VISION_THEME_IDS,
   GAME,
-} from "./js/data.js";
+  GLOBALS,
+} from "../js/data.js";
+
 import {
   buildWorldCard,
   resolveShot,
@@ -27,63 +31,143 @@ import {
   visionFingerprint,
   shotNarrativeKey,
   clipText as visionClip,
-} from "./js/vision-prompt.mjs";
-import { RoomManager } from "./js/rooms/room-manager.mjs";
+} from "../js/vision-prompt.mjs";
+import { RoomManager } from "../js/rooms/room-manager.mjs";
 import {
   usageTrackerFromEnv,
   extractTokenUsage,
   normalizeSessionId,
-} from "./js/usage-metrics.mjs";
-import { scanQuestsFolder, resolveQuestsDir, ensureQuestsDir } from "./js/quests-folder.mjs";
+} from "../js/usage-metrics.mjs";
+import { scanQuestsFolder, resolveQuestsDir, ensureQuestsDir } from "../js/quests-folder.mjs";
 import {
   fetchRemoteQuestCatalog,
   resolveQuestsRemoteUrl,
-} from "./js/quests-remote.mjs";
+} from "../js/quests-remote.mjs";
 import {
   fetchRemoteTrendCatalog,
   resolveTrendsRemoteUrl,
-} from "./js/trends-remote.mjs";
-import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "./js/scene-prose.js";
+} from "../js/trends-remote.mjs";
+import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "../js/scene-prose.js";
 import {
   normalizeTtsText,
   ttsCacheKey,
   createTtsCache,
-} from "./js/tts-cache.mjs";
-import { RateLimiter } from "./js/server/rate-limit.mjs";
-import { clientIp, isLoopbackSocket } from "./js/server/client-ip.mjs";
-import { canSeeAdmin } from "./js/server/admin-gate.mjs";
-import { serveStatic } from "./js/server/static.mjs";
+} from "../js/tts-cache.mjs";
+import { RateLimiter } from "../js/server/rate-limit.mjs";
+import { clientIp, isLoopbackSocket } from "../js/server/client-ip.mjs";
+import { canSeeAdmin } from "../js/server/admin-gate.mjs";
+import { serveStatic } from "../js/server/static.mjs";
 import {
   readBody,
   sendJson,
   errorStatus,
-} from "./js/server/read-body.mjs";
+} from "../js/server/read-body.mjs";
 import {
   CostPolicy,
   checkApiSecret,
-} from "./js/server/cost-policy.mjs";
-import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
+} from "../js/server/cost-policy.mjs";
+import { resolveDeveloperEnabled } from "../js/server/developer-mode.mjs";
+import {
+  publicClerkConfig,
+  authenticateClerkRequest,
+  runWithClerkIdentity,
+  clerkUserIdFromContext,
+} from "../js/server/clerk-auth.mjs";
+import {
+  applyCatalogGate,
+  publicCatalogTile,
+  prepareTutorContext,
+  questIdFromContext,
+} from "../js/server/cloud-gate.mjs";
+import {
+  dbEnabled,
+  publicDbConfig,
+  migrate as migrateCloudDb,
+  listSolvedIds,
+  importProgress,
+  insertRun,
+  listRuns,
+  startRun,
+  getRunForUser,
+  listDailyScores,
+  upsertDailyScore,
+  listAchievements,
+  insertAchievements,
+  listUserDailyPeriods,
+  countUsers,
+  deleteUser,
+  ensureUser,
+  getProfileByUserId,
+  getProfileByUsername,
+  updateProfile,
+  listSharedHolds,
+  setRunShare,
+  getAiHits,
+  incrementAiHits,
+  listPins,
+  replacePins,
+  getRunState,
+  putRunState,
+} from "../js/server/db.mjs";
+import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
+import { planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
+import { sanitizePinList } from "../js/server/pins.mjs";
+import { userQuotaDecision, freeDailyCapFromEnv } from "../js/server/ai-quota.mjs";
+import {
+  parseProfilePatch,
+  publicInventorPage,
+  parseShareBody,
+  parseReportBody,
+  sanitizeUsername,
+} from "../js/server/profile.mjs";
+import { dailyStreak } from "../js/server/streak.mjs";
+import {
+  cloudWriteGate,
+  parseImportBody,
+  sanitizeLastRun,
+} from "../js/server/cloud-save.mjs";
+import { parseRunsQuery } from "../js/server/quest-log.mjs";
+import {
+  dailyPeriod,
+  parseWeekPeriod,
+  dailyPoolFromTiles,
+  pickFromPool,
+  hashSeed,
+  parseDailySubmit,
+  isBetterScore,
+  rankBoard,
+  DAILY_SALT,
+  WEEK_SALT,
+  isoWeekPeriod,
+  utcDayString,
+} from "../js/server/daily.mjs";
+import {
+  awardForRun,
+  publicAchievement,
+  countHoldsInWeek,
+  foundingCodes,
+} from "../js/server/achievements.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
   SEARCH_SYSTEM_LINE,
-} from "./js/server/ai-search.mjs";
-import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "./js/idea-cards.js";
+} from "../js/server/ai-search.mjs";
+import { ideasOrFallback, localIdeaSparks, rotateLocalIdeaSparks } from "../js/idea-cards.js";
 import {
   sanitizeScrutiny,
   localScrutinyProposals,
-} from "./js/scrutiny-shared.js";
+} from "../js/scrutiny-shared.js";
 import {
   FAST_EVAL_MODES,
   isFastEvalMode,
   fastEvalUserContent,
   sanitizeFast,
-} from "./js/server/fast-eval.mjs";
-import { heuristicConverges } from "./js/hex/evaluate.js";
+} from "../js/server/fast-eval.mjs";
+import { heuristicConverges } from "../js/hex/evaluate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = __dirname;
+const ROOT = path.resolve(__dirname, "..");
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
 const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
@@ -119,7 +203,7 @@ function loadEnvFile() {
 // Must run before reading FF_* config from process.env
 loadEnvFile();
 
-const PORT = Number(process.env.FF_PORT) || 8765;
+const PORT = Number(process.env.PORT || process.env.FF_PORT) || 8765;
 /** Optional shared secret for expensive APIs when exposed beyond loopback. */
 const API_SECRET = String(process.env.FF_API_SECRET || "").trim();
 /** Max concurrent rooms (DoS). */
@@ -195,7 +279,7 @@ const roomManager = ROOMS_ENABLED
  * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
  * @param {object|null} [body]
  */
-function gateExpensive(req, route, body = null) {
+async function gateExpensive(req, route, body = null) {
   const ip = clientIp(req);
   const rate = costPolicy.allowExpensive(route, ip);
   if (!rate.ok) return rate;
@@ -204,6 +288,24 @@ function gateExpensive(req, route, body = null) {
     isLoopback: isLoopbackSocket(req),
   });
   if (!secret.ok) return secret;
+  if (dbEnabled()) {
+    try {
+      const ident = await authenticateClerkRequest(req);
+      if (ident.signedIn && ident.userId) {
+        const day = utcDayString();
+        const used = await getAiHits(ident.userId, day);
+        const q = userQuotaDecision({
+          signedIn: true,
+          used,
+          cap: freeDailyCapFromEnv(),
+        });
+        if (!q.ok) return q;
+        await incrementAiHits(ident.userId, day);
+      }
+    } catch (e) {
+      console.warn("[ai quota]", e?.message || e);
+    }
+  }
   return { ok: true, ip };
 }
 
@@ -234,6 +336,7 @@ function recordAiText(opts) {
     ok: opts.ok !== false,
     sessionId: opts.sessionId || null,
     roomCode: opts.roomCode || null,
+    clerkUserId: opts.clerkUserId || clerkUserIdFromContext(),
   });
 }
 
@@ -258,7 +361,20 @@ function recordAiImage(opts) {
     ok: opts.ok !== false,
     sessionId: opts.sessionId || null,
     roomCode: opts.roomCode || null,
+    clerkUserId: opts.clerkUserId || clerkUserIdFromContext(),
   });
+}
+
+/**
+ * @param {import('node:http').IncomingMessage} req
+ * @param {() => Promise<any>} fn
+ */
+async function withClerkIdentity(req, fn) {
+  const ident = await authenticateClerkRequest(req);
+  return runWithClerkIdentity(
+    ident.signedIn ? { userId: ident.userId, sessionId: ident.sessionId } : {},
+    fn
+  );
 }
 
 /**
@@ -2247,6 +2363,112 @@ async function aiCoInvent(body, client, meta = {}) {
   return out;
 }
 
+/**
+ * Local folder + remote catalog, merged by id (remote wins).
+ * @param {{ forceRemote?: boolean }} [opts]
+ */
+async function loadMergedQuestTiles(opts = {}) {
+  const [scanned, remote] = await Promise.all([
+    scanQuestsFolder(QUESTS_DIR),
+    fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: Boolean(opts.forceRemote) }),
+  ]);
+  const local = scanned.quests || [];
+  const remoteQuests = remote.quests || [];
+  const byId = new Map();
+  for (const q of local) byId.set(q.id, q);
+  for (const q of remoteQuests) byId.set(q.id, q);
+  return {
+    scanned,
+    remote,
+    local,
+    remoteQuests,
+    quests: [...byId.values()],
+    byId,
+  };
+}
+
+async function resolveOfficialDaily(dateRaw, opts = {}) {
+  const salt = opts.salt || DAILY_SALT;
+  const period =
+    opts.period ||
+    (salt === WEEK_SALT ? parseWeekPeriod(dateRaw) : dailyPeriod(dateRaw));
+  const pack = await loadMergedQuestTiles();
+  const pool = dailyPoolFromTiles(pack.quests);
+  let tile = null;
+  let questId = null;
+  if (pool.length) {
+    tile = pickFromPool(pool, period, salt);
+    questId = String(tile?.id || tile?.mission?.id || "");
+  } else if (GLOBALS.length) {
+    const h = hashSeed(`${salt}:${period}`);
+    const g = GLOBALS[h % GLOBALS.length];
+    const list = localScenariosForGlobal(g, { count: 4, salt: (h >>> 8) % 1000 }) || [];
+    const mission = list.length ? list[(h >>> 16) % list.length] : null;
+    if (mission) {
+      questId = String(mission.id);
+      tile = {
+        id: questId,
+        title: mission.title,
+        place: mission.place,
+        mission: { ...mission, source: "daily" },
+        access: "account",
+      };
+    }
+  }
+  return { period, questId: questId || null, tile };
+}
+
+async function ensureUserFromWebhook(plan) {
+  if (!plan?.userId) return;
+  await ensureUser(plan.userId);
+  if (Array.isArray(plan.codes) && plan.codes.length) {
+    await insertAchievements(plan.userId, plan.codes);
+  }
+}
+
+async function grantCloudAchievements(clerkUserId, run, extra = {}) {
+  if (!dbEnabled() || !clerkUserId || !run) return [];
+  try {
+    const have = await listAchievements(clerkUserId);
+    const periods = await listUserDailyPeriods(clerkUserId);
+    const week = isoWeekPeriod(new Date());
+    const codes = awardForRun(
+      {
+        outcome: run.outcome,
+        kind: run.kind,
+        techIds: run.techIds,
+        challengerCount: extra.challengerCount,
+      },
+      {
+        already: have.map((h) => h.code),
+        sponsored: Boolean(extra.sponsored),
+        dailyHoldsThisWeek: countHoldsInWeek(periods, week, isoWeekPeriod),
+      }
+    );
+    const n = await countUsers();
+    const extraCodes = foundingCodes({
+      userCount: n,
+      inventNight: run.kind === "friends" && new Date().getUTCDay() === 3,
+    });
+    for (const c of extraCodes) {
+      if (!have.some((h) => h.code === c) && !codes.includes(c)) codes.push(c);
+    }
+    if (codes.length) await insertAchievements(clerkUserId, codes, extra.runId || run.id || null);
+    return codes.map((c) => publicAchievement(c)).filter(Boolean);
+  } catch (e) {
+    console.warn("[achievements]", e?.message || e);
+    return [];
+  }
+}
+
+function findQuestTile(pack, id) {
+  if (!id || !pack) return null;
+  if (pack.byId?.has(id)) return pack.byId.get(id);
+  return (
+    pack.quests?.find((q) => q.id === id || q.mission?.id === id) || null
+  );
+}
+
 async function handleCoInvent(body) {
   const context = body.context || {};
   const mode = body.mode || "chat";
@@ -2836,6 +3058,7 @@ async function handleTts(body) {
       latencyMs,
       ok: true,
       sessionId,
+      clerkUserId: clerkUserIdFromContext(),
     });
     return {
       buffer: cached.buffer,
@@ -2926,6 +3149,7 @@ async function handleTts(body) {
       latencyMs: Date.now() - t0,
       ok: false,
       sessionId,
+      clerkUserId: clerkUserIdFromContext(),
     });
     throw e;
   }
@@ -2941,6 +3165,7 @@ async function handleTts(body) {
     latencyMs,
     ok: true,
     sessionId,
+    clerkUserId: clerkUserIdFromContext(),
   });
 
   return {
@@ -2994,6 +3219,8 @@ const server = http.createServer(async (req, res) => {
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
+      clerk: publicClerkConfig(),
+      db: publicDbConfig(),
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3018,6 +3245,567 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (req.method === "GET" && (req.url === "/api/me" || req.url?.startsWith("/api/me?"))) {
+    const ident = await authenticateClerkRequest(req);
+    if (!ident.enabled) {
+      return sendJson(res, 200, { ok: true, signedIn: false, clerk: false, db: false });
+    }
+    if (ident.missingToken) {
+      return sendJson(res, 200, {
+        ok: true,
+        signedIn: false,
+        clerk: true,
+        db: dbEnabled(),
+      });
+    }
+    if (ident.invalidToken || !ident.signedIn) {
+      return sendJson(res, 401, { ok: false, error: "invalid_token", clerk: true });
+    }
+    const dbOn = dbEnabled();
+    let solvedIds = [];
+    if (dbOn) {
+      try {
+        solvedIds = await listSolvedIds(ident.userId);
+      } catch (e) {
+        console.warn("[cloud db] listSolvedIds", e?.message || e);
+      }
+    }
+    return sendJson(res, 200, {
+      ok: true,
+      signedIn: true,
+      clerk: true,
+      userId: ident.userId,
+      sessionId: ident.sessionId,
+      db: dbOn,
+      solvedIds,
+    });
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/runs" || req.url?.startsWith("/api/me/runs?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const q = parseRunsQuery(url.searchParams);
+      const result = await listRuns({
+        clerkUserId: gate.userId,
+        kind: q.kind,
+        outcome: q.outcome,
+        limit: q.limit,
+      });
+      return sendJson(res, 200, { ok: true, runs: result.runs || [] });
+    } catch (e) {
+      console.warn("[cloud db] listRuns", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "runs_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/me/achievements" || req.url?.startsWith("/api/me/achievements?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const rows = await listAchievements(gate.userId);
+      return sendJson(res, 200, {
+        ok: true,
+        achievements: rows.map((r) => publicAchievement(r.code, r.unlockedAt)).filter(Boolean),
+      });
+    } catch (e) {
+      console.warn("[cloud db] achievements", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/streak" || req.url?.startsWith("/api/me/streak?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const periods = await listUserDailyPeriods(gate.userId);
+      const today = utcDayString();
+      const days = dailyStreak(periods, today);
+      return sendJson(res, 200, { ok: true, days, today });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "streak_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/pins" || req.url?.startsWith("/api/me/pins?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const pins = await listPins(gate.userId);
+      return sendJson(res, 200, { ok: true, pins });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "pins_failed" });
+    }
+  }
+
+  if (req.method === "PUT" && (req.url === "/api/me/pins" || req.url?.startsWith("/api/me/pins?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 48_000 });
+      const pins = sanitizePinList(body);
+      const result = await replacePins(gate.userId, pins);
+      return sendJson(res, 200, { ok: true, pins: result.pins });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "pins_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/me/run-state" || req.url?.startsWith("/api/me/run-state?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const st = await getRunState(gate.userId);
+      return sendJson(res, 200, { ok: true, state: st });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+    }
+  }
+
+  if (
+    req.method === "PUT" &&
+    (req.url === "/api/me/run-state" || req.url?.startsWith("/api/me/run-state?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: RUN_STATE_MAX_BYTES });
+      const parsed = parseRunStateBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      await putRunState(gate.userId, parsed.state);
+      return sendJson(res, 200, { ok: true });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/me/profile" || req.url?.startsWith("/api/me/profile?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const profile = await getProfileByUserId(gate.userId);
+      return sendJson(res, 200, { ok: true, profile: profile || { isPublic: false, username: null } });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
+    }
+  }
+
+  if (req.method === "PUT" && (req.url === "/api/me/profile" || req.url?.startsWith("/api/me/profile?"))) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const parsed = parseProfilePatch(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      const result = await updateProfile(gate.userId, parsed.patch);
+      return sendJson(res, 200, { ok: true, profile: result.profile });
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (/unique/i.test(msg) || e?.code === "23505") {
+        return sendJson(res, 409, { ok: false, error: "username_taken" });
+      }
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs/share" || req.url?.startsWith("/api/me/runs/share?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 4_000 });
+      const parsed = parseShareBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      const result = await setRunShare(gate.userId, parsed.runId, parsed.share);
+      return sendJson(res, 200, { ok: true, stored: result.stored });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "share_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/webhooks/clerk" || req.url?.startsWith("/api/webhooks/clerk?"))
+  ) {
+    const secret = String(process.env.CLERK_WEBHOOK_SECRET || "").trim();
+    if (!secret) {
+      req.resume();
+      return sendJson(res, 404, { ok: false, error: "webhooks_off" });
+    }
+    try {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const payload = Buffer.concat(chunks).toString("utf8");
+      let evt = null;
+      try {
+        const { verifyWebhook } = await import("@clerk/backend/webhooks");
+        evt = await verifyWebhook(
+          {
+            headers: req.headers,
+            rawBody: payload,
+          },
+          { signingSecret: secret }
+        );
+      } catch {
+        try {
+          evt = JSON.parse(payload);
+        } catch {
+          return sendJson(res, 400, { ok: false, error: "invalid_webhook" });
+        }
+        return sendJson(res, 401, { ok: false, error: "invalid_signature" });
+      }
+      const plan = planClerkUserEvent(evt);
+      if (!plan.ok) return sendJson(res, 400, { ok: false, error: plan.error });
+      if (plan.action === "delete") {
+        await deleteUser(plan.userId);
+      } else if (plan.action === "ensure" || plan.action === "touch") {
+        await ensureUserFromWebhook(plan);
+      }
+      return sendJson(res, 200, { ok: true, action: plan.action });
+    } catch (e) {
+      console.warn("[clerk webhook]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "webhook_failed" });
+    }
+  }
+
+  if (req.method === "POST" && (req.url === "/api/report" || req.url?.startsWith("/api/report?"))) {
+    try {
+      const body = await readBody(req, { maxBytes: 4_000 });
+      const parsed = parseReportBody(body);
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+      console.warn("[cloud report]", parsed.username || parsed.questId, parsed.reason.slice(0, 80));
+      return sendJson(res, 200, { ok: true });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "report_failed" });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/u/")) {
+    try {
+      const pathOnly = String(req.url).split("?")[0];
+      const slug = sanitizeUsername(decodeURIComponent(pathOnly.slice("/api/u/".length)));
+      if (!slug) return sendJson(res, 404, { ok: false, error: "not_found" });
+      const row = await getProfileByUsername(slug);
+      const page = publicInventorPage(row, row ? await listSharedHolds(row.clerkUserId) : []);
+      if (!page) return sendJson(res, 404, { ok: false, error: "not_found" });
+      return sendJson(res, 200, { ok: true, profile: page });
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/import" || req.url?.startsWith("/api/me/import?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 32_000 });
+      const parsed = parseImportBody(body);
+      const result = await importProgress({
+        clerkUserId: gate.userId,
+        solvedIds: parsed.solvedIds,
+        lastRun: parsed.lastRun,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        inserted: result.inserted,
+        total: result.total,
+        lastRunStored: result.lastRunStored,
+        solvedIds: result.solvedIds,
+      });
+    } catch (e) {
+      console.warn("[cloud db] import", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_json" : "import_failed",
+      });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs/start" || req.url?.startsWith("/api/me/runs/start?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const result = await startRun({ ...body, clerkUserId: gate.userId });
+      return sendJson(res, 200, { ok: true, stored: result.stored, id: result.id || null });
+    } catch (e) {
+      console.warn("[cloud db] startRun", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_run" : "run_failed",
+      });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/runs" || req.url?.startsWith("/api/me/runs?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 16_000 });
+      const run = sanitizeLastRun(body?.run || body);
+      if (!run) {
+        return sendJson(res, 400, { ok: false, error: "invalid_run" });
+      }
+      const result = await insertRun({ clerkUserId: gate.userId, run });
+      const unlocked = await grantCloudAchievements(gate.userId, run, {
+        runId: result.id,
+        sponsored: Boolean(body?.sponsored),
+        challengerCount: body?.challengerCount,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        stored: result.stored,
+        id: result.id || null,
+        questId: result.questId || run.questId,
+        unlocked,
+      });
+    } catch (e) {
+      console.warn("[cloud db] insertRun", e?.message || e);
+      return sendJson(res, errorStatus(e), {
+        ok: false,
+        error: e?.status === 400 ? "invalid_run" : "run_failed",
+      });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/daily" || req.url?.startsWith("/api/daily?"))) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const resolved = await resolveOfficialDaily(url.searchParams.get("date"));
+      if (!resolved.questId || !resolved.tile) {
+        return sendJson(res, 404, { ok: false, error: "no_daily" });
+      }
+      const tile = applyCatalogGate(resolved.tile, ident);
+      return sendJson(res, 200, {
+        ok: true,
+        date: resolved.period,
+        period: resolved.period,
+        questId: resolved.questId,
+        tile: publicCatalogTile(tile),
+      });
+    } catch (e) {
+      console.warn("[daily]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "daily_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/daily/board" || req.url?.startsWith("/api/daily/board?"))
+  ) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const period = dailyPeriod(url.searchParams.get("date"));
+      const ident = await authenticateClerkRequest(req);
+      const listed = await listDailyScores(period);
+      const board = rankBoard(listed.rows || [], {
+        userId: ident.signedIn ? ident.userId : null,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        date: period,
+        period,
+        top: board.top,
+        you: board.you,
+      });
+    } catch (e) {
+      console.warn("[daily board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/daily/submit" || req.url?.startsWith("/api/daily/submit?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const resolved = await resolveOfficialDaily(body.date || body.period);
+      const parsed = parseDailySubmit(body, {
+        expectedQuestId: resolved.questId,
+        period: resolved.period,
+      });
+      if (!parsed.ok) {
+        return sendJson(res, 400, { ok: false, error: parsed.error });
+      }
+      const owned = await getRunForUser(gate.userId, parsed.row.runId);
+      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
+        return sendJson(res, 400, { ok: false, error: "run_required" });
+      }
+      const result = await upsertDailyScore(
+        { ...parsed.row, clerkUserId: gate.userId },
+        isBetterScore
+      );
+      return sendJson(res, 200, {
+        ok: true,
+        stored: Boolean(result.stored),
+        kept: Boolean(result.kept),
+        period: resolved.period,
+      });
+    } catch (e) {
+      console.warn("[daily submit]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (req.url === "/api/weekly" || req.url?.startsWith("/api/weekly?"))) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const resolved = await resolveOfficialDaily(url.searchParams.get("period"), {
+        salt: WEEK_SALT,
+      });
+      if (!resolved.questId || !resolved.tile) {
+        return sendJson(res, 404, { ok: false, error: "no_weekly" });
+      }
+      const tile = applyCatalogGate(resolved.tile, ident);
+      return sendJson(res, 200, {
+        ok: true,
+        period: resolved.period,
+        questId: resolved.questId,
+        tile: publicCatalogTile(tile),
+      });
+    } catch (e) {
+      console.warn("[weekly]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "weekly_failed" });
+    }
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/weekly/board" || req.url?.startsWith("/api/weekly/board?"))
+  ) {
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const period = parseWeekPeriod(url.searchParams.get("period"));
+      const ident = await authenticateClerkRequest(req);
+      const listed = await listDailyScores(period);
+      const board = rankBoard(listed.rows || [], {
+        userId: ident.signedIn ? ident.userId : null,
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        period,
+        top: board.top,
+        you: board.you,
+      });
+    } catch (e) {
+      console.warn("[weekly board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/weekly/submit" || req.url?.startsWith("/api/weekly/submit?"))
+  ) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      req.resume();
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const resolved = await resolveOfficialDaily(body.period, { salt: WEEK_SALT });
+      const parsed = parseDailySubmit(body, {
+        expectedQuestId: resolved.questId,
+        period: resolved.period,
+      });
+      if (!parsed.ok) {
+        return sendJson(res, 400, { ok: false, error: parsed.error });
+      }
+      const owned = await getRunForUser(gate.userId, parsed.row.runId);
+      if (!owned || String(owned.quest_id) !== parsed.row.questId) {
+        return sendJson(res, 400, { ok: false, error: "run_required" });
+      }
+      const result = await upsertDailyScore(
+        { ...parsed.row, clerkUserId: gate.userId },
+        isBetterScore
+      );
+      return sendJson(res, 200, {
+        ok: true,
+        stored: Boolean(result.stored),
+        kept: Boolean(result.kept),
+        period: resolved.period,
+      });
+    } catch (e) {
+      console.warn("[weekly submit]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
+    }
+  }
+
   if (req.method === "GET" && req.url?.startsWith("/api/usage")) {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const admin = canSeeAdmin(req, { url });
@@ -3035,31 +3823,50 @@ const server = http.createServer(async (req, res) => {
   }
 
   // —— Quest tiles: local folder (Library) + remote catalog (Sponsored/Learning) ——
-  if (req.method === "GET" && (req.url === "/api/quests" || req.url?.startsWith("/api/quests?"))) {
+  if (req.method === "GET" && req.url && (req.url === "/api/quests" || req.url.startsWith("/api/quests?") || req.url.startsWith("/api/quests/"))) {
     try {
-      const forceRemote =
-        typeof req.url === "string" && /[?&]refresh=1(?:&|$)/.test(req.url);
-      const [scanned, remote] = await Promise.all([
-        scanQuestsFolder(QUESTS_DIR),
-        fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: forceRemote }),
-      ]);
-      const local = scanned.quests || [];
-      const remoteQuests = remote.quests || [];
-      // Merge for backward compat: remote wins on id
-      const byId = new Map();
-      for (const q of local) byId.set(q.id, q);
-      for (const q of remoteQuests) byId.set(q.id, q);
-      const quests = [...byId.values()];
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const ident = await authenticateClerkRequest(req);
+      const forceRemote = url.searchParams.get("refresh") === "1";
+      const pack = await loadMergedQuestTiles({ forceRemote });
+      const { scanned, remote, local, remoteQuests, quests } = pack;
+
+      const idParam =
+        url.searchParams.get("id") ||
+        (url.pathname.startsWith("/api/quests/") && url.pathname !== "/api/quests/"
+          ? decodeURIComponent(url.pathname.slice("/api/quests/".length))
+          : "");
+      const questId = String(idParam || "").trim();
+
+      if (questId) {
+        const tile = findQuestTile(pack, questId);
+        if (!tile) {
+          return sendJson(res, 404, { ok: false, error: "not_found", id: questId });
+        }
+        const gated = applyCatalogGate(tile, ident);
+        const stripped = gated !== tile;
+        if (stripped) {
+          return sendJson(res, 401, {
+            ok: false,
+            error: "sign_in_required",
+            id: questId,
+            tile: gated,
+          });
+        }
+        return sendJson(res, 200, { ok: true, tile });
+      }
+
+      const gateOne = (q) => applyCatalogGate(q, ident);
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
         remoteUrl: remote.url,
         remoteOk: remote.ok,
         remoteCached: remote.cached,
-        local,
-        remote: remoteQuests,
+        local: local.map(gateOne),
+        remote: remoteQuests.map(gateOne),
         count: quests.length,
-        quests,
+        quests: quests.map(gateOne),
         errors: [...(scanned.errors || []), ...(remote.errors || [])],
       });
     } catch (e) {
@@ -3110,9 +3917,11 @@ const server = http.createServer(async (req, res) => {
       const sid = clientSessionFromBody(body);
       if (sid) usage.touchSession(sid);
       const ip = clientIp(req);
+      const ident = await authenticateClerkRequest(req);
       const result = roomManager.createRoom({
         displayName: body.displayName,
         ip,
+        clerkUserId: ident.signedIn ? ident.userId : null,
       });
       return sendJson(res, result.ok ? 200 : result.status || 400, result);
     } catch (e) {
@@ -3131,10 +3940,12 @@ const server = http.createServer(async (req, res) => {
         const sid = clientSessionFromBody(body);
         if (sid) usage.touchSession(sid);
         const ip = clientIp(req);
+        const ident = await authenticateClerkRequest(req);
         const result = roomManager.joinRoom(joinMatch[1].toUpperCase(), {
           displayName: body.displayName,
           playerToken: body.playerToken,
           ip,
+          clerkUserId: ident.signedIn ? ident.userId : null,
         });
         return sendJson(res, result.ok ? 200 : result.status || 400, result);
       } catch (e) {
@@ -3191,14 +4002,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/vision")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "vision", body);
+      const gate = await gateExpensive(req, "vision", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
-      const result = await handleVision(body);
+      const result = await withClerkIdentity(req, () => handleVision(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[vision]", e.message || e);
@@ -3213,14 +4025,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/idea-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "idea-image", body);
+      const gate = await gateExpensive(req, "idea-image", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
-      const result = await handleIdeaImage(body);
+      const result = await withClerkIdentity(req, () => handleIdeaImage(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[idea-image]", e.message || e);
@@ -3235,14 +4048,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "market-image", body);
+      const gate = await gateExpensive(req, "market-image", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
-      const result = await handleMarketImage(body);
+      const result = await withClerkIdentity(req, () => handleMarketImage(body));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[market-image]", e.message || e);
@@ -3257,14 +4071,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "tts", body);
+      const gate = await gateExpensive(req, "tts", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
         });
       }
-      const result = await handleTts(body);
+      const result = await withClerkIdentity(req, () => handleTts(body));
       res.writeHead(200, {
         "Content-Type": result.contentType || "audio/mpeg",
         "Content-Length": result.buffer.length,
@@ -3289,10 +4104,11 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "co-invent", body);
+      const gate = await gateExpensive(req, "co-invent", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
           error: gate.error || "rate_limited",
+          message: gate.message || undefined,
           source: "error",
           message:
             gate.error === "api_secret_required"
@@ -3308,7 +4124,33 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
-      const result = await handleCoInvent(body);
+      const ident = await authenticateClerkRequest(req);
+      let pack = null;
+      try {
+        pack = await loadMergedQuestTiles();
+      } catch (e) {
+        console.warn("[quests catalog]", e.message || e);
+      }
+      const tile = findQuestTile(pack, questIdFromContext(body.context));
+      const prepared = prepareTutorContext(body.context, ident, tile);
+      if (!prepared.ok) {
+        return sendJson(res, prepared.status || 401, {
+          error: prepared.error || "sign_in_required",
+          source: "error",
+          message: "Sign in to use the tutor on this lesson.",
+          proposals: {
+            addTechIds: [],
+            removeTechIds: [],
+            inventionName: null,
+            inventionHow: null,
+            inventionImpact: null,
+          },
+          teaching: [],
+        });
+      }
+      const result = await withClerkIdentity(req, () =>
+        handleCoInvent({ ...body, context: prepared.context })
+      );
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
@@ -3509,16 +4351,29 @@ server.on("error", (err) => {
       `Port ${PORT} is already in use (${HOST}).\n` +
         `Stop the other Future Forge process, e.g.:\n` +
         `  fuser -k ${PORT}/tcp\n` +
-        `  # or: pkill -f "node server.mjs"\n` +
-        `Or start on another port: FF_PORT=8766 npm start`
+        `  # or: pkill -f "node portal/server.mjs"\n` +
+        `Or start on another port: PORT=8766 npm run portal`
     );
     process.exit(1);
   }
   throw err;
 });
 
+server.keepAliveTimeout = 120_000;
+server.headersTimeout = 125_000;
 server.listen(PORT, HOST, async () => {
-  console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  console.log(`Warmer Sun Cloud (portal) → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  if (dbEnabled()) {
+    try {
+      const mig = await migrateCloudDb();
+      const extra = mig.applied?.length ? ` applied ${mig.applied.join(", ")}` : " schema current";
+      console.log(`Cloud DB: Neon ready (${extra.trim()})`);
+    } catch (e) {
+      console.warn("Cloud DB: migrate failed — import/save disabled until fixed:", e?.message || e);
+    }
+  } else {
+    console.log("Cloud DB: off (no DATABASE_URL)");
+  }
   if (usage.enabled) {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {
@@ -3608,6 +4463,13 @@ server.listen(PORT, HOST, async () => {
   }
   if (API_SECRET) {
     console.log("API secret: ON (expensive POST routes require FF_API_SECRET)");
+  }
+  if (publicClerkConfig().enabled) {
+    console.log("Learner accounts: Clerk ON (optional sign-in)");
+  } else {
+    console.log(
+      "Learner accounts: OFF (set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY)"
+    );
   }
   try {
     const token = await resolveAccessToken();

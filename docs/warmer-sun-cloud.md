@@ -4,6 +4,15 @@
 **Clerk application:** `Warmer Sun Cloud`  
 **Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1).
 
+**game** vs **portal** (same git repo, two Node processes):
+
+| Name | Command | What |
+|------|---------|------|
+| **game** | `npm start` → `server.mjs` | Future Forge engine as it was before this branch. Self-host, Invent Night, unsigned play. No Clerk, no Neon. |
+| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud: playable Future Forge + Clerk + Neon + official Daily. Hosted on **Render**. |
+
+Do not run both on port 8765. Render runs **only portal**.
+
 This note is a menu. Each item is: the **idea**, then a **short how**. Pick later. Do not build all of it.
 
 ---
@@ -55,7 +64,7 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 |------|--------|
 | Optional Sign in / UserButton / Sign out | `feat/clerk-auth`, `js/auth.js` |
 | [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; hub lock |
-| `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `server.mjs`, `js/server/clerk-auth.mjs` |
+| `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/server.mjs`, `js/server/clerk-auth.mjs` |
 | [**A2**](#A2) save-at-pride / first sign-in import | `POST /api/me/import`, `POST /api/me/runs`; outcome Sign in CTA; union merge ([C4](#C4)) |
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
 | SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
@@ -95,7 +104,7 @@ All previously **ready** lettered IDs are implemented except this A1 row (alread
 
 | Item | Why it is todo |
 |------|----------------|
-| **App host** = Warmer Sun Cloud API | **Picked:** self-host + Tailscale **Funnel** + `warmersun.com/cloud` redirect. [H](#H). Ops still: keep the box up, Clerk origins, webhook URL. |
+| **App host** = **portal** | **Picked:** Render Web Service, `npm run portal`. [H](#H). Ops: Clerk origins, webhook URL, optional `warmersun.com/cloud` redirect. |
 | **Clerk production** instance | Claim the keyless app; `pk_live_` / `sk_live_`; custom domain |
 | [**B1**](#B1) Paid lesson modules | Clerk **Billing** not enabled |
 | [**B2**](#B2) Quota by paid plan | same |
@@ -121,12 +130,12 @@ All previously **ready** lettered IDs are implemented except this A1 row (alread
 **How.**  
 - Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules and official Daily = `account`.  
 - Hub already splits Themes / Sponsored / Learning. Unsigned: Learning and Daily cards show a lock + Sign in.  
-- **The browser lock is UX only.** The Node server (`server.mjs`) is the real gate: no session → no start token, no official Daily submit, no tutor context. That check is ordinary code on a process we already have **locally**.  
+- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate: no session → no start token, no official Daily submit, no tutor context. **game** does not gate.  
 - `GET /api/quests` may list cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. **Starting** (`POST /api/runs`) and tutor AI (`POST /api/co-invent` in tutor mode) require a verified Clerk JWT. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
 - Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins.
 
-**Public gate:** the [Cloud host](#H) on this machine, Funnel HTTPS, doorway at `warmersun.com/cloud`. here.now is files, not the gate.
+**Public gate:** **portal** on Render ([H](#H)), doorway at `warmersun.com/cloud` when the redirect is set. here.now is files, not the gate.
 
 **Softer variant:** anyone can *play* Daily; you need an account to **count** it (streak, leaderboard, “I held the pathway”). Practice vs official.
 
@@ -407,17 +416,17 @@ These are settled. Do not re-open them in implementation.
 
 1. **No ORM.** This repo is vanilla JS, not TypeScript. Skip Drizzle, Prisma, and the rest. Talk to Neon with a Postgres driver (`pg` or `postgres`) and plain SQL (`CREATE TABLE`, migrations as `.sql` files under `js/server/db/`). Typed query builders buy nothing here.
 2. **Clerk is identity; Neon is only Postgres.** Do not enable Neon Auth (or Supabase Auth, or a second user table that pretends to be login). Session JWT we already verify is the user. Neon stores `runs`, achievements, Daily scores — keyed by `clerk_user_id`.
-3. **The Cloud host is the gate.** Two here.now Sites (public files vs gated files). Only the host process knows the gated credential. Neon, Clerk verify, entitlements, and AI for Cloud users live **on that host**, not on here.now. Self-host never talks to the gated Site. Details: [H](#H).
-4. **v1 of that host is this machine, public via Tailscale Funnel**, advertised as `https://warmersun.com/cloud` (redirect). Not Fly/Railway until we outgrow a always-on box you already run. Use **Funnel** (public HTTPS, friends need no Tailscale), not **Serve** (tailnet-only). Same pattern as [friends over Funnel](multiplayer-internet-tailscale-funnel.md).
+3. **The Cloud host is the gate.** Two here.now Sites (public files vs gated files). Only **portal** knows the gated credential. Neon, Clerk verify, entitlements, and AI for Cloud users live **on portal**, not on here.now. **game** (self-host) never talks to the gated Site. Details: [H](#H).
+4. **The host is a Render Web Service running portal** (`npm run portal`, `render.yaml`). Funnel on this machine was a laptop prototype. Optional: `https://warmersun.com/cloud` 302s to the Render URL.
 
 ---
 
 <a id="H"></a>
-## H. The Cloud host — two here.now Sites
+## H. The Cloud host — portal on Render
 
-**Status:** architecture lock. **Where it runs (v1):** you self-host `server.mjs`; Tailscale **Funnel** gives a public `https://<machine>.<tailnet>.ts.net`; **`https://warmersun.com/cloud`** 302s there. Fly/Railway later if the box cannot stay up. here.now still cannot gate.
+**Status:** architecture lock. **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service**. Optional: **`https://warmersun.com/cloud`** 302s there. **game** (`server.mjs`, `npm start`) is the self-host engine and is not deployed to Render. here.now still cannot gate.
 
-Warmer Sun Cloud is **not** the static game. It is a small always-on Node API that:
+Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node process that:
 
 - Verifies Clerk JWTs  
 - Owns Neon (`runs`, entitlements, quotas)  
@@ -432,10 +441,10 @@ Browser
   ├─ public here.now     free SPA, free catalog JSON, theme play
   │                      (anyone can GET)
   │
-  └─ Cloud host API      Clerk + Neon + AI
+  └─ portal (Render)     Clerk + Neon + AI + play + Friends WS
          │
          └─ gated here.now   paid tiles, aiTutorContext, official Daily bodies
-                             credential known only to the host
+                             credential known only to portal
 ```
 
 **Public Site** — game shell, open tiles, marketing. Free stuff never needs the host (except Cloud AI, if we even offer that unsigned — default: no).
@@ -450,25 +459,25 @@ Browser
 
 **Caveat:** confirm here.now **site password** is something Node can send (HTTP Basic / header), not only a browser interstitial + cookie. If it is cookie-only, use a **Drive + API key** instead of a passworded Site — same split, designed for server fetch.
 
-**Does not live on here.now:** Neon, Clerk verify, WebSockets, xAI. Optional here.now **proxy** `/api/*` → Funnel is fine so the public SPA can look same-origin-ish; the gate is still this process.
+**Does not live on here.now:** Neon, Clerk verify, WebSockets, xAI. Optional here.now **proxy** `/api/*` → Render is fine so the public SPA can look same-origin-ish; the gate is still portal. Cloud players can also load the SPA from Render (same origin).
 
-### Where it runs (v1)
+### Where it runs
 
-Same Node you already Funnel for friends rooms ([multiplayer Funnel](multiplayer-internet-tailscale-funnel.md)):
+Render **Web Service** (see `render.yaml`):
 
-1. `npm start` (Cloud keys in `.env`: Clerk, `DATABASE_URL`, gated here.now secret, xAI).  
-2. `tailscale funnel 8765` → `https://<machine>.<tailnet>.ts.net`.  
-3. On the warmersun.com site: **`/cloud` → 302** to that Funnel URL (or to the public here.now SPA with API base set to Funnel). Pretty name; real origin is `*.ts.net`.
+1. Build `npm install`. Start `npm run portal`. Health `GET /api/health`.  
+2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_XAI_API_KEY`, `FF_TRUST_PROXY=1`. Render injects `PORT`.  
+3. Optional: on warmersun.com, **`/cloud` → 302** to `https://<service>.onrender.com` (or a custom domain later).
 
-Use **Funnel**, not **Serve**. Cloud users and Clerk webhooks are not on your tailnet.
+Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env`). Engine only: `npm start`.
 
 **Clerk / CORS**
 
-- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://<machine>.<tailnet>.ts.net` (and `http://127.0.0.1:8765` for local). A redirect does **not** make Clerk cookies live on `warmersun.com`.  
-- Webhooks: `https://<machine>.<tailnet>.ts.net/api/webhooks/clerk` (must stay the same hostname).  
-- If the SPA stays on public here.now, it calls Funnel `/api/*` (we already allow CORS).
+- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://<service>.onrender.com` (and `http://127.0.0.1:8765` for local portal). A redirect does **not** make Clerk cookies live on `warmersun.com`.  
+- Webhooks: `https://<service>.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).  
+- If the SPA stays on public here.now, it calls Render `/api/*` (we already allow CORS). Same-origin on Render needs no extra CORS.
 
-**Ops honesty:** laptop sleep = Cloud down. Funnel hostname changes if you rename the machine or tailnet — update the `/cloud` redirect, Clerk origins, and webhook URL together. That is acceptable for v1; a VPS is what you buy when that gets annoying.
+**Ops honesty:** Render sleep on free instances = Cloud down; use a paid instance if Daily must stay up. Custom domain, Clerk production keys, and the `/cloud` redirect are ops after the first deploy. Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
 
 ---
 
@@ -496,7 +505,7 @@ README already names the deploy shape: VPS or PaaS (Fly, Railway, Render), `npm 
 
 | Block | What it is | Bucket | Needed for |
 |-------|------------|--------|------------|
-| **1. App host** | Always-on Node + WS + HTTPS | **Picked v1:** this machine + Tailscale Funnel + `warmersun.com/cloud` | Public webhooks, [A1](#A1), [E5](#E5) |
+| **1. App host** | Always-on Node + WS + HTTPS | **Picked:** Render Web Service running **portal** | Public webhooks, [A1](#A1), [E5](#E5) |
 | **2. Database** | Relational store keyed by `clerk_user_id` | **Implemented** — Neon, `.env` | [C1](#C1), [D1](#D1), [B2](#B2) |
 | **3. Schema + migrations** | Versioned `.sql`, no ORM | **Ready** | Same |
 | **4. Clerk → our DB** | Webhooks + JWT on writes | **Ready** — JWT done; webhook route is code | Names on the board, delete-account |

@@ -75,25 +75,7 @@ export function isoWeekPeriod(d = new Date()) {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-/**
- * @param {unknown} raw
- * @param {Date} [now]
- */
-/**
- * URL for the official Daily or weekly tile. Ghost links pass the shared UTC date.
- * @param {"daily"|"weekly"} kind
- * @param {{ daily?: string|null, period?: string|null }} [ghost]
- */
-export function officialPeriodUrl(kind, ghost = null) {
-  if (kind === "weekly") {
-    const period = ghost?.period || null;
-    return period
-      ? `/api/weekly?period=${encodeURIComponent(period)}`
-      : "/api/weekly";
-  }
-  const date = ghost?.daily || ghost?.date || null;
-  return date ? `/api/daily?date=${encodeURIComponent(date)}` : "/api/daily";
-}
+export { officialPeriodUrl } from "../cloud/daily-url.js";
 
 export function parseWeekPeriod(raw, now = new Date()) {
   const s = String(raw || "")

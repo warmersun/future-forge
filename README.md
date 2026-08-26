@@ -51,8 +51,9 @@ Open **http://127.0.0.1:8765**
 
 | Command | Purpose |
 |--------|---------|
-| `npm start` / `npm run serve` | Start the server (`server.mjs`) |
-| `npm start -- --usage` | Start with AI/session usage metrics writing to `data/usage/` |
+| `npm start` / `npm run serve` | **game** — Future Forge engine (`server.mjs`). No Clerk, no Neon. |
+| `npm run portal` | **portal** — Warmer Sun Cloud (`portal/server.mjs`). Sign-in + Neon. What Render runs. |
+| `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
 | `npm run author:quest -- --tech gene-sequencing --local-only` | Scaffold a spotlight Quest tile |
@@ -70,11 +71,11 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Replaces Daily on that device by default. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
-Default port: **8765** (override with `FF_PORT`).
+Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
 
 ### Learner accounts (optional Clerk)
 
-Sign-in is **optional**. Future Forge stays fully playable without an account. Hosted [warmersun.com](https://warmersun.com) can turn Clerk on so learners have a stable identity (progress sync, achievements, and paid lessons come later).
+Sign-in is **optional** and lives on **portal** (`npm run portal`), not on **game** (`npm start`). Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, Daily board, Continue).
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
@@ -92,7 +93,7 @@ CLERK_SECRET_KEY=sk_test_...
 
 In the Clerk Dashboard, add allowed origins for `http://localhost:8765`, `http://127.0.0.1:8765`, and the production host. If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
 
-Without these keys, `npm start` is unchanged (no account chip, no Clerk network).
+Without these keys, `npm run portal` still plays but shows no account chip. `npm start` (**game**) never reads Clerk keys.
 
 ### Optional environment
 
@@ -115,8 +116,8 @@ The Node server serves static files and exposes:
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
-- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token); includes `clerk` config when learner accounts are on  
-- `GET /api/me` — Clerk learner identity (optional; unsigned play still works)  
+- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token); **portal** also includes `clerk` + `db`  
+- `GET /api/me` — **portal** only: Clerk learner identity (unsigned play still works)  
 - `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
 **AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) are resolved **on the server** and never go to the browser. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
@@ -253,10 +254,13 @@ GET http://127.0.0.1:8765/api/health
 
 ```text
 future-forge/
-  server.mjs          # static file server + /api/*
-  index.html          # app shell
+  server.mjs          # game — engine (static + co-inventor + Friends WS)
+  portal/server.mjs   # portal — Warmer Sun Cloud (game + Clerk + Neon). Render runs this.
+  render.yaml         # Render Blueprint for portal
+  index.html          # app shell (shared)
   css/ styles.css
   js/                 # workshop loop, data, co-inventor client, vision, problem briefs
+  js/cloud/           # browser-safe Cloud helpers
   assets/
     problems/         # theme card art
     challengers/      # Moloch, Ethicist, Stakeholder, Mother Nature
@@ -272,12 +276,16 @@ Browser state lives in **localStorage** on the learner’s device: scenario cach
 
 This is a **long-running Node process**, not a static-only site (unless you accept the local co-inventor only).
 
-Typical approach:
+**Warmer Sun Cloud (portal)** is a Render **Web Service**. See `render.yaml`.
 
-1. Host the repo on a VPS or PaaS (Fly, Railway, Render, etc.).
-2. `npm install --omit=dev` and `npm start`.
-3. Set `FF_PORT` and **`FF_XAI_API_KEY`** in the host environment (prefer API key over SuperGrok OAuth on servers).
-4. Terminate TLS with nginx, Caddy, or the platform’s HTTPS.
+1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
+2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
+3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled for migrations), `FF_XAI_API_KEY`, `FF_TRUST_PROXY=1`.
+4. Clerk Dashboard: add `https://<service>.onrender.com` to allowed origins / authorized parties. Webhook: `https://<service>.onrender.com/api/webhooks/clerk`.
+
+**game** (self-host / Invent Night): `npm start` on a LAN box. No Clerk, no Neon.
+
+Do not run **game** and **portal** on the same port.
 
 Do not commit secrets. Do not put API keys in the client or the git repo.
 

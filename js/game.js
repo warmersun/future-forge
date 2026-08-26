@@ -29,9 +29,9 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./server/ghost.mjs";
-import { officialPeriodUrl } from "./server/daily.mjs";
-import { applyContinueSnapshot } from "./server/run-state.mjs";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-1";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-1";
+import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-1";
 import {
   apiFetch,
   getClerk,

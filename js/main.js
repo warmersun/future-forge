@@ -1,6 +1,8 @@
 // Query busts game.js (and its graph) — parent main.js?v= alone does not.
-import { init } from "./game.js?v=clerk-auth-3";
-import { initAuth } from "./auth.js?v=clerk-1";
-
-init();
-void initAuth();
+// Load Clerk independently so a game-module failure still shows Sign in.
+void import("./auth.js?v=portal-1")
+  .then((m) => m.initAuth())
+  .catch((e) => console.warn("[clerk]", e?.message || e));
+void import("./game.js?v=portal-1")
+  .then((m) => m.init())
+  .catch((e) => console.error("[game]", e?.message || e));
