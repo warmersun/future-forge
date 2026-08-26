@@ -199,13 +199,41 @@
         "data-clerk-publishable-key": pk,
       });
       const stayHere = `${location.origin}/signin?device=${encodeURIComponent(device)}`;
+      const pickHere = `${stayHere}&pick=1`;
+      const AWAIT_KEY = "ff-clerk-await-signin";
+
+      function setAwaiting() {
+        try {
+          sessionStorage.setItem(AWAIT_KEY, "1");
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function clearAwaiting() {
+        try {
+          sessionStorage.removeItem(AWAIT_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function isAwaiting() {
+        if (new URLSearchParams(location.search).get("pick") === "1") return true;
+        try {
+          return sessionStorage.getItem(AWAIT_KEY) === "1";
+        } catch {
+          return false;
+        }
+      }
+
       const Clerk = window.Clerk;
       await Clerk.load({
         ui: { ClerkUI: window.__internal_ClerkUICtor },
         appearance: CLERK_APPEARANCE,
-        afterSignOutUrl: stayHere,
-        signInForceRedirectUrl: stayHere,
-        signInFallbackRedirectUrl: stayHere,
+        afterSignOutUrl: pickHere,
+        signInForceRedirectUrl: pickHere,
+        signInFallbackRedirectUrl: pickHere,
       });
 
       const signInProps = {
@@ -213,8 +241,8 @@
         withSignUp: true,
         routing: "hash",
         oauthFlow: "redirect",
-        forceRedirectUrl: stayHere,
-        fallbackRedirectUrl: stayHere,
+        forceRedirectUrl: pickHere,
+        fallbackRedirectUrl: pickHere,
       };
 
       let completing = false;
@@ -227,6 +255,7 @@
       }
 
       function showSignInUi() {
+        setAwaiting();
         hideChoice();
         status.textContent = "Sign in to continue in the game on this computer.";
         if (signInMounted) {
@@ -267,6 +296,7 @@
             return false;
           }
           await complete(token);
+          clearAwaiting();
           hideChoice();
           if (signInMounted) {
             try {
@@ -310,8 +340,9 @@
         hideChoice();
         status.textContent = "Sign in to continue in the game on this computer.";
         autoFinish = true;
+        setAwaiting();
         try {
-          await Clerk.signOut({ redirectUrl: stayHere });
+          await Clerk.signOut({ redirectUrl: pickHere });
         } catch {
           /* still show Sign in */
         }
@@ -328,7 +359,16 @@
         }
       });
 
-      if (Clerk.session) {
+      if (Clerk.session && isAwaiting()) {
+        autoFinish = true;
+        status.textContent = "Signing in…";
+        try {
+          await finishIfSignedIn();
+        } catch (e) {
+          status.textContent = e?.message || String(e);
+          showContinueChoice();
+        }
+      } else if (Clerk.session) {
         showContinueChoice();
       } else {
         autoFinish = true;
