@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-22" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-23" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -149,51 +149,6 @@
         </div>
         <p id="quest-log-empty" class="muted" hidden>No quests on this account yet.</p>
         <ol id="quest-log-list" class="quest-log-list"></ol>
-      </div>
-    </section>
-
-    <section id="screen-cloud-profile" class="screen">
-      <header class="topbar">
-        <div class="brand">
-          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
-            <span class="hud-product-sun" aria-hidden="true"></span>
-            <div class="hud-product-text">
-              <span class="hud-product-title">Future Forge</span>
-            </div>
-          </div>
-        </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-profile-back">← Home</button>
-      </header>
-      <div class="content">
-        <div class="section-intro">
-          <h1>Inventor page</h1>
-          <p>Opt-in and private by default. Display name is how you appear on leaderboards — not your Google or Clerk name. Your public inventor page and streaming never show your email.</p>
-        </div>
-        <p id="cloud-profile-login" class="muted sm cloud-profile-login" hidden></p>
-        <form id="cloud-profile-form" class="panel cloud-profile-form">
-          <div class="field">
-            <label for="cloud-profile-username">Username</label>
-            <input id="cloud-profile-username" name="username" type="text" maxlength="24" autocomplete="username" placeholder="lowercase handle" />
-          </div>
-          <div class="field">
-            <label for="cloud-profile-display">Display name</label>
-            <input id="cloud-profile-display" name="displayName" type="text" maxlength="40" autocomplete="nickname" required placeholder="How you appear on the board" />
-          </div>
-          <div class="field">
-            <label for="cloud-profile-bio">Bio</label>
-            <textarea id="cloud-profile-bio" name="bio" maxlength="280" rows="3" placeholder="Optional. Never includes your email."></textarea>
-          </div>
-          <label class="cloud-profile-check" for="cloud-profile-public">
-            <input type="checkbox" id="cloud-profile-public" />
-            Public inventor page
-          </label>
-          <label class="cloud-profile-check" for="cloud-profile-hide-email">
-            <input type="checkbox" id="cloud-profile-hide-email" checked />
-            Hide email (always on for the public page)
-          </label>
-          <button type="submit" class="btn btn-primary">Save</button>
-          <p id="cloud-profile-status" class="muted sm"></p>
-        </form>
       </div>
     </section>
 
@@ -2382,8 +2337,76 @@
       </div>
     </div>
 
+    <!-- Inventor / account details — overlay only; never a screen switch -->
+    <div
+      id="cloud-profile-backdrop"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cloud-profile-title"
+    >
+      <div class="modal cloud-profile-modal">
+        <header class="cloud-profile-header">
+          <h3 id="cloud-profile-title">Inventor page</h3>
+          <p class="cloud-profile-intro">
+            Opt-in and private by default. Display name is how you appear on leaderboards — not your Google or Clerk
+            name. Your public inventor page and streaming never show your email.
+          </p>
+        </header>
+        <p id="cloud-profile-login" class="muted sm cloud-profile-login" hidden></p>
+        <form id="cloud-profile-form" class="cloud-profile-form">
+          <div class="field">
+            <label for="cloud-profile-username">Username</label>
+            <input
+              id="cloud-profile-username"
+              name="username"
+              type="text"
+              maxlength="24"
+              autocomplete="username"
+              placeholder="lowercase handle"
+            />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-display">Display name</label>
+            <input
+              id="cloud-profile-display"
+              name="displayName"
+              type="text"
+              maxlength="40"
+              autocomplete="nickname"
+              required
+              placeholder="How you appear on the board"
+            />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-bio">Bio</label>
+            <textarea
+              id="cloud-profile-bio"
+              name="bio"
+              maxlength="280"
+              rows="3"
+              placeholder="Optional. Never includes your email."
+            ></textarea>
+          </div>
+          <label class="cloud-profile-check" for="cloud-profile-public">
+            <input type="checkbox" id="cloud-profile-public" />
+            Public inventor page
+          </label>
+          <label class="cloud-profile-check" for="cloud-profile-hide-email">
+            <input type="checkbox" id="cloud-profile-hide-email" checked />
+            Hide email (always on for the public page)
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-profile-close">Close</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+          <p id="cloud-profile-status" class="muted sm"></p>
+        </form>
+      </div>
+    </div>
+
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-19"></script>
+    <script type="module" src="js/main.js?v=portal-20"></script>
   </body>
 </html>

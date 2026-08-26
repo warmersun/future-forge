@@ -3725,8 +3725,12 @@ function paintCloudLogin(login) {
   el.hidden = !line;
 }
 
+function closeCloudProfile() {
+  $("#cloud-profile-backdrop")?.classList.remove("open");
+}
+
 async function openCloudProfile(opts = {}) {
-  showScreen("cloud-profile");
+  $("#cloud-profile-backdrop")?.classList.add("open");
   const status = $("#cloud-profile-status");
   paintCloudLogin(null);
   try {
@@ -18958,7 +18962,10 @@ function bind() {
   window.addEventListener("ff-open-cloud-profile", () => {
     void openCloudProfile();
   });
-  $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-cloud-profile-close")?.addEventListener("click", () => closeCloudProfile());
+  $("#cloud-profile-backdrop")?.addEventListener("click", (e) => {
+    if (e.target?.id === "cloud-profile-backdrop") closeCloudProfile();
+  });
   $("#cloud-profile-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     void saveCloudProfile();
@@ -19688,6 +19695,7 @@ function bind() {
     if (e.key === "Escape") {
       closeModal();
       closeHelp();
+      closeCloudProfile();
     }
   });
 
