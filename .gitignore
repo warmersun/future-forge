@@ -3,6 +3,7 @@ node_modules/
 .env.local
 .env.portal
 .env.portal.local
+.env.portal.production
 .env.*.local
 *.log
 .DS_Store
@@ -25,3 +26,6 @@ docs/.obsidian/
 scenario-seeds.bak-*
 .grok/
 .herenow/
+
+skills-lock.json
+.agent-skills/
