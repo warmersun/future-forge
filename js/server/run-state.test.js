@@ -48,6 +48,47 @@ describe("parseRunStateBody", () => {
     assert.equal(parsed.state.chats.tutor.length, 1);
     assert.equal(parsed.state.chats.coinventor.length, 0);
   });
+
+  it("keeps a theme mission stub on play.mission", () => {
+    const parsed = parseRunStateBody({
+      questId: "gen-air-abc123",
+      play: {
+        mission: {
+          id: "gen-air-abc123",
+          globalId: "air",
+          title: "North Stack",
+          place: "Cedar Bend",
+          scene: "A mill town.",
+          startYear: 2026,
+          collapseYear: 2034,
+        },
+      },
+    });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.state.play.mission.id, "gen-air-abc123");
+    assert.equal(parsed.state.play.mission.place, "Cedar Bend");
+  });
+
+  it("keeps idea sparks and R&D spark batches", () => {
+    const parsed = parseRunStateBody({
+      questId: "q1",
+      play: {
+        focusedTechId: "iot",
+        ideas: {
+          "q1|iot|2026|here": [
+            { id: "dock", title: "Street dock", insertText: "A cooler on the curb." },
+          ],
+        },
+        sparkBatches: {
+          iot: { ids: ["inv-1", "inv-2"], titles: ["Street dock", "Shade sail"] },
+        },
+      },
+    });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.state.play.focusedTechId, "iot");
+    assert.equal(parsed.state.play.ideas["q1|iot|2026|here"][0].title, "Street dock");
+    assert.deepEqual(parsed.state.play.sparkBatches.iot.ids, ["inv-1", "inv-2"]);
+  });
 });
 
 describe("applyContinueSnapshot", () => {

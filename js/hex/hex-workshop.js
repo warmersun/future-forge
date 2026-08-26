@@ -1057,7 +1057,10 @@ export function createHexWorkshop(api) {
         hint.textContent = "Pick an emTech to invent.";
       }
     }
-    if (body) body.hidden = !focusedTechId;
+    if (body) {
+      const hasRd = unplacedRdTiles(board()).length > 0;
+      body.hidden = !focusedTechId && !hasRd;
+    }
     syncCreateBusyUi();
   }
 
@@ -2432,6 +2435,44 @@ export function createHexWorkshop(api) {
     afterBoardChange,
     syncPathwayScores,
     afterWaitPressureRise,
+    exportSparkBatches: () => {
+      const out = {};
+      for (const [techId, batch] of sparkBatches.entries()) {
+        if (!techId || !batch?.ids?.length) continue;
+        out[techId] = {
+          ids: [...batch.ids],
+          titles: [...(batch.titles || [])],
+        };
+      }
+      return Object.keys(out).length ? out : null;
+    },
+    importSparkBatches: (raw) => {
+      sparkBatches.clear();
+      if (raw && typeof raw === "object") {
+        for (const [techId, batch] of Object.entries(raw)) {
+          if (!techId || !batch || !Array.isArray(batch.ids) || !batch.ids.length) continue;
+          sparkBatches.set(techId, {
+            ids: batch.ids.map(String),
+            titles: Array.isArray(batch.titles) ? batch.titles.map(String) : [],
+          });
+        }
+      }
+      if (!sparkBatches.size) {
+        const tiles = Object.values(board()?.tiles || {});
+        const byTech = new Map();
+        for (const t of tiles) {
+          if (t?.kind !== TILE_KIND.invention || t.origin !== "sparks") continue;
+          if (t.q != null && t.r != null) continue;
+          const tid = t.techId;
+          if (!tid) continue;
+          if (!byTech.has(tid)) byTech.set(tid, { ids: [], titles: [] });
+          const row = byTech.get(tid);
+          row.ids.push(t.id);
+          row.titles.push(t.name || "Idea");
+        }
+        for (const [tid, batch] of byTech) sparkBatches.set(tid, batch);
+      }
+    },
   };
 }
 

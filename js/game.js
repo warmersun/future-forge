@@ -29,9 +29,9 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-8";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-8";
-import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-8";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-10";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-10";
+import { applyContinueSnapshot } from "./cloud/continue.js?v=portal-10";
 import {
   apiFetch,
   getClerk,
@@ -3232,8 +3232,39 @@ function cloudRunStatePayload() {
       budget: state.budget,
       will: state.will,
       tutorSessionActive: Boolean(state.tutorSessionActive),
+      mission: slimMissionForContinue(state.mission),
+      focusedTechId: focusedTechId || hexWorkshop?.getFocusedTechId?.() || null,
+      ideas: ideaSparkCache.size
+        ? Object.fromEntries(ideaSparkCache.entries())
+        : null,
+      sparkBatches: hexWorkshop?.exportSparkBatches?.() || null,
     },
     chats: state.coInventor?.exportHistories?.() || null,
+  };
+}
+
+function slimMissionForContinue(m) {
+  if (!m?.id) return null;
+  return {
+    id: m.id,
+    globalId: m.globalId || null,
+    title: m.title || "",
+    place: m.place || "",
+    scene: m.scene || "",
+    startYear: m.startYear,
+    collapseYear: m.collapseYear,
+    yearsPerTurn: m.yearsPerTurn,
+    pressure: m.pressure,
+    pressureRise: m.pressureRise,
+    winMax: m.winMax,
+    pressureDesc: m.pressureDesc,
+    crisisRoles: m.crisisRoles,
+    suggested: m.suggested,
+    source: m.source || "play",
+    isLearningModule: Boolean(m.isLearningModule),
+    module: m.module,
+    lesson: m.lesson,
+    totalLessons: m.totalLessons,
   };
 }
 
@@ -3272,6 +3303,13 @@ function applyRestoredPlay(play) {
   if (typeof play.tutorSessionActive === "boolean") {
     state.tutorSessionActive = play.tutorSessionActive;
   }
+  if (play.focusedTechId) focusedTechId = String(play.focusedTechId);
+  if (play.ideas && typeof play.ideas === "object") {
+    ideaSparkCache.clear();
+    for (const [key, list] of Object.entries(play.ideas)) {
+      if (Array.isArray(list) && list.length) ideaSparkCache.set(key, list);
+    }
+  }
 }
 
 async function maybeOfferContinue() {
@@ -3291,15 +3329,39 @@ async function maybeOfferContinue() {
   }
 }
 
-function continueCloudRun() {
+function resolveContinueMission(st) {
+  const id = st?.questId;
+  if (!id) return null;
+  const fromHosted = (state.hostedQuests || []).find(
+    (q) => q.id === id || q.mission?.id === id
+  );
+  if (fromHosted?.mission) {
+    return normalizeMission(fromHosted.mission, fromHosted.mission.globalId);
+  }
+  const stub = st.play?.mission || st.mission;
+  if (stub?.id) {
+    return normalizeMission(stub, stub.globalId);
+  }
+  for (const list of Object.values(state.scenarioCache || {})) {
+    const raw = (list || []).find((m) => m && (m.id === id || m.mission?.id === id));
+    const m = raw?.mission || raw;
+    if (m?.id) return normalizeMission(m, m.globalId);
+  }
+  if (state.mission?.id === id) return state.mission;
+  return null;
+}
+
+async function continueCloudRun() {
   const st = state.cloudContinue;
   if (!st?.questId) return;
-  const fromHosted = (state.hostedQuests || []).find(
-    (q) => q.id === st.questId || q.mission?.id === st.questId
-  );
-  const mission = fromHosted?.mission
-    ? normalizeMission(fromHosted.mission, fromHosted.mission.globalId)
-    : state.mission;
+  if (!state.hostedQuestsLoaded) {
+    try {
+      await refreshHostedQuests({ silent: true });
+    } catch {
+      /* stub / cache may still restore */
+    }
+  }
+  const mission = resolveContinueMission(st);
   if (!mission?.id) {
     flashToast("Could not restore that quest on this device.");
     return;
@@ -5840,6 +5902,24 @@ function startMission(mission, opts = {}) {
       hex.paint();
       hex.syncPathwayScores?.();
       if (restored.year != null) hex.refreshAfterYearChange?.();
+      hex.importSparkBatches?.(restored.play?.sparkBatches);
+      const trayTiles = Object.values(restored.hexBoard.tiles || {});
+      const sparkTech = trayTiles.find(
+        (t) =>
+          t &&
+          t.kind === "invention" &&
+          t.origin === "sparks" &&
+          t.techId &&
+          (t.q == null || t.r == null)
+      )?.techId;
+      const focus =
+        focusedTechId || restored.play?.focusedTechId || sparkTech || null;
+      if (focus) {
+        focusedTechId = focus;
+        hex.focusTech(focus);
+      } else {
+        hex.paint();
+      }
     } else {
       hex.seedFromMission(state.mission);
     }

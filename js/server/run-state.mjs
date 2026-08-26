@@ -58,6 +58,41 @@ function sanitizePressure(raw) {
  * @param {unknown} raw
  * @returns {object|null}
  */
+/**
+ * Theme-generated missions are not in GET /api/quests. Keep a stub so Continue
+ * can start without the hosted catalog.
+ * @param {unknown} raw
+ */
+export function sanitizeMissionStub(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const id = sanitizeQuestId(raw.id);
+  if (!id) return null;
+  const stub = {
+    id,
+    globalId: clipStr(raw.globalId, 80) || null,
+    title: clipStr(raw.title, 200),
+    place: clipStr(raw.place, 200),
+    scene: clipStr(raw.scene, PLAY_STRING_MAX),
+    startYear: optionalInt(raw.startYear, 2020, 2200),
+    collapseYear: optionalInt(raw.collapseYear, 2020, 2300),
+    yearsPerTurn: optionalInt(raw.yearsPerTurn, 1, 10),
+    pressure: sanitizePressure(raw.pressure),
+    pressureRise: sanitizePressure(raw.pressureRise),
+    winMax: sanitizePressure(raw.winMax),
+    pressureDesc: sanitizePressure(raw.pressureDesc),
+    suggested: sanitizeTechIds(raw.suggested),
+    source: clipStr(raw.source, 40) || "play",
+    isLearningModule: Boolean(raw.isLearningModule),
+  };
+  if (Array.isArray(raw.crisisRoles)) {
+    stub.crisisRoles = raw.crisisRoles.map((x) => clipStr(x, 40)).filter(Boolean).slice(0, 8);
+  }
+  if (typeof raw.module === "string") stub.module = clipStr(raw.module, 120);
+  if (raw.lesson != null) stub.lesson = optionalInt(raw.lesson, 0, 99);
+  if (raw.totalLessons != null) stub.totalLessons = optionalInt(raw.totalLessons, 0, 99);
+  return stub;
+}
+
 export function sanitizePlay(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const sideTab = raw.sideTab === "coinventor" ? "coinventor" : "vision";
@@ -77,8 +112,66 @@ export function sanitizePlay(raw) {
     budget: optionalInt(raw.budget, 0, 99),
     will: optionalInt(raw.will, 0, 99),
     tutorSessionActive: Boolean(raw.tutorSessionActive),
+    mission: sanitizeMissionStub(raw.mission),
+    focusedTechId: sanitizeQuestId(raw.focusedTechId),
+    ideas: sanitizeIdeaCache(raw.ideas),
+    sparkBatches: sanitizeSparkBatches(raw.sparkBatches),
   };
   return play;
+}
+
+function sanitizeIdeaCache(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {};
+  let n = 0;
+  for (const [key, list] of Object.entries(raw)) {
+    if (n >= 20) break;
+    const k = clipStr(key, 200);
+    if (!k || looksInline(k)) continue;
+    if (!Array.isArray(list)) continue;
+    const ideas = [];
+    for (const item of list.slice(0, 6)) {
+      if (!item || typeof item !== "object") continue;
+      const title = clipStr(item.title, 80);
+      const insert = clipStr(item.insertText || item.howText || item.blurb, 400);
+      if (!title) continue;
+      let imagePrompt = clipStr(item.imagePrompt, 400);
+      if (looksInline(imagePrompt) || imagePrompt.includes("data:image")) imagePrompt = "";
+      ideas.push({
+        id: clipStr(item.id, 80) || `idea-${ideas.length}`,
+        title,
+        blurb: clipStr(item.blurb || insert, 160),
+        insertText: insert,
+        howText: clipStr(item.howText, 400),
+        imagePrompt,
+      });
+    }
+    if (!ideas.length) continue;
+    out[k] = ideas;
+    n += 1;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function sanitizeSparkBatches(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {};
+  let n = 0;
+  for (const [techId, batch] of Object.entries(raw)) {
+    if (n >= 24) break;
+    const id = sanitizeQuestId(techId);
+    if (!id || !batch || typeof batch !== "object") continue;
+    const ids = Array.isArray(batch.ids)
+      ? batch.ids.map((x) => clipStr(x, 80)).filter(Boolean).slice(0, 12)
+      : [];
+    const titles = Array.isArray(batch.titles)
+      ? batch.titles.map((x) => clipStr(x, 80)).filter(Boolean).slice(0, 12)
+      : [];
+    if (!ids.length) continue;
+    out[id] = { ids, titles };
+    n += 1;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 function sanitizeLane(raw) {
