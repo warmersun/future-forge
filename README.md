@@ -52,7 +52,7 @@ Open **http://127.0.0.1:8765**
 | Command | Purpose |
 |--------|---------|
 | `npm start` / `npm run serve` | **game** — Future Forge engine (`server.mjs`). No Clerk, no Neon. |
-| `npm run portal` | **portal** — Warmer Sun Cloud (`portal/server.mjs`). Sign-in + Neon. No xAI. What Render runs. |
+| `npm run portal` | **portal** — Cloud **APIs** only (`portal/server.mjs`). Clerk + Neon. No game UI. Render runs this. |
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
@@ -80,7 +80,8 @@ Sign-in is **optional** and lives on **portal** (`npm run portal`), not on **gam
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
 ```bash
-# .env — both keys required to enable the Sign in chip
+cp .env.portal.example .env.portal   # gitignored
+# both keys required to enable the Sign in chip
 CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 # Optional: CLERK_AUTHORIZED_PARTIES=http://127.0.0.1:8765,https://warmersun.com
@@ -93,11 +94,11 @@ CLERK_SECRET_KEY=sk_test_...
 
 In the Clerk Dashboard, add allowed origins for `http://localhost:8765`, `http://127.0.0.1:8765`, and the production host. If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
 
-Without these keys, `npm run portal` still plays but shows no account chip. `npm start` (**game**) never reads Clerk keys.
+Without these keys, `npm run portal` still plays but shows no account chip. `npm start` (**game**) loads `.env` only and never reads Clerk keys.
 
 ### Optional environment
 
-Copy `.env.example` to `.env` if you want overrides:
+**game:** copy `.env.example` to `.env`. **portal:** copy `.env.portal.example` to `.env.portal`.
 
 ```bash
 # .env
@@ -257,6 +258,8 @@ future-forge/
   server.mjs          # game — engine (static + co-inventor + Friends WS)
   portal/server.mjs   # portal — Warmer Sun Cloud (game + Clerk + Neon). Render runs this.
   render.yaml         # Render Blueprint for portal
+  .env.example        # game env template → .env
+  .env.portal.example # portal env template → .env.portal
   index.html          # app shell (shared)
   css/ styles.css
   js/                 # workshop loop, data, co-inventor client, vision, problem briefs
@@ -276,14 +279,13 @@ Browser state lives in **localStorage** on the learner’s device: scenario cach
 
 This is a **long-running Node process**, not a static-only site (unless you accept the local co-inventor only).
 
-**Warmer Sun Cloud (portal)** is a Render **Web Service**. See `render.yaml`.
+**Warmer Sun Cloud (portal)** is a Render **Web Service** of **HTTP APIs**, not the game. See `render.yaml`.
 
 1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
 2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
-3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled for migrations), `FF_TRUST_PROXY=1`. No xAI key — **portal does not use AI**.
-4. Clerk Dashboard: add `https://<service>.onrender.com` to allowed origins / authorized parties. Webhook: `https://<service>.onrender.com/api/webhooks/clerk`.
-
-**game** (self-host / Invent Night): `npm start` on a LAN box. No Clerk, no Neon.
+3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled), `FF_TRUST_PROXY=1`. No xAI.
+4. Play the SPA on **game** (`npm start`) with `FF_PORTAL_URL=https://<service>.onrender.com`.
+5. Clerk allowed origins = the **game** origin (localhost / here.now), not only the API host. Webhook URL is still the Render `/api/webhooks/clerk`.
 
 Do not run **game** and **portal** on the same port.
 

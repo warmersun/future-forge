@@ -6,7 +6,7 @@
  *   npm i -D playwright
  *   npx playwright install chromium
  *
- * Put credentials in gitignored .env (never commit them):
+ * Put credentials in gitignored .env.portal (never commit them):
  *   CLERK_E2E_EMAIL=you@example.com
  *   CLERK_E2E_PASSWORD=...
  *
@@ -29,22 +29,24 @@ const ORIGIN = String(process.env.FF_ORIGIN || "http://127.0.0.1:8765").replace(
 const OUT = path.join(ROOT, "data", "e2e");
 
 function loadEnvFile() {
-  const file = path.join(ROOT, ".env");
-  if (!fs.existsSync(file)) return;
-  for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
-    const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq < 1) continue;
-    const key = line.slice(0, eq).trim();
-    let val = line.slice(eq + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
+  const files = [path.join(ROOT, ".env.portal"), path.join(ROOT, ".env.portal.local")];
+  for (const file of files) {
+    if (!fs.existsSync(file)) continue;
+    for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 1) continue;
+      const key = line.slice(0, eq).trim();
+      let val = line.slice(eq + 1).trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = val;
     }
-    if (!process.env[key]) process.env[key] = val;
   }
 }
 
@@ -89,7 +91,7 @@ async function clickClerkPrimary(scope) {
 
 async function main() {
   if (!EMAIL || !PASSWORD) {
-    console.error("FAIL  Set CLERK_E2E_EMAIL and CLERK_E2E_PASSWORD in .env (gitignored).");
+    console.error("FAIL  Set CLERK_E2E_EMAIL and CLERK_E2E_PASSWORD in .env.portal (gitignored).");
     process.exit(1);
   }
 

@@ -2977,6 +2977,9 @@ const server = http.createServer(async (req, res) => {
       ai = false;
     }
     /** Public health — no LAN IPs / paths / room counts (Funnel-safe). */
+    const portalOrigin = String(process.env.FF_PORTAL_URL || "")
+      .trim()
+      .replace(/\/$/, "");
     const publicHealth = {
       ok: true,
       coInventor: true,
@@ -2994,6 +2997,7 @@ const server = http.createServer(async (req, res) => {
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
+      portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),

@@ -117,14 +117,58 @@ export async function authHeaders(extra = {}) {
   return headers;
 }
 
+/** @type {string|null} */
+let portalOrigin = null;
+let portalResolved = false;
+
+/**
+ * Cloud HTTP lives on portal (Render). Game /api/health points at it via portal.origin.
+ * @returns {Promise<string|null>}
+ */
+export async function resolvePortalOrigin() {
+  if (portalResolved) return portalOrigin;
+  portalResolved = true;
+  try {
+    const res = await fetch("/api/health");
+    if (!res.ok) return null;
+    const data = await res.json();
+    const origin = String(data?.portal?.origin || "").trim().replace(/\/$/, "");
+    if (/^https?:\/\//i.test(origin)) portalOrigin = origin;
+  } catch {
+    portalOrigin = null;
+  }
+  return portalOrigin;
+}
+
+/**
+ * Paths that belong on portal, not game.
+ * @param {string} url
+ */
+export function isCloudApiPath(url) {
+  const path = String(url || "").split("?")[0];
+  if (path === "/api/health" || path.startsWith("/api/health/")) return true;
+  if (path === "/api/me" || path.startsWith("/api/me/")) return true;
+  if (path === "/api/daily" || path.startsWith("/api/daily/")) return true;
+  if (path === "/api/weekly" || path.startsWith("/api/weekly/")) return true;
+  if (path.startsWith("/api/u/")) return true;
+  if (path === "/api/report" || path.startsWith("/api/report/")) return true;
+  return false;
+}
+
 /**
  * fetch() that attaches a Clerk session JWT when signed in.
+ * Cloud routes go to portal when FF_PORTAL_URL is set on game.
  * @param {string} url
  * @param {RequestInit} [init]
  */
 export async function apiFetch(url, init = {}) {
   const headers = await authHeaders(init.headers || {});
-  return fetch(url, { ...init, headers });
+  let dest = url;
+  if (isCloudApiPath(url)) {
+    const origin = await resolvePortalOrigin();
+    if (origin) dest = `${origin}${url}`;
+  }
+  return fetch(dest, { ...init, headers, mode: "cors" });
 }
 
 /**
@@ -134,7 +178,9 @@ export async function initAuth() {
   const mount = document.getElementById("ff-account");
   if (!mount) return;
   try {
-    const res = await fetch("/api/health");
+    const origin = await resolvePortalOrigin();
+    if (!origin) return;
+    const res = await fetch(`${origin}/api/health`);
     if (!res.ok) return;
     const data = await res.json();
     if (!data?.clerk?.enabled || !data?.clerk?.publishableKey) return;

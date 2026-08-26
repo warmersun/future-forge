@@ -1,9 +1,7 @@
 /**
- * Warmer Sun Cloud (portal) — hosted Future Forge + Clerk + Neon.
+ * Warmer Sun Cloud (portal) — Cloud HTTP APIs only (Clerk + Neon).
+ * No game UI, no xAI, no Friends WS. The playable SPA is ../server.mjs (game).
  * Render Web Service: listen on PORT (or FF_PORT), host 0.0.0.0.
- * The self-host engine is ../server.mjs (game). Do not run both on one port.
- * Portal does not use xAI / SuperGrok. Live co-inventor, Imagine, and TTS are game.
- * Hex play still works; /api/co-invent uses the local heuristic partner only.
  */
 
 import http from "node:http";
@@ -171,9 +169,14 @@ const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
 const XAI_BASE = "https://api.x.ai/v1";
 
 function loadEnvFile() {
-  const candidates = [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")];
+  const candidates = [
+    path.join(ROOT, ".env.portal"),
+    path.join(ROOT, ".env.portal.local"),
+  ];
+  let loaded = 0;
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
+    loaded += 1;
     const text = fs.readFileSync(file, "utf8");
     for (const raw of text.split("\n")) {
       const line = raw.trim();
@@ -190,6 +193,11 @@ function loadEnvFile() {
       }
       if (!process.env[key]) process.env[key] = val;
     }
+  }
+  if (!loaded) {
+    console.warn(
+      "No .env.portal — Clerk/Neon off. Copy .env.portal.example → .env.portal (gitignored)."
+    );
   }
 }
 
@@ -220,8 +228,8 @@ const TTS_MAX_CHARS = 15_000;
 const TTS_CACHE_DIR =
   process.env.FF_TTS_CACHE_DIR || path.join(ROOT, "data", "tts-cache");
 const ttsCache = createTtsCache({ dir: TTS_CACHE_DIR, maxMemory: 64 });
-/** Friends co-op rooms (PR9). Default on; set FF_ENABLE_ROOMS=0 to disable. */
-const ROOMS_ENABLED = process.env.FF_ENABLE_ROOMS !== "0";
+/** Portal is Cloud HTTP only — no Friends WS. Rooms live on game. */
+const ROOMS_ENABLED = false;
 
 /** Shared rate limiter for HTTP cost policy + room manager. */
 const rateLimiter = new RateLimiter();
@@ -3050,36 +3058,54 @@ async function handleTts(body) {
 
 /* —— HTTP —— */
 
+/**
+ * Cloud API surface only. The playable SPA, co-inventor, and Friends WS are game.
+ * @param {string} pathOnly
+ */
+function isPortalApiPath(pathOnly) {
+  const p = String(pathOnly || "");
+  if (p === "/api/health" || p.startsWith("/api/health/")) return true;
+  if (p === "/api/me" || p.startsWith("/api/me/")) return true;
+  if (p === "/api/daily" || p.startsWith("/api/daily/")) return true;
+  if (p === "/api/weekly" || p.startsWith("/api/weekly/")) return true;
+  if (p.startsWith("/api/u/")) return true;
+  if (p === "/api/webhooks/clerk" || p.startsWith("/api/webhooks/clerk/")) return true;
+  if (p === "/api/report" || p.startsWith("/api/report/")) return true;
+  return false;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
       "Access-Control-Allow-Headers":
         "Content-Type, Authorization, X-Admin-Token, X-FF-Secret",
     });
     return res.end();
   }
 
+  const pathOnly = String(req.url || "/").split("?")[0];
+  if (req.method === "GET" && (pathOnly === "/" || pathOnly === "/api")) {
+    return sendJson(res, 200, {
+      ok: true,
+      service: "portal",
+      name: "Warmer Sun Cloud",
+      health: "/api/health",
+    });
+  }
+  if (!isPortalApiPath(pathOnly)) {
+    return sendJson(res, 404, {
+      ok: false,
+      error: "not_found",
+      service: "portal",
+    });
+  }
+
   if (req.method === "GET" && req.url?.startsWith("/api/health")) {
-    /** Public health — no LAN IPs / paths / room counts (Funnel-safe). */
     const publicHealth = {
       ok: true,
-      coInventor: true,
-      vision: false,
-      ai: false,
-      auth: null,
-      rooms: ROOMS_ENABLED,
-      features: {
-        actionPoints: Boolean(GAME.features?.actionPoints),
-        budgetWill: Boolean(GAME.features?.budgetWill),
-        rooms: ROOMS_ENABLED,
-        tts: false,
-        ttsVoice: TTS_VOICE,
-      },
-      usageEnabled: usage.enabled,
-      developer: DEVELOPER_MODE,
-      aiSearch: AI_SEARCH_ENABLED,
+      service: "portal",
       clerk: publicClerkConfig(),
       db: publicDbConfig(),
     };
@@ -3089,20 +3115,10 @@ const server = http.createServer(async (req, res) => {
     if (!admin.ok) {
       return sendJson(res, 200, publicHealth);
     }
-    const lanIps = listLanIpv4();
     return sendJson(res, 200, {
       ...publicHealth,
-      auth: authInfo.source,
-      model: MODEL,
-      imageModel: IMAGE_MODEL,
       port: PORT,
-      lanIps,
-      lanUrls: lanIps.map((ip) => `http://${ip}:${PORT}`),
-      roomStats: roomManager ? roomManager.stats() : null,
-      usageDir: usage.enabled ? usage._dir : null,
       trustProxy: process.env.FF_TRUST_PROXY === "1",
-      apiSecretRequired: Boolean(API_SECRET),
-      maxRooms: MAX_ROOMS,
     });
   }
 
@@ -4032,10 +4048,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  if (req.method === "GET") return serveStatic(ROOT, req, res);
-
-  res.writeHead(405);
-  res.end("Method not allowed");
+  return sendJson(res, 405, { ok: false, error: "method_not_allowed", service: "portal" });
 });
 
 // Inject AI boundary into rooms (PR10) once handleCoInvent is in scope

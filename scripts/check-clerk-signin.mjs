@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 /**
- * Verify Sign in can appear on the live **portal** host (Warmer Sun Cloud).
+ * Verify **portal** Cloud APIs (no game UI).
  *
  *   npm run portal
- *   npm run check:clerk-signin
- *   FF_ORIGIN=http://127.0.0.1:8765 node scripts/check-clerk-signin.mjs
+ *   FF_ORIGIN=http://127.0.0.1:8765 npm run check:clerk-signin
+ *   FF_ORIGIN=https://future-forge-0yil.onrender.com npm run check:clerk-signin
  *
- * Exit 0 = PASS. Exit 1 = FAIL lines (those are the bugs to fix).
- *
- * This does not click the Clerk modal. After PASS: open the origin, hard-refresh,
- * Sign in is top-right. **game** (`npm start`) has no Sign in — that is correct.
+ * Sign in is on **game** (`npm start` with FF_PORTAL_URL), not on this origin.
  */
 
 import fs from "node:fs";
@@ -22,7 +19,7 @@ const ORIGIN = String(process.env.FF_ORIGIN || process.argv[2] || "http://127.0.
   /\/$/,
   ""
 );
-const CACHE = "portal-1";
+const CACHE = "portal-2";
 
 const fails = [];
 const oks = [];
@@ -106,66 +103,31 @@ async function main() {
       ok("health.clerk.enabled + publishableKey");
     } else {
       fail(
-        "health.clerk.enabled is false or publishableKey missing — set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY in .env and restart npm run portal"
+        "health.clerk.enabled is false or publishableKey missing — set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY in .env.portal and restart npm run portal"
       );
     }
     if (health.db?.enabled) ok("health.db.enabled (Neon)");
     else console.log("  skip   health.db.enabled false (save/import off; Sign in can still show)");
   }
 
-  const htmlHit = await get("/").catch(() => null);
-  const html = htmlHit?.status === 200 ? htmlHit.text : "";
-  if (!html) fail("GET / not 200");
-  else {
-    if (html.includes('id="ff-account"') && html.includes("ff-account-signin")) {
-      ok("HTML has #ff-account and Sign in");
-    } else fail("HTML missing #ff-account / Sign in — wrong document");
-    if (html.includes(`js/main.js?v=${CACHE}`)) ok(`HTML loads main.js?v=${CACHE}`);
-    else fail(`HTML missing main.js?v=${CACHE} — bump or hard-refresh; got old cache bust`);
-  }
+  const rootHit = await get("/").catch(() => null);
+  if (rootHit?.status === 200) {
+    try {
+      const body = JSON.parse(rootHit.text);
+      if (body.service === "portal") ok("GET / is portal JSON (no game UI)");
+      else fail(`GET / JSON service=${body.service}`);
+    } catch {
+      fail("GET / is not JSON — portal must not serve the game SPA");
+    }
+  } else fail(`GET / HTTP ${rootHit?.status}`);
 
-  const mainJs = (await get(`/js/main.js?v=${CACHE}`)).text;
-  if (mainJs.includes("initAuth")) ok("main.js loads initAuth");
-  else fail("main.js does not load initAuth");
-  if (mainJs.includes('import("./auth.js')) ok("main.js loads auth.js even if game.js fails");
-  else fail("main.js statically ties auth to game — a game graph error hides Sign in");
+  const spa = await get("/index.html");
+  if (spa.status === 404) ok("GET /index.html 404 (API-only)");
+  else fail(`GET /index.html HTTP ${spa.status} — portal must not serve the SPA`);
 
-  const gamePath = `/js/game.js?v=${CACHE}`;
-  const gameHit = await get(gamePath);
-  if (gameHit.status !== 200) fail(`GET ${gamePath} HTTP ${gameHit.status}`);
-  const gameJs = gameHit.text;
-  if (gameJs.includes("clerk-auth.mjs")) fail("game.js source imports clerk-auth.mjs");
-  else ok("game.js source does not import clerk-auth.mjs");
-
-  const authHit = await get(`/js/auth.js?v=${CACHE}`);
-  const authJs = authHit.status === 200 ? authHit.text : "";
-  if (authJs.includes("mount.hidden = false")) ok("auth.js unhides #ff-account after Clerk CDN");
-  else fail("auth.js missing mount.hidden = false");
-
-  // Every relative import from served game.js must be HTTP 200 (this is why Sign in / the page dies).
-  const gameImports = importSpecs(gameJs)
-    .filter((s) => s.startsWith("."))
-    .map((s) => resolveRel("/js/game.js", s));
-  const mustServe = [
-    ...new Set(gameImports.filter((p) => p.includes("/server/") || p.includes("/cloud/"))),
-  ];
-  console.log(`\n  game.js cloud/server imports: ${mustServe.join(", ") || "(none)"}\n`);
-  for (const p of mustServe) {
-    const hit = await get(p);
-    if (hit.status === 200) ok(`browser can GET ${p}`);
-    else if (hit.status === 403) {
-      fail(
-        `GET ${p} HTTP 403 — static.mjs blocks .mjs. Allowlist this client module in isPublicRel (keep clerk-auth.mjs / db.mjs / *.sql blocked)`
-      );
-    } else fail(`GET ${p} HTTP ${hit.status}`);
-  }
-
-  const clerkAuth = await get("/js/server/clerk-auth.mjs");
-  if (clerkAuth.status === 403 || clerkAuth.status === 404) {
-    ok("GET /js/server/clerk-auth.mjs blocked (must stay server-only)");
-  } else {
-    fail(`GET /js/server/clerk-auth.mjs HTTP ${clerkAuth.status} — must not be public`);
-  }
+  const js = await get("/js/game.js");
+  if (js.status === 404) ok("GET /js/game.js 404");
+  else fail(`GET /js/game.js HTTP ${js.status}`);
 
   const ghostDisk = path.join(ROOT, "js/cloud/ghost.js");
   const ghostSrc = fs.readFileSync(ghostDisk, "utf8");
@@ -213,11 +175,11 @@ async function main() {
   console.log("");
   if (fails.length) {
     console.log(`RESULT  FAIL  ${fails.length} check(s)`);
-    console.log("Fix each FAIL. Then: hard-refresh the origin (Ctrl+Shift+R). Sign in is top-right.");
+    console.log("Fix each FAIL.");
     process.exit(1);
   }
-  console.log("RESULT  PASS  host will unhide Sign in after Clerk CDN loads in the browser.");
-  console.log(`Open ${ORIGIN}  →  Ctrl+Shift+R  →  Sign in top-right.`);
+  console.log("RESULT  PASS  portal is Cloud APIs. Sign in is on game with FF_PORTAL_URL.");
+  console.log(`API ${ORIGIN}/api/health`);
   process.exit(0);
 }
 

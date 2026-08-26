@@ -9,7 +9,7 @@
 | Name | Command | What |
 |------|---------|------|
 | **game** | `npm start` → `server.mjs` | Future Forge engine as it was before this branch. Self-host, Invent Night, unsigned play. No Clerk, no Neon. |
-| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud: playable Future Forge + Clerk + Neon + official Daily. **No xAI.** Hosted on **Render**. |
+| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud **HTTP APIs** (Clerk, Neon, official Daily, webhooks). No game UI. **Render**. |
 
 Do not run both on port 8765. Render runs **only portal**.
 
@@ -40,7 +40,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI. No paywall. No cloud progress. |
 | Friends | Rooms + WebSocket. Names are per room, not Clerk. |
 | Money | None in software. `COMMERCIAL.md` is a **license** conversation (self-host / education / commercial / cloud operator). Clerk Billing is unused. |
-| Database | **Neon Postgres** (`DATABASE_URL` in gitignored `.env`, pooler host, `us-west-2`). Empty of Cloud tables. Usage JSONL is still only operator cost logs. |
+| Database | **Neon Postgres** (`DATABASE_URL` in gitignored `.env.portal`, pooler host, `us-west-2`). Empty of Cloud tables. Usage JSONL is still only operator cost logs. |
 
 **Implementation default for almost everything below**
 
@@ -83,8 +83,8 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk → DB webhooks | `POST /api/webhooks/clerk` verifies Svix; user.deleted cascades Neon rows |
 | [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state`; strips data-URL art; Continue on title |
-| Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env` |
-| Neon project, pooler `DATABASE_URL` (gitignored) | `.env`; pinged `neondb` as `neondb_owner` |
+| Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env.portal` |
+| Neon project, pooler `DATABASE_URL` (gitignored) | `.env.portal`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
 | No ORM; Clerk = identity, Neon = Postgres only | [Decisions locked](#decisions-locked) |
 | Unsigned engine: localStorage progress, client Daily, learning tiles, Friends WS, usage JSONL | existing game |
@@ -424,7 +424,7 @@ These are settled. Do not re-open them in implementation.
 <a id="H"></a>
 ## H. The Cloud host — portal on Render
 
-**Status:** architecture lock. **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service**. Optional: **`https://warmersun.com/cloud`** 302s there. **game** (`server.mjs`, `npm start`) is the self-host engine and is not deployed to Render. here.now still cannot gate.
+**Status:** architecture lock. **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is **Cloud HTTP APIs only**. **game** (`npm start`) is the playable SPA. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
 
 Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node process that:
 
@@ -441,7 +441,7 @@ Browser
   ├─ public here.now     free SPA, free catalog JSON, theme play
   │                      (anyone can GET)
   │
-  └─ portal (Render)     Clerk + Neon + play + Friends WS (no xAI)
+  └─ portal (Render)     Cloud HTTP APIs only (Clerk + Neon, no SPA, no xAI)
          │
          └─ gated here.now   paid tiles, aiTutorContext, official Daily bodies
                              credential known only to portal
@@ -469,7 +469,7 @@ Render **Web Service** (see `render.yaml`):
 2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY`.** Render injects `PORT`.  
 3. Optional: on warmersun.com, **`/cloud` → 302** to `https://<service>.onrender.com` (or a custom domain later).
 
-Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env`). Engine only: `npm start`.
+Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).
 
 **Clerk / CORS**
 
