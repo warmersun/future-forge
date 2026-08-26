@@ -28,4 +28,5 @@ scenario-seeds.bak-*
 .herenow/
 
 skills-lock.json
-.agent-skills/
+.agents/
+
