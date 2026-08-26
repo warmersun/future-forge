@@ -90,6 +90,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | No ORM; Clerk = identity, Neon = Postgres only | [Decisions locked](#decisions-locked) |
 | Unsigned engine: localStorage progress, theme play, learning tiles, Friends WS, usage JSONL | existing **game** |
 | Paper licenses (self-host / education / commercial / cloud operator) | `COMMERCIAL.md` — [F1](#F1), [F3](#F3), [F4](#F4) as **contracts**, not Cloud UX |
+| ToS / privacy that names Cloud stored runs | `warmersun.com/terms/`, `warmersun.com/privacy/` (effective 25 August 2026) |
 
 ### Ready (building blocks exist — write the feature)
 
@@ -106,7 +107,6 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 | **Clerk Organizations** | Enable Orgs (with Billing) | [F2](#F2) company seats. Only when a company asks with money. |
 | **Gated catalog CDN** | here.now passworded Site or Drive API key (`HERENOW_GATED_SECRET`) | Finish [A1](#A1): `aiTutorContext` off the public CDN. Portal already strips on *our* API. |
 | **Marketing surface** | Where `warmersun.com` is served; optional `/cloud` 302 | [E10](#E10) Daily as homepage; [E1](#E1) `warmersun.com/u/…`. In-game pages are already **done**. |
-| **Legal** | ToS / privacy that names stored runs | Paper. Cloud already writes Neon. |
 | **Observability** | Beyond Render logs | Ops. Not a player feature. |
 
 ### Todo (missing a building block or later product)
@@ -118,7 +118,6 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 | [**B2**](#B2) Quota by paid plan | same |
 | [**E10**](#E10) Daily as warmersun.com homepage | Catalog site vs game process still two surfaces |
 | [**F2**](#F2) Company seats on our Cloud | Clerk Organizations + Billing not on |
-| Legal: ToS / privacy for **stored runs** | Site privacy exists; Cloud already stores runs — paper should catch up |
 | Observability beyond console | Render logs today |
 | Optional: `warmersun.com/cloud` redirect | Ops after first deploy |
 
@@ -521,7 +520,7 @@ README deploy: **portal** on Render (`npm run portal`); **game** is `npm start` 
 | **9. Object storage** | Gallery stills | **Not needed** — top-3 stills are Neon BYTEA on [D1](#D1) | Dropped [E5](#E5) |
 | **10. Secrets / env** | `DATABASE_URL`, Clerk keys | **Done** locally (`.env.portal`) and on Render | Deploy |
 | **11. Observability** | Process up, webhook failures | **Todo** | Operating Cloud |
-| **12. Legal** | Privacy / ToS for stored runs | **Todo** | Paper should catch up; runs are already stored |
+| **12. Legal** | Privacy / ToS for stored runs | **Done** — warmersun.com/terms and /privacy (25 Aug 2026) | Cloud rows, Continue, leaderboard stills named |
 
 **Do not need in v1:** Redis, Kafka, a second region, Kubernetes, a game BaaS (PlayFab / Nakama / LootLocker / Beamable). Those are live-ops platforms for Unity/Unreal studios. We already have a game server.
 
