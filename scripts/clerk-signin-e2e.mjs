@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser click-through against **portal**: Sign in → Clerk email/password → signed in.
- * game (`npm start`) has no Sign-in chip — run `npm run portal` first.
+ * Browser click-through against **portal** `/signin`: device start → Clerk email/password → JWT redeem.
  *
  *   npm i -D playwright
  *   npx playwright install chromium
@@ -119,13 +118,24 @@ async function main() {
     }
     log("1", "health.clerk.enabled true");
 
-    await page.goto(ORIGIN, { waitUntil: "domcontentloaded" });
+    log("2", "POST /api/device/start");
+    const start = await page.request.post(`${ORIGIN}/api/device/start`, {
+      headers: { Origin: "http://127.0.0.1:8765" },
+    });
+    const startBody = await start.json();
+    if (!start.ok() || !startBody?.code || !startBody?.signInUrl) {
+      throw new Error(`device start failed: ${JSON.stringify(startBody)}`);
+    }
+    const { code } = startBody;
+    const signInUrl = `${ORIGIN}/signin?device=${encodeURIComponent(code)}`;
+    log("2", `open ${signInUrl}`);
+    await page.goto(signInUrl, { waitUntil: "domcontentloaded" });
     await shot(page, "01-loaded");
 
-    log("2", "wait for Sign in (Clerk CDN + initAuth unhides #ff-account)");
-    const signIn = page.locator("#ff-account-signin");
+    log("3", "wait for portal Sign in");
+    const signIn = page.locator("#signin");
     await signIn.waitFor({ state: "visible", timeout: 40_000 });
-    log("2", "Sign in visible — clicking");
+    log("3", "Sign in visible — clicking");
     await signIn.click();
     await shot(page, "02-clicked-signin");
 
@@ -193,46 +203,30 @@ async function main() {
     }
     await shot(page, "04-after-password");
 
-    log("5", "wait until signed in (Sign in hidden, UserButton mounted)");
-    await page.locator("#ff-account-signin").waitFor({ state: "hidden", timeout: 40_000 });
-    await page.locator("#ff-account-user").waitFor({ state: "visible", timeout: 20_000 });
+    log("5", "wait until handshake finished");
+    await page.getByText(/return to Future Forge/i).waitFor({ timeout: 40_000 });
+    await shot(page, "05-handshake-done");
 
-    const signed = await page.evaluate(() => {
-      const c = window.Clerk;
-      return {
-        ready: Boolean(c),
-        isSignedIn: Boolean(c?.isSignedIn),
-        userId: c?.user?.id || null,
-        hasSession: Boolean(c?.session),
-      };
-    });
-    log("5", JSON.stringify(signed));
-    if (!signed.isSignedIn || !signed.hasSession) {
-      await shot(page, "fail-not-signed-in");
-      throw new Error("Clerk reports not signed in after submit");
+    log("6", "GET /api/device/status then /api/me");
+    const st = await page.request.get(
+      `${ORIGIN}/api/device/status?code=${encodeURIComponent(code)}`,
+      { headers: { Origin: "http://127.0.0.1:8765" } }
+    );
+    const stBody = await st.json();
+    if (!st.ok() || stBody.pending !== false || !stBody.token) {
+      throw new Error(`device status failed: ${JSON.stringify(stBody)}`);
     }
-
-    log("6", "GET /api/me with session JWT");
-    const me = await page.evaluate(async () => {
-      const token = await window.Clerk.session.getToken();
-      const res = await fetch("/api/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return { status: res.status, body: await res.json() };
+    const me = await page.request.get(`${ORIGIN}/api/me`, {
+      headers: { Authorization: `Bearer ${stBody.token}` },
     });
-    log("6", `HTTP ${me.status} signedIn=${me.body?.signedIn} userId=${me.body?.userId ? "yes" : "no"}`);
-    if (me.status !== 200 || me.body?.signedIn !== true || !me.body?.userId) {
+    const meBody = await me.json();
+    log("6", `HTTP ${me.status()} signedIn=${meBody?.signedIn} userId=${meBody?.userId ? "yes" : "no"}`);
+    if (me.status() !== 200 || meBody?.signedIn !== true || !meBody?.userId) {
       await shot(page, "fail-api-me");
-      throw new Error(`GET /api/me after login failed: ${JSON.stringify(me)}`);
+      throw new Error(`GET /api/me after login failed: ${JSON.stringify(meBody)}`);
     }
 
-    log("7", "open UserButton menu");
-    const userBtn = page.locator("#ff-account-user button, #ff-account-user .cl-userButtonTrigger").first();
-    await userBtn.click();
-    await page.waitForTimeout(500);
-    await shot(page, "05-user-button");
-
-    log("PASS", "Sign in clicked through. Session JWT accepted by GET /api/me.");
+    log("PASS", "Portal Sign in handed a JWT the game can send as Bearer.");
     console.log(`Screenshots: ${OUT}/clerk-signin-*.png`);
     await browser.close();
     process.exit(0);

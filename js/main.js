@@ -1,5 +1,5 @@
-// Same specifier as game.js (`./auth.js`) — a ?v= here would be a second Clerk module
-// and title CTAs would never see the session.
+// Same specifier as game.js (`./auth.js`) — a ?v= here would be a second module
+// and title CTAs would never see the session JWT.
 void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));

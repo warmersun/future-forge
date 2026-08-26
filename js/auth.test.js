@@ -16,7 +16,7 @@ describe("clerkFrontendApiHost", () => {
 });
 
 describe("isCloudApiPath", () => {
-  it("routes Cloud save/health/board to portal", () => {
+  it("routes Cloud save/health/board/device to portal", () => {
     assert.equal(isCloudApiPath("/api/me"), true);
     assert.equal(isCloudApiPath("/api/me/runs?kind=lesson"), true);
     assert.equal(isCloudApiPath("/api/daily"), false);
@@ -25,6 +25,8 @@ describe("isCloudApiPath", () => {
     assert.equal(isCloudApiPath("/api/board/lesson-1/still/user_abc"), true);
     assert.equal(isCloudApiPath("/api/me/quests/lesson-1/score"), true);
     assert.equal(isCloudApiPath("/api/health"), true);
+    assert.equal(isCloudApiPath("/api/device/start"), true);
+    assert.equal(isCloudApiPath("/api/device/status?code=abc"), true);
     assert.equal(isCloudApiPath("/api/co-invent"), false);
     assert.equal(isCloudApiPath("/api/quests"), false);
     assert.equal(isCloudApiPath("/api/rooms"), false);

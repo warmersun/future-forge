@@ -7,6 +7,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import { normalizeClerkUserId } from "./clerk-id.mjs";
+import { CLOUD_PORTAL_ORIGIN } from "../cloud/portal-origin.js";
 
 export { normalizeClerkUserId };
 
@@ -24,6 +25,7 @@ const DEFAULT_AUTHORIZED_PARTIES = [
   "http://127.0.0.1:8765",
   "http://localhost:8765",
   "https://warmersun.com",
+  CLOUD_PORTAL_ORIGIN,
 ];
 
 /** @type {AsyncLocalStorage<{ userId?: string|null, sessionId?: string|null }>} */

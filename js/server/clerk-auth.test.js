@@ -94,6 +94,8 @@ describe("authorizedPartiesFromEnv", () => {
     const parties = authorizedPartiesFromEnv({});
     assert.ok(parties.includes("http://127.0.0.1:8765"));
     assert.ok(parties.includes("https://warmersun.com"));
+    assert.ok(parties.includes("https://cloud.warmersun.com"));
+    assert.equal(parties.includes("https://local.warmersun.com"), false);
   });
 
   it("parses comma list", () => {

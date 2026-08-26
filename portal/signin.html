@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Warmer Sun Cloud — Sign in</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070b14;
+        --text: #e8eef9;
+        --dim: #94a3b8;
+        --accent: #a78bfa;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+      main {
+        max-width: 28rem;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      p {
+        color: var(--dim);
+        line-height: 1.5;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+        border: 0;
+        border-radius: 10px;
+        padding: 0.55rem 1rem;
+        background: var(--accent);
+        color: #0c1220;
+      }
+      button[hidden] {
+        display: none !important;
+      }
+      #status {
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Warmer Sun Cloud</h1>
+      <p id="status">Loading Sign in…</p>
+      <p>
+        <button type="button" id="signin" hidden>Sign in</button>
+      </p>
+    </main>
+    <script type="module">
+      const CLERK_APPEARANCE = {
+        variables: {
+          colorPrimary: "#a78bfa",
+          colorPrimaryForeground: "#0c1220",
+          colorBackground: "#121a2b",
+          colorForeground: "#e8eef9",
+          colorMuted: "#1a2438",
+          colorMutedForeground: "#94a3b8",
+          colorNeutral: "#94a3b8",
+          colorInput: "#1a2438",
+          colorInputForeground: "#e8eef9",
+          colorBorder: "#2a3a58",
+          colorModalBackdrop: "rgba(7, 11, 20, 0.78)",
+          borderRadius: "14px",
+        },
+      };
+
+      const status = document.getElementById("status");
+      const btn = document.getElementById("signin");
+      const device = new URLSearchParams(location.search).get("device") || "";
+
+      function clerkFrontendApiHost(publishableKey) {
+        const parts = String(publishableKey || "").trim().split("_");
+        if (parts.length < 3) throw new Error("Invalid Clerk publishable key");
+        const decoded = atob(parts.slice(2).join("_"));
+        return decoded.endsWith("$") ? decoded.slice(0, -1) : decoded;
+      }
+
+      function loadScript(src, attrs = {}) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.crossOrigin = "anonymous";
+          for (const [k, v] of Object.entries(attrs)) script.setAttribute(k, v);
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error(`Failed to load ${src}`));
+          document.head.appendChild(script);
+        });
+      }
+
+      async function complete(token) {
+        const res = await fetch("/api/device/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code: device }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Could not finish handshake");
+        }
+      }
+
+      const health = await fetch("/api/health").then((r) => r.json());
+      const pk = health?.clerk?.publishableKey;
+      if (!health?.clerk?.enabled || !pk) {
+        status.textContent = "Sign in is off on this portal (Clerk keys missing).";
+        throw new Error("clerk off");
+      }
+      if (!device) {
+        status.textContent =
+          "Open Sign in from Future Forge on your computer (http://127.0.0.1:8765). This page needs a device code from the game.";
+        throw new Error("no device");
+      }
+
+      const host = clerkFrontendApiHost(pk);
+      await loadScript(`https://${host}/npm/@clerk/ui@1/dist/ui.browser.js`);
+      await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
+        "data-clerk-publishable-key": pk,
+      });
+      const Clerk = window.Clerk;
+      await Clerk.load({
+        ui: { ClerkUI: window.__internal_ClerkUICtor },
+        appearance: CLERK_APPEARANCE,
+      });
+
+      async function finishIfSignedIn() {
+        if (!Clerk.session) return false;
+        const token = await Clerk.session.getToken();
+        if (!token) return false;
+        await complete(token);
+        status.textContent = "Signed in. You can return to Future Forge.";
+        btn.hidden = true;
+        return true;
+      }
+
+      if (await finishIfSignedIn()) {
+        /* done */
+      } else {
+        status.textContent = "Sign in to continue in the game on this computer.";
+        btn.hidden = false;
+        btn.addEventListener("click", () => {
+          Clerk.openSignIn({ appearance: CLERK_APPEARANCE });
+        });
+        Clerk.addListener?.(async () => {
+          try {
+            await finishIfSignedIn();
+          } catch (e) {
+            status.textContent = e?.message || String(e);
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

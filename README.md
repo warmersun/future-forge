@@ -75,16 +75,17 @@ Default port: **8765** (override with `FF_PORT`). **game** and **portal** both d
 
 ### Learner accounts (optional Clerk)
 
-Sign-in is **optional** and lives on **portal** (`npm run portal`), not on **game** (`npm start`). Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
+Sign-in is **optional**. Clerk UI runs on the hosted portal at **`https://cloud.warmersun.com/signin`**. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens the portal and stores a session JWT. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
+Set `FF_PORTAL_URL` on the game to the portal API origin (Render `https://….onrender.com` is fine). Production Clerk keys only load on `warmersun.com` (or a subdomain) — that is why Sign in is on `cloud.warmersun.com`, not on loopback.
+
 ```bash
-cp .env.portal.example .env.portal   # gitignored
-# both keys required to enable the Sign in chip
-CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-# Optional: CLERK_AUTHORIZED_PARTIES=http://127.0.0.1:8765,https://warmersun.com
+cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
+# Render Dashboard holds pk_live_ / sk_live_
+# If you set CLERK_AUTHORIZED_PARTIES it *replaces* defaults — include:
+#   https://warmersun.com,https://cloud.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
 ```
 
 | Endpoint | Behavior |
@@ -92,9 +93,9 @@ CLERK_SECRET_KEY=sk_test_...
 | `GET /api/health` | Public `clerk.enabled` + publishable key (never the secret) |
 | `GET /api/me` | `{ signedIn: false }` unsigned; `{ userId }` when the session JWT is valid; `401` on a bad token |
 
-In the Clerk Dashboard, add allowed origins for `http://localhost:8765`, `http://127.0.0.1:8765`, and the production host. If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
+In the Clerk Dashboard, add allowed origins for `https://cloud.warmersun.com` and `https://warmersun.com`. Google / X **Authorized JavaScript origins** are those same hosts (not loopback). If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
 
-Without these keys, `npm run portal` still plays but shows no account chip. `npm start` (**game**) loads `.env` only and never reads Clerk keys.
+Without these keys, `npm run portal` has no Sign in page. `npm start` (**game**) loads `.env` only and never reads Clerk keys. Unsigned play at `http://127.0.0.1:8765` still works.
 
 ### Optional environment
 
@@ -284,8 +285,9 @@ This is a **long-running Node process**, not a static-only site (unless you acce
 1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
 2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
 3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled), `FF_TRUST_PROXY=1`. No xAI.
-4. Play the SPA on **game** (`npm start`) with `FF_PORTAL_URL=https://<service>.onrender.com`.
-5. Clerk allowed origins = the **game** origin (localhost / here.now), not only the API host. Webhook URL is still the Render `/api/webhooks/clerk`.
+4. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://<service>.onrender.com`. Sign in is **`https://cloud.warmersun.com/signin`**.
+5. Clerk allowed origins / Google / X JS origins = `https://cloud.warmersun.com` and `https://warmersun.com`. `CLERK_AUTHORIZED_PARTIES` must include those plus loopback game origins if the env **replaces** defaults. Webhook URL is still the Render `/api/webhooks/clerk` until the custom domain is the webhook host too.
+6. DNS: CNAME `cloud.warmersun.com` → the Render hostname; add the custom domain on Render. Cloudflare-proxied TLS is fine on this public host.
 
 Do not run **game** and **portal** on the same port.
 

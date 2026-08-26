@@ -18,6 +18,8 @@ services:
         sync: false
       - key: CLERK_AUTHORIZED_PARTIES
         sync: false
+        # If set, include https://cloud.warmersun.com plus loopback game origins
+        # (replaces code defaults). Keep https://warmersun.com.
       - key: CLERK_WEBHOOK_SECRET
         sync: false
       - key: DATABASE_URL

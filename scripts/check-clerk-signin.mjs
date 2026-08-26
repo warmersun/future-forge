@@ -6,7 +6,8 @@
  *   FF_ORIGIN=http://127.0.0.1:8765 npm run check:clerk-signin
  *   FF_ORIGIN=https://future-forge-0yil.onrender.com npm run check:clerk-signin
  *
- * Sign in is on **game** (`npm start` with FF_PORTAL_URL), not on this origin.
+ * Clerk UI is GET /signin on the portal. The game (`npm start` + FF_PORTAL_URL)
+ * only stores the handshake JWT.
  */
 
 import fs from "node:fs";
@@ -121,6 +122,11 @@ async function main() {
     }
   } else fail(`GET / HTTP ${rootHit?.status}`);
 
+  const signin = await get("/signin");
+  if (signin.status === 200 && /Warmer Sun Cloud/i.test(signin.text) && /<html/i.test(signin.text)) {
+    ok("GET /signin HTML Sign in page");
+  } else fail(`GET /signin HTTP ${signin.status} — portal must serve /signin`);
+
   const spa = await get("/index.html");
   if (spa.status === 404) ok("GET /index.html 404 (API-only)");
   else fail(`GET /index.html HTTP ${spa.status} — portal must not serve the SPA`);
@@ -171,7 +177,7 @@ async function main() {
     console.log("Fix each FAIL.");
     process.exit(1);
   }
-  console.log("RESULT  PASS  portal is Cloud APIs. Sign in is on game with FF_PORTAL_URL.");
+  console.log("RESULT  PASS  portal is Cloud APIs + /signin. Game handshake uses FF_PORTAL_URL.");
   console.log(`API ${ORIGIN}/api/health`);
   process.exit(0);
 }

@@ -1,48 +1,14 @@
 /**
- * Optional Clerk learner accounts (CDN clerk-js).
- * No-op when GET /api/health has clerk.enabled !== true.
- * Play stays fully available unsigned.
+ * Optional learner accounts. The game never loads Clerk JS.
+ * Sign in happens on the hosted portal; a device handshake returns a JWT.
  */
 
-const CLERK_APPEARANCE = {
-  variables: {
-    colorPrimary: "#a78bfa",
-    colorPrimaryForeground: "#0c1220",
-    colorBackground: "#121a2b",
-    colorForeground: "#e8eef9",
-    colorMuted: "#1a2438",
-    colorMutedForeground: "#94a3b8",
-    colorNeutral: "#94a3b8",
-    colorInput: "#1a2438",
-    colorInputForeground: "#e8eef9",
-    colorBorder: "#2a3a58",
-    colorModalBackdrop: "rgba(7, 11, 20, 0.78)",
-    // Pre-2025 aliases (still sent so older clerk-js keeps the same palette)
-    colorText: "#e8eef9",
-    colorTextSecondary: "#94a3b8",
-    colorInputBackground: "#1a2438",
-    colorInputText: "#e8eef9",
-    colorTextOnPrimaryBackground: "#0c1220",
-    borderRadius: "14px",
-    fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
-  },
-  elements: {
-    formFieldInput: {
-      backgroundColor: "#1a2438",
-      color: "#e8eef9",
-      borderColor: "#2a3a58",
-    },
-    socialButtonsBlockButton: {
-      backgroundColor: "#1a2438",
-      color: "#e8eef9",
-      borderColor: "#2a3a58",
-    },
-  },
-};
+const JWT_STORAGE = "ff-clerk-jwt";
 
-/** @type {null | { load: Function, isSignedIn: boolean, session: any, addListener: Function, openSignIn: Function, mountUserButton: Function, unmountUserButton?: Function }} */
-let clerkInstance = null;
-let userButtonMounted = false;
+/** @type {string|null} */
+let handshakeJwt = null;
+let handshakeReady = false;
+
 /** @type {Set<() => void>} */
 const sessionListeners = new Set();
 
@@ -66,25 +32,15 @@ export function clerkFrontendApiHost(publishableKey) {
 }
 
 export function getClerk() {
-  return clerkInstance;
+  return null;
 }
 
 export function isClerkReady() {
-  return Boolean(clerkInstance);
+  return handshakeReady;
 }
 
 export function isClerkSignedIn() {
-  const c = clerkInstance;
-  if (!c) return false;
-  try {
-    if (c.session) return true;
-    if (c.user) return true;
-    if (c.isSignedIn === true) return true;
-    if (typeof c.isSignedIn === "function" && c.isSignedIn()) return true;
-  } catch {
-    /* clerk-js shape */
-  }
-  return false;
+  return Boolean(handshakeJwt);
 }
 
 /** @type {object|null} */
@@ -109,7 +65,7 @@ export function cachedProfileDisplayName() {
 }
 
 export function openCloudSignIn() {
-  clerkInstance?.openSignIn?.({ appearance: CLERK_APPEARANCE });
+  void startDeviceHandshake();
 }
 
 /**
@@ -119,8 +75,7 @@ export function openCloudSignIn() {
 export function onClerkSession(fn) {
   if (typeof fn !== "function") return () => {};
   sessionListeners.add(fn);
-  // Clerk may already be signed in (listener registered after load).
-  if (clerkInstance) {
+  if (handshakeReady) {
     try {
       fn();
     } catch (e) {
@@ -147,14 +102,7 @@ function emitClerkSession() {
  * @returns {Promise<string|null>}
  */
 export async function getClerkToken() {
-  const clerk = clerkInstance;
-  if (!clerk?.session?.getToken) return null;
-  try {
-    const token = await clerk.session.getToken();
-    return token ? String(token) : null;
-  } catch {
-    return null;
-  }
+  return handshakeJwt;
 }
 
 /**
@@ -214,6 +162,7 @@ export function isCloudApiPath(url) {
   if (path.startsWith("/api/u/")) return true;
   if (path === "/api/report" || path.startsWith("/api/report/")) return true;
   if (path === "/api/board" || path.startsWith("/api/board/")) return true;
+  if (path === "/api/device" || path.startsWith("/api/device/")) return true;
   return false;
 }
 
@@ -233,8 +182,27 @@ export async function apiFetch(url, init = {}) {
   return fetch(dest, { ...init, headers, mode: "cors" });
 }
 
+function readStoredJwt() {
+  try {
+    const raw = sessionStorage.getItem(JWT_STORAGE);
+    return raw && raw.trim() ? raw.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredJwt(token) {
+  handshakeJwt = token ? String(token) : null;
+  try {
+    if (handshakeJwt) sessionStorage.setItem(JWT_STORAGE, handshakeJwt);
+    else sessionStorage.removeItem(JWT_STORAGE);
+  } catch {
+    /* private mode */
+  }
+}
+
 /**
- * Load Clerk from the Frontend API CDN and show the account chip.
+ * Handshake: portal /signin holds Clerk; game only stores the JWT.
  */
 export async function initAuth() {
   const mount = document.getElementById("ff-account");
@@ -245,114 +213,74 @@ export async function initAuth() {
     const res = await fetch(`${origin}/api/health`);
     if (!res.ok) return;
     const data = await res.json();
-    if (!data?.clerk?.enabled || !data?.clerk?.publishableKey) return;
-    await loadClerkFromCdn(data.clerk.publishableKey);
+    if (!data?.clerk?.enabled) return;
+    handshakeReady = true;
+    handshakeJwt = readStoredJwt();
     document.body.classList.add("ff-accounts");
     mount.hidden = false;
-    bindSignIn(mount);
-    clerkInstance?.addListener?.(() => emitClerkSession());
-    await waitForClerkSession(clerkInstance);
+    bindAccountChip(mount);
     emitClerkSession();
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
   }
 }
 
-/**
- * @param {string} publishableKey
- */
-async function loadClerkFromCdn(publishableKey) {
-  const host = clerkFrontendApiHost(publishableKey);
-  await loadScript(`https://${host}/npm/@clerk/ui@1/dist/ui.browser.js`);
-  await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
-    "data-clerk-publishable-key": publishableKey,
-  });
-  const Clerk = window.Clerk;
-  if (!Clerk || typeof Clerk.load !== "function") {
-    throw new Error("Clerk JS did not initialize");
+async function startDeviceHandshake() {
+  if (!handshakeReady) return;
+  const origin = await resolvePortalOrigin();
+  if (!origin) return;
+  const res = await apiFetch("/api/device/start", { method: "POST" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.code || !data?.signInUrl) {
+    console.warn("[clerk]", data?.error || "device_start_failed");
+    return;
   }
-  await Clerk.load({
-    ui: { ClerkUI: window.__internal_ClerkUICtor },
-    appearance: CLERK_APPEARANCE,
-  });
-  clerkInstance = Clerk;
-}
-
-/** Cookie session can land a beat after Clerk.load() on refresh. */
-async function waitForClerkSession(clerk, ms = 3000) {
-  if (!clerk) return;
-  const deadline = Date.now() + ms;
+  window.open(data.signInUrl, "ff-cloud-signin", "width=480,height=720");
+  const deadline = Date.now() + 5 * 60 * 1000;
   while (Date.now() < deadline) {
-    try {
-      if (clerk.session || clerk.user || clerk.isSignedIn === true) return;
-    } catch {
-      /* ignore */
-    }
-    await new Promise((r) => setTimeout(r, 50));
-  }
-}
-
-/**
- * @param {string} src
- * @param {Record<string, string>} [attrs]
- */
-function loadScript(src, attrs = {}) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      resolve();
+    await new Promise((r) => setTimeout(r, 1000));
+    const st = await apiFetch(
+      `/api/device/status?code=${encodeURIComponent(data.code)}`
+    );
+    const body = await st.json().catch(() => ({}));
+    if (st.ok && body.pending === false && body.token) {
+      writeStoredJwt(body.token);
+      emitClerkSession();
       return;
     }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    for (const [k, v] of Object.entries(attrs)) {
-      script.setAttribute(k, v);
-    }
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load ${src}`));
-    document.head.appendChild(script);
-  });
+    if (!st.ok && body.error === "unknown") return;
+  }
+}
+
+function signOutHandshake() {
+  writeStoredJwt(null);
+  emitClerkSession();
 }
 
 /**
  * @param {HTMLElement} mount
  */
-function bindSignIn(mount) {
+function bindAccountChip(mount) {
   const btn = mount.querySelector("#ff-account-signin");
-  if (!btn || btn.dataset.bound === "1") return;
-  btn.dataset.bound = "1";
-  btn.addEventListener("click", () => {
-    clerkInstance?.openSignIn?.({ appearance: CLERK_APPEARANCE });
-  });
+  if (btn && btn.dataset.bound !== "1") {
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      void startDeviceHandshake();
+    });
+  }
+  const out = mount.querySelector("#ff-account-signout");
+  if (out && out.dataset.bound !== "1") {
+    out.dataset.bound = "1";
+    out.addEventListener("click", () => signOutHandshake());
+  }
 }
 
 function renderAccountChip() {
   const mount = document.getElementById("ff-account");
-  if (!mount || !clerkInstance) return;
+  if (!mount) return;
   const signInBtn = mount.querySelector("#ff-account-signin");
-  const userSlot = mount.querySelector("#ff-account-user");
+  const signOutBtn = mount.querySelector("#ff-account-signout");
   const signedIn = isClerkSignedIn();
-
   if (signInBtn) signInBtn.hidden = signedIn;
-  if (!userSlot) return;
-
-  if (signedIn) {
-    userSlot.hidden = false;
-    if (!userButtonMounted) {
-      clerkInstance.mountUserButton(userSlot, { appearance: CLERK_APPEARANCE });
-      userButtonMounted = true;
-    }
-  } else {
-    if (userButtonMounted && typeof clerkInstance.unmountUserButton === "function") {
-      try {
-        clerkInstance.unmountUserButton(userSlot);
-      } catch {
-        userSlot.replaceChildren();
-      }
-      userButtonMounted = false;
-    }
-    userSlot.hidden = true;
-  }
+  if (signOutBtn) signOutBtn.hidden = !signedIn;
 }

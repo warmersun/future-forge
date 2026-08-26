@@ -33,7 +33,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 
 | Piece | Today |
 |--------|--------|
-| Identity | Clerk (`user_…`). Optional. Sign in / UserButton / Sign out works. |
+| Identity | Clerk (`user_…`). Optional. Sign in chip on **game**; Clerk UI on **`https://cloud.warmersun.com/signin`**. |
 | Play | Works unsigned. Self-host needs no Clerk. |
 | Progress | `localStorage` always (cache). Signed-in + portal `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). Continue board: [C3](#C3). |
 | Daily | A **Learning** module (`isLearningModule`), not a UTC rotation. Play it from the Learning hub. Ranked on that tile’s [D1](#D1) board. |
@@ -62,7 +62,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 
 | Item | Where |
 |------|--------|
-| Optional Sign in / UserButton / Sign out | `feat/clerk-auth`, `js/auth.js` — on **game**; session JWT to portal |
+| Optional Sign in / Sign out | `js/auth.js` device handshake; Clerk UI on portal `GET /signin` |
 | [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; Learning lock |
 | **App host** = **portal** | Render Web Service, `npm run portal`. Live: `https://future-forge-0yil.onrender.com`. [H](#H). |
 | `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/server.mjs`, `js/server/clerk-auth.mjs` |
@@ -208,7 +208,7 @@ A log row is enough for “what I took.” The live workshop (hex, invent panel,
 **How.**  
 Table `achievements` (`clerk_user_id`, `code`, `unlocked_at`, `run_id`).  
 Server awards on run complete from a small rules file (`js/server/achievements.mjs`) — never let the client say “I unlocked.”  
-Surface: UserButton menu → Achievements, and a strip on the title screen when signed in.
+Surface: Achievements on the title strip when signed in.
 
 <a id="C3"></a>
 ### C3. Continue the board — **done**
@@ -416,7 +416,7 @@ These are settled. Do not re-open them in implementation.
 <a id="H"></a>
 ## H. The Cloud host — portal on Render
 
-**Status:** **done** (Render). **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is **Cloud HTTP APIs only** (`https://future-forge-0yil.onrender.com`). **game** (`npm start`) is the playable SPA. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
+**Status:** **done** (Render). **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is Cloud HTTP APIs plus **`GET /signin`** (`https://cloud.warmersun.com`, API also at `https://future-forge-0yil.onrender.com`). **game** (`npm start`) is the playable SPA at `http://127.0.0.1:8765`. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
 
 Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node process that:
 
@@ -433,7 +433,7 @@ Browser
   ├─ public here.now     free SPA, free catalog JSON, theme play
   │                      (anyone can GET)
   │
-  └─ portal (Render)     Cloud HTTP APIs only (Clerk + Neon, no SPA, no xAI)
+  └─ portal (Render)     Cloud APIs + GET /signin (Clerk + Neon, no playable SPA, no xAI)
          │
          └─ gated here.now   paid tiles, aiTutorContext, lesson bodies
                              credential known only to portal
@@ -459,15 +459,17 @@ Render **Web Service** (see `render.yaml`):
 
 1. Build `npm install`. Start `npm run portal`. Health `GET /api/health`.  
 2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY`.** Render injects `PORT`.  
-3. Optional: on warmersun.com, **`/cloud` → 302** to `https://<service>.onrender.com` (or a custom domain later).
+3. Optional: on warmersun.com, **`/cloud` → 302** to the game; Sign in stays **`https://cloud.warmersun.com/signin`**.
 
 Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).
 
 **Clerk / CORS**
 
-- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: the **game** origin (`http://127.0.0.1:8765` locally). Portal is APIs; Clerk UI runs in the game SPA. A redirect does **not** make Clerk cookies live on `warmersun.com`.  
-- Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).  
-- Game SPA calls Render `/api/*` with CORS `*`.
+- Production Clerk keys only load on `warmersun.com` (or a subdomain). Sign in is **`https://cloud.warmersun.com/signin`**. CNAME that host to Render; add the custom domain on Render. Cloudflare-proxied TLS is fine here (public host, not loopback).
+- Local **game** is HTTP **`:8765` only** (`http://127.0.0.1:8765` or `http://localhost:8765`). Do not bind port 443. The game never calls `Clerk.load()`.
+- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://cloud.warmersun.com`, `https://warmersun.com`, plus loopback game origins (`http://127.0.0.1:8765`, `http://localhost:8765`). If `CLERK_AUTHORIZED_PARTIES` is set on Render it **replaces** code defaults — keep those hosts. Google and X **Authorized JavaScript origins**: `https://cloud.warmersun.com` and `https://warmersun.com` only.
+- Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).
+- Device handshake (`POST /api/device/start`, `GET /api/device/status`) CORS is loopback game origins only. Other Cloud APIs stay CORS `*`. Do not serve the playable SPA from portal.
 
 **Ops honesty:** Render sleep on free instances = Cloud down; use a paid instance if Sign in / boards must stay up. Custom domain, Clerk production keys, and the `/cloud` redirect are ops after the first deploy. Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
 

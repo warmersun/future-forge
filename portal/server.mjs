@@ -70,10 +70,16 @@ import { resolveDeveloperEnabled } from "../js/server/developer-mode.mjs";
 import {
   publicClerkConfig,
   authenticateClerkRequest,
+  extractBearerToken,
   runWithClerkIdentity,
   clerkUserIdFromContext,
   clerkWebhookSecretFromEnv,
 } from "../js/server/clerk-auth.mjs";
+import { deviceAuth } from "../js/server/device-auth.mjs";
+import {
+  allowGameDeviceOrigin,
+  portalPublicOrigin,
+} from "../js/cloud/portal-origin.js";
 import {
   applyCatalogGate,
   publicCatalogTile,
@@ -3036,6 +3042,50 @@ async function handleTts(body) {
 
 /* —— HTTP —— */
 
+function isDeviceApiPath(pathOnly) {
+  const p = String(pathOnly || "");
+  return p === "/api/device" || p.startsWith("/api/device/");
+}
+
+/**
+ * Device start/status are called from the game SPA. Echo loopback origins only.
+ * Missing Origin (curl) is allowed; a foreign Origin is 403.
+ */
+function sendDeviceJson(req, res, status, data) {
+  const origin = String(req.headers.origin || "");
+  if (origin && !allowGameDeviceOrigin(origin)) {
+    return sendJson(res, 403, { ok: false, error: "origin_forbidden" });
+  }
+  const body = JSON.stringify(data);
+  /** @type {Record<string, string>} */
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": String(Buffer.byteLength(body)),
+    "Cache-Control": "no-store",
+    Vary: "Origin",
+  };
+  if (origin) headers["Access-Control-Allow-Origin"] = origin;
+  res.writeHead(status, headers);
+  res.end(body);
+}
+
+function servePortalSignin(res) {
+  const file = path.join(__dirname, "signin.html");
+  let html;
+  try {
+    html = fs.readFileSync(file, "utf8");
+  } catch {
+    return sendJson(res, 500, { ok: false, error: "signin_missing" });
+  }
+  const buf = Buffer.from(html);
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": buf.length,
+    "Cache-Control": "no-store",
+  });
+  res.end(buf);
+}
+
 /**
  * Cloud API surface only. The playable SPA, co-inventor, and Friends WS are game.
  * @param {string} pathOnly
@@ -3048,6 +3098,7 @@ function isPortalApiPath(pathOnly) {
   if (p === "/api/webhooks/clerk" || p.startsWith("/api/webhooks/clerk/")) return true;
   if (p === "/api/report" || p.startsWith("/api/report/")) return true;
   if (p === "/api/board" || p.startsWith("/api/board/")) return true;
+  if (p === "/api/device" || p.startsWith("/api/device/")) return true;
   return false;
 }
 
@@ -3097,7 +3148,22 @@ async function evictQuestStills(questId) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const pathOnly = String(req.url || "/").split("?")[0];
   if (req.method === "OPTIONS") {
+    if (isDeviceApiPath(pathOnly)) {
+      const origin = String(req.headers.origin || "");
+      if (!allowGameDeviceOrigin(origin)) {
+        res.writeHead(403);
+        return res.end();
+      }
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        Vary: "Origin",
+      });
+      return res.end();
+    }
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
@@ -3107,14 +3173,17 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  const pathOnly = String(req.url || "/").split("?")[0];
   if (req.method === "GET" && (pathOnly === "/" || pathOnly === "/api")) {
     return sendJson(res, 200, {
       ok: true,
       service: "portal",
       name: "Warmer Sun Cloud",
       health: "/api/health",
+      signin: "/signin",
     });
+  }
+  if (req.method === "GET" && pathOnly === "/signin") {
+    return servePortalSignin(res);
   }
   if (!isPortalApiPath(pathOnly)) {
     return sendJson(res, 404, {
@@ -3141,6 +3210,54 @@ const server = http.createServer(async (req, res) => {
       ...publicHealth,
       port: PORT,
       trustProxy: process.env.FF_TRUST_PROXY === "1",
+    });
+  }
+
+  if (req.method === "POST" && pathOnly === "/api/device/start") {
+    if (!publicClerkConfig().enabled) {
+      return sendDeviceJson(req, res, 503, { ok: false, error: "clerk_off" });
+    }
+    const code = deviceAuth.start();
+    const origin = portalPublicOrigin();
+    return sendDeviceJson(req, res, 200, {
+      ok: true,
+      code,
+      signInUrl: `${origin}/signin?device=${encodeURIComponent(code)}`,
+    });
+  }
+
+  if (req.method === "POST" && pathOnly === "/api/device/complete") {
+    const ident = await authenticateClerkRequest(req);
+    if (!ident.enabled) {
+      return sendJson(res, 503, { ok: false, error: "clerk_off" });
+    }
+    if (!ident.signedIn) {
+      return sendJson(res, 401, { ok: false, error: "sign_in_required" });
+    }
+    let body = {};
+    try {
+      body = await readBody(req);
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: e.message || "bad_body" });
+    }
+    const result = deviceAuth.complete(body?.code, extractBearerToken(req));
+    if (!result.ok) return sendJson(res, 400, { ok: false, error: result.error });
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (req.method === "GET" && pathOnly === "/api/device/status") {
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    const result = deviceAuth.takeStatus(url.searchParams.get("code"));
+    if (!result.ok) {
+      return sendDeviceJson(req, res, 404, { ok: false, error: result.error });
+    }
+    if (result.pending) {
+      return sendDeviceJson(req, res, 200, { ok: true, pending: true });
+    }
+    return sendDeviceJson(req, res, 200, {
+      ok: true,
+      pending: false,
+      token: result.token,
     });
   }
 
