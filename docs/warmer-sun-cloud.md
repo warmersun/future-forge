@@ -234,7 +234,7 @@ Leaderboards only work if **everyone got the same job**. That is a **catalog que
 <a id="D1"></a>
 ### D1. Per-quest leaderboard — **done** (portal APIs; title picker + catalog)
 
-**Idea.** One board per **stable catalog quest**. Same job → comparable invents. Theme `gen-…` missions have no board. Each signed-in person appears **once** (personal best). Rank: earlier in-game year, then more stars, then fewer waits. The **pathway write-up** (placed invents + how-it-works) sits on the row. Vision stills only for the **current top 3** (`BYTEA` in Neon). Daily, if you want one, is a Learning tile on that board — not a featured door.
+**Idea.** One board per **stable catalog quest**. Same job → comparable invents. Theme `gen-…` missions have no board. Each signed-in person appears **once** (personal best). Rank **score** = honesty stars of the hold ÷ years from the quest’s present (`year_reached - startYear`, same-year counts as 1). Multiply, do not add. **Waits** break ties only. The **pathway write-up** (placed invents + how-it-works) sits on the row. Vision stills only for the **current top 3** (`BYTEA` in Neon). Daily, if you want one, is a Learning tile on that board — not a featured door.
 
 **How.**  
 - `POST /api/me/quests/:id/score` copies year/stars/waits from the owned `runs` row; stores `pathway_text`.  

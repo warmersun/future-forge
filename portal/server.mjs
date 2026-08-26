@@ -3303,7 +3303,15 @@ const server = http.createServer(async (req, res) => {
         const parsed = parseQuestScoreBody(body, meQuest.questId);
         if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
         const owned = await getRunForUser(gate.userId, parsed.row.runId);
-        const bound = bindQuestScoreFromRun(parsed, owned);
+        let catalogStartYear = null;
+        try {
+          const pack = await loadMergedQuestTiles();
+          const tile = findQuestTile(pack, parsed.row.questId);
+          catalogStartYear = tile?.mission?.startYear ?? tile?.startYear ?? null;
+        } catch {
+          catalogStartYear = null;
+        }
+        const bound = bindQuestScoreFromRun(parsed, owned, { startYear: catalogStartYear });
         if (!bound.ok) return sendJson(res, 400, { ok: false, error: bound.error });
         const profile = await getProfileByUserId(gate.userId);
         const displayName = sanitizeDisplayName(

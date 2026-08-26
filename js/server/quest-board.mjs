@@ -17,30 +17,61 @@ export function isPlausibleYear(year) {
 }
 
 /**
- * Lower year (earlier hold) wins, then more stars, then fewer waits.
- * @param {{ yearReached?: number|null, stars?: number|null, waits?: number|null }} row
+ * Honesty of the hold (stars). Collapse never ranks.
+ * @param {{ stars?: number|null }} row
  */
-export function scoreTuple(row) {
-  const year = Number.isFinite(Number(row?.yearReached)) ? Number(row.yearReached) : 9999;
-  const stars = Number.isFinite(Number(row?.stars)) ? Number(row.stars) : 0;
-  const waits = Number.isFinite(Number(row?.waits)) ? Number(row.waits) : 9999;
-  return [year, -stars, waits];
+export function holdWeight(row) {
+  const stars = Number(row?.stars);
+  return Number.isFinite(stars) ? Math.max(0, stars) : 0;
+}
+
+/**
+ * Years from the quest's present to the hold. Same-year hold counts as 1
+ * (never divide by zero).
+ * @param {{ yearReached?: number|null, startYear?: number|null }} row
+ */
+export function yearsTaken(row) {
+  const solved = Number(row?.yearReached ?? row?.year_reached);
+  const present = Number(row?.startYear ?? row?.start_year);
+  if (!Number.isFinite(solved)) return 1;
+  if (!Number.isFinite(present)) return 1;
+  return Math.max(1, Math.trunc(solved) - Math.trunc(present));
+}
+
+/**
+ * stars × 1/years. Integer cross-multiply elsewhere so ranking stays exact.
+ * @param {object} row
+ */
+export function boardScore(row) {
+  return holdWeight(row) / yearsTaken(row);
+}
+
+export function formatBoardScore(row) {
+  const s = boardScore(row);
+  if (!Number.isFinite(s)) return "0";
+  return String(Math.round(s * 1000) / 1000);
 }
 
 /**
  * True if `a` should replace `b` (strictly better). Equal keeps existing.
+ * Product score first (hold / years); waits only break ties.
  * @param {object} a
  * @param {object} b
  */
 export function isBetterScore(a, b) {
   if (!b) return true;
-  const ta = scoreTuple(a);
-  const tb = scoreTuple(b);
-  for (let i = 0; i < ta.length; i++) {
-    if (ta[i] < tb[i]) return true;
-    if (ta[i] > tb[i]) return false;
-  }
-  return false;
+  const left = holdWeight(a) * yearsTaken(b);
+  const right = holdWeight(b) * yearsTaken(a);
+  if (left > right) return true;
+  if (left < right) return false;
+  const wa = Number.isFinite(Number(a?.waits)) ? Number(a.waits) : 9999;
+  const wb = Number.isFinite(Number(b?.waits)) ? Number(b.waits) : 9999;
+  return wa < wb;
+}
+
+export function scoreTuple(row) {
+  const waits = Number.isFinite(Number(row?.waits)) ? Number(row.waits) : 9999;
+  return [-boardScore(row), waits];
 }
 
 /**
@@ -67,29 +98,23 @@ export function rankBoard(rows, opts = {}) {
     return a._i - b._i;
   });
   const limit = Math.min(50, Math.max(1, Number(opts.limit) || BOARD_LIMIT));
-  const top = list.slice(0, limit).map((r, idx) => ({
-    rank: idx + 1,
+  const publicRow = (r, rank) => ({
+    rank,
     displayName: r.displayName || r.display_name || "Inventor",
+    score: boardScore(r),
+    startYear: r.startYear ?? r.start_year ?? null,
     yearReached: r.yearReached ?? r.year_reached ?? null,
     stars: r.stars ?? 0,
     waits: r.waits ?? 0,
+    years: yearsTaken(r),
     clerkUserId: r.clerkUserId || r.clerk_user_id || null,
-  }));
+  });
+  const top = list.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
   const uid = opts.userId || null;
   let you = null;
   if (uid) {
     const idx = list.findIndex((r) => (r.clerkUserId || r.clerk_user_id) === uid);
-    if (idx >= 0) {
-      const r = list[idx];
-      you = {
-        rank: idx + 1,
-        displayName: r.displayName || r.display_name || "Inventor",
-        yearReached: r.yearReached ?? r.year_reached ?? null,
-        stars: r.stars ?? 0,
-        waits: r.waits ?? 0,
-        clerkUserId: r.clerkUserId || r.clerk_user_id || uid,
-      };
-    }
+    if (idx >= 0) you = publicRow(list[idx], idx + 1);
   }
   return { top, you };
 }
@@ -154,8 +179,12 @@ export function parseQuestScoreBody(body, expectedQuestId) {
 
 /**
  * Copy year/stars/waits from the owned run. Ignore client score fields.
+ * startYear is the quest present (catalog), not client-supplied.
+ * @param {{ ok?: boolean, row?: object }} parsed
+ * @param {object|null} owned
+ * @param {{ startYear?: number|null }} [opts]
  */
-export function bindQuestScoreFromRun(parsed, owned) {
+export function bindQuestScoreFromRun(parsed, owned, opts = {}) {
   if (!parsed?.ok || !parsed.row) return { ok: false, error: "run_required" };
   if (!owned) return { ok: false, error: "run_required" };
   const questId = String(owned.quest_id || owned.questId || "");
@@ -166,13 +195,21 @@ export function bindQuestScoreFromRun(parsed, owned) {
   }
   const yearReached = owned.year_reached ?? owned.yearReached;
   if (!isPlausibleYear(yearReached)) return { ok: false, error: "impossible_year" };
+  const solved = Math.trunc(Number(yearReached));
+  let startYear = opts.startYear ?? owned.start_year ?? owned.startYear;
+  if (!isPlausibleYear(startYear) || Math.trunc(Number(startYear)) > solved) {
+    startYear = solved;
+  } else {
+    startYear = Math.trunc(Number(startYear));
+  }
   const starsRaw = Number(owned.stars);
   const waitsRaw = Number(owned.waits);
   return {
     ok: true,
     row: {
       ...parsed.row,
-      yearReached: Math.trunc(Number(yearReached)),
+      yearReached: solved,
+      startYear,
       stars: Number.isFinite(starsRaw) ? Math.max(0, Math.min(5, Math.trunc(starsRaw))) : 0,
       waits: Number.isFinite(waitsRaw) ? Math.max(0, Math.min(10_000, Math.trunc(waitsRaw))) : 0,
       place: parsed.row.place || owned.place || "",

@@ -683,6 +683,7 @@ function mapQuestScoreRow(row) {
     questId: row.quest_id,
     runId: row.run_id,
     yearReached: row.year_reached,
+    startYear: row.start_year,
     stars: row.stars,
     waits: row.waits,
     displayName: row.display_name,
@@ -699,7 +700,7 @@ export async function listQuestScores(questId) {
   const db = getPool();
   if (!db || !questId) return { skipped: true, rows: [] };
   const r = await db.query(
-    `SELECT clerk_user_id, quest_id, run_id, year_reached, stars, waits,
+    `SELECT clerk_user_id, quest_id, run_id, year_reached, start_year, stars, waits,
             display_name, place, stack, pathway_text
      FROM quest_scores WHERE quest_id = $1`,
     [String(questId)]
@@ -720,19 +721,21 @@ export async function upsertQuestScore(input, betterFn) {
     await client.query("BEGIN");
     await ensureUser(clerkUserId, client);
     const prev = await client.query(
-      `SELECT year_reached, stars, waits FROM quest_scores
+      `SELECT year_reached, start_year, stars, waits FROM quest_scores
        WHERE clerk_user_id = $1 AND quest_id = $2`,
       [clerkUserId, input.questId]
     );
     const existing = prev.rows[0]
       ? {
           yearReached: prev.rows[0].year_reached,
+          startYear: prev.rows[0].start_year,
           stars: prev.rows[0].stars,
           waits: prev.rows[0].waits,
         }
       : null;
     const next = {
       yearReached: input.yearReached,
+      startYear: input.startYear,
       stars: input.stars,
       waits: input.waits,
     };
@@ -742,12 +745,13 @@ export async function upsertQuestScore(input, betterFn) {
     }
     await client.query(
       `INSERT INTO quest_scores (
-         clerk_user_id, quest_id, run_id, year_reached, stars, waits,
+         clerk_user_id, quest_id, run_id, year_reached, start_year, stars, waits,
          display_name, place, stack, pathway_text
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (clerk_user_id, quest_id) DO UPDATE SET
          run_id = EXCLUDED.run_id,
          year_reached = EXCLUDED.year_reached,
+         start_year = EXCLUDED.start_year,
          stars = EXCLUDED.stars,
          waits = EXCLUDED.waits,
          display_name = EXCLUDED.display_name,
@@ -760,6 +764,7 @@ export async function upsertQuestScore(input, betterFn) {
         input.questId,
         input.runId,
         input.yearReached,
+        input.startYear,
         input.stars,
         input.waits,
         input.displayName,
@@ -808,7 +813,12 @@ export async function listQuestScoreUserIdsRanked(questId, limit = 3) {
   const r = await db.query(
     `SELECT clerk_user_id FROM quest_scores
      WHERE quest_id = $1
-     ORDER BY year_reached ASC NULLS LAST, stars DESC, waits ASC, submitted_at ASC
+     ORDER BY (
+       COALESCE(stars, 0)::double precision
+       / GREATEST(1, COALESCE(year_reached, 0) - COALESCE(start_year, year_reached, 0))
+     ) DESC NULLS LAST,
+     waits ASC NULLS LAST,
+     submitted_at ASC
      LIMIT $2`,
     [String(questId), n]
   );

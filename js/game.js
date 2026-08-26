@@ -29,8 +29,8 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-15";
-import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-15";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-17";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-17";
 import {
   apiFetch,
   getClerk,
@@ -3976,6 +3976,12 @@ function openQuestBoard(questId) {
   void loadDailyBoard();
 }
 
+function formatBoardScore(row) {
+  const s = Number(row?.score);
+  if (!Number.isFinite(s)) return "0";
+  return String(Math.round(s * 1000) / 1000);
+}
+
 function stillUrlForRow(questId, row) {
   const uid = row?.clerkUserId;
   if (!questId || !uid || !row.hasStill) return "";
@@ -4019,8 +4025,8 @@ function renderDailyBoard() {
       blurbEl.textContent = "Pick a Learning, Sponsored, or Library quest. Same job, comparable invents.";
     } else {
       blurbEl.textContent = data.place
-        ? `Best holds of this quest in ${data.place}. One row per inventor — your personal best.`
-        : "Best holds of this quest. One row per inventor — your personal best.";
+        ? `Best holds of this quest in ${data.place}. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.`
+        : "Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.";
     }
   }
   if (dateEl) dateEl.textContent = !picking && data.place && data.title ? data.place : "";
@@ -4028,7 +4034,7 @@ function renderDailyBoard() {
   if (youEl) {
     if (!picking && data.you) {
       youEl.hidden = false;
-      youEl.textContent = `You: #${data.you.rank} · year ${data.you.yearReached} · ${data.you.stars}★`;
+      youEl.textContent = `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
     } else {
       youEl.hidden = true;
       youEl.textContent = "";
@@ -4055,7 +4061,7 @@ function renderDailyBoard() {
     li.className = "quest-board-row";
     const head = document.createElement("div");
     head.className = "quest-board-row-head";
-    head.textContent = `#${row.rank} ${row.displayName} · year ${row.yearReached} · ${row.stars}★ · ${row.waits} waits`;
+    head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${row.stars}★ / ${row.years || "?"}y · ${row.waits} waits`;
     li.appendChild(head);
     const stillSrc = stillUrlForRow(questId, row);
     if (stillSrc) {

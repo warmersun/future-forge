@@ -9,6 +9,8 @@ import {
   attachBoardExtras,
   rankBoard,
   isBetterScore,
+  boardScore,
+  yearsTaken,
   sanitizeDisplayName,
   isPlausibleYear,
   PATHWAY_TEXT_MAX,
@@ -46,16 +48,21 @@ describe("parse + bind quest score", () => {
       },
       "lesson-1"
     );
-    const bound = bindQuestScoreFromRun(parsed, {
-      quest_id: "lesson-1",
-      outcome: "hold",
-      year_reached: 2031,
-      stars: 2,
-      waits: 4,
-      place: "Quay",
-    });
+    const bound = bindQuestScoreFromRun(
+      parsed,
+      {
+        quest_id: "lesson-1",
+        outcome: "hold",
+        year_reached: 2031,
+        stars: 2,
+        waits: 4,
+        place: "Quay",
+      },
+      { startYear: 2026 }
+    );
     assert.equal(bound.ok, true);
     assert.equal(bound.row.yearReached, 2031);
+    assert.equal(bound.row.startYear, 2026);
     assert.equal(bound.row.stars, 2);
     assert.equal(bound.row.waits, 4);
     assert.match(bound.row.pathwayText, /Moves water/);
@@ -74,8 +81,23 @@ describe("attachBoardExtras", () => {
   it("marks stills and copies write-ups; top K is 3", () => {
     assert.equal(STILL_TOP_K, 3);
     const rows = [
-      { clerkUserId: "user_a", yearReached: 2028, stars: 3, waits: 1, pathwayText: "A how", place: "Here" },
-      { clerkUserId: "user_b", yearReached: 2030, stars: 2, waits: 2, pathwayText: "B how" },
+      {
+        clerkUserId: "user_a",
+        startYear: 2026,
+        yearReached: 2028,
+        stars: 3,
+        waits: 1,
+        pathwayText: "A how",
+        place: "Here",
+      },
+      {
+        clerkUserId: "user_b",
+        startYear: 2026,
+        yearReached: 2030,
+        stars: 2,
+        waits: 2,
+        pathwayText: "B how",
+      },
     ];
     const ranked = rankBoard(rows, { userId: "user_b" });
     const board = attachBoardExtras(ranked, ["user_a"], rows);
@@ -88,22 +110,59 @@ describe("attachBoardExtras", () => {
 });
 
 describe("isBetterScore still drives replace", () => {
-  it("earlier year beats later, then stars, then waits", () => {
-    assert.equal(isBetterScore({ yearReached: 2030, stars: 1, waits: 9 }, { yearReached: 2034, stars: 5, waits: 0 }), true);
-    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 2 }, { yearReached: 2030, stars: 2, waits: 0 }), true);
-    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 1 }, { yearReached: 2030, stars: 3, waits: 4 }), true);
-    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 1 }, { yearReached: 2030, stars: 3, waits: 1 }), false);
+  const present = { startYear: 2026 };
+  it("score is hold stars divided by years from present (same year = 1)", () => {
+    assert.equal(yearsTaken({ ...present, yearReached: 2026 }), 1);
+    assert.equal(yearsTaken({ ...present, yearReached: 2030 }), 4);
+    assert.equal(boardScore({ ...present, yearReached: 2026, stars: 3 }), 3);
+    assert.equal(boardScore({ ...present, yearReached: 2030, stars: 3 }), 0.75);
+  });
+  it("multiplies hold by inverse years; waits only break ties", () => {
+    // 3★ in 4 years (0.75) loses to 1★ same-year (1)
+    assert.equal(
+      isBetterScore(
+        { ...present, yearReached: 2026, stars: 1, waits: 9 },
+        { ...present, yearReached: 2030, stars: 3, waits: 0 }
+      ),
+      true
+    );
+    // 3★ in 2 years beats 3★ in 4 years
+    assert.equal(
+      isBetterScore(
+        { ...present, yearReached: 2028, stars: 3, waits: 4 },
+        { ...present, yearReached: 2030, stars: 3, waits: 0 }
+      ),
+      true
+    );
+    // same product, fewer waits wins
+    assert.equal(
+      isBetterScore(
+        { ...present, yearReached: 2028, stars: 3, waits: 1 },
+        { ...present, yearReached: 2028, stars: 3, waits: 4 }
+      ),
+      true
+    );
+    // equal product and waits: first stays
+    assert.equal(
+      isBetterScore(
+        { ...present, yearReached: 2028, stars: 3, waits: 1 },
+        { ...present, yearReached: 2028, stars: 3, waits: 1 }
+      ),
+      false
+    );
   });
   it("rankBoard returns top N and your row", () => {
     const rows = [
-      { clerkUserId: "user_slow", yearReached: 2040, stars: 5, waits: 0, displayName: "Slow" },
-      { clerkUserId: "user_me", yearReached: 2031, stars: 2, waits: 1, displayName: "Me" },
-      { clerkUserId: "user_ace", yearReached: 2028, stars: 1, waits: 3, displayName: "Ace" },
+      { clerkUserId: "user_slow", startYear: 2026, yearReached: 2040, stars: 3, waits: 0, displayName: "Slow" },
+      { clerkUserId: "user_me", startYear: 2026, yearReached: 2028, stars: 3, waits: 1, displayName: "Me" },
+      { clerkUserId: "user_ace", startYear: 2026, yearReached: 2026, stars: 1, waits: 3, displayName: "Ace" },
     ];
     const b = rankBoard(rows, { userId: "user_me", limit: 10 });
-    assert.equal(b.top[0].displayName, "Ace");
-    assert.equal(b.you.rank, 2);
+    // Me: 3/2 = 1.5, Ace: 1/1 = 1, Slow: 3/14 ≈ 0.21
+    assert.equal(b.top[0].displayName, "Me");
+    assert.equal(b.you.rank, 1);
     assert.equal(b.you.displayName, "Me");
+    assert.equal(b.top[1].displayName, "Ace");
   });
   it("strips email-like display names and junk years", () => {
     assert.equal(sanitizeDisplayName("a@b.com"), "Inventor");
