@@ -9,7 +9,7 @@
 | Name | Command | What |
 |------|---------|------|
 | **game** | `npm start` → `server.mjs` | Future Forge engine as it was before this branch. Self-host, Invent Night, unsigned play. No Clerk, no Neon. |
-| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud: playable Future Forge + Clerk + Neon + official Daily. Hosted on **Render**. |
+| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud: playable Future Forge + Clerk + Neon + official Daily. **No xAI.** Hosted on **Render**. |
 
 Do not run both on port 8765. Render runs **only portal**.
 
@@ -416,7 +416,7 @@ These are settled. Do not re-open them in implementation.
 
 1. **No ORM.** This repo is vanilla JS, not TypeScript. Skip Drizzle, Prisma, and the rest. Talk to Neon with a Postgres driver (`pg` or `postgres`) and plain SQL (`CREATE TABLE`, migrations as `.sql` files under `js/server/db/`). Typed query builders buy nothing here.
 2. **Clerk is identity; Neon is only Postgres.** Do not enable Neon Auth (or Supabase Auth, or a second user table that pretends to be login). Session JWT we already verify is the user. Neon stores `runs`, achievements, Daily scores — keyed by `clerk_user_id`.
-3. **The Cloud host is the gate.** Two here.now Sites (public files vs gated files). Only **portal** knows the gated credential. Neon, Clerk verify, entitlements, and AI for Cloud users live **on portal**, not on here.now. **game** (self-host) never talks to the gated Site. Details: [H](#H).
+3. **The Cloud host is the gate.** Two here.now Sites (public files vs gated files). Only **portal** knows the gated credential. Neon, Clerk verify, and entitlements live **on portal**, not on here.now. Live xAI (co-inventor, Imagine, TTS) is **game**, not portal. **game** (self-host) never talks to the gated Site. Details: [H](#H).
 4. **The host is a Render Web Service running portal** (`npm run portal`, `render.yaml`). Funnel on this machine was a laptop prototype. Optional: `https://warmersun.com/cloud` 302s to the Render URL.
 
 ---
@@ -430,7 +430,7 @@ Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node pro
 
 - Verifies Clerk JWTs  
 - Owns Neon (`runs`, entitlements, quotas)  
-- Pays xAI for Cloud users and meters it  
+- Does **not** call xAI — live co-inventor / Imagine / TTS is **game**  
 - Is the **only** client that can read gated catalog files  
 
 here.now stays a **CDN for files**.
@@ -441,13 +441,13 @@ Browser
   ├─ public here.now     free SPA, free catalog JSON, theme play
   │                      (anyone can GET)
   │
-  └─ portal (Render)     Clerk + Neon + AI + play + Friends WS
+  └─ portal (Render)     Clerk + Neon + play + Friends WS (no xAI)
          │
          └─ gated here.now   paid tiles, aiTutorContext, official Daily bodies
                              credential known only to portal
 ```
 
-**Public Site** — game shell, open tiles, marketing. Free stuff never needs the host (except Cloud AI, if we even offer that unsigned — default: no).
+**Public Site** — game shell, open tiles, marketing. Free stuff never needs the host.
 
 **Gated Site** — password-protected (or a here.now **Drive** with an API key — same idea, better for servers). Browsers get 401. The host stores `HERENOW_GATED_SECRET` (or Drive token) in env, fetches JSON server-side, and only then returns a lesson to a Clerk user who is allowed.
 
@@ -459,14 +459,14 @@ Browser
 
 **Caveat:** confirm here.now **site password** is something Node can send (HTTP Basic / header), not only a browser interstitial + cookie. If it is cookie-only, use a **Drive + API key** instead of a passworded Site — same split, designed for server fetch.
 
-**Does not live on here.now:** Neon, Clerk verify, WebSockets, xAI. Optional here.now **proxy** `/api/*` → Render is fine so the public SPA can look same-origin-ish; the gate is still portal. Cloud players can also load the SPA from Render (same origin).
+**Does not live on here.now:** Neon, Clerk verify, WebSockets. Live xAI is **game**, not portal. Optional here.now **proxy** `/api/*` → Render is fine so the public SPA can look same-origin-ish; the gate is still portal. Cloud players can also load the SPA from Render (same origin).
 
 ### Where it runs
 
 Render **Web Service** (see `render.yaml`):
 
 1. Build `npm install`. Start `npm run portal`. Health `GET /api/health`.  
-2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_XAI_API_KEY`, `FF_TRUST_PROXY=1`. Render injects `PORT`.  
+2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY`.** Render injects `PORT`.  
 3. Optional: on warmersun.com, **`/cloud` → 302** to `https://<service>.onrender.com` (or a custom domain later).
 
 Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env`). Engine only: `npm start`.

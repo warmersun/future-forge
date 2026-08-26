@@ -2,8 +2,8 @@
  * Warmer Sun Cloud (portal) — hosted Future Forge + Clerk + Neon.
  * Render Web Service: listen on PORT (or FF_PORT), host 0.0.0.0.
  * The self-host engine is ../server.mjs (game). Do not run both on one port.
- * Auth: SuperGrok session from ~/.grok/auth.json (same login as Grok CLI).
- * Optional fallback: FF_XAI_API_KEY. Local co-inventor if nothing works.
+ * Portal does not use xAI / SuperGrok. Live co-inventor, Imagine, and TTS are game.
+ * Hex play still works; /api/co-invent uses the local heuristic partner only.
  */
 
 import http from "node:http";
@@ -102,8 +102,6 @@ import {
   updateProfile,
   listSharedHolds,
   setRunShare,
-  getAiHits,
-  incrementAiHits,
   listPins,
   replacePins,
   getRunState,
@@ -112,7 +110,6 @@ import {
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
-import { userQuotaDecision, freeDailyCapFromEnv } from "../js/server/ai-quota.mjs";
 import {
   parseProfilePatch,
   publicInventorPage,
@@ -148,7 +145,6 @@ import {
   foundingCodes,
 } from "../js/server/achievements.mjs";
 import {
-  resolveAiSearchEnabled,
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
   SEARCH_SYSTEM_LINE,
@@ -172,10 +168,7 @@ const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
 const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
 const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
-const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
-const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
-const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
 
 function loadEnvFile() {
   const candidates = [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")];
@@ -254,13 +247,9 @@ const DEVELOPER_MODE = resolveDeveloperEnabled(
 );
 
 /**
- * Live web + X search on timing assess and idea-sparks. Off by default.
- * Enable with `node server.mjs --ai-search` or FF_AI_SEARCH=1.
+ * Live web + X search is game-only. Portal never enables it, even if FF_AI_SEARCH=1.
  */
-const AI_SEARCH_ENABLED = resolveAiSearchEnabled(
-  process.argv.slice(2),
-  process.env
-);
+const AI_SEARCH_ENABLED = false;
 
 /** Filled after handleCoInvent is defined (see bottom rooms wire). */
 const roomManager = ROOMS_ENABLED
@@ -288,24 +277,7 @@ async function gateExpensive(req, route, body = null) {
     isLoopback: isLoopbackSocket(req),
   });
   if (!secret.ok) return secret;
-  if (dbEnabled()) {
-    try {
-      const ident = await authenticateClerkRequest(req);
-      if (ident.signedIn && ident.userId) {
-        const day = utcDayString();
-        const used = await getAiHits(ident.userId, day);
-        const q = userQuotaDecision({
-          signedIn: true,
-          used,
-          cap: freeDailyCapFromEnv(),
-        });
-        if (!q.ok) return q;
-        await incrementAiHits(ident.userId, day);
-      }
-    } catch (e) {
-      console.warn("[ai quota]", e?.message || e);
-    }
-  }
+  // No live xAI on portal — do not burn Cloud AI quota on local heuristics.
   return { ok: true, ip };
 }
 
@@ -412,113 +384,10 @@ function lanJoinUrls() {
 /** @type {{ source: 'supergrok'|'api-key'|null, email?: string }} */
 let authInfo = { source: null };
 
-function readAuthFile() {
-  try {
-    if (!fs.existsSync(AUTH_PATH)) return null;
-    const data = JSON.parse(fs.readFileSync(AUTH_PATH, "utf8"));
-    const entries = Object.entries(data || {});
-    if (!entries.length) return null;
-    // Prefer auth.x.ai session entries
-    entries.sort(([a], [b]) => {
-      const score = (k) => (k.includes("auth.x.ai") ? 0 : 1);
-      return score(a) - score(b);
-    });
-    const [storeKey, entry] = entries[0];
-    if (!entry?.key) return null;
-    return { storeKey, entry, all: data };
-  } catch {
-    return null;
-  }
-}
-
-function writeAuthEntry(storeKey, entry, all) {
-  try {
-    const next = { ...all, [storeKey]: entry };
-    fs.writeFileSync(AUTH_PATH, JSON.stringify(next, null, 2), { mode: 0o600 });
-  } catch (e) {
-    console.warn("[auth] could not persist refreshed token:", e.message);
-  }
-}
-
-function tokenExpired(entry, skewMs = 60_000) {
-  if (!entry?.expires_at) return false;
-  const exp = Date.parse(entry.expires_at);
-  if (Number.isNaN(exp)) return false;
-  return Date.now() >= exp - skewMs;
-}
-
-async function refreshSuperGrokToken(storeKey, entry, all) {
-  if (!entry.refresh_token || !entry.oidc_client_id) {
-    throw new Error("SuperGrok session has no refresh token — run: grok login");
-  }
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: entry.refresh_token,
-    client_id: entry.oidc_client_id,
-  });
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`SuperGrok token refresh failed (${res.status}): ${text.slice(0, 120)}`);
-  }
-  const out = await res.json();
-  const access = out.access_token;
-  if (!access) throw new Error("SuperGrok refresh returned no access_token");
-  const expiresIn = Number(out.expires_in) || 21600;
-  const updated = {
-    ...entry,
-    key: access,
-    refresh_token: out.refresh_token || entry.refresh_token,
-    expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
-  };
-  writeAuthEntry(storeKey, updated, all);
-  return updated.key;
-}
-
-/**
- * Resolve bearer token: SuperGrok login first, then optional API key.
- * Never expose tokens to the browser.
- */
-async function resolveAccessToken({ forceRefresh = false } = {}) {
-  const session = readAuthFile();
-  if (session) {
-    let { storeKey, entry, all } = session;
-    try {
-      if (forceRefresh || tokenExpired(entry)) {
-        const token = await refreshSuperGrokToken(storeKey, entry, all);
-        authInfo = { source: "supergrok", email: entry.email };
-        return token;
-      }
-      authInfo = { source: "supergrok", email: entry.email };
-      return entry.key;
-    } catch (e) {
-      console.warn("[auth]", e.message);
-      // fall through to API key if any
-    }
-  }
-
-  const apiKey = process.env.FF_XAI_API_KEY || "";
-  // Intentionally ignore bare GROK_API_KEY env noise when SuperGrok session is preferred;
-  // only FF_XAI_API_KEY is treated as an explicit console key override.
-  if (apiKey && !apiKey.startsWith("eyJ")) {
-    // If it looks like a console key (xai-...), use it only when no session worked
-    if (!session) {
-      authInfo = { source: "api-key" };
-      return apiKey;
-    }
-  }
-
-  if (!session) {
-    authInfo = { source: null };
-    return null;
-  }
-  // Session existed but refresh failed — last try with existing key
-  authInfo = { source: "supergrok", email: session.entry.email };
-  return session.entry.key;
+/** Portal never pays xAI. SuperGrok / FF_XAI_API_KEY are game (`npm start`) only. */
+async function resolveAccessToken() {
+  authInfo = { source: null };
+  return null;
 }
 
 async function getClient(opts) {
@@ -3193,27 +3062,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && req.url?.startsWith("/api/health")) {
-    // Probe auth without blocking on refresh unless needed
-    let ai = false;
-    try {
-      const token = await resolveAccessToken();
-      ai = Boolean(token);
-    } catch {
-      ai = false;
-    }
     /** Public health — no LAN IPs / paths / room counts (Funnel-safe). */
     const publicHealth = {
       ok: true,
       coInventor: true,
-      vision: ai,
-      ai,
-      auth: authInfo.source ? "configured" : null,
+      vision: false,
+      ai: false,
+      auth: null,
       rooms: ROOMS_ENABLED,
       features: {
         actionPoints: Boolean(GAME.features?.actionPoints),
         budgetWill: Boolean(GAME.features?.budgetWill),
         rooms: ROOMS_ENABLED,
-        tts: ai,
+        tts: false,
         ttsVoice: TTS_VOICE,
       },
       usageEnabled: usage.enabled,
@@ -4384,11 +4245,7 @@ server.listen(PORT, HOST, async () => {
   } else {
     console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
   }
-  if (AI_SEARCH_ENABLED) {
-    console.log("AI search: ON (web + X on timing assess and idea-sparks)");
-  } else {
-    console.log("AI search: OFF (pass --ai-search or set FF_AI_SEARCH=1 to enable)");
-  }
+  console.log("AI search: OFF (portal does not use live AI; that is game)");
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR);
     console.log(
@@ -4471,20 +4328,7 @@ server.listen(PORT, HOST, async () => {
       "Learner accounts: OFF (set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY)"
     );
   }
-  try {
-    const token = await resolveAccessToken();
-    if (token && authInfo.source === "supergrok") {
-      console.log(
-        `Co-inventor: SuperGrok session${authInfo.email ? ` (${authInfo.email})` : ""} · model ${MODEL}`
-      );
-    } else if (token) {
-      console.log(`Co-inventor: API key auth · model ${MODEL}`);
-    } else {
-      console.log("Co-inventor: local only — run `grok login` for SuperGrok");
-    }
-  } catch (e) {
-    console.log("Co-inventor: local only —", e.message);
-  }
+  console.log("AI: off — portal does not use xAI / SuperGrok (that is game)");
 });
 
 function safeWs(socket, obj) {

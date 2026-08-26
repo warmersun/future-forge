@@ -52,7 +52,7 @@ Open **http://127.0.0.1:8765**
 | Command | Purpose |
 |--------|---------|
 | `npm start` / `npm run serve` | **game** — Future Forge engine (`server.mjs`). No Clerk, no Neon. |
-| `npm run portal` | **portal** — Warmer Sun Cloud (`portal/server.mjs`). Sign-in + Neon. What Render runs. |
+| `npm run portal` | **portal** — Warmer Sun Cloud (`portal/server.mjs`). Sign-in + Neon. No xAI. What Render runs. |
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
@@ -120,7 +120,7 @@ The Node server serves static files and exposes:
 - `GET /api/me` — **portal** only: Clerk learner identity (unsigned play still works)  
 - `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
-**AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) are resolved **on the server** and never go to the browser. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
+**AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) are resolved **on game** (`npm start`) and never go to the browser. **portal** does not use them. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
 
 ### Server hardening (static, rates, admin)
 
@@ -280,7 +280,7 @@ This is a **long-running Node process**, not a static-only site (unless you acce
 
 1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
 2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
-3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled for migrations), `FF_XAI_API_KEY`, `FF_TRUST_PROXY=1`.
+3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled for migrations), `FF_TRUST_PROXY=1`. No xAI key — **portal does not use AI**.
 4. Clerk Dashboard: add `https://<service>.onrender.com` to allowed origins / authorized parties. Webhook: `https://<service>.onrender.com/api/webhooks/clerk`.
 
 **game** (self-host / Invent Night): `npm start` on a LAN box. No Clerk, no Neon.
