@@ -235,6 +235,7 @@ export function rankBoard(rows, opts = {}) {
         yearReached: r.yearReached ?? r.year_reached ?? null,
         stars: r.stars ?? 0,
         waits: r.waits ?? 0,
+        clerkUserId: r.clerkUserId || r.clerk_user_id || uid,
       };
     }
   }

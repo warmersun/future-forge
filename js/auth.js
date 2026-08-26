@@ -193,6 +193,7 @@ export function isCloudApiPath(url) {
   if (path === "/api/weekly" || path.startsWith("/api/weekly/")) return true;
   if (path.startsWith("/api/u/")) return true;
   if (path === "/api/report" || path.startsWith("/api/report/")) return true;
+  if (path === "/api/board" || path.startsWith("/api/board/")) return true;
   return false;
 }
 

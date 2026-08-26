@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-6" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-14" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -51,7 +51,7 @@
             </p>
           </div>
         </div>
-        <p id="cloud-streak-chip" class="cloud-streak-chip" hidden></p>
+        <button type="button" id="cloud-streak-chip" class="cloud-streak-chip" hidden></button>
         <p id="cloud-achievements-strip" class="cloud-achievements-strip" hidden></p>
         <p class="tagline" id="game-tagline">
           Invent local pathways with emerging tech — place them on the board as the future arrives.
@@ -89,7 +89,7 @@
             Profile
           </button>
           <button type="button" class="btn btn-ghost" id="btn-daily-board" hidden>
-            Daily board
+            Leaderboard
           </button>
           <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
             Start a Quest →
@@ -165,6 +165,7 @@
         <div class="section-intro">
           <h1>Inventor page</h1>
           <p>Opt-in and private by default. Never shows your email.</p>
+          <p id="cloud-profile-streak" class="cloud-streak-chip" hidden></p>
         </div>
         <form id="cloud-profile-form" class="panel cloud-profile-form">
           <div class="field">
@@ -208,17 +209,17 @@
           </div>
         </div>
         <div class="progress-pills">
-          <span class="pill active">Daily</span>
+          <span class="pill active">Leaderboard</span>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-board-back">← Home</button>
       </header>
       <div class="content">
         <div class="section-intro">
-          <h1 id="daily-board-title">Daily hold board</h1>
-          <p>
-            UTC day <span id="daily-board-date"></span> — same official job for everyone.
-            Unsigned practice does not count.
+          <h1 id="daily-board-title">Leaderboard</h1>
+          <p id="daily-board-blurb">
+            Same quest, comparable invents. Sign in for your hold to count.
           </p>
+          <p id="daily-board-date" class="muted"></p>
         </div>
         <p id="daily-board-you" class="quest-log-item-meta" hidden></p>
         <p id="daily-board-empty" class="muted">No holds yet today. Be first.</p>
@@ -1968,6 +1969,12 @@
           <p id="outcome-story"></p>
         </div>
 
+        <div id="outcome-pathway" class="future-story" hidden>
+          <h3>Your pathway</h3>
+          <p id="outcome-pathway-text" class="outcome-pathway-text"></p>
+          <p id="outcome-board-rank" class="quest-log-item-meta" hidden></p>
+        </div>
+
         <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>
 
@@ -2378,6 +2385,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-12"></script>
+    <script type="module" src="js/main.js?v=portal-14"></script>
   </body>
 </html>

@@ -20,6 +20,9 @@ describe("isCloudApiPath", () => {
     assert.equal(isCloudApiPath("/api/me"), true);
     assert.equal(isCloudApiPath("/api/me/runs?kind=daily"), true);
     assert.equal(isCloudApiPath("/api/daily"), true);
+    assert.equal(isCloudApiPath("/api/board/lesson-1"), true);
+    assert.equal(isCloudApiPath("/api/board/lesson-1/still/user_abc"), true);
+    assert.equal(isCloudApiPath("/api/me/quests/lesson-1/score"), true);
     assert.equal(isCloudApiPath("/api/health"), true);
     assert.equal(isCloudApiPath("/api/co-invent"), false);
     assert.equal(isCloudApiPath("/api/quests"), false);

@@ -1,8 +1,8 @@
 # Warmer Sun Cloud — what we can build now
 
-**Status:** ideation plus a few locked building blocks. See **implemented / ready / todo** below.  
+**Status:** **done / ready / todo** below. Cloud APIs are live on Render; the playable SPA is **game**.  
 **Clerk application:** `Warmer Sun Cloud`  
-**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1).
+**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned (migrations `001`–`010`). Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1). Continue: [C3](#C3).
 
 **game** vs **portal** (same git repo, two Node processes):
 
@@ -13,13 +13,13 @@
 
 Do not run both on port 8765. Render runs **only portal**.
 
-This note is a menu. Each item is: the **idea**, then a **short how**. Pick later. Do not build all of it.
+Letter IDs that are **done** are in the repo. **Ready** means the next work is code, not a vendor search. That bucket is empty: every feature we could write on Clerk + Neon + Render is **done**. **Todo** waits on **another building block** (a vendor or ops pick). Until we provision one, nothing moves to Ready.
 
 ---
 
 ## Stance
 
-**The product is for people.** Someone curious about emerging tech, a friend at Invent Night, a teenager who wants a practice, an adult who wants a daily invent. Direct to consumer. Warmer Sun Cloud is the **hosted game + account + catalog**, not a school platform.
+**The product is for people.** Someone curious about emerging tech, a friend at Invent Night, a teenager who wants a practice, an adult who wants a daily invent. Direct to consumer. Warmer Sun Cloud is the **hosted account + catalog APIs** (portal); the playable SPA is **game**. Not a school platform.
 
 **The engine stays free.** Self-host, unsigned play, friends in a room, hex invent — that remains the CC / hobby path. Cloud is what you **cannot keep in one browser**: a name that follows you, a history, a paid catalog, a public scoreboard, AI that we pay for.
 
@@ -35,12 +35,12 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 |--------|--------|
 | Identity | Clerk (`user_…`). Optional. Sign in / UserButton / Sign out works. |
 | Play | Works unsigned. Self-host needs no Clerk. |
-| Progress | `localStorage` always (cache). Signed-in + `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). |
-| Daily | Server `GET /api/daily` picks one UTC-day tile ([D1](#D1)). Unsigned practice does not submit. |
-| Lessons | Quest tiles with `isLearningModule`. Tutor UI. No paywall. No cloud progress. |
-| Friends | Rooms + WebSocket. Names are per room, not Clerk. |
+| Progress | `localStorage` always (cache). Signed-in + portal `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). Continue board: [C3](#C3). |
+| Daily | Portal `GET /api/daily` picks one UTC-day tile ([D1](#D1)). Unsigned practice does not submit. **Not a hub card** — new lessons land under **Learning**. |
+| Lessons | Quest tiles with `isLearningModule`. Tutor UI gated by [A1](#A1). No paywall ([B1](#B1) todo). Cloud progress via [C1](#C1) / [C3](#C3). |
+| Friends | Rooms + WebSocket on **game**. Signed-in players send Clerk names ([E4](#E4)). Unsigned stays per-room names. |
 | Money | None in software. `COMMERCIAL.md` is a **license** conversation (self-host / education / commercial / cloud operator). Clerk Billing is unused. |
-| Database | **Neon Postgres** (`DATABASE_URL` in gitignored `.env.portal`, pooler host, `us-west-2`). Empty of Cloud tables. Usage JSONL is still only operator cost logs. |
+| Database | **Neon Postgres** (`DATABASE_URL` in gitignored `.env.portal`, pooler host, `us-west-2`). Cloud tables from `js/server/db/*.sql`. Usage JSONL is still only operator cost logs. |
 
 **Implementation default for almost everything below**
 
@@ -54,23 +54,24 @@ Clerk user `publicMetadata` / `unsafeMetadata` is **not** a save game. Boards an
 
 ---
 
-## Status: implemented / ready / todo
+## Status: done / ready / todo
 
-Three buckets. **Implemented** is in the repo or provisioned. **Ready** means the architecture is in place (Clerk identity + Neon) so the next work is code, not a vendor search. **Todo** still needs a pick (host, Billing, production Clerk) or is explicitly later.
+Three buckets. **Done** is in the repo or provisioned. **Ready** means a building block exists so the next work is code, not a vendor search. **Todo** still needs a building block (or is later product). Empty Ready + leftover Todo = pick the next block, then features become Ready.
 
-### Implemented
+### Done
 
 | Item | Where |
 |------|--------|
-| Optional Sign in / UserButton / Sign out | `feat/clerk-auth`, `js/auth.js` |
-| [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; hub lock |
+| Optional Sign in / UserButton / Sign out | `feat/clerk-auth`, `js/auth.js` — on **game**; session JWT to portal |
+| [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; Learning lock |
+| **App host** = **portal** | Render Web Service, `npm run portal`. Live: `https://future-forge-0yil.onrender.com`. [H](#H). |
 | `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/server.mjs`, `js/server/clerk-auth.mjs` |
 | [**A2**](#A2) save-at-pride / first sign-in import | `POST /api/me/import`, `POST /api/me/runs`; outcome Sign in CTA; union merge ([C4](#C4)) |
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
-| SQL migrations `users` / `solved_quests` / `runs` | `js/server/db/001_users_solved_runs.sql`, `pg` Pool |
+| SQL migrations `users` / `solved_quests` / `runs` / `run_state` | `js/server/db/001_*.sql` … `010_c3_full_run_state.sql`, `pg` Pool |
 | [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
-| [**D1**](#D1) Daily hold board | `GET /api/daily`, `POST /api/daily/submit`, `GET /api/daily/board` |
-| [**D2**](#D2) Seasonal / weekly board | `GET /api/weekly` + `period=YYYY-Www` on `daily_scores` |
+| [**D1**](#D1) Per-quest leaderboard | `quest_scores` + `GET /api/board/:questId`; Daily is a featured door. Stills: top 3 BYTEA |
+| [**D2**](#D2) Featured week door | `GET /api/weekly` still picks a tile; ranking is that tile’s quest board |
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
 | [**E2**](#E2) Streaks | `GET /api/me/streak` from official daily_scores |
@@ -82,38 +83,44 @@ Three buckets. **Implemented** is in the repo or provisioned. **Ready** means th
 | [**E7**](#E7) Founding / season badges | first 100 accounts; Invent Night 2026 on Wednesday Friends |
 | [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk → DB webhooks | `POST /api/webhooks/clerk` verifies Svix; user.deleted cascades Neon rows |
-| [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state`; strips data-URL art; Continue on title |
+| [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state` — hex, invent panel, chats; strips data-URL art; Continue on title |
 | Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env.portal` |
 | Neon project, pooler `DATABASE_URL` (gitignored) | `.env.portal`; pinged `neondb` as `neondb_owner` |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
 | No ORM; Clerk = identity, Neon = Postgres only | [Decisions locked](#decisions-locked) |
-| Unsigned engine: localStorage progress, client Daily, learning tiles, Friends WS, usage JSONL | existing game |
+| Unsigned engine: localStorage progress, theme play, learning tiles, Friends WS, usage JSONL | existing **game** |
 | Paper licenses (self-host / education / commercial / cloud operator) | `COMMERCIAL.md` — [F1](#F1), [F3](#F3), [F4](#F4) as **contracts**, not Cloud UX |
 
 ### Ready (building blocks exist — write the feature)
 
-All previously **ready** lettered IDs are implemented except this A1 row (already implemented; Daily **count** is D1). Webhooks ship.
+None. Clerk + Neon + Render are spent: every lettered ID those blocks unlocked is **done**. Remaining IDs stay **todo** until we pick another block (table below).
 
-| Item | Why it is ready |
-|------|-----------------|
-| [**A1**](#A1) Account door | **Implemented:** strip tutor context on `GET /api/quests`, `401` tutor co-invent, hub Sign in lock. Daily **count** is [D1](#D1). Gated CDN is [H](#H). |
+### Next building blocks (would fill Ready)
 
+The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. Each row here is a *pick*, not a feature. After the pick, the listed IDs become **ready**.
 
+| Building block | What to pick | Then Ready |
+|----------------|--------------|------------|
+| **Clerk production** | Claim the app; `pk_live_` / `sk_live_`; production instance | Real users on a public origin. Not a lettered feature — ops so Cloud is not on keyless dev keys. |
+| **Clerk Billing** | Enable Billing; Free vs Cloud plans; `subscription.*` webhooks | [B1](#B1) paid modules, [B2](#B2) quota by plan. Same vendor as identity. |
+| **Clerk Organizations** | Enable Orgs (with Billing) | [F2](#F2) company seats. Only when a company asks with money. |
+| **Gated catalog CDN** | here.now passworded Site or Drive API key (`HERENOW_GATED_SECRET`) | Finish [A1](#A1): `aiTutorContext` off the public CDN. Portal already strips on *our* API. |
+| **Marketing surface** | Where `warmersun.com` is served; optional `/cloud` 302 | [E10](#E10) Daily as homepage; [E1](#E1) `warmersun.com/u/…`. In-game pages are already **done**. |
+| **Legal** | ToS / privacy that names stored runs | Paper. Cloud already writes Neon. |
+| **Observability** | Beyond Render logs | Ops. Not a player feature. |
 
-### Todo (missing a pick or a later product)
+### Todo (missing a building block or later product)
 
 | Item | Why it is todo |
 |------|----------------|
-| **App host** = **portal** | **Picked:** Render Web Service, `npm run portal`. [H](#H). Ops: Clerk origins, webhook URL, optional `warmersun.com/cloud` redirect. |
 | **Clerk production** instance | Claim the keyless app; `pk_live_` / `sk_live_`; custom domain |
 | [**B1**](#B1) Paid lesson modules | Clerk **Billing** not enabled |
 | [**B2**](#B2) Quota by paid plan | same |
-| [**E5**](#E5) Pathway gallery as a public site | Needs a host; images may need object storage (not picked) |
 | [**E10**](#E10) Daily as warmersun.com homepage | Catalog site vs game process still two surfaces |
 | [**F2**](#F2) Company seats on our Cloud | Clerk Organizations + Billing not on |
-| Object storage (R2 / Tigris) | Only when gallery stills are real |
-| Legal: ToS / privacy for **stored runs** | Site privacy exists; Cloud save is new data |
-| Observability beyond console | Fine until we have a host |
+| Legal: ToS / privacy for **stored runs** | Site privacy exists; Cloud already stores runs — paper should catch up |
+| Observability beyond console | Render logs today |
+| Optional: `warmersun.com/cloud` redirect | Ops after first deploy |
 
 [**E9**](#E9) (cross-device is why Sign in exists) is a product rule, not a feature — it is [C1](#C1)+[C3](#C3)+[A2](#A2). [**D3**](#D3) (what not to rank) is a rule, not work.
 
@@ -123,15 +130,15 @@ All previously **ready** lettered IDs are implemented except this A1 row (alread
 ## A. Account as a door (not as the whole game)
 
 <a id="A1"></a>
-### A1. “You need an account for lessons and the official Daily” — **implemented** (Node gate + hub lock); Daily **count** still [D1](#D1); CDN leak still [H](#H)
+### A1. “You need an account for lessons and the official Daily” — **done** (Node gate + Learning lock); Daily **count** still [D1](#D1); CDN leak still [H](#H)
 
-**Idea.** Core invent (pick a theme, hex board, friends, surprise mission) stays open. The **catalog that we curate** — Daily, learning modules, sponsored spotlights — asks you to sign in. Reason: those are *our* drops, they cost us AI, and they only mean something if the same person can come back tomorrow.
+**Idea.** Core invent (pick a theme, hex board, friends, surprise mission) stays open. The **catalog that we curate** — learning modules, sponsored spotlights — asks you to sign in. Reason: those are *our* drops, they cost us AI, and they only mean something if the same person can come back tomorrow.
 
 **How.**  
-- Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules and official Daily = `account`.  
-- Hub already splits Themes / Sponsored / Learning. Unsigned: Learning and Daily cards show a lock + Sign in.  
-- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate: no session → no start token, no official Daily submit, no tutor context. **game** does not gate.  
-- `GET /api/quests` may list cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. **Starting** (`POST /api/runs`) and tutor AI (`POST /api/co-invent` in tutor mode) require a verified Clerk JWT. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check.  
+- Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules = `account`.  
+- Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: Learning (and `access: account|paid` tiles) show a lock + Sign in. Official Daily/weekly are **not** hub cards — new lessons land under Learning. Daily **count** is [D1](#D1).  
+- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate: no session → no tutor context, no official Daily submit. **game** does not gate theme play.  
+- `GET /api/quests` may list cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
 - Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins.
 
@@ -140,7 +147,7 @@ All previously **ready** lettered IDs are implemented except this A1 row (alread
 **Softer variant:** anyone can *play* Daily; you need an account to **count** it (streak, leaderboard, “I held the pathway”). Practice vs official.
 
 <a id="A2"></a>
-### A2. Soft account, hard save — **implemented** (import + live run write; quest-log UI is [C1](#C1))
+### A2. Soft account, hard save — **done** (import + live run write; quest-log UI is [C1](#C1))
 
 **Idea.** Never block the first quest. After “pathway holds,” prompt: *Save this to your Warmer Sun Cloud account.* Conversion at the moment of pride, not at the door.
 
@@ -166,14 +173,14 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 - Self-host without Clerk: all local `quests/` tiles playable (operator’s catalog, operator’s AI bill). Paywall is **Warmer Sun Cloud’s** catalog, not the engine.
 
 <a id="B2"></a>
-### B2. Meter the expensive bit (AI), not the hexes — **implemented** (free cap); **todo** (plan cap)
+### B2. Meter the expensive bit (AI), not the hexes — **done** (free cap); **todo** (plan cap)
 
 **Idea.** Hex invent is cheap. Co-inventor, Imagine, TTS are not. Free account: daily AI budget. Paid: higher cap. Prevents “free Cloud” from becoming an xAI invoice.
 
-**How.** We already have usage JSONL + per-IP rate limits. Add per-`clerk_user_id` daily counters in the DB. `gateExpensive` consults identity when present: unsigned IP limit (LAN/self-host); signed Cloud uses user quota by plan. Return `402` / `429` with a plain message: *Today’s co-inventor energy is spent — comes back at midnight, or upgrade.*
+**How.** Usage JSONL + per-IP rate limits stay for unsigned / self-host. Signed Cloud uses per-`clerk_user_id` daily counters in Neon. `gateExpensive` consults identity when present. Return `402` / `429` with a plain message: *Today’s co-inventor energy is spent — comes back at midnight, or upgrade.* Plan-based caps wait on [B1](#B1).
 
 <a id="B3"></a>
-### B3. Sponsored lessons stay free (with a name) — **implemented**
+### B3. Sponsored lessons stay free (with a name) — **done**
 
 **Idea.** A company pays **us** to author a spotlight (already have `sponsorName`). Player does not pay. That is advertising / patronage, not a student license.
 
@@ -187,7 +194,7 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 Replace “this laptop remembers” with “your account remembers.”
 
 <a id="C1"></a>
-### C1. Quest log — **implemented**
+### C1. Quest log — **done**
 
 **Idea.** A list: what you started, what you held, what collapsed, which Daily dates, which lesson N/M. Open it on your phone tomorrow.
 
@@ -196,10 +203,10 @@ Table `runs` (`id`, `clerk_user_id`, `quest_id`, `kind` daily|theme|lesson|frien
 Write on start and on outcome (the same moment we write `STORAGE_SOLVED` / run reports).  
 `GET /api/me/runs`. Profile screen: list + filters. Unsigned: keep localStorage only.
 
-Do **not** upload full hex boards in v1 unless we need Continue ([C3](#C3)). A log row is enough for “what I took.”
+A log row is enough for “what I took.” The live workshop (hex, invent panel, chats) is [C3](#C3).
 
 <a id="C2"></a>
-### C2. Achievements — **implemented**
+### C2. Achievements — **done**
 
 **Idea.** Consumer badges, not transcripts. *Held a pathway. Held three Dailies in a week. Used a converter to dock bits to atoms. Summoned all four challengers. Invented on a sponsored spotlight. First Friends hold.* Flavor in the practice’s language.
 
@@ -209,14 +216,14 @@ Server awards on run complete from a small rules file (`js/server/achievements.m
 Surface: UserButton menu → Achievements, and a strip on the title screen when signed in.
 
 <a id="C3"></a>
-### C3. Continue the board — **implemented** (v2; Neon can hold JSON)
+### C3. Continue the board — **done**
 
 **Idea.** Close the laptop mid-quest, open another device, board and crisis lights are still there.
 
-**How.** Harder. Snapshot `hex` board JSON (we already strip data-URL art for multiplayer wire). Table `run_state` (current run, board blob, mission id, year, tutor flag). Debounced `PUT` while playing; restore on load if signed in. Cap blob size; store Imagine images by cache key, not inline. v2.
+**How.** Snapshot the full workshop: hex board, invent panel (R&D, AI idea sparks, user-minted custom tiles), co-inventor + tutor chats. Table `run_state` (`board`, `play`, `chats` JSONB, mission id, year, tutor flag). Debounced `PUT` while playing; restore Continue on the title screen if signed in. Strip `data:` Imagine stills on the way in so the PUT does not 413. Cap blob size.
 
 <a id="C4"></a>
-### C4. Merge on first sign-in — **implemented** (solved-id union + last completed run; board continue is [C3](#C3))
+### C4. Merge on first sign-in — **done** (solved-id union + last completed run; board continue is [C3](#C3))
 
 **Idea.** People will invent unsigned, then Sign in. Don’t lose the local solved set.
 
@@ -230,23 +237,23 @@ Surface: UserButton menu → Achievements, and a strip on the title screen when 
 Leaderboards only work if **everyone got the same job**. That is Daily (or a named seasonal quest), not “any theme you picked.”
 
 <a id="D1"></a>
-### D1. Daily hold board — **implemented**
+### D1. Per-quest leaderboard — **done** (portal APIs; title + catalog)
 
-**Idea.** UTC day D: one official mission (server-picked, same tile for all Cloud players). Leaderboard: who held the pathway, how early (calendar year in-game), stars, maybe fewest Wait ticks. Reset next day. Yesterday’s board stays readable.
+**Idea.** One board per **stable catalog quest** (Learning, sponsored, official Daily tile). Same job → comparable invents. Theme `gen-…` missions have no board. Each signed-in person appears **once** (personal best). Rank: earlier in-game year, then more stars, then fewer waits. The **pathway write-up** (placed invents + how-it-works) sits on the row. Vision stills only for the **current top 3** (`BYTEA` in Neon).
 
 **How.**  
-- Server `GET /api/daily?date=YYYY-MM-DD` returns the canonical tile (stop hashing only in the browser).  
-- On hold, `POST /api/daily/submit` with outcome stats. Server verifies session, checks the run is that day’s id, writes `daily_scores`.  
-- `GET /api/daily/board` returns top N + **your** row. Display Clerk first name / chosen username, not email.  
-- Anti-cheat v1 is modest: must have a server-started run id; ignore impossible years; one row per user per day (best score). Dedicated cheaters are a later problem.  
-- Unsigned can still play a *local* daily; it does not submit.
+- `POST /api/me/quests/:id/score` copies year/stars/waits from the owned `runs` row; stores `pathway_text`.  
+- `PUT /api/me/quests/:id/still` JPEG if that user is in the top 3. Displace deletes the blob.  
+- `GET /api/board/:questId` public top N + you + write-ups; `GET /api/board/:id/still/:user` the JPEG.  
+- Official Daily `GET /api/daily/board` is that tile’s **quest** board (not a UTC-day ranking). `daily_scores` remains for streaks.  
+- Unsigned practice does not submit.
 
 <a id="D2"></a>
-### D2. Seasonal / weekly — **implemented**
+### D2. Seasonal / weekly — **done** (featured door)
 
-**Idea.** Invent Night already locks a Wednesday. Cloud can lock a **Quest of the week** — same spotlight for seven days, a week board, a champion strip on warmersun.com.
+**Idea.** Invent Night already locks a Wednesday. Cloud can feature a **Quest of the week** — same spotlight for seven days. Ranking is that tile’s [D1](#D1) board, not a separate ISO-week table.
 
-**How.** Same as [D1](#D1) with `period=2026-W34` instead of a date. Editorial: we publish the tile in `quests/` and point Daily/weekly at it.
+**How.** `GET /api/weekly` picks the tile. Submit still check-ins `daily_scores` for the week period (streak/habit). The public list is `GET /api/board/:questId`.
 
 <a id="D3"></a>
 ### D3. What not to rank
@@ -259,56 +266,54 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 ## E. Other consumer things that fit
 
 <a id="E1"></a>
-### E1. Public inventor page — **implemented** in-game; **todo** as `warmersun.com/u/…`
+### E1. Public inventor page — **done** in-game; **todo** as `warmersun.com/u/…`
 
 **Idea.** `warmersun.com/u/sic` — display name, badges, last few public holds, favorite emTech. Opt-in. Default private.
 
 **How.** `users.profile` (`username` unique, `bio`, `public` bool). Username via Clerk or our table. Only publish runs with `share: true` (outcome screen already has a share card — add “Publish to my page”).
 
 <a id="E2"></a>
-### E2. Streaks (the Daily habit) — **implemented**
+### E2. Streaks (the Daily habit) — **done**
 
 **Idea.** A fire for consecutive official Dailies, not for logging in. Invent Night is weekly; Daily is the solo habit.
 
 **How.** Derived from `daily_scores`. Show on title chip: *3 days*. Missing a day breaks it. No guilt email.
 
 <a id="E3"></a>
-### E3. Pins in the cloud (watch later) — **implemented**
+### E3. Pins in the cloud (watch later) — **done**
 
 **Idea.** Three pins already exist locally. Signed-in, they follow you. “I want this mission when I have an hour.”
 
 **How.** Table `pins` (max 3 server-side). Replace `future-forge:pins` when signed in.
 
 <a id="E4"></a>
-### E4. Friends rooms with real names — **implemented**
+### E4. Friends rooms with real names — **done**
 
 **Idea.** Invent with friends, but the host sees *Tamas*, not `Player 2`, and the run can land on everyone’s quest log.
 
 **How.** On room create/join, pass Clerk user id (server already has the JWT on REST). Store `clerk_user_id` on the room player. Outcome fan-out: each signed-in player gets a `runs` row (`kind: friends`). Unsigned guests still play; they just don’t keep the souvenir.
 
 <a id="E5"></a>
-### E5. Pathway gallery (show the invent, not the grade) — **todo** (host; optional object storage)
+### E5. Pathway gallery — **dropped** (was a dump of every published hold)
 
-**Idea.** A public feed of **held pathways**: place, stack, one-line how-it-works, vision still. TikTok-brain for inventing, not a student portfolio for a teacher.
-
-**How.** Opt-in publish from outcome ([E1](#E1)). `GET /api/gallery` newest / daily-only. Report/hide button (young audience). No comments in v1 (moderation cost).
+A public feed of every hold is not the product. Readable invents belong on the **per-quest leaderboard** ([D1](#D1)): write-up on every score row, vision still only for the current top 3. Inventor page ([E1](#E1)) can link to boards. No object store.
 
 <a id="E6"></a>
-### E6. Rematch / ghost — **implemented**
+### E6. Rematch / ghost — **done**
 
 **Idea.** “Your friend held today’s Daily in year 2034. Try to beat that year.” Not a live spectator sport.
 
 **How.** Share link `?daily=2026-08-25&beat=user_…` loads the same tile plus a target year. On hold, compare. Could feed [D1](#D1).
 
 <a id="E7"></a>
-### E7. Founding / season badges — **implemented**
+### E7. Founding / season badges — **done**
 
 **Idea.** First N Cloud accounts, or “Invent Night 2026,” as a cosmetic badge. Consumer myth, not a certificate.
 
 **How.** `achievements` codes granted by webhook on `user.created` if `created_at` before a cutoff, or by attending a tagged Friends room.
 
 <a id="E8"></a>
-### E8. Display name, age gate, block — **implemented**
+### E8. Display name, age gate, block — **done**
 
 **Idea.** Young audience is in the mission of the practice. Cloud needs a chosen name, a way to hide email, a way to block a gallery item. Still not a school.
 
@@ -334,7 +339,7 @@ If we only paywall lessons and never save, people will screenshot. **C1 + [C3](#
 This is **not** “add Classes.” It is money + rights, matching `COMMERCIAL.md`.
 
 <a id="F1"></a>
-### F1. They want to **self-host** (company, consultancy, paid workshop as a business) — **implemented** (paper in `COMMERCIAL.md`)
+### F1. They want to **self-host** (company, consultancy, paid workshop as a business) — **done** (paper in `COMMERCIAL.md`)
 
 **Idea.** They run Node. They bring their own xAI key. They do not need our Daily leaderboard. They pay for the **right** to use Future Forge commercially (internal training, client workshops, embedding).
 
@@ -357,14 +362,14 @@ This is **not** “add Classes.” It is money + rights, matching `COMMERCIAL.md
 - If they ask for “our manager can see completion %,” sell them the **quest log export for the org** (who invented this month) — a **usage story**, not a gradebook. Make it opt-in at the employee profile.
 
 <a id="F3"></a>
-### F3. They want to **resell hosting** (another cloud) — **implemented** (paper only)
+### F3. They want to **resell hosting** (another cloud) — **done** (paper only)
 
 **Idea.** Cloud / Managed Service tier in `COMMERCIAL.md`. Rare. Contract + branding rules. They are not our consumer.
 
 **How.** Paper. Maybe a private source drop or a support retainer. Do not build multi-tenant white-label into v1 of Warmer Sun Cloud.
 
 <a id="F4"></a>
-### F4. Education institutions — **implemented** (paper; no classroom UX)
+### F4. Education institutions — **done** (paper; no classroom UX)
 
 They need a paid **Education** license to self-host. We still **do not build classroom UX**. If a university wants seats on Cloud, treat them like [F2](#F2) (a company-shaped org) or send them to self-host. Do not grow a “for schools” SKU in the UI.
 
@@ -372,15 +377,15 @@ They need a paid **Education** license to self-host. We still **do not build cla
 
 ## Suggested order (if we do any of this)
 
-Smallest path that makes Cloud *feel* real. Items 1–4 are **ready**. 5–8 wait on **todo** vendors or a host.
+Items 1–7 are **done**. Remaining wait on a **next building block** (Clerk Billing, production instance, object storage, marketing surface).
 
-1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **implemented**  
-2. **Server Daily + submit + 24h board** ([D1](#D1)) — **implemented** ([E10](#E10) homepage is **todo**)  
-3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1), [E2](#E2)) — **ready**  
-4. **AI quota (free cap)** ([B2](#B2)) — **ready**; plan cap is **todo**  
+1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **done**  
+2. **Server Daily + submit + 24h board** ([D1](#D1)) — **done** ([E10](#E10) homepage is **todo**)  
+3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1), [E2](#E2)) — **done** (in-game; `warmersun.com/u/…` is **todo**)  
+4. **AI quota (free cap)** ([B2](#B2)) — **done**; plan cap is **todo**  
 5. **Paid lesson entitlements** ([B1](#B1)) — **todo** Clerk Billing  
-6. **Friends identity** ([E4](#E4)) **ready**; **gallery** ([E5](#E5)) **todo** host  
-7. **Continue board** ([C3](#C3)) — **ready** but v2  
+6. **Friends identity** ([E4](#E4)) — **done**; gallery ([E5](#E5)) **dropped** (use [D1](#D1) boards)  
+7. **Continue board** ([C3](#C3)) — **done**  
 8. **Org seats** ([F2](#F2)) — **todo**; only when a company asks with money
 
 ---
@@ -406,7 +411,7 @@ If a feature’s main customer is a teacher, it does not belong in Warmer Sun Cl
 - Username required, or “Tamas S.” from Clerk?  
 - How brutal is the AI free cap? (This is a cost decision.)
 
-Identity and the first Neon write are done. The next *useful* thing is probably **the quest log UI** ([C1](#C1)), then **one shared Daily**.
+Identity, quest log, Daily APIs, Continue, and the portal host are **done**. Nothing is **ready**. Next is a building block, not a feature: Clerk production, Clerk Billing ([B1](#B1)), object storage ([E5](#E5)), or the marketing surface ([E10](#E10)).
 
 ---
 
@@ -424,7 +429,7 @@ These are settled. Do not re-open them in implementation.
 <a id="H"></a>
 ## H. The Cloud host — portal on Render
 
-**Status:** architecture lock. **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is **Cloud HTTP APIs only**. **game** (`npm start`) is the playable SPA. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
+**Status:** **done** (Render). **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is **Cloud HTTP APIs only** (`https://future-forge-0yil.onrender.com`). **game** (`npm start`) is the playable SPA. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
 
 Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node process that:
 
@@ -455,11 +460,11 @@ Browser
 
 **Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY`. They never call the gated Site. They incur their own AI cost. That is the point.
 
-**Extend the host later** without moving files: `/api/runs`, Daily submit, quotas, Billing `has()`, webhooks, Friends WS. One process, one Neon, one secret.
+**Extend the host later** without moving files: Billing `has()`, gallery, extra quotas. Friends WS stays on **game**. One portal process, one Neon, one gated-catalog secret.
 
 **Caveat:** confirm here.now **site password** is something Node can send (HTTP Basic / header), not only a browser interstitial + cookie. If it is cookie-only, use a **Drive + API key** instead of a passworded Site — same split, designed for server fetch.
 
-**Does not live on here.now:** Neon, Clerk verify, WebSockets. Live xAI is **game**, not portal. Optional here.now **proxy** `/api/*` → Render is fine so the public SPA can look same-origin-ish; the gate is still portal. Cloud players can also load the SPA from Render (same origin).
+**Does not live on here.now:** Neon, Clerk verify. WebSockets and live xAI are **game**, not portal. The game SPA calls Render `/api/*` (CORS `*`). Do not serve the SPA from portal.
 
 ### Where it runs
 
@@ -473,9 +478,9 @@ Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine
 
 **Clerk / CORS**
 
-- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://<service>.onrender.com` (and `http://127.0.0.1:8765` for local portal). A redirect does **not** make Clerk cookies live on `warmersun.com`.  
-- Webhooks: `https://<service>.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).  
-- If the SPA stays on public here.now, it calls Render `/api/*` (we already allow CORS). Same-origin on Render needs no extra CORS.
+- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: the **game** origin (`http://127.0.0.1:8765` locally). Portal is APIs; Clerk UI runs in the game SPA. A redirect does **not** make Clerk cookies live on `warmersun.com`.  
+- Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).  
+- Game SPA calls Render `/api/*` with CORS `*`.
 
 **Ops honesty:** Render sleep on free instances = Cloud down; use a paid instance if Daily must stay up. Custom domain, Clerk production keys, and the `/cloud` redirect are ops after the first deploy. Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
 
@@ -484,7 +489,7 @@ Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine
 <a id="G"></a>
 ## G. Outstanding building blocks — research and recommendation
 
-**Researched:** 2026-08-25. Prices and plan names move; re-check before spending. This is the missing “where does the database live?” layer. Clerk is identity only. Cloud features in A–E all assume a store we do not have yet.
+**Researched:** 2026-08-25. Prices and plan names move; re-check before spending. Clerk is identity only. Neon is the store (provisioned; schema **done**). Host pick: Render for **portal**, not Fly.
 
 <a id="G0"></a>
 ### G0. Constraints of *this* stack (do not pretend we are Next.js)
@@ -494,29 +499,29 @@ Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine
 | Long-running Node (`server.mjs`) | Not a serverless function. Friends rooms use **WebSockets**. Vercel / Netlify / Cloudflare Workers are the wrong shape. |
 | Disk already in play | Shared TTS cache under `data/tts-cache/`. The process wants a volume, not a read-only lambda. |
 | Clerk already chosen | Do not buy a second auth (Supabase Auth, Firebase Auth, PlayFab). |
-| Catalog vs game | `warmersun.com` already publishes quest/trend JSON. The **game** is a Node process (`/forge` today). Cloud DB belongs next to the game, not inside the static site. |
+| Catalog vs game | `warmersun.com` already publishes quest/trend JSON. The **game** is a Node process (`npm start`). Cloud DB belongs on **portal**, not inside the static site. |
 | Scale | Sole prop, consumer, Invent Night + Daily. Hundreds of users first, not 100k DAU. **xAI tokens will dwarf the database bill.** |
 | Self-host must stay simple | Hobby `npm start` without Cloud. No required Neon account for a LAN night. |
 
-README already names the deploy shape: VPS or PaaS (Fly, Railway, Render), `npm start`, TLS in front.
+README deploy: **portal** on Render (`npm run portal`); **game** is `npm start` with `FF_PORTAL_URL`. Self-host engine stays `npm start` without Clerk.
 
 <a id="G1"></a>
 ### G1. Outstanding blocks (the shopping list)
 
 | Block | What it is | Bucket | Needed for |
 |-------|------------|--------|------------|
-| **1. App host** | Always-on Node + WS + HTTPS | **Picked:** Render Web Service running **portal** | Public webhooks, [A1](#A1), [E5](#E5) |
-| **2. Database** | Relational store keyed by `clerk_user_id` | **Implemented** — Neon, `.env` | [C1](#C1), [D1](#D1), [B2](#B2) |
-| **3. Schema + migrations** | Versioned `.sql`, no ORM | **Ready** | Same |
-| **4. Clerk → our DB** | Webhooks + JWT on writes | **Ready** — JWT done; webhook route is code | Names on the board, delete-account |
-| **5. Public webhook URL** | TLS endpoint Clerk/Svix can POST | **Todo** — needs app host | (4) in production |
-| **6. Backups** | PITR off the app disk | **Implemented** — Neon instant restore on the project | Not losing the quest log |
+| **1. App host** | Always-on Node + HTTPS | **Done** — Render Web Service running **portal** | Public webhooks, [A1](#A1), [E5](#E5) |
+| **2. Database** | Relational store keyed by `clerk_user_id` | **Done** — Neon, `.env.portal` | [C1](#C1), [D1](#D1), [B2](#B2) |
+| **3. Schema + migrations** | Versioned `.sql`, no ORM | **Done** — `js/server/db/001`–`010` | Same |
+| **4. Clerk → our DB** | Webhooks + JWT on writes | **Done** — JWT + `POST /api/webhooks/clerk` | Names on the board, delete-account |
+| **5. Public webhook URL** | TLS endpoint Clerk/Svix can POST | **Done** — `https://future-forge-0yil.onrender.com/api/webhooks/clerk` | (4) in production |
+| **6. Backups** | PITR off the app disk | **Done** — Neon instant restore on the project | Not losing the quest log |
 | **7. Clerk production instance** | `pk_live_` / claimed app | **Todo** | Real users on warmersun.com |
 | **8. Billing** | Clerk Billing + `subscription.*` | **Todo** | [B1](#B1), [F2](#F2) |
-| **9. Object storage** | Gallery stills | **Todo** — not picked | [E5](#E5) images |
-| **10. Secrets / env** | `DATABASE_URL`, Clerk keys | **Implemented** locally; **todo** on a host | Deploy |
+| **9. Object storage** | Gallery stills | **Not needed** — top-3 stills are Neon BYTEA on [D1](#D1) | Dropped [E5](#E5) |
+| **10. Secrets / env** | `DATABASE_URL`, Clerk keys | **Done** locally (`.env.portal`) and on Render | Deploy |
 | **11. Observability** | Process up, webhook failures | **Todo** | Operating Cloud |
-| **12. Legal** | Privacy / ToS for stored runs | **Todo** | Before storing runs |
+| **12. Legal** | Privacy / ToS for stored runs | **Todo** | Paper should catch up; runs are already stored |
 
 **Do not need in v1:** Redis, Kafka, a second region, Kubernetes, a game BaaS (PlayFab / Nakama / LootLocker / Beamable). Those are live-ops platforms for Unity/Unreal studios. We already have a game server.
 
@@ -547,7 +552,7 @@ Clerk’s own docs (2026): prefer **session JWT** for the current user; **sync a
 <a id="G3"></a>
 ### G3. Recommendation
 
-**Build the schema against Postgres from day one. Prototype locally with Postgres (Neon free branch or Docker). Host Cloud Postgres on Neon. Host the Node process on Fly.io (or keep the current `/forge` host if it already does always-on Node + WS + a volume). Do not put the database on the app’s local disk in production.**
+**Done in spirit, host pick updated:** schema is Postgres; Cloud Postgres is Neon; **portal** Node is on **Render** (`npm run portal`), not Fly. Do not put the database on the app’s local disk in production. The Fly.io notes below are the 2026-08-25 research that led here — do not re-open the host pick.
 
 Why this split:
 
@@ -558,7 +563,7 @@ Why this split:
 5. **No ORM** — `pg` or `postgres` plus `.sql` migrations in `js/server/db/`. This repo is untyped JS; Drizzle/Prisma would be extra machinery. See **Decisions locked**.
 6. **Webhooks:** `POST /api/webhooks/clerk`, `verifyWebhook` from `@clerk/backend`, env `CLERK_WEBHOOK_SIGNING_SECRET`. Local: `npx clerk webhooks listen --forward-to http://127.0.0.1:8765/api/webhooks/clerk` (first-party; skip ngrok unless that fails). Events: `user.created`, `user.updated`, `user.deleted`. Upsert `users(clerk_user_id, display_name, image_url)`.
 7. **Writes from the game** still use the session JWT we already attach. Never trust a client-supplied `userId`.
-8. **Object storage** later (Tigris on Fly, or R2) when gallery images are real. v1 leaderboard is names + numbers.
+8. **Object storage** not required. Per-quest stills are Neon BYTEA for the current top 3.
 9. **Billing** stays Clerk Billing when we reach [B1](#B1) — one vendor with identity.
 10. **Claim** the Clerk app into the Warmer Sun Cloud workspace and create a **production** instance before any real consumer data. Keyless dev keys are not a production identity.
 
@@ -575,19 +580,19 @@ Why this split:
 | TLS / domain | Already have warmersun.com |
 | **xAI** | **The actual bill.** Quotas ([B2](#B2)) exist so this does not go unbounded. |
 
-Infrastructure for save + Daily is cheap. Do not wait on a bigger host. Wait on schema + webhook + one `runs` table.
+Infrastructure for save + Daily is cheap. Schema, webhook, and `runs` are **done**. Remaining spend risk is xAI, not the host.
 
 <a id="G5"></a>
-### G5. First infra slice (when we leave ideation)
+### G5. First infra slice — **done**
 
-1. Claim Clerk app; keep using **dev** keys on localhost.  
-2. Neon project `warmer-sun-cloud-dev`, region close to Fly. `DATABASE_URL` in `.env` (gitignored).  
-3. SQL migrations: `users`, `runs` — nothing else. No ORM.  
-4. `POST /api/webhooks/clerk` + `clerk webhooks listen` in dev.  
+1. Clerk app **Warmer Sun Cloud**; **dev** keys on localhost and on Render. Production instance is **todo**.  
+2. Neon project, region `us-west-2`. `DATABASE_URL` in gitignored `.env.portal`.  
+3. SQL migrations `001`–`010` (`users`, `runs`, Daily, achievements, profile, quota, pins, `run_state`). No ORM.  
+4. `POST /api/webhooks/clerk` on portal.  
 5. `POST /api/me/runs` (JWT required) + `GET /api/me/runs`.  
-6. Only then: deploy Node to Fly (or current host) and point Clerk webhook at `https://…/api/webhooks/clerk`.
+6. Portal on Render; webhook URL `https://future-forge-0yil.onrender.com/api/webhooks/clerk`.
 
-Skip paid lessons, gallery, and org seats until that loop is boringly reliable.
+Skip paid lessons, gallery, and org seats until that loop stays boringly reliable.
 
 <a id="G6"></a>
 ### G6. Sources (2026)
@@ -595,5 +600,5 @@ Skip paid lessons, gallery, and org seats until that loop is boringly reliable.
 - Clerk: [sync data with webhooks](https://clerk.com/docs/guides/development/webhooks/syncing), [Neon integration](https://clerk.com/docs/guides/development/integrations/databases/neon), [webhooks overview](https://clerk.com/docs/guides/development/webhooks/overview)  
 - Neon vs Supabase vs Railway (SaaS Postgres, May–Aug 2026 roundups): free-tier pause vs scale-to-zero, Pro $25 floor vs Neon usage  
 - Fly.io [resource pricing](https://fly.io/docs/about/pricing/) — machines, volumes, unmanaged vs managed Postgres  
-- This repo: `README.md` deploy section; `server.mjs` long-running HTTP + `ws`; `data/tts-cache`; Clerk already in `.env`  
+- This repo: `README.md` deploy section; `portal/server.mjs` Cloud APIs; `server.mjs` game HTTP + `ws`; Clerk + Neon in `.env.portal`  
 - Game BaaS pricing surveys (PlayFab / Nakama / LootLocker at 200–1k DAU) — used only as **negative** space

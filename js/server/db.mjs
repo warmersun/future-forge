@@ -409,7 +409,7 @@ export async function getRunForUser(clerkUserId, runId) {
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid || !runId) return null;
     const r = await db.query(
-      `SELECT id, quest_id, kind, outcome, stars, year_reached, waits FROM runs
+      `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place FROM runs
      WHERE id = $1::uuid AND clerk_user_id = $2`,
       [runId, uid]
     );
@@ -788,6 +788,224 @@ export async function getRunState(clerkUserId) {
     chats: row.chats || null,
     updatedAt: row.updated_at,
   };
+}
+
+function mapQuestScoreRow(row) {
+  return {
+    clerkUserId: row.clerk_user_id,
+    questId: row.quest_id,
+    runId: row.run_id,
+    yearReached: row.year_reached,
+    stars: row.stars,
+    waits: row.waits,
+    displayName: row.display_name,
+    place: row.place,
+    stack: Array.isArray(row.stack) ? row.stack : [],
+    pathwayText: row.pathway_text || "",
+  };
+}
+
+/**
+ * @param {string} questId
+ */
+export async function listQuestScores(questId) {
+  const db = getPool();
+  if (!db || !questId) return { skipped: true, rows: [] };
+  const r = await db.query(
+    `SELECT clerk_user_id, quest_id, run_id, year_reached, stars, waits,
+            display_name, place, stack, pathway_text
+     FROM quest_scores WHERE quest_id = $1`,
+    [String(questId)]
+  );
+  return { skipped: false, rows: r.rows.map(mapQuestScoreRow) };
+}
+
+/**
+ * Best score per user per quest. `betterFn(next, prev)` true → replace.
+ */
+export async function upsertQuestScore(input, betterFn) {
+  const db = getPool();
+  if (!db) return { skipped: true, stored: false };
+  const clerkUserId = normalizeClerkUserId(input?.clerkUserId);
+  if (!clerkUserId) throw Object.assign(new Error("invalid_user"), { status: 401 });
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureUser(clerkUserId, client);
+    const prev = await client.query(
+      `SELECT year_reached, stars, waits FROM quest_scores
+       WHERE clerk_user_id = $1 AND quest_id = $2`,
+      [clerkUserId, input.questId]
+    );
+    const existing = prev.rows[0]
+      ? {
+          yearReached: prev.rows[0].year_reached,
+          stars: prev.rows[0].stars,
+          waits: prev.rows[0].waits,
+        }
+      : null;
+    const next = {
+      yearReached: input.yearReached,
+      stars: input.stars,
+      waits: input.waits,
+    };
+    if (existing && typeof betterFn === "function" && !betterFn(next, existing)) {
+      await client.query("COMMIT");
+      return { skipped: false, stored: false, kept: true };
+    }
+    await client.query(
+      `INSERT INTO quest_scores (
+         clerk_user_id, quest_id, run_id, year_reached, stars, waits,
+         display_name, place, stack, pathway_text
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (clerk_user_id, quest_id) DO UPDATE SET
+         run_id = EXCLUDED.run_id,
+         year_reached = EXCLUDED.year_reached,
+         stars = EXCLUDED.stars,
+         waits = EXCLUDED.waits,
+         display_name = EXCLUDED.display_name,
+         place = EXCLUDED.place,
+         stack = EXCLUDED.stack,
+         pathway_text = EXCLUDED.pathway_text,
+         submitted_at = now()`,
+      [
+        clerkUserId,
+        input.questId,
+        input.runId,
+        input.yearReached,
+        input.stars,
+        input.waits,
+        input.displayName,
+        input.place || "",
+        input.stack || [],
+        input.pathwayText || "",
+      ]
+    );
+    await client.query("COMMIT");
+    return { skipped: false, stored: true };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Clerk ids currently holding a still for this quest.
+ * @param {string} questId
+ */
+export async function listQuestStillUserIds(questId) {
+  const db = getPool();
+  if (!db || !questId) return [];
+  const r = await db.query(
+    `SELECT clerk_user_id FROM quest_stills WHERE quest_id = $1`,
+    [String(questId)]
+  );
+  return r.rows.map((row) => row.clerk_user_id);
+}
+
+/**
+ * Ranked clerk ids for a quest (best first).
+ * @param {string} questId
+ * @param {number} [limit]
+ */
+export async function listQuestScoreUserIdsRanked(questId, limit = 3) {
+  const db = getPool();
+  if (!db || !questId) return [];
+  const n = Math.min(50, Math.max(1, Number(limit) || 3));
+  const r = await db.query(
+    `SELECT clerk_user_id FROM quest_scores
+     WHERE quest_id = $1
+     ORDER BY year_reached ASC NULLS LAST, stars DESC, waits ASC, submitted_at ASC
+     LIMIT $2`,
+    [String(questId), n]
+  );
+  return r.rows.map((row) => row.clerk_user_id);
+}
+
+async function withUnpooledClient(fn) {
+  const url = migrateUrl();
+  if (!url) return { skipped: true };
+  const client = new Client(poolConfig(url));
+  await client.connect();
+  try {
+    return await fn(client);
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Store a still only for a user currently in the top K (caller checks).
+ */
+export async function putQuestStill(questId, clerkUserId, bytes, contentType = "image/jpeg") {
+  const uid = normalizeClerkUserId(clerkUserId);
+  const qid = String(questId || "");
+  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes || []);
+  if (!uid || !qid || !buf.length) return { skipped: true, stored: false };
+  return withUnpooledClient(async (client) => {
+    await client.query(
+      `INSERT INTO quest_stills (quest_id, clerk_user_id, bytes, content_type, byte_len)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (quest_id, clerk_user_id) DO UPDATE SET
+         bytes = EXCLUDED.bytes,
+         content_type = EXCLUDED.content_type,
+         byte_len = EXCLUDED.byte_len`,
+      [qid, uid, buf, String(contentType || "image/jpeg").slice(0, 80), buf.length]
+    );
+    return { skipped: false, stored: true };
+  });
+}
+
+export async function getQuestStill(questId, clerkUserId) {
+  const uid = normalizeClerkUserId(clerkUserId);
+  const qid = String(questId || "");
+  if (!uid || !qid) return null;
+  const got = await withUnpooledClient(async (client) => {
+    const r = await client.query(
+      `SELECT bytes, content_type FROM quest_stills
+       WHERE quest_id = $1 AND clerk_user_id = $2`,
+      [qid, uid]
+    );
+    return r.rows[0] || null;
+  });
+  if (!got || got.skipped) return null;
+  return { bytes: got.bytes, contentType: got.content_type || "image/jpeg" };
+}
+
+export async function deleteQuestStillsOutside(questId, keepUserIds) {
+  const qid = String(questId || "");
+  if (!qid) return { skipped: true };
+  const keep = (keepUserIds || []).map((id) => normalizeClerkUserId(id)).filter(Boolean);
+  return withUnpooledClient(async (client) => {
+    if (!keep.length) {
+      await client.query(`DELETE FROM quest_stills WHERE quest_id = $1`, [qid]);
+      return { skipped: false };
+    }
+    await client.query(
+      `DELETE FROM quest_stills WHERE quest_id = $1 AND NOT (clerk_user_id = ANY($2::text[]))`,
+      [qid, keep]
+    );
+    return { skipped: false };
+  });
+}
+
+export async function deleteQuestStill(questId, clerkUserId) {
+  const uid = normalizeClerkUserId(clerkUserId);
+  const qid = String(questId || "");
+  if (!uid || !qid) return { skipped: true };
+  const db = getPool();
+  if (!db) return { skipped: true };
+  await db.query(
+    `DELETE FROM quest_stills WHERE quest_id = $1 AND clerk_user_id = $2`,
+    [qid, uid]
+  );
+  return { skipped: false };
 }
 
 export async function putRunState(clerkUserId, state) {

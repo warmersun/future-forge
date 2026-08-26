@@ -29,9 +29,10 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-12";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-12";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-12";
+import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-14";
+import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-14";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-14";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-14";
 import {
   apiFetch,
   getClerk,
@@ -54,6 +55,7 @@ import { localPose as offlinePose } from "./challenge-pose.js";
 import {
   boardHolds,
   deriveBoardProse,
+  summarizePathwayForBoard,
   techIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -419,6 +421,7 @@ const state = {
   dailyPlay: null,
   dailyBoard: null,
   boardKind: "daily",
+  boardQuestId: null,
   ghostTarget: null,
   cloudContinue: null,
   /**
@@ -3671,27 +3674,46 @@ function renderTitleCtas() {
   }
 }
 
+function streakLabel(days) {
+  const n = Number(days) || 0;
+  if (n < 1) return "Streak — none yet. Hold today’s Daily to start.";
+  if (n === 1) return "Streak — 1 day";
+  return `Streak — ${n} days`;
+}
+
 async function loadStreakChip() {
   const el = $("#cloud-streak-chip");
-  if (!el) return;
-  if (!isClerkSignedIn()) {
-    el.hidden = true;
-    el.textContent = "";
+  const profileEl = $("#cloud-profile-streak");
+  const signedIn = isClerkSignedIn();
+  if (!signedIn) {
+    if (el) {
+      el.hidden = true;
+      el.textContent = "";
+    }
+    if (profileEl) {
+      profileEl.hidden = true;
+      profileEl.textContent = "";
+    }
     return;
   }
+  let n = 0;
   try {
     const res = await apiFetch("/api/me/streak");
     const data = await res.json().catch(() => ({}));
-    const n = Number(data.days) || 0;
-    if (n < 1) {
-      el.hidden = true;
-      el.textContent = "";
-      return;
-    }
-    el.hidden = false;
-    el.textContent = n === 1 ? "1 day" : `${n} days`;
+    if (res.ok) n = Number(data.days) || 0;
   } catch {
-    el.hidden = true;
+    n = 0;
+  }
+  const label = streakLabel(n);
+  if (el) {
+    el.hidden = false;
+    el.removeAttribute("hidden");
+    el.textContent = label;
+  }
+  if (profileEl) {
+    profileEl.hidden = false;
+    profileEl.removeAttribute("hidden");
+    profileEl.textContent = label;
   }
 }
 
@@ -3743,6 +3765,7 @@ function questLogOutcomeLabel(outcome) {
 
 async function openCloudProfile() {
   showScreen("cloud-profile");
+  void loadStreakChip();
   try {
     const res = await apiFetch("/api/me/profile");
     const data = await res.json().catch(() => ({}));
@@ -3912,6 +3935,98 @@ async function playTodayDaily(kind = "daily") {
   startMission(m);
 }
 
+function currentPathwaySummary() {
+  return summarizePathwayForBoard(state.hexBoard, {
+    place: state.mission?.place || "",
+    year: state.outcome?.year ?? state.year,
+    techTitle: (id) => techById(id)?.name || id,
+  });
+}
+
+function paintOutcomePathway(m, o) {
+  const wrap = $("#outcome-pathway");
+  const textEl = $("#outcome-pathway-text");
+  const rankEl = $("#outcome-board-rank");
+  if (!wrap || !textEl) return;
+  const held = o?.kind === "win" || o?.kind === "partial" || o?.kind === "hold";
+  const sum = held ? currentPathwaySummary() : { text: "" };
+  if (!sum.text) {
+    wrap.hidden = true;
+    textEl.textContent = "";
+    if (rankEl) {
+      rankEl.hidden = true;
+      rankEl.textContent = "";
+    }
+    return;
+  }
+  wrap.hidden = false;
+  wrap.removeAttribute("hidden");
+  textEl.textContent = sum.text;
+  if (rankEl) {
+    rankEl.hidden = true;
+    rankEl.textContent = "";
+  }
+}
+
+async function visionStillBlob() {
+  const live = collectVisionForShare();
+  const url = live.url;
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    if (!blob || blob.size < 32 || blob.size > 1_500_000) return null;
+    return blob;
+  } catch {
+    return null;
+  }
+}
+
+async function submitQuestBoardIfCounted(run) {
+  const questId = String(run?.questId || state.mission?.id || "");
+  if (!questHasLeaderboard(questId) || !isClerkSignedIn()) return;
+  if (run?.outcome !== "hold" && run?.outcome !== "partial") return;
+  const runId = run.id || state.cloudRunId;
+  if (!runId) return;
+  const sum = currentPathwaySummary();
+  const clerk = getClerk();
+  const displayName =
+    clerk?.user?.firstName || clerk?.user?.username || clerk?.user?.fullName || "Inventor";
+  try {
+    const res = await apiFetch(`/api/me/quests/${encodeURIComponent(questId)}/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        runId,
+        questId,
+        pathwayText: sum.text,
+        stack: sum.stack,
+        place: run.place || state.mission?.place || "",
+        displayName,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const rankEl = $("#outcome-board-rank");
+    if (res.ok && data.rank && rankEl) {
+      rankEl.hidden = false;
+      rankEl.removeAttribute("hidden");
+      rankEl.textContent = `You are #${data.rank} on this quest.`;
+    }
+    if (res.ok && data.inTopStills) {
+      const blob = await visionStillBlob();
+      if (blob) {
+        await apiFetch(`/api/me/quests/${encodeURIComponent(questId)}/still`, {
+          method: "PUT",
+          headers: { "Content-Type": blob.type || "image/jpeg" },
+          body: blob,
+        });
+      }
+    }
+  } catch {
+    /* board is optional */
+  }
+}
+
 async function submitDailyIfCounted(run) {
   const d = state.dailyPlay;
   if (!d?.official || !isClerkSignedIn()) return;
@@ -3939,11 +4054,18 @@ async function submitDailyIfCounted(run) {
 }
 
 async function loadDailyBoard() {
+  const qid = state.boardQuestId;
   const weekly = state.boardKind === "weekly";
   try {
-    const res = await apiFetch(weekly ? "/api/weekly/board" : "/api/daily/board");
+    const url = qid
+      ? `/api/board/${encodeURIComponent(qid)}`
+      : weekly
+        ? "/api/weekly/board"
+        : "/api/daily/board";
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     state.dailyBoard = res.ok ? data : { top: [], you: null };
+    if (res.ok && data.questId) state.boardQuestId = data.questId;
   } catch {
     state.dailyBoard = { top: [], you: null };
   }
@@ -3952,8 +4074,26 @@ async function loadDailyBoard() {
 
 function openDailyBoard(kind = "daily") {
   state.boardKind = kind === "weekly" ? "weekly" : "daily";
+  state.boardQuestId = null;
   showScreen("daily-board");
   void loadDailyBoard();
+}
+
+function openQuestBoard(questId) {
+  if (!questHasLeaderboard(questId)) {
+    flashToast("This quest has no leaderboard.");
+    return;
+  }
+  state.boardKind = "quest";
+  state.boardQuestId = String(questId);
+  showScreen("daily-board");
+  void loadDailyBoard();
+}
+
+function stillUrlForRow(questId, row) {
+  const uid = row?.clerkUserId;
+  if (!questId || !uid || !row.hasStill) return "";
+  return `/api/board/${encodeURIComponent(questId)}/still/${encodeURIComponent(uid)}`;
 }
 
 function renderDailyBoard() {
@@ -3962,20 +4102,48 @@ function renderDailyBoard() {
   const empty = $("#daily-board-empty");
   const dateEl = $("#daily-board-date");
   const titleEl = $("#daily-board-title");
+  const blurbEl = $("#daily-board-blurb");
   const data = state.dailyBoard || {};
-  if (titleEl) {
-    titleEl.textContent =
-      state.boardKind === "weekly" ? "Week hold board" : "Daily hold board";
+  const questId = data.questId || state.boardQuestId || "";
+  const heading = data.title || data.place || "Leaderboard";
+  if (titleEl) titleEl.textContent = heading;
+  if (blurbEl) {
+    blurbEl.textContent = data.place
+      ? `Best holds of this quest in ${data.place}. One row per inventor — your personal best.`
+      : "Best holds of this quest. One row per inventor — your personal best.";
   }
-  if (dateEl) dateEl.textContent = data.period || data.date || "";
+  if (dateEl) dateEl.textContent = data.place && data.title ? data.place : "";
   if (!list) return;
   list.replaceChildren();
   const top = Array.isArray(data.top) ? data.top : [];
   if (empty) empty.hidden = top.length > 0;
   for (const row of top) {
     const li = document.createElement("li");
-    li.className = "quest-log-item";
-    li.textContent = `#${row.rank} ${row.displayName} · year ${row.yearReached} · ${row.stars}★ · ${row.waits} waits`;
+    li.className = "quest-board-row";
+    const head = document.createElement("div");
+    head.className = "quest-board-row-head";
+    head.textContent = `#${row.rank} ${row.displayName} · year ${row.yearReached} · ${row.stars}★ · ${row.waits} waits`;
+    li.appendChild(head);
+    const stillSrc = stillUrlForRow(questId, row);
+    if (stillSrc) {
+      const img = document.createElement("img");
+      img.className = "quest-board-still";
+      img.alt = `Vision still, ${row.displayName}`;
+      li.appendChild(img);
+      void apiFetch(stillSrc)
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (!blob || !img.isConnected) return;
+          img.src = URL.createObjectURL(blob);
+        })
+        .catch(() => {});
+    }
+    if (row.pathwayText) {
+      const p = document.createElement("p");
+      p.className = "quest-board-writeup";
+      p.textContent = row.pathwayText;
+      li.appendChild(p);
+    }
     list.appendChild(li);
   }
   if (youEl) {
@@ -3986,6 +4154,13 @@ function renderDailyBoard() {
       youEl.hidden = true;
       youEl.textContent = "";
     }
+  }
+  const playBtn = $("#btn-daily-board-play");
+  if (playBtn) {
+    const featured = state.boardKind !== "quest";
+    playBtn.hidden = !featured;
+    if (featured) playBtn.removeAttribute("hidden");
+    else playBtn.setAttribute("hidden", "");
   }
 }
 
@@ -4852,6 +5027,13 @@ function catalogCardHtml(entry, kind, opts = {}) {
             : ""
         }
         ${
+          questHasLeaderboard(entry.id || m?.id)
+            ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
+                entry.id || m?.id || ""
+              )}">Leaderboard</button>`
+            : ""
+        }
+        ${
           entry.canRemove
             ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
             : ""
@@ -5008,6 +5190,12 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       ev.preventDefault();
       ev.stopPropagation();
       if (entry) openQuestCatalogInspect(entry);
+    });
+    wrap.querySelector(".catalog-board")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const qid = ev.currentTarget?.dataset?.catalogBoardId || entry?.id;
+      if (qid) openQuestBoard(qid);
     });
     wrap.querySelector(".catalog-remove")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -14713,8 +14901,11 @@ function finishOutcome(kind, meta = {}) {
   showScreen("outcome");
   const slim = slimLastRunFromState();
   stashLastRun(slim);
-  postCloudRun(slim);
-  void submitDailyIfCounted(slim);
+  void postCloudRun(slim).then((id) => {
+    const run = { ...slim, id: id || slim.id };
+    void submitDailyIfCounted(run);
+    void submitQuestBoardIfCounted(run);
+  });
   if (state.ghostTarget?.year != null && (slim.outcome === "hold" || slim.outcome === "partial")) {
     const g = ghostResult({ yearReached: slim.yearReached }, state.ghostTarget.year);
     if (g.ok) {
@@ -15461,6 +15652,8 @@ function renderOutcome() {
     headline = "Mission paused";
     story = "You left the invent. The calendar in that place keeps moving without you.";
   }
+
+  paintOutcomePathway(m, o);
 
   $("#outcome-headline").textContent = headline;
   $("#outcome-story").textContent = story;
@@ -18793,6 +18986,7 @@ function bind() {
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
   $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
+  $("#cloud-streak-chip")?.addEventListener("click", () => openDailyBoard("daily"));
   $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
   $("#cloud-profile-form")?.addEventListener("submit", (e) => {
     e.preventDefault();

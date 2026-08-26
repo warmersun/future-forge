@@ -57,7 +57,9 @@ import { canSeeAdmin } from "../js/server/admin-gate.mjs";
 import { serveStatic } from "../js/server/static.mjs";
 import {
   readBody,
+  readRawBody,
   sendJson,
+  sendBytes,
   errorStatus,
 } from "../js/server/read-body.mjs";
 import {
@@ -88,7 +90,6 @@ import {
   listRuns,
   startRun,
   getRunForUser,
-  listDailyScores,
   upsertDailyScore,
   listAchievements,
   insertAchievements,
@@ -105,6 +106,13 @@ import {
   replacePins,
   getRunState,
   putRunState,
+  listQuestScores,
+  upsertQuestScore,
+  listQuestStillUserIds,
+  listQuestScoreUserIdsRanked,
+  putQuestStill,
+  getQuestStill,
+  deleteQuestStillsOutside,
 } from "../js/server/db.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
@@ -137,7 +145,16 @@ import {
   WEEK_SALT,
   isoWeekPeriod,
   utcDayString,
+  sanitizeDisplayName,
 } from "../js/server/daily.mjs";
+import {
+  questHasLeaderboard,
+  parseQuestScoreBody,
+  bindQuestScoreFromRun,
+  attachBoardExtras,
+  STILL_TOP_K,
+  STILL_MAX_BYTES,
+} from "../js/server/quest-board.mjs";
 import {
   awardForRun,
   publicAchievement,
@@ -3079,7 +3096,53 @@ function isPortalApiPath(pathOnly) {
   if (p.startsWith("/api/u/")) return true;
   if (p === "/api/webhooks/clerk" || p.startsWith("/api/webhooks/clerk/")) return true;
   if (p === "/api/report" || p.startsWith("/api/report/")) return true;
+  if (p === "/api/board" || p.startsWith("/api/board/")) return true;
   return false;
+}
+
+function parseBoardPath(pathOnly) {
+  const m = /^\/api\/board\/([^/]+)(?:\/still\/([^/]+))?$/.exec(String(pathOnly || ""));
+  if (!m) return null;
+  try {
+    return {
+      questId: decodeURIComponent(m[1]),
+      stillUser: m[2] ? decodeURIComponent(m[2]) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseMeQuestPath(pathOnly) {
+  const m = /^\/api\/me\/quests\/([^/]+)\/(score|still)$/.exec(String(pathOnly || ""));
+  if (!m) return null;
+  try {
+    return { questId: decodeURIComponent(m[1]), action: m[2] };
+  } catch {
+    return null;
+  }
+}
+
+async function questBoardJson(questId, ident, extra = {}) {
+  const listed = await listQuestScores(questId);
+  const ranked = rankBoard(listed.rows || [], {
+    userId: ident?.signedIn ? ident.userId : null,
+  });
+  const stillIds = await listQuestStillUserIds(questId);
+  const board = attachBoardExtras(ranked, stillIds, listed.rows || []);
+  return {
+    ok: true,
+    questId,
+    ...extra,
+    top: board.top,
+    you: board.you,
+  };
+}
+
+async function evictQuestStills(questId) {
+  const keep = await listQuestScoreUserIdsRanked(questId, STILL_TOP_K);
+  await deleteQuestStillsOutside(questId, keep);
+  return keep;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -3291,6 +3354,76 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+    }
+  }
+
+  {
+    const pathOnly = String(req.url || "").split("?")[0];
+    const meQuest = parseMeQuestPath(pathOnly);
+    if (meQuest && req.method === "POST" && meQuest.action === "score") {
+      const ident = await authenticateClerkRequest(req);
+      const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+      if (!gate.ok) {
+        req.resume();
+        return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+      }
+      try {
+        const body = await readBody(req, { maxBytes: 16_000 });
+        const parsed = parseQuestScoreBody(body, meQuest.questId);
+        if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
+        const owned = await getRunForUser(gate.userId, parsed.row.runId);
+        const bound = bindQuestScoreFromRun(parsed, owned);
+        if (!bound.ok) return sendJson(res, 400, { ok: false, error: bound.error });
+        const profile = await getProfileByUserId(gate.userId);
+        const displayName = sanitizeDisplayName(
+          profile?.displayName || bound.row.displayName
+        );
+        const result = await upsertQuestScore(
+          { ...bound.row, clerkUserId: gate.userId, displayName },
+          isBetterScore
+        );
+        const keep = await evictQuestStills(meQuest.questId);
+        const inTopStills = keep.includes(gate.userId);
+        const listed = await listQuestScores(meQuest.questId);
+        const ranked = rankBoard(listed.rows || [], { userId: gate.userId });
+        return sendJson(res, 200, {
+          ok: true,
+          stored: Boolean(result.stored),
+          kept: Boolean(result.kept),
+          rank: ranked.you?.rank || null,
+          inTopStills,
+        });
+      } catch (e) {
+        console.warn("[quest score]", e?.message || e);
+        return sendJson(res, errorStatus(e), { ok: false, error: "score_failed" });
+      }
+    }
+    if (meQuest && req.method === "PUT" && meQuest.action === "still") {
+      const ident = await authenticateClerkRequest(req);
+      const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+      if (!gate.ok) {
+        req.resume();
+        return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+      }
+      if (!questHasLeaderboard(meQuest.questId)) {
+        req.resume();
+        return sendJson(res, 400, { ok: false, error: "no_board" });
+      }
+      try {
+        const buf = await readRawBody(req, { maxBytes: STILL_MAX_BYTES });
+        if (!buf.length) return sendJson(res, 400, { ok: false, error: "empty_still" });
+        const keep = await listQuestScoreUserIdsRanked(meQuest.questId, STILL_TOP_K);
+        if (!keep.includes(gate.userId)) {
+          return sendJson(res, 200, { ok: true, stored: false, reason: "not_top" });
+        }
+        const ctype = String(req.headers["content-type"] || "image/jpeg").split(";")[0].trim();
+        await putQuestStill(meQuest.questId, gate.userId, buf, ctype || "image/jpeg");
+        await deleteQuestStillsOutside(meQuest.questId, keep);
+        return sendJson(res, 200, { ok: true, stored: true });
+      } catch (e) {
+        console.warn("[quest still]", e?.message || e);
+        return sendJson(res, errorStatus(e), { ok: false, error: "still_failed" });
+      }
     }
   }
 
@@ -3516,6 +3649,26 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "GET" && String(req.url || "").split("?")[0].startsWith("/api/board/")) {
+    const parsed = parseBoardPath(String(req.url || "").split("?")[0]);
+    if (!parsed?.questId || !questHasLeaderboard(parsed.questId)) {
+      return sendJson(res, 404, { ok: false, error: "no_board" });
+    }
+    try {
+      if (parsed.stillUser) {
+        const still = await getQuestStill(parsed.questId, parsed.stillUser);
+        if (!still?.bytes) return sendJson(res, 404, { ok: false, error: "no_still" });
+        return sendBytes(res, 200, still.bytes, still.contentType || "image/jpeg");
+      }
+      const ident = await authenticateClerkRequest(req);
+      const body = await questBoardJson(parsed.questId, ident);
+      return sendJson(res, 200, body);
+    } catch (e) {
+      console.warn("[quest board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
+    }
+  }
+
   if (req.method === "GET" && (req.url === "/api/daily" || req.url?.startsWith("/api/daily?"))) {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -3544,19 +3697,27 @@ const server = http.createServer(async (req, res) => {
   ) {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const period = dailyPeriod(url.searchParams.get("date"));
       const ident = await authenticateClerkRequest(req);
-      const listed = await listDailyScores(period);
-      const board = rankBoard(listed.rows || [], {
-        userId: ident.signedIn ? ident.userId : null,
+      const resolved = await resolveOfficialDaily(url.searchParams.get("date"));
+      if (!resolved.questId || !questHasLeaderboard(resolved.questId)) {
+        return sendJson(res, 200, {
+          ok: true,
+          date: resolved.period,
+          period: resolved.period,
+          questId: resolved.questId,
+          place: resolved.tile?.place || resolved.tile?.mission?.place || "",
+          title: resolved.tile?.title || resolved.tile?.mission?.title || "",
+          top: [],
+          you: null,
+        });
+      }
+      const body = await questBoardJson(resolved.questId, ident, {
+        date: resolved.period,
+        period: resolved.period,
+        place: resolved.tile?.place || resolved.tile?.mission?.place || "",
+        title: resolved.tile?.title || resolved.tile?.mission?.title || "",
       });
-      return sendJson(res, 200, {
-        ok: true,
-        date: period,
-        period,
-        top: board.top,
-        you: board.you,
-      });
+      return sendJson(res, 200, body);
     } catch (e) {
       console.warn("[daily board]", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
@@ -3592,11 +3753,29 @@ const server = http.createServer(async (req, res) => {
         { ...bound.row, clerkUserId: gate.userId },
         isBetterScore
       );
+      if (questHasLeaderboard(bound.row.questId)) {
+        const profile = await getProfileByUserId(gate.userId);
+        await upsertQuestScore(
+          {
+            ...bound.row,
+            clerkUserId: gate.userId,
+            displayName: sanitizeDisplayName(
+              profile?.displayName || bound.row.displayName
+            ),
+            place: bound.row.place || resolved.tile?.place || "",
+            stack: [],
+            pathwayText: "",
+          },
+          isBetterScore
+        );
+        await evictQuestStills(bound.row.questId);
+      }
       return sendJson(res, 200, {
         ok: true,
         stored: Boolean(result.stored),
         kept: Boolean(result.kept),
         period: resolved.period,
+        questId: bound.row.questId,
       });
     } catch (e) {
       console.warn("[daily submit]", e?.message || e);
@@ -3633,18 +3812,27 @@ const server = http.createServer(async (req, res) => {
   ) {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const period = parseWeekPeriod(url.searchParams.get("period"));
       const ident = await authenticateClerkRequest(req);
-      const listed = await listDailyScores(period);
-      const board = rankBoard(listed.rows || [], {
-        userId: ident.signedIn ? ident.userId : null,
+      const resolved = await resolveOfficialDaily(url.searchParams.get("period"), {
+        salt: WEEK_SALT,
       });
-      return sendJson(res, 200, {
-        ok: true,
-        period,
-        top: board.top,
-        you: board.you,
+      if (!resolved.questId || !questHasLeaderboard(resolved.questId)) {
+        return sendJson(res, 200, {
+          ok: true,
+          period: resolved.period,
+          questId: resolved.questId,
+          place: resolved.tile?.place || resolved.tile?.mission?.place || "",
+          title: resolved.tile?.title || resolved.tile?.mission?.title || "",
+          top: [],
+          you: null,
+        });
+      }
+      const body = await questBoardJson(resolved.questId, ident, {
+        period: resolved.period,
+        place: resolved.tile?.place || resolved.tile?.mission?.place || "",
+        title: resolved.tile?.title || resolved.tile?.mission?.title || "",
       });
+      return sendJson(res, 200, body);
     } catch (e) {
       console.warn("[weekly board]", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
@@ -3680,11 +3868,29 @@ const server = http.createServer(async (req, res) => {
         { ...bound.row, clerkUserId: gate.userId },
         isBetterScore
       );
+      if (questHasLeaderboard(bound.row.questId)) {
+        const profile = await getProfileByUserId(gate.userId);
+        await upsertQuestScore(
+          {
+            ...bound.row,
+            clerkUserId: gate.userId,
+            displayName: sanitizeDisplayName(
+              profile?.displayName || bound.row.displayName
+            ),
+            place: bound.row.place || resolved.tile?.place || "",
+            stack: [],
+            pathwayText: "",
+          },
+          isBetterScore
+        );
+        await evictQuestStills(bound.row.questId);
+      }
       return sendJson(res, 200, {
         ok: true,
         stored: Boolean(result.stored),
         kept: Boolean(result.kept),
         period: resolved.period,
+        questId: bound.row.questId,
       });
     } catch (e) {
       console.warn("[weekly submit]", e?.message || e);

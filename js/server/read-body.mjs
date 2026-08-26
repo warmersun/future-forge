@@ -51,6 +51,63 @@ export function readBody(req, opts = {}) {
 }
 
 /**
+ * Raw bytes with a hard size cap (JPEG stills).
+ * @param {import('node:http').IncomingMessage} req
+ * @param {{ maxBytes?: number }} [opts]
+ * @returns {Promise<Buffer>}
+ */
+export function readRawBody(req, opts = {}) {
+  const maxBytes = opts.maxBytes ?? 1_500_000;
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+    req.on("data", (c) => {
+      size += c.length;
+      if (size > maxBytes) {
+        const err = Object.assign(new Error("Payload too large"), { status: 413 });
+        try {
+          req.destroy();
+        } catch {
+          /* ignore */
+        }
+        fail(err);
+        return;
+      }
+      chunks.push(c);
+    });
+    req.on("end", () => {
+      if (settled) return;
+      settled = true;
+      resolve(Buffer.concat(chunks));
+    });
+    req.on("error", fail);
+  });
+}
+
+/**
+ * @param {import('node:http').ServerResponse} res
+ * @param {number} status
+ * @param {Buffer} bytes
+ * @param {string} contentType
+ */
+export function sendBytes(res, status, bytes, contentType) {
+  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes || []);
+  res.writeHead(status, {
+    "Content-Type": contentType || "application/octet-stream",
+    "Content-Length": buf.length,
+    "Cache-Control": "public, max-age=300",
+    "Access-Control-Allow-Origin": "*",
+  });
+  res.end(buf);
+}
+
+/**
  * @param {import('node:http').ServerResponse} res
  * @param {number} status
  * @param {object} data
