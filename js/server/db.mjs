@@ -417,104 +417,6 @@ export async function getRunForUser(clerkUserId, runId) {
 }
 
 /**
- * @param {string} period
- */
-export async function listDailyScores(period) {
-  const db = getPool();
-  if (!db || !period) return { skipped: true, rows: [] };
-  const r = await db.query(
-    `SELECT clerk_user_id, period, quest_id, run_id, year_reached, stars, waits, display_name
-     FROM daily_scores WHERE period = $1`,
-    [String(period)]
-  );
-  return {
-    skipped: false,
-    rows: r.rows.map((row) => ({
-      clerkUserId: row.clerk_user_id,
-      period: row.period,
-      questId: row.quest_id,
-      runId: row.run_id,
-      yearReached: row.year_reached,
-      stars: row.stars,
-      waits: row.waits,
-      displayName: row.display_name,
-    })),
-  };
-}
-
-/**
- * Keep the best score per user per period.
- * @param {object} input
- * @param {(next: object, prev: object|null) => boolean} betterFn
- */
-export async function upsertDailyScore(input, betterFn) {
-  const db = getPool();
-  if (!db) return { skipped: true, stored: false };
-  const clerkUserId = normalizeClerkUserId(input?.clerkUserId);
-  if (!clerkUserId) throw Object.assign(new Error("invalid_user"), { status: 401 });
-  const client = await db.connect();
-  try {
-    await client.query("BEGIN");
-    await ensureUser(clerkUserId, client);
-    const prev = await client.query(
-      `SELECT year_reached, stars, waits FROM daily_scores
-       WHERE clerk_user_id = $1 AND period = $2`,
-      [clerkUserId, input.period]
-    );
-    const existing = prev.rows[0]
-      ? {
-          yearReached: prev.rows[0].year_reached,
-          stars: prev.rows[0].stars,
-          waits: prev.rows[0].waits,
-        }
-      : null;
-    const next = {
-      yearReached: input.yearReached,
-      stars: input.stars,
-      waits: input.waits,
-    };
-    if (existing && typeof betterFn === "function" && !betterFn(next, existing)) {
-      await client.query("COMMIT");
-      return { skipped: false, stored: false, kept: true };
-    }
-    await client.query(
-      `INSERT INTO daily_scores (
-         clerk_user_id, period, quest_id, run_id, year_reached, stars, waits, display_name
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       ON CONFLICT (clerk_user_id, period) DO UPDATE SET
-         quest_id = EXCLUDED.quest_id,
-         run_id = EXCLUDED.run_id,
-         year_reached = EXCLUDED.year_reached,
-         stars = EXCLUDED.stars,
-         waits = EXCLUDED.waits,
-         display_name = EXCLUDED.display_name,
-         submitted_at = now()`,
-      [
-        clerkUserId,
-        input.period,
-        input.questId,
-        input.runId,
-        input.yearReached,
-        input.stars,
-        input.waits,
-        input.displayName,
-      ]
-    );
-    await client.query("COMMIT");
-    return { skipped: false, stored: true };
-  } catch (e) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {
-      /* ignore */
-    }
-    throw e;
-  } finally {
-    client.release();
-  }
-}
-
-/**
  * @param {string} clerkUserId
  */
 export async function deleteUser(clerkUserId) {
@@ -566,21 +468,6 @@ export async function insertAchievements(clerkUserId, codes, runId = null) {
     [uid, list, runId]
   );
   return { inserted: r.rowCount || 0 };
-}
-
-/**
- * @param {string} clerkUserId
- * @returns {Promise<string[]>}
- */
-export async function listUserDailyPeriods(clerkUserId) {
-  const db = getPool();
-  const uid = normalizeClerkUserId(clerkUserId);
-  if (!db || !uid) return [];
-  const r = await db.query(
-    `SELECT period FROM daily_scores WHERE clerk_user_id = $1`,
-    [uid]
-  );
-  return r.rows.map((row) => String(row.period));
 }
 
 function profileRow(row) {

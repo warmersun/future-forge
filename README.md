@@ -69,13 +69,13 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 3. Learners see **External Quests** on the home screen and **first** when choosing a theme/Quest (including Friends). Cards use a gold “External” badge.
 4. Override path: `FF_QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
 
-**Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Replaces Daily on that device by default. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
+**Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Lands in **Library**. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
 Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
 
 ### Learner accounts (optional Clerk)
 
-Sign-in is **optional** and lives on **portal** (`npm run portal`), not on **game** (`npm start`). Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, Daily board, Continue).
+Sign-in is **optional** and lives on **portal** (`npm run portal`), not on **game** (`npm start`). Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 

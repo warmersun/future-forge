@@ -129,17 +129,10 @@ async function main() {
   if (js.status === 404) ok("GET /js/game.js 404");
   else fail(`GET /js/game.js HTTP ${js.status}`);
 
-  const ghostDisk = path.join(ROOT, "js/cloud/ghost.js");
-  const ghostSrc = fs.readFileSync(ghostDisk, "utf8");
-  if (ghostSrc.includes("clerk-auth.mjs") || ghostSrc.includes("node:async_hooks")) {
-    fail("js/cloud/ghost.js still imports clerk-auth.mjs or node:async_hooks");
-  } else ok("disk js/cloud/ghost.js uses clerk-id, not clerk-auth");
-
   const nodeHits = assertNoNodeBuiltins([
-    path.join(ROOT, "js/cloud/ghost.js"),
-    path.join(ROOT, "js/cloud/daily-url.js"),
     path.join(ROOT, "js/cloud/continue.js"),
     path.join(ROOT, "js/cloud/clerk-id.js"),
+    path.join(ROOT, "js/cloud/quest-board.js"),
     path.join(ROOT, "js/auth.js"),
   ]);
   if (nodeHits.length) fail(`client disk graph pulls Node builtins:\n    ${nodeHits.join("\n    ")}`);

@@ -189,8 +189,6 @@ export function isCloudApiPath(url) {
   const path = String(url || "").split("?")[0];
   if (path === "/api/health" || path.startsWith("/api/health/")) return true;
   if (path === "/api/me" || path.startsWith("/api/me/")) return true;
-  if (path === "/api/daily" || path.startsWith("/api/daily/")) return true;
-  if (path === "/api/weekly" || path.startsWith("/api/weekly/")) return true;
   if (path.startsWith("/api/u/")) return true;
   if (path === "/api/report" || path.startsWith("/api/report/")) return true;
   if (path === "/api/board" || path.startsWith("/api/board/")) return true;

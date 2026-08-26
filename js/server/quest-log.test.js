@@ -12,7 +12,7 @@ import {
 
 const rows = [
   { id: "1", kind: "theme", outcome: "hold", questId: "a" },
-  { id: "2", kind: "daily", outcome: "hold", questId: "b" },
+  { id: "2", kind: "friends", outcome: "hold", questId: "b" },
   { id: "3", kind: "theme", outcome: "collapse", questId: "c" },
   { id: "4", kind: "lesson", outcome: "partial", questId: "d" },
 ];
@@ -24,8 +24,8 @@ describe("parseRunsQuery", () => {
     assert.equal(q.outcome, null);
     assert.equal(q.limit, DEFAULT_RUNS_LIMIT);
     assert.equal(parseRunsQuery(new URLSearchParams("limit=9999")).limit, MAX_RUNS_LIMIT);
-    assert.equal(parseRunsQuery({ kind: "daily", outcome: "win", limit: "10" }).kind, "daily");
-    assert.equal(parseRunsQuery({ kind: "daily", outcome: "win" }).outcome, "hold");
+    assert.equal(parseRunsQuery({ kind: "lesson", outcome: "win", limit: "10" }).kind, "lesson");
+    assert.equal(parseRunsQuery({ kind: "lesson", outcome: "win" }).outcome, "hold");
   });
 
   it("ignores unknown kind/outcome", () => {

@@ -1309,6 +1309,7 @@ export function createHexWorkshop(api) {
     );
     for (const fp of abort) abortPathwayJob(fp);
     for (const fp of start) schedulePathwayScore(fp);
+    api.onBoardPainted?.();
   }
 
   function abortPathwayJob(fp) {

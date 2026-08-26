@@ -8,7 +8,7 @@ export const QUEST_ID_RE = /^[A-Za-z0-9._:-]{1,120}$/;
 export const PLACE_MAX = 200;
 
 const OUTCOMES = new Set(["hold", "partial", "collapse", "abandon"]);
-const KINDS = new Set(["theme", "lesson", "friends", "import", "daily"]);
+const KINDS = new Set(["theme", "lesson", "friends", "import"]);
 
 /**
  * @param {unknown} raw
@@ -54,7 +54,7 @@ export function mapOutcome(raw) {
 
 /**
  * @param {unknown} raw
- * @returns {"theme"|"lesson"|"friends"|"import"|"daily"}
+ * @returns {"theme"|"lesson"|"friends"|"import"}
  */
 export function mapKind(raw) {
   const s = String(raw || "")

@@ -184,26 +184,10 @@ body.ff-accounts .topbar-game {
   min-height: 1.2em;
 }
 
-.cloud-streak-chip {
-  margin: 0.35rem 0 0;
-  font-size: 0.88rem;
-  color: #fbbf24;
-  text-align: center;
-}
-
-button.cloud-streak-chip {
-  display: block;
+.catalog-board-pick {
   width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 0.15rem 0;
-  cursor: pointer;
-  font: inherit;
-}
-
-button.cloud-streak-chip:hover,
-button.cloud-streak-chip:focus-visible {
-  text-decoration: underline;
+  text-align: left;
+  justify-content: flex-start;
 }
 
 .outcome-pathway-text {

@@ -5,7 +5,7 @@
 
 import { mapKind, mapOutcome, sanitizeQuestId, PLACE_MAX } from "./cloud-save.mjs";
 
-export const RUN_KINDS = ["theme", "lesson", "friends", "import", "daily"];
+export const RUN_KINDS = ["theme", "lesson", "friends", "import"];
 export const RUN_OUTCOMES = ["hold", "partial", "collapse", "abandon"];
 export const DEFAULT_RUNS_LIMIT = 50;
 export const MAX_RUNS_LIMIT = 100;

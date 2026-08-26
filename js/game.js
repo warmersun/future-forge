@@ -29,10 +29,8 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { parseGhostQuery, ghostResult, ghostSharePath } from "./cloud/ghost.js?v=portal-14";
-import { officialPeriodUrl } from "./cloud/daily-url.js?v=portal-14";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-14";
-import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-14";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-15";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-15";
 import {
   apiFetch,
   getClerk,
@@ -65,7 +63,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
 } from "./hex/board-state.js";
-import { boardWorstPathwayTiming } from "./hex/evaluate.js";
+import { boardWorstPathwayTiming, boardPathwayReevaluating } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
@@ -122,7 +120,6 @@ import {
   loadQuestLibrary,
   importQuestToLibrary,
   removeQuestFromLibrary,
-  pickDailyMission,
   loadPins,
   savePins,
 } from "./meta.js";
@@ -417,12 +414,9 @@ const state = {
   cloudRunId: null,
   questLogFilter: { outcome: null, kind: null },
   questLogRuns: [],
-  /** Official or practice Daily for this play */
-  dailyPlay: null,
   dailyBoard: null,
-  boardKind: "daily",
+  boardKind: "picker",
   boardQuestId: null,
-  ghostTarget: null,
   cloudContinue: null,
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
@@ -3035,9 +3029,7 @@ function slimLastRunFromState() {
     ? "lesson"
     : isMultipartyOutcome()
       ? "friends"
-      : m.source === "daily" || state.dailyPlay
-        ? "daily"
-        : "theme";
+      : "theme";
   let outcome = String(o.kind || "");
   if (outcome === "win") outcome = "hold";
   if (!outcome) return null;
@@ -3143,9 +3135,7 @@ function postCloudRunStart(mission) {
     ? "lesson"
     : isRoomOrHotseatSession()
       ? "friends"
-      : mission.source === "daily" || state.dailyPlay
-        ? "daily"
-        : "theme";
+      : "theme";
   void apiFetch("/api/me/runs/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -3674,49 +3664,6 @@ function renderTitleCtas() {
   }
 }
 
-function streakLabel(days) {
-  const n = Number(days) || 0;
-  if (n < 1) return "Streak — none yet. Hold today’s Daily to start.";
-  if (n === 1) return "Streak — 1 day";
-  return `Streak — ${n} days`;
-}
-
-async function loadStreakChip() {
-  const el = $("#cloud-streak-chip");
-  const profileEl = $("#cloud-profile-streak");
-  const signedIn = isClerkSignedIn();
-  if (!signedIn) {
-    if (el) {
-      el.hidden = true;
-      el.textContent = "";
-    }
-    if (profileEl) {
-      profileEl.hidden = true;
-      profileEl.textContent = "";
-    }
-    return;
-  }
-  let n = 0;
-  try {
-    const res = await apiFetch("/api/me/streak");
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) n = Number(data.days) || 0;
-  } catch {
-    n = 0;
-  }
-  const label = streakLabel(n);
-  if (el) {
-    el.hidden = false;
-    el.removeAttribute("hidden");
-    el.textContent = label;
-  }
-  if (profileEl) {
-    profileEl.hidden = false;
-    profileEl.removeAttribute("hidden");
-    profileEl.textContent = label;
-  }
-}
-
 async function loadAchievementsStrip() {
   const el = $("#cloud-achievements-strip");
   if (!el) return;
@@ -3744,7 +3691,6 @@ async function loadAchievementsStrip() {
 function renderTitleMeta() {
   renderTitleCtas();
   void loadAchievementsStrip();
-  void loadStreakChip();
   void maybeOfferContinue();
   if (state.screen === "quest-log") void loadQuestLog();
   // Keep catalog warm for hub/lists
@@ -3765,7 +3711,6 @@ function questLogOutcomeLabel(outcome) {
 
 async function openCloudProfile() {
   showScreen("cloud-profile");
-  void loadStreakChip();
   try {
     const res = await apiFetch("/api/me/profile");
     const data = await res.json().catch(() => ({}));
@@ -3884,57 +3829,6 @@ function renderQuestLog() {
   }
 }
 
-async function playTodayDaily(kind = "daily") {
-  const weekly = kind === "weekly";
-  let official = null;
-  try {
-    const ghost = weekly ? null : state.ghostTarget;
-    const url = officialPeriodUrl(weekly ? "weekly" : "daily", ghost);
-    const res = await apiFetch(url);
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.tile?.mission) official = data;
-  } catch {
-    /* fall through to local pick */
-  }
-  const signedIn = isClerkSignedIn();
-  if (official?.tile?.mission) {
-    const m = normalizeMission(
-      { ...official.tile.mission, source: "daily" },
-      official.tile.mission.globalId || official.tile.globalId
-    );
-    state.dailyPlay = {
-      kind: weekly ? "weekly" : "daily",
-      period: official.period || official.date,
-      questId: String(official.questId || m.id),
-      official: signedIn,
-    };
-    if (!signedIn) {
-      flashToast(
-        weekly
-          ? "Practice week quest — Sign in to count it."
-          : "Practice Daily — Sign in to count it on the board."
-      );
-    }
-    state.global = globalById(m.globalId) || state.global;
-    startMission(m);
-    return;
-  }
-  if (weekly) {
-    flashToast("No week quest available.");
-    return;
-  }
-  const picked = pickDailyMission(GLOBALS, localScenariosForGlobal);
-  if (!picked?.mission) {
-    flashToast("No Daily quest available today.");
-    return;
-  }
-  const m = normalizeMission({ ...picked.mission, source: "daily" }, picked.global?.id);
-  state.dailyPlay = { kind: "daily", period: picked.seed, questId: String(m.id), official: false };
-  flashToast("Local Daily (this device). Sign in for the official board.");
-  state.global = picked.global || state.global;
-  startMission(m);
-}
-
 function currentPathwaySummary() {
   return summarizePathwayForBoard(state.hexBoard, {
     place: state.mission?.place || "",
@@ -4027,42 +3921,33 @@ async function submitQuestBoardIfCounted(run) {
   }
 }
 
-async function submitDailyIfCounted(run) {
-  const d = state.dailyPlay;
-  if (!d?.official || !isClerkSignedIn()) return;
-  if (run?.outcome !== "hold" && run?.outcome !== "partial") return;
-  const clerk = getClerk();
-  const displayName =
-    clerk?.user?.firstName || clerk?.user?.username || clerk?.user?.fullName || "Inventor";
-  try {
-    await apiFetch(d.kind === "weekly" ? "/api/weekly/submit" : "/api/daily/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: d.period,
-        questId: d.questId,
-        runId: run.id || state.cloudRunId,
-        yearReached: run.yearReached,
-        stars: run.stars,
-        waits: run.waits,
-        displayName,
-      }),
+function catalogBoardEntries() {
+  const list = Array.isArray(state.hostedQuests) ? state.hostedQuests : [];
+  const out = [];
+  const seen = new Set();
+  for (const entry of list) {
+    const id = String(entry?.id || entry?.mission?.id || "");
+    if (!questHasLeaderboard(id) || seen.has(id)) continue;
+    seen.add(id);
+    const m = entry.mission || {};
+    out.push({
+      id,
+      title: entry.title || m.title || id,
+      place: entry.place || m.place || "",
     });
-  } catch {
-    /* board is optional */
   }
+  return out;
 }
 
 async function loadDailyBoard() {
   const qid = state.boardQuestId;
-  const weekly = state.boardKind === "weekly";
+  if (!qid) {
+    state.dailyBoard = { top: [], you: null };
+    renderDailyBoard();
+    return;
+  }
   try {
-    const url = qid
-      ? `/api/board/${encodeURIComponent(qid)}`
-      : weekly
-        ? "/api/weekly/board"
-        : "/api/daily/board";
-    const res = await apiFetch(url);
+    const res = await apiFetch(`/api/board/${encodeURIComponent(qid)}`);
     const data = await res.json().catch(() => ({}));
     state.dailyBoard = res.ok ? data : { top: [], you: null };
     if (res.ok && data.questId) state.boardQuestId = data.questId;
@@ -4072,11 +3957,12 @@ async function loadDailyBoard() {
   renderDailyBoard();
 }
 
-function openDailyBoard(kind = "daily") {
-  state.boardKind = kind === "weekly" ? "weekly" : "daily";
+function openLeaderboardHome() {
+  state.boardKind = "picker";
   state.boardQuestId = null;
+  state.dailyBoard = { top: [], you: null };
   showScreen("daily-board");
-  void loadDailyBoard();
+  void refreshHostedQuests({ silent: true }).then(() => renderDailyBoard());
 }
 
 function openQuestBoard(questId) {
@@ -4097,6 +3983,7 @@ function stillUrlForRow(questId, row) {
 }
 
 function renderDailyBoard() {
+  const picker = $("#quest-board-picker");
   const list = $("#daily-board-list");
   const youEl = $("#daily-board-you");
   const empty = $("#daily-board-empty");
@@ -4105,18 +3992,64 @@ function renderDailyBoard() {
   const blurbEl = $("#daily-board-blurb");
   const data = state.dailyBoard || {};
   const questId = data.questId || state.boardQuestId || "";
-  const heading = data.title || data.place || "Leaderboard";
-  if (titleEl) titleEl.textContent = heading;
-  if (blurbEl) {
-    blurbEl.textContent = data.place
-      ? `Best holds of this quest in ${data.place}. One row per inventor — your personal best.`
-      : "Best holds of this quest. One row per inventor — your personal best.";
+  const picking = !questId;
+
+  if (picker) {
+    picker.hidden = !picking;
+    picker.replaceChildren();
+    if (picking) {
+      const entries = catalogBoardEntries();
+      for (const e of entries) {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-ghost catalog-board-pick";
+        btn.textContent = e.place ? `${e.title} · ${e.place}` : e.title;
+        btn.addEventListener("click", () => openQuestBoard(e.id));
+        li.appendChild(btn);
+        picker.appendChild(li);
+      }
+    }
   }
-  if (dateEl) dateEl.textContent = data.place && data.title ? data.place : "";
+  if (list) list.hidden = picking;
+
+  if (titleEl) titleEl.textContent = picking ? "Leaderboard" : data.title || data.place || "Leaderboard";
+  if (blurbEl) {
+    if (picking) {
+      blurbEl.textContent = "Pick a Learning, Sponsored, or Library quest. Same job, comparable invents.";
+    } else {
+      blurbEl.textContent = data.place
+        ? `Best holds of this quest in ${data.place}. One row per inventor — your personal best.`
+        : "Best holds of this quest. One row per inventor — your personal best.";
+    }
+  }
+  if (dateEl) dateEl.textContent = !picking && data.place && data.title ? data.place : "";
+
+  if (youEl) {
+    if (!picking && data.you) {
+      youEl.hidden = false;
+      youEl.textContent = `You: #${data.you.rank} · year ${data.you.yearReached} · ${data.you.stars}★`;
+    } else {
+      youEl.hidden = true;
+      youEl.textContent = "";
+    }
+  }
+
   if (!list) return;
   list.replaceChildren();
-  const top = Array.isArray(data.top) ? data.top : [];
-  if (empty) empty.hidden = top.length > 0;
+  const top = !picking && Array.isArray(data.top) ? data.top : [];
+  if (empty) {
+    if (picking) {
+      const n = catalogBoardEntries().length;
+      empty.hidden = n > 0;
+      empty.textContent = n
+        ? ""
+        : "Open a Learning or Sponsored quest, then tap Leaderboard on the card.";
+    } else {
+      empty.hidden = top.length > 0;
+      empty.textContent = "No holds yet.";
+    }
+  }
   for (const row of top) {
     const li = document.createElement("li");
     li.className = "quest-board-row";
@@ -4145,22 +4078,6 @@ function renderDailyBoard() {
       li.appendChild(p);
     }
     list.appendChild(li);
-  }
-  if (youEl) {
-    if (data.you) {
-      youEl.hidden = false;
-      youEl.textContent = `You: #${data.you.rank} · year ${data.you.yearReached} · ${data.you.stars}★`;
-    } else {
-      youEl.hidden = true;
-      youEl.textContent = "";
-    }
-  }
-  const playBtn = $("#btn-daily-board-play");
-  if (playBtn) {
-    const featured = state.boardKind !== "quest";
-    playBtn.hidden = !featured;
-    if (featured) playBtn.removeAttribute("hidden");
-    else playBtn.setAttribute("hidden", "");
   }
 }
 
@@ -6023,7 +5940,6 @@ function startMission(mission, opts = {}) {
     opts.restore || null
   );
   state.cloudRunId = restored.cloudRunId;
-  if (merged.source !== "daily") state.dailyPlay = null;
   if (!restored.skipNewRun) postCloudRunStart(merged);
   scheduleCloudRunState();
   // Clear invent progress immediately (before first paint) for non-learning quests
@@ -7020,12 +6936,22 @@ function renderFeasibility() {
   const summary = $("#feasibility-summary");
   const dims = $("#feasibility-dims");
   const foot = $("#feasibility-foot");
+  const pending = boardPathwayReevaluating(board);
   if (light) {
-    light.dataset.level = overall;
-    light.classList.remove("is-pending");
-    light.title = "Pathway coverage";
+    if (pending) {
+      light.dataset.level = lastFeasibilityLightLevel;
+      light.classList.add("is-pending");
+      light.setAttribute("aria-busy", "true");
+      light.title = "Re-evaluating pathway…";
+    } else {
+      lastFeasibilityLightLevel = overall;
+      light.dataset.level = overall;
+      light.classList.remove("is-pending");
+      light.removeAttribute("aria-busy");
+      light.title = "Pathway coverage";
+    }
   }
-  if (label) label.textContent = overall;
+  if (label) label.textContent = pending ? lastFeasibilityLightLevel : overall;
   if (summary) {
     summary.textContent = board?.concernsSummoned
       ? `${reds} red · ${yellows} yellow · ${greens} green among crisis & concerns`
@@ -14903,19 +14829,8 @@ function finishOutcome(kind, meta = {}) {
   stashLastRun(slim);
   void postCloudRun(slim).then((id) => {
     const run = { ...slim, id: id || slim.id };
-    void submitDailyIfCounted(run);
     void submitQuestBoardIfCounted(run);
   });
-  if (state.ghostTarget?.year != null && (slim.outcome === "hold" || slim.outcome === "partial")) {
-    const g = ghostResult({ yearReached: slim.yearReached }, state.ghostTarget.year);
-    if (g.ok) {
-      flashToast(
-        g.beat
-          ? `You beat the ghost (year ${g.held} vs ${g.target}).`
-          : `Ghost still ahead (year ${g.held} vs ${g.target}).`
-      );
-    }
-  }
   applyOutcomeNextChallengeChrome();
 }
 
@@ -18986,7 +18901,6 @@ function bind() {
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
   $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
-  $("#cloud-streak-chip")?.addEventListener("click", () => openDailyBoard("daily"));
   $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
   $("#cloud-profile-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -19002,31 +18916,8 @@ function bind() {
       body: JSON.stringify({ runId: id, share: true }),
     }).catch(() => {});
   });
-  $("#btn-daily-board")?.addEventListener("click", () => openDailyBoard("daily"));
+  $("#btn-daily-board")?.addEventListener("click", () => openLeaderboardHome());
   $("#btn-daily-board-back")?.addEventListener("click", () => showScreen("title"));
-  $("#btn-daily-board-play")?.addEventListener("click", () =>
-    void playTodayDaily(state.boardKind === "weekly" ? "weekly" : "daily")
-  );
-  $("#btn-daily-ghost-share")?.addEventListener("click", async () => {
-    const data = state.dailyBoard || {};
-    const you = data.you;
-    const clerk = getClerk();
-    const beat = clerk?.user?.id || null;
-    const year = you?.yearReached;
-    const daily = data.period || data.date;
-    if (!daily || year == null) {
-      flashToast("Hold today’s Daily first to share a ghost.");
-      return;
-    }
-    const path = ghostSharePath({ daily, beat, year });
-    const url = `${window.location.origin}${path}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      flashToast("Ghost link copied.");
-    } catch {
-      flashToast(url);
-    }
-  });
   $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");
@@ -19779,23 +19670,6 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const ghost = parseGhostQuery(params);
-    if (ghost && (ghost.beat || ghost.year != null || params.get("daily") || params.get("date"))) {
-      state.ghostTarget = ghost;
-      flashToast(
-        ghost.year
-          ? `Ghost challenge: beat year ${ghost.year}.`
-          : "Ghost challenge: play that day’s Daily."
-      );
-      if (params.get("daily") || params.get("date")) {
-        void playTodayDaily("daily");
-      }
-    }
-  } catch {
-    /* ignore */
-  }
   onClerkSession(() => {
     renderTitleMeta();
     void syncCloudProgress();

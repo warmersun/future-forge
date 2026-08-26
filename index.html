@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-14" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-15" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -51,7 +51,6 @@
             </p>
           </div>
         </div>
-        <button type="button" id="cloud-streak-chip" class="cloud-streak-chip" hidden></button>
         <p id="cloud-achievements-strip" class="cloud-achievements-strip" hidden></p>
         <p class="tagline" id="game-tagline">
           Invent local pathways with emerging tech — place them on the board as the future arrives.
@@ -139,7 +138,6 @@
           <button type="button" class="chip" data-log-filter="hold">Held</button>
           <button type="button" class="chip" data-log-filter="partial">Partial</button>
           <button type="button" class="chip" data-log-filter="collapse">Collapsed</button>
-          <button type="button" class="chip" data-log-kind="daily">Daily</button>
           <button type="button" class="chip" data-log-kind="theme">Theme</button>
           <button type="button" class="chip" data-log-kind="lesson">Lesson</button>
           <button type="button" class="chip" data-log-kind="friends">Friends</button>
@@ -165,7 +163,6 @@
         <div class="section-intro">
           <h1>Inventor page</h1>
           <p>Opt-in and private by default. Never shows your email.</p>
-          <p id="cloud-profile-streak" class="cloud-streak-chip" hidden></p>
         </div>
         <form id="cloud-profile-form" class="panel cloud-profile-form">
           <div class="field">
@@ -221,13 +218,10 @@
           </p>
           <p id="daily-board-date" class="muted"></p>
         </div>
+        <ol id="quest-board-picker" class="quest-log-list" hidden></ol>
         <p id="daily-board-you" class="quest-log-item-meta" hidden></p>
-        <p id="daily-board-empty" class="muted">No holds yet today. Be first.</p>
+        <p id="daily-board-empty" class="muted">No holds yet.</p>
         <ol id="daily-board-list" class="quest-log-list"></ol>
-        <div class="form-actions" style="margin-top: 1rem">
-          <button type="button" class="btn btn-primary" id="btn-daily-board-play">Play today’s Daily</button>
-          <button type="button" class="btn btn-secondary" id="btn-daily-ghost-share">Share ghost</button>
-        </div>
       </div>
     </section>
 
@@ -2385,6 +2379,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-14"></script>
+    <script type="module" src="js/main.js?v=portal-15"></script>
   </body>
 </html>

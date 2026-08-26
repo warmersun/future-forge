@@ -1,16 +1,98 @@
 /**
- * Per-quest leaderboard: eligibility, submit parse, still caps.
- * Ranking tuples live in daily.mjs (scoreTuple / isBetterScore / rankBoard).
+ * Per-quest leaderboard: eligibility, rank, submit parse, still caps.
  */
 
 import { sanitizeQuestId } from "./cloud-save.mjs";
-import { sanitizeDisplayName, bindDailyScoreFromRun } from "./daily.mjs";
 import { questHasLeaderboard as clientHasBoard } from "../cloud/quest-board.js";
 
 export const STILL_TOP_K = 3;
 export const STILL_MAX_BYTES = 1_500_000;
 export const PATHWAY_TEXT_MAX = 4000;
 export const STACK_MAX = 12;
+export const BOARD_LIMIT = 20;
+
+export function isPlausibleYear(year) {
+  const y = Number(year);
+  return Number.isInteger(y) && y >= 2020 && y <= 2200;
+}
+
+/**
+ * Lower year (earlier hold) wins, then more stars, then fewer waits.
+ * @param {{ yearReached?: number|null, stars?: number|null, waits?: number|null }} row
+ */
+export function scoreTuple(row) {
+  const year = Number.isFinite(Number(row?.yearReached)) ? Number(row.yearReached) : 9999;
+  const stars = Number.isFinite(Number(row?.stars)) ? Number(row.stars) : 0;
+  const waits = Number.isFinite(Number(row?.waits)) ? Number(row.waits) : 9999;
+  return [year, -stars, waits];
+}
+
+/**
+ * True if `a` should replace `b` (strictly better). Equal keeps existing.
+ * @param {object} a
+ * @param {object} b
+ */
+export function isBetterScore(a, b) {
+  if (!b) return true;
+  const ta = scoreTuple(a);
+  const tb = scoreTuple(b);
+  for (let i = 0; i < ta.length; i++) {
+    if (ta[i] < tb[i]) return true;
+    if (ta[i] > tb[i]) return false;
+  }
+  return false;
+}
+
+/**
+ * @param {unknown} raw
+ */
+export function sanitizeDisplayName(raw) {
+  const s = String(raw || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 40);
+  if (!s || s.includes("@")) return "Inventor";
+  return s;
+}
+
+/**
+ * @param {object[]} rows
+ * @param {{ userId?: string|null, limit?: number }} [opts]
+ */
+export function rankBoard(rows, opts = {}) {
+  const list = (Array.isArray(rows) ? rows : []).map((r, i) => ({ ...r, _i: i }));
+  list.sort((a, b) => {
+    if (isBetterScore(a, b)) return -1;
+    if (isBetterScore(b, a)) return 1;
+    return a._i - b._i;
+  });
+  const limit = Math.min(50, Math.max(1, Number(opts.limit) || BOARD_LIMIT));
+  const top = list.slice(0, limit).map((r, idx) => ({
+    rank: idx + 1,
+    displayName: r.displayName || r.display_name || "Inventor",
+    yearReached: r.yearReached ?? r.year_reached ?? null,
+    stars: r.stars ?? 0,
+    waits: r.waits ?? 0,
+    clerkUserId: r.clerkUserId || r.clerk_user_id || null,
+  }));
+  const uid = opts.userId || null;
+  let you = null;
+  if (uid) {
+    const idx = list.findIndex((r) => (r.clerkUserId || r.clerk_user_id) === uid);
+    if (idx >= 0) {
+      const r = list[idx];
+      you = {
+        rank: idx + 1,
+        displayName: r.displayName || r.display_name || "Inventor",
+        yearReached: r.yearReached ?? r.year_reached ?? null,
+        stars: r.stars ?? 0,
+        waits: r.waits ?? 0,
+        clerkUserId: r.clerkUserId || r.clerk_user_id || uid,
+      };
+    }
+  }
+  return { top, you };
+}
 
 export function questHasLeaderboard(questId) {
   const id = sanitizeQuestId(questId);
@@ -74,12 +156,25 @@ export function parseQuestScoreBody(body, expectedQuestId) {
  * Copy year/stars/waits from the owned run. Ignore client score fields.
  */
 export function bindQuestScoreFromRun(parsed, owned) {
-  const bound = bindDailyScoreFromRun(parsed, owned);
-  if (!bound.ok) return bound;
+  if (!parsed?.ok || !parsed.row) return { ok: false, error: "run_required" };
+  if (!owned) return { ok: false, error: "run_required" };
+  const questId = String(owned.quest_id || owned.questId || "");
+  if (questId !== parsed.row.questId) return { ok: false, error: "run_required" };
+  const outcome = String(owned.outcome || "");
+  if (outcome !== "hold" && outcome !== "partial") {
+    return { ok: false, error: "hold_required" };
+  }
+  const yearReached = owned.year_reached ?? owned.yearReached;
+  if (!isPlausibleYear(yearReached)) return { ok: false, error: "impossible_year" };
+  const starsRaw = Number(owned.stars);
+  const waitsRaw = Number(owned.waits);
   return {
     ok: true,
     row: {
-      ...bound.row,
+      ...parsed.row,
+      yearReached: Math.trunc(Number(yearReached)),
+      stars: Number.isFinite(starsRaw) ? Math.max(0, Math.min(5, Math.trunc(starsRaw))) : 0,
+      waits: Number.isFinite(waitsRaw) ? Math.max(0, Math.min(10_000, Math.trunc(waitsRaw))) : 0,
       place: parsed.row.place || owned.place || "",
       stack: parsed.row.stack,
       pathwayText: parsed.row.pathwayText,

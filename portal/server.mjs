@@ -90,10 +90,8 @@ import {
   listRuns,
   startRun,
   getRunForUser,
-  upsertDailyScore,
   listAchievements,
   insertAchievements,
-  listUserDailyPeriods,
   countUsers,
   deleteUser,
   ensureUser,
@@ -124,7 +122,6 @@ import {
   parseReportBody,
   sanitizeUsername,
 } from "../js/server/profile.mjs";
-import { dailyStreak } from "../js/server/streak.mjs";
 import {
   cloudWriteGate,
   parseImportBody,
@@ -132,33 +129,19 @@ import {
 } from "../js/server/cloud-save.mjs";
 import { parseRunsQuery } from "../js/server/quest-log.mjs";
 import {
-  dailyPeriod,
-  parseWeekPeriod,
-  dailyPoolFromTiles,
-  pickFromPool,
-  hashSeed,
-  parseDailySubmit,
-  bindDailyScoreFromRun,
-  isBetterScore,
-  rankBoard,
-  DAILY_SALT,
-  WEEK_SALT,
-  isoWeekPeriod,
-  utcDayString,
-  sanitizeDisplayName,
-} from "../js/server/daily.mjs";
-import {
   questHasLeaderboard,
   parseQuestScoreBody,
   bindQuestScoreFromRun,
   attachBoardExtras,
+  isBetterScore,
+  rankBoard,
+  sanitizeDisplayName,
   STILL_TOP_K,
   STILL_MAX_BYTES,
 } from "../js/server/quest-board.mjs";
 import {
   awardForRun,
   publicAchievement,
-  countHoldsInWeek,
   foundingCodes,
 } from "../js/server/achievements.mjs";
 import {
@@ -2283,37 +2266,6 @@ async function loadMergedQuestTiles(opts = {}) {
   };
 }
 
-async function resolveOfficialDaily(dateRaw, opts = {}) {
-  const salt = opts.salt || DAILY_SALT;
-  const period =
-    opts.period ||
-    (salt === WEEK_SALT ? parseWeekPeriod(dateRaw) : dailyPeriod(dateRaw));
-  const pack = await loadMergedQuestTiles();
-  const pool = dailyPoolFromTiles(pack.quests);
-  let tile = null;
-  let questId = null;
-  if (pool.length) {
-    tile = pickFromPool(pool, period, salt);
-    questId = String(tile?.id || tile?.mission?.id || "");
-  } else if (GLOBALS.length) {
-    const h = hashSeed(`${salt}:${period}`);
-    const g = GLOBALS[h % GLOBALS.length];
-    const list = localScenariosForGlobal(g, { count: 4, salt: (h >>> 8) % 1000 }) || [];
-    const mission = list.length ? list[(h >>> 16) % list.length] : null;
-    if (mission) {
-      questId = String(mission.id);
-      tile = {
-        id: questId,
-        title: mission.title,
-        place: mission.place,
-        mission: { ...mission, source: "daily" },
-        access: "account",
-      };
-    }
-  }
-  return { period, questId: questId || null, tile };
-}
-
 async function ensureUserFromWebhook(plan) {
   if (!plan?.userId) return;
   await ensureUser(plan.userId);
@@ -2326,8 +2278,6 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
   if (!dbEnabled() || !clerkUserId || !run) return [];
   try {
     const have = await listAchievements(clerkUserId);
-    const periods = await listUserDailyPeriods(clerkUserId);
-    const week = isoWeekPeriod(new Date());
     let sponsored = false;
     try {
       const pack = await loadMergedQuestTiles();
@@ -2344,7 +2294,6 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
       {
         already: have.map((h) => h.code),
         sponsored,
-        dailyHoldsThisWeek: countHoldsInWeek(periods, week, isoWeekPeriod),
       }
     );
     const n = await countUsers();
@@ -3091,8 +3040,6 @@ function isPortalApiPath(pathOnly) {
   const p = String(pathOnly || "");
   if (p === "/api/health" || p.startsWith("/api/health/")) return true;
   if (p === "/api/me" || p.startsWith("/api/me/")) return true;
-  if (p === "/api/daily" || p.startsWith("/api/daily/")) return true;
-  if (p === "/api/weekly" || p.startsWith("/api/weekly/")) return true;
   if (p.startsWith("/api/u/")) return true;
   if (p === "/api/webhooks/clerk" || p.startsWith("/api/webhooks/clerk/")) return true;
   if (p === "/api/report" || p.startsWith("/api/report/")) return true;
@@ -3269,22 +3216,6 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.warn("[cloud db] achievements", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
-    }
-  }
-
-  if (req.method === "GET" && (req.url === "/api/me/streak" || req.url?.startsWith("/api/me/streak?"))) {
-    const ident = await authenticateClerkRequest(req);
-    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
-    if (!gate.ok) {
-      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
-    }
-    try {
-      const periods = await listUserDailyPeriods(gate.userId);
-      const today = utcDayString();
-      const days = dailyStreak(periods, today);
-      return sendJson(res, 200, { ok: true, days, today });
-    } catch (e) {
-      return sendJson(res, errorStatus(e), { ok: false, error: "streak_failed" });
     }
   }
 
@@ -3666,235 +3597,6 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.warn("[quest board]", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
-    }
-  }
-
-  if (req.method === "GET" && (req.url === "/api/daily" || req.url?.startsWith("/api/daily?"))) {
-    try {
-      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const ident = await authenticateClerkRequest(req);
-      const resolved = await resolveOfficialDaily(url.searchParams.get("date"));
-      if (!resolved.questId || !resolved.tile) {
-        return sendJson(res, 404, { ok: false, error: "no_daily" });
-      }
-      const tile = applyCatalogGate(resolved.tile, ident);
-      return sendJson(res, 200, {
-        ok: true,
-        date: resolved.period,
-        period: resolved.period,
-        questId: resolved.questId,
-        tile: publicCatalogTile(tile),
-      });
-    } catch (e) {
-      console.warn("[daily]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "daily_failed" });
-    }
-  }
-
-  if (
-    req.method === "GET" &&
-    (req.url === "/api/daily/board" || req.url?.startsWith("/api/daily/board?"))
-  ) {
-    try {
-      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const ident = await authenticateClerkRequest(req);
-      const resolved = await resolveOfficialDaily(url.searchParams.get("date"));
-      if (!resolved.questId || !questHasLeaderboard(resolved.questId)) {
-        return sendJson(res, 200, {
-          ok: true,
-          date: resolved.period,
-          period: resolved.period,
-          questId: resolved.questId,
-          place: resolved.tile?.place || resolved.tile?.mission?.place || "",
-          title: resolved.tile?.title || resolved.tile?.mission?.title || "",
-          top: [],
-          you: null,
-        });
-      }
-      const body = await questBoardJson(resolved.questId, ident, {
-        date: resolved.period,
-        period: resolved.period,
-        place: resolved.tile?.place || resolved.tile?.mission?.place || "",
-        title: resolved.tile?.title || resolved.tile?.mission?.title || "",
-      });
-      return sendJson(res, 200, body);
-    } catch (e) {
-      console.warn("[daily board]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
-    }
-  }
-
-  if (
-    req.method === "POST" &&
-    (req.url === "/api/daily/submit" || req.url?.startsWith("/api/daily/submit?"))
-  ) {
-    const ident = await authenticateClerkRequest(req);
-    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
-    if (!gate.ok) {
-      req.resume();
-      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
-    }
-    try {
-      const body = await readBody(req, { maxBytes: 8_000 });
-      const resolved = await resolveOfficialDaily(body.date || body.period);
-      const parsed = parseDailySubmit(body, {
-        expectedQuestId: resolved.questId,
-        period: resolved.period,
-      });
-      if (!parsed.ok) {
-        return sendJson(res, 400, { ok: false, error: parsed.error });
-      }
-      const owned = await getRunForUser(gate.userId, parsed.row.runId);
-      const bound = bindDailyScoreFromRun(parsed, owned);
-      if (!bound.ok) {
-        return sendJson(res, 400, { ok: false, error: bound.error });
-      }
-      const result = await upsertDailyScore(
-        { ...bound.row, clerkUserId: gate.userId },
-        isBetterScore
-      );
-      if (questHasLeaderboard(bound.row.questId)) {
-        const profile = await getProfileByUserId(gate.userId);
-        await upsertQuestScore(
-          {
-            ...bound.row,
-            clerkUserId: gate.userId,
-            displayName: sanitizeDisplayName(
-              profile?.displayName || bound.row.displayName
-            ),
-            place: bound.row.place || resolved.tile?.place || "",
-            stack: [],
-            pathwayText: "",
-          },
-          isBetterScore
-        );
-        await evictQuestStills(bound.row.questId);
-      }
-      return sendJson(res, 200, {
-        ok: true,
-        stored: Boolean(result.stored),
-        kept: Boolean(result.kept),
-        period: resolved.period,
-        questId: bound.row.questId,
-      });
-    } catch (e) {
-      console.warn("[daily submit]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
-    }
-  }
-
-  if (req.method === "GET" && (req.url === "/api/weekly" || req.url?.startsWith("/api/weekly?"))) {
-    try {
-      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const ident = await authenticateClerkRequest(req);
-      const resolved = await resolveOfficialDaily(url.searchParams.get("period"), {
-        salt: WEEK_SALT,
-      });
-      if (!resolved.questId || !resolved.tile) {
-        return sendJson(res, 404, { ok: false, error: "no_weekly" });
-      }
-      const tile = applyCatalogGate(resolved.tile, ident);
-      return sendJson(res, 200, {
-        ok: true,
-        period: resolved.period,
-        questId: resolved.questId,
-        tile: publicCatalogTile(tile),
-      });
-    } catch (e) {
-      console.warn("[weekly]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "weekly_failed" });
-    }
-  }
-
-  if (
-    req.method === "GET" &&
-    (req.url === "/api/weekly/board" || req.url?.startsWith("/api/weekly/board?"))
-  ) {
-    try {
-      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const ident = await authenticateClerkRequest(req);
-      const resolved = await resolveOfficialDaily(url.searchParams.get("period"), {
-        salt: WEEK_SALT,
-      });
-      if (!resolved.questId || !questHasLeaderboard(resolved.questId)) {
-        return sendJson(res, 200, {
-          ok: true,
-          period: resolved.period,
-          questId: resolved.questId,
-          place: resolved.tile?.place || resolved.tile?.mission?.place || "",
-          title: resolved.tile?.title || resolved.tile?.mission?.title || "",
-          top: [],
-          you: null,
-        });
-      }
-      const body = await questBoardJson(resolved.questId, ident, {
-        period: resolved.period,
-        place: resolved.tile?.place || resolved.tile?.mission?.place || "",
-        title: resolved.tile?.title || resolved.tile?.mission?.title || "",
-      });
-      return sendJson(res, 200, body);
-    } catch (e) {
-      console.warn("[weekly board]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
-    }
-  }
-
-  if (
-    req.method === "POST" &&
-    (req.url === "/api/weekly/submit" || req.url?.startsWith("/api/weekly/submit?"))
-  ) {
-    const ident = await authenticateClerkRequest(req);
-    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
-    if (!gate.ok) {
-      req.resume();
-      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
-    }
-    try {
-      const body = await readBody(req, { maxBytes: 8_000 });
-      const resolved = await resolveOfficialDaily(body.period, { salt: WEEK_SALT });
-      const parsed = parseDailySubmit(body, {
-        expectedQuestId: resolved.questId,
-        period: resolved.period,
-      });
-      if (!parsed.ok) {
-        return sendJson(res, 400, { ok: false, error: parsed.error });
-      }
-      const owned = await getRunForUser(gate.userId, parsed.row.runId);
-      const bound = bindDailyScoreFromRun(parsed, owned);
-      if (!bound.ok) {
-        return sendJson(res, 400, { ok: false, error: bound.error });
-      }
-      const result = await upsertDailyScore(
-        { ...bound.row, clerkUserId: gate.userId },
-        isBetterScore
-      );
-      if (questHasLeaderboard(bound.row.questId)) {
-        const profile = await getProfileByUserId(gate.userId);
-        await upsertQuestScore(
-          {
-            ...bound.row,
-            clerkUserId: gate.userId,
-            displayName: sanitizeDisplayName(
-              profile?.displayName || bound.row.displayName
-            ),
-            place: bound.row.place || resolved.tile?.place || "",
-            stack: [],
-            pathwayText: "",
-          },
-          isBetterScore
-        );
-        await evictQuestStills(bound.row.questId);
-      }
-      return sendJson(res, 200, {
-        ok: true,
-        stored: Boolean(result.stored),
-        kept: Boolean(result.kept),
-        period: resolved.period,
-        questId: bound.row.questId,
-      });
-    } catch (e) {
-      console.warn("[weekly submit]", e?.message || e);
-      return sendJson(res, errorStatus(e), { ok: false, error: "submit_failed" });
     }
   }
 

@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   awardForRun,
   publicAchievement,
-  countHoldsInWeek,
   foundingCodes,
   FOUNDING_MAX,
 } from "./achievements.mjs";
@@ -21,21 +20,21 @@ describe("awardForRun", () => {
     );
   });
 
-  it("awards friends, sponsored, daily streak, converter, four challengers", () => {
+  it("awards friends, sponsored, converter, four challengers", () => {
     const codes = awardForRun(
       {
         outcome: "hold",
         kind: "friends",
         techIds: ["split-converter"],
       },
-      { sponsored: true, challengerCount: 4, dailyHoldsThisWeek: 3 }
+      { sponsored: true, challengerCount: 4 }
     );
     assert.ok(codes.includes("held_pathway"));
     assert.ok(codes.includes("first_friends_hold"));
     assert.ok(codes.includes("sponsored_spotlight"));
-    assert.ok(codes.includes("daily_three_week"));
     assert.ok(codes.includes("four_challengers"));
     assert.ok(codes.includes("converter_dock"));
+    assert.equal(codes.includes("daily_three_week"), false);
   });
 
   it("never trusts a client-supplied code list as unlocks", () => {
@@ -52,16 +51,6 @@ describe("awardForRun", () => {
     });
     assert.equal(codes.includes("sponsored_spotlight"), false);
     assert.equal(codes.includes("four_challengers"), false);
-  });
-});
-
-describe("countHoldsInWeek", () => {
-  it("counts UTC days that fall in the ISO week plus the week key", () => {
-    const weekOf = (d) => (d === "2026-08-25" || d === "2026-08-26" ? "2026-W35" : "2026-W34");
-    assert.equal(
-      countHoldsInWeek(["2026-08-25", "2026-08-26", "2026-W35", "2026-08-01"], "2026-W35", weekOf),
-      3
-    );
   });
 });
 

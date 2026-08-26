@@ -19,12 +19,11 @@ describe("static allowlist", () => {
     assert.equal(isPublicRel("js/main.js"), true);
     assert.equal(isPublicRel("js/game.js"), true);
     assert.equal(isPublicRel("js/auth.js"), true);
-    assert.equal(isPublicRel("js/cloud/ghost.js"), true);
-    assert.equal(isPublicRel("js/cloud/daily-url.js"), true);
+    assert.equal(isPublicRel("js/cloud/quest-board.js"), true);
     assert.equal(isPublicRel("js/cloud/continue.js"), true);
     assert.equal(isPublicRel("js/server/clerk-auth.mjs"), false);
     assert.equal(isPublicRel("js/server/db.mjs"), false);
-    assert.equal(isPublicRel("js/server/ghost.mjs"), false);
+    assert.equal(isPublicRel("js/server/quest-board.mjs"), false);
     assert.equal(isPublicRel("js/server/cloud-gate.mjs"), false);
     assert.equal(isPublicRel("js/multiplayer/ui.js"), true);
     assert.equal(isPublicRel("assets/problems/x.jpg"), true);

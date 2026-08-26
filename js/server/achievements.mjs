@@ -15,10 +15,6 @@ export const ACHIEVEMENT_DEFS = {
     title: "Named invent",
     blurb: "You invented on a sponsored spotlight.",
   },
-  daily_three_week: {
-    title: "Three Dailies",
-    blurb: "Held three official Dailies in one week.",
-  },
   four_challengers: {
     title: "All four questions",
     blurb: "Summoned all four challengers on a held pathway.",
@@ -39,7 +35,7 @@ export const ACHIEVEMENT_DEFS = {
 
 /**
  * @param {{ outcome?: string|null, kind?: string, techIds?: string[] }} run
- * @param {{ sponsored?: boolean, challengerCount?: number, dailyHoldsThisWeek?: number, already?: string[] }} [ctx]
+ * @param {{ sponsored?: boolean, challengerCount?: number, already?: string[] }} [ctx]
  * @returns {string[]} newly unlocked codes
  */
 export function awardForRun(run, ctx = {}) {
@@ -59,9 +55,6 @@ export function awardForRun(run, ctx = {}) {
   }
   if ((run?.outcome === "hold" || run?.outcome === "partial") && ctx.sponsored) {
     unlock("sponsored_spotlight");
-  }
-  if (Number(ctx.dailyHoldsThisWeek) >= 3) {
-    unlock("daily_three_week");
   }
   if ((run?.outcome === "hold" || run?.outcome === "partial") && Number(ctx.challengerCount) >= 4) {
     unlock("four_challengers");
@@ -97,27 +90,6 @@ export function foundingCodes(ctx = {}) {
     }
   }
   return codes;
-}
-
-/**
- * @param {string} code
- */
-/**
- * Count official Daily (YYYY-MM-DD) and weekly (YYYY-Www) scores in an ISO week.
- * @param {string[]} periods
- * @param {string} weekPeriod
- * @param {(isoDate: string) => string} weekOf
- */
-export function countHoldsInWeek(periods, weekPeriod, weekOf) {
-  const week = String(weekPeriod || "");
-  return (periods || []).filter((p) => {
-    const s = String(p);
-    if (s === week) return true;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s) && typeof weekOf === "function") {
-      return weekOf(s) === week;
-    }
-    return false;
-  }).length;
 }
 
 export function publicAchievement(code, unlockedAt = null) {

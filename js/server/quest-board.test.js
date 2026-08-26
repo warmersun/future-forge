@@ -1,6 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { rankBoard, isBetterScore } from "./daily.mjs";
 import {
   questHasLeaderboard,
   clipPathwayText,
@@ -8,6 +7,10 @@ import {
   parseQuestScoreBody,
   bindQuestScoreFromRun,
   attachBoardExtras,
+  rankBoard,
+  isBetterScore,
+  sanitizeDisplayName,
+  isPlausibleYear,
   PATHWAY_TEXT_MAX,
   STILL_TOP_K,
 } from "./quest-board.mjs";
@@ -85,7 +88,27 @@ describe("attachBoardExtras", () => {
 });
 
 describe("isBetterScore still drives replace", () => {
-  it("earlier year wins", () => {
-    assert.equal(isBetterScore({ yearReached: 2028, stars: 1, waits: 9 }, { yearReached: 2030, stars: 5, waits: 0 }), true);
+  it("earlier year beats later, then stars, then waits", () => {
+    assert.equal(isBetterScore({ yearReached: 2030, stars: 1, waits: 9 }, { yearReached: 2034, stars: 5, waits: 0 }), true);
+    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 2 }, { yearReached: 2030, stars: 2, waits: 0 }), true);
+    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 1 }, { yearReached: 2030, stars: 3, waits: 4 }), true);
+    assert.equal(isBetterScore({ yearReached: 2030, stars: 3, waits: 1 }, { yearReached: 2030, stars: 3, waits: 1 }), false);
+  });
+  it("rankBoard returns top N and your row", () => {
+    const rows = [
+      { clerkUserId: "user_slow", yearReached: 2040, stars: 5, waits: 0, displayName: "Slow" },
+      { clerkUserId: "user_me", yearReached: 2031, stars: 2, waits: 1, displayName: "Me" },
+      { clerkUserId: "user_ace", yearReached: 2028, stars: 1, waits: 3, displayName: "Ace" },
+    ];
+    const b = rankBoard(rows, { userId: "user_me", limit: 10 });
+    assert.equal(b.top[0].displayName, "Ace");
+    assert.equal(b.you.rank, 2);
+    assert.equal(b.you.displayName, "Me");
+  });
+  it("strips email-like display names and junk years", () => {
+    assert.equal(sanitizeDisplayName("a@b.com"), "Inventor");
+    assert.equal(sanitizeDisplayName("Tamas S."), "Tamas S.");
+    assert.equal(isPlausibleYear(2030), true);
+    assert.equal(isPlausibleYear(1800), false);
   });
 });

@@ -623,6 +623,20 @@ export function boardWorstPathwayTiming(board) {
 }
 
 /**
+ * True while the Pathway panel should spin: a given lamp is re-scoring
+ * or a bonded pathway is still re-checking timing.
+ * @param {object|null|undefined} board
+ */
+export function boardPathwayReevaluating(board) {
+  if (boardWorstPathwayTiming(board).pending) return true;
+  return Object.values(board?.tiles || {}).some(
+    (t) =>
+      (t.kind === TILE_KIND.crisis || t.kind === TILE_KIND.concern) &&
+      t.lampPending
+  );
+}
+
+/**
  * Cache key for per-tile timing assess (no name).
  * @param {object} tile
  * @param {number} year
