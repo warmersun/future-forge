@@ -9,7 +9,7 @@ export const STILL_TOP_K = 3;
 export const STILL_MAX_BYTES = 1_500_000;
 export const PATHWAY_TEXT_MAX = 4000;
 export const STACK_MAX = 12;
-export const BOARD_LIMIT = 20;
+export const BOARD_LIMIT = 10;
 
 export function isPlausibleYear(year) {
   const y = Number(year);
@@ -117,6 +117,83 @@ export function rankBoard(rows, opts = {}) {
     if (idx >= 0) you = publicRow(list[idx], idx + 1);
   }
   return { top, you };
+}
+
+/**
+ * One row per inventor: sum of per-quest scores (★ / years).
+ * Tie-break: more quests, then fewer waits.
+ * @param {object[]} rows quest_scores rows
+ */
+export function aggregatePlayers(rows) {
+  const byUser = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const id = r.clerkUserId || r.clerk_user_id;
+    if (!id) continue;
+    const cur = byUser.get(id) || {
+      clerkUserId: id,
+      displayName: "Inventor",
+      score: 0,
+      waits: 0,
+      quests: 0,
+      _i: byUser.size,
+    };
+    cur.score += boardScore(r);
+    cur.waits += Number.isFinite(Number(r.waits)) ? Number(r.waits) : 0;
+    cur.quests += 1;
+    const name = sanitizeDisplayName(r.displayName || r.display_name);
+    if (name && name !== "Inventor") cur.displayName = name;
+    byUser.set(id, cur);
+  }
+  return [...byUser.values()];
+}
+
+/**
+ * @param {object} a
+ * @param {object} b
+ */
+export function isBetterPlayer(a, b) {
+  if (!b) return true;
+  const sa = Number(a?.score) || 0;
+  const sb = Number(b?.score) || 0;
+  if (sa > sb) return true;
+  if (sa < sb) return false;
+  const qa = Number(a?.quests) || 0;
+  const qb = Number(b?.quests) || 0;
+  if (qa > qb) return true;
+  if (qa < qb) return false;
+  const wa = Number.isFinite(Number(a?.waits)) ? Number(a.waits) : 9999;
+  const wb = Number.isFinite(Number(b?.waits)) ? Number(b.waits) : 9999;
+  return wa < wb;
+}
+
+/**
+ * @param {object[]} rows quest_scores rows
+ * @param {{ userId?: string|null, limit?: number }} [opts]
+ */
+export function rankPlayers(rows, opts = {}) {
+  const list = aggregatePlayers(rows);
+  list.sort((a, b) => {
+    if (isBetterPlayer(a, b)) return -1;
+    if (isBetterPlayer(b, a)) return 1;
+    return a._i - b._i;
+  });
+  const limit = Math.min(50, Math.max(1, Number(opts.limit) || BOARD_LIMIT));
+  const publicRow = (r, rank) => ({
+    rank,
+    displayName: r.displayName || "Inventor",
+    score: r.score,
+    quests: r.quests,
+    waits: r.waits,
+    clerkUserId: r.clerkUserId || null,
+  });
+  const top = list.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
+  const uid = opts.userId || null;
+  let you = null;
+  if (uid) {
+    const idx = list.findIndex((r) => r.clerkUserId === uid);
+    if (idx >= 0) you = publicRow(list[idx], idx + 1);
+  }
+  return { kind: "players", top, you };
 }
 
 export function questHasLeaderboard(questId) {

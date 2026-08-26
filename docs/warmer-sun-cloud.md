@@ -70,7 +70,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
 | SQL migrations `users` / `solved_quests` / `runs` / `run_state` / `quest_scores` | `js/server/db/*.sql` (no `daily_scores`), `pg` Pool |
 | [**C1**](#C1) Quest log | `GET /api/me/runs`, `POST /api/me/runs/start`; signed-in Quest log screen |
-| [**D1**](#D1) Per-quest leaderboard | `quest_scores` + `GET /api/board/:questId`. Title picker + catalog cards. Stills: top 3 BYTEA |
+| [**D1**](#D1) Per-quest leaderboard | `quest_scores` + `GET /api/board/:questId` (quest, catalog card). Title **Leaderboard** is `GET /api/board` top 10 inventors (sum of quest scores). Stills: top 3 BYTEA |
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
 | [**B2**](#B2) Per-user AI quota (free cap) | signed-in daily hit cap; unsigned still IP-limited |
@@ -232,15 +232,16 @@ Surface: UserButton menu → Achievements, and a strip on the title screen when 
 Leaderboards only work if **everyone got the same job**. That is a **catalog quest** (Learning, sponsored, Library) — not “any theme you picked,” not a UTC-day rotation.
 
 <a id="D1"></a>
-### D1. Per-quest leaderboard — **done** (portal APIs; title picker + catalog)
+### D1. Per-quest leaderboard — **done** (portal APIs; catalog card)
 
 **Idea.** One board per **stable catalog quest**. Same job → comparable invents. Theme `gen-…` missions have no board. Each signed-in person appears **once** (personal best). Rank **score** = honesty stars of the hold ÷ years from the quest’s present (`year_reached - startYear`, same-year counts as 1). Multiply, do not add. **Waits** break ties only. The **pathway write-up** (placed invents + how-it-works) sits on the row. Vision stills only for the **current top 3** (`BYTEA` in Neon). Daily, if you want one, is a Learning tile on that board — not a featured door.
 
 **How.**  
 - `POST /api/me/quests/:id/score` copies year/stars/waits from the owned `runs` row; stores `pathway_text`.  
 - `PUT /api/me/quests/:id/still` JPEG if that user is in the top 3. Displace deletes the blob.  
-- `GET /api/board/:questId` public top N + you + write-ups; `GET /api/board/:id/still/:user` the JPEG.  
-- Title **Leaderboard** lists catalog quests; catalog cards have a Leaderboard control. No Play Daily, no Share ghost.  
+- `GET /api/board/:questId` public **top 10** + you + write-ups; `GET /api/board/:id/still/:user` the JPEG.  
+- Title **Leaderboard** (`GET /api/board`): top 10 **inventors**. Score = sum of that person’s per-quest scores (★ ÷ years). Tie-break: more quests, then fewer waits.  
+- Each catalog card still has that quest’s own board.  
 - Unsigned practice does not submit.
 
 <a id="D2"></a>

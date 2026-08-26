@@ -708,6 +708,17 @@ export async function listQuestScores(questId) {
   return { skipped: false, rows: r.rows.map(mapQuestScoreRow) };
 }
 
+export async function listAllQuestScores() {
+  const db = getPool();
+  if (!db) return { skipped: true, rows: [] };
+  const r = await db.query(
+    `SELECT clerk_user_id, quest_id, run_id, year_reached, start_year, stars, waits,
+            display_name, place, stack, pathway_text
+     FROM quest_scores`
+  );
+  return { skipped: false, rows: r.rows.map(mapQuestScoreRow) };
+}
+
 /**
  * Best score per user per quest. `betterFn(next, prev)` true → replace.
  */

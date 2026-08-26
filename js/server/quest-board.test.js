@@ -8,9 +8,11 @@ import {
   bindQuestScoreFromRun,
   attachBoardExtras,
   rankBoard,
+  rankPlayers,
   isBetterScore,
   boardScore,
   yearsTaken,
+  BOARD_LIMIT,
   sanitizeDisplayName,
   isPlausibleYear,
   PATHWAY_TEXT_MAX,
@@ -163,6 +165,36 @@ describe("isBetterScore still drives replace", () => {
     assert.equal(b.you.rank, 1);
     assert.equal(b.you.displayName, "Me");
     assert.equal(b.top[1].displayName, "Ace");
+  });
+  it("rankPlayers sums per-quest scores and keeps top 10 inventors", () => {
+    const present = { startYear: 2026 };
+    const rows = [
+      { clerkUserId: "user_a", displayName: "Ann", ...present, yearReached: 2026, stars: 3, waits: 1, questId: "q1" },
+      { clerkUserId: "user_a", displayName: "Ann", ...present, yearReached: 2028, stars: 3, waits: 2, questId: "q2" },
+      { clerkUserId: "user_b", displayName: "Bo", ...present, yearReached: 2026, stars: 3, waits: 0, questId: "q1" },
+    ];
+    const b = rankPlayers(rows, { userId: "user_b" });
+    // Ann: 3 + 1.5 = 4.5; Bo: 3
+    assert.equal(b.kind, "players");
+    assert.equal(b.top[0].displayName, "Ann");
+    assert.equal(b.top[0].quests, 2);
+    assert.equal(b.top[0].score, 4.5);
+    assert.equal(b.you.displayName, "Bo");
+    assert.equal(b.you.rank, 2);
+  });
+  it("caps the public board at 10", () => {
+    assert.equal(BOARD_LIMIT, 10);
+    const rows = Array.from({ length: 15 }, (_, i) => ({
+      clerkUserId: `user_${i}`,
+      startYear: 2026,
+      yearReached: 2026,
+      stars: 3,
+      waits: i,
+      displayName: `P${i}`,
+    }));
+    const b = rankBoard(rows);
+    assert.equal(b.top.length, 10);
+    assert.equal(b.top[0].displayName, "P0");
   });
   it("strips email-like display names and junk years", () => {
     assert.equal(sanitizeDisplayName("a@b.com"), "Inventor");

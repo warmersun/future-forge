@@ -105,6 +105,7 @@ import {
   getRunState,
   putRunState,
   listQuestScores,
+  listAllQuestScores,
   upsertQuestScore,
   listQuestStillUserIds,
   listQuestScoreUserIdsRanked,
@@ -135,6 +136,7 @@ import {
   attachBoardExtras,
   isBetterScore,
   rankBoard,
+  rankPlayers,
   sanitizeDisplayName,
   STILL_TOP_K,
   STILL_MAX_BYTES,
@@ -3585,6 +3587,20 @@ const server = http.createServer(async (req, res) => {
         ok: false,
         error: e?.status === 400 ? "invalid_run" : "run_failed",
       });
+    }
+  }
+
+  if (req.method === "GET" && (pathOnly === "/api/board" || pathOnly === "/api/board/")) {
+    try {
+      const ident = await authenticateClerkRequest(req);
+      const listed = await listAllQuestScores();
+      const ranked = rankPlayers(listed.rows || [], {
+        userId: ident?.signedIn ? ident.userId : null,
+      });
+      return sendJson(res, 200, { ok: true, ...ranked });
+    } catch (e) {
+      console.warn("[players board]", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "board_failed" });
     }
   }
 

@@ -29,8 +29,8 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-17";
-import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-17";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
 import {
   apiFetch,
   getClerk,
@@ -415,7 +415,7 @@ const state = {
   questLogFilter: { outcome: null, kind: null },
   questLogRuns: [],
   dailyBoard: null,
-  boardKind: "picker",
+  boardKind: "quest",
   boardQuestId: null,
   cloudContinue: null,
   /**
@@ -3647,11 +3647,15 @@ function renderTitleCtas() {
   const profBtn = $("#btn-cloud-profile");
   const dailyBtn = $("#btn-daily-board");
   const showLog = isClerkSignedIn();
-  for (const btn of [logBtn, profBtn, dailyBtn]) {
+  for (const btn of [logBtn, profBtn]) {
     if (!btn) continue;
     btn.hidden = !showLog;
     if (showLog) btn.removeAttribute("hidden");
     else btn.setAttribute("hidden", "");
+  }
+  if (dailyBtn) {
+    dailyBtn.hidden = false;
+    dailyBtn.removeAttribute("hidden");
   }
   if (start) {
     start.hidden = true;
@@ -3921,33 +3925,16 @@ async function submitQuestBoardIfCounted(run) {
   }
 }
 
-function catalogBoardEntries() {
-  const list = Array.isArray(state.hostedQuests) ? state.hostedQuests : [];
-  const out = [];
-  const seen = new Set();
-  for (const entry of list) {
-    const id = String(entry?.id || entry?.mission?.id || "");
-    if (!questHasLeaderboard(id) || seen.has(id)) continue;
-    seen.add(id);
-    const m = entry.mission || {};
-    out.push({
-      id,
-      title: entry.title || m.title || id,
-      place: entry.place || m.place || "",
-    });
-  }
-  return out;
-}
-
 async function loadDailyBoard() {
+  const players = state.boardKind === "players";
   const qid = state.boardQuestId;
-  if (!qid) {
-    state.dailyBoard = { top: [], you: null };
-    renderDailyBoard();
+  if (!players && !qid) {
+    showScreen("title");
     return;
   }
   try {
-    const res = await apiFetch(`/api/board/${encodeURIComponent(qid)}`);
+    const url = players ? "/api/board" : `/api/board/${encodeURIComponent(qid)}`;
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     state.dailyBoard = res.ok ? data : { top: [], you: null };
     if (res.ok && data.questId) state.boardQuestId = data.questId;
@@ -3957,12 +3944,11 @@ async function loadDailyBoard() {
   renderDailyBoard();
 }
 
-function openLeaderboardHome() {
-  state.boardKind = "picker";
+function openPlayersBoard() {
+  state.boardKind = "players";
   state.boardQuestId = null;
-  state.dailyBoard = { top: [], you: null };
   showScreen("daily-board");
-  void refreshHostedQuests({ silent: true }).then(() => renderDailyBoard());
+  void loadDailyBoard();
 }
 
 function openQuestBoard(questId) {
@@ -3989,52 +3975,38 @@ function stillUrlForRow(questId, row) {
 }
 
 function renderDailyBoard() {
-  const picker = $("#quest-board-picker");
   const list = $("#daily-board-list");
   const youEl = $("#daily-board-you");
   const empty = $("#daily-board-empty");
   const dateEl = $("#daily-board-date");
   const titleEl = $("#daily-board-title");
   const blurbEl = $("#daily-board-blurb");
+  const back = $("#btn-daily-board-back");
   const data = state.dailyBoard || {};
+  const players = state.boardKind === "players" || data.kind === "players";
   const questId = data.questId || state.boardQuestId || "";
-  const picking = !questId;
-
-  if (picker) {
-    picker.hidden = !picking;
-    picker.replaceChildren();
-    if (picking) {
-      const entries = catalogBoardEntries();
-      for (const e of entries) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn-ghost catalog-board-pick";
-        btn.textContent = e.place ? `${e.title} · ${e.place}` : e.title;
-        btn.addEventListener("click", () => openQuestBoard(e.id));
-        li.appendChild(btn);
-        picker.appendChild(li);
-      }
-    }
-  }
-  if (list) list.hidden = picking;
-
-  if (titleEl) titleEl.textContent = picking ? "Leaderboard" : data.title || data.place || "Leaderboard";
+  if (titleEl) titleEl.textContent = players ? "Leaderboard" : data.title || data.place || "Leaderboard";
   if (blurbEl) {
-    if (picking) {
-      blurbEl.textContent = "Pick a Learning, Sponsored, or Library quest. Same job, comparable invents.";
+    if (players) {
+      blurbEl.textContent =
+        "Top 10 inventors. Each person’s score is the sum of their quest scores (★ ÷ years from that quest’s present).";
     } else {
       blurbEl.textContent = data.place
-        ? `Best holds of this quest in ${data.place}. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.`
-        : "Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.";
+        ? `Top 10 in ${data.place}. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.`
+        : "Top 10. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.";
     }
   }
-  if (dateEl) dateEl.textContent = !picking && data.place && data.title ? data.place : "";
+  if (dateEl) dateEl.textContent = players ? "" : data.place && data.title ? data.place : "";
+  if (back) back.textContent = players ? "← Home" : "← Quests";
 
   if (youEl) {
-    if (!picking && data.you) {
+    if (data.you) {
       youEl.hidden = false;
-      youEl.textContent = `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
+      youEl.textContent = players
+        ? `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.quests || 0} quest${
+            data.you.quests === 1 ? "" : "s"
+          }`
+        : `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
     } else {
       youEl.hidden = true;
       youEl.textContent = "";
@@ -4042,46 +4014,48 @@ function renderDailyBoard() {
   }
 
   if (!list) return;
+  list.hidden = false;
   list.replaceChildren();
-  const top = !picking && Array.isArray(data.top) ? data.top : [];
+  const top = Array.isArray(data.top) ? data.top : [];
   if (empty) {
-    if (picking) {
-      const n = catalogBoardEntries().length;
-      empty.hidden = n > 0;
-      empty.textContent = n
-        ? ""
-        : "Open a Learning or Sponsored quest, then tap Leaderboard on the card.";
-    } else {
-      empty.hidden = top.length > 0;
-      empty.textContent = "No holds yet.";
-    }
+    empty.hidden = top.length > 0;
+    empty.textContent = "No holds yet.";
   }
   for (const row of top) {
     const li = document.createElement("li");
     li.className = "quest-board-row";
     const head = document.createElement("div");
     head.className = "quest-board-row-head";
-    head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${row.stars}★ / ${row.years || "?"}y · ${row.waits} waits`;
-    li.appendChild(head);
-    const stillSrc = stillUrlForRow(questId, row);
-    if (stillSrc) {
-      const img = document.createElement("img");
-      img.className = "quest-board-still";
-      img.alt = `Vision still, ${row.displayName}`;
-      li.appendChild(img);
-      void apiFetch(stillSrc)
-        .then((res) => (res.ok ? res.blob() : null))
-        .then((blob) => {
-          if (!blob || !img.isConnected) return;
-          img.src = URL.createObjectURL(blob);
-        })
-        .catch(() => {});
+    if (players) {
+      const n = Number(row.quests) || 0;
+      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${n} quest${
+        n === 1 ? "" : "s"
+      }`;
+    } else {
+      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${row.stars}★ / ${row.years || "?"}y · ${row.waits} waits`;
     }
-    if (row.pathwayText) {
-      const p = document.createElement("p");
-      p.className = "quest-board-writeup";
-      p.textContent = row.pathwayText;
-      li.appendChild(p);
+    li.appendChild(head);
+    if (!players) {
+      const stillSrc = stillUrlForRow(questId, row);
+      if (stillSrc) {
+        const img = document.createElement("img");
+        img.className = "quest-board-still";
+        img.alt = `Vision still, ${row.displayName}`;
+        li.appendChild(img);
+        void apiFetch(stillSrc)
+          .then((res) => (res.ok ? res.blob() : null))
+          .then((blob) => {
+            if (!blob || !img.isConnected) return;
+            img.src = URL.createObjectURL(blob);
+          })
+          .catch(() => {});
+      }
+      if (row.pathwayText) {
+        const p = document.createElement("p");
+        p.className = "quest-board-writeup";
+        p.textContent = row.pathwayText;
+        li.appendChild(p);
+      }
     }
     list.appendChild(li);
   }
@@ -18922,8 +18896,10 @@ function bind() {
       body: JSON.stringify({ runId: id, share: true }),
     }).catch(() => {});
   });
-  $("#btn-daily-board")?.addEventListener("click", () => openLeaderboardHome());
-  $("#btn-daily-board-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-daily-board")?.addEventListener("click", () => openPlayersBoard());
+  $("#btn-daily-board-back")?.addEventListener("click", () =>
+    showScreen(state.boardKind === "players" ? "title" : "quest-hub")
+  );
   $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");
