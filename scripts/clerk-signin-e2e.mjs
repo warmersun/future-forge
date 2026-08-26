@@ -132,12 +132,16 @@ async function main() {
     await page.goto(signInUrl, { waitUntil: "domcontentloaded" });
     await shot(page, "01-loaded");
 
-    log("3", "wait for portal Sign in");
-    const signIn = page.locator("#signin");
-    await signIn.waitFor({ state: "visible", timeout: 40_000 });
-    log("3", "Sign in visible — clicking");
-    await signIn.click();
-    await shot(page, "02-clicked-signin");
+    log("3", "wait for Clerk Sign in (or leftover session choice)");
+    const switchBtn = page.locator("#switch");
+    try {
+      await switchBtn.waitFor({ state: "visible", timeout: 8_000 });
+      log("3", "leftover session — Use a different account");
+      await switchBtn.click();
+    } catch {
+      /* mounted Sign in */
+    }
+    await shot(page, "02-clerk-signin");
 
     log("3", "Clerk: email");
     const ident = page.locator(

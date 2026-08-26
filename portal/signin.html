@@ -42,11 +42,25 @@
         background: var(--accent);
         color: #0c1220;
       }
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        box-shadow: inset 0 0 0 1px #2a3a58;
+      }
       button[hidden] {
         display: none !important;
       }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 0.35rem;
+      }
       #status {
         margin-top: 1rem;
+      }
+      #clerk-mount {
+        margin-top: 1.15rem;
       }
     </style>
   </head>
@@ -54,9 +68,13 @@
     <main>
       <h1>Warmer Sun Cloud</h1>
       <p id="status">Loading Sign in…</p>
-      <p>
-        <button type="button" id="signin" hidden>Sign in</button>
+      <p class="actions">
+        <button type="button" id="continue" hidden>Continue</button>
+        <button type="button" class="secondary" id="switch" hidden>
+          Use a different account
+        </button>
       </p>
+      <div id="clerk-mount"></div>
     </main>
     <script type="module">
       const CLERK_APPEARANCE = {
@@ -77,8 +95,56 @@
       };
 
       const status = document.getElementById("status");
-      const btn = document.getElementById("signin");
+      const continueBtn = document.getElementById("continue");
+      const switchBtn = document.getElementById("switch");
+      const mount = document.getElementById("clerk-mount");
       const device = new URLSearchParams(location.search).get("device") || "";
+
+      const PROVIDER_LABELS = {
+        oauth_google: "Google",
+        google: "Google",
+        oauth_x: "X",
+        x: "X",
+        oauth_twitter: "X",
+        twitter: "X",
+        oauth_github: "GitHub",
+        github: "GitHub",
+      };
+
+      function clerkProviderLabel(provider) {
+        const raw = String(provider || "")
+          .trim()
+          .toLowerCase();
+        if (!raw) return "";
+        if (PROVIDER_LABELS[raw]) return PROVIDER_LABELS[raw];
+        const stripped = raw.replace(/^oauth_/, "");
+        if (PROVIDER_LABELS[stripped]) return PROVIDER_LABELS[stripped];
+        return stripped
+          .split(/[_-]+/)
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+      }
+
+      function continueAsLine(user) {
+        const email = String(
+          user?.primaryEmailAddress?.emailAddress ||
+            user?.emailAddresses?.[0]?.emailAddress ||
+            ""
+        ).trim();
+        const providers = [];
+        const seen = new Set();
+        for (const acc of user?.externalAccounts || []) {
+          const label = clerkProviderLabel(acc?.provider);
+          if (!label || seen.has(label)) continue;
+          seen.add(label);
+          providers.push(label);
+        }
+        if (email && providers.length) return `Continue as ${email} · ${providers.join(", ")}`;
+        if (email) return `Continue as ${email}`;
+        if (providers.length) return `Continue as ${providers.join(", ")}`;
+        return "Continue as this account";
+      }
 
       function clerkFrontendApiHost(publishableKey) {
         const parts = String(publishableKey || "").trim().split("_");
@@ -138,43 +204,129 @@
         appearance: CLERK_APPEARANCE,
       });
 
-      async function finishIfSignedIn() {
-        if (!Clerk.session) return false;
-        const token = await Clerk.session.getToken();
-        if (!token) return false;
-        await complete(token);
-        status.textContent = "Signed in. You can return to Future Forge.";
-        btn.hidden = true;
-        try {
-          window.close();
-        } catch {
-          /* ignore */
+      const signInProps = {
+        appearance: CLERK_APPEARANCE,
+        withSignUp: true,
+        routing: "hash",
+        oauthFlow: "redirect",
+        forceRedirectUrl: location.href,
+      };
+
+      let completing = false;
+      let autoFinish = false;
+      let signInMounted = false;
+
+      function hideChoice() {
+        continueBtn.hidden = true;
+        switchBtn.hidden = true;
+      }
+
+      function showSignInUi() {
+        hideChoice();
+        status.textContent = "Sign in to continue in the game on this computer.";
+        if (signInMounted) {
+          try {
+            Clerk.unmountSignIn(mount);
+          } catch {
+            /* ignore */
+          }
+          signInMounted = false;
         }
-        setTimeout(() => {
+        Clerk.mountSignIn(mount, signInProps);
+        signInMounted = true;
+      }
+
+      function showContinueChoice() {
+        autoFinish = false;
+        if (signInMounted) {
+          try {
+            Clerk.unmountSignIn(mount);
+          } catch {
+            /* ignore */
+          }
+          signInMounted = false;
+        }
+        mount.replaceChildren();
+        status.textContent = continueAsLine(Clerk.user);
+        continueBtn.hidden = false;
+        switchBtn.hidden = false;
+      }
+
+      async function finishIfSignedIn() {
+        if (completing || !Clerk.session) return false;
+        completing = true;
+        try {
+          const token = await Clerk.session.getToken();
+          if (!token) {
+            completing = false;
+            return false;
+          }
+          await complete(token);
+          hideChoice();
+          if (signInMounted) {
+            try {
+              Clerk.unmountSignIn(mount);
+            } catch {
+              /* ignore */
+            }
+            signInMounted = false;
+          }
+          status.textContent = "Signed in. You can return to Future Forge.";
           try {
             window.close();
           } catch {
             /* ignore */
           }
-        }, 1000);
-        return true;
+          setTimeout(() => {
+            try {
+              window.close();
+            } catch {
+              /* ignore */
+            }
+          }, 1000);
+          return true;
+        } catch (e) {
+          completing = false;
+          throw e;
+        }
       }
 
-      if (await finishIfSignedIn()) {
-        /* done */
-      } else {
+      continueBtn.addEventListener("click", async () => {
+        try {
+          await finishIfSignedIn();
+        } catch (e) {
+          status.textContent = e?.message || String(e);
+          continueBtn.hidden = false;
+          switchBtn.hidden = false;
+        }
+      });
+
+      switchBtn.addEventListener("click", async () => {
+        hideChoice();
         status.textContent = "Sign in to continue in the game on this computer.";
-        btn.hidden = false;
-        btn.addEventListener("click", () => {
-          Clerk.openSignIn({ appearance: CLERK_APPEARANCE });
-        });
-        Clerk.addListener?.(async () => {
-          try {
-            await finishIfSignedIn();
-          } catch (e) {
-            status.textContent = e?.message || String(e);
-          }
-        });
+        try {
+          await Clerk.signOut();
+        } catch {
+          /* still show Sign in */
+        }
+        autoFinish = true;
+        showSignInUi();
+      });
+
+      Clerk.addListener?.(async () => {
+        if (!autoFinish) return;
+        try {
+          await finishIfSignedIn();
+        } catch (e) {
+          status.textContent = e?.message || String(e);
+        }
+      });
+
+      if (Clerk.session) {
+        showContinueChoice();
+      } else {
+        autoFinish = true;
+        showSignInUi();
       }
     </script>
   </body>

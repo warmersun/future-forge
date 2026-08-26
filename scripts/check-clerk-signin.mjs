@@ -123,8 +123,14 @@ async function main() {
   } else fail(`GET / HTTP ${rootHit?.status}`);
 
   const signin = await get("/signin");
-  if (signin.status === 200 && /Warmer Sun Cloud/i.test(signin.text) && /<html/i.test(signin.text)) {
-    ok("GET /signin HTML Sign in page");
+  if (
+    signin.status === 200 &&
+    /Warmer Sun Cloud/i.test(signin.text) &&
+    /id="continue"/.test(signin.text) &&
+    /id="switch"/.test(signin.text) &&
+    /id="clerk-mount"/.test(signin.text)
+  ) {
+    ok("GET /signin HTML Sign in page (Continue / switch / Clerk mount)");
   } else fail(`GET /signin HTTP ${signin.status} — portal must serve /signin`);
 
   const spa = await get("/index.html");
