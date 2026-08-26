@@ -87,6 +87,22 @@ export function sanitizeDisplayName(raw) {
 }
 
 /**
+ * True when this score row has a chosen in-game name (not Clerk legal name).
+ * Explicit `hasDisplayName` from the users JOIN wins; otherwise a non-empty displayName.
+ * @param {object} r
+ */
+export function rowHasChosenName(r) {
+  if (r && Object.prototype.hasOwnProperty.call(r, "hasDisplayName")) {
+    return Boolean(r.hasDisplayName);
+  }
+  return Boolean(String(r?.displayName || r?.display_name || "").trim());
+}
+
+function rowUserId(r) {
+  return r?.clerkUserId || r?.clerk_user_id || null;
+}
+
+/**
  * @param {object[]} rows
  * @param {{ userId?: string|null, limit?: number }} [opts]
  */
@@ -98,7 +114,7 @@ export function rankBoard(rows, opts = {}) {
     return a._i - b._i;
   });
   const limit = Math.min(50, Math.max(1, Number(opts.limit) || BOARD_LIMIT));
-  const publicRow = (r, rank) => ({
+  const publicRow = (r, rank, extra = {}) => ({
     rank,
     displayName: r.displayName || r.display_name || "Inventor",
     score: boardScore(r),
@@ -107,14 +123,20 @@ export function rankBoard(rows, opts = {}) {
     stars: r.stars ?? 0,
     waits: r.waits ?? 0,
     years: yearsTaken(r),
-    clerkUserId: r.clerkUserId || r.clerk_user_id || null,
+    clerkUserId: rowUserId(r),
+    ...extra,
   });
-  const top = list.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
+  const named = list.filter(rowHasChosenName);
+  const top = named.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
   const uid = opts.userId || null;
   let you = null;
   if (uid) {
-    const idx = list.findIndex((r) => (r.clerkUserId || r.clerk_user_id) === uid);
-    if (idx >= 0) you = publicRow(list[idx], idx + 1);
+    const namedIdx = named.findIndex((r) => rowUserId(r) === uid);
+    if (namedIdx >= 0) you = publicRow(named[namedIdx], namedIdx + 1);
+    else {
+      const idx = list.findIndex((r) => rowUserId(r) === uid);
+      if (idx >= 0) you = publicRow(list[idx], idx + 1, { needsDisplayName: true });
+    }
   }
   return { top, you };
 }
@@ -135,6 +157,7 @@ export function aggregatePlayers(rows) {
       score: 0,
       waits: 0,
       quests: 0,
+      hasDisplayName: false,
       _i: byUser.size,
     };
     cur.score += boardScore(r);
@@ -142,6 +165,7 @@ export function aggregatePlayers(rows) {
     cur.quests += 1;
     const name = sanitizeDisplayName(r.displayName || r.display_name);
     if (name && name !== "Inventor") cur.displayName = name;
+    if (rowHasChosenName(r)) cur.hasDisplayName = true;
     byUser.set(id, cur);
   }
   return [...byUser.values()];
@@ -178,20 +202,26 @@ export function rankPlayers(rows, opts = {}) {
     return a._i - b._i;
   });
   const limit = Math.min(50, Math.max(1, Number(opts.limit) || BOARD_LIMIT));
-  const publicRow = (r, rank) => ({
+  const publicRow = (r, rank, extra = {}) => ({
     rank,
     displayName: r.displayName || "Inventor",
     score: r.score,
     quests: r.quests,
     waits: r.waits,
     clerkUserId: r.clerkUserId || null,
+    ...extra,
   });
-  const top = list.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
+  const named = list.filter(rowHasChosenName);
+  const top = named.slice(0, limit).map((r, idx) => publicRow(r, idx + 1));
   const uid = opts.userId || null;
   let you = null;
   if (uid) {
-    const idx = list.findIndex((r) => r.clerkUserId === uid);
-    if (idx >= 0) you = publicRow(list[idx], idx + 1);
+    const namedIdx = named.findIndex((r) => r.clerkUserId === uid);
+    if (namedIdx >= 0) you = publicRow(named[namedIdx], namedIdx + 1);
+    else {
+      const idx = list.findIndex((r) => r.clerkUserId === uid);
+      if (idx >= 0) you = publicRow(list[idx], idx + 1, { needsDisplayName: true });
+    }
   }
   return { kind: "players", top, you };
 }
@@ -246,7 +276,6 @@ export function parseQuestScoreBody(body, expectedQuestId) {
     row: {
       questId,
       runId,
-      displayName: sanitizeDisplayName(src.displayName || src.display_name),
       place: String(src.place || "").trim().slice(0, 200),
       stack: sanitizeStack(src.stack),
       pathwayText: clipPathwayText(src.pathwayText || src.pathway_text),

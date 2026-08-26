@@ -38,6 +38,14 @@ describe("parse + bind quest score", () => {
     assert.equal(parseQuestScoreBody({ runId }, "lesson-1").ok, true);
     assert.equal(parseQuestScoreBody({ runId, questId: "other" }, "lesson-1").error, "wrong_quest");
   });
+  it("ignores a client-supplied display name", () => {
+    const parsed = parseQuestScoreBody(
+      { runId, displayName: "Legal Name From Clerk", questId: "lesson-1" },
+      "lesson-1"
+    );
+    assert.equal(parsed.ok, true);
+    assert.equal("displayName" in parsed.row, false);
+  });
   it("copies year/stars/waits from the owned run", () => {
     const parsed = parseQuestScoreBody(
       {
@@ -85,6 +93,7 @@ describe("attachBoardExtras", () => {
     const rows = [
       {
         clerkUserId: "user_a",
+        displayName: "A",
         startYear: 2026,
         yearReached: 2028,
         stars: 3,
@@ -94,6 +103,7 @@ describe("attachBoardExtras", () => {
       },
       {
         clerkUserId: "user_b",
+        displayName: "B",
         startYear: 2026,
         yearReached: 2030,
         stars: 2,
@@ -195,6 +205,35 @@ describe("isBetterScore still drives replace", () => {
     const b = rankBoard(rows);
     assert.equal(b.top.length, 10);
     assert.equal(b.top[0].displayName, "P0");
+  });
+  it("omits unnamed rows from the public top but keeps you", () => {
+    const rows = [
+      {
+        clerkUserId: "user_ghost",
+        startYear: 2026,
+        yearReached: 2026,
+        stars: 3,
+        waits: 0,
+        hasDisplayName: false,
+      },
+      {
+        clerkUserId: "user_named",
+        startYear: 2026,
+        yearReached: 2028,
+        stars: 3,
+        waits: 1,
+        displayName: "Ada",
+        hasDisplayName: true,
+      },
+    ];
+    const b = rankBoard(rows, { userId: "user_ghost" });
+    assert.equal(b.top.length, 1);
+    assert.equal(b.top[0].displayName, "Ada");
+    assert.equal(b.you.needsDisplayName, true);
+    assert.equal(b.you.clerkUserId, "user_ghost");
+    const namedYou = rankBoard(rows, { userId: "user_named" });
+    assert.equal(namedYou.you.rank, 1);
+    assert.equal(namedYou.you.needsDisplayName, undefined);
   });
   it("strips email-like display names and junk years", () => {
     assert.equal(sanitizeDisplayName("a@b.com"), "Inventor");

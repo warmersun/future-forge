@@ -3,16 +3,22 @@ import assert from "node:assert/strict";
 import { clerkRoomDisplayName, stampRoomPlayer } from "./friends-identity.mjs";
 
 describe("clerkRoomDisplayName", () => {
-  it("prefers a typed display name over Clerk", () => {
+  it("prefers a typed display name over profile", () => {
     assert.equal(
-      clerkRoomDisplayName({ displayName: "Ada", clerkFirstName: "Tamas" }),
+      clerkRoomDisplayName({ displayName: "Ada", profileDisplayName: "Tamas" }),
       "Ada"
     );
   });
-  it("falls back to Clerk when the form is empty", () => {
+  it("uses the chosen profile name when the form is empty", () => {
     assert.equal(
-      clerkRoomDisplayName({ displayName: "", clerkFirstName: "Tamas" }),
-      "Tamas"
+      clerkRoomDisplayName({ displayName: "", profileDisplayName: "Ada" }),
+      "Ada"
+    );
+  });
+  it("does not fall back to Clerk legal names", () => {
+    assert.equal(
+      clerkRoomDisplayName({ displayName: "", clerkFirstName: "Tamas", fallback: "Host" }),
+      "Host"
     );
   });
   it("rejects email-like names", () => {

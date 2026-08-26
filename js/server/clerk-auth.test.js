@@ -4,6 +4,7 @@ import {
   isJwtShaped,
   extractBearerToken,
   clerkKeysFromEnv,
+  clerkWebhookSecretFromEnv,
   authorizedPartiesFromEnv,
   publicClerkConfig,
   normalizeClerkUserId,
@@ -64,6 +65,27 @@ describe("clerkKeysFromEnv", () => {
     });
     assert.equal(b.enabled, true);
     assert.equal(b.publishableKey, "pk_test_b");
+  });
+});
+
+describe("clerkWebhookSecretFromEnv", () => {
+  it("reads CLERK_WEBHOOK_SECRET or Clerk's SIGNING_SECRET name", () => {
+    assert.equal(clerkWebhookSecretFromEnv({}), "");
+    assert.equal(
+      clerkWebhookSecretFromEnv({ CLERK_WEBHOOK_SECRET: "whsec_a" }),
+      "whsec_a"
+    );
+    assert.equal(
+      clerkWebhookSecretFromEnv({ CLERK_WEBHOOK_SIGNING_SECRET: "whsec_b" }),
+      "whsec_b"
+    );
+    assert.equal(
+      clerkWebhookSecretFromEnv({
+        CLERK_WEBHOOK_SECRET: "whsec_a",
+        CLERK_WEBHOOK_SIGNING_SECRET: "whsec_b",
+      }),
+      "whsec_a"
+    );
   });
 });
 

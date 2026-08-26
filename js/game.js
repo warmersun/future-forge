@@ -33,11 +33,11 @@ import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=po
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
 import {
   apiFetch,
-  getClerk,
   isClerkReady,
   isClerkSignedIn,
   openCloudSignIn,
   onClerkSession,
+  setCloudProfileCache,
 } from "./auth.js";
 import {
   IdeaDeck,
@@ -3713,12 +3713,16 @@ function questLogOutcomeLabel(outcome) {
   return "In play";
 }
 
-async function openCloudProfile() {
+let askedForDisplayName = false;
+
+async function openCloudProfile(opts = {}) {
   showScreen("cloud-profile");
+  const status = $("#cloud-profile-status");
   try {
     const res = await apiFetch("/api/me/profile");
     const data = await res.json().catch(() => ({}));
     const p = data.profile || {};
+    setCloudProfileCache(p);
     const u = $("#cloud-profile-username");
     const d = $("#cloud-profile-display");
     const b = $("#cloud-profile-bio");
@@ -3729,6 +3733,33 @@ async function openCloudProfile() {
     if (pub) pub.checked = Boolean(p.isPublic);
     const hide = $("#cloud-profile-hide-email");
     if (hide) hide.checked = p.hideEmail !== false;
+    if (opts.requireName || data.needsDisplayName) {
+      if (status) {
+        status.textContent = "Pick a display name before you appear on leaderboards.";
+      }
+    } else if (status) {
+      status.textContent = "";
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function maybePromptDisplayName() {
+  if (!isClerkSignedIn()) {
+    askedForDisplayName = false;
+    return;
+  }
+  const screen = state.screen;
+  if (screen !== "title" && screen !== "outcome") return;
+  if (askedForDisplayName) return;
+  try {
+    const res = await apiFetch("/api/me/profile");
+    const data = await res.json().catch(() => ({}));
+    setCloudProfileCache(data.profile || null);
+    if (!data.needsDisplayName) return;
+    askedForDisplayName = true;
+    await openCloudProfile({ requireName: true });
   } catch {
     /* ignore */
   }
@@ -3736,25 +3767,45 @@ async function openCloudProfile() {
 
 async function saveCloudProfile() {
   const status = $("#cloud-profile-status");
+  const display = String($("#cloud-profile-display")?.value || "").trim();
+  if (!display) {
+    if (status) status.textContent = "Pick a display name before you appear on leaderboards.";
+    return;
+  }
+  const pub = Boolean($("#cloud-profile-public")?.checked);
+  const username = String($("#cloud-profile-username")?.value || "").trim();
+  if (pub && !username) {
+    if (status) status.textContent = "A username is required for a public inventor page.";
+    return;
+  }
   try {
     const res = await apiFetch("/api/me/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: $("#cloud-profile-username")?.value || "",
-        displayName: $("#cloud-profile-display")?.value || "",
+        username,
+        displayName: display,
         bio: $("#cloud-profile-bio")?.value || "",
-        public: Boolean($("#cloud-profile-public")?.checked),
+        public: pub,
         hideEmail: Boolean($("#cloud-profile-hide-email")?.checked),
       }),
     });
     const data = await res.json().catch(() => ({}));
+    if (res.ok) setCloudProfileCache(data.profile || null);
     if (status) {
       status.textContent = res.ok
         ? "Saved. Still hidden unless you turn on Public."
         : data.error === "username_taken"
           ? "That username is taken."
-          : "Could not save profile.";
+          : data.error === "display_name_required"
+            ? "Pick a display name before you appear on leaderboards."
+            : data.error === "invalid_username"
+              ? pub
+                ? "A username is required for a public inventor page."
+                : "Username must be 3–24 letters, numbers, or underscores."
+              : data.error === "invalid_name"
+                ? "Display name cannot include an email."
+                : "Could not save profile.";
     }
   } catch {
     if (status) status.textContent = "Could not save profile.";
@@ -3887,9 +3938,6 @@ async function submitQuestBoardIfCounted(run) {
   const runId = run.id || state.cloudRunId;
   if (!runId) return;
   const sum = currentPathwaySummary();
-  const clerk = getClerk();
-  const displayName =
-    clerk?.user?.firstName || clerk?.user?.username || clerk?.user?.fullName || "Inventor";
   try {
     const res = await apiFetch(`/api/me/quests/${encodeURIComponent(questId)}/score`, {
       method: "POST",
@@ -3900,11 +3948,19 @@ async function submitQuestBoardIfCounted(run) {
         pathwayText: sum.text,
         stack: sum.stack,
         place: run.place || state.mission?.place || "",
-        displayName,
       }),
     });
     const data = await res.json().catch(() => ({}));
     const rankEl = $("#outcome-board-rank");
+    if (data.error === "display_name_required") {
+      if (rankEl) {
+        rankEl.hidden = false;
+        rankEl.removeAttribute("hidden");
+        rankEl.textContent = "Pick a display name to appear on this quest’s leaderboard.";
+      }
+      await openCloudProfile({ requireName: true });
+      return;
+    }
     if (res.ok && data.rank && rankEl) {
       rankEl.hidden = false;
       rankEl.removeAttribute("hidden");
@@ -4002,11 +4058,14 @@ function renderDailyBoard() {
   if (youEl) {
     if (data.you) {
       youEl.hidden = false;
-      youEl.textContent = players
+      const base = players
         ? `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.quests || 0} quest${
             data.you.quests === 1 ? "" : "s"
           }`
         : `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
+      youEl.textContent = data.you.needsDisplayName
+        ? `${base} — pick a display name to appear on this board.`
+        : base;
     } else {
       youEl.hidden = true;
       youEl.textContent = "";
@@ -19655,6 +19714,7 @@ export function init() {
   onClerkSession(() => {
     renderTitleMeta();
     void syncCloudProgress();
+    void maybePromptDisplayName();
   });
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;

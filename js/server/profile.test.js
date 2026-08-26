@@ -6,6 +6,8 @@ import {
   publicInventorPage,
   parseShareBody,
   parseReportBody,
+  chosenDisplayName,
+  profileNeedsDisplayName,
 } from "./profile.mjs";
 
 describe("sanitizeUsername", () => {
@@ -24,6 +26,30 @@ describe("parseProfilePatch", () => {
   });
   it("rejects email as display name", () => {
     assert.equal(parseProfilePatch({ displayName: "a@b.com" }).ok, false);
+    assert.equal(parseProfilePatch({ displayName: "a@b.com" }).error, "invalid_name");
+  });
+  it("requires a display name when the field is sent", () => {
+    assert.equal(parseProfilePatch({ displayName: "  " }).ok, false);
+    assert.equal(parseProfilePatch({ displayName: "  " }).error, "display_name_required");
+    const p = parseProfilePatch({ displayName: "Ada" });
+    assert.equal(p.ok, true);
+    assert.equal(p.patch.displayName, "Ada");
+  });
+  it("allows an empty username unless the page is public", () => {
+    const privatePatch = parseProfilePatch({ username: "", displayName: "Ada" });
+    assert.equal(privatePatch.ok, true);
+    assert.equal(privatePatch.patch.username, null);
+    assert.equal(parseProfilePatch({ username: "", public: true, displayName: "Ada" }).ok, false);
+  });
+});
+
+describe("chosenDisplayName", () => {
+  it("does not treat empty or email as a board name", () => {
+    assert.equal(chosenDisplayName({ displayName: "" }), null);
+    assert.equal(chosenDisplayName({ displayName: "a@b.com" }), null);
+    assert.equal(chosenDisplayName({ displayName: "  Ada  " }), "Ada");
+    assert.equal(profileNeedsDisplayName({ displayName: null }), true);
+    assert.equal(profileNeedsDisplayName({ displayName: "Ada" }), false);
   });
 });
 

@@ -87,6 +87,27 @@ export function isClerkSignedIn() {
   return false;
 }
 
+/** @type {object|null} */
+let cloudProfileCache = null;
+
+export function getCloudProfileCache() {
+  return cloudProfileCache;
+}
+
+export function setCloudProfileCache(profile) {
+  cloudProfileCache = profile && typeof profile === "object" ? profile : null;
+}
+
+/** Chosen in-game name for rooms/boards. Never Clerk firstName. */
+export function cachedProfileDisplayName() {
+  const n = String(cloudProfileCache?.displayName || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 24);
+  if (!n || n.includes("@")) return "";
+  return n;
+}
+
 export function openCloudSignIn() {
   clerkInstance?.openSignIn?.({ appearance: CLERK_APPEARANCE });
 }
@@ -111,6 +132,7 @@ export function onClerkSession(fn) {
 
 function emitClerkSession() {
   document.body.classList.toggle("ff-signed-in", isClerkSignedIn());
+  if (!isClerkSignedIn()) cloudProfileCache = null;
   renderAccountChip();
   for (const fn of sessionListeners) {
     try {

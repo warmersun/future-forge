@@ -27,15 +27,41 @@ export function sanitizeBio(raw) {
 }
 
 /**
+ * Chosen in-game name. Never treats Clerk legal names as a fallback.
+ * @param {unknown} profileOrName
+ */
+export function chosenDisplayName(profileOrName) {
+  const raw =
+    profileOrName && typeof profileOrName === "object"
+      ? profileOrName.displayName ?? profileOrName.display_name
+      : profileOrName;
+  const n = String(raw || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 40);
+  if (!n || n.includes("@")) return null;
+  return n;
+}
+
+export function profileNeedsDisplayName(profile) {
+  return !chosenDisplayName(profile);
+}
+
+/**
  * @param {unknown} body
  */
 export function parseProfilePatch(body) {
   const src = body && typeof body === "object" ? body : {};
   const out = {};
   if ("username" in src) {
-    const u = sanitizeUsername(src.username);
-    if (!u) return { ok: false, error: "invalid_username" };
-    out.username = u;
+    const raw = String(src.username || "").trim();
+    if (!raw) {
+      out.username = null;
+    } else {
+      const u = sanitizeUsername(src.username);
+      if (!u) return { ok: false, error: "invalid_username" };
+      out.username = u;
+    }
   }
   if ("bio" in src) out.bio = sanitizeBio(src.bio);
   if ("public" in src || "isPublic" in src) {
@@ -45,12 +71,19 @@ export function parseProfilePatch(body) {
     out.hideEmail = Boolean(src.hideEmail ?? src.hide_email);
   }
   if ("displayName" in src) {
-    const n = String(src.displayName || "")
-      .trim()
-      .replace(/\s+/g, " ")
-      .slice(0, 40);
-    if (n.includes("@")) return { ok: false, error: "invalid_name" };
-    out.displayName = n || null;
+    const n = chosenDisplayName(src.displayName);
+    if (!n) {
+      return {
+        ok: false,
+        error: String(src.displayName || "").includes("@")
+          ? "invalid_name"
+          : "display_name_required",
+      };
+    }
+    out.displayName = n;
+  }
+  if (out.isPublic && !out.username && !sanitizeUsername(src.username)) {
+    return { ok: false, error: "invalid_username" };
   }
   return { ok: true, patch: out };
 }

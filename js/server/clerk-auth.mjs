@@ -70,6 +70,17 @@ export function clerkKeysFromEnv(env = process.env) {
 }
 
 /**
+ * Svix signing secret. Clerk Dashboard / `env pull` use
+ * CLERK_WEBHOOK_SIGNING_SECRET; this repo's Render env is CLERK_WEBHOOK_SECRET.
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+export function clerkWebhookSecretFromEnv(env = process.env) {
+  return String(
+    env.CLERK_WEBHOOK_SECRET || env.CLERK_WEBHOOK_SIGNING_SECRET || ""
+  ).trim();
+}
+
+/**
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  * @returns {string[]}
  */

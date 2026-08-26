@@ -14,6 +14,7 @@ import {
   shouldStoreLastRun,
 } from "./cloud-save.mjs";
 import { parseStartBody, publicRunRow } from "./quest-log.mjs";
+import { sanitizeUsername } from "./profile.mjs";
 
 const { Pool, Client } = pg;
 
@@ -141,8 +142,9 @@ export async function migrate(env = process.env) {
 /**
  * @param {string} clerkUserId
  * @param {pg.Pool|pg.PoolClient} [cx]
+ * @param {{ username?: string|null }} [opts] fill-if-empty Clerk slug only; never overwrites
  */
-export async function ensureUser(clerkUserId, cx) {
+export async function ensureUser(clerkUserId, cx, opts = {}) {
   const id = normalizeClerkUserId(clerkUserId);
   if (!id) throw Object.assign(new Error("invalid_user"), { status: 401 });
   const db = cx || getPool();
@@ -152,6 +154,19 @@ export async function ensureUser(clerkUserId, cx) {
      ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen_at = now()`,
     [id]
   );
+  const username = sanitizeUsername(opts?.username);
+  if (username) {
+    await db.query(
+      `UPDATE users SET username = $2
+       WHERE clerk_user_id = $1
+         AND (username IS NULL OR BTRIM(username) = '')
+         AND NOT EXISTS (
+           SELECT 1 FROM users other
+           WHERE other.username = $2 AND other.clerk_user_id <> $1
+         )`,
+      [id, username]
+    );
+  }
   return { skipped: false, clerkUserId: id };
 }
 
@@ -677,7 +692,14 @@ export async function getRunState(clerkUserId) {
   };
 }
 
+const QUEST_SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reached, q.start_year,
+            q.stars, q.waits, q.place, q.stack, q.pathway_text,
+            NULLIF(BTRIM(u.display_name), '') AS profile_display_name
+     FROM quest_scores q
+     LEFT JOIN users u ON u.clerk_user_id = q.clerk_user_id`;
+
 function mapQuestScoreRow(row) {
+  const chosen = row.profile_display_name || null;
   return {
     clerkUserId: row.clerk_user_id,
     questId: row.quest_id,
@@ -686,7 +708,8 @@ function mapQuestScoreRow(row) {
     startYear: row.start_year,
     stars: row.stars,
     waits: row.waits,
-    displayName: row.display_name,
+    displayName: chosen || "Inventor",
+    hasDisplayName: Boolean(chosen),
     place: row.place,
     stack: Array.isArray(row.stack) ? row.stack : [],
     pathwayText: row.pathway_text || "",
@@ -699,23 +722,14 @@ function mapQuestScoreRow(row) {
 export async function listQuestScores(questId) {
   const db = getPool();
   if (!db || !questId) return { skipped: true, rows: [] };
-  const r = await db.query(
-    `SELECT clerk_user_id, quest_id, run_id, year_reached, start_year, stars, waits,
-            display_name, place, stack, pathway_text
-     FROM quest_scores WHERE quest_id = $1`,
-    [String(questId)]
-  );
+  const r = await db.query(`${QUEST_SCORE_SELECT} WHERE q.quest_id = $1`, [String(questId)]);
   return { skipped: false, rows: r.rows.map(mapQuestScoreRow) };
 }
 
 export async function listAllQuestScores() {
   const db = getPool();
   if (!db) return { skipped: true, rows: [] };
-  const r = await db.query(
-    `SELECT clerk_user_id, quest_id, run_id, year_reached, start_year, stars, waits,
-            display_name, place, stack, pathway_text
-     FROM quest_scores`
-  );
+  const r = await db.query(QUEST_SCORE_SELECT);
   return { skipped: false, rows: r.rows.map(mapQuestScoreRow) };
 }
 

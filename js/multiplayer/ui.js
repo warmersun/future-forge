@@ -1227,15 +1227,40 @@ export function initFriendsUi(api) {
     clearMissionPickSession?.();
     showScreen("title");
   });
+  async function resolveRoomName(typed, fallback) {
+    const { apiFetch, cachedProfileDisplayName, setCloudProfileCache } = await import(
+      "../auth.js"
+    );
+    const clean = (raw) => {
+      const s = String(raw || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 24);
+      return s && !s.includes("@") ? s : "";
+    };
+    const typedName = clean(typed);
+    if (typedName) return typedName;
+    let profileName = cachedProfileDisplayName();
+    if (!profileName) {
+      try {
+        const res = await apiFetch("/api/me/profile");
+        const data = await res.json().catch(() => ({}));
+        if (data.profile) setCloudProfileCache(data.profile);
+        profileName = cachedProfileDisplayName();
+      } catch {
+        /* unsigned or portal down */
+      }
+    }
+    return clean(profileName) || fallback;
+  }
+
   // Forms so Enter in name/code fields activates the primary button
   $("#friends-create-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const clerk = (await import("../auth.js")).getClerk?.();
     const typed = $("#friends-create-name")?.value?.trim() || "";
-    const clerkName = clerk?.user?.firstName || clerk?.user?.username || "";
-    const name = typed || clerkName || "Host";
+    const name = await resolveRoomName(typed, "Host");
     const nameEl = $("#friends-create-name");
-    if (nameEl && !nameEl.value && clerkName) nameEl.value = clerkName;
+    if (nameEl && !nameEl.value && name && name !== "Host") nameEl.value = name;
     setHubStatus("Creating room…");
     try {
       const data = await client.create(name);
@@ -1250,10 +1275,8 @@ export function initFriendsUi(api) {
   });
   $("#friends-join-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const clerkJoin = (await import("../auth.js")).getClerk?.();
     const typedJoin = $("#friends-join-name")?.value?.trim() || "";
-    const clerkJoinName = clerkJoin?.user?.firstName || clerkJoin?.user?.username || "";
-    const name = typedJoin || clerkJoinName || "Player";
+    const name = await resolveRoomName(typedJoin, "Player");
     const code = $("#friends-join-code")?.value?.trim() || "";
     if (!code) {
       flashToast("Enter a room code");

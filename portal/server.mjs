@@ -72,6 +72,7 @@ import {
   authenticateClerkRequest,
   runWithClerkIdentity,
   clerkUserIdFromContext,
+  clerkWebhookSecretFromEnv,
 } from "../js/server/clerk-auth.mjs";
 import {
   applyCatalogGate,
@@ -122,6 +123,8 @@ import {
   parseShareBody,
   parseReportBody,
   sanitizeUsername,
+  chosenDisplayName,
+  profileNeedsDisplayName,
 } from "../js/server/profile.mjs";
 import {
   cloudWriteGate,
@@ -137,7 +140,6 @@ import {
   isBetterScore,
   rankBoard,
   rankPlayers,
-  sanitizeDisplayName,
   STILL_TOP_K,
   STILL_MAX_BYTES,
 } from "../js/server/quest-board.mjs";
@@ -2270,7 +2272,7 @@ async function loadMergedQuestTiles(opts = {}) {
 
 async function ensureUserFromWebhook(plan) {
   if (!plan?.userId) return;
-  await ensureUser(plan.userId);
+  await ensureUser(plan.userId, null, { username: plan.username });
   if (Array.isArray(plan.codes) && plan.codes.length) {
     await insertAchievements(plan.userId, plan.codes);
   }
@@ -3316,9 +3318,10 @@ const server = http.createServer(async (req, res) => {
         const bound = bindQuestScoreFromRun(parsed, owned, { startYear: catalogStartYear });
         if (!bound.ok) return sendJson(res, 400, { ok: false, error: bound.error });
         const profile = await getProfileByUserId(gate.userId);
-        const displayName = sanitizeDisplayName(
-          profile?.displayName || bound.row.displayName
-        );
+        const displayName = chosenDisplayName(profile);
+        if (!displayName) {
+          return sendJson(res, 400, { ok: false, error: "display_name_required" });
+        }
         const result = await upsertQuestScore(
           { ...bound.row, clerkUserId: gate.userId, displayName },
           isBetterScore
@@ -3376,7 +3379,12 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const profile = await getProfileByUserId(gate.userId);
-      return sendJson(res, 200, { ok: true, profile: profile || { isPublic: false, username: null } });
+      const p = profile || { isPublic: false, username: null, displayName: null };
+      return sendJson(res, 200, {
+        ok: true,
+        profile: p,
+        needsDisplayName: profileNeedsDisplayName(p),
+      });
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: "profile_failed" });
     }
@@ -3394,7 +3402,12 @@ const server = http.createServer(async (req, res) => {
       const parsed = parseProfilePatch(body);
       if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
       const result = await updateProfile(gate.userId, parsed.patch);
-      return sendJson(res, 200, { ok: true, profile: result.profile });
+      const p = result.profile || { isPublic: false, username: null, displayName: null };
+      return sendJson(res, 200, {
+        ok: true,
+        profile: p,
+        needsDisplayName: profileNeedsDisplayName(p),
+      });
     } catch (e) {
       const msg = String(e?.message || e);
       if (/unique/i.test(msg) || e?.code === "23505") {
@@ -3429,7 +3442,7 @@ const server = http.createServer(async (req, res) => {
     req.method === "POST" &&
     (req.url === "/api/webhooks/clerk" || req.url?.startsWith("/api/webhooks/clerk?"))
   ) {
-    const secret = String(process.env.CLERK_WEBHOOK_SECRET || "").trim();
+    const secret = clerkWebhookSecretFromEnv();
     if (!secret) {
       req.resume();
       return sendJson(res, 404, { ok: false, error: "webhooks_off" });

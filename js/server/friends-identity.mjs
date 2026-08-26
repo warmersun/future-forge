@@ -1,5 +1,6 @@
 /**
- * E4 Friends: typed name wins; Clerk fills in when the form is empty.
+ * E4 Friends: typed name wins; chosen profile name fills in when the form is empty.
+ * Never uses Clerk first/last name.
  */
 
 export function clerkRoomDisplayName(opts = {}) {
@@ -8,12 +9,11 @@ export function clerkRoomDisplayName(opts = {}) {
     .replace(/\s+/g, " ")
     .slice(0, 24);
   if (typed && !typed.includes("@")) return typed;
-  const clerk =
-    String(opts.clerkFirstName || opts.firstName || opts.clerkUsername || "")
-      .trim()
-      .replace(/\s+/g, " ")
-      .slice(0, 24);
-  if (clerk && !clerk.includes("@")) return clerk;
+  const profile = String(opts.profileDisplayName || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 24);
+  if (profile && !profile.includes("@")) return profile;
   return opts.fallback || "Player";
 }
 
