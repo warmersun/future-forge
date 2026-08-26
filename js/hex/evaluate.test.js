@@ -19,6 +19,7 @@ import {
   timingPctToLevel,
   pathwayTimingChance,
   boardWorstPathwayTiming,
+  boardPathwayReevaluating,
   tileTimingPct,
   tileBaseTimingPct,
   clampTimingPct,
@@ -168,6 +169,84 @@ describe("pathway timing product", () => {
     assert.equal(t.level, "yellow");
     assert.equal(t.pct, null);
     assert.equal(t.count, 0);
+  });
+});
+
+describe("boardPathwayReevaluating", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, `place ${id} at ${q},${r}`);
+    return res.board;
+  }
+
+  it("false on empty board", () => {
+    assert.equal(boardPathwayReevaluating(createEmptyBoard()), false);
+    assert.equal(boardPathwayReevaluating(null), false);
+  });
+
+  it("true when a given has lampPending", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 1 },
+    });
+    board.tiles["crisis-local"].lampPending = true;
+    assert.equal(boardPathwayReevaluating(board), true);
+  });
+
+  it("true when a placed invention is timingPending", () => {
+    let board = createEmptyBoard();
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "a",
+        techId: "ai",
+        howText: "a how.",
+        year: 2026,
+        feasibilityPct: 50,
+        timingLevel: "yellow",
+      })
+    );
+    board = placeOk(board, "a", 0, 0);
+    board.tiles.a.timingPending = true;
+    assert.equal(boardPathwayReevaluating(board), true);
+  });
+
+  it("false when lamps and timing are settled", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 1 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "a",
+        techId: "ai",
+        howText: "a how.",
+        year: 2026,
+        feasibilityPct: 50,
+        timingLevel: "yellow",
+        timingPending: false,
+      })
+    );
+    board = placeOk(board, "a", 0, 0);
+    assert.equal(board.tiles["crisis-local"].lampPending, false);
+    assert.equal(boardPathwayReevaluating(board), false);
+  });
+
+  it("invention timingPending alone is enough; invention lampPending is ignored", () => {
+    const inv = mintInventionTile({
+      id: "x",
+      techId: "ai",
+      howText: "Pilot.",
+      timingPending: false,
+      timingLevel: "yellow",
+      feasibilityPct: 50,
+    });
+    inv.lampPending = true;
+    let board = createEmptyBoard();
+    board = addTile(board, inv);
+    board = placeOk(board, "x", 0, 0);
+    assert.equal(boardPathwayReevaluating(board), false);
   });
 });
 

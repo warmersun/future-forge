@@ -23,6 +23,7 @@ import {
   sampleConcernRoster,
   neighborTiles,
   boardHolds,
+  summarizePathwayForBoard,
   techIdsFromBoard,
   unplacedInventionsForTech,
   techIdsWithUnplacedInventions,
@@ -436,6 +437,55 @@ test("techIdsFromBoard counts only placed field inventions", () => {
   assert.match(prose.inventionHow, /Routes alerts/);
   assert.equal(prose.inventionImpact.includes("green"), false);
   assert.equal(prose.inventionImpact.includes("Board lights"), false);
+});
+
+test("summarizePathwayForBoard uses placed tiles only, in year then hex order", () => {
+  let board = createEmptyBoard();
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "tray",
+      techId: "ai",
+      name: "Tray idea",
+      howText: "Should not appear.",
+    })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "late",
+      techId: "bio",
+      name: "Later dock",
+      howText: "Cleans the quay.",
+      year: 2032,
+    })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "early",
+      techId: "ai",
+      name: "First dock",
+      howText: "Routes alerts.",
+      year: 2028,
+    })
+  );
+  board = placeTile(board, "late", 0, 1).board;
+  board = placeTile(board, "early", 1, 0).board;
+  const sum = summarizePathwayForBoard(board, {
+    place: "Quay",
+    year: 2032,
+    techTitle: (id) => (id === "ai" ? "AI" : id === "bio" ? "Bio" : id),
+  });
+  assert.equal(sum.stack.join(","), "ai,bio");
+  assert.match(sum.text, /Quay · held in 2032/);
+  assert.match(sum.text, /First dock \(AI\)/);
+  assert.match(sum.text, /Routes alerts/);
+  assert.match(sum.text, /Later dock \(Bio\)/);
+  assert.equal(sum.text.includes("Should not appear"), false);
+  const earlyAt = sum.text.indexOf("First dock");
+  const lateAt = sum.text.indexOf("Later dock");
+  assert.ok(earlyAt >= 0 && lateAt > earlyAt);
 });
 
 test("removeUnplacedTiles drops tray tiles only", () => {

@@ -11,6 +11,9 @@ import {
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
+/** Cloud catalog gate: open | account | paid (paid ≡ account until Billing). */
+export const TILE_ACCESS = new Set(["open", "account", "paid"]);
+
 export const CAPS = {
   title: 100,
   place: 80,
@@ -46,6 +49,27 @@ function pickTileOrMissionField(tile, missionIn, key) {
     return missionIn[key];
   }
   return undefined;
+}
+
+/**
+ * Optional Cloud access. Invalid strings fail validation.
+ * Omitted → "account" when learning module, else "open".
+ * @returns {{ ok: true, value: string } | { ok: false, details: string[] }}
+ */
+export function parseAccessField(tile, missionIn = {}, opts = {}) {
+  const raw = pickTileOrMissionField(tile, missionIn, "access");
+  if (raw === undefined) {
+    const learning = Boolean(opts.isLearningModule);
+    return { ok: true, value: learning ? "account" : "open" };
+  }
+  if (typeof raw !== "string") {
+    return { ok: false, details: ["access_not_string"] };
+  }
+  const v = raw.trim().toLowerCase();
+  if (!TILE_ACCESS.has(v)) {
+    return { ok: false, details: ["access_invalid"] };
+  }
+  return { ok: true, value: v };
 }
 
 /**
@@ -642,6 +666,12 @@ export function validateQuestTile(tile, opts = {}) {
   if (!learningParsed.ok) {
     details.push(...learningParsed.details);
   }
+  const accessParsed = parseAccessField(tile, missionIn, {
+    isLearningModule: Boolean(learningParsed.ok && learningParsed.value.isLearningModule),
+  });
+  if (!accessParsed.ok) {
+    details.push(...accessParsed.details);
+  }
 
   const trendsParsed = parseQuestTrendFields(tile, missionIn, {
     techIds: [...techIds],
@@ -756,6 +786,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.totalLessons != null) mission.totalLessons = learning.totalLessons;
   if (sponsorName) mission.sponsorName = sponsorName;
   if (sponsorBanner) mission.sponsorBanner = sponsorBanner;
+  if (accessParsed.ok) mission.access = accessParsed.value;
   const trendFields = trendsParsed.ok ? trendsParsed.value : {};
   if (trendFields.trends?.length) mission.trends = trendFields.trends;
   if (trendFields.spotlightTrends?.length) {
@@ -789,6 +820,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (learning.totalLessons != null) normalizedTile.totalLessons = learning.totalLessons;
   if (sponsorName) normalizedTile.sponsorName = sponsorName;
   if (sponsorBanner) normalizedTile.sponsorBanner = sponsorBanner;
+  if (accessParsed.ok) normalizedTile.access = accessParsed.value;
   if (trendFields.trends?.length) normalizedTile.trends = trendFields.trends;
   if (trendFields.spotlightTrends?.length) {
     normalizedTile.spotlightTrends = trendFields.spotlightTrends;

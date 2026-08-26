@@ -9,9 +9,17 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/mascot/ff-mark.webp" type="image/webp" />
-    <link rel="stylesheet" href="css/styles.css?v=readable-idea-tiles-1" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-20" />
   </head>
   <body>
+    <div id="ff-account" hidden>
+      <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signin">
+        Sign in
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ff-account-signout" hidden>
+        Sign out
+      </button>
+    </div>
     <!-- TITLE -->
     <section id="screen-title" class="screen active">
       <div class="title-orb" aria-hidden="true"></div>
@@ -45,6 +53,7 @@
             </p>
           </div>
         </div>
+        <p id="cloud-achievements-strip" class="cloud-achievements-strip" hidden></p>
         <p class="tagline" id="game-tagline">
           Invent local pathways with emerging tech — place them on the board as the future arrives.
         </p>
@@ -71,6 +80,18 @@
           <button type="button" class="btn btn-primary" id="btn-choose-theme">
             Start a Quest →
           </button>
+          <button type="button" class="btn btn-secondary" id="btn-cloud-continue" hidden>
+            Continue
+          </button>
+          <button type="button" class="btn btn-ghost" id="btn-quest-log" hidden>
+            Quest log
+          </button>
+          <button type="button" class="btn btn-ghost" id="btn-cloud-profile" hidden>
+            Profile
+          </button>
+          <button type="button" class="btn btn-ghost" id="btn-daily-board" hidden>
+            Leaderboard
+          </button>
           <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
             Start a Quest →
           </button>
@@ -86,6 +107,122 @@
             Reset tutorial
           </button>
         </p>
+      </div>
+    </section>
+
+    <!-- QUEST LOG — signed-in Cloud history -->
+    <section id="screen-quest-log" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+              <span class="hud-product-credit">
+                by
+                <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-pills">
+          <span class="pill active">Log</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-quest-log-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>Quest log</h1>
+          <p>What you started, held, or lost — on this account, any device.</p>
+        </div>
+        <div id="quest-log-filters" class="quest-log-filters" role="toolbar" aria-label="Filter quest log">
+          <button type="button" class="chip is-on" data-log-filter="all">All</button>
+          <button type="button" class="chip" data-log-filter="hold">Held</button>
+          <button type="button" class="chip" data-log-filter="partial">Partial</button>
+          <button type="button" class="chip" data-log-filter="collapse">Collapsed</button>
+          <button type="button" class="chip" data-log-kind="theme">Theme</button>
+          <button type="button" class="chip" data-log-kind="lesson">Lesson</button>
+          <button type="button" class="chip" data-log-kind="friends">Friends</button>
+        </div>
+        <p id="quest-log-empty" class="muted" hidden>No quests on this account yet.</p>
+        <ol id="quest-log-list" class="quest-log-list"></ol>
+      </div>
+    </section>
+
+    <section id="screen-cloud-profile" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-profile-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1>Inventor page</h1>
+          <p>Opt-in and private by default. Display name is how you appear on leaderboards — not your Google or Clerk name. Never shows your email.</p>
+        </div>
+        <form id="cloud-profile-form" class="panel cloud-profile-form">
+          <div class="field">
+            <label for="cloud-profile-username">Username</label>
+            <input id="cloud-profile-username" name="username" type="text" maxlength="24" autocomplete="username" placeholder="lowercase handle" />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-display">Display name</label>
+            <input id="cloud-profile-display" name="displayName" type="text" maxlength="40" autocomplete="nickname" required placeholder="How you appear on the board" />
+          </div>
+          <div class="field">
+            <label for="cloud-profile-bio">Bio</label>
+            <textarea id="cloud-profile-bio" name="bio" maxlength="280" rows="3" placeholder="Optional. Never includes your email."></textarea>
+          </div>
+          <label class="cloud-profile-check" for="cloud-profile-public">
+            <input type="checkbox" id="cloud-profile-public" />
+            Public inventor page
+          </label>
+          <label class="cloud-profile-check" for="cloud-profile-hide-email">
+            <input type="checkbox" id="cloud-profile-hide-email" checked />
+            Hide email (always on for the public page)
+          </label>
+          <button type="submit" class="btn btn-primary">Save</button>
+          <p id="cloud-profile-status" class="muted sm"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-daily-board" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <div class="hud-product" aria-label="Future Forge by Warmer Sun">
+            <span class="hud-product-sun" aria-hidden="true"></span>
+            <div class="hud-product-text">
+              <span class="hud-product-title">Future Forge</span>
+              <span class="hud-product-credit">
+                by
+                <a class="hud-product-link" href="https://warmersun.com" target="_blank" rel="noopener noreferrer">Warmer Sun</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-pills">
+          <span class="pill active">Leaderboard</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-daily-board-back">← Home</button>
+      </header>
+      <div class="content">
+        <div class="section-intro">
+          <h1 id="daily-board-title">Leaderboard</h1>
+          <p id="daily-board-blurb">
+            Top 10 inventors. Each person’s score is the sum of their quest scores (★ ÷ years).
+          </p>
+          <p id="daily-board-date" class="muted"></p>
+        </div>
+        <p id="daily-board-you" class="quest-log-item-meta" hidden></p>
+        <p id="daily-board-empty" class="muted">No holds yet.</p>
+        <ol id="daily-board-list" class="quest-log-list"></ol>
       </div>
     </section>
 
@@ -1827,6 +1964,12 @@
           <p id="outcome-story"></p>
         </div>
 
+        <div id="outcome-pathway" class="future-story" hidden>
+          <h3>Your pathway</h3>
+          <p id="outcome-pathway-text" class="outcome-pathway-text"></p>
+          <p id="outcome-board-rank" class="quest-log-item-meta" hidden></p>
+        </div>
+
         <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>
 
@@ -1887,6 +2030,19 @@
         <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Technologies you used</h3>
         <div id="outcome-techs" class="learn-grid"></div>
 
+        <div id="outcome-cloud-save" class="outcome-cloud-save panel" hidden>
+          <p class="outcome-cloud-save-kicker">Warmer Sun Cloud</p>
+          <p class="outcome-cloud-save-copy">
+            Save this to your Warmer Sun Cloud account.
+          </p>
+          <button type="button" class="btn btn-primary" id="btn-outcome-cloud-signin">
+            Sign in
+          </button>
+        </div>
+        <label id="outcome-publish-wrap" class="outcome-publish" hidden>
+          <input type="checkbox" id="outcome-publish" />
+          Publish this hold to my inventor page
+        </label>
         <p id="outcome-actions-hint" class="outcome-actions-hint muted sm" hidden></p>
         <div class="form-actions" style="justify-content: center; flex-wrap: wrap; gap: 0.65rem">
           <button
@@ -2224,6 +2380,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=idea-cards-9"></script>
+    <script type="module" src="js/main.js?v=portal-19"></script>
   </body>
 </html>

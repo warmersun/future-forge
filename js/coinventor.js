@@ -3,6 +3,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
 import { renderChatMarkdown } from "./md-lite.js";
 import {
   attachReadAloud,
@@ -79,6 +80,7 @@ export class CoInventor {
     this.onEndTutoring = opts.onEndTutoring || null;
     this.onResumeTutoring = opts.onResumeTutoring || null;
     this.onTutorSessionEnded = opts.onTutorSessionEnded || null;
+    this.onHistoryChange = opts.onHistoryChange || null;
     /** Separate full transcripts: tutor session vs regular co-inventor. */
     this.histories = {
       tutor: Array.isArray(opts.histories?.tutor) ? [...opts.histories.tutor] : [],
@@ -516,6 +518,11 @@ export class CoInventor {
     if (showUser) {
       this.messages.push({ role: "user", content: userDisplay || userText });
       this.renderMessages();
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
     }
 
     this.busy = true;
@@ -560,6 +567,7 @@ export class CoInventor {
           grounding: ctx.grounding || null,
           isLearningModule: Boolean(ctx.isLearningModule),
           aiTutorContext: ctx.aiTutorContext || null,
+          questId: ctx.questId || ctx.challenge?.id || null,
           // Active tutor session only (not merely "this is a learning quest")
           tutorMode: Boolean(ctx.tutorMode),
           guidance: ctx.guidance || null,
@@ -581,7 +589,7 @@ export class CoInventor {
           return;
         }
       } else {
-        const res = await fetch("/api/co-invent", {
+        const res = await apiFetch("/api/co-invent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
@@ -589,6 +597,9 @@ export class CoInventor {
         data = await res.json();
         this.removeThinking(thinkingId);
         if (!res.ok && data.error) {
+          if (data.error === "sign_in_required" && isClerkReady()) {
+            openCloudSignIn();
+          }
           this.pushAssistant({
             message: data.message || data.error,
             proposals: emptyProposals(),
@@ -616,6 +627,11 @@ export class CoInventor {
       });
       this.renderMessages();
       requestOk = true;
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
 
       // AI tutor can end the free tutoring session (learning quests)
       if (data.endTutoring && this.tutorMode && this.learningQuest) {
@@ -653,6 +669,13 @@ export class CoInventor {
       local: Boolean(local),
     });
     this.renderMessages();
+    if (!local) {
+      try {
+        this.onHistoryChange?.();
+      } catch {
+        /* host */
+      }
+    }
   }
 
   pushThinking() {

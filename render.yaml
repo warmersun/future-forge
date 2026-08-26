@@ -1,0 +1,28 @@
+# Warmer Sun Cloud (portal) on Render.
+# Dashboard can match these settings without using the Blueprint.
+# Secrets: set in the Dashboard — never commit real values.
+
+services:
+  - type: web
+    name: warmer-sun-portal
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run portal
+    healthCheckPath: /api/health
+    envVars:
+      - key: FF_TRUST_PROXY
+        value: "1"
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_AUTHORIZED_PARTIES
+        sync: false
+        # If set, include https://cloud.warmersun.com plus loopback game origins
+        # (replaces code defaults). Keep https://warmersun.com.
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false

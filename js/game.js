@@ -29,6 +29,16 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import { getClientSessionId } from "./client-session.js";
+import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
+import {
+  apiFetch,
+  isClerkReady,
+  isClerkSignedIn,
+  openCloudSignIn,
+  onClerkSession,
+  setCloudProfileCache,
+} from "./auth.js";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -43,6 +53,7 @@ import { localPose as offlinePose } from "./challenge-pose.js";
 import {
   boardHolds,
   deriveBoardProse,
+  summarizePathwayForBoard,
   techIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -52,7 +63,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
 } from "./hex/board-state.js";
-import { boardWorstPathwayTiming } from "./hex/evaluate.js";
+import { boardWorstPathwayTiming, boardPathwayReevaluating } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
@@ -109,6 +120,8 @@ import {
   loadQuestLibrary,
   importQuestToLibrary,
   removeQuestFromLibrary,
+  loadPins,
+  savePins,
 } from "./meta.js";
 import {
   parseQuestTileJson,
@@ -397,6 +410,14 @@ const state = {
   scenariosLoading: false,
   /** Mission ids the player has already deployed/solved (still replayable) */
   solvedMissionIds: new Set(),
+  /** Neon runs.id for the current signed-in play (C1) */
+  cloudRunId: null,
+  questLogFilter: { outcome: null, kind: null },
+  questLogRuns: [],
+  dailyBoard: null,
+  boardKind: "quest",
+  boardQuestId: null,
+  cloudContinue: null,
   /**
    * Learning-module tutor session (free co-inventor AP). Only meaningful when
    * mission.isLearningModule. Start true on learning quests; End/Resume or AI endTutoring.
@@ -458,6 +479,7 @@ const state = {
 const STORAGE_SCENARIOS = "future-forge:scenarioCache:v12";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
+const STORAGE_LAST_RUN = "future-forge:lastRun";
 
 /**
  * Friends room / hotseat keep today's full GAME.features (not Spark).
@@ -1074,6 +1096,7 @@ function ensureHexWorkshop() {
     getBoard: () => state.hexBoard || createEmptyBoard(),
     setBoard: (b) => {
       state.hexBoard = b;
+      scheduleCloudRunState();
     },
     getYear: () => state.year,
     getPressure: () => state.pressure,
@@ -1099,6 +1122,7 @@ function ensureHexWorkshop() {
       if (nameEl) nameEl.value = state.inventionName;
       if (howEl) howEl.value = state.inventionHow;
       if (impactEl) impactEl.value = state.inventionImpact;
+      scheduleCloudRunState();
     },
     /** @deprecated prefer reconcileStackFromBoard — kept for callers that only assign */
     setSelectedTechIds: (ids) => {
@@ -1151,6 +1175,7 @@ function ensureHexWorkshop() {
       return Boolean(b.canFaceChallenge?.());
     },
     commitBoard: (b) => {
+      scheduleCloudRunState();
       try {
         if (roomBridge.isRoom() && roomBridge.isMyTurn?.()) {
           if (!mpHexEditsAllowed()) return;
@@ -2996,6 +3021,409 @@ function persistSolvedMissions() {
   }
 }
 
+function slimLastRunFromState() {
+  const o = state.outcome;
+  const m = state.mission;
+  if (!o || !m?.id) return null;
+  const kind = m.isLearningModule
+    ? "lesson"
+    : isMultipartyOutcome()
+      ? "friends"
+      : "theme";
+  let outcome = String(o.kind || "");
+  if (outcome === "win") outcome = "hold";
+  if (!outcome) return null;
+  return {
+    id: state.cloudRunId || null,
+    questId: String(m.id),
+    outcome,
+    kind,
+    stars: o.runReport?.stars ?? null,
+    yearReached: o.year ?? state.year ?? null,
+    waits: o.waits ?? 0,
+    place: m.place ? String(m.place) : "",
+    techIds: Array.isArray(state.selectedTechIds) ? [...state.selectedTechIds] : [],
+  };
+}
+
+function stashLastRun(run) {
+  if (!run?.questId) return;
+  try {
+    sessionStorage.setItem(STORAGE_LAST_RUN, JSON.stringify(run));
+  } catch {
+    /* ignore */
+  }
+}
+
+function readStashedLastRun() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_LAST_RUN);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function unionSolvedIds(ids) {
+  if (!Array.isArray(ids) || !ids.length) return;
+  for (const id of ids) {
+    if (id) state.solvedMissionIds.add(String(id));
+  }
+  persistSolvedMissions();
+}
+
+let cloudImportDone = false;
+let cloudDbEnabled = null;
+
+async function refreshCloudDbFlag() {
+  try {
+    const res = await apiFetch("/api/health");
+    if (!res.ok) return cloudDbEnabled === true;
+    const data = await res.json();
+    cloudDbEnabled = Boolean(data?.db?.enabled);
+    return cloudDbEnabled;
+  } catch {
+    return cloudDbEnabled === true;
+  }
+}
+
+function applyOutcomeCloudSaveChrome() {
+  const panel = $("#outcome-cloud-save");
+  if (!panel) return;
+  const clerkOn = document.body.classList.contains("ff-accounts");
+  const signedIn = isClerkSignedIn();
+  const kind = state.outcome?.kind;
+  const pride = kind === "win" || kind === "partial";
+  const show =
+    clerkOn && !signedIn && pride && state.screen === "outcome" && !isMultipartyOutcome();
+  panel.hidden = !show;
+  const pub = $("#outcome-publish-wrap");
+  if (pub) {
+    const showPub = isClerkSignedIn() && pride && state.screen === "outcome" && !isMultipartyOutcome();
+    pub.hidden = !showPub;
+  }
+}
+
+function postCloudRun(run) {
+  if (!isClerkSignedIn() || !run?.questId) return Promise.resolve(null);
+  return apiFetch("/api/me/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(run),
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.id) state.cloudRunId = data.id;
+      if (res.ok && Array.isArray(data.unlocked) && data.unlocked.length) {
+        flashToast(data.unlocked.map((u) => u.title).filter(Boolean).join(" · "));
+        void loadAchievementsStrip();
+      }
+      applyOutcomeCloudSaveChrome();
+      return res.ok ? data.id || null : null;
+    })
+    .catch(() => {
+      /* unsigned cache still holds */
+      return null;
+    });
+}
+
+function postCloudRunStart(mission) {
+  if (!isClerkSignedIn() || !mission?.id) return;
+  const kind = mission.isLearningModule
+    ? "lesson"
+    : isRoomOrHotseatSession()
+      ? "friends"
+      : "theme";
+  void apiFetch("/api/me/runs/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      questId: String(mission.id),
+      kind,
+      place: mission.place ? String(mission.place) : "",
+    }),
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.id) state.cloudRunId = String(data.id);
+    })
+    .catch(() => {
+      /* local play continues */
+    });
+}
+
+async function syncCloudProgress() {
+  applyOutcomeCloudSaveChrome();
+  if (!isClerkSignedIn()) {
+    cloudImportDone = false;
+    return;
+  }
+  const dbOn = await refreshCloudDbFlag();
+  if (!dbOn) return;
+  if (cloudImportDone) {
+    try {
+      const res = await apiFetch("/api/me");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.solvedIds)) unionSolvedIds(data.solvedIds);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  cloudImportDone = true;
+  try {
+    const res = await apiFetch("/api/me/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solvedIds: [...state.solvedMissionIds],
+        lastRun: readStashedLastRun(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 503) {
+      cloudImportDone = false;
+      return;
+    }
+    if (res.ok && Array.isArray(data.solvedIds)) unionSolvedIds(data.solvedIds);
+    const n = Number(data.inserted) || 0;
+    if (res.ok && n > 0) {
+      flashToast(`Saved ${n} quest${n === 1 ? "" : "s"} to your account.`);
+    }
+    if (res.ok) {
+      if (data.lastRunId) {
+        state.cloudRunId = String(data.lastRunId);
+      } else {
+        await postCloudRun(readStashedLastRun());
+      }
+      applyOutcomeCloudSaveChrome();
+    }
+  } catch {
+    cloudImportDone = false;
+  }
+  void syncCloudPins();
+  void maybeOfferContinue();
+}
+
+let cloudRunStateTimer = null;
+function cloudRunStatePayload() {
+  if (!state.mission?.id) return null;
+  return snapshotForWire({
+    questId: state.mission.id,
+    year: state.year,
+    tutor: Boolean(state.tutorSessionActive),
+    runId: state.cloudRunId,
+    board: state.hexBoard,
+    play: {
+      inventionName: state.inventionName,
+      inventionHow: state.inventionHow,
+      inventionImpact: state.inventionImpact,
+      selectedTechIds: [...state.selectedTechIds],
+      learnOrder: [...(state.learnOrder || [])],
+      domainFilter: state.domainFilter || "all",
+      sideTab: state.sideTab === "coinventor" ? "coinventor" : "vision",
+      waits: state.waits,
+      turn: state.turn,
+      pressure: state.pressure,
+      ap: state.ap,
+      apMax: state.apMax,
+      budget: state.budget,
+      will: state.will,
+      tutorSessionActive: Boolean(state.tutorSessionActive),
+      mission: slimMissionForContinue(state.mission),
+      focusedTechId: focusedTechId || hexWorkshop?.getFocusedTechId?.() || null,
+      ideas: ideaSparkCache.size
+        ? Object.fromEntries(ideaSparkCache.entries())
+        : null,
+      sparkBatches: hexWorkshop?.exportSparkBatches?.() || null,
+    },
+    chats: state.coInventor?.exportHistories?.() || null,
+  });
+}
+
+function slimMissionForContinue(m) {
+  if (!m?.id) return null;
+  return {
+    id: m.id,
+    globalId: m.globalId || null,
+    title: m.title || "",
+    place: m.place || "",
+    scene: m.scene || "",
+    startYear: m.startYear,
+    collapseYear: m.collapseYear,
+    yearsPerTurn: m.yearsPerTurn,
+    pressure: m.pressure,
+    pressureRise: m.pressureRise,
+    winMax: m.winMax,
+    pressureDesc: m.pressureDesc,
+    crisisRoles: m.crisisRoles,
+    suggested: m.suggested,
+    source: m.source || "play",
+    isLearningModule: Boolean(m.isLearningModule),
+    module: m.module,
+    lesson: m.lesson,
+    totalLessons: m.totalLessons,
+  };
+}
+
+function scheduleCloudRunState() {
+  if (!isClerkSignedIn() || !state.mission?.id) return;
+  const body = cloudRunStatePayload();
+  if (!body) return;
+  clearTimeout(cloudRunStateTimer);
+  cloudRunStateTimer = setTimeout(() => {
+    void apiFetch("/api/me/run-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then((res) => {
+        if (res.ok) {
+          continueSaveWarned = false;
+          return;
+        }
+        if (!continueSaveWarned) {
+          continueSaveWarned = true;
+          flashToast(
+            res.status === 413
+              ? "Could not save Continue — snapshot too large."
+              : "Could not save Continue to Cloud."
+          );
+        }
+      })
+      .catch(() => {
+        if (!continueSaveWarned) {
+          continueSaveWarned = true;
+          flashToast("Could not save Continue to Cloud.");
+        }
+      });
+  }, 2500);
+}
+
+let continueSaveWarned = false;
+
+function applyRestoredPlay(play) {
+  if (!play || typeof play !== "object") return;
+  if (play.inventionName != null) state.inventionName = String(play.inventionName);
+  if (play.inventionHow != null) state.inventionHow = String(play.inventionHow);
+  if (play.inventionImpact != null) state.inventionImpact = String(play.inventionImpact);
+  if (Array.isArray(play.selectedTechIds)) state.selectedTechIds = [...play.selectedTechIds];
+  if (Array.isArray(play.learnOrder)) state.learnOrder = [...play.learnOrder];
+  if (play.domainFilter) state.domainFilter = String(play.domainFilter);
+  if (play.sideTab === "coinventor" || play.sideTab === "vision") state.sideTab = play.sideTab;
+  if (play.waits != null) state.waits = play.waits;
+  if (play.turn != null) state.turn = play.turn;
+  if (play.pressure && typeof play.pressure === "object") {
+    state.pressure = clonePressure(play.pressure);
+  }
+  if (play.ap != null) state.ap = play.ap;
+  if (play.apMax != null) state.apMax = play.apMax;
+  if (play.budget != null) state.budget = play.budget;
+  if (play.will != null) state.will = play.will;
+  if (typeof play.tutorSessionActive === "boolean") {
+    state.tutorSessionActive = play.tutorSessionActive;
+  }
+  if (play.focusedTechId) focusedTechId = String(play.focusedTechId);
+  if (play.ideas && typeof play.ideas === "object") {
+    ideaSparkCache.clear();
+    for (const [key, list] of Object.entries(play.ideas)) {
+      if (Array.isArray(list) && list.length) ideaSparkCache.set(key, list);
+    }
+  }
+}
+
+async function maybeOfferContinue() {
+  const btn = $("#btn-cloud-continue");
+  if (!btn || !isClerkSignedIn()) {
+    if (btn) btn.hidden = true;
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/run-state");
+    const data = await res.json().catch(() => ({}));
+    const st = data.state;
+    state.cloudContinue = st && st.questId ? st : null;
+    btn.hidden = !state.cloudContinue;
+  } catch {
+    if (btn) btn.hidden = true;
+  }
+}
+
+function resolveContinueMission(st) {
+  const id = st?.questId;
+  if (!id) return null;
+  const fromHosted = (state.hostedQuests || []).find(
+    (q) => q.id === id || q.mission?.id === id
+  );
+  if (fromHosted?.mission) {
+    return normalizeMission(fromHosted.mission, fromHosted.mission.globalId);
+  }
+  const stub = st.play?.mission || st.mission;
+  if (stub?.id) {
+    return normalizeMission(stub, stub.globalId);
+  }
+  for (const list of Object.values(state.scenarioCache || {})) {
+    const raw = (list || []).find((m) => m && (m.id === id || m.mission?.id === id));
+    const m = raw?.mission || raw;
+    if (m?.id) return normalizeMission(m, m.globalId);
+  }
+  if (state.mission?.id === id) return state.mission;
+  return null;
+}
+
+let continueInFlight = false;
+async function continueCloudRun() {
+  if (continueInFlight) return;
+  const st = state.cloudContinue;
+  if (!st?.questId) return;
+  const btn = $("#btn-cloud-continue");
+  continueInFlight = true;
+  if (btn) btn.disabled = true;
+  try {
+    if (!state.hostedQuestsLoaded) {
+      try {
+        await refreshHostedQuests({ silent: true });
+      } catch {
+        /* stub / cache may still restore */
+      }
+    }
+    const mission = resolveContinueMission(st);
+    if (!mission?.id) {
+      flashToast("Could not restore that quest on this device.");
+      return;
+    }
+    if (startMission(mission, { restore: st })) {
+      flashToast("Continued from the cloud.");
+    }
+  } finally {
+    continueInFlight = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function syncCloudPins() {
+  if (!isClerkSignedIn()) return;
+  try {
+    const res = await apiFetch("/api/me/pins");
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data.pins) && data.pins.length) {
+      savePins(data.pins);
+      return;
+    }
+    const local = loadPins();
+    if (!local.length) return;
+    await apiFetch("/api/me/pins", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pins: local }),
+    });
+  } catch {
+    /* local pins remain */
+  }
+}
+
 function isMissionSolved(missionId) {
   return Boolean(missionId && state.solvedMissionIds.has(String(missionId)));
 }
@@ -3215,6 +3643,20 @@ function renderTitleCtas() {
     choose.classList.add("btn-primary");
     choose.classList.remove("btn-secondary");
   }
+  const logBtn = $("#btn-quest-log");
+  const profBtn = $("#btn-cloud-profile");
+  const dailyBtn = $("#btn-daily-board");
+  const showLog = isClerkSignedIn();
+  for (const btn of [logBtn, profBtn]) {
+    if (!btn) continue;
+    btn.hidden = !showLog;
+    if (showLog) btn.removeAttribute("hidden");
+    else btn.setAttribute("hidden", "");
+  }
+  if (dailyBtn) {
+    dailyBtn.hidden = false;
+    dailyBtn.removeAttribute("hidden");
+  }
   if (start) {
     start.hidden = true;
     start.setAttribute("hidden", "");
@@ -3226,14 +3668,456 @@ function renderTitleCtas() {
   }
 }
 
+async function loadAchievementsStrip() {
+  const el = $("#cloud-achievements-strip");
+  if (!el) return;
+  if (!isClerkSignedIn()) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/achievements");
+    const data = await res.json().catch(() => ({}));
+    const list = res.ok && Array.isArray(data.achievements) ? data.achievements : [];
+    if (!list.length) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = list.map((a) => a.title).join(" · ");
+  } catch {
+    el.hidden = true;
+  }
+}
+
 function renderTitleMeta() {
   renderTitleCtas();
+  void loadAchievementsStrip();
+  void maybeOfferContinue();
+  if (state.screen === "quest-log") void loadQuestLog();
   // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {
     if (state.screen === "quest-hub") renderQuestHub();
     if (state.screen === "quest-catalog") renderQuestCatalog();
   });
   void refreshHostedTrends({ silent: true });
+}
+
+function questLogOutcomeLabel(outcome) {
+  if (outcome === "hold") return "Held";
+  if (outcome === "partial") return "Partial";
+  if (outcome === "collapse") return "Collapsed";
+  if (outcome === "abandon") return "Left";
+  return "In play";
+}
+
+let askedForDisplayName = false;
+
+async function openCloudProfile(opts = {}) {
+  showScreen("cloud-profile");
+  const status = $("#cloud-profile-status");
+  try {
+    const res = await apiFetch("/api/me/profile");
+    const data = await res.json().catch(() => ({}));
+    const p = data.profile || {};
+    setCloudProfileCache(p);
+    const u = $("#cloud-profile-username");
+    const d = $("#cloud-profile-display");
+    const b = $("#cloud-profile-bio");
+    const pub = $("#cloud-profile-public");
+    if (u) u.value = p.username || "";
+    if (d) d.value = p.displayName || "";
+    if (b) b.value = p.bio || "";
+    if (pub) pub.checked = Boolean(p.isPublic);
+    const hide = $("#cloud-profile-hide-email");
+    if (hide) hide.checked = p.hideEmail !== false;
+    if (opts.requireName || data.needsDisplayName) {
+      if (status) {
+        status.textContent = "Pick a display name before you appear on leaderboards.";
+      }
+    } else if (status) {
+      status.textContent = "";
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function maybePromptDisplayName() {
+  if (!isClerkSignedIn()) {
+    askedForDisplayName = false;
+    return;
+  }
+  const screen = state.screen;
+  if (screen !== "title" && screen !== "outcome") return;
+  if (askedForDisplayName) return;
+  try {
+    const res = await apiFetch("/api/me/profile");
+    const data = await res.json().catch(() => ({}));
+    setCloudProfileCache(data.profile || null);
+    if (!data.needsDisplayName) return;
+    askedForDisplayName = true;
+    await openCloudProfile({ requireName: true });
+  } catch {
+    /* ignore */
+  }
+}
+
+async function saveCloudProfile() {
+  const status = $("#cloud-profile-status");
+  const display = String($("#cloud-profile-display")?.value || "").trim();
+  if (!display) {
+    if (status) status.textContent = "Pick a display name before you appear on leaderboards.";
+    return;
+  }
+  const pub = Boolean($("#cloud-profile-public")?.checked);
+  const username = String($("#cloud-profile-username")?.value || "").trim();
+  if (pub && !username) {
+    if (status) status.textContent = "A username is required for a public inventor page.";
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/me/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        displayName: display,
+        bio: $("#cloud-profile-bio")?.value || "",
+        public: pub,
+        hideEmail: Boolean($("#cloud-profile-hide-email")?.checked),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) setCloudProfileCache(data.profile || null);
+    if (status) {
+      status.textContent = res.ok
+        ? "Saved. Still hidden unless you turn on Public."
+        : data.error === "username_taken"
+          ? "That username is taken."
+          : data.error === "display_name_required"
+            ? "Pick a display name before you appear on leaderboards."
+            : data.error === "invalid_username"
+              ? pub
+                ? "A username is required for a public inventor page."
+                : "Username must be 3–24 letters, numbers, or underscores."
+              : data.error === "invalid_name"
+                ? "Display name cannot include an email."
+                : "Could not save profile.";
+    }
+  } catch {
+    if (status) status.textContent = "Could not save profile.";
+  }
+}
+
+function openQuestLog() {
+  showScreen("quest-log");
+  void loadQuestLog();
+}
+
+async function loadQuestLog() {
+  const list = $("#quest-log-list");
+  const empty = $("#quest-log-empty");
+  if (!isClerkSignedIn()) {
+    if (list) list.replaceChildren();
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = "Sign in to keep a quest log across devices.";
+    }
+    return;
+  }
+  const params = new URLSearchParams();
+  if (state.questLogFilter.kind) params.set("kind", state.questLogFilter.kind);
+  if (state.questLogFilter.outcome) params.set("outcome", state.questLogFilter.outcome);
+  const q = params.toString();
+  try {
+    const res = await apiFetch(q ? `/api/me/runs?${q}` : "/api/me/runs");
+    const data = await res.json().catch(() => ({}));
+    state.questLogRuns = res.ok && Array.isArray(data.runs) ? data.runs : [];
+  } catch {
+    state.questLogRuns = [];
+  }
+  renderQuestLog();
+}
+
+function renderQuestLog() {
+  const list = $("#quest-log-list");
+  const empty = $("#quest-log-empty");
+  const bar = $("#quest-log-filters");
+  if (bar) {
+    bar.querySelectorAll("[data-log-filter], [data-log-kind]").forEach((btn) => {
+      const f = btn.getAttribute("data-log-filter");
+      const k = btn.getAttribute("data-log-kind");
+      const on =
+        (f === "all" && !state.questLogFilter.outcome && !state.questLogFilter.kind) ||
+        (f && f !== "all" && state.questLogFilter.outcome === f) ||
+        (k && state.questLogFilter.kind === k);
+      btn.classList.toggle("is-on", Boolean(on));
+    });
+  }
+  if (!list) return;
+  list.replaceChildren();
+  const runs = state.questLogRuns || [];
+  if (empty) {
+    empty.hidden = runs.length > 0;
+    empty.textContent = "No quests on this account yet.";
+  }
+  for (const run of runs) {
+    const li = document.createElement("li");
+    li.className = "quest-log-item";
+    const title = document.createElement("p");
+    title.className = "quest-log-item-title";
+    title.textContent = run.place || run.questId || "Quest";
+    const meta = document.createElement("p");
+    meta.className = "quest-log-item-meta";
+    const bits = [
+      questLogOutcomeLabel(run.outcome),
+      run.kind,
+      run.yearReached != null ? `year ${run.yearReached}` : null,
+      run.stars != null ? `${run.stars}★` : null,
+    ].filter(Boolean);
+    meta.textContent = bits.join(" · ");
+    li.append(title, meta);
+    list.appendChild(li);
+  }
+}
+
+function currentPathwaySummary() {
+  return summarizePathwayForBoard(state.hexBoard, {
+    place: state.mission?.place || "",
+    year: state.outcome?.year ?? state.year,
+    techTitle: (id) => techById(id)?.name || id,
+  });
+}
+
+function paintOutcomePathway(m, o) {
+  const wrap = $("#outcome-pathway");
+  const textEl = $("#outcome-pathway-text");
+  const rankEl = $("#outcome-board-rank");
+  if (!wrap || !textEl) return;
+  const held = o?.kind === "win" || o?.kind === "partial" || o?.kind === "hold";
+  const sum = held ? currentPathwaySummary() : { text: "" };
+  if (!sum.text) {
+    wrap.hidden = true;
+    textEl.textContent = "";
+    if (rankEl) {
+      rankEl.hidden = true;
+      rankEl.textContent = "";
+    }
+    return;
+  }
+  wrap.hidden = false;
+  wrap.removeAttribute("hidden");
+  textEl.textContent = sum.text;
+  if (rankEl) {
+    rankEl.hidden = true;
+    rankEl.textContent = "";
+  }
+}
+
+async function visionStillBlob() {
+  const live = collectVisionForShare();
+  const url = live.url;
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    if (!blob || blob.size < 32 || blob.size > 1_500_000) return null;
+    return blob;
+  } catch {
+    return null;
+  }
+}
+
+async function submitQuestBoardIfCounted(run) {
+  const questId = String(run?.questId || state.mission?.id || "");
+  if (!questHasLeaderboard(questId) || !isClerkSignedIn()) return;
+  if (run?.outcome !== "hold" && run?.outcome !== "partial") return;
+  const runId = run.id || state.cloudRunId;
+  if (!runId) return;
+  const sum = currentPathwaySummary();
+  try {
+    const res = await apiFetch(`/api/me/quests/${encodeURIComponent(questId)}/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        runId,
+        questId,
+        pathwayText: sum.text,
+        stack: sum.stack,
+        place: run.place || state.mission?.place || "",
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const rankEl = $("#outcome-board-rank");
+    if (data.error === "display_name_required") {
+      if (rankEl) {
+        rankEl.hidden = false;
+        rankEl.removeAttribute("hidden");
+        rankEl.textContent = "Pick a display name to appear on this quest’s leaderboard.";
+      }
+      await openCloudProfile({ requireName: true });
+      return;
+    }
+    if (res.ok && data.rank && rankEl) {
+      rankEl.hidden = false;
+      rankEl.removeAttribute("hidden");
+      rankEl.textContent = `You are #${data.rank} on this quest.`;
+    }
+    if (res.ok && data.inTopStills) {
+      const blob = await visionStillBlob();
+      if (blob) {
+        await apiFetch(`/api/me/quests/${encodeURIComponent(questId)}/still`, {
+          method: "PUT",
+          headers: { "Content-Type": blob.type || "image/jpeg" },
+          body: blob,
+        });
+      }
+    }
+  } catch {
+    /* board is optional */
+  }
+}
+
+async function loadDailyBoard() {
+  const players = state.boardKind === "players";
+  const qid = state.boardQuestId;
+  if (!players && !qid) {
+    showScreen("title");
+    return;
+  }
+  try {
+    const url = players ? "/api/board" : `/api/board/${encodeURIComponent(qid)}`;
+    const res = await apiFetch(url);
+    const data = await res.json().catch(() => ({}));
+    state.dailyBoard = res.ok ? data : { top: [], you: null };
+    if (res.ok && data.questId) state.boardQuestId = data.questId;
+  } catch {
+    state.dailyBoard = { top: [], you: null };
+  }
+  renderDailyBoard();
+}
+
+function openPlayersBoard() {
+  state.boardKind = "players";
+  state.boardQuestId = null;
+  showScreen("daily-board");
+  void loadDailyBoard();
+}
+
+function openQuestBoard(questId) {
+  if (!questHasLeaderboard(questId)) {
+    flashToast("This quest has no leaderboard.");
+    return;
+  }
+  state.boardKind = "quest";
+  state.boardQuestId = String(questId);
+  showScreen("daily-board");
+  void loadDailyBoard();
+}
+
+function formatBoardScore(row) {
+  const s = Number(row?.score);
+  if (!Number.isFinite(s)) return "0";
+  return String(Math.round(s * 1000) / 1000);
+}
+
+function stillUrlForRow(questId, row) {
+  const uid = row?.clerkUserId;
+  if (!questId || !uid || !row.hasStill) return "";
+  return `/api/board/${encodeURIComponent(questId)}/still/${encodeURIComponent(uid)}`;
+}
+
+function renderDailyBoard() {
+  const list = $("#daily-board-list");
+  const youEl = $("#daily-board-you");
+  const empty = $("#daily-board-empty");
+  const dateEl = $("#daily-board-date");
+  const titleEl = $("#daily-board-title");
+  const blurbEl = $("#daily-board-blurb");
+  const back = $("#btn-daily-board-back");
+  const data = state.dailyBoard || {};
+  const players = state.boardKind === "players" || data.kind === "players";
+  const questId = data.questId || state.boardQuestId || "";
+  if (titleEl) titleEl.textContent = players ? "Leaderboard" : data.title || data.place || "Leaderboard";
+  if (blurbEl) {
+    if (players) {
+      blurbEl.textContent =
+        "Top 10 inventors. Each person’s score is the sum of their quest scores (★ ÷ years from that quest’s present).";
+    } else {
+      blurbEl.textContent = data.place
+        ? `Top 10 in ${data.place}. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.`
+        : "Top 10. Score is ★ of the hold ÷ years from the quest’s present. Waits break ties.";
+    }
+  }
+  if (dateEl) dateEl.textContent = players ? "" : data.place && data.title ? data.place : "";
+  if (back) back.textContent = players ? "← Home" : "← Quests";
+
+  if (youEl) {
+    if (data.you) {
+      youEl.hidden = false;
+      const base = players
+        ? `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.quests || 0} quest${
+            data.you.quests === 1 ? "" : "s"
+          }`
+        : `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
+      youEl.textContent = data.you.needsDisplayName
+        ? `${base} — pick a display name to appear on this board.`
+        : base;
+    } else {
+      youEl.hidden = true;
+      youEl.textContent = "";
+    }
+  }
+
+  if (!list) return;
+  list.hidden = false;
+  list.replaceChildren();
+  const top = Array.isArray(data.top) ? data.top : [];
+  if (empty) {
+    empty.hidden = top.length > 0;
+    empty.textContent = "No holds yet.";
+  }
+  for (const row of top) {
+    const li = document.createElement("li");
+    li.className = "quest-board-row";
+    const head = document.createElement("div");
+    head.className = "quest-board-row-head";
+    if (players) {
+      const n = Number(row.quests) || 0;
+      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${n} quest${
+        n === 1 ? "" : "s"
+      }`;
+    } else {
+      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${row.stars}★ / ${row.years || "?"}y · ${row.waits} waits`;
+    }
+    li.appendChild(head);
+    if (!players) {
+      const stillSrc = stillUrlForRow(questId, row);
+      if (stillSrc) {
+        const img = document.createElement("img");
+        img.className = "quest-board-still";
+        img.alt = `Vision still, ${row.displayName}`;
+        li.appendChild(img);
+        void apiFetch(stillSrc)
+          .then((res) => (res.ok ? res.blob() : null))
+          .then((blob) => {
+            if (!blob || !img.isConnected) return;
+            img.src = URL.createObjectURL(blob);
+          })
+          .catch(() => {});
+      }
+      if (row.pathwayText) {
+        const p = document.createElement("p");
+        p.className = "quest-board-writeup";
+        p.textContent = row.pathwayText;
+        li.appendChild(p);
+      }
+    }
+    list.appendChild(li);
+  }
 }
 
 /**
@@ -3243,7 +4127,7 @@ function renderTitleMeta() {
 async function refreshHostedQuests(opts = {}) {
   try {
     const url = opts.force ? "/api/quests?refresh=1" : "/api/quests";
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
       if (!opts.silent) flashToast("Could not load Quests catalog.");
@@ -3499,19 +4383,63 @@ function groupLearningModules(learningEntries) {
   });
 }
 
+function catalogNeedsAccount(entry) {
+  if (!isClerkReady()) return false;
+  const access = entry?.access || entry?.mission?.access;
+  if (access === "open") return false;
+  if (access === "account" || access === "paid") return true;
+  return Boolean(entry?.isLearningModule || entry?.mission?.isLearningModule);
+}
+
+function promptCloudSignIn(msg) {
+  flashToast(msg || "Sign in to continue.");
+  openCloudSignIn();
+}
+
+async function fetchFullQuestTile(id) {
+  if (!id) return null;
+  try {
+    const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      promptCloudSignIn("Sign in to open this lesson.");
+      return null;
+    }
+    if (!res.ok || !data?.ok) return null;
+    return data.tile || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Play a catalog entry (solo or multiplayer pick intercept via startMission).
  * @param {object} entry
  * @param {{ clearPick?: boolean }} [opts]
  */
-function playCatalogEntry(entry, opts = {}) {
+async function playCatalogEntry(entry, opts = {}) {
   if (!entry?.mission) {
     flashToast("Quest missing mission data.");
     return;
   }
+  if (catalogNeedsAccount(entry) && !isClerkSignedIn()) {
+    promptCloudSignIn("Sign in to play this lesson.");
+    return;
+  }
+  let src = entry;
+  const learning = Boolean(entry.isLearningModule || entry.mission?.isLearningModule);
+  if (
+    learning &&
+    isClerkReady() &&
+    !entry.aiTutorContext &&
+    !entry.mission?.aiTutorContext
+  ) {
+    const full = await fetchFullQuestTile(entry.id);
+    if (full?.mission) src = { ...entry, ...full, mission: { ...entry.mission, ...full.mission } };
+  }
   const m = normalizeMission(
-    { ...entry.mission, source: entry.source || entry.mission.source || "hosted" },
-    entry.mission.globalId || entry.globalId
+    { ...src.mission, source: src.source || src.mission.source || "hosted" },
+    src.mission.globalId || src.globalId
   );
   // Learning modules are solo-only (tutor session) — never for multiplayer pick
   if (missionPickSession && isLearningMission(m)) {
@@ -3660,7 +4588,7 @@ function renderQuestHub() {
       id: "learning",
       title: "Learning",
       blurb:
-        "Solo modules and lessons with AI tutor mode. Progress stays on this device.",
+        "Modules of lessons. New lessons land here — pick a module and take the next one.",
       meta: learning.length
         ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
             learning.length
@@ -4015,12 +4943,15 @@ function catalogCardHtml(entry, kind, opts = {}) {
     opts.groupBy === "theme"
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
+  const locked = catalogNeedsAccount(entry) && !isClerkSignedIn();
   const cta =
-    missionPickSession
-      ? "Use for friends game →"
-      : solved
-        ? "Play again →"
-        : "Play this Quest →";
+    locked
+      ? "Sign in to play →"
+      : missionPickSession
+        ? "Use for friends game →"
+        : solved
+          ? "Play again →"
+          : "Play this Quest →";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
       <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
@@ -4049,6 +4980,13 @@ function catalogCardHtml(entry, kind, opts = {}) {
               )}" title="Inspect tile JSON and Markdown">
           Developer
         </button>`
+            : ""
+        }
+        ${
+          questHasLeaderboard(entry.id || m?.id)
+            ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
+                entry.id || m?.id || ""
+              )}">Leaderboard</button>`
             : ""
         }
         ${
@@ -4208,6 +5146,12 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       ev.preventDefault();
       ev.stopPropagation();
       if (entry) openQuestCatalogInspect(entry);
+    });
+    wrap.querySelector(".catalog-board")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const qid = ev.currentTarget?.dataset?.catalogBoardId || entry?.id;
+      if (qid) openQuestBoard(qid);
     });
     wrap.querySelector(".catalog-remove")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -4606,7 +5550,7 @@ async function ensureScenarios(global, { force = false } = {}) {
   }
 
   try {
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -4986,18 +5930,18 @@ function clearMissionPickSession() {
   missionPickSession = null;
 }
 
-function startMission(mission) {
+function startMission(mission, opts = {}) {
   if (state.scenariosLoading) {
     flashToast("Challenges still drafting — wait a moment.");
-    return;
+    return false;
   }
-  if (!mission) return;
+  if (!mission) return false;
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
     if (isLearningMission(mission)) {
       flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
-      return;
+      return false;
     }
     const session = missionPickSession;
     missionPickSession = null;
@@ -5007,8 +5951,9 @@ function startMission(mission) {
     } catch (e) {
       console.error("[mission pick]", e);
       flashToast(e.message || "Could not start Friends mission");
+      return false;
     }
-    return;
+    return true;
   }
 
   // Normalize so AI camelCase meter ids become human labels (Benzene Spikes, not BenzeneSpikes)
@@ -5024,12 +5969,24 @@ function startMission(mission) {
     delete merged.isLearningModule;
   }
   state.mission = merged;
+  const restored = applyContinueSnapshot(
+    {
+      cloudRunId: null,
+      hexBoard: null,
+      year: merged.startYear,
+      tutorSessionActive: Boolean(merged.isLearningModule),
+    },
+    opts.restore || null
+  );
+  state.cloudRunId = restored.cloudRunId;
+  if (!restored.skipNewRun) postCloudRunStart(merged);
+  scheduleCloudRunState();
   // Clear invent progress immediately (before first paint) for non-learning quests
   if (!shouldShowInventLessonProgress(merged)) {
     hideInventLessonProgress();
   }
   state.global = globalById(state.mission.globalId) || state.global;
-  state.year = state.mission.startYear;
+  state.year = restored.year != null ? restored.year : state.mission.startYear;
   state.turn = 0;
   state.waits = 0;
   state.pressure = clonePressure(state.mission.pressure);
@@ -5059,7 +6016,10 @@ function startMission(mission) {
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
   // Learning modules open on Co-Inventor (tutor); normal Quests keep Future vision.
-  state.tutorSessionActive = Boolean(state.mission?.isLearningModule);
+  state.tutorSessionActive =
+    restored.skipNewRun && typeof restored.tutorSessionActive === "boolean"
+      ? restored.tutorSessionActive
+      : Boolean(state.mission?.isLearningModule);
   state.sideTab = state.mission?.isLearningModule ? "coinventor" : "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
@@ -5092,6 +6052,12 @@ function startMission(mission) {
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
   state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
   state.will = res.startingWill ?? GAME.startingWill ?? 3;
+  applyRestoredPlay(restored.play);
+  state.lastWriteSnapshot = {
+    name: state.inventionName || "",
+    how: state.inventionHow || "",
+    impact: state.inventionImpact || "",
+  };
   state.techAddedThisTurn = {};
   state.scrutiny = null;
   state.elegancePivotPenalty = false;
@@ -5111,19 +6077,53 @@ function startMission(mission) {
   }
   resetDeployBayState();
   if (state.vision) state.vision.newSession();
-  showScreen("workshop");
-  setSideTab(state.sideTab || "vision");
-  // Seed hex invent board with crisis meters
+  // Seed hex invent board before the first workshop paint — skip when Continue restored a board
   try {
-    ensureHexWorkshop().seedFromMission(state.mission);
+    const hex = ensureHexWorkshop();
+    if (restored.skipSeed && restored.hexBoard) {
+      state.hexBoard = restored.hexBoard;
+      hex.paint();
+      hex.syncPathwayScores?.();
+      if (restored.year != null) hex.refreshAfterYearChange?.();
+      hex.importSparkBatches?.(restored.play?.sparkBatches);
+      const trayTiles = Object.values(restored.hexBoard.tiles || {});
+      const sparkTech = trayTiles.find(
+        (t) =>
+          t &&
+          t.kind === "invention" &&
+          t.origin === "sparks" &&
+          t.techId &&
+          (t.q == null || t.r == null)
+      )?.techId;
+      const focus =
+        focusedTechId || restored.play?.focusedTechId || sparkTech || null;
+      if (focus) {
+        focusedTechId = focus;
+        hex.focusTech(focus);
+      } else {
+        hex.paint();
+      }
+    } else {
+      hex.seedFromMission(state.mission);
+    }
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
-  // Learning modules land on co-inventor; ensure root exists before welcome.
-  if (state.sideTab === "coinventor") ensureCoInventor();
+  showScreen("workshop");
+  setSideTab(state.sideTab || "vision");
+  // Learning modules land on co-inventor; ensure root exists before welcome / restore.
+  const savedChats = restored.chats;
+  const hasSavedChats = Boolean(
+    savedChats &&
+      ((Array.isArray(savedChats.tutor) && savedChats.tutor.length) ||
+        (Array.isArray(savedChats.coinventor) && savedChats.coinventor.length))
+  );
+  if (state.sideTab === "coinventor" || hasSavedChats) ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
-  // Seed co-inventor / tutor welcome with mission context
-  if (state.coInventor) {
+  if (state.coInventor && hasSavedChats) {
+    state.coInventor.importHistories(savedChats);
+    syncCoInventorTutorUi();
+  } else if (state.coInventor) {
     // New mission: wipe both tutor and co-inventor chat lanes
     if (typeof state.coInventor.clearAllHistories === "function") {
       state.coInventor.clearAllHistories(false);
@@ -5159,6 +6159,7 @@ function startMission(mission) {
       { local: true }
     );
   }
+  return true;
 }
 
 function emptyProps() {
@@ -5974,12 +6975,22 @@ function renderFeasibility() {
   const summary = $("#feasibility-summary");
   const dims = $("#feasibility-dims");
   const foot = $("#feasibility-foot");
+  const pending = boardPathwayReevaluating(board);
   if (light) {
-    light.dataset.level = overall;
-    light.classList.remove("is-pending");
-    light.title = "Pathway coverage";
+    if (pending) {
+      light.dataset.level = lastFeasibilityLightLevel;
+      light.classList.add("is-pending");
+      light.setAttribute("aria-busy", "true");
+      light.title = "Re-evaluating pathway…";
+    } else {
+      lastFeasibilityLightLevel = overall;
+      light.dataset.level = overall;
+      light.classList.remove("is-pending");
+      light.removeAttribute("aria-busy");
+      light.title = "Pathway coverage";
+    }
   }
-  if (label) label.textContent = overall;
+  if (label) label.textContent = pending ? lastFeasibilityLightLevel : overall;
   if (summary) {
     summary.textContent = board?.concernsSummoned
       ? `${reds} red · ${yellows} yellow · ${greens} green among crisis & concerns`
@@ -6874,6 +7885,7 @@ function ideaSparksContext(techId) {
     availableTechs: TECHS.map((t) => techForAi(t, state.year)),
     grounding: state.mission?.grounding || null,
     isLearningModule: Boolean(state.mission?.isLearningModule),
+    questId: state.mission?.id || null,
   };
 }
 
@@ -6898,7 +7910,7 @@ async function fetchIdeaSparks(techId, opts = {}) {
 
   const pending = (async () => {
     try {
-      const res = await fetch("/api/co-invent", {
+      const res = await apiFetch("/api/co-invent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6954,7 +7966,7 @@ async function fetchIdeaImage(idea) {
       clientSessionId: getClientSessionId(),
     };
     if (idea.kind) body.kind = idea.kind;
-    const res = await fetch("/api/idea-image", {
+    const res = await apiFetch("/api/idea-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -8038,6 +9050,7 @@ function endTurn() {
     } catch {
       /* ignore */
     }
+    scheduleCloudRunState();
   }
   if (state.screen === "challenge-step") {
     renderChallengeHud();
@@ -8986,7 +9999,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         tutorMode: isLearningTutorSessionActive(),
         ...rest,
       };
-  const res = await fetch("/api/co-invent", {
+  const res = await apiFetch("/api/co-invent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -13851,6 +14864,12 @@ function finishOutcome(kind, meta = {}) {
   };
   state.mpOutcome = thisMp;
   showScreen("outcome");
+  const slim = slimLastRunFromState();
+  stashLastRun(slim);
+  void postCloudRun(slim).then((id) => {
+    const run = { ...slim, id: id || slim.id };
+    void submitQuestBoardIfCounted(run);
+  });
   applyOutcomeNextChallengeChrome();
 }
 
@@ -13907,6 +14926,7 @@ function setOutcomeBtnVisible(el, on) {
 }
 
 function applyOutcomeNextChallengeChrome() {
+  applyOutcomeCloudSaveChrome();
   const retry = $("#btn-outcome-retry");
   const neu = $("#btn-outcome-new");
   const pick = $("#btn-outcome-rematch-pick");
@@ -14586,6 +15606,8 @@ function renderOutcome() {
     headline = "Mission paused";
     story = "You left the invent. The calendar in that place keeps moving without you.";
   }
+
+  paintOutcomePathway(m, o);
 
   $("#outcome-headline").textContent = headline;
   $("#outcome-story").textContent = story;
@@ -15332,6 +16354,7 @@ function ensureCoInventor() {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
+        questId: state.mission?.id || null,
         tutorMode: isLearningTutorSessionActive(),
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
@@ -15339,6 +16362,7 @@ function ensureCoInventor() {
       };
     },
     applyProposals: applyCoInventorProposals,
+    onHistoryChange: () => scheduleCloudRunState(),
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
     showQuickActions: !onChallenge,
@@ -15646,7 +16670,7 @@ async function judgeContributionAdditive({ field, before, after, baseline }) {
   // (never let AI reject when we're unsure — wait, local already rejected;
   //  allow AI to rescue a borderline false reject)
   try {
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -16170,11 +17194,12 @@ async function callCoInventMode(mode, userLabel) {
       grounding: state.mission?.grounding || null,
       isLearningModule: Boolean(state.mission?.isLearningModule),
       aiTutorContext: state.mission?.aiTutorContext || null,
+      questId: state.mission?.id || null,
       tutorMode: isLearningTutorSessionActive(),
       contributingToOther: contributingOther,
     };
 
-    const res = await fetch("/api/co-invent", {
+    const res = await apiFetch("/api/co-invent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -17912,6 +18937,39 @@ function bind() {
     state.playMode = "workshop";
     openQuestHub();
   });
+  $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
+  $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
+  $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
+  $("#btn-cloud-profile-back")?.addEventListener("click", () => showScreen("title"));
+  $("#cloud-profile-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveCloudProfile();
+  });
+  $("#outcome-publish")?.addEventListener("change", () => {
+    const on = Boolean($("#outcome-publish")?.checked);
+    const id = state.cloudRunId;
+    if (!on || !id || !isClerkSignedIn()) return;
+    void apiFetch("/api/me/runs/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ runId: id, share: true }),
+    }).catch(() => {});
+  });
+  $("#btn-daily-board")?.addEventListener("click", () => openPlayersBoard());
+  $("#btn-daily-board-back")?.addEventListener("click", () =>
+    showScreen(state.boardKind === "players" ? "title" : "quest-hub")
+  );
+  $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
+  $("#quest-log-filters")?.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");
+    if (!btn) return;
+    const f = btn.getAttribute("data-log-filter");
+    const k = btn.getAttribute("data-log-kind");
+    if (f === "all") state.questLogFilter = { outcome: null, kind: null };
+    else if (f) state.questLogFilter = { outcome: f, kind: null };
+    else if (k) state.questLogFilter = { outcome: null, kind: k };
+    void loadQuestLog();
+  });
   $("#btn-reset-spark")?.addEventListener("click", () => {
     requestResetTutorialProgress();
   });
@@ -18110,6 +19168,7 @@ function bind() {
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
+    scheduleCloudRunState();
     state.coInventor?.syncChipGates?.();
   });
   $("#invention-impact")?.addEventListener("input", (e) => {
@@ -18129,6 +19188,7 @@ function bind() {
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
+    scheduleCloudRunState();
   });
   $("#invention-name")?.addEventListener("input", (e) => {
     if (inventInputBlocked()) {
@@ -18138,6 +19198,7 @@ function bind() {
     }
     state.inventionName = e.target.value;
     scheduleSoftInventSave();
+    scheduleCloudRunState();
   });
   ["#invention-how", "#invention-impact", "#invention-name"].forEach((sel) => {
     $(sel)?.addEventListener("blur", () => {
@@ -18455,6 +19516,9 @@ function bind() {
     updateVision({ immediate: true, force: true, context: "deploy" });
   });
 
+  $("#btn-outcome-cloud-signin")?.addEventListener("click", () => {
+    openCloudSignIn();
+  });
   $("#btn-outcome-new").addEventListener("click", () => {
     if (isMultipartyOutcome()) {
       flashToast(
@@ -18647,4 +19711,16 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
+  onClerkSession(() => {
+    renderTitleMeta();
+    void syncCloudProgress();
+    void maybePromptDisplayName();
+  });
+  // Refresh: Clerk cookie session can arrive after the first title paint.
+  let ticks = 0;
+  const iv = setInterval(() => {
+    ticks += 1;
+    renderTitleMeta();
+    if (isClerkSignedIn() || ticks >= 40) clearInterval(iv);
+  }, 100);
 }

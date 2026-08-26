@@ -157,7 +157,9 @@ export function createUsageTracker(opts = {}) {
     if (!enabled || closed) return;
     try {
       ensureToday();
-      const { sessionId: rawSid, roomCode: rawRoom, ...rest } = partial;
+      const { sessionId: rawSid, roomCode: rawRoom, clerkUserId: rawClerk, ...rest } =
+        partial;
+      const clerkUserId = normalizeSessionId(rawClerk);
       const event = {
         ...rest,
         ts: new Date(nowFn()).toISOString(),
@@ -165,6 +167,7 @@ export function createUsageTracker(opts = {}) {
         sessionId: normalizeSessionId(rawSid),
         roomCode: rawRoom ? String(rawRoom).toUpperCase().slice(0, 16) : null,
       };
+      if (clerkUserId) event.clerkUserId = clerkUserId;
 
       applyEventToAggregates(event);
       appendEvent(event);

@@ -28,6 +28,21 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* Modest horizontal breathing room (not full-bleed, not huge margins) */
   --page-gutter: clamp(0.75rem, 2vw, 1.25rem);
+  /* Clerk Sign in / UserButton — match the workshop, not Clerk's light inputs */
+  --clerk-color-primary: #a78bfa;
+  --clerk-color-primary-foreground: #0c1220;
+  --clerk-color-background: #121a2b;
+  --clerk-color-foreground: #e8eef9;
+  --clerk-color-muted: #1a2438;
+  --clerk-color-muted-foreground: #94a3b8;
+  --clerk-color-input: #1a2438;
+  --clerk-color-input-foreground: #e8eef9;
+  --clerk-color-border: #2a3a58;
+  --clerk-color-modal-backdrop: rgba(7, 11, 20, 0.78);
+}
+
+html {
+  color-scheme: dark;
 }
 
 *,
@@ -72,6 +87,184 @@ button {
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Optional Clerk account chip — hidden unless portal Clerk is on */
+#ff-account {
+  position: fixed;
+  top: 0.75rem;
+  right: var(--page-gutter);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+#ff-account[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #ff-account {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Leave room so Sign in / Sign out does not cover topbar actions */
+body.ff-accounts .topbar,
+body.ff-accounts .topbar-game {
+  padding-right: 6.75rem;
+}
+
+.outcome-publish {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.75rem auto;
+  max-width: 28rem;
+  font-size: 0.88rem;
+  color: var(--text-dim, #cbd5e1);
+}
+
+.cloud-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 28rem;
+  padding: 1.15rem 1.25rem 1.35rem;
+}
+
+.cloud-profile-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.cloud-profile-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.cloud-profile-check input {
+  margin: 0.15rem 0 0;
+  flex: 0 0 auto;
+}
+
+.cloud-profile-form .btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.cloud-profile-form #cloud-profile-status {
+  margin: 0;
+  min-height: 1.2em;
+}
+
+.catalog-board-pick {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.outcome-pathway-text {
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.quest-board-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.quest-board-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.quest-board-still {
+  max-width: 100%;
+  height: auto;
+  max-height: 180px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.quest-board-writeup {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  color: var(--text-dim, #cbd5e1);
+  margin: 0;
+}
+
+.cloud-achievements-strip {
+  margin: 0.4rem 0 0.6rem;
+  font-size: 0.82rem;
+  color: #c4b5fd;
+  text-align: center;
+}
+
+.quest-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.quest-log-filters .chip {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: var(--text-dim, #cbd5e1);
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.quest-log-filters .chip.is-on {
+  border-color: rgba(167, 139, 250, 0.7);
+  background: rgba(167, 139, 250, 0.18);
+  color: #ede9fe;
+}
+
+.quest-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.quest-log-item {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.quest-log-item-title {
+  margin: 0 0 0.2rem;
+  font-weight: 650;
+}
+
+.quest-log-item-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-dim, #94a3b8);
 }
 
 /* Screens */
@@ -2248,6 +2441,7 @@ button.btn[hidden] {
   align-items: center;
 }
 .quest-catalog-grid .catalog-dev,
+.quest-catalog-grid .catalog-board,
 .quest-catalog-grid .catalog-remove {
   align-self: auto;
 }
@@ -3941,6 +4135,40 @@ body.challenge-pose-pending #challenge-help-form {
 .outcome-meter-gap.is-fail {
   border-color: rgba(248, 113, 113, 0.5);
   color: #fecaca;
+}
+
+.outcome-cloud-save {
+  width: 100%;
+  max-width: 28rem;
+  margin: 1.1rem auto 0.85rem;
+  padding: 1rem 1.15rem 1.1rem;
+  text-align: center;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  background: linear-gradient(
+    145deg,
+    rgba(167, 139, 250, 0.12),
+    rgba(15, 23, 42, 0.9)
+  );
+}
+
+.outcome-cloud-save[hidden] {
+  display: none !important;
+}
+
+.outcome-cloud-save-kicker {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+
+.outcome-cloud-save-copy {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text, #e8eef9);
 }
 
 .outcome-actions-hint {

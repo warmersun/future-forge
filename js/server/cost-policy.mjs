@@ -4,6 +4,7 @@
  */
 
 import { RateLimiter } from "./rate-limit.mjs";
+import { extractBearerToken, isJwtShaped } from "./clerk-auth.mjs";
 
 /** @typedef {{ limit: number, windowMs: number }} Window */
 
@@ -104,7 +105,9 @@ export class CostPolicy {
 /**
  * Optional shared secret for public exposure (Funnel / VPS).
  * When FF_API_SECRET is set, expensive POST routes require:
- *   Authorization: Bearer <secret>  or  X-FF-Secret: <secret>  or body.apiSecret
+ *   X-FF-Secret: <secret>  or  Authorization: Bearer <secret>  or body.apiSecret
+ * JWT-shaped Bearer tokens (Clerk sessions) are ignored here — use X-FF-Secret
+ * when Clerk learner accounts are also enabled.
  * Loopback is always allowed without the secret.
  *
  * @param {import('node:http').IncomingMessage} req
@@ -119,12 +122,9 @@ export function checkApiSecret(req, body, opts = {}) {
   if (!secret) return { ok: true };
   if (opts.isLoopback) return { ok: true };
 
-  const auth = req.headers?.authorization;
+  const authTok = extractBearerToken(req);
   let presented = "";
-  if (typeof auth === "string") {
-    const m = auth.match(/^Bearer\s+(.+)$/i);
-    if (m) presented = m[1].trim();
-  }
+  if (authTok && !isJwtShaped(authTok)) presented = authTok;
   if (!presented && typeof req.headers?.["x-ff-secret"] === "string") {
     presented = req.headers["x-ff-secret"].trim();
   }

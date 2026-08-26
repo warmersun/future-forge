@@ -2977,6 +2977,9 @@ const server = http.createServer(async (req, res) => {
       ai = false;
     }
     /** Public health — no LAN IPs / paths / room counts (Funnel-safe). */
+    const portalOrigin = String(process.env.FF_PORTAL_URL || "")
+      .trim()
+      .replace(/\/$/, "");
     const publicHealth = {
       ok: true,
       coInventor: true,
@@ -2994,6 +2997,7 @@ const server = http.createServer(async (req, res) => {
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
+      portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3340,10 +3344,11 @@ if (roomManager) {
   roomManager.coInventHandler = (body) => handleCoInvent(body);
 }
 
+function attachRoomSockets(httpLikeServer) {
 // WebSocket for friends rooms
 if (ROOMS_ENABLED && roomManager) {
   const wss = new WebSocketServer({
-    server,
+    server: httpLikeServer,
     path: "/ws/rooms",
     maxPayload: WS_MAX_PAYLOAD,
   });
@@ -3477,6 +3482,11 @@ if (ROOMS_ENABLED && roomManager) {
     });
   });
 }
+}
+
+if (ROOMS_ENABLED && roomManager) {
+  attachRoomSockets(server);
+}
 
 function shutdownUsage(signal) {
   try {
@@ -3503,7 +3513,7 @@ process.on("beforeExit", () => {
   }
 });
 
-server.on("error", (err) => {
+function onListenError(err) {
   if (err && err.code === "EADDRINUSE") {
     console.error(
       `Port ${PORT} is already in use (${HOST}).\n` +
@@ -3515,10 +3525,15 @@ server.on("error", (err) => {
     process.exit(1);
   }
   throw err;
-});
+}
 
-server.listen(PORT, HOST, async () => {
+async function afterListen() {
   console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
+  if (process.env.FF_PORTAL_URL) {
+    console.log(
+      "Sign in: https://cloud.warmersun.com/signin (chip on this page; game stays HTTP :8765)"
+    );
+  }
   if (usage.enabled) {
     console.log(`Usage metrics ON → ${usage._dir}/summary.json (GET /api/usage)`);
   } else {
@@ -3623,6 +3638,11 @@ server.listen(PORT, HOST, async () => {
   } catch (e) {
     console.log("Co-inventor: local only —", e.message);
   }
+}
+
+server.on("error", onListenError);
+server.listen(PORT, HOST, () => {
+  afterListen().catch((e) => console.warn(e));
 });
 
 function safeWs(socket, obj) {

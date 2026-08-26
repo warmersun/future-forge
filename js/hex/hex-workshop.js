@@ -1057,7 +1057,14 @@ export function createHexWorkshop(api) {
         hint.textContent = "Pick an emTech to invent.";
       }
     }
-    if (body) body.hidden = !focusedTechId;
+    if (body) {
+      const b = board();
+      const hasRd = unplacedRdTiles(b).length > 0;
+      const hasTrayInvent = Object.values(b?.tiles || {}).some(
+        (t) => t && t.kind === TILE_KIND.invention && (t.q == null || t.r == null)
+      );
+      body.hidden = !focusedTechId && !hasRd && !hasTrayInvent;
+    }
     syncCreateBusyUi();
   }
 
@@ -1302,6 +1309,7 @@ export function createHexWorkshop(api) {
     );
     for (const fp of abort) abortPathwayJob(fp);
     for (const fp of start) schedulePathwayScore(fp);
+    api.onBoardPainted?.();
   }
 
   function abortPathwayJob(fp) {
@@ -2432,6 +2440,54 @@ export function createHexWorkshop(api) {
     afterBoardChange,
     syncPathwayScores,
     afterWaitPressureRise,
+    exportSparkBatches: () => {
+      const out = {};
+      for (const [techId, batch] of sparkBatches.entries()) {
+        if (!techId || !batch?.ids?.length) continue;
+        out[techId] = {
+          ids: [...batch.ids],
+          titles: [...(batch.titles || [])],
+        };
+      }
+      return Object.keys(out).length ? out : null;
+    },
+    importSparkBatches: (raw) => {
+      sparkBatches.clear();
+      if (raw && typeof raw === "object") {
+        for (const [techId, batch] of Object.entries(raw)) {
+          if (!techId || !batch || !Array.isArray(batch.ids) || !batch.ids.length) continue;
+          sparkBatches.set(techId, {
+            ids: batch.ids.map(String),
+            titles: Array.isArray(batch.titles) ? batch.titles.map(String) : [],
+          });
+        }
+      }
+      const tiles = Object.values(board()?.tiles || {});
+      const byTech = new Map();
+      for (const t of tiles) {
+        if (t?.kind !== TILE_KIND.invention) continue;
+        if (t.q != null && t.r != null) continue;
+        const tid = t.techId;
+        if (!tid) continue;
+        if (!byTech.has(tid)) byTech.set(tid, { ids: [], titles: [] });
+        const row = byTech.get(tid);
+        if (!row.ids.includes(t.id)) {
+          row.ids.push(t.id);
+          row.titles.push(t.name || "Idea");
+        }
+      }
+      for (const [tid, batch] of byTech) {
+        if (!sparkBatches.has(tid)) sparkBatches.set(tid, batch);
+        else {
+          const have = new Set(sparkBatches.get(tid).ids);
+          for (const id of batch.ids) {
+            if (have.has(id)) continue;
+            sparkBatches.get(tid).ids.push(id);
+            sparkBatches.get(tid).titles.push(batch.titles[batch.ids.indexOf(id)] || "Idea");
+          }
+        }
+      }
+    },
   };
 }
 

@@ -1227,10 +1227,40 @@ export function initFriendsUi(api) {
     clearMissionPickSession?.();
     showScreen("title");
   });
+  async function resolveRoomName(typed, fallback) {
+    const { apiFetch, cachedProfileDisplayName, setCloudProfileCache } = await import(
+      "../auth.js"
+    );
+    const clean = (raw) => {
+      const s = String(raw || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 24);
+      return s && !s.includes("@") ? s : "";
+    };
+    const typedName = clean(typed);
+    if (typedName) return typedName;
+    let profileName = cachedProfileDisplayName();
+    if (!profileName) {
+      try {
+        const res = await apiFetch("/api/me/profile");
+        const data = await res.json().catch(() => ({}));
+        if (data.profile) setCloudProfileCache(data.profile);
+        profileName = cachedProfileDisplayName();
+      } catch {
+        /* unsigned or portal down */
+      }
+    }
+    return clean(profileName) || fallback;
+  }
+
   // Forms so Enter in name/code fields activates the primary button
   $("#friends-create-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const name = $("#friends-create-name")?.value?.trim() || "Host";
+    const typed = $("#friends-create-name")?.value?.trim() || "";
+    const name = await resolveRoomName(typed, "Host");
+    const nameEl = $("#friends-create-name");
+    if (nameEl && !nameEl.value && name && name !== "Host") nameEl.value = name;
     setHubStatus("Creating room…");
     try {
       const data = await client.create(name);
@@ -1245,7 +1275,8 @@ export function initFriendsUi(api) {
   });
   $("#friends-join-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const name = $("#friends-join-name")?.value?.trim() || "Player";
+    const typedJoin = $("#friends-join-name")?.value?.trim() || "";
+    const name = await resolveRoomName(typedJoin, "Player");
     const code = $("#friends-join-code")?.value?.trim() || "";
     if (!code) {
       flashToast("Enter a room code");

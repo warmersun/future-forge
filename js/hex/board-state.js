@@ -1003,6 +1003,64 @@ export function techIdsWithUnplacedInventions(board) {
  * Derive prose snapshot for co-inventor / vision / outcome.
  * @param {object} board
  */
+export const PATHWAY_TEXT_MAX = 4000;
+
+/**
+ * Inventions on the hex field (not tray). Year, then hex reading order.
+ * @param {object} board
+ * @returns {object[]}
+ */
+export function placedInventions(board) {
+  return Object.values(board?.tiles || {})
+    .filter((t) => t.kind === TILE_KIND.invention && t.q != null && t.r != null)
+    .sort((a, b) => {
+      const ya = Number(a.year);
+      const yb = Number(b.year);
+      const fa = Number.isFinite(ya);
+      const fb = Number.isFinite(yb);
+      if (fa && fb && ya !== yb) return ya - yb;
+      if (fa !== fb) return fa ? -1 : 1;
+      const ra = Number(a.r) || 0;
+      const rb = Number(b.r) || 0;
+      if (ra !== rb) return ra - rb;
+      return (Number(a.q) || 0) - (Number(b.q) || 0);
+    });
+}
+
+/**
+ * Readable leaderboard write-up: placed invents only (name + how-it-works).
+ * @param {object} board
+ * @param {{ place?: string, year?: number, techTitle?: (id: string) => string }} [opts]
+ */
+export function summarizePathwayForBoard(board, opts = {}) {
+  const place = String(opts.place || "").trim();
+  const yearNum = Number(opts.year);
+  const titleFn = typeof opts.techTitle === "function" ? opts.techTitle : null;
+  const placed = placedInventions(board);
+  const lines = [];
+  if (place || Number.isFinite(yearNum)) {
+    const bits = [];
+    if (place) bits.push(place);
+    if (Number.isFinite(yearNum)) bits.push(`held in ${Math.trunc(yearNum)}`);
+    lines.push(bits.join(" · "));
+    lines.push("");
+  }
+  /** @type {string[]} */
+  const stack = [];
+  for (const t of placed) {
+    if (t.techId && !stack.includes(t.techId)) stack.push(t.techId);
+    const how = String(t.howText || "").trim();
+    const name = String(t.name || "").trim() || "Invent";
+    const techRaw = t.techId ? String(t.techId) : "";
+    const tech = techRaw && titleFn ? titleFn(techRaw) || techRaw : techRaw;
+    lines.push(tech ? `${name} (${tech})` : name);
+    if (how) lines.push(how);
+    lines.push("");
+  }
+  const text = lines.join("\n").trim().slice(0, PATHWAY_TEXT_MAX);
+  return { text, stack, inventions: placed };
+}
+
 export function deriveBoardProse(board) {
   const inventions = Object.values(board?.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.invention

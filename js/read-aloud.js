@@ -4,6 +4,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { apiFetch } from "./auth.js";
 
 /** Hide control below this length (after normalize). */
 export const MIN_CHARS = 100;
@@ -504,7 +505,7 @@ async function fetchCloudAudioUrl(text, signal) {
   const cached = audioCache.get(key);
   if (cached) return cached;
 
-  const res = await fetch("/api/tts", {
+  const res = await apiFetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
