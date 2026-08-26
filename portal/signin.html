@@ -198,10 +198,14 @@
       await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
         "data-clerk-publishable-key": pk,
       });
+      const stayHere = `${location.origin}/signin?device=${encodeURIComponent(device)}`;
       const Clerk = window.Clerk;
       await Clerk.load({
         ui: { ClerkUI: window.__internal_ClerkUICtor },
         appearance: CLERK_APPEARANCE,
+        afterSignOutUrl: stayHere,
+        signInForceRedirectUrl: stayHere,
+        signInFallbackRedirectUrl: stayHere,
       });
 
       const signInProps = {
@@ -209,7 +213,8 @@
         withSignUp: true,
         routing: "hash",
         oauthFlow: "redirect",
-        forceRedirectUrl: location.href,
+        forceRedirectUrl: stayHere,
+        fallbackRedirectUrl: stayHere,
       };
 
       let completing = false;
@@ -304,12 +309,13 @@
       switchBtn.addEventListener("click", async () => {
         hideChoice();
         status.textContent = "Sign in to continue in the game on this computer.";
+        autoFinish = true;
         try {
-          await Clerk.signOut();
+          await Clerk.signOut({ redirectUrl: stayHere });
         } catch {
           /* still show Sign in */
         }
-        autoFinish = true;
+        if (Clerk.session) return;
         showSignInUi();
       });
 
