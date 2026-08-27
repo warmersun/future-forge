@@ -1141,10 +1141,13 @@ describe("mp-session pay_ap", () => {
   it("pays and refunds AP for co-inventor", () => {
     let s = started();
     const ap0 = s.invents["seat-0"].ap;
+    const spent0 = s.invents["seat-0"].apSpentThisTurn || 0;
     s = applyMpAction(s, { type: "pay_ap", payload: { amount: 1 } }).session;
     assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].apSpentThisTurn, spent0 + 1);
     s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
     assert.equal(s.invents["seat-0"].ap, ap0);
+    assert.equal(s.invents["seat-0"].apSpentThisTurn, spent0);
   });
 });
 

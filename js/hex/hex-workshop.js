@@ -32,7 +32,6 @@ import {
   boardHolds,
   techIdsFromBoard,
   unplacedInventionsForTech,
-  deriveBoardProse,
   cloneBoard,
   TILE_KIND,
   CRISIS_ROLE_DEFAULT_NAMES,
@@ -71,6 +70,7 @@ import {
   listInventionPathways,
   islandHowKey,
   resolveIslandHow,
+  islandHowForAi,
   setIslandHow,
   rekeyIslandHow,
 } from "./evaluate.js";
@@ -736,7 +736,7 @@ export function createHexWorkshop(api) {
           playerAnswer: text,
           pathway: {
             anyTouch: docked,
-            howText: resolveIslandHow(board(), cluster?.inventions || []).text.slice(
+            howText: islandHowForAi(board(), cluster?.inventions || []).slice(
               0,
               1600
             ),
@@ -1583,7 +1583,7 @@ export function createHexWorkshop(api) {
           const data = await api.coInvent("score-pathway", "[Score pathway]", {
             pathway: {
               fingerprint: fp,
-              howText: resolveIslandHow(b, inventions).text,
+              howText: islandHowForAi(b, inventions),
               inventions: inventions.map((n) => ({
                 techId: n.techId,
                 year: n.year,
@@ -2275,6 +2275,7 @@ export function createHexWorkshop(api) {
     if (!remaining.length) return b;
 
     const isFirstDraw = concernAnglesOnBoard(b).length === 0;
+    let paidFirstSummon = false;
     if (isFirstDraw && api.apEnabled?.()) {
       const pay = api.spendFirstSummonAp?.();
       if (pay && pay.ok === false) {
@@ -2283,6 +2284,7 @@ export function createHexWorkshop(api) {
         });
         return board();
       }
+      paidFirstSummon = Boolean(pay && pay.ok !== false);
     }
 
     const pickAngle =
@@ -2325,6 +2327,7 @@ export function createHexWorkshop(api) {
       }
     };
 
+    let placedOk = false;
     try {
       const place = api.getPlace?.() || "";
       const year = api.getYear?.() || 2026;
@@ -2346,16 +2349,17 @@ export function createHexWorkshop(api) {
         const k = islandHowKey(invs);
         if (seenHow.has(k)) continue;
         seenHow.add(k);
-        const text = resolveIslandHow(board(), invs).text;
+        const text = islandHowForAi(board(), invs);
         if (text) howParts.push(text);
       }
+      const pathwayLabel = pathwayArtLabel(posedTiles);
       const pathway = {
         inventions: posedTiles.map((n) => ({
           techId: n.techId,
           howText: String(n.howText || "").slice(0, 800),
           timingLevel: n.timingLevel || null,
         })),
-        howText: howParts.join("\n\n") || spawn.howText || "",
+        howText: howParts.join("\n\n"),
       };
       const hexBoard = summarizeBoardForScrutiny(board(), spawn.inventionIds);
       const local = localPose(pickAngle, { place });
@@ -2387,7 +2391,7 @@ export function createHexWorkshop(api) {
         const imagePrompt = defaultChallengerImagePrompt(
           pickAngle,
           place,
-          prose.inventionName
+          pathwayLabel
         );
         const artId = ideaImageId({
           techId: `challenger-${pickAngle}`,
@@ -2448,7 +2452,7 @@ export function createHexWorkshop(api) {
           imagePrompt: defaultChallengerImagePrompt(
             pickAngle,
             place,
-            prose.inventionName
+            pathwayLabel
           ),
           artUrl: finalMeta.visual || null,
         };
@@ -2466,6 +2470,7 @@ export function createHexWorkshop(api) {
         api.flashToast?.(placed.error || "Could not place challenger");
         return board();
       }
+      placedOk = true;
       setBoard(placed.board);
       ensureUi()?.setHighlight?.(null);
       ensureUi()?.render();
@@ -2486,6 +2491,9 @@ export function createHexWorkshop(api) {
       );
       return placed.board;
     } finally {
+      if (paidFirstSummon && !placedOk) {
+        api.refundFirstSummonAp?.();
+      }
       hideReel();
       setCreateBusy("summon", false);
       api.setAiBusy?.(false);
@@ -2818,7 +2826,15 @@ function summarizeBoardForScrutiny(board, inventionIds = null) {
   };
 }
 
-function defaultChallengerImagePrompt(angle, place, pathwayName) {
+export function pathwayArtLabel(inventions) {
+  const names = (inventions || [])
+    .map((t) => t?.techId)
+    .filter(Boolean)
+    .slice(0, 3);
+  return names.join(" · ") || "a local pathway";
+}
+
+export function defaultChallengerImagePrompt(angle, place, pathwayName) {
   const where = place || "this place";
   const path = pathwayName || "a local pathway";
   if (angle === "moloch") {

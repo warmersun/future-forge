@@ -907,6 +907,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
   if (type === "refund_ap") {
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
     actor.ap = Math.min(actor.apMax || 3, (actor.ap || 0) + n);
+    actor.apSpentThisTurn = Math.max(0, (actor.apSpentThisTurn || 0) - n);
     events.push({ type: "refund_ap", amount: n, seatId: activeId });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };

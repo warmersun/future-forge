@@ -362,9 +362,6 @@
       if (Clerk.session && isAwaiting()) {
         autoFinish = true;
         status.textContent = "Signing in…";
-        // #region agent log
-        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'pre-fix',hypothesisId:'F',location:'portal/signin.html:branch',message:'signin branch autoFinish',data:{hasSession:Boolean(Clerk.session),hasUser:Boolean(Clerk.user),awaiting:true,pick:new URLSearchParams(location.search).get('pick'),continueHidden:continueBtn.hidden},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         try {
           await finishIfSignedIn();
         } catch (e) {
@@ -372,15 +369,9 @@
           showContinueChoice();
         }
       } else if (Clerk.session) {
-        // #region agent log
-        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'pre-fix',hypothesisId:'F',location:'portal/signin.html:branch',message:'signin branch showContinue',data:{hasSession:Boolean(Clerk.session),hasUser:Boolean(Clerk.user),awaiting:false,continueHidden:continueBtn.hidden},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         showContinueChoice();
       } else {
         autoFinish = true;
-        // #region agent log
-        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'pre-fix',hypothesisId:'F',location:'portal/signin.html:branch',message:'signin branch showSignInUi',data:{hasSession:false,hasUser:Boolean(Clerk.user),awaiting:isAwaiting(),continueHidden:continueBtn.hidden},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         showSignInUi();
       }
     </script>

@@ -52,7 +52,6 @@ import {
   refreshAccountChip,
   setCloudProfileCache,
   formatClerkLoginLine,
-  peekClerkSessionClaims,
   invalidateClerkSession,
 } from "./auth.js";
 import {
@@ -85,6 +84,7 @@ import {
   hexPathwayPanel,
   listInventionPathways,
   resolveIslandHow,
+  islandHowForAi,
   setIslandHow,
   visionPathwaysFromBoard,
 } from "./hex/evaluate.js";
@@ -1184,6 +1184,7 @@ function ensureHexWorkshop() {
       return spendContributionAp("judge-challenge");
     },
     spendFirstSummonAp: () => spendFirstSummonAp(),
+    refundFirstSummonAp: () => refundFirstSummonAp(),
     apEnabled: () => apEnabled(),
     budgetWillEnabled: () => budgetWillEnabled(),
     spendRdMint: () => spendRdMint(),
@@ -3305,11 +3306,7 @@ function scheduleCloudRunState() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-      .then(async (res) => {
-        // #region agent log
-        const errBody = res.ok ? null : await res.clone().json().catch(() => ({}));
-        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'D',location:'game.js:scheduleCloudRunState:put',message:'run-state PUT result',data:{status:res.status,ok:res.ok,bytes:JSON.stringify(body).length,questId:body.questId||null,error:errBody&&errBody.error||null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+      .then((res) => {
         if (res.ok) {
           continueSaveWarned = false;
           return;
@@ -3323,10 +3320,7 @@ function scheduleCloudRunState() {
           );
         }
       })
-      .catch((e) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'D',location:'game.js:scheduleCloudRunState:catch',message:'run-state PUT threw',data:{err:String(e&&e.message||e),bytes:JSON.stringify(body).length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+      .catch(() => {
         if (!continueSaveWarned) {
           continueSaveWarned = true;
           flashToast("Could not save Continue to Cloud.");
@@ -3370,9 +3364,6 @@ function applyRestoredPlay(play) {
 async function maybeOfferContinue() {
   const btn = $("#btn-cloud-continue");
   const signedIn = isClerkSignedIn();
-  // #region agent log
-  fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'A',location:'game.js:maybeOfferContinue:entry',message:'maybeOfferContinue entry',data:{signedIn,hasBtn:Boolean(btn),screen:state.screen,claims:peekClerkSessionClaims()},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (!btn || !signedIn) {
     if (btn) btn.hidden = true;
     return;
@@ -3383,19 +3374,10 @@ async function maybeOfferContinue() {
     const st = data.state;
     state.cloudContinue = st && st.questId ? st : null;
     btn.hidden = !state.cloudContinue;
-    // #region agent log
-    const rect = btn.getBoundingClientRect();
-    const title = document.getElementById("screen-title");
-    const trect = title ? title.getBoundingClientRect() : null;
-    fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'B',location:'game.js:maybeOfferContinue:afterGet',message:'run-state GET and Continue visibility',data:{status:res.status,ok:res.ok,hasState:Boolean(st),questId:st&&st.questId?String(st.questId):null,error:data.error||null,btnHidden:btn.hidden,claims:peekClerkSessionClaims(),rect:{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height},clipBottom:Boolean(trect)&&rect.bottom>trect.bottom+1,clipRight:Boolean(trect)&&rect.right>trect.right+1,profileHidden:Boolean($("#btn-cloud-profile")?.hidden),logHidden:Boolean($("#btn-quest-log")?.hidden)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (res.status === 401 && data.error === "invalid_token") {
       invalidateClerkSession();
     }
-  } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'B',location:'game.js:maybeOfferContinue:catch',message:'run-state GET threw',data:{err:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+  } catch {
     if (btn) btn.hidden = true;
   }
 }
@@ -3588,7 +3570,7 @@ function summarizeHexBoardForAi(board) {
     const resolved = resolveIslandHow(board, invs);
     return {
       inventionIds: invs.map((t) => t.id),
-      howText: resolved.text,
+      howText: islandHowForAi(board, invs),
       howSource: resolved.source,
     };
   });
@@ -17157,6 +17139,40 @@ function spendFirstSummonAp() {
   }
   renderHud();
   return { ok: true };
+}
+
+/**
+ * Undo first-summon AP if pose/place fails after spendFirstSummonAp.
+ * Solo also leaves scrutiny so invent stays playable.
+ */
+function refundFirstSummonAp() {
+  if (!apEnabled()) return;
+  if (roomBridge.isRoom()) {
+    try {
+      roomBridge.send({ type: "refund_ap", payload: { amount: 1 } });
+      state.ap = Math.min(state.apMax || 3, (state.ap || 0) + 1);
+      state.apSpentThisTurn = Math.max(0, (state.apSpentThisTurn || 0) - 1);
+      renderHud();
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  if (hotseatBridge.isHotseat()) {
+    hotseatBridge.applyActiveAction?.({
+      type: "refund_ap",
+      payload: { amount: 1 },
+    });
+    hotseatBridge.hydrateSoloState?.(state, { global: state.global });
+    renderHud();
+    return;
+  }
+  dispatchSim("refund_ap", { amount: 1 });
+  if (state.turnPhase === "scrutiny") {
+    dispatchSim("abandon_scrutiny");
+  }
+  state.turnPhase = "act";
+  renderHud();
 }
 
 /**

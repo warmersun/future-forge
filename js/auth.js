@@ -57,20 +57,6 @@ function storedJwtExpired(token = handshakeJwt) {
   return Number(p.exp) * 1000 < Date.now() - 2000;
 }
 
-/** Claims safe to log — never sub/email. */
-export function peekClerkSessionClaims() {
-  const p = jwtPayloadUnsafe(handshakeJwt);
-  if (!p) return null;
-  return {
-    exp: p.exp ?? null,
-    iat: p.iat ?? null,
-    azp: p.azp ?? null,
-    iss: typeof p.iss === "string" ? p.iss : null,
-    typ: p.typ ?? null,
-    expired: p.exp != null ? Number(p.exp) * 1000 < Date.now() : null,
-  };
-}
-
 export function isClerkSignedIn() {
   if (!handshakeJwt) return false;
   if (storedJwtExpired()) return false;

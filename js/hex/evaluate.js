@@ -141,6 +141,15 @@ export function resolveIslandHow(board, inventions) {
 }
 
 /**
+ * Island inventHow for AI payloads. Empty unless the learner (or AI apply) stored one.
+ * Never a concat of member tile howTexts — those travel on inventions[].
+ */
+export function islandHowForAi(board, inventions) {
+  const resolved = resolveIslandHow(board, inventions);
+  return resolved.stored ? resolved.text : "";
+}
+
+/**
  * Imagine payload: one entry per connected invent island (inventHow, no name).
  * @param {object|null|undefined} board
  * @param {(techId: string) => { id?: string, name?: string, summary?: string, vision?: { narrative?: string } } | null} [techById]
@@ -149,7 +158,6 @@ export function resolveIslandHow(board, inventions) {
 export function visionPathwaysFromBoard(board, techById) {
   const lookup = typeof techById === "function" ? techById : () => null;
   return listInventionPathways(board).map((invs) => {
-    const resolved = resolveIslandHow(board, invs);
     const seen = new Set();
     const techs = [];
     for (const tile of invs) {
@@ -164,7 +172,7 @@ export function visionPathwaysFromBoard(board, techById) {
         narrative: String(tech?.vision?.narrative || "").slice(0, 240),
       });
     }
-    return { howText: resolved.text, techs };
+    return { howText: islandHowForAi(board, invs), techs };
   });
 }
 

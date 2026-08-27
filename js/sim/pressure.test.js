@@ -304,6 +304,35 @@ describe("actions", () => {
     assert.equal(rejected.sim.turnPhase, "scrutiny");
   });
 
+  it("refund_ap undoes enter_challenge AP; abandon_scrutiny leaves scrutiny", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const entered = applyAction(s, { type: "enter_challenge" }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(entered.ok, true);
+    assert.equal(entered.sim.ap, 2);
+    assert.equal(entered.sim.apSpentThisTurn, 1);
+    assert.equal(entered.sim.turnPhase, "scrutiny");
+
+    const refunded = applyAction(
+      entered.sim,
+      { type: "refund_ap", payload: { amount: 1 } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(refunded.ok, true);
+    assert.equal(refunded.sim.ap, 3);
+    assert.equal(refunded.sim.apSpentThisTurn, 0);
+    assert.equal(refunded.sim.turnPhase, "scrutiny");
+
+    const left = applyAction(refunded.sim, { type: "abandon_scrutiny" }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(left.ok, true);
+    assert.equal(left.sim.turnPhase, "act");
+  });
+
   it("reserve_ai with reservedAp 0 does not spend AP (tutor free chat)", () => {
     const s = base();
     s.ap = 3;

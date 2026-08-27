@@ -49,6 +49,7 @@ import {
   listInventionPathways,
   islandHowKey,
   resolveIslandHow,
+  islandHowForAi,
   setIslandHow,
   rekeyIslandHow,
   visionPathwaysFromBoard,
@@ -913,6 +914,7 @@ describe("island inventHow", () => {
     const unset = resolveIslandHow(board, invs);
     assert.equal(unset.stored, false);
     assert.equal(unset.source, "concat");
+    assert.equal(islandHowForAi(board, invs), "");
     assert.match(unset.text, /Part A/);
     assert.match(unset.text, /Part B/);
     assert.equal(unset.key, islandHowKey(invs));
@@ -920,6 +922,7 @@ describe("island inventHow", () => {
     const set = resolveIslandHow(board, invs);
     assert.equal(set.stored, true);
     assert.equal(set.text, "The pair radios the crest together.");
+    assert.equal(islandHowForAi(board, invs), "The pair radios the crest together.");
     assert.equal(set.source, "user");
     assert.equal(board.tiles.a.howText, "Part A.");
     assert.equal(board.tiles.b.howText, "Part B.");
@@ -952,7 +955,7 @@ describe("island inventHow", () => {
     const pair = paths.find((p) => p.techs.some((t) => t.id === "ai"));
     const iot = paths.find((p) => p.techs.some((t) => t.id === "iot"));
     assert.equal(pair.howText, "The pair radios the crest.");
-    assert.equal(iot.howText, "Part C.");
+    assert.equal(iot.howText, "");
     assert.equal(
       paths.every((p) => p.inventionName == null && p.name == null),
       true

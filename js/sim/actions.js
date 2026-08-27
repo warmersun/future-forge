@@ -169,6 +169,15 @@ export function applyAction(sim, action, opts = {}) {
     return { ok: true, events: [{ type: "enter_challenge" }], sim: next };
   }
 
+  if (type === "refund_ap") {
+    const n = Math.max(0, Math.floor(Number(action.payload?.amount) || 1));
+    if (apOn && n > 0) {
+      next.ap = Math.min(apMax, (next.ap || 0) + n);
+      next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - n);
+    }
+    return { ok: true, events: [{ type: "refund_ap", amount: n }], sim: next };
+  }
+
   if (type === "abandon_scrutiny") {
     next.turnPhase = "act";
     return { ok: true, events: [{ type: "abandon_scrutiny" }], sim: next };
