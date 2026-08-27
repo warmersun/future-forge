@@ -6,7 +6,7 @@ import { VISION_STAGES, techById } from "../data.js";
 import { VisionRenderer, narrativesFromTechs } from "../vision.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
-import { visionPathwaysFromBoard, visionGivensFromBoard } from "../hex/evaluate.js";
+import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js";
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -270,6 +270,7 @@ export class MpSidePanel {
       stageId,
       techs.map((t) => t.id).sort().join(","),
       pathBit,
+      invent?.hexBoard ? visionPeopleMood(invent.hexBoard) : "neutral",
     ].join("¦");
     if (!opts.force && contentKey === this._lastVisionKey && this.vision.currentUrl) {
       return;
@@ -299,6 +300,7 @@ export class MpSidePanel {
       techs,
       pathways,
       givens,
+      peopleMood: invent?.hexBoard ? visionPeopleMood(invent.hexBoard) : "neutral",
       year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},

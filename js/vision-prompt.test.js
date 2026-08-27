@@ -1,12 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  composeGeneratePrompt,
   decideShot,
   visionFingerprint,
   visionGeometryHappening,
   visionHowNarrative,
   visionPathwaysOf,
   visionPathwaysKey,
+  visionPeopleMoodOf,
   techNames,
 } from "./vision-prompt.mjs";
 
@@ -144,6 +146,58 @@ describe("vision pathways signature", () => {
     assert.ok(!/not yet installed/i.test(used));
     assert.notEqual(visionFingerprint(body), visionFingerprint(applied));
     assert.notEqual(visionPathwaysKey(body), visionPathwaysKey(applied));
+  });
+
+  it("peopleMood follows local crisis lamp; missing local is ordinary faces", () => {
+    const world = {
+      place: placeBody.place,
+      title: placeBody.challenge.title,
+      scene: placeBody.challenge.scene,
+      visualSetting: placeBody.challenge.scene,
+    };
+    const none = { ...placeBody, pathways: [], givens: [] };
+    assert.equal(visionPeopleMoodOf(none), "neutral");
+    const sad = {
+      ...placeBody,
+      peopleMood: "sad",
+      pathways: [
+        {
+          techs: [{ id: "ai", name: "AI" }],
+          howText: "Sensors radio the crest.",
+          status: "applied",
+          touching: [
+            { id: "crisis-local", kind: "crisis", role: "local", name: "Floods" },
+          ],
+        },
+      ],
+      givens: [
+        {
+          id: "crisis-local",
+          kind: "crisis",
+          role: "local",
+          name: "Floods",
+          lamp: "red",
+          applied: true,
+        },
+      ],
+    };
+    assert.equal(visionPeopleMoodOf(sad), "sad");
+    const shot = decideShot(sad, { dataUrl: "data:image/jpeg;base64,xx" }, world);
+    assert.equal(shot.peopleMood, "sad");
+    assert.match(shot.happening, /worn and sad/i);
+    const prompt = composeGeneratePrompt(world, shot, "prototype");
+    assert.match(prompt, /worn and sad/i);
+    assert.ok(!/serious hope/i.test(prompt));
+
+    const glad = {
+      ...sad,
+      peopleMood: "happy",
+      givens: [{ ...sad.givens[0], lamp: "green" }],
+    };
+    assert.equal(visionPeopleMoodOf(glad), "happy");
+    assert.notEqual(visionFingerprint(sad), visionFingerprint(glad));
+    const happyShot = decideShot(glad, { dataUrl: "data:image/jpeg;base64,xx" }, world);
+    assert.match(happyShot.happening, /relieved and glad/i);
   });
 
   it("legacy inventionHow still works when pathways is omitted", () => {

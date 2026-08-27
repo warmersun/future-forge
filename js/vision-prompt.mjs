@@ -92,10 +92,59 @@ function slimVisionGiven(g) {
     kind,
     name: clipText(g.name, 80),
   };
-  if (kind === "crisis") row.role = g.role || null;
+  if (kind === "crisis") {
+    row.role = g.role || null;
+    const lamp = String(g.lamp || "").toLowerCase();
+    if (lamp === "red" || lamp === "green" || lamp === "yellow") row.lamp = lamp;
+  }
   if (kind === "concern") row.angle = g.angle || null;
   if (g.applied != null) row.applied = Boolean(g.applied);
   return row;
+}
+
+const PEOPLE_MOODS = new Set(["happy", "sad", "concerned", "neutral"]);
+
+const PEOPLE_MOOD_LINE = {
+  happy: "People in the frame look relieved and glad; faces show ease, not posed grins.",
+  sad: "People in the frame look worn and sad; faces show strain and hardship.",
+  concerned: "People in the frame look uneasy and concerned; no smiles, no despair.",
+  neutral:
+    "People in the frame have ordinary unforced documentary faces — neither posed-happy nor posed-sad.",
+};
+
+/** Faces follow the local crisis lamp; no local crisis → ordinary. */
+export function visionPeopleMoodOf(body) {
+  const raw = String(body?.peopleMood || "").toLowerCase();
+  if (PEOPLE_MOODS.has(raw)) return raw;
+  const local = visionGivensOf(body).find(
+    (g) => g.kind === "crisis" && g.role === "local"
+  );
+  if (!local) return "neutral";
+  if (local.lamp === "green") return "happy";
+  if (local.lamp === "red") return "sad";
+  if (local.lamp === "yellow") return "concerned";
+  return "neutral";
+}
+
+export function visionPeopleMoodLine(mood) {
+  return PEOPLE_MOOD_LINE[mood] || PEOPLE_MOOD_LINE.neutral;
+}
+
+function withFaces(body, happening) {
+  const t = String(happening || "").trim();
+  const faces = visionPeopleMoodLine(visionPeopleMoodOf(body));
+  if (!t) return faces;
+  if (/People in the frame/i.test(t)) return t;
+  return clipText(`${t} ${faces}`, 720);
+}
+
+function taggedShot(body, shot) {
+  const peopleMood = visionPeopleMoodOf(body);
+  return {
+    ...shot,
+    peopleMood,
+    happening: withFaces(body, shot.happening),
+  };
 }
 
 function givenLabel(g) {
@@ -381,21 +430,21 @@ export function decideShot(body, prev, worldCard) {
   const force = Boolean(body.force);
 
   const challengeShot = shotFromChallengeBeat(body, prev, worldCard);
-  if (challengeShot) return challengeShot;
+  if (challengeShot) return taggedShot(body, challengeShot);
 
   const geo = visionGeometryHappening(body, place);
   if (geo) {
-    return {
+    return taggedShot(body, {
       mode: "generate",
       continuity: hasPrior ? "new-shot" : "baseline",
       reason: "Board geometry frames the shot",
       happening: groundInPlace(place, geo),
       subjects: names,
-    };
+    });
   }
 
   if (!hasPrior) {
-    return {
+    return taggedShot(body, {
       mode: "generate",
       continuity: "baseline",
       reason: "First vision for this session",
@@ -406,11 +455,11 @@ export function decideShot(body, prev, worldCard) {
           )
         : `Ordinary present-day life in ${place}; the local situation from the mission is visible in the land and people.`,
       subjects: [],
-    };
+    });
   }
 
   if (force) {
-    return {
+    return taggedShot(body, {
       mode: "generate",
       continuity: "new-shot",
       reason: "Manual refresh",
@@ -423,7 +472,7 @@ export function decideShot(body, prev, worldCard) {
             )
           : `A clear documentary view of life in ${place} at this moment.`,
       subjects: names,
-    };
+    });
   }
 
   // Substantial story → new camera, same world (place-safe default).
@@ -434,7 +483,7 @@ export function decideShot(body, prev, worldCard) {
     if (how) bits.push(how);
     // Spark mirrors how→impact; avoid pasting the same sentence twice into the shot
     if (life && life !== how) bits.push(life);
-    return {
+    return taggedShot(body, {
       mode: "generate",
       continuity: "new-shot",
       reason: "Learner story frames the shot",
@@ -443,23 +492,23 @@ export function decideShot(body, prev, worldCard) {
         `${bits.join(" ")} All of this unfolds in ${place}, with the terrain, climate, and sky of the setting.`
       ),
       subjects: names,
-    };
+    });
   }
 
   // Empty / thin story + no stack → keep present-day place baseline
   if (stageId === "present" && techs.length === 0) {
-    return {
+    return taggedShot(body, {
       mode: "generate",
       continuity: "baseline",
       reason: "Present-day baseline",
       happening: `Ordinary present-day life in ${place}; the local situation from the mission is visible in the land and people.`,
       subjects: [],
-    };
+    });
   }
 
   // Tech-only / thin narrative → evolve same frame
   if (narrative.length < 40 && techs.length > 0) {
-    return {
+    return taggedShot(body, {
       mode: "edit",
       continuity: "same-frame",
       reason: "Stack change without a new story frame",
@@ -467,26 +516,26 @@ export function decideShot(body, prev, worldCard) {
         ? `The same view of ${place}, with ${names.join(", ")} visible as real local tools or infrastructure that fit this terrain and climate.`
         : `The same view of ${place}, with subtle local progress.`,
       subjects: names,
-    };
+    });
   }
 
   if (techs.length > 0 && hasPrior) {
-    return {
+    return taggedShot(body, {
       mode: "edit",
       continuity: "same-frame",
       reason: "Incremental stack evolve",
       happening: `The same view of ${place}, evolving with local technology in use.`,
       subjects: names,
-    };
+    });
   }
 
-  return {
+  return taggedShot(body, {
     mode: "generate",
     continuity: "new-shot",
     reason: "Default generate with frozen world",
     happening: `A clear documentary still of life in ${place}.`,
     subjects: names,
-  };
+  });
 }
 
 /**
@@ -548,12 +597,15 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
           name: g.name || null,
           role: g.role || null,
           angle: g.angle || null,
+          lamp: g.lamp || null,
           applied: Boolean(g.applied),
         })),
+        peopleMood: visionPeopleMoodOf(body),
       }
     : {
         inventHow: how || null,
         inventionImpact: life || null,
+        peopleMood: visionPeopleMoodOf(body),
       };
 
   const input = [
@@ -569,6 +621,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         `status "idea" means it is not touching a crisis or concern: show a person who lives this situation considering the idea (thinking, sketching) — not installed in the streets.\n` +
         `status "applied" means it edge-touches those crises/concerns: show the invent in use addressing them.\n` +
         `givens with applied false are still visible as the unsolved local situation.\n` +
+        `peopleMood is the faces of everyone in frame: happy = relieved/glad; sad = worn/hardship; concerned = uneasy; neutral = ordinary documentary faces (quest has no local crisis). Do not mix moods.\n` +
         `Choose "edit" only if the same camera view can show the change by adding elements.\n` +
         `Choose "generate" if a different camera in the same setting is better.\n` +
         `Rules: positive description only; no negations; no other countries or stock tourist locations; ` +
@@ -692,24 +745,25 @@ export async function resolveShot(
   const impact = visionLifeNarrative(body, 400);
   const narrKey = `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}`;
   if (prev?.shotNarrativeKey === narrKey && prev?.lastShot?.happening) {
-    return {
+    return taggedShot(body, {
       mode: prev.lastShot.mode || heuristic.mode,
       continuity: prev.lastShot.continuity || heuristic.continuity,
       happening: prev.lastShot.happening,
       subjects: prev.lastShot.subjects || [],
       reason: prev.lastShot.reason || "Cached shot",
-    };
+    });
   }
 
   const directed = await directShot(body, prev, worldCard, client, {
     model,
     onAiTextUsage,
   });
-  return directed || heuristic;
+  return taggedShot(body, directed || heuristic);
 }
 
 export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
   const tone = STAGE_TONE[stageId] || STAGE_TONE.present;
+  const faces = visionPeopleMoodLine(shot.peopleMood || "neutral");
   const subjects =
     shot.subjects?.length > 0
       ? `Visible details: ${shot.subjects.map((s) => clipText(s, 40)).join("; ")}.`
@@ -724,10 +778,10 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
     titleLine,
     "",
     "WHAT IS HAPPENING IN THIS FRAME:",
-    clipText(shot.happening, 500),
+    clipText(shot.happening, 560),
     subjects,
     "",
-    `Tone: ${tone}; human-scale, serious hope, specific local reality.`,
+    `Tone: ${tone}; ${faces} human-scale, specific local reality.`,
   ]
     .filter((line) => line !== undefined && line !== null)
     .join("\n")
@@ -742,6 +796,7 @@ export function composeEditPrompt(worldCard, shot) {
     "Keep the same terrain, sky, and landmarks.",
     place,
     `Show this change: ${clipText(shot.happening, 400)}`,
+    visionPeopleMoodLine(shot.peopleMood || "neutral"),
     "Photorealistic, no text, no logos.",
   ]
     .filter(Boolean)
@@ -800,9 +855,10 @@ export function visionFingerprint(body) {
     : "";
   const beat = challengeBeatKey(body.challengeBeat);
   const givenKey = visionGivensOf(body)
-    .map((g) => `${g.id || g.name || g.kind}:${g.applied ? 1 : 0}`)
+    .map((g) => `${g.id || g.name || g.kind}:${g.applied ? 1 : 0}:${g.lamp || ""}`)
     .join(",");
-  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${givenKey}|${beat}`;
+  const mood = visionPeopleMoodOf(body);
+  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${givenKey}|${mood}|${beat}`;
 }
 
 export function shotNarrativeKey(body) {

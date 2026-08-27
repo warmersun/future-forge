@@ -54,6 +54,7 @@ import {
   rekeyIslandHow,
   visionPathwaysFromBoard,
   visionGivensFromBoard,
+  visionPeopleMood,
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
@@ -982,6 +983,26 @@ describe("island inventHow", () => {
     const localGiven = givens.find((g) => g.id === "crisis-local");
     assert.equal(localGiven.applied, true);
     assert.equal(givens.every((g) => g.kind === "crisis" || g.kind === "concern"), true);
+  });
+
+  it("visionPeopleMood follows the local crisis lamp, else ordinary faces", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["global", "support"],
+      pressure: { Roots: 2, Trust: 2 },
+    });
+    assert.equal(visionPeopleMood(board), "neutral");
+    board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board.tiles["crisis-local"].lamp = "red";
+    assert.equal(visionPeopleMood(board), "sad");
+    board.tiles["crisis-local"].lamp = "green";
+    assert.equal(visionPeopleMood(board), "happy");
+    board.tiles["crisis-local"].lamp = "yellow";
+    assert.equal(visionPeopleMood(board), "concerned");
+    const givens = visionGivensFromBoard(board);
+    assert.equal(givens.find((g) => g.role === "local").lamp, "yellow");
   });
 
   it("saving island inventHow changes the pathway fingerprint so scores re-run", () => {

@@ -338,6 +338,7 @@ export class VisionRenderer {
       pressureKey,
       techKey,
       pathKey,
+      state.peopleMood || "neutral",
       beatKey,
     ].join("|");
     const followOnly = Boolean(state.followOnly);
@@ -449,9 +450,11 @@ export class VisionRenderer {
               name: g.name || "",
               role: g.role || null,
               angle: g.angle || null,
+              lamp: g.lamp || null,
               applied: Boolean(g.applied),
             }))
           : [],
+        peopleMood: state.peopleMood || "neutral",
       };
 
       const res = await apiFetch("/api/vision", {

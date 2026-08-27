@@ -158,9 +158,35 @@ function visionGivenSlice(tile) {
     kind: tile.kind,
     name: String(tile.name || "").slice(0, 80),
   };
-  if (tile.kind === TILE_KIND.crisis) row.role = tile.role || null;
+  if (tile.kind === TILE_KIND.crisis) {
+    row.role = tile.role || null;
+    const lamp = String(tile.lamp || "").toLowerCase();
+    row.lamp = lamp === "red" || lamp === "green" || lamp === "yellow" ? lamp : "yellow";
+  }
   if (tile.kind === TILE_KIND.concern) row.angle = tile.angle || null;
   return row;
+}
+
+/**
+ * Faces in Future Vision follow the local crisis lamp only.
+ * No local crisis on this quest → ordinary (neutral) faces.
+ * @returns {"happy"|"sad"|"concerned"|"neutral"}
+ */
+export function visionPeopleMood(board) {
+  let local = null;
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t?.kind !== TILE_KIND.crisis) continue;
+    if (t.q == null || t.r == null) continue;
+    if (t.role === "local") {
+      local = t;
+      break;
+    }
+  }
+  if (!local) return "neutral";
+  const lamp = String(local.lamp || "").toLowerCase();
+  if (lamp === "green") return "happy";
+  if (lamp === "red") return "sad";
+  return "concerned";
 }
 
 /**

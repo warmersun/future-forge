@@ -88,6 +88,7 @@ import {
   setIslandHow,
   visionPathwaysFromBoard,
   visionGivensFromBoard,
+  visionPeopleMood,
 } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
@@ -15856,6 +15857,7 @@ function visionContentKey() {
     state.deployStage || "",
     techs,
     pathBit,
+    visionPeopleMood(state.hexBoard),
     beatBit,
     `rev:${vRev}`,
   ].join("¦");
@@ -16338,6 +16340,7 @@ function updateVision(opts = {}) {
     techs,
     pathways,
     givens,
+    peopleMood: visionPeopleMood(state.hexBoard),
     year: state.year,
     place: state.mission.place,
     pressure: state.pressure,
