@@ -1363,12 +1363,17 @@
           <div id="side-aitrace" class="side-pane" role="tabpanel" hidden>
             <div class="ai-trace">
               <p class="ai-trace-lead muted sm">
-                Developer only. Last co-invent calls: context sent, then what came back.
+                Developer only. Last AI text and image calls: what was sent, then what came back.
               </p>
+              <div class="ai-trace-filters" id="aitrace-filters" role="group" aria-label="Filter AI calls">
+                <button type="button" class="ai-trace-filter is-active" data-ai-trace-filter="all" aria-pressed="true">All</button>
+                <button type="button" class="ai-trace-filter" data-ai-trace-filter="text" aria-pressed="false">Text</button>
+                <button type="button" class="ai-trace-filter" data-ai-trace-filter="image" aria-pressed="false">Images</button>
+              </div>
               <div class="ai-trace-split">
                 <div class="ai-trace-list" id="aitrace-list" role="list"></div>
                 <div class="ai-trace-detail" id="aitrace-detail">
-                  <p class="muted sm">No calls yet — place an idea or summon a challenger.</p>
+                  <p class="muted sm">No calls yet — place an idea, imagine a scene, or summon a challenger.</p>
                 </div>
               </div>
             </div>

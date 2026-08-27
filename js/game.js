@@ -36,6 +36,9 @@ import {
   formatAiTraceJson,
   aiTraceBadgeLabel,
   subscribeAiTrace,
+  setAiTraceFilter,
+  aiTraceFilter,
+  aiTraceFilterCounts,
 } from "./ai-trace.js";
 import { getClientSessionId } from "./client-session.js";
 import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
@@ -8012,21 +8015,47 @@ async function fetchIdeaImage(idea) {
       place: idea.place || state.mission?.place,
       year: idea.year ?? state.year,
     });
+  const sent = {
+    id,
+    prompt: idea.imagePrompt || idea.title,
+    clientSessionId: getClientSessionId(),
+  };
+  if (idea.kind) sent.kind = idea.kind;
+  const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const elapsed = () => {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    return now - t0;
+  };
   try {
-    const body = {
-      id,
-      prompt: idea.imagePrompt || idea.title,
-      clientSessionId: getClientSessionId(),
-    };
-    if (idea.kind) body.kind = idea.kind;
     const res = await apiFetch("/api/idea-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(sent),
     });
     const data = await res.json();
-    return data?.ok && data.imageUrl ? data.imageUrl : null;
-  } catch {
+    const ok = Boolean(data?.ok && data.imageUrl);
+    recordAiTrace({
+      kind: "image",
+      mode: "idea-image",
+      sent,
+      received: data,
+      ok,
+      error: ok ? null : String(data?.error || `HTTP ${res.status}`),
+      ms: elapsed(),
+      source: data?.cached ? "cache" : ok ? "live" : "error",
+    });
+    return ok ? data.imageUrl : null;
+  } catch (e) {
+    recordAiTrace({
+      kind: "image",
+      mode: "idea-image",
+      sent,
+      received: null,
+      ok: false,
+      error: String(e?.message || e),
+      ms: elapsed(),
+      source: "error",
+    });
     return null;
   }
 }
@@ -10036,7 +10065,7 @@ function leanCoInventContext(mode, extra = {}) {
   };
 }
 
-function recordCoInventTrace(info) {
+function recordAiTrace(info) {
   if (!state.developer) return;
   pushAiTrace(info);
 }
@@ -10088,7 +10117,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
       signal,
     });
     const data = await res.json();
-    recordCoInventTrace({
+    recordAiTrace({
       mode,
       sent,
       received: data,
@@ -10101,7 +10130,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
     const cancelled = Boolean(
       e && (e.name === "AbortError" || e.code === 20 || signal?.aborted)
     );
-    recordCoInventTrace({
+    recordAiTrace({
       mode,
       sent,
       received: null,
@@ -16123,6 +16152,7 @@ function ensureVision() {
   const root = $("#vision-root");
   if (!root) return;
   if (!state.vision) state.vision = new VisionRenderer(root);
+  state.vision.onTrace = (info) => recordAiTrace(info);
   const chRoot = $("#challenge-vision-root");
   if (chRoot) state.vision.addMirror(chRoot);
 }
@@ -16328,20 +16358,35 @@ function renderAiTrace() {
   const list = $("#aitrace-list");
   const detail = $("#aitrace-detail");
   const badge = $("#aitrace-badge");
+  const counts = aiTraceFilterCounts();
+  const filter = aiTraceFilter();
   const rows = listAiTrace();
   const selected = selectedAiTrace();
+  const latest = listAiTrace({ filter: "all" })[0] || null;
+  $$("[data-ai-trace-filter]").forEach((btn) => {
+    const key = btn.getAttribute("data-ai-trace-filter");
+    const n = key === "text" ? counts.text : key === "image" ? counts.image : counts.all;
+    const label = key === "text" ? "Text" : key === "image" ? "Images" : "All";
+    btn.classList.toggle("is-active", key === filter);
+    btn.setAttribute("aria-pressed", key === filter ? "true" : "false");
+    btn.textContent = `${label} (${n})`;
+  });
   if (badge) {
-    if (!state.developer || !rows.length) {
+    if (!state.developer || !latest) {
       badge.hidden = true;
       badge.textContent = "";
     } else {
       badge.hidden = false;
-      badge.textContent = aiTraceBadgeLabel(rows[0]);
+      badge.textContent = aiTraceBadgeLabel(latest);
     }
   }
   if (list) {
-    if (!rows.length) {
+    if (!counts.all) {
       list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No calls yet.</p>`;
+    } else if (!rows.length) {
+      list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No ${
+        filter === "image" ? "image" : "text"
+      } calls in this list.</p>`;
     } else {
       list.innerHTML = rows
         .map((e) => {
@@ -16362,14 +16407,27 @@ function renderAiTrace() {
     }
   }
   if (detail) {
-    if (!selected) {
-      detail.innerHTML = `<p class="muted sm">No calls yet — place an idea or summon a challenger.</p>`;
+    if (!counts.all) {
+      detail.innerHTML = `<p class="muted sm">No calls yet — place an idea, imagine a scene, or summon a challenger.</p>`;
+    } else if (!selected) {
+      detail.innerHTML = `<p class="muted sm">No ${
+        filter === "image" ? "image" : "text"
+      } calls — switch the filter to see the rest.</p>`;
     } else {
       const err = selected.error
         ? `<p class="muted sm">Error: ${escapeHtml(selected.error)}</p>`
         : "";
+      const preview =
+        selected.kind === "image" && selected.previewUrl
+          ? `<img class="ai-trace-preview" alt="Imagine result" src="${escapeHtml(
+              selected.previewUrl
+            )}" />`
+          : selected.kind === "image"
+            ? `<p class="muted sm">Image preview expired from inspect (prompt and metadata remain).</p>`
+            : "";
       detail.innerHTML =
         err +
+        preview +
         `<div class="ai-trace-block">
           <div class="ai-trace-block-head">Sent<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
           <pre class="ai-trace-pre" id="aitrace-sent">${escapeHtml(
@@ -16538,7 +16596,7 @@ function ensureCoInventor() {
     },
     applyProposals: applyCoInventorProposals,
     onTrace: (info) => {
-      recordCoInventTrace({
+      recordAiTrace({
         mode: info?.mode,
         sent: info?.sent,
         received: info?.received,
@@ -19748,6 +19806,12 @@ function bind() {
     const btn = e.target.closest("[data-ai-trace-id]");
     if (!btn) return;
     selectAiTrace(btn.getAttribute("data-ai-trace-id"));
+    renderAiTrace();
+  });
+  $("#aitrace-filters")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-ai-trace-filter]");
+    if (!btn) return;
+    setAiTraceFilter(btn.getAttribute("data-ai-trace-filter"));
     renderAiTrace();
   });
   $("#aitrace-detail")?.addEventListener("click", async (e) => {

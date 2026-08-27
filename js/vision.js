@@ -49,8 +49,9 @@ function dataUrlToBlobUrl(dataUrl) {
 export class VisionRenderer {
   /**
    * @param {HTMLElement} root — container with .vision-image, status, etc.
+   * @param {{ onTrace?: (info: object) => void }} [opts]
    */
-  constructor(root) {
+  constructor(root, opts = {}) {
     this.root = root;
     this.img = root?.querySelector?.(".vision-image") || null;
     this.status = root?.querySelector?.(".vision-status") || null;
@@ -68,6 +69,8 @@ export class VisionRenderer {
     this._blobUrl = "";
     /** Optional extra roots to keep in sync (e.g. invent + challenge panels) */
     this.mirrorRoots = [];
+    /** Developer inspect: sent/received Imagine payload */
+    this.onTrace = opts.onTrace || null;
   }
 
   destroy() {
@@ -355,8 +358,27 @@ export class VisionRenderer {
       );
     }
 
+    const t0 = Date.now();
+    let data = null;
+    let payload = null;
+    const emitTrace = (extra = {}) => {
+      if (!this.onTrace) return;
+      try {
+        this.onTrace({
+          kind: "image",
+          mode: "vision",
+          sent: payload,
+          received: data,
+          ms: Date.now() - t0,
+          ...extra,
+        });
+      } catch {
+        /* inspect must not break vision */
+      }
+    };
+
     try {
-      const payload = {
+      payload = {
         sessionId: this.sessionId,
         clientSessionId: getClientSessionId(),
         force: Boolean(state.force) && !followOnly,
@@ -395,7 +417,7 @@ export class VisionRenderer {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      data = await res.json();
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `Vision failed (${res.status})`);
       }
@@ -406,10 +428,16 @@ export class VisionRenderer {
         ? `${fingerprint}|rev:${state.visionRev ?? ""}`
         : fingerprint;
       this.lastFingerprint = storeKey;
+      const source = followOnly ? "follow" : data.cached ? "cache" : "live";
       if (data.imageUrl) {
         const prevRaw = this._rawKey;
         this.applyImageUrl(data.imageUrl);
         this._followWaitTries = 0;
+        this._tracedFollowWait = false;
+        const sameFrame = data.imageUrl === prevRaw;
+        if (!(silentFollow && sameFrame)) {
+          emitTrace({ ok: true, source });
+        }
         // Notify host after a *new* frame (not pure cache re-apply of same raw URL)
         if (
           !followOnly &&
@@ -429,6 +457,10 @@ export class VisionRenderer {
       } else if (followOnly && data.waiting) {
         // Only announce wait if we have nothing to show yet
         if (!this.currentUrl) this.setStatus("Waiting for shared vision…");
+        if (!silentFollow && !this._tracedFollowWait) {
+          this._tracedFollowWait = true;
+          emitTrace({ ok: true, source: "follow" });
+        }
         const tries = (this._followWaitTries || 0) + 1;
         this._followWaitTries = tries;
         // Peek until owner finishes (or give up after ~30s)
@@ -441,6 +473,8 @@ export class VisionRenderer {
           }, 2500);
         }
         return;
+      } else {
+        emitTrace({ ok: true, source });
       }
 
       // Silent follow re-peeks: don't thrash status if the frame is unchanged
@@ -466,7 +500,14 @@ export class VisionRenderer {
     } catch (e) {
       console.error("[vision]", e);
       // Don't clobber a good shared frame with error text on silent peeks
-      if (!silentFollow) this.setStatus(e.message || "Could not imagine this future");
+      if (!silentFollow) {
+        this.setStatus(e.message || "Could not imagine this future");
+        emitTrace({
+          ok: false,
+          source: "error",
+          error: String(e?.message || e),
+        });
+      }
     } finally {
       this.busy = false;
       this.setLoading(false);
