@@ -3,6 +3,6 @@
 void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));
-void import("./game.js?v=portal-23")
+void import("./game.js?v=portal-24")
   .then((m) => m.init())
   .catch((e) => console.error("[game]", e?.message || e));

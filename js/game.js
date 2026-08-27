@@ -54,6 +54,7 @@ import {
   formatClerkLoginLine,
   invalidateClerkSession,
   whenAuthReady,
+  resumePendingDeviceHandshake,
 } from "./auth.js";
 import {
   parseDeepLink,
@@ -4460,9 +4461,13 @@ function catalogNeedsAccount(entry) {
   return Boolean(entry?.isLearningModule || entry?.mission?.isLearningModule);
 }
 
-function promptCloudSignIn(msg) {
+/**
+ * @param {string} [msg]
+ * @param {{ sameTab?: boolean }} [opts]
+ */
+function promptCloudSignIn(msg, opts = {}) {
   flashToast(msg || "Sign in to continue.");
-  openCloudSignIn();
+  openCloudSignIn(opts);
 }
 
 async function fetchFullQuestTile(id) {
@@ -4484,7 +4489,7 @@ async function fetchFullQuestTile(id) {
 /**
  * Play a catalog entry (solo or multiplayer pick intercept via startMission).
  * @param {object} entry
- * @param {{ clearPick?: boolean }} [opts]
+ * @param {{ clearPick?: boolean, sameTabSignIn?: boolean }} [opts]
  */
 async function playCatalogEntry(entry, opts = {}) {
   if (!entry?.mission) {
@@ -4492,7 +4497,10 @@ async function playCatalogEntry(entry, opts = {}) {
     return "missing";
   }
   if (catalogNeedsAccount(entry) && !isClerkSignedIn()) {
-    promptCloudSignIn("Sign in to play this lesson.");
+    promptCloudSignIn(
+      opts.sameTabSignIn ? "Opening Sign in…" : "Sign in to play this lesson.",
+      { sameTab: Boolean(opts.sameTabSignIn) }
+    );
     return "needs_sign_in";
   }
   let src = entry;
@@ -4591,7 +4599,7 @@ async function consumeDeepLink() {
       deepLinkFinished = true;
       return;
     }
-    const result = await playCatalogEntry(entry);
+    const result = await playCatalogEntry(entry, { sameTabSignIn: true });
     if (result === "needs_sign_in") return;
     if (result === "started") {
       clearDeepLinkFromUrl();
@@ -20201,13 +20209,20 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
-  void consumeDeepLink();
   onClerkSession(() => {
     renderTitleMeta();
     void syncCloudProgress();
     void maybePromptDisplayName();
     if (isClerkSignedIn()) void consumeDeepLink();
   });
+  void (async () => {
+    await Promise.race([
+      whenAuthReady(),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+    await resumePendingDeviceHandshake();
+    await consumeDeepLink();
+  })();
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;
   const iv = setInterval(() => {

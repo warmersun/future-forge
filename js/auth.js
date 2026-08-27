@@ -4,6 +4,8 @@
  */
 
 const JWT_STORAGE = "ff-clerk-jwt";
+const PENDING_DEVICE = "ff-pending-device";
+const PENDING_DEVICE_TTL_MS = 8 * 60 * 1000;
 
 /** @type {string|null} */
 let handshakeJwt = null;
@@ -150,8 +152,11 @@ export function refreshAccountChip() {
   renderAccountChip();
 }
 
-export function openCloudSignIn() {
-  void startDeviceHandshake();
+/**
+ * @param {{ sameTab?: boolean, returnHref?: string }} [opts]
+ */
+export function openCloudSignIn(opts = {}) {
+  void startDeviceHandshake(opts);
 }
 
 /**
@@ -301,6 +306,42 @@ function writeStoredJwt(token) {
   }
 }
 
+function writePendingDevice(code) {
+  const s = String(code || "").trim();
+  if (!s) return;
+  try {
+    sessionStorage.setItem(PENDING_DEVICE, JSON.stringify({ code: s, at: Date.now() }));
+  } catch {
+    /* private mode */
+  }
+}
+
+function readPendingDevice() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_DEVICE);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const code = String(data?.code || "").trim();
+    const at = Number(data?.at);
+    if (!code) return null;
+    if (Number.isFinite(at) && Date.now() - at > PENDING_DEVICE_TTL_MS) {
+      sessionStorage.removeItem(PENDING_DEVICE);
+      return null;
+    }
+    return { code };
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingDevice() {
+  try {
+    sessionStorage.removeItem(PENDING_DEVICE);
+  } catch {
+    /* private mode */
+  }
+}
+
 /**
  * Handshake: portal /signin holds Clerk; game only stores the JWT.
  */
@@ -328,7 +369,34 @@ export async function initAuth() {
   }
 }
 
-async function startDeviceHandshake() {
+function withReturnOnSignInUrl(signInUrl, returnHref) {
+  const base = String(signInUrl || "").trim();
+  const back = String(returnHref || "").trim();
+  if (!base || !back) return base;
+  try {
+    const bounce = new URL(back);
+    const host = bounce.hostname.toLowerCase();
+    const ok =
+      (bounce.protocol === "http:" || bounce.protocol === "https:") &&
+      !bounce.username &&
+      (host === "127.0.0.1" ||
+        host === "localhost" ||
+        host === "warmersun.com" ||
+        host.endsWith(".warmersun.com") ||
+        host.endsWith(".ts.net"));
+    if (!ok) return base;
+    const u = new URL(base);
+    u.searchParams.set("return", back);
+    return u.href;
+  } catch {
+    return base;
+  }
+}
+
+/**
+ * @param {{ sameTab?: boolean, returnHref?: string }} [opts]
+ */
+async function startDeviceHandshake(opts = {}) {
   if (!handshakeReady) return;
   const origin = await resolvePortalOrigin();
   if (!origin) return;
@@ -338,7 +406,24 @@ async function startDeviceHandshake() {
     console.warn("[clerk]", data?.error || "device_start_failed");
     return;
   }
-  const popup = window.open(data.signInUrl, "ff-cloud-signin", "width=480,height=720");
+  writePendingDevice(data.code);
+  const returnHref =
+    opts.returnHref || (typeof location !== "undefined" ? location.href : "");
+  const signInUrl = withReturnOnSignInUrl(data.signInUrl, returnHref);
+  const sameTab = opts.sameTab === true;
+  /** @type {Window|null} */
+  let popup = null;
+  if (!sameTab) {
+    popup = window.open(signInUrl, "ff-cloud-signin", "width=480,height=720");
+  }
+  if (sameTab || !popup) {
+    try {
+      location.assign(signInUrl);
+    } catch {
+      location.href = signInUrl;
+    }
+    return;
+  }
   const deadline = Date.now() + 5 * 60 * 1000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 1000));
@@ -348,16 +433,48 @@ async function startDeviceHandshake() {
     const body = await st.json().catch(() => ({}));
     if (st.ok && body.pending === false && body.token) {
       writeStoredJwt(body.token);
+      clearPendingDevice();
       closeHandshakePopup(popup);
       emitClerkSession();
       return;
     }
     if (!st.ok && body.error === "unknown") {
+      clearPendingDevice();
       closeHandshakePopup(popup);
       return;
     }
   }
   closeHandshakePopup(popup);
+}
+
+/**
+ * After same-tab Sign in, the game reloads with ?q= still on the URL.
+ * Redeem the device code deposited on the portal.
+ * @returns {Promise<boolean>}
+ */
+export async function resumePendingDeviceHandshake() {
+  const pending = readPendingDevice();
+  if (!pending?.code) return false;
+  if (!handshakeReady) return false;
+  const deadline = Date.now() + 20 * 1000;
+  while (Date.now() < deadline) {
+    const st = await apiFetch(
+      `/api/device/status?code=${encodeURIComponent(pending.code)}`
+    );
+    const body = await st.json().catch(() => ({}));
+    if (st.ok && body.pending === false && body.token) {
+      writeStoredJwt(body.token);
+      clearPendingDevice();
+      emitClerkSession();
+      return true;
+    }
+    if (!st.ok && body.error === "unknown") {
+      clearPendingDevice();
+      return false;
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return false;
 }
 
 function closeHandshakePopup(win) {

@@ -98,7 +98,9 @@
       const continueBtn = document.getElementById("continue");
       const switchBtn = document.getElementById("switch");
       const mount = document.getElementById("clerk-mount");
-      const device = new URLSearchParams(location.search).get("device") || "";
+      const params = new URLSearchParams(location.search);
+      const device = params.get("device") || "";
+      const returnTo = params.get("return") || "";
 
       const PROVIDER_LABELS = {
         oauth_google: "Google",
@@ -198,7 +200,27 @@
       await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
         "data-clerk-publishable-key": pk,
       });
-      const stayHere = `${location.origin}/signin?device=${encodeURIComponent(device)}`;
+      function isAllowedGameReturnUrl(href) {
+        try {
+          const u = new URL(String(href || ""));
+          if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+          if (u.username || u.password) return false;
+          const host = String(u.hostname || "").toLowerCase();
+          if (!host) return false;
+          if (host === "127.0.0.1" || host === "localhost") return true;
+          if (host === "warmersun.com" || host.endsWith(".warmersun.com")) return true;
+          if (host.endsWith(".ts.net")) return true;
+          return false;
+        } catch {
+          return false;
+        }
+      }
+
+      const stayHere =
+        `${location.origin}/signin?device=${encodeURIComponent(device)}` +
+        (returnTo && isAllowedGameReturnUrl(returnTo)
+          ? `&return=${encodeURIComponent(returnTo)}`
+          : "");
       const pickHere = `${stayHere}&pick=1`;
       const AWAIT_KEY = "ff-clerk-await-signin";
 
@@ -305,6 +327,11 @@
               /* ignore */
             }
             signInMounted = false;
+          }
+          if (returnTo && isAllowedGameReturnUrl(returnTo)) {
+            status.textContent = "Signed in. Returning to Future Forge…";
+            location.replace(returnTo);
+            return true;
           }
           status.textContent = "Signed in. You can return to Future Forge.";
           try {

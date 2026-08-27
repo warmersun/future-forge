@@ -5,8 +5,10 @@ import {
   GAME_DEVICE_ORIGINS,
   allowGameDeviceOrigin,
   gameDeviceOriginsFromEnv,
+  isAllowedGameReturnUrl,
   normalizeGameDeviceOrigin,
   portalPublicOrigin,
+  signInUrlWithReturn,
 } from "./portal-origin.js";
 
 const EMPTY = {};
@@ -88,5 +90,36 @@ describe("allowGameDeviceOrigin", () => {
     );
     assert.equal(allowGameDeviceOrigin("https://other.ts.net", env), false);
     assert.equal(allowGameDeviceOrigin("http://127.0.0.1:8765", env), true);
+  });
+});
+
+describe("isAllowedGameReturnUrl", () => {
+  it("allows loopback, Funnel, and warmersun hop", () => {
+    assert.equal(isAllowedGameReturnUrl("http://127.0.0.1:8765/?q=lesson-1", EMPTY), true);
+    assert.equal(
+      isAllowedGameReturnUrl("https://futureforge.xantu-chickadee.ts.net/?q=lesson-1"),
+      true
+    );
+    assert.equal(isAllowedGameReturnUrl("https://warmersun.com/forge/?q=lesson-1"), true);
+    assert.equal(isAllowedGameReturnUrl("https://cloud.warmersun.com/signin"), true);
+  });
+
+  it("rejects open redirects", () => {
+    assert.equal(isAllowedGameReturnUrl("https://evil.example/?q=x"), false);
+    assert.equal(isAllowedGameReturnUrl("javascript:alert(1)"), false);
+    assert.equal(isAllowedGameReturnUrl(""), false);
+    assert.equal(isAllowedGameReturnUrl("https://user:pass@127.0.0.1:8765/"), false);
+  });
+});
+
+describe("signInUrlWithReturn", () => {
+  it("appends return only when the bounce is allowed", () => {
+    const base = "https://cloud.warmersun.com/signin?device=abc";
+    const back = "https://futureforge.xantu-chickadee.ts.net/?q=lesson-1";
+    assert.equal(
+      signInUrlWithReturn(base, back),
+      `${base}&return=${encodeURIComponent(back)}`
+    );
+    assert.equal(signInUrlWithReturn(base, "https://evil.example/"), base);
   });
 });

@@ -70,3 +70,49 @@ export function allowGameDeviceOrigin(origin, env = process.env) {
   if (!needle) return false;
   return gameDeviceOriginsFromEnv(env).includes(needle);
 }
+
+/**
+ * Safe post-signin bounce back to the game (deep-link same-tab).
+ * Allows loopback, Funnel (*.ts.net), warmersun.com, and FF_GAME_DEVICE_ORIGINS.
+ * @param {unknown} href
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>|string[]} [envOrExtras]
+ */
+export function isAllowedGameReturnUrl(href, envOrExtras) {
+  let u;
+  try {
+    u = new URL(String(href || ""));
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  if (u.username || u.password) return false;
+  const host = String(u.hostname || "").toLowerCase();
+  if (!host) return false;
+  if (host === "127.0.0.1" || host === "localhost") return true;
+  if (host === "warmersun.com" || host.endsWith(".warmersun.com")) return true;
+  if (host.endsWith(".ts.net")) return true;
+  /** @type {string[]} */
+  let extras = [];
+  if (Array.isArray(envOrExtras)) extras = envOrExtras;
+  else if (envOrExtras && typeof envOrExtras === "object") {
+    extras = gameDeviceOriginsFromEnv(envOrExtras);
+  }
+  return extras.includes(u.origin);
+}
+
+/**
+ * @param {string} signInUrl
+ * @param {string} returnHref
+ * @returns {string}
+ */
+export function signInUrlWithReturn(signInUrl, returnHref) {
+  const base = String(signInUrl || "").trim();
+  if (!base || !isAllowedGameReturnUrl(returnHref)) return base;
+  try {
+    const u = new URL(base);
+    u.searchParams.set("return", String(returnHref));
+    return u.href;
+  } catch {
+    return base;
+  }
+}
