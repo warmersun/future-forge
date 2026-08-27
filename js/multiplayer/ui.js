@@ -26,7 +26,7 @@ import {
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { renderMarkdownSafe } from "../md-lite.js";
-import { attachReadAloud } from "../read-aloud.js";
+import { attachReadAloud, formatHeadingForSpeech } from "../read-aloud.js";
 import {
   initTechDrawers,
   updateTechDrawerCount,
@@ -1720,10 +1720,19 @@ export function initFriendsUi(api) {
         setText("hs-brief-causes", brief.rootCauses || "");
         setText("hs-brief-warnings", brief.warnings || "");
         attachReadAloud(briefRoot, {
-          getText: () =>
-            [brief.currentState, brief.rootCauses, brief.warnings]
-              .filter(Boolean)
-              .join("\n\n"),
+          getText: () => {
+            const parts = [];
+            if (brief.currentState) {
+              parts.push(formatHeadingForSpeech("Current state"), brief.currentState);
+            }
+            if (brief.rootCauses) {
+              parts.push(formatHeadingForSpeech("Root causes"), brief.rootCauses);
+            }
+            if (brief.warnings) {
+              parts.push(formatHeadingForSpeech("Warnings for inventors"), brief.warnings);
+            }
+            return parts.join("\n\n");
+          },
         });
       } else {
         briefRoot.hidden = true;

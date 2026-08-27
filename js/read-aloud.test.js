@@ -6,6 +6,8 @@ import {
   SPEAK_CHUNK_MAX,
   SPEAK_CHUNK_TARGET,
   normalizeSpeakText,
+  formatHeadingForSpeech,
+  stripSpeakTags,
   shouldShowReadAloud,
   cacheKeyFor,
   clampTtsText,
@@ -47,6 +49,30 @@ describe("read-aloud helpers", () => {
   it("does not clamp under limit", () => {
     const t = "A design-challenge scene about clean water and local invention.";
     assert.equal(clampTtsText(t), t);
+  });
+
+  it("punctuates headings and appends a pause tag", () => {
+    assert.equal(formatHeadingForSpeech("Your job"), "Your job. [pause]");
+    assert.equal(formatHeadingForSpeech("  The place  "), "The place. [pause]");
+    assert.equal(formatHeadingForSpeech(""), "");
+  });
+
+  it("does not add a second period to a heading that already ends a sentence", () => {
+    assert.equal(formatHeadingForSpeech("What's strained."), "What's strained. [pause]");
+    assert.equal(formatHeadingForSpeech("Ready?"), "Ready? [pause]");
+    assert.equal(formatHeadingForSpeech("Go!"), "Go! [pause]");
+  });
+
+  it("strips pause tags for device speech", () => {
+    assert.equal(
+      stripSpeakTags("Your job. [pause]\n\nPlain invent invitation in everyday words."),
+      "Your job.\n\nPlain invent invitation in everyday words."
+    );
+    assert.equal(
+      stripSpeakTags("Wait. [long-pause] Then the clinic radio clears."),
+      "Wait. Then the clinic radio clears."
+    );
+    assert.equal(stripSpeakTags("No tags here."), "No tags here.");
   });
 });
 
@@ -120,5 +146,21 @@ describe("splitSpeakChunks", () => {
       assert.ok(c.length <= 60);
     }
     assert.equal(chunks.join(" "), text);
+  });
+
+  it("keeps a heading pause with the following sentence", () => {
+    const heading = formatHeadingForSpeech("Your job");
+    const body =
+      "Plain invent invitation in everyday words names who is in trouble.";
+    const text = `${heading}\n\n${body}`;
+    const chunks = splitSpeakChunks(text, { target: 80, max: 200 });
+    assert.ok(chunks.length >= 1);
+    const joined = chunks.join(" ");
+    assert.ok(joined.includes("[pause]"));
+    assert.ok(joined.includes("Your job."));
+    assert.ok(joined.includes("Plain invent invitation"));
+    for (const c of chunks) {
+      assert.ok(c.length > 0);
+    }
   });
 });

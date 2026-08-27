@@ -168,6 +168,7 @@ import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
   attachReadAloud,
+  formatHeadingForSpeech,
   refreshReadAloud,
   stopReadAloud,
   setReadAloudToast,
@@ -5488,10 +5489,19 @@ function renderProblemBrief(global, { drafting = false } = {}) {
   if (causesEl) causesEl.textContent = brief.rootCauses;
   if (warnEl) warnEl.textContent = brief.warnings;
   attachReadAloud(root, {
-    getText: () =>
-      [brief.currentState, brief.rootCauses, brief.warnings]
-        .filter(Boolean)
-        .join("\n\n"),
+    getText: () => {
+      const parts = [];
+      if (brief.currentState) {
+        parts.push(formatHeadingForSpeech("Current state"), brief.currentState);
+      }
+      if (brief.rootCauses) {
+        parts.push(formatHeadingForSpeech("Root causes"), brief.rootCauses);
+      }
+      if (brief.warnings) {
+        parts.push(formatHeadingForSpeech("Warnings for inventors"), brief.warnings);
+      }
+      return parts.join("\n\n");
+    },
   });
 }
 
@@ -18688,7 +18698,13 @@ function showYearBulletinModal(bulletin, opts = {}) {
       getText: () => {
         const intro = body.textContent || "";
         const items = list?.innerText || "";
-        return [title?.textContent, intro, items].filter(Boolean).join("\n");
+        return [
+          title?.textContent ? formatHeadingForSpeech(title.textContent) : "",
+          intro,
+          items,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
       },
     });
   }

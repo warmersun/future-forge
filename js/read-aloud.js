@@ -66,6 +66,19 @@ export function setReadAloudToast(fn) {
   toastFn = typeof fn === "function" ? fn : null;
 }
 
+const HEADING_TAGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
+const TEXT_BLOCK_TAGS = new Set(["P", "LI", "BLOCKQUOTE"]);
+const RECURSE_TAGS = new Set([
+  "UL",
+  "OL",
+  "DIV",
+  "SECTION",
+  "ARTICLE",
+  "HEADER",
+  "MAIN",
+  "ASIDE",
+]);
+
 /**
  * Collapse whitespace for length / speak / cache keys.
  * @param {string|null|undefined} s
@@ -81,7 +94,35 @@ export function normalizeSpeakText(s) {
 }
 
 /**
+ * Turn a section title into a spoken unit: period (if needed) plus an xAI pause tag.
+ * @param {string|null|undefined} text
+ */
+export function formatHeadingForSpeech(text) {
+  const t = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!t) return "";
+  const withStop = /[.!?]$/.test(t) ? t : `${t}.`;
+  return `${withStop} [pause]`;
+}
+
+/**
+ * Drop inline pause tags so device speechSynthesis does not say “pause”.
+ * @param {string|null|undefined} text
+ */
+export function stripSpeakTags(text) {
+  return String(text || "")
+    .replace(/\s*\[(?:long-)?pause\]/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .trim();
+}
+
+/**
  * Plain text from a DOM node (skips script/style and optional selectors).
+ * Headings become a punctuated unit plus `[pause]` so TTS does not glue them
+ * to the next line.
  * @param {Element|null|undefined} el
  * @param {{ skipSelector?: string }} [opts]
  */
@@ -92,7 +133,62 @@ export function plainTextFromEl(el, opts = {}) {
   if (clone instanceof Element) {
     clone.querySelectorAll(skip).forEach((n) => n.remove());
   }
-  return normalizeSpeakText(clone.textContent || "");
+  const blocks = [];
+  collectSpeakBlocks(clone, blocks);
+  return normalizeSpeakText(blocks.filter(Boolean).join("\n\n"));
+}
+
+/**
+ * @param {Node} node
+ * @param {string[]} blocks
+ */
+function collectSpeakBlocks(node, blocks) {
+  if (!node || node.nodeType !== 1) return;
+  const tag = node.tagName;
+  if (HEADING_TAGS.has(tag)) {
+    const t = formatHeadingForSpeech(node.textContent);
+    if (t) blocks.push(t);
+    return;
+  }
+  if (TEXT_BLOCK_TAGS.has(tag)) {
+    const t = innerSpeakText(node);
+    if (t) blocks.push(t);
+    return;
+  }
+  if (shouldRecurseSpeak(node)) {
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3) {
+        const t = innerSpeakText(child);
+        if (t) blocks.push(t);
+      } else if (child.nodeType === 1) {
+        collectSpeakBlocks(child, blocks);
+      }
+    }
+    return;
+  }
+  const t = innerSpeakText(node);
+  if (t) blocks.push(t);
+}
+
+/**
+ * @param {Element} el
+ */
+function shouldRecurseSpeak(el) {
+  for (const c of el.children) {
+    if (HEADING_TAGS.has(c.tagName) || TEXT_BLOCK_TAGS.has(c.tagName) || RECURSE_TAGS.has(c.tagName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @param {Node} node
+ */
+function innerSpeakText(node) {
+  return String(node.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -616,7 +712,7 @@ function playBrowserSpeech(text, rec) {
     }
     setBtnState(rec, "playing");
     playWaitResolve = () => resolve();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(stripSpeakTags(text));
     u.lang = "en-US";
     u.rate = 1;
     u.onend = () => {
