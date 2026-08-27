@@ -6,6 +6,7 @@ import { VISION_STAGES, techById } from "../data.js";
 import { VisionRenderer, narrativesFromTechs } from "../vision.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
+import { visionPathwaysFromBoard } from "../hex/evaluate.js";
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -183,9 +184,35 @@ export class MpSidePanel {
     if (!this.vision) return;
     this.vision.attach(this.visionRoot);
 
-    const techs = (invent?.stack || [])
-      .map((x) => techById(x.techId))
-      .filter(Boolean);
+    const pathways = invent?.hexBoard
+      ? visionPathwaysFromBoard(invent.hexBoard, techById)
+      : [];
+    const techsFromPathways = [];
+    const seenTech = new Set();
+    for (const p of pathways) {
+      for (const t of p.techs || []) {
+        if (!t?.id || seenTech.has(t.id)) continue;
+        const full = techById(t.id);
+        if (full) {
+          seenTech.add(t.id);
+          techsFromPathways.push(full);
+        }
+      }
+    }
+    const techs = techsFromPathways.length
+      ? techsFromPathways
+      : (invent?.stack || []).map((x) => techById(x.techId)).filter(Boolean);
+    if (!invent?.hexBoard && !pathways.length && (invent?.inventionHow || techs.length)) {
+      pathways.push({
+        howText: String(invent?.inventionHow || ""),
+        techs: techs.map((t) => ({
+          id: t.id,
+          name: t.name,
+          summary: String(t.summary || "").slice(0, 160),
+          narrative: String(t.vision?.narrative || "").slice(0, 240),
+        })),
+      });
+    }
     const stageId = mpVisionStageId(invent?.deployStage || "none", techs.length);
     const stage = VISION_STAGES.find((s) => s.id === stageId) || VISION_STAGES[0];
 
@@ -226,14 +253,19 @@ export class MpSidePanel {
     }
 
     // Content gate — skip Imagine if nothing invent-related changed
+    const pathBit = pathways
+      .map((p) => {
+        const ids = (p.techs || []).map((t) => t.id).sort().join(",");
+        const how = String(p.howText || "").replace(/\s+/g, " ").trim().slice(0, 300);
+        return `${ids}:${how}`;
+      })
+      .join("||");
     const contentKey = [
       invent?.seatId || invent?.displayName || "",
       inventYear,
       stageId,
       techs.map((t) => t.id).sort().join(","),
-      (invent?.inventionName || "").trim(),
-      (invent?.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 300),
-      (invent?.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      pathBit,
     ].join("¦");
     if (!opts.force && contentKey === this._lastVisionKey && this.vision.currentUrl) {
       return;
@@ -261,9 +293,7 @@ export class MpSidePanel {
         visionTheme: mission.visionTheme || "rebuild-city",
       },
       techs,
-      inventionName: invent?.inventionName || "",
-      inventionHow: invent?.inventionHow || "",
-      inventionImpact: invent?.inventionImpact || "",
+      pathways,
       year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},

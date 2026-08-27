@@ -187,10 +187,7 @@ export class VisionRenderer {
    * @param {object} state.stage
    * @param {object} state.challenge
    * @param {object[]} state.techs
-   * @param {string} state.inventionName
-   * @param {string} [state.inventionHow]
-   * @param {string} [state.inventionImpact]
-   * @param {string} [state.inventionRisk]
+   * @param {{ howText?: string, techs?: object[] }[]} [state.pathways]
    * @param {object} [state.challengeBeat]
    * @param {boolean} [state.immediate]
    * @param {boolean} [state.force]
@@ -303,8 +300,25 @@ export class VisionRenderer {
     if (state.sessionId) this.setSessionId(state.sessionId, { clear: false });
 
     const techKey = (state.techs || []).map((t) => t.id).sort().join(",");
-    const howKey = (state.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 400);
-    const lifeKey = (state.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 400);
+    const pathKey = Array.isArray(state.pathways)
+      ? state.pathways
+          .map((p) => {
+            const ids = (p?.techs || [])
+              .map((t) => t.id || t.name)
+              .filter(Boolean)
+              .sort()
+              .join(",");
+            const how = String(p?.howText || "")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 400);
+            return `${ids}:${how}`;
+          })
+          .join("||")
+      : String(state.inventionHow || "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 400);
     const pressureKey = state.pressure
       ? Object.entries(state.pressure)
           .map(([k, v]) => `${k}:${v}`)
@@ -318,9 +332,7 @@ export class VisionRenderer {
       state.place || "",
       pressureKey,
       techKey,
-      (state.inventionName || "").trim(),
-      howKey,
-      lifeKey,
+      pathKey,
       beatKey,
     ].join("|");
     const followOnly = Boolean(state.followOnly);
@@ -337,7 +349,7 @@ export class VisionRenderer {
     }
 
     this.busy = true;
-    const hasNarrative = Boolean(howKey || lifeKey);
+    const hasNarrative = Boolean(pathKey);
     const underChallenge = Boolean(state.challengeBeat?.angle);
     // Followers: silent re-peek when a frame is already on screen (no loading flicker)
     const silentFollow = followOnly && Boolean(this.currentUrl);
@@ -383,10 +395,6 @@ export class VisionRenderer {
         clientSessionId: getClientSessionId(),
         force: Boolean(state.force) && !followOnly,
         followOnly,
-        inventionName: state.inventionName || "",
-        inventionHow: state.inventionHow || "",
-        inventionImpact: state.inventionImpact || "",
-        inventionRisk: state.inventionRisk || "",
         year: state.year || null,
         place: state.place || "",
         pressure: state.pressure || null,
@@ -410,6 +418,17 @@ export class VisionRenderer {
           summary: t.summary,
           narrative: t.vision?.narrative || "",
         })),
+        pathways: Array.isArray(state.pathways)
+          ? state.pathways.map((p) => ({
+              howText: String(p?.howText || ""),
+              techs: (p?.techs || []).map((t) => ({
+                id: t.id,
+                name: t.name,
+                summary: t.summary || "",
+                narrative: t.narrative || t.vision?.narrative || "",
+              })),
+            }))
+          : [],
       };
 
       const res = await apiFetch("/api/vision", {

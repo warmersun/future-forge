@@ -77,15 +77,116 @@ export function buildWorldCard(body) {
   };
 }
 
+/**
+ * Connected invent islands for Imagine. `null` if the body still uses the
+ * legacy single inventionHow (old clients / fixtures). Empty array = no pathways.
+ * @param {object} body
+ * @returns {{ howText: string, techs: {id: string, name: string, summary: string, narrative: string}[] }[] | null}
+ */
+export function visionPathwaysOf(body) {
+  if (!Array.isArray(body?.pathways)) return null;
+  return body.pathways
+    .map((p) => {
+      const techs = (Array.isArray(p?.techs) ? p.techs : [])
+        .map((t) => {
+          if (!t || typeof t !== "object") {
+            const id = String(t || "").slice(0, 80);
+            return id ? { id, name: id, summary: "", narrative: "" } : null;
+          }
+          return {
+            id: String(t.id || "").slice(0, 80),
+            name: clipText(t.name, 80),
+            summary: clipText(t.summary, 160),
+            narrative: clipText(t.narrative, 240),
+          };
+        })
+        .filter(Boolean)
+        .filter((t) => t.id || t.name);
+      return {
+        howText: clipText(p?.howText || p?.inventHow, 700),
+        techs,
+      };
+    })
+    .filter((p) => p.howText || p.techs.length);
+}
+
+/** Island inventHows joined for a shot; legacy body.inventionHow if no pathways. */
+export function visionHowNarrative(body, max = 700) {
+  const paths = visionPathwaysOf(body);
+  if (paths) {
+    return clipText(
+      paths
+        .map((p) => p.howText)
+        .filter(Boolean)
+        .join(" Meanwhile "),
+      max
+    );
+  }
+  return clipText(body?.inventionHow, max);
+}
+
+/** Everyday-life face only for legacy single-essay clients. Hex pathways skip it. */
+export function visionLifeNarrative(body, max = 700) {
+  if (Array.isArray(body?.pathways)) return "";
+  return clipText(body?.inventionImpact, max);
+}
+
+/** Cache key: per-island membership + inventHow. Never includes an invention name. */
+export function visionPathwaysKey(body) {
+  const paths = visionPathwaysOf(body);
+  if (paths) {
+    return paths
+      .map((p) => {
+        const ids = p.techs
+          .map((t) => t.id || t.name)
+          .filter(Boolean)
+          .sort()
+          .join(",");
+        return `${ids}:${clipText(p.howText, 400).toLowerCase()}`;
+      })
+      .join("||");
+  }
+  return clipText(body?.inventionHow, 400).toLowerCase();
+}
+
+export function visionTechList(body, max = 8) {
+  const paths = visionPathwaysOf(body);
+  const source = paths ? paths.flatMap((p) => p.techs) : body?.techs || [];
+  const seen = new Set();
+  const out = [];
+  for (const t of source) {
+    if (!t) continue;
+    const row =
+      typeof t === "object"
+        ? {
+            id: String(t.id || "").slice(0, 80),
+            name: clipText(t.name, 80),
+            summary: clipText(t.summary, 160),
+            narrative: clipText(t.narrative, 240),
+          }
+        : {
+            id: String(t).slice(0, 80),
+            name: String(t),
+            summary: "",
+            narrative: "",
+          };
+    const key = row.id || row.name;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 export function narrativeLength(body) {
-  const how = clipText(body.inventionHow, 700);
-  const life = clipText(body.inventionImpact, 700);
+  const how = visionHowNarrative(body, 700);
+  const life = visionLifeNarrative(body, 700);
   return `${how} ${life}`.trim().length;
 }
 
 export function techNames(body, max = 6) {
-  return (body.techs || [])
-    .slice(0, max)
+  return visionTechList(body, max)
     .map((t) => t.name)
     .filter(Boolean);
 }
@@ -127,8 +228,8 @@ function shotFromChallengeBeat(body, prev, worldCard) {
   const beat = body.challengeBeat;
   if (!beat || !beat.angle) return null;
   const place = worldCard.place || "this place";
-  const how = clipText(body.inventionHow, 360);
-  const life = clipText(body.inventionImpact, 280);
+  const how = visionHowNarrative(body, 360);
+  const life = visionLifeNarrative(body, 280);
   const names = techNames(body);
   const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
   const label = clipText(beat.label || beat.angle, 40) || "critic";
@@ -197,8 +298,8 @@ export function decideShot(body, prev, worldCard) {
   const place = worldCard.place || "this place";
   const techs = body.techs || [];
   const stageId = body.stage?.id || "present";
-  const how = clipText(body.inventionHow, 500);
-  const life = clipText(body.inventionImpact, 500);
+  const how = visionHowNarrative(body, 500);
+  const life = visionLifeNarrative(body, 500);
   const narrative = `${how} ${life}`.trim();
   const names = techNames(body);
   const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
@@ -336,12 +437,24 @@ export function sanitizeHappening(text, worldCard) {
 export async function directShot(body, prev, worldCard, client, opts = {}) {
   const { model } = opts;
   if (!client) return null;
-  const how = clipText(body.inventionHow, 500);
-  const life = clipText(body.inventionImpact, 500);
+  const how = visionHowNarrative(body, 500);
+  const life = visionLifeNarrative(body, 500);
   if (`${how} ${life}`.trim().length < 40) return null;
 
   const names = techNames(body, 8);
   const hasPrior = Boolean(prev?.dataUrl?.startsWith("data:"));
+  const paths = visionPathwaysOf(body);
+  const inventPayload = paths
+    ? {
+        pathways: paths.map((p) => ({
+          techs: p.techs.map((t) => t.name || t.id).filter(Boolean),
+          inventHow: p.howText || null,
+        })),
+      }
+    : {
+        inventHow: how || null,
+        inventionImpact: life || null,
+      };
 
   const input = [
     {
@@ -352,6 +465,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         `Write what is VISIBLY happening in the frame, grounded in that setting.\n` +
         `If the invention involves rockets, networks, clinics, etc., describe them as they would appear ` +
         `in THIS setting's terrain and climate (use words from the setting).\n` +
+        `Each pathways[] entry is one local invent (connected island) with its inventHow — there is no invention name.\n` +
         `Choose "edit" only if the same camera view can show the change by adding elements.\n` +
         `Choose "generate" if a different camera in the same setting is better.\n` +
         `Rules: positive description only; no negations; no other countries or stock tourist locations; ` +
@@ -370,9 +484,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         hasPriorImage: hasPrior,
         stage: body.stage?.id || "present",
         techs: names,
-        inventionName: clipText(body.inventionName, 80) || null,
-        inventionHow: how || null,
-        inventionImpact: life || null,
+        ...inventPayload,
       }),
     },
   ];
@@ -474,9 +586,8 @@ export async function resolveShot(
   }
 
   // Cache: same narrative as previous → reuse previous shot if stored
-  const how = clipText(body.inventionHow, 400);
-  const impact = clipText(body.inventionImpact, 400);
-  const narrKey = `${how}|${impact}|${techNames(body).join(",")}`;
+  const impact = visionLifeNarrative(body, 400);
+  const narrKey = `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}`;
   if (prev?.shotNarrativeKey === narrKey && prev?.lastShot?.happening) {
     return {
       mode: prev.lastShot.mode || heuristic.mode,
@@ -569,11 +680,13 @@ export function assertCleanImagePrompt(prompt, { worldScene = "" } = {}) {
 }
 
 export function visionFingerprint(body) {
-  const techIds = (body.techs || []).map((t) => t.id || t.name).sort().join(",");
+  const techIds = visionTechList(body, 12)
+    .map((t) => t.id || t.name)
+    .sort()
+    .join(",");
   const stage = body.stage?.id || "present";
-  const name = (body.inventionName || "").trim().toLowerCase();
-  const how = clipText(body.inventionHow, 400).toLowerCase();
-  const life = clipText(body.inventionImpact, 400).toLowerCase();
+  const pathKey = visionPathwaysKey(body);
+  const life = visionLifeNarrative(body, 400).toLowerCase();
   const year = body.year || "";
   const place = clipText(body.place || body.challenge?.place, 80).toLowerCase();
   const scene = clipText(body.challenge?.scene || body.challenge?.problem, 200).toLowerCase();
@@ -583,12 +696,11 @@ export function visionFingerprint(body) {
         .join(",")
     : "";
   const beat = challengeBeatKey(body.challengeBeat);
-  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${name}|${how}|${life}|${beat}`;
+  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${beat}`;
 }
 
 export function shotNarrativeKey(body) {
-  const how = clipText(body.inventionHow, 400);
-  const impact = clipText(body.inventionImpact, 400);
+  const impact = visionLifeNarrative(body, 400);
   const beat = challengeBeatKey(body.challengeBeat);
-  return `${how}|${impact}|${techNames(body).join(",")}|${beat}`;
+  return `${visionPathwaysKey(body)}|${impact}|${techNames(body).join(",")}|${beat}`;
 }

@@ -37,15 +37,24 @@ const atacamaBody = {
   },
   stage: { id: "prototype" },
   techs: [{ id: "space", name: "Space systems" }],
-  inventionHow:
-    "A small rocket lofted from a local pad carries a relay that serves nearby settlements.",
-  inventionImpact: "Communities get links without leaving the desert valleys.",
+  pathways: [
+    {
+      techs: [{ id: "space", name: "Space systems" }],
+      howText:
+        "A small rocket lofted from a local pad carries a relay that serves nearby settlements. Communities get links without leaving the desert valleys.",
+    },
+  ],
 };
 
 const world1 = buildWorldCard(atacamaBody);
 const world2 = buildWorldCard({
   ...atacamaBody,
-  inventionHow: "Totally different invention about drones only.",
+  pathways: [
+    {
+      techs: [{ id: "drones", name: "Drones" }],
+      howText: "Totally different invention about drones only.",
+    },
+  ],
 });
 assert(world1.visualSetting === world2.visualSetting, "world card stable across invention changes");
 assert(/Atacama/i.test(world1.visualSetting), "visualSetting includes place");
@@ -66,8 +75,7 @@ assert(!/LOCALE LOCK/i.test(genPrompt), "no LOCALE LOCK meta");
 // Tech-only → edit
 const techOnly = {
   ...atacamaBody,
-  inventionHow: "",
-  inventionImpact: "",
+  pathways: [{ techs: [{ id: "drones", name: "Drones" }], howText: "" }],
   techs: [{ id: "drones", name: "Drones" }],
 };
 const shotEdit = decideShot(techOnly, { dataUrl: "data:image/jpeg;base64,xx" }, world1);
@@ -89,10 +97,13 @@ const storyOnlyBody = {
   },
   stage: { id: "present" },
   techs: [],
-  inventionHow:
-    "Neighbors share a mesh of cheap water sensors that trigger street-level diversion boards before the tide peaks.",
-  inventionImpact:
-    "Neighbors share a mesh of cheap water sensors that trigger street-level diversion boards before the tide peaks.",
+  pathways: [
+    {
+      techs: [],
+      howText:
+        "Neighbors share a mesh of cheap water sensors that trigger street-level diversion boards before the tide peaks.",
+    },
+  ],
 };
 const storyWorld = buildWorldCard(storyOnlyBody);
 const storyShot = decideShot(
@@ -118,8 +129,7 @@ assert(
 const emptyPresent = decideShot(
   {
     ...storyOnlyBody,
-    inventionHow: "",
-    inventionImpact: "",
+    pathways: [],
   },
   { dataUrl: "data:image/jpeg;base64,xx" },
   storyWorld
@@ -141,8 +151,7 @@ const coastalBody = {
   },
   stage: { id: "present" },
   techs: [],
-  inventionHow: "",
-  inventionImpact: "",
+  pathways: [],
 };
 const coastalWorld = buildWorldCard(coastalBody);
 const coastalShot = decideShot(coastalBody, null, coastalWorld);

@@ -26,7 +26,8 @@ import {
   assertCleanImagePrompt,
   visionFingerprint,
   shotNarrativeKey,
-  clipText as visionClip,
+  visionHowNarrative,
+  visionLifeNarrative,
 } from "./js/vision-prompt.mjs";
 import { RoomManager } from "./js/rooms/room-manager.mjs";
 import {
@@ -2614,8 +2615,8 @@ async function handleVision(body) {
       reason,
     },
     shotNarrativeKey: shotNarrativeKey(body),
-    how: visionClip(body.inventionHow, 700),
-    impact: visionClip(body.inventionImpact, 700),
+    how: visionHowNarrative(body, 700),
+    impact: visionLifeNarrative(body, 700),
     decisionReason: reason,
     updatedAt: Date.now(),
   });

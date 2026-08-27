@@ -141,6 +141,34 @@ export function resolveIslandHow(board, inventions) {
 }
 
 /**
+ * Imagine payload: one entry per connected invent island (inventHow, no name).
+ * @param {object|null|undefined} board
+ * @param {(techId: string) => { id?: string, name?: string, summary?: string, vision?: { narrative?: string } } | null} [techById]
+ * @returns {{ howText: string, techs: { id: string, name: string, summary: string, narrative: string }[] }[]}
+ */
+export function visionPathwaysFromBoard(board, techById) {
+  const lookup = typeof techById === "function" ? techById : () => null;
+  return listInventionPathways(board).map((invs) => {
+    const resolved = resolveIslandHow(board, invs);
+    const seen = new Set();
+    const techs = [];
+    for (const tile of invs) {
+      const tech = lookup(tile?.techId);
+      const id = String(tech?.id || tile?.techId || "").slice(0, 80);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      techs.push({
+        id,
+        name: String(tech?.name || tile?.name || id).slice(0, 80),
+        summary: String(tech?.summary || "").slice(0, 160),
+        narrative: String(tech?.vision?.narrative || "").slice(0, 240),
+      });
+    }
+    return { howText: resolved.text, techs };
+  });
+}
+
+/**
  * Persist inventHow for this island. Empty text deletes the store.
  * Writing a multi-tile island drops absorbed member keys.
  * @param {"user"|"ai"} [source]

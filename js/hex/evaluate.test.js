@@ -51,6 +51,7 @@ import {
   resolveIslandHow,
   setIslandHow,
   rekeyIslandHow,
+  visionPathwaysFromBoard,
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
@@ -922,6 +923,40 @@ describe("island inventHow", () => {
     assert.equal(set.source, "user");
     assert.equal(board.tiles.a.howText, "Part A.");
     assert.equal(board.tiles.b.howText, "Part B.");
+  });
+
+  it("visionPathwaysFromBoard is one inventHow per island, no invention name", () => {
+    const lookup = (id) =>
+      id === "ai"
+        ? { id: "ai", name: "AI", summary: "Models" }
+        : id === "iot"
+          ? { id: "iot", name: "IoT", summary: "Sensors" }
+          : null;
+    let board = twoAiBoard();
+    board = addTile(
+      board,
+      mintInventionTile({ id: "c", techId: "iot", howText: "Part C.", year: 2026 })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = placeOk(board, "c", local.q + 1, local.r);
+    board = setIslandHow(
+      board,
+      [board.tiles.a, board.tiles.b],
+      "The pair radios the crest.",
+      "user"
+    );
+    const paths = visionPathwaysFromBoard(board, lookup);
+    assert.equal(paths.length, 2);
+    const pair = paths.find((p) => p.techs.some((t) => t.id === "ai"));
+    const iot = paths.find((p) => p.techs.some((t) => t.id === "iot"));
+    assert.equal(pair.howText, "The pair radios the crest.");
+    assert.equal(iot.howText, "Part C.");
+    assert.equal(
+      paths.every((p) => p.inventionName == null && p.name == null),
+      true
+    );
   });
 
   it("saving island inventHow changes the pathway fingerprint so scores re-run", () => {

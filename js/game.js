@@ -86,6 +86,7 @@ import {
   listInventionPathways,
   resolveIslandHow,
   setIslandHow,
+  visionPathwaysFromBoard,
 } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
@@ -1252,6 +1253,7 @@ function ensureHexWorkshop() {
       updateChallengeButton();
       renderHud();
       updateLearnButton?.();
+      updateVision({ debounceMs: 800 });
     },
     openLearnWhileIdeas: (techId) => openLearnWhileIdeas(techId),
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
@@ -15846,15 +15848,20 @@ function visionContentKey() {
     roomBridge.isRoom() && viewId
       ? roomBridge.invent?.(viewId)?.visionRev || state.mpVisionRev || 0
       : 0;
+  const pathBit = visionPathwaysFromBoard(state.hexBoard, techById)
+    .map((p) => {
+      const ids = (p.techs || []).map((t) => t.id).sort().join(",");
+      const how = String(p.howText || "").replace(/\s+/g, " ").trim().slice(0, 400);
+      return `${ids}:${how}`;
+    })
+    .join("||");
   return [
     viewId,
     state.mission?.id || "",
     state.year || "",
     state.deployStage || "",
     techs,
-    (state.inventionName || "").trim(),
-    (state.inventionHow || "").replace(/\s+/g, " ").trim().slice(0, 400),
-    (state.inventionImpact || "").replace(/\s+/g, " ").trim().slice(0, 400),
+    pathBit,
     beatBit,
     `rev:${vRev}`,
   ].join("¦");
@@ -16233,7 +16240,20 @@ function updateVision(opts = {}) {
   ensureVision();
   if (!state.vision) return;
 
-  const techs = selectedTechs();
+  const pathways = visionPathwaysFromBoard(state.hexBoard, techById);
+  const techsFromPathways = [];
+  const seenTech = new Set();
+  for (const p of pathways) {
+    for (const t of p.techs || []) {
+      if (!t?.id || seenTech.has(t.id)) continue;
+      const full = techById(t.id);
+      if (full) {
+        seenTech.add(t.id);
+        techsFromPathways.push(full);
+      }
+    }
+  }
+  const techs = techsFromPathways.length ? techsFromPathways : selectedTechs();
   const stage = currentStage();
   const inventName = $("#vision-stage-name");
   const inventBlurb = $("#vision-stage-blurb");
@@ -16321,9 +16341,7 @@ function updateVision(opts = {}) {
       visionTheme: state.mission.visionTheme,
     },
     techs,
-    inventionName: state.inventionName,
-    inventionHow: state.inventionHow,
-    inventionImpact: state.inventionImpact,
+    pathways,
     year: state.year,
     place: state.mission.place,
     pressure: state.pressure,
