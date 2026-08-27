@@ -83,6 +83,25 @@ export function buildWorldCard(body) {
  * @param {object} body
  * @returns {{ howText: string, techs: {id: string, name: string, summary: string, narrative: string}[] }[] | null}
  */
+function slimVisionGiven(g) {
+  if (!g || typeof g !== "object") return null;
+  const kind = g.kind === "concern" ? "concern" : g.kind === "crisis" ? "crisis" : null;
+  if (!kind) return null;
+  const row = {
+    id: String(g.id || "").slice(0, 80),
+    kind,
+    name: clipText(g.name, 80),
+  };
+  if (kind === "crisis") row.role = g.role || null;
+  if (kind === "concern") row.angle = g.angle || null;
+  if (g.applied != null) row.applied = Boolean(g.applied);
+  return row;
+}
+
+function givenLabel(g) {
+  return clipText(g?.name || g?.role || g?.angle || g?.kind, 40);
+}
+
 export function visionPathwaysOf(body) {
   if (!Array.isArray(body?.pathways)) return null;
   return body.pathways
@@ -102,27 +121,78 @@ export function visionPathwaysOf(body) {
         })
         .filter(Boolean)
         .filter((t) => t.id || t.name);
+      const touching = (Array.isArray(p?.touching) ? p.touching : [])
+        .map(slimVisionGiven)
+        .filter(Boolean);
+      const status =
+        p?.status === "applied" || touching.length ? "applied" : "idea";
       return {
         howText: clipText(p?.howText || p?.inventHow, 700),
         techs,
+        status,
+        touching,
       };
     })
     .filter((p) => p.howText || p.techs.length);
 }
 
-/** Island inventHows joined for a shot; legacy body.inventionHow if no pathways. */
+export function visionGivensOf(body) {
+  if (!Array.isArray(body?.givens)) return [];
+  return body.givens.map(slimVisionGiven).filter(Boolean);
+}
+
+/** Applied inventHows, else idea hows; legacy body.inventionHow if no pathways. */
 export function visionHowNarrative(body, max = 700) {
   const paths = visionPathwaysOf(body);
   if (paths) {
-    return clipText(
-      paths
-        .map((p) => p.howText)
-        .filter(Boolean)
-        .join(" Meanwhile "),
-      max
-    );
+    const applied = paths.filter((p) => p.status === "applied").map((p) => p.howText).filter(Boolean);
+    const ideas = paths.filter((p) => p.status === "idea").map((p) => p.howText).filter(Boolean);
+    return clipText((applied.length ? applied : ideas).join(" Meanwhile "), max);
   }
   return clipText(body?.inventionHow, max);
+}
+
+function pathwayLine(p) {
+  const names = p.techs.map((t) => t.name).filter(Boolean).join(", ");
+  return p.howText || (names ? `local tools related to ${names}` : "");
+}
+
+/**
+ * Documentary happening from board geometry. Null if the body has no pathways[].
+ */
+export function visionGeometryHappening(body, place) {
+  const paths = visionPathwaysOf(body);
+  if (!paths) return null;
+  const here = place || "this place";
+  const applied = paths.filter((p) => p.status === "applied");
+  const ideas = paths.filter((p) => p.status === "idea");
+  const unsolved = visionGivensOf(body).filter((g) => g.applied === false);
+  const parts = [];
+  for (const p of applied) {
+    const line = pathwayLine(p);
+    const where = p.touching.map(givenLabel).filter(Boolean).join(", ");
+    if (line && where) {
+      parts.push(`${line} This is in use in ${here}, addressing ${where}.`);
+    } else if (line) {
+      parts.push(`${line} This is in use in ${here}.`);
+    }
+  }
+  for (const p of ideas) {
+    const line = pathwayLine(p);
+    if (line) {
+      parts.push(
+        `A person who lives this situation in ${here} is considering an idea — thinking, sketching, talking it through — not yet installed in the streets: ${line}`
+      );
+    }
+  }
+  if (unsolved.length) {
+    const labels = unsolved.map(givenLabel).filter(Boolean).join(", ");
+    if (labels) {
+      parts.push(`The unsolved local pressure is still visible: ${labels}.`);
+    }
+  }
+  if (!parts.length) return "";
+  return clipText(parts.join(" Meanwhile "), 700);
 }
 
 /** Everyday-life face only for legacy single-essay clients. Hex pathways skip it. */
@@ -142,7 +212,12 @@ export function visionPathwaysKey(body) {
           .filter(Boolean)
           .sort()
           .join(",");
-        return `${ids}:${clipText(p.howText, 400).toLowerCase()}`;
+        const touch = (p.touching || [])
+          .map((g) => g.id || g.role || g.angle || g.kind)
+          .filter(Boolean)
+          .sort()
+          .join(",");
+        return `${ids}:${p.status}:${touch}:${clipText(p.howText, 400).toLowerCase()}`;
       })
       .join("||");
   }
@@ -308,6 +383,17 @@ export function decideShot(body, prev, worldCard) {
   const challengeShot = shotFromChallengeBeat(body, prev, worldCard);
   if (challengeShot) return challengeShot;
 
+  const geo = visionGeometryHappening(body, place);
+  if (geo) {
+    return {
+      mode: "generate",
+      continuity: hasPrior ? "new-shot" : "baseline",
+      reason: "Board geometry frames the shot",
+      happening: groundInPlace(place, geo),
+      subjects: names,
+    };
+  }
+
   if (!hasPrior) {
     return {
       mode: "generate",
@@ -449,6 +535,20 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         pathways: paths.map((p) => ({
           techs: p.techs.map((t) => t.name || t.id).filter(Boolean),
           inventHow: p.howText || null,
+          status: p.status,
+          touching: p.touching.map((g) => ({
+            kind: g.kind,
+            name: g.name || null,
+            role: g.role || null,
+            angle: g.angle || null,
+          })),
+        })),
+        givens: visionGivensOf(body).map((g) => ({
+          kind: g.kind,
+          name: g.name || null,
+          role: g.role || null,
+          angle: g.angle || null,
+          applied: Boolean(g.applied),
         })),
       }
     : {
@@ -466,6 +566,9 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         `If the invention involves rockets, networks, clinics, etc., describe them as they would appear ` +
         `in THIS setting's terrain and climate (use words from the setting).\n` +
         `Each pathways[] entry is one local invent (connected island) with its inventHow — there is no invention name.\n` +
+        `status "idea" means it is not touching a crisis or concern: show a person who lives this situation considering the idea (thinking, sketching) — not installed in the streets.\n` +
+        `status "applied" means it edge-touches those crises/concerns: show the invent in use addressing them.\n` +
+        `givens with applied false are still visible as the unsolved local situation.\n` +
         `Choose "edit" only if the same camera view can show the change by adding elements.\n` +
         `Choose "generate" if a different camera in the same setting is better.\n` +
         `Rules: positive description only; no negations; no other countries or stock tourist locations; ` +
@@ -696,7 +799,10 @@ export function visionFingerprint(body) {
         .join(",")
     : "";
   const beat = challengeBeatKey(body.challengeBeat);
-  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${beat}`;
+  const givenKey = visionGivensOf(body)
+    .map((g) => `${g.id || g.name || g.kind}:${g.applied ? 1 : 0}`)
+    .join(",");
+  return `${place}|${scene}|${stage}|${year}|${pressure}|${techIds}|${pathKey}|${life}|${givenKey}|${beat}`;
 }
 
 export function shotNarrativeKey(body) {

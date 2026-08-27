@@ -79,7 +79,8 @@ const techOnly = {
   techs: [{ id: "drones", name: "Drones" }],
 };
 const shotEdit = decideShot(techOnly, { dataUrl: "data:image/jpeg;base64,xx" }, world1);
-assert(shotEdit.mode === "edit", "tech-only uses edit");
+assert(shotEdit.reason === "Board geometry frames the shot", "tech-only uses board geometry");
+assert(/considering|thinking/i.test(shotEdit.happening), "undocked tech is considered, not installed");
 const editPrompt = composeEditPrompt(world1, shotEdit);
 assert(/Atacama|same place/i.test(editPrompt), "edit prompt anchors place");
 assert(!/\bmarina\b/i.test(editPrompt), "edit prompt has no marina");
@@ -113,12 +114,16 @@ const storyShot = decideShot(
 );
 assert(storyShot.mode === "generate", "story-only uses generate");
 assert(
-  storyShot.reason === "Learner story frames the shot",
-  "story-only reason is learner story"
+  storyShot.reason === "Board geometry frames the shot",
+  "story-only reason is board geometry"
 );
 assert(
   /water sensors|diversion boards/i.test(storyShot.happening),
   "story-only happening includes learner text"
+);
+assert(
+  /thinking|considering/i.test(storyShot.happening),
+  "untouched pathway is a thought, not installed"
 );
 assert(
   !/Ordinary present-day life/i.test(storyShot.happening),

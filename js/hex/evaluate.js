@@ -149,11 +149,26 @@ export function islandHowForAi(board, inventions) {
   return resolved.stored ? resolved.text : "";
 }
 
+function visionGivenSlice(tile) {
+  if (!tile) return null;
+  if (tile.kind !== TILE_KIND.crisis && tile.kind !== TILE_KIND.concern) return null;
+  if (tile.q == null || tile.r == null) return null;
+  const row = {
+    id: String(tile.id || "").slice(0, 80),
+    kind: tile.kind,
+    name: String(tile.name || "").slice(0, 80),
+  };
+  if (tile.kind === TILE_KIND.crisis) row.role = tile.role || null;
+  if (tile.kind === TILE_KIND.concern) row.angle = tile.angle || null;
+  return row;
+}
+
 /**
  * Imagine payload: one entry per connected invent island (inventHow, no name).
+ * `status` is "applied" when the island edge-touches a crisis or concern.
  * @param {object|null|undefined} board
  * @param {(techId: string) => { id?: string, name?: string, summary?: string, vision?: { narrative?: string } } | null} [techById]
- * @returns {{ howText: string, techs: { id: string, name: string, summary: string, narrative: string }[] }[]}
+ * @returns {{ howText: string, techs: object[], status: "idea"|"applied", touching: object[] }[]}
  */
 export function visionPathwaysFromBoard(board, techById) {
   const lookup = typeof techById === "function" ? techById : () => null;
@@ -172,8 +187,41 @@ export function visionPathwaysFromBoard(board, techById) {
         narrative: String(tech?.vision?.narrative || "").slice(0, 240),
       });
     }
-    return { howText: islandHowForAi(board, invs), techs };
+    const seedId = invs[0]?.id;
+    const touching = (seedId ? givensReachedFromInvention(board, seedId) : [])
+      .map((gid) => visionGivenSlice(board?.tiles?.[gid]))
+      .filter(Boolean);
+    return {
+      howText: islandHowForAi(board, invs),
+      techs,
+      status: touching.length ? "applied" : "idea",
+      touching,
+    };
   });
+}
+
+/**
+ * Every placed crisis/concern for Imagine, with whether any island applies to it.
+ * @param {object|null|undefined} board
+ * @param {object[]} [pathways]
+ */
+export function visionGivensFromBoard(board, pathways) {
+  const appliedIds = new Set();
+  const list = Array.isArray(pathways)
+    ? pathways
+    : visionPathwaysFromBoard(board);
+  for (const p of list) {
+    for (const g of p.touching || []) {
+      if (g?.id) appliedIds.add(String(g.id));
+    }
+  }
+  const out = [];
+  for (const t of Object.values(board?.tiles || {})) {
+    const row = visionGivenSlice(t);
+    if (!row) continue;
+    out.push({ ...row, applied: appliedIds.has(row.id) });
+  }
+  return out.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 }
 
 /**

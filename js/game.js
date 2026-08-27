@@ -87,6 +87,7 @@ import {
   islandHowForAi,
   setIslandHow,
   visionPathwaysFromBoard,
+  visionGivensFromBoard,
 } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
@@ -15834,7 +15835,8 @@ function visionContentKey() {
     .map((p) => {
       const ids = (p.techs || []).map((t) => t.id).sort().join(",");
       const how = String(p.howText || "").replace(/\s+/g, " ").trim().slice(0, 400);
-      return `${ids}:${how}`;
+      const touch = (p.touching || []).map((g) => g.id).filter(Boolean).sort().join(",");
+      return `${ids}:${p.status || "idea"}:${touch}:${how}`;
     })
     .join("||");
   return [
@@ -16223,6 +16225,7 @@ function updateVision(opts = {}) {
   if (!state.vision) return;
 
   const pathways = visionPathwaysFromBoard(state.hexBoard, techById);
+  const givens = visionGivensFromBoard(state.hexBoard, pathways);
   const techsFromPathways = [];
   const seenTech = new Set();
   for (const p of pathways) {
@@ -16324,6 +16327,7 @@ function updateVision(opts = {}) {
     },
     techs,
     pathways,
+    givens,
     year: state.year,
     place: state.mission.place,
     pressure: state.pressure,

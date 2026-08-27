@@ -312,7 +312,12 @@ export class VisionRenderer {
               .replace(/\s+/g, " ")
               .trim()
               .slice(0, 400);
-            return `${ids}:${how}`;
+            const touch = (p?.touching || [])
+              .map((g) => g.id || g.role || g.angle || "")
+              .filter(Boolean)
+              .sort()
+              .join(",");
+            return `${ids}:${p?.status || "idea"}:${touch}:${how}`;
           })
           .join("||")
       : String(state.inventionHow || "")
@@ -421,12 +426,30 @@ export class VisionRenderer {
         pathways: Array.isArray(state.pathways)
           ? state.pathways.map((p) => ({
               howText: String(p?.howText || ""),
+              status: p?.status === "applied" ? "applied" : "idea",
+              touching: (p?.touching || []).map((g) => ({
+                id: g.id || "",
+                kind: g.kind,
+                name: g.name || "",
+                role: g.role || null,
+                angle: g.angle || null,
+              })),
               techs: (p?.techs || []).map((t) => ({
                 id: t.id,
                 name: t.name,
                 summary: t.summary || "",
                 narrative: t.narrative || t.vision?.narrative || "",
               })),
+            }))
+          : [],
+        givens: Array.isArray(state.givens)
+          ? state.givens.map((g) => ({
+              id: g.id || "",
+              kind: g.kind,
+              name: g.name || "",
+              role: g.role || null,
+              angle: g.angle || null,
+              applied: Boolean(g.applied),
             }))
           : [],
       };

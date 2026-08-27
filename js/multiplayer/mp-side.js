@@ -6,7 +6,7 @@ import { VISION_STAGES, techById } from "../data.js";
 import { VisionRenderer, narrativesFromTechs } from "../vision.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
-import { visionPathwaysFromBoard } from "../hex/evaluate.js";
+import { visionPathwaysFromBoard, visionGivensFromBoard } from "../hex/evaluate.js";
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -253,11 +253,15 @@ export class MpSidePanel {
     }
 
     // Content gate — skip Imagine if nothing invent-related changed
+    const givens = invent?.hexBoard
+      ? visionGivensFromBoard(invent.hexBoard, pathways)
+      : [];
     const pathBit = pathways
       .map((p) => {
         const ids = (p.techs || []).map((t) => t.id).sort().join(",");
         const how = String(p.howText || "").replace(/\s+/g, " ").trim().slice(0, 300);
-        return `${ids}:${how}`;
+        const touch = (p.touching || []).map((g) => g.id).filter(Boolean).sort().join(",");
+        return `${ids}:${p.status || "idea"}:${touch}:${how}`;
       })
       .join("||");
     const contentKey = [
@@ -294,6 +298,7 @@ export class MpSidePanel {
       },
       techs,
       pathways,
+      givens,
       year: inventYear,
       place: mission.place || "",
       pressure: place.pressure || {},

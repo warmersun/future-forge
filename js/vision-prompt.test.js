@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   decideShot,
   visionFingerprint,
+  visionGeometryHappening,
   visionHowNarrative,
   visionPathwaysOf,
   visionPathwaysKey,
@@ -76,6 +77,73 @@ describe("vision pathways signature", () => {
     };
     assert.notEqual(visionFingerprint(a), visionFingerprint(b));
     assert.notEqual(visionPathwaysKey(a), visionPathwaysKey(b));
+  });
+
+  it("idea pathways are thinking, not installed; applied pathways are in use", () => {
+    const body = {
+      ...placeBody,
+      pathways: [
+        {
+          techs: [{ id: "ai", name: "AI" }],
+          howText: "A mesh of cheap water sensors that pages the quay.",
+          status: "idea",
+          touching: [],
+        },
+      ],
+      givens: [
+        {
+          id: "crisis-local",
+          kind: "crisis",
+          role: "local",
+          name: "Floods",
+          applied: false,
+        },
+      ],
+    };
+    const geo = visionGeometryHappening(body, body.place);
+    assert.match(geo, /thinking|considering/i);
+    assert.match(geo, /not yet installed/i);
+    assert.match(geo, /water sensors/);
+    assert.match(geo, /Floods/);
+    assert.ok(!/in use/i.test(geo));
+    const world = {
+      place: body.place,
+      title: body.challenge.title,
+      scene: body.challenge.scene,
+      visualSetting: body.challenge.scene,
+    };
+    const shot = decideShot(body, { dataUrl: "data:image/jpeg;base64,xx" }, world);
+    assert.equal(shot.reason, "Board geometry frames the shot");
+    assert.match(shot.happening, /thinking|considering/i);
+
+    const applied = {
+      ...body,
+      pathways: [
+        {
+          techs: [{ id: "ai", name: "AI" }],
+          howText: "A mesh of cheap water sensors that pages the quay.",
+          status: "applied",
+          touching: [
+            { id: "crisis-local", kind: "crisis", role: "local", name: "Floods" },
+          ],
+        },
+      ],
+      givens: [
+        {
+          id: "crisis-local",
+          kind: "crisis",
+          role: "local",
+          name: "Floods",
+          applied: true,
+        },
+      ],
+    };
+    const used = visionGeometryHappening(applied, applied.place);
+    assert.match(used, /in use/i);
+    assert.match(used, /Floods/);
+    assert.ok(!/not yet installed/i.test(used));
+    assert.notEqual(visionFingerprint(body), visionFingerprint(applied));
+    assert.notEqual(visionPathwaysKey(body), visionPathwaysKey(applied));
   });
 
   it("legacy inventionHow still works when pathways is omitted", () => {

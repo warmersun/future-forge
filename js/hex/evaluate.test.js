@@ -53,6 +53,7 @@ import {
   setIslandHow,
   rekeyIslandHow,
   visionPathwaysFromBoard,
+  visionGivensFromBoard,
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
@@ -960,6 +961,27 @@ describe("island inventHow", () => {
       paths.every((p) => p.inventionName == null && p.name == null),
       true
     );
+  });
+
+  it("visionPathwaysFromBoard marks isolated islands as idea and docked as applied", () => {
+    const lookup = (id) => ({ id, name: id });
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", -3, -3);
+    board = setIslandHow(board, [board.tiles.a], "Docked sensors.", "user");
+    board = setIslandHow(board, [board.tiles.b], "Only a thought.", "user");
+    const paths = visionPathwaysFromBoard(board, lookup);
+    const docked = paths.find((p) => p.howText === "Docked sensors.");
+    const idea = paths.find((p) => p.howText === "Only a thought.");
+    assert.equal(docked.status, "applied");
+    assert.equal(docked.touching.some((g) => g.kind === "crisis"), true);
+    assert.equal(idea.status, "idea");
+    assert.equal(idea.touching.length, 0);
+    const givens = visionGivensFromBoard(board, paths);
+    const localGiven = givens.find((g) => g.id === "crisis-local");
+    assert.equal(localGiven.applied, true);
+    assert.equal(givens.every((g) => g.kind === "crisis" || g.kind === "concern"), true);
   });
 
   it("saving island inventHow changes the pathway fingerprint so scores re-run", () => {
