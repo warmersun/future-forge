@@ -105,11 +105,13 @@ function slimVisionGiven(g) {
 const PEOPLE_MOODS = new Set(["happy", "sad", "concerned", "neutral"]);
 
 const PEOPLE_MOOD_LINE = {
-  happy: "People in the frame look relieved and glad; faces show ease, not posed grins.",
-  sad: "People in the frame look worn and sad; faces show strain and hardship.",
-  concerned: "People in the frame look uneasy and concerned; no smiles, no despair.",
+  happy:
+    "If any people are already visible, their faces look relieved and glad. Do not add extra people or crowds.",
+  sad: "If any people are already visible, their faces look worn and sad. Do not add extra people or crowds.",
+  concerned:
+    "If any people are already visible, their faces look uneasy and concerned. Do not add extra people or crowds.",
   neutral:
-    "People in the frame have ordinary unforced documentary faces — neither posed-happy nor posed-sad.",
+    "If any people are already visible, keep ordinary unforced faces. Do not add extra people or crowds.",
 };
 
 /** Faces follow the local crisis lamp; no local crisis → ordinary. */
@@ -134,7 +136,7 @@ function withFaces(body, happening) {
   const t = String(happening || "").trim();
   const faces = visionPeopleMoodLine(visionPeopleMoodOf(body));
   if (!t) return faces;
-  if (/People in the frame/i.test(t)) return t;
+  if (/Do not add extra people/i.test(t)) return t;
   return clipText(`${t} ${faces}`, 720);
 }
 
@@ -621,7 +623,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         `status "idea" means it is not touching a crisis or concern: show a person who lives this situation considering the idea (thinking, sketching) — not installed in the streets.\n` +
         `status "applied" means it edge-touches those crises/concerns: show the invent in use addressing them.\n` +
         `givens with applied false are still visible as the unsolved local situation.\n` +
-        `peopleMood is the faces of everyone in frame: happy = relieved/glad; sad = worn/hardship; concerned = uneasy; neutral = ordinary documentary faces (quest has no local crisis). Do not mix moods.\n` +
+        `peopleMood only colors faces of people already in the scene (happy = relieved/glad; sad = worn/hardship; concerned = uneasy; neutral = ordinary). Never add people or crowds to illustrate mood.\n` +
         `Choose "edit" only if the same camera view can show the change by adding elements.\n` +
         `Choose "generate" if a different camera in the same setting is better.\n` +
         `Rules: positive description only; no negations; no other countries or stock tourist locations; ` +
