@@ -124,6 +124,17 @@ button:disabled {
   }
 }
 
+/* Clear the maximized-board restore control in the upper-right corner */
+body.hex-board-expanded.ff-accounts #ff-account {
+  right: calc(var(--page-gutter) + 2.75rem);
+}
+
+@media (max-width: 640px) {
+  body.hex-board-expanded.ff-accounts #ff-account {
+    right: 3.25rem;
+  }
+}
+
 /* Leave room so Sign in / name / Sign out does not cover topbar actions */
 body.ff-accounts .topbar,
 body.ff-accounts .topbar-game {
@@ -9430,6 +9441,10 @@ button.linkish:hover {
 
 body.hex-board-expanded {
   overflow: hidden;
+}
+
+body.hex-board-expanded.ff-accounts .hex-board-wrap.is-expanded .hex-board-status {
+  padding-right: 10rem;
 }
 
 .hex-board-pending {
