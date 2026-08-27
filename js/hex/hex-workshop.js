@@ -27,6 +27,7 @@ import {
   convergencePairKey,
   summonOneConcern,
   remainingConcernAngles,
+  concernAnglesOnBoard,
   ensureConcernRoster,
   boardHolds,
   techIdsFromBoard,
@@ -67,6 +68,11 @@ import {
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
+  listInventionPathways,
+  islandHowKey,
+  resolveIslandHow,
+  setIslandHow,
+  rekeyIslandHow,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRise } from "../sim/pressure.js";
@@ -243,20 +249,145 @@ export function createHexWorkshop(api) {
     return api.getBoard();
   }
 
-  function setBoard(b) {
-    api.setBoard(b);
+  function setBoard(b, opts = {}) {
+    const next = opts.skipRekey ? b : rekeyIslandHow(b);
+    api.setBoard(next);
     syncDerivedProse();
+    if (opts.paintHow !== false) renderPathwayHowPanel();
   }
 
   function syncDerivedProse() {
-    const prose = deriveBoardProse(board());
-    api.setDerivedProse?.(prose);
     const ids = techIdsFromBoard(board());
     if (api.reconcileStackFromBoard) {
       api.reconcileStackFromBoard(ids);
     } else {
       api.setSelectedTechIds?.(ids);
     }
+  }
+
+  function renderPathwayHowPanel() {
+    const host = document.querySelector("#hex-island-how");
+    if (!host) return;
+    const pathways = listInventionPathways(board());
+    if (!pathways.length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    const active = document.activeElement;
+    const keepKey =
+      active && active.classList?.contains("hex-island-how-text")
+        ? active.getAttribute("data-island-key")
+        : null;
+    const keepVal = keepKey && active ? active.value : null;
+    const keepSel =
+      keepKey && active
+        ? [active.selectionStart, active.selectionEnd]
+        : null;
+    host.innerHTML = pathways
+      .map((invs, i) => {
+        const key = islandHowKey(invs);
+        const resolved = resolveIslandHow(board(), invs);
+        const label =
+          invs
+            .map((t) => t.techId || t.name || t.id)
+            .filter(Boolean)
+            .slice(0, 4)
+            .join(" · ") || `Pathway ${i + 1}`;
+        const origin = invs[0]?.id || "";
+        return (
+          `<div class="hex-island-how-block">` +
+          `<label class="hex-island-how-label" for="hex-island-how-${i}">${escapeHtml(
+            label
+          )}</label>` +
+          `<div class="hex-island-how-row">` +
+          `<textarea id="hex-island-how-${i}" class="hex-island-how-text" rows="3" ` +
+          `data-island-key="${escapeHtml(key)}" data-origin-id="${escapeHtml(
+            origin
+          )}" ` +
+          `placeholder="How this pathway works as a whole…">${escapeHtml(
+            resolved.text
+          )}</textarea>` +
+          `<button type="button" class="btn btn-primary btn-sm hex-island-how-save" ` +
+          `data-island-key="${escapeHtml(key)}" disabled>Save</button>` +
+          `</div>` +
+          `</div>`
+        );
+      })
+      .join("");
+    if (keepKey && keepVal != null) {
+      const el = [...host.querySelectorAll("textarea")].find(
+        (ta) => ta.getAttribute("data-island-key") === keepKey
+      );
+      if (el) {
+        el.value = keepVal;
+        el.focus();
+        if (keepSel) {
+          try {
+            el.setSelectionRange(keepSel[0], keepSel[1]);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+    host.querySelectorAll(".hex-island-how-block").forEach((block) => {
+      const ta = block.querySelector("textarea");
+      const btn = block.querySelector(".hex-island-how-save");
+      if (!ta || !btn) return;
+      const syncDirty = () => {
+        const key = ta.getAttribute("data-island-key");
+        const invs = listInventionPathways(board()).find(
+          (p) => islandHowKey(p) === key
+        );
+        const cur = invs ? resolveIslandHow(board(), invs).text : "";
+        const dirty = String(ta.value || "").trim() !== String(cur || "").trim();
+        btn.disabled = !dirty;
+      };
+      syncDirty();
+      ta.addEventListener("focus", () => {
+        const key = ta.getAttribute("data-island-key");
+        const origin = ta.getAttribute("data-origin-id");
+        const invs = listInventionPathways(board()).find(
+          (p) => islandHowKey(p) === key
+        );
+        if (origin && invs) {
+          ensureUi()?.setHighlight?.({
+            originId: origin,
+            inventionIds: invs.map((t) => t.id),
+            givenIds: [],
+          });
+        }
+      });
+      ta.addEventListener("input", syncDirty);
+      ta.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          commitIslandHowFromTextarea(ta);
+        }
+      });
+      btn.addEventListener("click", () => commitIslandHowFromTextarea(ta));
+    });
+  }
+
+  function commitIslandHowFromTextarea(ta) {
+    if (!ta?.isConnected) return false;
+    const key = ta.getAttribute("data-island-key");
+    const invs = listInventionPathways(board()).find(
+      (p) => islandHowKey(p) === key
+    );
+    if (!invs) return false;
+    const cur = resolveIslandHow(board(), invs);
+    const nextText = String(ta.value || "").trim();
+    if (nextText === cur.text && cur.stored) return false;
+    setBoard(setIslandHow(board(), invs, ta.value, "user"), {
+      skipRekey: true,
+      paintHow: false,
+    });
+    syncPathwayScores();
+    renderPathwayHowPanel();
+    return true;
   }
 
   function ensureUi() {
@@ -603,10 +734,12 @@ export function createHexWorkshop(api) {
           challengeSpeech: pose.speech,
           challengeQuestion: pose.question,
           playerAnswer: text,
-          concernPathway: {
+          pathway: {
             anyTouch: docked,
-            techIds: cluster?.techIds || [],
-            howText: String(cluster?.howText || "").slice(0, 1600),
+            howText: resolveIslandHow(board(), cluster?.inventions || []).text.slice(
+              0,
+              1600
+            ),
             inventions: (cluster?.inventions || []).map((n) => ({
               techId: n.techId,
               howText: String(n.howText || "").slice(0, 400),
@@ -1413,7 +1546,7 @@ export function createHexWorkshop(api) {
         playerAnswer: reply.answer || null,
         answerQuality: reply.quality,
         priorLevel: t.lamp || "red",
-        inventChanged: concernInventChanged(t, inventions),
+        inventChanged: concernInventChanged(t, inventions, board),
         posedHowText: String(t.posedHowText || "").slice(0, 1600),
       });
     }
@@ -1450,6 +1583,7 @@ export function createHexWorkshop(api) {
           const data = await api.coInvent("score-pathway", "[Score pathway]", {
             pathway: {
               fingerprint: fp,
+              howText: resolveIslandHow(b, inventions).text,
               inventions: inventions.map((n) => ({
                 techId: n.techId,
                 year: n.year,
@@ -1506,7 +1640,7 @@ export function createHexWorkshop(api) {
           if (!row) continue;
           const hasAnswer = Boolean(String(t.playerAnswer || "").trim());
           const allowImprove =
-            hasAnswer || concernInventChanged(t, inventions);
+            hasAnswer || concernInventChanged(t, inventions, b);
           const prior =
             t.lamp === "yellow" || t.lamp === "green" || t.lamp === "red"
               ? t.lamp
@@ -2140,6 +2274,17 @@ export function createHexWorkshop(api) {
     const remaining = remainingConcernAngles(b);
     if (!remaining.length) return b;
 
+    const isFirstDraw = concernAnglesOnBoard(b).length === 0;
+    if (isFirstDraw && api.apEnabled?.()) {
+      const pay = api.spendFirstSummonAp?.();
+      if (pay && pay.ok === false) {
+        api.flashToast?.(pay.reason || "No AP — End Turn or Wait first.", {
+          resource: "ap",
+        });
+        return board();
+      }
+    }
+
     const pickAngle =
       remaining.length === 1
         ? remaining[0]
@@ -2194,23 +2339,26 @@ export function createHexWorkshop(api) {
       const posedTiles = spawn.inventionIds
         .map((id) => board()?.tiles?.[id])
         .filter((t) => t && t.kind === TILE_KIND.invention);
-      const prose = posedTiles.length
-        ? {
-            inventionName:
-              posedTiles
-                .map((t) => t.techId)
-                .filter(Boolean)
-                .slice(0, 3)
-                .join(" · ") || "Pathway",
-            inventionHow: spawn.howText || "",
-            inventionImpact: "",
-          }
-        : deriveBoardProse(board());
+      const howParts = [];
+      const seenHow = new Set();
+      for (const invs of listInventionPathways(board())) {
+        if (!invs.some((t) => spawn.inventionIds.includes(t.id))) continue;
+        const k = islandHowKey(invs);
+        if (seenHow.has(k)) continue;
+        seenHow.add(k);
+        const text = resolveIslandHow(board(), invs).text;
+        if (text) howParts.push(text);
+      }
+      const pathway = {
+        inventions: posedTiles.map((n) => ({
+          techId: n.techId,
+          howText: String(n.howText || "").slice(0, 800),
+          timingLevel: n.timingLevel || null,
+        })),
+        howText: howParts.join("\n\n") || spawn.howText || "",
+      };
       const hexBoard = summarizeBoardForScrutiny(board(), spawn.inventionIds);
-      const local = localPose(pickAngle, {
-        place,
-        inventionName: prose.inventionName,
-      });
+      const local = localPose(pickAngle, { place });
 
       const until = (async () => {
         let speech = local.speech;
@@ -2223,9 +2371,7 @@ export function createHexWorkshop(api) {
               {
                 challengeAngle: pickAngle,
                 hexBoard,
-                inventionName: prose.inventionName,
-                inventionHow: prose.inventionHow,
-                inventionImpact: prose.inventionImpact,
+                pathway,
               }
             );
             speech =
@@ -2413,6 +2559,7 @@ export function createHexWorkshop(api) {
     ensureUi()?.render();
     renderTray();
     updateCreatePanel();
+    renderPathwayHowPanel();
     resolveMissingTileArt();
   }
 
@@ -2522,6 +2669,15 @@ export function createHexWorkshop(api) {
     isCreateBusy,
     createBusyKind,
     afterBoardChange,
+    renderPathwayHowPanel,
+    setIslandHowText: (inventions, text, source) => {
+      setBoard(setIslandHow(board(), inventions, text, source), {
+        skipRekey: true,
+      });
+      syncPathwayScores();
+    },
+    listPathways: () => listInventionPathways(board()),
+    resolveIslandHow: (inventions) => resolveIslandHow(board(), inventions),
     syncPathwayScores,
     afterWaitPressureRise,
     exportSparkBatches: () => {

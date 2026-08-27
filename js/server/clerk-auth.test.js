@@ -188,6 +188,26 @@ describe("authenticateClerkRequest", () => {
     assert.equal(ident.signedIn, false);
     assert.equal(ident.invalidToken, true);
   });
+
+  it("accepts a minted ff_game session without Clerk verify", async () => {
+    const { mintGameSessionToken } = await import("./game-session.mjs");
+    const token = mintGameSessionToken(
+      { userId: "user_2abcDEF", sessionId: "sess_9" },
+      env
+    );
+    const ident = await authenticateClerkRequest(
+      { headers: { authorization: `Bearer ${token}` } },
+      {
+        env,
+        verify: async () => {
+          throw new Error("clerk verify must not run for ff_game");
+        },
+      }
+    );
+    assert.equal(ident.signedIn, true);
+    assert.equal(ident.userId, "user_2abcDEF");
+    assert.equal(ident.sessionId, "sess_9");
+  });
 });
 
 describe("runWithClerkIdentity", () => {

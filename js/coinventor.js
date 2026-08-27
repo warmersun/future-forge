@@ -52,6 +52,7 @@ export class CoInventor {
    * @param {(mode: string) => boolean|Promise<boolean>} [opts.beforeRequest] — return false to abort (e.g. no AP)
    * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
    * @param {(body: object) => Promise<object>} [opts.transport] — replace fetch /api/co-invent (e.g. room WS)
+   * @param {(info: object) => void} [opts.onTrace] — developer inspect: sent/received payload
    * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
    * @param {"hex"|"legacy"} [opts.surface="legacy"] — hex workshop vs essay/stack apply
    * @param {string} [opts.placeholder] — compose box placeholder
@@ -69,6 +70,7 @@ export class CoInventor {
     this.beforeRequest = opts.beforeRequest || null;
     this.afterRequest = opts.afterRequest || null;
     this.transport = opts.transport || null;
+    this.onTrace = opts.onTrace || null;
     this.showQuickActions = opts.showQuickActions !== false;
     this.surface = opts.surface === "hex" ? "hex" : "legacy";
     this.placeholder =
@@ -347,7 +349,11 @@ export class CoInventor {
         return {};
       }
     })();
-    const howOk = String(ctx.inventionHow || "").trim().length >= HOW_IT_WORKS_MIN;
+    const howOk = ctx.hexInvent
+      ? (ctx.hexBoard?.pathways || []).some(
+          (p) => String(p.howText || "").trim().length >= HOW_IT_WORKS_MIN
+        )
+      : String(ctx.inventionHow || "").trim().length >= HOW_IT_WORKS_MIN;
     this.root.querySelectorAll(".co-chip").forEach((chip) => {
       const mode = chip.dataset.mode;
       const action = QUICK_ACTIONS.find((a) => a.mode === mode);
@@ -529,6 +535,7 @@ export class CoInventor {
     this.setBusyUi(true);
     const thinkingId = this.pushThinking();
     let requestOk = false;
+    const t0 = Date.now();
 
     try {
       const ctx = this.getContext();
@@ -551,9 +558,9 @@ export class CoInventor {
               }
             : null,
           selectedTechIds: ctx.selectedTechIds,
-          inventionName: ctx.inventionName,
-          inventionHow: ctx.inventionHow,
-          inventionImpact: ctx.inventionImpact,
+          inventionName: ctx.hexInvent ? null : ctx.inventionName,
+          inventionHow: ctx.hexInvent ? null : ctx.inventionHow,
+          inventionImpact: ctx.hexInvent ? null : ctx.inventionImpact,
           storyFace: ctx.storyFace,
           writeBoth: ctx.writeBoth,
           hexInvent: Boolean(ctx.hexInvent),
@@ -577,10 +584,24 @@ export class CoInventor {
       };
 
       let data;
+      const trace = (extra = {}) => {
+        try {
+          this.onTrace?.({
+            mode,
+            sent: requestBody,
+            received: data || null,
+            ms: Date.now() - t0,
+            ...extra,
+          });
+        } catch {
+          /* inspect must not break chat */
+        }
+      };
       if (this.transport) {
         data = await this.transport(requestBody);
         this.removeThinking(thinkingId);
         if (data?.error && !data.message) {
+          trace({ ok: false, error: data.error });
           this.pushAssistant({
             message: data.message || data.error,
             proposals: emptyProposals(),
@@ -588,6 +609,7 @@ export class CoInventor {
           });
           return;
         }
+        trace({ ok: true });
       } else {
         const res = await apiFetch("/api/co-invent", {
           method: "POST",
@@ -597,6 +619,7 @@ export class CoInventor {
         data = await res.json();
         this.removeThinking(thinkingId);
         if (!res.ok && data.error) {
+          trace({ ok: false, error: data.error });
           if (data.error === "sign_in_required" && isClerkReady()) {
             openCloudSignIn();
           }
@@ -607,6 +630,7 @@ export class CoInventor {
           });
           return;
         }
+        trace({ ok: res.ok });
       }
 
       // Store plain text for conversation history
@@ -643,6 +667,21 @@ export class CoInventor {
       }
     } catch (e) {
       this.removeThinking(thinkingId);
+      const cancelled =
+        e?.name === "AbortError" || e?.code === 20;
+      try {
+        this.onTrace?.({
+          mode,
+          sent: null,
+          received: null,
+          cancelled,
+          error: cancelled ? null : String(e?.message || e),
+          ok: false,
+          ms: Date.now() - t0,
+        });
+      } catch {
+        /* inspect */
+      }
       this.pushAssistant({
         message: `Connection error: ${e.message}. Is the Future Forge server running?`,
         proposals: emptyProposals(),
@@ -846,7 +885,7 @@ export class CoInventor {
       if (p.inventionHow) {
         bits.push(
           hex
-            ? `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Use as how it works</button>`
+            ? `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Set as this pathway's how</button>`
             : `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Apply how-it-works</button>`
         );
       }

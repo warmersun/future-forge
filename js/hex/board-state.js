@@ -84,7 +84,24 @@ export function createEmptyBoard() {
      * }>}
      */
     convergences: {},
+    /** Per-island inventHow. Key = sorted invention ids. Not stored on tiles. */
+    islandHow: {},
   };
+}
+
+function cloneIslandHow(src) {
+  if (!src || typeof src !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(src)
+      .filter(([k, v]) => k && v && String(v.text || "").trim())
+      .map(([k, v]) => [
+        String(k),
+        {
+          text: String(v.text).slice(0, 8000),
+          source: v.source === "ai" ? "ai" : "user",
+        },
+      ])
+  );
 }
 
 /**
@@ -146,6 +163,7 @@ export function cloneBoard(board) {
       ])
     ),
     convergences: cloneConvergences(board.convergences),
+    islandHow: cloneIslandHow(board.islandHow),
   };
 }
 

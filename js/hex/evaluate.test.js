@@ -10,6 +10,7 @@ import {
   addTile,
   placeTile,
   liftTile,
+  discardTile,
   createEmptyBoard,
   putConvergence,
   pruneStaleConvergences,
@@ -46,6 +47,10 @@ import {
   normalizePathwayScore,
   pathwayContentFingerprint,
   listInventionPathways,
+  islandHowKey,
+  resolveIslandHow,
+  setIslandHow,
+  rekeyIslandHow,
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
@@ -872,6 +877,170 @@ describe("pathway clusters (BFS)", () => {
     assert.ok(hl.inventionIds.includes("near"));
     assert.ok(hl.inventionIds.includes("far"));
     assert.deepEqual(hl.givenIds, ["crisis-local"]);
+  });
+});
+
+describe("island inventHow", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    return res.board;
+  }
+
+  function twoAiBoard() {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 2 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({ id: "a", techId: "ai", howText: "Part A.", year: 2026 })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({ id: "b", techId: "ai", howText: "Part B.", year: 2026 })
+    );
+    return board;
+  }
+
+  it("unset defaults to concat of member howTexts; stored essay is used instead", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    const invs = [board.tiles.a, board.tiles.b];
+    const unset = resolveIslandHow(board, invs);
+    assert.equal(unset.stored, false);
+    assert.equal(unset.source, "concat");
+    assert.match(unset.text, /Part A/);
+    assert.match(unset.text, /Part B/);
+    assert.equal(unset.key, islandHowKey(invs));
+    board = setIslandHow(board, invs, "The pair radios the crest together.", "user");
+    const set = resolveIslandHow(board, invs);
+    assert.equal(set.stored, true);
+    assert.equal(set.text, "The pair radios the crest together.");
+    assert.equal(set.source, "user");
+    assert.equal(board.tiles.a.howText, "Part A.");
+    assert.equal(board.tiles.b.howText, "Part B.");
+  });
+
+  it("saving island inventHow changes the pathway fingerprint so scores re-run", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    const invs = [board.tiles.a, board.tiles.b];
+    const fpBefore = pathwayContentFingerprint(invs, board);
+    board.pathwayImpacts = {
+      [fpBefore]: {
+        inventionIds: ["a", "b"],
+        crisisDelta: { local: -1, global: 0, support: 0 },
+        concerns: {},
+        pending: false,
+      },
+    };
+    let applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways[0].needsScore, false);
+
+    board = setIslandHow(applied.board, invs, "The pair radios the crest together.", "user");
+    const fpAfter = pathwayContentFingerprint(invs, board);
+    assert.notEqual(fpAfter, fpBefore);
+    applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways[0].fingerprint, fpAfter);
+    assert.equal(applied.pathways[0].needsScore, true);
+    assert.equal(applied.board.pathwayImpacts[fpAfter].pending, true);
+    assert.equal(applied.board.pathwayImpacts[fpBefore], undefined);
+  });
+
+  it("caches the exact tile set across split and re-dock; fragments fall back to their parts", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = setIslandHow(board, [board.tiles.a, board.tiles.b], "Together.", "user");
+    const pairKey = islandHowKey([board.tiles.a, board.tiles.b]);
+
+    board = liftTile(board, "b").board;
+    board = placeOk(board, "b", local.q + 2, local.r);
+    board = rekeyIslandHow(board);
+    const aSplit = resolveIslandHow(board, [board.tiles.a]);
+    const bSplit = resolveIslandHow(board, [board.tiles.b]);
+    assert.equal(aSplit.stored, false);
+    assert.equal(aSplit.text, "Part A.");
+    assert.equal(bSplit.stored, false);
+    assert.equal(bSplit.text, "Part B.");
+    assert.equal(board.islandHow[pairKey]?.text, "Together.");
+
+    board = liftTile(board, "a").board;
+    board = placeOk(board, "a", local.q - 3, local.r);
+    board = rekeyIslandHow(board);
+    assert.equal(resolveIslandHow(board, [board.tiles.a]).text, "Part A.");
+    assert.equal(board.islandHow[pairKey]?.text, "Together.");
+
+    board = liftTile(board, "b").board;
+    board = placeOk(board, "b", local.q - 4, local.r);
+    board = rekeyIslandHow(board);
+    const restored = resolveIslandHow(board, [board.tiles.a, board.tiles.b]);
+    assert.equal(restored.text, "Together.");
+    assert.equal(board.tiles.a.howText, "Part A.");
+    assert.equal(board.tiles.b.howText, "Part B.");
+  });
+
+  it("docking a second tile drops the solo essay; combined defaults to concat of parts", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = setIslandHow(board, [board.tiles.a], "Solo A.", "user");
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = rekeyIslandHow(board);
+    assert.equal(board.islandHow[islandHowKey([board.tiles.a])], undefined);
+    const merged = resolveIslandHow(board, [board.tiles.a, board.tiles.b]);
+    assert.equal(merged.stored, false);
+    assert.match(merged.text, /Part A/);
+    assert.match(merged.text, /Part B/);
+    assert.equal(merged.text.includes("Solo A."), false);
+
+    board = liftTile(board, "b").board;
+    board = placeOk(board, "b", local.q + 2, local.r);
+    board = rekeyIslandHow(board);
+    assert.equal(resolveIslandHow(board, [board.tiles.a]).text, "Part A.");
+    assert.equal(resolveIslandHow(board, [board.tiles.b]).text, "Part B.");
+  });
+
+  it("writing a pair essay drops member keys; first-time merge defaults to parts not stored fragments", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q + 2, local.r);
+    board = setIslandHow(board, [board.tiles.a], "Island A.", "user");
+    board = setIslandHow(board, [board.tiles.b], "Island B.", "user");
+    board = liftTile(board, "b").board;
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = rekeyIslandHow(board);
+    const merged = resolveIslandHow(board, [board.tiles.a, board.tiles.b]);
+    assert.equal(merged.stored, false);
+    assert.match(merged.text, /Part A/);
+    assert.match(merged.text, /Part B/);
+    assert.equal(merged.text.includes("Island A."), false);
+    assert.equal(merged.text.includes("Island B."), false);
+    assert.equal(board.islandHow[islandHowKey([board.tiles.a])], undefined);
+    assert.equal(board.islandHow[islandHowKey([board.tiles.b])], undefined);
+
+    const pairKey = islandHowKey([board.tiles.a, board.tiles.b]);
+    board.islandHow = {
+      ...board.islandHow,
+      [islandHowKey([board.tiles.a])]: { text: "Solo leftover.", source: "user" },
+    };
+    board = setIslandHow(board, [board.tiles.a, board.tiles.b], "Together.", "user");
+    assert.equal(board.islandHow[islandHowKey([board.tiles.a])], undefined);
+    assert.equal(board.islandHow[pairKey]?.text, "Together.");
+
+    const tossed = discardTile(board, "b");
+    assert.equal(tossed.ok, true);
+    board = rekeyIslandHow(tossed.board);
+    assert.equal(board.islandHow[pairKey], undefined);
+    assert.equal(board.islandHow[islandHowKey([{ id: "b" }])], undefined);
+    assert.equal(resolveIslandHow(board, [board.tiles.a]).text, "Part A.");
   });
 });
 

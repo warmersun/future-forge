@@ -78,7 +78,7 @@ function missionSlice(context) {
 }
 
 export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future Forge.
-Judge the combination (techId + howText + timing — no names) for this place and year.
+There is no invention name. pathway.inventions[] (techId + howText + timing) are the parts. pathway.howText is the island inventHow if the learner wrote one — not a concat of parts. Judge the combination as ONE invent for this place and year.
 crisisDelta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
@@ -120,7 +120,7 @@ Return JSON only:
 
 export const POSE_CHALLENGE_SYSTEM = `You are a hostile critic in Future Forge (local inventing practice).
 Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethicist (hard tradeoffs), stakeholder (funding/permits/public), or nature (physical/ecological limits).
-Attack THIS invention in THIS place with 2–4 vivid sentences. End with ONE sharp question.
+There is no invention name. Attack THIS pathway in THIS place: pathway.inventions[] (techId + howText) are the parts; pathway.howText is the island inventHow if written. Treat them as ONE invent. A downstream tile can make an upstream claim honest. 2–4 vivid sentences. End with ONE sharp question.
 Stay local and specific. No UN resolutions. No tabletop jargon.
 ${GROUNDING_LINE}
 Return JSON only:
@@ -135,7 +135,7 @@ Return JSON only:
 
 export const JUDGE_CHALLENGE_SYSTEM = `You judge the learner's answer to a challenge in Future Forge.
 verdict: pass | partial | fail. Concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail.
-If concernPathway is present, read the reachable invention howText as the docked invent and judge the written answer together with that pathway. anyTouch false means nothing is docked — still score hit/glance/miss, but that score does not ease the tile light.
+There is no invention name. If pathway is present, inventions[] + howText are ONE docked invent island. Judge the written answer together with that whole pathway. pathway.anyTouch false means nothing is docked — still score the writing, but that score does not ease the tile light.
 ${GROUNDING_LINE}
 Return JSON only:
 {"verdict":"partial","message":"feedback","lesson":"one teaching sentence"}`;
@@ -147,17 +147,45 @@ Return JSON only:
 {"additive":true,"reason":"one sentence"}`;
 
 export const COACH_CHALLENGE_SYSTEM = `You coach a learner stuck on a challenge in Future Forge.
-Explain what this angle cares about. Give 2–4 concrete hint bullets for THIS invention. Do not write a full ready-to-submit answer unless they asked to draft.
+Explain what this angle cares about. Give 2–4 concrete hint bullets for THIS pathway (inventions[] as one invent). Do not write a full ready-to-submit answer unless they asked to draft.
 ${GROUNDING_LINE}
 Return JSON only:
 {"message":"coaching text"}`;
 
 export const DRAFT_CHALLENGE_SYSTEM = `You write a solid draft answer the learner can edit and submit.
-Be specific to their invention: actors, costs or physical limits, anti-defection or affordability as relevant.
+Be specific to their pathway (no invention name; inventions[] + howText as one invent): actors, costs or physical limits, anti-defection or affordability as relevant.
 Put the full draft in draftAnswer and a short coaching note in message.
 ${GROUNDING_LINE}
 Return JSON only:
 {"message":"short coaching note","draftAnswer":"full draft"}`;
+
+function pathwayInventions(src) {
+  const list = Array.isArray(src?.inventions) ? src.inventions : [];
+  return list.slice(0, 12).map((n) => ({
+    techId: n?.techId || null,
+    howText: clip(n?.howText, 800),
+    timingLevel: n?.timingLevel || null,
+  }));
+}
+
+/** Island inventHow if stored — never a concat of member tile howTexts. */
+function islandHowText(src) {
+  return clip(String(src?.howText || "").trim(), 1600);
+}
+
+/** Shared island shape: inventions[] + stored inventHow. No invention name. */
+function pathwaySlice(context) {
+  const src = context?.pathway || context?.concernPathway || {};
+  const inventions = pathwayInventions(src);
+  const howText = islandHowText(src);
+  const out = { inventions, howText };
+  const touch =
+    context?.pathway && Object.prototype.hasOwnProperty.call(context.pathway, "anyTouch")
+      ? context.pathway.anyTouch
+      : context?.concernPathway?.anyTouch;
+  if (touch != null) out.anyTouch = Boolean(touch);
+  return out;
+}
 
 function buildScorePathwayPayload(context) {
   const invs = Array.isArray(context?.pathway?.inventions)
@@ -201,6 +229,7 @@ function buildScorePathwayPayload(context) {
           n?.feasibilityPct != null ? Number(n.feasibilityPct) : null,
         year: n?.year || null,
       })),
+      howText: islandHowText(context?.pathway),
     },
   };
 }
@@ -246,9 +275,7 @@ function buildPosePayload(context) {
     challengeAngle: context?.challengeAngle || null,
     place: context?.place || null,
     year: context?.year || null,
-    inventionName: clip(context?.inventionName, 80),
-    inventionHow: clip(context?.inventionHow, 1200),
-    inventionImpact: clip(context?.inventionImpact, 800),
+    pathway: pathwaySlice(context),
     stack: slimStack(context),
     grounding: groundingOf(context),
     mission,
@@ -263,25 +290,17 @@ function buildJudgePayload(mode, context) {
     challengeSpeech: clip(context?.challengeSpeech, 800),
     challengeQuestion: clip(context?.challengeQuestion, 400),
     playerAnswer: clip(context?.playerAnswer, 2000),
-    concernPathway: context?.concernPathway
-      ? {
-          anyTouch: Boolean(context.concernPathway.anyTouch),
-          techIds: (context.concernPathway.techIds || []).slice(0, 12),
-          howText: clip(context.concernPathway.howText, 1600),
-          inventions: (context.concernPathway.inventions || [])
-            .slice(0, 12)
-            .map((n) => ({
-              techId: n?.techId || null,
-              howText: clip(n?.howText, 400),
-              timingLevel: n?.timingLevel || null,
-            })),
-        }
-      : undefined,
+    pathway: pathwaySlice(context),
     place: context?.place || null,
     year: context?.year || null,
-    inventionName: clip(context?.inventionName, 80),
-    inventionHow: clip(context?.inventionHow, 1200),
-    inventionImpact: clip(context?.inventionImpact, 800),
+    inventionHow:
+      mode === "judge-challenge"
+        ? undefined
+        : clip(context?.inventionHow, 1200),
+    inventionImpact:
+      mode === "judge-challenge"
+        ? undefined
+        : clip(context?.inventionImpact, 800),
     stack: slimStack(context),
     grounding: groundingOf(context),
     mission,

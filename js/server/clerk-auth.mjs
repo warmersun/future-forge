@@ -8,6 +8,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { normalizeClerkUserId } from "./clerk-id.mjs";
 import { CLOUD_PORTAL_ORIGIN } from "../cloud/portal-origin.js";
+import { isGameSessionToken, verifyGameSessionToken } from "./game-session.mjs";
 
 export { normalizeClerkUserId };
 
@@ -157,6 +158,37 @@ export async function authenticateClerkRequest(req, opts = {}) {
       sessionId: null,
       invalidToken: true,
     };
+  }
+
+  if (isGameSessionToken(token)) {
+    try {
+      const payload = verifyGameSessionToken(token, env);
+      const userId = normalizeClerkUserId(payload?.sub);
+      const sessionId = normalizeClerkUserId(payload?.sid);
+      if (!userId) {
+        return {
+          enabled: true,
+          signedIn: false,
+          userId: null,
+          sessionId: null,
+          invalidToken: true,
+        };
+      }
+      return {
+        enabled: true,
+        signedIn: true,
+        userId,
+        sessionId,
+      };
+    } catch {
+      return {
+        enabled: true,
+        signedIn: false,
+        userId: null,
+        sessionId: null,
+        invalidToken: true,
+      };
+    }
   }
 
   try {

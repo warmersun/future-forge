@@ -28,6 +28,15 @@ import {
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
+import {
+  pushAiTrace,
+  listAiTrace,
+  selectAiTrace,
+  selectedAiTrace,
+  formatAiTraceJson,
+  aiTraceBadgeLabel,
+  subscribeAiTrace,
+} from "./ai-trace.js";
 import { getClientSessionId } from "./client-session.js";
 import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
@@ -40,6 +49,8 @@ import {
   refreshAccountChip,
   setCloudProfileCache,
   formatClerkLoginLine,
+  peekClerkSessionClaims,
+  invalidateClerkSession,
 } from "./auth.js";
 import {
   IdeaDeck,
@@ -69,6 +80,9 @@ import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
   hexPathwayPanel,
+  listInventionPathways,
+  resolveIslandHow,
+  setIslandHow,
 } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
@@ -1165,10 +1179,11 @@ function ensureHexWorkshop() {
       if (!apEnabled()) return { ok: true };
       return spendContributionAp("judge-challenge");
     },
+    spendFirstSummonAp: () => spendFirstSummonAp(),
     apEnabled: () => apEnabled(),
     budgetWillEnabled: () => budgetWillEnabled(),
     spendRdMint: () => spendRdMint(),
-    flashToast: (msg) => flashToast(msg),
+    flashToast: (msg, opts) => flashToast(msg, opts),
     canEditBoard: () => mpHexEditsAllowed(),
     canSummonChallengers: () => {
       const b = mpBridge();
@@ -3285,7 +3300,11 @@ function scheduleCloudRunState() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-      .then((res) => {
+      .then(async (res) => {
+        // #region agent log
+        const errBody = res.ok ? null : await res.clone().json().catch(() => ({}));
+        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'D',location:'game.js:scheduleCloudRunState:put',message:'run-state PUT result',data:{status:res.status,ok:res.ok,bytes:JSON.stringify(body).length,questId:body.questId||null,error:errBody&&errBody.error||null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (res.ok) {
           continueSaveWarned = false;
           return;
@@ -3299,7 +3318,10 @@ function scheduleCloudRunState() {
           );
         }
       })
-      .catch(() => {
+      .catch((e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'D',location:'game.js:scheduleCloudRunState:catch',message:'run-state PUT threw',data:{err:String(e&&e.message||e),bytes:JSON.stringify(body).length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (!continueSaveWarned) {
           continueSaveWarned = true;
           flashToast("Could not save Continue to Cloud.");
@@ -3342,7 +3364,11 @@ function applyRestoredPlay(play) {
 
 async function maybeOfferContinue() {
   const btn = $("#btn-cloud-continue");
-  if (!btn || !isClerkSignedIn()) {
+  const signedIn = isClerkSignedIn();
+  // #region agent log
+  fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'A',location:'game.js:maybeOfferContinue:entry',message:'maybeOfferContinue entry',data:{signedIn,hasBtn:Boolean(btn),screen:state.screen,claims:peekClerkSessionClaims()},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  if (!btn || !signedIn) {
     if (btn) btn.hidden = true;
     return;
   }
@@ -3352,7 +3378,19 @@ async function maybeOfferContinue() {
     const st = data.state;
     state.cloudContinue = st && st.questId ? st : null;
     btn.hidden = !state.cloudContinue;
-  } catch {
+    // #region agent log
+    const rect = btn.getBoundingClientRect();
+    const title = document.getElementById("screen-title");
+    const trect = title ? title.getBoundingClientRect() : null;
+    fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'B',location:'game.js:maybeOfferContinue:afterGet',message:'run-state GET and Continue visibility',data:{status:res.status,ok:res.ok,hasState:Boolean(st),questId:st&&st.questId?String(st.questId):null,error:data.error||null,btnHidden:btn.hidden,claims:peekClerkSessionClaims(),rect:{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height},clipBottom:Boolean(trect)&&rect.bottom>trect.bottom+1,clipRight:Boolean(trect)&&rect.right>trect.right+1,profileHidden:Boolean($("#btn-cloud-profile")?.hidden),logHidden:Boolean($("#btn-quest-log")?.hidden)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (res.status === 401 && data.error === "invalid_token") {
+      invalidateClerkSession();
+    }
+  } catch (e) {
+    // #region agent log
+    fetch('http://127.0.0.1:7253/ingest/8efc81da-0202-467c-bc72-ac686e5a23d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'01bf1c'},body:JSON.stringify({sessionId:'01bf1c',runId:'post-fix',hypothesisId:'B',location:'game.js:maybeOfferContinue:catch',message:'run-state GET threw',data:{err:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (btn) btn.hidden = true;
   }
 }
@@ -3541,13 +3579,20 @@ function newsForYear(year) {
 function summarizeHexBoardForAi(board) {
   if (!board?.tiles) return null;
   const tiles = Object.values(board.tiles);
+  const pathways = listInventionPathways(board).map((invs) => {
+    const resolved = resolveIslandHow(board, invs);
+    return {
+      inventionIds: invs.map((t) => t.id),
+      howText: resolved.text,
+      howSource: resolved.source,
+    };
+  });
   return {
     concernsSummoned: Boolean(board.concernsSummoned),
     inventions: tiles
       .filter((t) => t.kind === "invention")
       .map((t) => ({
         id: t.id,
-        name: t.name,
         techId: t.techId,
         polarity: t.polarity,
         year: t.year,
@@ -3569,6 +3614,7 @@ function summarizeHexBoardForAi(board) {
         q: t.q,
         r: t.r,
       })),
+    pathways,
   };
 }
 
@@ -8270,17 +8316,21 @@ function updateChallengeButton() {
 
   const reason = challengeBlockReason();
   const ready = !reason && inventReadyForChallenge();
-  btn.disabled = !ready || isInventActionBusy();
+  const noAp = apEnabled() && getSpendableAp() < 1;
+  const apBlock = noAp ? "No AP — End turn or Wait first." : "";
+  btn.disabled = !ready || isInventActionBusy() || noAp;
   btn.textContent = "Answer the hard questions →";
   btn.title =
     reason ||
+    apBlock ||
     "Summon challengers one at a time — Mother Nature, Moloch, Ethicist, Stakeholder";
   if (hint) {
     hint.textContent =
-      reason || "Ready to be challenged — face each hard question, one by one.";
-    hint.className = reason
-      ? "challenge-ready-hint blocked"
-      : "challenge-ready-hint ready";
+      reason ||
+      apBlock ||
+      "Ready to be challenged — face each hard question, one by one.";
+    hint.className =
+      reason || noAp ? "challenge-ready-hint blocked" : "challenge-ready-hint ready";
   }
 }
 
@@ -9986,6 +10036,11 @@ function leanCoInventContext(mode, extra = {}) {
   };
 }
 
+function recordCoInventTrace(info) {
+  if (!state.developer) return;
+  pushAiTrace(info);
+}
+
 async function apiCoInvent(mode, userContent, extra = {}) {
   const { signal, ...rest } = extra;
   const context = LEAN_EVAL_MODES.has(mode)
@@ -10014,18 +10069,49 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         tutorMode: isLearningTutorSessionActive(),
         ...rest,
       };
-  const res = await apiFetch("/api/co-invent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const sent = {
+    mode,
+    clientSessionId: getClientSessionId(),
+    messages: [{ role: "user", content: userContent }],
+    context,
+  };
+  const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const elapsed = () => {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    return now - t0;
+  };
+  try {
+    const res = await apiFetch("/api/co-invent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sent),
+      signal,
+    });
+    const data = await res.json();
+    recordCoInventTrace({
       mode,
-      clientSessionId: getClientSessionId(),
-      messages: [{ role: "user", content: userContent }],
-      context,
-    }),
-    signal,
-  });
-  return res.json();
+      sent,
+      received: data,
+      ok: res.ok,
+      error: res.ok ? null : String(data?.error || `HTTP ${res.status}`),
+      ms: elapsed(),
+    });
+    return data;
+  } catch (e) {
+    const cancelled = Boolean(
+      e && (e.name === "AbortError" || e.code === 20 || signal?.aborted)
+    );
+    recordCoInventTrace({
+      mode,
+      sent,
+      received: null,
+      cancelled,
+      error: cancelled ? null : String(e?.message || e),
+      ok: false,
+      ms: elapsed(),
+    });
+    throw e;
+  }
 }
 
 /**
@@ -16232,7 +16318,78 @@ function updateVision(opts = {}) {
   });
 }
 
+function syncDeveloperAiTraceTab() {
+  const tab = $("#tab-aitrace");
+  if (tab) tab.hidden = !state.developer;
+  if (!state.developer && state.sideTab === "aitrace") setSideTab("vision");
+}
+
+function renderAiTrace() {
+  const list = $("#aitrace-list");
+  const detail = $("#aitrace-detail");
+  const badge = $("#aitrace-badge");
+  const rows = listAiTrace();
+  const selected = selectedAiTrace();
+  if (badge) {
+    if (!state.developer || !rows.length) {
+      badge.hidden = true;
+      badge.textContent = "";
+    } else {
+      badge.hidden = false;
+      badge.textContent = aiTraceBadgeLabel(rows[0]);
+    }
+  }
+  if (list) {
+    if (!rows.length) {
+      list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No calls yet.</p>`;
+    } else {
+      list.innerHTML = rows
+        .map((e) => {
+          const when = new Date(e.ts).toLocaleTimeString();
+          const st = e.cancelled
+            ? "cancelled"
+            : e.ok
+              ? `${e.ms}ms${e.source ? ` · ${escapeHtml(e.source)}` : ""}`
+              : "error";
+          return `<button type="button" class="ai-trace-item${
+            selected?.id === e.id ? " is-active" : ""
+          }" data-ai-trace-id="${escapeHtml(e.id)}" role="listitem">
+            <strong>${escapeHtml(e.mode)}</strong>
+            <span class="muted">${escapeHtml(when)} · ${escapeHtml(st)}</span>
+          </button>`;
+        })
+        .join("");
+    }
+  }
+  if (detail) {
+    if (!selected) {
+      detail.innerHTML = `<p class="muted sm">No calls yet — place an idea or summon a challenger.</p>`;
+    } else {
+      const err = selected.error
+        ? `<p class="muted sm">Error: ${escapeHtml(selected.error)}</p>`
+        : "";
+      detail.innerHTML =
+        err +
+        `<div class="ai-trace-block">
+          <div class="ai-trace-block-head">Sent<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
+          <pre class="ai-trace-pre" id="aitrace-sent">${escapeHtml(
+            formatAiTraceJson(selected.sent)
+          )}</pre>
+        </div>
+        <div class="ai-trace-block">
+          <div class="ai-trace-block-head">Returned<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="returned">Copy</button></div>
+          <pre class="ai-trace-pre" id="aitrace-returned">${escapeHtml(
+            formatAiTraceJson(selected.received)
+          )}</pre>
+        </div>`;
+    }
+  }
+}
+
 function setSideTab(tab) {
+  const allowed = new Set(["vision", "coinventor", "aitrace"]);
+  if (tab === "aitrace" && !state.developer) tab = "vision";
+  if (!allowed.has(tab)) tab = "vision";
   state.sideTab = tab;
   // Only invent-screen tabs use data-tab (not data-ch-tab)
   $$(".side-tab[data-tab]").forEach((btn) => {
@@ -16242,8 +16399,10 @@ function setSideTab(tab) {
   });
   const vision = $("#side-vision");
   const co = $("#side-coinventor");
+  const trace = $("#side-aitrace");
   if (vision) vision.hidden = tab !== "vision";
   if (co) co.hidden = tab !== "coinventor";
+  if (trace) trace.hidden = tab !== "aitrace";
   if (tab === "vision") {
     requestAnimationFrame(() => {
       ensureVision();
@@ -16252,6 +16411,7 @@ function setSideTab(tab) {
     });
   }
   if (tab === "coinventor") ensureCoInventor();
+  if (tab === "aitrace") renderAiTrace();
 }
 
 function setChallengeSideTab(tab) {
@@ -16349,9 +16509,9 @@ function ensureCoInventor() {
             }
           : null,
         selectedTechIds: [...state.selectedTechIds],
-        inventionName: state.inventionName,
-        inventionHow: state.inventionHow,
-        inventionImpact: state.inventionImpact,
+        inventionName: isHexInventUi() ? null : state.inventionName,
+        inventionHow: isHexInventUi() ? null : state.inventionHow,
+        inventionImpact: isHexInventUi() ? null : state.inventionImpact,
         storyFace: state.storyFace,
         hexInvent: state.screen === "workshop" && isHexInventUi(),
         focusTechId: focusedTechId,
@@ -16377,6 +16537,17 @@ function ensureCoInventor() {
       };
     },
     applyProposals: applyCoInventorProposals,
+    onTrace: (info) => {
+      recordCoInventTrace({
+        mode: info?.mode,
+        sent: info?.sent,
+        received: info?.received,
+        error: info?.error,
+        cancelled: info?.cancelled,
+        ok: info?.ok,
+        ms: info?.ms,
+      });
+    },
     onHistoryChange: () => scheduleCloudRunState(),
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
@@ -16473,24 +16644,29 @@ function applyHexCoInventorProposals(proposals) {
   }
 
   if (proposals.inventionHow) {
+    const ws = ensureHexWorkshop();
+    const pathways = listInventionPathways(state.hexBoard);
     const hintId = proposals.howTechId || (proposals.addTechIds || [])[0] || null;
     const techId = focusedTechId || hintId;
-    if (!techId || !techById(techId)) {
-      flashToast("Pick an emTech first.");
+    let invs =
+      (techId &&
+        pathways.find((p) => p.some((t) => t.techId === techId))) ||
+      null;
+    if (!invs && pathways.length) {
+      invs = pathways.slice().sort((a, b) => b.length - a.length)[0];
+    }
+    if (!invs?.length) {
+      flashToast("Place an idea on the board first.");
     } else {
-      if (techId !== focusedTechId) focusTech(techId);
-      const howEl = $("#hex-how-text");
-      if (howEl) {
-        howEl.value = proposals.inventionHow;
-        filledHow = true;
-        changed = true;
-      }
+      ws.setIslandHowText?.(invs, proposals.inventionHow, "ai");
+      filledHow = true;
+      changed = true;
     }
   }
 
   if (changed) {
     if (filledHow) {
-      flashToast("Draft in How it works — Mint tile when you're ready.");
+      flashToast("Saved as this pathway's how — the whole, not the parts.");
     } else if (focusedTechIds.length === 1) {
       const name = techById(focusedTechIds[0])?.name || "this emTech";
       flashToast(`Invent with ${name} — Ask for ideas or write how it works.`);
@@ -16850,6 +17026,61 @@ function contribFaceForField(field) {
   if (field === "inventionImpact") return "life";
   if (field === "inventionHow") return "how";
   return undefined;
+}
+
+/**
+ * Spend 1 AP for the first hex challenger draw (before pose-challenge).
+ * Rooms/hotseat use pay_ap so invent stays on the board (no enter_challenge screen).
+ * Solo uses enter_challenge as the existing AP spend; caller restores turnPhase act.
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+function spendFirstSummonAp() {
+  if (!apEnabled()) return { ok: true };
+  const apNow = getSpendableAp();
+  if (apNow < 1) {
+    return { ok: false, reason: "No AP — End Turn or Wait first." };
+  }
+  if (roomBridge.isRoom()) {
+    try {
+      roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
+      state.ap = Math.max(0, apNow - 1);
+      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+      renderHud();
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: "Could not spend AP." };
+    }
+  }
+  if (hotseatBridge.isHotseat()) {
+    const r = hotseatBridge.applyActiveAction?.({
+      type: "pay_ap",
+      payload: { amount: 1 },
+    });
+    if (!r?.ok) {
+      return {
+        ok: false,
+        reason:
+          r?.error === "no_ap"
+            ? "No AP — End Turn or Wait first."
+            : mpFriendlyError(r?.error) || "Cannot summon concerns",
+      };
+    }
+    hotseatBridge.hydrateSoloState?.(state, { global: state.global });
+    renderHud();
+    return { ok: true };
+  }
+  const r = dispatchSim("enter_challenge");
+  if (!r.ok) {
+    return {
+      ok: false,
+      reason:
+        r.error === "no_ap"
+          ? "No AP — End Turn or Wait first."
+          : r.error || "Cannot summon concerns",
+    };
+  }
+  renderHud();
+  return { ok: true };
 }
 
 /**
@@ -19329,26 +19560,13 @@ function bind() {
       return;
     }
 
-    // Spend AP only on the first challenger draw
-    if (
-      isFirstDraw &&
-      apEnabled() &&
-      !roomBridge.isRoom() &&
-      !hotseatBridge.isHotseat()
-    ) {
-      const r = dispatchSim("enter_challenge");
-      if (!r.ok) {
-        if (r.error === "no_ap")
-          flashToast("No AP — End Turn or Wait first.", { resource: "ap" });
-        else flashToast(r.error || "Cannot summon concerns");
-        return;
-      }
-      renderHud();
-    }
+    const onBoardBefore = concernAnglesOnBoard(state.hexBoard).length;
     try {
       await ensureHexWorkshop().summonNextChallenger();
-      state.challengePassed = true;
-      state.turnPhase = "act";
+      if (concernAnglesOnBoard(state.hexBoard).length > onBoardBefore) {
+        state.challengePassed = true;
+        state.turnPhase = "act";
+      }
       renderWorkshop();
       updateChallengeButton();
     } catch (e) {
@@ -19526,6 +19744,30 @@ function bind() {
   $$(".side-tab[data-tab]").forEach((btn) =>
     btn.addEventListener("click", () => setSideTab(btn.dataset.tab))
   );
+  $("#aitrace-list")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-ai-trace-id]");
+    if (!btn) return;
+    selectAiTrace(btn.getAttribute("data-ai-trace-id"));
+    renderAiTrace();
+  });
+  $("#aitrace-detail")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-ai-trace-copy]");
+    if (!btn) return;
+    const which = btn.getAttribute("data-ai-trace-copy");
+    const selected = selectedAiTrace();
+    const payload =
+      which === "sent" ? selected?.sent : selected?.received;
+    try {
+      await navigator.clipboard.writeText(formatAiTraceJson(payload));
+      flashToast("Copied.");
+    } catch {
+      flashToast("Could not copy.");
+    }
+  });
+  subscribeAiTrace(() => {
+    if (!state.developer) return;
+    renderAiTrace();
+  });
   $$(".side-tab[data-ch-tab]").forEach((btn) =>
     btn.addEventListener("click", () => setChallengeSideTab(btn.dataset.chTab))
   );
@@ -19714,6 +19956,7 @@ async function refreshDeveloperModeFromHealth() {
     const next = Boolean(data?.developer);
     if (next === state.developer) return;
     state.developer = next;
+    syncDeveloperAiTraceTab();
     if (state.screen === "quest-catalog") renderQuestCatalog();
     if (_waitConfirmCtx) syncWaitTrendCharts();
   } catch {
@@ -19725,6 +19968,7 @@ export function init() {
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();
+  syncDeveloperAiTraceTab();
   initTechDrawers();
   try {
     ensureHexWorkshop().wireDom();

@@ -87,6 +87,7 @@ describe("buildFastPayload", () => {
   it("score-pathway omits catalog, conversation, and invent drafts", () => {
     const p = buildFastPayload("score-pathway", {
       pathway: {
+        howText: "The pair radios the crest together.",
         inventions: [
           {
             id: "secret-id",
@@ -132,6 +133,9 @@ describe("buildFastPayload", () => {
     assert.equal(p.pathway.inventions[0].name, undefined);
     assert.equal(p.pathway.inventions[0].techId, "ai");
     assert.equal(p.concerns[0].challengeSpeech, "Freeriders eat the pilot.");
+    assert.equal(p.pathway.howText, "The pair radios the crest together.");
+    assert.match(p.pathway.inventions[0].howText, /Sensors alert/);
+    assert.equal(p.pathway.inventions[0].techId, "ai");
     assert.equal(p.concerns[0].challengeQuestion, "Who defects?");
     assert.equal(p.concerns[0].analysis, undefined);
     assert.ok(p.concerns[0].playerAnswer.length <= 2000);
@@ -240,7 +244,7 @@ describe("buildFastPayload", () => {
   it("pose payload has no proposals key", () => {
     const p = buildFastPayload("pose-challenge", {
       challengeAngle: "moloch",
-      inventionHow: "A shared meter.",
+      pathway: { howText: "A shared meter.", inventions: [] },
       place: "Portside",
       year: 2026,
       selectedTechIds: ["ai"],
@@ -248,7 +252,61 @@ describe("buildFastPayload", () => {
     });
     assert.equal(p.challengeAngle, "moloch");
     assert.equal(p.proposals, undefined);
-    assert.ok(p.inventionHow);
+    assert.equal(p.inventionName, undefined);
+    assert.equal(p.pathway.howText, "A shared meter.");
+  });
+
+  it("pose and judge send pathway inventions, not an invention name", () => {
+    const ctx = {
+      challengeAngle: "moloch",
+      inventionName: "SecretName",
+      inventionHow: "should not be the only how",
+      pathway: {
+        howText: "The pair radios the crest together.",
+        inventions: [
+          { techId: "ai", howText: "Sensors on the quay.", timingLevel: "green" },
+          { techId: "iot", howText: "Mesh radios the crest.", timingLevel: "yellow" },
+        ],
+      },
+      concernPathway: {
+        anyTouch: true,
+        inventions: [
+          { techId: "ai", howText: "Sensors on the quay.", timingLevel: "green" },
+        ],
+      },
+      playerAnswer: "Bonded escrow after proof.",
+    };
+    const pose = buildFastPayload("pose-challenge", ctx);
+    assert.equal(pose.inventionName, undefined);
+    assert.equal(pose.inventionHow, undefined);
+    assert.equal(pose.pathway.inventions.length, 2);
+    assert.equal(pose.pathway.howText, "The pair radios the crest together.");
+    assert.match(pose.pathway.inventions[0].howText, /Sensors on the quay/);
+    assert.match(pose.pathway.inventions[1].howText, /Mesh radios/);
+
+    const judge = buildFastPayload("judge-challenge", ctx);
+    assert.equal(judge.inventionName, undefined);
+    assert.equal(judge.inventionHow, undefined);
+    assert.equal(judge.pathway.anyTouch, true);
+    assert.equal(judge.pathway.inventions[0].techId, "ai");
+    assert.ok(!JSON.stringify(pose).includes("SecretName"));
+    assert.ok(!JSON.stringify(judge).includes("SecretName"));
+  });
+
+  it("unset island how stays empty; member tile howTexts are not joined", () => {
+    const p = buildFastPayload("score-pathway", {
+      pathway: {
+        inventions: [
+          { techId: "ai", howText: "Part A.", timingLevel: "green" },
+          { techId: "iot", howText: "Part B.", timingLevel: "yellow" },
+        ],
+      },
+      year: 2026,
+      place: "Portside",
+    });
+    assert.equal(p.pathway.howText, "");
+    assert.equal(p.pathway.inventions[0].howText, "Part A.");
+    assert.equal(p.pathway.inventions[1].howText, "Part B.");
   });
 });
 

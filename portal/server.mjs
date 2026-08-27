@@ -77,6 +77,7 @@ import {
   fetchClerkLoginSummary,
 } from "../js/server/clerk-auth.mjs";
 import { deviceAuth } from "../js/server/device-auth.mjs";
+import { mintGameSessionToken } from "../js/server/game-session.mjs";
 import {
   allowGameDeviceOrigin,
   portalPublicOrigin,
@@ -546,7 +547,7 @@ const GROUNDING_HINT =
 
 /** Hex workshop: apply buttons focus emTech / fill mint-box, not essay/stack. */
 const HEX_INVENT_HINT =
-  " Hex invent: the learner mints invention tiles on a hex board. proposals.addTechIds means consider these emTech categories (they focus the picker — not add to a stack). proposals.inventionHow is a mint-box draft for ONE focused tech; the learner still hits Mint tile. Leave inventionName and inventionImpact empty/null. Do not tell them to Apply name or everyday life.";
+  " Hex invent: the learner mints invention tiles on a hex board. There is no inventionName. hexBoard.pathways[] is each connected island as ONE invent (howText = that island's inventHow). Geometry (which tiles touch which crisis/concern hexes) says which pathway addresses which given — there is no board-wide how. proposals.addTechIds focus the emTech picker. proposals.inventionHow SETS the stored inventHow for one pathway (highlighted / focused island). Leave inventionName and inventionImpact empty/null.";
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
@@ -1836,7 +1837,7 @@ function buildUserPayload({ messages, context, mode }) {
     "judge-contribution":
       "Multiplayer contribution check. Context has field, beforeText, afterText (and optional full invent). Decide if afterText is ADDITIVE vs DESTRUCTIVE relative to beforeText. Additive keeps original actors/mechanisms/intent and adds detail; destructive rewrites, clears, or strips core meaning. Return JSON with top-level additive (boolean) and reason (one sentence). message may echo the reason. proposals empty.",
     "pose-challenge":
-      "Speak ONLY as context.challengeAngle (moloch|ethicist|stakeholder|nature). Attack this invent in 2–4 sentences; one question. Return angle, angleLabel, challengeSpeech, challengeQuestion. Keep speech under ~120 words." +
+      "Speak ONLY as context.challengeAngle (moloch|ethicist|stakeholder|nature). There is no invention name. Attack THIS pathway (pathway.inventions + pathway.howText as one invent) in 2–4 sentences; one question. Return angle, angleLabel, challengeSpeech, challengeQuestion. Keep speech under ~120 words." +
       GROUNDING_HINT +
       " Stay hostile but do not invent capability limits that contradict grounding.",
     "judge-scrutiny-move":
@@ -3263,7 +3264,14 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       return sendJson(res, errorStatus(e), { ok: false, error: e.message || "bad_body" });
     }
-    const result = deviceAuth.complete(body?.code, extractBearerToken(req));
+    const gameToken = mintGameSessionToken(
+      { userId: ident.userId, sessionId: ident.sessionId },
+      process.env
+    );
+    if (!gameToken) {
+      return sendJson(res, 500, { ok: false, error: "session_mint_failed" });
+    }
+    const result = deviceAuth.complete(body?.code, gameToken);
     if (!result.ok) return sendJson(res, 400, { ok: false, error: result.error });
     return sendJson(res, 200, { ok: true });
   }

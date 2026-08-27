@@ -57,11 +57,131 @@ export function listInventionPathways(board) {
 }
 
 /**
- * Content fingerprint for one invention pathway (ids + tech/how/timing).
+ * Membership key for an island's inventHow (ids only — not tile howText).
  * @param {object[]} inventions
+ */
+export function islandHowKey(inventions) {
+  return (inventions || [])
+    .map((t) => t?.id)
+    .filter(Boolean)
+    .map(String)
+    .sort((a, b) => a.localeCompare(b))
+    .join("|");
+}
+
+function islandHowMemberIds(key) {
+  return String(key || "")
+    .split("|")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+function isProperSubsetIds(inner, outer) {
+  if (!inner.length || inner.length >= outer.length) return false;
+  const o = new Set(outer);
+  return inner.every((id) => o.has(id));
+}
+
+/**
+ * Keep essays whose tiles still exist. Drop keys absorbed into a larger live
+ * island so a leftover tile does not wear the parent pathway's inventHow.
+ * @param {object|null|undefined} store
+ * @param {object|null|undefined} board
+ */
+export function pruneIslandHowStore(store, board) {
+  const prev = store && typeof store === "object" ? store : {};
+  const liveIds = new Set();
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t?.kind === TILE_KIND.invention && t.id) liveIds.add(String(t.id));
+  }
+  const liveIdLists = listInventionPathways(board).map((invs) =>
+    islandHowMemberIds(islandHowKey(invs))
+  );
+  const out = {};
+  for (const [key, row] of Object.entries(prev)) {
+    const ids = islandHowMemberIds(key);
+    if (!ids.length || ids.some((id) => !liveIds.has(id))) continue;
+    if (liveIdLists.some((live) => isProperSubsetIds(ids, live))) continue;
+    const text = String(row?.text || "").trim();
+    if (!text) continue;
+    out[key] = {
+      text: text.slice(0, 8000),
+      source: row?.source === "ai" ? "ai" : "user",
+    };
+  }
+  return out;
+}
+
+function concatMemberHow(inventions) {
+  return (inventions || [])
+    .map((t) => String(t?.howText || "").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/**
+ * Stored island essay for this exact membership key.
+ * If unset, the default is the member tile howTexts joined (display only — not stored).
+ * @returns {{ text: string, source: "concat"|"user"|"ai", key: string, stored: boolean }}
+ */
+export function resolveIslandHow(board, inventions) {
+  const key = islandHowKey(inventions);
+  const stored = key ? board?.islandHow?.[key] : null;
+  const text = String(stored?.text || "").trim();
+  if (text) {
+    const src = stored.source === "ai" ? "ai" : "user";
+    return { text, source: src, key, stored: true };
+  }
+  return {
+    text: concatMemberHow(inventions),
+    source: "concat",
+    key,
+    stored: false,
+  };
+}
+
+/**
+ * Persist inventHow for this island. Empty text deletes the store.
+ * Writing a multi-tile island drops absorbed member keys.
+ * @param {"user"|"ai"} [source]
+ */
+export function setIslandHow(board, inventions, text, source = "user") {
+  const next = cloneBoard(board);
+  if (!next.islandHow) next.islandHow = {};
+  const key = islandHowKey(inventions);
+  if (!key) return next;
+  const t = String(text || "").trim();
+  if (!t) {
+    delete next.islandHow[key];
+    next.islandHow = pruneIslandHowStore(next.islandHow, next);
+    return next;
+  }
+  next.islandHow[key] = {
+    text: t.slice(0, 8000),
+    source: source === "ai" ? "ai" : "user",
+  };
+  next.islandHow = pruneIslandHowStore(next.islandHow, next);
+  return next;
+}
+
+/**
+ * After place/lift/discard: keep cached essays whose member tiles still exist
+ * (placed or tray). Exact membership only — no split inherit, no merge concat.
+ * Subset keys absorbed into a larger live island are dropped.
+ */
+export function rekeyIslandHow(board) {
+  const next = cloneBoard(board);
+  next.islandHow = pruneIslandHowStore(next.islandHow, next);
+  return next;
+}
+
+/**
+ * Content fingerprint for one invention pathway (ids + tech/how/timing + stored inventHow).
+ * @param {object[]} inventions
+ * @param {object|null|undefined} [board]
  * @returns {string}
  */
-export function pathwayContentFingerprint(inventions) {
+export function pathwayContentFingerprint(inventions, board) {
   const parts = (inventions || [])
     .slice()
     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
@@ -72,7 +192,10 @@ export function pathwayContentFingerprint(inventions) {
         (n.feasibilityPct != null ? `pct:${n.feasibilityPct}` : "");
       return `${n.id}:${n.techId || ""}:${how}:${timing}`;
     });
-  return parts.join(";") || "empty";
+  const body = parts.join(";") || "empty";
+  const resolved = resolveIslandHow(board, inventions);
+  if (!resolved.stored) return body;
+  return `${body}#ih:${resolved.text}`;
 }
 
 /**
@@ -142,8 +265,8 @@ export function pickConcernSpawn(board) {
       q: slot.q,
       r: slot.r,
       inventionIds: ids,
-      fingerprints: [pathwayContentFingerprint(pathways[0])],
-      howText: pathwayHowText(pathways[0]),
+      fingerprints: [pathwayContentFingerprint(pathways[0], board)],
+      howText: resolveIslandHow(board, pathways[0]).text,
     };
   }
 
@@ -152,8 +275,8 @@ export function pickConcernSpawn(board) {
   const fingerprints = [];
   const howParts = [];
   for (const i of indexes) {
-    fingerprints.push(pathwayContentFingerprint(pathways[i]));
-    howParts.push(pathwayHowText(pathways[i]));
+    fingerprints.push(pathwayContentFingerprint(pathways[i], board));
+    howParts.push(resolveIslandHow(board, pathways[i]).text);
     for (const t of pathways[i]) inventionIds.push(t.id);
   }
   return {
@@ -163,13 +286,6 @@ export function pickConcernSpawn(board) {
     fingerprints,
     howText: howParts.filter(Boolean).join("\n\n"),
   };
-}
-
-function pathwayHowText(inventions) {
-  return (inventions || [])
-    .map((n) => String(n.howText || "").trim())
-    .filter(Boolean)
-    .join("\n\n");
 }
 
 /**
@@ -196,12 +312,12 @@ export function clampConcernLamp(prior, next, allowImprove) {
  * @param {object} concernTile
  * @param {object[]} inventions
  */
-export function concernInventChanged(concernTile, inventions) {
+export function concernInventChanged(concernTile, inventions, board) {
   const posed = Array.isArray(concernTile?.posedFingerprints)
     ? concernTile.posedFingerprints
     : [];
   if (!posed.length) return true;
-  const fp = pathwayContentFingerprint(inventions);
+  const fp = pathwayContentFingerprint(inventions, board);
   return !posed.includes(fp);
 }
 
@@ -418,7 +534,7 @@ export function applyPathwayPressure(board, opts = {}) {
   }
 
   const pathways = listInventionPathways(next).map((inventions) => {
-    const fingerprint = pathwayContentFingerprint(inventions);
+    const fingerprint = pathwayContentFingerprint(inventions, next);
     const cached = next.pathwayImpacts[fingerprint];
     const concernKey = pathwayConcernScoreKey(next, inventions);
     const keyMismatch =

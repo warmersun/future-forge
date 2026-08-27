@@ -1287,6 +1287,8 @@
               hidden
             ></div>
 
+            <div class="hex-island-how" id="hex-island-how" hidden></div>
+
             <div class="prompt-tip" id="prompt-tip"></div>
 
             <div class="form-actions game-actions">
@@ -1326,6 +1328,9 @@
           <div class="side-tabs" role="tablist">
             <button type="button" class="side-tab active" data-tab="vision" role="tab">Future vision</button>
             <button type="button" class="side-tab" data-tab="coinventor" role="tab">AI co-inventor</button>
+            <button type="button" class="side-tab" data-tab="aitrace" role="tab" id="tab-aitrace" hidden>
+              AI inspect <span class="side-tab-badge" id="aitrace-badge" hidden></span>
+            </button>
           </div>
 
           <div id="side-vision" class="side-pane" role="tabpanel">
@@ -1353,6 +1358,20 @@
 
           <div id="side-coinventor" class="side-pane" role="tabpanel" hidden>
             <div id="co-inventor-root" class="co-inventor-root"></div>
+          </div>
+
+          <div id="side-aitrace" class="side-pane" role="tabpanel" hidden>
+            <div class="ai-trace">
+              <p class="ai-trace-lead muted sm">
+                Developer only. Last co-invent calls: context sent, then what came back.
+              </p>
+              <div class="ai-trace-split">
+                <div class="ai-trace-list" id="aitrace-list" role="list"></div>
+                <div class="ai-trace-detail" id="aitrace-detail">
+                  <p class="muted sm">No calls yet — place an idea or summon a challenger.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -2407,6 +2426,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-20"></script>
+    <script type="module" src="js/main.js?v=portal-22"></script>
   </body>
 </html>

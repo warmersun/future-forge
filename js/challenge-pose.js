@@ -10,7 +10,7 @@
 export function localPose(angle, opts = {}) {
   const id = typeof angle === "string" ? angle : angle?.id || "";
   const place = opts.place || "here";
-  const name = opts.inventionName || "this invention";
+  const name = opts.inventionName || "this pathway";
   if (id === "nature") {
     return {
       speech: `Mother Nature, ${place}: “${name} still runs on energy, materials, and waste. Storms, heat, and scarcity do not negotiate with your pitch.”`,
