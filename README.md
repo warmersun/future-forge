@@ -71,6 +71,8 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Lands in **Library**. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
+**Share a lesson (X / open table):** catalog card → **Copy link**. That copies `https://warmersun.com/forge/?q=<quest-id>`. The hop forwards `?q=` onto the Funnel game host, and Future Forge starts that Quest. Learning lessons still need Sign in when Cloud is on. Do not post the `*.ts.net` URL.
+
 Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
 
 ### Learner accounts (optional Clerk)

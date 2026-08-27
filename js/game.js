@@ -53,7 +53,15 @@ import {
   setCloudProfileCache,
   formatClerkLoginLine,
   invalidateClerkSession,
+  whenAuthReady,
 } from "./auth.js";
+import {
+  parseDeepLink,
+  findCatalogEntry,
+  hrefWithoutDeepLink,
+  resolveShareOrigin,
+  buildQuestShareUrl,
+} from "./deep-link.js";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -375,6 +383,8 @@ const state = {
   remoteQuestsUrl: null,
   remoteQuestsOk: true,
   hostedQuestsLoaded: false,
+  /** Public share origin from GET /api/health (`FF_SHARE_ORIGIN`), else inferred */
+  shareOrigin: "",
   /** @type {object[]} Capability trends from GET /api/trends */
   hostedTrends: [],
   hostedTrendsLoaded: false,
@@ -4479,11 +4489,11 @@ async function fetchFullQuestTile(id) {
 async function playCatalogEntry(entry, opts = {}) {
   if (!entry?.mission) {
     flashToast("Quest missing mission data.");
-    return;
+    return "missing";
   }
   if (catalogNeedsAccount(entry) && !isClerkSignedIn()) {
     promptCloudSignIn("Sign in to play this lesson.");
-    return;
+    return "needs_sign_in";
   }
   let src = entry;
   const learning = Boolean(entry.isLearningModule || entry.mission?.isLearningModule);
@@ -4503,7 +4513,7 @@ async function playCatalogEntry(entry, opts = {}) {
   // Learning modules are solo-only (tutor session) — never for multiplayer pick
   if (missionPickSession && isLearningMission(m)) {
     flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
-    return;
+    return "blocked";
   }
   if (opts.clearPick !== false && !missionPickSession) {
     clearMissionPickSession();
@@ -4512,7 +4522,87 @@ async function playCatalogEntry(entry, opts = {}) {
     state.playMode = "workshop";
   }
   state.global = globalById(m.globalId) || state.global;
-  startMission(m);
+  const ok = startMission(m);
+  return ok === false ? "blocked" : "started";
+}
+
+let deepLinkInFlight = false;
+let deepLinkFinished = false;
+
+function clearDeepLinkFromUrl() {
+  try {
+    const next = hrefWithoutDeepLink(location.href);
+    if (`${location.pathname}${location.search}${location.hash}` === next) return;
+    history.replaceState(null, "", next || "/");
+  } catch {
+    /* ignore */
+  }
+}
+
+function currentShareOrigin() {
+  return resolveShareOrigin({
+    healthShareOrigin: state.shareOrigin,
+    hostname: typeof location !== "undefined" ? location.hostname : "",
+    locationOrigin: typeof location !== "undefined" ? location.origin : "",
+  });
+}
+
+async function copyQuestShareLink(questId) {
+  const url = buildQuestShareUrl(questId, currentShareOrigin());
+  if (!url) {
+    flashToast("Could not build a link for this Quest.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    flashToast("Link copied");
+  } catch {
+    flashToast("Could not copy link.");
+  }
+}
+
+/**
+ * Boot (and post-sign-in): start the Quest named in ?q= / ?quest=.
+ */
+async function consumeDeepLink() {
+  if (deepLinkFinished || deepLinkInFlight) return;
+  const intent = parseDeepLink(typeof location !== "undefined" ? location.href : "");
+  if (!intent) return;
+  if (missionPickSession || roomBridge.isRoom() || hotseatBridge.isHotseat()) return;
+  if (state.screen === "workshop" && state.mission) {
+    clearDeepLinkFromUrl();
+    deepLinkFinished = true;
+    return;
+  }
+
+  deepLinkInFlight = true;
+  try {
+    await Promise.race([
+      whenAuthReady(),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+    if (!state.hostedQuestsLoaded) {
+      await refreshHostedQuests({ silent: true });
+    }
+    const entry = findCatalogEntry(intent.token, partitionCatalogQuests().all);
+    if (!entry) {
+      flashToast("Quest not found.");
+      clearDeepLinkFromUrl();
+      deepLinkFinished = true;
+      return;
+    }
+    const result = await playCatalogEntry(entry);
+    if (result === "needs_sign_in") return;
+    if (result === "started") {
+      clearDeepLinkFromUrl();
+      deepLinkFinished = true;
+      return;
+    }
+    clearDeepLinkFromUrl();
+    deepLinkFinished = true;
+  } finally {
+    deepLinkInFlight = false;
+  }
 }
 
 /** Show Start tutorial again (clears local completion flag). */
@@ -5041,6 +5131,11 @@ function catalogCardHtml(entry, kind, opts = {}) {
         </button>`
             : ""
         }
+        <button type="button" class="btn btn-ghost btn-sm catalog-copy" data-catalog-copy-id="${escapeHtml(
+          entry.id || m?.id || ""
+        )}" title="Copy a public link to this Quest">
+          Copy link
+        </button>
         ${
           questHasLeaderboard(entry.id || m?.id)
             ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
@@ -5200,6 +5295,12 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
     const entry = flat.find((e) => e.id === id);
     wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
       playCatalogEntry(entry);
+    });
+    wrap.querySelector(".catalog-copy")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const qid = ev.currentTarget?.dataset?.catalogCopyId || entry?.id;
+      if (qid) void copyQuestShareLink(qid);
     });
     wrap.querySelector(".catalog-dev")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -20075,6 +20176,8 @@ async function refreshDeveloperModeFromHealth() {
     if (!res.ok) return;
     const data = await res.json();
     const next = Boolean(data?.developer);
+    const share = String(data?.shareOrigin || "").trim();
+    if (share) state.shareOrigin = share;
     if (next === state.developer) return;
     state.developer = next;
     syncDeveloperAiTraceTab();
@@ -20098,10 +20201,12 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
+  void consumeDeepLink();
   onClerkSession(() => {
     renderTitleMeta();
     void syncCloudProgress();
     void maybePromptDisplayName();
+    if (isClerkSignedIn()) void consumeDeepLink();
   });
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;

@@ -54,6 +54,7 @@ import { RateLimiter } from "./js/server/rate-limit.mjs";
 import { clientIp, isLoopbackSocket } from "./js/server/client-ip.mjs";
 import { canSeeAdmin } from "./js/server/admin-gate.mjs";
 import { serveStatic } from "./js/server/static.mjs";
+import { shareOriginFromEnv } from "./js/deep-link.js";
 import {
   readBody,
   sendJson,
@@ -3003,6 +3004,7 @@ const server = http.createServer(async (req, res) => {
     const portalOrigin = String(process.env.FF_PORTAL_URL || "")
       .trim()
       .replace(/\/$/, "");
+    const shareOrigin = shareOriginFromEnv() || null;
     const publicHealth = {
       ok: true,
       coInventor: true,
@@ -3021,6 +3023,7 @@ const server = http.createServer(async (req, res) => {
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
       portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
+      shareOrigin,
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),

@@ -12,6 +12,20 @@ let handshakeReady = false;
 /** @type {Set<() => void>} */
 const sessionListeners = new Set();
 
+/** Resolves when initAuth finishes (Clerk on or off). */
+let settleAuthReady;
+const authReadyPromise = new Promise((resolve) => {
+  settleAuthReady = resolve;
+});
+
+/**
+ * Game boot waits here so learning deep-links see the account door.
+ * @returns {Promise<void>}
+ */
+export function whenAuthReady() {
+  return authReadyPromise;
+}
+
 /**
  * Clerk publishable keys encode the Frontend API host in the third `_` segment.
  * @param {string} publishableKey
@@ -292,8 +306,8 @@ function writeStoredJwt(token) {
  */
 export async function initAuth() {
   const mount = document.getElementById("ff-account");
-  if (!mount) return;
   try {
+    if (!mount) return;
     const origin = await resolvePortalOrigin();
     if (!origin) return;
     const res = await fetch(`${origin}/api/health`);
@@ -309,6 +323,8 @@ export async function initAuth() {
     emitClerkSession();
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
+  } finally {
+    settleAuthReady();
   }
 }
 

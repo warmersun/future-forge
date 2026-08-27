@@ -2488,6 +2488,7 @@ button.btn[hidden] {
 }
 .quest-catalog-grid .catalog-dev,
 .quest-catalog-grid .catalog-board,
+.quest-catalog-grid .catalog-copy,
 .quest-catalog-grid .catalog-remove {
   align-self: auto;
 }
