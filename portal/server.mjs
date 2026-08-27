@@ -81,6 +81,7 @@ import { deviceAuth } from "../js/server/device-auth.mjs";
 import { mintGameSessionToken } from "../js/server/game-session.mjs";
 import {
   allowGameDeviceOrigin,
+  gameDeviceOriginsFromEnv,
   portalPublicOrigin,
 } from "../js/cloud/portal-origin.js";
 import {
@@ -3073,8 +3074,9 @@ function isDeviceApiPath(pathOnly) {
 }
 
 /**
- * Device start/status are called from the game SPA. Echo loopback origins only.
- * Missing Origin (curl) is allowed; a foreign Origin is 403.
+ * Device start/status are called from the game SPA.
+ * Echo loopback plus FF_GAME_DEVICE_ORIGINS. Missing Origin (curl) is allowed;
+ * a foreign Origin is 403.
  */
 function sendDeviceJson(req, res, status, data) {
   const origin = String(req.headers.origin || "");
@@ -4441,6 +4443,9 @@ server.listen(PORT, HOST, async () => {
   }
   if (publicClerkConfig().enabled) {
     console.log("Learner accounts: Clerk ON (optional sign-in)");
+    console.log(
+      `Device handshake origins: ${gameDeviceOriginsFromEnv().join(", ")}`
+    );
   } else {
     console.log(
       "Learner accounts: OFF (set CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY)"

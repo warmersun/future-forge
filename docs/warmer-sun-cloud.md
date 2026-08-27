@@ -469,7 +469,7 @@ Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine
 - Local **game** is HTTP **`:8765` only** (`http://127.0.0.1:8765` or `http://localhost:8765`). Do not bind port 443. The game never calls `Clerk.load()`.
 - Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://cloud.warmersun.com`, `https://warmersun.com`, plus loopback game origins (`http://127.0.0.1:8765`, `http://localhost:8765`). If `CLERK_AUTHORIZED_PARTIES` is set on Render it **replaces** code defaults — keep those hosts. Google and X **Authorized JavaScript origins**: `https://cloud.warmersun.com` and `https://warmersun.com` only.
 - Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).
-- Device handshake (`POST /api/device/start`, `GET /api/device/status`) CORS is loopback game origins only. Other Cloud APIs stay CORS `*`. Do not serve the playable SPA from portal.
+- Device handshake (`POST /api/device/start`, `GET /api/device/status`) CORS is loopback game origins plus optional `FF_GAME_DEVICE_ORIGINS` (comma-separated Funnel/public game origins). Other Cloud APIs stay CORS `*`. Do not serve the playable SPA from portal.
 
 **Ops honesty:** Render sleep on free instances = Cloud down; use a paid instance if Sign in / boards must stay up. Custom domain, Clerk production keys, and the `/cloud` redirect are ops after the first deploy. Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
 

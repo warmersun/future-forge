@@ -20,6 +20,10 @@ services:
         sync: false
         # If set, include https://cloud.warmersun.com plus loopback game origins
         # (replaces code defaults). Keep https://warmersun.com.
+      - key: FF_GAME_DEVICE_ORIGINS
+        sync: false
+        # Optional extras for /api/device CORS (appends to loopback). Exact
+        # browser Origin, e.g. https://futureforge.xantu-chickadee.ts.net
       - key: CLERK_WEBHOOK_SECRET
         sync: false
       - key: DATABASE_URL

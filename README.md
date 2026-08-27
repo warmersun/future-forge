@@ -86,6 +86,8 @@ cp .env.portal.example .env.portal   # gitignored — local portal / test keys o
 # Render Dashboard holds pk_live_ / sk_live_
 # If you set CLERK_AUTHORIZED_PARTIES it *replaces* defaults — include:
 #   https://warmersun.com,https://cloud.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
+# Funnel / public game host (device handshake CORS; appends to loopback):
+#   FF_GAME_DEVICE_ORIGINS=https://futureforge.xantu-chickadee.ts.net
 ```
 
 | Endpoint | Behavior |
