@@ -126,11 +126,13 @@ button:disabled {
 
 /* Clear the maximized-board restore control in the upper-right corner */
 body.hex-board-expanded.ff-accounts #ff-account {
+  top: 0;
   right: calc(var(--page-gutter) + 2.75rem);
 }
 
 @media (max-width: 640px) {
   body.hex-board-expanded.ff-accounts #ff-account {
+    top: 0;
     right: 3.25rem;
   }
 }
