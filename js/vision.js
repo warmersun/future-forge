@@ -165,6 +165,28 @@ export class VisionRenderer {
     this.setStatus("A new horizon waits to be imagined…");
   }
 
+  /**
+   * Show a local still (e.g. theme postcard) until Imagine returns a real frame.
+   * Does not set currentUrl / fingerprint, so share cards stay clean and
+   * /api/vision still replaces this picture.
+   * @param {string} url
+   */
+  seedLocalFrame(url) {
+    const src = String(url || "").trim();
+    if (!src || this.currentUrl) return;
+    const apply = (img) => {
+      if (!img) return;
+      if (img.getAttribute("src") === src) {
+        img.hidden = false;
+        return;
+      }
+      img.hidden = false;
+      img.src = src;
+    };
+    apply(this.img);
+    for (const r of this.mirrorRoots) apply(r.querySelector?.(".vision-image"));
+  }
+
   resize() {
     /* no-op — image is CSS-sized */
   }

@@ -30,7 +30,7 @@
     "market-news:catalog": "python3 scripts/build-market-news-catalog.py",
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "foresight:build": "node scripts/build-world-foresight.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/hex/*.test.js js/meta.test.js js/quest-tile.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/capability-trend.test.js js/trends-remote.test.js js/trend-chart.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/idea-cards.test.js js/ai-trace.test.js js/vision-prompt.test.js js/learn-stack.test.js js/auth.test.js js/deep-link.test.js js/cloud/portal-origin.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/hex/*.test.js js/meta.test.js js/quest-tile.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/capability-trend.test.js js/trends-remote.test.js js/trend-chart.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/idea-cards.test.js js/ai-trace.test.js js/vision-prompt.test.js js/vision.test.js js/learn-stack.test.js js/auth.test.js js/deep-link.test.js js/cloud/portal-origin.test.js"
   },
   "dependencies": {
     "@clerk/backend": "^3.16.12",

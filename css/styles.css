@@ -6860,6 +6860,22 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     max-height: none;
   }
 
+  .workshop-layout > .vision-panel.is-tutor-split #side-vision {
+    flex: 0 0 auto;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split #side-vision .vision-canvas-wrap {
+    flex: none;
+    height: min(22vh, 160px);
+    min-height: 120px;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split #side-coinventor {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .workshop-layout > .vision-panel .vision-narratives {
     max-height: 7rem;
     overflow: auto;
@@ -7044,9 +7060,40 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   }
 
   /* Co-inventor on phone: allow more height when tab selected */
-  .workshop-layout > .vision-panel:has(.side-pane.mp-side-coinventor:not([hidden])),
-  .workshop-layout > .vision-panel:has(#side-coinventor:not([hidden])) {
+  .workshop-layout > .vision-panel:has(.side-pane.mp-side-coinventor:not([hidden])):not(.is-tutor-split),
+  .workshop-layout > .vision-panel:has(#side-coinventor:not([hidden])):not(.is-tutor-split) {
     max-height: min(50vh, 22rem);
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split {
+    max-height: min(58vh, 28rem);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split #side-vision .vision-canvas-wrap {
+    height: 7.5rem;
+    min-height: 7.5rem;
+    flex: none;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split #side-coinventor {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split .co-inventor-root {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split .co-messages {
+    min-height: 0;
+  }
+
+  .workshop-layout > .vision-panel.is-tutor-split .co-inventor-root.is-tutor-mode .co-actions {
+    display: none;
   }
 
   /* Bottom sheet for emTech */
@@ -7853,6 +7900,34 @@ button.linkish:hover {
 
 .side-pane[hidden] {
   display: none !important;
+}
+
+/* Learning tutor: Future vision strip above co-inventor chat */
+.vision-panel.is-tutor-split #side-vision {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.vision-panel.is-tutor-split #side-vision .vision-stage-bar {
+  padding: 0.4rem 0.75rem;
+}
+
+.vision-panel.is-tutor-split #side-vision .vision-stage-blurb,
+.vision-panel.is-tutor-split #side-vision .vision-narratives {
+  display: none;
+}
+
+.vision-panel.is-tutor-split #side-vision .vision-canvas-wrap {
+  flex: none;
+  height: min(28vh, 200px);
+  min-height: 140px;
+}
+
+.vision-panel.is-tutor-split #side-coinventor {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
 }
 
 .side-tab-badge {

@@ -603,6 +603,31 @@ function resumeTutorSession() {
   }
 }
 
+function isTutorSplitLayout() {
+  return Boolean(state.mission?.isLearningModule) && state.sideTab === "coinventor";
+}
+
+function applyInventSidePanes() {
+  const tab = state.sideTab || "vision";
+  const split = isTutorSplitLayout();
+  const panel = document.querySelector("#screen-workshop .vision-panel");
+  panel?.classList.toggle("is-tutor-split", split);
+  const vision = $("#side-vision");
+  const co = $("#side-coinventor");
+  const trace = $("#side-aitrace");
+  if (vision) vision.hidden = tab !== "vision" && !split;
+  if (co) co.hidden = tab !== "coinventor";
+  if (trace) trace.hidden = tab !== "aitrace";
+}
+
+function seedLearningVisionStill() {
+  if (!state.mission?.isLearningModule) return;
+  ensureVision();
+  const gid = state.mission.globalId || state.global?.id;
+  if (!gid || !state.vision?.seedLocalFrame) return;
+  state.vision.seedLocalFrame(problemVisualUrl(gid));
+}
+
 function syncCoInventorTutorUi() {
   const learning = Boolean(state.mission?.isLearningModule);
   const active = isLearningTutorSessionActive();
@@ -615,6 +640,7 @@ function syncCoInventorTutorUi() {
         ? "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime"
         : undefined,
   });
+  applyInventSidePanes();
 }
 
 function apEnabled() {
@@ -3655,6 +3681,7 @@ function showScreen(id) {
     setSideTab(state.sideTab || "vision");
     requestAnimationFrame(() => {
       ensureVision();
+      seedLearningVisionStill();
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
       else updateVision({ immediate: true });
     });
@@ -6311,17 +6338,15 @@ function startMission(mission, opts = {}) {
     const tutor = isLearningTutorSessionActive();
     const place = state.mission?.place || mission.place;
     const year = state.mission?.startYear || mission.startYear;
-    const scene = state.mission?.scene || mission.scene;
+    const sceneRaw = String(state.mission?.scene || mission.scene || "").trim();
+    const scene =
+      sceneRaw.length > 160 ? `${sceneRaw.slice(0, 159).trim()}…` : sceneRaw;
     const ypt = state.mission?.yearsPerTurn || mission.yearsPerTurn || GAME.yearsPerTurn;
     const welcome = tutor
       ? `**${place}**, ${year}. ${scene}\n\n` +
-        `I'm your **AI tutor** for this lesson — we'll go **one idea at a time** (**free AP** while tutoring). ` +
-        `I'll explain what you need when you need it. Readings on warmersun.com/lessons come one at a time when a step needs them.\n\n` +
-        `You still invent: pick techs, place idea tiles on the hex board, and keep claims honest for this year. ` +
-        `I won't dump the whole solution at once.\n\n` +
-        `Use **End tutoring** when you want to invent on your own (chat then costs AP). I may also end tutoring when the invent gate is met.\n\n` +
-        `What's one thing you already notice about this place or problem?`
-      : `**${place}**, ${year}. ${scene}\n\n` +
+        `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision** (above). What's one thing you already notice?\n\n` +
+        `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
+      : `**${place}**, ${year}. ${sceneRaw}\n\n` +
         `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
         `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
         `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
@@ -16344,6 +16369,7 @@ function updateVision(opts = {}) {
 
   ensureVision();
   if (!state.vision) return;
+  seedLearningVisionStill();
 
   const pathways = visionPathwaysFromBoard(state.hexBoard, techById);
   const givens = visionGivensFromBoard(state.hexBoard, pathways);
@@ -16581,15 +16607,11 @@ function setSideTab(tab) {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
-  const vision = $("#side-vision");
-  const co = $("#side-coinventor");
-  const trace = $("#side-aitrace");
-  if (vision) vision.hidden = tab !== "vision";
-  if (co) co.hidden = tab !== "coinventor";
-  if (trace) trace.hidden = tab !== "aitrace";
-  if (tab === "vision") {
+  applyInventSidePanes();
+  if (tab === "vision" || isTutorSplitLayout()) {
     requestAnimationFrame(() => {
       ensureVision();
+      seedLearningVisionStill();
       if (roomBridge.isRoom()) scheduleRoomVisionRefresh({ immediate: true });
       else updateVision({ context: "invent" });
     });
