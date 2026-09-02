@@ -32,6 +32,7 @@ You write a **portable Quest tile** so learners can invent with **one spotlight 
 One JSON file (or a **set** of files for multi-lesson modules) conforming to `future-forge.quest-tile/v1`:
 
 - Prefer path: `output/quests/<slug>/quest.json` (or `…/lesson-N.json` for sequences)
+- Multi-lesson: also emit a **`kind: "module"`** wrapper that lists lesson ids and the path summary
 - Browser import: **JSON only**
 - Default `placement.mode`: `replace-daily`
 - Class/server: game repo **`quests/`** folder
@@ -69,7 +70,7 @@ All of these may appear on **one** tile:
 | **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Classroom pacing |
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md` |
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
-| **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt |
+| **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
 | **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
 
@@ -131,7 +132,7 @@ Follow **`references/learning-and-sponsor.md`**.
 - Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste wholesale into player text.
 - Optionally stock **RESOURCES** (Markdown `https` links to readings, often `https://warmersun.com/lessons/…`) and **ILLUSTRATIONS** (`![caption](https://…)` diagrams) in `aiTutorContext`. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. See **`references/learning-and-sponsor.md`**.
 - Set `module` (title string), `lesson`, `totalLessons` (UI: **{title} · Lesson X/Y**).
-- Multi-lesson set: separate JSON files; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites.
+- Multi-lesson set: separate JSON files **plus a `kind: "module"` wrapper**; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites. The wrapper is the catalog card and **summary panel** (title, summary, `overviewMd`); lessons drill down from there. Sponsored sets show under **Sponsored**, not Learning.
 - The tutor teaches jargon; the tile’s player text must not require it to understand the job.
 
 ### 7. Sponsor (if applicable)
@@ -156,7 +157,7 @@ npm run validate:quest -- <file>
 - Copy into **`quests/`** or Import Quest…  
 - Spotlight tech + invent invitation  
 - UI chips expected: Sponsored / Learn / Start / Crisis as applicable  
-- If multi-lesson: list all files and intended order (host-managed for now)  
+- If multi-lesson: list the **module wrapper** plus all lesson files and intended order (host-managed for now)  
 
 ## Quality checklist
 
@@ -176,6 +177,7 @@ npm run validate:quest -- <file>
 - [ ] Invent framed as **application** of unlocked use cases; open tension  
 - [ ] Unused optionals **omitted** (not empty strings)  
 - [ ] Learning: solid `aiTutorContext`; module title string; lesson/totalLessons integers ≥ 1; no fake unlocks  
+- [ ] Multi-lesson: `kind: "module"` wrapper with the same `module` title, `lessons` ids in order, and a plain-language `summary` / `overviewMd` (14-year-old path test)  
 - [ ] Learning media (if any): https-only resource links / illustrations in `aiTutorContext`; paced for tutor chat, not a first-turn dump; SEQUENCE does not say “open the page, do not answer”  
 - [ ] Sponsor: text-only; invent still required; capability chain in `grounding`  
 - [ ] Combinations validated if used together  
@@ -183,7 +185,7 @@ npm run validate:quest -- <file>
 
 ## Non-goals
 
-- Multi-quest packs (`quest-pack` rejected)  
+- Multi-quest packs (`quest-pack` rejected — use `kind: "module"` for a learning path)  
 - Hard-locking the tech tray  
 - Module unlock graphs / auto-advance  
 - Sponsor scoring bonuses or forced product usage  

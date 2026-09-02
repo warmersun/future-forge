@@ -30,3 +30,5 @@ scenario-seeds.bak-*
 .agents/
 skills-lock.json
 docs/a-better-land/
+assets/quests/base-onchain-dollars/
+quests/base-onchain-dollars*

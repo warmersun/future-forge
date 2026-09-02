@@ -130,4 +130,30 @@ describe("quest library (memory localStorage shim)", () => {
     assert.equal(loadQuestLibrary().length, 0);
     assert.equal(getFocusedQuest(), null);
   });
+
+  it("imports a kind:module wrapper without a mission", () => {
+    globalThis.localStorage = mem;
+    store.clear();
+    saveQuestLibrary([]);
+    const r = importQuestToLibrary({
+      kind: "module",
+      tile: {
+        kind: "module",
+        id: "module-sensors",
+        title: "Sensors before models",
+        summary: "Invent local sensor workflows.",
+        module: "Sensors before models",
+        lessons: ["spotlight-gene-seq-test"],
+      },
+      mission: null,
+    });
+    assert.equal(r.ok, true);
+    const lib = loadQuestLibrary();
+    assert.equal(lib.length, 1);
+    assert.equal(lib[0].kind, "module");
+    assert.equal(lib[0].id, "module-sensors");
+    assert.equal(lib[0].mission, null);
+    removeQuestFromLibrary("module-sensors");
+    assert.equal(loadQuestLibrary().length, 0);
+  });
 });

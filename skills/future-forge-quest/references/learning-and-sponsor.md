@@ -88,7 +88,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 - User messages stay plain text.
 - Quest `briefMd` rendering is separate (links yes; images remain off by default for briefs).
 
-### Multi-lesson set (several JSON files)
+### Multi-lesson set (module wrapper + lesson files)
 
 There is **no engine unlock graph** yet. Author a set manually:
 
@@ -96,8 +96,21 @@ There is **no engine unlock graph** yet. Author a set manually:
 2. `lesson`: `1`, `2`, … `totalLessons`.
 3. Distinct `id` / `mission.id` per lesson (e.g. `…-open-weight-lesson-2`).
 4. Distinct place angle or invent gate per lesson; may share theme `globalId` and spotlight tech.
-5. Each file is a full valid quest tile (own `pressure`, `scene`, `briefMd`).
-6. Do **not** invent fake “must complete lesson 1 first” mechanics in prose unless the host enforces them outside the game.
+5. Each lesson file is a full valid quest tile (own `pressure`, `scene`, `briefMd`).
+6. Also emit a **`kind: "module"`** wrapper (not playable): same `module` title, `summary` (path job, ≤160 chars), `overviewMd` (what you invent across the path), `lessons` (ids in order), optional `coverImageUrl` / sponsor / spotlight. Catalog shows **one module card**; opening it shows the **summary panel first**, then the lesson list.
+7. Do **not** invent fake “must complete lesson 1 first” mechanics in prose unless the host enforces them outside the game.
+
+**Where it shows**
+
+| Set | Catalog |
+|-----|---------|
+| Sponsored (`sponsorName` on the wrapper / lessons) | **Sponsored** as one module (not also under Learning) |
+| Unsponsored learning | **Learning** |
+| Local `quests/` or Import | **Library** (same grouping) |
+
+Without a wrapper, the engine still groups lessons that share a `module` title (weaker summary: first lesson’s `summary`). Always author the wrapper for a real path lede.
+
+The catalog **groups first, then classifies**. A path is Sponsored if the **wrapper or any lesson** has `sponsorName`. Join key is wrapper `lessons[]` (slugified ids); `module` title is fallback for wrapper-less sets.
 
 ### What tutor mode does (solo)
 
@@ -136,7 +149,7 @@ Multiplayer / hotseat do **not** switch to tutor mode.
 
 ### Sponsor + learning module (recommended showcase pattern)
 
-One tile may include **all** of:
+**One lesson tile** may include **all** of:
 
 - Spotlight tech + fictive place  
 - Structured pressure  
@@ -145,7 +158,9 @@ One tile may include **all** of:
 - `sponsorName` + `sponsorBanner`  
 - Optional `resources` for classroom pacing  
 
-Example in monorepo: `quests/kimi-k3.json`. Portable skill example: `examples/spotlight-sponsored-learning.json`.
+**A multi-lesson sponsored path** is the wrapper (`kind: "module"`) plus N lesson files. The hub shows it under **Sponsored**.
+
+Portable examples: `examples/spotlight-sponsored-learning.json` (one lesson), `examples/spotlight-sponsored-module.json` (wrapper). Monorepo: `quests/base-onchain-dollars.json` + `quests/base-onchain-dollars-lesson-*.json`.
 
 ---
 

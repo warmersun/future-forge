@@ -27,6 +27,7 @@ export function tileAccess(tile) {
   if (tile.isLearningModule === true || tile.mission?.isLearningModule === true) {
     return ACCESS.ACCOUNT;
   }
+  if (tile.kind === "module") return ACCESS.ACCOUNT;
   return ACCESS.OPEN;
 }
 

@@ -31,7 +31,7 @@ Required:
 | Field | Notes |
 |-------|--------|
 | `schema` | `"future-forge.quest-tile/v1"` |
-| `kind` | `"quest"` (packs not supported in v1 UI) |
+| `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper). Packs not supported |
 | `globalId` | Must match a theme in `js/data.js` `GLOBALS` |
 | `spotlight.techId` | Must match `TECHS` id |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
@@ -97,6 +97,26 @@ When `isLearningModule` is true:
 - Learning quests start in a free-AP **tutor session** (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode (assistant chat still supports the same Markdown rendering).
+
+### Optional `kind: "module"` (path wrapper)
+
+A **module** is not a playable Quest. It groups lesson tiles in the catalog: one card, **summary panel first**, then drill into lessons. Sponsored modules show under **Sponsored** (not also Learning). Local `quests/` copies still land in Library until published to the remote catalog.
+
+| Field | Notes |
+|-------|--------|
+| `kind` | `"module"` |
+| `id`, `title`, `summary` | Path title + plain-language job (≤160 chars) |
+| `globalId` | Theme id |
+| `module` | Same title string as the lesson files |
+| `lessons` | Lesson quest ids, display order |
+| `totalLessons` | Optional; defaults to `lessons.length` |
+| `overviewMd` | Optional Markdown path overview |
+| `coverImageUrl` | Optional `https://…` or `assets/…` still |
+| `sponsorName` / `sponsorBanner` | Optional; same text-only rules |
+
+No `mission` / pressure / `briefMd`. Each listed lesson remains a full `kind: "quest"` tile. `kind: "quest-pack"` is still rejected.
+
+Developer inspect on a lesson shows **Briefing beats** (authored stills + captions, or derived from `briefMd`) after Player brief.
 
 ```json
 "isLearningModule": true,

@@ -160,7 +160,8 @@ import {
 } from "./meta.js";
 import {
   parseQuestTileJson,
-  validateQuestTile,
+  validateQuestDocument,
+  catalogRecordFromValidated,
   CAPS,
   parseResourceOverrides,
   normalizeMissionPressure,
@@ -168,6 +169,17 @@ import {
   crisisRolesLabel,
   learningProgressBarHtml,
 } from "./quest-tile.js";
+import {
+  isLearningMission,
+  isSponsoredMission,
+  isModuleEntry,
+  isLearningEntry,
+  isSponsoredEntry,
+  partitionCatalogQuests as partitionCatalogBuckets,
+  groupLearningModules,
+  catalogTopLevel,
+  catalogHubCounts,
+} from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
 import {
   mountTrendChart,
@@ -182,7 +194,12 @@ import {
   paintQuestBriefing,
   resetQuestBriefing,
 } from "./briefing-ui.js";
-import { normalizeBriefBeats } from "./brief-beats.js";
+import {
+  normalizeBriefBeats,
+  resolveBriefBeats,
+  briefBeatAuthoredUrl,
+  jobLineFromMission,
+} from "./brief-beats.js";
 import {
   attachReadAloud,
   formatHeadingForSpeech,
@@ -4324,12 +4341,7 @@ async function refreshHostedTrends(opts = {}) {
   }
 }
 
-function isLearningMission(m) {
-  if (!m || typeof m !== "object") return false;
-  if (m.isLearningModule) return true;
-  if (m.module != null || m.lesson != null) return true;
-  return false;
-}
+
 
 /**
  * Invent-screen module progress bar: Learning catalog lessons only.
@@ -4361,9 +4373,7 @@ function hideInventLessonProgress(el) {
   progressEl.innerHTML = "";
 }
 
-function isSponsoredMission(m) {
-  return Boolean(String(m?.sponsorName || "").trim());
-}
+
 
 /**
  * Normalize a catalog API entry into a hub entry.
@@ -4372,6 +4382,32 @@ function isSponsoredMission(m) {
  * @param {{ canRemove?: boolean }} [opts]
  */
 function catalogEntryFromApi(e, source, opts = {}) {
+  if (isModuleEntry(e) || e?.kind === "module") {
+    const id = String(e.id || e.tile?.id || "");
+    if (!id) return null;
+    return {
+      ...e,
+      id,
+      kind: "module",
+      source: source || e.source || "hosted",
+      canRemove: Boolean(opts.canRemove),
+      mission: null,
+      title: e.title || e.tile?.title || "Module",
+      summary: e.summary || e.tile?.summary || "",
+      globalId: e.globalId || e.tile?.globalId,
+      spotlightTechId: e.spotlightTechId || e.tile?.spotlight?.techId || null,
+      lessons: Array.isArray(e.lessons) ? e.lessons : e.tile?.lessons || [],
+      module: e.module || e.tile?.module || e.title,
+      overviewMd: e.overviewMd || e.tile?.overviewMd || "",
+      coverImageUrl: e.coverImageUrl || e.tile?.coverImageUrl || "",
+      sponsorName: e.sponsorName || e.tile?.sponsorName || "",
+      sponsorBanner: e.sponsorBanner || e.tile?.sponsorBanner || "",
+      isLearningModule: true,
+      tile: e.tile && typeof e.tile === "object" ? e.tile : null,
+      file: e.file ? String(e.file) : null,
+      remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
+    };
+  }
   if (!e?.mission) return null;
   const id = String(e.id || e.mission.id || "");
   if (!id) return null;
@@ -4382,6 +4418,7 @@ function catalogEntryFromApi(e, source, opts = {}) {
   );
   return {
     id,
+    kind: "quest",
     source: source || mission.source,
     mission,
     title: e.title || mission.title || "Quest",
@@ -4430,6 +4467,22 @@ function collectCatalogBuckets() {
   }
 
   for (const e of loadQuestLibrary()) {
+    if (e?.kind === "module" || e?.tile?.kind === "module") {
+      const rec =
+        e.tile && typeof e.tile === "object"
+          ? catalogRecordFromValidated(
+              { ok: true, tile: e.tile, mission: null, kind: "module" },
+              { canRemove: true, source: "imported" }
+            )
+          : catalogEntryFromApi({ ...e, kind: "module" }, "imported", {
+              canRemove: true,
+            });
+      const id = String(rec?.id || "");
+      if (!id || seenLocal.has(id)) continue;
+      seenLocal.add(id);
+      imported.push({ ...rec, canRemove: true, source: "imported" });
+      continue;
+    }
     if (!e?.mission) continue;
     const id = String(e.id || e.mission.id || "");
     if (!id || seenLocal.has(id)) continue;
@@ -4440,12 +4493,13 @@ function collectCatalogBuckets() {
     );
     imported.push({
       id,
+      kind: "quest",
       source: "imported",
       mission,
       title: mission.title || "Quest",
       place: mission.place || "",
       globalId: mission.globalId,
-      summary: "",
+      summary: e.tile?.summary || mission.summary || "",
       spotlightTechId: mission.spotlight?.techId || null,
       canRemove: true,
       tile: e.tile && typeof e.tile === "object" ? e.tile : null,
@@ -4462,53 +4516,26 @@ function collectCatalogBuckets() {
  * @returns {{ all: object[], sponsored: object[], learning: object[], library: object[] }}
  */
 function partitionCatalogQuests() {
-  const { remote, local, imported } = collectCatalogBuckets();
-  const sponsored = remote.filter((e) => isSponsoredMission(e.mission));
-  const learning = remote.filter((e) => isLearningMission(e.mission));
-  // Library: every local/import tile (including side-loaded sponsored/learning for classroom)
-  const library = [...local, ...imported];
-  const all = [...remote, ...library];
-  return { all, sponsored, learning, library };
+  return partitionCatalogBuckets(collectCatalogBuckets());
 }
 
-/**
- * Group learning entries by module title string.
- * @param {object[]} learningEntries
- * @returns {{ module: string|null, key: string, entries: object[] }[]}
- */
-function groupLearningModules(learningEntries) {
-  const map = new Map();
-  for (const e of learningEntries) {
-    const title =
-      typeof e.mission?.module === "string" ? e.mission.module.trim() : "";
-    const key = title || "other";
-    if (!map.has(key)) {
-      map.set(key, {
-        module: title || null,
-        key,
-        entries: [],
-      });
-    }
-    map.get(key).entries.push(e);
-  }
-  for (const g of map.values()) {
-    g.entries.sort(
-      (a, b) => (Number(a.mission?.lesson) || 0) - (Number(b.mission?.lesson) || 0)
-    );
-  }
-  return [...map.values()].sort((a, b) => {
-    if (a.module == null) return 1;
-    if (b.module == null) return -1;
-    return a.module.localeCompare(b.module, undefined, { sensitivity: "base" });
-  });
+function allLearningCatalogEntries() {
+  const { sponsored, learning, library } = partitionCatalogQuests();
+  return [...sponsored, ...learning, ...library].filter((e) =>
+    isLearningEntry(e)
+  );
 }
 
 function catalogNeedsAccount(entry) {
   if (!isClerkReady()) return false;
-  const access = entry?.access || entry?.mission?.access;
+  const access = entry?.access || entry?.mission?.access || entry?.tile?.access;
   if (access === "open") return false;
   if (access === "account" || access === "paid") return true;
-  return Boolean(entry?.isLearningModule || entry?.mission?.isLearningModule);
+  return Boolean(
+    entry?.isLearningModule ||
+      entry?.mission?.isLearningModule ||
+      isModuleEntry(entry)
+  );
 }
 
 /**
@@ -4542,6 +4569,17 @@ async function fetchFullQuestTile(id) {
  * @param {{ clearPick?: boolean, sameTabSignIn?: boolean }} [opts]
  */
 async function playCatalogEntry(entry, opts = {}) {
+  if (isModuleEntry(entry)) {
+    const title = String(entry.module || entry.title || "").trim();
+    const kind =
+      entry.source === "remote"
+        ? isSponsoredEntry(entry)
+          ? "sponsored"
+          : "learning"
+        : "library";
+    openQuestCatalog(kind, { moduleKey: title || entry.id });
+    return "opened_module";
+  }
   if (!entry?.mission) {
     flashToast("Quest missing mission data.");
     return "missing";
@@ -4705,22 +4743,26 @@ function handleQuestTileFileText(text) {
     flashToast("Could not parse Quest JSON.");
     return;
   }
-  const v = validateQuestTile(parsed.value);
+  const v = validateQuestDocument(parsed.value);
   if (!v.ok) {
     const detail = (v.details || []).slice(0, 3).join(", ");
     flashToast(`Invalid Quest tile: ${v.error}${detail ? ` (${detail})` : ""}`);
     return;
   }
-  const r = importQuestToLibrary({ tile: v.tile, mission: v.mission }, { setFocus: false });
+  const r = importQuestToLibrary({ tile: v.tile, mission: v.mission, kind: v.kind }, { setFocus: false });
   if (!r.ok) {
     flashToast("Import failed.");
     return;
   }
   flashToast("Quest imported into Library.");
-  const m = v.mission;
-  if (isLearningMission(m)) openQuestCatalog("learning");
-  else if (isSponsoredMission(m)) openQuestCatalog("sponsored");
-  else openQuestCatalog("library");
+  if (isLearningEntry({ ...v, tile: v.tile, mission: v.mission, kind: v.tile?.kind })) {
+    const moduleTitle = String(v.tile?.module || v.mission?.module || "").trim();
+    openQuestCatalog("library", moduleTitle ? { moduleKey: moduleTitle } : {});
+  } else if (isSponsoredMission(v.mission) || v.tile?.sponsorName) {
+    openQuestCatalog("library");
+  } else {
+    openQuestCatalog("library");
+  }
 }
 
 function openQuestHub() {
@@ -4747,16 +4789,11 @@ function renderQuestHub() {
   const grid = $("#quest-hub-grid");
   if (!grid) return;
   const { sponsored, learning, library } = partitionCatalogQuests();
-  const learningGroups = groupLearningModules(learning);
   const mpPick = Boolean(missionPickSession);
-
-  // Multiplayer host pick: Themes / Sponsored / Library only (no Learning)
-  const sponsoredForHub = mpPick
-    ? sponsored.filter((e) => !isLearningMission(e.mission))
-    : sponsored;
-  const libraryForHub = mpPick
-    ? library.filter((e) => !isLearningMission(e.mission))
-    : library;
+  const counts = catalogHubCounts(
+    { sponsored, learning, library },
+    { mpPick }
+  );
 
   const intro = document.querySelector("#screen-quest-hub .section-intro p");
   if (intro) {
@@ -4784,8 +4821,8 @@ function renderQuestHub() {
       title: "Sponsored",
       blurb:
         "Partner and product-attributed Spotlight Quests. Attribution only — you still invent the local application.",
-      meta: sponsoredForHub.length
-        ? `${sponsoredForHub.length} Quest${sponsoredForHub.length === 1 ? "" : "s"}`
+      meta: counts.sponsored
+        ? `${counts.sponsored} Quest${counts.sponsored === 1 ? "" : "s"}`
         : "None loaded yet",
       cta: "Open sponsored →",
     },
@@ -4796,10 +4833,10 @@ function renderQuestHub() {
       title: "Learning",
       blurb:
         "Modules of lessons. New lessons land here — pick a module and take the next one.",
-      meta: learning.length
-        ? `${learningGroups.length} module${learningGroups.length === 1 ? "" : "s"} · ${
-            learning.length
-          } lesson${learning.length === 1 ? "" : "s"}`
+      meta: counts.learningLessons
+        ? `${counts.learningGroups} module${counts.learningGroups === 1 ? "" : "s"} · ${
+            counts.learningLessons
+          } lesson${counts.learningLessons === 1 ? "" : "s"}`
         : "None loaded yet",
       cta: "Open learning →",
     });
@@ -4809,8 +4846,8 @@ function renderQuestHub() {
     title: "Library",
     blurb:
       "Side-loaded Quests from the local quests/ folder or Import (classroom / custom packs).",
-    meta: libraryForHub.length
-      ? `${libraryForHub.length} Quest${libraryForHub.length === 1 ? "" : "s"}`
+    meta: counts.library
+      ? `${counts.library} Quest${counts.library === 1 ? "" : "s"}`
       : "Import or drop JSON in quests/",
     cta: "Open library →",
   });
@@ -4981,7 +5018,80 @@ function catalogInspectTile(entry) {
   if (m.totalLessons != null) out.totalLessons = m.totalLessons;
   if (m.sponsorName) out.sponsorName = m.sponsorName;
   if (m.sponsorBanner) out.sponsorBanner = m.sponsorBanner;
+  if (Array.isArray(m.briefBeats) && m.briefBeats.length) {
+    out.briefBeats = m.briefBeats;
+  }
   return out;
+}
+
+/**
+ * Developer inspect: walkthrough beats (authored or derived), matching play.
+ * @param {object} mission
+ * @param {object} tile
+ */
+function catalogInspectBeatsHtml(mission, tile) {
+  const authored = Array.isArray(mission?.briefBeats) && mission.briefBeats.length
+    ? mission.briefBeats
+    : Array.isArray(tile?.briefBeats) && tile.briefBeats.length
+      ? tile.briefBeats
+      : null;
+  const beats = resolveBriefBeats(
+    { ...(mission || {}), briefBeats: authored || mission?.briefBeats },
+    { summary: tile?.summary || mission?.summary, title: tile?.title || mission?.title }
+  );
+  if (!beats.length) {
+    return `
+      <section class="quest-dev-section">
+        <h4>Briefing beats</h4>
+        <p class="muted">No walkthrough beats (no briefMd).</p>
+      </section>`;
+  }
+  const source = authored
+    ? `authored ${beats.length}`
+    : `derived from briefMd · ${beats.length}`;
+  const job = jobLineFromMission(mission, {
+    summary: tile?.summary || mission?.summary,
+    title: tile?.title || mission?.title,
+  });
+  const items = beats
+    .map((beat, i) => {
+      const still = briefBeatAuthoredUrl(beat);
+      const img = still
+        ? `<img class="quest-dev-beat-still" src="${escapeHtml(
+            still
+          )}" alt="" loading="lazy" width="640" height="360" />`
+        : "";
+      const prompt =
+        !still && beat.imagePrompt
+          ? `<p class="muted quest-dev-beat-prompt">imagePrompt: ${escapeHtml(
+              beat.imagePrompt
+            )}</p>`
+          : "";
+      return `<li class="quest-dev-beat">
+        ${img}
+        <div class="quest-dev-beat-copy">
+          <p class="quest-dev-beat-meta">${i + 1} · ${escapeHtml(
+            beat.role || "other"
+          )}</p>
+          <h5>${escapeHtml(beat.title || `Beat ${i + 1}`)}</h5>
+          <div class="quest-dev-md">${renderMarkdownSafe(beat.bodyMd || "", {
+            autolink: true,
+          })}</div>
+          ${prompt}
+        </div>
+      </li>`;
+    })
+    .join("");
+  return `
+    <section class="quest-dev-section">
+      <h4>Briefing beats <span class="muted">${escapeHtml(source)}</span></h4>
+      ${
+        job
+          ? `<p class="quest-dev-job-line">${escapeHtml(job)}</p>`
+          : ""
+      }
+      <ol class="quest-dev-beats">${items}</ol>
+    </section>`;
 }
 
 /**
@@ -4989,7 +5099,7 @@ function catalogInspectTile(entry) {
  * @param {object} entry
  */
 function openQuestCatalogInspect(entry) {
-  if (!entry?.mission && !entry?.tile) {
+  if (!entry?.mission && !entry?.tile && !isModuleEntry(entry)) {
     flashToast("No quest data to inspect.");
     return;
   }
@@ -5014,25 +5124,49 @@ function openQuestCatalogInspect(entry) {
     })
     .join("");
 
+  const authoredBeats = Array.isArray(m.briefBeats)
+    ? m.briefBeats
+    : Array.isArray(tile.briefBeats)
+      ? tile.briefBeats
+      : [];
+  const isMod = isModuleEntry(entry) || tile.kind === "module";
+  const lessonIds = Array.isArray(entry.lessons)
+    ? entry.lessons
+    : Array.isArray(tile.lessons)
+      ? tile.lessons
+      : [];
   const overviewBits = [
-    ["id", entry.id || m.id],
+    ["kind", isMod ? "module" : "quest"],
+    ["id", entry.id || m.id || tile.id],
     ["source", entry.source || m.source || "—"],
     ["file", entry.file || "—"],
     ["remoteUrl", entry.remoteUrl || "—"],
-    ["globalId", `${entry.globalId || m.globalId || "—"}${g ? ` (${g.title})` : ""}`],
+    ["globalId", `${entry.globalId || m.globalId || tile.globalId || "—"}${g ? ` (${g.title})` : ""}`],
     ["spotlight", tech ? `${tech.name} (${techId})` : techId || "—"],
-    ["sponsor", m.sponsorName || "—"],
+    ["sponsor", m.sponsorName || tile.sponsorName || "—"],
     [
       "learning",
-      m.isLearningModule || m.module
-        ? `${m.module || "module"}${
-            m.lesson != null
-              ? ` · Lesson ${m.lesson}${
-                  m.totalLessons != null ? `/${m.totalLessons}` : ""
-                }`
-              : ""
-          }`
-        : "—",
+      isMod
+        ? `${tile.module || entry.module || "module"} · ${lessonIds.length} lessons`
+        : m.isLearningModule || m.module
+          ? `${m.module || "module"}${
+              m.lesson != null
+                ? ` · Lesson ${m.lesson}${
+                    m.totalLessons != null ? `/${m.totalLessons}` : ""
+                  }`
+                : ""
+            }`
+          : "—",
+    ],
+    [
+      "beats",
+      isMod
+        ? "—"
+        : authoredBeats.length
+          ? `authored ${authoredBeats.length}`
+          : m.briefMd
+            ? "derived from briefMd"
+            : "—",
     ],
     [
       "resources",
@@ -5068,7 +5202,7 @@ function openQuestCatalogInspect(entry) {
   }
   if (body) {
     body.classList.add("quest-dev-modal-body");
-    body.innerHTML = `
+    const overviewSection = `
       <section class="quest-dev-section">
         <h4>Overview</h4>
         <dl class="quest-dev-dl">
@@ -5086,7 +5220,37 @@ function openQuestCatalogInspect(entry) {
             ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
             : ""
         }
+      </section>`;
+    const jsonSection = `
+      <section class="quest-dev-section">
+        <div class="quest-dev-json-head">
+          <h4>Full JSON</h4>
+          <button type="button" class="btn btn-secondary btn-sm" id="quest-dev-copy-json">Copy JSON</button>
+        </div>
+        <pre class="quest-dev-json"><code>${escapeHtml(jsonText)}</code></pre>
+      </section>`;
+    body.innerHTML = isMod
+      ? `${overviewSection}
+      <section class="quest-dev-section">
+        <h4>Summary</h4>
+        <p class="quest-dev-scene">${escapeHtml(tile.summary || entry.summary || "")}</p>
       </section>
+      <section class="quest-dev-section">
+        <h4>Path overview</h4>
+        ${mdOrNone(tile.overviewMd || entry.overviewMd, "No overviewMd")}
+      </section>
+      <section class="quest-dev-section">
+        <h4>Lessons</h4>
+        ${
+          lessonIds.length
+            ? `<ul class="quest-dev-list">${lessonIds
+                .map((id) => `<li><code>${escapeHtml(id)}</code></li>`)
+                .join("")}</ul>`
+            : `<p class="muted">No lesson ids</p>`
+        }
+      </section>
+      ${jsonSection}`
+      : `${overviewSection}
       <section class="quest-dev-section">
         <h4>Scene</h4>
         <p class="quest-dev-scene">${escapeHtml(m.scene || "(empty)")}</p>
@@ -5095,6 +5259,7 @@ function openQuestCatalogInspect(entry) {
         <h4>Player brief</h4>
         ${mdOrNone(m.briefMd, "No briefMd")}
       </section>
+      ${catalogInspectBeatsHtml(m, tile)}
       <section class="quest-dev-section">
         <h4>Grounding</h4>
         ${mdOrNone(m.grounding || tile.grounding, "No grounding")}
@@ -5106,14 +5271,7 @@ function openQuestCatalogInspect(entry) {
           "No aiTutorContext"
         )}
       </section>
-      <section class="quest-dev-section">
-        <div class="quest-dev-json-head">
-          <h4>Full JSON</h4>
-          <button type="button" class="btn btn-secondary btn-sm" id="quest-dev-copy-json">Copy JSON</button>
-        </div>
-        <pre class="quest-dev-json"><code>${escapeHtml(jsonText)}</code></pre>
-      </section>
-    `;
+      ${jsonSection}`;
     body.querySelector("#quest-dev-copy-json")?.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(jsonText);
@@ -5235,6 +5393,7 @@ function learningModuleProgressHtml(group, opts = {}) {
       : "";
   const first = group?.entries?.[0];
   const total =
+    Number(group?.totalLessons) ||
     Number(first?.mission?.totalLessons) ||
     group?.entries?.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
     group?.entries?.length ||
@@ -5247,36 +5406,157 @@ function learningModuleProgressHtml(group, opts = {}) {
   });
 }
 
+function moduleCoverUrl(group) {
+  const authored = String(group?.coverImageUrl || "").trim();
+  if (authored) return authored;
+  const first = group?.entries?.[0];
+  return problemVisualUrl(first?.globalId || first?.mission?.globalId || "climate");
+}
+
 function moduleCardHtml(group) {
   const n = group.entries.length;
   const label =
     typeof group.module === "string" && group.module.trim()
       ? group.module.trim()
       : "Learning path";
-  const first = group.entries[0];
-  const total =
-    first?.mission?.totalLessons ||
-    group.entries.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
-    n;
+  const total = Number(group.totalLessons) || n;
   const done = learningCompletedInGroup(group);
   const progress = learningModuleProgressHtml(group);
+  const summary = String(group.summary || "").trim();
   const status =
     done >= total && total > 0
       ? "Complete — open to replay a lesson."
       : done > 0
         ? `${done} of ${total || n} completed · open to pick a lesson.`
-        : `${n} lesson${n === 1 ? "" : "s"}${
-            total ? ` · ${total} in set` : ""
-          }. Open to pick a lesson.`;
+        : `${n || total} lesson${(n || total) === 1 ? "" : "s"}. Open for the path summary.`;
+  const sponsor = sponsorBadgeHtml({
+    sponsorName: group.sponsorName,
+    sponsorBanner: group.sponsorBanner,
+  });
+  const cover = moduleCoverUrl(group);
+  const inspectBtn =
+    state.developer && group.wrapper
+      ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-module-inspect="${escapeHtml(
+          group.key
+        )}" title="Inspect module JSON">Developer</button>`
+      : "";
   return `
-    <button type="button" class="challenge-card quest-module-card" data-module-key="${escapeHtml(
+    <div class="mission-card-wrap catalog-card-wrap" data-module-key="${escapeHtml(
       group.key
     )}">
-      <h3>${escapeHtml(label)}</h3>
-      ${progress}
-      <p>${escapeHtml(status)}</p>
-      <span class="cta">View lessons →</span>
-    </button>`;
+      <button type="button" class="challenge-card challenge-card-visual quest-module-card" data-module-key="${escapeHtml(
+        group.key
+      )}">
+        <span class="card-visual" aria-hidden="true">
+          <img src="${escapeHtml(cover)}" alt="" loading="lazy" width="640" height="360" />
+        </span>
+        <span class="card-body">
+          <span class="num">${
+            sponsor ||
+            `<span class="scenario-tag learning-tag">Learn</span>`
+          }</span>
+          <h3>${escapeHtml(label)}</h3>
+          ${progress}
+          <p>${escapeHtml(summary || status)}</p>
+          <span class="cta">Open module →</span>
+        </span>
+      </button>
+      ${
+        inspectBtn
+          ? `<div class="catalog-card-actions">${inspectBtn}</div>`
+          : ""
+      }
+    </div>`;
+}
+
+function moduleSummaryHtml(group) {
+  const cover = String(group?.coverImageUrl || "").trim();
+  const sponsor = sponsorBadgeHtml({
+    sponsorName: group.sponsorName,
+    sponsorBanner: group.sponsorBanner,
+  });
+  const overview = String(group.overviewMd || "").trim();
+  const summary = String(group.summary || "").trim();
+  const progress = learningModuleProgressHtml(group, { compact: false });
+  return `
+    <section class="quest-module-summary">
+      ${
+        cover
+          ? `<img class="quest-module-cover" src="${escapeHtml(
+              cover
+            )}" alt="" width="960" height="540" />`
+          : ""
+      }
+      <div class="quest-module-summary-body">
+        ${sponsor}
+        ${
+          summary
+            ? `<p class="quest-module-lede">${escapeHtml(summary)}</p>`
+            : ""
+        }
+        ${
+          overview
+            ? `<div class="quest-module-overview">${renderMarkdownSafe(overview, {
+                allowImages: true,
+                autolink: true,
+              })}</div>`
+            : ""
+        }
+        ${progress}
+      </div>
+    </section>`;
+}
+
+function wireModuleCards(grid, kind, groups) {
+  grid.querySelectorAll(".quest-module-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openQuestCatalog(kind, { moduleKey: btn.dataset.moduleKey });
+    });
+  });
+  grid.querySelectorAll("[data-module-inspect]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const key = btn.dataset.moduleInspect;
+      const group = (groups || []).find((g) => g.key === key);
+      if (group?.wrapper) openQuestCatalogInspect(group.wrapper);
+    });
+  });
+}
+
+function paintModuleDetail(grid, group, kind, els) {
+  const label =
+    typeof group?.module === "string" && group.module.trim()
+      ? group.module.trim()
+      : "Learning lessons";
+  if (els.titleEl) els.titleEl.textContent = label;
+  if (els.blurbEl) {
+    const bar = group ? learningModuleProgressHtml(group, { compact: true }) : "";
+    els.blurbEl.innerHTML = `${bar}<span class="catalog-blurb-note">Summary first, then lessons in order · progress stays on this device.</span>`;
+  }
+  if (!group) {
+    grid.innerHTML = `<p class="empty-hint muted">No lessons in this module.</p>`;
+    if (els.status) {
+      els.status.hidden = true;
+      els.status.textContent = "";
+    }
+    return;
+  }
+  const lessonKind = kind === "library" ? "library" : "learning";
+  grid.innerHTML = `${moduleSummaryHtml(group)}<div id="catalog-module-lessons"></div>`;
+  const host = grid.querySelector("#catalog-module-lessons");
+  const lessons = group.entries || [];
+  if (lessons.length && host) {
+    paintCatalogEntries(host, lessons, lessonKind, { groupBy: null });
+  } else if (host) {
+    host.innerHTML = `<p class="empty-hint muted">No lessons loaded for this module yet.</p>`;
+  }
+  if (els.status) {
+    els.status.hidden = false;
+    els.status.textContent = `${lessons.length} lesson${
+      lessons.length === 1 ? "" : "s"
+    }`;
+  }
 }
 
 /**
@@ -5396,24 +5676,35 @@ function renderQuestCatalog() {
   const parts = partitionCatalogQuests();
   if (importLabel) importLabel.hidden = false;
 
-  if (backBtn) {
-    backBtn.textContent =
-      kind === "learning" && moduleKey != null ? "← Modules" : "← Quests";
+  if (kind === "learning" && missionPickSession) {
+    openQuestHub();
+    return;
   }
 
-  let entries = [];
+  let pool =
+    kind === "sponsored"
+      ? parts.sponsored
+      : kind === "library"
+        ? parts.library
+        : parts.learning;
+  if (missionPickSession) {
+    pool = pool.filter((e) => !isLearningEntry(e));
+  }
+
+  const top = catalogTopLevel(pool);
+
+  if (backBtn) {
+    backBtn.textContent = moduleKey != null ? "← Modules" : "← Quests";
+  }
+
   /** @type {"emTech"|"theme"|null} */
   let groupBy = null;
-
   if (kind === "sponsored") {
     if (titleEl) titleEl.textContent = "Sponsored Quests";
     if (blurbEl) {
       blurbEl.textContent =
         "From warmersun.com — partner Spotlight Quests. Attribution only; invent a local application.";
     }
-    entries = missionPickSession
-      ? parts.sponsored.filter((e) => !isLearningMission(e.mission))
-      : parts.sponsored;
     groupBy = "emTech";
   } else if (kind === "library") {
     if (titleEl) titleEl.textContent = "Library";
@@ -5422,89 +5713,58 @@ function renderQuestCatalog() {
         ? "Side-loaded Quests for this party (learning modules hidden — solo only)."
         : "Local side-load only (quests/ folder or Import).";
     }
-    entries = missionPickSession
-      ? parts.library.filter((e) => !isLearningMission(e.mission))
-      : parts.library;
     groupBy = "theme";
-  } else if (kind === "learning") {
-    if (missionPickSession) {
-      openQuestHub();
-      return;
-    }
-    if (moduleKey != null) {
-      const groups = groupLearningModules(parts.learning);
-      const group = groups.find((g) => g.key === String(moduleKey));
-      if (titleEl) {
-        titleEl.textContent =
-          typeof group?.module === "string" && group.module.trim()
-            ? group.module.trim()
-            : "Learning lessons";
-      }
-      if (blurbEl) {
-        const bar = group ? learningModuleProgressHtml(group, { compact: true }) : "";
-        blurbEl.innerHTML = `${bar}<span class="catalog-blurb-note">Lessons in order · progress stays on this device.</span>`;
-      }
-      entries = [...(group?.entries || [])].sort((a, b) => {
-        const la = Number(a.mission?.lesson) || 0;
-        const lb = Number(b.mission?.lesson) || 0;
-        if (la !== lb) return la - lb;
-        return String(a.title || a.mission?.title || "").localeCompare(
-          String(b.title || b.mission?.title || "")
-        );
-      });
-      groupBy = null;
-    } else {
-      if (titleEl) titleEl.textContent = "Learning modules";
-      if (blurbEl) {
-        blurbEl.textContent =
-          "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
-      }
-      const groups = groupLearningModules(parts.learning);
-      if (!groups.length) {
-        grid.innerHTML = `<p class="empty-hint muted">No learning Quests loaded. Drop lesson JSON into <code>quests/</code> or Import.</p>`;
-        if (status) {
-          status.hidden = true;
-          status.textContent = "";
-        }
-        return;
-      }
-      if (groups.length === 1) {
-        state.questCatalogModuleKey = groups[0].key;
-        renderQuestCatalog();
-        return;
-      }
-      grid.innerHTML = `<div class="challenge-grid">${groups.map(moduleCardHtml).join("")}</div>`;
-      grid.querySelectorAll(".quest-module-card").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          openQuestCatalog("learning", { moduleKey: btn.dataset.moduleKey });
-        });
-      });
-      const completedLessons = parts.learning.filter((e) =>
-        isMissionSolved(e.mission?.id || e.id)
-      ).length;
-      if (status) {
-        status.hidden = false;
-        status.textContent = `${groups.length} modules · ${parts.learning.length} lessons${
-          completedLessons ? ` · ${completedLessons} completed` : ""
-        }`;
-      }
-      return;
+  } else {
+    if (titleEl) titleEl.textContent = "Learning modules";
+    if (blurbEl) {
+      blurbEl.textContent =
+        "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
     }
   }
 
-  if (!entries.length) {
-    grid.innerHTML = `<p class="empty-hint muted">Nothing here yet. Drop Quest JSON into the server <code>quests/</code> folder or use Import.</p>`;
+  if (moduleKey != null) {
+    const groups = groupLearningModules(pool.filter((e) => isLearningEntry(e)));
+    const group = groups.find((g) => g.key === String(moduleKey));
+    paintModuleDetail(grid, group, kind, { titleEl, blurbEl, status });
+  } else if (!top.groups.length && !top.standalone.length) {
+    const empty =
+      kind === "learning"
+        ? `No learning Quests loaded. Drop lesson JSON into <code>quests/</code> or Import.`
+        : `Nothing here yet. Drop Quest JSON into the server <code>quests/</code> folder or use Import.`;
+    grid.innerHTML = `<p class="empty-hint muted">${empty}</p>`;
     if (status) {
       status.hidden = true;
       status.textContent = "";
     }
-    return;
-  }
-
-  paintCatalogEntries(grid, entries, kind, { groupBy });
-  if (status) {
-    status.hidden = false;
-    status.textContent = `${entries.length} Quest${entries.length === 1 ? "" : "s"}`;
+  } else {
+    const modulesHtml = top.groups.length
+      ? `<div class="challenge-grid catalog-modules">${top.groups
+          .map(moduleCardHtml)
+          .join("")}</div>`
+      : "";
+    grid.innerHTML = `${modulesHtml}<div id="catalog-standalone"></div>`;
+    wireModuleCards(grid, kind, top.groups);
+    const standHost = grid.querySelector("#catalog-standalone");
+    if (standHost && top.standalone.length) {
+      paintCatalogEntries(standHost, top.standalone, kind, { groupBy });
+    } else if (standHost) {
+      standHost.remove();
+    }
+    if (status) {
+      status.hidden = false;
+      const bits = [];
+      if (top.groups.length) {
+        bits.push(
+          `${top.groups.length} module${top.groups.length === 1 ? "" : "s"}`
+        );
+      }
+      if (top.standalone.length) {
+        bits.push(
+          `${top.standalone.length} Quest${top.standalone.length === 1 ? "" : "s"}`
+        );
+      }
+      status.textContent = bits.join(" · ");
+    }
   }
 
   if (!state.hostedQuestsLoaded) {
@@ -6434,7 +6694,7 @@ function renderWorkshop() {
       const lesson = Number(m.lesson);
       let completedCount;
       if (title) {
-        const group = groupLearningModules(partitionCatalogQuests().learning).find(
+        const group = groupLearningModules(allLearningCatalogEntries()).find(
           (g) => g.key === title
         );
         if (group) {
@@ -19617,12 +19877,9 @@ function bind() {
     showScreen("title");
   });
   $("#btn-quest-catalog-back")?.addEventListener("click", () => {
-    if (state.questCatalogKind === "learning" && state.questCatalogModuleKey != null) {
-      const groups = groupLearningModules(partitionCatalogQuests().learning);
-      if (groups.length > 1) {
-        openQuestCatalog("learning");
-        return;
-      }
+    if (state.questCatalogModuleKey != null) {
+      openQuestCatalog(state.questCatalogKind || "library");
+      return;
     }
     showScreen("quest-hub");
   });

@@ -143,7 +143,7 @@ Add:
 
 Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
 
-**Multi-lesson set:** N files, same `module` title string + `totalLessons`, `lesson` = 1…N, unique `id`s. No engine unlock — host orders files.
+**Multi-lesson set:** N lesson files, same `module` title string + `totalLessons`, `lesson` = 1…N, unique `id`s, **plus Recipe F** (`kind: "module"` wrapper). No engine unlock — host orders files. Sponsored sets appear under **Sponsored** as one module.
 
 ---
 
@@ -177,6 +177,33 @@ Combine base + B + C (+ A if needed). Example:
 ```
 
 Portable example file: `examples/spotlight-sponsored-learning.json`.
+
+---
+
+## Recipe F — module wrapper (multi-lesson path)
+
+Not a playable Quest. Catalog card + **summary panel**. `kind` must be `"module"` (never `"quest-pack"`).
+
+```json
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "module",
+  "id": "module-<slug>",
+  "title": "…path title…",
+  "summary": "Invent … across this path. (≤160 chars, 14-year-old test)",
+  "globalId": "<themeId>",
+  "module": "…same title as each lesson’s module field…",
+  "totalLessons": 4,
+  "lessons": ["lesson-id-1", "lesson-id-2", "lesson-id-3", "lesson-id-4"],
+  "spotlight": { "techId": "<techId>", "asOf": "2026-09", "encourageCopy": "…" },
+  "sponsorName": "Acme",
+  "sponsorBanner": "…tagline…",
+  "coverImageUrl": "assets/quests/<slug>/cover.png",
+  "overviewMd": "## What you invent across this path\n\n…"
+}
+```
+
+No `mission`, pressure, or `briefMd`. Validate with `npm run validate:quest`. Portable example: `examples/spotlight-sponsored-module.json`.
 
 ---
 

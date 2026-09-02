@@ -46,9 +46,8 @@ export function ensureQuestsDir(dir) {
  */
 export async function scanQuestsFolder(dir = resolveQuestsDir()) {
   ensureQuestsDir(dir);
-  const { parseQuestTileJson, validateQuestTile } = await import(
-    pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href
-  );
+  const { parseQuestTileJson, validateQuestDocument, catalogRecordFromValidated } =
+    await import(pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href);
 
   /** @type {object[]} */
   const quests = [];
@@ -94,7 +93,7 @@ export async function scanQuestsFolder(dir = resolveQuestsDir()) {
       continue;
     }
 
-    const v = validateQuestTile(parsed.value);
+    const v = validateQuestDocument(parsed.value);
     if (!v.ok) {
       errors.push({
         file: name,
@@ -104,23 +103,9 @@ export async function scanQuestsFolder(dir = resolveQuestsDir()) {
       continue;
     }
 
-    const mission = {
-      ...v.mission,
-      source: "hosted",
-    };
-
-    quests.push({
-      id: mission.id,
-      file: name,
-      title: mission.title,
-      summary: v.tile.summary || "",
-      globalId: mission.globalId,
-      place: mission.place,
-      spotlightTechId: mission.spotlight?.techId || null,
-      placement: v.tile.placement || { mode: "replace-daily" },
-      mission,
-      tile: { ...v.tile, mission },
-    });
+    const rec = catalogRecordFromValidated(v, { file: name, source: "hosted" });
+    if (!rec) continue;
+    quests.push(rec);
   }
 
   return { dir, quests, errors };

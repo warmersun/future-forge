@@ -22,7 +22,7 @@ if (!fs.existsSync(abs)) {
   process.exit(2);
 }
 
-const { validateQuestTile, parseQuestTileJson } = await import(
+const { validateQuestDocument, parseQuestTileJson } = await import(
   pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href
 );
 
@@ -32,7 +32,7 @@ if (!parsed.ok) {
   console.error(`FAIL: ${parsed.error}`);
   process.exit(1);
 }
-const r = validateQuestTile(parsed.value);
+const r = validateQuestDocument(parsed.value);
 if (!r.ok) {
   console.error(`FAIL: ${r.error}`);
   if (r.details?.length) {
@@ -40,39 +40,62 @@ if (!r.ok) {
   }
   process.exit(1);
 }
-console.log(`OK: ${r.mission.id}`);
-console.log(`  title: ${r.mission.title}`);
-console.log(`  globalId: ${r.mission.globalId}`);
-console.log(`  spotlight: ${r.mission.spotlight?.techId}`);
-console.log(`  briefMd: ${r.mission.briefMd.length} chars`);
+
+if (r.tile?.kind === "module" || r.kind === "module") {
+  const t = r.tile;
+  console.log(`OK: ${t.id}`);
+  console.log(`  kind: module`);
+  console.log(`  title: ${t.title}`);
+  console.log(`  module: ${t.module}`);
+  console.log(`  globalId: ${t.globalId}`);
+  console.log(`  lessons: ${(t.lessons || []).join(", ")}`);
+  console.log(`  totalLessons: ${t.totalLessons}`);
+  if (t.spotlight?.techId) console.log(`  spotlight: ${t.spotlight.techId}`);
+  if (t.sponsorName) {
+    const ban = t.sponsorBanner ? ` — ${t.sponsorBanner}` : "";
+    console.log(`  sponsor: ${t.sponsorName}${ban}`);
+  }
+  if (t.overviewMd) console.log(`  overviewMd: ${t.overviewMd.length} chars`);
+  process.exit(0);
+}
+
+const m = r.mission;
+console.log(`OK: ${m.id}`);
+console.log(`  title: ${m.title}`);
+console.log(`  globalId: ${m.globalId}`);
+console.log(`  spotlight: ${m.spotlight?.techId}`);
+console.log(`  briefMd: ${m.briefMd.length} chars`);
 console.log(`  placement: ${r.tile.placement?.mode}`);
-if (r.mission.resources) {
-  console.log(`  resources: ${JSON.stringify(r.mission.resources)}`);
+if (m.resources) {
+  console.log(`  resources: ${JSON.stringify(m.resources)}`);
 }
-if (r.mission.crisisRoles) {
-  console.log(`  crisisRoles: ${JSON.stringify(r.mission.crisisRoles)}`);
+if (m.crisisRoles) {
+  console.log(`  crisisRoles: ${JSON.stringify(m.crisisRoles)}`);
 }
-if (r.mission.grounding) {
-  console.log(`  grounding: ${r.mission.grounding.length} chars`);
+if (m.grounding) {
+  console.log(`  grounding: ${m.grounding.length} chars`);
 }
-if (r.mission.isLearningModule) {
+if (Array.isArray(m.briefBeats) && m.briefBeats.length) {
+  console.log(`  briefBeats: authored ${m.briefBeats.length}`);
+}
+if (m.isLearningModule) {
   const bits = ["learning module"];
-  if (r.mission.lesson != null || r.mission.totalLessons != null) {
+  if (m.lesson != null || m.totalLessons != null) {
     bits.push(
-      `lesson ${r.mission.lesson ?? "?"}${
-        r.mission.totalLessons != null ? `/${r.mission.totalLessons}` : ""
+      `lesson ${m.lesson ?? "?"}${
+        m.totalLessons != null ? `/${m.totalLessons}` : ""
       }`
     );
   }
-  if (r.mission.module != null) bits.push(`module "${r.mission.module}"`);
-  if (r.mission.aiTutorContext) {
-    bits.push(`tutorContext ${r.mission.aiTutorContext.length} chars`);
+  if (m.module != null) bits.push(`module "${m.module}"`);
+  if (m.aiTutorContext) {
+    bits.push(`tutorContext ${m.aiTutorContext.length} chars`);
   }
   console.log(`  ${bits.join(" · ")}`);
 }
-if (r.mission.sponsorName) {
-  const ban = r.mission.sponsorBanner ? ` — ${r.mission.sponsorBanner}` : "";
-  console.log(`  sponsor: ${r.mission.sponsorName}${ban}`);
+if (m.sponsorName) {
+  const ban = m.sponsorBanner ? ` — ${m.sponsorBanner}` : "";
+  console.log(`  sponsor: ${m.sponsorName}${ban}`);
 }
-console.log(`  pressure: ${JSON.stringify(r.mission.pressure)}`);
+console.log(`  pressure: ${JSON.stringify(m.pressure)}`);
 process.exit(0);

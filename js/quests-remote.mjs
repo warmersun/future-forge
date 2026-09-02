@@ -219,9 +219,11 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
     };
   }
 
-  const { parseQuestTileJson, validateQuestTile } = await import(
-    pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href
-  );
+  const {
+    parseQuestTileJson,
+    validateQuestDocument,
+    catalogRecordFromValidated,
+  } = await import(pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href);
 
   /** @type {object[]} */
   const quests = [];
@@ -297,7 +299,7 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
       continue;
     }
 
-    const v = validateQuestTile(parsed.value);
+    const v = validateQuestDocument(parsed.value);
     if (!v.ok) {
       errors.push({
         file,
@@ -307,25 +309,13 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
       continue;
     }
 
-    const mission = {
-      ...v.mission,
-      source: "remote",
-    };
-
-    quests.push({
-      id: mission.id,
+    const rec = catalogRecordFromValidated(v, {
       file,
       remoteUrl: tileUrl,
-      title: mission.title,
-      summary: v.tile.summary || "",
-      globalId: mission.globalId,
-      place: mission.place,
-      spotlightTechId: mission.spotlight?.techId || null,
-      placement: v.tile.placement || { mode: "replace-daily" },
-      mission,
-      tile: { ...v.tile, mission },
       source: "remote",
     });
+    if (!rec) continue;
+    quests.push(rec);
   }
 
   const result = {

@@ -34,4 +34,34 @@ describe("scanQuestsFolder", () => {
     assert.equal(r.quests[0].spotlightTechId, "gene-sequencing");
     assert.ok(r.errors.some((e) => e.file === "bad.json"));
   });
+
+  it("loads a kind:module wrapper without a mission", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ff-quests-mod-"));
+    try {
+      ensureQuestsDir(dir);
+      fs.writeFileSync(
+        path.join(dir, "mod.json"),
+        JSON.stringify({
+          schema: "future-forge.quest-tile/v1",
+          kind: "module",
+          id: "module-sensors-before-models",
+          title: "Sensors before models",
+          summary: "Invent local sensor workflows before you scale a model.",
+          globalId: "infectious",
+          module: "Sensors before models",
+          lessons: ["spotlight-gene-seq-test"],
+          totalLessons: 1,
+        }),
+        "utf8"
+      );
+      const r = await scanQuestsFolder(dir);
+      assert.equal(r.errors.length, 0, JSON.stringify(r.errors));
+      assert.equal(r.quests.length, 1);
+      assert.equal(r.quests[0].kind, "module");
+      assert.equal(r.quests[0].mission, null);
+      assert.deepEqual(r.quests[0].lessons, ["spotlight-gene-seq-test"]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

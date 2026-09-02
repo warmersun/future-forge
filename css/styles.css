@@ -2674,6 +2674,111 @@ button.btn[hidden] {
   min-height: 160px;
 }
 
+.quest-module-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  align-items: start;
+  margin: 0 0 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 20, 0.28);
+}
+.quest-module-cover {
+  display: block;
+  width: 100%;
+  max-height: 12rem;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #0f172a;
+}
+.quest-module-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.quest-module-lede {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.quest-module-overview {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.quest-module-overview p {
+  margin: 0 0 0.5rem;
+}
+.quest-module-overview h2,
+.quest-module-overview h3 {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+@media (max-width: 720px) {
+  .quest-module-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quest-dev-job-line {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.quest-dev-beats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.quest-dev-beat {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: start;
+  padding: 0.65rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(2, 6, 14, 0.4);
+}
+.quest-dev-beat-still {
+  display: block;
+  width: 100%;
+  max-height: 8.5rem;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #0f172a;
+}
+.quest-dev-beat-copy h5 {
+  margin: 0 0 0.3rem;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+.quest-dev-beat-meta {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+.quest-dev-beat-prompt {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+}
+@media (max-width: 720px) {
+  .quest-dev-beat {
+    grid-template-columns: 1fr;
+  }
+}
+
 .challenge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

@@ -137,13 +137,20 @@ export function loadQuestLibrary() {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr
-      .filter((e) => e && e.mission && e.mission.id)
+      .filter(
+        (e) =>
+          e &&
+          (e.mission?.id ||
+            e.kind === "module" ||
+            e.tile?.kind === "module")
+      )
       .slice(0, MAX_QUEST_LIBRARY)
       .map((e) => ({
-        id: String(e.id || e.mission.id),
+        id: String(e.id || e.mission?.id || e.tile?.id || ""),
         importedAt: Number(e.importedAt) || Date.now(),
         tile: e.tile || null,
-        mission: e.mission,
+        mission: e.mission || null,
+        kind: e.kind || e.tile?.kind || "quest",
       }));
   } catch {
     return [];
@@ -170,14 +177,18 @@ export function saveQuestLibrary(entries) {
  * @param {{ setFocus?: boolean }} [opts]
  */
 export function importQuestToLibrary(validated, opts = {}) {
-  if (!validated?.mission?.id) return { ok: false, error: "no_mission", library: loadQuestLibrary() };
+  const isModule = validated?.tile?.kind === "module" || validated?.kind === "module";
+  const id = isModule
+    ? String(validated?.tile?.id || "")
+    : String(validated?.mission?.id || "");
+  if (!id) return { ok: false, error: "no_mission", library: loadQuestLibrary() };
   const library = loadQuestLibrary();
-  const id = String(validated.mission.id);
   const entry = {
     id,
     importedAt: Date.now(),
     tile: validated.tile || null,
-    mission: validated.mission,
+    mission: validated.mission || null,
+    kind: isModule ? "module" : "quest",
   };
   const next = [entry, ...library.filter((e) => e.id !== id)].slice(0, MAX_QUEST_LIBRARY);
   if (next.length >= MAX_QUEST_LIBRARY && !library.some((e) => e.id === id)) {
@@ -675,7 +686,10 @@ function drawShareSection(ctx, { x, y, w, label, body, maxLines = 12, bodySize =
   return yy + 10;
 }
 
-const brandMarkImg = new Image();
+const brandMarkImg =
+  typeof Image === "function"
+    ? new Image()
+    : { complete: false, naturalWidth: 0, decoding: "async", src: "" };
 brandMarkImg.decoding = "async";
 brandMarkImg.src = "assets/mascot/ff-mark.webp";
 

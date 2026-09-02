@@ -4,6 +4,10 @@ import {
   QUEST_TILE_SCHEMA,
   parseQuestTileJson,
   validateQuestTile,
+  validateQuestModule,
+  validateQuestDocument,
+  catalogRecordFromValidated,
+  slugId,
   humanizeMeterKey,
   resourceOverrideLabel,
   parseResourceOverrides,
@@ -729,6 +733,7 @@ describe("quest-tile", () => {
       r.mission.briefBeats[0].imageUrl,
       "assets/quests/spotlight-gene-seq/place-1.jpg"
     );
+    assert.equal(r.tile.briefBeats.length, 3);
   });
 
   it("rejects invalid briefBeats (too few)", () => {
@@ -740,5 +745,120 @@ describe("quest-tile", () => {
     const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
     assert.equal(r.ok, false);
     assert.ok(r.details.some((d) => /briefBeats/.test(d)));
+  });
+});
+
+function baseModule(over = {}) {
+  return {
+    schema: QUEST_TILE_SCHEMA,
+    kind: "module",
+    id: "module-sensors-before-models",
+    title: "Sensors before models",
+    summary: "Invent local sensor workflows before you scale a model.",
+    globalId: "infectious",
+    module: "Sensors before models",
+    totalLessons: 2,
+    lessons: ["spotlight-gene-seq-test", "spotlight-gene-seq-lesson-2"],
+    spotlight: { techId: "gene-sequencing", asOf: "2026-07" },
+    overviewMd: "## What you invent across this path\n\nStart with sensors.",
+    coverImageUrl: "assets/quests/spotlight-gene-seq/place-1.jpg",
+    ...over,
+  };
+}
+
+describe("quest module wrapper", () => {
+  it("validates a module and rejects quest-pack", () => {
+    const r = validateQuestModule(baseModule(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.kind, "module");
+    assert.equal(r.mission, null);
+    assert.equal(r.tile.kind, "module");
+    assert.equal(r.tile.lessons.length, 2);
+    assert.equal(r.tile.module, "Sensors before models");
+    assert.equal(r.tile.access, "account");
+
+    const pack = validateQuestDocument(
+      { ...baseModule(), kind: "quest-pack" },
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(pack.ok, false);
+    assert.equal(pack.error, "packs_not_supported");
+  });
+
+  it("validateQuestDocument dispatches module vs quest", () => {
+    const mod = validateQuestDocument(baseModule(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(mod.ok, true);
+    assert.equal(mod.tile.kind, "module");
+
+    const quest = validateQuestDocument(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(quest.ok, true);
+    assert.equal(quest.mission.suggested[0], "gene-sequencing");
+  });
+
+  it("rejects empty lessons, bad cover, missing summary", () => {
+    const empty = validateQuestModule(baseModule({ lessons: [] }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(empty.ok, false);
+
+    const cover = validateQuestModule(
+      baseModule({ coverImageUrl: "javascript:alert(1)" }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(cover.ok, false);
+    assert.ok(cover.details.some((d) => d === "coverImageUrl_unsafe"));
+
+    const noSum = validateQuestModule(baseModule({ summary: "" }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(noSum.ok, false);
+  });
+
+  it("slugifies lesson ids on the module wrapper", () => {
+    const r = validateQuestModule(
+      baseModule({
+        lessons: ["Spotlight Gene Seq Test", "spotlight-gene-seq-lesson-2"],
+      }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.tile.lessons, [
+      "spotlight-gene-seq-test",
+      "spotlight-gene-seq-lesson-2",
+    ]);
+    assert.equal(slugId("Spotlight Gene Seq Test"), "spotlight-gene-seq-test");
+  });
+
+  it("catalogRecordFromValidated builds module and quest records", () => {
+    const mod = validateQuestModule(baseModule({ sponsorName: "Acme" }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    const rec = catalogRecordFromValidated(mod, { file: "mod.json", source: "hosted" });
+    assert.equal(rec.kind, "module");
+    assert.equal(rec.mission, null);
+    assert.equal(rec.sponsorName, "Acme");
+    assert.equal(rec.lessons.length, 2);
+    assert.equal(rec.file, "mod.json");
+
+    const quest = validateQuestTile(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    const qrec = catalogRecordFromValidated(quest, { source: "remote" });
+    assert.equal(qrec.kind, "quest");
+    assert.equal(qrec.mission.source, "remote");
+    assert.equal(qrec.id, "spotlight-gene-seq-test");
   });
 });

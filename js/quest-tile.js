@@ -8,7 +8,7 @@ import {
   TREND_CAPS,
   validateCapabilityTrend,
 } from "./capability-trend.js";
-import { normalizeBriefBeats } from "./brief-beats.js";
+import { isSafeBriefImageUrl, normalizeBriefBeats } from "./brief-beats.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -35,6 +35,9 @@ export const CAPS = {
   sponsorBanner: 200,
   /** Learning-module title (display + catalog group key). */
   moduleTitle: 80,
+  /** Module wrapper overview (player-facing path summary). */
+  overviewMd: 8_000,
+  maxModuleLessons: 24,
   maxQuestTrends: TREND_CAPS.maxQuestTrends,
 };
 
@@ -566,6 +569,275 @@ export function parseQuestTileJson(raw) {
 }
 
 /**
+ * Catalog container for a multi-lesson path. Not playable — no mission/pressure.
+ * @param {object} tile
+ * @param {{ techIds?: string[], globalIds?: string[] }} [opts]
+ * @returns {{ ok: true, tile: object, mission: null, kind: "module" } | { ok: false, error: string, details?: string[] }}
+ */
+export function validateQuestModule(tile, opts = {}) {
+  const details = [];
+  if (!tile || typeof tile !== "object") {
+    return { ok: false, error: "not_object" };
+  }
+
+  const schema = String(tile.schema || "");
+  if (schema !== QUEST_TILE_SCHEMA) {
+    return { ok: false, error: "bad_schema", details: [`expected ${QUEST_TILE_SCHEMA}`] };
+  }
+
+  const kind = String(tile.kind || "");
+  if (kind !== "module") {
+    return { ok: false, error: "bad_kind", details: [kind || "(empty)"] };
+  }
+
+  const techIds = new Set(opts.techIds || allTechIds());
+  const globalIds = new Set(opts.globalIds || GLOBALS.map((g) => g.id));
+
+  const id = slugId(tile.id || tile.title);
+  if (!id) details.push("missing_id");
+
+  const title = String(tile.title || "").trim();
+  if (!title) details.push("missing_title");
+
+  const summary = String(tile.summary || "").trim();
+  if (!summary) details.push("missing_summary");
+  if (summary.length > CAPS.summary) details.push("summary_too_long");
+
+  const moduleRaw = tile.module != null ? String(tile.module).trim() : title;
+  const moduleTitle = moduleRaw.slice(0, CAPS.moduleTitle);
+  if (!moduleTitle) details.push("learning_module_not_nonempty_string");
+
+  const globalId = String(tile.globalId || "").trim();
+  if (!globalId || !globalIds.has(globalId)) {
+    details.push(`bad_global_id:${globalId || "(empty)"}`);
+  }
+
+  /** @type {string[]} */
+  const lessons = [];
+  if (tile.lessons === undefined || tile.lessons === null) {
+    details.push("lessons_not_array");
+  } else if (!Array.isArray(tile.lessons)) {
+    details.push("lessons_not_array");
+  } else if (tile.lessons.length < 1) {
+    details.push("lessons_empty");
+  } else if (tile.lessons.length > CAPS.maxModuleLessons) {
+    details.push("too_many_lessons");
+  } else {
+    const seen = new Set();
+    for (let i = 0; i < tile.lessons.length; i++) {
+      const lid = String(tile.lessons[i] || "").trim();
+      if (!lid) {
+        details.push(`lesson_${i}_empty_id`);
+        continue;
+      }
+      const sliced = slugId(lid);
+      if (!sliced) {
+        details.push(`lesson_${i}_bad_id`);
+        continue;
+      }
+      if (seen.has(sliced)) {
+        details.push(`lesson_${i}_duplicate_id`);
+        continue;
+      }
+      seen.add(sliced);
+      lessons.push(sliced);
+    }
+    if (!lessons.length) details.push("lessons_empty");
+  }
+
+  let totalLessons = Number(tile.totalLessons);
+  if (tile.totalLessons === undefined || tile.totalLessons === null) {
+    totalLessons = lessons.length || 1;
+  } else if (
+    typeof tile.totalLessons !== "number" ||
+    !Number.isFinite(tile.totalLessons) ||
+    !Number.isInteger(tile.totalLessons) ||
+    tile.totalLessons < 1
+  ) {
+    details.push("learning_totalLessons_not_positive_integer");
+    totalLessons = lessons.length || 1;
+  }
+
+  /** @type {object|null} */
+  let spotlight = null;
+  const spotlightIn = tile.spotlight;
+  if (spotlightIn !== undefined && spotlightIn !== null) {
+    if (typeof spotlightIn !== "object" || Array.isArray(spotlightIn)) {
+      details.push("missing_spotlight");
+    } else {
+      const techId = String(spotlightIn.techId || "").trim();
+      if (!techId || !techIds.has(techId)) {
+        details.push(`bad_spotlight_tech:${techId || "(empty)"}`);
+      } else {
+        spotlight = {
+          techId,
+          advanceTitle: String(spotlightIn.advanceTitle || "").slice(0, CAPS.advanceTitle),
+          advanceSummary: String(spotlightIn.advanceSummary || "").slice(
+            0,
+            CAPS.advanceSummary
+          ),
+          asOf: String(spotlightIn.asOf || "").slice(0, 32),
+          encourageCopy: String(spotlightIn.encourageCopy || "").slice(
+            0,
+            CAPS.encourageCopy
+          ),
+        };
+      }
+    }
+  }
+
+  let overviewMd = "";
+  if (tile.overviewMd !== undefined && tile.overviewMd !== null) {
+    if (typeof tile.overviewMd !== "string") {
+      details.push("overviewMd_not_string");
+    } else {
+      overviewMd = tile.overviewMd.trim();
+      if (overviewMd.length > CAPS.overviewMd) details.push("overviewMd_too_long");
+      if (/<script/i.test(overviewMd) || /javascript\s*:/i.test(overviewMd)) {
+        details.push("overviewMd_unsafe");
+      }
+    }
+  }
+
+  let coverImageUrl = "";
+  if (tile.coverImageUrl !== undefined && tile.coverImageUrl !== null) {
+    if (typeof tile.coverImageUrl !== "string") {
+      details.push("coverImageUrl_not_string");
+    } else {
+      const url = tile.coverImageUrl.trim();
+      if (url && !isSafeBriefImageUrl(url)) {
+        details.push("coverImageUrl_unsafe");
+      } else {
+        coverImageUrl = url;
+      }
+    }
+  }
+
+  let sponsorName = null;
+  let sponsorBanner = null;
+  if (tile.sponsorName !== undefined) {
+    if (typeof tile.sponsorName !== "string") {
+      details.push("sponsorName_not_string");
+    } else {
+      const s = tile.sponsorName.trim();
+      if (s) sponsorName = s.slice(0, CAPS.sponsorName);
+    }
+  }
+  if (tile.sponsorBanner !== undefined) {
+    if (typeof tile.sponsorBanner !== "string") {
+      details.push("sponsorBanner_not_string");
+    } else {
+      const s = tile.sponsorBanner.trim();
+      if (s) sponsorBanner = s.slice(0, CAPS.sponsorBanner);
+    }
+  }
+
+  const accessParsed = parseAccessField(tile, {}, { isLearningModule: true });
+  if (!accessParsed.ok) details.push(...accessParsed.details);
+
+  if (details.length) {
+    return { ok: false, error: "validation_failed", details };
+  }
+
+  const placementMode = String(tile.placement?.mode || "replace-daily");
+  const placement = {
+    mode: PLACEMENT_MODES.has(placementMode) ? placementMode : "replace-daily",
+    activeFrom: tile.placement?.activeFrom ?? null,
+    activeTo: tile.placement?.activeTo ?? null,
+    priority: Number(tile.placement?.priority) || 0,
+  };
+
+  /** @type {Record<string, unknown>} */
+  const normalized = {
+    schema: QUEST_TILE_SCHEMA,
+    kind: "module",
+    id,
+    version: Number(tile.version) || 1,
+    title: title.slice(0, CAPS.title),
+    summary: summary.slice(0, CAPS.summary),
+    module: moduleTitle,
+    globalId,
+    lessons,
+    totalLessons,
+    placement,
+    author: tile.author && typeof tile.author === "object" ? tile.author : null,
+    createdAt: String(tile.createdAt || new Date().toISOString()),
+    tags: Array.isArray(tile.tags) ? tile.tags.map(String).slice(0, 20) : [],
+    license: String(tile.license || "").slice(0, 80),
+  };
+  if (spotlight) normalized.spotlight = spotlight;
+  if (overviewMd) normalized.overviewMd = overviewMd.slice(0, CAPS.overviewMd);
+  if (coverImageUrl) normalized.coverImageUrl = coverImageUrl;
+  if (sponsorName) normalized.sponsorName = sponsorName;
+  if (sponsorBanner) normalized.sponsorBanner = sponsorBanner;
+  if (accessParsed.ok) normalized.access = accessParsed.value;
+
+  return { ok: true, tile: normalized, mission: null, kind: "module" };
+}
+
+/**
+ * Validate a quest tile or a module wrapper.
+ * @param {object} tile
+ * @param {{ techIds?: string[], globalIds?: string[] }} [opts]
+ */
+export function validateQuestDocument(tile, opts = {}) {
+  const kind = String(tile?.kind || "quest");
+  if (kind === "module") return validateQuestModule(tile, opts);
+  return validateQuestTile(tile, opts);
+}
+
+/**
+ * Catalog API/list record from a successful validateQuestDocument result.
+ * @param {{ ok: true, tile: object, mission?: object|null }} v
+ * @param {Record<string, unknown>} [extra]
+ */
+export function catalogRecordFromValidated(v, extra = {}) {
+  if (!v?.ok || !v.tile) return null;
+  const extraSource = extra.source != null ? String(extra.source) : "";
+  if (v.tile.kind === "module" || v.kind === "module") {
+    const t = v.tile;
+    return {
+      id: t.id,
+      kind: "module",
+      title: t.title,
+      summary: t.summary || "",
+      globalId: t.globalId,
+      place: "",
+      spotlightTechId: t.spotlight?.techId || null,
+      placement: t.placement || { mode: "replace-daily" },
+      mission: null,
+      tile: t,
+      lessons: Array.isArray(t.lessons) ? t.lessons : [],
+      module: t.module,
+      totalLessons: t.totalLessons,
+      overviewMd: t.overviewMd || "",
+      coverImageUrl: t.coverImageUrl || "",
+      sponsorName: t.sponsorName || "",
+      sponsorBanner: t.sponsorBanner || "",
+      isLearningModule: true,
+      access: t.access,
+      ...extra,
+    };
+  }
+  const mission = extraSource
+    ? { ...v.mission, source: extraSource }
+    : { ...v.mission };
+  return {
+    id: mission.id,
+    kind: "quest",
+    title: mission.title,
+    summary: v.tile.summary || "",
+    globalId: mission.globalId,
+    place: mission.place,
+    spotlightTechId: mission.spotlight?.techId || null,
+    placement: v.tile.placement || { mode: "replace-daily" },
+    mission,
+    tile: { ...v.tile, mission },
+    ...extra,
+  };
+}
+
+/**
  * @param {object} tile
  * @param {{ techIds?: string[], globalIds?: string[] }} [opts]
  * @returns {{ ok: true, tile: object, mission: object } | { ok: false, error: string, details?: string[] }}
@@ -844,8 +1116,11 @@ export function validateQuestTile(tile, opts = {}) {
   if (trendFields.spotlightTrends?.length) {
     normalizedTile.spotlightTrends = trendFields.spotlightTrends;
   }
+  if (briefBeats?.length) {
+    normalizedTile.briefBeats = briefBeats;
+  }
 
-  return { ok: true, tile: normalizedTile, mission };
+  return { ok: true, tile: normalizedTile, mission, kind: "quest" };
 }
 
 /**
@@ -858,7 +1133,7 @@ export function tileToMission(tile, opts = {}) {
   return { ok: true, mission: r.mission, tile: r.tile };
 }
 
-function slugId(s) {
+export function slugId(s) {
   return String(s || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

@@ -48,3 +48,4 @@ Capability trends (Wait charts) use a separate catalog — see [`docs/capability
 
 - `spotlight-gene-seq.json` — Spotlight gene sequencing
 - `spotlight-ai-edge-north-stack-2026.json` — AI edge sample (not sponsored)
+- `base-onchain-dollars.json` + `base-onchain-dollars-lesson-*.json` — sponsored learning **module** (Library until published to the warmersun catalog; then **Sponsored** as one path with a summary panel)

@@ -169,6 +169,49 @@ describe("quests-remote", () => {
     }
   });
 
+  it("loads a kind:module wrapper from the catalog", async () => {
+    const prev = fs.readFileSync(catalogPath, "utf8");
+    try {
+      fs.writeFileSync(
+        path.join(tmp, "mod.json"),
+        JSON.stringify({
+          schema: "future-forge.quest-tile/v1",
+          kind: "module",
+          id: "module-sensors-before-models",
+          title: "Sensors before models",
+          summary: "Invent local sensor workflows before you scale a model.",
+          globalId: "infectious",
+          module: "Sensors before models",
+          lessons: [tileId],
+          totalLessons: 1,
+        }),
+        "utf8"
+      );
+      fs.writeFileSync(
+        catalogPath,
+        JSON.stringify({
+          schema: "future-forge.quest-catalog/v1",
+          updated: "2026-08-06",
+          quests: [
+            { id: tileId, file: "demo.json" },
+            { id: "module-sensors-before-models", file: "mod.json" },
+          ],
+        }),
+        "utf8"
+      );
+      _resetRemoteQuestCache();
+      const r = await fetchRemoteQuestCatalog(catalogPath, { force: true });
+      assert.equal(r.ok, true);
+      const mod = r.quests.find((q) => q.kind === "module");
+      assert.ok(mod);
+      assert.equal(mod.mission, null);
+      assert.deepEqual(mod.lessons, [tileId]);
+    } finally {
+      fs.writeFileSync(catalogPath, prev, "utf8");
+      _resetRemoteQuestCache();
+    }
+  });
+
   it("loads a real warmersun tile when present on disk", async () => {
     if (!fs.existsSync(WARMERSUN_KIMI)) {
       // skip when warmersun checkout missing

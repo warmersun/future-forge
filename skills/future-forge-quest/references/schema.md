@@ -17,7 +17,7 @@ npm run validate:quest -- path/to/quest.json
 | Field | Notes |
 |-------|--------|
 | `schema` | `"future-forge.quest-tile/v1"` |
-| `kind` | `"quest"` (packs not supported) |
+| `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper; not playable). Packs (`quest-pack`) not supported |
 | `globalId` | Valid theme id from game `GLOBALS` / theme list |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
@@ -260,5 +260,24 @@ Optional fields (`resources`, `grounding`, learning fields, sponsor fields, `bri
 - Non-boolean `isLearningModule`  
 - Non-string or empty `module` (must be a non-empty title string)
 - Non-positive-integer `lesson` / `totalLessons`  
-- `kind: "quest-pack"`
-- `briefBeats` that is not a 3–8 array of valid beat objects (omit the key instead)  
+- `kind: "quest-pack"` (use `kind: "module"` for a multi-lesson path)
+- `briefBeats` that is not a 3–8 array of valid beat objects (omit the key instead)
+
+## Optional `kind: "module"` (path wrapper)
+
+Not playable. Groups lesson quests in the catalog. First panel is the path **summary**, then drill into lessons. Sponsored wrappers show under **Sponsored**.
+
+| Field | Notes |
+|-------|--------|
+| `kind` | `"module"` |
+| `id`, `title`, `summary` | Path title + plain-language job (≤160 chars) |
+| `globalId` | Valid theme id |
+| `module` | Same title string as the lesson files (defaults to `title`) |
+| `lessons` | Array of lesson quest `id`s, display order, ≥1 (slugified like quest `id`s; join key for the catalog) |
+| `totalLessons` | Optional; defaults to `lessons.length` |
+| `overviewMd` | Optional Markdown: what you invent across the path |
+| `coverImageUrl` | Optional `https://…` or `assets/…jpg\|png\|webp` |
+| `spotlight` | Optional; if present, `techId` must be valid |
+| `sponsorName` / `sponsorBanner` | Optional; same rules as quest tiles |
+
+No `mission` / `pressure` / `briefMd`. Each listed lesson is still a full `kind: "quest"` file.  

@@ -31,6 +31,7 @@ describe("tileAccess", () => {
   it("defaults learning modules to account", () => {
     assert.equal(tileAccess(learning), "account");
     assert.equal(tileAccess({ mission: { isLearningModule: true } }), "account");
+    assert.equal(tileAccess({ kind: "module", id: "module-x" }), "account");
   });
 
   it("defaults other tiles to open", () => {

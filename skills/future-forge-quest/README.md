@@ -16,7 +16,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 | **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
 | **Plottable trends** | Optional `trends` / `spotlightTrends` for Wait log-scale charts (see `future-forge-trends` skill) |
 | **Learning modules** | Tutor mode, hidden `aiTutorContext` (may stock resource links + illustrations for chat), progress `Module X Lesson Y/Z` |
-| **Multi-lesson sets** | Multiple JSON files with shared module/totalLessons (display-only; no engine unlock yet) |
+| **Multi-lesson sets** | `kind: "module"` wrapper + lesson JSON files (display-only progress; no engine unlock). Sponsored paths show under Sponsored |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |
 | **Briefing walkthrough** | Invent screen steps `briefMd` one short paragraph at a time; optional `briefBeats` for tighter captions and shipped stills (`imageUrl`) |
 
@@ -28,7 +28,7 @@ All optional features may be **combined** on one tile (see `examples/spotlight-s
 | **`references/schema.md`** | Full field reference |
 | **`references/grounding-template.md`** | Capability SoT chain (authoring guidance) |
 | **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson, sponsor recipes |
-| **`references/output-contract.md`** | Skeleton + recipes A–E |
+| **`references/output-contract.md`** | Skeleton + recipes A–F |
 | **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
 | **`references/brief-beats.md`** | Walkthrough cards; optional authored `briefBeats` |
 
@@ -59,6 +59,7 @@ npm run validate:quest -- output/quests/<slug>/quest.json
 |------|----------------|
 | `examples/spotlight-gene-seq.json` | Structured pressure (local+support), resources, grounding, sample `briefBeats` with `imageUrl` |
 | `examples/spotlight-sponsored-learning.json` | Sponsor + learning module + tutor context + grounding + resources |
+| `examples/spotlight-sponsored-module.json` | `kind: "module"` wrapper for a multi-lesson sponsored path |
 
 Monorepo also has richer classroom tiles under `quests/` (e.g. `kimi-k3.json`).
 
