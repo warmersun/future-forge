@@ -159,4 +159,49 @@ describe("room-bridge", () => {
     assert.equal(state.stagedDropPool, 2);
     assert.equal(state.stagedDropRemaining, 2);
   });
+
+  it("keeps a richer leftover local hex board unless forceHexBoard", () => {
+    // Solo abandon left inventions + a challenge tile in state.hexBoard.
+    // New room invent is crisis-only with overlapping crisis ids — default
+    // preferIncoming keeps the richer local board; enter-play must force.
+    const incoming = {
+      tiles: {
+        "crisis-local": { id: "crisis-local", kind: "crisis", q: 0, r: 0 },
+      },
+    };
+    const leftover = {
+      tiles: {
+        "crisis-local": { id: "crisis-local", kind: "crisis", q: 0, r: 0 },
+        inv: { id: "inv", kind: "invention", techId: "drones", q: 1, r: 0 },
+        "concern-moloch": {
+          id: "concern-moloch",
+          kind: "concern",
+          q: 2,
+          r: 0,
+        },
+      },
+    };
+    const b = createRoomBridge();
+    b.attach(
+      mockClient({
+        invents: {
+          "seat-0": baseInvent({ hexBoard: incoming }),
+        },
+      })
+    );
+    const state = {
+      global: { id: "climate" },
+      selectedTechIds: [],
+      hexBoard: leftover,
+    };
+    b.setViewSeat("seat-0");
+    b.hydrateSoloState(state, { global: state.global });
+    assert.ok(state.hexBoard.tiles.inv, "in-session prefer keeps leftover mint");
+    assert.ok(state.hexBoard.tiles["concern-moloch"]);
+
+    b.hydrateSoloState(state, { global: state.global, forceHexBoard: true });
+    assert.equal(state.hexBoard.tiles.inv, undefined);
+    assert.equal(state.hexBoard.tiles["concern-moloch"], undefined);
+    assert.ok(state.hexBoard.tiles["crisis-local"]);
+  });
 });

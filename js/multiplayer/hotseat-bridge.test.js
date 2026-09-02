@@ -203,4 +203,34 @@ describe("hotseat-bridge", () => {
     assert.equal(b.canContributeStory(), true);
     assert.equal(b.canEditStack(), true);
   });
+
+  it("replaces leftover solo hex tiles when forceHexBoard is set", () => {
+    const b = createHotseatBridge();
+    const r = b.startFromPick(["Alex", "Bea"], mission, "climate");
+    assert.equal(r.ok, true);
+    const leftover = {
+      tiles: {
+        "crisis-local": { id: "crisis-local", kind: "crisis", q: 0, r: 0 },
+        inv: { id: "inv", kind: "invention", techId: "drones", q: 1, r: 0 },
+        "concern-moloch": {
+          id: "concern-moloch",
+          kind: "concern",
+          q: 2,
+          r: 0,
+        },
+      },
+    };
+    const state = {
+      global: { id: "climate" },
+      selectedTechIds: [],
+      hexBoard: leftover,
+    };
+    b.hydrateSoloState(state, { global: state.global });
+    assert.ok(state.hexBoard.tiles.inv, "in-session prefer keeps leftover mint");
+    assert.ok(state.hexBoard.tiles["concern-moloch"]);
+
+    b.hydrateSoloState(state, { global: state.global, forceHexBoard: true });
+    assert.equal(state.hexBoard.tiles.inv, undefined);
+    assert.equal(state.hexBoard.tiles["concern-moloch"], undefined);
+  });
 });

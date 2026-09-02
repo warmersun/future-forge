@@ -2265,7 +2265,12 @@ function enterHotseatPlay(names, mission, global) {
   state.scrutiny = null;
   state.coInventor?.reset?.(false);
   if (state.vision) state.vision.newSession();
-  hotseatBridge.hydrateSoloState(state, { global: state.global });
+  // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
+  state.hexBoard = createEmptyBoard();
+  hotseatBridge.hydrateSoloState(state, {
+    global: state.global,
+    forceHexBoard: true,
+  });
   ensureHexBoardSeededFromMission();
   // Ensure feature flags match solo workshop
   state.mpLastActiveSeatId = null;
@@ -2840,11 +2845,19 @@ function enterRoomPlay(client, opts = {}) {
     state.scrutiny = null;
     state.challengeSpectator = false;
     state.coInventor?.reset?.(false);
+    // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
+    state.hexBoard = createEmptyBoard();
 
-    roomBridge.hydrateSoloState(state, { global: state.global });
+    roomBridge.hydrateSoloState(state, {
+      global: state.global,
+      forceHexBoard: true,
+    });
     const me = roomBridge.myId();
     if (me) roomBridge.setViewSeat(me);
-    roomBridge.hydrateSoloState(state, { global: state.global });
+    roomBridge.hydrateSoloState(state, {
+      global: state.global,
+      forceHexBoard: true,
+    });
     ensureHexBoardSeededFromMission();
 
     state.mpLastActiveSeatId = null;
@@ -19591,6 +19604,7 @@ function bind() {
       return;
     }
     if (confirm("Leave this Quest? You can pick another Quest.")) {
+      state.hexBoard = createEmptyBoard();
       openQuestHub();
     }
   });
