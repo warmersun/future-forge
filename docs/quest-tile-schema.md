@@ -80,7 +80,7 @@ Marks a Quest as part of a learning path and switches the solo **AI Co-Inventor*
 
 | Field | Type | Notes |
 |-------|------|--------|
-| `isLearningModule` | boolean | When `true`, invent starts on the Co-Inventor tab and the server uses the **tutor** system prompt |
+| `isLearningModule` | boolean | When `true`, invent starts on the visual briefing; opening Co-Inventor uses the **tutor** system prompt |
 | `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown wholesale in the player UI. May include Markdown **resource links** and **illustration** URLs for the tutor to re-emit in chat |
 | `module` | non-empty string | Module **title** for display and catalog grouping (max 80 chars) |
 | `lesson` | integer ≥ 1 | Lesson index for display |
@@ -94,7 +94,7 @@ When `isLearningModule` is true:
 - `aiTutorContext` is injected into the AI payload as authoritative teaching notes (with `grounding` still used for capability truth when present).
 - Tutor chat bubbles render safe Markdown: **clickable https links** and **inline https images** (`[title](url)`, `![alt](url)`). Authors stock readings/diagrams in `aiTutorContext`. The tutor **answers first**, then offers at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook (not a first-turn dump, not a URL with no spoken answer).
 - Progress fields, when present, drive a **module title + segment bar** on the invent screen and Learning catalog (one segment per lesson; filled segments = completed on this device). Selection chips show **Learn · {module title}**.
-- Learning quests start in a free-AP **tutor session** (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
+- Learning quests start on the **visual briefing** (Future Vision walk). A free-AP **tutor session** is ready when they open Co-Inventor (Tutoring badge). Learner can **End tutoring** / **Resume tutoring**; the AI may set `endTutoring: true` when the invent gate is met.
 
 When `isLearningModule` is absent or false, Co-Inventor stays in normal invention-assistant mode (assistant chat still supports the same Markdown rendering).
 

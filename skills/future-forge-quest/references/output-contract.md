@@ -141,7 +141,7 @@ Add:
 "aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) … — offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation of this idea\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://warmersun.com/lessons/…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- Chat is the conversation; /lessons is the textbook.\n- Always teach the current idea in a short paragraph (analogy + one mechanism); never a URL alone; never rewrite a page.\n- After that spoken explanation, offer the one matching page on the next SEQUENCE idea, a listed misconception, or a request for the long version.\n- Stay in chat for recaps, invent, and follow-ups after they already got that page.\n- Never paste this wholesale to the player."
 ```
 
-Keep `grounding` for capability truth (product-category chain). UI: invent opens on Co-Inventor; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
+Keep `grounding` for capability truth (product-category chain). UI: invent starts on the visual briefing; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor is on Co-Inventor when opened. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
 
 **Multi-lesson set:** N lesson files, same `module` title string + `totalLessons`, `lesson` = 1…N, unique `id`s, **plus Recipe F** (`kind: "module"` wrapper). No engine unlock — host orders files. Sponsored sets appear under **Sponsored** as one module.
 

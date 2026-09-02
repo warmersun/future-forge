@@ -6514,16 +6514,13 @@ function startMission(mission, opts = {}) {
   state.hadChallengeAttempt = false;
   state.lastChallengeVerdict = null;
   state.domainFilter = "all";
-  // Learning modules open on Co-Inventor (tutor); normal Quests keep Future vision.
+  // Learning modules keep a tutor session ready; the invent screen always
+  // starts on Future Vision (briefing walk). Co-Inventor is opt-in.
   state.tutorSessionActive =
     restored.skipNewRun && typeof restored.tutorSessionActive === "boolean"
       ? restored.tutorSessionActive
       : Boolean(state.mission?.isLearningModule);
-  const willBrief =
-    Boolean(String(state.mission?.briefMd || state.mission?.scene || "").trim()) &&
-    !isBriefingDismissed(state.mission?.id);
-  state.sideTab =
-    state.mission?.isLearningModule && !willBrief ? "coinventor" : "vision";
+  state.sideTab = "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
   state.lastNews = "";
@@ -6614,7 +6611,6 @@ function startMission(mission, opts = {}) {
   }
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
-  // Learning modules land on co-inventor; ensure root exists before welcome / restore.
   const savedChats = restored.chats;
   const hasSavedChats = Boolean(
     savedChats &&
@@ -6627,38 +6623,13 @@ function startMission(mission, opts = {}) {
     state.coInventor.importHistories(savedChats);
     syncCoInventorTutorUi();
   } else if (state.coInventor) {
-    // New mission: wipe both tutor and co-inventor chat lanes
     if (typeof state.coInventor.clearAllHistories === "function") {
       state.coInventor.clearAllHistories(false);
     } else {
       state.coInventor.reset(false);
     }
     syncCoInventorTutorUi();
-    const tutor = isLearningTutorSessionActive();
-    const place = state.mission?.place || mission.place;
-    const year = state.mission?.startYear || mission.startYear;
-    const sceneRaw = String(state.mission?.scene || mission.scene || "").trim();
-    const scene =
-      sceneRaw.length > 160 ? `${sceneRaw.slice(0, 159).trim()}…` : sceneRaw;
-    const ypt = state.mission?.yearsPerTurn || mission.yearsPerTurn || GAME.yearsPerTurn;
-    const welcome = tutor
-      ? `**${place}**, ${year}. ${scene}\n\n` +
-        `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision** (above). What's one thing you already notice?\n\n` +
-        `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
-      : `**${place}**, ${year}. ${sceneRaw}\n\n` +
-        `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
-        `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
-        `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
-        `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
-        `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
-    state.coInventor.pushAssistant(
-      {
-        message: welcome,
-        proposals: emptyProps(),
-        teaching: [],
-      },
-      { local: true }
-    );
+    maybeSeedCoInventorWelcome();
   }
   return true;
 }
@@ -6778,9 +6749,6 @@ function renderWorkshop() {
           updateVision({ debounceMs: 80, force: true });
         } catch {
           /* ignore */
-        }
-        if (state.mission?.isLearningModule) {
-          setSideTab("coinventor");
         }
       },
     });
@@ -16999,6 +16967,41 @@ function hexInventSurface() {
   return state.screen === "workshop" && isHexInventUi() ? "hex" : "legacy";
 }
 
+function maybeSeedCoInventorWelcome() {
+  if (!state.coInventor) return;
+  if (state.screen !== "workshop") return;
+  const tutor = isLearningTutorSessionActive();
+  const key = tutor ? "tutor" : "coinventor";
+  if ((state.coInventor.historyLength?.(key) || 0) > 0) return;
+  if ((state.coInventor.activeHistoryLength?.() || 0) > 0) return;
+  const mission = state.mission;
+  if (!mission) return;
+  const place = mission.place || "this place";
+  const year = mission.startYear || GAME.startYear;
+  const sceneRaw = String(mission.scene || "").trim();
+  const scene =
+    sceneRaw.length > 160 ? `${sceneRaw.slice(0, 159).trim()}…` : sceneRaw;
+  const ypt = mission.yearsPerTurn || GAME.yearsPerTurn;
+  const welcome = tutor
+    ? `**${place}**, ${year}. ${scene}\n\n` +
+      `I'm your **AI tutor** — one idea at a time (**free AP**). Look at this place in **Future vision**. What's one thing you already notice?\n\n` +
+      `Pick techs and place idea tiles when you're ready. **End tutoring** anytime to invent on your own.`
+    : `**${place}**, ${year}. ${sceneRaw}\n\n` +
+      `I'm your co-inventor. Pick emTechs and place invention tiles on the **hex board** — categories are never locked by year. ` +
+      `Traffic lights on crisis and concern tiles show whether your pathway is honest.\n\n` +
+      `Use **Art of the possible** for milestones, current capabilities, and use cases. ` +
+      `**Wait** advances the world (+${ypt} years) and raises crisis — not to unlock cards.\n\n` +
+      `What's the first constraint you care about — cost, trust, speed, or who's left out?`;
+  state.coInventor.pushAssistant(
+    {
+      message: welcome,
+      proposals: emptyProps(),
+      teaching: [],
+    },
+    { local: true }
+  );
+}
+
 function ensureCoInventor() {
   const root = coInventorRootEl();
   if (!root) return state.coInventor;
@@ -17006,6 +17009,7 @@ function ensureCoInventor() {
   if (state.coInventor && state.coInventor.root === root) {
     state.coInventor.surface = hexInventSurface();
     syncCoInventorTutorUi();
+    maybeSeedCoInventorWelcome();
     return state.coInventor;
   }
 
@@ -17147,6 +17151,7 @@ function ensureCoInventor() {
       ? inventActionBusyReason()
       : "";
   state.coInventor.setInteractive?.(!spect && !isInventActionBusy(), reason);
+  maybeSeedCoInventorWelcome();
   return state.coInventor;
 }
 

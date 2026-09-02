@@ -172,7 +172,7 @@ Recommended structure (omit thin sections; may merge Trends+Predictions or Unloc
 
 | Field | Type | Notes |
 |-------|------|--------|
-| `isLearningModule` | boolean | `true` → solo invent opens **Co-Inventor** tab and uses **tutor** system prompt |
+| `isLearningModule` | boolean | `true` → solo invent starts on the visual briefing; Co-Inventor uses the **tutor** system prompt when opened |
 | `aiTutorContext` | string | **Hidden** curriculum notes for the AI only — never shown wholesale to the player. May include Markdown **resource links** and **illustration** URLs for the tutor to re-emit in chat (see `learning-and-sponsor.md`) |
 | `module` | non-empty string | Module **title** (display + catalog group key; max 80 chars) |
 | `lesson` | integer ≥ 1 | Lesson index (display) |

@@ -15,7 +15,7 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 
 | Field | Required for tutor? | Notes |
 |-------|---------------------|--------|
-| `isLearningModule` | **Yes** (`true`) | Opens Co-Inventor tab; server uses tutor system prompt (solo) |
+| `isLearningModule` | **Yes** (`true`) | Invent starts on the visual briefing; Co-Inventor uses the tutor system prompt when opened (solo) |
 | `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only (may include resource links + illustration URLs; see below) |
 | `module` | Recommended | Non-empty **title** string — UI + catalog group key |
 | `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y** |
@@ -114,7 +114,7 @@ The catalog **groups first, then classifies**. A path is Sponsored if the **wrap
 
 ### What tutor mode does (solo)
 
-- Invent opens on **AI co-inventor** (not Future vision).
+- Invent starts on **Future vision** with the stepped briefing (beats / stills), same as other Quests. The **AI tutor** is on the Co-Inventor tab when the learner opens it (not auto-opened).
 - Built-in tutor style (server): **one current idea** per reply, taught as a **short paragraph** (analogy + one mechanism); **full sentences**; **no default quizzes**; **learner-driven** (answer the question they asked — SEQUENCE does not block a later idea); explain concepts a **high-school senior** may not know on first use; scaffold inventing; no full solution dump. **Answer vs send-to-read:** speak the explanation first; offer at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook; stay in chat for recaps, invent, and follow-ups.
 - `grounding` still used for capability assess / advice when present.
 - Tutor messages can include Markdown **links** and **images** drawn from `aiTutorContext` resources (see above).
