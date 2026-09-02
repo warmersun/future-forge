@@ -8,6 +8,7 @@ import {
   TREND_CAPS,
   validateCapabilityTrend,
 } from "./capability-trend.js";
+import { normalizeBriefBeats } from "./brief-beats.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -680,6 +681,17 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...trendsParsed.details);
   }
 
+  const briefBeatsRaw = pickTileOrMissionField(tile, missionIn, "briefBeats");
+  let briefBeats = null;
+  if (briefBeatsRaw !== undefined && briefBeatsRaw !== null) {
+    const beatsParsed = normalizeBriefBeats(briefBeatsRaw);
+    if (!beatsParsed.ok) {
+      details.push(...(beatsParsed.details || ["briefBeats_invalid"]));
+    } else {
+      briefBeats = beatsParsed.beats;
+    }
+  }
+
   /** @type {string|null} */
   let sponsorName = null;
   /** @type {string|null} */
@@ -791,6 +803,13 @@ export function validateQuestTile(tile, opts = {}) {
   if (trendFields.trends?.length) mission.trends = trendFields.trends;
   if (trendFields.spotlightTrends?.length) {
     mission.spotlightTrends = trendFields.spotlightTrends;
+  }
+  const summary = String(tile.summary || missionIn.summary || "")
+    .trim()
+    .slice(0, CAPS.summary);
+  if (summary) mission.summary = summary;
+  if (briefBeats?.length) {
+    mission.briefBeats = briefBeats;
   }
 
   const normalizedTile = {

@@ -26,10 +26,16 @@ export function narrativesFromTechs(techs) {
     .map((t) => ({ id: t.id, name: t.name, text: t.vision.narrative }));
 }
 
+/** Cartoon briefing owns this pane until Full brief removes `.is-briefing`. */
+function briefingOwnsImage(img) {
+  return Boolean(img?.closest?.(".vision-canvas-wrap.is-briefing"));
+}
+
 /** data:image… → blob: URL so Chrome doesn't re-decode multi‑MB base64 on every img.src set */
-function dataUrlToBlobUrl(dataUrl) {
+export function dataUrlToBlobUrl(dataUrl) {
   const m = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
   if (!m) return null;
+  if (typeof Blob === "undefined" || typeof URL?.createObjectURL !== "function") return null;
   const mime = m[1] || "image/png";
   const isB64 = Boolean(m[2]);
   const data = m[3] || "";
@@ -104,7 +110,12 @@ export class VisionRenderer {
     this.status = root.querySelector(".vision-status");
     this.overlay = root.querySelector(".vision-loading");
     // Only set src if different — re-assigning data: URLs freezes Chrome
-    if (this.currentUrl && this.img && this.img.getAttribute("src") !== this.currentUrl) {
+    if (
+      this.currentUrl &&
+      this.img &&
+      this.img.getAttribute("src") !== this.currentUrl &&
+      !briefingOwnsImage(this.img)
+    ) {
       this.img.hidden = false;
       this.img.src = this.currentUrl;
     }
@@ -115,7 +126,11 @@ export class VisionRenderer {
     if (root && !this.mirrorRoots.includes(root)) this.mirrorRoots.push(root);
     if (root && this.currentUrl) {
       const img = root.querySelector?.(".vision-image");
-      if (img && img.getAttribute("src") !== this.currentUrl) {
+      if (
+        img &&
+        img.getAttribute("src") !== this.currentUrl &&
+        !briefingOwnsImage(img)
+      ) {
         img.hidden = false;
         img.src = this.currentUrl;
       }
@@ -137,7 +152,7 @@ export class VisionRenderer {
     if (opts.clear !== false) {
       this.currentUrl = "";
       const clearImg = (img) => {
-        if (!img) return;
+        if (!img || briefingOwnsImage(img)) return;
         img.removeAttribute("src");
         img.hidden = true;
       };
@@ -156,7 +171,7 @@ export class VisionRenderer {
     this.lastFingerprint = "";
     this.currentUrl = "";
     const clearImg = (img) => {
-      if (!img) return;
+      if (!img || briefingOwnsImage(img)) return;
       img.removeAttribute("src");
       img.hidden = true;
     };
@@ -175,7 +190,7 @@ export class VisionRenderer {
     const src = String(url || "").trim();
     if (!src || this.currentUrl) return;
     const apply = (img) => {
-      if (!img) return;
+      if (!img || briefingOwnsImage(img)) return;
       if (img.getAttribute("src") === src) {
         img.hidden = false;
         return;
@@ -256,7 +271,7 @@ export class VisionRenderer {
     this.currentUrl = display;
 
     const apply = (img) => {
-      if (!img) return;
+      if (!img || briefingOwnsImage(img)) return;
       if (img.getAttribute("src") === display) {
         img.hidden = false;
         return;

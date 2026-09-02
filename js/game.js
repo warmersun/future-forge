@@ -177,6 +177,13 @@ import {
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
+  briefingOwnsRoot,
+  isBriefingDismissed,
+  paintQuestBriefing,
+  resetQuestBriefing,
+} from "./briefing-ui.js";
+import { normalizeBriefBeats } from "./brief-beats.js";
+import {
   attachReadAloud,
   formatHeadingForSpeech,
   refreshReadAloud,
@@ -604,14 +611,17 @@ function resumeTutorSession() {
 }
 
 function isTutorSplitLayout() {
-  return Boolean(state.mission?.isLearningModule) && state.sideTab === "coinventor";
+  return (
+    state.sideTab === "coinventor" && !briefingOwnsRoot($("#vision-root"))
+  );
 }
 
 function applyInventSidePanes() {
   const tab = state.sideTab || "vision";
   const split = isTutorSplitLayout();
   const panel = document.querySelector("#screen-workshop .vision-panel");
-  panel?.classList.toggle("is-tutor-split", split);
+  panel?.classList.toggle("is-vision-split", split);
+  panel?.classList.remove("is-tutor-split");
   const vision = $("#side-vision");
   const co = $("#side-coinventor");
   const trace = $("#side-aitrace");
@@ -621,7 +631,7 @@ function applyInventSidePanes() {
 }
 
 function seedLearningVisionStill() {
-  if (!state.mission?.isLearningModule) return;
+  if (!state.mission) return;
   ensureVision();
   const gid = state.mission.globalId || state.global?.id;
   if (!gid || !state.vision?.seedLocalFrame) return;
@@ -5940,6 +5950,11 @@ function normalizeMission(raw, globalId) {
   const spotlightTrends = Array.isArray(raw.spotlightTrends)
     ? raw.spotlightTrends.map(String).filter(Boolean).slice(0, 8)
     : null;
+  let briefBeatsSafe = null;
+  if (Array.isArray(raw.briefBeats) && raw.briefBeats.length) {
+    const n = normalizeBriefBeats(raw.briefBeats);
+    if (n.ok) briefBeatsSafe = n.beats;
+  }
 
   return {
     id,
@@ -5977,6 +5992,10 @@ function normalizeMission(raw, globalId) {
     ...(sponsorBanner ? { sponsorBanner } : {}),
     ...(trends?.length ? { trends } : {}),
     ...(spotlightTrends?.length ? { spotlightTrends } : {}),
+    ...(String(raw.summary || "").trim()
+      ? { summary: String(raw.summary).trim().slice(0, CAPS.summary) }
+      : {}),
+    ...(briefBeatsSafe ? { briefBeats: briefBeatsSafe } : {}),
   };
 }
 
@@ -6186,6 +6205,9 @@ function startMission(mission, opts = {}) {
     delete merged.isLearningModule;
   }
   state.mission = merged;
+  resetQuestBriefing({
+    clearDismissed: !opts.restore,
+  });
   const restored = applyContinueSnapshot(
     {
       cloudRunId: null,
@@ -6237,7 +6259,11 @@ function startMission(mission, opts = {}) {
     restored.skipNewRun && typeof restored.tutorSessionActive === "boolean"
       ? restored.tutorSessionActive
       : Boolean(state.mission?.isLearningModule);
-  state.sideTab = state.mission?.isLearningModule ? "coinventor" : "vision";
+  const willBrief =
+    Boolean(String(state.mission?.briefMd || state.mission?.scene || "").trim()) &&
+    !isBriefingDismissed(state.mission?.id);
+  state.sideTab =
+    state.mission?.isLearningModule && !willBrief ? "coinventor" : "vision";
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
   state.lastNews = "";
@@ -6476,14 +6502,31 @@ function renderWorkshop() {
     }
   }
   const sceneEl = $("#ws-mission-scene");
-  if (sceneEl) {
-    if (m.briefMd) {
-      sceneEl.classList.add("quest-brief");
-      sceneEl.innerHTML = renderMarkdownSafe(m.briefMd);
-    } else {
-      sceneEl.classList.remove("quest-brief");
-      sceneEl.textContent = m.scene || m.problem || "";
-    }
+  const visionRoot = $("#vision-root");
+  if (visionRoot) {
+    paintQuestBriefing(visionRoot, m, {
+      sceneEl,
+      summary: m.summary,
+      globalId: m.globalId || g?.id,
+      onChange: (snap) => {
+        if (snap?.mode === "walk") {
+          setSideTab("vision");
+          return;
+        }
+        if (snap?.mode !== "off") return;
+        try {
+          updateVision({ debounceMs: 80, force: true });
+        } catch {
+          /* ignore */
+        }
+        if (state.mission?.isLearningModule) {
+          setSideTab("coinventor");
+        }
+      },
+    });
+  } else if (sceneEl) {
+    sceneEl.hidden = false;
+    sceneEl.textContent = m.scene || m.problem || "";
     attachReadAloud(sceneEl);
   }
   $("#ws-stakeholder").textContent = m.stakeholder ? `Stakeholder: ${m.stakeholder}` : "";
@@ -16473,6 +16516,14 @@ function updateVision(opts = {}) {
   if (followOnly) startRoomFollowVisionPoll();
   else stopRoomFollowVisionPoll();
 
+  const primaryRoot =
+    onChallenge && state.screen === "challenge-step"
+      ? $("#challenge-vision-root")
+      : state.screen === "deploy"
+        ? $("#deploy-vision-root")
+        : $("#vision-root");
+  if (briefingOwnsRoot(primaryRoot) && !opts.force) return;
+
   state.vision.setState({
     stageId: stage.id,
     stage,
@@ -19605,6 +19656,7 @@ function bind() {
     }
     if (confirm("Leave this Quest? You can pick another Quest.")) {
       state.hexBoard = createEmptyBoard();
+      resetQuestBriefing({ clearDismissed: true });
       openQuestHub();
     }
   });

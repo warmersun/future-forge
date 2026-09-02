@@ -69,7 +69,9 @@ Invent a local system for this place that makes honest use of **${tech.name}** (
 
 ## The place
 
-**${place}** is a fictive locale where people feel a concrete strain that ${tech.name} could honestly touch — if someone invents the local workflow.
+A named person does one concrete thing now at **${place}** (fictive). The strain is already in the room.
+
+The world pushes back. The local driver shows up through what people do — not a lecture. Who invents a ${tech.name} workflow that works *here*?
 
 ## What’s strained
 

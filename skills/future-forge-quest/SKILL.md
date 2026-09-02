@@ -43,13 +43,14 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 | **`references/learning-and-sponsor.md`** | Tutor + sponsor recipes, multi-lesson sets |
 | **`references/output-contract.md`** | Skeleton + omit rules + recipes |
 | **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
-| **`references/brief-template.md`** | `briefMd` headings (job first) |
+| **`references/brief-template.md`** | `briefMd` headings (job first; short paragraphs = walkthrough cards) |
+| **`references/brief-beats.md`** | How the invent screen steps the brief; optional authored `briefBeats` |
 
 ## Hard rules
 
 1. **`spotlight.techId`** = one valid Future Forge tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
 2. **`mission.suggested`** = exactly `[spotlight.techId]`.
-3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. Do not dump research or tutor curriculum into the brief.
+3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. **Write short paragraphs** (one idea each, especially **The place**) — the invent screen steps them as a visual walkthrough. Do not dump research or tutor curriculum into the brief. Optional **`briefBeats`**: see `brief-beats.md` (omit when unused).
 4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
 5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4).
 6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid.
@@ -70,6 +71,7 @@ All of these may appear on **one** tile:
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
+| **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
 
 Details and templates: **`references/learning-and-sponsor.md`**.
 
@@ -115,8 +117,9 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
 **Read `references/scene-prose.md` first** (including Spotlight / learning extras).
 
 1. `mission.scene` (≤500 chars) — story craft; everyday words  
-2. `briefMd` — headings from **`references/brief-template.md`**: **Your job** first, then **The place**, strained, what became possible, constraints  
-3. Keep brief lean (~250–600 words). Curriculum and deep capability lectures stay in `aiTutorContext` / `grounding`.
+2. `briefMd` — headings from **`references/brief-template.md`**: **Your job** first, then **The place**, strained, what became possible, constraints. **The place** = 2–4 short paragraphs (hook / complication / mechanism / stakes) so the walkthrough can show one card each. See **`brief-beats.md`**.  
+3. Keep brief lean (~250–600 words). Curriculum and deep capability lectures stay in `aiTutorContext` / `grounding`.  
+4. Optional **`briefBeats`** only when captions must be tighter than the essay, you want shipped stills (`imageUrl` — walk shows them immediately), or live `imagePrompt`s. Never a substitute for `briefMd`.
 
 Spine for scene/place: hook → complication → mechanism → stakes → **open** design challenge. No product theater. A metaphor-only closer is not enough — **summary + Your job** must state the invent in plain words.
 
@@ -164,6 +167,8 @@ npm run validate:quest -- <file>
 - [ ] `encourageCopy` is everyday words (no research jargon)  
 - [ ] Scene craft ≤500; place story craft; everyday words in player text  
 - [ ] `briefMd`: **Your job** first; ~250–600 words; no capability/tutor lecture dump  
+- [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable  
+- [ ] If `briefBeats` is present: 3–8 beats, captions ≤500 chars, no new facts vs `briefMd`; `imageUrl` is `https://…` or `assets/…` still (skips Imagine); omit the key otherwise  
 - [ ] Lab/research terms live in `grounding` / `aiTutorContext`, not as the only way to understand the job  
 - [ ] Open invent tension — no prescribed solution  
 - [ ] `grounding` present for AI consistency (recommended always)  

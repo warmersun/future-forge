@@ -8,7 +8,7 @@ Use this for:
 | Field | How to apply |
 |-------|----------------|
 | `mission.scene` | Full spine in plain text. Schema max **500 characters**. Still craft-compliant: short breaths, punch-lines, open challenge. |
-| `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). A few tight paragraphs — not a novella or policy memo. |
+| `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). **2–4 short paragraphs** (blank line between) — the invent screen shows each as a walkthrough card. Not a novella, policy memo, or one dense block. |
 | Rest of `briefMd` | Same voice; headings stay scannable. **Your job** states the invent in plain words (see `brief-template.md`). |
 
 ---
@@ -145,6 +145,7 @@ Keep the full spine. Prefer **several short sentences** over one long lede. End 
 - [ ] Mechanism shown through action, not lecture  
 - [ ] One plot type carries the piece  
 - [ ] Punch-line sentences used 2–4 times (scene or place section)  
+- [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable  
 - [ ] Ends on open design challenge — not a solution  
 - [ ] Dense stacked clauses avoided; easy on first read  
 - [ ] Player text uses everyday words; lab jargon is not required to understand the job  

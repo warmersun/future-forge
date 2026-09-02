@@ -25,8 +25,8 @@ import {
 } from "./tech-library.js";
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
-import { renderMarkdownSafe } from "../md-lite.js";
 import { attachReadAloud, formatHeadingForSpeech } from "../read-aloud.js";
+import { paintQuestBriefing } from "../briefing-ui.js";
 import {
   initTechDrawers,
   updateTechDrawerCount,
@@ -90,23 +90,37 @@ export function initFriendsUi(api) {
   }
 
   /**
-   * Invent left column: full quest text (markdown brief when present), scrollable via CSS.
+   * Invent left column: stepped briefing when briefMd is present, else scene text.
    * Mirrors solo workshop `#ws-mission-scene` rendering.
    * @param {HTMLElement} sceneEl
    * @param {object|null|undefined} mission
    */
   function paintMissionScene(sceneEl, mission) {
     if (!sceneEl) return;
-    const brief = mission?.briefMd && String(mission.briefMd).trim();
-    if (brief) {
-      sceneEl.classList.add("quest-brief");
-      sceneEl.innerHTML = renderMarkdownSafe(brief);
+    const layout =
+      sceneEl.closest(".workshop-layout") || sceneEl.closest("section");
+    const visionRoot = layout?.querySelector(".vision-canvas-wrap");
+    if (visionRoot) {
+      paintQuestBriefing(visionRoot, mission, {
+        sceneEl,
+        summary: mission?.summary,
+        globalId: mission?.globalId,
+        onChange: (snap) => {
+          if (snap?.mode !== "off") return;
+          try {
+            roomSide?.syncVision?.({ force: true, immediate: true });
+            hsSide?.syncVision?.({ force: true, immediate: true });
+          } catch {
+            /* ignore */
+          }
+        },
+      });
     } else {
-      sceneEl.classList.remove("quest-brief");
+      sceneEl.hidden = false;
       sceneEl.textContent =
         mission?.scene || mission?.problem || mission?.description || "";
+      attachReadAloud(sceneEl);
     }
-    attachReadAloud(sceneEl);
   }
 
   /**

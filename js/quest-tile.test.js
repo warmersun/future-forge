@@ -683,4 +683,62 @@ describe("quest-tile", () => {
     assert.equal(many.ok, false);
     assert.ok(many.details.includes("too_many_trends"));
   });
+
+  it("copies summary onto the runtime mission", () => {
+    const r = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.summary, "Clinic backlog");
+  });
+
+  it("omits briefBeats when absent; copies a valid authored set", () => {
+    const plain = validateQuestTile(baseTile(), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(plain.ok, true);
+    assert.equal(plain.mission.briefBeats, undefined);
+
+    const withBeats = baseTile({
+      briefBeats: [
+        {
+          id: "place-1",
+          role: "place",
+          title: "The place",
+          bodyMd: "Nurse Amina seals a swab.",
+          imageUrl: "assets/quests/spotlight-gene-seq/place-1.jpg",
+        },
+        {
+          id: "strain-1",
+          role: "strain",
+          title: "What's strained",
+          bodyMd: "The cooler fills while the truck is gone.",
+        },
+        {
+          id: "job-1",
+          role: "job",
+          title: "Your job",
+          bodyMd: "Invent the local workflow.",
+        },
+      ],
+    });
+    const r = validateQuestTile(withBeats, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.equal(r.mission.briefBeats.length, 3);
+    assert.equal(r.mission.briefBeats[0].id, "place-1");
+    assert.equal(
+      r.mission.briefBeats[0].imageUrl,
+      "assets/quests/spotlight-gene-seq/place-1.jpg"
+    );
+  });
+
+  it("rejects invalid briefBeats (too few)", () => {
+    const t = baseTile({
+      briefBeats: [
+        { id: "place-1", title: "The place", bodyMd: "A clinic waits." },
+      ],
+    });
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, false);
+    assert.ok(r.details.some((d) => /briefBeats/.test(d)));
+  });
 });

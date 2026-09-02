@@ -18,6 +18,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 | **Learning modules** | Tutor mode, hidden `aiTutorContext` (may stock resource links + illustrations for chat), progress `Module X Lesson Y/Z` |
 | **Multi-lesson sets** | Multiple JSON files with shared module/totalLessons (display-only; no engine unlock yet) |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |
+| **Briefing walkthrough** | Invent screen steps `briefMd` one short paragraph at a time; optional `briefBeats` for tighter captions and shipped stills (`imageUrl`) |
 
 All optional features may be **combined** on one tile (see `examples/spotlight-sponsored-learning.json`).
 
@@ -27,8 +28,9 @@ All optional features may be **combined** on one tile (see `examples/spotlight-s
 | **`references/schema.md`** | Full field reference |
 | **`references/grounding-template.md`** | Capability SoT chain (authoring guidance) |
 | **`references/learning-and-sponsor.md`** | Tutor sequences, multi-lesson, sponsor recipes |
-| **`references/output-contract.md`** | Skeleton + recipes A–D |
+| **`references/output-contract.md`** | Skeleton + recipes A–E |
 | **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
+| **`references/brief-beats.md`** | Walkthrough cards; optional authored `briefBeats` |
 
 ## Not under `.grok/`
 
@@ -38,7 +40,7 @@ Works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” wo
 
 1. Follow **`SKILL.md`** — especially the **player-language job** pass (title + summary must pass the 14-year-old invent-job test).
 2. Read **`references/scene-prose.md`** before drafting scene / place (Spotlight extras: everyday words; job not hidden in jargon).
-3. Read **`references/brief-template.md`** (**Your job** first; ~250–600 words).
+3. Read **`references/brief-template.md`** (**Your job** first; ~250–600 words; short paragraphs for the walkthrough). Read **`references/brief-beats.md`** if emitting optional `briefBeats`.
 4. Read **`references/schema.md`** and **`grounding-template.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
 5. Write the JSON; **omit** unused optional keys. Keep lab terms in `grounding` / `aiTutorContext`.
 6. Validate:
@@ -55,7 +57,7 @@ npm run validate:quest -- output/quests/<slug>/quest.json
 
 | File | Demonstrates |
 |------|----------------|
-| `examples/spotlight-gene-seq.json` | Structured pressure (local+support), resources, grounding |
+| `examples/spotlight-gene-seq.json` | Structured pressure (local+support), resources, grounding, sample `briefBeats` with `imageUrl` |
 | `examples/spotlight-sponsored-learning.json` | Sponsor + learning module + tutor context + grounding + resources |
 
 Monorepo also has richer classroom tiles under `quests/` (e.g. `kimi-k3.json`).

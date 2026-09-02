@@ -12,7 +12,7 @@ Portable **Spotlight Quest** files for Future Forge.
 1. Research a **real recent emTech advance**.
 2. Write a **fictive** local crisis shaped so that technology’s new capability is a natural invent target.
 3. Set **`suggested` to exactly one** catalog tech id (the spotlight).
-4. Put the long learner-facing text in **`mission.briefMd`** (Markdown).
+4. Put the long learner-facing text in **`mission.briefMd`** (Markdown). The invent screen **steps** that brief one short paragraph at a time (optional authored `briefBeats` for tighter captions).
 
 ## Browser import
 
@@ -38,7 +38,22 @@ Required:
 | `mission.briefMd` | Non-empty Markdown brief |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
-Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, learning-module fields, sponsor fields below.
+Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, `briefBeats`, learning-module fields, sponsor fields below.
+
+### Optional `briefBeats` (authored walkthrough)
+
+The UI derives a stepped briefing from `briefMd` headings and paragraphs and swaps a still on Future Vision with each caption. **Omit this key** for that default. Author 3–8 beats when captions should be tighter than the essay, you want shipped stills (`imageUrl`), or live prompts (`imagePrompt`).
+
+| Field | Notes |
+|-------|--------|
+| `id` | Unique slug ≤40 |
+| `role` | Optional: `job` \| `place` \| `strain` \| `possible` \| `constraints` \| `other` |
+| `title` | Player kicker ≤60 |
+| `bodyMd` | Caption ≤500 chars; no new facts vs `briefMd` |
+| `imageUrl` | Optional `https://…` or bundled `assets/…jpg\|png\|webp`. Walk shows it immediately (no Imagine) |
+| `imagePrompt` | Optional ≤400; used only when `imageUrl` is omitted |
+
+Invalid arrays fail `validate:quest`. `briefMd` stays required. Authoring guide: `skills/future-forge-quest/references/brief-beats.md`.
 
 ### Optional sponsor attribution (display only)
 

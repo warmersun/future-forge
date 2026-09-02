@@ -2,7 +2,7 @@
 
 1. Write UTF-8 JSON (pretty-printed OK).
 2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
-3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words.
+3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
 4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 6. Run `npm run validate:quest -- <file>` until `OK:`.
@@ -180,6 +180,37 @@ Portable example file: `examples/spotlight-sponsored-learning.json`.
 
 ---
 
+## Recipe E — authored briefing cards (optional)
+
+Only when captions should be tighter than `briefMd`, you want **shipped stills** (`imageUrl`), or live prompts (`imagePrompt`). **Never omit `briefMd`.** 3–8 beats. See `brief-beats.md`. `imageUrl` skips Imagine — pre-generate the file and point at it.
+
+```json
+"briefBeats": [
+  {
+    "id": "place-1",
+    "role": "place",
+    "title": "The place",
+    "bodyMd": "Nurse Amina seals another swab under the corrugated awning. The fever sheet on the fridge does not match.",
+    "imageUrl": "assets/quests/spotlight-gene-seq/place-1.jpg",
+    "imagePrompt": "Photoreal documentary still: a small border clinic under a corrugated awning, a nurse sealing a swab, labeled tubes in a cooler, heat haze, no readable text, no logos."
+  },
+  {
+    "id": "strain-1",
+    "role": "strain",
+    "title": "What's strained",
+    "bodyMd": "Outbreak risk rises while samples wait on the weekly truck. Rumors fill the gap first."
+  },
+  {
+    "id": "job-1",
+    "role": "job",
+    "title": "Your job",
+    "bodyMd": "Invent a same-shift sample-to-answer workflow this clinic can run under heat and thin staffing. Do not invent sequencing from scratch."
+  }
+]
+```
+
+---
+
 ## Omit when not needed
 
 | Situation | Action |
@@ -189,6 +220,7 @@ Portable example file: `examples/spotlight-sponsored-learning.json`.
 | Not a lesson | Omit all learning keys |
 | No sponsor | Omit `sponsorName` / `sponsorBanner` |
 | Focused meters | Omit unused `pressure` roles |
+| Default walkthrough | Omit `briefBeats` — engine derives from `briefMd` paragraphs |
 
 ---
 

@@ -7,6 +7,7 @@ import { VisionRenderer, narrativesFromTechs } from "../vision.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
 import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js";
+import { briefingOwnsRoot } from "../briefing-ui.js";
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -176,6 +177,7 @@ export class MpSidePanel {
     const place = this.opts.getPlace?.();
     const invent = this.opts.getInvent?.();
     if (!place?.mission) return;
+    if (briefingOwnsRoot(this.visionRoot) && !opts.force) return;
 
     // Lazy-mount vision if panel became visible after setup
     if (!this.vision && this.visionRoot) {

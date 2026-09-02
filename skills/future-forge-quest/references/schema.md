@@ -21,7 +21,7 @@ npm run validate:quest -- path/to/quest.json
 | `globalId` | Valid theme id from game `GLOBALS` / theme list |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
-| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **Your job** first, then **The place** (story craft); aim ~250–600 words |
+| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **Your job** first, then **The place** (story craft); aim ~250–600 words. Short paragraphs — the UI steps them (see `brief-beats.md`) |
 | `title`, `summary`, `spotlight.encourageCopy` | Plain invent job in everyday words (14-year-old test); see `scene-prose.md` Spotlight extras |
 | `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; craft in `scene-prose.md`; everyday words |
 | `mission.pressure` | **Structured** crisis meters (below) — flat maps are **rejected** |
@@ -198,6 +198,27 @@ Tutor style (enforced by server prompt when `isLearningModule` is true):
 "totalLessons": 3
 ```
 
+## Optional `briefBeats` (authored walkthrough)
+
+Omit when unused. The engine already derives a walkthrough from `briefMd`. Author beats for tighter captions, shipped stills (`imageUrl`), or live prompts (`imagePrompt`). Full rules: **`brief-beats.md`**.
+
+| Field | Notes |
+|-------|--------|
+| `briefBeats` | Array, 3–8 objects. Tile top-level or under `mission`. Invalid arrays **fail** validation. |
+
+Each beat:
+
+| Field | Notes |
+|-------|--------|
+| `id` | Unique slug ≤40 |
+| `role` | Optional: `job` \| `place` \| `strain` \| `possible` \| `constraints` \| `other` |
+| `title` | Player kicker ≤60 |
+| `bodyMd` | Caption ≤500 chars; no new facts vs `briefMd` |
+| `imageUrl` | Optional `https://…` or `assets/…` still (`jpg`/`png`/`webp`). Walk shows it immediately — no Imagine wait |
+| `imagePrompt` | Optional ≤400; live generate only when `imageUrl` is omitted |
+
+`briefMd` remains required. Captions must not contradict the essay.
+
 ## Optional sponsor attribution (display only)
 
 | Field | Type | Notes |
@@ -229,7 +250,7 @@ Selection chip: **Sponsored · {name}**.
 
 ## Field placement
 
-Optional fields (`resources`, `grounding`, learning fields, sponsor fields) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
+Optional fields (`resources`, `grounding`, learning fields, sponsor fields, `briefBeats`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
 
 ## Invalid / rejected patterns
 
@@ -239,4 +260,5 @@ Optional fields (`resources`, `grounding`, learning fields, sponsor fields) may 
 - Non-boolean `isLearningModule`  
 - Non-string or empty `module` (must be a non-empty title string)
 - Non-positive-integer `lesson` / `totalLessons`  
-- `kind: "quest-pack"`  
+- `kind: "quest-pack"`
+- `briefBeats` that is not a 3–8 array of valid beat objects (omit the key instead)  

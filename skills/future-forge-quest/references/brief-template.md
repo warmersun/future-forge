@@ -4,6 +4,8 @@
 
 **Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains belong in `aiTutorContext` / `grounding` — not here.
 
+**Walkthrough:** The invent screen shows this brief **one short beat at a time** (derived from `##` headings and paragraphs). Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the job line on every card. Optional authored cards: `brief-beats.md`.
+
 ```markdown
 ## Your job
 
@@ -14,7 +16,7 @@ End on the open choice — not a solution checklist.
 
 ## The place
 
-Write a short design-challenge story (fictive place, real problem shape):
+Write a short design-challenge story (fictive place, real problem shape). **Blank line between paragraphs** — each paragraph becomes one walkthrough card:
 
 1. **Hook** — named person or clear role does something specific, now  
 2. **Complication** — the world pushes back in the scene  
@@ -22,9 +24,9 @@ Write a short design-challenge story (fictive place, real problem shape):
 4. **Stakes** — human-scale harm people feel  
 5. **Open challenge** — leave the design tension unresolved (do not invent the solution)
 
-Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath.
+Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath **and per paragraph**.
 Lived local harm + local driver must both appear as story.
-Target: a few tight paragraphs (fuller than `mission.scene`; same craft). Not a novella.
+Target: 2–4 tight paragraphs (fuller than `mission.scene`; same craft). Not a novella. Not one dense block.
 
 ## What’s strained
 

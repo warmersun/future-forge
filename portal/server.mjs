@@ -2821,10 +2821,13 @@ async function handleIdeaImage(body) {
   if (!id) {
     return { ok: false, error: "missing_id" };
   }
+  const rawPrompt = String(body?.prompt || "").slice(0, 700);
+  const kind = String(body?.kind || "idea").toLowerCase();
+  const logKind = kind === "brief" || kind === "challenger" ? kind : "idea";
   const cached = ideaImageCache.get(id);
   if (cached?.imageUrl) {
     recordAiImage({
-      kind: "idea",
+      kind: logKind,
       mode: "generate",
       source: "cache",
       imageCount: 0,
@@ -2840,8 +2843,6 @@ async function handleIdeaImage(body) {
     };
   }
 
-  const rawPrompt = String(body?.prompt || "").slice(0, 700);
-  const kind = String(body?.kind || "idea").toLowerCase();
   const prompt =
     kind === "challenger"
       ? [
@@ -2850,6 +2851,12 @@ async function handleIdeaImage(body) {
           rawPrompt ||
             "People and place under a concrete social, ethical, or natural-world pressure.",
         ].join(" ")
+      : kind === "brief"
+        ? [
+            "Photoreal cinematic 16:9 documentary still of a lived local scene for a design-challenge story.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+            rawPrompt || "A specific person in a specific place under concrete tension.",
+          ].join(" ")
       : [
           "Photoreal 4:3 documentary still of a local emerging-tech application.",
           "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
@@ -2867,7 +2874,7 @@ async function handleIdeaImage(body) {
       if (oldest) ideaImageCache.delete(oldest[0]);
     }
     recordAiImage({
-      kind: "idea",
+      kind: logKind,
       mode: "generate",
       source: "live",
       imageCount: 1,
@@ -2886,7 +2893,7 @@ async function handleIdeaImage(body) {
   } catch (e) {
     console.warn("[idea-image]", e.message || e);
     recordAiImage({
-      kind: "idea",
+      kind: logKind,
       mode: "generate",
       source: "error",
       imageCount: 0,
