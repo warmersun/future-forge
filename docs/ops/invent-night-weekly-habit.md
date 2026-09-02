@@ -52,8 +52,8 @@ Fill these and don’t change weekly unless broken:
 Do this **once**, then never rebuild from zero.
 
 ### 3.1 Containers
-- [ ] Discord: channels `#welcome` · `#inventions` · `#invent-nights` · `#install-help` · `#prompts`
-- [ ] Discord: scheduled event template “Invent Night — [Date]”
+- [x] Discord: channels `#welcome` · `#inventions` · `#invent-nights` · `#install-help` · `#prompts` — live; IDs + pitfalls in `docs/ops/discord.md`
+- [x] Discord: scheduled event template “Invent Night — [Date]” — next online is Sep 9; do not double-book IRL Wednesdays
 - [ ] X: pin post = invent promise + site + Discord (when you next touch bio)
 - [ ] One recurring calendar event: **Invent Night** + 45-min **Promo block** mid-week
 - [ ] One event link tool (pick one and keep it): Luma **or** Discord Events **or** plain markdown in `#invent-nights`
@@ -301,6 +301,7 @@ Every 12 weeks:
 
 - Product framing: `docs/what-is-future-forge.md`  
 - Public site: https://warmersun.com/future-forge/  
+- Discord server (IDs, layout, Hermes admin): `docs/ops/discord.md`  
 - Channels lock: site + shares · Discord · X  
 
 ---
