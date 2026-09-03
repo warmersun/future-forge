@@ -1813,8 +1813,6 @@ export function createHexWorkshop(api) {
     try {
       const data = await api.coInvent("assess-feasibility", "[Assess tile timing]", {
         inventionHow: tile.howText || "",
-        inventionImpact: "",
-        inventionName: null,
         selectedTechIds: tile.techId ? [tile.techId] : [],
         year,
         place: api.getPlace?.() || "",

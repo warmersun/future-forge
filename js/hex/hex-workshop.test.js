@@ -85,6 +85,35 @@ function seededBoard() {
   return placeOk(board, "a", local.q - 1, local.r);
 }
 
+describe("hex-workshop tile timing extra", () => {
+  before(() => stubDom());
+
+  it("assess-feasibility extra is how + stack, no invention name or impact", async () => {
+    let board = seededBoard();
+    const extras = [];
+    const ws = createHexWorkshop({
+      getBoard: () => board,
+      setBoard: (b) => {
+        board = b;
+      },
+      getYear: () => 2026,
+      getPlace: () => "Saltpier Market (fictive)",
+      getGrounding: () => "## Technology\n- **emTech:** crypto",
+      coInvent: async (mode, _msg, extra) => {
+        extras.push({ mode, extra });
+        return { timing: { level: "green", reason: "ok" } };
+      },
+    });
+    await ws.refreshAfterYearChange();
+    const assess = extras.find((e) => e.mode === "assess-feasibility");
+    assert.ok(assess);
+    assert.equal(Object.hasOwn(assess.extra, "inventionName"), false);
+    assert.equal(Object.hasOwn(assess.extra, "inventionImpact"), false);
+    assert.match(assess.extra.inventionHow, /Part A/);
+    assert.deepEqual(assess.extra.selectedTechIds, ["ai"]);
+  });
+});
+
 describe("hex-workshop challenger art", () => {
   it("pathwayArtLabel uses tech ids, not an invention name", () => {
     assert.equal(

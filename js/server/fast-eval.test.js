@@ -175,6 +175,7 @@ describe("buildFastPayload", () => {
   it("assess-feasibility is how + stack only", () => {
     const p = buildFastPayload("assess-feasibility", {
       inventionHow: "Pilot corridor sensors with a city partner.",
+      inventionName: "SecretName",
       year: 2026,
       place: "Portside",
       selectedTechIds: ["ai"],
@@ -194,6 +195,8 @@ describe("buildFastPayload", () => {
     assert.equal(p.availableTechs, undefined);
     assert.equal(p.timing, undefined);
     assert.equal(p.priorTiming.level, "yellow");
+    assert.equal(p.inventionName, undefined);
+    assert.ok(!JSON.stringify(p).includes("SecretName"));
   });
 
   it("idea-sparks sends one focus tech, not a catalog", () => {

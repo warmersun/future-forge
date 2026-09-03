@@ -29,6 +29,10 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
 import { CoInventor } from "./coinventor.js";
 import {
+  leanCoInventContext as buildLeanCoInventContext,
+  inventDraftFieldsForContext,
+} from "./lean-coinvent-context.js";
+import {
   pushAiTrace,
   listAiTrace,
   selectAiTrace,
@@ -10420,63 +10424,23 @@ function techsForCoInventMode(mode) {
 }
 
 function leanCoInventContext(mode, extra = {}) {
-  const grounding = state.mission?.grounding || null;
-  const year = extra.year ?? state.year;
-  const place = extra.place ?? state.mission?.place;
   const scene = String(state.mission?.scene || "").slice(0, 600);
-  const base = {
-    year,
-    place,
-    grounding,
+  return buildLeanCoInventContext(mode, extra, {
+    year: state.year,
+    place: state.mission?.place,
+    grounding: state.mission?.grounding || null,
     missionTitle: state.mission?.title || "",
     missionScene: scene,
-    ...extra,
-  };
-
-  if (mode === "score-pathway") {
-    return {
-      ...base,
-      challenge: state.mission
-        ? { title: state.mission.title, problem: scene }
-        : null,
-    };
-  }
-
-  if (mode === "idea-sparks") {
-    const focusId = extra.focusTechId || state.selectedTechIds[0] || null;
-    const tech = focusId ? techById(focusId) : null;
-    return {
-      ...base,
-      focusTechId: focusId,
-      availableTechs: tech ? [slimTechForEval(tech)] : [],
-    };
-  }
-
-  if (mode === "assess-feasibility") {
-    const ids = extra.selectedTechIds || [...state.selectedTechIds];
-    const techs = ids.map((id) => techById(id)).filter(Boolean).map(slimTechForEval);
-    return {
-      ...base,
-      inventionHow: extra.inventionHow ?? state.inventionHow,
-      inventionImpact: extra.inventionImpact ?? state.inventionImpact,
-      selectedTechIds: ids,
-      availableTechs: techs,
-      priorTiming: extra.priorTiming || null,
-    };
-  }
-
-  const selected = selectedTechs().map(slimTechForEval).filter(Boolean);
-  return {
-    ...base,
-    inventionName: extra.inventionName ?? state.inventionName,
-    inventionHow: extra.inventionHow ?? state.inventionHow,
-    inventionImpact: extra.inventionImpact ?? state.inventionImpact,
-    selectedTechIds: extra.selectedTechIds || [...state.selectedTechIds],
-    availableTechs: selected,
+    inventionHow: state.inventionHow,
+    inventionImpact: state.inventionImpact,
+    selectedTechIds: [...state.selectedTechIds],
+    techsForIds: (ids) =>
+      ids.map((id) => techById(id)).filter(Boolean).map(slimTechForEval),
+    selectedTechs: () => selectedTechs().map(slimTechForEval).filter(Boolean),
     challenge: state.mission
       ? { title: state.mission.title, problem: scene }
       : null,
-  };
+  });
 }
 
 function recordAiTrace(info) {
@@ -17043,9 +17007,12 @@ function ensureCoInventor() {
             }
           : null,
         selectedTechIds: [...state.selectedTechIds],
-        inventionName: isHexInventUi() ? null : state.inventionName,
-        inventionHow: isHexInventUi() ? null : state.inventionHow,
-        inventionImpact: isHexInventUi() ? null : state.inventionImpact,
+        ...inventDraftFieldsForContext({
+          hexInvent: state.screen === "workshop" && isHexInventUi(),
+          inventionName: state.inventionName,
+          inventionHow: state.inventionHow,
+          inventionImpact: state.inventionImpact,
+        }),
         storyFace: state.storyFace,
         hexInvent: state.screen === "workshop" && isHexInventUi(),
         focusTechId: focusedTechId,

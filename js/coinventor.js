@@ -3,6 +3,7 @@
  */
 
 import { getClientSessionId } from "./client-session.js";
+import { inventDraftFieldsForContext } from "./lean-coinvent-context.js";
 import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
 import { renderChatMarkdown } from "./md-lite.js";
 import {
@@ -558,9 +559,7 @@ export class CoInventor {
               }
             : null,
           selectedTechIds: ctx.selectedTechIds,
-          inventionName: ctx.hexInvent ? null : ctx.inventionName,
-          inventionHow: ctx.hexInvent ? null : ctx.inventionHow,
-          inventionImpact: ctx.hexInvent ? null : ctx.inventionImpact,
+          ...inventDraftFieldsForContext(ctx),
           storyFace: ctx.storyFace,
           writeBoth: ctx.writeBoth,
           hexInvent: Boolean(ctx.hexInvent),
