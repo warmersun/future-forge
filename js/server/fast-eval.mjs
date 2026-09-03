@@ -79,13 +79,14 @@ function missionSlice(context) {
 
 export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future Forge.
 There is no invention name. pathway.inventions[] (techId + howText + timing) are the parts. pathway.howText is the island inventHow if the learner wrote one — not a concat of parts. Judge the combination as ONE invent for this place and year.
-crisisDelta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
+crisisDelta: for each role local, global, support return {delta, reason}. delta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
+reason is one everyday sentence (≤160 chars) that cites the how-text mechanism and MATCHES the signed delta. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every role, including 0.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
-concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green.
+concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
 ${GROUNDING_LINE}
 Return JSON only (no markdown, no other keys):
-{"crisisDelta":{"local":0,"global":0,"support":0},"concerns":{"moloch":{"level":"yellow","reason":"one sentence"}}}`;
+{"crisisDelta":{"local":{"delta":-1,"reason":"one sentence"},"global":{"delta":0,"reason":"one sentence"},"support":{"delta":0,"reason":"one sentence"}},"concerns":{"moloch":{"level":"yellow","reason":"one sentence"}}}`;
 
 export const ASSESS_FEASIBILITY_SYSTEM = `You judge claim TIMING only in Future Forge: is this mechanism possible or already demonstrated in year?
 Do not judge quest fit, clinic job, hopper vs heavy-lift category, or whether the idea matches grounding's example applications.
@@ -347,8 +348,31 @@ function clampDelta(v) {
   return Math.max(-2, Math.min(1, Math.round(Number(v) || 0)));
 }
 
+function clipCrisisReason(s) {
+  return String(s || "").trim().slice(0, 160);
+}
+
+function parseDeltaField(v) {
+  if (v && typeof v === "object") {
+    const raw = v.delta != null ? v.delta : v.value;
+    return { delta: clampDelta(raw), reason: clipCrisisReason(v.reason) };
+  }
+  return { delta: clampDelta(v), reason: "" };
+}
+
 function sanitizeScorePathway(parsed, source) {
   const cd = parsed?.crisisDelta || {};
+  const sibling =
+    parsed?.crisisReasons && typeof parsed.crisisReasons === "object"
+      ? parsed.crisisReasons
+      : {};
+  const crisisDelta = {};
+  const crisisReasons = {};
+  for (const role of ["local", "global", "support"]) {
+    const parsedRole = parseDeltaField(cd[role]);
+    crisisDelta[role] = parsedRole.delta;
+    crisisReasons[role] = parsedRole.reason || clipCrisisReason(sibling[role]);
+  }
   const concerns = {};
   const rawC =
     parsed?.concerns && typeof parsed.concerns === "object" ? parsed.concerns : {};
@@ -362,11 +386,8 @@ function sanitizeScorePathway(parsed, source) {
   }
   return {
     source,
-    crisisDelta: {
-      local: clampDelta(cd.local),
-      global: clampDelta(cd.global),
-      support: clampDelta(cd.support),
-    },
+    crisisDelta,
+    crisisReasons,
     concerns,
   };
 }
@@ -502,7 +523,7 @@ export const FAST_EVAL_MODES = {
     system: SCORE_PATHWAY_SYSTEM,
     userPrefix: "Score this pathway (JSON state):",
     temperature: 0,
-    maxOutputTokens: 350,
+    maxOutputTokens: 550,
   },
   "assess-feasibility": {
     system: ASSESS_FEASIBILITY_SYSTEM,

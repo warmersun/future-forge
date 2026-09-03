@@ -45,7 +45,17 @@ import {
   applyPathwayPressure,
   heuristicPathwayScore,
   normalizePathwayScore,
+  blendPathwayScore,
+  pickPrimaryCrisisReason,
   pathwayContentFingerprint,
+  crisisDeltaValues,
+  crisisDeltaReasons,
+  reasonsForCrisisTile,
+  reasonsForConcernTile,
+  pickScoreChipTiles,
+  formatSignedDelta,
+  pathwayScoreLabel,
+  crisisMeterTooltipBits,
   listInventionPathways,
   islandHowKey,
   resolveIslandHow,
@@ -1399,6 +1409,33 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.equal(n.concerns.moloch.level, "yellow");
   });
 
+  it("normalizePathwayScore accepts nested {delta, reason} and legacy numbers", () => {
+    const nested = normalizePathwayScore({
+      crisisDelta: {
+        local: { delta: -1, reason: "The noon cooler keeps class in the rooms." },
+        global: { delta: 0, reason: "Nothing names the substation contract." },
+        support: { delta: 1, reason: "Kids still go home to dead coolers." },
+      },
+    });
+    assert.equal(nested.crisisDelta.local, -1);
+    assert.match(nested.crisisReasons.local, /noon cooler/);
+    assert.equal(nested.crisisReasons.global.startsWith("Nothing names"), true);
+
+    const sibling = normalizePathwayScore({
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      crisisReasons: { local: "Sibling why." },
+    });
+    assert.equal(sibling.crisisDelta.local, -1);
+    assert.equal(sibling.crisisReasons.local, "Sibling why.");
+
+    const clipped = normalizePathwayScore({
+      crisisDelta: {
+        local: { delta: 0, reason: "x".repeat(400) },
+      },
+    });
+    assert.equal(clipped.crisisReasons.local.length, 160);
+  });
+
   it("heuristicPathwayScore gives mild relief for mature how-text", () => {
     const inventions = [
       {
@@ -1414,6 +1451,9 @@ describe("applyPathwayPressure (cached scores)", () => {
     });
     assert.equal(unanswered.crisisDelta.local, -1);
     assert.equal(unanswered.concerns.moloch.level, "red");
+    assert.ok(unanswered.crisisReasons.local);
+    assert.notEqual(unanswered.crisisReasons.local.toLowerCase(), "heuristic");
+    assert.match(unanswered.concerns.moloch.reason, /unanswered/i);
 
     const answered = heuristicPathwayScore(inventions, 2026, {
       concernAngles: ["moloch"],
@@ -1438,6 +1478,151 @@ describe("applyPathwayPressure (cached scores)", () => {
     );
     assert.equal(score.crisisDelta.local, -1);
     assert.equal(score.crisisDelta.support, 1);
+    assert.match(score.crisisReasons.support, /next door|honest this year/i);
+  });
+
+  it("reasonsForCrisisTile lists every reaching island", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Cooler.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "dr1",
+        techId: "drones",
+        howText: "Scout.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const res = placeTile(board, "dr1", local.q + 1, local.r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    board = res.board;
+    const fpA = pathwayContentFingerprint([board.tiles.ai1]);
+    const fpB = pathwayContentFingerprint([board.tiles.dr1]);
+    board.pathwayImpacts[fpA] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      crisisReasons: { local: "The noon cooler keeps class in the rooms.", global: "", support: "" },
+      concerns: {},
+      pending: false,
+    };
+    board.pathwayImpacts[fpB] = {
+      inventionIds: ["dr1"],
+      crisisDelta: { local: 0, global: 0, support: 0 },
+      crisisReasons: { local: "This island never names the heat.", global: "", support: "" },
+      concerns: {},
+      pending: false,
+    };
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    const rows = reasonsForCrisisTile(applied.board, applied.board.tiles["crisis-local"]);
+    assert.equal(rows.length, 2);
+    assert.equal(rows.some((r) => r.delta === -1 && /cooler/i.test(r.reason)), true);
+    assert.equal(rows.some((r) => r.delta === 0 && /never names/i.test(r.reason)), true);
+    assert.match(applied.board.tiles["crisis-local"].lampReason, /cooler/i);
+    assert.equal(/never names/i.test(applied.board.tiles["crisis-local"].lampReason), false);
+    assert.equal(applied.board.tiles["crisis-local"].lampReason.includes("3/5"), false);
+    const tip = crisisMeterTooltipBits(applied.board, "Floods");
+    assert.match(tip, /2 pathways/);
+    assert.match(tip, /cooler/i);
+  });
+
+  it("blendPathwayScore does not attach heuristic copy to a mismatched AI delta", () => {
+    const local = heuristicPathwayScore(
+      [
+        {
+          kind: "invention",
+          year: 2026,
+          howText: "A clear forty-character mechanism for local flood sensors.",
+          timingLevel: "green",
+          feasibilityPct: 85,
+        },
+      ],
+      2026
+    );
+    assert.equal(local.crisisDelta.local, -1);
+    const blended = blendPathwayScore(
+      {
+        crisisDelta: { local: 1, global: 0, support: 0 },
+        crisisReasons: { local: "", global: "", support: "" },
+        concerns: {},
+      },
+      local
+    );
+    assert.equal(blended.crisisDelta.local, 1);
+    assert.equal(blended.crisisReasons.local, "");
+    assert.ok(blended.crisisReasons.global);
+  });
+
+  it("blendPathwayScore fills a role only when AI and heuristic deltas match", () => {
+    const local = heuristicPathwayScore(
+      [
+        {
+          kind: "invention",
+          year: 2026,
+          howText: "A clear forty-character mechanism for local flood sensors.",
+          timingLevel: "green",
+          feasibilityPct: 85,
+        },
+      ],
+      2026
+    );
+    const blended = blendPathwayScore(
+      {
+        crisisDelta: { local: -1, global: 0, support: 0 },
+        crisisReasons: { local: "", global: "", support: "" },
+        concerns: {},
+      },
+      local
+    );
+    assert.equal(blended.crisisDelta.local, -1);
+    assert.equal(blended.crisisReasons.local, local.crisisReasons.local);
+  });
+
+  it("pickPrimaryCrisisReason prefers max |delta|", () => {
+    const pick = pickPrimaryCrisisReason([
+      { delta: 0, reason: "Never names the heat.", pending: false },
+      { delta: -2, reason: "The noon cooler keeps class in the rooms.", pending: false },
+    ]);
+    assert.match(pick.reason, /cooler/);
+    assert.equal(pick.primary.delta, -2);
+  });
+
+  it("pickScoreChipTiles prefers large crisis moves then concerns", () => {
+    const picked = pickScoreChipTiles(
+      [
+        { kind: "concern", tileId: "c1", level: "yellow" },
+        { kind: "crisis", tileId: "a", absDelta: 0 },
+        { kind: "crisis", tileId: "b", absDelta: 2 },
+        { kind: "concern", tileId: "c2", level: "red" },
+      ],
+      3
+    );
+    assert.deepEqual(
+      picked.map((x) => x.tileId),
+      ["b", "a", "c2"]
+    );
+  });
+
+  it("pathwayScoreLabel and formatSignedDelta", () => {
+    assert.equal(pathwayScoreLabel([{ techId: "ai" }, { techId: "iot" }]), "ai · iot");
+    assert.equal(formatSignedDelta(-1), "-1");
+    assert.equal(formatSignedDelta(1), "+1");
+    assert.deepEqual(crisisDeltaValues({ local: { delta: -2 } }).local, -2);
+    assert.equal(crisisDeltaReasons({ local: { reason: "Hi." } }).local, "Hi.");
   });
 });
 

@@ -51,8 +51,10 @@ describe("FAST_EVAL_MODES", () => {
       assert.ok(spec.maxOutputTokens > 0);
     }
     assert.match(SCORE_PATHWAY_SYSTEM, /crisisDelta/);
+    assert.match(SCORE_PATHWAY_SYSTEM, /"delta"/);
     assert.match(SCORE_PATHWAY_SYSTEM, /challengeSpeech/);
     assert.match(SCORE_PATHWAY_SYSTEM, /description/i);
+    assert.equal(FAST_EVAL_MODES["score-pathway"].maxOutputTokens >= 550, true);
     assert.match(ASSESS_FEASIBILITY_SYSTEM, /"timing"/);
     assert.match(IDEA_SPARKS_SYSTEM, /"ideas"/);
     assert.match(POSE_CHALLENGE_SYSTEM, /challengeSpeech/);
@@ -330,6 +332,39 @@ describe("sanitizeFast", () => {
     assert.equal(out.crisisDelta.local, -2);
     assert.equal(out.crisisDelta.global, 1);
     assert.equal(out.concerns.moloch.level, "yellow");
+  });
+
+  it("score-pathway sanitizes nested {delta, reason}", () => {
+    const out = sanitizeFast(
+      "score-pathway",
+      {
+        crisisDelta: {
+          local: { delta: -1, reason: "The noon cooler keeps class in." },
+          global: { delta: 0, reason: "No root-cause lever." },
+          support: 1,
+        },
+        crisisReasons: { support: "Public fear of the stack." },
+      },
+      "ai"
+    );
+    assert.equal(out.crisisDelta.local, -1);
+    assert.match(out.crisisReasons.local, /noon cooler/);
+    assert.equal(out.crisisDelta.support, 1);
+    assert.match(out.crisisReasons.support, /Public fear/);
+    assert.equal(out.crisisReasons.local.length <= 160, true);
+  });
+
+  it("score-pathway clips a 400-char nested reason to 160", () => {
+    const out = sanitizeFast(
+      "score-pathway",
+      {
+        crisisDelta: {
+          local: { delta: 0, reason: "y".repeat(400) },
+        },
+      },
+      "ai"
+    );
+    assert.equal(out.crisisReasons.local.length, 160);
   });
 
   it("assess-feasibility returns only timing", () => {

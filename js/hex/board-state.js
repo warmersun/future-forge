@@ -14,6 +14,7 @@ import {
 } from "./hex-tile-grid.js";
 import { polarityForTech, SPLIT } from "./polarity.js";
 import { GAME, clampChallengerCount } from "../data.js";
+import { crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js";
 
 export const TILE_KIND = {
   invention: "invention",
@@ -68,6 +69,7 @@ export function createEmptyBoard() {
      * @type {Record<string, {
      *   inventionIds: string[],
      *   crisisDelta: { local: number, global: number, support: number },
+     *   crisisReasons: { local: string, global: string, support: string },
      *   concerns: Record<string, { level: string, reason: string }>,
      *   pending: boolean,
      * }>}
@@ -137,11 +139,11 @@ export function cloneBoard(board) {
           inventionIds: Array.isArray(row?.inventionIds)
             ? row.inventionIds.map(String)
             : [],
-          crisisDelta: {
-            local: Number(row?.crisisDelta?.local) || 0,
-            global: Number(row?.crisisDelta?.global) || 0,
-            support: Number(row?.crisisDelta?.support) || 0,
-          },
+          crisisDelta: crisisDeltaValues(row?.crisisDelta),
+          crisisReasons: crisisDeltaReasons(
+            row?.crisisDelta,
+            row?.crisisReasons
+          ),
           concerns:
             row?.concerns && typeof row.concerns === "object"
               ? Object.fromEntries(

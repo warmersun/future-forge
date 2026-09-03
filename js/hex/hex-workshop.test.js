@@ -4,6 +4,8 @@ import {
   createHexWorkshop,
   defaultChallengerImagePrompt,
   pathwayArtLabel,
+  crisisWhyBlockHtml,
+  concernWhyBlockHtml,
 } from "./hex-workshop.js";
 import {
   addTile,
@@ -111,6 +113,51 @@ describe("hex-workshop tile timing extra", () => {
     assert.equal(Object.hasOwn(assess.extra, "inventionImpact"), false);
     assert.match(assess.extra.inventionHow, /Part A/);
     assert.deepEqual(assess.extra.selectedTechIds, ["ai"]);
+  });
+});
+
+describe("hex-workshop why blocks", () => {
+  it("crisisWhyBlockHtml lists net and each island", () => {
+    const one = crisisWhyBlockHtml([
+      { label: "ai · iot", delta: -1, reason: "The noon cooler keeps class in the rooms.", pending: false },
+    ]);
+    assert.match(one, /This pathway: −1|This pathway: -1/);
+    assert.match(one, /noon cooler/);
+    const two = crisisWhyBlockHtml([
+      { label: "ai", delta: -1, reason: "Cooler at noon.", pending: false },
+      { label: "drones", delta: 0, reason: "Never names the heat.", pending: false },
+    ]);
+    assert.match(two, /from 2 pathways/);
+    assert.match(two, /Cooler at noon/);
+    assert.match(two, /Never names the heat/);
+    const pending = crisisWhyBlockHtml([
+      { label: "ai", delta: 0, reason: "", pending: true },
+    ]);
+    assert.match(pending, /Judging/);
+    const mixed = crisisWhyBlockHtml([
+      { label: "ai", delta: -1, reason: "Cooler at noon.", pending: false },
+      { label: "drones", delta: 0, reason: "", pending: true },
+    ]);
+    assert.match(mixed, /Cooler at noon/);
+    assert.match(mixed, /Judging another pathway/);
+    assert.equal(/Never names/i.test(mixed), false);
+  });
+
+  it("concernWhyBlockHtml lists every island lamp", () => {
+    const html = concernWhyBlockHtml([
+      { label: "ai", level: "yellow", reason: "Neighbors can skip the fee.", pending: false },
+      { label: "drones", level: "red", reason: "Still unanswered.", pending: false },
+    ]);
+    assert.match(html, /yellow/);
+    assert.match(html, /Neighbors can skip/);
+    assert.match(html, /red/);
+    assert.match(html, /Still unanswered/);
+    const mixed = concernWhyBlockHtml([
+      { label: "ai", level: "yellow", reason: "Neighbors can skip the fee.", pending: false },
+      { label: "drones", level: "red", reason: "", pending: true },
+    ]);
+    assert.match(mixed, /Neighbors can skip/);
+    assert.match(mixed, /Judging another pathway/);
   });
 });
 

@@ -105,6 +105,8 @@ export function createHexBoardUi(opts) {
   let highlight = null;
   /** @type {{ a: string, b: string }|null} */
   let pulsePair = null;
+  /** @type {string[]} */
+  let pulseIds = [];
   /** @type {{ a: string, b: string }[]} */
   let evaluatingPairs = [];
   const gridOpts = {
@@ -261,8 +263,9 @@ export function createHexBoardUi(opts) {
     else if (highlight && tileInHighlight(p.id)) g.setAttribute("opacity", "1");
     if (isOrigin) g.classList.add("hex-pathway-origin");
     if (
-      pulsePair &&
-      (p.id === pulsePair.a || p.id === pulsePair.b)
+      (pulsePair &&
+        (p.id === pulsePair.a || p.id === pulsePair.b)) ||
+      pulseIds.includes(p.id)
     ) {
       g.classList.add("hex-tile-pulse");
     }
@@ -1008,6 +1011,10 @@ export function createHexBoardUi(opts) {
     },
     setPulsePair: (a, b) => {
       pulsePair = a && b ? { a, b } : null;
+      render();
+    },
+    setPulseIds: (ids) => {
+      pulseIds = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
       render();
     },
     setEvaluatingPairs: (pairs) => {

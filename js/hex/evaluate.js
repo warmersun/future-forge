@@ -17,6 +17,28 @@ import {
   cloneBoard,
   applyLights,
 } from "./board-state.js";
+import {
+  CRISIS_REASON_MAX,
+  CRISIS_ROLES,
+  emptyCrisisDelta,
+  emptyCrisisReasons,
+  clipCrisisReason,
+  clampCrisisDelta,
+  parseCrisisDeltaField,
+  crisisDeltaValues,
+  crisisDeltaReasons,
+} from "./crisis-delta.js";
+
+export {
+  CRISIS_REASON_MAX,
+  emptyCrisisDelta,
+  emptyCrisisReasons,
+  clipCrisisReason,
+  clampCrisisDelta,
+  parseCrisisDeltaField,
+  crisisDeltaValues,
+  crisisDeltaReasons,
+};
 
 /** cool/warm/hot → hex RYG — same as HUD. */
 export function bandToLamp(band) {
@@ -25,8 +47,19 @@ export function bandToLamp(band) {
   return "red";
 }
 
-export function emptyCrisisDelta() {
-  return { local: 0, global: 0, support: 0 };
+export function formatSignedDelta(n) {
+  const v = Math.round(Number(n) || 0);
+  if (v > 0) return `+${v}`;
+  return String(v);
+}
+
+/** Tech-id island label (no invention name). */
+export function pathwayScoreLabel(inventions) {
+  const names = (inventions || [])
+    .map((t) => t?.techId)
+    .filter(Boolean)
+    .slice(0, 3);
+  return names.join(" · ") || "a local pathway";
 }
 
 /**
@@ -461,15 +494,37 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
       howBlob
     );
   const delta = emptyCrisisDelta();
+  const crisisReasons = emptyCrisisReasons();
   if (mature && howLen >= 40) {
     delta.local = -1;
     delta.support = -1;
+    crisisReasons.local =
+      "The how-text names a here-and-now mechanism that can ease this meter.";
+    crisisReasons.support =
+      "The how-text is specific enough that people could actually field it.";
   } else if (howLen >= 20) {
     delta.local = -1;
+    crisisReasons.local =
+      "There is a local mechanism on the page, but it is still thin.";
   }
   // Invent can make a meter worse (red timing, or a hostile stack).
   if (redTiming || hostile) {
     delta.support = Math.max(delta.support, 1);
+    crisisReasons.support = redTiming
+      ? "A claim is not honest this year, so public buy-in gets harder."
+      : "The stack includes something people will not want next door.";
+  }
+  if (!crisisReasons.local) {
+    crisisReasons.local =
+      "Nothing in the how-text eases the harm people feel today.";
+  }
+  if (!crisisReasons.global) {
+    crisisReasons.global =
+      "Nothing here names a lasting driver of the problem.";
+  }
+  if (!crisisReasons.support) {
+    crisisReasons.support =
+      "Nothing here earns public buy-in or a path beyond a pilot.";
   }
   const answers =
     opts.concernAnswers && typeof opts.concernAnswers === "object"
@@ -485,7 +540,7 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
         : "Still unanswered — docking is not enough.",
     };
   }
-  return { crisisDelta: delta, concerns };
+  return { crisisDelta: delta, crisisReasons, concerns };
 }
 
 /**
@@ -495,15 +550,8 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
 export function normalizePathwayScore(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const cd = src.crisisDelta || src.deltas || {};
-  const clampDelta = (v) => {
-    const n = Math.round(Number(v) || 0);
-    return Math.max(-2, Math.min(1, n));
-  };
-  const crisisDelta = {
-    local: clampDelta(cd.local),
-    global: clampDelta(cd.global),
-    support: clampDelta(cd.support),
-  };
+  const crisisDelta = crisisDeltaValues(cd);
+  const crisisReasons = crisisDeltaReasons(cd, src.crisisReasons);
   const concerns = {};
   const rawC = src.concerns && typeof src.concerns === "object" ? src.concerns : {};
   for (const [angle, row] of Object.entries(rawC)) {
@@ -514,7 +562,46 @@ export function normalizePathwayScore(raw) {
       reason: String(row?.reason || "").slice(0, 280),
     };
   }
-  return { crisisDelta, concerns };
+  return { crisisDelta, crisisReasons, concerns };
+}
+
+/**
+ * Merge an AI score with the local heuristic. Never pair an AI delta with a
+ * heuristic sentence written for a different signed value.
+ * @param {object} ai — from normalizePathwayScore
+ * @param {object} local — from heuristicPathwayScore
+ */
+export function blendPathwayScore(ai, local) {
+  const cd = crisisDeltaValues(ai?.crisisDelta);
+  const aiReasons = crisisDeltaReasons(ai?.crisisDelta, ai?.crisisReasons);
+  const localDelta = crisisDeltaValues(local?.crisisDelta);
+  const localReasons = local?.crisisReasons || emptyCrisisReasons();
+  const cdEmpty = cd.local === 0 && cd.global === 0 && cd.support === 0;
+  const hasReasons = CRISIS_ROLES.some((role) =>
+    String(aiReasons[role] || "").trim()
+  );
+  const hasConcerns = Object.keys(ai?.concerns || {}).length > 0;
+  if (cdEmpty && !hasConcerns && !hasReasons) {
+    return {
+      crisisDelta: localDelta,
+      crisisReasons: { ...localReasons },
+      concerns: { ...(local?.concerns || {}), ...(ai?.concerns || {}) },
+    };
+  }
+  const crisisReasons = emptyCrisisReasons();
+  for (const role of CRISIS_ROLES) {
+    const aiR = String(aiReasons[role] || "").trim();
+    if (aiR) {
+      crisisReasons[role] = clipCrisisReason(aiR);
+    } else if (cd[role] === localDelta[role]) {
+      crisisReasons[role] = clipCrisisReason(localReasons[role]);
+    }
+  }
+  return {
+    crisisDelta: cd,
+    crisisReasons,
+    concerns: { ...(local?.concerns || {}), ...(ai?.concerns || {}) },
+  };
 }
 
 /**
@@ -663,6 +750,7 @@ export function applyPathwayPressure(board, opts = {}) {
       next.pathwayImpacts[fingerprint] = {
         inventionIds: inventions.map((t) => t.id),
         crisisDelta: emptyCrisisDelta(),
+        crisisReasons: emptyCrisisReasons(),
         concerns: {},
         pending: true,
         concernsPending: false,
@@ -714,7 +802,7 @@ export function applyPathwayPressure(board, opts = {}) {
       const seedId = inventions[0]?.id;
       if (!seedId) continue;
       if (!givensReachedFromInvention(next, seedId).includes(t.id)) continue;
-      sum += Number(impact.crisisDelta?.[role]) || 0;
+      sum += crisisDeltaValues(impact.crisisDelta)[role] || 0;
     }
     const base = Number(next.pressureBase?.[key] ?? 0);
     displayPressure[key] = clampPressure(base + sum);
@@ -729,10 +817,17 @@ export function applyPathwayPressure(board, opts = {}) {
       const key = t.meterKey || t.name;
       const n = displayPressure[key] ?? clampPressure(next.pressureBase?.[key]);
       const band = crisisMeterLevel(n, winMax[key]);
+      const pick = pickPrimaryCrisisReason(reasonsForCrisisTile(next, t));
+      let reason = pick.reason;
+      if (!reason) {
+        reason = pick.reachingSettled
+          ? "Docked pathways are not easing this meter yet."
+          : "No docked pathway is easing this meter yet.";
+      }
       lights.push({
         id: t.id,
         level: bandToLamp(band),
-        reason: `${n}/5 · ${band}`,
+        reason,
       });
     } else if (t.kind === TILE_KIND.concern && t.q != null) {
       let lamp = null;
@@ -806,6 +901,158 @@ export function applyPathwayPressure(board, opts = {}) {
     pendingGivenIds: [...pendingGivenIds],
     pathways,
   };
+}
+
+function pathwayReachesGiven(board, inventions, givenId) {
+  const seedId = inventions?.[0]?.id;
+  if (!seedId) return false;
+  return givensReachedFromInvention(board, seedId).includes(givenId);
+}
+
+/**
+ * Settled (and pending) crisis-delta rows for one meter hex.
+ * One row per reaching invent island.
+ * @returns {Array<{ fingerprint: string, label: string, delta: number, reason: string, pending: boolean }>}
+ */
+export function reasonsForCrisisTile(board, crisisTile) {
+  const tile =
+    crisisTile && typeof crisisTile === "object"
+      ? crisisTile
+      : board?.tiles?.[crisisTile];
+  if (!tile || tile.kind !== TILE_KIND.crisis || tile.q == null) return [];
+  const role = tile.role || "local";
+  const out = [];
+  for (const inventions of listInventionPathways(board)) {
+    if (!pathwayReachesGiven(board, inventions, tile.id)) continue;
+    const fingerprint = pathwayContentFingerprint(inventions, board);
+    const impact = board?.pathwayImpacts?.[fingerprint];
+    const pending = !impact || Boolean(impact.pending);
+    const delta = pending ? 0 : crisisDeltaValues(impact.crisisDelta)[role] || 0;
+    const reason = pending
+      ? ""
+      : clipCrisisReason(impact.crisisReasons?.[role]);
+    out.push({
+      fingerprint,
+      label: pathwayScoreLabel(inventions),
+      delta,
+      reason,
+      pending,
+    });
+  }
+  return out;
+}
+
+/**
+ * Settled (and pending) concern rows for one critic hex.
+ * One row per reaching invent island. Hex lamp stays the worse of settled levels.
+ * @returns {Array<{ fingerprint: string, label: string, level: string|null, reason: string, pending: boolean }>}
+ */
+export function reasonsForConcernTile(board, concernTile) {
+  const tile =
+    concernTile && typeof concernTile === "object"
+      ? concernTile
+      : board?.tiles?.[concernTile];
+  if (!tile || tile.kind !== TILE_KIND.concern || tile.q == null) return [];
+  const angle = tile.angle;
+  const out = [];
+  for (const inventions of listInventionPathways(board)) {
+    if (!pathwayReachesGiven(board, inventions, tile.id)) continue;
+    const fingerprint = pathwayContentFingerprint(inventions, board);
+    const impact = board?.pathwayImpacts?.[fingerprint];
+    const pending =
+      !impact || Boolean(impact.pending) || Boolean(impact.concernsPending);
+    const row = !pending && angle ? impact.concerns?.[angle] : null;
+    const level =
+      row?.level === "red" || row?.level === "yellow" || row?.level === "green"
+        ? row.level
+        : null;
+    out.push({
+      fingerprint,
+      label: pathwayScoreLabel(inventions),
+      level,
+      reason: pending ? "" : String(row?.reason || "").trim(),
+      pending,
+    });
+  }
+  return out;
+}
+
+/**
+ * Pick at most `limit` settle chips: worst |crisis delta| first, then other
+ * crises, then harshest concern (red > yellow > green).
+ * @param {Array<{ kind: string, absDelta?: number, concernRank?: number }>} items
+ * @param {number} [limit]
+ */
+/**
+ * Settled island that should own lamp / HUD copy: largest |delta|, then one
+ * that actually has a reason.
+ * @param {Array<{ delta?: number, reason?: string, pending?: boolean }>} rows
+ * @returns {{ primary: object|null, reason: string, reachingSettled: number }}
+ */
+export function pickPrimaryCrisisReason(rows) {
+  const settled = (rows || []).filter((r) => !r.pending);
+  if (!settled.length) {
+    return { primary: null, reason: "", reachingSettled: 0 };
+  }
+  const abs = (r) => Math.abs(Number(r.delta) || 0);
+  const maxAbs = Math.max(...settled.map(abs));
+  const amongMax = settled.filter((r) => abs(r) === maxAbs);
+  const primary =
+    amongMax.find((r) => String(r.reason || "").trim()) || amongMax[0];
+  const reason =
+    clipCrisisReason(primary?.reason) ||
+    clipCrisisReason(
+      settled.find((r) => String(r.reason || "").trim())?.reason
+    );
+  return { primary, reason, reachingSettled: settled.length };
+}
+
+export function pickScoreChipTiles(items, limit = 3) {
+  const rankLamp = { red: 2, yellow: 1, green: 0 };
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  const crises = list
+    .filter((x) => x.kind === "crisis")
+    .sort((a, b) => (Number(b.absDelta) || 0) - (Number(a.absDelta) || 0));
+  const concerns = list
+    .filter((x) => x.kind === "concern")
+    .sort(
+      (a, b) =>
+        (rankLamp[b.level] ?? Number(b.concernRank) ?? 0) -
+        (rankLamp[a.level] ?? Number(a.concernRank) ?? 0)
+    );
+  return [...crises, ...concerns].slice(0, Math.max(0, limit));
+}
+
+/**
+ * HUD tooltip suffix: net + first island why. Empty if nothing settled.
+ * @param {object|null|undefined} board
+ * @param {string} meterKey
+ */
+export function crisisMeterTooltipBits(board, meterKey) {
+  const key = String(meterKey || "");
+  if (!key) return "";
+  let tile = null;
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t?.kind !== TILE_KIND.crisis || t.q == null) continue;
+    if (String(t.meterKey || t.name) === key) {
+      tile = t;
+      break;
+    }
+  }
+  if (!tile) return "";
+  const rows = reasonsForCrisisTile(board, tile).filter((r) => !r.pending);
+  if (!rows.length) return "";
+  const net = rows.reduce((s, r) => s + (Number(r.delta) || 0), 0);
+  const pick = pickPrimaryCrisisReason(rows);
+  const first = pick.primary || rows[0];
+  const countBit =
+    rows.length > 1
+      ? `Net ${formatSignedDelta(net)} from ${rows.length} pathways. `
+      : `This pathway: ${formatSignedDelta(first.delta)}. `;
+  const why = first?.reason
+    ? `${first.label}: ${formatSignedDelta(first.delta)} — ${first.reason}`
+    : "";
+  return `${countBit}${why}`.trim();
 }
 
 /**

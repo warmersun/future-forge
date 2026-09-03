@@ -52,9 +52,17 @@ import {
   applyPathwayPressure,
   heuristicPathwayScore,
   normalizePathwayScore,
+  blendPathwayScore,
   emptyCrisisDelta,
+  emptyCrisisReasons,
+  parseCrisisDeltaField,
   clampPressure,
   bandToLamp,
+  reasonsForCrisisTile,
+  reasonsForConcernTile,
+  pickScoreChipTiles,
+  formatSignedDelta,
+  pathwayScoreLabel,
   diffPathwayScoreJobs,
   clusterFromGiven,
   invalidatePathwaysTouchingGiven,
@@ -63,6 +71,7 @@ import {
   clampTimingPct,
   heuristicConverges,
   concernsReachedFromPathway,
+  givensReachedFromInvention,
   pathwayConcernScoreKey,
   pickConcernSpawn,
   clampConcernLamp,
@@ -114,6 +123,11 @@ export function createHexWorkshop(api) {
   /** @type {string|null} */
   let concernAnswerRevisingId = null;
   let concernAnswerBusy = false;
+  /** @type {ReturnType<typeof setTimeout>|null} */
+  let scoreChipTimer = null;
+  /** @type {ReturnType<typeof setTimeout>|null} */
+  let pulseTimer = null;
+  let scoreChipsWired = false;
 
   const BUSY_LABELS = {
     ideas: "Generating ideas…",
@@ -436,6 +450,7 @@ export function createHexWorkshop(api) {
       onInspectCancel: () => {
         hideTilePopup();
         inspectTileId = null;
+        hideScoreChips();
       },
       onPathwayToggle: (id, hl) => {
         if (isCreateBusy()) return;
@@ -940,8 +955,10 @@ export function createHexWorkshop(api) {
             `<p><span class="hex-tile-popup-lamp ${escapeHtml(lamp)}"></span><strong>${escapeHtml(band)}</strong> — ${escapeHtml(status)}</p>`
           );
         } else {
-          parts.push(lampExplainHtml(t.lamp, t.lampReason, "crisis"));
+          parts.push(lampExplainHtml(t.lamp, "crisis"));
         }
+        const crisisWhy = crisisWhyBlockHtml(reasonsForCrisisTile(board(), t));
+        if (crisisWhy) parts.push(crisisWhy);
       } else if (t.kind === TILE_KIND.concern) {
         const angleMeta = CHALLENGE_ANGLES.find((a) => a.id === t.angle);
         const angleLabel =
@@ -1018,10 +1035,14 @@ export function createHexWorkshop(api) {
           );
         }
         parts.push(
-          lampExplainHtml(t.lamp, t.lampReason, "concern", {
+          lampExplainHtml(t.lamp, "concern", {
             answeredUndocked: Boolean(reply.answer) && !docked,
           })
         );
+        const concernWhy = concernWhyBlockHtml(
+          reasonsForConcernTile(board(), t)
+        );
+        if (concernWhy) parts.push(concernWhy);
       } else if (t.kind === TILE_KIND.rd) {
         parts.push(
           `<p>This is a research roll of <strong>${escapeHtml(formatFactor(t.factor))}</strong>. Dock it against an invention pathway to multiply that pathway's honesty chance.</p>`
@@ -1515,6 +1536,9 @@ export function createHexWorkshop(api) {
       crisisDelta: opts.keepCrisisDelta
         ? prev.crisisDelta || emptyCrisisDelta()
         : score.crisisDelta || emptyCrisisDelta(),
+      crisisReasons: opts.keepCrisisDelta
+        ? prev.crisisReasons || emptyCrisisReasons()
+        : score.crisisReasons || emptyCrisisReasons(),
       concerns: score.concerns || {},
       pending: false,
       concernsPending: false,
@@ -1526,6 +1550,176 @@ export function createHexWorkshop(api) {
     api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
     api.onBoardPainted?.();
+    showScoreSettleChips(fp, {
+      keepCrisisDelta: Boolean(opts.keepCrisisDelta),
+      score,
+    });
+    if (inspectTileId) showTilePopup(inspectTileId);
+  }
+
+  function hideScoreChips() {
+    if (scoreChipTimer) {
+      clearTimeout(scoreChipTimer);
+      scoreChipTimer = null;
+    }
+    if (pulseTimer) {
+      clearTimeout(pulseTimer);
+      pulseTimer = null;
+      ensureUi()?.setPulseIds?.([]);
+    }
+    const host = document.querySelector("#hex-score-chips");
+    if (host) {
+      host.innerHTML = "";
+      host.hidden = true;
+    }
+  }
+
+  function wireScoreChipsOnce() {
+    if (scoreChipsWired) return;
+    scoreChipsWired = true;
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        const host = document.querySelector("#hex-score-chips");
+        if (!host || host.hidden) return;
+        if (host.contains(e.target)) return;
+        hideScoreChips();
+      },
+      true
+    );
+  }
+
+  function positionScoreChip(btn, tileId) {
+    const anchor = findTileAnchor(tileId);
+    const pad = 10;
+    const gap = 10;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rect = anchor?.getBoundingClientRect?.() || {
+      left: vw / 2,
+      top: vh / 2,
+      width: 0,
+      height: 0,
+      right: vw / 2,
+      bottom: vh / 2,
+    };
+    const cw = btn.offsetWidth || 240;
+    const ch = btn.offsetHeight || 72;
+    let left = rect.right + gap;
+    let top = rect.top + rect.height / 2 - ch / 2;
+    if (left + cw > vw - pad) left = rect.left - gap - cw;
+    if (left < pad) left = pad;
+    if (top < pad) top = pad;
+    if (top + ch > vh - pad) top = Math.max(pad, vh - pad - ch);
+    btn.style.left = `${Math.round(left)}px`;
+    btn.style.top = `${Math.round(top)}px`;
+  }
+
+  function showScoreSettleChips(fp, opts = {}) {
+    wireScoreChipsOnce();
+    const b = board();
+    const impact = b?.pathwayImpacts?.[fp];
+    if (!impact) return;
+    const inventions = (impact.inventionIds || [])
+      .map((id) => b.tiles?.[id])
+      .filter((t) => t && t.kind === TILE_KIND.invention);
+    const seedId = inventions[0]?.id;
+    if (!seedId) return;
+    const givenIds = givensReachedFromInvention(b, seedId);
+    const keepCrisis = Boolean(opts.keepCrisisDelta);
+    const items = [];
+    for (const gid of givenIds) {
+      const t = b.tiles?.[gid];
+      if (!t) continue;
+      if (inspectTileId === t.id) continue;
+      if (t.kind === TILE_KIND.crisis && !keepCrisis) {
+        const role = t.role || "local";
+        const delta = parseCrisisDeltaField(impact.crisisDelta?.[role]).delta;
+        const reason = String(impact.crisisReasons?.[role] || "").trim();
+        const all = reasonsForCrisisTile(b, t).filter((r) => !r.pending);
+        items.push({
+          kind: "crisis",
+          tileId: t.id,
+          name: t.name || role,
+          delta,
+          absDelta: Math.abs(delta),
+          reason,
+          extraCount: all.length,
+          net: all.reduce((s, r) => s + (Number(r.delta) || 0), 0),
+        });
+      } else if (t.kind === TILE_KIND.concern) {
+        const row = impact.concerns?.[t.angle];
+        if (!row) continue;
+        const all = reasonsForConcernTile(b, t).filter((r) => !r.pending);
+        items.push({
+          kind: "concern",
+          tileId: t.id,
+          name: t.name || t.angle,
+          level: row.level,
+          reason: String(row.reason || "").trim(),
+          extraCount: all.length,
+        });
+      }
+    }
+    const picked = pickScoreChipTiles(items, 3);
+    const host = document.querySelector("#hex-score-chips");
+    if (!host) return;
+    if (!picked.length) {
+      hideScoreChips();
+      return;
+    }
+    host.hidden = false;
+    host.innerHTML = picked
+      .map((item) => {
+        const kicker =
+          item.kind === "crisis"
+            ? `${formatSignedDelta(item.delta)} · ${item.name}`
+            : `${item.level || "red"} · ${item.name}`;
+        const sub =
+          item.extraCount > 1
+            ? item.kind === "crisis"
+              ? `Net ${formatSignedDelta(item.net)} from ${item.extraCount} pathways`
+              : `from ${item.extraCount} pathways`
+            : "";
+        const reason = item.reason
+          ? `<span class="hex-score-chip-reason">${escapeHtml(item.reason)}</span>`
+          : "";
+        const subHtml = sub
+          ? `<span class="hex-score-chip-sub muted">${escapeHtml(sub)}</span>`
+          : "";
+        return `<button type="button" class="hex-score-chip" data-tile-id="${escapeHtml(
+          item.tileId
+        )}"><span class="hex-score-chip-kicker">${escapeHtml(
+          kicker
+        )}</span>${reason}${subHtml}</button>`;
+      })
+      .join("");
+    const buttons = [...host.querySelectorAll(".hex-score-chip")];
+    buttons.forEach((btn) => {
+      const id = btn.getAttribute("data-tile-id");
+      positionScoreChip(btn, id);
+      btn.addEventListener("click", () => {
+        hideScoreChips();
+        inspectTileId = id;
+        showTilePopup(id);
+      });
+    });
+    if (scoreChipTimer) clearTimeout(scoreChipTimer);
+    scoreChipTimer = setTimeout(() => {
+      scoreChipTimer = null;
+      hideScoreChips();
+    }, 5000);
+    if (pulseTimer) {
+      clearTimeout(pulseTimer);
+      pulseTimer = null;
+    }
+    if (!prefersReducedMotion() && picked.length) {
+      ensureUi()?.setPulseIds?.(picked.map((p) => p.tileId));
+      pulseTimer = setTimeout(() => {
+        pulseTimer = null;
+        ensureUi()?.setPulseIds?.([]);
+      }, 900);
+    }
   }
 
   function dockedConcernScoreOpts(board, inventions) {
@@ -1611,21 +1805,10 @@ export function createHexWorkshop(api) {
             signal,
           });
           if (signal?.aborted) return;
-          score = normalizePathwayScore(data);
-          const local = heuristicPathwayScore(inventions, year, heurOpts);
-          const cd = score.crisisDelta;
-          const cdEmpty =
-            !cd ||
-            (cd.local === 0 && cd.global === 0 && cd.support === 0);
-          score = {
-            crisisDelta: cdEmpty && !Object.keys(score.concerns || {}).length
-              ? local.crisisDelta
-              : cd || local.crisisDelta,
-            concerns: {
-              ...local.concerns,
-              ...(score.concerns || {}),
-            },
-          };
+          score = blendPathwayScore(
+            normalizePathwayScore(data),
+            heuristicPathwayScore(inventions, year, heurOpts)
+          );
         } catch (e) {
           if (isAbortError(e) || signal?.aborted) return;
           console.warn("[score-pathway]", e.message || e);
@@ -2738,17 +2921,14 @@ export function createHexWorkshop(api) {
 }
 
 /**
- * Traffic-light line for crisis / concern popups.
- * Hides internal "heuristic" reasons; shows real AI reasons when present.
+ * Traffic-light line for crisis / concern popups (band meaning only).
+ * Per-island AI/heuristic why lives in crisisWhyBlockHtml / concernWhyBlockHtml.
  * @param {string|null|undefined} lamp
- * @param {string|null|undefined} lampReason
  * @param {"crisis"|"concern"} kind
  */
-function lampExplainHtml(lamp, lampReason, kind, opts = {}) {
+function lampExplainHtml(lamp, kind, opts = {}) {
   const level = lamp === "green" || lamp === "yellow" || lamp === "red" ? lamp : "red";
   const label = level.charAt(0).toUpperCase() + level.slice(1);
-  const reason = String(lampReason || "").trim();
-  const showReason = reason && reason.toLowerCase() !== "heuristic";
   let meaning;
   if (kind === "crisis") {
     if (level === "green") {
@@ -2776,8 +2956,80 @@ function lampExplainHtml(lamp, lampReason, kind, opts = {}) {
         "unanswered. This veto stays red until you answer the critic or change the touching invent. Docking alone does not move the light.";
     }
   }
-  const detail = showReason ? escapeHtml(reason) : meaning;
-  return `<p><span class="hex-tile-popup-lamp ${escapeHtml(level)}"></span><strong>${escapeHtml(label)}</strong> — ${detail}</p>`;
+  return `<p><span class="hex-tile-popup-lamp ${escapeHtml(level)}"></span><strong>${escapeHtml(label)}</strong> — ${meaning}</p>`;
+}
+
+export function crisisWhyBlockHtml(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return "";
+  const settled = list.filter((r) => !r.pending);
+  const pendingCount = list.length - settled.length;
+  if (!settled.length) {
+    return `<p class="muted">Judging how docked pathways hit this meter…</p>`;
+  }
+  const net = settled.reduce((s, r) => s + (Number(r.delta) || 0), 0);
+  let body;
+  if (settled.length === 1) {
+    const r = settled[0];
+    const why = r.reason
+      ? `<p class="muted">${escapeHtml(r.reason)}</p>`
+      : "";
+    body = `<p><strong>This pathway: ${escapeHtml(
+      formatSignedDelta(r.delta)
+    )}</strong> · ${escapeHtml(r.label)}</p>${why}`;
+  } else {
+    const rowsHtml = settled
+      .map((r) => {
+        const why = r.reason ? ` — ${escapeHtml(r.reason)}` : "";
+        return `<p class="muted"><strong>${escapeHtml(
+          formatSignedDelta(r.delta)
+        )}</strong> · ${escapeHtml(r.label)}${why}</p>`;
+      })
+      .join("");
+    body = `<p><strong>Net ${escapeHtml(
+      formatSignedDelta(net)
+    )} from ${settled.length} pathways</strong></p>${rowsHtml}`;
+  }
+  const judging = pendingCount
+    ? `<p class="muted">${
+        pendingCount === 1
+          ? "Judging another pathway…"
+          : `Judging ${pendingCount} other pathways…`
+      }</p>`
+    : "";
+  return `<div class="hex-tile-popup-why">${body}${judging}</div>`;
+}
+
+export function concernWhyBlockHtml(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return "";
+  const settled = list.filter((r) => !r.pending);
+  const pendingCount = list.length - settled.length;
+  if (!settled.length) {
+    return `<p class="muted">Judging how docked pathways answer this critic…</p>`;
+  }
+  const rowsHtml = settled
+    .map((r) => {
+      const lvl =
+        r.level === "green" || r.level === "yellow" || r.level === "red"
+          ? r.level
+          : "red";
+      const why = r.reason ? ` — ${escapeHtml(r.reason)}` : "";
+      return `<p class="muted"><span class="hex-tile-popup-lamp ${escapeHtml(
+        lvl
+      )}"></span><strong>${escapeHtml(lvl)}</strong> · ${escapeHtml(
+        r.label
+      )}${why}</p>`;
+    })
+    .join("");
+  const judging = pendingCount
+    ? `<p class="muted">${
+        pendingCount === 1
+          ? "Judging another pathway…"
+          : `Judging ${pendingCount} other pathways…`
+      }</p>`
+    : "";
+  return `<div class="hex-tile-popup-why">${rowsHtml}${judging}</div>`;
 }
 
 function escapeHtml(s) {
@@ -2825,11 +3077,7 @@ function summarizeBoardForScrutiny(board, inventionIds = null) {
 }
 
 export function pathwayArtLabel(inventions) {
-  const names = (inventions || [])
-    .map((t) => t?.techId)
-    .filter(Boolean)
-    .slice(0, 3);
-  return names.join(" · ") || "a local pathway";
+  return pathwayScoreLabel(inventions);
 }
 
 export function defaultChallengerImagePrompt(angle, place, pathwayName) {

@@ -767,6 +767,11 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
     global: 0,
     support: 0,
   });
+  assert.deepEqual(copy.pathwayImpacts["a:ai:how:yellow"].crisisReasons, {
+    local: "",
+    global: "",
+    support: "",
+  });
   assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].concerns.moloch.level, "yellow");
   assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].pending, false);
   assert.equal(
@@ -776,8 +781,32 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
   // Mutating clone must not touch original
   copy.pressureBase.Floods = 9;
   copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta.local = 0;
+  copy.pathwayImpacts["a:ai:how:yellow"].crisisReasons.local = "mutated";
   assert.equal(board.pressureBase.Floods, 2);
   assert.equal(board.pathwayImpacts["a:ai:how:yellow"].crisisDelta.local, -1);
+  assert.equal(board.pathwayImpacts["a:ai:how:yellow"].crisisReasons?.local || "", "");
+});
+
+test("cloneBoard clamps nested crisisDelta and clips reasons", () => {
+  const board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 2 },
+  });
+  board.pathwayImpacts["nested"] = {
+    inventionIds: ["inv-1"],
+    crisisDelta: {
+      local: { delta: -9, reason: "x".repeat(400) },
+      global: { delta: 3, reason: "Too much." },
+      support: 0,
+    },
+    concerns: {},
+    pending: false,
+  };
+  const copy = cloneBoard(board);
+  assert.equal(copy.pathwayImpacts.nested.crisisDelta.local, -2);
+  assert.equal(copy.pathwayImpacts.nested.crisisDelta.global, 1);
+  assert.equal(copy.pathwayImpacts.nested.crisisReasons.local.length, 160);
+  assert.equal(copy.pathwayImpacts.nested.crisisReasons.global, "Too much.");
 });
 
 test("buildNeighborEvalContext lists neighbors", () => {

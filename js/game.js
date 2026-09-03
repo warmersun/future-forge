@@ -102,6 +102,7 @@ import {
   visionPathwaysFromBoard,
   visionGivensFromBoard,
   visionPeopleMood,
+  crisisMeterTooltipBits,
 } from "./hex/evaluate.js";
 import { applyHeuristicLights } from "./hex/lights.js";
 import {
@@ -11265,9 +11266,13 @@ function paintHudPressureMeters(box) {
         goal != null && !Number.isNaN(Number(goal))
           ? ` · goal ≤${Math.round(Number(goal))}`
           : "";
+      const whyBit = crisisMeterTooltipBits(state.hexBoard, k);
+      const whySuffix = whyBit ? ` ${whyBit}` : "";
       return `<span class="meter ${level}" title="${escapeHtml(
         label
-      )}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers."><b>${escapeHtml(
+      )}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers.${escapeHtml(
+        whySuffix
+      )}"><b>${escapeHtml(
         label
       )}</b> ${"●".repeat(n)}${"○".repeat(5 - n)}</span>`;
     })
