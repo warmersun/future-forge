@@ -13,7 +13,7 @@ Schema: [`docs/capability-trend-schema.md`](capability-trend-schema.md).
 - `GET /api/trends` — validated trends from the remote catalog
 - `GET /api/trends?refresh=1` — skip process cache + cache-bust CDN URLs
 
-In-memory TTL ~10 minutes (same pattern as Quests).
+In-memory TTL ~10 minutes (same pattern as Quests). Game `.env` / `.env.local` (and portal `.env.portal`) are loaded before this URL is resolved.
 
 | Env | Effect |
 |-----|--------|

@@ -86,14 +86,6 @@ import { heuristicConverges } from "./js/hex/evaluate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
-const QUESTS_DIR = resolveQuestsDir(ROOT);
-ensureQuestsDir(QUESTS_DIR);
-const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
-const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
-const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
-const AUTH_PATH = path.join(GROK_HOME, "auth.json");
-const XAI_BASE = "https://api.x.ai/v1";
-const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
 
 function loadEnvFile() {
   const candidates = [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")];
@@ -120,6 +112,15 @@ function loadEnvFile() {
 
 // Must run before reading FF_* config from process.env
 loadEnvFile();
+
+const QUESTS_DIR = resolveQuestsDir(ROOT);
+ensureQuestsDir(QUESTS_DIR);
+const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
+const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
+const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
+const AUTH_PATH = path.join(GROK_HOME, "auth.json");
+const XAI_BASE = "https://api.x.ai/v1";
+const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
 
 const PORT = Number(process.env.FF_PORT) || 8765;
 /** Optional shared secret for expensive APIs when exposed beyond loopback. */
