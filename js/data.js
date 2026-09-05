@@ -4,6 +4,7 @@
  */
 
 import { SCENARIO_ANGLE_PACKS as SEED_ANGLE_PACKS } from "./scenario-seeds.js";
+import { SCENARIO_PACK_SUMMARIES } from "./scenario-pack-summaries.js";
 
 export const GAME = {
   title: "Future Forge",
@@ -1163,7 +1164,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-export const SCENARIO_PACK_REV = "d6";
+export const SCENARIO_PACK_REV = "d7";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
@@ -1173,6 +1174,7 @@ function buildLocalScenarioVariants(g, count, salt) {
   const out = [];
   for (let i = 0; i < n; i++) {
     const pack = packs[(i + salt) % packs.length];
+    const packIndex = (i + salt) % packs.length;
     const place = pickRot(pack.places, i + salt);
     const title = pack.title.replace("{place}", place);
     const scene = pack.scene.replace(/\{place\}/g, place).replace(/\{theme\}/g, g.title);
@@ -1217,6 +1219,11 @@ function buildLocalScenarioVariants(g, count, salt) {
       };
     });
     const collapseYear = 2032 + ((i + salt) % 3) * 2;
+    const table =
+      SCENARIO_PACK_SUMMARIES[g.id] || SCENARIO_PACK_SUMMARIES._default || [];
+    const summary = String(
+      pack.summary || table[packIndex] || table[0] || ""
+    ).trim();
     out.push({
       id: `gen-${g.id}-${i}-${salt}-${SCENARIO_PACK_REV}`,
       globalId: g.id,
@@ -1231,6 +1238,7 @@ function buildLocalScenarioVariants(g, count, salt) {
       suggested: pack.suggested || suggestedDefault,
       visionTheme: pack.visionTheme || visionDefault,
       source: "generated",
+      ...(summary ? { summary } : {}),
     });
   }
   return out;

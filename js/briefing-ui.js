@@ -501,15 +501,12 @@ function renderWalk(rec) {
     )
     .join("");
   const caption = overlayCaptionHtml(beat);
-  const job = rec.jobLine
-    ? `<p class="quest-briefing-job">${escapeHtml(rec.jobLine)}</p>`
-    : "";
   const kicker = beat?.title
     ? `<div class="quest-briefing-kicker"><span class="quest-briefing-title">${escapeHtml(
         beat.title
       )}</span></div>`
     : "";
-  return `${job}${kicker}<div class="quest-briefing-speak">
+  return `${kicker}<div class="quest-briefing-speak">
       <div class="quest-briefing-body" aria-live="polite">${caption}</div>
     </div>
     <div class="quest-briefing-nav">

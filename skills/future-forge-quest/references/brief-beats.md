@@ -6,7 +6,7 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
 
 ## What the player sees
 
-- A **job line** from `summary` (always visible while they read).
+- A **summary lede** in the left invent banner (2–3 plain sentences: global problem, situation, what we’re solving for). Always visible while they read beats. Not a story. No place or person names.
 - Beats in **story-then-job** order, even if you wrote **Your job** first in Markdown:
   1. The place (one paragraph per card)
   2. What’s strained
@@ -26,7 +26,7 @@ This is the default path for side-loaded tiles. You do **not** have to emit `bri
 2. **The place:** 2–4 **short** paragraphs, one spine beat each (hook / complication / mechanism / stakes). Blank line between paragraphs. One idea per paragraph.
 3. Other sections: one short paragraph (or a short list for Constraints). Do not pack three ideas into one paragraph.
 4. Soft target: ~40–90 words per paragraph. The engine splits on blank lines and caps the walkthrough at **8** cards.
-5. `summary` must pass the 14-year-old invent-job test — it is the line they see on every card.
+5. `summary` must pass the 14-year-old invent-job test — it is the 2–3 sentence lede in the left banner (not a scene).
 
 If **The place** is one dense block, the first card is still a wall of text. Split it.
 

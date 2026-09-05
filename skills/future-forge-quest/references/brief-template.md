@@ -4,7 +4,7 @@
 
 **Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains belong in `aiTutorContext` / `grounding` — not here.
 
-**Walkthrough:** The invent screen shows this brief **one short beat at a time** (derived from `##` headings and paragraphs). Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the job line on every card. Optional authored cards: `brief-beats.md`.
+**Walkthrough:** The invent screen shows this brief **one short beat at a time** (derived from `##` headings and paragraphs). Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the 2–3 sentence lede in the left banner (not a scene). Optional authored cards: `brief-beats.md`.
 
 ```markdown
 ## Your job

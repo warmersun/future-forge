@@ -188,7 +188,7 @@ describe("briefing-ui paint", () => {
     assert.equal(sceneEl.textContent, "Only a problem line.");
   });
 
-  it("paints job line + beat title on the overlay", () => {
+  it("keeps beat title on the overlay without a duplicate job line", () => {
     installDom();
     const root = fakeEl("vision-canvas-wrap");
     const sceneEl = fakeEl("ws-mission-scene");
@@ -208,8 +208,7 @@ describe("briefing-ui paint", () => {
     assert.equal(briefingOwnsRoot(root), true);
     const overlay = root.querySelector(".quest-briefing-overlay");
     assert.ok(overlay);
-    assert.match(overlay.innerHTML, /quest-briefing-job/);
-    assert.match(overlay.innerHTML, /Invent a same-shift workflow/);
+    assert.doesNotMatch(overlay.innerHTML, /quest-briefing-job/);
     assert.match(overlay.innerHTML, /The place/);
     assert.equal(lastBriefingPaint()?.mode, "walk");
     assert.equal(sceneEl.hidden, true);

@@ -53,7 +53,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 2. **`mission.suggested`** = exactly `[spotlight.techId]`.
 3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. **Write short paragraphs** (one idea each, especially **The place**) — the invent screen steps them as a visual walkthrough. Do not dump research or tutor curriculum into the brief. Optional **`briefBeats`**: see `brief-beats.md` (omit when unused).
 4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
-5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4).
+5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4). Summary is 2–3 short sentences (≤420 chars), not a one-liner.
 6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid.
 7. Scenario is **fictive**;   research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
 8. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
@@ -108,7 +108,13 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
 
 **Pass this test before writing scene or place:** *Could a 14-year-old restate the invent job from title + summary alone?*
 
-1. **`summary`** (≤160 chars) — the plain job. Pattern: *Invent a [concrete thing] so [this person] can [everyday outcome].* No invented-place poetry, no “local cut,” no insider nouns (*opposite-handed peptides*, *open-weight*, *MoE*).
+1. **`summary`** (2–3 short sentences, ≤420 chars) — plain spoken, like explaining the quest to a student. **Not a story. Not a scene.** No place names, person names, or invented proper nouns (the banner already shows those). Recipe, in order:
+   - Which **global problem** (everyday theme name).
+   - The **situation** — one plain fact about what is going wrong.
+   - **What we’re solving for** — local job and/or global/system job when both exist. Spotlight quests name the emTech and the capability gap in everyday words. Theme packs with a whole tech tray do not list techs.
+   - Gold: *Climate crises. It’s too hot — it doesn’t even cool down overnight. The local problem is dealing with the heat. The global problem is inventing something that actually moves the needle on warming.*
+   - Gold (spotlight): *Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site — so they don’t have to send samples to a lab.*
+   If a draft sounds like a short story, it fails.
 2. **`title`** — names the **job or human situation**, not only the fictive place. Good: *School lab rule before the science fair*. Weak: *The unposted rule at Tideglass High* (place poetry without the job).
 3. **`spotlight.encourageCopy`** — same plain voice: what to invent, in everyday words.
 4. Then write story: if a term would fail a high-school first read, use the everyday phrase in player text; put the lab term only in `grounding` / `aiTutorContext`.
@@ -164,7 +170,7 @@ npm run validate:quest -- <file>
 - [ ] Advance citable; place fictive  
 - [ ] Exactly one suggested tech  
 - [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture)  
-- [ ] **Plain-language test:** a 14-year-old can restate the invent job from **title + summary** alone  
+- [ ] **Plain-language test:** a 14-year-old can restate the invent job from **title + summary** alone (summary is 2–3 plain sentences: global problem, situation, what we’re solving for; no names, no scene)  
 - [ ] `encourageCopy` is everyday words (no research jargon)  
 - [ ] Scene craft ≤500; place story craft; everyday words in player text  
 - [ ] `briefMd`: **Your job** first; ~250–600 words; no capability/tutor lecture dump  

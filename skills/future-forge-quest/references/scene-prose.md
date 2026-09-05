@@ -23,7 +23,7 @@ Each piece is a **flight simulator for a design decision**. The reader should fi
 
 **Core test:** *If the reader remembers only one thing, what decision becomes sharper?*
 
-**Plain-language test (Spotlight / learning tiles):** *Could a 14-year-old restate the invent job from title + summary alone?* Story craft does not replace that test.
+**Plain-language test (Spotlight / learning tiles):** *Could a 14-year-old restate the invent job from title + summary alone?* Summary is 2–3 plain sentences (global problem, situation, what we’re solving for) — not a scene, no place or person names. Story craft does not replace that test.
 
 ---
 

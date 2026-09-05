@@ -18,6 +18,7 @@ import {
   techById,
   globalById,
 } from "../js/data.js";
+import { SUMMARY_CAP } from "../js/quest-summary.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -96,9 +97,9 @@ const tile = {
   id: slug,
   version: 1,
   title: `Invent with ${tech.name} at this place`,
-  summary: `Invent a local workflow that uses ${tech.name} honestly here — pilot-sized, not a brochure.`.slice(
+  summary: `${global.title}. This is about how far ${tech.name} has to go so it can be used honestly here — not a brochure.`.slice(
     0,
-    160
+    SUMMARY_CAP
   ),
   author: { name: "author-quest.mjs", note: localOnly ? "local-only template" : "draft" },
   createdAt: new Date().toISOString(),

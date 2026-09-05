@@ -33,6 +33,7 @@ describe("FAST_EVAL_MODES", () => {
       "judge-contribution",
       "coach-challenge",
       "draft-challenge",
+      "fill-quest-summary",
     ]) {
       assert.equal(isFastEvalMode(m), true, m);
     }
@@ -404,6 +405,17 @@ describe("sanitizeFast", () => {
     assert.equal(out.additive, true);
     assert.equal(out.reason, "Keeps the core.");
     assert.equal(out.proposals, undefined);
+  });
+
+  it("fill-quest-summary returns clipped summary only", () => {
+    const out = sanitizeFast(
+      "fill-quest-summary",
+      { summary: "  Climate crises. It's too hot.  ", extra: true },
+      "ai"
+    );
+    assert.equal(out.summary, "Climate crises. It's too hot.");
+    assert.equal(out.proposals, undefined);
+    assert.equal(isFastEvalMode("fill-quest-summary"), true);
   });
 
   it("evaluate-convergence keeps pair hits and drops extras", () => {

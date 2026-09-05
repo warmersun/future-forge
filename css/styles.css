@@ -3638,6 +3638,38 @@ body.mp-hotseat .hud-product {
   margin: 0 0 0.35rem !important;
 }
 
+.mission-summary {
+  margin: 0 0 0.45rem !important;
+  max-width: 38rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.challenge-banner .mission-summary {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mission-summary.is-loading {
+  font-weight: 500;
+  color: var(--text-mute);
+  animation: mission-summary-pulse 1.1s ease-in-out infinite;
+}
+
+.mission-summary[hidden] {
+  display: none !important;
+  margin: 0 !important;
+}
+
+@keyframes mission-summary-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
 .lesson-progress-slot {
   margin: 0 0 0.55rem;
 }

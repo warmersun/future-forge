@@ -4,6 +4,9 @@
 
 import { techById, GLOBALS } from "../data.js";
 import { briefForGlobal } from "../problem-briefs.js";
+import { ensureQuestSummary } from "../quest-summary.js";
+import { apiFetch } from "../auth.js";
+import { getClientSessionId } from "../client-session.js";
 import { techCost } from "../sim/economy.js";
 import { RoomClient } from "./client.js";
 import {
@@ -87,6 +90,36 @@ export function initFriendsUi(api) {
   function setHubStatus(msg) {
     const el = $("#friends-hub-status");
     if (el) el.textContent = msg || "";
+  }
+
+  /**
+   * Invent left column: stepped briefing when briefMd is present, else scene text.
+   * Mirrors solo workshop `#ws-mission-scene` rendering.
+   * @param {HTMLElement} sceneEl
+   * @param {object|null|undefined} mission
+   */
+  function requestQuestSummary(mission, globalTitle) {
+    const spot = mission?.spotlight?.techId ? techById(mission.spotlight.techId) : null;
+    return apiFetch("/api/co-invent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "fill-quest-summary",
+        clientSessionId: getClientSessionId(),
+        messages: [{ role: "user", content: "[Fill quest summary]" }],
+        context: {
+          missionTitle: mission?.title || "",
+          missionScene: String(mission?.scene || "").slice(0, 600),
+          globalTitle: globalTitle || "",
+          spotlightTechName: spot?.name || "",
+          spotlightTechId: mission?.spotlight?.techId || "",
+        },
+      }),
+    }).then((res) => res.json());
+  }
+
+  function paintPlaySummary(el, mission, globalTitle) {
+    ensureQuestSummary(mission, el, () => requestQuestSummary(mission, globalTitle));
   }
 
   /**
@@ -564,6 +597,11 @@ export function initFriendsUi(api) {
     $("#mp-mission-place").textContent = mission
       ? `${mission.place} · collapse ${mission.collapseYear}`
       : "";
+    paintPlaySummary(
+      $("#mp-mission-summary"),
+      mission,
+      GLOBALS.find((g) => g.id === place?.globalId)?.title || ""
+    );
     const sceneEl = $("#mp-mission-scene");
     if (sceneEl) paintMissionScene(sceneEl, mission);
     const gLabel = $("#mp-play-global-label");
@@ -1704,6 +1742,11 @@ export function initFriendsUi(api) {
     );
     setText("hs-play-mission-title", m?.title || "Hotseat");
     setText("hs-play-mission-place", m?.place || "");
+    paintPlaySummary(
+      $("#hs-play-mission-summary"),
+      m,
+      global?.title || ""
+    );
     // Quest description (solo workshop: briefMd scrollable, else full scene)
     const sceneEl = $("#hs-play-mission-scene");
     if (sceneEl) {

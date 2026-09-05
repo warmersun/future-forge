@@ -1,7 +1,7 @@
 # Output contract
 
 1. Write UTF-8 JSON (pretty-printed OK).
-2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
+2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). `summary` is 2–3 short sentences (global problem, situation, what we’re solving for) — not a scene. Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
 3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
 4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
@@ -82,7 +82,7 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
 }
 ```
 
-`title` / `summary` / `encourageCopy`: plain invent job (see `SKILL.md` §4). Lab terms stay in `grounding`.
+`title` / `summary` / `encourageCopy`: plain invent job (see `SKILL.md` §4). Summary: 2–3 short sentences, no names, no scene. Lab terms stay in `grounding`.
 
 ---
 
@@ -190,7 +190,7 @@ Not a playable Quest. Catalog card + **summary panel**. `kind` must be `"module"
   "kind": "module",
   "id": "module-<slug>",
   "title": "…path title…",
-  "summary": "Invent … across this path. (≤160 chars, 14-year-old test)",
+  "summary": "Invent … across this path. (2–3 short sentences, ≤420 chars, 14-year-old test)",
   "globalId": "<themeId>",
   "module": "…same title as each lesson’s module field…",
   "totalLessons": 4,

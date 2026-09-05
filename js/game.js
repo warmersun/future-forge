@@ -192,6 +192,7 @@ import {
   formatTrendValue,
 } from "./trend-chart.js";
 import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
+import { clipSummary, ensureQuestSummary } from "./quest-summary.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
   briefingOwnsRoot,
@@ -542,8 +543,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v12: crisis-meter descriptions on seed packs; drop v11 caches minted without them */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v12";
+/** v13: quest summary lede on seed packs; drop v12 caches minted without them */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v13";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 const STORAGE_LAST_RUN = "future-forge:lastRun";
@@ -5971,10 +5972,13 @@ function paintMissionCards(list, { disabled = false } = {}) {
             ? "Challenge"
             : "Quest";
       const solved = isMissionSolved(m.id);
-      const scene = m.briefMd
-        ? excerptFromBrief(m.briefMd, 180)
-        : (m.scene || "").slice(0, 180);
-      const ellipsis = !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
+      const blurb = String(m.summary || "").trim()
+        ? m.summary
+        : m.briefMd
+          ? excerptFromBrief(m.briefMd, 180)
+          : (m.scene || "").slice(0, 180);
+      const ellipsis =
+        !m.summary && !m.briefMd && (m.scene || "").length > 180 ? "…" : "";
       return `
     <div class="mission-card-wrap">
       <button type="button" class="challenge-card ${disabled ? "disabled" : ""} ${
@@ -5986,7 +5990,7 @@ function paintMissionCards(list, { disabled = false } = {}) {
           ${solved ? `<span class="scenario-tag solved-tag" title="You already deployed a solution here">Solved</span>` : ""}
         </span>
         <h3>${escapeHtml(m.title)}</h3>
-        <p>${escapeHtml(scene)}${ellipsis}</p>
+        <p>${escapeHtml(blurb)}${ellipsis}</p>
         ${
           m.stakeholder
             ? `<p class="stakeholder-line">Stakeholder: ${escapeHtml(m.stakeholder)}</p>`
@@ -6062,6 +6066,7 @@ async function ensureScenarios(global, { force = false } = {}) {
             title: m.title,
             place: m.place,
             scene: m.scene,
+            summary: m.summary,
             stakeholder: m.stakeholder,
             suggested: m.suggested,
             visionTheme: m.visionTheme,
@@ -6650,6 +6655,39 @@ function emptyProps() {
   };
 }
 
+/** In-flight AI summary fills keyed by mission id. */
+function cacheMissionSummary(mission, summary) {
+  const text = clipSummary(summary);
+  if (!text || !mission) return "";
+  mission.summary = text;
+  const gid = mission.globalId;
+  const list = gid && state.scenarioCache?.[gid];
+  if (Array.isArray(list)) {
+    const hit = list.find((x) => x.id === mission.id);
+    if (hit) hit.summary = text;
+  }
+  return text;
+}
+
+/**
+ * Paint authored summary, or AI-fill once per mission when missing.
+ * @param {HTMLElement|null} el
+ */
+async function ensureMissionSummary(el) {
+  const m = state.mission;
+  if (!m || !el) return;
+  const g = state.global || globalById(m.globalId);
+  const spot = m.spotlight?.techId ? techById(m.spotlight.techId) : null;
+  const text = await ensureQuestSummary(m, el, () =>
+    apiCoInvent("fill-quest-summary", "[Fill quest summary]", {
+      globalTitle: g?.title || "",
+      spotlightTechName: spot?.name || "",
+      spotlightTechId: m.spotlight?.techId || "",
+    })
+  );
+  if (text && state.mission?.id === m.id) cacheMissionSummary(state.mission, text);
+}
+
 /* —— Workshop —— */
 function renderWorkshop() {
   const m = state.mission;
@@ -6662,6 +6700,7 @@ function renderWorkshop() {
     : "Mission";
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
+  ensureMissionSummary($("#ws-mission-summary"));
   const progressEl = $("#ws-lesson-progress");
   if (progressEl) {
     if (shouldShowInventLessonProgress(m)) {
@@ -10401,6 +10440,7 @@ const LEAN_EVAL_MODES = new Set([
   "judge-contribution",
   "coach-challenge",
   "draft-challenge",
+  "fill-quest-summary",
 ]);
 
 function slimTechForEval(t) {

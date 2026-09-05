@@ -4,6 +4,7 @@
  */
 
 import { ideasOrFallback } from "../idea-cards.js";
+import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
 
 const GROUNDING_CAP = 3000;
 
@@ -269,6 +270,18 @@ function buildIdeaSparksPayload(context) {
   };
 }
 
+function buildFillQuestSummaryPayload(context) {
+  const mission = missionSlice(context);
+  return {
+    mode: "fill-quest-summary",
+    globalTitle: clip(context?.globalTitle, 80),
+    title: clip(context?.missionTitle || mission.title, 100),
+    scene: clip(context?.missionScene || mission.scene, 600),
+    spotlightTechName: clip(context?.spotlightTechName, 80),
+    spotlightTechId: clip(context?.spotlightTechId, 40),
+  };
+}
+
 function buildPosePayload(context) {
   const mission = missionSlice(context);
   return {
@@ -341,6 +354,7 @@ export function buildFastPayload(mode, context = {}) {
   if (mode === "evaluate-convergence") return buildEvaluateConvergencePayload(context);
   if (mode === "idea-sparks") return buildIdeaSparksPayload(context);
   if (mode === "pose-challenge") return buildPosePayload(context);
+  if (mode === "fill-quest-summary") return buildFillQuestSummaryPayload(context);
   return buildJudgePayload(mode, context);
 }
 
@@ -502,6 +516,13 @@ function sanitizeEvaluateConvergence(parsed, source, context) {
   return { source, convergences: out };
 }
 
+function sanitizeFillQuestSummary(parsed, source) {
+  return {
+    source,
+    summary: clipSummary(parsed?.summary),
+  };
+}
+
 export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
   if (mode === "score-pathway") return sanitizeScorePathway(parsed, source);
   if (mode === "assess-feasibility") return sanitizeTiming(parsed, source);
@@ -515,6 +536,7 @@ export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
   if (mode === "judge-contribution") return sanitizeJudgeContribution(parsed, source);
   if (mode === "coach-challenge") return sanitizeCoach(parsed, source);
   if (mode === "draft-challenge") return sanitizeDraft(parsed, source);
+  if (mode === "fill-quest-summary") return sanitizeFillQuestSummary(parsed, source);
   return { source };
 }
 
@@ -578,6 +600,12 @@ export const FAST_EVAL_MODES = {
     userPrefix: "Draft a challenge answer (JSON state):",
     temperature: 0.4,
     maxOutputTokens: 800,
+  },
+  "fill-quest-summary": {
+    system: FILL_QUEST_SUMMARY_SYSTEM,
+    userPrefix: "Write this quest summary (JSON state):",
+    temperature: 0.4,
+    maxOutputTokens: 220,
   },
 };
 

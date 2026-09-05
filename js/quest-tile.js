@@ -9,6 +9,7 @@ import {
   validateCapabilityTrend,
 } from "./capability-trend.js";
 import { isSafeBriefImageUrl, normalizeBriefBeats } from "./brief-beats.js";
+import { SUMMARY_CAP } from "./quest-summary.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -21,7 +22,7 @@ export const CAPS = {
   scene: 500,
   briefMd: 12_000,
   stakeholder: 120,
-  summary: 160,
+  summary: SUMMARY_CAP,
   advanceTitle: 200,
   advanceSummary: 600,
   encourageCopy: 280,
@@ -881,6 +882,10 @@ export function validateQuestTile(tile, opts = {}) {
   if (!title) details.push("missing_title");
   if (!place) details.push("missing_place");
 
+  const summary = String(tile.summary || missionIn.summary || "").trim();
+  if (!summary) details.push("missing_summary");
+  if (summary.length > CAPS.summary) details.push("summary_too_long");
+
   const scene = String(missionIn.scene || "").trim();
   const briefMd = String(missionIn.briefMd || tile.briefMd || "").trim();
   if (!briefMd) details.push("missing_brief_md");
@@ -1076,10 +1081,7 @@ export function validateQuestTile(tile, opts = {}) {
   if (trendFields.spotlightTrends?.length) {
     mission.spotlightTrends = trendFields.spotlightTrends;
   }
-  const summary = String(tile.summary || missionIn.summary || "")
-    .trim()
-    .slice(0, CAPS.summary);
-  if (summary) mission.summary = summary;
+  if (summary) mission.summary = summary.slice(0, CAPS.summary);
   if (briefBeats?.length) {
     mission.briefBeats = briefBeats;
   }

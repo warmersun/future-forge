@@ -36,6 +36,7 @@ Required:
 | `spotlight.techId` | Must match `TECHS` id |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
 | `mission.briefMd` | Non-empty Markdown brief |
+| `title`, `summary` | `summary` is required: 2–3 short sentences (≤420 chars). Global problem, situation, what we’re solving for. No place/person names, no scene craft. Spotlight names the emTech gap. |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
 Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, `briefBeats`, learning-module fields, sponsor fields below.
@@ -105,7 +106,7 @@ A **module** is not a playable Quest. It groups lesson tiles in the catalog: one
 | Field | Notes |
 |-------|--------|
 | `kind` | `"module"` |
-| `id`, `title`, `summary` | Path title + plain-language job (≤160 chars) |
+| `id`, `title`, `summary` | Path title + plain-language job (2–3 short sentences, ≤420 chars) |
 | `globalId` | Theme id |
 | `module` | Same title string as the lesson files |
 | `lessons` | Lesson quest ids, display order |

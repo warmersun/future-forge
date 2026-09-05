@@ -694,6 +694,15 @@ describe("quest-tile", () => {
     assert.equal(r.mission.summary, "Clinic backlog");
   });
 
+  it("rejects a playable tile with no summary", () => {
+    const r = validateQuestTile(baseTile({ summary: "" }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(r.ok, false);
+    assert.ok(r.details.includes("missing_summary"));
+  });
+
   it("omits briefBeats when absent; copies a valid authored set", () => {
     const plain = validateQuestTile(baseTile(), {
       techIds: TECHS,

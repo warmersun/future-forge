@@ -97,7 +97,7 @@ There is **no engine unlock graph** yet. Author a set manually:
 3. Distinct `id` / `mission.id` per lesson (e.g. `…-open-weight-lesson-2`).
 4. Distinct place angle or invent gate per lesson; may share theme `globalId` and spotlight tech.
 5. Each lesson file is a full valid quest tile (own `pressure`, `scene`, `briefMd`).
-6. Also emit a **`kind: "module"`** wrapper (not playable): same `module` title, `summary` (path job, ≤160 chars), `overviewMd` (what you invent across the path), `lessons` (ids in order), optional `coverImageUrl` / sponsor / spotlight. Catalog shows **one module card**; opening it shows the **summary panel first**, then the lesson list.
+6. Also emit a **`kind: "module"`** wrapper (not playable): same `module` title, `summary` (path job, 2–3 short sentences, ≤420 chars), `overviewMd` (what you invent across the path), `lessons` (ids in order), optional `coverImageUrl` / sponsor / spotlight. Catalog shows **one module card**; opening it shows the **summary panel first**, then the lesson list.
 7. Do **not** invent fake “must complete lesson 1 first” mechanics in prose unless the host enforces them outside the game.
 
 **Where it shows**

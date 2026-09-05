@@ -14,6 +14,7 @@
  *   node scripts/generate-scenario-seeds.mjs --dry-run
  *   node scripts/generate-scenario-seeds.mjs --fill-descriptions
  *   node scripts/generate-scenario-seeds.mjs --fill-descriptions --themes infectious
+ *   node scripts/generate-scenario-seeds.mjs --fill-summaries --local-only
  *
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
@@ -38,6 +39,8 @@ import {
   assertSceneReadable,
   sceneRepairInstruction,
 } from "../js/scene-prose.js";
+import { SCENARIO_PACK_SUMMARIES } from "../js/scenario-pack-summaries.js";
+import { QUEST_SUMMARY_RECIPE, clipSummary } from "../js/quest-summary.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -55,19 +58,20 @@ const SCENARIO_COUNT = 4;
  *   --themes a --themes b
  * Unknown flags are ignored except a missing value after --themes errors.
  * @param {string[]} argv process.argv.slice(2)
- * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, themeFilter: string[] | null }}
+ * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, themeFilter: string[] | null }}
  */
 export function parseSeedArgs(argv) {
   const localOnly = argv.includes("--local-only");
   const dryRun = argv.includes("--dry-run");
   const fillDescriptions = argv.includes("--fill-descriptions");
+  const fillSummaries = argv.includes("--fill-summaries");
   /** @type {string[]} */
   const themeIds = [];
   let sawThemesFlag = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--local-only" || a === "--dry-run" || a === "--fill-descriptions") continue;
+    if (a === "--local-only" || a === "--dry-run" || a === "--fill-descriptions" || a === "--fill-summaries") continue;
     if (a.startsWith("--themes=")) {
       sawThemesFlag = true;
       themeIds.push(
@@ -101,11 +105,11 @@ export function parseSeedArgs(argv) {
   }
 
   const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
-  return { localOnly, dryRun, fillDescriptions, themeFilter };
+  return { localOnly, dryRun, fillDescriptions, fillSummaries, themeFilter };
 }
 
 const args = process.argv.slice(2);
-const { localOnly, dryRun, fillDescriptions, themeFilter } = parseSeedArgs(args);
+const { localOnly, dryRun, fillDescriptions, fillSummaries, themeFilter } = parseSeedArgs(args);
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -213,11 +217,13 @@ const MODE_INSTRUCTION =
   "Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles. " +
   "Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
   SCENE_PROSE +
-  " Each object fields: id (slug), title, place, scene, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
+  " Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
   "pressure (structured crisis meters — see CRITICAL), " +
   "suggested (tech ids from availableTechs only — mix protection and abatement when relevant), " +
   "visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), " +
   "source ('generated'). message: one short invite line. proposals empty. Follow context.guidance when present. " +
+  QUEST_SUMMARY_RECIPE +
+  " " +
   "CRITICAL — pressure is an object with up to three role keys: local, global, support. " +
   "Omit a role to leave that crisis meter off the HUD. " +
   "Each present role is { \"label\": \"plain English HUD name\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. " +
@@ -662,10 +668,14 @@ function packToJs(pack, indent = "    ") {
     .join(", ");
   const sug = (pack.suggested || []).map((k) => jsString(k)).join(", ");
   const places = (pack.places || []).map((p) => jsString(p)).join(", ");
+  const summaryLine = pack.summary
+    ? `${indent}  summary: ${jsString(pack.summary)},\n`
+    : "";
   return (
     `${indent}{\n` +
     `${indent}  places: [${places}],\n` +
     `${indent}  title: ${jsString(pack.title)},\n` +
+    summaryLine +
     `${indent}  scene:\n${indent}    ${jsString(pack.scene)},\n` +
     `${indent}  stakeholder: ${jsString(pack.stakeholder)},\n` +
     `${indent}  crisisMeters: { ${meterParts} },\n` +
@@ -802,6 +812,117 @@ async function fillPackMeterDescs(client, g, pack) {
   };
 }
 
+async function aiFillPackSummary(client, g, pack) {
+  const extraUser =
+    QUEST_SUMMARY_RECIPE +
+    " Return JSON only: { \"summary\": \"…\" }. Do not retell the scene.";
+  const payload = {
+    mode: "fill-quest-summary",
+    globalTheme: { id: g.id, title: g.title },
+    quest: {
+      title: pack.title,
+      scene: pack.scene,
+      stakeholder: pack.stakeholder,
+    },
+  };
+  const text = await callScenarioModel(client, payload, extraUser);
+  const parsed = extractJson(text);
+  return clipSummary(parsed?.summary);
+}
+
+async function fillMissingSummaries(client, themes) {
+  console.log("Fill-summaries mode: keeping scenes, adding missing pack.summary");
+  const packsByTheme = await loadExistingPacks();
+  let filled = 0;
+  let skipped = 0;
+  for (let i = 0; i < themes.length; i++) {
+    const g = themes[i];
+    const packs = packsByTheme[g.id];
+    if (!Array.isArray(packs) || !packs.length) {
+      console.log(`[${i + 1}/${themes.length}] ${g.id}… skip (no packs)`);
+      skipped += 1;
+      continue;
+    }
+    process.stdout.write(`[${i + 1}/${themes.length}] ${g.id}… `);
+    const table = SCENARIO_PACK_SUMMARIES[g.id] || [];
+    const next = [];
+    let themeFilled = 0;
+    for (let pi = 0; pi < packs.length; pi++) {
+      const pack = packs[pi];
+      const existing = clipSummary(pack.summary);
+      if (existing) {
+        next.push(pack);
+        continue;
+      }
+      let summary = clipSummary(table[pi]);
+      if (!summary && client) {
+        try {
+          summary = await aiFillPackSummary(client, g, pack);
+        } catch (err) {
+          console.warn(`\n  AI summary failed for ${pack.title}: ${err?.message || err}`);
+        }
+      }
+      if (summary) {
+        next.push({ ...pack, summary });
+        themeFilled += 1;
+      } else {
+        next.push(pack);
+      }
+    }
+    packsByTheme[g.id] = next;
+    filled += themeFilled;
+    console.log(`filled ${themeFilled}/${packs.length}`);
+  }
+
+  const extraIds = Object.keys(packsByTheme).filter(
+    (id) => !themes.some((g) => g.id === id)
+  );
+  for (const id of extraIds) {
+    const packs = packsByTheme[id];
+    if (!Array.isArray(packs) || !packs.length) continue;
+    process.stdout.write(`[extra] ${id}… `);
+    const table = SCENARIO_PACK_SUMMARIES[id] || [];
+    const next = [];
+    let themeFilled = 0;
+    for (let pi = 0; pi < packs.length; pi++) {
+      const pack = packs[pi];
+      const existing = clipSummary(pack.summary);
+      if (existing) {
+        next.push(pack);
+        continue;
+      }
+      const summary = clipSummary(table[pi]);
+      if (summary) {
+        next.push({ ...pack, summary });
+        themeFilled += 1;
+      } else {
+        next.push(pack);
+      }
+    }
+    packsByTheme[id] = next;
+    filled += themeFilled;
+    console.log(`filled ${themeFilled}/${packs.length}`);
+  }
+
+  const meta = {
+    generatedAt: new Date().toISOString(),
+    source: `fill-summaries filled=${filled} skipped=${skipped}`,
+  };
+  const text = writeSeedsFile(packsByTheme, meta);
+  if (dryRun) {
+    console.log("\n--dry-run: not writing file.");
+    return;
+  }
+  if (fs.existsSync(OUT)) {
+    const bak = OUT.replace(/\.js$/, `.bak-${Date.now()}.js`);
+    fs.copyFileSync(OUT, bak);
+    console.log(`Backup: ${path.relative(ROOT, bak)}`);
+  }
+  fs.writeFileSync(OUT, text);
+  console.log(`Wrote ${path.relative(ROOT, OUT)}`);
+  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v13).");
+}
+
 async function fillMissingMeterDescriptions(client, themes) {
   console.log("Fill-descriptions mode: keeping scenes, adding missing crisisMeters.description");
   const packsByTheme = await loadExistingPacks();
@@ -892,6 +1013,11 @@ async function main() {
       throw new Error("--fill-descriptions requires SuperGrok session or FF_XAI_API_KEY");
     }
     await fillMissingMeterDescriptions(client, themes);
+    return;
+  }
+
+  if (fillSummaries) {
+    await fillMissingSummaries(client, themes);
     return;
   }
 

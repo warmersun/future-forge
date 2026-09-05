@@ -22,7 +22,7 @@ npm run validate:quest -- path/to/quest.json
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
 | `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **Your job** first, then **The place** (story craft); aim ~250–600 words. Short paragraphs — the UI steps them (see `brief-beats.md`) |
-| `title`, `summary`, `spotlight.encourageCopy` | Plain invent job in everyday words (14-year-old test); see `scene-prose.md` Spotlight extras |
+| `title`, `summary`, `spotlight.encourageCopy` | Plain invent job in everyday words (14-year-old test). `summary` is 2–3 short sentences (≤420 chars): global problem, situation, what we’re solving for. No place/person names, no scene craft. Spotlight names the emTech gap. See `scene-prose.md` |
 | `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; craft in `scene-prose.md`; everyday words |
 | `mission.pressure` | **Structured** crisis meters (below) — flat maps are **rejected** |
 
@@ -270,7 +270,7 @@ Not playable. Groups lesson quests in the catalog. First panel is the path **sum
 | Field | Notes |
 |-------|--------|
 | `kind` | `"module"` |
-| `id`, `title`, `summary` | Path title + plain-language job (≤160 chars) |
+| `id`, `title`, `summary` | Path title + plain-language job (2–3 short sentences, ≤420 chars) |
 | `globalId` | Valid theme id |
 | `module` | Same title string as the lesson files (defaults to `title`) |
 | `lessons` | Array of lesson quest `id`s, display order, ≥1 (slugified like quest `id`s; join key for the catalog) |
