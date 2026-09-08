@@ -309,6 +309,7 @@ export function createHotseatBridge() {
     state.budget = actor.budget;
     state.will = actor.will;
     state.apSpentThisTurn = actor.apSpentThisTurn || 0;
+    state.aiTaxThisTurn = Boolean(actor.aiTaxThisTurn);
     state.writeCommitsThisTurn = actor.writeCommitsThisTurn || 0;
     state.techAddedThisTurn = { ...(actor.techAddedThisTurn || {}) };
     // Screen phase: owner of the viewed invent, or active actor if viewing self
@@ -406,6 +407,7 @@ export function createHotseatBridge() {
     actor.budget = state.budget;
     actor.will = state.will;
     actor.apSpentThisTurn = state.apSpentThisTurn || 0;
+    actor.aiTaxThisTurn = Boolean(state.aiTaxThisTurn);
     actor.writeCommitsThisTurn = state.writeCommitsThisTurn || 0;
     actor.techAddedThisTurn = { ...(state.techAddedThisTurn || {}) };
     if (aId === vId) {

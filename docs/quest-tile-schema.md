@@ -41,6 +41,15 @@ Required:
 
 Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, `briefBeats`, learning-module fields, sponsor fields below.
 
+Tune `resources` and `mission.pressure*` with the economy lab so a Quest is challenging but solvable before meters go red:
+
+```bash
+npm run economy:quest -- path/to/quest.json
+npm run economy:quest -- --all
+```
+
+Developer UI (server `--developer`): `/tools/quest-economy`. Writes only those knobs, then `validate:quest`.
+
 ### Optional `briefBeats` (authored walkthrough)
 
 The UI derives a stepped briefing from `briefMd` headings and paragraphs and swaps a still on Future Vision with each caption. **Omit this key** for that default. Author 3–8 beats when captions should be tighter than the essay, you want shipped stills (`imageUrl`), or live prompts (`imagePrompt`).
@@ -226,7 +235,7 @@ Each active entry:
 | `label` | Short HUD name (e.g. `"Outbreak"`) |
 | `description` | Optional. 1–3 everyday sentences of what this meter means *here* (same voice as brief **What’s strained**). Omitted / empty defaults to `""` — old tiles stay valid. Soft-clipped at ~400 chars. Shown on crisis tile details and passed to AI eval when non-empty. |
 | `pressure` | Starting level 0–5 |
-| `pressureRise` | Rise per Wait (0–3; default 1) |
+| `pressureRise` | Rise **per calendar year** (0–3; default 1). End turn applies it once; Wait applies it `yearsPerTurn` times. |
 | `winMax` | Goal: hold at or under this after deploy (0–5; default 1) |
 
 ```json

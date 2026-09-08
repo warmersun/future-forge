@@ -173,7 +173,7 @@ export class CoInventor {
             class="btn btn-ghost btn-sm co-tutor-toggle"
             id="co-end-tutor"
             hidden
-            title="End free tutor mode — chat will cost 1 AP like a normal co-inventor"
+            title="End free tutor mode — first co-inventor ask this turn costs 1 AP, then free"
           >End tutoring</button>
           <button
             type="button"
@@ -289,7 +289,7 @@ export class CoInventor {
       badge.classList.toggle("is-idle", Boolean(this.learningQuest && !this.tutorMode));
       badge.title = this.tutorMode
         ? "Tutor mode on — co-inventor chat does not cost AP"
-        : "Tutor mode off — co-inventor chat costs 1 AP · Resume tutoring to turn free help back on";
+        : "Tutor mode off — first ask this turn costs 1 AP, then free · Resume tutoring to turn free help back on";
       badge.setAttribute("aria-pressed", this.tutorMode ? "true" : "false");
     }
     if (endBtn) endBtn.hidden = !(this.learningQuest && this.tutorMode);
@@ -308,7 +308,7 @@ export class CoInventor {
     } else if (this.learningQuest) {
       status.textContent =
         this.subtitle ||
-        "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime";
+        "Co-inventor mode · first ask this turn 1 AP, then free — Resume tutoring anytime";
       status.dataset.tutorOwned = "1";
     } else {
       delete status.dataset.tutorOwned;

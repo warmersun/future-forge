@@ -108,6 +108,7 @@ import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
+  applyPressureRiseYears,
   applyPressureDrop,
   maxPressure as simMaxPressure,
   totalPressure as simTotalPressure,
@@ -140,6 +141,7 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
+import { thinkingAiApCost } from "./sim/ai-tax.js";
 import { techCost as techCostRaw, deployActionCost, scaleActionCost } from "./sim/economy.js";
 import {
   describeMarketEffects,
@@ -505,6 +507,7 @@ const state = {
   ap: GAME.apMax ?? 3,
   apMax: GAME.apMax ?? 3,
   apSpentThisTurn: 0,
+  aiTaxThisTurn: false,
   writeCommitsThisTurn: 0,
   learnOpenedThisTurn: false,
   turnPhase: "act",
@@ -581,11 +584,30 @@ function isLearningTutorSessionActive() {
   return Boolean(state.mission?.isLearningModule) && state.tutorSessionActive === true;
 }
 
-/** AP to reserve for invent co-inventor panel; 0 while tutoring on a learning quest. */
+/** AP to reserve for invent co-inventor panel; 0 while tutoring, or after the season tax is paid. */
 function coInventorReserveAp() {
   if (!apEnabled()) return 0;
   if (isLearningTutorSessionActive()) return 0;
-  return 1;
+  return thinkingAiApCost(state, "chat", 1);
+}
+
+function coInventorHelpSubtitle({ onChallenge = false, learning = false, tutorOn = false } = {}) {
+  if (tutorOn) {
+    return "Free AP · one idea at a time — stack picks and fielding still cost resources";
+  }
+  if (learning) {
+    return thinkingAiApCost(state, "chat", 1) > 0
+      ? "Co-inventor mode · first ask this turn 1 AP, then free — Resume tutoring anytime"
+      : "Co-inventor mode · more help this turn is free — Resume tutoring anytime";
+  }
+  if (onChallenge) {
+    return thinkingAiApCost(state, "coach-challenge", 1) > 0
+      ? "First AI ask this turn costs 1 Attention; more help this turn is free"
+      : "More co-inventor help this turn is free";
+  }
+  return thinkingAiApCost(state, "chat", 1) > 0
+    ? "First AI ask this turn costs 1 Attention; more help this turn is free"
+    : "More co-inventor help this turn is free. Placing tech still costs Attention.";
 }
 
 /**
@@ -600,8 +622,8 @@ function endTutorSession(who = "learner") {
   syncCoInventorTutorUi();
   const msg =
     who === "ai"
-      ? "Tutoring ended — you're inventing with the co-inventor now (**1 AP** per AI request). **Resume tutoring** anytime on this lesson (your tutor chat is kept)."
-      : "Tutoring ended — co-inventor chat costs **1 AP** per request. **Resume tutoring** anytime; your tutor chat is kept separately.";
+      ? "Tutoring ended — co-inventor chat costs **1 AP** for the first ask this turn, then free. **Resume tutoring** anytime on this lesson (your tutor chat is kept)."
+      : "Tutoring ended — first co-inventor ask this turn costs **1 AP**, then free. **Resume tutoring** anytime; your tutor chat is kept separately.";
   flashToast(who === "ai" ? "Tutor signed off — AP applies again" : "Tutoring ended — AP applies again");
   // Local note only on the co-inventor lane (active after switch)
   if (state.coInventor) {
@@ -672,11 +694,7 @@ function syncCoInventorTutorUi() {
   state.coInventor?.setTutorSession?.({
     learningQuest: learning,
     tutorMode: active,
-    subtitle: active
-      ? "Free AP · one idea at a time — stack picks and fielding still cost resources"
-      : learning
-        ? "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime"
-        : undefined,
+    subtitle: coInventorHelpSubtitle({ learning, tutorOn: active }),
   });
   applyInventSidePanes();
 }
@@ -765,6 +783,7 @@ function syncRoomResourcesFromSnapshot() {
     if (f.budget != null) state.budget = Number(f.budget) || 0;
     if (f.will != null) state.will = Number(f.will) || 0;
     if (f.apSpentThisTurn != null) state.apSpentThisTurn = Number(f.apSpentThisTurn) || 0;
+    if (f.aiTaxThisTurn != null) state.aiTaxThisTurn = Boolean(f.aiTaxThisTurn);
   } catch {
     /* ignore */
   }
@@ -5239,6 +5258,13 @@ function openQuestCatalogInspect(entry) {
             ? `<p class="muted" style="margin:0.5rem 0 0.25rem">Pressure</p><ul class="quest-dev-list">${pressureRows}</ul>`
             : ""
         }
+        ${
+          !isMod && state.developer
+            ? `<p style="margin:0.75rem 0 0"><a class="btn btn-ghost btn-sm" href="/tools/quest-economy?id=${encodeURIComponent(
+                entry.id || m.id || ""
+              )}" target="_blank" rel="noopener">Economy lab</a></p>`
+            : ""
+        }
       </section>`;
     const jsonSection = `
       <section class="quest-dev-section">
@@ -6568,6 +6594,7 @@ function startMission(mission, opts = {}) {
   state.apMax = res.apMax ?? GAME.apMax ?? 3;
   state.ap = state.apMax;
   state.apSpentThisTurn = 0;
+  state.aiTaxThisTurn = false;
   state.writeCommitsThisTurn = 0;
   state.learnOpenedThisTurn = false;
   state.turnPhase = "act";
@@ -6866,7 +6893,7 @@ function renderWorkshop() {
   const crisisWrap = $("#hud-crisis-wrap");
   if (crisisWrap) {
     crisisWrap.title =
-      `Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. ` +
+      `Crisis meters 0–5: how bad things are. Each year the calendar moves they rise; inventing/deploy lowers them. ` +
       (mpBridge() || state.mp
         ? `Hit 5 on any shared meter and the place falls. Invent calendars are personal — fail year ${m.collapseYear} only ends the table when every invent has waited that far. Open ? for more.`
         : `Hit 5 on any meter or year ${m.collapseYear} and the mission ends. Open ? for more.`);
@@ -8172,7 +8199,9 @@ function ideaSparksCached(techId) {
 function ideaSparksWouldCostAp(techId) {
   if (!apEnabled()) return false;
   const key = ideaSparksKey(techId);
-  return !ideaSparkCache.has(key) && !ideaSparkInflight.has(key);
+  const needsFetch = !ideaSparkCache.has(key) && !ideaSparkInflight.has(key);
+  if (!needsFetch) return false;
+  return thinkingAiApCost(state, "idea-sparks", 1) > 0;
 }
 
 function chargeIdeaSparksAp() {
@@ -8288,10 +8317,13 @@ async function openIdeaDeck(techId) {
   try {
     await deck.open(tech, {
       hint: onStack
-        ? "Pick a spark to add to How it works, or close. Refresh gets a new set (1 AP)."
+        ? "Pick a spark to add to How it works, or close. Refresh is free after the first AI ask this turn."
         : "Close if none fit — nothing is added. Picking a spark adds this tech (normal costs) and a starter to How it works.",
       pickLabel: onStack ? "Add to how it works" : "Add tech + how it works",
-      refreshLabel: apEnabled() ? "Refresh · 1 AP" : "Refresh",
+      refreshLabel:
+        apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
+          ? "Refresh · 1 AP"
+          : "Refresh",
       selectedIds: ideaSparkPicked.get(ideaSparksKey(id)) || [],
     });
   } finally {
@@ -8367,7 +8399,11 @@ function renderIdeaFocusBar() {
         deckOpen
           ? `<button type="button" class="btn btn-secondary btn-sm" data-idea-refresh-bar ${
               busy ? "disabled" : ""
-            }>${apEnabled() ? "Refresh · 1 AP" : "Refresh"}</button>
+            }>${
+              apEnabled() && thinkingAiApCost(state, "idea-sparks", 1) > 0
+                ? "Refresh · 1 AP"
+                : "Refresh"
+            }</button>
              <button type="button" class="btn btn-ghost btn-sm" data-idea-close-bar ${
                busy ? "disabled" : ""
              }>Close ideas</button>`
@@ -8860,7 +8896,7 @@ function buildWaitImplicationsHtml(ctx = {}) {
   const failY = m.collapseYear;
   const yearsLeft = Math.max(0, failY - nextYear);
   const rise = m.pressureRise || {};
-  const nextPressure = previewPressureAfterWait(pressure, rise);
+  const nextPressure = applyPressureRiseYears(pressure, rise, step);
   const crisisLine = Object.keys(pressure)
     .map((k) => {
       const a = pressure[k] ?? 0;
@@ -8898,7 +8934,7 @@ function buildWaitImplicationsHtml(ctx = {}) {
     <p><strong>What happens</strong></p>
     <ul class="wait-confirm-list">
       <li>Calendar moves <strong>${year} → ${nextYear}</strong> (waits ${waits + 1}).</li>
-      <li>Crisis meters rise: ${crisisLine || "—"}. Wait is never free.</li>
+      <li>Crisis meters rise once per year jumped (${step} years): ${crisisLine || "—"}. Wait is a bigger skip than End turn, not a different crisis formula.</li>
       ${apLine}
       <li>Feasibility re-checks whether your how-it-works over-claims <strong>${nextYear}</strong>.</li>
     </ul>
@@ -9609,16 +9645,23 @@ function endTurn() {
     }
     return;
   }
-  flashToast(`End turn · AP refilled (${state.ap})`);
-  // Solo end_turn advances world year +1 — re-assess timing (do not leave AI cache for prior year)
+  flashToast(`End turn · year ${state.year} · crises rose · AP refilled (${state.ap})`);
+  // Solo end_turn: +1 year and crisis rise — re-assess timing
   if ((r.events || []).some((e) => e.type === "year_tick")) {
     onInventYearChangedForTiming();
     try {
+      const rise = state.mission?.pressureRise || {};
+      ensureHexWorkshop().afterYearPressureRise?.(rise, 1);
       ensureHexWorkshop().refreshAfterYearChange();
     } catch {
       /* ignore */
     }
     scheduleCloudRunState();
+  }
+  if (collapsed()) {
+    renderWorkshop();
+    finishOutcome("collapse");
+    return;
   }
   if (state.screen === "challenge-step") {
     renderChallengeHud();
@@ -9871,10 +9914,11 @@ function waitTurn(opts = {}) {
   state.lastNews = `→ ${state.year}. ${horizon}. Crisis tightened. ${news}`.trim();
   onInventYearChangedForTiming(); // re-evaluate claims in new year (monotonic vs last settle)
 
-  // Keep hex pressureBase in sync with Wait rise, then re-apply pathway deltas
+  // Keep hex pressureBase in sync with years jumped, then re-apply pathway deltas
   try {
     const rise = m.pressureRise || {};
-    ensureHexWorkshop().afterWaitPressureRise?.(rise, riskEv || null);
+    const years = m.yearsPerTurn || GAME.yearsPerTurn || 2;
+    ensureHexWorkshop().afterYearPressureRise?.(rise, years, riskEv || null);
   } catch (e) {
     console.warn("[hex wait pressure]", e);
   }
@@ -11324,7 +11368,7 @@ function paintHudPressureMeters(box) {
       const whySuffix = whyBit ? ` ${whyBit}` : "";
       return `<span class="meter ${level}" title="${escapeHtml(
         label
-      )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Wait raises; Scale lowers.${escapeHtml(
+      )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Each year raises; inventing/Scale lowers.${escapeHtml(
         whySuffix
       )}"><b>${escapeHtml(
         label
@@ -13864,15 +13908,16 @@ async function coachChallenge(mode, userText) {
     flashToast("Wait for the challenge to load first.");
     return;
   }
-  // Always 1 AP — same as invent co-inventor (Coach / Draft / Ask are not free)
+  // First thinking ask of the turn is 1 AP; further coach/draft this turn is free.
   let roomApPaid = false;
   let reservedLocal = false;
-  if (apEnabled()) {
+  const helpCost = apEnabled() ? thinkingAiApCost(state, mode, 1) : 0;
+  if (apEnabled() && helpCost > 0) {
     if (roomBridge.isRoom()) syncRoomResourcesFromSnapshot();
     const apHave = getSpendableAp();
-    if (apHave < 1) {
+    if (apHave < helpCost) {
       flashToast(
-        `No AP for AI help (have ${apHave}, need 1). End turn to refill, or answer without coaching.`,
+        `No AP for AI help (have ${apHave}, need ${helpCost}). End turn to refill, or answer without coaching.`,
         { resource: "ap" }
       );
       renderChallengeHud();
@@ -13880,10 +13925,11 @@ async function coachChallenge(mode, userText) {
     }
     if (roomBridge.isRoom()) {
       try {
-        roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
+        roomBridge.send({ type: "pay_ap", payload: { amount: helpCost, mode } });
         roomApPaid = true;
-        state.ap = Math.max(0, apHave - 1);
-        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+        state.ap = Math.max(0, apHave - helpCost);
+        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + helpCost;
+        state.aiTaxThisTurn = true;
       } catch (e) {
         flashToast(mpFriendlyError(e.message) || "Could not spend AP for AI help");
         return;
@@ -13909,7 +13955,13 @@ async function coachChallenge(mode, userText) {
   state.aiBusy = true;
   setChallengeHelpBusy(true);
   const pendingLabel =
-    mode === "draft-challenge" ? "Drafting an answer… (1 AP)" : "Coaching… (1 AP)";
+    mode === "draft-challenge"
+      ? helpCost > 0
+        ? "Drafting an answer… (1 AP)"
+        : "Drafting an answer…"
+      : helpCost > 0
+        ? "Coaching… (1 AP)"
+        : "Coaching…";
   showChallengeCoach(aiPendingHtml(pendingLabel));
   let requestOk = false;
   try {
@@ -13950,13 +14002,17 @@ async function coachChallenge(mode, userText) {
       const panel = $("#challenge-coach-panel");
       if (panel) panel.dataset.draft = draft;
       showChallengeCoach(
-        `<div>Draft for this ${angle.label} attack — edit before submit. <span class="muted">(1 AP spent)</span></div><div class="draft-block"><strong>Draft answer</strong><p>${escapeHtml(
+        `<div>Draft for this ${angle.label} attack — edit before submit.${
+          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
+        }</div><div class="draft-block"><strong>Draft answer</strong><p>${escapeHtml(
           draft
         )}</p><div class="draft-actions"><button type="button" class="btn btn-primary btn-sm" id="btn-apply-draft">Use this draft</button></div></div>`
       );
     } else {
       showChallengeCoach(
-        `<div><strong>${angle.label} coaching</strong> <span class="muted">(1 AP spent)</span><br/>${escapeHtml(
+        `<div><strong>${angle.label} coaching</strong>${
+          helpCost > 0 ? ` <span class="muted">(1 AP spent)</span>` : ""
+        }<br/>${escapeHtml(
           angle.blurb
         )}<br/><br/>• Answer the exact question asked.<br/>• Name a concrete actor, cost, or physical limit in ${escapeHtml(
           place
@@ -17165,13 +17221,7 @@ function ensureCoInventor() {
     showQuickActions: !onChallenge,
     learningQuest: learning,
     tutorMode: tutorOn,
-    subtitle: tutorOn
-      ? "Free AP · one idea at a time — stack picks and fielding still cost resources"
-      : learning
-        ? "Co-inventor mode · 1 AP per AI request — Resume tutoring anytime"
-        : onChallenge
-          ? "Help with this challenger — you still own Defend / Fix / Sidestep"
-          : "Your creative partner for this challenge",
+    subtitle: coInventorHelpSubtitle({ onChallenge, learning, tutorOn }),
     placeholder: onChallenge
       ? "Ask about this attack… e.g. “What would a solid Moloch answer name?”"
       : undefined,
@@ -17190,15 +17240,18 @@ function ensureCoInventor() {
         flashToast("Not your turn — you can browse and use Learn, but only the active seat acts.");
         return false;
       }
-      const cost = coInventorReserveAp();
+      const cost =
+        !apEnabled() || isLearningTutorSessionActive()
+          ? 0
+          : thinkingAiApCost(state, mode || "chat", 1);
       if (cost <= 0) return true;
       const r = dispatchSim("reserve_ai", {
-        mode,
-        reservedAp: cost,
+        mode: mode || "chat",
+        reservedAp: 1,
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
-        flashToast("No AP left for co-inventor — End Turn or Wait.", { resource: "ap" });
+        flashToast("No AP left for co-inventor — End turn or Wait.", { resource: "ap" });
         return false;
       }
       renderHud();
@@ -17738,18 +17791,23 @@ function refundFirstSummonAp() {
  */
 function spendContributionAp(mode = "contribution") {
   if (!apEnabled()) return { ok: true, roomPaid: false };
+  const cost = thinkingAiApCost(state, mode, 1);
   if (roomBridge.isRoom()) {
-    if ((state.ap ?? 0) < 1) return { ok: false, roomPaid: false };
+    if (cost > 0 && (state.ap ?? 0) < cost) return { ok: false, roomPaid: false };
     try {
-      roomBridge.send({ type: "pay_ap", payload: { amount: 1 } });
-      state.ap -= 1;
-      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+      roomBridge.send({ type: "pay_ap", payload: { amount: cost, mode } });
+      if (cost > 0) {
+        state.ap -= cost;
+        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + cost;
+        state.aiTaxThisTurn = true;
+      }
       renderHud();
-      return { ok: true, roomPaid: true };
+      return { ok: true, roomPaid: true, amount: cost };
     } catch {
       return { ok: false, roomPaid: false };
     }
   }
+  if (cost <= 0) return { ok: true, roomPaid: false, amount: 0 };
   const res = dispatchSim("reserve_ai", {
     mode,
     reservedAp: 1,
@@ -17758,7 +17816,7 @@ function spendContributionAp(mode = "contribution") {
   if (!res.ok) return { ok: false, roomPaid: false };
   renderHud();
   mpSyncFromSolo();
-    return { ok: true, roomPaid: false };
+  return { ok: true, roomPaid: false, amount: cost };
 }
 
 /**

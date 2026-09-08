@@ -520,7 +520,7 @@ export function resolveTourStep(raw) {
       return step(
         "G6",
         "Refill AP",
-        "You're out of AP. End turn to refill (calendar +1 year; crisis meters stay put).",
+        "You're out of AP. End turn to refill — the year advances and crises get worse. Inventing is what eases them.",
         sel("#btn-end-turn")
       );
     }
@@ -589,7 +589,7 @@ export function resolveTourStep(raw) {
     return step(
       "I5",
       "AI co-inventor",
-      "Stuck on the idea? The co-inventor can suggest a stack or check timing — usually 1 AP per request.",
+      "Stuck on the idea? The co-inventor can suggest a stack or check timing — first ask this turn costs 1 AP, then more help is free.",
       sel('.side-tab[data-tab="coinventor"]')
     );
   }

@@ -157,7 +157,7 @@ export const MISSIONS = [
     collapseYear: 2036,
     yearsPerTurn: 2,
     pressure: {
-      local: { label: "Floods", pressure: 2, pressureRise: 1, winMax: 1 },
+      local: { label: "Floods", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Livelihoods", pressure: 2, pressureRise: 1, winMax: 1 },
       support: { label: "Trust", pressure: 1, pressureRise: 0, winMax: 2 }
     },
@@ -178,7 +178,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Thirst", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Cost", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Health", pressure: 1, pressureRise: 1, winMax: 1 }
+      support: { label: "Health", pressure: 1, pressureRise: 0, winMax: 1 }
     },
     scene:
       "One town’s main well is brackish. Tanker prices spike every dry month. Kids miss school to haul water. A fix must be affordable and maintainable locally.",
@@ -195,9 +195,9 @@ export const MISSIONS = [
     collapseYear: 2032,
     yearsPerTurn: 2,
     pressure: {
-      local: { label: "Outbreak", pressure: 2, pressureRise: 1, winMax: 1 },
+      local: { label: "Outbreak", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Capacity", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Fear", pressure: 1, pressureRise: 1, winMax: 1 }
+      support: { label: "Fear", pressure: 1, pressureRise: 0, winMax: 1 }
     },
     scene:
       "A small clinic sees a new fever pattern among travelers. Staff are three nurses deep. They need detection, logistics, and trust — this week, not after a conference.",
@@ -235,7 +235,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Shelter", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Services", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Tension", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "Tension", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "A mid-size city expects 4,000 new arrivals before spring. Gyms are full. Paperwork is chaos. Locals fear queues at clinics. Dignity has a deadline.",
@@ -254,7 +254,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Jobs", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Skills", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Dignity", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "Dignity", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "Warehouse automation cut 30% of shifts in eighteen months. Rent didn’t fall. Workers want retraining that leads to real pay — not a pamphlet.",
@@ -271,9 +271,9 @@ export const MISSIONS = [
     collapseYear: 2032,
     yearsPerTurn: 2,
     pressure: {
-      local: { label: "Opacity", pressure: 2, pressureRise: 1, winMax: 0 },
+      local: { label: "Opacity", pressure: 3, pressureRise: 1, winMax: 0 },
       global: { label: "Harm", pressure: 1, pressureRise: 1, winMax: 0 },
-      support: { label: "Protest", pressure: 1, pressureRise: 1, winMax: 1 }
+      support: { label: "Protest", pressure: 1, pressureRise: 0, winMax: 1 }
     },
     scene:
       "City hall wants to deploy an opaque AI to decide benefits *this year* and cut costs. Caseworkers are already overruled by a black box pilot. Prevention means a better system, not a ban on tools.",
@@ -292,7 +292,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "AsthmaDays", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "ParentTrust", pressure: 2, pressureRise: 0, winMax: 1 },
-      support: { label: "CorridorPM", pressure: 3, pressureRise: 1, winMax: 1 }
+      support: { label: "CorridorPM", pressure: 3, pressureRise: 0, winMax: 1 }
     },
     scene:
       "Asthma days close classrooms along the truck route. Parents have sensor photos of the haze — and the corridor still runs diesel at rush hour. A local fix must protect kids and cut corridor exhaust.",
@@ -311,7 +311,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Power", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Care", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "ColdChain", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "ColdChain", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "When the grid fails, vaccines warm and night births go dark. Diesel is expensive and late. Staff need first watts that stay on.",
@@ -330,7 +330,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Stocks", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Habitat", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Conflict", pressure: 1, pressureRise: 1, winMax: 1 }
+      support: { label: "Conflict", pressure: 1, pressureRise: 0, winMax: 1 }
     },
     scene:
       "Fish stocks collapsed locally. Some boats still cheat night limits. Young people leave. Monitoring and alternatives have to work for this harbor.",
@@ -349,7 +349,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Care", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Safety", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Families", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "Families", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "A day center for people with dementia has a waitlist of fourteen months. Families burn out. Staff need tools that preserve dignity — not just surveillance.",
@@ -387,7 +387,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Shelter", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Cold", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Services", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "Services", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "Encampments grow under the overpass each winter. Hotels are full. Building codes move slowly. People need warm, safe options *this* season and a path to stay housed.",
@@ -425,7 +425,7 @@ export const MISSIONS = [
     pressure: {
       local: { label: "Blindspots", pressure: 3, pressureRise: 1, winMax: 1 },
       global: { label: "Delay", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Trust", pressure: 2, pressureRise: 1, winMax: 1 }
+      support: { label: "Trust", pressure: 2, pressureRise: 0, winMax: 1 }
     },
     scene:
       "Five small coastal towns share a storm path but not a budget or data pipe. Each mayor waits for the other to buy sensors. Coordination *is* the invention.",
@@ -1164,7 +1164,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-export const SCENARIO_PACK_REV = "d7";
+export const SCENARIO_PACK_REV = "d8";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
@@ -1213,8 +1213,9 @@ function buildLocalScenarioVariants(g, count, salt) {
       pressure[role] = {
         label,
         description: desc.slice(0, 400),
-        pressure: 2 + ((i + ki + salt) % 2),
-        pressureRise: ki === 2 ? 0 : 1,
+        // Local is urgent (lose in ~2 years). Global gets one extra year (start 2).
+        pressure: role === "local" ? 3 : role === "global" ? 2 : 2,
+        pressureRise: role === "support" ? 0 : 1,
         winMax: 1,
       };
     });

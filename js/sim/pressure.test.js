@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   applyPressureRise,
+  applyPressureRiseYears,
   applyPressureDrop,
   previewPressureAfterWait,
   maxPressure,
@@ -25,6 +26,21 @@ describe("pressure", () => {
     const rise = { Floods: 1, Livelihoods: 1, Trust: 0 };
     const next = applyPressureRise({ Floods: 2, Livelihoods: 2, Trust: 1 }, rise);
     assert.deepEqual(next, { Floods: 3, Livelihoods: 3, Trust: 1 });
+  });
+
+  it("applyPressureRiseYears is whole years, never half", () => {
+    const rise = { Floods: 1, Livelihoods: 1, Trust: 0 };
+    const p = { Floods: 2, Livelihoods: 2, Trust: 1 };
+    assert.deepEqual(applyPressureRiseYears(p, rise, 1), {
+      Floods: 3,
+      Livelihoods: 3,
+      Trust: 1,
+    });
+    assert.deepEqual(applyPressureRiseYears(p, rise, 2), {
+      Floods: 4,
+      Livelihoods: 4,
+      Trust: 1,
+    });
   });
 
   it("preview matches rise", () => {
@@ -191,6 +207,10 @@ describe("actions", () => {
     budget: 5,
     will: 3,
     techAddedThisTurn: {},
+    mission: {
+      pressureRise: { Floods: 1, Livelihoods: 1, Trust: 0 },
+      collapseYear: 2036,
+    },
   });
 
   it("select_tech spends AP", () => {
@@ -342,6 +362,49 @@ describe("actions", () => {
     assert.equal(left.sim.turnPhase, "act");
   });
 
+  it("first thinking AI of the turn costs 1 AP; further thinking is free", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const first = applyAction(
+      s,
+      { type: "reserve_ai", payload: { mode: "chat", reservedAp: 1 } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(first.ok, true);
+    assert.equal(first.sim.ap, 2);
+    assert.equal(first.sim.aiTaxThisTurn, true);
+    const resolved = applyAction(first.sim, { type: "resolve_ai" }, {
+      features: { actionPoints: true },
+    });
+    const second = applyAction(
+      resolved.sim,
+      { type: "reserve_ai", payload: { mode: "idea-sparks", reservedAp: 1 } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(second.ok, true);
+    assert.equal(second.sim.ap, 2);
+    assert.equal(second.sim.pendingAi.reservedAp, 0);
+    const judge = applyAction(
+      applyAction(second.sim, { type: "resolve_ai" }, { features: { actionPoints: true } }).sim,
+      { type: "reserve_ai", payload: { mode: "judge-challenge", reservedAp: 1 } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(judge.ok, true);
+    assert.equal(judge.sim.ap, 1);
+  });
+
+  it("end_turn clears the AI season tax", () => {
+    const s = base();
+    s.ap = 2;
+    s.apSpentThisTurn = 1;
+    s.aiTaxThisTurn = true;
+    const r = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } });
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.aiTaxThisTurn, false);
+    assert.equal(r.sim.year, 2027);
+  });
+
   it("reserve_ai with reservedAp 0 does not spend AP (tutor free chat)", () => {
     const s = base();
     s.ap = 3;
@@ -360,15 +423,15 @@ describe("actions", () => {
     assert.equal(reserved.sim.pendingAi?.reservedAp, 0);
   });
 
-  it("end_turn does not raise pressure (year +1 market round)", () => {
+  it("end_turn raises pressure one year (year +1 market round)", () => {
     const s = base();
     s.apSpentThisTurn = 1;
     s.ap = 2;
     const r = applyAction(s, { type: "end_turn" }, { features: { actionPoints: true } });
     assert.equal(r.ok, true);
-    assert.equal(r.sim.year, 2027); // world year tick on market round
+    assert.equal(r.sim.year, 2027);
     assert.equal(r.sim.waits, 0);
-    assert.deepEqual(r.sim.pressure, { Floods: 2, Livelihoods: 2, Trust: 1 });
+    assert.deepEqual(r.sim.pressure, { Floods: 3, Livelihoods: 3, Trust: 1 });
     assert.equal(r.sim.ap, 3);
     assert.equal(r.sim.turn, 1);
     assert.ok((r.events || []).some((e) => e.type === "year_tick"));
@@ -411,7 +474,7 @@ describe("actions", () => {
     assert.equal(r.ok, true);
     assert.equal(r.sim.year, 2028);
     assert.equal(r.sim.waits, 1);
-    assert.deepEqual(r.sim.pressure, { Floods: 3, Livelihoods: 3, Trust: 1 });
+    assert.deepEqual(r.sim.pressure, { Floods: 4, Livelihoods: 4, Trust: 1 });
     assert.equal(r.sim.ap, 3);
   });
 

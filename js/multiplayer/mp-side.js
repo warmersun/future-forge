@@ -64,18 +64,21 @@ export class MpSidePanel {
         techById,
         subtitle:
           this.opts.mode === "room"
-            ? "Room co-inventor — your turn only · 1 AP"
-            : "Hotseat co-inventor — active seat · 1 AP",
+            ? "Room co-inventor — your turn only · first ask 1 AP"
+            : "Hotseat co-inventor — active seat · first ask 1 AP",
         placeholder: "Brainstorm your invention for this place…",
         getContext: () => this.buildContext(),
         applyProposals: (p) => this.applyProposals(p),
-        beforeRequest: async () => {
+        beforeRequest: async (mode) => {
           if (!this.opts.canAct()) {
             this.opts.toast?.("Not your turn — pass the device / wait");
             return false;
           }
           if (this.opts.payAp) {
-            const ok = await this.opts.payAp(1);
+            const paid = await this.opts.payAp(mode || "chat");
+            const ok = paid === true || paid?.ok === true;
+            const amount = typeof paid === "object" && paid ? Number(paid.amount) || 0 : ok ? 1 : 0;
+            this._lastAiCharge = ok ? amount : 0;
             if (!ok) {
               this.opts.toast?.("Not enough AP for co-inventor");
               return false;
@@ -84,7 +87,10 @@ export class MpSidePanel {
           return true;
         },
         afterRequest: (mode, ok) => {
-          if (!ok && this.opts.refundAp) this.opts.refundAp(1);
+          if (!ok && this.opts.refundAp && this._lastAiCharge > 0) {
+            this.opts.refundAp(this._lastAiCharge);
+          }
+          this._lastAiCharge = 0;
         },
         transport: this.opts.transport || null,
       });

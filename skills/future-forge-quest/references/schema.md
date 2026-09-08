@@ -45,7 +45,7 @@ Each active entry:
 | `label` | Short HUD name (plain English, 1–3 words, Title Case) |
 | `description` | Optional. 1–3 everyday sentences of what this meter means in this place. Omit or `""` on old tiles. Recommended on new tiles. |
 | `pressure` | Starting level 0–5 |
-| `pressureRise` | Rise per Wait 0–3 (default 1) |
+| `pressureRise` | Rise **per calendar year** 0–3 (default 1). End turn ×1; Wait × `yearsPerTurn`. Local meters should be more urgent (higher start) than global. |
 | `winMax` | Hold at or under this after deploy 0–5 (default 1) |
 
 ```json
@@ -91,6 +91,14 @@ Override invent start values for this Quest only. Omitted keys keep game default
 ```
 
 Selection UI shows **Start · …** when values differ from defaults. Tile top-level or under `mission`.
+
+Tune starting wallet and crisis numbers against the live AP / tile / Wait clock:
+
+```bash
+npm run economy:quest -- path/to/quest.json
+```
+
+`--write` applies the recommended patch (resources + pressure integers + optional collapseYear) after validation. Developer UI: `/tools/quest-economy` when the game server is started with `--developer`.
 
 ## Optional `trends` / `spotlightTrends` (Wait charts)
 

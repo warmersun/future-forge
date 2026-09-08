@@ -4,6 +4,7 @@
  */
 
 import { GAME } from "../data.js";
+import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
 
 /** Design defaults for friends rooms */
 export const ROOM_AI_QUOTAS = {
@@ -121,12 +122,15 @@ export function reserveAiOnSim(sim, payload = {}, opts = {}) {
   const features = opts.features || sim.featureFlags || GAME.features || {};
   const apOn = Boolean(features.actionPoints);
   const apMax = opts.apMax ?? sim.apMax ?? GAME.apMax ?? 3;
-  const cost = payload.reservedAp ?? 1;
+  const mode = payload.mode || "chat";
+  const requested = payload.reservedAp ?? 1;
   const next = {
     ...sim,
     pressure: { ...(sim.pressure || {}) },
     techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
   };
+  const charge = applyThinkingAiCharge(next, mode, requested);
+  const cost = charge.cost;
   if (apOn && cost > 0) {
     if ((next.ap ?? 0) < cost) {
       return { ok: false, error: "no_ap", sim };
@@ -134,10 +138,11 @@ export function reserveAiOnSim(sim, payload = {}, opts = {}) {
     next.ap -= cost;
     next.apSpentThisTurn = (next.apSpentThisTurn || 0) + cost;
   }
+  if (charge.markPaid) next.aiTaxThisTurn = true;
   next.turnPhase = "ai_pending";
   next.pendingAi = {
     clientActionId: payload.clientActionId || null,
-    mode: payload.mode || "chat",
+    mode,
     reservedAp: cost,
     playerId: payload.playerId || null,
   };
@@ -178,11 +183,13 @@ export function rejectAiOnSim(sim, opts = {}) {
     pressure: { ...(sim.pressure || {}) },
     techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
   };
-  const refund = next.pendingAi?.reservedAp || 0;
+  const pending = next.pendingAi;
+  const refund = pending?.reservedAp || 0;
   if (apOn && refund > 0) {
     next.ap = Math.min(apMax, (next.ap || 0) + refund);
+    if (isAiSeasonTaxMode(pending?.mode)) next.aiTaxThisTurn = false;
   }
-  const clientActionId = next.pendingAi?.clientActionId || opts.clientActionId || null;
+  const clientActionId = pending?.clientActionId || opts.clientActionId || null;
   next.pendingAi = null;
   if (next.turnPhase === "ai_pending") next.turnPhase = "act";
   return {

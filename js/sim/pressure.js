@@ -16,9 +16,24 @@ export function clonePressure(p) {
 export function applyPressureRise(pressure, rise = {}, cap = 5) {
   const next = clonePressure(pressure);
   for (const k of Object.keys(next)) {
-    const delta = rise[k] ?? 1;
+    const delta = rise[k] ?? 0;
     next[k] = Math.min(cap, (next[k] ?? 0) + delta);
   }
+  return next;
+}
+
+/**
+ * Apply rise once per calendar year jumped (End turn = 1, Wait = yearsPerTurn).
+ * Whole numbers only — never splits a rise across years.
+ * @param {Record<string, number>} pressure
+ * @param {Record<string, number>} rise
+ * @param {number} years
+ * @param {number} [cap=5]
+ */
+export function applyPressureRiseYears(pressure, rise = {}, years = 1, cap = 5) {
+  const n = Math.max(0, Math.floor(Number(years) || 0));
+  let next = clonePressure(pressure);
+  for (let i = 0; i < n; i++) next = applyPressureRise(next, rise, cap);
   return next;
 }
 

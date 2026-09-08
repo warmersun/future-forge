@@ -8,6 +8,7 @@ import { GAME, techById } from "../data.js";
 import { cloneMission, friendsFeatureFlags } from "./state.js";
 import {
   applyPressureDrop,
+  applyPressureRiseYears,
   clonePressure,
   totalPressure,
 } from "./pressure.js";
@@ -33,6 +34,7 @@ import {
   isInventContentFrozen,
   isHexBoardFrozen,
 } from "./invent-phase.js";
+import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
 import {
   techIdsFromBoard,
   seedCrisisTiles,
@@ -256,6 +258,7 @@ function createInvent(seat, settings, mission = null) {
     budget: res.startingBudget ?? GAME.startingBudget ?? 5,
     will: res.startingWill ?? GAME.startingWill ?? 3,
     apSpentThisTurn: 0,
+    aiTaxThisTurn: false,
     writeCommitsThisTurn: 0,
     techAddedThisTurn: {}, // techId -> { cost, targetSeatId }
     /** Personal invent calendar — Wait advances this, not place.year */
@@ -566,7 +569,18 @@ function passToNext(session, opts = {}) {
     // (yearsPerTurn 2 + wrap 1) while mid-round Waits only showed +2 until later.
     const yearBefore = next.place?.year ?? GAME.startYear ?? 2026;
     const yearAfter = yearBefore + 1;
-    if (next.place) next.place.year = yearAfter;
+    if (next.place) {
+      next.place.year = yearAfter;
+      const rise =
+        next.place.mission?.pressureRise ||
+        next.questMeta?.mission?.pressureRise ||
+        {};
+      next.place.pressure = applyPressureRiseYears(next.place.pressure || {}, rise, 1);
+      if (isMpPlaceCollapsed(next, { forgeYear: inventYear })) {
+        next.place.status = "collapsed";
+        next.place.lastNews = "Shared crisis meters broke the place. Nobody wins.";
+      }
+    }
     for (const id of next.seatOrder || Object.keys(next.invents || {})) {
       const f = next.invents[id];
       if (!f) continue;
@@ -628,6 +642,7 @@ function passToNext(session, opts = {}) {
     invent.apSpentThisTurn = 0;
     invent.writeCommitsThisTurn = 0;
     invent.techAddedThisTurn = {};
+    invent.aiTaxThisTurn = false;
     invent.pilotFailedThisTurn = false;
     invent.scaleFailedThisTurn = false;
     invent.waitedThisTurn = false;
@@ -878,9 +893,15 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
   // —— AP pay / refund (AI co-inventor on hotseat; rooms use server reserve) ——
   if (type === "pay_ap") {
-    const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
+    const mode = payload.mode;
+    let n = Math.max(0, Math.floor(Number(payload.amount) || 1));
+    if (isAiSeasonTaxMode(mode) && mode) {
+      const charge = applyThinkingAiCharge(actor, mode, 1);
+      n = charge.cost;
+      if (charge.markPaid) actor.aiTaxThisTurn = true;
+    }
     if (n > 0 && !spendAp(actor, n)) return { ok: false, error: "no_ap", session };
-    events.push({ type: "pay_ap", amount: n, seatId: activeId });
+    events.push({ type: "pay_ap", amount: n, seatId: activeId, mode: mode || null });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }

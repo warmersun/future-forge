@@ -66,6 +66,7 @@ import {
   checkApiSecret,
 } from "./js/server/cost-policy.mjs";
 import { resolveDeveloperEnabled } from "./js/server/developer-mode.mjs";
+import { handleQuestEconomyHttp } from "./js/server/quest-economy.mjs";
 import {
   resolveAiSearchEnabled,
   searchToolsForMode,
@@ -3376,6 +3377,15 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (
+    await handleQuestEconomyHttp(req, res, {
+      root: ROOT,
+      developer: DEVELOPER_MODE,
+    })
+  ) {
+    return;
+  }
+
   if (req.method === "GET") return serveStatic(ROOT, req, res);
 
   res.writeHead(405);
@@ -3583,7 +3593,9 @@ async function afterListen() {
     console.log("Usage metrics OFF (pass --usage or set FF_USAGE_ENABLED=1 to enable)");
   }
   if (DEVELOPER_MODE) {
-    console.log("Developer mode: ON (quest / trend inspect UI)");
+    console.log(
+      `Developer mode: ON (quest / trend inspect UI · economy lab http://127.0.0.1:${PORT}/tools/quest-economy)`
+    );
   } else {
     console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
   }

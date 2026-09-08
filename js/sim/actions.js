@@ -3,7 +3,7 @@
  */
 
 import { GAME } from "../data.js";
-import { applyPressureRise, clonePressure } from "./pressure.js";
+import { applyPressureRiseYears, clonePressure } from "./pressure.js";
 import { isCollapsed } from "./collapse.js";
 import {
   techCost,
@@ -12,6 +12,7 @@ import {
 } from "./economy.js";
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
 import { foresightForYear } from "./world-foresight.js";
+import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
 
 /**
  * @param {object} sim — mutable sim slice (pressure, year, turn, waits, ap, budget, will, …)
@@ -127,11 +128,14 @@ export function applyAction(sim, action, opts = {}) {
   }
 
   if (type === "reserve_ai") {
-    const cost = action.payload?.reservedAp ?? 1;
+    const mode = action.payload?.mode || "chat";
+    const requested = action.payload?.reservedAp ?? 1;
+    const charge = applyThinkingAiCharge(next, mode, requested);
+    const cost = charge.cost;
     if (apOn && cost > 0 && !spendAp(cost)) return { ok: false, error: "no_ap", sim };
+    if (charge.markPaid) next.aiTaxThisTurn = true;
     const prevPhase = next.turnPhase || "act";
     next.turnPhase = "ai_pending";
-    const mode = action.payload?.mode || "chat";
     // Challenge/scrutiny judges must return to scrutiny — not drop to "act"
     let resumePhase = prevPhase === "ai_pending" ? "act" : prevPhase;
     if (
@@ -151,13 +155,15 @@ export function applyAction(sim, action, opts = {}) {
   }
 
   if (type === "resolve_ai" || type === "reject_ai") {
-    if (type === "reject_ai" && next.pendingAi?.reservedAp && apOn) {
-      next.ap = Math.min(apMax, (next.ap || 0) + next.pendingAi.reservedAp);
+    const pending = next.pendingAi;
+    if (type === "reject_ai" && pending?.reservedAp && apOn) {
+      next.ap = Math.min(apMax, (next.ap || 0) + pending.reservedAp);
       // Reject refunds AP — also reverse spent counter so End turn still needs a real action
-      const refund = next.pendingAi.reservedAp;
+      const refund = pending.reservedAp;
       next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - refund);
+      if (isAiSeasonTaxMode(pending.mode) && refund > 0) next.aiTaxThisTurn = false;
     }
-    const resume = next.pendingAi?.resumePhase || "act";
+    const resume = pending?.resumePhase || "act";
     next.pendingAi = null;
     if (next.turnPhase === "ai_pending") next.turnPhase = resume;
     return { ok: true, events: [{ type }], sim: next };
@@ -212,9 +218,13 @@ export function applyAction(sim, action, opts = {}) {
     next.writeCommitsThisTurn = 0;
     next.learnOpenedThisTurn = false;
     next.techAddedThisTurn = {};
-    // Solo market round = seat-turn: world year +1 (capability clock; no crisis rise)
+    next.aiTaxThisTurn = false;
+    // Solo market round = seat-turn: world year +1 and crises rise one year
     const yearBefore = next.year;
     next.year = (next.year || GAME.startYear || 2026) + 1;
+    const endRise =
+      action.payload?.mission?.pressureRise || next.mission?.pressureRise || {};
+    next.pressure = applyPressureRiseYears(next.pressure, endRise, 1);
     // New market conditions for the upcoming round
     const news = rollRoundMarketNews({
       round: next.turn,
@@ -247,6 +257,18 @@ export function applyAction(sim, action, opts = {}) {
       toYear: next.year,
       bulletin: next.lastYearBulletin,
     });
+    if (
+      isCollapsed({
+        year: next.year,
+        collapseYear:
+          action.payload?.mission?.collapseYear ||
+          next.mission?.collapseYear ||
+          next.year + 99,
+        pressure: next.pressure,
+      })
+    ) {
+      events.push({ type: "collapsed" });
+    }
     return { ok: true, events, sim: next };
   }
 
@@ -262,7 +284,7 @@ export function applyAction(sim, action, opts = {}) {
     next.year = (next.year || GAME.startYear) + step;
     next.waits = (next.waits || 0) + 1;
     next.turn = (next.turn || 0) + 1;
-    next.pressure = applyPressureRise(next.pressure, rise);
+    next.pressure = applyPressureRiseYears(next.pressure, rise, step);
 
     // Frontier risk tick (G2)
     if (bwOn && action.payload?.techs) {
@@ -284,6 +306,7 @@ export function applyAction(sim, action, opts = {}) {
     next.writeCommitsThisTurn = 0;
     next.learnOpenedThisTurn = false;
     next.techAddedThisTurn = {};
+    next.aiTaxThisTurn = false;
     next.challengePassed = false;
     next.challengeVerdict = null;
     // Wait also completes a solo market round → new market card.
@@ -383,6 +406,7 @@ export function simSliceFromState(state) {
     turnPhase: state.turnPhase || "act",
     selectedTechIds: [...(state.selectedTechIds || [])],
     pendingAi: state.pendingAi || null,
+    aiTaxThisTurn: Boolean(state.aiTaxThisTurn),
     challengePassed: state.challengePassed,
     challengeVerdict: state.challengeVerdict,
     hadChallengeAttempt: state.hadChallengeAttempt || false,
@@ -415,6 +439,7 @@ export function applySimSliceToState(state, slice) {
   state.turnPhase = slice.turnPhase;
   state.selectedTechIds = [...(slice.selectedTechIds || [])];
   state.pendingAi = slice.pendingAi;
+  state.aiTaxThisTurn = Boolean(slice.aiTaxThisTurn);
   state.challengePassed = slice.challengePassed;
   state.challengeVerdict = slice.challengeVerdict;
   state.hadChallengeAttempt = slice.hadChallengeAttempt;

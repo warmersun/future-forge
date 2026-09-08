@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quest Economy Lab · Future Forge</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/tools/quest-economy.css" />
+  </head>
+  <body class="econ-lab">
+    <header class="econ-head">
+      <div>
+        <p class="econ-kicker">Developer · Future Forge</p>
+        <h1>Is this Quest too easy, too hard, or just tight?</h1>
+        <p class="econ-lede">
+          Pick a Quest the same way as the app. The lab pretends four kinds of player
+          invent before crisis meters go <strong>red</strong>. Target:
+          <strong>possible but tight</strong> — especially solo without AI.
+        </p>
+      </div>
+      <p class="econ-back"><a href="/">Open the game</a></p>
+    </header>
+
+    <details class="econ-help">
+      <summary>How to read this page</summary>
+      <ol>
+        <li><strong>Start a Quest</strong> — Themes, Sponsored, Learning, or Library, then a card (place + picture, not only the title).</li>
+        <li><strong>Tiles vs pathways</strong> — tiles cost Attention; a pathway is a connected island and is what eases meters.</li>
+        <li><strong>AI Attention</strong> — first AI ask of a turn is 1 AP; more thinking that turn is free. Judge/submit still costs 1 AP.</li>
+        <li><strong>Year table</strong> — one row per calendar year. Meters stay whole numbers on in-between years; they jump on a Wait (never +0.5). 5 is lose.</li>
+        <li><strong>Crisis chart</strong> — T0 is the start. Solid dots are this path’s actions (hover for the action). Dashed line: if they never invent, solo Waits climb to lose. Pink band is red (4–5).</li>
+      </ol>
+    </details>
+
+    <section id="econ-pick" class="econ-pick">
+      <div class="econ-pick-bar">
+        <button type="button" class="btn btn-ghost btn-sm" id="econ-back" hidden>← Quests</button>
+        <h2 id="econ-pick-title">Start a Quest</h2>
+        <label class="econ-seats-inline">
+          Friends seats
+          <input id="econ-seats" type="number" min="2" max="6" value="3" />
+        </label>
+      </div>
+      <p id="econ-pick-blurb" class="muted sm"></p>
+      <div id="econ-hub" class="quest-hub-grid"></div>
+      <div id="econ-channel" class="econ-channel" hidden></div>
+    </section>
+
+    <p id="econ-status" class="econ-status muted" role="status"></p>
+
+    <section id="econ-selected" class="econ-selected" hidden></section>
+    <section id="econ-hero" class="econ-hero" hidden></section>
+    <section id="econ-setup" class="econ-setup" hidden></section>
+
+    <section id="econ-players" class="econ-players" hidden>
+      <h2>Four kinds of player</h2>
+      <p class="muted sm">
+        Big numbers are <strong>invention tiles</strong> and <strong>pathways</strong>.
+        AI cards list every AI Attention spend.
+      </p>
+      <div id="econ-cards" class="econ-cards"></div>
+    </section>
+
+    <section id="econ-viz" class="econ-viz" hidden>
+      <h2 id="econ-viz-title">Crisis over the year</h2>
+      <p class="muted sm" id="econ-viz-lead"></p>
+      <div id="econ-meter-toggles" class="econ-meter-toggles"></div>
+      <div id="econ-chart"></div>
+    </section>
+
+    <section id="econ-rec" class="econ-rec" hidden></section>
+
+    <script type="module" src="/tools/quest-economy.js"></script>
+  </body>
+</html>

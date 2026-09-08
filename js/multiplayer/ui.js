@@ -1605,17 +1605,18 @@ export function initFriendsUi(api) {
         scheduleHsVision({ force: true, immediate: true });
         flashToast("Applied co-inventor suggestions");
       },
-      payAp: (amount) => {
-        if (!hotseat?.place) return false;
+      payAp: (mode) => {
+        if (!hotseat?.place) return { ok: false, amount: 0 };
         const r = hotseatApplyAction(hotseat, {
           type: "pay_ap",
-          payload: { amount: amount || 1 },
+          payload: { amount: 1, mode: mode || "chat" },
         });
-        if (!r.ok) return false;
+        if (!r.ok) return { ok: false, amount: 0 };
         hotseat = r.session;
+        const amt = (r.events || []).find((e) => e.type === "pay_ap")?.amount ?? 0;
         const f = activeInvent(hotseat);
         if (f) $("#hs-hud-ap").textContent = `AP ${f.ap}/${f.apMax}`;
-        return true;
+        return { ok: true, amount: amt };
       },
       refundAp: (amount) => {
         if (!hotseat?.place) return;

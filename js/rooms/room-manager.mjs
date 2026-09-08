@@ -1236,6 +1236,7 @@ function inventPlaceShim(mp, playerId) {
     deployStage: f.deployStage,
     abandoned: f.abandoned,
     pendingAi: f.pendingAi || null,
+    aiTaxThisTurn: Boolean(f.aiTaxThisTurn),
     turnPhase: f.pendingAi ? "ai_pending" : f.turnPhase || "act",
     featureFlags: {
       actionPoints: true,
@@ -1252,6 +1253,8 @@ function applySliceToChallenge(mp, playerId, slice) {
   if (!f || !slice) return;
   f.ap = slice.ap;
   f.pendingAi = slice.pendingAi || null;
+  if ("aiTaxThisTurn" in slice) f.aiTaxThisTurn = Boolean(slice.aiTaxThisTurn);
+  if (slice.apSpentThisTurn != null) f.apSpentThisTurn = slice.apSpentThisTurn;
   if (slice.turnPhase === "ai_pending") {
     /* keep invent turnPhase */
   } else if (slice.turnPhase) {

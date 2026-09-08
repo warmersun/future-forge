@@ -84,7 +84,7 @@ import {
   rekeyIslandHow,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
-import { applyPressureRise } from "../sim/pressure.js";
+import { applyPressureRiseYears } from "../sim/pressure.js";
 import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
 import { detectClaimStretch } from "../data.js";
@@ -1494,16 +1494,17 @@ export function createHexWorkshop(api) {
   }
 
   /**
-   * After Wait: rise pressureBase, then re-apply deltas onto display pressure.
+   * After calendar years jump: rise pressureBase once per year, then re-apply deltas.
    * @param {Record<string, number>} rise
+   * @param {number} [years=1]
    * @param {{ meter?: string }|null} [frontierRisk]
    */
-  function afterWaitPressureRise(rise, frontierRisk = null) {
+  function afterYearPressureRise(rise, years = 1, frontierRisk = null) {
     let b = cloneBoard(board());
     if (!b.pressureBase) {
       b.pressureBase = { ...(api.getPressure?.() || {}) };
     }
-    b.pressureBase = applyPressureRise(b.pressureBase, rise || {});
+    b.pressureBase = applyPressureRiseYears(b.pressureBase, rise || {}, years);
     if (frontierRisk?.meter && b.pressureBase[frontierRisk.meter] != null) {
       b.pressureBase[frontierRisk.meter] = clampPressure(
         (b.pressureBase[frontierRisk.meter] || 0) + 1
@@ -1511,6 +1512,10 @@ export function createHexWorkshop(api) {
     }
     setBoard(b);
     syncPathwayScores();
+  }
+
+  function afterWaitPressureRise(rise, frontierRisk = null) {
+    afterYearPressureRise(rise, 2, frontierRisk);
   }
 
   function schedulePathwayScore(fp) {
@@ -2871,6 +2876,7 @@ export function createHexWorkshop(api) {
     resolveIslandHow: (inventions) => resolveIslandHow(board(), inventions),
     syncPathwayScores,
     afterWaitPressureRise,
+    afterYearPressureRise,
     exportSparkBatches: () => {
       const out = {};
       for (const [techId, batch] of sparkBatches.entries()) {

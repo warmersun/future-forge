@@ -48,6 +48,31 @@ describe("ai_jobs quotas", () => {
     assert.equal(quota.byPlayer.p1.session, 1);
   });
 
+  it("second thinking request of the turn is free", () => {
+    const sim = freshSim();
+    const quota = createRoomAiQuotaState();
+    const startAp = sim.ap;
+    const a = reserveRoomAiJob(
+      sim,
+      quota,
+      "p1",
+      { mode: "chat", reservedAp: 1, clientActionId: "c-a" },
+      { features: sim.featureFlags }
+    );
+    assert.equal(a.ok, true);
+    Object.assign(sim, resolveRoomAiJob(a.sim, quota, "c-a").sim);
+    const b = reserveRoomAiJob(
+      sim,
+      quota,
+      "p1",
+      { mode: "chat", reservedAp: 1, clientActionId: "c-b" },
+      { features: sim.featureFlags }
+    );
+    assert.equal(b.ok, true);
+    assert.equal(b.sim.ap, startAp - 1);
+    assert.equal(b.sim.pendingAi.reservedAp, 0);
+  });
+
   it("rejects over per-player/min without spending AP", () => {
     const sim = freshSim();
     const quota = createRoomAiQuotaState();

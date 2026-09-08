@@ -68,6 +68,8 @@ export function createSimState(mission, global = null, opts = {}) {
     techAddedThisTurn: {},
     actionsThisTurn: [],
     pendingAi: null,
+    /** First thinking AI request of this seat-turn has been paid (1 AP). */
+    aiTaxThisTurn: false,
     aiTiming: null,
     challengePassed: false,
     challengeAngle: null,

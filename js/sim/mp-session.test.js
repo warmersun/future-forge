@@ -140,6 +140,26 @@ describe("mp-session turns", () => {
     assert.equal(s.invents["seat-1"].ap, s.invents["seat-1"].apMax);
   });
 
+  it("table wrap raises shared meters once; Wait does not", () => {
+    let s = started();
+    const floods0 = s.place.pressure.Floods;
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, { type: "select_tech", payload: { techId: "solar" } }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(s.place.pressure.Floods, floods0, "no wrap yet");
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "B" },
+    }).session;
+    s = applyMpAction(s, { type: "select_tech", payload: { techId: "iot" } }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    assert.equal(s.place.year, 2027);
+    assert.equal(s.place.pressure.Floods, floods0 + 1);
+  });
+
   it("one player waiting past fail year does not collapse while another invent is still early", () => {
     // Fail year 2030: two waits on one seat → invent 2030, partner stays 2026
     let s = createMpLobby(["Alex", "Bea"]);
@@ -263,7 +283,7 @@ describe("mp-session turns", () => {
         ...mission,
         startYear: 2026,
         collapseYear: 2030,
-        pressure: { Floods: 4, Trust: 4 }, // would have meter-killed if Wait still raised crisis
+        pressure: { Floods: 2, Trust: 2 },
         pressureRise: { Floods: 1, Trust: 1 },
       },
       "climate"
@@ -294,7 +314,8 @@ describe("mp-session turns", () => {
     assert.equal(s.invents["seat-0"].year, 2030);
     assert.equal(s.invents["seat-1"].year, 2028); // two wrap ticks only (no personal Wait)
     assert.equal(s.place.status, "playing");
-    assert.equal(s.place.pressure.Floods, 4, "Wait must not raise shared meters");
+    // Two wraps (Bea End turns) raise Floods 2→4. Alex's Waits did not add extra shared rise.
+    assert.equal(s.place.pressure.Floods, 4);
   });
 
   it("last seat Wait does not stack yearsPerTurn + wrap into +3 invent years", () => {
