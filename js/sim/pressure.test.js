@@ -13,6 +13,7 @@ import {
   isMpPlaceCollapsed,
   isMpQuestOver,
   crisisMeterLevel,
+  crisisHoldNeedLabel,
 } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
@@ -91,6 +92,14 @@ describe("collapse / win", () => {
     assert.equal(crisisMeterLevel(1, null), "cool");
     assert.equal(crisisMeterLevel(3, undefined), "warm");
     assert.equal(crisisMeterLevel(4, null), "hot");
+  });
+
+  it("crisisHoldNeedLabel is words, not ≤", () => {
+    assert.equal(crisisHoldNeedLabel(1), "need 1 or less");
+    assert.equal(crisisHoldNeedLabel(0), "need 0 or less");
+    assert.equal(crisisHoldNeedLabel(null), "");
+    assert.equal(crisisHoldNeedLabel(undefined), "");
+    assert.equal(crisisHoldNeedLabel(Number.NaN), "");
   });
 
   it("mp place year-fail only when all invents are late", () => {

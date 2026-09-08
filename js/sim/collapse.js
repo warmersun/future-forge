@@ -36,6 +36,17 @@ export function crisisMeterLevel(cur, winMaxForKey) {
 }
 
 /**
+ * Player-facing hold line for a crisis meter (winMax).
+ * Words, not “≤” — that glyph reads as “s” in some fonts (“goal ≤1” → “s1”).
+ * @param {number|null|undefined} need
+ * @returns {string} e.g. "need 1 or less", or ""
+ */
+export function crisisHoldNeedLabel(need) {
+  if (need == null || Number.isNaN(Number(need))) return "";
+  return `need ${Math.round(Number(need))} or less`;
+}
+
+/**
  * Multiplayer race is over — no more seat-turns / deploy actions.
  * - won: full solve (meters under goals)
  * - collapsed: place fell

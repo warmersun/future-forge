@@ -60,6 +60,7 @@ import {
   islandHowKey,
   resolveIslandHow,
   islandHowForAi,
+  summarizePathwayForBoard,
   setIslandHow,
   rekeyIslandHow,
   visionPathwaysFromBoard,
@@ -938,6 +939,79 @@ describe("island inventHow", () => {
     assert.equal(set.source, "user");
     assert.equal(board.tiles.a.howText, "Part A.");
     assert.equal(board.tiles.b.howText, "Part B.");
+  });
+
+  it("summarizePathwayForBoard writes island how, not truncated tile names", () => {
+    let board = createEmptyBoard();
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "tray",
+        techId: "ai",
+        name: "Tray idea",
+        howText: "Should not appear.",
+      })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "custom",
+        techId: "ai",
+        name: "on-board AI so it can fly blind, geo-fen",
+        howText: "on-board AI so it can fly blind, geo-fencing, kill-switch",
+        year: 2027,
+      })
+    );
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "iot1",
+        techId: "iot",
+        name: "sensors with IOT: camera, GPS for geo-fe",
+        howText: "sensors with IOT: camera, GPS for geo-fencing, barometer, IMU",
+        year: 2027,
+      })
+    );
+    board = placeOk(board, "custom", 0, 0);
+    board = placeOk(board, "iot1", 3, 0);
+    const sum = summarizePathwayForBoard(board, {
+      place: "Quay",
+      year: 2027,
+      techTitle: (id) =>
+        id === "ai" ? "Artificial Intelligence" : id === "iot" ? "Internet of Things" : id,
+    });
+    assert.equal(sum.stack.join(","), "ai,iot");
+    assert.match(sum.text, /Quay · held in 2027/);
+    assert.match(sum.text, /Artificial Intelligence/);
+    assert.match(sum.text, /Internet of Things/);
+    assert.match(sum.text, /on-board AI so it can fly blind, geo-fencing, kill-switch/);
+    assert.match(sum.text, /sensors with IOT: camera, GPS for geo-fencing, barometer, IMU/);
+    assert.equal(sum.text.includes("geo-fen ("), false);
+    assert.equal(sum.text.includes("geo-fe ("), false);
+    assert.equal(sum.text.includes("Should not appear"), false);
+    assert.equal(sum.text.includes("Tray idea"), false);
+  });
+
+  it("summarizePathwayForBoard prefers a stored pathway inventHow over tile concat", () => {
+    let board = twoAiBoard();
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "a", local.q - 1, local.r);
+    board = placeOk(board, "b", local.q - 2, local.r);
+    board = setIslandHow(
+      board,
+      [board.tiles.a, board.tiles.b],
+      "The pair radios the crest together.",
+      "user"
+    );
+    const sum = summarizePathwayForBoard(board, {
+      place: "Ridge",
+      year: 2028,
+      techTitle: () => "AI",
+    });
+    assert.match(sum.text, /Ridge · held in 2028/);
+    assert.match(sum.text, /The pair radios the crest together/);
+    assert.equal(sum.text.includes("Part A"), false);
+    assert.equal(sum.text.includes("Part B"), false);
   });
 
   it("visionPathwaysFromBoard is one inventHow per island, no invention name", () => {

@@ -1050,10 +1050,7 @@ export function techIdsWithUnplacedInventions(board) {
   return ids;
 }
 
-/**
- * Derive prose snapshot for co-inventor / vision / outcome.
- * @param {object} board
- */
+/** Cap for leaderboard / outcome pathway write-ups. */
 export const PATHWAY_TEXT_MAX = 4000;
 
 /**
@@ -1079,39 +1076,10 @@ export function placedInventions(board) {
 }
 
 /**
- * Readable leaderboard write-up: placed invents only (name + how-it-works).
+ * Derive prose snapshot for co-inventor / vision / outcome.
+ * Hex invents have no name — inventionName is a weak tech-id join for legacy callers.
  * @param {object} board
- * @param {{ place?: string, year?: number, techTitle?: (id: string) => string }} [opts]
  */
-export function summarizePathwayForBoard(board, opts = {}) {
-  const place = String(opts.place || "").trim();
-  const yearNum = Number(opts.year);
-  const titleFn = typeof opts.techTitle === "function" ? opts.techTitle : null;
-  const placed = placedInventions(board);
-  const lines = [];
-  if (place || Number.isFinite(yearNum)) {
-    const bits = [];
-    if (place) bits.push(place);
-    if (Number.isFinite(yearNum)) bits.push(`held in ${Math.trunc(yearNum)}`);
-    lines.push(bits.join(" · "));
-    lines.push("");
-  }
-  /** @type {string[]} */
-  const stack = [];
-  for (const t of placed) {
-    if (t.techId && !stack.includes(t.techId)) stack.push(t.techId);
-    const how = String(t.howText || "").trim();
-    const name = String(t.name || "").trim() || "Invent";
-    const techRaw = t.techId ? String(t.techId) : "";
-    const tech = techRaw && titleFn ? titleFn(techRaw) || techRaw : techRaw;
-    lines.push(tech ? `${name} (${tech})` : name);
-    if (how) lines.push(how);
-    lines.push("");
-  }
-  const text = lines.join("\n").trim().slice(0, PATHWAY_TEXT_MAX);
-  return { text, stack, inventions: placed };
-}
-
 export function deriveBoardProse(board) {
   const inventions = Object.values(board?.tiles || {}).filter(
     (t) => t.kind === TILE_KIND.invention

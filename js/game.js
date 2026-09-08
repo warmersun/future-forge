@@ -81,7 +81,6 @@ import { localPose as offlinePose } from "./challenge-pose.js";
 import {
   boardHolds,
   deriveBoardProse,
-  summarizePathwayForBoard,
   techIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -98,6 +97,7 @@ import {
   listInventionPathways,
   resolveIslandHow,
   islandHowForAi,
+  summarizePathwayForBoard,
   setIslandHow,
   visionPathwaysFromBoard,
   visionGivensFromBoard,
@@ -131,6 +131,7 @@ import {
   isCollapsed as simIsCollapsed,
   isMpPlaceCollapsed,
   crisisMeterLevel,
+  crisisHoldNeedLabel,
 } from "./sim/collapse.js";
 import { inventYear } from "./sim/mp-session.js";
 import { scoreRun, starLabel } from "./sim/scoring.js";
@@ -11317,15 +11318,13 @@ function paintHudPressureMeters(box) {
       const goal = winMax[k];
       const level = crisisMeterLevel(n, goal);
       const label = crisisMeterDisplayLabel(k);
-      const goalBit =
-        goal != null && !Number.isNaN(Number(goal))
-          ? ` · goal ≤${Math.round(Number(goal))}`
-          : "";
+      const hold = crisisHoldNeedLabel(goal);
+      const goalBit = hold ? ` · ${hold}` : "";
       const whyBit = crisisMeterTooltipBits(state.hexBoard, k);
       const whySuffix = whyBit ? ` ${whyBit}` : "";
       return `<span class="meter ${level}" title="${escapeHtml(
         label
-      )}: ${n}/5${goalBit}. Green = at goal; yellow = above goal; red = danger. Wait raises; Scale lowers.${escapeHtml(
+      )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Wait raises; Scale lowers.${escapeHtml(
         whySuffix
       )}"><b>${escapeHtml(
         label
@@ -15310,9 +15309,7 @@ function buildHotseatMpOutcome(sess, opts = {}) {
   };
   const inventChallenge = inventId ? sess.invents?.[inventId] : null;
   const inventName =
-    inventChallenge?.inventionName ||
-    state.inventionName ||
-    "Untitled invention";
+    String(inventChallenge?.inventionName || state.inventionName || "").trim();
   const inventionHow =
     inventChallenge?.inventionHow || state.inventionHow || "";
   const inventionImpact =
@@ -15695,10 +15692,18 @@ function renderOutcomeResultBanner(o, m) {
     if (kicker) kicker.textContent = multiparty ? "Friends · Quest held" : "Solo · Quest held";
     if (title) title.textContent = "Quest held";
     if (sub) {
-      // Plain English: meters 0–5 must each be ≤ this Quest’s goal (shown as “goal ≤N”)
-      sub.textContent = multiparty
-        ? "Every shared crisis meter is at or below its goal for this Quest. The Quest is over — players are ranked by score below."
-        : "Every crisis meter is at or below its goal for this Quest. You fully held the line.";
+      const metersHeld = gaps.length > 0 && gaps.every((g) => g.status === "ok");
+      if (multiparty) {
+        sub.textContent = metersHeld
+          ? "Every shared crisis meter is at or below its hold line for this Quest (meters run 0–5). The Quest is over — players are ranked by score below."
+          : "The pathway holds. Crisis meters below run 0–5; “need N or less” is this Quest’s hold line. Players are ranked by score below.";
+      } else if (o.meta?.hexPathway && !metersHeld) {
+        sub.textContent =
+          "The pathway on the board holds. Crisis meters below run 0–5; “need N or less” is this Quest’s hold line.";
+      } else {
+        sub.textContent =
+          "Every crisis meter is at or below its hold line for this Quest (meters run 0–5). You fully held the line.";
+      }
     }
   } else if (kind === "partial" && (o.meta?.leftByVote || o.mpOutcome?.kind === "abandoned_by_vote")) {
     if (kicker) kicker.textContent = multiparty ? "Friends · left by vote" : "Left by vote";
@@ -15713,7 +15718,7 @@ function renderOutcomeResultBanner(o, m) {
     if (title) title.textContent = "Crisis still hot";
     if (sub) {
       sub.textContent =
-        "You fielded a New normal and eased pressure — but at least one crisis meter is still above its goal. " +
+        "You fielded a New normal and eased pressure — but at least one crisis meter is still above its hold line. " +
         "Continue this Quest to push further, or leave for another.";
     }
   } else if (kind === "collapse" && o.meta?.bankrupt) {
@@ -15750,19 +15755,18 @@ function renderOutcomeResultBanner(o, m) {
       gapsEl.hidden = false;
       gapsEl.innerHTML = gaps
         .map((g) => {
-          // “goal ≤N” = mission winMax for that meter (what “full win” requires)
-          const needBit =
-            g.need != null ? ` · goal ≤${g.need}` : "";
+          const label = crisisMeterDisplayLabel(g.key);
+          const hold = crisisHoldNeedLabel(g.need);
+          const needBit = hold ? ` · ${hold}` : "";
           const mark =
             g.status === "ok" ? "✓" : g.status === "fail" ? "!" : "·";
-          const tip =
-            g.need != null
-              ? `${g.key}: now ${g.cur} (full win needs ≤${g.need})`
-              : `${g.key}: ${g.cur}`;
+          const tip = hold
+            ? `${label}: now ${g.cur} of 5 (${hold} to hold this Quest)`
+            : `${label}: ${g.cur} of 5`;
           return `<li class="outcome-meter-gap is-${g.status}" title="${escapeHtml(
             tip
           )}"><span>${mark}</span> <strong>${escapeHtml(
-            g.key
+            label
           )}</strong> ${g.cur}${needBit}</li>`;
         })
         .join("");
@@ -15989,6 +15993,48 @@ function paintWorkshopUnlockPanel(o, mp) {
   else panel.setAttribute("hidden", "");
 }
 
+/** Hex play no longer names the invent — leftover titles are placeholders. */
+function isPlayerInventionName(name) {
+  const n = String(name || "").trim();
+  if (!n) return false;
+  if (/^(untitled( invention)?|idea|invent|my idea|pathway|your pathway)$/i.test(n)) {
+    return false;
+  }
+  // deriveBoardProse used raw tech ids joined with ·
+  if (/^[a-z0-9-]+( · [a-z0-9-]+)+$/.test(n)) return false;
+  return true;
+}
+
+function uniqueTechDisplayNames(techs) {
+  const out = [];
+  const seen = new Set();
+  for (const t of techs || []) {
+    const n = String(t?.name || t?.id || "").trim();
+    if (!n) continue;
+    const k = n.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(n);
+  }
+  return out;
+}
+
+/**
+ * Outcome heading + story noun. Hex invents have no name — heading is the
+ * emTech stack; story says “your pathway”.
+ */
+function outcomePathwayLabel(o, mp) {
+  const player = [mp?.inventName, o?.inventionName, state.inventionName]
+    .map((s) => String(s || "").trim())
+    .find(isPlayerInventionName);
+  if (player) return { title: player, storyName: player };
+  const techs = uniqueTechDisplayNames(o?.techs?.length ? o.techs : selectedTechs());
+  return {
+    title: techs.join(" · "),
+    storyName: "your pathway",
+  };
+}
+
 function renderOutcome() {
   const o = state.outcome;
   const m = state.mission;
@@ -16001,11 +16047,14 @@ function renderOutcome() {
         : o?.meta?.multiparty
           ? o.meta.mpOutcome || null
           : null;
-  const name =
-    (mp?.inventName && String(mp.inventName).trim()) ||
-    state.inventionName.trim() ||
-    "Untitled invention";
-  $("#outcome-name").textContent = name;
+  const { title: displayTitle, storyName: name } = outcomePathwayLabel(o, mp);
+  const nameEl = $("#outcome-name");
+  if (nameEl) {
+    nameEl.textContent = displayTitle;
+    nameEl.hidden = !displayTitle;
+    if (displayTitle) nameEl.removeAttribute("hidden");
+    else nameEl.setAttribute("hidden", "");
+  }
   $("#outcome-meta").textContent = `${m?.place || "—"} · ${o.year} · Turn ${o.turn} · waits ${
     o.waits ?? state.waits ?? 0
   } · ${state.global?.title || ""}${mp?.multiparty ? " · Friends / hotseat" : ""}`;
@@ -16112,7 +16161,7 @@ function renderOutcome() {
   } else if (o.kind === "partial") {
     headline = "Not fully solved";
     story =
-      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its goal for a full win. ` +
+      `In ${o.year}, ${name} went live in ${m.place} and eased pressure (−${o.meta?.drop || "?"} on the meters), but at least one crisis meter is still above its hold line for a full win. ` +
       `Continue this Quest to invent another step against the remaining crisis, or leave for a different Quest. ` +
       `(In Friends, a partial Scale would not open this screen — the Challenge keeps going until every meter meets its goal.)`;
     lessons.push({
@@ -16197,7 +16246,7 @@ function renderOutcome() {
   state.sharePayload = {
     kind: o.kind,
     kindLabel: kindLabelForOutcome(o.kind, o.meta),
-    inventionName: name,
+    inventionName: displayTitle || "Your pathway",
     inventionHow,
     inventionImpact,
     place: m.place,

@@ -16,6 +16,7 @@ import {
   CRISIS_ROLE_BLURBS,
   cloneBoard,
   applyLights,
+  PATHWAY_TEXT_MAX,
 } from "./board-state.js";
 import {
   CRISIS_REASON_MAX,
@@ -171,6 +172,73 @@ export function resolveIslandHow(board, inventions) {
     key,
     stored: false,
   };
+}
+
+function islandReadOrder(inventions) {
+  let year = Infinity;
+  let r = Infinity;
+  let q = Infinity;
+  for (const t of inventions || []) {
+    const y = Number(t.year);
+    if (Number.isFinite(y) && y < year) year = y;
+    const rr = Number(t.r);
+    const qq = Number(t.q);
+    if (Number.isFinite(rr) && (rr < r || (rr === r && Number.isFinite(qq) && qq < q))) {
+      r = rr;
+      q = Number.isFinite(qq) ? qq : q;
+    }
+  }
+  return { year, r, q };
+}
+
+/**
+ * Outcome / leaderboard write-up: one block per connected invent island.
+ * Uses the stored pathway inventHow when the learner set one; otherwise the
+ * default concat of member tile howTexts. No per-tile invention name.
+ * @param {object} board
+ * @param {{ place?: string, year?: number, techTitle?: (id: string) => string }} [opts]
+ */
+export function summarizePathwayForBoard(board, opts = {}) {
+  const place = String(opts.place || "").trim();
+  const yearNum = Number(opts.year);
+  const titleFn = typeof opts.techTitle === "function" ? opts.techTitle : null;
+  const pathways = listInventionPathways(board)
+    .slice()
+    .sort((a, b) => {
+      const ka = islandReadOrder(a);
+      const kb = islandReadOrder(b);
+      if (ka.year !== kb.year) return ka.year - kb.year;
+      if (ka.r !== kb.r) return ka.r - kb.r;
+      return ka.q - kb.q;
+    });
+  const lines = [];
+  if (place || Number.isFinite(yearNum)) {
+    const bits = [];
+    if (place) bits.push(place);
+    if (Number.isFinite(yearNum)) bits.push(`held in ${Math.trunc(yearNum)}`);
+    lines.push(bits.join(" · "));
+    lines.push("");
+  }
+  /** @type {string[]} */
+  const stack = [];
+  const inventions = [];
+  for (const invs of pathways) {
+    const techLabels = [];
+    for (const t of invs) {
+      inventions.push(t);
+      if (t.techId && !stack.includes(t.techId)) stack.push(t.techId);
+      if (!t.techId) continue;
+      const raw = String(t.techId);
+      const label = titleFn ? titleFn(raw) || raw : raw;
+      if (label && !techLabels.includes(label)) techLabels.push(label);
+    }
+    const how = resolveIslandHow(board, invs).text;
+    if (techLabels.length) lines.push(techLabels.join(" · "));
+    if (how) lines.push(how);
+    lines.push("");
+  }
+  const text = lines.join("\n").trim().slice(0, PATHWAY_TEXT_MAX);
+  return { text, stack, inventions };
 }
 
 /**

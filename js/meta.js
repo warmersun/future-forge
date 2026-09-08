@@ -408,7 +408,7 @@ export async function renderShareCard(opts = {}) {
   // —— Invention name + place ——
   ctx.fillStyle = "#fff4e6";
   ctx.font = "700 48px system-ui, sans-serif";
-  y = wrapText(ctx, String(opts.inventionName || "Untitled invention"), padX, y, contentW, 54, 3) + 28;
+  y = wrapText(ctx, String(opts.inventionName || "Your pathway"), padX, y, contentW, 54, 3) + 28;
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "400 24px system-ui, sans-serif";

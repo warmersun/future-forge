@@ -4357,6 +4357,7 @@ body.challenge-pose-pending #challenge-help-form {
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.65);
   color: #e2e8f0;
+  white-space: nowrap;
 }
 
 .outcome-meter-gap.is-ok {
@@ -9158,6 +9159,10 @@ button.linkish:hover {
   font-size: 1.35rem;
   color: var(--accent);
   font-weight: 600;
+}
+
+.reveal-hero .invention-name[hidden] {
+  display: none;
 }
 
 .score-row {
