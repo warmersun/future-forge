@@ -85,14 +85,14 @@
     "pressure": {
       "local": {
         "label": "Outbreak",
-        "pressure": 2,
+        "pressure": 3,
         "pressureRise": 1,
         "winMax": 1
       },
       "support": {
         "label": "Fear",
-        "pressure": 1,
-        "pressureRise": 1,
+        "pressure": 2,
+        "pressureRise": 0,
         "winMax": 1
       }
     },

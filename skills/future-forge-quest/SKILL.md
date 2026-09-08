@@ -55,7 +55,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **Your job** first, then story. **Write short paragraphs** (one idea each, especially **The place**) — the invent screen steps them as a visual walkthrough. Do not dump research or tutor curriculum into the brief. Optional **`briefBeats`**: see `brief-beats.md` (omit when unused).
 4. **`mission.scene`** = design-challenge lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
 5. **`summary`**, **`title`**, and **`spotlight.encourageCopy`** state the invent job in plain language (see Procedure §4). Summary is 2–3 short sentences (≤420 chars), not a one-liner.
-6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid.
+6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid. **New-tile defaults** (integers; rise is per calendar year): local **3↑1**, global **2↑1**, support **2↑0**. `winMax` typically 1. Local is more urgent than global. Support rise **0** unless you mean trust to rot with time. One island must not finish both local and global — see `economy.md`.
 7. Scenario is **fictive**;   research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
 8. Do **not** force a single correct invention; invite the capability class. End on open design tension — no solution theater.
 9. Sensitive themes: `references/sensitivity.md`.
@@ -103,7 +103,7 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
 
 - Place + lived harm + local driver as **story**.
 - Inventable application of the capability (pilot-honest).
-- `globalId`, stakeholder, structured **`pressure`** (1–3 roles).
+- `globalId`, stakeholder, structured **`pressure`** (1–3 roles). Defaults: local 3↑1, global 2↑1, support 2↑0 (`winMax` 1). Omit a role to hide it. Local this year; global after a year tick.
 - Optional **`resources`**.
 
 ### 4. Player-language job (before story prose)
@@ -174,7 +174,7 @@ Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.
 
 - [ ] Advance citable; place fictive  
 - [ ] Exactly one suggested tech  
-- [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture)  
+- [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture). New tiles: local 3↑1, global 2↑1, support 2↑0 unless you have a reason.  
 - [ ] **Plain-language test:** a 14-year-old can restate the invent job from **title + summary** alone (summary is 2–3 plain sentences: global problem, situation, what we’re solving for; no names, no scene)  
 - [ ] `encourageCopy` is everyday words (no research jargon)  
 - [ ] Scene craft ≤500; place story craft; everyday words in player text  

@@ -44,23 +44,25 @@ Each active entry:
 |-------|--------|
 | `label` | Short HUD name (plain English, 1–3 words, Title Case) |
 | `description` | Optional. 1–3 everyday sentences of what this meter means in this place. Omit or `""` on old tiles. Recommended on new tiles. |
-| `pressure` | Starting level 0–5 |
-| `pressureRise` | Rise **per calendar year** 0–3 (default 1). End turn ×1; Wait × `yearsPerTurn`. Local meters should be more urgent (higher start) than global. |
-| `winMax` | Hold at or under this after deploy 0–5 (default 1) |
+| `pressure` | Starting level 0–5. **New tiles:** local **3**, global **2**, support **2**. |
+| `pressureRise` | Rise **per calendar year** 0–3. End turn ×1; Wait × `yearsPerTurn`. **New tiles:** local **1**, global **1**, support **0** (time does not grind trust). |
+| `winMax` | Hold at or under this after deploy 0–5 (typically **1**) |
+
+Local is more urgent than global. Untreated local 3↑1 hits 5 in 2028. A first island should not also finish the global meter (`economy.md`).
 
 ```json
 "pressure": {
       "local": {
         "label": "Outbreak",
         "description": "The fever pattern is real and invisible while swabs wait on the weekly lab truck.",
-        "pressure": 2,
+        "pressure": 3,
         "pressureRise": 1,
         "winMax": 1
       },
   "support": {
     "label": "Fear",
-    "pressure": 1,
-    "pressureRise": 1,
+    "pressure": 2,
+    "pressureRise": 0,
     "winMax": 1
   }
 }

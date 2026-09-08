@@ -43,6 +43,8 @@ Red at 4 is danger. Collapse is meter 5 or the fail year.
 
 Do not let one invent pathway solve both the immediate local harm and the longer-term global / root cause.
 
+Put these integers on **new** tiles (then run the evaluator — do not invent 2 / rise 1 because an old example did):
+
 | Role | Typical start | Rise / calendar year |
 |------|---------------|----------------------|
 | `local` | 3 | 1 |

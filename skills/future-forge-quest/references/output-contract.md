@@ -55,7 +55,7 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
       "local": {
         "label": "…",
         "description": "…",
-        "pressure": 2,
+        "pressure": 3,
         "pressureRise": 1,
         "winMax": 1
       },
@@ -69,8 +69,8 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
       "support": {
         "label": "…",
         "description": "…",
-        "pressure": 1,
-        "pressureRise": 1,
+        "pressure": 2,
+        "pressureRise": 0,
         "winMax": 1
       }
     },

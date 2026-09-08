@@ -11,7 +11,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 | Area | Summary |
 |------|---------|
 | **Core spotlight** | One tech, fictive place, plain invent job + design-challenge prose |
-| **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus). Optional `description` per role (recommended on new tiles). |
+| **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus). New-tile defaults: local 3↑1, global 2↑1, support 2↑0. Optional `description` per role (recommended on new tiles). |
 | **Resources** | Optional starting AP / Budget / Will |
 | **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
 | **Plottable trends** | Optional `trends` / `spotlightTrends` for Wait log-scale charts (see `future-forge-trends` skill) |

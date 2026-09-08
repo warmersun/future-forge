@@ -74,7 +74,7 @@
       "support": {
         "label": "Trust",
         "pressure": 2,
-        "pressureRise": 1,
+        "pressureRise": 0,
         "winMax": 1
       }
     },
