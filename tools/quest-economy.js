@@ -22,6 +22,7 @@ const pickEl = $("econ-pick");
 const hubEl = $("econ-hub");
 const channelEl = $("econ-channel");
 const backBtn = $("econ-back");
+const leaveBtn = $("econ-leave");
 const pickTitle = $("econ-pick-title");
 const pickBlurb = $("econ-pick-blurb");
 const selectedEl = $("econ-selected");
@@ -135,6 +136,21 @@ function showResults(on) {
     if (!on) el.hidden = true;
   }
   pickEl.hidden = on;
+  if (leaveBtn) leaveBtn.hidden = !on;
+}
+
+function leaveQuest() {
+  current = null;
+  lastReport = null;
+  showResults(false);
+  const url = new URL(location.href);
+  url.searchParams.delete("id");
+  url.searchParams.delete("file");
+  url.searchParams.delete("source");
+  history.replaceState(null, "", url);
+  setStatus("");
+  renderNav();
+  pickEl?.scrollIntoView({ block: "start" });
 }
 
 function renderNav() {
@@ -328,6 +344,7 @@ function restoreThemeMission(missionId) {
     const places = localScenariosForGlobal(g, { count: 4, salt: 0 });
     const mission = places.find((m) => m.id === missionId);
     if (mission) {
+      nav = { view: "theme", shelf: g.id };
       pickThemeMission(g, mission);
       return;
     }
@@ -552,10 +569,7 @@ function renderSelected() {
         <button type="button" class="btn btn-ghost btn-sm" id="econ-change">Change Quest</button>
       </div>
     </article>`;
-  $("econ-change")?.addEventListener("click", () => {
-    showResults(false);
-    renderNav();
-  });
+  $("econ-change")?.addEventListener("click", () => leaveQuest());
 }
 
 function headline(report) {
@@ -1208,6 +1222,8 @@ async function copyToLibrary() {
     setStatus(e.message || "Could not save a Library copy", "bad");
   }
 }
+
+leaveBtn?.addEventListener("click", () => leaveQuest());
 
 backBtn.addEventListener("click", () => {
   if (nav.view === "theme") nav = { view: "themes" };

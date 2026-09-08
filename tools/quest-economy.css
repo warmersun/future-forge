@@ -38,8 +38,19 @@
   color: var(--accent-2);
 }
 
-.econ-back a {
+.econ-head-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.econ-head-links a {
   color: var(--text-dim);
+}
+
+.econ-head-links a:hover {
+  color: var(--text);
 }
 
 .econ-help {
