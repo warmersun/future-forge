@@ -621,6 +621,7 @@ export function boardBondsLevel(board) {
     return {
       level: "red",
       uncovered: 0,
+      uncoveredIds: [],
       note: "No crisis hexes on the board.",
     };
   }
@@ -632,11 +633,13 @@ export function boardBondsLevel(board) {
       covered.add(gid);
     }
   }
-  const uncovered = givens.filter((g) => !covered.has(g.id)).length;
+  const uncoveredList = givens.filter((g) => !covered.has(g.id));
+  const uncovered = uncoveredList.length;
   if (uncovered) {
     return {
       level: "red",
       uncovered,
+      uncoveredIds: uncoveredList.map((g) => g.id),
       note:
         uncovered === 1
           ? "1 hex is not touching any invent island"
@@ -646,6 +649,7 @@ export function boardBondsLevel(board) {
   return {
     level: "green",
     uncovered: 0,
+    uncoveredIds: [],
     note: "Every crisis and concern hex touches an invent island",
   };
 }

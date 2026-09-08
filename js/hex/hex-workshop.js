@@ -2854,6 +2854,7 @@ export function createHexWorkshop(api) {
     refreshAfterYearChange,
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
+    hasSparkBatch,
     isSummonBusy: () => summonBusy,
     isCreateBusy,
     createBusyKind,

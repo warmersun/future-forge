@@ -4554,6 +4554,119 @@ body.challenge-pose-pending #challenge-help-form {
   transform: scale(1.05);
 }
 
+/* Guided tour — next-step coach-mark (on-demand from ?) */
+#tour-root {
+  position: fixed;
+  inset: 0;
+  z-index: 125;
+  pointer-events: none;
+}
+
+#tour-root:not(.is-open) {
+  display: none;
+}
+
+#tour-root.is-open {
+  display: block;
+}
+
+.tour-panes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tour-panes[hidden] {
+  display: none !important;
+}
+
+.tour-pane {
+  position: absolute;
+  background: rgba(2, 6, 14, 0.52);
+  pointer-events: auto;
+}
+
+.tour-ring {
+  position: fixed;
+  z-index: 126;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.35),
+    0 0 24px rgba(56, 189, 248, 0.35);
+  animation: tour-ring-in 0.22s var(--ease);
+}
+
+.tour-ring[hidden] {
+  display: none !important;
+}
+
+@keyframes tour-ring-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tour-card {
+  position: fixed;
+  z-index: 126;
+  pointer-events: auto;
+  width: min(340px, calc(100vw - 24px));
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem 0.85rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  outline: none;
+}
+
+.tour-card[hidden] {
+  display: none !important;
+}
+
+.tour-card[data-edge="bottom-sheet"] {
+  width: auto;
+}
+
+.tour-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tour-card-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.tour-card-body {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.tour-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+#help-backdrop {
+  z-index: 140;
+}
+
 /* Help modal — stacked blocks + equal tile grids (panel size: .modal.help-modal) */
 
 .help-header {
@@ -4580,7 +4693,7 @@ body.challenge-pose-pending #challenge-help-form {
 .help-body {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.45rem;
   margin: 0;
   font-size: 0.86rem;
   color: var(--text-dim);
@@ -4649,8 +4762,8 @@ body.challenge-pose-pending #challenge-help-form {
 }
 
 .help-block-title {
-  margin: 0 0 0.65rem;
-  font-size: 0.7rem;
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--accent);
@@ -4674,7 +4787,7 @@ body.challenge-pose-pending #challenge-help-form {
   gap: 0.5rem;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .help-steps {
     grid-template-columns: 1fr 1fr;
   }

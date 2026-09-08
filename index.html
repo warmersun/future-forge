@@ -1017,8 +1017,8 @@
             type="button"
             class="btn-help"
             id="btn-help"
-            title="How Future Forge works"
-            aria-label="Help: how this works"
+            title="What to do next"
+            aria-label="Help: what to do next"
           >
             ?
           </button>
@@ -1435,8 +1435,8 @@
             type="button"
             class="btn-help"
             id="btn-challenge-help"
-            title="How Future Forge works"
-            aria-label="Help: how this works"
+            title="What to do next"
+            aria-label="Help: what to do next"
           >
             ?
           </button>
@@ -1768,8 +1768,8 @@
             type="button"
             class="btn-help"
             id="btn-deploy-help"
-            title="How Future Forge works"
-            aria-label="Help: how this works"
+            title="What to do next"
+            aria-label="Help: what to do next"
           >
             ?
           </button>
@@ -2114,254 +2114,146 @@
       </div>
     </div>
 
-    <!-- How it works help — three stepping-stones first; Workshop systems under More detail -->
+    <!-- Context-aware next-step tour (opened from ?) -->
+    <div id="tour-root"></div>
+
+    <!-- Rules — hex invent loop, all visible -->
     <div id="help-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div class="modal help-modal">
         <header class="help-header">
-          <h3 id="help-title">How Future Forge works</h3>
+          <h3 id="help-title">Rules</h3>
           <p class="help-intro">
-            Pick a place in trouble. Build an honest invention from emerging tech. Answer one hard question.
-            Field it before the crisis wins. The <strong>AI co-inventor</strong> advises — you lead.
+            Invent a pathway on the hex board. Dock it against every crisis hex. Summon the hard questions onto
+            that same board, then hold when every light is yellow or green — before the crisis wins.
+            The <strong>AI co-inventor</strong> advises. You lead.
           </p>
         </header>
 
         <div class="help-body">
           <section class="help-block">
-            <h4 class="help-block-title">Three steps</h4>
             <ol class="help-steps">
               <li>
                 <span class="help-step-num">1</span>
                 <span class="help-step-body">
                   <strong>The place is in trouble</strong>
-                  <span>Watch crisis meters and the year. Wait raises the crisis; stall and the place can fall.</span>
+                  <span>Crisis meters and the year. Stall and the place can fall.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">2</span>
                 <span class="help-step-body">
-                  <strong>Invent something honest</strong>
-                  <span>Pick emerging tools for this place. Write what it does here — claims must fit this year.</span>
+                  <strong>Invent on the board</strong>
+                  <span>Pick an emTech, mint idea tiles, dock them against the crisis hexes.</span>
                 </span>
               </li>
               <li>
                 <span class="help-step-num">3</span>
                 <span class="help-step-body">
-                  <strong>Answer a hard question, then field it</strong>
-                  <span
-                    >Face one challenge, then <strong>Field it</strong> before meters max or the fail year.</span
-                  >
+                  <strong>Summon hard questions</strong>
+                  <span>Challengers land on the board. Answer who acts, who pays, what limit you respect.</span>
+                </span>
+              </li>
+              <li>
+                <span class="help-step-num">4</span>
+                <span class="help-step-body">
+                  <strong>Hold the pathway</strong>
+                  <span>When every lamp is yellow or green, declare it holds — before a meter hits 5.</span>
                 </span>
               </li>
             </ol>
-            <p class="help-note" style="margin-top: 0.85rem; margin-bottom: 0">
-              Loop: <strong>Invent · Challenge · Field</strong>. Feasibility is honesty about timing and fit —
-              not a card unlock gate. <strong>Pilot</strong> asks if it works here for people;
-              <strong>Scale</strong> also asks if it can last (Sustainable — not only sheltering symptoms).
+          </section>
+
+          <section class="help-block">
+            <h4 class="help-block-title">Why the pathway is red</h4>
+            <p class="help-note">The panel under the board is three checks. Red means that check failed — not that you must mint more tiles.</p>
+            <div class="help-tiles help-tiles-3">
+              <article class="help-tile">
+                <h5>Coverage</h5>
+                <p>Crisis lamps. Red = that role still isn’t helped. Change how it works, or add an idea aimed at that meter.</p>
+              </article>
+              <article class="help-tile">
+                <h5>Bonds</h5>
+                <p>Every crisis hex must <em>touch</em> your invent island. Drag crisis tiles — they move. You often don’t need more ideas.</p>
+              </article>
+              <article class="help-tile">
+                <h5>Timing</h5>
+                <p>Does the claim fit this year? Soften how it works, or Look Ahead (+2 years; the crisis rises).</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="help-block">
+            <h4 class="help-block-title">Inventing</h4>
+            <ul class="help-list">
+              <li>Pick an <strong>emTech</strong>, then <strong>Ask for ideas</strong> (AI mints 3 tiles) or write <strong>How it works</strong> and mint your own.</li>
+              <li>Drag a tile onto the hex board. Matching worlds (bits / atoms) can dock. Crisis hexes always dock — slide them next to your island.</li>
+              <li>The stack is techs with a <em>placed</em> tile. Looking at the board is the thinking.</li>
+            </ul>
+          </section>
+
+          <section class="help-block">
+            <h4 class="help-block-title">Clock &amp; resources</h4>
+            <div class="help-tiles help-tiles-2">
+              <article class="help-tile help-tile-accent">
+                <h5>End turn</h5>
+                <p>Refill AP. Calendar <strong>+1 year</strong>. Crisis meters stay put.</p>
+              </article>
+              <article class="help-tile help-tile-warn">
+                <h5>Look Ahead <span class="help-tile-meta">Wait +2 years</span></h5>
+                <p>Later capability can mature. Crisis meters <strong>rise</strong>. Leftover AP burns, then refills.</p>
+              </article>
+              <article class="help-tile">
+                <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
+                <p>
+                  Attention: Ask for ideas, first challenger, answers, Lobby, AI chat
+                  (<strong>1 AP</strong> each). Learning modules: tutor chat is free while Tutoring is on.
+                </p>
+              </article>
+              <article class="help-tile">
+                <h5>Budget &amp; Support</h5>
+                <p>
+                  Budget starts at 5$ — placing a new tech costs cash; solo, <strong>0$ ends the Quest</strong>.
+                  Support starts at 3. Lobby: 1 AP + 1$ → +1 Support.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section class="help-block">
+            <h4 class="help-block-title">AI co-inventor</h4>
+            <p class="help-note">Usually 1 AP per request. You still choose which tiles to mint, place, and keep.</p>
+            <ul class="help-list">
+              <li><strong>Invent with</strong> focuses an emTech so you can Ask for ideas or mint.</li>
+              <li>SIT / SCAMPER remake a minted how-it-works (need a tile on the board first).</li>
+              <li>Learning quests: End tutoring to unlock invent chips; Resume anytime (tutor chat stays free).</li>
+            </ul>
+          </section>
+
+          <section class="help-block">
+            <h4 class="help-block-title">Hard questions</h4>
+            <p class="help-note">
+              Challengers (Mother Nature, Moloch, Ethicist, Stakeholder) land on the board — usually one, sometimes more.
+              Click the hex, write a short answer, submit. Docking without an answer does not turn the light green.
             </p>
           </section>
 
-          <details class="help-more">
-            <summary class="help-more-summary">More detail (Workshop systems)</summary>
-            <div class="help-more-body">
-              <section class="help-block">
-                <div class="help-block-head">
-                  <h4 class="help-block-title">Resources</h4>
-                  <p class="help-note">Full Workshop HUD. Only AP refills on End turn (Budget and Support do not). First-run Spark hides most of this.</p>
-                </div>
-                <div class="help-tiles help-tiles-4">
-                  <article class="help-tile">
-                    <h5>Year &amp; turn</h5>
-                    <p><strong>End turn</strong> advances the calendar +1 year. <strong>Wait</strong> +2 years. Turn advances on either.</p>
-                  </article>
-                  <article class="help-tile">
-                    <h5>AP <span class="help-tile-meta">3 / turn</span></h5>
-                    <p>
-                      Attention for tech, Lobby, hard question, scrutiny moves, Field, and the
-                      <strong>AI co-inventor</strong> (<strong>1 AP</strong> per AI request;
-                      <strong>learning modules</strong>: free while the <strong>Tutoring</strong> badge is on —
-                      End / Resume tutoring anytime).
-                      <strong>End turn</strong> refills AP and advances the calendar +1 year.
-                      <strong>Wait</strong> burns leftover AP, then refills.
-                    </p>
-                  </article>
-                  <article class="help-tile">
-                    <h5>Budget <span class="help-tile-meta">start 5</span></h5>
-                    <p>
-                      Capital for techs and <strong>Pilot / Scale</strong>. Same-turn remove refunds half.
-                      Not refilled by End turn. Solo: <strong>Budget 0$ ends the Quest</strong> — keep cash to field.
-                    </p>
-                  </article>
-                  <article class="help-tile">
-                    <h5>Support <span class="help-tile-meta">start 3</span></h5>
-                    <p>
-                      Public + policy support — not a crisis meter. Lobby: 1 AP + 1 Budget → +1 Support.
-                      ≥4 boosts fielding; 0 hurts it. Sidestep costs Support equal to remaining resolve hearts.
-                    </p>
-                  </article>
-                </div>
-              </section>
+          <section class="help-block">
+            <h4 class="help-block-title">Friends</h4>
+            <ul class="help-list">
+              <li>Each person builds their own invention. You share one crisis — if the place falls, everyone loses.</li>
+              <li>Live room (code) or <strong>Hotseat</strong> (one device). Only the active seat spends AP / Budget / Support.</li>
+              <li>Learning modules are solo only.</li>
+            </ul>
+          </section>
 
-              <section class="help-block">
-                <h4 class="help-block-title">End turn vs Wait</h4>
-                <div class="help-tiles help-tiles-2">
-                  <article class="help-tile help-tile-accent">
-                    <h5>End turn</h5>
-                    <p>Next invent/challenge beat. AP → full. Calendar <strong>+1 year</strong>. Crisis meters unchanged.</p>
-                  </article>
-                  <article class="help-tile help-tile-warn">
-                    <h5>Wait <span class="help-tile-meta">+2 years</span></h5>
-                    <p>
-                      Later world conditions (tech and readiness can mature). Crisis meters <strong>rise</strong>.
-                      Leftover AP burned, then refilled. Preview shows the rise.
-                    </p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="help-block">
-                <div class="help-tiles help-tiles-2">
-                  <article class="help-tile">
-                    <h5>Story</h5>
-                    <ul class="help-list">
-                      <li>Pick an <strong>emTech</strong>, then <strong>Ask for ideas</strong> or write <strong>How it works</strong> and mint a tile.</li>
-                      <li>Place tiles on the hex board. Matching worlds (bits / atoms) can dock; the stack is techs with a placed tile.</li>
-                      <li>Looking at the board is the thinking — crisis and concern lights show whether the pathway is honest.</li>
-                    </ul>
-                  </article>
-                  <article class="help-tile">
-                    <h5>AI co-inventor <span class="help-tile-meta">1 AP each*</span></h5>
-                    <p class="help-cost">Usually 1 AP per AI request. *Learning quests: tutor chat is free while Tutoring is on (End / Resume in the panel; the AI may also end tutoring).</p>
-                    <ul class="help-list">
-                      <li><strong>Invent:</strong> chips and chat — 1 AP each. While Tutoring is on, chips are locked; tutor chat stays free. End tutoring to use invent tools.</li>
-                      <li>
-                        <strong>Invent with</strong> focuses an emTech (Ask for ideas or mint). <strong>Use as how it works</strong> fills the mint box — you still mint the tile.
-                      </li>
-                      <li>
-                        <strong>SIT invent:</strong> remakes a minted how-it-works via addition · subtraction ·
-                        multiplication · division (needs a minted idea tile first; greyed until then).
-                      </li>
-                      <li>
-                        <strong>SCAMPER invent:</strong> remakes a minted how-it-works via Substitute · Combine ·
-                        Adapt · Modify · Put to other uses · Eliminate · Reverse (same mint-tile gate; 1
-                        AP).
-                      </li>
-                      <li>You still decide which tiles to mint, place, and keep.</li>
-                    </ul>
-                  </article>
-                </div>
-              </section>
-
-              <section class="help-block">
-                <div class="help-block-head">
-                  <h4 class="help-block-title">Hard question — Workshop scrutiny</h4>
-                  <p class="help-note">
-                    Spark is essay-only. Workshop may open Defend / Fix / Sidestep against one critic’s resolve hearts.
-                  </p>
-                </div>
-                <div class="help-tiles help-tiles-3">
-                  <article class="help-tile help-tile-move">
-                    <h5>Defend in writing</h5>
-                    <p class="help-cost">1 AP to submit</p>
-                    <p>
-                      Write who acts, who pays, or what limit you respect. Strong answer clears them (−2);
-                      partial chips 1; miss chips 0 and counts against you.
-                    </p>
-                  </article>
-                  <article class="help-tile help-tile-move">
-                    <h5>Fix the invention</h5>
-                    <p class="help-cost">1 AP · optional +¤1</p>
-                    <p>
-                      <strong>You</strong> edit how-it-works under fire. Apply fix chips resolve; AI coaches, you apply.
-                    </p>
-                  </article>
-                  <article class="help-tile help-tile-move">
-                    <h5>Sidestep once</h5>
-                    <p class="help-cost">Cost = remaining ♥</p>
-                    <p>
-                      Skip without winning — once per run. Cost tracks remaining resolve (AP + Support). Softens
-                      elegance stars.
-                    </p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="help-block">
-                <div class="help-block-head">
-                  <h4 class="help-block-title">Field — Pilot · Scale · New normal</h4>
-                  <p class="help-note">
-                    Spark: one <strong>Field it</strong> button. Workshop: Pilot then Scale after the hard question.
-                    Odds: <strong>Red 10% · Yellow 50% · Green 85%</strong>. Wait blocked while the bay is open.
-                  </p>
-                </div>
-                <div class="help-tiles help-tiles-2">
-                  <article class="help-tile help-tile-accent">
-                    <h5>1 · Pilot</h5>
-                    <p class="help-cost">Each try: AP + Budget · chance = overall feasibility</p>
-                    <p>
-                      First fielding. Success drops ~half the crisis pool; Scale unlocks. Fail: retry or rework on
-                      Invent.
-                    </p>
-                  </article>
-                  <article class="help-tile help-tile-accent">
-                    <h5>2 · Scale</h5>
-                    <p class="help-cost">Each try: AP + Budget + Support (Support free if ≥ 4)</p>
-                    <p>
-                      Wider rollout. Success spends the rest of the pool and reaches New normal. Fail: Pilot still
-                      stands.
-                    </p>
-                  </article>
-                  <article class="help-tile help-tile-move">
-                    <h5>3 · New normal</h5>
-                    <p class="help-cost">Automatic when Scale succeeds</p>
-                    <p>
-                      Mission ends: full <strong>win</strong> if meters are low enough, else <strong>partial</strong>.
-                    </p>
-                  </article>
-                  <article class="help-tile">
-                    <h5>← Back to Invent</h5>
-                    <p class="help-cost">Anytime in the field bay</p>
-                    <p>
-                      Rework stack or story, then return. You keep a successful Pilot; failed tries only cost what you
-                      spent.
-                    </p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="help-block">
-                <h4 class="help-block-title">Friends · hotseat</h4>
-                <ul class="help-list">
-                  <li>Each person builds their own invention.</li>
-                  <li>You share one crisis — if the place falls, everyone loses.</li>
-                  <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
-                  <li>
-                    Live room (code, same Wi‑Fi) or <strong>Hotseat</strong> (one device). Only the active seat spends
-                    AP / Budget / Support.
-                  </li>
-                </ul>
-              </section>
-
-              <section class="help-block">
-                <h4 class="help-block-title">Start a Quest · Share</h4>
-                <ul class="help-list">
-                  <li><strong>Themes</strong> — pick a global problem, get up to 4 local Quests, or generate a new set.</li>
-                  <li><strong>Sponsored / Library</strong> — remote and side-loaded tiles. <strong>Learning</strong> modules are solo only (Friends is not available).</li>
-                  <li><strong>Share card</strong> on outcome downloads a PNG of your run.</li>
-                </ul>
-              </section>
-
-              <section class="help-block help-block-last">
-                <h4 class="help-block-title">Stars &amp; tips</h4>
-                <ul class="help-list">
-                  <li>★★★ for speed, honesty, elegance (outcome only). Sidestep softens elegance.</li>
-                  <li>Stay local. End turn to refill AP (+1 year); Wait when later years are worth the crisis cost.</li>
-                  <li>Lobby toward Support 4 before Pilot when economy is on.</li>
-                  <li>Feasibility judges <em>claims</em>, not card unlocks.</li>
-                  <li>Solo: <strong>Budget 0$ ends the Quest</strong> when Budget is active.</li>
-                </ul>
-              </section>
-            </div>
-          </details>
+          <section class="help-block help-block-last">
+            <h4 class="help-block-title">Keep in mind</h4>
+            <ul class="help-list">
+              <li>Stay local. Honesty is about timing and fit — not unlocking a card.</li>
+              <li>End turn to refill AP; Look Ahead only if later years are worth the crisis cost.</li>
+              <li>★★★ on the outcome for speed, honesty, elegance.</li>
+            </ul>
+          </section>
         </div>
 
         <div class="modal-actions help-footer">

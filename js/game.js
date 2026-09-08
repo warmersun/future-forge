@@ -197,9 +197,11 @@ import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./m
 import {
   briefingOwnsRoot,
   isBriefingDismissed,
+  lastBriefingPaint,
   paintQuestBriefing,
   resetQuestBriefing,
 } from "./briefing-ui.js";
+import { createGuidedTour, queryTourTarget } from "./guided-tour.js";
 import {
   normalizeBriefBeats,
   resolveBriefBeats,
@@ -222,7 +224,9 @@ import {
   workshopLayoutFor,
   setTechRailCollapsed,
   setTechDrawerOpen,
+  setTechRailPeek,
   isTechRailCollapsed,
+  isTechRailPeek,
   isTechDrawerMode,
   isTechDrawerOpen,
 } from "./tech-drawer.js";
@@ -1328,6 +1332,7 @@ function ensureHexWorkshop() {
       renderHud();
       updateLearnButton?.();
       updateVision({ debounceMs: 800 });
+      refreshGuidedTour();
     },
     openLearnWhileIdeas: (techId) => openLearnWhileIdeas(techId),
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
@@ -3709,6 +3714,13 @@ function showScreen(id) {
     // Challenge / Deploy screens removed — hex board is the play
     id = "workshop";
     state.screen = "workshop";
+  }
+  if (id !== "workshop") {
+    try {
+      guidedTour.close();
+    } catch {
+      /* tour module not constructed yet */
+    }
   }
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
   if (id === "title") {
@@ -6786,6 +6798,7 @@ function renderWorkshop() {
       onChange: (snap) => {
         if (snap?.mode === "walk") {
           setSideTab("vision");
+          refreshGuidedTour();
           return;
         }
         if (snap?.mode !== "off") return;
@@ -6794,6 +6807,7 @@ function renderWorkshop() {
         } catch {
           /* ignore */
         }
+        refreshGuidedTour();
       },
     });
   } else if (sceneEl) {
@@ -6897,6 +6911,7 @@ function renderWorkshop() {
   ensureCoInventor();
   // Co-inventor may remount — re-apply spectator / busy locks
   syncInventActionButtons();
+  refreshGuidedTour();
 }
 
 /**
@@ -16919,6 +16934,7 @@ function setSideTab(tab) {
   }
   if (tab === "coinventor") ensureCoInventor();
   if (tab === "aitrace") renderAiTrace();
+  refreshGuidedTour();
 }
 
 function setChallengeSideTab(tab) {
@@ -19754,6 +19770,195 @@ async function surpriseMission() {
 }
 
 /* —— Bind —— */
+function tourWorkshopLayout() {
+  return workshopLayoutFor($("#screen-workshop") || document.body);
+}
+
+function isTechCatalogHidden() {
+  const layout = tourWorkshopLayout();
+  if (!layout) return false;
+  if (isTechDrawerMode()) return !isTechDrawerOpen(layout);
+  return isTechRailCollapsed(layout) && !isTechRailPeek(layout);
+}
+
+function tourSnapshot() {
+  const board = state.hexBoard || {};
+  const tiles = Object.values(board.tiles || {});
+  const inventions = tiles.filter((t) => t && t.kind === "invention");
+  const unplaced = inventions.filter((t) => t.q == null || t.r == null);
+  const placed = inventions.filter((t) => t.q != null && t.r != null);
+  const panel = hexPathwayPanel(board);
+  const brief = lastBriefingPaint() || {};
+  const mission = state.mission || {};
+  const spotlightId = mission.spotlight?.techId || null;
+  const spotlightTech = spotlightId ? techById(spotlightId) : null;
+  const focusId =
+    focusedTechId || hexWorkshop?.getFocusedTechId?.() || null;
+  const focusTech = focusId ? techById(focusId) : null;
+  const concerns = tiles.filter((t) => t && t.kind === "concern");
+  const unanswered = concerns.find(
+    (t) => !String(t.playerAnswer || "").trim() && !t.answerPending
+  );
+  const pendingAnswer = concerns.some((t) => t.answerPending);
+  const redGiven =
+    (panel.givens || []).find((t) => t && t.lamp === "red") ||
+    tiles.find(
+      (t) =>
+        (t.kind === "crisis" || t.kind === "concern") &&
+        t.lamp === "red" &&
+        t.q != null
+    );
+  const redInvention = placed.find((t) => t.timingLevel === "red");
+  const uncoveredIds = Array.isArray(panel.bonds?.uncoveredIds)
+    ? panel.bonds.uncoveredIds
+    : [];
+  const uncoveredTile = uncoveredIds[0]
+    ? tiles.find((t) => t && t.id === uncoveredIds[0]) ||
+      board.tiles?.[uncoveredIds[0]]
+    : null;
+  const howHost = $("#hex-island-how");
+  const howBoxes = howHost ? [...howHost.querySelectorAll("textarea")] : [];
+  const islandHowEmpty = Boolean(
+    howHost &&
+      !howHost.hidden &&
+      howBoxes.length &&
+      !howBoxes.some((ta) => String(ta.value || "").trim())
+  );
+  const co = state.coInventor;
+  const coinventorUsed = Boolean(
+    (Array.isArray(co?.messages) && co.messages.length) ||
+      (Array.isArray(co?.histories?.coinventor) && co.histories.coinventor.length)
+  );
+  const popup = $("#hex-tile-popup");
+  const conv = $("#hex-convergence-dialog");
+  const draw = $("#hex-challenger-draw");
+  const waitBd = $("#wait-confirm-backdrop");
+  const passBtn = $("#btn-mp-pass-device");
+  const lobbyBtn = $("#btn-lobby");
+  const mp = mpBridge();
+  let hex = null;
+  try {
+    hex = hexWorkshop || ensureHexWorkshop();
+  } catch {
+    hex = hexWorkshop;
+  }
+  const beatCount = Array.isArray(brief.beats) ? brief.beats.length : 0;
+  return {
+    screen: state.screen,
+    place: mission.place || "",
+    spotlightTechId: spotlightId,
+    spotlightName: spotlightTech?.name || "",
+    spotlightEncourage: String(mission.spotlight?.encourageCopy || "").trim(),
+    suggestedIds: Array.isArray(mission.suggested) ? mission.suggested : [],
+    focusedTechId: focusId,
+    focusedTechName: focusTech?.name || "",
+    isLearning: Boolean(mission.isLearningModule),
+    tutorOn: isLearningTutorSessionActive(),
+    sideTab: state.sideTab || "vision",
+    briefing: {
+      active: Boolean(brief.active),
+      index: Number(brief.index) || 0,
+      beatCount,
+      dismissedOnFirstBeat:
+        !brief.active && beatCount > 0 && (Number(brief.index) || 0) === 0,
+    },
+    unplacedInventionCount: unplaced.length,
+    placedInventionCount: placed.length,
+    howTextLength: String($("#hex-how-text")?.value || "").trim().length,
+    hasSparkBatch: Boolean(focusId && hex?.hasSparkBatch?.(focusId)),
+    pathway: {
+      overall: panel.overall,
+      bonds: panel.bonds?.level || "red",
+      coverage: panel.coverage?.level || "red",
+      timingLevel: panel.timingLevel || panel.timing?.level || "red",
+      timingPending: Boolean(
+        panel.timing?.pending || boardPathwayReevaluating(board)
+      ),
+    },
+    concernsOnBoard: concernAnglesOnBoard(board).length,
+    remainingConcerns: remainingConcernAngles(board).length,
+    concernsSummoned: Boolean(board.concernsSummoned),
+    boardHolds: boardHolds(board),
+    unansweredConcernId: unanswered?.id || null,
+    concernAnswerPending: pendingAnswer,
+    redGivenId: redGiven?.id || null,
+    redInventionId: redInvention?.id || null,
+    uncoveredGivenId: uncoveredTile?.id || uncoveredIds[0] || null,
+    uncoveredGivenName: String(uncoveredTile?.name || "").trim(),
+    uncoveredCount: Number(panel.bonds?.uncovered) || uncoveredIds.length,
+    bondsNote: String(panel.bonds?.note || "").trim(),
+    coverageNote: String(panel.coverage?.note || "").trim(),
+    coverageReds: Number(panel.reds) || 0,
+    ap: getSpendableAp(),
+    apEnabled: apEnabled(),
+    budget: Number(state.budget) || 0,
+    budgetWillEnabled: budgetWillEnabled(),
+    will: Number(state.will) || 0,
+    lobbyVisible: Boolean(lobbyBtn && !lobbyBtn.hidden),
+    mp: {
+      spectator: isMpInventSpectator(),
+      viewingOther: Boolean(mp?.viewingOther?.()),
+      hotseat: Boolean(hotseatBridge.isHotseat?.()),
+      needPassDevice: Boolean(passBtn && !passBtn.hidden),
+    },
+    ui: {
+      techCatalogHidden: isTechCatalogHidden(),
+      waitConfirmOpen: Boolean(waitBd?.classList.contains("open")),
+      tilePopupOpen: Boolean(popup && !popup.hidden),
+      convergenceOpen: Boolean(conv && !conv.hidden),
+      createBusy: Boolean(hex?.isCreateBusy?.()),
+      summonBusy: Boolean(hex?.isSummonBusy?.()),
+      challengerDrawOpen: Boolean(draw && !draw.hidden),
+    },
+    islandHowEmpty,
+    coinventorUsed,
+    learnOpenedThisTurn: Boolean(state.learnOpenedThisTurn),
+    waitUsed: (Number(state.waits) || 0) > 0,
+  };
+}
+
+async function ensureTourTargetVisible(step) {
+  const needsCatalog =
+    step?.target?.kind === "tech" ||
+    step?.id === "E0" ||
+    step?.id === "E1" ||
+    step?.id === "E2" ||
+    step?.id === "E3";
+  const layout = tourWorkshopLayout();
+  if (layout && needsCatalog) {
+    if (isTechDrawerMode()) {
+      setTechDrawerOpen(layout, true, { focus: false });
+    } else if (isTechRailCollapsed(layout)) {
+      setTechRailPeek(layout, true);
+    }
+    await new Promise((r) => {
+      requestAnimationFrame(() => requestAnimationFrame(r));
+    });
+  }
+  const el = queryTourTarget(step);
+  try {
+    el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  } catch {
+    /* ignore */
+  }
+}
+
+const guidedTour = createGuidedTour({
+  onOpenRules: () => $("#help-backdrop")?.classList.add("open"),
+  restoreFocusEl: () => $("#btn-help"),
+  ensureTargetVisible: ensureTourTargetVisible,
+  snapshot: () => tourSnapshot(),
+});
+
+function refreshGuidedTour() {
+  if (!guidedTour.isOpen()) return;
+  void guidedTour.refresh(tourSnapshot());
+}
+
+function openGuidedTour() {
+  void guidedTour.open(tourSnapshot());
+}
+
 function bind() {
   // Title actions first — never let multiplayer/friends setup block the home screen.
   $("#btn-start")?.addEventListener("click", () => {
@@ -20511,22 +20716,27 @@ function bind() {
     if (e.target.id === "modal-backdrop") closeModal();
   });
 
-  const openHelp = () => $("#help-backdrop")?.classList.add("open");
   const closeHelp = () => $("#help-backdrop")?.classList.remove("open");
-  $("#btn-help")?.addEventListener("click", openHelp);
-  $("#btn-challenge-help")?.addEventListener("click", openHelp);
-  $("#btn-deploy-help")?.addEventListener("click", openHelp);
+  $("#btn-help")?.addEventListener("click", () => openGuidedTour());
+  $("#btn-challenge-help")?.addEventListener("click", () => openGuidedTour());
+  $("#btn-deploy-help")?.addEventListener("click", () => openGuidedTour());
   $("#help-close")?.addEventListener("click", closeHelp);
   $("#help-backdrop")?.addEventListener("click", (e) => {
     if (e.target.id === "help-backdrop") closeHelp();
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
+    if (e.key !== "Escape") return;
+    if ($("#help-backdrop")?.classList.contains("open")) {
       closeHelp();
-      closeCloudProfile();
+      return;
     }
+    if (guidedTour.isOpen()) {
+      guidedTour.close();
+      return;
+    }
+    closeModal();
+    closeCloudProfile();
   });
 
   $("#game-title").textContent = GAME.title;

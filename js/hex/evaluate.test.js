@@ -1773,6 +1773,7 @@ describe("ambient crisis lamps + Bonds coverage", () => {
     });
     assert.equal(boardBondsLevel(board).level, "red");
     assert.match(boardBondsLevel(board).note, /1 hex/);
+    assert.deepEqual(boardBondsLevel(board).uncoveredIds, ["concern-moloch"]);
   });
 
   it("overall pathway is red when Bonds is red even if coverage is not", () => {
