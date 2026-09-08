@@ -3,10 +3,11 @@
 1. Write UTF-8 JSON (pretty-printed OK).
 2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). `summary` is 2–3 short sentences (global problem, situation, what we’re solving for) — not a scene. Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
 3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
-4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`.
+4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`. Difficulty: `references/economy.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 6. Run `npm run validate:quest -- <file>` until `OK:`.
-7. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
+7. Run `npm run economy:quest -- <file>` until the quest verdict is **challenging** (solo-AI year should match solo-no-AI).
+8. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
 
 ---
 

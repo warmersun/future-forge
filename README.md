@@ -56,11 +56,12 @@ Open **http://127.0.0.1:8765**
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
+| `npm run economy:quest -- path.json` | Simulate four players; say if the Quest is too easy / too hard / tight ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)) |
 | `npm run author:quest -- --tech gene-sequencing --local-only` | Scaffold a spotlight Quest tile |
 
 ### Spotlight / External Quest tiles
 
-AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md` and the MIT skill package `skills/future-forge-quest/`.
+AI agents (any harness) can research a recent emTech advance and author a portable **Quest tile** JSON. See `docs/quest-tile-schema.md`, the MIT skill package `skills/future-forge-quest/`, and the difficulty simulator in [`docs/quest-economy-lab.md`](docs/quest-economy-lab.md).
 
 **Server folder (recommended for classrooms / Friends):**
 
@@ -149,7 +150,7 @@ Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`
 
 **Off by default.** When on, the browser unlocks developer chrome (not automatic dump of all tiles). Production `npm start` must leave this off.
 
-- **Quests:** **Developer** on catalog cards → inspect modal (markdown + JSON).
+- **Quests:** **Developer** on catalog cards → inspect modal (markdown + JSON). **Economy lab** at `/tools/quest-economy` pretends four players and charts crisis vs calendar ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)).
 - **Trends:** Look Ahead stays stack-only until you click **Developer view** (then all catalog tiles; per-card **Developer** opens player chart + JSON). **Player view** returns to the normal stack charts.
 
 ```bash

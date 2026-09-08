@@ -1170,6 +1170,104 @@ describe("mp-session pay_ap", () => {
     assert.equal(s.invents["seat-0"].ap, ap0);
     assert.equal(s.invents["seat-0"].apSpentThisTurn, spent0);
   });
+
+  it("amount 0 stays 0 when there is no AI mode", () => {
+    const s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    const r = applyMpAction(s, { type: "pay_ap", payload: { amount: 0 } });
+    assert.equal(r.ok, true);
+    assert.equal(r.session.invents["seat-0"].ap, ap0);
+    assert.equal(r.events.find((e) => e.type === "pay_ap")?.amount, 0);
+  });
+
+  it("first thinking ask costs 1 AP; further thinking is free; judge still 1", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "chat" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "idea-sparks" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "judge-challenge" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+  });
+
+  it("judge then chat still costs 1 AP for the first thinking ask", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "judge-challenge" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, false);
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "chat" },
+    }).session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 2);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+  });
+
+  it("thinking pay_ap ignores client amount 0", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    const r = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 0, mode: "chat" },
+    });
+    assert.equal(r.ok, true);
+    s = r.session;
+    assert.equal(s.invents["seat-0"].ap, ap0 - 1);
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+  });
+
+  it("refund_ap after a thinking ask clears the season tax", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "pay_ap",
+      payload: { amount: 1, mode: "chat" },
+    }).session;
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, true);
+    s = applyMpAction(s, { type: "refund_ap", payload: { amount: 1 } }).session;
+    assert.equal(s.invents["seat-0"].aiTaxThisTurn, false);
+  });
+});
+
+describe("mp-session wrap hex pressureBase", () => {
+  it("table wrap rises each seat hex pressureBase with shared meters", () => {
+    let s = started();
+    const floods0 = s.invents["seat-0"].hexBoard.pressureBase.Floods;
+    const floods1 = s.invents["seat-1"].hexBoard.pressureBase.Floods;
+    assert.equal(floods0, 2);
+    assert.equal(floods1, 2);
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "a" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionHow", value: "b" },
+    }).session;
+    const r = applyMpAction(s, { type: "end_turn" });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.ok(r.events.some((e) => e.type === "year_tick"));
+    assert.equal(s.place.pressure.Floods, 3);
+    assert.equal(s.invents["seat-0"].hexBoard.pressureBase.Floods, 3);
+    assert.equal(s.invents["seat-1"].hexBoard.pressureBase.Floods, 3);
+  });
 });
 
 describe("mp-session pay_budget", () => {

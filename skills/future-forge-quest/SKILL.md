@@ -6,8 +6,8 @@ description: >
   tile (JSON). Portable multi-harness skill — not tied to a single agent product.
   Player-facing prose states the invent job in everyday words first; story craft
   follows. Supports structured crisis meters, optional resources, grounding,
-  learning-module tutor mode, multi-lesson sets (display-only progress), and
-  sponsor attribution.
+  learning-module tutor mode, multi-lesson sets (display-only progress),
+  sponsor attribution, and the quest economy evaluator (too easy / too hard / tight).
 ---
 
 # Future Forge Spotlight Quest author
@@ -46,6 +46,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 | **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
 | **`references/brief-template.md`** | `briefMd` headings (job first; short paragraphs = walkthrough cards) |
 | **`references/brief-beats.md`** | How the invent screen steps the brief; optional authored `briefBeats` |
+| **`references/economy.md`** | Quest economy evaluator — too easy / too hard / tight; CLI + lab |
 
 ## Hard rules
 
@@ -60,6 +61,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 9. Sensitive themes: `references/sensitivity.md`.
 10. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
 11. Validate: `npm run validate:quest -- <file>` until `OK:`.
+12. Economy: `npm run economy:quest -- <file>` until the quest verdict is **challenging** (`references/economy.md`). Do not ship a tile the lab calls too easy or too hard without a reason.
 
 ## Optional extensions (combinable)
 
@@ -155,7 +157,10 @@ Use **`references/output-contract.md`** (base skeleton + recipes). Run:
 
 ```bash
 npm run validate:quest -- <file>
+npm run economy:quest -- <file>
 ```
+
+Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.md`**.
 
 ### 9. Hand off
 
@@ -187,7 +192,8 @@ npm run validate:quest -- <file>
 - [ ] Learning media (if any): https-only resource links / illustrations in `aiTutorContext`; paced for tutor chat, not a first-turn dump; SEQUENCE does not say “open the page, do not answer”  
 - [ ] Sponsor: text-only; invent still required; capability chain in `grounding`  
 - [ ] Combinations validated if used together  
-- [ ] `npm run validate:quest` → `OK:`  
+- [ ] `npm run validate:quest` → `OK:`
+- [ ] `npm run economy:quest` → quest verdict `challenging`; solo-AI year matches solo-no-AI  
 
 ## Non-goals
 

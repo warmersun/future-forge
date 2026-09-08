@@ -984,7 +984,10 @@ export class RoomManager {
     const clientActionId =
       payload.clientActionId ||
       `ai-${player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const reservedAp = payload.reservedAp ?? 1;
+    // Thinking tax ignores client reservedAp (a 0 would skip the first-ask AP).
+    // Tutor is the only free-chat escape, and it must be explicit.
+    const tutor = Boolean(payload.tutor || payload.context?.tutorMode);
+    const reservedAp = tutor ? 0 : 1;
 
     const slice = inventPlaceShim(publicMpState(room.mp), player.id);
     if (!slice) return { ok: false, error: "no_forge" };
@@ -993,8 +996,8 @@ export class RoomManager {
       slice,
       room.aiQuota,
       player.id,
-      { mode, reservedAp, clientActionId, playerId: player.id },
-      { features: { actionPoints: true, multiplayer: true }, apMax: slice.apMax }
+      { mode, reservedAp, tutor, clientActionId, playerId: player.id },
+      { features: { actionPoints: true, multiplayer: true }, apMax: slice.apMax, tutor }
     );
 
     if (!reserved.ok) {

@@ -175,6 +175,25 @@ describe("ai_jobs quotas", () => {
     assert.equal(rej.ok, true);
     assert.equal(rej.sim.ap, startAp);
     assert.equal(rej.sim.pendingAi, null);
+    assert.equal(rej.sim.apSpentThisTurn, 0);
+    assert.equal(rej.sim.aiTaxThisTurn, false);
+  });
+
+  it("reservedAp 0 without tutor still spends first thinking AP", () => {
+    const sim = freshSim();
+    const quota = createRoomAiQuotaState();
+    const startAp = sim.ap;
+    const r = reserveRoomAiJob(
+      sim,
+      quota,
+      "p1",
+      { mode: "chat", reservedAp: 0, clientActionId: "sneak" },
+      { features: sim.featureFlags }
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.ap, startAp - 1);
+    assert.equal(r.sim.aiTaxThisTurn, true);
+    assert.equal(r.sim.pendingAi.reservedAp, 1);
   });
 
   it("idempotent clientActionId does not double-spend", () => {

@@ -130,7 +130,9 @@ export function applyAction(sim, action, opts = {}) {
   if (type === "reserve_ai") {
     const mode = action.payload?.mode || "chat";
     const requested = action.payload?.reservedAp ?? 1;
-    const charge = applyThinkingAiCharge(next, mode, requested);
+    const charge = applyThinkingAiCharge(next, mode, requested, {
+      tutor: Boolean(action.payload?.tutor),
+    });
     const cost = charge.cost;
     if (apOn && cost > 0 && !spendAp(cost)) return { ok: false, error: "no_ap", sim };
     if (charge.markPaid) next.aiTaxThisTurn = true;
@@ -180,6 +182,7 @@ export function applyAction(sim, action, opts = {}) {
     if (apOn && n > 0) {
       next.ap = Math.min(apMax, (next.ap || 0) + n);
       next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - n);
+      next.aiTaxThisTurn = false;
     }
     return { ok: true, events: [{ type: "refund_ap", amount: n }], sim: next };
   }

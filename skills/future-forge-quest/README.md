@@ -19,6 +19,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 | **Multi-lesson sets** | `kind: "module"` wrapper + lesson JSON files (display-only progress; no engine unlock). Sponsored paths show under Sponsored |
 | **Sponsors** | Text-only `sponsorName` / `sponsorBanner`; invent still required |
 | **Briefing walkthrough** | Invent screen steps `briefMd` one short paragraph at a time; optional `briefBeats` for tighter captions and shipped stills (`imageUrl`) |
+| **Economy lab** | After validate: simulate four players; target verdict **challenging** (`references/economy.md`) |
 
 All optional features may be **combined** on one tile (see `examples/spotlight-sponsored-learning.json`).
 
@@ -31,6 +32,7 @@ All optional features may be **combined** on one tile (see `examples/spotlight-s
 | **`references/output-contract.md`** | Skeleton + recipes A–F |
 | **`references/scene-prose.md`** | Player-facing lede craft + plain-language job |
 | **`references/brief-beats.md`** | Walkthrough cards; optional authored `briefBeats` |
+| **`references/economy.md`** | Difficulty evaluator (too easy / too hard / tight) |
 
 ## Not under `.grok/`
 
@@ -43,11 +45,14 @@ Works with Grok, Claude Code, Cursor, Codex, and plain “read this folder” wo
 3. Read **`references/brief-template.md`** (**Your job** first; ~250–600 words; short paragraphs for the walkthrough). Read **`references/brief-beats.md`** if emitting optional `briefBeats`.
 4. Read **`references/schema.md`** and **`grounding-template.md`** (+ **`learning-and-sponsor.md`** if module or sponsor).
 5. Write the JSON; **omit** unused optional keys. Keep lab terms in `grounding` / `aiTutorContext`.
-6. Validate:
+6. Validate, then check difficulty:
 
 ```bash
 npm run validate:quest -- output/quests/<slug>/quest.json
+npm run economy:quest -- output/quests/<slug>/quest.json
 ```
+
+Target quest verdict **challenging**. See **`references/economy.md`**.
 
 7. Hand-off:
    - Copy into game **`quests/`** and refresh (External Quests), or  
@@ -69,4 +74,4 @@ Monorepo also has richer classroom tiles under `quests/` (e.g. `kimi-k3.json`).
 npm run author:quest -- --tech gene-sequencing --local-only
 ```
 
-CLI output is a **stub** — re-check against `references/schema.md`, add `grounding` / learning / sponsor as needed, and re-validate.
+CLI output is a **stub** — re-check against `references/schema.md`, add `grounding` / learning / sponsor as needed, then `validate:quest` and `economy:quest`.

@@ -904,11 +904,11 @@ export function createHexWorkshop(api) {
           pressureLine +=
             " If it hits <strong>5</strong>, the place falls.";
           if (rise != null && rise > 0) {
-            pressureLine += ` Wait raises this meter by <strong>${escapeHtml(String(rise))}</strong>.`;
+            pressureLine += ` Each calendar year raises this meter by <strong>${escapeHtml(String(rise))}</strong> (End turn once; Wait usually twice).`;
           } else if (rise === 0) {
-            pressureLine += " Wait does not raise this meter.";
+            pressureLine += " Time does not raise this meter.";
           } else {
-            pressureLine += " Waiting a year makes it worse.";
+            pressureLine += " Each calendar year makes it worse.";
           }
           parts.push(`<p>${pressureLine}</p>`);
         }

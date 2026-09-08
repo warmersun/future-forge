@@ -375,6 +375,7 @@ export class RoomClient {
               context: body.context,
               clientSessionId: body.clientSessionId || getClientSessionId(),
               reservedAp: body.reservedAp ?? 1,
+              tutor: Boolean(body.tutor || body.context?.tutorMode),
               clientActionId,
               userLabel: body.userLabel,
               prompt: body.prompt,

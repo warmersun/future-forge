@@ -12,8 +12,9 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 
 1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest`).
 2. Validate: `npm run validate:quest -- path.json`
-3. Copy into this folder (or set `FF_QUESTS_DIR`).
-4. Start the server: `npm start` — Library lists local tiles; Import still works in the hub.
+3. Check difficulty: `npm run economy:quest -- path.json` (guide: [`docs/quest-economy-lab.md`](../docs/quest-economy-lab.md)). Target verdict **challenging**.
+4. Copy into this folder (or set `FF_QUESTS_DIR`).
+5. Start the server: `npm start` — Library lists local tiles; Import still works in the hub.
 
 ## Official sponsored / learning
 
@@ -42,7 +43,7 @@ Capability trends (Wait charts) use a separate catalog — see [`docs/capability
 - Only `*.json` files in **this folder** (not subfolders).
 - Must pass `npm run validate:quest -- path.json`.
 - Invalid files are skipped (logged in `/api/quests` as errors).
-- **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`. Optional `description` per role is recommended on new tiles; omitted is valid.
+- **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`. Optional `description` per role is recommended on new tiles; omitted is valid. Tune start / rise / wallet with the [Quest economy lab](../docs/quest-economy-lab.md).
 
 ## Sample library tiles
 

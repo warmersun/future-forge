@@ -129,7 +129,9 @@ export function reserveAiOnSim(sim, payload = {}, opts = {}) {
     pressure: { ...(sim.pressure || {}) },
     techAddedThisTurn: { ...(sim.techAddedThisTurn || {}) },
   };
-  const charge = applyThinkingAiCharge(next, mode, requested);
+  const charge = applyThinkingAiCharge(next, mode, requested, {
+    tutor: Boolean(opts.tutor || payload.tutor),
+  });
   const cost = charge.cost;
   if (apOn && cost > 0) {
     if ((next.ap ?? 0) < cost) {
@@ -187,6 +189,7 @@ export function rejectAiOnSim(sim, opts = {}) {
   const refund = pending?.reservedAp || 0;
   if (apOn && refund > 0) {
     next.ap = Math.min(apMax, (next.ap || 0) + refund);
+    next.apSpentThisTurn = Math.max(0, (next.apSpentThisTurn || 0) - refund);
     if (isAiSeasonTaxMode(pending?.mode)) next.aiTaxThisTurn = false;
   }
   const clientActionId = pending?.clientActionId || opts.clientActionId || null;
@@ -246,7 +249,7 @@ export function reserveRoomAiJob(sim, quota, playerId, payload = {}, opts = {}) 
       status: "pending",
       playerId,
       mode,
-      reservedAp: payload.reservedAp ?? 1,
+      reservedAp: reserved.sim?.pendingAi?.reservedAp ?? 0,
       createdAt: opts.now ?? Date.now(),
     };
   }

@@ -39,11 +39,13 @@ export function applyPressureRiseYears(pressure, rise = {}, years = 1, cap = 5) 
 
 /**
  * Predict pressure after one Wait without mutating.
+ * Wait jumps `years` (default yearsPerTurn = 2) and applies rise once per year.
  * @param {Record<string, number>} pressure
  * @param {Record<string, number>} rise
+ * @param {number} [years=2]
  */
-export function previewPressureAfterWait(pressure, rise = {}) {
-  return applyPressureRise(pressure, rise, 5);
+export function previewPressureAfterWait(pressure, rise = {}, years = 2) {
+  return applyPressureRiseYears(pressure, rise, years, 5);
 }
 
 /**

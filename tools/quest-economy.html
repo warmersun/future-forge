@@ -27,9 +27,14 @@
         <li><strong>Start a Quest</strong> — Themes, Sponsored, Learning, or Library, then a card (place + picture, not only the title).</li>
         <li><strong>Tiles vs pathways</strong> — tiles cost Attention; a pathway is a connected island and is what eases meters.</li>
         <li><strong>AI Attention</strong> — first AI ask of a turn is 1 AP; more thinking that turn is free. Judge/submit still costs 1 AP.</li>
-        <li><strong>Year table</strong> — one row per calendar year. Meters stay whole numbers on in-between years; they jump on a Wait (never +0.5). 5 is lose.</li>
-        <li><strong>Crisis chart</strong> — T0 is the start. Solid dots are this path’s actions (hover for the action). Dashed line: if they never invent, solo Waits climb to lose. Pink band is red (4–5).</li>
+        <li><strong>Year table</strong> — one row per calendar year. Each year applies rise once (End turn). Wait is the same rise twice (usually). Whole numbers only. 5 is lose.</li>
+        <li><strong>Crisis chart</strong> — T0 is the start. Solid dots are this path’s actions (hover for the action). Dashed line: if they never invent, calendar years still climb. Pink band is red (4–5).</li>
+        <li><strong>Friends</strong> — personal Wait does not raise shared meters; table wrap (+1 year) does. The two-act Friends path uses wrap, not Wait +2.</li>
       </ol>
+      <p class="muted sm">
+        CLI: <code>npm run economy:quest -- path/to/quest.json</code>.
+        Repo guide: <code>docs/quest-economy-lab.md</code>.
+      </p>
     </details>
 
     <section id="econ-pick" class="econ-pick">

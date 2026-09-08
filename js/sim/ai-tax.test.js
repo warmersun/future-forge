@@ -33,11 +33,21 @@ describe("AI season tax", () => {
     assert.equal(thinkingAiApCost(taxed, "judge-challenge", 1), 1);
   });
 
-  it("explicit 0 AP (tutor) does not pay the tax", () => {
+  it("explicit tutor flag does not pay the tax", () => {
     const sim = { aiTaxThisTurn: false };
-    const r = applyThinkingAiCharge(sim, "chat", 0);
+    const r = applyThinkingAiCharge(sim, "chat", 0, { tutor: true });
     assert.equal(r.cost, 0);
     assert.equal(r.markPaid, false);
-    assert.equal(thinkingAiApCost(sim, "chat", 0), 0);
+    assert.equal(thinkingAiApCost(sim, "chat", 0, { tutor: true }), 0);
+  });
+
+  it("client reservedAp 0 still costs 1 AP for thinking unless tutor", () => {
+    const sim = { aiTaxThisTurn: false };
+    const sneak = applyThinkingAiCharge(sim, "chat", 0);
+    assert.equal(sneak.cost, 1);
+    assert.equal(sneak.markPaid, true);
+    const judgeZero = applyThinkingAiCharge(sim, "judge-challenge", 0);
+    assert.equal(judgeZero.cost, 1);
+    assert.equal(judgeZero.markPaid, false);
   });
 });

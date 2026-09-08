@@ -478,7 +478,8 @@ const UNTREATED_WAIT_CAP = 12;
 
 /**
  * Solo Wait-only clock: meters climb until collapse (any meter at 5) or fail year.
- * End turn is not on this axis (year moves, meters do not).
+ * Each Wait jumps `yearsPerTurn` and applies rise once per year (usually ×2).
+ * Use yearlyCrisisClock for the End-turn (+1 year, +rise once) axis.
  * @param {object} knobs
  * @returns {{ waits: number, year: number, pressure: object, collapsed: boolean, reason: string|null }[]}
  */
@@ -649,6 +650,22 @@ function applyPathwayRelief(pressure, knobs, pathways) {
 }
 
 /**
+ * Lab Wait on display meters: keep pathway relief, apply rise × years jumped.
+ * Friends personal Wait does not raise shared meters.
+ * @param {Record<string, number>} displayPressure
+ * @param {object} knobs
+ * @param {{ friends?: boolean }} [opts]
+ */
+export function pressureAfterLabWait(displayPressure, knobs, opts = {}) {
+  if (opts.friends) return clonePressure(displayPressure);
+  return applyPressureRiseYears(
+    displayPressure,
+    knobs.pressureRise || {},
+    knobs.yearsPerTurn || 2
+  );
+}
+
+/**
  * Scripted competent path through applyAction + analytical hex relief.
  * @param {object} knobs
  * @param {object} archetype
@@ -693,13 +710,14 @@ export function simulateArchetype(knobs, archetype) {
   let aiAp = 0;
 
   const payAi = (step, mode, apCost = 1) => {
-    const requested = knobs.isLearningModule && mode === "chat" ? 0 : apCost;
+    const tutor = knobs.isLearningModule && mode === "chat";
+    const requested = tutor ? 0 : apCost;
     const row = { step, mode, ap: 0 };
     aiBill.push(row);
     const tryReserve = () =>
       labAction(
         sim,
-        { type: "reserve_ai", payload: { reservedAp: requested, mode } },
+        { type: "reserve_ai", payload: { reservedAp: requested, mode, tutor } },
         actionOpts
       );
     let r = tryReserve();
@@ -744,12 +762,27 @@ export function simulateArchetype(knobs, archetype) {
 
   const yearAfter = (delta) => (sim.year || knobs.startYear) + delta;
 
-  const wouldCollapseYear = (nextYear) =>
+  const collapsedNow = (year) =>
     isCollapsed({
-      year: nextYear,
+      year,
       collapseYear: knobs.collapseYear,
       pressure: displayPressure,
-    });
+    }) || maxPressure(displayPressure) >= 5;
+
+  const wouldCollapseAfter = (nextYear, riseYears) => {
+    const preview = applyPressureRiseYears(
+      displayPressure,
+      knobs.pressureRise,
+      riseYears
+    );
+    return (
+      isCollapsed({
+        year: nextYear,
+        collapseYear: knobs.collapseYear,
+        pressure: preview,
+      }) || maxPressure(preview) >= 5
+    );
+  };
 
   const refill = () => {
     const r = labAction(sim, { type: "end_turn", payload: { missionId: knobs.id } }, actionOpts);
@@ -766,10 +799,7 @@ export function simulateArchetype(knobs, archetype) {
     );
     actions.push({ type: "end_turn" });
     snap("end_turn");
-    if (
-      wouldCollapseYear(sim.year) ||
-      maxPressure(displayPressure) >= 5
-    ) {
+    if (collapsedNow(sim.year)) {
       blocked = { error: "collapsed", resource: "calendar" };
       return false;
     }
@@ -777,9 +807,28 @@ export function simulateArchetype(knobs, archetype) {
   };
 
   const waitOnce = () => {
+    const step = knobs.yearsPerTurn || 2;
     if (archetype.mode === "friends") {
-      // Friends Wait does not raise shared meters; treat as a worse calendar burn.
-      return refill();
+      // Personal Wait: calendar jump + AP refill; shared meters unchanged (wrap is refill()).
+      sim = {
+        ...sim,
+        year: (sim.year || knobs.startYear) + step,
+        waits: (sim.waits || 0) + 1,
+        ap: knobs.apMax,
+        apSpentThisTurn: 0,
+        writeCommitsThisTurn: 0,
+        learnOpenedThisTurn: false,
+        aiTaxThisTurn: false,
+        techAddedThisTurn: {},
+      };
+      waits += 1;
+      actions.push({ type: "wait" });
+      snap("wait");
+      if (collapsedNow(sim.year)) {
+        blocked = { error: "collapsed", resource: "calendar" };
+        return false;
+      }
+      return true;
     }
     const r = labAction(
       sim,
@@ -803,16 +852,10 @@ export function simulateArchetype(knobs, archetype) {
     }
     sim = r.sim;
     waits += 1;
-    displayPressure = clonePressure(sim.pressure);
+    displayPressure = pressureAfterLabWait(displayPressure, knobs, { friends: false });
     actions.push({ type: "wait" });
     snap("wait");
-    if (
-      isCollapsed({
-        year: sim.year,
-        collapseYear: knobs.collapseYear,
-        pressure: displayPressure,
-      })
-    ) {
+    if (collapsedNow(sim.year)) {
       blocked = { error: "collapsed", resource: "calendar" };
       return false;
     }
@@ -822,26 +865,27 @@ export function simulateArchetype(knobs, archetype) {
   const ensureAp = (n) => {
     while ((sim.ap ?? 0) < n) {
       const nextEnd = yearAfter(1);
-      if (!wouldCollapseYear(nextEnd)) {
+      if (!wouldCollapseAfter(nextEnd, 1)) {
         if (!refill()) return false;
         continue;
       }
-      // Calendar too tight for End turn — solo Wait only if meters stay off red/collapse.
-      if (archetype.mode === "solo") {
-        const preview = {};
-        for (const m of knobs.meters) {
-          preview[m.key] = Math.min(5, (displayPressure[m.key] ?? 0) + (m.rise || 0));
-        }
-        const waitYear = yearAfter(knobs.yearsPerTurn);
-        const waitCollapse =
-          waitYear >= knobs.collapseYear || maxPressure(preview) >= 5;
-        const waitRed = knobs.meters.some(
-          (m) => crisisMeterLevel(preview[m.key], m.winMax) === "hot"
-        );
-        if (!waitCollapse && !waitRed) {
-          if (!waitOnce()) return false;
-          continue;
-        }
+      // Calendar too tight for End turn / wrap — Wait only if meters stay off red/collapse.
+      const step = knobs.yearsPerTurn || 2;
+      const riseYears = archetype.mode === "friends" ? 0 : step;
+      const preview = applyPressureRiseYears(
+        displayPressure,
+        knobs.pressureRise,
+        riseYears
+      );
+      const waitYear = yearAfter(step);
+      const waitCollapse =
+        waitYear >= knobs.collapseYear || maxPressure(preview) >= 5;
+      const waitRed = knobs.meters.some(
+        (m) => crisisMeterLevel(preview[m.key], m.winMax) === "hot"
+      );
+      if (!waitCollapse && !waitRed) {
+        if (!waitOnce()) return false;
+        continue;
       }
       blocked = { error: "no_ap", resource: "calendar" };
       return false;

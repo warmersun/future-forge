@@ -921,13 +921,13 @@ function actionExplain(row, meter, value) {
   if (note === "end_turn") {
     return {
       title: "End turn",
-      body: `${when}. Attention refilled. Year +1. Crisis meters do not rise. ${meterBit}.`,
+      body: `${when}. Attention refilled. Year +1. Crisis meters rise one year. ${meterBit}.`,
     };
   }
   if (note === "wait") {
     return {
       title: "Wait",
-      body: `${when}. They let time pass. Solo meters rise. ${meterBit}.`,
+      body: `${when}. They let time pass. Solo Wait jumps the calendar and raises meters once per year jumped. Friends personal Wait does not raise shared meters. ${meterBit}.`,
     };
   }
   if (note === "lobby") {

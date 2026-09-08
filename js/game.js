@@ -141,7 +141,7 @@ import {
   simSliceFromState,
   applySimSliceToState,
 } from "./sim/actions.js";
-import { thinkingAiApCost } from "./sim/ai-tax.js";
+import { applyThinkingAiCharge, thinkingAiApCost } from "./sim/ai-tax.js";
 import { techCost as techCostRaw, deployActionCost, scaleActionCost } from "./sim/economy.js";
 import {
   describeMarketEffects,
@@ -2257,6 +2257,32 @@ function renderMpChrome() {
   applyMpContributionLockToDom();
 }
 
+/**
+ * Friends wrap already rose place.pressure. Rise the viewed hex pressureBase
+ * if it is still behind, then re-apply pathway deltas.
+ */
+function applyWrapYearPressureToHex() {
+  if (!isHexInventUi()) return;
+  try {
+    const rise = state.mission?.pressureRise || {};
+    const base = state.hexBoard?.pressureBase;
+    const placeP = state.pressure;
+    if (base && placeP) {
+      const behind = Object.keys(rise).some(
+        (k) => (Number(rise[k]) || 0) > 0 && (base[k] ?? 0) < (placeP[k] ?? 0)
+      );
+      if (!behind) {
+        ensureHexWorkshop().refreshAfterYearChange?.();
+        return;
+      }
+    }
+    ensureHexWorkshop().afterYearPressureRise?.(rise, 1);
+    ensureHexWorkshop().refreshAfterYearChange?.();
+  } catch (e) {
+    console.warn("[hex wrap pressure]", e);
+  }
+}
+
 function mpPassDevice() {
   // Online rooms never use Pass device — only hotseat
   if (!hotseatBridge.isHotseat()) {
@@ -2299,6 +2325,7 @@ function mpPassDevice() {
   mpHydrateAndRender({
     skipTurnNotice: Boolean(marketEv?.marketNews),
   });
+  if (yearEv) applyWrapYearPressureToHex();
   // Turn notice after market (or immediately if no market card)
   const nextName = r.seat?.displayName || hotseatBridge.activeSeat()?.displayName || "next";
   if (nextId) {
@@ -2547,6 +2574,7 @@ function handleRoomPlayEvent(client, evt) {
     // and sidestep isn't blocked by a stale "AP 1" chip while state.ap is already 0.
     syncRoomResourcesFromSnapshot();
   }
+  if (yearEv) applyWrapYearPressureToHex();
 
   // Follow only on meaningful events (not every presence/hello)
   const meaningful = events.some((e) =>
@@ -13929,7 +13957,8 @@ async function coachChallenge(mode, userText) {
         roomApPaid = true;
         state.ap = Math.max(0, apHave - helpCost);
         state.apSpentThisTurn = (state.apSpentThisTurn || 0) + helpCost;
-        state.aiTaxThisTurn = true;
+        const charge = applyThinkingAiCharge(state, mode, helpCost);
+        if (charge.markPaid) state.aiTaxThisTurn = true;
       } catch (e) {
         flashToast(mpFriendlyError(e.message) || "Could not spend AP for AI help");
         return;
@@ -17132,12 +17161,29 @@ function maybeSeedCoInventorWelcome() {
   );
 }
 
+/** Room hex co-inventor must hit requestAi so the server season-tax is paid. */
+function roomCoInventTransport() {
+  if (!roomBridge.isRoom()) return null;
+  const client = roomBridge.client?.();
+  if (!client?.requestAiAsync) return null;
+  return (body) => {
+    const tutor = isLearningTutorSessionActive();
+    return client.requestAiAsync({
+      ...body,
+      tutor,
+      reservedAp: tutor ? 0 : 1,
+    });
+  };
+}
+
 function ensureCoInventor() {
   const root = coInventorRootEl();
   if (!root) return state.coInventor;
+  const roomTransport = roomCoInventTransport();
   // Remount when switching Invent ↔ Challenge ↔ Deploy so the panel lives on the active screen
   if (state.coInventor && state.coInventor.root === root) {
     state.coInventor.surface = hexInventSurface();
+    state.coInventor.transport = roomTransport;
     syncCoInventorTutorUi();
     maybeSeedCoInventorWelcome();
     return state.coInventor;
@@ -17245,9 +17291,18 @@ function ensureCoInventor() {
           ? 0
           : thinkingAiApCost(state, mode || "chat", 1);
       if (cost <= 0) return true;
+      if (roomBridge.isRoom()) {
+        // requestAi (transport) charges the server; do not local-only reserve_ai.
+        if ((state.ap ?? 0) < cost) {
+          flashToast("No AP left for co-inventor — End turn or Wait.", { resource: "ap" });
+          return false;
+        }
+        return true;
+      }
       const r = dispatchSim("reserve_ai", {
         mode: mode || "chat",
         reservedAp: 1,
+        tutor: isLearningTutorSessionActive(),
         clientActionId: `co-${Date.now()}`,
       });
       if (!r.ok) {
@@ -17260,6 +17315,7 @@ function ensureCoInventor() {
     },
     afterRequest: (_mode, ok) => {
       if (!apEnabled()) return;
+      if (roomBridge.isRoom()) return;
       // Only resolve/refund when we actually reserved AP this request
       if (!state.pendingAi) return;
       if (ok) dispatchSim("resolve_ai");
@@ -17267,6 +17323,7 @@ function ensureCoInventor() {
       renderHud();
       renderChallengeHud();
     },
+    transport: roomTransport,
   });
   state.coInventor.mount(root);
   if (prevHistories) {
@@ -17791,16 +17848,18 @@ function refundFirstSummonAp() {
  */
 function spendContributionAp(mode = "contribution") {
   if (!apEnabled()) return { ok: true, roomPaid: false };
-  const cost = thinkingAiApCost(state, mode, 1);
+  const charge = applyThinkingAiCharge(state, mode, 1, {
+    tutor: isLearningTutorSessionActive(),
+  });
+  const cost = charge.cost;
   if (roomBridge.isRoom()) {
-    if (cost > 0 && (state.ap ?? 0) < cost) return { ok: false, roomPaid: false };
+    if (cost <= 0) return { ok: true, roomPaid: false, amount: 0 };
+    if ((state.ap ?? 0) < cost) return { ok: false, roomPaid: false };
     try {
       roomBridge.send({ type: "pay_ap", payload: { amount: cost, mode } });
-      if (cost > 0) {
-        state.ap -= cost;
-        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + cost;
-        state.aiTaxThisTurn = true;
-      }
+      state.ap -= cost;
+      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + cost;
+      if (charge.markPaid) state.aiTaxThisTurn = true;
       renderHud();
       return { ok: true, roomPaid: true, amount: cost };
     } catch {
@@ -17811,6 +17870,7 @@ function spendContributionAp(mode = "contribution") {
   const res = dispatchSim("reserve_ai", {
     mode,
     reservedAp: 1,
+    tutor: isLearningTutorSessionActive(),
     clientActionId: `${mode}-${Date.now()}`,
   });
   if (!res.ok) return { ok: false, roomPaid: false };

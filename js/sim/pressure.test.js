@@ -43,9 +43,10 @@ describe("pressure", () => {
     });
   });
 
-  it("preview matches rise", () => {
+  it("preview matches Wait years (default 2)", () => {
     const p = { A: 2, B: 0 };
-    assert.deepEqual(previewPressureAfterWait(p, { A: 1, B: 1 }), { A: 3, B: 1 });
+    assert.deepEqual(previewPressureAfterWait(p, { A: 1, B: 1 }), { A: 4, B: 2 });
+    assert.deepEqual(previewPressureAfterWait(p, { A: 1, B: 1 }, 1), { A: 3, B: 1 });
   });
 
   it("drop allocates highest first", () => {
@@ -405,7 +406,7 @@ describe("actions", () => {
     assert.equal(r.sim.year, 2027);
   });
 
-  it("reserve_ai with reservedAp 0 does not spend AP (tutor free chat)", () => {
+  it("reserve_ai with reservedAp 0 does not spend AP when tutor is set", () => {
     const s = base();
     s.ap = 3;
     s.apSpentThisTurn = 0;
@@ -413,7 +414,7 @@ describe("actions", () => {
       s,
       {
         type: "reserve_ai",
-        payload: { mode: "chat", reservedAp: 0, clientActionId: "tutor" },
+        payload: { mode: "chat", reservedAp: 0, tutor: true, clientActionId: "tutor" },
       },
       { features: { actionPoints: true } }
     );
@@ -421,6 +422,55 @@ describe("actions", () => {
     assert.equal(reserved.sim.ap, 3);
     assert.equal(reserved.sim.apSpentThisTurn, 0);
     assert.equal(reserved.sim.pendingAi?.reservedAp, 0);
+  });
+
+  it("reserve_ai reservedAp 0 without tutor still pays the thinking tax", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const reserved = applyAction(
+      s,
+      {
+        type: "reserve_ai",
+        payload: { mode: "chat", reservedAp: 0, clientActionId: "sneak" },
+      },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(reserved.ok, true);
+    assert.equal(reserved.sim.ap, 2);
+    assert.equal(reserved.sim.aiTaxThisTurn, true);
+  });
+
+  it("reject_ai restores apSpentThisTurn", () => {
+    const s = base();
+    s.ap = 3;
+    s.apSpentThisTurn = 0;
+    const reserved = applyAction(
+      s,
+      { type: "reserve_ai", payload: { mode: "chat", reservedAp: 1 } },
+      { features: { actionPoints: true } }
+    );
+    assert.equal(reserved.sim.apSpentThisTurn, 1);
+    const rejected = applyAction(reserved.sim, { type: "reject_ai" }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(rejected.sim.ap, 3);
+    assert.equal(rejected.sim.apSpentThisTurn, 0);
+    assert.equal(rejected.sim.aiTaxThisTurn, false);
+  });
+
+  it("refund_ap after a thinking ask clears the season tax", () => {
+    const s = base();
+    s.ap = 2;
+    s.apSpentThisTurn = 1;
+    s.aiTaxThisTurn = true;
+    const r = applyAction(s, { type: "refund_ap", payload: { amount: 1 } }, {
+      features: { actionPoints: true },
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.sim.ap, 3);
+    assert.equal(r.sim.apSpentThisTurn, 0);
+    assert.equal(r.sim.aiTaxThisTurn, false);
   });
 
   it("end_turn raises pressure one year (year +1 market round)", () => {

@@ -437,6 +437,43 @@ describe("RoomManager", () => {
     assert.equal(room.mp.invents[host.id].ap, ap);
   });
 
+  it("requestAi reservedAp 0 without tutor still spends first thinking AP", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const startAp = room.mp.invents[host.id].ap;
+    const pending = await rm.requestAi(room, host, {
+      mode: "chat",
+      clientActionId: "sneak",
+      reservedAp: 0,
+    });
+    assert.equal(pending.ok, true);
+    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, true);
+  });
+
+  it("requestAi tutor flag keeps chat free", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const startAp = room.mp.invents[host.id].ap;
+    const pending = await rm.requestAi(room, host, {
+      mode: "chat",
+      clientActionId: "tutor",
+      reservedAp: 0,
+      tutor: true,
+    });
+    assert.equal(pending.ok, true);
+    assert.equal(room.mp.invents[host.id].ap, startAp);
+    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, false);
+  });
+
   it("does not grant host powers across rooms via player.isHost", () => {
     const rm = new RoomManager();
     const a = rm.createRoom({ displayName: "HostA" });

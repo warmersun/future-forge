@@ -41,14 +41,14 @@ Required:
 
 Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, `briefBeats`, learning-module fields, sponsor fields below.
 
-Tune `resources` and `mission.pressure*` with the economy lab so a Quest is challenging but solvable before meters go red:
+Tune `resources` and `mission.pressure*` with the **Quest economy lab** so a Quest is challenging but solvable before meters go red. Full guide: [`docs/quest-economy-lab.md`](quest-economy-lab.md).
 
 ```bash
 npm run economy:quest -- path/to/quest.json
 npm run economy:quest -- --all
 ```
 
-Developer UI (server `--developer`): `/tools/quest-economy`. Writes only those knobs, then `validate:quest`.
+Developer UI (server `--developer`): `/tools/quest-economy`. Writes only those knobs (local `quests/` / `output/quests/` only), then `validate:quest`.
 
 ### Optional `briefBeats` (authored walkthrough)
 

@@ -34,7 +34,7 @@ import {
   isInventContentFrozen,
   isHexBoardFrozen,
 } from "./invent-phase.js";
-import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
+import { applyThinkingAiCharge } from "./ai-tax.js";
 import {
   techIdsFromBoard,
   seedCrisisTiles,
@@ -576,6 +576,15 @@ function passToNext(session, opts = {}) {
         next.questMeta?.mission?.pressureRise ||
         {};
       next.place.pressure = applyPressureRiseYears(next.place.pressure || {}, rise, 1);
+      // Keep each seat's hex pressureBase in lockstep so a later pathway
+      // rescore cannot wipe the wrap rise (display = base + deltas).
+      for (const id of next.seatOrder || Object.keys(next.invents || {})) {
+        const f = next.invents[id];
+        if (!f?.hexBoard?.pressureBase) continue;
+        const board = cloneBoard(f.hexBoard);
+        board.pressureBase = applyPressureRiseYears(board.pressureBase, rise, 1);
+        f.hexBoard = board;
+      }
       if (isMpPlaceCollapsed(next, { forgeYear: inventYear })) {
         next.place.status = "collapsed";
         next.place.lastNews = "Shared crisis meters broke the place. Nobody wins.";
@@ -894,9 +903,12 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
   // —— AP pay / refund (AI co-inventor on hotseat; rooms use server reserve) ——
   if (type === "pay_ap") {
     const mode = payload.mode;
-    let n = Math.max(0, Math.floor(Number(payload.amount) || 1));
-    if (isAiSeasonTaxMode(mode) && mode) {
-      const charge = applyThinkingAiCharge(actor, mode, 1);
+    const rawAmt = Number(payload.amount);
+    let n = Number.isFinite(rawAmt) ? Math.max(0, Math.floor(rawAmt)) : 1;
+    if (mode) {
+      const charge = applyThinkingAiCharge(actor, mode, n || 1, {
+        tutor: Boolean(payload.tutor),
+      });
       n = charge.cost;
       if (charge.markPaid) actor.aiTaxThisTurn = true;
     }
@@ -929,6 +941,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     const n = Math.max(0, Math.floor(Number(payload.amount) || 1));
     actor.ap = Math.min(actor.apMax || 3, (actor.ap || 0) + n);
     actor.apSpentThisTurn = Math.max(0, (actor.apSpentThisTurn || 0) - n);
+    if (n > 0) actor.aiTaxThisTurn = false;
     events.push({ type: "refund_ap", amount: n, seatId: activeId });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };

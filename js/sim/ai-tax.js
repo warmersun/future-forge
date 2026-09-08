@@ -22,30 +22,31 @@ export function isAiSeasonTaxMode(mode) {
 
 /**
  * AP to charge for this AI request on the current seat-turn.
- * Explicit reservedAp ≤ 0 (tutor) stays 0 and does not pay the season tax.
+ * Thinking modes ignore a client reservedAp of 0 unless opts.tutor is set.
  *
  * @param {object|null|undefined} sim
  * @param {string} [mode]
  * @param {number} [requestedAp]
+ * @param {{ tutor?: boolean }} [opts]
  * @returns {number}
  */
-export function thinkingAiApCost(sim, mode, requestedAp = 1) {
-  return applyThinkingAiCharge(sim, mode, requestedAp).cost;
+export function thinkingAiApCost(sim, mode, requestedAp = 1, opts = {}) {
+  return applyThinkingAiCharge(sim, mode, requestedAp, opts).cost;
 }
 
 /**
  * @param {object|null|undefined} sim
  * @param {string} [mode]
  * @param {number} [requestedAp]
+ * @param {{ tutor?: boolean }} [opts]
  * @returns {{ cost: number, markPaid: boolean }}
  */
-export function applyThinkingAiCharge(sim, mode, requestedAp = 1) {
-  const requested = Number(requestedAp);
-  if (!Number.isFinite(requested) || requested <= 0) {
-    return { cost: 0, markPaid: false };
-  }
+export function applyThinkingAiCharge(sim, mode, requestedAp = 1, opts = {}) {
+  if (opts.tutor) return { cost: 0, markPaid: false };
   if (!isAiSeasonTaxMode(mode)) {
-    return { cost: Math.max(0, Math.floor(requested)), markPaid: false };
+    const requested = Number(requestedAp);
+    const n = Number.isFinite(requested) ? Math.max(0, Math.floor(requested)) : 1;
+    return { cost: n > 0 ? n : 1, markPaid: false };
   }
   if (sim?.aiTaxThisTurn) return { cost: 0, markPaid: false };
   return { cost: 1, markPaid: true };

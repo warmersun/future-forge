@@ -92,13 +92,13 @@ Override invent start values for this Quest only. Omitted keys keep game default
 
 Selection UI shows **Start · …** when values differ from defaults. Tile top-level or under `mission`.
 
-Tune starting wallet and crisis numbers against the live AP / tile / Wait clock:
+Tune starting wallet and crisis numbers with the evaluator (full guide: **`economy.md`**; in the game repo also `docs/quest-economy-lab.md`):
 
 ```bash
 npm run economy:quest -- path/to/quest.json
 ```
 
-`--write` applies the recommended patch (resources + pressure integers + optional collapseYear) after validation. Developer UI: `/tools/quest-economy` when the game server is started with `--developer`.
+`--write` applies the recommended patch (resources + pressure integers + optional collapseYear) after validation. Developer UI: `/tools/quest-economy` when the game server is started with `--developer`. Target verdict: **challenging** on both solo-no-AI and solo-AI, same calendar year.
 
 ## Optional `trends` / `spotlightTrends` (Wait charts)
 

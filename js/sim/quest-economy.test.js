@@ -20,6 +20,7 @@ import {
   heavyAiBill,
   recommendQuestEconomy,
   simulateArchetype,
+  pressureAfterLabWait,
   YIELD_BANDS,
 } from "./quest-economy.js";
 
@@ -267,6 +268,34 @@ describe("simulateArchetype", () => {
         "Friends relief should not raise meters"
       );
     }
+  });
+
+  it("Friends two-act wrap matches solo End turn year, not Wait +2", () => {
+    const k = extractKnobs(MISSIONS.find((m) => m.id === "portside-floods"));
+    const solo = simulateArchetype(k, ARCHETYPES.find((a) => a.id === "solo-no-ai"));
+    const friends = simulateArchetype(
+      k,
+      ARCHETYPES.find((a) => a.id === "friends-no-ai")
+    );
+    assert.equal(solo.pathwayCount, 2);
+    assert.equal(friends.pathwayCount, 2);
+    assert.equal(solo.endTurns, 1);
+    assert.equal(friends.endTurns, 1);
+    assert.equal(friends.waits, 0);
+    assert.equal(solo.year, 2027);
+    assert.equal(friends.year, 2027);
+    const local = k.meters.find((m) => m.role === "local");
+    assert.equal(solo.pressure[local.key], friends.pressure[local.key]);
+  });
+
+  it("Wait after first-island relief keeps the eased local meter", () => {
+    const k = extractKnobs(MISSIONS.find((m) => m.id === "portside-floods"));
+    const local = k.meters.find((m) => m.role === "local");
+    const eased = { ...k.pressure, [local.key]: local.start - 1 };
+    const afterSolo = pressureAfterLabWait(eased, k, { friends: false });
+    assert.equal(afterSolo[local.key], local.start - 1 + local.rise * (k.yearsPerTurn || 2));
+    const afterFriends = pressureAfterLabWait(eased, k, { friends: true });
+    assert.equal(afterFriends[local.key], local.start - 1);
   });
 
   it("blocks when budget cannot pay an early-curve tech", () => {
