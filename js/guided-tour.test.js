@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveTourStep, queryTourTarget } from "./guided-tour.js";
+import {
+  resolveTourStep,
+  queryTourTarget,
+  createGuidedTour,
+} from "./guided-tour.js";
 
 function base(over = {}) {
   const briefing = { active: false, index: 0, beatCount: 4, ...(over.briefing || {}) };
@@ -65,6 +69,34 @@ describe("resolveTourStep", () => {
     );
   });
 
+  it("A2 / H2 / H3 target the popup card and skip the dimmer", () => {
+    const a2 = resolveTourStep(base({ ui: { tilePopupOpen: true } }));
+    assert.equal(a2.id, "A2");
+    assert.equal(a2.target.selector, ".hex-tile-popup-card");
+    assert.equal(a2.skipDimmer, true);
+
+    const h2 = resolveTourStep(
+      base({
+        ui: { tilePopupOpen: true },
+        unansweredConcernId: "concern-nature",
+      })
+    );
+    assert.equal(h2.id, "H2");
+    assert.equal(h2.target.selector, ".hex-tile-popup-card");
+    assert.equal(h2.skipDimmer, true);
+
+    const h3 = resolveTourStep(base({ concernAnswerPending: true }));
+    assert.equal(h3.id, "H3");
+    assert.equal(h3.target.selector, ".hex-tile-popup-card");
+    assert.equal(h3.skipDimmer, true);
+  });
+
+  it("E0 selector is scoped to the workshop screen", () => {
+    const step = resolveTourStep(base({ ui: { techCatalogHidden: true } }));
+    assert.equal(step.id, "E0");
+    assert.equal(step.target.selector, "#screen-workshop [data-tech-dock-handle]");
+  });
+
   it("C1 points at briefing Next, C2 at Full brief on last beat", () => {
     assert.equal(
       idOf(base({ briefing: { active: true, index: 0, beatCount: 4 } })),
@@ -74,7 +106,7 @@ describe("resolveTourStep", () => {
       base({ briefing: { active: true, index: 3, beatCount: 4 } })
     );
     assert.equal(c2.id, "C2");
-    assert.equal(c2.target.selector, '[data-brief="full"]');
+    assert.equal(c2.target.selector, ".quest-briefing-full");
   });
 
   it("E1 names the spotlight tech after briefing", () => {
@@ -94,7 +126,7 @@ describe("resolveTourStep", () => {
       })
     );
     assert.equal(step.id, "E2");
-    assert.equal(step.target.selector, ".tech-card.recommended");
+    assert.equal(step.target.selector, "#screen-workshop .tech-card.recommended");
   });
 
   it("E0 opens the catalog when it is tucked", () => {
@@ -389,8 +421,256 @@ describe("queryTourTarget", () => {
   it("returns null without a document", () => {
     assert.equal(queryTourTarget({ target: selDummy() }, null), null);
   });
+
+  it("uses the given root so a hidden catalog does not win", () => {
+    const ws = { id: "workshop-ai" };
+    const root = {
+      querySelector(sel) {
+        if (String(sel).includes('data-id="ai"')) return ws;
+        return { id: "hotseat-ai" };
+      },
+    };
+    const el = queryTourTarget({ target: { kind: "tech", id: "ai" } }, root);
+    assert.equal(el, ws);
+  });
+
+  it("C2 hits Full brief, not the pager arrow", () => {
+    const full = { id: "full-brief" };
+    const arrow = { id: "pager-arrow" };
+    const root = {
+      querySelector(sel) {
+        if (sel === ".quest-briefing-full") return full;
+        if (String(sel).includes("data-brief")) return arrow;
+        return null;
+      },
+    };
+    const step = resolveTourStep(
+      base({ briefing: { active: true, index: 3, beatCount: 4 } })
+    );
+    assert.equal(queryTourTarget(step, root), full);
+  });
+});
+
+describe("guided tour overlay", () => {
+  let prevDoc;
+  let prevWin;
+  let prevRaf;
+
+  function installFakeDom() {
+    prevDoc = globalThis.document;
+    prevWin = globalThis.window;
+    prevRaf = globalThis.requestAnimationFrame;
+    const { document: doc, window: win } = fakeDom();
+    globalThis.document = doc;
+    globalThis.window = win;
+    globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+    return doc;
+  }
+
+  function restoreDom() {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+    globalThis.requestAnimationFrame = prevRaf;
+  }
+
+  it("cancel during ensureTargetVisible does not resurrect the tour", async () => {
+    installFakeDom();
+    try {
+      let release;
+      const gate = new Promise((r) => {
+        release = r;
+      });
+      const tour = createGuidedTour({
+        ensureTargetVisible: () => gate,
+      });
+      const pending = tour.open(base());
+      assert.equal(tour.isOpen(), false);
+      tour.close();
+      release();
+      await pending;
+      assert.equal(tour.isOpen(), false);
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it("refresh does not steal focus from the card", async () => {
+    installFakeDom();
+    try {
+      const tour = createGuidedTour();
+      await tour.open(base());
+      const card = globalThis.document.getElementById("tour-root").querySelector(".tour-card");
+      assert.equal(card.didFocus, true);
+      card.didFocus = false;
+      await tour.refresh(base());
+      assert.equal(tour.isOpen(), true);
+      assert.equal(card.didFocus, false);
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it("close restores focus to the opener", async () => {
+    installFakeDom();
+    try {
+      const opener = fakeEl("button", "btn-help");
+      const tour = createGuidedTour();
+      await tour.open(base(), { opener });
+      tour.close();
+      assert.equal(opener.didFocus, true);
+    } finally {
+      restoreDom();
+    }
+  });
 });
 
 function selDummy() {
   return { kind: "selector", selector: "#nope" };
+}
+
+function fakeClassList(on = new Set()) {
+  return {
+    add(...xs) {
+      xs.forEach((x) => on.add(x));
+    },
+    remove(...xs) {
+      xs.forEach((x) => on.delete(x));
+    },
+    contains(x) {
+      return on.has(x);
+    },
+    toggle(x, force) {
+      if (force === true) on.add(x);
+      else if (force === false) on.delete(x);
+      else if (on.has(x)) on.delete(x);
+      else on.add(x);
+      return on.has(x);
+    },
+  };
+}
+
+function fakeEl(tag, id = "") {
+  const children = [];
+  const classSet = new Set();
+  const node = {
+    tagName: String(tag).toUpperCase(),
+    id,
+    className: "",
+    hidden: false,
+    dataset: {},
+    style: {},
+    children,
+    parentNode: null,
+    didFocus: false,
+    classList: fakeClassList(classSet),
+    querySelector(sel) {
+      return findDesc(node, sel);
+    },
+    querySelectorAll(sel) {
+      const out = [];
+      walk(node, (n) => {
+        if (n !== node && matchSel(n, sel)) out.push(n);
+      });
+      return out;
+    },
+    addEventListener() {},
+    appendChild(c) {
+      children.push(c);
+      c.parentNode = node;
+      return c;
+    },
+    setAttribute(k, v) {
+      if (k === "id") node.id = v;
+      if (k === "hidden") node.hidden = true;
+      if (k === "data-edge") node.dataset.edge = v;
+    },
+    removeAttribute(k) {
+      if (k === "hidden") node.hidden = false;
+    },
+    focus() {
+      node.didFocus = true;
+    },
+    getBoundingClientRect() {
+      return { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 };
+    },
+  };
+  Object.defineProperty(node, "isConnected", { get: () => true });
+  Object.defineProperty(node, "innerHTML", {
+    get: () => "",
+    set() {
+      children.length = 0;
+      const panes = fakeEl("div");
+      panes.classList.add("tour-panes");
+      for (const edge of ["n", "s", "w", "e"]) {
+        const p = fakeEl("div");
+        p.classList.add("tour-pane");
+        p.dataset.edge = edge;
+        panes.appendChild(p);
+      }
+      node.appendChild(panes);
+      const ring = fakeEl("div");
+      ring.classList.add("tour-ring");
+      node.appendChild(ring);
+      const card = fakeEl("div");
+      card.classList.add("tour-card");
+      const title = fakeEl("h3", "tour-card-title");
+      const body = fakeEl("p", "tour-card-body");
+      card.appendChild(title);
+      card.appendChild(body);
+      card.appendChild(fakeEl("button", "tour-rules"));
+      card.appendChild(fakeEl("button", "tour-got-it"));
+      node.appendChild(card);
+    },
+  });
+  return node;
+}
+
+function walk(node, fn) {
+  fn(node);
+  for (const c of node.children || []) walk(c, fn);
+}
+
+function matchSel(node, sel) {
+  const s = String(sel).trim();
+  if (s.startsWith("#")) return node.id === s.slice(1);
+  if (s.startsWith(".")) return node.classList.contains(s.slice(1).split(/[\s.\[]/)[0]);
+  const edge = s.match(/\[data-edge="(\w)"\]/);
+  if (edge) return node.dataset.edge === edge[1];
+  return false;
+}
+
+function findDesc(node, sel) {
+  let found = null;
+  walk(node, (n) => {
+    if (found || n === node) return;
+    if (matchSel(n, sel)) found = n;
+  });
+  return found;
+}
+
+function fakeDom() {
+  const byId = new Map();
+  const body = fakeEl("body");
+  const tourRoot = fakeEl("div", "tour-root");
+  byId.set("tour-root", tourRoot);
+  body.appendChild(tourRoot);
+  const workshop = fakeEl("section", "screen-workshop");
+  byId.set("screen-workshop", workshop);
+  body.appendChild(workshop);
+  const doc = {
+    body,
+    getElementById: (id) => byId.get(id) || null,
+    createElement: (tag) => fakeEl(tag),
+    querySelector: (sel) => {
+      if (sel === "#screen-workshop") return workshop;
+      return findDesc(body, sel) || (matchSel(body, sel) ? body : null);
+    },
+    addEventListener() {},
+  };
+  const win = {
+    innerWidth: 1024,
+    innerHeight: 768,
+    addEventListener() {},
+  };
+  return { document: doc, window: win };
 }

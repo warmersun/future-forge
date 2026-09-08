@@ -19859,8 +19859,6 @@ function tourSnapshot() {
       active: Boolean(brief.active),
       index: Number(brief.index) || 0,
       beatCount,
-      dismissedOnFirstBeat:
-        !brief.active && beatCount > 0 && (Number(brief.index) || 0) === 0,
     },
     unplacedInventionCount: unplaced.length,
     placedInventionCount: placed.length,
@@ -19955,8 +19953,14 @@ function refreshGuidedTour() {
   void guidedTour.refresh(tourSnapshot());
 }
 
-function openGuidedTour() {
-  void guidedTour.open(tourSnapshot());
+function openRulesHelp() {
+  $("#help-backdrop")?.classList.add("open");
+}
+
+function openGuidedTour(ev) {
+  const opener =
+    ev?.currentTarget instanceof HTMLElement ? ev.currentTarget : $("#btn-help");
+  void guidedTour.open(tourSnapshot(), { opener });
 }
 
 function bind() {
@@ -20717,9 +20721,9 @@ function bind() {
   });
 
   const closeHelp = () => $("#help-backdrop")?.classList.remove("open");
-  $("#btn-help")?.addEventListener("click", () => openGuidedTour());
-  $("#btn-challenge-help")?.addEventListener("click", () => openGuidedTour());
-  $("#btn-deploy-help")?.addEventListener("click", () => openGuidedTour());
+  $("#btn-help")?.addEventListener("click", (ev) => openGuidedTour(ev));
+  $("#btn-challenge-help")?.addEventListener("click", () => openRulesHelp());
+  $("#btn-deploy-help")?.addEventListener("click", () => openRulesHelp());
   $("#help-close")?.addEventListener("click", closeHelp);
   $("#help-backdrop")?.addEventListener("click", (e) => {
     if (e.target.id === "help-backdrop") closeHelp();

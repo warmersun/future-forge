@@ -49,7 +49,6 @@ function snapOf(raw = {}) {
       active: Boolean(briefing.active),
       index: Number(briefing.index) || 0,
       beatCount: Number(briefing.beatCount) || 0,
-      dismissedOnFirstBeat: Boolean(briefing.dismissedOnFirstBeat),
     },
     unplacedInventionCount: Number(raw.unplacedInventionCount) || 0,
     placedInventionCount: Number(raw.placedInventionCount) || 0,
@@ -210,7 +209,8 @@ export function resolveTourStep(raw) {
       "H3",
       "Challenger is reading",
       "Wait — your answer is being judged. You can close this card when it finishes.",
-      sel("#hex-tile-popup")
+      sel(".hex-tile-popup-card"),
+      { skipDimmer: true }
     );
   }
   if (s.ui.tilePopupOpen && s.unansweredConcernId) {
@@ -218,7 +218,8 @@ export function resolveTourStep(raw) {
       "H2",
       "Answer the hard question",
       "Write who acts, who pays, or what limit you respect — a short paragraph is enough — then submit.",
-      sel("#hex-concern-answer-submit")
+      sel(".hex-tile-popup-card"),
+      { skipDimmer: true }
     );
   }
   if (s.ui.tilePopupOpen) {
@@ -226,7 +227,8 @@ export function resolveTourStep(raw) {
       "A2",
       "This tile",
       "Read the tile, then close it (or keep editing). Looking at the board is the thinking.",
-      sel("#hex-tile-popup")
+      sel(".hex-tile-popup-card"),
+      { skipDimmer: true }
     );
   }
   if (s.ui.convergenceOpen) {
@@ -234,7 +236,8 @@ export function resolveTourStep(raw) {
       "A3",
       "Convergence",
       "Two ideas docked and sped each other up. Got it to keep inventing.",
-      sel("#hex-convergence-ok")
+      sel(".hex-convergence-card"),
+      { skipDimmer: true }
     );
   }
   if (s.ui.summonBusy || s.ui.challengerDrawOpen) {
@@ -295,7 +298,7 @@ export function resolveTourStep(raw) {
         "C2",
         "Finish the briefing",
         "Last card. Click Full brief when you know the job — then invent on the hex board.",
-        sel('[data-brief="full"]')
+        sel(".quest-briefing-full")
       );
     }
     return step(
@@ -331,7 +334,7 @@ export function resolveTourStep(raw) {
         "E0",
         "Open emerging tech",
         "The catalog is tucked away. Open it, then pick a tech to invent with.",
-        sel("[data-tech-dock-handle]")
+        sel("#screen-workshop [data-tech-dock-handle]")
       );
     }
     if (s.spotlightTechId) {
@@ -348,7 +351,7 @@ export function resolveTourStep(raw) {
         "E2",
         "Pick a suggested tech",
         "Start with a suggested emTech for this place — then Ask for ideas. The AI will mint 3 tiles.",
-        sel(".tech-card.recommended")
+        sel("#screen-workshop .tech-card.recommended")
       );
     }
     return step(
@@ -417,7 +420,7 @@ export function resolveTourStep(raw) {
       "E0",
       "Open emerging tech",
       "Open the catalog to pick another emTech.",
-      sel("[data-tech-dock-handle]")
+      sel("#screen-workshop [data-tech-dock-handle]")
     );
   }
 
@@ -608,27 +611,45 @@ export function resolveTourStep(raw) {
 }
 
 /**
+ * Prefer the live workshop screen so hidden hotseat/room catalogs don't win.
+ * @param {Document|null} [doc]
+ * @returns {ParentNode|null}
+ */
+export function tourQueryRoot(doc = typeof document !== "undefined" ? document : null) {
+  if (!doc?.querySelector) return doc || null;
+  return doc.querySelector("#screen-workshop") || doc;
+}
+
+function queryIn(root, selector) {
+  if (!root?.querySelector || !selector) return null;
+  return root.querySelector(selector);
+}
+
+/**
  * Resolve a step's target to a live element.
  * @param {TourStep} step
  * @param {ParentNode} [root]
  * @returns {HTMLElement|SVGElement|null}
  */
-export function queryTourTarget(step, root = typeof document !== "undefined" ? document : null) {
-  if (!step?.target || !root?.querySelector) return null;
+export function queryTourTarget(step, root) {
+  const doc = typeof document !== "undefined" ? document : null;
+  const scope = root || tourQueryRoot(doc);
+  if (!step?.target || !scope?.querySelector) return null;
   const t = step.target;
+  const lookup = (sel) => queryIn(scope, sel) || (doc && scope !== doc ? queryIn(doc, sel) : null);
   if (t.kind === "tech" && t.id) {
     return (
-      root.querySelector(`.tech-card[data-id="${cssIdent(t.id)}"]`) ||
-      root.querySelector(`[data-tech-focus="${cssIdent(t.id)}"]`)
+      lookup(`.tech-card[data-id="${cssIdent(t.id)}"]`) ||
+      lookup(`[data-tech-focus="${cssIdent(t.id)}"]`)
     );
   }
   if (t.kind === "hex-tile" && t.id) {
     return (
-      root.querySelector(`#hex-board-svg [data-id="${cssIdent(t.id)}"]`) ||
-      root.querySelector(`#hex-board [data-id="${cssIdent(t.id)}"]`)
+      lookup(`#hex-board-svg [data-id="${cssIdent(t.id)}"]`) ||
+      lookup(`#hex-board [data-id="${cssIdent(t.id)}"]`)
     );
   }
-  if (t.selector) return root.querySelector(t.selector);
+  if (t.selector) return lookup(t.selector);
   return null;
 }
 
@@ -659,7 +680,10 @@ export function createGuidedTour(opts = {}) {
   let current = null;
   /** @type {HTMLElement|SVGElement|null} */
   let lastTarget = null;
+  /** @type {HTMLElement|null} */
+  let openerEl = null;
   let bound = false;
+  let gen = 0;
 
   function ensureRoot() {
     if (root && root.isConnected) return root;
@@ -679,7 +703,7 @@ export function createGuidedTour(opts = {}) {
           <div class="tour-pane" data-edge="e"></div>
         </div>
         <div class="tour-ring" hidden></div>
-        <div class="tour-card" hidden role="dialog" aria-modal="false" aria-labelledby="tour-card-title" tabindex="-1">
+        <div class="tour-card" hidden role="dialog" aria-modal="false" aria-labelledby="tour-card-title" aria-describedby="tour-card-body" tabindex="-1">
           <p class="tour-kicker">Next step</p>
           <h3 class="tour-card-title" id="tour-card-title"></h3>
           <p class="tour-card-body" id="tour-card-body"></p>
@@ -727,7 +751,14 @@ export function createGuidedTour(opts = {}) {
     return Boolean(root?.classList.contains("is-open"));
   }
 
-  async function open(snapshot) {
+  /**
+   * @param {object} snapshot
+   * @param {{ refresh?: boolean, opener?: HTMLElement|null }} [extra]
+   */
+  async function open(snapshot, extra = {}) {
+    const token = ++gen;
+    const refresh = Boolean(extra.refresh);
+    if (!refresh && extra.opener) openerEl = extra.opener;
     const host = ensureRoot();
     bindWindow();
     let next = resolveTourStep(snapshot);
@@ -737,6 +768,7 @@ export function createGuidedTour(opts = {}) {
     } catch {
       /* still show the card */
     }
+    if (token !== gen) return;
     if (next.id === "E0" && typeof opts.snapshot === "function") {
       try {
         next = resolveTourStep(opts.snapshot());
@@ -746,9 +778,11 @@ export function createGuidedTour(opts = {}) {
         /* keep E0 */
       }
     }
+    if (token !== gen) return;
     host.classList.add("is-open");
     document.body.classList.add("tour-open");
     layout(next);
+    if (refresh) return;
     const card = host.querySelector(".tour-card");
     try {
       card?.focus?.({ preventScroll: true });
@@ -759,10 +793,11 @@ export function createGuidedTour(opts = {}) {
 
   async function refresh(snapshot) {
     if (!isOpen()) return;
-    await open(snapshot);
+    await open(snapshot, { refresh: true });
   }
 
   function close() {
+    gen += 1;
     if (!root) return;
     root.classList.remove("is-open");
     document.body.classList.remove("tour-open");
@@ -774,7 +809,8 @@ export function createGuidedTour(opts = {}) {
     lastTarget?.classList?.remove("tour-target");
     lastTarget = null;
     current = null;
-    const restore = opts.restoreFocusEl?.();
+    const restore = openerEl || opts.restoreFocusEl?.() || null;
+    openerEl = null;
     try {
       restore?.focus?.({ preventScroll: true });
     } catch {

@@ -191,8 +191,9 @@ export function createHexWorkshop(api) {
 
   function hasSparkBatch(techId) {
     const id = techId || focusedTechId;
-    const batch = ensureSparkBatch(id);
-    return Boolean(batch?.ids?.length);
+    if (!id) return false;
+    if (sparkBatches.get(id)?.ids?.length) return true;
+    return unplacedSparksFor(id).length > 0;
   }
 
   function hasUnplacedSparks(techId) {
