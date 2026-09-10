@@ -27,7 +27,7 @@ import {
   isPortableTile,
   formatFactor,
 } from "./board-state.js";
-import { pathwayHighlight, tileTimingPct } from "./evaluate.js";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";
@@ -379,13 +379,7 @@ export function createHexBoardUi(opts) {
       const fillW =
         pct == null ? 0 : Math.max(0, Math.min(1, pct)) * (bw - 2);
       const fillCol =
-        pct == null
-          ? "#64748b"
-          : pct < 0.35
-            ? "#ef4444"
-            : pct >= 0.99
-              ? "#22c55e"
-              : "#eab308";
+        pct == null ? "#64748b" : RYG[timingPctToLevel(shown)] || RYG.yellow;
       g.insertAdjacentHTML(
         "beforeend",
         `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="2" fill="#070b14" opacity=".72"/>` +

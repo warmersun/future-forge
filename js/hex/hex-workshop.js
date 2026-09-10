@@ -68,6 +68,7 @@ import {
   invalidatePathwaysTouchingGiven,
   tileTimingPct,
   tileBaseTimingPct,
+  timingPctToLevel,
   clampTimingPct,
   heuristicConverges,
   concernsReachedFromPathway,
@@ -1091,8 +1092,7 @@ export function createHexWorkshop(api) {
           const base = tileBaseTimingPct(t);
           const pct = shown != null ? shown : base;
           const lvl =
-            t.timingLevel ||
-            (pct == null ? "yellow" : pct < 35 ? "red" : pct < 70 ? "yellow" : "green");
+            pct != null ? timingPctToLevel(pct) : t.timingLevel || "yellow";
           let line = `Timing: <strong>${escapeHtml(lvl)}</strong>`;
           if (pct != null) {
             line += ` · <strong>${escapeHtml(String(pct))}%</strong> honest this year.`;
