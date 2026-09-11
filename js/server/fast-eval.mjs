@@ -613,6 +613,19 @@ export function isFastEvalMode(mode) {
   return Boolean(FAST_EVAL_MODES[mode]);
 }
 
+/**
+ * grok-4.6 defaults to high reasoning (cannot be disabled).
+ * Fast eval stays low. Active tutor sessions use medium. Regular chat: omit
+ * so the model keeps the default.
+ * @param {{ mode?: string, tutor?: boolean }} [opts]
+ * @returns {"low"|"medium"|undefined}
+ */
+export function reasoningEffortForCoInvent(opts = {}) {
+  if (isFastEvalMode(opts.mode)) return "low";
+  if (opts.tutor) return "medium";
+  return undefined;
+}
+
 export function fastEvalUserContent(mode, context) {
   const spec = FAST_EVAL_MODES[mode];
   const prefix = spec?.userPrefix || "JSON state:";

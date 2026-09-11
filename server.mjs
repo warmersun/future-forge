@@ -83,6 +83,7 @@ import {
   isFastEvalMode,
   fastEvalUserContent,
   sanitizeFast,
+  reasoningEffortForCoInvent,
 } from "./js/server/fast-eval.mjs";
 import { heuristicConverges } from "./js/hex/evaluate.js";
 
@@ -2196,8 +2197,11 @@ async function aiCoInvent(body, client, meta = {}) {
   };
   if (fastSpec) {
     createOpts.max_output_tokens = fastSpec.maxOutputTokens;
-    // grok-4.6 defaults to high reasoning; eval JSON does not need it.
-    createOpts.reasoning = { effort: "low" };
+  }
+  // grok-4.6 defaults to high (cannot disable). Eval stays low; tutor uses medium.
+  const reasoningEffort = reasoningEffortForCoInvent({ mode, tutor: isTutor });
+  if (reasoningEffort) {
+    createOpts.reasoning = { effort: reasoningEffort };
   }
   if (searchTools) {
     createOpts.tools = searchTools;

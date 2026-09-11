@@ -16,6 +16,7 @@ import {
   buildFastPayload,
   sanitizeFast,
   isFastEvalMode,
+  reasoningEffortForCoInvent,
 } from "./fast-eval.mjs";
 
 const ENVELOPE_KEYS = ["proposals", "teaching", "addTechIds"];
@@ -445,5 +446,25 @@ describe("sanitizeFast", () => {
     assert.equal(out.convergences[0].enhancedId, "b");
     assert.equal(out.convergences[0].extra, undefined);
     assert.equal(out.proposals, undefined);
+  });
+});
+
+describe("reasoningEffortForCoInvent", () => {
+  it("uses medium for tutor chat and chips", () => {
+    assert.equal(reasoningEffortForCoInvent({ mode: "chat", tutor: true }), "medium");
+    assert.equal(reasoningEffortForCoInvent({ mode: "sit", tutor: true }), "medium");
+  });
+
+  it("omits effort for regular co-inventor chat", () => {
+    assert.equal(reasoningEffortForCoInvent({ mode: "chat", tutor: false }), undefined);
+    assert.equal(reasoningEffortForCoInvent({ mode: "chat" }), undefined);
+  });
+
+  it("keeps fast eval on low even during a tutor session", () => {
+    assert.equal(
+      reasoningEffortForCoInvent({ mode: "score-pathway", tutor: true }),
+      "low"
+    );
+    assert.equal(reasoningEffortForCoInvent({ mode: "assess-feasibility" }), "low");
   });
 });
