@@ -131,9 +131,9 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 
 **How.**  
 - Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules = `account`.  
-- Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: Learning (and `access: account|paid` tiles) show a lock + Sign in. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
-- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate: no session → no tutor context. **game** does not gate theme play.  
-- `GET /api/quests` may list cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check.  
+- Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: **remote** Learning (and `access: account|paid` tiles) show a lock + Sign in. **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
+- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate for the **curated remote catalog**: no session → no tutor context. **game** does not gate theme play or Library side-load.  
+- `GET /api/quests` may list remote cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT **for gated remote tiles**. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check. Library sessions keep the side-loaded notes and must not look up the remote-wins merge by id.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
 - Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins.
 

@@ -6,6 +6,9 @@ import {
   isModuleEntry,
   isLearningEntry,
   isSponsoredEntry,
+  isLibraryCatalogSource,
+  isLibraryCatalogEntry,
+  catalogNeedsAccount,
   partitionCatalogQuests,
   groupLearningModules,
   catalogTopLevel,
@@ -246,5 +249,46 @@ describe("quest-catalog", () => {
     const top = catalogTopLevel(groups[0].wrapper ? [groups[0].wrapper] : []);
     assert.equal(top.groups.length, 1);
     assert.equal(top.groups[0].entries.length, 0);
+  });
+});
+
+describe("catalogNeedsAccount / Library source", () => {
+  it("treats hosted and imported as Library", () => {
+    assert.equal(isLibraryCatalogSource("hosted"), true);
+    assert.equal(isLibraryCatalogSource("imported"), true);
+    assert.equal(isLibraryCatalogSource("remote"), false);
+    assert.equal(isLibraryCatalogEntry({ source: "hosted" }), true);
+    assert.equal(isLibraryCatalogEntry({ mission: { source: "imported" } }), true);
+    assert.equal(isLibraryCatalogEntry({ source: "remote" }), false);
+  });
+
+  it("never requires an account for Library learning tiles", () => {
+    const hosted = lesson({
+      id: "hearthline",
+      source: "hosted",
+      access: "account",
+      isLearningModule: true,
+    });
+    hosted.mission.access = "account";
+    const imported = lesson({
+      id: "import-1",
+      source: "imported",
+      access: "account",
+    });
+    imported.mission.source = "imported";
+    imported.mission.access = "account";
+    assert.equal(catalogNeedsAccount(hosted, { clerkReady: true }), false);
+    assert.equal(catalogNeedsAccount(imported, { clerkReady: true }), false);
+  });
+
+  it("locks remote learning when Clerk is ready", () => {
+    const remote = lesson({ id: "remote-1", source: "remote" });
+    remote.mission.source = "remote";
+    assert.equal(catalogNeedsAccount(remote, { clerkReady: true }), true);
+    assert.equal(catalogNeedsAccount(remote, { clerkReady: false }), false);
+    const openRemote = lesson({ id: "open-r", source: "remote", access: "open" });
+    openRemote.mission.source = "remote";
+    openRemote.mission.access = "open";
+    assert.equal(catalogNeedsAccount(openRemote, { clerkReady: true }), false);
   });
 });

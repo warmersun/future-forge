@@ -183,6 +183,8 @@ import {
   isModuleEntry,
   isLearningEntry,
   isSponsoredEntry,
+  isLibraryCatalogEntry,
+  catalogNeedsAccount as catalogEntryNeedsAccount,
   partitionCatalogQuests as partitionCatalogBuckets,
   groupLearningModules,
   catalogTopLevel,
@@ -4593,15 +4595,7 @@ function allLearningCatalogEntries() {
 }
 
 function catalogNeedsAccount(entry) {
-  if (!isClerkReady()) return false;
-  const access = entry?.access || entry?.mission?.access || entry?.tile?.access;
-  if (access === "open") return false;
-  if (access === "account" || access === "paid") return true;
-  return Boolean(
-    entry?.isLearningModule ||
-      entry?.mission?.isLearningModule ||
-      isModuleEntry(entry)
-  );
+  return catalogEntryNeedsAccount(entry, { clerkReady: isClerkReady() });
 }
 
 /**
@@ -4659,9 +4653,11 @@ async function playCatalogEntry(entry, opts = {}) {
   }
   let src = entry;
   const learning = Boolean(entry.isLearningModule || entry.mission?.isLearningModule);
+  // Library JSON is the lesson — do not hydrate from the gated Cloud catalog.
   if (
     learning &&
     isClerkReady() &&
+    !isLibraryCatalogEntry(entry) &&
     !entry.aiTutorContext &&
     !entry.mission?.aiTutorContext
   ) {
@@ -8480,6 +8476,7 @@ function ideaSparksContext(techId) {
     grounding: state.mission?.grounding || null,
     isLearningModule: Boolean(state.mission?.isLearningModule),
     questId: state.mission?.id || null,
+    source: state.mission?.source || null,
   };
 }
 
@@ -10602,6 +10599,8 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
+        questId: state.mission?.id || null,
+        source: state.mission?.source || null,
         tutorMode: isLearningTutorSessionActive(),
         ...rest,
       };
@@ -17243,6 +17242,7 @@ function ensureCoInventor() {
         isLearningModule: Boolean(state.mission?.isLearningModule),
         aiTutorContext: state.mission?.aiTutorContext || null,
         questId: state.mission?.id || null,
+        source: state.mission?.source || null,
         tutorMode: isLearningTutorSessionActive(),
         guidance: state.mission?.spotlight?.techId
           ? `This is a Spotlight Quest for tech "${state.mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
@@ -18205,6 +18205,7 @@ async function callCoInventMode(mode, userLabel) {
       isLearningModule: Boolean(state.mission?.isLearningModule),
       aiTutorContext: state.mission?.aiTutorContext || null,
       questId: state.mission?.id || null,
+      source: state.mission?.source || null,
       tutorMode: isLearningTutorSessionActive(),
       contributingToOther: contributingOther,
     };

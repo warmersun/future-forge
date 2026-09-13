@@ -574,6 +574,7 @@ export class CoInventor {
           isLearningModule: Boolean(ctx.isLearningModule),
           aiTutorContext: ctx.aiTutorContext || null,
           questId: ctx.questId || ctx.challenge?.id || null,
+          source: ctx.source || null,
           // Active tutor session only (not merely "this is a learning quest")
           tutorMode: Boolean(ctx.tutorMode),
           guidance: ctx.guidance || null,

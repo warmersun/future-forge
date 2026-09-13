@@ -51,6 +51,51 @@ export function isSponsoredEntry(e) {
 }
 
 /**
+ * Disk Library (`hosted`) or browser Import (`imported`) — not the remote catalog.
+ * @param {unknown} source
+ */
+export function isLibraryCatalogSource(source) {
+  return source === "hosted" || source === "imported";
+}
+
+/**
+ * @param {object|null|undefined} entry catalog card, tile, or co-invent context
+ */
+export function catalogSourceOf(entry) {
+  if (!entry || typeof entry !== "object") return "";
+  return String(
+    entry.source || entry.mission?.source || entry.tile?.source || ""
+  );
+}
+
+/**
+ * @param {object|null|undefined} entry
+ */
+export function isLibraryCatalogEntry(entry) {
+  return isLibraryCatalogSource(catalogSourceOf(entry));
+}
+
+/**
+ * A1 account door: curated remote Learning / access:account|paid.
+ * Library side-load is local JSON — never requires Sign in.
+ *
+ * @param {object|null|undefined} entry
+ * @param {{ clerkReady?: boolean }} [opts]
+ */
+export function catalogNeedsAccount(entry, opts = {}) {
+  if (!opts.clerkReady) return false;
+  if (isLibraryCatalogEntry(entry)) return false;
+  const access = entry?.access || entry?.mission?.access || entry?.tile?.access;
+  if (access === "open") return false;
+  if (access === "account" || access === "paid") return true;
+  return Boolean(
+    entry?.isLearningModule ||
+      entry?.mission?.isLearningModule ||
+      isModuleEntry(entry)
+  );
+}
+
+/**
  * A module group is Sponsored if the wrapper or any lesson is sponsored.
  * @param {object} group
  */

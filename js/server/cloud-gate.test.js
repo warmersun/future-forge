@@ -43,7 +43,25 @@ describe("tileAccess", () => {
     assert.equal(tileAccess({ access: "paid", isLearningModule: true }), "paid");
     assert.equal(tileAccess({ access: "open", isLearningModule: true }), "open");
   });
+
+  it("treats Library source as open even when access is account", () => {
+    assert.equal(
+      tileAccess({
+        source: "hosted",
+        access: "account",
+        isLearningModule: true,
+      }),
+      "open"
+    );
+    assert.equal(
+      tileAccess({
+        mission: { source: "imported", isLearningModule: true, access: "account" },
+      }),
+      "open"
+    );
+  });
 });
+
 
 describe("needsPlayerBilling (B3)", () => {
   it("sponsored and catalog.free never bill the player", () => {
@@ -88,6 +106,17 @@ describe("mayReadSecrets / requireCloudAccount", () => {
     assert.equal(requireCloudAccount(out).status, 401);
   });
 
+  it("unsigned can read Library learning tiles", () => {
+    const hosted = {
+      ...learning,
+      source: "hosted",
+      access: "account",
+      mission: { ...learning.mission, source: "hosted" },
+    };
+    assert.equal(mayReadSecrets(out, hosted), true);
+  });
+
+
   it("signed-in can read account tiles; open always", () => {
     assert.equal(mayReadSecrets(inn, learning), true);
     assert.equal(mayReadSecrets(out, openTile), true);
@@ -109,6 +138,18 @@ describe("applyCatalogGate", () => {
     const p = applyCatalogGate(learning, { enabled: true, signedIn: false });
     assert.equal(p.aiTutorContext, undefined);
   });
+
+  it("keeps Library tutor text when unsigned", () => {
+    const hosted = {
+      ...learning,
+      source: "hosted",
+      access: "account",
+      mission: { ...learning.mission, source: "hosted" },
+    };
+    const p = applyCatalogGate(hosted, { enabled: true, signedIn: false });
+    assert.equal(p.aiTutorContext, "SECRET CURRICULUM");
+  });
+
 
   it("keeps secrets when signed in or Clerk off", () => {
     assert.equal(
@@ -168,7 +209,44 @@ describe("prepareTutorContext", () => {
     );
     assert.equal(r.ok, true);
   });
+
+  it("keeps Library client tutor text unsigned and does not use remote-wins tile", () => {
+    const remoteSameId = {
+      id: "lesson-1",
+      source: "remote",
+      isLearningModule: true,
+      aiTutorContext: "REMOTE CURRICULUM",
+      mission: { id: "lesson-1", source: "remote", isLearningModule: true },
+    };
+    const r = prepareTutorContext(
+      {
+        tutorMode: true,
+        source: "hosted",
+        questId: "lesson-1",
+        aiTutorContext: "LOCAL JSON NOTES",
+      },
+      { enabled: true, signedIn: false },
+      remoteSameId
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.context.aiTutorContext, "LOCAL JSON NOTES");
+  });
+
+  it("keeps imported tutor notes when there is no server tile", () => {
+    const r = prepareTutorContext(
+      {
+        tutorMode: true,
+        source: "imported",
+        aiTutorContext: "from-import-file",
+      },
+      { enabled: true, signedIn: false },
+      null
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.context.aiTutorContext, "from-import-file");
+  });
 });
+
 
 describe("questIdFromContext / isTutorContext", () => {
   it("reads questId / mission.id / challenge.id", () => {

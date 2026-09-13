@@ -1,12 +1,16 @@
 /**
  * A1 account door for Warmer Sun Cloud.
  * When Clerk is off, nothing is gated (self-host / LAN).
- * When Clerk is on, learning (and access:account|paid) tiles need a session
- * to receive aiTutorContext and to run tutor-mode co-invent.
+ * When Clerk is on, *curated remote* learning (and access:account|paid) tiles
+ * need a session to receive aiTutorContext and to run tutor-mode co-invent.
+ * Library side-load (`hosted` / `imported`) is local JSON — play and tutor
+ * use the tile itself, never the Cloud catalog.
  *
  * Public CDN catalogs may still contain tutor text until the gated here.now
  * split (H). This module only gates *our* API and the in-app tutor.
  */
+
+import { isLibraryCatalogEntry } from "../quest-catalog.js";
 
 export const ACCESS = {
   OPEN: "open",
@@ -20,6 +24,7 @@ export const ACCESS = {
  */
 export function tileAccess(tile) {
   if (!tile || typeof tile !== "object") return ACCESS.OPEN;
+  if (isLibraryCatalogEntry(tile)) return ACCESS.OPEN;
   const raw = tile.access || tile.mission?.access;
   if (raw === ACCESS.OPEN || raw === ACCESS.ACCOUNT || raw === ACCESS.PAID) {
     return raw;
@@ -138,8 +143,9 @@ export function questIdFromContext(context) {
 }
 
 /**
- * When Clerk is on, tutor sessions require sign-in and take aiTutorContext
- * from the server catalog tile — never from the client body.
+ * When Clerk is on, curated remote tutor sessions require sign-in and take
+ * aiTutorContext from the server catalog tile — never from the client body.
+ * Library sessions keep the side-loaded JSON notes and skip the account door.
  *
  * @param {object|null|undefined} context
  * @param {object|null|undefined} ident
@@ -149,6 +155,10 @@ export function prepareTutorContext(context, ident, catalogTile) {
   const ctx = context && typeof context === "object" ? context : {};
   if (!ident?.enabled) return { ok: true, context: ctx };
   if (!isTutorContext(ctx)) return { ok: true, context: ctx };
+
+  if (isLibraryCatalogEntry(ctx) || isLibraryCatalogEntry(catalogTile)) {
+    return { ok: true, context: ctx };
+  }
 
   const account = requireCloudAccount(ident);
   if (!account.ok) return account;
