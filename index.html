@@ -302,8 +302,8 @@
             <li>Field ideas to ease the shared crisis; rank only if the place holds.</li>
           </ul>
           <p class="muted sm">
-            Create a room and share the <strong>room code</strong> plus the host’s
-            <strong>local network address</strong> (shown after create). Same Wi‑Fi only — not the public Internet.
+            Create a room and share the <strong>room code</strong> plus the join address
+            shown after create (Funnel / <code>FF_JOIN_ORIGIN</code>, or the same Wi‑Fi LAN URL).
           </p>
         </div>
         <div class="friends-hub-grid">
@@ -574,11 +574,11 @@
         <button type="button" class="btn btn-ghost btn-sm" id="btn-room-leave">Leave</button>
       </header>
       <div class="content room-lobby-content">
-        <!-- Join info for another computer on the same LAN -->
+        <!-- Join info: Funnel / FF_JOIN_ORIGIN first, then LAN -->
         <aside class="panel room-connect-panel" id="room-connect-panel" aria-labelledby="room-connect-title">
           <h2 id="room-connect-title">Connect from another computer</h2>
-          <p class="muted room-connect-lead">
-            Same Wi‑Fi / local network only. Friends open the address below, then join with the room code.
+          <p class="muted room-connect-lead" id="room-connect-lead">
+            Friends open the address below, then join with the room code.
           </p>
           <div class="room-connect-grid">
             <div class="room-connect-field">

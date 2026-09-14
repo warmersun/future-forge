@@ -36,6 +36,7 @@ import {
   updateTechDrawerCount,
   workshopLayoutFor,
 } from "../tech-drawer.js";
+import { isRemoteJoinUrl, resolveRoomJoinUrls } from "../join-origin.js";
 
 /**
  * @param {{
@@ -214,9 +215,24 @@ export function initFriendsUi(api) {
     if (el) el.textContent = msg || "";
   }
 
-  /** @type {{ port?: number, lanIps?: string[], lanUrls?: string[] } | null} */
+  /** @type {{ port?: number, lanIps?: string[], lanUrls?: string[], joinUrls?: string[] } | null} */
   let lanJoinInfo = null;
   let lanJoinInfoPromise = null;
+
+  function pageJoinContext() {
+    return {
+      hostname: typeof location !== "undefined" ? location.hostname : "",
+      locationOrigin: typeof location !== "undefined" ? location.origin : "",
+    };
+  }
+
+  function displayJoinUrls() {
+    return resolveRoomJoinUrls({
+      joinUrls: lanJoinInfo?.joinUrls || [],
+      lanUrls: lanJoinInfo?.lanUrls || [],
+      ...pageJoinContext(),
+    });
+  }
 
   async function ensureLanJoinInfo() {
     if (lanJoinInfo) return lanJoinInfo;
@@ -228,6 +244,7 @@ export function initFriendsUi(api) {
           port: data.port || 8765,
           lanIps: Array.isArray(data.lanIps) ? data.lanIps : [],
           lanUrls: Array.isArray(data.lanUrls) ? data.lanUrls : [],
+          joinUrls: Array.isArray(data.joinUrls) ? data.joinUrls : [],
         };
         // Fallback: if server omitted URLs but we have port, still empty list
         if (!lanJoinInfo.lanUrls.length && lanJoinInfo.lanIps.length) {
@@ -238,7 +255,7 @@ export function initFriendsUi(api) {
         return lanJoinInfo;
       })
       .catch(() => {
-        lanJoinInfo = { port: 8765, lanIps: [], lanUrls: [] };
+        lanJoinInfo = { port: 8765, lanIps: [], lanUrls: [], joinUrls: [] };
         return lanJoinInfo;
       });
     return lanJoinInfoPromise;
@@ -250,21 +267,29 @@ export function initFriendsUi(api) {
 
     const ul = $("#room-connect-urls");
     const hint = $("#room-connect-hint");
+    const lead = $("#room-connect-lead");
     if (!ul) return;
 
-    const urls = lanJoinInfo?.lanUrls || [];
+    const urls = displayJoinUrls();
     const port = lanJoinInfo?.port || 8765;
+    const remote = urls.some((u) => isRemoteJoinUrl(u));
 
     if (!lanJoinInfo) {
       ul.innerHTML = `<li class="muted">Loading network address…</li>`;
       return;
     }
 
+    if (lead) {
+      lead.textContent = remote
+        ? "Friends open the address below, then join with the room code."
+        : "Same Wi‑Fi / local network only. Friends open the address below, then join with the room code.";
+    }
+
     if (!urls.length) {
-      ul.innerHTML = `<li class="muted">No private LAN IP found on this machine. Check Wi‑Fi, or share <code>http://&lt;host-ip&gt;:${port}</code> manually.</li>`;
+      ul.innerHTML = `<li class="muted">No join URL yet. Set <code>FF_JOIN_ORIGIN</code> for Funnel, or share <code>http://&lt;host-ip&gt;:${port}</code> on the same Wi‑Fi.</li>`;
       if (hint) {
         hint.textContent =
-          "On the host, run npm start and note the “LAN” lines in the terminal. Friends open that URL, then Join with the room code.";
+          "On the host, set FF_JOIN_ORIGIN or note the “LAN” / “Join” lines in the terminal. Friends open that URL, then Join with the room code.";
       }
       return;
     }
@@ -278,20 +303,22 @@ export function initFriendsUi(api) {
       )
       .join("");
     if (hint) {
-      hint.textContent =
-        "Same local network only (not the public Internet). They open the link → Invent with friends → Join → room code + name.";
+      hint.textContent = remote
+        ? "They open the link → Invent with friends → Join → room code + name."
+        : "Same local network only (not the public Internet). They open the link → Invent with friends → Join → room code + name.";
     }
   }
 
   function buildJoinInfoText(code) {
     const c = (code || "").toUpperCase();
-    const urls = lanJoinInfo?.lanUrls || [];
+    const urls = displayJoinUrls();
+    const remote = urls.some((u) => isRemoteJoinUrl(u));
     const lines = [
       "Future Forge — join my room",
       `Room code: ${c}`,
       "",
-      "On the same Wi‑Fi, open:",
-      ...(urls.length ? urls : ["(ask host for their LAN IP and port)"]),
+      remote ? "Open:" : "On the same Wi‑Fi, open:",
+      ...(urls.length ? urls : ["(ask host for their join URL or LAN IP and port)"]),
       "",
       "Then: Invent with friends → Join → enter code and your name.",
     ];
@@ -1365,7 +1392,7 @@ export function initFriendsUi(api) {
     const text = buildJoinInfoText(code);
     try {
       await navigator.clipboard.writeText(text);
-      flashToast("Copied join info (code + LAN address)");
+      flashToast("Copied join info (code + address)");
     } catch {
       flashToast(text.slice(0, 80) + "…");
     }

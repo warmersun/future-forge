@@ -20,6 +20,8 @@ describe("static allowlist", () => {
     assert.equal(isPublicRel("js/game.js"), true);
     assert.equal(isPublicRel("js/deep-link.js"), true);
     assert.equal(isPublicRel("js/deep-link.test.js"), false);
+    assert.equal(isPublicRel("js/join-origin.js"), true);
+    assert.equal(isPublicRel("js/join-origin.test.js"), false);
     assert.equal(normalizePublicRel("/?q=learn-daily-1"), "index.html");
     assert.equal(isPublicRel("js/auth.js"), true);
     assert.equal(isPublicRel("js/cloud/quest-board.js"), true);

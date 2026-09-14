@@ -123,7 +123,7 @@ The Node server serves static files and exposes:
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
-- `GET /api/health` — public co-inventor status (LAN IPs / models / room stats only on loopback or with admin token); **portal** also includes `clerk` + `db`  
+- `GET /api/health` — public co-inventor status (`joinUrls` from `FF_JOIN_ORIGIN`; LAN IPs / models / room stats only on loopback or with admin token); **portal** also includes `clerk` + `db`  
 - `GET /api/me` — **portal** only: Clerk learner identity (unsigned play still works)  
 - `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
@@ -136,6 +136,7 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | Env | Purpose |
 |-----|---------|
 | `FF_TRUST_PROXY=1` | Use `X-Forwarded-For` for rate-limit keys (**only** behind a reverse proxy you control; off by default) |
+| `FF_JOIN_ORIGIN` | Public URL friends open to join a room (Tailscale Funnel `https://….ts.net`). Shown in the Friends lobby. |
 | `FF_API_SECRET` | If set, expensive POST routes require `X-FF-Secret` or non-JWT `Authorization: Bearer` (loopback exempt). Prefer `X-FF-Secret` when Clerk is on. |
 | `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` | Optional learner accounts. Both required. |
 | `FF_ADMIN_TOKEN` | Non-loopback access to `/api/usage` and detailed `/api/health` |

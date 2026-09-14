@@ -56,6 +56,7 @@ import { clientIp, isLoopbackSocket } from "./js/server/client-ip.mjs";
 import { canSeeAdmin } from "./js/server/admin-gate.mjs";
 import { serveStatic } from "./js/server/static.mjs";
 import { shareOriginFromEnv } from "./js/deep-link.js";
+import { joinOriginFromEnv } from "./js/join-origin.js";
 import {
   readBody,
   sendJson,
@@ -3027,6 +3028,8 @@ const server = http.createServer(async (req, res) => {
       .trim()
       .replace(/\/$/, "");
     const shareOrigin = shareOriginFromEnv() || null;
+    const joinOrigin = joinOriginFromEnv() || "";
+    const joinUrls = joinOrigin ? [joinOrigin] : [];
     const publicHealth = {
       ok: true,
       coInventor: true,
@@ -3046,6 +3049,7 @@ const server = http.createServer(async (req, res) => {
       aiSearch: AI_SEARCH_ENABLED,
       portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
       shareOrigin,
+      joinUrls,
     };
     const admin = canSeeAdmin(req, {
       url: new URL(req.url || "/", `http://${req.headers.host || "localhost"}`),
@@ -3660,6 +3664,10 @@ async function afterListen() {
     }
   } else {
     console.log("Remote Trends catalog: OFF (FF_TRENDS_REMOTE_URL empty/off)");
+  }
+  const joinOrigin = joinOriginFromEnv();
+  if (joinOrigin) {
+    console.log(`Join: ${joinOrigin}`);
   }
   const urls = lanJoinUrls();
   if (urls.length) {
