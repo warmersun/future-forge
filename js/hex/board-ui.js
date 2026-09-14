@@ -587,8 +587,19 @@ export function createHexBoardUi(opts) {
       );
       return false;
     }
-    opts.setBoard(res.board);
-    opts.onBoardChange?.(res.board, id, "place", { beforeBoard });
+    const applied = opts.setBoard(res.board);
+    if (applied && applied.ok === false) {
+      opts.onUnaffordablePlace?.(tile, applied);
+      setStatus(
+        applied.error === "stack full" || applied.error === "stack_full"
+          ? "Stack full — lift a tile off the board first."
+          : "Not enough resources to add this emTech to your stack.",
+        true
+      );
+      render();
+      return false;
+    }
+    opts.onBoardChange?.(board(), id, "place", { beforeBoard });
     setStatus("Placed.", false);
     render();
     return true;

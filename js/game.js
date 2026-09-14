@@ -629,6 +629,7 @@ function coInventorHelpSubtitle({ onChallenge = false, learning = false, tutorOn
  * @param {"learner"|"ai"} [who]
  */
 function endTutorSession(who = "learner") {
+  if (isRoomOrHotseatSession()) return;
   if (!state.mission?.isLearningModule) return;
   if (!state.tutorSessionActive) return;
   state.tutorSessionActive = false;
@@ -654,6 +655,7 @@ function endTutorSession(who = "learner") {
 
 /** Resume free tutor session (learning quests only). */
 function resumeTutorSession() {
+  if (isRoomOrHotseatSession()) return;
   if (!state.mission?.isLearningModule) return;
   if (state.tutorSessionActive) return;
   state.tutorSessionActive = true;
@@ -722,15 +724,49 @@ function budgetWillEnabled() {
 }
 
 /**
- * Prefer the lower of local vs snapshot so an optimistic spend is not clobbered
- * by a stale room/hotseat invent slice before the matching patch lands.
+ * Unacked optimistic spends. Snapshot is truth; pending is subtracted until
+ * the matching patch lands (or a refill/refund raises the snapshot).
  */
-function mergeSpendableResource(local, snapVal) {
-  const snapN = Number(snapVal);
-  const localN = Number(local);
-  if (Number.isFinite(snapN) && Number.isFinite(localN)) return Math.min(localN, snapN);
-  if (Number.isFinite(snapN)) return snapN;
-  return localN;
+const pendingSpend = { ap: 0, budget: 0, will: 0 };
+const lastSnapRes = { ap: null, budget: null, will: null };
+
+function resetPendingSpend() {
+  pendingSpend.ap = 0;
+  pendingSpend.budget = 0;
+  pendingSpend.will = 0;
+  lastSnapRes.ap = null;
+  lastSnapRes.budget = null;
+  lastSnapRes.will = null;
+}
+
+function noteSnapshotResources(f) {
+  if (!f) return;
+  for (const k of ["ap", "budget", "will"]) {
+    if (f[k] == null) continue;
+    const snap = Number(f[k]);
+    if (!Number.isFinite(snap)) continue;
+    const prev = lastSnapRes[k];
+    if (prev != null && Number.isFinite(prev)) {
+      if (snap > prev) {
+        if (pendingSpend[k] < 0) {
+          pendingSpend[k] = Math.min(0, pendingSpend[k] + (snap - prev));
+        } else {
+          pendingSpend[k] = 0;
+        }
+      } else if (snap < prev && pendingSpend[k] > 0) {
+        pendingSpend[k] = Math.max(0, pendingSpend[k] - (prev - snap));
+      }
+    }
+    lastSnapRes[k] = snap;
+  }
+}
+
+function snapshotResource(key, fallback) {
+  const f = liveInventSlice();
+  if (f && f[key] != null && Number.isFinite(Number(f[key]))) {
+    return Number(f[key]);
+  }
+  return fallback;
 }
 
 function liveInventSlice() {
@@ -756,32 +792,49 @@ function liveInventSlice() {
  * so Challenge HUD / sidestep checks don't use a stale counter.
  */
 function getSpendableAp() {
-  let raw = state.ap;
   try {
-    const f = liveInventSlice();
-    if (f && f.ap != null) raw = mergeSpendableResource(raw, f.ap);
+    noteSnapshotResources(liveInventSlice());
   } catch {
     /* ignore */
   }
-  const n = Number(raw);
-  const ap = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  const base = Number(snapshotResource("ap", state.ap));
+  const ap = Math.max(
+    0,
+    Math.floor((Number.isFinite(base) ? base : 0) - pendingSpend.ap)
+  );
   state.ap = ap;
   return ap;
 }
 
 /** Authoritative spendable Will for the local player (same sources as AP). */
 function getSpendableWill() {
-  let raw = state.will;
   try {
-    const f = liveInventSlice();
-    if (f && f.will != null) raw = mergeSpendableResource(raw, f.will);
+    noteSnapshotResources(liveInventSlice());
   } catch {
     /* ignore */
   }
-  const n = Number(raw);
-  const will = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  const base = Number(snapshotResource("will", state.will));
+  const will = Math.max(
+    0,
+    Math.floor((Number.isFinite(base) ? base : 0) - pendingSpend.will)
+  );
   state.will = will;
   return will;
+}
+
+function getSpendableBudget() {
+  try {
+    noteSnapshotResources(liveInventSlice());
+  } catch {
+    /* ignore */
+  }
+  const base = Number(snapshotResource("budget", state.budget));
+  const budget = Math.max(
+    0,
+    Math.floor((Number.isFinite(base) ? base : 0) - pendingSpend.budget)
+  );
+  state.budget = budget;
+  return budget;
 }
 
 /**
@@ -799,11 +852,18 @@ function syncRoomResourcesFromSnapshot() {
       roomBridge.client?.()?.snapshot?.you?.invent ||
       null;
     if (!f) return;
-    if (f.ap != null) state.ap = Number(f.ap) || 0;
+    noteSnapshotResources(f);
     if (f.apMax != null) state.apMax = Number(f.apMax) || state.apMax;
-    if (f.budget != null) state.budget = Number(f.budget) || 0;
-    if (f.will != null) state.will = Number(f.will) || 0;
-    if (f.apSpentThisTurn != null) state.apSpentThisTurn = Number(f.apSpentThisTurn) || 0;
+    state.ap = getSpendableAp();
+    state.budget = getSpendableBudget();
+    state.will = getSpendableWill();
+    if (f.apSpentThisTurn != null) {
+      const snapSpent = Number(f.apSpentThisTurn) || 0;
+      state.apSpentThisTurn =
+        pendingSpend.ap > 0
+          ? Math.max(snapSpent, state.apSpentThisTurn || 0, snapSpent + pendingSpend.ap)
+          : snapSpent;
+    }
     if (f.aiTaxThisTurn != null) state.aiTaxThisTurn = Boolean(f.aiTaxThisTurn);
   } catch {
     /* ignore */
@@ -885,8 +945,8 @@ function canAffordTech(t) {
   if (apEnabled() && getSpendableAp() < 1) return { ok: false, error: "no_ap" };
   if (budgetWillEnabled()) {
     const cost = techCost(t);
-    if ((state.budget ?? 0) < (cost.budget || 0)) return { ok: false, error: "no_budget" };
-    if ((state.will ?? 0) < (cost.will || 0)) return { ok: false, error: "no_will" };
+    if (getSpendableBudget() < (cost.budget || 0)) return { ok: false, error: "no_budget" };
+    if (getSpendableWill() < (cost.will || 0)) return { ok: false, error: "no_will" };
   }
   return { ok: true };
 }
@@ -979,6 +1039,23 @@ function reconcileStackFromBoard(nextIds) {
       return { ok: true };
     }
     const targetSeatId = roomBridge.getViewId?.() || roomBridge.myId?.();
+    const checkpoint = {
+      selectedTechIds: [...prev],
+      techAddedThisTurn: { ...(state.techAddedThisTurn || {}) },
+      apSpentThisTurn: state.apSpentThisTurn || 0,
+      pending: { ...pendingSpend },
+    };
+    const restoreCheckpoint = () => {
+      pendingSpend.ap = checkpoint.pending.ap;
+      pendingSpend.budget = checkpoint.pending.budget;
+      pendingSpend.will = checkpoint.pending.will;
+      state.techAddedThisTurn = checkpoint.techAddedThisTurn;
+      state.apSpentThisTurn = checkpoint.apSpentThisTurn;
+      state.selectedTechIds = checkpoint.selectedTechIds;
+      getSpendableAp();
+      getSpendableBudget();
+      getSpendableWill();
+    };
     for (const id of prev) {
       if (wantedSet.has(id)) continue;
       const key = targetSeatId ? `${targetSeatId}:${id}` : id;
@@ -986,7 +1063,7 @@ function reconcileStackFromBoard(nextIds) {
       if (rec && budgetWillEnabled()) {
         const cost = rec.cost || rec;
         const refund = Math.floor((Number(cost.budget) || 0) / 2);
-        state.budget = (state.budget ?? 0) + refund;
+        pendingSpend.budget -= refund;
         if (state.techAddedThisTurn) {
           delete state.techAddedThisTurn[key];
           delete state.techAddedThisTurn[id];
@@ -995,21 +1072,25 @@ function reconcileStackFromBoard(nextIds) {
       removeFromLearnOrder(id);
     }
     for (const id of wanted) {
-      if (prev.includes(id)) continue;
+      if (prev.includes(id) || (state.selectedTechIds || []).includes(id)) continue;
       const tech = techById(id);
       const afford = canAffordTech(tech);
       if (!afford.ok) {
+        restoreCheckpoint();
         flashUnaffordableTech(id, afford.error);
         return { ok: false, error: afford.error, techId: id };
       }
       if (apEnabled()) {
-        state.ap = Math.max(0, getSpendableAp() - 1);
+        pendingSpend.ap += 1;
         state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+        getSpendableAp();
       }
       if (budgetWillEnabled() && tech) {
         const cost = techCost(tech);
-        state.budget = Math.max(0, (state.budget ?? 0) - (cost.budget || 0));
-        state.will = Math.max(0, (state.will ?? 0) - (cost.will || 0));
+        pendingSpend.budget += cost.budget || 0;
+        pendingSpend.will += cost.will || 0;
+        getSpendableBudget();
+        getSpendableWill();
         if (!state.techAddedThisTurn) state.techAddedThisTurn = {};
         if (targetSeatId) {
           state.techAddedThisTurn[`${targetSeatId}:${id}`] = {
@@ -2422,6 +2503,7 @@ function enterHotseatPlay(names, mission, global) {
   state.coInventor?.reset?.(false);
   if (state.vision) state.vision.newSession();
   state.tutorSessionActive = false;
+  resetPendingSpend();
   // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
   state.hexBoard = createEmptyBoard();
   hotseatBridge.hydrateSoloState(state, {
@@ -2935,7 +3017,19 @@ function enterRoomPlay(client, opts = {}) {
         flashToast(mpFriendlyError(err));
         // Roll back optimistic stack (e.g. select_tech denied for no_budget/no_will/no_ap)
         try {
-          roomBridge.hydrateSoloState(state, { global: state.global });
+          resetPendingSpend();
+          const spendErr = [
+            "no_ap",
+            "no_budget",
+            "no_will",
+            "stack_full",
+            "unknown_tech",
+            "not_your_layer",
+          ].includes(err);
+          roomBridge.hydrateSoloState(state, {
+            global: state.global,
+            forceHexBoard: spendErr,
+          });
           if (state.screen === "workshop") {
             renderTechList();
             renderSelectedChips();
@@ -3004,6 +3098,7 @@ function enterRoomPlay(client, opts = {}) {
     state.challengeSpectator = false;
     state.coInventor?.reset?.(false);
     state.tutorSessionActive = false;
+    resetPendingSpend();
     // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
     state.hexBoard = createEmptyBoard();
 
@@ -8520,7 +8615,7 @@ function ideaSparksContext(techId) {
     pressure: state.pressure,
     availableTechs: TECHS.map((t) => techForAi(t, state.year)),
     grounding: state.mission?.grounding || null,
-    isLearningModule: Boolean(state.mission?.isLearningModule),
+    isLearningModule: Boolean(coInventorLearningQuest()),
     questId: state.mission?.id || null,
     source: state.mission?.source || null,
   };
@@ -10643,7 +10738,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         pressure: state.pressure,
         availableTechs: techsForCoInventMode(mode),
         grounding: state.mission?.grounding || null,
-        isLearningModule: Boolean(state.mission?.isLearningModule),
+        isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),
         questId: state.mission?.id || null,
         source: state.mission?.source || null,
@@ -17285,7 +17380,7 @@ function ensureCoInventor() {
         spotlightTechId: state.mission?.spotlight?.techId || null,
         spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
         grounding: state.mission?.grounding || null,
-        isLearningModule: Boolean(state.mission?.isLearningModule),
+        isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),
         questId: state.mission?.id || null,
         source: state.mission?.source || null,
@@ -18248,7 +18343,7 @@ async function callCoInventMode(mode, userLabel) {
       pressure: state.pressure,
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
       grounding: state.mission?.grounding || null,
-      isLearningModule: Boolean(state.mission?.isLearningModule),
+      isLearningModule: Boolean(coInventorLearningQuest()),
       aiTutorContext: coInventorAiTutorContext(),
       questId: state.mission?.id || null,
       source: state.mission?.source || null,

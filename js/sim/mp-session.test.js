@@ -581,6 +581,113 @@ describe("mp-session hex board help", () => {
     assert.ok(r.events.some((e) => e.type === "tech_layered"));
   });
 
+  it("helper board_commit missing an owner tile restores it instead of wiping", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "board_commit",
+      payload: {
+        hexBoard: withPlacedIdeaTile(
+          s.invents["seat-0"].hexBoard,
+          "inv-owner",
+          "solar"
+        ),
+      },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const helperAp = s.invents["seat-1"].ap;
+    const helperBoard = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    delete helperBoard.tiles["inv-owner"];
+    helperBoard.tiles["inv-help"] = {
+      id: "inv-help",
+      kind: "invention",
+      techId: "iot",
+      name: "Helper layer",
+      howText: "Layered",
+      q: 3,
+      r: 1,
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: helperBoard, targetSeatId: "seat-0" },
+    });
+    assert.equal(r.ok, true, r.error);
+    const ids = r.session.invents["seat-0"].stack.map((x) => x.techId).sort();
+    assert.deepEqual(ids, ["iot", "solar"]);
+    assert.ok(r.session.invents["seat-0"].hexBoard.tiles["inv-owner"]);
+    assert.equal(r.session.invents["seat-1"].ap, helperAp - 1);
+  });
+
+  it("helper cannot occupy the hex of an owner tile they omitted", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "board_commit",
+      payload: {
+        hexBoard: withPlacedIdeaTile(
+          s.invents["seat-0"].hexBoard,
+          "inv-owner",
+          "solar"
+        ),
+      },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const helperBoard = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    delete helperBoard.tiles["inv-owner"];
+    helperBoard.tiles["inv-help"] = {
+      id: "inv-help",
+      kind: "invention",
+      techId: "iot",
+      name: "Overwrite",
+      howText: "Same cell",
+      q: 2,
+      r: 1,
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: helperBoard, targetSeatId: "seat-0" },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "not_your_layer");
+  });
+
+  it("board_commit rejects an unknown placed techId", () => {
+    let s = started();
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: {
+        hexBoard: withPlacedIdeaTile(
+          s.invents["seat-0"].hexBoard,
+          "inv-x",
+          "not-a-real-tech"
+        ),
+      },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "unknown_tech");
+  });
+
+  it("board_commit rejects more than six placed emTechs", () => {
+    let s = started();
+    const board = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    const ids = TECHS.slice(0, 7).map((t) => t.id);
+    ids.forEach((techId, i) => {
+      board.tiles[`inv-${techId}`] = {
+        id: `inv-${techId}`,
+        kind: "invention",
+        techId,
+        name: techId,
+        howText: "x",
+        q: i,
+        r: 4,
+      };
+    });
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "stack_full");
+  });
+
   it("helper cannot summon challenger tiles on another invent", () => {
     let s = started();
     s = applyMpAction(s, {

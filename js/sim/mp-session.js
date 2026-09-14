@@ -45,6 +45,51 @@ import {
 
 const MAX_PLAYERS = 6;
 const MIN_PLAYERS = 2;
+/** Same cap as select_tech / Workshop stackCap default. */
+const MP_STACK_CAP = 6;
+
+function hexCellTaken(board, q, r, exceptId) {
+  return Object.values(board?.tiles || {}).some(
+    (t) => t && t.id !== exceptId && t.q === q && t.r === r
+  );
+}
+
+/**
+ * Helper board_commit often omits owner invention tiles (stale/local subset).
+ * Restore those placed tiles instead of wiping the owner's stack.
+ * @returns {{ ok: true, board: object } | { ok: false, error: string }}
+ */
+function restoreHelperPreservedInventions(prevBoard, incoming, prevStack, actorId) {
+  const tiles = { ...(incoming?.tiles || {}) };
+  let changed = false;
+  const placed = new Set(
+    Object.values(tiles)
+      .filter(
+        (t) => t?.kind === "invention" && t.techId && t.q != null && t.r != null
+      )
+      .map((t) => t.techId)
+  );
+  for (const entry of prevStack || []) {
+    if (!entry?.techId || entry.addedBy === actorId) continue;
+    if (placed.has(entry.techId)) continue;
+    const src = Object.values(prevBoard?.tiles || {}).find(
+      (t) =>
+        t?.kind === "invention" &&
+        t.techId === entry.techId &&
+        t.q != null &&
+        t.r != null
+    );
+    if (!src) continue;
+    if (hexCellTaken({ tiles }, src.q, src.r, src.id)) {
+      return { ok: false, error: "not_your_layer" };
+    }
+    tiles[src.id] = { ...src };
+    placed.add(entry.techId);
+    changed = true;
+  }
+  if (!changed) return { ok: true, board: incoming };
+  return { ok: true, board: { ...incoming, tiles } };
+}
 
 /**
  * @param {string[]|{id:string,displayName:string,isHost?:boolean}[]} namesOrSeats
@@ -854,15 +899,27 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       if (!gate.ok) return { ok: false, error: gate.error, session };
     }
     if (payload.hexBoard && typeof payload.hexBoard === "object") {
-      const incomingBoard = boardForWire(payload.hexBoard);
-      const placedIds = techIdsFromBoard(incomingBoard);
+      let incomingBoard = boardForWire(payload.hexBoard);
       const prevStack = target.stack || [];
       const prevIds = prevStack.map((x) => x.techId);
       const prevById = new Map(prevStack.map((x) => [x.techId, x]));
+      if (targetSeatId !== activeId) {
+        const preserved = restoreHelperPreservedInventions(
+          target.hexBoard,
+          incomingBoard,
+          prevStack,
+          activeId
+        );
+        if (!preserved.ok) {
+          return { ok: false, error: preserved.error, session };
+        }
+        incomingBoard = preserved.board;
+      }
+      const placedIds = techIdsFromBoard(incomingBoard);
       const addedIds = placedIds.filter((id) => !prevIds.includes(id));
       const removedIds = prevIds.filter((id) => !placedIds.includes(id));
 
-      if (placedIds.length > 6) {
+      if (placedIds.length > MP_STACK_CAP) {
         return { ok: false, error: "stack_full", session };
       }
       // Helpers may only lift layers they added (same rule as deselect_tech)
@@ -960,7 +1017,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       );
       // Derive prose for consumers that still read inventionHow
       try {
-        const tiles = Object.values(payload.hexBoard.tiles || {});
+        const tiles = Object.values(target.hexBoard.tiles || {});
         const inventions = tiles.filter((t) => t.kind === "invention");
         target.inventionName =
           inventions
@@ -1128,7 +1185,7 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
 
     const ids = stackTechIds(target);
     if (ids.includes(techId)) return { ok: false, error: "already_on_stack", session };
-    if (ids.length >= 6) return { ok: false, error: "stack_full", session };
+    if (ids.length >= MP_STACK_CAP) return { ok: false, error: "stack_full", session };
 
     const tech = payload.tech || techById(techId);
     if (!tech) return { ok: false, error: "unknown_tech", session };

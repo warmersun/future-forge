@@ -266,19 +266,27 @@ export function createHexWorkshop(api) {
   }
 
   function setBoard(b, opts = {}) {
+    const prev = board();
     const next = opts.skipRekey ? b : rekeyIslandHow(b);
     api.setBoard(next);
-    syncDerivedProse();
+    const rec = syncDerivedProse();
+    if (rec && rec.ok === false) {
+      api.setBoard(prev);
+      syncDerivedProse();
+      if (opts.paintHow !== false) renderPathwayHowPanel();
+      return rec;
+    }
     if (opts.paintHow !== false) renderPathwayHowPanel();
+    return rec || { ok: true };
   }
 
   function syncDerivedProse() {
     const ids = techIdsFromBoard(board());
     if (api.reconcileStackFromBoard) {
-      api.reconcileStackFromBoard(ids);
-    } else {
-      api.setSelectedTechIds?.(ids);
+      return api.reconcileStackFromBoard(ids);
     }
+    api.setSelectedTechIds?.(ids);
+    return { ok: true };
   }
 
   function renderPathwayHowPanel() {
