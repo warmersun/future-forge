@@ -135,6 +135,7 @@ import {
   crisisHoldNeedLabel,
 } from "./sim/collapse.js";
 import { inventYear } from "./sim/mp-session.js";
+import { cloudRunKind, missionForFriendsPlay } from "./sim/state.js";
 import { scoreRun, starLabel } from "./sim/scoring.js";
 import {
   applyAction,
@@ -178,7 +179,6 @@ import {
   learningProgressBarHtml,
 } from "./quest-tile.js";
 import {
-  isLearningMission,
   isSponsoredMission,
   isModuleEntry,
   isLearningEntry,
@@ -583,7 +583,19 @@ function features() {
 
 /** Learning quest with tutor session currently on (free co-inventor chat AP). */
 function isLearningTutorSessionActive() {
+  if (isRoomOrHotseatSession()) return false;
   return Boolean(state.mission?.isLearningModule) && state.tutorSessionActive === true;
+}
+
+/** Tutor chrome is solo-only; friends games invent like any other Quest. */
+function coInventorLearningQuest() {
+  if (isRoomOrHotseatSession()) return false;
+  return Boolean(state.mission?.isLearningModule);
+}
+
+function coInventorAiTutorContext() {
+  if (isRoomOrHotseatSession()) return null;
+  return state.mission?.aiTutorContext || null;
 }
 
 /** AP to reserve for invent co-inventor panel; 0 while tutoring, or after the season tax is paid. */
@@ -691,7 +703,7 @@ function seedLearningVisionStill() {
 }
 
 function syncCoInventorTutorUi() {
-  const learning = Boolean(state.mission?.isLearningModule);
+  const learning = coInventorLearningQuest();
   const active = isLearningTutorSessionActive();
   state.coInventor?.setTutorSession?.({
     learningQuest: learning,
@@ -710,6 +722,35 @@ function budgetWillEnabled() {
 }
 
 /**
+ * Prefer the lower of local vs snapshot so an optimistic spend is not clobbered
+ * by a stale room/hotseat invent slice before the matching patch lands.
+ */
+function mergeSpendableResource(local, snapVal) {
+  const snapN = Number(snapVal);
+  const localN = Number(local);
+  if (Number.isFinite(snapN) && Number.isFinite(localN)) return Math.min(localN, snapN);
+  if (Number.isFinite(snapN)) return snapN;
+  return localN;
+}
+
+function liveInventSlice() {
+  if (roomBridge.isRoom()) {
+    const id = roomBridge.myId?.();
+    return (
+      (id && roomBridge.invent?.(id)) ||
+      (id && roomBridge.client?.()?.snapshot?.mp?.invents?.[id]) ||
+      roomBridge.client?.()?.snapshot?.you?.invent ||
+      null
+    );
+  }
+  if (hotseatBridge.isHotseat()) {
+    const id = hotseatBridge.getActiveId?.();
+    return id ? hotseatBridge.invent?.(id) : null;
+  }
+  return null;
+}
+
+/**
  * Authoritative spendable AP for the local player.
  * Rooms may skip full hydrate mid-Challenge; still read live invent AP from the snapshot
  * so Challenge HUD / sidestep checks don't use a stale counter.
@@ -717,19 +758,8 @@ function budgetWillEnabled() {
 function getSpendableAp() {
   let raw = state.ap;
   try {
-    if (roomBridge.isRoom()) {
-      const id = roomBridge.myId?.();
-      const f =
-        (id && roomBridge.invent?.(id)) ||
-        (id && roomBridge.client?.()?.snapshot?.mp?.invents?.[id]) ||
-        roomBridge.client?.()?.snapshot?.you?.invent ||
-        null;
-      if (f && f.ap != null) raw = f.ap;
-    } else if (hotseatBridge.isHotseat()) {
-      const id = hotseatBridge.getActiveId?.();
-      const f = id ? hotseatBridge.invent?.(id) : null;
-      if (f && f.ap != null) raw = f.ap;
-    }
+    const f = liveInventSlice();
+    if (f && f.ap != null) raw = mergeSpendableResource(raw, f.ap);
   } catch {
     /* ignore */
   }
@@ -743,19 +773,8 @@ function getSpendableAp() {
 function getSpendableWill() {
   let raw = state.will;
   try {
-    if (roomBridge.isRoom()) {
-      const id = roomBridge.myId?.();
-      const f =
-        (id && roomBridge.invent?.(id)) ||
-        (id && roomBridge.client?.()?.snapshot?.mp?.invents?.[id]) ||
-        roomBridge.client?.()?.snapshot?.you?.invent ||
-        null;
-      if (f && f.will != null) raw = f.will;
-    } else if (hotseatBridge.isHotseat()) {
-      const id = hotseatBridge.getActiveId?.();
-      const f = id ? hotseatBridge.invent?.(id) : null;
-      if (f && f.will != null) raw = f.will;
-    }
+    const f = liveInventSlice();
+    if (f && f.will != null) raw = mergeSpendableResource(raw, f.will);
   } catch {
     /* ignore */
   }
@@ -863,7 +882,7 @@ function techCost(t) {
  */
 function canAffordTech(t) {
   if (!t) return { ok: false };
-  if (apEnabled() && (state.ap ?? 0) < 1) return { ok: false, error: "no_ap" };
+  if (apEnabled() && getSpendableAp() < 1) return { ok: false, error: "no_ap" };
   if (budgetWillEnabled()) {
     const cost = techCost(t);
     if ((state.budget ?? 0) < (cost.budget || 0)) return { ok: false, error: "no_budget" };
@@ -951,8 +970,58 @@ function reconcileStackFromBoard(nextIds) {
   }
 
   if (roomBridge.isRoom()) {
+    const canPay =
+      Boolean(roomBridge.isMyTurn?.()) && Boolean(roomBridge.canEditStack?.());
+    if (!canPay) {
+      state.selectedTechIds = wanted;
+      syncLearnOrderWithSelection();
+      paintAfterStackReconcile();
+      return { ok: true };
+    }
+    const targetSeatId = roomBridge.getViewId?.() || roomBridge.myId?.();
+    for (const id of prev) {
+      if (wantedSet.has(id)) continue;
+      const key = targetSeatId ? `${targetSeatId}:${id}` : id;
+      const rec = state.techAddedThisTurn?.[key] || state.techAddedThisTurn?.[id];
+      if (rec && budgetWillEnabled()) {
+        const cost = rec.cost || rec;
+        const refund = Math.floor((Number(cost.budget) || 0) / 2);
+        state.budget = (state.budget ?? 0) + refund;
+        if (state.techAddedThisTurn) {
+          delete state.techAddedThisTurn[key];
+          delete state.techAddedThisTurn[id];
+        }
+      }
+      removeFromLearnOrder(id);
+    }
+    for (const id of wanted) {
+      if (prev.includes(id)) continue;
+      const tech = techById(id);
+      const afford = canAffordTech(tech);
+      if (!afford.ok) {
+        flashUnaffordableTech(id, afford.error);
+        return { ok: false, error: afford.error, techId: id };
+      }
+      if (apEnabled()) {
+        state.ap = Math.max(0, getSpendableAp() - 1);
+        state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+      }
+      if (budgetWillEnabled() && tech) {
+        const cost = techCost(tech);
+        state.budget = Math.max(0, (state.budget ?? 0) - (cost.budget || 0));
+        state.will = Math.max(0, (state.will ?? 0) - (cost.will || 0));
+        if (!state.techAddedThisTurn) state.techAddedThisTurn = {};
+        if (targetSeatId) {
+          state.techAddedThisTurn[`${targetSeatId}:${id}`] = {
+            cost,
+            targetSeatId,
+            techId: id,
+          };
+        }
+      }
+      pushLearnOrder(id);
+    }
     state.selectedTechIds = wanted;
-    syncLearnOrderWithSelection();
     paintAfterStackReconcile();
     return { ok: true };
   }
@@ -2352,6 +2421,7 @@ function enterHotseatPlay(names, mission, global) {
   state.scrutiny = null;
   state.coInventor?.reset?.(false);
   if (state.vision) state.vision.newSession();
+  state.tutorSessionActive = false;
   // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
   state.hexBoard = createEmptyBoard();
   hotseatBridge.hydrateSoloState(state, {
@@ -2687,7 +2757,7 @@ function handleRoomPlayEvent(client, evt) {
     renderSelectedChips();
     // Stack chips alone is not enough — left tech rail needs ✓ / selected state
     const stackChanged = events.some((e) =>
-      ["tech_added", "tech_layered", "tech_removed", "deselect_tech"].includes(e?.type)
+      ["tech_added", "tech_layered", "tech_removed", "deselect_tech", "board_commit"].includes(e?.type)
     );
     if (stackChanged || evt?.type === "snapshot" || seatTurnChanged) {
       syncLearnOrderWithSelection();
@@ -2933,6 +3003,7 @@ function enterRoomPlay(client, opts = {}) {
     state.scrutiny = null;
     state.challengeSpectator = false;
     state.coInventor?.reset?.(false);
+    state.tutorSessionActive = false;
     // Drop leftover solo/prior-quest tiles so preferIncoming cannot keep them.
     state.hexBoard = createEmptyBoard();
 
@@ -3193,11 +3264,10 @@ function slimLastRunFromState() {
   const o = state.outcome;
   const m = state.mission;
   if (!o || !m?.id) return null;
-  const kind = m.isLearningModule
-    ? "lesson"
-    : isMultipartyOutcome()
-      ? "friends"
-      : "theme";
+  const kind = cloudRunKind({
+    multiparty: isMultipartyOutcome(),
+    isLearningModule: Boolean(m.isLearningModule),
+  });
   let outcome = String(o.kind || "");
   if (outcome === "win") outcome = "hold";
   if (!outcome) return null;
@@ -3299,11 +3369,10 @@ function postCloudRun(run) {
 
 function postCloudRunStart(mission) {
   if (!isClerkSignedIn() || !mission?.id) return;
-  const kind = mission.isLearningModule
-    ? "lesson"
-    : isRoomOrHotseatSession()
-      ? "friends"
-      : "theme";
+  const kind = cloudRunKind({
+    multiparty: isRoomOrHotseatSession(),
+    isLearningModule: Boolean(mission.isLearningModule),
+  });
   void apiFetch("/api/me/runs/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -4668,11 +4737,6 @@ async function playCatalogEntry(entry, opts = {}) {
     { ...src.mission, source: src.source || src.mission.source || "hosted" },
     src.mission.globalId || src.globalId
   );
-  // Learning modules are solo-only (tutor session) — never for multiplayer pick
-  if (missionPickSession && isLearningMission(m)) {
-    flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
-    return "blocked";
-  }
   if (opts.clearPick !== false && !missionPickSession) {
     clearMissionPickSession();
     leaveHotseat?.();
@@ -4836,12 +4900,6 @@ function openQuestHub() {
  * @param {{ moduleKey?: string|null }} [opts]
  */
 function openQuestCatalog(kind, opts = {}) {
-  // Learning catalog is solo-only
-  if (kind === "learning" && missionPickSession) {
-    flashToast("Learning modules are solo only.");
-    openQuestHub();
-    return;
-  }
   state.questCatalogKind = kind;
   state.questCatalogModuleKey = opts.moduleKey ?? null;
   showScreen("quest-catalog");
@@ -4860,7 +4918,7 @@ function renderQuestHub() {
   const intro = document.querySelector("#screen-quest-hub .section-intro p");
   if (intro) {
     intro.innerHTML = mpPick
-      ? "Pick a Quest for the party: a <strong>theme</strong>, <strong>sponsored</strong> Spotlight, or side-loaded <strong>Library</strong> tile. <strong>Learning</strong> modules are solo only."
+      ? "Pick a Quest for the party: a <strong>theme</strong>, <strong>sponsored</strong> Spotlight, <strong>learning</strong> lesson, or side-loaded <strong>Library</strong> tile."
       : "Pick how you want to enter: generate local challenges from a <strong>theme</strong>, open a <strong>sponsored</strong> or <strong>learning</strong> path, or browse other side-loaded Quests.";
   }
   const h1 = document.querySelector("#screen-quest-hub .section-intro h1");
@@ -4888,21 +4946,20 @@ function renderQuestHub() {
         : "None loaded yet",
       cta: "Open sponsored →",
     },
-  ];
-  if (!mpPick) {
-    cards.push({
+    {
       id: "learning",
       title: "Learning",
-      blurb:
-        "Modules of lessons. New lessons land here — pick a module and take the next one.",
+      blurb: mpPick
+        ? "Curriculum lessons for the party — same invent loop as other Quests (tutor stays solo)."
+        : "Modules of lessons. New lessons land here — pick a module and take the next one.",
       meta: counts.learningLessons
         ? `${counts.learningGroups} module${counts.learningGroups === 1 ? "" : "s"} · ${
             counts.learningLessons
           } lesson${counts.learningLessons === 1 ? "" : "s"}`
         : "None loaded yet",
-      cta: "Open learning →",
-    });
-  }
+      cta: mpPick ? "Pick a lesson →" : "Open learning →",
+    },
+  ];
   cards.push({
     id: "library",
     title: "Library",
@@ -5745,20 +5802,12 @@ function renderQuestCatalog() {
   const parts = partitionCatalogQuests();
   if (importLabel) importLabel.hidden = false;
 
-  if (kind === "learning" && missionPickSession) {
-    openQuestHub();
-    return;
-  }
-
-  let pool =
+  const pool =
     kind === "sponsored"
       ? parts.sponsored
       : kind === "library"
         ? parts.library
         : parts.learning;
-  if (missionPickSession) {
-    pool = pool.filter((e) => !isLearningEntry(e));
-  }
 
   const top = catalogTopLevel(pool);
 
@@ -5779,15 +5828,16 @@ function renderQuestCatalog() {
     if (titleEl) titleEl.textContent = "Library";
     if (blurbEl) {
       blurbEl.textContent = missionPickSession
-        ? "Side-loaded Quests for this party (learning modules hidden — solo only)."
+        ? "Side-loaded Quests for this party, including learning lessons."
         : "Local side-load only (quests/ folder or Import).";
     }
     groupBy = "theme";
   } else {
     if (titleEl) titleEl.textContent = "Learning modules";
     if (blurbEl) {
-      blurbEl.textContent =
-        "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
+      blurbEl.textContent = missionPickSession
+        ? "Curriculum lessons for this party — same invent loop as other Quests (tutor stays solo). Open a module, then a lesson."
+        : "From warmersun.com — curriculum paths with tutor-mode co-inventor. Open a module, then a lesson. Progress is saved on this device.";
     }
   }
 
@@ -6508,10 +6558,6 @@ function startMission(mission, opts = {}) {
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
-    if (isLearningMission(mission)) {
-      flashToast("Learning modules are solo only — pick Themes, Sponsored, or Library.");
-      return false;
-    }
     const session = missionPickSession;
     missionPickSession = null;
     const global = globalById(mission.globalId) || state.global;
@@ -10598,7 +10644,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         availableTechs: techsForCoInventMode(mode),
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
-        aiTutorContext: state.mission?.aiTutorContext || null,
+        aiTutorContext: coInventorAiTutorContext(),
         questId: state.mission?.id || null,
         source: state.mission?.source || null,
         tutorMode: isLearningTutorSessionActive(),
@@ -15880,11 +15926,11 @@ function launchRoomNextChallengePick() {
       try {
         await client.hostCmd("set_quest", {
           globalId: global?.id || mission.globalId,
-          mission,
+          mission: missionForFriendsPlay(mission),
         });
         await client.hostCmd("start_quest", {
           globalId: global?.id || mission.globalId,
-          mission,
+          mission: missionForFriendsPlay(mission),
         });
         // Snapshot / next_quest_started will re-enter play (force when key changes)
         flashToast(`Next race: ${mission.title}`);
@@ -17190,7 +17236,7 @@ function ensureCoInventor() {
 
   const prevHistories = state.coInventor?.exportHistories?.() || null;
   const onChallenge = state.screen === "challenge-step";
-  const learning = Boolean(state.mission?.isLearningModule);
+  const learning = coInventorLearningQuest();
   const tutorOn = isLearningTutorSessionActive();
   state.coInventor = new CoInventor({
     surface: hexInventSurface(),
@@ -17240,7 +17286,7 @@ function ensureCoInventor() {
         spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(state.mission?.isLearningModule),
-        aiTutorContext: state.mission?.aiTutorContext || null,
+        aiTutorContext: coInventorAiTutorContext(),
         questId: state.mission?.id || null,
         source: state.mission?.source || null,
         tutorMode: isLearningTutorSessionActive(),
@@ -18203,7 +18249,7 @@ async function callCoInventMode(mode, userLabel) {
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
       grounding: state.mission?.grounding || null,
       isLearningModule: Boolean(state.mission?.isLearningModule),
-      aiTutorContext: state.mission?.aiTutorContext || null,
+      aiTutorContext: coInventorAiTutorContext(),
       questId: state.mission?.id || null,
       source: state.mission?.source || null,
       tutorMode: isLearningTutorSessionActive(),

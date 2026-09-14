@@ -147,6 +147,29 @@ export function cloneMission(m) {
   };
 }
 
+/**
+ * Friends play keeps lesson labels but never the hidden tutor curriculum.
+ * @param {object|null|undefined} mission
+ */
+export function missionForFriendsPlay(mission) {
+  const m = cloneMission(mission);
+  if (!m) return null;
+  delete m.aiTutorContext;
+  return m;
+}
+
+/**
+ * Cloud quest-log kind. Multiparty wins over learning-module, so a friends
+ * hold on a lesson tile still counts as friends.
+ * @param {{ multiparty?: boolean, isLearningModule?: boolean }} [opts]
+ * @returns {"friends"|"lesson"|"theme"}
+ */
+export function cloudRunKind(opts = {}) {
+  if (opts.multiparty) return "friends";
+  if (opts.isLearningModule) return "lesson";
+  return "theme";
+}
+
 export function cloneSimState(sim) {
   if (!sim) return null;
   return {

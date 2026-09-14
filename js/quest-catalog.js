@@ -337,19 +337,12 @@ export function catalogTopLevel(entries) {
  * Hub meta counts: modules count as 1, nested lessons do not.
  *
  * @param {{ sponsored: object[], learning: object[], library: object[] }} parts
- * @param {{ mpPick?: boolean }} [opts]
+ * @param {{ mpPick?: boolean }} [_opts] unused — friends pick lists the same tiles as solo
  */
-export function catalogHubCounts(parts, opts = {}) {
-  const mpPick = Boolean(opts.mpPick);
-  const sponsoredPool = mpPick
-    ? (parts.sponsored || []).filter((e) => !isLearningEntry(e))
-    : parts.sponsored || [];
-  const libraryPool = mpPick
-    ? (parts.library || []).filter((e) => !isLearningEntry(e))
-    : parts.library || [];
-  const sp = catalogTopLevel(sponsoredPool);
+export function catalogHubCounts(parts, _opts = {}) {
+  const sp = catalogTopLevel(parts.sponsored || []);
   const learn = catalogTopLevel(parts.learning || []);
-  const lib = catalogTopLevel(libraryPool);
+  const lib = catalogTopLevel(parts.library || []);
   return {
     sponsored: sp.groups.length + sp.standalone.length,
     learningGroups: learn.groups.length,

@@ -44,6 +44,25 @@ const alwaysOk = () => 0.01;
 const alwaysFail = () => 0.99;
 
 describe("mp-session lobby & start", () => {
+  it("strips aiTutorContext when attaching a learning lesson", () => {
+    const raw = {
+      ...mission,
+      isLearningModule: true,
+      module: "RSI desk",
+      lesson: 1,
+      aiTutorContext: "SECRET CURRICULUM",
+    };
+    let s = createMpLobby(["Alex", "Bea"]);
+    s = setMpQuest(s, raw, "climate");
+    assert.equal(s.questMeta.mission.aiTutorContext, undefined);
+    assert.equal(s.questMeta.mission.isLearningModule, true);
+    assert.equal(raw.aiTutorContext, "SECRET CURRICULUM");
+    const r = startMpQuest(s);
+    assert.equal(r.ok, true);
+    assert.equal(r.session.place.mission.aiTutorContext, undefined);
+    assert.equal(r.session.place.mission.isLearningModule, true);
+  });
+
   it("requires 2 seats and creates personal invents", () => {
     const s = started(["Alex", "Bea", "Cara"]);
     assert.equal(s.seats.length, 3);
@@ -440,6 +459,126 @@ describe("mp-session hex board help", () => {
     assert.ok((r.session.invents["seat-0"].apSpentThisTurn || 0) >= 1);
     const end = applyMpAction(r.session, { type: "end_turn" });
     assert.equal(end.ok, true, end.error);
+  });
+
+  function withPlacedIdeaTile(board, id = "inv-placed", techId = "solar") {
+    const next = JSON.parse(JSON.stringify(board));
+    next.tiles[id] = {
+      id,
+      kind: "invention",
+      techId,
+      name: "Docked idea",
+      howText: "Placed on the field",
+      q: 2,
+      r: 1,
+    };
+    return next;
+  }
+
+  it("board_commit spends AP and budget when an invention is placed on the field", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    const budget0 = s.invents["seat-0"].budget;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(r.ok, true, r.error);
+    const f = r.session.invents["seat-0"];
+    assert.equal(f.ap, ap0 - 1);
+    assert.ok(f.budget < budget0, "placing spends Budget");
+    assert.ok((f.apSpentThisTurn || 0) >= 1);
+    assert.equal(f.stack[0]?.techId, "solar");
+    assert.ok(r.events.some((e) => e.type === "tech_added" && e.techId === "solar"));
+  });
+
+  it("board_commit does not charge AP again for a tech already on the stack", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "select_tech",
+      payload: { techId: "solar" },
+    }).session;
+    const apAfterSelect = s.invents["seat-0"].ap;
+    const budgetAfterSelect = s.invents["seat-0"].budget;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.invents["seat-0"].ap, apAfterSelect);
+    assert.equal(r.session.invents["seat-0"].budget, budgetAfterSelect);
+  });
+
+  it("board_commit rejects a new placed tech when AP is gone", () => {
+    let s = started();
+    s.invents["seat-0"].ap = 0;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "no_ap");
+    assert.equal(s.invents["seat-0"].stack.length, 0);
+  });
+
+  it("tray-only invention tiles do not spend stack AP", () => {
+    let s = started();
+    const ap0 = s.invents["seat-0"].ap;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.invents["seat-0"].ap, ap0);
+    assert.equal(r.session.invents["seat-0"].stack.length, 0);
+  });
+
+  it("lifting a same-turn placed tile refunds half Budget, not AP", () => {
+    let s = started();
+    const budget0 = s.invents["seat-0"].budget;
+    const placed = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard) },
+    });
+    assert.equal(placed.ok, true, placed.error);
+    const afterPlace = placed.session.invents["seat-0"];
+    const apAfter = afterPlace.ap;
+    const budgetAfter = afterPlace.budget;
+    const expectedRefund = Math.floor((budget0 - budgetAfter) / 2);
+    const lifted = JSON.parse(JSON.stringify(afterPlace.hexBoard));
+    delete lifted.tiles["inv-placed"];
+    const r = applyMpAction(placed.session, {
+      type: "board_commit",
+      payload: { hexBoard: lifted },
+    });
+    assert.equal(r.ok, true, r.error);
+    const f = r.session.invents["seat-0"];
+    assert.equal(f.ap, apAfter, "AP is not refunded");
+    assert.equal(f.budget, budgetAfter + expectedRefund);
+    assert.equal(f.stack.length, 0);
+  });
+
+  it("helper pays AP to place a layer on another invent", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "buffer_write",
+      payload: { field: "inventionName", value: "A" },
+    }).session;
+    s = applyMpAction(s, { type: "end_turn" }).session;
+    const helperAp = s.invents["seat-1"].ap;
+    const ownerAp = s.invents["seat-0"].ap;
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: {
+        hexBoard: withPlacedIdeaTile(s.invents["seat-0"].hexBoard),
+        targetSeatId: "seat-0",
+      },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.invents["seat-1"].ap, helperAp - 1);
+    assert.equal(r.session.invents["seat-0"].ap, ownerAp);
+    assert.equal(r.session.invents["seat-0"].stack[0]?.addedBy, "seat-1");
+    assert.ok(r.events.some((e) => e.type === "tech_layered"));
   });
 
   it("helper cannot summon challenger tiles on another invent", () => {

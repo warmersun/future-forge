@@ -16,6 +16,7 @@ import {
   MIN_PLAYERS,
   MAX_PLAYERS,
 } from "../sim/mp-session.js";
+import { missionForFriendsPlay } from "../sim/state.js";
 import {
   createRoomAiQuotaState,
   reserveRoomAiJob,
@@ -663,7 +664,7 @@ export class RoomManager {
       const mission = payload.mission;
       const globalId = payload.globalId || mission?.globalId;
       if (!mission?.id) return { ok: false, error: "mission_required" };
-      room.questMeta = { globalId, mission };
+      room.questMeta = { globalId, mission: missionForFriendsPlay(mission) };
       room.updatedAt = Date.now();
       const phase = outcome ? "next_quest_ready" : "ready";
       const chooser = this.nextQuestChooserId(room);
@@ -705,7 +706,7 @@ export class RoomManager {
       if (payload.mission) {
         room.questMeta = {
           globalId: payload.globalId || mission.globalId,
-          mission,
+          mission: missionForFriendsPlay(mission),
         };
       }
 
@@ -736,7 +737,7 @@ export class RoomManager {
       room.nextQuestChooserId = null;
       room.questMeta = {
         globalId: room.questMeta?.globalId || mission.globalId,
-        mission,
+        mission: missionForFriendsPlay(mission),
       };
       room.updatedAt = Date.now();
 

@@ -38,6 +38,37 @@ function twoPlayerRoom() {
 }
 
 describe("RoomManager", () => {
+  it("strips aiTutorContext from set_quest and start_quest snapshots", () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    const raw = {
+      ...sampleMission,
+      isLearningModule: true,
+      module: "RSI desk",
+      lesson: 1,
+      aiTutorContext: "SECRET CURRICULUM",
+    };
+    const set = rm.hostCommand(room, host, "set_quest", {
+      hostToken: created.hostToken,
+      mission: raw,
+      globalId: "climate",
+    });
+    assert.equal(set.ok, true, set.error);
+    assert.equal(room.questMeta.mission.aiTutorContext, undefined);
+    assert.equal(room.questMeta.mission.isLearningModule, true);
+    const snap = rm.snapshotFor(room, room.players[1].id);
+    assert.equal(snap.questMeta.mission.aiTutorContext, undefined);
+
+    const start = rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: raw,
+      globalId: "climate",
+    });
+    assert.equal(start.ok, true, start.error);
+    assert.equal(room.mp.place.mission.aiTutorContext, undefined);
+    assert.equal(room.questMeta.mission.aiTutorContext, undefined);
+    assert.equal(raw.aiTutorContext, "SECRET CURRICULUM");
+  });
+
   it("creates room with host tokens", () => {
     const rm = new RoomManager();
     const r = rm.createRoom({ displayName: "Alex" });
@@ -111,6 +142,34 @@ describe("RoomManager", () => {
     assert.equal(act.ok, true);
     assert.equal(room.mp.invents[host.id].stack[0].techId, T0);
     assert.equal(room.mp.invents[bea.id].stack.length, 0);
+  });
+
+  it("board_commit of a placed invention spends the actor's AP", () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const invent = room.mp.invents[host.id];
+    const ap0 = invent.ap;
+    const hexBoard = JSON.parse(JSON.stringify(invent.hexBoard));
+    hexBoard.tiles["inv-placed"] = {
+      id: "inv-placed",
+      kind: "invention",
+      techId: T0,
+      name: "Placed idea",
+      howText: "On the field",
+      q: 2,
+      r: 1,
+    };
+    const act = rm.applyPlayerAction(room, host, {
+      type: "board_commit",
+      payload: { hexBoard },
+    });
+    assert.equal(act.ok, true, act.error);
+    assert.equal(room.mp.invents[host.id].ap, ap0 - 1);
+    assert.equal(room.mp.invents[host.id].stack[0]?.techId, T0);
   });
 
   it("non-active seat cannot act", () => {

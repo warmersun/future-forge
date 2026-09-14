@@ -169,6 +169,35 @@ describe("quest-catalog", () => {
     assert.equal(counts.learningGroups, 0);
   });
 
+  it("mpPick does not hide learning tiles from hub counts", () => {
+    const unsponsored = lesson({
+      id: "u1",
+      module: "Sensors",
+      sponsorName: undefined,
+    });
+    delete unsponsored.mission.sponsorName;
+    const hostedLearn = lesson({ id: "local-learn", source: "hosted" });
+    hostedLearn.source = "hosted";
+    const parts = partitionCatalogQuests({
+      remote: [
+        wrapper(),
+        lesson({ id: "lesson-1", lesson: 1, sponsorName: "Base" }),
+        lesson({ id: "lesson-2", lesson: 2, sponsorName: "Base" }),
+        unsponsored,
+        { id: "spot", kind: "quest", mission: { id: "spot", sponsorName: "Acme" } },
+      ],
+      local: [hostedLearn],
+      imported: [],
+    });
+    const solo = catalogHubCounts(parts);
+    const mp = catalogHubCounts(parts, { mpPick: true });
+    assert.deepEqual(mp, solo);
+    assert.equal(mp.learningGroups, 1);
+    assert.equal(mp.learningLessons, 1);
+    assert.equal(mp.sponsored, 2);
+    assert.equal(mp.library, 1);
+  });
+
   it("classifies the group as Sponsored if only the wrapper is sponsored", () => {
     const lessons = [
       lesson({ id: "lesson-1", lesson: 1 }),

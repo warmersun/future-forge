@@ -5,7 +5,7 @@
  */
 
 import { GAME, techById } from "../data.js";
-import { cloneMission, friendsFeatureFlags } from "./state.js";
+import { cloneMission, friendsFeatureFlags, missionForFriendsPlay } from "./state.js";
 import {
   applyPressureDrop,
   applyPressureRiseYears,
@@ -197,7 +197,7 @@ export function setMpQuest(session, mission, globalId) {
   return {
     ...session,
     questMeta: {
-      mission: cloneMission(mission),
+      mission: missionForFriendsPlay(mission),
       globalId: globalId || mission?.globalId || null,
     },
   };
@@ -318,7 +318,7 @@ function createInvent(seat, settings, mission = null) {
 
 /** Start a Quest (crisis episode) with fresh personal invents. */
 export function startMpQuest(session) {
-  const mission = session.questMeta?.mission;
+  const mission = missionForFriendsPlay(session.questMeta?.mission);
   if (!mission) return { ok: false, error: "mission_required", session };
   if ((session.seats || []).length < MIN_PLAYERS) {
     return { ok: false, error: "min_players", session };
@@ -854,7 +854,99 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       if (!gate.ok) return { ok: false, error: gate.error, session };
     }
     if (payload.hexBoard && typeof payload.hexBoard === "object") {
-      target.hexBoard = boardForWire(payload.hexBoard);
+      const incomingBoard = boardForWire(payload.hexBoard);
+      const placedIds = techIdsFromBoard(incomingBoard);
+      const prevStack = target.stack || [];
+      const prevIds = prevStack.map((x) => x.techId);
+      const prevById = new Map(prevStack.map((x) => [x.techId, x]));
+      const addedIds = placedIds.filter((id) => !prevIds.includes(id));
+      const removedIds = prevIds.filter((id) => !placedIds.includes(id));
+
+      if (placedIds.length > 6) {
+        return { ok: false, error: "stack_full", session };
+      }
+      // Helpers may only lift layers they added (same rule as deselect_tech)
+      if (targetSeatId !== activeId) {
+        for (const techId of removedIds) {
+          const entry = prevById.get(techId);
+          if (entry?.addedBy !== activeId) {
+            return { ok: false, error: "not_your_layer", session };
+          }
+        }
+      }
+
+      const addedCosts = [];
+      for (const techId of addedIds) {
+        const tech = techById(techId);
+        if (!tech) return { ok: false, error: "unknown_tech", session };
+        addedCosts.push({
+          techId,
+          cost: techCost(tech, { market: s.place?.marketNews }),
+        });
+      }
+      const needAp = addedCosts.length;
+      let needBudget = 0;
+      let needWill = 0;
+      for (const row of addedCosts) {
+        needBudget += row.cost.budget || 0;
+        needWill += row.cost.will || 0;
+      }
+      if (needAp > 0 && (actor.ap ?? 0) < needAp) {
+        return { ok: false, error: "no_ap", session };
+      }
+      if (bwOn && (actor.budget ?? 0) < needBudget) {
+        return { ok: false, error: "no_budget", session };
+      }
+      if (bwOn && (actor.will ?? 0) < needWill) {
+        return { ok: false, error: "no_will", session };
+      }
+
+      for (const { techId, cost } of addedCosts) {
+        if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+        if (bwOn) {
+          actor.budget -= cost.budget || 0;
+          actor.will -= cost.will || 0;
+        }
+        actor.techAddedThisTurn[`${targetSeatId}:${techId}`] = {
+          cost,
+          targetSeatId,
+          techId,
+        };
+        if (targetSeatId !== activeId) {
+          actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+          actor.contributionBudgetSpent =
+            (actor.contributionBudgetSpent || 0) + (cost.budget || 0);
+          actor.contributionWillSpent =
+            (actor.contributionWillSpent || 0) + (cost.will || 0);
+        }
+        events.push({
+          type: targetSeatId === activeId ? "tech_added" : "tech_layered",
+          techId,
+          targetSeatId,
+          addedBy: activeId,
+          cost,
+        });
+      }
+
+      for (const techId of removedIds) {
+        const key = `${targetSeatId}:${techId}`;
+        if (bwOn && actor.techAddedThisTurn?.[key]) {
+          const cost = actor.techAddedThisTurn[key].cost;
+          const refund = techBudgetRefund(cost);
+          actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + refund);
+          delete actor.techAddedThisTurn[key];
+          events.push({
+            type: "tech_removed",
+            techId,
+            targetSeatId,
+            budgetRefund: refund,
+          });
+        } else {
+          events.push({ type: "tech_removed", techId, targetSeatId });
+        }
+      }
+
+      target.hexBoard = incomingBoard;
       target.concernsSummoned = Boolean(target.hexBoard.concernsSummoned);
       // Placing / minting hex tiles is the invent action — count as engagement
       const hasInventTile = Object.values(target.hexBoard.tiles || {}).some(
@@ -863,19 +955,9 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       if (hasInventTile) {
         actor.apSpentThisTurn = Math.max(actor.apSpentThisTurn || 0, 1);
       }
-      // Stack follows placed invention tiles on the hex field
-      try {
-        const placedIds = techIdsFromBoard(payload.hexBoard);
-        const prevById = new Map(
-          (target.stack || []).map((x) => [x.techId, x])
-        );
-        target.stack = placedIds.map(
-          (techId) =>
-            prevById.get(techId) || { techId, addedBy: activeId }
-        );
-      } catch {
-        /* ignore */
-      }
+      target.stack = placedIds.map(
+        (techId) => prevById.get(techId) || { techId, addedBy: activeId }
+      );
       // Derive prose for consumers that still read inventionHow
       try {
         const tiles = Object.values(payload.hexBoard.tiles || {});

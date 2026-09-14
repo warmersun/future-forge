@@ -9,6 +9,7 @@ import { apiFetch } from "../auth.js";
 import { getClientSessionId } from "../client-session.js";
 import { techCost } from "../sim/economy.js";
 import { RoomClient } from "./client.js";
+import { missionForFriendsPlay } from "../sim/state.js";
 import {
   createHotseatSession,
   activeSeat,
@@ -416,14 +417,15 @@ export function initFriendsUi(api) {
           mission,
         };
         try {
+          const safe = missionForFriendsPlay(mission);
           await client.hostCmd("set_quest", {
             globalId: roomPick.globalId,
-            mission,
+            mission: safe,
           });
           if (client.snapshot) {
             client.snapshot.questMeta = {
               globalId: roomPick.globalId,
-              mission,
+              mission: safe,
             };
             client.snapshot.phase = "ready";
           }
@@ -1417,14 +1419,23 @@ export function initFriendsUi(api) {
         flashToast("Pick a theme and Quest card first");
         return;
       }
-      await client.hostCmd("set_quest", cur);
-      meta = cur;
+      await client.hostCmd("set_quest", {
+        globalId: cur.globalId,
+        mission: missionForFriendsPlay(cur.mission),
+      });
+      meta = {
+        globalId: cur.globalId,
+        mission: missionForFriendsPlay(cur.mission),
+      };
     }
     try {
       setLobbyStatus("Starting Quest…");
       const startBtn = $("#btn-room-start");
       if (startBtn) startBtn.disabled = true;
-      await client.hostCmd("start_quest", meta);
+      await client.hostCmd("start_quest", {
+        globalId: meta.globalId,
+        mission: missionForFriendsPlay(meta.mission),
+      });
       // WS snapshot / quest_started will call tryEnterRoomPlayOnce — don't double-enter here
     } catch (e) {
       flashToast(e.message || "Start failed");
