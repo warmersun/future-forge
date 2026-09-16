@@ -15,6 +15,7 @@
  *   node scripts/generate-scenario-seeds.mjs --fill-descriptions
  *   node scripts/generate-scenario-seeds.mjs --fill-descriptions --themes infectious
  *   node scripts/generate-scenario-seeds.mjs --fill-summaries --local-only
+ *   node scripts/generate-scenario-seeds.mjs --rewrite-summaries
  *
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
@@ -58,20 +59,29 @@ const SCENARIO_COUNT = 4;
  *   --themes a --themes b
  * Unknown flags are ignored except a missing value after --themes errors.
  * @param {string[]} argv process.argv.slice(2)
- * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, themeFilter: string[] | null }}
+ * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, rewriteSummaries: boolean, themeFilter: string[] | null }}
  */
 export function parseSeedArgs(argv) {
   const localOnly = argv.includes("--local-only");
   const dryRun = argv.includes("--dry-run");
   const fillDescriptions = argv.includes("--fill-descriptions");
   const fillSummaries = argv.includes("--fill-summaries");
+  const rewriteSummaries = argv.includes("--rewrite-summaries");
   /** @type {string[]} */
   const themeIds = [];
   let sawThemesFlag = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--local-only" || a === "--dry-run" || a === "--fill-descriptions" || a === "--fill-summaries") continue;
+    if (
+      a === "--local-only" ||
+      a === "--dry-run" ||
+      a === "--fill-descriptions" ||
+      a === "--fill-summaries" ||
+      a === "--rewrite-summaries"
+    ) {
+      continue;
+    }
     if (a.startsWith("--themes=")) {
       sawThemesFlag = true;
       themeIds.push(
@@ -105,11 +115,12 @@ export function parseSeedArgs(argv) {
   }
 
   const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
-  return { localOnly, dryRun, fillDescriptions, fillSummaries, themeFilter };
+  return { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, themeFilter };
 }
 
 const args = process.argv.slice(2);
-const { localOnly, dryRun, fillDescriptions, fillSummaries, themeFilter } = parseSeedArgs(args);
+const { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, themeFilter } =
+  parseSeedArgs(args);
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -735,6 +746,29 @@ ${body},
   return header;
 }
 
+function writeSummariesFile(packsByTheme) {
+  const keys = Object.keys(packsByTheme);
+  const body = keys
+    .map((id) => {
+      const key = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id) ? id : JSON.stringify(id);
+      const packs = packsByTheme[id] || [];
+      const lines = packs
+        .map((p) => `    ${jsString(clipSummary(p.summary) || "")},`)
+        .join("\n");
+      return `  ${key}: [\n${lines}\n  ]`;
+    })
+    .join(",\n");
+  return `/**
+ * Authored 2–3 line summaries for curated theme packs (same order as SCENARIO_ANGLE_PACKS).
+ * Instance lede: named person, place, what went wrong now.
+ */
+
+export const SCENARIO_PACK_SUMMARIES = {
+${body},
+};
+`;
+}
+
 async function loadExistingPacks() {
   try {
     const mod = await import(`../js/scenario-seeds.js?t=${Date.now()}`);
@@ -812,29 +846,100 @@ async function fillPackMeterDescs(client, g, pack) {
   };
 }
 
-async function aiFillPackSummary(client, g, pack) {
+async function aiFillThemeSummaries(client, g, packs) {
   const extraUser =
     QUEST_SUMMARY_RECIPE +
-    " Return JSON only: { \"summary\": \"…\" }. Do not retell the scene.";
+    ` Return JSON only: { "summaries": ["…"] } with exactly ${packs.length} strings, same order as quests. Compress each scene into that quest's instance lede. Named person and place from THAT scene. Do not invent a new plot. Do not name a technology or product. Do not start with the theme title.`;
   const payload = {
     mode: "fill-quest-summary",
     globalTheme: { id: g.id, title: g.title },
-    quest: {
-      title: pack.title,
-      scene: pack.scene,
-      stakeholder: pack.stakeholder,
-    },
+    quests: packs.map((p, i) => ({
+      index: i,
+      title: p.title,
+      scene: p.scene,
+      stakeholder: p.stakeholder,
+    })),
   };
   const text = await callScenarioModel(client, payload, extraUser);
   const parsed = extractJson(text);
-  return clipSummary(parsed?.summary);
+  const arr = Array.isArray(parsed?.summaries)
+    ? parsed.summaries
+    : Array.isArray(parsed)
+      ? parsed
+      : [];
+  return packs.map((_, i) => clipSummary(arr[i]));
 }
 
-async function fillMissingSummaries(client, themes) {
-  console.log("Fill-summaries mode: keeping scenes, adding missing pack.summary");
+function persistSummaryRewrite(packsByTheme, meta, { backupOnce }) {
+  if (dryRun) return;
+  if (backupOnce.needed && fs.existsSync(OUT)) {
+    const bak = OUT.replace(/\.js$/, `.bak-${Date.now()}.js`);
+    fs.copyFileSync(OUT, bak);
+    console.log(`Backup: ${path.relative(ROOT, bak)}`);
+    backupOnce.needed = false;
+  }
+  fs.writeFileSync(OUT, writeSeedsFile(packsByTheme, meta));
+  fs.writeFileSync(path.join(ROOT, "js/scenario-pack-summaries.js"), writeSummariesFile(packsByTheme));
+}
+
+async function fillMissingSummaries(client, themes, { force = false } = {}) {
+  const concurrency = force ? 4 : 1;
+  console.log(
+    force
+      ? `Rewrite-summaries: 1 API call per theme (${themes.length} themes, concurrency ${concurrency}); write after each batch`
+      : "Fill-summaries mode: keeping scenes, adding missing pack.summary"
+  );
   const packsByTheme = await loadExistingPacks();
   let filled = 0;
   let skipped = 0;
+  const backupOnce = { needed: true };
+  const summariesPath = path.join(ROOT, "js/scenario-pack-summaries.js");
+
+  async function rewriteTheme(g, index) {
+    const packs = packsByTheme[g.id];
+    if (!Array.isArray(packs) || !packs.length) {
+      skipped += 1;
+      console.log(`[${index + 1}/${themes.length}] ${g.id}… skip (no packs)`);
+      return;
+    }
+    process.stdout.write(`[${index + 1}/${themes.length}] ${g.id}… `);
+    try {
+      const summaries = await aiFillThemeSummaries(client, g, packs);
+      let themeFilled = 0;
+      packsByTheme[g.id] = packs.map((pack, pi) => {
+        const summary = summaries[pi];
+        if (!summary) return pack;
+        themeFilled += 1;
+        return { ...pack, summary };
+      });
+      filled += themeFilled;
+      console.log(`filled ${themeFilled}/${packs.length}`);
+    } catch (err) {
+      console.warn(`FAIL ${err?.message || err}`);
+    }
+  }
+
+  if (force) {
+    if (!client) throw new Error("rewrite requires AI");
+    for (let i = 0; i < themes.length; i += concurrency) {
+      const batch = themes.slice(i, i + concurrency);
+      await Promise.all(batch.map((g, j) => rewriteTheme(g, i + j)));
+      persistSummaryRewrite(
+        packsByTheme,
+        {
+          generatedAt: new Date().toISOString(),
+          source: `rewrite-summaries filled=${filled} skipped=${skipped}`,
+        },
+        { backupOnce }
+      );
+    }
+    if (!dryRun) {
+      console.log(`Wrote ${path.relative(ROOT, OUT)}`);
+      console.log(`Wrote ${path.relative(ROOT, summariesPath)}`);
+    }
+    return;
+  }
+
   for (let i = 0; i < themes.length; i++) {
     const g = themes[i];
     const packs = packsByTheme[g.id];
@@ -857,7 +962,8 @@ async function fillMissingSummaries(client, themes) {
       let summary = clipSummary(table[pi]);
       if (!summary && client) {
         try {
-          summary = await aiFillPackSummary(client, g, pack);
+          const one = await aiFillThemeSummaries(client, g, [pack]);
+          summary = one[0];
         } catch (err) {
           console.warn(`\n  AI summary failed for ${pack.title}: ${err?.message || err}`);
         }
@@ -874,53 +980,18 @@ async function fillMissingSummaries(client, themes) {
     console.log(`filled ${themeFilled}/${packs.length}`);
   }
 
-  const extraIds = Object.keys(packsByTheme).filter(
-    (id) => !themes.some((g) => g.id === id)
+  persistSummaryRewrite(
+    packsByTheme,
+    {
+      generatedAt: new Date().toISOString(),
+      source: `fill-summaries filled=${filled} skipped=${skipped}`,
+    },
+    { backupOnce }
   );
-  for (const id of extraIds) {
-    const packs = packsByTheme[id];
-    if (!Array.isArray(packs) || !packs.length) continue;
-    process.stdout.write(`[extra] ${id}… `);
-    const table = SCENARIO_PACK_SUMMARIES[id] || [];
-    const next = [];
-    let themeFilled = 0;
-    for (let pi = 0; pi < packs.length; pi++) {
-      const pack = packs[pi];
-      const existing = clipSummary(pack.summary);
-      if (existing) {
-        next.push(pack);
-        continue;
-      }
-      const summary = clipSummary(table[pi]);
-      if (summary) {
-        next.push({ ...pack, summary });
-        themeFilled += 1;
-      } else {
-        next.push(pack);
-      }
-    }
-    packsByTheme[id] = next;
-    filled += themeFilled;
-    console.log(`filled ${themeFilled}/${packs.length}`);
+  if (!dryRun) {
+    console.log(`Wrote ${path.relative(ROOT, OUT)}`);
+    console.log(`Wrote ${path.relative(ROOT, summariesPath)}`);
   }
-
-  const meta = {
-    generatedAt: new Date().toISOString(),
-    source: `fill-summaries filled=${filled} skipped=${skipped}`,
-  };
-  const text = writeSeedsFile(packsByTheme, meta);
-  if (dryRun) {
-    console.log("\n--dry-run: not writing file.");
-    return;
-  }
-  if (fs.existsSync(OUT)) {
-    const bak = OUT.replace(/\.js$/, `.bak-${Date.now()}.js`);
-    fs.copyFileSync(OUT, bak);
-    console.log(`Backup: ${path.relative(ROOT, bak)}`);
-  }
-  fs.writeFileSync(OUT, text);
-  console.log(`Wrote ${path.relative(ROOT, OUT)}`);
-  console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v13).");
 }
 
 async function fillMissingMeterDescriptions(client, themes) {
@@ -1016,8 +1087,11 @@ async function main() {
     return;
   }
 
-  if (fillSummaries) {
-    await fillMissingSummaries(client, themes);
+  if (fillSummaries || rewriteSummaries) {
+    if (rewriteSummaries && !client) {
+      throw new Error("--rewrite-summaries requires SuperGrok session or FF_XAI_API_KEY");
+    }
+    await fillMissingSummaries(client, themes, { force: rewriteSummaries });
     return;
   }
 

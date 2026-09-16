@@ -1164,7 +1164,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-export const SCENARIO_PACK_REV = "d8";
+export const SCENARIO_PACK_REV = "d9";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;

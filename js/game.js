@@ -553,8 +553,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v13: quest summary lede on seed packs; drop v12 caches minted without them */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v13";
+/** v14: instance-story summaries on seed packs; drop v13 theme-word ledes */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v14";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 const STORAGE_LAST_RUN = "future-forge:lastRun";
