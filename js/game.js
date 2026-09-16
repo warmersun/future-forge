@@ -22,7 +22,6 @@ import {
   techById,
   domainsInStack,
   detectClaimStretch,
-  techHorizonYear,
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
@@ -241,6 +240,7 @@ import {
   learnTechIds,
   learnButtonMeta,
   dockTransform,
+  techLearnCardHtml,
 } from "./learn-stack.js";
 import { rankSurvivors } from "./sim/mp-rank.js";
 import {
@@ -18671,76 +18671,12 @@ async function commitWriteIfNeeded() {
 }
 
 /* —— Modal —— */
-function learnSection(title, bodyHtml) {
-  if (!bodyHtml) return "";
-  return `<section class="learn-sec"><h5>${title}</h5><div class="learn-sec-body">${bodyHtml}</div></section>`;
-}
-
-function techLearnCardHtml(t, { newest = false } = {}) {
-  if (!t) return "";
-  const mat = t.maturity || {};
-  const soft = techHorizonYear(t);
-  const domain = DOMAINS[t.domain]?.label || t.domain;
-  const primer =
-    t.primer ||
-    t.learn ||
-    `${t.name} is an emerging-technology family you can invent with for this local mission.`;
-  const inventWith =
-    t.inventionHint ||
-    `Ask how ${t.name} could change what is scarce in this place — then write a concrete local mechanism.`;
-  const useNow = (t.useCasesNow || []).filter(Boolean);
-  const milestones = (t.milestones || []).filter(Boolean);
-  const risks = (t.risk || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const horizonNote =
-    soft > state.year
-      ? `Broader “near” use cases often become more common around <strong>${soft}</strong> — a soft horizon, not a lock. You may invent with this category in <strong>${state.year}</strong>; feasibility judges whether your <em>how it works</em> over-claims what is possible now.`
-      : `Near-scale applications of this family are already in the toolkit in many places by <strong>${state.year}</strong>. Feasibility still judges your specific claims, not the card.`;
-
-  const badge = newest ? `<span class="learn-newest">Latest select</span>` : "";
-  const useList = useNow.length
-    ? `<ul class="learn-list">${useNow.map((u) => `<li>${escapeHtml(u)}</li>`).join("")}</ul>`
-    : `<p class="learn-muted">Look for pilots and products that already ship under human oversight.</p>`;
-  const mileList = milestones.length
-    ? `<ul class="learn-list">${milestones.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
-    : "";
-  const riskList = risks.length
-    ? `<ul class="learn-list learn-list-warn">${risks.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`
-    : `<p class="learn-muted">Every tool has failure modes — name them in your design.</p>`;
-
-  return `
-    <article class="learn-tech-card ${newest ? "is-newest" : ""}" data-tech-id="${escapeHtml(t.id)}">
-      <header class="learn-tech-head">
-        <div>
-          <h4><span class="learn-tech-icon">${t.icon}</span> ${escapeHtml(t.name)}</h4>
-          <p class="learn-tech-meta">${escapeHtml(domain)} · ${escapeHtml(t.curve || "emerging")} curve</p>
-        </div>
-        ${badge}
-      </header>
-      <p class="learn-tech-summary">${escapeHtml(t.summary)}</p>
-      ${learnSection("What is this family?", `<p>${escapeHtml(primer)}</p>`)}
-      ${learnSection(
-        "What already works",
-        `<p><strong>Now:</strong> ${escapeHtml(mat.now || "Real deployments exist in some form today.")}</p>
-         <p class="learn-subhead">Use cases you can honestly claim this decade</p>
-         ${useList}
-         ${mileList ? `<p class="learn-subhead">Recent milestones</p>${mileList}` : ""}`
-      )}
-      ${learnSection(
-        "Where the curve is heading",
-        `<p><strong>Near:</strong> ${escapeHtml(mat.near || "Broader, cheaper, more reliable applications.")}</p>
-         <p><strong>Frontier (stretch if claimed as routine):</strong> ${escapeHtml(
-           mat.frontier || "Transformative default infrastructure everywhere."
-         )}</p>
-         <p class="learn-horizon">${horizonNote}</p>`
-      )}
-      ${learnSection("How to invent with it here", `<p>${escapeHtml(inventWith)}</p>
-         <p class="learn-muted">Pair with other domains when the local problem needs sensing, power, logistics, or care — not as a checklist.</p>`)}
-      ${learnSection("Watch-outs", riskList)}
-    </article>`;
+function learnCardHtml(t, { newest = false } = {}) {
+  return techLearnCardHtml(t, {
+    newest,
+    year: state.year,
+    domainLabel: DOMAINS[t?.domain]?.label || t?.domain || "",
+  });
 }
 
 /** Right-click / single-tech learn peek */
@@ -18758,7 +18694,7 @@ function openTechModal(id, { lead: leadText } = {}) {
       "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
   }
   if (body) {
-    body.innerHTML = techLearnCardHtml(t, { newest: true });
+    body.innerHTML = learnCardHtml(t, { newest: true });
     syncReadAloud(body);
   }
   const backdrop = $("#modal-backdrop");
@@ -18796,7 +18732,7 @@ function openLearnStack() {
   }
   if (body) {
     body.innerHTML = ids
-      .map((id, i) => techLearnCardHtml(techById(id), { newest: i === 0 }))
+      .map((id, i) => learnCardHtml(techById(id), { newest: i === 0 }))
       .join("");
     syncReadAloud(body);
   }
