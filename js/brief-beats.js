@@ -34,6 +34,7 @@ const HEADING_ROLE = {
   "your job": "job",
   "your brief": "job",
   "the place": "place",
+  "the bigger problem": "strain",
   "what's strained": "strain",
   "what just became possible": "possible",
   "a capability that just became more real": "possible",
@@ -60,18 +61,48 @@ export function roleFromHeading(title) {
   return HEADING_ROLE[key] || "other";
 }
 
+/** Invent-banner walkthrough lede. Summary may be longer; clip on a sentence. */
+export const JOB_LINE_CAP = 160;
+
 /**
- * Player-facing one-liner: what to invent, always visible during the walkthrough.
+ * Clip player lede on a sentence (then a word), never mid-word.
+ * @param {string|null|undefined} text
+ * @param {number} [maxLen]
+ */
+export function clipLede(text, maxLen = JOB_LINE_CAP) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  const cap = Number.isFinite(maxLen) ? Math.max(1, Math.round(maxLen)) : JOB_LINE_CAP;
+  if (s.length <= cap) return s;
+  const sentences = splitSentences(s);
+  let acc = "";
+  for (const sent of sentences) {
+    const next = acc ? `${acc} ${sent}` : sent;
+    if (next.length <= cap) {
+      acc = next;
+      continue;
+    }
+    break;
+  }
+  if (acc) return acc;
+  const window = s.slice(0, cap);
+  const sp = window.lastIndexOf(" ");
+  return (sp > 24 ? window.slice(0, sp) : window).trim();
+}
+
+/**
+ * Player-facing walkthrough lede: the instance (named person, place, what went wrong).
+ * Always visible during the briefing. Clips on a sentence at JOB_LINE_CAP.
  * @param {object|null|undefined} mission
- * @param {{ summary?: string }} [opts]
+ * @param {{ summary?: string, title?: string }} [opts]
  */
 export function jobLineFromMission(mission, opts = {}) {
   const summary = String(opts.summary || mission?.summary || "").trim();
-  if (summary) return summary.slice(0, 160);
+  if (summary) return clipLede(summary, JOB_LINE_CAP);
   const encourage = String(mission?.spotlight?.encourageCopy || "").trim();
-  if (encourage) return encourage.slice(0, 160);
+  if (encourage) return clipLede(encourage, JOB_LINE_CAP);
   const title = String(opts.title || mission?.title || "").trim();
-  if (title) return title.slice(0, 160);
+  if (title) return clipLede(title, JOB_LINE_CAP);
   const scene = String(mission?.scene || "").trim();
   if (scene) return excerptFromBrief(scene, 140);
   return "";
@@ -171,7 +202,7 @@ export function briefBeatArtId(parts = {}) {
  * Invalid authored arrays fail open to derive at runtime (validator fails closed).
  *
  * @param {object|null|undefined} mission
- * @param {{ summary?: string, maxBeats?: number }} [opts]
+ * @param {{ summary?: string, title?: string, encourageCopy?: string, maxBeats?: number }} [opts]
  * @returns {BriefBeat[]}
  */
 export function resolveBriefBeats(mission, opts = {}) {
@@ -184,6 +215,8 @@ export function resolveBriefBeats(mission, opts = {}) {
     summary: opts.summary || mission?.summary || "",
     scene: mission?.scene || "",
     title: opts.title || mission?.title || "",
+    encourageCopy:
+      opts.encourageCopy || mission?.spotlight?.encourageCopy || "",
     maxBeats: opts.maxBeats,
   });
 }
@@ -202,7 +235,7 @@ export function resolveBriefBeats(mission, opts = {}) {
 /**
  * Split a Quest brief into walkthrough beats.
  * @param {string} briefMd
- * @param {{ summary?: string, scene?: string, maxBeats?: number }} [opts]
+ * @param {{ summary?: string, scene?: string, title?: string, encourageCopy?: string, maxBeats?: number }} [opts]
  * @returns {BriefBeat[]}
  */
 export function deriveBriefBeats(briefMd, opts = {}) {
@@ -211,6 +244,7 @@ export function deriveBriefBeats(briefMd, opts = {}) {
   const maxBeats = clampMaxBeats(opts.maxBeats);
   const summary = String(opts.summary || "").trim();
   const title = String(opts.title || "").trim();
+  const encourageCopy = String(opts.encourageCopy || "").trim();
 
   const source = md || scene;
   if (!source) return [];
@@ -241,7 +275,8 @@ export function deriveBriefBeats(briefMd, opts = {}) {
   }
 
   if (!buckets.job.length) {
-    const jobBody = summary || (title ? `Invent for this place: ${title}.` : "");
+    const jobBody =
+      encourageCopy || (title ? `Invent for this place: ${title}.` : "");
     if (jobBody) {
       buckets.job.push({
         id: "",
@@ -259,7 +294,7 @@ export function deriveBriefBeats(briefMd, opts = {}) {
   }
 
   if (!ordered.length) {
-    const jobBody = summary || title;
+    const jobBody = encourageCopy || title || summary;
     if (jobBody) {
       ordered = [
         {
@@ -400,7 +435,7 @@ function titleForRole(role) {
     case "job":
       return "Your job";
     case "strain":
-      return "What's strained";
+      return "The bigger problem";
     case "possible":
       return "What just became possible";
     case "constraints":

@@ -6,27 +6,39 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
 
 ## What the player sees
 
-- A **summary lede** in the left invent banner (2–3 plain sentences: global problem, situation, what we’re solving for). Always visible while they read beats. Not a story. No place or person names.
-- Beats in **story-then-job** order, even if you wrote **Your job** first in Markdown:
+- A **summary lede** in the left invent banner (2–3 spoken sentences: the **instance** — named person, place, what went wrong now). Always visible while they read beats.
+- Beats in **instance → bigger problem → job** order:
   1. The place (one paragraph per card)
-  2. What’s strained
-  3. What just became possible
-  4. Constraints
-  5. Unknown `##` headings (kept, never dropped)
-  6. Your job (last card → **Start inventing**)
+  2. The bigger problem (root cause; old **What’s strained** still maps here)
+  3. Unknown `##` headings (kept, never dropped)
+  4. Your job (last card → **Start inventing**)
 - After dismiss: compact recap + Replay + Full brief (the whole `briefMd`).
 
-Heading aliases the engine already knows: **Your job** / **Your brief**; **What’s strained**; **What just became possible** / **A capability that just became more real**.
+Do **not** author **What just became possible** or **Constraints** on new tiles. Those were capability / constraint lectures. Honest limits belong in `grounding` / tutor. Lived constraints belong inside the story.
+
+Heading aliases the engine already knows:
+
+| Heading | Role |
+|---------|------|
+| **The place** | `place` |
+| **The bigger problem** | `strain` |
+| **What’s strained** (legacy) | `strain` |
+| **Your job** / **Your brief** | `job` |
+| **What just became possible** / **A capability that just became more real** (legacy) | `possible` |
+| **Constraints** (legacy) | `constraints` |
+
+Legacy headings still walk so old tiles play. New tiles use **The place / The bigger problem / Your job** only.
 
 ## Write `briefMd` so the derived walkthrough is good
 
 This is the default path for side-loaded tiles. You do **not** have to emit `briefBeats`.
 
-1. Keep the headings from `brief-template.md`.
+1. Keep the headings from `brief-template.md` (**The place**, **The bigger problem**, **Your job**).
 2. **The place:** 2–4 **short** paragraphs, one spine beat each (hook / complication / mechanism / stakes). Blank line between paragraphs. One idea per paragraph.
-3. Other sections: one short paragraph (or a short list for Constraints). Do not pack three ideas into one paragraph.
-4. Soft target: ~40–90 words per paragraph. The engine splits on blank lines and caps the walkthrough at **8** cards.
-5. `summary` must pass the 14-year-old invent-job test — it is the 2–3 sentence lede in the left banner (not a scene).
+3. **The bigger problem:** one or two short paragraphs (instance → global issue → root cause).
+4. **Your job:** one short paragraph, outcome only.
+5. Soft target: ~40–90 words per paragraph. The engine splits on blank lines and caps the walkthrough at **8** cards.
+6. `summary` is the instance lede (names allowed) — a 14-year-old can retell who is in trouble.
 
 If **The place** is one dense block, the first card is still a wall of text. Split it.
 
@@ -38,6 +50,7 @@ Use when captions should be **tighter than the essay**, or you want per-beat sti
 - Captions: 1–3 everyday sentences (`bodyMd` ≤ 500 chars). **No new facts** that are not in `briefMd`.
 - `briefMd` must still stand alone — *could you delete `briefBeats` and still have a valid Quest?* Yes.
 - Omit the key when you are not authoring beats.
+- Do not add a `possible` or `constraints` beat on new tiles.
 
 ```json
 "briefBeats": [
@@ -77,3 +90,5 @@ Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg`, or ho
 - Dump tutor SEQUENCE or `grounding` into beats.
 - Replace `briefMd` with beats.
 - Emit empty `briefBeats: []`.
+- Author a “what just became possible” card (capability lecture).
+- Put the spotlight tech or sponsor product in a caption.

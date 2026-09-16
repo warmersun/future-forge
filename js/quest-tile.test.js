@@ -81,6 +81,15 @@ describe("quest-tile", () => {
     assert.equal(parseQuestTileJson("{").ok, false);
   });
 
+  it("defaults missing encourageCopy to an outcome, not a tech riddle", () => {
+    const t = baseTile();
+    delete t.spotlight.encourageCopy;
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true);
+    assert.match(r.mission.spotlight.encourageCopy, /Invent a way this place/i);
+    assert.ok(!/Build your invention around/i.test(r.mission.spotlight.encourageCopy));
+  });
+
   it("validates a good spotlight tile", () => {
     const r = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
     assert.equal(r.ok, true);

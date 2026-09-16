@@ -229,7 +229,7 @@ const MODE_INSTRUCTION =
   "Each present role is { \"label\": \"plain English HUD name\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. " +
   "local = lived local harm; global = systemic/driver pressure; support = trust/legitimacy/public fear. " +
   "label: plain English, 1–3 words, Title Case with spaces. " +
-  "description: place-specific strain (same voice as What's strained), not the generic local/global/support lecture. " +
+  "description: place-specific strain in everyday words, not the generic local/global/support lecture. " +
   "label: plain English, 1–3 words, Title Case with spaces. " +
   "Good labels: \"Dirty air\", \"Sick days\", \"Truck exhaust\", \"Flooding\", \"Jobs\". " +
   "BAD labels: AlleyPM, BenzeneSpikes, GensetHours, CorridorPM. " +

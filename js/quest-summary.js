@@ -1,6 +1,7 @@
 /**
  * Player-facing quest summary (invent-banner lede).
- * Plain spoken — not scene craft. Shared by schema, skill writers, seed fill, AI fallback.
+ * Instance story — named person, place, what went wrong now.
+ * Shared by schema, skill writers, seed fill, AI fallback.
  */
 
 export const SUMMARY_CAP = 420;
@@ -9,20 +10,19 @@ export const SUMMARY_LOADING_COPY = "Shaping the job…";
 
 /** Locked voice + recipe for every writer (skill, seed fill, generate-scenarios, fill-quest-summary). */
 export const QUEST_SUMMARY_RECIPE = `QUEST SUMMARY (player-facing lede, 2–3 short sentences, max ${SUMMARY_CAP} chars):
-Plain spoken, like explaining the quest to a student. Not a story. Not a scene.
-No asphalt, flares, whiteboards, named clinics, "who designs…", place names, person names, or invented proper nouns.
+A brief little story: one instance of the bigger issue. Named person, concrete fictive place, what went wrong NOW.
+Lead with the hook so the first two sentences still work as the invent-banner lede (engine clips on a sentence at ~160 chars — never mid-word).
 
 Recipe, in order:
-1) Which global problem — everyday theme name (Climate crises, Infectious diseases, Rogue AI).
-2) The situation — one plain fact about what is going wrong.
-3) What we are solving for — local job and/or global/system job when both exist. Spotlight quests name the emTech and the capability gap in everyday words. Theme packs with a whole tech tray do NOT list techs.
-4) Hard no: names, scene craft, solution theater. If a draft sounds like a short story, it fails.
+1) Named person does something specific, now, in a named place.
+2) The world pushes back — one concrete fact about what is going wrong here.
+3) Optional third sentence: the human-scale stake if nothing changes.
+Hard no: theme-word ledes ("Infectious diseases. This is about how far…"), spotlight tech names, sponsor products, "invent with [tech]", "do not invent X", capability lectures, solution theater.
 
 Gold examples:
-- Climate crises. It's too hot — it doesn't even cool down overnight. The local problem is dealing with the heat. The global problem is inventing something that actually moves the needle on warming.
-- Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site — so they don't have to send samples to a lab.
-- Rogue AI. This is about AI making high-stakes decisions, and how we know the answer is right — and that it hasn't gone rogue.
-- Climate crises. Ocean currents are shifting, so fisheries can't find fish the way they used to. Invent something sustainable that doesn't make the long run worse.`;
+- Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.
+- After the last ferry, Ms. Okonkwo locks the pier lab at Harborside. The yard manuals on the bench cannot leave the room. Students still need days of practice.
+- Nia tapes a donor plaque beside the new bench at Tideglass High. The visiting fellow wrote: do not finish a living cell. No one has posted what that means on the door.`;
 
 export const FILL_QUEST_SUMMARY_SYSTEM = `You write ONE player-facing quest summary for Future Forge.
 ${QUEST_SUMMARY_RECIPE}

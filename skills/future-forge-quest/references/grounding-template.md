@@ -2,7 +2,7 @@
 
 Optional free-text **`grounding`** (Markdown) is the Quest’s **capability truth** for co-inventor, tutor, claim-timing, and challenge. It is **guidance, not a schema** — omit thin sections rather than pad; validators only require a string when present.
 
-Player-facing invent invitation stays in `title` / `summary` / `briefMd` (**Your job** first) / `mission.scene`. Grounding is for **AI consistency**, not a second brief — do not paste this chain into player prose.
+Player-facing prose is the instance story, the bigger problem / root cause, and an outcome-only job (`title` / `summary` / `briefMd` / `mission.scene`). Grounding is for **AI consistency** and is the home for capability / product hints — do not paste this chain into player prose. The tutor may teach it after the player has the story.
 
 ---
 

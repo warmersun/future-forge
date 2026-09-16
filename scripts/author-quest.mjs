@@ -54,7 +54,7 @@ const { QUEST_TILE_SCHEMA, validateQuestTile } = await import(
 );
 
 const slug = `spotlight-${tech.id}-${Date.now().toString(36)}`;
-const place = `Fictive ${tech.name} field site`;
+const place = `Fictive field site`;
 const advanceTitle =
   advance ||
   `Recent advance in ${tech.name} (fill after research)`;
@@ -64,31 +64,19 @@ const advanceSummary =
   tech.summary ||
   `Capability in ${tech.name} is shifting — design a local application.`;
 
-const briefMd = `## Your job
-
-Invent a local system for this place that makes honest use of **${tech.name}** (${tech.id}) in year ${GAME.startYear}. Name it. Write how it works here. Show everyday life. Do not invent a brochure claim.
-
-## The place
+const briefMd = `## The place
 
 A named person does one concrete thing now at **${place}** (fictive). The strain is already in the room.
 
-The world pushes back. The local driver shows up through what people do — not a lecture. Who invents a ${tech.name} workflow that works *here*?
+The world pushes back. The local driver shows up through what people do — not a lecture.
 
-## What’s strained
+## The bigger problem
 
-Name the pressures the staff and residents feel this season. Tie them to meters the player will see.
+This scene is one case of a bigger issue. Name that issue in everyday words. Say the system that keeps producing it — not a machine that got cheaper.
 
-## What just became possible
+## Your job
 
-${advanceSummary}
-
-One short paragraph in everyday words. Do not prescribe one branded product or a single correct invention. Put lab detail in grounding.
-
-## Constraints
-
-- Pilot-honest for ${GAME.startYear}; avoid overnight city-wide guarantees.
-- Staff time, trust, power, and cost remain scarce.
-- Other techs may support the stack, but this Quest is built to practice **${tech.name}**.
+Invent a way this place works for the people who live it. Stakeholder: **Local working group lead**.
 `;
 
 const tile = {
@@ -96,8 +84,8 @@ const tile = {
   kind: "quest",
   id: slug,
   version: 1,
-  title: `Invent with ${tech.name} at this place`,
-  summary: `${global.title}. This is about how far ${tech.name} has to go so it can be used honestly here — not a brochure.`.slice(
+  title: `What went wrong at this place`,
+  summary: `Someone at ${place} is already in trouble. The usual path failed. The people who live it cannot wait on a distant fix.`.slice(
     0,
     SUMMARY_CAP
   ),
@@ -111,7 +99,7 @@ const tile = {
     advanceTitle: String(advanceTitle).slice(0, 200),
     advanceSummary: String(advanceSummary).slice(0, 600),
     asOf: new Date().toISOString().slice(0, 7),
-    encourageCopy: `Build your invention around ${tech.name} — the spotlight capability is the point of this Quest.`,
+    encourageCopy: `Invent a way this place works for the people who live it.`,
   },
   research: {
     topic: advance || tech.name,
@@ -126,7 +114,7 @@ const tile = {
   mission: {
     id: slug,
     globalId: global.id,
-    title: `${tech.name} under pressure at ${place}`.slice(0, 100),
+    title: `Trouble at ${place}`.slice(0, 100),
     place: place.slice(0, 80),
     startYear: GAME.startYear,
     collapseYear: GAME.startYear + 6,
@@ -136,7 +124,7 @@ const tile = {
       global: { label: "Capacity", description: "The local driver that keeps producing the problem.", pressure: 2, pressureRise: 1, winMax: 1 },
       support: { label: "Trust", description: "Whether neighbors will back a visible local fix.", pressure: 2, pressureRise: 0, winMax: 1 },
     },
-    scene: `People at ${place} need a pilot-honest application of ${tech.name} before meters tip.`,
+    scene: `A named person at ${place} is already in trouble. The usual path failed. Who makes this place work before the next harm lands?`,
     briefMd,
     stakeholder: "Local working group lead",
     suggested: [tech.id],

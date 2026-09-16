@@ -1032,7 +1032,7 @@ export function validateQuestTile(tile, opts = {}) {
     asOf: String(spotlightIn.asOf || "").slice(0, 32),
     encourageCopy: String(
       spotlightIn.encourageCopy ||
-        `Build your invention around this Quest's spotlight technology.`
+        `Invent a way this place works for the people who live it.`
     ).slice(0, CAPS.encourageCopy),
   };
 

@@ -4,7 +4,7 @@
   "id": "module-sealed-pier-ai-lab",
   "version": 1,
   "title": "Sealed pier AI lab",
-  "summary": "Invent night-class AI that stays in the pier lab — no cloud for the manuals.",
+  "summary": "After the last ferry, Ms. Okonkwo locks the pier lab. The yard manuals cannot leave the room, but students still need days of practice.",
   "author": {
     "name": "Future Forge skill example",
     "note": "Portable module wrapper around spotlight-sponsored-learning.json"
@@ -26,7 +26,7 @@
     "techId": "ai",
     "advanceTitle": "Hostable near-frontier open-weight models",
     "asOf": "2026-07",
-    "encourageCopy": "Invent a night-class AI path that never phones home."
+    "encourageCopy": "Invent a way night class can practice without the manuals leaving the pier."
   },
   "sponsorName": "Example Labs",
   "sponsorBanner": "Open weights — invent the local application",
@@ -35,5 +35,5 @@
   "lessons": [
     "spotlight-ai-learning-demo-harborside-2026"
   ],
-  "overviewMd": "## What you invent across this path\n\nKeep yard manuals in the pier lab. Invent a night-class workflow that uses on-prem AI so students can practice for days without a public cloud chat.\n\nLesson 1 is the sealed-lab invent job."
+  "overviewMd": "## What you invent across this path\n\nKeep yard manuals in the pier lab. Invent a way night class can practice for days without sending the pages out.\n\nLesson 1 is the sealed-lab invent job."
 }

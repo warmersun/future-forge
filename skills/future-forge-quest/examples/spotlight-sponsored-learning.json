@@ -3,8 +3,8 @@
   "kind": "quest",
   "id": "spotlight-ai-learning-demo-harborside-2026",
   "version": 1,
-  "title": "Night-class AI that stays in the pier lab",
-  "summary": "Invent a pier-lab learning workflow so students practice for days without sending yard manuals to the cloud.",
+  "title": "Yard manuals after the last ferry",
+  "summary": "After the last ferry, Ms. Okonkwo locks the pier lab at Harborside Trade School. The yard manuals on the bench cannot leave the room. Students still need days of practice.",
   "author": {
     "name": "Future Forge skill example",
     "note": "Portable learning + sponsor sample"
@@ -26,7 +26,7 @@
     "advanceTitle": "Hostable near-frontier open-weight models",
     "advanceSummary": "Open weights and long-context agents make local institutional hosting realistic when a cluster exists — if the learning workflow is invented.",
     "asOf": "2026-07",
-    "encourageCopy": "Invent a night-class AI path that never phones home — local control is the point."
+    "encourageCopy": "Invent a way night class can practice for days without the manuals leaving the pier."
   },
   "research": {
     "topic": "Open-weight institutional hosting for education",
@@ -59,7 +59,7 @@
   "mission": {
     "id": "spotlight-ai-learning-demo-harborside-2026",
     "globalId": "education",
-    "title": "Night-class AI that stays in the pier lab",
+    "title": "Yard manuals after the last ferry",
     "place": "Harborside Trade School (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -78,8 +78,8 @@
         "winMax": 1
       }
     },
-    "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard manuals on the bench cannot leave this room. Students still need multi-day practice. Cloud chat is forbidden by contract. Who designs help that never phones home?",
-    "briefMd": "## Your job\n\nInvent a **night-class learning workflow** for the pier lab that uses AI on the school’s own machines so students can practice for days without sending yard manuals to the cloud.\n\nStakeholder: **Ms. Okonkwo, night instructor**.\n\nPilot one course track. Keep a human gate on commits. Do not invent a whole-port overnight rollout. Do not require a public cloud chat for core practice.\n\n## The place\n\n**Harborside Trade School** (fictive). Night class. Real yard manuals. A small machine rack hums under the table. After the last ferry, Ms. Okonkwo locks the door. The firmware on the bench stays in the room — by contract.\n\nStudents still need multi-day debug practice. Worksheets do not explain a stuck step at midnight. Wrong answers in a sealed lab are costly.\n\n## What’s strained\n\n**Skills gap** — practice is thin. **Trust** — a leak or a confident wrong answer can end the program.\n\n## What just became possible\n\nSchools with a small on-site cluster can run serious tutoring software without shipping protected files to a distant chat service — **if** someone invents the classroom workflow, not only the brochure.\n\n## Constraints\n\n- On-prem only for core tutoring. Pilot one track. Human gates. No overnight whole-port claims.\n",
+    "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard manuals on the bench cannot leave this room. Students still need multi-day practice. Who designs help that never sends the pages out?",
+    "briefMd": "## The place\n\nAfter the last ferry, **Ms. Okonkwo** locks the pier lab at **Harborside Trade School**. Night class. Real yard manuals. A small machine rack hums under the table. The firmware on the bench stays in the room — by contract.\n\nStudents still need multi-day debug practice. Worksheets do not explain a stuck step at midnight. Wrong answers in a sealed lab are costly.\n\n## The bigger problem\n\nThis is how a trade school loses the next cohort. Learning that only gets “smart” by shipping the pages out cannot run in a sealed yard. The root is not a missing chatbot. It is a practice loop that cannot stay in the room where the manuals are allowed to live.\n\n## Your job\n\nInvent a way night class can practice for days without the manuals leaving the pier. Stakeholder: **Ms. Okonkwo, night instructor**.\n",
     "stakeholder": "Ms. Okonkwo, night instructor",
     "suggested": [
       "ai"

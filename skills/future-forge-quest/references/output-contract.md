@@ -1,8 +1,8 @@
 # Output contract
 
 1. Write UTF-8 JSON (pretty-printed OK).
-2. Plain job first: `title`, `summary`, and `spotlight.encourageCopy` in everyday words (14-year-old invent-job test). `summary` is 2–3 short sentences (global problem, situation, what we’re solving for) — not a scene. Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
-3. Brief headings: `references/brief-template.md` — **Your job** first; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
+2. Instance first: `summary` (2–3 short sentences, named person + place + what went wrong now) and `title` (human situation / place). `spotlight.encourageCopy` is the **outcome** in everyday words. Do not name the spotlight tech. Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
+3. Brief headings: `references/brief-template.md` — **The place** → **The bigger problem** → **Your job**; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
 4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`. Difficulty: `references/economy.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 6. Run `npm run validate:quest -- <file>` until `OK:`.
@@ -75,7 +75,7 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
       }
     },
     "scene": "… ≤500 chars, everyday words …",
-    "briefMd": "## Your job\n\n…\n\n## The place\n\n…\n\n## What’s strained\n\n…\n\n## What just became possible\n\n…\n\n## Constraints\n\n…\n",
+    "briefMd": "## The place\n\n…\n\n## The bigger problem\n\n…\n\n## Your job\n\n…\n",
     "stakeholder": "…",
     "suggested": ["<techId>"],
     "visionTheme": "rebuild-city"
@@ -83,7 +83,7 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
 }
 ```
 
-`title` / `summary` / `encourageCopy`: plain invent job (see `SKILL.md` §4). Summary: 2–3 short sentences, no names, no scene. Lab terms stay in `grounding`.
+`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary: 2–3 short sentences, names allowed. Lab terms and product names stay in `grounding` / tutor.
 
 ---
 
@@ -225,14 +225,14 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
   {
     "id": "strain-1",
     "role": "strain",
-    "title": "What's strained",
-    "bodyMd": "Outbreak risk rises while samples wait on the weekly truck. Rumors fill the gap first."
+    "title": "The bigger problem",
+    "bodyMd": "Outbreaks stay invisible because truth lives in a capital lab. The calendar is a truck, not a shift. Rumors fill the gap first."
   },
   {
     "id": "job-1",
     "role": "job",
     "title": "Your job",
-    "bodyMd": "Invent a same-shift sample-to-answer workflow this clinic can run under heat and thin staffing. Do not invent sequencing from scratch."
+    "bodyMd": "Invent a way this clinic can know what the fever is before the next queue arrives."
   }
 ]
 ```

@@ -3,14 +3,18 @@
   "kind": "quest",
   "id": "spotlight-gene-seq-border-clinic-2026",
   "version": 1,
-  "title": "Same-shift fever answers at Crossing Clinic 7",
-  "summary": "Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site — so they don’t have to send samples to a lab.",
+  "title": "The fever sheet at Crossing Clinic 7",
+  "summary": "Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.",
   "author": {
     "name": "Future Forge example",
     "note": "MIT skill example fixture"
   },
   "createdAt": "2026-07-27T12:00:00Z",
-  "tags": ["spotlight", "gene-sequencing", "infectious"],
+  "tags": [
+    "spotlight",
+    "gene-sequencing",
+    "infectious"
+  ],
   "license": "MIT",
   "placement": {
     "mode": "replace-daily"
@@ -20,7 +24,7 @@
     "advanceTitle": "Rugged same-shift clinic sequencing",
     "advanceSummary": "Portable and desktop sequencers have gotten cheaper and more field-rugged, so a small clinic can run pathogen reads without shipping every sample to a national lab — if the local workflow exists.",
     "asOf": "2026-07",
-    "encourageCopy": "Invent the on-site sample-to-answer workflow — gene sequencing is the tool, not the brochure."
+    "encourageCopy": "Invent a way this clinic can know what the fever is before the next queue arrives."
   },
   "research": {
     "topic": "Clinic-grade / portable gene sequencing turnaround",
@@ -46,9 +50,18 @@
       "summary": "It used to cost tens of thousands of dollars to read one person’s full DNA. After public labs were no longer the only buyers, that price has been dropping by about half every 18 months. The chart is US dollars per genome — lower means cheaper.",
       "capability": "Affordable whole-genome sequencing",
       "unit": "USD / genome",
-      "compounding": { "kind": "halving", "periodYears": 1.5 },
-      "anchor": { "date": "2015-01-01", "value": 4000 },
-      "domain": { "start": "2001", "end": "2036" },
+      "compounding": {
+        "kind": "halving",
+        "periodYears": 1.5
+      },
+      "anchor": {
+        "date": "2015-01-01",
+        "value": 4000
+      },
+      "domain": {
+        "start": "2001",
+        "end": "2036"
+      },
       "milestones": [
         {
           "id": "thousand-dollar",
@@ -73,11 +86,13 @@
       ]
     }
   ],
-  "spotlightTrends": ["gene-seq-cost-per-genome"],
+  "spotlightTrends": [
+    "gene-seq-cost-per-genome"
+  ],
   "mission": {
     "id": "spotlight-gene-seq-border-clinic-2026",
     "globalId": "infectious",
-    "title": "Same-shift fever answers at Crossing Clinic 7",
+    "title": "The fever sheet at Crossing Clinic 7",
     "place": "Crossing Clinic 7 (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -96,8 +111,8 @@
         "winMax": 1
       }
     },
-    "scene": "Nurse Amina seals another swab and slides it into the cooler. The fever does not match the sheet on the fridge. The lab truck left at dawn. Answers take days. By then the queue has moved on — or the ward is full. Who designs a same-shift truth for this bench?",
-    "briefMd": "## Your job\n\nInvent a **same-shift sample-to-answer workflow** for Crossing Clinic 7 that uses gene sequencing honestly here.\n\nStakeholder: **Dr. Okonkwo, clinic lead** — fewer blind days between swab and action, without promising magic.\n\nName the system. Show how samples move, who is trained, what gets shared upstream, and how patients hear results without panic. Do not invent sequencing from scratch. Do not promise a city-wide overnight guarantee.\n\n## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7** — a fictive border post with three nurses, a doctor on alternate days, and a generator that coughs after midnight. Travelers and traders share one waiting bench. She checks the fever sheet taped to the fridge. The pattern does not match.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\nThe clinic can swab and counsel. It cannot yet turn a sample into a provisional answer before the next queue arrives. The delay is the driver: a shipping calendar built for a capital lab, not for a border shift.\n\nWho designs a workflow that works *here* — under heat, thin staffing, and fragile trust?\n\n## What’s strained\n\n**Outbreak** risk rises when the pattern is real and invisible. **Fear** spreads when rumors outrun lab truth — a wrong whisper can empty markets or fill the wrong ward.\n\n## What just became possible\n\nSmall clinics can now run pathogen reads on-site with rugged machines — **if** someone designs the local workflow under heat, power cuts, and thin staffing.\n\n## Constraints\n\n- Power and cold chain are uneven after dusk.\n- Staff time is the scarcest resource; tools that need a full specialist team will fail.\n- Public trust is fragile: a wrong headline is worse than a slow truth.\n- Pilot language is welcome; city-wide overnight guarantees are not honest for 2026.\n",
+    "scene": "Nurse Amina seals another swab and slides it into the cooler. The fever does not match the sheet on the fridge. The lab truck left at dawn. Answers take days. By then the queue has moved on — or the ward is full. Who can tell her what the fever is before the next queue arrives?",
+    "briefMd": "## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7**. Three nurses. A doctor on alternate days. A generator that coughs after midnight. Travelers and traders share one waiting bench.\n\nShe checks the fever sheet taped to the fridge. The pattern does not match.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\n## The bigger problem\n\nThis is how outbreaks stay invisible. Truth lives in a capital lab. The calendar is a truck, not a shift.\n\nWhile samples travel, rumors move first. The wrong ward fills. A market empties. The next traveler is already gone. The root is not that this bench lacks a machine. It is a system that only believes a result after it has left the people who needed it.\n\n## Your job\n\nInvent a way this clinic can know what the fever is before the next queue arrives. Stakeholder: **Dr. Okonkwo, clinic lead**.\n",
     "briefBeats": [
       {
         "id": "place-1",
@@ -116,30 +131,20 @@
       {
         "id": "strain-1",
         "role": "strain",
-        "title": "What's strained",
-        "bodyMd": "Outbreak risk rises when the pattern is real and invisible. Fear spreads when rumors outrun lab truth."
-      },
-      {
-        "id": "possible-1",
-        "role": "possible",
-        "title": "What just became possible",
-        "bodyMd": "Small clinics can now run pathogen reads on-site with rugged machines — if someone designs the local workflow."
-      },
-      {
-        "id": "constraints-1",
-        "role": "constraints",
-        "title": "Constraints",
-        "bodyMd": "Uneven power after dusk. Staff time is scarce. A wrong headline is worse than a slow truth. Pilot language only for 2026."
+        "title": "The bigger problem",
+        "bodyMd": "Outbreaks stay invisible because truth lives in a capital lab. The calendar is a truck, not a shift. Rumors move first."
       },
       {
         "id": "job-1",
         "role": "job",
         "title": "Your job",
-        "bodyMd": "Invent a same-shift sample-to-answer workflow this clinic can run. Do not invent sequencing from scratch. Do not promise a city-wide overnight guarantee."
+        "bodyMd": "Invent a way this clinic can know what the fever is before the next queue arrives."
       }
     ],
     "stakeholder": "Dr. Okonkwo, clinic lead",
-    "suggested": ["gene-sequencing"],
+    "suggested": [
+      "gene-sequencing"
+    ],
     "visionTheme": "care-city"
   }
 }

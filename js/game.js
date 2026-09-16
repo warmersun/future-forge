@@ -5251,7 +5251,7 @@ function catalogInspectBeatsHtml(mission, tile) {
       : null;
   const beats = resolveBriefBeats(
     { ...(mission || {}), briefBeats: authored || mission?.briefBeats },
-    { summary: tile?.summary || mission?.summary, title: tile?.title || mission?.title }
+    { summary: tile?.summary || mission?.summary, title: tile?.title || mission?.title, encourageCopy: tile?.spotlight?.encourageCopy || mission?.spotlight?.encourageCopy }
   );
   if (!beats.length) {
     return `

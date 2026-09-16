@@ -1,46 +1,42 @@
 # Brief template (`mission.briefMd`)
 
-**Prose style:** All player-facing narrative follows `references/scene-prose.md` (design-challenge story craft + plain-language job). **Your job** comes first so the invent is clear before the story.
+**Prose style:** All player-facing narrative follows `references/scene-prose.md`. The player reads **instance → bigger problem → outcome job**. Capability, product, and “invent with this tech” hints stay in `grounding` / `aiTutorContext`.
 
-**Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains belong in `aiTutorContext` / `grounding` — not here.
+**Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains do not belong here.
 
-**Walkthrough:** The invent screen shows this brief **one short beat at a time** (derived from `##` headings and paragraphs). Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the 2–3 sentence lede in the left banner (not a scene). Optional authored cards: `brief-beats.md`.
+**Walkthrough:** The invent screen shows this brief **one short beat at a time**. Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the instance lede in the left banner (named people and place are allowed). Optional authored cards: `brief-beats.md`.
+
+Write headings in this order (the walkthrough already shows story then job):
 
 ```markdown
-## Your job
-
-Plain invent invitation in everyday words. Name who is in trouble, what to invent, and what not to invent.
-No insider shorthand (“local cut,” unexplained lab terms).
-Stakeholder can appear here in one line.
-End on the open choice — not a solution checklist.
-
 ## The place
 
-Write a short design-challenge story (fictive place, real problem shape). **Blank line between paragraphs** — each paragraph becomes one walkthrough card:
+A brief little story: an **instance** of the bigger global issue. Fictive place, named people, one moment. **Blank line between paragraphs** — each paragraph becomes one walkthrough card:
 
-1. **Hook** — named person or clear role does something specific, now  
-2. **Complication** — the world pushes back in the scene  
-3. **Mechanism** — local driver revealed through action (not a lecture)  
-4. **Stakes** — human-scale harm people feel  
-5. **Open challenge** — leave the design tension unresolved (do not invent the solution)
+1. **Hook** — named person or clear role does something specific, now
+2. **Complication** — the world pushes back in the scene
+3. **Mechanism** — local driver revealed through action (not a lecture)
+4. **Stakes** — human-scale harm people feel
 
 Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath **and per paragraph**.
 Lived local harm + local driver must both appear as story.
 Target: 2–4 tight paragraphs (fuller than `mission.scene`; same craft). Not a novella. Not one dense block.
+Do **not** name the spotlight tech, a sponsor product, or “what just became possible.”
 
-## What’s strained
+## The bigger problem
 
-What fails if nothing changes (ties to crisis meters). Keep concrete and local — still plain declarative prose, not framework lists unless the meters need a short map.
+Zoom out. This scene is a case of what? **Root cause analysis** in everyday words: the system that keeps producing the harm — not a meter dump, not a capability lecture, not “machines got cheaper.”
 
-## What just became possible
+One or two short paragraphs. Name the global issue in human language. Say why it keeps happening. Leave the design tension open.
 
-One short paragraph, everyday words: the *kind* of advance that makes a new local invent realistic (not a product ad, not a research abstract).
-Do not prescribe a single brand or one-step “correct” invention.
-Prefer leaving lab terms in `grounding`; if you must name one here, use an everyday phrase the reader already met in **Your job**.
+Old heading **What’s strained** still walks (engine alias). Do not use **What just became possible** or **Constraints** on new tiles.
 
-## Constraints (optional)
+## Your job
 
-Cost, trust, power, skills — inventable constraints (concrete, local).
+Outcome only. What must be true for these people / this class of place.
+No product name. No “invent with [tech].” No “do not invent X” ban-list.
+Stakeholder can appear here in one line (same paragraph — a blank line makes a second walkthrough card).
+End on the open choice — not a solution checklist. The tray already suggests the spotlight tech (`mission.suggested`); the tutor and `grounding` may hint later.
 ```
 
-Also write **`mission.scene`** as a plain-text lede (≤500 chars) with the same spine and rhythm — see `references/scene-prose.md`. Write **`summary`** / **`title`** / **`encourageCopy`** as the plain job *before* drafting this brief (see `SKILL.md` Procedure §4).
+Also write **`mission.scene`** as a plain-text instance lede (≤500 chars) with the same spine — see `references/scene-prose.md`. Write **`summary`** as the instance (names allowed), **`title`** as the human situation / place, **`encourageCopy`** as the outcome — see `SKILL.md` Procedure §4.

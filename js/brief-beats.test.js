@@ -14,6 +14,8 @@ import {
   deriveBriefBeats,
   isSafeBriefImageUrl,
   splitSentences,
+  JOB_LINE_CAP,
+  clipLede,
   jobLineFromMission,
   normalizeBriefBeats,
   normalizeBriefHeading,
@@ -41,6 +43,7 @@ describe("brief-beats headings", () => {
     assert.equal(roleFromHeading("Your job"), "job");
     assert.equal(roleFromHeading("Your brief"), "job");
     assert.equal(roleFromHeading("The place"), "place");
+    assert.equal(roleFromHeading("The bigger problem"), "strain");
     assert.equal(roleFromHeading("What just became possible"), "possible");
     assert.equal(
       roleFromHeading("A capability that just became more real"),
@@ -137,7 +140,7 @@ describe("deriveBriefBeats", () => {
     assert.equal(beats[0].role, "place");
   });
 
-  it("walks gene-seq shipped headings (place-first, Your brief)", () => {
+  it("walks gene-seq shipped headings (place-first, bigger problem, job)", () => {
     const tile = loadQuest("quests/spotlight-gene-seq.json");
     const beats = deriveBriefBeats(tile.mission.briefMd, {
       summary: tile.summary,
@@ -148,12 +151,22 @@ describe("deriveBriefBeats", () => {
     assert.equal(beats[beats.length - 1].role, "job");
     const roles = new Set(beats.map((b) => b.role));
     assert.ok(roles.has("strain"));
-    assert.ok(roles.has("possible"));
-    assert.ok(roles.has("constraints"));
+    assert.ok(!roles.has("possible"));
+    assert.ok(!roles.has("constraints"));
     assert.match(beats[0].bodyMd, /Nurse Amina/i);
   });
 
-  it("walks skill example job-first template into story-then-job order", () => {
+  it("titles The bigger problem as strain from a synthetic brief", () => {
+    const beats = deriveBriefBeats(
+      "## The place\n\nHere.\n\n## The bigger problem\n\nRoot cause.\n\n## Your job\n\nInvent it."
+    );
+    const strain = beats.find((b) => b.role === "strain");
+    assert.ok(strain);
+    assert.equal(strain.title, "The bigger problem");
+    assert.match(strain.bodyMd, /Root cause/);
+  });
+
+  it("walks skill example place-then-job order", () => {
     const tile = loadQuest(
       "skills/future-forge-quest/examples/spotlight-gene-seq.json"
     );
@@ -164,7 +177,7 @@ describe("deriveBriefBeats", () => {
     assert.equal(beats[beats.length - 1].role, "job");
     assert.ok(beats.length <= BRIEF_BEAT_CAPS.maxBeats);
     const job = beats[beats.length - 1];
-    assert.match(job.bodyMd, /same-shift|workflow|Invent/i);
+    assert.match(job.bodyMd, /Invent|fever|queue/i);
   });
 
   it("caps a long place (tideglass) at 8 beats without dropping the job", () => {
@@ -178,12 +191,24 @@ describe("deriveBriefBeats", () => {
     assert.match(beats[0].bodyMd, /Nia|Tideglass/i);
   });
 
-  it("appends a job beat from summary when the brief has none", () => {
+  it("appends a job beat from encourageCopy when the brief has none", () => {
     const beats = deriveBriefBeats("## The place\n\nA clinic waits.", {
-      summary: "Invent a same-shift workflow.",
+      summary: "Nurse Amina seals a swab at Crossing Clinic 7.",
+      encourageCopy: "Invent a way this clinic can know what the fever is.",
     });
     assert.equal(beats[beats.length - 1].role, "job");
-    assert.match(beats[beats.length - 1].bodyMd, /same-shift workflow/);
+    assert.match(beats[beats.length - 1].bodyMd, /know what the fever/);
+    assert.ok(!/Nurse Amina/.test(beats[beats.length - 1].bodyMd));
+  });
+
+  it("falls back to title for a missing job when there is no encourageCopy", () => {
+    const beats = deriveBriefBeats("## The place\n\nA clinic waits.", {
+      summary: "Nurse Amina seals a swab.",
+      title: "The fever sheet at Crossing Clinic 7",
+    });
+    assert.equal(beats[beats.length - 1].role, "job");
+    assert.match(beats[beats.length - 1].bodyMd, /Invent for this place/);
+    assert.ok(!/Nurse Amina/.test(beats[beats.length - 1].bodyMd));
   });
 
   it("keeps unknown headings as other, never discarded", () => {
@@ -257,6 +282,19 @@ describe("normalizeBriefBeats / resolveBriefBeats", () => {
     assert.ok(beats.length >= 2);
     assert.match(beats[0].bodyMd, /Clinic story/);
   });
+
+  it("resolveBriefBeats uses spotlight.encourageCopy as the missing-job card", () => {
+    const beats = resolveBriefBeats({
+      briefMd: "## The place\n\nClinic story.",
+      summary: "Nurse Amina seals a swab.",
+      spotlight: {
+        encourageCopy: "Invent a way this clinic can know what the fever is.",
+      },
+    });
+    assert.equal(beats[beats.length - 1].role, "job");
+    assert.match(beats[beats.length - 1].bodyMd, /know what the fever/);
+    assert.ok(!/Nurse Amina/.test(beats[beats.length - 1].bodyMd));
+  });
 });
 
 describe("job line and stills", () => {
@@ -268,6 +306,30 @@ describe("job line and stills", () => {
       }),
       "Invent a workflow."
     );
+  });
+
+  it("clips a long instance summary on a sentence, not mid-word", () => {
+    const tile = loadQuest("quests/spotlight-gene-seq.json");
+    const line = jobLineFromMission({ summary: tile.summary });
+    assert.ok(line.length <= JOB_LINE_CAP);
+    assert.ok(line.length < tile.summary.length);
+    assert.match(line, /Crossing Clinic 7/);
+    assert.match(line, /\.$/);
+    assert.ok(!/then t$/i.test(line));
+    assert.equal(
+      line,
+      "Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match."
+    );
+  });
+
+  it("does not clip the banner lede after Ms.", () => {
+    const summary =
+      "After the last ferry, Ms. Okonkwo locks the pier lab at Harborside. The yard manuals on the bench cannot leave the room. Students still need days of practice before the exam, and the contract still forbids sending a page out.";
+    const line = jobLineFromMission({ summary });
+    assert.ok(line.length <= JOB_LINE_CAP);
+    assert.match(line, /Okonkwo/);
+    assert.match(line, /cannot leave the room\.$/);
+    assert.equal(clipLede("short."), "short.");
   });
 
   it("uses title when there is no summary (theme quests)", () => {

@@ -28,7 +28,7 @@ UI: invent and Learning catalog show **module title + segment bar** (one segment
 
 Write as short structured notes. Do **not** paste this into `briefMd` or `scene`.
 
-**Player brief stays lean.** Capability lectures, product-category chains, SEQUENCE steps, readings, and misconceptions live here (and in `grounding`) — not as long sections in `briefMd`. The learner must understand the invent job from **title + summary + Your job** without reading the tutor notes.
+**Player brief stays lean.** Capability lectures, product-category chains, SEQUENCE steps, readings, and misconceptions live here (and in `grounding`) — not as long sections in `briefMd`. The learner must understand who is in trouble and what must get better from **title + summary + The place + The bigger problem + Your job** without reading the tutor notes or naming a product.
 
 ```text
 LESSON GOAL: <one sentence — what the learner should invent/understand>
@@ -77,7 +77,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 
 1. **https only** — no `javascript:`, `data:`, or relative paths. Prefer stable, citable pages and diagrams.
 2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
-3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). Do not paste a capability lecture into **What just became possible** either — one short everyday paragraph max; the tutor teaches the rest.
+3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). Do not author **What just became possible** on new tiles. The tutor teaches the capability class after the story.
 4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.
 5. **Never** treat a sponsored product URL as a required solution path; invent stays open and pilot-honest.
 6. Chat still refuses raw HTML — use Markdown only.
@@ -141,9 +141,9 @@ Multiplayer / hotseat do **not** switch to tutor mode.
 
 ### Hard copy rules
 
-1. Player-facing invent invitation stays **open** — invite **application categories** unlocked by the product-category milestone, not “use Product X”.
-2. Naming a brand/product is **not** a valid solution; invent must be local, pilot-honest.
-3. Capability claims live in **`grounding`** (and research), not only in the sponsor banner.
+1. Player-facing invent invitation stays **open** — an **outcome** for these people, not “use Product X” and not “invent with X without saying X”.
+2. Naming a brand/product is **not** a valid solution; invent must be local, pilot-honest. The product may appear under **Milestone** in `grounding`; the tutor may teach the category after the story.
+3. Capability claims live in **`grounding`** (and research), not in scene, summary, job, or the sponsor banner as the plot.
 4. Under **Milestone**, the sponsor product may appear as the **instance** that hit the category threshold; **Unlocks / Applications** stay category-level.
 5. Attribution is **display-only** — no scoring bonus, no forced tech tray, no AI “sell mode”.
 
@@ -184,9 +184,9 @@ Portable examples: `examples/spotlight-sponsored-learning.json` (one lesson), `e
 - Link-only tutor turns, or rewriting a `/lessons` page in chat  
 - Broken or non-https media URLs in `aiTutorContext`  
 - Putting pedagogy-only images into `briefMd` instead of tutor context + chat  
-- Dumping capability lectures, SEQUENCE, or research into `briefMd` / `scene` / `summary`  
-- Title/summary that hide the job behind place poetry or insider jargon (“local cut,” unexplained “open-weight”)  
-- Sponsor without `grounding` (AI has no capability SoT)  
-- Bare-emTech unlocks (“AI unlocks education”) instead of product-category grain  
-- Product theater in scene/brief (“only Brand Y works”)  
+- Dumping capability lectures, SEQUENCE, or research into `briefMd` / `scene` / `summary`
+- Title/summary that hide the people behind a tech-gap riddle (“This is about how far gene sequencing has to go”) or insider jargon (“local cut,” unexplained “open-weight”)
+- Sponsor without `grounding` (AI has no capability SoT)
+- Bare-emTech unlocks (“AI unlocks education”) instead of product-category grain
+- Product theater or product riddle in scene/brief (“only Brand Y works”; “invent with Y, just don’t say Y”)
 - Claiming lesson unlocks that the game does not enforce  

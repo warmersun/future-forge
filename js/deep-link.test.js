@@ -25,8 +25,8 @@ const LESSON = {
 
 const OTHER = {
   id: "spotlight-gene-seq-border-clinic-2026",
-  title: "Fever samples waiting at Crossing Clinic 7",
-  mission: { id: "spotlight-gene-seq-border-clinic-2026", title: "Fever samples waiting at Crossing Clinic 7" },
+  title: "The fever sheet at Crossing Clinic 7",
+  mission: { id: "spotlight-gene-seq-border-clinic-2026", title: "The fever sheet at Crossing Clinic 7" },
 };
 
 describe("sanitizeQuestToken", () => {
