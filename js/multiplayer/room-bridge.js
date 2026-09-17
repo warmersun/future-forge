@@ -376,6 +376,7 @@ export function createRoomBridge() {
     state.apMax = me.apMax;
     state.budget = me.budget;
     state.will = me.will;
+    state.pathwayEasePaid = { ...(me.pathwayEasePaid || {}) };
     state.apSpentThisTurn = me.apSpentThisTurn || 0;
     state.aiTaxThisTurn = Boolean(me.aiTaxThisTurn);
     state.writeCommitsThisTurn = me.writeCommitsThisTurn || 0;

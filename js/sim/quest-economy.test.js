@@ -298,6 +298,21 @@ describe("simulateArchetype", () => {
     assert.equal(afterFriends[local.key], local.start - 1);
   });
 
+  it("pathway relief grants Budget for newly eased roles", () => {
+    const k = extractKnobs(MISSIONS.find((m) => m.id === "portside-floods"));
+    const start = k.budget;
+    const r = simulateArchetype(k, ARCHETYPES.find((a) => a.id === "solo-no-ai"));
+    const income = r.actions.filter((a) => a.type === "pathway_income");
+    assert.ok(income.length >= 1, "at least one pathway-ease grant");
+    const granted = income.reduce((n, a) => n + (a.amount || 0), 0);
+    assert.ok(granted >= 1);
+    assert.ok(r.budget > 0);
+    assert.ok(
+      r.budget >= start - r.tileCount,
+      "ease income offsets some of the tech spend"
+    );
+  });
+
   it("blocks when budget cannot pay an early-curve tech", () => {
     const k = extractKnobs(loadGeneSeq(), {
       resources: { apMax: 4, startingBudget: 0, startingWill: 4 },

@@ -2500,6 +2500,7 @@ describe("rules weather key", () => {
     assert.equal(applied.board.pathwayImpacts[fp].crisisDelta.local, -1);
     assert.equal(applied.displayPressure.Floods, 2);
     assert.equal(applied.pathways[0].needsScore, true);
+    assert.equal(applied.board.tiles["crisis-local"].lampPending, true);
     assert.equal(
       pathwayContentFingerprint([applied.board.tiles.ai1], applied.board),
       fp

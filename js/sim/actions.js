@@ -9,6 +9,8 @@ import {
   techCost,
   techBudgetRefund,
   maybeFrontierRiskTick,
+  pathwayEaseGrant,
+  clonePathwayEasePaid,
 } from "./economy.js";
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
 import { foresightForYear } from "./world-foresight.js";
@@ -247,6 +249,26 @@ export function applyAction(sim, action, opts = {}) {
     return { ok: true, events, sim: next };
   }
 
+  if (type === "pathway_income") {
+    if (!bwOn) return { ok: true, events: [], sim: next };
+    const grant = pathwayEaseGrant({
+      paid: next.pathwayEasePaid,
+      crisisDelta: action.payload?.crisisDelta,
+      skip: Boolean(action.payload?.skip),
+    });
+    next.pathwayEasePaid = grant.paid;
+    if (grant.amount > 0) {
+      next.budget = Math.min(maxBudget, (next.budget ?? 0) + grant.amount);
+    }
+    events.push({
+      type: "pathway_income",
+      amount: grant.amount,
+      roles: grant.roles,
+      budget: next.budget,
+    });
+    return { ok: true, events, sim: next };
+  }
+
   if (type === "end_turn") {
     if (apOn) {
       const spent = next.apSpentThisTurn || 0;
@@ -456,6 +478,7 @@ export function simSliceFromState(state) {
     lastChallengeVerdict: state.lastChallengeVerdict || null,
     budget: state.budget ?? GAME.startingBudget ?? 5,
     will: state.will ?? GAME.startingWill ?? 3,
+    pathwayEasePaid: clonePathwayEasePaid(state.pathwayEasePaid),
     techAddedThisTurn: { ...(state.techAddedThisTurn || {}) },
     marketNews: state.marketNews ? cloneMarketNews(state.marketNews) : null,
     lastYearBulletin: state.lastYearBulletin
@@ -490,6 +513,9 @@ export function applySimSliceToState(state, slice) {
   state.lastChallengeVerdict = slice.lastChallengeVerdict;
   state.budget = slice.budget;
   state.will = slice.will;
+  if ("pathwayEasePaid" in slice) {
+    state.pathwayEasePaid = clonePathwayEasePaid(slice.pathwayEasePaid);
+  }
   state.techAddedThisTurn = { ...(slice.techAddedThisTurn || {}) };
   if ("marketNews" in slice) {
     state.marketNews = slice.marketNews ? cloneMarketNews(slice.marketNews) : null;

@@ -505,7 +505,7 @@ export function resolveTourStep(raw) {
     return step(
       "G7",
       "Budget is empty",
-      "Solo runs end at Budget 0$. Don't spend — summon or hold while you still can.",
+      "Budget is empty — you cannot buy more techs or lobby. A docked pathway that eases a crisis pays some back.",
       sel("#hud-budget")
     );
   }

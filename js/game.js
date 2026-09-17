@@ -158,7 +158,13 @@ import {
   applySimSliceToState,
 } from "./sim/actions.js";
 import { applyThinkingAiCharge, thinkingAiApCost } from "./sim/ai-tax.js";
-import { techCost as techCostRaw, deployActionCost, scaleActionCost } from "./sim/economy.js";
+import {
+  techCost as techCostRaw,
+  deployActionCost,
+  scaleActionCost,
+  pathwayEaseGrant,
+  clonePathwayEasePaid,
+} from "./sim/economy.js";
 import {
   describeMarketEffects,
   marketAffectsTech,
@@ -538,6 +544,7 @@ const state = {
   // G2 budget + political will (never state.trust)
   budget: GAME.startingBudget ?? 5,
   will: GAME.startingWill ?? 3,
+  pathwayEasePaid: {},
   rules: [],
   techAddedThisTurn: {},
   /** G3 multi-encounter scrutiny (null when essay mode) */
@@ -1195,11 +1202,8 @@ function dispatchSim(type, payload = {}) {
   if (result.ok) {
     applySimSliceToState(state, result.sim);
     mpSyncFromSolo();
-    // Solo: Budget 0 is terminal (after any spend that emptied the wallet)
-    // Hotseat: personal budget 0 is not whole-table game over
-    if (!hotseatBridge.isHotseat() && type !== "wait" && type !== "end_turn") {
-      maybeBudgetGameOver({ from: type });
-    }
+    // 0$ is a floor (cannot buy). Do not collapse mid-turn — a pending
+    // pathway score can still pay Budget back.
     const newsEv = (result.events || []).find((e) => e.type === "market_news");
     if (newsEv?.marketNews) {
       queueMarketNewsModal(newsEv.marketNews, { force: true });
@@ -1471,6 +1475,7 @@ function ensureHexWorkshop() {
       if (!b) return true;
       return Boolean(b.canFaceChallenge?.());
     },
+    grantPathwayEase: (opts) => grantPathwayEase(opts),
     commitBoard: (b) => {
       scheduleCloudRunState();
       try {
@@ -3313,21 +3318,64 @@ function leaveHotseat() {
 }
 
 /**
- * Solo rule: running out of Budget ends the mission.
+ * 0$ is a floor (cannot buy techs / lobby / R&D). Instant collapse here
+ * killed last-dollar docks before a pathway score could pay Budget back.
  * @returns {boolean} true if the run just ended
  */
-function maybeBudgetGameOver(meta = {}) {
-  if (!budgetWillEnabled()) return false;
-  if (state.screen === "outcome") return false;
-  if (!state.mission) return false;
-  if ((state.budget ?? 0) > 0) return false;
-  flashToast("Budget hit 0$ — the Quest ends. Capital ran out before the idea could field.");
-  finishOutcome("collapse", {
-    bankrupt: true,
-    reason: "budget",
-    ...meta,
+function maybeBudgetGameOver(_meta = {}) {
+  return false;
+}
+
+function pathwayEaseToast(roles, amount) {
+  const labels = { local: "local crisis", global: "root cause", support: "support" };
+  const names = (roles || []).map((r) => labels[r] || r);
+  if (amount === 1) {
+    return `Pathway eased the ${names[0] || "crisis"} — +1$ Budget.`;
+  }
+  return `Pathway eased ${names.join(" and ")} — +${amount}$ Budget.`;
+}
+
+/**
+ * +1 Budget per crisis role a settled pathway newly eases (once per role).
+ * Solo/hotseat: applyAction. Rooms: board_commit is authority; toast here.
+ */
+function grantPathwayEase(opts = {}) {
+  if (!budgetWillEnabled()) return { amount: 0, roles: [], paid: state.pathwayEasePaid || {} };
+  if (opts.skip) return { amount: 0, roles: [], paid: state.pathwayEasePaid || {} };
+  const preview = pathwayEaseGrant({
+    paid: state.pathwayEasePaid,
+    crisisDelta: opts.crisisDelta,
+    skip: false,
   });
-  return true;
+  if (roomBridge.isRoom()) {
+    const viewId = roomBridge.getViewId?.() || roomBridge.myId?.();
+    const mine = viewId === roomBridge.myId?.();
+    if (!mine) return preview;
+    state.pathwayEasePaid = preview.paid;
+    if (preview.amount > 0) {
+      const cap = GAME.maxBudget ?? 10;
+      state.budget = Math.min(cap, (state.budget ?? 0) + preview.amount);
+      flashToast(pathwayEaseToast(preview.roles, preview.amount), { resource: "budget" });
+      renderHud();
+    }
+    return preview;
+  }
+  const r = dispatchSim("pathway_income", {
+    crisisDelta: opts.crisisDelta,
+    skip: false,
+  });
+  if (r.ok) {
+    state.pathwayEasePaid = clonePathwayEasePaid(r.sim?.pathwayEasePaid || preview.paid);
+    const ev = (r.events || []).find((e) => e.type === "pathway_income");
+    const amount = ev?.amount ?? preview.amount;
+    const roles = ev?.roles || preview.roles;
+    if (amount > 0) {
+      flashToast(pathwayEaseToast(roles, amount), { resource: "budget" });
+      renderHud();
+    }
+    return { amount, roles, paid: state.pathwayEasePaid };
+  }
+  return preview;
 }
 
 function loadPersistedProgress() {
@@ -3627,6 +3675,7 @@ function cloudRunStatePayload() {
       apMax: state.apMax,
       budget: state.budget,
       will: state.will,
+      pathwayEasePaid: clonePathwayEasePaid(state.pathwayEasePaid),
       rules: cloneRules(state.rules),
       tutorSessionActive: Boolean(state.tutorSessionActive),
       mission: slimMissionForContinue(state.mission),
@@ -3719,6 +3768,9 @@ function applyRestoredPlay(play) {
   if (play.apMax != null) state.apMax = play.apMax;
   if (play.budget != null) state.budget = play.budget;
   if (play.will != null) state.will = play.will;
+  if (play.pathwayEasePaid && typeof play.pathwayEasePaid === "object") {
+    state.pathwayEasePaid = clonePathwayEasePaid(play.pathwayEasePaid);
+  }
   if (Array.isArray(play.rules)) state.rules = cloneRules(play.rules);
   if (typeof play.tutorSessionActive === "boolean") {
     state.tutorSessionActive = play.tutorSessionActive;
@@ -6841,6 +6893,7 @@ function startMission(mission, opts = {}) {
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
   state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
   state.will = res.startingWill ?? GAME.startingWill ?? 3;
+  state.pathwayEasePaid = {};
   state.rules = seedLiveRules(
     state.mission?.rules || merged.rules,
     state.mission?.startYear ?? GAME.startYear ?? 2026
@@ -7956,7 +8009,7 @@ function renderHud() {
   const budgetEl = $("#hud-budget");
   if (budgetEl && budgetWillEnabled()) {
     budgetEl.title =
-      "Capital for techs, Lobby, Pilot, and Scale. Solo: Budget 0$ ends the Quest. Not refilled by End turn.";
+      "Capital for techs, Lobby, and R&D. Earned when a docked pathway eases a crisis. Not refilled by End turn. 0$ cannot buy.";
   }
   const willEl = $("#hud-will");
   if (willEl && budgetWillEnabled()) {
@@ -11829,10 +11882,20 @@ function remapMeterKeyedObject(obj) {
  * Color is dynamic vs this Quest's winMax (no extra HUD text):
  * green = at/under goal · yellow = above goal · red = dangerous (4–5).
  */
+function pendingCrisisMeterKeys() {
+  const keys = new Set();
+  for (const t of Object.values(state.hexBoard?.tiles || {})) {
+    if (t?.kind !== "crisis" || t.q == null || !t.lampPending) continue;
+    keys.add(String(t.meterKey || t.name));
+  }
+  return keys;
+}
+
 function paintHudPressureMeters(box) {
   if (!box) return;
   const pressure = state.pressure || {};
   const winMax = state.mission?.winMax || {};
+  const pendingKeys = pendingCrisisMeterKeys();
   box.innerHTML = Object.entries(pressure)
     .map(([k, v]) => {
       const n = Math.max(0, Math.min(5, Math.round(Number(v) || 0)));
@@ -11841,9 +11904,14 @@ function paintHudPressureMeters(box) {
       const label = crisisMeterDisplayLabel(k);
       const hold = crisisHoldNeedLabel(goal);
       const goalBit = hold ? ` · ${hold}` : "";
-      const whyBit = crisisMeterTooltipBits(state.hexBoard, k);
+      const pending = pendingKeys.has(k);
+      const whyBit = pending
+        ? " Re-judging under the local rules on the books."
+        : crisisMeterTooltipBits(state.hexBoard, k);
       const whySuffix = whyBit ? ` ${whyBit}` : "";
-      return `<span class="meter ${level}" title="${escapeHtml(
+      return `<span class="meter ${level}${pending ? " is-pending" : ""}"${
+        pending ? ' aria-busy="true"' : ""
+      } title="${escapeHtml(
         label
       )}: ${n}/5${goalBit}. Green = at or below the hold line; yellow = above; red = danger. Each year raises; inventing/Scale lowers.${escapeHtml(
         whySuffix
@@ -11876,7 +11944,7 @@ function renderChallengeHud() {
   const budgetEl = $("#ch-hud-budget");
   if (budgetEl && budgetWillEnabled()) {
     budgetEl.title =
-      "Capital (same as invent). Solo: Budget 0$ ends the Quest. Challenge wins can restore a little.";
+      "Capital (same as invent). Earned when a docked pathway eases a crisis. 0$ cannot buy.";
   }
   const willEl = $("#ch-hud-will");
   if (willEl && budgetWillEnabled()) {
@@ -15733,7 +15801,7 @@ function attemptDeployLegacy() {
       if (pay.error === "no_ap") {
         flashToast("No AP to deploy — return to Invent and End turn, then come back.", { resource: "ap" });
       } else if (pay.error === "no_budget") {
-        flashToast(`Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, win challenge income, or simplify the stack.`, { resource: "budget" });
+        flashToast(`Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, or wait for a pathway to ease a crisis.`, { resource: "budget" });
       } else {
         flashToast("Cannot deploy right now.");
       }
@@ -16717,15 +16785,14 @@ function renderOutcome() {
     headline = "Out of capital";
     story =
       `In ${o.year}, ${name || "the invention"} never got a real chance in ${m.place}: Budget hit 0$ and the project went broke. ` +
-      `Tech cards, Lobby, Pilot, and Scale all spend capital — save enough to field what you invent. ` +
-      `Clearing Challenge can restore a little Budget; over-buying the stack often cannot.`;
+      `Tech cards, Lobby, and R&D spend capital. A docked pathway that eases a crisis pays some back.`;
     lessons.push({
       type: "grow",
-      text: "Solo rule: Budget 0$ ends the Quest. Keep cash for Pilot (and Scale), not only for shiny cards.",
+      text: "0$ cannot buy more techs. Dock an honest island so a scored pathway can refill the till.",
     });
     lessons.push({
       type: "grow",
-      text: "Lean stacks, half-refunds on same-turn removes, and challenge wins (+1 Budget) are how you stay solvent.",
+      text: "Lean stacks and same-turn half-refunds keep enough cash to invent the next island.",
     });
   } else if (o.kind === "collapse" && mp?.multiparty) {
     headline = "Quest collapsed — no champion";

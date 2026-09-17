@@ -1577,8 +1577,14 @@ export function createHexWorkshop(api) {
     api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
     api.onBoardPainted?.();
+    api.commitBoard?.(applied.board);
+    const keepCrisis = Boolean(opts.keepCrisisDelta);
+    api.grantPathwayEase?.({
+      crisisDelta: keepCrisis ? null : score?.crisisDelta || emptyCrisisDelta(),
+      skip: keepCrisis,
+    });
     showScoreSettleChips(fp, {
-      keepCrisisDelta: Boolean(opts.keepCrisisDelta),
+      keepCrisisDelta: keepCrisis,
       score,
     });
     if (inspectTileId) showTilePopup(inspectTileId);

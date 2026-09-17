@@ -75,6 +75,80 @@ export function techBudgetRefund(cost) {
   return Math.floor((cost?.budget || 0) / 2);
 }
 
+/** Crisis roles a settled pathway can ease (and thus pay Budget for). */
+export const PATHWAY_EASE_ROLES = ["local", "global", "support"];
+
+function roleDelta(v) {
+  if (v && typeof v === "object") return Math.round(Number(v.delta) || 0);
+  return Math.round(Number(v) || 0);
+}
+
+/**
+ * Clone the once-per-role pathway-ease paid set.
+ * @param {object|null|undefined} paid
+ * @returns {Record<string, boolean>}
+ */
+export function clonePathwayEasePaid(paid) {
+  const out = {};
+  if (!paid || typeof paid !== "object") return out;
+  for (const role of PATHWAY_EASE_ROLES) {
+    if (paid[role]) out[role] = true;
+  }
+  return out;
+}
+
+function crisisDeltaFromUnknown(cd) {
+  const out = { local: 0, global: 0, support: 0 };
+  if (!cd || typeof cd !== "object") return out;
+  for (const role of PATHWAY_EASE_ROLES) {
+    out[role] = roleDelta(cd[role]);
+  }
+  return out;
+}
+
+/**
+ * First time a settled pathway eases a crisis role, +1 Budget per such role.
+ * Does not pay again for that role on this invent/seat.
+ *
+ * @param {{ paid?: object, crisisDelta?: object, skip?: boolean }} [opts]
+ * @returns {{ amount: number, roles: string[], paid: Record<string, boolean> }}
+ */
+export function pathwayEaseGrant(opts = {}) {
+  const paid = clonePathwayEasePaid(opts.paid);
+  if (opts.skip) return { amount: 0, roles: [], paid };
+  const delta = crisisDeltaFromUnknown(opts.crisisDelta);
+  const roles = [];
+  for (const role of PATHWAY_EASE_ROLES) {
+    if (paid[role]) continue;
+    if (delta[role] < 0) {
+      roles.push(role);
+      paid[role] = true;
+    }
+  }
+  return { amount: roles.length, roles, paid };
+}
+
+/**
+ * Union of settled (non-pending) pathway impacts → grant.
+ * Used when the hex board is the source of truth (Friends board_commit).
+ *
+ * @param {object|null|undefined} impacts — board.pathwayImpacts
+ * @param {object|null|undefined} paid
+ */
+export function pathwayEaseGrantFromImpacts(impacts, paid) {
+  const merged = { local: 0, global: 0, support: 0 };
+  if (impacts && typeof impacts === "object") {
+    for (const row of Object.values(impacts)) {
+      if (!row || row.pending) continue;
+      const d = crisisDeltaFromUnknown(row.crisisDelta);
+      for (const role of PATHWAY_EASE_ROLES) {
+        if (d[role] < merged[role]) merged[role] = d[role];
+      }
+    }
+  }
+  return pathwayEaseGrant({ paid, crisisDelta: merged });
+}
+
 /**
  * Cost to field / deploy the invention (on top of tech acquisition).
  * Theme: robots in a village still need install, training, ops money.

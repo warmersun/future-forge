@@ -18,7 +18,14 @@ import {
 } from "./collapse.js";
 import { scoreRun } from "./scoring.js";
 import { applyAction } from "./actions.js";
-import { techCost, applyG2DeployDeltas, deployActionCost, scaleActionCost } from "./economy.js";
+import {
+  techCost,
+  applyG2DeployDeltas,
+  deployActionCost,
+  scaleActionCost,
+  pathwayEaseGrant,
+  pathwayEaseGrantFromImpacts,
+} from "./economy.js";
 import { GAME, TECHS } from "../data.js";
 
 describe("pressure", () => {
@@ -763,6 +770,52 @@ describe("actions", () => {
     });
     assert.equal(end.ok, true, end.error);
   });
+
+  it("pathway_income pays +1 Budget per newly eased role, once", () => {
+    const s = base();
+    s.budget = 2;
+    const r = applyAction(
+      s,
+      { type: "pathway_income", payload: { crisisDelta: { local: -1, support: -1, global: 0 } } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.budget, 4);
+    assert.deepEqual(r.sim.pathwayEasePaid, { local: true, support: true });
+    const ev = (r.events || []).find((e) => e.type === "pathway_income");
+    assert.equal(ev.amount, 2);
+    const again = applyAction(
+      r.sim,
+      { type: "pathway_income", payload: { crisisDelta: { local: -2, support: -1 } } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(again.ok, true);
+    assert.equal(again.sim.budget, 4, "already-eased roles do not pay again");
+    const global = applyAction(
+      again.sim,
+      { type: "pathway_income", payload: { crisisDelta: { global: -1 } } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(global.sim.budget, 5);
+    assert.equal(global.sim.pathwayEasePaid.global, true);
+  });
+
+  it("pathway_income skip and positive deltas pay nothing", () => {
+    const s = base();
+    s.budget = 3;
+    const skip = applyAction(
+      s,
+      { type: "pathway_income", payload: { crisisDelta: { local: -1 }, skip: true } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(skip.sim.budget, 3);
+    const backlash = applyAction(
+      s,
+      { type: "pathway_income", payload: { crisisDelta: { local: 1, support: 0 } } },
+      { features: { budgetWill: true } }
+    );
+    assert.equal(backlash.sim.budget, 3);
+  });
 });
 
 describe("economy", () => {
@@ -802,6 +855,30 @@ describe("economy", () => {
       { will: 4 }
     );
     assert.equal(threeMandate.budget, 1);
+  });
+
+  it("pathwayEaseGrant is once per role and ignores pending impacts", () => {
+    const g = pathwayEaseGrant({
+      paid: {},
+      crisisDelta: { local: { delta: -1 }, global: 0, support: -1 },
+    });
+    assert.equal(g.amount, 2);
+    assert.deepEqual(g.roles, ["local", "support"]);
+    const again = pathwayEaseGrant({
+      paid: g.paid,
+      crisisDelta: { local: -2, support: -1 },
+    });
+    assert.equal(again.amount, 0);
+    const fromBoard = pathwayEaseGrantFromImpacts(
+      {
+        fp1: { pending: true, crisisDelta: { local: -1 } },
+        fp2: { pending: false, crisisDelta: { local: -1, global: -1 } },
+      },
+      {}
+    );
+    assert.equal(fromBoard.amount, 2);
+    assert.ok(fromBoard.roles.includes("local"));
+    assert.ok(fromBoard.roles.includes("global"));
   });
 
   it("scale costs 1 AP; pilot fielding costs 0 AP", () => {

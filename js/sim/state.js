@@ -66,6 +66,8 @@ export function createSimState(mission, global = null, opts = {}) {
     learnOpenedThisTurn: false,
     budget,
     will,
+    /** Roles already paid by pathway-ease income ({ local, global, support }). */
+    pathwayEasePaid: {},
     techAddedThisTurn: {},
     actionsThisTurn: [],
     pendingAi: null,

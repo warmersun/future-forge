@@ -3632,6 +3632,16 @@ body.mp-hotseat .hud-product {
   background: rgba(239, 68, 68, 0.14);
 }
 
+.hud-pressure .meter.is-pending {
+  animation: hud-meter-pending 0.9s ease-in-out infinite;
+}
+
+@keyframes hud-meter-pending {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .mission-place {
   font-weight: 600;
   color: var(--accent);

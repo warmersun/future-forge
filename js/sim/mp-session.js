@@ -18,7 +18,15 @@ import {
   isWin,
   mpEarliestInventYear,
 } from "./collapse.js";
-import { techCost, techBudgetRefund, deployActionCost, scaleActionCost } from "./economy.js";
+import {
+  techCost,
+  techBudgetRefund,
+  deployActionCost,
+  scaleActionCost,
+  pathwayEaseGrant,
+  pathwayEaseGrantFromImpacts,
+  clonePathwayEasePaid,
+} from "./economy.js";
 import {
   computeDeployDrop,
   rollDeploySuccess,
@@ -314,6 +322,7 @@ function createInvent(seat, settings, mission = null) {
     apMax,
     budget: res.startingBudget ?? GAME.startingBudget ?? 5,
     will: res.startingWill ?? GAME.startingWill ?? 3,
+    pathwayEasePaid: {},
     apSpentThisTurn: 0,
     aiTaxThisTurn: false,
     writeCommitsThisTurn: 0,
@@ -510,6 +519,7 @@ function cloneInvent(f) {
     stack: (f.stack || []).map((x) => ({ ...x })),
     techAddedThisTurn: { ...(f.techAddedThisTurn || {}) },
     hexBoard: f.hexBoard ? boardForWire(f.hexBoard) : createEmptyBoard(),
+    pathwayEasePaid: clonePathwayEasePaid(f.pathwayEasePaid),
   };
 }
 
@@ -1051,8 +1061,52 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
       } catch {
         /* ignore */
       }
+      if (bwOn) {
+        const grant = pathwayEaseGrantFromImpacts(
+          target.hexBoard.pathwayImpacts,
+          target.pathwayEasePaid
+        );
+        target.pathwayEasePaid = grant.paid;
+        if (grant.amount > 0) {
+          target.budget = Math.min(maxBudget, (target.budget ?? 0) + grant.amount);
+          events.push({
+            type: "pathway_income",
+            amount: grant.amount,
+            roles: grant.roles,
+            seatId: targetSeatId,
+            budget: target.budget,
+          });
+        }
+      }
     }
     events.push({ type: "board_commit", seatId: activeId, targetSeatId });
+    s.version = (session.version || 0) + 1;
+    return { ok: true, session: s, events };
+  }
+
+  if (type === "pathway_income") {
+    if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    if (!bwOn) {
+      events.push({ type: "pathway_income", amount: 0, seatId: activeId, skipped: true });
+      s.version = (session.version || 0) + 1;
+      return { ok: true, session: s, events };
+    }
+    const used = pathwayEaseGrant({
+      paid: actor.pathwayEasePaid,
+      crisisDelta: action.payload?.crisisDelta,
+      skip: Boolean(action.payload?.skip),
+    });
+    actor.pathwayEasePaid = used.paid;
+    if (used.amount > 0) {
+      actor.budget = Math.min(maxBudget, (actor.budget ?? 0) + used.amount);
+    }
+    events.push({
+      type: "pathway_income",
+      amount: used.amount,
+      roles: used.roles,
+      seatId: activeId,
+      budget: actor.budget,
+    });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };
   }

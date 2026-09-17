@@ -316,6 +316,7 @@ export function createHotseatBridge() {
     state.apMax = actor.apMax;
     state.budget = actor.budget;
     state.will = actor.will;
+    state.pathwayEasePaid = { ...(actor.pathwayEasePaid || {}) };
     state.apSpentThisTurn = actor.apSpentThisTurn || 0;
     state.aiTaxThisTurn = Boolean(actor.aiTaxThisTurn);
     state.writeCommitsThisTurn = actor.writeCommitsThisTurn || 0;
@@ -415,6 +416,7 @@ export function createHotseatBridge() {
     actor.apMax = state.apMax;
     actor.budget = state.budget;
     actor.will = state.will;
+    actor.pathwayEasePaid = { ...(state.pathwayEasePaid || {}) };
     actor.apSpentThisTurn = state.apSpentThisTurn || 0;
     actor.aiTaxThisTurn = Boolean(state.aiTaxThisTurn);
     actor.writeCommitsThisTurn = state.writeCommitsThisTurn || 0;

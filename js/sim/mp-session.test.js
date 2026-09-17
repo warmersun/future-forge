@@ -492,6 +492,52 @@ describe("mp-session hex board help", () => {
     assert.ok(r.events.some((e) => e.type === "tech_added" && e.techId === "solar"));
   });
 
+  it("board_commit with a settled easing pathway pays Budget once per role", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "select_tech",
+      payload: { techId: "solar" },
+    }).session;
+    const budgetAfterSelect = s.invents["seat-0"].budget;
+    const board = withPlacedIdeaTile(s.invents["seat-0"].hexBoard);
+    board.pathwayImpacts = {
+      fp1: { pending: false, crisisDelta: { local: -1, global: 0, support: 0 } },
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.invents["seat-0"].budget, budgetAfterSelect + 1);
+    assert.equal(r.session.invents["seat-0"].pathwayEasePaid.local, true);
+    assert.ok(r.events.some((e) => e.type === "pathway_income" && e.amount === 1));
+    const again = applyMpAction(r.session, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(again.session.invents["seat-0"].budget, budgetAfterSelect + 1);
+  });
+
+  it("board_commit does not pay for a pending pathway score", () => {
+    let s = started();
+    s = applyMpAction(s, {
+      type: "select_tech",
+      payload: { techId: "solar" },
+    }).session;
+    const budgetAfterSelect = s.invents["seat-0"].budget;
+    const board = withPlacedIdeaTile(s.invents["seat-0"].hexBoard);
+    board.pathwayImpacts = {
+      fp1: { pending: true, crisisDelta: { local: -1 } },
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.session.invents["seat-0"].budget, budgetAfterSelect);
+    assert.equal(r.session.invents["seat-0"].pathwayEasePaid?.local, undefined);
+  });
+
   it("board_commit does not charge AP again for a tech already on the stack", () => {
     let s = started();
     s = applyMpAction(s, {

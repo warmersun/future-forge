@@ -639,14 +639,18 @@ function labAction(sim, action, opts) {
 
 function applyPathwayRelief(pressure, knobs, pathways) {
   const next = clonePressure(pressure);
+  const crisisDelta = { local: 0, global: 0, support: 0 };
   for (const p of pathways || []) {
     for (const m of knobs.meters) {
       if (!(p.reaches || []).includes(m.role)) continue;
       const y = Number(p.yield?.[m.role]) || 0;
       next[m.key] = Math.max(0, Math.min(5, (next[m.key] ?? 0) + y));
+      if (y < 0 && crisisDelta[m.role] != null) {
+        crisisDelta[m.role] = Math.min(crisisDelta[m.role], y);
+      }
     }
   }
-  return { pressure: next };
+  return { pressure: next, crisisDelta };
 }
 
 /**
@@ -981,6 +985,18 @@ export function simulateArchetype(knobs, archetype) {
     if (archetype.ai && !payAi(`Pathway ${p + 1} essay`, "chat")) break;
     const relief = applyPathwayRelief(displayPressure, knobs, [island]);
     displayPressure = relief.pressure;
+    const income = labAction(
+      sim,
+      { type: "pathway_income", payload: { crisisDelta: relief.crisisDelta } },
+      actionOpts
+    );
+    if (income.ok) {
+      sim = income.sim;
+      const ev = (income.events || []).find((e) => e.type === "pathway_income");
+      if (ev?.amount) {
+        actions.push({ type: "pathway_income", amount: ev.amount, roles: ev.roles });
+      }
+    }
     snap(p === 0 ? "relief" : "relief-global");
   }
 
