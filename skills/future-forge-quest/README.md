@@ -12,7 +12,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 |------|---------|
 | **Core spotlight** | One tech, fictive place, instance story → bigger problem / RCA → outcome job (tech hints stay in grounding / tutor) |
 | **Crisis meters** | Structured `mission.pressure`: `local` / `global` / `support` (omit roles to focus). New-tile defaults: local 3↑1, global 2↑1, support 2↑0. Optional `description` per role (recommended on new tiles). |
-| **Resources** | Optional starting AP / Budget / Will |
+| **Resources** | Optional starting AP / Budget / Will. Default Budget 5; a scored pathway that eases a crisis pays +1$ per newly eased role (do not raise start cash just to fund act two) |
 | **Grounding** | Markdown AI source-of-truth along the chain: emTech → product category → capabilities → trends/predictions → milestones → use cases → applications |
 | **Plottable trends** | Optional `trends` / `spotlightTrends` for Wait log-scale charts (see `future-forge-trends` skill) |
 | **Learning modules** | Tutor mode, hidden `aiTutorContext` (may stock resource links + illustrations for chat), progress `Module X Lesson Y/Z` |

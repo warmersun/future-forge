@@ -22,7 +22,7 @@ The lab pretends four players: solo no-AI, solo with AI, Friends no-AI, Friends 
 |---------|-----|
 | `challenging` | Survives the scripted path (no collapse, no red, no meter at 5). Ship this. |
 | `too_easy` | Already green, cheap, leftover years. Tighten meters or wallet. |
-| `too_hard` / `impossible` | Cannot pay tiles or the calendar breaks. Ease Budget / Support / AP, or give global a slightly lower start. |
+| `too_hard` / `impossible` | Cannot pay tiles or the calendar breaks. Ease start Budget / Support / AP only if the **first** island cannot buy the tech — two-act is funded by pathway-ease income, not a bigger opening grant. |
 
 Full green on every meter is **not** required. Hex hold is yellow+. Local this year + global after a year tick is the intended loop.
 
@@ -38,6 +38,22 @@ If solo-with-AI finishes **two or more years later** than solo-no-AI, the Attent
 | Friends personal Wait | waiter only +2 | shared meters **unchanged** |
 
 Red at 4 is danger. Collapse is meter 5 or the fail year.
+
+## Wallet (Budget)
+
+Attention (AP) refills every End turn. **Budget does not.** It is a stock: techs, Lobby, and R&D spend it.
+
+**Income:** when a docked invention pathway **scores and eases a crisis role** (local / global / support), the player gets **+1 Budget per newly eased role**, once per role this Quest. Pending scores and backlash (a meter that got worse) do not pay. Lobby-written bans are weather — they must not ease meters, so they must not print Budget.
+
+The lab models this. After the first island’s typical yield (local −1, often support −1), slack Budget goes **up**, then End turn, then the second island can buy the later tech.
+
+| Do | Don’t |
+|----|--------|
+| Omit `resources` unless the **first** tile cannot be bought (early-curve / 2030+ techs cost 2–3$) | Raise `startingBudget` to 8 as a Spotlight habit so act two is payable |
+| Let the first island’s ease fund the global island | Treat Budget as spend-only or refill it like AP |
+| Keep start at game default (Budget **5**, Support **3**, AP **3**) when a 1$ tech is the first pick | Print start cash because `--write` used to do that before income existed |
+
+0$ cannot buy more techs. It is not instant Quest over — a last-dollar dock can still score and pay back.
 
 ## Two-act meters
 

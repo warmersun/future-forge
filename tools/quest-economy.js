@@ -950,10 +950,10 @@ function actionExplain(row, meter, value) {
       body: `${when}. Spend 1 AP and 1 Budget for +1 Support. ${meterBit}.`,
     };
   }
-  if (note === "relief") {
+  if (note === "relief" || note === "relief-global") {
     return {
       title: "Invent lands",
-      body: `${when}. The pathway eases crisis meters. ${meterBit}.`,
+      body: `${when}. The pathway eases crisis meters. Each newly eased meter pays +1 Budget (once per role this Quest). ${meterBit}.`,
     };
   }
   if (note === "unsolved-wait") {

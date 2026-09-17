@@ -71,7 +71,7 @@ All of these may appear on **one** tile:
 
 | Feature | Fields | When to use |
 |---------|--------|-------------|
-| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Classroom pacing |
+| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Only if the **first** island cannot pay the tech. A scored pathway that eases a crisis pays +1 Budget per newly eased role — that funds act two. See `economy.md`. |
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** |
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **Tutor may hint the capability class after the player has the story.** |
@@ -108,7 +108,7 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
 - Root cause of the bigger problem (the system that keeps producing it).
 - Open outcome the player invents toward (pilot-honest). Do not decide the product in the story.
 - `globalId`, stakeholder, structured **`pressure`** (1–3 roles). Defaults: local 3↑1, global 2↑1, support 2↑0 (`winMax` 1). Omit a role to hide it. Local this year; global after a year tick.
-- Optional **`resources`**. Optional **`rules`** (1–3 named local locks; omit when unused).
+- Optional **`resources`** — omit unless the first tile is too expensive to buy at default Budget 5. Do not bump start cash to fund a second island; pathway-ease income does that (`economy.md`). Optional **`rules`** (1–3 named local locks; omit when unused).
 
 ### 4. Player-language instance (before capability notes)
 

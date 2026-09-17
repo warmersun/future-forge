@@ -13,6 +13,7 @@ A Quest that solves in 2026 vs 2029 is a different story. The lab exists so auth
 Rules it encodes:
 
 - Crises **worsen with the calendar**. They ease only when an invention pathway scores.
+- **Budget is a stock.** End turn refills Attention, not Budget. A scored pathway that eases a crisis role pays **+1 Budget per newly eased role**, once per role this Quest. That is how act two is funded. Pending scores and backlash do not pay.
 - **AI must not steal extra years.** First thinking ask of a seat-turn is 1 Attention; further thinking that turn is free. Judge / submit still costs 1 AP.
 - **Two-act pedagogy.** A local island this year should not also finish the global / root-cause meter. Later honest capabilities (after a year tick) are the second act.
 - **Friends Wait does not raise shared meters.** The table wrap (+1 year) does.
@@ -95,7 +96,7 @@ Lab **Friends two-act** uses one wrap analog (End turn +1) between islands — t
 | One meter, or local + support only | 1 pathway, 1 tile |
 | Local + global (support optional) | 2 pathways, 1 tile each: local[+support] **this year**, then End turn, then global |
 
-Typical yield (no AI): local −1, support −1, global 0 on the first island. A **global-aimed** second island eases global (typical −1, strong −2). Strong (AI) still does not finish global on the first island.
+Typical yield (no AI): local −1, support −1, global 0 on the first island (**+1 Budget per newly eased role** — often +2$ after that island). A **global-aimed** second island eases global (typical −1, strong −2) and can pay +1$ if global had not been eased yet. Strong (AI) still does not finish global on the first island.
 
 That is why a three-meter theme Quest usually lands in **2027** on both solo-no-AI and solo-AI — one End turn between acts, not four extra years of chatting.
 
@@ -123,7 +124,7 @@ Theme-pack style (three meters) that the lab treats as tight:
 
 Untreated local 3↑1 hits 5 in **2028** if they never invent (2026 → 2027 → 2028).
 
-`resources` omitted → game defaults (`apMax` 3, Budget 5, Support 3). Spotlight tiles often raise Budget / Support so an early-curve tech is payable.
+`resources` omitted → game defaults (`apMax` 3, Budget 5, Support 3). Raise start Budget only if the **first** tile cannot be bought (early-curve 2–3$). Do not inflate `startingBudget` to fund a second island — ease income does that.
 
 The recommender (`--write` / lab **Write into file**) may bump `apMax`, Budget, Support, start pressure, rise, or `collapseYear`. It never drops a crisis **role**. Read the patch before applying — it is a search, not pedagogy.
 
@@ -140,7 +141,7 @@ The lab page shows the same four player cards plus a **turn-based** crisis chart
 
 ## What it is not
 
-- Not live hex AI scoring. Relief is **analytical** (`YIELD_BANDS` on the planned island), then `applyAction` for AP / Wait / End turn.
+- Not live hex AI scoring. Relief is **analytical** (`YIELD_BANDS` on the planned island), then `applyAction` for AP / Wait / End turn and **`pathway_income`** (+1 Budget per newly eased role).
 - Not market news or frontier-risk ticks (stripped so authoring is deterministic).
 - Not a 2–6 player Friends session. Wrap vs personal Wait is encoded; seats are not simulated around the table.
 - Not a rewrite of remote warmersun.com tiles. Copy to Library first.

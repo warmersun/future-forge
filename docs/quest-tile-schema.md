@@ -268,6 +268,8 @@ Internal scenario seeds still store ordered `pressureKeys` labels (`[local, glob
 
 Override solo (and Friends invent) starting resources for this Quest only. Omitted fields keep the global defaults from `js/data.js` `GAME` (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
 
+Budget is a stock (End turn does not refill it). A scored pathway that eases a crisis role pays **+1 Budget per newly eased role**, once per role. Raise `startingBudget` only when the first tile cannot be bought; two-act tiles should not need 8$ just to afford the second island. See [`docs/quest-economy-lab.md`](quest-economy-lab.md).
+
 | Field | Notes |
 |-------|--------|
 | `apMax` | Action points per turn (integer ≥ 0) |

@@ -87,18 +87,18 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
 
 ---
 
-## Recipe A — resources (easier start)
+## Recipe A — resources (first-island affordability only)
 
-Add top-level (or under `mission`):
+Omit `resources` unless the **first** island cannot buy the spotlight tech at default Budget 5 (early-curve / 2030+ tiles cost 2–3$). A scored pathway that eases a crisis pays +1 Budget per newly eased role — that is how act two is funded. Do not emit `startingBudget: 8` as a Spotlight default.
 
 ```json
 "resources": {
-  "startingBudget": 8,
+  "startingBudget": 6,
   "startingWill": 4
 }
 ```
 
-Omit keys you do not want to override. UI chip when non-default: **Start · Budget 8 · Will 4**.
+Omit keys you do not want to override. UI chip when non-default: **Start · Budget 6 · Will 4**. See `economy.md`.
 
 ---
 
@@ -173,8 +173,7 @@ Combine base + B + C (+ A if needed). Example:
 "lesson": 1,
 "totalLessons": 3,
 "aiTutorContext": "…",
-"grounding": "## Technology\n…",
-"resources": { "startingBudget": 8 }
+"grounding": "## Technology\n…"
 ```
 
 Portable example file: `examples/spotlight-sponsored-learning.json`.

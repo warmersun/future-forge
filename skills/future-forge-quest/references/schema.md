@@ -78,6 +78,8 @@ Subset of roles → selection UI shows a **Crisis · Local · Support** chip.
 
 Override invent start values for this Quest only. Omitted keys keep game defaults (`apMax: 3`, `startingBudget: 5`, `startingWill: 3`).
 
+Budget is a stock (not refilled by End turn). A scored pathway that **eases** a crisis role pays **+1 Budget per newly eased role**, once per role — the lab counts this, so a two-act tile should not need `startingBudget: 8` just to afford the second island. Raise start only when the **first** tile cannot be bought. Details: **`economy.md`**.
+
 | Field | Type |
 |-------|------|
 | `apMax` | integer ≥ 0 |
@@ -87,7 +89,7 @@ Override invent start values for this Quest only. Omitted keys keep game default
 ```json
 "resources": {
   "apMax": 4,
-  "startingBudget": 8,
+  "startingBudget": 6,
   "startingWill": 4
 }
 ```
