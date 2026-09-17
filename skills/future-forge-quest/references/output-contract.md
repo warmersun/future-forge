@@ -249,6 +249,25 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
 | No sponsor | Omit `sponsorName` / `sponsorBanner` |
 | Focused meters | Omit unused `pressure` roles |
 | Default walkthrough | Omit `briefBeats` — engine derives from `briefMd` paragraphs |
+| No local policy weather | Omit `rules` |
+
+---
+
+## Recipe G — named local rules (optional weather)
+
+Add top-level or under `mission` when the scene already lives under a lock, quota, or ban. 1–3. Lobby can write more in play. **Not the invent.**
+
+```json
+"rules": [
+  {
+    "id": "piece-rate-follows-robots",
+    "kind": "policy",
+    "label": "Piece-rate follows robot pace",
+    "body": "The unit rate learns from robot clean runs, then applies that pace to people.",
+    "effects": ["share-required", "backlash"]
+  }
+]
+```
 
 ---
 

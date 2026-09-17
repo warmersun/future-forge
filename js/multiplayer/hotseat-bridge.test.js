@@ -50,6 +50,30 @@ describe("hotseat-bridge", () => {
     assert.equal(state.mp.mode, "hotseat");
   });
 
+  it("hydrates place.rules and writes them back on sync", () => {
+    const b = createHotseatBridge();
+    const r = b.startFromPick(
+      ["Alex", "Bea"],
+      {
+        ...mission,
+        rules: [
+          { id: "lock", kind: "policy", label: "Override lock" },
+        ],
+      },
+      "climate"
+    );
+    assert.equal(r.ok, true);
+    const state = { global: { id: "climate" }, selectedTechIds: [] };
+    b.hydrateSoloState(state, { global: state.global });
+    assert.equal(state.rules.some((row) => row.id === "lock"), true);
+    state.rules = [];
+    b.syncSoloToSession(state);
+    assert.deepEqual(b.getSession().place.rules, []);
+    const other = { global: { id: "climate" }, selectedTechIds: [] };
+    b.hydrateSoloState(other, { global: other.global });
+    assert.deepEqual(other.rules, []);
+  });
+
   it("wait advances only active invent year; other invent keeps present for feasibility", () => {
     const b = createHotseatBridge();
     b.startFromPick(["Alex", "Bea"], mission, "climate");

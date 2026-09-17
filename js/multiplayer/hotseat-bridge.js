@@ -13,6 +13,7 @@ import {
 } from "./hotseat.js";
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
+import { cloneRules } from "../sim/policy-rules.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js";
 import { preferIncomingHexBoard } from "../hex/board-state.js";
 import {
@@ -245,6 +246,11 @@ export function createHotseatBridge() {
     state.waits = inventWaits(view, place);
     state.turn = place.turn || 0;
     state.pressure = clonePressure(place.pressure);
+    state.rules = Array.isArray(place.rules)
+      ? cloneRules(place.rules)
+      : Array.isArray(state.rules)
+        ? state.rules
+        : [];
     state.lastNews = place.lastNews || "";
     state.marketNews = place.marketNews
       ? {
@@ -345,6 +351,7 @@ export function createHotseatBridge() {
     // Place (shared crisis + baseline year only — invent calendars live on invents)
     session.place.turn = state.turn || 0;
     session.place.pressure = clonePressure(state.pressure);
+    session.place.rules = cloneRules(state.rules);
     session.place.lastNews = state.lastNews || session.place.lastNews;
 
     // Personal invent calendar for the viewed invent (feasibility / AI timing use this)

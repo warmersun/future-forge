@@ -94,6 +94,32 @@ Override invent start values for this Quest only. Omitted keys keep game default
 
 Selection UI shows **Start · …** when values differ from defaults. Tile top-level or under `mission`.
 
+## Optional `rules` (local policy weather)
+
+Omit when unused. 1–3 named local rules already on the books in this place (a contract, lock, quota, or ban the scene is living under). Lobby can write more during play; a rule **does not drop crisis meters**.
+
+| Field | Notes |
+|-------|--------|
+| `id` | Unique slug ≤48 |
+| `kind` | `regulation` \| `law` \| `policy` \| `ban` (`contract` aliases to `policy`) |
+| `label` | Short HUD name ≤80 |
+| `body` | Optional. 1–3 everyday sentences of what the rule does *here* ≤400 |
+| `effects` | Optional array of `share-required`, `eval-required`, `backlash`. Unknown ids fail validation. |
+
+```json
+"rules": [
+  {
+    "id": "override-lock",
+    "kind": "policy",
+    "label": "Override lock",
+    "body": "Risk office grayed human overrides after extra laparotomies drove the liability score.",
+    "effects": ["eval-required", "backlash"]
+  }
+]
+```
+
+Tile top-level or under `mission`. Empty array rejected — omit the key.
+
 Tune starting wallet and crisis numbers with the evaluator (full guide: **`economy.md`**; in the game repo also `docs/quest-economy-lab.md`):
 
 ```bash
@@ -260,7 +286,7 @@ Selection chip: **Sponsored · {name}**.
 
 ## Field placement
 
-Optional fields (`resources`, `grounding`, learning fields, sponsor fields, `briefBeats`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
+Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
 
 ## Invalid / rejected patterns
 

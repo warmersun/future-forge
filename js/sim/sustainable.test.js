@@ -60,6 +60,51 @@ describe("assessSustainable", () => {
     assert.notEqual(r.level, "red");
   });
 
+  it("automation robots without a share cannot green the root cause", () => {
+    const r = assessSustainable({
+      global: { id: "automation", title: "Automation & livelihoods", kind: "now" },
+      mission: {
+        id: "warehouse-shifts",
+        globalId: "automation",
+        scene: "Warehouse automation cut shifts. Rent did not fall.",
+      },
+      techs: [{ id: "robots" }, { id: "ai" }],
+      inventionHow:
+        "Aisle robots finish the easy shelves faster so the remaining awkward cases still move.",
+      inventionImpact: "The bay clears. Maya still has no guaranteed hours.",
+    });
+    assert.equal(r.level, "red", r.note);
+    assert.match(r.note, /surplus/i);
+  });
+
+  it("automation robots with a crew-wallet share can leave the red cap", () => {
+    const r = assessSustainable({
+      global: { id: "automation", kind: "now" },
+      mission: { id: "warehouse-shifts", globalId: "automation", scene: "Shifts gone." },
+      techs: [{ id: "robots" }, { id: "crypto" }],
+      inventionHow:
+        "Robots still clear the easy bays. Sorter surplus hits the crew wallet this Friday so Maya's rent clears.",
+      inventionImpact: "The flex pool gets paid from the machine, not a pamphlet.",
+    });
+    assert.notEqual(r.level, "red", r.note);
+  });
+
+  it("rogue-si smarter score without override stays red on root cause", () => {
+    const r = assessSustainable({
+      global: { id: "rogue-si", kind: "before" },
+      mission: {
+        id: "opaque-benefits",
+        globalId: "rogue-si",
+        scene: "The override button sits gray.",
+      },
+      techs: [{ id: "ai" }, { id: "computing" }],
+      inventionHow: "A more accurate trauma score writes the discharge path.",
+      inventionImpact: "Fewer extra laparotomies. The attending still cannot outvote the green bar.",
+    });
+    assert.equal(r.level, "red", r.note);
+    assert.match(r.note, /last call|override/i);
+  });
+
   it("acute themes stay green for protection invents", () => {
     const r = assessSustainable({
       global: { id: "climate", kind: "now" },

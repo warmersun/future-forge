@@ -5,6 +5,7 @@
 
 import { GAME } from "../data.js";
 import { clonePressure } from "./pressure.js";
+import { cloneRules, seedLiveRules } from "./policy-rules.js";
 
 /**
  * @param {object} mission — normalized mission
@@ -97,6 +98,8 @@ export function createSimState(mission, global = null, opts = {}) {
     waitReport: "",
     /** Active round market news (shifts emTech Budget/Will costs). Null until first round completes. */
     marketNews: null,
+    /** Live policy weather (quest-seeded + lobby-written). */
+    rules: seedLiveRules(mission?.rules, mission?.startYear ?? GAME.startYear ?? 2026),
     featureFlags: {
       actionPoints: Boolean(features.actionPoints),
       budgetWill: Boolean(features.budgetWill),
@@ -122,6 +125,9 @@ export function cloneMission(m) {
     spotlight: m.spotlight && typeof m.spotlight === "object" ? { ...m.spotlight } : null,
     ...(m.resources && typeof m.resources === "object"
       ? { resources: { ...m.resources } }
+      : {}),
+    ...(Array.isArray(m.rules) && m.rules.length
+      ? { rules: cloneRules(m.rules) }
       : {}),
     ...(Array.isArray(m.crisisRoles) && m.crisisRoles.length
       ? { crisisRoles: [...m.crisisRoles] }
@@ -197,6 +203,7 @@ export function cloneSimState(sim) {
         }
       : null,
     featureFlags: { ...(sim.featureFlags || {}) },
+    rules: cloneRules(sim.rules),
   };
 }
 

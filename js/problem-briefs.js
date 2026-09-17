@@ -10,11 +10,11 @@
 export const PROBLEM_BRIEFS = {
   "rogue-si": {
     currentState:
-      "Frontier AI systems already outperform humans on many narrow tasks and are being wired into search, code, finance, and government pilots. Full “superintelligence” is not here, but rapid capability gains and competitive deployment mean control and alignment lag behind capability in many institutions.",
+      "Scoring systems already outvote the person who still signs: trauma discharge, call routing, water cuts, night buses. Frontier labs also race: models help write the next model, and a pause in one place is a lead for another. Full “superintelligence” is not here; locked overrides and racing evals already are.",
     rootCauses:
-      "Race dynamics reward speed over safety; evaluation of open-ended systems is hard; incentives favor productization; governance is fragmented across labs, states, and open-source ecosystems; once systems act at scale, reverse is costly.",
+      "Liability and contracts punish human overrides; races reward speed over a reachable stop; evaluation of open-ended systems is hard; once a score is the path, reverse is costly. A ban on the tool does not unlock the last call.",
     warnings:
-      "Local inventions that hand high-stakes decisions to opaque models can lock in harm before safeguards exist. Prefer human-in-the-loop, audit trails, and narrow scopes. Do not invent as if full autonomous AGI is already reliable infrastructure.",
+      "A smarter model that still grays the override is not a fix. Prefer a human-in-the-loop that still works this year, audit trails, and narrow scopes. Do not invent as if a treaty or an unplug is the invent, or as if full autonomous AGI is already reliable infrastructure.",
   },
   genocide: {
     currentState:
@@ -98,11 +98,11 @@ export const PROBLEM_BRIEFS = {
   },
   automation: {
     currentState:
-      "Automation and AI already reshape warehouses, offices, transport, and customer service. Some jobs vanish or deskill; new ones appear unevenly. Debates on UBI, reskilling, and shorter work weeks are live policy fights.",
+      "Automation and AI already reshape warehouses, offices, transport, and customer service. Some jobs vanish or deskill; new ones appear unevenly. Debates on UBI, reskilling, and shorter work weeks are live policy fights — they are the weather, not the invent.",
     rootCauses:
       "Capital substitutes for routine labor where profitable; skills pipelines lag; social insurance was built for 20th-century employment; firms capture productivity gains without sharing.",
     warnings:
-      "“Retrain everyone with an app” fails without real wages and placement. Invent for dignity, portable skills, and income bridges—not only efficiency for owners.",
+      "Passing UBI is not an invent. “Retrain everyone with an app” fails without real wages and placement. Invent a mechanism that makes livelihood or meaning abundant here — a share, a paid skill, a crew wallet — not only a faster sorter for the owners.",
   },
   refugees: {
     currentState:

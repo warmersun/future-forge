@@ -51,6 +51,7 @@ import {
   assessGivenPrior,
   applyPathwayPressure,
   heuristicPathwayScore,
+  clampPathwayScore,
   normalizePathwayScore,
   blendPathwayScore,
   emptyCrisisDelta,
@@ -83,6 +84,7 @@ import {
   islandHowForAi,
   setIslandHow,
   rekeyIslandHow,
+  rulesWeatherKey,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
@@ -1176,9 +1178,7 @@ export function createHexWorkshop(api) {
     timingCache.clear();
     sparkBatches.clear();
     const b = seedCrisisTiles(mission || {});
-    const applied = applyPathwayPressure(b, {
-      winMax: mission?.winMax || {},
-    });
+    const applied = applyPathwayPressure(b, pressureOpts(mission || {}));
     setBoard(applied.board);
     api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
@@ -1426,7 +1426,23 @@ export function createHexWorkshop(api) {
       mission,
       global: api.getGlobal?.() || null,
       suggested: mission?.suggested || [],
+      rules: api.getRules?.() || mission?.rules || [],
     };
+  }
+
+  function pressureOpts(mission = api.getMission?.() || null) {
+    return {
+      winMax: api.getWinMax?.() || mission?.winMax || {},
+      rules: api.getRules?.() || mission?.rules || [],
+      globalId: api.getGlobal?.()?.id || mission?.globalId || "",
+      global: api.getGlobal?.() || null,
+      mission,
+    };
+  }
+
+  function liveRulesWeatherKey() {
+    const mission = api.getMission?.() || null;
+    return rulesWeatherKey(api.getRules?.() || mission?.rules || []);
   }
 
   function afterBoardChange(tileId, kind, extra = {}) {
@@ -1464,9 +1480,7 @@ export function createHexWorkshop(api) {
    * scores running; abort fingerprints that left the board.
    */
   function syncPathwayScores() {
-    const mission = api.getMission?.() || null;
-    const winMax = api.getWinMax?.() || mission?.winMax || {};
-    const applied = applyPathwayPressure(board(), { winMax });
+    const applied = applyPathwayPressure(board(), pressureOpts());
     setBoard(applied.board);
     api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
@@ -1541,7 +1555,6 @@ export function createHexWorkshop(api) {
 
   function applySettledPathwayScore(fp, score, scoredConcernKey, opts = {}) {
     const mission = api.getMission?.() || null;
-    const winMax = api.getWinMax?.() || mission?.winMax || {};
     const next = cloneBoard(board());
     if (!next.pathwayImpacts[fp]) return;
     const prev = next.pathwayImpacts[fp];
@@ -1559,7 +1572,7 @@ export function createHexWorkshop(api) {
       concernKey: scoredConcernKey ?? "",
     };
     setBoard(next);
-    const applied = applyPathwayPressure(board(), { winMax });
+    const applied = applyPathwayPressure(board(), pressureOpts(mission));
     setBoard(applied.board);
     api.setPressure?.(applied.displayPressure);
     ensureUi()?.render();
@@ -1781,7 +1794,9 @@ export function createHexWorkshop(api) {
         b,
         inventions
       );
-      const heurOpts = { concernAngles, concernAnswers };
+      const globalId = api.getGlobal?.()?.id || mission?.globalId || "";
+      const rules = api.getRules?.() || mission?.rules || [];
+      const heurOpts = { concernAngles, concernAnswers, globalId, mission, rules };
 
       let score;
       if (!api.coInvent) {
@@ -1803,6 +1818,8 @@ export function createHexWorkshop(api) {
             year,
             place: api.getPlace?.() || "",
             missionTitle: api.getMissionTitle?.() || "",
+            globalId,
+            rules,
             scene: String(mission?.scene || "").slice(0, 600),
             grounding: api.getGrounding?.() || null,
             pressureBase: b.pressureBase || {},
@@ -1819,9 +1836,13 @@ export function createHexWorkshop(api) {
             signal,
           });
           if (signal?.aborted) return;
-          score = blendPathwayScore(
-            normalizePathwayScore(data),
-            heuristicPathwayScore(inventions, year, heurOpts)
+          score = clampPathwayScore(
+            blendPathwayScore(
+              normalizePathwayScore(data),
+              heuristicPathwayScore(inventions, year, heurOpts)
+            ),
+            inventions,
+            heurOpts
           );
         } catch (e) {
           if (isAbortError(e) || signal?.aborted) return;
@@ -2712,6 +2733,14 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
   }
 
+  function afterRulesChange() {
+    if ((board()?.rulesWeatherKey ?? "") !== liveRulesWeatherKey()) {
+      for (const fp of [...pathwayJobs.keys()]) abortPathwayJob(fp);
+    }
+    syncPathwayScores();
+    api.onBoardPainted?.();
+  }
+
   let artResolveBusy = false;
   async function resolveMissingTileArt() {
     if (artResolveBusy || !api.fetchIdeaImage) return;
@@ -2764,6 +2793,9 @@ export function createHexWorkshop(api) {
     updateCreatePanel();
     renderPathwayHowPanel();
     resolveMissingTileArt();
+    if ((board()?.rulesWeatherKey ?? "") !== liveRulesWeatherKey()) {
+      afterRulesChange();
+    }
   }
 
   const EXPAND_LABEL = "Maximize hex board";
@@ -2866,6 +2898,7 @@ export function createHexWorkshop(api) {
     summonNextChallenger,
     remainingConcernAngles: () => remainingConcernAngles(board()),
     refreshAfterYearChange,
+    afterRulesChange,
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
     hasSparkBatch,

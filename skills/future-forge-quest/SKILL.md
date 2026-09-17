@@ -59,7 +59,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 5. **`summary`** = the instance in 2–3 short sentences (≤420 chars): named person, place, what went wrong now. **`title`** names the human situation and/or fictive place. **`spotlight.encourageCopy`** states the **outcome** in everyday words (see Procedure §4). None of these name the spotlight tech or a sponsor product.
 6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid. **New-tile defaults** (integers; rise is per calendar year): local **3↑1**, global **2↑1**, support **2↑0**. `winMax` typically 1. Local is more urgent than global. Support rise **0** unless you mean trust to rot with time. One island must not finish both local and global — see `economy.md`.
 7. Scenario is **fictive**; research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
-8. Do **not** force a single correct invention. Do **not** write “invent with [tech]”, “build around [product]”, or a “do not invent X” ban-list in player fields. End on open design tension — no solution theater, no product riddle.
+8. Do **not** force a single correct invention. Do **not** write “invent with [tech]”, “build around [product]”, or a “do not invent X” ban-list in player fields. End on open design tension — no solution theater, no product riddle. **Your job is never “pass a law / ban / UBI bill.”** A rule or incentive may be the **root cause** (bigger problem) or the weather the pathway flies through. The invent still makes something scarce more abundant with emTechs in this place this year. Policy as the sole how-it-works is invalid.
 9. Sensitive themes: `references/sensitivity.md`.
 10. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
 11. Validate: `npm run validate:quest -- <file>` until `OK:`.
@@ -77,6 +77,7 @@ All of these may appear on **one** tile:
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **Tutor may hint the capability class after the player has the story.** |
 | **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
 | **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
+| **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. |
 
 Details and templates: **`references/learning-and-sponsor.md`**.
 
@@ -107,7 +108,7 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
 - Root cause of the bigger problem (the system that keeps producing it).
 - Open outcome the player invents toward (pilot-honest). Do not decide the product in the story.
 - `globalId`, stakeholder, structured **`pressure`** (1–3 roles). Defaults: local 3↑1, global 2↑1, support 2↑0 (`winMax` 1). Omit a role to hide it. Local this year; global after a year tick.
-- Optional **`resources`**.
+- Optional **`resources`**. Optional **`rules`** (1–3 named local locks; omit when unused).
 
 ### 4. Player-language instance (before capability notes)
 
@@ -181,13 +182,13 @@ Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.
 - [ ] `briefMd`: **The place** → **The bigger problem** → **Your job**; ~250–600 words; no capability/tutor lecture dump
 - [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable
 - [ ] **The bigger problem** is root cause analysis, not a meter dump
-- [ ] **Your job** is outcome only — no “invent with [tech]”, no ban-list
+- [ ] **Your job** is outcome only — no “invent with [tech]”, no ban-list, no “pass a law / UBI / treaty”
 - [ ] If `briefBeats` is present: 3–8 beats, captions ≤500 chars, no new facts vs `briefMd`; `imageUrl` is `https://…` or `assets/…` still (skips Imagine); omit the key otherwise; no `possible` / `constraints` beats
 - [ ] Lab/research terms and product names live in `grounding` / `aiTutorContext`, not as the only way to understand the job
 - [ ] Open invent tension — no prescribed solution
 - [ ] `grounding` present for AI consistency (recommended always)
 - [ ] Grounding follows chain at **product-category** grain (not bare emTech unlocks)
-- [ ] Unused optionals **omitted** (not empty strings)
+- [ ] Unused optionals **omitted** (not empty strings); omit `rules` when the scene has no named local lock
 - [ ] Learning: solid `aiTutorContext`; module title string; lesson/totalLessons integers ≥ 1; no fake unlocks
 - [ ] Multi-lesson: `kind: "module"` wrapper with the same `module` title, `lessons` ids in order, and a path `summary` / `overviewMd` that is still an instance or outcome (not a product riddle)
 - [ ] Learning media (if any): https-only resource links / illustrations in `aiTutorContext`; paced for tutor chat, not a first-turn dump; SEQUENCE does not say “open the page, do not answer”
@@ -204,3 +205,4 @@ Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.
 - Sponsor scoring bonuses or forced product usage
 - Requiring any single vendor’s `.grok/` skill path
 - Player-facing “invent Product Y” or “invent with Product Y without saying Y”
+- Player-facing “pass a law / ban / UBI bill” as the invent (policy is weather, not the win)

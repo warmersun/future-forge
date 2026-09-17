@@ -29,6 +29,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: { label: "Missed Crises", description: "Belly bleeds and airway crashes get filed as stable. Ramirez watches people leave the bay who should still be on the table." }, global: { label: "Hard Locks", description: "The hospital grayed out overrides after the payout model punished extra surgeries. The attending still signs. The software still chooses the path." }, support: { label: "Liability Push", description: "Insurers and the board treat every human override as a future lawsuit. Staff learn to stop arguing with a green bar." } },
       suggested: ["ai", "computing", "networks", "iot", "vr", "robots"],
       visionTheme: "care-city",
+      rules: [
+        {
+          id: "override-lock",
+          kind: "policy",
+          label: "Override lock",
+          body: "Risk office grayed human overrides after extra laparotomies drove the liability score.",
+          effects: ["eval-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["King County Emergency Call Center, Seattle"],
@@ -40,6 +49,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: { label: "Slow Help", description: "A child who will not wake waits while the queue slides the call down. Minutes stack in kitchens off Rainier Avenue." }, global: { label: "Auto Drops", description: "The router callbacks or hangs up the calls that sound uncertain. Last year's logs taught it that long, accented speech is rarely an emergency." }, support: { label: "Handle Time", description: "Supervisors get dinged when Aisha stays on the line. The county sold average speed as proof the center works." } },
       suggested: ["ai", "networks", "computing", "iot", "space", "vr"],
       visionTheme: "social-city",
+      rules: [
+        {
+          id: "handle-time-contract",
+          kind: "policy",
+          label: "Handle-time contract",
+          body: "The county sold average handle time to the council. Long, uncertain calls get painted yellow.",
+          effects: ["eval-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["Westlands Water District Allocation Desk, Fresno County"],
@@ -51,6 +69,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: { label: "Crop Stress", description: "Elena's stone fruit run dry while the canal still moves. Trees drop fruit and neighbors pull whole rows." }, global: { label: "Opaque Cuts", description: "The district optimizer cuts small farms first and will not show the math. The green blocks stay green." }, support: { label: "Bond Rules", description: "Refinance covenants demand the model maximize dollars per acre-foot. Clerks cannot unlock a field without breaking the deal." } },
       suggested: ["ai", "iot", "networks", "computing", "drones", "space", "solar"],
       visionTheme: "food-city",
+      rules: [
+        {
+          id: "bond-dollars-per-acre-foot",
+          kind: "regulation",
+          label: "Bond covenant: dollars per acre-foot",
+          body: "Refinance covenants demand the model maximize district-wide return. Clerks cannot unlock a field without breaking the deal.",
+          effects: ["eval-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["MBTA Operations Control Center, Boston"],
@@ -62,7 +89,16 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: { label: "Stranded Riders", description: "Night clinic staff and late cleaners wait at dark stops the bus no longer makes. Some sleep in a break room." }, global: { label: "Skipped Stops", description: "The scheduler drops low-boarding stops after midnight to hit cost per rider. The map looks efficient and empty." }, support: { label: "Cost Targets", description: "City Hall treats on-time bonuses and cost-per-boarding as the only score that matters. Forcing a stop costs Marcus." } },
       suggested: ["ai", "networks", "computing", "transportation", "iot", "self-driving", "battery"],
       visionTheme: "coastal-city",
-    }
+      rules: [
+        {
+          id: "cost-per-rider-target",
+          kind: "policy",
+          label: "Cost-per-rider target",
+          body: "City Hall treats on-time bonuses and cost-per-boarding as the only score that matters. Forcing a stop costs the scheduler.",
+          effects: ["eval-required", "backlash"],
+        },
+      ],
+    },
   ],
 
   genocide: [
@@ -546,6 +582,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: "Jobs", global: "Pick quotas", support: "Rent stress" },
       suggested: ["robots", "ai", "iot", "networks", "computing", "transportation"],
       visionTheme: "food-city",
+      rules: [
+        {
+          id: "piece-rate-follows-robots",
+          kind: "policy",
+          label: "Piece-rate follows robot pace",
+          body: "The unit rate learns from robot clean runs, then applies that pace to people.",
+          effects: ["share-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["Harborview Driver Dispatch Garage"],
@@ -557,6 +602,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: "Jobs", global: "Fleet scores", support: "Debt" },
       suggested: ["self-driving", "ai", "networks", "transportation", "computing", "crypto"],
       visionTheme: "coastal-city",
+      rules: [
+        {
+          id: "curb-ranked-by-app-score",
+          kind: "policy",
+          label: "Curb ranked by app score",
+          body: "Dispatch ranks drivers by acceptance and on-time percent. The same app steers riders toward pods on mapped blocks.",
+          effects: ["share-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["Lakeside Hospital Revenue Wing"],
@@ -568,6 +622,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: "Jobs", global: "Chart targets", support: "Loan strain" },
       suggested: ["ai", "computing", "networks", "vr", "crypto", "iot"],
       visionTheme: "care-city",
+      rules: [
+        {
+          id: "chart-throughput-dashboard",
+          kind: "policy",
+          label: "Chart throughput dashboard",
+          body: "Managers post daily chart targets. Overrides dip throughput and flag the bay.",
+          effects: ["share-required", "backlash"],
+        },
+      ],
     },
     {
       places: ["Sunridge Berry Packing Shed"],
@@ -579,6 +642,15 @@ export const SCENARIO_ANGLE_PACKS = {
       crisisMeters: { local: "Jobs", global: "Pack speed", support: "Skills" },
       suggested: ["robots", "ai", "iot", "print3d", "networks", "computing"],
       visionTheme: "food-city",
+      rules: [
+        {
+          id: "pack-speed-contract",
+          kind: "policy",
+          label: "Pack-speed contract",
+          body: "Growers pay the shed by packed flats per hour. When the sorter speeds up, the contract math drops human hours first.",
+          effects: ["share-required", "backlash"],
+        },
+      ],
     }
   ],
 

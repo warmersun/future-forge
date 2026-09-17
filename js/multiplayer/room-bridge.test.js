@@ -128,6 +128,23 @@ describe("room-bridge", () => {
     assert.equal(state.deployUnlocked, false);
   });
 
+  it("hydrates shared place.rules onto solo state", () => {
+    const b = createRoomBridge();
+    b.attach(
+      mockClient({
+        invents: {
+          "seat-0": baseInvent(),
+        },
+      })
+    );
+    b.client().snapshot.place.rules = [
+      { id: "lock", kind: "policy", label: "Override lock", status: "active" },
+    ];
+    const state = { global: { id: "climate" }, selectedTechIds: [] };
+    b.hydrateSoloState(state, { global: state.global });
+    assert.equal(state.rules[0].id, "lock");
+  });
+
   it("hydrates viewed invent pool even when local state still holds another pool", () => {
     const b = createRoomBridge();
     b.attach(

@@ -10,6 +10,7 @@ import {
 } from "./capability-trend.js";
 import { isSafeBriefImageUrl, normalizeBriefBeats } from "./brief-beats.js";
 import { SUMMARY_CAP } from "./quest-summary.js";
+import { parseQuestRules } from "./sim/policy-rules.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -958,6 +959,12 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...trendsParsed.details);
   }
 
+  const rulesRaw = pickTileOrMissionField(tile, missionIn, "rules");
+  const rulesParsed = parseQuestRules(rulesRaw);
+  if (!rulesParsed.ok) {
+    details.push(...rulesParsed.details);
+  }
+
   const briefBeatsRaw = pickTileOrMissionField(tile, missionIn, "briefBeats");
   let briefBeats = null;
   if (briefBeatsRaw !== undefined && briefBeatsRaw !== null) {
@@ -1060,6 +1067,9 @@ export function validateQuestTile(tile, opts = {}) {
   };
   if (resourcesParsed.value) {
     mission.resources = resourcesParsed.value;
+  }
+  if (rulesParsed.value?.length) {
+    mission.rules = rulesParsed.value;
   }
   if (crisisRoles?.length) {
     mission.crisisRoles = crisisRoles;

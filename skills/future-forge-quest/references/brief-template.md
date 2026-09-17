@@ -35,6 +35,7 @@ Old heading **What’s strained** still walks (engine alias). Do not use **What 
 
 Outcome only. What must be true for these people / this class of place.
 No product name. No “invent with [tech].” No “do not invent X” ban-list.
+No “pass a law,” “ban the model,” or “UBI bill” as the job — those are weather, not the invent.
 Stakeholder can appear here in one line (same paragraph — a blank line makes a second walkthrough card).
 End on the open choice — not a solution checklist. The tray already suggests the spotlight tech (`mission.suggested`); the tutor and `grounding` may hint later.
 ```

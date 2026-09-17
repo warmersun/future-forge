@@ -559,6 +559,148 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 2);
   });
 
+  it("lobby can write a local rule without dropping pressure", () => {
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    s.ap = 3;
+    s.pressure = { Jobs: 3 };
+    const r = applyAction(
+      s,
+      {
+        type: "lobby",
+        payload: {
+          write: {
+            kind: "ban",
+            label: "No gray override in the trauma bay",
+            body: "Ramirez can still fire a two-finger override.",
+          },
+        },
+      },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.rules.length, 1);
+    assert.equal(r.sim.rules[0].kind, "ban");
+    assert.equal(r.sim.rules[0].source, "lobby");
+    assert.equal(r.sim.pressure.Jobs, 3);
+    assert.equal(r.sim.will, 4);
+  });
+
+  it("lobby can remove a local rule without dropping pressure", () => {
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    s.ap = 3;
+    s.pressure = { Jobs: 3 };
+    s.rules = [
+      {
+        id: "piece-rate",
+        kind: "policy",
+        label: "Piece-rate follows robot pace",
+        body: "The unit rate learns from robot clean runs.",
+        source: "quest",
+        status: "active",
+        year: 2026,
+      },
+    ];
+    const r = applyAction(
+      s,
+      { type: "lobby", payload: { remove: "piece-rate" } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.rules.length, 0);
+    assert.equal(r.sim.pressure.Jobs, 3);
+    assert.equal(r.events.some((e) => e.op === "remove"), true);
+  });
+
+  it("removing the last rule then lobbying does not resurrect quest rules", () => {
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    s.ap = 3;
+    s.mission = {
+      ...s.mission,
+      rules: [
+        {
+          id: "override-lock",
+          kind: "policy",
+          label: "Override lock",
+          effects: ["eval-required"],
+        },
+      ],
+    };
+    s.rules = [
+      {
+        id: "override-lock",
+        kind: "policy",
+        label: "Override lock",
+        source: "quest",
+        status: "active",
+        year: 2026,
+        effects: ["eval-required"],
+      },
+    ];
+    const gone = applyAction(
+      s,
+      { type: "lobby", payload: { remove: "override-lock" } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(gone.ok, true, gone.error);
+    assert.equal(gone.sim.rules.length, 0);
+    const wrote = applyAction(
+      gone.sim,
+      {
+        type: "lobby",
+        payload: { write: { kind: "regulation", label: "Logged override" } },
+      },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(wrote.ok, true, wrote.error);
+    assert.equal(
+      wrote.sim.rules.some((row) => row.id === "override-lock"),
+      false
+    );
+    assert.equal(wrote.sim.rules.length, 1);
+    assert.equal(wrote.sim.rules[0].label, "Logged override");
+  });
+
+  it("lobby seeds quest rules when the save never had a rules list", () => {
+    const s = base();
+    s.budget = 5;
+    s.will = 3;
+    s.ap = 3;
+    s.mission = {
+      ...s.mission,
+      rules: [
+        {
+          id: "override-lock",
+          kind: "policy",
+          label: "Override lock",
+        },
+      ],
+    };
+    delete s.rules;
+    const r = applyAction(
+      s,
+      {
+        type: "lobby",
+        payload: { write: { kind: "ban", label: "Harbor curfew" } },
+      },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(
+      r.sim.rules.some((row) => row.id === "override-lock"),
+      true
+    );
+    assert.equal(
+      r.sim.rules.some((row) => row.label === "Harbor curfew"),
+      true
+    );
+  });
+
   it("mint_rd spends 1 AP + 1 Budget", () => {
     const s = base();
     s.budget = 5;

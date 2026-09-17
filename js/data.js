@@ -97,7 +97,7 @@ export const START_HERE_THEME_IDS = [
  * `shelf` groups Choose a theme (not used for Spark one-click Portside).
  */
 export const GLOBALS = [
-  { id: "rogue-si", title: "Rogue SuperIntelligence", kind: "before", shelf: "longterm", blurb: "Powerful AI without control or alignment." },
+  { id: "rogue-si", title: "AI that outruns its keepers", kind: "before", shelf: "longterm", blurb: "Scoring systems and racing labs that lock humans out of the last call." },
   { id: "genocide", title: "Prevent Genocide", kind: "before", shelf: "rights", blurb: "Mass atrocity risk and failed early warning." },
   { id: "poverty", title: "Extreme Poverty", kind: "now", shelf: "learning", blurb: "People locked out of income, services, and agency." },
   { id: "chem-bio", title: "Chemical and Biological Weapons", kind: "before", shelf: "longterm", blurb: "Catastrophic dual-use and detection gaps." },
@@ -108,7 +108,7 @@ export const GLOBALS = [
   { id: "slavery", title: "Slavery", kind: "now", shelf: "rights", blurb: "Forced labor hidden in supply chains." },
   { id: "women", title: "Equal Rights for Women", kind: "now", shelf: "rights", blurb: "Safety, rights, education, economic agency." },
   { id: "education", title: "Lack of Education", kind: "now", shelf: "learning", blurb: "Talent universal; opportunity uneven." },
-  { id: "automation", title: "Automation / UBI", kind: "now", shelf: "learning", blurb: "Jobs and meaning under automation." },
+  { id: "automation", title: "Automation & livelihoods", kind: "now", shelf: "learning", blurb: "Jobs and meaning under automation — who captures the surplus." },
   { id: "refugees", title: "Refugees", kind: "now", shelf: "rights", blurb: "Displacement, shelter, papers, belonging." },
   { id: "ag", title: "Sustainable Agriculture", kind: "now", shelf: "food", blurb: "Food systems that regenerate land." },
   { id: "food", title: "Food Security", kind: "now", shelf: "food", blurb: "Reliable nutritious food for all." },
@@ -261,6 +261,15 @@ export const MISSIONS = [
     stakeholder: "Dev, shift steward",
     suggested: ["ai", "robots", "vr", "networks", "crypto", "computing"],
     visionTheme: "social-city",
+    rules: [
+      {
+        id: "piece-rate-follows-robots",
+        kind: "policy",
+        label: "Piece-rate follows robot pace",
+        body: "The unit rate learns from robot clean runs, then applies that pace to people.",
+        effects: ["share-required", "backlash"],
+      },
+    ],
   },
   {
     id: "opaque-benefits",
@@ -280,6 +289,15 @@ export const MISSIONS = [
     stakeholder: "Len, casework supervisor",
     suggested: ["ai", "computing", "networks", "crypto", "bci", "iot"],
     visionTheme: "social-city",
+    rules: [
+      {
+        id: "override-lock",
+        kind: "policy",
+        label: "Override lock",
+        body: "Risk office grayed human overrides after extra laparotomies drove the liability score.",
+        effects: ["eval-required", "backlash"],
+      },
+    ],
   },
   {
     id: "smog-corridor",
@@ -1164,7 +1182,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-export const SCENARIO_PACK_REV = "d9";
+export const SCENARIO_PACK_REV = "d10";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
@@ -1240,9 +1258,39 @@ function buildLocalScenarioVariants(g, count, salt) {
       visionTheme: pack.visionTheme || visionDefault,
       source: "generated",
       ...(summary ? { summary } : {}),
+      ...(Array.isArray(pack.rules) && pack.rules.length
+        ? { rules: pack.rules }
+        : {}),
     });
   }
   return out;
+}
+
+/**
+ * Authored local rules for a generated/curated mission, looked up by theme + title.
+ * Used when a cached scenario was slimmed without `rules`.
+ * @param {{ globalId?: string, title?: string, id?: string }|null|undefined} mission
+ * @returns {object[]|null}
+ */
+export function packRulesForMission(mission) {
+  if (!mission || typeof mission !== "object") return null;
+  if (Array.isArray(mission.rules) && mission.rules.length) return mission.rules;
+  const gid = mission.globalId;
+  const title = mission.title;
+  if (gid && title) {
+    const packs = SEED_ANGLE_PACKS[gid] || [];
+    const pack = packs.find((p) => p && p.title === title);
+    if (Array.isArray(pack?.rules) && pack.rules.length) return pack.rules;
+  }
+  const flagship = MISSIONS.find(
+    (m) =>
+      m &&
+      ((mission.id && m.id === mission.id) ||
+        (gid && title && m.globalId === gid && m.title === title)) &&
+      Array.isArray(m.rules) &&
+      m.rules.length
+  );
+  return flagship?.rules || null;
 }
 
 function pickRot(arr, i) {

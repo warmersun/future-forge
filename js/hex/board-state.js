@@ -88,6 +88,8 @@ export function createEmptyBoard() {
     convergences: {},
     /** Per-island inventHow. Key = sorted invention ids. Not stored on tiles. */
     islandHow: {},
+    /** Sorted `id:status` of live local rules this cache was scored under. */
+    rulesWeatherKey: "",
   };
 }
 
@@ -166,6 +168,7 @@ export function cloneBoard(board) {
     ),
     convergences: cloneConvergences(board.convergences),
     islandHow: cloneIslandHow(board.islandHow),
+    rulesWeatherKey: String(board.rulesWeatherKey ?? ""),
   };
 }
 

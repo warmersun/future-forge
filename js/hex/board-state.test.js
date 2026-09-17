@@ -710,7 +710,9 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
     pending: false,
     concernKey: "moloch:Bonded escrow",
   };
+  board.rulesWeatherKey = "a:active|b:suspended";
   const copy = cloneBoard(board);
+  assert.equal(copy.rulesWeatherKey, "a:active|b:suspended");
   assert.deepEqual(copy.pressureBase, { Floods: 2, Trust: 3 });
   assert.deepEqual(copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta, {
     local: -1,

@@ -114,6 +114,35 @@ describe("hex-workshop tile timing extra", () => {
     assert.match(assess.extra.inventionHow, /Part A/);
     assert.deepEqual(assess.extra.selectedTechIds, ["ai"]);
   });
+
+  it("afterRulesChange does not retime inventions", () => {
+    let board = seededBoard();
+    board.tiles.a.timingLevel = "green";
+    const extras = [];
+    const ws = createHexWorkshop({
+      getBoard: () => board,
+      setBoard: (b) => {
+        board = b;
+      },
+      getYear: () => 2026,
+      getRules: () => [
+        { id: "piece-rate", status: "active", effects: ["share-required"] },
+      ],
+      getGlobal: () => ({ id: "automation" }),
+      getMission: () => ({ globalId: "automation", winMax: { Floods: 2 } }),
+      getWinMax: () => ({ Floods: 2 }),
+      coInvent: async (mode, _msg, extra) => {
+        extras.push({ mode, extra });
+        return { crisisDelta: { local: 0, global: 0, support: 0 }, concerns: {} };
+      },
+    });
+    ws.afterRulesChange();
+    assert.equal(board.tiles.a.timingLevel, "green");
+    assert.equal(
+      extras.some((e) => e.mode === "assess-feasibility"),
+      false
+    );
+  });
 });
 
 describe("hex-workshop why blocks", () => {

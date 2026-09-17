@@ -90,6 +90,25 @@ describe("leanCoInventContext other lean modes", () => {
     assert.equal(ctx.pathway.howText, "The pair radios the crest.");
   });
 
+  it("keeps local rules on score-pathway context", () => {
+    const rules = [
+      {
+        id: "piece-rate",
+        kind: "policy",
+        label: "Piece-rate follows robot pace",
+        body: "The unit rate learns from robot clean runs.",
+        status: "active",
+      },
+    ];
+    const ctx = leanCoInventContext(
+      "score-pathway",
+      { pathway: { howText: "x", inventions: [] }, rules },
+      leftoverSnap
+    );
+    assert.equal(ctx.rules[0].id, "piece-rate");
+    assert.equal(ctx.rules[0].label, "Piece-rate follows robot pace");
+  });
+
   it("pose/judge default branch does not re-add snap.inventionName", () => {
     const ctx = leanCoInventContext(
       "pose-challenge",

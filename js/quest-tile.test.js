@@ -260,6 +260,43 @@ describe("quest-tile", () => {
     assert.deepEqual(r.value, { startingBudget: 0, startingWill: 0 });
   });
 
+  it("accepts optional named local rules and omits when unused", () => {
+    const t = baseTile();
+    t.mission.rules = [
+      {
+        id: "override-lock",
+        kind: "policy",
+        label: "Override lock",
+        body: "Risk office grayed human overrides.",
+        effects: ["eval-required", "backlash"],
+      },
+    ];
+    const r = validateQuestTile(t, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true, JSON.stringify(r.details));
+    assert.equal(r.mission.rules.length, 1);
+    assert.equal(r.mission.rules[0].id, "override-lock");
+    const bare = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(bare.ok, true);
+    assert.equal(bare.mission.rules, undefined);
+  });
+
+  it("rejects empty or unknown-effect rules", () => {
+    const empty = baseTile();
+    empty.mission.rules = [];
+    assert.equal(
+      validateQuestTile(empty, { techIds: TECHS, globalIds: GLOBALS }).ok,
+      false
+    );
+    const bad = baseTile();
+    bad.mission.rules = [
+      { id: "x", kind: "ban", label: "Pause", effects: ["tax-holiday"] },
+    ];
+    assert.equal(
+      validateQuestTile(bad, { techIds: TECHS, globalIds: GLOBALS }).ok,
+      false
+    );
+  });
+
   it("accepts structured pressure with subset of roles", () => {
     const t = baseTile();
     t.mission.pressure = {

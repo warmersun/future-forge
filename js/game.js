@@ -17,6 +17,7 @@ import {
   globalById,
   missionsForGlobal,
   localScenariosForGlobal,
+  packRulesForMission,
   SCENARIO_PACK_REV,
   allTechIds,
   techById,
@@ -125,6 +126,21 @@ import {
   clampTimingForYearAdvance,
 } from "./sim/deploy.js";
 import { assessSustainable } from "./sim/sustainable.js";
+import {
+  cloneRules,
+  seedLiveRules,
+  writeLobbyRule,
+  setRuleStatus,
+  removeLobbyRule,
+  parseQuestRules,
+  kindLabel as ruleKindLabel,
+  MAX_LIVE_RULES,
+  RULE_KINDS,
+  RULE_KIND_LABELS,
+  RULE_LABEL_MAX,
+  RULE_BODY_MAX,
+  summarizeRulesForAi,
+} from "./sim/policy-rules.js";
 import {
   isWin as simIsWin,
   isWin,
@@ -365,6 +381,10 @@ function mpFriendlyError(err) {
     cannot_enter_challenge: "Cannot enter Challenge on this invent right now.",
     no_ap: "Not enough AP for that action.",
     no_budget: "Not enough Budget for that action.",
+    rules_full: "Too many local rules on the books.",
+    rule_missing: "That rule is no longer on the books.",
+    rule_empty_label: "Name the rule first.",
+    rule_bad_kind: "Pick a regulation, law, policy, or ban.",
     no_target: "Could not find that invent.",
     target_abandoned: "That invent was abandoned.",
     abandoned: "You abandoned your invent — help others or Wait.",
@@ -518,6 +538,7 @@ const state = {
   // G2 budget + political will (never state.trust)
   budget: GAME.startingBudget ?? 5,
   will: GAME.startingWill ?? 3,
+  rules: [],
   techAddedThisTurn: {},
   /** G3 multi-encounter scrutiny (null when essay mode) */
   scrutiny: null,
@@ -553,8 +574,8 @@ const state = {
   lastDeployRoll: null,
 };
 
-/** v14: instance-story summaries on seed packs; drop v13 theme-word ledes */
-const STORAGE_SCENARIOS = "future-forge:scenarioCache:v14";
+/** v15: persist mission.rules (local policy weather). Drop v14 slims that omitted them. */
+const STORAGE_SCENARIOS = "future-forge:scenarioCache:v15";
 const STORAGE_SOLVED = "future-forge:solvedMissions";
 const STORAGE_RUNS = "future-forge:runReports";
 const STORAGE_LAST_RUN = "future-forge:lastRun";
@@ -1383,6 +1404,7 @@ function ensureHexWorkshop() {
     getPlace: () => state.mission?.place || "",
     getMissionTitle: () => state.mission?.title || "",
     getMission: () => state.mission || null,
+    getRules: () => liveRules(),
     getGlobal: () => state.global || null,
     getGrounding: () => state.mission?.grounding || null,
     setDerivedProse: (prose) => {
@@ -1816,18 +1838,17 @@ function syncInventActionButtons() {
     } else {
       lobbyBtn.hidden = false;
       lobbyBtn.removeAttribute("hidden");
+      const spendableAp = apEnabled() ? getSpendableAp() : 1;
+      const spendableBudget = getSpendableBudget();
       const can =
-        !spectator &&
-        !busy &&
-        (!apEnabled() || (state.ap ?? 0) >= 1) &&
-        (state.budget ?? 0) >= 1;
+        !spectator && !busy && spendableAp >= 1 && spendableBudget >= 1;
       lobbyBtn.disabled = !can;
       if (spectator) lobbyBtn.title = spectatorReason;
       else if (busy) lobbyBtn.title = busyReason;
-      else if ((state.budget ?? 0) < 1) lobbyBtn.title = "Need 1 Budget to lobby";
-      else if (apEnabled() && (state.ap ?? 0) < 1)
+      else if (spendableBudget < 1) lobbyBtn.title = "Need 1 Budget to lobby";
+      else if (apEnabled() && spendableAp < 1)
         lobbyBtn.title = "Need 1 AP to lobby";
-      else lobbyBtn.title = "Spend 1 AP + 1 Budget to gain Support";
+      else lobbyBtn.title = "Write a local rule — 1 AP + 1 Budget, +1 Support. Does not drop crisis meters.";
     }
   }
 
@@ -2729,6 +2750,31 @@ function handleRoomPlayEvent(client, evt) {
     syncRoomResourcesFromSnapshot();
   }
   if (yearEv) applyWrapYearPressureToHex();
+  const lobbyEv = events.find((e) => e?.type === "lobby");
+  if (lobbyEv || evt?.type === "lobby") {
+    try {
+      ensureHexWorkshop().afterRulesChange?.();
+    } catch (e) {
+      console.warn("[hex rules]", e);
+    }
+  }
+  if (lobbyEv) {
+    const me = roomBridge.myId?.();
+    if (me && (evt?.actorId === me || lobbyEv.seatId === me)) {
+      const payload =
+        lobbyEv.op === "write"
+          ? { write: { label: lobbyEv.rule?.label || "" } }
+          : lobbyEv.op === "remove"
+            ? { remove: lobbyEv.rule?.id || true }
+            : lobbyEv.op === "suspend"
+              ? { suspend: true }
+              : lobbyEv.op === "restore"
+                ? { restore: true }
+                : {};
+      flashToast(lobbyToast(payload, [lobbyEv]));
+      if (lobbyEv.op === "write") clearLobbyComposeFields();
+    }
+  }
 
   // Follow only on meaningful events (not every presence/hello)
   const meaningful = events.some((e) =>
@@ -3026,11 +3072,25 @@ function enterRoomPlay(client, opts = {}) {
             "unknown_tech",
             "not_your_layer",
           ].includes(err);
+          const rulesErr = [
+            "rules_full",
+            "rule_missing",
+            "rule_empty_label",
+            "rule_bad_kind",
+            "not_active_seat",
+            "abandoned",
+          ].includes(err);
           roomBridge.hydrateSoloState(state, {
             global: state.global,
-            forceHexBoard: spendErr,
+            forceHexBoard: spendErr || rulesErr,
           });
+          try {
+            ensureHexWorkshop().afterRulesChange?.();
+          } catch (e) {
+            console.warn("[hex rules]", e);
+          }
           if (state.screen === "workshop") {
+            paintPolicyWeather();
             renderTechList();
             renderSelectedChips();
             renderHud();
@@ -3284,6 +3344,9 @@ function loadPersistedProgress() {
     localStorage.removeItem("future-forge:scenarioCache:v9");
     localStorage.removeItem("future-forge:scenarioCache:v10");
     localStorage.removeItem("future-forge:scenarioCache:v11");
+    localStorage.removeItem("future-forge:scenarioCache:v12");
+    localStorage.removeItem("future-forge:scenarioCache:v13");
+    localStorage.removeItem("future-forge:scenarioCache:v14");
   } catch {
     /* ignore */
   }
@@ -3339,6 +3402,7 @@ function persistScenarioCache() {
         visionTheme: m.visionTheme,
         source: m.source,
         spotlight: m.spotlight || null,
+        ...(Array.isArray(m.rules) && m.rules.length ? { rules: m.rules } : {}),
       }));
     }
     localStorage.setItem(STORAGE_SCENARIOS, JSON.stringify(slim));
@@ -3563,6 +3627,7 @@ function cloudRunStatePayload() {
       apMax: state.apMax,
       budget: state.budget,
       will: state.will,
+      rules: cloneRules(state.rules),
       tutorSessionActive: Boolean(state.tutorSessionActive),
       mission: slimMissionForContinue(state.mission),
       focusedTechId: focusedTechId || hexWorkshop?.getFocusedTechId?.() || null,
@@ -3654,6 +3719,7 @@ function applyRestoredPlay(play) {
   if (play.apMax != null) state.apMax = play.apMax;
   if (play.budget != null) state.budget = play.budget;
   if (play.will != null) state.will = play.will;
+  if (Array.isArray(play.rules)) state.rules = cloneRules(play.rules);
   if (typeof play.tutorSessionActive === "boolean") {
     state.tutorSessionActive = play.tutorSessionActive;
   }
@@ -6474,6 +6540,14 @@ function normalizeMission(raw, globalId) {
       ? { summary: String(raw.summary).trim().slice(0, CAPS.summary) }
       : {}),
     ...(briefBeatsSafe ? { briefBeats: briefBeatsSafe } : {}),
+    ...(() => {
+      const rawRules =
+        Array.isArray(raw.rules) && raw.rules.length
+          ? raw.rules
+          : packRulesForMission(raw);
+      const parsed = parseQuestRules(rawRules);
+      return parsed.ok && parsed.value?.length ? { rules: parsed.value } : {};
+    })(),
   };
 }
 
@@ -6767,6 +6841,10 @@ function startMission(mission, opts = {}) {
   state.lastWriteSnapshot = { name: "", how: "", impact: "" };
   state.budget = res.startingBudget ?? GAME.startingBudget ?? 5;
   state.will = res.startingWill ?? GAME.startingWill ?? 3;
+  state.rules = seedLiveRules(
+    state.mission?.rules || merged.rules,
+    state.mission?.startYear ?? GAME.startYear ?? 2026
+  );
   applyRestoredPlay(restored.play);
   state.lastWriteSnapshot = {
     name: state.inventionName || "",
@@ -6906,6 +6984,7 @@ function renderWorkshop() {
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
   ensureMissionSummary($("#ws-mission-summary"));
+  paintPolicyWeather();
   const progressEl = $("#ws-lesson-progress");
   if (progressEl) {
     if (shouldShowInventLessonProgress(m)) {
@@ -9840,6 +9919,271 @@ function endTurn() {
   renderWorkshop();
 }
 
+function liveRules() {
+  return Array.isArray(state.rules) ? state.rules : [];
+}
+
+function applyLobbyPayloadLocally(payload) {
+  let rules = cloneRules(state.rules);
+  if (payload.write && typeof payload.write === "object") {
+    const written = writeLobbyRule(rules, {
+      ...payload.write,
+      year: state.year,
+    });
+    if (written.ok) rules = written.rules;
+  } else if (payload.suspend) {
+    const s = setRuleStatus(rules, payload.suspend, "suspended");
+    if (s.ok) rules = s.rules;
+  } else if (payload.restore) {
+    const s = setRuleStatus(rules, payload.restore, "active");
+    if (s.ok) rules = s.rules;
+  } else if (payload.remove) {
+    const gone = removeLobbyRule(rules, payload.remove);
+    if (gone.ok) rules = gone.rules;
+  }
+  state.rules = rules;
+}
+
+/** Rule id shown in the read-only lobby pane; null = compose list. */
+let lobbyReadRuleId = null;
+
+function ruleById(id) {
+  const want = String(id || "");
+  return liveRules().find((r) => r && r.id === want) || null;
+}
+
+function ruleSourceLine(rule) {
+  if (!rule) return "";
+  if (rule.source === "lobby") return "You lobbied this onto the books. Read-only.";
+  return "Came with this quest. Read-only.";
+}
+
+function paintPolicyWeather() {
+  const host = $("#policy-weather");
+  if (!host) return;
+  if (!budgetWillEnabled()) {
+    host.hidden = true;
+    host.setAttribute("hidden", "");
+    return;
+  }
+  host.hidden = false;
+  host.removeAttribute("hidden");
+  const rules = liveRules();
+  const list = $("#policy-weather-list");
+  const empty = $("#policy-weather-empty");
+  const count = $("#policy-weather-count");
+  if (count) count.textContent = rules.length ? `${rules.length}/${MAX_LIVE_RULES}` : "";
+  if (list) {
+    list.innerHTML = rules
+      .map((r) => {
+        const kind = ruleKindLabel(r.kind);
+        const sus = r.status === "suspended";
+        const name = `${kind} ${r.label}`;
+        return `<li class="policy-weather-item${sus ? " is-suspended" : ""}">
+          <button type="button" class="policy-weather-pill" data-rule-id="${escapeHtml(
+            r.id
+          )}" title="Read this ${escapeHtml(kind)}"><span class="policy-weather-kind">${escapeHtml(
+            kind
+          )}</span> ${escapeHtml(r.label)}</button>
+          <button type="button" class="policy-weather-x" data-rule-id="${escapeHtml(
+            r.id
+          )}" title="Remove · 1 AP + 1$ → +1 Support" aria-label="Remove ${escapeHtml(
+            name
+          )}">×</button>
+        </li>`;
+      })
+      .join("");
+  }
+  if (empty) {
+    empty.hidden = rules.length > 0;
+    if (rules.length) empty.setAttribute("hidden", "");
+    else empty.removeAttribute("hidden");
+  }
+}
+
+function closeLobbyDialog() {
+  const bd = $("#lobby-backdrop");
+  if (!bd) return;
+  lobbyReadRuleId = null;
+  bd.hidden = true;
+  bd.setAttribute("hidden", "");
+  bd.classList.remove("open");
+}
+
+function showLobbyBackdrop() {
+  const bd = $("#lobby-backdrop");
+  if (!bd) return;
+  bd.hidden = false;
+  bd.removeAttribute("hidden");
+  bd.classList.add("open");
+}
+
+function openLobbyDialog() {
+  lobbyReadRuleId = null;
+  paintLobbyDialog();
+  showLobbyBackdrop();
+  $("#lobby-label")?.focus();
+}
+
+function openLobbyRule(ruleId) {
+  lobbyReadRuleId = String(ruleId || "") || null;
+  paintLobbyDialog();
+  showLobbyBackdrop();
+}
+
+function paintLobbyDialog() {
+  const kindSel = $("#lobby-kind");
+  if (kindSel && !kindSel.options.length) {
+    for (const k of RULE_KINDS) {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = RULE_KIND_LABELS[k];
+      kindSel.appendChild(opt);
+    }
+    kindSel.value = "policy";
+  }
+  const readEl = $("#lobby-read");
+  const composeEl = $("#lobby-compose");
+  const titleEl = $("#lobby-title");
+  const leadEl = $("#lobby-lead");
+  const focused = lobbyReadRuleId ? ruleById(lobbyReadRuleId) : null;
+  if (lobbyReadRuleId && !focused) {
+    lobbyReadRuleId = null;
+  }
+  if (focused && readEl && composeEl) {
+    readEl.hidden = false;
+    composeEl.hidden = true;
+    if (titleEl) titleEl.textContent = ruleKindLabel(focused.kind);
+    if (leadEl) leadEl.hidden = true;
+    const meta = $("#lobby-read-meta");
+    const heading = $("#lobby-read-title");
+    const body = $("#lobby-read-body");
+    if (meta) meta.textContent = ruleSourceLine(focused);
+    if (heading) heading.textContent = focused.label || "";
+    if (body) {
+      body.textContent = focused.body
+        ? focused.body
+        : "No further detail was written for this rule.";
+    }
+    return;
+  }
+  if (readEl) readEl.hidden = true;
+  if (composeEl) composeEl.hidden = false;
+  if (titleEl) titleEl.textContent = "Lobby";
+  if (leadEl) leadEl.hidden = false;
+  const labelEl = $("#lobby-label");
+  const bodyEl = $("#lobby-body");
+  if (labelEl) {
+    labelEl.maxLength = RULE_LABEL_MAX;
+    labelEl.readOnly = false;
+  }
+  if (bodyEl) {
+    bodyEl.maxLength = RULE_BODY_MAX;
+    bodyEl.readOnly = false;
+  }
+}
+
+function clearLobbyComposeFields() {
+  const labelEl = $("#lobby-label");
+  const bodyEl = $("#lobby-body");
+  if (labelEl) labelEl.value = "";
+  if (bodyEl) bodyEl.value = "";
+}
+
+function canAffordLobby() {
+  if (!budgetWillEnabled()) return { ok: false, error: "off" };
+  if (apEnabled() && getSpendableAp() < 1) return { ok: false, error: "no_ap" };
+  if (getSpendableBudget() < 1) return { ok: false, error: "no_budget" };
+  return { ok: true };
+}
+
+function commitLobby(payload = {}) {
+  if (!budgetWillEnabled()) return false;
+  if (blockIfMpTurnGate("lobbying")) return false;
+  if (isInventActionBusy()) {
+    flashToast(inventActionBusyReason());
+    return false;
+  }
+  if (isChallengeWatchOnly?.()) {
+    flashToast("Watching only — Lobby on your own invent turn.");
+    return false;
+  }
+  const bridge = mpBridge();
+  if (bridge && !bridge.isMyTurn?.()) {
+    flashToast("Not your turn.");
+    return false;
+  }
+  const afford = canAffordLobby();
+  if (!afford.ok) {
+    if (afford.error === "no_ap") {
+      flashToast("No AP to lobby — End turn or Wait first.", { resource: "ap" });
+    } else if (afford.error === "no_budget") {
+      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
+    }
+    return false;
+  }
+
+  if (roomBridge.isRoom()) {
+    syncRoomResourcesFromSnapshot();
+    try {
+      roomBridge.send({ type: "lobby", payload });
+    } catch (e) {
+      flashToast(mpFriendlyError(e.message) || "Could not lobby");
+      return false;
+    }
+    if (apEnabled()) {
+      state.ap = Math.max(0, getSpendableAp() - 1);
+      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
+    }
+    state.budget = Math.max(0, (state.budget ?? 0) - 1);
+    state.will = Math.min(GAME.maxWill ?? 5, (state.will ?? 0) + 1);
+    applyLobbyPayloadLocally(payload);
+    // Toast on server patch so a reject cannot flash success then roll back.
+    finishLobbyCommit(payload);
+    return true;
+  }
+
+  const r = dispatchSim("lobby", payload);
+  if (!r.ok) {
+    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.", { resource: "ap" });
+    else if (r.error === "no_budget")
+      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
+    else if (r.error === "rule_empty_label") flashToast("Name the rule first.");
+    else if (r.error === "rules_full") flashToast("Too many local rules on the books.");
+    else if (r.error === "rule_missing") flashToast("That rule is no longer on the books.");
+    else flashToast("Cannot lobby now.");
+    return false;
+  }
+  flashToast(lobbyToast(payload, r.events));
+  clearLobbyComposeFields();
+  finishLobbyCommit(payload);
+  return true;
+}
+
+function finishLobbyCommit(payload) {
+  closeLobbyDialog();
+  try {
+    ensureHexWorkshop().afterRulesChange?.();
+  } catch (e) {
+    console.warn("[hex rules]", e);
+  }
+  renderWorkshop();
+}
+
+function lobbyToast(payload, events) {
+  const ev = (events || []).find((e) => e.type === "lobby");
+  const label = ev?.rule?.label || payload?.write?.label || "";
+  if (payload.write) {
+    return `On the books: ${label || "new rule"} · Support ${state.will}`;
+  }
+  if (payload.remove) {
+    return `Off the books: ${ev?.rule?.label || "rule"} · Support ${state.will}`;
+  }
+  if (payload.suspend) return `Paused a local rule · Support ${state.will}`;
+  if (payload.restore) return `Restored a local rule · Support ${state.will}`;
+  return `Lobbied · Budget ${state.budget} · Support ${state.will}`;
+}
+
 function lobbyAction() {
   if (!budgetWillEnabled()) return;
   if (blockIfMpTurnGate("lobbying")) return;
@@ -9847,56 +10191,7 @@ function lobbyAction() {
     flashToast(inventActionBusyReason());
     return;
   }
-  if (isChallengeWatchOnly?.()) {
-    flashToast("Watching only — Lobby on your own invent turn.");
-    return;
-  }
-  const bridge = mpBridge();
-  if (bridge && !bridge.isMyTurn?.()) {
-    flashToast("Not your turn.");
-    return;
-  }
-
-  // Online room: server-authoritative lobby on *your* invent
-  if (roomBridge.isRoom()) {
-    syncRoomResourcesFromSnapshot();
-    if (apEnabled() && getSpendableAp() < 1) {
-      flashToast("No AP to lobby — End turn or Wait first.", { resource: "ap" });
-      return;
-    }
-    if ((state.budget ?? 0) < 1) {
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
-      return;
-    }
-    try {
-      roomBridge.send({ type: "lobby" });
-    } catch (e) {
-      flashToast(mpFriendlyError(e.message) || "Could not lobby");
-      return;
-    }
-    // Optimistic HUD (patch re-syncs)
-    if (apEnabled()) {
-      state.ap = Math.max(0, getSpendableAp() - 1);
-      state.apSpentThisTurn = (state.apSpentThisTurn || 0) + 1;
-    }
-    state.budget = Math.max(0, (state.budget ?? 0) - 1);
-    state.will = Math.min(GAME.maxWill ?? 5, (state.will ?? 0) + 1);
-    flashToast(`Lobbied · Budget ${state.budget} · Support ${state.will}`);
-    renderWorkshop();
-    return;
-  }
-
-  // Solo / hotseat: local sim (hotseat syncs invent via dispatchSim → mpSyncFromSolo)
-  const r = dispatchSim("lobby");
-  if (!r.ok) {
-    if (r.error === "no_ap") flashToast("No AP — End Turn or Wait.", { resource: "ap" });
-    else if (r.error === "no_budget")
-      flashToast("Need 1 Budget to lobby.", { resource: "budget" });
-    else flashToast("Cannot lobby now.");
-    return;
-  }
-  flashToast(`Lobbied · Budget ${state.budget} · Support ${state.will}`);
-  renderWorkshop();
+  openLobbyDialog();
 }
 
 /**
@@ -10690,24 +10985,34 @@ function techsForCoInventMode(mode) {
   return TECHS.map((t) => techForAi(t, state.year));
 }
 
+function rulesForAiContext() {
+  const list = summarizeRulesForAi(liveRules());
+  return list.length ? list : undefined;
+}
+
 function leanCoInventContext(mode, extra = {}) {
   const scene = String(state.mission?.scene || "").slice(0, 600);
-  return buildLeanCoInventContext(mode, extra, {
-    year: state.year,
-    place: state.mission?.place,
-    grounding: state.mission?.grounding || null,
-    missionTitle: state.mission?.title || "",
-    missionScene: scene,
-    inventionHow: state.inventionHow,
-    inventionImpact: state.inventionImpact,
-    selectedTechIds: [...state.selectedTechIds],
-    techsForIds: (ids) =>
-      ids.map((id) => techById(id)).filter(Boolean).map(slimTechForEval),
-    selectedTechs: () => selectedTechs().map(slimTechForEval).filter(Boolean),
-    challenge: state.mission
-      ? { title: state.mission.title, problem: scene }
-      : null,
-  });
+  const rules = extra.rules !== undefined ? extra.rules : rulesForAiContext();
+  return buildLeanCoInventContext(
+    mode,
+    rules ? { ...extra, rules } : extra,
+    {
+      year: state.year,
+      place: state.mission?.place,
+      grounding: state.mission?.grounding || null,
+      missionTitle: state.mission?.title || "",
+      missionScene: scene,
+      inventionHow: state.inventionHow,
+      inventionImpact: state.inventionImpact,
+      selectedTechIds: [...state.selectedTechIds],
+      techsForIds: (ids) =>
+        ids.map((id) => techById(id)).filter(Boolean).map(slimTechForEval),
+      selectedTechs: () => selectedTechs().map(slimTechForEval).filter(Boolean),
+      challenge: state.mission
+        ? { title: state.mission.title, problem: scene }
+        : null,
+    }
+  );
 }
 
 function recordAiTrace(info) {
@@ -10745,6 +11050,10 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         tutorMode: isLearningTutorSessionActive(),
         ...rest,
       };
+    if (rest.rules === undefined) {
+      const rules = rulesForAiContext();
+      if (rules) context.rules = rules;
+    }
   const sent = {
     mode,
     clientSessionId: getClientSessionId(),
@@ -20545,11 +20854,53 @@ function bind() {
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    const lobbyBd = $("#lobby-backdrop");
+    if (lobbyBd && lobbyBd.classList.contains("open")) {
+      closeLobbyDialog();
+      return;
+    }
     const bd = $("#wait-confirm-backdrop");
     if (bd && bd.classList.contains("open")) closeWaitConfirm();
   });
   $("#btn-end-turn")?.addEventListener("click", () => endTurn());
   $("#btn-lobby")?.addEventListener("click", () => lobbyAction());
+  $("#lobby-cancel")?.addEventListener("click", () => closeLobbyDialog());
+  $("#lobby-read-back")?.addEventListener("click", () => closeLobbyDialog());
+  $("#lobby-read-remove")?.addEventListener("click", () => {
+    if (!lobbyReadRuleId) return;
+    commitLobby({ remove: lobbyReadRuleId });
+  });
+  $("#lobby-write")?.addEventListener("click", () => {
+    const kind = $("#lobby-kind")?.value || "policy";
+    const label = String($("#lobby-label")?.value || "").trim();
+    const body = String($("#lobby-body")?.value || "").trim();
+    if (!label) {
+      flashToast("Name the rule first.");
+      $("#lobby-label")?.focus();
+      return;
+    }
+    commitLobby({ write: { kind, label, body } });
+  });
+  $("#lobby-backdrop")?.addEventListener("click", (e) => {
+    if (e.target?.id === "lobby-backdrop") closeLobbyDialog();
+  });
+  $("#policy-weather")?.addEventListener("click", (e) => {
+    if (!budgetWillEnabled()) return;
+    const drop = e.target.closest?.(".policy-weather-x");
+    if (drop) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = drop.getAttribute("data-rule-id");
+      if (id) commitLobby({ remove: id });
+      return;
+    }
+    const pill = e.target.closest?.(".policy-weather-pill");
+    const id = pill?.getAttribute("data-rule-id");
+    if (id) {
+      e.preventDefault();
+      openLobbyRule(id);
+    }
+  });
   $("#btn-to-challenge")?.addEventListener("click", async () => {
     if (isInventActionBusy()) {
       flashToast(inventActionBusyReason());

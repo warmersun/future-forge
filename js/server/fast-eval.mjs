@@ -72,9 +72,26 @@ function missionSlice(context) {
       "",
     600
   );
+  const globalId =
+    context?.globalId ||
+    context?.mission?.globalId ||
+    context?.global?.id ||
+    null;
+  const rulesRaw = context?.rules || context?.mission?.rules || [];
+  const rules = Array.isArray(rulesRaw)
+    ? rulesRaw.slice(0, 8).map((r) => ({
+        id: r?.id || null,
+        kind: r?.kind || null,
+        label: clip(r?.label, 80),
+        body: clip(r?.body, 280),
+        status: r?.status === "suspended" ? "suspended" : "active",
+      }))
+    : [];
   return {
     title: title || null,
     scene: scene || null,
+    globalId: globalId || null,
+    rules: rules.length ? rules : null,
   };
 }
 
@@ -82,6 +99,10 @@ export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future F
 There is no invention name. pathway.inventions[] (techId + howText + timing) are the parts. pathway.howText is the island inventHow if the learner wrote one — not a concat of parts. Judge the combination as ONE invent for this place and year.
 crisisDelta: for each role local, global, support return {delta, reason}. delta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
+A law, ban, UBI bill, or treaty is not an invent: score local/global/support delta 0 (support may be +1). Ask what becomes abundant with which capability this year.
+If mission.globalId is automation: robots, AI, or self-driving without a share/bridge/paid-skill/meaning mechanism must not ease global. They may ease local remaining work and may raise support (backlash).
+If mission.globalId is rogue-si: an AI/computing stack without a reachable human override, eval, or audit must not ease global. A smarter score that still locks the last call can raise support.
+mission.rules (if present) are local weather — regulation/law/policy/ban already on the books or lobbied this session. They do not ease meters by themselves. Cite them when they change who can field, not as the invent.
 reason is one everyday sentence (≤160 chars) that cites the how-text mechanism and MATCHES the signed delta. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every role, including 0.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
 concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
@@ -113,6 +134,7 @@ Return JSON only:
 
 export const IDEA_SPARKS_SYSTEM = `You return exactly 3 application SPARKS for focusTechId in this place and year.
 Different angles. Pilot-honest.
+Sparks are capability applications, not bills, bans, or UBI as the idea.
 title is a plain noun phrase a learner can say aloud — what the idea is, not a slogan. No coined slang or riddles.
 howText/insertText is one clear mechanism sentence in everyday words (named person/place when known).
 If refresh is true, do not repeat avoidTitles.

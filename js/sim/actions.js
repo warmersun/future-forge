@@ -13,6 +13,13 @@ import {
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
 import { foresightForYear } from "./world-foresight.js";
 import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
+import {
+  cloneRules,
+  liveRulesOrSeed,
+  writeLobbyRule,
+  setRuleStatus,
+  removeLobbyRule,
+} from "./policy-rules.js";
 
 /**
  * @param {object} sim — mutable sim slice (pressure, year, turn, waits, ap, budget, will, …)
@@ -108,13 +115,46 @@ export function applyAction(sim, action, opts = {}) {
   }
 
   if (type === "lobby") {
+    const payload = action.payload || {};
+    let rules = liveRulesOrSeed(next.rules, next.mission?.rules, next.year);
+    let ruleEvent = null;
+    if (payload.write && typeof payload.write === "object") {
+      const written = writeLobbyRule(rules, {
+        ...payload.write,
+        year: next.year,
+      });
+      if (!written.ok) return { ok: false, error: written.error, sim };
+      rules = written.rules;
+      ruleEvent = { op: "write", rule: written.rule };
+    } else if (payload.suspend) {
+      const s = setRuleStatus(rules, payload.suspend, "suspended");
+      if (!s.ok) return { ok: false, error: s.error, sim };
+      rules = s.rules;
+      ruleEvent = { op: "suspend", rule: s.rule };
+    } else if (payload.restore) {
+      const s = setRuleStatus(rules, payload.restore, "active");
+      if (!s.ok) return { ok: false, error: s.error, sim };
+      rules = s.rules;
+      ruleEvent = { op: "restore", rule: s.rule };
+    } else if (payload.remove) {
+      const gone = removeLobbyRule(rules, payload.remove);
+      if (!gone.ok) return { ok: false, error: gone.error, sim };
+      rules = gone.rules;
+      ruleEvent = { op: "remove", rule: gone.rule };
+    }
+    if (bwOn && (next.budget ?? 0) < 1) return { ok: false, error: "no_budget", sim };
     if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
     if (bwOn) {
-      if ((next.budget ?? 0) < 1) return { ok: false, error: "no_budget", sim };
       next.budget -= 1;
       next.will = Math.min(maxWill, (next.will ?? 0) + 1);
     }
-    events.push({ type: "lobby", will: next.will, budget: next.budget });
+    next.rules = rules;
+    events.push({
+      type: "lobby",
+      will: next.will,
+      budget: next.budget,
+      ...(ruleEvent || {}),
+    });
     return { ok: true, events, sim: next };
   }
 
@@ -426,6 +466,7 @@ export function simSliceFromState(state) {
       : null,
     mission: state.mission || null,
     globalId: state.global?.id || state.globalId || null,
+    ...(Array.isArray(state.rules) ? { rules: cloneRules(state.rules) } : {}),
   };
 }
 
@@ -460,5 +501,8 @@ export function applySimSliceToState(state, slice) {
           highlights: [...(slice.lastYearBulletin.highlights || [])],
         }
       : null;
+  }
+  if ("rules" in slice) {
+    state.rules = cloneRules(slice.rules);
   }
 }

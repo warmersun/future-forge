@@ -56,6 +56,9 @@ describe("FAST_EVAL_MODES", () => {
     assert.match(SCORE_PATHWAY_SYSTEM, /"delta"/);
     assert.match(SCORE_PATHWAY_SYSTEM, /challengeSpeech/);
     assert.match(SCORE_PATHWAY_SYSTEM, /description/i);
+    assert.match(SCORE_PATHWAY_SYSTEM, /law, ban, UBI bill, or treaty/i);
+    assert.match(SCORE_PATHWAY_SYSTEM, /mission.globalId is automation/);
+    assert.match(IDEA_SPARKS_SYSTEM, /not bills, bans, or UBI/);
     assert.equal(FAST_EVAL_MODES["score-pathway"].maxOutputTokens >= 550, true);
     assert.match(ASSESS_FEASIBILITY_SYSTEM, /"timing"/);
     assert.match(IDEA_SPARKS_SYSTEM, /"ideas"/);
@@ -151,6 +154,14 @@ describe("buildFastPayload", () => {
       p.crisisRoles[0].description,
       "The quay goes under every spring tide."
     );
+    assert.equal(p.mission.globalId, null);
+    assert.equal(p.mission.rules, null);
+
+    const withTheme = buildFastPayload("score-pathway", {
+      pathway: { inventions: [] },
+      globalId: "automation",
+    });
+    assert.equal(withTheme.mission.globalId, "automation");
     for (const k of ENVELOPE_KEYS) {
       assert.equal(json.includes(k), false, k);
     }

@@ -5,6 +5,10 @@
  */
 
 import { assessSustainable } from "../sim/sustainable.js";
+import { clampPathwayScore } from "../sim/policy-honesty.js";
+import { rulesWeatherKey } from "../sim/policy-rules.js";
+
+export { clampPathwayScore, rulesWeatherKey };
 import { worseLevel } from "../sim/deploy.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { neighbor } from "./hex-tile-grid.js";
@@ -608,7 +612,11 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
         : "Still unanswered — docking is not enough.",
     };
   }
-  return { crisisDelta: delta, crisisReasons, concerns };
+  return clampPathwayScore(
+    { crisisDelta: delta, crisisReasons, concerns },
+    inventions,
+    opts
+  );
 }
 
 /**
@@ -781,6 +789,46 @@ export function hexPathwayPanel(board) {
 }
 
 /**
+ * Clamp cached deltas and mark pending when live rules change.
+ * @param {object} board — mutated
+ * @param {object} opts
+ */
+function syncRulesWeather(board, opts = {}) {
+  const liveKey = rulesWeatherKey(opts.rules);
+  const storedKey = board.rulesWeatherKey ?? "";
+  board.rulesWeatherKey = liveKey;
+  if (liveKey === storedKey) return false;
+  const clampOpts = {
+    globalId: opts.globalId || opts.global,
+    global: opts.global,
+    mission: opts.mission,
+    rules: opts.rules,
+  };
+  for (const [fp, row] of Object.entries(board.pathwayImpacts || {})) {
+    if (!row) continue;
+    const inventions = (row.inventionIds || [])
+      .map((id) => board.tiles?.[id])
+      .filter((t) => t && t.kind === TILE_KIND.invention);
+    const clamped = clampPathwayScore(
+      {
+        crisisDelta: row.crisisDelta,
+        crisisReasons: row.crisisReasons,
+        concerns: row.concerns,
+      },
+      inventions,
+      clampOpts
+    );
+    board.pathwayImpacts[fp] = {
+      ...row,
+      crisisDelta: clamped.crisisDelta || row.crisisDelta,
+      crisisReasons: clamped.crisisReasons || row.crisisReasons,
+      pending: true,
+    };
+  }
+  return true;
+}
+
+/**
  * Apply cached pathway deltas to pressure + hex lamps.
  * Instant — no AI. Sets lampPending on givens reached by pending fingerprints.
  *
@@ -788,6 +836,10 @@ export function hexPathwayPanel(board) {
  * @param {object} opts
  * @param {Record<string, number>} [opts.winMax]
  * @param {Record<string, number>|null} [opts.pressureBase] — override board.pressureBase
+ * @param {object[]} [opts.rules] — live local rules; omit to leave weather cache alone
+ * @param {string|object} [opts.globalId]
+ * @param {object|null} [opts.global]
+ * @param {object|null} [opts.mission]
  * @returns {{ board: object, displayPressure: Record<string, number>, pendingGivenIds: string[], pathways: Array<{ fingerprint: string, inventions: object[], needsScore: boolean, needsConcernScore: boolean }> }}
  */
 export function applyPathwayPressure(board, opts = {}) {
@@ -800,6 +852,10 @@ export function applyPathwayPressure(board, opts = {}) {
     next.pressureBase = Object.fromEntries(
       Object.entries(baseSrc).map(([k, v]) => [k, clampPressure(v)])
     );
+  }
+
+  if (opts.rules !== undefined) {
+    syncRulesWeather(next, opts);
   }
 
   const pathways = listInventionPathways(next).map((inventions) => {
@@ -870,10 +926,12 @@ export function applyPathwayPressure(board, opts = {}) {
     let sum = 0;
     for (const { fingerprint, inventions } of pathways) {
       const impact = next.pathwayImpacts[fingerprint];
-      if (!impact || impact.pending) continue;
+      if (!impact) continue;
       const seedId = inventions[0]?.id;
       if (!seedId) continue;
       if (!givensReachedFromInvention(next, seedId).includes(t.id)) continue;
+      // First invent is empty zeros. Weather clamp keeps the last delta visible
+      // while pending so lamps do not snap back to ambient.
       sum += crisisDeltaValues(impact.crisisDelta)[role] || 0;
     }
     const base = Number(next.pressureBase?.[key] ?? 0);
@@ -2006,6 +2064,7 @@ export function assessGlobalSustainPrior(cluster, opts = {}) {
     techs,
     inventionHow: cluster.howText || "",
     inventionImpact: "",
+    rules: opts.rules || opts.mission?.rules,
   });
   return { level: sustain.level, note: sustain.note };
 }
@@ -2069,6 +2128,7 @@ export function assessGivenPrior(board, given, ctx = {}) {
     const prior = assessGlobalSustainPrior(cluster, {
       mission: ctx.mission,
       global: ctx.global,
+      rules: ctx.rules || ctx.mission?.rules,
     });
     return { ...prior, role, cluster };
   }

@@ -95,6 +95,7 @@ Then **The bigger problem** zooms out: this scene is one instance of [global iss
 - Sentences that tell the reader how to feel
 - Policy-brief packing / framework dumps
 - Solution theater
+- “Pass a law / ban / UBI bill” as the job (a rule may be the root cause; the invent is still a capability pathway)
 - Research or tutor curriculum dumped into player prose
 - **Product riddle:** “Company X launched Y… invent Y, or invent *with* Y, just don’t say Y”
 - **Capability lecture** in the brief (*What just became possible*, “sequencers got cheaper”, “do not invent sequencing from scratch”)

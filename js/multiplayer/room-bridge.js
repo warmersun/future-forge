@@ -5,6 +5,7 @@
 
 import { cloneMission } from "../sim/state.js";
 import { clonePressure } from "../sim/pressure.js";
+import { cloneRules } from "../sim/policy-rules.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js";
 import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js";
 import {
@@ -281,6 +282,11 @@ export function createRoomBridge() {
     state.waits = inventWaits(view, place);
     state.turn = place.turn || m.round || 0;
     state.pressure = clonePressure(place.pressure);
+    state.rules = Array.isArray(place.rules)
+      ? cloneRules(place.rules)
+      : Array.isArray(state.rules)
+        ? state.rules
+        : [];
     state.lastNews = place.lastNews || "";
     state.marketNews = place.marketNews
       ? {

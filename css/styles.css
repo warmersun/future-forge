@@ -9280,6 +9280,190 @@ button.linkish:hover {
   display: flex;
 }
 
+.policy-weather {
+  margin: 0.65rem 0 0.35rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.policy-weather-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.policy-weather-head #btn-lobby {
+  font-weight: 600;
+}
+.policy-weather-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.policy-weather-item {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.policy-weather-item.is-suspended {
+  opacity: 0.55;
+}
+.policy-weather-pill {
+  appearance: none;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.18rem 0.4rem 0.18rem 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.policy-weather-pill:hover,
+.policy-weather-pill:focus-visible {
+  color: var(--accent-2);
+}
+.policy-weather-x {
+  appearance: none;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0 0.42rem 0.05rem;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+}
+.policy-weather-x:hover,
+.policy-weather-x:focus-visible {
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.12);
+}
+.policy-weather-kind {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+.policy-weather-empty {
+  margin: 0;
+}
+.lobby-sub {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.85rem;
+}
+.lobby-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.lobby-rule-row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.lobby-rule-row.is-suspended {
+  opacity: 0.65;
+}
+.lobby-rule-open {
+  appearance: none;
+  display: block;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lobby-rule-kicker {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  margin-bottom: 0.2rem;
+}
+.lobby-rule-name {
+  display: block;
+  font-size: 0.95rem;
+}
+.lobby-rule-body {
+  margin: 0.35rem 0 0;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+.lobby-read[hidden],
+.lobby-compose[hidden] {
+  display: none !important;
+}
+.lobby-read {
+  padding: 0.15rem 0 0.35rem;
+}
+.lobby-read-meta {
+  margin: 0 0 0.45rem;
+}
+.lobby-read-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+.lobby-read-body {
+  margin: 0 0 1rem;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lobby-read-actions {
+  align-items: flex-start;
+}
+.lobby-remove-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+.lobby-read-cost {
+  margin: 0;
+  white-space: nowrap;
+  text-align: right;
+  line-height: 1.3;
+}
+.lobby-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.3rem 0;
+}
+.lobby-field input,
+.lobby-field select,
+.lobby-field textarea {
+  width: 100%;
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  font: inherit;
+}
+
 .modal {
   width: min(480px, 100%);
   max-height: 85vh;
@@ -9293,6 +9477,12 @@ button.linkish:hover {
 }
 
 /* Must beat .modal { width } — same stylesheet order used to win over the base rule */
+.modal.lobby-modal {
+  width: min(840px, 94vw);
+  max-height: none;
+  overflow: visible;
+}
+
 .modal.help-modal {
   width: min(920px, 94vw);
   max-width: 94vw;

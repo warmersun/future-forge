@@ -1575,6 +1575,60 @@ describe("mp-session lobby", () => {
     assert.equal(r.ok, true, r.error);
     assert.equal(r.session.invents["seat-0"].will, 5);
   });
+
+  it("writes a shared local rule onto place without dropping pressure", () => {
+    let s = started();
+    const pressure0 = { ...s.place.pressure };
+    const r = applyMpAction(s, {
+      type: "lobby",
+      payload: {
+        write: { kind: "regulation", label: "Logged override in the bay" },
+      },
+    });
+    assert.equal(r.ok, true, r.error);
+    s = r.session;
+    assert.equal(s.place.rules.some((row) => row.label.includes("Logged override")), true);
+    assert.deepEqual(s.place.pressure, pressure0);
+
+    const gone = applyMpAction(s, {
+      type: "lobby",
+      payload: { remove: s.place.rules.find((row) => row.source === "lobby").id },
+    });
+    assert.equal(gone.ok, true, gone.error);
+    assert.equal(
+      gone.session.place.rules.some((row) => row.label.includes("Logged override")),
+      false
+    );
+  });
+
+  it("seeds quest rules when place.rules was never set", () => {
+    let s = started();
+    s.place.mission = {
+      ...s.place.mission,
+      rules: [
+        {
+          id: "override-lock",
+          kind: "policy",
+          label: "Override lock",
+          effects: ["eval-required"],
+        },
+      ],
+    };
+    delete s.place.rules;
+    const r = applyMpAction(s, {
+      type: "lobby",
+      payload: { write: { kind: "regulation", label: "Logged override" } },
+    });
+    assert.equal(r.ok, true, r.error);
+    assert.equal(
+      r.session.place.rules.some((row) => row.id === "override-lock"),
+      true
+    );
+    assert.equal(
+      r.session.place.rules.some((row) => row.label === "Logged override"),
+      true
+    );
+  });
 });
 
 describe("mp-session challenge feedback", () => {

@@ -130,7 +130,7 @@ Unless a Quest turns meters off and focuses on one or two roles, the invention i
 | **Root cause** | Does it move the needle on the **underlying** problem, not only the surface? |
 | **Support** | Can you earn **goodwill and buy-in** — public and policy support so the pathway can actually field? |
 
-Local relief without a deeper lever is incomplete. A clever root-cause story with no support never leaves the notebook. Support without a real fix is theater. The three together are the inventing discipline.
+Local relief without a deeper lever is incomplete. A clever root-cause story with no support never leaves the notebook. Support without a real fix is theater. The three together are the inventing discipline. A law, ban, or UBI bill is not a fourth win path: politics steers *who* gets the abundance, but the invent is still a capability pathway that makes something scarce more abundant here.
 
 ### With others: compete, but learn cooperation
 

@@ -295,6 +295,18 @@ Partial example (easier budget/will, default AP):
 
 When any value differs from the global default, selection UI (theme pick, daily/focus, External list, import library, Friends mission pick) shows a **Start · …** chip so learners see the adjusted start before they start.
 
+### Optional `rules` (local policy weather)
+
+Omit when unused. 1–3 named local rules already on the books (a lock, quota, or ban the scene is living under). Lobby can write more during play. A rule **does not drop crisis meters**.
+
+| Field | Notes |
+|-------|--------|
+| `id` | Unique slug |
+| `kind` | `regulation` \| `law` \| `policy` \| `ban` |
+| `label` | Short HUD name |
+| `body` | Optional. What the rule does here |
+| `effects` | Optional: `share-required`, `eval-required`, `backlash` |
+
 ## Markdown subset (rendered in the Library / Quest UI)
 
 Headings `#`–`###`, paragraphs, `**bold**`, `*italic*`, lists, `https?` links. No raw HTML, images, or scripts.

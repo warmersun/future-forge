@@ -565,7 +565,7 @@ export function resolveTourStep(raw) {
     return step(
       "I2",
       "Lobby for support",
-      "Spend 1 AP and 1$ for +1 Support. Support 4 or more helps the pathway stick.",
+      "Lobby sits on Local rules. Spend 1 AP and 1$ to write a rule — or click a pill to read it, × to remove.",
       sel("#btn-lobby")
     );
   }

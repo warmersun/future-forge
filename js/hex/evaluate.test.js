@@ -74,6 +74,7 @@ import {
   bandToLamp,
   diffPathwayScoreJobs,
   pathwayHasTimingPending,
+  rulesWeatherKey,
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { buildNeighborEvalContext, applyHeuristicLights } from "./lights.js";
@@ -370,6 +371,21 @@ describe("cluster priors", () => {
       worstTiming: "green",
     });
     assert.equal(r.level, "green");
+  });
+
+  it("global prior stays red for rogue-si AI without an override", () => {
+    const cluster = {
+      anyTouch: true,
+      techIds: ["ai", "computing"],
+      howText: "A more accurate trauma score writes the discharge path.",
+      matureCount: 1,
+      worstTiming: "green",
+    };
+    const r = assessGlobalSustainPrior(cluster, {
+      mission: { id: "opaque-benefits", globalId: "rogue-si", scene: "Override gray." },
+      global: { id: "rogue-si", kind: "before" },
+    });
+    assert.equal(r.level, "red", r.note);
   });
 
   it("global wraps assessSustainable — filtration-only air not green", () => {
@@ -1536,6 +1552,47 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.equal(answered.concerns.moloch.level, "yellow");
   });
 
+  it("heuristicPathwayScore does not ease meters for a UBI bill", () => {
+    const score = heuristicPathwayScore(
+      [
+        {
+          kind: "invention",
+          techId: "crypto",
+          year: 2026,
+          howText: "The council passes universal basic income this year for the warehouse crew.",
+          timingLevel: "green",
+          feasibilityPct: 85,
+        },
+      ],
+      2026,
+      { globalId: "automation" }
+    );
+    assert.equal(score.crisisDelta.local, 0);
+    assert.equal(score.crisisDelta.global, 0);
+    assert.match(score.crisisReasons.local, /law or ban/i);
+  });
+
+  it("heuristicPathwayScore blocks global ease for unpaired robots on automation", () => {
+    const score = heuristicPathwayScore(
+      [
+        {
+          kind: "invention",
+          techId: "robots",
+          year: 2026,
+          howText:
+            "Aisle robots finish the easy shelves so the remaining awkward cases still move tonight.",
+          timingLevel: "green",
+          feasibilityPct: 85,
+        },
+      ],
+      2026,
+      { globalId: "automation" }
+    );
+    assert.equal(score.crisisDelta.local, -1);
+    assert.equal(score.crisisDelta.global, 0);
+    assert.equal(score.crisisDelta.support, 1);
+  });
+
   it("heuristicPathwayScore can worsen support for a hostile stack", () => {
     const score = heuristicPathwayScore(
       [
@@ -2272,6 +2329,181 @@ describe("invalidatePathwaysTouchingGiven", () => {
     assert.equal(applied.board.pathwayImpacts[fp].concernKey, concernKey);
     assert.equal(applied.board.tiles["concern-moloch"].lampPending, false);
     assert.equal(applied.board.tiles["concern-moloch"].lamp, "red");
+  });
+});
+
+describe("rules weather key", () => {
+  function placeOk(board, id, q, r) {
+    const res = placeTile(board, id, q, r);
+    assert.equal(res.ok, true, JSON.stringify(res.blockers));
+    return res.board;
+  }
+
+  it("sorts id:status stably; add/remove/suspend change the key", () => {
+    assert.equal(rulesWeatherKey(null), "");
+    assert.equal(rulesWeatherKey([]), "");
+    assert.equal(
+      rulesWeatherKey([
+        { id: "b", status: "active" },
+        { id: "a", status: "suspended" },
+      ]),
+      "a:suspended|b:active"
+    );
+    assert.equal(
+      rulesWeatherKey([{ id: "a" }, { id: "b", status: "active" }]),
+      "a:active|b:active"
+    );
+    assert.notEqual(
+      rulesWeatherKey([{ id: "a", status: "active" }]),
+      rulesWeatherKey([])
+    );
+    assert.notEqual(
+      rulesWeatherKey([{ id: "a", status: "active" }]),
+      rulesWeatherKey([{ id: "a", status: "suspended" }])
+    );
+  });
+
+  it("empty board stamps the key and starts no score jobs", () => {
+    const board = seedCrisisTiles({
+      crisisRoles: ["global"],
+      pressure: { Surplus: 3 },
+    });
+    const applied = applyPathwayPressure(board, {
+      winMax: { Surplus: 2 },
+      rules: [{ id: "piece-rate", status: "active" }],
+      globalId: "automation",
+    });
+    assert.equal(applied.board.rulesWeatherKey, "piece-rate:active");
+    assert.equal(applied.pathways.length, 0);
+    assert.deepEqual(diffPathwayScoreJobs(applied.pathways, []).start, []);
+  });
+
+  it("omitting rules leaves a settled impact and stored key alone", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["global"],
+      pressure: { Surplus: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "rx",
+        techId: "robots",
+        howText: "Aisle robots finish the easy shelves so the remaining cases move.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const global = board.tiles["crisis-global"];
+    board = placeOk(board, "rx", global.q - 1, global.r);
+    const fp = pathwayContentFingerprint([board.tiles.rx], board);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["rx"],
+      crisisDelta: { local: -1, global: -1, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    board.rulesWeatherKey = "old:active";
+    const applied = applyPathwayPressure(board, { winMax: { Surplus: 2 } });
+    assert.equal(applied.pathways[0].needsScore, false);
+    assert.equal(applied.board.pathwayImpacts[fp].pending, false);
+    assert.equal(applied.board.rulesWeatherKey, "old:active");
+  });
+
+  it("key mismatch clamps unpaired robots, keeps timing, and starts a score job", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["global"],
+      pressure: { Surplus: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "rx",
+        techId: "robots",
+        howText: "Aisle robots finish the easy shelves so the remaining cases move.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const global = board.tiles["crisis-global"];
+    board = placeOk(board, "rx", global.q - 1, global.r);
+    const fp = pathwayContentFingerprint([board.tiles.rx], board);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["rx"],
+      crisisDelta: { local: -1, global: -1, support: -1 },
+      crisisReasons: { local: "local", global: "eased", support: "ok" },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    board.rulesWeatherKey = "";
+    const applied = applyPathwayPressure(board, {
+      winMax: { Surplus: 2 },
+      rules: [
+        {
+          id: "piece-rate",
+          kind: "policy",
+          label: "Piece-rate",
+          effects: ["share-required", "backlash"],
+          status: "active",
+        },
+      ],
+      globalId: "automation",
+    });
+    assert.equal(
+      pathwayContentFingerprint([applied.board.tiles.rx], applied.board),
+      fp
+    );
+    assert.equal(applied.board.tiles.rx.timingLevel, "green");
+    assert.equal(applied.board.rulesWeatherKey, "piece-rate:active");
+    const impact = applied.board.pathwayImpacts[fp];
+    assert.equal(impact.pending, true);
+    assert.equal(impact.crisisDelta.global, 0);
+    assert.equal(impact.crisisDelta.support, 1);
+    assert.equal(impact.crisisDelta.local, -1);
+    assert.equal(applied.pathways[0].needsScore, true);
+    assert.equal(applied.displayPressure.Surplus, 3);
+    assert.deepEqual(diffPathwayScoreJobs(applied.pathways, []).start, [fp]);
+  });
+
+  it("flavor-only rules still mark pending so the judge can cite weather", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Corridor sensors alert crews before flood crest.",
+        year: 2026,
+        timingLevel: "green",
+      })
+    );
+    const local = board.tiles["crisis-local"];
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1], board);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    const applied = applyPathwayPressure(board, {
+      winMax: { Floods: 2 },
+      rules: [{ id: "curfew", kind: "policy", label: "Harbor curfew", status: "active" }],
+      globalId: "climate",
+    });
+    assert.equal(applied.board.pathwayImpacts[fp].pending, true);
+    assert.equal(applied.board.pathwayImpacts[fp].crisisDelta.local, -1);
+    assert.equal(applied.displayPressure.Floods, 2);
+    assert.equal(applied.pathways[0].needsScore, true);
+    assert.equal(
+      pathwayContentFingerprint([applied.board.tiles.ai1], applied.board),
+      fp
+    );
   });
 });
 

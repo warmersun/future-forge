@@ -4,6 +4,8 @@
  * Rules-only v1 (no AI). Used for Scale odds with the Scale dim.
  */
 
+import { applyCoordinationCap } from "./policy-honesty.js";
+
 /** Techs that mostly protect / sense exposure without cutting the driver. */
 export const SHELTER_TECH_IDS = new Set([
   "materials",
@@ -115,6 +117,35 @@ export const THEME_DEPTH = {
     ],
     shelterHints: ["relief", "ration", "food aid", "temporary", "bailout only"],
   },
+  automation: {
+    depthCharacter: "source",
+    causeHints: [
+      "quota",
+      "piece-rate",
+      "flex pool",
+      "surplus",
+      "wage",
+      "shift",
+      "unit rate",
+      "deskilled",
+      "income",
+    ],
+    shelterHints: ["retrain pamphlet", "coping", "food bank"],
+  },
+  "rogue-si": {
+    depthCharacter: "source",
+    causeHints: [
+      "override",
+      "lock",
+      "liability",
+      "race",
+      "eval",
+      "audit",
+      "handle time",
+      "opaque",
+    ],
+    shelterHints: ["ban the model", "unplug", "pause all ai"],
+  },
   misinfo: {
     depthCharacter: "source",
     causeHints: [
@@ -215,6 +246,10 @@ function countHits(text, hints) {
  * @returns {{ level: "red"|"yellow"|"green", note: string, depthCharacter: string }}
  */
 export function assessSustainable(opts) {
+  return applyCoordinationCap(assessSustainableUncapped(opts), opts);
+}
+
+function assessSustainableUncapped(opts) {
   const global = opts.global || null;
   const mission = opts.mission || null;
   const techs = opts.techs || [];

@@ -36,6 +36,13 @@ import {
 } from "./invent-phase.js";
 import { applyThinkingAiCharge } from "./ai-tax.js";
 import {
+  seedLiveRules,
+  liveRulesOrSeed,
+  writeLobbyRule,
+  setRuleStatus,
+  removeLobbyRule,
+} from "./policy-rules.js";
+import {
   techIdsFromBoard,
   seedCrisisTiles,
   createEmptyBoard,
@@ -177,6 +184,11 @@ export function publicMpState(session) {
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
           marketNews: cloneMarketNews(session.place.marketNews),
+          rules: liveRulesOrSeed(
+            session.place.rules,
+            session.place.mission?.rules,
+            session.place.year ?? session.place.mission?.startYear
+          ),
         }
       : null,
     invents: Object.fromEntries(
@@ -387,6 +399,7 @@ export function startMpQuest(session) {
     lastNews: "Quest started — invent, Face Challenge, Pilot, then Scale.",
     /** Active market news (shifts emTech costs). Set when a full seat-round completes. */
     marketNews: null,
+    rules: seedLiveRules(mission.rules, mission.startYear ?? GAME.startYear ?? 2026),
     /** Cleared each new Quest — year foresight for HUD reopen */
     lastYearBulletin: null,
     status: "playing", // playing | won | collapsed | abandoned_by_vote
@@ -516,6 +529,11 @@ function cloneSession(session) {
           mission: cloneMission(session.place.mission),
           pressure: clonePressure(session.place.pressure),
           marketNews: cloneMarketNews(session.place.marketNews),
+          rules: liveRulesOrSeed(
+            session.place.rules,
+            session.place.mission?.rules,
+            session.place.year ?? session.place.mission?.startYear
+          ),
         }
       : null,
     questMeta: session.questMeta
@@ -1110,22 +1128,61 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
   }
 
   // —— Lobby: personal political capital (same as solo) ——
-  // Active seat only: 1 AP + 1 Budget → +1 Will (cap maxWill). Does not touch shared place.
+  // Active seat only: 1 AP + 1 Budget → +1 Will (cap maxWill). Also writes shared place.rules.
   if (type === "lobby") {
     if (actor.abandoned) return { ok: false, error: "abandoned", session };
+    const payload = action.payload || {};
+    if (!s.place) s.place = {};
+    let rules = liveRulesOrSeed(
+      s.place.rules,
+      s.place.mission?.rules,
+      inventYear(actor, s.place)
+    );
+    let ruleEvent = null;
+    if (payload.write && typeof payload.write === "object") {
+      const written = writeLobbyRule(rules, {
+        ...payload.write,
+        year: inventYear(actor, s.place),
+      });
+      if (!written.ok) return { ok: false, error: written.error, session };
+      rules = written.rules;
+      ruleEvent = { op: "write", rule: written.rule };
+    } else if (payload.suspend) {
+      const st = setRuleStatus(rules, payload.suspend, "suspended");
+      if (!st.ok) return { ok: false, error: st.error, session };
+      rules = st.rules;
+      ruleEvent = { op: "suspend", rule: st.rule };
+    } else if (payload.restore) {
+      const st = setRuleStatus(rules, payload.restore, "active");
+      if (!st.ok) return { ok: false, error: st.error, session };
+      rules = st.rules;
+      ruleEvent = { op: "restore", rule: st.rule };
+    } else if (payload.remove) {
+      const gone = removeLobbyRule(rules, payload.remove);
+      if (!gone.ok) return { ok: false, error: gone.error, session };
+      rules = gone.rules;
+      ruleEvent = { op: "remove", rule: gone.rule };
+    }
+    if (bwOn && (actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
     if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     if (bwOn) {
-      if ((actor.budget ?? 0) < 1) return { ok: false, error: "no_budget", session };
       actor.budget -= 1;
       actor.will = Math.min(maxWill, (actor.will ?? 0) + 1);
     }
-    actor.lastNews = `Lobbied for support — Will ${actor.will}, Budget ${actor.budget}$.`;
+    s.place.rules = rules;
+    actor.lastNews =
+      ruleEvent?.op === "write"
+        ? `Lobbied ${ruleEvent.rule?.label || "a rule"} — Will ${actor.will}, Budget ${actor.budget}$.`
+        : ruleEvent?.op === "remove"
+          ? `Took ${ruleEvent.rule?.label || "a rule"} off the books — Will ${actor.will}.`
+          : `Lobbied for support — Will ${actor.will}, Budget ${actor.budget}$.`;
     events.push({
       type: "lobby",
       seatId: activeId,
       will: actor.will,
       budget: actor.budget,
       ap: actor.ap,
+      ...(ruleEvent || {}),
     });
     s.version = (session.version || 0) + 1;
     return { ok: true, session: s, events };

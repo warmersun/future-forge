@@ -1300,16 +1300,30 @@
 
             <div class="prompt-tip" id="prompt-tip"></div>
 
+            <aside
+              id="policy-weather"
+              class="policy-weather"
+              hidden
+              aria-label="Local rules"
+            >
+              <div class="policy-weather-head">
+                <span class="policy-weather-title">Local rules <span class="muted sm" id="policy-weather-count"></span></span>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  id="btn-lobby"
+                  title="Write a local rule — 1 AP + 1 Budget, +1 Support"
+                >
+                  Lobby
+                </button>
+              </div>
+              <ul id="policy-weather-list" class="policy-weather-list"></ul>
+              <p id="policy-weather-empty" class="policy-weather-empty muted sm" hidden>
+                None on the books. Lobby to write a regulation, law, policy, or ban.
+              </p>
+            </aside>
+
             <div class="form-actions game-actions">
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                id="btn-lobby"
-                hidden
-                title="Spend 1 Budget and 1 AP for +1 political will"
-              >
-                Lobby
-              </button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
@@ -2088,6 +2102,61 @@
         <div id="modal-body" class="modal-body"></div>
         <div class="modal-actions">
           <button type="button" class="btn btn-primary btn-sm" id="modal-close">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local rule detail (read / remove) or Lobby (add only) -->
+    <div
+      id="lobby-backdrop"
+      class="modal-backdrop lobby-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lobby-title"
+      hidden
+    >
+      <div class="modal lobby-modal">
+        <header>
+          <h3 id="lobby-title">Lobby</h3>
+          <p id="lobby-lead" class="muted sm">
+            Write a regulation, law, policy, or ban for this place. It changes the weather.
+            It does not drop crisis meters — the invent still has to make something abundant.
+          </p>
+        </header>
+        <div id="lobby-read" class="lobby-read" hidden>
+          <p id="lobby-read-meta" class="lobby-read-meta muted sm"></p>
+          <h4 id="lobby-read-title" class="lobby-read-title"></h4>
+          <p id="lobby-read-body" class="lobby-read-body"></p>
+          <div class="modal-actions lobby-read-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="lobby-read-back">Close</button>
+            <div class="lobby-remove-wrap">
+              <button type="button" class="btn btn-ghost btn-sm" id="lobby-read-remove" title="1 AP + 1 Budget → +1 Support">Remove</button>
+              <p class="muted sm lobby-read-cost">1 AP + 1$ → +1 Support</p>
+            </div>
+          </div>
+        </div>
+        <div id="lobby-compose" class="lobby-compose">
+          <div class="modal-body lobby-body">
+            <label class="lobby-field">
+              <span class="muted sm">Kind</span>
+              <select id="lobby-kind"></select>
+            </label>
+            <label class="lobby-field">
+              <span class="muted sm">Name</span>
+              <input id="lobby-label" type="text" maxlength="80" placeholder="A short name for this place" autocomplete="off" />
+            </label>
+            <label class="lobby-field">
+              <span class="muted sm">What it does here</span>
+              <textarea id="lobby-body" rows="2" maxlength="400" placeholder="Who must do what, in this place."></textarea>
+            </label>
+          </div>
+          <div class="modal-actions lobby-read-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="lobby-cancel">Close</button>
+            <div class="lobby-remove-wrap">
+              <button type="button" class="btn btn-primary btn-sm" id="lobby-write">Write this rule</button>
+              <p class="muted sm lobby-read-cost">1 AP + 1$ → +1 Support</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
