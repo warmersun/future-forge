@@ -5,14 +5,15 @@
 
 const CAP = 30;
 const PREVIEW_CAP = 6;
-const FILTERS = new Set(["all", "text", "image"]);
+const FILTERS = new Set(["all", "text", "image", "jev"]);
 const IMAGE_MODES = new Set(["vision", "idea-image"]);
+const JEV_MODES = new Set(["tag-lobby-rule"]);
 
 /** @type {Array<object>} */
 let entries = [];
 let selectedId = null;
 let seq = 0;
-/** @type {"all"|"text"|"image"} */
+/** @type {"all"|"text"|"image"|"jev"} */
 let filter = "all";
 /** @type {Set<() => void>} */
 const listeners = new Set();
@@ -128,12 +129,16 @@ function prunePreviews(list) {
 
 /**
  * @param {object} [raw]
- * @returns {"text"|"image"}
+ * @returns {"text"|"image"|"jev"}
  */
 export function aiTraceKind(raw = {}) {
-  if (raw.kind === "image" || raw.kind === "text") return raw.kind;
+  if (raw.kind === "image" || raw.kind === "text" || raw.kind === "jev") {
+    return raw.kind;
+  }
   const mode = String(raw.mode || raw.sent?.mode || "");
+  const source = String(raw.source || raw.received?.source || "");
   if (IMAGE_MODES.has(mode)) return "image";
+  if (source === "typesafe" || JEV_MODES.has(mode)) return "jev";
   return "text";
 }
 
@@ -153,7 +158,7 @@ export function subscribeAiTrace(fn) {
 }
 
 /**
- * @param {"all"|"text"|"image"} next
+ * @param {"all"|"text"|"image"|"jev"} next
  */
 export function setAiTraceFilter(next) {
   const want = FILTERS.has(next) ? next : "all";
@@ -170,17 +175,19 @@ export function aiTraceFilter() {
 export function aiTraceFilterCounts() {
   let text = 0;
   let image = 0;
+  let jev = 0;
   for (const e of entries) {
     if (e.kind === "image") image += 1;
+    else if (e.kind === "jev") jev += 1;
     else text += 1;
   }
-  return { all: entries.length, text, image };
+  return { all: entries.length, text, image, jev };
 }
 
 /**
  * @param {{
  *   mode?: string,
- *   kind?: "text"|"image",
+ *   kind?: "text"|"image"|"jev",
  *   sent?: object,
  *   received?: object|null,
  *   error?: string|null,
@@ -220,6 +227,10 @@ export function pushAiTrace(raw = {}) {
     ms: Number.isFinite(Number(raw.ms)) ? Math.max(0, Math.round(Number(raw.ms))) : 0,
     source,
     previewUrl,
+    modelRequest:
+      raw.modelRequest && typeof raw.modelRequest === "object"
+        ? summarizeAiTracePayload(raw.modelRequest)
+        : null,
   };
   const next = [entry, ...entries];
   const dropped = next.slice(CAP);
@@ -233,7 +244,97 @@ export function pushAiTrace(raw = {}) {
 }
 
 /**
- * @param {{ filter?: "all"|"text"|"image" }} [opts]
+ * Peel `typesafeTrace` off a co-invent payload and push a Jev inspect row.
+ * Grok/local stays Text (or Images). `tag-lobby-rule` is Jev-only.
+ * @param {object} [raw]
+ */
+export function pushAiTraceWithTypesafe(raw = {}) {
+  const rec =
+    raw.received && typeof raw.received === "object" ? raw.received : null;
+  const ts =
+    rec?.typesafeTrace && typeof rec.typesafeTrace === "object"
+      ? rec.typesafeTrace
+      : null;
+  let mr =
+    rec?.modelRequest && typeof rec.modelRequest === "object"
+      ? rec.modelRequest
+      : raw.modelRequest && typeof raw.modelRequest === "object"
+        ? raw.modelRequest
+        : null;
+  if (
+    !mr &&
+    (raw.kind === "image" ||
+      IMAGE_MODES.has(String(raw.mode || raw.sent?.mode || "")))
+  ) {
+    const prompt = rec?.prompt || raw.sent?.prompt;
+    if (prompt || raw.sent) {
+      mr = {
+        model: rec?.model || null,
+        system: prompt ? String(prompt) : null,
+        payload: raw.sent || null,
+      };
+    }
+  }
+  let cleaned = rec && ts ? stripTypesafeTrace(rec) : rec;
+  if (cleaned && mr) {
+    cleaned = { ...cleaned };
+    delete cleaned.modelRequest;
+  }
+  const jevOnly =
+    raw.kind === "jev" ||
+    String(raw.mode || raw.sent?.mode || "") === "tag-lobby-rule";
+  let textEntry = null;
+  if (!jevOnly) {
+    textEntry = pushAiTrace({
+      ...raw,
+      received: cleaned,
+      modelRequest: mr,
+    });
+  }
+  if (ts) {
+    pushAiTrace({
+      kind: "jev",
+      mode: raw.mode || raw.sent?.mode || "co-invent",
+      modelRequest: {
+        model: ts.model || "jev-latest",
+        questions: ts.questions || null,
+        state: ts.state || null,
+      },
+      sent: {
+        model: ts.model || "jev-latest",
+        questions: ts.questions || null,
+        state: ts.state || null,
+      },
+      received: {
+        model: ts.model || null,
+        usage: ts.usage || null,
+        answers: ts.answers || null,
+      },
+      ms: Number.isFinite(Number(ts.ms)) ? Math.max(0, Math.round(Number(ts.ms))) : raw.ms,
+      source: "typesafe",
+      ok: raw.ok,
+      error: raw.error,
+      cancelled: raw.cancelled,
+    });
+  } else if (jevOnly) {
+    pushAiTrace({
+      ...raw,
+      kind: "jev",
+      received: cleaned,
+      source: raw.source || "typesafe",
+    });
+  }
+  return textEntry;
+}
+
+function stripTypesafeTrace(received) {
+  const out = { ...received };
+  delete out.typesafeTrace;
+  return out;
+}
+
+/**
+ * @param {{ filter?: "all"|"text"|"image"|"jev" }} [opts]
  */
 export function listAiTrace(opts = {}) {
   const all = entries.slice();
@@ -254,6 +355,23 @@ export function selectedAiTrace() {
   return visible.find((e) => e.id === selectedId) || visible[0] || null;
 }
 
+/**
+ * Reconstruct the full model request as plain text (prompt + payload).
+ * @param {object|null|undefined} req
+ */
+export function formatModelRequestPlain(req) {
+  if (!req || typeof req !== "object") return "";
+  const bits = [];
+  if (req.model) bits.push(`model: ${req.model}`);
+  if (req.system) bits.push(req.system);
+  if (req.questions) bits.push(formatAiTraceJson(req.questions));
+  if (req.userPrefix) bits.push(req.userPrefix);
+  if (req.payload != null) bits.push(formatAiTraceJson(req.payload));
+  if (req.state != null) bits.push(formatAiTraceJson(req.state));
+  if (req.userSuffix) bits.push(req.userSuffix);
+  return bits.filter(Boolean).join("\n\n");
+}
+
 export function formatAiTraceJson(value) {
   try {
     return JSON.stringify(value ?? null, null, 2);
@@ -270,6 +388,9 @@ export function aiTraceBadgeLabel(entry) {
   if (entry.kind === "image") {
     const src = String(entry.source || "live").trim() || "live";
     return `${mode} · ${src}`;
+  }
+  if (entry.kind === "jev") {
+    return `${mode} · jev`;
   }
   return mode;
 }

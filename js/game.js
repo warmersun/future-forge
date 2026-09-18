@@ -33,11 +33,12 @@ import {
   inventDraftFieldsForContext,
 } from "./lean-coinvent-context.js";
 import {
-  pushAiTrace,
+  pushAiTraceWithTypesafe,
   listAiTrace,
   selectAiTrace,
   selectedAiTrace,
   formatAiTraceJson,
+  formatModelRequestPlain,
   aiTraceBadgeLabel,
   subscribeAiTrace,
   setAiTraceFilter,
@@ -11015,6 +11016,7 @@ const LEAN_EVAL_MODES = new Set([
   "coach-challenge",
   "draft-challenge",
   "fill-quest-summary",
+  "tag-lobby-rule",
 ]);
 
 function slimTechForEval(t) {
@@ -11070,7 +11072,7 @@ function leanCoInventContext(mode, extra = {}) {
 
 function recordAiTrace(info) {
   if (!state.developer) return;
-  pushAiTrace(info);
+  pushAiTraceWithTypesafe(info);
 }
 
 async function apiCoInvent(mode, userContent, extra = {}) {
@@ -11112,6 +11114,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
     clientSessionId: getClientSessionId(),
     messages: [{ role: "user", content: userContent }],
     context,
+    inspect: Boolean(state.developer),
   };
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
   const elapsed = () => {
@@ -17466,6 +17469,69 @@ function updateVision(opts = {}) {
   });
 }
 
+function aiTraceSliceHtml(kind, label, text) {
+  const cls = kind === "payload" ? "is-payload" : "is-prompt";
+  const body = `<pre class="ai-trace-pre">${escapeHtml(text)}</pre>`;
+  if (kind === "prompt") {
+    return `<details class="ai-trace-slice ${cls}">
+    <summary class="ai-trace-slice-label">${escapeHtml(label)}</summary>
+    ${body}
+  </details>`;
+  }
+  return `<div class="ai-trace-slice ${cls}">
+    <div class="ai-trace-slice-label">${escapeHtml(label)}</div>
+    ${body}
+  </div>`;
+}
+
+function renderAiTraceSentHtml(entry) {
+  const req = entry?.modelRequest;
+  if (!req || typeof req !== "object") {
+    return `<pre class="ai-trace-pre" id="aitrace-sent">${escapeHtml(
+      formatAiTraceJson(entry.sent)
+    )}</pre>`;
+  }
+  const bits = [];
+  const meta = [req.model, req.reasoning ? `reasoning ${req.reasoning}` : ""]
+    .filter(Boolean)
+    .join(" · ");
+  if (meta) {
+    bits.push(`<p class="ai-trace-model-meta muted sm">${escapeHtml(meta)}</p>`);
+  }
+  bits.push(
+    `<p class="ai-trace-legend muted sm"><span class="ai-trace-legend-prompt">Prompt</span> vs <span class="ai-trace-legend-payload">context payload</span></p>`
+  );
+  if (req.system) {
+    bits.push(aiTraceSliceHtml("prompt", "System prompt", String(req.system)));
+  }
+  if (req.questions) {
+    bits.push(
+      aiTraceSliceHtml("prompt", "Questions", formatAiTraceJson(req.questions))
+    );
+  }
+  if (req.userPrefix) {
+    bits.push(aiTraceSliceHtml("prompt", "User prompt", String(req.userPrefix)));
+  }
+  if (req.payload != null) {
+    bits.push(
+      aiTraceSliceHtml(
+        "payload",
+        "Context payload",
+        formatAiTraceJson(req.payload)
+      )
+    );
+  }
+  if (req.state != null) {
+    bits.push(
+      aiTraceSliceHtml("payload", "State payload", formatAiTraceJson(req.state))
+    );
+  }
+  if (req.userSuffix) {
+    bits.push(aiTraceSliceHtml("prompt", "User prompt", String(req.userSuffix)));
+  }
+  return `<div class="ai-trace-model-req" id="aitrace-sent">${bits.join("")}</div>`;
+}
+
 function syncDeveloperAiTraceTab() {
   const tab = $("#tab-aitrace");
   if (tab) tab.hidden = !state.developer;
@@ -17483,8 +17549,16 @@ function renderAiTrace() {
   const latest = listAiTrace({ filter: "all" })[0] || null;
   $$("[data-ai-trace-filter]").forEach((btn) => {
     const key = btn.getAttribute("data-ai-trace-filter");
-    const n = key === "text" ? counts.text : key === "image" ? counts.image : counts.all;
-    const label = key === "text" ? "Text" : key === "image" ? "Images" : "All";
+    const n =
+      key === "text"
+        ? counts.text
+        : key === "image"
+          ? counts.image
+          : key === "jev"
+            ? counts.jev
+            : counts.all;
+    const label =
+      key === "text" ? "Text" : key === "image" ? "Images" : key === "jev" ? "Jev" : "All";
     btn.classList.toggle("is-active", key === filter);
     btn.setAttribute("aria-pressed", key === filter ? "true" : "false");
     btn.textContent = `${label} (${n})`;
@@ -17503,7 +17577,7 @@ function renderAiTrace() {
       list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No calls yet.</p>`;
     } else if (!rows.length) {
       list.innerHTML = `<p class="muted sm" style="padding:0.5rem">No ${
-        filter === "image" ? "image" : "text"
+        filter === "image" ? "image" : filter === "jev" ? "Jev" : "text"
       } calls in this list.</p>`;
     } else {
       list.innerHTML = rows
@@ -17529,7 +17603,7 @@ function renderAiTrace() {
       detail.innerHTML = `<p class="muted sm">No calls yet — place an idea, imagine a scene, or summon a challenger.</p>`;
     } else if (!selected) {
       detail.innerHTML = `<p class="muted sm">No ${
-        filter === "image" ? "image" : "text"
+        filter === "image" ? "image" : filter === "jev" ? "Jev" : "text"
       } calls — switch the filter to see the rest.</p>`;
     } else {
       const err = selected.error
@@ -17547,10 +17621,8 @@ function renderAiTrace() {
         err +
         preview +
         `<div class="ai-trace-block">
-          <div class="ai-trace-block-head">Sent<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
-          <pre class="ai-trace-pre" id="aitrace-sent">${escapeHtml(
-            formatAiTraceJson(selected.sent)
-          )}</pre>
+          <div class="ai-trace-block-head">Sent to model<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
+          ${renderAiTraceSentHtml(selected)}
         </div>
         <div class="ai-trace-block">
           <div class="ai-trace-block-head">Returned<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="returned">Copy</button></div>
@@ -17767,6 +17839,7 @@ function ensureCoInventor() {
       };
     },
     applyProposals: applyCoInventorProposals,
+    inspect: () => Boolean(state.developer),
     onTrace: (info) => {
       recordAiTrace({
         mode: info?.mode,
@@ -20937,7 +21010,7 @@ function bind() {
     if (!lobbyReadRuleId) return;
     commitLobby({ remove: lobbyReadRuleId });
   });
-  $("#lobby-write")?.addEventListener("click", () => {
+  $("#lobby-write")?.addEventListener("click", async () => {
     const kind = $("#lobby-kind")?.value || "policy";
     const label = String($("#lobby-label")?.value || "").trim();
     const body = String($("#lobby-body")?.value || "").trim();
@@ -20946,7 +21019,26 @@ function bind() {
       $("#lobby-label")?.focus();
       return;
     }
-    commitLobby({ write: { kind, label, body } });
+    const btn = $("#lobby-write");
+    if (btn) btn.disabled = true;
+    const write = { kind, label, body };
+    try {
+      const data = await apiCoInvent("tag-lobby-rule", "[Tag lobby rule]", {
+        kind,
+        label,
+        body,
+        globalId: state.mission?.globalId || state.mission?.global?.id,
+      });
+      if (data?.kind) write.kind = data.kind;
+      if (Array.isArray(data?.effects) && data.effects.length) {
+        write.effects = data.effects;
+      }
+    } catch {
+      /* flavor write without mechanical effects */
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+    commitLobby({ write });
   });
   $("#lobby-backdrop")?.addEventListener("click", (e) => {
     if (e.target?.id === "lobby-backdrop") closeLobbyDialog();
@@ -21220,9 +21312,15 @@ function bind() {
     const which = btn.getAttribute("data-ai-trace-copy");
     const selected = selectedAiTrace();
     const payload =
-      which === "sent" ? selected?.sent : selected?.received;
+      which === "sent"
+        ? selected?.modelRequest
+          ? formatModelRequestPlain(selected.modelRequest)
+          : formatAiTraceJson(selected?.sent)
+        : formatAiTraceJson(selected?.received);
     try {
-      await navigator.clipboard.writeText(formatAiTraceJson(payload));
+      await navigator.clipboard.writeText(
+        typeof payload === "string" ? payload : formatAiTraceJson(payload)
+      );
       flashToast("Copied.");
     } catch {
       flashToast("Could not copy.");

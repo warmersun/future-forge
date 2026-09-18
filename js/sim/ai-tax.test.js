@@ -33,6 +33,14 @@ describe("AI season tax", () => {
     assert.equal(thinkingAiApCost(taxed, "judge-challenge", 1), 1);
   });
 
+  it("tag-lobby-rule never spends AP", () => {
+    const sim = { aiTaxThisTurn: false, ap: 3 };
+    const r = applyThinkingAiCharge(sim, "tag-lobby-rule", 1);
+    assert.equal(r.cost, 0);
+    assert.equal(r.markPaid, false);
+    assert.equal(thinkingAiApCost(sim, "tag-lobby-rule", 1), 0);
+  });
+
   it("explicit tutor flag does not pay the tax", () => {
     const sim = { aiTaxThisTurn: false };
     const r = applyThinkingAiCharge(sim, "chat", 0, { tutor: true });

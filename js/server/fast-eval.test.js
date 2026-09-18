@@ -14,6 +14,7 @@ import {
   ASSESS_GROUNDING_LINE,
   CONVERGENCE_GROUNDING_LINE,
   buildFastPayload,
+  fastEvalUserParts,
   sanitizeFast,
   isFastEvalMode,
   reasoningEffortForCoInvent,
@@ -87,6 +88,19 @@ describe("FAST_EVAL_MODES", () => {
       ASSESS_FEASIBILITY_SYSTEM,
       /Different category.*not.*does not exist this year/i
     );
+  });
+});
+
+describe("fastEvalUserParts", () => {
+  it("splits prompt wrapping from the app-built JSON payload", () => {
+    const parts = fastEvalUserParts("score-pathway", {
+      pathway: { howText: "Sensors page the crew.", inventions: [] },
+      year: 2026,
+    });
+    assert.match(parts.prefix, /Score this pathway/i);
+    assert.equal(parts.suffix, "JSON only.");
+    assert.equal(parts.payload.mode, "score-pathway");
+    assert.equal(parts.payload.year, 2026);
   });
 });
 

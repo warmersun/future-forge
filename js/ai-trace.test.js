@@ -13,6 +13,8 @@ import {
   setAiTraceFilter,
   aiTraceFilter,
   aiTraceFilterCounts,
+  pushAiTraceWithTypesafe,
+  formatModelRequestPlain,
 } from "./ai-trace.js";
 
 const TINY_PNG =
@@ -130,6 +132,92 @@ describe("ai-trace", () => {
 
     setAiTraceFilter("all");
     assert.equal(listAiTrace().length, 2);
+  });
+
+  it("splits a TypeSafe overlay into a Jev row and keeps Grok as Text", () => {
+    pushAiTraceWithTypesafe({
+      mode: "score-pathway",
+      sent: { mode: "score-pathway" },
+      received: {
+        source: "ai",
+        crisisDelta: { local: -1 },
+        typesafeTrace: {
+          model: "jev-1.13.0",
+          usage: { input_tokens: 10, output_tokens: 0 },
+          answers: { flags: { purePolicy: false } },
+          state: { pathway: { howText: "Sensors page the crew." } },
+        },
+      },
+      ms: 800,
+      ok: true,
+    });
+    const counts = aiTraceFilterCounts();
+    assert.equal(counts.all, 2);
+    assert.equal(counts.text, 1);
+    assert.equal(counts.jev, 1);
+    assert.equal(counts.image, 0);
+    const text = listAiTrace({ filter: "text" })[0];
+    assert.equal(text.kind, "text");
+    assert.equal(text.received.typesafeTrace, undefined);
+    assert.equal(text.received.crisisDelta.local, -1);
+    const jev = listAiTrace({ filter: "jev" })[0];
+    assert.equal(jev.kind, "jev");
+    assert.equal(jev.source, "typesafe");
+    assert.equal(jev.received.model, "jev-1.13.0");
+    assert.equal(jev.received.answers.flags.purePolicy, false);
+    assert.equal(aiTraceBadgeLabel(jev), "score-pathway · jev");
+    assert.equal(aiTraceKind({ source: "typesafe", mode: "chat" }), "jev");
+    assert.equal(aiTraceKind({ mode: "tag-lobby-rule" }), "jev");
+  });
+
+  it("keeps a split Grok modelRequest on the Text row", () => {
+    pushAiTraceWithTypesafe({
+      mode: "score-pathway",
+      sent: { mode: "score-pathway" },
+      received: {
+        source: "ai",
+        crisisDelta: { local: 0 },
+        modelRequest: {
+          model: "grok-4.6",
+          system: "You score ONE pathway.",
+          userPrefix: "Score this pathway (JSON state):",
+          payload: { year: 2026 },
+          userSuffix: "JSON only.",
+        },
+      },
+      ok: true,
+    });
+    const text = listAiTrace({ filter: "text" })[0];
+    assert.equal(text.received.modelRequest, undefined);
+    assert.equal(text.modelRequest.system, "You score ONE pathway.");
+    assert.equal(text.modelRequest.payload.year, 2026);
+    assert.match(formatModelRequestPlain(text.modelRequest), /JSON only/);
+    assert.match(formatModelRequestPlain(text.modelRequest), /You score ONE pathway/);
+  });
+
+  it("shows Imagine prompt wrapping vs HTTP payload on image rows", () => {
+    pushAiTraceWithTypesafe({
+      kind: "image",
+      mode: "vision",
+      sent: { place: "Khetpur Flats", year: 2026 },
+      received: {
+        ok: true,
+        model: "grok-imagine-image",
+        prompt: "Photorealistic documentary still…",
+        modelRequest: {
+          model: "grok-imagine-image",
+          system: "Photorealistic documentary still, 16:9, single frame.",
+          payload: { happening: "Meena at window three.", place: "Khetpur Flats" },
+        },
+      },
+      source: "live",
+      ok: true,
+    });
+    const img = listAiTrace({ filter: "image" })[0];
+    assert.equal(img.kind, "image");
+    assert.match(img.modelRequest.system, /Photorealistic documentary still/);
+    assert.equal(img.modelRequest.payload.place, "Khetpur Flats");
+    assert.equal(img.received.modelRequest, undefined);
   });
 
   it("does not steal selection when a hidden kind arrives", () => {

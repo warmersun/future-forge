@@ -54,6 +54,7 @@ export class CoInventor {
    * @param {(mode: string, ok: boolean) => void} [opts.afterRequest] — cleanup after AI call
    * @param {(body: object) => Promise<object>} [opts.transport] — replace fetch /api/co-invent (e.g. room WS)
    * @param {(info: object) => void} [opts.onTrace] — developer inspect: sent/received payload
+   * @param {() => boolean} [opts.inspect] — when true, server returns the full model request
    * @param {boolean} [opts.showQuickActions=true] — invent chips (spark, stack, …); off on Challenge
    * @param {"hex"|"legacy"} [opts.surface="legacy"] — hex workshop vs essay/stack apply
    * @param {string} [opts.placeholder] — compose box placeholder
@@ -72,6 +73,7 @@ export class CoInventor {
     this.afterRequest = opts.afterRequest || null;
     this.transport = opts.transport || null;
     this.onTrace = opts.onTrace || null;
+    this.inspect = opts.inspect || null;
     this.showQuickActions = opts.showQuickActions !== false;
     this.surface = opts.surface === "hex" ? "hex" : "legacy";
     this.placeholder =
@@ -546,6 +548,7 @@ export class CoInventor {
         messages: [
           ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
         ].map((m) => ({ role: m.role, content: m.content })),
+        inspect: Boolean(this.inspect?.()),
         context: {
           challenge: ctx.challenge
             ? {

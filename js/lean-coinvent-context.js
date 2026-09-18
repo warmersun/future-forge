@@ -70,6 +70,17 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     };
   }
 
+  if (mode === "tag-lobby-rule") {
+    return {
+      year,
+      place,
+      kind: rest.kind || "policy",
+      label: rest.label || "",
+      body: rest.body || "",
+      globalId: rest.globalId || null,
+    };
+  }
+
   if (mode === "assess-feasibility") {
     const ids = rest.selectedTechIds || [...(snap.selectedTechIds || [])];
     const techs =

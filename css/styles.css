@@ -8274,6 +8274,80 @@ button.linkish:hover {
   border-color: rgba(167, 139, 250, 0.45);
 }
 
+.ai-trace-legend {
+  margin: 0 0 0.35rem;
+}
+
+.ai-trace-legend-prompt {
+  color: #fbbf24;
+}
+
+.ai-trace-legend-payload {
+  color: var(--accent, #38bdf8);
+}
+
+.ai-trace-model-meta {
+  margin: 0 0 0.35rem;
+}
+
+.ai-trace-model-req {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ai-trace-slice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ai-trace-slice.is-prompt {
+  border-left: 3px solid #fbbf24;
+}
+
+.ai-trace-slice.is-payload {
+  border-left: 3px solid var(--accent, #38bdf8);
+}
+
+.ai-trace-slice-label {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+details.ai-trace-slice > summary.ai-trace-slice-label {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+details.ai-trace-slice > summary.ai-trace-slice-label::-webkit-details-marker {
+  display: none;
+}
+
+details.ai-trace-slice > summary.ai-trace-slice-label::before {
+  content: "▸";
+  color: #fbbf24;
+  font-size: 0.7rem;
+}
+
+details.ai-trace-slice[open] > summary.ai-trace-slice-label::before {
+  content: "▾";
+}
+
+.ai-trace-slice.is-prompt .ai-trace-pre {
+  color: #fbbf24;
+}
+
+.ai-trace-slice.is-payload .ai-trace-pre {
+  color: var(--accent, #38bdf8);
+}
+
 .ai-trace-preview {
   display: block;
   width: 100%;

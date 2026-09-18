@@ -5,6 +5,8 @@ import {
   hasShareBridgeClaim,
   hasEvalOverrideClaim,
   hasCapabilityMechanism,
+  detectHonestyFlagsRegex,
+  honestyFlagsUncertain,
   coordinationLampCap,
   applyPolicyHonesty,
   applyCoordinationCap,
@@ -113,6 +115,85 @@ describe("coordinationLampCap", () => {
       howText: "Leak sensors page the pump crew before the tank runs dry.",
     });
     assert.equal(cap, null);
+  });
+});
+
+describe("detectHonestyFlagsRegex", () => {
+  it("mirrors the named regex helpers", () => {
+    const statute = detectHonestyFlagsRegex(
+      "The council passes universal basic income this year."
+    );
+    assert.equal(statute.source, "regex");
+    assert.equal(statute.purePolicy, true);
+    assert.equal(statute.shareBridge, false);
+    const share = detectHonestyFlagsRegex(
+      "Sorter surplus hits the crew wallet this Friday."
+    );
+    assert.equal(share.shareBridge, true);
+    assert.equal(share.purePolicy, false);
+  });
+});
+
+describe("injected honesty flags", () => {
+  it("clamps a paraphrase share-bridge that regex would miss when flags say yes", () => {
+    const how = "Maya gets Friday cash from the night's sort so rent clears.";
+    assert.equal(hasShareBridgeClaim(how), false);
+    const r = applyPolicyHonesty({
+      globalId: "automation",
+      techIds: ["robots"],
+      howText: how,
+      flags: {
+        source: "typesafe",
+        mechanism: true,
+        purePolicy: false,
+        shareBridge: true,
+        evalOverride: false,
+      },
+      crisisDelta: { local: -1, global: -1, support: -1 },
+    });
+    assert.equal(r.tag, null);
+    assert.equal(r.crisisDelta.global, -1);
+    assert.equal(r.crisisDelta.support, -1);
+  });
+
+  it("does not treat an uncertain share as a missing share", () => {
+    const r = applyPolicyHonesty({
+      globalId: "automation",
+      techIds: ["robots"],
+      howText: "Aisle robots finish the easy shelves so the remaining cases move.",
+      flags: {
+        source: "typesafe",
+        mechanism: true,
+        purePolicy: false,
+        shareBridge: null,
+        evalOverride: false,
+      },
+      crisisDelta: { local: -1, global: -1, support: -1 },
+    });
+    assert.equal(r.tag, null);
+    assert.equal(r.crisisDelta.global, -1);
+    assert.equal(
+      honestyFlagsUncertain(r.flags, { share: true }),
+      true
+    );
+  });
+
+  it("still zeros a statute when TypeSafe flags purePolicy", () => {
+    const r = applyPolicyHonesty({
+      globalId: "water",
+      techIds: ["iot"],
+      howText: "Neighbors agree a water compact this year.",
+      flags: {
+        source: "typesafe",
+        mechanism: false,
+        purePolicy: true,
+        shareBridge: false,
+        evalOverride: false,
+      },
+      crisisDelta: { local: -1, global: -1, support: -1 },
+    });
+    assert.equal(r.tag, "pure-policy");
+    assert.equal(r.crisisDelta.local, 0);
   });
 });
 

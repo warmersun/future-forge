@@ -445,7 +445,7 @@ Browser
 
 **Why the host cannot be bypassed (for Cloud catalog):** the gated URL is useless without the secret. The secret never ships in `js/`. Leaking it is an ops incident (rotate), not “inspect element.” This is a **shared secret**, not per-user crypto — good enough to keep `aiTutorContext` off the public CDN.
 
-**Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY`. They never call the gated Site. They incur their own AI cost. That is the point.
+**Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY` (and optional `FF_TYPESAFE_API_KEY` for Jev judges). They never call the gated Site. They incur their own AI cost. That is the point.
 
 **Extend the host later** without moving files: Billing `has()`, gallery, extra quotas. Friends WS stays on **game**. One portal process, one Neon, one gated-catalog secret.
 
@@ -458,7 +458,7 @@ Browser
 Render **Web Service** (see `render.yaml`):
 
 1. Build `npm install`. Start `npm run portal`. Health `GET /api/health`.  
-2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY`.** Render injects `PORT`.  
+2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY` or `FF_TYPESAFE_API_KEY`.** Render injects `PORT`.  
 3. Optional: on warmersun.com, **`/cloud` → 302** to the game; Sign in stays **`https://cloud.warmersun.com/signin`**.
 
 Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).

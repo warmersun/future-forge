@@ -638,7 +638,14 @@ export function normalizePathwayScore(raw) {
       reason: String(row?.reason || "").slice(0, 280),
     };
   }
-  return { crisisDelta, crisisReasons, concerns };
+  return {
+    crisisDelta,
+    crisisReasons,
+    concerns,
+    ...(src.honestyFlags ? { honestyFlags: src.honestyFlags } : {}),
+    ...(src.honestyUncertain ? { honestyUncertain: true } : {}),
+    ...(src.scoreUncertain ? { scoreUncertain: true } : {}),
+  };
 }
 
 /**
@@ -657,11 +664,16 @@ export function blendPathwayScore(ai, local) {
     String(aiReasons[role] || "").trim()
   );
   const hasConcerns = Object.keys(ai?.concerns || {}).length > 0;
+  const honestyPass = {};
+  if (ai?.honestyFlags) honestyPass.honestyFlags = ai.honestyFlags;
+  if (ai?.honestyUncertain) honestyPass.honestyUncertain = true;
+  if (ai?.scoreUncertain) honestyPass.scoreUncertain = true;
   if (cdEmpty && !hasConcerns && !hasReasons) {
     return {
       crisisDelta: localDelta,
       crisisReasons: { ...localReasons },
       concerns: { ...(local?.concerns || {}), ...(ai?.concerns || {}) },
+      ...honestyPass,
     };
   }
   const crisisReasons = emptyCrisisReasons();
@@ -677,6 +689,7 @@ export function blendPathwayScore(ai, local) {
     crisisDelta: cd,
     crisisReasons,
     concerns: { ...(local?.concerns || {}), ...(ai?.concerns || {}) },
+    ...honestyPass,
   };
 }
 

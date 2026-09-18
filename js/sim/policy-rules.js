@@ -291,6 +291,13 @@ export function writeLobbyRule(rules, draft = {}) {
   if (live.some((r) => r.id === id)) {
     id = slugRuleId(`${id}-${live.length + 1}`) || `${id}-${live.length + 1}`;
   }
+  const fx = [];
+  if (Array.isArray(draft.effects)) {
+    for (const item of draft.effects) {
+      const id = String(item || "").trim();
+      if (EFFECT_SET.has(id) && !fx.includes(id)) fx.push(id);
+    }
+  }
   const rule = {
     id,
     kind,
@@ -300,6 +307,7 @@ export function writeLobbyRule(rules, draft = {}) {
     status: "active",
     year,
   };
+  if (fx.length) rule.effects = fx;
   live.push(rule);
   return { ok: true, rules: live, rule };
 }

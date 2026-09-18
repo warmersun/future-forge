@@ -120,6 +120,26 @@ describe("leanCoInventContext other lean modes", () => {
   });
 });
 
+describe("leanCoInventContext tag-lobby-rule", () => {
+  it("sends kind, label, body, and globalId without leftover invent drafts", () => {
+    const ctx = leanCoInventContext(
+      "tag-lobby-rule",
+      {
+        kind: "ban",
+        label: "No locked trauma scores",
+        body: "Ramirez can still fire an override.",
+        globalId: "rogue-si",
+      },
+      leftoverSnap
+    );
+    assert.equal(ctx.kind, "ban");
+    assert.equal(ctx.label, "No locked trauma scores");
+    assert.equal(ctx.globalId, "rogue-si");
+    assert.equal(Object.hasOwn(ctx, "inventionName"), false);
+    assert.ok(!JSON.stringify(ctx).includes("LeftoverName"));
+  });
+});
+
 describe("inventDraftFieldsForContext", () => {
   it("omits name/how/impact keys on hex instead of sending null", () => {
     const hex = inventDraftFieldsForContext({

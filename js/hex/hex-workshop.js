@@ -1581,7 +1581,10 @@ export function createHexWorkshop(api) {
     const keepCrisis = Boolean(opts.keepCrisisDelta);
     api.grantPathwayEase?.({
       crisisDelta: keepCrisis ? null : score?.crisisDelta || emptyCrisisDelta(),
-      skip: keepCrisis,
+      skip:
+        keepCrisis ||
+        Boolean(score?.honestyUncertain) ||
+        Boolean(score?.scoreUncertain),
     });
     showScoreSettleChips(fp, {
       keepCrisisDelta: keepCrisis,
@@ -1848,7 +1851,11 @@ export function createHexWorkshop(api) {
               heuristicPathwayScore(inventions, year, heurOpts)
             ),
             inventions,
-            heurOpts
+            {
+              ...heurOpts,
+              howText: islandHowForAi(b, inventions),
+              flags: data.honestyFlags,
+            }
           );
         } catch (e) {
           if (isAbortError(e) || signal?.aborted) return;

@@ -91,6 +91,64 @@ export function hasEvalOverrideClaim(howText) {
   return EVAL_OVERRIDE_RE.test(String(howText || ""));
 }
 
+/**
+ * Sync regex detector. TypeSafe fills the same shape with true/false/null.
+ * @param {string} howText
+ * @returns {{
+ *   source: "regex",
+ *   mechanism: boolean,
+ *   purePolicy: boolean,
+ *   shareBridge: boolean,
+ *   evalOverride: boolean,
+ *   uncertain: Record<string, boolean>,
+ * }}
+ */
+export function detectHonestyFlagsRegex(howText) {
+  const how = String(howText || "");
+  return {
+    source: "regex",
+    mechanism: hasCapabilityMechanism(how),
+    purePolicy: isPurePolicyInvent(how),
+    shareBridge: hasShareBridgeClaim(how),
+    evalOverride: hasEvalOverrideClaim(how),
+    uncertain: {},
+  };
+}
+
+/**
+ * @param {object|null|undefined} flags
+ * @returns {boolean}
+ */
+function isTrue(flagsValue) {
+  return flagsValue === true;
+}
+
+/**
+ * @param {object|null|undefined} flagsValue
+ * @returns {boolean}
+ */
+function isFalse(flagsValue) {
+  return flagsValue === false;
+}
+
+/**
+ * Used-branch uncertainty: statute always; share/eval only when the theme needs them.
+ * @param {object|null|undefined} flags
+ * @param {{ share?: boolean, eval?: boolean }} [needs]
+ */
+export function honestyFlagsUncertain(flags, needs = {}) {
+  if (!flags) return false;
+  if (flags.purePolicy == null) return true;
+  if (needs.share && flags.shareBridge == null) return true;
+  if (needs.eval && flags.evalOverride == null) return true;
+  return false;
+}
+
+function resolveHonestyFlags(opts = {}) {
+  if (opts.flags && typeof opts.flags === "object") return opts.flags;
+  return detectHonestyFlagsRegex(opts.howText);
+}
+
 function techIdsOf(list) {
   return (list || []).map((t) => (typeof t === "string" ? t : t?.techId || t?.id)).filter(Boolean);
 }
@@ -101,14 +159,14 @@ function techIdsOf(list) {
  * @returns {{ level: "red"|"yellow", note: string } | null}
  */
 export function coordinationLampCap(opts = {}) {
-  const how = String(opts.howText || "");
   const ids = techIdsOf(opts.techIds);
   const needs = honestyNeeds({
     globalId: opts.globalId,
     rules: opts.rules,
   });
+  const flags = resolveHonestyFlags(opts);
 
-  if (isPurePolicyInvent(how)) {
+  if (isTrue(flags.purePolicy)) {
     return {
       level: "red",
       note: "A law or ban is not an invent — name what becomes abundant here, with which capability, this year.",
@@ -118,7 +176,7 @@ export function coordinationLampCap(opts = {}) {
   if (
     needs.share &&
     ids.some((id) => DISPLACEMENT_TECH_IDS.has(id)) &&
-    !hasShareBridgeClaim(how)
+    isFalse(flags.shareBridge)
   ) {
     return {
       level: "red",
@@ -129,7 +187,7 @@ export function coordinationLampCap(opts = {}) {
   if (
     needs.eval &&
     ids.some((id) => HIGH_STAKES_AI_TECH_IDS.has(id)) &&
-    !hasEvalOverrideClaim(how)
+    isFalse(flags.evalOverride)
   ) {
     return {
       level: "red",
@@ -151,6 +209,7 @@ export function applyCoordinationCap(result, opts = {}) {
     techIds: opts.techs,
     howText: [opts.inventionHow, opts.inventionImpact].filter(Boolean).join("\n"),
     rules: opts.rules || opts.mission?.rules,
+    flags: opts.flags,
   });
   if (!cap || !result) return result;
   const level = worseLevel(result.level, cap.level);
@@ -177,19 +236,21 @@ function cloneReasons(reasons) {
 /**
  * Clamp crisisDelta so a statute cannot ease meters, and unpaired stacks
  * cannot ease the root-cause meter (and may inflame support).
- * @param {{ globalId?: string, techIds?: string[], howText?: string, rules?: object[], crisisDelta?: object, crisisReasons?: object }} opts
+ * Optional `flags` (true/false/null) replace regex detection. Null = uncertain:
+ * that branch does not clamp (not treated as a known violation).
+ * @param {{ globalId?: string, techIds?: string[], howText?: string, rules?: object[], crisisDelta?: object, crisisReasons?: object, flags?: object }} opts
  */
 export function applyPolicyHonesty(opts = {}) {
-  const how = String(opts.howText || "");
   const ids = techIdsOf(opts.techIds);
   const needs = honestyNeeds({
     globalId: opts.globalId,
     rules: opts.rules,
   });
+  const flags = resolveHonestyFlags(opts);
   const crisisDelta = cloneDelta(opts.crisisDelta);
   const crisisReasons = cloneReasons(opts.crisisReasons);
 
-  if (isPurePolicyInvent(how)) {
+  if (isTrue(flags.purePolicy)) {
     crisisDelta.local = Math.max(crisisDelta.local, 0);
     crisisDelta.global = Math.max(crisisDelta.global, 0);
     crisisDelta.support = Math.max(crisisDelta.support, 0);
@@ -199,13 +260,13 @@ export function applyPolicyHonesty(opts = {}) {
       "Passing a rule does not change the driver unless a mechanism in this place makes something abundant.";
     crisisReasons.support =
       "A statute without a fieldable pathway does not earn buy-in on the ground.";
-    return { crisisDelta, crisisReasons, tag: "pure-policy" };
+    return { crisisDelta, crisisReasons, tag: "pure-policy", flags };
   }
 
   if (
     needs.share &&
     ids.some((id) => DISPLACEMENT_TECH_IDS.has(id)) &&
-    !hasShareBridgeClaim(how)
+    isFalse(flags.shareBridge)
   ) {
     crisisDelta.global = Math.max(crisisDelta.global, 0);
     crisisReasons.global =
@@ -215,13 +276,13 @@ export function applyPolicyHonesty(opts = {}) {
       crisisReasons.support =
         "Faster machines without a share for the crew inflame rent and dignity.";
     }
-    return { crisisDelta, crisisReasons, tag: "no-share" };
+    return { crisisDelta, crisisReasons, tag: "no-share", flags };
   }
 
   if (
     needs.eval &&
     ids.some((id) => HIGH_STAKES_AI_TECH_IDS.has(id)) &&
-    !hasEvalOverrideClaim(how)
+    isFalse(flags.evalOverride)
   ) {
     crisisDelta.global = Math.max(crisisDelta.global, 0);
     crisisReasons.global =
@@ -231,36 +292,55 @@ export function applyPolicyHonesty(opts = {}) {
       crisisReasons.support =
         "Liability and the board treat a locked model as safer than a reachable override.";
     }
-    return { crisisDelta, crisisReasons, tag: "no-eval" };
+    return { crisisDelta, crisisReasons, tag: "no-eval", flags };
   }
 
-  return { crisisDelta, crisisReasons, tag: null };
+  return { crisisDelta, crisisReasons, tag: null, flags };
 }
 
 /**
  * Clamp a normalized / blended pathway score in place (idempotent).
  * @param {object} score
  * @param {object[]} inventions
- * @param {{ globalId?: string, global?: *, mission?: *, rules?: object[] }} [opts]
+ * @param {{ globalId?: string, global?: *, mission?: *, rules?: object[], howText?: string, flags?: object }} [opts]
  */
 export function clampPathwayScore(score, inventions = [], opts = {}) {
   if (!score || typeof score !== "object") return score;
-  const howText = inventions
-    .map((n) => String(n?.howText || "").trim())
-    .filter(Boolean)
-    .join("\n");
+  const howText =
+    opts.howText != null
+      ? String(opts.howText)
+      : inventions
+          .map((n) => String(n?.howText || "").trim())
+          .filter(Boolean)
+          .join("\n");
+  const globalId = resolveGlobalId(opts.globalId || opts.global, opts.mission);
+  const rules = opts.rules || opts.mission?.rules;
+  const flags = opts.flags || detectHonestyFlagsRegex(howText);
+  const needs = honestyNeeds({ globalId, rules });
   const applied = applyPolicyHonesty({
-    globalId: resolveGlobalId(opts.globalId || opts.global, opts.mission),
+    globalId,
     techIds: inventions,
     howText,
-    rules: opts.rules || opts.mission?.rules,
+    rules,
+    flags,
     crisisDelta: score.crisisDelta,
     crisisReasons: score.crisisReasons,
   });
-  if (!applied.tag) return score;
-  return {
-    ...score,
-    crisisDelta: applied.crisisDelta,
-    crisisReasons: applied.crisisReasons,
-  };
+  const uncertain = honestyFlagsUncertain(flags, needs);
+  if (!applied.tag && !uncertain && !opts.flags && !score.scoreUncertain) {
+    return score;
+  }
+  const out = applied.tag
+    ? {
+        ...score,
+        crisisDelta: applied.crisisDelta,
+        crisisReasons: applied.crisisReasons,
+      }
+    : { ...score };
+  if (opts.flags || uncertain) {
+    out.honestyFlags = flags;
+    out.honestyUncertain = uncertain;
+  }
+  if (score.scoreUncertain) out.scoreUncertain = true;
+  return out;
 }

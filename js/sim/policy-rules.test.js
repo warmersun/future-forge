@@ -104,6 +104,18 @@ describe("lobby write / suspend", () => {
     assert.equal(w.rule.effects, undefined);
   });
 
+  it("copies valid lobby effects onto a write", () => {
+    const w = writeLobbyRule([], {
+      kind: "policy",
+      label: "Crew cut on the night sort",
+      body: "Sorter surplus hits the crew wallet every Friday.",
+      year: 2026,
+      effects: ["share-required", "backlash", "nope"],
+    });
+    assert.equal(w.ok, true);
+    assert.deepEqual(w.rule.effects, ["share-required", "backlash"]);
+  });
+
   it("suspends backlash without dropping share honesty on automation", () => {
     const live = seedLiveRules(
       [

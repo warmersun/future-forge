@@ -648,8 +648,21 @@ export function reasoningEffortForCoInvent(opts = {}) {
   return undefined;
 }
 
-export function fastEvalUserContent(mode, context) {
+/**
+ * Split the fast-eval user message into prompt wrapping vs app-built JSON.
+ * @param {string} mode
+ * @param {object} [context]
+ */
+export function fastEvalUserParts(mode, context = {}) {
   const spec = FAST_EVAL_MODES[mode];
-  const prefix = spec?.userPrefix || "JSON state:";
-  return `${prefix}\n${JSON.stringify(buildFastPayload(mode, context))}\n\nJSON only.`;
+  return {
+    prefix: spec?.userPrefix || "JSON state:",
+    payload: buildFastPayload(mode, context),
+    suffix: "JSON only.",
+  };
+}
+
+export function fastEvalUserContent(mode, context) {
+  const { prefix, payload, suffix } = fastEvalUserParts(mode, context);
+  return `${prefix}\n${JSON.stringify(payload)}\n\n${suffix}`;
 }

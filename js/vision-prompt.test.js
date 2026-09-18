@@ -2,6 +2,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   composeGeneratePrompt,
+  composeGeneratePromptParts,
+  ideaImagePromptParts,
+  imageModelRequest,
   decideShot,
   visionFingerprint,
   visionGeometryHappening,
@@ -216,5 +219,33 @@ describe("vision pathways signature", () => {
     };
     const shot = decideShot(body, { dataUrl: "data:image/jpeg;base64,xx" }, world);
     assert.equal(shot.reason, "Learner story frames the shot");
+  });
+});
+
+describe("Imagine prompt inspect parts", () => {
+  it("splits generate wrapping from place/shot payload", () => {
+    const world = {
+      place: "Portside Ward",
+      title: "Portside floods",
+      visualSetting: "Low streets flood after storms.",
+      year: 2026,
+    };
+    const shot = { happening: "Crews check the pump house.", subjects: ["pump"], peopleMood: "neutral" };
+    const parts = composeGeneratePromptParts(world, shot, "present");
+    const joined = composeGeneratePrompt(world, shot, "present");
+    assert.match(parts.system, /Photorealistic documentary still/);
+    assert.equal(parts.payload.happening.includes("pump house"), true);
+    assert.equal(joined, composeGeneratePrompt(world, shot, "present"));
+    assert.match(joined, /Photorealistic documentary still/);
+    assert.match(joined, /pump house/);
+    const req = imageModelRequest("grok-imagine-image", parts);
+    assert.equal(req.model, "grok-imagine-image");
+    assert.equal(req.payload.place, "Portside Ward");
+  });
+
+  it("splits idea-image wrap from scene", () => {
+    const parts = ideaImagePromptParts("idea", "A kiosk OCR-reads the harvest book.");
+    assert.match(parts.system, /Photoreal 4:3/);
+    assert.equal(parts.payload.scene.includes("kiosk"), true);
   });
 });

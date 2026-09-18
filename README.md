@@ -8,6 +8,8 @@ Future Forge is an inventing practice. You pick a global problem, land in a conc
 
 **Hex invent surface:** [docs/workshop-hex-invent-surface.md](docs/workshop-hex-invent-surface.md)
 
+**Jev judges (TypeSafe):** lamps, Budget honesty, challenge grades, chat stack applies, and lobby weather — [docs/typesafe-jev.md](docs/typesafe-jev.md)
+
 ![Future Forge workshop — invent with emerging tech, feasibility light, and AI co-inventor](docs/future-forge-workshop.jpg)
 
 *Invent screen: emTech tray, hex pathway board, crisis/concern traffic lights, future vision, and AI co-inventor.*
@@ -33,8 +35,9 @@ Future Forge is an inventing practice. You pick a global problem, land in a conc
 - Optional but recommended for full AI + vision:
   - **SuperGrok** session via Grok CLI (`grok login`), **or**
   - An **xAI API key** (`FF_XAI_API_KEY`)
+- Optional **TypeSafe (Jev)** key (`FF_TYPESAFE_API_KEY`) so pathway scores, challenge grades, chat applies, and lobby weather are typed judgments instead of parsed Grok JSON — [docs/typesafe-jev.md](docs/typesafe-jev.md)
 
-Without either auth path, the practice still runs: static UI + a **local** co-inventor fallback (weaker, no live Grok).
+Without xAI auth, the practice still runs: static UI + a **local** co-inventor fallback (weaker, no live Grok). Without TypeSafe, those judges stay on Grok JSON + regex.
 
 ---
 
@@ -58,6 +61,7 @@ Open **http://127.0.0.1:8765**
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
 | `npm run economy:quest -- path.json` | Simulate four players; say if the Quest is too easy / too hard / tight ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)) |
 | `npm run author:quest -- --tech gene-sequencing --local-only` | Scaffold a spotlight Quest tile |
+| `npm run honesty:typesafe` / `pathway:typesafe` / `judges:typesafe` / `calls:typesafe` | Live Jev fixture evals (needs `FF_TYPESAFE_API_KEY`) |
 
 ### Spotlight / External Quest tiles
 
@@ -111,6 +115,7 @@ Without these keys, `npm run portal` has no Sign in page. `npm start` (**game**)
 FF_PORT=8765
 FF_XAI_MODEL=grok-4.6
 # FF_XAI_API_KEY=xai-...   # see auth below
+# FF_TYPESAFE_API_KEY=apikey_...  # Jev judges; see docs/typesafe-jev.md
 # FF_TTS_VOICE=eve         # optional default for Read out loud
 ```
 
@@ -127,7 +132,9 @@ The Node server serves static files and exposes:
 - `GET /api/me` — **portal** only: Clerk learner identity (unsigned play still works)  
 - `GET /api/usage` — AI token / image / TTS / session rollups (**loopback or `FF_ADMIN_TOKEN` only**)
 
-**AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) are resolved **on game** (`npm start`) and never go to the browser. **portal** does not use them. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
+**AI provider credentials** (SuperGrok / `FF_XAI_API_KEY`) and **TypeSafe** (`FF_TYPESAFE_API_KEY`) are resolved **on game** (`npm start`) and never go to the browser. **portal** does not use them. **Learner accounts** use a Clerk session JWT in `Authorization: Bearer` when the player is signed in.
+
+Grok still drafts story and sparks. Jev returns typed yes/no and closed-set answers for scores, grades, stack applies, and lobby effects — details in [docs/typesafe-jev.md](docs/typesafe-jev.md).
 
 ### Server hardening (static, rates, admin)
 

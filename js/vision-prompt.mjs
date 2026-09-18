@@ -763,7 +763,13 @@ export async function resolveShot(
   return taggedShot(body, directed || heuristic);
 }
 
-export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
+/**
+ * Split Imagine generate wrapping (style/tone) from the place/shot payload.
+ * @param {object} worldCard
+ * @param {object} shot
+ * @param {string} [stageId]
+ */
+export function composeGeneratePromptParts(worldCard, shot, stageId = "present") {
   const tone = STAGE_TONE[stageId] || STAGE_TONE.present;
   const faces = visionPeopleMoodLine(shot.peopleMood || "neutral");
   const subjects =
@@ -771,24 +777,59 @@ export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
       ? `Visible details: ${shot.subjects.map((s) => clipText(s, 40)).join("; ")}.`
       : "";
   const titleLine = worldCard.title ? `Mission context: ${worldCard.title}.` : "";
+  return {
+    system:
+      "Photorealistic documentary still, 16:9, single frame, no text, no logos, no watermark, no UI.",
+    userPrefix: "SETTING (this place only):",
+    payload: {
+      visualSetting: worldCard.visualSetting,
+      titleLine,
+      happening: clipText(shot.happening, 560),
+      subjectsLine: subjects,
+      place: worldCard.place || null,
+      year: worldCard.year || null,
+      title: worldCard.title || null,
+    },
+    userSuffix: `Tone: ${tone}; ${faces} human-scale, specific local reality.`,
+  };
+}
 
+export function composeGeneratePrompt(worldCard, shot, stageId = "present") {
+  const p = composeGeneratePromptParts(worldCard, shot, stageId);
   return [
-    "Photorealistic documentary still, 16:9, single frame, no text, no logos, no watermark, no UI.",
+    p.system,
     "",
-    "SETTING (this place only):",
-    worldCard.visualSetting,
-    titleLine,
+    p.userPrefix,
+    p.payload.visualSetting,
+    p.payload.titleLine,
     "",
     "WHAT IS HAPPENING IN THIS FRAME:",
-    clipText(shot.happening, 560),
-    subjects,
+    p.payload.happening,
+    p.payload.subjectsLine,
     "",
-    `Tone: ${tone}; ${faces} human-scale, specific local reality.`,
+    p.userSuffix,
   ]
     .filter((line) => line !== undefined && line !== null)
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * @param {object} worldCard
+ * @param {object} shot
+ */
+export function composeEditPromptParts(worldCard, shot) {
+  return {
+    system:
+      "Edit this image to a later moment in the same place and camera view. Keep the same terrain, sky, and landmarks. Photorealistic, no text, no logos.",
+    payload: {
+      place: worldCard.place || null,
+      happening: clipText(shot.happening, 400),
+      peopleMood: shot.peopleMood || "neutral",
+    },
+    userSuffix: visionPeopleMoodLine(shot.peopleMood || "neutral"),
+  };
 }
 
 export function composeEditPrompt(worldCard, shot) {
@@ -803,6 +844,51 @@ export function composeEditPrompt(worldCard, shot) {
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/**
+ * Inspect blob for Imagine — same shape as Grok modelRequest.
+ * @param {string} model
+ * @param {{ system?: string, userPrefix?: string, payload?: object, userSuffix?: string }} parts
+ */
+export function imageModelRequest(model, parts = {}) {
+  return {
+    model: model || null,
+    system: parts.system || null,
+    userPrefix: parts.userPrefix || null,
+    payload: parts.payload || null,
+    userSuffix: parts.userSuffix || null,
+  };
+}
+
+export function ideaImagePromptParts(kind, rawPrompt) {
+  const k = String(kind || "idea").toLowerCase();
+  const scene = String(rawPrompt || "").trim();
+  const wraps =
+    k === "challenger"
+      ? [
+          "Photoreal 4:3 documentary still of a local pressure or hard question facing a community pathway.",
+          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+        ]
+      : k === "brief"
+        ? [
+            "Photoreal cinematic 16:9 documentary still of a lived local scene for a design-challenge story.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+          ]
+        : [
+            "Photoreal 4:3 documentary still of a local emerging-tech application.",
+            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
+          ];
+  const fallback =
+    k === "challenger"
+      ? "People and place under a concrete social, ethical, or natural-world pressure."
+      : k === "brief"
+        ? "A specific person in a specific place under concrete tension."
+        : "People using a practical tool in a specific neighborhood.";
+  return {
+    system: wraps.join(" "),
+    payload: { kind: k === "challenger" || k === "brief" ? k : "idea", scene: scene || fallback },
+  };
 }
 
 /**

@@ -22,7 +22,11 @@ import {
   buildWorldCard,
   resolveShot,
   composeGeneratePrompt,
+  composeGeneratePromptParts,
   composeEditPrompt,
+  composeEditPromptParts,
+  imageModelRequest,
+  ideaImagePromptParts,
   assertCleanImagePrompt,
   visionFingerprint,
   shotNarrativeKey,
@@ -82,11 +86,14 @@ import {
 import {
   FAST_EVAL_MODES,
   isFastEvalMode,
-  fastEvalUserContent,
+  fastEvalUserParts,
   sanitizeFast,
   reasoningEffortForCoInvent,
 } from "./js/server/fast-eval.mjs";
-import { heuristicConverges, clampPathwayScore } from "./js/hex/evaluate.js";
+import { heuristicConverges } from "./js/hex/evaluate.js";
+import { applyHonestyToScorePathway } from "./js/server/honesty-score.mjs";
+import { applyTypeSafeFastJudge } from "./js/server/fast-judge-score.mjs";
+import { applyTypeSafeFunctionCall } from "./js/server/function-call-score.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -1275,20 +1282,11 @@ function localCoInvent({ mode, messages, context }) {
           : "Still unanswered — docking is not enough.",
       };
     }
-    const clamped = clampPathwayScore(
-      { crisisDelta, concerns },
-      invs,
-      {
-        globalId: context.globalId || context.mission?.globalId || context.global?.id,
-        mission: context.mission,
-        rules: context.rules || context.mission?.rules,
-      }
-    );
     return {
       source: "local",
-      crisisDelta: clamped.crisisDelta,
-      crisisReasons: clamped.crisisReasons,
-      concerns: clamped.concerns,
+      crisisDelta,
+      crisisReasons: {},
+      concerns,
     };
   }
 
@@ -2166,6 +2164,79 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
   };
 }
 
+/**
+ * Exact Grok request, split into prompt wrapping vs app-built JSON payload.
+ * Used to call the model and (when inspect) to show the request in AI inspect.
+ */
+function grokPromptParts({ mode, context, messages }) {
+  const fastSpec = FAST_EVAL_MODES[mode];
+  const isTutor =
+    !fastSpec && isTutorMode(context) && mode !== "generate-scenarios";
+  const searchTools = searchToolsForMode(mode, AI_SEARCH_ENABLED);
+  let system = fastSpec
+    ? fastSpec.system
+    : isTutor
+      ? TUTOR_SYSTEM_PROMPT
+      : SYSTEM_PROMPT;
+  if (searchTools) {
+    system = `${system}\n${SEARCH_SYSTEM_LINE}`;
+  }
+  let userPrefix;
+  let payload;
+  let userSuffix;
+  if (fastSpec) {
+    const parts = fastEvalUserParts(mode, context);
+    userPrefix = parts.prefix;
+    payload = parts.payload;
+    userSuffix = parts.suffix;
+  } else if (isTutor) {
+    userPrefix = "Tutor session state and conversation (JSON):";
+    payload = JSON.parse(
+      buildUserPayload({ messages, context, mode }) || "{}"
+    );
+    userSuffix =
+      "Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.";
+  } else {
+    userPrefix = "Co-invention session state and conversation (JSON):";
+    payload = JSON.parse(
+      buildUserPayload({ messages, context, mode }) || "{}"
+    );
+    userSuffix = "Respond with the required JSON object only.";
+  }
+  const reasoningEffort = reasoningEffortForCoInvent({ mode, tutor: isTutor });
+  return {
+    model: MODEL,
+    system,
+    userPrefix,
+    payload,
+    userSuffix,
+    pretty: !fastSpec,
+    temperature: fastSpec
+      ? fastSpec.temperature
+      : mode === "generate-scenarios"
+        ? 0.55
+        : 0.8,
+    maxOutputTokens: fastSpec ? fastSpec.maxOutputTokens : null,
+    reasoning: reasoningEffort || null,
+    tools: searchTools || null,
+  };
+}
+
+function grokUserContentFromParts(parts) {
+  const json = parts.pretty
+    ? JSON.stringify(parts.payload, null, 2)
+    : JSON.stringify(parts.payload);
+  return `${parts.userPrefix}\n${json}\n\n${parts.userSuffix}`;
+}
+
+function attachModelRequest(result, modelRequest, inspect) {
+  if (!inspect || !result || typeof result !== "object" || !modelRequest) {
+    return result;
+  }
+  result.modelRequest = modelRequest;
+  return result;
+}
+
 async function aiCoInvent(body, client, meta = {}) {
   const mode = body.mode || "chat";
   const context = body.context || {};
@@ -2173,25 +2244,13 @@ async function aiCoInvent(body, client, meta = {}) {
   const availableIds = (context.availableTechs || []).map((t) => t.id);
   const sessionId = meta.sessionId || clientSessionFromBody(body);
 
+  const prompt = grokPromptParts({ mode, context, messages });
   const fastSpec = FAST_EVAL_MODES[mode];
   const isTutor =
     !fastSpec && isTutorMode(context) && mode !== "generate-scenarios";
-  const searchTools = searchToolsForMode(mode, AI_SEARCH_ENABLED);
-  let systemContent = fastSpec
-    ? fastSpec.system
-    : isTutor
-      ? TUTOR_SYSTEM_PROMPT
-      : SYSTEM_PROMPT;
-  if (searchTools) {
-    systemContent = `${systemContent}\n${SEARCH_SYSTEM_LINE}`;
-  }
-  const userContent = fastSpec
-    ? fastEvalUserContent(mode, context)
-    : isTutor
-      ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
-      : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
-        `Respond with the required JSON object only.`;
+  const searchTools = prompt.tools;
+  const systemContent = prompt.system;
+  const userContent = grokUserContentFromParts(prompt);
 
   const input = [
     { role: "system", content: systemContent },
@@ -2299,6 +2358,59 @@ async function aiCoInvent(body, client, meta = {}) {
   return out;
 }
 
+async function attachScorePathwayHonesty(result, body, sessionId) {
+  if ((body.mode || "chat") !== "score-pathway") return result;
+  const started = Date.now();
+  const signal = body.context?.signal;
+  return applyHonestyToScorePathway(result, body.context || {}, {
+    ...(signal ? { requestOptions: { signal } } : {}),
+    onUsage: (info) => {
+      recordAiText({
+        mode: "score-pathway",
+        source: "typesafe",
+        model: info.model || "jev-latest",
+        usage: info.usage,
+        latencyMs: Date.now() - started,
+        ok: true,
+        sessionId,
+      });
+    },
+  });
+}
+
+async function attachTypeSafeJudges(result, body, sessionId) {
+  const mode = body.mode || "chat";
+  if (mode === "score-pathway") {
+    return attachScorePathwayHonesty(result, body, sessionId);
+  }
+  const started = Date.now();
+  const signal = body.context?.signal;
+  const onUsage = (info) => {
+    recordAiText({
+      mode: info.mode || mode,
+      source: "typesafe",
+      model: info.model || "jev-latest",
+      usage: info.usage,
+      latencyMs: Date.now() - started,
+      ok: true,
+      sessionId,
+    });
+  };
+  const opts = {
+    ...(signal ? { requestOptions: { signal } } : {}),
+    onUsage,
+  };
+  if (
+    mode === "tag-lobby-rule" ||
+    mode === "chat" ||
+    mode === "spark" ||
+    mode === "suggest-stack"
+  ) {
+    return applyTypeSafeFunctionCall(result, body, opts);
+  }
+  return applyTypeSafeFastJudge(result, body, opts);
+}
+
 async function handleCoInvent(body) {
   const context = body.context || {};
   const mode = body.mode || "chat";
@@ -2306,9 +2418,19 @@ async function handleCoInvent(body) {
   const sessionId = clientSessionFromBody(body);
   if (sessionId) usage.touchSession(sessionId);
 
+  let result;
+  if (mode === "tag-lobby-rule") {
+    result = {
+      source: "local",
+      kind: context.kind || "policy",
+      effects: [],
+    };
+    return finishCoInvent(result, body, sessionId);
+  }
+
   let client = await getClient();
   if (!client) {
-    const local = localCoInvent({ mode, messages, context });
+    result = localCoInvent({ mode, messages, context });
     recordAiText({
       mode,
       source: "local",
@@ -2318,39 +2440,65 @@ async function handleCoInvent(body) {
       ok: true,
       sessionId,
     });
-    return local;
-  }
+  } else {
+    try {
+      result = await aiCoInvent(body, client, { sessionId });
+    } catch (e) {
+      const msg = String(e?.message || e);
+      console.error("[co-invent ai]", msg.slice(0, 200));
 
-  try {
-    return await aiCoInvent(body, client, { sessionId });
-  } catch (e) {
-    const msg = String(e?.message || e);
-    console.error("[co-invent ai]", msg.slice(0, 200));
+      // One retry with forced SuperGrok token refresh
+      if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
+        try {
+          client = await getClient({ forceRefresh: true });
+          if (client) {
+            result = await aiCoInvent(body, client, { sessionId });
+          }
+        } catch (e2) {
+          console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
+        }
+      }
 
-    // One retry with forced SuperGrok token refresh
-    if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
-      try {
-        client = await getClient({ forceRefresh: true });
-        if (client) return await aiCoInvent(body, client, { sessionId });
-      } catch (e2) {
-        console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
+      if (!result) {
+        result = localCoInvent({ mode, messages, context });
+        result.message =
+          `*(Co-inventor temporarily offline; local partner here.)*\n\n` +
+          result.message;
+        recordAiText({
+          mode,
+          source: "local",
+          model: null,
+          usage: null,
+          latencyMs: 0,
+          ok: true,
+          sessionId,
+        });
       }
     }
-
-    const local = localCoInvent({ mode, messages, context });
-    local.message =
-      `*(Co-inventor temporarily offline; local partner here.)*\n\n` + local.message;
-    recordAiText({
-      mode,
-      source: "local",
-      model: null,
-      usage: null,
-      latencyMs: 0,
-      ok: true,
-      sessionId,
-    });
-    return local;
   }
+
+  return finishCoInvent(result, body, sessionId);
+}
+
+async function finishCoInvent(result, body, sessionId) {
+  const mode = body.mode || "chat";
+  if (
+    body.inspect &&
+    result &&
+    typeof result === "object" &&
+    mode !== "tag-lobby-rule"
+  ) {
+    try {
+      result.modelRequest = grokPromptParts({
+        mode,
+        context: body.context || {},
+        messages: Array.isArray(body.messages) ? body.messages : [],
+      });
+    } catch (e) {
+      console.warn("[inspect]", String(e?.message || e).slice(0, 200));
+    }
+  }
+  return attachTypeSafeJudges(result, body, sessionId);
 }
 
 /* —— Future vision (Imagine) —— */
@@ -2531,6 +2679,7 @@ async function handleVision(body) {
       cached: true,
       imageUrl: prev.dataUrl,
       prompt: prev.prompt,
+      modelRequest: prev.modelRequest || null,
       stageId,
       model: IMAGE_MODEL,
       mode: prev.mode || "generate",
@@ -2564,6 +2713,10 @@ async function handleVision(body) {
     shot = { ...shot, mode: "generate", continuity: "new-shot", reason: "No prior frame to edit" };
   }
 
+  let promptParts =
+    mode === "edit"
+      ? composeEditPromptParts(worldCard, shot)
+      : composeGeneratePromptParts(worldCard, shot, stageId);
   let prompt =
     mode === "edit"
       ? composeEditPrompt(worldCard, shot)
@@ -2587,6 +2740,7 @@ async function handleVision(body) {
       usedMode = "generate";
       continuity = "new-shot";
       reason = `Edit failed — regenerate (${String(e.message || "error").slice(0, 80)})`;
+      promptParts = composeGeneratePromptParts(worldCard, shot, stageId);
       prompt = composeGeneratePrompt(worldCard, shot, stageId);
       try {
         data = await runVisionImage("generate", prompt, null);
@@ -2628,10 +2782,13 @@ async function handleVision(body) {
 
   const imageUrl = await normalizeVisionDataUrl(data);
 
+  const modelRequest = imageModelRequest(IMAGE_MODEL, promptParts);
+
   visionSessions.set(sessionId, {
     fingerprint,
     dataUrl: imageUrl,
     prompt,
+    modelRequest,
     stageId,
     mode: usedMode,
     continuity,
@@ -2660,6 +2817,7 @@ async function handleVision(body) {
     cached: false,
     imageUrl,
     prompt,
+    modelRequest,
     stageId,
     model: IMAGE_MODEL,
     mode: usedMode,
@@ -2767,6 +2925,9 @@ async function handleIdeaImage(body) {
   const rawPrompt = String(body?.prompt || "").slice(0, 700);
   const kind = String(body?.kind || "idea").toLowerCase();
   const logKind = kind === "brief" || kind === "challenger" ? kind : "idea";
+  const parts = ideaImagePromptParts(kind, rawPrompt);
+  const prompt = [parts.system, parts.payload.scene].filter(Boolean).join(" ");
+  const modelRequest = imageModelRequest(IMAGE_MODEL, parts);
   const cached = ideaImageCache.get(id);
   if (cached?.imageUrl) {
     recordAiImage({
@@ -2781,35 +2942,17 @@ async function handleIdeaImage(body) {
       ok: true,
       cached: true,
       imageUrl: cached.imageUrl,
+      prompt: cached.prompt || prompt,
+      modelRequest: cached.modelRequest || modelRequest,
       model: IMAGE_MODEL,
       id,
     };
   }
 
-  const prompt =
-    kind === "challenger"
-      ? [
-          "Photoreal 4:3 documentary still of a local pressure or hard question facing a community pathway.",
-          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-          rawPrompt ||
-            "People and place under a concrete social, ethical, or natural-world pressure.",
-        ].join(" ")
-      : kind === "brief"
-        ? [
-            "Photoreal cinematic 16:9 documentary still of a lived local scene for a design-challenge story.",
-            "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-            rawPrompt || "A specific person in a specific place under concrete tension.",
-          ].join(" ")
-      : [
-          "Photoreal 4:3 documentary still of a local emerging-tech application.",
-          "Natural light, grounded, no readable text, no logos, no watermarks, no named real people.",
-          rawPrompt || "People using a practical tool in a specific neighborhood.",
-        ].join(" ");
-
   try {
     const data = await runVisionImage("generate", prompt, null);
     const imageUrl = await normalizeVisionDataUrl(data);
-    ideaImageCache.set(id, { imageUrl, prompt, updatedAt: Date.now() });
+    ideaImageCache.set(id, { imageUrl, prompt, modelRequest, updatedAt: Date.now() });
     if (ideaImageCache.size > 80) {
       const oldest = [...ideaImageCache.entries()].sort(
         (a, b) => (a[1].updatedAt || 0) - (b[1].updatedAt || 0)
@@ -2830,6 +2973,8 @@ async function handleIdeaImage(body) {
       ok: true,
       cached: false,
       imageUrl,
+      prompt,
+      modelRequest,
       model: IMAGE_MODEL,
       id,
     };

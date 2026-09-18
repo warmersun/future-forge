@@ -1499,6 +1499,28 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.equal(n.concerns.moloch.level, "yellow");
   });
 
+  it("normalizePathwayScore keeps honesty flags", () => {
+    const flags = {
+      source: "typesafe",
+      shareBridge: true,
+      purePolicy: false,
+    };
+    const n = normalizePathwayScore({
+      crisisDelta: { local: -1, global: -1, support: 0 },
+      honestyFlags: flags,
+      honestyUncertain: true,
+    });
+    assert.equal(n.honestyFlags, flags);
+    assert.equal(n.honestyUncertain, true);
+    const blended = blendPathwayScore(n, {
+      crisisDelta: { local: 0, global: 0, support: 0 },
+      crisisReasons: {},
+      concerns: {},
+    });
+    assert.equal(blended.honestyFlags, flags);
+    assert.equal(blended.honestyUncertain, true);
+  });
+
   it("normalizePathwayScore accepts nested {delta, reason} and legacy numbers", () => {
     const nested = normalizePathwayScore({
       crisisDelta: {

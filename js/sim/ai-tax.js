@@ -12,6 +12,9 @@ export const AI_ALWAYS_CHARGE_MODES = new Set([
   "assess-feasibility",
 ]);
 
+/** Side-band TypeSafe tags — never spend AP (lobby write already paid). */
+export const AI_FREE_MODES = new Set(["tag-lobby-rule"]);
+
 /**
  * @param {string} [mode]
  */
@@ -43,6 +46,9 @@ export function thinkingAiApCost(sim, mode, requestedAp = 1, opts = {}) {
  */
 export function applyThinkingAiCharge(sim, mode, requestedAp = 1, opts = {}) {
   if (opts.tutor) return { cost: 0, markPaid: false };
+  if (AI_FREE_MODES.has(String(mode || ""))) {
+    return { cost: 0, markPaid: false };
+  }
   if (!isAiSeasonTaxMode(mode)) {
     const requested = Number(requestedAp);
     const n = Number.isFinite(requested) ? Math.max(0, Math.floor(requested)) : 1;
