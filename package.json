@@ -13,6 +13,7 @@
     "serve": "node server.mjs",
     "start:usage": "node server.mjs --usage",
     "start:developer": "node server.mjs --developer",
+    "start:dev": "bash scripts/dev-server.sh",
     "portal": "node portal/server.mjs",
     "portal:usage": "node portal/server.mjs --usage",
     "portal:developer": "node portal/server.mjs --developer",

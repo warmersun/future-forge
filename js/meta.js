@@ -691,7 +691,7 @@ const brandMarkImg =
     ? new Image()
     : { complete: false, naturalWidth: 0, decoding: "async", src: "" };
 brandMarkImg.decoding = "async";
-brandMarkImg.src = "assets/mascot/ff-mark.webp";
+brandMarkImg.src = "assets/brand/ff-mark.png";
 
 /** Future Forge plate when loaded; otherwise the old sunrise disc. */
 function drawBrandMark(ctx, cx, cy, r) {
