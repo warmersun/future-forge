@@ -7,7 +7,6 @@ const CAP = 30;
 const PREVIEW_CAP = 6;
 const FILTERS = new Set(["all", "text", "image", "jev"]);
 const IMAGE_MODES = new Set(["vision", "idea-image"]);
-const JEV_MODES = new Set(["tag-lobby-rule"]);
 
 /** @type {Array<object>} */
 let entries = [];
@@ -138,7 +137,7 @@ export function aiTraceKind(raw = {}) {
   const mode = String(raw.mode || raw.sent?.mode || "");
   const source = String(raw.source || raw.received?.source || "");
   if (IMAGE_MODES.has(mode)) return "image";
-  if (source === "typesafe" || JEV_MODES.has(mode)) return "jev";
+  if (source === "typesafe") return "jev";
   return "text";
 }
 
@@ -244,8 +243,10 @@ export function pushAiTrace(raw = {}) {
 }
 
 /**
- * Peel `typesafeTrace` off a co-invent payload and push a Jev inspect row.
- * Grok/local stays Text (or Images). `tag-lobby-rule` is Jev-only.
+ * Peel `typesafeTrace` / `typesafeError` off a co-invent payload and push a
+ * Jev inspect row only when Jev actually ran or failed trying. Grok/local
+ * stays Text (or Images). Lobby `tag-lobby-rule` is Jev-only when the overlay
+ * ran; a local fallback stays under Text.
  * @param {object} [raw]
  */
 export function pushAiTraceWithTypesafe(raw = {}) {
@@ -254,6 +255,10 @@ export function pushAiTraceWithTypesafe(raw = {}) {
   const ts =
     rec?.typesafeTrace && typeof rec.typesafeTrace === "object"
       ? rec.typesafeTrace
+      : null;
+  const tsError =
+    rec?.typesafeError && typeof rec.typesafeError === "object"
+      ? rec.typesafeError
       : null;
   let mr =
     rec?.modelRequest && typeof rec.modelRequest === "object"
@@ -275,14 +280,15 @@ export function pushAiTraceWithTypesafe(raw = {}) {
       };
     }
   }
-  let cleaned = rec && ts ? stripTypesafeTrace(rec) : rec;
+  const mode = raw.mode || raw.sent?.mode || "co-invent";
+  const lobbyOnly = String(mode) === "tag-lobby-rule";
+  const hasJev = Boolean(ts) || Boolean(tsError);
+  const jevOnly = raw.kind === "jev" || (lobbyOnly && hasJev);
+  let cleaned = rec && hasJev ? stripTypesafeMeta(rec) : rec;
   if (cleaned && mr) {
     cleaned = { ...cleaned };
     delete cleaned.modelRequest;
   }
-  const jevOnly =
-    raw.kind === "jev" ||
-    String(raw.mode || raw.sent?.mode || "") === "tag-lobby-rule";
   let textEntry = null;
   if (!jevOnly) {
     textEntry = pushAiTrace({
@@ -294,14 +300,14 @@ export function pushAiTraceWithTypesafe(raw = {}) {
   if (ts) {
     pushAiTrace({
       kind: "jev",
-      mode: raw.mode || raw.sent?.mode || "co-invent",
+      mode,
       modelRequest: {
-        model: ts.model || "jev-latest",
+        model: ts.model || null,
         questions: ts.questions || null,
         state: ts.state || null,
       },
       sent: {
-        model: ts.model || "jev-latest",
+        model: ts.model || null,
         questions: ts.questions || null,
         state: ts.state || null,
       },
@@ -316,20 +322,32 @@ export function pushAiTraceWithTypesafe(raw = {}) {
       error: raw.error,
       cancelled: raw.cancelled,
     });
-  } else if (jevOnly) {
+  } else if (tsError) {
+    const message = String(tsError.message || "TypeSafe overlay failed").slice(0, 200);
     pushAiTrace({
-      ...raw,
       kind: "jev",
-      received: cleaned,
-      source: raw.source || "typesafe",
+      mode,
+      sent: {
+        mode: tsError.mode || mode,
+      },
+      received: {
+        error: message,
+        mode: tsError.mode || mode,
+      },
+      ms: raw.ms,
+      source: "typesafe",
+      ok: false,
+      error: message,
+      cancelled: raw.cancelled,
     });
   }
   return textEntry;
 }
 
-function stripTypesafeTrace(received) {
+function stripTypesafeMeta(received) {
   const out = { ...received };
   delete out.typesafeTrace;
+  delete out.typesafeError;
   return out;
 }
 

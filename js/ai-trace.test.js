@@ -167,7 +167,68 @@ describe("ai-trace", () => {
     assert.equal(jev.received.answers.flags.purePolicy, false);
     assert.equal(aiTraceBadgeLabel(jev), "score-pathway · jev");
     assert.equal(aiTraceKind({ source: "typesafe", mode: "chat" }), "jev");
-    assert.equal(aiTraceKind({ mode: "tag-lobby-rule" }), "jev");
+    assert.equal(aiTraceKind({ mode: "tag-lobby-rule" }), "text");
+    assert.equal(aiTraceKind({ mode: "tag-lobby-rule", source: "typesafe" }), "jev");
+  });
+
+  it("records a local lobby tag as Text, not Jev", () => {
+    pushAiTraceWithTypesafe({
+      mode: "tag-lobby-rule",
+      sent: { mode: "tag-lobby-rule" },
+      received: { source: "local", kind: "policy", effects: [] },
+      ok: true,
+    });
+    assert.equal(aiTraceFilterCounts().jev, 0);
+    assert.equal(aiTraceFilterCounts().text, 1);
+    const row = listAiTrace({ filter: "text" })[0];
+    assert.equal(row.kind, "text");
+    assert.equal(row.source, "local");
+  });
+
+  it("records a lobby tag with typesafeTrace as Jev-only", () => {
+    pushAiTraceWithTypesafe({
+      mode: "tag-lobby-rule",
+      sent: { mode: "tag-lobby-rule" },
+      received: {
+        source: "typesafe",
+        kind: "policy",
+        effects: ["backlash"],
+        typesafeTrace: {
+          model: "jev-1.13.0",
+          usage: { input_tokens: 4, output_tokens: 0 },
+          answers: { kind: "policy" },
+        },
+      },
+      ok: true,
+    });
+    assert.equal(aiTraceFilterCounts().jev, 1);
+    assert.equal(aiTraceFilterCounts().text, 0);
+    const jev = listAiTrace({ filter: "jev" })[0];
+    assert.equal(jev.source, "typesafe");
+    assert.equal(jev.received.model, "jev-1.13.0");
+  });
+
+  it("shows a TypeSafe overlay failure as a Jev error row", () => {
+    pushAiTraceWithTypesafe({
+      mode: "score-pathway",
+      sent: { mode: "score-pathway" },
+      received: {
+        source: "ai",
+        crisisDelta: { local: 0 },
+        typesafeError: { message: "timeout", mode: "score-pathway" },
+      },
+      ok: true,
+    });
+    const counts = aiTraceFilterCounts();
+    assert.equal(counts.text, 1);
+    assert.equal(counts.jev, 1);
+    const text = listAiTrace({ filter: "text" })[0];
+    assert.equal(text.received.typesafeError, undefined);
+    assert.equal(text.ok, true);
+    const jev = listAiTrace({ filter: "jev" })[0];
+    assert.equal(jev.ok, false);
+    assert.equal(jev.error, "timeout");
+    assert.equal(jev.source, "typesafe");
   });
 
   it("keeps a split Grok modelRequest on the Text row", () => {

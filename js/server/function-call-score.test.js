@@ -49,6 +49,50 @@ describe("applyChatJudgment", () => {
     assert.deepEqual(out.proposals.addTechIds, ["robots"]);
     assert.equal(out.proposals.inventionHow, null);
   });
+
+  it("clears leftover how-drafts when intent is uncertain", () => {
+    const out = applyChatJudgment(
+      {
+        proposals: {
+          addTechIds: ["iot"],
+          inventionHow: "Should not apply.",
+          inventionImpact: "Leftover life.",
+          inventionName: "Leftover name",
+          removeTechIds: [],
+          scrutiny: null,
+        },
+      },
+      {
+        intent: "none",
+        intentUncertain: true,
+        addTechIds: ["iot"],
+      },
+      {}
+    );
+    assert.deepEqual(out.proposals.addTechIds, []);
+    assert.equal(out.proposals.inventionHow, null);
+    assert.equal(out.proposals.inventionImpact, null);
+    assert.equal(out.proposals.inventionName, null);
+  });
+
+  it("does not apply addTechIds when add_tech is uncertain", () => {
+    const out = applyChatJudgment(
+      {
+        proposals: {
+          addTechIds: ["robots"],
+          inventionHow: "Leftover.",
+          inventionImpact: null,
+          inventionName: null,
+          removeTechIds: [],
+          scrutiny: null,
+        },
+      },
+      { intent: "add_tech", intentUncertain: true, addTechIds: ["robots"] },
+      {}
+    );
+    assert.deepEqual(out.proposals.addTechIds, []);
+    assert.equal(out.proposals.inventionHow, null);
+  });
 });
 
 describe("applyTypeSafeFunctionCall", () => {
@@ -125,5 +169,99 @@ describe("applyTypeSafeFunctionCall", () => {
       { client: null }
     );
     assert.equal(out, src);
+  });
+
+  it("does not attach a trace when suggest-stack has no questions", async () => {
+    let called = 0;
+    let usage = 0;
+    const client = {
+      async systemOne() {
+        called += 1;
+        return { model: "jev-test", usage: {}, answers: {} };
+      },
+    };
+    const out = await applyTypeSafeFunctionCall(
+      { proposals: { addTechIds: [] } },
+      { mode: "suggest-stack", context: { availableTechs: [] } },
+      { client, onUsage: () => { usage += 1; } }
+    );
+    assert.equal(called, 0);
+    assert.equal(usage, 0);
+    assert.equal(out.typesafeTrace, undefined);
+  });
+
+  it("does not ask endTutoring after the tutor session ended", async () => {
+    let questions;
+    const client = {
+      async systemOne(req) {
+        questions = req.questions;
+        return {
+          model: "jev-test",
+          usage: { input_tokens: 1, output_tokens: 0 },
+          answers: { intent: { choice: "none", confidence: 0.9 } },
+        };
+      },
+    };
+    await applyTypeSafeFunctionCall(
+      { message: "ok", proposals: {} },
+      {
+        mode: "chat",
+        messages: [{ role: "user", content: "What next?" }],
+        context: { tutorMode: false, isLearningModule: true },
+      },
+      { client }
+    );
+    assert.equal(questions.endTutoring, undefined);
+    assert.ok(questions.intent);
+  });
+
+  it("stamps typesafeError when the overlay throws", async () => {
+    let usage = null;
+    const out = await applyTypeSafeFunctionCall(
+      { source: "local", kind: "policy", effects: [] },
+      { mode: "tag-lobby-rule", context: { kind: "policy", label: "x", body: "y" } },
+      {
+        client: {
+          async systemOne() {
+            throw new Error("timeout");
+          },
+        },
+        warn: () => {},
+        onUsage: (info) => {
+          usage = info;
+        },
+      }
+    );
+    assert.equal(out.kind, "policy");
+    assert.equal(out.typesafeError.message, "timeout");
+    assert.equal(out.typesafeError.mode, "tag-lobby-rule");
+    assert.equal(usage.ok, false);
+    assert.equal(out.typesafeTrace, undefined);
+  });
+
+  it("forwards requestOptions.signal to systemOne", async () => {
+    const ac = new AbortController();
+    let got;
+    const client = {
+      async systemOne(_req, options) {
+        got = options;
+        return {
+          model: "jev-test",
+          usage: { input_tokens: 1, output_tokens: 0 },
+          answers: {
+            kind: { choice: "policy", confidence: 0.9 },
+            "share-required": { noul: 0.1 },
+            "eval-required": { noul: 0.1 },
+            backlash: { noul: 0.1 },
+          },
+        };
+      },
+    };
+    await applyTypeSafeFunctionCall(
+      { kind: "policy", effects: [] },
+      { mode: "tag-lobby-rule", context: { kind: "policy", label: "x", body: "y" } },
+      { client, requestOptions: { signal: ac.signal } }
+    );
+    assert.equal(got.signal, ac.signal);
   });
 });

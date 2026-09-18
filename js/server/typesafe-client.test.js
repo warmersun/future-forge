@@ -9,6 +9,7 @@ import {
   resolveTypeSafeApiKey,
   resolveTypeSafeModel,
   typesafeTraceOf,
+  typesafeErrorOf,
   jsonSafeQuestions,
 } from "./typesafe-client.mjs";
 
@@ -63,6 +64,22 @@ describe("typesafeTraceOf", () => {
     assert.equal(t.model, "jev-1.13.0");
     assert.equal(t.answers.intent, "none");
     assert.equal(t.state.userText, "hi");
+  });
+
+  it("returns null when systemOne did not run", () => {
+    assert.equal(
+      typesafeTraceOf({ model: null, usage: null }, { answers: { intent: "none" } }),
+      null
+    );
+    assert.equal(typesafeTraceOf(null, { answers: {} }), null);
+  });
+});
+
+describe("typesafeErrorOf", () => {
+  it("keeps a short message and mode", () => {
+    const e = typesafeErrorOf(new Error("timeout"), "chat");
+    assert.equal(e.message, "timeout");
+    assert.equal(e.mode, "chat");
   });
 });
 

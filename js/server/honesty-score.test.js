@@ -152,6 +152,9 @@ describe("applyHonestyToScorePathway", () => {
     );
     assert.match(warned, /timeout/);
     assert.equal(out.crisisDelta.local, 0);
+    assert.equal(out.typesafeError.message, "timeout");
+    assert.equal(out.typesafeError.mode, "score-pathway");
+    assert.equal(out.typesafeTrace, undefined);
   });
 
   it("replaces Grok deltas with TypeSafe Choices then clamps", async () => {

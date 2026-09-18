@@ -8,7 +8,11 @@
 import { clampPathwayScore } from "../hex/evaluate.js";
 import { CRISIS_ROLES, clipCrisisReason } from "../hex/crisis-delta.js";
 import { cannedDeltaReason } from "../sim/pathway-questions.js";
-import { getTypeSafeClient, typesafeTraceOf } from "./typesafe-client.mjs";
+import {
+  getTypeSafeClient,
+  typesafeErrorOf,
+  typesafeTraceOf,
+} from "./typesafe-client.mjs";
 import {
   pathwayTypeSafeState,
   scorePathwayTypeSafe,
@@ -128,6 +132,7 @@ export async function applyHonestyToScorePathway(
 
   let composed = result;
   let trace = null;
+  let typesafeError = null;
   if (client) {
     try {
       const state = pathwayTypeSafeState({
@@ -161,20 +166,33 @@ export async function applyHonestyToScorePathway(
           scoreUncertain: judged.scoreUncertain,
         },
       });
-      if (typeof opts.onUsage === "function") {
+      if (typeof opts.onUsage === "function" && (judged.model || judged.usage)) {
         opts.onUsage({
-          model: judged.model,
+          model: judged.model || null,
           usage: judged.usage,
           flags: judged.flags,
           scoreUncertain: judged.scoreUncertain,
+          mode: "score-pathway",
         });
       }
     } catch (e) {
       warn(String(e?.message || e).slice(0, 200));
+      typesafeError = typesafeErrorOf(e, "score-pathway");
+      if (typeof opts.onUsage === "function") {
+        opts.onUsage({
+          model: null,
+          usage: null,
+          mode: "score-pathway",
+          ok: false,
+          error: typesafeError.message,
+        });
+      }
     }
   }
 
   const out = clampPathwayScore(composed, invs, clampOpts);
-  if (trace && out && typeof out === "object") out.typesafeTrace = trace;
+  if (!out || typeof out !== "object") return out;
+  if (trace) out.typesafeTrace = trace;
+  if (typesafeError) return { ...out, typesafeError };
   return out;
 }

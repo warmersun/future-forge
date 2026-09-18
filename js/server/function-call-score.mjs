@@ -2,7 +2,11 @@
  * Overlay TypeSafe function-calling on chat proposals and lobby tags.
  */
 
-import { getTypeSafeClient, typesafeTraceOf } from "./typesafe-client.mjs";
+import {
+  getTypeSafeClient,
+  typesafeErrorOf,
+  typesafeTraceOf,
+} from "./typesafe-client.mjs";
 import {
   judgeChatFunctionTypeSafe,
   judgeLobbyTagTypeSafe,
@@ -50,28 +54,18 @@ export async function applyTypeSafeFunctionCall(result, body = {}, opts = {}) {
         body.context || {},
         opts.requestOptions
       );
-      if (typeof opts.onUsage === "function") {
-        opts.onUsage({
-          model: judged.model,
-          usage: judged.usage,
-          mode: "tag-lobby-rule",
-        });
-      }
-      return {
+      notifyTypeSafeUsage(opts, judged, "tag-lobby-rule");
+      const out = {
         ...result,
         source: judged.model ? "typesafe" : result.source,
         kind: judged.kind,
         effects: judged.effects,
-        typesafeTrace: typesafeTraceOf(judged, {
-          state: judged.state,
-          questions: judged.questions,
-          answers: {
-            kind: judged.kind,
-            effects: judged.effects,
-            effectFlags: judged.effectFlags,
-          },
-        }),
       };
+      return attachFunctionTrace(out, judged, {
+        kind: judged.kind,
+        effects: judged.effects,
+        effectFlags: judged.effectFlags,
+      });
     }
 
     const forceAddStack = STACK_VERIFY_MODES.has(mode);
@@ -85,34 +79,21 @@ export async function applyTypeSafeFunctionCall(result, body = {}, opts = {}) {
       opts.requestOptions,
       { skipIntent: forceAddStack, forceAddStack }
     );
-    if (typeof opts.onUsage === "function") {
-      opts.onUsage({
-        model: judged.model,
-        usage: judged.usage,
-        mode,
-      });
-    }
+    notifyTypeSafeUsage(opts, judged, mode);
     const out = applyChatJudgment(result, judged, {
-      tutorMode: Boolean(
-        body.context?.tutorMode || body.context?.isLearningModule
-      ),
+      tutorMode: Boolean(body.context?.tutorMode),
       forceAddStack,
     });
-    out.typesafeTrace = typesafeTraceOf(judged, {
-      state: judged.state,
-      questions: judged.questions,
-      answers: {
-        intent: judged.intent,
-        intentUncertain: judged.intentUncertain,
-        addTechIds: judged.addTechIds,
-        endTutoring: judged.endTutoring,
-        flags: judged.flags,
-      },
+    return attachFunctionTrace(out, judged, {
+      intent: judged.intent,
+      intentUncertain: judged.intentUncertain,
+      addTechIds: judged.addTechIds,
+      endTutoring: judged.endTutoring,
+      flags: judged.flags,
     });
-    return out;
   } catch (e) {
     warn(String(e?.message || e).slice(0, 200));
-    return result;
+    return overlayTypeSafeFailure(result, e, mode, opts);
   }
 }
 
@@ -128,10 +109,16 @@ export function applyChatJudgment(result, judged, opts = {}) {
     : [];
 
   const intent = judged.intent || "none";
-  const uncertain = Boolean(judged.intentUncertain);
+  const certain = !Boolean(judged.intentUncertain);
+  const applyIntent =
+    certain &&
+    (intent === "add_tech" ||
+      intent === "remove_tech" ||
+      intent === "rewrite_how" ||
+      intent === "rewrite_life");
 
-  if (!opts.forceAddStack && !uncertain) {
-    if (intent === "none" || intent === "end_tutoring") {
+  if (!opts.forceAddStack) {
+    if (!applyIntent) {
       proposals.addTechIds = [];
       proposals.removeTechIds = [];
       proposals.inventionHow = null;
@@ -155,4 +142,39 @@ export function applyChatJudgment(result, judged, opts = {}) {
     else delete out.endTutoring;
   }
   return out;
+}
+
+function attachFunctionTrace(out, judged, answers) {
+  const trace = typesafeTraceOf(judged, {
+    state: judged?.state,
+    questions: judged?.questions,
+    answers,
+  });
+  if (trace) out.typesafeTrace = trace;
+  return out;
+}
+
+function notifyTypeSafeUsage(opts, judged, mode) {
+  if (typeof opts.onUsage !== "function") return;
+  if (!judged?.model && !judged?.usage) return;
+  opts.onUsage({
+    model: judged.model || null,
+    usage: judged.usage || null,
+    mode,
+  });
+}
+
+function overlayTypeSafeFailure(result, err, mode, opts) {
+  const error = typesafeErrorOf(err, mode);
+  if (typeof opts.onUsage === "function") {
+    opts.onUsage({
+      model: null,
+      usage: null,
+      mode,
+      ok: false,
+      error: error.message,
+    });
+  }
+  if (!result || typeof result !== "object") return result;
+  return { ...result, typesafeError: error };
 }

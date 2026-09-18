@@ -30,22 +30,6 @@ export function resolveTypeSafeModel(env = process.env) {
 }
 
 /**
- * @param {{
- *   env?: NodeJS.ProcessEnv|Record<string, string|undefined>,
- *   apiKey?: string,
- *   model?: string,
- *   timeout?: number,
- *   fetch?: typeof fetch,
- *   logLevel?: "debug"|"info"|"warn"|"error"|"off",
- * }} [opts]
- * @returns {TypeSafeClient|null}
- */
-/**
- * Inspect blob for the AI inspect Jev row. Keep it JSON-safe and small.
- * @param {object|null|undefined} judged
- * @param {{ state?: object, answers?: object, ms?: number }} [extra]
- */
-/**
  * JSON-safe TypeSafe questions for inspect (instructions + criteria).
  * @param {object} [questions]
  */
@@ -62,11 +46,19 @@ export function jsonSafeQuestions(questions = {}) {
   return out;
 }
 
+/**
+ * Inspect blob for the AI inspect Jev row. Keep it JSON-safe and small.
+ * Null when systemOne never ran (no model and no usage).
+ * @param {object|null|undefined} judged
+ * @param {{ state?: object, answers?: object, ms?: number, model?: string, usage?: object, questions?: object }} [extra]
+ */
 export function typesafeTraceOf(judged, extra = {}) {
-  if (!judged && !extra.answers) return null;
+  const model = judged?.model || extra.model || null;
+  const usage = judged?.usage || extra.usage || null;
+  if (!model && !usage) return null;
   return {
-    model: judged?.model || extra.model || null,
-    usage: judged?.usage || extra.usage || null,
+    model,
+    usage,
     ms: Number.isFinite(Number(extra.ms)) ? Math.max(0, Math.round(Number(extra.ms))) : null,
     state: extra.state || null,
     questions: extra.questions || judged?.questions || null,
@@ -74,6 +66,29 @@ export function typesafeTraceOf(judged, extra = {}) {
   };
 }
 
+/**
+ * Overlay failure for inspect. Not a successful typesafe source.
+ * @param {unknown} err
+ * @param {string} [mode]
+ */
+export function typesafeErrorOf(err, mode) {
+  return {
+    message: String(err?.message || err).slice(0, 200),
+    mode: mode ? String(mode) : null,
+  };
+}
+
+/**
+ * @param {{
+ *   env?: NodeJS.ProcessEnv|Record<string, string|undefined>,
+ *   apiKey?: string,
+ *   model?: string,
+ *   timeout?: number,
+ *   fetch?: typeof fetch,
+ *   logLevel?: "debug"|"info"|"warn"|"error"|"off",
+ * }} [opts]
+ * @returns {TypeSafeClient|null}
+ */
 export function getTypeSafeClient(opts = {}) {
   const env = opts.env || process.env;
   const apiKey =

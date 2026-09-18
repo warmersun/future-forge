@@ -67,7 +67,7 @@ export function chatFunctionState(result, context = {}, messages = []) {
   return {
     userText: clip(lastUserText(messages), 2000),
     assistantMessage: clip(result?.message, 2000),
-    tutorMode: Boolean(context.tutorMode || context.isLearningModule),
+    tutorMode: Boolean(context.tutorMode),
     proposals: {
       addTechIds: (result?.proposals?.addTechIds || []).map(String).slice(0, 8),
     },

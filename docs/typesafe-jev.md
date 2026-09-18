@@ -28,9 +28,9 @@ export TYPESAFE_API_KEY=apikey_…
 
 Without a key, hex scoring, challenges, chat applies, and lobby writes behave as they did before this work: Grok JSON where configured, keyword regex / length heuristics as local fallback.
 
-Usage events from Jev are recorded as `source: "typesafe"` on the same `/api/co-invent` session when `--usage` is on.
+Usage events from Jev are recorded as `source: "typesafe"` on the same `/api/co-invent` session when `--usage` is on. Skip-path overlays that never call `systemOne` (empty `suggest-stack`, no-neighbor convergence) do not record usage or a Jev inspect row. Overlay throws stamp `typesafeError` (`message` + `mode`) and show as a Jev error row; play still falls back to Grok / regex / local.
 
-In **developer mode**, the side-tab **AI inspect** shows the **full model request**, not only the `/api/co-invent` HTTP body. **Prompt** wrapping (system prompt, user instructions, TypeSafe questions, Imagine style lines) is gold and **collapsed by default**; the **context payload** JSON the app built from game state is cyan. Filter **Jev** lists TypeSafe overlays. Grok drafts stay under **Text**; Imagine stays under **Images**. Lobby `tag-lobby-rule` is Jev-only.
+In **developer mode**, the side-tab **AI inspect** shows the **full model request**, not only the `/api/co-invent` HTTP body. **Prompt** wrapping (system prompt, user instructions, TypeSafe questions, Imagine style lines) is gold and **collapsed by default**; the **context payload** JSON the app built from game state is cyan. Filter **Jev** lists TypeSafe overlays that called `systemOne` (or failed trying). Grok drafts stay under **Text**; Imagine stays under **Images**. Lobby `tag-lobby-rule` is Jev-only when the overlay ran; a local fallback stays under Text.
 
 ---
 
@@ -108,7 +108,7 @@ Grok still writes the chat bubble. Jev selects the **handler**:
 
 - Intent: `none \| add_tech \| remove_tech \| rewrite_how \| rewrite_life \| end_tutoring`
 - Noul per proposed catalog id (plus name-mentions over-found from the turn text)
-- Tutor Noul: end the free tutor session
+- Tutor Noul: end the free tutor session (only while `tutorMode` is the active session, not merely `isLearningModule`)
 
 A question turn does not apply a leftover how-draft or sneak `addTechIds`. Only catalog ids Jev marks **yes** are applied. `endTutoring: true` from Grok is dropped unless Jev agrees.
 

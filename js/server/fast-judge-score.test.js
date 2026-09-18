@@ -171,6 +171,28 @@ describe("applyTypeSafeFastJudge", () => {
     assert.match(warned, /timeout/);
     assert.equal(out.verdict, "partial");
     assert.match(out.message, /Keep me/);
+    assert.equal(out.typesafeError.message, "timeout");
+    assert.equal(out.typesafeError.mode, "judge-challenge");
+  });
+
+  it("does not claim Jev ran when there are no neighbors", async () => {
+    let usage = 0;
+    const client = {
+      async systemOne() {
+        throw new Error("should not be called");
+      },
+    };
+    const out = await applyTypeSafeFastJudge(
+      { source: "local", convergences: [] },
+      {
+        mode: "evaluate-convergence",
+        context: { placed: { id: "p1" }, neighbors: [] },
+      },
+      { client, onUsage: () => { usage += 1; } }
+    );
+    assert.equal(usage, 0);
+    assert.equal(out.typesafeTrace, undefined);
+    assert.deepEqual(out.convergences, []);
   });
 });
 

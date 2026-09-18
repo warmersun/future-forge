@@ -3,7 +3,11 @@
  * Missing key or TypeSafe error → leave the incoming result (regex/Grok path).
  */
 
-import { getTypeSafeClient, typesafeTraceOf } from "./typesafe-client.mjs";
+import {
+  getTypeSafeClient,
+  typesafeErrorOf,
+  typesafeTraceOf,
+} from "./typesafe-client.mjs";
 import {
   judgeChallengeTypeSafe,
   judgeContributionTypeSafe,
@@ -50,24 +54,33 @@ export async function applyTypeSafeFastJudge(result, body = {}, opts = {}) {
 
   try {
     const judged = await handler(result, body.context || {}, client, opts);
-    if (typeof opts.onUsage === "function" && judged && judged._usage) {
-      opts.onUsage(judged._usage);
+    if (!judged || typeof judged !== "object") return result;
+    const { _usage, ...rest } = judged;
+    if (typeof opts.onUsage === "function" && _usage) {
+      opts.onUsage(_usage);
     }
-    if (judged && judged._usage) {
-      const { _usage, ...rest } = judged;
-      return rest;
-    }
-    return judged || result;
+    return rest;
   } catch (e) {
     warn(String(e?.message || e).slice(0, 200));
-    return result;
+    const error = typesafeErrorOf(e, mode);
+    if (typeof opts.onUsage === "function") {
+      opts.onUsage({
+        model: null,
+        usage: null,
+        mode,
+        ok: false,
+        error: error.message,
+      });
+    }
+    return { ...result, typesafeError: error };
   }
 }
 
 function usagePack(judged, mode) {
+  if (!judged?.model && !judged?.usage) return null;
   return {
-    model: judged.model,
-    usage: judged.usage,
+    model: judged.model || null,
+    usage: judged.usage || null,
     mode,
   };
 }

@@ -94,6 +94,7 @@ import { heuristicConverges } from "./js/hex/evaluate.js";
 import { applyHonestyToScorePathway } from "./js/server/honesty-score.mjs";
 import { applyTypeSafeFastJudge } from "./js/server/fast-judge-score.mjs";
 import { applyTypeSafeFunctionCall } from "./js/server/function-call-score.mjs";
+import { abortSignalFromHttp } from "./js/server/http-abort.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -239,7 +240,7 @@ function recordAiText(opts) {
     type: "ai_text",
     mode: opts.mode || "chat",
     source: opts.source || "ai",
-    model: opts.model || MODEL,
+    model: opts.source === "typesafe" ? opts.model || null : opts.model || MODEL,
     inputTokens: tokens.inputTokens,
     outputTokens: tokens.outputTokens,
     totalTokens: tokens.totalTokens,
@@ -2358,41 +2359,40 @@ async function aiCoInvent(body, client, meta = {}) {
   return out;
 }
 
-async function attachScorePathwayHonesty(result, body, sessionId) {
+async function attachScorePathwayHonesty(result, body, sessionId, signal) {
   if ((body.mode || "chat") !== "score-pathway") return result;
   const started = Date.now();
-  const signal = body.context?.signal;
   return applyHonestyToScorePathway(result, body.context || {}, {
     ...(signal ? { requestOptions: { signal } } : {}),
     onUsage: (info) => {
       recordAiText({
         mode: "score-pathway",
         source: "typesafe",
-        model: info.model || "jev-latest",
+        model: info.model || null,
         usage: info.usage,
         latencyMs: Date.now() - started,
-        ok: true,
+        ok: info.ok !== false,
         sessionId,
       });
     },
   });
 }
 
-async function attachTypeSafeJudges(result, body, sessionId) {
+async function attachTypeSafeJudges(result, body, sessionId, signal) {
+  if (signal?.aborted) return result;
   const mode = body.mode || "chat";
   if (mode === "score-pathway") {
-    return attachScorePathwayHonesty(result, body, sessionId);
+    return attachScorePathwayHonesty(result, body, sessionId, signal);
   }
   const started = Date.now();
-  const signal = body.context?.signal;
   const onUsage = (info) => {
     recordAiText({
       mode: info.mode || mode,
       source: "typesafe",
-      model: info.model || "jev-latest",
+      model: info.model || null,
       usage: info.usage,
       latencyMs: Date.now() - started,
-      ok: true,
+      ok: info.ok !== false,
       sessionId,
     });
   };
@@ -2411,11 +2411,12 @@ async function attachTypeSafeJudges(result, body, sessionId) {
   return applyTypeSafeFastJudge(result, body, opts);
 }
 
-async function handleCoInvent(body) {
+async function handleCoInvent(body, requestOpts = {}) {
   const context = body.context || {};
   const mode = body.mode || "chat";
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const sessionId = clientSessionFromBody(body);
+  const signal = requestOpts.signal;
   if (sessionId) usage.touchSession(sessionId);
 
   let result;
@@ -2425,7 +2426,7 @@ async function handleCoInvent(body) {
       kind: context.kind || "policy",
       effects: [],
     };
-    return finishCoInvent(result, body, sessionId);
+    return finishCoInvent(result, body, sessionId, signal);
   }
 
   let client = await getClient();
@@ -2477,10 +2478,10 @@ async function handleCoInvent(body) {
     }
   }
 
-  return finishCoInvent(result, body, sessionId);
+  return finishCoInvent(result, body, sessionId, signal);
 }
 
-async function finishCoInvent(result, body, sessionId) {
+async function finishCoInvent(result, body, sessionId, signal) {
   const mode = body.mode || "chat";
   if (
     body.inspect &&
@@ -2498,7 +2499,7 @@ async function finishCoInvent(result, body, sessionId) {
       console.warn("[inspect]", String(e?.message || e).slice(0, 200));
     }
   }
-  return attachTypeSafeJudges(result, body, sessionId);
+  return attachTypeSafeJudges(result, body, sessionId, signal);
 }
 
 /* —— Future vision (Imagine) —— */
@@ -3521,7 +3522,9 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
-      const result = await handleCoInvent(body);
+      const result = await handleCoInvent(body, {
+        signal: abortSignalFromHttp(req, res),
+      });
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
