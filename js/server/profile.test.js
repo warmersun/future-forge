@@ -66,6 +66,17 @@ describe("publicInventorPage", () => {
     assert.equal("email" in page, false);
     assert.equal("login" in page, false);
     assert.equal(page.holds[0].place, "Accra");
+    assert.equal("portfolio" in page, false);
+  });
+
+  it("includes a public toolkit when provided", () => {
+    const page = publicInventorPage(
+      { username: "sic", isPublic: true, displayName: "Tamas" },
+      [],
+      { usedCount: 2, total: 11, complete: false, categories: [] }
+    );
+    assert.equal(page.portfolio.usedCount, 2);
+    assert.equal(page.portfolio.complete, false);
   });
 });
 

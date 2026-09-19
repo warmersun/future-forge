@@ -24,6 +24,7 @@ import {
   neighborTiles,
   boardHolds,
   techIdsFromBoard,
+  creditedTechIdsFromBoard,
   unplacedInventionsForTech,
   techIdsWithUnplacedInventions,
   deriveBoardProse,
@@ -440,6 +441,46 @@ test("lift invention is allowed; lift crisis is not", () => {
   board = placeTile(board, "ai1", 0, 0).board;
   assert.equal(liftTile(board, "ai1").ok, true);
   assert.equal(liftTile(board, "crisis-local").ok, false);
+});
+
+test("creditedTechIdsFromBoard counts pathway techs on eased givens only", () => {
+  let board = seedCrisisTiles({
+    crisisRoles: ["local"],
+    pressure: { Floods: 1 },
+  });
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "docked-ai",
+      techId: "ai",
+      name: "Desk",
+      howText: "Routes alerts.",
+    })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "tray-robots", techId: "robots", name: "Tray" })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({ id: "lonely-iot", techId: "iot", name: "Far" })
+  );
+  // crisis-local is at q=1,r=3; (0,3) shares an edge.
+  board = placeTile(board, "docked-ai", 0, 3).board;
+  board = placeTile(board, "lonely-iot", 8, 8).board;
+  board = summonConcerns(board);
+  board = applyLights(board, [
+    { id: "crisis-local", level: "green" },
+    { id: "concern-nature", level: "yellow" },
+    { id: "concern-moloch", level: "green" },
+    { id: "concern-ethicist", level: "yellow" },
+    { id: "concern-stakeholder", level: "green" },
+  ]);
+  assert.equal(boardHolds(board), true);
+  assert.deepEqual(creditedTechIdsFromBoard(board), ["ai"]);
+  assert.ok(techIdsFromBoard(board).includes("iot"));
+  board = applyLights(board, [{ id: "crisis-local", level: "red" }]);
+  assert.deepEqual(creditedTechIdsFromBoard(board), []);
 });
 
 test("techIdsFromBoard counts only placed field inventions", () => {

@@ -2,10 +2,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   awardForRun,
+  awardPortfolioCodes,
   publicAchievement,
   foundingCodes,
   FOUNDING_MAX,
 } from "./achievements.mjs";
+import { emptyPortfolio, addTechsToPortfolio, PORTFOLIO_CATEGORIES } from "../sim/portfolio.js";
 
 describe("awardForRun", () => {
   it("does not award on collapse", () => {
@@ -69,9 +71,24 @@ describe("foundingCodes", () => {
   });
 });
 
+describe("awardPortfolioCodes", () => {
+  it("does not award full toolkit from a single category", () => {
+    const port = addTechsToPortfolio(emptyPortfolio(), ["ai"]);
+    assert.deepEqual(awardPortfolioCodes(port), []);
+  });
+
+  it("awards full toolkit when every main category has a hold", () => {
+    const all = PORTFOLIO_CATEGORIES.map((c) => c.techIds[0]);
+    const port = addTechsToPortfolio(emptyPortfolio(), all);
+    assert.deepEqual(awardPortfolioCodes(port), ["full_toolkit"]);
+    assert.deepEqual(awardPortfolioCodes(port, ["full_toolkit"]), []);
+  });
+});
+
 describe("publicAchievement", () => {
   it("hides unknown codes", () => {
     assert.equal(publicAchievement("grade_a"), null);
     assert.equal(publicAchievement("held_pathway").title, "Pathway holds");
+    assert.equal(publicAchievement("full_toolkit").title, "Full toolkit");
   });
 });

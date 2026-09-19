@@ -153,11 +153,6 @@ body.ff-accounts .topbar-game {
   color: var(--text-dim, #cbd5e1);
 }
 
-.modal.cloud-profile-modal {
-  width: min(32rem, 94vw);
-  max-height: 90vh;
-}
-
 .cloud-profile-header {
   margin-bottom: 0.75rem;
 }
@@ -211,6 +206,249 @@ body.ff-accounts .topbar-game {
 .cloud-profile-form #cloud-profile-status {
   margin: 0;
   min-height: 1.2em;
+}
+
+.cloud-portfolio {
+  --hex-w: 4.55rem;
+  width: 100%;
+  margin: 0 0 1.15rem;
+  padding: 1rem 0.75rem 1.1rem;
+  border: 1px solid rgba(232, 161, 42, 0.18);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(232, 161, 42, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(12, 18, 32, 0.92), rgba(8, 12, 22, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 210, 138, 0.08);
+}
+
+.cloud-portfolio-hero {
+  text-align: center;
+  margin: 0 0 0.35rem;
+}
+
+.cloud-portfolio-seal {
+  display: none;
+  width: 3.1rem;
+  height: 3.1rem;
+  margin: 0 auto 0.55rem;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 210, 138, 0.35), transparent 62%),
+    #0b141b;
+  box-shadow: 0 0 22px rgba(232, 161, 42, 0.45);
+}
+
+.cloud-portfolio-seal-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url("../assets/brand/ff-mark.svg") center / 86% no-repeat;
+}
+
+.cloud-portfolio.is-complete .cloud-portfolio-seal {
+  display: block;
+  animation: forge-seal 2.8s var(--ease) infinite;
+}
+
+@keyframes forge-seal {
+  0%,
+  100% {
+    box-shadow: 0 0 16px rgba(232, 161, 42, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(255, 210, 138, 0.7);
+  }
+}
+
+.cloud-portfolio-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.cloud-portfolio.is-complete .cloud-portfolio-title {
+  font-size: 1.28rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  font-weight: 750;
+  color: #ffd28a;
+  text-shadow: 0 0 18px rgba(232, 161, 42, 0.35);
+}
+
+.cloud-portfolio-lede {
+  margin: 0.35rem auto 0;
+  max-width: 22rem;
+  line-height: 1.4;
+}
+
+.cloud-portfolio-progress {
+  margin: 0.45rem 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: #ffd28a;
+}
+
+.cloud-portfolio-meter {
+  width: min(14rem, 70%);
+  height: 3px;
+  margin: 0 auto 0.85rem;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.cloud-portfolio-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb347, #ffe29a);
+  box-shadow: 0 0 8px rgba(255, 210, 138, 0.6);
+}
+
+.cloud-portfolio-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.55rem;
+  color: rgba(255, 244, 230, 0.72);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.cloud-portfolio-badge strong {
+  display: none;
+}
+
+.cloud-portfolio-grid {
+  list-style: none;
+  margin: 0.15rem auto 0;
+  padding: 0 0 1.35rem;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, var(--hex-w)));
+  justify-content: center;
+  justify-items: center;
+  max-width: calc(var(--hex-w) * 5.15);
+}
+
+.cloud-portfolio-hex {
+  width: var(--hex-w);
+  margin-bottom: calc(var(--hex-w) * -0.36);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
+}
+
+.cloud-portfolio-hex:nth-child(1) {
+  grid-column: 3 / 5;
+}
+.cloud-portfolio-hex:nth-child(2) {
+  grid-column: 5 / 7;
+}
+.cloud-portfolio-hex:nth-child(3) {
+  grid-column: 7 / 9;
+}
+.cloud-portfolio-hex:nth-child(4) {
+  grid-column: 2 / 4;
+}
+.cloud-portfolio-hex:nth-child(5) {
+  grid-column: 4 / 6;
+}
+.cloud-portfolio-hex:nth-child(6) {
+  grid-column: 6 / 8;
+}
+.cloud-portfolio-hex:nth-child(7) {
+  grid-column: 8 / 10;
+}
+.cloud-portfolio-hex:nth-child(8) {
+  grid-column: 3 / 5;
+}
+.cloud-portfolio-hex:nth-child(9) {
+  grid-column: 5 / 7;
+}
+.cloud-portfolio-hex:nth-child(10) {
+  grid-column: 7 / 9;
+}
+.cloud-portfolio-hex:nth-child(11) {
+  grid-column: 5 / 7;
+}
+
+.cloud-portfolio-hex-face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  width: 100%;
+  aspect-ratio: 1 / 1.12;
+  padding: 0.78rem 0.32rem 0.62rem;
+  color: var(--text-mute);
+  background: rgba(15, 22, 36, 0.88);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+}
+
+.cloud-portfolio-hex.is-used .cloud-portfolio-hex-face {
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--chip) 38%, #0b141b), #0b141b 72%);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--chip) 75%, #fff 8%),
+    inset 0 -10px 18px color-mix(in srgb, var(--chip) 18%, transparent);
+}
+
+.cloud-portfolio-hex.is-used {
+  filter:
+    drop-shadow(0 0 8px color-mix(in srgb, var(--chip) 42%, transparent))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
+}
+
+.cloud-portfolio.is-complete .cloud-portfolio-hex.is-used {
+  filter:
+    drop-shadow(0 0 10px color-mix(in srgb, var(--chip) 55%, transparent))
+    drop-shadow(0 0 16px rgba(232, 161, 42, 0.22));
+}
+
+.cloud-portfolio-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: grid;
+  place-items: center;
+}
+
+.cloud-portfolio-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
+.cloud-portfolio-name {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 3.6rem;
+}
+
+.cloud-portfolio-dev {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.85rem 0 0;
+}
+
+@media (max-width: 420px) {
+  .cloud-portfolio {
+    --hex-w: 3.85rem;
+    padding-inline: 0.4rem;
+  }
+  .cloud-portfolio-name {
+    font-size: 0.52rem;
+  }
 }
 
 .catalog-board-pick {
@@ -9513,6 +9751,12 @@ button.linkish:hover {
   width: min(840px, 94vw);
   max-height: none;
   overflow: visible;
+}
+
+.modal.cloud-profile-modal {
+  width: min(38rem, 94vw);
+  max-height: 90vh;
+  overflow: auto;
 }
 
 .modal.help-modal {

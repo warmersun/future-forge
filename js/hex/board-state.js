@@ -1013,6 +1013,43 @@ export function techIdsFromBoard(board) {
   return ids;
 }
 
+/**
+ * Tech ids on invention tiles that sit in a yellow/green given's pathway.
+ * Tray tiles and isolated (undocked) inventions do not count.
+ * Call on a held quest: those pathways are the invents that passed the
+ * challenge and held.
+ * @param {object} board
+ * @returns {string[]}
+ */
+export function creditedTechIdsFromBoard(board) {
+  const ids = [];
+  const seenTech = new Set();
+  const seenTile = new Set();
+  const walkFrom = (startId) => {
+    const queue = [startId];
+    while (queue.length) {
+      const id = queue.shift();
+      for (const n of neighborTiles(board, id)) {
+        if (n.kind !== TILE_KIND.invention) continue;
+        if (n.q == null || n.r == null) continue;
+        if (seenTile.has(n.id)) continue;
+        seenTile.add(n.id);
+        queue.push(n.id);
+        const techId = String(n.techId || "");
+        if (!techId || seenTech.has(techId)) continue;
+        seenTech.add(techId);
+        ids.push(techId);
+      }
+    }
+  };
+  for (const t of Object.values(board?.tiles || {})) {
+    if (t.kind !== TILE_KIND.crisis && t.kind !== TILE_KIND.concern) continue;
+    if (t.lamp !== "yellow" && t.lamp !== "green") continue;
+    walkFrom(t.id);
+  }
+  return ids;
+}
+
 function isUnplaced(tile) {
   return tile?.q == null || tile?.r == null;
 }

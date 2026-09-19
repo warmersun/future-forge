@@ -48,6 +48,16 @@ import { getClientSessionId } from "./client-session.js";
 import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
 import {
+  publicPortfolio,
+  portfolioFromRuns,
+  pickRicherPublicPortfolio,
+  recordLocalHold,
+  readLocalPortfolio,
+  seedFullToolkitPreview,
+  clearLocalPortfolio,
+  portfolioIconSvg,
+} from "./sim/portfolio.js";
+import {
   apiFetch,
   isClerkReady,
   isClerkSignedIn,
@@ -82,6 +92,7 @@ import {
   boardHolds,
   deriveBoardProse,
   techIdsFromBoard,
+  creditedTechIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
   createEmptyBoard,
@@ -3467,6 +3478,15 @@ function persistSolvedMissions() {
   }
 }
 
+function techIdsForCloudRun(outcome) {
+  const pride = outcome === "hold" || outcome === "partial" || outcome === "win";
+  if (pride && state.hexBoard) {
+    const credited = creditedTechIdsFromBoard(state.hexBoard);
+    if (credited.length) return credited;
+  }
+  return Array.isArray(state.selectedTechIds) ? [...state.selectedTechIds] : [];
+}
+
 function slimLastRunFromState() {
   const o = state.outcome;
   const m = state.mission;
@@ -3487,7 +3507,7 @@ function slimLastRunFromState() {
     yearReached: o.year ?? state.year ?? null,
     waits: o.waits ?? 0,
     place: m.place ? String(m.place) : "",
-    techIds: Array.isArray(state.selectedTechIds) ? [...state.selectedTechIds] : [],
+    techIds: techIdsForCloudRun(outcome),
   };
 }
 
@@ -4197,16 +4217,156 @@ function closeCloudProfile() {
   $("#cloud-profile-backdrop")?.classList.remove("open");
 }
 
+function localPortfolioPayload() {
+  try {
+    return publicPortfolio(readLocalPortfolio(localStorage));
+  } catch {
+    return publicPortfolio(null);
+  }
+}
+
+/**
+ * Live Cloud already stores tech_ids on hold rows (the quest log).
+ * Derive the toolkit from those so the profile does not depend on a
+ * newer /api/me/profile.portfolio field.
+ */
+async function portfolioFromCloudHolds() {
+  let runs = Array.isArray(state.questLogRuns) ? state.questLogRuns : [];
+  if (isClerkSignedIn()) {
+    try {
+      const res = await apiFetch("/api/me/runs?outcome=hold&limit=100");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.runs)) runs = data.runs;
+    } catch {
+      /* keep cached quest-log rows */
+    }
+  }
+  return publicPortfolio(portfolioFromRuns(runs));
+}
+
+function syncPortfolioDevChrome() {
+  const el = $("#cloud-portfolio-dev");
+  if (!el) return;
+  el.hidden = !state.developer;
+  if (state.developer) el.removeAttribute("hidden");
+}
+
+function applyFullToolkitPreview() {
+  try {
+    seedFullToolkitPreview(localStorage);
+  } catch {
+    /* ignore */
+  }
+  paintCloudPortfolio(localPortfolioPayload());
+  const strip = $("#cloud-achievements-strip");
+  if (strip) {
+    const have = strip.textContent.trim();
+    strip.hidden = false;
+    strip.removeAttribute("hidden");
+    if (!/Full toolkit/i.test(have)) {
+      strip.textContent = have ? `${have} · Full toolkit` : "Full toolkit";
+    }
+  }
+}
+
+async function clearFullToolkitPreview() {
+  try {
+    clearLocalPortfolio(localStorage);
+  } catch {
+    /* ignore */
+  }
+  paintCloudPortfolio(
+    pickRicherPublicPortfolio(await portfolioFromCloudHolds(), publicPortfolio(null))
+  );
+  void loadAchievementsStrip();
+}
+
+function paintCloudPortfolio(portfolio) {
+  const root = $("#cloud-profile-portfolio");
+  const grid = $("#cloud-portfolio-grid");
+  const progress = $("#cloud-portfolio-progress");
+  const badge = $("#cloud-portfolio-achievement");
+  const title = $("#cloud-portfolio-title");
+  const lede = $("#cloud-portfolio-lede");
+  const meter = $("#cloud-portfolio-meter");
+  const fill = $("#cloud-portfolio-meter-fill");
+  if (!root || !grid) return;
+  const data =
+    portfolio && Array.isArray(portfolio.categories) ? portfolio : localPortfolioPayload();
+  root.hidden = false;
+  root.removeAttribute("hidden");
+  syncPortfolioDevChrome();
+  const used = Number(data.usedCount) || 0;
+  const total = Number(data.total) || 11;
+  const done = Boolean(data.complete);
+  root.classList.toggle("is-complete", done);
+  if (title) title.textContent = done ? "Full toolkit" : "emTech toolkit";
+  if (lede) {
+    lede.hidden = done;
+    if (!done) lede.removeAttribute("hidden");
+  }
+  if (progress) {
+    progress.hidden = done;
+    progress.textContent = done
+      ? ""
+      : used === 0
+        ? "None forged yet — hold a quest with an invent on the pathway."
+        : `${used} of ${total} forged`;
+  }
+  if (meter) {
+    meter.hidden = done;
+    meter.setAttribute("aria-valuenow", String(used));
+    meter.setAttribute("aria-valuemax", String(total));
+    if (fill) fill.style.width = `${Math.round((used / Math.max(1, total)) * 100)}%`;
+  }
+  grid.replaceChildren();
+  for (const cat of data.categories || []) {
+    const li = document.createElement("li");
+    const on = Number(cat.uses) > 0;
+    li.className = `cloud-portfolio-hex${on ? " is-used" : ""}`;
+    li.style.setProperty("--chip", cat.color || "#94a3b8");
+    li.setAttribute(
+      "title",
+      on
+        ? `${cat.name} · held on ${cat.uses} quest${cat.uses === 1 ? "" : "s"}`
+        : `${cat.name} · not yet forged`
+    );
+    const face = document.createElement("span");
+    face.className = "cloud-portfolio-hex-face";
+    const icon = document.createElement("span");
+    icon.className = "cloud-portfolio-icon";
+    icon.setAttribute("aria-hidden", "true");
+    const svg = portfolioIconSvg(cat.id);
+    if (svg) icon.innerHTML = svg;
+    else icon.textContent = cat.icon || "";
+    const name = document.createElement("span");
+    name.className = "cloud-portfolio-name";
+    name.textContent = cat.name;
+    face.append(icon, name);
+    li.append(face);
+    grid.append(li);
+  }
+  if (badge) {
+    badge.hidden = !done;
+    if (done) badge.removeAttribute("hidden");
+  }
+}
+
 async function openCloudProfile(opts = {}) {
   $("#cloud-profile-backdrop")?.classList.add("open");
   const status = $("#cloud-profile-status");
   paintCloudLogin(null);
+  paintCloudPortfolio(localPortfolioPayload());
   try {
     const res = await apiFetch("/api/me/profile");
     const data = await res.json().catch(() => ({}));
     const p = data.profile || {};
     setCloudProfileCache(p);
     paintCloudLogin(data.login);
+    const fromHolds = await portfolioFromCloudHolds();
+    paintCloudPortfolio(
+      pickRicherPublicPortfolio(localPortfolioPayload(), data.portfolio, fromHolds)
+    );
     const u = $("#cloud-profile-username");
     const d = $("#cloud-profile-display");
     const b = $("#cloud-profile-bio");
@@ -16033,6 +16193,13 @@ function finishOutcome(kind, meta = {}) {
   showScreen("outcome");
   const slim = slimLastRunFromState();
   stashLastRun(slim);
+  if (slim && (slim.outcome === "hold" || slim.outcome === "partial")) {
+    try {
+      recordLocalHold(localStorage, slim.techIds);
+    } catch {
+      /* private mode */
+    }
+  }
   void postCloudRun(slim).then((id) => {
     const run = { ...slim, id: id || slim.id };
     void submitQuestBoardIfCounted(run);
@@ -20614,6 +20781,10 @@ function bind() {
     e.preventDefault();
     void saveCloudProfile();
   });
+  $("#btn-cloud-portfolio-preview")?.addEventListener("click", () => applyFullToolkitPreview());
+  $("#btn-cloud-portfolio-clear")?.addEventListener("click", () => {
+    void clearFullToolkitPreview();
+  });
   $("#outcome-publish")?.addEventListener("change", () => {
     const on = Boolean($("#outcome-publish")?.checked);
     const id = state.cloudRunId;
@@ -21428,6 +21599,7 @@ async function refreshDeveloperModeFromHealth() {
     if (next === state.developer) return;
     state.developer = next;
     syncDeveloperAiTraceTab();
+    syncPortfolioDevChrome();
     if (state.screen === "quest-catalog") renderQuestCatalog();
     if (_waitConfirmCtx) syncWaitTrendCharts();
   } catch {
@@ -21461,6 +21633,10 @@ export function init() {
     ]);
     await resumePendingDeviceHandshake();
     await consumeDeepLink();
+    if (String(location.hash || "") === "#ff-preview-toolkit") {
+      applyFullToolkitPreview();
+      void openCloudProfile();
+    }
   })();
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;

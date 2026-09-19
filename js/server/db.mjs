@@ -449,6 +449,24 @@ export async function countUsers() {
   return r.rows[0]?.n || 0;
 }
 
+/**
+ * Tech-id arrays from hold/partial runs — input to the inventor portfolio.
+ * @param {string} clerkUserId
+ * @returns {Promise<string[][]>}
+ */
+export async function listHoldTechIdLists(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT tech_ids FROM runs
+     WHERE clerk_user_id = $1 AND outcome IN ('hold','partial')
+     ORDER BY ended_at ASC NULLS LAST`,
+    [uid]
+  );
+  return r.rows.map((row) => (Array.isArray(row.tech_ids) ? row.tech_ids.map(String) : []));
+}
+
 export async function listAchievements(clerkUserId) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);

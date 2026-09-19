@@ -103,6 +103,7 @@ import {
   startRun,
   getRunForUser,
   listAchievements,
+  listHoldTechIdLists,
   insertAchievements,
   countUsers,
   deleteUser,
@@ -156,9 +157,14 @@ import {
 } from "../js/server/quest-board.mjs";
 import {
   awardForRun,
+  awardPortfolioCodes,
   publicAchievement,
   foundingCodes,
 } from "../js/server/achievements.mjs";
+import {
+  portfolioFromTechIdLists,
+  publicPortfolio,
+} from "../js/sim/portfolio.js";
 import {
   searchToolsForMode,
   SEARCH_MAX_OUTPUT_TOKENS,
@@ -2347,6 +2353,7 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
     } catch {
       sponsored = false;
     }
+    const already = have.map((h) => h.code);
     const codes = awardForRun(
       {
         outcome: run.outcome,
@@ -2354,10 +2361,22 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
         techIds: run.techIds,
       },
       {
-        already: have.map((h) => h.code),
+        already,
         sponsored,
       }
     );
+    try {
+      const lists = await listHoldTechIdLists(clerkUserId);
+      const toolkit = awardPortfolioCodes(portfolioFromTechIdLists(lists), [
+        ...already,
+        ...codes,
+      ]);
+      for (const c of toolkit) {
+        if (!codes.includes(c)) codes.push(c);
+      }
+    } catch {
+      /* portfolio is additive; hold still saved */
+    }
     const n = await countUsers();
     const extraCodes = foundingCodes({
       userCount: n,
@@ -3565,9 +3584,17 @@ const server = http.createServer(async (req, res) => {
       const profile = await getProfileByUserId(gate.userId);
       const p = profile || { isPublic: false, username: null, displayName: null };
       const login = await fetchClerkLoginSummary(gate.userId);
+      let portfolio = publicPortfolio(null);
+      try {
+        const lists = await listHoldTechIdLists(gate.userId);
+        portfolio = publicPortfolio(portfolioFromTechIdLists(lists));
+      } catch {
+        /* profile still loads without toolkit */
+      }
       return sendJson(res, 200, {
         ok: true,
         profile: p,
+        portfolio,
         needsDisplayName: profileNeedsDisplayName(p),
         ...(login ? { login } : {}),
       });
@@ -3589,9 +3616,11 @@ const server = http.createServer(async (req, res) => {
       if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
       const result = await updateProfile(gate.userId, parsed.patch);
       const p = result.profile || { isPublic: false, username: null, displayName: null };
+      const lists = await listHoldTechIdLists(gate.userId);
       return sendJson(res, 200, {
         ok: true,
         profile: p,
+        portfolio: publicPortfolio(portfolioFromTechIdLists(lists)),
         needsDisplayName: profileNeedsDisplayName(p),
       });
     } catch (e) {
@@ -3687,7 +3716,17 @@ const server = http.createServer(async (req, res) => {
       const slug = sanitizeUsername(decodeURIComponent(pathOnly.slice("/api/u/".length)));
       if (!slug) return sendJson(res, 404, { ok: false, error: "not_found" });
       const row = await getProfileByUsername(slug);
-      const page = publicInventorPage(row, row ? await listSharedHolds(row.clerkUserId) : []);
+      let lists = [];
+      try {
+        lists = row ? await listHoldTechIdLists(row.clerkUserId) : [];
+      } catch {
+        lists = [];
+      }
+      const page = publicInventorPage(
+        row,
+        row ? await listSharedHolds(row.clerkUserId) : [],
+        publicPortfolio(portfolioFromTechIdLists(lists))
+      );
       if (!page) return sendJson(res, 404, { ok: false, error: "not_found" });
       return sendJson(res, 200, { ok: true, profile: page });
     } catch (e) {
@@ -3713,6 +3752,12 @@ const server = http.createServer(async (req, res) => {
         solvedIds: parsed.solvedIds,
         lastRun: parsed.lastRun,
       });
+      let unlocked = [];
+      if (result.lastRunStored && parsed.lastRun) {
+        unlocked = await grantCloudAchievements(gate.userId, parsed.lastRun, {
+          runId: result.lastRunId,
+        });
+      }
       return sendJson(res, 200, {
         ok: true,
         inserted: result.inserted,
@@ -3720,6 +3765,7 @@ const server = http.createServer(async (req, res) => {
         lastRunStored: result.lastRunStored,
         lastRunId: result.lastRunId || null,
         solvedIds: result.solvedIds,
+        unlocked,
       });
     } catch (e) {
       console.warn("[cloud db] import", e?.message || e);

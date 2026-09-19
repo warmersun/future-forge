@@ -2,6 +2,8 @@
  * C2 consumer badges. Server decides; the client never says "I unlocked."
  */
 
+import { FULL_TOOLKIT_CODE, isFullToolkit } from "../sim/portfolio.js";
+
 export const ACHIEVEMENT_DEFS = {
   held_pathway: {
     title: "Pathway holds",
@@ -22,6 +24,10 @@ export const ACHIEVEMENT_DEFS = {
   converter_dock: {
     title: "Bits to atoms",
     blurb: "Used a converter to dock bits to atoms.",
+  },
+  [FULL_TOOLKIT_CODE]: {
+    title: "Full toolkit",
+    blurb: "You held pathways using every main emTech — AI, robots, transport, networks, power, computing, AR/VR, IoT, 3D print, SynBio, and crypto.",
   },
   founding: {
     title: "Founding inventor",
@@ -67,6 +73,19 @@ export function awardForRun(run, ctx = {}) {
     unlock("converter_dock");
   }
   return out;
+}
+
+/**
+ * Full toolkit is career-wide, not one run. Pass the aggregated portfolio.
+ * @param {{ uses?: Record<string, number> }|null|undefined} portfolio
+ * @param {string[]} [already]
+ * @returns {string[]}
+ */
+export function awardPortfolioCodes(portfolio, already = []) {
+  const have = new Set(already || []);
+  if (have.has(FULL_TOOLKIT_CODE) || !ACHIEVEMENT_DEFS[FULL_TOOLKIT_CODE]) return [];
+  if (!isFullToolkit(portfolio)) return [];
+  return [FULL_TOOLKIT_CODE];
 }
 
 export const FOUNDING_MAX = 100;

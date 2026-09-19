@@ -10,7 +10,7 @@
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark.svg" type="image/svg+xml" />
     <link rel="icon" href="assets/brand/ff-mark.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-46" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-56" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -2345,6 +2345,41 @@
           </p>
         </header>
         <p id="cloud-profile-login" class="muted sm cloud-profile-login" hidden></p>
+        <section id="cloud-profile-portfolio" class="cloud-portfolio" hidden>
+          <header class="cloud-portfolio-hero">
+            <div class="cloud-portfolio-seal" aria-hidden="true">
+              <span class="cloud-portfolio-seal-mark"></span>
+            </div>
+            <h4 class="cloud-portfolio-title" id="cloud-portfolio-title">emTech toolkit</h4>
+            <p class="muted sm cloud-portfolio-lede" id="cloud-portfolio-lede">
+              emTechs on invent tiles that passed the challenge and held the quest.
+            </p>
+            <p id="cloud-portfolio-progress" class="cloud-portfolio-progress"></p>
+            <div
+              id="cloud-portfolio-meter"
+              class="cloud-portfolio-meter"
+              hidden
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="11"
+            >
+              <span id="cloud-portfolio-meter-fill"></span>
+            </div>
+            <p id="cloud-portfolio-achievement" class="cloud-portfolio-badge" hidden>
+              <strong>Full toolkit</strong>
+              <span>Every main emTech has held a quest.</span>
+            </p>
+          </header>
+          <ol id="cloud-portfolio-grid" class="cloud-portfolio-grid"></ol>
+          <p id="cloud-portfolio-dev" class="cloud-portfolio-dev" hidden>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-preview">
+              Preview all 11
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-clear">
+              Clear preview
+            </button>
+          </p>
+        </section>
         <form id="cloud-profile-form" class="cloud-profile-form">
           <div class="field">
             <label for="cloud-profile-username">Username</label>
@@ -2398,6 +2433,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-40"></script>
+    <script type="module" src="js/main.js?v=portal-56"></script>
   </body>
 </html>

@@ -93,7 +93,7 @@ export function parseProfilePatch(body) {
  * @param {object} row
  * @param {object[]} [holds]
  */
-export function publicInventorPage(row, holds = []) {
+export function publicInventorPage(row, holds = [], portfolio = null) {
   if (!row || !row.isPublic) return null;
   return {
     username: row.username,
@@ -105,6 +105,7 @@ export function publicInventorPage(row, holds = []) {
       yearReached: h.yearReached ?? h.year_reached ?? null,
       kind: h.kind || null,
     })),
+    ...(portfolio ? { portfolio } : {}),
   };
 }
 
