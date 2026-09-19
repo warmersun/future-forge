@@ -35,6 +35,7 @@ Required:
 | `globalId` | Must match a theme in `js/data.js` `GLOBALS` |
 | `spotlight.techId` | Must match `TECHS` id |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
+| `mission.suggestedWhy` | Optional `{ [techId]: string }`. One everyday-words sentence (≤120 chars) per suggested id: what that family could do in *this* place and which crisis meter label it eases. Shown under the card in the **For this place** shelf and in the crisis-hex "What could help here?" list. Falls back to the tech's capability line + hottest meter when absent. Unknown ids and non-strings are dropped; a non-object is a validation error. |
 | `mission.briefMd` | Non-empty Markdown brief |
 | `title`, `summary` | `summary` is required: 2–3 short sentences (≤420 chars). Global problem, situation, what we’re solving for. No place/person names, no scene craft. Spotlight names the emTech gap. |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |

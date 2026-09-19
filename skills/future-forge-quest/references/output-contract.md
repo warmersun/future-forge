@@ -78,12 +78,15 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
     "briefMd": "## The place\n\n…\n\n## The bigger problem\n\n…\n\n## Your job\n\n…\n",
     "stakeholder": "…",
     "suggested": ["<techId>"],
+    "suggestedWhy": { "<techId>": "… one sentence: what this family could do here and which crisis meter label it eases …" },
     "visionTheme": "rebuild-city"
   }
 }
 ```
 
 `title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary: 2–3 short sentences, names allowed. Lab terms and product names stay in `grounding` / tutor.
+
+`suggestedWhy`: optional, keyed by the spotlight id. ≤120 chars, everyday words, names the crisis meter label it eases. The tray shows it under the card as **why here**; the family name is fine there, product names are not. Omit rather than pad — the engine falls back to the tech's capability line + hottest meter.
 
 ---
 

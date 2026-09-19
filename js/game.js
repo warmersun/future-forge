@@ -292,13 +292,15 @@ import {
   cloneScrutiny,
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
+import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
+import { splitTray, whyHere, capabilityLine, pickTechsForCrisis } from "./tech-why.js";
+import { termHtml, bindGlossaryTaps } from "./glossary.js";
 import {
-  featuresForPlayMode,
-  readHasCompletedSpark,
-  markSparkCompleted,
-  resetSparkProgress,
-  shouldShowWorkshopUnlock,
-} from "./sim/play-mode.js";
+  resolveConceptCard,
+  conceptById,
+  readMutedConcepts,
+  setConceptMuted,
+} from "./concept-cards.js";
 
 /** Hotseat session bridged into solo workshop / challenge / deploy */
 const hotseatBridge = createHotseatBridge();
@@ -444,10 +446,6 @@ const state = {
   mission: null,
   /** @type {null | object} multiplayer chrome flags (set by hotseatBridge.hydrateSoloState) */
   mp: null,
-  /** Solo mode for current run: "spark" (Start tutorial only) | "workshop" | null */
-  playMode: null,
-  /** True only while a Play-tutorial mission is active */
-  tutorialRun: false,
   /** Server developer mode from GET /api/health (CLI --developer). Off by default. */
   developer: false,
   /** @type {object[]} Merged quests from GET /api/quests (compat) */
@@ -495,6 +493,10 @@ const state = {
   hadChallengeAttempt: false,
   lastChallengeVerdict: null,
   domainFilter: "all",
+  /** Per-Quest: the full emTech catalog is expanded under "For this place" */
+  trayShowAll: false,
+  /** Per-Quest: concept cards already auto-shown (Friend's seven ids) */
+  conceptSeen: [],
   vision: null,
   coInventor: null,
   sideTab: "vision",
@@ -599,8 +601,8 @@ const STORAGE_RUNS = "future-forge:runReports";
 const STORAGE_LAST_RUN = "future-forge:lastRun";
 
 /**
- * Friends room / hotseat keep today's full GAME.features (not Spark).
- * Solo: Workshop by default; Spark only while a "Start tutorial" run is active.
+ * Friends room / hotseat keep today's full GAME.features.
+ * Solo: the single Workshop profile.
  */
 function isRoomOrHotseatSession() {
   try {
@@ -616,7 +618,6 @@ function isRoomOrHotseatSession() {
 function features() {
   const base = GAME.features || {};
   if (isRoomOrHotseatSession()) return base;
-  // Tutorial/Spark retired — Workshop only
   return featuresForPlayMode("workshop", base);
 }
 
@@ -924,19 +925,19 @@ function deployStagesEnabled() {
   return Boolean(features().deployStages);
 }
 
-/** Max techs on stack — Spark 3, Workshop 6 (from play-mode profile). */
+/** Max techs on stack — 6 (from the Workshop profile). */
 function stackCapLimit() {
   const c = features().stackCap;
   if (typeof c === "number" && c > 0) return Math.floor(c);
   return 6;
 }
 
-/** Spark: only starter techs (+ mission.suggested). Workshop: full catalog. */
+/** Kept for the profile flag; the Workshop always shows the full catalog. */
 function starterTechOnlyEnabled() {
   return Boolean(features().starterTechOnly);
 }
 
-/** Spark: one story box; Workshop: How it works + Everyday life. */
+/** Kept for the profile flag; the Workshop uses How it works + Everyday life. */
 function singleStoryFaceEnabled() {
   return Boolean(features().singleStoryFace);
 }
@@ -1419,6 +1420,9 @@ function ensureHexWorkshop() {
     getPlace: () => state.mission?.place || "",
     getMissionTitle: () => state.mission?.title || "",
     getMission: () => state.mission || null,
+    /** "What could help here?" — suggested emTechs with plain reasons for a crisis hex */
+    techsForCrisis: (where) => pickTechsForCrisis(state.mission, TECHS, where || {}, 3),
+    focusTechFromBoard: (id) => focusTech(id),
     getRules: () => liveRules(),
     getGlobal: () => state.global || null,
     getGrounding: () => state.mission?.grounding || null,
@@ -1535,6 +1539,8 @@ function ensureHexWorkshop() {
         console.warn("[board_commit]", e);
       }
     },
+    /** Create panel finished (ideas / mint / summon): coach-marks may open now. */
+    onCreateIdle: () => refreshCoachMarks(),
     onBoardPainted: () => {
       renderSelectedChips();
       renderFeasibility();
@@ -1542,7 +1548,7 @@ function ensureHexWorkshop() {
       renderHud();
       updateLearnButton?.();
       updateVision({ debounceMs: 800 });
-      refreshGuidedTour();
+      refreshCoachMarks();
     },
     openLearnWhileIdeas: (techId) => openLearnWhileIdeas(techId),
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
@@ -4076,9 +4082,6 @@ function showScreen(id) {
   }
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
   if (id === "title") {
-    // Back on Home: clear tutorial session flag (storage not used)
-    state.tutorialRun = false;
-    state.playMode = null;
     renderTitleMeta();
   }
   if (id === "quest-hub") renderQuestHub();
@@ -4123,7 +4126,6 @@ function shuffleCopy(arr) {
 function renderTitleCtas() {
   const start = $("#btn-start");
   const choose = $("#btn-choose-theme");
-  const resetBtn = $("#btn-reset-spark");
 
   if (choose) {
     choose.hidden = false;
@@ -4144,17 +4146,14 @@ function renderTitleCtas() {
     else btn.setAttribute("hidden", "");
   }
   if (dailyBtn) {
-    dailyBtn.hidden = false;
-    dailyBtn.removeAttribute("hidden");
+    dailyBtn.hidden = !showLog;
+    if (showLog) dailyBtn.removeAttribute("hidden");
+    else dailyBtn.setAttribute("hidden", "");
   }
   if (start) {
     start.hidden = true;
     start.setAttribute("hidden", "");
     start.setAttribute("aria-hidden", "true");
-  }
-  if (resetBtn) {
-    resetBtn.hidden = true;
-    resetBtn.setAttribute("hidden", "");
   }
 }
 
@@ -4176,7 +4175,12 @@ async function loadAchievementsStrip() {
       return;
     }
     el.hidden = false;
-    el.textContent = list.map((a) => a.title).join(" · ");
+    el.innerHTML = list
+      .map(
+        (a) =>
+          `<span class="achievement-chip" title="${escapeHtml(a.blurb || "")}">${escapeHtml(a.title || "")}</span>`
+      )
+      .join('<span class="achievement-sep" aria-hidden="true"> · </span>');
   } catch {
     el.hidden = true;
   }
@@ -5113,8 +5117,6 @@ async function playCatalogEntry(entry, opts = {}) {
   if (opts.clearPick !== false && !missionPickSession) {
     clearMissionPickSession();
     leaveHotseat?.();
-    state.tutorialRun = false;
-    state.playMode = "workshop";
   }
   state.global = globalById(m.globalId) || state.global;
   const ok = startMission(m);
@@ -5200,38 +5202,6 @@ async function consumeDeepLink() {
   }
 }
 
-/** Show Start tutorial again (clears local completion flag). */
-function requestResetTutorialProgress() {
-  const ok = confirm(
-    "Reset tutorial progress?\n\n" +
-      "Start tutorial will show again on the home screen.\n" +
-      "This does not delete theme caches or imported Quests."
-  );
-  if (!ok) return;
-  resetSparkProgress();
-  state.tutorialRun = false;
-  state.playMode = null;
-  renderTitleMeta();
-  flashToast("Tutorial reset — Start tutorial when ready.");
-}
-
-/**
- * Start tutorial → Portside Ward with Spark profile for this run only.
- */
-function startSparkPortsideMission() {
-  clearMissionPickSession();
-  leaveHotseat();
-  leaveRoomPlay({ silent: true });
-  state.mp = null;
-  state.mpOutcome = null;
-  state.tutorialRun = true;
-  state.playMode = "spark";
-  const raw = MISSIONS.find((m) => m.id === "portside-floods") || MISSIONS[0];
-  const globalId = raw.globalId || "climate";
-  const mission = normalizeMission({ ...raw, source: "curated" }, globalId);
-  state.global = globalById(globalId) || state.global;
-  startMission(mission);
-}
 
 /**
  * @param {string|ArrayBuffer} text
@@ -6997,6 +6967,9 @@ function startMission(mission, opts = {}) {
   ideaSparkJobCurrent.clear();
   ideaSparksBusy = false;
   focusedTechId = null;
+  state.trayShowAll = false;
+  state.conceptSeen = [];
+  hexWorkshop?.resetCreateMode?.();
   closeIdeaDeck();
   state.inventionName = "";
   state.inventionHow = "";
@@ -7069,13 +7042,6 @@ function startMission(mission, opts = {}) {
   state.elegancePivotPenalty = false;
   state.challengeClearMode = null;
   state.scrutinyMoveMode = null;
-  // Solo mode for this run: spark only if Start tutorial set tutorialRun; else Workshop
-  if (state.tutorialRun) {
-    state.playMode = "spark";
-  } else {
-    state.playMode = "workshop";
-    state.tutorialRun = false;
-  }
   // Never carry Friends standings into a solo mission outcome
   if (!missionPickSession && !mpBridge()) {
     state.mp = null;
@@ -7166,7 +7132,7 @@ function cacheMissionSummary(mission, summary) {
 }
 
 /**
- * Paint authored summary, or AI-fill once per mission when missing.
+ * Paint authored summary, or AI-fill once per Quest when missing.
  * @param {HTMLElement|null} el
  */
 async function ensureMissionSummary(el) {
@@ -7283,7 +7249,7 @@ function renderWorkshop() {
       onChange: (snap) => {
         if (snap?.mode === "walk") {
           setSideTab("vision");
-          refreshGuidedTour();
+          refreshCoachMarks();
           return;
         }
         if (snap?.mode !== "off") return;
@@ -7292,7 +7258,7 @@ function renderWorkshop() {
         } catch {
           /* ignore */
         }
-        refreshGuidedTour();
+        refreshCoachMarks();
       },
     });
   } else if (sceneEl) {
@@ -7396,7 +7362,7 @@ function renderWorkshop() {
   ensureCoInventor();
   // Co-inventor may remount — re-apply spectator / busy locks
   syncInventActionButtons();
-  refreshGuidedTour();
+  refreshCoachMarks();
 }
 
 /**
@@ -8037,14 +8003,15 @@ function renderFeasibility() {
       timingNote = "Mint an invention tile";
     }
     const rows = [
-      { name: "Coverage", level: coverage.level, note: coverage.note },
-      { name: "Bonds", level: bonds.level, note: bonds.note },
-      { name: "Timing", level: panel.timingLevel, note: timingNote },
+      { name: "Coverage", term: "coverage", level: coverage.level, note: coverage.note },
+      { name: "Bonds", term: "bonds", level: bonds.level, note: bonds.note },
+      { name: "Timing", term: "timing", level: panel.timingLevel, note: timingNote },
     ];
     dims.innerHTML = rows
       .map(
         (d) =>
-          `<li><span class="dot ${d.level}"></span><span class="dim-name">${escapeHtml(
+          `<li><span class="dot ${d.level}"></span><span class="dim-name">${termHtml(
+            d.term,
             d.name
           )}</span><span>${escapeHtml(d.note)}</span></li>`
       )
@@ -8299,24 +8266,25 @@ function renderTechList() {
   const suggested = new Set(state.mission?.suggested || []);
   const spotlightId = state.mission?.spotlight?.techId || null;
   let list = techsForTray();
+  const catalogCount = list.length;
   if (state.domainFilter !== "all") list = list.filter((t) => t.domain === state.domainFilter);
-  list.sort((a, b) => {
-    const as = a.id === spotlightId ? 0 : suggested.has(a.id) ? 1 : 2;
-    const bs = b.id === spotlightId ? 0 : suggested.has(b.id) ? 1 : 2;
-    if (as !== bs) return as - bs;
-    return a.name.localeCompare(b.name);
-  });
+  const { place, rest } = splitTray(state.mission, list);
+  rest.sort((a, b) => a.name.localeCompare(b.name));
+  const grouped = suggestedCount() > 0;
 
   const el = $("#tech-list");
-  el.innerHTML = list
-    .map((t) => {
+  const cardHtml = (t, onShelf) => {
       const sel = state.selectedTechIds.includes(t.id);
       const sug = suggested.has(t.id);
       const isSpot = spotlightId && t.id === spotlightId;
       const afford = sel ? { ok: true } : canAffordTech(t);
       const unaffordable = !sel && !afford.ok;
       const color = DOMAINS[t.domain]?.color || "#94a3b8";
-      const nowCap = t.useCasesNow?.[0] || t.maturity?.now || t.summary;
+      const canDo = capabilityLine(t);
+      const why = onShelf ? whyHere(t, state.mission) : "";
+      // Template reasons already begin with the capability line — show it once
+      const canStem = canDo.replace(/[.…]+$/, "");
+      const showCan = !why || !canStem || !why.startsWith(canStem);
       const cost = budgetWillEnabled() ? techCost(t) : null;
       const baseCost = budgetWillEnabled() ? techCostRaw(t) : null;
       const marketHit =
@@ -8324,7 +8292,7 @@ function renderTechList() {
       const costTitle = cost
         ? ` | ${isHexInventUi() ? "Cost when placed on board" : "To add"}: ${cost.budget} Budget${cost.will ? `, ${cost.will} Support` : ""}${
             apEnabled() ? ", 1 AP" : ""
-          }${cost.frontierRisk ? ` · frontier risk ${cost.frontierRisk}` : ""}${
+          }${cost.frontierRisk ? ` · early-tech risk ${cost.frontierRisk}` : ""}${
             marketHit ? " · market news active" : ""
           }${unaffordable ? " · cannot afford" : ""}`
         : apEnabled()
@@ -8390,13 +8358,14 @@ function renderTechList() {
       return `
         <div class="${cardClass}" data-id="${t.id}" style="--domain:${color}" role="listitem" tabindex="-1">
           <button type="button" class="tech-card-main" data-tech-focus="${t.id}"
-            title="${escapeHtml(nowCap)}${escapeHtml(costTitle)} — click to focus">
+            title="${escapeHtml(t.summary || "")}${escapeHtml(costTitle)} — click to focus">
             <span class="tech-icon">${t.icon}</span>
             <span class="tech-meta">
               <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
-              <p>${escapeHtml(t.summary)}</p>
+              ${showCan ? `<p class="tech-can">${escapeHtml(canDo)}</p>` : ""}
+              ${why ? `<p class="tech-why">${escapeHtml(why)}</p>` : ""}
               <span class="tech-domain">${DOMAINS[t.domain]?.label || t.domain}${
-                !isSpot && sug ? " · suggested" : ""
+                !grouped && !isSpot && sug ? " · suggested" : ""
               }${unaffordable ? " · can't afford" : ""}</span>
               ${costHtml}
             </span>
@@ -8406,8 +8375,36 @@ function renderTechList() {
             <span class="tech-add">${toggleMark}</span>
           </button>
         </div>`;
-    })
-    .join("");
+  };
+
+  if (!grouped) {
+    el.innerHTML = [...place, ...rest].map((t) => cardHtml(t, false)).join("");
+  } else {
+    const filtered = state.domainFilter !== "all";
+    const openAll = state.trayShowAll || place.length === 0;
+    const shelf = place.length
+      ? `<section class="tech-group tech-group-place" aria-label="For this place">
+          <h3 class="tech-group-title">For this place</h3>
+          <p class="tech-group-sub muted">Suggested for this Quest — each line says why.</p>
+          ${place.map((t) => cardHtml(t, true)).join("")}
+        </section>`
+      : filtered
+        ? `<p class="tech-group-empty muted">No suggested emTech in this domain — the full list is below.</p>`
+        : "";
+    const restHtml = rest.length
+      ? rest.map((t) => cardHtml(t, false)).join("")
+      : `<p class="tech-group-empty muted">Nothing else in this domain.</p>`;
+    el.innerHTML = `${shelf}
+      <details class="tech-group tech-group-all" id="tech-group-all"${openAll ? " open" : ""}>
+        <summary class="tech-group-title tech-group-summary">All emerging tech <span class="tech-group-count">(${catalogCount})</span></summary>
+        <p class="tech-group-sub muted">Every family is always pickable. Open Learn on any card to see what it can do now.</p>
+        ${restHtml}
+      </details>`;
+    const details = el.querySelector("#tech-group-all");
+    details?.addEventListener("toggle", () => {
+      state.trayShowAll = Boolean(details.open);
+    });
+  }
 
   el.querySelectorAll("[data-tech-focus]").forEach((btn) => {
     btn.addEventListener("click", () => focusTech(btn.dataset.techFocus));
@@ -8430,6 +8427,13 @@ function renderTechList() {
       openTechModal(card.dataset.id);
     });
   });
+}
+
+/** How many emTechs the Quest points at (spotlight counts). */
+function suggestedCount() {
+  const ids = new Set(state.mission?.suggested || []);
+  if (state.mission?.spotlight?.techId) ids.add(state.mission.spotlight.techId);
+  return ids.size;
 }
 
 function pushLearnOrder(id) {
@@ -8735,6 +8739,7 @@ function focusTech(techId) {
   renderSelectedChips();
   renderIdeaFocusBar();
   updateLearnButton();
+  refreshCoachMarks();
 }
 
 async function openIdeaDeck(techId) {
@@ -9780,6 +9785,7 @@ function closeWaitConfirm() {
   }
   document.body.classList.remove("wait-confirm-open");
   _waitConfirmOnOk = null;
+  refreshCoachMarks();
 }
 
 /**
@@ -9821,6 +9827,7 @@ function openWaitConfirm(onOk, ctx = {}) {
   });
   syncWaitTrendCharts();
   $("#wait-confirm-ok")?.focus();
+  refreshCoachMarks();
 }
 
 /** Click handler: confirm, then run waitTurn. */
@@ -11186,6 +11193,9 @@ function slimTechForEval(t) {
     domain: full.domain,
     summary: full.summary,
     readyYear: full.readyYear || full.softHorizon || null,
+    // Problem-facing seeds so offline Ask for ideas can say what the family does here
+    inventionHint: t.inventionHint || full.inventionHint || undefined,
+    useCasesNow: Array.isArray(t.useCasesNow) ? t.useCasesNow.slice(0, 3) : undefined,
   };
 }
 
@@ -11224,8 +11234,28 @@ function leanCoInventContext(mode, extra = {}) {
       challenge: state.mission
         ? { title: state.mission.title, problem: scene }
         : null,
+      stakeholder: state.mission?.stakeholder || "",
+      crisisMeters: crisisMetersForAi(),
     }
   );
+}
+
+/**
+ * Crisis meters as the AI should see them for ideation: label, level, goal, plain description.
+ * Uses the live pressure so ideas aim at what is hot now.
+ */
+function crisisMetersForAi() {
+  const m = state.mission;
+  if (!m?.pressure) return [];
+  const live = state.pressure || {};
+  const roles = Array.isArray(m.crisisRoles) ? m.crisisRoles : [];
+  return Object.keys(m.pressure).map((label, i) => ({
+    label,
+    role: roles[i] || null,
+    level: Number(live[label] ?? m.pressure[label]) || 0,
+    goal: Number(m.winMax?.[label] ?? 1),
+    description: String(m.pressureDesc?.[label] || "").slice(0, 240),
+  }));
 }
 
 function recordAiTrace(info) {
@@ -12159,8 +12189,8 @@ function updateSidestepAvailability() {
       : used
         ? "Sidestep already used this mission (once per run)"
         : cost.ok
-          ? `Skip this challenger once per mission (${hearts}♥ left → ${costLabel}; softens elegance ★)`
-          : "Skip this challenger once per mission (cost = remaining resolve hearts)";
+          ? `Skip this challenger once per Quest (${hearts}♥ left → ${costLabel}; softens elegance ★)`
+          : "Skip this challenger once per Quest (cost = remaining resolve hearts)";
   }
   if (costEl) {
     costEl.textContent = used
@@ -12318,10 +12348,10 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
       if (sc.ok) {
         lead.innerHTML = `You dodge this challenger without answering. Cost equals <strong>remaining resolve</strong>: <strong>${sc.hearts}♥</strong> → <strong>${escapeHtml(
           formatSidestepCostShort(sc)
-        )}</strong>. Only once per mission. Lobby on Invent if you need more Support.`;
+        )}</strong>. Only once per Quest. Lobby on Invent if you need more Support.`;
       } else {
         lead.innerHTML =
-          "You dodge this challenger without answering. Cost equals remaining resolve hearts (e.g. 2♥ → 2 AP · 2 Support). Only once per mission.";
+          "You dodge this challenger without answering. Cost equals remaining resolve hearts (e.g. 2♥ → 2 AP · 2 Support). Only once per Quest.";
       }
     }
     // status line for spectators
@@ -12924,7 +12954,7 @@ function scrutinyPivot() {
   state.challengeClearMode = "sidestep";
   const sidestepMsg = `<strong>SIDESTEP</strong> — You skipped ${escapeHtml(
     enc.label
-  )} (${cost.hearts}♥ remaining · ${formatSidestepCostShort(cost)} · once per mission · softens elegance ★).`;
+  )} (${cost.hearts}♥ remaining · ${formatSidestepCostShort(cost)} · once per Quest · softens elegance ★).`;
   state.challengeFeedback = sidestepMsg;
   // Not a defended pass — still unlocks deploy, but scoring/outcome treat it as a dodge
   state.challengeVerdict = "pass";
@@ -16149,23 +16179,8 @@ function finishOutcome(kind, meta = {}) {
     delete enriched.multiparty;
   }
 
-  // Tutorial win: set local flag (hide Start tutorial on Home) + meta for outcome explainer
-  // Snapshot graduation *before* clearing tutorialRun (renderOutcome needs the flag)
   const solo = !thisMp?.multiparty && !enriched.multiparty;
-  const tutorialGraduation =
-    solo && kind === "win" && (state.tutorialRun || state.playMode === "spark");
-  if (tutorialGraduation) {
-    enriched.tutorialGraduation = true;
-    try {
-      markSparkCompleted();
-    } catch {
-      /* private mode */
-    }
-  }
-  if (solo) {
-    state.tutorialRun = false;
-    state.mpOutcome = null;
-  }
+  if (solo) state.mpOutcome = null;
   const report = features().runReport ? buildRunReport(kind, enriched) : null;
   state.runReport = report;
   if (report && state.mission?.id) persistRunReport(state.mission.id, report);
@@ -16744,23 +16759,6 @@ function paintOutcomeVision(m, o) {
   }
 }
 
-/**
- * Show/hide Workshop graduation panel on outcome (solo tutorial win only).
- * @param {object} o — state.outcome
- * @param {object|null} mp — multiparty snapshot if any
- */
-function paintWorkshopUnlockPanel(o, mp) {
-  const panel = $("#outcome-workshop-unlock");
-  if (!panel) return;
-  const show = shouldShowWorkshopUnlock({
-    kind: o?.kind,
-    multiparty: Boolean(mp?.multiparty || o?.meta?.multiparty),
-    tutorialGraduation: Boolean(o?.meta?.tutorialGraduation),
-  });
-  panel.hidden = !show;
-  if (show) panel.removeAttribute("hidden");
-  else panel.setAttribute("hidden", "");
-}
 
 /** Hex play no longer names the invent — leftover titles are placeholders. */
 function isPlayerInventionName(name) {
@@ -16831,9 +16829,6 @@ function renderOutcome() {
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
 
-  // Solo tutorial win only — what Workshop layers on vs Spark
-  paintWorkshopUnlockPanel(o, mp);
-
   const starsEl = $("#outcome-stars");
   const report = o.runReport || state.runReport;
   if (starsEl) {
@@ -16903,7 +16898,7 @@ function renderOutcome() {
     story =
       `In ${o.year}, ${name} landed in ${m.place}. Crisis meters fell enough for people to breathe. ` +
       (sidestepped
-        ? `You sidestepped a ${o.meta?.angle || "challenge"} challenger (once per mission), then deployed. `
+        ? `You sidestepped a ${o.meta?.angle || "challenge"} challenger (once per Quest), then deployed. `
         : `You faced a ${o.meta?.angle || "challenge"} attack, then deployed. `) +
       (state.inventionImpact.trim()
         ? `Everyday life: ${state.inventionImpact.trim()}`
@@ -16940,7 +16935,7 @@ function renderOutcome() {
     if (o.meta?.sidestep) {
       lessons.push({
         type: "grow",
-        text: `You sidestepped the ${o.meta.angle || "challenge"} challenger before deploying — a paid dodge (once per mission), not a defended answer.`,
+        text: `You sidestepped the ${o.meta.angle || "challenge"} challenger before deploying — a paid dodge (once per Quest), not a defended answer.`,
       });
     } else if (o.meta?.angle) {
       lessons.push({
@@ -16988,7 +16983,7 @@ function renderOutcome() {
       text: "Categories were always pickable — the skill is matching how-it-works claims to the year.",
     });
   } else {
-    headline = "Mission paused";
+    headline = "Quest paused";
     story = "You left the invent. The calendar in that place keeps moving without you.";
   }
 
@@ -17751,7 +17746,7 @@ function setSideTab(tab) {
   }
   if (tab === "coinventor") ensureCoInventor();
   if (tab === "aitrace") renderAiTrace();
-  refreshGuidedTour();
+  refreshCoachMarks();
 }
 
 function setChallengeSideTab(tab) {
@@ -20648,6 +20643,8 @@ function tourSnapshot() {
       index: Number(brief.index) || 0,
       beatCount,
     },
+    firstPlacedTileId: placed[0]?.id || null,
+    convergedTileId: placed.find((t) => Number(t.convergenceFactor) > 1)?.id || null,
     unplacedInventionCount: unplaced.length,
     placedInventionCount: placed.length,
     howTextLength: String($("#hex-how-text")?.value || "").trim().length,
@@ -20704,8 +20701,16 @@ function tourSnapshot() {
 }
 
 async function ensureTourTargetVisible(step) {
+  if (step?.openSideTab) {
+    try {
+      setSideTab(step.openSideTab);
+    } catch {
+      /* ignore */
+    }
+  }
   const needsCatalog =
     step?.target?.kind === "tech" ||
+    Boolean(step?.openTray) ||
     step?.id === "E0" ||
     step?.id === "E1" ||
     step?.id === "E2" ||
@@ -20734,11 +20739,54 @@ const guidedTour = createGuidedTour({
   restoreFocusEl: () => $("#btn-help"),
   ensureTargetVisible: ensureTourTargetVisible,
   snapshot: () => tourSnapshot(),
+  onOpenConcept: (id) => {
+    const card = conceptById(id);
+    if (!card) return;
+    void guidedTour.openConcept(card, tourSnapshot(), { opener: $("#btn-help") });
+  },
+  onMuteConcept: (id, on) => {
+    setConceptMuted(id, on);
+    flashToast(on ? "Okay — this concept stays in ? but won't pop up." : "This concept will pop up again in new Quests.");
+  },
+  isConceptMuted: (id) => readMutedConcepts().has(id),
 });
 
 function refreshGuidedTour() {
   if (!guidedTour.isOpen()) return;
   void guidedTour.refresh(tourSnapshot());
+}
+
+function helpModalOpen() {
+  return Boolean($("#help-backdrop")?.classList.contains("open"));
+}
+
+/**
+ * Coach-marks after any workshop change: follow an open card, or auto-open the
+ * next Friend's-seven concept card at its first relevant moment this Quest.
+ */
+function refreshCoachMarks() {
+  if (guidedTour.isOpen()) {
+    if (guidedTour.mode?.() === "concept") {
+      // A concept card whose anchor vanished (dialog closed) should not float.
+      const cur = guidedTour.currentStep();
+      if (cur && !queryTourTarget(cur)) guidedTour.close();
+      else void guidedTour.refresh(tourSnapshot());
+      return;
+    }
+    void guidedTour.refresh(tourSnapshot());
+    return;
+  }
+  if (helpModalOpen()) return;
+  if (!state.mission) return;
+  const snap = tourSnapshot();
+  const card = resolveConceptCard(snap, {
+    seen: state.conceptSeen || [],
+    muted: readMutedConcepts(),
+  });
+  if (!card) return;
+  if (!Array.isArray(state.conceptSeen)) state.conceptSeen = [];
+  state.conceptSeen.push(card.id);
+  void guidedTour.openConcept(card, snap);
 }
 
 function openRulesHelp() {
@@ -20756,15 +20804,11 @@ function bind() {
   $("#btn-start")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    state.tutorialRun = false;
-    state.playMode = "workshop";
     openQuestHub();
   });
   $("#btn-choose-theme")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    state.tutorialRun = false;
-    state.playMode = "workshop";
     openQuestHub();
   });
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
@@ -20810,15 +20854,10 @@ function bind() {
     else if (k) state.questLogFilter = { outcome: null, kind: k };
     void loadQuestLog();
   });
-  $("#btn-reset-spark")?.addEventListener("click", () => {
-    requestResetTutorialProgress();
-  });
   $("#btn-surprise")?.addEventListener("click", () => {
     clearMissionPickSession();
     leaveHotseat();
-    state.tutorialRun = false;
-    state.playMode = "workshop";
-    surpriseMission().catch(() => flashToast("Could not start a surprise mission"));
+    surpriseMission().catch(() => flashToast("Could not start a surprise Quest"));
   });
   try {
     initFriendsUi({
@@ -21427,14 +21466,6 @@ function bind() {
       return;
     }
     // Leave Quest → quest hub (game continues)
-    state.tutorialRun = false;
-    state.playMode = "workshop";
-    openQuestHub();
-  });
-  $("#btn-outcome-workshop-themes")?.addEventListener("click", () => {
-    // Graduation CTA → same path as Home “Start a Quest →”
-    state.tutorialRun = false;
-    state.playMode = "workshop";
     openQuestHub();
   });
   $("#btn-outcome-retry").addEventListener("click", () => {
@@ -21608,6 +21639,8 @@ async function refreshDeveloperModeFromHealth() {
 }
 
 export function init() {
+  forgetLegacySparkKey();
+  bindGlossaryTaps(document);
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();

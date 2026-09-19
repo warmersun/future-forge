@@ -4,6 +4,7 @@
  */
 
 import { GAME, GLOBALS, allTechIds } from "./data.js";
+import { sanitizeSuggestedWhy } from "./tech-why.js";
 import {
   TREND_CAPS,
   validateCapabilityTrend,
@@ -915,6 +916,17 @@ export function validateQuestTile(tile, opts = {}) {
       details.push("suggested_must_be_spotlight_only");
     }
   }
+  // Optional plain-words reason per suggested id ("why this emTech here")
+  const suggestedWhyRaw =
+    tile.suggestedWhy !== undefined ? tile.suggestedWhy : missionIn.suggestedWhy;
+  if (
+    suggestedWhyRaw !== undefined &&
+    suggestedWhyRaw !== null &&
+    (typeof suggestedWhyRaw !== "object" || Array.isArray(suggestedWhyRaw))
+  ) {
+    details.push("suggestedWhy_not_object");
+  }
+  const suggestedWhy = sanitizeSuggestedWhy(suggestedWhyRaw, techIds);
 
   const resourcesRaw =
     tile.resources !== undefined && tile.resources !== null
@@ -1065,6 +1077,7 @@ export function validateQuestTile(tile, opts = {}) {
     source: "imported",
     spotlight,
   };
+  if (suggestedWhy) mission.suggestedWhy = suggestedWhy;
   if (resourcesParsed.value) {
     mission.resources = resourcesParsed.value;
   }

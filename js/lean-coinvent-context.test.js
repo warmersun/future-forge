@@ -146,3 +146,35 @@ describe("inventDraftFieldsForContext", () => {
     assert.equal(legacy.inventionImpact, "Crews leave before the tide.");
   });
 });
+
+describe("leanCoInventContext idea-sparks sees the problem", () => {
+  it("passes stakeholder and up to three crisis meters, clipped", () => {
+    const ctx = leanCoInventContext(
+      "idea-sparks",
+      { focusTechId: "iot" },
+      {
+        ...leftoverSnap,
+        stakeholder: "  Priya, parent coalition ",
+        crisisMeters: [
+          { label: "AsthmaDays", role: "local", level: 3, goal: 1, description: "x".repeat(400) },
+          { label: "ParentTrust", role: "global", level: 2, goal: 1 },
+          { label: "CorridorPM", role: "support", level: 3 },
+          { label: "Extra", level: 1 },
+          { nope: true },
+        ],
+      }
+    );
+    assert.equal(ctx.focusTechId, "iot");
+    assert.equal(ctx.stakeholder, "Priya, parent coalition");
+    assert.equal(ctx.crisisMeters.length, 3);
+    assert.equal(ctx.crisisMeters[0].description.length, 240);
+    assert.equal(ctx.crisisMeters[2].goal, 1);
+    assert.equal("inventionName" in ctx, false);
+  });
+
+  it("omits the fields when the snapshot has none", () => {
+    const ctx = leanCoInventContext("idea-sparks", { focusTechId: "iot" }, leftoverSnap);
+    assert.equal("stakeholder" in ctx, false);
+    assert.equal("crisisMeters" in ctx, false);
+  });
+});

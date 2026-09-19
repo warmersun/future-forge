@@ -53,7 +53,7 @@ One JSON file (or a **set** of files for multi-lesson modules) conforming to `fu
 ## Hard rules
 
 1. **`spotlight.techId`** = one valid Future Forge tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
-2. **`mission.suggested`** = exactly `[spotlight.techId]`. This is how the tray hints. **Do not repeat the hint in player prose.**
+2. **`mission.suggested`** = exactly `[spotlight.techId]`. This is how the tray hints. **Do not repeat the hint in player prose.** Optional **`mission.suggestedWhy`** = `{ [spotlight.techId]: "…" }`, one everyday-words sentence (≤120 chars) saying what this family could do *here* and which crisis meter label it eases — the tray shows it under the card as **why here**. Plain words only; no product names.
 3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **The place**, then **The bigger problem**, then **Your job**. **Write short paragraphs** (one idea each, especially **The place**) — the invent screen steps them as a visual walkthrough. Do not dump research or tutor curriculum into the brief. Optional **`briefBeats`**: see `brief-beats.md` (omit when unused).
 4. **`mission.scene`** = instance lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
 5. **`summary`** = the instance in 2–3 short sentences (≤420 chars): named person, place, what went wrong now. **`title`** names the human situation and/or fictive place. **`spotlight.encourageCopy`** states the **outcome** in everyday words (see Procedure §4). None of these name the spotlight tech or a sponsor product.
@@ -120,7 +120,8 @@ Research voice stays in `research` / `grounding`. Do **not** paste it into title
    If a draft names the spotlight tech or a sponsor product, it fails.
 2. **`title`** — human situation and/or fictive place. Good: *The fever sheet at Crossing Clinic 7* / *The unposted rule at Tideglass High*. Weak: theme-word + tech gap with nobody in the room.
 3. **`spotlight.encourageCopy`** — outcome only, everyday words. Gold: *Invent a way this clinic can know what the fever is before the next queue arrives.* Fail: *Build your invention around gene sequencing.*
-4. Everyday words in all player fields; lab terms only in `grounding` / `aiTutorContext`.
+4. **`mission.suggestedWhy`** — one sentence (≤120 chars) under the spotlight id: what this **family** could do *here* and which **crisis meter label** it eases. It shows under the card in the tray's **For this place** shelf and in the crisis-hex "What could help here?" list, so naming the family is fine there; **no product or vendor names**, no lab jargon. Gold: *A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.* Fail: *Use the AcmeSeq Mini to run 16S reads.* Omit the key rather than write filler — the engine falls back to the tech's capability line plus the hottest meter.
+5. Everyday words in all player fields; lab terms only in `grounding` / `aiTutorContext`.
 
 ### 5. Player-facing prose
 
@@ -178,6 +179,7 @@ Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.
 - [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture). New tiles: local 3↑1, global 2↑1, support 2↑0 unless you have a reason.
 - [ ] **Plain-language test:** a 14-year-old can retell who is in trouble, what went wrong, and the bigger problem from **title + summary** (instance story; names allowed; no product)
 - [ ] `encourageCopy` is an outcome in everyday words (no tech name, no research jargon)
+- [ ] `suggestedWhy[spotlight.techId]` is one plain sentence (≤120 chars) that names the crisis meter it eases; no product names
 - [ ] Scene craft ≤500; place is a brief little story; everyday words in player text
 - [ ] `briefMd`: **The place** → **The bigger problem** → **Your job**; ~250–600 words; no capability/tutor lecture dump
 - [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable

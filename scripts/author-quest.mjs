@@ -128,6 +128,10 @@ const tile = {
     briefMd,
     stakeholder: "Local working group lead",
     suggested: [tech.id],
+    // Why this family here — shown under the card in "For this place". Rewrite for the place; name the meter it eases.
+    suggestedWhy: {
+      [tech.id]: `${String(tech.inventionHint || `What ${tech.name} could do here`).replace(/\.$/, "")} — for Pressure.`.slice(0, 120),
+    },
     visionTheme: "rebuild-city",
   },
 };
@@ -147,7 +151,7 @@ if (!v.ok) {
 const outDir = path.join(ROOT, "output", "quests", slug);
 fs.mkdirSync(outDir, { recursive: true });
 const outFile = path.join(outDir, "quest.json");
-fs.writeFileSync(outFile, JSON.stringify(v.tile, null, 2) + "\n", "utf8");
+fs.writeFileSync(outFile, JSON.stringify(tile, null, 2) + "\n", "utf8");
 console.log(`Wrote ${outFile}`);
 console.log(`Import in Future Forge: Import Quest… → select this JSON.`);
 console.log(`Validate: npm run validate:quest -- ${outFile}`);

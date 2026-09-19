@@ -63,10 +63,26 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
       typeof snap.techsForIds === "function"
         ? snap.techsForIds(focusId ? [focusId] : [])
         : [];
+    const stakeholder = String(rest.stakeholder ?? snap.stakeholder ?? "").trim();
+    const metersRaw = rest.crisisMeters ?? snap.crisisMeters;
+    const crisisMeters = Array.isArray(metersRaw)
+      ? metersRaw
+          .filter((x) => x && typeof x === "object" && x.label)
+          .slice(0, 3)
+          .map((x) => ({
+            label: String(x.label).slice(0, 60),
+            role: x.role || null,
+            level: Number(x.level) || 0,
+            goal: Number.isFinite(Number(x.goal)) ? Number(x.goal) : 1,
+            description: String(x.description || "").slice(0, 240),
+          }))
+      : [];
     return {
       ...base,
       focusTechId: focusId,
       availableTechs: techs,
+      ...(stakeholder ? { stakeholder } : {}),
+      ...(crisisMeters.length ? { crisisMeters } : {}),
     };
   }
 

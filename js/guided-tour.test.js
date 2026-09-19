@@ -5,6 +5,7 @@ import {
   queryTourTarget,
   createGuidedTour,
 } from "./guided-tour.js";
+import { conceptById } from "./concept-cards.js";
 
 function base(over = {}) {
   const briefing = { active: false, index: 0, beatCount: 4, ...(over.briefing || {}) };
@@ -524,6 +525,81 @@ describe("guided tour overlay", () => {
   });
 });
 
+describe("createGuidedTour concept cards", () => {
+  let prevDoc;
+  let prevWin;
+  let prevRaf;
+  function installFakeDom() {
+    prevDoc = globalThis.document;
+    prevWin = globalThis.window;
+    prevRaf = globalThis.requestAnimationFrame;
+    const { document: doc, window: win } = fakeDom();
+    globalThis.document = doc;
+    globalThis.window = win;
+    globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+    return doc;
+  }
+  function restoreDom() {
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+    globalThis.requestAnimationFrame = prevRaf;
+  }
+
+  it("openConcept shows the card in concept mode with the Concept kicker and mute row", async () => {
+    installFakeDom();
+    try {
+      const muted = new Set(["learn"]);
+      const tour = createGuidedTour({ isConceptMuted: (id) => muted.has(id) });
+      await tour.openConcept(conceptById("learn"), base());
+      assert.equal(tour.isOpen(), true);
+      assert.equal(tour.mode(), "concept");
+      assert.equal(tour.currentStep().id, "learn");
+      const root = globalThis.document.getElementById("tour-root");
+      const card = root.querySelector(".tour-card");
+      assert.equal(card.classList.contains("is-concept"), true);
+      assert.equal(root.querySelector("#tour-card-kicker").textContent, "Concept");
+      assert.equal(root.querySelector("#tour-mute-row").hidden, false);
+      assert.equal(root.querySelector("#tour-mute").checked, true);
+      assert.equal(card.didFocus, true);
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it("refresh keeps a concept card instead of swapping to a next step; close resets to step mode", async () => {
+    installFakeDom();
+    try {
+      const tour = createGuidedTour();
+      await tour.openConcept(conceptById("look-ahead"), base());
+      await tour.refresh(base({ ui: { waitConfirmOpen: true } }));
+      assert.equal(tour.currentStep().id, "look-ahead");
+      assert.equal(tour.mode(), "concept");
+      tour.close();
+      assert.equal(tour.isOpen(), false);
+      assert.equal(tour.mode(), "step");
+      await tour.open(base());
+      assert.equal(tour.mode(), "step");
+      const root = globalThis.document.getElementById("tour-root");
+      assert.equal(root.querySelector("#tour-card-kicker").textContent, "Next step");
+      assert.equal(root.querySelector("#tour-mute-row").hidden, true);
+      assert.equal(root.querySelector(".tour-card").classList.contains("is-concept"), false);
+    } finally {
+      restoreDom();
+    }
+  });
+
+  it("openConcept with a null card is a no-op", async () => {
+    installFakeDom();
+    try {
+      const tour = createGuidedTour();
+      await tour.openConcept(null, base());
+      assert.equal(tour.isOpen(), false);
+    } finally {
+      restoreDom();
+    }
+  });
+});
+
 function selDummy() {
   return { kind: "selector", selector: "#nope" };
 }
@@ -613,12 +689,25 @@ function fakeEl(tag, id = "") {
       node.appendChild(ring);
       const card = fakeEl("div");
       card.classList.add("tour-card");
+      const kicker = fakeEl("p", "tour-card-kicker");
+      kicker.classList.add("tour-kicker");
+      card.appendChild(kicker);
       const title = fakeEl("h3", "tour-card-title");
       const body = fakeEl("p", "tour-card-body");
       card.appendChild(title);
       card.appendChild(body);
       card.appendChild(fakeEl("button", "tour-rules"));
       card.appendChild(fakeEl("button", "tour-got-it"));
+      const muteRow = fakeEl("label", "tour-mute-row");
+      muteRow.classList.add("tour-mute");
+      muteRow.appendChild(fakeEl("input", "tour-mute"));
+      card.appendChild(muteRow);
+      for (const id of ["look-ahead", "honesty-bar", "convergence", "pathway", "wait-vs-end-turn", "art-of-the-possible", "learn"]) {
+        const chip = fakeEl("button");
+        chip.classList.add("tour-concept-chip");
+        chip.dataset.concept = id;
+        card.appendChild(chip);
+      }
       node.appendChild(card);
     },
   });

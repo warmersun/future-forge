@@ -230,3 +230,39 @@ describe("ideasOrFallback", () => {
     assert.ok(ideas[0].insertText.includes("Here"));
   });
 });
+
+import { easesLabel as easesLabelFn, ideasOrFallback as ideasOrFallbackFn, localIdeaSparks as localIdeaSparksFn } from "./idea-cards.js";
+
+describe("eases — which crisis meter a spark aims at", () => {
+  const context = {
+    place: "Corridor",
+    year: 2026,
+    crisisMeters: [
+      { label: "AsthmaDays", level: 3, goal: 1 },
+      { label: "ParentTrust", level: 2, goal: 1 },
+    ],
+  };
+  it("keeps a model label that names a known meter (case-insensitive)", () => {
+    assert.equal(easesLabelFn("asthmadays", context), "AsthmaDays");
+  });
+  it("falls back to the hottest meter for unknown or missing labels", () => {
+    assert.equal(easesLabelFn("Nope", context), "AsthmaDays");
+    assert.equal(easesLabelFn(null, context), "AsthmaDays");
+  });
+  it("returns empty with no meters and no label", () => {
+    assert.equal(easesLabelFn(null, {}), "");
+  });
+  it("ideasOrFallback stamps eases on model ideas; local sparks get the hottest meter", () => {
+    const tech = { id: "iot", name: "IoT", useCasesNow: ["Air sensors", "Water meters", "Cold-chain logs"] };
+    const raw = [
+      { id: "a", title: "Lamp-post sensors", insertText: "Sensors on lamp posts log the haze hour by hour.", eases: "ParentTrust" },
+      { id: "b", title: "Bus stop alerts", insertText: "A screen at the stop shows today's air.", eases: "made-up" },
+    ];
+    const out = ideasOrFallbackFn(raw, tech, context);
+    assert.equal(out.length, 3);
+    assert.equal(out[0].eases, "ParentTrust");
+    assert.equal(out[1].eases, "AsthmaDays");
+    assert.equal(out[2].eases, "AsthmaDays");
+    for (const i of localIdeaSparksFn(tech, context)) assert.equal(i.eases, "AsthmaDays");
+  });
+});

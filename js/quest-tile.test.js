@@ -917,3 +917,32 @@ describe("quest module wrapper", () => {
     assert.equal(qrec.id, "spotlight-gene-seq-test");
   });
 });
+
+describe("quest-tile suggestedWhy", () => {
+  it("keeps an authored why-here for the spotlight id and drops junk ids", () => {
+    const tile = baseTile();
+    tile.mission.suggestedWhy = {
+      "gene-sequencing": "  A bench sequencer can name the fever before the queue forms — eases Outbreak.  ",
+      ai: "not suggested here but a valid id",
+      nope: "unknown id",
+      solar: 42,
+    };
+    const v = validateQuestTile(tile);
+    assert.equal(v.ok, true, JSON.stringify(v.details));
+    assert.deepEqual(v.mission.suggestedWhy, {
+      "gene-sequencing": "A bench sequencer can name the fever before the queue forms — eases Outbreak.",
+      ai: "not suggested here but a valid id",
+    });
+  });
+
+  it("omits the field when absent and rejects a non-object", () => {
+    const ok = validateQuestTile(baseTile());
+    assert.equal(ok.ok, true);
+    assert.equal("suggestedWhy" in ok.mission, false);
+    const bad = baseTile();
+    bad.mission.suggestedWhy = ["gene-sequencing"];
+    const v = validateQuestTile(bad);
+    assert.equal(v.ok, false);
+    assert.ok(v.details.includes("suggestedWhy_not_object"), JSON.stringify(v.details));
+  });
+});

@@ -145,6 +145,9 @@
     "suggested": [
       "gene-sequencing"
     ],
+    "suggestedWhy": {
+      "gene-sequencing": "A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue."
+    },
     "visionTheme": "care-city"
   }
 }

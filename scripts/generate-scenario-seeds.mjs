@@ -20,6 +20,7 @@
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
 import fs from "node:fs";
+import { sanitizeSuggestedWhy } from "../js/tech-why.js";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -230,7 +231,8 @@ const MODE_INSTRUCTION =
   SCENE_PROSE +
   " Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
   "pressure (structured crisis meters — see CRITICAL), " +
-  "suggested (tech ids from availableTechs only — mix protection and abatement when relevant), " +
+  "suggested (4–7 tech ids from availableTechs only — mix protection and abatement when relevant), " +
+  "suggestedWhy (object: for EACH suggested id, one everyday-words sentence ≤120 chars — what that family could do in THIS place and which crisis meter label it eases), " +
   "visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), " +
   "source ('generated'). message: one short invite line. proposals empty. Follow context.guidance when present. " +
   QUEST_SUMMARY_RECIPE +
@@ -432,6 +434,7 @@ function normalizeScenario(raw, globalId) {
     .map(String)
     .filter((id) => valid.has(id))
     .slice(0, 8);
+  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, valid);
   return {
     places: [place],
     title,
@@ -440,6 +443,7 @@ function normalizeScenario(raw, globalId) {
     crisisMeters,
     ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
     suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+    ...(suggestedWhy ? { suggestedWhy } : {}),
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
   };
 }
@@ -475,6 +479,7 @@ function localPackForTheme(g) {
       crisisMeters,
       ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
       suggested: m.suggested || ["ai", "iot", "networks"],
+      ...(m.suggestedWhy ? { suggestedWhy: m.suggestedWhy } : {}),
       visionTheme: m.visionTheme || "rebuild-city",
     };
   });
@@ -678,6 +683,14 @@ function packToJs(pack, indent = "    ") {
     })
     .join(", ");
   const sug = (pack.suggested || []).map((k) => jsString(k)).join(", ");
+  const whyEntries = Object.entries(pack.suggestedWhy || {}).filter(
+    ([k, v]) => (pack.suggested || []).includes(k) && typeof v === "string" && v.trim()
+  );
+  const whyLines = whyEntries.length
+    ? `${indent}  suggestedWhy: {\n${whyEntries
+        .map(([k, v]) => `${indent}    ${jsString(k)}: ${jsString(v.trim().slice(0, 200))},`)
+        .join("\n")}\n${indent}  },\n`
+    : "";
   const places = (pack.places || []).map((p) => jsString(p)).join(", ");
   const summaryLine = pack.summary
     ? `${indent}  summary: ${jsString(pack.summary)},\n`
@@ -691,6 +704,7 @@ function packToJs(pack, indent = "    ") {
     `${indent}  stakeholder: ${jsString(pack.stakeholder)},\n` +
     `${indent}  crisisMeters: { ${meterParts} },\n` +
     `${indent}  suggested: [${sug}],\n` +
+    whyLines +
     `${indent}  visionTheme: ${jsString(pack.visionTheme)},\n` +
     `${indent}}`
   );

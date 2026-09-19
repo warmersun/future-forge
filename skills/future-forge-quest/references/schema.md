@@ -21,6 +21,7 @@ npm run validate:quest -- path/to/quest.json
 | `globalId` | Valid theme id from game `GLOBALS` / theme list |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | Exactly `[spotlight.techId]` |
+| `mission.suggestedWhy` | Optional `{ [spotlight.techId]: string }` — one everyday-words sentence (≤120 chars): what the family could do *here* and which crisis meter label it eases. Shown under the card in **For this place** and in the crisis-hex "What could help here?" list. Family name allowed; no product names. Unknown ids / non-strings dropped; a non-object is rejected (`suggestedWhy_not_object`) |
 | `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** → **The bigger problem** → **Your job**; aim ~250–600 words. Short paragraphs — the UI steps them (see `brief-beats.md`) |
 | `title`, `summary`, `spotlight.encourageCopy` | Instance + outcome in everyday words (14-year-old test). `summary` is 2–3 short sentences (≤420 chars): named person, place, what went wrong now. `encourageCopy` is the outcome. Do **not** name the spotlight tech or a sponsor product. See `scene-prose.md` |
 | `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; craft in `scene-prose.md`; everyday words |

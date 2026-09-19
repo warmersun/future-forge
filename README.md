@@ -17,10 +17,10 @@ Future Forge is an inventing practice. You pick a global problem, land in a conc
 ## How it works
 
 1. **Theme** — Choose a global problem (climate, infectious disease, energy access, …).
-2. **Local scenarios** — Read a short problem brief while Future Forge drafts several concrete places. Pick one mission (cached for next time; solved ones stay available).
+2. **Local scenarios** — Read a short problem brief while Future Forge drafts several concrete places. Pick one Quest (cached for next time; solved ones stay available).
 3. **Invent on the hex board** — Pick emTechs from domains like Power, Automator, Mover, LifeForce, Link, and Portal. **Ask for ideas** (or write how it works) to mint invention tiles with AI art. Drag them onto the board. **Bits** (blue) and **atoms** (pink) faces must match to dock; converters (IoT, print, …) bridge both.
 4. **Traffic lights** — Crisis meters start on the board. Neighboring inventions re-evaluate lamps (red / yellow / green). Looking at the board *is* the thinking.
-5. **Hard questions** — When ready, summon all four challengers onto the board at once: **Moloch**, **Ethicist**, **Stakeholder**, **Mother Nature**. Ease their lights with honest ideas.
+5. **Hard questions** — When ready, summon the challengers onto the board (one by default, up to four): **Moloch**, **Ethicist**, **Stakeholder**, **Mother Nature**. Ease their lights with honest ideas.
 6. **Hold the pathway** — When every active light is yellow or green, declare the pathway holds. **Wait** advances the calendar and raises crisis. Fail if any meter hits 5 or the collapse year arrives.
 
 **Learn** (tech tray) opens primers. The **AI co-inventor** brainstorms and tutors — you lead; it proposes.

@@ -1255,6 +1255,9 @@ function buildLocalScenarioVariants(g, count, salt) {
       scene,
       stakeholder: pack.stakeholder,
       suggested: pack.suggested || suggestedDefault,
+      ...(pack.suggestedWhy && typeof pack.suggestedWhy === "object"
+        ? { suggestedWhy: pack.suggestedWhy }
+        : {}),
       visionTheme: pack.visionTheme || visionDefault,
       source: "generated",
       ...(summary ? { summary } : {}),

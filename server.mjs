@@ -5,6 +5,7 @@
  */
 
 import http from "node:http";
+import { sanitizeSuggestedWhy } from "./js/tech-why.js";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -435,7 +436,7 @@ Role:
 - When mode is scamper: SCAMPER checklist (Osborn/Eberle) on context.inventionHow. Structure message with seven headings: Substitute, Combine, Adapt, Modify, Put to other uses, Eliminate, Reverse/Rearrange. More open than SIT (Adapt may borrow nearby domains) but still anchored on their draft. Brainstorm only — leave proposals empty (no inventionHow apply). Do not invent a new mission.
 - When mode is assess-feasibility: judge ONLY whether the mechanism is possible or already demonstrated in context.year. Return top-level timing: { "level": "red"|"yellow"|"green", "reason": "..." }. Do not judge quest fit, clinic job, or whether the idea matches grounding's example applications (hoppers vs heavy-lift). green = architecture+payload exists or is demonstrated by year (no pilot tax; smaller grounding examples do not cap payload). yellow = vague, or after checking year the claimed scale is not yet demonstrated. red = only if grounding EXPLICITLY forbids / says not yet, or sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper". Categories in the stack never force red by themselves. Capability only advances with time: if claims and stack are unchanged, a later year must NOT rate worse than an earlier year. If context.priorTiming is set with the same claims, do not rate harsher than priorTiming.level when year >= priorTiming.year. If context.grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or "not yet". Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction.
 - When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme. Return top-level scenarios array (not just one). Concrete places, different angles, valid tech ids only.
-- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year}]. Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText (or insertText) is one clear mechanism sentence in everyday words, using the named person/place when known. If context.refresh, do not repeat context.avoidTitles.
+- When mode is idea-sparks: return exactly 3 application sparks for context.focusTechId in this place and year. Top-level ideas: [{id, title, blurb, insertText, howText, imagePrompt, year, eases}]. eases = the exact label of the context.crisisMeters entry this spark most helps (aim at least one spark at the hottest meter; use context.stakeholder as the person it serves). Leave proposals empty (no inventionHow / name / stack). Three different angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText (or insertText) is one clear mechanism sentence in everyday words, using the named person/place when known. If context.refresh, do not repeat context.avoidTitles.
 - When mode is evaluate-neighbors: judge traffic lights for hex board givens in context.hexEval.givens. Each given is a crisis meter or challenger concern. Judge from that given's FULL reachable invention pathway (neighbors[] = pathway tiles with techId + howText + timing; direct:true = shares an edge with this given; also pathway: combined howText/techIds). Read the pathway as ONE invent — a downstream mechanism can make a docked tile honest. Crisis (kind=crisis): judge against role — local = here-and-now relief / local fit; global = root cause / lasting driver; support = public buy-in AND scale-beyond-pilot. Honor prior; green allowed when honestly eased. Concern (kind=concern): judge against stored challengeSpeech/challengeQuestion plus playerAnswer if present. Judge the combination of ALL inventions in that given's reachable pathway AND the written answer. Nothing docked stays red even with an answer. Docking/touching is NOT addressing — a docked concern with no written answer and no pathway mechanism that honestly answers THIS challenge stays red. yellow = partial honest address via written answer and/or pathway how-text. Green only if the pathway honestly holds the answer. red = unanswered/hot; green = honestly eased for this place and year. Do not require bits/atoms world-match. Do not rewrite howText or art. Honor grounding. Leave proposals empty.
 - When mode is score-pathway: score ONE invention pathway (context.pathway.inventions: techId + howText + timing — no names) as a combination. Return top-level crisisDelta: { local, global, support } each { delta: integer -2..+1, reason: one everyday sentence }. Negative delta eases that crisis if this pathway docks onto that meter; positive worsens it. reason must match the signed delta and cite the how-text mechanism; delta 0 says what is missing. Always reason every role including 0. An invent change may score worse than the prior fingerprint. A how-text that only passes a law, ban, UBI bill, or treaty must score local/global/support delta 0 (or support +1) — ask what becomes abundant with which capability this year. On automation / livelihoods: robots, AI, or self-driving without a share/bridge/paid-skill/meaning mechanism must not ease global; they may ease local remaining work and may raise support (backlash). On rogue-si: an AI/computing stack without a reachable human override, eval, or audit must not ease global; a smarter score that still locks the last call can raise support. Also return concerns: { [angle]: { level: "red"|"yellow"|"green", reason } } for angles in context.concerns (judge ALL inventions in the pathway plus playerAnswer if present vs stored challengeSpeech/challengeQuestion). Docking/touching is NOT addressing. A listed concern stays red unless the pathway how-text and/or written answer honestly respond to that challenge. yellow = partial; green only if the pathway honestly holds the answer — a written answer cannot green an empty dock. Leave proposals empty. Do not rewrite inventions.
 - When mode is complete-picture: the player wrote ONLY one face (how OR everyday life). Fill the OTHER face only in proposals (inventionHow XOR inventionImpact). Stay local, match the stack, complementary not contradictory. If context.contributingToOther is true, the draft must ADD to their invent without gutting or contradicting what they already wrote.
@@ -453,6 +454,7 @@ Hard rules:
 - Only use technology ids from availableTechs.
 - Stay local: this place/year, not UN resolutions.
 - A law, ban, UBI bill, or treaty is not an invent. The invent makes something scarce more abundant with emTechs in this place this year. Policy may appear as a fielding condition, never as the sole how-it-works.
+- The learner may be new to emerging technologies. Do not assume subject-matter knowledge: when a term a high-school senior would not know appears, say it in plain words first, then the term. One concrete analogy where it helps. No tabletop or UI jargon.
 - If context.rules is set, those are the local weather already on the books (quest locks plus any the player lobbied). Cite them when they change who can field. They do not ease crisis meters by themselves.
 - No tabletop jargon. No UI lectures.
 - Never say a category is locked until a year.
@@ -475,7 +477,7 @@ Respond with a single JSON object (no markdown fences):
 }
 
 For assess-feasibility set timing to { "level": "red"|"yellow"|"green", "reason": "one sentence" }.
-For idea-sparks set ideas to exactly 3 objects { id, title, blurb, insertText, imagePrompt } and keep proposals empty.
+For idea-sparks set ideas to exactly 3 objects { id, title, blurb, insertText, imagePrompt, eases } and keep proposals empty.
 For other modes timing and ideas may be null.
 
 scrutiny when used:
@@ -930,6 +932,7 @@ function sanitizeScenarioList(rawList, context, techIds) {
       .map(String)
       .filter((id) => validTech.has(id))
       .slice(0, 8);
+    const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, validTech);
     const visionTheme = visionOk.has(String(raw.visionTheme))
       ? String(raw.visionTheme)
       : "rebuild-city";
@@ -949,6 +952,7 @@ function sanitizeScenarioList(rawList, context, techIds) {
       scene: String(raw.scene || "").trim().slice(0, 800),
       stakeholder: String(raw.stakeholder || "").trim().slice(0, 120),
       suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+      ...(suggestedWhy ? { suggestedWhy } : {}),
       visionTheme,
       source: sourceHint || (raw.source === "curated" ? "curated" : "generated"),
       ...(summary ? { summary } : {}),
@@ -1797,7 +1801,7 @@ function buildUserPayload({ messages, context, mode }) {
       "Ignite the session: frame the challenge, suggest 2–3 starting tech directions (as proposals.addTechIds only if they have none), and ask one great question. Do not fully invent for them. Remind categories are always pickable." +
       GROUNDING_HINT,
     "idea-sparks":
-      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year }. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
+      "Return exactly 3 application SPARKS for context.focusTechId in this place and year. Top-level ideas array of 3 objects: { id (slug), title (\u226460 chars), blurb (\u2264140), insertText/howText (\u2264280), imagePrompt (\u2264400), year, eases }. eases = the exact label of one context.crisisMeters entry this spark helps most; aim at least one spark at the meter furthest above its goal; write for context.stakeholder when named. Three DIFFERENT angles. Pilot-honest. title is a plain noun phrase a learner can say aloud (what the idea is, not a slogan; no coined slang). howText/insertText is one clear mechanism sentence in everyday words, using the named person/place when known. Leave proposals empty. If context.refresh is true, do not repeat context.avoidTitles." +
       GROUNDING_HINT,
     "evaluate-neighbors":
       "Judge hex-board traffic lights for context.hexEval.givens from EACH given's FULL reachable invention pathway (neighbors[] + pathway howText/techIds; direct:true = edge contact) plus playerAnswer if present. Judge the combination as one invent. Crisis: role criteria — local = here-and-now / local fit; global = root cause / sustainable; support = public buy-in + scale beyond pilot; honor prior; green OK when honest. Concern: judge against stored challengeSpeech/challengeQuestion AND playerAnswer — hard question honestly answered by the pathway plus written answer? Docking/touching is NOT addressing. Docked with no answer and no pathway mechanism that answers THIS challenge stays red. yellow = partial honest address; green only if the pathway honestly holds the answer. Return lights: [{id, level:red|yellow|green, reason}]. Do not rewrite inventions. Leave proposals empty." +
@@ -1873,7 +1877,7 @@ function buildUserPayload({ messages, context, mode }) {
     "generate-scenarios":
       "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms (e.g. air pollution: name trucks/cookfuel/stacks, not only indoor filters). " +
       SCENE_PROSE +
-      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). " +
+      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of 4–7 tech ids from availableTechs only — mix protection and abatement when relevant), suggestedWhy (object: for EACH id in suggested, one everyday-words sentence ≤120 chars saying what that family could do in THIS place and which crisis meter label it eases — no lab jargon, no product names), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). " +
       QUEST_SUMMARY_RECIPE +
       " CRITICAL — pressure is an object with up to three role keys: local, global, support. Omit a role to hide that crisis meter on the HUD. Each present role: { \"label\": \"plain English HUD name 1–3 words Title Case\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. local = lived local harm; global = systemic/driver; support = trust/legitimacy/fear. description is place-specific strain, not the generic role lecture. NEVER camelCase jargon labels (bad: AlleyPM, BenzeneSpikes, CorridorPM). Default full Quest uses all three roles. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
   };
@@ -2023,7 +2027,7 @@ function extractJson(text) {
   }
 }
 
-function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
+function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat", context = {}) {
   const ids = new Set(availableIds);
   // SIT / SCAMPER / idea-sparks are brainstorm sparks — never offer Apply how-it-works
   const brainstormOnly =
@@ -2091,7 +2095,7 @@ function sanitizeResult(parsed, availableIds, source = "ai", mode = "chat") {
   };
 
   if (mode === "idea-sparks") {
-    out.ideas = ideasOrFallback(parsed.ideas, null);
+    out.ideas = ideasOrFallback(parsed.ideas, null, context);
   }
 
   // Tutor session exit signal (learning modules)
@@ -2285,7 +2289,7 @@ async function aiCoInvent(body, client, meta = {}) {
   if (mode === "generate-scenarios") {
     return sanitizeScenariosResult(parsed, context, "ai");
   }
-  const out = sanitizeResult(parsed, availableIds, "ai", mode);
+  const out = sanitizeResult(parsed, availableIds, "ai", mode, context);
   if (mode === "evaluate-neighbors") {
     const raw = Array.isArray(parsed.lights) ? parsed.lights : [];
     out.lights = raw

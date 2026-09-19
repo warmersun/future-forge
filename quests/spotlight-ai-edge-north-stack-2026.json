@@ -82,6 +82,9 @@
     "suggested": [
       "ai"
     ],
+    "suggestedWhy": {
+      "ai": "Assistance that runs on the school's own laptops, offline, can lift Learning without sending student work away."
+    },
     "visionTheme": "social-city"
   }
 }

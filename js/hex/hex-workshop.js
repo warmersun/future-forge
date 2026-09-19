@@ -5,6 +5,23 @@
 
 import { techById, CHALLENGE_ANGLES } from "../data.js";
 import {
+  scaffoldFields,
+  scaffoldLabels,
+  composeHow,
+  parseHow,
+  isScaffoldComplete,
+} from "../invent-scaffold.js";
+import { termHtml } from "../glossary.js";
+
+/** Plain words for a tile's world (bits / atoms / both). */
+const WORLD_PLAIN = {
+  bits: "bits (information)",
+  atoms: "atoms (physical things)",
+  split: "bits and atoms",
+  curve: "any",
+};
+const ANGLE_TERM = { nature: "mother-nature", moloch: "moloch", ethicist: "ethicist", stakeholder: "stakeholder" };
+import {
   ideaCacheKey,
   ideaImageId,
   ideasOrFallback,
@@ -156,6 +173,7 @@ export function createHexWorkshop(api) {
     else if (kind === "summon") summonBusy = Boolean(on);
     syncCreateBusyUi(kind);
     if (kind === "summon") syncSummonWaitUi();
+    if (!on && !isCreateBusy()) api.onCreateIdle?.();
   }
 
   function refreshLabel() {
@@ -863,7 +881,7 @@ export function createHexWorkshop(api) {
           t.angle ||
           "Challenger";
         const sub = angleMeta?.subtitle ? ` · ${angleMeta.subtitle}` : "";
-        meta.textContent = `Challenger · ${angleLabel}${sub}`;
+        meta.innerHTML = `Challenger · ${termHtml(ANGLE_TERM[t.angle] || "challenger", angleLabel)}${escapeHtml(sub)}`;
       } else if (t.kind === TILE_KIND.rd) {
         const onField = t.q != null && t.r != null;
         meta.textContent = `R&D · ${formatFactor(t.factor)}${onField ? " · on board" : " · in tray"}`;
@@ -971,6 +989,24 @@ export function createHexWorkshop(api) {
         }
         const crisisWhy = crisisWhyBlockHtml(reasonsForCrisisTile(board(), t));
         if (crisisWhy) parts.push(crisisWhy);
+        const helpers = api.techsForCrisis?.({ meterLabel: key, role }) || [];
+        if (helpers.length) {
+          parts.push(
+            `<div class="hex-crisis-help">
+              <p><strong>What could help here?</strong> <span class="muted">Suggested for this Quest — pick one, then Ask for ideas.</span></p>
+              <ul class="hex-crisis-help-list">${helpers
+                .map(
+                  (h) => `<li>
+                    <button type="button" class="btn btn-secondary btn-sm hex-crisis-help-btn" data-help-tech="${escapeHtml(h.tech.id)}">
+                      <span class="hex-crisis-help-icon" aria-hidden="true">${h.tech.icon || ""}</span> Invent with ${escapeHtml(h.tech.name)}
+                    </button>
+                    ${h.why ? `<span class="hex-crisis-help-why muted">${escapeHtml(h.why)}</span>` : ""}
+                  </li>`
+                )
+                .join("")}</ul>
+            </div>`
+          );
+        }
       } else if (t.kind === TILE_KIND.concern) {
         const angleMeta = CHALLENGE_ANGLES.find((a) => a.id === t.angle);
         const angleLabel =
@@ -1105,7 +1141,7 @@ export function createHexWorkshop(api) {
             pct != null ? timingPctToLevel(pct) : t.timingLevel || "yellow";
           let line = `Timing: <strong>${escapeHtml(lvl)}</strong>`;
           if (pct != null) {
-            line += ` · <strong>${escapeHtml(String(pct))}%</strong> honest this year.`;
+            line += ` · <strong>${escapeHtml(String(pct))}%</strong> ${termHtml("honest", "honest")} this year.`;
           }
           if (base != null && shown != null && shown !== base) {
             line += ` <span class="muted">(base ${escapeHtml(String(Math.round(base)))}%)</span>`;
@@ -1116,7 +1152,7 @@ export function createHexWorkshop(api) {
           }
         }
         parts.push(
-          `<p class="muted">World rim: ${escapeHtml(t.polarity || "?")} (bits left, atoms right).</p>`
+          `<p class="muted">${termHtml("world", "World")}: ${escapeHtml(WORLD_PLAIN[t.polarity] || t.polarity || "?")} — bits dock on the left faces, atoms on the right.</p>`
         );
         const actions = [];
         const canEdit = !api.canEditBoard || Boolean(api.canEditBoard());
@@ -1135,6 +1171,20 @@ export function createHexWorkshop(api) {
         }
       }
       body.innerHTML = parts.join("");
+      body.querySelectorAll("[data-help-tech]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = btn.getAttribute("data-help-tech");
+          hideTilePopup();
+          if (api.focusTechFromBoard) api.focusTechFromBoard(id);
+          else focusTech(id);
+          document
+            .querySelector(`.tech-card[data-id="${id}"]`)
+            ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          api.flashToast?.(`Inventing with ${techById(id)?.name || id} — Ask for ideas or write how it works.`);
+        });
+      });
       body.querySelector("#hex-tile-popup-lift")?.addEventListener("click", () => {
         const ok = ensureUi()?.liftInvention(tileId);
         if (ok) {
@@ -1201,6 +1251,85 @@ export function createHexWorkshop(api) {
     renderIdeaCards();
   }
 
+  /** How-it-works mode: false = two-blank scaffold (default), true = free textarea. Per Quest. */
+  let freeWrite = false;
+
+  function scaffoldEls() {
+    return {
+      wrap: document.querySelector("#hex-scaffold"),
+      scarce: document.querySelector("#hex-scaffold-scarce"),
+      mech: document.querySelector("#hex-scaffold-mech"),
+      scarceLabel: document.querySelector("#hex-scaffold-scarce-label"),
+      mechLabel: document.querySelector("#hex-scaffold-mech-label"),
+      preview: document.querySelector("#hex-scaffold-preview"),
+      ta: document.querySelector("#hex-how-text"),
+      modeBtn: document.querySelector("#btn-how-mode"),
+      label: document.querySelector("#hex-how-label"),
+    };
+  }
+
+  function readScaffold(tech) {
+    const els = scaffoldEls();
+    const f = scaffoldFields(api.getMission?.() || null, tech);
+    f.scarce = String(els.scarce?.value || "");
+    f.mechanism = String(els.mech?.value || "");
+    return f;
+  }
+
+  function clearScaffold() {
+    const els = scaffoldEls();
+    if (els.scarce) els.scarce.value = "";
+    if (els.mech) els.mech.value = "";
+    if (els.preview) els.preview.textContent = "";
+  }
+
+  function paintScaffoldPreview() {
+    const els = scaffoldEls();
+    if (!els.preview) return;
+    const tech = focusedTechId ? techById(focusedTechId) : null;
+    const f = readScaffold(tech);
+    els.preview.textContent = isScaffoldComplete(f) ? composeHow(f) : "";
+  }
+
+  /** Show the scaffold or the textarea; relabel the blanks for the focused tech. */
+  function syncScaffold(tech) {
+    const els = scaffoldEls();
+    if (!els.wrap || !els.ta) return;
+    const f = scaffoldFields(api.getMission?.() || null, tech);
+    const labels = scaffoldLabels(f);
+    if (els.scarceLabel) els.scarceLabel.textContent = labels.scarce;
+    if (els.mechLabel) els.mechLabel.textContent = labels.mechanism;
+    if (els.scarce) els.scarce.placeholder = labels.scarceHint;
+    if (els.mech) els.mech.placeholder = labels.mechanismHint;
+    els.wrap.hidden = freeWrite;
+    els.ta.hidden = !freeWrite;
+    if (els.modeBtn) {
+      els.modeBtn.textContent = freeWrite ? "Use the two blanks" : "Write freely";
+      els.modeBtn.setAttribute("aria-pressed", freeWrite ? "true" : "false");
+    }
+    if (els.label) els.label.textContent = freeWrite ? "How it works" : "How it works — scarce to abundant";
+    paintScaffoldPreview();
+  }
+
+  function setFreeWrite(on) {
+    const els = scaffoldEls();
+    const tech = focusedTechId ? techById(focusedTechId) : null;
+    if (on && !freeWrite) {
+      // Carry a complete scaffold into the textarea so nothing typed is lost
+      const f = readScaffold(tech);
+      const composed = isScaffoldComplete(f) ? composeHow(f) : "";
+      if (composed && els.ta && !String(els.ta.value || "").trim()) els.ta.value = composed;
+    } else if (!on && freeWrite && els.ta) {
+      const back = parseHow(els.ta.value);
+      if (back) {
+        if (els.scarce) els.scarce.value = back.scarce;
+        if (els.mech) els.mech.value = back.mechanism;
+      }
+    }
+    freeWrite = Boolean(on);
+    syncScaffold(tech);
+  }
+
   function updateCreatePanel() {
     const panel = document.querySelector("#hex-tile-create");
     const title = document.querySelector("#hex-tile-create-title");
@@ -1220,11 +1349,13 @@ export function createHexWorkshop(api) {
     if (hint) {
       if (tech) {
         const pol = polarityForTech(focusedTechId);
-        hint.textContent = `World: ${pol}. Ask for ideas or write how it works.`;
+        const place = api.getPlace?.() || "this place";
+        hint.textContent = `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${WORLD_PLAIN[pol] || pol}.`;
       } else {
-        hint.textContent = "Pick an emTech to invent.";
+        hint.textContent = "Pick an emTech on the left — start with “For this place”.";
       }
     }
+    syncScaffold(tech);
     if (body) {
       const b = board();
       const hasRd = unplacedRdTiles(b).length > 0;
@@ -1381,6 +1512,13 @@ export function createHexWorkshop(api) {
       how.className = "hex-idea-card-how";
       how.textContent = t.howText || "No description yet.";
       body.appendChild(how);
+      if (t.eases) {
+        const eases = document.createElement("p");
+        eases.className = "hex-idea-card-eases";
+        eases.title = "The crisis meter this idea aims at — dock it next to that hex";
+        eases.textContent = `Eases: ${t.eases}`;
+        body.appendChild(eases);
+      }
       card.appendChild(body);
 
       const toss = document.createElement("button");
@@ -2079,6 +2217,20 @@ export function createHexWorkshop(api) {
     );
   }
 
+  /** Crisis meters (label · live level · goal · plain description) for Ask for ideas. */
+  function crisisMetersForIdeas(mission) {
+    if (!mission?.pressure) return [];
+    const live = api.getPressure?.() || {};
+    const roles = Array.isArray(mission.crisisRoles) ? mission.crisisRoles : [];
+    return Object.keys(mission.pressure).map((label, i) => ({
+      label,
+      role: roles[i] || null,
+      level: Number(live[label] ?? mission.pressure[label]) || 0,
+      goal: Number(mission.winMax?.[label] ?? 1),
+      description: String(mission.pressureDesc?.[label] || "").slice(0, 240),
+    }));
+  }
+
   async function askForIdeas({ refresh = false } = {}) {
     if (!focusedTechId || isCreateBusy()) return;
     if (api.canEditBoard && !api.canEditBoard()) {
@@ -2110,12 +2262,15 @@ export function createHexWorkshop(api) {
 
       api.openLearnWhileIdeas?.(techId);
 
+      const mission = api.getMission?.() || null;
       const ctx = {
         focusTechId: techId,
         year,
         place,
         refresh: isRefresh,
         avoidTitles,
+        stakeholder: mission?.stakeholder || "",
+        crisisMeters: crisisMetersForIdeas(mission),
       };
       let ideas = [];
       if (api.coInvent) {
@@ -2181,6 +2336,7 @@ export function createHexWorkshop(api) {
           imagePrompt: idea.imagePrompt || null,
           feasibilityPct: null,
           origin: "sparks",
+          eases: idea.eases || null,
         });
         b = addTile(b, tile);
         mintedIds.push(tile.id);
@@ -2216,10 +2372,20 @@ export function createHexWorkshop(api) {
     }
     const techId = focusedTechId;
     const ta = document.querySelector("#hex-how-text");
-    const how = String(ta?.value || "").trim();
-    if (how.length < 12) {
-      api.flashToast?.("Write a bit more about how it works.");
-      return;
+    let how = "";
+    if (freeWrite) {
+      how = String(ta?.value || "").trim();
+      if (how.length < 12) {
+        api.flashToast?.("Write a bit more about how it works.");
+        return;
+      }
+    } else {
+      const fields = readScaffold(techById(techId));
+      if (!isScaffoldComplete(fields)) {
+        api.flashToast?.("Fill both blanks: what is scarce, and how this emTech makes it abundant.");
+        return;
+      }
+      how = composeHow(fields);
     }
     setCreateBusy("mint", true);
     try {
@@ -2256,6 +2422,7 @@ export function createHexWorkshop(api) {
       const b = addTile(board(), tile);
       setBoard(b);
       if (ta) ta.value = "";
+      clearScaffold();
       renderIdeaCards();
       ensureUi()?.render();
       api.flashToast?.("Tile minted — drag it onto the board.");
@@ -2871,6 +3038,12 @@ export function createHexWorkshop(api) {
     document.querySelector("#btn-mint-custom")?.addEventListener("click", () => {
       mintCustom().catch((e) => console.warn(e));
     });
+    document.querySelector("#btn-how-mode")?.addEventListener("click", () => {
+      setFreeWrite(!freeWrite);
+    });
+    for (const sel of ["#hex-scaffold-scarce", "#hex-scaffold-mech"]) {
+      document.querySelector(sel)?.addEventListener("input", () => paintScaffoldPreview());
+    }
     document.querySelector("#btn-mint-rd")?.addEventListener("click", () => {
       mintRd();
     });
@@ -2907,6 +3080,12 @@ export function createHexWorkshop(api) {
     afterRulesChange,
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
+    /** New Quest: back to the two-blank scaffold, blanks cleared. */
+    resetCreateMode: () => {
+      freeWrite = false;
+      clearScaffold();
+      syncScaffold(focusedTechId ? techById(focusedTechId) : null);
+    },
     hasSparkBatch,
     isSummonBusy: () => summonBusy,
     isCreateBusy,

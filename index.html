@@ -74,7 +74,7 @@
           </ol>
         </div>
         <div class="form-actions" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
-          <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise mission</button>
+          <button type="button" class="btn btn-secondary" id="btn-surprise">Surprise Quest</button>
           <button type="button" class="btn btn-secondary" id="btn-friends">Invent with friends</button>
           <button type="button" class="btn btn-primary" id="btn-choose-theme">
             Start a Quest →
@@ -95,17 +95,6 @@
             Start a Quest →
           </button>
         </div>
-        <p class="title-spark-reset-wrap" hidden>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm"
-            id="btn-reset-spark"
-            hidden
-            title="Legacy tutorial reset (removed)"
-          >
-            Reset tutorial
-          </button>
-        </p>
       </div>
     </section>
 
@@ -352,7 +341,7 @@
           <span class="hud-turn" id="hs-hud-turn">Round 1</span>
           <span class="hud-ap" id="hs-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="hs-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="hs-hud-will">Will 3</span>
+          <span class="hud-will" id="hs-hud-will">Support 3</span>
         </div>
         <div class="hud-product" aria-label="Future Forge by Warmer Sun">
           <span class="hud-product-sun" aria-hidden="true"></span>
@@ -606,7 +595,7 @@
           <p id="room-lobby-status" class="friends-status muted" aria-live="polite"></p>
         </div>
         <div class="panel room-lobby-mission">
-          <h2>Mission</h2>
+          <h2>Quest</h2>
           <p id="room-mission-summary" class="muted room-mission-summary">
             Host picks a Quest via <strong>Themes</strong>, <strong>Sponsored</strong>,
             <strong>Learning</strong>, or the side-loaded <strong>Library</strong>.
@@ -639,7 +628,7 @@
           <span class="hud-turn" id="mp-hud-turn">Round 1</span>
           <span class="hud-ap" id="mp-hud-ap">AP 3/3</span>
           <span class="hud-budget" id="mp-hud-budget">Budget 5$</span>
-          <span class="hud-will" id="mp-hud-will">Will 3</span>
+          <span class="hud-will" id="mp-hud-will">Support 3</span>
         </div>
         <div class="hud-product" aria-label="Future Forge by Warmer Sun">
           <span class="hud-product-sun" aria-hidden="true"></span>
@@ -894,7 +883,7 @@
         </div>
         <div class="progress-pills">
           <span class="pill active">1 · Theme</span>
-          <span class="pill">2 · Mission</span>
+          <span class="pill">2 · Quest</span>
           <span class="pill">3 · Invent</span>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-global-back">← Quests</button>
@@ -929,7 +918,7 @@
         </div>
         <div class="progress-pills">
           <span class="pill done">1 · Theme</span>
-          <span class="pill active">2 · Mission</span>
+          <span class="pill active">2 · Quest</span>
           <span class="pill">3 · Invent</span>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-mission-back">← Themes</button>
@@ -977,10 +966,10 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
+        <div class="progress-pills invent-steps" aria-label="Quest steps">
           <span class="pill active" data-step="invent">Invent</span>
         </div>
-        <div class="hud-clock" id="hud-clock" title="Mission calendar">
+        <div class="hud-clock" id="hud-clock" title="Quest calendar">
           <button type="button" class="hud-year hud-year-btn" id="hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="hud-turn">Turn 0</span>
           <span class="hud-resources" id="hud-resources">
@@ -1002,9 +991,9 @@
         <div
           class="hud-crisis-wrap"
           id="hud-crisis-wrap"
-          title="Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the mission ends. More in ?"
+          title="Crisis meters 0–5: how bad things are. Wait +2 years raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the Quest ends. More in ?"
         >
-          <span class="hud-crisis-label">Crisis</span>
+          <span class="hud-crisis-label"><dfn class="term" data-term="crisis-meter" tabindex="0" role="button" title="Tap for plain words">Crisis</dfn></span>
           <div class="hud-pressure" id="hud-pressure"></div>
         </div>
         <div class="hud-actions">
@@ -1039,7 +1028,7 @@
         <aside class="tech-library" id="solo-tech-library">
           <div class="tech-library-body">
             <div class="panel-header">
-              <h2>Emerging tech</h2>
+              <h2><dfn class="term" data-term="emerging-tech" tabindex="0" role="button" title="Tap for plain words">Emerging tech</dfn></h2>
               <div class="tech-library-header-actions">
                 <button type="button" class="btn btn-ghost btn-sm" id="btn-learn-tech" disabled title="Pick an emTech to learn about it">
                   Learn
@@ -1065,6 +1054,7 @@
                 </button>
               </div>
             </div>
+            <p class="term-plain tech-library-plain">Families of tools still getting better and cheaper every year. Pick one, then Ask for ideas.</p>
             <div id="filter-row" class="filter-row"></div>
             <p id="filter-domain-hint" class="filter-domain-hint" hidden aria-live="polite"></p>
             <div id="tech-list" class="tech-list" role="list"></div>
@@ -1141,10 +1131,28 @@
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-ideas" hidden>Refresh</button>
                 </div>
                 <div class="field" id="field-hex-how">
-                  <label for="hex-how-text">How it works</label>
+                  <div class="hex-how-head">
+                    <label for="hex-how-text" id="hex-how-label">How it works</label>
+                    <button type="button" class="btn-link hex-how-mode" id="btn-how-mode" aria-pressed="false">Write freely</button>
+                  </div>
+                  <div class="hex-scaffold" id="hex-scaffold">
+                    <p class="hex-scaffold-lead muted">
+                      Technology takes something scarce and makes it abundant. Fill the two blanks.
+                    </p>
+                    <label class="hex-scaffold-field">
+                      <span class="hex-scaffold-q" id="hex-scaffold-scarce-label">What is scarce here?</span>
+                      <input type="text" id="hex-scaffold-scarce" maxlength="120" autocomplete="off" placeholder="Clean air at school…" />
+                    </label>
+                    <label class="hex-scaffold-field">
+                      <span class="hex-scaffold-q" id="hex-scaffold-mech-label">How does this emTech make it more abundant?</span>
+                      <textarea id="hex-scaffold-mech" rows="2" maxlength="240" placeholder="Who does what, with what, this year…"></textarea>
+                    </label>
+                    <p class="hex-scaffold-preview muted" id="hex-scaffold-preview" aria-live="polite"></p>
+                  </div>
                   <textarea
                     id="hex-how-text"
                     rows="3"
+                    hidden
                     placeholder="Describe your own idea for this place — then mint a tile…"
                   ></textarea>
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-mint-custom" style="margin-top:.4rem">Mint tile</button>
@@ -1273,9 +1281,9 @@
 
             <div class="feasibility" id="feasibility" aria-live="polite">
               <div class="feasibility-head">
-                <div class="feasibility-light" id="feasibility-light" data-level="red" title="Feasibility"></div>
+                <div class="feasibility-light" id="feasibility-light" data-level="red" title="Pathway"></div>
                 <div>
-                  <div class="feasibility-title">Pathway <span id="feasibility-level-label">red</span></div>
+                  <div class="feasibility-title"><dfn class="term" data-term="pathway" tabindex="0" role="button" title="Tap for plain words">Pathway</dfn> <span id="feasibility-level-label">red</span></div>
                   <p class="feasibility-summary" id="feasibility-summary">Place invention tiles and ease the crisis lights.</p>
                 </div>
               </div>
@@ -1407,12 +1415,12 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player-ch" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
+        <div class="progress-pills invent-steps" aria-label="Quest steps">
           <span class="pill done" data-step="invent">1 · Invent</span>
           <span class="pill active" data-step="challenge">2 · Challenge</span>
           <span class="pill" data-step="deploy">3 · Field</span>
         </div>
-        <div class="hud-clock" id="ch-hud-clock" title="Mission calendar and resources">
+        <div class="hud-clock" id="ch-hud-clock" title="Quest calendar and resources">
           <button type="button" class="hud-year hud-year-btn" id="ch-hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="ch-hud-turn">Turn 0</span>
           <span class="hud-resources">
@@ -1434,7 +1442,7 @@
         <div
           class="hud-crisis-wrap"
           id="ch-hud-crisis-wrap"
-          title="Crisis meters 0–5: how bad things are. Wait raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the mission ends. More in ?"
+          title="Crisis meters 0–5: how bad things are. Wait +2 years raises them; Deploy after a challenge lowers them. Hit 5 on any meter or the fail year and the Quest ends. More in ?"
         >
           <span class="hud-crisis-label">Crisis</span>
           <div class="hud-pressure" id="ch-hud-pressure"></div>
@@ -1552,7 +1560,7 @@
                   <span class="scrutiny-move-cost">cost = remaining ♥ · softens elegance</span>
                   <span class="scrutiny-move-blurb">
                     Skip without winning — once per run. Cost equals remaining resolve hearts
-                    (2♥ → 2 AP · 2 Will; 1♥ → 1 AP · 1 Will). Softens elegance. Confirm below.
+                    (2♥ → 2 AP · 2 Support; 1♥ → 1 AP · 1 Support). Softens elegance. Confirm below.
                   </span>
                 </button>
               </div>
@@ -1598,8 +1606,8 @@
             <div id="mode-panel-sidestep" class="mode-panel" hidden>
               <p class="mode-panel-lead">
                 You dodge this challenger without answering. Cost equals
-                <strong>remaining resolve hearts</strong> (2♥ → 2 AP · 2 Will; after a partial
-                defense 1♥ → 1 AP · 1 Will). Only once per mission. Lobby if you need more Will.
+                <strong>remaining resolve hearts</strong> (2♥ → 2 AP · 2 Support; after a partial
+                defense 1♥ → 1 AP · 1 Support). Only once per Quest. Lobby if you need more Support.
               </p>
               <div class="form-actions game-actions challenge-footer-actions">
                 <button type="button" class="btn btn-secondary" id="btn-challenge-confirm-sidestep">
@@ -1738,12 +1746,12 @@
         <div class="brand">
           <span class="mp-active-player" id="mp-active-player-dep" hidden aria-live="polite"></span>
         </div>
-        <div class="progress-pills invent-steps" aria-label="Mission steps">
+        <div class="progress-pills invent-steps" aria-label="Quest steps">
           <span class="pill done" data-step="invent">1 · Invent</span>
           <span class="pill done" data-step="challenge">2 · Challenge</span>
           <span class="pill active" data-step="deploy">3 · Field</span>
         </div>
-        <div class="hud-clock" id="dep-hud-clock" title="Mission calendar and resources">
+        <div class="hud-clock" id="dep-hud-clock" title="Quest calendar and resources">
           <button type="button" class="hud-year hud-year-btn" id="dep-hud-year" title="Year foresight">2026</button>
           <span class="hud-turn" id="dep-hud-turn">Turn 0</span>
           <span class="hud-resources">
@@ -1765,7 +1773,7 @@
         <div
           class="hud-crisis-wrap"
           id="dep-hud-crisis-wrap"
-          title="Crisis meters 0–5: how bad things are. Wait raises them; Scale after Pilot lowers them. Hit 5 on any meter or the fail year and the mission ends."
+          title="Crisis meters 0–5: how bad things are. Wait +2 years raises them; Scale after Pilot lowers them. Hit 5 on any meter or the fail year and the Quest ends."
         >
           <span class="hud-crisis-label">Crisis</span>
           <div class="hud-pressure" id="dep-hud-pressure"></div>
@@ -1974,57 +1982,6 @@
 
         <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>
-
-        <!-- Solo tutorial win only: what Workshop unlocks (hidden otherwise) -->
-        <section
-          id="outcome-workshop-unlock"
-          class="outcome-workshop-unlock panel"
-          hidden
-          aria-labelledby="outcome-workshop-unlock-title"
-        >
-          <p class="outcome-workshop-unlock-kicker">Tutorial complete</p>
-          <h2 id="outcome-workshop-unlock-title" class="outcome-workshop-unlock-title">
-            Workshop is unlocked
-          </h2>
-          <p class="outcome-workshop-unlock-lead">
-            You finished the quiet run. <strong>Start a Quest</strong> opens the full Workshop — same loop,
-            more systems on the board.
-          </p>
-          <ul class="outcome-workshop-unlock-list">
-            <li>
-              <strong>AP · Budget · Support</strong> — spend attention and capital; End turn refills AP and advances
-              the calendar +1 year.
-            </li>
-            <li>
-              <strong>End turn vs Wait</strong> — End turn refills AP and advances +1 year (crisis meters unchanged);
-              Wait +2 years moves the calendar further and raises crisis meters.
-            </li>
-            <li>
-              <strong>Lobby</strong> — spend to raise Support (public and policy backing) before fielding.
-            </li>
-            <li>
-              <strong>Story</strong> — two faces: How it works + Everyday life (tutorial used one box).
-            </li>
-            <li>
-              <strong>Hard question</strong> — may open Defend / Fix / Sidestep against a critic’s resolve
-              (tutorial was essay-only).
-            </li>
-            <li>
-              <strong>Field</strong> — Pilot → Scale → New normal with odds and costs (tutorial was one Field it).
-            </li>
-            <li>
-              <strong>Tech tray</strong> — full catalog and larger stack (tutorial: starters, smaller stack).
-            </li>
-            <li>
-              <strong>Themes</strong> — many places and problems, not only the tutorial mission.
-            </li>
-          </ul>
-          <div class="form-actions outcome-workshop-unlock-actions">
-            <button type="button" class="btn btn-primary" id="btn-outcome-workshop-themes">
-              Start a Quest →
-            </button>
-          </div>
-        </section>
 
         <h3 style="margin: 1.25rem 0 0.65rem; font-size: 1rem">Foresight for your stack</h3>
         <div id="outcome-foresight" class="foresight-grid"></div>
@@ -2308,7 +2265,7 @@
             <ul class="help-list">
               <li>Each person builds their own invention. You share one crisis — if the place falls, everyone loses.</li>
               <li>Live room (code) or <strong>Hotseat</strong> (one device). Only the active seat spends AP / Budget / Support.</li>
-              <li>Host can pick a theme, sponsored Spotlight, learning lesson, or Library tile. Start tutorial stays solo.</li>
+              <li>Host can pick a theme, sponsored Spotlight, learning lesson, or Library tile.</li>
             </ul>
           </section>
 

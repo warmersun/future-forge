@@ -130,6 +130,9 @@
     "suggested": [
       "ai"
     ],
+    "suggestedWhy": {
+      "ai": "AI that checks AI: an independent watcher can flag a self-improvement loop before Rogue SI outruns review."
+    },
     "visionTheme": "social-city"
   }
 }

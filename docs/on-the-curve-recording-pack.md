@@ -261,6 +261,8 @@ One clip per teaching moment. Invent screen, first-person. Player-facing names o
 
 That is Look Ahead, honesty, convergence, pathway-as-system, Wait costs, Art of the possible, Learn. The rest are B-roll of the same lesson.
 
+In the product these seven are also **concept cards**: each auto-opens once per Quest at its first relevant moment (see `problem-first-invent.md`, slice two) and all seven sit as chips on the `?` card.
+
 | Order | Clip | One beat |
 | --- | --- | --- |
 | 1 | Look Ahead | The exponential clock |

@@ -23,6 +23,8 @@
  * }} TourStep
  */
 
+import { listConcepts } from "./concept-cards.js";
+
 const MINT_HOW_MIN = 12;
 
 /**
@@ -661,6 +663,10 @@ function cssIdent(id) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function escapeAttr(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 const GAP = 12;
 const RING_PAD = 6;
 
@@ -671,6 +677,9 @@ const RING_PAD = 6;
  *   ensureTargetVisible?: (step: TourStep) => void | Promise<void>,
  *   restoreFocusEl?: () => HTMLElement|null,
  *   snapshot?: () => object,
+ *   onOpenConcept?: (id: string) => void,
+ *   onMuteConcept?: (id: string, on: boolean) => void,
+ *   isConceptMuted?: (id: string) => boolean,
  * }} [opts]
  */
 export function createGuidedTour(opts = {}) {
@@ -678,6 +687,8 @@ export function createGuidedTour(opts = {}) {
   let root = null;
   /** @type {TourStep|null} */
   let current = null;
+  /** "step" = next-step coach-mark; "concept" = one of the Friend's-seven cards */
+  let mode = "step";
   /** @type {HTMLElement|SVGElement|null} */
   let lastTarget = null;
   /** @type {HTMLElement|null} */
@@ -704,15 +715,39 @@ export function createGuidedTour(opts = {}) {
         </div>
         <div class="tour-ring" hidden></div>
         <div class="tour-card" hidden role="dialog" aria-modal="false" aria-labelledby="tour-card-title" aria-describedby="tour-card-body" tabindex="-1">
-          <p class="tour-kicker">Next step</p>
+          <p class="tour-kicker" id="tour-card-kicker">Next step</p>
           <h3 class="tour-card-title" id="tour-card-title"></h3>
           <p class="tour-card-body" id="tour-card-body"></p>
           <div class="tour-card-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="tour-rules">Rules</button>
             <button type="button" class="btn btn-primary btn-sm" id="tour-got-it">Got it</button>
           </div>
+          <div class="tour-foot" id="tour-foot">
+            <label class="tour-mute" id="tour-mute-row" hidden>
+              <input type="checkbox" id="tour-mute" /> Don't auto-show this one
+            </label>
+            <div class="tour-concepts" role="group" aria-label="Concepts">
+              <span class="tour-concepts-label">Concepts</span>
+              ${listConcepts()
+                .map(
+                  (c) =>
+                    `<button type="button" class="tour-concept-chip" data-concept="${c.id}" title="${escapeAttr(c.title)}">${escapeAttr(c.title.split(":")[0].split(" is ")[0])}</button>`
+                )
+                .join("")}
+            </div>
+          </div>
         </div>
       `;
+      root.querySelector("#tour-mute")?.addEventListener("change", (e) => {
+        if (mode !== "concept" || !current) return;
+        opts.onMuteConcept?.(current.id, Boolean(e.target?.checked));
+      });
+      root.querySelectorAll(".tour-concept-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset?.concept || btn.getAttribute?.("data-concept");
+          if (id) opts.onOpenConcept?.(id);
+        });
+      });
       root.querySelector("#tour-got-it")?.addEventListener("click", () => close());
       root.querySelector("#tour-rules")?.addEventListener("click", () => {
         close();
@@ -761,6 +796,7 @@ export function createGuidedTour(opts = {}) {
     if (!refresh && extra.opener) openerEl = extra.opener;
     const host = ensureRoot();
     bindWindow();
+    mode = "step";
     let next = resolveTourStep(snapshot);
     current = next;
     try {
@@ -793,11 +829,48 @@ export function createGuidedTour(opts = {}) {
 
   async function refresh(snapshot) {
     if (!isOpen()) return;
+    if (mode === "concept") {
+      // A concept card stays until dismissed; only follow its target around.
+      if (current) layout(current);
+      return;
+    }
     await open(snapshot, { refresh: true });
+  }
+
+  /**
+   * Show one Friend's-seven concept card (auto-open or on demand).
+   * @param {object|null} card — from concept-cards.js
+   * @param {object} [_snapshot]
+   * @param {{ opener?: HTMLElement|null }} [extra]
+   */
+  async function openConcept(card, _snapshot, extra = {}) {
+    if (!card) return;
+    const token = ++gen;
+    if (extra.opener) openerEl = extra.opener;
+    const host = ensureRoot();
+    bindWindow();
+    mode = "concept";
+    current = card;
+    try {
+      await opts.ensureTargetVisible?.(card);
+    } catch {
+      /* still show the card */
+    }
+    if (token !== gen) return;
+    host.classList.add("is-open");
+    document.body.classList.add("tour-open");
+    layout(card);
+    const el = host.querySelector(".tour-card");
+    try {
+      el?.focus?.({ preventScroll: true });
+    } catch {
+      /* ignore */
+    }
   }
 
   function close() {
     gen += 1;
+    mode = "step";
     if (!root) return;
     root.classList.remove("is-open");
     document.body.classList.remove("tour-open");
@@ -831,6 +904,18 @@ export function createGuidedTour(opts = {}) {
     body.textContent = stepObj.body;
     card.hidden = false;
     card.dataset.step = stepObj.id;
+    const concept = mode === "concept";
+    const kicker = host.querySelector("#tour-card-kicker");
+    if (kicker) kicker.textContent = concept ? stepObj.kicker || "Concept" : "Next step";
+    card.classList.toggle("is-concept", concept);
+    const muteRow = host.querySelector("#tour-mute-row");
+    if (muteRow) muteRow.hidden = !concept;
+    const mute = host.querySelector("#tour-mute");
+    if (mute && concept) mute.checked = Boolean(opts.isConceptMuted?.(stepObj.id));
+    host.querySelectorAll?.(".tour-concept-chip").forEach((btn) => {
+      const id = btn.dataset?.concept || btn.getAttribute?.("data-concept");
+      btn.classList.toggle("is-active", concept && id === stepObj.id);
+    });
 
     lastTarget?.classList?.remove("tour-target");
     const target = queryTourTarget(stepObj);
@@ -861,10 +946,12 @@ export function createGuidedTour(opts = {}) {
 
   return {
     open,
+    openConcept,
     refresh,
     close,
     isOpen,
     currentStep: () => current,
+    mode: () => mode,
   };
 }
 

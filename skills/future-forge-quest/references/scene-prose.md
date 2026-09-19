@@ -22,6 +22,7 @@ Use this for:
 | `summary` | The instance in 2–3 spoken sentences (names and place **allowed**). |
 | `title` | Human situation and/or fictive place. |
 | `spotlight.encourageCopy` | Outcome in everyday words — never the tray tech. |
+| `mission.suggestedWhy[techId]` | *Why this family here*, one sentence naming the crisis meter it eases. Lives under the tray card, so the family name is fine; product names are not. |
 
 ---
 

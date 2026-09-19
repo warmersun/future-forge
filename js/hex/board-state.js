@@ -327,6 +327,8 @@ export function mintInventionTile(opts = {}) {
     timingPending: false,
     timingForKey: null,
     origin: opts.origin || null,
+    /** Crisis meter label this idea aims at (from Ask for ideas), or null */
+    eases: opts.eases ? String(opts.eases).slice(0, 60) : null,
     lamp: null,
     /** Sticky honesty multiplier from convergences (default 1). Survives lift. */
     convergenceFactor:

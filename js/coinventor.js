@@ -15,27 +15,32 @@ import {
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
 
+/** Problem-first order: which tech, what it can do here, teach me, timing — then remix tools. */
 const QUICK_ACTIONS = [
-  { mode: "spark", label: "Spark ideas", hint: "Frame the local mission" },
-  { mode: "suggest-stack", label: "Suggest stack", hint: "Tech combo for this place" },
+  {
+    mode: "suggest-stack",
+    label: "Which tech could help here?",
+    hint: "Suggests a few emTechs for this place and says why each one fits",
+  },
   {
     mode: "art-of-the-possible",
     label: "Art of the possible",
-    hint: "Milestones, capabilities, unlocked use cases for this stack & year",
+    hint: "What already works with these emTechs here, this year — and what is still a stretch",
   },
+  { mode: "explain-techs", label: "Teach me", hint: "Plain-words primer on the emTechs on your board" },
+  { mode: "push-further", label: "Timing check", hint: "Is this idea honest for this year, or should you Wait?" },
+  { mode: "spark", label: "Spark ideas", hint: "Frame the Quest and ask one good question" },
   {
     mode: "sit",
     label: "SIT invent",
-    hint: "Addition · subtraction · multiplication · division — thinking in a box",
+    hint: "Systematic Inventive Thinking: remix a minted idea by adding, removing, splitting, or multiplying a part",
   },
   {
     mode: "scamper",
     label: "SCAMPER invent",
-    hint: "Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse",
+    hint: "Remix a minted idea: Substitute · Combine · Adapt · Modify · Put to other uses · Eliminate · Reverse",
   },
   { mode: "draft-name", label: "Name it", hint: "Invention name" },
-  { mode: "push-further", label: "Timing check", hint: "Wait vs claim fit for this year" },
-  { mode: "explain-techs", label: "Teach me", hint: "Explain techs in the stack" },
 ];
 
 /** Match invent howOk threshold — enough substance for SIT / SCAMPER to remake. */

@@ -84,6 +84,9 @@
     "suggested": [
       "ai"
     ],
+    "suggestedWhy": {
+      "ai": "An assistant hosted on the school's own cluster can coach night-class practice and close the Skills gap."
+    },
     "visionTheme": "learn-city"
   }
 }

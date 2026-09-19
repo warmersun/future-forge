@@ -9,7 +9,34 @@ export const IDEA_LIMITS = {
   blurb: 140,
   insertText: 280,
   imagePrompt: 400,
+  eases: 60,
 };
+
+/**
+ * Which crisis meter a spark aims at. Prefers the model's `eases` when it names a
+ * known meter; else the hottest meter in context (highest level above its goal).
+ * @param {unknown} raw — model-provided label
+ * @param {{ crisisMeters?: {label:string, level?:number, goal?:number}[] }} [context]
+ * @returns {string}
+ */
+export function easesLabel(raw, context = {}) {
+  const meters = Array.isArray(context?.crisisMeters) ? context.crisisMeters : [];
+  const want = String(raw || "").trim();
+  if (want) {
+    const hit = meters.find(
+      (m) => String(m?.label || "").toLowerCase() === want.toLowerCase()
+    );
+    if (hit) return String(hit.label);
+    if (!meters.length) return want.slice(0, IDEA_LIMITS.eases);
+  }
+  if (!meters.length) return "";
+  const sorted = [...meters].sort(
+    (a, b) =>
+      (Number(b.level) || 0) - (Number(b.goal) || 0) -
+      ((Number(a.level) || 0) - (Number(a.goal) || 0))
+  );
+  return String(sorted[0]?.label || "");
+}
 
 /**
  * Session cache key for sparks (mission + tech + year + place).
@@ -83,7 +110,10 @@ export function normalizeIdeas(raw) {
  * @param {object} [context]
  */
 export function ideasOrFallback(raw, tech, context) {
-  const ideas = normalizeIdeas(raw);
+  const ideas = normalizeIdeas(raw).map((i) => {
+    const eases = easesLabel(i.eases, context);
+    return eases ? { ...i, eases } : i;
+  });
   if (ideas.length >= 3 || !tech) return ideas.slice(0, 3);
   const pad = context?.refresh
     ? rotateLocalIdeaSparks(tech, context, context.avoidTitles || [])
@@ -430,6 +460,7 @@ function ideaFromSeed(tech, context, use, index, salt = 0) {
     blurb: `${clip(use, 90)} — a pilot-honest angle for ${year}.`,
     insertText: `In ${place}, ${name} could ${lowerFirst(use)} — keep a person here accountable for the call that matters.`,
     imagePrompt: `Photoreal 4:3 scene in ${place}: people using ${name} for ${use}. Natural light, documentary still, no readable text, no logos, no watermarks.`,
+    ...(easesLabel(null, context) ? { eases: easesLabel(null, context) } : {}),
   };
 }
 
@@ -452,6 +483,7 @@ function sanitizeIdea(item, index) {
     blurb: clip(item.blurb || insertText, IDEA_LIMITS.blurb),
     insertText,
     imagePrompt: clip(item.imagePrompt, IDEA_LIMITS.imagePrompt),
+    ...(clip(item.eases, IDEA_LIMITS.eases) ? { eases: clip(item.eases, IDEA_LIMITS.eases) } : {}),
   };
 }
 
