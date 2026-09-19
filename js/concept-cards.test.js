@@ -66,8 +66,11 @@ describe("concept card content", () => {
 });
 
 describe("resolveConceptCard triggers", () => {
-  it("nothing fires on a bare board", () => {
+  it("nothing fires on a bare board, and null / junk snapshots are safe", () => {
     assert.equal(resolveConceptCard(base()), null);
+    assert.equal(resolveConceptCard(null), null);
+    assert.equal(resolveConceptCard(undefined), null);
+    assert.equal(resolveConceptCard("nope"), null);
   });
   it("learn fires on first focus and targets the Learn button (opens the tray)", () => {
     const c = resolveConceptCard(base({ focusedTechId: "solar" }));
@@ -108,12 +111,16 @@ describe("resolveConceptCard triggers", () => {
     assert.equal(resolveConceptCard(base({ placedInventionCount: 1, pathway: { coverage: "yellow" } }), { seen }).id, "pathway");
     assert.equal(resolveConceptCard(base({ pathway: { coverage: "yellow" }, focusedTechId: "solar" }), { seen }).id, "learn");
   });
-  it("wait-vs-end-turn fires over the Wait confirm without a dimmer, or after a Wait", () => {
+  it("wait-vs-end-turn fires over the Wait confirm without a dimmer, or after a Wait on the Look Ahead button", () => {
     const seen = ["look-ahead", "honesty-bar", "convergence", "pathway"];
     const c = resolveConceptCard(base({ ui: { waitConfirmOpen: true } }), { seen });
     assert.equal(c.id, "wait-vs-end-turn");
     assert.equal(c.skipDimmer, true);
-    assert.equal(resolveConceptCard(base({ waitUsed: true }), { seen }).id, "wait-vs-end-turn");
+    assert.equal(c.target.selector, "#wait-confirm-ok");
+    const after = resolveConceptCard(base({ waitUsed: true }), { seen });
+    assert.equal(after.id, "wait-vs-end-turn");
+    assert.equal(after.target.selector, "#btn-wait");
+    assert.equal(after.skipDimmer, false);
   });
   it("art-of-the-possible fires on a red tile or the co-inventor tab and opens that tab", () => {
     const seen = ["look-ahead", "honesty-bar", "convergence", "pathway", "wait-vs-end-turn"];

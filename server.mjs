@@ -932,7 +932,10 @@ function sanitizeScenarioList(rawList, context, techIds) {
       .map(String)
       .filter((id) => validTech.has(id))
       .slice(0, 8);
-    const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, validTech);
+    const suggestedWhy = sanitizeSuggestedWhy(
+      raw.suggestedWhy,
+      new Set(suggested.length ? suggested : ["ai", "iot", "networks"])
+    );
     const visionTheme = visionOk.has(String(raw.visionTheme))
       ? String(raw.visionTheme)
       : "rebuild-city";

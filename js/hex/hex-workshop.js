@@ -998,7 +998,7 @@ export function createHexWorkshop(api) {
                 .map(
                   (h) => `<li>
                     <button type="button" class="btn btn-secondary btn-sm hex-crisis-help-btn" data-help-tech="${escapeHtml(h.tech.id)}">
-                      <span class="hex-crisis-help-icon" aria-hidden="true">${h.tech.icon || ""}</span> Invent with ${escapeHtml(h.tech.name)}
+                      <span class="hex-crisis-help-icon" aria-hidden="true">${escapeHtml(h.tech.icon || "")}</span> Invent with ${escapeHtml(h.tech.name)}
                     </button>
                     ${h.why ? `<span class="hex-crisis-help-why muted">${escapeHtml(h.why)}</span>` : ""}
                   </li>`
@@ -1283,6 +1283,15 @@ export function createHexWorkshop(api) {
     if (els.preview) els.preview.textContent = "";
   }
 
+  /** How-text the tour and mint would see right now (scaffold or free text). */
+  function effectiveHowLength() {
+    const els = scaffoldEls();
+    if (freeWrite) return String(els.ta?.value || "").trim().length;
+    const tech = focusedTechId ? techById(focusedTechId) : null;
+    const f = readScaffold(tech);
+    return isScaffoldComplete(f) ? composeHow(f).length : 0;
+  }
+
   function paintScaffoldPreview() {
     const els = scaffoldEls();
     if (!els.preview) return;
@@ -1307,7 +1316,10 @@ export function createHexWorkshop(api) {
       els.modeBtn.textContent = freeWrite ? "Use the two blanks" : "Write freely";
       els.modeBtn.setAttribute("aria-pressed", freeWrite ? "true" : "false");
     }
-    if (els.label) els.label.textContent = freeWrite ? "How it works" : "How it works — scarce to abundant";
+    if (els.label) {
+      els.label.textContent = freeWrite ? "How it works" : "How it works — scarce to abundant";
+      els.label.htmlFor = freeWrite ? "hex-how-text" : "hex-scaffold-scarce";
+    }
     paintScaffoldPreview();
   }
 
@@ -1320,7 +1332,7 @@ export function createHexWorkshop(api) {
       const composed = isScaffoldComplete(f) ? composeHow(f) : "";
       if (composed && els.ta && !String(els.ta.value || "").trim()) els.ta.value = composed;
     } else if (!on && freeWrite && els.ta) {
-      const back = parseHow(els.ta.value);
+      const back = parseHow(els.ta.value, scaffoldFields(api.getMission?.() || null, tech));
       if (back) {
         if (els.scarce) els.scarce.value = back.scarce;
         if (els.mech) els.mech.value = back.mechanism;
@@ -3042,8 +3054,12 @@ export function createHexWorkshop(api) {
       setFreeWrite(!freeWrite);
     });
     for (const sel of ["#hex-scaffold-scarce", "#hex-scaffold-mech"]) {
-      document.querySelector(sel)?.addEventListener("input", () => paintScaffoldPreview());
+      document.querySelector(sel)?.addEventListener("input", () => {
+        paintScaffoldPreview();
+        api.onHowInput?.();
+      });
     }
+    document.querySelector("#hex-how-text")?.addEventListener("input", () => api.onHowInput?.());
     document.querySelector("#btn-mint-rd")?.addEventListener("click", () => {
       mintRd();
     });
@@ -3080,6 +3096,7 @@ export function createHexWorkshop(api) {
     afterRulesChange,
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
+    effectiveHowLength,
     /** New Quest: back to the two-blank scaffold, blanks cleared. */
     resetCreateMode: () => {
       freeWrite = false;

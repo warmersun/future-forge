@@ -423,6 +423,7 @@ export class IdeaDeck {
       <div class="idea-card-body">
         <h4>${escapeHtml(idea.title)}</h4>
         <p>${escapeHtml(idea.blurb)}</p>
+        ${idea.eases ? `<p class="idea-card-eases">Eases: ${escapeHtml(idea.eases)}</p>` : ""}
         <button type="button" class="idea-card-cta" data-idea-pick="${escapeHtml(idea.id)}">
           ${escapeHtml(this.pickLabel || "Add to how it works")}
         </button>

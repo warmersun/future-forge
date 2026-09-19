@@ -60,22 +60,42 @@ export function isScaffoldComplete(f) {
  */
 export function composeHow(f) {
   if (!isScaffoldComplete(f)) return "";
-  const scarce = sentenceCase(trimDot(clean(f.scarce).slice(0, SCAFFOLD_LIMITS.scarce)));
+  const scarce = lowerFirst(trimDot(clean(f.scarce).slice(0, SCAFFOLD_LIMITS.scarce)));
   const mech = lowerFirst(trimDot(clean(f.mechanism).slice(0, SCAFFOLD_LIMITS.mechanism)));
-  const who = f.stakeholder ? ` — for ${f.stakeholder}` : "";
-  return `In ${f.place}, ${lowerFirst(scarce)} is scarce. ${f.tech} makes it more abundant by ${mech}${who}, this year.`;
+  const tail = f.stakeholder ? `. For ${f.stakeholder}, this year.` : `, this year.`;
+  return `In ${f.place}, ${scarce} is scarce. ${f.tech} makes it more abundant: ${mech}${tail}`;
 }
 
 /**
- * Best-effort split of an existing how-text back into the blanks (for switching modes).
+ * Split a composed how-text back into the two blanks (for switching modes).
+ * Pass the known place / tech / stakeholder so commas or dashes inside them
+ * cannot be mistaken for the sentence structure.
  * @param {string} how
+ * @param {{ place?: string, tech?: string, stakeholder?: string }} [known]
  * @returns {{ scarce: string, mechanism: string } | null}
  */
-export function parseHow(how) {
+export function parseHow(how, known = {}) {
   const t = clean(how);
-  const m = t.match(/^In [^,]+, (.+?) is scarce\. .+? makes it more abundant by (.+?)(?: — for [^,]+)?, this year\.?$/);
-  if (!m) return null;
-  return { scarce: m[1], mechanism: m[2] };
+  if (!t) return null;
+  const place = clean(known.place);
+  const tech = clean(known.tech);
+  const who = clean(known.stakeholder);
+  if (place && tech) {
+    const tail = who ? `\\. For ${esc(who)}, this year\\.?` : `, this year\\.?`;
+    const re = new RegExp(
+      `^In ${esc(place)}, (.+) is scarce\\. ${esc(tech)} makes it more abundant: (.+)${tail}$`
+    );
+    const m = t.match(re);
+    if (m) return { scarce: m[1], mechanism: m[2] };
+  }
+  // Unknown fields: best effort on the canonical shape (place may contain commas, so anchor on " is scarce.").
+  const g = t.match(/^In .+, (.+?) is scarce\. .+? makes it more abundant: (.+?)(?:\. For .+?)?, this year\.?$/);
+  if (!g) return null;
+  return { scarce: g[1], mechanism: g[2] };
+}
+
+function esc(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function clean(s) {
@@ -86,9 +106,6 @@ function trimDot(s) {
 }
 function lowerFirst(s) {
   return s ? s[0].toLowerCase() + s.slice(1) : s;
-}
-function sentenceCase(s) {
-  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 function firstName(stakeholder) {
   const s = clean(stakeholder);

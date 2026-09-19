@@ -151,7 +151,12 @@ if (!v.ok) {
 const outDir = path.join(ROOT, "output", "quests", slug);
 fs.mkdirSync(outDir, { recursive: true });
 const outFile = path.join(outDir, "quest.json");
-fs.writeFileSync(outFile, JSON.stringify(tile, null, 2) + "\n", "utf8");
+// Write the authored (structured-pressure) tile so it re-imports cleanly, with the
+// validator's sanitized suggestedWhy folded in so the file matches what the game shows.
+const outTile = { ...tile, mission: { ...tile.mission } };
+if (v.mission?.suggestedWhy) outTile.mission.suggestedWhy = v.mission.suggestedWhy;
+else delete outTile.mission.suggestedWhy;
+fs.writeFileSync(outFile, JSON.stringify(outTile, null, 2) + "\n", "utf8");
 console.log(`Wrote ${outFile}`);
 console.log(`Import in Future Forge: Import Quest… → select this JSON.`);
 console.log(`Validate: npm run validate:quest -- ${outFile}`);

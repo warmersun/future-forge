@@ -78,7 +78,7 @@ The blank box becomes two blanks built on the game's own definition of technolog
 
 The composed sentence is previewed live and minted as the how-text:
 
-> In Riverbend Health Post, power after dusk is scarce. Solar Power makes it more abundant by rooftop panels charging a battery that runs the vaccine fridge at night — for Nurse Amara, this year.
+> In Riverbend Health Post, power after dusk is scarce. Solar Power makes it more abundant: rooftop panels charge a battery that runs the vaccine fridge at night. For Nurse Amara, this year.
 
 **Write freely** swaps to the plain textarea; a complete scaffold is carried across so nothing typed is lost, and a composed sentence parses back into the blanks. The choice is per Quest and resets with the next one. The 12-character mint check is unchanged.
 

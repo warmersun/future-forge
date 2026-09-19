@@ -1541,6 +1541,8 @@ function ensureHexWorkshop() {
     },
     /** Create panel finished (ideas / mint / summon): coach-marks may open now. */
     onCreateIdle: () => refreshCoachMarks(),
+    /** Scaffold blanks or free text changed: the next-step card may advance to Mint. */
+    onHowInput: () => refreshCoachMarks(),
     onBoardPainted: () => {
       renderSelectedChips();
       renderFeasibility();
@@ -8359,7 +8361,7 @@ function renderTechList() {
         <div class="${cardClass}" data-id="${t.id}" style="--domain:${color}" role="listitem" tabindex="-1">
           <button type="button" class="tech-card-main" data-tech-focus="${t.id}"
             title="${escapeHtml(t.summary || "")}${escapeHtml(costTitle)} — click to focus">
-            <span class="tech-icon">${t.icon}</span>
+            <span class="tech-icon">${escapeHtml(t.icon || "")}</span>
             <span class="tech-meta">
               <h4>${escapeHtml(t.name)}${isSpot ? ' <span class="tech-spotlight-tag">Spotlight</span>' : ""}</h4>
               ${showCan ? `<p class="tech-can">${escapeHtml(canDo)}</p>` : ""}
@@ -20647,7 +20649,9 @@ function tourSnapshot() {
     convergedTileId: placed.find((t) => Number(t.convergenceFactor) > 1)?.id || null,
     unplacedInventionCount: unplaced.length,
     placedInventionCount: placed.length,
-    howTextLength: String($("#hex-how-text")?.value || "").trim().length,
+    howTextLength:
+      hexWorkshop?.effectiveHowLength?.() ??
+      String($("#hex-how-text")?.value || "").trim().length,
     hasSparkBatch: Boolean(focusId && hex?.hasSparkBatch?.(focusId)),
     pathway: {
       overall: panel.overall,
@@ -20784,9 +20788,18 @@ function refreshCoachMarks() {
     muted: readMutedConcepts(),
   });
   if (!card) return;
+  // Only count a card as shown when its anchor is actually visible on screen.
+  if (!coachTargetVisible(queryTourTarget(card))) return;
   if (!Array.isArray(state.conceptSeen)) state.conceptSeen = [];
   state.conceptSeen.push(card.id);
   void guidedTour.openConcept(card, snap);
+}
+
+function coachTargetVisible(el) {
+  if (!el) return false;
+  if (el.closest?.("[hidden]")) return false;
+  const r = el.getBoundingClientRect?.();
+  return Boolean(r && r.width > 0 && r.height > 0);
 }
 
 function openRulesHelp() {

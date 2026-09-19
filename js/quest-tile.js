@@ -926,7 +926,7 @@ export function validateQuestTile(tile, opts = {}) {
   ) {
     details.push("suggestedWhy_not_object");
   }
-  const suggestedWhy = sanitizeSuggestedWhy(suggestedWhyRaw, techIds);
+  const suggestedWhy = sanitizeSuggestedWhy(suggestedWhyRaw, new Set(suggested));
 
   const resourcesRaw =
     tile.resources !== undefined && tile.resources !== null

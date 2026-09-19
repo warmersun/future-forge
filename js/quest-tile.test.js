@@ -919,7 +919,7 @@ describe("quest module wrapper", () => {
 });
 
 describe("quest-tile suggestedWhy", () => {
-  it("keeps an authored why-here for the spotlight id and drops junk ids", () => {
+  it("keeps an authored why-here for the spotlight id only and drops other ids", () => {
     const tile = baseTile();
     tile.mission.suggestedWhy = {
       "gene-sequencing": "  A bench sequencer can name the fever before the queue forms — eases Outbreak.  ",
@@ -931,7 +931,6 @@ describe("quest-tile suggestedWhy", () => {
     assert.equal(v.ok, true, JSON.stringify(v.details));
     assert.deepEqual(v.mission.suggestedWhy, {
       "gene-sequencing": "A bench sequencer can name the fever before the queue forms — eases Outbreak.",
-      ai: "not suggested here but a valid id",
     });
   });
 

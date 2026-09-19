@@ -119,7 +119,8 @@ export function conceptById(id) {
 }
 
 /** Normalize the raw workshop snapshot (same field names as guided-tour snapOf). */
-function snap(raw = {}) {
+function snap(raw) {
+  raw = raw && typeof raw === "object" ? raw : {};
   const briefing = raw.briefing || {};
   const pathway = raw.pathway || {};
   const ui = raw.ui || {};
@@ -198,6 +199,10 @@ function withLiveTarget(card, s) {
   }
   if (card.id === "convergence" && !s.ui.convergenceOpen && s.convergedTileId) {
     return { ...card, target: hexTarget(s.convergedTileId), skipDimmer: false };
+  }
+  if (card.id === "wait-vs-end-turn" && !s.ui.waitConfirmOpen) {
+    // Dialog closed (after a Wait): anchor on the Look Ahead button, with the dimmer.
+    return { ...card, target: sel("#btn-wait"), skipDimmer: false };
   }
   return card;
 }

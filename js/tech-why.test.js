@@ -41,6 +41,10 @@ describe("clipLine / capabilityLine", () => {
     assert.equal(capabilityLine({ summary: "Just a summary." }), "Just a summary.");
     assert.equal(capabilityLine(null), "");
   });
+  it("ignores non-string fields instead of printing objects", () => {
+    assert.equal(capabilityLine({ useCasesNow: [{ bad: true }], summary: { also: "bad" }, maturity: { now: "Works now" } }), "Works now");
+    assert.equal(capabilityLine({ useCasesNow: [42], summary: 7 }), "");
+  });
 });
 
 describe("metersByHeat", () => {
@@ -83,6 +87,17 @@ describe("whyHere", () => {
     const m = { ...mission, spotlight: { techId: "iot", advanceSummary: "Sensors got cheap. Second sentence ignored." } };
     assert.equal(whyHere(iot, m), "Sensors got cheap.");
   });
+  it("does not cut the spotlight sentence at an abbreviation", () => {
+    for (const [summary, want] of [
+      ["U.S. sensors got cheap overnight. Second.", "U.S. sensors got cheap overnight."],
+      ["Dr. Okonkwo runs the bench now. More.", "Dr. Okonkwo runs the bench now."],
+      ["Use e.g. a kit on site. More.", "Use e.g. a kit on site."],
+      ["No sentence end at all", "No sentence end at all"],
+    ]) {
+      const m = { ...mission, spotlight: { techId: "iot", advanceSummary: summary } };
+      assert.equal(whyHere(iot, m), want, summary);
+    }
+  });
   it("stays within WHY_MAX and avoids banned words", () => {
     const m = { ...mission, suggestedWhy: { iot: "x".repeat(300) } };
     assert.ok(whyHere(iot, m).length <= WHY_MAX);
@@ -103,9 +118,11 @@ describe("pickTechsForCrisis", () => {
 });
 
 describe("sanitizeSuggestedWhy", () => {
-  it("keeps known ids with string reasons only", () => {
+  it("keeps known ids with string reasons only, clipped to WHY_MAX", () => {
     const out = sanitizeSuggestedWhy({ iot: " ok ", nope: "x", ai: 5, solar: "" }, ["iot", "ai", "solar"]);
     assert.deepEqual(out, { iot: "ok" });
+    const long = sanitizeSuggestedWhy({ iot: "word ".repeat(60) }, ["iot"]);
+    assert.ok(long.iot.length <= WHY_MAX);
   });
   it("returns null for junk", () => {
     assert.equal(sanitizeSuggestedWhy("str", ["iot"]), null);

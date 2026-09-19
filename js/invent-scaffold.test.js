@@ -39,7 +39,7 @@ describe("composeHow", () => {
     assert.equal(isScaffoldComplete(f), false);
     assert.equal(composeHow(f), "");
   });
-  it("composes one plain paragraph over the 12-char mint minimum", () => {
+  it("composes grammatical sentences over the 12-char mint minimum", () => {
     const f = {
       ...scaffoldFields(mission, tech),
       scarce: "Power after dusk.",
@@ -48,23 +48,41 @@ describe("composeHow", () => {
     const how = composeHow(f);
     assert.equal(
       how,
-      "In Riverbend Health Post, power after dusk is scarce. Solar Power makes it more abundant by rooftop panels charge a battery that runs the vaccine fridge and the delivery room lights at night — for Nurse Amara, this year."
+      "In Riverbend Health Post, power after dusk is scarce. Solar Power makes it more abundant: rooftop panels charge a battery that runs the vaccine fridge and the delivery room lights at night. For Nurse Amara, this year."
     );
     assert.ok(how.length >= 12);
   });
-  it("omits the stakeholder clause when unknown", () => {
+  it("omits the stakeholder sentence when unknown", () => {
     const f = { ...scaffoldFields({ place: "Here" }, tech), scarce: "cold storage", mechanism: "panels run a fridge" };
-    assert.equal(composeHow(f), "In Here, cold storage is scarce. Solar Power makes it more abundant by panels run a fridge, this year.");
+    assert.equal(composeHow(f), "In Here, cold storage is scarce. Solar Power makes it more abundant: panels run a fridge, this year.");
   });
 });
 
 describe("parseHow", () => {
   it("round-trips a composed how-text back into the blanks", () => {
     const f = { ...scaffoldFields(mission, tech), scarce: "power after dusk", mechanism: "panels charge a battery" };
-    const back = parseHow(composeHow(f));
+    const back = parseHow(composeHow(f), f);
     assert.deepEqual(back, { scarce: "power after dusk", mechanism: "panels charge a battery" });
   });
-  it("returns null for free text", () => {
+  it("survives a place with commas and a mechanism with an em-dash 'for' clause", () => {
+    const tideglass = { place: "Tideglass High, Kettle Reach (fictive)", stakeholder: "Ms. Idris, biology club" };
+    const synbio = { id: "synbio", name: "Synthetic Biology" };
+    const f = {
+      ...scaffoldFields(tideglass, synbio),
+      scarce: "trust in the water",
+      mechanism: "a screening kit flags mirror parts — for the club, before anything grows",
+    };
+    const how = composeHow(f);
+    assert.deepEqual(parseHow(how, f), { scarce: f.scarce, mechanism: f.mechanism });
+    // Without the known fields the best-effort parse still gets it right when the blanks hold no commas
+    assert.deepEqual(parseHow(how), { scarce: f.scarce, mechanism: f.mechanism });
+  });
+  it("round-trips when no stakeholder is known", () => {
+    const f = { ...scaffoldFields({ place: "Here, there" }, tech), scarce: "cold storage", mechanism: "panels run a fridge" };
+    assert.deepEqual(parseHow(composeHow(f), f), { scarce: "cold storage", mechanism: "panels run a fridge" });
+  });
+  it("returns null for free text or empty input", () => {
     assert.equal(parseHow("A drone drops medicine at the clinic door."), null);
+    assert.equal(parseHow("", { place: "x", tech: "y" }), null);
   });
 });

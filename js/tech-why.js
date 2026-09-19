@@ -31,12 +31,12 @@ export function clipLine(text, max = WHY_MAX) {
  * @param {object} tech
  */
 export function capabilityLine(tech) {
+  const str = (v) => (typeof v === "string" && v.trim() ? v.trim() : "");
   const src =
-    (typeof tech?.inventionHint === "string" && tech.inventionHint.trim()) ||
-    (Array.isArray(tech?.useCasesNow) && tech.useCasesNow[0]) ||
-    (typeof tech?.maturity?.now === "string" && tech.maturity.now) ||
-    tech?.summary ||
-    "";
+    str(tech?.inventionHint) ||
+    (Array.isArray(tech?.useCasesNow) ? str(tech.useCasesNow[0]) : "") ||
+    str(tech?.maturity?.now) ||
+    str(tech?.summary);
   return clipLine(src, CAPABILITY_MAX);
 }
 
@@ -104,7 +104,7 @@ export function whyHere(tech, mission) {
  * Prefers authored reasons that name this meter; then the rest of the shelf.
  * @param {object} mission
  * @param {object[]} techs — full catalog
- * @param {{ meterLabel?: string, role?: string }} where
+ * @param {{ meterLabel?: string }} where — the crisis meter's label (its role is not needed)
  * @param {number} [n]
  * @returns {{ tech: object, why: string }[]}
  */
@@ -146,7 +146,8 @@ export function splitTray(mission, techs) {
 }
 
 /**
- * Sanitize an authored `suggestedWhy` map: keep only known tech ids, strings only, clipped.
+ * Sanitize an authored `suggestedWhy` map: keep only the given ids (callers pass the
+ * Quest's suggested / spotlight ids), strings only, clipped to WHY_MAX.
  * @param {unknown} raw
  * @param {Set<string>|string[]} validIds
  * @returns {Record<string,string>|null}
@@ -159,13 +160,25 @@ export function sanitizeSuggestedWhy(raw, validIds) {
   for (const [id, text] of Object.entries(raw)) {
     if (!valid.has(id)) continue;
     if (typeof text !== "string" || !text.trim()) continue;
-    out[id] = clipLine(text, 200);
+    out[id] = clipLine(text, WHY_MAX);
   }
   return Object.keys(out).length ? out : null;
 }
 
+const ABBREVIATIONS = new Set(["dr", "mr", "mrs", "ms", "prof", "st", "no", "vs", "eg", "e.g", "ie", "i.e", "etc", "approx", "u.s", "u.k", "e.u", "inc", "ltd"]);
+
+/** First sentence, ignoring periods inside abbreviations ("U.S.", "Dr.", "e.g."). */
 function firstSentence(text) {
   const t = String(text || "").trim();
-  const m = t.match(/^[^.!?]+[.!?]/);
-  return m ? m[0] : t;
+  const re = /[.!?]+(?=\s|$)/g;
+  let m;
+  while ((m = re.exec(t))) {
+    const before = t.slice(0, m.index);
+    const word = (before.match(/(\S+)$/) || [])[1] || "";
+    const bare = word.replace(/^[("'“]+/, "").toLowerCase();
+    const isInitial = /^(?:[a-z]\.)*[a-z]$/.test(bare) && bare.length <= 3; // "U.S", "J"
+    if (m[0] === "." && (isInitial || ABBREVIATIONS.has(bare))) continue;
+    return t.slice(0, m.index + m[0].length);
+  }
+  return t;
 }

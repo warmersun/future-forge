@@ -20,7 +20,7 @@
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
 import fs from "node:fs";
-import { sanitizeSuggestedWhy } from "../js/tech-why.js";
+import { sanitizeSuggestedWhy, WHY_MAX } from "../js/tech-why.js";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -434,7 +434,10 @@ function normalizeScenario(raw, globalId) {
     .map(String)
     .filter((id) => valid.has(id))
     .slice(0, 8);
-  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, valid);
+  const suggestedWhy = sanitizeSuggestedWhy(
+    raw.suggestedWhy,
+    new Set(suggested.length ? suggested : ["ai", "iot", "networks"])
+  );
   return {
     places: [place],
     title,
@@ -688,7 +691,7 @@ function packToJs(pack, indent = "    ") {
   );
   const whyLines = whyEntries.length
     ? `${indent}  suggestedWhy: {\n${whyEntries
-        .map(([k, v]) => `${indent}    ${jsString(k)}: ${jsString(v.trim().slice(0, 200))},`)
+        .map(([k, v]) => `${indent}    ${jsString(k)}: ${jsString(v.trim().slice(0, WHY_MAX))},`)
         .join("\n")}\n${indent}  },\n`
     : "";
   const places = (pack.places || []).map((p) => jsString(p)).join(", ");

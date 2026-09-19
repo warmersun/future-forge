@@ -11998,3 +11998,11 @@ dfn.term:focus-visible {
   border-color: var(--warn);
   color: var(--warn);
 }
+
+.idea-card-eases {
+  margin: 0.25rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--warn);
+}
