@@ -439,6 +439,7 @@ async function recordClip(cdp, shot, action, opts = {}) {
   fs.rmSync(framesDir, { recursive: true, force: true });
   log("REC", shot.file);
   await injectChrome(cdp);
+  await cancelDrag(cdp);
   const t0 = Date.now();
   const rec = await startScreencast(cdp, framesDir);
   try {
@@ -937,6 +938,24 @@ async function failIdeaImages(cdp) {
   })()`);
 }
 
+async function cancelDrag(cdp) {
+  await cdp.eval(`(() => {
+    document.getElementById('hex-drag-ghost')?.remove();
+    document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
+    window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, pointerType: 'mouse', buttons: 0 }));
+    window.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1, pointerType: 'mouse' }));
+    return 'ok';
+  })()`);
+  await cdp.call("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x: 20,
+    y: 20,
+    button: 0,
+    buttons: 0,
+    pointerType: "mouse",
+  }).catch(() => {});
+}
+
 async function collapseBoard(cdp) {
   const expanded = await cdp.eval(
     `document.querySelector('#btn-hex-board-expand')?.getAttribute('aria-pressed') === 'true'`
@@ -1004,94 +1023,109 @@ async function retakeMain() {
     await collapseBoard(cdp);
     await setupGeneOnStack(cdp);
     await sleep(500);
+    const only = (process.env.FF_RECORD_ONLY || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const want = (id) => !only.length || only.includes(id) || only.includes(id.replace(/^\d+-/, ""));
 
-    // 08 honesty bar — expand, hover (no drag), wait for bar + reason, hold
-    await expandBoard(cdp);
-    await hoverInventHex(cdp);
-    await waitFor(
-      cdp,
-      `(() => {
-        const popup = document.querySelector('#hex-tile-popup');
-        if (!popup || popup.hidden) return '';
-        const t = (popup.innerText || '').replace(/\\s+/g, ' ');
-        if (/Re-checking/i.test(t)) return '';
-        if (/Timing:\\s*(green|yellow|red)/i.test(t) || /honest this year/i.test(t)) return t.slice(0, 80);
-        return '';
-      })()`,
-      45000,
-      "honesty-popup"
-    );
-    await recordClip(
-      cdp,
-      byId["08-honesty-bar"],
-      async () => {
-        await hoverInventHex(cdp);
-        await sleep(700);
-        await parkOnPopup(cdp);
-        await pointAt(cdp, "#hex-tile-popup-title", 2500);
-        await pointAt(cdp, "#hex-tile-popup-body", 4000);
-        await hoverInventHex(cdp);
-        await sleep(2500);
-        await parkOnPopup(cdp);
-        await sleep(4000);
-      },
-      { noWiggle: true }
-    );
-    await cdp.eval(`document.querySelector('#hex-tile-popup') && (document.querySelector('#hex-tile-popup').hidden = true)`);
-    await collapseBoard(cdp);
-
-    // 09 Timing check — wait for the wait-vs-revise reply, then record it
-    await openCoinventor(cdp);
-    await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 400);
-    await clickSel(cdp, 'button.co-chip[data-mode="push-further"]', { after: 400 });
-    const timingHit = await waitFor(
-      cdp,
-      `(() => {
-        if (document.querySelector('.co-msg.thinking')) return '';
-        const bubbles = [...document.querySelectorAll('.co-msg.assistant:not(.thinking) .co-bubble')];
-        const text = bubbles.map((b) => (b.innerText || '')).join(' ').replace(/\\s+/g, ' ').trim();
-        if (text.length < 80) return '';
-        if (/Thinking with you/i.test(text)) return '';
-        if (!/wait|revise|this year|honest|curve|today/i.test(text)) return '';
-        return text.slice(0, 120);
-      })()`,
-      120000,
-      "timing-reply"
-    );
-    if (!timingHit) {
-      const dump = await cdp.eval(
-        `document.querySelector('#co-messages')?.innerText?.slice(0, 400) || 'empty'`
+    if (want("08-honesty-bar")) {
+      await expandBoard(cdp);
+      await hoverInventHex(cdp);
+      await waitFor(
+        cdp,
+        `(() => {
+          const popup = document.querySelector('#hex-tile-popup');
+          if (!popup || popup.hidden) return '';
+          const t = (popup.innerText || '').replace(/\\s+/g, ' ');
+          if (/Re-checking/i.test(t)) return '';
+          if (/Timing:\\s*(green|yellow|red)/i.test(t) || /honest this year/i.test(t)) return t.slice(0, 80);
+          return '';
+        })()`,
+        45000,
+        "honesty-popup"
       );
-      log("timing dump", dump);
+      await recordClip(
+        cdp,
+        byId["08-honesty-bar"],
+        async () => {
+          await hoverInventHex(cdp);
+          await sleep(700);
+          await parkOnPopup(cdp);
+          await pointAt(cdp, "#hex-tile-popup-title", 2500);
+          await pointAt(cdp, "#hex-tile-popup-body", 4000);
+          await hoverInventHex(cdp);
+          await sleep(2500);
+          await parkOnPopup(cdp);
+          await sleep(4000);
+        },
+        { noWiggle: true }
+      );
+      await cdp.eval(`document.querySelector('#hex-tile-popup') && (document.querySelector('#hex-tile-popup').hidden = true)`);
+      await collapseBoard(cdp);
     }
-    await recordClip(
-      cdp,
-      byId["09-timing-check"],
-      async () => {
-        await openCoinventor(cdp);
-        await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 1200);
-        const bubble = await boxOf(cdp, ".co-msg.assistant:not(.thinking) .co-bubble");
-        if (bubble) {
-          await moveCursor(cdp, bubble.x, bubble.y);
-          await sleep(5000);
-          await cdp.eval(`document.querySelector('#co-messages, #co-log')?.scrollBy?.({ top: 80, behavior: 'smooth' })`);
-          await sleep(4000);
-          await moveCursor(cdp, bubble.x, bubble.y + 40);
-          await sleep(4000);
-        } else {
-          await pointAt(cdp, ".co-msg.assistant .co-bubble", 12000);
-        }
-      },
-      { noWiggle: true }
-    );
+
+    if (want("09-timing-check")) {
+      await openCoinventor(cdp);
+      await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 400);
+      await clickSel(cdp, 'button.co-chip[data-mode="push-further"]', { after: 400 });
+      const timingHit = await waitFor(
+        cdp,
+        `(() => {
+          if (document.querySelector('.co-msg.thinking')) return '';
+          const bubbles = [...document.querySelectorAll('.co-msg.assistant:not(.thinking) .co-bubble')];
+          const text = bubbles.map((b) => (b.innerText || '')).join(' ').replace(/\\s+/g, ' ').trim();
+          if (text.length < 80) return '';
+          if (/Thinking with you/i.test(text)) return '';
+          if (!/wait|revise|this year|honest|curve|today/i.test(text)) return '';
+          return text.slice(0, 120);
+        })()`,
+        120000,
+        "timing-reply"
+      );
+      if (!timingHit) {
+        const dump = await cdp.eval(
+          `document.querySelector('#co-messages')?.innerText?.slice(0, 400) || 'empty'`
+        );
+        log("timing dump", dump);
+      }
+      await recordClip(
+        cdp,
+        byId["09-timing-check"],
+        async () => {
+          await openCoinventor(cdp);
+          await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 1200);
+          const bubble = await boxOf(cdp, ".co-msg.assistant:not(.thinking) .co-bubble");
+          if (bubble) {
+            await moveCursor(cdp, bubble.x, bubble.y);
+            await sleep(5000);
+            await cdp.eval(`document.querySelector('#co-messages, #co-log')?.scrollBy?.({ top: 80, behavior: 'smooth' })`);
+            await sleep(4000);
+            await moveCursor(cdp, bubble.x, bubble.y + 40);
+            await sleep(4000);
+          } else {
+            await pointAt(cdp, ".co-msg.assistant .co-bubble", 12000);
+          }
+        },
+        { noWiggle: true }
+      );
+    }
 
     // Place a second bits tile (AI) for convergence / pathway
-    await focusTech(cdp, "ai");
-    const minted = await mintCustom(cdp, AI_HOW);
-    log("ai mint", minted);
-    if (!minted) {
-      await cdp.eval(`document.querySelector('#hex-idea-cards [data-id]')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
-      await sleep(800);
+    const needAi =
+      !only.length ||
+      only.some((x) =>
+        ["10-convergence", "11-pathway", "12-combined-honesty", "13-traffic-lights"].includes(x)
+      );
+    if (needAi) {
+      await focusTech(cdp, "ai");
+      const minted = await mintCustom(cdp, AI_HOW);
+      log("ai mint", minted);
+      if (!minted) {
+        await cdp.eval(`document.querySelector('#hex-idea-cards [data-id]')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
+        await sleep(800);
+      }
+      await cancelDrag(cdp);
     }
 
     await recordClip(cdp, byId["10-convergence"], async () => {
@@ -1140,20 +1174,41 @@ async function retakeMain() {
     });
     await cdp.eval(`document.querySelector('#hex-tile-popup') && (document.querySelector('#hex-tile-popup').hidden = true)`);
 
+    await cancelDrag(cdp);
     await openCoinventor(cdp);
-    await recordClip(cdp, byId["14-art-of-the-possible"], async () => {
-      await pointAt(cdp, 'button.co-chip[data-mode="art-of-the-possible"]', 900);
-      await clickSel(cdp, 'button.co-chip[data-mode="art-of-the-possible"]', { after: 500 });
-      await waitFor(
-        cdp,
-        `document.querySelector('.ai-pending:not([hidden]), .co-pending') ? '' : (document.querySelector('#co-log')?.innerText?.match(/now|near|frontier|milestone|unlock/i) ? 'art' : '')`,
-        45000,
-        "art-reply"
-      );
-      await cdp.eval(`document.querySelector('#co-log, #co-thread')?.parentElement?.scrollBy?.({ top: 160, behavior:'smooth' })`);
-      await sleep(1000);
-      await pointAt(cdp, "#co-log, .co-msg", 5000);
-    });
+    await clickSel(cdp, 'button.co-chip[data-mode="art-of-the-possible"]', { after: 400 });
+    await waitFor(
+      cdp,
+      `(() => {
+        if (document.querySelector('.co-msg.thinking')) return '';
+        const bubbles = [...document.querySelectorAll('.co-msg.assistant:not(.thinking) .co-bubble')];
+        if (bubbles.length < 2) return '';
+        const last = (bubbles[bubbles.length - 1].innerText || '').replace(/\\s+/g, ' ');
+        if (last.length < 80) return '';
+        if (/Thinking with you/i.test(last)) return '';
+        return last.slice(0, 100);
+      })()`,
+      90000,
+      "art-reply"
+    );
+    await recordClip(
+      cdp,
+      byId["14-art-of-the-possible"],
+      async () => {
+        await openCoinventor(cdp);
+        await pointAt(cdp, 'button.co-chip[data-mode="art-of-the-possible"]', 1200);
+        const bubble = await boxOf(cdp, ".co-msg.assistant:not(.thinking) .co-bubble:last-of-type");
+        if (bubble) {
+          await moveCursor(cdp, bubble.x, bubble.y);
+          await sleep(4000);
+          await cdp.eval(`document.querySelector('#co-messages')?.scrollBy?.({ top: 90, behavior:'smooth' })`);
+          await sleep(4000);
+        } else {
+          await pointAt(cdp, ".co-msg.assistant .co-bubble", 8000);
+        }
+      },
+      { noWiggle: true }
+    );
 
     await dismissPop(cdp);
     await closeWait(cdp);

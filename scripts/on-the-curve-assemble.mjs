@@ -14,9 +14,13 @@ const PACK = path.join(ROOT, "output/on-the-curve");
 const RAW = path.join(PACK, "raw");
 const CLIPS = path.join(PACK, "clips");
 const AUDIO = path.join(PACK, "audio");
-const MIN_S = 15;
-const MAX_S = 25;
-const TARGET_S = 18;
+/** Voice starts after this pad; clip ends shortly after the Say line. */
+const VO_DELAY_S = 0.35;
+const VO_TAIL_S = 0.45;
+/** Start this far into the raw take so the Record beat is on screen during the Say line. */
+const RAW_START_S = {
+  "10-convergence": 7.2,
+};
 
 function run(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -62,18 +66,14 @@ async function muxClip(shot) {
   if (!fs.existsSync(mp3)) throw new Error(`missing audio ${mp3}`);
   const vDur = await probeDuration(raw);
   const aDur = await probeDuration(mp3);
-  let dur = Math.max(TARGET_S, aDur + 4.5, Math.min(vDur, TARGET_S));
-  dur = Math.min(MAX_S, Math.max(MIN_S, dur));
-  const delayMs = 400;
+  const dur = VO_DELAY_S + aDur + VO_TAIL_S;
+  const delayMs = Math.round(VO_DELAY_S * 1000);
+  const start = Number(RAW_START_S[shot.id] || 0);
+  const ffIn = ["-y", "-hide_banner", "-loglevel", "error"];
+  if (start > 0) ffIn.push("-ss", start.toFixed(2));
+  ffIn.push("-i", raw, "-i", mp3);
   await run("ffmpeg", [
-    "-y",
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-i",
-    raw,
-    "-i",
-    mp3,
+    ...ffIn,
     "-filter_complex",
     [
       `[0:v]fps=24,scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=${dur}[v]`,
