@@ -6,205 +6,139 @@ description: >
   tile (JSON). Portable multi-harness skill — not tied to a single agent product.
   Player-facing prose is a brief fictive story (named people, concrete place),
   then the bigger problem and its root cause, then an outcome-only invent job.
-  Capability hints stay in grounding and tutor mode. Supports structured crisis
-  meters, optional resources, grounding, learning-module tutor mode, multi-lesson
-  sets (display-only progress), sponsor attribution, and the quest economy
-  evaluator (too easy / too hard / tight).
+  The tray hints the spotlight plus 2–4 supporting emTechs; capability truth
+  lives in grounding and tutor mode. Ships with a validator, a craft lint, and
+  a difficulty lab (too easy / too hard / challenging).
 ---
 
 # Future Forge Spotlight Quest author
 
 **License: MIT** (this skill package only).
 
-You write a **portable Quest tile** so learners can invent after a **real recent capability advance**. The playable place is **fictive**. The spotlight tech is a strong, honest fit — but **player-facing prose never names it as the answer**.
+You write a **portable Quest tile** so learners can invent after a **real recent capability advance**. The playable place is **fictive**. The spotlight tech is a strong, honest fit, and **player-facing prose never names it as the answer** — the tray does that.
 
-**Player path:** instance story → bigger problem + root cause → outcome job. Full rules: **`references/scene-prose.md`**. Do not write dense policy-brief ledes, research jargon in player text, product riddles, or stacked megasentences.
+**Player path:** instance story → bigger problem + root cause → outcome job. Full craft: **`references/scene-prose.md`**.
 
-## When to use
+## Start here
 
-- “Write a Future Forge quest about drones / gene sequencing / solar…”
-- “Teach this week’s emTech advance as a quest”
-- “Lesson 2 of 5 in a module on open-weight AI…”
-- “Sponsored quest for Company X’s capability (still inventable)…”
-- “Sponsored learning module on …”
-- Research → classroom-ready invent scenario
+```bash
+npm run author:quest -- --tech <techId> --local-only      # scaffold → output/quests/<slug>/quest.json
+# edit the JSON (research → grounding, story → player fields)
+npm run validate:quest -- <file> --strict                 # OK: + lint: clean
+npm run economy:quest -- <file>                           # quest verdict: challenging
+```
 
-## Deliverable
-
-One JSON file (or a **set** of files for multi-lesson modules) conforming to `future-forge.quest-tile/v1`:
-
-- Prefer path: `output/quests/<slug>/quest.json` (or `…/lesson-N.json` for sequences)
-- Multi-lesson: also emit a **`kind: "module"`** wrapper that lists lesson ids and the path summary
-- Browser import: **JSON only**
-- Default `placement.mode`: `replace-daily`
-- Class/server: game repo **`quests/`** folder
+The scaffold already carries the current defaults (spotlight-first shelf with two partners, 7-heading `grounding`, triad brief, pressure 3↑1 / 2↑1 / 2↑0 with descriptions, no `resources`). Every placeholder in it lints as a warning until you replace it, so an unedited scaffold cannot ship by accident.
 
 | Doc | Purpose |
 |-----|---------|
-| **`references/schema.md`** | Full field reference |
-| **`references/grounding-template.md`** | Capability SoT chain (emTech → product category → … → applications) |
-| **`references/learning-and-sponsor.md`** | Tutor + sponsor recipes, multi-lesson sets |
-| **`references/output-contract.md`** | Skeleton + omit rules + recipes |
-| **`references/scene-prose.md`** | Instance story + RCA + outcome job |
-| **`references/brief-template.md`** | `briefMd` headings (place → bigger problem → job) |
-| **`references/brief-beats.md`** | How the invent screen steps the brief; optional authored `briefBeats` |
-| **`references/economy.md`** | Quest economy evaluator — too easy / too hard / tight; CLI + lab |
+| **`references/scene-prose.md`** | Instance story + root cause + outcome job (the craft) |
+| **`references/brief-template.md`** | `briefMd` headings: The place → The bigger problem → Your job |
+| **`references/schema.md`** | Field reference, what each field reaches, lint codes |
+| **`references/grounding-template.md`** | Capability truth chain (emTech → product category → … → applications) |
+| **`references/economy.md`** | Difficulty lab: what challenging means, tech cost, two-act meters |
+| **`references/output-contract.md`** | Skeleton, optional extensions, recipes A–G |
+| **`references/learning-and-sponsor.md`** | Tutor lessons, multi-lesson sets, sponsors |
+| **`references/brief-beats.md`** | How the briefing walk derives cards; optional authored `briefBeats` |
+| **`references/tech-ids.md`**, **`references/sensitivity.md`** | Valid ids; charged themes |
+
+## What the player and the AI actually see
+
+Write for these surfaces, not for the JSON. Numbers are character clips in the engine.
+
+| Field | Player | AI | Clip |
+|-------|--------|----|------|
+| `summary` | Invent banner lede, every catalog card | — | whole, ≤420 |
+| `mission.briefMd` | Briefing walk: **one card per paragraph**, merged to 8; then the full brief | Co-inventor, as plain text | **first 2800** |
+| `mission.scene` | Co-inventor's opening line; vision fallback | Imagine locale lock; fast-eval | 500 (600 in AI) |
+| `grounding` | — | **Every** AI judgement: score, timing, sparks, challenge, judge | **first 3000** (fast-eval) |
+| `pressure[role].description` | Crisis hex popup | Sparks (240), scoring (400) | first sentence carries it |
+| `mission.suggestedWhy[id]` | Under each **For this place** card; red-hex "What could help here?" | — | 120; must contain the meter label to rank first |
+| `spotlight.encourageCopy` | Under the Spotlight chip; the **Your job** card if the brief has none | — | 280 |
+| `spotlight.advance*` | Chip tooltip | **Tutor mode only**: the tutor names the advance after the story | 200 / 600 |
+| `aiTutorContext` | — | Conversational tutor only (never fast-eval) | 50k |
+| `rules` | HUD weather + honesty gates | Fast-eval | body 280 |
+| `research`, `visionTheme`, `placement`, `tags`, `author` | — | — | stored, never shown or read |
 
 ## Hard rules
 
-1. **`spotlight.techId`** = one valid Future Forge tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
-2. **`mission.suggested`** = exactly `[spotlight.techId]`. This is how the tray hints. **Do not repeat the hint in player prose.** Optional **`mission.suggestedWhy`** = `{ [spotlight.techId]: "…" }`, one everyday-words sentence (≤120 chars) saying what this family could do *here* and which crisis meter label it eases — the tray shows it under the card as **why here**. Plain words only; no product names.
-3. **`mission.briefMd`** = Markdown brief (aim **~250–600 words**; max 12 000 chars). Headings: `brief-template.md` — **The place**, then **The bigger problem**, then **Your job**. **Write short paragraphs** (one idea each, especially **The place**) — the invent screen steps them as a visual walkthrough. Do not dump research or tutor curriculum into the brief. Optional **`briefBeats`**: see `brief-beats.md` (omit when unused).
-4. **`mission.scene`** = instance lede (`scene-prose.md`, ≤**500** chars). Everyday words; lab terms belong in `grounding` / `aiTutorContext`.
-5. **`summary`** = the instance in 2–3 short sentences (≤420 chars): named person, place, what went wrong now. **`title`** names the human situation and/or fictive place. **`spotlight.encourageCopy`** states the **outcome** in everyday words (see Procedure §4). None of these name the spotlight tech or a sponsor product.
-6. **`mission.pressure`** = **structured** roles only: `local` / `global` / `support` (omit roles to hide meters). Each: `{ label, pressure, pressureRise, winMax }` plus optional **`description`** (1–3 everyday sentences of what that meter means *here*). **Flat maps rejected.** Old tiles without `description` remain valid. **New-tile defaults** (integers; rise is per calendar year): local **3↑1**, global **2↑1**, support **2↑0**. `winMax` typically 1. Local is more urgent than global. Support rise **0** unless you mean trust to rot with time. One island must not finish both local and global — see `economy.md`.
-7. Scenario is **fictive**; research notes go in `research` (usually not player-facing). Capability truth goes in **`grounding`** (and tutor notes in **`aiTutorContext`**) — not as a lecture in player prose. Plottable exponential series for Wait charts go in optional **`trends`** / **`spotlightTrends`** (see schema) — grounding Markdown is not a substitute for chart data.
-8. Do **not** force a single correct invention. Do **not** write “invent with [tech]”, “build around [product]”, or a “do not invent X” ban-list in player fields. End on open design tension — no solution theater, no product riddle. **Your job is never “pass a law / ban / UBI bill.”** A rule or incentive may be the **root cause** (bigger problem) or the weather the pathway flies through. The invent still makes something scarce more abundant with emTechs in this place this year. Policy as the sole how-it-works is invalid.
-9. Sensitive themes: `references/sensitivity.md`.
-10. **Omit** unused optional keys — do not emit `""` or `false` for optionals.
-11. Validate: `npm run validate:quest -- <file>` until `OK:`.
-12. Economy: `npm run economy:quest -- <file>` until the quest verdict is **challenging** (`references/economy.md`). Do not ship a tile the lab calls too easy or too hard without a reason.
-
-## Optional extensions (combinable)
-
-All of these may appear on **one** tile:
-
-| Feature | Fields | When to use |
-|---------|--------|-------------|
-| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Only if the **first** island cannot pay the tech. A scored pathway that eases a crisis pays +1 Budget per newly eased role — that funds act two. See `economy.md`. |
-| **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** |
-| **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
-| **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **Tutor may hint the capability class after the player has the story.** |
-| **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
-| **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
-| **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. |
-
-Details and templates: **`references/learning-and-sponsor.md`**.
+1. **`spotlight.techId`** = one valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
+2. **`mission.suggested`** = `[spotlight, …2–4 supporting]` (max 5, spotlight first). Supporting techs are **convergence partners** for this place: pick from the tech's `pairs` or by fit, and make sure one is honest against the **global** meter (act two). Each id gets a **`mission.suggestedWhy`** sentence (≤120 chars, everyday words) that says what this family could do *here* and **contains the label of the crisis meter it eases**. The family name is fine there; product names are not. Player prose never names the spotlight **or** the supporting techs.
+3. **`mission.briefMd`** = Markdown, **~250–600 words**, headings exactly **The place** (2–4 short paragraphs, one idea each, ≤90 words) → **The bigger problem** (1–2 paragraphs, root cause in everyday words) → **Your job** (one paragraph, outcome only). The walk turns each paragraph into a card and the AI reads the first 2800 characters, so the decisive facts come early. No `What just became possible`, no `Constraints`, no lecture.
+4. **`mission.scene`** ≤500 chars, same spine, everyday words. It is the co-inventor's opening line, so it must stand alone.
+5. **`summary`** = the instance in 2–3 short sentences (≤420): named person, fictive place, what went wrong now. **`title`** names the human situation and/or the place. **`spotlight.encourageCopy`** states the outcome. None of these name the spotlight tech, a supporting tech, or a product.
+6. **`mission.pressure`** = structured roles `local` / `global` / `support` (omit a role to hide its meter), each `{ label, description, pressure, pressureRise, winMax }`. New tiles: local **3↑1**, global **2↑1**, support **2↑0**, `winMax` 1. Local hotter than global; support rise 0 unless you mean trust to rot with time. `description` is place-specific and shown to players.
+7. **`grounding`** (Markdown) is the capability truth every AI judgement reads: chain from emTech → product category → capabilities → trends/predictions → milestone → use cases → applications → **honest limits**. Keep it inside **3000 characters** or put **Honest limits** early; anything past the window cannot turn a light red. Tutor-only material (debate framings, discourse maps, SEQUENCE) goes in `aiTutorContext`. `research` is citation metadata for humans; nothing in the game reads it.
+8. **Your job is an outcome, not a product and not a policy.** No "invent with [tech]", no "build around [product]", no "do not invent X" ban-list, no "pass a law / ban / UBI". A rule may be the **root cause** and may be authored as **`rules`** weather; the invent still makes something scarce more abundant with emTechs in this place this year.
+9. **`resources`** only when the **first** island cannot buy the spotlight tech at Budget 5 (frontier techs cost 2–3$). Pathway ease pays +1 Budget per eased role; that funds act two. `startingBudget: 8` is the classic mistake.
+10. Sensitive themes: `references/sensitivity.md`. Fictive places only; no real victims.
+11. **Omit** unused optional keys. No `""`, no `[]`, no `false` for optionals.
+12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year.
 
 ## Procedure
 
 ### 1. Intake
 
-- emTech (name → tech id), theme, audience, year (~2026).
-- Ask (or infer): learning module? multi-lesson set? sponsor? resource difficulty?
-- If multi-lesson: which module **title**, which `lesson` / `totalLessons`?
+emTech (name → tech id), theme (`globalId`), audience, year (~2026). Learning module? Multi-lesson set? Sponsor? If multi-lesson: module title, `lesson` / `totalLessons`.
 
-### 2. Research the advance
+### 2. Research → grounding
 
-- What changed? Near-term honest use? Constraints?
-- `research.sources`: `https` only; no invented stats.
-- Fill `spotlight.advanceTitle`, `advanceSummary`, `asOf`.
-- Draft **`grounding`** per **`references/grounding-template.md`**:
-  - emTech **enables** a **product category** (not bare tray id alone)
-  - capabilities → **trends** → **predictions**
-  - **milestone** unlocks **use cases** → **applications** the learner will invent
-  - honest limits; sponsor product only as milestone evidence when sponsored
-
-Research voice stays in `research` / `grounding`. Do **not** paste it into title, summary, scene, or brief.
+- What changed, near-term honest use, constraints. Fill `spotlight.advanceTitle`, `advanceSummary`, `asOf` — on learning quests the **tutor** names this advance after the learner has the story, so write it as you would say it to a 17-year-old.
+- Draft **`grounding`** per `references/grounding-template.md` at **product-category** grain. Honest limits inside the first 3000 characters.
+- `research.sources`: `https` only, real pages, no invented stats. It is for humans reading the file.
 
 ### 3. Invent the fictive Quest
 
-- Named people + concrete place + lived harm as **one instance** of the global issue.
-- Root cause of the bigger problem (the system that keeps producing it).
-- Open outcome the player invents toward (pilot-honest). Do not decide the product in the story.
-- `globalId`, stakeholder, structured **`pressure`** (1–3 roles). Defaults: local 3↑1, global 2↑1, support 2↑0 (`winMax` 1). Omit a role to hide it. Local this year; global after a year tick.
-- Optional **`resources`** — omit unless the first tile is too expensive to buy at default Budget 5. Do not bump start cash to fund a second island; pathway-ease income does that (`economy.md`). Optional **`rules`** (1–3 named local locks; omit when unused).
+- Named people, concrete fictive place, lived harm as **one instance** of the global issue. Root cause: the system that keeps producing it. Open outcome the player invents toward.
+- Stakeholder, structured `pressure` with descriptions, optional `rules` (1–3 named local locks already on the books; weather, not the invent — note any authored rule also switches off default theme backlash on `automation` / `rogue-si`).
+- Shelf: spotlight + 2–4 supporting techs, each with a `suggestedWhy` that names its meter.
 
-### 4. Player-language instance (before capability notes)
+### 4. Player-language instance
 
-**Pass this test:** *Could a 14-year-old retell who is in trouble, what went wrong in that place, and what the bigger problem is — without naming a product?*
+**Test:** *Could a 14-year-old retell who is in trouble, what went wrong in that place, and what the bigger problem is, without naming a product or a tech family?*
 
-1. **`summary`** (2–3 short sentences, ≤420 chars) — the **instance**, spoken. Named person, place, what went wrong **now**. Lead with the hook so the first two sentences still work as the invent-banner lede (engine clips on a sentence at ~160 chars).
-   - Gold: *Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.*
-   - Fail: *Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site.*
-   If a draft names the spotlight tech or a sponsor product, it fails.
-2. **`title`** — human situation and/or fictive place. Good: *The fever sheet at Crossing Clinic 7* / *The unposted rule at Tideglass High*. Weak: theme-word + tech gap with nobody in the room.
-3. **`spotlight.encourageCopy`** — outcome only, everyday words. Gold: *Invent a way this clinic can know what the fever is before the next queue arrives.* Fail: *Build your invention around gene sequencing.*
-4. **`mission.suggestedWhy`** — one sentence (≤120 chars) under the spotlight id: what this **family** could do *here* and which **crisis meter label** it eases. It shows under the card in the tray's **For this place** shelf and in the crisis-hex "What could help here?" list, so naming the family is fine there; **no product or vendor names**, no lab jargon. Gold: *A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.* Fail: *Use the AcmeSeq Mini to run 16S reads.* Omit the key rather than write filler — the engine falls back to the tech's capability line plus the hottest meter.
-5. Everyday words in all player fields; lab terms only in `grounding` / `aiTutorContext`.
+- **`summary`** gold: *Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.*
+  Fail: *Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site.*
+- **`title`** good: *The fever sheet at Crossing Clinic 7*. Weak: theme-word + tech gap with nobody in the room.
+- **`encourageCopy`** gold: *Invent a way this clinic can know what the fever is before the next queue arrives.* Fail: *Build your invention around gene sequencing.*
+- **`suggestedWhy`** gold: *A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.* Fail: *Use the AcmeSeq Mini to run 16S reads.*
 
 ### 5. Player-facing prose
 
-**Read `references/scene-prose.md` first.**
-
-1. `mission.scene` (≤500 chars) — instance spine; everyday words; no tech name
-2. `briefMd` — headings from **`references/brief-template.md`**: **The place**, **The bigger problem**, **Your job**. **The place** = 2–4 short paragraphs (hook / complication / mechanism / stakes). See **`brief-beats.md`**.
-3. Keep brief lean (~250–600 words). Curriculum and capability lectures stay in `aiTutorContext` / `grounding`. Do not author **What just became possible** or **Constraints**.
-4. Optional **`briefBeats`** only when captions must be tighter than the essay, you want shipped stills (`imageUrl` — walk shows them immediately), or live `imagePrompt`s. Never a substitute for `briefMd`. No `possible` / `constraints` beats on new tiles.
-
-Spine for scene/place: hook → complication → mechanism → stakes → **open** design challenge. Then zoom out for root cause. Then outcome job. No product theater.
+Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`references/brief-template.md`). Spine: hook → complication → mechanism → stakes → open design challenge; then zoom out for root cause; then the outcome job. One plot type. 2–4 punch-line sentences. Optional `briefBeats` only for tighter captions or shipped stills (`references/brief-beats.md`).
 
 ### 6. Learning module (if applicable)
 
-Follow **`references/learning-and-sponsor.md`**.
-
-- Set `isLearningModule: true`.
-- Write **`aiTutorContext`** with LESSON GOAL + numbered SEQUENCE (one idea at a time) + MISCONCEPTIONS + INVENT GATE. Never paste wholesale into player text.
-- Optionally stock **RESOURCES** (Markdown `https` links to readings, often `https://warmersun.com/lessons/…`) and **ILLUSTRATIONS** (`![caption](https://…)` diagrams) in `aiTutorContext`. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. See **`references/learning-and-sponsor.md`**.
-- Set `module` (title string), `lesson`, `totalLessons` (UI: **{title} · Lesson X/Y**).
-- Multi-lesson set: separate JSON files **plus a `kind: "module"` wrapper**; same module title + totalLessons; `lesson` 1…N; unique ids. **No engine unlock** — do not invent fake prerequisites. The wrapper is the catalog card and **summary panel** (title, summary, `overviewMd`); lessons drill down from there. Sponsored sets show under **Sponsored**, not Learning.
-- The tutor may introduce the capability class **after** the player has the story. The tile’s player text must not require jargon — or the product name — to understand the job.
+`references/learning-and-sponsor.md`. Set `isLearningModule: true`; write `aiTutorContext` with LESSON GOAL, SEQUENCE (idea 1 = **what just moved and where it sits on the curve**; the tutor says it after the story), RESOURCES / ILLUSTRATIONS (https), MISCONCEPTIONS, INVENT GATE (a capability pathway, never a rule text). Set `module`, `lesson`, `totalLessons` together. Multi-lesson sets also emit a `kind: "module"` wrapper whose `totalLessons` agrees with the lessons. A learning quest without `access` requires sign-in on the hosted catalog.
 
 ### 7. Sponsor (if applicable)
 
-Follow **`references/learning-and-sponsor.md`**.
+`sponsorName` + text `sponsorBanner`. Strong `grounding` (the product may evidence the Milestone). Player text stays an open outcome; naming the product is never a valid solution.
 
-- `sponsorName` + optional text `sponsorBanner` (tagline, not image).
-- Strong **`grounding`** required in practice (product category chain; product may appear under Milestone).
-- Scene/brief stay open invent invitations — not “use Product X”, not “invent with Product X without saying the name.”
-
-### 8. Emit JSON + validate
-
-Use **`references/output-contract.md`** (base skeleton + recipes). Run:
+### 8. Validate, lint, evaluate
 
 ```bash
-npm run validate:quest -- <file>
+npm run validate:quest -- <file> --strict
 npm run economy:quest -- <file>
 ```
 
-Shape first (`OK:`), then difficulty (`challenging`). See **`references/economy.md`**.
+Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft lint). Then read the lab: `too_hard` usually means a frontier spotlight tile costs more than Budget 5 / Will 3 buys, or local is not hotter than global; `too_easy` means one cheap tile clears everything with years to spare. Do not raise `startingBudget` to fund act two.
 
 ### 9. Hand off
 
-- Path(s) to file(s)
-- Copy into **`quests/`** or Import Quest…
-- Spotlight tech lives in `suggested` / `grounding` / tutor — not in the player lede
-- UI chips expected: Sponsored / Learn / Start / Crisis as applicable
-- If multi-lesson: list the **module wrapper** plus all lesson files and intended order (host-managed for now)
+Path(s); copy into `quests/` or Import Quest…; the UI chips expected (Spotlight / Sponsored / Learn / Start / Crisis); any lint warning you kept and why; multi-lesson order if any.
 
-## Quality checklist
+## What lint cannot check (you still must)
 
-- [ ] Advance citable; place fictive
-- [ ] Exactly one suggested tech
-- [ ] Structured `pressure` (roles only; optional `description` recommended — place-specific, not the generic role lecture). New tiles: local 3↑1, global 2↑1, support 2↑0 unless you have a reason.
-- [ ] **Plain-language test:** a 14-year-old can retell who is in trouble, what went wrong, and the bigger problem from **title + summary** (instance story; names allowed; no product)
-- [ ] `encourageCopy` is an outcome in everyday words (no tech name, no research jargon)
-- [ ] `suggestedWhy[spotlight.techId]` is one plain sentence (≤120 chars) that names the crisis meter it eases; no product names
-- [ ] Scene craft ≤500; place is a brief little story; everyday words in player text
-- [ ] `briefMd`: **The place** → **The bigger problem** → **Your job**; ~250–600 words; no capability/tutor lecture dump
-- [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable
-- [ ] **The bigger problem** is root cause analysis, not a meter dump
-- [ ] **Your job** is outcome only — no “invent with [tech]”, no ban-list, no “pass a law / UBI / treaty”
-- [ ] If `briefBeats` is present: 3–8 beats, captions ≤500 chars, no new facts vs `briefMd`; `imageUrl` is `https://…` or `assets/…` still (skips Imagine); omit the key otherwise; no `possible` / `constraints` beats
-- [ ] Lab/research terms and product names live in `grounding` / `aiTutorContext`, not as the only way to understand the job
-- [ ] Open invent tension — no prescribed solution
-- [ ] `grounding` present for AI consistency (recommended always)
-- [ ] Grounding follows chain at **product-category** grain (not bare emTech unlocks)
-- [ ] Unused optionals **omitted** (not empty strings); omit `rules` when the scene has no named local lock
-- [ ] Learning: solid `aiTutorContext`; module title string; lesson/totalLessons integers ≥ 1; no fake unlocks
-- [ ] Multi-lesson: `kind: "module"` wrapper with the same `module` title, `lessons` ids in order, and a path `summary` / `overviewMd` that is still an instance or outcome (not a product riddle)
-- [ ] Learning media (if any): https-only resource links / illustrations in `aiTutorContext`; paced for tutor chat, not a first-turn dump; SEQUENCE does not say “open the page, do not answer”
-- [ ] Sponsor: text-only; invent still required; capability chain in `grounding`; player text does not smuggle the product
-- [ ] Combinations validated if used together
-- [ ] `npm run validate:quest` → `OK:`
-- [ ] `npm run economy:quest` → quest verdict `challenging`; solo-AI year matches solo-no-AI
+- The place is fictive and the people have dignity.
+- One plot type carries the scene; the close is an open design tension, not a solution.
+- **The bigger problem** is a root cause, not a meter dump or a capability lecture.
+- Supporting techs are honest convergence partners for this place, not padding.
+- `aiTutorContext` teaches the advance **after** the story and never gets pasted into player text.
 
 ## Non-goals
 
-- Multi-quest packs (`quest-pack` rejected — use `kind: "module"` for a learning path)
-- Hard-locking the tech tray
-- Module unlock graphs / auto-advance
-- Sponsor scoring bonuses or forced product usage
-- Requiring any single vendor’s `.grok/` skill path
-- Player-facing “invent Product Y” or “invent with Product Y without saying Y”
-- Player-facing “pass a law / ban / UBI bill” as the invent (policy is weather, not the win)
+- Multi-quest packs (`quest-pack` rejected; use `kind: "module"` for a learning path)
+- Hard-locking the tech tray; module unlock graphs; sponsor scoring bonuses
+- Player-facing "invent Product Y" or "invent with Y without saying Y"
+- Player-facing "pass a law / ban / UBI bill" as the invent (policy is weather, not the win)

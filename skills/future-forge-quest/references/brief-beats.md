@@ -6,13 +6,16 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
 
 ## What the player sees
 
-- A **summary lede** in the left invent banner (2–3 spoken sentences: the **instance** — named person, place, what went wrong now). Always visible while they read beats.
-- Beats in **instance → bigger problem → job** order:
-  1. The place (one paragraph per card)
-  2. The bigger problem (root cause; old **What’s strained** still maps here)
-  3. Unknown `##` headings (kept, never dropped)
-  4. Your job (last card → **Start inventing**)
-- After dismiss: compact recap + Replay. Full `briefMd` sits behind **Read the whole story**. Last card is **Start inventing** (not a skip hatch).
+- A **Your job** line in the left invent banner. Always visible while they read beats.
+- Beats in **instance → bigger problem → job** order, derived from `briefMd` (`js/brief-beats.js` `deriveBriefBeats`):
+  1. Every `##` heading opens a section; text before the first heading becomes a **The place** card.
+  2. **One paragraph = one card** (split on blank lines). Consecutive list items form a single card. A paragraph over 120 words is split into sentence groups.
+  3. Cards are reordered by role: place → bigger problem (old **What’s strained** still maps here) → legacy `possible` / `constraints` → unknown headings → **Your job**. **Your job is always moved last**, wherever it sits in the source.
+  4. Cap **8 cards**: adjacent same-role cards are merged, job paragraphs first, the place hook protected longest. A merged card can run past one screen — and only the **first 4 paragraphs** of any card render.
+  5. Last card → **Start inventing**.
+- After dismiss: compact recap of The place + The bigger problem. Full `briefMd` (minus Your job) sits behind **Read the whole story**; opening that disclosure hides the recap clip.
+
+Card arithmetic: total paragraphs + list blocks across all sections. Six headings with three paragraphs each is 18 chunks squeezed into 8 lumpy cards. Write ≤8 paragraphs total, or author `briefBeats`. Lint: `brief_cards_over_cap:<n>`, `paragraph_too_long:<section>:<n>`, `place_paragraphs_out_of_band:<n>`.
 
 Do **not** author **What just became possible** or **Constraints** on new tiles. Those were capability / constraint lectures. Honest limits belong in `grounding` / tutor. Lived constraints belong inside the story.
 
@@ -38,7 +41,8 @@ This is the default path for side-loaded tiles. You do **not** have to emit `bri
 3. **The bigger problem:** one or two short paragraphs (instance → global issue → root cause).
 4. **Your job:** one short paragraph, outcome only.
 5. Soft target: ~40–90 words per paragraph. The engine splits on blank lines and caps the walkthrough at **8** cards.
-6. `summary` is the instance lede (names allowed) — a 14-year-old can retell who is in trouble.
+6. `summary` is the instance lede (names allowed), shown whole on the banner — a 14-year-old can retell who is in trouble.
+7. The co-inventor reads the brief as plain text clipped to **2800 chars**. Put the decisive facts early.
 
 If **The place** is one dense block, the first card is still a wall of text. Split it.
 
@@ -91,4 +95,4 @@ Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg`, or ho
 - Replace `briefMd` with beats.
 - Emit empty `briefBeats: []`.
 - Author a “what just became possible” card (capability lecture).
-- Put the spotlight tech or sponsor product in a caption.
+- Put the spotlight tech, a supporting tech, or sponsor product in a caption.

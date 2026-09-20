@@ -5,15 +5,15 @@
 3. Brief headings: `references/brief-template.md` — **The place** → **The bigger problem** → **Your job**; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
 4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`. Difficulty: `references/economy.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
-6. Run `npm run validate:quest -- <file>` until `OK:`.
-7. Run `npm run economy:quest -- <file>` until the quest verdict is **challenging** (solo-AI year should match solo-no-AI).
+6. Run `npm run validate:quest -- <file> --strict` until `OK:` with **no `WARN` lines** (craft lint; codes in `schema.md`). If a warning must stay, name it and why in the hand-off.
+7. Run `npm run economy:quest -- <file>` until the quest verdict is **challenging** — `too_easy` on either solo path now fails the quest verdict too (solo-AI year should match solo-no-AI).
 8. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
 
 ---
 
 ## Base skeleton (spotlight quest)
 
-Recommended: always include **`grounding`**. Include only the `pressure` roles you need (1–3).
+Recommended: always include **`grounding`** (fast-eval reads its first 3000 chars — keep it tight, `## Honest limits` inside the window). Include only the `pressure` roles you need (1–3). `research` is citation metadata for humans (the game never reads it): real `https` sources or omit the `sources` key — never `[]`.
 
 ```json
 {
@@ -77,16 +77,40 @@ Recommended: always include **`grounding`**. Include only the `pressure` roles y
     "scene": "… ≤500 chars, everyday words …",
     "briefMd": "## The place\n\n…\n\n## The bigger problem\n\n…\n\n## Your job\n\n…\n",
     "stakeholder": "…",
-    "suggested": ["<techId>"],
-    "suggestedWhy": { "<techId>": "… one sentence: what this family could do here and which crisis meter label it eases …" },
+    "suggested": ["<techId>", "<partnerA>", "<partnerB>"],
+    "suggestedWhy": {
+      "<techId>": "… what this family could do here — for <local meter label> …",
+      "<partnerA>": "… the act-two partner — for <global meter label> …",
+      "<partnerB>": "… a cheap local helper — for <support meter label> …"
+    },
     "visionTheme": "rebuild-city"
   }
 }
 ```
 
-`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary: 2–3 short sentences, names allowed. Lab terms and product names stay in `grounding` / tutor.
+`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary: 2–3 short sentences, names allowed, shown whole on the banner. Lab terms and product names stay in `grounding` / tutor.
 
-`suggestedWhy`: optional, keyed by the spotlight id. ≤120 chars, everyday words, names the crisis meter label it eases. The tray shows it under the card as **why here**; the family name is fine there, product names are not. Omit rather than pad — the engine falls back to the tech's capability line + hottest meter.
+`suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids. Supporting techs stay offstage in prose like the spotlight.
+
+`suggestedWhy`: one entry per suggested id. ≤120 chars, everyday words, **contains the crisis meter label** it eases (the red-hex list ranks on that substring). The tray shows it under each card as **why here**; the family name is fine there, product names are not. Omit an entry rather than pad — the engine falls back to the tech's capability line + hottest meter (lint `suggestedWhy_missing:<id>`).
+
+---
+
+## Optional extensions (combinable)
+
+All of these may appear on **one** tile:
+
+| Feature | Fields | When to use |
+|---------|--------|-------------|
+| **Easier/harder start** | `resources`: `apMax`, `startingBudget`, `startingWill` (integers ≥ 0) | Only if the **first** island cannot pay the tech. A scored pathway that eases a crisis pays +1 Budget per newly eased role — that funds act two. See `economy.md`. Lint: `resources_budget_high` at ≥ 7. |
+| **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** First 3000 chars reach fast-eval. |
+| **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
+| **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **The tutor names the spotlight advance after the player has the story.** Defaults to `access: "account"`. |
+| **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
+| **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
+| **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. Side effect: switches off default theme backlash on `automation` / `rogue-si`. |
+
+Details and templates: `learning-and-sponsor.md`, `brief-beats.md`, `economy.md`.
 
 ---
 
@@ -142,10 +166,10 @@ Add:
 "module": "Open-weight AI for classrooms",
 "lesson": 1,
 "totalLessons": 3,
-"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) … — offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation of this idea\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://warmersun.com/lessons/…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- Chat is the conversation; /lessons is the textbook.\n- Always teach the current idea in a short paragraph (analogy + one mechanism); never a URL alone; never rewrite a page.\n- After that spoken explanation, offer the one matching page on the next SEQUENCE idea, a listed misconception, or a request for the long version.\n- Stay in chat for recaps, invent, and follow-ups after they already got that page.\n- Never paste this wholesale to the player."
+"aiTutorContext": "LESSON GOAL: …\n\nSEQUENCE:\n1) What just moved and where it sits on the curve (the spotlight advance; name it only after the learner has the story) — offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation of this idea\n2) …\n3) …\n\nRESOURCES:\n- [Reading title](https://warmersun.com/lessons/…)\n\nILLUSTRATIONS:\n- ![Caption](https://…/diagram.png)\n\nMISCONCEPTIONS TO CATCH:\n- …\n\nINVENT GATE:\n- …\n\nTEACHING STYLE:\n- Chat is the conversation; /lessons is the textbook.\n- Always teach the current idea in a short paragraph (analogy + one mechanism); never a URL alone; never rewrite a page.\n- After that spoken explanation, offer the one matching page on the next SEQUENCE idea, a listed misconception, or a request for the long version.\n- Stay in chat for recaps, invent, and follow-ups after they already got that page.\n- Never paste this wholesale to the player."
 ```
 
-Keep `grounding` for capability truth (product-category chain). UI: invent starts on the visual briefing; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor is on Co-Inventor when opened. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
+Keep `grounding` for capability truth (product-category chain). Fill `spotlight.advanceTitle` / `advanceSummary` / `asOf` honestly — the tutor names that advance after the story. UI: invent starts on the visual briefing; **Learn · Open-weight AI for classrooms · Lesson 1/3**. Tutor is on Co-Inventor when opened. Tutor chat renders Markdown **links** and **inline images** from player-facing messages (stock materials in `aiTutorContext`; see `learning-and-sponsor.md`).
 
 **Multi-lesson set:** N lesson files, same `module` title string + `totalLessons`, `lesson` = 1…N, unique `id`s, **plus Recipe F** (`kind: "module"` wrapper). No engine unlock — host orders files. Sponsored sets appear under **Sponsored** as one module.
 
@@ -246,7 +270,9 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
 | Situation | Action |
 |-----------|--------|
 | Default resources | Omit `resources` |
-| No AI SoT | Prefer still including `grounding`; if truly none, omit key |
+| No AI SoT | Prefer still including `grounding`; if truly none, omit key (lint `grounding_missing`) |
+| No real sources yet | Omit `research.sources` (never `[]`); replace placeholders before shipping |
+| Single-tech shelf | `suggested: ["<techId>"]` is valid but leaves the player one card; prefer 1–2 partners |
 | Not a lesson | Omit all learning keys |
 | No sponsor | Omit `sponsorName` / `sponsorBanner` |
 | Focused meters | Omit unused `pressure` roles |

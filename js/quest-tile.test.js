@@ -20,7 +20,7 @@ import {
   learningProgressBarHtml,
 } from "./quest-tile.js";
 
-const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
+const TECHS = ["gene-sequencing", "solar", "ai", "iot", "networks", "drones"];
 const GLOBALS = ["infectious", "climate", "water"];
 
 function baseTile(over = {}) {
@@ -151,12 +151,31 @@ describe("quest-tile", () => {
       false
     );
 
+    const notFirst = baseTile();
+    notFirst.mission.suggested = ["solar", "gene-sequencing"];
+    const nf = validateQuestTile(notFirst, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(nf.ok, false);
+    assert.ok(nf.details.includes("suggested_spotlight_not_first"), JSON.stringify(nf.details));
+
+    const tooMany = baseTile();
+    tooMany.mission.suggested = ["gene-sequencing", "solar", "iot", "ai", "networks", "drones"];
+    const tm = validateQuestTile(tooMany, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(tm.ok, false);
+    assert.ok(tm.details.includes("suggested_too_many"), JSON.stringify(tm.details));
+
+    const unknown = baseTile();
+    unknown.mission.suggested = ["gene-sequencing", "nope"];
+    const un = validateQuestTile(unknown, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(un.ok, false);
+    assert.ok(un.details.includes("suggested_bad_id:nope"), JSON.stringify(un.details));
+  });
+
+  it("keeps spotlight-first supporting techs on the shelf", () => {
     const multi = baseTile();
-    multi.mission.suggested = ["gene-sequencing", "solar"];
-    assert.equal(
-      validateQuestTile(multi, { techIds: TECHS, globalIds: GLOBALS }).ok,
-      false
-    );
+    multi.mission.suggested = ["gene-sequencing", "iot", "gene-sequencing", "networks"];
+    const r = validateQuestTile(multi, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(r.ok, true, r.error);
+    assert.deepEqual(r.mission.suggested, ["gene-sequencing", "iot", "networks"]);
   });
 
   it("rejects unsafe brief content", () => {

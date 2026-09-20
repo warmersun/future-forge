@@ -57,7 +57,7 @@ Developer inspect on a catalog card also links here with `?id=`.
 | `friends-no-ai` | Personal wallet. Wait does not raise shared meters. Calendar + shared crises tick on **table wrap**. |
 | `friends-ai` | Same Friends clock, plus the AI bill. |
 
-**Quest verdict** = the worse of `solo-no-ai` and `solo-ai`. Friends being easier is expected (personal Wait is not a shared crisis grind). Do not lower starting meters only to nerf Friends.
+**Quest verdict** = the worse of `solo-no-ai` and `solo-ai`, where `too_easy` also counts as worse than `challenging` (a tile that a solo player clears in one cheap season with years to spare is not shippable either). Friends being easier is expected (personal Wait is not a shared crisis grind). Do not lower starting meters only to nerf Friends.
 
 ### Verdicts
 

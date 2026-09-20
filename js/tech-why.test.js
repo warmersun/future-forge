@@ -11,6 +11,7 @@ import {
   pickTechsForCrisis,
   splitTray,
   sanitizeSuggestedWhy,
+  spotlightAdvanceForAi,
 } from "./tech-why.js";
 
 const iot = { id: "iot", name: "IoT", summary: "Sensors that make the physical world measurable.", inventionHint: "Early warning and continuous monitoring.", useCasesNow: ["Air sensors on lamp posts"] };
@@ -127,5 +128,26 @@ describe("sanitizeSuggestedWhy", () => {
   it("returns null for junk", () => {
     assert.equal(sanitizeSuggestedWhy("str", ["iot"]), null);
     assert.equal(sanitizeSuggestedWhy({ zzz: "x" }, ["iot"]), null);
+  });
+});
+
+describe("spotlightAdvanceForAi", () => {
+  it("returns title, summary, and asOf from the spotlight", () => {
+    const out = spotlightAdvanceForAi({
+      spotlight: {
+        advanceTitle: "Open weights on a school rack",
+        advanceSummary: "Models got good enough to host on-site.",
+        asOf: "2026-07",
+      },
+    });
+    assert.deepEqual(out, {
+      title: "Open weights on a school rack",
+      summary: "Models got good enough to host on-site.",
+      asOf: "2026-07",
+    });
+  });
+  it("returns null when the spotlight has no advance", () => {
+    assert.equal(spotlightAdvanceForAi({ spotlight: { techId: "ai" } }), null);
+    assert.equal(spotlightAdvanceForAi({}), null);
   });
 });

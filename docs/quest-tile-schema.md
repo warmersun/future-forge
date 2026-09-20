@@ -11,7 +11,7 @@ Portable **Spotlight Quest** files for Future Forge.
 
 1. Research a **real recent emTech advance**.
 2. Write a **fictive** local crisis shaped so that technology’s new capability is a natural invent target.
-3. Set **`suggested` to exactly one** catalog tech id (the spotlight).
+3. Set **`suggested`** to the spotlight tech id first, then 0–4 supporting emTechs (convergence partners for act two), each with a `suggestedWhy`.
 4. Put the long learner-facing text in **`mission.briefMd`** (Markdown). The invent screen **steps** that brief one short paragraph at a time (optional authored `briefBeats` for tighter captions).
 
 ## Browser import
@@ -34,13 +34,35 @@ Required:
 | `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper). Packs not supported |
 | `globalId` | Must match a theme in `js/data.js` `GLOBALS` |
 | `spotlight.techId` | Must match `TECHS` id |
-| `mission.suggested` | Exactly `[spotlight.techId]` |
+| `mission.suggested` | Spotlight-first array, 1–5 valid unique tech ids: `[spotlight.techId, …supporting]`. The spotlight must be index 0 (`suggested_spotlight_not_first`); unknown ids fail (`suggested_bad_id:<id>`); more than 5 fails (`suggested_too_many`). This is the **For this place** shelf. |
 | `mission.suggestedWhy` | Optional `{ [techId]: string }`. One everyday-words sentence (≤120 chars) per suggested id: what that family could do in *this* place and which crisis meter label it eases. Shown under the card in the **For this place** shelf and in the crisis-hex "What could help here?" list. Falls back to the tech's capability line + hottest meter when absent. Unknown ids and non-strings are dropped; a non-object is a validation error. |
 | `mission.briefMd` | Non-empty Markdown brief |
-| `title`, `summary` | `summary` is required: 2–3 short sentences (≤420 chars). Global problem, situation, what we’re solving for. No place/person names, no scene craft. Spotlight names the emTech gap. |
+| `title`, `summary` | `summary` is required: 2–3 short sentences (≤420 chars). The **instance**: named person, fictive place, what went wrong now. Names allowed. Never the spotlight tech or a product (the tray hints; `npm run validate:quest` lint warns `tech_named_in_player_text`). Shown whole on the invent banner and every catalog card. |
 | `mission.title`, `mission.place`, `mission.scene` | Scene = plain-text design-challenge lede (≤500 chars; craft in `skills/future-forge-quest/references/scene-prose.md` / `js/scene-prose.js`) |
 
 Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-only` — daily/focus UI removed; imports always go to the Library catalog), `research`, `author`, `tags`, `resources`, `grounding`, `briefBeats`, learning-module fields, sponsor fields below.
+
+### What reaches the player and the AI (and what does not)
+
+| Field | Player surface | AI surface | Clip |
+|-------|----------------|------------|------|
+| `summary` | Invent banner lede, catalog / Friends cards | `fill-quest-summary` exemplar only | whole, ≤420 |
+| `mission.briefMd` | Briefing walkthrough (one card per paragraph, merged to 8), then full brief | Conversational co-inventor `challenge.problem` as plain text | **first 2800 chars** |
+| `mission.scene` | Co-inventor opening line; Future Vision fallback | Imagine locale lock; fast-eval `mission.scene` | 600 (fast-eval) |
+| `grounding` | — | Every fast-eval call (score, assess, sparks, pose, judge) and the co-inventor | **first 3000 chars** in fast-eval; 50k in chat |
+| `pressure[role].description` | Crisis hex popup | Idea sparks (240), score-pathway (400) | put the meaning in the first sentence |
+| `mission.suggestedWhy[id]` | Under each **For this place** card; red-hex "What could help here?" (reasons containing the meter label rank first) | — | 120 |
+| `spotlight.encourageCopy` | Under the Spotlight chip; synthesized **Your job** card when the brief has none | — | 280 |
+| `spotlight.advanceTitle` / `advanceSummary` / `asOf` | Chip tooltip (`advanceSummary`) | **Tutor mode only** (`isLearningModule`): the tutor names the advance after the learner has the story | 200 / 600 / 32 |
+| `aiTutorContext` | — | Conversational tutor only (not fast-eval) | 50k |
+| `rules` | HUD weather | Fast-eval `mission.rules` | body 280 |
+| `research`, `visionTheme`, `placement.*`, `tags`, `author`, `license`, `version` | — | — | stored, not shown or read |
+
+`research` is citation metadata for humans reading the file. Capability truth the AI must respect goes in `grounding`.
+
+### Craft lint
+
+`npm run validate:quest -- <file>` prints `WARN <code>` lines after `OK:` for craft rules the schema cannot enforce (tech named in player text, legacy brief headings, word counts, pressure defaults, `startingBudget` ≥ 7, missing grounding, template placeholders, …). `--strict` turns warnings into a failing exit. Library tiles should be `--strict` clean.
 
 Tune `resources` and `mission.pressure*` with the **Quest economy lab** so a Quest is challenging but solvable before meters go red. Full guide: [`docs/quest-economy-lab.md`](quest-economy-lab.md).
 

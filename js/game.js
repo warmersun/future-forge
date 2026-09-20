@@ -296,7 +296,7 @@ import {
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
 import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
-import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, sanitizeSuggestedWhy } from "./tech-why.js";
+import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi, sanitizeSuggestedWhy } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
 import {
   resolveConceptCard,
@@ -6632,10 +6632,9 @@ function normalizeMission(raw, globalId) {
         asOf: String(raw.spotlight.asOf || "").slice(0, 32),
         encourageCopy: String(raw.spotlight.encourageCopy || "").slice(0, 280),
       };
-      // Spotlight Quests: keep suggested as the single teaching tech
-      if (raw.source === "imported" || suggested.length === 1) {
-        suggested = [techId];
-      }
+      // Spotlight Quests: the spotlight leads the "For this place" shelf;
+      // authored supporting emTechs follow in order (convergence partners).
+      suggested = [techId, ...suggested.filter((id) => id !== techId)].slice(0, 8);
     }
   }
 
@@ -6705,8 +6704,8 @@ function normalizeMission(raw, globalId) {
     const n = normalizeBriefBeats(raw.briefBeats);
     if (n.ok) briefBeatsSafe = n.beats;
   }
-  const suggestedIds = suggested.length ? suggested : ["ai", "iot", "networks"];
-  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, new Set(suggestedIds));
+  const suggestedSafe = suggested.length ? suggested : ["ai", "iot", "networks"];
+  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, new Set(suggestedSafe));
 
   return {
     id,
@@ -6728,7 +6727,7 @@ function normalizeMission(raw, globalId) {
     ),
     briefMd,
     stakeholder: String(raw.stakeholder || "").slice(0, 120),
-    suggested: suggestedIds,
+    suggested: suggestedSafe,
     ...(suggestedWhy ? { suggestedWhy } : {}),
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
     source,
@@ -17930,7 +17929,7 @@ function ensureCoInventor() {
         challengeSpeech: state.challengeText,
         challengeQuestion: state.challengeQuestion,
         spotlightTechId: state.mission?.spotlight?.techId || null,
-        spotlightAdvance: state.mission?.spotlight?.advanceSummary || null,
+        spotlightAdvance: spotlightAdvanceForAi(state.mission),
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),

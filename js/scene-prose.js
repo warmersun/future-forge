@@ -75,6 +75,11 @@ export const SCENE_HINT_REWRITE =
   "Spoken mid-length sentences a friend would say. At most 1–2 punch-lines. Do not imitate dense stacks or telegram chops. Do not close with Who designs X?";
 
 /** Technical cap — generous so craft is not truncated mid-story. */
+/**
+ * Generated seed scenes (js/scenario-seeds.js) may run this long.
+ * Imported Quest tiles cap mission.scene at 500 (CAPS.scene in js/quest-tile.js);
+ * their longer story lives in briefMd.
+ */
 export const SCENE_CHAR_CAP = 2000;
 
 /**

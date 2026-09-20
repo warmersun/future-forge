@@ -11,7 +11,7 @@ export const SUMMARY_LOADING_COPY = "Shaping the job…";
 /** Locked voice + recipe for every writer (skill, seed fill, generate-scenarios, fill-quest-summary). */
 export const QUEST_SUMMARY_RECIPE = `QUEST SUMMARY (player-facing lede, 2–3 short sentences, max ${SUMMARY_CAP} chars):
 A brief little story: one instance of the bigger issue. Named person, concrete fictive place, what went wrong NOW.
-Lead with the hook so the first two sentences still work as the invent-banner lede (engine clips on a sentence at ~160 chars — never mid-word).
+Lead with the hook: the invent banner and every catalog card show the whole summary (up to ${SUMMARY_CAP} chars), so the first sentence is what a browsing player reads first.
 
 Recipe, in order:
 1) Named person does something specific, now, in a named place.

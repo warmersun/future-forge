@@ -8,6 +8,7 @@ import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
 import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js";
 import { briefingOwnsRoot } from "../briefing-ui.js";
+import { spotlightAdvanceForAi } from "../tech-why.js";
 
 /**
  * @param {string} deployStage — none | pilot_ok | scaled | pilot | scale
@@ -154,7 +155,7 @@ export class MpSidePanel {
       availableTechs: stackIds.map(techById).filter(Boolean),
       grounding: mission?.grounding || null,
       spotlightTechId: mission?.spotlight?.techId || null,
-      spotlightAdvance: mission?.spotlight?.advanceSummary || null,
+      spotlightAdvance: spotlightAdvanceForAi(mission),
       guidance: mission?.spotlight?.techId
         ? `This is a Spotlight Quest for tech "${mission.spotlight.techId}". Prefer proposals that use that capability honestly and pilot-fit for this year.`
         : undefined,

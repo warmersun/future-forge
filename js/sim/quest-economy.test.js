@@ -41,9 +41,9 @@ describe("extractKnobs", () => {
   it("reads structured mission resources and meters", () => {
     const v = loadGeneSeq();
     const k = extractKnobs(v);
-    assert.equal(k.apMax, 4);
-    assert.equal(k.budget, 8);
-    assert.equal(k.will, 4);
+    assert.equal(k.apMax, 3);
+    assert.equal(k.budget, 5);
+    assert.equal(k.will, 3);
     assert.equal(k.startYear, 2026);
     assert.equal(k.collapseYear, 2032);
     assert.equal(k.meters.length, 2);
@@ -63,7 +63,7 @@ describe("extractKnobs", () => {
     assert.equal(k.budget, 1);
     assert.equal(k.will, 0);
     assert.equal(k.meters.find((m) => m.role === "local").start, 3);
-    assert.equal(v.mission.resources.apMax, 4);
+    assert.equal(v.mission.resources, undefined);
   });
 
   it("accepts built-in MISSIONS entries", () => {
@@ -106,7 +106,7 @@ describe("clockFacts", () => {
     const k = extractKnobs(loadGeneSeq());
     const c = clockFacts(k);
     assert.equal(c.yearTicksSafe, 5);
-    assert.equal(c.waitsUntilRed, 2);
+    assert.equal(c.waitsUntilRed, 1);
     assert.equal(c.startingRed, false);
     assert.ok(c.meters.length >= 1);
     assert.equal(typeof c.meters[0].waitsUntilCollapse, "number");
@@ -351,6 +351,37 @@ describe("heavyAiBill", () => {
 });
 
 describe("evaluateQuestEconomy", () => {
+  it("reports too_easy at quest level when only the no-AI solo path is too easy", () => {
+    // Synthetic knobs — not the live gene-seq shelf. One cheap tile, deep wallet,
+    // one soft meter: no-AI solves it in a single season with years and Budget to spare.
+    // The quest verdict must surface the too_easy side, not hide it behind a challenging AI path.
+    const k = {
+      id: "too-easy-solo",
+      title: "Soft meter",
+      place: "Test",
+      startYear: 2026,
+      collapseYear: 2040,
+      yearsPerTurn: 2,
+      apMax: 3,
+      budget: 9,
+      will: 4,
+      suggested: ["computing"],
+      isLearningModule: false,
+      meters: [{ role: "local", key: "Strain", label: "Strain", start: 1, rise: 0, winMax: 1 }],
+      pressure: { Strain: 1 },
+      pressureRise: { Strain: 0 },
+      winMax: { Strain: 1 },
+      crisisRoles: ["local"],
+    };
+    const report = evaluateQuestEconomy(k, { recommend: false });
+    const noAi = report.archetypes["solo-no-ai"].verdict;
+    const ai = report.archetypes["solo-ai"].verdict;
+    assert.equal(noAi, "too_easy");
+    assert.notEqual(ai, "impossible");
+    if (ai === "challenging") assert.equal(report.questVerdict, "too_easy");
+    else assert.equal(report.questVerdict, ai === "too_easy" ? "too_easy" : ai);
+  });
+
   it("returns four archetypes and a recommendation object", () => {
     const report = evaluateQuestEconomy(loadGeneSeq());
     assert.ok(report.archetypes["solo-no-ai"]);
@@ -403,7 +434,7 @@ describe("recommendQuestEconomy / applyEconomyPatchToTile", () => {
     assert.equal(next.resources.startingBudget, 6);
     assert.equal(next.mission.pressure.local.pressure, 3);
     assert.equal(next.mission.collapseYear, 2034);
-    assert.equal(tile.resources.apMax, 4);
+    assert.equal(tile.resources, undefined);
     const v = validateQuestTile(next);
     assert.equal(v.ok, true, (v.details || []).join(", "));
   });

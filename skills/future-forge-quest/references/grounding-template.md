@@ -4,6 +4,14 @@ Optional free-text **`grounding`** (Markdown) is the Quest’s **capability trut
 
 Player-facing prose is the instance story, the bigger problem / root cause, and an outcome-only job (`title` / `summary` / `briefMd` / `mission.scene`). Grounding is for **AI consistency** and is the home for capability / product hints — do not paste this chain into player prose. The tutor may teach it after the player has the story.
 
+## The 3000-character window
+
+Fast-eval — claim timing, pathway scoring, idea sparks, challenge pose and judge, convergence — reads **only the first 3000 characters** of `grounding` (`js/server/fast-eval.mjs` `GROUNDING_CAP`). Only the conversational co-inventor sees more. So:
+
+- Keep the whole grounding at roughly ≤3000 chars, **or** put `## Honest limits` early — directly after `## Milestone` is fine. The limits are the only lines that can turn a timing light red; past the window they do nothing.
+- Tutor-only material (discourse maps, debate framings, lesson SEQUENCE, misconceptions) goes in `aiTutorContext`, not here. It never reaches fast-eval anyway and it pushes the limits past the window.
+- Lint: `grounding_limits_past_clip:<offset>`, `grounding_limits_missing`, `grounding_unknown_heading:<h>`, `grounding_missing`.
+
 ---
 
 ## The chain (canonical)
@@ -148,6 +156,7 @@ trust fragile — pilot language only for 2026.
 - Applications prescribed as the one correct invention (or “buy our product”)
 - Pasting grounding into `briefMd` / `scene` wholesale
 - Empty optional sections left as placeholders — **omit** instead
+- Extra sections (discourse maps, debate scripts) that belong in `aiTutorContext` and push `## Honest limits` past the 3000-char fast-eval window
 
 ---
 
@@ -156,7 +165,7 @@ trust fragile — pilot language only for 2026.
 | Artifact | Job |
 |----------|-----|
 | `grounding` | Capability truth along the chain (AI SoT) |
-| `research` | Citable notes (usually hidden) |
+| `research` | Citation metadata for humans reading the file — the game never reads it |
 | `briefMd` / `scene` | **Your job** (plain invent) + lived place; apply unlocked use cases |
 | Learner invent | Concrete **application** in place/year |
 | `aiTutorContext` | Pedagogy sequence (hidden); may map unlocks → local application |

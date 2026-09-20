@@ -15,12 +15,13 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 
 | Field | Required for tutor? | Notes |
 |-------|---------------------|--------|
-| `isLearningModule` | **Yes** (`true`) | Invent starts on the visual briefing; Co-Inventor uses the tutor system prompt when opened (solo) |
-| `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only (may include resource links + illustration URLs; see below) |
+| `isLearningModule` | **Yes** (`true`) | Invent starts on the visual briefing; Co-Inventor uses the tutor system prompt when opened (solo). **Without an `access` field a learning module defaults to `access: "account"`** (sign-in required on the hosted catalog) |
+| `aiTutorContext` | Strongly recommended | **Hidden** from player — curriculum notes for the AI only (may include resource links + illustration URLs; see below). Reaches the conversational tutor only, never fast-eval (timing, scoring, challenge) |
 | `module` | Recommended | Non-empty **title** string — UI + catalog group key |
-| `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y** |
-| `totalLessons` | Recommended with `lesson` | Shared across all lessons in the set |
-| `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md` |
+| `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y**. **Always pair with `totalLessons`**: a lone `lesson` paints no progress bar |
+| `totalLessons` | Required with `lesson` | Shared across all lessons in the set and **must agree with the module wrapper** |
+| `spotlight.advanceTitle` / `advanceSummary` / `asOf` | Fill honestly | The tutor receives them as `spotlightAdvance` and **names the real advance** — the family and where it sits on its curve — once the learner has the story. Player prose still never names it |
+| `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md`. Fast-eval reads the first 3000 chars only |
 
 UI: invent and Learning catalog show **module title + segment bar** (one segment per lesson; filled = completed on the device via `localStorage`). Selection chip: **Learn · {module title}**.
 
@@ -34,7 +35,7 @@ Write as short structured notes. Do **not** paste this into `briefMd` or `scene`
 LESSON GOAL: <one sentence — what the learner should invent/understand>
 
 SEQUENCE (one idea at a time; do not dump all at once):
-1) <idea — offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation of this idea>
+1) <what just moved and where it sits on the curve — the real advance behind this Quest (spotlight.advanceTitle / advanceSummary), named only after the learner has the story; offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation>
 2) <product category capability honesty (not whole emTech) — offer matching page after a short spoken explanation of this idea>
 3) <map unlocked use case → local application category>
 4) <scope / pilot limits; invent stays in chat>
@@ -92,7 +93,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 
 There is **no engine unlock graph** yet. Author a set manually:
 
-1. Same `module` **title string** and same `totalLessons` on every lesson file.
+1. Same `module` **title string** and same `totalLessons` on every lesson file **and on the wrapper** (they must agree).
 2. `lesson`: `1`, `2`, … `totalLessons`.
 3. Distinct `id` / `mission.id` per lesson (e.g. `…-open-weight-lesson-2`).
 4. Distinct place angle or invent gate per lesson; may share theme `globalId` and spotlight tech.
@@ -115,6 +116,7 @@ The catalog **groups first, then classifies**. A path is Sponsored if the **wrap
 ### What tutor mode does (solo)
 
 - Invent starts on **Future vision** with the stepped briefing (beats / stills), same as other Quests. The **AI tutor** is on the Co-Inventor tab when the learner opens it (not auto-opened).
+- The tutor knows the real advance (`spotlightAdvance` from the tile's `spotlight` fields) and names it — family, curve, what just became possible, what is still years out — once the learner has the story. Never before the story, never as the answer to invent.
 - Built-in tutor style (server): **one current idea** per reply, taught as a **short paragraph** (analogy + one mechanism); **full sentences**; **no default quizzes**; **learner-driven** (answer the question they asked — SEQUENCE does not block a later idea); explain concepts a **high-school senior** may not know on first use; scaffold inventing; no full solution dump. **Answer vs send-to-read:** speak the explanation first; offer at most one matching lesson page when the next SEQUENCE idea or a misconception needs the textbook; stay in chat for recaps, invent, and follow-ups.
 - `grounding` still used for capability assess / advice when present.
 - Tutor messages can include Markdown **links** and **images** drawn from `aiTutorContext` resources (see above).
@@ -178,7 +180,9 @@ Portable examples: `examples/spotlight-sponsored-learning.json` (one lesson), `e
 ## Anti-patterns
 
 - Empty strings for unused optionals (`"sponsorName": ""`) — **omit the keys**  
-- Learning module without `aiTutorContext` (tutor has nothing to teach)  
+- Learning module without `aiTutorContext` (tutor has nothing to teach; lint `learning_no_tutor_context`)  
+- `lesson` without `totalLessons` (no progress bar paints; lint `learning_lesson_without_total`), or a wrapper whose `totalLessons` disagrees with the lesson files  
+- Empty `spotlight.advanceSummary` on a learning quest (the tutor has no advance to name)  
 - Resource dump in the first tutor turn (list every link/image at once)  
 - `SEQUENCE` / `TEACHING STYLE` that says “open the page, do not answer” (fights the engine)  
 - Link-only tutor turns, or rewriting a `/lessons` page in chat  

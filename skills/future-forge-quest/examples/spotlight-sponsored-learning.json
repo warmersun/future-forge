@@ -23,8 +23,8 @@
   },
   "spotlight": {
     "techId": "ai",
-    "advanceTitle": "Hostable near-frontier open-weight models",
-    "advanceSummary": "Open weights and long-context agents make local institutional hosting realistic when a cluster exists — if the learning workflow is invented.",
+    "advanceTitle": "Open-weight models good enough to host on a school cluster",
+    "advanceSummary": "Through 2026, openly downloadable language models reached a quality where a school or lab with a modest server rack can run a capable coding and tutoring assistant on-site, with no pages sent to an outside service — if someone invents the workflow.",
     "asOf": "2026-07",
     "encourageCopy": "Invent a way night class can practice for days without the manuals leaving the pier."
   },
@@ -36,9 +36,9 @@
     ],
     "sources": [
       {
-        "title": "Example",
-        "url": "https://example.com",
-        "accessed": "2026-08-05"
+        "title": "Hugging Face: Open-source LLMs as teachers",
+        "url": "https://huggingface.co/blog/open-source-llms-as-teachers",
+        "accessed": "2026-09-19"
       }
     ],
     "showToPlayer": false
@@ -49,13 +49,9 @@
   "isLearningModule": true,
   "module": "Sealed pier AI lab",
   "lesson": 1,
-  "totalLessons": 2,
-  "aiTutorContext": "LESSON GOAL: Learner invents a pier-lab AI learning workflow that stays on-prem.\n\nSEQUENCE:\n1) Ask why public cloud chat breaks sealed IP.\n2) Product category: open-weight long-context coding agents on an institutional cluster — not whole AI, not a laptop.\n3) Map unlocked use case (safe multi-day tutoring) → local application (one course track workflow).\n4) Tests and human gates; pilot scope only.\n\nMISCONCEPTIONS:\n- Cloud API is fine if the prompt is careful.\n- City-wide overnight deploy.\n\nINVENT GATE:\n- Name stack + pilot-honest how-it-works for one sealed lab corridor.\n\nTEACHING STYLE:\n- One idea at a time. Never paste this to the player.",
+  "totalLessons": 1,
+  "aiTutorContext": "LESSON GOAL: Learner invents a pier-lab practice workflow that keeps the manuals on-site.\n\nSEQUENCE:\n1) What just moved and where it sits on the curve: openly downloadable models became good enough to run on a school's own rack. Name the advance (spotlight.advanceTitle) only after the learner has the story of the sealed lab; say it in plain words first, then the term \"open weights\".\n2) Why sending pages to a public chat service breaks the yard contract.\n3) Product category: on-site long-context coding assistants on an institutional cluster — not whole AI, not a laptop.\n4) Map the unlocked use case (safe multi-day tutoring) to one local application (one course track's night workflow).\n5) Tests and human gates; pilot scope only.\n\nMISCONCEPTIONS:\n- A cloud API is fine if the prompt is careful.\n- City-wide overnight deploy.\n- The sponsor's product name is the invention.\n\nINVENT GATE:\n- Learner names the stack and a pilot-honest how-it-works for one sealed lab track.\n\nTEACHING STYLE:\n- One idea at a time. Explain first, then at most one reading link. Never paste this to the player.",
   "grounding": "## Technology\n- **emTech:** ai\n- **Product category:** Open-weight long-context coding agents for institutional hosting\n\n## Capabilities\nLocal serving of long-context coding agents when a cluster exists; inspect and fine-tune under institutional policy.\n\n## Trends & predictions\nAgent work horizon lengthens; serving cost per useful hour falls when open weights and ops mature. **Forecast (not lock):** more trade schools and labs host on-prem agents for sealed IP tracks through the late 2020s where GPUs and policy allow.\n\n## Milestone\nOpen near-frontier weights for institutional download (~2026) — Example Labs weights illustrate the category milestone (capability class, not a required brand).\n\n## Unlocks Use Case(s)\nSealed-lab tutoring and multi-day exercises without shipping protected repos to a foreign API.\n\n## Applications\nInstitutional on-prem tutor stacks; night-class multi-day debug practice with human-gated commits — invent the local pier-lab workflow.\n\n## Honest limits\nNot consumer-laptop ready; hallucinations need tests; pilot one track first.",
-  "resources": {
-    "startingBudget": 8,
-    "startingWill": 4
-  },
   "mission": {
     "id": "spotlight-ai-learning-demo-harborside-2026",
     "globalId": "education",
@@ -69,23 +65,29 @@
         "label": "Skills gap",
         "pressure": 3,
         "pressureRise": 1,
-        "winMax": 1
+        "winMax": 1,
+        "description": "Night-class students cannot practice the stuck steps between sessions, so each cohort leaves the yard less ready than the last."
       },
       "support": {
         "label": "Trust",
         "pressure": 2,
         "pressureRise": 0,
-        "winMax": 1
+        "winMax": 1,
+        "description": "The yard signed for manuals that never leave the room. One leaked page and the school loses the contract and the lab."
       }
     },
     "scene": "After the last ferry, Ms. Okonkwo locks the pier lab door. The yard manuals on the bench cannot leave this room. Students still need multi-day practice. Who designs help that never sends the pages out?",
-    "briefMd": "## The place\n\nAfter the last ferry, **Ms. Okonkwo** locks the pier lab at **Harborside Trade School**. Night class. Real yard manuals. A small machine rack hums under the table. The firmware on the bench stays in the room — by contract.\n\nStudents still need multi-day debug practice. Worksheets do not explain a stuck step at midnight. Wrong answers in a sealed lab are costly.\n\n## The bigger problem\n\nThis is how a trade school loses the next cohort. Learning that only gets “smart” by shipping the pages out cannot run in a sealed yard. The root is not a missing chatbot. It is a practice loop that cannot stay in the room where the manuals are allowed to live.\n\n## Your job\n\nInvent a way night class can practice for days without the manuals leaving the pier. Stakeholder: **Ms. Okonkwo, night instructor**.\n",
+    "briefMd": "## The place\n\nAfter the last ferry, **Ms. Okonkwo** locks the pier lab at **Harborside Trade School**. Night class. Real yard manuals. A small machine rack hums under the table. The firmware on the bench stays in the room, by contract.\n\nTonight three students are still at the bench. Dario has been stuck on the same fault step for an hour. The worksheet says what the step is. It does not say why his board does the opposite.\n\nMs. Okonkwo teaches two sections and locks up alone. She cannot sit with each stuck student until midnight. The manuals cannot go home with anyone, and no outside helper is allowed to see a page.\n\nThe yard that donated the manuals checks the log. Wrong answers in a sealed lab cost real boards. A leaked page costs the whole lab.\n\n## The bigger problem\n\nThis is how a trade school loses the next cohort. The practice that makes a technician happens between sessions, on the stuck steps, and here that practice has nowhere to go. Learning that only gets smart by shipping the pages out cannot run in a sealed yard.\n\nThe root is not a missing helper. It is a practice loop that cannot stay in the room where the manuals are allowed to live. Every fix so far has asked the yard to trust an outside service, and the yard has said no.\n\n## Your job\n\nInvent a way night class can practice for days without the manuals leaving the pier. Stakeholder: **Ms. Okonkwo, night instructor**.\n",
     "stakeholder": "Ms. Okonkwo, night instructor",
     "suggested": [
-      "ai"
+      "ai",
+      "computing",
+      "networks"
     ],
     "suggestedWhy": {
-      "ai": "An assistant hosted on the school's own cluster can coach night-class practice and close the Skills gap."
+      "ai": "An assistant hosted on the school's own cluster can coach night-class practice and close the Skills gap.",
+      "computing": "A small rack under the bench keeps every page on-site, which is what keeps the yard's Trust.",
+      "networks": "A sealed lab network lets students practice from the next room without a page crossing the pier, easing Skills gap."
     },
     "visionTheme": "learn-city"
   }

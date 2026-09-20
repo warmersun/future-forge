@@ -65,6 +65,22 @@ export function metersByHeat(mission) {
  * @param {object} mission
  * @returns {string[]}
  */
+/**
+ * The real advance behind a Spotlight Quest, shaped for the AI tutor:
+ * { title, summary, asOf } or null. Player prose never names it; the tutor
+ * does, after the learner has the story (server.mjs TUTOR_SYSTEM_PROMPT).
+ * @param {object} mission
+ */
+export function spotlightAdvanceForAi(mission) {
+  const spot = mission?.spotlight;
+  if (!spot || typeof spot !== "object") return null;
+  const title = String(spot.advanceTitle || "").trim() || null;
+  const summary = String(spot.advanceSummary || "").trim() || null;
+  const asOf = String(spot.asOf || "").trim() || null;
+  if (!title && !summary) return null;
+  return { title, summary, asOf };
+}
+
 export function suggestedIds(mission) {
   const spot = mission?.spotlight?.techId || null;
   const list = Array.isArray(mission?.suggested) ? mission.suggested.map(String) : [];

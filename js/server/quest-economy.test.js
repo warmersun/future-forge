@@ -70,7 +70,7 @@ describe("writeQuestEconomyPatch", () => {
       assert.equal(w.ok, true, w.error);
       const written = JSON.parse(fs.readFileSync(abs, "utf8"));
       assert.equal(written.resources.apMax, 3);
-      assert.equal(written.mission.pressure.local.pressure, 2);
+      assert.equal(written.mission.pressure.local.pressure, 3);
     } finally {
       fs.rmSync(absDir, { recursive: true, force: true });
       try {
