@@ -426,7 +426,7 @@ async function wiggleCursor(cdp, ms) {
   }
 }
 
-async function recordClip(cdp, shot, action) {
+async function recordClip(cdp, shot, action, opts = {}) {
   const only = (process.env.FF_RECORD_ONLY || "")
     .split(",")
     .map((s) => s.trim())
@@ -444,10 +444,10 @@ async function recordClip(cdp, shot, action) {
   try {
     await action();
     const elapsed = (Date.now() - t0) / 1000;
-    if (elapsed < TARGET_S) await wiggleCursor(cdp, (TARGET_S - elapsed) * 1000);
+    if (!opts.noWiggle && elapsed < TARGET_S) await wiggleCursor(cdp, (TARGET_S - elapsed) * 1000);
   } finally {
     const elapsed = (Date.now() - t0) / 1000;
-    if (elapsed < MIN_S) await wiggleCursor(cdp, (MIN_S - elapsed) * 1000);
+    if (!opts.noWiggle && elapsed < MIN_S) await wiggleCursor(cdp, (MIN_S - elapsed) * 1000);
     const over = (Date.now() - t0) / 1000 - MAX_S;
     if (over > 0) log("clip long", shot.id, (MAX_S + over).toFixed(1));
     const stopped = await rec.stop();
@@ -944,22 +944,46 @@ async function collapseBoard(cdp) {
   if (expanded) await clickSel(cdp, "#btn-hex-board-expand", { after: 400 });
 }
 
-async function clickInventHex(cdp) {
-  return cdp.eval(`(() => {
+async function expandBoard(cdp) {
+  const expanded = await cdp.eval(
+    `document.querySelector('#btn-hex-board-expand')?.getAttribute('aria-pressed') === 'true'`
+  );
+  if (!expanded) await clickSel(cdp, "#btn-hex-board-expand", { after: 500 });
+}
+
+/** Hover only — pointerdown starts a drag and hides the inspect popup. */
+async function hoverInventHex(cdp) {
+  const box = await cdp.eval(`(() => {
     const g = [...document.querySelectorAll('#hex-board-svg g[data-id]')].find((el) => {
       const id = el.dataset.id || '';
       return id && !id.startsWith('crisis-') && !id.startsWith('concern-') && !id.startsWith('rd-');
     });
-    if (!g) return '';
+    if (!g) return null;
     g.scrollIntoView({ block: 'center', inline: 'nearest' });
     const r = g.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    g.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
-    g.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true, buttons: 1 }));
-    g.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
-    g.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x, clientY: y }));
-    return g.dataset.id;
+    const x = r.left + r.width / 2, y = r.top + r.height * 0.62;
+    g.dispatchEvent(new PointerEvent('pointerenter', {
+      bubbles: true, cancelable: true, view: window,
+      clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true
+    }));
+    g.focus?.();
+    return { x, y, id: g.dataset.id };
   })()`);
+  if (box) await moveCursor(cdp, box.x, box.y);
+  return box;
+}
+
+async function parkOnPopup(cdp) {
+  const box = await boxOf(cdp, "#hex-tile-popup-card, .hex-tile-popup-card, #hex-tile-popup-body");
+  if (box) {
+    await moveCursor(cdp, box.x, box.y);
+    await cdp.eval(`document.querySelector('.hex-tile-popup-card')?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }))`);
+  }
+  return box;
+}
+
+async function clickInventHex(cdp) {
+  return hoverInventHex(cdp).then((b) => b?.id || "");
 }
 
 async function retakeMain() {
@@ -981,15 +1005,85 @@ async function retakeMain() {
     await setupGeneOnStack(cdp);
     await sleep(500);
 
-    // 08 honesty bar
-    await recordClip(cdp, byId["08-honesty-bar"], async () => {
-      const id = await clickInventHex(cdp);
-      log("hex", id);
-      await sleep(700);
-      await pointAt(cdp, "#hex-board-svg g[data-id] rect", 2500);
-      await pointAt(cdp, "#hex-tile-popup-title, #hex-tile-popup-body", 4000);
-    });
+    // 08 honesty bar — expand, hover (no drag), wait for bar + reason, hold
+    await expandBoard(cdp);
+    await hoverInventHex(cdp);
+    await waitFor(
+      cdp,
+      `(() => {
+        const popup = document.querySelector('#hex-tile-popup');
+        if (!popup || popup.hidden) return '';
+        const t = (popup.innerText || '').replace(/\\s+/g, ' ');
+        if (/Re-checking/i.test(t)) return '';
+        if (/Timing:\\s*(green|yellow|red)/i.test(t) || /honest this year/i.test(t)) return t.slice(0, 80);
+        return '';
+      })()`,
+      45000,
+      "honesty-popup"
+    );
+    await recordClip(
+      cdp,
+      byId["08-honesty-bar"],
+      async () => {
+        await hoverInventHex(cdp);
+        await sleep(700);
+        await parkOnPopup(cdp);
+        await pointAt(cdp, "#hex-tile-popup-title", 2500);
+        await pointAt(cdp, "#hex-tile-popup-body", 4000);
+        await hoverInventHex(cdp);
+        await sleep(2500);
+        await parkOnPopup(cdp);
+        await sleep(4000);
+      },
+      { noWiggle: true }
+    );
     await cdp.eval(`document.querySelector('#hex-tile-popup') && (document.querySelector('#hex-tile-popup').hidden = true)`);
+    await collapseBoard(cdp);
+
+    // 09 Timing check — wait for the wait-vs-revise reply, then record it
+    await openCoinventor(cdp);
+    await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 400);
+    await clickSel(cdp, 'button.co-chip[data-mode="push-further"]', { after: 400 });
+    const timingHit = await waitFor(
+      cdp,
+      `(() => {
+        if (document.querySelector('.co-msg.thinking')) return '';
+        const bubbles = [...document.querySelectorAll('.co-msg.assistant:not(.thinking) .co-bubble')];
+        const text = bubbles.map((b) => (b.innerText || '')).join(' ').replace(/\\s+/g, ' ').trim();
+        if (text.length < 80) return '';
+        if (/Thinking with you/i.test(text)) return '';
+        if (!/wait|revise|this year|honest|curve|today/i.test(text)) return '';
+        return text.slice(0, 120);
+      })()`,
+      120000,
+      "timing-reply"
+    );
+    if (!timingHit) {
+      const dump = await cdp.eval(
+        `document.querySelector('#co-messages')?.innerText?.slice(0, 400) || 'empty'`
+      );
+      log("timing dump", dump);
+    }
+    await recordClip(
+      cdp,
+      byId["09-timing-check"],
+      async () => {
+        await openCoinventor(cdp);
+        await pointAt(cdp, 'button.co-chip[data-mode="push-further"]', 1200);
+        const bubble = await boxOf(cdp, ".co-msg.assistant:not(.thinking) .co-bubble");
+        if (bubble) {
+          await moveCursor(cdp, bubble.x, bubble.y);
+          await sleep(5000);
+          await cdp.eval(`document.querySelector('#co-messages, #co-log')?.scrollBy?.({ top: 80, behavior: 'smooth' })`);
+          await sleep(4000);
+          await moveCursor(cdp, bubble.x, bubble.y + 40);
+          await sleep(4000);
+        } else {
+          await pointAt(cdp, ".co-msg.assistant .co-bubble", 12000);
+        }
+      },
+      { noWiggle: true }
+    );
 
     // Place a second bits tile (AI) for convergence / pathway
     await focusTech(cdp, "ai");
