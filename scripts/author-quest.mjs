@@ -64,6 +64,47 @@ const advanceSummary =
   tech.summary ||
   `Capability in ${tech.name} is shifting — design a local application.`;
 
+const meterLabels = { local: "Pressure", global: "Capacity", support: "Trust" };
+// Supporting emTechs: two catalog convergence partners, so the "For this place" shelf
+// and the economy lab's second pathway start from authored ids. Re-pick for the place.
+const supporting = (tech.pairs || [])
+  .map((id) => techById(id))
+  .filter(Boolean)
+  .slice(0, 2);
+const suggested = [tech.id, ...supporting.map((t) => t.id)];
+const whyFor = (t, meterLabel) =>
+  `${String(t.inventionHint || `What ${t.name} could do here`).replace(/\.$/, "")} — for ${meterLabel}.`.slice(0, 120);
+const suggestedWhy = {
+  [tech.id]: whyFor(tech, meterLabels.local),
+};
+if (supporting[0]) suggestedWhy[supporting[0].id] = whyFor(supporting[0], meterLabels.global);
+if (supporting[1]) suggestedWhy[supporting[1].id] = whyFor(supporting[1], meterLabels.support);
+
+// AI capability truth. Fast-eval reads only the first 3000 chars, so keep it tight and
+// keep "Honest limits" inside that window. Fill after research; delete nothing else.
+const grounding = `## Technology
+- **emTech:** ${tech.id}
+- **Product category:** (what ${tech.name} enables as a product shape — the focus unit; fill after research)
+
+## Capabilities
+What that product category can do now, in operational terms. (fill after research)
+
+## Trends & predictions
+How those capabilities are advancing (cost, quality, access). Label forecasts as forecasts. (fill after research)
+
+## Milestone
+The threshold reached or expected around ${GAME.startYear} that makes new use cases real here. (fill after research)
+
+## Honest limits
+Pilot scope, cost, power, skills, trust, dual-use for this category in ${GAME.startYear}. (fill after research)
+
+## Unlocks Use Case(s)
+Scenarios the milestone unlocks for this product category. (fill after research)
+
+## Applications
+Application categories the learner could invent locally — seeds, not one answer. (fill after research)
+`;
+
 const briefMd = `## The place
 
 A named person does one concrete thing now at **${place}** (fictive). The strain is already in the room.
@@ -101,16 +142,10 @@ const tile = {
     asOf: new Date().toISOString().slice(0, 7),
     encourageCopy: `Invent a way this place works for the people who live it.`,
   },
-  research: {
-    topic: advance || tech.name,
-    bullets: [
-      "Replace with researched bullets before classroom use.",
-      tech.summary,
-    ].filter(Boolean),
-    sources: [],
-    showToPlayer: false,
-  },
+  // Citation metadata only — omit `research` until there are real https sources.
+  // An empty `sources: []` (or example.org placeholders) fails craft lint.
   globalId: global.id,
+  grounding,
   mission: {
     id: slug,
     globalId: global.id,
@@ -120,18 +155,18 @@ const tile = {
     collapseYear: GAME.startYear + 6,
     yearsPerTurn: GAME.yearsPerTurn,
     pressure: {
-      local: { label: "Pressure", description: "Lived strain people feel here this season.", pressure: 3, pressureRise: 1, winMax: 1 },
-      global: { label: "Capacity", description: "The local driver that keeps producing the problem.", pressure: 2, pressureRise: 1, winMax: 1 },
-      support: { label: "Trust", description: "Whether neighbors will back a visible local fix.", pressure: 2, pressureRise: 0, winMax: 1 },
+      local: { label: meterLabels.local, description: "Lived strain people feel here this season.", pressure: 3, pressureRise: 1, winMax: 1 },
+      global: { label: meterLabels.global, description: "The local driver that keeps producing the problem.", pressure: 2, pressureRise: 1, winMax: 1 },
+      support: { label: meterLabels.support, description: "Whether neighbors will back a visible local fix.", pressure: 2, pressureRise: 0, winMax: 1 },
     },
     scene: `A named person at ${place} is already in trouble. The usual path failed. Who makes this place work before the next harm lands?`,
     briefMd,
     stakeholder: "Local working group lead",
-    suggested: [tech.id],
-    // Why this family here — shown under the card in "For this place". Rewrite for the place; name the meter it eases.
-    suggestedWhy: {
-      [tech.id]: `${String(tech.inventionHint || `What ${tech.name} could do here`).replace(/\.$/, "")} — for Pressure.`.slice(0, 120),
-    },
+    // The "For this place" shelf: spotlight first, then supporting partners (act two).
+    suggested,
+    // Why this family here — under each shelf card and in the red-hex list. Rewrite for
+    // the place; keep the crisis meter label in the sentence so it ranks for that hex.
+    suggestedWhy,
     visionTheme: "rebuild-city",
   },
 };
@@ -159,7 +194,9 @@ else delete outTile.mission.suggestedWhy;
 fs.writeFileSync(outFile, JSON.stringify(outTile, null, 2) + "\n", "utf8");
 console.log(`Wrote ${outFile}`);
 console.log(`Import in Future Forge: Import Quest… → select this JSON.`);
-console.log(`Validate: npm run validate:quest -- ${outFile}`);
+console.log(`Validate + craft lint: npm run validate:quest -- ${outFile} --strict`);
+console.log(`Difficulty: npm run economy:quest -- ${outFile}`);
+console.log(`This is a template: every "(fill after research)" and placeholder line lints as a warning until you replace it.`);
 
 function parseArgs(argv) {
   const out = {};

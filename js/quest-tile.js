@@ -28,6 +28,8 @@ export const CAPS = {
   advanceTitle: 200,
   advanceSummary: 600,
   encourageCopy: 280,
+  /** Shelf size: spotlight first, then up to four supporting emTechs. */
+  suggested: 5,
   researchTotal: 8_000,
   meterKey: 40,
   /** Soft safety ceiling for optional AI grounding (not a product length limit). */
@@ -907,14 +909,23 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(`bad_spotlight_tech:${techId || "(empty)"}`);
   }
 
-  let suggested = (Array.isArray(missionIn.suggested) ? missionIn.suggested : [])
-    .map(String)
-    .filter((id) => techIds.has(id));
+  // Shelf for this place: the spotlight leads, then 0–4 supporting emTechs
+  // (convergence partners for act two). Unknown ids are errors, duplicates fold.
+  const suggestedRaw = Array.isArray(missionIn.suggested)
+    ? missionIn.suggested.map((id) => String(id).trim())
+    : [];
+  let suggested = [];
+  for (const id of suggestedRaw) {
+    if (!techIds.has(id)) {
+      details.push(`suggested_bad_id:${id || "(empty)"}`);
+      continue;
+    }
+    if (!suggested.includes(id)) suggested.push(id);
+  }
   if (techId && techIds.has(techId)) {
     if (suggested.length === 0) suggested = [techId];
-    if (suggested.length !== 1 || suggested[0] !== techId) {
-      details.push("suggested_must_be_spotlight_only");
-    }
+    if (suggested[0] !== techId) details.push("suggested_spotlight_not_first");
+    if (suggested.length > CAPS.suggested) details.push("suggested_too_many");
   }
   // Optional plain-words reason per suggested id ("why this emTech here")
   const suggestedWhyRaw =
@@ -1072,7 +1083,7 @@ export function validateQuestTile(tile, opts = {}) {
     scene: (scene || plainLedeFromBrief(briefMd)).slice(0, CAPS.scene),
     briefMd: briefMd.slice(0, CAPS.briefMd),
     stakeholder: String(missionIn.stakeholder || "").slice(0, CAPS.stakeholder),
-    suggested: [techId],
+    suggested: suggested.slice(0, CAPS.suggested),
     visionTheme: String(missionIn.visionTheme || "rebuild-city").slice(0, 40),
     source: "imported",
     spotlight,

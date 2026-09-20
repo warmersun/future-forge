@@ -16,13 +16,30 @@ Developer UI (game server `--developer`): `/tools/quest-economy`. `--write` / **
 
 The lab pretends four players: solo no-AI, solo with AI, Friends no-AI, Friends with AI.
 
-**Quest verdict** = worse of the two **solo** paths. Target: both **challenging**.
+**Quest verdict** = the **solo** path furthest from challenging. `too_easy` counts as worse than `challenging` (a tile one solo player clears in a single cheap season with years to spare is not shippable either). Target: both solo paths **challenging**.
 
 | Verdict | Use |
 |---------|-----|
 | `challenging` | Survives the scripted path (no collapse, no red, no meter at 5). Ship this. |
-| `too_easy` | Already green, cheap, leftover years. Tighten meters or wallet. |
+| `too_easy` | Already green, cheap, leftover years. Tighten meters or wallet (usually: drop `resources`). |
 | `too_hard` / `impossible` | Cannot pay tiles or the calendar breaks. Ease start Budget / Support / AP only if the **first** island cannot buy the tech — two-act is funded by pathway-ease income, not a bigger opening grant. |
+
+## What a tile costs (the usual `too_hard` cause)
+
+Tech cost is not authorable; it comes from the catalog tech's `curve` and `readyYear` (`js/sim/economy.js` `baseTechCost`) against a default wallet of **Budget 5 · Support 3 · AP 3**:
+
+| Spotlight profile | Budget | Support |
+|-------------------|--------|---------|
+| Mature (default) | 1 | 0 |
+| `curve: "early"` | 2 | 1 |
+| `readyYear ≥ 2028` | ≥2 | — |
+| `readyYear ≥ 2030` | ≥3 | ≥1 |
+
+A frontier spotlight opens at 3 Budget + 1 Support, so the first island alone eats most of the wallet. That, not the meters, is the usual `too_hard`. Prefer a supporting partner that is cheap for act one and let the frontier tech ride act two, before touching `resources`.
+
+## Supporting techs feed act two
+
+The lab picks tiles from `mission.suggested` in order (`pickTechs`), then the spotlight's catalog pairs. Author the shelf so the lab plans with your ids: spotlight first, then the partner meant for the **global** meter, then a cheap local helper. `suggestedWhy` per id names the meter it eases.
 
 Full green on every meter is **not** required. Hex hold is yellow+. Local this year + global after a year tick is the intended loop.
 

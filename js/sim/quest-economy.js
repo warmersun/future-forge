@@ -1244,9 +1244,20 @@ function knobsToPseudoMission(knobs) {
   };
 }
 
+/**
+ * Quest verdict = the solo path that is furthest from "challenging".
+ * Too easy is a failure too: VERDICT_RANK orders by ease, so use badness here.
+ */
+const VERDICT_BADNESS = {
+  impossible: 0,
+  too_hard: 1,
+  too_easy: 2,
+  challenging: 3,
+};
+
 function worseVerdict(a, b) {
-  const ra = VERDICT_RANK[a] ?? 2;
-  const rb = VERDICT_RANK[b] ?? 2;
+  const ra = VERDICT_BADNESS[a] ?? 3;
+  const rb = VERDICT_BADNESS[b] ?? 3;
   return ra <= rb ? a : b;
 }
 

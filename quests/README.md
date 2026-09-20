@@ -10,9 +10,9 @@ Source of truth for those tiles: `~/dev/warmersun/future-forge/quests/` (publish
 
 ## How to use (Library / classroom side-load)
 
-1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest`).
-2. Validate: `npm run validate:quest -- path.json`
-3. Check difficulty: `npm run economy:quest -- path.json` (guide: [`docs/quest-economy-lab.md`](../docs/quest-economy-lab.md)). Target verdict **challenging**.
+1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest -- --tech <id> --local-only`).
+2. Validate + craft lint: `npm run validate:quest -- path.json --strict` (shape errors fail; `WARN <code>` lines are craft rules — tech named in player text, legacy brief headings, word counts, pressure defaults, missing grounding, template placeholders; `--strict` fails on any).
+3. Check difficulty: `npm run economy:quest -- path.json` (guide: [`docs/quest-economy-lab.md`](../docs/quest-economy-lab.md)). Target verdict **challenging** (too easy now counts as a failing verdict too).
 4. Copy into this folder (or set `FF_QUESTS_DIR`).
 5. Start the server: `npm start` — Library lists local tiles; Import still works in the hub.
 
@@ -41,12 +41,15 @@ Capability trends (Wait charts) use a separate catalog — see [`docs/capability
 ## Rules (local folder)
 
 - Only `*.json` files in **this folder** (not subfolders).
-- Must pass `npm run validate:quest -- path.json`.
+- Must pass `npm run validate:quest -- path.json`; tiles kept here should also be `--strict` lint clean.
 - Invalid files are skipped (logged in `/api/quests` as errors).
 - **Crisis meters** use structured `mission.pressure` — see `docs/quest-tile-schema.md`. Optional `description` per role is recommended on new tiles; omitted is valid. Tune start / rise / wallet with the [Quest economy lab](../docs/quest-economy-lab.md).
 
 ## Sample library tiles
 
-- `spotlight-gene-seq.json` — Spotlight gene sequencing
-- `spotlight-ai-edge-north-stack-2026.json` — AI edge sample (not sponsored)
-- `base-onchain-dollars.json` + `base-onchain-dollars-lesson-*.json` — sponsored learning **module** (Library until published to the warmersun catalog; then **Sponsored** as one path with a summary panel)
+- `spotlight-gene-seq.json` — Spotlight gene sequencing; identical to the skill's `examples/spotlight-gene-seq.json` (the gold prose example)
+- `spotlight-ai-edge-north-stack-2026.json` — AI edge spotlight (not sponsored)
+- `spotlight-ai-hearthline-rsi-check-2026.json` — learning module, single lesson
+- `preventing-mirror-life-tideglass.json` — learning module, single lesson
+
+Sponsored learning **modules** (wrapper + lesson files) live in the warmersun catalog; see `skills/future-forge-quest/examples/spotlight-sponsored-module.json` for the wrapper shape.

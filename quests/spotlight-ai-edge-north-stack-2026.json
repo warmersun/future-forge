@@ -2,9 +2,9 @@
   "schema": "future-forge.quest-tile/v1",
   "kind": "quest",
   "id": "spotlight-ai-edge-north-stack-2026",
-  "version": 1,
-  "title": "Night school under the filter at North Stack",
-  "summary": "Totalitarianism. Night class still needs the filtered backbone. This is about how far on-device AI has to go so learning can happen without sending manuals to someone who is listening.",
+  "version": 2,
+  "title": "The stairwell door at North Stack Night School",
+  "summary": "Omar locks the stairwell door before he powers the secondhand laptop at North Stack Night School. Twelve adults are waiting for exam help, and the public filter just killed the lesson mid-sentence. Last month a careful question on a shared account brought the block warden to the door, and three learners never came back.",
   "author": {
     "name": "Future Forge Spotlight",
     "note": "Research-backed quest: small/open-weight edge AI for privacy under information control"
@@ -28,7 +28,7 @@
     "advanceTitle": "Open-weight and edge-runnable AI that need not phone home",
     "advanceSummary": "Capable open-weight models (including efficient MoE ‘Flash’ tiers and smaller distilled models) plus mature local runtimes mean useful assistance can run on locked laptops, phones, and mini PCs — offline or air-gapped — if the local workflow, power, and update path exist.",
     "asOf": "2026-07",
-    "encourageCopy": "Build your invention around AI that stays on local hardware — private inference is the point of this Quest."
+    "encourageCopy": "Invent a way these adults can get real help with exams, forms, and their rights without one word of it leaving this room."
   },
   "research": {
     "topic": "Open-weight / small LLMs for local and edge private inference (2026)",
@@ -38,20 +38,55 @@
       "Privacy and control are the product when prompts must not cross a monitored gateway — capability alone does not invent the classroom kit, trust model, or update path."
     ],
     "sources": [
-      "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash",
-      "https://api-docs.deepseek.com/news/news260424/",
-      "https://artificialanalysis.ai/articles/deepseek-is-back-among-the-leading-open-weights-models-with-v4-pro-and-v4-flash",
-      "https://openrouter.ai/blog/insights/the-open-weight-models-that-matter-june-2026/",
-      "https://v-chandra.github.io/on-device-llms/",
-      "https://www.darkreading.com/cyber-risk/open-weight-chinese-ai-models-drive-privacy-innovation-llm"
-    ],
-    "showToPlayer": false
+      {
+        "title": "DeepSeek-V4-Flash model card",
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash",
+        "accessed": "2026-09-19"
+      },
+      {
+        "title": "DeepSeek news: V4 release",
+        "url": "https://api-docs.deepseek.com/news/news260424/",
+        "accessed": "2026-09-19"
+      },
+      {
+        "title": "Artificial Analysis: DeepSeek back among leading open-weights models",
+        "url": "https://artificialanalysis.ai/articles/deepseek-is-back-among-the-leading-open-weights-models-with-v4-pro-and-v4-flash",
+        "accessed": "2026-09-19"
+      },
+      {
+        "title": "OpenRouter: the open-weight models that matter (June 2026)",
+        "url": "https://openrouter.ai/blog/insights/the-open-weight-models-that-matter-june-2026/",
+        "accessed": "2026-09-19"
+      },
+      {
+        "title": "On-device LLMs overview",
+        "url": "https://v-chandra.github.io/on-device-llms/",
+        "accessed": "2026-09-19"
+      },
+      {
+        "title": "Dark Reading: open-weight models drive privacy innovation",
+        "url": "https://www.darkreading.com/cyber-risk/open-weight-chinese-ai-models-drive-privacy-innovation-llm",
+        "accessed": "2026-09-19"
+      }
+    ]
   },
   "globalId": "totalitarianism",
+  "grounding": "## Technology\n- **emTech:** ai\n- **Product category:** Open-weight, edge-runnable language assistants — tutoring, drafting, translation and quizzing software that runs on hardware a community controls (locked laptops, phones, a mini PC under the table), offline or on a room-only link.\n\n## Capabilities\nExplain a stuck exam step, draft and check a form, translate plain-language rights material, and quiz a learner in natural language — on-device, with no prompt sent to a distant server. Quality is below the largest cloud systems but adequate for certificate-track tutoring and form help when the workflow around it exists.\n\n## Trends & predictions\nOpen-weight releases through 2025–2026 (including efficient sparse tiers that activate only a slice of their weights per token, and smaller distilled models), quantization, and mature local runtimes keep pushing useful assistance onto cheaper hardware. **Forecast (not lock):** offline tutoring on secondhand laptops becomes routine where power, storage, and a safe update path hold; legal and exam accuracy still lag and need human gates.\n\n## Milestone\nAround 2026, capable open-weight models plus local runtimes make private, offline classroom assistance realistic on hardware a night school can own — the strong versions no longer live only behind cloud APIs that log every sentence.\n\n## Honest limits\nConfident wrong answers on legal or exam content are worse than a slow human; keep human review on those. Volunteers can learn a runbook, not run a model-ops team. Building power and secondhand hardware fail. A loud \"private lab\" brand makes the stairwell lock pointless — design for ordinary cover. One room, one certificate track, or one device cart first; not a national underground network in 2026.\n\n## Unlocks Use Case(s)\nRoom-only tutoring that never crosses a monitored gateway; form and rights help with custody of the learner's words; low-signature study tools that look like ordinary night-school kit.\n\n## Applications\nShared device carts with a volunteer runbook; offline exam-prep assistants with syllabus-checked answer gates; room-network study helpers with explicit, rare, stripable sync for updates; first-session flows that let a nervous learner start without feeling watched. Invent the local system — kit, keys, update path, human gates.\n",
+  "rules": [
+    {
+      "id": "public-filter-and-block-warden",
+      "kind": "law",
+      "label": "Public filter and block-warden reporting",
+      "body": "Every public connection in the stack runs through the ministry filter, and building wardens must report gatherings that look political. Study tools that phone out are visible; the filter can cut them mid-sentence.",
+      "effects": [
+        "share-required"
+      ]
+    }
+  ],
   "mission": {
     "id": "spotlight-ai-edge-north-stack-2026",
     "globalId": "totalitarianism",
-    "title": "Night school under the filter at North Stack",
+    "title": "The stairwell door at North Stack Night School",
     "place": "North Stack Night School (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -59,31 +94,38 @@
     "pressure": {
       "local": {
         "label": "Learning",
+        "description": "Exam prep, job forms, and rights lessons stall each time the help cuts out mid-sentence and the queue outgrows one volunteer.",
         "pressure": 3,
         "pressureRise": 1,
         "winMax": 1
       },
       "global": {
         "label": "Fear",
+        "description": "A typed question can become evidence. Shared accounts and logged wifi teach adults to ask smaller questions or stop coming.",
         "pressure": 2,
         "pressureRise": 1,
         "winMax": 1
       },
       "support": {
         "label": "Burnout",
+        "description": "Three volunteers are tutor, proctor, and tech support with no spare devices. When enrollment drops, funders call the room low demand.",
         "pressure": 2,
-        "pressureRise": 1,
+        "pressureRise": 0,
         "winMax": 1
       }
     },
-    "scene": "Omar locks the stairwell door before he powers the secondhand laptop. On North Stack's third floor, adults wait for exam help the public filter just killed mid-sentence. Last month a rights question flagged a shared cloud account. Three learners stopped coming. The only smart tutor still phones the ministry's pipes. Who designs help that never leaves this room?",
-    "briefMd": "## The place\n\nOmar locks the stairwell door before he powers the secondhand laptop. The bulb in the North Stack corridor hums. On the third floor of a fictive high-rise block, twelve adults unfold cheap chairs around two folding tables. This is night school — exam prep, job forms, and the plain language of rights that the daytime curriculum skips.\n\nHe opens the browser tutor the city library still recommends. The page spins. Then it dies mid-sentence on a history prompt. The public filter won again.\n\nLast month someone typed a careful question about assembly law into a free cloud chatbot on the shared account. The session froze. Two days later a block warden asked why the community room was “studying politics.” Three learners stopped coming. They still need the certificate. They will not risk another flag.\n\nOmar prints worksheets when the toner lasts. He answers what he can from memory. The queue is longer than one volunteer. Learners who can pay for private tutors leave the stack. Everyone else learns to ask smaller questions.\n\nThe driver is not a lack of curiosity. It is a learning stack that only gets “smart” by shipping every prompt through pipes the ministry can watch, throttle, or stain. Convenience still points at the cloud. Fear teaches silence faster than any lesson plan.\n\nWho designs help that stays useful when the backbone lies, listens, or simply fails — without turning night school into a louder target?\n\n## What’s strained\n\n**Learning** stalls when tools cut out on the exact topics adults need for exams and work. Worksheets cannot explain a stuck algebra step at midnight. Cloud tutors that vanish mid-answer waste the only free hours people have after shifts.\n\n**Fear** rises when a prompt can become evidence. Shared accounts, logged wifi, and “helpful” cloud copilots turn ordinary study into risk. People self-censor. The room gets quieter. The certificate gets further away.\n\n**Burnout** hits Omar and the two other volunteers first. They are translators, proctors, and tech support with no spare devices and no safe smart layer. When enrollment drops, funders call the program “low demand.” The demand went underground or went silent.\n\nIf nothing changes, North Stack keeps a room and loses a generation of adult learners who will not type the truth into a box that phones home.\n\n## A capability that just became more real\n\n**Artificial intelligence** here means software that can draft, explain, translate, and quiz in natural language. For years the strong versions lived behind cloud APIs. That meant every sensitive sentence left the building.\n\nWhat shifted is the **open-weight and edge** wave. Open-weight models publish the learned parameters so a community can run them on hardware it controls. Efficient tiers — including large sparse models that only activate a smaller slice of weights per token, and smaller distilled models — plus quantization and local runtimes make serious help runnable on locked laptops, phones, and mini PCs. Some setups work offline. Some stay on a single room network with no outbound model calls.\n\nThe advance is not a brand you must buy. It is a **capability class**: private inference good enough for tutoring and form help, without renting a distant brain that logs the prompt.\n\nThat capability does nothing for North Stack until someone invents the kit, the rules, the update path, and the human gates around it.\n\n## Your brief\n\nDesign an invention for **North Stack Night School** that makes honest use of **AI** in this place and year — especially local, open-weight, edge-runnable assistance.\n\nStakeholder: **Omar, volunteer tutor lead**, who must face learners after every outage and every rumor of a flagged account. He will not deploy a toy that gets someone hurt. He also cannot keep serving twelve adults with worksheets alone.\n\nName your invention. Write how it works on a bad connectivity night. Show who holds the device keys, how models get updated without a reckless open pipe, how wrong answers get caught, and how a nervous first-time learner starts a session without feeling watched.\n\nYou are not asked to topple a regime or build a surveillance counter-weapon. You are asked to invent **learning infrastructure that keeps custody of people’s words** while still raising Learning and lowering Fear and Burnout.\n\nEnd on the choice this room forces: smart help that leaves, or smart help that stays — and what you build so “stays” is real.\n\n## Constraints\n\n- **No mandatory cloud round-trip for core tutoring.** Optional sync must be explicit, rare, and stripable.\n- **Cheap, repairable, shared hardware** beats a lab full of unobtainium. Think secondhand laptops, phones, a mini PC under the table, battery or building power that fails.\n- **Finite volunteer skill.** Omar can learn a runbook. He cannot become a full-time ML ops team.\n- **Trust over fluency.** A confident wrong answer on legal or exam content is worse than a slow human. Human gates and clear “not legal advice / check the syllabus” beats magic.\n- **Low signature.** A flashing “dissident AI lab” brand makes the stairwell lock pointless. Design for ordinary night-school cover: study tools, language practice, form help.\n- **Dignity.** Learners are adults with jobs and fear, not props. No real-world victim names; no gore; no revenge plot — invent the system of help.\n- **Pilot honesty.** One room, one certificate track, or one device cart first — not a national underground network on turn one.\n",
+    "scene": "Omar locks the stairwell door before he powers the secondhand laptop. On North Stack's third floor, twelve adults wait for exam help the public filter just killed mid-sentence. Last month a careful rights question on the shared account brought the block warden to the door. Three learners stopped coming. The only help that still works sends every word out through the ministry's pipes. Who designs help that never leaves this room?",
+    "briefMd": "## The place\n\nOmar locks the stairwell door before he powers the secondhand laptop. The bulb in the North Stack corridor hums. On the third floor of the block, twelve adults unfold cheap chairs around two folding tables. This is night school: exam prep, job forms, and the plain language of rights that the daytime curriculum skips.\n\nHe opens the study page the city library still recommends. It spins. Then it dies mid-sentence on a history question. The public filter won again.\n\nLast month someone typed a careful question about assembly law into the free help on the shared account. The session froze. Two days later a block warden asked why the community room was studying politics. Three learners stopped coming. They still need the certificate. They will not risk another flag.\n\nOmar prints worksheets while the toner lasts and answers what he can from memory. The queue is longer than one volunteer. Learners who can pay for private tutors leave the stack. Everyone else learns to ask smaller questions.\n\n## The bigger problem\n\nNorth Stack is one room in a country where learning runs through pipes someone else watches. Every useful study tool gets useful by sending each question out of the building, where it can be throttled, logged, or turned into a knock on the door.\n\nThe root is not a lack of curiosity, and not a missing gadget. It is a system that decides who may read what, and that makes convenience point at the watcher. Fear teaches silence faster than any lesson plan. When the room goes quiet, funders read it as low demand, and the volunteers who kept it open burn out first.\n\n## Your job\n\nInvent a way these adults can get real help with exams, forms, and their rights without one word of it leaving this room, on nights when the building power and the connection both fail. Stakeholder: **Omar, volunteer tutor lead**, who faces the learners after every outage and every rumor of a flagged account, and will not deploy anything that gets someone hurt. The choice this room forces is simple to say and hard to build: help that leaves, or help that stays.\n",
     "stakeholder": "Omar, volunteer tutor lead",
     "suggested": [
-      "ai"
+      "ai",
+      "computing",
+      "networks"
     ],
     "suggestedWhy": {
-      "ai": "Assistance that runs on the school's own laptops, offline, can lift Learning without sending student work away."
+      "ai": "A tutor that runs on the school's own laptops, offline, can lift Learning without sending a learner's words away.",
+      "computing": "A cheap box under the table that holds the help locally keeps questions in the room, so Fear has less to feed on.",
+      "networks": "A room-only link between the devices lets one runbook serve twelve learners, easing Burnout for the volunteers."
     },
     "visionTheme": "social-city"
   }

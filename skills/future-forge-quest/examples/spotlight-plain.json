@@ -1,0 +1,102 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "spotlight-drones-peck-orchard-2026",
+  "version": 1,
+  "title": "The far block at Peck Orchard",
+  "summary": "Elena tapes a hail tag on the first bin at Peck Orchard. The buyer trucks come at ten. Hail last night blackened fruit she cannot see past the third block, and the county will not let anyone leave the tree line without a watcher on the ground.",
+  "author": {
+    "name": "Future Forge skill example",
+    "note": "Plain spotlight fixture — imitate this default"
+  },
+  "createdAt": "2026-09-19T00:00:00Z",
+  "tags": [
+    "spotlight",
+    "drones",
+    "agriculture"
+  ],
+  "license": "MIT",
+  "placement": {
+    "mode": "replace-daily"
+  },
+  "spotlight": {
+    "techId": "drones",
+    "advanceTitle": "Rugged orchard inspection craft that can hold a line of sight",
+    "advanceSummary": "Small uncrewed inspection craft got cheaper, longer-legged, and better at hugging tree rows, so a packing floor can see far blocks in one pass — if the local workflow, power, and county watcher rule exist.",
+    "asOf": "2026-07",
+    "encourageCopy": "Invent a way this packing floor can know which far-block fruit is still good before the trucks leave."
+  },
+  "research": {
+    "topic": "Agricultural inspection craft and visual-line-of-sight rules (2026)",
+    "bullets": [
+      "Small uncrewed craft already fly inspection and spray routes over orchards and vineyards where a person on the ground can keep them in sight.",
+      "Beyond-line-of-sight work is still gated by local rules, radio, and a watcher — capability alone does not invent the packing-floor workflow."
+    ],
+    "sources": [
+      {
+        "title": "FAA: Unmanned Aircraft Systems (UAS)",
+        "url": "https://www.faa.gov/uas",
+        "accessed": "2026-09-19"
+      }
+    ]
+  },
+  "globalId": "ag",
+  "grounding": "## Technology\n- **emTech:** drones\n- **Product category:** Low-altitude orchard inspection craft — cameras and simple sensors on a small airframe that can hug tree rows and return a same-morning map of hail, rot, and gaps.\n\n## Capabilities\nA trained operator can cover far blocks in one pass that would take a walker until noon, and mark fruit that is brown under the skin, provided battery, radio, and a legal watcher exist. Spray and delivery are a different product; this tile is look-and-map.\n\n## Trends & predictions\nAirframes got cheaper and more field-rugged through 2025–2026; software stitches a row into a picture a packing lead can read. **Forecast (not lock):** same-morning orchard maps become routine where county rules and a spare operator hold.\n\n## Milestone\nAround 2026, small inspection craft plus stitching software make a same-morning far-block read realistic for a family orchard — not only for a research station.\n\n## Honest limits\nWind after hail grounds the craft. A county visual-line-of-sight rule still needs a watcher unless the invent changes how looking is done. No full agronomy team. Pilot one orchard, one morning, not a county fleet.\n\n## Unlocks Use Case(s)\nSame-morning hail and rot maps for packing decisions; a record a buyer can see that a walker cannot fake.\n\n## Applications\nPacking-shed flight runbooks; row-map boards the night crew can read; a watcher workflow that does not steal the whole floor — invent the local system.\n",
+  "rules": [
+    {
+      "id": "county-tree-line-watcher",
+      "kind": "regulation",
+      "label": "County tree-line watcher rule",
+      "body": "Any craft that leaves the tree line must stay in sight of a named watcher on the ground for the whole flight. The packing floor has four people and none to spare on a hill.",
+      "effects": [
+        "eval-required"
+      ]
+    }
+  ],
+  "mission": {
+    "id": "spotlight-drones-peck-orchard-2026",
+    "globalId": "ag",
+    "title": "The far block at Peck Orchard",
+    "place": "Peck Orchard, Willow Cut (fictive)",
+    "startYear": 2026,
+    "collapseYear": 2032,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "local": {
+        "label": "Hours",
+        "description": "The buyer trucks come at ten. Walking the far blocks takes until noon. Every minute she guesses, good fruit sits and bad fruit ships.",
+        "pressure": 3,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "global": {
+        "label": "Rot",
+        "description": "Hail, heat, and blight do not wait on a walker. Farms that only believe what a person can see before the truck will throw good fruit and ship bad fruit in the same hour.",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "support": {
+        "label": "Trust",
+        "description": "Pickers and buyers remember last year's guess. One bad bin and they stop waiting on this floor.",
+        "pressure": 2,
+        "pressureRise": 0,
+        "winMax": 1
+      }
+    },
+    "scene": "Elena tapes a hail tag on the first bin. At Peck Orchard the buyer trucks come at ten. Hail last night blackened fruit she cannot see past the third block. The county will not let anyone leave the tree line without a watcher on the ground. Who can tell her which far-block fruit is still good before the trucks leave?",
+    "briefMd": "## The place\n\nElena tapes a hail tag on the first bin at **Peck Orchard**. Dawn. Willow Cut still smells like wet leaves. The buyer trucks come at ten. The near rows she can walk. Past the third block the trees close over, and last night's hail is a rumor.\n\nShe picks one apple from the near row. Sound. She picks one from the edge of the far block. Brown under the skin. She cannot walk every row before the trucks. Last year she guessed. The packing floor threw out two bins that were fine, and kept one that was not. The buyer cut the contract for a month.\n\nThe county clerk left a laminated card on the packing-shed door. Any craft that leaves the tree line needs a watcher who can see it the whole time. Elena has four people on the floor and none to spare on a hill. The far blocks stay a guess.\n\nThe pickers wait by the bins. If she sends them into spoiled fruit they lose the morning. If she holds them they miss the trucks. Either way the floor goes quiet.\n\n## The bigger problem\n\nThis is how a harvest dies in the rows nobody can walk. Truth lives at walking speed. Hail, heat, and blight do not. A farm that only believes what a person can see before the buyer comes will throw good fruit and ship bad fruit in the same hour.\n\nThe root is not a missing pair of eyes in the sky. It is a packing floor that has no way to know the far blocks in the hour it still has, and a county rule that treats looking from above as a spectacle that needs a babysitter. Every orchard on this ridge lives under the same clock.\n\n## Your job\n\nInvent a way this packing floor can know which far-block fruit is still good before the trucks leave, without walking every row. Stakeholder: **Elena Ruiz, night packing lead**.\n",
+    "stakeholder": "Elena Ruiz, night packing lead",
+    "suggested": [
+      "drones",
+      "iot",
+      "battery"
+    ],
+    "suggestedWhy": {
+      "drones": "A look from above the far blocks names good fruit before Hours run out.",
+      "iot": "Cheap watches on the far blocks flag Rot before a person can walk it.",
+      "battery": "Power that waits in a pack lets the night crew keep looking, which is what keeps Trust."
+    },
+    "visionTheme": "rebuild-city"
+  }
+}

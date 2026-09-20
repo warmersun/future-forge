@@ -518,6 +518,7 @@ Role:
   - Never use a page as a substitute for the invent gate.
 - If context.grounding is present, treat it as authoritative capability truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits). Prefer that grain over the whole emTech tray card.
 - Scaffold the learner to **apply** unlocked use cases as a local **application** in this place/year (pilot-honest) — do not dump a finished invention or expand to unlimited bare emTech.
+- If context.spotlightAdvance is set, this lesson is pegged to a real recent advance (title, summary, asOf). The player-facing story deliberately never names it. Once the learner has the story (they have read the briefing, or asked about the place or what could help), name the advance, the emTech family it belongs to, and where it sits on its curve: what just became possible, and what is still years out. Say it in plain words first, then the term. Do not lead with the advance before the story, and never present it as the answer to invent — it is what makes the invent possible here.
 - Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
 
 Tutor style (hard rules for teaching):
@@ -564,7 +565,7 @@ const HEX_INVENT_HINT =
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
-  " Tutor mode: one current idea per reply, taught in a short paragraph (4–8 sentences, ~80–180 words, analogy + one mechanism); full sentences; no quiz or check questions; answer the question they asked (SEQUENCE does not block a later idea); explain terms a high-school senior may not know on first use; do not dump full solutions; use context.aiTutorContext as hidden curriculum without pasting it wholesale. Answer vs send-to-read: always speak the explanation (never a URL alone); do not rewrite a lesson page; stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link; after the spoken paragraph, offer the one matching RESOURCES/ILLUSTRATIONS page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version (https only; chat renders links and inline images).";
+  " Tutor mode: one current idea per reply, taught in a short paragraph (4–8 sentences, ~80–180 words, analogy + one mechanism); full sentences; if context.spotlightAdvance is set, name that real advance, its emTech family, and where it sits on its curve once the learner has the story (never before, never as the answer); no quiz or check questions; answer the question they asked (SEQUENCE does not block a later idea); explain terms a high-school senior may not know on first use; do not dump full solutions; use context.aiTutorContext as hidden curriculum without pasting it wholesale. Answer vs send-to-read: always speak the explanation (never a URL alone); do not rewrite a lesson page; stay in chat for recaps, follow-ups after they already got that page, invent/how-it-works, and confusion after a link; after the spoken paragraph, offer the one matching RESOURCES/ILLUSTRATIONS page when this is the next SEQUENCE idea, a listed misconception fires, or they ask for the long version (https only; chat renders links and inline images).";
 
 /**
  * Resolve optional Quest grounding string from request context.
@@ -600,6 +601,25 @@ function resolveTutorContext(context) {
     return String(context.mission.aiTutorContext).trim().slice(0, 50_000);
   }
   return null;
+}
+
+/**
+ * Spotlight advance for tutor mode: { title, summary, asOf } or null.
+ * Accepts the object the client sends, or a bare summary string from older clients.
+ */
+function resolveSpotlightAdvance(context) {
+  const raw = context?.spotlightAdvance;
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    const summary = raw.trim().slice(0, 600);
+    return summary ? { title: null, summary, asOf: null } : null;
+  }
+  if (typeof raw !== "object") return null;
+  const title = String(raw.title || "").trim().slice(0, 200) || null;
+  const summary = String(raw.summary || "").trim().slice(0, 600) || null;
+  const asOf = String(raw.asOf || "").trim().slice(0, 32) || null;
+  if (!title && !summary) return null;
+  return { title, summary, asOf };
 }
 
 function isTutorMode(context) {
@@ -1975,6 +1995,8 @@ function buildUserPayload({ messages, context, mode }) {
     isLearningModule: tutorMode,
     tutorMode,
     aiTutorContext,
+    // Learning quests only: the tutor names the real advance after the learner has the story.
+    spotlightAdvance: tutorMode ? resolveSpotlightAdvance(context) : null,
     focusTechId: context?.focusTechId || null,
     hexInvent: Boolean(context?.hexInvent),
     hexEval: context?.hexEval || null,

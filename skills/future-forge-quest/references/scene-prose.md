@@ -9,17 +9,17 @@ Player text has three jobs, in this order:
 2. **Bigger problem** — what that scene is a case of, plus **root cause**
 3. **Outcome job** — what must get better; open invent; no product
 
-Capability truth, product names, and “invent with this tech” hints live in **`grounding`** and **tutor mode** only.
+Capability truth, product names, and “invent with this tech” hints live in **`grounding`** and **tutor mode** only. That covers the **supporting techs** on the shelf too, not only the spotlight: the tray shows them with a *why here*; the prose does not.
 
 Use this for:
 
 | Field | How to apply |
 |-------|----------------|
-| `mission.scene` | Full spine in plain text. Schema max **500 characters**. Short breaths, punch-lines, open challenge. |
+| `mission.scene` | Full spine in plain text. Schema max **500 characters**. Short breaths, punch-lines, open challenge. It is the co-inventor’s opening line and the Imagine locale lock, so it must stand alone; when `briefMd` exists it is **not** the left-column copy. |
 | `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). **2–4 short paragraphs** (blank line between) — the invent screen shows each as a walkthrough card. |
 | `mission.briefMd` → **The bigger problem** | Zoom-out + root cause. Everyday words. Not a capability lecture. |
 | `mission.briefMd` → **Your job** | Outcome only (see `brief-template.md`). |
-| `summary` | The instance in 2–3 spoken sentences (names and place **allowed**). |
+| `summary` | The instance in 2–3 spoken sentences (names and place **allowed**). Shown whole (≤420) on the invent banner and catalog cards. |
 | `title` | Human situation and/or fictive place. |
 | `spotlight.encourageCopy` | Outcome in everyday words — never the tray tech. |
 | `mission.suggestedWhy[techId]` | *Why this family here*, one sentence naming the crisis meter it eases. Lives under the tray card, so the family name is fine; product names are not. |
@@ -114,7 +114,7 @@ Catalog theme seeds can stay in lived-harm story voice. **Spotlight and learning
 4. Capability lectures, product-category chains, lesson SEQUENCE, brand names, and “invent with [spotlight tech]” belong in **`grounding`** / **`aiTutorContext`** — never as the bulk of `briefMd`, never in `summary` / `scene` / `encourageCopy`.
 5. Ban insider shorthand in player fields: “local cut,” unexplained “open-weight,” “MoE,” “genome-scale opposite-handed DNA,” “filtered backbone,” etc.
 
-The tray already suggests the tech (`mission.suggested`). Naming it in player prose turns the quest into a riddle whose answer is the product.
+The tray already suggests the spotlight and its supporting techs (`mission.suggested`, each with a *why here*). Naming any of them in player prose turns the quest into a riddle whose answer is the product.
 
 ---
 

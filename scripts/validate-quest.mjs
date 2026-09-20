@@ -10,9 +10,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
-const tilePath = process.argv[2];
+const argv = process.argv.slice(2);
+const strict = argv.includes("--strict");
+const tilePath = argv.find((a) => !a.startsWith("--"));
 if (!tilePath) {
-  console.error("Usage: node scripts/validate-quest.mjs <quest.json>");
+  console.error("Usage: node scripts/validate-quest.mjs <quest.json> [--strict]");
   process.exit(2);
 }
 
@@ -25,6 +27,24 @@ if (!fs.existsSync(abs)) {
 const { validateQuestDocument, parseQuestTileJson } = await import(
   pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href
 );
+const { lintQuestTile, formatLintWarnings } = await import(
+  pathToFileURL(path.join(ROOT, "js/quest-lint.js")).href
+);
+
+/** Craft warnings after shape OK; --strict turns them into a failure. */
+function reportLint(raw, validated) {
+  const { warnings } = lintQuestTile(raw, validated);
+  if (!warnings.length) {
+    console.log("  lint: clean");
+    return 0;
+  }
+  for (const line of formatLintWarnings(warnings)) console.log(`  ${line}`);
+  if (strict) {
+    console.error(`FAIL: ${warnings.length} lint warning(s) (--strict)`);
+    return 1;
+  }
+  return 0;
+}
 
 const raw = fs.readFileSync(abs, "utf8");
 const parsed = parseQuestTileJson(raw);
@@ -56,7 +76,7 @@ if (r.tile?.kind === "module" || r.kind === "module") {
     console.log(`  sponsor: ${t.sponsorName}${ban}`);
   }
   if (t.overviewMd) console.log(`  overviewMd: ${t.overviewMd.length} chars`);
-  process.exit(0);
+  process.exit(reportLint(parsed.value, r));
 }
 
 const m = r.mission;
@@ -98,4 +118,4 @@ if (m.sponsorName) {
   console.log(`  sponsor: ${m.sponsorName}${ban}`);
 }
 console.log(`  pressure: ${JSON.stringify(m.pressure)}`);
-process.exit(0);
+process.exit(reportLint(parsed.value, r));

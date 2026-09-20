@@ -71,6 +71,11 @@ export const SCENE_HINT_REWRITE =
   "Vary sentence length and land punch-lines. Do not imitate dense stacked-clause style. Do not shorten for its own sake.";
 
 /** Technical cap — generous so craft is not truncated mid-story. */
+/**
+ * Generated seed scenes (js/scenario-seeds.js) may run this long.
+ * Imported Quest tiles cap mission.scene at 500 (CAPS.scene in js/quest-tile.js);
+ * their longer story lives in briefMd.
+ */
 export const SCENE_CHAR_CAP = 2000;
 
 /**

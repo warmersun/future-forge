@@ -4,7 +4,9 @@
 
 **Length:** Aim **~250–600 words**. Hard cap: 12 000 characters. Curriculum, research dumps, and capability chains do not belong here.
 
-**Walkthrough:** The invent screen shows this brief **one short beat at a time**. Write **The place** as 2–4 short paragraphs (one idea each). `summary` is the instance lede in the left banner (named people and place are allowed). Optional authored cards: `brief-beats.md`.
+**Walkthrough:** The invent screen shows this brief **one short beat at a time** — one card per paragraph (list blocks count as one), **Your job** always last, merged down to **8** cards. Write **The place** as 2–4 short paragraphs (one idea each) and keep the whole brief to ≤8 paragraphs. `summary` is the instance lede in the left banner, shown whole (named people and place are allowed). Optional authored cards: `brief-beats.md`.
+
+**AI clip:** the co-inventor reads this brief as plain text cut at **2800 characters**. Decisive facts (who, what broke, the root cause, the outcome) belong early; the 12 000-char cap is a safety ceiling, not a target.
 
 Write headings in this order (the walkthrough already shows story then job):
 
@@ -21,7 +23,7 @@ A brief little story: an **instance** of the bigger global issue. Fictive place,
 Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath **and per paragraph**.
 Lived local harm + local driver must both appear as story.
 Target: 2–4 tight paragraphs (fuller than `mission.scene`; same craft). Not a novella. Not one dense block.
-Do **not** name the spotlight tech, a sponsor product, or “what just became possible.”
+Do **not** name the spotlight tech, any supporting tech on the shelf, a sponsor product, or “what just became possible.”
 
 ## The bigger problem
 
@@ -37,7 +39,7 @@ Outcome only. What must be true for these people / this class of place.
 No product name. No “invent with [tech].” No “do not invent X” ban-list.
 No “pass a law,” “ban the model,” or “UBI bill” as the job — those are weather, not the invent.
 Stakeholder can appear here in one line (same paragraph — a blank line makes a second walkthrough card).
-End on the open choice — not a solution checklist. The tray already suggests the spotlight tech (`mission.suggested`); the tutor and `grounding` may hint later.
+End on the open choice — not a solution checklist. The tray already suggests the spotlight and its supporting techs (`mission.suggested`, with `suggestedWhy` under each card); the tutor and `grounding` may hint later.
 ```
 
 Also write **`mission.scene`** as a plain-text instance lede (≤500 chars) with the same spine — see `references/scene-prose.md`. Write **`summary`** as the instance (names allowed), **`title`** as the human situation / place, **`encourageCopy`** as the outcome — see `SKILL.md` Procedure §4.

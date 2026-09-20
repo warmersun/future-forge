@@ -32,15 +32,17 @@
       "Field and clinic sequencing can shorten time from sample to provisional read versus distant central labs.",
       "Workflow, power, training, and trust still gate real use — not the existence of sequencers alone."
     ],
-    "sources": [],
+    "sources": [
+      {
+        "title": "NHGRI: The cost of sequencing a human genome",
+        "url": "https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost",
+        "accessed": "2026-09-19"
+      }
+    ],
     "showToPlayer": false
   },
   "globalId": "infectious",
-  "resources": {
-    "apMax": 4,
-    "startingBudget": 8,
-    "startingWill": 4
-  },
+  "grounding": "## Technology\n- **emTech:** gene-sequencing\n- **Product category:** Portable / clinic-rugged same-shift pathogen sequencers\n\n## Capabilities\nSame-shift or next-morning provisional pathogen reads when workflow, power, reagents, and trained staff exist — not sequencing as a capital-lab monopoly only.\n\n## Trends & predictions\nTime-to-read and ruggedness improve; reagent kits get cheaper; software turns raw reads into provisional signals for non-specialist posts. **Forecast (not lock):** same-shift reads become more routine at border and rural clinics through the late 2020s where power and training hold.\n\n## Milestone\nCheaper, more field-rugged sequencers and software (through ~2026) make on-site clinic reads realistic for small posts.\n\n## Honest limits\nPower and cold chain after dusk; no full bioinformatics team; public trust fragile — pilot language only for 2026.\n## Unlocks Use Case(s)\nLocal sample-to-read workflows; triage and isolation decisions without waiting on a distant lab truck.\n\n## Applications\nClinic sample-to-isolation protocols; shift-handoff pathogen boards; trust-preserving result counseling workflows — invent the local system.\n",
   "trends": [
     {
       "id": "gene-seq-cost-per-genome",
@@ -83,54 +85,10 @@
           "url": "https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost"
         }
       ]
-    },
-    {
-      "id": "pathogen-seq-turnaround-hours",
-      "techId": "gene-sequencing",
-      "name": "Sample-to-provisional read time",
-      "summary": "Reading a pathogen’s DNA used to mean days of waiting after the sample left the clinic. Better machines, kits, and analysis software have shortened that wait — from about two days toward same-shift answers in well-run pilots. Workflow, power, and training still limit how often that speed shows up in the field. The chart is hours from sample in to a first usable read — lower means faster.",
-      "capability": "Faster pathogen sequencing turnaround",
-      "unit": "hours (sample to first read)",
-      "compounding": {
-        "kind": "halving",
-        "periodYears": 3
-      },
-      "anchor": {
-        "date": "2018-01-01",
-        "value": 48
-      },
-      "domain": {
-        "start": "2014",
-        "end": "2034"
-      },
-      "milestones": [
-        {
-          "id": "turn-2018",
-          "label": "~2-day class common",
-          "date": "2018",
-          "value": 48,
-          "status": "reached"
-        },
-        {
-          "id": "turn-2026",
-          "label": "Same-shift clinic workflows",
-          "date": "2026",
-          "value": 8,
-          "status": "reached"
-        },
-        {
-          "id": "turn-2030-pred",
-          "label": "Sub-4h more routine (forecast)",
-          "date": "2030",
-          "value": 3,
-          "status": "predicted"
-        }
-      ]
     }
   ],
   "spotlightTrends": [
-    "gene-seq-cost-per-genome",
-    "pathogen-seq-turnaround-hours"
+    "gene-seq-cost-per-genome"
   ],
   "mission": {
     "id": "spotlight-gene-seq-border-clinic-2026",
@@ -143,25 +101,59 @@
     "pressure": {
       "local": {
         "label": "Outbreak",
-        "pressure": 2,
+        "description": "The fever pattern on the fridge sheet is real and still invisible while the swabs ride the weekly lab truck. Every day without an answer, the bench and the ward trade places.",
+        "pressure": 3,
         "pressureRise": 1,
         "winMax": 1
       },
       "support": {
         "label": "Fear",
-        "pressure": 1,
-        "pressureRise": 1,
+        "description": "Traders and travelers hear rumors before results. When the market empties on a guess, the clinic loses the trust it needs to isolate anyone.",
+        "pressure": 2,
+        "pressureRise": 0,
         "winMax": 1
       }
     },
     "scene": "Nurse Amina seals another swab and slides it into the cooler. The fever does not match the sheet on the fridge. The lab truck left at dawn. Answers take days. By then the queue has moved on — or the ward is full. Who can tell her what the fever is before the next queue arrives?",
-    "briefMd": "## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7**. Three nurses. A doctor on alternate days. A generator that coughs after midnight. Travelers and traders share one waiting bench.\n\nShe checks the fever sheet taped to the fridge. The pattern does not match.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\n## The bigger problem\n\nThis is how outbreaks stay invisible. Truth lives in a capital lab. The calendar is a truck, not a shift.\n\nWhile samples travel, rumors move first. The wrong ward fills. A market empties. The next traveler is already gone. The root is not that this bench lacks a machine. It is a system that only believes a result after it has left the people who needed it.\n\n## Your job\n\nInvent a way this clinic can know what the fever is before the next queue arrives. Stakeholder: **Dr. Okonkwo, clinic lead**.\n",
+    "briefMd": "## The place\n\nNurse Amina seals another swab under the corrugated awning at **Crossing Clinic 7**. Three nurses. A doctor on alternate days. A generator that coughs after midnight. Travelers and traders share one waiting bench.\n\nShe checks the fever sheet taped to the fridge. The pattern does not match. Last week it was children from the river side. This week it is drivers who slept in their cabs, and two of them are back for the second time.\n\nLabeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Central results return in days, not hours. By then the person on the bench has moved on. Or the ward is full. Rumors fill the gap first.\n\nDr. Okonkwo, who runs the clinic, has one call to make before the market opens. Close the bench and lose the traders' trust, or keep it open and guess. Neither choice is a diagnosis.\n\n## The bigger problem\n\nThis is how outbreaks stay invisible. Truth lives in a capital lab. The calendar is a truck, not a shift. A clinic that sees the first cases is the last to know what they are.\n\nWhile samples travel, rumors move first. The wrong ward fills. A market empties on a guess. The next traveler is already across the border. The root is not that this bench lacks a machine. It is a system that only believes a result after it has left the people who needed it, and gives them nothing to say in the meantime.\n\n## Your job\n\nInvent a way this clinic can know what the fever is before the next queue arrives. Stakeholder: **Dr. Okonkwo, clinic lead**.\n",
+    "briefBeats": [
+      {
+        "id": "place-1",
+        "role": "place",
+        "title": "The place",
+        "bodyMd": "Nurse Amina seals another swab under the corrugated awning at Crossing Clinic 7. The fever sheet on the fridge does not match.",
+        "imageUrl": "assets/problems/infectious.jpg",
+        "imagePrompt": "Photoreal documentary still: a small border clinic under a corrugated awning, a nurse sealing a swab, heat, no readable text, no logos."
+      },
+      {
+        "id": "place-2",
+        "role": "place",
+        "title": "The place",
+        "bodyMd": "Labeled tubes stack in the cooler. The weekly lab truck already rolled out at dawn. Answers take days. Rumors fill the gap first."
+      },
+      {
+        "id": "strain-1",
+        "role": "strain",
+        "title": "The bigger problem",
+        "bodyMd": "Outbreaks stay invisible because truth lives in a capital lab. The calendar is a truck, not a shift. Rumors move first."
+      },
+      {
+        "id": "job-1",
+        "role": "job",
+        "title": "Your job",
+        "bodyMd": "Invent a way this clinic can know what the fever is before the next queue arrives."
+      }
+    ],
     "stakeholder": "Dr. Okonkwo, clinic lead",
     "suggested": [
-      "gene-sequencing"
+      "gene-sequencing",
+      "iot",
+      "networks"
     ],
     "suggestedWhy": {
-      "gene-sequencing": "A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue."
+      "gene-sequencing": "A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.",
+      "iot": "Cheap sensors on the fridge and the cooler can flag a fever pattern early, so Outbreak is seen before the truck.",
+      "networks": "A shared result board across the border posts turns rumor into a posted answer, easing Fear at the bench."
     },
     "visionTheme": "care-city"
   }
