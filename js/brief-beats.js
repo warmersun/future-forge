@@ -108,6 +108,197 @@ export function jobLineFromMission(mission, opts = {}) {
   return "";
 }
 
+/** Player-facing outcome line (not the instance summary). */
+export const OUTCOME_JOB_FALLBACK = "Invent a way this place gets better this year.";
+
+/**
+ * Persistent "Your job" copy: encourageCopy, then the job beat, never the instance lede.
+ * @param {object|null|undefined} mission
+ * @param {{ encourageCopy?: string, title?: string, beats?: BriefBeat[], summary?: string }} [opts]
+ */
+export function outcomeJobFromMission(mission, opts = {}) {
+  const encourage = String(
+    opts.encourageCopy || mission?.spotlight?.encourageCopy || ""
+  ).trim();
+  if (encourage) return clipLede(encourage, JOB_LINE_CAP);
+
+  const beats = Array.isArray(opts.beats)
+    ? opts.beats
+    : resolveBriefBeats(mission, opts);
+  const jobBeat = [...beats].reverse().find((b) => b.role === "job");
+  if (jobBeat?.bodyMd) {
+    const plain = plainTextFromMarkdown(jobBeat.bodyMd).trim();
+    if (plain) return clipLede(plain, JOB_LINE_CAP);
+  }
+
+  if (String(opts.title || mission?.title || "").trim()) {
+    return OUTCOME_JOB_FALLBACK;
+  }
+  return "";
+}
+
+/**
+ * Three-line recap after the walk (place / bigger problem / job).
+ * @param {BriefBeat[]|null|undefined} beats
+ * @returns {{ place: string, strain: string, job: string }}
+ */
+export function compactRecapFromBeats(beats) {
+  const list = Array.isArray(beats) ? beats : [];
+  const take = (role) => {
+    const beat =
+      role === "job"
+        ? [...list].reverse().find((b) => b.role === "job")
+        : list.find((b) => b.role === role);
+    if (!beat?.bodyMd) return "";
+    return clipLede(plainTextFromMarkdown(beat.bodyMd), 220);
+  };
+  return {
+    place: take("place"),
+    strain: take("strain"),
+    job: take("job"),
+  };
+}
+
+/** Prompt paste: three-heading player brief (instance → RCA → outcome). */
+export const BRIEF_MD_RECIPE = [
+  "QUEST BRIEF (mission.briefMd, Markdown, ~250–600 words):",
+  "Required headings in this order, nothing else:",
+  "## The place — 2–4 short paragraphs (blank line between). Spoken story: named person, concrete place, what went wrong now. Mid-length sentences a friend would say. One or two short punch-lines, not a telegram. Do not close with a 'Who designs X?' riddle.",
+  "## The bigger problem — one or two short paragraphs. This scene is a case of the global issue, plus the root cause (the system that keeps producing it). Everyday words. Not a meter dump, not a capability lecture.",
+  "## Your job — one short paragraph, outcome only. What must get better for these people this year. No product name, no 'invent with [tech]', no ban-list.",
+].join(" ");
+
+const LEGACY_BRIEF_ROLES = new Set(["possible", "constraints"]);
+
+/**
+ * Shape check for new-tile briefMd (place / bigger problem / job; no capability lecture).
+ * @param {string|null|undefined} briefMd
+ * @returns {string[]}
+ */
+export function briefMdShapeIssues(briefMd) {
+  const md = String(briefMd || "").trim();
+  /** @type {string[]} */
+  const issues = [];
+  if (!md) {
+    issues.push("brief_md_missing_place");
+    issues.push("brief_md_missing_bigger_problem");
+    issues.push("brief_md_missing_job");
+    return issues;
+  }
+  const sections = splitMarkdownSections(md);
+  const roles = sections.filter((s) => s.title).map((s) => s.role);
+  if (roles.some((r) => LEGACY_BRIEF_ROLES.has(r))) {
+    issues.push("brief_md_legacy_headings");
+  }
+  if (!roles.includes("place")) issues.push("brief_md_missing_place");
+  if (!roles.includes("strain")) issues.push("brief_md_missing_bigger_problem");
+  if (!roles.includes("job")) issues.push("brief_md_missing_job");
+  return issues;
+}
+
+/**
+ * True when Imagine should run for a beat (authored prompt). Postcard/authored URL otherwise.
+ * @param {{ imagePrompt?: string, imageUrl?: string }|null|undefined} beat
+ */
+export function briefBeatWantsImagine(beat) {
+  if (briefBeatAuthoredUrl(beat)) return false;
+  return Boolean(String(beat?.imagePrompt || "").trim());
+}
+
+function meterPlain(value) {
+  if (value == null || value === false) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "object") {
+    const desc = String(value.description || value.desc || "").trim();
+    if (desc) return desc;
+    return String(value.label || "").trim();
+  }
+  return "";
+}
+
+/**
+ * Split a heading-less scene into 2–4 short place paragraphs.
+ * @param {string|null|undefined} scene
+ * @returns {string[]}
+ */
+function isWorkshopRiddle(sentence) {
+  const s = String(sentence || "").trim();
+  return /^who (designs|builds|invents|writes|makes)\b/i.test(s);
+}
+
+/** Drop a trailing "Who designs X?" workshop closer so the place stays a story. */
+export function stripWorkshopRiddle(text) {
+  const sentences = splitSentences(text);
+  if (sentences.length > 1 && isWorkshopRiddle(sentences[sentences.length - 1])) {
+    return sentences.slice(0, -1).join(" ").trim();
+  }
+  return String(text || "").trim();
+}
+
+export function splitSceneIntoPlaceParagraphs(scene) {
+  const text = String(scene || "").trim();
+  if (!text) return [];
+  const existing = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (existing.length >= 2) return existing.slice(0, 4);
+  const sentences = splitSentences(text);
+  if (sentences.length <= 1) return text ? [text] : [];
+  const target = Math.min(4, Math.max(2, Math.ceil(sentences.length / 3)));
+  const size = Math.ceil(sentences.length / target);
+  /** @type {string[]} */
+  const out = [];
+  for (let i = 0; i < sentences.length; i += size) {
+    out.push(sentences.slice(i, i + size).join(" "));
+  }
+  return out.slice(0, 4);
+}
+
+/**
+ * Minimal three-heading brief from a lived scene (theme-pack / offline fallback).
+ * @param {{
+ *   scene?: string,
+ *   title?: string,
+ *   stakeholder?: string,
+ *   crisisMeters?: object,
+ *   pressure?: object,
+ *   globalTitle?: string,
+ *   encourageCopy?: string,
+ * }} [opts]
+ */
+export function briefMdFromLivedStory(opts = {}) {
+  const scene = stripWorkshopRiddle(opts.scene);
+  const paras = splitSceneIntoPlaceParagraphs(scene);
+  const place =
+    paras.join("\n\n") ||
+    scene ||
+    "People here feel the problem now.";
+  const meters = opts.crisisMeters || opts.pressure || {};
+  /** @type {string[]} */
+  const bits = [];
+  const theme = String(opts.globalTitle || "").trim();
+  if (theme) bits.push(`This scene is one instance of ${theme}.`);
+  const global = meterPlain(meters.global);
+  const local = meterPlain(meters.local);
+  const support = meterPlain(meters.support);
+  if (global) bits.push(global);
+  else if (local) bits.push(local);
+  if (support && bits.length < 2) bits.push(support);
+  if (bits.length < 2 && local && global) bits.push(local);
+  if (!bits.length) {
+    bits.push(
+      "The same local driver keeps producing this harm. It is not a one-off accident."
+    );
+  }
+  const who = String(opts.stakeholder || "the people here").trim();
+  let job = String(opts.encourageCopy || "").trim();
+  if (!job || isWorkshopRiddle(job) || /\binvent with\b/i.test(job)) {
+    job = `Invent a way ${who} can get through this year without the same harm landing again.`;
+  }
+  return `## The place\n\n${place}\n\n## The bigger problem\n\n${bits.join(" ")}\n\n## Your job\n\n${job}`;
+}
+
 /**
  * Authored cartoon still on a beat (`https://…` or bundled `assets/…`).
  * Empty when missing or unsafe — caller may fall back to Imagine / postcard.

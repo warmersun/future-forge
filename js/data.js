@@ -5,6 +5,7 @@
 
 import { SCENARIO_ANGLE_PACKS as SEED_ANGLE_PACKS } from "./scenario-seeds.js";
 import { SCENARIO_PACK_SUMMARIES } from "./scenario-pack-summaries.js";
+import { briefMdFromLivedStory } from "./brief-beats.js";
 
 export const GAME = {
   title: "Future Forge",
@@ -1182,7 +1183,7 @@ export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
 }
 
 /** Bump when seed scenes change so generated ids never collide with old caches. */
-export const SCENARIO_PACK_REV = "d10";
+export const SCENARIO_PACK_REV = "d11";
 
 function buildLocalScenarioVariants(g, count, salt) {
   const packs = SCENARIO_ANGLE_PACKS[g.id] || SCENARIO_ANGLE_PACKS._default;
@@ -1253,6 +1254,15 @@ function buildLocalScenarioVariants(g, count, salt) {
       yearsPerTurn: GAME.yearsPerTurn,
       pressure,
       scene,
+      briefMd:
+        String(pack.briefMd || "").trim() ||
+        briefMdFromLivedStory({
+          scene,
+          title,
+          stakeholder: pack.stakeholder,
+          crisisMeters: pack.crisisMeters,
+          globalTitle: g.title,
+        }),
       stakeholder: pack.stakeholder,
       suggested: pack.suggested || suggestedDefault,
       ...(pack.suggestedWhy && typeof pack.suggestedWhy === "object" && !Array.isArray(pack.suggestedWhy)

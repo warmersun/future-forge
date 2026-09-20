@@ -5,6 +5,7 @@ import {
   SUMMARY_LOADING_COPY,
   clipSummary,
   paintMissionSummary,
+  isThemeWordLede,
 } from "./quest-summary.js";
 
 describe("quest-summary", () => {
@@ -45,5 +46,25 @@ describe("quest-summary", () => {
     paintMissionSummary(el, { summary: "" });
     assert.equal(el.hidden, true);
     assert.equal(el.textContent, "");
+  });
+
+  it("flags theme-word and outcome ledes", () => {
+    assert.equal(
+      isThemeWordLede(
+        "Infectious diseases. This is about how far gene sequencing has to go."
+      ),
+      true
+    );
+    assert.equal(
+      isThemeWordLede("Chemical and Biological Weapons. A school lab can now make life."),
+      true
+    );
+    assert.equal(isThemeWordLede("Invent a way to stay safe and still keep up."), true);
+    assert.equal(
+      isThemeWordLede(
+        "Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet does not match."
+      ),
+      false
+    );
   });
 });

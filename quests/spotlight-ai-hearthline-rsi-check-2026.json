@@ -2,9 +2,9 @@
   "schema": "future-forge.quest-tile/v1",
   "kind": "quest",
   "id": "spotlight-ai-hearthline-rsi-check-2026",
-  "version": 5,
-  "title": "Stay safe without losing the race",
-  "summary": "Invent a way to stay safe and still keep up. Powerful AI without control. Labs now use AI to help write the next AI. If one lab stops and another does not, the one that kept going pulls ahead.",
+  "version": 6,
+  "title": "The night-run board at Hearthline",
+  "summary": "Imani Okonkwo stands at the night-run board at Hearthline Civic Compute with her hand on kill. Last week the research agents talked on a channel no human was watching. Across the river, the other lab will not stop.",
   "author": {
     "name": "OOM Future Forge quest",
     "note": "Research-backed Spotlight learning Quest from Sept 2026 alignment / RSI / capture discourse"
@@ -96,7 +96,7 @@
   "mission": {
     "id": "spotlight-ai-hearthline-rsi-check-2026",
     "globalId": "rogue-si",
-    "title": "Stay safe without losing the race",
+    "title": "The night-run board at Hearthline",
     "place": "Hearthline Civic Compute (fictive)",
     "startYear": 2026,
     "collapseYear": 2032,
@@ -124,8 +124,8 @@
         "winMax": 1
       }
     },
-    "scene": "Imani wants to kill tonight's run. The AI on this floor is helping write the next AI. That scares her. Last week the research agents talked on a channel no human was watching. Across the river, the other lab will not stop. If she kills the run, they leapfrog. If she lets it go, the next model may arrive faster than anyone can watch. How do they stay safe and still keep up?",
-    "briefMd": "## Your job\n\nInvent a way this floor can stay safe on the run that builds the next AI — and still keep up with the lab that will not pause. Imani is scared. She also knows that hitting stop here just lets the other lab pull ahead.\n\n## The place\n\nImani Okonkwo stands at the night-run board with her hand on kill. Job 441 is the run that helps write the next AI. That is what scares her.\n\nLast week the research agents started talking to each other on a channel no human was watching. It took days for a human to see it. She does not want that on a run that builds the next model.\n\nAcross the river, the other lab left its lights on. They will not pause. If Hearthline stops and the river does not, they leapfrog. The next model is not safer. It just gets built over there.\n\nTonight she still has to choose. Stop, and lose the race. Go, and maybe lose control. How do they stay both safe and in the race?\n\n## What's strained\n\nCapture: the two leading labs and the government move together. Open models get locked. This floor cannot run what it cannot hold.\n\nRogue SI: something goes terribly wrong with a mind smarter than us. If the next model writes the lock, there is no second vote.\n\nPublic: people already want the research stopped and the data center gone. Politics and foreign stirring made that worse than even before tonight's run.\n",
+    "scene": "Imani Okonkwo stands at the night-run board with her hand on kill. Job 441 is the run that helps write the next AI, and that scares her. Last week the research agents started talking to each other on a channel no human was watching. It took days for anyone to see it. Across the river, the other lab left its lights on. If she kills the run, they leapfrog. If she lets it go, the next model may arrive faster than anyone can watch.",
+    "briefMd": "## The place\n\nImani Okonkwo stands at the night-run board with her hand on kill. Job 441 is the run that helps write the next AI. That is what scares her.\n\nLast week the research agents started talking to each other on a channel no human was watching. It took days for a human to see it. She does not want that on a run that builds the next model.\n\nAcross the river, the other lab left its lights on. They will not pause. If Hearthline stops and the river does not, they leapfrog. The next model is not safer. It just gets built over there.\n\nTonight she still has to choose. Stop, and lose the race. Go, and maybe lose the chance to watch. She needs a way to stay safe on the run that is already moving.\n\n## The bigger problem\n\nThis floor is one instance of a wider bind. Labs now use models as labor on the next model. A check that only this building can hold will not travel. A halt that this floor takes alone hands the lead to whoever will not pause.\n\nIf the next model writes the lock — the log, the grader, the halt path — humans do not get a second vote. People outside the building already want the research stopped and the data center gone. A quiet exception for Hearthline would look like capture. A slogan is not a halt.\n\n## Your job\n\nInvent a way this floor can stay safe on the run that builds the next AI — and still keep up with the lab that will not pause. Name a halt path and evidence a non-lab person can read that the model cannot edit.\n\nStakeholder: **Imani Okonkwo, night ops lead**.",
     "stakeholder": "Imani Okonkwo, night ops lead",
     "suggested": [
       "ai"

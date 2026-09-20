@@ -104,6 +104,14 @@ describe("briefing-ui paint", () => {
         contains(x) {
           return this._c.has(x);
         },
+        toggle(x, on) {
+          if (on === false || (on === undefined && this._c.has(x))) {
+            this.remove(x);
+            return false;
+          }
+          this.add(x);
+          return true;
+        },
       },
       querySelector(sel) {
         const cls = String(sel).replace(/^\./, "").split(/[\s.\[]/)[0];
@@ -132,10 +140,19 @@ describe("briefing-ui paint", () => {
         return out;
       },
       appendChild(c) {
+        c.parentNode = el;
         el.children.push(c);
         return c;
       },
-      closest() {
+      closest(sel) {
+        const want = String(sel || "").replace(/^\./, "").split(/[\s.#\[]/)[0];
+        let n = el;
+        while (n) {
+          if (n.classList?.contains(want) || String(n.className || "").split(/\s+/).includes(want)) {
+            return n;
+          }
+          n = n.parentNode;
+        }
         return null;
       },
       addEventListener() {},
@@ -191,7 +208,9 @@ describe("briefing-ui paint", () => {
   it("keeps beat title on the overlay without a duplicate job line", () => {
     installDom();
     const root = fakeEl("vision-canvas-wrap");
+    const banner = fakeEl("challenge-banner");
     const sceneEl = fakeEl("ws-mission-scene");
+    banner.appendChild(sceneEl);
     const snap = paintQuestBriefing(
       root,
       {
@@ -206,11 +225,56 @@ describe("briefing-ui paint", () => {
     assert.equal(snap.active, true);
     assert.equal(snap.mode, "walk");
     assert.equal(briefingOwnsRoot(root), true);
+    assert.equal(banner.classList.contains("is-briefing-walk"), true);
+    assert.equal(banner.classList.contains("is-briefing-recap"), false);
     const overlay = root.querySelector(".quest-briefing-overlay");
     assert.ok(overlay);
     assert.doesNotMatch(overlay.innerHTML, /quest-briefing-job/);
+    assert.doesNotMatch(overlay.innerHTML, /Full brief/);
+    assert.doesNotMatch(overlay.innerHTML, /Start inventing/);
     assert.match(overlay.innerHTML, /The place/);
     assert.equal(lastBriefingPaint()?.mode, "walk");
     assert.equal(sceneEl.hidden, true);
+    assert.doesNotMatch(sceneEl.innerHTML, /quest-brief-recap/);
+  });
+
+  it("after dismiss paints a compact recap, not the whole essay", () => {
+    installDom();
+    const store = memStore();
+    setBriefingDismissed("q-recap", true, store);
+    const root = fakeEl("vision-canvas-wrap");
+    const banner = fakeEl("challenge-banner");
+    const sceneEl = fakeEl("ws-mission-scene");
+    banner.appendChild(sceneEl);
+    const snap = paintQuestBriefing(
+      root,
+      {
+        id: "q-recap",
+        place: "Crossing Clinic 7",
+        spotlight: { encourageCopy: "Invent a same-shift workflow." },
+        briefMd:
+          "## The place\n\nNurse Amina seals a swab.\n\n## The bigger problem\n\nTruth lives in a capital lab.\n\n## Your job\n\nInvent a same-shift workflow.",
+        briefBeats: beats,
+      },
+      { sceneEl, storage: store }
+    );
+    assert.equal(snap.active, false);
+    assert.equal(snap.mode, "off");
+    assert.equal(sceneEl.hidden, false);
+    assert.equal(banner.classList.contains("is-briefing-recap"), true);
+    assert.equal(banner.classList.contains("is-briefing-walk"), false);
+    assert.match(sceneEl.innerHTML, /quest-brief-recap/);
+    assert.match(sceneEl.innerHTML, /The place/);
+    assert.match(sceneEl.innerHTML, /The bigger problem/);
+    assert.match(sceneEl.innerHTML, /Read the whole story/);
+    assert.doesNotMatch(sceneEl.innerHTML, /quest-brief-recap-title">Your job/);
+    assert.doesNotMatch(sceneEl.innerHTML, /Labeled tubes stack/);
+    // Essay is briefMd minus Your job; recap-speak stays a sibling of details so
+    // CSS `.quest-brief-recap:has(.quest-brief-full[open])` can hide the clip.
+    assert.match(sceneEl.innerHTML, /quest-brief-recap-speak[\s\S]*<details class="quest-brief-full"/);
+    assert.match(sceneEl.innerHTML, /<h2>The place<\/h2>/);
+    assert.match(sceneEl.innerHTML, /<h2>The bigger problem<\/h2>/);
+    assert.doesNotMatch(sceneEl.innerHTML, /<h2>Your job<\/h2>/);
+    assert.doesNotMatch(sceneEl.innerHTML, /quest-brief-full-body[\s\S]*Invent a same-shift workflow/);
   });
 });

@@ -18,7 +18,7 @@ A brief little story: an **instance** of the bigger global issue. Fictive place,
 3. **Mechanism** — local driver revealed through action (not a lecture)
 4. **Stakes** — human-scale harm people feel
 
-Vary sentence length. Land 2–4 short punch-line sentences. One idea per breath **and per paragraph**.
+Spoken mid-length sentences. At most 1–2 short punch-line sentences. One idea per paragraph.
 Lived local harm + local driver must both appear as story.
 Target: 2–4 tight paragraphs (fuller than `mission.scene`; same craft). Not a novella. Not one dense block.
 Do **not** name the spotlight tech, a sponsor product, or “what just became possible.”

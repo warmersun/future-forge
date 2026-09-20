@@ -9,8 +9,8 @@ import {
   TREND_CAPS,
   validateCapabilityTrend,
 } from "./capability-trend.js";
-import { isSafeBriefImageUrl, normalizeBriefBeats } from "./brief-beats.js";
-import { SUMMARY_CAP } from "./quest-summary.js";
+import { isSafeBriefImageUrl, normalizeBriefBeats, briefMdShapeIssues } from "./brief-beats.js";
+import { SUMMARY_CAP, isThemeWordLede } from "./quest-summary.js";
 import { parseQuestRules } from "./sim/policy-rules.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
@@ -887,6 +887,7 @@ export function validateQuestTile(tile, opts = {}) {
   const summary = String(tile.summary || missionIn.summary || "").trim();
   if (!summary) details.push("missing_summary");
   if (summary.length > CAPS.summary) details.push("summary_too_long");
+  if (summary && isThemeWordLede(summary)) details.push("summary_theme_word_lede");
 
   const scene = String(missionIn.scene || "").trim();
   const briefMd = String(missionIn.briefMd || tile.briefMd || "").trim();
@@ -894,6 +895,9 @@ export function validateQuestTile(tile, opts = {}) {
   if (briefMd.length > CAPS.briefMd) details.push("brief_md_too_long");
   if (/<script/i.test(briefMd) || /javascript\s*:/i.test(briefMd)) {
     details.push("brief_md_unsafe");
+  }
+  if (briefMd) {
+    details.push(...briefMdShapeIssues(briefMd));
   }
   if (scene.length > CAPS.scene) details.push("scene_too_long");
 
@@ -905,6 +909,10 @@ export function validateQuestTile(tile, opts = {}) {
   const techId = String(spotlightIn?.techId || "").trim();
   if (!techId || !techIds.has(techId)) {
     details.push(`bad_spotlight_tech:${techId || "(empty)"}`);
+  }
+  const encourageCopy = String(spotlightIn?.encourageCopy || "").trim();
+  if (/\bbuild your invention around\b/i.test(encourageCopy)) {
+    details.push("encourage_product_riddle");
   }
 
   let suggested = (Array.isArray(missionIn.suggested) ? missionIn.suggested : [])

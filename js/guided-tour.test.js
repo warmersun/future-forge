@@ -98,7 +98,7 @@ describe("resolveTourStep", () => {
     assert.equal(step.target.selector, "#screen-workshop [data-tech-dock-handle]");
   });
 
-  it("C1 points at briefing Next, C2 at Full brief on last beat", () => {
+  it("C1 points at briefing Next, C2 at Start inventing on last beat", () => {
     assert.equal(
       idOf(base({ briefing: { active: true, index: 0, beatCount: 4 } })),
       "C1"
@@ -107,7 +107,11 @@ describe("resolveTourStep", () => {
       base({ briefing: { active: true, index: 3, beatCount: 4 } })
     );
     assert.equal(c2.id, "C2");
-    assert.equal(c2.target.selector, ".quest-briefing-full");
+    assert.equal(c2.target.selector, ".quest-briefing-invent");
+    const c1 = resolveTourStep(
+      base({ briefing: { active: true, index: 0, beatCount: 4 } })
+    );
+    assert.match(c1.body, /this card on the right/i);
   });
 
   it("E1 names the spotlight tech after briefing", () => {
@@ -435,12 +439,12 @@ describe("queryTourTarget", () => {
     assert.equal(el, ws);
   });
 
-  it("C2 hits Full brief, not the pager arrow", () => {
-    const full = { id: "full-brief" };
+  it("C2 hits Start inventing, not the pager arrow", () => {
+    const invent = { id: "start-inventing" };
     const arrow = { id: "pager-arrow" };
     const root = {
       querySelector(sel) {
-        if (sel === ".quest-briefing-full") return full;
+        if (sel === ".quest-briefing-invent") return invent;
         if (String(sel).includes("data-brief")) return arrow;
         return null;
       },
@@ -448,7 +452,7 @@ describe("queryTourTarget", () => {
     const step = resolveTourStep(
       base({ briefing: { active: true, index: 3, beatCount: 4 } })
     );
-    assert.equal(queryTourTarget(step, root), full);
+    assert.equal(queryTourTarget(step, root), invent);
   });
 });
 

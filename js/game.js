@@ -236,14 +236,17 @@ import {
   isBriefingDismissed,
   lastBriefingPaint,
   paintQuestBriefing,
+  paintQuestJob,
   resetQuestBriefing,
 } from "./briefing-ui.js";
 import { createGuidedTour, queryTourTarget } from "./guided-tour.js";
 import {
+  BRIEF_MD_RECIPE,
+  briefMdFromLivedStory,
   normalizeBriefBeats,
   resolveBriefBeats,
   briefBeatAuthoredUrl,
-  jobLineFromMission,
+  outcomeJobFromMission,
 } from "./brief-beats.js";
 import {
   attachReadAloud,
@@ -293,7 +296,7 @@ import {
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
 import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
-import { splitTray, whyHere, capabilityLine, pickTechsForCrisis } from "./tech-why.js";
+import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, sanitizeSuggestedWhy } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
 import {
   resolveConceptCard,
@@ -5513,9 +5516,11 @@ function catalogInspectBeatsHtml(mission, tile) {
   const source = authored
     ? `authored ${beats.length}`
     : `derived from briefMd · ${beats.length}`;
-  const job = jobLineFromMission(mission, {
+  const job = outcomeJobFromMission(mission, {
     summary: tile?.summary || mission?.summary,
     title: tile?.title || mission?.title,
+    beats,
+    encourageCopy: tile?.spotlight?.encourageCopy || mission?.spotlight?.encourageCopy,
   });
   const items = beats
     .map((beat, i) => {
@@ -6525,8 +6530,10 @@ async function ensureScenarios(global, { force = false } = {}) {
             place: m.place,
             scene: m.scene,
             summary: m.summary,
+            briefMd: m.briefMd,
             stakeholder: m.stakeholder,
             suggested: m.suggested,
+            suggestedWhy: m.suggestedWhy,
             visionTheme: m.visionTheme,
             pressure: m.pressure,
             collapseYear: m.collapseYear,
@@ -6540,6 +6547,9 @@ async function ensureScenarios(global, { force = false } = {}) {
             "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
             SCENE_PROSE +
+            " " +
+            BRIEF_MD_RECIPE +
+            " Each Quest also needs briefMd with those three headings, and suggestedWhy for each suggested tech. " +
             " Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
             "Each present pressure role should also include description: 1–3 everyday sentences of what that meter means in this place (not the generic local/global/support lecture). " +
             "Never camelCase or jargon ids (not AlleyPM, BenzeneSpikes, GensetHours). " +
@@ -6629,7 +6639,19 @@ function normalizeMission(raw, globalId) {
     }
   }
 
-  const briefMd = String(raw.briefMd || "").slice(0, 12_000);
+  const authoredBrief = String(raw.briefMd || "").trim().slice(0, 12_000);
+  const briefMd =
+    authoredBrief ||
+    briefMdFromLivedStory({
+      scene: String(raw.scene || "").trim(),
+      title: String(raw.title || "").trim(),
+      stakeholder: String(raw.stakeholder || "").trim(),
+      pressure: raw.pressure,
+      globalTitle: String(globalById(globalId)?.title || "").trim(),
+      encourageCopy: String(
+        raw.encourageCopy || raw.spotlight?.encourageCopy || ""
+      ).trim(),
+    }).slice(0, 12_000);
   const source =
     raw.source === "curated"
       ? "curated"
@@ -6683,6 +6705,8 @@ function normalizeMission(raw, globalId) {
     const n = normalizeBriefBeats(raw.briefBeats);
     if (n.ok) briefBeatsSafe = n.beats;
   }
+  const suggestedIds = suggested.length ? suggested : ["ai", "iot", "networks"];
+  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, new Set(suggestedIds));
 
   return {
     id,
@@ -6704,7 +6728,8 @@ function normalizeMission(raw, globalId) {
     ),
     briefMd,
     stakeholder: String(raw.stakeholder || "").slice(0, 120),
-    suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+    suggested: suggestedIds,
+    ...(suggestedWhy ? { suggestedWhy } : {}),
     visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
     source,
     spotlight,
@@ -7165,6 +7190,7 @@ function renderWorkshop() {
   $("#ws-mission-title").textContent = m.title;
   $("#ws-mission-place").textContent = `${m.place}`;
   ensureMissionSummary($("#ws-mission-summary"));
+  paintQuestJob($("#ws-quest-job"), m, { summary: m.summary });
   paintPolicyWeather();
   const progressEl = $("#ws-lesson-progress");
   if (progressEl) {
@@ -7291,25 +7317,11 @@ function renderWorkshop() {
     }
   }
   if (spotEncourage) {
-    if (m.spotlight?.encourageCopy) {
-      spotEncourage.hidden = false;
-      spotEncourage.removeAttribute("hidden");
-      spotEncourage.style.display = "";
-      spotEncourage.textContent = m.spotlight.encourageCopy;
-    } else if (m.spotlight?.techId) {
-      const tech = techById(m.spotlight.techId);
-      spotEncourage.hidden = false;
-      spotEncourage.removeAttribute("hidden");
-      spotEncourage.style.display = "";
-      spotEncourage.textContent = `This Quest is built to practice ${
-        tech?.name || m.spotlight.techId
-      } — invent with it honestly.`;
-    } else {
-      spotEncourage.hidden = true;
-      spotEncourage.setAttribute("hidden", "");
-      spotEncourage.style.display = "none";
-      spotEncourage.textContent = "";
-    }
+    // Persistent job lives on #ws-quest-job. Do not also lecture the spotlight tech.
+    spotEncourage.hidden = true;
+    spotEncourage.setAttribute("hidden", "");
+    spotEncourage.style.display = "none";
+    spotEncourage.textContent = "";
   }
   renderMarketBanner();
   renderMpChrome();

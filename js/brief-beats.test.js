@@ -17,6 +17,11 @@ import {
   JOB_LINE_CAP,
   clipLede,
   jobLineFromMission,
+  outcomeJobFromMission,
+  compactRecapFromBeats,
+  briefMdFromLivedStory,
+  briefMdShapeIssues,
+  briefBeatWantsImagine,
   normalizeBriefBeats,
   normalizeBriefHeading,
   resolveBriefBeats,
@@ -340,6 +345,53 @@ describe("job line and stills", () => {
       }),
       "Trauma scores that outvote the surgeon"
     );
+  });
+
+  it("outcome job prefers encourageCopy, not the instance summary", () => {
+    assert.equal(
+      outcomeJobFromMission({
+        summary: "Nurse Amina seals another swab at Crossing Clinic 7.",
+        spotlight: { encourageCopy: "Invent a way this clinic can know what the fever is." },
+        title: "The fever sheet",
+      }),
+      "Invent a way this clinic can know what the fever is."
+    );
+  });
+
+  it("compact recap pulls place, strain, and job", () => {
+    const recap = compactRecapFromBeats([
+      { role: "place", bodyMd: "Nurse Amina seals a swab." },
+      { role: "strain", bodyMd: "Truth lives in a capital lab." },
+      { role: "job", bodyMd: "Invent a same-shift workflow." },
+    ]);
+    assert.match(recap.place, /Amina/);
+    assert.match(recap.strain, /capital lab/);
+    assert.match(recap.job, /same-shift/);
+  });
+
+  it("synthesizes a three-heading brief from a theme scene", () => {
+    const md = briefMdFromLivedStory({
+      scene:
+        "Dr. Ramirez presses two fingers into the motorcycle rider's tight belly. The screen says discharge. Who designs a trauma score a surgeon can still outrun?",
+      stakeholder: "Dr. Ramirez, trauma attending",
+      globalTitle: "Rogue superintelligence",
+      crisisMeters: {
+        local: { label: "Missed Crises", description: "Belly bleeds get filed as stable." },
+        global: { label: "Hard Locks", description: "The hospital grayed out overrides." },
+      },
+    });
+    assert.match(md, /## The place/);
+    assert.match(md, /## The bigger problem/);
+    assert.match(md, /## Your job/);
+    assert.match(md, /Ramirez/);
+    assert.doesNotMatch(md, /Who designs/);
+    assert.deepEqual(briefMdShapeIssues(md), []);
+  });
+
+  it("Imagine is opt-in via imagePrompt", () => {
+    assert.equal(briefBeatWantsImagine({ imagePrompt: "A clinic awning." }), true);
+    assert.equal(briefBeatWantsImagine({ imageUrl: "assets/problems/infectious.jpg" }), false);
+    assert.equal(briefBeatWantsImagine({}), false);
   });
 
   it("builds a problem postcard url", () => {

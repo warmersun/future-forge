@@ -16,6 +16,9 @@
  *   node scripts/generate-scenario-seeds.mjs --fill-descriptions --themes infectious
  *   node scripts/generate-scenario-seeds.mjs --fill-summaries --local-only
  *   node scripts/generate-scenario-seeds.mjs --rewrite-summaries
+ *   node scripts/generate-scenario-seeds.mjs --rewrite-briefs --local-only
+ *   node scripts/generate-scenario-seeds.mjs --rewrite-briefs --themes infectious
+
  *
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
  */
@@ -41,6 +44,7 @@ import {
   assertSceneReadable,
   sceneRepairInstruction,
 } from "../js/scene-prose.js";
+import { BRIEF_MD_RECIPE, briefMdFromLivedStory } from "../js/brief-beats.js";
 import { SCENARIO_PACK_SUMMARIES } from "../js/scenario-pack-summaries.js";
 import { QUEST_SUMMARY_RECIPE, clipSummary } from "../js/quest-summary.js";
 
@@ -60,7 +64,7 @@ const SCENARIO_COUNT = 4;
  *   --themes a --themes b
  * Unknown flags are ignored except a missing value after --themes errors.
  * @param {string[]} argv process.argv.slice(2)
- * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, rewriteSummaries: boolean, themeFilter: string[] | null }}
+ * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, rewriteSummaries: boolean, rewriteBriefs: boolean, themeFilter: string[] | null }}
  */
 export function parseSeedArgs(argv) {
   const localOnly = argv.includes("--local-only");
@@ -68,6 +72,7 @@ export function parseSeedArgs(argv) {
   const fillDescriptions = argv.includes("--fill-descriptions");
   const fillSummaries = argv.includes("--fill-summaries");
   const rewriteSummaries = argv.includes("--rewrite-summaries");
+  const rewriteBriefs = argv.includes("--rewrite-briefs");
   /** @type {string[]} */
   const themeIds = [];
   let sawThemesFlag = false;
@@ -79,7 +84,8 @@ export function parseSeedArgs(argv) {
       a === "--dry-run" ||
       a === "--fill-descriptions" ||
       a === "--fill-summaries" ||
-      a === "--rewrite-summaries"
+      a === "--rewrite-summaries" ||
+      a === "--rewrite-briefs"
     ) {
       continue;
     }
@@ -116,11 +122,11 @@ export function parseSeedArgs(argv) {
   }
 
   const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
-  return { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, themeFilter };
+  return { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, rewriteBriefs, themeFilter };
 }
 
 const args = process.argv.slice(2);
-const { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, themeFilter } =
+const { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, rewriteBriefs, themeFilter } =
   parseSeedArgs(args);
 
 function loadEnvFile() {
@@ -229,7 +235,9 @@ const MODE_INSTRUCTION =
   "Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles. " +
   "Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
   SCENE_PROSE +
-  " Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
+  " " +
+  BRIEF_MD_RECIPE +
+  " Each object fields: id (slug), title, place, scene, summary, briefMd, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
   "pressure (structured crisis meters — see CRITICAL), " +
   "suggested (4–7 tech ids from availableTechs only — mix protection and abatement when relevant), " +
   "suggestedWhy (object: for EACH suggested id, one everyday-words sentence ≤120 chars — what that family could do in THIS place and which crisis meter label it eases), " +
@@ -253,6 +261,7 @@ When mode is generate-scenarios: invent MULTIPLE distinct local mission scenario
 Return a single JSON object only (no markdown fences) with top-level "scenarios" array and "message".
 Hard rules: only use technology ids from availableTechs; stay local; concrete inventable places.
 ${SCENE_PROSE_CAPSULE}
+${BRIEF_MD_RECIPE}
 Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.
 Each present pressure role should include a short place-specific description of what that meter means here.`;
 
@@ -438,10 +447,21 @@ function normalizeScenario(raw, globalId) {
     raw.suggestedWhy,
     new Set(suggested.length ? suggested : ["ai", "iot", "networks"])
   );
+  const gTitle = String(raw.globalTitle || "").trim();
+  const briefMd =
+    String(raw.briefMd || "").trim() ||
+    briefMdFromLivedStory({
+      scene: String(raw.scene || "").slice(0, SCENE_CHAR_CAP),
+      title,
+      stakeholder: String(raw.stakeholder || "Local working group"),
+      crisisMeters: crisisMeters,
+      globalTitle: gTitle,
+    });
   return {
     places: [place],
     title,
     scene: String(raw.scene || "").slice(0, SCENE_CHAR_CAP),
+    ...(briefMd ? { briefMd: briefMd.slice(0, 8000) } : {}),
     stakeholder: String(raw.stakeholder || "Local working group").slice(0, 120),
     crisisMeters,
     ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
@@ -478,12 +498,14 @@ function localPackForTheme(g) {
       places: [m.place],
       title: m.title,
       scene: m.scene,
+      ...(m.briefMd ? { briefMd: m.briefMd } : {}),
       stakeholder: m.stakeholder || "Local working group",
       crisisMeters,
       ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
       suggested: m.suggested || ["ai", "iot", "networks"],
       ...(m.suggestedWhy ? { suggestedWhy: m.suggestedWhy } : {}),
       visionTheme: m.visionTheme || "rebuild-city",
+      ...(Array.isArray(m.rules) && m.rules.length ? { rules: m.rules } : {}),
     };
   });
 }
@@ -669,6 +691,49 @@ async function aiPackForTheme(client, g) {
   return packs;
 }
 
+function metersForBrief(pack) {
+  const cm = pack.crisisMeters || {};
+  const descs = pack.crisisMeterDescs || {};
+  /** @type {Record<string, { label: string, description: string }>} */
+  const out = {};
+  for (const r of CRISIS_ROLES) {
+    const { label, description } = meterLabelDesc(cm[r], descs[r]);
+    if (!label && !description) continue;
+    out[r] = { label, description };
+  }
+  return out;
+}
+
+function localSuggestedWhy(pack) {
+  const suggested = Array.isArray(pack.suggested) ? pack.suggested : [];
+  const cm = pack.crisisMeters || {};
+  const hottest =
+    meterLabelDesc(cm.local, pack.crisisMeterDescs?.local).label ||
+    meterLabelDesc(cm.global, pack.crisisMeterDescs?.global).label ||
+    "this crisis";
+  /** @type {Record<string, string>} */
+  const raw = {};
+  for (const id of suggested) {
+    const tech = TECHS.find((t) => t.id === id);
+    const name = String(tech?.name || id).replace(/\s+/g, " ").trim();
+    const who =
+      String(pack.stakeholder || "the people here").split(",")[0].trim() ||
+      "the people here";
+    raw[id] = `${name} could help ${who} ease ${hottest} this year.`;
+  }
+  return sanitizeSuggestedWhy(raw, new Set(suggested));
+}
+
+function localBriefForPack(pack, g) {
+  return briefMdFromLivedStory({
+    scene: pack.scene,
+    title: pack.title,
+    stakeholder: pack.stakeholder,
+    crisisMeters: metersForBrief(pack),
+    globalTitle: g?.title || "",
+  });
+}
+
 function jsString(s) {
   return JSON.stringify(String(s ?? ""));
 }
@@ -698,19 +763,47 @@ function packToJs(pack, indent = "    ") {
   const summaryLine = pack.summary
     ? `${indent}  summary: ${jsString(pack.summary)},\n`
     : "";
+  const briefLine = pack.briefMd
+    ? `${indent}  briefMd:\n${indent}    ${jsString(pack.briefMd)},\n`
+    : "";
+  const rulesLine = rulesToJs(pack.rules, indent);
   return (
     `${indent}{\n` +
     `${indent}  places: [${places}],\n` +
     `${indent}  title: ${jsString(pack.title)},\n` +
     summaryLine +
     `${indent}  scene:\n${indent}    ${jsString(pack.scene)},\n` +
+    briefLine +
     `${indent}  stakeholder: ${jsString(pack.stakeholder)},\n` +
     `${indent}  crisisMeters: { ${meterParts} },\n` +
     `${indent}  suggested: [${sug}],\n` +
     whyLines +
     `${indent}  visionTheme: ${jsString(pack.visionTheme)},\n` +
+    rulesLine +
     `${indent}}`
   );
+}
+
+function rulesToJs(rules, indent) {
+  if (!Array.isArray(rules) || !rules.length) return "";
+  const items = rules
+    .filter((r) => r && typeof r === "object")
+    .map((r) => {
+      const effects = Array.isArray(r.effects)
+        ? r.effects.map((e) => jsString(e)).join(", ")
+        : "";
+      return (
+        `${indent}    {\n` +
+        `${indent}      id: ${jsString(r.id)},\n` +
+        `${indent}      kind: ${jsString(r.kind)},\n` +
+        `${indent}      label: ${jsString(r.label)},\n` +
+        `${indent}      body: ${jsString(r.body)},\n` +
+        (effects ? `${indent}      effects: [${effects}],\n` : "") +
+        `${indent}    }`
+      );
+    });
+  if (!items.length) return "";
+  return `${indent}  rules: [\n${items.join(",\n")}\n${indent}  ],\n`;
 }
 
 function writeSeedsFile(packsByTheme, meta) {
@@ -736,6 +829,7 @@ function writeSeedsFile(packsByTheme, meta) {
  * Crisis meters: crisisMeters: { local, global, support } — HUD labels per perspective.
  *   Optional description on a role: { label, description } (place-specific strain).
  *   (buildLocalScenarioVariants expands to structured mission.pressure with levels.)
+ * Brief: briefMd uses ## The place / ## The bigger problem / ## Your job.
  *
  * Re-run: node scripts/generate-scenario-seeds.mjs
  * Scale rule: existential themes (asteroid, nuclear, rogue SI, chem-bio…) are
@@ -752,6 +846,8 @@ ${body},
       title: "Crisis lands in {place}",
       scene:
         "People in {place} feel this global problem in daily life. A local driver keeps it going — invent for this place and year, not a slogan.",
+      briefMd:
+        "## The place\\n\\nPeople in {place} feel this global problem in daily life.\\n\\n## The bigger problem\\n\\nA local driver keeps producing the same harm.\\n\\n## Your job\\n\\nInvent a way the people here can get through this year without the same harm landing again.",
       stakeholder: "Local working group",
       crisisMeters: { local: "Pressure", global: "Capacity", support: "Trust" },
       suggested: ["ai", "iot", "networks", "solar", "battery"],
@@ -1011,6 +1107,97 @@ async function fillMissingSummaries(client, themes, { force = false } = {}) {
   }
 }
 
+async function rewritePackBriefs(client, themes) {
+  console.log(
+    client
+      ? `Rewrite-briefs: keep scenes; write briefMd + suggestedWhy (${themes.length} themes)`
+      : "Rewrite-briefs (local): keep scenes; synthesize briefMd + suggestedWhy"
+  );
+  const packsByTheme = await loadExistingPacks();
+  let filled = 0;
+  let skipped = 0;
+  const backupOnce = { needed: true };
+
+  for (let i = 0; i < themes.length; i++) {
+    const g = themes[i];
+    const packs = packsByTheme[g.id];
+    if (!Array.isArray(packs) || !packs.length) {
+      skipped += 1;
+      console.log(`[${i + 1}/${themes.length}] ${g.id}… skip (no packs)`);
+      continue;
+    }
+    process.stdout.write(`[${i + 1}/${themes.length}] ${g.id}… `);
+    let next = packs.map((pack) => {
+      const briefMd = localBriefForPack(pack, g);
+      const suggestedWhy = localSuggestedWhy(pack) || pack.suggestedWhy || null;
+      return {
+        ...pack,
+        briefMd,
+        ...(suggestedWhy ? { suggestedWhy } : {}),
+      };
+    });
+    if (client) {
+      try {
+        const extraUser =
+          BRIEF_MD_RECIPE +
+          ` Keep each quest's place, people, and facts. Return JSON only: { "items": [ { "briefMd": "…", "suggestedWhy": { "techId": "…" } } ] } with exactly ${packs.length} items, same order. suggestedWhy: one ≤120 char sentence per suggested id. Do not name products. Do not close The place with Who designs X?`;
+        const payload = {
+          mode: "fill-quest-briefs",
+          globalTheme: { id: g.id, title: g.title },
+          quests: packs.map((p, pi) => ({
+            index: pi,
+            title: p.title,
+            scene: p.scene,
+            stakeholder: p.stakeholder,
+            suggested: p.suggested,
+            crisisMeters: p.crisisMeters,
+          })),
+        };
+        const text = await callScenarioModel(client, payload, extraUser);
+        const parsed = extractJson(text);
+        const items = Array.isArray(parsed?.items)
+          ? parsed.items
+          : Array.isArray(parsed)
+            ? parsed
+            : [];
+        next = packs.map((pack, pi) => {
+          const item = items[pi] || {};
+          const briefMd = String(item.briefMd || "").trim() || localBriefForPack(pack, g);
+          const suggestedWhy =
+            sanitizeSuggestedWhy(item.suggestedWhy, new Set(pack.suggested || [])) ||
+            pack.suggestedWhy ||
+            localSuggestedWhy(pack);
+          return {
+            ...pack,
+            briefMd,
+            ...(suggestedWhy ? { suggestedWhy } : {}),
+          };
+        });
+      } catch (err) {
+        console.warn(`AI fail (${err?.message || err}); local brief`);
+      }
+    }
+    packsByTheme[g.id] = next;
+    filled += next.length;
+    console.log(`filled ${next.length}/${packs.length}`);
+  }
+
+  persistSummaryRewrite(
+    packsByTheme,
+    {
+      generatedAt: new Date().toISOString(),
+      source: `rewrite-briefs filled=${filled} skipped=${skipped}`,
+    },
+    { backupOnce }
+  );
+  if (dryRun) {
+    console.log("\n--dry-run: not writing file.");
+    return;
+  }
+  console.log(`Wrote ${path.relative(ROOT, OUT)}`);
+  console.log(`Wrote ${path.relative(ROOT, path.join(ROOT, "js/scenario-pack-summaries.js"))}`);
+}
+
 async function fillMissingMeterDescriptions(client, themes) {
   console.log("Fill-descriptions mode: keeping scenes, adding missing crisisMeters.description");
   const packsByTheme = await loadExistingPacks();
@@ -1109,6 +1296,11 @@ async function main() {
       throw new Error("--rewrite-summaries requires SuperGrok session or FF_XAI_API_KEY");
     }
     await fillMissingSummaries(client, themes, { force: rewriteSummaries });
+    return;
+  }
+
+  if (rewriteBriefs) {
+    await rewritePackBriefs(client, themes);
     return;
   }
 

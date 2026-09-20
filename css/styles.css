@@ -9155,6 +9155,7 @@ button.linkish:hover {
 .vision-canvas-wrap > .quest-briefing-overlay .quest-briefing-arrow,
 .vision-canvas-wrap > .quest-briefing-overlay .quest-briefing-dot,
 .vision-canvas-wrap > .quest-briefing-overlay .quest-briefing-full,
+.vision-canvas-wrap > .quest-briefing-overlay .quest-briefing-invent,
 .vision-canvas-wrap > .quest-briefing-overlay .read-aloud-bar,
 .vision-canvas-wrap > .quest-briefing-overlay .btn,
 .vision-canvas-wrap > .quest-briefing-overlay .btn-read-aloud {
@@ -10490,7 +10491,8 @@ button.linkish:hover {
   opacity: 0.35;
   cursor: default;
 }
-.quest-briefing-full {
+.quest-briefing-full,
+.quest-briefing-invent {
   grid-column: 3;
   justify-self: end;
   background: none;
@@ -10501,6 +10503,79 @@ button.linkish:hover {
   cursor: pointer;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
   padding: 0.2rem 0.15rem;
+}
+.quest-briefing-invent {
+  color: #ffd28a;
+}
+.quest-briefing-invent-spacer {
+  grid-column: 3;
+}
+
+.quest-job-line {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #ffe7c2;
+}
+.quest-job-kicker {
+  display: inline-block;
+  margin-right: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+  vertical-align: middle;
+}
+.quest-job-line[hidden] {
+  display: none !important;
+}
+
+/* Walk owns the story on the right: hide the instance lede and stakeholder. */
+.challenge-banner.is-briefing-walk .mission-summary,
+.challenge-banner.is-briefing-walk .stakeholder,
+.challenge-banner.is-briefing-recap .mission-summary {
+  display: none !important;
+}
+
+.quest-brief-recap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.quest-brief-recap-item {
+  margin: 0;
+}
+.quest-brief-recap-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+.quest-brief-recap-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #e8eef8;
+}
+.quest-brief-recap:has(.quest-brief-full[open]) .quest-brief-recap-speak {
+  display: none;
+}
+.quest-brief-full {
+  margin: 0.15rem 0 0;
+}
+.quest-brief-full summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #cbd5e1;
+}
+.quest-brief-full-body {
+  margin-top: 0.45rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

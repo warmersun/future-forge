@@ -36,6 +36,30 @@ export function clipSummary(raw) {
   return String(raw || "").trim().slice(0, SUMMARY_CAP);
 }
 
+const TITLE_CASE_WORD = /^(?:[A-Z][A-Za-z-]*|[A-Z]{2,}|and|of|the|for|in)$/;
+
+/**
+ * True when a summary opens as a topic label or an outcome, not an instance story.
+ * @param {string|null|undefined} text
+ */
+export function isThemeWordLede(text) {
+  const s = String(text || "").trim();
+  if (!s) return false;
+  if (/\bthis is about how far\b/i.test(s)) return true;
+  if (/\bbuild your invention around\b/i.test(s)) return true;
+  if (/^Invent a way\b/i.test(s)) return true;
+  const m = /^([^.!?]+)\.\s+/.exec(s);
+  if (!m) return false;
+  const first = m[1].trim();
+  const words = first.split(/\s+/).filter(Boolean);
+  if (words.length < 1 || words.length > 6) return false;
+  const allTitle = words.every((w) => TITLE_CASE_WORD.test(w));
+  const hasLowerContent = words.some(
+    (w) => /^[a-z]/.test(w) && !/^(and|of|the|for|in)$/.test(w)
+  );
+  return allTitle && !hasLowerContent;
+}
+
 /**
  * @param {HTMLElement|null|undefined} el
  * @param {{ summary?: string, loading?: boolean }} [opts]

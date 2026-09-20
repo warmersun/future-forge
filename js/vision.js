@@ -26,7 +26,7 @@ export function narrativesFromTechs(techs) {
     .map((t) => ({ id: t.id, name: t.name, text: t.vision.narrative }));
 }
 
-/** Cartoon briefing owns this pane until Full brief removes `.is-briefing`. */
+/** Cartoon briefing owns this pane until Start inventing removes `.is-briefing`. */
 function briefingOwnsImage(img) {
   return Boolean(img?.closest?.(".vision-canvas-wrap.is-briefing"));
 }

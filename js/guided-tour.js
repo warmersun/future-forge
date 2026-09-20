@@ -299,14 +299,14 @@ export function resolveTourStep(raw) {
       return step(
         "C2",
         "Finish the briefing",
-        "Last card. Click Full brief when you know the job — then invent on the hex board.",
-        sel(".quest-briefing-full")
+        "Last card. When you know the job, click Start inventing — then invent on the hex board.",
+        sel(".quest-briefing-invent")
       );
     }
     return step(
       "C1",
       "Read the briefing",
-      "This walkthrough is the Quest. Read this card, then Next — or Full brief to skip to the whole story.",
+      "The story is this card on the right. Read it, then Next.",
       sel('[data-brief="next"]')
     );
   }

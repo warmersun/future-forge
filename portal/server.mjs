@@ -48,6 +48,8 @@ import {
 } from "../js/trends-remote.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "../js/scene-prose.js";
 import { QUEST_SUMMARY_RECIPE, SUMMARY_CAP } from "../js/quest-summary.js";
+import { BRIEF_MD_RECIPE, briefMdFromLivedStory } from "../js/brief-beats.js";
+import { sanitizeSuggestedWhy } from "../js/tech-why.js";
 import {
   normalizeTtsText,
   ttsCacheKey,
@@ -941,10 +943,24 @@ function sanitizeScenarioList(rawList, context, techIds) {
       .map(String)
       .filter((id) => validTech.has(id))
       .slice(0, 8);
+    const suggestedWhy = sanitizeSuggestedWhy(
+      raw.suggestedWhy,
+      new Set(suggested.length ? suggested : ["ai", "iot", "networks"])
+    );
     const visionTheme = visionOk.has(String(raw.visionTheme))
       ? String(raw.visionTheme)
       : "rebuild-city";
     const summary = String(raw.summary || "").trim().slice(0, SUMMARY_CAP);
+    const briefMdRaw = String(raw.briefMd || "").trim();
+    const briefMd =
+      briefMdRaw.slice(0, 8000) ||
+      briefMdFromLivedStory({
+        scene: String(raw.scene || "").trim(),
+        title: title || place,
+        stakeholder: String(raw.stakeholder || "").trim(),
+        pressure: raw.pressure,
+        globalTitle: String(theme.title || "").trim(),
+      }).slice(0, 8000);
     const id =
       String(raw.id || "").trim() ||
       `gen-${globalId}-${out.length}-${Math.random().toString(36).slice(2, 7)}`;
@@ -958,8 +974,10 @@ function sanitizeScenarioList(rawList, context, techIds) {
       yearsPerTurn: Number(raw.yearsPerTurn) || GAME.yearsPerTurn,
       pressure,
       scene: String(raw.scene || "").trim().slice(0, 800),
+      ...(briefMd ? { briefMd } : {}),
       stakeholder: String(raw.stakeholder || "").trim().slice(0, 120),
       suggested: suggested.length ? suggested : ["ai", "iot", "networks"],
+      ...(suggestedWhy ? { suggestedWhy } : {}),
       visionTheme,
       source: sourceHint || (raw.source === "curated" ? "curated" : "generated"),
       ...(summary ? { summary } : {}),
@@ -1884,7 +1902,9 @@ function buildUserPayload({ messages, context, mode }) {
     "generate-scenarios":
       "Generate MULTIPLE distinct local Quests (crisis episodes) for context.globalTheme (a global problem). Return top-level scenarios: an array of 4 objects (or context.scenarioCount) — wire field name stays 'scenarios' for compatibility. Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles (not renames of the same story). Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms (e.g. air pollution: name trucks/cookfuel/stacks, not only indoor filters). " +
       SCENE_PROSE +
-      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, summary, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). " +
+      " " +
+      BRIEF_MD_RECIPE +
+      " Include seedMissions as curated baselines if provided, then invent NEW ones that do not duplicate them. Each object fields: id (slug), title, place, scene, summary, briefMd, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), pressure (structured — see CRITICAL), suggested (array of tech ids from availableTechs only — mix protection and abatement when relevant), suggestedWhy (object: for EACH id in suggested, one everyday-words sentence ≤120 chars saying what that family could do in THIS place and which crisis meter label it eases — no lab jargon, no product names), visionTheme (one of: coastal-city, food-city, care-city, energy-city, learn-city, rebuild-city, social-city, ocean-city), source ('curated' or 'generated'). " +
       QUEST_SUMMARY_RECIPE +
       " CRITICAL — pressure is an object with up to three role keys: local, global, support. Omit a role to hide that crisis meter on the HUD. Each present role: { \"label\": \"plain English HUD name 1–3 words Title Case\", \"description\": \"1-3 everyday sentences of what this meter means in this place\", \"pressure\": 0-5, \"pressureRise\": 0-3, \"winMax\": 0-5 }. local = lived local harm; global = systemic/driver; support = trust/legitimacy/fear. description is place-specific strain, not the generic role lecture. NEVER camelCase jargon labels (bad: AlleyPM, BenzeneSpikes, CorridorPM). Default full Quest uses all three roles. message: one short line inviting the learner to pick a Quest. proposals empty. Also follow context.guidance when present.",
   };

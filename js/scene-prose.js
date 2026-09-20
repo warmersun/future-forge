@@ -31,19 +31,20 @@ export const SCENE_PROSE = [
   "No meta, no workshop jargon, no \"this case shows,\" \"as designers we must,\" \"the lesson here is.\"",
   "If you use jargon or a concept the reader may not know, introduce it once: plain definition → concrete image → resume the scene.",
   "",
-  "RHYTHM (this fixes hard-to-read dense stacks):",
-  "Vary sentence length. After a complex beat, land a short punch-line sentence — often its own breath.",
-  "Use punch-line sentences 2–4 times per scene (more dilutes them).",
-  "Default beat: Explain → Concretize → Land.",
-  "Prefer one idea per sentence breath. Do not stack three clauses with while/because/so/which into one megasentence.",
+  "RHYTHM (spoken story, not a telegram and not a dense stack):",
+  "Default sentences are mid-length — the kind you would say to a friend. Vary length.",
+  "Use at most 1–2 short punch-line sentences per scene (more reads like a workshop exercise).",
+  "Connective tissue is good. Do not chop every fact into its own breath.",
+  "Prefer one idea per sentence. Do not stack three clauses with while/because/so/which into one megasentence.",
   "Avoid semicolon chains and em-dash lists of abstractions.",
   "Do NOT shorten for its own sake — keep texture and stakes; make the path through the story easy.",
+  "Spoken-aloud test: would you say this to a friend? If not, rewrite.",
   "",
   "OPENING / CLOSING:",
-  "Opening fails if it starts with a thesis, a question, a definition, a trend, or \"Imagine…\".",
+  "Opening fails if it starts with a thesis, a question, a definition, a trend, \"Imagine…\", or a theme-word lede (\"Infectious diseases. This is about how far…\").",
   "Opening passes if a specific person does a specific thing in a specific moment, with tension already seeded.",
-  "Closing fails if it summarizes lessons, lists principles, or hands a solution checklist.",
-  "Closing passes if a short final beat leaves the design challenge sharp, open, and hard to unsee.",
+  "Closing fails if it summarizes lessons, lists principles, hands a solution checklist, or uses a formula riddle (\"Who designs X?\").",
+  "Closing passes if a short final beat leaves the design challenge sharp, open, and hard to unsee — in spoken English, not an MFA prompt.",
   "",
   "CUT: repeated restatements, empty intensifiers (very/incredibly/really), throat-clearing,",
   "sentences that tell the reader how to feel, policy-brief packing, solution theater,",
@@ -52,8 +53,11 @@ export const SCENE_PROSE = [
   "BAD (dense stack — never write like this):",
   "\"In the chawl maternity room, mothers share cots under a tin roof that holds the day's heat long after dark while the grid dies and fans stop and the sterilizer goes cold, so a new mother spikes a fever with no clean way to cool her because a wiring plan built for lights and phones—landlords still meter power by the room—never reaches the birth floor.\"",
   "",
-  "GOOD (same facts, story craft — not shorter for its own sake):",
-  "\"Night holds the day's heat under the tin roof. Mothers share cots on the birth floor. When the grid dies, fans stop. The sterilizer goes cold. A new mother spikes a fever, and there is no clean way to cool her or keep instruments safe. Landlords still meter power by the room. The wiring was built for lights and phones, not for round-the-clock birth care. Backup never reaches this floor. Who designs power for the hour a life arrives?\"",
+  "BAD (telegram punches — also never write like this):",
+  "\"Night holds the heat. Cots fill. Fans stop. Who designs power for the hour a life arrives?\"",
+  "",
+  "GOOD (same facts, spoken story):",
+  "\"Night holds the day's heat under the tin roof, and mothers share cots on the birth floor. When the grid dies, the fans stop and the sterilizer goes cold. A new mother spikes a fever, and there is no clean way to cool her or keep the instruments safe. Landlords still meter power by the room. The wiring was built for lights and phones, not for round-the-clock birth care, so backup never reaches this floor. Someone has to keep a newborn safe through a night that will not cool.\"",
 ].join(" ");
 
 /** Short system-prompt paste (tone line + spine reminder). */
@@ -61,14 +65,14 @@ export const SCENE_PROSE_CAPSULE = [
   "Quest scene prose: nonfiction design-challenge story craft.",
   "Spine: scene hook → complication → mechanism through action → human stakes → close on open design challenge (do not solve).",
   "Voice: confident, declarative, plain-but-not-flat, warm-but-unsentimental, third person, no meta.",
-  "Rhythm: vary sentence length; 2–4 short punch-line sentences; one idea per breath; no dense stacked clauses.",
+  "Rhythm: spoken mid-length sentences; at most 1–2 short punch-lines; no telegram chops; no dense stacked clauses; no 'Who designs X?' riddle close.",
   "Must include lived local harm + local driver as story, not checklist. Do not shorten for its own sake.",
 ].join(" ");
 
 /** Soft hint when seed missions are topic anchors only. */
 export const SCENE_HINT_REWRITE =
   "Write fresh scene prose with design-challenge story craft (hook → complication → mechanism → stakes → open challenge). " +
-  "Vary sentence length and land punch-lines. Do not imitate dense stacked-clause style. Do not shorten for its own sake.";
+  "Spoken mid-length sentences a friend would say. At most 1–2 punch-lines. Do not imitate dense stacks or telegram chops. Do not close with Who designs X?";
 
 /** Technical cap — generous so craft is not truncated mid-story. */
 export const SCENE_CHAR_CAP = 2000;
@@ -122,11 +126,14 @@ export function assertSceneReadable(text) {
   if (veryLong.length >= 2) {
     reasons.push("multiple_very_long_sentences");
   }
-  if (long.length >= 3 && shortPunch.length < 2) {
+  if (long.length >= 3 && shortPunch.length < 1) {
     reasons.push("long_sentences_without_punches");
   }
   if (long.length >= 1 && sentences.length <= 4 && shortPunch.length === 0) {
     reasons.push("all_dense_no_punches");
+  }
+  if (shortPunch.length >= 5 && sentences.length >= 6) {
+    reasons.push("too_many_punch_lines");
   }
 
   if ((scene.match(/;/g) || []).length >= 2) {
@@ -154,6 +161,9 @@ export function assertSceneReadable(text) {
   ) {
     reasons.push("solution_or_takeaway_close");
   }
+  if (/^Who (designs|writes|builds|invents)\b/i.test(close)) {
+    reasons.push("riddle_close");
+  }
 
   // Stacked relative/subordinate glue in a single sentence
   for (const s of sentences) {
@@ -176,8 +186,8 @@ export function sceneRepairInstruction(reasons = []) {
   const why = reasons.length ? ` Issues: ${reasons.join(", ")}.` : "";
   return (
     "Rewrite each quest scene with the same facts, place, and design tension." +
-    " Fix rhythm only: vary sentence length, land 2–4 short punch-line sentences," +
-    " one idea per breath, story spine (hook → complication → mechanism → stakes → open challenge)." +
+    " Fix rhythm only: spoken mid-length sentences, at most 1–2 short punch-lines," +
+    " no telegram chops, no Who-designs-X riddle, story spine (hook → complication → mechanism → stakes → open challenge)." +
     " Do not solve the problem. Do not shorten for its own sake." +
     why
   );

@@ -59,7 +59,7 @@ function baseTile(over = {}) {
       },
       scene: "Samples stack up while fear spreads at the border clinic.",
       briefMd:
-        "## The place\n\nA **fictive** clinic waits on samples.\n\n## Your brief\n\nInvent a workflow that uses sequencing *here*.",
+        "## The place\n\nA **fictive** clinic waits on samples.\n\n## The bigger problem\n\nTruth still lives in a capital lab.\n\n## Your brief\n\nInvent a workflow that uses sequencing *here*.",
       stakeholder: "Dr. Okonkwo",
       suggested: ["gene-sequencing"],
       visionTheme: "care-city",
@@ -98,6 +98,27 @@ describe("quest-tile", () => {
     assert.equal(r.mission.suggested[0], "gene-sequencing");
     assert.equal(r.mission.spotlight.techId, "gene-sequencing");
     assert.ok(r.mission.briefMd.includes("## The place"));
+  });
+
+  it("rejects theme-word summaries, product-riddle encourage, and legacy brief headings", () => {
+    const theme = baseTile();
+    theme.summary = "Infectious diseases. This is about how far sequencing has to go.";
+    const themeR = validateQuestTile(theme, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(themeR.ok, false);
+    assert.ok(themeR.details.includes("summary_theme_word_lede"));
+
+    const riddle = baseTile();
+    riddle.spotlight.encourageCopy = "Build your invention around gene sequencing.";
+    const riddleR = validateQuestTile(riddle, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(riddleR.ok, false);
+    assert.ok(riddleR.details.includes("encourage_product_riddle"));
+
+    const legacy = baseTile();
+    legacy.mission.briefMd =
+      "## The place\n\nClinic.\n\n## The bigger problem\n\nLabs are far.\n\n## What just became possible\n\nSequencers got cheaper.\n\n## Your job\n\nInvent it.";
+    const legacyR = validateQuestTile(legacy, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(legacyR.ok, false);
+    assert.ok(legacyR.details.includes("brief_md_legacy_headings"));
   });
 
   it("rejects bad schema and packs", () => {

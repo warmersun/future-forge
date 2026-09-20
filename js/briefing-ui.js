@@ -1,9 +1,10 @@
 /**
  * Quest briefing — captions + pager overlay Future Vision.
- * Walk: each beat swaps the same pane's still. Authored `imageUrl` wins (no
- * Imagine). Else /api/idea-image kind:brief. Does not write those URLs into
- * VisionRenderer.currentUrl.
- * Full brief restores invent/pathway vision. Invent column stays title + board.
+ * Walk: each beat swaps the same pane's still. Authored `imageUrl` wins, then
+ * the theme postcard. Imagine only when a beat has `imagePrompt`. Does not
+ * write those URLs into VisionRenderer.currentUrl.
+ * Start inventing restores invent/pathway vision and a compact recap.
+ * Invent column stays title + board (tools stay live).
  */
 
 import { attachReadAloud, pruneDetachedReadAloud } from "./read-aloud.js";
@@ -16,9 +17,12 @@ import {
   briefBeatAuthoredUrl,
   briefBeatImagePrompt,
   briefBeatStillUrl,
+  briefBeatWantsImagine,
   captionMdFromBeatBody,
-  jobLineFromMission,
+  compactRecapFromBeats,
+  outcomeJobFromMission,
   resolveBriefBeats,
+  splitMarkdownSections,
 } from "./brief-beats.js";
 
 const STORAGE_PREFIX = "ff.briefing.done.";
@@ -113,6 +117,27 @@ export function sceneCopyFromMission(mission) {
 }
 
 /**
+ * Persistent "Your job" in the challenge banner (solo + Friends). Skippers still see the outcome.
+ * @param {HTMLElement|null|undefined} el
+ * @param {object|null|undefined} mission
+ * @param {{ summary?: string, beats?: object[] }} [opts]
+ */
+export function paintQuestJob(el, mission, opts = {}) {
+  if (!el) return "";
+  const line = outcomeJobFromMission(mission, opts);
+  if (!line) {
+    el.hidden = true;
+    el.setAttribute?.("hidden", "");
+    el.textContent = "";
+    return "";
+  }
+  el.hidden = false;
+  el.removeAttribute?.("hidden");
+  el.innerHTML = `<span class="quest-job-kicker">Your job</span> ${escapeHtml(line)}`;
+  return line;
+}
+
+/**
  * Drop overlay so a new Quest cannot inherit the previous one.
  * @param {{ missionId?: string, clearDismissed?: boolean, storage?: Storage }} [opts]
  */
@@ -127,6 +152,11 @@ export function resetQuestBriefing(opts = {}) {
       delete el.dataset.briefingKey;
       records.delete(el);
     });
+    document
+      .querySelectorAll(".challenge-banner.is-briefing-walk, .challenge-banner.is-briefing-recap")
+      .forEach((el) => {
+        el.classList.remove("is-briefing-walk", "is-briefing-recap");
+      });
     document
       .querySelectorAll(
         ".quest-briefing-host, #ws-mission-scene, #hs-play-mission-scene, #mp-mission-scene"
@@ -195,6 +225,10 @@ export function paintQuestBriefing(visionRoot, mission, opts = {}) {
     if (sceneEl) {
       sceneEl.hidden = false;
       sceneEl.textContent = sceneCopyFromMission(mission);
+      sceneEl.closest?.(".challenge-banner")?.classList?.remove?.(
+        "is-briefing-walk",
+        "is-briefing-recap"
+      );
     }
     return empty;
   }
@@ -215,7 +249,12 @@ export function paintQuestBriefing(visionRoot, mission, opts = {}) {
 
   const missionId = String(mission?.id || "").trim() || "quest";
   const fingerprint = `${missionId}|${beats.map((b) => b.id).join(",")}`;
-  const jobLine = jobLineFromMission(mission, { summary: opts.summary });
+  const jobLine = outcomeJobFromMission(mission, {
+    summary: opts.summary,
+    title: mission?.title,
+    beats,
+    encourageCopy: mission?.spotlight?.encourageCopy,
+  });
   const place = String(mission?.place || "").trim();
   const globalId = String(opts.globalId || mission?.globalId || "").trim();
   const dismissed = isBriefingDismissed(missionId, opts.storage);
@@ -294,6 +333,9 @@ function unmountOverlay(root) {
   delete root.dataset.briefingKey;
   records.delete(root);
   removeReplayChip(root);
+  const banner =
+    root.closest?.(".workshop-layout")?.querySelector?.(".challenge-banner") || null;
+  banner?.classList?.remove?.("is-briefing-walk", "is-briefing-recap");
 }
 
 function clearBriefing(el) {
@@ -355,7 +397,6 @@ function onBriefAction(rec, action, indexRaw) {
       step(rec, 1);
       break;
     case "done":
-    case "full":
     case "invent":
       rec.mode = "off";
       setBriefingDismissed(rec.missionId, true);
@@ -407,9 +448,25 @@ function commit(rec) {
   }
 }
 
+function bannerFromRec(rec) {
+  const fromScene = rec?.sceneEl?.closest?.(".challenge-banner");
+  if (fromScene) return fromScene;
+  return rec?.visionRoot?.closest?.(".workshop-layout")?.querySelector?.(".challenge-banner") || null;
+}
+
+function syncBannerMode(rec) {
+  const banner = bannerFromRec(rec);
+  if (!banner?.classList) return;
+  const walk = rec.mode === "walk";
+  const recap = rec.mode === "off";
+  banner.classList.toggle("is-briefing-walk", walk);
+  banner.classList.toggle("is-briefing-recap", recap);
+}
+
 function paintDom(rec) {
   const root = rec.visionRoot;
   const paintKey = `${rec.fingerprint}|${rec.mode}|${rec.index}`;
+  syncBannerMode(rec);
 
   if (rec.mode === "off") {
     root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
@@ -447,7 +504,7 @@ function paintDom(rec) {
 }
 
 /**
- * Restore the invent-column essay; Future Vision is un-overlaid.
+ * Compact recap in the invent column; full story stays behind a disclosure.
  * @param {BriefingRecord} rec
  */
 function paintLeftBrief(rec) {
@@ -456,8 +513,54 @@ function paintLeftBrief(rec) {
   el.hidden = false;
   el.classList.add("quest-brief");
   el.classList.remove("quest-briefing-host");
-  el.innerHTML = renderMarkdownSafe(rec.briefMd || "");
-  attachReadAloud(el, { minChars: SPEAK_MIN });
+  el.innerHTML = renderRecap(rec);
+  const speak = el.querySelector(".quest-brief-recap-speak");
+  if (speak) attachReadAloud(speak, { minChars: SPEAK_MIN });
+  const full = el.querySelector(".quest-brief-full-body");
+  if (full) attachReadAloud(full, { minChars: SPEAK_MIN });
+}
+
+function recapSection(title, body) {
+  const text = String(body || "").trim();
+  if (!text) return "";
+  return `<section class="quest-brief-recap-item">
+      <h3 class="quest-brief-recap-title">${escapeHtml(title)}</h3>
+      <p>${escapeHtml(text)}</p>
+    </section>`;
+}
+
+/**
+ * Full-story markdown without Your job — the banner already has that line.
+ * @param {string} [briefMd]
+ */
+function essayWithoutJob(briefMd) {
+  const sections = splitMarkdownSections(briefMd).filter((s) => s.role !== "job");
+  if (!sections.length) return "";
+  return sections
+    .map((s) => {
+      const heading = s.title ? `## ${s.title}` : "";
+      return [heading, s.body].filter(Boolean).join("\n\n");
+    })
+    .join("\n\n")
+    .trim();
+}
+
+function renderRecap(rec) {
+  const recap = compactRecapFromBeats(rec.beats);
+  const sections =
+    recapSection("The place", recap.place) +
+    recapSection("The bigger problem", recap.strain);
+  const essay = essayWithoutJob(rec.briefMd);
+  const full = essay
+    ? `<details class="quest-brief-full">
+        <summary>Read the whole story</summary>
+        <div class="quest-brief-full-body">${renderMarkdownSafe(essay)}</div>
+      </details>`
+    : "";
+  return `<div class="quest-brief-recap">
+      <div class="quest-brief-recap-speak">${sections}</div>
+      ${full}
+    </div>`;
 }
 
 function ensureReplayChip(rec) {
@@ -516,10 +619,14 @@ function renderWalk(rec) {
         } aria-label="Previous">&lt;</button>
         <div class="quest-briefing-dots" role="tablist" aria-label="Briefing steps">${dots}</div>
         <button type="button" class="quest-briefing-arrow" data-brief="${
-          last ? "full" : "next"
-        }" aria-label="${last ? "Show full brief" : "Next"}">&gt;</button>
+          last ? "invent" : "next"
+        }" aria-label="${last ? "Start inventing" : "Next"}">&gt;</button>
       </div>
-      <button type="button" class="quest-briefing-full" data-brief="full">Full brief</button>
+      ${
+        last
+          ? `<button type="button" class="quest-briefing-invent" data-brief="invent">Start inventing</button>`
+          : `<span class="quest-briefing-invent-spacer" aria-hidden="true"></span>`
+      }
     </div>`;
 }
 
@@ -554,12 +661,14 @@ function requestBeatArt(rec, index, prefetchNext = false) {
     } else {
       const fallback = briefBeatStillUrl(beat, { globalId: rec.globalId });
       if (fallback) applyCartoonFrame(rec, index, fallback);
-      fetchBeatArt(
-        artIdFor(rec, beat),
-        briefBeatImagePrompt(beat, { place: rec.place })
-      ).then((url) => {
-        if (url) applyCartoonFrame(rec, index, url);
-      });
+      if (briefBeatWantsImagine(beat)) {
+        fetchBeatArt(
+          artIdFor(rec, beat),
+          briefBeatImagePrompt(beat, { place: rec.place })
+        ).then((url) => {
+          if (url) applyCartoonFrame(rec, index, url);
+        });
+      }
     }
   }
   if (prefetchNext && index + 1 < rec.beats.length) {
@@ -567,11 +676,14 @@ function requestBeatArt(rec, index, prefetchNext = false) {
     const nextAuthored = briefBeatAuthoredUrl(next);
     if (nextAuthored) {
       prefetchStillUrl(nextAuthored);
-    } else if (next && !artCache.has(artIdFor(rec, next))) {
+    } else if (next && briefBeatWantsImagine(next) && !artCache.has(artIdFor(rec, next))) {
       fetchBeatArt(
         artIdFor(rec, next),
         briefBeatImagePrompt(next, { place: rec.place })
       );
+    } else if (next) {
+      const nextStill = briefBeatAuthoredUrl(next) || briefBeatStillUrl(next, { globalId: rec.globalId });
+      if (nextStill) prefetchStillUrl(nextStill);
     }
   }
 }

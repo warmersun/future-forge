@@ -30,7 +30,7 @@ import {
 import { describeMarketEffects } from "../sim/market-news.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { attachReadAloud, formatHeadingForSpeech } from "../read-aloud.js";
-import { paintQuestBriefing } from "../briefing-ui.js";
+import { paintQuestBriefing, paintQuestJob } from "../briefing-ui.js";
 import {
   initTechDrawers,
   updateTechDrawerCount,
@@ -631,6 +631,7 @@ export function initFriendsUi(api) {
       mission,
       GLOBALS.find((g) => g.id === place?.globalId)?.title || ""
     );
+    paintQuestJob($("#mp-quest-job"), mission, { summary: mission?.summary });
     const sceneEl = $("#mp-mission-scene");
     if (sceneEl) paintMissionScene(sceneEl, mission);
     const gLabel = $("#mp-play-global-label");
@@ -1786,6 +1787,7 @@ export function initFriendsUi(api) {
       m,
       global?.title || ""
     );
+    paintQuestJob($("#hs-quest-job"), m, { summary: m?.summary });
     // Quest description (solo workshop: briefMd scrollable, else full scene)
     const sceneEl = $("#hs-play-mission-scene");
     if (sceneEl) {

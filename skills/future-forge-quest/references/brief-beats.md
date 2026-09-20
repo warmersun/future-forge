@@ -12,7 +12,7 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
   2. The bigger problem (root cause; old **What’s strained** still maps here)
   3. Unknown `##` headings (kept, never dropped)
   4. Your job (last card → **Start inventing**)
-- After dismiss: compact recap + Replay + Full brief (the whole `briefMd`).
+- After dismiss: compact recap + Replay. Full `briefMd` sits behind **Read the whole story**. Last card is **Start inventing** (not a skip hatch).
 
 Do **not** author **What just became possible** or **Constraints** on new tiles. Those were capability / constraint lectures. Honest limits belong in `grounding` / tutor. Lived constraints belong inside the story.
 
@@ -82,7 +82,7 @@ The walk swaps a still on Future Vision with each caption:
 2. Else Imagine from `imagePrompt` (or a derived prompt).
 3. Else the theme postcard while that generates.
 
-Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg`, or host them and use `https://…`. Full brief restores invent/pathway vision. Omit `imageUrl` when you are fine with live generate.
+Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg`, or host them and use `https://…`. Start inventing restores invent/pathway vision. Omit `imageUrl` when the theme postcard is enough; `imagePrompt` opts into live Imagine.
 
 ## Do not
 

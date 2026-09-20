@@ -15,7 +15,7 @@ Use this for:
 
 | Field | How to apply |
 |-------|----------------|
-| `mission.scene` | Full spine in plain text. Schema max **500 characters**. Short breaths, punch-lines, open challenge. |
+| `mission.scene` | Full spine in plain text. Schema max **500 characters**. Spoken mid-length sentences; at most 1–2 punch-lines; open challenge. |
 | `mission.briefMd` → **The place** | Longer lived story (same spine/voice/rhythm). **2–4 short paragraphs** (blank line between) — the invent screen shows each as a walkthrough card. |
 | `mission.briefMd` → **The bigger problem** | Zoom-out + root cause. Everyday words. Not a capability lecture. |
 | `mission.briefMd` → **Your job** | Outcome only (see `brief-template.md`). |
@@ -68,13 +68,14 @@ Then **The bigger problem** zooms out: this scene is one instance of [global iss
 
 ---
 
-## Rhythm (this fixes hard-to-read dense stacks)
+## Rhythm (spoken story — not a telegram, not a dense stack)
 
-- Vary sentence length. After a complex beat, land a **short punch-line** sentence — often its own breath.
-- Use punch-line sentences **2–4 times** per scene (more dilutes them).
-- Default beat: **Explain → Concretize → Land.**
-- Prefer **one idea per sentence breath**. Do not stack three clauses with *while / because / so / which* into one megasentence.
+- Default sentences are **mid-length**: the kind you would say to a friend.
+- After a complex beat, you may land **one short punch-line**. Use punch-lines **1–2 times** per scene (more reads like a workshop exercise).
+- Connective tissue is good. Do not chop every fact into its own breath.
+- Prefer **one idea per sentence**. Do not stack three clauses with *while / because / so / which* into one megasentence.
 - Avoid semicolon chains and em-dash lists of abstractions.
+- **Spoken-aloud test:** would you say this to a friend? If not, rewrite.
 - **Do not shorten for its own sake** — keep texture and stakes; make the path through the story easy.
 
 ---
@@ -84,7 +85,7 @@ Then **The bigger problem** zooms out: this scene is one instance of [global iss
 | | Fails | Passes |
 |---|--------|--------|
 | **Open** | Thesis, trend, definition, “Imagine…”, abstract problem statement, theme-word lede (*Infectious diseases. This is about how far…*) | Specific person does a specific thing in a specific moment; tension already seeded |
-| **Close** | Lessons, principles, solution checklist, “they fixed it”, product name, “invent with [tech]” | Short final beat leaves the design challenge sharp, open, hard to unsee |
+| **Close** | Lessons, principles, solution checklist, “they fixed it”, product name, “invent with [tech]”, formula riddle (*Who designs a trauma score a surgeon can still outrun?*) | Short final beat leaves the design challenge sharp, open, hard to unsee — in spoken English |
 
 ---
 
@@ -126,9 +127,13 @@ The tray already suggests the tech (`mission.suggested`). Naming it in player pr
 
 > In the chawl maternity room, mothers share cots under a tin roof that holds the day’s heat long after dark while the grid dies and fans stop and the sterilizer goes cold, so a new mother spikes a fever with no clean way to cool her because a wiring plan built for lights and phones—landlords still meter power by the room—never reaches the birth floor.
 
-**GOOD (same facts, story craft):**
+**GOOD (same facts, spoken story):**
 
-> Night holds the day’s heat under the tin roof. Mothers share cots on the birth floor. When the grid dies, fans stop. The sterilizer goes cold. A new mother spikes a fever, and there is no clean way to cool her or keep instruments safe. Landlords still meter power by the room. The wiring was built for lights and phones, not for round-the-clock birth care. Backup never reaches this floor.
+> Night holds the day’s heat under the tin roof, and mothers share cots on the birth floor. When the grid dies, the fans stop and the sterilizer goes cold. A new mother spikes a fever, and there is no clean way to cool her or keep the instruments safe. Landlords still meter power by the room. The wiring was built for lights and phones, not for round-the-clock birth care, so backup never reaches this floor.
+
+**BAD (telegram punches):**
+
+> Night holds the heat. Cots fill. Fans stop. Who designs power for the hour a life arrives?
 
 ### Product riddle (never ship like this)
 
@@ -160,11 +165,11 @@ Lab terms (*chirality*, *opposite-handed*, *ribosome*) still live in `grounding`
 
 ## `mission.scene` under the 500-character cap
 
-Keep the full spine. Prefer **several short sentences** over one long lede. End on the open design tension (a sharp question or unfinished beat is fine). Still use everyday words. Do not name the spotlight tech.
+Keep the full spine. Prefer **spoken mid-length sentences** over a telegram of punches. End on the open design tension in ordinary English (an unfinished beat is fine; a “Who designs X?” riddle is not). Still use everyday words. Do not name the spotlight tech.
 
 **Shape to aim for (illustrative length, invent your own place):**
 
-> Meena wipes her sister’s forehead with a cloth that is already warm. Night holds the day’s heat under the tin roof. When the grid dies, fans stop. The sterilizer goes cold. Landlords still meter power by the room. Backup never reaches this floor. Who keeps a newborn safe through a night that will not cool?
+> Meena wipes her sister’s forehead with a cloth that is already warm. Night holds the day’s heat under the tin roof. When the grid dies, the fans stop and the sterilizer goes cold. Landlords still meter power by the room, so backup never reaches this floor. Someone has to keep a newborn safe through a night that will not cool.
 
 ---
 
@@ -177,7 +182,7 @@ Keep the full spine. Prefer **several short sentences** over one long lede. End 
 - [ ] **The bigger problem** names the global issue and its root cause
 - [ ] Mechanism shown through action, not lecture
 - [ ] One plot type carries the piece
-- [ ] Punch-line sentences used 2–4 times (scene or place section)
+- [ ] Spoken mid-length sentences; at most 1–2 punch-lines; no “Who designs X?” close
 - [ ] **The place** is 2–4 short paragraphs (one idea each) so the derived walkthrough is readable
 - [ ] Ends on open design challenge — not a solution, not a product
 - [ ] Player text never says “invent with [tech]” / “do not invent X” / a sponsor product
