@@ -219,23 +219,17 @@ Invent together: 90 minutes, a hard story, pizza
 
 **Approval:** Off. **Capacity:** 24 (tables of 3–4; raise later). Do not require a deck to register.
 
-**Cover:** Square. Words on the image: “Invent together — Totalitarianism — 90 min.” Not a logo-only card.
+**Cover:** Square. Words on the image: “Invent together — 90 min — pizza.” Not a logo-only card. Not the theme name as the headline.
 
 ---
 
 ### About
 
-**This week’s theme: Totalitarianism.**
-
-Not a history class. A design problem: one center wants one story, and a small group is trying to stay visible.
+You already see new tech every week. Almost nobody practices using it on a real problem, with other people in the room.
 
 Tonight’s first story: a night school where the tutor dies mid-sentence when someone asks a rights question. Three learners quit. They still need the certificate. We invent a way the room can help without sending anyone’s words out of the building.
 
-Second story, same theme, different place — a nurse’s screen, a locked cold locker, or a street that loses power. Sit where the sentence grabs you.
-
-This is not a talk night. It is not “bring your own app.”
-
-You already see new tech every week. Almost nobody practices using it on a real problem, with other people in the room.
+Second story, different place — a nurse’s screen, a locked cold locker, or a street that loses power. Sit where the sentence grabs you.
 
 We open the story in Future Forge. You read three lines: the job, the place, what is going wrong. Each person picks one technology and says what they think it is good for *here*. Then we invent on the board for two short rounds. You do not have to finish. If you get stuck, that is still the night — you can say that out loud at the end.
 
@@ -243,17 +237,19 @@ Pizza (and beer if the room allows) in the break. After that, anyone who wants a
 
 The AI in the room is on us for that hour.
 
+This week those stories sit under one theme: **Totalitarianism** — not as a history class, as a design problem. One center wants one story. A small group is trying to stay visible.
+
 Future Forge is the name of the practice and the free table: https://warmersun.com/forge/
 
 **Bring:** laptop and charger. Zero homework.
 
 **Who it is for:** you already like nights where people *do* something. You will try a story if the first sentence is interesting.
 
-**Who it is not for:** a lecture series, a hack on your own repo, or a 50-person mixer.
+Not a talk night. Not “bring your own app.” Not a 50-person mixer.
 
 Same time next week. Come back if it was good.
 
-Host: Sic / Warmer Sun. I sit at the table. I do not give a TED.
+Host: Sic / Warmer Sun. I sit at the table.
 
 ---
 
