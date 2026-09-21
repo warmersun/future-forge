@@ -121,6 +121,7 @@ FF_XAI_MODEL=grok-4.6
 The Node server serves static files and exposes:
 
 - `POST /api/co-invent` — scenarios, co-inventor, feasibility assist, challenges  
+- `POST /api/co-invent-voice/session` — mint a Grok Voice session for the AI co-inventor (mic on the compose row). Browser then opens `ws://…/ws/co-invent-voice`; the game server proxies audio to xAI so the API key never hits the page. No local-voice fallback.  
 - `POST /api/vision` — Imagine-based future vision images  
 - `POST /api/tts` — cloud text-to-speech for **Read out loud** on long narrative text (xAI TTS; **server caches** audio by text+voice under `data/tts-cache/` so all users share one file; browser falls back to device voice if AI is offline on a cache miss)  
 - `GET /api/health` — public co-inventor status (`joinUrls` from `FF_JOIN_ORIGIN`; LAN IPs / models / room stats only on loopback or with admin token); **portal** also includes `clerk` + `db`  
@@ -143,9 +144,13 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | `FF_MAX_ROOMS` | Cap concurrent friends rooms (default 200) |
 | `FF_WS_MAX_PAYLOAD` | Max WebSocket message bytes (default 256KiB) |
 | `FF_RATE_*` | Optional overrides for solo AI / WS action rate limits (see `.env.example`) |
+| `FF_VOICE_MAX_SESSIONS` | Cap concurrent Grok Voice calls (default 8; xAI team cap is 10) |
+| `FF_VOICE_MAX_MS` | Max voice call length (default 10 minutes) |
 | `FF_AI_SEARCH=1` | Live web + X search on timing assess and idea-sparks (off by default; also `--ai-search`) |
 
-Solo AI routes (`/api/co-invent`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
+Solo AI routes (`/api/co-invent`, `/api/co-invent-voice/session`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
+
+**Voice:** tap the mic next to Send on any AI co-inventor panel. Needs a live SuperGrok session or `FF_XAI_API_KEY`, a microphone, and a secure context (`http://127.0.0.1` or HTTPS). First ask of a turn still costs 1 AP (free while tutoring); the call itself is not billed per utterance. The co-inventor never writes the board — Apply buttons still confirm stack/how drafts. Portal (`npm run portal`) does not serve voice.
 
 ### Developer mode (quest / trend inspect)
 

@@ -27,7 +27,7 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor } from "./coinventor.js";
+import { CoInventor } from "./coinventor.js?v=voice-4";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,

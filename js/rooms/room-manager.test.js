@@ -468,6 +468,32 @@ describe("RoomManager", () => {
     assert.match(room.mp.invents[host.id].inventionHow, /Sensors/);
   });
 
+  it("requestAi mode voice charges thinking tax without calling Grok", async () => {
+    let grok = 0;
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.coInventHandler = async () => {
+      grok += 1;
+      return { message: "should not run", proposals: { inventionHow: "nope" } };
+    };
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const startAp = room.mp.invents[host.id].ap;
+    const r = await rm.requestAi(room, host, {
+      mode: "voice",
+      clientActionId: "voice-1",
+      reservedAp: 1,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.type, "ai_result");
+    assert.equal(r.mode, "voice");
+    assert.equal(grok, 0);
+    assert.equal(room.mp.invents[host.id].inventionHow || "", "");
+    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+  });
+
   it("over quota rejects without AP spend", async () => {
     const { rm, created, room, host } = twoPlayerRoom();
     rm.hostCommand(room, host, "start_quest", {

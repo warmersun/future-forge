@@ -1024,6 +1024,15 @@ export class RoomManager {
       displayName: player.displayName,
     });
 
+    // Voice pays the thinking tax here; the browser then opens /ws/co-invent-voice.
+    if (mode === "voice") {
+      return this.completeAiJob(room, player, clientActionId, {
+        ok: true,
+        result: { message: "", proposals: null, teaching: [] },
+        mode: "voice",
+      });
+    }
+
     if (!this.coInventHandler) {
       return {
         ok: true,

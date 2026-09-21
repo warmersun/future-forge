@@ -122,6 +122,7 @@ describe("createUsageTracker", () => {
         textOutPerMTok: 2,
         image: 0.05,
         ttsPerMChar: 1,
+        voicePerMin: 0.08,
       },
       warn: () => {},
     });
@@ -278,6 +279,29 @@ describe("createUsageTracker", () => {
     assert.equal(tts.length, 3);
     assert.equal(tts[0].source, "ai");
     assert.equal(tts[0].charCount, 1000);
+  });
+
+  it("records ai_voice duration and conservative two-way cost", () => {
+    tracker.record({
+      type: "ai_voice",
+      source: "ai",
+      durationMs: 60_000,
+      voice: "eve",
+      ok: true,
+    });
+    tracker.record({
+      type: "ai_voice",
+      source: "error",
+      durationMs: 1000,
+      ok: false,
+    });
+    const s = tracker.getSummary();
+    assert.equal(s.lifetime.voiceSessions, 1);
+    assert.equal(s.lifetime.voiceDurationMs, 60_000);
+    assert.equal(s.lifetime.voiceErrors, 1);
+    // 1 min × 2 directions × $0.08
+    assert.equal(s.lifetime.estimatedCostUsd, 0.16);
+    assert.equal(s.prices.voicePerMin, 0.08);
   });
 
   it("session touch + idle close accumulates duration", () => {

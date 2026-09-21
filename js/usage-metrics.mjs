@@ -25,6 +25,9 @@ import crypto from "node:crypto";
  *   ttsErrors: number,
  *   ttsChars: number,
  *   ttsBytes: number,
+ *   voiceSessions: number,
+ *   voiceDurationMs: number,
+ *   voiceErrors: number,
  *   sessions: number,
  *   sessionDurationMs: number,
  *   rooms: number,
@@ -38,7 +41,7 @@ import crypto from "node:crypto";
  * @param {boolean} [opts.enabled]
  * @param {number} [opts.flushMs]
  * @param {number} [opts.sessionIdleMs]
- * @param {{ textInPerMTok?: number, textOutPerMTok?: number, image?: number, ttsPerMChar?: number }} [opts.prices]
+ * @param {{ textInPerMTok?: number, textOutPerMTok?: number, image?: number, ttsPerMChar?: number, voicePerMin?: number }} [opts.prices]
  * @param {() => number} [opts.now] — inject clock for tests
  * @param {(msg: string) => void} [opts.warn]
  */
@@ -54,6 +57,7 @@ export function createUsageTracker(opts = {}) {
     textOutPerMTok: numOrNull(opts.prices?.textOutPerMTok),
     image: numOrNull(opts.prices?.image),
     ttsPerMChar: numOrNull(opts.prices?.ttsPerMChar),
+    voicePerMin: numOrNull(opts.prices?.voicePerMin),
   };
   const nowFn = typeof opts.now === "function" ? opts.now : () => Date.now();
   const warn =
@@ -287,6 +291,23 @@ export function createUsageTracker(opts = {}) {
       return;
     }
 
+    if (type === "ai_voice") {
+      const src = event.source || "ai";
+      const dur = Math.max(0, n(event.durationMs));
+      if (src === "error") {
+        lifetime.voiceErrors += 1;
+        today.voiceErrors += 1;
+      } else {
+        lifetime.voiceSessions += 1;
+        today.voiceSessions += 1;
+        lifetime.voiceDurationMs += dur;
+        today.voiceDurationMs += dur;
+      }
+      recomputeCost(lifetime);
+      recomputeCost(today);
+      return;
+    }
+
     if (type === "session_end") {
       lifetime.sessions += 1;
       today.sessions += 1;
@@ -310,7 +331,8 @@ export function createUsageTracker(opts = {}) {
       prices.textInPerMTok != null ||
       prices.textOutPerMTok != null ||
       prices.image != null ||
-      prices.ttsPerMChar != null;
+      prices.ttsPerMChar != null ||
+      prices.voicePerMin != null;
     if (!hasAny) {
       counters.estimatedCostUsd = null;
       return;
@@ -327,6 +349,10 @@ export function createUsageTracker(opts = {}) {
     }
     if (prices.ttsPerMChar != null) {
       cost += (counters.ttsChars / 1e6) * prices.ttsPerMChar;
+    }
+    if (prices.voicePerMin != null) {
+      // xAI bills audio sent or received; count connected minutes × 2.
+      cost += (counters.voiceDurationMs / 60_000) * 2 * prices.voicePerMin;
     }
     counters.estimatedCostUsd = Math.round(cost * 1e6) / 1e6;
   }
@@ -507,6 +533,7 @@ export function createUsageTracker(opts = {}) {
         textOutPerMTok: prices.textOutPerMTok,
         image: prices.image,
         ttsPerMChar: prices.ttsPerMChar,
+        voicePerMin: prices.voicePerMin,
       },
     };
   }
@@ -629,6 +656,7 @@ export function usageTrackerFromEnv(
     textOutPerMTok: numOrNull(env.FF_USAGE_PRICE_TEXT_OUT_PER_MTOK),
     image: numOrNull(env.FF_USAGE_PRICE_IMAGE),
     ttsPerMChar: numOrNull(env.FF_USAGE_PRICE_TTS_PER_MCHAR),
+    voicePerMin: numOrNull(env.FF_USAGE_PRICE_VOICE_PER_MIN),
   };
   return createUsageTracker({
     dir,
@@ -695,6 +723,9 @@ function emptyCounters() {
     ttsErrors: 0,
     ttsChars: 0,
     ttsBytes: 0,
+    voiceSessions: 0,
+    voiceDurationMs: 0,
+    voiceErrors: 0,
     sessions: 0,
     sessionDurationMs: 0,
     rooms: 0,

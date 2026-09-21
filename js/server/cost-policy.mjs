@@ -23,6 +23,8 @@ export const DEFAULT_COST_WINDOWS = {
   "idea-image": { limit: 20, windowMs: 60_000 },
   /** Cloud TTS */
   tts: { limit: 30, windowMs: 60_000 },
+  /** Grok Voice session create (not per utterance) */
+  voice: { limit: 8, windowMs: 60_000 },
   /** Global AI spend gate (all of the above share this) */
   "ai-global": { limit: 80, windowMs: 60_000 },
   /** Room create (also limited inside RoomManager) */
@@ -49,6 +51,7 @@ export function costWindowsFromEnv(env = process.env) {
     FF_RATE_MARKET_IMAGE: "market-image",
     FF_RATE_IDEA_IMAGE: "idea-image",
     FF_RATE_TTS: "tts",
+    FF_RATE_VOICE: "voice",
     FF_RATE_AI_GLOBAL: "ai-global",
     FF_RATE_WS_ACTION: "ws-action",
   };
@@ -92,7 +95,7 @@ export class CostPolicy {
 
   /**
    * Solo AI routes: per-route + global AI budget.
-   * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
+   * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'|'voice'} route
    * @param {string} ip
    */
   allowExpensive(route, ip) {

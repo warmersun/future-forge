@@ -89,6 +89,12 @@ import {
   reasoningEffortForCoInvent,
 } from "./js/server/fast-eval.mjs";
 import { heuristicConverges, clampPathwayScore } from "./js/hex/evaluate.js";
+import {
+  VOICE_MODEL,
+  VOICE_SAMPLE_RATE,
+} from "./js/server/voice-prompt.mjs";
+import { createVoiceSessionStore, VOICE_WS_PATH } from "./js/server/voice-session.mjs";
+import { attachVoiceSockets } from "./js/server/voice-proxy.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -169,6 +175,8 @@ const usage = usageTrackerFromEnv(
   process.argv.slice(2)
 );
 
+const voiceSessions = createVoiceSessionStore();
+
 /**
  * Developer UI (quest / trend inspect). Off by default.
  * Enable with `node server.mjs --developer` or FF_DEVELOPER=1.
@@ -201,7 +209,7 @@ const roomManager = ROOMS_ENABLED
 /**
  * Gate expensive AI POST routes: rate limit + optional FF_API_SECRET.
  * @param {import('node:http').IncomingMessage} req
- * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'} route
+ * @param {'co-invent'|'vision'|'market-image'|'idea-image'|'tts'|'voice'} route
  * @param {object|null} [body]
  */
 function gateExpensive(req, route, body = null) {
@@ -3098,6 +3106,7 @@ const server = http.createServer(async (req, res) => {
         rooms: ROOMS_ENABLED,
         tts: ai,
         ttsVoice: TTS_VOICE,
+        voice: ai,
       },
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
@@ -3397,6 +3406,79 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (
+    req.method === "POST" &&
+    (req.url?.startsWith("/api/co-invent-voice/session") ||
+      req.url?.startsWith("/api/co-invent-voice/hangup"))
+  ) {
+    try {
+      const body = await readBody(req);
+      const hangup = req.url.startsWith("/api/co-invent-voice/hangup");
+      if (hangup) {
+        const sid = String(body?.sessionId || "");
+        const tok = String(body?.token || "");
+        const found = voiceSessions.auth(sid, tok);
+        if (!found) {
+          return sendJson(res, 404, { ok: false, error: "not_found" });
+        }
+        voiceSessions.close(found.id, "hangup");
+        return sendJson(res, 200, { ok: true });
+      }
+      const gate = gateExpensive(req, "voice", body);
+      if (!gate.ok) {
+        return sendJson(res, gate.status || 429, {
+          ok: false,
+          error: gate.error || "rate_limited",
+          message:
+            gate.error === "api_secret_required"
+              ? "This server requires an API secret for co-inventor voice."
+              : gate.error === "voice_busy"
+                ? "Too many live voice sessions — try again in a moment."
+                : "Too many voice sessions — wait a moment and try again.",
+        });
+      }
+      const token = await resolveAccessToken();
+      if (!token) {
+        return sendJson(res, 503, {
+          ok: false,
+          error: "ai_offline",
+          message: "Voice needs SuperGrok or FF_XAI_API_KEY. Text co-inventor still works locally.",
+        });
+      }
+      const created = voiceSessions.create({
+        context: body?.context && typeof body.context === "object" ? body.context : {},
+        clientSessionId: clientSessionFromBody(body),
+        ip: gate.ip,
+        voice: TTS_VOICE,
+      });
+      if (!created.ok) {
+        return sendJson(res, created.status || 429, {
+          ok: false,
+          error: created.error || "voice_busy",
+          message: "Too many live voice sessions — try again in a moment.",
+        });
+      }
+      const s = created.session;
+      if (s.clientSessionId) usage.touchSession(s.clientSessionId);
+      return sendJson(res, 200, {
+        ok: true,
+        sessionId: s.id,
+        token: s.token,
+        wsPath: VOICE_WS_PATH,
+        voice: s.voice,
+        sampleRate: VOICE_SAMPLE_RATE,
+        model: VOICE_MODEL,
+      });
+    } catch (e) {
+      console.error("[voice]", e.message || e);
+      const status = errorStatus(e);
+      return sendJson(res, status, {
+        ok: false,
+        error: e.message || "Voice session failed",
+      });
+    }
+  }
+
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
     try {
       const body = await readBody(req);
@@ -3460,12 +3542,11 @@ if (roomManager) {
   roomManager.coInventHandler = (body) => handleCoInvent(body);
 }
 
-function attachRoomSockets(httpLikeServer) {
+function attachRoomSockets() {
 // WebSocket for friends rooms
 if (ROOMS_ENABLED && roomManager) {
   const wss = new WebSocketServer({
-    server: httpLikeServer,
-    path: "/ws/rooms",
+    noServer: true,
     maxPayload: WS_MAX_PAYLOAD,
   });
   wss.on("connection", (socket, req) => {
@@ -3597,14 +3678,40 @@ if (ROOMS_ENABLED && roomManager) {
       );
     });
   });
+  return wss;
 }
+return null;
 }
 
-if (ROOMS_ENABLED && roomManager) {
-  attachRoomSockets(server);
-}
+const roomWss = attachRoomSockets();
+const voiceWss = attachVoiceSockets(server, {
+  sessions: voiceSessions,
+  getAccessToken: (o) => resolveAccessToken(o),
+  maxPayload: WS_MAX_PAYLOAD,
+  voice: TTS_VOICE,
+  model: VOICE_MODEL,
+  onUsage: (event) => usage.record(event),
+});
+
+server.on("upgrade", (req, socket, head) => {
+  const path = String(req.url || "").split("?")[0];
+  const wss =
+    path === "/ws/rooms" ? roomWss : path === VOICE_WS_PATH ? voiceWss : null;
+  if (!wss) {
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
+});
 
 function shutdownUsage(signal) {
+  try {
+    voiceSessions.closeAll("shutdown");
+  } catch (e) {
+    console.warn("[voice] close failed:", e.message || e);
+  }
   try {
     usage.close();
   } catch (e) {

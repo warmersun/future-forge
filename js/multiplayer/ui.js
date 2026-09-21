@@ -1236,6 +1236,13 @@ export function initFriendsUi(api) {
     if (evt.type === "ai_result") {
       setAiPending(false);
       renderPlay();
+      if (evt.mode === "voice") {
+        if (evt.ok === false) {
+          flashToast(evt.error || "Voice failed");
+          setPlayStatus(evt.error || "Voice failed");
+        }
+        return;
+      }
       if (evt.ok === false) {
         flashToast(evt.error || "AI failed (AP refunded if reserved)");
         setPlayStatus(evt.error || "AI failed");

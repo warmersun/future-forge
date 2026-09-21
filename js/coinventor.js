@@ -10,7 +10,13 @@ import {
   attachReadAloud,
   pruneDetachedReadAloud,
   plainTextFromEl,
+  stopReadAloud,
 } from "./read-aloud.js";
+import {
+  sharedVoiceCallFor,
+  hangupVoice,
+  isVoiceLive,
+} from "./coinventor-voice.js";
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -104,6 +110,11 @@ export class CoInventor {
     this.interactive = true;
     this.available = null;
     this.root = null;
+    this._voice = null;
+    this._voiceUserCaption = "";
+    this._voiceAsstCaption = "";
+    /** null = health not in yet; only lock the mic after a definite no. */
+    this.aiLive = null;
   }
 
   /** @returns {"tutor"|"coinventor"} */
@@ -192,12 +203,23 @@ export class CoInventor {
       </div>
       <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
       <div class="co-messages" id="co-messages" role="log" aria-live="polite"></div>
+      <div class="co-voice-caption" id="co-voice-caption" hidden>
+        <span class="co-voice-who" id="co-voice-who"></span>
+        <span class="co-voice-text" id="co-voice-text"></span>
+      </div>
       <form class="co-compose" id="co-form">
         <textarea
           id="co-input"
           rows="2"
           placeholder="${escapeHtml(this.placeholder)}"
         ></textarea>
+        <button
+          type="button"
+          class="co-voice-btn"
+          id="co-voice"
+          aria-pressed="false"
+          title="Start a voice call"
+        >${WAVEFORM_ICON}</button>
         <button type="submit" class="btn btn-primary btn-sm" id="co-send">Send</button>
       </form>
     `;
@@ -258,10 +280,171 @@ export class CoInventor {
         /* host */
       }
     });
+    root.querySelector("#co-voice")?.addEventListener("click", () => {
+      void this.toggleVoice();
+    });
 
     this.syncChipGates();
     this.applyTutorModeUi();
+    this._voice = sharedVoiceCallFor(this);
+    this.syncVoiceChrome();
     this.checkHealth();
+  }
+
+  ensureVoice() {
+    this._voice = sharedVoiceCallFor(this);
+    return this._voice;
+  }
+
+  async toggleVoice() {
+    if (!this.interactive || this.busy) return;
+    const voice = this.ensureVoice();
+    if (voice.state === "idle" || voice.state === "error") {
+      if (this.available === false || this.aiLive === false) {
+        this.setVoiceCaption(
+          "Co-inventor",
+          "Voice needs SuperGrok — text still works. Run grok login or set FF_XAI_API_KEY."
+        );
+        return;
+      }
+      await voice.start();
+      return;
+    }
+    voice.hangup();
+  }
+
+  onVoiceState(state, detail) {
+    this.syncVoiceChrome(state, detail);
+    this.setBusyUi(this.busy);
+    if (state === "idle" || state === "error") {
+      this.setVoiceCaption("", "");
+    } else if (state === "connecting") {
+      this.setVoiceCaption("Co-inventor", "Connecting…");
+    } else if (state === "listening" && !this._voiceUserCaption && !this._voiceAsstCaption) {
+      this.setVoiceCaption("Co-inventor", "Listening — talk anytime. Tap to hang up.");
+    } else if (state === "speaking" && !this._voiceAsstCaption) {
+      this.setVoiceCaption("Co-inventor", "Speaking…");
+    }
+  }
+
+  onVoiceEvent(ev) {
+    const type = ev?.type;
+    if (type === "user_caption") {
+      const text = String(ev.text || "").trim();
+      this._voiceUserCaption = text;
+      this.setVoiceCaption("You", text || "…");
+      if (ev.final && text) {
+        const last = this.messages[this.messages.length - 1];
+        if (!(last?.role === "user" && last.content === text)) {
+          this.messages.push({ role: "user", content: text, voice: true });
+          this.renderMessages();
+          try {
+            this.onHistoryChange?.();
+          } catch {
+            /* host */
+          }
+        }
+      }
+      return;
+    }
+    if (type === "assistant_caption") {
+      if (ev.final) {
+        const text = String(ev.text || this._voiceAsstCaption || "").trim();
+        this._voiceAsstCaption = "";
+        this.setVoiceCaption("Co-inventor", text);
+        if (text) {
+          this.pushAssistant({
+            message: text,
+            proposals: emptyProposals(),
+            teaching: [],
+          });
+        }
+      } else {
+        this._voiceAsstCaption += String(ev.text || "");
+        this.setVoiceCaption("Co-inventor", this._voiceAsstCaption || "…");
+      }
+      return;
+    }
+    if (type === "proposals") {
+      if (ev.endTutoring && this.tutorMode && this.learningQuest) {
+        try {
+          this.onTutorSessionEnded?.("ai");
+        } catch {
+          /* host */
+        }
+      }
+      const drafted = hasAnyProposal(ev.proposals);
+      const text = String(ev.message || "").trim();
+      if (!drafted && !text) return;
+      this.pushAssistant({
+        message: text || "A draft you can apply:",
+        proposals: ev.proposals || emptyProposals(),
+        teaching: [],
+        endTutoring: Boolean(ev.endTutoring),
+      });
+      return;
+    }
+    if (type === "error") {
+      const msg = String(ev.error || "Voice dropped");
+      this.setVoiceCaption("Co-inventor", msg);
+      this.pushAssistant({
+        message: msg,
+        proposals: emptyProposals(),
+        teaching: [],
+      });
+    }
+  }
+
+  setVoiceCaption(who, text) {
+    const bar = this.root?.querySelector("#co-voice-caption");
+    const whoEl = this.root?.querySelector("#co-voice-who");
+    const textEl = this.root?.querySelector("#co-voice-text");
+    if (!bar) return;
+    const show = Boolean(who && text);
+    bar.hidden = !show;
+    if (whoEl) whoEl.textContent = who || "";
+    if (textEl) textEl.textContent = text || "";
+  }
+
+  syncVoiceChrome(state, detail) {
+    const btn = this.root?.querySelector("#co-voice");
+    if (!btn) return;
+    const st = state || this._voice?.state || "idle";
+    const live =
+      st === "connecting" || st === "listening" || st === "speaking" || st === "muted";
+    btn.classList.toggle("is-live", live);
+    btn.classList.toggle("is-speaking", st === "speaking");
+    btn.classList.toggle("is-muted", st === "muted");
+    btn.classList.toggle("is-connecting", st === "connecting");
+    btn.setAttribute("aria-pressed", live ? "true" : "false");
+    const titles = {
+      idle: "Start a voice call",
+      connecting: "Connecting… tap to cancel",
+      listening: "In a voice call — tap to hang up",
+      speaking: "Co-inventor speaking — tap to hang up",
+      muted: "Muted — tap to hang up",
+      error: detail?.error || "Voice dropped — tap to try again",
+    };
+    const locked =
+      Boolean(this.busy) ||
+      !this.interactive ||
+      this.available === false ||
+      this.aiLive === false;
+    btn.disabled = locked && !live;
+    if (btn.disabled && !live) {
+      if (!this.interactive && this._lockReason) btn.title = this._lockReason;
+      else if (this.aiLive === false) {
+        btn.title = "Voice needs SuperGrok — run grok login or set FF_XAI_API_KEY";
+      } else if (this.available === false) {
+        btn.title = "Co-inventor is offline";
+      } else {
+        btn.title = titles[st] || titles.idle;
+      }
+    } else {
+      btn.title = titles[st] || titles.idle;
+    }
+    btn.setAttribute("aria-label", btn.title);
+    this.root?.classList.toggle("co-voice-live", live);
   }
 
   /**
@@ -303,6 +486,7 @@ export class CoInventor {
     this.root.classList.toggle("is-learning-quest", this.learningQuest);
     this.syncClearButton();
     this.syncChipGates();
+    this.syncVoiceChrome();
     const status = this.root.querySelector("#co-status");
     if (!status || status.classList.contains("co-offline")) return;
     if (this.tutorMode) {
@@ -347,7 +531,7 @@ export class CoInventor {
   syncChipGates() {
     if (!this.root || !this.showQuickActions) return;
     const tutorLock = Boolean(this.learningQuest && this.tutorMode);
-    const locked = Boolean(this.busy) || !this.interactive;
+    const locked = Boolean(this.busy) || !this.interactive || isVoiceLive();
     const ctx = (() => {
       try {
         return this.getContext?.() || {};
@@ -396,6 +580,9 @@ export class CoInventor {
       const data = await res.json();
       this.available = Boolean(data.coInventor);
       this.aiLive = Boolean(data.ai);
+      if (data.features && Object.prototype.hasOwnProperty.call(data.features, "voice")) {
+        this.aiLive = Boolean(data.features.voice) || Boolean(data.ai);
+      }
       if (status) {
         if (!this.available) {
           status.textContent = "Offline";
@@ -423,6 +610,8 @@ export class CoInventor {
         status.classList.add("co-offline");
         delete status.dataset.tutorOwned;
       }
+    } finally {
+      this.syncVoiceChrome();
     }
   }
 
@@ -432,6 +621,7 @@ export class CoInventor {
    */
   reset(seedWelcome = true) {
     if (this.learningQuest && this.tutorMode) return;
+    hangupVoice();
     this.histories.coinventor = [];
     if (this.activeHistoryKey === "coinventor") {
       this.messages = this.histories.coinventor;
@@ -445,6 +635,7 @@ export class CoInventor {
    * @param {boolean} [seedWelcome=false]
    */
   clearAllHistories(seedWelcome = false) {
+    hangupVoice();
     this.histories = { tutor: [], coinventor: [] };
     this.activeHistoryKey = this._historyKeyForState();
     this.messages = this.histories[this.activeHistoryKey];
@@ -544,48 +735,13 @@ export class CoInventor {
     const t0 = Date.now();
 
     try {
-      const ctx = this.getContext();
       const requestBody = {
         mode,
         clientSessionId: getClientSessionId(),
         messages: [
           ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
         ].map((m) => ({ role: m.role, content: m.content })),
-        context: {
-          challenge: ctx.challenge
-            ? {
-                id: ctx.challenge.id,
-                title: ctx.challenge.title,
-                problem: ctx.challenge.problem,
-                stakes: ctx.challenge.stakes,
-                prompt: ctx.challenge.prompt,
-                recommended: ctx.challenge.recommended,
-                successLens: ctx.challenge.successLens,
-              }
-            : null,
-          selectedTechIds: ctx.selectedTechIds,
-          ...inventDraftFieldsForContext(ctx),
-          storyFace: ctx.storyFace,
-          writeBoth: ctx.writeBoth,
-          hexInvent: Boolean(ctx.hexInvent),
-          focusTechId: ctx.focusTechId || null,
-          hexBoard: ctx.hexBoard || null,
-          year: ctx.year,
-          turn: ctx.turn,
-          place: ctx.place,
-          pressure: ctx.pressure,
-          availableTechs: ctx.availableTechs,
-          grounding: ctx.grounding || null,
-          isLearningModule: Boolean(ctx.isLearningModule),
-          aiTutorContext: ctx.aiTutorContext || null,
-          questId: ctx.questId || ctx.challenge?.id || null,
-          source: ctx.source || null,
-          // Active tutor session only (not merely "this is a learning quest")
-          tutorMode: Boolean(ctx.tutorMode),
-          guidance: ctx.guidance || null,
-          spotlightTechId: ctx.spotlightTechId || null,
-          spotlightAdvance: ctx.spotlightAdvance || null,
-        },
+        context: this._buildRequestContext(),
       };
 
       let data;
@@ -746,26 +902,74 @@ export class CoInventor {
   setInteractive(on, reason = "") {
     this.interactive = Boolean(on);
     this._lockReason = reason || "";
+    if (!this.interactive) hangupVoice();
     this.setBusyUi(this.busy);
   }
 
+  _buildRequestContext() {
+    const ctx = this.getContext() || {};
+    return {
+      challenge: ctx.challenge
+        ? {
+            id: ctx.challenge.id,
+            title: ctx.challenge.title,
+            problem: ctx.challenge.problem,
+            stakes: ctx.challenge.stakes,
+            prompt: ctx.challenge.prompt,
+            recommended: ctx.challenge.recommended,
+            successLens: ctx.challenge.successLens,
+          }
+        : null,
+      selectedTechIds: ctx.selectedTechIds,
+      ...inventDraftFieldsForContext(ctx),
+      storyFace: ctx.storyFace,
+      writeBoth: ctx.writeBoth,
+      hexInvent: Boolean(ctx.hexInvent),
+      focusTechId: ctx.focusTechId || null,
+      hexBoard: ctx.hexBoard || null,
+      year: ctx.year,
+      turn: ctx.turn,
+      place: ctx.place,
+      pressure: ctx.pressure,
+      availableTechs: ctx.availableTechs,
+      grounding: ctx.grounding || null,
+      isLearningModule: Boolean(ctx.isLearningModule),
+      aiTutorContext: ctx.aiTutorContext || null,
+      questId: ctx.questId || ctx.challenge?.id || null,
+      source: ctx.source || null,
+      tutorMode: Boolean(ctx.tutorMode),
+      guidance: ctx.guidance || null,
+      spotlightTechId: ctx.spotlightTechId || null,
+      spotlightAdvance: ctx.spotlightAdvance || null,
+    };
+  }
+
   setBusyUi(busy) {
-    const locked = Boolean(busy) || !this.interactive;
+    const voiceLive = isVoiceLive();
+    const locked = Boolean(busy) || !this.interactive || voiceLive;
     const send = this.root?.querySelector("#co-send");
     const input = this.root?.querySelector("#co-input");
     if (send) send.disabled = locked;
     if (input) {
       input.disabled = locked;
       if (locked && this._lockReason) input.title = this._lockReason;
+      else if (voiceLive) input.title = "Hang up to type";
       else input.removeAttribute("title");
     }
     this.syncClearButton();
-    // End / Resume still usable unless busy (not spectator-locked? keep enabled when only spectator - actually spectator locks all)
     this.root?.querySelectorAll(".co-tutor-toggle").forEach((b) => {
       b.disabled = Boolean(busy) || !this.interactive;
     });
     this.root?.classList.toggle("co-locked", locked && !busy);
     this.syncChipGates();
+    this.syncVoiceChrome();
+    if (voiceLive) {
+      try {
+        this._voice?.pushContext?.(this._buildRequestContext());
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   renderMessages() {
@@ -844,7 +1048,9 @@ export class CoInventor {
     });
 
     pruneDetachedReadAloud();
+    if (isVoiceLive()) stopReadAloud();
     box.querySelectorAll(".co-msg.assistant .co-bubble-md").forEach((el) => {
+      if (isVoiceLive()) return;
       attachReadAloud(el, {
         minChars: CO_READ_MIN_CHARS,
         getText: () =>
@@ -1004,3 +1210,6 @@ function escapeHtml(s) {
 function formatMessage(text) {
   return renderChatMarkdown(text || "");
 }
+
+/** Grok Voice Mode control: waveform, not a mic (mic = dictation). */
+const WAVEFORM_ICON = `<svg class="co-voice-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="co-voice-bar" x="3.5" y="8" width="3" height="8" rx="1.5"/><rect class="co-voice-bar" x="8.5" y="4" width="3" height="16" rx="1.5"/><rect class="co-voice-bar" x="13.5" y="6" width="3" height="12" rx="1.5"/><rect class="co-voice-bar" x="18.5" y="9" width="3" height="6" rx="1.5"/></svg>`;

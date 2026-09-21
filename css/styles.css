@@ -9043,7 +9043,7 @@ button.linkish:hover {
 
 .co-compose {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 0.45rem;
   padding: 0.65rem 0.75rem;
   border-top: 1px solid var(--border);
@@ -9068,6 +9068,134 @@ button.linkish:hover {
 
 .co-compose .btn {
   align-self: end;
+}
+
+.co-voice-btn {
+  --co-voice-wave: #3b82f6;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: end;
+  border: none;
+  border-radius: 999px;
+  background: #0b0f19;
+  color: var(--co-voice-wave);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.co-voice-btn:hover:not(:disabled) {
+  background: #151b2c;
+}
+
+.co-voice-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.co-voice-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.co-voice-bar {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.co-voice-btn.is-connecting {
+  opacity: 0.7;
+}
+
+.co-voice-btn.is-live {
+  background: #0b0f19;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+.co-voice-btn.is-live .co-voice-bar {
+  animation: co-voice-bar 0.9s ease-in-out infinite;
+}
+
+.co-voice-btn.is-live .co-voice-bar:nth-child(1) {
+  animation-delay: 0s;
+}
+.co-voice-btn.is-live .co-voice-bar:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.co-voice-btn.is-live .co-voice-bar:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.co-voice-btn.is-live .co-voice-bar:nth-child(4) {
+  animation-delay: 0.08s;
+}
+
+.co-voice-btn.is-speaking {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.55);
+}
+
+.co-voice-btn.is-muted {
+  --co-voice-wave: #94a3b8;
+}
+
+.co-voice-btn.is-muted .co-voice-bar {
+  animation: none;
+}
+
+@keyframes co-voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.co-voice-caption {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  padding: 0.35rem 0.75rem 0.15rem;
+  font-size: 0.75rem;
+  color: var(--text-mute);
+  flex-shrink: 0;
+  min-height: 1.4rem;
+}
+
+.co-voice-caption[hidden] {
+  display: none !important;
+}
+
+.co-voice-who {
+  font-weight: 700;
+  color: #c4b5fd;
+  white-space: nowrap;
+}
+
+.co-inventor-root.co-voice-live .co-voice-caption:not([hidden]) {
+  color: #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .co-compose textarea {
+    grid-column: 1 / -1;
+  }
+  .co-voice-btn {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .co-compose #co-send {
+    grid-column: 3;
+    grid-row: 2;
+  }
 }
 
 .vision-stage-bar {

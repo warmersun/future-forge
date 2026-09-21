@@ -29,6 +29,18 @@ describe("RateLimiter", () => {
 });
 
 describe("CostPolicy", () => {
+  it("rate-limits voice session creates", () => {
+    const policy = new CostPolicy({
+      windows: {
+        voice: { limit: 2, windowMs: 60_000 },
+        "ai-global": { limit: 10, windowMs: 60_000 },
+      },
+    });
+    assert.equal(policy.allowExpensive("voice", "9.9.9.9").ok, true);
+    assert.equal(policy.allowExpensive("voice", "9.9.9.9").ok, true);
+    assert.equal(policy.allowExpensive("voice", "9.9.9.9").ok, false);
+  });
+
   it("rate-limits idea-image like other image routes", () => {
     const policy = new CostPolicy({
       windows: {

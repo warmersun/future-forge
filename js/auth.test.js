@@ -35,6 +35,7 @@ describe("isCloudApiPath", () => {
     assert.equal(isCloudApiPath("/api/device/start"), true);
     assert.equal(isCloudApiPath("/api/device/status?code=abc"), true);
     assert.equal(isCloudApiPath("/api/co-invent"), false);
+    assert.equal(isCloudApiPath("/api/co-invent-voice/session"), false);
     assert.equal(isCloudApiPath("/api/quests"), false);
     assert.equal(isCloudApiPath("/api/rooms"), false);
   });
