@@ -559,9 +559,9 @@ For assess-feasibility set timing; otherwise timing may be null.`;
 const GROUNDING_HINT =
   " If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits); prefer that grain over generic tech-id encyclopedia; do not invent contradicting facts.";
 
-/** Hex workshop: apply buttons focus emTech / fill mint-box, not essay/stack. */
+/** Hex workshop: apply buttons focus emTech / fill mint-box or pathway how, not essay/stack. */
 const HEX_INVENT_HINT =
-  " Hex invent: the learner mints invention tiles on a hex board. There is no inventionName. hexBoard.pathways[] is each connected island as ONE invent (howText = that island's inventHow). Geometry (which tiles touch which crisis/concern hexes) says which pathway addresses which given — there is no board-wide how. proposals.addTechIds focus the emTech picker. proposals.inventionHow SETS the stored inventHow for one pathway (highlighted / focused island). Leave inventionName and inventionImpact empty/null.";
+  " Hex invent: the learner mints invention tiles on a hex board. There is no inventionName. hexBoard.pathways[] is each connected island of PLACED tiles as ONE invent (howText = that island's inventHow). Geometry says which pathway addresses which given — there is no board-wide how. proposals.addTechIds focus the emTech picker. When you draft how something works, put the full draft sentences in message AND the same text in proposals.inventionHow (the button applies that field; the player must be able to read it). If hexBoard.pathways is empty, that button fills the mint How it works box — call it **Use as how it works**, then they mint a tile and place it. Do not tell them to set the pathway how until a pathway is placed. If a pathway is already placed, proposals.inventionHow sets that pathway's inventHow (the focused island, else the one they are discussing) — call the button **Set as this pathway's how**. Leave inventionName and inventionImpact empty/null.";
 
 /** Appended to invent modeHints when tutor mode is active. */
 const TUTOR_HINT =
@@ -1652,7 +1652,9 @@ function localCoInvent({ mode, messages, context }) {
         `Here's a draft mechanism you can steal, remix, or fight with:\n\n` +
         how +
         (context.hexInvent
-          ? `\n\nHit **Use as how it works** to drop this in the mint box, then Mint tile if it feels like yours. What's the one step only a human should still own?`
+          ? Array.isArray(context.hexBoard?.pathways) && context.hexBoard.pathways.length
+            ? `\n\nHit **Set as this pathway's how** to save this as how the placed pathway works. What's the one step only a human should still own?`
+            : `\n\nHit **Use as how it works** to drop this into How it works, then Mint tile if it feels like yours. What's the one step only a human should still own?`
           : `\n\nEdit it until it sounds like *your* invention. What's the one step only a human should still own?`),
       proposals: {
         ...base,

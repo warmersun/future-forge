@@ -8867,6 +8867,15 @@ button.linkish:hover {
   color: var(--text, #e8eef9);
   font-weight: 650;
 }
+.co-how-draft {
+  margin: 0.55rem 0 0.15rem;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid rgba(52, 211, 153, 0.55);
+  background: rgba(52, 211, 153, 0.06);
+  border-radius: 0 8px 8px 0;
+  color: var(--text, #e8eef9);
+  white-space: pre-wrap;
+}
 
 .co-msg.thinking .co-bubble {
   display: flex;

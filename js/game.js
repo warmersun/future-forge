@@ -27,7 +27,7 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor } from "./coinventor.js?v=voice-8";
+import { CoInventor } from "./coinventor.js?v=voice-9";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -18039,15 +18039,18 @@ function isHexWorkshopApply() {
 }
 
 /**
- * Hex invent: focus emTech / fill mint-box how-it-works. Do not add to stack or
- * write the hidden essay fields (those are derived from placed tiles).
+ * Hex invent: focus emTech. A how-draft writes the placed pathway's how, or
+ * the mint How it works box when nothing is placed yet. Do not add to stack
+ * or write the hidden essay fields (those are derived from placed tiles).
  * @param {object} proposals
- * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds: string[], filledHow: boolean }}
+ * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds: string[], filledHow: boolean, howTarget: "pathway"|"mint"|null }}
  */
 function applyHexCoInventorProposals(proposals) {
   let changed = false;
   const focusedTechIds = [];
   let filledHow = false;
+  /** @type {"pathway"|"mint"|null} */
+  let howTarget = null;
 
   for (const id of proposals.addTechIds || []) {
     if (!techById(id)) continue;
@@ -18057,7 +18060,8 @@ function applyHexCoInventorProposals(proposals) {
     changed = true;
   }
 
-  if (proposals.inventionHow) {
+  const howDraft = String(proposals.inventionHow || "").trim();
+  if (howDraft) {
     const ws = ensureHexWorkshop();
     const pathways = listInventionPathways(state.hexBoard);
     const hintId = proposals.howTechId || (proposals.addTechIds || [])[0] || null;
@@ -18069,18 +18073,47 @@ function applyHexCoInventorProposals(proposals) {
     if (!invs && pathways.length) {
       invs = pathways.slice().sort((a, b) => b.length - a.length)[0];
     }
-    if (!invs?.length) {
-      flashToast("Place an idea on the board first.");
-    } else {
-      ws.setIslandHowText?.(invs, proposals.inventionHow, "ai");
+    if (invs?.length) {
+      ws.setIslandHowText?.(invs, howDraft, "ai");
       filledHow = true;
+      howTarget = "pathway";
       changed = true;
+      document
+        .querySelector("#hex-island-how")
+        ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    } else {
+      const mintTech = techId;
+      if (!mintTech || !techById(mintTech)) {
+        flashToast("Pick an emTech first — then this draft can go in How it works.");
+      } else {
+        if (focusedTechId !== mintTech) focusTech(mintTech);
+        if (focusedTechId !== mintTech) {
+          // focus refused (busy) and already toasted
+        } else if (ws.isCreateBusy?.()) {
+          const kind = ws.createBusyKind?.();
+          flashToast(
+            kind === "mint"
+              ? "Tile still minting."
+              : kind === "ideas"
+                ? "Ideas still generating."
+                : "Wait — still working."
+          );
+        } else if (ws.fillMintHow?.(howDraft)) {
+          filledHow = true;
+          howTarget = "mint";
+          changed = true;
+        } else {
+          flashToast("Pick an emTech first — then this draft can go in How it works.");
+        }
+      }
     }
   }
 
   if (changed) {
-    if (filledHow) {
+    if (howTarget === "pathway") {
       flashToast("Saved as this pathway's how — the whole, not the parts.");
+    } else if (howTarget === "mint") {
+      flashToast("Dropped into How it works. Edit it, then mint a tile and place it.");
     } else if (focusedTechIds.length === 1) {
       const name = techById(focusedTechIds[0])?.name || "this emTech";
       flashToast(`Invent with ${name} — Ask for ideas or write how it works.`);
@@ -18088,7 +18121,7 @@ function applyHexCoInventorProposals(proposals) {
       flashToast("Focused suggested emTechs — Ask for ideas or write how it works.");
     }
   }
-  return { changed, addedTechIds: focusedTechIds, focusedTechIds, filledHow };
+  return { changed, addedTechIds: focusedTechIds, focusedTechIds, filledHow, howTarget };
 }
 
 /**
@@ -18097,11 +18130,17 @@ function applyHexCoInventorProposals(proposals) {
  * Never free bulk-add a whole suggested stack.
  * Hex workshop: focus / mint-box instead of stack add and essay writes.
  * @param {object} proposals
- * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds?: string[], filledHow?: boolean }}
+ * @returns {{ changed: boolean, addedTechIds: string[], focusedTechIds?: string[], filledHow?: boolean, howTarget?: "pathway"|"mint"|null }}
  */
 function applyCoInventorProposals(proposals) {
   if (!proposals) {
-    return { changed: false, addedTechIds: [], focusedTechIds: [], filledHow: false };
+    return {
+      changed: false,
+      addedTechIds: [],
+      focusedTechIds: [],
+      filledHow: false,
+      howTarget: null,
+    };
   }
   if (isHexWorkshopApply()) {
     return applyHexCoInventorProposals(proposals);

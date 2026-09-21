@@ -16,12 +16,18 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-8";
+} from "./coinventor-voice.js?v=voice-9";
 import {
   capVoiceHistory,
   commitUserVoiceCaption,
   reduceVoiceTranscript,
-} from "./voice-context.js?v=voice-8";
+} from "./voice-context.js?v=voice-9";
+import {
+  draftQuoteForBubble,
+  hexHowApplyCopy,
+  howAppliedLabel,
+  pathwayReadyForHow,
+} from "./coinventor-how-apply.js?v=voice-9";
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -1062,7 +1068,7 @@ export class CoInventor {
         btn.classList.add("applied");
         btn.disabled = true;
         if (kind === "how" && this.surface === "hex") {
-          btn.textContent = "Used as how it works";
+          btn.textContent = howAppliedLabel(result?.howTarget);
         } else {
           btn.textContent = btn.textContent.replace(/^Apply/, "Applied");
         }
@@ -1144,11 +1150,22 @@ export class CoInventor {
         );
       }
       if (p.inventionHow) {
-        bits.push(
-          hex
-            ? `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Set as this pathway's how</button>`
-            : `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Apply how-it-works</button>`
-        );
+        if (hex) {
+          let hasPathway = false;
+          try {
+            hasPathway = pathwayReadyForHow(this.getContext?.());
+          } catch {
+            hasPathway = false;
+          }
+          const copy = hexHowApplyCopy(hasPathway);
+          bits.push(
+            `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how" title="${escapeHtml(copy.title)}">${escapeHtml(copy.label)}</button>`
+          );
+        } else {
+          bits.push(
+            `<button type="button" class="co-apply" data-msg="${idx}" data-apply="how">Apply how-it-works</button>`
+          );
+        }
       }
       if (!hex && p.inventionImpact) {
         bits.push(
@@ -1190,9 +1207,13 @@ export class CoInventor {
 
     // Tutor / co-inventor: safe markdown (links, images, lists, bold)
     const html = formatMessage(m.content || "");
+    const quote = draftQuoteForBubble(m.content, p.inventionHow);
+    const draft = quote
+      ? `<blockquote class="co-how-draft">${escapeHtml(quote)}</blockquote>`
+      : "";
 
     return `<div class="co-msg assistant">
-      <div class="co-bubble co-bubble-md">${html}${teach}${actions}</div>
+      <div class="co-bubble co-bubble-md">${html}${draft}${teach}${actions}</div>
     </div>`;
   }
 

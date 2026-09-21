@@ -3115,6 +3115,34 @@ export function createHexWorkshop(api) {
       });
       syncPathwayScores();
     },
+    /**
+     * Drop a co-inventor draft into the mint How it works box.
+     * Switches to free-write and leaves any two-blank text in place.
+     * Caller focuses the emTech first. Returns false when the box cannot take it.
+     * @param {string} text
+     * @returns {boolean}
+     */
+    fillMintHow: (text) => {
+      const draft = String(text || "").trim();
+      if (!draft || !focusedTechId || isCreateBusy()) return false;
+      setFreeWrite(true);
+      const ta = document.querySelector("#hex-how-text");
+      if (!ta) return false;
+      ta.value = draft;
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+      const field = document.querySelector("#field-hex-how") || ta;
+      try {
+        field.scrollIntoView({ block: "center", behavior: "smooth" });
+      } catch {
+        /* ignore */
+      }
+      try {
+        ta.focus({ preventScroll: true });
+      } catch {
+        ta.focus();
+      }
+      return true;
+    },
     listPathways: () => listInventionPathways(board()),
     resolveIslandHow: (inventions) => resolveIslandHow(board(), inventions),
     syncPathwayScores,
