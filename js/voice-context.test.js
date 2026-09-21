@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   voiceContextFingerprint,
   reduceVoiceTranscript,
+  beginAssistantSpeech,
   capVoiceHistory,
   commitUserVoiceCaption,
   emptyVoiceProposals,
+  settleVoiceTurn,
   userTranscriptIsFinal,
 } from "./voice-context.js";
 
@@ -80,6 +82,24 @@ describe("voiceContextFingerprint", () => {
     assert.notEqual(base, moved);
   });
 
+  it("changes when guidance or the spotlight tech changes", () => {
+    const base = voiceContextFingerprint(board);
+    assert.notEqual(
+      base,
+      voiceContextFingerprint({ ...board, guidance: "Prefer the kelp baffles." })
+    );
+    assert.notEqual(
+      base,
+      voiceContextFingerprint({ ...board, spotlightTechId: "kelp" })
+    );
+    assert.notEqual(base, voiceContextFingerprint({ ...board, turn: 4 }));
+    assert.notEqual(base, voiceContextFingerprint({ ...board, focusTechId: "iot" }));
+    assert.notEqual(
+      base,
+      voiceContextFingerprint({ ...board, aiTutorContext: "Stay on one idea." })
+    );
+  });
+
   it("changes when the legacy invention name changes", () => {
     const legacy = { ...board, hexInvent: false, inventionName: "Kelp wall", inventionHow: "Baffles." };
     assert.notEqual(
@@ -107,7 +127,7 @@ describe("reduceVoiceTranscript", () => {
     assert.equal(folded.captionIndex, 0);
     const done = reduceVoiceTranscript(folded, { type: "turn_done" });
     assert.equal(done.messages.length, 1);
-    assert.equal(done.captionIndex, null);
+    assert.equal(done.captionIndex, 0);
   });
 
   it("keeps both tool packets that arrive before the caption", () => {
@@ -197,6 +217,45 @@ describe("reduceVoiceTranscript", () => {
     assert.equal(done.messages.length, 1);
     assert.equal(done.messages[0].content, "Suggested: IoT");
     assert.deepEqual(done.messages[0].proposals.addTechIds, ["iot"]);
+  });
+});
+
+describe("settleVoiceTurn", () => {
+  it("folds a partial caption and a waiting proposal into one bubble", () => {
+    const held = reduceVoiceTranscript(
+      { messages: [], captionIndex: null, pending: null },
+      {
+        type: "proposals",
+        message: "Baffles cut the wake.",
+        proposals: { ...emptyVoiceProposals(), inventionHow: "Baffles cut the wake." },
+      }
+    );
+    const settled = settleVoiceTurn({ ...held, asstCaption: "Try kelp baffles." });
+    assert.equal(settled.messages.length, 1);
+    assert.equal(settled.messages[0].content, "Try kelp baffles.");
+    assert.equal(settled.messages[0].proposals.inventionHow, "Baffles cut the wake.");
+    assert.equal(settled.asstCaption, "");
+    assert.equal(settled.captionIndex, 0);
+    assert.equal(settled.pending, null);
+  });
+
+  it("shows Apply buttons when the spoken caption never arrives", () => {
+    const held = reduceVoiceTranscript(
+      { messages: [], captionIndex: null, pending: null },
+      {
+        type: "proposals",
+        message: "Suggested: Kelp",
+        proposals: { ...emptyVoiceProposals(), addTechIds: ["kelp"] },
+      }
+    );
+    const settled = settleVoiceTurn({ ...held, asstCaption: "" });
+    assert.equal(settled.messages.length, 1);
+    assert.deepEqual(settled.messages[0].proposals.addTechIds, ["kelp"]);
+  });
+
+  it("starts a new reply without attaching it to the previous bubble", () => {
+    assert.equal(beginAssistantSpeech({ captionIndex: 2, asstCaption: "" }), null);
+    assert.equal(beginAssistantSpeech({ captionIndex: 2, asstCaption: "Try" }), 2);
   });
 });
 

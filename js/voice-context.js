@@ -126,6 +126,7 @@ export function voiceContextFingerprint(context) {
   const problem = String(c.challenge?.problem || "").trim();
   return [
     c.year ?? "",
+    c.turn ?? "",
     String(c.place || "").trim(),
     c.hexInvent ? "1" : "0",
     c.tutorMode ? "1" : "0",
@@ -138,6 +139,10 @@ export function voiceContextFingerprint(context) {
     pressure,
     title,
     problem,
+    String(c.focusTechId || "").trim(),
+    String(c.spotlightTechId || "").trim(),
+    String(c.guidance || "").trim(),
+    String(c.aiTutorContext || "").trim(),
   ].join("\u0001");
 }
 
@@ -254,7 +259,9 @@ export function reduceVoiceTranscript(state, event) {
   }
 
   if (type === "turn_done") {
-    if (!pending) return { messages, captionIndex: null, pending: null, changed: false };
+    // Keep captionIndex so a proposal that arrives after the learner barges in
+    // still folds into this spoken bubble. The next assistant speech clears it.
+    if (!pending) return { messages, captionIndex, pending: null, changed: false };
     const text = String(pending.message || "").trim();
     if (!hasVoiceProposal(pending.proposals) && !text) {
       return { messages, captionIndex, pending: null, changed: false };
@@ -267,10 +274,64 @@ export function reduceVoiceTranscript(state, event) {
       voice: true,
       endTutoring: Boolean(pending.endTutoring),
     });
-    return { messages, captionIndex: null, pending: null, changed: true };
+    return {
+      messages,
+      captionIndex: messages.length - 1,
+      pending: null,
+      changed: true,
+    };
   }
 
   return { messages, captionIndex, pending, changed: false };
+}
+
+/**
+ * Close an open spoken turn. A partial caption becomes the bubble, and any
+ * tool packet waiting on that caption is folded in. The bubble stays the
+ * merge target for a late proposal.
+ * @param {{ messages?: object[], captionIndex?: number|null, pending?: object|null, asstCaption?: string }} state
+ */
+export function settleVoiceTurn(state = {}) {
+  let cursor = {
+    messages: Array.isArray(state.messages) ? state.messages.slice() : [],
+    captionIndex: state.captionIndex ?? null,
+    pending: state.pending ?? null,
+  };
+  let changed = false;
+  const asst = String(state.asstCaption || "").trim();
+  if (asst) {
+    const capped = reduceVoiceTranscript(cursor, { type: "caption_final", text: asst });
+    cursor = capped;
+    changed = changed || capped.changed;
+  } else if (cursor.pending && cursor.captionIndex != null) {
+    const folded = reduceVoiceTranscript(cursor, {
+      type: "proposals",
+      proposals: cursor.pending.proposals,
+      message: cursor.pending.message,
+      endTutoring: cursor.pending.endTutoring,
+    });
+    cursor = folded;
+    changed = changed || folded.changed;
+  }
+  const done = reduceVoiceTranscript(cursor, { type: "turn_done" });
+  return {
+    messages: done.messages,
+    captionIndex: done.captionIndex,
+    pending: done.pending,
+    asstCaption: "",
+    changed: changed || done.changed,
+  };
+}
+
+/**
+ * First delta of a new reply. Drops the previous bubble as the merge target
+ * once speech for the new reply has started.
+ * @param {{ captionIndex?: number|null, asstCaption?: string }} state
+ * @returns {number|null}
+ */
+export function beginAssistantSpeech(state = {}) {
+  if (!String(state.asstCaption || "") && state.captionIndex != null) return null;
+  return state.captionIndex ?? null;
 }
 
 /**

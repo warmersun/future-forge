@@ -447,6 +447,10 @@ export class RoomManager {
       leftInvent.connected = false;
       leftInvent.lastNews = leftInvent.lastNews || "Disconnected.";
     }
+    const pendingVoice = leftInvent?.pendingAi;
+    if (pendingVoice?.mode === "voice" && pendingVoice.clientActionId) {
+      this.finishVoiceJob(room, leftPlayer, pendingVoice.clientActionId, false);
+    }
     // Bump version so clients hydrate invent.connected even when we don't advance turn
     room.mp.version = (room.mp.version || 0) + 1;
 
@@ -1024,13 +1028,16 @@ export class RoomManager {
       displayName: player.displayName,
     });
 
-    // Voice pays the thinking tax here; the browser then opens /ws/co-invent-voice.
+    // Voice pays the thinking tax here, but the job stays pending until the
+    // browser's voice socket is ready. A failed connect refunds the AP.
     if (mode === "voice") {
-      return this.completeAiJob(room, player, clientActionId, {
+      return {
         ok: true,
-        result: { message: "", proposals: null, teaching: [] },
+        pending: true,
+        clientActionId,
         mode: "voice",
-      });
+        simVersion: room.simVersion,
+      };
     }
 
     if (!this.coInventHandler) {
@@ -1142,6 +1149,33 @@ export class RoomManager {
     };
     this.broadcast(room, msg);
     return msg;
+  }
+
+  /**
+   * Resolve or refund a voice job that is still pending.
+   * Ignores a stale id so a second finish cannot refund a call that connected.
+   * @param {object} room
+   * @param {object} player
+   * @param {string} clientActionId
+   * @param {boolean} ok
+   */
+  finishVoiceJob(room, player, clientActionId, ok) {
+    if (!room?.mp || !player) return { ok: false, error: "not_started" };
+    const slice = inventPlaceShim(publicMpState(room.mp), player.id);
+    const pending = slice?.pendingAi;
+    const id = String(clientActionId || "");
+    if (!pending || pending.mode !== "voice" || String(pending.clientActionId || "") !== id) {
+      return { ok: false, error: "not_pending" };
+    }
+    if (pending.playerId && pending.playerId !== player.id) {
+      return { ok: false, error: "not_owner" };
+    }
+    return this.completeAiJob(room, player, id, {
+      ok: Boolean(ok),
+      error: ok ? undefined : "Voice didn't connect",
+      mode: "voice",
+      result: ok ? { message: "", proposals: null, teaching: [] } : undefined,
+    });
   }
 
   broadcast(room, msg, exceptSocket = null) {

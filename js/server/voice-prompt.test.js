@@ -8,6 +8,7 @@ import {
   buildVoiceKeyterms,
   buildSessionUpdate,
   instructionSectionHeadings,
+  SNAPSHOT_TECH_MAX,
   inventStateSnapshot,
   voiceToolSchemas,
 } from "./voice-prompt.mjs";
@@ -111,6 +112,25 @@ describe("inventStateSnapshot / session.update", () => {
     assert.equal(snap.how, "");
     assert.equal(snap.pathways[0].howText.includes("kelp"), true);
     assert.equal(snap.availableTechs.length, 3);
+  });
+
+  it("caps a huge availableTechs list", () => {
+    const many = Array.from({ length: SNAPSHOT_TECH_MAX + 40 }, (_, i) => ({
+      id: `t${i}`,
+      name: `Tech ${i}`,
+    }));
+    const snap = inventStateSnapshot({ ...hexCtx, availableTechs: many });
+    assert.equal(snap.availableTechs.length, SNAPSHOT_TECH_MAX);
+  });
+
+  it("includes a spotlight note when the quest has one", () => {
+    const text = buildVoiceInstructions({
+      ...hexCtx,
+      spotlightTechId: "synbio",
+      guidance: "Pilot the kelp baffles first.",
+    });
+    assert.match(text, /Spotlight emTech id: synbio/);
+    assert.match(text, /Pilot the kelp baffles first/);
   });
 
   it("session.update pins voice, VAD, tools, and transcribe", () => {

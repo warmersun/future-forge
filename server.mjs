@@ -3635,6 +3635,19 @@ if (ROOMS_ENABLED && roomManager) {
         return; // patch already broadcast
       }
 
+      if (msg.type === "finish_ai") {
+        const result = roomManager.finishVoiceJob(
+          room,
+          player,
+          msg.clientActionId,
+          msg.ok !== false && msg.ok !== 0
+        );
+        if (result?.error === "not_owner") {
+          safeWs(socket, { type: "reject", error: result.error });
+        }
+        return;
+      }
+
       if (msg.type === "request_ai") {
         if (!costPolicy.allow("ws-request-ai", `${room.code}:${player.id}`).ok) {
           return safeWs(socket, { type: "reject", error: "rate_limited" });

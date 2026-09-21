@@ -27,7 +27,8 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor } from "./coinventor.js?v=voice-9";
+import { CoInventor } from "./coinventor.js?v=voice-10";
+import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-10";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -17881,6 +17882,7 @@ function ensureCoInventor() {
   }
 
   const prevHistories = state.coInventor?.exportHistories?.() || null;
+  const prevVoice = state.coInventor?.exportVoiceDraft?.() || null;
   const onChallenge = state.screen === "challenge-step";
   const learning = coInventorLearningQuest();
   const tutorOn = isLearningTutorSessionActive();
@@ -18005,9 +18007,12 @@ function ensureCoInventor() {
       renderChallengeHud();
       return true;
     },
-    afterRequest: (_mode, ok) => {
+    afterRequest: (mode, ok) => {
+      if (roomBridge.isRoom()) {
+        if (mode === "voice") roomBridge.client?.()?.finishVoiceJob?.(ok);
+        return;
+      }
       if (!apEnabled()) return;
-      if (roomBridge.isRoom()) return;
       // Only resolve/refund when we actually reserved AP this request
       if (!state.pendingAi) return;
       if (ok) dispatchSim("resolve_ai");
@@ -18021,6 +18026,7 @@ function ensureCoInventor() {
   if (prevHistories) {
     state.coInventor.importHistories(prevHistories);
   }
+  if (prevVoice) state.coInventor.importVoiceDraft(prevVoice);
   syncCoInventorTutorUi();
   // Fresh mount starts interactive; re-apply multiplayer spectator / busy locks
   const spect = isMpInventSpectator();
@@ -18065,14 +18071,8 @@ function applyHexCoInventorProposals(proposals) {
     const ws = ensureHexWorkshop();
     const pathways = listInventionPathways(state.hexBoard);
     const hintId = proposals.howTechId || (proposals.addTechIds || [])[0] || null;
-    const techId = focusedTechId || hintId;
-    let invs =
-      (techId &&
-        pathways.find((p) => p.some((t) => t.techId === techId))) ||
-      null;
-    if (!invs && pathways.length) {
-      invs = pathways.slice().sort((a, b) => b.length - a.length)[0];
-    }
+    const techId = hintId || focusedTechId;
+    const invs = pathwayTilesForHow(pathways, hintId);
     if (invs?.length) {
       ws.setIslandHowText?.(invs, howDraft, "ai");
       filledHow = true;

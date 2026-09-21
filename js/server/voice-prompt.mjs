@@ -8,6 +8,8 @@ export const VOICE_SAMPLE_RATE = 24_000;
 export const VOICE_DEFAULT_ID = "eve";
 export const KEYTERM_MAX = 100;
 export const KEYTERM_LEN = 50;
+/** Stop a crafted catalog from blowing up get_invent_state. Real shelves fit. */
+export const SNAPSHOT_TECH_MAX = 120;
 
 const PROMPT_SECTIONS = [
   "Role & Persona",
@@ -160,7 +162,11 @@ export function inventStateSnapshot(context = {}) {
     name: hex ? "" : clip(context.inventionName, 80),
     pathways,
     pressure: listPressure(context.pressure),
-    availableTechs: listAvailableTechs(context),
+    availableTechs: listAvailableTechs(context).slice(0, SNAPSHOT_TECH_MAX),
+    turn: context.turn ?? null,
+    focusTechId: clip(context.focusTechId, 80) || null,
+    spotlightTechId: clip(context.spotlightTechId, 80) || null,
+    guidance: clip(context.guidance, 400),
   };
 }
 
@@ -188,6 +194,9 @@ export function buildVoiceInstructions(context = {}) {
     : clip(context.inventionHow, 500);
   const life = hex ? "" : clip(context.inventionImpact, 280);
   const problem = clip(context.challenge?.problem, 500);
+  const guidance = clip(context.guidance, 400);
+  const spotlight = clip(context.spotlightTechId, 80);
+  const tutorNote = tutor ? clip(context.aiTutorContext, 500) : "";
   const surface = hex
     ? "They invent on a hex board: emTech tiles plus a how-it-works sentence on each pathway. There is no invention name."
     : "They write an invention name, how it works, and everyday life, and pick emTechs for a stack.";
@@ -206,6 +215,9 @@ ${surface}
 Current stack: ${stack}.
 ${pressure ? `Crisis meters: ${pressure}.` : ""}
 ${problem ? `The situation: ${problem}` : ""}
+${guidance ? `Quest note: ${guidance}` : ""}
+${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it honestly fits this year.` : ""}
+${tutorNote ? `Tutor notes: ${tutorNote}` : ""}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}
 Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. If they want you to draft mechanism text, call \`draft_how\`. ${

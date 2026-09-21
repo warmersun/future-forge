@@ -9,12 +9,54 @@ function squash(s) {
 }
 
 /**
+ * True when Apply should write a placed pathway.
+ * A hinted emTech matches only an island that contains it.
+ * With no hint, the single island on the board is that pathway.
+ * Several islands and no hint, or a hint that is not placed, use the mint box.
  * @param {object|null|undefined} context co-inventor getContext()
+ * @param {string|null|undefined} [techId]
  * @returns {boolean}
  */
-export function pathwayReadyForHow(context) {
+export function pathwayReadyForHow(context, techId) {
   const paths = context?.hexBoard?.pathways;
-  return Array.isArray(paths) && paths.length > 0;
+  if (!Array.isArray(paths) || paths.length === 0) return false;
+  const id = String(techId || "").trim();
+  if (!id) return paths.length === 1;
+  const inventions = Array.isArray(context?.hexBoard?.inventions)
+    ? context.hexBoard.inventions
+    : [];
+  const tileIds = new Set(
+    inventions
+      .filter((t) => String(t?.techId || "") === id && t?.onBoard !== false)
+      .map((t) => String(t?.id || ""))
+      .filter(Boolean)
+  );
+  if (!tileIds.size) return false;
+  return paths.some((p) =>
+    (Array.isArray(p?.inventionIds) ? p.inventionIds : []).some((iid) =>
+      tileIds.has(String(iid))
+    )
+  );
+}
+
+/**
+ * Placed tiles that should receive a how-draft.
+ * `pathways` is the list from listInventionPathways (arrays of tiles).
+ * A hinted emTech writes only an island that contains it.
+ * With no hint, the only island is the target. Otherwise null (mint box).
+ * @param {object[][]|null|undefined} pathways
+ * @param {string|null|undefined} techId
+ * @returns {object[]|null}
+ */
+export function pathwayTilesForHow(pathways, techId) {
+  const lists = (Array.isArray(pathways) ? pathways : []).filter(
+    (p) => Array.isArray(p) && p.length > 0
+  );
+  const id = String(techId || "").trim();
+  if (id) {
+    return lists.find((p) => p.some((t) => String(t?.techId || "") === id)) || null;
+  }
+  return lists.length === 1 ? lists[0] : null;
 }
 
 /**

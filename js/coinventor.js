@@ -16,18 +16,20 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-9";
+} from "./coinventor-voice.js?v=voice-10";
 import {
+  beginAssistantSpeech,
   capVoiceHistory,
   commitUserVoiceCaption,
   reduceVoiceTranscript,
-} from "./voice-context.js?v=voice-9";
+  settleVoiceTurn,
+} from "./voice-context.js?v=voice-10";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
   howAppliedLabel,
   pathwayReadyForHow,
-} from "./coinventor-how-apply.js?v=voice-9";
+} from "./coinventor-how-apply.js?v=voice-10";
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -122,8 +124,11 @@ export class CoInventor {
     this.available = null;
     this.root = null;
     this._voice = null;
+    this._voiceCaptionIndex = null;
+    this._voicePending = null;
     this._voiceUserCaption = "";
     this._voiceAsstCaption = "";
+    this._voiceReconnecting = false;
     /** null = health not in yet; only lock the mic after a definite no. */
     this.aiLive = null;
   }
@@ -162,6 +167,46 @@ export class CoInventor {
     this.activeHistoryKey = key;
     this.messages = this.histories[key];
     this.renderMessages();
+  }
+
+  /**
+   * In-flight voice merge state. Not part of the saved transcript.
+   * @returns {{ captionIndex: number|null, pending: object|null, userCaption: string, asstCaption: string, reconnecting: boolean }}
+   */
+  exportVoiceDraft() {
+    const pending = this._voicePending;
+    return {
+      captionIndex: this._voiceCaptionIndex ?? null,
+      pending: pending
+        ? {
+            ...pending,
+            proposals: pending.proposals ? { ...pending.proposals } : null,
+          }
+        : null,
+      userCaption: this._voiceUserCaption || "",
+      asstCaption: this._voiceAsstCaption || "",
+      reconnecting: Boolean(this._voiceReconnecting),
+    };
+  }
+
+  /**
+   * Restore merge state after the panel remounts during a live call.
+   * @param {object|null|undefined} data
+   */
+  importVoiceDraft(data) {
+    if (!data || typeof data !== "object") return;
+    const idx = Number(data.captionIndex);
+    this._voiceCaptionIndex = Number.isInteger(idx) && idx >= 0 && idx < this.messages.length ? idx : null;
+    this._voicePending = data.pending && typeof data.pending === "object" ? data.pending : null;
+    this._voiceUserCaption = String(data.userCaption || "");
+    this._voiceAsstCaption = String(data.asstCaption || "");
+    this._voiceReconnecting = Boolean(data.reconnecting);
+    if (this._voiceAsstCaption) {
+      this.setVoiceCaption("Co-inventor", this._voiceAsstCaption);
+    } else if (this._voiceUserCaption) {
+      this.setVoiceCaption("You", this._voiceUserCaption);
+    }
+    if (this._voicePending && !this._voiceAsstCaption) this._flushOpenVoiceTurn();
   }
 
   /**
@@ -354,6 +399,27 @@ export class CoInventor {
     }
   }
 
+  /** Fold a partial caption and any waiting proposals into one bubble. */
+  _flushOpenVoiceTurn() {
+    const next = settleVoiceTurn({
+      messages: this.messages.slice(),
+      captionIndex: this._voiceCaptionIndex ?? null,
+      pending: this._voicePending ?? null,
+      asstCaption: this._voiceAsstCaption || "",
+    });
+    this._voiceCaptionIndex = next.captionIndex;
+    this._voicePending = next.pending;
+    this._voiceAsstCaption = next.asstCaption;
+    if (!next.changed) return;
+    this.messages.splice(0, this.messages.length, ...next.messages);
+    this.renderMessages();
+    try {
+      this.onHistoryChange?.();
+    } catch {
+      /* host */
+    }
+  }
+
   onVoiceState(state, detail) {
     this.syncVoiceChrome(state, detail);
     this.setBusyUi(this.busy);
@@ -366,6 +432,7 @@ export class CoInventor {
       this.setVoiceCaption("", "");
     } else if (state === "connecting") {
       this._voiceReconnecting = Boolean(detail?.reconnecting);
+      if (detail?.reconnecting) this._flushOpenVoiceTurn();
       this.setVoiceCaption(
         "Co-inventor",
         detail?.reconnecting ? "Reconnecting…" : "Connecting…"
@@ -395,8 +462,7 @@ export class CoInventor {
       this._voiceUserCaption = text;
       this.setVoiceCaption("You", text || "…");
       if (ev.final && text) {
-        if (!this._voiceAsstCaption) this._commitVoiceTranscript({ type: "turn_done" });
-        this._voiceCaptionIndex = null;
+        this._flushOpenVoiceTurn();
         const next = commitUserVoiceCaption(this.messages, {
           text,
           itemId: ev.itemId,
@@ -419,14 +485,17 @@ export class CoInventor {
         this.setVoiceCaption("Co-inventor", text);
         this._commitVoiceTranscript({ type: "caption_final", text });
       } else {
+        this._voiceCaptionIndex = beginAssistantSpeech({
+          captionIndex: this._voiceCaptionIndex ?? null,
+          asstCaption: this._voiceAsstCaption || "",
+        });
         this._voiceAsstCaption += String(ev.text || "");
         this.setVoiceCaption("Co-inventor", this._voiceAsstCaption || "…");
       }
       return;
     }
     if (type === "assistant_turn_done") {
-      if (this._voiceAsstCaption) return;
-      this._commitVoiceTranscript({ type: "turn_done" });
+      this._flushOpenVoiceTurn();
       return;
     }
     if (type === "proposals") {
@@ -443,6 +512,9 @@ export class CoInventor {
         message: ev.message || "",
         endTutoring: Boolean(ev.endTutoring),
       });
+      // A tool result that lands after the reconnect flush has no later
+      // response.done to publish it. Fold it now.
+      if (this._voiceReconnecting && this._voicePending) this._flushOpenVoiceTurn();
       return;
     }
     if (type === "error") {
@@ -1153,7 +1225,7 @@ export class CoInventor {
         if (hex) {
           let hasPathway = false;
           try {
-            hasPathway = pathwayReadyForHow(this.getContext?.());
+            hasPathway = pathwayReadyForHow(this.getContext?.(), (p.addTechIds || [])[0]);
           } catch {
             hasPathway = false;
           }

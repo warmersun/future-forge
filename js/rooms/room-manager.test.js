@@ -487,11 +487,42 @@ describe("RoomManager", () => {
       reservedAp: 1,
     });
     assert.equal(r.ok, true);
-    assert.equal(r.type, "ai_result");
+    assert.equal(r.pending, true);
     assert.equal(r.mode, "voice");
     assert.equal(grok, 0);
     assert.equal(room.mp.invents[host.id].inventionHow || "", "");
     assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].pendingAi.mode, "voice");
+    const ready = rm.finishVoiceJob(room, host, "voice-1", true);
+    assert.equal(ready.ok, true);
+    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    assert.equal(room.mp.invents[host.id].pendingAi, null);
+  });
+
+  it("voice connect failure refunds the reserved AP", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const startAp = room.mp.invents[host.id].ap;
+    const r = await rm.requestAi(room, host, {
+      mode: "voice",
+      clientActionId: "voice-fail",
+      reservedAp: 1,
+    });
+    assert.equal(r.pending, true);
+    assert.equal(room.mp.invents[host.id].ap, startAp - 1);
+    const failed = rm.finishVoiceJob(room, host, "voice-fail", false);
+    assert.equal(failed.ok, false);
+    assert.equal(failed.mode, "voice");
+    assert.equal(room.mp.invents[host.id].ap, startAp);
+    assert.equal(room.mp.invents[host.id].pendingAi, null);
+    assert.equal(room.mp.invents[host.id].aiTaxThisTurn, false);
+    const again = rm.finishVoiceJob(room, host, "voice-fail", false);
+    assert.equal(again.error, "not_pending");
+    assert.equal(room.mp.invents[host.id].ap, startAp);
   });
 
   it("over quota rejects without AP spend", async () => {

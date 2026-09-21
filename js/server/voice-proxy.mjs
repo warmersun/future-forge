@@ -27,6 +27,41 @@ export function planXaiClose(state = {}) {
   return "hangup";
 }
 
+/** 24 kHz 16-bit PCM, base64, about one second of mic audio. */
+export const VOICE_AUDIO_CHARS_PER_SEC = 64_000;
+
+/**
+ * Cap how much audio one session can forward in a one-second window.
+ * A live mic sits near one second of audio per second. Extra frames are
+ * dropped. A single window past the hard cap hangs the call up.
+ * @param {{ windowStart?: number, bytes?: number }|null|undefined} state
+ * @param {number} chars
+ * @param {number} now
+ * @param {{ windowMs?: number, burstChars?: number, hardChars?: number }} [opts]
+ * @returns {{ allow: boolean, hangup: boolean, state: { windowStart: number, bytes: number } }}
+ */
+export function takeAudioBudget(state, chars, now, opts = {}) {
+  const windowMs = opts.windowMs ?? 1000;
+  const burst = opts.burstChars ?? VOICE_AUDIO_CHARS_PER_SEC * 3;
+  const hard = opts.hardChars ?? VOICE_AUDIO_CHARS_PER_SEC * 8;
+  const n = Math.max(0, Number(chars) || 0);
+  const t = Number(now) || 0;
+  let windowStart = state?.windowStart || 0;
+  let bytes = state?.bytes || 0;
+  if (!windowStart || t - windowStart >= windowMs) {
+    windowStart = t;
+    bytes = 0;
+  }
+  const next = bytes + n;
+  if (next > hard) {
+    return { allow: false, hangup: true, state: { windowStart, bytes: next } };
+  }
+  if (next > burst) {
+    return { allow: false, hangup: false, state: { windowStart, bytes } };
+  }
+  return { allow: true, hangup: false, state: { windowStart, bytes: next } };
+}
+
 function envIdleMs() {
   const n = Number(process.env.FF_VOICE_IDLE_MS);
   return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : DEFAULT_VOICE_IDLE_MS;
@@ -86,13 +121,43 @@ export function attachVoiceSockets(httpServer, opts) {
     let upstreamDrops = 0;
     /** @type {Promise<unknown>[]} */
     let toolBatch = [];
+    /** Proposals the browser missed while the socket was not writable. */
+    let pendingClientPackets = [];
+    /** @type {{ windowStart: number, bytes: number }} */
+    let audioBudget = { windowStart: 0, bytes: 0 };
     let opening = false;
+    let unauthMessages = 0;
+    const authTimer = setTimeout(() => {
+      if (!authed && !closed) {
+        safeSend(clientWs, { type: "error", error: "auth_required" });
+        try {
+          clientWs.close();
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 8_000);
+    if (typeof authTimer.unref === "function") authTimer.unref();
     /** @type {ReturnType<typeof createIdleGuard>|null} */
     let idle = null;
+
+    const sendClient = (payload) => {
+      if (safeSend(clientWs, payload)) return true;
+      if (payload && payload.type === "proposals") pendingClientPackets.push(payload);
+      return false;
+    };
+
+    const flushClientPackets = () => {
+      if (!pendingClientPackets.length) return;
+      const queued = pendingClientPackets;
+      pendingClientPackets = [];
+      for (const packet of queued) sendClient(packet);
+    };
 
     const hangup = (reason = "hangup") => {
       if (closed) return;
       closed = true;
+      clearTimeout(authTimer);
       try {
         idle?.stop();
       } catch {
@@ -175,6 +240,7 @@ export function attachVoiceSockets(httpServer, opts) {
           sampleRate: VOICE_SAMPLE_RATE,
           voice: session.voice || defaultVoice,
         });
+        flushClientPackets();
         idle?.bump();
       });
 
@@ -213,6 +279,8 @@ export function attachVoiceSockets(httpServer, opts) {
         if (action === "ignore") return;
         if (action === "reconnect") {
           upstreamDrops += 1;
+          // In-flight runTool promises still deliver proposals to the browser.
+          // A fresh xAI session cannot accept the old function-call ids.
           toolBatch = [];
           xaiWs = null;
           opening = false;
@@ -262,14 +330,14 @@ export function attachVoiceSockets(httpServer, opts) {
       }
 
       if (type === "error") {
-        safeSend(clientWs, {
+        sendClient({
           type: "error",
           error: event.error?.message || event.message || "voice_error",
         });
         return;
       }
 
-      safeSend(clientWs, event);
+      sendClient(event);
     };
 
     const runTool = async (event) => {
@@ -278,6 +346,14 @@ export function attachVoiceSockets(httpServer, opts) {
         event.arguments,
         session?.context || {}
       );
+      if (result.proposals || result.endTutoring) {
+        sendClient({
+          type: "proposals",
+          proposals: result.proposals,
+          message: result.message || "",
+          endTutoring: Boolean(result.endTutoring),
+        });
+      }
       safeSend(xaiWs, {
         type: "conversation.item.create",
         item: {
@@ -286,14 +362,6 @@ export function attachVoiceSockets(httpServer, opts) {
           output: JSON.stringify(result.output),
         },
       });
-      if (result.proposals || result.endTutoring) {
-        safeSend(clientWs, {
-          type: "proposals",
-          proposals: result.proposals,
-          message: result.message || "",
-          endTutoring: Boolean(result.endTutoring),
-        });
-      }
       return result;
     };
 
@@ -310,6 +378,15 @@ export function attachVoiceSockets(httpServer, opts) {
       }
 
       if (!authed) {
+        unauthMessages += 1;
+        if (unauthMessages > 4) {
+          try {
+            clientWs.close();
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
         if (msg.type !== "auth") {
           safeSend(clientWs, { type: "error", error: "auth_required" });
           return;
@@ -325,6 +402,7 @@ export function attachVoiceSockets(httpServer, opts) {
           return;
         }
         authed = true;
+        clearTimeout(authTimer);
         session = found;
         sessions.bindClient(session.id, clientWs);
         idle = createIdleGuard({
@@ -369,6 +447,14 @@ export function attachVoiceSockets(httpServer, opts) {
 
       if (msg.type === "input_audio_buffer.append") {
         if (typeof msg.audio === "string" && msg.audio) {
+          const decision = takeAudioBudget(audioBudget, msg.audio.length, Date.now());
+          audioBudget = decision.state;
+          if (decision.hangup) {
+            sendClient({ type: "error", error: "Too much audio — voice hung up." });
+            hangup("error");
+            return;
+          }
+          if (!decision.allow) return;
           bumpIdle();
           safeSend(xaiWs, { type: "input_audio_buffer.append", audio: msg.audio });
         }

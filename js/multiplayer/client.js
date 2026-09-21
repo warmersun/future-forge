@@ -331,6 +331,7 @@ export class RoomClient {
       return Promise.reject(new Error("not_connected"));
     }
     const clientActionId = `co-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const voice = body.mode === "voice";
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => {
         off();
@@ -339,6 +340,13 @@ export class RoomClient {
       const off = this.on((evt) => {
         if (evt.type === "reject" && !evt.clientActionId) {
           // generic reject — ignore unless we just sent
+        }
+        if (voice && evt.type === "ai_pending" && evt.clientActionId === clientActionId) {
+          clearTimeout(t);
+          off();
+          this._pendingVoiceActionId = clientActionId;
+          resolve({ pending: true, clientActionId });
+          return;
         }
         if (evt.type === "ai_result" && evt.clientActionId === clientActionId) {
           clearTimeout(t);
@@ -388,6 +396,25 @@ export class RoomClient {
         reject(e);
       }
     });
+  }
+
+  /**
+   * Resolve or refund the voice job reserved by requestAiAsync.
+   * No-op when this client never reserved one.
+   * @param {boolean} ok
+   */
+  finishVoiceJob(ok) {
+    const id = this._pendingVoiceActionId;
+    this._pendingVoiceActionId = null;
+    if (!id || !this.ws || this.ws.readyState !== 1) return false;
+    this.ws.send(
+      JSON.stringify({
+        type: "finish_ai",
+        clientActionId: id,
+        ok: Boolean(ok),
+      })
+    );
+    return true;
   }
 
   async hostCmd(cmd, payload = {}) {

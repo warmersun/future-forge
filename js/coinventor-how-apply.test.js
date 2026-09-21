@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   pathwayReadyForHow,
+  pathwayTilesForHow,
   hexHowApplyCopy,
   howAppliedLabel,
   draftQuoteForBubble,
@@ -27,6 +28,35 @@ describe("hex how apply copy", () => {
     assert.equal(placed.label, "Set as this pathway's how");
     assert.match(placed.title, /placed pathway/);
     assert.equal(howAppliedLabel("pathway"), "Saved as this pathway's how");
+  });
+
+  it("does not claim a pathway when the draft's emTech is not on it", () => {
+    const context = {
+      hexBoard: {
+        inventions: [
+          { id: "tile-a", techId: "seawall", onBoard: true },
+        ],
+        pathways: [{ inventionIds: ["tile-a"], howText: "The old seawall line." }],
+      },
+    };
+    assert.equal(pathwayReadyForHow(context, "kelp"), false);
+    assert.equal(pathwayReadyForHow(context, "seawall"), true);
+    assert.equal(pathwayReadyForHow(context), true);
+    const two = {
+      hexBoard: {
+        pathways: [{ inventionIds: ["a"] }, { inventionIds: ["b"] }],
+      },
+    };
+    assert.equal(pathwayReadyForHow(two), false);
+  });
+
+  it("writes only the island that contains the hinted emTech", () => {
+    const seawall = [{ id: "tile-a", techId: "seawall" }];
+    const kelp = [{ id: "tile-b", techId: "kelp" }];
+    assert.equal(pathwayTilesForHow([seawall], "kelp"), null);
+    assert.equal(pathwayTilesForHow([seawall, kelp], "kelp"), kelp);
+    assert.equal(pathwayTilesForHow([seawall], null), seawall);
+    assert.equal(pathwayTilesForHow([seawall, kelp], null), null);
   });
 });
 
