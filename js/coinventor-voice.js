@@ -13,7 +13,7 @@ import {
   base64Pcm16ToFloat32,
 } from "./voice-pcm.js";
 import { isRecoverableVoiceError } from "./voice-errors.js";
-import { voiceContextFingerprint } from "./voice-context.js";
+import { voiceContextFingerprint, userTranscriptIsFinal } from "./voice-context.js?v=voice-8";
 
 export { resampleFloat32, float32ToPcm16Base64, base64Pcm16ToFloat32 };
 
@@ -23,7 +23,7 @@ const CONTEXT_DEBOUNCE_MS = 1000;
 /** Hold the first ~120 ms of a reply so a late TCP chunk does not punch a hole. */
 const PREROLL_SAMPLES = Math.round(VOICE_SAMPLE_RATE * 0.12);
 const PREROLL_MS = 120;
-const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-6", import.meta.url).href;
+const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-8", import.meta.url).href;
 
 /** @typedef {"idle"|"connecting"|"listening"|"speaking"|"muted"|"error"} VoiceUiState */
 
@@ -335,19 +335,18 @@ export function createVoiceCall(opts) {
       emit({ type: "user_speech_stopped" });
       return;
     }
-    if (type === "conversation.item.input_audio_transcription.updated") {
+    if (
+      type === "conversation.item.input_audio_transcription.updated" ||
+      type === "conversation.item.input_audio_transcription.completed"
+    ) {
+      // xAI streams partials on `completed` with status "in_progress".
+      // `updated` is always a live caption, even if a status tag is present.
+      const streaming = type.endsWith(".updated");
       emit({
         type: "user_caption",
         text: String(event.transcript || event.text || ""),
-        final: false,
-      });
-      return;
-    }
-    if (type === "conversation.item.input_audio_transcription.completed") {
-      emit({
-        type: "user_caption",
-        text: String(event.transcript || event.text || ""),
-        final: true,
+        itemId: String(event.item_id || ""),
+        final: streaming ? false : userTranscriptIsFinal(event),
       });
       return;
     }

@@ -142,6 +142,50 @@ export function voiceContextFingerprint(context) {
 }
 
 /**
+ * xAI sends growing user transcripts on `…transcription.completed` with
+ * `status: "in_progress"`, then one `status: "completed"`. A missing status
+ * is the older single-final payload and still counts as final.
+ * @param {{ status?: string }|null|undefined} event
+ */
+export function userTranscriptIsFinal(event) {
+  const status = String(event?.status || "").trim().toLowerCase();
+  if (status === "in_progress") return false;
+  return true;
+}
+
+/**
+ * Commit one spoken user line. The same item is one bubble, rewritten in
+ * place even after the co-inventor has replied. Identical text dedupes only
+ * when the transcript has no item id.
+ * @param {object[]} messages
+ * @param {{ text?: string, itemId?: string }} caption
+ */
+export function commitUserVoiceCaption(messages, caption = {}) {
+  const list = Array.isArray(messages) ? messages.slice() : [];
+  const content = String(caption.text || "").trim();
+  if (!content) return { messages: list, changed: false };
+  const itemId = String(caption.itemId || "").trim();
+  if (itemId) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const msg = list[i];
+      if (!(msg?.role === "user" && msg.voice && msg.itemId === itemId)) continue;
+      if (msg.content === content) return { messages: list, changed: false };
+      list[i] = { ...msg, content };
+      return { messages: list, changed: true };
+    }
+  } else {
+    const last = list[list.length - 1];
+    if (last?.role === "user" && last.content === content) {
+      return { messages: list, changed: false };
+    }
+  }
+  const msg = { role: "user", content, voice: true };
+  if (itemId) msg.itemId = itemId;
+  list.push(msg);
+  return { messages: list, changed: true };
+}
+
+/**
  * Fold a tool proposal into the spoken assistant turn.
  * A caption and a tool result become one bubble. end_tutoring with no draft
  * leaves the transcript alone.

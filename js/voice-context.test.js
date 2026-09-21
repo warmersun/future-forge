@@ -4,7 +4,9 @@ import {
   voiceContextFingerprint,
   reduceVoiceTranscript,
   capVoiceHistory,
+  commitUserVoiceCaption,
   emptyVoiceProposals,
+  userTranscriptIsFinal,
 } from "./voice-context.js";
 
 const board = {
@@ -195,6 +197,135 @@ describe("reduceVoiceTranscript", () => {
     assert.equal(done.messages.length, 1);
     assert.equal(done.messages[0].content, "Suggested: IoT");
     assert.deepEqual(done.messages[0].proposals.addTechIds, ["iot"]);
+  });
+});
+
+describe("user voice captions", () => {
+  const sentence = [
+    "Of course, we need to buy them out of their debt, and then we need to give them",
+    "Of course, we need to buy them out of their debt, and then we need to give them a way to capture",
+    "Of course, we need to buy them out of their debt, and then we need to give them a way to capture the value of what they produce.",
+  ];
+
+  it("treats in_progress as interim and completed or a missing status as final", () => {
+    assert.equal(userTranscriptIsFinal({ status: "in_progress" }), false);
+    assert.equal(userTranscriptIsFinal({ status: "completed" }), true);
+    assert.equal(userTranscriptIsFinal({}), true);
+    assert.equal(userTranscriptIsFinal(null), true);
+  });
+
+  it("keeps one bubble when partials grow and then complete", () => {
+    // Same gate as onVoiceEvent: commit only when the transcript is final.
+    const apply = (messages, event) => {
+      if (!userTranscriptIsFinal(event)) return { messages, changed: false };
+      return commitUserVoiceCaption(messages, {
+        text: event.transcript,
+        itemId: event.item_id,
+      });
+    };
+    let messages = [];
+    for (const transcript of sentence) {
+      const next = apply(messages, {
+        transcript,
+        item_id: "item-1",
+        status: "in_progress",
+      });
+      assert.equal(next.changed, false);
+      messages = next.messages;
+    }
+    assert.equal(messages.length, 0);
+    const done = apply(messages, {
+      transcript: sentence[2],
+      item_id: "item-1",
+      status: "completed",
+    });
+    assert.equal(done.changed, true);
+    assert.equal(done.messages.length, 1);
+    assert.equal(done.messages[0].role, "user");
+    assert.equal(done.messages[0].voice, true);
+    assert.equal(done.messages[0].itemId, "item-1");
+    assert.equal(done.messages[0].content, sentence[2]);
+  });
+
+  it("replaces a corrected final for the same item", () => {
+    const first = commitUserVoiceCaption([], {
+      text: "buy them out of their debt",
+      itemId: "item-1",
+    });
+    const corrected = commitUserVoiceCaption(first.messages, {
+      text: "buy them out of their debt, then keep the value local",
+      itemId: "item-1",
+    });
+    assert.equal(corrected.changed, true);
+    assert.equal(corrected.messages.length, 1);
+    assert.equal(
+      corrected.messages[0].content,
+      "buy them out of their debt, then keep the value local"
+    );
+  });
+
+  it("appends a second utterance with a different item id", () => {
+    const first = commitUserVoiceCaption([], { text: "First sentence.", itemId: "item-1" });
+    const second = commitUserVoiceCaption(first.messages, {
+      text: "Second sentence.",
+      itemId: "item-2",
+    });
+    assert.equal(second.messages.length, 2);
+    assert.equal(second.messages[0].content, "First sentence.");
+    assert.equal(second.messages[1].content, "Second sentence.");
+  });
+
+  it("keeps a second utterance that repeats the same words", () => {
+    const first = commitUserVoiceCaption([], { text: "Yes.", itemId: "item-1" });
+    const second = commitUserVoiceCaption(first.messages, { text: "Yes.", itemId: "item-2" });
+    assert.equal(second.changed, true);
+    assert.equal(second.messages.length, 2);
+    assert.equal(second.messages[0].itemId, "item-1");
+    assert.equal(second.messages[1].itemId, "item-2");
+    const repeatedTyped = commitUserVoiceCaption(
+      [{ role: "user", content: "Yes." }],
+      { text: "Yes.", itemId: "item-3" }
+    );
+    assert.equal(repeatedTyped.changed, true);
+    assert.equal(repeatedTyped.messages.length, 2);
+    assert.equal(repeatedTyped.messages[1].voice, true);
+  });
+
+  it("rewrites the spoken bubble after the co-inventor has replied", () => {
+    const spoken = commitUserVoiceCaption([], {
+      text: "buy them out of their debt",
+      itemId: "item-1",
+    });
+    const withReply = spoken.messages.concat([
+      { role: "assistant", content: "That gets at the root.", voice: true },
+    ]);
+    const corrected = commitUserVoiceCaption(withReply, {
+      text: "buy them out of their debt, then keep the value local",
+      itemId: "item-1",
+    });
+    assert.equal(corrected.changed, true);
+    assert.equal(corrected.messages.length, 2);
+    assert.equal(
+      corrected.messages[0].content,
+      "buy them out of their debt, then keep the value local"
+    );
+    assert.equal(corrected.messages[1].role, "assistant");
+    assert.equal(corrected.messages[1].content, "That gets at the root.");
+  });
+
+  it("does not duplicate an identical final", () => {
+    const first = commitUserVoiceCaption([], { text: "Same line.", itemId: "item-1" });
+    const again = commitUserVoiceCaption(first.messages, {
+      text: "Same line.",
+      itemId: "item-1",
+    });
+    assert.equal(again.changed, false);
+    assert.equal(again.messages.length, 1);
+    const untagged = commitUserVoiceCaption([{ role: "user", content: "Same line." }], {
+      text: "Same line.",
+    });
+    assert.equal(untagged.changed, false);
+    assert.equal(untagged.messages.length, 1);
   });
 });
 

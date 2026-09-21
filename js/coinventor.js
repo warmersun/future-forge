@@ -16,8 +16,12 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-6";
-import { capVoiceHistory, reduceVoiceTranscript } from "./voice-context.js";
+} from "./coinventor-voice.js?v=voice-8";
+import {
+  capVoiceHistory,
+  commitUserVoiceCaption,
+  reduceVoiceTranscript,
+} from "./voice-context.js?v=voice-8";
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -387,15 +391,17 @@ export class CoInventor {
       if (ev.final && text) {
         if (!this._voiceAsstCaption) this._commitVoiceTranscript({ type: "turn_done" });
         this._voiceCaptionIndex = null;
-        const last = this.messages[this.messages.length - 1];
-        if (!(last?.role === "user" && last.content === text)) {
-          this.messages.push({ role: "user", content: text, voice: true });
-          this.renderMessages();
-          try {
-            this.onHistoryChange?.();
-          } catch {
-            /* host */
-          }
+        const next = commitUserVoiceCaption(this.messages, {
+          text,
+          itemId: ev.itemId,
+        });
+        if (!next.changed) return;
+        this.messages.splice(0, this.messages.length, ...next.messages);
+        this.renderMessages();
+        try {
+          this.onHistoryChange?.();
+        } catch {
+          /* host */
         }
       }
       return;
