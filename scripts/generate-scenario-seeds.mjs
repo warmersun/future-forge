@@ -54,7 +54,7 @@ const OUT = path.join(ROOT, "js/scenario-seeds.js");
 const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
-const MODEL = process.env.FF_XAI_MODEL || "grok-4.6";
+const MODEL = process.env.FF_XAI_MODEL || "grok-4.7";
 const SCENARIO_COUNT = 4;
 
 /**

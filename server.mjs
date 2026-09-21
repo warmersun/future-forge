@@ -149,7 +149,7 @@ const WS_MAX_PAYLOAD = Math.max(
 );
 /** Bind all interfaces so LAN friends can connect (firewall still blocks WAN). */
 const HOST = process.env.FF_HOST || "0.0.0.0";
-const MODEL = process.env.FF_XAI_MODEL || "grok-4.6";
+const MODEL = process.env.FF_XAI_MODEL || "grok-4.7";
 /** Default xAI TTS voice (https://docs.x.ai — Text to Speech). */
 const TTS_VOICE = process.env.FF_TTS_VOICE || "eve";
 /** xAI TTS input character limit. */
@@ -2262,7 +2262,7 @@ async function aiCoInvent(body, client, meta = {}) {
   if (fastSpec) {
     createOpts.max_output_tokens = fastSpec.maxOutputTokens;
   }
-  // grok-4.6 defaults to high (cannot disable). Eval stays low; tutor uses medium.
+  // grok-4.7 defaults to high (cannot disable). Eval stays low; tutor uses medium.
   const reasoningEffort = reasoningEffortForCoInvent({ mode, tutor: isTutor });
   if (reasoningEffort) {
     createOpts.reasoning = { effort: reasoningEffort };

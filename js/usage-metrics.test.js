@@ -142,7 +142,7 @@ describe("createUsageTracker", () => {
       type: "ai_text",
       mode: "chat",
       source: "ai",
-      model: "grok-4.6",
+      model: "grok-4.7",
       inputTokens: 1000,
       outputTokens: 200,
       totalTokens: 1200,

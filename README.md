@@ -109,7 +109,7 @@ Without these keys, `npm run portal` has no Sign in page. `npm start` (**game**)
 ```bash
 # .env
 FF_PORT=8765
-FF_XAI_MODEL=grok-4.6
+FF_XAI_MODEL=grok-4.7
 # FF_XAI_API_KEY=xai-...   # see auth below
 # FF_TTS_VOICE=eve         # optional default for Read out loud
 ```

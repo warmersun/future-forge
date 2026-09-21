@@ -1394,7 +1394,7 @@ flowchart TB
   "vision": true,
   "ai": true,
   "auth": "supergrok",
-  "model": "grok-4.6",
+  "model": "grok-4.7",
   "imageModel": "grok-imagine-image",
   "rooms": false,
   "features": { "actionPoints": true, "rooms": false }
