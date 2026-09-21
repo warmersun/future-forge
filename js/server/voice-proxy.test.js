@@ -1,6 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { planXaiClose, takeAudioBudget, VOICE_AUDIO_CHARS_PER_SEC } from "./voice-proxy.mjs";
+import {
+  planXaiClose,
+  takeAudioBudget,
+  inventStateReadiness,
+  shouldForwardToolOutput,
+  VOICE_AUDIO_CHARS_PER_SEC,
+} from "./voice-proxy.mjs";
 
 describe("planXaiClose", () => {
   it("reconnects once, then hangs up", () => {
@@ -49,5 +55,57 @@ describe("takeAudioBudget", () => {
     const later = takeAudioBudget(extra.state, 6_400, 2_500);
     assert.equal(later.allow, true);
     assert.equal(later.hangup, false);
+  });
+});
+
+describe("shouldForwardToolOutput", () => {
+  const socket = {};
+
+  it("posts on the upstream socket that minted the call id", () => {
+    assert.equal(
+      shouldForwardToolOutput({ startedGen: 2, currentGen: 2, socket }),
+      true
+    );
+  });
+
+  it("drops the output after reconnect, hangup, or a missing socket", () => {
+    assert.equal(
+      shouldForwardToolOutput({ startedGen: 2, currentGen: 3, socket }),
+      false
+    );
+    assert.equal(
+      shouldForwardToolOutput({ startedGen: 2, currentGen: 2, closed: true, socket }),
+      false
+    );
+    assert.equal(
+      shouldForwardToolOutput({ startedGen: 2, currentGen: 2, socket: null }),
+      false
+    );
+  });
+});
+
+describe("inventStateReadiness", () => {
+  it("waits while meters are pending, then snapshots when they settle", () => {
+    assert.equal(inventStateReadiness({ metricsPending: true }), "wait");
+    assert.equal(inventStateReadiness({ metricsPending: false }), "snapshot");
+    assert.equal(inventStateReadiness({}), "snapshot");
+  });
+
+  it("retries on hangup or timeout while still pending", () => {
+    assert.equal(
+      inventStateReadiness({ metricsPending: true }, { timedOut: true }),
+      "retry"
+    );
+    assert.equal(
+      inventStateReadiness({ metricsPending: true }, { hungUp: true }),
+      "retry"
+    );
+  });
+
+  it("snapshots a settled board even if the wait timed out", () => {
+    assert.equal(
+      inventStateReadiness({ metricsPending: false }, { timedOut: true }),
+      "snapshot"
+    );
   });
 });

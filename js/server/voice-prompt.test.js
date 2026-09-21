@@ -64,6 +64,15 @@ describe("buildVoiceInstructions", () => {
     assert.doesNotMatch(text, /Shade pump/);
   });
 
+  it("omits crisis-meter levels while metrics are being re-checked", () => {
+    const text = buildVoiceInstructions({ ...hexCtx, metricsPending: true });
+    assert.match(text, /being re-checked/);
+    assert.doesNotMatch(text, /Floods 4/);
+    assert.doesNotMatch(text, /Trust 2/);
+    const settled = buildVoiceInstructions(hexCtx);
+    assert.match(settled, /Floods 4/);
+  });
+
   it("bakes legacy how/life and tutor end_tutoring", () => {
     const text = buildVoiceInstructions(legacyCtx);
     assert.match(text, /Accra/);
@@ -112,6 +121,14 @@ describe("inventStateSnapshot / session.update", () => {
     assert.equal(snap.how, "");
     assert.equal(snap.pathways[0].howText.includes("kelp"), true);
     assert.equal(snap.availableTechs.length, 3);
+    assert.equal(snap.metricsPending, false);
+    assert.equal(snap.pressure.some((p) => p.label === "Floods" && p.level === 4), true);
+  });
+
+  it("omits meter levels from the snapshot while metricsPending", () => {
+    const snap = inventStateSnapshot({ ...hexCtx, metricsPending: true });
+    assert.equal(snap.metricsPending, true);
+    assert.deepEqual(snap.pressure, []);
   });
 
   it("caps a huge availableTechs list", () => {

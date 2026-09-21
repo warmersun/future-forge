@@ -74,4 +74,27 @@ describe("handleVoiceTool", () => {
     const unk = handleVoiceTool("explode", {}, ctx);
     assert.equal(unk.output.error, "unknown_tool");
   });
+
+  it("get_invent_state retries without meter levels while metricsPending", () => {
+    const pending = handleVoiceTool(
+      "get_invent_state",
+      {},
+      { ...ctx, metricsPending: true, pressure: { Floods: 4 } }
+    );
+    assert.equal(pending.output.ok, false);
+    assert.equal(pending.output.retry, true);
+    assert.equal(pending.output.error, "metrics_recalculating");
+    assert.match(pending.output.hint, /Do not quote meter levels/);
+    assert.deepEqual(pending.output.state.pressure, []);
+    assert.equal(pending.output.state.metricsPending, true);
+
+    const settled = handleVoiceTool(
+      "get_invent_state",
+      {},
+      { ...ctx, pressure: { Floods: 4 } }
+    );
+    assert.equal(settled.output.ok, true);
+    assert.equal(settled.output.state.pressure.some((p) => p.label === "Floods"), true);
+    assert.equal(settled.output.state.metricsPending, false);
+  });
 });

@@ -141,6 +141,7 @@ export function buildVoiceKeyterms(context = {}) {
  */
 export function inventStateSnapshot(context = {}) {
   const hex = Boolean(context.hexInvent);
+  const pending = Boolean(context.metricsPending);
   const selected = listSelectedTechs(context);
   const pathways = Array.isArray(context.hexBoard?.pathways)
     ? context.hexBoard.pathways.slice(0, 8).map((p) => ({
@@ -161,7 +162,8 @@ export function inventStateSnapshot(context = {}) {
     life: hex ? "" : clip(context.inventionImpact, 800),
     name: hex ? "" : clip(context.inventionName, 80),
     pathways,
-    pressure: listPressure(context.pressure),
+    pressure: pending ? [] : listPressure(context.pressure),
+    metricsPending: pending,
     availableTechs: listAvailableTechs(context).slice(0, SNAPSHOT_TECH_MAX),
     turn: context.turn ?? null,
     focusTechId: clip(context.focusTechId, 80) || null,
@@ -181,14 +183,17 @@ export function buildVoiceInstructions(context = {}) {
   const year = context.year != null ? String(context.year) : "this year";
   const hex = Boolean(context.hexInvent);
   const tutor = Boolean(context.tutorMode);
+  const pendingMetrics = Boolean(context.metricsPending);
   const selected = listSelectedTechs(context);
   const stack =
     selected.length > 0
       ? selected.map((t) => `${t.name} (${t.id})`).join(", ")
       : "none yet";
-  const pressure = listPressure(context.pressure)
-    .map((p) => `${p.label} ${p.level}`)
-    .join(", ");
+  const pressure = pendingMetrics
+    ? ""
+    : listPressure(context.pressure)
+        .map((p) => `${p.label} ${p.level}`)
+        .join(", ");
   const how = hex
     ? clip(context.hexBoard?.pathways?.[0]?.howText, 500)
     : clip(context.inventionHow, 500);
@@ -213,7 +218,13 @@ Help them invent a local solution with emerging technologies for this place and 
 ## Conversation Flow
 ${surface}
 Current stack: ${stack}.
-${pressure ? `Crisis meters: ${pressure}.` : ""}
+${
+  pendingMetrics
+    ? "Crisis meters are being re-checked. Do not quote meter levels until get_invent_state returns them."
+    : pressure
+      ? `Crisis meters: ${pressure}.`
+      : ""
+}
 ${problem ? `The situation: ${problem}` : ""}
 ${guidance ? `Quest note: ${guidance}` : ""}
 ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it honestly fits this year.` : ""}

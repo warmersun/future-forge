@@ -8,7 +8,11 @@ import {
   commitUserVoiceCaption,
   emptyVoiceProposals,
   settleVoiceTurn,
+  shouldFlushVoiceContextNow,
+  planVoiceContextFlush,
   userTranscriptIsFinal,
+  screenShowsVoiceHangup,
+  voiceHangsUpOnScreenChange,
 } from "./voice-context.js";
 
 const board = {
@@ -24,6 +28,41 @@ const board = {
   hexBoard: { pathways: [{ howText: "Baffles cut the wake." }] },
   pressure: { flood: 2, heat: 1 },
 };
+
+describe("screenShowsVoiceHangup", () => {
+  it("is true only for workshop", () => {
+    assert.equal(screenShowsVoiceHangup("workshop"), true);
+    assert.equal(screenShowsVoiceHangup("outcome"), false);
+    assert.equal(screenShowsVoiceHangup("quest-hub"), false);
+    assert.equal(screenShowsVoiceHangup("title"), false);
+    assert.equal(screenShowsVoiceHangup("challenge-step"), false);
+    assert.equal(screenShowsVoiceHangup("deploy"), false);
+    assert.equal(screenShowsVoiceHangup(""), false);
+    assert.equal(screenShowsVoiceHangup(null), false);
+  });
+});
+
+describe("voiceHangsUpOnScreenChange", () => {
+  it("hangs up when leaving workshop for a screen that hides the waveform", () => {
+    assert.equal(voiceHangsUpOnScreenChange("workshop", "outcome"), true);
+    assert.equal(voiceHangsUpOnScreenChange("workshop", "quest-hub"), true);
+    assert.equal(voiceHangsUpOnScreenChange("workshop", "challenge-step"), true);
+    assert.equal(voiceHangsUpOnScreenChange("workshop", "deploy"), true);
+  });
+
+  it("keeps the call when the screen does not change or the workshop bar returns", () => {
+    assert.equal(voiceHangsUpOnScreenChange("workshop", "workshop"), false);
+    assert.equal(voiceHangsUpOnScreenChange("challenge-step", "challenge-step"), false);
+    assert.equal(voiceHangsUpOnScreenChange("deploy", "deploy"), false);
+    assert.equal(voiceHangsUpOnScreenChange("challenge-step", "workshop"), false);
+    assert.equal(voiceHangsUpOnScreenChange("outcome", "workshop"), false);
+  });
+
+  it("hangs up when challenge and deploy swap, since each hides the other's bar", () => {
+    assert.equal(voiceHangsUpOnScreenChange("challenge-step", "deploy"), true);
+    assert.equal(voiceHangsUpOnScreenChange("deploy", "challenge-step"), true);
+  });
+});
 
 describe("voiceContextFingerprint", () => {
   it("is stable for the same board, including pressure key order", () => {
@@ -105,6 +144,86 @@ describe("voiceContextFingerprint", () => {
     assert.notEqual(
       voiceContextFingerprint(legacy),
       voiceContextFingerprint({ ...legacy, inventionName: "Tide wall" })
+    );
+  });
+
+  it("changes when only metricsPending flips", () => {
+    const base = voiceContextFingerprint(board);
+    const pending = voiceContextFingerprint({ ...board, metricsPending: true });
+    assert.notEqual(base, pending);
+    assert.equal(
+      pending,
+      voiceContextFingerprint({ ...board, metricsPending: true })
+    );
+  });
+});
+
+describe("shouldFlushVoiceContextNow", () => {
+  it("skips the first send and flushes when pending meters flip", () => {
+    assert.equal(shouldFlushVoiceContextNow("", null, { metricsPending: true }), false);
+    assert.equal(
+      shouldFlushVoiceContextNow("fp", { metricsPending: false }, { metricsPending: true }),
+      true
+    );
+    assert.equal(
+      shouldFlushVoiceContextNow("fp", { metricsPending: true }, { metricsPending: false }),
+      true
+    );
+    assert.equal(
+      shouldFlushVoiceContextNow("fp", { metricsPending: true }, { metricsPending: true }),
+      false
+    );
+  });
+});
+
+describe("planVoiceContextFlush", () => {
+  it("drops a queued settled send when the live board matches the last snapshot", () => {
+    assert.equal(
+      planVoiceContextFlush({
+        sentFp: "pending-same",
+        pendingFp: "settled-intermediate",
+        nextFp: "pending-same",
+        sentMetricsPending: true,
+        pendingMetricsPending: false,
+        nextMetricsPending: true,
+      }),
+      "drop"
+    );
+  });
+
+  it("flushes immediately when pending flips against the queued snapshot", () => {
+    assert.equal(
+      planVoiceContextFlush({
+        sentFp: "sent-pending",
+        pendingFp: "queued-settled",
+        nextFp: "pending-new-pressure",
+        sentMetricsPending: true,
+        pendingMetricsPending: false,
+        nextMetricsPending: true,
+      }),
+      "now"
+    );
+  });
+
+  it("debounces an ordinary change and the first send", () => {
+    assert.equal(
+      planVoiceContextFlush({
+        sentFp: "",
+        pendingFp: "",
+        nextFp: "first",
+        nextMetricsPending: true,
+      }),
+      "debounce"
+    );
+    assert.equal(
+      planVoiceContextFlush({
+        sentFp: "sent",
+        pendingFp: "",
+        nextFp: "sent-plus-how",
+        sentMetricsPending: false,
+        nextMetricsPending: false,
+      }),
+      "debounce"
     );
   });
 });

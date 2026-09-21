@@ -13,7 +13,11 @@ import {
   base64Pcm16ToFloat32,
 } from "./voice-pcm.js";
 import { isRecoverableVoiceError } from "./voice-errors.js";
-import { voiceContextFingerprint, userTranscriptIsFinal } from "./voice-context.js?v=voice-10";
+import {
+  voiceContextFingerprint,
+  userTranscriptIsFinal,
+  planVoiceContextFlush,
+} from "./voice-context.js?v=voice-12";
 
 export { resampleFloat32, float32ToPcm16Base64, base64Pcm16ToFloat32 };
 
@@ -23,7 +27,7 @@ const CONTEXT_DEBOUNCE_MS = 1000;
 /** Hold the first ~120 ms of a reply so a late TCP chunk does not punch a hole. */
 const PREROLL_SAMPLES = Math.round(VOICE_SAMPLE_RATE * 0.12);
 const PREROLL_MS = 120;
-const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-10", import.meta.url).href;
+const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-12", import.meta.url).href;
 
 /** @typedef {"idle"|"connecting"|"listening"|"speaking"|"muted"|"error"} VoiceUiState */
 
@@ -82,6 +86,7 @@ export function createVoiceCall(opts) {
   let reserved = false;
   /** Fingerprint of the invent snapshot already given to this call. */
   let sentFp = "";
+  let sentMetricsPending = false;
   let pendingFp = "";
   /** @type {object|null} */
   let pendingContext = null;
@@ -277,6 +282,7 @@ export function createVoiceCall(opts) {
     stopMic();
     session = null;
     sentFp = "";
+    sentMetricsPending = false;
     pendingFp = "";
     pendingContext = null;
     if (reserved && !startedOk) {
@@ -486,6 +492,7 @@ export function createVoiceCall(opts) {
     stopReadAloud();
     const ctx = opts.getContext?.() || {};
     sentFp = voiceContextFingerprint(ctx);
+    sentMetricsPending = Boolean(ctx.metricsPending);
     pendingFp = "";
     pendingContext = null;
     live = call;
@@ -575,7 +582,7 @@ export function createVoiceCall(opts) {
     }
   };
 
-  const scheduleContextFlush = () => {
+  const flushContext = (delayMs) => {
     if (contextTimer) clearTimeout(contextTimer);
     contextTimer = setTimeout(() => {
       contextTimer = 0;
@@ -586,6 +593,7 @@ export function createVoiceCall(opts) {
       }
       if (sendJson({ type: "context", context: pendingContext })) {
         sentFp = pendingFp;
+        sentMetricsPending = Boolean(pendingContext.metricsPending);
         pendingFp = "";
         pendingContext = null;
         return;
@@ -596,17 +604,35 @@ export function createVoiceCall(opts) {
         state === "speaking" ||
         state === "muted"
       ) {
-        scheduleContextFlush();
+        flushContext(CONTEXT_DEBOUNCE_MS);
       }
-    }, CONTEXT_DEBOUNCE_MS);
+    }, delayMs);
   };
+
+  const scheduleContextFlush = () => flushContext(CONTEXT_DEBOUNCE_MS);
 
   const pushContext = (context) => {
     const fp = voiceContextFingerprint(context);
-    if (fp === sentFp) return;
+    const plan = planVoiceContextFlush({
+      sentFp,
+      pendingFp,
+      nextFp: fp,
+      sentMetricsPending,
+      pendingMetricsPending: Boolean(pendingContext?.metricsPending),
+      nextMetricsPending: Boolean(context?.metricsPending),
+    });
+    if (plan === "drop") {
+      if (contextTimer) {
+        clearTimeout(contextTimer);
+        contextTimer = 0;
+      }
+      pendingFp = "";
+      pendingContext = null;
+      return;
+    }
     pendingContext = context;
     pendingFp = fp;
-    scheduleContextFlush();
+    flushContext(plan === "now" ? 0 : CONTEXT_DEBOUNCE_MS);
   };
 
   const onPageHide = () => hangup();

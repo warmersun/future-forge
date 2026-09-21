@@ -27,6 +27,34 @@ export function planXaiClose(state = {}) {
   return "hangup";
 }
 
+/** Hold get_invent_state this long while crisis meters re-score. */
+export const INVENT_STATE_WAIT_MS = 8_000;
+
+/**
+ * Whether get_invent_state should wait, return the snapshot, or ask the model to retry.
+ * Settled meters always snapshot. Hangup and timeout while still pending retry.
+ * @param {object|null|undefined} context
+ * @param {{ timedOut?: boolean, hungUp?: boolean }} [gate]
+ * @returns {"wait"|"snapshot"|"retry"}
+ */
+export function inventStateReadiness(context, gate = {}) {
+  if (gate.hungUp) return "retry";
+  if (!context?.metricsPending) return "snapshot";
+  if (gate.timedOut) return "retry";
+  return "wait";
+}
+
+/**
+ * A function-call id belongs to the upstream socket that minted it.
+ * After reconnect the socket is gone or replaced, so the output must not be posted.
+ * @param {{ startedGen?: number, currentGen?: number, closed?: boolean, socket?: unknown }} state
+ */
+export function shouldForwardToolOutput(state = {}) {
+  if (state.closed) return false;
+  if (!state.socket) return false;
+  return state.startedGen === state.currentGen;
+}
+
 /** 24 kHz 16-bit PCM, base64, about one second of mic audio. */
 export const VOICE_AUDIO_CHARS_PER_SEC = 64_000;
 
@@ -121,6 +149,8 @@ export function attachVoiceSockets(httpServer, opts) {
     let upstreamDrops = 0;
     /** @type {Promise<unknown>[]} */
     let toolBatch = [];
+    /** @type {{ done: boolean, timer: ReturnType<typeof setTimeout>|null, finish: (decision: "snapshot"|"retry") => void }[]} */
+    let inventStateWaiters = [];
     /** Proposals the browser missed while the socket was not writable. */
     let pendingClientPackets = [];
     /** @type {{ windowStart: number, bytes: number }} */
@@ -154,9 +184,63 @@ export function attachVoiceSockets(httpServer, opts) {
       for (const packet of queued) sendClient(packet);
     };
 
+    const resolveInventState = (decision) => {
+      const ctx = session?.context || {};
+      if (decision === "snapshot") {
+        return handleVoiceTool("get_invent_state", {}, ctx);
+      }
+      return handleVoiceTool("get_invent_state", {}, { ...ctx, metricsPending: true });
+    };
+
+    const finishInventStateWaiters = (decision) => {
+      const waiting = inventStateWaiters;
+      inventStateWaiters = [];
+      for (const waiter of waiting) waiter.finish(decision);
+    };
+
+    const wakeInventStateWaiters = () => {
+      const decision = inventStateReadiness(session?.context || {}, { hungUp: closed });
+      if (decision === "wait") return;
+      finishInventStateWaiters(decision);
+    };
+
+    const waitForInventState = () => {
+      const first = inventStateReadiness(session?.context || {}, { hungUp: closed });
+      if (first !== "wait") return Promise.resolve(resolveInventState(first));
+      return new Promise((resolve) => {
+        const waiter = {
+          done: false,
+          timer: null,
+          finish(decision) {
+            if (waiter.done) return;
+            waiter.done = true;
+            if (waiter.timer) {
+              clearTimeout(waiter.timer);
+              waiter.timer = null;
+            }
+            const i = inventStateWaiters.indexOf(waiter);
+            if (i >= 0) inventStateWaiters.splice(i, 1);
+            resolve(resolveInventState(decision));
+          },
+        };
+        waiter.timer = setTimeout(() => {
+          waiter.timer = null;
+          waiter.finish(
+            inventStateReadiness(session?.context || {}, {
+              timedOut: true,
+              hungUp: closed,
+            })
+          );
+        }, INVENT_STATE_WAIT_MS);
+        if (typeof waiter.timer.unref === "function") waiter.timer.unref();
+        inventStateWaiters.push(waiter);
+      });
+    };
+
     const hangup = (reason = "hangup") => {
       if (closed) return;
       closed = true;
+      finishInventStateWaiters("retry");
       clearTimeout(authTimer);
       try {
         idle?.stop();
@@ -279,10 +363,11 @@ export function attachVoiceSockets(httpServer, opts) {
         if (action === "ignore") return;
         if (action === "reconnect") {
           upstreamDrops += 1;
-          // In-flight runTool promises still deliver proposals to the browser.
-          // A fresh xAI session cannot accept the old function-call ids.
+          // Old function-call ids die with this socket. Finish meter waits as
+          // retry and let runTool drop the output (shouldForwardToolOutput).
           toolBatch = [];
           xaiWs = null;
+          finishInventStateWaiters("retry");
           opening = false;
           safeSend(clientWs, { type: "reconnecting" });
           void connectXai(false);
@@ -320,11 +405,13 @@ export function attachVoiceSockets(httpServer, opts) {
         if (toolBatch.length) {
           const batch = toolBatch;
           toolBatch = [];
+          const doneGen = xaiGen;
           try {
             await Promise.all(batch);
           } catch (e) {
             warn(String(e?.message || e).slice(0, 160));
           }
+          if (doneGen !== xaiGen || closed) return;
           safeSend(xaiWs, { type: "response.create" });
         }
       }
@@ -341,11 +428,21 @@ export function attachVoiceSockets(httpServer, opts) {
     };
 
     const runTool = async (event) => {
-      const result = handleVoiceTool(
-        event.name,
-        event.arguments,
-        session?.context || {}
-      );
+      const startedGen = xaiGen;
+      const result =
+        String(event.name || "").trim() === "get_invent_state"
+          ? await waitForInventState()
+          : handleVoiceTool(event.name, event.arguments, session?.context || {});
+      if (
+        !shouldForwardToolOutput({
+          startedGen,
+          currentGen: xaiGen,
+          closed,
+          socket: xaiWs,
+        })
+      ) {
+        return result;
+      }
       if (result.proposals || result.endTutoring) {
         sendClient({
           type: "proposals",
@@ -430,10 +527,10 @@ export function attachVoiceSockets(httpServer, opts) {
       if (msg.type === "context") {
         const fp = voiceContextFingerprint(msg.context);
         const socketOpen = xaiWs && xaiWs.readyState === WebSocket.OPEN && !opening;
-        if (fp === session.voiceFp && socketOpen) return;
+        const sameFp = fp === session.voiceFp;
         sessions.updateContext(session.id, msg.context);
         session.voiceFp = fp;
-        if (socketOpen) {
+        if (!sameFp && socketOpen) {
           safeSend(
             xaiWs,
             buildSessionUpdate(session.context, {
@@ -442,6 +539,7 @@ export function attachVoiceSockets(httpServer, opts) {
             })
           );
         }
+        wakeInventStateWaiters();
         return;
       }
 

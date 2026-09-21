@@ -77,6 +77,20 @@ export function handleVoiceTool(name, args, context = {}) {
   const tutor = Boolean(context.tutorMode);
 
   if (tool === "get_invent_state") {
+    if (Boolean(context.metricsPending)) {
+      return {
+        output: {
+          ok: false,
+          retry: true,
+          error: "metrics_recalculating",
+          hint: "Meters are being re-checked. Call get_invent_state again shortly. Do not quote meter levels.",
+          state: inventStateSnapshot(context),
+        },
+        proposals: null,
+        endTutoring: false,
+        message: "",
+      };
+    }
     const state = inventStateSnapshot(context);
     return {
       output: { ok: true, state },

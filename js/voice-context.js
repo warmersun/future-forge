@@ -5,6 +5,24 @@
 
 export const VOICE_HISTORY_CAP = 24;
 
+/** Hangup lives on the workshop compose bar. Any other screen hides it. */
+export function screenShowsVoiceHangup(screenId) {
+  return String(screenId || "") === "workshop";
+}
+
+/**
+ * Hang up when the visible screen changes to one that hides the workshop waveform.
+ * Staying on challenge or deploy must not drop a call whose button is already there.
+ * @param {string|null|undefined} prevScreenId
+ * @param {string|null|undefined} nextScreenId resolved screen, after challenge/deploy remap
+ */
+export function voiceHangsUpOnScreenChange(prevScreenId, nextScreenId) {
+  const prev = String(prevScreenId || "");
+  const next = String(nextScreenId || "");
+  if (prev === next) return false;
+  return !screenShowsVoiceHangup(next);
+}
+
 export function emptyVoiceProposals() {
   return {
     addTechIds: [],
@@ -143,7 +161,55 @@ export function voiceContextFingerprint(context) {
     String(c.spotlightTechId || "").trim(),
     String(c.guidance || "").trim(),
     String(c.aiTutorContext || "").trim(),
+    c.metricsPending ? "1" : "0",
   ].join("\u0001");
+}
+
+/**
+ * Pending meters should reach the proxy without the usual 1s debounce.
+ * First send after connect still waits.
+ * @param {string} sentFp
+ * @param {{ metricsPending?: boolean }|null|undefined} sentContext
+ * @param {{ metricsPending?: boolean }|null|undefined} nextContext
+ */
+export function shouldFlushVoiceContextNow(sentFp, sentContext, nextContext) {
+  if (!sentFp) return false;
+  return Boolean(nextContext?.metricsPending) !== Boolean(sentContext?.metricsPending);
+}
+
+/**
+ * How a new invent snapshot meets a live call.
+ * "drop" cancels a queued send when the live board matches what we already sent,
+ * so a timing-settle paint cannot emit settled meters after scoring starts again.
+ * "now" skips the debounce when pending meters flip versus the snapshot that
+ * would otherwise go out (the queued one, otherwise the last sent one).
+ * @param {{
+ *   sentFp?: string,
+ *   pendingFp?: string,
+ *   nextFp?: string,
+ *   sentMetricsPending?: boolean,
+ *   pendingMetricsPending?: boolean,
+ *   nextMetricsPending?: boolean,
+ * }} state
+ * @returns {"drop"|"now"|"debounce"}
+ */
+export function planVoiceContextFlush(state = {}) {
+  const sentFp = String(state.sentFp || "");
+  const nextFp = String(state.nextFp || "");
+  if (nextFp === sentFp) return "drop";
+  const baselinePending = state.pendingFp
+    ? state.pendingMetricsPending
+    : state.sentMetricsPending;
+  if (
+    shouldFlushVoiceContextNow(
+      sentFp,
+      { metricsPending: baselinePending },
+      { metricsPending: state.nextMetricsPending }
+    )
+  ) {
+    return "now";
+  }
+  return "debounce";
 }
 
 /**

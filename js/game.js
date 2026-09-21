@@ -27,7 +27,8 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor } from "./coinventor.js?v=voice-10";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-12";
+import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-12";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-10";
 import {
   leanCoInventContext as buildLeanCoInventContext,
@@ -1555,6 +1556,7 @@ function ensureHexWorkshop() {
       updateLearnButton?.();
       updateVision({ debounceMs: 800 });
       refreshCoachMarks();
+      state.coInventor?.noteVoiceContext?.();
     },
     openLearnWhileIdeas: (techId) => openLearnWhileIdeas(techId),
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
@@ -2201,10 +2203,12 @@ function bindMpSeatTabClicks(list, b) {
         setChallengePoseBusy(Boolean(challengeCombatBusy), {
           judging: Boolean(challengeCombatBusy),
         });
+        const prevScreen = state.screen;
         state.screen = "challenge-step";
         $$(".screen").forEach((el) =>
           el.classList.toggle("active", el.id === "screen-challenge-step")
         );
+        hangupVoiceOnScreenChange(prevScreen, "challenge-step");
         renderChallengeStep();
         // Re-apply interactive combat chrome after any spectator locks
         applyEndTurnChrome();
@@ -4071,14 +4075,21 @@ function tips() {
 }
 
 /* —— Screens —— */
+/** The waveform hangup is on the workshop compose bar. */
+function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
+  if (voiceHangsUpOnScreenChange(prevScreenId, nextScreenId)) hangupVoice();
+}
+
 function showScreen(id) {
   stopReadAloud();
+  const prevScreen = state.screen;
   state.screen = id;
   if (id === "challenge-step" || id === "deploy") {
     // Challenge / Deploy screens removed — hex board is the play
     id = "workshop";
     state.screen = "workshop";
   }
+  hangupVoiceOnScreenChange(prevScreen, id);
   if (id !== "workshop") {
     try {
       guidedTour.close();
@@ -13802,10 +13813,12 @@ function enterChallengeAsSpectator(activeInvent, activeName) {
   applySpectatorChallengeFromChallenge(activeInvent);
   // Avoid showScreen → renderChallengeStep essay mode wiping spectator chrome:
   // set screen class directly, then paint spectator UI.
+  const prevScreen = state.screen;
   state.screen = "challenge-step";
   $$(".screen").forEach((el) =>
     el.classList.toggle("active", el.id === "screen-challenge-step")
   );
+  hangupVoiceOnScreenChange(prevScreen, "challenge-step");
   ensureCoInventor();
   setChallengeSideTab(state.challengeSideTab || "vision");
 
@@ -14083,10 +14096,12 @@ function enterDeployAsSpectator(invent, activeName, evt) {
   state.deployStage = soloDeployStageFromChallenge(invent?.deployStage);
   if (invent?.stagedDropPool != null) state.stagedDropPool = invent.stagedDropPool;
 
+  const prevScreen = state.screen;
   state.screen = "deploy";
   $$(".screen").forEach((el) =>
     el.classList.toggle("active", el.id === "screen-deploy")
   );
+  hangupVoiceOnScreenChange(prevScreen, "deploy");
 
   const lead = $("#deploy-screen-lead");
   if (lead) {
@@ -14538,12 +14553,14 @@ function ensureChallengeScreenVisible() {
   const ch = document.getElementById("screen-challenge-step");
   const ws = document.getElementById("screen-workshop");
   const dep = document.getElementById("screen-deploy");
+  const prevScreen = state.screen;
   if (ch) {
     ch.classList.add("active");
     state.screen = "challenge-step";
   }
   if (ws) ws.classList.remove("active");
   if (dep) dep.classList.remove("active");
+  hangupVoiceOnScreenChange(prevScreen, "challenge-step");
 }
 
 /**
@@ -15308,12 +15325,14 @@ function ensureDeployScreenVisible() {
   const dep = document.getElementById("screen-deploy");
   const ws = document.getElementById("screen-workshop");
   const ch = document.getElementById("screen-challenge-step");
+  const prevScreen = state.screen;
   if (dep) {
     dep.classList.add("active");
     state.screen = "deploy";
   }
   if (ws) ws.classList.remove("active");
   if (ch) ch.classList.remove("active");
+  hangupVoiceOnScreenChange(prevScreen, "deploy");
 }
 
 /** Pay Pilot fielding each attempt (fail still spends — retry costs again). */
@@ -17318,10 +17337,12 @@ function enterDeployBayInteractive(invent, opts = {}) {
     }
   }
 
+  const prevScreen = state.screen;
   state.screen = "deploy";
   $$(".screen").forEach((el) =>
     el.classList.toggle("active", el.id === "screen-deploy")
   );
+  hangupVoiceOnScreenChange(prevScreen, "deploy");
 
   const lead = $("#deploy-screen-lead");
   if (lead) {
@@ -17385,10 +17406,12 @@ function openRoomTurnStartScreenForOwnInvent() {
     // Resume own mid-challenge on Challenge screen (not fail-locked)
     state.challengeSpectator = false;
     document.body.classList.remove("challenge-spectator");
+    const prevScreen = state.screen;
     state.screen = "challenge-step";
     $$(".screen").forEach((el) =>
       el.classList.toggle("active", el.id === "screen-challenge-step")
     );
+    hangupVoiceOnScreenChange(prevScreen, "challenge-step");
     renderChallengeStep();
     renderMpChrome();
     scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
@@ -17925,6 +17948,7 @@ function ensureCoInventor() {
         year: state.year,
         turn: state.turn,
         pressure: state.pressure,
+        metricsPending: boardPathwayReevaluating(state.hexBoard),
         place: state.mission?.place,
         availableTechs: TECHS.map((t) => techForAi(t, state.year)),
         challengeAngle: state.challengeAngle,

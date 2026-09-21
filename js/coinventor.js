@@ -16,20 +16,22 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-10";
+} from "./coinventor-voice.js?v=voice-12";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
   commitUserVoiceCaption,
   reduceVoiceTranscript,
   settleVoiceTurn,
-} from "./voice-context.js?v=voice-10";
+} from "./voice-context.js?v=voice-12";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
   howAppliedLabel,
   pathwayReadyForHow,
 } from "./coinventor-how-apply.js?v=voice-10";
+
+export { hangupVoice };
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -353,20 +355,20 @@ export class CoInventor {
   }
 
   async toggleVoice() {
-    if (!this.interactive || this.busy) return;
     const voice = this.ensureVoice();
-    if (voice.state === "idle" || voice.state === "error") {
-      if (this.available === false || this.aiLive === false) {
-        this.setVoiceCaption(
-          "Co-inventor",
-          "Voice needs SuperGrok — text still works. Run grok login or set FF_XAI_API_KEY."
-        );
-        return;
-      }
-      await voice.start();
+    if (voice.state !== "idle" && voice.state !== "error") {
+      voice.hangup();
       return;
     }
-    voice.hangup();
+    if (!this.interactive || this.busy) return;
+    if (this.available === false || this.aiLive === false) {
+      this.setVoiceCaption(
+        "Co-inventor",
+        "Voice needs SuperGrok — text still works. Run grok login or set FF_XAI_API_KEY."
+      );
+      return;
+    }
+    await voice.start();
   }
 
   noteVoiceContext() {
@@ -1065,6 +1067,7 @@ export class CoInventor {
       turn: ctx.turn,
       place: ctx.place,
       pressure: ctx.pressure,
+      metricsPending: Boolean(ctx.metricsPending),
       availableTechs: ctx.availableTechs,
       grounding: ctx.grounding || null,
       isLearningModule: Boolean(ctx.isLearningModule),

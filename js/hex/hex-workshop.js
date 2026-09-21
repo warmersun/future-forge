@@ -2103,7 +2103,7 @@ export function createHexWorkshop(api) {
   function settleTileTiming(tileId, level, reason, forKey) {
     setBoard(applyTimingToTile(tileId, level, reason, forKey));
     ensureUi()?.render();
-    api.onBoardPainted?.();
+    // onBoardPainted runs from syncPathwayScores, after lampPending is set.
     afterTimingSettled(tileId);
   }
 
