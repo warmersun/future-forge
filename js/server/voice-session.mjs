@@ -7,7 +7,44 @@ import crypto from "node:crypto";
 
 export const DEFAULT_VOICE_MAX_SESSIONS = 8;
 export const DEFAULT_VOICE_MAX_MS = 10 * 60 * 1000;
+/** No mic frames and no model audio. A suspended tab stops sending PCM. */
+export const DEFAULT_VOICE_IDLE_MS = 90 * 1000;
 export const VOICE_WS_PATH = "/ws/co-invent-voice";
+
+/**
+ * Reset on activity. Fires onIdle once the quiet stretch elapses.
+ * @param {{ ms: number, onIdle: () => void, schedule?: typeof setTimeout, cancel?: typeof clearTimeout }} opts
+ */
+export function createIdleGuard(opts) {
+  const ms = opts.ms;
+  const onIdle = opts.onIdle;
+  const schedule = opts.schedule || setTimeout;
+  const cancel = opts.cancel || clearTimeout;
+  let timer = null;
+  let generation = 0;
+
+  return {
+    bump() {
+      const gen = ++generation;
+      if (timer) cancel(timer);
+      timer = schedule(() => {
+        if (gen !== generation) return;
+        timer = null;
+        try {
+          onIdle();
+        } catch {
+          /* host */
+        }
+      }, ms);
+      if (timer && typeof timer.unref === "function") timer.unref();
+    },
+    stop() {
+      generation += 1;
+      if (timer) cancel(timer);
+      timer = null;
+    },
+  };
+}
 
 function defaultId() {
   return crypto.randomBytes(16).toString("hex");

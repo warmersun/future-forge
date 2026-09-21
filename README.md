@@ -146,11 +146,12 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | `FF_RATE_*` | Optional overrides for solo AI / WS action rate limits (see `.env.example`) |
 | `FF_VOICE_MAX_SESSIONS` | Cap concurrent Grok Voice calls (default 8; xAI team cap is 10) |
 | `FF_VOICE_MAX_MS` | Max voice call length (default 10 minutes) |
+| `FF_VOICE_IDLE_MS` | Hang up a call with no audio frames (default 90 seconds). An open mic still counts as audio; a backgrounded tab does not |
 | `FF_AI_SEARCH=1` | Live web + X search on timing assess and idea-sparks (off by default; also `--ai-search`) |
 
 Solo AI routes (`/api/co-invent`, `/api/co-invent-voice/session`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 
-**Voice:** tap the mic next to Send on any AI co-inventor panel. Needs a live SuperGrok session or `FF_XAI_API_KEY`, a microphone, and a secure context (`http://127.0.0.1` or HTTPS). First ask of a turn still costs 1 AP (free while tutoring); the call itself is not billed per utterance. The co-inventor never writes the board — Apply buttons still confirm stack/how drafts. Portal (`npm run portal`) does not serve voice.
+**Voice:** tap the waveform next to Send on any AI co-inventor panel. Needs a live SuperGrok session or `FF_XAI_API_KEY`, a microphone, and a secure context (`http://127.0.0.1` or HTTPS). First ask of a turn still costs 1 AP (free while tutoring); the call itself is not billed per utterance. The co-inventor never writes the board — Apply buttons still confirm stack/how drafts. A backgrounded tab with no audio frames hangs up after 90 seconds; an open mic keeps the call until the 10-minute cap. Portal (`npm run portal`) does not serve voice.
 
 ### Developer mode (quest / trend inspect)
 

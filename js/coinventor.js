@@ -16,7 +16,8 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js";
+} from "./coinventor-voice.js?v=voice-6";
+import { capVoiceHistory, reduceVoiceTranscript } from "./voice-context.js";
 
 /** Chat replies can be shorter than brief/scene hosts. */
 const CO_READ_MIN_CHARS = 40;
@@ -313,17 +314,67 @@ export class CoInventor {
     voice.hangup();
   }
 
+  noteVoiceContext() {
+    if (!isVoiceLive()) return;
+    try {
+      this._voice?.pushContext?.(this._buildRequestContext());
+    } catch {
+      /* host */
+    }
+  }
+
+  _commitVoiceTranscript(event) {
+    const next = reduceVoiceTranscript(
+      {
+        messages: this.messages.slice(),
+        captionIndex: this._voiceCaptionIndex ?? null,
+        pending: this._voicePending ?? null,
+      },
+      event
+    );
+    this._voiceCaptionIndex = next.captionIndex;
+    this._voicePending = next.pending;
+    if (!next.changed) return;
+    this.messages.splice(0, this.messages.length, ...next.messages);
+    this.renderMessages();
+    try {
+      this.onHistoryChange?.();
+    } catch {
+      /* host */
+    }
+  }
+
   onVoiceState(state, detail) {
     this.syncVoiceChrome(state, detail);
     this.setBusyUi(this.busy);
     if (state === "idle" || state === "error") {
+      this._voiceCaptionIndex = null;
+      this._voicePending = null;
+      this._voiceUserCaption = "";
+      this._voiceAsstCaption = "";
+      this._voiceReconnecting = false;
       this.setVoiceCaption("", "");
     } else if (state === "connecting") {
-      this.setVoiceCaption("Co-inventor", "Connecting…");
-    } else if (state === "listening" && !this._voiceUserCaption && !this._voiceAsstCaption) {
-      this.setVoiceCaption("Co-inventor", "Listening — talk anytime. Tap to hang up.");
-    } else if (state === "speaking" && !this._voiceAsstCaption) {
-      this.setVoiceCaption("Co-inventor", "Speaking…");
+      this._voiceReconnecting = Boolean(detail?.reconnecting);
+      this.setVoiceCaption(
+        "Co-inventor",
+        detail?.reconnecting ? "Reconnecting…" : "Connecting…"
+      );
+    } else if (state === "listening" || state === "speaking") {
+      const restore = this._voiceReconnecting;
+      this._voiceReconnecting = false;
+      const quiet = !this._voiceUserCaption && !this._voiceAsstCaption;
+      if (restore || quiet) {
+        if (this._voiceAsstCaption) {
+          this.setVoiceCaption("Co-inventor", this._voiceAsstCaption);
+        } else if (state === "listening" && this._voiceUserCaption) {
+          this.setVoiceCaption("You", this._voiceUserCaption);
+        } else if (state === "listening") {
+          this.setVoiceCaption("Co-inventor", "Listening — talk anytime. Tap to hang up.");
+        } else {
+          this.setVoiceCaption("Co-inventor", "Speaking…");
+        }
+      }
     }
   }
 
@@ -334,6 +385,8 @@ export class CoInventor {
       this._voiceUserCaption = text;
       this.setVoiceCaption("You", text || "…");
       if (ev.final && text) {
+        if (!this._voiceAsstCaption) this._commitVoiceTranscript({ type: "turn_done" });
+        this._voiceCaptionIndex = null;
         const last = this.messages[this.messages.length - 1];
         if (!(last?.role === "user" && last.content === text)) {
           this.messages.push({ role: "user", content: text, voice: true });
@@ -352,17 +405,16 @@ export class CoInventor {
         const text = String(ev.text || this._voiceAsstCaption || "").trim();
         this._voiceAsstCaption = "";
         this.setVoiceCaption("Co-inventor", text);
-        if (text) {
-          this.pushAssistant({
-            message: text,
-            proposals: emptyProposals(),
-            teaching: [],
-          });
-        }
+        this._commitVoiceTranscript({ type: "caption_final", text });
       } else {
         this._voiceAsstCaption += String(ev.text || "");
         this.setVoiceCaption("Co-inventor", this._voiceAsstCaption || "…");
       }
+      return;
+    }
+    if (type === "assistant_turn_done") {
+      if (this._voiceAsstCaption) return;
+      this._commitVoiceTranscript({ type: "turn_done" });
       return;
     }
     if (type === "proposals") {
@@ -373,13 +425,10 @@ export class CoInventor {
           /* host */
         }
       }
-      const drafted = hasAnyProposal(ev.proposals);
-      const text = String(ev.message || "").trim();
-      if (!drafted && !text) return;
-      this.pushAssistant({
-        message: text || "A draft you can apply:",
-        proposals: ev.proposals || emptyProposals(),
-        teaching: [],
+      this._commitVoiceTranscript({
+        type: "proposals",
+        proposals: ev.proposals,
+        message: ev.message || "",
         endTutoring: Boolean(ev.endTutoring),
       });
       return;
@@ -529,6 +578,7 @@ export class CoInventor {
    * busy / spectator, then SIT / SCAMPER how-it-works gates.
    */
   syncChipGates() {
+    this.noteVoiceContext();
     if (!this.root || !this.showQuickActions) return;
     const tutorLock = Boolean(this.learningQuest && this.tutorMode);
     const locked = Boolean(this.busy) || !this.interactive || isVoiceLive();
@@ -738,9 +788,9 @@ export class CoInventor {
       const requestBody = {
         mode,
         clientSessionId: getClientSessionId(),
-        messages: [
-          ...this.messages.filter((m) => m.role === "user" || m.role === "assistant"),
-        ].map((m) => ({ role: m.role, content: m.content })),
+        messages: capVoiceHistory(
+          this.messages.filter((m) => m.role === "user" || m.role === "assistant")
+        ).map((m) => ({ role: m.role, content: m.content })),
         context: this._buildRequestContext(),
       };
 
@@ -963,13 +1013,7 @@ export class CoInventor {
     this.root?.classList.toggle("co-locked", locked && !busy);
     this.syncChipGates();
     this.syncVoiceChrome();
-    if (voiceLive) {
-      try {
-        this._voice?.pushContext?.(this._buildRequestContext());
-      } catch {
-        /* ignore */
-      }
-    }
+    this.noteVoiceContext();
   }
 
   renderMessages() {

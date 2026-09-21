@@ -13,12 +13,17 @@ import {
   base64Pcm16ToFloat32,
 } from "./voice-pcm.js";
 import { isRecoverableVoiceError } from "./voice-errors.js";
+import { voiceContextFingerprint } from "./voice-context.js";
 
 export { resampleFloat32, float32ToPcm16Base64, base64Pcm16ToFloat32 };
 
 export const VOICE_SAMPLE_RATE = 24_000;
 const CHUNK_SAMPLES = 2400; // 100 ms at 24 kHz
 const CONTEXT_DEBOUNCE_MS = 1000;
+/** Hold the first ~120 ms of a reply so a late TCP chunk does not punch a hole. */
+const PREROLL_SAMPLES = Math.round(VOICE_SAMPLE_RATE * 0.12);
+const PREROLL_MS = 120;
+const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-6", import.meta.url).href;
 
 /** @typedef {"idle"|"connecting"|"listening"|"speaking"|"muted"|"error"} VoiceUiState */
 
@@ -56,8 +61,10 @@ export function createVoiceCall(opts) {
   let ws = null;
   let session = null;
   let mediaStream = null;
-  let captureCtx = null;
-  let playCtx = null;
+  /** @type {Promise<MediaStream>|null} */
+  let micPromise = null;
+  /** @type {AudioContext|null} */
+  let audioCtx = null;
   let processor = null;
   let sourceNode = null;
   let muted = false;
@@ -65,12 +72,24 @@ export function createVoiceCall(opts) {
   /** @type {AudioBufferSourceNode[]} */
   let playing = [];
   let pendingPcm = new Float32Array(0);
+  /** @type {Float32Array[]} */
+  let holdChunks = [];
+  let holdSamples = 0;
+  let playbackPrimed = false;
+  let holdTimer = 0;
   let contextTimer = 0;
   let startedOk = false;
   let reserved = false;
+  /** Fingerprint of the invent snapshot already given to this call. */
+  let sentFp = "";
+  let pendingFp = "";
+  /** @type {object|null} */
+  let pendingContext = null;
 
   const setState = (next, detail) => {
+    const same = state === next && detail == null;
     state = next;
+    if (same) return;
     try {
       opts.onState?.(next, detail);
     } catch {
@@ -86,7 +105,18 @@ export function createVoiceCall(opts) {
     }
   };
 
+  const clearHold = () => {
+    holdChunks = [];
+    holdSamples = 0;
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = 0;
+    }
+  };
+
   const stopPlayback = () => {
+    clearHold();
+    playbackPrimed = false;
     for (const src of playing) {
       try {
         src.stop();
@@ -95,20 +125,20 @@ export function createVoiceCall(opts) {
       }
     }
     playing = [];
-    if (playCtx) playTime = playCtx.currentTime;
+    if (audioCtx) playTime = audioCtx.currentTime;
   };
 
-  const enqueuePlayback = (float32) => {
-    if (!playCtx || !float32.length) return;
-    if (playCtx.state === "suspended") {
-      void playCtx.resume().catch(() => {});
+  const schedulePlayback = (float32) => {
+    if (!audioCtx || !float32.length) return;
+    if (audioCtx.state === "suspended") {
+      void audioCtx.resume().catch(() => {});
     }
-    const buf = playCtx.createBuffer(1, float32.length, VOICE_SAMPLE_RATE);
+    const buf = audioCtx.createBuffer(1, float32.length, VOICE_SAMPLE_RATE);
     buf.copyToChannel(float32, 0);
-    const src = playCtx.createBufferSource();
+    const src = audioCtx.createBufferSource();
     src.buffer = buf;
-    src.connect(playCtx.destination);
-    const now = playCtx.currentTime;
+    src.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
     if (playTime < now) playTime = now;
     src.start(playTime);
     playTime += buf.duration;
@@ -118,15 +148,55 @@ export function createVoiceCall(opts) {
     };
   };
 
+  const flushHold = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = 0;
+    }
+    if (!holdSamples) {
+      playbackPrimed = true;
+      return;
+    }
+    const merged = new Float32Array(holdSamples);
+    let offset = 0;
+    for (const chunk of holdChunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    holdChunks = [];
+    holdSamples = 0;
+    playbackPrimed = true;
+    schedulePlayback(merged);
+  };
+
+  const enqueuePlayback = (float32) => {
+    if (!audioCtx || !float32.length) return;
+    if (playbackPrimed) {
+      schedulePlayback(float32);
+      return;
+    }
+    holdChunks.push(float32);
+    holdSamples += float32.length;
+    if (holdSamples >= PREROLL_SAMPLES) {
+      flushHold();
+      return;
+    }
+    if (!holdTimer) holdTimer = setTimeout(flushHold, PREROLL_MS);
+  };
+
   const sendJson = (obj) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    try {
       ws.send(JSON.stringify(obj));
+      return true;
+    } catch {
+      return false;
     }
   };
 
   const flushCapture = (float32) => {
     if (muted || !float32.length) return;
-    const native = captureCtx?.sampleRate || VOICE_SAMPLE_RATE;
+    const native = audioCtx?.sampleRate || VOICE_SAMPLE_RATE;
     const resampled = resampleFloat32(float32, native, VOICE_SAMPLE_RATE);
     const merged = new Float32Array(pendingPcm.length + resampled.length);
     merged.set(pendingPcm);
@@ -143,11 +213,30 @@ export function createVoiceCall(opts) {
     pendingPcm = merged.slice(offset);
   };
 
+  const stopStream = (stream) => {
+    if (!stream) return;
+    for (const t of stream.getTracks()) {
+      try {
+        t.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
   const stopMic = () => {
     try {
       processor?.disconnect();
     } catch {
       /* ignore */
+    }
+    if (processor?.port) {
+      try {
+        processor.port.onmessage = null;
+        processor.port.close();
+      } catch {
+        /* ignore */
+      }
     }
     processor = null;
     try {
@@ -156,22 +245,19 @@ export function createVoiceCall(opts) {
       /* ignore */
     }
     sourceNode = null;
+    const pendingMic = micPromise;
+    micPromise = null;
+    if (mediaStream) stopStream(mediaStream);
+    else if (pendingMic) {
+      void pendingMic.then((stream) => stopStream(stream)).catch(() => {});
+    }
+    mediaStream = null;
     try {
-      captureCtx?.close();
+      audioCtx?.close();
     } catch {
       /* ignore */
     }
-    captureCtx = null;
-    if (mediaStream) {
-      for (const t of mediaStream.getTracks()) {
-        try {
-          t.stop();
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    mediaStream = null;
+    audioCtx = null;
     pendingPcm = new Float32Array(0);
   };
 
@@ -187,15 +273,12 @@ export function createVoiceCall(opts) {
       /* ignore */
     }
     ws = null;
-    stopMic();
     stopPlayback();
-    try {
-      playCtx?.close();
-    } catch {
-      /* ignore */
-    }
-    playCtx = null;
+    stopMic();
     session = null;
+    sentFp = "";
+    pendingFp = "";
+    pendingContext = null;
     if (reserved && !startedOk) {
       try {
         opts.afterRequest?.("voice", false);
@@ -212,12 +295,20 @@ export function createVoiceCall(opts) {
 
   const onServerEvent = (event) => {
     const type = String(event.type || "");
+    if (type === "reconnecting") {
+      stopPlayback();
+      setState("connecting", { reconnecting: true });
+      return;
+    }
     if (type === "ready") {
+      const firstReady = !startedOk;
       startedOk = true;
-      try {
-        opts.afterRequest?.("voice", true);
-      } catch {
-        /* host */
+      if (firstReady) {
+        try {
+          opts.afterRequest?.("voice", true);
+        } catch {
+          /* host */
+        }
       }
       if (!muted) setState("listening");
       return;
@@ -261,6 +352,10 @@ export function createVoiceCall(opts) {
       return;
     }
     if (type === "response.created") {
+      // Each response, including the one after a tool, gets its own preroll.
+      // Audio already scheduled for the previous response keeps playing.
+      clearHold();
+      playbackPrimed = false;
       if (!muted) setState("speaking");
       return;
     }
@@ -287,6 +382,7 @@ export function createVoiceCall(opts) {
       return;
     }
     if (type === "response.done") {
+      emit({ type: "assistant_turn_done" });
       if (!muted) setState("listening");
       return;
     }
@@ -300,31 +396,51 @@ export function createVoiceCall(opts) {
     }
   };
 
-  const startMic = async () => {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1,
-      },
-    });
-    captureCtx = new AudioContext();
-    playCtx = new AudioContext({ sampleRate: VOICE_SAMPLE_RATE });
-    playTime = playCtx.currentTime;
-    sourceNode = captureCtx.createMediaStreamSource(mediaStream);
-    const bufSize = 2048;
-    processor = captureCtx.createScriptProcessor(bufSize, 1, 1);
-    processor.onaudioprocess = (ev) => {
-      if (muted) return;
-      const input = ev.inputBuffer.getChannelData(0);
-      flushCapture(new Float32Array(input));
-    };
-    const silent = captureCtx.createGain();
+  const attachGraph = async (stream) => {
+    mediaStream = stream;
+    sourceNode = audioCtx.createMediaStreamSource(stream);
+    const silent = audioCtx.createGain();
     silent.gain.value = 0;
-    sourceNode.connect(processor);
-    processor.connect(silent);
-    silent.connect(captureCtx.destination);
+    let captureNode = null;
+    try {
+      await audioCtx.audioWorklet.addModule(CAPTURE_WORKLET_URL);
+      const node = new AudioWorkletNode(audioCtx, "voice-capture");
+      node.port.onmessage = (ev) => {
+        if (muted) return;
+        const data = ev.data;
+        if (data instanceof Float32Array && data.length) flushCapture(data);
+      };
+      captureNode = node;
+    } catch {
+      captureNode = audioCtx.createScriptProcessor(2048, 1, 1);
+      captureNode.onaudioprocess = (ev) => {
+        if (muted) return;
+        flushCapture(new Float32Array(ev.inputBuffer.getChannelData(0)));
+      };
+    }
+    processor = captureNode;
+    sourceNode.connect(captureNode);
+    captureNode.connect(silent);
+    silent.connect(audioCtx.destination);
+    playTime = audioCtx.currentTime;
+  };
+
+  const releaseEarlyMic = async () => {
+    const pendingMic = micPromise;
+    micPromise = null;
+    if (pendingMic) {
+      try {
+        stopStream(await pendingMic);
+      } catch {
+        /* permission denied or already stopped */
+      }
+    }
+    try {
+      await audioCtx?.close();
+    } catch {
+      /* ignore */
+    }
+    audioCtx = null;
   };
 
   const start = async () => {
@@ -336,17 +452,48 @@ export function createVoiceCall(opts) {
       emit({ type: "error", error: "mic_unsupported" });
       return;
     }
+    // Same turn as the click. Safari drops the user gesture across the awaits below.
+    try {
+      micPromise = navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
+      audioCtx = new AudioContext();
+      void audioCtx.resume().catch(() => {});
+    } catch (e) {
+      await releaseEarlyMic();
+      const msg = String(e?.message || e || "mic_unsupported");
+      emit({ type: "error", error: msg });
+      setState("error", { error: msg });
+      return;
+    }
     if (opts.beforeRequest) {
-      const ok = await opts.beforeRequest("voice");
-      if (!ok) return;
+      let ok = false;
+      try {
+        ok = await opts.beforeRequest("voice");
+      } catch {
+        ok = false;
+      }
+      if (!ok) {
+        await releaseEarlyMic();
+        return;
+      }
     }
     reserved = true;
     stopReadAloud();
-    setState("connecting");
+    const ctx = opts.getContext?.() || {};
+    sentFp = voiceContextFingerprint(ctx);
+    pendingFp = "";
+    pendingContext = null;
     live = call;
+    setState("connecting");
     startedOk = false;
     try {
-      const ctx = opts.getContext?.() || {};
+      const streamPromise = micPromise;
       if (typeof opts.transport === "function") {
         await opts.transport({
           mode: "voice",
@@ -400,7 +547,13 @@ export function createVoiceCall(opts) {
         }
       };
       sendJson({ type: "auth", sessionId: data.sessionId, token: data.token });
-      await startMic();
+      const stream = await streamPromise;
+      if (live !== call) {
+        stopStream(stream);
+        return;
+      }
+      await attachGraph(stream);
+      scheduleContextFlush();
     } catch (e) {
       const msg = String(e?.message || e);
       emit({ type: "error", error: msg });
@@ -423,13 +576,38 @@ export function createVoiceCall(opts) {
     }
   };
 
-  const pushContext = (context) => {
-    if (!session) return;
+  const scheduleContextFlush = () => {
     if (contextTimer) clearTimeout(contextTimer);
     contextTimer = setTimeout(() => {
       contextTimer = 0;
-      sendJson({ type: "context", context });
+      if (!pendingContext || pendingFp === sentFp) {
+        pendingFp = "";
+        pendingContext = null;
+        return;
+      }
+      if (sendJson({ type: "context", context: pendingContext })) {
+        sentFp = pendingFp;
+        pendingFp = "";
+        pendingContext = null;
+        return;
+      }
+      if (
+        state === "connecting" ||
+        state === "listening" ||
+        state === "speaking" ||
+        state === "muted"
+      ) {
+        scheduleContextFlush();
+      }
     }, CONTEXT_DEBOUNCE_MS);
+  };
+
+  const pushContext = (context) => {
+    const fp = voiceContextFingerprint(context);
+    if (fp === sentFp) return;
+    pendingContext = context;
+    pendingFp = fp;
+    scheduleContextFlush();
   };
 
   const onPageHide = () => hangup();

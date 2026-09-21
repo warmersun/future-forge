@@ -119,6 +119,7 @@ describe("inventStateSnapshot / session.update", () => {
     assert.equal(msg.session.voice, "eve");
     assert.equal(msg.session.reasoning.effort, "none");
     assert.equal(msg.session.turn_detection.type, "server_vad");
+    assert.equal(msg.session.resumption, undefined);
     assert.equal(msg.session.audio.input.transcription.model, "grok-transcribe");
     const names = msg.session.tools.map((t) => t.name);
     assert.deepEqual(names, [

@@ -6,7 +6,31 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { VOICE_MODEL, VOICE_SAMPLE_RATE, buildSessionUpdate } from "./voice-prompt.mjs";
 import { handleVoiceTool } from "./voice-tools.mjs";
-import { VOICE_WS_PATH } from "./voice-session.mjs";
+import { voiceContextFingerprint } from "../voice-context.js";
+import {
+  createIdleGuard,
+  DEFAULT_VOICE_IDLE_MS,
+  VOICE_WS_PATH,
+} from "./voice-session.mjs";
+
+/**
+ * Unexpected xAI close: reconnect once, then hang up.
+ * A close after the call is already finished is ignored.
+ * @param {{ closed?: boolean, drops?: number, maxDrops?: number }} state
+ * @returns {"ignore"|"reconnect"|"hangup"}
+ */
+export function planXaiClose(state = {}) {
+  if (state.closed) return "ignore";
+  const drops = Number(state.drops) || 0;
+  const maxDrops = Number.isFinite(state.maxDrops) ? state.maxDrops : 1;
+  if (drops < maxDrops) return "reconnect";
+  return "hangup";
+}
+
+function envIdleMs() {
+  const n = Number(process.env.FF_VOICE_IDLE_MS);
+  return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : DEFAULT_VOICE_IDLE_MS;
+}
 
 const XAI_REALTIME = "wss://api.x.ai/v1/realtime";
 
@@ -47,6 +71,7 @@ export function attachVoiceSockets(httpServer, opts) {
   const warn = typeof opts.warn === "function" ? opts.warn : (m) => console.warn("[voice]", m);
   const defaultVoice = opts.voice || "eve";
   const model = opts.model || VOICE_MODEL;
+  const idleMs = opts.idleMs || envIdleMs();
 
   const wss = new WebSocketServer({ noServer: true, maxPayload });
 
@@ -58,13 +83,22 @@ export function attachVoiceSockets(httpServer, opts) {
     let closed = false;
     let xaiRetried = false;
     let xaiGen = 0;
+    let upstreamDrops = 0;
     /** @type {Promise<unknown>[]} */
     let toolBatch = [];
     let opening = false;
+    /** @type {ReturnType<typeof createIdleGuard>|null} */
+    let idle = null;
 
     const hangup = (reason = "hangup") => {
       if (closed) return;
       closed = true;
+      try {
+        idle?.stop();
+      } catch {
+        /* ignore */
+      }
+      idle = null;
       const s = session;
       session = null;
       if (s) {
@@ -130,6 +164,7 @@ export function attachVoiceSockets(httpServer, opts) {
       socket.on("open", () => {
         if (gen !== xaiGen || closed || !session) return;
         opening = false;
+        session.voiceFp = voiceContextFingerprint(session.context);
         const update = buildSessionUpdate(session.context, {
           voice: session.voice || defaultVoice,
           sampleRate: VOICE_SAMPLE_RATE,
@@ -140,6 +175,7 @@ export function attachVoiceSockets(httpServer, opts) {
           sampleRate: VOICE_SAMPLE_RATE,
           voice: session.voice || defaultVoice,
         });
+        idle?.bump();
       });
 
       socket.on("unexpected-response", async (_req, res) => {
@@ -173,7 +209,18 @@ export function attachVoiceSockets(httpServer, opts) {
 
       socket.on("close", () => {
         if (gen !== xaiGen) return;
-        if (!closed) hangup("xai_close");
+        const action = planXaiClose({ closed, drops: upstreamDrops });
+        if (action === "ignore") return;
+        if (action === "reconnect") {
+          upstreamDrops += 1;
+          toolBatch = [];
+          xaiWs = null;
+          opening = false;
+          safeSend(clientWs, { type: "reconnecting" });
+          void connectXai(false);
+          return;
+        }
+        hangup("xai_close");
       });
       socket.on("error", (err) => {
         if (gen !== xaiGen) return;
@@ -181,9 +228,19 @@ export function attachVoiceSockets(httpServer, opts) {
       });
     };
 
+    const bumpIdle = () => idle?.bump();
+
     const onXaiEvent = async (event) => {
       const type = String(event.type || "");
+      if (
+        type === "response.output_audio.delta" ||
+        type === "response.audio.delta" ||
+        type === "response.output_audio_transcript.delta"
+      ) {
+        bumpIdle();
+      }
       if (type === "response.function_call_arguments.done") {
+        bumpIdle();
         const p = runTool(event);
         toolBatch.push(p);
         return;
@@ -270,6 +327,17 @@ export function attachVoiceSockets(httpServer, opts) {
         authed = true;
         session = found;
         sessions.bindClient(session.id, clientWs);
+        idle = createIdleGuard({
+          ms: idleMs,
+          onIdle: () => {
+            safeSend(clientWs, {
+              type: "error",
+              error: "Voice hung up after a quiet stretch.",
+            });
+            hangup("idle");
+          },
+        });
+        idle.bump();
         void connectXai();
         return;
       }
@@ -279,18 +347,29 @@ export function attachVoiceSockets(httpServer, opts) {
         return;
       }
 
+      if (closed || !session) return;
+
       if (msg.type === "context") {
+        const fp = voiceContextFingerprint(msg.context);
+        const socketOpen = xaiWs && xaiWs.readyState === WebSocket.OPEN && !opening;
+        if (fp === session.voiceFp && socketOpen) return;
         sessions.updateContext(session.id, msg.context);
-        const update = buildSessionUpdate(session.context, {
-          voice: session.voice || defaultVoice,
-          sampleRate: VOICE_SAMPLE_RATE,
-        });
-        safeSend(xaiWs, update);
+        session.voiceFp = fp;
+        if (socketOpen) {
+          safeSend(
+            xaiWs,
+            buildSessionUpdate(session.context, {
+              voice: session.voice || defaultVoice,
+              sampleRate: VOICE_SAMPLE_RATE,
+            })
+          );
+        }
         return;
       }
 
       if (msg.type === "input_audio_buffer.append") {
         if (typeof msg.audio === "string" && msg.audio) {
+          bumpIdle();
           safeSend(xaiWs, { type: "input_audio_buffer.append", audio: msg.audio });
         }
         return;

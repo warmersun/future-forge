@@ -336,7 +336,6 @@ export function buildSessionUpdate(context = {}, opts = {}) {
         prefix_padding_ms: 333,
         silence_duration_ms: 700,
       },
-      resumption: { enabled: true },
       tools: voiceToolSchemas(),
       audio: {
         input: {

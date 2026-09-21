@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createVoiceSessionStore } from "./voice-session.mjs";
+import { createIdleGuard, createVoiceSessionStore } from "./voice-session.mjs";
 
 describe("voice sessions", () => {
   it("creates, auths, and rejects a bad token", () => {
@@ -61,5 +61,45 @@ describe("voice sessions", () => {
     assert.equal(store.close("id1", "hangup"), true);
     assert.equal(store.get("id1"), null);
     assert.equal(store.size(), 0);
+  });
+});
+
+describe("voice idle guard", () => {
+  it("fires once after a quiet stretch and a bump delays it", () => {
+    /** @type {{ fn: () => void, at: number, cancelled: boolean }[]} */
+    const pending = [];
+    let now = 0;
+    let fired = 0;
+    const idle = createIdleGuard({
+      ms: 90,
+      onIdle: () => {
+        fired += 1;
+      },
+      schedule: (fn, ms) => {
+        const timer = { fn, at: now + ms, cancelled: false };
+        pending.push(timer);
+        return timer;
+      },
+      cancel: (timer) => {
+        timer.cancelled = true;
+      },
+    });
+    const runDue = () => {
+      for (const timer of pending) {
+        if (!timer.cancelled && timer.at <= now) timer.fn();
+      }
+    };
+    idle.bump();
+    now = 89;
+    runDue();
+    assert.equal(fired, 0);
+    idle.bump();
+    now = 179;
+    runDue();
+    assert.equal(fired, 1);
+    idle.stop();
+    now = 400;
+    runDue();
+    assert.equal(fired, 1);
   });
 });
