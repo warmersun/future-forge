@@ -16,14 +16,16 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-12";
+} from "./coinventor-voice.js?v=voice-13";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
   commitUserVoiceCaption,
   reduceVoiceTranscript,
   settleVoiceTurn,
-} from "./voice-context.js?v=voice-12";
+  voiceBlocksModeSwitch,
+} from "./voice-context.js?v=voice-13";
+import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-13";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
@@ -131,6 +133,8 @@ export class CoInventor {
     this._voiceUserCaption = "";
     this._voiceAsstCaption = "";
     this._voiceReconnecting = false;
+    /** Server VAD heard the learner. Independent of mic and speaker mute. */
+    this._voiceHearing = false;
     /** null = health not in yet; only lock the mic after a definite no. */
     this.aiLive = null;
   }
@@ -271,13 +275,46 @@ export class CoInventor {
           rows="2"
           placeholder="${escapeHtml(this.placeholder)}"
         ></textarea>
-        <button
-          type="button"
-          class="co-voice-btn"
-          id="co-voice"
-          aria-pressed="false"
-          title="Start a voice call"
-        >${WAVEFORM_ICON}</button>
+        <div class="co-voice-dock" id="co-voice-dock">
+          <button
+            type="button"
+            class="co-voice-icon-btn"
+            id="co-voice-speaker"
+            hidden
+            aria-pressed="false"
+            title="Mute co-inventor"
+          >${SPEAKER_ICON}</button>
+          <div class="co-voice-mic-pill" id="co-voice-mic-pill" hidden>
+            <span class="co-voice-activity" id="co-voice-activity" aria-hidden="true">${WAVEFORM_ICON}</span>
+            <button
+              type="button"
+              class="co-voice-icon-btn co-voice-mic"
+              id="co-voice-mic"
+              aria-pressed="false"
+              title="Mute microphone"
+            >${MIC_ICON}</button>
+          </div>
+          <label class="co-voice-pick">
+            <select id="co-voice-pick" aria-label="Co-inventor voice">
+              ${voicePickOptions(readStoredVoice())}
+            </select>
+          </label>
+          <button
+            type="button"
+            class="co-voice-btn"
+            id="co-voice"
+            aria-pressed="false"
+            title="${escapeHtml(this._voiceStartTitle())}"
+          >${WAVEFORM_ICON}</button>
+          <button
+            type="button"
+            class="co-voice-stop"
+            id="co-voice-stop"
+            hidden
+            title="Hang up"
+            aria-label="Hang up"
+          ><span class="co-voice-stop-mark" aria-hidden="true"></span></button>
+        </div>
         <button type="submit" class="btn btn-primary btn-sm" id="co-send">Send</button>
       </form>
     `;
@@ -324,6 +361,7 @@ export class CoInventor {
     });
     root.querySelector("#co-end-tutor")?.addEventListener("click", () => {
       if (this.busy) return;
+      if (voiceBlocksModeSwitch(isVoiceLive(), "tutor", "coinventor")) return;
       try {
         this.onEndTutoring?.();
       } catch {
@@ -332,6 +370,7 @@ export class CoInventor {
     });
     root.querySelector("#co-resume-tutor")?.addEventListener("click", () => {
       if (this.busy) return;
+      if (voiceBlocksModeSwitch(isVoiceLive(), "coinventor", "tutor")) return;
       try {
         this.onResumeTutoring?.();
       } catch {
@@ -341,10 +380,33 @@ export class CoInventor {
     root.querySelector("#co-voice")?.addEventListener("click", () => {
       void this.toggleVoice();
     });
+    root.querySelector("#co-voice-stop")?.addEventListener("click", () => {
+      this.ensureVoice().hangup();
+    });
+    root.querySelector("#co-voice-speaker")?.addEventListener("click", () => {
+      const voice = this.ensureVoice();
+      voice.setSpeakerMuted(!voice.speakerMuted);
+      this.syncVoiceChrome();
+    });
+    root.querySelector("#co-voice-mic")?.addEventListener("click", () => {
+      const voice = this.ensureVoice();
+      const next = !voice.micMuted;
+      voice.setMicMuted(next);
+      if (next) this._voiceHearing = false;
+      this.syncVoiceChrome();
+    });
+    root.querySelector("#co-voice-pick")?.addEventListener("change", (e) => {
+      const id = knownVoiceId(e.target?.value);
+      if (!id) return;
+      writeStoredVoice(id);
+      this.ensureVoice().setVoice(id);
+    });
 
     this.syncChipGates();
     this.applyTutorModeUi();
     this._voice = sharedVoiceCallFor(this);
+    if (!isVoiceLive()) this._voice.setVoice(readStoredVoice());
+    else this._selectVoice(this._voice.voiceId);
     this.syncVoiceChrome();
     this.checkHealth();
   }
@@ -356,10 +418,7 @@ export class CoInventor {
 
   async toggleVoice() {
     const voice = this.ensureVoice();
-    if (voice.state !== "idle" && voice.state !== "error") {
-      voice.hangup();
-      return;
-    }
+    if (voice.state !== "idle" && voice.state !== "error") return;
     if (!this.interactive || this.busy) return;
     if (this.available === false || this.aiLive === false) {
       this.setVoiceCaption(
@@ -431,6 +490,7 @@ export class CoInventor {
       this._voiceUserCaption = "";
       this._voiceAsstCaption = "";
       this._voiceReconnecting = false;
+      this._voiceHearing = false;
       this.setVoiceCaption("", "");
     } else if (state === "connecting") {
       this._voiceReconnecting = Boolean(detail?.reconnecting);
@@ -459,6 +519,20 @@ export class CoInventor {
 
   onVoiceEvent(ev) {
     const type = ev?.type;
+    if (type === "user_speech_started") {
+      if (!this._voice?.micMuted) this._voiceHearing = true;
+      this.syncVoiceChrome();
+      return;
+    }
+    if (type === "user_speech_stopped") {
+      this._voiceHearing = false;
+      this.syncVoiceChrome();
+      return;
+    }
+    if (type === "voice") {
+      this._selectVoice(ev.voice);
+      return;
+    }
     if (type === "user_caption") {
       const text = String(ev.text || "").trim();
       this._voiceUserCaption = text;
@@ -501,13 +575,7 @@ export class CoInventor {
       return;
     }
     if (type === "proposals") {
-      if (ev.endTutoring && this.tutorMode && this.learningQuest) {
-        try {
-          this.onTutorSessionEnded?.("ai");
-        } catch {
-          /* host */
-        }
-      }
+      const endTutor = Boolean(ev.endTutoring && this.tutorMode && this.learningQuest);
       this._commitVoiceTranscript({
         type: "proposals",
         proposals: ev.proposals,
@@ -515,8 +583,19 @@ export class CoInventor {
         endTutoring: Boolean(ev.endTutoring),
       });
       // A tool result that lands after the reconnect flush has no later
-      // response.done to publish it. Fold it now.
-      if (this._voiceReconnecting && this._voicePending) this._flushOpenVoiceTurn();
+      // response.done to publish it. Fold it now. An end-tutoring turn
+      // folds onto this lane before the call hangs up.
+      if (endTutor || (this._voiceReconnecting && this._voicePending)) {
+        this._flushOpenVoiceTurn();
+      }
+      if (endTutor) {
+        if (isVoiceLive()) hangupVoice();
+        try {
+          this.onTutorSessionEnded?.("ai");
+        } catch {
+          /* host */
+        }
+      }
       return;
     }
     if (type === "error") {
@@ -541,23 +620,54 @@ export class CoInventor {
     if (textEl) textEl.textContent = text || "";
   }
 
+  _voiceStartTitle() {
+    return this._historyKeyForState() === "tutor"
+      ? "Start a tutoring call"
+      : "Start a co-inventor call";
+  }
+
+  _selectVoice(id) {
+    const next = knownVoiceId(id);
+    if (!next) return;
+    const sel = this.root?.querySelector("#co-voice-pick");
+    if (sel) sel.value = next;
+    writeStoredVoice(next);
+  }
+
+  syncTutorVoiceGate() {
+    const endBtn = this.root?.querySelector("#co-end-tutor");
+    const resumeBtn = this.root?.querySelector("#co-resume-tutor");
+    const live = isVoiceLive();
+    if (endBtn) {
+      const blocked = voiceBlocksModeSwitch(live, "tutor", "coinventor");
+      endBtn.disabled = blocked;
+      endBtn.title = blocked
+        ? "Hang up before ending tutoring"
+        : "End free tutor mode — first co-inventor ask this turn costs 1 AP, then free";
+    }
+    if (resumeBtn) {
+      const blocked = voiceBlocksModeSwitch(live, "coinventor", "tutor");
+      resumeBtn.disabled = blocked;
+      resumeBtn.title = blocked
+        ? "Hang up before resuming tutoring"
+        : "Resume AI tutor mode — free AP, one short idea at a time (learning quests only)";
+    }
+  }
+
   syncVoiceChrome(state, detail) {
     const btn = this.root?.querySelector("#co-voice");
     if (!btn) return;
     const st = state || this._voice?.state || "idle";
-    const live =
-      st === "connecting" || st === "listening" || st === "speaking" || st === "muted";
-    btn.classList.toggle("is-live", live);
-    btn.classList.toggle("is-speaking", st === "speaking");
-    btn.classList.toggle("is-muted", st === "muted");
+    const live = st === "connecting" || st === "listening" || st === "speaking";
+    const micMuted = Boolean(this._voice?.micMuted);
+    const speakerMuted = Boolean(this._voice?.speakerMuted);
+    const hearing = Boolean(this._voiceHearing) && !micMuted;
+    btn.hidden = live;
     btn.classList.toggle("is-connecting", st === "connecting");
-    btn.setAttribute("aria-pressed", live ? "true" : "false");
+    btn.setAttribute("aria-pressed", "false");
+    const idleTitle = this._voiceStartTitle();
     const titles = {
-      idle: "Start a voice call",
-      connecting: "Connecting… tap to cancel",
-      listening: "In a voice call — tap to hang up",
-      speaking: "Co-inventor speaking — tap to hang up",
-      muted: "Muted — tap to hang up",
+      idle: idleTitle,
       error: detail?.error || "Voice dropped — tap to try again",
     };
     const locked =
@@ -573,13 +683,47 @@ export class CoInventor {
       } else if (this.available === false) {
         btn.title = "Co-inventor is offline";
       } else {
-        btn.title = titles[st] || titles.idle;
+        btn.title = titles[st] || idleTitle;
       }
     } else {
-      btn.title = titles[st] || titles.idle;
+      btn.title = titles[st] || idleTitle;
     }
     btn.setAttribute("aria-label", btn.title);
+
+    const speaker = this.root.querySelector("#co-voice-speaker");
+    const pill = this.root.querySelector("#co-voice-mic-pill");
+    const mic = this.root.querySelector("#co-voice-mic");
+    const stop = this.root.querySelector("#co-voice-stop");
+    const pick = this.root.querySelector("#co-voice-pick");
+    const activity = this.root.querySelector("#co-voice-activity");
+    if (speaker) {
+      speaker.hidden = !live;
+      speaker.classList.toggle("is-muted", speakerMuted);
+      speaker.setAttribute("aria-pressed", speakerMuted ? "true" : "false");
+      speaker.title = speakerMuted ? "Unmute co-inventor" : "Mute co-inventor";
+      speaker.setAttribute("aria-label", speaker.title);
+    }
+    if (pill) pill.hidden = !live;
+    if (mic) {
+      mic.classList.toggle("is-muted", micMuted);
+      mic.setAttribute("aria-pressed", micMuted ? "true" : "false");
+      mic.title = micMuted ? "Unmute microphone" : "Mute microphone";
+      mic.setAttribute("aria-label", mic.title);
+    }
+    if (stop) stop.hidden = !live;
+    if (pick) {
+      pick.disabled = locked && !live;
+      const chosen = knownVoiceId(this._voice?.voiceId) || readStoredVoice();
+      if (pick.value !== chosen) pick.value = chosen;
+    }
+    if (activity) {
+      activity.classList.toggle("is-live", live);
+      activity.classList.toggle("is-connecting", st === "connecting");
+      activity.classList.toggle("is-hearing", live && hearing);
+      activity.classList.toggle("is-speaking", live && st === "speaking");
+    }
     this.root?.classList.toggle("co-voice-live", live);
+    this.syncTutorVoiceGate();
   }
 
   /**
@@ -591,6 +735,9 @@ export class CoInventor {
     if (opts.learningQuest != null) this.learningQuest = Boolean(opts.learningQuest);
     if (opts.subtitle != null) this.subtitle = String(opts.subtitle);
     const nextKey = this._historyKeyForState();
+    if (voiceBlocksModeSwitch(isVoiceLive(), this.activeHistoryKey, nextKey)) {
+      hangupVoice();
+    }
     this._switchHistoryLane(nextKey);
     this.applyTutorModeUi();
   }
@@ -1357,5 +1504,36 @@ function formatMessage(text) {
   return renderChatMarkdown(text || "");
 }
 
-/** Grok Voice Mode control: waveform, not a mic (mic = dictation). */
+/** Speech-detected bars. The start button and the live mic pill both use them. */
 const WAVEFORM_ICON = `<svg class="co-voice-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="co-voice-bar" x="3.5" y="8" width="3" height="8" rx="1.5"/><rect class="co-voice-bar" x="8.5" y="4" width="3" height="16" rx="1.5"/><rect class="co-voice-bar" x="13.5" y="6" width="3" height="12" rx="1.5"/><rect class="co-voice-bar" x="18.5" y="9" width="3" height="6" rx="1.5"/></svg>`;
+
+const SPEAKER_ICON = `<svg class="co-voice-glyph co-voice-glyph-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.2L12 19.2V4.8L6.2 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.2a3.6 3.6 0 0 1 0 5.6M17.8 7a6.2 6.2 0 0 1 0 10"/></svg><svg class="co-voice-glyph co-voice-glyph-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5v5h3.2L12 19.2V4.8L6.2 9.5H3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 9l5 6M21 9l-5 6"/></svg>`;
+
+const MIC_ICON = `<svg class="co-voice-glyph co-voice-glyph-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20"/></svg><svg class="co-voice-glyph co-voice-glyph-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20M5 19L19 5"/></svg>`;
+
+const VOICE_STORAGE_KEY = "ff-co-voice-id";
+
+function readStoredVoice() {
+  try {
+    return knownVoiceId(globalThis.localStorage?.getItem(VOICE_STORAGE_KEY)) || "eve";
+  } catch {
+    return "eve";
+  }
+}
+
+function writeStoredVoice(id) {
+  const next = knownVoiceId(id);
+  if (!next) return;
+  try {
+    globalThis.localStorage?.setItem(VOICE_STORAGE_KEY, next);
+  } catch {
+    /* private mode */
+  }
+}
+
+function voicePickOptions(selected) {
+  const id = knownVoiceId(selected) || "eve";
+  return VOICE_CHOICES.map(
+    (v) => `<option value="${v.id}"${v.id === id ? " selected" : ""}>${v.label}</option>`
+  ).join("");
+}

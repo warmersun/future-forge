@@ -1,12 +1,27 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  planVoiceChange,
   planXaiClose,
   takeAudioBudget,
   inventStateReadiness,
   shouldForwardToolOutput,
   VOICE_AUDIO_CHARS_PER_SEC,
 } from "./voice-proxy.mjs";
+
+describe("planVoiceChange", () => {
+  it("accepts a new known voice, including case", () => {
+    assert.deepEqual(planVoiceChange("eve", "ara"), { ok: true, voice: "ara" });
+    assert.deepEqual(planVoiceChange("eve", "REX"), { ok: true, voice: "rex" });
+  });
+
+  it("keeps the current voice when the request is unknown or unchanged", () => {
+    assert.deepEqual(planVoiceChange("eve", "nope"), { ok: false, voice: "eve" });
+    assert.deepEqual(planVoiceChange("ara", "ara"), { ok: false, voice: "ara" });
+    assert.deepEqual(planVoiceChange("eve", "eve"), { ok: false, voice: "eve" });
+    assert.deepEqual(planVoiceChange("nope", "sal"), { ok: true, voice: "sal" });
+  });
+});
 
 describe("planXaiClose", () => {
   it("reconnects once, then hangs up", () => {

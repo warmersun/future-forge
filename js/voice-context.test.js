@@ -13,6 +13,7 @@ import {
   userTranscriptIsFinal,
   screenShowsVoiceHangup,
   voiceHangsUpOnScreenChange,
+  voiceBlocksModeSwitch,
 } from "./voice-context.js";
 
 const board = {
@@ -61,6 +62,20 @@ describe("voiceHangsUpOnScreenChange", () => {
   it("hangs up when challenge and deploy swap, since each hides the other's bar", () => {
     assert.equal(voiceHangsUpOnScreenChange("challenge-step", "deploy"), true);
     assert.equal(voiceHangsUpOnScreenChange("deploy", "challenge-step"), true);
+  });
+});
+
+describe("voiceBlocksModeSwitch", () => {
+  it("blocks a live switch between tutoring and co-inventing", () => {
+    assert.equal(voiceBlocksModeSwitch(true, "tutor", "coinventor"), true);
+    assert.equal(voiceBlocksModeSwitch(true, "coinventor", "tutor"), true);
+  });
+
+  it("allows the same lane and an idle call", () => {
+    assert.equal(voiceBlocksModeSwitch(true, "tutor", "tutor"), false);
+    assert.equal(voiceBlocksModeSwitch(true, "coinventor", "coinventor"), false);
+    assert.equal(voiceBlocksModeSwitch(false, "tutor", "coinventor"), false);
+    assert.equal(voiceBlocksModeSwitch(false, "coinventor", "tutor"), false);
   });
 });
 

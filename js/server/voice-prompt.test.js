@@ -154,6 +154,8 @@ describe("inventStateSnapshot / session.update", () => {
     const msg = buildSessionUpdate(hexCtx, { voice: "eve" });
     assert.equal(msg.type, "session.update");
     assert.equal(msg.session.voice, "eve");
+    assert.equal(buildSessionUpdate(hexCtx, { voice: "ARA" }).session.voice, "ara");
+    assert.equal(buildSessionUpdate(hexCtx, { voice: "nope" }).session.voice, "eve");
     assert.equal(msg.session.reasoning.effort, "none");
     assert.equal(msg.session.turn_detection.type, "server_vad");
     assert.equal(msg.session.resumption, undefined);

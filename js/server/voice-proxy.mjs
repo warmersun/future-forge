@@ -7,11 +7,25 @@ import { WebSocketServer, WebSocket } from "ws";
 import { VOICE_MODEL, VOICE_SAMPLE_RATE, buildSessionUpdate } from "./voice-prompt.mjs";
 import { handleVoiceTool } from "./voice-tools.mjs";
 import { voiceContextFingerprint } from "../voice-context.js";
+import { knownVoiceId } from "../voice-choices.js";
 import {
   createIdleGuard,
   DEFAULT_VOICE_IDLE_MS,
   VOICE_WS_PATH,
 } from "./voice-session.mjs";
+
+/**
+ * Mid-call voice change. An unknown or unchanged id keeps the current voice.
+ * @param {string} current
+ * @param {unknown} requested
+ * @returns {{ ok: boolean, voice: string }}
+ */
+export function planVoiceChange(current, requested) {
+  const cur = knownVoiceId(current) || "eve";
+  const next = knownVoiceId(requested);
+  if (!next || next === cur) return { ok: false, voice: cur };
+  return { ok: true, voice: next };
+}
 
 /**
  * Unexpected xAI close: reconnect once, then hang up.
@@ -523,6 +537,26 @@ export function attachVoiceSockets(httpServer, opts) {
       }
 
       if (closed || !session) return;
+
+      if (msg.type === "voice") {
+        const current = session.voice || defaultVoice;
+        const plan = planVoiceChange(current, msg.voice);
+        if (plan.ok) {
+          session.voice = plan.voice;
+          const socketOpen = xaiWs && xaiWs.readyState === WebSocket.OPEN && !opening;
+          if (socketOpen) {
+            safeSend(
+              xaiWs,
+              buildSessionUpdate(session.context, {
+                voice: plan.voice,
+                sampleRate: VOICE_SAMPLE_RATE,
+              })
+            );
+          }
+        }
+        sendClient({ type: "voice", voice: plan.voice });
+        return;
+      }
 
       if (msg.type === "context") {
         const fp = voiceContextFingerprint(msg.context);

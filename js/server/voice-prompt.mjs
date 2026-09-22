@@ -3,6 +3,8 @@
  * Spoken partner — not the JSON SYSTEM_PROMPT used by POST /api/co-invent.
  */
 
+import { knownVoiceId } from "../voice-choices.js";
+
 export const VOICE_MODEL = "grok-voice-latest";
 export const VOICE_SAMPLE_RATE = 24_000;
 export const VOICE_DEFAULT_ID = "eve";
@@ -344,7 +346,7 @@ export function voiceToolSchemas() {
  * @param {{ voice?: string, sampleRate?: number }} [opts]
  */
 export function buildSessionUpdate(context = {}, opts = {}) {
-  const voice = clip(opts.voice || VOICE_DEFAULT_ID, 64) || VOICE_DEFAULT_ID;
+  const voice = knownVoiceId(opts.voice) || VOICE_DEFAULT_ID;
   const rate = Number(opts.sampleRate) || VOICE_SAMPLE_RATE;
   const keyterms = buildVoiceKeyterms(context);
   return {

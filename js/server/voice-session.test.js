@@ -17,6 +17,16 @@ describe("voice sessions", () => {
     assert.equal(store.auth("id1", "tok"), null);
   });
 
+  it("stores a requested voice", () => {
+    const store = createVoiceSessionStore({
+      randomId: () => "id",
+      randomToken: () => "tok",
+    });
+    const r = store.create({ voice: "ara" });
+    assert.equal(r.ok, true);
+    assert.equal(r.session.voice, "ara");
+  });
+
   it("replaces the previous session for the same client", () => {
     let n = 0;
     const closed = [];

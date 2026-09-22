@@ -23,6 +23,18 @@ export function voiceHangsUpOnScreenChange(prevScreenId, nextScreenId) {
   return !screenShowsVoiceHangup(next);
 }
 
+/**
+ * A live call belongs to one lane. Tutoring ↔ co-inventing waits until hangup.
+ * The same lane, and an idle call, do not block.
+ * @param {boolean} live
+ * @param {string} fromLane
+ * @param {string} toLane
+ */
+export function voiceBlocksModeSwitch(live, fromLane, toLane) {
+  if (!live) return false;
+  return String(fromLane || "") !== String(toLane || "");
+}
+
 export function emptyVoiceProposals() {
   return {
     addTechIds: [],

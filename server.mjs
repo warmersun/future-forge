@@ -94,6 +94,7 @@ import {
   VOICE_SAMPLE_RATE,
 } from "./js/server/voice-prompt.mjs";
 import { createVoiceSessionStore, VOICE_WS_PATH } from "./js/server/voice-session.mjs";
+import { knownVoiceId } from "./js/voice-choices.js";
 import { attachVoiceSockets } from "./js/server/voice-proxy.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -3451,7 +3452,7 @@ const server = http.createServer(async (req, res) => {
         context: body?.context && typeof body.context === "object" ? body.context : {},
         clientSessionId: clientSessionFromBody(body),
         ip: gate.ip,
-        voice: TTS_VOICE,
+        voice: knownVoiceId(body?.voice || TTS_VOICE) || "eve",
       });
       if (!created.ok) {
         return sendJson(res, created.status || 429, {
