@@ -41,6 +41,29 @@ describe("handleVoiceTool", () => {
     assert.equal(r.proposals.inventionHow, "Kelp baffles cut the wake.");
   });
 
+  it("draft_how on hex keeps a mint target for a new tile", () => {
+    const r = handleVoiceTool(
+      "draft_how",
+      { text: "The card predicts the coating before the ribbon is cut.", target: "mint" },
+      { ...ctx, hexInvent: true }
+    );
+    assert.equal(r.output.ok, true);
+    assert.equal(r.proposals.howTarget, "mint");
+    assert.match(r.proposals.inventionHow, /ribbon/);
+    const path = handleVoiceTool(
+      "draft_how",
+      { text: "The pathway shares one how.", target: "PATHWAY" },
+      { ...ctx, hexInvent: true }
+    );
+    assert.equal(path.proposals.howTarget, "pathway");
+    const essay = handleVoiceTool(
+      "draft_how",
+      { text: "A shaded courtyard.", target: "mint" },
+      ctx
+    );
+    assert.equal(essay.proposals.howTarget, null);
+  });
+
   it("hex rejects draft_life", () => {
     const r = handleVoiceTool(
       "draft_life",

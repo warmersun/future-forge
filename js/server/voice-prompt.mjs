@@ -206,7 +206,7 @@ export function buildVoiceInstructions(context = {}) {
   const spotlight = clip(context.spotlightTechId, 80);
   const tutorBlock = tutor ? tutorVoiceBlock(context.aiTutorContext) : "";
   const surface = hex
-    ? "They invent on a hex board: emTech tiles plus a how-it-works sentence on each pathway. There is no invention name."
+    ? "They invent on a hex board. A placed pathway is one connected island and has one how-it-works for that whole pathway. A new invent tile gets its own how-it-works in the How it works box, then they mint the tile and place it. There is no invention name and no second description field."
     : "They write an invention name, how it works, and everyday life, and pick emTechs for a stack.";
   const roleLine = tutor
     ? `You are the AI co-inventor tutor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`
@@ -216,7 +216,7 @@ export function buildVoiceInstructions(context = {}) {
 ${roleLine} You are a creative partner, not the sole inventor. Warm, practical, hopeful. You talk like a sharp colleague at a workshop table.
 
 ## Objective
-Help them invent a local solution with emerging technologies for this place and year. They lead. You brainstorm, teach in plain words, and may suggest emTechs or draft how-it-works text they can apply. Do not mint tiles or write the board yourself.
+Help them invent a local solution with emerging technologies for this place and year. They lead. You brainstorm, teach in plain words, and may suggest emTechs or draft how-it-works text they can apply. You do not mint tiles, place them, or write the board yourself.
 
 ## Conversation Flow
 ${surface}
@@ -234,10 +234,10 @@ ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it
 ${tutorBlock}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}
-Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. If they want you to draft mechanism text, call \`draft_how\`. ${
+Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. ${
     hex
-      ? "Do not call \`draft_life\` on the hex board."
-      : "If they want everyday-life prose, call \`draft_life\`."
+      ? "If they want how a placed pathway works, call \`draft_how\` with target pathway. If they want the description for a new invent tile, the invent card, or so they can mint, call \`draft_how\` with target mint. That fills How it works. They edit it, mint the tile, and place it. You do not mint it. Do not describe another writing surface."
+      : "If they want mechanism text, call \`draft_how\`. If they want everyday-life prose, call \`draft_life\`."
   }
 Call \`get_invent_state\` when you are unsure what is on the board now.
 ${
@@ -268,10 +268,13 @@ NEVER invent technology ids. NEVER call tools that are not in your tool list.
 
 /**
  * Custom function tools for Grok Voice session.update.
+ * Hex sessions omit draft_life so a new tile is not described as another surface.
+ * @param {object|null|undefined} [context]
  * @returns {object[]}
  */
-export function voiceToolSchemas() {
-  return [
+export function voiceToolSchemas(context = {}) {
+  const hex = Boolean(context?.hexInvent);
+  const tools = [
     {
       type: "function",
       name: "get_invent_state",
@@ -300,8 +303,9 @@ export function voiceToolSchemas() {
     {
       type: "function",
       name: "draft_how",
-      description:
-        "Offer a how-it-works draft the learner can Apply. Does not write the board by itself.",
+      description: hex
+        ? "Offer a how-it-works draft the learner can apply. target pathway writes the placed pathway. target mint fills How it works for a new invent tile they will mint. Does not mint or place the tile."
+        : "Offer a how-it-works draft the learner can Apply. Does not write the board by itself.",
       parameters: {
         type: "object",
         properties: {
@@ -309,6 +313,16 @@ export function voiceToolSchemas() {
             type: "string",
             description: "One short mechanism paragraph in everyday words, local to this place and year",
           },
+          ...(hex
+            ? {
+                target: {
+                  type: "string",
+                  enum: ["pathway", "mint"],
+                  description:
+                    "pathway = how the placed pathway works. mint = How it works for a new tile they mint.",
+                },
+              }
+            : {}),
         },
         required: ["text"],
         additionalProperties: false,
@@ -361,6 +375,8 @@ export function voiceToolSchemas() {
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   ];
+  if (!hex) return tools;
+  return tools.filter((tool) => tool.name !== "draft_life");
 }
 
 /**
@@ -384,7 +400,7 @@ export function buildSessionUpdate(context = {}, opts = {}) {
         prefix_padding_ms: 333,
         silence_duration_ms: 700,
       },
-      tools: voiceToolSchemas(),
+      tools: voiceToolSchemas(context),
       audio: {
         input: {
           format: { type: "audio/pcm", rate },

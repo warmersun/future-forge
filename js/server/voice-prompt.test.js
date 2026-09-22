@@ -59,7 +59,11 @@ describe("buildVoiceInstructions", () => {
     assert.match(text, /2028/);
     assert.match(text, /Hold the seawall/);
     assert.match(text, /Living kelp baffles/);
-    assert.match(text, /Do not call `draft_life`/);
+    assert.match(text, /target mint/);
+    assert.match(text, /target pathway/);
+    assert.doesNotMatch(text, /draft_life/);
+    assert.doesNotMatch(text, /daily life/i);
+    assert.doesNotMatch(text, /essay/);
     assert.match(text, /hex board/i);
     assert.doesNotMatch(text, /Shade pump/);
   });
@@ -179,10 +183,14 @@ describe("inventStateSnapshot / session.update", () => {
       "get_invent_state",
       "suggest_techs",
       "draft_how",
-      "draft_life",
       "show_lesson_media",
       "end_tutoring",
     ]);
-    assert.equal(voiceToolSchemas().length, 6);
+    assert.equal(voiceToolSchemas(hexCtx).length, 5);
+    assert.equal(
+      voiceToolSchemas(legacyCtx).some((tool) => tool.name === "draft_life"),
+      true
+    );
+    assert.equal(msg.session.tools.some((tool) => tool.name === "draft_life"), false);
   });
 });

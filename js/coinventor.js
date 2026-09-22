@@ -16,7 +16,7 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-14";
+} from "./coinventor-voice.js?v=voice-15";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
@@ -25,14 +25,14 @@ import {
   settleVoiceTurn,
   tutorToggleLocked,
   voiceBlocksModeSwitch,
-} from "./voice-context.js?v=voice-14";
-import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-14";
+} from "./voice-context.js?v=voice-15";
+import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-15";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
+  hexHowTargetsPathway,
   howAppliedLabel,
-  pathwayReadyForHow,
-} from "./coinventor-how-apply.js?v=voice-10";
+} from "./coinventor-how-apply.js?v=voice-15";
 
 export { hangupVoice };
 
@@ -1409,7 +1409,7 @@ export class CoInventor {
         if (hex) {
           let hasPathway = false;
           try {
-            hasPathway = pathwayReadyForHow(this.getContext?.(), (p.addTechIds || [])[0]);
+            hasPathway = hexHowTargetsPathway(this.getContext?.(), p);
           } catch {
             hasPathway = false;
           }
@@ -1493,6 +1493,9 @@ export class CoInventor {
       partial.inventionName = proposals.inventionName;
     } else if (kind === "how") {
       partial.inventionHow = proposals.inventionHow;
+      if (proposals.howTarget === "mint" || proposals.howTarget === "pathway") {
+        partial.howTarget = proposals.howTarget;
+      }
       if (this.surface === "hex" && proposals.addTechIds?.[0]) {
         partial.howTechId = proposals.addTechIds[0];
       }

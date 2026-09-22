@@ -63,6 +63,21 @@ export function pathwayTilesForHow(pathways, techId) {
  * @param {boolean} hasPathway
  * @returns {{ label: string, title: string }}
  */
+/**
+ * Whether this how-draft writes a placed pathway.
+ * An explicit mint target stays in the mint box even when a pathway is on the board.
+ * An explicit pathway target names the pathway button. Otherwise the board decides.
+ * @param {object|null|undefined} context
+ * @param {{ howTarget?: string, howTechId?: string, addTechIds?: string[] }|null|undefined} [proposals]
+ */
+export function hexHowTargetsPathway(context, proposals) {
+  const target = String(proposals?.howTarget || "").trim();
+  if (target === "mint") return false;
+  if (target === "pathway") return true;
+  const hint = proposals?.howTechId || proposals?.addTechIds?.[0];
+  return pathwayReadyForHow(context, hint);
+}
+
 export function hexHowApplyCopy(hasPathway) {
   if (hasPathway) {
     return {

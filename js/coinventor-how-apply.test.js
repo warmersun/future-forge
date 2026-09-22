@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   pathwayReadyForHow,
   pathwayTilesForHow,
+  hexHowTargetsPathway,
   hexHowApplyCopy,
   howAppliedLabel,
   draftQuoteForBubble,
@@ -57,6 +58,13 @@ describe("hex how apply copy", () => {
     assert.equal(pathwayTilesForHow([seawall, kelp], "kelp"), kelp);
     assert.equal(pathwayTilesForHow([seawall], null), seawall);
     assert.equal(pathwayTilesForHow([seawall, kelp], null), null);
+  });
+
+  it("keeps a mint draft off the pathway even when one island is placed", () => {
+    const context = { hexBoard: { pathways: [{ howText: "The old line." }] } };
+    assert.equal(hexHowTargetsPathway(context, { howTarget: "mint" }), false);
+    assert.equal(hexHowTargetsPathway(context, { howTarget: "pathway" }), true);
+    assert.equal(hexHowTargetsPathway(context, {}), true);
   });
 });
 

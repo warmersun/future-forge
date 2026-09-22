@@ -27,9 +27,9 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-14";
-import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-14";
-import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-10";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-15";
+import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-15";
+import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-15";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -18096,8 +18096,11 @@ function applyHexCoInventorProposals(proposals) {
     const pathways = listInventionPathways(state.hexBoard);
     const hintId = proposals.howTechId || (proposals.addTechIds || [])[0] || null;
     const techId = hintId || focusedTechId;
-    const invs = pathwayTilesForHow(pathways, hintId);
-    if (invs?.length) {
+    const forced = String(proposals.howTarget || "").trim();
+    const invs = forced === "mint" ? null : pathwayTilesForHow(pathways, hintId);
+    if (forced === "pathway" && !invs?.length) {
+      flashToast("Place a pathway first — then this draft can be its how.");
+    } else if (invs?.length) {
       ws.setIslandHowText?.(invs, howDraft, "ai");
       filledHow = true;
       howTarget = "pathway";

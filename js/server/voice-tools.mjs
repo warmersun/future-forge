@@ -14,6 +14,7 @@ export function emptyProposals() {
     inventionHow: null,
     inventionImpact: null,
     scrutiny: null,
+    howTarget: null,
   };
 }
 
@@ -160,9 +161,12 @@ export function handleVoiceTool(name, args, context = {}) {
         message: "",
       };
     }
+    const asked = String(a.target || "").trim().toLowerCase();
+    const howTarget =
+      hex && (asked === "mint" || asked === "pathway") ? asked : null;
     return {
-      output: { ok: true, applied: false },
-      proposals: { ...emptyProposals(), inventionHow: text },
+      output: { ok: true, applied: false, howTarget },
+      proposals: { ...emptyProposals(), inventionHow: text, howTarget },
       endTutoring: false,
       message: text,
     };
@@ -174,7 +178,7 @@ export function handleVoiceTool(name, args, context = {}) {
         output: {
           ok: false,
           error: "not_on_this_surface",
-          hint: "Hex invent has no everyday-life field. Use draft_how for the pathway.",
+          hint: "A new tile's description is draft_how with target mint. A placed pathway is draft_how with target pathway.",
         },
         proposals: null,
         endTutoring: false,

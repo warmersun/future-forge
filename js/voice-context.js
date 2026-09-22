@@ -170,6 +170,7 @@ export function mergeVoiceProposals(a, b) {
     inventionHow: pick("inventionHow"),
     inventionImpact: pick("inventionImpact"),
     scrutiny: pick("scrutiny"),
+    howTarget: pick("howTarget"),
   };
 }
 
