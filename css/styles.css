@@ -9256,7 +9256,7 @@ button.linkish:hover {
 
 .co-voice-pick select {
   appearance: none;
-  background: transparent;
+  background-color: var(--bg-1);
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: 999px;
@@ -9266,6 +9266,18 @@ button.linkish:hover {
   font-size: 0.82rem;
   cursor: pointer;
   color-scheme: dark;
+}
+
+/* The native popup inherits the light text color and paints a white sheet. */
+.co-voice-pick select option,
+.co-voice-pick select optgroup {
+  background-color: var(--bg-1);
+  color: var(--text);
+}
+
+.co-voice-pick select option:checked {
+  background-color: #1e3a5f;
+  color: var(--text);
 }
 
 .co-voice-pick select:disabled {
