@@ -232,6 +232,22 @@ export function voiceContextFingerprint(context) {
   } else {
     how = String(c.inventionHow || "").trim();
   }
+  let convergences = "";
+  if (c.hexInvent) {
+    const rows = Array.isArray(c.hexBoard?.convergences) ? c.hexBoard.convergences : [];
+    convergences = rows
+      .map((row) => {
+        const ids = (Array.isArray(row?.tileIds) ? row.tileIds : [])
+          .map((id) => String(id || "").trim())
+          .filter(Boolean)
+          .join(",");
+        const title = String(row?.title || "").trim();
+        const reason = String(row?.reason || "").trim();
+        return `${ids}:${title}:${reason}`;
+      })
+      .filter(Boolean)
+      .join("|");
+  }
   const name = c.hexInvent ? "" : String(c.inventionName || "").trim();
   let pressure = "";
   if (Array.isArray(c.pressure)) {
@@ -263,6 +279,7 @@ export function voiceContextFingerprint(context) {
     life,
     name,
     pathwayIds,
+    convergences,
     pressure,
     title,
     problem,

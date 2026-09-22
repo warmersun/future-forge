@@ -138,6 +138,68 @@ export function buildVoiceKeyterms(context = {}) {
   return out;
 }
 
+const VOICE_CONVERGENCE_CAP = 4;
+const VOICE_CONVERGENCE_REASON = 180;
+
+/**
+ * Judged convergences already on the hex summary (lean rows from the client).
+ * @param {object|null|undefined} context
+ */
+export function listVoiceConvergences(context) {
+  const raw = Array.isArray(context?.hexBoard?.convergences)
+    ? context.hexBoard.convergences
+    : [];
+  const out = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const tileIds = (Array.isArray(row.tileIds) ? row.tileIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean)
+      .slice(0, 2);
+    if (tileIds.length < 2) continue;
+    const techIds = (Array.isArray(row.techIds) ? row.techIds : [])
+      .map((id) => clip(id, 80))
+      .filter(Boolean)
+      .slice(0, 2);
+    const techNames = (Array.isArray(row.techNames) ? row.techNames : [])
+      .map((name) => clip(name, 80))
+      .filter(Boolean)
+      .slice(0, 2);
+    out.push({
+      tileIds,
+      techIds,
+      techNames,
+      title: clip(row.title, 80) || "Convergence",
+      reason: clip(row.reason, 400),
+      factor: Number(row.factor) || 1.25,
+    });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+/**
+ * Spoken facts for pairs already judged. Empty when the board has none.
+ * @param {object|null|undefined} context
+ */
+function convergenceVoiceBlock(context) {
+  const rows = listVoiceConvergences(context).slice(0, VOICE_CONVERGENCE_CAP);
+  if (!rows.length) return "";
+  const bits = rows.map((row) => {
+    const who =
+      row.techNames.length >= 2
+        ? `${row.techNames[0]} and ${row.techNames[1]}`
+        : row.techNames[0] || "Two ideas";
+    const titled =
+      row.title && row.title.toLowerCase() !== "convergence"
+        ? `${who} (${row.title})`
+        : who;
+    const reason = clip(row.reason, VOICE_CONVERGENCE_REASON);
+    return reason ? `${titled}: ${reason}` : `${titled}.`;
+  });
+  return `Convergences already on the board: ${bits.join(" ")} Mention one when it helps. Do not claim a convergence that is not listed.`;
+}
+
 /**
  * Compact invent snapshot for the get_invent_state tool.
  * @param {object|null|undefined} context
@@ -165,6 +227,7 @@ export function inventStateSnapshot(context = {}) {
     life: hex ? "" : clip(context.inventionImpact, 800),
     name: hex ? "" : clip(context.inventionName, 80),
     pathways,
+    convergences: listVoiceConvergences(context),
     pressure: pending ? [] : listPressure(context.pressure),
     metricsPending: pending,
     availableTechs: listAvailableTechs(context).slice(0, SNAPSHOT_TECH_MAX),
@@ -211,6 +274,7 @@ export function buildVoiceInstructions(context = {}) {
   const roleLine = tutor
     ? `You are the AI co-inventor tutor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`
     : `You are the AI co-inventor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`;
+  const convergenceLine = convergenceVoiceBlock(context);
 
   return `## Role & Persona
 ${roleLine} You are a creative partner, not the sole inventor. Warm, practical, hopeful. You talk like a sharp colleague at a workshop table.
@@ -234,7 +298,7 @@ ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it
 ${tutorBlock}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}
-Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. ${
+${convergenceLine ? `${convergenceLine}\n` : ""}Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. ${
     hex
       ? "If they want how a placed pathway works, call \`draft_how\` with target pathway. If they want the description for a new invent tile, the invent card, or so they can mint, call \`draft_how\` with target mint. That fills How it works. They edit it, mint the tile, and place it. You do not mint it. Do not describe another writing surface."
       : "If they want mechanism text, call \`draft_how\`. If they want everyday-life prose, call \`draft_life\`."

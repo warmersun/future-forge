@@ -16,7 +16,7 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-15";
+} from "./coinventor-voice.js?v=voice-16";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
@@ -25,14 +25,14 @@ import {
   settleVoiceTurn,
   tutorToggleLocked,
   voiceBlocksModeSwitch,
-} from "./voice-context.js?v=voice-15";
-import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-15";
+} from "./voice-context.js?v=voice-16";
+import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-16";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
   hexHowTargetsPathway,
   howAppliedLabel,
-} from "./coinventor-how-apply.js?v=voice-15";
+} from "./coinventor-how-apply.js?v=voice-16";
 
 export { hangupVoice };
 

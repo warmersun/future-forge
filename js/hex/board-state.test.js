@@ -8,6 +8,9 @@ import {
   unplacedRdTiles,
   putConvergence,
   pruneStaleConvergences,
+  convergenceTileLabel,
+  convergenceDialogCopy,
+  convergencesForAi,
   rollRdFactor,
   RD_FACTORS,
   formatFactor,
@@ -972,4 +975,84 @@ test("pruneStaleConvergences keeps a judged pair after lift; drops it after disc
   board = tossed.board;
   assert.equal(Object.keys(board.convergences).length, 0);
   assert.equal(board.tiles.a.convergenceFactor, 1.25);
+});
+
+test("convergenceTileLabel prefers the catalog name and unchops a how slice", () => {
+  const chopped = "Mira feeds the catalyst fragment's handf";
+  assert.equal(chopped.length, 40);
+  const tile = { techId: "materials", name: chopped };
+  assert.equal(convergenceTileLabel(tile, "Materials science"), "Materials science");
+  assert.equal(
+    convergenceTileLabel(tile, ""),
+    "Mira feeds the catalyst fragment's"
+  );
+  assert.equal(convergenceTileLabel({ name: "" }, ""), "This idea");
+  assert.equal(convergenceTileLabel({ name: "Alert" }, ""), "Alert");
+});
+
+test("convergence dialog says Convergence and names the emTechs", () => {
+  const chopped = "Mira feeds the catalyst fragment's handf";
+  const copy = convergenceDialogCopy({
+    nameA: convergenceTileLabel({ name: chopped, techId: "materials" }, "Materials science"),
+    nameB: convergenceTileLabel({ name: chopped, techId: "quantum" }, "Quantum simulation"),
+    reason: "Predicted bond strength can be checked against flask samples.",
+    lines: [
+      "Materials science 85% → 99%.",
+      "Quantum simulation 72% → 90%.",
+    ],
+  });
+  assert.equal(copy.title, "Convergence");
+  assert.equal(
+    copy.meta,
+    "Materials science and Quantum simulation catalyze each other — each gets a 1.25× honesty boost."
+  );
+  assert.equal(copy.pct.includes(chopped), false);
+  assert.equal(copy.meta.includes("handf"), false);
+  assert.match(copy.reason, /flask samples/);
+});
+
+test("convergencesForAi names the judged pair for the co-inventor", () => {
+  let board = createEmptyBoard();
+  const chopped = "Mira feeds the catalyst fragment's handf";
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "a",
+      techId: "materials",
+      name: chopped,
+      howText: "Mira feeds the catalyst fragment's handful of powder.",
+    })
+  );
+  board = addTile(
+    board,
+    mintInventionTile({
+      id: "b",
+      techId: "quantum",
+      name: chopped,
+      howText: "Cloud minutes check the bond strength.",
+    })
+  );
+  board = putConvergence(board, "b", "a", {
+    factor: 1.25,
+    title: "Materials science and quantum simulation",
+    reason: "Better coatings pull demand back onto quantum queues.",
+  });
+  const rows = convergencesForAi(board, (id) =>
+    id === "materials"
+      ? "Materials science"
+      : id === "quantum"
+        ? "Quantum simulation"
+        : ""
+  );
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0].tileIds, ["a", "b"]);
+  assert.deepEqual(rows[0].techIds, ["materials", "quantum"]);
+  assert.deepEqual(rows[0].techNames, [
+    "Materials science",
+    "Quantum simulation",
+  ]);
+  assert.equal(rows[0].title, "Materials science and quantum simulation");
+  assert.match(rows[0].reason, /quantum queues/);
+  assert.equal(rows[0].factor, 1.25);
+  assert.deepEqual(convergencesForAi(createEmptyBoard()), []);
 });

@@ -200,6 +200,80 @@ export function convergencePairKey(idA, idB) {
 }
 
 /**
+ * Player-facing name for one side of a convergence.
+ * Catalog emTech name wins. A 40-character how-text slice (custom mint)
+ * breaks on the last space so it does not end mid-word.
+ * @param {object|null|undefined} tile
+ * @param {string} [techName]
+ */
+export function convergenceTileLabel(tile, techName) {
+  const tech = String(techName || "").trim();
+  if (tech) return tech;
+  const raw = String(tile?.name || "").trim();
+  if (!raw) return "This idea";
+  if (raw.length < 40) return raw;
+  const cut = raw.slice(0, 40);
+  const sp = cut.lastIndexOf(" ");
+  if (sp > 16) return cut.slice(0, sp);
+  return cut;
+}
+
+const CONVERGENCE_AI_CAP = 8;
+
+/**
+ * Judged pairs for the co-inventor and voice. Empty when none are stored.
+ * @param {object|null|undefined} board
+ * @param {(techId: string) => string} [techNameOf]
+ */
+export function convergencesForAi(board, techNameOf) {
+  const src = board?.convergences;
+  if (!src || typeof src !== "object") return [];
+  const nameOf = typeof techNameOf === "function" ? techNameOf : () => "";
+  const tiles = board?.tiles || {};
+  const out = [];
+  for (const key of Object.keys(src).sort()) {
+    const row = src[key];
+    if (!row || typeof row !== "object") continue;
+    const [idA, idB] = String(key).split("|");
+    if (!idA || !idB) continue;
+    const a = tiles[idA];
+    const b = tiles[idB];
+    const techA = a?.techId ? String(a.techId) : null;
+    const techB = b?.techId ? String(b.techId) : null;
+    out.push({
+      tileIds: [idA, idB],
+      techIds: [techA, techB],
+      techNames: [
+        convergenceTileLabel(a, techA ? nameOf(techA) : ""),
+        convergenceTileLabel(b, techB ? nameOf(techB) : ""),
+      ],
+      title: String(row.title || "Convergence").slice(0, 80),
+      reason: String(row.reason || "").slice(0, 400),
+      factor: Number(row.factor) || CONVERGENCE_FACTOR,
+    });
+    if (out.length >= CONVERGENCE_AI_CAP) break;
+  }
+  return out;
+}
+
+/**
+ * Player-facing Convergence card. The heading is the word Convergence.
+ * Names are catalog emTech labels, not how-text slices.
+ * @param {{ nameA?: string, nameB?: string, reason?: string, lines?: string[], factor?: number }} copy
+ */
+export function convergenceDialogCopy(copy = {}) {
+  const a = String(copy.nameA || "").trim() || "This idea";
+  const b = String(copy.nameB || "").trim() || "that idea";
+  const lines = Array.isArray(copy.lines) ? copy.lines.filter(Boolean) : [];
+  return {
+    title: "Convergence",
+    meta: `${a} and ${b} catalyze each other — each gets a ${formatFactor(copy.factor || CONVERGENCE_FACTOR)} honesty boost.`,
+    reason: String(copy.reason || ""),
+    pct: lines.join(" "),
+  };
+}
+
+/**
  * Format a multiplier for HUD / tile face (0.75 → "0.75×").
  * @param {number} factor
  */

@@ -68,6 +68,48 @@ describe("buildVoiceInstructions", () => {
     assert.doesNotMatch(text, /Shade pump/);
   });
 
+  it("names a judged convergence and stays quiet when the board has none", () => {
+    const plain = buildVoiceInstructions(hexCtx);
+    assert.doesNotMatch(plain, /Convergences already/);
+    assert.doesNotMatch(plain, /daily life/i);
+    assert.doesNotMatch(plain, /essay/);
+    assert.deepEqual(inventStateSnapshot(hexCtx).convergences, []);
+
+    const ctx = {
+      ...hexCtx,
+      hexBoard: {
+        ...hexCtx.hexBoard,
+        convergences: [
+          {
+            tileIds: ["a", "b"],
+            techIds: ["materials", "quantum"],
+            techNames: ["Materials science", "Quantum simulation"],
+            title: "Materials science and quantum simulation",
+            reason: "Better coatings pull demand back onto quantum queues.",
+            factor: 1.25,
+          },
+        ],
+      },
+    };
+    const text = buildVoiceInstructions(ctx);
+    assert.match(text, /Convergences already on the board/);
+    assert.match(text, /Materials science and Quantum simulation/);
+    assert.match(text, /Materials science and quantum simulation/);
+    assert.match(text, /quantum queues/);
+    assert.match(text, /Do not claim a convergence that is not listed/);
+    assert.doesNotMatch(text, /daily life/i);
+    assert.doesNotMatch(text, /essay/);
+    const snap = inventStateSnapshot(ctx);
+    assert.equal(snap.convergences.length, 1);
+    assert.deepEqual(snap.convergences[0].techNames, [
+      "Materials science",
+      "Quantum simulation",
+    ]);
+    assert.equal(snap.convergences[0].title, "Materials science and quantum simulation");
+    assert.match(snap.convergences[0].reason, /quantum queues/);
+    assert.equal(snap.convergences[0].factor, 1.25);
+  });
+
   it("omits crisis-meter levels while metrics are being re-checked", () => {
     const text = buildVoiceInstructions({ ...hexCtx, metricsPending: true });
     assert.match(text, /being re-checked/);

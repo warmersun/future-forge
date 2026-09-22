@@ -212,6 +212,36 @@ describe("voiceContextFingerprint", () => {
     );
   });
 
+  it("changes when a convergence is identified and stays put when that pair does not", () => {
+    const base = voiceContextFingerprint(board);
+    const identified = {
+      tileIds: ["a", "b"],
+      title: "Materials and quantum",
+      reason: "Coatings pull demand back onto queues.",
+    };
+    const withConv = voiceContextFingerprint({
+      ...board,
+      hexBoard: { ...board.hexBoard, convergences: [identified] },
+    });
+    assert.notEqual(base, withConv);
+    const same = voiceContextFingerprint({
+      ...board,
+      hexBoard: {
+        ...board.hexBoard,
+        convergences: [{ ...identified, factor: 1.25 }],
+      },
+    });
+    assert.equal(withConv, same);
+    const retitled = voiceContextFingerprint({
+      ...board,
+      hexBoard: {
+        ...board.hexBoard,
+        convergences: [{ ...identified, title: "A different loop" }],
+      },
+    });
+    assert.notEqual(withConv, retitled);
+  });
+
   it("changes when only metricsPending flips", () => {
     const base = voiceContextFingerprint(board);
     const pending = voiceContextFingerprint({ ...board, metricsPending: true });

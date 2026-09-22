@@ -27,9 +27,9 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-15";
-import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-15";
-import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-15";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-16";
+import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
+import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-16";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -102,6 +102,7 @@ import {
   remainingConcernAngles,
   concernAnglesOnBoard,
   formatFactor,
+  convergencesForAi,
 } from "./hex/board-state.js";
 import {
   boardWorstPathwayTiming,
@@ -4061,6 +4062,7 @@ function summarizeHexBoardForAi(board) {
         r: t.r,
       })),
     pathways,
+    convergences: convergencesForAi(board, (id) => techById(id)?.name || ""),
   };
 }
 

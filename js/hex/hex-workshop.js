@@ -42,6 +42,8 @@ import {
   formatFactor,
   CONVERGENCE_FACTOR,
   convergencePairKey,
+  convergenceTileLabel,
+  convergenceDialogCopy,
   summonOneConcern,
   remainingConcernAngles,
   concernAnglesOnBoard,
@@ -2503,7 +2505,12 @@ export function createHexWorkshop(api) {
     };
   }
 
-  function showConvergenceDialog({ title, reason, nameA, nameB, lines }) {
+  function convergenceSideLabel(tile) {
+    const techName = tile?.techId ? techById(tile.techId)?.name || "" : "";
+    return convergenceTileLabel(tile, techName);
+  }
+
+  function showConvergenceDialog({ reason, nameA, nameB, lines }) {
     const dlg = document.querySelector("#hex-convergence-dialog");
     if (!dlg) return Promise.resolve();
     const titleEl = document.querySelector("#hex-convergence-title");
@@ -2511,16 +2518,17 @@ export function createHexWorkshop(api) {
     const reasonEl = document.querySelector("#hex-convergence-reason");
     const pctEl = document.querySelector("#hex-convergence-pct");
     const ok = document.querySelector("#hex-convergence-ok");
-    if (titleEl) titleEl.textContent = title || "Convergence";
-    if (metaEl) {
-      const a = nameA || "This idea";
-      const b = nameB || "that idea";
-      metaEl.textContent = `${a} and ${b} catalyze each other — each gets a ${formatFactor(CONVERGENCE_FACTOR)} honesty boost.`;
-    }
-    if (reasonEl) reasonEl.textContent = reason || "";
-    if (pctEl) {
-      pctEl.textContent = Array.isArray(lines) && lines.length ? lines.join(" ") : "";
-    }
+    const copy = convergenceDialogCopy({
+      nameA,
+      nameB,
+      reason,
+      lines,
+      factor: CONVERGENCE_FACTOR,
+    });
+    if (titleEl) titleEl.textContent = copy.title;
+    if (metaEl) metaEl.textContent = copy.meta;
+    if (reasonEl) reasonEl.textContent = copy.reason;
+    if (pctEl) pctEl.textContent = copy.pct;
     dlg.hidden = false;
     return new Promise((resolve) => {
       const done = () => {
@@ -2546,11 +2554,12 @@ export function createHexWorkshop(api) {
     const key = convergencePairKey(placedId, neighborId);
     if (b0.convergences?.[key]) return;
     const factor = CONVERGENCE_FACTOR;
-    const pctLine = (tile) => {
+    const labelA = convergenceSideLabel(placed);
+    const labelB = convergenceSideLabel(neighbor);
+    const pctLine = (tile, label) => {
       const before = tileTimingPct(tile, b0);
       if (before == null) return null;
       const after = clampTimingPct(before * factor);
-      const label = tile?.name || "This idea";
       return `${label} ${Math.round(before)}% → ${Math.round(after)}%.`;
     };
     const reduced = prefersReducedMotion();
@@ -2561,11 +2570,10 @@ export function createHexWorkshop(api) {
     }
     if (!reduced) {
       await showConvergenceDialog({
-        title: hit.title || "Convergence",
         reason: hit.reason,
-        nameA: placed.name || "This idea",
-        nameB: neighbor.name || "That idea",
-        lines: [pctLine(placed), pctLine(neighbor)].filter(Boolean),
+        nameA: labelA,
+        nameB: labelB,
+        lines: [pctLine(placed, labelA), pctLine(neighbor, labelB)].filter(Boolean),
       });
     }
     const next = putConvergence(board(), placedId, neighborId, {

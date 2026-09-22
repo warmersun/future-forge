@@ -17,8 +17,8 @@ import {
   voiceContextFingerprint,
   userTranscriptIsFinal,
   planVoiceContextFlush,
-} from "./voice-context.js?v=voice-15";
-import { knownVoiceId } from "./voice-choices.js?v=voice-15";
+} from "./voice-context.js?v=voice-16";
+import { knownVoiceId } from "./voice-choices.js?v=voice-16";
 
 export { resampleFloat32, float32ToPcm16Base64, base64Pcm16ToFloat32 };
 
@@ -28,7 +28,7 @@ const CONTEXT_DEBOUNCE_MS = 1000;
 /** Hold the first ~120 ms of a reply so a late TCP chunk does not punch a hole. */
 const PREROLL_SAMPLES = Math.round(VOICE_SAMPLE_RATE * 0.12);
 const PREROLL_MS = 120;
-const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-15", import.meta.url).href;
+const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-16", import.meta.url).href;
 
 /** @typedef {"idle"|"connecting"|"listening"|"speaking"|"error"} VoiceUiState */
 
