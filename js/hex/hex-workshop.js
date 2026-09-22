@@ -61,13 +61,8 @@ import {
   setConcernReply,
 } from "./board-state.js";
 import {
-  applyHeuristicLights,
-  heuristicLamp,
-} from "./lights.js";
-import {
   tileTimingCacheKey,
   timingLevelToPct,
-  assessGivenPrior,
   applyPathwayPressure,
   heuristicPathwayScore,
   clampPathwayScore,
@@ -1569,19 +1564,6 @@ export function createHexWorkshop(api) {
     renderIdeaCards();
   }
 
-  function heuristicCtx() {
-    const mission = api.getMission?.() || null;
-    return {
-      year: api.getYear(),
-      pressure: api.getPressure?.() || {},
-      winMax: api.getWinMax?.() || mission?.winMax || {},
-      mission,
-      global: api.getGlobal?.() || null,
-      suggested: mission?.suggested || [],
-      rules: api.getRules?.() || mission?.rules || [],
-    };
-  }
-
   function pressureOpts(mission = api.getMission?.() || null) {
     return {
       winMax: api.getWinMax?.() || mission?.winMax || {},
@@ -2043,33 +2025,6 @@ export function createHexWorkshop(api) {
         schedulePathwayScore(fp);
       }
     }
-  }
-
-  /**
-   * Offline / empty-AI lights from cluster priors (legacy; prefer syncPathwayScores).
-   * @param {string[]|null} givenIds
-   */
-  function priorLightsForGivens(givenIds) {
-    const b = board();
-    const hctx = heuristicCtx();
-    const givens = Object.values(b?.tiles || {}).filter((t) => {
-      if (t.kind !== TILE_KIND.crisis && t.kind !== TILE_KIND.concern) return false;
-      if (t.q == null || t.r == null) return false;
-      if (givenIds && !givenIds.includes(t.id)) return false;
-      return true;
-    });
-    return givens.map((g) => {
-      const prior = assessGivenPrior(b, g, hctx);
-      let level = prior.level;
-      if (g.kind === TILE_KIND.concern && level === "green") level = "yellow";
-      const heur = heuristicLamp(b, g, hctx);
-      if (!prior.cluster?.anyTouch) level = heur;
-      return {
-        id: g.id,
-        level,
-        reason: prior.note || "heuristic",
-      };
-    });
   }
 
   function localTileTiming(tile, year) {

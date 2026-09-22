@@ -568,6 +568,8 @@ export function initFriendsUi(api) {
   }
 
   function renderPlay() {
+    // Live friends play is the hex workshop. This painter is the old essay shell.
+    if (typeof enterRoomPlay === "function") return;
     const snap = client.snapshot;
     const mp = snap?.mp;
     const place = snap?.place || mp?.place;
@@ -1737,6 +1739,8 @@ export function initFriendsUi(api) {
   }
 
   function renderHotseat() {
+    // Live hotseat play is the hex workshop. This painter is the old essay shell.
+    if (typeof enterHotseatPlay === "function") return;
     if (!hotseat) return;
     const seat = activeSeat(hotseat);
     const invent = activeInvent(hotseat);

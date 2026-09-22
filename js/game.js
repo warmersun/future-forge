@@ -88,8 +88,8 @@ import {
   localIdeaSparks,
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
+import { localPose } from "./challenge-pose.js";
 import { createHexWorkshop } from "./hex/hex-workshop.js";
-import { localPose as offlinePose } from "./challenge-pose.js";
 import {
   boardHolds,
   deriveBoardProse,
@@ -118,7 +118,6 @@ import {
   visionPeopleMood,
   crisisMeterTooltipBits,
 } from "./hex/evaluate.js";
-import { applyHeuristicLights } from "./hex/lights.js";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -938,33 +937,9 @@ function stackCapLimit() {
   return 6;
 }
 
-/** Kept for the profile flag; the Workshop always shows the full catalog. */
-function starterTechOnlyEnabled() {
-  return Boolean(features().starterTechOnly);
-}
-
-/** Kept for the profile flag; the Workshop uses How it works + Everyday life. */
-function singleStoryFaceEnabled() {
-  return Boolean(features().singleStoryFace);
-}
-
-/**
- * Techs shown in the invent tray for the current mode.
- * Spark: starters plus any mission-suggested ids (even non-starters).
- */
+/** Techs shown in the invent tray. */
 function techsForTray() {
-  if (!starterTechOnlyEnabled()) return [...TECHS];
-  const suggested = new Set(state.mission?.suggested || []);
-  return TECHS.filter((t) => t.starter || suggested.has(t.id));
-}
-
-/**
- * Spark keeps both state fields populated so feasibility / deploy min-length still pass.
- * Mirrors how → impact (same text).
- */
-function mirrorSparkStoryImpact() {
-  if (!singleStoryFaceEnabled()) return;
-  state.inventionImpact = String(state.inventionHow || "");
+  return [...TECHS];
 }
 
 /** Active market card (solo state or shared place in multiplayer). */
@@ -7424,18 +7399,13 @@ function syncStoryFieldsFromDom() {
   const howEl = $("#invention-how");
   const impEl = $("#invention-impact");
   if (howEl) state.inventionHow = howEl.value;
-  if (singleStoryFaceEnabled()) {
-    mirrorSparkStoryImpact();
-  } else if (impEl) {
-    state.inventionImpact = impEl.value;
-  }
+  if (impEl) state.inventionImpact = impEl.value;
 }
 
 function syncStoryFieldsToDom(opts = {}) {
   const force = Boolean(opts.force);
   const howEl = $("#invention-how");
   const impEl = $("#invention-impact");
-  if (singleStoryFaceEnabled()) mirrorSparkStoryImpact();
   // Default: never yank text out from under a focused caret.
   // Pass { force: true } after a rejected contribution / explicit reset.
   if (
@@ -7447,7 +7417,6 @@ function syncStoryFieldsToDom(opts = {}) {
   }
   if (
     impEl &&
-    !singleStoryFaceEnabled() &&
     impEl.value !== state.inventionImpact &&
     (force || document.activeElement !== impEl)
   ) {
@@ -7470,12 +7439,6 @@ function placeFillOtherButton(face) {
   const btn = $("#btn-fill-other");
   const header = face === "life" ? $("#header-life") : $("#header-how");
   if (!btn || !header) return;
-  // Spark: never surface Fill other side (single story face)
-  if (singleStoryFaceEnabled()) {
-    btn.hidden = true;
-    btn.setAttribute("hidden", "");
-    return;
-  }
   header.appendChild(btn);
   btn.hidden = false;
   btn.removeAttribute("hidden");
@@ -7488,10 +7451,8 @@ function placeFillOtherButton(face) {
  * AI drafts the opposite face from that focus.
  */
 function renderStoryFaceUI() {
-  const sparkSingle = singleStoryFaceEnabled();
-  const face = sparkSingle ? "how" : state.storyFace === "life" ? "life" : "how";
+  const face = state.storyFace === "life" ? "life" : "how";
   state.storyFace = face;
-  if (sparkSingle) mirrorSparkStoryImpact();
 
   $$(".story-mode-btn").forEach((btn) => {
     const on = btn.dataset.face === face;
@@ -7509,31 +7470,19 @@ function renderStoryFaceUI() {
   const noteHow = $("#note-how");
   const noteLife = $("#note-life");
   const hint = $("#story-mode-hint");
-  const fillBtn = $("#btn-fill-other");
 
-  // Spark: hide dual-face chrome; Workshop: restore
-  // Prefer #story-mode id (stable); fall back to class
   const storyModeEl = $("#story-mode") || storyMode;
   if (storyModeEl) {
-    storyModeEl.hidden = sparkSingle;
-    if (sparkSingle) storyModeEl.setAttribute("hidden", "");
-    else storyModeEl.removeAttribute("hidden");
+    storyModeEl.hidden = false;
+    storyModeEl.removeAttribute("hidden");
   }
   if (hint) {
-    hint.hidden = sparkSingle;
-    if (sparkSingle) hint.setAttribute("hidden", "");
-    else hint.removeAttribute("hidden");
+    hint.hidden = false;
+    hint.removeAttribute("hidden");
   }
   if (fieldLife) {
-    fieldLife.hidden = sparkSingle;
-    if (sparkSingle) fieldLife.setAttribute("hidden", "");
-    else fieldLife.removeAttribute("hidden");
-  }
-  if (fillBtn) {
-    if (sparkSingle) {
-      fillBtn.hidden = true;
-      fillBtn.setAttribute("hidden", "");
-    }
+    fieldLife.hidden = false;
+    fieldLife.removeAttribute("hidden");
   }
 
   const b = mpBridge();
@@ -7549,13 +7498,11 @@ function renderStoryFaceUI() {
       ? b?.viewedPhase?.() === "challenge" || b?.invent?.(b.getViewId?.())?.turnPhase === "scrutiny"
         ? "Locked — Challenge started; invent is frozen."
         : "Locked — can't edit this invent right now."
-      : sparkSingle
-        ? "What does this invention do for people in this place?"
-        : b?.viewingOther?.()
-          ? "Add to their how-it-works (additive only — don't gut their idea)…"
-          : "What acts, what decides, how the pieces connect for *this* place…";
+      : b?.viewingOther?.()
+        ? "Add to their how-it-works (additive only — don't gut their idea)…"
+        : "What acts, what decides, how the pieces connect for *this* place…";
   }
-  if (lifeArea && !sparkSingle) {
+  if (lifeArea) {
     if (document.activeElement !== lifeArea) {
       lifeArea.value = state.inventionImpact;
     }
@@ -7570,9 +7517,7 @@ function renderStoryFaceUI() {
         : "A Tuesday here after your invention lands…";
   }
   applyStoryFieldLocks();
-  if (labelHow) {
-    labelHow.textContent = sparkSingle ? "What does it do here?" : "How does it work?";
-  }
+  if (labelHow) labelHow.textContent = "How does it work?";
   if (labelLife) labelLife.textContent = "Everyday life if it works";
 
   const setRole = (field, role) => {
@@ -7583,25 +7528,6 @@ function renderStoryFaceUI() {
     if (pending) field.classList.add("is-ai-pending");
   };
 
-  if (sparkSingle) {
-    setRole(fieldHow, "focus");
-    if (noteHow) {
-      noteHow.hidden = true;
-      noteHow.setAttribute("hidden", "");
-    }
-    if (noteLife) {
-      noteLife.hidden = true;
-      noteLife.setAttribute("hidden", "");
-    }
-    // Keep fill button out of the layout even if a later path calls placeFillOtherButton
-    if (fillBtn) {
-      fillBtn.hidden = true;
-      fillBtn.setAttribute("hidden", "");
-    }
-    return;
-  }
-
-  // Workshop / multiparty: single button lives on the focused header only
   placeFillOtherButton(face);
 
   if (face === "how") {
@@ -9081,7 +9007,6 @@ function applyIdeaSpark(idea) {
   }
 
   state.inventionHow = appendHowText(state.inventionHow, insert);
-  if (singleStoryFaceEnabled()) mirrorSparkStoryImpact();
   syncStoryFieldsToDom({ force: true });
   state.aiTiming = null;
   scheduleAiTimingAssess();
@@ -10660,86 +10585,29 @@ function waitTurn(opts = {}) {
   );
 }
 
-/**
- * Essay-only (Spark / scrutinyCombat off): stakeholder + nature.
- * Full combat Workshop: all CHALLENGE_ANGLES.
- */
 function challengeAnglePool() {
-  if (!scrutinyCombatEnabled()) {
-    const soft = CHALLENGE_ANGLES.filter(
-      (a) => a.id === "stakeholder" || a.id === "nature"
-    );
-    if (soft.length) return soft;
-  }
   return CHALLENGE_ANGLES;
 }
 
-function pickChallengeAngle() {
-  const used = state.challengeAngle;
-  const angles = challengeAnglePool();
-  const pool = angles.filter((a) => a.id !== used);
-  const list = pool.length ? pool : angles;
-  return list[Math.floor(Math.random() * list.length)];
-}
-
-/**
- * Essay challenge chrome: answer box + submit only — never Argue/Patch/Pivot.
- */
-function setupEssayChallengeChrome() {
+/** Challenger not on the board yet — hide the answer form until combat paint runs. */
+function showChallengePending() {
   const moves = $("#scrutiny-moves");
   if (moves) {
     moves.hidden = true;
     moves.setAttribute("hidden", "");
   }
-  $$(".scrutiny-move-btn").forEach((btn) => {
-    btn.classList.remove("is-selected");
-    btn.setAttribute("aria-checked", "false");
-  });
-  const fix = $("#mode-panel-fix");
-  const side = $("#mode-panel-sidestep");
-  if (fix) {
-    fix.hidden = true;
-    fix.setAttribute("hidden", "");
-  }
-  if (side) {
-    side.hidden = true;
-    side.setAttribute("hidden", "");
-  }
-  const defend = $("#mode-panel-defend");
-  if (defend) {
-    defend.hidden = false;
-    defend.removeAttribute("hidden");
-  }
-  const label = $("#challenge-answer-label");
-  if (label) label.textContent = "Your answer";
   const submit = $("#btn-challenge-submit");
   if (submit) {
-    submit.hidden = false;
-    submit.removeAttribute("hidden");
-    submit.textContent = apEnabled() ? "Submit answer (1 AP)" : "Submit answer";
-    submit.title = apEnabled()
-      ? "Submit your written answer (costs 1 AP when judgment runs)"
-      : "Submit your written answer to this challenge";
-  }
-  const box = $("#scrutiny-encounters");
-  if (box) {
-    box.hidden = true;
-    box.setAttribute("hidden", "");
+    submit.hidden = true;
+    submit.setAttribute("hidden", "");
   }
   const status = $("#scrutiny-status");
   if (status) {
-    status.hidden = true;
-    status.setAttribute("hidden", "");
+    status.hidden = false;
+    status.removeAttribute("hidden");
+    status.textContent = "Waiting for the challenger.";
   }
-  // Essay is not multi-move combat
   state.scrutinyMoveMode = null;
-}
-
-function localPose(angle) {
-  return offlinePose(angle, {
-    place: state.mission?.place || "here",
-    inventionName: state.inventionName || "this invention",
-  });
 }
 
 function setChallengerVisual(angle) {
@@ -11618,26 +11486,7 @@ async function enterChallenge() {
     }
     showScreen("challenge-step");
     await poseScrutinyEncounters();
-    return;
   }
-
-  // Essay-only path (Spark / scrutinyCombat off) — no move grid
-  state.scrutiny = null;
-  const angle = pickChallengeAngle();
-  state.challengeAngle = angle.id;
-  state.challengeRevealPending = true;
-  hideChallengerBannerForReveal();
-  if (roomBridge.isRoom()) {
-    roomSyncChallengeView({
-      angle: angle.id,
-      speech: "",
-      question: "",
-      scrutiny: null,
-    });
-  }
-  showScreen("challenge-step");
-  setupEssayChallengeChrome();
-  await poseChallenge(angle);
 }
 
 /**
@@ -11689,7 +11538,10 @@ async function poseScrutinyEncounters() {
         visual: enc.visual,
       };
     state.challengeAngle = enc.angleId;
-    const local = localPose(meta);
+    const local = localPose(meta, {
+      place: state.mission?.place || "here",
+      inventionName: state.inventionName || "this invention",
+    });
     const maxHp = enc.maxHp || 2;
 
     // AI starts immediately (behind the scenes); carousel runs until it completes
@@ -11959,98 +11811,6 @@ function renderScrutinyEncounters() {
   paintChallengerResolve(enc);
 }
 
-async function poseChallenge(angleMeta) {
-  const angle = angleMeta || CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
-  setupEssayChallengeChrome();
-  setChallengePoseBusy(true);
-
-  state.challengeAngle = angle.id;
-  state.challengeRevealPending = true;
-  document.body.classList.add("challenge-reveal-pending");
-  hideChallengerBannerForReveal();
-  const localFb = localPose(angle);
-  $("#challenge-answer").value = "";
-  $("#challenge-feedback").hidden = true;
-  $("#challenge-feedback")?.classList.remove("is-pending", "pass", "partial", "fail");
-  const bayEssay = $("#deploy-bay");
-  if (bayEssay) bayEssay.hidden = true;
-  const essayBtn = $("#btn-challenge-submit");
-  if (essayBtn) essayBtn.disabled = true;
-  renderChallengeHud();
-
-  try {
-    const posePromise = (async () => {
-      try {
-        const data = await apiCoInvent("pose-challenge", "[Pose challenge]", {
-          challengeAngle: angle.id,
-        });
-        return {
-          speech:
-            (data.challengeSpeech || data.message || "").trim() || localFb.speech,
-          question:
-            (
-              data.challengeQuestion ||
-              "How does your invention survive this attack?"
-            ).trim() || localFb.question,
-        };
-      } catch {
-        return { speech: localFb.speech, question: localFb.question };
-      }
-    })();
-
-    const posed = await playChallengerDrawAnimation(angle, {
-      until: posePromise,
-      maxHp: 2,
-    });
-
-    state.challengeText = posed?.speech || localFb.speech;
-    state.challengeQuestion =
-      posed?.question ||
-      localFb.question ||
-      "How does your invention survive this attack?";
-    state.challengeAngle = angle.id;
-    setChallengerVisual(angle);
-    $("#challenge-angle-title").textContent = angle.label;
-    $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
-    const speechPose = $("#challenge-speech");
-    if (speechPose) {
-      speechPose.innerHTML = `<p>${escapeHtml(state.challengeText).replace(
-        /\n/g,
-        "<br>"
-      )}</p>`;
-      syncReadAloud(speechPose);
-    }
-    $("#challenge-question").textContent = state.challengeQuestion;
-
-    refreshChallengeVision(
-      {
-        angle: angle.id,
-        label: angle.label,
-        phase: "posed",
-        speech: state.challengeText || "",
-        question: state.challengeQuestion || "",
-        move: "",
-        response: "",
-        quality: "",
-      },
-      { immediate: true }
-    );
-  } finally {
-    state.challengeRevealPending = false;
-    document.body.classList.remove("challenge-reveal-pending");
-    setChallengePoseBusy(false);
-    setupEssayChallengeChrome();
-    const essayBtnDone = $("#btn-challenge-submit");
-    if (essayBtnDone) essayBtnDone.disabled = false;
-    renderChallengeHud();
-    roomSyncChallengeView({
-      angle: state.challengeAngle,
-      speech: state.challengeText,
-      question: state.challengeQuestion,
-    });
-  }
-}
-
 /**
  * Turn camelCase / PascalCase / snake_case meter ids into spaced labels.
  * BenzeneSpikes → Benzene Spikes · CorridorPM → Corridor PM
@@ -12265,7 +12025,7 @@ function updateSidestepAvailability() {
 function paintScrutinyMoveModeChrome(mode, opts = {}) {
   // Never paint Argue/Patch/Pivot when combat is off (Spark essay)
   if (!scrutinyCombatEnabled() || !state.scrutiny) {
-    setupEssayChallengeChrome();
+    showChallengePending();
     return;
   }
   const m = mode === "fix" || mode === "sidestep" ? mode : "defend";
@@ -12395,7 +12155,7 @@ function paintScrutinyMoveModeChrome(mode, opts = {}) {
 function setScrutinyMoveMode(mode) {
   // Spark / essay path: never open the strategy trio
   if (!scrutinyCombatEnabled() || !state.scrutiny) {
-    setupEssayChallengeChrome();
+    showChallengePending();
     return;
   }
   if (blockIfMpTurnGate("choosing a challenge move")) return;
@@ -12468,38 +12228,7 @@ function renderChallengeStep() {
     renderChallengeHud();
     return;
   }
-  // Essay fallback mode (Spark / scrutinyCombat off) — answer box only
-  setupEssayChallengeChrome();
-  const angle = CHALLENGE_ANGLES.find((a) => a.id === state.challengeAngle);
-  if (angle) {
-    $("#challenge-angle-title").textContent = angle.label;
-    $("#challenge-angle-sub").textContent = `${angle.subtitle} — ${angle.blurb}`;
-    setChallengerVisual(angle);
-  }
-  if (state.challengeText) {
-    const essaySpeech = $("#challenge-speech");
-    if (essaySpeech) {
-      essaySpeech.innerHTML = `<p>${escapeHtml(state.challengeText).replace(/\n/g, "<br>")}</p>`;
-      syncReadAloud(essaySpeech);
-    }
-  }
-  $("#challenge-question").textContent = state.challengeQuestion || "";
-  if ($("#challenge-answer") && state.challengeAnswer != null) {
-    $("#challenge-answer").value = state.challengeAnswer || "";
-  }
-  const fb = $("#challenge-feedback");
-  if (state.challengeFeedback && fb) {
-    fb.hidden = false;
-    fb.className = `challenge-feedback ${state.challengeVerdict || ""}`;
-    fb.innerHTML = state.challengeFeedback;
-  } else if (fb) fb.hidden = true;
-  if (state.challengePassed) {
-    if (!state.deployUnlocked) unlockDeployBay();
-    else renderDeployBay();
-  } else {
-    const bay = $("#deploy-bay");
-    if (bay) bay.hidden = true;
-  }
+  showChallengePending();
   renderChallengeHud();
 }
 
@@ -14832,114 +14561,7 @@ async function submitChallengeAnswer() {
     await scrutinyArgue();
     return;
   }
-  // —— Essay-only judgment (Spark) ——
-  setupEssayChallengeChrome();
-  const answer = $("#challenge-answer").value.trim();
-  state.challengeAnswer = answer;
-  if (answer.length < 20) {
-    flashToast("Give a real answer — a short paragraph.");
-    return;
-  }
-  if (apEnabled()) {
-    const reserve = dispatchSim("reserve_ai", {
-      mode: "judge-challenge",
-      reservedAp: 1,
-      clientActionId: `judge-${Date.now()}`,
-    });
-    if (!reserve.ok) {
-      flashToast("No AP left to submit for judgment — return to Invent and End turn first.", { resource: "ap" });
-      return;
-    }
-    renderChallengeHud();
-  }
-  setChallengeJudging(true, {
-    answer,
-    reason: "AI is evaluating your defense…",
-  });
-  $("#btn-challenge-submit").disabled = true;
-  const fbPending = $("#challenge-feedback");
-  if (fbPending) {
-    fbPending.hidden = false;
-    fbPending.className = "challenge-feedback is-pending";
-    fbPending.innerHTML = aiPendingHtml("Judging your answer…");
-  }
-  let requestOk = false;
-  try {
-    const data = await apiCoInvent("judge-challenge", answer, {
-      challengeAngle: state.challengeAngle,
-      challengeSpeech: state.challengeText,
-      challengeQuestion: state.challengeQuestion,
-      playerAnswer: answer,
-    });
-    const verdict = (data.verdict || "partial").toLowerCase();
-    state.challengeVerdict = ["pass", "partial", "fail"].includes(verdict) ? verdict : "partial";
-    state.hadChallengeAttempt = true;
-    state.lastChallengeVerdict = state.challengeVerdict;
-    state.challengeFeedback = `<strong>${state.challengeVerdict.toUpperCase()}</strong> — ${escapeHtml(
-      data.message || data.lesson || "Judged."
-    )}${data.lesson ? `<br/><em>${escapeHtml(data.lesson)}</em>` : ""}`;
-    if (state.challengeVerdict === "fail") {
-      state.challengeFails += 1;
-      state.challengePassed = false;
-      state.challengeFeedback +=
-        state.challengeFails >= 2
-          ? "<br/>Two fails — go back to Invent, strengthen the idea, then try again."
-          : "<br/>Not enough. Revise your answer, or return to Invent. Next challenge may use a different angle.";
-    } else if (!bothStoryFacesReady()) {
-      // Never unlock deploy without both story faces (entry gate should have blocked this)
-      state.challengePassed = false;
-      state.challengeVerdict = "fail";
-      state.challengeFails += 1;
-      state.challengeFeedback +=
-        "<br/>Both story faces are required (how it works + everyday life). Return to Invent and finish them.";
-    } else {
-      state.challengePassed = true;
-      state.challengeClearMode = state.challengeClearMode || "essay";
-      // unlockDeployBay opens Field it (Spark) or staged bay (Workshop)
-    }
-    if (budgetWillEnabled()) {
-      dispatchSim("challenge_income", { verdict: state.challengeVerdict });
-    }
-    requestOk = true;
-  } catch {
-    requestOk = true;
-    const ok = answer.length >= 40 && bothStoryFacesReady();
-    state.challengeVerdict = ok ? "partial" : "fail";
-    state.challengePassed = ok;
-    if (ok) state.challengeClearMode = state.challengeClearMode || "essay";
-    state.hadChallengeAttempt = true;
-    state.lastChallengeVerdict = state.challengeVerdict;
-    state.challengeFeedback = !bothStoryFacesReady()
-      ? "<strong>FAIL</strong> — Both story faces are required (how it works + everyday life)."
-      : ok
-        ? "<strong>PARTIAL</strong> — Concrete enough to try a deploy."
-        : "<strong>FAIL</strong> — Too vague. Name who acts, who pays, or what limit you respect.";
-    if (!ok) state.challengeFails += 1;
-    if (budgetWillEnabled()) {
-      dispatchSim("challenge_income", { verdict: state.challengeVerdict });
-    }
-  }
-  if (apEnabled()) {
-    if (requestOk) dispatchSim("resolve_ai");
-    else dispatchSim("reject_ai");
-  }
-  setChallengeJudging(false, {
-    answer,
-    feedbackHtml: state.challengeFeedback || "",
-  });
-  $("#btn-challenge-submit").disabled = false;
-  // Passed → open Deploy (staged Workshop or single Field it for Spark)
-  if (state.challengePassed) {
-    state.challengeClearMode = state.challengeClearMode || "essay";
-    if (!state.deployUnlocked) unlockDeployBay();
-    else if (!deployStagesEnabled()) {
-      // Already unlocked: still ensure Field UI is painted
-      renderDeployBay();
-    }
-    return;
-  }
-  setupEssayChallengeChrome();
-  renderChallengeStep();
+  flashToast("Wait for the challenger to finish loading.");
 }
 
 function currentDeployFieldCost(techs = selectedTechs()) {
@@ -15025,23 +14647,6 @@ function unlockDeployBay() {
     (roomBridge.isRoom() && roomBridge.invent?.(roomBridge.getViewId())) ||
     null;
 
-  // Spark / non-staged: one Field it beat (no Pilot → Scale pool)
-  if (!deployStagesEnabled()) {
-    state.deployUnlocked = true;
-    state.turnPhase = "between_stages";
-    state.deployStage = "none";
-    state.deployFieldPaid = false;
-    state.stagedDropPool = 0;
-    state.stagedDropRemaining = 0;
-    state.lastNews = "Challenge cleared · Field your invention when ready.";
-    enterDeployBayInteractive(inv, {
-      helper: Boolean(b?.viewingOther?.()),
-      ownerName: b?.viewingOther?.() ? "this invent" : "your invent",
-    });
-    flashToast("Challenge cleared — Field it when ready.");
-    return;
-  }
-
   if (!state.deployUnlocked) {
     state.deployUnlocked = true;
     state.turnPhase = "between_stages";
@@ -15105,47 +14710,6 @@ function renderDeployBay() {
   const canField =
     !state.challengeSpectator && (!b || Boolean(b.canRunDeploy?.()));
 
-  // —— Spark / friends-style single field ——
-  if (!deployStagesEnabled()) {
-    if (pills) {
-      pills.hidden = true;
-      pills.setAttribute("hidden", "");
-    }
-    $$(".deploy-stage-pill", bay).forEach((pill) => {
-      pill.hidden = true;
-      pill.classList.remove("is-done", "is-active");
-    });
-    if (title) title.textContent = "Field your invention";
-    if (lead) {
-      lead.textContent =
-        "Challenge cleared. Field your invention into this place — one step, then see how the crisis responds.";
-    }
-    const fieldCost = currentDeployFieldCost();
-    const costBits = [];
-    if (apEnabled() && (fieldCost.ap || 0) > 0) costBits.push(`${fieldCost.ap} AP`);
-    if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
-    if (status) {
-      status.textContent = costBits.length
-        ? `One step: field the idea. Cost: ${costBits.join(" · ")}.`
-        : "One step: field the idea. Crisis drops if the hold works.";
-    }
-    if (primary) {
-      primary.hidden = false;
-      primary.removeAttribute("hidden");
-      primary.disabled = !canField;
-      primary.textContent = "Field it →";
-      primary.title = !canField
-        ? state.challengeSpectator
-          ? "Read-only — watching the active seat"
-          : "Not your turn to field this invent"
-        : "Deploy your invention and see how the crisis responds";
-    }
-    if (backInvent) backInvent.hidden = true;
-    updateDeployFooterButtons();
-    return;
-  }
-
-  // —— Workshop staged: Pilot → Scale → New normal ——
   if (pills) {
     pills.hidden = false;
     pills.removeAttribute("hidden");
@@ -15417,10 +14981,6 @@ function snapshotTimingAtDeploy() {
 }
 
 function attemptDeployStage(stage) {
-  if (!deployStagesEnabled()) {
-    attemptDeployLegacy();
-    return;
-  }
   if (blockIfMpTurnGate(stage === "pilot" ? "Pilot" : "Scale")) return;
   if (!state.challengePassed || !state.deployUnlocked) {
     flashToast("Clear the challenge first.");
@@ -15987,80 +15547,9 @@ function updateChallengeAbandonButton() {
 }
 
 function attemptDeploy() {
-  if (deployStagesEnabled()) {
-    const next = nextDeployStageAction();
-    if (next) attemptDeployStage(next);
-    else flashToast("Deploy finished.");
-    return;
-  }
-  attemptDeployLegacy();
-}
-
-function attemptDeployLegacy() {
-  if (!state.challengePassed) {
-    flashToast("Pass the challenge step first.");
-    showScreen("challenge-step");
-    return;
-  }
-  const techs = selectedTechs();
-  if (!techs.length) {
-    flashToast("Add at least one technology.");
-    return;
-  }
-  if (state.inventionHow.trim().length < 20 || state.inventionImpact.trim().length < 20) {
-    flashToast("Need both story faces.");
-    return;
-  }
-  if (assessFeasibility().overall === "red") {
-    flashToast("Feasibility is red — revise how-it-works timing claims first.");
-    return;
-  }
-
-  const fieldCost = currentDeployFieldCost(techs);
-  if (apEnabled() || budgetWillEnabled()) {
-    const pay = dispatchSim("deploy", {
-      apCost: apEnabled() ? fieldCost.ap : 0,
-      budgetCost: budgetWillEnabled() ? fieldCost.budget : 0,
-    });
-    if (!pay.ok) {
-      if (pay.error === "no_ap") {
-        flashToast("No AP to deploy — return to Invent and End turn, then come back.", { resource: "ap" });
-      } else if (pay.error === "no_budget") {
-        flashToast(`Need ¤${fieldCost.budget} Budget to field this (you have ${state.budget ?? 0}). Lobby less, or wait for a pathway to ease a crisis.`, { resource: "budget" });
-      } else {
-        flashToast("Cannot deploy right now.");
-      }
-      renderChallengeHud();
-      updateDeployButtonCost();
-      return;
-    }
-    renderChallengeHud();
-  }
-
-  const { domains, pairs, dropInfo } = computeCurrentDropInfo();
-  const drop = dropInfo.drop;
-  const timingSnap = snapshotTimingAtDeploy();
-
-  state.pressure = applyPressureDrop(state.pressure, drop);
-
-  const costBits = [];
-  if (apEnabled() && (fieldCost.ap || 0) > 0) costBits.push(`${fieldCost.ap} AP`);
-  if (budgetWillEnabled()) costBits.push(`¤${fieldCost.budget}`);
-  const costNote = costBits.length ? ` Cost: ${costBits.join(" · ")}.` : "";
-
-  state.lastNews = `Deployed in ${state.year} after ${state.challengeAngle} challenge. Crisis −${drop}.${costNote}`;
-  state.waitReport = "";
-  markMissionSolved(state.mission);
-  finishOutcome(wonMission() ? "win" : "partial", {
-    drop,
-    dropParts: dropInfo.parts,
-    deployCost: fieldCost,
-    domains,
-    pairs,
-    verdict: state.challengeVerdict,
-    angle: state.challengeAngle,
-    timingLevel: timingSnap,
-  });
+  const next = nextDeployStageAction();
+  if (next) attemptDeployStage(next);
+  else flashToast("Deploy finished.");
 }
 
 function buildRunReport(kind, meta = {}) {
@@ -17349,15 +16838,9 @@ function enterDeployBayInteractive(invent, opts = {}) {
   const lead = $("#deploy-screen-lead");
   if (lead) {
     const who = opts.ownerName || "this invent";
-    if (!deployStagesEnabled()) {
-      lead.textContent = opts.helper
-        ? `Fielding ${who} — one Field it step (you pay if costs apply).`
-        : "Challenge cleared. Field your invention into this place.";
-    } else {
-      lead.textContent = opts.helper
-        ? `Fielding ${who} — Pilot / Scale (you pay). Invent locked after Challenge.`
-        : "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
-    }
+    lead.textContent = opts.helper
+      ? `Fielding ${who} — Pilot / Scale (you pay). Invent locked after Challenge.`
+      : "Challenge cleared. Field this invent: Pilot, then Scale to update the shared crisis.";
   }
   const fb = $("#deploy-feedback");
   if (fb && !state.lastDeployRoll) {
@@ -21133,8 +20616,6 @@ function bind() {
       return;
     }
     state.inventionHow = e.target.value;
-    // Spark: keep impact in lockstep so challenge/deploy face length checks pass
-    mirrorSparkStoryImpact();
     bumpClaimTiming();
     bumpNarrative();
     scheduleSoftInventSave();
@@ -21152,8 +20633,6 @@ function bind() {
       }
       return;
     }
-    // Spark hides this field; ignore stray input
-    if (singleStoryFaceEnabled()) return;
     state.inventionImpact = e.target.value;
     bumpClaimTiming();
     bumpNarrative();
@@ -21370,16 +20849,7 @@ function bind() {
   });
   $("#btn-deploy-stage-primary")?.addEventListener("click", () => {
     if (isDeployWatchOnly()) {
-      flashToast(
-        deployStagesEnabled()
-          ? "Watching only — active seat fields Pilot/Scale."
-          : "Watching only — active seat fields this invent."
-      );
-      return;
-    }
-    // Spark: single Field it → attemptDeployLegacy; Workshop: Pilot/Scale stages
-    if (!deployStagesEnabled()) {
-      attemptDeploy();
+      flashToast("Watching only — active seat fields Pilot/Scale.");
       return;
     }
     const next = nextDeployStageAction();
