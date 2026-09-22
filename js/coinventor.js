@@ -5,7 +5,7 @@
 import { getClientSessionId } from "./client-session.js";
 import { inventDraftFieldsForContext } from "./lean-coinvent-context.js";
 import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
-import { renderChatMarkdown } from "./md-lite.js";
+import { isSafeHttpUrl, renderChatMarkdown } from "./md-lite.js";
 import {
   attachReadAloud,
   pruneDetachedReadAloud,
@@ -16,16 +16,17 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-13";
+} from "./coinventor-voice.js?v=voice-14";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
   commitUserVoiceCaption,
   reduceVoiceTranscript,
   settleVoiceTurn,
+  tutorToggleLocked,
   voiceBlocksModeSwitch,
-} from "./voice-context.js?v=voice-13";
-import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-13";
+} from "./voice-context.js?v=voice-14";
+import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-14";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
@@ -360,8 +361,17 @@ export class CoInventor {
       this.reset(true);
     });
     root.querySelector("#co-end-tutor")?.addEventListener("click", () => {
-      if (this.busy) return;
-      if (voiceBlocksModeSwitch(isVoiceLive(), "tutor", "coinventor")) return;
+      if (
+        tutorToggleLocked({
+          busy: this.busy,
+          interactive: this.interactive,
+          live: isVoiceLive(),
+          fromLane: "tutor",
+          toLane: "coinventor",
+        })
+      ) {
+        return;
+      }
       try {
         this.onEndTutoring?.();
       } catch {
@@ -369,8 +379,17 @@ export class CoInventor {
       }
     });
     root.querySelector("#co-resume-tutor")?.addEventListener("click", () => {
-      if (this.busy) return;
-      if (voiceBlocksModeSwitch(isVoiceLive(), "coinventor", "tutor")) return;
+      if (
+        tutorToggleLocked({
+          busy: this.busy,
+          interactive: this.interactive,
+          live: isVoiceLive(),
+          fromLane: "coinventor",
+          toLane: "tutor",
+        })
+      ) {
+        return;
+      }
       try {
         this.onResumeTutoring?.();
       } catch {
@@ -581,6 +600,7 @@ export class CoInventor {
         proposals: ev.proposals,
         message: ev.message || "",
         endTutoring: Boolean(ev.endTutoring),
+        media: ev.media,
       });
       // A tool result that lands after the reconnect flush has no later
       // response.done to publish it. Fold it now. An end-tutoring turn
@@ -638,20 +658,34 @@ export class CoInventor {
     const endBtn = this.root?.querySelector("#co-end-tutor");
     const resumeBtn = this.root?.querySelector("#co-resume-tutor");
     const live = isVoiceLive();
-    if (endBtn) {
-      const blocked = voiceBlocksModeSwitch(live, "tutor", "coinventor");
-      endBtn.disabled = blocked;
-      endBtn.title = blocked
-        ? "Hang up before ending tutoring"
-        : "End free tutor mode — first co-inventor ask this turn costs 1 AP, then free";
-    }
-    if (resumeBtn) {
-      const blocked = voiceBlocksModeSwitch(live, "coinventor", "tutor");
-      resumeBtn.disabled = blocked;
-      resumeBtn.title = blocked
-        ? "Hang up before resuming tutoring"
-        : "Resume AI tutor mode — free AP, one short idea at a time (learning quests only)";
-    }
+    const paint = (btn, fromLane, toLane, hangTitle, idleTitle) => {
+      if (!btn) return;
+      const voiceBlocked = voiceBlocksModeSwitch(live, fromLane, toLane);
+      btn.disabled = tutorToggleLocked({
+        busy: this.busy,
+        interactive: this.interactive,
+        live,
+        fromLane,
+        toLane,
+      });
+      if (voiceBlocked) btn.title = hangTitle;
+      else if (!this.interactive && this._lockReason) btn.title = this._lockReason;
+      else btn.title = idleTitle;
+    };
+    paint(
+      endBtn,
+      "tutor",
+      "coinventor",
+      "Hang up before ending tutoring",
+      "End free tutor mode — first co-inventor ask this turn costs 1 AP, then free"
+    );
+    paint(
+      resumeBtn,
+      "coinventor",
+      "tutor",
+      "Hang up before resuming tutoring",
+      "Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
+    );
   }
 
   syncVoiceChrome(state, detail) {
@@ -1429,13 +1463,14 @@ export class CoInventor {
 
     // Tutor / co-inventor: safe markdown (links, images, lists, bold)
     const html = formatMessage(m.content || "");
+    const lesson = renderLessonMedia(m.media);
     const quote = draftQuoteForBubble(m.content, p.inventionHow);
     const draft = quote
       ? `<blockquote class="co-how-draft">${escapeHtml(quote)}</blockquote>`
       : "";
 
     return `<div class="co-msg assistant">
-      <div class="co-bubble co-bubble-md">${html}${draft}${teach}${actions}</div>
+      <div class="co-bubble co-bubble-md">${html}${lesson}${draft}${teach}${actions}</div>
     </div>`;
   }
 
@@ -1502,6 +1537,39 @@ function escapeHtml(s) {
 
 function formatMessage(text) {
   return renderChatMarkdown(text || "");
+}
+
+/**
+ * Lesson pictures and reading links attached by show_lesson_media.
+ * @param {{ images?: { alt?: string, url?: string }[], links?: { label?: string, url?: string }[] }|null|undefined} media
+ */
+function renderLessonMedia(media) {
+  const images = Array.isArray(media?.images) ? media.images : [];
+  const links = Array.isArray(media?.links) ? media.links : [];
+  const figures = [];
+  for (const img of images) {
+    const url = String(img?.url || "").trim();
+    if (!isSafeHttpUrl(url)) continue;
+    const alt = escapeHtml(img?.alt || "");
+    const src = escapeHtml(url);
+    const cap = alt ? `<figcaption class="co-lesson-cap">${alt}</figcaption>` : "";
+    figures.push(
+      `<figure class="co-lesson-figure"><img class="md-img" src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />${cap}</figure>`
+    );
+  }
+  const anchors = [];
+  for (const link of links) {
+    const url = String(link?.url || "").trim();
+    if (!isSafeHttpUrl(url)) continue;
+    const label = escapeHtml(link?.label || "Lesson page");
+    anchors.push(
+      `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+    );
+  }
+  const linkHtml = anchors.length
+    ? `<p class="co-lesson-links">${anchors.join("<br>")}</p>`
+    : "";
+  return `${figures.join("")}${linkHtml}`;
 }
 
 /** Speech-detected bars. The start button and the live mic pill both use them. */

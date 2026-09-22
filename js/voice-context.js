@@ -35,6 +35,88 @@ export function voiceBlocksModeSwitch(live, fromLane, toLane) {
   return String(fromLane || "") !== String(toLane || "");
 }
 
+/**
+ * End / Resume tutoring stays disabled while the panel is busy, locked,
+ * or a live call still belongs to the other lane.
+ * @param {{ busy?: boolean, interactive?: boolean, live?: boolean, fromLane?: string, toLane?: string }} state
+ */
+export function tutorToggleLocked(state = {}) {
+  return (
+    Boolean(state.busy) ||
+    !state.interactive ||
+    voiceBlocksModeSwitch(state.live, state.fromLane, state.toLane)
+  );
+}
+
+export const VOICE_MEDIA_IMAGE_CAP = 2;
+export const VOICE_MEDIA_LINK_CAP = 4;
+
+/**
+ * @param {string} url
+ */
+function lessonHttps(url) {
+  const u = String(url || "").trim();
+  return /^https:\/\//i.test(u) && !/[\s<>"']/.test(u) ? u : "";
+}
+
+/**
+ * @param {unknown} raw
+ * @param {"images"|"links"} key
+ * @param {number} cap
+ */
+function takeMedia(raw, key, cap) {
+  const items = Array.isArray(raw) ? raw : [];
+  const out = [];
+  const seen = new Set();
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const url = lessonHttps(item.url);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    if (key === "images") {
+      out.push({
+        id: String(item.id || "").trim(),
+        alt: String(item.alt || "").trim(),
+        url,
+      });
+    } else {
+      out.push({
+        id: String(item.id || "").trim(),
+        label: String(item.label || "").trim(),
+        url,
+      });
+    }
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
+/**
+ * @param {object|null|undefined} media
+ */
+export function hasVoiceMedia(media) {
+  return Boolean(media?.images?.length || media?.links?.length);
+}
+
+/**
+ * Union by URL. First-seen wins. Caps match one tutoring turn.
+ * @param {object|null|undefined} a
+ * @param {object|null|undefined} b
+ */
+export function mergeVoiceMedia(a, b) {
+  const images = takeMedia(
+    [...(a?.images || []), ...(b?.images || [])],
+    "images",
+    VOICE_MEDIA_IMAGE_CAP
+  );
+  const links = takeMedia(
+    [...(a?.links || []), ...(b?.links || [])],
+    "links",
+    VOICE_MEDIA_LINK_CAP
+  );
+  return { images, links };
+}
+
 export function emptyVoiceProposals() {
   return {
     addTechIds: [],
@@ -101,7 +183,21 @@ function mergeVoicePacket(prev, next) {
     proposals: mergeVoiceProposals(prev?.proposals, next?.proposals),
     message: parts.join(" "),
     endTutoring: Boolean(prev?.endTutoring || next?.endTutoring),
+    media: mergeVoiceMedia(prev?.media, next?.media),
   };
+}
+
+/**
+ * Spoken text wins. A board draft with no words still gets the Apply line.
+ * Media alone stays a blank caption so the picture is not labeled a draft.
+ * @param {string} text
+ * @param {object|null|undefined} proposals
+ */
+function bubbleContent(text, proposals) {
+  const spoken = String(text || "").trim();
+  if (spoken) return spoken;
+  if (hasVoiceProposal(proposals)) return "A draft you can apply:";
+  return "";
 }
 
 /**
@@ -288,10 +384,17 @@ export function reduceVoiceTranscript(state, event) {
       return { messages, captionIndex, pending, changed: false };
     }
     const folded = pending;
+    const proposals = folded?.proposals || emptyVoiceProposals();
+    const media = mergeVoiceMedia(null, folded?.media);
+    const content = bubbleContent(text || String(folded?.message || "").trim(), proposals);
+    if (!content && !hasVoiceMedia(media)) {
+      return { messages, captionIndex, pending: null, changed: false };
+    }
     messages.push({
       role: "assistant",
-      content: text || String(folded?.message || "").trim() || "A draft you can apply:",
-      proposals: folded?.proposals || emptyVoiceProposals(),
+      content,
+      proposals,
+      media,
       teaching: [],
       voice: true,
       endTutoring: Boolean(folded?.endTutoring),
@@ -307,24 +410,32 @@ export function reduceVoiceTranscript(state, event) {
   if (type === "proposals") {
     const proposals = event.proposals || emptyVoiceProposals();
     const text = String(event.message || "").trim();
-    if (!hasVoiceProposal(proposals) && !text) {
+    const media = mergeVoiceMedia(null, event.media);
+    if (!hasVoiceProposal(proposals) && !text && !hasVoiceMedia(media)) {
       return { messages, captionIndex, pending, changed: false };
     }
     const packet = {
       proposals,
       message: text,
       endTutoring: Boolean(event.endTutoring),
+      media,
     };
     if (captionIndex != null && messages[captionIndex]?.role === "assistant") {
       const prev = messages[captionIndex];
       const merged = mergeVoicePacket(
-        { proposals: prev.proposals, message: "", endTutoring: prev.endTutoring },
+        {
+          proposals: prev.proposals,
+          message: "",
+          endTutoring: prev.endTutoring,
+          media: prev.media,
+        },
         packet
       );
       messages[captionIndex] = {
         ...prev,
         proposals: merged.proposals,
         endTutoring: merged.endTutoring,
+        media: merged.media,
       };
       return { messages, captionIndex, pending: null, changed: true };
     }
@@ -341,13 +452,15 @@ export function reduceVoiceTranscript(state, event) {
     // still folds into this spoken bubble. The next assistant speech clears it.
     if (!pending) return { messages, captionIndex, pending: null, changed: false };
     const text = String(pending.message || "").trim();
-    if (!hasVoiceProposal(pending.proposals) && !text) {
+    const media = mergeVoiceMedia(null, pending.media);
+    if (!hasVoiceProposal(pending.proposals) && !text && !hasVoiceMedia(media)) {
       return { messages, captionIndex, pending: null, changed: false };
     }
     messages.push({
       role: "assistant",
-      content: text || "A draft you can apply:",
+      content: bubbleContent(text, pending.proposals),
       proposals: pending.proposals || emptyVoiceProposals(),
+      media,
       teaching: [],
       voice: true,
       endTutoring: Boolean(pending.endTutoring),
@@ -387,6 +500,7 @@ export function settleVoiceTurn(state = {}) {
       proposals: cursor.pending.proposals,
       message: cursor.pending.message,
       endTutoring: cursor.pending.endTutoring,
+      media: cursor.pending.media,
     });
     cursor = folded;
     changed = changed || folded.changed;

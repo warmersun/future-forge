@@ -14,6 +14,8 @@ import {
   screenShowsVoiceHangup,
   voiceHangsUpOnScreenChange,
   voiceBlocksModeSwitch,
+  tutorToggleLocked,
+  hasVoiceMedia,
 } from "./voice-context.js";
 
 const board = {
@@ -76,6 +78,54 @@ describe("voiceBlocksModeSwitch", () => {
     assert.equal(voiceBlocksModeSwitch(true, "coinventor", "coinventor"), false);
     assert.equal(voiceBlocksModeSwitch(false, "tutor", "coinventor"), false);
     assert.equal(voiceBlocksModeSwitch(false, "coinventor", "tutor"), false);
+  });
+});
+
+describe("tutorToggleLocked", () => {
+  it("stays locked when busy or not interactive, even if the call is idle", () => {
+    assert.equal(
+      tutorToggleLocked({
+        busy: true,
+        interactive: true,
+        live: false,
+        fromLane: "tutor",
+        toLane: "coinventor",
+      }),
+      true
+    );
+    assert.equal(
+      tutorToggleLocked({
+        busy: false,
+        interactive: false,
+        live: false,
+        fromLane: "coinventor",
+        toLane: "tutor",
+      }),
+      true
+    );
+  });
+
+  it("stays locked for a live lane change when the panel is free", () => {
+    assert.equal(
+      tutorToggleLocked({
+        busy: false,
+        interactive: true,
+        live: true,
+        fromLane: "tutor",
+        toLane: "coinventor",
+      }),
+      true
+    );
+    assert.equal(
+      tutorToggleLocked({
+        busy: false,
+        interactive: true,
+        live: false,
+        fromLane: "tutor",
+        toLane: "coinventor",
+      }),
+      false
+    );
   });
 });
 
@@ -327,6 +377,71 @@ describe("reduceVoiceTranscript", () => {
     assert.equal(spoken.messages.length, 1);
     assert.equal(spoken.messages[0].content, "Here is a how-it-works.");
     assert.equal(spoken.messages[0].proposals.inventionHow, "Kelp baffles cut the wake.");
+  });
+
+  it("folds lesson media onto the spoken bubble and unions a second call", () => {
+    const picture = {
+      images: [{ id: "img1", alt: "Software that can pay", url: "https://warmersun.com/i07.png" }],
+      links: [{ id: "link1", label: "Page 07", url: "https://warmersun.com/p07.html" }],
+    };
+    const spoken = reduceVoiceTranscript(
+      { messages: [], captionIndex: null, pending: null },
+      { type: "caption_final", text: "A night helper can pay one ping." }
+    );
+    const shown = reduceVoiceTranscript(spoken, {
+      type: "proposals",
+      message: "",
+      proposals: null,
+      media: picture,
+    });
+    assert.equal(shown.messages.length, 1);
+    assert.equal(shown.messages[0].content, "A night helper can pay one ping.");
+    assert.equal(shown.messages[0].media.images[0].id, "img1");
+    assert.equal(shown.messages[0].media.links[0].label, "Page 07");
+    const again = reduceVoiceTranscript(shown, {
+      type: "proposals",
+      media: {
+        images: [
+          { id: "img1", alt: "Software that can pay", url: "https://warmersun.com/i07.png" },
+          { id: "img2", alt: "Pilot", url: "https://warmersun.com/i08.png" },
+          { id: "img3", alt: "Extra", url: "https://warmersun.com/i09.png" },
+        ],
+        links: [],
+      },
+    });
+    assert.equal(again.messages.length, 1);
+    assert.deepEqual(
+      again.messages[0].media.images.map((item) => item.id),
+      ["img1", "img2"]
+    );
+    assert.equal(hasVoiceMedia(again.messages[0].media), true);
+  });
+
+  it("keeps a picture that arrives before the caption, without calling it a draft", () => {
+    const held = reduceVoiceTranscript(
+      { messages: [], captionIndex: null, pending: null },
+      {
+        type: "proposals",
+        message: "",
+        proposals: null,
+        media: {
+          images: [{ id: "img1", alt: "Diagram", url: "https://warmersun.com/d.png" }],
+          links: [],
+        },
+      }
+    );
+    assert.equal(held.messages.length, 0);
+    assert.equal(held.pending.media.images[0].id, "img1");
+    const spoken = reduceVoiceTranscript(held, {
+      type: "caption_final",
+      text: "Here is the diagram.",
+    });
+    assert.equal(spoken.messages[0].content, "Here is the diagram.");
+    assert.equal(spoken.messages[0].media.images[0].url, "https://warmersun.com/d.png");
+    const alone = reduceVoiceTranscript(held, { type: "turn_done" });
+    assert.equal(alone.messages.length, 1);
+    assert.equal(alone.messages[0].content, "");
+    assert.equal(alone.messages[0].media.images.length, 1);
   });
 
   it("does not add a bubble for end_tutoring alone", () => {

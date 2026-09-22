@@ -8843,6 +8843,17 @@ button.linkish:hover {
 .co-bubble-md .md-img-wrap {
   margin: 0.35rem 0;
 }
+.co-bubble-md .co-lesson-figure {
+  margin: 0.45rem 0 0.15rem;
+}
+.co-bubble-md .co-lesson-cap {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-mute);
+}
+.co-bubble-md .co-lesson-links {
+  margin: 0.35rem 0 0;
+}
 .co-bubble-md h1,
 .co-bubble-md h2,
 .co-bubble-md h3 {

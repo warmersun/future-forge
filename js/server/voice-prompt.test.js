@@ -82,6 +82,20 @@ describe("buildVoiceInstructions", () => {
     assert.match(text, /tutor/i);
     assert.doesNotMatch(text, /Do not call `draft_life`/);
   });
+
+  it("lists lesson media ids and keeps speech free of URLs", () => {
+    const text = buildVoiceInstructions({
+      ...legacyCtx,
+      aiTutorContext:
+        "SEQUENCE: offer [Page 07](https://warmersun.com/lessons/p07.html).\nILLUSTRATIONS:\n- ![Software that can pay](https://warmersun.com/lessons/i07.png)",
+    });
+    assert.match(text, /show_lesson_media/);
+    assert.match(text, /img1/);
+    assert.match(text, /link1/);
+    assert.match(text, /Software that can pay/);
+    assert.match(text, /Spoken word only/);
+    assert.doesNotMatch(text, /https?:\/\//);
+  });
 });
 
 describe("buildVoiceKeyterms", () => {
@@ -166,8 +180,9 @@ describe("inventStateSnapshot / session.update", () => {
       "suggest_techs",
       "draft_how",
       "draft_life",
+      "show_lesson_media",
       "end_tutoring",
     ]);
-    assert.equal(voiceToolSchemas().length, 5);
+    assert.equal(voiceToolSchemas().length, 6);
   });
 });

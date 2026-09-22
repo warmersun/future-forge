@@ -4,6 +4,7 @@
  */
 
 import { knownVoiceId } from "../voice-choices.js";
+import { listLessonMedia, tutorNotesForVoice } from "../lesson-media.js";
 
 export const VOICE_MODEL = "grok-voice-latest";
 export const VOICE_SAMPLE_RATE = 24_000;
@@ -203,7 +204,7 @@ export function buildVoiceInstructions(context = {}) {
   const problem = clip(context.challenge?.problem, 500);
   const guidance = clip(context.guidance, 400);
   const spotlight = clip(context.spotlightTechId, 80);
-  const tutorNote = tutor ? clip(context.aiTutorContext, 500) : "";
+  const tutorBlock = tutor ? tutorVoiceBlock(context.aiTutorContext) : "";
   const surface = hex
     ? "They invent on a hex board: emTech tiles plus a how-it-works sentence on each pathway. There is no invention name."
     : "They write an invention name, how it works, and everyday life, and pick emTechs for a stack.";
@@ -230,7 +231,7 @@ ${
 ${problem ? `The situation: ${problem}` : ""}
 ${guidance ? `Quest note: ${guidance}` : ""}
 ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it honestly fits this year.` : ""}
-${tutorNote ? `Tutor notes: ${tutorNote}` : ""}
+${tutorBlock}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}
 Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. If they want you to draft mechanism text, call \`draft_how\`. ${
@@ -241,7 +242,7 @@ Listen first. Ask at most one good question per turn. If they want a stack idea,
 Call \`get_invent_state\` when you are unsure what is on the board now.
 ${
   tutor
-    ? "This is a free tutoring session. Stay with one short idea at a time. Call \`end_tutoring\` only when they clearly want to invent on their own."
+    ? "This is a free tutoring session. Stay with one short idea at a time. Speak the explanation in plain words. Never say a URL, a filename, or the word image. If the catalog lists lesson images or links, call `show_lesson_media` after that explanation with the ids for this turn: the next sequence idea, a listed misconception, or they asked for the picture or the long version. One image and its reading link is the normal turn. Pass more ids only when they ask to see more. The chat shows them. Do not read them. Call `end_tutoring` only when they clearly want to invent on their own."
     : "Quick chips like Spark and SIT stay on the screen — do not try to run those modes."
 }
 
@@ -332,6 +333,28 @@ export function voiceToolSchemas() {
     },
     {
       type: "function",
+      name: "show_lesson_media",
+      description:
+        "Show lesson illustrations and reading links in the chat. Tutoring only. Speak the idea first, then call this with catalog ids. Does not read URLs aloud.",
+      parameters: {
+        type: "object",
+        properties: {
+          imageIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "img1, img2, … from the lesson catalog. Usually one.",
+          },
+          linkIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "link1, link2, … Usually the matching reading. More only if they ask.",
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
       name: "end_tutoring",
       description:
         "End the free tutoring session after the learner clearly wants to invent on their own. Tutoring only.",
@@ -383,6 +406,28 @@ export function buildSessionUpdate(context = {}, opts = {}) {
  * @param {string} instructions
  * @returns {string[]}
  */
+/**
+ * Spoken tutor notes plus a URL-free catalog. Empty when there is no curriculum.
+ * @param {unknown} raw
+ */
+export function tutorVoiceBlock(raw) {
+  const notes = tutorNotesForVoice(raw);
+  const media = listLessonMedia(raw);
+  const images = media.images
+    .map((item) => `- ${item.id}: ${item.alt || "illustration"}`)
+    .join("\n");
+  const links = media.links
+    .map((item) => `- ${item.id}: ${item.label || "reading"}`)
+    .join("\n");
+  const catalog = [
+    images ? `Lesson images:\n${images}` : "",
+    links ? `Lesson links:\n${links}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return [notes ? `Tutor notes: ${notes}` : "", catalog].filter(Boolean).join("\n");
+}
+
 export function instructionSectionHeadings(instructions) {
   return String(instructions || "")
     .split("\n")

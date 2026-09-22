@@ -8,6 +8,7 @@ import { VOICE_MODEL, VOICE_SAMPLE_RATE, buildSessionUpdate } from "./voice-prom
 import { handleVoiceTool } from "./voice-tools.mjs";
 import { voiceContextFingerprint } from "../voice-context.js";
 import { knownVoiceId } from "../voice-choices.js";
+import { hasLessonMedia } from "../lesson-media.js";
 import {
   createIdleGuard,
   DEFAULT_VOICE_IDLE_MS,
@@ -457,12 +458,13 @@ export function attachVoiceSockets(httpServer, opts) {
       ) {
         return result;
       }
-      if (result.proposals || result.endTutoring) {
+      if (result.proposals || result.endTutoring || hasLessonMedia(result.media)) {
         sendClient({
           type: "proposals",
           proposals: result.proposals,
           message: result.message || "",
           endTutoring: Boolean(result.endTutoring),
+          media: hasLessonMedia(result.media) ? result.media : null,
         });
       }
       safeSend(xaiWs, {

@@ -57,6 +57,36 @@ describe("handleVoiceTool", () => {
     assert.equal(r.proposals.inventionImpact, "Vaccines last the afternoon.");
   });
 
+  it("show_lesson_media resolves catalog ids only while tutoring", () => {
+    const tutor = {
+      ...ctx,
+      tutorMode: true,
+      aiTutorContext:
+        "![Software that can pay](https://warmersun.com/lessons/i07.png)\n[Page 07](https://warmersun.com/lessons/p07.html)\n[Page 03](https://warmersun.com/lessons/p03.html)",
+    };
+    const off = handleVoiceTool("show_lesson_media", { imageIds: ["img1"] }, ctx);
+    assert.equal(off.output.ok, false);
+    assert.equal(off.output.error, "not_tutoring");
+    assert.equal(off.media, null);
+
+    const shown = handleVoiceTool(
+      "show_lesson_media",
+      { imageIds: ["img1", "nope"], linkIds: ["link1"] },
+      tutor
+    );
+    assert.equal(shown.output.ok, true);
+    assert.equal(shown.proposals, null);
+    assert.equal(shown.media.images[0].id, "img1");
+    assert.equal(shown.media.images[0].alt, "Software that can pay");
+    assert.equal(shown.media.links[0].id, "link1");
+    assert.equal(shown.media.images.length, 1);
+    assert.match(shown.output.hint, /Do not read URLs/);
+
+    const miss = handleVoiceTool("show_lesson_media", { imageIds: ["img9"] }, tutor);
+    assert.equal(miss.output.ok, false);
+    assert.equal(miss.media, null);
+  });
+
   it("end_tutoring only while tutoring", () => {
     const off = handleVoiceTool("end_tutoring", {}, ctx);
     assert.equal(off.endTutoring, false);

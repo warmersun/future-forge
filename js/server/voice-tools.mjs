@@ -4,6 +4,7 @@
  */
 
 import { clip, inventStateSnapshot, listAvailableTechs } from "./voice-prompt.mjs";
+import { listLessonMedia } from "../lesson-media.js";
 
 export function emptyProposals() {
   return {
@@ -38,6 +39,29 @@ export function parseToolArguments(raw) {
  */
 export function availableTechIdSet(context) {
   return new Set(listAvailableTechs(context).map((t) => t.id));
+}
+
+const SHOW_IMAGE_CAP = 2;
+const SHOW_LINK_CAP = 4;
+
+/**
+ * @param {unknown} ids
+ * @param {{ id: string }[]} catalog
+ * @param {number} cap
+ */
+export function pickLessonIds(ids, catalog, cap) {
+  const wanted = Array.isArray(ids) ? ids : ids ? [ids] : [];
+  const byId = new Map(catalog.map((item) => [item.id, item]));
+  const out = [];
+  const seen = new Set();
+  for (const raw of wanted) {
+    const id = String(raw || "").trim().toLowerCase();
+    if (!id || seen.has(id) || !byId.has(id)) continue;
+    seen.add(id);
+    out.push(byId.get(id));
+    if (out.length >= cap) break;
+  }
+  return out;
 }
 
 /**
@@ -171,6 +195,52 @@ export function handleVoiceTool(name, args, context = {}) {
       proposals: { ...emptyProposals(), inventionImpact: text },
       endTutoring: false,
       message: text,
+    };
+  }
+
+  if (tool === "show_lesson_media") {
+    if (!tutor) {
+      return {
+        output: {
+          ok: false,
+          error: "not_tutoring",
+          hint: "Tutoring is not on. Do not call show_lesson_media.",
+        },
+        proposals: null,
+        media: null,
+        endTutoring: false,
+        message: "",
+      };
+    }
+    const catalog = listLessonMedia(context.aiTutorContext);
+    const images = pickLessonIds(a.imageIds, catalog.images, SHOW_IMAGE_CAP);
+    const links = pickLessonIds(a.linkIds, catalog.links, SHOW_LINK_CAP);
+    if (!images.length && !links.length) {
+      return {
+        output: {
+          ok: false,
+          error: "no_lesson_media",
+          hint: "Use imgN and linkN from the lesson catalog. Nothing was shown.",
+        },
+        proposals: null,
+        media: null,
+        endTutoring: false,
+        message: "",
+      };
+    }
+    return {
+      output: {
+        ok: true,
+        shown: {
+          images: images.map((item) => item.alt),
+          links: links.map((item) => item.label),
+        },
+        hint: "Already on screen in the chat. Do not read URLs or filenames.",
+      },
+      proposals: null,
+      media: { images, links },
+      endTutoring: false,
+      message: "",
     };
   }
 

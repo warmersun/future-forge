@@ -27,8 +27,8 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer, narrativesFromTechs } from "./vision.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-13";
-import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-13";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-14";
+import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-14";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-10";
 import {
   leanCoInventContext as buildLeanCoInventContext,
