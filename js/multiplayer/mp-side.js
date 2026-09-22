@@ -3,7 +3,8 @@
  */
 
 import { VISION_STAGES, techById } from "../data.js";
-import { VisionRenderer, narrativesFromTechs } from "../vision.js";
+import { VisionRenderer } from "../vision.js";
+import { bindVisionSplit } from "../side-split.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
 import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js";
@@ -43,7 +44,6 @@ export class MpSidePanel {
     this.vision = null;
     this.co = null;
     this.sideTab = "vision";
-    this.wired = false;
     this.visionRoot = null;
     this.coRoot = null;
   }
@@ -98,26 +98,26 @@ export class MpSidePanel {
       this.co.mount(coRoot);
       this.co.syncChipGates?.();
     }
-    if (tabBar && !this.wired) {
-      this.wired = true;
-      tabBar.querySelectorAll("[data-mp-tab]").forEach((btn) => {
-        btn.addEventListener("click", () => this.setTab(btn.dataset.mpTab));
-      });
-    }
-    this.setTab(this.sideTab);
+    const panel =
+      tabBar?.querySelector?.(".vision-co-stack") ||
+      tabBar?.closest?.(".vision-panel")?.querySelector?.(".vision-co-stack") ||
+      visionRoot?.closest?.(".vision-co-stack");
+    if (panel) bindVisionSplit(panel);
+    this.showStack();
   }
 
-  setTab(tab) {
-    this.sideTab = tab === "coinventor" ? "coinventor" : "vision";
+  setTab() {
+    this.showStack();
+  }
+
+  showStack() {
+    this.sideTab = "vision";
     const root = this.visionRoot?.closest(".mp-side-panel") || this.coRoot?.closest(".mp-side-panel");
     if (!root) return;
-    root.querySelectorAll("[data-mp-tab]").forEach((b) => {
-      b.classList.toggle("active", b.dataset.mpTab === this.sideTab);
-    });
     const v = root.querySelector("#mp-side-vision, .mp-side-vision");
     const c = root.querySelector("#mp-side-coinventor, .mp-side-coinventor");
-    if (v) v.hidden = this.sideTab !== "vision";
-    if (c) c.hidden = this.sideTab !== "coinventor";
+    if (v) v.hidden = false;
+    if (c) c.hidden = false;
   }
 
   buildContext() {
@@ -237,30 +237,6 @@ export class MpSidePanel {
           : stage.blurb;
     }
 
-    const narr = panel?.querySelector(".mp-vision-narratives");
-    if (narr) {
-      const narratives = narrativesFromTechs(techs);
-      const pressureLine = Object.entries(place.pressure || {})
-        .map(([k, v]) => `${k} ${v}/5`)
-        .join(" · ");
-      narr.innerHTML =
-        `<div class="narrative-card"><div class="src">${inventYear}</div>Pressure: ${escapeHtml(
-          pressureLine
-        )}</div>` +
-        (narratives.length
-          ? narratives
-              .map(
-                (n) =>
-                  `<div class="narrative-card"><div class="src">${escapeHtml(
-                    n.name
-                  )}</div>${escapeHtml(n.text)}</div>`
-              )
-              .join("")
-          : `<div class="narrative-card"><div class="src">Place</div>${escapeHtml(
-              String(place.mission.scene || "").slice(0, 180)
-            )}</div>`);
-    }
-
     // Content gate — skip Imagine if nothing invent-related changed
     const givens = invent?.hexBoard
       ? visionGivensFromBoard(invent.hexBoard, pathways)
@@ -334,12 +310,4 @@ export class MpSidePanel {
     this.vision = null;
     this.co = null;
   }
-}
-
-function escapeHtml(s) {
-  return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

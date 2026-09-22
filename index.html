@@ -505,34 +505,41 @@
         </main>
 
         <aside class="vision-panel side-panel mp-side-panel" id="hs-side-panel">
-          <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">Future vision</button>
-            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">AI co-inventor</button>
-          </div>
-          <div id="hs-side-vision" class="side-pane mp-side-vision" role="tabpanel">
-            <div class="vision-stage-bar">
-              <div>
-                <div class="vision-stage-name mp-vision-stage-name">Today</div>
-                <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-regen-vision" title="Regenerate">↻</button>
-            </div>
-            <div class="vision-canvas-wrap" id="hs-vision-root">
-              <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden aria-live="polite">
-                <div class="vision-loading-frame" aria-hidden="true"></div>
-                <div class="vision-loading-inner">
-                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining this place…</span>
+          <div class="vision-co-stack">
+            <div id="hs-side-vision" class="vision-stack-top mp-side-vision">
+              <div class="vision-stage-bar">
+                <div>
+                  <div class="vision-stage-name mp-vision-stage-name">Today</div>
+                  <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
                 </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-hs-regen-vision" title="Regenerate">↻</button>
               </div>
-              <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
-              <div class="vision-status" aria-live="polite"></div>
+              <div class="vision-canvas-wrap" id="hs-vision-root">
+                <img class="vision-image" alt="Vision of this place" hidden />
+                <div class="vision-loading" hidden aria-live="polite">
+                  <div class="vision-loading-frame" aria-hidden="true"></div>
+                  <div class="vision-loading-inner">
+                    <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="vision-loading-text">Imagining this place…</span>
+                  </div>
+                </div>
+                <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
+                <div class="vision-status" aria-live="polite"></div>
+              </div>
             </div>
-            <div class="vision-narratives mp-vision-narratives"></div>
-          </div>
-          <div id="hs-side-coinventor" class="side-pane mp-side-coinventor" role="tabpanel" hidden>
-            <div id="hs-co-inventor-root" class="co-inventor-root"></div>
+            <div
+              class="vision-split-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize AI co-inventor"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              tabindex="0"
+            ></div>
+            <div id="hs-side-coinventor" class="vision-stack-bottom mp-side-coinventor">
+              <div id="hs-co-inventor-root" class="co-inventor-root"></div>
+            </div>
           </div>
         </aside>
       </div>
@@ -824,45 +831,48 @@
         </main>
 
         <aside class="vision-panel side-panel mp-side-panel" id="mp-side-panel">
-          <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-mp-tab="vision" role="tab">
-              Future vision
-            </button>
-            <button type="button" class="side-tab" data-mp-tab="coinventor" role="tab">
-              AI co-inventor
-            </button>
-          </div>
-          <div id="mp-side-vision" class="side-pane mp-side-vision" role="tabpanel">
-            <div class="vision-stage-bar">
-              <div>
-                <div class="vision-stage-name mp-vision-stage-name">Today</div>
-                <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
-              </div>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                id="btn-mp-regen-vision"
-                title="Regenerate"
-              >
-                ↻
-              </button>
-            </div>
-            <div class="vision-canvas-wrap" id="mp-vision-root">
-              <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden aria-live="polite">
-                <div class="vision-loading-frame" aria-hidden="true"></div>
-                <div class="vision-loading-inner">
-                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining this place…</span>
+          <div class="vision-co-stack">
+            <div id="mp-side-vision" class="vision-stack-top mp-side-vision">
+              <div class="vision-stage-bar">
+                <div>
+                  <div class="vision-stage-name mp-vision-stage-name">Today</div>
+                  <div class="vision-stage-blurb mp-vision-stage-blurb">The place as it is.</div>
                 </div>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  id="btn-mp-regen-vision"
+                  title="Regenerate"
+                >
+                  ↻
+                </button>
               </div>
-              <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
-              <div class="vision-status" aria-live="polite"></div>
+              <div class="vision-canvas-wrap" id="mp-vision-root">
+                <img class="vision-image" alt="Vision of this place" hidden />
+                <div class="vision-loading" hidden aria-live="polite">
+                  <div class="vision-loading-frame" aria-hidden="true"></div>
+                  <div class="vision-loading-inner">
+                    <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="vision-loading-text">Imagining this place…</span>
+                  </div>
+                </div>
+                <div class="vision-placeholder">Stack techs or write your idea — the image follows</div>
+                <div class="vision-status" aria-live="polite"></div>
+              </div>
             </div>
-            <div class="vision-narratives mp-vision-narratives"></div>
-          </div>
-          <div id="mp-side-coinventor" class="side-pane mp-side-coinventor" role="tabpanel" hidden>
-            <div id="mp-co-inventor-root" class="co-inventor-root"></div>
+            <div
+              class="vision-split-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize AI co-inventor"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              tabindex="0"
+            ></div>
+            <div id="mp-side-coinventor" class="vision-stack-bottom mp-side-coinventor">
+              <div id="mp-co-inventor-root" class="co-inventor-root"></div>
+            </div>
           </div>
         </aside>
       </div>
@@ -1355,39 +1365,50 @@
         </main>
 
         <aside class="vision-panel side-panel">
-          <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-tab="vision" role="tab">Future vision</button>
-            <button type="button" class="side-tab" data-tab="coinventor" role="tab">AI co-inventor</button>
+          <div class="side-tabs" role="tablist" hidden>
+            <button type="button" class="side-tab active" data-tab="vision" role="tab" id="tab-vision" hidden>
+              Future vision
+            </button>
             <button type="button" class="side-tab" data-tab="aitrace" role="tab" id="tab-aitrace" hidden>
               AI inspect <span class="side-tab-badge" id="aitrace-badge" hidden></span>
             </button>
           </div>
 
-          <div id="side-vision" class="side-pane" role="tabpanel">
-            <div class="vision-stage-bar">
-              <div>
-                <div class="vision-stage-name" id="vision-stage-name">Today</div>
-                <div class="vision-stage-blurb" id="vision-stage-blurb">The place as it is.</div>
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision">↻</button>
-            </div>
-            <div class="vision-canvas-wrap" id="vision-root">
-              <img class="vision-image" alt="Vision of this place" hidden />
-              <div class="vision-loading" hidden aria-live="polite">
-                <div class="vision-loading-frame" aria-hidden="true"></div>
-                <div class="vision-loading-inner">
-                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining this place…</span>
+          <div class="vision-co-stack">
+            <div id="side-vision" class="vision-stack-top">
+              <div class="vision-stage-bar">
+                <div>
+                  <div class="vision-stage-name" id="vision-stage-name">Today</div>
+                  <div class="vision-stage-blurb" id="vision-stage-blurb">The place as it is.</div>
                 </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision">↻</button>
               </div>
-              <div class="vision-placeholder">Add technologies or describe your idea — the image follows</div>
-              <div class="vision-status" aria-live="polite"></div>
+              <div class="vision-canvas-wrap" id="vision-root">
+                <img class="vision-image" alt="Vision of this place" hidden />
+                <div class="vision-loading" hidden aria-live="polite">
+                  <div class="vision-loading-frame" aria-hidden="true"></div>
+                  <div class="vision-loading-inner">
+                    <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="vision-loading-text">Imagining this place…</span>
+                  </div>
+                </div>
+                <div class="vision-placeholder">Add technologies or describe your idea — the image follows</div>
+                <div class="vision-status" aria-live="polite"></div>
+              </div>
             </div>
-            <div id="vision-narratives" class="vision-narratives"></div>
-          </div>
-
-          <div id="side-coinventor" class="side-pane" role="tabpanel" hidden>
-            <div id="co-inventor-root" class="co-inventor-root"></div>
+            <div
+              class="vision-split-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize AI co-inventor"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              tabindex="0"
+            ></div>
+            <div id="side-coinventor" class="vision-stack-bottom">
+              <div id="co-inventor-root" class="co-inventor-root"></div>
+            </div>
           </div>
 
           <div id="side-aitrace" class="side-pane" role="tabpanel" hidden>
@@ -1646,98 +1667,84 @@
 
         <!-- RIGHT: Future vision + AI co-inventor (same pattern as Invent) -->
         <aside class="challenge-side vision-panel side-panel">
-          <div class="side-tabs" role="tablist" aria-label="Challenge side panel">
-            <button
-              type="button"
-              class="side-tab active"
-              data-ch-tab="vision"
-              role="tab"
-              aria-selected="true"
-            >
-              Future vision
-            </button>
-            <button
-              type="button"
-              class="side-tab"
-              data-ch-tab="coinventor"
-              role="tab"
-              aria-selected="false"
-            >
-              AI co-inventor
-            </button>
-          </div>
-
-          <div id="side-challenge-vision" class="side-pane" role="tabpanel">
-            <div class="vision-stage-bar">
-              <div>
-                <div class="vision-stage-name" id="challenge-vision-stage-name">Under challenge</div>
-                <div class="vision-stage-blurb" id="challenge-vision-stage-blurb">
-                  How the place looks while this critic presses the idea.
+          <div class="vision-co-stack">
+            <div id="side-challenge-vision" class="vision-stack-top">
+              <div class="vision-stage-bar">
+                <div>
+                  <div class="vision-stage-name" id="challenge-vision-stage-name">Under challenge</div>
+                  <div class="vision-stage-blurb" id="challenge-vision-stage-blurb">
+                    How the place looks while this critic presses the idea.
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  id="btn-regen-challenge-vision"
+                  title="Regenerate challenge vision"
+                >
+                  ↻
+                </button>
               </div>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                id="btn-regen-challenge-vision"
-                title="Regenerate challenge vision"
-              >
-                ↻
-              </button>
-            </div>
-            <div class="vision-canvas-wrap" id="challenge-vision-root">
-              <img class="vision-image" alt="Vision of this place under challenge" hidden />
-              <div class="vision-loading" hidden aria-live="polite">
-                <div class="vision-loading-frame" aria-hidden="true"></div>
-                <div class="vision-loading-inner">
-                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining the challenge…</span>
+              <div class="vision-canvas-wrap" id="challenge-vision-root">
+                <img class="vision-image" alt="Vision of this place under challenge" hidden />
+                <div class="vision-loading" hidden aria-live="polite">
+                  <div class="vision-loading-frame" aria-hidden="true"></div>
+                  <div class="vision-loading-inner">
+                    <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="vision-loading-text">Imagining the challenge…</span>
+                  </div>
                 </div>
+                <div class="vision-placeholder">
+                  The critic steps in — the image follows the challenge and your response
+                </div>
+                <div class="vision-status" aria-live="polite"></div>
               </div>
-              <div class="vision-placeholder">
-                The critic steps in — the image follows the challenge and your response
+            </div>
+            <div
+              class="vision-split-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize AI co-inventor"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              tabindex="0"
+            ></div>
+            <div id="side-challenge-coinventor" class="vision-stack-bottom">
+              <div id="ch-co-inventor-root" class="co-inventor-root"></div>
+              <div class="challenge-side-hint muted">
+                Coach, draft, or ask — <strong>1 AP each</strong> (same as invent co-inventor). You still choose
+                Defend / Fix / Sidestep on the left.
               </div>
-              <div class="vision-status" aria-live="polite"></div>
+              <div class="challenge-help-actions challenge-side-actions">
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  id="btn-challenge-coach"
+                  title="1 AP — coaching tips for this critic"
+                >
+                  Coach me (1 AP)
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  id="btn-challenge-draft"
+                  title="1 AP — draft a defense paragraph you can edit"
+                >
+                  Draft a defense (1 AP)
+                </button>
+              </div>
+              <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
+              <form class="challenge-help-form" id="challenge-help-form">
+                <input
+                  type="text"
+                  id="challenge-help-input"
+                  placeholder="Ask… e.g. “What would a good Moloch answer mention?”"
+                  autocomplete="off"
+                />
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
+              </form>
             </div>
-            <p class="challenge-vision-hint muted">
-              Same place as Invent. Updates when the critic poses, and again when you Defend, Fix, or
-              Sidestep.
-            </p>
-          </div>
-
-          <div id="side-challenge-coinventor" class="side-pane" role="tabpanel" hidden>
-            <div id="ch-co-inventor-root" class="co-inventor-root"></div>
-            <div class="challenge-side-hint muted">
-              Coach, draft, or ask — <strong>1 AP each</strong> (same as invent co-inventor). You still choose
-              Defend / Fix / Sidestep on the left.
-            </div>
-            <div class="challenge-help-actions challenge-side-actions">
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                id="btn-challenge-coach"
-                title="1 AP — coaching tips for this critic"
-              >
-                Coach me (1 AP)
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                id="btn-challenge-draft"
-                title="1 AP — draft a defense paragraph you can edit"
-              >
-                Draft a defense (1 AP)
-              </button>
-            </div>
-            <div id="challenge-coach-panel" class="challenge-coach-panel" hidden></div>
-            <form class="challenge-help-form" id="challenge-help-form">
-              <input
-                type="text"
-                id="challenge-help-input"
-                placeholder="Ask… e.g. “What would a good Moloch answer mention?”"
-                autocomplete="off"
-              />
-              <button type="submit" class="btn btn-primary btn-sm" id="btn-challenge-ask">Ask</button>
-            </form>
           </div>
         </aside>
       </div>
@@ -1853,67 +1860,54 @@
         </main>
 
         <aside class="challenge-side vision-panel side-panel">
-          <div class="side-tabs" role="tablist" aria-label="Deploy side panel">
-            <button
-              type="button"
-              class="side-tab active"
-              data-dep-tab="vision"
-              role="tab"
-              aria-selected="true"
-            >
-              Future vision
-            </button>
-            <button
-              type="button"
-              class="side-tab"
-              data-dep-tab="coinventor"
-              role="tab"
-              aria-selected="false"
-            >
-              AI co-inventor
-            </button>
-          </div>
-
-          <div id="side-deploy-vision" class="side-pane" role="tabpanel">
-            <div class="vision-stage-bar">
-              <div>
-                <div class="vision-stage-name" id="deploy-vision-stage-name">Fielding</div>
-                <div class="vision-stage-blurb" id="deploy-vision-stage-blurb">
-                  How the place looks as you Pilot and Scale this invent.
+          <div class="vision-co-stack">
+            <div id="side-deploy-vision" class="vision-stack-top">
+              <div class="vision-stage-bar">
+                <div>
+                  <div class="vision-stage-name" id="deploy-vision-stage-name">Fielding</div>
+                  <div class="vision-stage-blurb" id="deploy-vision-stage-blurb">
+                    How the place looks as you Pilot and Scale this invent.
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  id="btn-regen-deploy-vision"
+                  title="Regenerate deploy vision"
+                >
+                  ↻
+                </button>
               </div>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                id="btn-regen-deploy-vision"
-                title="Regenerate deploy vision"
-              >
-                ↻
-              </button>
-            </div>
-            <div class="vision-canvas-wrap" id="deploy-vision-root">
-              <img class="vision-image" alt="Vision of this place as the invent fields" hidden />
-              <div class="vision-loading" hidden aria-live="polite">
-                <div class="vision-loading-frame" aria-hidden="true"></div>
-                <div class="vision-loading-inner">
-                  <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="vision-loading-text">Imagining the fielding…</span>
+              <div class="vision-canvas-wrap" id="deploy-vision-root">
+                <img class="vision-image" alt="Vision of this place as the invent fields" hidden />
+                <div class="vision-loading" hidden aria-live="polite">
+                  <div class="vision-loading-frame" aria-hidden="true"></div>
+                  <div class="vision-loading-inner">
+                    <span class="co-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="vision-loading-text">Imagining the fielding…</span>
+                  </div>
                 </div>
+                <div class="vision-placeholder">
+                  Pilot and Scale update how this place looks
+                </div>
+                <div class="vision-status" aria-live="polite"></div>
               </div>
-              <div class="vision-placeholder">
-                Pilot and Scale update how this place looks
-              </div>
-              <div class="vision-status" aria-live="polite"></div>
             </div>
-            <p class="challenge-vision-hint muted">
-              Same place as Invent. Updates as Pilot succeeds and Scale lands.
-            </p>
-          </div>
-
-          <div id="side-deploy-coinventor" class="side-pane" role="tabpanel" hidden>
-            <div id="dep-co-inventor-root" class="co-inventor-root"></div>
-            <div class="challenge-side-hint muted">
-              Ask about Pilot odds, Scale timing, or who must buy in — then field on the left.
+            <div
+              class="vision-split-handle"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize AI co-inventor"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              tabindex="0"
+            ></div>
+            <div id="side-deploy-coinventor" class="vision-stack-bottom">
+              <div id="dep-co-inventor-root" class="co-inventor-root"></div>
+              <div class="challenge-side-hint muted">
+                Ask about Pilot odds, Scale timing, or who must buy in — then field on the left.
+              </div>
             </div>
           </div>
         </aside>

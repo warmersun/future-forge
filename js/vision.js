@@ -20,12 +20,6 @@ export function featuresFromTechs(techs) {
   return [...features];
 }
 
-export function narrativesFromTechs(techs) {
-  return techs
-    .filter((t) => t.vision?.narrative)
-    .map((t) => ({ id: t.id, name: t.name, text: t.vision.narrative }));
-}
-
 /** Cartoon briefing owns this pane until Start inventing removes `.is-briefing`. */
 function briefingOwnsImage(img) {
   return Boolean(img?.closest?.(".vision-canvas-wrap.is-briefing"));

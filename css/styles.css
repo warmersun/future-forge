@@ -1912,20 +1912,15 @@ body.mp-hotseat .workshop-layout {
 
 .mp-side-panel .vision-canvas-wrap {
   flex: 1;
-  min-height: min(42vh, 28rem);
+  min-height: 0;
   max-height: none;
 }
 
 .mp-side-panel .co-inventor-root {
   flex: 1;
-  min-height: min(50vh, 32rem);
+  min-height: 0;
   display: flex;
   flex-direction: column;
-}
-
-.mp-side-panel .vision-narratives {
-  max-height: 9rem;
-  overflow: auto;
 }
 
 .mp-side-panel .co-messages {
@@ -6013,61 +6008,49 @@ body.year-bulletin-open {
 
 .challenge-side {
   min-width: 0;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--bg-1, rgba(7, 11, 20, 0.4));
 }
 
-.challenge-side .side-tabs {
-  flex-shrink: 0;
-}
-
-.challenge-side .side-pane {
+.challenge-side .vision-co-stack {
   flex: 1;
   min-height: 0;
+}
+
+.challenge-side .vision-stack-top,
+.challenge-side .vision-stack-bottom {
+  padding: 0.35rem 0.55rem 0.55rem;
+}
+
+.challenge-side .vision-stack-bottom {
   overflow: auto;
-  padding: 0.75rem 0.85rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.45rem;
 }
 
-.challenge-side .side-pane[hidden] {
-  display: none !important;
-}
-
-.challenge-side #side-challenge-vision {
-  /* Match invent vision pane: canvas grows, less scroll thrash */
-  overflow: hidden;
-}
-
-.challenge-side #challenge-vision-root {
+.challenge-side #challenge-vision-root,
+.challenge-side #deploy-vision-root {
   flex: 1;
-  min-height: 14rem;
-}
-
-.challenge-vision-hint {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  flex-shrink: 0;
+  min-height: 0;
 }
 
 .challenge-side .co-inventor-root {
   flex: 1;
-  min-height: 12rem;
+  min-height: 0;
 }
 
 .challenge-side-hint {
   font-size: 0.78rem;
   line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .challenge-side-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .challenge-step-content {
@@ -6783,6 +6766,7 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .challenge-help-form input {
@@ -7296,7 +7280,7 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     align-self: stretch;
     min-height: 0;
     max-height: 100%;
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     border-right: none;
@@ -7311,29 +7295,8 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
 
   .workshop-layout > .vision-panel .vision-canvas-wrap {
     flex: 1 1 auto;
-    min-height: min(38vh, 22rem);
-    max-height: none;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split #side-vision {
-    flex: 0 0 auto;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split #side-vision .vision-canvas-wrap {
-    flex: none;
-    height: min(22vh, 160px);
-    min-height: 120px;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split #side-coinventor {
-    flex: 1 1 0;
     min-height: 0;
-    overflow: hidden;
-  }
-
-  .workshop-layout > .vision-panel .vision-narratives {
-    max-height: 7rem;
-    overflow: auto;
+    max-height: none;
   }
 
   /* emTech drawer (left) */
@@ -7484,10 +7447,14 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     position: sticky;
     top: 0;
     z-index: 6;
-    max-height: min(36vh, 16rem);
+    max-height: min(58vh, 28rem);
     overflow: hidden;
     border-bottom: 1px solid var(--border);
     background: rgba(7, 11, 20, 0.92);
+  }
+
+  .workshop-layout > .vision-panel:has(.vision-canvas-wrap.is-briefing) {
+    max-height: min(78vh, 36rem);
   }
 
   .workshop-layout > .vision-panel .side-tabs {
@@ -7498,8 +7465,7 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     padding: 0.35rem 0.65rem;
   }
 
-  .workshop-layout > .vision-panel .vision-stage-blurb,
-  .workshop-layout > .vision-panel .vision-narratives {
+  .workshop-layout > .vision-panel .vision-stage-blurb {
     display: none;
   }
 
@@ -7509,45 +7475,17 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     max-height: none;
   }
 
-  .workshop-layout > .vision-panel .side-pane[hidden] {
-    display: none !important;
+  .workshop-layout > .vision-panel .vision-stack-bottom {
+    min-height: 11rem;
   }
 
-  /* Co-inventor on phone: allow more height when tab selected */
-  .workshop-layout > .vision-panel:has(.side-pane.mp-side-coinventor:not([hidden])):not(.is-vision-split),
-  .workshop-layout > .vision-panel:has(#side-coinventor:not([hidden])):not(.is-vision-split) {
-    max-height: min(50vh, 22rem);
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split {
-    max-height: min(58vh, 28rem);
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split #side-vision .vision-canvas-wrap {
-    height: 7.5rem;
-    min-height: 7.5rem;
-    flex: none;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split #side-coinventor {
-    flex: 1 1 0;
+  .workshop-layout > .vision-panel .co-inventor-root {
     min-height: 0;
     overflow: hidden;
   }
 
-  .workshop-layout > .vision-panel.is-vision-split .co-inventor-root {
+  .workshop-layout > .vision-panel .co-messages {
     min-height: 0;
-    overflow: hidden;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split .co-messages {
-    min-height: 0;
-  }
-
-  .workshop-layout > .vision-panel.is-vision-split .co-inventor-root.is-tutor-mode .co-actions {
-    display: none;
   }
 
   /* Bottom sheet for emTech */
@@ -8402,6 +8340,7 @@ button.linkish:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
   background: var(--bg-0);
 }
 
@@ -8409,6 +8348,10 @@ button.linkish:hover {
   display: flex;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.side-tabs[hidden] {
+  display: none !important;
 }
 
 .side-tab {
@@ -8444,32 +8387,108 @@ button.linkish:hover {
   display: none !important;
 }
 
-/* Co-inventor: Future vision strip above chat (every quest, not only tutor) */
-.vision-panel.is-vision-split #side-vision {
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
-.vision-panel.is-vision-split #side-vision .vision-stage-bar {
-  padding: 0.4rem 0.75rem;
-}
-
-.vision-panel.is-vision-split #side-vision .vision-stage-blurb,
-.vision-panel.is-vision-split #side-vision .vision-narratives {
-  display: none;
-}
-
-.vision-panel.is-vision-split #side-vision .vision-canvas-wrap {
-  flex: none;
-  height: min(28vh, 200px);
-  min-height: 140px;
-}
-
-.vision-panel.is-vision-split #side-coinventor {
-  flex: 1 1 0;
+.vision-co-stack {
+  --vision-co-pct: 50%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  border-top: 1px solid var(--border);
+}
+
+.vision-co-stack[hidden] {
+  display: none !important;
+}
+
+.vision-stack-top {
+  flex: 1 1 0;
+  min-height: 120px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vision-stack-top .vision-canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.vision-split-handle {
+  flex: 0 0 7px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: ns-resize;
+  touch-action: none;
+  background: var(--border);
+  position: relative;
+}
+
+.vision-split-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.5rem;
+  height: 3px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.55);
+}
+
+.vision-split-handle:hover,
+.vision-split-handle:focus-visible,
+.vision-co-stack.is-splitting .vision-split-handle {
+  background: rgba(167, 139, 250, 0.35);
+}
+
+.vision-co-stack.is-splitting {
+  user-select: none;
+}
+
+.vision-split-handle:focus-visible {
+  outline: 2px solid var(--accent-2, #a78bfa);
+  outline-offset: -2px;
+}
+
+.vision-stack-bottom {
+  flex: 0 0 var(--vision-co-pct, 50%);
+  min-height: 220px;
+  max-height: calc(100% - 127px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header and compose stay put; the transcript scrolls inside the pane. */
+.vision-stack-bottom .co-inventor-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vision-stack-bottom .co-messages,
+.mp-side-panel .vision-stack-bottom .co-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-split-handle,
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-stack-bottom,
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-stage-bar,
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .side-tabs {
+  display: none !important;
+}
+
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-co-stack,
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-stack-top,
+.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-canvas-wrap {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .side-tab-badge {
@@ -9399,9 +9418,6 @@ button.linkish:hover {
 .vision-canvas-wrap.is-briefing .vision-loading {
   display: none;
 }
-.vision-panel:has(.vision-canvas-wrap.is-briefing) .vision-narratives {
-  display: none;
-}
 .vision-canvas-wrap > .quest-briefing-overlay {
   position: absolute;
   left: 0;
@@ -9686,45 +9702,6 @@ button.linkish:hover {
 
 .reveal-vision-wrap .vision-image {
   min-height: 280px;
-}
-
-.vision-narratives {
-  max-height: 38%;
-  overflow-y: auto;
-  border-top: 1px solid var(--border);
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.narrative-card {
-  font-size: 0.8rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  animation: slideIn 0.35s var(--ease);
-}
-
-.narrative-card .src {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  margin-bottom: 0.2rem;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 /* —— Reveal / results —— */

@@ -590,12 +590,12 @@ async function placeCard(cdp, q, r) {
   return info;
 }
 
-async function openCoinventor(cdp) {
-  await clickSel(cdp, 'button.side-tab[data-tab="coinventor"]', { after: 400 });
+async function openCoinventor(_cdp) {
+  /* Vision and co-inventor share one column. */
 }
 
-async function openVision(cdp) {
-  await clickSel(cdp, 'button.side-tab[data-tab="vision"]', { after: 300 });
+async function openVision(_cdp) {
+  /* Vision and co-inventor share one column. */
 }
 
 async function waitWorkshop(cdp) {

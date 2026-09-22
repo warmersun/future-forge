@@ -26,7 +26,8 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer, narrativesFromTechs } from "./vision.js";
+import { VisionRenderer } from "./vision.js";
+import { bindAllVisionSplits } from "./side-split.js";
 import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-16";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-16";
@@ -721,23 +722,17 @@ function resumeTutorSession() {
   }
 }
 
-function isTutorSplitLayout() {
-  return (
-    state.sideTab === "coinventor" && !briefingOwnsRoot($("#vision-root"))
-  );
-}
-
 function applyInventSidePanes() {
-  const tab = state.sideTab || "vision";
-  const split = isTutorSplitLayout();
+  const tab = state.sideTab === "aitrace" ? "aitrace" : "vision";
   const panel = document.querySelector("#screen-workshop .vision-panel");
-  panel?.classList.toggle("is-vision-split", split);
-  panel?.classList.remove("is-tutor-split");
+  panel?.classList.remove("is-vision-split", "is-tutor-split");
+  const stack = panel?.querySelector(".vision-co-stack");
   const vision = $("#side-vision");
   const co = $("#side-coinventor");
   const trace = $("#side-aitrace");
-  if (vision) vision.hidden = tab !== "vision" && !split;
-  if (co) co.hidden = tab !== "coinventor";
+  if (stack) stack.hidden = tab === "aitrace";
+  if (vision) vision.hidden = false;
+  if (co) co.hidden = false;
   if (trace) trace.hidden = tab !== "aitrace";
 }
 
@@ -3679,7 +3674,7 @@ function cloudRunStatePayload() {
       selectedTechIds: [...state.selectedTechIds],
       learnOrder: [...(state.learnOrder || [])],
       domainFilter: state.domainFilter || "all",
-      sideTab: state.sideTab === "coinventor" ? "coinventor" : "vision",
+      sideTab: "vision",
       waits: state.waits,
       turn: state.turn,
       pressure: state.pressure,
@@ -3770,7 +3765,7 @@ function applyRestoredPlay(play) {
   if (Array.isArray(play.selectedTechIds)) state.selectedTechIds = [...play.selectedTechIds];
   if (Array.isArray(play.learnOrder)) state.learnOrder = [...play.learnOrder];
   if (play.domainFilter) state.domainFilter = String(play.domainFilter);
-  if (play.sideTab === "coinventor" || play.sideTab === "vision") state.sideTab = play.sideTab;
+  if (play.sideTab === "coinventor" || play.sideTab === "vision") state.sideTab = "vision";
   if (play.waits != null) state.waits = play.waits;
   if (play.turn != null) state.turn = play.turn;
   if (play.pressure && typeof play.pressure === "object") {
@@ -7104,7 +7099,7 @@ function startMission(mission, opts = {}) {
       ((Array.isArray(savedChats.tutor) && savedChats.tutor.length) ||
         (Array.isArray(savedChats.coinventor) && savedChats.coinventor.length))
   );
-  if (state.sideTab === "coinventor" || hasSavedChats) ensureCoInventor();
+  ensureCoInventor();
   state.coInventor?.onChallengeStart?.();
   if (state.coInventor && hasSavedChats) {
     state.coInventor.importHistories(savedChats);
@@ -7264,11 +7259,11 @@ function renderWorkshop() {
       globalId: m.globalId || g?.id,
       onChange: (snap) => {
         if (snap?.mode === "walk") {
-          setSideTab("vision");
           refreshCoachMarks();
           return;
         }
         if (snap?.mode !== "off") return;
+        ensureCoInventor();
         try {
           updateVision({ debounceMs: 80, force: true });
         } catch {
@@ -14872,19 +14867,13 @@ function renderDeployHud() {
   updateMissionStepPills();
 }
 
-function setDeploySideTab(tab) {
-  const t = tab === "coinventor" ? "coinventor" : "vision";
-  state.deploySideTab = t;
-  $$("[data-dep-tab]").forEach((btn) => {
-    const on = btn.dataset.depTab === t;
-    btn.classList.toggle("active", on);
-    btn.setAttribute("aria-selected", on ? "true" : "false");
-  });
+function setDeploySideTab() {
+  state.deploySideTab = "vision";
   const vis = $("#side-deploy-vision");
   const co = $("#side-deploy-coinventor");
-  if (vis) vis.hidden = t !== "vision";
-  if (co) co.hidden = t !== "coinventor";
-  if (t === "coinventor") ensureCoInventor();
+  if (vis) vis.hidden = false;
+  if (co) co.hidden = false;
+  ensureCoInventor();
 }
 
 function ensureDeployScreenVisible() {
@@ -14899,6 +14888,7 @@ function ensureDeployScreenVisible() {
   if (ws) ws.classList.remove("active");
   if (ch) ch.classList.remove("active");
   hangupVoiceOnScreenChange(prevScreen, "deploy");
+  setDeploySideTab();
 }
 
 /** Pay Pilot fielding each attempt (fail still spends — retry costs again). */
@@ -17043,25 +17033,6 @@ function updateVision(opts = {}) {
   }
   updateChallengeVisionLabels();
 
-  const box = $("#vision-narratives");
-  if (box && state.screen === "workshop") {
-    const narratives = narrativesFromTechs(techs);
-    const pressureLine = Object.entries(state.pressure)
-      .map(([k, v]) => `${k} ${v}/5`)
-      .join(" · ");
-    const head = `<div class="narrative-card"><div class="src">${state.year}</div>Pressure: ${escapeHtml(pressureLine)}</div>`;
-    box.innerHTML =
-      head +
-      (narratives.length
-        ? narratives
-            .map(
-              (n) =>
-                `<div class="narrative-card"><div class="src">${escapeHtml(n.name)}</div>${escapeHtml(n.text)}</div>`
-            )
-            .join("")
-        : `<div class="narrative-card"><div class="src">Place</div>${escapeHtml(state.mission.scene.slice(0, 180))}</div>`);
-  }
-
   const onChallenge =
     opts.context === "challenge" ||
     state.screen === "challenge-step" ||
@@ -17151,8 +17122,12 @@ function updateVision(opts = {}) {
 }
 
 function syncDeveloperAiTraceTab() {
-  const tab = $("#tab-aitrace");
-  if (tab) tab.hidden = !state.developer;
+  const inspect = $("#tab-aitrace");
+  const vision = $("#tab-vision");
+  const tabs = inspect?.closest(".side-tabs") || vision?.closest(".side-tabs");
+  if (inspect) inspect.hidden = !state.developer;
+  if (vision) vision.hidden = !state.developer;
+  if (tabs) tabs.hidden = !state.developer;
   if (!state.developer && state.sideTab === "aitrace") setSideTab("vision");
 }
 
@@ -17247,18 +17222,18 @@ function renderAiTrace() {
 }
 
 function setSideTab(tab) {
-  const allowed = new Set(["vision", "coinventor", "aitrace"]);
+  if (tab === "coinventor") tab = "vision";
   if (tab === "aitrace" && !state.developer) tab = "vision";
-  if (!allowed.has(tab)) tab = "vision";
+  if (tab !== "aitrace") tab = "vision";
   state.sideTab = tab;
-  // Only invent-screen tabs use data-tab (not data-ch-tab)
   $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
   applyInventSidePanes();
-  if (tab === "vision" || isTutorSplitLayout()) {
+  if (tab === "vision") {
+    ensureCoInventor();
     requestAnimationFrame(() => {
       ensureVision();
       seedLearningVisionStill();
@@ -17266,33 +17241,25 @@ function setSideTab(tab) {
       else updateVision({ context: "invent" });
     });
   }
-  if (tab === "coinventor") ensureCoInventor();
   if (tab === "aitrace") renderAiTrace();
   refreshCoachMarks();
 }
 
-function setChallengeSideTab(tab) {
-  state.challengeSideTab = tab === "coinventor" ? "coinventor" : "vision";
-  $$(".side-tab[data-ch-tab]").forEach((btn) => {
-    const on = btn.dataset.chTab === state.challengeSideTab;
-    btn.classList.toggle("active", on);
-    btn.setAttribute("aria-selected", on ? "true" : "false");
-  });
+function setChallengeSideTab() {
+  state.challengeSideTab = "vision";
   const vision = $("#side-challenge-vision");
   const co = $("#side-challenge-coinventor");
-  if (vision) vision.hidden = state.challengeSideTab !== "vision";
-  if (co) co.hidden = state.challengeSideTab !== "coinventor";
-  if (state.challengeSideTab === "vision") {
-    requestAnimationFrame(() => {
-      ensureVision();
-      if (roomBridge.isRoom()) {
-        scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
-      } else {
-        updateVision({ context: "challenge", immediate: true });
-      }
-    });
-  }
-  if (state.challengeSideTab === "coinventor") ensureCoInventor();
+  if (vision) vision.hidden = false;
+  if (co) co.hidden = false;
+  ensureCoInventor();
+  requestAnimationFrame(() => {
+    ensureVision();
+    if (roomBridge.isRoom()) {
+      scheduleRoomVisionRefresh({ immediate: true, context: "challenge" });
+    } else {
+      updateVision({ context: "challenge", immediate: true });
+    }
+  });
 }
 
 function refreshChallengeVision(partialBeat, opts = {}) {
@@ -20956,7 +20923,11 @@ function bind() {
     coachChallenge("coach-challenge", q);
     $("#challenge-help-input").value = "";
   });
-  $("#btn-open-coinventor").addEventListener("click", () => setSideTab("coinventor"));
+  $("#btn-open-coinventor").addEventListener("click", () => {
+    setSideTab("vision");
+    ensureCoInventor();
+    $("#co-inventor-root")?.querySelector?.("textarea, input")?.focus?.();
+  });
   $("#btn-learn-tech").addEventListener("click", () => openLearnStack());
   $("#btn-regen-vision").addEventListener("click", () => {
     lastRoomVisionKey = "";
@@ -21004,12 +20975,6 @@ function bind() {
     if (!state.developer) return;
     renderAiTrace();
   });
-  $$(".side-tab[data-ch-tab]").forEach((btn) =>
-    btn.addEventListener("click", () => setChallengeSideTab(btn.dataset.chTab))
-  );
-  $$(".side-tab[data-dep-tab]").forEach((btn) =>
-    btn.addEventListener("click", () => setDeploySideTab(btn.dataset.depTab))
-  );
   $("#btn-regen-deploy-vision")?.addEventListener("click", () => {
     lastRoomVisionKey = "";
     updateVision({ immediate: true, force: true, context: "deploy" });
@@ -21203,6 +21168,7 @@ async function refreshDeveloperModeFromHealth() {
 export function init() {
   forgetLegacySparkKey();
   bindGlossaryTaps(document);
+  bindAllVisionSplits(document);
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();

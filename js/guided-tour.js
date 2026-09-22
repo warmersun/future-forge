@@ -313,14 +313,6 @@ export function resolveTourStep(raw) {
 
   // D — learning tutor (only before inventing)
   if (s.isLearning && s.tutorOn && noInventYet(s) && !s.focusedTechId) {
-    if (s.sideTab !== "coinventor") {
-      return step(
-        "D1",
-        "Meet the tutor",
-        "This lesson has a tutor. Open AI co-inventor — chat is free while Tutoring is on. Pick an emTech when you're ready to invent.",
-        sel('.side-tab[data-tab="coinventor"]')
-      );
-    }
     return step(
       "D2",
       "Talk to the tutor",
@@ -554,15 +546,8 @@ export function resolveTourStep(raw) {
     }
   }
 
-  // I — idle extras
-  if (s.isLearning && !s.tutorOn && s.sideTab === "coinventor") {
-    return step(
-      "I1",
-      "Tutor is paused",
-      "Resume tutoring anytime (free AP), or keep inventing — co-inventor chat costs 1 AP.",
-      sel("#co-resume-tutor")
-    );
-  }
+  // I — idle extras. Board actions outrank the always-visible co-inventor,
+  // so a paused tutor or unused chat cannot hide Lobby, Learn, or Look Ahead.
   if (s.lobbyVisible && s.will < 4 && !outOfAp(s) && s.budget >= 1) {
     return step(
       "I2",
@@ -587,20 +572,28 @@ export function resolveTourStep(raw) {
       sel("#hex-island-how")
     );
   }
-  if (!s.coinventorUsed && s.sideTab !== "coinventor") {
-    return step(
-      "I5",
-      "AI co-inventor",
-      "Stuck on the idea? The co-inventor can suggest a stack or check timing — first ask this turn costs 1 AP, then more help is free.",
-      sel('.side-tab[data-tab="coinventor"]')
-    );
-  }
   if (!s.waitUsed && s.pathway.timingLevel === "yellow") {
     return step(
       "I3",
       "Look Ahead",
       "Timing is tight but not blocked. Look Ahead if you want later-year capability (crisis will rise).",
       sel("#btn-wait")
+    );
+  }
+  if (s.isLearning && !s.tutorOn) {
+    return step(
+      "I1",
+      "Tutor is paused",
+      "Resume tutoring anytime (free AP), or keep inventing — co-inventor chat costs 1 AP.",
+      sel("#co-resume-tutor")
+    );
+  }
+  if (!s.coinventorUsed) {
+    return step(
+      "I5",
+      "AI co-inventor",
+      "Stuck on the idea? The co-inventor can suggest a stack or check timing — first ask this turn costs 1 AP, then more help is free.",
+      sel("#co-inventor-root")
     );
   }
 

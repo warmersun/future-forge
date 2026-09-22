@@ -89,7 +89,7 @@ export const CONCEPT_CARDS = [
     glossaryId: "art-of-the-possible",
     kicker: CONCEPT_KICKER,
     target: sel('.co-chip[data-mode="art-of-the-possible"]'),
-    openSideTab: "coinventor",
+    openSideTab: "vision",
   },
   {
     id: "learn",
@@ -180,7 +180,7 @@ export function resolveConceptCard(raw, opts = {}) {
     convergence: s.ui.convergenceOpen || Boolean(s.convergedTileId),
     pathway: s.placed >= 2 || (s.placed >= 1 && s.coverage !== "red"),
     "wait-vs-end-turn": s.ui.waitConfirmOpen || s.waitUsed,
-    "art-of-the-possible": Boolean(s.redInventionId) || s.sideTab === "coinventor",
+    "art-of-the-possible": Boolean(s.redInventionId),
     learn: Boolean(s.focusedTechId),
   };
 

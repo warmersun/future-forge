@@ -122,17 +122,17 @@ describe("resolveConceptCard triggers", () => {
     assert.equal(after.target.selector, "#btn-wait");
     assert.equal(after.skipDimmer, false);
   });
-  it("art-of-the-possible fires on a red tile or the co-inventor tab and opens that tab", () => {
+  it("art-of-the-possible fires on a red tile and keeps the stacked panel in view", () => {
     const seen = ["look-ahead", "honesty-bar", "convergence", "pathway", "wait-vs-end-turn"];
-    const c = resolveConceptCard(base({ sideTab: "coinventor" }), { seen });
+    const c = resolveConceptCard(base({ redInventionId: "inv-9" }), { seen });
     assert.equal(c.id, "art-of-the-possible");
-    assert.equal(c.openSideTab, "coinventor");
-    assert.equal(resolveConceptCard(base({ redInventionId: "inv-9" }), { seen }).id, "art-of-the-possible");
+    assert.equal(c.openSideTab, "vision");
+    assert.equal(c.target.selector, '.co-chip[data-mode="art-of-the-possible"]');
   });
 });
 
 describe("resolveConceptCard suppression", () => {
-  const hot = base({ focusedTechId: "solar", unplacedInventionCount: 1, sideTab: "coinventor" });
+  const hot = base({ focusedTechId: "solar", unplacedInventionCount: 1, redInventionId: "inv-9" });
   it("seen and muted both suppress, in order", () => {
     assert.equal(resolveConceptCard(hot, { seen: ["look-ahead"] }).id, "art-of-the-possible");
     assert.equal(resolveConceptCard(hot, { seen: ["look-ahead"], muted: new Set(["art-of-the-possible"]) }).id, "learn");

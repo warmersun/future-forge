@@ -141,19 +141,73 @@ describe("resolveTourStep", () => {
     );
   });
 
-  it("D1 opens the tutor tab on a learning quest before inventing", () => {
+  it("D2 points at the tutor after briefing on a learning quest", () => {
     const step = resolveTourStep(
       base({ isLearning: true, tutorOn: true, sideTab: "vision" })
     );
-    assert.equal(step.id, "D1");
-    assert.equal(step.target.selector, '.side-tab[data-tab="coinventor"]');
+    assert.equal(step.id, "D2");
+    assert.equal(step.target.selector, "#co-inventor-root");
   });
 
-  it("D2 stays on the tutor once that tab is open", () => {
+  it("D2 stays on the tutor once the panel is in view", () => {
     assert.equal(
       idOf(base({ isLearning: true, tutorOn: true, sideTab: "coinventor" })),
       "D2"
     );
+  });
+
+  it("a paused tutor does not hide lobby, Look Ahead, or the generic hint", () => {
+    const mid = {
+      focusedTechId: "ai",
+      focusedTechName: "AI",
+      placedInventionCount: 1,
+      hasSparkBatch: true,
+      spotlightTechId: "",
+      suggestedIds: [],
+      pathway: { overall: "red", bonds: "yellow", coverage: "yellow", timingLevel: "yellow" },
+    };
+    assert.equal(
+      idOf(base({ ...mid, isLearning: true, tutorOn: false })),
+      "I2"
+    );
+    assert.equal(
+      idOf(
+        base({
+          ...mid,
+          isLearning: true,
+          tutorOn: false,
+          lobbyVisible: false,
+          learnOpenedThisTurn: true,
+          coinventorUsed: false,
+        })
+      ),
+      "I3"
+    );
+    assert.equal(
+      idOf(
+        base({
+          ...mid,
+          isLearning: true,
+          tutorOn: false,
+          lobbyVisible: false,
+          learnOpenedThisTurn: true,
+          waitUsed: true,
+          coinventorUsed: true,
+        })
+      ),
+      "I1"
+    );
+    const co = resolveTourStep(
+      base({
+        ...mid,
+        lobbyVisible: false,
+        learnOpenedThisTurn: true,
+        waitUsed: true,
+        coinventorUsed: false,
+      })
+    );
+    assert.equal(co.id, "I5");
+    assert.equal(co.target.selector, "#co-inventor-root");
   });
 
   it("briefing beats the learning tutor hint", () => {
