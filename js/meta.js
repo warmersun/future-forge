@@ -691,7 +691,10 @@ const brandMarkImg =
     ? new Image()
     : { complete: false, naturalWidth: 0, decoding: "async", src: "" };
 brandMarkImg.decoding = "async";
-brandMarkImg.src = "assets/brand/ff-mark.png";
+brandMarkImg.src = "assets/brand/ff-mark-hex.png";
+
+/** Hex mark glyph on the padded 1024 plate (center ~half). */
+const BRAND_MARK_CROP = { sx: 220, sy: 236, sw: 584, sh: 560 };
 
 /** Future Forge plate when loaded; otherwise the old sunrise disc. */
 function drawBrandMark(ctx, cx, cy, r) {
@@ -705,7 +708,8 @@ function drawBrandMark(ctx, cx, cy, r) {
     if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, s, s, rad);
     else ctx.rect(x, y, s, s);
     ctx.clip();
-    ctx.drawImage(brandMarkImg, x, y, s, s);
+    const { sx, sy, sw, sh } = BRAND_MARK_CROP;
+    ctx.drawImage(brandMarkImg, sx, sy, sw, sh, x, y, s, s);
     ctx.restore();
     return;
   }

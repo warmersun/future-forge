@@ -231,7 +231,7 @@ body.ff-accounts .topbar-game {
   width: 3.1rem;
   height: 3.1rem;
   margin: 0 auto 0.55rem;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border-radius: 0.55rem;
   background:
     radial-gradient(circle at 50% 42%, rgba(255, 210, 138, 0.35), transparent 62%),
     #0b141b;
@@ -242,7 +242,7 @@ body.ff-accounts .topbar-game {
   display: block;
   width: 100%;
   height: 100%;
-  background: url("../assets/brand/ff-mark.svg") center / 86% no-repeat;
+  background: url("../assets/brand/ff-mark-hex.png") center / 190% no-repeat;
 }
 
 .cloud-portfolio.is-complete .cloud-portfolio-seal {
@@ -2096,31 +2096,17 @@ body.mp-hotseat .workshop-layout {
   color: var(--text);
 }
 
-/* Home hero: Future Forge by Warmer Sun (same mark as HUD product logo) */
-.title-logo {
-  --ws-sun: #ffe29a;
-  --ws-amber: #ff9f43;
-  --ws-coral: #ff6b4a;
-  --ws-cream: #fff4e6;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.9rem 1.1rem;
-  margin: 0 0 0.75rem;
-  text-align: left;
-}
-
-.title-logo-mark {
-  display: block;
-  width: 5.5rem;
-  height: 5.5rem;
-  object-fit: cover;
-  border-radius: 1.15rem;
-  box-shadow:
-    0 0 0 1px rgba(232, 161, 42, 0.32),
-    0 12px 32px rgba(0, 0, 0, 0.4);
+/* Home hero: mascot lockup is the product logo */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .title-logo-sun {
@@ -2131,9 +2117,9 @@ body.mp-hotseat .workshop-layout {
   background: radial-gradient(
     circle at 35% 35%,
     #fff8e7 0%,
-    var(--ws-sun) 28%,
-    var(--ws-amber) 62%,
-    var(--ws-coral) 100%
+    #ffe29a 28%,
+    #ff9f43 62%,
+    #ff6b4a 100%
   );
   box-shadow:
     0 0 0 1px rgba(255, 180, 100, 0.35),
@@ -2141,47 +2127,16 @@ body.mp-hotseat .workshop-layout {
     0 0 56px rgba(255, 107, 74, 0.22);
 }
 
-.title-logo-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-}
-
-#screen-title h1 {
-  margin: 0;
-  font-size: clamp(1.85rem, 5vw, 2.55rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  color: var(--text);
-}
-
 .title-logo-credit {
-  margin: 0;
+  margin: 0 0 1.1rem;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0.45rem;
   font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0.03em;
   color: rgba(247, 240, 230, 0.55);
-}
-
-@media (max-width: 420px) {
-  .title-logo {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .title-logo-text {
-    align-items: center;
-  }
-
-  .title-logo-credit {
-    justify-content: center;
-  }
 }
 
 .title-logo-link {
@@ -2204,18 +2159,14 @@ body.mp-hotseat .workshop-layout {
 }
 
 .title-mascots {
-  margin: 0.15rem auto 1.1rem;
-  max-width: min(420px, 88vw);
+  margin: 0 auto 0.2rem;
+  max-width: min(720px, 92vw);
 }
 
 .title-mascots img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: var(--radius);
-  box-shadow:
-    0 0 0 1px rgba(232, 161, 42, 0.22),
-    0 18px 48px rgba(0, 0, 0, 0.4);
 }
 
 /* Legacy class kept for any residual refs */
@@ -3654,76 +3605,31 @@ button.hud-year-btn.hud-year-pulse {
   flex-shrink: 0;
 }
 
-/* Product mark: sits between resources and Crisis (Warmer Sun palette) */
+/* Product lockup: Future Forge by Warmer Sun (art includes the words) */
 .hud-product {
-  --ws-sun: #ffe29a;
-  --ws-gold: #ffb347;
-  --ws-amber: #ff9f43;
-  --ws-coral: #ff6b4a;
-  --ws-cream: #fff4e6;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  display: block;
   flex: 0 0 auto;
-  min-width: 0;
-  padding: 0.15rem 0.35rem 0.15rem 0.2rem;
-  line-height: 1.15;
+  height: 2.65rem;
+  width: auto;
+  padding: 0;
+  line-height: 0;
+  text-decoration: none;
+}
+
+.hud-product img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.hud-product:focus-visible {
+  outline: 2px solid rgba(255, 159, 67, 0.7);
+  outline-offset: 2px;
 }
 
 /* Topbar brand slot: product logo replaces the old cyan brand-dot */
 .brand .hud-product {
   padding-left: 0;
-}
-
-.hud-product-sun {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 6px;
-  flex-shrink: 0;
-  background: url("../assets/brand/ff-mark.svg") center / cover no-repeat;
-  box-shadow: 0 0 0 1px rgba(232, 161, 42, 0.32);
-}
-
-.hud-product-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  min-width: 0;
-}
-
-.hud-product-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ws-cream);
-  white-space: nowrap;
-}
-
-.hud-product-credit {
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: rgba(247, 240, 230, 0.55);
-  white-space: nowrap;
-}
-
-.hud-product-link {
-  color: #ffd28a;
-  text-decoration: none;
-  font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
-}
-
-.hud-product-link:hover {
-  color: var(--ws-cream);
-  border-bottom-color: rgba(255, 210, 138, 0.55);
-}
-
-.hud-product-link:focus-visible {
-  outline: 2px solid rgba(255, 159, 67, 0.7);
-  outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /* Left brand slot on game topbars: show active-player chip and/or product logo */
@@ -3815,17 +3721,8 @@ body.mp-hotseat .hud-product {
 }
 
 @media (max-width: 720px) {
-  .hud-product-credit {
-    display: none;
-  }
-
-  .hud-product-title {
-    font-size: 0.75rem;
-  }
-
-  .hud-product-sun {
-    width: 1.45rem;
-    height: 1.45rem;
+  .hud-product {
+    height: 2.15rem;
   }
 }
 
