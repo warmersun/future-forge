@@ -28,6 +28,9 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* Modest horizontal breathing room (not full-bleed, not huge margins) */
   --page-gutter: clamp(0.75rem, 2vw, 1.25rem);
+  /* Taller lockup: keep the bar short, and size the account chip to this band */
+  --topbar-pad-y: 0.4rem;
+  --hud-logo-h: 2.65rem;
   /* Clerk Sign in / UserButton — match the workshop, not Clerk's light inputs */
   --clerk-color-primary: #a78bfa;
   --clerk-color-primary-foreground: #0c1220;
@@ -89,14 +92,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Optional Clerk account chip — hidden unless portal Clerk is on */
+/* Optional Clerk account chip — hidden unless portal Clerk is on.
+   Fixed, so it does not ride the topbar's flex centering. Match the bar
+   height (padding + logo) and center inside it. */
 #ff-account {
   position: fixed;
-  top: 0.75rem;
+  top: 0;
   right: var(--page-gutter);
   z-index: 90;
   display: flex;
   align-items: center;
+  height: calc(var(--topbar-pad-y) * 2 + var(--hud-logo-h));
   gap: 0.4rem;
 }
 
@@ -119,14 +125,16 @@ button:disabled {
 
 @media (max-width: 640px) {
   #ff-account {
-    top: 0.5rem;
     right: 0.5rem;
   }
 }
 
-/* Clear the maximized-board restore control in the upper-right corner */
+/* Fullscreen board covers the topbar. Pin the chip to the top corner
+   so it clears the restore control, instead of centering in the bar. */
 body.hex-board-expanded.ff-accounts #ff-account {
   top: 0;
+  height: auto;
+  align-items: flex-start;
   right: calc(var(--page-gutter) + 2.75rem);
 }
 
@@ -2311,7 +2319,7 @@ button.btn[hidden] {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem var(--page-gutter);
+  padding: var(--topbar-pad-y) var(--page-gutter);
   border-bottom: 1px solid var(--border);
   background: rgba(7, 11, 20, 0.85);
   backdrop-filter: blur(12px);
@@ -3609,7 +3617,7 @@ button.hud-year-btn.hud-year-pulse {
 .hud-product {
   display: block;
   flex: 0 0 auto;
-  height: 2.65rem;
+  height: var(--hud-logo-h);
   width: auto;
   padding: 0;
   line-height: 0;
@@ -3721,8 +3729,8 @@ body.mp-hotseat .hud-product {
 }
 
 @media (max-width: 720px) {
-  .hud-product {
-    height: 2.15rem;
+  :root {
+    --hud-logo-h: 2.15rem;
   }
 }
 
