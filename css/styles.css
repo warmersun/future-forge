@@ -8698,6 +8698,7 @@ button.linkish:hover {
   flex-direction: column;
   gap: 0.65rem;
   min-height: 160px;
+  container-type: size;
 }
 
 .co-msg {
@@ -8759,7 +8760,10 @@ button.linkish:hover {
 .co-bubble-md img.md-img {
   display: block;
   max-width: 100%;
+  max-height: min(52cqh, 16rem);
+  width: auto;
   height: auto;
+  object-fit: contain;
   border-radius: 8px;
   margin: 0.5rem 0;
   background: rgba(0, 0, 0, 0.2);
