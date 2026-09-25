@@ -10728,7 +10728,7 @@ button.linkish:hover {
 .quest-brief-recap-item {
   margin: 0;
 }
-.quest-brief-recap-title {
+.quest-brief .quest-brief-recap-title {
   margin: 0 0 0.2rem;
   font-size: 0.68rem;
   font-weight: 800;
