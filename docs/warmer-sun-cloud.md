@@ -131,7 +131,7 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 
 #### Access wording (source of truth)
 
-Open invent quests and the core table use **"No account needed to invent"** (signup optional). Learn Daily and other learning/lesson quests (quest IDs starting with `spotlight-`) and sponsored spotlights use **"Free signup. No card."**
+Core invent and quests with `access: 'open'` use **"No account needed to invent"** (signup optional). Learn Daily lesson quests and account-gated quests use **"Free signup. No card."**
 
 Other docs and marketing copy must link here instead of restating the rule.
 
