@@ -9,3 +9,5 @@ Owner posts. Do not count likes, impressions, or followers.
 ## Sentence (do not post until you have opened the live link yourself)
 
 If you want a way to put a breakthrough on a curve and invent with it, not another take: this is a free lesson in the browser, no account. You lead; the AI only advises. https://warmersun.com/forge/?q=spotlight-synbio-tideglass-high-2026
+
+**Note (2026-09-24):** This wording was inaccurate for spotlight/lesson quests, which require free signup. Future copy follows the [Access wording source of truth](../warmer-sun-cloud.md#access-wording-source-of-truth).
