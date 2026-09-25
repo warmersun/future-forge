@@ -4,7 +4,7 @@ Portable **Spotlight Quest** files for Future Forge.
 
 | Channel | How tiles get in |
 |---------|------------------|
-| **Sponsored / Learning** | Official catalog on **warmersun.com** (`/future-forge/quests/catalog.json`); the server downloads them |
+| **Sponsored / Learning** | Official catalog on **warmersun.com** (`/quests/catalog.json`); the server downloads them |
 | **Library** | Local `quests/` folder or browser **Import Quest…** |
 
 ## Pedagogy

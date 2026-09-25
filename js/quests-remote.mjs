@@ -1,6 +1,6 @@
 /**
  * Fetch official Sponsored / Learning quest tiles from a remote catalog
- * (default: warmersun.com/future-forge/quests/catalog.json).
+ * (default: warmersun.com/quests/catalog.json).
  *
  * Also accepts a local filesystem path to catalog.json (dev/offline).
  */
@@ -15,26 +15,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
 /**
- * Canonical public catalog (warmersun.com) — preferred once the full site republishes
- * with `future-forge/quests/`. Until then the fallback CDN below is used automatically.
+ * Canonical public catalog. Built by warmersun `scripts/publish-quests.sh`
+ * and mounted at /quests.
  */
 export const DEFAULT_QUESTS_REMOTE_URL =
-  "https://warmersun.com/future-forge/quests/catalog.json";
+  "https://warmersun.com/quests/catalog.json";
 
 /**
- * Interim permanent catalog (here.now) while full-site republish of warmersun.com
- * fails on large file sets. Same tile set as warmersun `future-forge/quests/`.
- */
-export const FALLBACK_QUESTS_REMOTE_URL =
-  "https://russet-waffle-sx4j.here.now/catalog.json";
-
-/**
- * Local checkout when present (dev machines with ~/dev/warmersun).
+ * Local checkout of the combined catalog (built by publish-quests.sh).
  */
 export function defaultLocalWarmersunCatalogPath() {
   const candidates = [
-    path.join(os.homedir(), "dev/warmersun/future-forge/quests/catalog.json"),
-    path.join(ROOT, "../warmersun/future-forge/quests/catalog.json"),
+    path.join(os.homedir(), "dev/warmersun/quests/catalog.json"),
+    path.join(ROOT, "../warmersun/quests/catalog.json"),
   ];
   for (const p of candidates) {
     try {
@@ -52,7 +45,7 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 /**
  * Resolve remote catalog URL or local path from env.
  * Empty / "0" / "off" / "false" disables remote fetch.
- * Unset: local warmersun checkout → warmersun.com → here.now fallback (see fetch).
+ * Unset: local combined catalog if present, else https://warmersun.com/quests/catalog.json.
  * @returns {string|null}
  */
 export function resolveQuestsRemoteUrl() {
@@ -77,8 +70,6 @@ export function resolveQuestsRemoteUrlCandidates(primary = resolveQuestsRemoteUr
   if (raw !== undefined) return [primary];
   const out = [primary];
   if (primary !== DEFAULT_QUESTS_REMOTE_URL) out.push(DEFAULT_QUESTS_REMOTE_URL);
-  if (primary !== FALLBACK_QUESTS_REMOTE_URL) out.push(FALLBACK_QUESTS_REMOTE_URL);
-  // unique preserve order
   return [...new Set(out.filter(Boolean))];
 }
 
