@@ -129,6 +129,12 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 
 **Idea.** Core invent (pick a theme, hex board, friends, surprise mission) stays open. The **catalog that we curate** — learning modules, sponsored spotlights — asks you to sign in. Reason: those are *our* drops, they cost us AI, and they only mean something if the same person can come back tomorrow.
 
+#### Access wording (source of truth)
+
+Open invent quests and the core table use **"No account needed to invent"** (signup optional). Learn Daily and other learning/lesson quests (quest IDs starting with `spotlight-`) and sponsored spotlights use **"Free signup. No card."**
+
+Other docs and marketing copy must link here instead of restating the rule.
+
 **How.**  
 - Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules = `account`.  
 - Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: **remote** Learning (and `access: account|paid` tiles) show a lock + Sign in. **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
