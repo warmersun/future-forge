@@ -7,7 +7,7 @@
  * Invent column stays title + board (tools stay live).
  */
 
-import { attachReadAloud, pruneDetachedReadAloud } from "./read-aloud.js";
+import { attachReadAloud, pruneDetachedReadAloud, stopReadAloudFor } from "./read-aloud.js";
 import { escapeHtml, renderMarkdownSafe } from "./md-lite.js";
 import { apiFetch } from "./auth.js";
 import { getClientSessionId } from "./client-session.js";
@@ -514,6 +514,21 @@ function paintLeftBrief(rec) {
   el.classList.add("quest-brief");
   el.classList.remove("quest-briefing-host");
   el.innerHTML = renderRecap(rec);
+  if (!el.dataset.recapFullToggle) {
+    el.dataset.recapFullToggle = "1";
+    // toggle does not bubble; capture on the scene element survives innerHTML paints.
+    el.addEventListener(
+      "toggle",
+      (ev) => {
+        const details = ev.target;
+        if (!(details instanceof HTMLDetailsElement)) return;
+        if (!details.open || !details.classList.contains("quest-brief-full")) return;
+        const clip = el.querySelector(".quest-brief-recap-speak");
+        if (clip) stopReadAloudFor(clip);
+      },
+      true
+    );
+  }
   const speak = el.querySelector(".quest-brief-recap-speak");
   if (speak) attachReadAloud(speak, { minChars: SPEAK_MIN });
   const full = el.querySelector(".quest-brief-full-body");

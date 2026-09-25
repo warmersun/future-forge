@@ -431,6 +431,15 @@ export function refreshReadAloud(contentEl) {
 }
 
 /**
+ * Stop only if this content element is the one currently speaking.
+ * @param {HTMLElement|null|undefined} contentEl
+ */
+export function stopReadAloudFor(contentEl) {
+  if (!contentEl || activeContent !== contentEl) return;
+  stopReadAloud();
+}
+
+/**
  * Stop any in-flight fetch / audio / browser speech and reset all buttons.
  */
 export function stopReadAloud() {

@@ -10739,7 +10739,8 @@ button.linkish:hover {
   font-weight: 500;
   color: #e8eef8;
 }
-.quest-brief-recap:has(.quest-brief-full[open]) .quest-brief-recap-speak {
+.quest-brief-recap:has(.quest-brief-full[open]) .quest-brief-recap-speak,
+.quest-brief-recap:has(.quest-brief-full[open]) > .quest-brief-recap-speak + .read-aloud-bar {
   display: none;
 }
 .quest-brief-full {
