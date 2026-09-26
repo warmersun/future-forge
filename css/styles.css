@@ -2583,6 +2583,21 @@ button.btn[hidden] {
   color: #6ee7b7;
 }
 
+.challenge-card .scenario-tag.next-lesson-tag {
+  color: #fde68a;
+  border-color: rgba(253, 230, 138, 0.55);
+  background: rgba(253, 230, 138, 0.12);
+}
+
+.challenge-card.is-suggested-lesson {
+  border-color: rgba(253, 230, 138, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.12);
+}
+
+.challenge-card.is-suggested-lesson .cta {
+  color: #fde68a;
+}
+
 .challenge-card .stakeholder-line {
   font-size: 0.8rem;
   color: var(--text-mute);

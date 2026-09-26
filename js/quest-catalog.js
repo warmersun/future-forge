@@ -334,6 +334,91 @@ export function catalogTopLevel(entries) {
 }
 
 /**
+ * After a learning lesson ends, offer the lesson list for that same module.
+ * Standalone lessons (no sibling path) return null.
+ *
+ * @param {object|null|undefined} mission
+ * @param {object[]} [groups] result of groupLearningModules
+ * @param {{ solvedIds?: Set<string> }} [opts]
+ * @returns {{
+ *   moduleKey: string,
+ *   module: string,
+ *   hasLaterLesson: boolean,
+ *   nextId: string,
+ *   nextTitle: string,
+ * }|null}
+ */
+export function sameModuleLessonOffer(mission, groups, opts = {}) {
+  if (!mission || mission.isLearningModule !== true) return null;
+  const title = typeof mission.module === "string" ? mission.module.trim() : "";
+  if (!title) return null;
+  const list = Array.isArray(groups) ? groups : [];
+  const missionId = String(mission.id || "");
+  const solvedIds = opts.solvedIds instanceof Set ? opts.solvedIds : null;
+  const group =
+    (missionId
+      ? list.find((g) =>
+          (g.entries || []).some(
+            (e) => String(e.id || e.mission?.id || "") === missionId
+          )
+        )
+      : null) ||
+    list.find((g) => g.key === title || g.module === title) ||
+    null;
+
+  if (!group) {
+    const total = Number(mission.totalLessons);
+    if (!(Number.isFinite(total) && total >= 2)) return null;
+    const lesson = Number(mission.lesson);
+    return {
+      moduleKey: title,
+      module: title,
+      hasLaterLesson: Number.isFinite(lesson) && lesson < total,
+      nextId: "",
+      nextTitle: "",
+    };
+  }
+
+  const n = group.entries?.length || 0;
+  const total = Number(group.totalLessons) || n;
+  if (!group.wrapper && n < 2 && total < 2) return null;
+
+  const currentLesson = Number(mission.lesson);
+  const laterEntries = (group.entries || []).filter((e) => {
+    if (String(e.id || e.mission?.id || "") === missionId) return false;
+    const ln = Number(e.mission?.lesson);
+    return (
+      Number.isFinite(ln) &&
+      Number.isFinite(currentLesson) &&
+      ln > currentLesson
+    );
+  });
+  const unsolvedLater = solvedIds
+    ? laterEntries.filter((e) => {
+        const id = String(e.id || e.mission?.id || "");
+        return id && !solvedIds.has(id);
+      })
+    : laterEntries;
+  const next = unsolvedLater[0] || null;
+  const hasLaterLesson =
+    Boolean(next) ||
+    (laterEntries.length === 0 &&
+      Number.isFinite(currentLesson) &&
+      Number.isFinite(total) &&
+      currentLesson < total);
+
+  return {
+    moduleKey: String(group.key || title),
+    module: String(group.module || title),
+    hasLaterLesson,
+    nextId: next ? String(next.id || next.mission?.id || "") : "",
+    nextTitle: next
+      ? String(next.title || next.mission?.title || "").trim()
+      : "",
+  };
+}
+
+/**
  * Hub meta counts: modules count as 1, nested lessons do not.
  *
  * @param {{ sponsored: object[], learning: object[], library: object[] }} parts

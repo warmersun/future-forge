@@ -224,6 +224,7 @@ import {
   groupLearningModules,
   catalogTopLevel,
   catalogHubCounts,
+  sameModuleLessonOffer,
 } from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
 import {
@@ -5246,7 +5247,77 @@ function openQuestHub() {
 function openQuestCatalog(kind, opts = {}) {
   state.questCatalogKind = kind;
   state.questCatalogModuleKey = opts.moduleKey ?? null;
+  state.questCatalogSuggestId = opts.suggestId || null;
   showScreen("quest-catalog");
+}
+
+/**
+ * Solo learning lesson that belongs to a module: offer its lesson list.
+ * @returns {{ kind: string, moduleKey: string, module: string, hasLaterLesson: boolean, nextId: string, nextTitle: string }|null}
+ */
+function learningModuleOutcomeOffer() {
+  const m = state.mission;
+  if (!m || m.isLearningModule !== true) return null;
+  if (isMultipartyOutcome()) return null;
+  const title = typeof m.module === "string" ? m.module.trim() : "";
+  if (!title) return null;
+
+  const parts = partitionCatalogQuests();
+  const pools = {
+    library: parts.library,
+    sponsored: parts.sponsored,
+    learning: parts.learning,
+  };
+  const preferred =
+    m.source === "hosted" || m.source === "imported"
+      ? "library"
+      : isSponsoredMission(m)
+        ? "sponsored"
+        : "learning";
+  const order = [preferred, "learning", "sponsored", "library"].filter(
+    (k, i, all) => all.indexOf(k) === i
+  );
+  const missionId = String(m.id || "");
+
+  /** @type {string|null} */
+  let kind = null;
+  /** @type {object[]} */
+  let groups = [];
+  for (const k of order) {
+    const grouped = groupLearningModules(
+      (pools[k] || []).filter((e) => isLearningEntry(e))
+    );
+    const contains = missionId
+      ? grouped.some((g) =>
+          (g.entries || []).some(
+            (e) => String(e.id || e.mission?.id || "") === missionId
+          )
+        )
+      : false;
+    if (contains) {
+      kind = k;
+      groups = grouped;
+      break;
+    }
+  }
+  if (!kind) {
+    for (const k of order) {
+      const grouped = groupLearningModules(
+        (pools[k] || []).filter((e) => isLearningEntry(e))
+      );
+      if (grouped.some((g) => g.key === title || g.module === title)) {
+        kind = k;
+        groups = grouped;
+        break;
+      }
+    }
+  }
+
+  const offer = sameModuleLessonOffer(m, groups, {
+    solvedIds: state.solvedMissionIds,
+  });
+  if (!offer) return null;
+  return { ...offer, kind: kind || preferred };
 }
 
 function renderQuestHub() {
@@ -5781,26 +5852,32 @@ function catalogCardHtml(entry, kind, opts = {}) {
       ? place
       : [g?.title || entry.globalId || "", place].filter(Boolean).join(" · ");
   const locked = catalogNeedsAccount(entry) && !isClerkSignedIn();
-  const cta =
-    locked
-      ? "Sign in to play →"
+  const suggested =
+    Boolean(opts.suggestId) && String(opts.suggestId) === String(entry.id);
+  const cta = locked
+    ? "Sign in to play →"
+    : suggested
+      ? "Next lesson →"
       : missionPickSession
         ? "Use for friends game →"
         : solved
           ? "Play again →"
           : "Play this Quest →";
+  const nextTag = suggested
+    ? `<span class="scenario-tag next-lesson-tag" title="Next lesson in this module">Next</span>`
+    : "";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
       <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
         solved ? "solved" : ""
-      }">
+      }${suggested ? " is-suggested-lesson" : ""}">
         <span class="card-visual" aria-hidden="true">
           <img src="${escapeHtml(img)}" alt="" loading="lazy" width="640" height="360" />
         </span>
         <span class="card-body">
           ${
-            badges
-              ? `<span class="num">${badges}</span>`
+            badges || nextTag
+              ? `<span class="num">${nextTag}${badges}</span>`
               : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
           }
           <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
@@ -6019,7 +6096,20 @@ function paintModuleDetail(grid, group, kind, els) {
   const host = grid.querySelector("#catalog-module-lessons");
   const lessons = group.entries || [];
   if (lessons.length && host) {
-    paintCatalogEntries(host, lessons, lessonKind, { groupBy: null });
+    paintCatalogEntries(host, lessons, lessonKind, {
+      groupBy: null,
+      suggestId: state.questCatalogSuggestId || "",
+    });
+    const suggestId = state.questCatalogSuggestId;
+    if (suggestId && typeof host.querySelector === "function") {
+      const sel =
+        typeof CSS !== "undefined" && CSS.escape
+          ? CSS.escape(String(suggestId))
+          : String(suggestId).replace(/"/g, "");
+      host.querySelector(`[data-catalog-id="${sel}"]`)?.scrollIntoView?.({
+        block: "nearest",
+      });
+    }
   } else if (host) {
     host.innerHTML = `<p class="empty-hint muted">No lessons loaded for this module yet.</p>`;
   }
@@ -6064,7 +6154,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
   const groupBy = catalogGroupByIfUseful(entries, opts.groupBy || null);
   /** @type {object[]} */
   let flat = entries;
-  const cardOpts = { groupBy };
+  const cardOpts = { groupBy, suggestId: opts.suggestId || "" };
 
   if (groupBy === "emTech") {
     const sections = groupCatalogByEmTech(entries);
@@ -15800,14 +15890,21 @@ function setOutcomeBtnVisible(el, on) {
   el.disabled = !on;
 }
 
+function hideOutcomeNextLesson(btn) {
+  setOutcomeBtnVisible(btn, false);
+  if (btn) btn.style.display = "none";
+}
+
 function applyOutcomeNextChallengeChrome() {
   applyOutcomeCloudSaveChrome();
   const retry = $("#btn-outcome-retry");
   const neu = $("#btn-outcome-new");
+  const nextLesson = $("#btn-outcome-next-lesson");
   const pick = $("#btn-outcome-rematch-pick");
   const wait = $("#outcome-rematch-wait");
   const leave = $("#btn-outcome-leave-room");
   const hint = $("#outcome-actions-hint");
+  hideOutcomeNextLesson(nextLesson);
   const roomMp = isRoomMultipartyOutcome();
   const hotseatMp = isHotseatMultipartyOutcome() && !roomMp;
   const multi = roomMp || hotseatMp || isMultipartyOutcome();
@@ -15951,6 +16048,32 @@ function applyOutcomeNextChallengeChrome() {
     retry.textContent = "Continue this Quest";
     neu.textContent = "Leave Quest";
     setHint("");
+  }
+
+  const offer = learningModuleOutcomeOffer();
+  if (offer && nextLesson) {
+    nextLesson.style.display = "";
+    setOutcomeBtnVisible(nextLesson, true);
+    nextLesson.textContent = offer.hasLaterLesson
+      ? "Pick next lesson"
+      : "Module lessons";
+    nextLesson.title = offer.hasLaterLesson
+      ? `Open ${offer.module} and pick the next lesson`
+      : `Open ${offer.module} and pick a lesson`;
+    if (kind === "win") {
+      nextLesson.classList.add("btn-primary");
+      nextLesson.classList.remove("btn-secondary");
+      neu.classList.remove("btn-primary");
+      neu.classList.add("btn-secondary");
+      setHint(
+        offer.hasLaterLesson
+          ? `Lesson held. Pick the next lesson in ${offer.module}.`
+          : `Lesson held. Pick a lesson in ${offer.module}.`
+      );
+    } else {
+      nextLesson.classList.add("btn-secondary");
+      nextLesson.classList.remove("btn-primary");
+    }
   }
 }
 
@@ -21006,6 +21129,18 @@ function bind() {
     }
     // Leave Quest → quest hub (game continues)
     openQuestHub();
+  });
+  $("#btn-outcome-next-lesson")?.addEventListener("click", () => {
+    if (isMultipartyOutcome()) return;
+    const offer = learningModuleOutcomeOffer();
+    if (!offer) {
+      openQuestHub();
+      return;
+    }
+    openQuestCatalog(offer.kind, {
+      moduleKey: offer.moduleKey,
+      suggestId: offer.nextId || null,
+    });
   });
   $("#btn-outcome-retry").addEventListener("click", () => {
     if (isMultipartyOutcome()) {

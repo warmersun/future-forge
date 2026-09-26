@@ -13,6 +13,7 @@ import {
   groupLearningModules,
   catalogTopLevel,
   catalogHubCounts,
+  sameModuleLessonOffer,
 } from "./quest-catalog.js";
 
 function lesson(over = {}) {
@@ -308,6 +309,56 @@ describe("catalogNeedsAccount / Library source", () => {
     imported.mission.access = "account";
     assert.equal(catalogNeedsAccount(hosted, { clerkReady: true }), false);
     assert.equal(catalogNeedsAccount(imported, { clerkReady: true }), false);
+  });
+
+  it("offers the same module after a learning lesson", () => {
+    const lessons = [1, 2, 3, 4].map((n) =>
+      lesson({ id: `lesson-${n}`, lesson: n, title: `Lesson ${n}` })
+    );
+    const groups = groupLearningModules([wrapper(), ...lessons]);
+    const offer = sameModuleLessonOffer(lessons[0].mission, groups);
+    assert.equal(offer.module, "Same-day dollars");
+    assert.equal(offer.moduleKey, "Same-day dollars");
+    assert.equal(offer.hasLaterLesson, true);
+    assert.equal(offer.nextId, "lesson-2");
+    assert.equal(offer.nextTitle, "Lesson 2");
+
+    const last = sameModuleLessonOffer(lessons[3].mission, groups);
+    assert.equal(last.hasLaterLesson, false);
+    assert.equal(last.nextId, "");
+
+    assert.equal(sameModuleLessonOffer({ title: "Theme quest" }, groups), null);
+
+    const solo = lesson({
+      id: "only",
+      module: "One-off",
+      lesson: 1,
+      totalLessons: 1,
+    });
+    assert.equal(
+      sameModuleLessonOffer(solo.mission, groupLearningModules([solo])),
+      null
+    );
+
+    const offline = sameModuleLessonOffer(
+      lesson({ id: "lesson-1", lesson: 1, totalLessons: 4 }).mission,
+      []
+    );
+    assert.equal(offline.hasLaterLesson, true);
+    assert.equal(offline.moduleKey, "Same-day dollars");
+    assert.equal(offline.nextId, "");
+  });
+
+  it("skips solved later lessons when choosing the next one", () => {
+    const lessons = [1, 2, 3].map((n) =>
+      lesson({ id: `lesson-${n}`, lesson: n, title: `Lesson ${n}` })
+    );
+    const groups = groupLearningModules(lessons);
+    const offer = sameModuleLessonOffer(lessons[0].mission, groups, {
+      solvedIds: new Set(["lesson-1", "lesson-2"]),
+    });
+    assert.equal(offer.nextId, "lesson-3");
+    assert.equal(offer.nextTitle, "Lesson 3");
   });
 
   it("locks remote learning when Clerk is ready", () => {
