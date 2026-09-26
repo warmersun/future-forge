@@ -2104,7 +2104,7 @@ body.mp-hotseat .workshop-layout {
   color: var(--text);
 }
 
-/* Home hero: mascot lockup is the product logo */
+/* Home hero: product lockup (art includes the words) */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -2135,46 +2135,23 @@ body.mp-hotseat .workshop-layout {
     0 0 56px rgba(255, 107, 74, 0.22);
 }
 
-.title-logo-credit {
-  margin: 0 0 1.1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: rgba(247, 240, 230, 0.55);
+.title-logo {
+  display: block;
+  margin: 0 auto 1.1rem;
+  max-width: min(440px, 88vw);
+  line-height: 0;
 }
 
-.title-logo-link {
-  color: #ffd28a;
-  text-decoration: none;
-  font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
-}
-
-.title-logo-link:hover {
-  color: #fff4e6;
-  border-bottom-color: rgba(255, 210, 138, 0.55);
-}
-
-.title-logo-link:focus-visible {
-  outline: 2px solid rgba(255, 159, 67, 0.7);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-.title-mascots {
-  margin: 0 auto 0.2rem;
-  max-width: min(720px, 92vw);
-}
-
-.title-mascots img {
+.title-logo img {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.title-logo:focus-visible {
+  outline: 2px solid rgba(255, 159, 67, 0.7);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 /* Legacy class kept for any residual refs */
