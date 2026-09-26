@@ -829,6 +829,27 @@ function syncRulesWeather(board, opts = {}) {
 }
 
 /**
+ * Settled cache whose invention tiles still exist and still hash to this
+ * fingerprint (on the board or back in the tray). In-flight rows are not
+ * current — a later place must score, not reuse empty zeros.
+ * @param {object|null|undefined} board
+ * @param {string} fp
+ */
+export function pathwayImpactStillCurrent(board, fp) {
+  const row = board?.pathwayImpacts?.[fp];
+  if (!row || row.pending) return false;
+  const ids = Array.isArray(row.inventionIds) ? row.inventionIds : [];
+  if (!ids.length) return false;
+  const inventions = [];
+  for (const id of ids) {
+    const t = board?.tiles?.[id];
+    if (!t || t.kind !== TILE_KIND.invention) return false;
+    inventions.push(t);
+  }
+  return pathwayContentFingerprint(inventions, board) === fp;
+}
+
+/**
  * Apply cached pathway deltas to pressure + hex lamps.
  * Instant — no AI. Sets lampPending on givens reached by pending fingerprints.
  *
@@ -907,10 +928,13 @@ export function applyPathwayPressure(board, opts = {}) {
     };
   });
 
-  // Drop impacts for fingerprints no longer on the board
+  // Drop scores that are still in flight, whose tiles are gone, or whose
+  // content changed. Keep a settled fingerprint when its island leaves the
+  // board so placing that same invent again reuses the delta.
   const live = new Set(pathways.map((p) => p.fingerprint));
   for (const fp of Object.keys(next.pathwayImpacts)) {
-    if (!live.has(fp)) delete next.pathwayImpacts[fp];
+    if (live.has(fp)) continue;
+    if (!pathwayImpactStillCurrent(next, fp)) delete next.pathwayImpacts[fp];
   }
 
   // Sum crisis deltas per crisis from pathways that reach it

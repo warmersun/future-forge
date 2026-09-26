@@ -93,6 +93,7 @@ import {
   clampConcernLamp,
   concernInventChanged,
   listInventionPathways,
+  pathwayContentFingerprint,
   islandHowKey,
   resolveIslandHow,
   islandHowForAi,
@@ -2017,8 +2018,13 @@ export function createHexWorkshop(api) {
       if (job && job.abort.signal === signal) {
         pathwayJobs.delete(fp);
       }
-      const impact = board()?.pathwayImpacts?.[fp];
+      const b = board();
+      const impact = b?.pathwayImpacts?.[fp];
+      const stillPlaced = listInventionPathways(b).some(
+        (invs) => pathwayContentFingerprint(invs, b) === fp
+      );
       if (
+        stillPlaced &&
         (impact?.pending || impact?.concernsPending) &&
         !pathwayJobs.has(fp)
       ) {

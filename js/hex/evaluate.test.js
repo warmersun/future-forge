@@ -1412,6 +1412,91 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.equal(applied.displayPressure.Trust, 2); // 3 + (-1)
   });
 
+  it("lifting and replacing the same invent reuses the settled crisis delta", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    const local = board.tiles["crisis-local"];
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Corridor sensors alert crews before flood crest.",
+        year: 2026,
+        timingLevel: "yellow",
+      })
+    );
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1], board);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      crisisReasons: {
+        local: "Sensors buy time on this block.",
+        global: "",
+        support: "",
+      },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    let applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.displayPressure.Floods, 2);
+    assert.equal(applied.pathways[0].needsScore, false);
+
+    board = liftTile(applied.board, "ai1").board;
+    applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways.length, 0);
+    assert.equal(applied.displayPressure.Floods, 3);
+    assert.equal(applied.board.pathwayImpacts[fp].crisisDelta.local, -1);
+    assert.equal(applied.board.pathwayImpacts[fp].pending, false);
+
+    board = placeOk(applied.board, "ai1", local.q - 1, local.r);
+    applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.pathways.length, 1);
+    assert.equal(applied.pathways[0].fingerprint, fp);
+    assert.equal(applied.pathways[0].needsScore, false);
+    assert.equal(applied.displayPressure.Floods, 2);
+    assert.equal(
+      applied.board.pathwayImpacts[fp].crisisReasons.local,
+      "Sensors buy time on this block."
+    );
+  });
+
+  it("discarding an invent drops its cached crisis delta", () => {
+    let board = seedCrisisTiles({
+      crisisRoles: ["local"],
+      pressure: { Floods: 3 },
+    });
+    const local = board.tiles["crisis-local"];
+    board = addTile(
+      board,
+      mintInventionTile({
+        id: "ai1",
+        techId: "ai",
+        howText: "Corridor sensors alert crews before flood crest.",
+        year: 2026,
+        timingLevel: "yellow",
+      })
+    );
+    board = placeOk(board, "ai1", local.q - 1, local.r);
+    const fp = pathwayContentFingerprint([board.tiles.ai1], board);
+    board.pathwayImpacts[fp] = {
+      inventionIds: ["ai1"],
+      crisisDelta: { local: -1, global: 0, support: 0 },
+      concerns: {},
+      pending: false,
+      concernKey: "",
+    };
+    board = liftTile(board, "ai1").board;
+    board = discardTile(board, "ai1").board;
+    const applied = applyPathwayPressure(board, { winMax: { Floods: 2 } });
+    assert.equal(applied.board.pathwayImpacts[fp], undefined);
+    assert.equal(applied.displayPressure.Floods, 3);
+  });
+
   it("splitting a chain creates a new fingerprint that needs score", () => {
     let board = seedCrisisTiles({
       crisisRoles: ["local"],
@@ -1461,7 +1546,14 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.equal(applied.pathways[0].fingerprint, soloFp);
     assert.equal(applied.pathways[0].needsScore, true);
     assert.equal(applied.board.pathwayImpacts[soloFp].pending, true);
-    assert.equal(applied.board.pathwayImpacts[chainFp], undefined);
+    // The pair's settled score stays cached so docking them together again
+    // does not ask for a new delta. It is not applied while they are split.
+    assert.equal(applied.board.pathwayImpacts[chainFp].crisisDelta.local, -1);
+    assert.equal(
+      applied.pathways.some((p) => p.fingerprint === chainFp),
+      false
+    );
+    assert.equal(applied.displayPressure.Floods, 3);
   });
 
   it("isolated invention needs score but does not spin crisis lamps", () => {
