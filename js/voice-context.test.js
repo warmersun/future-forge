@@ -242,6 +242,52 @@ describe("voiceContextFingerprint", () => {
     assert.notEqual(withConv, retitled);
   });
 
+  it("changes when a challenger concern tile is placed, not when a crisis meter is", () => {
+    const base = voiceContextFingerprint(board);
+    const crisis = voiceContextFingerprint({
+      ...board,
+      hexBoard: {
+        ...board.hexBoard,
+        givens: [{ id: "crisis-local", kind: "crisis", name: "Floods", lamp: "red", q: 0, r: 0 }],
+      },
+    });
+    assert.equal(base, crisis);
+    const placed = {
+      id: "concern-moloch",
+      kind: "concern",
+      angle: "moloch",
+      lamp: "red",
+      q: 0,
+      r: 4,
+      challengeSpeech: "Freeriders eat the pilot.",
+      challengeQuestion: "Who defects?",
+      playerAnswer: "",
+    };
+    const withConcern = voiceContextFingerprint({
+      ...board,
+      hexBoard: { ...board.hexBoard, givens: [placed] },
+    });
+    assert.notEqual(base, withConcern);
+    const same = voiceContextFingerprint({
+      ...board,
+      hexBoard: { ...board.hexBoard, givens: [{ ...placed, name: "Moloch" }] },
+    });
+    assert.equal(withConcern, same);
+    const answered = voiceContextFingerprint({
+      ...board,
+      hexBoard: {
+        ...board.hexBoard,
+        givens: [{ ...placed, playerAnswer: "A bonded escrow pays only after proof." }],
+      },
+    });
+    assert.notEqual(withConcern, answered);
+    const offBoard = voiceContextFingerprint({
+      ...board,
+      hexBoard: { ...board.hexBoard, givens: [{ ...placed, q: null, r: null }] },
+    });
+    assert.equal(base, offBoard);
+  });
+
   it("changes when only metricsPending flips", () => {
     const base = voiceContextFingerprint(board);
     const pending = voiceContextFingerprint({ ...board, metricsPending: true });

@@ -4021,16 +4021,28 @@ function summarizeHexBoardForAi(board) {
       })),
     givens: tiles
       .filter((t) => t.kind === "crisis" || t.kind === "concern")
-      .map((t) => ({
-        id: t.id,
-        kind: t.kind,
-        name: t.name,
-        role: t.role || null,
-        angle: t.angle || null,
-        lamp: t.lamp,
-        q: t.q,
-        r: t.r,
-      })),
+      .map((t) => {
+        const row = {
+          id: t.id,
+          kind: t.kind,
+          name: t.name,
+          role: t.role || null,
+          angle: t.angle || null,
+          lamp: t.lamp,
+          q: t.q,
+          r: t.r,
+        };
+        if (t.kind !== "concern") return row;
+        const speech = String(t.challengeSpeech || t.analysis || "").trim().slice(0, 500);
+        const question = String(t.challengeQuestion || "").trim().slice(0, 300);
+        const answer = String(t.playerAnswer || "").trim().slice(0, 400);
+        return {
+          ...row,
+          challengeSpeech: speech || null,
+          challengeQuestion: question || null,
+          playerAnswer: answer || null,
+        };
+      }),
     pathways,
     convergences: convergencesForAi(board, (id) => techById(id)?.name || ""),
   };

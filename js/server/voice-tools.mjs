@@ -108,7 +108,7 @@ export function handleVoiceTool(name, args, context = {}) {
           ok: false,
           retry: true,
           error: "metrics_recalculating",
-          hint: "Meters are being re-checked. Call get_invent_state again shortly. Do not quote meter levels.",
+          hint: "Meters are being re-checked. Call get_invent_state again shortly. Do not quote meter levels or concern light colors.",
           state: inventStateSnapshot(context),
         },
         proposals: null,

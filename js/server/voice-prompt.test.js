@@ -10,6 +10,7 @@ import {
   instructionSectionHeadings,
   SNAPSHOT_TECH_MAX,
   inventStateSnapshot,
+  listVoiceConcerns,
   voiceToolSchemas,
 } from "./voice-prompt.mjs";
 
@@ -110,6 +111,78 @@ describe("buildVoiceInstructions", () => {
     assert.equal(snap.convergences[0].factor, 1.25);
   });
 
+  it("names placed challenger concern tiles and stays quiet about ones not on the board", () => {
+    const plain = buildVoiceInstructions(hexCtx);
+    assert.match(plain, /No challenger concern tiles are on the board yet/);
+    assert.doesNotMatch(plain, /Moloch/);
+    assert.deepEqual(inventStateSnapshot(hexCtx).concerns, []);
+    assert.deepEqual(listVoiceConcerns(hexCtx), []);
+
+    const ctx = {
+      ...hexCtx,
+      hexBoard: {
+        ...hexCtx.hexBoard,
+        givens: [
+          {
+            id: "crisis-local",
+            kind: "crisis",
+            name: "Floods",
+            role: "local",
+            lamp: "red",
+            q: 0,
+            r: 0,
+          },
+          {
+            id: "concern-moloch",
+            kind: "concern",
+            name: "Moloch",
+            angle: "moloch",
+            lamp: "red",
+            q: 0,
+            r: 4,
+            challengeSpeech: "Freeriders eat the pilot.",
+            challengeQuestion: "Who defects?",
+            playerAnswer: "A bonded escrow pays only after proof.",
+          },
+          {
+            id: "concern-nature",
+            kind: "concern",
+            angle: "nature",
+            lamp: "yellow",
+            q: null,
+            r: null,
+            challengeSpeech: "Not placed yet.",
+          },
+        ],
+      },
+    };
+    const text = buildVoiceInstructions(ctx);
+    assert.match(text, /Challenger concern tiles on the board/);
+    assert.match(text, /Moloch, light red/);
+    assert.match(text, /Freeriders eat the pilot/);
+    assert.match(text, /Question: Who defects\?/);
+    assert.match(text, /Written answer: A bonded escrow pays only after proof/);
+    assert.match(text, /Do not claim a challenger that is not listed/);
+    assert.doesNotMatch(text, /Not placed yet/);
+    assert.doesNotMatch(text, /Mother Nature/);
+    assert.doesNotMatch(text, /Floods, light/);
+    const snap = inventStateSnapshot(ctx);
+    assert.equal(snap.concerns.length, 1);
+    assert.equal(snap.concerns[0].id, "concern-moloch");
+    assert.equal(snap.concerns[0].angle, "moloch");
+    assert.equal(snap.concerns[0].lamp, "red");
+    assert.match(snap.concerns[0].speech, /Freeriders/);
+    assert.equal(snap.concerns[0].question, "Who defects?");
+    assert.match(snap.concerns[0].answer, /escrow/);
+
+    const pending = buildVoiceInstructions({ ...ctx, metricsPending: true });
+    assert.match(pending, /Moloch/);
+    assert.match(pending, /Who defects\?/);
+    assert.doesNotMatch(pending, /light red/);
+    assert.match(pending, /Do not quote concern light colors/);
+    assert.equal(inventStateSnapshot({ ...ctx, metricsPending: true }).concerns[0].lamp, null);
+  });
+
   it("omits crisis-meter levels while metrics are being re-checked", () => {
     const text = buildVoiceInstructions({ ...hexCtx, metricsPending: true });
     assert.match(text, /being re-checked/);
@@ -145,10 +218,26 @@ describe("buildVoiceInstructions", () => {
 });
 
 describe("buildVoiceKeyterms", () => {
-  it("includes place, crises, and tech names with caps", () => {
-    const terms = buildVoiceKeyterms(hexCtx);
+  it("includes place, crises, challengers, and tech names with caps", () => {
+    const terms = buildVoiceKeyterms({
+      ...hexCtx,
+      hexBoard: {
+        ...hexCtx.hexBoard,
+        givens: [
+          {
+            id: "concern-moloch",
+            kind: "concern",
+            name: "Moloch",
+            angle: "moloch",
+            q: 1,
+            r: 0,
+          },
+        ],
+      },
+    });
     assert.ok(terms.includes("Rotterdam"));
     assert.ok(terms.includes("Floods"));
+    assert.ok(terms.includes("Moloch"));
     assert.ok(terms.includes("Synthetic Biology"));
     assert.ok(terms.includes("synbio"));
     assert.ok(terms.length <= KEYTERM_MAX);

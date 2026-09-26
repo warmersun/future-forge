@@ -103,8 +103,100 @@ export function listPressure(pressure) {
   return [];
 }
 
+const VOICE_CONCERN_CAP = 4;
+const VOICE_CONCERN_SPEECH = 220;
+const VOICE_CONCERN_QUESTION = 180;
+const VOICE_CONCERN_ANSWER = 180;
+
+const CONCERN_NAMES = {
+  nature: "Mother Nature",
+  moloch: "Moloch",
+  ethicist: "Ethicist",
+  stakeholder: "Stakeholder",
+};
+
 /**
- * ASR bias terms: place, crises, selected + available emTech names.
+ * Placed challenger tiles. Off-board mints and crisis meters stay out.
+ * @param {object|null|undefined} row
+ */
+function concernOnBoard(row) {
+  if (!row || typeof row !== "object") return false;
+  if (String(row.kind || "") !== "concern") return false;
+  if (row.q == null || row.r == null || row.q === "" || row.r === "") return false;
+  return Number.isFinite(Number(row.q)) && Number.isFinite(Number(row.r));
+}
+
+/**
+ * @param {unknown} raw
+ */
+function concernLamp(raw) {
+  const lamp = String(raw || "").trim().toLowerCase();
+  return lamp === "red" || lamp === "yellow" || lamp === "green" ? lamp : "";
+}
+
+/**
+ * Challenger concern tiles already on the hex summary (lean rows from the client).
+ * @param {object|null|undefined} context
+ */
+export function listVoiceConcerns(context) {
+  const raw = Array.isArray(context?.hexBoard?.givens) ? context.hexBoard.givens : [];
+  const out = [];
+  const seen = new Set();
+  for (const row of raw) {
+    if (!concernOnBoard(row)) continue;
+    const id = clip(row.id, 80);
+    const angle = clip(row.angle, 40);
+    const key = id || angle;
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    const name = clip(row.name, 80) || CONCERN_NAMES[angle] || angle || "Challenger";
+    out.push({
+      id,
+      angle,
+      name,
+      lamp: concernLamp(row.lamp),
+      speech: clip(row.challengeSpeech || row.speech || row.analysis, 400),
+      question: clip(row.challengeQuestion || row.question, 240),
+      answer: clip(row.playerAnswer || row.answer, 400),
+    });
+    if (out.length >= VOICE_CONCERN_CAP) break;
+  }
+  return out;
+}
+
+/**
+ * Spoken facts for challengers already placed. Empty off the hex board.
+ * @param {object|null|undefined} context
+ */
+function concernVoiceBlock(context) {
+  if (!context?.hexInvent) return "";
+  const rows = listVoiceConcerns(context);
+  if (!rows.length) return "No challenger concern tiles are on the board yet.";
+  const hideLamp = Boolean(context.metricsPending);
+  const bits = rows.map((row) => {
+    const who = hideLamp || !row.lamp ? row.name : `${row.name}, light ${row.lamp}`;
+    const parts = [who];
+    const speech = clip(row.speech, VOICE_CONCERN_SPEECH);
+    const question = clip(row.question, VOICE_CONCERN_QUESTION);
+    const answer = clip(row.answer, VOICE_CONCERN_ANSWER);
+    if (speech) parts.push(speech);
+    if (question) parts.push(`Question: ${question}`);
+    parts.push(answer ? `Written answer: ${answer}` : "No written answer yet");
+    const sentence = parts
+      .map((part) => String(part).trim().replace(/\.+$/g, ""))
+      .filter(Boolean)
+      .join(". ")
+      .replace(/\?\.\s/g, "? ");
+    return `${sentence}.`;
+  });
+  const lights = hideLamp
+    ? "Their traffic lights are being re-checked. Do not quote concern light colors until get_invent_state returns them."
+    : "Red means this critic is not honestly answered yet. Yellow is partial. Green means the pathway holds the answer.";
+  return `Challenger concern tiles on the board: ${bits.join(" ")} ${lights} Mention one when it helps. Do not claim a challenger that is not listed. You do not change a light.`;
+}
+
+/**
+ * ASR bias terms: place, crises, challengers, selected + available emTech names.
  * @param {object|null|undefined} context
  * @returns {string[]}
  */
@@ -118,6 +210,10 @@ export function buildVoiceKeyterms(context = {}) {
   push(context.challenge?.title);
   push(context.challenge?.stakes);
   for (const p of listPressure(context.pressure)) push(p.label);
+  for (const c of listVoiceConcerns(context)) {
+    push(c.name);
+    push(c.angle);
+  }
   for (const t of listSelectedTechs(context)) {
     push(t.name);
     push(t.id);
@@ -228,6 +324,15 @@ export function inventStateSnapshot(context = {}) {
     name: hex ? "" : clip(context.inventionName, 80),
     pathways,
     convergences: listVoiceConvergences(context),
+    concerns: listVoiceConcerns(context).map((row) => ({
+      id: row.id,
+      angle: row.angle,
+      name: row.name,
+      lamp: pending ? null : row.lamp || null,
+      speech: row.speech,
+      question: row.question,
+      answer: row.answer,
+    })),
     pressure: pending ? [] : listPressure(context.pressure),
     metricsPending: pending,
     availableTechs: listAvailableTechs(context).slice(0, SNAPSHOT_TECH_MAX),
@@ -275,6 +380,7 @@ export function buildVoiceInstructions(context = {}) {
     ? `You are the AI co-inventor tutor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`
     : `You are the AI co-inventor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`;
   const convergenceLine = convergenceVoiceBlock(context);
+  const concernLine = concernVoiceBlock(context);
 
   return `## Role & Persona
 ${roleLine} You are a creative partner, not the sole inventor. Warm, practical, hopeful. You talk like a sharp colleague at a workshop table.
@@ -298,7 +404,7 @@ ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it
 ${tutorBlock}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}
-${convergenceLine ? `${convergenceLine}\n` : ""}Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. ${
+${convergenceLine ? `${convergenceLine}\n` : ""}${concernLine ? `${concernLine}\n` : ""}Listen first. Ask at most one good question per turn. If they want a stack idea, call \`suggest_techs\` with real ids after you name them in speech. ${
     hex
       ? "If they want how a placed pathway works, call \`draft_how\` with target pathway. If they want the description for a new invent tile, the invent card, or so they can mint, call \`draft_how\` with target mint. That fills How it works. They edit it, mint the tile, and place it. You do not mint it. Do not describe another writing surface."
       : "If they want mechanism text, call \`draft_how\`. If they want everyday-life prose, call \`draft_life\`."
@@ -343,7 +449,7 @@ export function voiceToolSchemas(context = {}) {
       type: "function",
       name: "get_invent_state",
       description:
-        "Read the current Quest year, place, stack, how-it-works, and available emTech ids. Call when the board may have changed.",
+        "Read the current Quest year, place, stack, how-it-works, challenger concern tiles, and available emTech ids. Call when the board may have changed.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
     {

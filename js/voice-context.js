@@ -248,6 +248,27 @@ export function voiceContextFingerprint(context) {
       .filter(Boolean)
       .join("|");
   }
+  let concerns = "";
+  if (c.hexInvent) {
+    const givens = Array.isArray(c.hexBoard?.givens) ? c.hexBoard.givens : [];
+    concerns = givens
+      .filter((row) => {
+        if (String(row?.kind || "") !== "concern") return false;
+        if (row.q == null || row.r == null || row.q === "" || row.r === "") return false;
+        return Number.isFinite(Number(row.q)) && Number.isFinite(Number(row.r));
+      })
+      .map((row) => {
+        const id = String(row?.id || "").trim();
+        const angle = String(row?.angle || "").trim();
+        const lamp = String(row?.lamp || "").trim();
+        const speech = String(row?.challengeSpeech || row?.speech || "").trim();
+        const question = String(row?.challengeQuestion || row?.question || "").trim();
+        const answer = String(row?.playerAnswer || row?.answer || "").trim();
+        return `${id}:${angle}:${lamp}:${speech}:${question}:${answer}`;
+      })
+      .filter(Boolean)
+      .join("|");
+  }
   const name = c.hexInvent ? "" : String(c.inventionName || "").trim();
   let pressure = "";
   if (Array.isArray(c.pressure)) {
@@ -280,6 +301,7 @@ export function voiceContextFingerprint(context) {
     name,
     pathwayIds,
     convergences,
+    concerns,
     pressure,
     title,
     problem,
