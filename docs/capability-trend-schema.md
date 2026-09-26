@@ -4,7 +4,7 @@ Portable **quantitative exponential trend** files for Future Forge Wait charts.
 
 | Channel | How trends get in |
 |---------|------------------|
-| **Official catalog** | warmersun.com `/future-forge/trends/catalog.json` (server downloads) |
+| **Official catalog** | warmersun.com `/trends/catalog.json` (server downloads) |
 | **Quest tile** | Optional embedded `trends[]` on a quest (overrides catalog by `id`) |
 
 Validate:

@@ -5,7 +5,7 @@
 3. Player copy: full sentences; introduce terms; you do not have to be brief (`research.md` → Honest copy).
 4. **Omit** unused optional keys.
 5. Run `npm run validate:trend -- <file>` until `OK:`.
-6. Hand off: warmersun `future-forge/trends/` + catalog entry, or quest `trends` / `spotlightTrends`.
+6. Hand off: warmersun `future-forge/trends/` then `./scripts/publish-trends.sh`, or quest `trends` / `spotlightTrends`.
 
 ---
 

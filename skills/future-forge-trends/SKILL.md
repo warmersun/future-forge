@@ -82,5 +82,5 @@ npm run validate:trend -- output/trends/<id>.json
 
 ### 6. Hand off
 
-- Add to warmersun `future-forge/trends/` + `catalog.json`, **or**
+- Add the tile to warmersun `future-forge/trends/`, then run `./scripts/publish-trends.sh` (rebuilds `catalog.json` and publishes `https://warmersun.com/trends/`), **or**
 - Embed on a Quest via `trends` / `spotlightTrends` (see `future-forge-quest` skill).

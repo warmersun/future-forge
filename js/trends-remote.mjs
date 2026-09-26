@@ -1,6 +1,6 @@
 /**
  * Fetch capability-trend tiles from a remote catalog
- * (default: warmersun.com/future-forge/trends/catalog.json).
+ * (default: warmersun.com/trends/catalog.json).
  *
  * Also accepts a local filesystem path to catalog.json (dev/offline).
  */
@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
 export const DEFAULT_TRENDS_REMOTE_URL =
-  "https://warmersun.com/future-forge/trends/catalog.json";
+  "https://warmersun.com/trends/catalog.json";
 
 /**
  * Local checkout when present (dev machines with ~/dev/warmersun).

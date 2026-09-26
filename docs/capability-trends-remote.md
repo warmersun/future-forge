@@ -2,9 +2,9 @@
 
 Official capability-trend tiles download from Warmer Sun:
 
-`https://warmersun.com/future-forge/trends/catalog.json`
+`https://warmersun.com/trends/catalog.json`
 
-Source of truth: `~/dev/warmersun/future-forge/trends/` (publish with the marketing site).
+Source of truth: `~/dev/warmersun/future-forge/trends/` (rebuild and publish with `./scripts/publish-trends.sh`).
 
 Schema: [`docs/capability-trend-schema.md`](capability-trend-schema.md).
 

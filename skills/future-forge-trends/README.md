@@ -13,7 +13,7 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 | **Trend tile** | One measured capability series per file |
 | **Compounding** | `doubling` / `halving` / `cagr` |
 | **Milestones** | Reached and predicted markers with date + value |
-| **Catalog** | warmersun `future-forge/trends/catalog.json` |
+| **Catalog** | warmersun `future-forge/trends/` → live at `/trends/catalog.json` via `publish-trends.sh` |
 | **Quest embed** | Optional via quest skill `trends` / `spotlightTrends` |
 
 | Doc | Purpose |

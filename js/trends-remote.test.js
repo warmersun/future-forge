@@ -78,10 +78,10 @@ describe("trends-remote", () => {
   it("resolveTrendTileUrl joins relative files for http and local", () => {
     assert.equal(
       resolveTrendTileUrl(
-        "https://warmersun.com/future-forge/trends/catalog.json",
+        "https://warmersun.com/trends/catalog.json",
         "a.json"
       ),
-      "https://warmersun.com/future-forge/trends/a.json"
+      "https://warmersun.com/trends/a.json"
     );
     const local = resolveTrendTileUrl(catalogPath, "gene.json");
     assert.equal(local, path.join(tmp, "gene.json"));
