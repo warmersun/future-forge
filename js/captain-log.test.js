@@ -4,6 +4,11 @@ import {
   clearCaptainLog,
   appendCaptainLog,
   listCaptainLog,
+  clipWords,
+  ellipsisCappedName,
+  ideaIdentityText,
+  visibleLogTitle,
+  visibleLogDetail,
   setCaptainLogFilter,
   captainLogFilter,
   captainLogFilterCounts,
@@ -37,6 +42,80 @@ describe("captain-log", () => {
     assert.equal(rows.length, 1);
     assert.equal(rows[0].title, "Timing green");
     assert.equal(listCaptainLog({ filter: "all" }).length, 2);
+  });
+
+  it("lists earliest first when asked for chrono order", () => {
+    appendCaptainLog({ title: "First" });
+    appendCaptainLog({ title: "Second" });
+    const chrono = listCaptainLog({ order: "chrono" });
+    assert.deepEqual(
+      chrono.map((e) => e.title),
+      ["First", "Second"]
+    );
+    assert.equal(listCaptainLog()[0].title, "Second");
+  });
+
+  it("clips a title on a word and marks it", () => {
+    const full =
+      "Placed nano filter that is fine enough to filter viruses out of the village well before the dry season ends and the truck leaves";
+    assert.equal(clipWords("short title", 120), "short title");
+    const cut = clipWords(full, 48);
+    assert.match(cut, /\.\.\.$/);
+    assert.ok(cut.length <= 48);
+    const stem = cut.slice(0, -3);
+    assert.equal(full.startsWith(stem), true);
+    assert.equal(full[stem.length], " ");
+    const entry = appendCaptainLog({ title: full });
+    assert.match(entry.title, /\.\.\.$/);
+    assert.ok(entry.title.length <= 120);
+    assert.equal(full[entry.title.length - 3], " ");
+  });
+
+  it("uses the full description when the title is only a cut of it", () => {
+    const how = "nano-filter that is fine enough to filter bacteria and bigger viruses from water";
+    assert.equal(ideaIdentityText("nano-filter that is fine enough to...", how), how);
+    assert.equal(ideaIdentityText(how.slice(0, 40), how), how);
+    assert.equal(
+      ideaIdentityText("using AI for material science", "using AI to advance material science we make a filter"),
+      "using AI for material science"
+    );
+  });
+
+  it("keeps the emTech beside an idea", () => {
+    const e = appendCaptainLog({
+      title: "Placed",
+      ideas: [{ text: "graphene filter", tech: "Artificial Intelligence" }],
+    });
+    assert.equal(e.ideas[0].text, "graphene filter");
+    assert.equal(e.ideas[0].tech, "Artificial Intelligence");
+  });
+
+  it("keeps pathway names and the full description", () => {
+    const e = appendCaptainLog({
+      title: "Pathway created",
+      names: ["nano filter", "drip line"],
+      description: "The pair keeps the wells clear.",
+    });
+    assert.deepEqual(e.names, ["nano filter", "drip line"]);
+    assert.equal(e.description, "The pair keeps the wells clear.");
+  });
+
+  it("marks a tile name that was already cut at 40 characters", () => {
+    const cut = "nano-filter, fine enough to filter bacte";
+    assert.equal(cut.length, 40);
+    assert.equal(ellipsisCappedName(cut), "nano-filter, fine enough to filter...");
+    assert.equal(
+      visibleLogTitle(`Minted ${cut}`),
+      "Minted nano-filter, fine enough to filter..."
+    );
+    assert.equal(ellipsisCappedName("short idea"), "short idea");
+    assert.equal(
+      visibleLogDetail(
+        `Placed ${cut}`,
+        `Pathway ${cut} applied to crisis Field Runoff.`
+      ),
+      "Pathway nano-filter, fine enough to filter... applied to crisis Field Runoff."
+    );
   });
 
   it("clears the book", () => {
@@ -87,8 +166,8 @@ describe("captain-log", () => {
   });
 
   it("names the tile on a feasibility line", () => {
-    const row = formatTimingLog("green", "Pilot honest for this year.", "nano filter");
-    assert.equal(row.title, "Timing green · nano filter");
+    const row = formatTimingLog("green", "Pilot honest for this year.");
+    assert.equal(row.title, "Timing green");
     assert.equal(row.detail, "Pilot honest for this year.");
     assert.equal(row.tone, "green");
   });

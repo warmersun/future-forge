@@ -1333,7 +1333,12 @@
                 <button type="button" class="captain-log-filter" data-captain-log-filter="action" aria-pressed="false">Actions</button>
                 <button type="button" class="captain-log-filter" data-captain-log-filter="assessment" aria-pressed="false">Assessments</button>
               </div>
-              <div class="captain-log-list" id="captain-log-list" role="log"></div>
+              <div class="captain-log-scroll">
+                <div class="captain-log-list" id="captain-log-list" role="log"></div>
+                <button type="button" class="captain-log-latest" id="captain-log-latest" hidden>
+                  Latest
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1881,6 +1886,12 @@
           <p id="outcome-pathway-text" class="outcome-pathway-text"></p>
           <p id="outcome-board-rank" class="quest-log-item-meta" hidden></p>
         </div>
+
+        <details id="outcome-log" class="outcome-log">
+          <summary id="outcome-log-summary">Captain's log</summary>
+          <p class="muted sm outcome-log-lead">What you did, and how it was judged.</p>
+          <div id="outcome-log-list" class="captain-log-list outcome-log-list" role="log"></div>
+        </details>
 
         <h3 style="margin: 0 0 0.65rem; font-size: 1rem">What you learned</h3>
         <ul id="outcome-lessons" class="feedback-list"></ul>

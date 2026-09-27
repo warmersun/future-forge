@@ -52,6 +52,8 @@ import {
 import {
   appendCaptainLog,
   listCaptainLog,
+  visibleLogTitle,
+  visibleLogDetail,
   clearCaptainLog,
   subscribeCaptainLog,
   setCaptainLogFilter,
@@ -7130,6 +7132,7 @@ function startMission(mission, opts = {}) {
       : Boolean(state.mission?.isLearningModule);
   state.sideTab = "vision";
   clearCaptainLog();
+  captainLogFollowLatest = true;
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
   state.lastNews = "";
@@ -10168,6 +10171,8 @@ function endTurn() {
   ) {
     state.apSpentThisTurn = 1;
   }
+  const endYearBefore = state.year;
+  const endPressureBefore = clonePressure(state.pressure);
   const r = dispatchSim("end_turn");
   if (!r.ok) {
     if (r.error === "end_turn_noop") {
@@ -10184,11 +10189,6 @@ function endTurn() {
     }
     return;
   }
-  appendCaptainLog({
-    kind: "action",
-    title: "Ended turn",
-    detail: `Year ${state.year}. Crises rose. AP refilled.`,
-  });
   flashToast(`End turn · year ${state.year} · crises rose · AP refilled (${state.ap})`);
   // Solo end_turn: +1 year and crisis rise — re-assess timing
   if ((r.events || []).some((e) => e.type === "year_tick")) {
@@ -10202,6 +10202,16 @@ function endTurn() {
     }
     scheduleCloudRunState();
   }
+  appendCaptainLog({
+    kind: "action",
+    title: "End turn",
+    detail: [
+      `Year ${endYearBefore} → ${state.year}. Turn ended. Crises rose one year. AP refilled.`,
+      crisisMeterLogLine(endPressureBefore, state.pressure),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
   if (collapsed()) {
     renderWorkshop();
     finishOutcome("collapse");
@@ -10662,11 +10672,6 @@ function waitTurn(opts = {}) {
     flashToast(r.error || "Cannot Wait now.");
     return;
   }
-  appendCaptainLog({
-    kind: "action",
-    title: "Waited",
-    detail: `${prevYear} → ${state.year}.`,
-  });
 
   // Soft horizon: categories whose "near" use cases often get more common
   const horizonShift = TECHS.filter((t) => t.readyYear > prevYear && t.readyYear <= state.year);
@@ -10692,13 +10697,24 @@ function waitTurn(opts = {}) {
   onInventYearChangedForTiming(); // re-evaluate claims in new year (monotonic vs last settle)
 
   // Keep hex pressureBase in sync with years jumped, then re-apply pathway deltas
+  const years = m.yearsPerTurn || GAME.yearsPerTurn || 2;
   try {
     const rise = m.pressureRise || {};
-    const years = m.yearsPerTurn || GAME.yearsPerTurn || 2;
     ensureHexWorkshop().afterYearPressureRise?.(rise, years, riskEv || null);
   } catch (e) {
     console.warn("[hex wait pressure]", e);
   }
+
+  appendCaptainLog({
+    kind: "action",
+    title: `Wait ${years} years`,
+    detail: [
+      `${prevYear} → ${state.year}. Turn ended. AP refilled. Crises rose once for each year — ${years} years, so the yearly rise landed ${years} times.`,
+      crisisMeterLogLine(prevPressure, state.pressure),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
 
   if (collapsed()) {
     renderWorkshop();
@@ -11996,6 +12012,21 @@ function humanizeMeterKey(key) {
  * Display label for a crisis meter key (logic keys unchanged).
  * Trust → Public confidence for players.
  */
+function crisisMeterLogLine(before, after) {
+  const keys = [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])];
+  if (!keys.length) return "";
+  return keys
+    .map((k) => {
+      const label = crisisMeterDisplayLabel(k) || k;
+      const from = Math.max(0, Math.min(5, Math.round(Number(before?.[k]) || 0)));
+      const to = Math.max(0, Math.min(5, Math.round(Number(after?.[k]) || 0)));
+      if (before?.[k] == null) return `${label} ${to}/5`;
+      if (from === to) return `${label} stayed ${to}/5`;
+      return `${label} ${from} → ${to}/5`;
+    })
+    .join("\n");
+}
+
 function crisisMeterDisplayLabel(key) {
   if (key === "Trust") return "Public confidence";
   return humanizeMeterKey(key);
@@ -16744,6 +16775,7 @@ function renderOutcome() {
   }
 
   paintOutcomePathway(m, o);
+  renderOutcomeLog();
 
   $("#outcome-headline").textContent = headline;
   $("#outcome-story").textContent = story;
@@ -17481,11 +17513,110 @@ function setSideTab(tab) {
   refreshCoachMarks();
 }
 
+/** Stay pinned to the newest line until the reader scrolls up. */
+let captainLogFollowLatest = true;
+let captainLogHoldScroll = false;
+
+function captainLogAtEnd(el) {
+  if (!el) return true;
+  return el.scrollHeight - el.scrollTop - el.clientHeight <= 32;
+}
+
+function syncCaptainLogLatestButton() {
+  const btn = $("#captain-log-latest");
+  const list = $("#captain-log-list");
+  if (!btn) return;
+  const overflow = Boolean(list && list.scrollHeight - list.clientHeight > 8);
+  btn.hidden = !(overflow && !captainLogFollowLatest);
+}
+
+function scrollCaptainLogToEnd() {
+  const list = $("#captain-log-list");
+  if (!list) return;
+  captainLogFollowLatest = true;
+  captainLogHoldScroll = true;
+  list.scrollTop = list.scrollHeight;
+  captainLogHoldScroll = false;
+  syncCaptainLogLatestButton();
+}
+
+function captainLogEntriesHtml(rows) {
+  return rows
+    .map((e) => {
+      const when = new Date(e.ts).toLocaleTimeString();
+      const tone = ["green", "yellow", "red"].includes(e.tone) ? e.tone : "neutral";
+      const ideas = (Array.isArray(e.ideas) && e.ideas.length ? e.ideas : e.names || []).filter(Boolean);
+      const ideaRows = ideas.map((n) =>
+        n && typeof n === "object"
+          ? { text: String(n.text || "").trim(), tech: String(n.tech || "").trim() }
+          : { text: String(n || "").trim(), tech: "" }
+      );
+      const ideasHtml = ideaRows
+        .filter((row) => row.text || row.tech)
+        .map((row) => {
+          const tech = row.tech
+            ? `<span class="captain-log-emtech">${escapeHtml(row.tech)}</span>`
+            : "";
+          const text = row.text
+            ? `<span class="captain-log-idea-text">${escapeHtml(row.text)}</span>`
+            : "";
+          return `<p class="captain-log-idea">${tech}${text}</p>`;
+        })
+        .join("");
+      const description = String(e.description || "").trim();
+      const shownIdeas = new Set(ideaRows.map((row) => row.text));
+      const pathwayText = `<span class="captain-log-pathway-text">${escapeHtml(description)}</span>`;
+      const descHtml =
+        description && !shownIdeas.has(description)
+          ? e.partOf
+            ? `<p class="captain-log-partof">part of ${pathwayText} pathway</p>`
+            : `<p class="captain-log-pathway">${pathwayText}</p>`
+          : "";
+      const concern = String(e.concern || "").trim();
+      const concernHtml = concern
+        ? `<p class="captain-log-concern">${escapeHtml(concern)}</p>`
+        : "";
+      const reply = String(e.reply || "").trim();
+      const replyHtml = reply ? `<p class="captain-log-reply">${escapeHtml(reply)}</p>` : "";
+      const detailText = visibleLogDetail(e.title, e.detail);
+      const detail = detailText
+        ? `<p class="captain-log-detail">${escapeHtml(detailText)}</p>`
+        : "";
+      return `<article class="captain-log-entry is-${tone}" role="listitem">
+        <span class="captain-log-lamp" aria-hidden="true"></span>
+        <div class="captain-log-title">${escapeHtml(visibleLogTitle(e.title))} <span class="captain-log-when muted">${escapeHtml(when)}</span></div>
+        ${ideasHtml}${descHtml}${concernHtml}${replyHtml}${detail}
+      </article>`;
+    })
+    .join("");
+}
+
+function renderOutcomeLog() {
+  const host = $("#outcome-log");
+  const list = $("#outcome-log-list");
+  const summary = $("#outcome-log-summary");
+  if (!host || !list) return;
+  const kind = state.outcome?.kind;
+  const show = kind === "win" || kind === "partial" || kind === "collapse";
+  host.hidden = !show;
+  if (!show) {
+    host.open = false;
+    return;
+  }
+  const rows = listCaptainLog({ order: "chrono", filter: "all" });
+  if (summary) {
+    summary.textContent = rows.length ? `Captain's log (${rows.length})` : "Captain's log";
+  }
+  list.innerHTML = rows.length
+    ? captainLogEntriesHtml(rows)
+    : `<p class="muted sm" style="padding:0.65rem">Nothing was logged this quest.</p>`;
+}
+
 function renderCaptainLog() {
   const list = $("#captain-log-list");
   const counts = captainLogFilterCounts();
   const filter = captainLogFilter();
-  const rows = listCaptainLog();
+  const rows = listCaptainLog({ order: "chrono" });
   $$("[data-captain-log-filter]").forEach((btn) => {
     const key = btn.getAttribute("data-captain-log-filter");
     const n = key === "action" ? counts.action : key === "assessment" ? counts.assessment : counts.all;
@@ -17495,29 +17626,32 @@ function renderCaptainLog() {
     btn.textContent = `${label} (${n})`;
   });
   if (!list) return;
+  const follow = captainLogFollowLatest;
+  const keepTop = list.scrollTop;
+  captainLogHoldScroll = true;
   if (!counts.all) {
     list.innerHTML = `<p class="muted sm" style="padding:0.65rem">Nothing logged yet — place a tile, end a turn, or wait for a score.</p>`;
-    return;
-  }
-  if (!rows.length) {
+  } else if (!rows.length) {
     const which = filter === "assessment" ? "assessments" : "actions";
     list.innerHTML = `<p class="muted sm" style="padding:0.65rem">No ${which} in this list.</p>`;
-    return;
+  } else {
+    list.innerHTML = captainLogEntriesHtml(rows);
   }
-  list.innerHTML = rows
-    .map((e) => {
-      const when = new Date(e.ts).toLocaleTimeString();
-      const tone = ["green", "yellow", "red"].includes(e.tone) ? e.tone : "neutral";
-      const detail = e.detail
-        ? `<p class="captain-log-detail">${escapeHtml(e.detail)}</p>`
-        : "";
-      return `<article class="captain-log-entry is-${tone}" role="listitem">
-        <span class="captain-log-lamp" aria-hidden="true"></span>
-        <div class="captain-log-title">${escapeHtml(e.title)} <span class="captain-log-when muted">${escapeHtml(when)}</span></div>
-        ${detail}
-      </article>`;
-    })
-    .join("");
+  if (follow) list.scrollTop = list.scrollHeight;
+  else list.scrollTop = keepTop;
+  captainLogHoldScroll = false;
+  syncCaptainLogLatestButton();
+  if (follow) {
+    requestAnimationFrame(() => {
+      if (!captainLogFollowLatest || captainLogHoldScroll) return;
+      const live = $("#captain-log-list");
+      if (!live) return;
+      captainLogHoldScroll = true;
+      live.scrollTop = live.scrollHeight;
+      captainLogHoldScroll = false;
+      syncCaptainLogLatestButton();
+    });
+  }
 }
 
 function setChallengeSideTab() {
@@ -21372,8 +21506,22 @@ function bind() {
   $("#captain-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-captain-log-filter]");
     if (!btn) return;
+    captainLogFollowLatest = true;
     setCaptainLogFilter(btn.getAttribute("data-captain-log-filter"));
     renderCaptainLog();
+  });
+  $("#captain-log-list")?.addEventListener("scroll", () => {
+    if (captainLogHoldScroll) return;
+    const list = $("#captain-log-list");
+    captainLogFollowLatest = captainLogAtEnd(list);
+    syncCaptainLogLatestButton();
+  });
+  $("#captain-log-latest")?.addEventListener("click", () => scrollCaptainLogToEnd());
+  $("#outcome-log")?.addEventListener("toggle", () => {
+    const host = $("#outcome-log");
+    const list = $("#outcome-log-list");
+    if (!host?.open || !list) return;
+    list.scrollTop = list.scrollHeight;
   });
   subscribeCaptainLog(() => {
     if (state.sideTab === "log") renderCaptainLog();
