@@ -5,6 +5,12 @@
 
 import { techById, CHALLENGE_ANGLES } from "../data.js";
 import {
+  appendCaptainLog,
+  formatPathwayScoreLog,
+  formatPlacementTouch,
+  formatTimingLog,
+} from "../captain-log.js";
+import {
   scaffoldFields,
   scaffoldLabels,
   composeHow,
@@ -53,6 +59,7 @@ import {
   unplacedInventionsForTech,
   cloneBoard,
   TILE_KIND,
+  neighborTiles,
   CRISIS_ROLE_DEFAULT_NAMES,
   CRISIS_ROLE_BLURBS,
   CONCERN_LABELS,
@@ -92,6 +99,7 @@ import {
   pickConcernSpawn,
   clampConcernLamp,
   concernInventChanged,
+  inventionComponent,
   listInventionPathways,
   pathwayContentFingerprint,
   islandHowKey,
@@ -806,6 +814,7 @@ export function createHexWorkshop(api) {
       }
       setBoard(b);
       api.commitBoard?.(b);
+      logConcernReply(t, quality, feedback);
       if (docked) syncPathwayScores();
       else {
         ensureUi()?.render();
@@ -823,6 +832,11 @@ export function createHexWorkshop(api) {
       });
       setBoard(b);
       api.commitBoard?.(b);
+      logConcernReply(
+        board()?.tiles?.[tileId] || t,
+        quality,
+        "Could not reach the judge — saved your draft. Dock a pathway so the light can move."
+      );
       showTilePopup(tileId);
     } finally {
       concernAnswerBusy = false;
@@ -1576,7 +1590,100 @@ export function createHexWorkshop(api) {
     return rulesWeatherKey(api.getRules?.() || mission?.rules || []);
   }
 
+  function shortTileName(t) {
+    const tech = t?.techId ? techById(t.techId)?.name : "";
+    return String(t?.name || tech || t?.angle || t?.role || "tile").trim();
+  }
+
+  function pathwayTouchRows(b, components) {
+    return (components || []).map((comp) => {
+      const crises = [];
+      const concerns = [];
+      const seed = comp[0]?.id;
+      if (seed) {
+        for (const id of givensReachedFromInvention(b, seed)) {
+          const g = b.tiles?.[id];
+          if (!g) continue;
+          if (g.kind === TILE_KIND.crisis) {
+            crises.push(g.name || g.meterKey || g.role || "crisis");
+          } else if (g.kind === TILE_KIND.concern) {
+            concerns.push(g.name || CONCERN_LABELS[g.angle] || g.angle || "concern");
+          }
+        }
+      }
+      return { pathway: comp.map(shortTileName), crises, concerns };
+    });
+  }
+
+  function pathwaysForPlacedTile(b, tile) {
+    if (!b || !tile || tile.q == null || tile.r == null) return [];
+    if (tile.kind === TILE_KIND.invention) {
+      const comp = inventionComponent(b, tile.id);
+      return comp.length ? [comp] : [];
+    }
+    if (tile.kind !== TILE_KIND.crisis && tile.kind !== TILE_KIND.concern) return [];
+    const seen = new Set();
+    const out = [];
+    for (const n of neighborTiles(b, tile.id)) {
+      if (n.kind !== TILE_KIND.invention) continue;
+      const comp = inventionComponent(b, n.id);
+      const key = comp.map((t) => t.id).sort().join("|");
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(comp);
+    }
+    return out;
+  }
+
+  function logBoardMove(tileId, kind, extra = {}) {
+    const before = extra?.beforeBoard?.tiles?.[tileId];
+    const after = board()?.tiles?.[tileId];
+    const tile = after || before;
+    const techName = tile?.techId ? techById(tile.techId)?.name : "";
+    const name = String(tile?.name || techName || tile?.techId || "tile").slice(0, 80);
+    if (kind === "place") {
+      const b = board();
+      const rows = pathwayTouchRows(b, pathwaysForPlacedTile(b, tile));
+      const detail =
+        tile?.kind === TILE_KIND.invention ||
+        tile?.kind === TILE_KIND.crisis ||
+        tile?.kind === TILE_KIND.concern
+          ? formatPlacementTouch(rows)
+          : "On the board.";
+      appendCaptainLog({
+        kind: "action",
+        title: `Placed ${name}`,
+        detail,
+      });
+    } else if (kind === "lift") {
+      appendCaptainLog({
+        kind: "action",
+        title: `Lifted ${name}`,
+        detail: "Back in the tray.",
+      });
+    } else if (kind === "discard") {
+      appendCaptainLog({
+        kind: "action",
+        title: `Threw away ${name}`,
+        detail: "Off the board.",
+      });
+    }
+  }
+
+  function logConcernReply(tile, quality, feedback) {
+    const name = String(tile?.name || tile?.angle || "challenger").slice(0, 80);
+    const q = quality === "hit" || quality === "glance" || quality === "miss" ? quality : "glance";
+    const tone = q === "hit" ? "green" : q === "miss" ? "red" : "yellow";
+    appendCaptainLog({
+      kind: "action",
+      title: `Answered ${name}`,
+      detail: String(feedback || "").trim() || "Reply saved.",
+      tone,
+    });
+  }
+
   function afterBoardChange(tileId, kind, extra = {}) {
+    logBoardMove(tileId, kind, extra);
     let b = pruneStaleConvergences(board());
     setBoard(b);
     ensureUi()?.render();
@@ -1710,6 +1817,15 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
     api.commitBoard?.(applied.board);
     const keepCrisis = Boolean(opts.keepCrisisDelta);
+    const scored = formatPathwayScoreLog(score, { keepCrisisDelta: keepCrisis });
+    if (scored.detail) {
+      appendCaptainLog({
+        kind: "assessment",
+        title: scored.title,
+        detail: scored.detail,
+        tone: scored.tone,
+      });
+    }
     api.grantPathwayEase?.({
       crisisDelta: keepCrisis ? null : score?.crisisDelta || emptyCrisisDelta(),
       skip: keepCrisis,
@@ -2126,6 +2242,23 @@ export function createHexWorkshop(api) {
     );
   }
 
+  function logTileFeasibility(tile, level, reason) {
+    const techName = tile?.techId ? techById(tile.techId)?.name : "";
+    const name = tile?.name || techName || "tile";
+    const row = formatTimingLog(level, reason, name);
+    appendCaptainLog({
+      kind: "assessment",
+      title: row.title,
+      detail: row.detail,
+      tone: row.tone,
+    });
+  }
+
+  function commitTileTiming(tile, tileId, level, reason, key) {
+    logTileFeasibility(tile, level, reason);
+    settleTileTiming(tileId, level, reason, key);
+  }
+
   async function runTileTiming(tileId, gen) {
     if (timingGens.get(tileId) !== gen) return;
     const tile = board()?.tiles?.[tileId];
@@ -2135,7 +2268,7 @@ export function createHexWorkshop(api) {
     if (!api.coInvent) {
       const local = localTileTiming(tile, year);
       if (timingGens.get(tileId) !== gen) return;
-      settleTileTiming(tileId, local.level, local.reason, key);
+      commitTileTiming(tile, tileId, local.level, local.reason, key);
       return;
     }
     try {
@@ -2150,15 +2283,15 @@ export function createHexWorkshop(api) {
       const rawLevel = data.timing?.level || data.timingLevel;
       const reason = data.timing?.reason || data.timingNote || data.message || "";
       if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
-        settleTileTiming(tileId, rawLevel, reason, key);
+        commitTileTiming(tile, tileId, rawLevel, reason, key);
       } else {
         const local = localTileTiming(tile, year);
-        settleTileTiming(tileId, local.level, local.reason, key);
+        commitTileTiming(tile, tileId, local.level, local.reason, key);
       }
     } catch {
       const local = localTileTiming(tile, year);
       if (timingGens.get(tileId) !== gen) return;
-      settleTileTiming(tileId, local.level, local.reason, key);
+      commitTileTiming(tile, tileId, local.level, local.reason, key);
     }
   }
 
@@ -2392,6 +2525,11 @@ export function createHexWorkshop(api) {
       renderIdeaCards();
       ensureUi()?.render();
       api.flashToast?.("Tile minted — drag it onto the board.");
+      appendCaptainLog({
+        kind: "action",
+        title: `Minted ${String(tile.name || name || "tile").slice(0, 80)}`,
+        detail: "In the tray — drag it onto the board.",
+      });
       api.onBoardPainted?.();
       api.commitBoard?.(b);
     } finally {
@@ -2418,6 +2556,11 @@ export function createHexWorkshop(api) {
     api.flashToast?.(
       `R&D ${formatFactor(tile.factor)} — drag it onto a pathway.`
     );
+    appendCaptainLog({
+      kind: "action",
+      title: `Minted R&D ${formatFactor(tile.factor)}`,
+      detail: "In the tray — drag it onto a pathway.",
+    });
     api.onBoardPainted?.();
     api.commitBoard?.(b);
   }

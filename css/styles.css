@@ -3244,18 +3244,39 @@ button.btn[hidden] {
   color: #fde68a;
 }
 
-.feasibility {
+.pathway-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   padding: 0.85rem 0.95rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: rgba(15, 23, 42, 0.65);
 }
 
+.feasibility {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 .hex-island-how {
-  margin: 0.65rem 0 0.35rem;
+  margin: 0.7rem 0 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+
+.pathway-panel .prompt-tip {
+  margin: 0.7rem 0 0;
+  padding: 0.7rem 0.15rem 0.1rem 0.75rem;
+  border-top: 1px solid var(--border);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 0;
+  background: transparent;
 }
 
 .hex-island-how[hidden] {
@@ -6856,6 +6877,11 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   grid-template-areas: "invent vision";
 }
 
+/* Clear the collapsed Emerging tech ear so it does not cover pathway text. */
+.workshop-layout.is-tech-collapsed > .invent-center {
+  padding-left: 1.75rem;
+}
+
 .workshop-layout > .tech-library {
   grid-area: tech;
 }
@@ -7181,6 +7207,11 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     border-right: 1px solid var(--border);
+  }
+
+  /* Ear is hidden in the compact drawer; don't inset the invent column. */
+  .workshop-layout.is-tech-collapsed > .invent-center {
+    padding-left: 0;
   }
 
   .workshop-layout > .vision-panel {
@@ -8456,10 +8487,98 @@ button.linkish:hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.ai-trace-filter.is-active {
+.ai-trace-filter.is-active,
+.captain-log-filter.is-active {
   background: rgba(167, 139, 250, 0.18);
   color: var(--text);
   border-color: rgba(167, 139, 250, 0.45);
+}
+
+.captain-log {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0.6rem 0.7rem 0.8rem;
+  gap: 0.5rem;
+}
+
+.captain-log-lead {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.captain-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.captain-log-filter {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted, #94a3b8);
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.captain-log-filter:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.captain-log-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.captain-log-entry {
+  display: grid;
+  grid-template-columns: 0.55rem 1fr;
+  gap: 0.15rem 0.45rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.74rem;
+}
+
+.captain-log-lamp {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 0.28rem;
+  border-radius: 50%;
+  background: var(--muted, #94a3b8);
+}
+
+.captain-log-entry.is-green .captain-log-lamp {
+  background: #34d399;
+}
+
+.captain-log-entry.is-yellow .captain-log-lamp {
+  background: #fbbf24;
+}
+
+.captain-log-entry.is-red .captain-log-lamp {
+  background: #f87171;
+}
+
+.captain-log-title {
+  font-weight: 650;
+}
+
+.captain-log-when {
+  font-weight: 500;
+}
+
+.captain-log-detail {
+  grid-column: 2;
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--text-mute, #94a3b8);
 }
 
 .ai-trace-preview {

@@ -1199,17 +1199,23 @@
             </div>
             </div>
 
-            <div class="feasibility" id="feasibility" aria-live="polite">
-              <div class="feasibility-head">
-                <div class="feasibility-light" id="feasibility-light" data-level="red" title="Pathway"></div>
-                <div>
-                  <div class="feasibility-title"><dfn class="term" data-term="pathway" tabindex="0" role="button" title="Tap for plain words">Pathway</dfn> <span id="feasibility-level-label">red</span></div>
-                  <p class="feasibility-summary" id="feasibility-summary">Place invention tiles and ease the crisis lights.</p>
+            <section class="pathway-panel" id="pathway-panel" aria-label="Pathway">
+              <div class="feasibility" id="feasibility" aria-live="polite">
+                <div class="feasibility-head">
+                  <div class="feasibility-light" id="feasibility-light" data-level="red" title="Pathway"></div>
+                  <div>
+                    <div class="feasibility-title"><dfn class="term" data-term="pathway" tabindex="0" role="button" title="Tap for plain words">Pathway</dfn> <span id="feasibility-level-label">red</span></div>
+                    <p class="feasibility-summary" id="feasibility-summary">Place invention tiles and ease the crisis lights.</p>
+                  </div>
                 </div>
+                <ul class="feasibility-dims" id="feasibility-dims"></ul>
+                <p class="feasibility-foot" id="feasibility-foot"></p>
               </div>
-              <ul class="feasibility-dims" id="feasibility-dims"></ul>
-              <p class="feasibility-foot" id="feasibility-foot"></p>
-            </div>
+
+              <div class="hex-island-how" id="hex-island-how" hidden></div>
+
+              <div class="prompt-tip" id="prompt-tip"></div>
+            </section>
 
             <!-- Hotseat contribution result -->
             <div
@@ -1219,10 +1225,6 @@
               aria-live="polite"
               hidden
             ></div>
-
-            <div class="hex-island-how" id="hex-island-how" hidden></div>
-
-            <div class="prompt-tip" id="prompt-tip"></div>
 
             <aside
               id="policy-weather"
@@ -1272,9 +1274,12 @@
         </main>
 
         <aside class="vision-panel side-panel">
-          <div class="side-tabs" role="tablist" hidden>
-            <button type="button" class="side-tab active" data-tab="vision" role="tab" id="tab-vision" hidden>
+          <div class="side-tabs" role="tablist">
+            <button type="button" class="side-tab active" data-tab="vision" role="tab" id="tab-vision" aria-selected="true">
               Future vision
+            </button>
+            <button type="button" class="side-tab" data-tab="log" role="tab" id="tab-log" aria-selected="false">
+              Log
             </button>
             <button type="button" class="side-tab" data-tab="aitrace" role="tab" id="tab-aitrace" hidden>
               AI inspect <span class="side-tab-badge" id="aitrace-badge" hidden></span>
@@ -1315,6 +1320,20 @@
             ></div>
             <div id="side-coinventor" class="vision-stack-bottom">
               <div id="co-inventor-root" class="co-inventor-root"></div>
+            </div>
+          </div>
+
+          <div id="side-log" class="side-pane" role="tabpanel" hidden>
+            <div class="captain-log">
+              <p class="captain-log-lead muted sm">
+                Captain's log — what you did, and how it was judged.
+              </p>
+              <div class="captain-log-filters" id="captain-log-filters" role="group" aria-label="Filter the log">
+                <button type="button" class="captain-log-filter is-active" data-captain-log-filter="all" aria-pressed="true">All</button>
+                <button type="button" class="captain-log-filter" data-captain-log-filter="action" aria-pressed="false">Actions</button>
+                <button type="button" class="captain-log-filter" data-captain-log-filter="assessment" aria-pressed="false">Assessments</button>
+              </div>
+              <div class="captain-log-list" id="captain-log-list" role="log"></div>
             </div>
           </div>
 

@@ -49,6 +49,17 @@ import {
   aiTraceFilter,
   aiTraceFilterCounts,
 } from "./ai-trace.js";
+import {
+  appendCaptainLog,
+  listCaptainLog,
+  clearCaptainLog,
+  subscribeCaptainLog,
+  setCaptainLogFilter,
+  captainLogFilter,
+  captainLogFilterCounts,
+  formatTimingLog,
+  formatScrutinyLog,
+} from "./captain-log.js";
 import { getClientSessionId } from "./client-session.js";
 import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
@@ -728,17 +739,20 @@ function resumeTutorSession() {
 }
 
 function applyInventSidePanes() {
-  const tab = state.sideTab === "aitrace" ? "aitrace" : "vision";
+  const tab =
+    state.sideTab === "aitrace" ? "aitrace" : state.sideTab === "log" ? "log" : "vision";
   const panel = document.querySelector("#screen-workshop .vision-panel");
   panel?.classList.remove("is-vision-split", "is-tutor-split");
   const stack = panel?.querySelector(".vision-co-stack");
   const vision = $("#side-vision");
   const co = $("#side-coinventor");
   const trace = $("#side-aitrace");
-  if (stack) stack.hidden = tab === "aitrace";
+  const log = $("#side-log");
+  if (stack) stack.hidden = tab !== "vision";
   if (vision) vision.hidden = false;
   if (co) co.hidden = false;
   if (trace) trace.hidden = tab !== "aitrace";
+  if (log) log.hidden = tab !== "log";
 }
 
 function seedLearningVisionStill() {
@@ -2486,6 +2500,11 @@ function mpPassDevice() {
     );
     return;
   }
+  appendCaptainLog({
+    kind: "action",
+    title: "Ended turn",
+    detail: "Passed the device.",
+  });
   showScreen("workshop");
   // Reset so maybeNotifyMpTurnStart always fires for the new seat
   state.mpLastActiveSeatId = null;
@@ -7110,6 +7129,7 @@ function startMission(mission, opts = {}) {
       ? restored.tutorSessionActive
       : Boolean(state.mission?.isLearningModule);
   state.sideTab = "vision";
+  clearCaptainLog();
   state.challengeSideTab = "vision";
   state.challengeVisionBeat = null;
   state.lastNews = "";
@@ -10093,6 +10113,11 @@ function endTurn() {
     }
     try {
       roomBridge.send({ type: "end_turn" });
+      appendCaptainLog({
+        kind: "action",
+        title: "Ended turn",
+        detail: "Seat-turn passed.",
+      });
       flashToast(
         state.turnPhase === "scrutiny"
           ? "Turn ended — invent stays locked mid-Challenge until you resume"
@@ -10159,6 +10184,11 @@ function endTurn() {
     }
     return;
   }
+  appendCaptainLog({
+    kind: "action",
+    title: "Ended turn",
+    detail: `Year ${state.year}. Crises rose. AP refilled.`,
+  });
   flashToast(`End turn · year ${state.year} · crises rose · AP refilled (${state.ap})`);
   // Solo end_turn: +1 year and crisis rise — re-assess timing
   if ((r.events || []).some((e) => e.type === "year_tick")) {
@@ -10520,6 +10550,11 @@ function waitTurn(opts = {}) {
     }
     try {
       roomBridge.send({ type: "wait" });
+      appendCaptainLog({
+        kind: "action",
+        title: "Waited",
+        detail: "Invent +2 years. Seat-turn ends.",
+      });
       // Clear any leftover challenge/pose locks so we don't look "frozen" until the patch
       state.challengeSpectator = false;
       state.challengePosePending = false;
@@ -10586,6 +10621,11 @@ function waitTurn(opts = {}) {
       r.session.invents?.[waiterId]?.year ??
       (r.events || []).find((e) => e.type === "wait")?.year ??
       yearBefore + (m.yearsPerTurn || 2);
+    appendCaptainLog({
+      kind: "action",
+      title: "Waited",
+      detail: `Invent year ${waiterYear}.`,
+    });
     flashToast(`Wait → your invent ${waiterYear} · next player keeps their year`);
     showScreen("workshop");
     mpHydrateAndRender({ skipTurnNotice: Boolean(marketEv?.marketNews) });
@@ -10622,6 +10662,11 @@ function waitTurn(opts = {}) {
     flashToast(r.error || "Cannot Wait now.");
     return;
   }
+  appendCaptainLog({
+    kind: "action",
+    title: "Waited",
+    detail: `${prevYear} → ${state.year}.`,
+  });
 
   // Soft horizon: categories whose "near" use cases often get more common
   const horizonShift = TECHS.filter((t) => t.readyYear > prevYear && t.readyYear <= state.year);
@@ -11432,6 +11477,13 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
         reason: String(reason || "").slice(0, 400),
         forKey: key,
       };
+      const timingRow = formatTimingLog(level, state.aiTiming.reason);
+      appendCaptainLog({
+        kind: "assessment",
+        title: timingRow.title,
+        detail: timingRow.detail,
+        tone: timingRow.tone,
+      });
       recordSettledTimingLevel(level);
     }
   } catch {
@@ -11586,6 +11638,13 @@ async function enterChallenge() {
       });
     }
     showScreen("challenge-step");
+    appendCaptainLog({
+      kind: "action",
+      title: "Faced the challenge",
+      detail: state.challengeAngle
+        ? `Critic: ${state.challengeAngle}.`
+        : "A critic is being drawn.",
+    });
     await poseScrutinyEncounters();
   }
 }
@@ -12409,6 +12468,11 @@ async function scrutinyArgue() {
     }
     renderChallengeHud();
   }
+  appendCaptainLog({
+    kind: "action",
+    title: `Defended against ${enc.label || "the challenger"}`,
+    detail: answer.slice(0, 280),
+  });
   state.challengeAnswer = answer;
   // Lock defense textarea + broadcast draft to spectators while AI judges
   setChallengeJudging(true, {
@@ -12437,6 +12501,13 @@ async function scrutinyArgue() {
     message = local.message;
     if (apEnabled() && usedReserveAi) dispatchSim("resolve_ai");
   }
+  const judged = formatScrutinyLog(quality, message);
+  appendCaptainLog({
+    kind: "assessment",
+    title: judged.title,
+    detail: judged.detail,
+    tone: judged.tone,
+  });
   if (hotseatBridge.isHotseat()) mpSyncFromSolo();
 
   const result = applyArgueResult(state.scrutiny, enc.id, quality);
@@ -12639,6 +12710,14 @@ function scrutinyPatch() {
   if (inventHow) inventHow.value = how;
   const result = applyPatchResult(state.scrutiny, enc.id, funded);
   state.scrutiny = result.scrutiny;
+  appendCaptainLog({
+    kind: "action",
+    title: `Fixed ${enc.label || "the challenge"}`,
+    detail: funded
+      ? "How it works was updated, and the fix was funded."
+      : "How it works was updated under fire.",
+    tone: "yellow",
+  });
   state.hadChallengeAttempt = true;
   const fb = $("#challenge-feedback");
   fb.hidden = false;
@@ -12806,6 +12885,12 @@ function scrutinyPivot() {
     return;
   }
   state.scrutiny = result.scrutiny;
+  appendCaptainLog({
+    kind: "action",
+    title: `Sidestepped ${enc.label || "the challenger"}`,
+    detail: `Once per quest. ${cost.hearts} hearts left.`,
+    tone: "yellow",
+  });
   state.elegancePivotPenalty = true; // also gates further sidesteps this mission
   state.hadChallengeAttempt = true;
   state.challengeClearMode = "sidestep";
@@ -15076,6 +15161,19 @@ function snapshotTimingAtDeploy() {
   return timingSnap;
 }
 
+function logFieldAttempt(stage, outcome, detail) {
+  const label = stage === "scale" ? "Scale" : "Pilot";
+  const title =
+    outcome === "ok" ? `${label} succeeded` : outcome === "fail" ? `${label} failed` : `Tried ${label}`;
+  const tone = outcome === "ok" ? "green" : outcome === "fail" ? "red" : "neutral";
+  appendCaptainLog({
+    kind: "action",
+    title,
+    detail: String(detail || "").trim(),
+    tone,
+  });
+}
+
 function attemptDeployStage(stage) {
   if (blockIfMpTurnGate(stage === "pilot" ? "Pilot" : "Scale")) return;
   if (!state.challengePassed || !state.deployUnlocked) {
@@ -15158,6 +15256,7 @@ function attemptDeployStage(stage) {
           targetSeatId,
         },
       });
+      logFieldAttempt(stage, "tried");
       flashToast(stage === "pilot" ? "Trying Pilot…" : "Trying Scale…");
     } catch (e) {
       flashToast(mpFriendlyError(e.message) || "Deploy failed");
@@ -15192,6 +15291,7 @@ function attemptDeployStage(stage) {
     state.lastDeployRoll = { stage: "pilot", ok: roll.ok, pct: roll.pct, level: roll.level };
     if (!roll.ok) {
       state.lastNews = `Pilot failed in ${state.year}.`;
+      logFieldAttempt("pilot", "fail", "The try did not land.");
       flashToast(
         hotseatBridge.isHotseat()
           ? "Pilot failed. Invention stays locked — retry later or Pass device."
@@ -15202,6 +15302,7 @@ function attemptDeployStage(stage) {
       renderChallengeHud();
       return;
     }
+    logFieldAttempt("pilot", "ok", "Pilot landed.");
 
     // Hotseat: Pilot is personal readiness — does NOT update shared crisis meters
     if (hotseatBridge.isHotseat()) {
@@ -15281,12 +15382,14 @@ function attemptDeployStage(stage) {
     if (!roll.ok) {
       state.lastNews = `Scale failed. Pilot still stands — retry Scale or return to Invent.`;
       state.lastDeployRoll = { stage: "scale", ok: false, pct: roll.pct, level: roll.level };
+      logFieldAttempt("scale", "fail", "The try did not land.");
       flashToast("Scale failed — you did not win this try. Retry Scale, or rework on Invent.");
       renderDeployBay();
       renderChallengeHud();
       return;
     }
     state.lastDeployRoll = { stage: "scale", ok: true, pct: roll.pct, level: roll.level };
+    logFieldAttempt("scale", "ok", "Scale landed.");
 
     // Success → apply Scale drop, then auto New normal
     const scaleStep = applyStagedDropStep(
@@ -17268,10 +17371,12 @@ function updateVision(opts = {}) {
 function syncDeveloperAiTraceTab() {
   const inspect = $("#tab-aitrace");
   const vision = $("#tab-vision");
+  const log = $("#tab-log");
   const tabs = inspect?.closest(".side-tabs") || vision?.closest(".side-tabs");
   if (inspect) inspect.hidden = !state.developer;
-  if (vision) vision.hidden = !state.developer;
-  if (tabs) tabs.hidden = !state.developer;
+  if (vision) vision.hidden = false;
+  if (log) log.hidden = false;
+  if (tabs) tabs.hidden = false;
   if (!state.developer && state.sideTab === "aitrace") setSideTab("vision");
 }
 
@@ -17354,7 +17459,7 @@ function renderAiTrace() {
 function setSideTab(tab) {
   if (tab === "coinventor") tab = "vision";
   if (tab === "aitrace" && !state.developer) tab = "vision";
-  if (tab !== "aitrace") tab = "vision";
+  if (tab !== "aitrace" && tab !== "log") tab = "vision";
   state.sideTab = tab;
   $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
@@ -17372,7 +17477,47 @@ function setSideTab(tab) {
     });
   }
   if (tab === "aitrace") renderAiTrace();
+  if (tab === "log") renderCaptainLog();
   refreshCoachMarks();
+}
+
+function renderCaptainLog() {
+  const list = $("#captain-log-list");
+  const counts = captainLogFilterCounts();
+  const filter = captainLogFilter();
+  const rows = listCaptainLog();
+  $$("[data-captain-log-filter]").forEach((btn) => {
+    const key = btn.getAttribute("data-captain-log-filter");
+    const n = key === "action" ? counts.action : key === "assessment" ? counts.assessment : counts.all;
+    const label = key === "action" ? "Actions" : key === "assessment" ? "Assessments" : "All";
+    btn.classList.toggle("is-active", key === filter);
+    btn.setAttribute("aria-pressed", key === filter ? "true" : "false");
+    btn.textContent = `${label} (${n})`;
+  });
+  if (!list) return;
+  if (!counts.all) {
+    list.innerHTML = `<p class="muted sm" style="padding:0.65rem">Nothing logged yet — place a tile, end a turn, or wait for a score.</p>`;
+    return;
+  }
+  if (!rows.length) {
+    const which = filter === "assessment" ? "assessments" : "actions";
+    list.innerHTML = `<p class="muted sm" style="padding:0.65rem">No ${which} in this list.</p>`;
+    return;
+  }
+  list.innerHTML = rows
+    .map((e) => {
+      const when = new Date(e.ts).toLocaleTimeString();
+      const tone = ["green", "yellow", "red"].includes(e.tone) ? e.tone : "neutral";
+      const detail = e.detail
+        ? `<p class="captain-log-detail">${escapeHtml(e.detail)}</p>`
+        : "";
+      return `<article class="captain-log-entry is-${tone}" role="listitem">
+        <span class="captain-log-lamp" aria-hidden="true"></span>
+        <div class="captain-log-title">${escapeHtml(e.title)} <span class="captain-log-when muted">${escapeHtml(when)}</span></div>
+        ${detail}
+      </article>`;
+    })
+    .join("");
 }
 
 function setChallengeSideTab() {
@@ -21224,6 +21369,15 @@ function bind() {
   $$(".side-tab[data-tab]").forEach((btn) =>
     btn.addEventListener("click", () => setSideTab(btn.dataset.tab))
   );
+  $("#captain-log-filters")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-captain-log-filter]");
+    if (!btn) return;
+    setCaptainLogFilter(btn.getAttribute("data-captain-log-filter"));
+    renderCaptainLog();
+  });
+  subscribeCaptainLog(() => {
+    if (state.sideTab === "log") renderCaptainLog();
+  });
   $("#aitrace-list")?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-ai-trace-id]");
     if (!btn) return;
