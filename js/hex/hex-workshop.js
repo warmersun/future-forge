@@ -2597,6 +2597,7 @@ export function createHexWorkshop(api) {
 
       const mintedIds = [];
       const mintedTitles = [];
+      const mintedTiles = [];
       for (const idea of ideas) {
         let artUrl = null;
         const artId = ideaImageId({
@@ -2634,12 +2635,19 @@ export function createHexWorkshop(api) {
         b = addTile(b, tile);
         mintedIds.push(tile.id);
         mintedTitles.push(tile.name);
+        mintedTiles.push(tile);
       }
       sparkBatches.set(techId, { ids: mintedIds, titles: mintedTitles });
       setBoard(b);
       renderIdeaCards();
       ensureUi()?.render();
       ideasOk = true;
+      appendCaptainLog({
+        kind: "action",
+        title: isRefresh ? `AI refreshed ${mintedTiles.length} ideas` : `AI minted ${mintedTiles.length} ideas`,
+        ideas: mintedTiles.map(ideaLog),
+        detail: "In the tray — drag them onto the board.",
+      });
       api.flashToast?.(
         isRefresh
           ? `Refreshed ${ideas.length} idea tiles — drag them onto the board.`
