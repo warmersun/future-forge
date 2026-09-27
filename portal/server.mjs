@@ -180,6 +180,7 @@ import {
   WORLD_CLOCK_TIMING_LINE,
   WORLD_CLOCK_CONTEXT_LINE,
 } from "../js/server/fast-eval.mjs";
+import { buildImageLlmInspect, buildLlmInspect } from "../js/server/llm-inspect.mjs";
 import {
   GROUNDING_HINT,
   HEX_INVENT_HINT,
@@ -1004,13 +1005,11 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
   };
 }
 
-async function aiCoInvent(body, client, meta = {}) {
+function composeCoInventCall(body) {
   const mode = body.mode || "chat";
   const context = body.context || {};
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const availableIds = (context.availableTechs || []).map((t) => t.id);
-  const sessionId = meta.sessionId || clientSessionFromBody(body);
-
   const fastSpec = FAST_EVAL_MODES[mode];
   const isTutor =
     !fastSpec && isTutorMode(context) && mode !== "generate-scenarios";
@@ -1060,6 +1059,33 @@ async function aiCoInvent(body, client, meta = {}) {
     const bump = SEARCH_MAX_OUTPUT_TOKENS[mode];
     if (bump) createOpts.max_output_tokens = bump;
   }
+  return { mode, context, messages, availableIds, systemContent, userContent, createOpts };
+}
+
+function coInventLlm(call, extra = {}) {
+  if (!DEVELOPER_MODE || !call) return null;
+  return buildLlmInspect({
+    system: call.systemContent,
+    user: call.userContent,
+    model: call.createOpts?.model,
+    temperature: call.createOpts?.temperature,
+    maxOutputTokens: call.createOpts?.max_output_tokens,
+    reasoning: call.createOpts?.reasoning,
+    tools: call.createOpts?.tools,
+    ...extra,
+  });
+}
+
+function stampDeveloperLlm(out, llm) {
+  if (!llm || !out || typeof out !== "object") return out;
+  out.llm = llm;
+  return out;
+}
+
+async function aiCoInvent(body, client, meta = {}) {
+  const call = composeCoInventCall(body);
+  const { mode, context, messages, availableIds, createOpts } = call;
+  const sessionId = meta.sessionId || clientSessionFromBody(body);
 
   const t0 = Date.now();
   let response;
@@ -1075,6 +1101,15 @@ async function aiCoInvent(body, client, meta = {}) {
       ok: false,
       sessionId,
     });
+    try {
+      e.llm = coInventLlm(call, {
+        sent: false,
+        rawOutput: "",
+        error: String(e?.message || e),
+      });
+    } catch {
+      /* inspect must not hide the model error */
+    }
     throw e;
   }
 
@@ -1089,22 +1124,24 @@ async function aiCoInvent(body, client, meta = {}) {
   });
 
   const text = response.output_text || "";
+  const echoed = (out) =>
+    stampDeveloperLlm(out, coInventLlm(call, { sent: true, rawOutput: text }));
   const parsed = extractJson(text);
   if (!parsed) {
     if (isFastEvalMode(mode)) {
-      return localCoInvent({ mode, messages, context });
+      return echoed(localCoInvent({ mode, messages, context }));
     }
     if (mode === "generate-scenarios") {
-      return localGenerateScenarios(context, {
+      return echoed(localGenerateScenarios(context, {
         addTechIds: [],
         removeTechIds: [],
         inventionName: null,
         inventionHow: null,
         inventionImpact: null,
         scrutiny: null,
-      });
+      }));
     }
-    return {
+    return echoed({
       source: "ai",
       message: text.slice(0, 2000) || "I had trouble shaping that thought — try again?",
       proposals: {
@@ -1115,13 +1152,13 @@ async function aiCoInvent(body, client, meta = {}) {
         inventionImpact: null,
       },
       teaching: [],
-    };
+    });
   }
   if (isFastEvalMode(mode)) {
-    return sanitizeFast(mode, parsed, "ai", context);
+    return echoed(sanitizeFast(mode, parsed, "ai", context));
   }
   if (mode === "generate-scenarios") {
-    return sanitizeScenariosResult(parsed, context, "ai");
+    return echoed(sanitizeScenariosResult(parsed, context, "ai"));
   }
   const out = sanitizeResult(parsed, availableIds, "ai", mode);
   if (mode === "evaluate-neighbors") {
@@ -1134,7 +1171,7 @@ async function aiCoInvent(body, client, meta = {}) {
         reason: String(L.reason || "").slice(0, 280),
       }));
   }
-  return out;
+  return echoed(out);
 }
 
 /**
@@ -1247,7 +1284,10 @@ async function handleCoInvent(body) {
       ok: true,
       sessionId,
     });
-    return local;
+    return stampDeveloperLlm(
+      local,
+      coInventLlm(composeCoInventCall(body), { sent: false, rawOutput: "", note: "local" })
+    );
   }
 
   try {
@@ -1278,7 +1318,15 @@ async function handleCoInvent(body) {
       ok: true,
       sessionId,
     });
-    return local;
+    const llm =
+      e.llm ||
+      coInventLlm(composeCoInventCall(body), {
+        sent: false,
+        rawOutput: "",
+        error: msg,
+        note: "local",
+      });
+    return stampDeveloperLlm(local, llm);
   }
 }
 
@@ -1385,6 +1433,28 @@ async function normalizeVisionDataUrl(data) {
   return imageUrl;
 }
 
+function developerImageLlm(prompt, extra = {}) {
+  if (!DEVELOPER_MODE || !prompt) return null;
+  return buildImageLlmInspect({
+    prompt,
+    model: IMAGE_MODEL,
+    ...extra,
+  });
+}
+
+function failWithImageLlm(err, prompt, extra = {}) {
+  if (err && typeof err === "object") {
+    const llm = developerImageLlm(prompt, {
+      sent: false,
+      rawOutput: "",
+      error: String(err.message || err),
+      ...extra,
+    });
+    if (llm) err.llm = llm;
+  }
+  throw err;
+}
+
 /**
  * Ensure frozen World Card for this session.
  * Rebuild only when mission place/title/scene identity changes.
@@ -1419,19 +1489,26 @@ async function handleVision(body) {
       sessionId: clientSessionId,
     });
     if (prev?.dataUrl) {
-      return {
-        ok: true,
-        cached: true,
-        followOnly: true,
-        imageUrl: prev.dataUrl,
-        prompt: prev.prompt,
-        stageId: prev.stageId || stageId,
-        model: IMAGE_MODEL,
-        mode: prev.mode || "generate",
-        continuity: prev.continuity || "baseline",
-        reason: "Shared vision for room seat",
-        place: prev.worldCard?.place || null,
-      };
+      return stampDeveloperLlm(
+        {
+          ok: true,
+          cached: true,
+          followOnly: true,
+          imageUrl: prev.dataUrl,
+          prompt: prev.prompt,
+          stageId: prev.stageId || stageId,
+          model: IMAGE_MODEL,
+          mode: prev.mode || "generate",
+          continuity: prev.continuity || "baseline",
+          reason: "Shared vision for room seat",
+          place: prev.worldCard?.place || null,
+        },
+        developerImageLlm(prev.prompt, {
+          sent: false,
+          note: "follow",
+          imageMode: prev.mode || "generate",
+        })
+      );
     }
     return {
       ok: true,
@@ -1455,22 +1532,30 @@ async function handleVision(body) {
       ok: true,
       sessionId: clientSessionId,
     });
-    return {
-      ok: true,
-      cached: true,
-      imageUrl: prev.dataUrl,
-      prompt: prev.prompt,
-      stageId,
-      model: IMAGE_MODEL,
-      mode: prev.mode || "generate",
-      continuity: prev.continuity || "baseline",
-      reason: prev.decisionReason || "Cached vision",
-      place: prev.worldCard?.place || null,
-    };
+    return stampDeveloperLlm(
+      {
+        ok: true,
+        cached: true,
+        imageUrl: prev.dataUrl,
+        prompt: prev.prompt,
+        stageId,
+        model: IMAGE_MODEL,
+        mode: prev.mode || "generate",
+        continuity: prev.continuity || "baseline",
+        reason: prev.decisionReason || "Cached vision",
+        place: prev.worldCard?.place || null,
+      },
+      developerImageLlm(prev.prompt, {
+        sent: false,
+        note: "cache",
+        imageMode: prev.mode || "generate",
+      })
+    );
   }
 
   const worldCard = ensureWorldCard(sessionId, body, prev);
   const client = await getClient().catch(() => null);
+  let directorExchange = null;
   let shot = await resolveShot(body, prev, worldCard, {
     client,
     model: MODEL,
@@ -1484,6 +1569,9 @@ async function handleVision(body) {
         ok: info.ok !== false,
         sessionId: clientSessionId,
       });
+    },
+    onDirectorExchange: (info) => {
+      directorExchange = info;
     },
   });
 
@@ -1529,7 +1617,10 @@ async function handleVision(body) {
           ok: false,
           sessionId: clientSessionId,
         });
-        throw e2;
+        throw failWithImageLlm(e2, prompt, {
+          imageMode: usedMode,
+          director: directorExchange,
+        });
       }
     } else {
       recordAiImage({
@@ -1540,7 +1631,10 @@ async function handleVision(body) {
         ok: false,
         sessionId: clientSessionId,
       });
-      throw e;
+      throw failWithImageLlm(e, prompt, {
+        imageMode: mode,
+        director: directorExchange,
+      });
     }
   }
 
@@ -1584,18 +1678,25 @@ async function handleVision(body) {
     if (oldest) visionSessions.delete(oldest[0]);
   }
 
-  return {
-    ok: true,
-    cached: false,
-    imageUrl,
-    prompt,
-    stageId,
-    model: IMAGE_MODEL,
-    mode: usedMode,
-    continuity,
-    reason,
-    place: worldCard.place || null,
-  };
+  return stampDeveloperLlm(
+    {
+      ok: true,
+      cached: false,
+      imageUrl,
+      prompt,
+      stageId,
+      model: IMAGE_MODEL,
+      mode: usedMode,
+      continuity,
+      reason,
+      place: worldCard.place || null,
+    },
+    developerImageLlm(prompt, {
+      sent: true,
+      imageMode: usedMode,
+      director: directorExchange,
+    })
+  );
 }
 
 /**
@@ -1706,13 +1807,16 @@ async function handleIdeaImage(body) {
       ok: true,
       sessionId: clientSessionId,
     });
-    return {
-      ok: true,
-      cached: true,
-      imageUrl: cached.imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
+    return stampDeveloperLlm(
+      {
+        ok: true,
+        cached: true,
+        imageUrl: cached.imageUrl,
+        model: IMAGE_MODEL,
+        id,
+      },
+      developerImageLlm(cached.prompt, { sent: false, note: "cache", imageMode: "generate" })
+    );
   }
 
   const prompt =
@@ -1755,13 +1859,16 @@ async function handleIdeaImage(body) {
       ok: true,
       sessionId: clientSessionId,
     });
-    return {
-      ok: true,
-      cached: false,
-      imageUrl,
-      model: IMAGE_MODEL,
-      id,
-    };
+    return stampDeveloperLlm(
+      {
+        ok: true,
+        cached: false,
+        imageUrl,
+        model: IMAGE_MODEL,
+        id,
+      },
+      developerImageLlm(prompt, { sent: true, imageMode: "generate" })
+    );
   } catch (e) {
     console.warn("[idea-image]", e.message || e);
     recordAiImage({
@@ -1772,12 +1879,19 @@ async function handleIdeaImage(body) {
       ok: false,
       sessionId: clientSessionId,
     });
-    return {
-      ok: false,
-      error: String(e.message || "generate_failed").slice(0, 200),
-      imageUrl: null,
-      id,
-    };
+    return stampDeveloperLlm(
+      {
+        ok: false,
+        error: String(e.message || "generate_failed").slice(0, 200),
+        imageUrl: null,
+        id,
+      },
+      developerImageLlm(prompt, {
+        sent: false,
+        error: String(e.message || e),
+        imageMode: "generate",
+      })
+    );
   }
 }
 
@@ -2920,6 +3034,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, status, {
         ok: false,
         error: e.message || "Vision generation failed",
+        ...(e.llm ? { llm: e.llm } : {}),
       });
     }
   }

@@ -647,10 +647,26 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
     },
   ];
 
+  const directorModel = model || "grok-4.7";
+  const reportDirector = (extra) => {
+    if (typeof opts.onDirectorExchange !== "function") return;
+    try {
+      opts.onDirectorExchange({
+        system: input[0].content,
+        user: input[1].content,
+        model: directorModel,
+        temperature: 0.2,
+        ...extra,
+      });
+    } catch {
+      /* inspect must not break the shot */
+    }
+  };
+
   const t0 = Date.now();
   try {
     const response = await client.responses.create({
-      model: model || "grok-4.7",
+      model: directorModel,
       input,
       temperature: 0.2,
     });
@@ -659,7 +675,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         opts.onAiTextUsage({
           mode: "vision-director",
           source: "ai",
-          model: model || "grok-4.7",
+          model: directorModel,
           usage: response.usage || null,
           latencyMs: Date.now() - t0,
           ok: true,
@@ -669,6 +685,7 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
       }
     }
     const text = response.output_text || "";
+    reportDirector({ sent: true, rawOutput: text });
     const parsed = extractJsonLoose(text);
     if (!parsed) return null;
     const mode = parsed.mode === "edit" ? "edit" : parsed.mode === "generate" ? "generate" : null;
@@ -693,7 +710,12 @@ export async function directShot(body, prev, worldCard, client, opts = {}) {
         ? parsed.subjects.map((s) => String(s).slice(0, 60)).slice(0, 8)
         : [],
     };
-  } catch {
+  } catch (e) {
+    reportDirector({
+      sent: false,
+      rawOutput: "",
+      error: String(e?.message || e),
+    });
     return null;
   }
 }
@@ -727,7 +749,7 @@ export async function resolveShot(
   body,
   prev,
   worldCard,
-  { client, model, onAiTextUsage } = {}
+  { client, model, onAiTextUsage, onDirectorExchange } = {}
 ) {
   const heuristic = decideShot(body, prev, worldCard);
   const nLen = narrativeLength(body);
@@ -759,6 +781,7 @@ export async function resolveShot(
   const directed = await directShot(body, prev, worldCard, client, {
     model,
     onAiTextUsage,
+    onDirectorExchange,
   });
   return taggedShot(body, directed || heuristic);
 }

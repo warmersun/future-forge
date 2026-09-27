@@ -13,6 +13,8 @@ import {
   setAiTraceFilter,
   aiTraceFilter,
   aiTraceFilterCounts,
+  aiTraceDetailBlocks,
+  aiTraceCopyText,
 } from "./ai-trace.js";
 
 const TINY_PNG =
@@ -106,6 +108,82 @@ describe("ai-trace", () => {
       ok: false,
     });
     assert.equal(aiTraceBadgeLabel(err), "idea-image · error");
+  });
+
+  it("keeps the model prompt off the parsed result", () => {
+    const system = "Role:\nStay local. Do not stub this.";
+    const e = pushAiTrace({
+      mode: "chat",
+      sent: { mode: "chat", context: { year: 2026 } },
+      received: {
+        source: "ai",
+        message: "ok",
+        imageUrl: TINY_PNG,
+        llm: {
+          kind: "text",
+          system,
+          user: "Co-invention session state and conversation (JSON):\n{}\n\nRespond.",
+          rawOutput: '{"message":"full"}',
+          sections: [{ id: "role", label: "Role", tone: "role", part: "system", text: system }],
+        },
+      },
+    });
+    assert.equal(e.llm.system, system);
+    assert.equal(e.llm.rawOutput, '{"message":"full"}');
+    assert.equal(e.received.llm, undefined);
+    assert.equal(e.received.message, "ok");
+    assert.match(e.received.imageUrl, /chars\)/);
+    assert.match(aiTraceDetailBlocks(e), /Role/);
+    assert.match(aiTraceDetailBlocks(e), /ai-trace-sec-role/);
+    assert.match(aiTraceDetailBlocks(e), /Response/);
+    assert.match(aiTraceCopyText(e, "request"), /Stay local/);
+    assert.equal(aiTraceCopyText(e, "response"), '{"message":"full"}');
+    assert.equal(aiTraceCopyText(e, "section", "main:0:role"), system);
+    assert.doesNotMatch(aiTraceCopyText(e, "returned"), /Stay local/);
+  });
+
+  it("indents the session-state JSON payload", () => {
+    const compact = '{"mode":"idea-sparks","year":2026}';
+    const entry = {
+      mode: "idea-sparks",
+      sent: { mode: "idea-sparks" },
+      received: { source: "ai" },
+      llm: {
+        kind: "text",
+        sent: true,
+        system: "Score sparks.",
+        user: `Three application sparks (JSON state):\n${compact}\n\nJSON only.`,
+        rawOutput: "{}",
+        sections: [
+          {
+            id: "preamble",
+            label: "Task",
+            tone: "preamble",
+            part: "user",
+            text: "Three application sparks (JSON state):\n",
+          },
+          {
+            id: "state",
+            label: "Session state",
+            tone: "state",
+            part: "user",
+            text: compact,
+          },
+        ],
+      },
+    };
+    const html = aiTraceDetailBlocks(entry);
+    assert.match(html, /ai-trace-sec-state" open/);
+    assert.match(html, /Parsed result/);
+    assert.match(html, /<details class="ai-trace-sec ai-trace-sec-folded" open>/);
+    assert.doesNotMatch(html, /ai-trace-sec-preamble" open/);
+    assert.doesNotMatch(html, /ai-trace-sec-meta" open/);
+    assert.match(html, /&quot;mode&quot;: &quot;idea-sparks&quot;/);
+    assert.match(html, /\n  &quot;year&quot;: 2026/);
+    assert.equal(
+      aiTraceCopyText(entry, "section", "main:1:state"),
+      '{\n  "mode": "idea-sparks",\n  "year": 2026\n}'
+    );
   });
 
   it("filters All / Text / Images and falls back selection", () => {

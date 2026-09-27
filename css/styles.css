@@ -8555,6 +8555,88 @@ button.linkish:hover {
   border-radius: 8px;
 }
 
+.ai-trace-sec {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.ai-trace-sec > summary {
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.ai-trace-sec > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-trace-sec > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.35rem;
+  color: var(--text-dim);
+}
+
+.ai-trace-sec[open] > summary::before {
+  content: "▾";
+}
+
+.ai-trace-sec-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0.4rem;
+}
+
+.ai-trace-sec > .ai-trace-pre {
+  margin: 0 0.4rem 0.4rem;
+  border-left-width: 1px;
+}
+
+.ai-trace-sec-role,
+.ai-trace-sec-preamble {
+  border-left-color: var(--accent);
+}
+
+.ai-trace-sec-warn {
+  border-left-color: var(--warn);
+}
+
+.ai-trace-sec-contract,
+.ai-trace-sec-instruction {
+  border-left-color: var(--accent-2);
+}
+
+.ai-trace-sec-state,
+.ai-trace-sec-search {
+  border-left-color: var(--accent-3);
+}
+
+.ai-trace-sec-response {
+  border-left-color: var(--danger);
+}
+
+.ai-trace-sec-meta,
+.ai-trace-sec-folded {
+  border-left-color: var(--text-mute);
+}
+
+.ai-trace-sec-director {
+  border-left-color: var(--accent-2);
+  padding-bottom: 0.35rem;
+}
+
+.ai-trace-director {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0 0.45rem 0.35rem;
+}
+
 /* Co-inventor */
 .co-inventor-root {
   display: flex;

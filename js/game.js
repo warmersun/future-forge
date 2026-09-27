@@ -27,6 +27,8 @@ import {
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer } from "./vision.js";
 import { bindAllVisionSplits } from "./side-split.js";
+import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
+import { claimOverlay } from "./overlay-queue.js";
 import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-16";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-16";
@@ -39,7 +41,8 @@ import {
   listAiTrace,
   selectAiTrace,
   selectedAiTrace,
-  formatAiTraceJson,
+  aiTraceDetailBlocks,
+  aiTraceCopyText,
   aiTraceBadgeLabel,
   subscribeAiTrace,
   setAiTraceFilter,
@@ -9839,6 +9842,7 @@ function closeWaitConfirm() {
  * @param {{ year?: number, waits?: number, pressure?: object, mission?: object, multiparty?: boolean, techIds?: string[] }} [ctx]
  */
 function openWaitConfirm(onOk, ctx = {}) {
+  claimOverlay("modal");
   const backdrop = $("#wait-confirm-backdrop");
   const body = $("#wait-confirm-body");
   const title = $("#wait-confirm-title");
@@ -10276,6 +10280,8 @@ function closeLobbyDialog() {
 }
 
 function showLobbyBackdrop() {
+  claimOverlay("modal");
+  document.dispatchEvent(new CustomEvent("ff-dock-expand", { detail: { panel: "rules" } }));
   const bd = $("#lobby-backdrop");
   if (!bd) return;
   bd.hidden = false;
@@ -17340,21 +17346,7 @@ function renderAiTrace() {
           : selected.kind === "image"
             ? `<p class="muted sm">Image preview expired from inspect (prompt and metadata remain).</p>`
             : "";
-      detail.innerHTML =
-        err +
-        preview +
-        `<div class="ai-trace-block">
-          <div class="ai-trace-block-head">Sent<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
-          <pre class="ai-trace-pre" id="aitrace-sent">${escapeHtml(
-            formatAiTraceJson(selected.sent)
-          )}</pre>
-        </div>
-        <div class="ai-trace-block">
-          <div class="ai-trace-block-head">Returned<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="returned">Copy</button></div>
-          <pre class="ai-trace-pre" id="aitrace-returned">${escapeHtml(
-            formatAiTraceJson(selected.received)
-          )}</pre>
-        </div>`;
+      detail.innerHTML = err + preview + aiTraceDetailBlocks(selected);
     }
   }
 }
@@ -18886,24 +18878,122 @@ function learnCardHtml(t, { newest = false } = {}) {
   });
 }
 
+/**
+ * Learn reads inside the Emerging tech panel on the hex workshop.
+ * @param {{ titleHtml: string, lead?: string, bodyHtml: string }} opts
+ * @returns {boolean}
+ */
+function paintLearnPanel({ titleHtml, lead, bodyHtml }) {
+  const host = document.querySelector("#emtech-learn");
+  if (!host) return false;
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="emtech-learn-card">
+      <div class="emtech-learn-head">
+        <h3>${titleHtml}</h3>
+        <button type="button" class="btn btn-ghost btn-sm" data-emtech-learn-close>Close</button>
+      </div>
+      <p class="muted sm emtech-learn-lead"></p>
+      <div class="emtech-learn-body"></div>
+    </div>`;
+  const leadEl = host.querySelector(".emtech-learn-lead");
+  const body = host.querySelector(".emtech-learn-body");
+  if (leadEl) leadEl.textContent = lead || "";
+  if (body) {
+    body.innerHTML = bodyHtml || "";
+    syncReadAloud(body);
+  }
+  host.querySelector("[data-emtech-learn-close]")?.addEventListener("click", () => {
+    stopReadAloud();
+    host.hidden = true;
+    host.innerHTML = "";
+  });
+  document.dispatchEvent(new CustomEvent("ff-dock-expand", { detail: { panel: "emtech" } }));
+  const layout = workshopLayoutFor(host);
+  if (layout && isTechDrawerMode()) {
+    if (!isTechDrawerOpen(layout)) setTechDrawerOpen(layout, true, { focus: false });
+  } else if (layout && isTechRailCollapsed(layout)) {
+    setTechRailPeek(layout, true);
+  }
+  return true;
+}
+
+/**
+ * Park a year or market bulletin in the brief strip. Chip stays after dismiss.
+ * @param {HTMLElement} el
+ * @param {string} label
+ * @returns {boolean}
+ */
+function hostNewsInBrief(el, label) {
+  const layout = workshopLayoutFor(el) || workshopLayoutFor() || document.querySelector("[data-dock-root]");
+  const wrap = layout?.querySelector?.("[data-dock-news]") || document.querySelector("[data-dock-news]");
+  const body = wrap?.querySelector("[data-dock-news-body]");
+  const chip = wrap?.querySelector("[data-dock-news-chip]");
+  if (!wrap || !body || !el) return false;
+  wrap.hidden = false;
+  if (chip) {
+    chip.hidden = false;
+    chip.textContent = label || "News";
+  }
+  body.classList.add("is-open");
+  body.appendChild(el);
+  document.dispatchEvent(new CustomEvent("ff-dock-expand", { detail: { panel: "brief" } }));
+  return true;
+}
+
+function bindNewsChips() {
+  document.querySelectorAll("[data-dock-news-chip]").forEach((chip) => {
+    if (chip.dataset.bound === "1") return;
+    chip.dataset.bound = "1";
+    chip.addEventListener("click", () => {
+      const wrap = chip.closest("[data-dock-news]");
+      const body = wrap?.querySelector("[data-dock-news-body]");
+      const modal = body?.querySelector(".market-news-modal, .year-bulletin-modal");
+      if (body) body.classList.toggle("is-open");
+      if (modal && body) {
+        modal.dataset.reread = "1";
+        const open = body.classList.contains("is-open");
+        modal.hidden = !open;
+        modal.style.display = open ? "block" : "none";
+      }
+      document.dispatchEvent(new CustomEvent("ff-dock-expand", { detail: { panel: "brief" } }));
+    });
+  });
+}
+
+function onOverlayClaim(e) {
+  const kind = e?.detail?.kind;
+  if (kind === "modal") return;
+  const backdrop = $("#modal-backdrop");
+  if (backdrop?.classList.contains("open") && !backdrop.classList.contains("quest-dev-modal-open")) {
+    closeModal();
+  }
+}
+
 /** Right-click / single-tech learn peek */
 function openTechModal(id, { lead: leadText } = {}) {
   const t = techById(id);
   if (!t) return;
+  const lead =
+    leadText ||
+    "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
+  const card = learnCardHtml(t, { newest: true });
+  if (isHexInventUi() && paintLearnPanel({ titleHtml: `${t.icon} ${escapeHtml(t.name)}`, lead, bodyHtml: card })) {
+    return;
+  }
   const title = $("#modal-title");
-  const lead = $("#modal-lead");
+  const leadEl = $("#modal-lead");
   const body = $("#modal-body");
   if (title) title.innerHTML = `${t.icon} ${escapeHtml(t.name)}`;
-  if (lead) {
-    lead.hidden = false;
-    lead.textContent =
-      leadText ||
-      "A deeper look at this emerging-tech family — what is real now, what is still stretch, and how to invent with it locally.";
+  if (leadEl) {
+    leadEl.hidden = false;
+    leadEl.textContent = lead;
   }
   if (body) {
-    body.innerHTML = learnCardHtml(t, { newest: true });
+    body.innerHTML = card;
     syncReadAloud(body);
   }
+  claimOverlay("modal");
   const backdrop = $("#modal-backdrop");
   backdrop?.classList.remove("is-docking-to-learn", "is-closing");
   backdrop?.classList.add("open");
@@ -18923,26 +19013,29 @@ function openLearnStack() {
     updateLearnButton();
     return;
   }
+  const titleText =
+    ids.length === 1 ? "Learn · your selection" : `Learn · ${ids.length} techs (newest first)`;
+  const leadText =
+    ids.length === 1
+      ? "What this family can do, where the curve is going, and how to invent with it in this place."
+      : "Most recently selected on top. Scroll for earlier picks — same depth for each.";
+  const card = ids.map((id, i) => learnCardHtml(techById(id), { newest: i === 0 })).join("");
+  if (hexInvent && paintLearnPanel({ titleHtml: escapeHtml(titleText), lead: leadText, bodyHtml: card })) {
+    return;
+  }
   const title = $("#modal-title");
   const lead = $("#modal-lead");
   const body = $("#modal-body");
-  if (title) {
-    title.textContent =
-      ids.length === 1 ? "Learn · your selection" : `Learn · ${ids.length} techs (newest first)`;
-  }
+  if (title) title.textContent = titleText;
   if (lead) {
     lead.hidden = false;
-    lead.textContent =
-      ids.length === 1
-        ? "What this family can do, where the curve is going, and how to invent with it in this place."
-        : "Most recently selected on top. Scroll for earlier picks — same depth for each.";
+    lead.textContent = leadText;
   }
   if (body) {
-    body.innerHTML = ids
-      .map((id, i) => learnCardHtml(techById(id), { newest: i === 0 }))
-      .join("");
+    body.innerHTML = card;
     syncReadAloud(body);
   }
+  claimOverlay("modal");
   const backdrop = $("#modal-backdrop");
   backdrop?.classList.remove("is-docking-to-learn", "is-closing");
   backdrop?.classList.add("open");
@@ -19238,7 +19331,7 @@ function mpHexEditsAllowed() {
 
 function isMarketNewsModalOpen() {
   const el = document.getElementById("market-news-modal");
-  return Boolean(el && !el.hidden && el.style.display !== "none");
+  return Boolean(el && !el.hidden && el.style.display !== "none" && el.dataset.reread !== "1");
 }
 
 /** True while a modal/flash should keep "your turn" queued. */
@@ -19355,6 +19448,7 @@ function closeMarketNewsModal(opts = {}) {
     marketNewsAutoCloseT = null;
   }
   marketNewsOpenId = null;
+  el.dataset.reread = "1";
   document.body.classList.remove("market-news-open");
   el.hidden = true;
   el.setAttribute("hidden", "");
@@ -19525,6 +19619,7 @@ function closeYearBulletinModal() {
   if (!el) return;
   stopReadAloud();
   yearBulletinOpen = false;
+  el.dataset.reread = "1";
   document.body.classList.remove("year-bulletin-open");
   el.hidden = true;
   el.setAttribute("hidden", "");
@@ -19582,7 +19677,9 @@ function showYearBulletinModal(bulletin, opts = {}) {
           <button type="button" class="btn btn-primary" id="year-bulletin-ok">Got it</button>
         </div>
       </div>`;
-    document.body.appendChild(el);
+    if (!hostNewsInBrief(el, `News · Year ${bulletin?.toYear || ""}`.trim())) {
+      document.body.appendChild(el);
+    }
     el.addEventListener("click", (ev) => {
       if (ev.target === el || ev.target?.id === "year-bulletin-ok" || ev.target?.closest?.("#year-bulletin-ok")) {
         closeYearBulletinModal();
@@ -19660,10 +19757,12 @@ function showYearBulletinModal(bulletin, opts = {}) {
     };
   }
 
+  delete el.dataset.reread;
   el.hidden = false;
   el.removeAttribute("hidden");
   el.style.display = "flex";
   el.classList.add("is-open");
+  hostNewsInBrief(el, `News · Year ${toY}`);
   document.body.classList.add("year-bulletin-open");
   try {
     flashToast(`📅 World clock → ${toY}`, { durationMs: 2800 });
@@ -19712,7 +19811,7 @@ function showMarketNewsModal(news) {
           <button type="button" class="btn btn-primary" id="market-news-ok">Got it</button>
         </div>
       </div>`;
-    document.body.appendChild(el);
+    if (!hostNewsInBrief(el, "News")) document.body.appendChild(el);
     el.addEventListener("click", (ev) => {
       if (ev.target === el || ev.target?.id === "market-news-ok" || ev.target?.closest?.("#market-news-ok")) {
         closeMarketNewsModal();
@@ -19730,10 +19829,12 @@ function showMarketNewsModal(news) {
   el.dataset.tone = tone;
 
   // Identical visibility recipe as mp-turn-modal (proven to work in multiplayer)
+  delete el.dataset.reread;
   el.hidden = false;
   el.removeAttribute("hidden");
   el.style.display = "flex";
   el.classList.add("is-open");
+  hostNewsInBrief(el, `News · ${news.headline || "Market"}`);
   document.body.classList.add("market-news-open");
 
   // Card fly-in each open
@@ -20016,6 +20117,7 @@ function showTurnStartNotice(opts = {}) {
     return;
   }
 
+  claimOverlay("modal");
   const name = opts.name || "Player";
   const mode = opts.mode || (roomBridge.isRoom() ? "room" : "hotseat");
   let el = document.getElementById("mp-turn-modal");
@@ -20472,6 +20574,7 @@ function coachTargetVisible(el) {
 }
 
 function openRulesHelp() {
+  claimOverlay("modal");
   $("#help-backdrop")?.classList.add("open");
 }
 
@@ -20479,6 +20582,42 @@ function openGuidedTour(ev) {
   const opener =
     ev?.currentTarget instanceof HTMLElement ? ev.currentTarget : $("#btn-help");
   void guidedTour.open(tourSnapshot(), { opener });
+}
+
+/**
+ * Copy inspect text during the click. The async clipboard API rejects when
+ * the document is not focused; execCommand still runs in that same click.
+ * @param {string} text
+ */
+function copyInspectText(text) {
+  const value = String(text ?? "");
+  const area = document.createElement("textarea");
+  area.value = value;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.top = "0";
+  area.style.left = "0";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  const previous = document.activeElement;
+  area.focus();
+  area.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } finally {
+    area.remove();
+    if (previous instanceof HTMLElement) previous.focus();
+  }
+  if (ok) return Promise.resolve("execCommand");
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function" &&
+    window.isSecureContext
+  ) {
+    return navigator.clipboard.writeText(value).then(() => "clipboard");
+  }
+  return Promise.reject(new Error("copy failed"));
 }
 
 function bind() {
@@ -21101,11 +21240,10 @@ function bind() {
     const btn = e.target.closest("[data-ai-trace-copy]");
     if (!btn) return;
     const which = btn.getAttribute("data-ai-trace-copy");
-    const selected = selectedAiTrace();
-    const payload =
-      which === "sent" ? selected?.sent : selected?.received;
+    const section = btn.getAttribute("data-ai-trace-section");
     try {
-      await navigator.clipboard.writeText(formatAiTraceJson(payload));
+      const text = aiTraceCopyText(selectedAiTrace(), which, section);
+      await copyInspectText(text);
       flashToast("Copied.");
     } catch {
       flashToast("Could not copy.");
@@ -21269,6 +21407,10 @@ function bind() {
   $("#btn-challenge-help")?.addEventListener("click", () => openRulesHelp());
   $("#btn-deploy-help")?.addEventListener("click", () => openRulesHelp());
   $("#help-close")?.addEventListener("click", closeHelp);
+  $("#btn-reset-layout")?.addEventListener("click", () => {
+    resetWorkshopDocks(document);
+    flashToast("Layout reset");
+  });
   $("#help-backdrop")?.addEventListener("click", (e) => {
     if (e.target.id === "help-backdrop") closeHelp();
   });
@@ -21335,6 +21477,9 @@ export function init() {
   forgetLegacySparkKey();
   bindGlossaryTaps(document);
   bindAllVisionSplits(document);
+  initWorkshopDocks(document);
+  bindNewsChips();
+  document.addEventListener("ff-overlay-claim", onOverlayClaim);
   loadPersistedProgress();
   setReadAloudToast(flashToast);
   bind();

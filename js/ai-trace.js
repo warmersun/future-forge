@@ -196,7 +196,12 @@ export function pushAiTrace(raw = {}) {
   const mode = String(raw.mode || raw.sent?.mode || "co-invent");
   const kind = aiTraceKind({ ...raw, mode });
   const receivedRaw =
-    raw.received && typeof raw.received === "object" ? raw.received : null;
+    raw.received && typeof raw.received === "object" ? { ...raw.received } : null;
+  let llm = raw.llm && typeof raw.llm === "object" ? raw.llm : null;
+  if (receivedRaw && receivedRaw.llm && typeof receivedRaw.llm === "object") {
+    if (!llm) llm = receivedRaw.llm;
+    delete receivedRaw.llm;
+  }
   const previewUrl = attachPreview(
     typeof raw.previewUrl === "string"
       ? raw.previewUrl
@@ -220,6 +225,7 @@ export function pushAiTrace(raw = {}) {
     ms: Number.isFinite(Number(raw.ms)) ? Math.max(0, Math.round(Number(raw.ms))) : 0,
     source,
     previewUrl,
+    llm,
   };
   const next = [entry, ...entries];
   const dropped = next.slice(CAP);
@@ -272,4 +278,204 @@ export function aiTraceBadgeLabel(entry) {
     return `${mode} · ${src}`;
   }
   return mode;
+}
+
+function escapeTraceHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+const TONE_CLASS = {
+  role: "ai-trace-sec-role",
+  warn: "ai-trace-sec-warn",
+  contract: "ai-trace-sec-contract",
+  state: "ai-trace-sec-state",
+  search: "ai-trace-sec-search",
+  instruction: "ai-trace-sec-instruction",
+  preamble: "ai-trace-sec-preamble",
+};
+
+function toneClass(tone) {
+  return TONE_CLASS[tone] || "ai-trace-sec-role";
+}
+
+function sectionKey(scope, section, index) {
+  return `${scope}:${index}:${section?.id || "part"}`;
+}
+
+function findTraceSection(llm, key) {
+  if (!llm || !key) return null;
+  const parts = String(key).split(":");
+  const scope = parts[0];
+  const index = Number(parts[1]);
+  const list = scope === "director" ? llm.director?.sections : llm.sections;
+  if (!Array.isArray(list) || !Number.isInteger(index)) return null;
+  return list[index] || null;
+}
+
+/**
+ * Text for an inspect copy button.
+ * @param {object|null} entry
+ * @param {string} which
+ * @param {string|null} [sectionKey]
+ */
+export function aiTraceCopyText(entry, which, sectionKey) {
+  const llm = entry?.llm;
+  if (which === "request") {
+    if (!llm) return formatAiTraceJson(entry?.sent);
+    if (llm.kind === "image") return String(llm.user || "");
+    return [llm.system, llm.user].filter((s) => s).join("\n\n");
+  }
+  if (which === "response") return String(llm?.rawOutput || "");
+  if (which === "director-request") {
+    const director = llm?.director;
+    if (!director) return "";
+    return [director.system, director.user].filter((s) => s).join("\n\n");
+  }
+  if (which === "director-response") return String(llm?.director?.rawOutput || "");
+  if (which === "section") return displaySectionText(findTraceSection(llm, sectionKey));
+  if (which === "sent") return formatAiTraceJson(entry?.sent);
+  return formatAiTraceJson(entry?.received);
+}
+
+function metaLines(llm) {
+  if (!llm) return "";
+  const lines = [];
+  if (llm.model) lines.push(`model: ${llm.model}`);
+  if (llm.imageMode) lines.push(`image mode: ${llm.imageMode}`);
+  if (llm.temperature != null) lines.push(`temperature: ${llm.temperature}`);
+  if (llm.maxOutputTokens != null) lines.push(`max output tokens: ${llm.maxOutputTokens}`);
+  if (llm.reasoning) lines.push(`reasoning: ${llm.reasoning}`);
+  if (Array.isArray(llm.tools) && llm.tools.length) lines.push(`tools: ${llm.tools.join(", ")}`);
+  lines.push(llm.sent ? "sent: yes" : "sent: no");
+  if (llm.note) lines.push(`note: ${llm.note}`);
+  if (llm.error) lines.push(`error: ${llm.error}`);
+  return lines.join("\n");
+}
+
+function detailsBlock({ className, open, title, copy, section, body }) {
+  const copyBtn = copy
+    ? `<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="${escapeTraceHtml(copy)}"${
+        section ? ` data-ai-trace-section="${escapeTraceHtml(section)}"` : ""
+      }>Copy</button>`
+    : "";
+  return `<details class="ai-trace-sec ${className}"${open ? " open" : ""}>
+    <summary><span>${escapeTraceHtml(title)}</span></summary>
+    ${copyBtn ? `<div class="ai-trace-sec-actions">${copyBtn}</div>` : ""}
+    <pre class="ai-trace-pre">${escapeTraceHtml(body)}</pre>
+  </details>`;
+}
+
+/**
+ * Session state is the JSON payload. Show it indented; the stored text stays exact.
+ * @param {object|null|undefined} section
+ */
+function displaySectionText(section) {
+  const text = String(section?.text || "");
+  if (section?.id !== "state" && section?.id !== "user") return text;
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return text;
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    return text;
+  }
+}
+
+function sectionsHtml(llm, scope) {
+  const list = Array.isArray(llm?.sections) ? llm.sections : [];
+  return list
+    .map((section, index) => {
+      const n = String(section?.text || "").length;
+      const title = `${section?.label || "Section"} · ${n.toLocaleString()} chars`;
+      return detailsBlock({
+        className: toneClass(section?.tone),
+        open: section?.id === "state",
+        title,
+        copy: "section",
+        section: sectionKey(scope, section, index),
+        body: displaySectionText(section),
+      });
+    })
+    .join("");
+}
+
+function exchangeHtml(llm, { scope, requestCopy, responseCopy, metaTitle }) {
+  if (!llm) return "";
+  const responseBody = llm.rawOutput
+    ? llm.rawOutput
+    : llm.kind === "image"
+      ? "No text response. The image is the preview above."
+      : "";
+  return (
+    detailsBlock({
+      className: "ai-trace-sec-meta",
+      open: false,
+      title: metaTitle,
+      copy: requestCopy,
+      body: metaLines(llm),
+    }) +
+    sectionsHtml(llm, scope) +
+    detailsBlock({
+      className: "ai-trace-sec-response",
+      open: false,
+      title: "Response",
+      copy: responseCopy,
+      body: responseBody,
+    })
+  );
+}
+
+/**
+ * Collapsible prompt sections when the server echoed `llm`; otherwise the payload JSON.
+ * @param {object|null} entry
+ */
+export function aiTraceDetailBlocks(entry) {
+  const llm = entry?.llm;
+  if (!llm || typeof llm !== "object") {
+    return `<div class="ai-trace-block">
+      <div class="ai-trace-block-head">Sent<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
+      <pre class="ai-trace-pre" id="aitrace-sent">${escapeTraceHtml(formatAiTraceJson(entry?.sent))}</pre>
+    </div>
+    <div class="ai-trace-block">
+      <div class="ai-trace-block-head">Returned<button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="returned">Copy</button></div>
+      <pre class="ai-trace-pre" id="aitrace-returned">${escapeTraceHtml(formatAiTraceJson(entry?.received))}</pre>
+    </div>`;
+  }
+  const director = llm.director
+    ? `<details class="ai-trace-sec ai-trace-sec-director">
+        <summary><span>Vision director</span></summary>
+        <div class="ai-trace-director">
+          ${exchangeHtml(llm.director, {
+            scope: "director",
+            requestCopy: "director-request",
+            responseCopy: "director-response",
+            metaTitle: "Director request",
+          })}
+        </div>
+      </details>`
+    : "";
+  const folded = `<details class="ai-trace-sec ai-trace-sec-folded" open>
+      <summary><span>Parsed result</span></summary>
+      <div class="ai-trace-sec-actions"><button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="returned">Copy</button></div>
+      <pre class="ai-trace-pre">${escapeTraceHtml(formatAiTraceJson(entry?.received))}</pre>
+    </details>
+    <details class="ai-trace-sec ai-trace-sec-folded">
+      <summary><span>HTTP payload</span></summary>
+      <div class="ai-trace-sec-actions"><button type="button" class="btn btn-ghost btn-sm" data-ai-trace-copy="sent">Copy</button></div>
+      <pre class="ai-trace-pre">${escapeTraceHtml(formatAiTraceJson(entry?.sent))}</pre>
+    </details>`;
+  return (
+    exchangeHtml(llm, {
+      scope: "main",
+      requestCopy: "request",
+      responseCopy: "response",
+      metaTitle: llm.kind === "image" ? "Image request" : "Request",
+    }) +
+    director +
+    folded
+  );
 }
