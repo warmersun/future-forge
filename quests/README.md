@@ -34,6 +34,8 @@ Source of truth: each course repo plus spotlight tiles in `~/dev/warmersun/futur
 
 Capability trends (Wait charts) use a separate catalog — see [`docs/capability-trends-remote.md`](../docs/capability-trends-remote.md) (`FF_TRENDS_REMOTE_URL`).
 
+The year dialog and the AI timing calendar come from one predictions bank, not from Quest tiles — see [`docs/predictions-bank.md`](../docs/predictions-bank.md) (`FF_PREDICTIONS_FILE`).
+
 **Dev note:** When the local warmersun checkout exists, unset `FF_QUESTS_REMOTE_URL` prefers `~/dev/warmersun/quests/catalog.json` (built by `publish-quests.sh`) over the live site. To pull the published catalog, set `FF_QUESTS_REMOTE_URL=https://warmersun.com/quests/catalog.json`. There is one public catalog.
 
 ## Rules (local folder)

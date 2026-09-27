@@ -13,7 +13,6 @@ import {
   VISION_STAGES,
   YEAR_NEWS,
   CHALLENGE_ANGLES,
-  foresightForStack,
   globalById,
   missionsForGlobal,
   localScenariosForGlobal,
@@ -186,9 +185,11 @@ import {
   marketNewsImagePath,
 } from "./sim/market-news.js";
 import {
-  foresightCapabilityContext,
-  applyForesightToClaimStretch,
+  bulletinHighlight,
+  foresightForStack,
   foresightForYear,
+  getWorldForesightBank,
+  setWorldForesightBank,
 } from "./sim/world-foresight.js";
 import {
   renderShareCard,
@@ -7747,12 +7748,7 @@ function assessFeasibility() {
       timingNote = state.aiTiming.reason || "AI timing assess.";
     } else {
       const how = state.inventionHow.trim() || state.inventionImpact.trim();
-      const stretch = detectClaimStretch(how, techs, year);
-      const fCtx = foresightCapabilityContext(year, techs, {
-        globalId: state.global?.id || state.mission?.globalId,
-        seed: state.mission?.id,
-      });
-      const adj = applyForesightToClaimStretch(stretch, how, fCtx);
+      const adj = detectClaimStretch(how, techs, year);
       const rawLevel = adj.level;
       timingLevel = applyTimingYearMonotonicity(rawLevel);
       timingNote =
@@ -11214,6 +11210,7 @@ function leanCoInventContext(mode, extra = {}) {
     {
       year: state.year,
       place: state.mission?.place,
+      globalId: state.global?.id || state.mission?.globalId || null,
       grounding: state.mission?.grounding || null,
       missionTitle: state.mission?.title || "",
       missionScene: scene,
@@ -11275,6 +11272,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         storyFace: state.storyFace,
         year: state.year,
         place: state.mission?.place,
+        globalId: state.global?.id || state.mission?.globalId || null,
         pressure: state.pressure,
         availableTechs: techsForCoInventMode(mode),
         grounding: state.mission?.grounding || null,
@@ -16686,15 +16684,20 @@ function renderOutcome() {
   const fs = foresightForStack(
     (o.techs || []).map((t) => t.id),
     state.global?.id || state.mission?.globalId,
-    o.year
+    o.year,
+    { seed: state.mission?.id || "outcome" }
   );
   const fg = $("#outcome-foresight");
   if (fg) {
     const card = (kind, label, item) => {
       if (!item) return "";
+      const by = item.attribution?.name
+        ? `<p class="foresight-attribution">— ${escapeHtml(item.attribution.name)}</p>`
+        : "";
       return `<article class="foresight-card foresight-${kind}">
-        <div class="foresight-kind">${label}</div>
-        <p>${escapeHtml(item.text)}</p>
+        <div class="foresight-kind">${label} · ${escapeHtml(String(item.year))}</div>
+        <p><strong>${escapeHtml(item.headline)}</strong> ${escapeHtml(item.detail)}</p>
+        ${by}
       </article>`;
     };
     const html =
@@ -19545,13 +19548,7 @@ function openYearForesightFromHud() {
     {
       fromYear: Math.max(GAME.startYear || 2026, (state.year || 2026) - 1),
       toYear: state.year || GAME.startYear || 2026,
-      highlights: highlights.map((h) => ({
-        id: h.id,
-        kind: h.kind,
-        headline: h.headline,
-        detail: h.detail,
-        claimBand: h.claimBand,
-      })),
+      highlights: highlights.map(bulletinHighlight),
     },
     { userOpen: true }
   );
@@ -19607,9 +19604,12 @@ function showYearBulletinModal(bulletin, opts = {}) {
   const list = el.querySelector("#year-bulletin-list");
   const okBtn = el.querySelector("#year-bulletin-ok");
   if (kicker) {
+    const bank = getWorldForesightBank();
+    const bankLabel =
+      bank?.id && bank.id !== "future-forge-default" && bank.title ? ` · ${bank.title}` : "";
     kicker.textContent = opts.userOpen
-      ? `World clock · Year ${toY}`
-      : `World clock · ${fromY} → ${toY}`;
+      ? `World clock · Year ${toY}${bankLabel}`
+      : `World clock · ${fromY} → ${toY}${bankLabel}`;
   }
   if (title) title.textContent = `Year ${toY} — capabilities shift`;
   if (body) {
@@ -19627,6 +19627,11 @@ function showYearBulletinModal(bulletin, opts = {}) {
               <span class="year-bulletin-kind">${escapeHtml(kind)}</span>
               <strong>${escapeHtml(h.headline || "")}</strong>
               <span class="year-bulletin-detail">${escapeHtml(h.detail || "")}</span>
+              ${
+                h.attribution
+                  ? `<span class="year-bulletin-attribution">— ${escapeHtml(h.attribution)}</span>`
+                  : ""
+              }
             </li>`;
           })
           .join("")
@@ -21312,6 +21317,20 @@ async function refreshDeveloperModeFromHealth() {
   }
 }
 
+/** Activate the server's predictions bank (default or FF_PREDICTIONS_FILE) for year dialogs and outcome cards. */
+async function loadPredictionsFromServer() {
+  try {
+    const res = await fetch("/api/predictions");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.bank) return;
+    const set = setWorldForesightBank(data.bank);
+    if (!set.ok) console.warn("[predictions] server bank rejected", set.errors);
+  } catch {
+    /* offline / static — no bank; bulletins read as a quiet year */
+  }
+}
+
 export function init() {
   forgetLegacySparkKey();
   bindGlossaryTaps(document);
@@ -21328,6 +21347,7 @@ export function init() {
   }
   showScreen("title");
   void refreshDeveloperModeFromHealth();
+  void loadPredictionsFromServer();
   onClerkSession(() => {
     renderTitleMeta();
     void syncCloudProgress();

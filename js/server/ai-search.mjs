@@ -16,7 +16,7 @@ export const SEARCH_MAX_OUTPUT_TOKENS = {
 };
 
 export const SEARCH_SYSTEM_LINE =
-  "Use web_search and x_search to check whether THIS architecture and payload are already demonstrated in year. If they are, score green (or write a real spark). Do not let smaller grounding examples (hoppers, medical boxes) cap payload or force yellow/red. Quest/clinic fit is not timing. Honor only explicit grounding contradictions (limits, denials, not-yet).";
+  "Use web_search and x_search to check whether THIS architecture and payload are already demonstrated in year. If they are, score green (or write a real spark). Do not let smaller grounding examples (hoppers, medical boxes) cap payload or force yellow/red. Quest/clinic fit is not timing. Honor only explicit grounding contradictions (limits, denials, not-yet). Search cannot override worldClock: a not_yet row stays ahead in this game's calendar even if search finds a lab demo.";
 
 /**
  * @param {string[]} [argv] — typically `process.argv.slice(2)`

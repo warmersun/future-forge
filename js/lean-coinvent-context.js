@@ -23,6 +23,7 @@ export function inventDraftFieldsForContext(ctx = {}) {
  * @param {object} [snap]
  * @param {number} [snap.year]
  * @param {string} [snap.place]
+ * @param {string|null} [snap.globalId] theme id — ranks world-clock rows server-side
  * @param {string|null} [snap.grounding]
  * @param {string} [snap.missionTitle]
  * @param {string} [snap.missionScene]
@@ -40,10 +41,12 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     rest.grounding !== undefined ? rest.grounding : snap.grounding ?? null;
   const year = rest.year ?? snap.year;
   const place = rest.place ?? snap.place;
+  const globalId = rest.globalId ?? snap.globalId ?? null;
   const scene = String(snap.missionScene || "").slice(0, 600);
   const base = {
     year,
     place,
+    ...(globalId ? { globalId } : {}),
     grounding,
     missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
     missionScene: rest.missionScene ?? scene,
@@ -93,6 +96,7 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     const out = {
       year,
       place,
+      ...(globalId ? { globalId } : {}),
       grounding,
       missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
       missionScene: rest.missionScene ?? scene,

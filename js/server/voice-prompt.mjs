@@ -5,6 +5,7 @@
 
 import { knownVoiceId } from "../voice-choices.js";
 import { listLessonMedia, tutorNotesForVoice } from "../lesson-media.js";
+import { worldClockContext } from "./fast-eval.mjs";
 
 export const VOICE_MODEL = "grok-voice-latest";
 export const VOICE_SAMPLE_RATE = 24_000;
@@ -297,6 +298,32 @@ function convergenceVoiceBlock(context) {
 }
 
 /**
+ * World-clock rows for the voice partner, ranked by the selected stack.
+ * @param {object} context
+ * @param {number} limit
+ */
+function voiceWorldClock(context, limit) {
+  const techIds = listSelectedTechs(context).map((t) => t.id).filter(Boolean);
+  return worldClockContext(context, { techIds, limit }) || [];
+}
+
+/**
+ * One spoken paragraph: what the calendar says is due and what is still ahead.
+ * @param {object} context
+ */
+export function worldClockVoiceBlock(context) {
+  const rows = voiceWorldClock(context, 6);
+  if (!rows.length) return "";
+  const say = (r) => `${r.headline}${r.attribution ? ` (${r.attribution})` : ""}`;
+  const due = rows.filter((r) => r.status === "due").map(say);
+  const ahead = rows.filter((r) => r.status === "not_yet").map((r) => `${say(r)} in ${r.year}`);
+  const parts = [];
+  if (due.length) parts.push(`Already real by now: ${due.join("; ")}.`);
+  if (ahead.length) parts.push(`Still ahead, forecasts only: ${ahead.join("; ")}.`);
+  return `World clock for this year. ${parts.join(" ")} Build on what is already real. Treat what is still ahead as a forecast, not today's tool, and name who made the forecast when you cite one.`;
+}
+
+/**
  * Compact invent snapshot for the get_invent_state tool.
  * @param {object|null|undefined} context
  */
@@ -340,6 +367,7 @@ export function inventStateSnapshot(context = {}) {
     focusTechId: clip(context.focusTechId, 80) || null,
     spotlightTechId: clip(context.spotlightTechId, 80) || null,
     guidance: clip(context.guidance, 400),
+    worldClock: voiceWorldClock(context, 8),
   };
 }
 
@@ -381,6 +409,7 @@ export function buildVoiceInstructions(context = {}) {
     : `You are the AI co-inventor in Future Forge, sitting with one learner on ${title} in ${place} (${year}).`;
   const convergenceLine = convergenceVoiceBlock(context);
   const concernLine = concernVoiceBlock(context);
+  const clockLine = worldClockVoiceBlock(context);
 
   return `## Role & Persona
 ${roleLine} You are a creative partner, not the sole inventor. Warm, practical, hopeful. You talk like a sharp colleague at a workshop table.
@@ -401,6 +430,7 @@ ${
 ${problem ? `The situation: ${problem}` : ""}
 ${guidance ? `Quest note: ${guidance}` : ""}
 ${spotlight ? `Spotlight emTech id: ${spotlight}. Prefer that capability when it honestly fits this year.` : ""}
+${clockLine}
 ${tutorBlock}
 ${how ? `How it works so far: ${how}` : "They have not written how it works yet."}
 ${life ? `Everyday life so far: ${life}` : ""}

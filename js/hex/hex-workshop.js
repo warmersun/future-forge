@@ -106,10 +106,6 @@ import { applyPressureRiseYears } from "../sim/pressure.js";
 import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
 import { detectClaimStretch } from "../data.js";
-import {
-  applyForesightToClaimStretch,
-  foresightCapabilityContext,
-} from "../sim/world-foresight.js";
 import { attachReadAloud, stopReadAloud } from "../read-aloud.js";
 
 /**
@@ -2037,12 +2033,7 @@ export function createHexWorkshop(api) {
     const tech = tile.techId ? techById(tile.techId) : null;
     const techs = tech ? [tech] : [];
     const how = String(tile.howText || "").trim();
-    const stretch = detectClaimStretch(how, techs, year);
-    const fCtx = foresightCapabilityContext(year, techs, {
-      globalId: api.getGlobal?.()?.id || api.getMission?.()?.globalId,
-      seed: api.getMission?.()?.id,
-    });
-    return applyForesightToClaimStretch(stretch, how, fCtx);
+    return detectClaimStretch(how, techs, year);
   }
 
   function applyTimingToTile(tileId, level, reason, forKey) {

@@ -1,0 +1,124 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "musk-abundance",
+  "title": "Elon Musk: AI, robots, and abundance",
+  "attribution": {
+    "name": "Elon Musk"
+  },
+  "predictions": [
+    {
+      "id": "musk-ai-beyond-any-human-2027",
+      "year": 2027,
+      "kind": "prediction",
+      "techIds": ["ai", "computing"],
+      "headline": "AI smarter than any single human",
+      "detail": "Prediction: AI surpasses the intelligence of any individual human by 2026–2027.",
+      "claimBand": "frontier",
+      "sourceNote": "Paraphrased from a compiled list of public statements; the source gives 2026–2027, placed at the later year."
+    },
+    {
+      "id": "musk-superhuman-digital-work-2027",
+      "year": 2027,
+      "kind": "prediction",
+      "techIds": ["ai", "computing", "networks"],
+      "headline": "Superhuman AI for any digital work",
+      "detail": "Prediction: by the end of 2027, AI can do anything digital that does not require shaping atoms, at a superhuman level.",
+      "claimBand": "frontier",
+      "sourceNote": "Paraphrased from a compiled list of public statements."
+    },
+    {
+      "id": "musk-software-engineering-2027",
+      "year": 2027,
+      "kind": "prediction",
+      "techIds": ["ai", "computing"],
+      "headline": "Humans can't compete at software engineering",
+      "detail": "Prediction: AI reaches a point in software engineering where humans simply can't compete.",
+      "claimBand": "frontier",
+      "sourceNote": "Undated in the source list; placed with the end-of-2027 digital-work claim."
+    },
+    {
+      "id": "musk-optimus-surgeon-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "techIds": ["robots", "ai"],
+      "headline": "Optimus out-operates the best surgeons",
+      "detail": "Prediction: the Optimus humanoid robot becomes a better surgeon than the world's best human surgeons, roughly within three years.",
+      "claimBand": "frontier",
+      "sourceNote": "Source says roughly three years; placed at 2029."
+    },
+    {
+      "id": "musk-ai-beyond-all-humanity-2031",
+      "year": 2031,
+      "kind": "prediction",
+      "techIds": ["ai", "computing"],
+      "headline": "AI smarter than all humanity combined",
+      "detail": "Prediction: AI surpasses the combined intelligence of all humanity around 2030–2031.",
+      "claimBand": "frontier",
+      "sourceNote": "Source gives 2030–2031, placed at the later year."
+    },
+    {
+      "id": "musk-billion-humanoids-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "techIds": ["robots", "ai", "energy"],
+      "headline": "A billion humanoid robots at work",
+      "detail": "Prediction: at least one billion humanoid robots exist within ten years, each producing roughly five times the output of a human, together more productive than all humans combined.",
+      "claimBand": "frontier",
+      "sourceNote": "Source says within ten years; placed at 2036."
+    },
+    {
+      "id": "musk-economy-doubles-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "techIds": ["ai", "robots"],
+      "globalIds": ["poverty"],
+      "headline": "AI and robots double the world economy",
+      "detail": "Prediction: AI and robots more than double the global economy in less than ten years.",
+      "claimBand": "frontier",
+      "sourceNote": "Source says less than ten years; placed at 2036."
+    },
+    {
+      "id": "musk-universal-high-income-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "techIds": ["ai", "robots"],
+      "globalIds": ["automation", "poverty"],
+      "headline": "Universal high income, work optional",
+      "detail": "Prediction: AI and robots lead to universal high income, and work becomes optional.",
+      "claimBand": "frontier",
+      "sourceNote": "Framed in the source as the coming decade; placed with the ten-year robot and economy claims."
+    },
+    {
+      "id": "musk-work-by-choice-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "techIds": ["ai", "robots"],
+      "globalIds": ["automation"],
+      "headline": "Work becomes a choice, not survival",
+      "detail": "Prediction: work shifts from something people need to do to survive economically into something they choose to do.",
+      "claimBand": "frontier",
+      "sourceNote": "Undated in the source list; placed with the universal-high-income claim."
+    },
+    {
+      "id": "musk-retirement-saving-irrelevant-2036",
+      "year": 2036,
+      "kind": "prediction",
+      "techIds": ["ai", "robots"],
+      "globalIds": ["ageing", "poverty"],
+      "headline": "Saving for retirement stops mattering",
+      "detail": "Prediction: if AI-driven abundance develops as predicted, saving for retirement eventually becomes irrelevant.",
+      "claimBand": "frontier",
+      "sourceNote": "Conditional and undated in the source list; placed with the universal-high-income claim."
+    },
+    {
+      "id": "musk-age-of-abundance-2040",
+      "year": 2040,
+      "kind": "trend",
+      "techIds": ["ai", "robots", "solar", "energy"],
+      "headline": "An age of extraordinary abundance",
+      "detail": "Prediction: the long-term outcome is an age of extraordinary abundance driven by AI, robotics, and abundant energy.",
+      "claimBand": "frontier",
+      "sourceNote": "Long-term and undated in the source list; placed at the last year the game's calendar covers."
+    }
+  ]
+}

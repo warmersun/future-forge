@@ -1,0 +1,106 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "future-forge-default-excerpt",
+  "title": "Excerpt of the shipped default bank",
+  "predictions": [
+    {
+      "id": "solar-cheapest-new-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "techIds": [
+        "solar",
+        "wind",
+        "battery",
+        "energy"
+      ],
+      "headline": "Cheap renewables + storage are real",
+      "detail": "In many markets utility-scale solar and wind paired with storage already undercut new fossil generation — the local fight is siting, grids, and who gets the electrons.",
+      "claimBand": "now",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "iot-flood-sensors-2026",
+      "year": 2026,
+      "kind": "milestone",
+      "techIds": [
+        "iot",
+        "networks"
+      ],
+      "headline": "Flood and leak sensors are deployable",
+      "detail": "Cheap sensing is real; governance and maintenance decide whether alerts become action.",
+      "claimBand": "now",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "edge-inference-2027",
+      "year": 2027,
+      "kind": "trend",
+      "techIds": [
+        "ai",
+        "computing",
+        "iot"
+      ],
+      "headline": "More inference moves to the edge",
+      "detail": "Smaller models and on-device chips make offline clinic and field assistants more honest for 2027+ claims — still narrow workflows, not general AGI.",
+      "claimBand": "near",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "autonomy-fixed-routes-2027",
+      "year": 2027,
+      "kind": "trend",
+      "techIds": [
+        "self-driving",
+        "drones",
+        "robots"
+      ],
+      "headline": "Autonomy expands on fixed routes first",
+      "detail": "Mapped sites and corridors get more reliable autonomy before messy open environments.",
+      "claimBand": "near",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "geofenced-shuttles-2028",
+      "year": 2028,
+      "kind": "prediction",
+      "techIds": [
+        "self-driving",
+        "transportation",
+        "networks"
+      ],
+      "headline": "Geofenced driverless shuttles normalize",
+      "detail": "Prediction: fixed-route, mapped shuttles become routine in some cities before open-road robotaxis everywhere.",
+      "claimBand": "near",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "space-eo-towns-2029",
+      "year": 2029,
+      "kind": "prediction",
+      "techIds": [
+        "space",
+        "ai",
+        "networks"
+      ],
+      "headline": "Near-real-time Earth observation for towns",
+      "detail": "Prediction: denser constellations make local environmental monitoring routine for small cities that can pay and act.",
+      "claimBand": "near",
+      "sourceNote": "curated 2026 foresight snapshot"
+    },
+    {
+      "id": "autonomous-rebuild-swarm-2034",
+      "year": 2034,
+      "kind": "prediction",
+      "techIds": [
+        "robots",
+        "drones",
+        "ai",
+        "print3d"
+      ],
+      "headline": "Rebuild robot swarms need humans",
+      "detail": "Prediction: disaster rebuild uses more semi-autonomous machines under command; unsupervised city rebuild swarms stay fiction.",
+      "claimBand": "frontier",
+      "sourceNote": "curated 2026 foresight snapshot"
+    }
+  ]
+}

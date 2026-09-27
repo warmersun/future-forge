@@ -5661,6 +5661,13 @@ body.market-news-open {
   color: #cbd5e1;
 }
 
+.year-bulletin-attribution,
+.foresight-attribution {
+  font-size: 0.76rem;
+  font-style: italic;
+  color: #94a3b8;
+}
+
 body.year-bulletin-open {
   overflow: hidden;
 }
@@ -6738,6 +6745,11 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   font-size: 0.9rem;
   color: var(--text-dim);
   line-height: 1.55;
+}
+
+.foresight-card p.foresight-attribution {
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
 }
 
 .muted {

@@ -37,6 +37,12 @@ import {
   fetchRemoteTrendCatalog,
   resolveTrendsRemoteUrl,
 } from "../js/trends-remote.mjs";
+import {
+  loadPredictionsBank,
+  lastPredictionsLoad,
+  logPredictionsLoad,
+  predictionsApiResponse,
+} from "../js/predictions-bank.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "../js/scene-prose.js";
 import { QUEST_SUMMARY_RECIPE } from "../js/quest-summary.js";
 import { BRIEF_MD_RECIPE } from "../js/brief-beats.js";
@@ -170,6 +176,9 @@ import {
   fastEvalUserContent,
   sanitizeFast,
   reasoningEffortForCoInvent,
+  worldClockContext,
+  WORLD_CLOCK_TIMING_LINE,
+  WORLD_CLOCK_CONTEXT_LINE,
 } from "../js/server/fast-eval.mjs";
 import {
   GROUNDING_HINT,
@@ -228,6 +237,8 @@ const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
 const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
 const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
+// Rooms, year bulletins, and the AI world clock read this bank from the first request on.
+await loadPredictionsBank();
 const XAI_BASE = "https://api.x.ai/v1";
 
 const PORT = Number(process.env.PORT || process.env.FF_PORT) || 8765;
@@ -468,6 +479,7 @@ Hard rules:
 - If context.rules is set, those are the local weather already on the books (quest locks plus any the player lobbied). Cite them when they change who can field. They do not ease crisis meters by themselves.
 - No tabletop jargon. No UI lectures.
 - Never say a category is locked until a year.
+- ${WORLD_CLOCK_CONTEXT_LINE} For assess-feasibility: ${WORLD_CLOCK_TIMING_LINE}
 - If context.grounding is set, treat it as the authoritative source of truth for this Quest along the chain: emTech enables product category → capabilities → trends → predictions → milestones unlock use cases → inventable applications (+ honest limits). Prefer product-category grain over generic tech-id encyclopedia when advising or assessing.
 
 Respond with a single JSON object (no markdown fences):
@@ -523,6 +535,7 @@ Role:
 - Scaffold the learner to **apply** unlocked use cases as a local **application** in this place/year (pilot-honest) — do not dump a finished invention or expand to unlimited bare emTech.
 - If context.spotlightAdvance is set, this lesson is pegged to a real recent advance (title, summary, asOf). The player-facing story deliberately never names it. Once the learner has the story (they have read the briefing, or asked about the place or what could help), name the advance, the emTech family it belongs to, and where it sits on its curve: what just became possible, and what is still years out. Say it in plain words first, then the term. Do not lead with the advance before the story, and never present it as the answer to invent — it is what makes the invent possible here.
 - Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
+- ${WORLD_CLOCK_CONTEXT_LINE} When teaching trends and predictions, use due rows as what is real now and not_yet rows as labeled forecasts.
 
 Tutor style (hard rules for teaching):
 - One **current idea** per reply — do not stack SEQUENCE 1–10 or lecture the whole lesson.
@@ -557,6 +570,20 @@ Respond with a single JSON object (no markdown fences) like the co-inventor, plu
 For assess-feasibility set timing; otherwise timing may be null.`;
 
 /** Compact pose prompt lives in js/server/fast-eval.mjs (FAST_EVAL_MODES). */
+
+/** Critic, judge, scoring, and scenario modes never get the world clock. */
+const WORLD_CLOCK_SKIP_MODES = new Set([
+  "score-pathway",
+  "pose-challenge",
+  "judge-scrutiny-move",
+  "judge-challenge",
+  "judge-contribution",
+  "coach-challenge",
+  "draft-challenge",
+  "evaluate-convergence",
+  "evaluate-neighbors",
+  "generate-scenarios",
+]);
 
 /* —— AI path —— */
 
@@ -645,7 +672,9 @@ function buildUserPayload({ messages, context, mode }) {
       "Stay local to place/year. Message structure: one-line SCAMPER framing, then the seven headed variants (2–4 sentences each + one why-it-might-win line). Brainstorm only — leave proposals empty (inventionHow, inventionName, inventionImpact, addTechIds all empty/null). Do NOT offer an Apply how-it-works draft; the learner rewrites their own story if inspired. Never say categories are year-locked. Do not confuse with SIT closed-world templates — SCAMPER may Adapt from outside the draft." +
       GROUNDING_HINT,
     "assess-feasibility":
-      "Judge claim timing only: is this mechanism possible or already demonstrated in context.year? Do not judge quest fit, clinic job, or hopper vs heavy-lift category. If grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or not-yet. Examples are not a closed inventory; smaller examples do not cap payload. Different category is not does-not-exist. Return timing: { level: red|yellow|green, reason: one sentence }. green = architecture+payload demonstrated by year (no pilot tax). yellow = vague or scale not yet demonstrated after checking year. red = only explicit grounding forbid/not-yet, or sci-fi as routine. Never red/yellow merely for different category or not a small hopper. Same claims at a later year must not score worse than priorTiming. message can briefly echo the reason. proposals empty.",
+      "Judge claim timing only: is this mechanism possible or already demonstrated in context.year? Do not judge quest fit, clinic job, or hopper vs heavy-lift category. If grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or not-yet. Examples are not a closed inventory; smaller examples do not cap payload. Different category is not does-not-exist. Return timing: { level: red|yellow|green, reason: one sentence }. green = architecture+payload demonstrated by year (no pilot tax). yellow = vague or scale not yet demonstrated after checking year. red = only explicit grounding forbid/not-yet, or sci-fi as routine. Never red/yellow merely for different category or not a small hopper. Same claims at a later year must not score worse than priorTiming. " +
+      WORLD_CLOCK_TIMING_LINE +
+      " message can briefly echo the reason. proposals empty.",
     "complete-picture":
       "Player wrote only one story face. storyFace in context is 'how' or 'life'. If storyFace=how, fill proposals.inventionImpact only (everyday life). If storyFace=life, fill proposals.inventionHow only (mechanism). Do not overwrite the face they wrote. Keep local and tied to the tech stack. If context.contributingToOther, extend their invent additively — never replace their core idea." +
       GROUNDING_HINT,
@@ -736,6 +765,8 @@ function buildUserPayload({ messages, context, mode }) {
     return JSON.stringify(posePayload);
   }
 
+  const worldClock = WORLD_CLOCK_SKIP_MODES.has(mode) ? null : worldClockContext(context);
+
   const payload = {
     mode: mode || "chat",
     modeInstruction,
@@ -785,6 +816,7 @@ function buildUserPayload({ messages, context, mode }) {
       ? String(context.playerAnswer).slice(0, 2000)
       : null,
     priorTiming: context?.priorTiming || null,
+    ...(worldClock ? { worldClock } : {}),
     refresh: Boolean(context?.refresh),
     avoidTitles: Array.isArray(context?.avoidTitles)
       ? context.avoidTitles.slice(0, 12)
@@ -2740,6 +2772,18 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // —— Predictions bank (year dialog, outcome cards, AI world clock) ——
+  if (
+    req.method === "GET" &&
+    (req.url === "/api/predictions" || req.url?.startsWith("/api/predictions?"))
+  ) {
+    try {
+      return sendJson(res, 200, await predictionsApiResponse(req.url));
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message || "predictions_failed" });
+    }
+  }
+
   // —— Capability trends (warmersun catalog) ——
   if (req.method === "GET" && (req.url === "/api/trends" || req.url?.startsWith("/api/trends?"))) {
     try {
@@ -3293,6 +3337,7 @@ server.listen(PORT, HOST, async () => {
   } else {
     console.log("Remote Trends catalog: OFF (FF_TRENDS_REMOTE_URL empty/off)");
   }
+  logPredictionsLoad(lastPredictionsLoad());
   const urls = lanJoinUrls();
   if (urls.length) {
     console.log("LAN (same Wi‑Fi) — friends open one of:");

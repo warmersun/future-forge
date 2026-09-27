@@ -13,7 +13,7 @@ import {
   clonePathwayEasePaid,
 } from "./economy.js";
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
-import { foresightForYear } from "./world-foresight.js";
+import { bulletinHighlight, foresightForYear } from "./world-foresight.js";
 import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
 import {
   cloneRules,
@@ -306,13 +306,7 @@ export function applyAction(sim, action, opts = {}) {
     next.lastYearBulletin = {
       fromYear: yearBefore,
       toYear: next.year,
-      highlights: highlights.map((h) => ({
-        id: h.id,
-        kind: h.kind,
-        headline: h.headline,
-        detail: h.detail,
-        claimBand: h.claimBand,
-      })),
+      highlights: highlights.map(bulletinHighlight),
     };
     events.push({ type: "end_turn" });
     events.push({ type: "market_news", marketNews: cloneMarketNews(news), round: next.turn });
@@ -391,13 +385,7 @@ export function applyAction(sim, action, opts = {}) {
     next.lastYearBulletin = {
       fromYear: yearBeforeWait,
       toYear: next.year,
-      highlights: highlights.map((h) => ({
-        id: h.id,
-        kind: h.kind,
-        headline: h.headline,
-        detail: h.detail,
-        claimBand: h.claimBand,
-      })),
+      highlights: highlights.map(bulletinHighlight),
     };
     events.push({ type: "wait", year: next.year });
     events.push({ type: "market_news", marketNews: cloneMarketNews(news), round: next.turn });

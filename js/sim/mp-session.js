@@ -35,7 +35,7 @@ import {
 } from "./deploy.js";
 import { rankSurvivors } from "./mp-rank.js";
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
-import { foresightForYear } from "./world-foresight.js";
+import { bulletinHighlight, foresightForYear } from "./world-foresight.js";
 import {
   applyInventPhaseEvent,
   deriveInventPhase,
@@ -694,13 +694,7 @@ function passToNext(session, opts = {}) {
     next.place.lastYearBulletin = {
       fromYear: yearBefore,
       toYear: yearAfter,
-      highlights: highlights.map((h) => ({
-        id: h.id,
-        kind: h.kind,
-        headline: h.headline,
-        detail: h.detail,
-        claimBand: h.claimBand,
-      })),
+      highlights: highlights.map(bulletinHighlight),
     };
     next.place.lastNews = `Year ${yearAfter} · Market news · ${news.headline}`;
     marketNewsEvent = {

@@ -1518,67 +1518,6 @@ export const YEAR_NEWS = [
 ];
 
 /**
- * Foresight bank for learn screen — milestones (what is already real),
- * trends (direction of travel), predictions (labeled forecasts).
- */
-export const FORESIGHT = [
-  { kind: "milestone", techIds: ["solar", "wind", "battery", "energy"], text: "Utility-scale solar and wind are already among the cheapest new electricity sources in much of the world when paired with storage." },
-  { kind: "trend", techIds: ["battery", "solar", "wind"], text: "Battery pack costs have fallen for over a decade, enabling local microgrids and evening power." },
-  { kind: "prediction", techIds: ["battery", "self-driving"], text: "Prediction: dense solid-state and next-gen packs further cut cost and fire risk this decade — still uncertain on exact year." },
-  { kind: "milestone", techIds: ["ai", "computing", "networks"], text: "AI copilots and assistive models are already in clinics, schools, and logistics software worldwide." },
-  { kind: "trend", techIds: ["ai", "computing"], text: "Inference is moving to the edge; smaller models get cheaper to run locally and offline." },
-  { kind: "prediction", techIds: ["ai", "bci"], text: "Prediction: clinical brain–computer interfaces expand from pilot trials to routine speech/motor restoration for narrow patient groups." },
-  { kind: "milestone", techIds: ["drones", "robots"], text: "Medical and inspection drone corridors already operate in several countries for blood, vaccines, and infrastructure checks." },
-  { kind: "trend", techIds: ["drones", "robots", "iot"], text: "Autonomy expands first on fixed routes and mapped sites, then into messier open environments." },
-  { kind: "prediction", techIds: ["self-driving", "transportation"], text: "Prediction: driverless shuttles on geofenced corridors become normal in some cities before fully open-road robotaxis everywhere." },
-  { kind: "milestone", techIds: ["gene-sequencing", "genetic-engineering", "synbio"], text: "Pathogen sequencing during outbreaks and early gene therapies are real clinical tools, not only lab demos." },
-  { kind: "trend", techIds: ["gene-sequencing", "ai"], text: "Time from sample to sequence continues to shrink; AI helps interpret results for non-specialists." },
-  { kind: "prediction", techIds: ["alt-proteins", "synbio"], text: "Prediction: alternative proteins reach price parity in more markets — adoption still depends on culture, regulation, and energy costs." },
-  { kind: "milestone", techIds: ["iot", "networks"], text: "Cities and utilities already deploy sensor networks for floods, leaks, air quality, and grid stress." },
-  { kind: "trend", techIds: ["iot", "networks", "crypto"], text: "Sensing gets cheaper; the hard part is governance — who owns the data and who acts on alerts." },
-  { kind: "prediction", techIds: ["quantum", "quantum-internet"], text: "Prediction: useful quantum applications stay narrow (materials, optimization niches) before general-purpose quantum networking." },
-  { kind: "milestone", techIds: ["print3d", "materials"], text: "Additive manufacturing already produces tools, spare parts, and some medical devices at local workshops." },
-  { kind: "trend", techIds: ["print3d", "materials", "nano"], text: "Design files travel as bits; local fabrication capacity spreads as materials and printers improve." },
-  { kind: "prediction", techIds: ["space", "ai"], text: "Prediction: denser Earth-observation and connectivity constellations make near-real-time local environmental data routine for small towns." },
-  { kind: "milestone", techIds: ["nuclear", "geothermal"], text: "Nuclear and geothermal already supply firm low-carbon power in regions that built them; new advanced designs are still ramping." },
-  { kind: "trend", techIds: ["nuclear", "geothermal", "tidal", "wave"], text: "Interest in firm clean power rises wherever grids hit renewable intermittency walls." },
-  { kind: "prediction", techIds: ["tidal", "wave"], text: "Prediction: marine energy stays site-limited; winners are harbors and islands with strong resources and patient capital." },
-  // theme-linked
-  { kind: "milestone", globalIds: ["climate", "weather", "water"], text: "Milestone: climate attribution science and local flood/heat early-warning systems are already used by cities." },
-  { kind: "trend", globalIds: ["climate", "energy-access", "air"], text: "Trend: electrification of transport and cooking continues where grids and wallets allow — uneven by district." },
-  { kind: "prediction", globalIds: ["climate", "coord"], text: "Prediction: places that share sensors and response funds across jurisdictions will outpace those that wait for national programs." },
-  { kind: "milestone", globalIds: ["infectious", "cancer", "maternal", "child"], text: "Milestone: genomic surveillance and telemedicine expanded rapidly after recent pandemics, then stalled where funding and trust failed." },
-  { kind: "trend", globalIds: ["education", "automation"], text: "Trend: hybrid human+AI teaching and training spreads first where teachers and workers are scarcest." },
-  { kind: "prediction", globalIds: ["refugees", "homeless"], text: "Prediction: modular shelter + digital identity systems scale in crises only if local legitimacy and funding are solved first." },
-];
-
-export function foresightForStack(techIds, globalId, year = 2026) {
-  const set = new Set(techIds || []);
-  const pick = (kind) => {
-    const pool = FORESIGHT.filter((f) => {
-      if (f.kind !== kind) return false;
-      const techHit = (f.techIds || []).some((id) => set.has(id));
-      const globalHit = (f.globalIds || []).includes(globalId);
-      return techHit || globalHit;
-    });
-    if (!pool.length) {
-      const fallback = FORESIGHT.filter((f) => f.kind === kind);
-      return fallback[Math.floor(Math.random() * fallback.length)] || null;
-    }
-    // Prefer tech hits
-    const techPool = pool.filter((f) => (f.techIds || []).some((id) => set.has(id)));
-    const use = techPool.length ? techPool : pool;
-    return use[Math.floor(Math.random() * use.length)];
-  };
-  return {
-    year,
-    milestone: pick("milestone"),
-    trend: pick("trend"),
-    prediction: pick("prediction"),
-  };
-}
-
-/**
  * Challenge faces that attack the invention.
  * visual: static asset under assets/challengers/{id}.jpg
  */

@@ -12,7 +12,9 @@ import {
   inventStateSnapshot,
   listVoiceConcerns,
   voiceToolSchemas,
+  worldClockVoiceBlock,
 } from "./voice-prompt.mjs";
+import { setWorldForesightBank } from "../sim/world-foresight.js";
 
 const techs = [
   { id: "synbio", name: "Synthetic Biology", domain: "lifeforce" },
@@ -297,6 +299,49 @@ describe("inventStateSnapshot / session.update", () => {
     });
     assert.match(text, /Spotlight emTech id: synbio/);
     assert.match(text, /Pilot the kelp baffles first/);
+  });
+
+  it("speaks the world clock and adds it to the snapshot once a bank is loaded", () => {
+    assert.equal(worldClockVoiceBlock(hexCtx), "");
+    assert.deepEqual(inventStateSnapshot(hexCtx).worldClock, []);
+    setWorldForesightBank({
+      schema: "future-forge.predictions/v1",
+      id: "voice-test",
+      title: "Voice test",
+      predictions: [
+        {
+          id: "kelp-farms",
+          year: 2027,
+          kind: "milestone",
+          techIds: ["synbio"],
+          headline: "Engineered kelp farms in trials",
+          detail: "Trials run in the North Sea.",
+          claimBand: "near",
+        },
+        {
+          id: "robot-surgeons",
+          year: 2029,
+          kind: "prediction",
+          techIds: ["robots"],
+          headline: "Robots out-operate surgeons",
+          detail: "Prediction: …",
+          claimBand: "frontier",
+          attribution: { name: "Elon Musk" },
+        },
+      ],
+    });
+    const text = buildVoiceInstructions(hexCtx);
+    assert.match(text, /Already real by now: Engineered kelp farms in trials\./);
+    assert.match(text, /Still ahead, forecasts only: Robots out-operate surgeons \(Elon Musk\) in 2029\./);
+    assert.equal(text.includes("http"), false);
+    const snap = inventStateSnapshot(hexCtx);
+    assert.deepEqual(
+      snap.worldClock.map((r) => [r.id, r.status]),
+      [
+        ["kelp-farms", "due"],
+        ["robot-surgeons", "not_yet"],
+      ]
+    );
   });
 
   it("session.update pins voice, VAD, tools, and transcribe", () => {

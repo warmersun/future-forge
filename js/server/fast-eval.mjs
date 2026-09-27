@@ -5,6 +5,7 @@
 
 import { ideasOrFallback } from "../idea-cards.js";
 import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
+import { worldClockForYear } from "../sim/world-foresight.js";
 
 const GROUNDING_CAP = 3000;
 
@@ -14,6 +15,38 @@ export const GROUNDING_LINE =
 /** Timing only: examples are existence proofs, not a closed inventory. */
 export const ASSESS_GROUNDING_LINE =
   "If grounding is present, it is authoritative only on contradiction: an explicit limit, denial, or \"not yet\" that the claim violates. Capabilities, unlocks, and applications are examples — not a closed inventory. Omission is not a contradiction. \"Different category\" is not \"does not exist this year.\" Do not score quest fit, clinic job, preferred grain, or \"not a small hopper\" as timing.";
+
+/** Binding timing calendar from the active predictions bank. */
+export const WORLD_CLOCK_TIMING_LINE =
+  "worldClock (if present) is this game's binding capability calendar for year. A status \"due\" row counts as demonstrated by year — do not score a claim that rests on it harsher than yellow for timing alone. A status \"not_yet\" row is still ahead: if the claim depends on that capability being routine now, score yellow (pilot-scale or partial) or red (treated as routine/at scale). Name the row headline in reason, and its attribution when present (\"per Elon Musk's forecast\"). worldClock beats your own knowledge and search on timing; grounding still wins on explicit contradiction.";
+
+/** Soft world-clock line for creative/tutor modes. */
+export const WORLD_CLOCK_CONTEXT_LINE =
+  "worldClock (if present) lists what this game's calendar says is already due by year and what is still ahead (not_yet). Keep suggestions consistent with it: build on due rows; treat not_yet rows as forecasts, not today's tools. Mention attribution when you cite a forecast.";
+
+function clockTechIds(context, stack) {
+  const ids = (context?.selectedTechIds || []).map(String).filter(Boolean);
+  if (ids.length) return ids;
+  return (stack || []).map((t) => t?.id).filter(Boolean);
+}
+
+/**
+ * World-clock slice for AI payloads; null when there is no year or no rows.
+ * @param {object} context
+ * @param {{ techIds?: string[], limit?: number }} [opts]
+ */
+export function worldClockContext(context, opts = {}) {
+  const year = Number(context?.year);
+  if (!Number.isFinite(year) || year <= 0) return null;
+  const globalId =
+    context?.globalId || context?.mission?.globalId || context?.global?.id || null;
+  const rows = worldClockForYear(year, {
+    techIds: opts.techIds || clockTechIds(context, null),
+    globalId,
+    limit: opts.limit ?? 12,
+  });
+  return rows.length ? rows : null;
+}
 
 /** Convergence: place/year may color a use; do not write a quest-feasibility brief. */
 export const CONVERGENCE_GROUNDING_LINE =
@@ -116,6 +149,7 @@ green = architecture+payload exists or is demonstrated by year (no pilot tax). I
 yellow = vague, OR after checking year the claimed scale is not yet demonstrated.
 red = only (1) grounding EXPLICITLY forbids / says not yet, or (2) sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper".
 If priorTiming is set with the same claims, a later year must not score harsher.
+${WORLD_CLOCK_TIMING_LINE}
 ${ASSESS_GROUNDING_LINE}
 Return JSON only:
 {"timing":{"level":"green","reason":"one sentence"}}`;
@@ -138,6 +172,7 @@ Sparks are capability applications, not bills, bans, or UBI as the idea.
 title is a plain noun phrase a learner can say aloud — what the idea is, not a slogan. No coined slang or riddles.
 howText/insertText is one clear mechanism sentence in everyday words (named person/place when known).
 If refresh is true, do not repeat avoidTitles.
+${WORLD_CLOCK_CONTEXT_LINE}
 ${GROUNDING_LINE}
 Return JSON only:
 {"ideas":[{"id":"slug","title":"≤60 chars","blurb":"≤140","insertText":"≤280","howText":"≤280","imagePrompt":"≤400","year":2026}]}`;
@@ -259,6 +294,11 @@ function buildScorePathwayPayload(context) {
 }
 
 function buildAssessFeasibilityPayload(context) {
+  const stack = slimStack(context);
+  const worldClock = worldClockContext(context, {
+    techIds: clockTechIds(context, stack),
+    limit: 12,
+  });
   return {
     mode: "assess-feasibility",
     year: context?.year || null,
@@ -266,8 +306,9 @@ function buildAssessFeasibilityPayload(context) {
     grounding: groundingOf(context),
     inventionHow: clip(context?.inventionHow, 1200),
     inventionImpact: clip(context?.inventionImpact, 800),
-    stack: slimStack(context),
+    stack,
     priorTiming: context?.priorTiming || null,
+    ...(worldClock ? { worldClock } : {}),
   };
 }
 
@@ -277,6 +318,10 @@ function buildIdeaSparksPayload(context) {
   const techs = (context?.availableTechs || []).map(slimTech).filter(Boolean);
   const focus =
     techs.find((t) => t.id === focusId) || techs[0] || null;
+  const worldClock = worldClockContext(context, {
+    techIds: focus?.id ? [focus.id] : [],
+    limit: 8,
+  });
   return {
     mode: "idea-sparks",
     focusTechId: focusId,
@@ -289,6 +334,7 @@ function buildIdeaSparksPayload(context) {
     avoidTitles: Array.isArray(context?.avoidTitles)
       ? context.avoidTitles.map(String).slice(0, 12)
       : [],
+    ...(worldClock ? { worldClock } : {}),
   };
 }
 

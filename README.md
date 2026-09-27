@@ -58,6 +58,11 @@ Open **http://127.0.0.1:8765**
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
 | `npm run economy:quest -- path.json` | Simulate four players; say if the Quest is too easy / too hard / tight ([docs/quest-economy-lab.md](docs/quest-economy-lab.md)) |
 | `npm run author:quest -- --tech gene-sequencing --local-only` | Scaffold a spotlight Quest tile |
+| `npm run validate:predictions -- path.json` | Validate a predictions bank (no args: default + examples) |
+
+### Predictions bank (year dialog + AI world clock)
+
+One JSON file of dated milestones, trends, and predictions drives the year dialog, the outcome foresight cards, and the world clock the AI uses to judge invention timing. The server ships `predictions/default.json`. To side-load another bank, for example Elon Musk's forecasts with attribution: `FF_PREDICTIONS_FILE=predictions/examples/musk-abundance.json npm start`. Author new banks with the MIT skill `skills/future-forge-predictions/`. Details: [docs/predictions-bank.md](docs/predictions-bank.md).
 
 ### Spotlight / External Quest tiles
 

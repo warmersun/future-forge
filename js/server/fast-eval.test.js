@@ -13,11 +13,52 @@ import {
   GROUNDING_LINE,
   ASSESS_GROUNDING_LINE,
   CONVERGENCE_GROUNDING_LINE,
+  WORLD_CLOCK_TIMING_LINE,
+  WORLD_CLOCK_CONTEXT_LINE,
   buildFastPayload,
   sanitizeFast,
   isFastEvalMode,
   reasoningEffortForCoInvent,
+  worldClockContext,
 } from "./fast-eval.mjs";
+import { SEARCH_SYSTEM_LINE } from "./ai-search.mjs";
+import { setWorldForesightBank } from "../sim/world-foresight.js";
+
+const CLOCK_BANK = {
+  schema: "future-forge.predictions/v1",
+  id: "clock-test",
+  title: "Clock test",
+  predictions: [
+    {
+      id: "ai-copilots",
+      year: 2026,
+      kind: "milestone",
+      techIds: ["ai"],
+      headline: "AI copilots in clinics",
+      detail: "Copilots draft notes.",
+      claimBand: "now",
+    },
+    {
+      id: "drone-corridors",
+      year: 2026,
+      kind: "milestone",
+      techIds: ["drones"],
+      headline: "Drone corridors",
+      detail: "Blood deliveries.",
+      claimBand: "now",
+    },
+    {
+      id: "ai-beyond-humans",
+      year: 2031,
+      kind: "prediction",
+      techIds: ["ai"],
+      headline: "AI beyond all humanity",
+      detail: "Prediction: …",
+      claimBand: "frontier",
+      attribution: { name: "Elon Musk" },
+    },
+  ],
+};
 
 const ENVELOPE_KEYS = ["proposals", "teaching", "addTechIds"];
 
@@ -87,6 +128,75 @@ describe("FAST_EVAL_MODES", () => {
       ASSESS_FEASIBILITY_SYSTEM,
       /Different category.*not.*does not exist this year/i
     );
+  });
+
+  it("assess binds timing to worldClock; sparks and search respect it", () => {
+    assert.equal(ASSESS_FEASIBILITY_SYSTEM.includes(WORLD_CLOCK_TIMING_LINE), true);
+    assert.match(WORLD_CLOCK_TIMING_LINE, /binding/);
+    assert.match(WORLD_CLOCK_TIMING_LINE, /"due" row counts as demonstrated/);
+    assert.match(WORLD_CLOCK_TIMING_LINE, /"not_yet".*yellow.*red/);
+    assert.match(WORLD_CLOCK_TIMING_LINE, /attribution/);
+    assert.match(WORLD_CLOCK_TIMING_LINE, /beats your own knowledge and search/);
+    assert.equal(IDEA_SPARKS_SYSTEM.includes(WORLD_CLOCK_CONTEXT_LINE), true);
+    assert.equal(POSE_CHALLENGE_SYSTEM.includes("worldClock"), false);
+    assert.equal(SCORE_PATHWAY_SYSTEM.includes("worldClock"), false);
+    assert.match(SEARCH_SYSTEM_LINE, /cannot override worldClock/);
+  });
+});
+
+describe("world clock in fast payloads", () => {
+  it("is absent while no bank is loaded", () => {
+    const p = buildFastPayload("assess-feasibility", {
+      year: 2027,
+      selectedTechIds: ["ai"],
+      availableTechs: [{ id: "ai", name: "AI" }],
+    });
+    assert.equal("worldClock" in p, false);
+  });
+
+  it("assess-feasibility gets due and not_yet rows for the stack", () => {
+    setWorldForesightBank(CLOCK_BANK);
+    const p = buildFastPayload("assess-feasibility", {
+      year: 2027,
+      selectedTechIds: ["ai"],
+      availableTechs: [{ id: "ai", name: "AI" }],
+      inventionHow: "AI triage.",
+    });
+    const byId = Object.fromEntries(p.worldClock.map((r) => [r.id, r]));
+    assert.equal(p.worldClock[0].id, "ai-copilots");
+    assert.equal(byId["ai-copilots"].status, "due");
+    assert.equal(byId["ai-beyond-humans"].status, "not_yet");
+    assert.equal(byId["ai-beyond-humans"].attribution, "Elon Musk");
+    assert.ok(p.worldClock.length <= 12);
+  });
+
+  it("the same claim sees a frontier row become due as the year advances", () => {
+    setWorldForesightBank(CLOCK_BANK);
+    const at = (year) =>
+      buildFastPayload("assess-feasibility", {
+        year,
+        selectedTechIds: ["ai"],
+        availableTechs: [{ id: "ai", name: "AI" }],
+      }).worldClock.find((r) => r.id === "ai-beyond-humans").status;
+    assert.equal(at(2030), "not_yet");
+    assert.equal(at(2031), "due");
+  });
+
+  it("idea-sparks ranks rows for the focus tech", () => {
+    setWorldForesightBank(CLOCK_BANK);
+    const p = buildFastPayload("idea-sparks", {
+      focusTechId: "drones",
+      year: 2027,
+      availableTechs: [{ id: "drones", name: "Drones" }],
+    });
+    assert.equal(p.worldClock[0].id, "drone-corridors");
+    assert.ok(p.worldClock.length <= 8);
+  });
+
+  it("worldClockContext needs a year", () => {
+    setWorldForesightBank(CLOCK_BANK);
+    assert.equal(worldClockContext({ selectedTechIds: ["ai"] }), null);
+    assert.ok(worldClockContext({ year: 2027 }).length > 0);
   });
 });
 
