@@ -25,7 +25,7 @@ export const MIME = {
 };
 
 /** Root-level files that may be served. */
-const ROOT_FILES = new Set(["index.html", "favicon.ico"]);
+const ROOT_FILES = new Set(["index.html", "favicon.ico", "second-pane.html"]);
 
 /** Top-level directories that may be served. */
 const PUBLIC_DIRS = new Set(["css", "js", "assets"]);

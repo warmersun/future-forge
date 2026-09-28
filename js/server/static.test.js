@@ -15,6 +15,7 @@ describe("static allowlist", () => {
     assert.equal(normalizePublicRel("/"), "index.html");
     assert.equal(normalizePublicRel("/index.html"), "index.html");
     assert.equal(isPublicRel("index.html"), true);
+    assert.equal(isPublicRel("second-pane.html"), true);
     assert.equal(isPublicRel("css/styles.css"), true);
     assert.equal(isPublicRel("js/main.js"), true);
     assert.equal(isPublicRel("js/game.js"), true);

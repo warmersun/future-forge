@@ -28,6 +28,7 @@ import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer } from "./vision.js";
 import { bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
+import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
 import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-16";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
@@ -740,21 +741,37 @@ function resumeTutorSession() {
   }
 }
 
+function visionPaneAway() {
+  return !document.querySelector("#side-vision");
+}
+
 function applyInventSidePanes() {
-  const tab =
-    state.sideTab === "aitrace" ? "aitrace" : state.sideTab === "log" ? "log" : "vision";
+  const visionAway = visionPaneAway();
+  let tab =
+    state.sideTab === "aitrace"
+      ? "aitrace"
+      : state.sideTab === "log"
+        ? "log"
+        : state.sideTab === "coinventor"
+          ? "coinventor"
+          : "vision";
+  if (visionAway && tab === "vision") tab = "coinventor";
+  if (!visionAway && tab === "coinventor") tab = "vision";
   const panel = document.querySelector("#screen-workshop .vision-panel");
   panel?.classList.remove("is-vision-split", "is-tutor-split");
+  panel?.classList.toggle("is-vision-away", visionAway);
   const stack = panel?.querySelector(".vision-co-stack");
-  const vision = $("#side-vision");
-  const co = $("#side-coinventor");
-  const trace = $("#side-aitrace");
-  const log = $("#side-log");
-  if (stack) stack.hidden = tab !== "vision";
+  const vision = document.querySelector("#side-vision");
+  const co = document.querySelector("#side-coinventor");
+  const trace = document.querySelector("#side-aitrace");
+  const log = document.querySelector("#side-log");
+  const showCo = tab === "vision" || tab === "coinventor";
+  if (stack) stack.hidden = !showCo;
   if (vision) vision.hidden = false;
   if (co) co.hidden = false;
   if (trace) trace.hidden = tab !== "aitrace";
   if (log) log.hidden = tab !== "log";
+  document.dispatchEvent(new Event("ff-side-layout"));
 }
 
 function seedLearningVisionStill() {
@@ -3929,8 +3946,15 @@ function cacheScenariosForGlobal(globalId, list) {
   return capped;
 }
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const $ = (sel, root = document) =>
+  root.querySelector(sel) ||
+  (root === document ? window.__ffSecondDoc?.querySelector(sel) : null) ||
+  null;
+const $$ = (sel, root = document) => {
+  const found = [...root.querySelectorAll(sel)];
+  if (found.length || root !== document || !window.__ffSecondDoc) return found;
+  return [...window.__ffSecondDoc.querySelectorAll(sel)];
+};
 
 function selectedTechs() {
   return state.selectedTechIds.map(techById).filter(Boolean);
@@ -17489,9 +17513,11 @@ function renderAiTrace() {
 }
 
 function setSideTab(tab) {
-  if (tab === "coinventor") tab = "vision";
-  if (tab === "aitrace" && !state.developer) tab = "vision";
-  if (tab !== "aitrace" && tab !== "log") tab = "vision";
+  const visionAway = visionPaneAway();
+  if (tab === "coinventor" && !visionAway) tab = "vision";
+  if (tab === "vision" && visionAway) tab = "coinventor";
+  if (tab === "aitrace" && !state.developer) tab = visionAway ? "coinventor" : "vision";
+  if (tab !== "aitrace" && tab !== "log" && tab !== "coinventor") tab = "vision";
   state.sideTab = tab;
   $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
@@ -17499,8 +17525,10 @@ function setSideTab(tab) {
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
   applyInventSidePanes();
-  if (tab === "vision") {
+  if (tab === "vision" || tab === "coinventor") {
     ensureCoInventor();
+  }
+  if (tab === "vision") {
     requestAnimationFrame(() => {
       ensureVision();
       seedLearningVisionStill();
@@ -17756,6 +17784,8 @@ function ensureCoInventor() {
   const root = coInventorRootEl();
   if (!root) return state.coInventor;
   const roomTransport = roomCoInventTransport();
+  // The second-screen popup must not keep a co-inventor that this screen is about to replace.
+  if (state.coInventor?.root && state.coInventor.root !== root) bringCoInventorHome(document);
   // Remount when switching Invent ↔ Challenge ↔ Deploy so the panel lives on the active screen
   if (state.coInventor && state.coInventor.root === root) {
     state.coInventor.surface = hexInventSurface();
@@ -21780,6 +21810,12 @@ export function init() {
   bindGlossaryTaps(document);
   bindAllVisionSplits(document);
   initWorkshopDocks(document);
+  initSecondScreen(document);
+  document.addEventListener("ff-pane-home", () => applyInventSidePanes());
+  document.addEventListener("ff-select-side-tab", (ev) => {
+    const tab = ev.detail?.tab;
+    if (tab) setSideTab(tab);
+  });
   bindNewsChips();
   document.addEventListener("ff-overlay-claim", onOverlayClaim);
   loadPersistedProgress();

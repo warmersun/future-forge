@@ -237,7 +237,13 @@ export class CoInventor {
     root.innerHTML = `
       <div class="co-header">
         <div class="co-header-text">
-          <div class="co-title">AI Co-Inventor</div>
+          <div class="co-title-line">
+            <div class="co-title">AI Co-Inventor</div>
+            <button type="button" class="btn-second-screen" data-second-screen="coinventor" aria-pressed="false" aria-label="Show AI co-inventor on the second screen" title="Show AI co-inventor on the second screen">
+              <svg class="icon-send" viewBox="0 0 16 16" aria-hidden="true"><rect x="0.8" y="1.6" width="8" height="6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9.2h3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="7.2" y="6.4" width="8" height="5.6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9.6 14.2h3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              <svg class="icon-back" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.4 3.2 3.2 8l4.2 4.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.8 8H13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+          </div>
           <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
         </div>
         <div class="co-header-actions">

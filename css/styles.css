@@ -12594,3 +12594,168 @@ dfn.term:focus-visible {
   letter-spacing: 0.02em;
   color: var(--warn);
 }
+
+/* Second display — one side pane at a time. Icon stays on the pane title. */
+.vision-panel .side-tab-item {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.vision-panel .side-tab-item:has(> .side-tab.active) {
+  border-bottom-color: var(--accent-2);
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.1), transparent);
+}
+
+.vision-panel .side-tab-item:has(> .side-tab[hidden]) {
+  display: none;
+}
+
+.vision-panel .side-tab-item > .side-tab {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  padding-right: 0.1rem;
+  border-bottom-color: transparent;
+  background: none;
+}
+
+.btn-second-screen {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.7rem;
+  margin: 0 0.15rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+}
+
+.btn-second-screen svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.btn-second-screen .icon-back {
+  display: none;
+}
+
+.btn-second-screen[aria-pressed="true"] .icon-send {
+  display: none;
+}
+
+.btn-second-screen[aria-pressed="true"] .icon-back {
+  display: block;
+}
+
+body.has-second-screen .btn-second-screen,
+body.ff-second-pane .btn-second-screen {
+  display: inline-flex;
+}
+
+.btn-second-screen:hover,
+.btn-second-screen[aria-pressed="true"] {
+  color: var(--accent-2);
+  background: rgba(167, 139, 250, 0.14);
+}
+
+.co-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.co-title-line .co-title {
+  min-width: 0;
+}
+
+.co-title-line .btn-second-screen {
+  width: 1.45rem;
+  height: 1.45rem;
+  margin: 0;
+}
+
+.vision-panel .side-tab-item.is-pane-away,
+.vision-panel.is-single-tab > .side-tabs,
+.vision-panel .side-tab-coinventor {
+  display: none;
+}
+
+.vision-panel.is-vision-away .side-tab-coinventor {
+  display: flex;
+}
+
+.vision-panel.is-vision-away .vision-split-handle {
+  display: none !important;
+}
+
+.vision-panel.is-vision-away .vision-stack-bottom {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+}
+
+.vision-panel.is-vision-away .co-title-line .btn-second-screen {
+  display: none !important;
+}
+
+.pane-title-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  padding: 0.7rem 0.85rem 0.15rem;
+  flex-shrink: 0;
+}
+
+.pane-title-line[hidden] {
+  display: none !important;
+}
+
+.pane-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.pane-title-line .btn-second-screen {
+  margin: 0;
+}
+
+#screen-workshop .vision-panel.is-co-away .vision-split-handle {
+  display: none !important;
+}
+
+#screen-workshop .vision-panel.is-co-away .vision-stack-top {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+body.ff-second-pane {
+  margin: 0;
+  height: 100vh;
+  background: var(--bg-0, #070b14);
+  color: var(--text, #e8eef9);
+  display: flex;
+  flex-direction: column;
+}
+
+body.ff-second-pane > #side-vision,
+body.ff-second-pane > #side-log,
+body.ff-second-pane > #side-aitrace,
+body.ff-second-pane > #side-coinventor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+}
