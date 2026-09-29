@@ -92,8 +92,8 @@ describe("tutorial lesson copy", () => {
     return texts;
   }
 
-  it("keeps 39 steps and the corrected lesson", () => {
-    assert.equal(TUTORIAL_STEPS.length, 39);
+  it("keeps 38 steps and the corrected lesson", () => {
+    assert.equal(TUTORIAL_STEPS.length, 38);
     const byId = Object.fromEntries(TUTORIAL_STEPS.map((s) => [s.id, s]));
     assert.match(byId["home-quest"].body, /design challenge/i);
     assert.match(byId["home-quest"].body, /grounding/i);
@@ -359,7 +359,8 @@ describe("resolveTutorialStep", () => {
     assert.equal(done.step.dockBottom, true);
     const ids = TUTORIAL_STEPS.map((s) => s.id);
     assert.ok(ids.indexOf("answer") < ids.indexOf("answer-judged"));
-    assert.ok(ids.indexOf("answer-judged") < ids.indexOf("close-popup"));
+    assert.ok(ids.indexOf("answer-judged") < ids.indexOf("hold"));
+    assert.equal(ids.includes("close-popup"), false);
   });
 
   it("keeps the summon step up while the challenger reel is open", () => {
