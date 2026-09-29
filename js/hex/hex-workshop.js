@@ -117,7 +117,7 @@ import { applyPressureRiseYears } from "../sim/pressure.js";
 import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
 import { detectClaimStretch } from "../data.js";
-import { attachReadAloud, stopReadAloud } from "../read-aloud.js";
+import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
 
 /**
  * @param {object} api — callbacks into game.js
@@ -526,6 +526,18 @@ export function createHexWorkshop(api) {
         if (api.canPlaceInvention) return api.canPlaceInvention(tile);
         return { ok: true };
       },
+      canOccupy: (tile, q, r) => {
+        if (!api.canOccupy) return true;
+        return api.canOccupy(tile, q, r);
+      },
+      canLift: (tile) => {
+        if (!api.canLift) return true;
+        return api.canLift(tile);
+      },
+      canDiscard: (tile) => {
+        if (!api.canDiscard) return true;
+        return api.canDiscard(tile);
+      },
       onUnaffordablePlace: (tile, gate) => {
         if (tile?.techId && api.flashUnaffordableTech) {
           api.flashUnaffordableTech(tile.techId, gate?.error);
@@ -607,6 +619,7 @@ export function createHexWorkshop(api) {
   }
 
   function scheduleInspect(tileId) {
+    if (api.allowTileInspect && api.allowTileInspect(tileId) === false) return;
     if (inspectHideTimer) {
       clearTimeout(inspectHideTimer);
       inspectHideTimer = null;
@@ -620,6 +633,12 @@ export function createHexWorkshop(api) {
   }
 
   function scheduleInspectEnd() {
+    if (
+      typeof document !== "undefined" &&
+      document.body?.classList.contains("tutorial-popup-front")
+    ) {
+      return;
+    }
     if (inspectShowTimer) {
       clearTimeout(inspectShowTimer);
       inspectShowTimer = null;
@@ -646,7 +665,7 @@ export function createHexWorkshop(api) {
       popup.hidden = true;
       popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern");
     }
-    stopReadAloud();
+    stopReadAloudFor(document.querySelector("#hex-tile-popup-body"));
   }
 
   function findTileAnchor(tileId) {
@@ -2706,6 +2725,7 @@ export function createHexWorkshop(api) {
             place,
             year,
             imagePrompt: how.slice(0, 400),
+            kind: "mint",
           });
         } catch {
           /* ignore */
@@ -3416,12 +3436,28 @@ export function createHexWorkshop(api) {
     afterRulesChange,
     boardHolds: () => boardHolds(board()),
     getFocusedTechId: () => focusedTechId,
+    /** Open a tile card immediately (tutorial meter lesson). */
+    revealTile: (id) => {
+      if (!id || !board()?.tiles?.[id]) return;
+      inspectTileId = id;
+      showTilePopup(id);
+    },
+    /** Close the tile card (tutorial leaving a pinned popup). */
+    hideTile: () => {
+      hideTilePopup();
+      inspectTileId = null;
+    },
     effectiveHowLength,
     /** New Quest: back to the two-blank scaffold, blanks cleared. */
     resetCreateMode: () => {
       freeWrite = false;
       clearScaffold();
       syncScaffold(focusedTechId ? techById(focusedTechId) : null);
+    },
+    /** Show the two blanks. Does not clear text already in them. */
+    useScaffold: () => {
+      if (freeWrite) setFreeWrite(false);
+      else syncScaffold(focusedTechId ? techById(focusedTechId) : null);
     },
     hasSparkBatch,
     isSummonBusy: () => summonBusy,

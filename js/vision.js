@@ -377,11 +377,24 @@ export class VisionRenderer {
       ? `${fingerprint}|rev:${state.visionRev ?? ""}`
       : fingerprint;
     if (!state.force && localKey === this.lastFingerprint && this.currentUrl) {
+      try {
+        state.onSettled?.();
+      } catch {
+        /* ignore */
+      }
       return;
     }
 
     if (this.busy) {
+      const displaced = this.queue;
       this.queue = state;
+      if (displaced && displaced !== state) {
+        try {
+          displaced.onSettled?.();
+        } catch {
+          /* ignore */
+        }
+      }
       return;
     }
 
@@ -587,10 +600,15 @@ export class VisionRenderer {
     } finally {
       this.busy = false;
       this.setLoading(false);
-      if (this.queue) {
-        const next = this.queue;
+      try {
+        state.onSettled?.();
+      } catch {
+        /* ignore */
+      }
+      const queued = this.queue;
+      if (queued) {
         this.queue = null;
-        this.pending = next;
+        this.pending = queued;
         clearTimeout(this._queueFlush);
         this._queueFlush = setTimeout(() => this.flush(), 400);
       }

@@ -26,7 +26,7 @@ import {
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
 import { VisionRenderer } from "./vision.js";
-import { bindAllVisionSplits } from "./side-split.js";
+import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
@@ -262,6 +262,13 @@ import {
   resetQuestBriefing,
 } from "./briefing-ui.js";
 import { createGuidedTour, queryTourTarget } from "./guided-tour.js";
+import {
+  createTutorial,
+  queryTutorialTarget,
+  tutorialCoInventResult,
+  readTutorialDone,
+  markTutorialDone,
+} from "./tutorial.js";
 import {
   BRIEF_MD_RECIPE,
   briefMdFromLivedStory,
@@ -522,6 +529,10 @@ const state = {
   trayShowAll: false,
   /** Per-Quest: concept cards already auto-shown (Friend's seven ids) */
   conceptSeen: [],
+  /** Hand-holding Paddy Step Wells tutorial is on screen. */
+  tutorialRun: false,
+  /** This outcome was reached through the tutorial. */
+  tutorialGraduated: false,
   vision: null,
   coInventor: null,
   sideTab: "vision",
@@ -1457,11 +1468,38 @@ function ensureHexWorkshop() {
       state.selectedTechIds = ids;
     },
     canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    canOccupy: (tile, q, r) => {
+      if (!state.tutorialRun || !tutorialCtl?.isOpen?.()) return true;
+      return tutorialCtl.allowOccupy(tile, q, r);
+    },
+    canLift: () =>
+      state.tutorialRun ? "Leave it on the board — follow the glowing step." : true,
+    canDiscard: () =>
+      state.tutorialRun ? "Keep this tile — the tutorial needs it." : true,
+    allowTileInspect: (id) => {
+      if (!state.tutorialRun || !tutorialCtl?.isOpen?.()) return true;
+      const step = tutorialCtl.currentStep?.();
+      if (!step) return false;
+      if (step.showTile) return id === step.showTile;
+      if (step.id === "hover-crisis") return id === "crisis-local";
+      if (step.id === "open-stakeholder" || step.id === "answer") {
+        return id === "concern-stakeholder" || String(id || "").includes("stakeholder");
+      }
+      return false;
+    },
     reconcileStackFromBoard: (ids) => reconcileStackFromBoard(ids),
     flashUnaffordableTech: (id, error) => flashUnaffordableTech(id, error),
-    coInvent: (mode, content, extra) => apiCoInvent(mode, content, extra),
-    fetchIdeaImage: (opts) =>
-      fetchIdeaImage({
+    coInvent: (mode, content, extra) => {
+      if (state.tutorialRun) {
+        const canned = tutorialCoInventResult(mode, extra);
+        if (canned !== undefined) return canned;
+      }
+      return apiCoInvent(mode, content, extra);
+    },
+    fetchIdeaImage: (opts) => {
+      // Challenger art stays local during the tutorial. Minted tiles still get a picture.
+      if (state.tutorialRun && opts?.kind !== "mint") return Promise.resolve(null);
+      return fetchIdeaImage({
         id: opts.ideaId,
         ideaId: opts.ideaId,
         techId: opts.techId,
@@ -1470,7 +1508,8 @@ function ensureHexWorkshop() {
         place: opts.place,
         year: opts.year,
         kind: opts.kind,
-      }),
+      });
+    },
     setAiBusy: (on, opts = {}) => {
       state.aiBusy = Boolean(on);
       if (!on) state.hexSummonPending = false;
@@ -4114,6 +4153,9 @@ function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
   if (voiceHangsUpOnScreenChange(prevScreenId, nextScreenId)) hangupVoice();
 }
 
+/** Set while startTutorial navigates home so showScreen does not cancel the run. */
+let keepTutorialOnTitle = false;
+
 function showScreen(id) {
   stopReadAloud();
   const prevScreen = state.screen;
@@ -4133,6 +4175,14 @@ function showScreen(id) {
   }
   $$(".screen").forEach((el) => el.classList.toggle("active", el.id === `screen-${id}`));
   if (id === "title") {
+    if (state.tutorialRun && !keepTutorialOnTitle) {
+      state.tutorialRun = false;
+      try {
+        tutorialCtl?.close?.();
+      } catch {
+        /* tutorial not constructed yet */
+      }
+    }
     renderTitleMeta();
   }
   if (id === "quest-hub") renderQuestHub();
@@ -4151,6 +4201,11 @@ function showScreen(id) {
     });
   }
   if (id === "outcome") renderOutcome();
+  try {
+    tutorialCtl?.refresh?.();
+  } catch {
+    /* tutorial not constructed yet */
+  }
 }
 
 /* —— Global / mission select —— */
@@ -4205,6 +4260,16 @@ function renderTitleCtas() {
     start.hidden = true;
     start.setAttribute("hidden", "");
     start.setAttribute("aria-hidden", "true");
+  }
+  const tut = $("#btn-tutorial");
+  if (tut) {
+    const done = readTutorialDone();
+    tut.hidden = false;
+    tut.removeAttribute("hidden");
+    tut.textContent = done ? "Replay tutorial" : "Tutorial";
+    tut.title = done
+      ? "Walk the Paddy Step Wells Quest again"
+      : "Guided Quest: Clean Water, the Paddy Step Wells";
   }
 }
 
@@ -6952,6 +7017,29 @@ function questMetaBadgesHtml(mission) {
   );
 }
 
+/** Clean Water pack entry the tutorial always pins to the top of the Quest list. */
+function tutorialPaddyMission() {
+  const g = globalById("water");
+  if (!g) return null;
+  const raw = localScenariosForGlobal(g, { count: 8, salt: 0 }).find((m) =>
+    /paddy step wells/i.test(`${m?.place || ""} ${m?.title || ""}`)
+  );
+  if (!raw) return null;
+  return normalizeMission({ ...raw, source: "curated" }, "water");
+}
+
+function pinTutorialMissions(list) {
+  const paddy = tutorialPaddyMission();
+  if (!paddy) return list || [];
+  const rest = (list || []).filter(
+    (m) =>
+      m &&
+      m.id !== paddy.id &&
+      !/paddy step wells/i.test(`${m.place || ""} ${m.title || ""}`)
+  );
+  return [paddy, ...rest].slice(0, SCENARIO_COUNT);
+}
+
 async function renderMissions({ force = false } = {}) {
   const g = state.global;
   $("#mission-global-title").textContent = g ? g.title : "Local Challenges";
@@ -6966,6 +7054,23 @@ async function renderMissions({ force = false } = {}) {
     paintMissionCards([]);
     setMissionStatus("");
     renderProblemBrief(null);
+    return;
+  }
+
+  // Tutorial always offers the Paddy Step Wells card, even before a theme cache exists.
+  if (state.tutorialRun && g.id === "water") {
+    const paddy = tutorialPaddyMission();
+    const cached = state.scenarioCache[g.id] || [];
+    const list = pinTutorialMissions(cached.length ? cached : paddy ? [paddy] : []);
+    state.missionChoices = list;
+    state.scenariosLoading = false;
+    paintMissionCards(list, { disabled: false });
+    renderProblemBrief(g, { drafting: false });
+    setMissionStatus("Tutorial Quest — Green film coats the Paddy Step Wells.");
+    if (regenBtn) {
+      regenBtn.disabled = true;
+      regenBtn.textContent = "Generate new Quests";
+    }
     return;
   }
 
@@ -7240,6 +7345,10 @@ function startMission(mission, opts = {}) {
       }
     } else {
       hex.seedFromMission(state.mission);
+      if (state.tutorialRun && state.hexBoard) {
+        state.hexBoard.concernRoster = ["stakeholder"];
+        state.hexBoard.concernTargetCount = 1;
+      }
     }
   } catch (e) {
     console.warn("[hex board seed]", e);
@@ -15965,6 +16074,14 @@ function finishOutcome(kind, meta = {}) {
   // Snapshot invent vision now (before any screen teardown clears panels)
   const visionSnap = collectVisionForShare();
   // Collapse / abandon does not mark solved — only deploy paths above do
+  if (state.tutorialRun) {
+    state.tutorialGraduated = true;
+    try {
+      markTutorialDone();
+    } catch {
+      /* private mode */
+    }
+  }
   state.outcome = {
     kind,
     meta: enriched,
@@ -16614,6 +16731,13 @@ function outcomePathwayLabel(o, mp) {
 }
 
 function renderOutcome() {
+  const tutorialPanel = $("#outcome-tutorial-done");
+  if (tutorialPanel) {
+    const show = Boolean(state.tutorialRun || state.tutorialGraduated);
+    tutorialPanel.hidden = !show;
+    if (show) tutorialPanel.removeAttribute("hidden");
+    else tutorialPanel.setAttribute("hidden", "");
+  }
   const o = state.outcome;
   const m = state.mission;
   // Prefer this outcome only — do not fall back to a stale room mpOutcome after leave
@@ -17421,6 +17545,7 @@ function updateVision(opts = {}) {
       : (meta) => {
           roomPublishVisionReady(meta);
         },
+    onSettled: typeof opts.onSettled === "function" ? opts.onSettled : undefined,
   });
 }
 
@@ -17518,6 +17643,7 @@ function setSideTab(tab) {
   if (tab === "vision" && visionAway) tab = "coinventor";
   if (tab === "aitrace" && !state.developer) tab = visionAway ? "coinventor" : "vision";
   if (tab !== "aitrace" && tab !== "log" && tab !== "coinventor") tab = "vision";
+  if (state.sideTab === tab) return;
   state.sideTab = tab;
   $$(".side-tab[data-tab]").forEach((btn) => {
     const on = btn.dataset.tab === tab;
@@ -20722,6 +20848,7 @@ function tourSnapshot() {
     sideTab: state.sideTab || "vision",
     briefing: {
       active: Boolean(brief.active),
+      mode: brief.mode || "",
       index: Number(brief.index) || 0,
       beatCount,
     },
@@ -20784,6 +20911,271 @@ function tourSnapshot() {
   };
 }
 
+function tutorialSnapshot() {
+  const base = tourSnapshot();
+  const board = state.hexBoard || {};
+  const tiles = Object.values(board.tiles || {}).filter(Boolean);
+  const concern = tiles.find((t) => t.kind === "concern") || null;
+  const challengeBtn = $("#btn-to-challenge");
+  let hex = null;
+  try {
+    hex = hexWorkshop || ensureHexWorkshop();
+  } catch {
+    hex = hexWorkshop;
+  }
+  return {
+    ...base,
+    globalId: state.global?.id || state.mission?.globalId || "",
+    missionTitle: state.mission?.title || "",
+    paddyId: tutorialPaddyMission()?.id || "",
+    scaffold: {
+      scarce: String($("#hex-scaffold-scarce")?.value || ""),
+      mech: String($("#hex-scaffold-mech")?.value || ""),
+    },
+    concernAnswer: String($("#hex-concern-answer")?.value || ""),
+    tiles: tiles.map((t) => ({
+      id: t.id,
+      kind: t.kind,
+      techId: t.techId || null,
+      q: t.q == null ? null : t.q,
+      r: t.r == null ? null : t.r,
+    })),
+    concern: {
+      id: concern?.id || null,
+      answered: Boolean(String(concern?.playerAnswer || "").trim()),
+      pending: Boolean(concern?.answerPending),
+      answer: String(concern?.playerAnswer || ""),
+      lamp: concern?.lamp || null,
+    },
+    turn: Number(state.turn) || 0,
+    year: Number(state.year) || 0,
+    marketNewsOpen: isMarketNewsModalOpen(),
+    summonBusy: Boolean(hex?.isSummonBusy?.()),
+    timingPending: Boolean(base.pathway?.timingPending),
+    challengeDisabled: Boolean(challengeBtn?.disabled),
+    concernsOnBoard: base.concernsOnBoard,
+    tilePopupOpen: Boolean(base.ui?.tilePopupOpen),
+    convergenceOpen: Boolean(base.ui?.convergenceOpen),
+    challengerDrawOpen: Boolean(base.ui?.challengerDrawOpen),
+    hasBatteryConvergence: Object.keys(board.convergences || {}).some((key) => {
+      const [a, b] = String(key).split("|");
+      const ids = [board.tiles?.[a]?.techId, board.tiles?.[b]?.techId];
+      return ids.includes("drones") && ids.includes("battery");
+    }),
+    islandHowTexts: Object.values(board.islandHow || {}).map((row) =>
+      String(row?.text || "")
+    ),
+    visionUrl: String(
+      document.querySelector("#vision-root .vision-image")?.getAttribute("src") || ""
+    ),
+  };
+}
+
+/** One forced redraw per vision step. Repeating force:true restarts the request. */
+let tutorialVisionKick = "";
+
+/** Tuck the solo workshop catalog so a mint ring cannot sit on a tech card. */
+function tuckSoloTechRail() {
+  const layout = document.querySelector("#screen-workshop.active .workshop-layout");
+  if (!layout) return;
+  if (isTechDrawerMode()) {
+    setTechDrawerOpen(layout, false, { focus: false });
+    return;
+  }
+  setTechRailCollapsed(layout, true, { focus: false, persist: false });
+  setTechRailPeek(layout, false);
+}
+
+async function ensureTutorialTargetsVisible(step) {
+  if (step?.openSideTab) {
+    try {
+      setSideTab(step.openSideTab);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (step?.expandVision) {
+    const stack = document.querySelector("#screen-workshop.active .vision-co-stack");
+    if (stack) applySplitRatio(stack, 0.28);
+  }
+  if (step?.watchVision && tutorialVisionKick !== step.id) {
+    tutorialVisionKick = step.id;
+    try {
+      updateVision({
+        force: true,
+        immediate: true,
+        onSettled: () => tutorialCtl?.noteVisionSettled?.(),
+      });
+    } catch {
+      /* vision not ready */
+    }
+  }
+  try {
+    const hex = ensureHexWorkshop();
+    if (step?.showTile) hex.revealTile?.(step.showTile);
+    else if (!step?.pinPopup) hex.hideTile?.();
+  } catch {
+    /* workshop not ready */
+  }
+  const mintTech =
+    step?.id === "mint-iot"
+      ? "iot"
+      : step?.id === "mint-drones"
+        ? "drones"
+        : step?.id === "mint-battery"
+          ? "battery"
+          : "";
+  if (mintTech) {
+    try {
+      focusTech(mintTech);
+    } catch {
+      /* workshop not ready */
+    }
+    tuckSoloTechRail();
+    await new Promise((r) => {
+      requestAnimationFrame(() => requestAnimationFrame(r));
+    });
+    try {
+      document
+        .querySelector("#screen-workshop.active #btn-mint-custom")
+        ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  const all = [...(step?.targets || []), ...(step?.spotlight || [])];
+  const tech = all.find((t) => t?.kind === "tech");
+  if (tech) {
+    if (tech.id === "battery") {
+      const soloBefore = document.querySelector("#screen-workshop.active .workshop-layout");
+      const detailsBefore = document.querySelector("#tech-group-all");
+      const needsList = !state.trayShowAll || !detailsBefore?.open;
+      const needsRail =
+        soloBefore &&
+        (isTechDrawerMode()
+          ? !isTechDrawerOpen(soloBefore)
+          : soloBefore.classList.contains("is-tech-collapsed"));
+      if (needsList || needsRail) {
+        state.domainFilter = "all";
+        state.trayShowAll = true;
+        if (needsList) {
+          try {
+            renderTechList();
+          } catch {
+            /* list not mounted yet */
+          }
+        }
+        if (soloBefore) {
+          if (isTechDrawerMode()) setTechDrawerOpen(soloBefore, true, { focus: false });
+          else setTechRailCollapsed(soloBefore, false, { persist: false, focus: false });
+        }
+        try {
+          document
+            .querySelector('#screen-workshop.active .tech-card[data-id="battery"]')
+            ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+        } catch {
+          /* ignore */
+        }
+      }
+    } else if (state.domainFilter !== "all") {
+      state.domainFilter = "all";
+      try {
+        renderTechList();
+      } catch {
+        /* list not mounted yet */
+      }
+    }
+    await ensureTourTargetVisible({ id: "E1", target: tech });
+    if (tech.id === "battery") {
+      try {
+        document
+          .querySelector('#screen-workshop.active .tech-card[data-id="battery"]')
+          ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      } catch {
+        /* ignore */
+      }
+    }
+  } else {
+    tuckSoloTechRail();
+  }
+  const spots = step?.spotlight?.length ? step.spotlight : step?.targets || [];
+  for (const t of spots) {
+    const el = queryTutorialTarget(t);
+    try {
+      el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function startTutorial() {
+  tutorialVisionKick = "";
+  try {
+    clearMissionPickSession();
+  } catch {
+    /* ignore */
+  }
+  try {
+    leaveHotseat();
+  } catch {
+    /* ignore */
+  }
+  try {
+    leaveRoomPlay({ silent: true });
+  } catch {
+    /* ignore */
+  }
+  state.mp = null;
+  state.mpOutcome = null;
+  state.tutorialGraduated = false;
+  keepTutorialOnTitle = true;
+  state.tutorialRun = true;
+  if (state.screen !== "title") showScreen("title");
+  keepTutorialOnTitle = false;
+  tutorialCtl?.start?.();
+}
+
+function quitTutorial() {
+  if (!state.tutorialRun && !tutorialCtl?.isOpen?.()) return;
+  const ok = confirm("Quit the tutorial? You can replay it from Home.");
+  if (!ok) return;
+  state.tutorialRun = false;
+  state.tutorialGraduated = false;
+  try {
+    tutorialCtl?.close?.();
+  } catch {
+    /* ignore */
+  }
+  if (state.screen !== "title") {
+    state.hexBoard = createEmptyBoard();
+    try {
+      resetQuestBriefing({ clearDismissed: true });
+    } catch {
+      /* ignore */
+    }
+    showScreen("title");
+  } else {
+    renderTitleMeta();
+  }
+}
+
+function finishTutorial() {
+  try {
+    markTutorialDone();
+  } catch {
+    /* private mode */
+  }
+  state.tutorialRun = false;
+  try {
+    tutorialCtl?.close?.();
+  } catch {
+    /* ignore */
+  }
+  renderTitleMeta();
+}
+
 async function ensureTourTargetVisible(step) {
   if (step?.openSideTab) {
     try {
@@ -20835,6 +21227,20 @@ const guidedTour = createGuidedTour({
   isConceptMuted: (id) => readMutedConcepts().has(id),
 });
 
+const tutorialCtl = createTutorial({
+  snapshot: () => tutorialSnapshot(),
+  ensureTargetVisible: ensureTutorialTargetsVisible,
+  useScaffold: () => {
+    try {
+      ensureHexWorkshop().useScaffold?.();
+    } catch {
+      /* workshop not ready */
+    }
+  },
+  onQuit: () => quitTutorial(),
+  onFinish: () => finishTutorial(),
+});
+
 function refreshGuidedTour() {
   if (!guidedTour.isOpen()) return;
   void guidedTour.refresh(tourSnapshot());
@@ -20849,6 +21255,10 @@ function helpModalOpen() {
  * next Friend's-seven concept card at its first relevant moment this Quest.
  */
 function refreshCoachMarks() {
+  if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
+    tutorialCtl.refresh();
+    return;
+  }
   if (guidedTour.isOpen()) {
     if (guidedTour.mode?.() === "concept") {
       // A concept card whose anchor vanished (dialog closed) should not float.
@@ -20888,6 +21298,10 @@ function openRulesHelp() {
 }
 
 function openGuidedTour(ev) {
+  if (state.tutorialRun && tutorialCtl?.isOpen?.()) {
+    tutorialCtl.nudge();
+    return;
+  }
   const opener =
     ev?.currentTarget instanceof HTMLElement ? ev.currentTarget : $("#btn-help");
   void guidedTour.open(tourSnapshot(), { opener });
@@ -20940,6 +21354,9 @@ function bind() {
     clearMissionPickSession();
     leaveHotseat();
     openQuestHub();
+  });
+  $("#btn-tutorial")?.addEventListener("click", () => {
+    startTutorial();
   });
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
   $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
@@ -21096,6 +21513,10 @@ function bind() {
         leaveHotseat();
         showScreen("friends");
       }
+      return;
+    }
+    if (state.tutorialRun) {
+      quitTutorial();
       return;
     }
     if (confirm("Leave this Quest? You can pick another Quest.")) {

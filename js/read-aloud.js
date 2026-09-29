@@ -41,6 +41,9 @@ let inflight = null;
 /** @type {HTMLElement|null} */
 let activeContent = null;
 
+/** Bumps on every start or stop so an older play loop cannot resume. */
+let speakGen = 0;
+
 /** @type {((msg: string) => void)|null} */
 let toastFn = null;
 
@@ -55,6 +58,8 @@ let playWaitResolve = null;
  *   getText: () => string,
  *   minChars: number,
  *   lastText: string,
+ *   continueOnChange: boolean,
+ *   following: boolean,
  * }} HostRecord
  */
 
@@ -338,6 +343,7 @@ function placeBarUnder(contentEl, bar) {
  *   getText?: () => string,
  *   minChars?: number,
  *   toast?: (msg: string) => void,
+ *   continueOnChange?: boolean,
  * }} [opts]
  */
 export function attachReadAloud(contentEl, opts = {}) {
@@ -348,6 +354,7 @@ export function attachReadAloud(contentEl, opts = {}) {
       ? opts.getText
       : () => plainTextFromEl(contentEl);
   const minChars = Number.isFinite(opts.minChars) ? opts.minChars : MIN_CHARS;
+  const continueOnChange = Boolean(opts.continueOnChange);
   if (typeof opts.toast === "function") toastFn = opts.toast;
 
   let rec = hosts.get(contentEl);
@@ -373,6 +380,8 @@ export function attachReadAloud(contentEl, opts = {}) {
       getText,
       minChars,
       lastText: "",
+      continueOnChange,
+      following: false,
     };
     hosts.set(contentEl, rec);
 
@@ -383,6 +392,7 @@ export function attachReadAloud(contentEl, opts = {}) {
   } else {
     rec.getText = getText;
     rec.minChars = minChars;
+    rec.continueOnChange = continueOnChange;
     // Migrate bars that were created above the content (older placement)
     placeBarUnder(contentEl, rec.bar);
   }
@@ -420,12 +430,22 @@ export function refreshReadAloud(contentEl) {
   const show = !hostHidden && text.length >= rec.minChars;
   rec.bar.hidden = !show;
 
-  if (activeContent === contentEl && rec.lastText && rec.lastText !== text) {
-    stopReadAloud();
-  }
+  const prev = rec.lastText;
+  const changed = Boolean(prev) && prev !== text;
   rec.lastText = text;
 
-  if (!show && activeContent === contentEl) {
+  if (!show) {
+    if (activeContent === contentEl) stopReadAloud();
+    else rec.following = false;
+    return;
+  }
+
+  if (changed && rec.continueOnChange && rec.following) {
+    void startSpeaking(contentEl);
+    return;
+  }
+
+  if (changed && activeContent === contentEl) {
     stopReadAloud();
   }
 }
@@ -442,7 +462,7 @@ export function stopReadAloudFor(contentEl) {
 /**
  * Stop any in-flight fetch / audio / browser speech and reset all buttons.
  */
-export function stopReadAloud() {
+function haltPlayback() {
   if (inflight) {
     try {
       inflight.abort();
@@ -482,6 +502,27 @@ export function stopReadAloud() {
   }
 }
 
+export function stopReadAloud() {
+  speakGen += 1;
+  haltPlayback();
+}
+
+/**
+ * Stop playback and clear the follow latch.
+ * Screen changes and popup closes call stopReadAloud only, so a tutorial
+ * that is already reading keeps the latch and speaks the next step.
+ * @param {HTMLElement|null|undefined} [contentEl] one host, or every host when omitted
+ */
+export function releaseReadAloudFollow(contentEl) {
+  if (contentEl) {
+    const rec = hosts.get(contentEl);
+    if (rec) rec.following = false;
+  } else {
+    for (const rec of hosts.values()) rec.following = false;
+  }
+  stopReadAloud();
+}
+
 /**
  * @param {HTMLElement} contentEl
  */
@@ -490,9 +531,23 @@ async function onHostClick(contentEl) {
   if (!rec) return;
 
   if (activeContent === contentEl) {
+    rec.following = false;
     stopReadAloud();
     return;
   }
+
+  if (rec.continueOnChange) rec.following = true;
+  await startSpeaking(contentEl);
+}
+
+/**
+ * Speak this host's current text. A follow-on step calls this after the
+ * words change; it does not clear `following`.
+ * @param {HTMLElement} contentEl
+ */
+async function startSpeaking(contentEl) {
+  const rec = hosts.get(contentEl);
+  if (!rec) return;
 
   const text = clampTtsText(rec.getText());
   if (text.length < rec.minChars) {
@@ -500,19 +555,24 @@ async function onHostClick(contentEl) {
     return;
   }
 
-  // Stop any other host first
-  stopReadAloud();
+  const gen = ++speakGen;
+  haltPlayback();
+  if (gen !== speakGen) return;
+  const live = hosts.get(contentEl);
+  if (!live) return;
+
   activeContent = contentEl;
-  setBtnState(rec, "loading");
+  setBtnState(live, "loading");
 
   try {
-    await playCloudOrFallback(text, rec);
+    await playCloudOrFallback(text, live, gen);
   } catch (e) {
+    if (gen !== speakGen) return;
     if (e?.name === "AbortError") return;
     console.warn("[read-aloud]", e?.message || e);
     notify(e?.message || "Could not read aloud.");
-    if (activeContent === contentEl) {
-      setBtnState(rec, "idle");
+    if (gen === speakGen && activeContent === contentEl) {
+      setBtnState(live, "idle");
       activeContent = null;
     }
   }
@@ -521,11 +581,13 @@ async function onHostClick(contentEl) {
 /**
  * @param {string} text
  * @param {HostRecord} rec
+ * @param {number} gen
  */
-async function playCloudOrFallback(text, rec) {
+async function playCloudOrFallback(text, rec, gen) {
+  const mine = () => gen === speakGen && activeContent === rec.contentEl;
   const chunks = splitSpeakChunks(text);
   if (!chunks.length) {
-    if (activeContent === rec.contentEl) {
+    if (mine()) {
       setBtnState(rec, "idle");
       activeContent = null;
     }
@@ -567,30 +629,31 @@ async function playCloudOrFallback(text, rec) {
   try {
     prefetchFrom(0);
     for (let i = 0; i < chunks.length; i++) {
-      if (activeContent !== rec.contentEl) return;
+      if (!mine()) return;
       prefetchFrom(i);
       let url;
       try {
         url = await fetchIdx(i);
       } catch (e) {
         if (e?.name === "AbortError") return;
+        if (!mine()) return;
         const rest = chunks.slice(i).join(" ");
         if (e?.code === "cloud_unavailable" || typeof speechSynthesis !== "undefined") {
           if (i > 0 || e?.code !== "cloud_unavailable") {
             notify("Cloud voice unavailable — using device voice.");
           }
-          await playBrowserSpeech(rest, rec);
+          await playBrowserSpeech(rest, rec, gen);
           return;
         }
         throw e;
       }
-      if (activeContent !== rec.contentEl) return;
+      if (!mine()) return;
 
       setBtnState(rec, "playing");
       const last = i === chunks.length - 1;
       const outcome = await playAudioUrl(url);
       if (outcome !== "ended") return;
-      if (last && activeContent === rec.contentEl) {
+      if (last && mine()) {
         setBtnState(rec, "idle");
         activeContent = null;
       }
@@ -708,14 +771,15 @@ function playAudioUrl(url) {
 /**
  * @param {string} text
  * @param {HostRecord} rec
+ * @param {number} gen
  */
-function playBrowserSpeech(text, rec) {
+function playBrowserSpeech(text, rec, gen) {
   return new Promise((resolve, reject) => {
     if (typeof speechSynthesis === "undefined" || typeof SpeechSynthesisUtterance === "undefined") {
       reject(new Error("Speech not available on this device"));
       return;
     }
-    if (activeContent !== rec.contentEl) {
+    if (gen !== speakGen || activeContent !== rec.contentEl) {
       resolve();
       return;
     }
@@ -726,7 +790,7 @@ function playBrowserSpeech(text, rec) {
     u.rate = 1;
     u.onend = () => {
       playWaitResolve = null;
-      if (activeContent === rec.contentEl) {
+      if (gen === speakGen && activeContent === rec.contentEl) {
         setBtnState(rec, "idle");
         activeContent = null;
       }

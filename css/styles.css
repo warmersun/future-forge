@@ -4752,6 +4752,135 @@ body.challenge-pose-pending #challenge-help-form {
   width: auto;
 }
 
+/* Hand-holding tutorial — same card and ring as ?, with a locked dimmer. */
+#tutorial-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10250;
+  pointer-events: none;
+}
+
+#tutorial-root:not(.is-open) {
+  display: none;
+}
+
+#tutorial-root.is-open {
+  display: block;
+}
+
+.tutorial-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 10250;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tutorial-dim-path {
+  /* Clicks are gated in script. Leaving the path transparent to the pointer
+     lets the page scroll under the dimmer. */
+  pointer-events: none;
+}
+
+.tutorial-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tutorial-ring {
+  position: fixed;
+  z-index: 10251;
+  animation: none;
+}
+
+.tutorial-ring.tutorial-ring-in {
+  animation: tour-ring-in 0.22s var(--ease, ease);
+}
+
+/* On body, above the tile popup (10255) and the home pitch (backdrop-filter). */
+body:not(.tutorial-open) > .tour-card.is-tutorial {
+  display: none;
+}
+
+.tour-card.is-tutorial {
+  z-index: 10270;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+
+.tutorial-type {
+  margin: 0 0 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(56, 189, 248, 0.08);
+  color: var(--text, #e2e8f0);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.tutorial-type em {
+  font-style: italic;
+}
+
+.tutorial-type[hidden],
+.tutorial-type-hint[hidden] {
+  display: none !important;
+}
+
+.tutorial-type-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.tour-card.is-tutorial.tutorial-nudge {
+  animation: tutorial-nudge 0.35s var(--ease, ease);
+}
+
+@keyframes tutorial-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-6px);
+  }
+  60% {
+    transform: translateX(6px);
+  }
+}
+
+.outcome-tutorial-done {
+  margin: 0 0 1.25rem;
+}
+
+.outcome-tutorial-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.outcome-tutorial-done h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+}
+
+.outcome-tutorial-done ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.outcome-tutorial-done li {
+  margin: 0.28rem 0;
+}
+
 .tour-kicker {
   margin: 0 0 0.2rem;
   font-size: 0.7rem;
@@ -11942,6 +12071,10 @@ body.hex-board-expanded.ff-accounts .hex-board-wrap.is-expanded .hex-board-statu
 
 .hex-tray-tile:hover {
   filter: brightness(1.06);
+}
+
+body.tutorial-popup-front #hex-tile-popup {
+  z-index: 10255;
 }
 
 .hex-tile-popup {

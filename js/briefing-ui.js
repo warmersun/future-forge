@@ -145,6 +145,16 @@ export function resetQuestBriefing(opts = {}) {
   artGen += 1;
   lastPaint = emptySnap();
   if (typeof document !== "undefined") {
+    // Off-mode records drop the is-briefing class, so a query for that class
+    // misses them. WeakMap has no key list; every vision root still in the
+    // document is dropped so the same canvas cannot reuse mode "off".
+    document.querySelectorAll(".vision-canvas-wrap").forEach((root) => {
+      records.delete(root);
+      root.classList.remove("is-briefing");
+      delete root.dataset.briefingKey;
+      root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
+      removeReplayChip(root);
+    });
     document.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
     document.querySelectorAll(".quest-briefing-replay").forEach((el) => el.remove());
     document.querySelectorAll(".vision-canvas-wrap.is-briefing").forEach((el) => {

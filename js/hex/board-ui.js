@@ -91,6 +91,10 @@ export function defaultSlots() {
  * @param {() => void} [opts.onInspectCancel] — immediate hide (pointerdown / drag)
  * @param {(tileId: string, hl: object|null) => void} [opts.onPathwayToggle] — click toggles pathway highlight
  * @param {() => boolean} [opts.isInteractive] — when false, drag/place/select no-op
+ * @param {(tile: object, q: number, r: number) => true|string|boolean} [opts.canOccupy]
+ *   Tutorial gate. `true` allows the drop; a string is the status line and the drop is refused.
+ * @param {(tile: object) => true|string|boolean} [opts.canLift]
+ * @param {(tile: object) => true|string|boolean} [opts.canDiscard]
  * @param {Array<{q:number,r:number}>} [opts.slots]
  */
 export function createHexBoardUi(opts) {
@@ -574,6 +578,16 @@ export function createHexBoardUi(opts) {
         return false;
       }
     }
+    if (opts.canOccupy && tile) {
+      const gate = opts.canOccupy(tile, q, r);
+      if (gate !== true) {
+        setStatus(
+          typeof gate === "string" ? gate : "Drop it on the glowing hex.",
+          true
+        );
+        return false;
+      }
+    }
     const res = placeTile(beforeBoard, id, q, r);
     if (!res.ok) {
       const need = res.blockers?.[0]?.need;
@@ -976,6 +990,14 @@ export function createHexBoardUi(opts) {
 
   function liftInvention(id) {
     const beforeBoard = board();
+    const tile = beforeBoard?.tiles?.[id];
+    if (opts.canLift && tile) {
+      const gate = opts.canLift(tile);
+      if (gate !== true) {
+        setStatus(typeof gate === "string" ? gate : "Leave that tile where it is.", true);
+        return false;
+      }
+    }
     const res = liftTile(beforeBoard, id);
     if (!res.ok) return false;
     opts.setBoard(res.board);
@@ -990,6 +1012,14 @@ export function createHexBoardUi(opts) {
       return false;
     }
     const beforeBoard = board();
+    const tile = beforeBoard?.tiles?.[id];
+    if (opts.canDiscard && tile) {
+      const gate = opts.canDiscard(tile);
+      if (gate !== true) {
+        setStatus(typeof gate === "string" ? gate : "Keep this tile.", true);
+        return false;
+      }
+    }
     const res = discardTile(beforeBoard, id);
     if (!res.ok) return false;
     opts.setBoard(res.board);
