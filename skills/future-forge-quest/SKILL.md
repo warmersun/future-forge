@@ -3,12 +3,13 @@ name: future-forge-quest
 license: MIT
 description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
-  tile (JSON). Portable multi-harness skill — not tied to a single agent product.
-  Player-facing prose is a brief fictive story (named people, concrete place),
-  then the bigger problem and its root cause, then an outcome-only invent job.
-  The tray hints the spotlight plus 2–4 supporting emTechs; capability truth
-  lives in grounding and tutor mode. Ships with a validator, a craft lint, and
-  a difficulty lab (too easy / too hard / challenging).
+  tile (JSON). A learning quest ships as one .ffquest file: the tile plus the
+  lesson pages it teaches from. Portable multi-harness skill — not tied to a
+  single agent product. Player-facing prose is a brief fictive story (named
+  people, concrete place), then the bigger problem and its root cause, then an
+  outcome-only invent job. The tray hints the spotlight plus 2–4 supporting
+  emTechs; capability truth lives in grounding and tutor mode. Ships with a
+  validator, a craft lint, and a difficulty lab (too easy / too hard / challenging).
 ---
 
 # Future Forge Spotlight Quest author
@@ -73,7 +74,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 9. **`resources`** only when the **first** island cannot buy the spotlight tech at Budget 5 (frontier techs cost 2–3$). Pathway ease pays +1 Budget per eased role; that funds act two. `startingBudget: 8` is the classic mistake.
 10. Sensitive themes: `references/sensitivity.md`. Fictive places only; no real victims.
 11. **Omit** unused optional keys. No `""`, no `[]`, no `false` for optionals.
-12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year.
+12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year. A learning quest with lesson pages also ships only after `npm run pack:quest` succeeds (step 9).
 
 ## Procedure
 
@@ -124,9 +125,34 @@ npm run economy:quest -- <file>
 
 Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft lint). Then read the lab: `too_hard` usually means a frontier spotlight tile costs more than Budget 5 / Will 3 buys, or local is not hotter than global; `too_easy` means one cheap tile clears everything with years to spare. Do not raise `startingBudget` to fund act two.
 
-### 9. Hand off
+### 9. Package a learning quest
 
-Path(s); copy into `quests/` or Import Quest…; the UI chips expected (Spotlight / Sponsored / Learn / Start / Crisis); any lint warning you kept and why; multi-lesson order if any. When the quest has lesson pages, the source directory is `quests/`, `lessons/`, and `assets/`. Lesson HTML uses page-relative links. Quest text cites package paths. Then `npm run pack:quest -- <dir>` — see `docs/quest-package.md`.
+When the quest has lesson pages, the hand-off is one `<id>.ffquest`. That file is a zip of the quest tile(s) and the lesson pages those tiles teach from. Loose JSON is not the hand-off.
+
+Build a source directory. Do not write `manifest.json`. `pack` does.
+
+```text
+quests/<id>.json                         file name is the id
+lessons/<folder>/index.html              the book: title and a link to each page
+lessons/<folder>/NN-<slug>.html          one file per lesson page, in teaching order
+lessons/<folder>/illustrations/…         the figures those pages show
+assets/…                                 stills this quest ships (cover, briefing)
+```
+
+- Only `quests/`, `lessons/`, and `assets/`. Quest JSON sits directly in `quests/`.
+- One lesson folder for a single quest. A multi-lesson set includes the `kind: "module"` wrapper, every lesson quest it lists, and the lesson folders those quests cite. The package id is the wrapper id when there is one, otherwise the quest id. The folder slug is lowercase and does not have to match the id.
+- Lesson HTML uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`).
+- Quest text that cites a shipped page or image uses a package path (`lessons/<folder>/01-job.html`, `assets/cover.png`). A reading that is not in the zip stays `https://`. Write the package path yourself. `pack` only rewrites `https://warmersun.com/lessons/…` and `https://warmersun.com/future-forge/quests/assets/…`. Any other host, including a placeholder, is left as written and is not checked as a file in the zip.
+
+From the game repo, after each tile is strict-clean and **challenging**:
+
+```bash
+npm run pack:quest -- <srcdir> -o <outdir>/<id>.ffquest
+```
+
+`pack` checks the tree, runs the strict quest validator, and writes the zip. Hand off that file. The format spec is `docs/quest-package.md` in the game repo. Stage and deploy only when asked.
+
+A spotlight with no lesson pages still hands off the JSON: path, `quests/` or Import Quest…, the UI chips (Spotlight / Sponsored / Learn / Start / Crisis), any lint warning you kept and why, and multi-lesson order if any.
 
 ## What lint cannot check (you still must)
 

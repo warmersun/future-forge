@@ -63,5 +63,6 @@ Every example is `--strict` clean and rates **challenging** in the lab. Imitate 
 
 ## Hand-off
 
-- Library / classroom: copy into game `quests/` and refresh (External Quests), or **Import Quest…** on the title screen.
+- Library / classroom, no lesson pages: copy into game `quests/` and refresh (External Quests), or **Import Quest…** on the title screen.
+- Learning quest with lesson pages: the hand-off is one `<id>.ffquest` — the tile(s) and those pages. `npm run pack:quest -- <srcdir> -o <id>.ffquest` from the game repo. Format: `docs/quest-package.md`.
 - Official Sponsored / Learning catalog: see the game repo's `quests/README.md`.

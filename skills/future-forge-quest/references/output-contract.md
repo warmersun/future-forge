@@ -7,7 +7,7 @@
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 6. Run `npm run validate:quest -- <file> --strict` until `OK:` with **no `WARN` lines** (craft lint; codes in `schema.md`). If a warning must stay, name it and why in the hand-off.
 7. Run `npm run economy:quest -- <file>` until the quest verdict is **challenging** — `too_easy` on either solo path now fails the quest verdict too (solo-AI year should match solo-no-AI).
-8. Hand off: path, `quests/` or Import Quest…, spotlight invent invitation, UI chips, multi-lesson order if any.
+8. Hand off a spotlight as the JSON path (`quests/` or Import Quest…). A learning quest with lesson pages hands off the `.ffquest` from `SKILL.md` (the tile and those pages in one file). Name the UI chips, and multi-lesson order if any.
 
 ---
 

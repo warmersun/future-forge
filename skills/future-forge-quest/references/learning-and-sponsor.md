@@ -187,7 +187,7 @@ Portable examples: `examples/spotlight-sponsored-learning.json` (one lesson), `e
 - Resource dump in the first tutor turn (list every link/image at once)  
 - `SEQUENCE` / `TEACHING STYLE` that says “open the page, do not answer” (fights the engine)  
 - Link-only tutor turns, or rewriting a `/lessons` page in chat  
-- Broken or non-https media URLs in `aiTutorContext`  
+- A lesson or image citation that is neither a package path (`lessons/…`, `assets/…`) nor `https://`  
 - Putting pedagogy-only images into `briefMd` instead of tutor context + chat  
 - Dumping capability lectures, SEQUENCE, or research into `briefMd` / `scene` / `summary`
 - Title/summary that hide the people behind a tech-gap riddle (“This is about how far gene sequencing has to go”) or insider jargon (“local cut,” unexplained “open-weight”)
