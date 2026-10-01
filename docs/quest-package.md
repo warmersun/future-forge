@@ -82,13 +82,13 @@ python3 scripts/quest-package.py unpack out.ffquest path/to/destdir \
 
 Deploy's asset root is the prefix `publish-quests.py` already rewrites to `https://warmersun.com/quests/<source>/assets/`.
 
-A page served from `http://localhost` cannot fetch `file://` images. Open the lesson HTML itself from disk for that, or point the game at the unpacked directory:
+To play a package on this machine, in developer mode, with the quest in Library:
 
 ```bash
-FF_CONTENT_DIR=path/to/unpacked FF_PORT=8765 npm start
+./scripts/sideload-local-package.sh path/to/quest.ffquest
 ```
 
-The package is then at `http://127.0.0.1:8765/content/`. The tutor follows `https://` links, `http://127.0.0.1` and `http://localhost` links, and a `file://` link only when the game page itself is `file:`.
+That unpacks into a temporary folder, serves it at `http://127.0.0.1:8765/content/`, and starts the game. Stopping the server removes the folder. The tutor follows `https://` links and `http://127.0.0.1` links. A page on localhost cannot fetch `file://` images.
 
 ## CLI
 
