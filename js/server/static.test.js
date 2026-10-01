@@ -6,6 +6,7 @@ import {
   normalizePublicRel,
   isPublicRel,
   safePublicPath,
+  safeContentPath,
 } from "./static.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -61,5 +62,14 @@ describe("static allowlist", () => {
     assert.ok(index.endsWith(`${path.sep}index.html`));
     const game = safePublicPath(ROOT, "/js/game.js");
     assert.ok(game && game.includes(`${path.sep}js${path.sep}game.js`));
+  });
+
+  it("serves an unpacked package under /content/ and refuses escape", () => {
+    const root = path.join(ROOT, "unpacked");
+    const page = safeContentPath(root, "/content/lessons/harbor/01.html");
+    assert.ok(page && page.endsWith(`${path.sep}lessons${path.sep}harbor${path.sep}01.html`));
+    assert.equal(safeContentPath(root, "/content/../.env"), null);
+    assert.equal(safeContentPath(root, "/content/secret.env"), null);
+    assert.equal(safeContentPath(root, "/content/notes.md"), null);
   });
 });

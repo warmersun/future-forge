@@ -22,6 +22,8 @@
     "generate:quests": "node scripts/generate-scenario-seeds.mjs",
     "generate:quests:local": "node scripts/generate-scenario-seeds.mjs --local-only",
     "validate:quest": "node scripts/validate-quest.mjs",
+    "pack:quest": "python3 scripts/quest-package.py pack",
+    "verify:quest-package": "python3 scripts/quest-package.py verify",
     "economy:quest": "node scripts/evaluate-quest-economy.mjs",
     "validate:trend": "node scripts/validate-trend.mjs",
     "author:quest": "node scripts/author-quest.mjs",
@@ -34,7 +36,7 @@
     "market-news:images": "node scripts/generate-market-news-images.mjs",
     "learn:images": "node scripts/generate-learn-images.mjs",
     "validate:predictions": "node scripts/validate-predictions.mjs",
-    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/hex/*.test.js js/meta.test.js js/quest-tile.test.js js/quest-lint.test.js js/quest-catalog.test.js js/quest-summary.test.js js/scenario-pack-summaries.test.js js/brief-beats.test.js js/briefing-ui.test.js js/guided-tour.test.js js/tutorial.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/capability-trend.test.js js/trends-remote.test.js js/predictions-bank.test.js js/trend-chart.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/idea-cards.test.js js/ai-trace.test.js js/captain-log.test.js js/lean-coinvent-context.test.js js/vision-prompt.test.js js/vision.test.js js/side-split.test.js js/learn-stack.test.js js/tech-why.test.js js/invent-scaffold.test.js js/glossary.test.js js/concept-cards.test.js js/auth.test.js js/coinventor-voice.test.js js/voice-context.test.js js/coinventor-how-apply.test.js js/challenge-pose.test.js js/deep-link.test.js js/join-origin.test.js js/cloud/portal-origin.test.js js/on-the-curve-pack.test.js"
+    "test": "npm run check:syntax && node --test 'js/sim/**/*.test.js' js/sim/*.test.js js/hex/*.test.js js/meta.test.js js/quest-tile.test.js js/quest-lint.test.js js/quest-catalog.test.js js/quest-summary.test.js js/scenario-pack-summaries.test.js js/brief-beats.test.js js/briefing-ui.test.js js/guided-tour.test.js js/tutorial.test.js js/md-lite.test.js js/read-aloud.test.js js/tts-cache.test.js js/quests-folder.test.js js/quests-remote.test.js js/capability-trend.test.js js/trends-remote.test.js js/predictions-bank.test.js js/trend-chart.test.js js/rooms/*.test.js js/multiplayer/*.test.js js/usage-metrics.test.js js/server/*.test.js js/idea-cards.test.js js/ai-trace.test.js js/captain-log.test.js js/lean-coinvent-context.test.js js/vision-prompt.test.js js/vision.test.js js/side-split.test.js js/learn-stack.test.js js/tech-why.test.js js/invent-scaffold.test.js js/glossary.test.js js/concept-cards.test.js js/auth.test.js js/coinventor-voice.test.js js/voice-context.test.js js/coinventor-how-apply.test.js js/challenge-pose.test.js js/deep-link.test.js js/join-origin.test.js js/cloud/portal-origin.test.js js/on-the-curve-pack.test.js test/quest-package.test.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.16.12",

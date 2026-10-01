@@ -35,17 +35,18 @@ Write as short structured notes. Do **not** paste this into `briefMd` or `scene`
 LESSON GOAL: <one sentence — what the learner should invent/understand>
 
 SEQUENCE (one idea at a time; do not dump all at once):
-1) <what just moved and where it sits on the curve — the real advance behind this Quest (spotlight.advanceTitle / advanceSummary), named only after the learner has the story; offer [Page title](https://warmersun.com/lessons/…) after a short spoken explanation>
+1) <what just moved and where it sits on the curve — the real advance behind this Quest (spotlight.advanceTitle / advanceSummary), named only after the learner has the story; offer [Page title](lessons/<folder>/01-job.html) after a short spoken explanation>
 2) <product category capability honesty (not whole emTech) — offer matching page after a short spoken explanation of this idea>
 3) <map unlocked use case → local application category>
 4) <scope / pilot limits; invent stays in chat>
 
 RESOURCES (optional — textbook pages the tutor offers after answering, not instead of answering):
-- Reading: [Short title](https://warmersun.com/lessons/…stable…) — after the short spoken explanation for step 2; not a first-turn dump
-- Reading: [Short title](https://…) — deeper dive; do not open with this
-ILLUSTRATIONS (optional — https images the tutor can show inline):
-- ![One-line caption](https://…/diagram.png) — with the matching page, or instead of a second link
-- ![…](https://…) — only if the image clarifies a mechanism or place-scale idea
+- Reading: [Short title](lessons/<folder>/02-job.html) — a page in this package, after the short spoken explanation for step 2; not a first-turn dump
+- Reading: [Short title](https://…) — a page that is not in the package; do not open with this
+ILLUSTRATIONS (optional — images the tutor can show inline):
+- ![One-line caption](lessons/<folder>/illustrations/cover.png) — a file in this package, with the matching page
+- ![…](assets/cover.png) — a still that travels in the package assets/ directory
+- ![…](https://…) — an image that is not in the package, only if it clarifies a mechanism or place-scale idea
 
 MISCONCEPTIONS TO CATCH:
 - <e.g. cloud API when IP is sealed>
@@ -70,13 +71,13 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 
 | In `aiTutorContext` (hidden) | In tutor `message` (player sees) | UI |
 |------------------------------|----------------------------------|-----|
-| `[Reading title](https://…)` | Same Markdown link when relevant | **Clickable** link (new tab) |
+| `[Reading title](lessons/<folder>/01-job.html)` | Same Markdown link when relevant | **Clickable** link (new tab), after the package root is joined |
 | Bare `https://…` resource URL | May include in message | Autolinked when safe |
-| `![Caption](https://…image…)` | Same image Markdown when relevant | **Inline image** in the bubble |
+| `![Caption](lessons/<folder>/illustrations/cover.png)` | Same image Markdown when relevant | **Inline image** in the bubble |
 
 **Author rules**
 
-1. **https only** — no `javascript:`, `data:`, or relative paths. Prefer stable, citable pages and diagrams.
+1. **Package path or https** — a page or image that ships in the package is `lessons/<folder>/…` or `assets/<file>`. A reading that does not ship in the package stays `https://`. No `javascript:` or `data:`. Lesson HTML itself uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`), not package paths.
 2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
 3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). Do not author **What just became possible** on new tiles. The tutor teaches the capability class after the story.
 4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.

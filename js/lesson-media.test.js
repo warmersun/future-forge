@@ -48,6 +48,18 @@ describe("listLessonMedia", () => {
     assert.equal(media.images.some((item) => /javascript:/i.test(item.url)), false);
   });
 
+  it("keeps a localhost content root and drops file URLs from node", () => {
+    const media = listLessonMedia(
+      "[Page](http://127.0.0.1:8765/content/lessons/harbor/01.html)\n" +
+        "[Disk](file:///tmp/pkg/lessons/harbor/01.html)\n" +
+        "[Elsewhere](http://example.com/lessons/01.html)"
+    );
+    assert.deepEqual(
+      media.links.map((item) => item.url),
+      ["http://127.0.0.1:8765/content/lessons/harbor/01.html"]
+    );
+  });
+
   it("caps images and links", () => {
     const images = Array.from({ length: LESSON_IMAGE_CAP + 3 }, (_, i) => {
       return `![Pic ${i}](https://example.com/i${i}.png)`;

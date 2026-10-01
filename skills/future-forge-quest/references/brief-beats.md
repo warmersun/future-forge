@@ -86,7 +86,7 @@ The walk swaps a still on Future Vision with each caption:
 2. Else Imagine from `imagePrompt` (or a derived prompt).
 3. Else the theme postcard while that generates.
 
-Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg`, or host them and use `https://…`. Start inventing restores invent/pathway vision. Omit `imageUrl` when the theme postcard is enough; `imagePrompt` opts into live Imagine.
+Put files next to the tile under `assets/quests/<quest-id>/<beat-id>.jpg` in the game repo, or host them and use `https://…`. A still that ships inside a quest package is `assets/<file>` in that package, not `assets/quests/…`. Start inventing restores invent/pathway vision. Omit `imageUrl` when the theme postcard is enough; `imagePrompt` opts into live Imagine.
 
 ## Do not
 

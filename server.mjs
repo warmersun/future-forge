@@ -55,7 +55,7 @@ import {
 import { RateLimiter } from "./js/server/rate-limit.mjs";
 import { clientIp, isLoopbackSocket } from "./js/server/client-ip.mjs";
 import { canSeeAdmin } from "./js/server/admin-gate.mjs";
-import { serveStatic } from "./js/server/static.mjs";
+import { serveContent, serveStatic } from "./js/server/static.mjs";
 import { shareOriginFromEnv } from "./js/deep-link.js";
 import { joinOriginFromEnv } from "./js/join-origin.js";
 import {
@@ -150,6 +150,10 @@ const XAI_BASE = "https://api.x.ai/v1";
 const TOKEN_ENDPOINT = "https://auth.x.ai/oauth2/token";
 
 const PORT = Number(process.env.FF_PORT) || 8765;
+/** Unpacked quest package, served at /content/ so lesson paths can use an http root. */
+const CONTENT_DIR = process.env.FF_CONTENT_DIR
+  ? path.resolve(process.env.FF_CONTENT_DIR)
+  : "";
 /** Optional shared secret for expensive APIs when exposed beyond loopback. */
 const API_SECRET = String(process.env.FF_API_SECRET || "").trim();
 /** Max concurrent rooms (DoS). */
@@ -2445,6 +2449,15 @@ const server = http.createServer(async (req, res) => {
     })
   ) {
     return;
+  }
+
+  if (
+    CONTENT_DIR &&
+    req.method === "GET" &&
+    req.url &&
+    (req.url === "/content" || req.url.startsWith("/content/") || req.url.startsWith("/content?"))
+  ) {
+    return serveContent(CONTENT_DIR, req, res);
   }
 
   if (req.method === "GET") return serveStatic(ROOT, req, res);

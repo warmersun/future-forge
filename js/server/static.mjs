@@ -136,10 +136,53 @@ export function safePublicPath(root, urlPath) {
 }
 
 /**
- * @param {string} root
+ * A file inside an unpacked quest package mounted at /content/, or null.
+ * @param {string} root absolute content directory
+ * @param {string} urlPath request path, including /content/
+ * @returns {string|null}
+ */
+export function safeContentPath(root, urlPath) {
+  const pathOnly = String(urlPath || "").split("?")[0].split("#")[0];
+  let rest = pathOnly.replace(/^\/content\/?/, "");
+  if (!rest) rest = "index.html";
+  const rel = normalizePublicRel(rest.startsWith("/") ? rest : `/${rest}`);
+  if (!rel) return null;
+  const ext = path.extname(rel).toLowerCase();
+  if (!ext || BLOCKED_EXT.has(ext)) return null;
+  if (!MIME[ext] && ext !== ".txt") return null;
+
+  const rootResolved = path.resolve(root);
+  const full = path.resolve(rootResolved, rel);
+  const relCheck = path.relative(rootResolved, full);
+  if (relCheck.startsWith("..") || path.isAbsolute(relCheck)) return null;
+  return full;
+}
+
+/**
+ * @param {string} root absolute content directory
  * @param {import('node:http').IncomingMessage} req
  * @param {import('node:http').ServerResponse} res
  */
+export function serveContent(root, req, res) {
+  const filePath = safeContentPath(root, req.url || "/content/");
+  if (!filePath) {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Forbidden");
+  }
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("Not found");
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, {
+      "Content-Type": MIME[ext] || "application/octet-stream",
+      "Cache-Control": "no-store",
+    });
+    res.end(data);
+  });
+}
+
 export function serveStatic(root, req, res) {
   let urlPath = req.url === "/" ? "/index.html" : req.url || "/";
   const filePath = safePublicPath(root, urlPath);

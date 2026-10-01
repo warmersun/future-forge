@@ -24,6 +24,8 @@ Source of truth: each course repo plus spotlight tiles in `~/dev/warmersun/futur
 4. Future Forge server fetches the catalog (override with `FF_QUESTS_REMOTE_URL`).
 5. In the app, open a Sponsored / Learning / Library catalog and tap **↻ Refresh** beside Import Quest… to revalidate (skips the process cache and cache-busts CDN URLs). Without Refresh, the server keeps a ~10-minute in-memory snapshot.
 
+To ship a quest together with its lesson pages, pack them into one `.ffquest` file and use the warmersun stage and deploy scripts. See [`docs/quest-package.md`](../docs/quest-package.md).
+
 | Env | Effect |
 |-----|--------|
 | `FF_QUESTS_REMOTE_URL` unset | Local `~/dev/warmersun/quests/catalog.json` if present, else `https://warmersun.com/quests/catalog.json` |

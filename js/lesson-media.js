@@ -32,11 +32,26 @@ function parseMdLink(text, openBracket) {
 /**
  * @param {string} url
  */
+function pageIsFile() {
+  try {
+    return typeof location !== "undefined" && location.protocol === "file:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Lesson media the tutor may fetch.
+ * https anywhere. http only on localhost. file only when this page is file:.
+ * @param {string} url
+ */
 export function isLessonHttps(url) {
   const u = String(url || "").trim();
-  if (!/^https:\/\//i.test(u)) return false;
-  if (/[\s<>"']/.test(u)) return false;
-  return true;
+  if (!u || /[\s<>"']/.test(u) || u.includes("..")) return false;
+  if (/^https:\/\//i.test(u)) return true;
+  if (/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(u)) return true;
+  if (/^file:\/\//i.test(u) && pageIsFile()) return true;
+  return false;
 }
 
 /**

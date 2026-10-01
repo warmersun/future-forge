@@ -109,7 +109,7 @@ Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`ref
 
 ### 6. Learning module (if applicable)
 
-`references/learning-and-sponsor.md`. Set `isLearningModule: true`; write `aiTutorContext` with LESSON GOAL, SEQUENCE (idea 1 = **what just moved and where it sits on the curve**; the tutor says it after the story), RESOURCES / ILLUSTRATIONS (https), MISCONCEPTIONS, INVENT GATE (a capability pathway, never a rule text). Set `module`, `lesson`, `totalLessons` together. Multi-lesson sets also emit a `kind: "module"` wrapper whose `totalLessons` agrees with the lessons. A learning quest without `access` requires sign-in on the hosted catalog.
+`references/learning-and-sponsor.md`. Set `isLearningModule: true`; write `aiTutorContext` with LESSON GOAL, SEQUENCE (idea 1 = **what just moved and where it sits on the curve**; the tutor says it after the story), RESOURCES / ILLUSTRATIONS, MISCONCEPTIONS, INVENT GATE (a capability pathway, never a rule text). A page that ships in the package is a package path (`lessons/<folder>/01-job.html`, `lessons/<folder>/illustrations/cover.png`). A reading that does not ship in the package stays `https://`. Set `module`, `lesson`, `totalLessons` together. Multi-lesson sets also emit a `kind: "module"` wrapper whose `totalLessons` agrees with the lessons. A learning quest without `access` requires sign-in on the hosted catalog.
 
 ### 7. Sponsor (if applicable)
 
@@ -126,7 +126,7 @@ Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft li
 
 ### 9. Hand off
 
-Path(s); copy into `quests/` or Import Quest…; the UI chips expected (Spotlight / Sponsored / Learn / Start / Crisis); any lint warning you kept and why; multi-lesson order if any.
+Path(s); copy into `quests/` or Import Quest…; the UI chips expected (Spotlight / Sponsored / Learn / Start / Crisis); any lint warning you kept and why; multi-lesson order if any. When the quest has lesson pages, the source directory is `quests/`, `lessons/`, and `assets/`. Lesson HTML uses page-relative links. Quest text cites package paths. Then `npm run pack:quest -- <dir>` — see `docs/quest-package.md`.
 
 ## What lint cannot check (you still must)
 
