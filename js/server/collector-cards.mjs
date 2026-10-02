@@ -312,21 +312,16 @@ export function renderCollectorCardPage(row, opts) {
       width:100%; 
     }
     .branding { 
-      display:inline-flex; 
-      align-items:center; 
-      gap:0.5rem; 
+      display:block;
       text-decoration:none;
-      color:var(--dim);
-      font-size:0.875rem;
-      font-weight:500;
-      letter-spacing:0.02em;
-      transition:color 0.2s;
+      transition:opacity 0.2s;
     }
-    .branding:hover { color:var(--text); }
+    .branding:hover { opacity:0.85; }
     .branding img { 
-      height:1.5rem; 
+      height:2.5rem;
       width:auto; 
       display:block;
+      max-width:100%;
     }
     
     /* Main content */
@@ -490,12 +485,12 @@ export function renderCollectorCardPage(row, opts) {
       text-align:center;
     }
     footer img {
-      height:2rem;
+      height:1.5rem;
       width:auto;
-      opacity:0.7;
+      opacity:0.5;
       transition:opacity 0.2s;
     }
-    footer img:hover { opacity:1; }
+    footer img:hover { opacity:0.75; }
     
     /* Tablet and desktop adjustments */
     @media (min-width: 640px) {
@@ -524,16 +519,18 @@ export function renderCollectorCardPage(row, opts) {
     }
     
     @media (min-width: 768px) {
-      .branding { font-size:0.9375rem; }
-      .branding img { height:1.75rem; }
+      .branding img { height:3.5rem; }
+    }
+    
+    @media (min-width: 1024px) {
+      .branding img { height:4rem; }
     }
   </style>
 </head>
 <body>
   <header>
     <a href="https://warmersun.com" class="branding" aria-label="Future Forge by Warmer Sun">
-      <img src="/assets/brand/ff-mark-footer.png" alt="" width="32" height="32" />
-      <span>Future Forge by Warmer Sun</span>
+      <img src="/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="1242" height="347" />
     </a>
   </header>
   <main>
@@ -553,7 +550,7 @@ export function renderCollectorCardPage(row, opts) {
     </div>
   </main>
   <footer>
-    <img src="/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="240" height="48" />
+    <img src="/assets/brand/ff-mark-footer.png" alt="Future Forge" width="256" height="256" />
   </footer>
   <script type="module">
     const boot = ${boot};
