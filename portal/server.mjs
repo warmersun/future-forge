@@ -123,7 +123,18 @@ import {
   putQuestStill,
   getQuestStill,
   deleteQuestStillsOutside,
+  getPublishedCollectorCard,
+  getCollectorCardImage,
+  collectCollectorCard,
+  listCollectedCards,
 } from "../js/server/db.mjs";
+import {
+  parseCardPath,
+  parseCollectPath,
+  publicCardDto,
+  renderCollectorCardPage,
+  collectHttpResult,
+} from "../js/server/collector-cards.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
@@ -2089,6 +2100,68 @@ function sendDeviceJson(req, res, status, data) {
   res.end(body);
 }
 
+function sendHtml(res, status, html) {
+  const buf = Buffer.from(html);
+  res.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": buf.length,
+    "Cache-Control": "no-store",
+  });
+  res.end(buf);
+}
+
+async function serveCollectorCard(req, res, pathOnly) {
+  const parsed = parseCardPath(pathOnly);
+  if (!parsed || parsed.invalid) {
+    return sendHtml(res, 404, "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>");
+  }
+  if (!dbEnabled()) {
+    return sendJson(res, 503, { ok: false, error: "db_unavailable" });
+  }
+  try {
+    if (parsed.image) {
+      const img = await getCollectorCardImage(parsed.id);
+      if (!img?.bytes) {
+        return sendJson(res, 404, { ok: false, error: "not_found" });
+      }
+      const stamp = img.updatedAt ? new Date(img.updatedAt).toISOString() : parsed.id;
+      const etag = `W/"${stamp}"`;
+      if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, {
+          ETag: etag,
+          "Cache-Control": "public, max-age=86400",
+        });
+        return res.end();
+      }
+      const buf = Buffer.isBuffer(img.bytes) ? img.bytes : Buffer.from(img.bytes);
+      res.writeHead(200, {
+        "Content-Type": img.contentType || "image/jpeg",
+        "Content-Length": buf.length,
+        ETag: etag,
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*",
+      });
+      return res.end(buf);
+    }
+    const card = await getPublishedCollectorCard(parsed.id);
+    if (!card) {
+      return sendHtml(res, 404, "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>");
+    }
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    const clerk = publicClerkConfig();
+    const html = renderCollectorCardPage(card, {
+      origin: portalPublicOrigin(),
+      publishableKey: clerk.publishableKey,
+      clerkEnabled: clerk.enabled,
+      collectNow: url.searchParams.get("collect") === "1",
+    });
+    return sendHtml(res, 200, html);
+  } catch (e) {
+    console.warn("[collector card]", e?.message || e);
+    return sendJson(res, errorStatus(e), { ok: false, error: "card_failed" });
+  }
+}
+
 function servePortalSignin(res) {
   const file = path.join(__dirname, "signin.html");
   let html;
@@ -2204,6 +2277,9 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === "GET" && pathOnly === "/signin") {
     return servePortalSignin(res);
+  }
+  if (req.method === "GET" && pathOnly.startsWith("/card/")) {
+    return serveCollectorCard(req, res, pathOnly);
   }
   if (!isPortalApiPath(pathOnly)) {
     return sendJson(res, 404, {
@@ -2364,6 +2440,57 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       console.warn("[cloud db] achievements", e?.message || e);
       return sendJson(res, errorStatus(e), { ok: false, error: "achievements_failed" });
+    }
+  }
+
+  if (req.method === "GET" && (pathOnly === "/api/me/cards")) {
+    const ident = await authenticateClerkRequest(req);
+    const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+    if (!gate.ok) {
+      return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
+    }
+    try {
+      const origin = portalPublicOrigin();
+      const rows = await listCollectedCards(gate.userId);
+      return sendJson(res, 200, {
+        ok: true,
+        cards: rows.map((row) => publicCardDto(row, origin)),
+      });
+    } catch (e) {
+      console.warn("[collector cards] list", e?.message || e);
+      return sendJson(res, errorStatus(e), { ok: false, error: "cards_failed" });
+    }
+  }
+
+  {
+    const collect = req.method === "POST" ? parseCollectPath(pathOnly) : null;
+    if (collect) {
+      req.resume();
+      if (collect.invalid) {
+        return sendJson(res, 404, { ok: false, error: "not_found" });
+      }
+      const ident = await authenticateClerkRequest(req);
+      const gate = cloudWriteGate(ident, { dbEnabled: dbEnabled() });
+      if (!gate.ok) {
+        const denied = collectHttpResult(gate, null);
+        return sendJson(res, denied.status, { ...denied.body, clerk: ident.enabled });
+      }
+      try {
+        const card = await getPublishedCollectorCard(collect.id);
+        if (!card) {
+          const missing = collectHttpResult(gate, null);
+          return sendJson(res, missing.status, missing.body);
+        }
+        const saved = await collectCollectorCard(gate.userId, collect.id);
+        const result = collectHttpResult(gate, card, { already: saved.already });
+        return sendJson(res, result.status, {
+          ...result.body,
+          card: publicCardDto(card, portalPublicOrigin()),
+        });
+      } catch (e) {
+        console.warn("[collector cards] collect", e?.message || e);
+        return sendJson(res, errorStatus(e), { ok: false, error: "collect_failed" });
+      }
     }
   }
 

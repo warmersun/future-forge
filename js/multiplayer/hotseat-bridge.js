@@ -458,7 +458,7 @@ export function createHotseatBridge() {
    * Layer tech onto viewed invent, paid by active (via applyMpAction).
    * Blocked during challenge phase.
    */
-  function layerTechOnView(techId, tech) {
+  function layerTechOnView(techId, tech, opts = {}) {
     if (!session) return { ok: false, error: "no_session" };
     if (!canEditStack()) {
       const phase = forgePhase(getViewId());
@@ -474,10 +474,11 @@ export function createHotseatBridge() {
     }
     const target = getViewId();
     const active = getActiveId();
+    const flags = { free: Boolean(opts.free), bill: Boolean(opts.bill) };
     const action =
       target === active
-        ? { type: "select_tech", payload: { techId, tech } }
-        : { type: "layer_tech", payload: { techId, targetSeatId: target, tech } };
+        ? { type: "select_tech", payload: { techId, tech, ...flags } }
+        : { type: "layer_tech", payload: { techId, targetSeatId: target, tech, ...flags } };
     const r = hotseatApplyAction(session, action, active);
     if (r.ok) session = r.session;
     return r;

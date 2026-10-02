@@ -78,6 +78,7 @@ import {
 } from "./sim/portfolio.js";
 import {
   apiFetch,
+  resolvePortalOrigin,
   isClerkReady,
   isClerkSignedIn,
   openCloudSignIn,
@@ -111,6 +112,8 @@ import {
   boardHolds,
   deriveBoardProse,
   techIdsFromBoard,
+  placedTechEconomy,
+  stackPlacementPlan,
   creditedTechIdsFromBoard,
   techIdsWithUnplacedInventions,
   cloneBoard,
@@ -1051,19 +1054,14 @@ function isHexInventUi() {
  * @returns {{ ok: boolean, error?: string }}
  */
 function canPlaceInventionOnStack(tile) {
-  if (!tile?.techId) return { ok: true };
-  if (tile.q != null && tile.r != null) return { ok: true };
-  const board = state.hexBoard;
-  if (techIdsFromBoard(board).includes(tile.techId)) return { ok: true };
-  if ((state.selectedTechIds || []).includes(tile.techId)) return { ok: true };
-  const tech = techById(tile.techId);
-  const afford = canAffordTech(tech);
-  if (!afford.ok) return afford;
-  const cap = stackCapLimit();
-  if ((state.selectedTechIds || []).length >= cap) {
+  const plan = stackPlacementPlan(tile, state.hexBoard, state.selectedTechIds);
+  if (!plan.charge && !plan.newSlot) return { ok: true };
+  if (plan.newSlot && (state.selectedTechIds || []).length >= stackCapLimit()) {
     return { ok: false, error: "stack full" };
   }
-  return { ok: true };
+  if (!plan.charge) return { ok: true };
+  const tech = techById(tile.techId);
+  return canAffordTech(tech);
 }
 
 function paintAfterStackReconcile() {
@@ -1083,13 +1081,24 @@ function paintAfterStackReconcile() {
  * @param {string[]} nextIds
  * @returns {{ ok: boolean, error?: string, techId?: string }}
  */
-function reconcileStackFromBoard(nextIds) {
+function reconcileStackFromBoard(nextIds, prevEcon) {
   const wanted = [...new Set((nextIds || []).filter(Boolean))];
   const wantedSet = new Set(wanted);
   const prev = [...(state.selectedTechIds || [])];
+  const nextEcon = placedTechEconomy(state.hexBoard);
+  const prevPaid = new Set(prevEcon?.paid || []);
+  const prevCollector = new Set(prevEcon?.collectorOnly || []);
+  const chargeIds = nextEcon.paid.filter((id) => {
+    if (prevPaid.has(id)) return false;
+    if (prev.includes(id) && !prevCollector.has(id)) return false;
+    return true;
+  });
+  const chargeSet = new Set(chargeIds);
+  const freeIds = nextEcon.collectorOnly.filter((id) => !prev.includes(id));
   if (
     prev.length === wanted.length &&
-    prev.every((id) => wantedSet.has(id))
+    prev.every((id) => wantedSet.has(id)) &&
+    chargeIds.length === 0
   ) {
     return { ok: true };
   }
@@ -1137,7 +1146,13 @@ function reconcileStackFromBoard(nextIds) {
       removeFromLearnOrder(id);
     }
     for (const id of wanted) {
-      if (prev.includes(id) || (state.selectedTechIds || []).includes(id)) continue;
+      const charging = chargeSet.has(id);
+      const freeing = freeIds.includes(id);
+      if (!charging && !freeing) continue;
+      if (freeing) {
+        if (!prev.includes(id)) pushLearnOrder(id);
+        continue;
+      }
       const tech = techById(id);
       const afford = canAffordTech(tech);
       if (!afford.ok) {
@@ -1165,7 +1180,7 @@ function reconcileStackFromBoard(nextIds) {
           };
         }
       }
-      pushLearnOrder(id);
+      if (!prev.includes(id)) pushLearnOrder(id);
     }
     state.selectedTechIds = wanted;
     paintAfterStackReconcile();
@@ -1187,19 +1202,25 @@ function reconcileStackFromBoard(nextIds) {
         (x) => x.techId
       );
     for (const id of wanted) {
-      if (prev.includes(id) || (state.selectedTechIds || []).includes(id)) continue;
-      if (viewStackIds().includes(id)) continue;
+      const charging = chargeSet.has(id);
+      const freeing = freeIds.includes(id);
+      if (!charging && !freeing) continue;
       if (!hotseatBridge.canEditStack?.()) {
         return { ok: false, error: "stack_locked", techId: id };
       }
-      const r = hotseatBridge.layerTechOnView(id, techById(id));
+      const onView = viewStackIds().includes(id);
+      const r = freeing
+        ? onView
+          ? { ok: true }
+          : hotseatBridge.layerTechOnView(id, techById(id), { free: true })
+        : hotseatBridge.layerTechOnView(id, techById(id), onView ? { bill: true } : {});
       if (!r.ok) {
         if (r.error === "already_on_stack") continue;
         flashUnaffordableTech(id, r.error);
         return { ok: false, error: r.error, techId: id };
       }
-      hotseatBridge.setSession(r.session);
-      pushLearnOrder(id);
+      if (r.session) hotseatBridge.setSession(r.session);
+      if (!prev.includes(id)) pushLearnOrder(id);
     }
     hotseatBridge.hydrateSoloState(state, {
       global: state.global,
@@ -1216,8 +1237,16 @@ function reconcileStackFromBoard(nextIds) {
     if (r.ok) removeFromLearnOrder(id);
   }
   for (const id of wanted) {
-    if ((state.selectedTechIds || []).includes(id)) continue;
-    const r = dispatchSim("select_tech", { techId: id, tech: techById(id) });
+    const charging = chargeSet.has(id);
+    const freeing = freeIds.includes(id);
+    if (!charging && !freeing) continue;
+    const already = (state.selectedTechIds || []).includes(id);
+    const r = dispatchSim("select_tech", {
+      techId: id,
+      tech: techById(id),
+      free: freeing,
+      bill: charging && already,
+    });
     if (!r.ok) {
       flashUnaffordableTech(id, r.error);
       return { ok: false, error: r.error, techId: id };
@@ -1468,6 +1497,9 @@ function ensureHexWorkshop() {
       state.selectedTechIds = ids;
     },
     canPlaceInvention: (tile) => canPlaceInventionOnStack(tile),
+    isSignedIn: () => isClerkSignedIn(),
+    onSignedIn: (fn) => onClerkSession(fn),
+    listCollectorCards: () => listCollectorCards(),
     canOccupy: (tile, q, r) => {
       if (!state.tutorialRun || !tutorialCtl?.isOpen?.()) return true;
       return tutorialCtl.allowOccupy(tile, q, r);
@@ -1487,7 +1519,7 @@ function ensureHexWorkshop() {
       }
       return false;
     },
-    reconcileStackFromBoard: (ids) => reconcileStackFromBoard(ids),
+    reconcileStackFromBoard: (ids, prevEcon) => reconcileStackFromBoard(ids, prevEcon),
     flashUnaffordableTech: (id, error) => flashUnaffordableTech(id, error),
     coInvent: (mode, content, extra) => {
       if (state.tutorialRun) {
@@ -3610,6 +3642,22 @@ function unionSolvedIds(ids) {
 
 let cloudImportDone = false;
 let cloudDbEnabled = null;
+
+async function listCollectorCards() {
+  const res = await apiFetch("/api/me/cards");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || "cards_failed");
+  }
+  const origin = await resolvePortalOrigin();
+  return (data.cards || []).map((card) => ({
+    ...card,
+    imageUrl:
+      origin && card.imagePath
+        ? `${origin}${card.imagePath}`
+        : card.imageUrl || card.imagePath || "",
+  }));
+}
 
 async function refreshCloudDbFlag() {
   try {

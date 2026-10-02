@@ -183,23 +183,6 @@
         }
       }
 
-      const health = await fetch("/api/health").then((r) => r.json());
-      const pk = health?.clerk?.publishableKey;
-      if (!health?.clerk?.enabled || !pk) {
-        status.textContent = "Sign in is off on this portal (Clerk keys missing).";
-        throw new Error("clerk off");
-      }
-      if (!device) {
-        status.textContent =
-          "Open Sign in from Future Forge on your computer (http://127.0.0.1:8765). This page needs a device code from the game.";
-        throw new Error("no device");
-      }
-
-      const host = clerkFrontendApiHost(pk);
-      await loadScript(`https://${host}/npm/@clerk/ui@1/dist/ui.browser.js`);
-      await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
-        "data-clerk-publishable-key": pk,
-      });
       function isAllowedGameReturnUrl(href) {
         try {
           const u = new URL(String(href || ""));
@@ -216,11 +199,29 @@
         }
       }
 
-      const stayHere =
-        `${location.origin}/signin?device=${encodeURIComponent(device)}` +
-        (returnTo && isAllowedGameReturnUrl(returnTo)
-          ? `&return=${encodeURIComponent(returnTo)}`
-          : "");
+      const health = await fetch("/api/health").then((r) => r.json());
+      const pk = health?.clerk?.publishableKey;
+      if (!health?.clerk?.enabled || !pk) {
+        status.textContent = "Sign in is off on this portal (Clerk keys missing).";
+        throw new Error("clerk off");
+      }
+      const returnOk = Boolean(returnTo && isAllowedGameReturnUrl(returnTo));
+      if (!device && !returnOk) {
+        status.textContent =
+          "Open Sign in from Future Forge on your computer (http://127.0.0.1:8765). This page needs a device code from the game.";
+        throw new Error("no device");
+      }
+
+      const host = clerkFrontendApiHost(pk);
+      await loadScript(`https://${host}/npm/@clerk/ui@1/dist/ui.browser.js`);
+      await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
+        "data-clerk-publishable-key": pk,
+      });
+
+      const stayHere = device
+        ? `${location.origin}/signin?device=${encodeURIComponent(device)}` +
+          (returnOk ? `&return=${encodeURIComponent(returnTo)}` : "")
+        : `${location.origin}/signin?return=${encodeURIComponent(returnTo)}`;
       const pickHere = `${stayHere}&pick=1`;
       const AWAIT_KEY = "ff-clerk-await-signin";
 
@@ -317,7 +318,7 @@
             completing = false;
             return false;
           }
-          await complete(token);
+          if (device) await complete(token);
           clearAwaiting();
           hideChoice();
           if (signInMounted) {

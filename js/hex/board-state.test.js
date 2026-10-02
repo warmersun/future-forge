@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createEmptyBoard,
+  placedTechEconomy,
+  stackPlacementPlan,
+  stackBillingDelta,
   seedCrisisTiles,
   mintInventionTile,
   mintRdTile,
@@ -1055,4 +1058,42 @@ test("convergencesForAi names the judged pair for the co-inventor", () => {
   assert.match(rows[0].reason, /quantum queues/);
   assert.equal(rows[0].factor, 1.25);
   assert.deepEqual(convergencesForAi(createEmptyBoard()), []);
+});
+
+test("a collector tile is free to place and does not prepay its emTech", () => {
+  const board = createEmptyBoard();
+  const collector = mintInventionTile({
+    id: "col",
+    techId: "drones",
+    origin: "collector",
+    collectorCardId: "11111111-1111-4111-8111-111111111111",
+    name: "Urban drone delivery",
+    howText: "Flies a meal to a nearby door.",
+  });
+  const plan = stackPlacementPlan(collector, board, []);
+  assert.deepEqual(plan, { charge: false, newSlot: true });
+
+  let placed = addTile(board, collector);
+  placed = placeTile(placed, "col", 1, 0).board;
+  const econ = placedTechEconomy(placed);
+  assert.deepEqual(econ.collectorOnly, ["drones"]);
+  assert.deepEqual(econ.paid, []);
+
+  const custom = mintInventionTile({
+    id: "mine",
+    techId: "drones",
+    origin: "custom",
+    name: "My drone",
+    howText: "A different aircraft.",
+  });
+  assert.deepEqual(stackPlacementPlan(custom, placed, ["drones"]), {
+    charge: true,
+    newSlot: false,
+  });
+
+  const both = addTile(placed, { ...custom, q: 2, r: 0 });
+  const delta = stackBillingDelta(placed, both);
+  assert.deepEqual(delta.newlyPaid, ["drones"]);
+  assert.deepEqual(delta.freeAdds, []);
+  assert.deepEqual(delta.addedIds, []);
 });

@@ -401,6 +401,10 @@ export function mintInventionTile(opts = {}) {
     timingPending: false,
     timingForKey: null,
     origin: opts.origin || null,
+    /** Library card this tile was minted from. Survives lift; discard drops only the tile. */
+    collectorCardId: opts.collectorCardId
+      ? String(opts.collectorCardId).slice(0, 80)
+      : null,
     /** Crisis meter label this idea aims at (from Ask for ideas), or null */
     eases: opts.eases ? String(opts.eases).slice(0, 60) : null,
     lamp: null,
@@ -1077,16 +1081,94 @@ export function affectedGivens(board, placedOrLiftedId = null) {
  * @returns {string[]}
  */
 export function techIdsFromBoard(board) {
-  const ids = [];
+  return placedTechEconomy(board).all;
+}
+
+/**
+ * A collector card plays as an invention tile and does not spend stack resources.
+ * @param {object|null|undefined} tile
+ */
+export function isCollectorTile(tile) {
+  if (!tile || typeof tile !== "object") return false;
+  if (tile.origin === "collector") return true;
+  return Boolean(tile.collectorCardId);
+}
+
+/**
+ * Placed invention techs. A tech is paid when any non-collector tile of it is on the field.
+ * Collector-only techs occupy a stack slot and do not bill.
+ * @param {object|null|undefined} board
+ * @returns {{ all: string[], paid: string[], collectorOnly: string[] }}
+ */
+export function placedTechEconomy(board) {
+  const paid = new Set();
   const seen = new Set();
+  const all = [];
   for (const t of Object.values(board?.tiles || {})) {
-    if (t.kind !== TILE_KIND.invention || !t.techId) continue;
+    if (t?.kind !== TILE_KIND.invention || !t.techId) continue;
     if (t.q == null || t.r == null) continue;
-    if (seen.has(t.techId)) continue;
-    seen.add(t.techId);
-    ids.push(t.techId);
+    if (!seen.has(t.techId)) {
+      seen.add(t.techId);
+      all.push(t.techId);
+    }
+    if (!isCollectorTile(t)) paid.add(t.techId);
   }
-  return ids;
+  return {
+    all,
+    paid: all.filter((id) => paid.has(id)),
+    collectorOnly: all.filter((id) => !paid.has(id)),
+  };
+}
+
+/**
+ * Stack membership change plus which techs newly require a resource charge.
+ * A collector card that introduces an emTech is a free add. A later non-collector
+ * tile of that emTech is newly paid even though the slot already exists.
+ * @param {object|null|undefined} prevBoard
+ * @param {object|null|undefined} nextBoard
+ */
+export function stackBillingDelta(prevBoard, nextBoard) {
+  const prev = placedTechEconomy(prevBoard);
+  const next = placedTechEconomy(nextBoard);
+  const prevSet = new Set(prev.all);
+  const nextSet = new Set(next.all);
+  const prevPaid = new Set(prev.paid);
+  const newlyPaid = next.paid.filter((id) => !prevPaid.has(id));
+  const bill = new Set(newlyPaid);
+  return {
+    placedIds: next.all,
+    addedIds: next.all.filter((id) => !prevSet.has(id)),
+    removedIds: prev.all.filter((id) => !nextSet.has(id)),
+    newlyPaid,
+    freeAdds: next.all.filter((id) => !prevSet.has(id) && !bill.has(id)),
+  };
+}
+
+/**
+ * Tray → field plan. `charge` is AP/Budget/Will. `newSlot` counts toward the stack cap.
+ * A collector tile never charges. It does not mark its emTech as paid.
+ * @param {object|null|undefined} tile
+ * @param {object|null|undefined} board
+ * @param {string[]} [selectedTechIds]
+ * @returns {{ charge: boolean, newSlot: boolean }}
+ */
+export function stackPlacementPlan(tile, board, selectedTechIds) {
+  if (!tile?.techId || (tile.q != null && tile.r != null)) {
+    return { charge: false, newSlot: false };
+  }
+  const econ = placedTechEconomy(board);
+  const selected = (selectedTechIds || []).includes(tile.techId);
+  const onField = econ.all.includes(tile.techId);
+  if (isCollectorTile(tile)) {
+    return { charge: false, newSlot: !onField && !selected };
+  }
+  const alreadyPaid =
+    econ.paid.includes(tile.techId) ||
+    (selected && !econ.collectorOnly.includes(tile.techId));
+  return {
+    charge: !alreadyPaid,
+    newSlot: !onField && !selected,
+  };
 }
 
 /**

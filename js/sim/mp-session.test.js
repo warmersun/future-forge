@@ -734,6 +734,108 @@ describe("mp-session hex board help", () => {
     assert.equal(r.error, "stack_full");
   });
 
+  it("board_commit places a collector card with an empty wallet", () => {
+    let s = started();
+    const seat = s.invents["seat-0"];
+    seat.ap = 0;
+    seat.budget = 0;
+    seat.will = 0;
+    const board = JSON.parse(JSON.stringify(seat.hexBoard));
+    board.tiles["inv-col"] = {
+      id: "inv-col",
+      kind: "invention",
+      techId: "drones",
+      origin: "collector",
+      collectorCardId: "11111111-1111-4111-8111-111111111111",
+      name: "Urban drone delivery",
+      howText: "Flies a meal to a nearby door.",
+      q: 2,
+      r: 1,
+    };
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, true, r.error);
+    const f = r.session.invents["seat-0"];
+    assert.equal(f.ap, 0);
+    assert.equal(f.budget, 0);
+    assert.equal(f.will, 0);
+    assert.equal(f.stack[0]?.techId, "drones");
+  });
+
+  it("a later non-collector tile of a collector emTech still spends resources", () => {
+    let s = started();
+    const seat0 = s.invents["seat-0"];
+    const ap0 = seat0.ap;
+    const budget0 = seat0.budget;
+    const board = JSON.parse(JSON.stringify(seat0.hexBoard));
+    board.tiles["inv-col"] = {
+      id: "inv-col",
+      kind: "invention",
+      techId: "drones",
+      origin: "collector",
+      collectorCardId: "11111111-1111-4111-8111-111111111111",
+      name: "Urban drone delivery",
+      howText: "Flies a meal to a nearby door.",
+      q: 2,
+      r: 1,
+    };
+    const placed = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(placed.ok, true, placed.error);
+    assert.equal(placed.session.invents["seat-0"].ap, ap0);
+    assert.equal(placed.session.invents["seat-0"].budget, budget0);
+    const both = JSON.parse(JSON.stringify(placed.session.invents["seat-0"].hexBoard));
+    both.tiles["inv-paid"] = {
+      id: "inv-paid",
+      kind: "invention",
+      techId: "drones",
+      origin: "custom",
+      name: "My drone",
+      howText: "A different aircraft.",
+      q: 3,
+      r: 1,
+    };
+    const billed = applyMpAction(placed.session, {
+      type: "board_commit",
+      payload: { hexBoard: both },
+    });
+    assert.equal(billed.ok, true, billed.error);
+    const f = billed.session.invents["seat-0"];
+    assert.equal(f.ap, ap0 - 1);
+    assert.ok(f.budget < budget0);
+    assert.equal(f.stack.length, 1);
+  });
+
+  it("collector cards still count toward the stack cap", () => {
+    let s = started();
+    s.invents["seat-0"].ap = 0;
+    const board = JSON.parse(JSON.stringify(s.invents["seat-0"].hexBoard));
+    const ids = ["computing", "energy", "ai", "drones", "solar", "wind", "battery"];
+    ids.forEach((techId, i) => {
+      board.tiles[`inv-${techId}`] = {
+        id: `inv-${techId}`,
+        kind: "invention",
+        techId,
+        origin: "collector",
+        collectorCardId: `00000000-0000-4000-8000-00000000000${i}`,
+        name: techId,
+        howText: "A collected capability.",
+        q: i,
+        r: 4,
+      };
+    });
+    const r = applyMpAction(s, {
+      type: "board_commit",
+      payload: { hexBoard: board },
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "stack_full");
+  });
+
   it("helper cannot summon challenger tiles on another invent", () => {
     let s = started();
     s = applyMpAction(s, {

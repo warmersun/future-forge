@@ -59,6 +59,8 @@ import {
   ensureConcernRoster,
   boardHolds,
   techIdsFromBoard,
+  placedTechEconomy,
+  isCollectorTile,
   unplacedInventionsForTech,
   cloneBoard,
   TILE_KIND,
@@ -116,6 +118,7 @@ import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
 import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
+import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
 import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
 
@@ -277,6 +280,12 @@ export function createHexWorkshop(api) {
       rdBtn.disabled = busy;
       rdBtn.textContent = mintRdLabel();
     }
+    const colBtn = document.querySelector("#btn-collector-cards");
+    if (colBtn) {
+      const signedIn = Boolean(api.isSignedIn?.());
+      colBtn.hidden = !signedIn;
+      colBtn.disabled = busy || !signedIn;
+    }
     if (how) how.disabled = busy || !focusedTechId;
     if (refreshBtn) {
       const show = Boolean(focusedTechId && hasSparkBatch(focusedTechId));
@@ -292,12 +301,13 @@ export function createHexWorkshop(api) {
 
   function setBoard(b, opts = {}) {
     const prev = board();
+    const prevEcon = placedTechEconomy(prev);
     const next = opts.skipRekey ? b : rekeyIslandHow(b);
     api.setBoard(next);
-    const rec = syncDerivedProse();
+    const rec = syncDerivedProse(prevEcon);
     if (rec && rec.ok === false) {
       api.setBoard(prev);
-      syncDerivedProse();
+      syncDerivedProse(placedTechEconomy(next));
       if (opts.paintHow !== false) renderPathwayHowPanel();
       return rec;
     }
@@ -305,10 +315,10 @@ export function createHexWorkshop(api) {
     return rec || { ok: true };
   }
 
-  function syncDerivedProse() {
+  function syncDerivedProse(prevEcon) {
     const ids = techIdsFromBoard(board());
     if (api.reconcileStackFromBoard) {
-      return api.reconcileStackFromBoard(ids);
+      return api.reconcileStackFromBoard(ids, prevEcon);
     }
     api.setSelectedTechIds?.(ids);
     return { ok: true };
@@ -1618,7 +1628,13 @@ export function createHexWorkshop(api) {
       meta.appendChild(sep);
       const status = document.createElement("span");
       status.className = `tech-chip-status ${inStack ? "is-instack" : "is-considering"}`;
-      status.textContent = inStack ? "In stack" : "Considering";
+      status.textContent = isCollectorTile(t)
+        ? inStack
+          ? "In stack · free"
+          : "Collector · free"
+        : inStack
+          ? "In stack"
+          : "Considering";
       meta.appendChild(status);
       body.appendChild(meta);
       const title = document.createElement("h4");
@@ -3380,6 +3396,146 @@ export function createHexWorkshop(api) {
     obs.observe(ws, { attributes: true, attributeFilter: ["class"] });
   }
 
+  async function chooseCollectorCard(card) {
+    if (!card?.id || !card.techId) return;
+    const existing = Object.values(board().tiles || {}).find(
+      (t) => t && t.collectorCardId === card.id
+    );
+    if (existing) {
+      focusTech(existing.techId);
+      renderIdeaCards();
+      const el = document.querySelector(
+        `#hex-idea-cards [data-tile-id="${existing.id}"]`
+      );
+      if (el) {
+        el.classList.add("is-collector-pick");
+        el.scrollIntoView?.({ block: "nearest" });
+      } else {
+        api.flashToast?.("That card is already on the board.");
+      }
+      return;
+    }
+    if (api.canEditBoard && !api.canEditBoard()) {
+      api.flashToast?.("You can't add ideas on this board right now.");
+      return;
+    }
+    if (isCreateBusy()) return;
+    focusTech(card.techId);
+    setCreateBusy("mint", true);
+    try {
+      const year = api.getYear();
+      const place = api.getPlace?.() || "";
+      const ideaId = `collector-${card.id}`;
+      const artId = ideaImageId({ techId: card.techId, ideaId, place, year });
+      let artUrl = null;
+      if (api.fetchIdeaImage) {
+        try {
+          artUrl = await api.fetchIdeaImage({
+            techId: card.techId,
+            ideaId,
+            artId,
+            place,
+            year,
+            imagePrompt: String(card.description || card.title || "").slice(0, 400),
+            kind: "mint",
+          });
+        } catch {
+          /* tile still appears, same as a mint whose picture failed */
+        }
+      }
+      const tile = mintInventionTile({
+        origin: "collector",
+        collectorCardId: card.id,
+        techId: card.techId,
+        name: card.title,
+        howText: card.description,
+        year,
+        artUrl,
+        artId,
+      });
+      const b = addTile(board(), tile);
+      const rec = setBoard(b);
+      if (rec && rec.ok === false) {
+        api.flashToast?.(rec.error || "Could not add that card.");
+        return;
+      }
+      renderIdeaCards();
+      ensureUi()?.render();
+      api.onBoardPainted?.();
+      api.commitBoard?.(board());
+      api.flashToast?.("Collector card ready — drag it onto the board. It costs nothing.");
+    } finally {
+      setCreateBusy("mint", false);
+    }
+  }
+
+  let collectionCards = null;
+  let collectionFilter = "all";
+  /** @type {Promise<object[]>|null} */
+  let collectionLoad = null;
+
+  function paintCollectionList() {
+    const list = document.querySelector("#collector-cards-list");
+    const filters = document.querySelector("#collector-cards-filters");
+    const empty = document.querySelector("#collector-cards-empty");
+    paintCollectorPicker({
+      list,
+      filters,
+      empty,
+      cards: collectionCards || [],
+      techId: collectionFilter,
+      onFilter: (id) => {
+        collectionFilter = id;
+        paintCollectionList();
+      },
+      onPick: (card) => {
+        const dlg = document.querySelector("#collector-cards");
+        if (typeof dlg?.close === "function") dlg.close();
+        chooseCollectorCard(card).catch((e) => console.warn(e));
+      },
+    });
+  }
+
+  async function showCollection() {
+    if (!api.isSignedIn?.()) {
+      api.flashToast?.("Sign in to use collector cards.");
+      return;
+    }
+    const dlg = document.querySelector("#collector-cards");
+    if (!dlg) return;
+    if (typeof dlg.showModal === "function" && !dlg.open) dlg.showModal();
+    const list = document.querySelector("#collector-cards-list");
+    const empty = document.querySelector("#collector-cards-empty");
+    if (!collectionCards) {
+      if (list && !collectionLoad) list.textContent = "Loading…";
+      if (empty) empty.hidden = true;
+      if (!collectionLoad) {
+        collectionLoad = Promise.resolve()
+          .then(() => api.listCollectorCards?.() || [])
+          .finally(() => {
+            collectionLoad = null;
+          });
+      }
+      try {
+        collectionCards = (await collectionLoad) || [];
+        if (!api.isSignedIn?.()) {
+          if (typeof dlg.close === "function") dlg.close();
+          collectionCards = null;
+          return;
+        }
+      } catch {
+        collectionCards = [];
+        if (list) list.textContent = "";
+        if (empty) {
+          empty.hidden = false;
+          empty.textContent = "Could not load your collection.";
+        }
+        return;
+      }
+    }
+    paintCollectionList();
+  }
+
   function wireDom() {
     document.querySelector("#btn-ask-ideas")?.addEventListener("click", () => {
       askForIdeas({ refresh: false }).catch((e) => console.warn(e));
@@ -3403,6 +3559,14 @@ export function createHexWorkshop(api) {
     document.querySelector("#btn-mint-rd")?.addEventListener("click", () => {
       mintRd();
     });
+    document.querySelector("#btn-collector-cards")?.addEventListener("click", () => {
+      showCollection().catch((e) => console.warn("[collection]", e));
+    });
+    api.onSignedIn?.(() => {
+      collectionCards = null;
+      syncCreateBusyUi();
+    });
+    syncCreateBusyUi();
     document.querySelector("#btn-hex-board-expand")?.addEventListener("click", () => {
       setBoardExpanded(!isBoardExpanded());
     });

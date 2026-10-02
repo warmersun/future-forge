@@ -25,6 +25,8 @@ export { normalizeClerkUserId };
 const DEFAULT_AUTHORIZED_PARTIES = [
   "http://127.0.0.1:8765",
   "http://localhost:8765",
+  "http://127.0.0.1:8766",
+  "http://localhost:8766",
   "https://warmersun.com",
   CLOUD_PORTAL_ORIGIN,
 ];
@@ -87,15 +89,31 @@ export function clerkWebhookSecretFromEnv(env = process.env) {
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  * @returns {string[]}
  */
+function publicOriginParty(env) {
+  const raw = String(env.FF_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(raw)) return "";
+  try {
+    const u = new URL(raw);
+    if (u.username || u.password || !u.hostname) return "";
+    return u.origin;
+  } catch {
+    return "";
+  }
+}
+
 export function authorizedPartiesFromEnv(env = process.env) {
   const raw = String(
     env.CLERK_AUTHORIZED_PARTIES || env.FF_CLERK_AUTHORIZED_PARTIES || ""
   ).trim();
-  if (!raw) return [...DEFAULT_AUTHORIZED_PARTIES];
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const listed = raw
+    ? raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [...DEFAULT_AUTHORIZED_PARTIES];
+  const extra = publicOriginParty(env);
+  if (extra && !listed.includes(extra)) listed.push(extra);
+  return listed;
 }
 
 /**

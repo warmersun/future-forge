@@ -1,0 +1,17 @@
+{
+  "source": "DoorDash Air, unveiled 30 September 2026. Pilot flights are planned for Northern California. Not stored or shown.",
+  "techId": "drones",
+  "title": "Urban drone delivery for restaurant orders",
+  "description": "A six-rotor aircraft sized for a typical takeout order flies it from a restaurant to a nearby door. A dispatcher sends the order by air only when it is light enough, close enough, and the weather is fit. Early test flights from kitchen to door averaged under five minutes, with cruising noise about like a passing car.",
+  "body": "The aircraft is one option in a mixed local-delivery fleet. For each order the network weighs distance, weight, weather, and street traffic, then assigns a courier, a sidewalk robot, or the aircraft. Roughly four in five restaurant orders are small and light enough to fly. Pilot flights are starting in Northern California under an air-carrier certificate. The bottleneck is on the ground: moving a meal from a busy kitchen onto the aircraft without making the shop run a second operation.",
+  "links": [
+    {
+      "label": "The delivery system",
+      "url": "https://about.doordash.com/en-us/news/doordash-air"
+    },
+    {
+      "label": "How the aircraft is sized",
+      "url": "https://www.axios.com/2026/09/30/doordash-drone-delivery-options"
+    }
+  ]
+}

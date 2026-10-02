@@ -51,7 +51,8 @@ import {
   removeLobbyRule,
 } from "./policy-rules.js";
 import {
-  techIdsFromBoard,
+  stackBillingDelta,
+  placedTechEconomy,
   seedCrisisTiles,
   createEmptyBoard,
   cloneBoard,
@@ -937,9 +938,9 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         }
         incomingBoard = preserved.board;
       }
-      const placedIds = techIdsFromBoard(incomingBoard);
-      const addedIds = placedIds.filter((id) => !prevIds.includes(id));
-      const removedIds = prevIds.filter((id) => !placedIds.includes(id));
+      const delta = stackBillingDelta(target.hexBoard, incomingBoard);
+      const placedIds = delta.placedIds;
+      const removedIds = delta.removedIds;
 
       if (placedIds.length > MP_STACK_CAP) {
         return { ok: false, error: "stack_full", session };
@@ -954,14 +955,21 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
         }
       }
 
+      const prevEcon = placedTechEconomy(target.hexBoard);
+      const billIds = delta.newlyPaid.filter(
+        (id) => !prevIds.includes(id) || prevEcon.collectorOnly.includes(id)
+      );
       const addedCosts = [];
-      for (const techId of addedIds) {
+      for (const techId of billIds) {
         const tech = techById(techId);
         if (!tech) return { ok: false, error: "unknown_tech", session };
         addedCosts.push({
           techId,
           cost: techCost(tech, { market: s.place?.marketNews }),
         });
+      }
+      for (const techId of delta.freeAdds) {
+        if (!techById(techId)) return { ok: false, error: "unknown_tech", session };
       }
       const needAp = addedCosts.length;
       let needBudget = 0;
@@ -1004,6 +1012,16 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
           targetSeatId,
           addedBy: activeId,
           cost,
+        });
+      }
+
+      for (const techId of delta.freeAdds) {
+        events.push({
+          type: targetSeatId === activeId ? "tech_added" : "tech_layered",
+          techId,
+          targetSeatId,
+          addedBy: activeId,
+          cost: { budget: 0, will: 0, free: true },
         });
       }
 
@@ -1289,12 +1307,55 @@ export function applyMpAction(session, action, seatId = null, opts = {}) {
     }
 
     const ids = stackTechIds(target);
-    if (ids.includes(techId)) return { ok: false, error: "already_on_stack", session };
-    if (ids.length >= MP_STACK_CAP) return { ok: false, error: "stack_full", session };
-
     const tech = payload.tech || techById(techId);
     if (!tech) return { ok: false, error: "unknown_tech", session };
     const cost = techCost(tech, { market: s.place?.marketNews });
+    const turnKey = `${targetSeatId}:${techId}`;
+
+    if (ids.includes(techId)) {
+      if (!payload.bill) return { ok: false, error: "already_on_stack", session };
+      if (actor.techAddedThisTurn?.[turnKey]) {
+        return { ok: true, session, events: [] };
+      }
+      if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
+      if (bwOn) {
+        if ((actor.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", session };
+        if ((actor.will ?? 0) < cost.will) return { ok: false, error: "no_will", session };
+        actor.budget -= cost.budget;
+        actor.will -= cost.will;
+      }
+      actor.techAddedThisTurn[turnKey] = { cost, targetSeatId, techId };
+      if (targetSeatId !== activeId) {
+        actor.contributionApSpent = (actor.contributionApSpent || 0) + 1;
+        actor.contributionBudgetSpent =
+          (actor.contributionBudgetSpent || 0) + (cost.budget || 0);
+        actor.contributionWillSpent =
+          (actor.contributionWillSpent || 0) + (cost.will || 0);
+      }
+      events.push({
+        type: targetSeatId === activeId ? "tech_added" : "tech_layered",
+        techId,
+        targetSeatId,
+        addedBy: activeId,
+        cost,
+      });
+      s.version = (session.version || 0) + 1;
+      return { ok: true, session: s, events };
+    }
+    if (ids.length >= MP_STACK_CAP) return { ok: false, error: "stack_full", session };
+
+    if (payload.free) {
+      target.stack = [...(target.stack || []), { techId, addedBy: activeId }];
+      events.push({
+        type: targetSeatId === activeId ? "tech_added" : "tech_layered",
+        techId,
+        targetSeatId,
+        addedBy: activeId,
+        cost: { budget: 0, will: 0, free: true },
+      });
+      s.version = (session.version || 0) + 1;
+      return { ok: true, session: s, events };
+    }
 
     if (!spendAp(actor, 1)) return { ok: false, error: "no_ap", session };
     if (bwOn) {

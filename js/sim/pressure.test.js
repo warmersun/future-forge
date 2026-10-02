@@ -550,6 +550,42 @@ describe("actions", () => {
     assert.equal(r.sim.ap, 2);
   });
 
+  it("select_tech free adds a collector emTech without spending", () => {
+    const s = base();
+    s.ap = 0;
+    s.budget = 0;
+    s.will = 0;
+    const tech = { id: "drones", readyYear: 2026, curve: "steep" };
+    const r = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "drones", tech, free: true } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.ap, 0);
+    assert.equal(r.sim.budget, 0);
+    assert.deepEqual(r.sim.selectedTechIds, ["drones"]);
+    assert.equal(r.sim.techAddedThisTurn.drones, undefined);
+  });
+
+  it("select_tech bill charges an emTech that a collector card already added", () => {
+    const s = base();
+    s.selectedTechIds = ["drones"];
+    s.ap = 3;
+    s.budget = 5;
+    const tech = { id: "drones", readyYear: 2026, curve: "steep" };
+    const r = applyAction(
+      s,
+      { type: "select_tech", payload: { techId: "drones", tech, bill: true } },
+      { features: { actionPoints: true, budgetWill: true } }
+    );
+    assert.equal(r.ok, true, r.error);
+    assert.equal(r.sim.ap, 2);
+    assert.equal(r.sim.budget, 4);
+    assert.deepEqual(r.sim.selectedTechIds, ["drones"]);
+    assert.ok(r.sim.techAddedThisTurn.drones);
+  });
+
   it("lobby trades budget for will", () => {
     const s = base();
     s.budget = 5;

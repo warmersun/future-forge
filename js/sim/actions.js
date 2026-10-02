@@ -56,18 +56,44 @@ export function applyAction(sim, action, opts = {}) {
   if (type === "select_tech") {
     const id = action.payload?.techId;
     if (!id) return { ok: false, error: "missing tech", sim };
+    const free = Boolean(action.payload?.free);
+    const bill = Boolean(action.payload?.bill);
     const ids = [...(next.selectedTechIds || [])];
-    if (ids.includes(id)) return { ok: true, events: [], sim: next };
+    const already = ids.includes(id);
+    const tech = action.payload?.tech || techById(id);
+    const cost = techCost(tech, { market: next.marketNews });
+    if (already && bill) {
+      if (next.techAddedThisTurn?.[id]) return { ok: true, events: [], sim: next };
+      if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
+      if (bwOn) {
+        if ((next.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", sim };
+        if ((next.will ?? 0) < cost.will) return { ok: false, error: "no_will", sim };
+        next.budget -= cost.budget;
+        next.will -= cost.will;
+        next.techAddedThisTurn[id] = cost;
+      }
+      events.push({ type: "tech_added", techId: id, cost });
+      return { ok: true, events, sim: next };
+    }
+    if (already) return { ok: true, events: [], sim: next };
     // Spark stackCap 3; Workshop / default 6 (features.stackCap from play-mode)
     const stackCap =
       typeof features.stackCap === "number" && features.stackCap > 0
         ? features.stackCap
         : 6;
     if (ids.length >= stackCap) return { ok: false, error: "stack full", sim };
+    if (free) {
+      ids.push(id);
+      next.selectedTechIds = ids;
+      events.push({
+        type: "tech_added",
+        techId: id,
+        cost: { budget: 0, will: 0, free: true },
+      });
+      return { ok: true, events, sim: next };
+    }
     if (apOn && !spendAp(1)) return { ok: false, error: "no_ap", sim };
 
-    const tech = action.payload?.tech || techById(id);
-    const cost = techCost(tech, { market: next.marketNews });
     if (bwOn) {
       if ((next.budget ?? 0) < cost.budget) return { ok: false, error: "no_budget", sim };
       if ((next.will ?? 0) < cost.will) return { ok: false, error: "no_will", sim };

@@ -948,6 +948,174 @@ export async function deleteQuestStill(questId, clerkUserId) {
   return { skipped: false };
 }
 
+function cardRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    techId: row.tech_id,
+    title: row.title,
+    description: row.description,
+    body: row.body || "",
+    links: Array.isArray(row.links) ? row.links : [],
+    contentType: row.content_type || "image/jpeg",
+    byteLen: Number(row.byte_len) || 0,
+    published: Boolean(row.published),
+    updatedAt: row.updated_at || null,
+    collectedAt: row.collected_at || null,
+  };
+}
+
+/**
+ * Published card without image bytes. Null when missing or unpublished.
+ * @param {string} cardId
+ */
+export async function getPublishedCollectorCard(cardId) {
+  const db = getPool();
+  if (!db || !cardId) return null;
+  const r = await db.query(
+    `SELECT id, tech_id, title, description, body, links, content_type, byte_len, published, updated_at
+     FROM collector_cards
+     WHERE id = $1 AND published = true`,
+    [cardId]
+  );
+  return cardRow(r.rows[0]);
+}
+
+/**
+ * @param {string} cardId
+ */
+export async function getCollectorCardImage(cardId) {
+  if (!cardId) return null;
+  const got = await withUnpooledClient(async (client) => {
+    const r = await client.query(
+      `SELECT image, content_type, updated_at
+       FROM collector_cards
+       WHERE id = $1 AND published = true AND image IS NOT NULL AND byte_len > 0`,
+      [cardId]
+    );
+    return r.rows[0] || null;
+  });
+  if (!got || got.skipped) return null;
+  return {
+    bytes: got.image,
+    contentType: got.content_type || "image/jpeg",
+    updatedAt: got.updated_at || null,
+  };
+}
+
+/**
+ * Insert or replace a card. Image may be omitted on update to keep the current bytes.
+ * @param {object} card
+ */
+export async function upsertCollectorCard(card) {
+  const id = String(card?.id || "");
+  if (!id) return { skipped: true, stored: false };
+  const links = JSON.stringify(Array.isArray(card.links) ? card.links : []);
+  const buf = card.image
+    ? Buffer.isBuffer(card.image)
+      ? card.image
+      : Buffer.from(card.image)
+    : null;
+  return withUnpooledClient(async (client) => {
+    if (buf && buf.length) {
+      await client.query(
+        `INSERT INTO collector_cards
+           (id, tech_id, title, description, body, links, image, content_type, byte_len, published)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)
+         ON CONFLICT (id) DO UPDATE SET
+           tech_id = EXCLUDED.tech_id,
+           title = EXCLUDED.title,
+           description = EXCLUDED.description,
+           body = EXCLUDED.body,
+           links = EXCLUDED.links,
+           image = EXCLUDED.image,
+           content_type = EXCLUDED.content_type,
+           byte_len = EXCLUDED.byte_len,
+           published = EXCLUDED.published,
+           updated_at = now()`,
+        [
+          id,
+          card.techId,
+          card.title,
+          card.description,
+          card.body || "",
+          links,
+          buf,
+          String(card.contentType || "image/jpeg").slice(0, 80),
+          buf.length,
+          card.published !== false,
+        ]
+      );
+    } else {
+      const existing = await client.query(`SELECT id FROM collector_cards WHERE id = $1`, [id]);
+      if (!existing.rows[0]) return { skipped: false, stored: false, error: "image_required" };
+      await client.query(
+        `UPDATE collector_cards SET
+           tech_id = $2,
+           title = $3,
+           description = $4,
+           body = $5,
+           links = $6::jsonb,
+           published = $7,
+           updated_at = now()
+         WHERE id = $1`,
+        [
+          id,
+          card.techId,
+          card.title,
+          card.description,
+          card.body || "",
+          links,
+          card.published !== false,
+        ]
+      );
+    }
+    return { skipped: false, stored: true, id };
+  });
+}
+
+/**
+ * Idempotent collect. Caller has already checked the card is published.
+ * @param {string} clerkUserId
+ * @param {string} cardId
+ */
+export async function collectCollectorCard(clerkUserId, cardId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid || !cardId) return { skipped: true, collected: false };
+  await ensureUser(uid);
+  const ins = await db.query(
+    `INSERT INTO user_collector_cards (clerk_user_id, card_id)
+     VALUES ($1, $2)
+     ON CONFLICT (clerk_user_id, card_id) DO NOTHING
+     RETURNING collected_at`,
+    [uid, cardId]
+  );
+  return {
+    skipped: false,
+    collected: true,
+    already: ins.rowCount === 0,
+  };
+}
+
+/**
+ * @param {string} clerkUserId
+ */
+export async function listCollectedCards(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT c.id, c.tech_id, c.title, c.description, c.updated_at, u.collected_at
+     FROM user_collector_cards u
+     JOIN collector_cards c ON c.id = u.card_id
+     WHERE u.clerk_user_id = $1 AND c.published = true
+     ORDER BY u.collected_at DESC`,
+    [uid]
+  );
+  return r.rows.map(cardRow);
+}
+
 export async function putRunState(clerkUserId, state) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);

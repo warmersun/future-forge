@@ -12892,3 +12892,120 @@ body.ff-second-pane > #side-coinventor {
   height: 100%;
   max-height: none;
 }
+
+.hex-tile-create-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.hex-tile-create-head-row .hex-tile-create-title {
+  margin: 0;
+}
+
+.collector-dialog {
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100vh - 2rem));
+  padding: 0;
+  border: 1px solid #2a3a58;
+  border-radius: 14px;
+  background: #0c1220;
+  color: #e8eef9;
+}
+
+.collector-dialog::backdrop {
+  background: rgba(7, 11, 20, 0.72);
+}
+
+.collector-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0.4rem;
+}
+
+.collector-dialog-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.collector-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.2rem 1rem 0.6rem;
+}
+
+.collector-filters button {
+  font: inherit;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #2a3a58;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0.2rem 0.65rem;
+  cursor: pointer;
+}
+
+.collector-filters button.is-on {
+  color: #0c1220;
+  background: #a78bfa;
+  border-color: #a78bfa;
+}
+
+.collector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0 1rem 1rem;
+  overflow: auto;
+  max-height: 24rem;
+}
+
+.collector-pick {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.65rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: #121a2b;
+  border: 1px solid #2a3a58;
+  border-radius: 12px;
+  padding: 0.45rem;
+  cursor: pointer;
+}
+
+.collector-pick img {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #070b14;
+}
+
+.collector-pick strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.collector-pick span {
+  display: block;
+  color: #a78bfa;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.collector-empty {
+  padding: 0 1rem 1rem;
+  line-height: 1.45;
+}
+
+.hex-idea-card.is-collector-pick {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}

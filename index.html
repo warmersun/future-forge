@@ -1040,7 +1040,10 @@
 
             <section class="hex-tile-create" id="hex-tile-create" aria-label="Invent">
               <div class="hex-tile-create-head">
-                <h3 class="hex-tile-create-title" id="hex-tile-create-title">Invent</h3>
+                <div class="hex-tile-create-head-row">
+                  <h3 class="hex-tile-create-title" id="hex-tile-create-title">Invent</h3>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-collector-cards" hidden>Collection</button>
+                </div>
                 <p class="muted hex-tile-create-hint" id="hex-tile-create-hint">Pick an emTech to invent.</p>
               </div>
               <div id="selected-techs" class="selected-techs hex-invent-stack" aria-label="Tech stack"></div>
@@ -1119,6 +1122,17 @@
               </div>
               <div class="hex-idea-tray" id="hex-idea-tray" hidden aria-hidden="true"></div>
             </section>
+            <dialog id="collector-cards" class="collector-dialog" aria-labelledby="collector-cards-title">
+              <div class="collector-dialog-head">
+                <h3 id="collector-cards-title">Collection</h3>
+                <form method="dialog">
+                  <button type="submit" class="btn btn-ghost btn-sm" value="cancel">Close</button>
+                </form>
+              </div>
+              <div id="collector-cards-filters" class="collector-filters" hidden></div>
+              <p id="collector-cards-empty" class="muted collector-empty" hidden></p>
+              <div id="collector-cards-list" class="collector-list"></div>
+            </dialog>
 
             <div class="hex-board-dock">
               <div class="hex-board-wrap" id="hex-board-wrap">

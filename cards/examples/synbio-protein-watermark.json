@@ -1,0 +1,17 @@
+{
+  "source": "Google DeepMind SynthID Bio, announced 30 September 2026. Not stored or shown.",
+  "techId": "synbio",
+  "title": "Watermark an AI-designed protein",
+  "description": "A design model writes a faint, key-detectable pattern into a protein's amino-acid sequence and into its predicted 3D shape. Substitutions are kept only when the protein still folds and binds, so the watermarked binder works like the unmarked one. A lab or a DNA foundry with the detection key can tell the protein was designed by a model.",
+  "body": "In lab tests, watermarked binders matched unmarked designs on hit rate and binding strength, and kept a similar spread of sequences. The mark is provenance for biosecurity screening and for open protein databases, separating model-made designs from natural ones. It is not permanent. Running the same fold through a different design tool can yield a new sequence that keeps the function and drops the mark.",
+  "links": [
+    {
+      "label": "How the watermark is embedded",
+      "url": "https://deepmind.google/blog/introducing-synthid-bio/"
+    },
+    {
+      "label": "What the lab tests showed",
+      "url": "https://www.nature.com/articles/d41586-026-03033-y"
+    }
+  ]
+}
