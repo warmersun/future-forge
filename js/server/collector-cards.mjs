@@ -4,7 +4,7 @@
  */
 
 import path from "node:path";
-import { techById } from "../data.js";
+import { DOMAINS, techById } from "../data.js";
 
 export const CARD_TITLE_MAX = 80;
 export const CARD_DESCRIPTION_MAX = 4000;
@@ -229,6 +229,29 @@ export function publicCardDto(row, origin) {
 }
 
 /**
+ * Domain light for the gallery. Falls back to forge gold.
+ * @param {string} techId
+ * @returns {string} "r, g, b"
+ */
+function domainRgb(techId) {
+  const hex = DOMAINS[techById(techId)?.domain]?.color;
+  const safe = /^#[0-9a-f]{6}$/i.test(String(hex || "")) ? hex : "#e4c56a";
+  const n = parseInt(safe.slice(1), 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+/**
+ * @param {string} url
+ */
+function linkHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+/**
  * @param {object} row
  * @param {{ origin: string, publishableKey?: string, clerkEnabled?: boolean, collectNow?: boolean }} opts
  */
@@ -244,13 +267,15 @@ export function renderCollectorCardPage(row, opts) {
   const pageUrl = `${origin}/card/${id}`;
   const imageUrl = `${origin}/card/${id}/image`;
   const ogDescription = description.replace(/\s+/g, " ").slice(0, 300);
+  const paint = domainRgb(techId);
+  const edition = `No. ${id.slice(0, 4).toUpperCase()}\u00b7${id.slice(4, 8).toUpperCase()}`;
   const linkHtml = links.length
-    ? `<ul class="links">${links
-        .map(
-          (l) =>
-            `<li><a href="${escapeHtml(l.url)}" rel="noopener noreferrer">${escapeHtml(l.label)}</a></li>`
-        )
-        .join("")}</ul>`
+    ? `<section class="record"><h2>The record</h2><ul>${links
+        .map((l) => {
+          const host = escapeHtml(linkHost(l.url));
+          return `<li><a href="${escapeHtml(l.url)}" rel="noopener noreferrer"><span class="record-name">${escapeHtml(l.label)}</span><span class="record-host">${host}</span></a></li>`;
+        })
+        .join("")}</ul></section>`
     : "";
   const bodyHtml = body
     ? `<div class="prose">${escapeHtml(body)
@@ -271,291 +296,481 @@ export function renderCollectorCardPage(row, opts) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)} — Future Forge</title>
   <meta name="description" content="${escapeHtml(ogDescription)}" />
+  <meta name="theme-color" content="#05070d" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
   <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:alt" content="${escapeHtml(title)}" />
   <meta property="og:url" content="${escapeHtml(pageUrl)}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
   <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+  <link rel="icon" href="/assets/brand/ff-mark-hex.png" type="image/png" />
   <style>
-    :root { 
-      color-scheme: dark; 
-      --bg:#070b14; 
-      --bg-elevated:#0f1729;
-      --text:#e8eef9; 
-      --text-bright:#f8fafc;
-      --dim:#94a3b8; 
-      --accent:#a78bfa; 
-      --accent-hover:#9169f5;
-      --line:#2a3a58; 
-      --shadow:rgba(0,0,0,0.4);
+    :root {
+      color-scheme: dark;
+      --ink: #05070d;
+      --ivory: #f7f8fb;
+      --read: #f4f7fb;
+      --gold: #e4c56a;
+      --gold-2: #f6e7b8;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
     }
     * { box-sizing: border-box; }
-    html, body { 
-      margin:0; 
-      background:var(--bg); 
-      color:var(--text); 
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
+    html { color-scheme: dark; scrollbar-color: rgba(228, 197, 106, 0.4) transparent; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--ink);
+      color: var(--read);
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 1.125rem;
+      line-height: 1.5;
     }
-    body { min-height:100vh; display:flex; flex-direction:column; }
-    
-    /* Header branding */
-    header { 
-      padding:1.25rem 1.25rem 0; 
-      max-width:50rem; 
-      margin:0 auto; 
-      width:100%; 
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(980px 680px at 16% 30%, rgba(var(--domain-rgb), 0.28), transparent 60%),
+        radial-gradient(820px 620px at 86% 78%, rgba(var(--domain-rgb), 0.14), transparent 62%),
+        radial-gradient(700px 460px at 50% 108%, rgba(228, 197, 106, 0.1), transparent 55%);
     }
-    .branding { 
-      display:block;
-      text-decoration:none;
-      transition:opacity 0.2s;
+    ::selection { background: rgba(var(--domain-rgb), 0.35); color: white; }
+    :focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; }
+    .hexfield, .grain {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
-    .branding:hover { opacity:0.85; }
-    .branding img { 
-      height:2.5rem;
-      width:auto; 
-      display:block;
-      max-width:100%;
+    .hexfield { z-index: 0; opacity: 0.07; }
+    .grain { z-index: 0; opacity: 0.04; mix-blend-mode: overlay; }
+    .mast, main, footer { position: relative; z-index: 1; }
+    .mast {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 auto;
+      padding: 1rem clamp(1.25rem, 2.4vw, 2.5rem) 0;
     }
-    
-    /* Main content */
-    main { 
-      flex:1;
-      max-width:50rem; 
-      margin:0 auto; 
-      padding:1.5rem 1.25rem 2rem;
-      width:100%;
+    .branding { display: block; text-decoration: none; }
+    .branding img { display: block; height: 2.15rem; width: auto; }
+    .mast-series {
+      margin: 0;
+      flex: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold-2);
     }
-    
-    /* Hero image - 16:9 with proper cropping */
-    .hero-wrapper {
-      position:relative;
-      width:100%;
-      aspect-ratio:16/9;
-      overflow:hidden;
-      border-radius:16px;
-      background:var(--bg-elevated);
-      box-shadow:0 4px 24px var(--shadow);
-      margin-bottom:2rem;
+    main {
+      margin: 0 auto;
+      padding: clamp(0.85rem, 2vh, 1.5rem) clamp(1.25rem, 2.4vw, 2.5rem) 2.5rem;
     }
-    .shot { 
-      width:100%; 
-      height:100%;
-      object-fit:cover;
-      display:block;
+    .plate { position: relative; z-index: 0; }
+    .plate::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: -16% -12%;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(var(--domain-rgb), 0.5), transparent 68%);
+      filter: blur(16px);
     }
-    
-    /* Content hierarchy */
-    .content { max-width:42rem; }
-    
-    .tech { 
-      margin:0 0 0.625rem; 
-      color:var(--accent); 
-      font-size:0.875rem; 
-      font-weight:600;
-      letter-spacing:0.05em; 
-      text-transform:uppercase; 
+    .plate-stage {
+      position: relative;
+      z-index: 0;
+      overflow: hidden;
+      padding: 1.15rem 1.15rem 1.05rem;
+      border-radius: 22px;
+      background: linear-gradient(165deg, #191d27 0%, #0c0e14 42%, #08090d 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 236, 200, 0.14),
+        0 0 0 1px rgba(228, 197, 106, 0.5),
+        0 30px 70px -24px rgba(0, 0, 0, 0.85),
+        0 46px 100px -30px rgba(var(--domain-rgb), 0.55);
+      animation: arrive 1.05s var(--ease) both;
+      transition: box-shadow 0.45s ease;
     }
-    
-    h1 { 
-      font-size:clamp(1.75rem, 4vw, 2.25rem);
-      line-height:1.2; 
-      margin:0 0 1rem; 
-      color:var(--text-bright);
-      font-weight:700;
-      letter-spacing:-0.02em;
+    .plate:hover .plate-stage {
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 236, 200, 0.2),
+        0 0 0 1px rgba(228, 197, 106, 0.78),
+        0 34px 80px -22px rgba(0, 0, 0, 0.88),
+        0 50px 110px -28px rgba(var(--domain-rgb), 0.7);
     }
-    
-    .desc { 
-      color:var(--text); 
-      line-height:1.65;
-      font-size:1.125rem;
-      margin:0 0 1.5rem;
-      font-weight:400;
+    .plate-wash {
+      position: absolute;
+      z-index: 0;
+      inset: -14%;
+      width: 128%;
+      height: 128%;
+      object-fit: cover;
+      filter: blur(36px) saturate(1.45) brightness(0.72);
     }
-    
-    .prose { 
-      margin:1.5rem 0;
-      color:var(--dim);
-      line-height:1.7;
-      font-size:1rem;
+    .plate-stage .wash-dim {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(5, 7, 13, 0.18), rgba(5, 7, 13, 0.62) 80%);
     }
-    .prose p { 
-      margin:0 0 1rem;
+    .mat {
+      position: relative;
+      z-index: 1;
+      border-radius: 3px;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+      background: #0b0d12;
     }
-    .prose p:last-child { margin-bottom:0; }
-    
-    .links { 
-      list-style:none;
-      padding:0;
-      margin:1.5rem 0;
-      display:flex;
-      flex-direction:column;
-      gap:0.625rem;
+    .shot {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 72vh;
+      object-fit: contain;
+      border-radius: 2px;
     }
-    .links li { margin:0; }
-    .links a { 
-      color:#7dd3fc;
-      text-decoration:none;
-      font-weight:500;
-      transition:color 0.2s;
-      display:inline-flex;
-      align-items:center;
-      gap:0.375rem;
+    .tick {
+      position: absolute;
+      z-index: 4;
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
     }
-    .links a:hover { color:#38bdf8; }
-    .links a::before {
-      content:"→";
-      font-size:1.125rem;
-      line-height:1;
+    .tick.tl { top: 9px; left: 9px; border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+    .tick.tr { top: 9px; right: 9px; border-top: 1.5px solid var(--gold); border-right: 1.5px solid var(--gold); }
+    .tick.bl { bottom: 9px; left: 9px; border-bottom: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+    .tick.br { bottom: 9px; right: 9px; border-bottom: 1.5px solid var(--gold); border-right: 1.5px solid var(--gold); }
+    .vignette, .sheen {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
     }
-    
-    /* Collect button - mobile optimized */
-    .collect-wrapper {
-      margin:2rem 0 1rem;
-      position:sticky;
-      bottom:0;
-      z-index:10;
-      background:linear-gradient(to bottom, transparent 0%, var(--bg) 20%, var(--bg) 100%);
-      padding:1.5rem 0 1rem;
-      margin-left:-1.25rem;
-      margin-right:-1.25rem;
-      padding-left:1.25rem;
-      padding-right:1.25rem;
+    .vignette {
+      z-index: 2;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(5, 7, 13, 0.28) 100%);
     }
-    
-    button { 
-      font:inherit;
-      font-size:1.0625rem;
-      font-weight:600;
-      cursor:pointer; 
-      border:0; 
-      border-radius:12px; 
-      padding:1rem 2rem;
-      background:var(--accent); 
-      color:#0c1220;
-      width:100%;
-      max-width:24rem;
-      display:block;
-      transition:background 0.2s, transform 0.1s;
-      box-shadow:0 2px 12px rgba(167,139,250,0.25);
-      min-height:3rem;
-      touch-action:manipulation;
+    .sheen {
+      z-index: 3;
+      background: linear-gradient(108deg, transparent 40%, rgba(255, 248, 230, 0.07) 47%, rgba(255, 248, 230, 0.28) 50%, rgba(255, 248, 230, 0.07) 53%, transparent 60%);
+      transform: translateX(-90%);
+      mix-blend-mode: soft-light;
+      animation: plate-sheen 16s ease-in-out infinite;
     }
-    button:hover:not([disabled]) { 
-      background:var(--accent-hover);
-      transform:translateY(-1px);
-      box-shadow:0 4px 16px rgba(167,139,250,0.35);
+    figcaption {
+      display: flex;
+      justify-content: flex-end;
+      margin: 0.8rem 0.2rem 0;
     }
-    button:active:not([disabled]) {
-      transform:translateY(0);
+    .edition {
+      flex: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      color: var(--gold-2);
     }
-    button[disabled] { 
-      opacity:0.5; 
-      cursor:default;
-      box-shadow:none;
+    .placard { animation: fade-in 0.9s var(--ease) 0.08s both; }
+    .eyebrow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 0 0 0.85rem;
+      color: var(--gold-2);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    
-    #status { 
-      color:var(--dim); 
-      min-height:1.5rem;
-      margin-top:0.75rem;
-      font-size:0.9375rem;
-      line-height:1.5;
+    .pip {
+      width: 0.62rem;
+      height: 0.72rem;
+      flex: none;
+      background: rgb(var(--domain-rgb));
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+      filter: drop-shadow(0 0 6px rgba(var(--domain-rgb), 0.9));
     }
-    
-    /* Bottom padding for mobile scroll clearance */
-    .content {
-      padding-bottom:8rem;
+    .eyebrow-tech { color: rgb(var(--domain-rgb)); letter-spacing: 0.06em; }
+    .eyebrow-tech::before {
+      content: "";
+      display: inline-block;
+      width: 3px;
+      height: 3px;
+      margin: 0 0.6rem 0 0.05rem;
+      border-radius: 50%;
+      background: currentColor;
+      vertical-align: 0.15em;
     }
-    
-    /* Footer branding */
+    h1 {
+      margin: 0 0 0.85rem;
+      color: #fff;
+      font-weight: 700;
+      font-size: clamp(2.15rem, 3.4vw, 3.6rem);
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+    .lead {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(1.25rem, 1.45vw, 1.6rem);
+      font-weight: 600;
+      line-height: 1.45;
+      text-wrap: pretty;
+    }
+    .prose {
+      margin-top: 1.25rem;
+      padding-top: 1.15rem;
+      border-top: 1px solid rgba(var(--domain-rgb), 0.55);
+      color: #fff;
+      font-size: clamp(1.15rem, 1.25vw, 1.4rem);
+      font-weight: 600;
+      line-height: 1.5;
+      text-wrap: pretty;
+    }
+    .prose p { margin: 0 0 0.95rem; }
+    .prose p:last-child { margin: 0; }
+    .record { margin-top: 1.5rem; }
+    .record h2 {
+      margin: 0 0 0.35rem;
+      color: var(--gold-2);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .record ul { list-style: none; margin: 0; padding: 0; }
+    .record a {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.2rem 1rem;
+      align-items: baseline;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid rgba(244, 247, 251, 0.18);
+      color: #fff;
+      font-size: clamp(1.05rem, 1.15vw, 1.25rem);
+      text-decoration: none;
+    }
+    .record li:first-child a { border-top: 1px solid rgba(244, 247, 251, 0.18); }
+    .record-name { font-weight: 700; }
+    .record a:hover .record-name { color: var(--gold-2); }
+    .record-host { color: #e7eef8; font-size: 1.05rem; letter-spacing: 0.01em; }
+    .record a:hover .record-host { color: rgb(var(--domain-rgb)); }
+    .collect-dock { margin-top: 1.6rem; }
+    #collect {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.7rem;
+      width: 100%;
+      max-width: 28rem;
+      min-height: 3.4rem;
+      padding: 0.95rem 1.5rem;
+      border: 0;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.48), transparent 40%),
+        linear-gradient(180deg, #f8e7b8 0%, #e6c36a 40%, #c4923a 100%);
+      color: #24180a;
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      line-height: 1.25;
+      text-align: center;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        0 12px 32px -14px rgba(228, 180, 70, 0.95),
+        0 0 0 1px rgba(90, 58, 10, 0.35);
+      transition: transform 0.2s var(--ease), filter 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-hex {
+      width: 0.68rem;
+      height: 0.78rem;
+      flex: none;
+      background: #3a2a10;
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    }
+    #collect:hover:not([disabled]) {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 18px 36px -12px rgba(228, 180, 70, 1),
+        0 0 0 1px rgba(90, 58, 10, 0.35);
+    }
+    #collect:active:not([disabled]) { transform: translateY(0); }
+    #collect[disabled] { cursor: default; }
+    #collect.is-held {
+      background: transparent;
+      color: var(--gold-2);
+      filter: none;
+      letter-spacing: 0.14em;
+      box-shadow: inset 0 0 0 1px rgba(228, 197, 106, 0.55);
+    }
+    #collect.is-held .btn-hex { background: var(--gold); }
+    #collect.is-quiet {
+      background: #241c12;
+      color: #d9cba8;
+      letter-spacing: 0.08em;
+      filter: none;
+      box-shadow: inset 0 0 0 1px rgba(228, 197, 106, 0.28);
+    }
+    #collect.is-quiet .btn-hex { background: #d9cba8; }
+    #status {
+      margin: 0.7rem 0 0;
+      color: var(--read);
+      font-size: 1.05rem;
+      line-height: 1.45;
+    }
+    #status:empty { display: none; }
+    .collect-dock:has(.is-held) #status { color: var(--gold-2); }
     footer {
-      padding:2rem 1.25rem 1.5rem;
-      max-width:50rem;
-      margin:0 auto;
-      width:100%;
-      border-top:1px solid var(--line);
-      text-align:center;
+      margin: 0 auto;
+      padding: 0.4rem clamp(1.25rem, 2.4vw, 2.5rem) 2.4rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      text-align: center;
     }
-    footer img {
-      height:1.5rem;
-      width:auto;
-      opacity:0.5;
-      transition:opacity 0.2s;
+    footer::before {
+      content: "";
+      width: 7.5rem;
+      height: 1px;
+      margin-bottom: 0.7rem;
+      background: linear-gradient(90deg, transparent, rgba(228, 197, 106, 0.75), transparent);
     }
-    footer img:hover { opacity:0.75; }
-    
-    /* Tablet and desktop adjustments */
-    @media (min-width: 640px) {
-      header { padding:1.5rem 2rem 0; }
-      main { padding:2rem 2rem 3rem; }
-      footer { padding:3rem 2rem 2rem; }
-      .hero-wrapper { 
-        border-radius:20px;
-        margin-bottom:2.5rem;
-      }
-      .content {
-        padding-bottom:0;
-      }
-      .collect-wrapper {
-        position:static;
-        margin:2.5rem 0 1.5rem;
-        background:transparent;
-        padding:0;
-        margin-left:0;
-        margin-right:0;
-      }
-      button {
-        width:auto;
-        min-width:16rem;
-      }
+    footer img { height: 2.55rem; width: auto; }
+    footer p { margin: 0; color: var(--read); font-size: 1.05rem; }
+    footer a { color: var(--gold-2); text-decoration: none; }
+    footer a:hover { color: white; }
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: none; }
     }
-    
-    @media (min-width: 768px) {
-      .branding img { height:3.5rem; }
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
-    
-    @media (min-width: 1024px) {
-      .branding img { height:4rem; }
+    @keyframes plate-sheen {
+      0%, 64% { transform: translateX(-95%); }
+      84%, 100% { transform: translateX(95%); }
+    }
+    @media (min-width: 720px) {
+      .branding img { height: 2.7rem; }
+    }
+    @media (min-width: 1040px) {
+      .spread {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+        column-gap: clamp(1.75rem, 2.6vw, 3.25rem);
+        align-items: start;
+      }
+      .plate { position: sticky; top: 1rem; }
+      .shot { max-height: 86vh; }
+      #collect { max-width: none; }
+    }
+    @media (max-width: 1039px) {
+      #collect { max-width: none; }
+      .shot { max-height: 62vh; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .plate-stage, .placard, .sheen { animation: none; }
+      .plate-stage, #collect { transition: none; }
     }
   </style>
 </head>
-<body>
-  <header>
-    <a href="https://warmersun.com" class="branding" aria-label="Future Forge by Warmer Sun">
+<body style="--domain-rgb:${paint}">
+  <svg class="hexfield" aria-hidden="true" focusable="false">
+    <defs>
+      <pattern id="hexes" width="28" height="49" patternUnits="userSpaceOnUse">
+        <path fill="#e4c56a" d="M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z"/>
+      </pattern>
+      <radialGradient id="hexfade" cx="50%" cy="42%" r="78%">
+        <stop offset="0%" stop-color="white"/>
+        <stop offset="62%" stop-color="white"/>
+        <stop offset="100%" stop-color="black"/>
+      </radialGradient>
+      <mask id="hexmask">
+        <rect width="100%" height="100%" fill="url(#hexfade)"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#hexes)" mask="url(#hexmask)"/>
+  </svg>
+  <svg class="grain" aria-hidden="true" focusable="false">
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain)"/>
+  </svg>
+  <header class="mast">
+    <a href="https://warmersun.com" class="branding">
       <img src="/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="1242" height="347" />
     </a>
+    <p class="mast-series">Collection</p>
   </header>
   <main>
-    <div class="hero-wrapper">
-      <img class="shot" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" />
-    </div>
-    <div class="content">
-      <p class="tech">${escapeHtml(techName)}</p>
-      <h1>${escapeHtml(title)}</h1>
-      <p class="desc">${escapeHtml(description)}</p>
-      ${bodyHtml}
-      ${linkHtml}
-      <div class="collect-wrapper">
-        <button type="button" id="collect">Collect</button>
-        <p id="status"></p>
-      </div>
+    <div class="spread">
+      <figure class="plate">
+        <div class="plate-stage">
+          <img class="plate-wash" alt="" aria-hidden="true" src="${escapeHtml(imageUrl)}" />
+          <div class="wash-dim" aria-hidden="true"></div>
+          <div class="mat">
+            <img class="shot" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" fetchpriority="high" />
+          </div>
+          <span class="tick tl" aria-hidden="true"></span>
+          <span class="tick tr" aria-hidden="true"></span>
+          <span class="tick bl" aria-hidden="true"></span>
+          <span class="tick br" aria-hidden="true"></span>
+          <span class="vignette" aria-hidden="true"></span>
+          <span class="sheen" aria-hidden="true"></span>
+        </div>
+        <figcaption>
+          <span class="edition">${escapeHtml(edition)}</span>
+        </figcaption>
+      </figure>
+      <article class="placard">
+        <p class="eyebrow"><span class="pip" aria-hidden="true"></span><span>Collector card</span><span class="eyebrow-tech">${escapeHtml(techName)}</span></p>
+        <h1>${escapeHtml(title)}</h1>
+        <p class="lead">${escapeHtml(description)}</p>
+        ${bodyHtml}
+        ${linkHtml}
+        <div class="collect-dock">
+          <button type="button" id="collect"><span class="btn-hex" aria-hidden="true"></span><span id="collect-label">Collect this card</span></button>
+          <p id="status" aria-live="polite"></p>
+        </div>
+      </article>
     </div>
   </main>
   <footer>
-    <img src="/assets/brand/ff-mark-footer.png" alt="Future Forge" width="256" height="256" />
+    <img src="/assets/brand/ff-mark-footer.png" alt="Future Forge" width="592" height="567" />
+    <p><a href="https://warmersun.com">Warmer Sun</a></p>
   </footer>
+
   <script type="module">
     const boot = ${boot};
     const btn = document.getElementById("collect");
+    const label = document.getElementById("collect-label");
     const status = document.getElementById("status");
+    function setLabel(text) {
+      if (label) label.textContent = text;
+      else btn.textContent = text;
+    }
     function clerkHost(pk) {
       const parts = String(pk || "").trim().split("_");
       if (parts.length < 3) throw new Error("Invalid Clerk publishable key");
@@ -586,13 +801,15 @@ export function renderCollectorCardPage(row, opts) {
       return (data.cards || []).some((c) => c.id === boot.cardId);
     }
     function markOwned() {
-      btn.textContent = "In your collection";
+      setLabel("In your collection");
+      btn.classList.add("is-held");
       btn.disabled = true;
       status.textContent = "This card is in your Future Forge collection.";
     }
     async function collect(token) {
       btn.disabled = true;
-      status.textContent = "Collecting…";
+      setLabel("Collecting…");
+      status.textContent = "";
       const res = await fetch("/api/me/cards/" + boot.cardId + "/collect", {
         method: "POST",
         headers: { Authorization: "Bearer " + token },
@@ -600,6 +817,7 @@ export function renderCollectorCardPage(row, opts) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         btn.disabled = false;
+        setLabel("Collect this card");
         status.textContent = "Could not collect this card.";
         return;
       }
@@ -619,7 +837,8 @@ export function renderCollectorCardPage(row, opts) {
       }
     });
     if (!boot.clerkEnabled) {
-      btn.textContent = "Sign in is unavailable";
+      setLabel("Sign in is unavailable");
+      btn.classList.add("is-quiet");
       btn.disabled = true;
     } else {
       try {

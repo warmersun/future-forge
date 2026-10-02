@@ -150,3 +150,20 @@ test("card page includes Future Forge branding and logo assets", () => {
   assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-mark-footer.png")));
   assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-by-warmersun-transparent-bg.png")));
 });
+
+test("card page lights the gallery with the emTech domain color", () => {
+  const html = renderCollectorCardPage(
+    {
+      id: CARD_ID,
+      techId: "synbio",
+      title: "Mark",
+      description: "A mark.",
+      body: "",
+      links: [],
+    },
+    { origin: "https://cloud.warmersun.com", clerkEnabled: false }
+  );
+  assert.match(html, /--domain-rgb:52, 211, 153/);
+  assert.match(html, /Synthetic Biology/);
+  assert.match(html, /Collect this card/);
+});
