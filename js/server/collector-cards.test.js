@@ -128,3 +128,25 @@ test("emTech filter appears once the collection reaches six cards", () => {
   assert.equal(filterCollectorCards(cards, "drones").length, 3);
   assert.equal(filterCollectorCards(cards, "all").length, 6);
 });
+
+test("card page includes Future Forge branding and logo assets", () => {
+  const html = renderCollectorCardPage(
+    {
+      id: CARD_ID,
+      techId: "drones",
+      title: "Test Card",
+      description: "Test description",
+      body: "Test body",
+      links: [],
+    },
+    { origin: "https://cloud.warmersun.com", clerkEnabled: false }
+  );
+  // Header branding with logo
+  assert.match(html, /Future Forge by Warmer Sun/);
+  assert.match(html, /\/assets\/brand\/ff-mark-footer\.png/);
+  // Footer branding
+  assert.match(html, /\/assets\/brand\/ff-by-warmersun-transparent-bg\.png/);
+  // Check that logo assets exist
+  assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-mark-footer.png")));
+  assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-by-warmersun-transparent-bg.png")));
+});
