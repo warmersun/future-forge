@@ -516,11 +516,52 @@ function paintDom(rec) {
     overlay.className = "quest-briefing-overlay";
     root.appendChild(overlay);
   }
-  overlay.innerHTML = renderWalk(rec);
+  paintWalkOverlay(overlay, rec);
 
   pruneDetachedReadAloud();
   const speak = overlay.querySelector(".quest-briefing-speak");
-  if (speak) attachReadAloud(speak, { minChars: SPEAK_MIN });
+  if (speak) {
+    attachReadAloud(speak, { minChars: SPEAK_MIN, continueOnChange: true });
+  }
+}
+
+/**
+ * First paint writes the full overlay. Later beats keep `.quest-briefing-speak`
+ * so a playing speaker can follow the new caption.
+ * @param {HTMLElement} overlay
+ * @param {BriefingRecord} rec
+ */
+function paintWalkOverlay(overlay, rec) {
+  const speak = overlay.querySelector(".quest-briefing-speak");
+  const body = speak?.querySelector(".quest-briefing-body");
+  const nav = overlay.querySelector(".quest-briefing-nav");
+  if (!speak || !body || !nav) {
+    overlay.innerHTML = renderWalk(rec);
+    return;
+  }
+  syncWalkKicker(overlay, speak, rec.beats[rec.index]);
+  body.innerHTML = overlayCaptionHtml(rec.beats[rec.index]);
+  nav.innerHTML = renderWalkNavInner(rec);
+}
+
+/**
+ * @param {HTMLElement} overlay
+ * @param {HTMLElement} speak
+ * @param {object|undefined} beat
+ */
+function syncWalkKicker(overlay, speak, beat) {
+  const title = String(beat?.title || "").trim();
+  let kicker = overlay.querySelector(".quest-briefing-kicker");
+  if (!title) {
+    kicker?.remove();
+    return;
+  }
+  if (!kicker) {
+    kicker = document.createElement("div");
+    kicker.className = "quest-briefing-kicker";
+    overlay.insertBefore(kicker, speak);
+  }
+  kicker.innerHTML = `<span class="quest-briefing-title">${escapeHtml(title)}</span>`;
 }
 
 /**
@@ -624,9 +665,22 @@ function removeReplayChip(root) {
 }
 
 function renderWalk(rec) {
+  const beat = rec.beats[rec.index];
+  const kicker = beat?.title
+    ? `<div class="quest-briefing-kicker"><span class="quest-briefing-title">${escapeHtml(
+        beat.title
+      )}</span></div>`
+    : "";
+  const caption = overlayCaptionHtml(beat);
+  return `${kicker}<div class="quest-briefing-speak">
+      <div class="quest-briefing-body" aria-live="polite">${caption}</div>
+    </div>
+    <div class="quest-briefing-nav">${renderWalkNavInner(rec)}</div>`;
+}
+
+function renderWalkNavInner(rec) {
   const n = rec.beats.length;
   const i = rec.index;
-  const beat = rec.beats[i];
   const last = i >= n - 1;
   const dots = rec.beats
     .map(
@@ -638,16 +692,7 @@ function renderWalk(rec) {
         )}" ${di === i ? 'aria-current="step"' : ""}></button>`
     )
     .join("");
-  const caption = overlayCaptionHtml(beat);
-  const kicker = beat?.title
-    ? `<div class="quest-briefing-kicker"><span class="quest-briefing-title">${escapeHtml(
-        beat.title
-      )}</span></div>`
-    : "";
-  return `${kicker}<div class="quest-briefing-speak">
-      <div class="quest-briefing-body" aria-live="polite">${caption}</div>
-    </div>
-    <div class="quest-briefing-nav">
+  return `
       <div class="quest-briefing-pager">
         <button type="button" class="quest-briefing-arrow" data-brief="back" ${
           i === 0 ? "disabled" : ""
@@ -662,7 +707,7 @@ function renderWalk(rec) {
           ? `<button type="button" class="quest-briefing-invent" data-brief="invent">Start inventing</button>`
           : `<span class="quest-briefing-invent-spacer" aria-hidden="true"></span>`
       }
-    </div>`;
+    `;
 }
 
 function overlayCaptionHtml(beat) {
