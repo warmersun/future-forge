@@ -281,31 +281,277 @@ export function renderCollectorCardPage(row, opts) {
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
   <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
   <style>
-    :root { color-scheme: dark; --bg:#070b14; --text:#e8eef9; --dim:#94a3b8; --accent:#a78bfa; --line:#2a3a58; }
-    html, body { margin:0; background:var(--bg); color:var(--text); font-family:"Segoe UI",system-ui,sans-serif; }
-    main { max-width:40rem; margin:0 auto; padding:1.5rem 1.1rem 3rem; }
-    .shot { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:14px; background:#121a2b; display:block; }
-    .tech { margin:1rem 0 0; color:var(--accent); font-size:.85rem; letter-spacing:.04em; text-transform:uppercase; }
-    h1 { font-size:1.6rem; line-height:1.25; margin:.35rem 0 .75rem; }
-    .desc, .prose p { color:var(--dim); line-height:1.5; }
-    .links { padding-left:1.1rem; }
-    .links a { color:#7dd3fc; }
-    button { font:inherit; cursor:pointer; border:0; border-radius:10px; padding:.6rem 1rem; background:var(--accent); color:#0c1220; margin-top:1rem; }
-    button[disabled] { opacity:.65; cursor:default; }
-    #status { color:var(--dim); min-height:1.2em; }
+    :root { 
+      color-scheme: dark; 
+      --bg:#070b14; 
+      --bg-elevated:#0f1729;
+      --text:#e8eef9; 
+      --text-bright:#f8fafc;
+      --dim:#94a3b8; 
+      --accent:#a78bfa; 
+      --accent-hover:#9169f5;
+      --line:#2a3a58; 
+      --shadow:rgba(0,0,0,0.4);
+    }
+    * { box-sizing: border-box; }
+    html, body { 
+      margin:0; 
+      background:var(--bg); 
+      color:var(--text); 
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    
+    /* Header branding */
+    header { 
+      padding:1.25rem 1.25rem 0; 
+      max-width:50rem; 
+      margin:0 auto; 
+      width:100%; 
+    }
+    .branding { 
+      display:block;
+      text-decoration:none;
+      transition:opacity 0.2s;
+    }
+    .branding:hover { opacity:0.85; }
+    .branding img { 
+      height:2.5rem;
+      width:auto; 
+      display:block;
+      max-width:100%;
+    }
+    
+    /* Main content */
+    main { 
+      flex:1;
+      max-width:50rem; 
+      margin:0 auto; 
+      padding:1.5rem 1.25rem 2rem;
+      width:100%;
+    }
+    
+    /* Hero image - 16:9 with proper cropping */
+    .hero-wrapper {
+      position:relative;
+      width:100%;
+      aspect-ratio:16/9;
+      overflow:hidden;
+      border-radius:16px;
+      background:var(--bg-elevated);
+      box-shadow:0 4px 24px var(--shadow);
+      margin-bottom:2rem;
+    }
+    .shot { 
+      width:100%; 
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    
+    /* Content hierarchy */
+    .content { max-width:42rem; }
+    
+    .tech { 
+      margin:0 0 0.625rem; 
+      color:var(--accent); 
+      font-size:0.875rem; 
+      font-weight:600;
+      letter-spacing:0.05em; 
+      text-transform:uppercase; 
+    }
+    
+    h1 { 
+      font-size:clamp(1.75rem, 4vw, 2.25rem);
+      line-height:1.2; 
+      margin:0 0 1rem; 
+      color:var(--text-bright);
+      font-weight:700;
+      letter-spacing:-0.02em;
+    }
+    
+    .desc { 
+      color:var(--text); 
+      line-height:1.65;
+      font-size:1.125rem;
+      margin:0 0 1.5rem;
+      font-weight:400;
+    }
+    
+    .prose { 
+      margin:1.5rem 0;
+      color:var(--dim);
+      line-height:1.7;
+      font-size:1rem;
+    }
+    .prose p { 
+      margin:0 0 1rem;
+    }
+    .prose p:last-child { margin-bottom:0; }
+    
+    .links { 
+      list-style:none;
+      padding:0;
+      margin:1.5rem 0;
+      display:flex;
+      flex-direction:column;
+      gap:0.625rem;
+    }
+    .links li { margin:0; }
+    .links a { 
+      color:#7dd3fc;
+      text-decoration:none;
+      font-weight:500;
+      transition:color 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:0.375rem;
+    }
+    .links a:hover { color:#38bdf8; }
+    .links a::before {
+      content:"→";
+      font-size:1.125rem;
+      line-height:1;
+    }
+    
+    /* Collect button - mobile optimized */
+    .collect-wrapper {
+      margin:2rem 0 1rem;
+      position:sticky;
+      bottom:0;
+      z-index:10;
+      background:linear-gradient(to bottom, transparent 0%, var(--bg) 20%, var(--bg) 100%);
+      padding:1.5rem 0 1rem;
+      margin-left:-1.25rem;
+      margin-right:-1.25rem;
+      padding-left:1.25rem;
+      padding-right:1.25rem;
+    }
+    
+    button { 
+      font:inherit;
+      font-size:1.0625rem;
+      font-weight:600;
+      cursor:pointer; 
+      border:0; 
+      border-radius:12px; 
+      padding:1rem 2rem;
+      background:var(--accent); 
+      color:#0c1220;
+      width:100%;
+      max-width:24rem;
+      display:block;
+      transition:background 0.2s, transform 0.1s;
+      box-shadow:0 2px 12px rgba(167,139,250,0.25);
+      min-height:3rem;
+      touch-action:manipulation;
+    }
+    button:hover:not([disabled]) { 
+      background:var(--accent-hover);
+      transform:translateY(-1px);
+      box-shadow:0 4px 16px rgba(167,139,250,0.35);
+    }
+    button:active:not([disabled]) {
+      transform:translateY(0);
+    }
+    button[disabled] { 
+      opacity:0.5; 
+      cursor:default;
+      box-shadow:none;
+    }
+    
+    #status { 
+      color:var(--dim); 
+      min-height:1.5rem;
+      margin-top:0.75rem;
+      font-size:0.9375rem;
+      line-height:1.5;
+    }
+    
+    /* Bottom padding for mobile scroll clearance */
+    .content {
+      padding-bottom:8rem;
+    }
+    
+    /* Footer branding */
+    footer {
+      padding:2rem 1.25rem 1.5rem;
+      max-width:50rem;
+      margin:0 auto;
+      width:100%;
+      border-top:1px solid var(--line);
+      text-align:center;
+    }
+    footer img {
+      height:1.5rem;
+      width:auto;
+      opacity:0.5;
+      transition:opacity 0.2s;
+    }
+    footer img:hover { opacity:0.75; }
+    
+    /* Tablet and desktop adjustments */
+    @media (min-width: 640px) {
+      header { padding:1.5rem 2rem 0; }
+      main { padding:2rem 2rem 3rem; }
+      footer { padding:3rem 2rem 2rem; }
+      .hero-wrapper { 
+        border-radius:20px;
+        margin-bottom:2.5rem;
+      }
+      .content {
+        padding-bottom:0;
+      }
+      .collect-wrapper {
+        position:static;
+        margin:2.5rem 0 1.5rem;
+        background:transparent;
+        padding:0;
+        margin-left:0;
+        margin-right:0;
+      }
+      button {
+        width:auto;
+        min-width:16rem;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .branding img { height:3.5rem; }
+    }
+    
+    @media (min-width: 1024px) {
+      .branding img { height:4rem; }
+    }
   </style>
 </head>
 <body>
+  <header>
+    <a href="https://warmersun.com" class="branding" aria-label="Future Forge by Warmer Sun">
+      <img src="/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="1242" height="347" />
+    </a>
+  </header>
   <main>
-    <img class="shot" src="${escapeHtml(imageUrl)}" alt="" />
-    <p class="tech">${escapeHtml(techName)}</p>
-    <h1>${escapeHtml(title)}</h1>
-    <p class="desc">${escapeHtml(description)}</p>
-    ${bodyHtml}
-    ${linkHtml}
-    <p><button type="button" id="collect">Collect</button></p>
-    <p id="status"></p>
+    <div class="hero-wrapper">
+      <img class="shot" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" />
+    </div>
+    <div class="content">
+      <p class="tech">${escapeHtml(techName)}</p>
+      <h1>${escapeHtml(title)}</h1>
+      <p class="desc">${escapeHtml(description)}</p>
+      ${bodyHtml}
+      ${linkHtml}
+      <div class="collect-wrapper">
+        <button type="button" id="collect">Collect</button>
+        <p id="status"></p>
+      </div>
+    </div>
   </main>
+  <footer>
+    <img src="/assets/brand/ff-mark-footer.png" alt="Future Forge" width="256" height="256" />
+  </footer>
   <script type="module">
     const boot = ${boot};
     const btn = document.getElementById("collect");
