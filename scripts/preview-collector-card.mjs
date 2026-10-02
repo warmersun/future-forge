@@ -70,6 +70,14 @@ const html = renderCollectorCardPage(card, {
   collectNow: false,
 });
 
+const MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+};
+
 const server = http.createServer((req, res) => {
   const url = req.url || "/";
   
@@ -80,10 +88,10 @@ const server = http.createServer((req, res) => {
     });
     res.end(html);
   } else if (url === "/card/preview/scrolled") {
-    // Auto-scroll version for bottom screenshot
+    // Auto-scroll version for bottom screenshot - scroll to maximum with longer delay
     const scrolled = html.replace(
       "</body>",
-      `<script>window.addEventListener('load',()=>setTimeout(()=>window.scrollTo(0,document.body.scrollHeight),100));</script></body>`
+      `<script>window.addEventListener('load',()=>{setTimeout(()=>{window.scrollTo(0,999999);},500);});</script></body>`
     );
     res.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
@@ -97,6 +105,24 @@ const server = http.createServer((req, res) => {
       "Cache-Control": "public, max-age=3600",
     });
     res.end(imageBytes);
+  } else if (url.startsWith("/assets/")) {
+    // Serve static assets like production does
+    const assetPath = path.join(ROOT, url.slice(1)); // Remove leading /
+    fs.readFile(assetPath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not found");
+        return;
+      }
+      const ext = path.extname(assetPath).toLowerCase();
+      const contentType = MIME[ext] || "application/octet-stream";
+      res.writeHead(200, {
+        "Content-Type": contentType,
+        "Content-Length": data.length,
+        "Cache-Control": "public, max-age=3600",
+      });
+      res.end(data);
+    });
   } else {
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("Not found");
