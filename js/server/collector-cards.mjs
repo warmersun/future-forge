@@ -425,8 +425,14 @@ export function renderCollectorCardPage(row, opts) {
     .collect-wrapper {
       margin:2rem 0 1rem;
       position:sticky;
-      bottom:1rem;
+      bottom:0;
       z-index:10;
+      background:linear-gradient(to bottom, transparent 0%, var(--bg) 20%, var(--bg) 100%);
+      padding:1.5rem 0 1rem;
+      margin-left:-1.25rem;
+      margin-right:-1.25rem;
+      padding-left:1.25rem;
+      padding-right:1.25rem;
     }
     
     button { 
@@ -469,6 +475,11 @@ export function renderCollectorCardPage(row, opts) {
       line-height:1.5;
     }
     
+    /* Bottom padding for mobile scroll clearance */
+    .content {
+      padding-bottom:8rem;
+    }
+    
     /* Footer branding */
     footer {
       padding:2rem 1.25rem 1.5rem;
@@ -495,9 +506,16 @@ export function renderCollectorCardPage(row, opts) {
         border-radius:20px;
         margin-bottom:2.5rem;
       }
+      .content {
+        padding-bottom:0;
+      }
       .collect-wrapper {
         position:static;
         margin:2.5rem 0 1.5rem;
+        background:transparent;
+        padding:0;
+        margin-left:0;
+        margin-right:0;
       }
       button {
         width:auto;
