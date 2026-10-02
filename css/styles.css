@@ -8560,6 +8560,41 @@ button.linkish:hover {
   max-height: none;
 }
 
+/* Quest beat walk is the only thing on screen until Start inventing. */
+body.is-quest-briefing .topbar,
+body.is-quest-briefing .mp-workshop-bar,
+body.is-quest-briefing .tech-library,
+body.is-quest-briefing .invent-center,
+body.is-quest-briefing .tech-dock-handle,
+body.is-quest-briefing .tech-dock-edge,
+body.is-quest-briefing .tech-drawer-backdrop,
+body.is-quest-briefing #ff-account {
+  display: none !important;
+}
+
+body.is-quest-briefing .workshop-layout,
+body.is-quest-briefing .workshop-layout.is-tech-collapsed,
+body.is-quest-briefing #screen-hotseat .workshop-layout,
+body.is-quest-briefing #screen-room-play .mp-workshop.workshop-layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "vision";
+  height: 100dvh;
+  width: 100%;
+  margin-inline: 0;
+}
+
+body.is-quest-briefing .workshop-layout > .vision-panel,
+body.is-quest-briefing .workshop-layout > .vision-panel:has(.vision-canvas-wrap.is-briefing) {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  max-height: none;
+  height: 100%;
+  border: none;
+  overflow: hidden;
+}
+
 .side-tab-badge {
   display: inline-block;
   margin-left: 0.25rem;

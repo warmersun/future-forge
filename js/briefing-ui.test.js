@@ -144,6 +144,14 @@ describe("briefing-ui paint", () => {
         el.children.push(c);
         return c;
       },
+      remove() {
+        const parent = el.parentNode;
+        if (parent?.children) {
+          const i = parent.children.indexOf(el);
+          if (i >= 0) parent.children.splice(i, 1);
+        }
+        el.parentNode = null;
+      },
       closest(sel) {
         const want = String(sel || "").replace(/^\./, "").split(/[\s.#\[]/)[0];
         let n = el;
@@ -276,5 +284,45 @@ describe("briefing-ui paint", () => {
     assert.match(sceneEl.innerHTML, /<h2>The bigger problem<\/h2>/);
     assert.doesNotMatch(sceneEl.innerHTML, /<h2>Your job<\/h2>/);
     assert.doesNotMatch(sceneEl.innerHTML, /quest-brief-full-body[\s\S]*Invent a same-shift workflow/);
+  });
+
+  it("fullscreens the walk and clears it on unmount, reset, and dismiss", () => {
+    installDom();
+    const body = fakeEl();
+    document.body = body;
+    const root = fakeEl("vision-canvas-wrap");
+    const banner = fakeEl("challenge-banner");
+    const sceneEl = fakeEl("ws-mission-scene");
+    banner.appendChild(sceneEl);
+    const mission = {
+      id: "q-full",
+      place: "Crossing Clinic 7",
+      briefMd: "## The place\n\nClinic.\n\n## Your job\n\nInvent it.",
+      briefBeats: beats,
+    };
+
+    const walking = paintQuestBriefing(root, mission, { sceneEl });
+    assert.equal(walking.mode, "walk");
+    assert.equal(body.classList.contains("is-quest-briefing"), true);
+
+    const empty = paintQuestBriefing(
+      root,
+      { id: "q-empty", problem: "Only a problem line." },
+      { sceneEl }
+    );
+    assert.equal(empty.used, false);
+    assert.equal(body.classList.contains("is-quest-briefing"), false);
+
+    paintQuestBriefing(root, mission, { sceneEl });
+    assert.equal(body.classList.contains("is-quest-briefing"), true);
+    resetQuestBriefing();
+    assert.equal(body.classList.contains("is-quest-briefing"), false);
+
+    const store = memStore();
+    setBriefingDismissed("q-full", true, store);
+    const fresh = fakeEl("vision-canvas-wrap");
+    const dismissed = paintQuestBriefing(fresh, mission, { sceneEl, storage: store });
+    assert.equal(dismissed.mode, "off");
+    assert.equal(body.classList.contains("is-quest-briefing"), false);
   });
 });

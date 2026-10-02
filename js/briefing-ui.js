@@ -3,8 +3,8 @@
  * Walk: each beat swaps the same pane's still. Authored `imageUrl` wins, then
  * the theme postcard. Imagine only when a beat has `imagePrompt`. Does not
  * write those URLs into VisionRenderer.currentUrl.
- * Start inventing restores invent/pathway vision and a compact recap.
- * Invent column stays title + board (tools stay live).
+ * Walk fills the viewport (`body.is-quest-briefing`) until Start inventing.
+ * That restores invent/pathway vision, the workshop, and a compact recap.
  */
 
 import { attachReadAloud, pruneDetachedReadAloud, stopReadAloudFor } from "./read-aloud.js";
@@ -28,6 +28,7 @@ import {
 const STORAGE_PREFIX = "ff.briefing.done.";
 const SPEAK_MIN = 12;
 const ART_CACHE_CAP = 24;
+const FULLSCREEN_CLASS = "is-quest-briefing";
 
 /** @type {WeakMap<HTMLElement, BriefingRecord>} */
 const records = new WeakMap();
@@ -177,6 +178,7 @@ export function resetQuestBriefing(opts = {}) {
         el.innerHTML = "";
         el.hidden = false;
       });
+    setQuestBriefingFullscreen(false);
   }
   if (opts.clearDismissed) {
     clearAllBriefingDismissed(opts.storage);
@@ -346,6 +348,13 @@ function unmountOverlay(root) {
   const banner =
     root.closest?.(".workshop-layout")?.querySelector?.(".challenge-banner") || null;
   banner?.classList?.remove?.("is-briefing-walk", "is-briefing-recap");
+  setQuestBriefingFullscreen(false);
+}
+
+/** Walk owns the viewport. Off, unmount, and reset give the workshop back. */
+function setQuestBriefingFullscreen(on) {
+  if (typeof document === "undefined") return;
+  document.body?.classList?.toggle?.(FULLSCREEN_CLASS, Boolean(on));
 }
 
 function clearBriefing(el) {
@@ -477,6 +486,7 @@ function paintDom(rec) {
   const root = rec.visionRoot;
   const paintKey = `${rec.fingerprint}|${rec.mode}|${rec.index}`;
   syncBannerMode(rec);
+  setQuestBriefingFullscreen(rec.mode === "walk");
 
   if (rec.mode === "off") {
     root.querySelectorAll(".quest-briefing-overlay").forEach((el) => el.remove());
