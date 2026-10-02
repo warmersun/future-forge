@@ -2162,6 +2162,67 @@ async function serveCollectorCard(req, res, pathOnly) {
   }
 }
 
+function serveBrandAsset(req, res, pathOnly) {
+  const BRAND_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+  };
+
+  let cleanPath;
+  try {
+    cleanPath = String(pathOnly).split("?")[0].split("#")[0];
+    cleanPath = decodeURIComponent(cleanPath);
+  } catch {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Forbidden");
+  }
+
+  cleanPath = path.posix.normalize(cleanPath.replace(/\\/g, "/"));
+  if (cleanPath.includes("..") || !cleanPath.startsWith("/assets/brand/")) {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Forbidden");
+  }
+
+  const ext = path.extname(cleanPath).toLowerCase();
+  if (!BRAND_IMAGE_MIME[ext]) {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Forbidden");
+  }
+
+  const relPath = cleanPath.slice(1);
+  const fullPath = path.resolve(ROOT, relPath);
+
+  const expectedPrefix = path.resolve(ROOT, "assets", "brand") + path.sep;
+  if (!fullPath.startsWith(expectedPrefix)) {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Forbidden");
+  }
+
+  fs.readFile(fullPath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("Not found");
+    }
+    if (req.method === "HEAD") {
+      res.writeHead(200, {
+        "Content-Type": BRAND_IMAGE_MIME[ext],
+        "Content-Length": data.length,
+        "Cache-Control": "public, max-age=86400",
+      });
+      return res.end();
+    }
+    res.writeHead(200, {
+      "Content-Type": BRAND_IMAGE_MIME[ext],
+      "Content-Length": data.length,
+      "Cache-Control": "public, max-age=86400",
+    });
+    res.end(data);
+  });
+}
+
 function servePortalSignin(res) {
   const file = path.join(__dirname, "signin.html");
   let html;
@@ -2280,6 +2341,9 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === "GET" && pathOnly.startsWith("/card/")) {
     return serveCollectorCard(req, res, pathOnly);
+  }
+  if ((req.method === "GET" || req.method === "HEAD") && pathOnly.startsWith("/assets/brand/")) {
+    return serveBrandAsset(req, res, pathOnly);
   }
   if (!isPortalApiPath(pathOnly)) {
     return sendJson(res, 404, {
