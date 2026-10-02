@@ -87,17 +87,6 @@ const server = http.createServer((req, res) => {
       "Content-Length": Buffer.byteLength(html),
     });
     res.end(html);
-  } else if (url === "/card/preview/scrolled") {
-    // Auto-scroll version for bottom screenshot - scroll to maximum with longer delay
-    const scrolled = html.replace(
-      "</body>",
-      `<script>window.addEventListener('load',()=>{setTimeout(()=>{window.scrollTo(0,999999);},500);});</script></body>`
-    );
-    res.writeHead(200, {
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Length": Buffer.byteLength(scrolled),
-    });
-    res.end(scrolled);
   } else if (url === `/card/${previewId}/image`) {
     res.writeHead(200, {
       "Content-Type": imageContentType,
