@@ -16,7 +16,7 @@ Windows PowerShell uses:
 irm https://x.ai/cli/install.ps1 | iex
 ```
 
-Open it with `grok`, sign in, then paste the block below. Grok will ask before it chooses a folder or a friends setup.
+Open it with `grok`, sign in, then paste the block below. Grok will ask before it chooses a folder or a friends setup. When the game is running, it also links the authoring skills in that folder and tells you how to add your own quests.
 
 ## Paste this into Grok
 
@@ -44,6 +44,37 @@ Install, after they confirm the folder:
 2. Install Git if it is missing.
 3. Install Node.js 22 LTS when `node -v` is missing or older than 20.9.0. npm comes with Node. Use the normal installer for this operating system (nodejs.org, Homebrew, or winget). Skip an old operating-system package that is still on Node 18.
 4. In the repo, run `npm install`.
+
+Agent skills, after the clone:
+
+The repo ships four MIT skill packages under `skills/`. They teach an agent how to author game content. They do not relicense the game. Grok discovers project skills from `.grok/skills/`, and `.grok/` is gitignored, so a fresh clone has the packages and no links. Create the links. Do not copy the trees. Do not commit `.grok/`. If a link is already there, leave it.
+
+On macOS and Linux, from the repo root:
+
+mkdir -p .grok/skills
+ln -sfn ../../skills/future-forge-quest .grok/skills/future-forge-quest
+ln -sfn ../../skills/future-forge-predictions .grok/skills/future-forge-predictions
+ln -sfn ../../skills/future-forge-trends .grok/skills/future-forge-trends
+ln -sfn ../../skills/future-forge-collector-cards .grok/skills/future-forge-collector-cards
+
+On Windows, from the repo root, make a directory junction for each package (no administrator prompt):
+
+New-Item -ItemType Directory -Force -Path .grok\skills | Out-Null
+foreach ($name in 'future-forge-quest','future-forge-predictions','future-forge-trends','future-forge-collector-cards') {
+  $link = Join-Path .grok\skills $name
+  if (-not (Test-Path $link)) {
+    New-Item -ItemType Junction -Path $link -Target (Join-Path (Resolve-Path skills) $name) | Out-Null
+  }
+}
+
+When they later ask for a quest, a predictions timeline, a capability chart, or a collector card, open `grok` in this repo and follow that skill's `SKILL.md`. Do not author any of those during this install unless they ask now.
+
+| Skill | They can ask for | Where it lands |
+|-------|------------------|----------------|
+| `skills/future-forge-quest/` | A Spotlight Quest, or a learning quest with lesson pages packed as one `.ffquest` | Library, after the side-load steps below |
+| `skills/future-forge-predictions/` | A dated predictions bank | `FF_PREDICTIONS_FILE` |
+| `skills/future-forge-trends/` | One measured capability curve for Look Ahead charts | A trend JSON file, then the trends catalog |
+| `skills/future-forge-collector-cards/` | A collector card: a real capability, collected by link, played as a free invention tile | `cards/<slug>.json` plus its page image |
 
 AI login: Future Forge reads ~/.grok/auth.json, the file `grok login` writes, and refreshes that session. Confirm the file exists. Do not open it, print it, copy it, or commit it. XAI_API_KEY and GROK_API_KEY do not sign this game in. Skip creating a separate xAI console key unless `grok login` cannot be finished on this machine.
 
@@ -91,11 +122,25 @@ Voice and read-aloud
 - FF_VOICE_IDLE_MS — default 90000. Hang up when a tab sends no audio.
 - FF_TTS_CACHE_DIR — default ./data/tts-cache inside the repo.
 
-Quests and trends
-- FF_QUESTS_DIR — default ./quests. Relative paths are inside the repo.
-- FF_QUESTS_REMOTE_URL — leave unset to use the official Warmer Sun quest catalog. Set off to skip it.
+Quests, predictions, and trends
+- FF_QUESTS_DIR — default ./quests, the Library folder. Relative paths are inside the repo. Setting it replaces that folder. It does not merge with it. The server reads only `*.json` files in that folder, not subfolders. Invalid files are skipped and listed on GET /api/quests.
+- FF_CONTENT_DIR — leave unset. Absolute path to an unpacked `.ffquest` tree. The server serves that tree at /content/ so lesson pages and package images load. Set it together with FF_QUESTS_DIR pointed at that tree's `quests/` directory.
+- FF_QUESTS_REMOTE_URL — leave unset to use the official Warmer Sun Sponsored and Learning catalog. Set off when the room should see only the Library folder.
+- FF_PREDICTIONS_FILE — leave unset to use predictions/default.json. A path or an https URL replaces that bank. It does not merge. The repo already has predictions/examples/musk-abundance.json.
 - FF_TRENDS_REMOTE_URL — leave unset to use the official trends catalog. Set off to skip it.
 - FF_SHARE_ORIGIN — leave unset. Copy link then uses the public warmersun.com/forge page.
+
+Side-loading quests — ask once, after the run-mode question: "Do you have a quest file to add, a .json tile or a .ffquest package?" If they say no, skip the copy and still explain the three ways in the closing summary. If they name files, add them before the health check, then restart with the script so the Library scan picks them up.
+
+Three ways a quest gets in:
+
+1. Server Library, a quest tile. Copy each `*.json` into the repo `quests/` folder (or into the folder FF_QUESTS_DIR names). Restart. Those tiles show in Library, first in the list, including a Friends room. The tracked `quests/` folder is part of the git checkout. A private tile belongs in a folder they name, with FF_QUESTS_DIR set to that absolute path, so a later commit does not pick it up.
+2. This browser only. On the home screen, Import Quest… or drop a `.json`. That copy stays in that browser. Friends in a room do not see it. You do not copy the file for this path.
+3. A learning quest with lesson pages, one `.ffquest` file (a zip of the tile and its pages). One-shot, from the repo, after the start-script server is stopped so the port is free: `./scripts/sideload-local-package.sh path/to/quest.ffquest`. That unpacks to a temp folder, serves lessons at /content/, and starts the game. Stopping deletes the folder. Needs `python3`. To keep the package across restarts, unpack into `data/sideload/<id>` (`data/` is gitignored):
+
+python3 scripts/quest-package.py unpack path/to/quest.ffquest data/sideload/<id> --lesson-root http://127.0.0.1:<port>/content/lessons/ --asset-root http://127.0.0.1:<port>/content/assets/
+
+Then set FF_QUESTS_DIR to the absolute path of `data/sideload/<id>/quests` and FF_CONTENT_DIR to the absolute path of `data/sideload/<id>`. Use the port the script will actually bind. A later port change means unpack again so those roots match. FF_QUESTS_DIR replaces the repo `quests/` folder for as long as it is set. Leave FF_QUESTS_REMOTE_URL unset unless they want official Sponsored and Learning hidden.
 
 Cloud sign-in is optional and is not required to play. Leave FF_PORTAL_URL unset. Do not run `npm run portal`. Do not create `.env.portal`.
 
@@ -127,7 +172,15 @@ Then tell them, in plain language, how to play:
 
 Say this before any link is shared: friends in a room spend the host's Grok subscription.
 
-When you finish, tell them: the folder, the start-script path, the local URL, whether the co-inventor is live, which choice you configured, and the lines you put in `.env`. Tell them to run the script to start next time and the script's stop command to stop. To update: `git pull`, `npm install`, then run the script again. Close with one line: this setup is for them and for friends they play with; a school or company needs a separate license.
+When you finish, tell them: the folder, the start-script path, the local URL, whether the co-inventor is live, which choice you configured, and the lines you put in `.env`. Tell them to run the script to start next time and the script's stop command to stop. To update: `git pull`, `npm install`, then run the script again. The skill links live in gitignored `.grok/skills/`, so after a fresh clone on another machine, make those four links again.
+
+Then tell them, in plain language, how to add a quest and what the skills are for:
+
+- A quest tile is one JSON file. Put it in the `quests` folder and restart, and everyone on this server sees it in Library, including friends in a room. Import Quest on the home screen keeps a tile on that browser only.
+- A learning quest that includes lesson pages is one `.ffquest` file. Hand that file over and ask to side-load it. One-shot play uses `scripts/sideload-local-package.sh`. A package that should stay uses `data/sideload/` plus FF_QUESTS_DIR and FF_CONTENT_DIR.
+- Four authoring skills are linked for Grok in this folder. Next time they open `grok` here they can ask for a Quest (`future-forge-quest`), a predictions timeline (`future-forge-predictions`, side-loaded with FF_PREDICTIONS_FILE), a capability chart (`future-forge-trends`), or a collector card (`future-forge-collector-cards`). Grok should read that skill's SKILL.md and follow it. The skills are MIT. The game is not.
+
+Close with one line: this setup is for them and for friends they play with; a school or company needs a separate license.
 
 If they later change their mind, edit `.env` and the funnel flag in the script, then stop and start. Use only variable names from the catalog above.
 
