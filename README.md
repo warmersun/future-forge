@@ -4,6 +4,8 @@
 
 Future Forge is an inventing practice. You pick a global problem, land in a concrete place, invent with emerging tech on a hexagonal pathway board, summon the hard questions onto that board, and hold the pathway before the local crisis collapses.
 
+**Handbook:** [docs/future-forge.md](docs/future-forge.md) — goals, ideas, the session, features, operations, and the agent skills.
+
 **About & learning goals:** Future Forge is an [inventing practice](docs/what-is-future-forge.md) — origin (6Ps tabletop), design contradiction, Progress and Predictions, and what learners practice today.
 
 **Hex invent surface:** [docs/workshop-hex-invent-surface.md](docs/workshop-hex-invent-surface.md)

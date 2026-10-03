@@ -134,9 +134,9 @@ Local relief without a deeper lever is incomplete. A clever root-cause story wit
 
 ### With others: compete, but learn cooperation
 
-In Friends, learners can race personal invents — and still share **one** place and **one** crisis. If the challenge is not solved in time, **everybody loses**. So the practice is not only competition: it is learning that some stakes are shared, and **cooperation** is part of inventing well under pressure.
+A **multi-user session** is either a **Friends** room (each person on their own machine, join with a room code) or **hotseat** (one machine, pass the device). Learners can race personal invents — and still share **one** place and **one** crisis. If the challenge is not solved in time, **everybody loses**. So the practice is not only competition: it is learning that some stakes are shared, and **cooperation** is part of inventing well under pressure.
 
-Optional paths: learning modules (tutor, one idea at a time), spotlight Quests on recent advances.
+Beside that shared table: **learning quests** (a tutor, one idea at a time, lesson pages), **sponsored quests** (a named partner; the invent is still required), and a **class** that self-hosts a folder of those tiles. Detail: [How it is run](#how-it-is-run).
 
 ---
 
@@ -213,10 +213,50 @@ Anyone who wants practice connecting technology to human problems — especially
 
 ---
 
+## How it is run
+
+The operational map, with commands and field lists, is the handbook: [`future-forge.md`](./future-forge.md). This is the short version of the pieces that essay does not cover.
+
+### Self-hosting
+
+`npm start` is the whole practice on a machine you control: the board, the co-inventor, vision, and multi-user rooms. Warmer Sun Cloud is optional. Unsigned play in the browser is complete. You may also run that process as a public server when you do not charge and you have no commercial intent — a free grant in [`COMMERCIAL.md`](../COMMERCIAL.md), next to a free grant for a meeting you yourself join. Install steps: [`README.md`](../README.md). Handbook: [Self-hosting](./future-forge.md#self-hosting).
+
+### Classes
+
+A class is a self-hosted game plus a folder of Quest files (`quests/`, or `FF_QUESTS_DIR`). Learners see those tiles first, marked External, including in a Friends room. A facilitator who participates and does not charge can host classmates under the meeting grant. A school, university, bootcamp, or training org — including a class server for enrolled learners — needs the paid **Education** license. The app has no roster or gradebook. The class is the people, the folder, and the session. Handbook: [Classes](./future-forge.md#classes).
+
+### Learning quests
+
+A learning Quest is a spotlight on a real recent advance, with an AI tutor that teaches one idea at a time and names that advance only after the learner has the story. A module is several lesson tiles plus pages, packed as one `.ffquest` file. Progress reads Lesson X/Y. The tutor runs in solo play. In a multi-user session the same Quest is still the invent. Official tiles download into the **Learning** catalog. Handbook: [Learning quests](./future-forge.md#learning-quests).
+
+### Sponsored quests
+
+A sponsored Quest shows **Sponsored by {name}** and a plain-text tagline. That is attribution. It does not score the pathway or force a product. The invent stays an outcome for the people in the place. A sponsored lesson path is listed under **Sponsored**. Handbook: [Sponsored quests](./future-forge.md#sponsored-quests).
+
+### Multi-user sessions
+
+**Friends:** create a room, share the join address and the code, each person on their own browser. **Hotseat:** one computer, named seats, pass the device. In both, invents are personal and the crisis is shared. If the place falls, everyone loses. Handbook: [Multi-user sessions](./future-forge.md#multi-user-sessions).
+
+### Agent skills
+
+Four MIT packages under `skills/` teach any agent how to author content for the practice. They do not relicense the app.
+
+| Skill | What it writes |
+|-------|----------------|
+| [`skills/future-forge-quest/`](../skills/future-forge-quest/) | Spotlight, learning, and sponsored Quest tiles, and the `.ffquest` package |
+| [`skills/future-forge-predictions/`](../skills/future-forge-predictions/) | The predictions bank the year dialog and the timing judge read |
+| [`skills/future-forge-trends/`](../skills/future-forge-trends/) | One measured capability curve for Look Ahead charts |
+| [`skills/future-forge-collector-cards/`](../skills/future-forge-collector-cards/) | A collector card: a real capability, collected by link, played as a free invention tile |
+
+Handbook: [Agent skills](./future-forge.md#agent-skills).
+
+---
+
 ## Related
 
 | Resource | Why |
 |----------|-----|
+| [`future-forge.md`](./future-forge.md) | Handbook: self-hosting, classes, learning and sponsored quests, multi-user sessions, agent skills |
 | [warmersun.com](https://warmersun.com) | The missing subject and mission |
 | [Future Forge on Warmer Sun](https://warmersun.com/future-forge/) | Invent · Challenge · Field |
 | [Progress and Predictions](https://101.warmersun.com) | Introductory course |
