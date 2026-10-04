@@ -4,6 +4,7 @@
  */
 
 import { excerptFromBrief, isSafeHttpUrl, plainTextFromMarkdown } from "./md-lite.js";
+import { PACK_STE_RULES } from "./pack-ste-prose.js";
 
 export const BRIEF_BEAT_ROLES = [
   "job",
@@ -161,11 +162,12 @@ export function compactRecapFromBeats(beats) {
 
 /** Prompt paste: three-heading player brief (instance → RCA → outcome). */
 export const BRIEF_MD_RECIPE = [
-  "QUEST BRIEF (mission.briefMd, Markdown, ~250–600 words):",
+  "QUEST BRIEF (mission.briefMd, Markdown):",
   "Required headings in this order, nothing else:",
-  "## The place — 2–4 short paragraphs (blank line between). Spoken story: named person, concrete place, what went wrong now. Mid-length sentences a friend would say. One or two short punch-lines, not a telegram. Do not close with a 'Who designs X?' riddle.",
-  "## The bigger problem — one or two short paragraphs. This scene is a case of the global issue, plus the root cause (the system that keeps producing it). Everyday words. Not a meter dump, not a capability lecture.",
-  "## Your job — one short paragraph, outcome only. What must get better for these people this year. No product name, no 'invent with [tech]', no ban-list.",
+  "## The place — 2–4 paragraphs (blank line between). Named person, concrete place, what went wrong. Description sentences only.",
+  "## The bigger problem — one or two paragraphs. This scene is a case of the global issue, plus the root cause (the system that keeps producing it). Description sentences only. Not a meter dump, not a capability lecture.",
+  "## Your job — one imperative sentence, outcome only. No product name, no 'invent with [tech]', no ban-list.",
+  PACK_STE_RULES,
 ].join(" ");
 
 const LEGACY_BRIEF_ROLES = new Set(["possible", "constraints"]);
@@ -273,12 +275,12 @@ export function briefMdFromLivedStory(opts = {}) {
   const place =
     paras.join("\n\n") ||
     scene ||
-    "People here feel the problem now.";
+    "A person in this place feels the problem at this time.";
   const meters = opts.crisisMeters || opts.pressure || {};
   /** @type {string[]} */
   const bits = [];
   const theme = String(opts.globalTitle || "").trim();
-  if (theme) bits.push(`This scene is one instance of ${theme}.`);
+  if (theme) bits.push(`This place is one case of ${theme}.`);
   const global = meterPlain(meters.global);
   const local = meterPlain(meters.local);
   const support = meterPlain(meters.support);
@@ -288,13 +290,15 @@ export function briefMdFromLivedStory(opts = {}) {
   if (bits.length < 2 && local && global) bits.push(local);
   if (!bits.length) {
     bits.push(
-      "The same local driver keeps producing this harm. It is not a one-off accident."
+      "The local driver produces this harm. This harm is not one accident."
     );
   }
-  const who = String(opts.stakeholder || "the people here").trim();
+  const who =
+    String(opts.stakeholder || "the person here").split(",")[0].trim() ||
+    "the person here";
   let job = String(opts.encourageCopy || "").trim();
   if (!job || isWorkshopRiddle(job) || /\binvent with\b/i.test(job)) {
-    job = `Invent a way ${who} can get through this year without the same harm landing again.`;
+    job = `Make sure ${who} gets through this year without this harm.`;
   }
   return `## The place\n\n${place}\n\n## The bigger problem\n\n${bits.join(" ")}\n\n## Your job\n\n${job}`;
 }
