@@ -253,7 +253,7 @@ import {
   destroyTrendChart,
   formatTrendValue,
 } from "./trend-chart.js";
-import { SCENE_CHAR_CAP } from "./scene-prose.js";
+import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
 import { clipSummary, ensureQuestSummary } from "./quest-summary.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
@@ -6498,7 +6498,7 @@ function renderQuestCatalog() {
 function themeCardHtml(g) {
   const tag = g.kind === "before" ? "Before it hits" : "Now";
   const cls = g.kind === "before" ? "flag-prevention" : "flag-problem";
-  const cachedList = scenarioPackCache(g.id);
+  const cachedList = state.scenarioCache[g.id] || [];
   const cached = cachedList.length;
   const solvedOnTheme = cachedList.filter((m) => isMissionSolved(m.id)).length;
   const hint = cached
@@ -6724,23 +6724,20 @@ function paintMissionCards(list, { disabled = false } = {}) {
   });
 }
 
-/** Cached quests for this theme only when every id matches the current pack revision. */
-function scenarioPackCache(globalId) {
-  const list = state.scenarioCache[globalId];
-  if (!Array.isArray(list) || !list.length) return [];
-  if (!list.every((m) => String(m?.id || "").endsWith(`-${SCENARIO_PACK_REV}`))) {
-    return [];
-  }
-  return list;
-}
-
 async function ensureScenarios(global, { force = false } = {}) {
   if (!global) return [];
   // Prefer last cached set (unless user asked for a fresh generation).
   // Ignore packs whose ids were minted under a different SCENARIO_PACK_REV.
-  const cachedList = !force ? scenarioPackCache(global.id) : [];
-  if (cachedList.length) {
-    return cachedList.slice(0, SCENARIO_COUNT);
+  const cachedList = !force && state.scenarioCache[global.id]?.length
+    ? state.scenarioCache[global.id]
+    : null;
+  const cacheRevOk =
+    Array.isArray(cachedList) &&
+    cachedList.every((m) =>
+      String(m?.id || "").endsWith(`-${SCENARIO_PACK_REV}`)
+    );
+  if (cacheRevOk) {
+    return state.scenarioCache[global.id].slice(0, SCENARIO_COUNT);
   }
 
   // Product default: curated seed packs for every theme (not AI one-shots).
@@ -6794,9 +6791,11 @@ async function ensureScenarios(global, { force = false } = {}) {
           year: GAME.startYear,
           depthCharacter: global.depthCharacter || undefined,
           guidance:
-            "Quests are local crisis episodes under this theme. Each quest scene MUST include: (1) lived local harm in a concrete place, (2) a local driver of the theme problem (not only how a person shelters from it). " +
+            "Quests are local crisis episodes under this theme. Each quest scene MUST include: (1) lived local harm in a concrete place, (2) a local driver of the theme problem (not only how people shelter from it). " +
             "Different geographies, stakeholders, and angles. Inventable with emerging tech. " +
             "For source themes (air pollution, emissions, short-termism, etc.), pure shelter-only framing is incomplete — the driver must still be visible in the scene. " +
+            SCENE_PROSE +
+            " " +
             BRIEF_MD_RECIPE +
             " Each Quest also needs briefMd with those three headings, and suggestedWhy for each suggested tech. " +
             " Crisis meter names (pressure keys) are shown on the HUD: plain English, 1–3 words, spaces allowed — e.g. Dirty air, Sick days, Truck exhaust. " +
@@ -7126,8 +7125,8 @@ async function renderMissions({ force = false } = {}) {
   // Brief is static — show immediately so the learner can read during drafting
   renderProblemBrief(g, { drafting: true });
 
-  const cached = !force ? scenarioPackCache(g.id) : [];
-  const needsGenerate = force || !cached.length;
+  const cached = !force && state.scenarioCache[g.id];
+  const needsGenerate = force || !cached?.length;
 
   // Ready cache (last 4): clickable immediately — no network wait
   if (!needsGenerate) {

@@ -18,7 +18,6 @@
  *   node scripts/generate-scenario-seeds.mjs --rewrite-summaries
  *   node scripts/generate-scenario-seeds.mjs --rewrite-briefs --local-only
  *   node scripts/generate-scenario-seeds.mjs --rewrite-briefs --themes infectious
- *   node scripts/generate-scenario-seeds.mjs --rewrite-ste --themes education
 
  *
  * Requires SuperGrok session (~/.grok/auth.json) or FF_XAI_API_KEY for AI packs.
@@ -37,18 +36,15 @@ import {
   techForAi,
 } from "../js/data.js";
 import { themeDepthFor } from "../js/sim/sustainable.js";
-import { SCENE_CHAR_CAP } from "../js/scene-prose.js";
 import {
-  PACK_STE_HINT,
-  PACK_STE_RULES,
-  packSteIssues,
-  steRepairInstruction,
-} from "../js/pack-ste-prose.js";
-import {
-  BRIEF_MD_RECIPE,
-  briefMdFromLivedStory,
-  splitMarkdownSections,
-} from "../js/brief-beats.js";
+  SCENE_PROSE,
+  SCENE_PROSE_CAPSULE,
+  SCENE_HINT_REWRITE,
+  SCENE_CHAR_CAP,
+  assertSceneReadable,
+  sceneRepairInstruction,
+} from "../js/scene-prose.js";
+import { BRIEF_MD_RECIPE, briefMdFromLivedStory } from "../js/brief-beats.js";
 import { SCENARIO_PACK_SUMMARIES } from "../js/scenario-pack-summaries.js";
 import { QUEST_SUMMARY_RECIPE, clipSummary } from "../js/quest-summary.js";
 
@@ -68,7 +64,7 @@ const SCENARIO_COUNT = 4;
  *   --themes a --themes b
  * Unknown flags are ignored except a missing value after --themes errors.
  * @param {string[]} argv process.argv.slice(2)
- * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, rewriteSummaries: boolean, rewriteBriefs: boolean, rewriteSte: boolean, themeFilter: string[] | null }}
+ * @returns {{ localOnly: boolean, dryRun: boolean, fillDescriptions: boolean, fillSummaries: boolean, rewriteSummaries: boolean, rewriteBriefs: boolean, themeFilter: string[] | null }}
  */
 export function parseSeedArgs(argv) {
   const localOnly = argv.includes("--local-only");
@@ -77,7 +73,6 @@ export function parseSeedArgs(argv) {
   const fillSummaries = argv.includes("--fill-summaries");
   const rewriteSummaries = argv.includes("--rewrite-summaries");
   const rewriteBriefs = argv.includes("--rewrite-briefs");
-  const rewriteSte = argv.includes("--rewrite-ste");
   /** @type {string[]} */
   const themeIds = [];
   let sawThemesFlag = false;
@@ -90,8 +85,7 @@ export function parseSeedArgs(argv) {
       a === "--fill-descriptions" ||
       a === "--fill-summaries" ||
       a === "--rewrite-summaries" ||
-      a === "--rewrite-briefs" ||
-      a === "--rewrite-ste"
+      a === "--rewrite-briefs"
     ) {
       continue;
     }
@@ -128,29 +122,12 @@ export function parseSeedArgs(argv) {
   }
 
   const themeFilter = sawThemesFlag ? [...new Set(themeIds)] : null;
-  return {
-    localOnly,
-    dryRun,
-    fillDescriptions,
-    fillSummaries,
-    rewriteSummaries,
-    rewriteBriefs,
-    rewriteSte,
-    themeFilter,
-  };
+  return { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, rewriteBriefs, themeFilter };
 }
 
 const args = process.argv.slice(2);
-const {
-  localOnly,
-  dryRun,
-  fillDescriptions,
-  fillSummaries,
-  rewriteSummaries,
-  rewriteBriefs,
-  rewriteSte,
-  themeFilter,
-} = parseSeedArgs(args);
+const { localOnly, dryRun, fillDescriptions, fillSummaries, rewriteSummaries, rewriteBriefs, themeFilter } =
+  parseSeedArgs(args);
 
 function loadEnvFile() {
   for (const file of [path.join(ROOT, ".env"), path.join(ROOT, ".env.local")]) {
@@ -257,6 +234,8 @@ const MODE_INSTRUCTION =
   "Return top-level scenarios: an array of 4 objects (or context.scenarioCount). " +
   "Each Quest MUST be a concrete place living a piece of the global problem — different geographies, stakeholders, and angles. " +
   "Each scene MUST include BOTH (1) lived local harm people feel now AND (2) a local driver/system that keeps producing the theme problem — not only how people shelter from symptoms. " +
+  SCENE_PROSE +
+  " " +
   BRIEF_MD_RECIPE +
   " Each object fields: id (slug), title, place, scene, summary, briefMd, stakeholder, startYear (2026), collapseYear (2032–2036), yearsPerTurn (2), " +
   "pressure (structured crisis meters — see CRITICAL), " +
@@ -281,10 +260,10 @@ const SYSTEM = `You are the AI Co-Inventor in Future Forge.
 When mode is generate-scenarios: invent MULTIPLE distinct local mission scenarios for context.globalTheme.
 Return a single JSON object only (no markdown fences) with top-level "scenarios" array and "message".
 Hard rules: only use technology ids from availableTechs; stay local; concrete inventable places.
-${PACK_STE_RULES}
+${SCENE_PROSE_CAPSULE}
 ${BRIEF_MD_RECIPE}
 Crisis meter names on the HUD must be plain English anyone understands — never camelCase codes or lab jargon.
-Each present pressure role should include a short place-specific description of what that meter means here. Each description sentence has at most 25 words.`;
+Each present pressure role should include a short place-specific description of what that meter means here.`;
 
 function extractJson(text) {
   if (!text) return null;
@@ -543,17 +522,16 @@ function parseScenarioList(text) {
 
 /**
  * @param {import("openai").default} client
+ * @param {object} g
  * @param {object} payload
  * @param {string} [extraUser]
- * @param {{ system?: string, reasoning?: string }} [opts]
  */
-async function callScenarioModel(client, payload, extraUser = "", opts = {}) {
-  /** @type {Record<string, unknown>} */
-  const createOpts = {
+async function callScenarioModel(client, payload, extraUser = "") {
+  const response = await client.responses.create({
     model: MODEL,
     temperature: 0.55,
     input: [
-      { role: "system", content: opts.system || SYSTEM },
+      { role: "system", content: SYSTEM },
       {
         role: "user",
         content:
@@ -562,9 +540,7 @@ async function callScenarioModel(client, payload, extraUser = "", opts = {}) {
           `Respond with the required JSON object only.`,
       },
     ],
-  };
-  if (opts.reasoning) createOpts.reasoning = { effort: opts.reasoning };
-  const response = await client.responses.create(createOpts);
+  });
   return response.output_text || "";
 }
 
@@ -578,10 +554,10 @@ function scorePackReadability(packs) {
   /** @type {number[]} */
   const failedIndexes = [];
   packs.forEach((p, i) => {
-    const issues = packSteIssues(p.scene, "description");
-    if (issues.length) {
+    const r = assertSceneReadable(p.scene);
+    if (!r.ok) {
       failedIndexes.push(i);
-      for (const reason of issues) {
+      for (const reason of r.reasons) {
         reasons.push(`[${i}]${reason}`);
       }
     }
@@ -602,7 +578,7 @@ async function aiPackForTheme(client, g) {
       visionTheme: m.visionTheme,
       pressure: m.pressure,
       collapseYear: m.collapseYear,
-      sceneHint: PACK_STE_HINT,
+      sceneHint: SCENE_HINT_REWRITE,
     })
   );
   const guidance =
@@ -610,8 +586,8 @@ async function aiPackForTheme(client, g) {
     "(1) lived local harm in a concrete place, (2) a local driver of the theme problem " +
     "(not only how people shelter from it). Different geographies and stakeholders. " +
     "Inventable with emerging tech. Pure shelter-only framing is incomplete for source themes. " +
-    PACK_STE_RULES +
-    " seedMissions are topic anchors only (place/title); invent fresh scene text in STE — never copy prior dense style. " +
+    SCENE_PROSE +
+    " seedMissions are topic anchors only (place/title); invent fresh scene text with story craft — never copy prior dense style. " +
     " Crisis meter names (pressure object keys) appear on the player HUD: plain English, 1–3 words " +
     "(Dirty air, Sick days, Truck exhaust) — never camelCase or opaque jargon. " +
     "Asteroid = civilization-class NEO; nuclear = strategic misjudgment risk.";
@@ -662,11 +638,11 @@ async function aiPackForTheme(client, g) {
         { role: "user", content: "[Generate Quests]" },
         {
           role: "user",
-          content: steRepairInstruction(score.reasons),
+          content: sceneRepairInstruction(score.reasons),
         },
       ],
     };
-    text = await callScenarioModel(client, repairPayload, steRepairInstruction(score.reasons));
+    text = await callScenarioModel(client, repairPayload, sceneRepairInstruction(score.reasons));
     list = parseScenarioList(text);
     if (list.length >= 2) {
       packs = list.slice(0, SCENARIO_COUNT).map((raw) => normalizeScenario(raw, g.id));
@@ -743,8 +719,7 @@ function localSuggestedWhy(pack) {
     const who =
       String(pack.stakeholder || "the people here").split(",")[0].trim() ||
       "the people here";
-    const person = who.replace(/^the people here$/i, "the person here");
-    raw[id] = `${name} can help ${person} with ${hottest} in this place.`;
+    raw[id] = `${name} could help ${who} ease ${hottest} this year.`;
   }
   return sanitizeSuggestedWhy(raw, new Set(suggested));
 }
@@ -850,8 +825,7 @@ function writeSeedsFile(packsByTheme, meta) {
  * Source: ${meta.source}
  * Themes: ${keys.length}
  * Logic: harm + local driver in every scene (Sustainable / Scale depth).
- * Prose: design-challenge story craft, unless a theme was rewritten with --rewrite-ste.
- * STE pass: description sentences ≤25 words; Your job is one imperative ≤20 words.
+ * Prose: design-challenge story craft (hook → mechanism → open challenge); easy first read, not shorter-for-its-own-sake.
  * Crisis meters: crisisMeters: { local, global, support } — HUD labels per perspective.
  *   Optional description on a role: { label, description } (place-specific strain).
  *   (buildLocalScenarioVariants expands to structured mission.pressure with levels.)
@@ -871,9 +845,9 @@ ${body},
       places: ["Local Ward", "Town Center", "District Hub"],
       title: "Crisis lands in {place}",
       scene:
-        "A person in {place} feels this problem. A local driver produces the harm.",
+        "People in {place} feel this global problem in daily life. A local driver keeps it going — invent for this place and year, not a slogan.",
       briefMd:
-        "## The place\\n\\nA person in {place} feels this problem.\\n\\n## The bigger problem\\n\\nA local driver produces the harm.\\n\\n## Your job\\n\\nMake sure the person in {place} gets through this year without this harm.",
+        "## The place\\n\\nPeople in {place} feel this global problem in daily life.\\n\\n## The bigger problem\\n\\nA local driver keeps producing the same harm.\\n\\n## Your job\\n\\nInvent a way the people here can get through this year without the same harm landing again.",
       stakeholder: "Local working group",
       crisisMeters: { local: "Pressure", global: "Capacity", support: "Trust" },
       suggested: ["ai", "iot", "networks", "solar", "battery"],
@@ -1274,202 +1248,6 @@ async function fillMissingMeterDescriptions(client, themes) {
   console.log("Next: bump STORAGE_SCENARIOS in js/game.js if players still see old packs (currently v12).");
 }
 
-/**
- * @param {object} pack
- * @param {object} item
- */
-function applySteItem(pack, item) {
-  const scene = String(item?.scene || pack.scene || "").slice(0, SCENE_CHAR_CAP);
-  const summary = clipSummary(item?.summary || pack.summary || "");
-  const briefMd = String(item?.briefMd || "").trim().slice(0, 8000);
-  const descriptions =
-    item?.descriptions && typeof item.descriptions === "object" ? item.descriptions : {};
-  /** @type {Record<string, unknown>} */
-  const crisisMeters = { ...(pack.crisisMeters || {}) };
-  /** @type {Record<string, string>} */
-  const crisisMeterDescs = { ...(pack.crisisMeterDescs || {}) };
-  for (const role of CRISIS_ROLES) {
-    const d = descriptions[role];
-    if (typeof d !== "string" || !d.trim()) continue;
-    const text = d.trim().slice(0, 400);
-    crisisMeterDescs[role] = text;
-    const cur = crisisMeters[role];
-    if (cur && typeof cur === "object") {
-      crisisMeters[role] = { ...cur, description: text };
-    } else if (typeof cur === "string" && cur.trim()) {
-      crisisMeters[role] = { label: cur, description: text };
-    }
-  }
-  const suggestedWhy =
-    sanitizeSuggestedWhy(item?.suggestedWhy, new Set(pack.suggested || [])) ||
-    pack.suggestedWhy ||
-    localSuggestedWhy({ ...pack, crisisMeters, crisisMeterDescs });
-  return {
-    ...pack,
-    scene,
-    ...(summary ? { summary } : {}),
-    ...(briefMd ? { briefMd } : {}),
-    crisisMeters,
-    ...(Object.keys(crisisMeterDescs).length ? { crisisMeterDescs } : {}),
-    ...(suggestedWhy ? { suggestedWhy } : {}),
-  };
-}
-
-/**
- * @param {object} pack
- * @param {number} index
- * @returns {string[]}
- */
-function steIssuesForPack(pack, index) {
-  /** @type {string[]} */
-  const issues = [];
-  const tag = (field, list) => {
-    for (const reason of list) issues.push(`[${index}]${field}:${reason}`);
-  };
-  tag("scene", packSteIssues(pack.scene, "description"));
-  if (pack.summary) tag("summary", packSteIssues(pack.summary, "description"));
-  const sections = splitMarkdownSections(pack.briefMd || "");
-  for (const section of sections) {
-    const kind = section.role === "job" ? "procedure" : "description";
-    tag(`brief:${section.role || "other"}`, packSteIssues(section.body, kind));
-  }
-  if (!String(pack.briefMd || "").trim()) tag("brief", ["empty"]);
-  const cm = pack.crisisMeters || {};
-  const descs = pack.crisisMeterDescs || {};
-  for (const role of CRISIS_ROLES) {
-    const { description } = meterLabelDesc(cm[role], descs[role]);
-    if (!description) continue;
-    tag(`meter:${role}`, packSteIssues(description, "description"));
-  }
-  const why = pack.suggestedWhy || {};
-  for (const id of pack.suggested || []) {
-    const line = why[id];
-    if (typeof line !== "string" || !line.trim()) continue;
-    tag(`why:${id}`, packSteIssues(line, "description"));
-  }
-  return issues;
-}
-
-const STE_REWRITE_SYSTEM = `You rewrite Future Forge theme-pack quests into ASD-STE100 Issue 9 style.
-Return a single JSON object only (no markdown fences).
-Keep the same person, place, facts, and cause. Do not add a plot. Do not solve the quest.
-${PACK_STE_RULES}`;
-
-/**
- * @param {import("openai").default} client
- * @param {object} g
- * @param {object[]} packs
- * @param {string[]} [issues]
- */
-async function aiRewriteSte(client, g, packs, issues = []) {
-  const extraUser =
-    "Rewrite each quest into ASD-STE100 style. Keep the same person, place, facts, cause, meter labels, and suggested tech ids. Do not add a plot. Do not solve the quest. " +
-    `Return JSON only: { "quests": [ { "scene": "…", "summary": "…", "briefMd": "…", "descriptions": { "local": "…", "global": "…", "support": "…" }, "suggestedWhy": { "techId": "…" } } ] } with exactly ${packs.length} items, same order. ` +
-    "briefMd headings, in order, and nothing else: ## The place (2-4 paragraphs), ## The bigger problem (1-2 paragraphs), ## Your job (one imperative sentence, outcome only, no tech name). " +
-    "descriptions: place-specific strain for each role that already has a label. Omit a role with no label. " +
-    "suggestedWhy: one description sentence per suggested id, at most 120 characters. Use can. Do not name a product. " +
-    (issues.length ? steRepairInstruction(issues) : "");
-  const payload = {
-    mode: "rewrite-ste",
-    globalTheme: { id: g.id, title: g.title, blurb: g.blurb },
-    quests: packs.map((p, i) => ({
-      index: i,
-      title: p.title,
-      places: p.places,
-      stakeholder: p.stakeholder,
-      scene: p.scene,
-      summary: p.summary || "",
-      suggested: p.suggested,
-      meterLabels: Object.fromEntries(
-        CRISIS_ROLES.map((role) => [role, meterLabelDesc(p.crisisMeters?.[role], p.crisisMeterDescs?.[role]).label]).filter(([, label]) => label)
-      ),
-    })),
-  };
-  const text = await callScenarioModel(client, payload, extraUser, {
-    system: STE_REWRITE_SYSTEM,
-    reasoning: "low",
-  });
-  const parsed = extractJson(text);
-  const items = Array.isArray(parsed?.quests)
-    ? parsed.quests
-    : Array.isArray(parsed?.items)
-      ? parsed.items
-      : [];
-  if (items.length < packs.length) {
-    throw new Error(`AI returned ${items.length} quests, expected ${packs.length}`);
-  }
-  return packs.map((pack, i) => applySteItem(pack, items[i] || {}));
-}
-
-async function rewritePackSte(client, themes) {
-  if (!client) {
-    throw new Error("--rewrite-ste requires SuperGrok session or FF_XAI_API_KEY");
-  }
-  console.log(
-    `Rewrite-ste: keep facts; rewrite scene, summary, brief, meters, suggestedWhy (${themes.length} theme(s))`
-  );
-  const packsByTheme = await loadExistingPacks();
-  let filled = 0;
-  let kept = 0;
-  const backupOnce = { needed: true };
-
-  for (let i = 0; i < themes.length; i++) {
-    const g = themes[i];
-    const packs = packsByTheme[g.id];
-    if (!Array.isArray(packs) || !packs.length) {
-      kept += 1;
-      console.log(`[${i + 1}/${themes.length}] ${g.id}… skip (no packs)`);
-      continue;
-    }
-    process.stdout.write(`[${i + 1}/${themes.length}] ${g.id}… `);
-    try {
-      let next = await aiRewriteSte(client, g, packs);
-      let issues = next.flatMap((pack, pi) => steIssuesForPack(pack, pi));
-      if (issues.length) {
-        process.stdout.write(`ste-retry (${issues.length})… `);
-        next = await aiRewriteSte(client, g, next, issues);
-        issues = next.flatMap((pack, pi) => steIssuesForPack(pack, pi));
-        if (issues.length) {
-          process.stdout.write(`ste-warn (${issues.slice(0, 4).join(";")})… `);
-        } else {
-          process.stdout.write("ste-ok… ");
-        }
-      } else {
-        process.stdout.write("ste-ok… ");
-      }
-      packsByTheme[g.id] = next;
-      filled += next.length;
-      console.log(`rewrote ${next.length}`);
-      persistSummaryRewrite(
-        packsByTheme,
-        {
-          generatedAt: new Date().toISOString(),
-          source: `rewrite-ste ${i + 1}/${themes.length} filled=${filled} kept=${kept}`,
-        },
-        { backupOnce }
-      );
-    } catch (err) {
-      kept += 1;
-      console.warn(`AI fail (${err?.message || err}); keep current`);
-    }
-  }
-
-  persistSummaryRewrite(
-    packsByTheme,
-    {
-      generatedAt: new Date().toISOString(),
-      source: `rewrite-ste themes=${themes.length} filled=${filled} kept=${kept}`,
-    },
-    { backupOnce }
-  );
-  if (dryRun) {
-    console.log("\n--dry-run: not writing file.");
-    return;
-  }
-  console.log(`Wrote ${path.relative(ROOT, OUT)}`);
-  console.log(`Wrote ${path.relative(ROOT, path.join(ROOT, "js/scenario-pack-summaries.js"))}`);
-}
-
 async function main() {
   if (themeFilter) {
     const known = new Set(GLOBALS.map((g) => g.id));
@@ -1523,11 +1301,6 @@ async function main() {
 
   if (rewriteBriefs) {
     await rewritePackBriefs(client, themes);
-    return;
-  }
-
-  if (rewriteSte) {
-    await rewritePackSte(client, themes);
     return;
   }
 
