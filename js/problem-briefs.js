@@ -352,6 +352,14 @@ export const PROBLEM_BRIEFS = {
     warnings:
       "Do not invent “another viral pandemic app” here. Prefer stewardship, rapid bacterial diagnostics, farm and pharmacy practice change, and access to the right drug—not unrestricted antibiotic vending. Preserve efficacy; do not invent systems that encourage more blind prescribing.",
   },
+  other: {
+    currentState:
+      "Some local problems do not sit inside a named theme. The harm is still real: a place, people who feel it now, and a driver that keeps producing it. This shelf is the catch-all for that gap, not a theme of its own.",
+    rootCauses:
+      "The named themes are a map, not a closed set. A problem lands here when none of those themes is an honest fit — not because the list is unfinished homework.",
+    warnings:
+      "Use Other only when no named theme fits. Do not use it to dodge a charged theme that does fit, such as genocide, slavery, or FGM. Invent for the place in front of you; do not invent a slogan that could have lived under a real theme.",
+  },
 };
 
 /**

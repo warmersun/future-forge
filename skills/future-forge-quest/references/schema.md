@@ -39,7 +39,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 |-------|--------|
 | `schema` | `"future-forge.quest-tile/v1"` |
 | `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper; not playable). A multi-lesson path ships as one `.ffquest`: the wrapper plus the lesson quests it lists. The kind string `quest-pack` is invalid |
-| `globalId` | Valid theme id from game `GLOBALS` / theme list |
+| `globalId` | Valid theme id from game `GLOBALS` / theme list. Use `other` only when the place fits none of the named themes |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | **Spotlight-first array, 1–5 valid unique tech ids**: `[spotlight.techId, …supporting]`. This is the **For this place** shelf. Supporting ids are convergence partners (one aimed at the global meter for act two; the economy lab plans with them). Errors: `suggested_spotlight_not_first`, `suggested_too_many` (>5), `suggested_bad_id:<id>`. Duplicates fold. Supporting techs stay offstage in player prose like the spotlight |
 | `mission.suggestedWhy` | `{ [techId]: string }` — **one entry per suggested id**, one everyday-words sentence (≤120 chars): what the family could do *here* and which crisis meter label it eases. Under each shelf card and in the crisis-hex "What could help here?" list — a reason ranks first for a hex only if it **contains that meter's label as a literal substring** (`js/tech-why.js`). Family name allowed; no product names. Unknown ids / non-strings dropped; a non-object is rejected (`suggestedWhy_not_object`). Lint: `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |
@@ -352,7 +352,7 @@ Not playable. Groups lesson quests in the catalog. First panel is the path **sum
 |-------|--------|
 | `kind` | `"module"` |
 | `id`, `title`, `summary` | Path title + instance or outcome (2–3 short sentences, ≤420 chars; no product riddle) |
-| `globalId` | Valid theme id |
+| `globalId` | Valid theme id, including `other` when no named theme fits |
 | `module` | Same title string as the lesson files (defaults to `title`) |
 | `lessons` | Array of lesson quest `id`s, display order, ≥1 (slugified like quest `id`s; join key for the catalog) |
 | `totalLessons` | Optional; defaults to `lessons.length` |

@@ -78,7 +78,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 
 ### 1. Intake
 
-emTech (name → tech id), theme (`globalId`), audience, year (~2026). Learning module? Multi-lesson set? Sponsor? If multi-lesson: module title, `lesson` / `totalLessons`.
+emTech (name → tech id), theme (`globalId`), audience, year (~2026). Learning module? Multi-lesson set? Sponsor? If multi-lesson: module title, `lesson` / `totalLessons`. If the place fits none of the named themes, set `globalId` to `other`.
 
 ### 2. Research → grounding
 

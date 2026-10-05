@@ -1259,7 +1259,10 @@ async function main() {
     }
   }
 
-  const themes = GLOBALS.filter((g) => !themeFilter || themeFilter.includes(g.id));
+  // `other` is a valid theme with no curated pack. Never invent four quests for it.
+  const themes = GLOBALS.filter(
+    (g) => g.id !== "other" && (!themeFilter || themeFilter.includes(g.id))
+  );
   if (themeFilter) {
     console.log(
       `Generating quest packs for ${themes.length} theme(s): ${themes.map((g) => g.id).join(", ")}`
@@ -1314,6 +1317,7 @@ async function main() {
   // Ensure every GLOBAL has something if full rebuild
   if (!themeFilter) {
     for (const g of GLOBALS) {
+      if (g.id === "other") continue;
       if (!packsByTheme[g.id]) packsByTheme[g.id] = localPackForTheme(g);
     }
   }
@@ -1352,6 +1356,7 @@ async function main() {
   // Full rebuild: include all GLOBALS even if somehow skipped
   if (!themeFilter) {
     for (const g of GLOBALS) {
+      if (g.id === "other") continue;
       if (!packsByTheme[g.id]?.length) {
         packsByTheme[g.id] = localPackForTheme(g);
       }

@@ -56,7 +56,7 @@ The timing judge treats a **due** row as demonstrated, and a **not_yet** row the
 
 ## Theme ids (`globalIds`)
 
-`rogue-si`, `genocide`, `poverty`, `chem-bio`, `asteroid`, `weather`, `mideast`, `nuclear`, `slavery`, `women`, `education`, `automation`, `refugees`, `ag`, `food`, `eco`, `infectious`, `climate`, `cancer`, `mental`, `alzheimer`, `ageing`, `water`, `air`, `energy-access`, `homeless`, `cities`, `child`, `maternal`, `coord`, `radicalization`, `fgm`, `short-termism`, `misinfo`, `totalitarianism`, `women-stem`, `memory`, `rural-roads`, `smoking`, `sanitation`, `waste`, `reproductive`, `amr`
+`rogue-si`, `genocide`, `poverty`, `chem-bio`, `asteroid`, `weather`, `mideast`, `nuclear`, `slavery`, `women`, `education`, `automation`, `refugees`, `ag`, `food`, `eco`, `infectious`, `climate`, `cancer`, `mental`, `alzheimer`, `ageing`, `water`, `air`, `energy-access`, `homeless`, `cities`, `child`, `maternal`, `coord`, `radicalization`, `fgm`, `short-termism`, `misinfo`, `totalitarianism`, `women-stem`, `memory`, `rural-roads`, `smoking`, `sanitation`, `waste`, `reproductive`, `amr`, `other`
 
 Source of truth: `GLOBALS` in `js/data.js`.
 

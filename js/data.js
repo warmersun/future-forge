@@ -81,6 +81,7 @@ export const THEME_SHELVES = [
   { id: "learning", title: "Learning & work" },
   { id: "rights", title: "Safety, rights & society" },
   { id: "longterm", title: "Long-term risks" },
+  { id: "other", title: "Other" },
 ];
 
 /** Pinned first row on the theme screen (ids into GLOBALS). */
@@ -141,6 +142,7 @@ export const GLOBALS = [
   { id: "waste", title: "Waste & Recycling", kind: "now", shelf: "climate", blurb: "Waste outruns recycling; circular systems lag." },
   { id: "reproductive", title: "Reproductive Health", kind: "now", shelf: "health", blurb: "Safe sex life and reproductive freedom for all people." },
   { id: "amr", title: "Antimicrobial Resistance", kind: "now", shelf: "health", blurb: "Superbugs and antibiotic failure — bacterial resistance." },
+  { id: "other", title: "Other", kind: "now", shelf: "other", blurb: "A problem that does not fit a named theme." },
 ];
 
 /**
@@ -1148,6 +1150,9 @@ export const VISION_THEME_IDS = [
 export function localScenariosForGlobal(global, { count = 4, salt = 0 } = {}) {
   const g = typeof global === "string" ? globalById(global) : global;
   if (!g) return [];
+  // Catch-all theme for authored quests. No curated four-quest pack, and no
+  // fallthrough to the generic _default angles.
+  if (g.id === "other") return [];
   // Prefer seed angle packs (quality default for every theme). Flagship MISSIONS
   // still win when they share a place/title — otherwise packs fill all four slots.
   const seeds = missionsForGlobal(g.id).map((m) => ({ ...m, source: "curated" }));
