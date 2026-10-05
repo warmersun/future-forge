@@ -308,7 +308,7 @@ Selection chip: **Sponsored · {name}**.
 
 | Field | Notes |
 |-------|--------|
-| `mission.startYear`, `collapseYear`, `yearsPerTurn` | Calendar (HUD fail year, Wait size, economy clock) |
+| `mission.startYear`, `collapseYear`, `yearsPerTurn` | Calendar (HUD fail year, Wait size, economy clock). `startYear` may be any year the place needs; 2026 in examples is the usual present |
 | `mission.stakeholder` | Named role; shown on the invent banner and pre-fills the how-it-works scaffold; sent to idea sparks |
 | `research` | Citation metadata for humans: `topic`, `bullets`, `sources` (`https` objects `{ title, url, accessed }`). **Nothing in the game reads it**, including `showToPlayer`. Omit `sources` rather than emit `[]` (lint `research_sources_empty`, `research_sources_missing`, `research_source_not_https`, `research_source_placeholder`) |
 | `placement.mode` | Legacy, inert (`replace-daily` \| `alongside` \| `library-only`); imports always land in the Library |

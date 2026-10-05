@@ -13,7 +13,7 @@
 
 ## Base skeleton (spotlight quest)
 
-Recommended: always include **`grounding`** (fast-eval reads its first 3000 chars — keep it tight, `## Honest limits` inside the window). Include only the `pressure` roles you need (1–3). `research` is citation metadata for humans (the game never reads it): real `https` sources or omit the `sources` key — never `[]`.
+Recommended: always include **`grounding`** (fast-eval reads its first 3000 chars — keep it tight, `## Honest limits` inside the window). Include only the `pressure` roles you need (1–3). `research` is citation metadata for humans (the game never reads it): real `https` sources or omit the `sources` key — never `[]`. `startYear: 2026` and `collapseYear: 2032` below are an example calendar. Set the year the place needs.
 
 ```json
 {
