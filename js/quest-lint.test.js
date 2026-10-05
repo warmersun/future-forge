@@ -1,12 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { QUEST_TILE_SCHEMA, validateQuestTile, validateQuestDocument } from "./quest-tile.js";
 import { lintQuestTile, formatLintWarnings } from "./quest-lint.js";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TECH_IDS = ["gene-sequencing", "solar", "ai", "iot", "networks"];
 const GLOBAL_IDS = ["infectious", "climate", "water"];
 
@@ -156,8 +152,12 @@ describe("quest-lint", () => {
 
   it("flags word count out of band and too many cards", () => {
     const t = goodTile();
-    t.mission.briefMd = "## The place\n\nShort.\n\nStill short.\n\n## The bigger problem\n\nTiny.\n\n## Your job\n\nInvent.\n";
-    assert.ok(has(lint(t), "brief_words_out_of_band"));
+    t.mission.briefMd = "## The place\n\nShort.\n\n## The bigger problem\n\nTiny.\n\n## Your job\n\nInvent.\n";
+    assert.ok(!has(lint(t), "brief_words_out_of_band"));
+    assert.ok(!has(lint(t), "place_paragraphs_out_of_band"));
+    const padded = goodTile();
+    padded.mission.briefMd = `${BRIEF}\n\n${"word ".repeat(700)}`;
+    assert.ok(has(lint(padded), "brief_words_out_of_band"));
     const t2 = goodTile();
     const many = Array.from({ length: 9 }, (_, i) => `Paragraph ${i} of the place, one idea each, short.`).join("\n\n");
     t2.mission.briefMd = `## The place\n\n${many}\n\n## The bigger problem\n\n${STRAIN}\n\n## Your job\n\n${JOB}\n`;
@@ -238,6 +238,14 @@ describe("quest-lint", () => {
     const t = goodTile();
     t.title = "What went wrong at this place";
     assert.ok(lint(t).includes("template_placeholder:title"));
+    const t2 = goodTile();
+    t2.spotlight.encourageCopy = "TODO (fill after research)";
+    t2.mission.pressure.local.label = "TODO local (fill after research)";
+    t2.mission.pressure.local.description = "TODO (fill after research)";
+    const codes = lint(t2);
+    assert.ok(codes.includes("template_placeholder:encourageCopy"), codes.join("\n"));
+    assert.ok(codes.includes("template_placeholder:pressure.local.label"), codes.join("\n"));
+    assert.ok(codes.includes("template_placeholder:pressure.local.description"), codes.join("\n"));
   });
 
   it("flags lesson without totalLessons and learning without tutor context", () => {
@@ -273,15 +281,5 @@ describe("quest-lint", () => {
   it("formatLintWarnings prints WARN lines", () => {
     const lines = formatLintWarnings([{ code: "x", hint: "y" }]);
     assert.deepEqual(lines, ["WARN x: y"]);
-  });
-
-  it("the skill's gene-seq fixture lints clean", () => {
-    const raw = JSON.parse(
-      readFileSync(join(ROOT, "skills/future-forge-quest/examples/spotlight-gene-seq.json"), "utf8")
-    );
-    const v = validateQuestDocument(raw);
-    assert.equal(v.ok, true, JSON.stringify(v.details));
-    const codes = lintQuestTile(raw, v).warnings.map((w) => w.code);
-    assert.deepEqual(codes, []);
   });
 });

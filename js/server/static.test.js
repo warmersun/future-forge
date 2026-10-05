@@ -44,7 +44,7 @@ describe("static allowlist", () => {
     assert.equal(isPublicRel("package-lock.json"), false);
     assert.equal(isPublicRel("data/usage/summary.json"), false);
     assert.equal(isPublicRel("node_modules/ws/package.json"), false);
-    assert.equal(isPublicRel("scripts/author-quest.mjs"), false);
+    assert.equal(isPublicRel("scripts/validate-quest.mjs"), false);
     assert.equal(isPublicRel("js/rooms/room-manager.mjs"), false);
     assert.equal(isPublicRel("js/usage-metrics.mjs"), false);
     assert.equal(isPublicRel("js/server/static.mjs"), false);

@@ -15,7 +15,7 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
   5. Last card → **Start inventing**.
 - After dismiss: compact recap of The place + The bigger problem. Full `briefMd` (minus Your job) sits behind **Read the whole story**; opening that disclosure hides the recap clip.
 
-Card arithmetic: total paragraphs + list blocks across all sections. Six headings with three paragraphs each is 18 chunks squeezed into 8 lumpy cards. Write ≤8 paragraphs total, or author `briefBeats`. Lint: `brief_cards_over_cap:<n>`, `paragraph_too_long:<section>:<n>`, `place_paragraphs_out_of_band:<n>`.
+Card arithmetic: total paragraphs + list blocks across all sections. Each extra paragraph is another card, merged down to 8. Prefer fewer. Lint: `brief_cards_over_cap:<n>`, `paragraph_too_long:<section>:<n>`, `place_paragraphs_out_of_band:<n>` (more than 4 place paragraphs).
 
 Do **not** author **What just became possible** or **Constraints** on new tiles. Those were capability / constraint lectures. Honest limits belong in `grounding` / tutor. Lived constraints belong inside the story.
 
@@ -62,9 +62,9 @@ Use when captions should be **tighter than the essay**, or you want per-beat sti
     "id": "place-1",
     "role": "place",
     "title": "The place",
-    "bodyMd": "Nurse Amina seals another swab under the corrugated awning. The fever sheet on the fridge does not match.",
-    "imageUrl": "assets/quests/spotlight-gene-seq/place-1.jpg",
-    "imagePrompt": "Photoreal documentary still: a small border clinic under a corrugated awning, a nurse sealing a swab, labeled tubes in a cooler, heat haze, no readable text, no logos."
+    "bodyMd": "Who is here, where, and what is happening now. One short paragraph.",
+    "imageUrl": "assets/quests/<slug>/place-1.jpg",
+    "imagePrompt": "Photoreal documentary still of this place. No readable text, no logos."
   }
 ]
 ```

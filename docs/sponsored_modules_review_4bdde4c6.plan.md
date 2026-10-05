@@ -36,14 +36,13 @@ Fix: seed the group from the wrapper, resolve `lessons` by catalog id, then fall
 
 **Lesson ids in the wrapper are not slugified.** [`validateQuestModule`](js/quest-tile.js) trims/slices `lessons[]`; quest ids always go through `slugId` (lowercase, non-alnum → hyphen). `groupLearningModules` uses exact `entry.id` match. A wrapper listing `"Spotlight Crypto Saltpier Payout 2026"` will not attach `spotlight-crypto-saltpier-payout-2026`.
 
-**Example wrapper is internally inconsistent.** [`skills/future-forge-quest/examples/spotlight-sponsored-module.json`](skills/future-forge-quest/examples/spotlight-sponsored-module.json) has `totalLessons: 2` and one id in `lessons`. Validator does not require those to agree; UI will show a 2-segment bar and one playable lesson.
+**`totalLessons` need not match `lessons.length`.** The validator does not require them to agree. A wrapper can advertise more lessons than it lists, and the UI will show that many segments.
 
 ## Low
 
 - **`overviewMd` images vs cover stills:** `moduleSummaryHtml` renders overview with `renderMarkdownSafe(..., { allowImages: true })`, which only allows `https?` URLs. `coverImageUrl` allows `assets/…`. Local stills in overview markdown will not show.
 - **`tileAccess` ignores `kind: "module"`** ([`js/server/cloud-gate.mjs`](js/server/cloud-gate.mjs)). Validated modules set `access: "account"`, so this is latent unless a module tile is stored without `access`.
 - **`isModuleEntry` fallback** `!e.mission && Array.isArray(e.lessons)` can treat a broken quest record as a module.
-- **`scripts/author-quest.mjs`** still calls `validateQuestTile`, so it cannot emit/validate wrappers (`validate:quest` CLI is updated).
 - Module cards have no Copy-link; deep link to a module id does open the panel via `playCatalogEntry`.
 
 ## Missing tests
@@ -69,4 +68,3 @@ Happy path is covered (module validate, folder scan, hub counts = 2 for wrapper+
 
 1. Group-then-partition in `quest-catalog.js`, join on wrapper lesson ids, slug lesson ids in `validateQuestModule`
 2. Tests for the three mismatch cases above
-3. Align the skill example `totalLessons` / `lessons.length`

@@ -10,7 +10,7 @@ Source of truth: each course repo plus spotlight tiles in `~/dev/warmersun/futur
 
 ## How to use (Library / classroom side-load)
 
-1. Author a tile with the skill or CLI (`skills/future-forge-quest/`, `npm run author:quest -- --tech <id> --local-only`).
+1. Author a tile with the skill (`skills/future-forge-quest/`).
 2. Validate + craft lint: `npm run validate:quest -- path.json --strict` (shape errors fail; `WARN <code>` lines are craft rules — tech named in player text, legacy brief headings, word counts, pressure defaults, missing grounding, template placeholders; `--strict` fails on any).
 3. Check difficulty: `npm run economy:quest -- path.json` (guide: [`docs/quest-economy-lab.md`](../docs/quest-economy-lab.md)). Target verdict **challenging** (too easy now counts as a failing verdict too).
 4. Copy into this folder (or set `FF_QUESTS_DIR`).
@@ -49,9 +49,9 @@ The year dialog and the AI timing calendar come from one predictions bank, not f
 
 ## Sample library tiles
 
-- `spotlight-gene-seq.json` — Spotlight gene sequencing; identical to the skill's `examples/spotlight-gene-seq.json` (the gold prose example)
+- `spotlight-gene-seq.json` — Spotlight gene sequencing
 - `spotlight-ai-edge-north-stack-2026.json` — AI edge spotlight (not sponsored)
 - `spotlight-ai-hearthline-rsi-check-2026.json` — learning module, single lesson
 - `preventing-mirror-life-tideglass.json` — learning module, single lesson
 
-Sponsored learning **modules** (wrapper + lesson files) live in the warmersun catalog; see `skills/future-forge-quest/examples/spotlight-sponsored-module.json` for the wrapper shape.
+Sponsored learning **modules** (wrapper + lesson files) live in the warmersun catalog. A path wrapper is `kind: "module"`; the field list is Recipe F in `skills/future-forge-quest/references/output-contract.md`.

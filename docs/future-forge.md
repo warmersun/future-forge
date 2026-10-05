@@ -257,7 +257,7 @@ Set `isLearningModule: true`. On the hosted catalog, a learning module **default
 
 Progress on the device is **Learn · {module title} · Lesson X/Y**, from `lesson` and `totalLessons` (both required for the bar) and a shared `module` title. A multi-lesson path is a `kind: "module"` wrapper plus one full Quest file per lesson, same title and same `totalLessons`, lessons numbered in order. The catalog shows one module card. The engine does not lock lesson 2 behind lesson 1; the wrapper’s `lessons` list is the order. Completed lessons fill the segment bar from `localStorage`.
 
-Lesson pages ship inside a **`.ffquest`** zip with the tiles: `lessons/<folder>/*.html` and illustrations. The tutor may offer one of those pages after it has explained the idea. Chat is the conversation. The pages are the textbook. Format: [quest-package.md](quest-package.md). Authoring: [skills/future-forge-quest/references/learning-and-sponsor.md](../skills/future-forge-quest/references/learning-and-sponsor.md). Examples: `skills/future-forge-quest/examples/spotlight-sponsored-learning.json` and `spotlight-sponsored-module.json`.
+Lesson pages ship inside a **`.ffquest`** zip with the tiles: `lessons/<folder>/*.html` and illustrations. The tutor may offer one of those pages after it has explained the idea. Chat is the conversation. The pages are the textbook. Format: [quest-package.md](quest-package.md). Authoring: [skills/future-forge-quest/references/learning-and-sponsor.md](../skills/future-forge-quest/references/learning-and-sponsor.md).
 
 Unsponsored learning paths appear in the **Learning** catalog, downloaded from Warmer Sun (`https://warmersun.com/quests/catalog.json`), not from the local `quests/` folder. A local copy or an import shows under **Library**, grouped the same way.
 
@@ -367,7 +367,7 @@ In this checkout, quest, predictions, and collector cards are also linked from `
 
 | Skill | You author | It drives | Check |
 |-------|------------|-----------|-------|
-| [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` and `npm run economy:quest -- <file>` (verdict: **challenging**). Scaffold: `npm run author:quest -- --tech <id> --local-only` |
+| [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` and `npm run economy:quest -- <file>` (verdict: **challenging**) |
 | [future-forge-predictions](../skills/future-forge-predictions/) | One `future-forge.predictions/v1` bank of dated milestones, trends, and predictions, with attribution | Year dialog, outcome foresight cards, the AI world clock | `npm run validate:predictions -- <file>`, then `FF_PREDICTIONS_FILE=<file> npm start` |
 | [future-forge-trends](../skills/future-forge-trends/) | One measured capability series (`future-forge.capability-trend/v1`): compounding, anchor, milestones. No invented statistics | Look Ahead charts; optional embed on a Quest | `npm run validate:trend -- <file>` |
 | [future-forge-collector-cards](../skills/future-forge-collector-cards/) | One capability card plus a sibling page image | Public `/card/<id>` page; a free reusable invention tile once collected | `npm run validate:collector-card -- cards/<slug>.json` |
@@ -380,7 +380,6 @@ Trends are plottable facts: anchor and milestone values must be greater than zer
 
 Examples worth imitating:
 
-- Quest: `skills/future-forge-quest/examples/spotlight-plain.json` (start here) and `spotlight-gene-seq.json` (the prose exemplar; the same file is copied under `quests/`)
 - Predictions: `skills/future-forge-predictions/examples/musk-abundance.json`
 - Trends: `skills/future-forge-trends/examples/` (sequencing cost, solar LCOE, frontier training compute, and others)
 - Cards: `cards/examples/`

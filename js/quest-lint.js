@@ -23,8 +23,10 @@ import { plainTextFromMarkdown } from "./md-lite.js";
 export const BRIEF_AI_CLIP = 2800;
 /** What fast-eval sees of grounding (js/server/fast-eval.mjs GROUNDING_CAP). */
 export const GROUNDING_AI_CLIP = 3000;
-export const BRIEF_WORDS = { min: 250, max: 600 };
-export const PLACE_PARAGRAPHS = { min: 2, max: 4 };
+/** Ceiling only. A short brief is allowed; padding is not. */
+export const BRIEF_WORDS = { max: 600 };
+/** Extra place paragraphs become extra cards. One paragraph is enough. */
+export const PLACE_PARAGRAPHS = { max: 4 };
 export const PARAGRAPH_MAX_WORDS = 90;
 export const WALK_CARD_CAP = 8;
 export const BUDGET_HIGH = 7;
@@ -143,9 +145,21 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
   lintEncourage(encourage, warn);
   lintBrief(briefMd, warn);
   lintScene(scene, warn);
-  lintPlaceholders([["title", title], ["summary", summary], ["scene", scene], ["briefMd", briefMd]], warn);
-
   const pressure = missionIn.pressure && typeof missionIn.pressure === "object" ? missionIn.pressure : {};
+  /** @type {[string, string][]} */
+  const placeholderFields = [
+    ["title", title],
+    ["summary", summary],
+    ["scene", scene],
+    ["briefMd", briefMd],
+    ["encourageCopy", encourage],
+  ];
+  for (const [role, meter] of Object.entries(pressure)) {
+    if (!meter || typeof meter !== "object") continue;
+    placeholderFields.push([`pressure.${role}.label`, str(meter.label)]);
+    placeholderFields.push([`pressure.${role}.description`, str(meter.description)]);
+  }
+  lintPlaceholders(placeholderFields, warn);
   lintDoNotSay(playerFields, pressure, warn);
   lintPressure(pressure, warn);
   lintResources(pick("resources"), warn);
@@ -269,13 +283,11 @@ function lintBrief(briefMd, warn) {
     chunkTotal += chunks.length;
 
     const paragraphs = s.body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    if (role === "place") {
-      if (paragraphs.length < PLACE_PARAGRAPHS.min || paragraphs.length > PLACE_PARAGRAPHS.max) {
-        warn(
-          `place_paragraphs_out_of_band:${paragraphs.length}`,
-          `The place has ${paragraphs.length} paragraphs; write 2–4 short ones (hook, complication, mechanism, stakes), one per walkthrough card.`
-        );
-      }
+    if (role === "place" && paragraphs.length > PLACE_PARAGRAPHS.max) {
+      warn(
+        `place_paragraphs_out_of_band:${paragraphs.length}`,
+        `The place has ${paragraphs.length} paragraphs; each one is a card. Cut any the reader does not need (more than ${PLACE_PARAGRAPHS.max}).`
+      );
     }
     for (const p of paragraphs) {
       const n = wordCount(plainTextFromMarkdown(p));
@@ -312,10 +324,10 @@ function lintBrief(briefMd, warn) {
 
   const plain = plainTextFromMarkdown(briefMd);
   const words = wordCount(plain);
-  if (words < BRIEF_WORDS.min || words > BRIEF_WORDS.max) {
+  if (words > BRIEF_WORDS.max) {
     warn(
       `brief_words_out_of_band:${words}`,
-      `briefMd is ${words} words; aim for ${BRIEF_WORDS.min}–${BRIEF_WORDS.max} (short paragraphs, no capability lecture).`
+      `briefMd is ${words} words; cut it under ${BRIEF_WORDS.max}. Words the reader does not need should go.`
     );
   }
   if (chunkTotal > WALK_CARD_CAP) {
@@ -360,7 +372,7 @@ function lintPlaceholders(fields, warn) {
     if (PLACEHOLDERS.some((re) => re.test(text)) || ((field === "title" || field === "summary") && /\(fictive\)/i.test(text))) {
       warn(
         `template_placeholder:${field}`,
-        `${field} still carries scaffold text from author-quest; replace it with the real place and people.`
+        `${field} still carries placeholder text; replace it with the real place and people.`
       );
     }
   }

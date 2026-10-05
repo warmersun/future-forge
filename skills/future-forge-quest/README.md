@@ -9,10 +9,9 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 ## Quick start
 
 ```bash
-npm run author:quest -- --tech gene-sequencing --local-only   # scaffold with current defaults
-# edit output/quests/<slug>/quest.json: research → grounding, story → player fields
-npm run validate:quest -- output/quests/<slug>/quest.json --strict   # OK: + lint: clean
-npm run economy:quest  -- output/quests/<slug>/quest.json            # quest verdict: challenging
+# write the tile from references/output-contract.md
+npm run validate:quest -- path/to/quest.json --strict   # OK: + lint: clean
+npm run economy:quest  -- path/to/quest.json            # quest verdict: challenging
 ```
 
 Then copy into the game's `quests/` folder (Library) or use **Import Quest…** on the title screen.
@@ -49,17 +48,6 @@ Follow **`SKILL.md`**. It opens with the table of what each field actually reach
 ## Not under `.grok/`
 
 Works with Grok, Claude Code, Cursor, Codex, and plain "read this folder" workflows. Optional: symlink into a harness skills directory — never required.
-
-## Examples
-
-Every example is `--strict` clean and rates **challenging** in the lab. Imitate them; they are kept in sync with the rules.
-
-| File | Demonstrates |
-|------|----------------|
-| `examples/spotlight-plain.json` | **Start here.** Plain spotlight: three meters with descriptions, `rules`, supporting techs, grounding, no resources |
-| `examples/spotlight-gene-seq.json` | The gold prose example (Crossing Clinic 7); `trends`, `briefBeats` with a shipped still. `quests/spotlight-gene-seq.json` is an identical copy |
-| `examples/spotlight-sponsored-learning.json` | Sponsor + learning module + tutor context that names the advance |
-| `examples/spotlight-sponsored-module.json` | `kind: "module"` wrapper for a multi-lesson sponsored path |
 
 ## Hand-off
 

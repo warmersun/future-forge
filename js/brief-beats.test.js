@@ -171,18 +171,14 @@ describe("deriveBriefBeats", () => {
     assert.match(strain.bodyMd, /Root cause/);
   });
 
-  it("walks skill example place-then-job order", () => {
-    const tile = loadQuest(
-      "skills/future-forge-quest/examples/spotlight-gene-seq.json"
+  it("walks place then job when the brief is ordered", () => {
+    const beats = deriveBriefBeats(
+      "## The place\n\nSomeone is already in trouble here.\n\nThe usual path left at dawn.\n\n## The bigger problem\n\nThe same delay hits every place on this road.\n\n## Your job\n\nInvent a way this place can know before the next harm lands."
     );
-    const beats = deriveBriefBeats(tile.mission.briefMd, {
-      summary: tile.summary,
-    });
     assert.equal(beats[0].role, "place");
     assert.equal(beats[beats.length - 1].role, "job");
     assert.ok(beats.length <= BRIEF_BEAT_CAPS.maxBeats);
-    const job = beats[beats.length - 1];
-    assert.match(job.bodyMd, /Invent|fever|queue/i);
+    assert.match(beats[beats.length - 1].bodyMd, /Invent/i);
   });
 
   it("caps a long place (tideglass) at 8 beats without dropping the job", () => {

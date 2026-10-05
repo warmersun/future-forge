@@ -159,13 +159,13 @@ export function compactRecapFromBeats(beats) {
   };
 }
 
-/** Prompt paste: three-heading player brief (instance → RCA → outcome). */
+/** Prompt paste: three-heading player brief. Short. Author chooses the telling. */
 export const BRIEF_MD_RECIPE = [
-  "QUEST BRIEF (mission.briefMd, Markdown, ~250–600 words):",
-  "Required headings in this order, nothing else:",
-  "## The place — 2–4 short paragraphs (blank line between). Spoken story: named person, concrete place, what went wrong now. Mid-length sentences a friend would say. One or two short punch-lines, not a telegram. Do not close with a 'Who designs X?' riddle.",
-  "## The bigger problem — one or two short paragraphs. This scene is a case of the global issue, plus the root cause (the system that keeps producing it). Everyday words. Not a meter dump, not a capability lecture.",
-  "## Your job — one short paragraph, outcome only. What must get better for these people this year. No product name, no 'invent with [tech]', no ban-list.",
+  "QUEST BRIEF (mission.briefMd, Markdown). Less is more. Cut anything the reader does not need. Do not pad to a word count.",
+  "Headings in this order, nothing else:",
+  "## The place — one instance of the global problem. One paragraph is enough. A blank line starts another card, so add one only if the instance is unclear without it.",
+  "## The bigger problem — what the global problem is, in everyday words.",
+  "## Your job — the outcome, short. No product name, no 'invent with [tech]', no ban-list.",
 ].join(" ");
 
 const LEGACY_BRIEF_ROLES = new Set(["possible", "constraints"]);

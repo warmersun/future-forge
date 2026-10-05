@@ -163,8 +163,6 @@ Multiplayer / hotseat do **not** switch to tutor mode.
 
 **A multi-lesson sponsored path** is the wrapper (`kind: "module"`) plus N lesson files. The hub shows it under **Sponsored**.
 
-Portable examples: `examples/spotlight-sponsored-learning.json` (one lesson), `examples/spotlight-sponsored-module.json` (wrapper). Monorepo: `quests/base-onchain-dollars.json` + `quests/base-onchain-dollars-lesson-*.json`.
-
 ---
 
 ## UI chips (after import / server folder)

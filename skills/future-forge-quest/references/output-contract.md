@@ -1,8 +1,8 @@
 # Output contract
 
 1. Write UTF-8 JSON (pretty-printed OK).
-2. Instance first: `summary` (2–3 short sentences, named person + place + what went wrong now) and `title` (human situation / place). `spotlight.encourageCopy` is the **outcome** in everyday words. Do not name the spotlight tech. Then prose: `references/scene-prose.md` for `mission.scene` and brief **The place**.
-3. Brief headings: `references/brief-template.md` — **The place** → **The bigger problem** → **Your job**; aim ~250–600 words. **The place** = 2–4 short paragraphs (walkthrough cards). Optional `briefBeats`: `brief-beats.md`.
+2. Instance first: `summary` (short) and `title` (the situation or the place). `spotlight.encourageCopy` is the outcome. Do not name the spotlight tech. Prose: `references/scene-prose.md`.
+3. Brief headings: `references/brief-template.md` — **The place** → **The bigger problem** → **Your job**. Short. One place paragraph is enough. Optional `briefBeats`: `brief-beats.md`.
 4. Schema: `references/schema.md`. Grounding chain: `references/grounding-template.md`. Learning/sponsor: `references/learning-and-sponsor.md`. Difficulty: `references/economy.md`.
 5. **Omit** unused optional keys — do not emit `""`, `false`, or empty objects for optionals.
 6. Run `npm run validate:quest -- <file> --strict` until `OK:` with **no `WARN` lines** (craft lint; codes in `schema.md`). If a warning must stay, name it and why in the hand-off.
@@ -88,7 +88,7 @@ Recommended: always include **`grounding`** (fast-eval reads its first 3000 char
 }
 ```
 
-`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary: 2–3 short sentences, names allowed, shown whole on the banner. Lab terms and product names stay in `grounding` / tutor.
+`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary is short and shown whole on the banner. Lab terms and product names stay in `grounding` / tutor.
 
 `suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids. Supporting techs stay offstage in prose like the spotlight.
 
@@ -203,13 +203,11 @@ Combine base + B + C (+ A if needed). Example:
 "grounding": "## Technology\n…"
 ```
 
-Portable example file: `examples/spotlight-sponsored-learning.json`.
-
 ---
 
 ## Recipe F — module wrapper (multi-lesson path)
 
-Not a playable Quest. Catalog card + **summary panel**. `kind` must be `"module"` (never `"quest-pack"`).
+A multi-lesson path ships as one `.ffquest`: this wrapper plus the lesson quests in `lessons`. Not a playable Quest. Catalog card + **summary panel**. `kind` must be `"module"`. The kind string `"quest-pack"` is invalid; it is not a second packaging format.
 
 ```json
 {
@@ -230,7 +228,7 @@ Not a playable Quest. Catalog card + **summary panel**. `kind` must be `"module"
 }
 ```
 
-No `mission`, pressure, or `briefMd`. Validate with `npm run validate:quest`. Portable example: `examples/spotlight-sponsored-module.json`.
+No `mission`, pressure, or `briefMd`. Validate with `npm run validate:quest`.
 
 ---
 
@@ -244,21 +242,21 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
     "id": "place-1",
     "role": "place",
     "title": "The place",
-    "bodyMd": "Nurse Amina seals another swab under the corrugated awning. The fever sheet on the fridge does not match.",
-    "imageUrl": "assets/quests/spotlight-gene-seq/place-1.jpg",
-    "imagePrompt": "Photoreal documentary still: a small border clinic under a corrugated awning, a nurse sealing a swab, labeled tubes in a cooler, heat haze, no readable text, no logos."
+    "bodyMd": "Who is here, where, and what is happening now. One short paragraph.",
+    "imageUrl": "assets/quests/<slug>/place-1.jpg",
+    "imagePrompt": "Photoreal documentary still of this place. No readable text, no logos."
   },
   {
     "id": "strain-1",
     "role": "strain",
     "title": "The bigger problem",
-    "bodyMd": "Outbreaks stay invisible because truth lives in a capital lab. The calendar is a truck, not a shift. Rumors fill the gap first."
+    "bodyMd": "What this scene is a case of, and the system that keeps producing it. Everyday words."
   },
   {
     "id": "job-1",
     "role": "job",
     "title": "Your job",
-    "bodyMd": "Invent a way this clinic can know what the fever is before the next queue arrives."
+    "bodyMd": "The outcome that must get better. No product, no technology name."
   }
 ]
 ```

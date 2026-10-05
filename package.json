@@ -26,7 +26,6 @@
     "verify:quest-package": "python3 scripts/quest-package.py verify",
     "economy:quest": "node scripts/evaluate-quest-economy.mjs",
     "validate:trend": "node scripts/validate-trend.mjs",
-    "author:quest": "node scripts/author-quest.mjs",
     "vendor:chartjs": "node scripts/vendor-chartjs.mjs",
     "check:clerk-signin": "node scripts/check-clerk-signin.mjs",
     "check:on-the-curve-vo": "node scripts/check-on-the-curve-vo.mjs",

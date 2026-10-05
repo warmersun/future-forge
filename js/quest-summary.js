@@ -9,20 +9,10 @@ export const SUMMARY_CAP = 420;
 export const SUMMARY_LOADING_COPY = "Shaping the job…";
 
 /** Locked voice + recipe for every writer (skill, seed fill, generate-scenarios, fill-quest-summary). */
-export const QUEST_SUMMARY_RECIPE = `QUEST SUMMARY (player-facing lede, 2–3 short sentences, max ${SUMMARY_CAP} chars):
-A brief little story: one instance of the bigger issue. Named person, concrete fictive place, what went wrong NOW.
-Lead with the hook: the invent banner and every catalog card show the whole summary (up to ${SUMMARY_CAP} chars), so the first sentence is what a browsing player reads first.
-
-Recipe, in order:
-1) Named person does something specific, now, in a named place.
-2) The world pushes back — one concrete fact about what is going wrong here.
-3) Optional third sentence: the human-scale stake if nothing changes.
-Hard no: theme-word ledes ("Infectious diseases. This is about how far…"), spotlight tech names, sponsor products, "invent with [tech]", "do not invent X", capability lectures, solution theater.
-
-Gold examples:
-- Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.
-- After the last ferry, Ms. Okonkwo locks the pier lab at Harborside. The yard manuals on the bench cannot leave the room. Students still need days of practice.
-- Nia tapes a donor plaque beside the new bench at Tideglass High. The visiting fellow wrote: do not finish a living cell. No one has posted what that means on the door.`;
+export const QUEST_SUMMARY_RECIPE = `QUEST SUMMARY (player-facing lede, max ${SUMMARY_CAP} chars):
+One instance of the global problem. As short as clarity allows. The invent banner and every catalog card show the whole summary, so the first sentence is what a browsing player reads.
+Voice and whether anyone is named are free. Do not pad to three sentences.
+Hard no: theme-word ledes ("Infectious diseases. This is about how far…"), spotlight tech names, sponsor products, "invent with [tech]", "do not invent X", capability lectures, solution theater.`;
 
 export const FILL_QUEST_SUMMARY_SYSTEM = `You write ONE player-facing quest summary for Future Forge.
 ${QUEST_SUMMARY_RECIPE}

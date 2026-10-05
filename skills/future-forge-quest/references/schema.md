@@ -38,13 +38,13 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | Field | Notes |
 |-------|--------|
 | `schema` | `"future-forge.quest-tile/v1"` |
-| `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper; not playable). Packs (`quest-pack`) not supported |
+| `kind` | `"quest"` (playable) or `"module"` (learning-path wrapper; not playable). A multi-lesson path ships as one `.ffquest`: the wrapper plus the lesson quests it lists. The kind string `quest-pack` is invalid |
 | `globalId` | Valid theme id from game `GLOBALS` / theme list |
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | **Spotlight-first array, 1–5 valid unique tech ids**: `[spotlight.techId, …supporting]`. This is the **For this place** shelf. Supporting ids are convergence partners (one aimed at the global meter for act two; the economy lab plans with them). Errors: `suggested_spotlight_not_first`, `suggested_too_many` (>5), `suggested_bad_id:<id>`. Duplicates fold. Supporting techs stay offstage in player prose like the spotlight |
 | `mission.suggestedWhy` | `{ [techId]: string }` — **one entry per suggested id**, one everyday-words sentence (≤120 chars): what the family could do *here* and which crisis meter label it eases. Under each shelf card and in the crisis-hex "What could help here?" list — a reason ranks first for a hex only if it **contains that meter's label as a literal substring** (`js/tech-why.js`). Family name allowed; no product names. Unknown ids / non-strings dropped; a non-object is rejected (`suggestedWhy_not_object`). Lint: `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |
-| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** → **The bigger problem** → **Your job**; aim ~250–600 words. Short paragraphs — the UI steps them (see `brief-beats.md`) |
-| `title`, `summary`, `spotlight.encourageCopy` | Instance + outcome in everyday words (14-year-old test). `summary` is 2–3 short sentences (≤420 chars, shown **whole** on the banner and cards): named person, place, what went wrong now. `encourageCopy` is the outcome. Do **not** name the spotlight or a supporting tech or a sponsor product. See `scene-prose.md` |
+| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** → **The bigger problem** → **Your job**. As short as clarity allows. Lint warns above 600 words. The UI steps paragraphs (see `brief-beats.md`) |
+| `title`, `summary`, `spotlight.encourageCopy` | `summary` is the instance, as short as clarity allows (≤420 chars, shown **whole**). `title` is the situation or the place. `encourageCopy` is the outcome. Do **not** name the spotlight or a supporting tech or a sponsor product. See `scene-prose.md` |
 | `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; it is the co-inventor's opening line and the Imagine locale lock, so it must stand alone; craft in `scene-prose.md`; everyday words |
 | `mission.pressure` | **Structured** crisis meters (below) — flat maps are **rejected** |
 
@@ -343,7 +343,7 @@ Ship with zero warnings, or name each remaining warning and why in the hand-off.
 - Non-boolean `isLearningModule`  
 - Non-string or empty `module` (must be a non-empty title string)
 - Non-positive-integer `lesson` / `totalLessons`  
-- `kind: "quest-pack"` (use `kind: "module"` for a multi-lesson path)
+- `kind: "quest-pack"` (invalid kind; a multi-lesson path is `kind: "module"` inside one `.ffquest`, not a second packaging format)
 - `briefBeats` that is not a 3–8 array of valid beat objects (omit the key instead)
 
 ## Optional `kind: "module"` (path wrapper)

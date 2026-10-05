@@ -5,9 +5,9 @@ description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
   tile (JSON). A learning quest ships as one .ffquest file: the tile plus the
   lesson pages it teaches from. Portable multi-harness skill — not tied to a
-  single agent product. Player-facing prose is a brief fictive story (named
-  people, concrete place), then the bigger problem and its root cause, then an
-  outcome-only invent job. The tray hints the spotlight plus 2–4 supporting
+  single agent product.   Player-facing prose is short: one instance of the global problem, then
+  what that problem is, then an outcome. Voice and shape are the author's.
+  The tray hints the spotlight plus 2–4 supporting
   emTechs; capability truth lives in grounding and tutor mode. Ships with a
   validator, a craft lint, and a difficulty lab (too easy / too hard / challenging).
 ---
@@ -18,22 +18,21 @@ description: >
 
 You write a **portable Quest tile** so learners can invent after a **real recent capability advance**. The playable place is **fictive**. The spotlight tech is a strong, honest fit, and **player-facing prose never names it as the answer** — the tray does that.
 
-**Player path:** instance story → bigger problem + root cause → outcome job. Full craft: **`references/scene-prose.md`**.
+**Player path:** one instance of the global problem, then what that problem is, then the outcome. Full craft: **`references/scene-prose.md`**. Less is more.
 
 ## Start here
 
 ```bash
-npm run author:quest -- --tech <techId> --local-only      # scaffold → output/quests/<slug>/quest.json
-# edit the JSON (research → grounding, story → player fields)
+# write the tile (references/output-contract.md)
 npm run validate:quest -- <file> --strict                 # OK: + lint: clean
 npm run economy:quest -- <file>                           # quest verdict: challenging
 ```
 
-The scaffold already carries the current defaults (spotlight-first shelf with two partners, 7-heading `grounding`, triad brief, pressure 3↑1 / 2↑1 / 2↑0 with descriptions, no `resources`). Every placeholder in it lints as a warning until you replace it, so an unedited scaffold cannot ship by accident.
+Write the tile from **`references/output-contract.md`**. New tiles use a spotlight-first shelf, 7-heading `grounding`, brief headings **The place → The bigger problem → Your job**, and pressure 3↑1 / 2↑1 / 2↑0. Omit `resources` unless the first island cannot buy the spotlight tech.
 
 | Doc | Purpose |
 |-----|---------|
-| **`references/scene-prose.md`** | Instance story + root cause + outcome job (the craft) |
+| **`references/scene-prose.md`** | Short player prose: instance, the global problem, the outcome |
 | **`references/brief-template.md`** | `briefMd` headings: The place → The bigger problem → Your job |
 | **`references/schema.md`** | Field reference, what each field reaches, lint codes |
 | **`references/grounding-template.md`** | Capability truth chain (emTech → product category → … → applications) |
@@ -65,9 +64,9 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 
 1. **`spotlight.techId`** = one valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
 2. **`mission.suggested`** = `[spotlight, …2–4 supporting]` (max 5, spotlight first). Supporting techs are **convergence partners** for this place: pick from the tech's `pairs` or by fit, and make sure one is honest against the **global** meter (act two). Each id gets a **`mission.suggestedWhy`** sentence (≤120 chars, everyday words) that says what this family could do *here* and **contains the label of the crisis meter it eases**. The family name is fine there; product names are not. Player prose never names the spotlight **or** the supporting techs.
-3. **`mission.briefMd`** = Markdown, **~250–600 words**, headings exactly **The place** (2–4 short paragraphs, one idea each, ≤90 words) → **The bigger problem** (1–2 paragraphs, root cause in everyday words) → **Your job** (one paragraph, outcome only). The walk turns each paragraph into a card and the AI reads the first 2800 characters, so the decisive facts come early. No `What just became possible`, no `Constraints`, no lecture.
-4. **`mission.scene`** ≤500 chars, same spine, everyday words. It is the co-inventor's opening line, so it must stand alone.
-5. **`summary`** = the instance in 2–3 short sentences (≤420): named person, fictive place, what went wrong now. **`title`** names the human situation and/or the place. **`spotlight.encourageCopy`** states the outcome. None of these name the spotlight tech, a supporting tech, or a product.
+3. **`mission.briefMd`** = Markdown, as short as clarity allows. Headings **The place** (the instance; one paragraph is enough) → **The bigger problem** (what the global problem is) → **Your job** (the outcome). Each paragraph is a walkthrough card. Lint warns above 600 words or more than 4 place paragraphs. No `What just became possible`, no `Constraints`, no lecture.
+4. **`mission.scene`** ≤500 chars. The instance, able to stand alone. It is the co-inventor's opening line.
+5. **`summary`** = the instance, short (≤420). **`title`** names the situation or the place. **`spotlight.encourageCopy`** states the outcome. None of these name the spotlight tech, a supporting tech, or a product.
 6. **`mission.pressure`** = structured roles `local` / `global` / `support` (omit a role to hide its meter), each `{ label, description, pressure, pressureRise, winMax }`. New tiles: local **3↑1**, global **2↑1**, support **2↑0**, `winMax` 1. Local hotter than global; support rise 0 unless you mean trust to rot with time. `description` is place-specific and shown to players.
 7. **`grounding`** (Markdown) is the capability truth every AI judgement reads: chain from emTech → product category → capabilities → trends/predictions → milestone → use cases → applications → **honest limits**. Keep it inside **3000 characters** or put **Honest limits** early; anything past the window cannot turn a light red. Tutor-only material (debate framings, discourse maps, SEQUENCE) goes in `aiTutorContext`. `research` is citation metadata for humans; nothing in the game reads it.
 8. **Your job is an outcome, not a product and not a policy.** No "invent with [tech]", no "build around [product]", no "do not invent X" ban-list, no "pass a law / ban / UBI". A rule may be the **root cause** and may be authored as **`rules`** weather; the invent still makes something scarce more abundant with emTechs in this place this year.
@@ -90,23 +89,22 @@ emTech (name → tech id), theme (`globalId`), audience, year (~2026). Learning 
 
 ### 3. Invent the fictive Quest
 
-- Named people, concrete fictive place, lived harm as **one instance** of the global issue. Root cause: the system that keeps producing it. Open outcome the player invents toward.
+- One instance of the global problem, and a plain statement of what that problem is. How it is told — people, voice, length — is yours. Open outcome the player invents toward.
 - Stakeholder, structured `pressure` with descriptions, optional `rules` (1–3 named local locks already on the books; weather, not the invent — note any authored rule also switches off default theme backlash on `automation` / `rogue-si`).
 - Shelf: spotlight + 2–4 supporting techs, each with a `suggestedWhy` that names its meter.
 
 ### 4. Player-language instance
 
-**Test:** *Could a 14-year-old retell who is in trouble, what went wrong in that place, and what the bigger problem is, without naming a product or a tech family?*
+**Test:** *Can the reader say what is happening in that place, and what global problem it is an instance of, without a product name?*
 
-- **`summary`** gold: *Nurse Amina seals another swab at Crossing Clinic 7. The fever sheet on the fridge does not match. The lab truck left at dawn — answers take days, and by then the bench is empty or the ward is full.*
-  Fail: *Infectious diseases. This is about how far gene sequencing has to go so clinics can do it quick and cheap on site.*
-- **`title`** good: *The fever sheet at Crossing Clinic 7*. Weak: theme-word + tech gap with nobody in the room.
-- **`encourageCopy`** gold: *Invent a way this clinic can know what the fever is before the next queue arrives.* Fail: *Build your invention around gene sequencing.*
-- **`suggestedWhy`** gold: *A rugged bench sequencer can name the fever during the same shift, before Outbreak spreads past the queue.* Fail: *Use the AcmeSeq Mini to run 16S reads.*
+- **`summary`** is the instance, short. It does not open on a theme word or on “this is about how far [a technology] has to go.”
+- **`title`** names the situation or the place.
+- **`encourageCopy`** states the outcome. “Build your invention around [a technology]” fails.
+- **`suggestedWhy`** says what this family could do here and contains the meter label. A product name fails.
 
 ### 5. Player-facing prose
 
-Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`references/brief-template.md`). Spine: hook → complication → mechanism → stakes → open design challenge; then zoom out for root cause; then the outcome job. One plot type. 2–4 punch-line sentences. Optional `briefBeats` only for tighter captions or shipped stills (`references/brief-beats.md`).
+Read `references/scene-prose.md`, then write `mission.scene` and `briefMd` (`references/brief-template.md`). Say the instance and what the global problem is. Cut every line that does not serve that. Optional `briefBeats` only for tighter captions or shipped stills (`references/brief-beats.md`).
 
 ### 6. Learning module (if applicable)
 
@@ -140,7 +138,7 @@ assets/…                                 stills this quest ships (cover, brief
 ```
 
 - Only `quests/`, `lessons/`, and `assets/`. Quest JSON sits directly in `quests/`.
-- One lesson folder for a single quest. A multi-lesson set includes the `kind: "module"` wrapper, every lesson quest it lists, and the lesson folders those quests cite. The package id is the wrapper id when there is one, otherwise the quest id. The folder slug is lowercase and does not have to match the id.
+- One lesson folder for a single quest. A multi-lesson path is one `.ffquest`: the `kind: "module"` wrapper plus every lesson quest it lists, and the lesson folders those quests cite. The package id is the wrapper id when there is one, otherwise the quest id. The folder slug is lowercase and does not have to match the id. The kind string `quest-pack` is invalid; it is not a second packaging format.
 - Lesson HTML uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`).
 - Quest text that cites a shipped page or image uses a package path (`lessons/<folder>/01-job.html`, `assets/cover.png`). A reading that is not in the zip stays `https://`. Write the package path yourself. `pack` only rewrites `https://warmersun.com/lessons/…` and `https://warmersun.com/future-forge/quests/assets/…`. Any other host, including a placeholder, is left as written and is not checked as a file in the zip.
 
@@ -157,14 +155,13 @@ A spotlight with no lesson pages still hands off the JSON: path, `quests/` or Im
 ## What lint cannot check (you still must)
 
 - The place is fictive and the people have dignity.
-- One plot type carries the scene; the close is an open design tension, not a solution.
-- **The bigger problem** is a root cause, not a meter dump or a capability lecture.
+- The instance and the global problem are both clear, and the close is not a solution.
+- **The bigger problem** names the global problem. It is not a meter dump or a capability lecture.
 - Supporting techs are honest convergence partners for this place, not padding.
 - `aiTutorContext` teaches the advance **after** the story and never gets pasted into player text.
 
 ## Non-goals
 
-- Multi-quest packs (`quest-pack` rejected; use `kind: "module"` for a learning path)
 - Hard-locking the tech tray; module unlock graphs; sponsor scoring bonuses
 - Player-facing "invent Product Y" or "invent with Y without saying Y"
 - Player-facing "pass a law / ban / UBI bill" as the invent (policy is weather, not the win)
