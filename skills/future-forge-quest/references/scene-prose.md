@@ -9,7 +9,7 @@ The player should leave with two things:
 1. **An instance** of the global problem — one concrete place, and what is happening there now.
 2. **What the global problem is** — named in everyday words.
 
-That is the job of `summary`, `mission.scene`, and `mission.briefMd`. **Your job** / `encourageCopy` say what must get better, and stop.
+That is the job of `summary`, `mission.scene`, and `mission.briefMd`. An optional **Your job** or `encourageCopy` is either an outcome to invent, or which emTech, capability, and use case to reach for.
 
 The author chooses the rest: voice, person, tense, how many sentences, whether anyone is named, how the instance is told. Do not pad to a spine, a plot type, a punch-line quota, or a word count.
 
@@ -21,17 +21,17 @@ The author chooses the rest: voice, person, tense, how many sentences, whether a
 | `mission.scene` | The same instance, able to stand alone (≤500). The co-inventor's opening line. |
 | `briefMd` → **The place** | The instance. One paragraph is enough. Each extra paragraph is a card. |
 | `briefMd` → **The bigger problem** | What this is a case of. |
-| `briefMd` → **Your job** | The outcome. No product. No "invent with [tech]." |
+| `briefMd` → **Your job** | Optional. An outcome, or the emTech, capability, and use case that fit. |
 | `title` | The situation, or the place. |
-| `spotlight.encourageCopy` | The outcome, if the brief's job line is not enough. |
+| `spotlight.encourageCopy` | The same optional ask, if the brief has no job. |
 | `mission.suggestedWhy` | Why this family here, under the tray card. The family name is fine. A product name is not. |
 
-Technology, product names, and lesson notes stay in `grounding` and `aiTutorContext`. The tray already shows the technologies.
+Lesson notes stay in `aiTutorContext`. The tray shows the technologies. The prose may name the one that fits.
 
 ## Cut
 
 - A second sentence that repeats the first
-- A lecture on the technology, a product, or what just became possible
+- A lecture that is not the instance, the bigger problem, or the ask
 - Throat-clearing, intensifiers, and sentences that tell the reader how to feel
 - A theme-word opening (*Infectious diseases. This is about how far…*)
 - A solution, a ban-list, or a "Who designs X?" close
@@ -41,4 +41,3 @@ Technology, product names, and lesson notes stay in `grounding` and `aiTutorCont
 
 - A reader can say what happened in that place, and what global problem it is an instance of
 - Nothing on the page could be deleted without losing one of those two
-- Player text does not name the spotlight or a supporting tech as the answer

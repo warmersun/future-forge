@@ -88,9 +88,9 @@ Recommended: always include **`grounding`** (fast-eval reads its first 3000 char
 }
 ```
 
-`title` / `summary` / `encourageCopy`: instance + outcome (see `SKILL.md` §4). Summary is short and shown whole on the banner. Lab terms and product names stay in `grounding` / tutor.
+`title` / `summary` / `encourageCopy`: the instance, and an optional ask (see `SKILL.md` §4). Summary is short and shown whole on the banner. The ask may name the emTech, capability, and use case that fit.
 
-`suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids. Supporting techs stay offstage in prose like the spotlight.
+`suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids.
 
 `suggestedWhy`: one entry per suggested id. ≤120 chars, everyday words, **contains the crisis meter label** it eases (the red-hex list ranks on that substring). The tray shows it under each card as **why here**; the family name is fine there, product names are not. Omit an entry rather than pad — the engine falls back to the tech's capability line + hottest meter (lint `suggestedWhy_missing:<id>`).
 

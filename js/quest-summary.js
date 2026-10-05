@@ -12,7 +12,7 @@ export const SUMMARY_LOADING_COPY = "Shaping the job…";
 export const QUEST_SUMMARY_RECIPE = `QUEST SUMMARY (player-facing lede, max ${SUMMARY_CAP} chars):
 One instance of the global problem. As short as clarity allows. The invent banner and every catalog card show the whole summary, so the first sentence is what a browsing player reads.
 Voice and whether anyone is named are free. Do not pad to three sentences.
-Hard no: theme-word ledes ("Infectious diseases. This is about how far…"), spotlight tech names, sponsor products, "invent with [tech]", "do not invent X", capability lectures, solution theater.`;
+Naming the applicable emTech is allowed. Do not pad. Do not turn it into a law, a ban, or a bill.`;
 
 export const FILL_QUEST_SUMMARY_SYSTEM = `You write ONE player-facing quest summary for Future Forge.
 ${QUEST_SUMMARY_RECIPE}

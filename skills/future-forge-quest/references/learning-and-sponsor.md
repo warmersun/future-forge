@@ -20,7 +20,7 @@ These extensions are **optional** and **combinable** with a normal spotlight til
 | `module` | Recommended | Non-empty **title** string — UI + catalog group key |
 | `lesson` | Recommended | Integer ≥ 1 — UI: **Lesson X/Y**. **Always pair with `totalLessons`**: a lone `lesson` paints no progress bar |
 | `totalLessons` | Required with `lesson` | Shared across all lessons in the set and **must agree with the module wrapper** |
-| `spotlight.advanceTitle` / `advanceSummary` / `asOf` | Fill honestly | The tutor receives them as `spotlightAdvance` and **names the real advance** — the family and where it sits on its curve — once the learner has the story. Player prose still never names it |
+| `spotlight.advanceTitle` / `advanceSummary` / `asOf` | Fill honestly | The tutor receives them as `spotlightAdvance`. The brief may also name the emTech, capability, and use case when that recognition is the ask |
 | `grounding` | Strongly recommended | Capability truth along the chain (product category → milestones → use cases → applications) — separate from pedagogy; see `grounding-template.md`. Fast-eval reads the first 3000 chars only |
 
 UI: invent and Learning catalog show **module title + segment bar** (one segment per lesson; filled = completed on the device via `localStorage`). Selection chip: **Learn · {module title}**.
@@ -144,7 +144,7 @@ Multiplayer / hotseat do **not** switch to tutor mode.
 
 ### Hard copy rules
 
-1. Player-facing invent invitation stays **open** — an **outcome** for these people, not “use Product X” and not “invent with X without saying X”.
+1. The ask stays the player's: an outcome to invent, or which emTech, capability, and use case fit. Not “only Brand Y works.”
 2. Naming a brand/product is **not** a valid solution; invent must be local, pilot-honest. The product may appear under **Milestone** in `grounding`; the tutor may teach the category after the story.
 3. Capability claims live in **`grounding`** (and research), not in scene, summary, job, or the sponsor banner as the plot.
 4. Under **Milestone**, the sponsor product may appear as the **instance** that hit the category threshold; **Unlocks / Applications** stay category-level.

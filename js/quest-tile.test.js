@@ -100,25 +100,22 @@ describe("quest-tile", () => {
     assert.ok(r.mission.briefMd.includes("## The place"));
   });
 
-  it("rejects theme-word summaries, product-riddle encourage, and legacy brief headings", () => {
+  it("accepts a theme-word summary, a named technology, a legacy heading, and a brief with no job", () => {
     const theme = baseTile();
     theme.summary = "Infectious diseases. This is about how far sequencing has to go.";
     const themeR = validateQuestTile(theme, { techIds: TECHS, globalIds: GLOBALS });
-    assert.equal(themeR.ok, false);
-    assert.ok(themeR.details.includes("summary_theme_word_lede"));
+    assert.equal(themeR.ok, true, JSON.stringify(themeR.details));
 
-    const riddle = baseTile();
-    riddle.spotlight.encourageCopy = "Build your invention around gene sequencing.";
-    const riddleR = validateQuestTile(riddle, { techIds: TECHS, globalIds: GLOBALS });
-    assert.equal(riddleR.ok, false);
-    assert.ok(riddleR.details.includes("encourage_product_riddle"));
+    const named = baseTile();
+    named.spotlight.encourageCopy = "Gene sequencing can name the fever during this shift.";
+    const namedR = validateQuestTile(named, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(namedR.ok, true, JSON.stringify(namedR.details));
 
     const legacy = baseTile();
     legacy.mission.briefMd =
-      "## The place\n\nClinic.\n\n## The bigger problem\n\nLabs are far.\n\n## What just became possible\n\nSequencers got cheaper.\n\n## Your job\n\nInvent it.";
+      "## The place\n\nClinic.\n\n## What's strained\n\nLabs are far.\n\n## What just became possible\n\nSequencers got cheaper.";
     const legacyR = validateQuestTile(legacy, { techIds: TECHS, globalIds: GLOBALS });
-    assert.equal(legacyR.ok, false);
-    assert.ok(legacyR.details.includes("brief_md_legacy_headings"));
+    assert.equal(legacyR.ok, true, JSON.stringify(legacyR.details));
   });
 
   it("rejects bad schema and packs", () => {

@@ -1,21 +1,19 @@
 /**
- * Quest craft lint — warnings (not failures) for authored Quest tiles.
+ * Quest lint — warnings (not failures) for authored Quest tiles.
  *
- * `validate:quest` checks JSON shape. This module checks the craft rules the
- * skill asks for: instance-first player prose, tech offstage, brief headings,
- * walkthrough card count, meter defaults, grounding that survives the AI clip.
+ * Player text is a beat sequence plus a short form (the place, the bigger
+ * problem). This module does not grade voice or length. It checks the data
+ * the game needs: crisis meters, grounding for the model, shelf reasons,
+ * research URLs, and learning-field pairs.
  * Pure; safe for Node tests and the browser.
  */
 
-import { TECHS } from "./data.js";
 import {
   splitMarkdownSections,
   splitBodyChunks,
   roleFromHeading,
   normalizeBriefHeading,
-  wordCount,
 } from "./brief-beats.js";
-import { assertSceneReadable } from "./scene-prose.js";
 import { DO_NOT_SAY } from "./tech-why.js";
 import { plainTextFromMarkdown } from "./md-lite.js";
 
@@ -23,43 +21,8 @@ import { plainTextFromMarkdown } from "./md-lite.js";
 export const BRIEF_AI_CLIP = 2800;
 /** What fast-eval sees of grounding (js/server/fast-eval.mjs GROUNDING_CAP). */
 export const GROUNDING_AI_CLIP = 3000;
-/** Ceiling only. A short brief is allowed; padding is not. */
-export const BRIEF_WORDS = { max: 600 };
-/** Extra place paragraphs become extra cards. One paragraph is enough. */
-export const PLACE_PARAGRAPHS = { max: 4 };
-export const PARAGRAPH_MAX_WORDS = 90;
 export const WALK_CARD_CAP = 8;
 export const BUDGET_HIGH = 7;
-
-/** Common player-text leaks per tech id (beyond the catalog name / id). */
-const TECH_ALIASES = {
-  ai: ["artificial intelligence", "on-device AI", "open-weight", "edge AI", "language model", "LLM"],
-  "gene-sequencing": ["sequencer", "sequencing", "genome"],
-  synbio: ["synthetic biology", "synbio"],
-  robots: ["robot"],
-  drones: ["drone"],
-  solar: ["solar panel"],
-  battery: ["battery"],
-  crypto: ["blockchain", "onchain", "stablecoin"],
-  bci: ["brain-computer", "neural implant"],
-  quantum: ["quantum"],
-  print3d: ["3D print"],
-  vr: ["VR", "headset"],
-  iot: ["sensor network"],
-  networks: ["5G", "mesh network"],
-  nano: ["nanotech"],
-  "alt-proteins": ["cultivated meat", "precision fermentation"],
-  "genetic-engineering": ["CRISPR", "gene editing"],
-};
-
-const LEGACY_HEADINGS = new Set([
-  "what's strained",
-  "what just became possible",
-  "a capability that just became more real",
-  "constraints",
-  "your brief",
-]);
-const CANON_HEADINGS = new Set(["the place", "the bigger problem", "your job"]);
 
 const GROUNDING_HEADINGS = new Set([
   "technology",
@@ -80,8 +43,6 @@ const GROUNDING_HEADINGS = new Set([
   "honest limits",
 ]);
 
-const BAN_LIST = [/\bdo not invent\b/i, /\bpass a law\b/i, /\bban the\b/i, /\bUBI\b/, /\bnot asked to\b/i];
-const PRESCRIBES = [/^build your invention around/i, /\binvent with\b/i, /is the point of this quest/i];
 const PLACEHOLDERS = [
   /fill after research/i,
   /replace with/i,
@@ -98,7 +59,6 @@ const PLACEHOLDERS = [
  * @returns {{ warnings: { code: string, hint: string }[] }}
  */
 export function lintQuestTile(rawTile, validated, opts = {}) {
-  const techs = Array.isArray(opts.techs) ? opts.techs : TECHS;
   /** @type {{ code: string, hint: string }[]} */
   const warnings = [];
   const warn = (code, hint) => warnings.push({ code, hint });
@@ -106,7 +66,7 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
   const kind = String(validated?.kind || validated?.tile?.kind || tile.kind || "quest");
 
   if (kind === "module") {
-    lintModule(tile, validated, techs, warn);
+    lintModule(tile, validated, warn);
     return { warnings };
   }
 
@@ -121,8 +81,6 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
       : spotlightId
         ? [spotlightId]
         : [];
-  const watchIds = [...new Set([spotlightId, ...suggested].filter(Boolean))];
-
   const summary = str(tile.summary || missionIn.summary);
   const title = str(tile.title || missionIn.title);
   const scene = str(missionIn.scene);
@@ -140,11 +98,7 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
     ...beats.map((b, i) => [`briefBeats[${i}]`, plainTextFromMarkdown(str(b?.bodyMd))]),
   ];
 
-  lintTechNames(playerFields, watchIds, techs, warn);
-  lintSummary(summary, warn);
-  lintEncourage(encourage, warn);
   lintBrief(briefMd, warn);
-  lintScene(scene, warn);
   const pressure = missionIn.pressure && typeof missionIn.pressure === "object" ? missionIn.pressure : {};
   /** @type {[string, string][]} */
   const placeholderFields = [
@@ -185,77 +139,14 @@ function str(v) {
   return v == null ? "" : String(v);
 }
 
-function escapeRe(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Whole-word, case-insensitive matcher for a phrase (word chars only at edges).
- * @param {string} phrase
- */
-function phraseRe(phrase) {
-  const body = escapeRe(phrase).replace(/\s+/g, "\\s+");
-  const lead = /^\w/.test(phrase) ? "(?<![\\w-])" : "";
-  const tail = /\w$/.test(phrase) ? "(?![\\w-])" : "";
-  return new RegExp(`${lead}${body}${tail}`, "i");
-}
-
-function lintModule(tile, validated, techs, warn) {
+function lintModule(tile, validated, warn) {
   const t = validated?.tile || tile;
-  const spotlightId = String(t.spotlight?.techId || tile.spotlight?.techId || "");
   const fields = [
     ["title", str(t.title || tile.title)],
     ["summary", str(t.summary || tile.summary)],
     ["overviewMd", plainTextFromMarkdown(str(t.overviewMd || tile.overviewMd))],
   ];
-  if (spotlightId) lintTechNames(fields, [spotlightId], techs, warn);
-  lintSummary(str(t.summary || tile.summary), warn);
   lintDoNotSay(fields, {}, warn);
-}
-
-function lintTechNames(fields, ids, techs, warn) {
-  const byId = new Map((techs || []).map((t) => [t.id, t]));
-  for (const id of ids) {
-    const tech = byId.get(id);
-    const phrases = new Set();
-    if (tech?.name) phrases.add(tech.name);
-    if (id.length > 2) phrases.add(id);
-    for (const a of TECH_ALIASES[id] || []) phrases.add(a);
-    for (const [field, text] of fields) {
-      if (!text) continue;
-      for (const phrase of phrases) {
-        if (phraseRe(phrase).test(text)) {
-          warn(
-            `tech_named_in_player_text:${field}:${phrase}`,
-            `"${phrase}" names the ${tech?.name || id} family in ${field}; keep the tech in suggestedWhy, grounding, or the tutor and describe the human problem instead.`
-          );
-          break;
-        }
-      }
-    }
-  }
-}
-
-function lintSummary(summary, warn) {
-  if (!summary.trim()) return;
-  const first = summary.split(/(?<=[.!?])\s+/)[0] || "";
-  const themeLede = /\.$/.test(first.trim()) && wordCount(first) <= 3;
-  if (themeLede || /this is about how far/i.test(summary)) {
-    warn(
-      "summary_theme_lede",
-      "Summary opens on a theme word or a tech-gap sentence; start with a named person doing something in the place, now."
-    );
-  }
-}
-
-function lintEncourage(encourage, warn) {
-  if (!encourage.trim()) return;
-  if (PRESCRIBES.some((re) => re.test(encourage))) {
-    warn(
-      "encourage_prescribes_tech",
-      "encourageCopy tells the player which tech to use; state the outcome that must get better in everyday words."
-    );
-  }
 }
 
 function lintBrief(briefMd, warn) {
@@ -265,71 +156,21 @@ function lintBrief(briefMd, warn) {
   let chunkTotal = 0;
 
   for (const s of sections) {
-    const key = normalizeBriefHeading(s.title);
-    if (LEGACY_HEADINGS.has(key)) {
-      warn(
-        `brief_legacy_heading:${s.title}`,
-        `"${s.title}" is a legacy heading; use The place, The bigger problem, Your job (capability lectures go to grounding).`
-      );
-    } else if (!CANON_HEADINGS.has(key)) {
-      warn(
-        `brief_unknown_heading:${s.title}`,
-        `"${s.title}" is not one of The place / The bigger problem / Your job; the walk shows it as an extra card before the job.`
-      );
-    }
-    const role = roleFromHeading(s.title);
-    roles.push(role);
-    const chunks = splitBodyChunks(s.body);
-    chunkTotal += chunks.length;
-
-    const paragraphs = s.body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    if (role === "place" && paragraphs.length > PLACE_PARAGRAPHS.max) {
-      warn(
-        `place_paragraphs_out_of_band:${paragraphs.length}`,
-        `The place has ${paragraphs.length} paragraphs; each one is a card. Cut any the reader does not need (more than ${PLACE_PARAGRAPHS.max}).`
-      );
-    }
-    for (const p of paragraphs) {
-      const n = wordCount(plainTextFromMarkdown(p));
-      if (n > PARAGRAPH_MAX_WORDS) {
-        warn(
-          `paragraph_too_long:${s.title}:${n}`,
-          `A paragraph under "${s.title}" runs ${n} words; split it so each card stays under ${PARAGRAPH_MAX_WORDS}.`
-        );
-      }
-    }
+    roles.push(roleFromHeading(s.title));
+    chunkTotal += splitBodyChunks(s.body).length;
   }
 
-  for (const need of ["place", "strain", "job"]) {
-    if (!roles.includes(need)) {
-      warn(
-        `brief_missing_section:${need}`,
-        need === "strain"
-          ? "No The bigger problem section; add the zoom-out with the root cause in everyday words."
-          : need === "place"
-            ? "No The place section; open with the instance story."
-            : "No Your job section; end with the outcome-only invent job."
-      );
-    }
+  if (!roles.includes("place")) {
+    warn("brief_missing_section:place", "No The place section; that is the local problem in the short form.");
   }
-  const jobAt = roles.indexOf("job");
-  const placeAt = roles.indexOf("place");
-  const strainAt = roles.indexOf("strain");
-  if (jobAt >= 0 && ((placeAt >= 0 && jobAt < placeAt) || (strainAt >= 0 && jobAt < strainAt))) {
+  if (!roles.includes("strain")) {
     warn(
-      "brief_heading_order",
-      "Your job comes before the story in the source; order the brief The place → The bigger problem → Your job."
+      "brief_missing_section:strain",
+      "No The bigger problem section; that is what this scene is an instance of."
     );
   }
 
   const plain = plainTextFromMarkdown(briefMd);
-  const words = wordCount(plain);
-  if (words > BRIEF_WORDS.max) {
-    warn(
-      `brief_words_out_of_band:${words}`,
-      `briefMd is ${words} words; cut it under ${BRIEF_WORDS.max}. Words the reader does not need should go.`
-    );
-  }
   if (chunkTotal > WALK_CARD_CAP) {
     warn(
       `brief_cards_over_cap:${chunkTotal}`,
@@ -340,28 +181,6 @@ function lintBrief(briefMd, warn) {
     warn(
       `brief_ai_clip:${plain.length}`,
       `The co-inventor reads only the first ${BRIEF_AI_CLIP} characters of the brief; keep the decisive facts early or trim.`
-    );
-  }
-  for (const re of BAN_LIST) {
-    const m = re.exec(plain);
-    if (m) {
-      warn(
-        `brief_ban_list:${m[0]}`,
-        `"${m[0]}" reads as a ban-list or policy job; leave the invent open and keep rules as root cause or weather.`
-      );
-    }
-  }
-}
-
-function lintScene(scene, warn) {
-  if (!scene.trim()) return;
-  const r = assertSceneReadable(scene);
-  if (r.ok) return;
-  for (const reason of r.reasons || []) {
-    if (reason === "too_few_sentences") continue; // a 500-char lede is allowed to be brief
-    warn(
-      `scene_unreadable:${reason}`,
-      "mission.scene is dense on first read; use several short sentences with 2–4 punch lines and no semicolon chains."
     );
   }
 }

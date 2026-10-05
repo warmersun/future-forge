@@ -43,7 +43,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | `spotlight.techId` | One valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`) |
 | `mission.suggested` | **Spotlight-first array, 1–5 valid unique tech ids**: `[spotlight.techId, …supporting]`. This is the **For this place** shelf. Supporting ids are convergence partners (one aimed at the global meter for act two; the economy lab plans with them). Errors: `suggested_spotlight_not_first`, `suggested_too_many` (>5), `suggested_bad_id:<id>`. Duplicates fold. Supporting techs stay offstage in player prose like the spotlight |
 | `mission.suggestedWhy` | `{ [techId]: string }` — **one entry per suggested id**, one everyday-words sentence (≤120 chars): what the family could do *here* and which crisis meter label it eases. Under each shelf card and in the crisis-hex "What could help here?" list — a reason ranks first for a hex only if it **contains that meter's label as a literal substring** (`js/tech-why.js`). Family name allowed; no product names. Unknown ids / non-strings dropped; a non-object is rejected (`suggestedWhy_not_object`). Lint: `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |
-| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** → **The bigger problem** → **Your job**. As short as clarity allows. Lint warns above 600 words. The UI steps paragraphs (see `brief-beats.md`) |
+| `mission.briefMd` | Non-empty Markdown (see `brief-template.md`); **The place** and **The bigger problem** required. **Your job** optional. The UI steps paragraphs (see `brief-beats.md`) |
 | `title`, `summary`, `spotlight.encourageCopy` | `summary` is the instance, as short as clarity allows (≤420 chars, shown **whole**). `title` is the situation or the place. `encourageCopy` is the outcome. Do **not** name the spotlight or a supporting tech or a sponsor product. See `scene-prose.md` |
 | `mission.title`, `mission.place`, `mission.scene` | Scene ≤500 chars; it is the co-inventor's opening line and the Imagine locale lock, so it must stand alone; craft in `scene-prose.md`; everyday words |
 | `mission.pressure` | **Structured** crisis meters (below) — flat maps are **rejected** |
@@ -322,10 +322,8 @@ Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fie
 
 | Field | Codes |
 |-------|-------|
-| Player text (`title`, `summary`, `scene`, `encourageCopy`, `briefMd`, beats) | `tech_named_in_player_text:<field>:<match>`, `do_not_say:<field>:<word>`, `template_placeholder:<field>` |
-| `summary` / `encourageCopy` | `summary_theme_lede`, `encourage_prescribes_tech` |
-| `briefMd` | `brief_legacy_heading:<h>`, `brief_unknown_heading:<h>`, `brief_missing_section:<role>`, `brief_heading_order`, `brief_words_out_of_band:<n>`, `place_paragraphs_out_of_band:<n>`, `paragraph_too_long:<section>:<n>`, `brief_cards_over_cap:<n>`, `brief_ai_clip:<chars>`, `brief_ban_list:<match>` |
-| `scene` | `scene_unreadable:<reason>` |
+| Player text (`title`, `summary`, `scene`, `encourageCopy`, `briefMd`, beats) | `do_not_say:<field>:<word>`, `template_placeholder:<field>` |
+| `briefMd` | `brief_missing_section:place`, `brief_missing_section:strain`, `brief_cards_over_cap:<n>`, `brief_ai_clip:<chars>` |
 | `pressure` | `pressure_support_rises`, `pressure_local_not_hotter`, `pressure_missing_description:<role>` |
 | `resources` | `resources_budget_high`, `resources_present` |
 | `grounding` | `grounding_missing`, `grounding_limits_past_clip:<offset>`, `grounding_limits_missing`, `grounding_unknown_heading:<h>` |

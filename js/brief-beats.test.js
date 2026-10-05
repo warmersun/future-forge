@@ -107,10 +107,10 @@ describe("deriveBriefBeats", () => {
       scene,
       title: "Trauma scores that outvote the surgeon",
     });
-    assert.ok(beats.length >= 2);
+    assert.ok(beats.length >= 1);
     assert.equal(beats[0].role, "place");
     assert.match(beats[0].bodyMd, /Ramirez/i);
-    assert.equal(beats[beats.length - 1].role, "job");
+    assert.ok(!beats.some((b) => /Invent for this place/.test(b.bodyMd)));
   });
 
   it("resolveBriefBeats uses scene on theme missions", () => {
@@ -120,8 +120,9 @@ describe("deriveBriefBeats", () => {
         "Marcus watches the 28 skip Massachusetts Avenue at 1:14 a.m. The optimizer labels the stop dead weight. Who designs a schedule that still waits?",
       briefMd: "",
     });
-    assert.ok(beats.length >= 2);
+    assert.ok(beats.length >= 1);
     assert.equal(beats[0].role, "place");
+    assert.match(beats[0].bodyMd, /Marcus/);
   });
 
   it("keeps punch-line sentences as separate caption lines", () => {
@@ -202,14 +203,14 @@ describe("deriveBriefBeats", () => {
     assert.ok(!/Nurse Amina/.test(beats[beats.length - 1].bodyMd));
   });
 
-  it("falls back to title for a missing job when there is no encourageCopy", () => {
+  it("ends on the story when there is no job and no encourageCopy", () => {
     const beats = deriveBriefBeats("## The place\n\nA clinic waits.", {
       summary: "Nurse Amina seals a swab.",
       title: "The fever sheet at Crossing Clinic 7",
     });
-    assert.equal(beats[beats.length - 1].role, "job");
-    assert.match(beats[beats.length - 1].bodyMd, /Invent for this place/);
-    assert.ok(!/Nurse Amina/.test(beats[beats.length - 1].bodyMd));
+    assert.equal(beats[beats.length - 1].role, "place");
+    assert.match(beats[beats.length - 1].bodyMd, /clinic waits/);
+    assert.ok(!beats.some((b) => b.role === "job"));
   });
 
   it("keeps unknown headings as other, never discarded", () => {

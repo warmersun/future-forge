@@ -165,13 +165,12 @@ export const BRIEF_MD_RECIPE = [
   "Headings in this order, nothing else:",
   "## The place — one instance of the global problem. One paragraph is enough. A blank line starts another card, so add one only if the instance is unclear without it.",
   "## The bigger problem — what the global problem is, in everyday words.",
-  "## Your job — the outcome, short. No product name, no 'invent with [tech]', no ban-list.",
+  "## Your job — optional. An outcome to invent, or which emTech, capability, and use case fit this place. Not a law, a ban, or a bill.",
 ].join(" ");
 
-const LEGACY_BRIEF_ROLES = new Set(["possible", "constraints"]);
-
 /**
- * Shape check for new-tile briefMd (place / bigger problem / job; no capability lecture).
+ * Shape check for briefMd: the short form is the local instance and the bigger problem.
+ * Your job is optional. Legacy headings still map to roles and do not fail the tile.
  * @param {string|null|undefined} briefMd
  * @returns {string[]}
  */
@@ -182,17 +181,12 @@ export function briefMdShapeIssues(briefMd) {
   if (!md) {
     issues.push("brief_md_missing_place");
     issues.push("brief_md_missing_bigger_problem");
-    issues.push("brief_md_missing_job");
     return issues;
   }
   const sections = splitMarkdownSections(md);
   const roles = sections.filter((s) => s.title).map((s) => s.role);
-  if (roles.some((r) => LEGACY_BRIEF_ROLES.has(r))) {
-    issues.push("brief_md_legacy_headings");
-  }
   if (!roles.includes("place")) issues.push("brief_md_missing_place");
   if (!roles.includes("strain")) issues.push("brief_md_missing_bigger_problem");
-  if (!roles.includes("job")) issues.push("brief_md_missing_job");
   return issues;
 }
 
@@ -433,8 +427,6 @@ export function deriveBriefBeats(briefMd, opts = {}) {
   const md = String(briefMd || "").replace(/\r\n/g, "\n").trim();
   const scene = String(opts.scene || "").replace(/\r\n/g, "\n").trim();
   const maxBeats = clampMaxBeats(opts.maxBeats);
-  const summary = String(opts.summary || "").trim();
-  const title = String(opts.title || "").trim();
   const encourageCopy = String(opts.encourageCopy || "").trim();
 
   const source = md || scene;
@@ -465,17 +457,13 @@ export function deriveBriefBeats(briefMd, opts = {}) {
     }
   }
 
-  if (!buckets.job.length) {
-    const jobBody =
-      encourageCopy || (title ? `Invent for this place: ${title}.` : "");
-    if (jobBody) {
-      buckets.job.push({
-        id: "",
-        role: "job",
-        title: "Your job",
-        bodyMd: jobBody,
-      });
-    }
+  if (!buckets.job.length && encourageCopy) {
+    buckets.job.push({
+      id: "",
+      role: "job",
+      title: "Your job",
+      bodyMd: encourageCopy,
+    });
   }
 
   /** @type {BriefBeat[]} */
@@ -484,18 +472,15 @@ export function deriveBriefBeats(briefMd, opts = {}) {
     ordered.push(...(buckets[role] || []));
   }
 
-  if (!ordered.length) {
-    const jobBody = encourageCopy || title || summary;
-    if (jobBody) {
-      ordered = [
-        {
-          id: "",
-          role: "job",
-          title: "Your job",
-          bodyMd: jobBody,
-        },
-      ];
-    }
+  if (!ordered.length && encourageCopy) {
+    ordered = [
+      {
+        id: "",
+        role: "job",
+        title: "Your job",
+        bodyMd: encourageCopy,
+      },
+    ];
   }
 
   ordered = mergeToCap(ordered, maxBeats);

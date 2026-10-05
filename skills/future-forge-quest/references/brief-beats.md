@@ -15,7 +15,7 @@ Players no longer read the Quest brief as one scroll. Future Forge **steps** it 
   5. Last card → **Start inventing**.
 - After dismiss: compact recap of The place + The bigger problem. Full `briefMd` (minus Your job) sits behind **Read the whole story**; opening that disclosure hides the recap clip.
 
-Card arithmetic: total paragraphs + list blocks across all sections. Each extra paragraph is another card, merged down to 8. Prefer fewer. Lint: `brief_cards_over_cap:<n>`, `paragraph_too_long:<section>:<n>`, `place_paragraphs_out_of_band:<n>` (more than 4 place paragraphs).
+Card arithmetic: total paragraphs + list blocks across all sections. Each extra paragraph is another card, merged down to 8. Prefer fewer. Lint: `brief_cards_over_cap:<n>` when that would be more than 8 cards.
 
 Do **not** author **What just became possible** or **Constraints** on new tiles. Those were capability / constraint lectures. Honest limits belong in `grounding` / tutor. Lived constraints belong inside the story.
 

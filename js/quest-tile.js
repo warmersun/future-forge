@@ -10,7 +10,7 @@ import {
   validateCapabilityTrend,
 } from "./capability-trend.js";
 import { isSafeBriefImageUrl, normalizeBriefBeats, briefMdShapeIssues } from "./brief-beats.js";
-import { SUMMARY_CAP, isThemeWordLede } from "./quest-summary.js";
+import { SUMMARY_CAP } from "./quest-summary.js";
 import { parseQuestRules } from "./sim/policy-rules.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
@@ -889,8 +889,6 @@ export function validateQuestTile(tile, opts = {}) {
   const summary = String(tile.summary || missionIn.summary || "").trim();
   if (!summary) details.push("missing_summary");
   if (summary.length > CAPS.summary) details.push("summary_too_long");
-  if (summary && isThemeWordLede(summary)) details.push("summary_theme_word_lede");
-
   const scene = String(missionIn.scene || "").trim();
   const briefMd = String(missionIn.briefMd || tile.briefMd || "").trim();
   if (!briefMd) details.push("missing_brief_md");
@@ -912,11 +910,6 @@ export function validateQuestTile(tile, opts = {}) {
   if (!techId || !techIds.has(techId)) {
     details.push(`bad_spotlight_tech:${techId || "(empty)"}`);
   }
-  const encourageCopy = String(spotlightIn?.encourageCopy || "").trim();
-  if (/\bbuild your invention around\b/i.test(encourageCopy)) {
-    details.push("encourage_product_riddle");
-  }
-
   // Shelf for this place: the spotlight leads, then 0–4 supporting emTechs
   // (convergence partners for act two). Unknown ids are errors, duplicates fold.
   const suggestedRaw = Array.isArray(missionIn.suggested)

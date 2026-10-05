@@ -11,16 +11,15 @@ export const SCENE_PROSE = [
   "Plain words. Short sentences. No throat-clearing, no lecture, no second telling of the same fact.",
   "The player must get two things: (1) one instance of the global problem — a concrete place and what is happening there now; (2) what the global problem is, in everyday words.",
   "Voice, person, and length are free. Do not pad to a five-beat spine, a plot type, or a word count.",
-  "Do not open on a theme-word lede (\"Infectious diseases. This is about how far…\").",
-  "Do not close with a solution, a lesson list, or a \"Who designs X?\" riddle.",
-  "Do not name a product or tell the player to invent with a technology.",
+  "An optional ask may be an outcome to invent, or which emTech, capability, and use case fit. Naming that technology is allowed.",
+  "Do not close with a law, a ban, or a bill.",
 ].join(" ");
 
 /** Short system-prompt paste. */
 export const SCENE_PROSE_CAPSULE = [
   "Quest prose: less is more. Cut anything the reader does not need.",
   "Show one instance of the global problem, and say what that problem is. Plain words. Short sentences.",
-  "Voice and length are free. Do not pad. No theme-word lede. No \"Who designs X?\" close. No product as the answer.",
+  "Voice and length are free. Do not pad. The ask, if any, is an invention or the emTech, capability, and use case that fit.",
 ].join(" ");
 
 /** Soft hint when seed missions are topic anchors only. */

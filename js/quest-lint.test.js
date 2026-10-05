@@ -104,74 +104,34 @@ describe("quest-lint", () => {
     assert.deepEqual(codes, [], codes.join("\n"));
   });
 
-  it("flags the spotlight tech named in player text", () => {
+  it("allows a named technology and a brief with no job", () => {
     const t = goodTile();
-    t.summary = "Nurse Amina waits on gene sequencing at Crossing Clinic 7. The truck left at dawn.";
-    assert.ok(has(lint(t), "tech_named_in_player_text:summary"));
-    const t2 = goodTile();
-    t2.mission.briefMd = BRIEF.replace("Truth lives in a capital lab.", "The sequencer lives in a capital lab.");
-    assert.ok(has(lint(t2), "tech_named_in_player_text:briefMd"));
-  });
-
-  it("does not flag the family name inside suggestedWhy or grounding", () => {
-    const t = goodTile();
-    t.mission.suggestedWhy["gene-sequencing"] = "Gene sequencing on the bench names the fever before Outbreak spreads.";
-    assert.ok(!has(lint(t), "tech_named_in_player_text"));
-  });
-
-  it("flags a theme-word lede", () => {
-    const t = goodTile();
-    t.summary = "Infectious diseases. This is about how far gene sequencing has to go so clinics can do it on site.";
-    assert.ok(lint(t).includes("summary_theme_lede"));
-  });
-
-  it("flags encourageCopy that prescribes the tech", () => {
-    const t = goodTile();
-    t.spotlight.encourageCopy = "Build your invention around the new on-site capability.";
-    assert.ok(lint(t).includes("encourage_prescribes_tech"));
-  });
-
-  it("flags legacy and unknown headings", () => {
-    const t = goodTile();
-    t.mission.briefMd = BRIEF.replace("## The bigger problem", "## What's strained") + "\n## Constraints\n\nOne line.\n";
+    t.summary = "Gene sequencing can name this fever during the shift.";
+    t.spotlight.encourageCopy = "Reach for gene sequencing: a same-shift read is the capability that fits.";
+    t.mission.briefMd = `## The place\n\n${PLACE}\n\n## The bigger problem\n\n${STRAIN}\n`;
     const codes = lint(t);
-    assert.ok(has(codes, "brief_legacy_heading:What's strained"), codes.join("\n"));
-    assert.ok(has(codes, "brief_legacy_heading:Constraints"));
-    const t2 = goodTile();
-    t2.mission.briefMd = BRIEF + "\n## Discourse map\n\nExtra.\n";
-    assert.ok(has(lint(t2), "brief_unknown_heading:Discourse map"));
+    assert.ok(!has(codes, "tech_named_in_player_text"), codes.join("\n"));
+    assert.ok(!codes.includes("brief_missing_section:job"), codes.join("\n"));
+    assert.ok(!codes.includes("encourage_prescribes_tech"));
   });
 
-  it("flags job before the story and a missing root-cause section", () => {
+  it("flags a brief that has no local problem or no bigger problem", () => {
     const t = goodTile();
     t.mission.briefMd = `## Your job\n\n${JOB}\n\n## The place\n\n${PLACE}\n`;
     const codes = lint(t);
-    assert.ok(codes.includes("brief_heading_order"), codes.join("\n"));
-    assert.ok(codes.includes("brief_missing_section:strain"));
+    assert.ok(codes.includes("brief_missing_section:strain"), codes.join("\n"));
+    assert.ok(!codes.includes("brief_heading_order"));
+    assert.ok(!codes.includes("brief_missing_section:job"));
   });
 
-  it("flags word count out of band and too many cards", () => {
+  it("flags too many walkthrough cards", () => {
     const t = goodTile();
-    t.mission.briefMd = "## The place\n\nShort.\n\n## The bigger problem\n\nTiny.\n\n## Your job\n\nInvent.\n";
-    assert.ok(!has(lint(t), "brief_words_out_of_band"));
-    assert.ok(!has(lint(t), "place_paragraphs_out_of_band"));
-    const padded = goodTile();
-    padded.mission.briefMd = `${BRIEF}\n\n${"word ".repeat(700)}`;
-    assert.ok(has(lint(padded), "brief_words_out_of_band"));
-    const t2 = goodTile();
     const many = Array.from({ length: 9 }, (_, i) => `Paragraph ${i} of the place, one idea each, short.`).join("\n\n");
-    t2.mission.briefMd = `## The place\n\n${many}\n\n## The bigger problem\n\n${STRAIN}\n\n## Your job\n\n${JOB}\n`;
-    const codes = lint(t2);
-    assert.ok(has(codes, "brief_cards_over_cap"), codes.join("\n"));
-    assert.ok(has(codes, "place_paragraphs_out_of_band:9"));
-  });
-
-  it("flags ban-list and policy jobs", () => {
-    const t = goodTile();
-    t.mission.briefMd = BRIEF.replace("Stakeholder:", "Do not invent a factory. Pass a law if you must. Stakeholder:");
+    t.mission.briefMd = `## The place\n\n${many}\n\n## The bigger problem\n\n${STRAIN}\n\n## Your job\n\n${JOB}\n`;
     const codes = lint(t);
-    assert.ok(has(codes, "brief_ban_list:Do not invent"), codes.join("\n"));
-    assert.ok(has(codes, "brief_ban_list:Pass a law"));
+    assert.ok(has(codes, "brief_cards_over_cap"), codes.join("\n"));
+    assert.ok(!has(codes, "place_paragraphs_out_of_band"));
+    assert.ok(!has(codes, "brief_words_out_of_band"));
   });
 
   it("flags meter defaults drift and missing descriptions", () => {
@@ -273,8 +233,8 @@ describe("quest-lint", () => {
     const v = validateQuestDocument(wrapper, { techIds: TECH_IDS, globalIds: GLOBAL_IDS });
     assert.equal(v.ok, true, JSON.stringify(v.details));
     const codes = lintQuestTile(wrapper, v).warnings.map((w) => w.code);
-    assert.ok(codes.includes("summary_theme_lede"));
-    assert.ok(has(codes, "tech_named_in_player_text:summary"));
+    assert.ok(!has(codes, "summary_theme_lede"));
+    assert.ok(!has(codes, "tech_named_in_player_text"));
     assert.ok(!codes.includes("grounding_missing"));
   });
 

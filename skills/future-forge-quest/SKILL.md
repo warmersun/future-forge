@@ -4,21 +4,20 @@ license: MIT
 description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
   tile (JSON). A learning quest ships as one .ffquest file: the tile plus the
-  lesson pages it teaches from. Portable multi-harness skill — not tied to a
-  single agent product.   Player-facing prose is short: one instance of the global problem, then
-  what that problem is, then an outcome. Voice and shape are the author's.
-  The tray hints the spotlight plus 2–4 supporting
-  emTechs; capability truth lives in grounding and tutor mode. Ships with a
-  validator, a craft lint, and a difficulty lab (too easy / too hard / challenging).
+  lesson pages it teaches from.   Portable multi-harness skill — not tied to a
+  single agent product. Player-facing prose is a short instance of the global
+  problem and what that problem is. The ask may be an invention, or recognizing
+  which emTech, capability, and use case fit. Ships with a validator, a lint
+  for play data, and a difficulty lab (too easy / too hard / challenging).
 ---
 
 # Future Forge Spotlight Quest author
 
 **License: MIT** (this skill package only).
 
-You write a **portable Quest tile** so learners can invent after a **real recent capability advance**. The playable place is **fictive**. The spotlight tech is a strong, honest fit, and **player-facing prose never names it as the answer** — the tray does that.
+You write a **portable Quest tile** so learners can face a **real recent capability advance**. The playable place is **fictive**. Sometimes they invent an outcome. Sometimes the point is to realize which emTech, which capability, and which use case fits this place. Naming that technology is allowed.
 
-**Player path:** one instance of the global problem, then what that problem is, then the outcome. Full craft: **`references/scene-prose.md`**. Less is more.
+**Player path:** one instance of the global problem, then what that problem is. Full craft: **`references/scene-prose.md`**. Less is more.
 
 ## Start here
 
@@ -28,12 +27,12 @@ npm run validate:quest -- <file> --strict                 # OK: + lint: clean
 npm run economy:quest -- <file>                           # quest verdict: challenging
 ```
 
-Write the tile from **`references/output-contract.md`**. New tiles use a spotlight-first shelf, 7-heading `grounding`, brief headings **The place → The bigger problem → Your job**, and pressure 3↑1 / 2↑1 / 2↑0. Omit `resources` unless the first island cannot buy the spotlight tech.
+Write the tile from **`references/output-contract.md`**. New tiles use a spotlight-first shelf, 7-heading `grounding`, brief headings **The place** and **The bigger problem** (**Your job** is optional), and pressure 3↑1 / 2↑1 / 2↑0. Omit `resources` unless the first island cannot buy the spotlight tech.
 
 | Doc | Purpose |
 |-----|---------|
-| **`references/scene-prose.md`** | Short player prose: instance, the global problem, the outcome |
-| **`references/brief-template.md`** | `briefMd` headings: The place → The bigger problem → Your job |
+| **`references/scene-prose.md`** | Short player prose: the instance and the global problem |
+| **`references/brief-template.md`** | `briefMd` headings: The place, The bigger problem; optional Your job |
 | **`references/schema.md`** | Field reference, what each field reaches, lint codes |
 | **`references/grounding-template.md`** | Capability truth chain (emTech → product category → … → applications) |
 | **`references/economy.md`** | Difficulty lab: what challenging means, tech cost, two-act meters |
@@ -63,13 +62,13 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 ## Hard rules
 
 1. **`spotlight.techId`** = one valid tech id (`references/tech-ids.md` or `js/data.js` `TECHS`).
-2. **`mission.suggested`** = `[spotlight, …2–4 supporting]` (max 5, spotlight first). Supporting techs are **convergence partners** for this place: pick from the tech's `pairs` or by fit, and make sure one is honest against the **global** meter (act two). Each id gets a **`mission.suggestedWhy`** sentence (≤120 chars, everyday words) that says what this family could do *here* and **contains the label of the crisis meter it eases**. The family name is fine there; product names are not. Player prose never names the spotlight **or** the supporting techs.
-3. **`mission.briefMd`** = Markdown, as short as clarity allows. Headings **The place** (the instance; one paragraph is enough) → **The bigger problem** (what the global problem is) → **Your job** (the outcome). Each paragraph is a walkthrough card. Lint warns above 600 words or more than 4 place paragraphs. No `What just became possible`, no `Constraints`, no lecture.
+2. **`mission.suggested`** = `[spotlight, …2–4 supporting]` (max 5, spotlight first). Supporting techs are **convergence partners** for this place: pick from the tech's `pairs` or by fit, and make sure one is honest against the **global** meter (act two). Each id gets a **`mission.suggestedWhy`** sentence (≤120 chars, everyday words) that says what this family could do *here* and **contains the label of the crisis meter it eases**. The family name is fine. A product name is not.
+3. **`mission.briefMd`** = Markdown, as short as clarity allows. Required headings: **The place** (what is wrong here) and **The bigger problem** (what this is an instance of). **Your job** is optional: an outcome to invent, or which emTech, capability, and use case to reach for. Each paragraph is a walkthrough card. The engine merges down to 8.
 4. **`mission.scene`** ≤500 chars. The instance, able to stand alone. It is the co-inventor's opening line.
-5. **`summary`** = the instance, short (≤420). **`title`** names the situation or the place. **`spotlight.encourageCopy`** states the outcome. None of these name the spotlight tech, a supporting tech, or a product.
+5. **`summary`** = the instance, short (≤420). **`title`** names the situation or the place. **`spotlight.encourageCopy`**, when present, is the optional ask (an outcome, or the applicable emTech / capability / use case).
 6. **`mission.pressure`** = structured roles `local` / `global` / `support` (omit a role to hide its meter), each `{ label, description, pressure, pressureRise, winMax }`. New tiles: local **3↑1**, global **2↑1**, support **2↑0**, `winMax` 1. Local hotter than global; support rise 0 unless you mean trust to rot with time. `description` is place-specific and shown to players.
 7. **`grounding`** (Markdown) is the capability truth every AI judgement reads: chain from emTech → product category → capabilities → trends/predictions → milestone → use cases → applications → **honest limits**. Keep it inside **3000 characters** or put **Honest limits** early; anything past the window cannot turn a light red. Tutor-only material (debate framings, discourse maps, SEQUENCE) goes in `aiTutorContext`. `research` is citation metadata for humans; nothing in the game reads it.
-8. **Your job is an outcome, not a product and not a policy.** No "invent with [tech]", no "build around [product]", no "do not invent X" ban-list, no "pass a law / ban / UBI". A rule may be the **root cause** and may be authored as **`rules`** weather; the invent still makes something scarce more abundant with emTechs in this place this year.
+8. **The ask is optional, and it is not a policy.** It may be an outcome to invent, or a recognition: which emTech, which capability, which use case fits. No "pass a law / ban / UBI" as the win. A rule may be the **root cause** and may be authored as **`rules`** weather.
 9. **`resources`** only when the **first** island cannot buy the spotlight tech at Budget 5 (frontier techs cost 2–3$). Pathway ease pays +1 Budget per eased role; that funds act two. `startingBudget: 8` is the classic mistake.
 10. Sensitive themes: `references/sensitivity.md`. Fictive places only; no real victims.
 11. **Omit** unused optional keys. No `""`, no `[]`, no `false` for optionals.
@@ -89,17 +88,17 @@ emTech (name → tech id), theme (`globalId`), audience, year (~2026). Learning 
 
 ### 3. Invent the fictive Quest
 
-- One instance of the global problem, and a plain statement of what that problem is. How it is told — people, voice, length — is yours. Open outcome the player invents toward.
+- One instance of the global problem, and a plain statement of what that problem is. How it is told — people, voice, length — is yours. The ask, if you write one, is an invention or a recognition of the fitting emTech, capability, and use case.
 - Stakeholder, structured `pressure` with descriptions, optional `rules` (1–3 named local locks already on the books; weather, not the invent — note any authored rule also switches off default theme backlash on `automation` / `rogue-si`).
 - Shelf: spotlight + 2–4 supporting techs, each with a `suggestedWhy` that names its meter.
 
 ### 4. Player-language instance
 
-**Test:** *Can the reader say what is happening in that place, and what global problem it is an instance of, without a product name?*
+**Test:** *Can the reader say what is happening in that place, and what global problem it is an instance of?*
 
-- **`summary`** is the instance, short. It does not open on a theme word or on “this is about how far [a technology] has to go.”
+- **`summary`** is the instance, short.
 - **`title`** names the situation or the place.
-- **`encourageCopy`** states the outcome. “Build your invention around [a technology]” fails.
+- **`encourageCopy`**, if you write it, is the ask: an outcome, or the emTech, capability, and use case that fit.
 - **`suggestedWhy`** says what this family could do here and contains the meter label. A product name fails.
 
 ### 5. Player-facing prose
@@ -163,5 +162,4 @@ A spotlight with no lesson pages still hands off the JSON: path, `quests/` or Im
 ## Non-goals
 
 - Hard-locking the tech tray; module unlock graphs; sponsor scoring bonuses
-- Player-facing "invent Product Y" or "invent with Y without saying Y"
-- Player-facing "pass a law / ban / UBI bill" as the invent (policy is weather, not the win)
+- Player-facing "pass a law / ban / UBI bill" as the win (policy is weather, not the win)
