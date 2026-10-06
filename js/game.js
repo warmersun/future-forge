@@ -37,6 +37,7 @@ import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
 } from "./lean-coinvent-context.js";
+import { bindPackageMediaUrls } from "./lesson-media.js";
 import {
   pushAiTrace,
   listAiTrace,
@@ -672,9 +673,26 @@ function coInventorLearningQuest() {
   return Boolean(state.mission?.isLearningModule);
 }
 
+function contentMediaRoots() {
+  try {
+    const origin = typeof location !== "undefined" ? location.origin : "";
+    if (!origin || origin === "null") return null;
+    return {
+      lessonRoot: `${origin}/content/lessons/`,
+      assetRoot: `${origin}/content/assets/`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function coInventorAiTutorContext() {
   if (isRoomOrHotseatSession()) return null;
-  return state.mission?.aiTutorContext || null;
+  const raw = state.mission?.aiTutorContext || null;
+  if (!raw) return null;
+  const roots = contentMediaRoots();
+  if (!roots) return raw;
+  return bindPackageMediaUrls(raw, roots);
 }
 
 /** AP to reserve for invent co-inventor panel; 0 while tutoring, or after the season tax is paid. */

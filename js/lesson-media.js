@@ -1,11 +1,15 @@
 /**
  * Lesson pictures and reading links inside aiTutorContext.
- * https only, same family as chat Markdown. Ids are first-seen order.
+ * Catalog entries are https, or http on localhost. Ids are first-seen order.
+ * Package paths (lessons/…, assets/…) are joined to a content root first.
  */
 
 export const LESSON_IMAGE_CAP = 8;
 export const LESSON_LINK_CAP = 12;
 export const TUTOR_NOTE_CAP = 2500;
+
+/** Stills the game already serves. A package root must not swallow them. */
+const GAME_ASSET_PREFIXES = ["assets/problems/", "assets/quests/"];
 
 /**
  * @param {string} text
@@ -52,6 +56,76 @@ export function isLessonHttps(url) {
   if (/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(u)) return true;
   if (/^file:\/\//i.test(u) && pageIsFile()) return true;
   return false;
+}
+
+/**
+ * @param {string} root
+ */
+function withSlash(root) {
+  const s = String(root || "").trim();
+  if (!s) return "";
+  return s.endsWith("/") ? s : `${s}/`;
+}
+
+/**
+ * Join a package-relative lesson or asset URL onto a content root.
+ * Hosted URLs and game stills stay as written.
+ * @param {string} url
+ * @param {string} lessonRoot
+ * @param {string} assetRoot
+ * @returns {string|null}
+ */
+function boundPackageUrl(url, lessonRoot, assetRoot) {
+  const raw = String(url || "").trim();
+  if (!raw || /[\s<>"']/.test(raw) || raw.includes("..")) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//")) return null;
+  const cut = raw.search(/[?#]/);
+  const suffix = cut >= 0 ? raw.slice(cut) : "";
+  const path = (cut >= 0 ? raw.slice(0, cut) : raw).replace(/^\/+/, "");
+  if (path.startsWith("lessons/") && lessonRoot) {
+    return lessonRoot + path.slice("lessons/".length) + suffix;
+  }
+  if (
+    path.startsWith("assets/") &&
+    assetRoot &&
+    !GAME_ASSET_PREFIXES.some((prefix) => path.startsWith(prefix))
+  ) {
+    return assetRoot + path.slice("assets/".length) + suffix;
+  }
+  return null;
+}
+
+/**
+ * Turn lessons/ and assets/ markdown targets into absolute content URLs.
+ * @param {unknown} raw
+ * @param {{ lessonRoot?: string, assetRoot?: string }} [roots]
+ */
+export function bindPackageMediaUrls(raw, roots = {}) {
+  const text = String(raw || "");
+  const lessonRoot = withSlash(roots.lessonRoot);
+  const assetRoot = withSlash(roots.assetRoot);
+  if (!text || (!lessonRoot && !assetRoot)) return text;
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const image = text[i] === "!" && text[i + 1] === "[";
+    if (image || text[i] === "[") {
+      const parsed = parseMdLink(text, image ? i + 1 : i);
+      if (parsed) {
+        const next = boundPackageUrl(parsed.url, lessonRoot, assetRoot);
+        if (next) {
+          out += `${image ? "!" : ""}[${parsed.label}](${next})`;
+        } else {
+          out += text.slice(i, parsed.end);
+        }
+        i = parsed.end;
+        continue;
+      }
+    }
+    out += text[i];
+    i += 1;
+  }
+  return out;
 }
 
 /**

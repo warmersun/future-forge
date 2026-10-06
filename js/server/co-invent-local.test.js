@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   HEX_INVENT_HINT,
+  TUTOR_HINT,
   isTutorMode,
   localCoInvent,
   sanitizeHowTechId,
@@ -35,6 +36,16 @@ describe("co-invent local engine", () => {
     assert.equal(out.source, "local");
     assert.match(out.message, /Suggest stack/);
     assert.deepEqual(out.proposals.addTechIds, []);
+  });
+
+  it("lets the tutor offer a side-loaded localhost lesson", () => {
+    assert.match(TUTOR_HINT, /http on localhost/);
+    assert.doesNotMatch(TUTOR_HINT, /https only/);
+    for (const rel of ["server.mjs", "portal/server.mjs"]) {
+      const src = fs.readFileSync(path.join(root, rel), "utf8");
+      assert.match(src, /http on localhost for a side-loaded lesson/, rel);
+      assert.doesNotMatch(src, /https only/, rel);
+    }
   });
 
   it("keeps tutoring off when the learner turned it off", () => {

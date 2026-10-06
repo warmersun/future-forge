@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   LESSON_IMAGE_CAP,
   LESSON_LINK_CAP,
+  bindPackageMediaUrls,
   hasLessonMedia,
   listLessonMedia,
   tutorNotesForVoice,
@@ -72,6 +73,49 @@ describe("listLessonMedia", () => {
     assert.equal(media.links.length, LESSON_LINK_CAP);
     assert.equal(media.images[0].id, "img1");
     assert.equal(media.images.at(-1).id, `img${LESSON_IMAGE_CAP}`);
+  });
+});
+
+describe("bindPackageMediaUrls", () => {
+  const roots = {
+    lessonRoot: "http://127.0.0.1:8765/content/lessons/",
+    assetRoot: "http://127.0.0.1:8765/content/assets/",
+  };
+
+  it("joins package lesson and asset paths and leaves hosted urls", () => {
+    const bound = bindPackageMediaUrls(
+      [
+        "[Page 01 — Wrong answers have to cancel](lessons/red-clay/01-wrong-answers-cancel.html)",
+        "![Wrong answers cancel](lessons/red-clay/illustrations/01-visual.png)",
+        "[Still](assets/job.png)",
+        "[Game still](assets/problems/flood.png)",
+        "[Host](https://warmersun.com/lessons/x.html)",
+      ].join("\n"),
+      roots
+    );
+    const media = listLessonMedia(bound);
+    assert.deepEqual(
+      media.links.map((item) => item.url),
+      [
+        "http://127.0.0.1:8765/content/lessons/red-clay/01-wrong-answers-cancel.html",
+        "http://127.0.0.1:8765/content/assets/job.png",
+        "https://warmersun.com/lessons/x.html",
+      ]
+    );
+    assert.equal(
+      media.images[0].url,
+      "http://127.0.0.1:8765/content/lessons/red-clay/illustrations/01-visual.png"
+    );
+    assert.match(bound, /\(assets\/problems\/flood\.png\)/);
+    assert.equal(listLessonMedia(
+      "[Page](lessons/red-clay/01.html)\n![Pic](lessons/red-clay/illustrations/01.png)"
+    ).links.length, 0);
+  });
+
+  it("does not rewrite a url that is already absolute", () => {
+    const text =
+      "[Page](http://127.0.0.1:8765/content/lessons/red-clay/01.html)";
+    assert.equal(bindPackageMediaUrls(text, roots), text);
   });
 });
 
