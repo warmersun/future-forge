@@ -9,8 +9,7 @@ export const BRIEF_BEAT_ROLES = [
   "job",
   "place",
   "strain",
-  "possible",
-  "constraints",
+  "hint",
   "other",
 ];
 
@@ -28,7 +27,7 @@ export const BRIEF_BEAT_CAPS = {
 const ROLE_SET = new Set(BRIEF_BEAT_ROLES);
 
 /** Canonical walkthrough order (story first, invent job last). */
-const ROLE_ORDER = ["place", "strain", "possible", "constraints", "other", "job"];
+const ROLE_ORDER = ["place", "strain", "hint", "other", "job"];
 
 const HEADING_ROLE = {
   "your job": "job",
@@ -36,9 +35,7 @@ const HEADING_ROLE = {
   "the place": "place",
   "the bigger problem": "strain",
   "what's strained": "strain",
-  "what just became possible": "possible",
-  "a capability that just became more real": "possible",
-  constraints: "constraints",
+  "a hint": "hint",
 };
 
 /**
@@ -352,10 +349,8 @@ export function briefBeatImagePrompt(beat, opts = {}) {
   let lead = `Lived scene in ${place}.`;
   if (role === "strain") {
     lead = `Visible human strain and pressure in ${place}.`;
-  } else if (role === "possible") {
-    lead = `A new local capability appearing in everyday life in ${place}. Not a product shot.`;
-  } else if (role === "constraints") {
-    lead = `Scarce power, time, or trust as a lived moment in ${place}.`;
+  } else if (role === "hint") {
+    lead = `A clue in everyday life in ${place}. No product, no finished invention.`;
   } else if (role === "job") {
     lead = `People in ${place} facing an open design problem. No finished invention, no brochure.`;
   } else if (role === "other") {
@@ -437,8 +432,7 @@ export function deriveBriefBeats(briefMd, opts = {}) {
   const buckets = {
     place: [],
     strain: [],
-    possible: [],
-    constraints: [],
+    hint: [],
     other: [],
     job: [],
   };
@@ -612,10 +606,8 @@ function titleForRole(role) {
       return "Your job";
     case "strain":
       return "The bigger problem";
-    case "possible":
-      return "What just became possible";
-    case "constraints":
-      return "Constraints";
+    case "hint":
+      return "A hint";
     default:
       return "The place";
   }
@@ -821,7 +813,7 @@ function mergeToCap(beats, cap) {
  * @param {BriefBeat[]} out
  */
 function findMergeIndex(out) {
-  const rank = { job: 0, possible: 1, strain: 2, constraints: 3, other: 4, place: 5 };
+  const rank = { job: 0, hint: 1, strain: 2, other: 4, place: 5 };
   let bestI = -1;
   let bestRank = 99;
   let bestLen = 1;

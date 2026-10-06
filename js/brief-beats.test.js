@@ -49,12 +49,9 @@ describe("brief-beats headings", () => {
     assert.equal(roleFromHeading("Your brief"), "job");
     assert.equal(roleFromHeading("The place"), "place");
     assert.equal(roleFromHeading("The bigger problem"), "strain");
-    assert.equal(roleFromHeading("What just became possible"), "possible");
-    assert.equal(
-      roleFromHeading("A capability that just became more real"),
-      "possible"
-    );
-    assert.equal(roleFromHeading("Constraints"), "constraints");
+    assert.equal(roleFromHeading("A hint"), "hint");
+    assert.equal(roleFromHeading("What just became possible"), "other");
+    assert.equal(roleFromHeading("Constraints"), "other");
     assert.equal(roleFromHeading("A surprise heading"), "other");
   });
 });
@@ -250,6 +247,15 @@ describe("normalizeBriefBeats / resolveBriefBeats", () => {
     assert.equal(n.ok, true);
     assert.equal(n.beats.length, 3);
     assert.equal(n.beats[0].id, "place-1");
+  });
+
+  it("rejects a legacy possible role", () => {
+    const legacy = sample.map((b, i) =>
+      i === 1 ? { ...b, role: "possible", title: "What just became possible" } : b
+    );
+    const n = normalizeBriefBeats(legacy);
+    assert.equal(n.ok, false);
+    assert.ok(n.details.some((d) => /bad_role/.test(d)));
   });
 
   it("rejects too few, missing id, bad url", () => {

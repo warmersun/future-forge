@@ -13,11 +13,15 @@ What is wrong here. As short as clarity allows.
 
 What global problem this is an instance of.
 
+## A hint
+
+On a learning quest. One or two sentences: the kind of change worth asking the tutor about. Not the method in this place. Not a product.
+
 ## Your job
 
 Optional. An outcome to invent, or which emTech, capability, and use case fit. Not "pass a law" / "ban" / "UBI".
 ```
 
-**The place** and **The bigger problem** are required. **Your job** is not. Old heading **What's strained** still walks as the bigger problem.
+**The place** and **The bigger problem** are required. **A hint** is required on a learning quest and optional on a spotlight tile. **Your job** is not required. Old heading **What's strained** still walks as the bigger problem.
 
 `mission.scene` is the instance again, in plain text, ≤500 characters, able to stand alone. `summary` is the instance on the card. `title` is the situation or the place. `encourageCopy`, when set, is the optional ask and becomes the job card if the brief has none.

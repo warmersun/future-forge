@@ -80,7 +80,7 @@ The UI derives a stepped briefing from `briefMd` headings and paragraphs and swa
 | Field | Notes |
 |-------|--------|
 | `id` | Unique slug ≤40 |
-| `role` | Optional: `job` \| `place` \| `strain` \| `possible` \| `constraints` \| `other` |
+| `role` | Optional: `job` \| `place` \| `strain` \| `hint` \| `other` |
 | `title` | Player kicker ≤60 |
 | `bodyMd` | Caption ≤500 chars; no new facts vs `briefMd` |
 | `imageUrl` | Optional `https://…` or bundled `assets/…jpg\|png\|webp`. Walk shows it immediately (no Imagine) |

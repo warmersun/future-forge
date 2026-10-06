@@ -79,7 +79,7 @@ Hidden **`aiTutorContext`** is for the AI only, but the **tutor’s chat replies
 
 1. **Package path or https** — a page or image that ships in the package is `lessons/<folder>/…` or `assets/<file>`. A reading that does not ship in the package stays `https://`. No `javascript:` or `data:`. Lesson HTML itself uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`), not package paths.
 2. **Stock in context; pace in chat** — list readings and illustrations under RESOURCES / ILLUSTRATIONS. `SEQUENCE` names the **idea**, then “offer [Page title](url) after a short spoken explanation of this idea.” Do not write “open pages/01.md” as if the tutor should only emit a path. One link or image per micro-step, not a resource dump. Never a URL with no spoken answer.
-3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). Do not author **What just became possible** on new tiles. The tutor teaches the capability class after the story.
+3. **Do not put these only in player brief** if they are pedagogy aids — curriculum materials belong in **`aiTutorContext`** (and capability truth stays in **`grounding`**). A learning quest may include **A hint**: one or two sentences naming the kind of change worth asking the tutor about. The tutor teaches the capability class after the story.
 4. **Images** must be useful teaching aids (mechanism diagram, map schematic, annotated photo). Avoid decorative stock; caption with `![…](url)`.
 5. **Never** treat a sponsored product URL as a required solution path; invent stays open and pilot-honest.
 6. Chat still refuses raw HTML — use Markdown only.
