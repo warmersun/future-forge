@@ -6,9 +6,11 @@ description: >
   collector card JSON file (also called a collection card). Players open a
   public link, collect the card, and play it as a free reusable invention
   tile. Portable multi-harness skill — not tied to a single agent product.
-  Knows the issue-script shape: techId, title, description, body, links,
-  source, and the sibling page image. Use when asked to create, write, or
-  edit a collector card, collection card, or cards/*.json capability tile.
+  Knows the issue-script shape: id, techId, title, description, body, links,
+  source, and the sibling page image. Daily cards live in
+  cards/daily/YYYY-MM-DD-<slug>.json and publish on merge through GitHub
+  Actions. Use when asked to create, write, or edit a collector card,
+  collection card, or cards/**/*.json capability tile.
 ---
 
 # Future Forge collector-card author
@@ -27,10 +29,12 @@ You write **one collector card**: a real capability, in general terms, that a le
 
 One JSON file next to its page image:
 
-- Path: `cards/<slug>.json` (examples live in `cards/examples/`)
-- Image: same basename, `.jpg` / `.jpeg` / `.png` / `.webp`, 16:9, ≤ 1.5MB
-- Validate: `npm run validate:collector-card -- cards/<slug>.json`
-- Publish only when the user asks: `./scripts/issue-collector-card.sh cards/<slug>.json` (needs `DATABASE_URL`; prints `/card/<uuid>`)
+- **Daily card (weekday news flow):** `cards/daily/YYYY-MM-DD-<kebab-slug>.json`
+- **One-off / example:** `cards/<slug>.json` (examples live in `cards/examples/`)
+- Image: same basename, `.jpg` / `.jpeg` / `.png` / `.webp`, 16:9, ≤ 1.5 MB, **AI-generated** (no photos, no logos — same rule as Spotlight brief beats)
+- The daily card **must** carry a fixed UUID `"id"`. Mint one once with `node -e "console.log(crypto.randomUUID())"` and keep it forever. Reusing or changing an id creates (or would create) a second card.
+- Validate: `npm run validate:collector-card -- cards/daily/<file>.json`
+- **Publish:** merging a daily card into `main` publishes it automatically (GitHub Actions + the `DATABASE_URL` repository secret). Do **not** run the issue script yourself for a daily card. For a one-off outside `cards/daily/`, run only when asked: `./scripts/issue-collector-card.sh cards/<slug>.json` (needs `DATABASE_URL`; prints `/card/<uuid>`). Dry-run: add `--dry-run`.
 
 | Doc | Purpose |
 |-----|---------|
@@ -61,9 +65,9 @@ A collected card can be played again. One card mints at most one tile on a board
 5. **`source`** is required for the operator and is not stored or shown. One line: who announced or published what, and the date. No invented attribution.
 6. **`links`**: 1–8 entries. `label` ≤ 80, saying what the page shows. `url` is `http` or `https` with no username or password. Primary sources only. A bad URL is dropped on issue, not repaired.
 7. **No invented facts.** Counts, times, and limits in `description` and `body` must be in the linked sources. If you cannot cite it, leave it out.
-8. **Omit** unused optional keys (`id`, `published`, `image`). No `""`, no `[]`. Include `id` only when updating a card that already has a UUID. Set `published: false` only to hide a card. Set `image` only when the picture is not the sibling file (path relative to the JSON).
-9. **New cards need a picture** before issue. Same basename as the JSON. The issuer refuses a new card with no image file.
-10. Validate until the script prints `OK`. Justify any `warn:` in the hand-off. Do not run the issue script unless the user asked to publish.
+8. **`id`.** Daily cards always include a fixed UUID. One-off / example cards omit it until they already have one (then keep it). Never invent a second id for the same card. No `""`, no `[]`. Omit unused optional keys (`published`, `image`). Set `published: false` only to hide a card. Set `image` only when the picture is not the sibling file (path relative to the JSON).
+9. **New cards need a picture** before issue. Same basename as the JSON, AI-generated, 16:9, ≤ 1.5 MB, no photos or logos. The issuer refuses a new card with no image file. Daily cards fail validation without one.
+10. Validate until the script prints `OK`. Justify any `warn:` in the hand-off. Do not run the issue script for a daily card — the merge publishes it. For anything else, do not run the issue script unless the user asked to publish.
 
 ## Procedure
 
@@ -88,15 +92,32 @@ Match the voice of `cards/examples/drones-urban-delivery.json` and `cards/exampl
 ### 4. Validate
 
 ```bash
-npm run validate:collector-card -- cards/<slug>.json
+npm run validate:collector-card -- cards/daily/YYYY-MM-DD-<slug>.json
 ```
 
-`unknown_tech`, `bad_title`, `bad_description`, `bad_body`, and `bad_id` are failures. Fix them. A missing sibling image is a warning until you add the file; the issue script treats it as a failure for a new card.
+`unknown_tech`, `bad_title`, `bad_description`, `bad_body`, `bad_id`, and (for daily cards) `id_required`, `bad_daily_name`, `image_required`, and `image_not_16x9` are failures. Fix them. For one-off cards a missing sibling image is a warning until you add the file; the issue script treats it as a failure for a new card.
 
 ### 5. Hand off
 
-Tell the user the JSON path, whether an image is beside it, and any warning you left in place. Give the publish command only as the next step they can run:
+Tell the user the JSON path, the fixed `id`, whether an image is beside it, and any warning you left in place.
+
+- **Daily card:** open a PR that adds the JSON + image under `cards/daily/`. Merging into `main` publishes it. Do not run the issue script.
+- **One-off:** give the publish command only as the next step they can run:
 
 ```bash
 ./scripts/issue-collector-card.sh cards/<slug>.json
 ```
+
+## Daily collector cards (weekday news)
+
+Bob picks one real invention each weekday. Future Forge authors it as a collector card under `cards/daily/`, opens a PR in this repo, and Sic merges. The merge runs `.github/workflows/collector-cards-publish.yml`, which upserts the card into Neon on its UUID and posts the `/card/<uuid>` link on the PR.
+
+| Rule | Detail |
+|------|--------|
+| Path | `cards/daily/YYYY-MM-DD-<kebab-slug>.json` + sibling image |
+| `id` | Required. Stable UUID. The database primary key. Edits keep the same id and update the card in place. |
+| Image | AI-generated, 16:9, ≤ 1.5 MB, jpg/png/webp, no photos or logos |
+| Scope | Only `cards/daily/` is published. `cards/examples/` and `test/fixtures/` never are. |
+| Idempotency | `INSERT ... ON CONFLICT (id) DO UPDATE`. Re-runs and later merges never create a second card. |
+| Secret | Repository secret `DATABASE_URL` = the Neon connection string (same value as on the portal). See the README. |
+| Manual republish | Actions → Collector cards publish → Run workflow (optional dry run). |

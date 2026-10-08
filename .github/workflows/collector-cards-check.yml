@@ -1,0 +1,80 @@
+# Checks collector cards in a pull request. No secrets, no database.
+# Daily cards (cards/daily/) must have a fixed id, the YYYY-MM-DD-<slug> name,
+# and a 16:9 jpg/png/webp page image of at most 1.5 MB. Card ids must be unique
+# and a card that already exists must keep its id.
+name: Collector cards check
+
+on:
+  pull_request:
+    paths:
+      - "cards/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collector-cards-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Find changed cards
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node scripts/collector-cards-ci.mjs changed --pr --scope all \
+            --base "$BASE_SHA" --head "$HEAD_SHA" > "$RUNNER_TEMP/cards.txt"
+          echo "Changed cards:"
+          cat "$RUNNER_TEMP/cards.txt"
+          echo "count=$(grep -c . "$RUNNER_TEMP/cards.txt" || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate cards and images
+        if: steps.changed.outputs.count != '0'
+        run: |
+          mapfile -t cards < "$RUNNER_TEMP/cards.txt"
+          npm run validate:collector-card -- "${cards[@]}"
+
+      - name: Check card ids
+        if: steps.changed.outputs.count != '0'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mapfile -t cards < "$RUNNER_TEMP/cards.txt"
+          base="$(git merge-base "$BASE_SHA" HEAD)"
+          node scripts/collector-cards-ci.mjs check-ids --base "$base" "${cards[@]}"
+
+      - name: Summary
+        if: always()
+        env:
+          COUNT: ${{ steps.changed.outputs.count }}
+          STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Collector cards check"
+            if [ "${COUNT:-0}" = "0" ]; then
+              echo "No card JSON was added or changed."
+            else
+              echo "Checked:"
+              while read -r card; do echo "- \`$card\`"; done < "$RUNNER_TEMP/cards.txt"
+              echo
+              if [ "$STATUS" = "success" ]; then
+                echo "Daily cards are published automatically when this pull request is merged."
+              else
+                echo "Fix the errors in the log above. Nothing is published until this check passes and the pull request is merged."
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
