@@ -106,7 +106,7 @@ Feature vs benefit vs proof vs feeling:
 |-------|-----------|
 | Feature | Eleven emTech families in a tray, Look Ahead curves with doubling, halving, and CAGR chips, reached and predicted milestones, convergence when tiles touch, honesty bar for timing, four challengers, hex pathway board, AI co-inventor, Friends rooms with shared crisis, Spotlight Quests from real advances, Foresight for your stack at the outcome |
 | Benefit | A map you can hold in your head, a way to tell which curves are steep now, and a pathway you invented and can defend |
-| Proof (what exists today) | The core table and open invent quests run free (no account needed to invent); learning/lesson quests need free signup; Look Ahead plots real capability curves per family; the co-inventor grades timing against the current year; four Quest tiles exist, two pegged to specific advances. **No completion, retention, or satisfaction numbers exist.** |
+| Proof (what exists today) | The core table and quests with access "open" run free (no account needed to invent, including open learning quests); account-gated quests need free signup; Look Ahead plots real capability curves per family; the co-inventor grades timing against the current year; four Quest tiles exist, two pegged to specific advances. **No completion, retention, or satisfaction numbers exist.** |
 | Feeling | Orientation ("I finally have a frame for this"), agency ("I could actually do something with it"), earned optimism at the hold, belonging when a friend is in the room |
 
 This / not that ("better for someone"):
@@ -159,7 +159,7 @@ Ladder: stranger → friend → customer → loyal. Next smallest yes at each ru
 
 | Rung | Who | Smallest next yes |
 |------|-----|-------------------|
-| Stranger | Read about an advance, saw a Quest link or a clip | Open the link, see Look Ahead, dock one tile. Open invent quests: no account. Learning/lesson quests: free signup |
+| Stranger | Read about an advance, saw a Quest link or a clip | Open the link, see Look Ahead, dock one tile. Quests with access "open": no account, even learning quests. Account-gated quests: free signup |
 | Friend | Held a pathway once, unsigned | Save the hold to a Cloud account at the outcome screen; opt in to the new-Quest notice |
 | Customer | Has an account, has returned for a second Quest | Invite friends into a Friends room; later, a paid module or Cloud plan when Billing exists |
 | Loyal | Returns for most drops, reads other people's write-ups | Author or request a Quest; host a Friends room under the free meeting grant |
@@ -194,7 +194,7 @@ Spread design (sneezers / smoothness / hive), not "go viral":
 - **Hive:** the conversation around a specific advance in the week it lands, among people who already feel the acceleration. The Quest enters that conversation as "here is the curve, here is what you would do with it," not as a product announcement.
 - **Promiscuous sneezers:** people who held a pathway and had the Look Ahead moment. Their tool is the outcome share card, Foresight for your stack, and the `?q=` link. Their status gain: they are the friend who has a framework when everyone else has a feed.
 - **Powerful sneezers:** people who author Quest tiles from real advances (researchers, newsletter writers, agent tinkerers) and people who already publicly hold the rational techno-optimist position. Their tool is `skills/future-forge-quest/`, the validator, and the economy simulator. Their status gain: a Quest card and a board with their authorship on it. Do not pay them or dress them as ads.
-- **Smoothness:** one link opens one specific Quest. Open invent quests need no account; learning/lesson quests and sponsored spotlights need free signup (see [Access wording source of truth](docs/warmer-sun-cloud.md#access-wording-source-of-truth)). One sentence transmits the idea. The remaining friction is the hour it takes, so drops land when people have time.
+- **Smoothness:** one link opens one specific Quest. Quests with access "open" need no account, learning quests included; account-gated quests need free signup (see [Access wording source of truth](docs/warmer-sun-cloud.md#access-wording-source-of-truth)). One sentence transmits the idea. The remaining friction is the hour it takes, so drops land when people have time.
 - **What we will not do that would make sneezers turn against us:** fake numbers, mandatory sign-in on the hex engine, a teacher dashboard, letting the AI invent for people, letting a sponsor's product name count as a solution, or sliding into either hype or doom in the copy.
 
 ---
@@ -323,7 +323,7 @@ True / consent / opt-out / claims needing evidence:
 | What's it for? | Building the mental model (eleven families, curves, convergence, timing) and the agency to invent pathways with it. Rational techno-optimism as a practice. |
 | Worldview? | This is real and accelerating; I need a frame, not another take; I want to act, not watch. |
 | Afraid of? | Vertigo without handles; being the person it happens to; being lectured or reassured. |
-| True story? | Free table for open invent (no account needed to invent); learning/lesson quests need free signup; real curves per family in Look Ahead; an AI that grades timing against the current year; a Quest about the advance in the news this week. All true today except the notice, which is the second ship. |
+| True story? | Free table and open quests (no account needed to invent, including open learning quests); account-gated quests need free signup; real curves per family in Look Ahead; an AI that grades timing against the current year; a Quest about the advance in the news this week. All true today except the notice, which is the second ship. |
 | Change? | From spectator with vertigo to rational techno-optimist with a map and a pathway. |
 | Status shift? | Affiliation: "I understand what is happening and I am doing something with it." Light playful dominance on per-quest boards. |
 | Early adopters? | People discussing a specific advance the week it lands who already feel the acceleration; agent tinkerers who will author Quests; public rational optimists. |
