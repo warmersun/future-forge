@@ -54,6 +54,7 @@ Open **http://127.0.0.1:8765**
 | Command | Purpose |
 |--------|---------|
 | `npm start` / `npm run serve` | **game** — Future Forge engine (`server.mjs`). No Clerk, no Neon. |
+| `npm run staging -- <token>` | game against a warmersun.com **staging** build instead of live (see below) |
 | `npm run portal` | **portal** — Cloud **APIs** only (`portal/server.mjs`). Clerk + Neon. No game UI. Render runs this. |
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
@@ -81,6 +82,40 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 **Share a lesson (X / open table):** catalog card → **Copy link**. That copies `https://warmersun.com/forge/?q=<quest-id>`. The hop forwards `?q=` onto the Funnel game host, and Future Forge starts that Quest. Learning lessons still need Sign in when Cloud is on. Do not post the `*.ts.net` URL.
 
 Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
+
+### Preview a staging build (`npm run staging`)
+
+Attila publishes unreleased content to `https://warmersun.com/staging/<token>/` before it goes live. To play that build locally on port 8765:
+
+```bash
+npm run staging -- 20261008-113941-f1ab7c98-solved-today
+# or
+./scripts/run-staging.sh https://warmersun.com/staging/20261008-113941-f1ab7c98-solved-today/
+```
+
+Open **http://127.0.0.1:8765**. The script takes a bare token or the full staging URL, and extra arguments go to the server (for example `--ai-search`). It runs in developer mode.
+
+What it does:
+
+1. Sets one variable, `FF_CONTENT_BASE_URL=https://warmersun.com/staging/<token>/`. Every remote content catalog is derived from it: quests (modules, lessons and spotlights) from `<base>quests/catalog.json`, and capability trends from `<base>trends/catalog.json`. Any `FF_QUESTS_REMOTE_URL` / `FF_TRENDS_REMOTE_URL` from your shell or `.env` is ignored for that run, and there is no quiet fallback to live quests.
+2. Checks the staging catalog **before** starting the server. If it 404s, is not JSON, lists no quests, or none of its quests load, it stops with `STAGING CHECK FAILED` and exit code 1. It prints each module, lesson and spotlight it loaded, warns about entries that failed, and lists any links in the staged quests that still point at live warmersun.com.
+3. If the staging build has no trends catalog, it uses live trends and says so.
+
+Staging layout the script assumes (as Attila publishes it today):
+
+```text
+/staging/<token>/
+  index.html                         preview index (not read by the app)
+  quests/catalog.json                future-forge.quest-catalog/v1; "file" paths are relative to quests/
+  quests/package/<id>.json           module and quest tiles
+  quests/package/assets/...          images; tiles reference them by absolute staging URL
+  quests/<id>-preview.html           human preview pages (not read by the app)
+  trends/catalog.json                optional; live trends are used when missing
+```
+
+Lesson pages and images are not fetched by the server. They are whatever absolute URLs the staged tiles contain, so staging tiles should point at staging copies. The local `quests/` Library folder still loads alongside staging (as with `npm start`).
+
+`FF_CONTENT_BASE_URL` works with `npm start` and the portal too. Unset, the live defaults are unchanged.
 
 ### Learner accounts (optional Clerk)
 

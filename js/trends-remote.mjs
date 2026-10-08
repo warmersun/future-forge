@@ -11,6 +11,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
+import { resolveContentBaseUrl, contentCatalogUrl } from "./content-base.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
@@ -43,7 +45,8 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 /**
  * Resolve remote catalog URL or local path from env.
  * Empty / "0" / "off" / "false" disables remote fetch.
- * Unset: local warmersun checkout → warmersun.com.
+ * Unset: FF_CONTENT_BASE_URL + trends/catalog.json when set (staging),
+ * else local warmersun checkout → warmersun.com.
  * @returns {string|null}
  */
 export function resolveTrendsRemoteUrl() {
@@ -53,6 +56,8 @@ export function resolveTrendsRemoteUrl() {
     if (!s || s === "0" || /^off$/i.test(s) || /^false$/i.test(s)) return null;
     return s;
   }
+  const base = resolveContentBaseUrl();
+  if (base) return contentCatalogUrl(base, "trends");
   return defaultLocalWarmersunTrendsCatalogPath() || DEFAULT_TRENDS_REMOTE_URL;
 }
 
@@ -66,7 +71,7 @@ export function resolveTrendsRemoteUrlCandidates(
 ) {
   if (!primary) return [];
   const raw = process.env.FF_TRENDS_REMOTE_URL;
-  if (raw !== undefined) return [primary];
+  if (raw !== undefined || resolveContentBaseUrl()) return [primary];
   const out = [primary];
   if (primary !== DEFAULT_TRENDS_REMOTE_URL) out.push(DEFAULT_TRENDS_REMOTE_URL);
   return [...new Set(out.filter(Boolean))];
@@ -344,7 +349,9 @@ export async function fetchRemoteTrendCatalog(
   }
 
   const tryFallbacks =
-    opts.tryFallbacks !== false && process.env.FF_TRENDS_REMOTE_URL === undefined;
+    opts.tryFallbacks !== false &&
+    process.env.FF_TRENDS_REMOTE_URL === undefined &&
+    !resolveContentBaseUrl();
   const candidates = tryFallbacks
     ? resolveTrendsRemoteUrlCandidates(url)
     : [url];
