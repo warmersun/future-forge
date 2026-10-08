@@ -76,6 +76,13 @@ Not a JSON field unless `image` overrides it. The issuer looks beside the JSON, 
 | `bad_id` | `id` present and not a UUID |
 | `image_required` | Daily cards: the validator. New cards of any kind: the issue script. |
 
+Validator warnings (never failures; fix them or justify them in the hand-off):
+
+| Warning | Cause |
+|---------|--------|
+| `jargon: "<term>" in <field>` | `title`, `capability`, or `useCases` uses an engineering term a stranger would not know: bandgap, electronvolt / eV, Schottky, substrate, epitaxy, doping, p-type / n-type, diode, transistor, sapphire. Explain it in the same sentence or cut it (stranger-on-the-street test, SKILL.md rule 5). The check matches whole words and cannot tell whether the term is already explained. |
+| `link label(s) over 80 characters` | The label would be cut off on the card page. |
+
 ## Played tile
 
 Minted in the workshop from the library row, not from this file directly:

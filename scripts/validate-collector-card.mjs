@@ -9,6 +9,10 @@
  * the file name rule, and a page image
  * that exists, is jpg/png/webp, is at most 1.5 MB, and is 16:9. Every card id
  * must be unique across cards/.
+ *
+ * Every card also gets warnings (never failures) for engineering jargon in the
+ * title, capability, or use cases (the "stranger on the street" test), and for
+ * link labels that would be cut at 80 characters.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -21,7 +25,7 @@ const CARDS_ROOT = process.env.FF_CARDS_ROOT ? path.resolve(process.env.FF_CARDS
 
 const { parseIssueCard, sanitizeCardLinks, siblingCardImageCandidates, normalizeCardId } =
   await import(pathToFileURL(path.join(ROOT, "js/server/collector-cards.mjs")).href);
-const { isDailyCardPath, dailyCardNameError, checkCardImage, findCardIdProblems, toPosix } =
+const { isDailyCardPath, dailyCardNameError, checkCardImage, findCardIdProblems, findCardJargon, toPosix } =
   await import(pathToFileURL(path.join(ROOT, "js/server/collector-card-publish.mjs")).href);
 
 function jsonFilesIn(dir) {
@@ -126,6 +130,14 @@ for (const abs of targets) {
     warns.push(`${rawLinks.length - kept.length} link(s) dropped (need a label and an http(s) URL)`);
   }
   if (!kept.length) warns.push("no links; cite the sources you used");
+  const longLabels = rawLinks.filter((l) => String(l?.label || "").trim().length > 80).length;
+  if (longLabels) warns.push(`${longLabels} link label(s) over 80 characters will be cut off; shorten them`);
+
+  for (const { field, term } of findCardJargon(card)) {
+    warns.push(
+      `jargon: "${term}" in ${field}. Would a stranger on the street get it in one read? Explain it in the same sentence or cut it`
+    );
+  }
 
   const imageOverride = String(raw.image || "").trim();
   const imagePath = imageOverride

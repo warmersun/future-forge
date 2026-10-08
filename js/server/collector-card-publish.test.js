@@ -9,6 +9,7 @@ import {
   imageInfo,
   checkCardImage,
   findCardIdProblems,
+  findCardJargon,
 } from "./collector-card-publish.mjs";
 import { solidPng } from "../../test/collector-card-png.mjs";
 
@@ -118,4 +119,32 @@ test("card ids: duplicates and changed ids are problems; new cards are fine", ()
     baseIdOf: () => A,
   });
   assert.match(removed[0], /now missing/);
+});
+
+test("stranger test: jargon in title, capability, or use cases is flagged; body and plain words are not", () => {
+  const rejected = {
+    title: "A 7-electronvolt oxide semiconductor that works as a diode and transistor",
+    capability:
+      "We can now grow a thin crystal film with a bandgap above 7 electronvolts that still carries current, and build a working diode and a transistor from it on an ordinary sapphire wafer.",
+    useCases: ["Building those very-wide-bandgap devices on sapphire wafers."],
+    body: "Schottky substrate epitaxy",
+  };
+  const hits = findCardJargon(rejected);
+  const terms = (field) => hits.filter((h) => h.field === field).map((h) => h.term).sort();
+  assert.deepEqual(terms("title"), ["diode", "electronvolt", "transistor"]);
+  assert.deepEqual(terms("capability"), ["bandgap", "diode", "electronvolt", "sapphire", "transistor"]);
+  assert.deepEqual(terms("useCases"), ["bandgap", "sapphire"]);
+  assert.equal(hits.some((h) => h.field === "body"), false);
+
+  const plain = {
+    title: "A new chip material for smaller, cooler power electronics",
+    capability:
+      "Power switches, the parts inside chargers, electric cars and the power grid that turn electricity on and off, could get smaller, run cooler and waste less energy. It's early lab work, not a product yet.",
+    useCases: ["Smaller chargers and power supplies that stay cooler and waste less electricity as heat."],
+  };
+  assert.deepEqual(findCardJargon(plain), []);
+  // Whole words only, and "eV" is case-sensitive so ordinary words never match.
+  assert.deepEqual(findCardJargon({ capability: "Every level of developer, even Steve, adopted it." }), []);
+  assert.deepEqual(findCardJargon({ capability: "A 6.2 eV film." }).map((h) => h.term), ["electronvolt"]);
+  assert.deepEqual(findCardJargon({ title: "Band gap record" }).map((h) => h.term), ["bandgap"]);
 });
