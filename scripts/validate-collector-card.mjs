@@ -5,7 +5,8 @@
  * With no args, validates cards/examples/*.json and cards/daily/*.json.
  *
  * Daily cards (cards/daily/YYYY-MM-DD-<slug>.json) are published on merge, so
- * they are held to more: a fixed `id`, the file name rule, and a page image
+ * they are held to more: a fixed `id`, a `capability` and 1–3 `useCases`,
+ * the file name rule, and a page image
  * that exists, is jpg/png/webp, is at most 1.5 MB, and is 16:9. Every card id
  * must be unique across cards/.
  */
@@ -101,6 +102,14 @@ for (const abs of targets) {
       errors.push(
         'id_required: a daily card needs its own fixed "id" (a UUID). Make one with: node -e "console.log(crypto.randomUUID())"'
       );
+    }
+    if (!card.capability) {
+      errors.push(
+        'capability_required: a daily card needs "capability": one plain sentence or two on what we can do now that we could not do before'
+      );
+    }
+    if (!card.useCases.length) {
+      errors.push('use_cases_required: a daily card needs "useCases": 1 to 3 short, concrete, plain-language uses');
     }
     if (raw.published === false) {
       warns.push("published is false: the card is stored but hidden");

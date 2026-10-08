@@ -30,15 +30,19 @@ const GIT_ENV = {
   GIT_COMMITTER_EMAIL: "test@example.com",
 };
 
-function card(id, title = "A daily card for the tests") {
+function card(id, title = "A daily card for the tests", extra = {}) {
   const c = {
     source: "test",
     techId: "drones",
     title,
     description: "A capability described in general terms for a test.",
+    capability: "Something can now be done that could not be done before.",
+    useCases: ["A first concrete use", "A second concrete use"],
     links: [{ label: "Source", url: "https://example.com/source" }],
+    ...extra,
   };
   if (id) c.id = id;
+  for (const [k, v] of Object.entries(c)) if (v === undefined) delete c[k];
   return `${JSON.stringify(c, null, 2)}\n`;
 }
 
@@ -206,8 +210,21 @@ test("validator: daily cards need an id, the name rule, and a 16:9 image", () =>
   assert.match(r.stderr, /duplicate_id/);
   fs.rmSync(path.join(repo.dir, "cards/daily/2026-10-09-copy.json"));
 
+  // Daily cards need a capability and 1–3 use cases.
+  repo.write("cards/daily/2026-10-10-nocap.json", card("9fb06d42-7b5e-4a0f-9c23-4e5f60718293", "No capability", { capability: undefined, useCases: undefined }));
+  repo.write("cards/daily/2026-10-10-nocap.png", solidPng(1600, 900));
+  r = validate("cards/daily/2026-10-10-nocap.json");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /capability_required/);
+  assert.match(r.stderr, /use_cases_required/);
+  repo.write("cards/daily/2026-10-10-nocap.json", card("9fb06d42-7b5e-4a0f-9c23-4e5f60718293", "Too many uses", { useCases: ["a", "b", "c", "d"] }));
+  r = validate("cards/daily/2026-10-10-nocap.json");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /bad_use_cases/);
+  fs.rmSync(path.join(repo.dir, "cards/daily/2026-10-10-nocap.json"));
+
   // Examples keep the old, looser rules: no id needed, odd aspect only warns.
-  repo.write("cards/examples/legacy.json", card(null, "Legacy example"));
+  repo.write("cards/examples/legacy.json", card(null, "Legacy example", { capability: undefined, useCases: undefined }));
   repo.write("cards/examples/legacy.png", solidPng(1200, 1073));
   r = validate("cards/examples/legacy.json");
   assert.equal(r.status, 0, r.stderr);
@@ -223,6 +240,8 @@ test("issue dry run: same id gives the same upsert target and link; daily cards 
   for (const r of [once, twice]) {
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /ON CONFLICT \(id\) DO UPDATE/);
+    assert.match(r.stdout, /## Capability\\nSomething can now be done/);
+    assert.match(r.stdout, /## Use cases\\n- A first concrete use\\n- A second concrete use/);
     assert.match(r.stdout, new RegExp(`/card/${ID_A}$`, "m"));
   }
   assert.equal(once.stdout, twice.stdout);

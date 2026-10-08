@@ -11,7 +11,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderCollectorCardPage } from "../js/server/collector-cards.mjs";
+import { renderCollectorCardPage, parseIssueCard } from "../js/server/collector-cards.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8766;
@@ -53,14 +53,20 @@ if (!imageFile) {
 
 const imageBytes = fs.readFileSync(imageFile);
 
-// Create mock card
+// Build the card the same way the issue script stores it (Capability and Use
+// cases are folded into the body).
+const parsed = parseIssueCard(cardData, { requireImage: false });
+if (!parsed.ok) {
+  console.error(`Card does not parse: ${parsed.error}`);
+  process.exit(1);
+}
 const card = {
   id: previewId,
-  techId: cardData.techId,
-  title: cardData.title,
-  description: cardData.description,
-  body: cardData.body || "",
-  links: cardData.links || [],
+  techId: parsed.card.techId,
+  title: parsed.card.title,
+  description: parsed.card.description,
+  body: parsed.card.body,
+  links: parsed.card.links,
 };
 
 const html = renderCollectorCardPage(card, {
