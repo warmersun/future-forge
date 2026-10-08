@@ -1,0 +1,137 @@
+# Publishes daily collector cards when they land on main.
+# Only cards/daily/ is published. cards/examples/ and test fixtures never are.
+#
+# No duplicates: every daily card carries its own fixed UUID "id", and the
+# issue script upserts on that primary key (INSERT ... ON CONFLICT (id) DO
+# UPDATE). Re-running this workflow, or merging an edit later, updates the same
+# card in place.
+#
+# Needs one repository secret: DATABASE_URL (the Neon connection string the
+# portal uses). See README > "Daily collector cards".
+name: Collector cards publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cards/daily/**"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: show what would be stored, store nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: collector-cards-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Find cards to publish
+        id: cards
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            # Manual run: republish every daily card. Safe because each one is
+            # an upsert on its own id.
+            node scripts/collector-cards-ci.mjs all --scope daily > "$RUNNER_TEMP/cards.txt"
+          else
+            node scripts/collector-cards-ci.mjs changed --scope daily \
+              --base "$BEFORE" --head "$AFTER" > "$RUNNER_TEMP/cards.txt"
+          fi
+          echo "Cards to publish:"
+          cat "$RUNNER_TEMP/cards.txt"
+          echo "count=$(grep -c . "$RUNNER_TEMP/cards.txt" || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to publish
+        if: steps.cards.outputs.count == '0'
+        run: echo "No daily card was added or changed in this push." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the DATABASE_URL secret
+        if: steps.cards.outputs.count != '0' && inputs.dry_run != true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::The DATABASE_URL repository secret is not set, so no card was published. Add it under Settings > Secrets and variables > Actions, then re-run this job (or run the workflow by hand to republish all daily cards)."
+            exit 1
+          fi
+
+      - name: Install
+        if: steps.cards.outputs.count != '0'
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate cards
+        if: steps.cards.outputs.count != '0'
+        run: |
+          mapfile -t cards < "$RUNNER_TEMP/cards.txt"
+          npm run validate:collector-card -- "${cards[@]}"
+
+      - name: Publish cards
+        if: steps.cards.outputs.count != '0'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DRY_RUN: ${{ inputs.dry_run == true && '1' || '' }}
+          CARD_LINKS_FILE: ${{ runner.temp }}/card-links.md
+        run: |
+          mapfile -t cards < "$RUNNER_TEMP/cards.txt"
+          node scripts/collector-cards-ci.mjs publish "${cards[@]}"
+
+      - name: Comment the links on the merged pull request
+        # The cards are already stored at this point; a comment problem is a
+        # warning, never a failed publish.
+        if: always() && github.event_name == 'push' && steps.cards.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          LINKS_FILE: ${{ runner.temp }}/card-links.md
+        run: |
+          if [ ! -s "$LINKS_FILE" ]; then
+            echo "No links file; skipping the comment."
+            exit 0
+          fi
+          if ! pr="$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '[.[] | select(.merged_at != null)][0].number // empty' 2>/dev/null)"; then
+            echo "::warning::Could not look up the pull request for $SHA; the links are in the job summary."
+            exit 0
+          fi
+          if ! [[ "$pr" =~ ^[0-9]+$ ]]; then
+            echo "No merged pull request for $SHA; skipping the comment."
+            exit 0
+          fi
+          marker="<!-- collector-cards-publish:$SHA -->"
+          if ! existing="$(gh api "repos/$REPO/issues/$pr/comments" --paginate --jq '.[].body' 2>/dev/null)"; then
+            echo "::warning::Could not read the comments on PR #$pr; the links are in the job summary."
+            exit 0
+          fi
+          if grep -qF "$marker" <<< "$existing"; then
+            echo "PR #$pr already has the links for $SHA; not commenting again."
+            exit 0
+          fi
+          { cat "$LINKS_FILE"; echo; echo "$marker"; } > "$RUNNER_TEMP/comment.md"
+          if gh api "repos/$REPO/issues/$pr/comments" -F "body=@$RUNNER_TEMP/comment.md" > /dev/null; then
+            echo "Commented on PR #$pr."
+          else
+            echo "::warning::Could not comment on PR #$pr; the links are in the job summary."
+          fi

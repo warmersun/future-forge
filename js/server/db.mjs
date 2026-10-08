@@ -64,10 +64,16 @@ export function publicDbConfig(env = process.env) {
 }
 
 function poolConfig(url) {
+  // Test-only: FF_DB_SSL=0 skips TLS so a local throwaway Postgres can prove
+  // the upsert. Never set this against Neon, Render, or in a GitHub Actions
+  // workflow — those always need SSL. Ignored inside GitHub Actions.
+  const skipSsl =
+    process.env.GITHUB_ACTIONS !== "true" &&
+    /^(0|false|off|no)$/i.test(String(process.env.FF_DB_SSL || ""));
   return {
     connectionString: url,
     max: 5,
-    ssl: { rejectUnauthorized: true },
+    ...(skipSsl ? {} : { ssl: { rejectUnauthorized: true } }),
   };
 }
 
@@ -1006,6 +1012,36 @@ export async function getCollectorCardImage(cardId) {
 }
 
 /**
+ * Insert-or-update keyed on the card's UUID primary key. Running it twice with
+ * the same id leaves one row: the second run updates that row in place.
+ */
+export const COLLECTOR_CARD_UPSERT_SQL = `INSERT INTO collector_cards
+           (id, tech_id, title, description, body, links, image, content_type, byte_len, published)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)
+         ON CONFLICT (id) DO UPDATE SET
+           tech_id = EXCLUDED.tech_id,
+           title = EXCLUDED.title,
+           description = EXCLUDED.description,
+           body = EXCLUDED.body,
+           links = EXCLUDED.links,
+           image = EXCLUDED.image,
+           content_type = EXCLUDED.content_type,
+           byte_len = EXCLUDED.byte_len,
+           published = EXCLUDED.published,
+           updated_at = now()`;
+
+/** Text-only update of an existing card; keeps the stored picture. */
+export const COLLECTOR_CARD_UPDATE_TEXT_SQL = `UPDATE collector_cards SET
+           tech_id = $2,
+           title = $3,
+           description = $4,
+           body = $5,
+           links = $6::jsonb,
+           published = $7,
+           updated_at = now()
+         WHERE id = $1`;
+
+/**
  * Insert or replace a card. Image may be omitted on update to keep the current bytes.
  * @param {object} card
  */
@@ -1021,20 +1057,7 @@ export async function upsertCollectorCard(card) {
   return withUnpooledClient(async (client) => {
     if (buf && buf.length) {
       await client.query(
-        `INSERT INTO collector_cards
-           (id, tech_id, title, description, body, links, image, content_type, byte_len, published)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)
-         ON CONFLICT (id) DO UPDATE SET
-           tech_id = EXCLUDED.tech_id,
-           title = EXCLUDED.title,
-           description = EXCLUDED.description,
-           body = EXCLUDED.body,
-           links = EXCLUDED.links,
-           image = EXCLUDED.image,
-           content_type = EXCLUDED.content_type,
-           byte_len = EXCLUDED.byte_len,
-           published = EXCLUDED.published,
-           updated_at = now()`,
+        COLLECTOR_CARD_UPSERT_SQL,
         [
           id,
           card.techId,
@@ -1052,15 +1075,7 @@ export async function upsertCollectorCard(card) {
       const existing = await client.query(`SELECT id FROM collector_cards WHERE id = $1`, [id]);
       if (!existing.rows[0]) return { skipped: false, stored: false, error: "image_required" };
       await client.query(
-        `UPDATE collector_cards SET
-           tech_id = $2,
-           title = $3,
-           description = $4,
-           body = $5,
-           links = $6::jsonb,
-           published = $7,
-           updated_at = now()
-         WHERE id = $1`,
+        COLLECTOR_CARD_UPDATE_TEXT_SQL,
         [
           id,
           card.techId,
