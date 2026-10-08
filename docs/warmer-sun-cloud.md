@@ -130,13 +130,13 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 
 #### Access wording (source of truth)
 
-Core invent and quests with `access: 'open'` use **"No account needed to invent"** (signup optional). Learn Daily lesson quests and account-gated quests use **"Free signup. No card."**
+The tile's `access` field decides, not the id prefix and not `isLearningModule`. Core invent and any quest or module with `access: "open"` (learning modules included) use **"No account needed to invent"** (signup optional). Quests and modules with `access: "account"` or `"paid"`, and remote learning tiles that leave `access` unset, use **"Free signup. No card."**
 
 Other docs and marketing copy must link here instead of restating the rule.
 
 **How.**  
-- Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. Learning modules = `account`.  
-- Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: **remote** Learning (and `access: account|paid` tiles) show a lock + Sign in. **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
+- Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. A remote learning module with no `access` set is treated as `account`; set `access: "open"` to make a learning module or its quests playable with no account.  
+- Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: remote `access: account|paid` tiles, and remote Learning tiles with no `access` set, show a lock + Sign in. Remote tiles with `access: "open"` play with no account, even when `isLearningModule` is set (`catalogNeedsAccount` in `js/quest-catalog.js`). **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
 - **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate for the **curated remote catalog**: no session → no tutor context. **game** does not gate theme play or Library side-load.  
 - `GET /api/quests` may list remote cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT **for gated remote tiles**. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check. Library sessions keep the side-loaded notes and must not look up the remote-wins merge by id.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
