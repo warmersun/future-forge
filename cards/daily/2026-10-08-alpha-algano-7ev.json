@@ -2,22 +2,22 @@
   "source": "Steele, Bhattacharya et al. (Cornell University, with University of Nebraska-Lincoln, UT Austin, University at Buffalo, Clark Atlanta University and Lund University), 'A 7-eV bandgap semiconductor based on silicon-doped α-(AlxGa1−x)2O3', Nature, published 7 October 2026, DOI 10.1038/s41586-026-11085-3. Devices named AlphaDiode and AlphaFET. Not stored or shown.",
   "id": "f267a886-ccd0-4cde-9ce6-2a509b3eed33",
   "techId": "materials",
-  "title": "A 7-electronvolt oxide semiconductor that works as a diode and transistor",
-  "description": "A thin crystal film of aluminium gallium oxide, grown layer by layer on a cheap sapphire wafer and seeded with silicon atoms, has a bandgap above 7 electronvolts yet still carries current. The bandgap is the energy an electron needs to break free; a wider one lets a power switch block more voltage in a thinner layer. A diode and a transistor have been built from the film.",
-  "capability": "We can now grow a thin crystal film with a bandgap above 7 electronvolts that still carries current, and build a working diode and a transistor from it on an ordinary sapphire wafer. These are early lab devices, not products.",
+  "title": "A new chip material for smaller, cooler power electronics",
+  "description": "Researchers made a new chip material: a thin crystal film of aluminium, gallium and oxygen with a pinch of silicon added. Materials tough enough to withstand very high voltages usually block electricity completely, but this one still lets it flow. It grows on cheap wafers that factories already make in huge numbers, and two simple working electronic parts have been built from it.",
+  "capability": "Power switches, the parts inside chargers, electric cars and the power grid that turn electricity on and off, could get smaller, run cooler and waste less energy. Researchers took a first step with a new lab-made chip material that should handle very high voltages and grows on cheap wafers factories already make. It's early lab work, not a product yet.",
   "useCases": [
-    "Power converters in chargers and grid equipment that waste less energy and get smaller, because a switch made from this film can block more voltage in a thinner layer.",
-    "Building those very-wide-bandgap devices on sapphire wafers that factories already make at massive scale, instead of the small, costly crystals that diamond and cubic boron nitride need.",
-    "Thinner power switches that dissipate less heat and need smaller parts around them, which follows from the same wider-bandgap physics."
+    "Smaller chargers and power supplies that stay cooler and waste less electricity as heat.",
+    "Electric cars, and the big computer centres that run the internet, losing less of their power as heat inside their electronics.",
+    "Grid equipment that moves solar and wind power to homes with less waste along the way."
   ],
-  "body": "Power converters waste less energy and get smaller when their switches use materials with wider bandgaps. A standard measure of how good such a switch can be grows with the bandgap raised to the power 5.5. The catch is that the wider the bandgap, the harder it is to add impurity atoms that make the material conduct. This film breaks that pattern: above 6 electronvolts it conducts more than 100 million times better than any earlier report, and its bandgap is wider than that of cubic boron nitride, the next-widest known semiconductor.\n\nThe first devices are proofs of concept, not products. Electrons move slowly through the film, the silicon atoms hold on to their electrons tightly so only some are freed at room temperature, and the matching p-type version of the material, which many devices need, has not been made yet.",
+  "body": "Inside every charger, electric car and power station, tiny switches turn electricity on and off to change it into the form a device needs, and each switch wastes a little energy as heat. Switches made from tougher materials, ones that can stand up to higher voltages, waste less and can be made thinner, and the gain grows very fast as the material gets tougher. The catch is that the toughest materials normally refuse to carry electricity at all. This film is tougher than any other material known to carry current in this controlled way, and among materials nearly this tough it carries current more than 100 million times better than any reported before. It grows on sapphire wafers, the same cheap crystal discs used to make LED lights and scratch-proof watch faces, instead of the tiny, costly crystals that rival materials such as diamond need.\n\nIt is still early lab work. The first parts built from it, a one-way valve for electric current and a simple switch, are proofs of concept, not products. Electricity still moves slowly through the film, only part of the added silicon actually helps carry current at room temperature, and a second, matching version of the material that most electronic parts also need has not been made yet.",
   "links": [
     {
-      "label": "The research paper: films, bandgap, diode and transistor measurements",
+      "label": "The research paper (technical): the films and the first two working parts",
       "url": "https://www.nature.com/articles/s41586-026-11085-3"
     },
     {
-      "label": "Plain-language summary, including the open limits",
+      "label": "A plain-language summary, including where this could be used and what is still unsolved",
       "url": "https://scienmag.com/doped-oxide-semiconductor-shatters-records-with-colossal-7-electronvolt-bandgap/"
     }
   ]
