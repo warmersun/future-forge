@@ -11,7 +11,7 @@
 | **game** | `npm start` → `server.mjs` | Future Forge engine as it was before this branch. Self-host, Invent Night, unsigned play. No Clerk, no Neon. |
 | **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud **HTTP APIs** (Clerk, Neon, quest boards, webhooks). No game UI. **Render**. |
 
-Do not run both on port 8765. Render runs **only portal**.
+Do not run both on port 8765. Render runs **portal** and, when Cloud AI is on, a second **game** service (`FF_CLOUD_AI=1`, `FF_XAI_API_KEY`).
 
 Letter IDs that are **done** are in the repo. **Ready** means the next work is code, not a vendor search. That bucket is empty: every feature we could write on Clerk + Neon + Render is **done**. **Todo** waits on **another building block** (a vendor or ops pick). Until we provision one, nothing moves to Ready.
 
@@ -73,7 +73,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | [**D1**](#D1) Per-quest leaderboard | `quest_scores` + `GET /api/board/:questId` (quest, catalog card). Title **Leaderboard** is `GET /api/board` top 10 inventors (sum of quest scores). Stills: top 3 BYTEA |
 | [**C2**](#C2) Achievements | `js/server/achievements.mjs`; `GET /api/me/achievements`; title strip |
 | [**E1**](#E1) Public inventor page (in-game) | `GET /api/u/:username` 404 if private; opt-in profile |
-| [**B2**](#B2) Per-user AI quota (free cap) | signed-in daily hit cap; unsigned still IP-limited |
+| [**B2**](#B2) Per-user AI quota | paid plan only; monthly budget; text, image, TTS, and voice rates |
 | [**B3**](#B3) Sponsored lessons stay free | `needsPlayerBilling` is false for sponsor / catalog.free |
 | [**E3**](#E3) Cloud pins | `GET/PUT /api/me/pins` max 3 |
 | [**E4**](#E4) Friends rooms with Clerk names | room player `clerkUserId`; friends `runs` on hold |
@@ -100,7 +100,7 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 | Building block | What to pick | Then Ready |
 |----------------|--------------|------------|
 | **Clerk production** | Claim the app; `pk_live_` / `sk_live_`; production instance | Real users on a public origin. Not a lettered feature — ops so Cloud is not on keyless dev keys. |
-| **Clerk Billing** | Enable Billing; Free vs Cloud plans; `subscription.*` webhooks | [B1](#B1) paid modules, [B2](#B2) quota by plan. Same vendor as identity. |
+| **Clerk Billing** | Enable Billing; create the paid `cloud` plan (ignore `free_user`); `subscription.*` webhooks | [B1](#B1) paid modules. [B2](#B2) quota code is in; it stays dark until this plan exists. |
 | **Clerk Organizations** | Enable Orgs (with Billing) | [F2](#F2) company seats. Only when a company asks with money. |
 | **Gated catalog CDN** | here.now passworded Site or Drive API key (`HERENOW_GATED_SECRET`) | Finish [A1](#A1): `aiTutorContext` off the public CDN. Portal already strips on *our* API. |
 | **Marketing surface** | Where `warmersun.com` is served; optional `/cloud` 302 | A Learning tile on the marketing site; [E1](#E1) `warmersun.com/u/…`. In-game pages are already **done**. |
@@ -112,7 +112,6 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 |------|----------------|
 | **Clerk production** instance | Claim the keyless app; `pk_live_` / `sk_live_`; custom domain |
 | [**B1**](#B1) Paid lesson modules | Clerk **Billing** not enabled |
-| [**B2**](#B2) Quota by paid plan | same |
 | [**F2**](#F2) Company seats on our Cloud | Clerk Organizations + Billing not on |
 | Observability beyond console | Render logs today |
 | Optional: `warmersun.com/cloud` redirect | Ops after first deploy |
@@ -174,11 +173,11 @@ Lessons are quest tiles with a tutor (`isLearningModule`, `module`, `lesson`, `t
 - Self-host without Clerk: all local `quests/` tiles playable (operator’s catalog, operator’s AI bill). Paywall is **Warmer Sun Cloud’s** catalog, not the engine.
 
 <a id="B2"></a>
-### B2. Meter the expensive bit (AI), not the hexes — **done** (free cap); **todo** (plan cap)
+### B2. Meter the expensive bit (AI), not the hexes — **done** (subscription budget)
 
-**Idea.** Hex invent is cheap. Co-inventor, Imagine, TTS are not. Free account: daily AI budget. Paid: higher cap. Prevents “free Cloud” from becoming an xAI invoice.
+**Idea.** Hex invent is cheap. Co-inventor, Imagine, TTS, and voice are not, and they do not cost the same. There is no Cloud free tier. A monthly subscription includes a budget. Self-host (`FF_CLOUD_AI` unset) is the free path: the operator’s own key, no paywall.
 
-**How.** Usage JSONL + per-IP rate limits stay for unsigned / self-host. Signed Cloud uses per-`clerk_user_id` daily counters in Neon. `gateExpensive` consults identity when present. Return `402` / `429` with a plain message: *Today’s co-inventor energy is spent — comes back at midnight, or upgrade.* Plan-based caps wait on [B1](#B1).
+**How.** When `FF_CLOUD_AI=1`, game holds `FF_XAI_API_KEY` and asks portal to reserve before each live call. Portal checks an active paid plan (`FF_CLOUD_PLAN_SLUGS`, default `cloud`; Clerk’s `free_user` is never entitled) and a period ledger in Neon (`spent_points` + `held_points`). The allowance is `FF_CLOUD_AI_BUDGET` (default 5000 points). Text counts `FF_QUOTA_TEXT_IN_PER_KTOK` and `FF_QUOTA_TEXT_OUT_PER_KTOK` points per started 1,000 tokens (defaults 2 and 6). An image is `FF_QUOTA_IMAGE` points (default 20). TTS is `FF_QUOTA_TTS_PER_KCHAR` points per started 1,000 characters (default 15). Voice is `FF_QUOTA_VOICE_PER_MIN` points per started minute (default 160). A text hold is the input blocks plus `FF_QUOTA_TEXT_MAX_OUT` (default 8192) plus `FF_QUOTA_TEXT_HOLD` reasoning headroom (default 20). Settle charges no more than that hold and no more than the remaining budget. A rate of 0 makes that modality free against the quota. TTS cache hits count as 0. Unsigned or unsubscribed calls return **402**. A hold the remaining budget cannot cover returns **429**. Settle needs the reservation’s user id and settle token. Room reserves need a grant from `GET /api/me`, signed with a key that stays in Neon. Denied calls do not fall through to the local co-inventor. Subscribe at portal `GET /subscribe`.
 
 <a id="B3"></a>
 ### B3. Sponsored lessons stay free (with a name) — **done**
@@ -376,7 +375,7 @@ Items 1–7 are **done**. Remaining wait on a **next building block** (Clerk Bil
 1. **`runs` log + first-sign-in import** ([C1](#C1), [C4](#C4), [A2](#A2)) — **done**  
 2. **Per-quest boards** ([D1](#D1)) — **done**  
 3. **Achievements + profile privacy** ([C2](#C2), [E1](#E1)) — **done** (in-game; `warmersun.com/u/…` is **todo**)  
-4. **AI quota (free cap)** ([B2](#B2)) — **done**; plan cap is **todo**  
+4. **AI quota** ([B2](#B2)) — **done** (paid plan, configurable budget). Stays dark until the Clerk `cloud` plan exists.  
 5. **Paid lesson entitlements** ([B1](#B1)) — **todo** Clerk Billing  
 6. **Friends identity** ([E4](#E4)) — **done**; gallery ([E5](#E5)) **dropped** (use [D1](#D1) boards)  
 7. **Continue board** ([C3](#C3)) — **done**  
@@ -461,10 +460,10 @@ Browser
 
 ### Where it runs
 
-Render **Web Service** (see `render.yaml`):
+Render **Web Services** (see `render.yaml`):
 
-1. Build `npm install`. Start `npm run portal`. Health `GET /api/health`.  
-2. Env in the Dashboard: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`. **No `FF_XAI_API_KEY`.** Render injects `PORT`.  
+1. **Portal.** Build `npm install`. Start `npm run portal`. Health `GET /api/health`. Env: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`, `FF_API_SECRET`, `FF_CLOUD_PLAN_SLUGS`, `FF_CLOUD_AI_BUDGET`, and the `FF_QUOTA_*` rates. **No `FF_XAI_API_KEY`.** Render injects `PORT`. Subscribe UI is `GET /subscribe`.
+2. **Game.** Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL` (the portal origin), the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` unset.
 3. Optional: on warmersun.com, **`/cloud` → 302** to the game; Sign in stays **`https://cloud.warmersun.com/signin`**.
 
 Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).

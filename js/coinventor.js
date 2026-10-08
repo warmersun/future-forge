@@ -34,6 +34,14 @@ import {
   howAppliedLabel,
 } from "./coinventor-how-apply.js?v=voice-16";
 
+function cloudQuotaText(data) {
+  const base = data?.message || data?.error || "Co-inventor unavailable";
+  const url = String(data?.subscribeUrl || "").trim();
+  if (!url) return base;
+  if (data.error !== "subscription_required" && data.error !== "quota_spent") return base;
+  return `${base}\n\n[Subscribe](${url})`;
+}
+
 export { hangupVoice };
 
 /** Chat replies can be shorter than brief/scene hosts. */
@@ -1087,7 +1095,7 @@ export class CoInventor {
         if (data?.error && !data.message) {
           trace({ ok: false, error: data.error });
           this.pushAssistant({
-            message: data.message || data.error,
+            message: cloudQuotaText(data),
             proposals: emptyProposals(),
             teaching: [],
           });
@@ -1108,7 +1116,7 @@ export class CoInventor {
             openCloudSignIn();
           }
           this.pushAssistant({
-            message: data.message || data.error,
+            message: cloudQuotaText(data),
             proposals: emptyProposals(),
             teaching: [],
           });

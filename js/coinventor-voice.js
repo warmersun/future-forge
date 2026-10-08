@@ -20,6 +20,14 @@ import {
 } from "./voice-context.js?v=voice-16";
 import { knownVoiceId } from "./voice-choices.js?v=voice-16";
 
+function cloudQuotaText(data) {
+  const base = data?.message || data?.error || "Voice session failed";
+  const url = String(data?.subscribeUrl || "").trim();
+  if (!url) return base;
+  if (data.error !== "subscription_required" && data.error !== "quota_spent") return base;
+  return `${base} ${url}`;
+}
+
 export { resampleFloat32, float32ToPcm16Base64, base64Pcm16ToFloat32 };
 
 export const VOICE_SAMPLE_RATE = 24_000;
@@ -562,7 +570,7 @@ export function createVoiceCall(opts) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (data.error === "sign_in_required" && isClerkReady()) openCloudSignIn();
-        throw new Error(data.message || data.error || "Voice session failed");
+        throw new Error(cloudQuotaText(data));
       }
       session = data;
       const proto = location.protocol === "https:" ? "wss:" : "ws:";

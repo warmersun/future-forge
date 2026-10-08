@@ -220,7 +220,7 @@ export class RoomManager {
     return { ok: true, player, isHost };
   }
 
-  createRoom({ displayName, ip, clerkUserId } = {}) {
+  createRoom({ displayName, ip, clerkUserId, quotaGrant } = {}) {
     this.sweep();
     if (this.rooms.size >= this.maxRooms) {
       return { ok: false, error: "server_full", status: 503 };
@@ -251,6 +251,7 @@ export class RoomManager {
           joinedAt: now,
           role: "host",
           clerkUserId: clerkUserId || null,
+          quotaGrant: quotaGrant || null,
         },
       ],
       settings: {
@@ -294,7 +295,7 @@ export class RoomManager {
     };
   }
 
-  joinRoom(code, { displayName, playerToken, ip, clerkUserId } = {}) {
+  joinRoom(code, { displayName, playerToken, ip, clerkUserId, quotaGrant } = {}) {
     this.sweep();
     const room = this.rooms.get(String(code || "").toUpperCase());
     if (!room) return { ok: false, error: "room_not_found", status: 404 };
@@ -309,6 +310,8 @@ export class RoomManager {
       const seat = room.players.find((p) => p.playerToken === playerToken);
       if (seat) {
         seat.connected = true;
+        if (clerkUserId) seat.clerkUserId = clerkUserId;
+        if (quotaGrant) seat.quotaGrant = quotaGrant;
         if (room.mp?.invents?.[seat.id]) {
           room.mp.invents[seat.id].connected = true;
         }
@@ -339,6 +342,7 @@ export class RoomManager {
         seat.connected = true;
         seat.displayName = name;
         if (clerkUserId) seat.clerkUserId = clerkUserId;
+        if (quotaGrant) seat.quotaGrant = quotaGrant;
         if (room.mp?.invents?.[seat.id]) {
           room.mp.invents[seat.id].connected = true;
         }
@@ -373,6 +377,7 @@ export class RoomManager {
       joinedAt: Date.now(),
       role: "polymath",
       clerkUserId: clerkUserId || null,
+      quotaGrant: quotaGrant || null,
     });
     room.updatedAt = Date.now();
     this._emitRoomPlayers(room);
@@ -1065,6 +1070,8 @@ export class RoomManager {
         messages,
         clientSessionId: payload.clientSessionId || null,
         context: buildRoomAiContext(room, player, payload),
+        clerkUserId: player.clerkUserId || null,
+        quotaGrant: player.quotaGrant || null,
       };
       const result = await this.coInventHandler(body);
       return this.completeAiJob(room, player, clientActionId, {

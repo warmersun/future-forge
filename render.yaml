@@ -30,3 +30,46 @@ services:
         sync: false
       - key: DATABASE_URL_UNPOOLED
         sync: false
+      - key: FF_API_SECRET
+        sync: false
+      - key: FF_CLOUD_PLAN_SLUGS
+        sync: false
+      - key: FF_CLOUD_AI_BUDGET
+        sync: false
+      - key: FF_QUOTA_TEXT_IN_PER_KTOK
+        sync: false
+      - key: FF_QUOTA_TEXT_OUT_PER_KTOK
+        sync: false
+      - key: FF_QUOTA_TEXT_HOLD
+        sync: false
+      - key: FF_QUOTA_TEXT_MAX_OUT
+        sync: false
+      - key: FF_QUOTA_IMAGE
+        sync: false
+      - key: FF_QUOTA_TTS_PER_KCHAR
+        sync: false
+      - key: FF_QUOTA_VOICE_PER_MIN
+        sync: false
+
+  - type: web
+    name: warmer-sun-game
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: FF_TRUST_PROXY
+        value: "1"
+      - key: FF_CLOUD_AI
+        value: "1"
+      - key: FF_XAI_API_KEY
+        sync: false
+      - key: FF_PORTAL_URL
+        sync: false
+      - key: FF_API_SECRET
+        sync: false
+      - key: FF_QUOTA_TEXT_MAX_OUT
+        sync: false
+        # Keep in step with the portal. The game applies the cap the portal returns.
+      - key: FF_JOIN_ORIGIN
+        sync: false

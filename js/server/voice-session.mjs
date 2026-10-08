@@ -97,9 +97,12 @@ export function createVoiceSessionStore(opts = {}) {
     s.closedAt = nowFn();
     s.closeReason = reason;
     try {
-      onClose?.(s, reason);
-    } catch {
-      /* host */
+      const pending = onClose?.(s, reason);
+      s.closedSettle = pending && typeof pending.then === "function" ? pending : Promise.resolve();
+    } catch (e) {
+      const rejected = Promise.reject(e);
+      rejected.catch(() => {});
+      s.closedSettle = rejected;
     }
     try {
       s.clientWs?.close?.();
@@ -116,8 +119,14 @@ export function createVoiceSessionStore(opts = {}) {
     return true;
   }
 
-  function closeAll(reason = "shutdown") {
-    for (const id of [...sessions.keys()]) close(id, reason);
+  async function closeAll(reason = "shutdown") {
+    const pending = [];
+    for (const id of [...sessions.keys()]) {
+      const s = sessions.get(id);
+      close(id, reason);
+      if (s?.closedSettle) pending.push(Promise.resolve(s.closedSettle).catch(() => {}));
+    }
+    await Promise.all(pending);
   }
 
   /**

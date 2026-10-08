@@ -5,8 +5,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { chargeMicro } from "./ai-quota.mjs";
 import { normalizeClerkUserId } from "./clerk-auth.mjs";
 import {
   sanitizeSolvedIds,
@@ -1145,4 +1147,263 @@ export async function putRunState(clerkUserId, state) {
     ]
   );
   return { skipped: false, stored: true };
+}
+
+const QUOTA_HOLD_STALE = "2 hours";
+
+function microInt(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
+}
+
+/**
+ * @param {{ userId: string, planSlug?: string|null, status?: string, periodStart?: string|Date|null, periodEnd?: string|Date|null }} row
+ */
+export async function upsertSubscription(row) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(row?.userId);
+  if (!db || !uid) return { skipped: true };
+  await ensureUser(uid);
+  await db.query(
+    `INSERT INTO subscriptions (clerk_user_id, plan_slug, status, period_start, period_end, updated_at)
+     VALUES ($1, $2, $3, $4, $5, now())
+     ON CONFLICT (clerk_user_id) DO UPDATE SET
+       plan_slug = EXCLUDED.plan_slug,
+       status = EXCLUDED.status,
+       period_start = EXCLUDED.period_start,
+       period_end = EXCLUDED.period_end,
+       updated_at = now()`,
+    [uid, row.planSlug || null, String(row.status || "active"), row.periodStart || null, row.periodEnd || null]
+  );
+  return { skipped: false };
+}
+
+/**
+ * @param {string} clerkUserId
+ */
+export async function getSubscription(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return null;
+  const r = await db.query(
+    `SELECT clerk_user_id, plan_slug, status, period_start, period_end
+     FROM subscriptions WHERE clerk_user_id = $1`,
+    [uid]
+  );
+  return r.rows[0] || null;
+}
+
+/**
+ * Lock a period row and take a hold. quoteHold(remainingMicro) => hold micro.
+ * @param {object} input
+ */
+export async function reserveAiBudget(input) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(input?.userId);
+  if (!db || !uid) return { ok: false, status: 503, error: "quota_unavailable" };
+  const budget = microInt(input.budgetMicro);
+  const periodStart = input.periodStart;
+  const kind = String(input.kind || "");
+  if (!periodStart || typeof input.quoteHold !== "function") {
+    return { ok: false, status: 400, error: "bad_reserve" };
+  }
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureUser(uid, client);
+    const stale = await client.query(
+      `UPDATE ai_quota_reservations
+       SET settled = true, settled_points = held_points
+       WHERE clerk_user_id = $1 AND settled = false
+         AND created_at < now() - interval '${QUOTA_HOLD_STALE}'
+       RETURNING held_points, period_start`,
+      [uid]
+    );
+    for (const row of stale.rows) {
+      const heldAmt = microInt(row.held_points);
+      await client.query(
+        `UPDATE ai_usage_period
+         SET spent_points = spent_points + $3,
+             held_points = GREATEST(0, held_points - $3)
+         WHERE clerk_user_id = $1 AND period_start = $2`,
+        [uid, row.period_start, heldAmt]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    client.release();
+    throw e;
+  }
+
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO ai_usage_period (clerk_user_id, period_start, spent_points, held_points)
+       VALUES ($1, $2, 0, 0)
+       ON CONFLICT (clerk_user_id, period_start) DO NOTHING`,
+      [uid, periodStart]
+    );
+    const locked = await client.query(
+      `SELECT spent_points, held_points FROM ai_usage_period
+       WHERE clerk_user_id = $1 AND period_start = $2
+       FOR UPDATE`,
+      [uid, periodStart]
+    );
+    const spent = microInt(locked.rows[0]?.spent_points);
+    const held = microInt(locked.rows[0]?.held_points);
+    const remaining = Math.max(0, budget - spent - held);
+    const hold = microInt(input.quoteHold(remaining));
+    if (hold > remaining) {
+      await client.query("ROLLBACK");
+      return {
+        ok: false,
+        status: 429,
+        error: "quota_spent",
+        remainingMicro: remaining,
+      };
+    }
+    const id = globalThis.crypto.randomUUID();
+    const settleToken = randomBytes(32).toString("base64url");
+    await client.query(
+      `UPDATE ai_usage_period SET held_points = held_points + $3
+       WHERE clerk_user_id = $1 AND period_start = $2`,
+      [uid, periodStart, hold]
+    );
+    await client.query(
+      `INSERT INTO ai_quota_reservations
+         (id, clerk_user_id, period_start, kind, held_points, settle_token)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, uid, periodStart, kind, hold, settleToken]
+    );
+    await client.query("COMMIT");
+    return {
+      ok: true,
+      reservationId: id,
+      settleToken,
+      userId: uid,
+      holdMicro: hold,
+      remainingMicro: remaining - hold,
+    };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * @param {string} reservationId
+ */
+export async function getAiReservation(reservationId) {
+  const db = getPool();
+  const id = String(reservationId || "").trim();
+  if (!db || !id) return null;
+  const r = await db.query(
+    `SELECT id, clerk_user_id, period_start, kind, held_points, settled, settle_token
+     FROM ai_quota_reservations WHERE id = $1`,
+    [id]
+  );
+  return r.rows[0] || null;
+}
+
+/**
+ * Replace a hold with the actual charge, clamped to the hold and the budget.
+ * actualMicro 0 releases the hold. Idempotent once settled.
+ * @param {{ reservationId: string, actualMicro?: number, budgetMicro?: number|null }} input
+ */
+export async function settleAiReservation(input) {
+  const db = getPool();
+  const id = String(input?.reservationId || "").trim();
+  if (!db || !id) return { ok: false, status: 400, error: "bad_settle" };
+  const actual = microInt(input.actualMicro);
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const resv = await client.query(
+      `SELECT id, clerk_user_id, period_start, held_points, settled, settled_points
+       FROM ai_quota_reservations WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+    const row = resv.rows[0];
+    if (!row) {
+      await client.query("ROLLBACK");
+      return { ok: false, status: 404, error: "not_found" };
+    }
+    if (row.settled) {
+      await client.query("COMMIT");
+      return { ok: true, idempotent: true, actualMicro: microInt(row.settled_points) };
+    }
+    const heldAmt = microInt(row.held_points);
+    const period = await client.query(
+      `SELECT spent_points, held_points FROM ai_usage_period
+       WHERE clerk_user_id = $1 AND period_start = $2
+       FOR UPDATE`,
+      [row.clerk_user_id, row.period_start]
+    );
+    const spent = microInt(period.rows[0]?.spent_points);
+    const heldTotal = microInt(period.rows[0]?.held_points);
+    const charged = chargeMicro({
+      actualMicro: actual,
+      heldMicro: heldAmt,
+      budgetMicro: input.budgetMicro,
+      spentMicro: spent,
+      heldTotalMicro: heldTotal,
+    });
+    if (period.rows[0]) {
+      await client.query(
+        `UPDATE ai_usage_period
+         SET spent_points = spent_points + $3,
+             held_points = GREATEST(0, held_points - $4)
+         WHERE clerk_user_id = $1 AND period_start = $2`,
+        [row.clerk_user_id, row.period_start, charged, heldAmt]
+      );
+    }
+    await client.query(
+      `UPDATE ai_quota_reservations
+       SET settled = true, settled_points = $2
+       WHERE id = $1`,
+      [id, charged]
+    );
+    await client.query("COMMIT");
+    return { ok: true, actualMicro: charged };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Portal-only HMAC key for room quota grants. Created once in Neon.
+ * @returns {Promise<string|null>}
+ */
+export async function getQuotaGrantSecret() {
+  const db = getPool();
+  if (!db) return null;
+  const existing = await db.query("SELECT secret FROM quota_grant_key WHERE id = 1");
+  if (existing.rows[0]?.secret) return String(existing.rows[0].secret);
+  const secret = randomBytes(32).toString("base64url");
+  await db.query(
+    `INSERT INTO quota_grant_key (id, secret) VALUES (1, $1)
+     ON CONFLICT (id) DO NOTHING`,
+    [secret]
+  );
+  const again = await db.query("SELECT secret FROM quota_grant_key WHERE id = 1");
+  return again.rows[0]?.secret ? String(again.rows[0].secret) : null;
 }

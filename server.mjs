@@ -106,6 +106,16 @@ import {
   VOICE_SAMPLE_RATE,
 } from "./js/server/voice-prompt.mjs";
 import { createVoiceSessionStore, VOICE_WS_PATH } from "./js/server/voice-session.mjs";
+import {
+  cloudAiEnabled,
+  estimateInputTokens,
+  quotaKindForRoute,
+  reserveCloudQuota,
+  reserveCloudQuotaForUser,
+  settleCloudQuotaReliable,
+  verifyPortalUser,
+  withCloudQuota,
+} from "./js/server/cloud-quota-client.mjs";
 import { knownVoiceId } from "./js/voice-choices.js";
 import { attachVoiceSockets } from "./js/server/voice-proxy.mjs";
 
@@ -194,7 +204,17 @@ const usage = usageTrackerFromEnv(
   process.argv.slice(2)
 );
 
-const voiceSessions = createVoiceSessionStore();
+let quotaOnVoiceClose = () => {};
+const voiceSessions = createVoiceSessionStore({
+  onClose(session) {
+    try {
+      quotaOnVoiceClose(session);
+    } catch {
+      /* quota settle must not throw out of session close */
+    }
+  },
+});
+const CLOUD_AI = cloudAiEnabled();
 
 /**
  * Developer UI (quest / trend inspect). Off by default.
@@ -236,11 +256,92 @@ function gateExpensive(req, route, body = null) {
   const rate = costPolicy.allowExpensive(route, ip);
   if (!rate.ok) return rate;
   const secret = checkApiSecret(req, body, {
-    secret: API_SECRET,
+    // FF_API_SECRET on a hosted game is the portal quota credential, not a
+    // browser password. Subscription quota is the player gate.
+    secret: CLOUD_AI ? "" : API_SECRET,
     isLoopback: isLoopbackSocket(req),
   });
   if (!secret.ok) return secret;
   return { ok: true, ip };
+}
+
+/**
+ * Rate limit, then hosted subscription quota. Self-host skips the quota.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {string} route
+ * @param {object|null} body
+ * @param {() => Promise<any>} call
+ * @param {(result: any) => object} measure
+ */
+async function hostedAi(req, route, body, call, measure) {
+  const gate = gateExpensive(req, route, body);
+  if (!gate.ok) return { ok: false, gate };
+  const kind = quotaKindForRoute(route);
+  const chars = kind === "tts" ? String(body?.text || "").length : 0;
+  const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
+  const out = await withCloudQuota({
+    reserve: () =>
+      reserveCloudQuota({
+        kind,
+        chars,
+        inputTokens,
+        authorization: req.headers.authorization || "",
+      }),
+    call,
+    measure,
+    settle: (reservationId, m) => settleCloudQuotaReliable({ reservationId, ...m }),
+  });
+  if (!out.ok) return out;
+  return { ok: true, result: out.result, ip: gate.ip, reserved: out };
+}
+
+function quotaDenyMessage(gate, secretCopy, rateCopy) {
+  if (gate?.message) return gate.message;
+  if (gate?.error === "api_secret_required") return secretCopy;
+  return rateCopy;
+}
+
+function armVoiceQuota(session) {
+  const q = session?.quota;
+  if (!q?.reservationId || !q.minuteMicro || !q.holdMicro) return;
+  const timer = setInterval(() => {
+    const live = voiceSessions.get(session.id);
+    if (!live) {
+      clearInterval(timer);
+      return;
+    }
+    const elapsed = Date.now() - (live.startedAt || Date.now());
+    const minutesOpen = Math.floor(elapsed / 60_000) + 1;
+    if (minutesOpen * q.minuteMicro > q.holdMicro) {
+      voiceSessions.close(session.id, "quota");
+      Promise.resolve(live.closedSettle).catch((e) => {
+        console.error("[quota] voice settle", e?.message || e);
+      });
+    }
+  }, 15_000);
+  if (typeof timer.unref === "function") timer.unref();
+  session.quotaTimer = timer;
+}
+
+quotaOnVoiceClose = (session) => {
+  if (session?.quotaTimer) {
+    clearInterval(session.quotaTimer);
+    session.quotaTimer = null;
+  }
+  const q = session?.quota;
+  if (!q?.reservationId) return null;
+  const dur = Math.max(0, (session.closedAt || Date.now()) - (session.startedAt || Date.now()));
+  return settleCloudQuotaReliable({
+    reservationId: q.reservationId,
+    durationMs: dur,
+    userId: q.userId,
+    settleToken: q.settleToken,
+  });
+};
+
+async function roomPortalUser(req) {
+  if (!CLOUD_AI) return null;
+  return verifyPortalUser({ authorization: req.headers.authorization || "" });
 }
 
 /**
@@ -1068,6 +1169,20 @@ function composeCoInventCall(body) {
   return { mode, context, messages, availableIds, systemContent, userContent, createOpts };
 }
 
+/**
+ * Hosted text calls cannot emit more output than the quota ceiling.
+ * A lower fast-eval cap stays lower.
+ * @param {Record<string, unknown>} createOpts
+ * @param {number} maxOutputTokens
+ */
+function applyHostedOutputCap(createOpts, maxOutputTokens) {
+  const cap = Math.floor(Number(maxOutputTokens) || 0);
+  if (cap <= 0 || !createOpts) return;
+  const existing = Number(createOpts.max_output_tokens);
+  createOpts.max_output_tokens =
+    Number.isFinite(existing) && existing > 0 ? Math.min(existing, cap) : cap;
+}
+
 function coInventLlm(call, extra = {}) {
   if (!DEVELOPER_MODE || !call) return null;
   return buildLlmInspect({
@@ -1090,6 +1205,7 @@ function stampDeveloperLlm(out, llm) {
 
 async function aiCoInvent(body, client, meta = {}) {
   const call = composeCoInventCall(body);
+  applyHostedOutputCap(call.createOpts, meta.maxOutputTokens);
   const { mode, context, messages, availableIds, createOpts } = call;
   const sessionId = meta.sessionId || clientSessionFromBody(body);
 
@@ -1130,8 +1246,13 @@ async function aiCoInvent(body, client, meta = {}) {
   });
 
   const text = response.output_text || "";
-  const echoed = (out) =>
-    stampDeveloperLlm(out, coInventLlm(call, { sent: true, rawOutput: text }));
+  const echoed = (out) => {
+    const stamped = stampDeveloperLlm(out, coInventLlm(call, { sent: true, rawOutput: text }));
+    if (stamped && typeof stamped === "object") {
+      stamped._quotaTokens = extractTokenUsage(response.usage);
+    }
+    return stamped;
+  };
   const parsed = extractJson(text);
   if (!parsed) {
     if (isFastEvalMode(mode)) {
@@ -1180,7 +1301,8 @@ async function aiCoInvent(body, client, meta = {}) {
   return echoed(out);
 }
 
-async function handleCoInvent(body) {
+async function handleCoInvent(body, opts = {}) {
+  const allowLocal = opts.allowLocal !== false;
   const context = body.context || {};
   const mode = body.mode || "chat";
   const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -1189,6 +1311,11 @@ async function handleCoInvent(body) {
 
   let client = await getClient();
   if (!client) {
+    if (!allowLocal) {
+      const err = new Error("The hosted co-inventor is offline.");
+      err.status = 503;
+      throw err;
+    }
     const local = localCoInvent({ mode, messages, context });
     recordAiText({
       mode,
@@ -1206,7 +1333,7 @@ async function handleCoInvent(body) {
   }
 
   try {
-    return await aiCoInvent(body, client, { sessionId });
+    return await aiCoInvent(body, client, { sessionId, maxOutputTokens: opts.maxOutputTokens });
   } catch (e) {
     const msg = String(e?.message || e);
     console.error("[co-invent ai]", msg.slice(0, 200));
@@ -1215,11 +1342,18 @@ async function handleCoInvent(body) {
     if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
       try {
         client = await getClient({ forceRefresh: true });
-        if (client) return await aiCoInvent(body, client, { sessionId });
+        if (client) {
+          return await aiCoInvent(body, client, {
+            sessionId,
+            maxOutputTokens: opts.maxOutputTokens,
+          });
+        }
       } catch (e2) {
         console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
       }
     }
+
+    if (!allowLocal) throw e;
 
     const local = localCoInvent({ mode, messages, context });
     local.message =
@@ -2149,9 +2283,12 @@ const server = http.createServer(async (req, res) => {
       const sid = clientSessionFromBody(body);
       if (sid) usage.touchSession(sid);
       const ip = clientIp(req);
+      const portalUser = await roomPortalUser(req);
       const result = roomManager.createRoom({
         displayName: body.displayName,
         ip,
+        clerkUserId: portalUser?.userId || null,
+        quotaGrant: portalUser?.quotaGrant || null,
       });
       return sendJson(res, result.ok ? 200 : result.status || 400, result);
     } catch (e) {
@@ -2170,10 +2307,13 @@ const server = http.createServer(async (req, res) => {
         const sid = clientSessionFromBody(body);
         if (sid) usage.touchSession(sid);
         const ip = clientIp(req);
+        const portalUser = await roomPortalUser(req);
         const result = roomManager.joinRoom(joinMatch[1].toUpperCase(), {
           displayName: body.displayName,
           playerToken: body.playerToken,
           ip,
+          clerkUserId: portalUser?.userId || null,
+          quotaGrant: portalUser?.quotaGrant || null,
         });
         return sendJson(res, result.ok ? 200 : result.status || 400, result);
       } catch (e) {
@@ -2230,15 +2370,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/vision")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "vision", body);
-      if (!gate.ok) {
+      const outcome = await hostedAi(
+        req,
+        "vision",
+        body,
+        () => handleVision(body),
+        (result) => (result?.cached || result?.ok === false ? { release: true } : { bill: true })
+      );
+      if (!outcome.ok) {
+        const gate = outcome.gate || outcome;
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: quotaDenyMessage(gate, "", ""),
+          subscribeUrl: gate.subscribeUrl,
         });
       }
-      const result = await handleVision(body);
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, outcome.result);
     } catch (e) {
       console.error("[vision]", e.message || e);
       const status = errorStatus(e);
@@ -2253,15 +2401,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/idea-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "idea-image", body);
-      if (!gate.ok) {
+      const outcome = await hostedAi(
+        req,
+        "idea-image",
+        body,
+        () => handleIdeaImage(body),
+        (result) => (result?.cached || result?.ok === false ? { release: true } : { bill: true })
+      );
+      if (!outcome.ok) {
+        const gate = outcome.gate || outcome;
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: quotaDenyMessage(gate, "", ""),
+          subscribeUrl: gate.subscribeUrl,
         });
       }
-      const result = await handleIdeaImage(body);
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, outcome.result);
     } catch (e) {
       console.error("[idea-image]", e.message || e);
       const status = errorStatus(e);
@@ -2275,15 +2431,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/market-image")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "market-image", body);
-      if (!gate.ok) {
+      const outcome = await hostedAi(
+        req,
+        "market-image",
+        body,
+        () => handleMarketImage(body),
+        (result) => (result?.cached || result?.ok === false ? { release: true } : { bill: true })
+      );
+      if (!outcome.ok) {
+        const gate = outcome.gate || outcome;
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: quotaDenyMessage(gate, "", ""),
+          subscribeUrl: gate.subscribeUrl,
         });
       }
-      const result = await handleMarketImage(body);
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, outcome.result);
     } catch (e) {
       console.error("[market-image]", e.message || e);
       const status = errorStatus(e);
@@ -2297,14 +2461,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/tts")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "tts", body);
-      if (!gate.ok) {
+      const outcome = await hostedAi(
+        req,
+        "tts",
+        body,
+        () => handleTts(body),
+        (result) => (result?.cache === "hit" ? { release: true } : { chars: result?.charCount || 0 })
+      );
+      if (!outcome.ok) {
+        const gate = outcome.gate || outcome;
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
+          message: quotaDenyMessage(gate, "", ""),
+          subscribeUrl: gate.subscribeUrl,
         });
       }
-      const result = await handleTts(body);
+      const result = outcome.result;
       res.writeHead(200, {
         "Content-Type": result.contentType || "audio/mpeg",
         "Content-Length": result.buffer.length,
@@ -2342,6 +2515,7 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 404, { ok: false, error: "not_found" });
         }
         voiceSessions.close(found.id, "hangup");
+        if (found.closedSettle) await found.closedSettle;
         return sendJson(res, 200, { ok: true });
       }
       const gate = gateExpensive(req, "voice", body);
@@ -2349,20 +2523,46 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, gate.status || 429, {
           ok: false,
           error: gate.error || "rate_limited",
-          message:
-            gate.error === "api_secret_required"
-              ? "This server requires an API secret for co-inventor voice."
-              : gate.error === "voice_busy"
-                ? "Too many live voice sessions — try again in a moment."
-                : "Too many voice sessions — wait a moment and try again.",
+          message: quotaDenyMessage(
+            gate,
+            "This server requires an API secret for co-inventor voice.",
+            gate.error === "voice_busy"
+              ? "Too many live voice sessions — try again in a moment."
+              : "Too many voice sessions — wait a moment and try again."
+          ),
+          subscribeUrl: gate.subscribeUrl,
         });
       }
+      const reserved = await reserveCloudQuota({
+        kind: "voice",
+        authorization: req.headers.authorization || "",
+      });
+      if (!reserved.ok) {
+        return sendJson(res, reserved.status || 402, {
+          ok: false,
+          error: reserved.error || "subscription_required",
+          message: reserved.message,
+          subscribeUrl: reserved.subscribeUrl,
+        });
+      }
+      const releaseVoice = () =>
+        reserved.reservationId
+          ? settleCloudQuotaReliable({
+              reservationId: reserved.reservationId,
+              release: true,
+              userId: reserved.userId,
+              settleToken: reserved.settleToken,
+            })
+          : null;
       const token = await resolveAccessToken();
       if (!token) {
+        await releaseVoice();
         return sendJson(res, 503, {
           ok: false,
           error: "ai_offline",
-          message: "Voice needs SuperGrok or FF_XAI_API_KEY. Text co-inventor still works locally.",
+          message: CLOUD_AI
+            ? "The hosted co-inventor is offline."
+            : "Voice needs SuperGrok or FF_XAI_API_KEY. Text co-inventor still works locally.",
         });
       }
       const created = voiceSessions.create({
@@ -2372,6 +2572,7 @@ const server = http.createServer(async (req, res) => {
         voice: knownVoiceId(body?.voice || TTS_VOICE) || "eve",
       });
       if (!created.ok) {
+        await releaseVoice();
         return sendJson(res, created.status || 429, {
           ok: false,
           error: created.error || "voice_busy",
@@ -2379,6 +2580,14 @@ const server = http.createServer(async (req, res) => {
         });
       }
       const s = created.session;
+      s.quota = {
+        reservationId: reserved.reservationId,
+        holdMicro: reserved.holdMicro || 0,
+        minuteMicro: reserved.minuteMicro || 0,
+        userId: reserved.userId || null,
+        settleToken: reserved.settleToken || null,
+      };
+      armVoiceQuota(s);
       if (s.clientSessionId) usage.touchSession(s.clientSessionId);
       return sendJson(res, 200, {
         ok: true,
@@ -2402,34 +2611,49 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
     try {
       const body = await readBody(req);
-      const gate = gateExpensive(req, "co-invent", body);
-      if (!gate.ok) {
+      const emptyProposals = {
+        addTechIds: [],
+        removeTechIds: [],
+        inventionName: null,
+        inventionHow: null,
+        inventionImpact: null,
+      };
+      const outcome = await hostedAi(
+        req,
+        "co-invent",
+        body,
+        () => handleCoInvent(body, { allowLocal: !CLOUD_AI }),
+        (result) => {
+          const t = result?._quotaTokens || {};
+          if (result && typeof result === "object") delete result._quotaTokens;
+          return { inputTokens: t.inputTokens || 0, outputTokens: t.outputTokens || 0 };
+        }
+      );
+      if (!outcome.ok) {
+        const gate = outcome.gate || outcome;
         return sendJson(res, gate.status || 429, {
           error: gate.error || "rate_limited",
           source: "error",
-          message:
-            gate.error === "api_secret_required"
-              ? "This server requires an API secret for co-inventor calls."
-              : "Too many co-inventor requests — wait a moment and try again.",
-          proposals: {
-            addTechIds: [],
-            removeTechIds: [],
-            inventionName: null,
-            inventionHow: null,
-            inventionImpact: null,
-          },
+          message: quotaDenyMessage(
+            gate,
+            "This server requires an API secret for co-inventor calls.",
+            "Too many co-inventor requests — wait a moment and try again."
+          ),
+          subscribeUrl: gate.subscribeUrl,
+          proposals: emptyProposals,
           teaching: [],
         });
       }
-      const result = await handleCoInvent(body);
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, outcome.result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
       const status = errorStatus(e);
       return sendJson(res, status, {
         error: e.message || "Co-inventor failed",
         source: "error",
-        message: "The co-inventor hit a snag. Try again in a moment.",
+        message: CLOUD_AI
+          ? "The hosted co-inventor is offline."
+          : "The co-inventor hit a snag. Try again in a moment.",
         proposals: {
           addTechIds: [],
           removeTechIds: [],
@@ -2468,7 +2692,57 @@ const server = http.createServer(async (req, res) => {
 
 // Inject AI boundary into rooms (PR10) once handleCoInvent is in scope
 if (roomManager) {
-  roomManager.coInventHandler = (body) => handleCoInvent(body);
+  roomManager.coInventHandler = async (body) => {
+    const userId = body?.clerkUserId || null;
+    const quotaGrant = body?.quotaGrant || null;
+    if (body && typeof body === "object") {
+      delete body.clerkUserId;
+      delete body.quotaGrant;
+    }
+    const kind = body?.mode === "vision" ? "image" : "text";
+    const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
+    const reserved = await reserveCloudQuotaForUser({ userId, kind, quotaGrant, inputTokens });
+    if (!reserved.ok) {
+      const err = new Error(
+        reserved.subscribeUrl
+          ? `${reserved.message || "subscription_required"} ${reserved.subscribeUrl}`
+          : reserved.message || "subscription_required"
+      );
+      err.status = reserved.status || 402;
+      throw err;
+    }
+    const settleCreds = {
+      userId: reserved.userId || userId,
+      settleToken: reserved.settleToken,
+    };
+    try {
+      const result = await handleCoInvent(body, {
+        allowLocal: !CLOUD_AI,
+        maxOutputTokens: kind === "text" ? reserved.maxOutputTokens || 0 : 0,
+      });
+      const tokens = result?._quotaTokens || {};
+      if (result && typeof result === "object") delete result._quotaTokens;
+      if (reserved.reservationId) {
+        await settleCloudQuotaReliable({
+          reservationId: reserved.reservationId,
+          inputTokens: tokens.inputTokens || 0,
+          outputTokens: tokens.outputTokens || 0,
+          bill: kind === "image",
+          ...settleCreds,
+        });
+      }
+      return result;
+    } catch (e) {
+      if (reserved.reservationId) {
+        await settleCloudQuotaReliable({
+          reservationId: reserved.reservationId,
+          release: true,
+          ...settleCreds,
+        });
+      }
+      throw e;
+    }
+  };
 }
 
 function attachRoomSockets() {
@@ -2650,7 +2924,10 @@ server.on("upgrade", (req, socket, head) => {
 
 function shutdownUsage(signal) {
   try {
-    voiceSessions.closeAll("shutdown");
+    const pending = voiceSessions.closeAll("shutdown");
+    Promise.resolve(pending).catch((e) => {
+      console.warn("[voice] close failed:", e.message || e);
+    });
   } catch (e) {
     console.warn("[voice] close failed:", e.message || e);
   }

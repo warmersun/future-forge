@@ -53,7 +53,7 @@ import {
 } from "../js/tts-cache.mjs";
 import { RateLimiter } from "../js/server/rate-limit.mjs";
 import { clientIp, isLoopbackSocket } from "../js/server/client-ip.mjs";
-import { canSeeAdmin } from "../js/server/admin-gate.mjs";
+import { canSeeAdmin, timingSafeEqualStr } from "../js/server/admin-gate.mjs";
 import { serveStatic } from "../js/server/static.mjs";
 import {
   readBody,
@@ -127,6 +127,7 @@ import {
   getCollectorCardImage,
   collectCollectorCard,
   listCollectedCards,
+  upsertSubscription,
 } from "../js/server/db.mjs";
 import {
   parseCardPath,
@@ -136,7 +137,8 @@ import {
   collectHttpResult,
 } from "../js/server/collector-cards.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
-import { planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
+import { planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
+import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota } from "../js/server/cloud-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -2253,7 +2255,33 @@ function isPortalApiPath(pathOnly) {
   if (p === "/api/report" || p.startsWith("/api/report/")) return true;
   if (p === "/api/board" || p.startsWith("/api/board/")) return true;
   if (p === "/api/device" || p.startsWith("/api/device/")) return true;
+  if (p === "/api/internal/ai/reserve") return true;
   return false;
+}
+
+function quotaSecretOk(req) {
+  const secret = String(process.env.FF_API_SECRET || "").trim();
+  if (!secret) return false;
+  const presented = String(req.headers["x-ff-secret"] || "").trim();
+  if (!presented) return false;
+  return timingSafeEqualStr(presented, secret);
+}
+
+function servePortalSubscribe(res) {
+  const file = path.join(__dirname, "subscribe.html");
+  let html;
+  try {
+    html = fs.readFileSync(file, "utf8");
+  } catch {
+    return sendJson(res, 500, { ok: false, error: "subscribe_missing" });
+  }
+  const buf = Buffer.from(html);
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": buf.length,
+    "Cache-Control": "no-store",
+  });
+  res.end(buf);
 }
 
 function parseBoardPath(pathOnly) {
@@ -2334,10 +2362,14 @@ const server = http.createServer(async (req, res) => {
       name: "Warmer Sun Cloud",
       health: "/api/health",
       signin: "/signin",
+      subscribe: "/subscribe",
     });
   }
   if (req.method === "GET" && pathOnly === "/signin") {
     return servePortalSignin(res);
+  }
+  if (req.method === "GET" && pathOnly === "/subscribe") {
+    return servePortalSubscribe(res);
   }
   if (req.method === "GET" && pathOnly.startsWith("/card/")) {
     return serveCollectorCard(req, res, pathOnly);
@@ -2453,6 +2485,14 @@ const server = http.createServer(async (req, res) => {
         console.warn("[cloud db] listSolvedIds", e?.message || e);
       }
     }
+    let quotaGrant = null;
+    if (dbOn) {
+      try {
+        quotaGrant = await quotaGrantForUser(ident.userId);
+      } catch (e) {
+        console.warn("[quota] grant", e?.message || e);
+      }
+    }
     return sendJson(res, 200, {
       ok: true,
       signedIn: true,
@@ -2461,6 +2501,7 @@ const server = http.createServer(async (req, res) => {
       sessionId: ident.sessionId,
       db: dbOn,
       solvedIds,
+      quotaGrant,
     });
   }
 
@@ -2787,6 +2828,77 @@ const server = http.createServer(async (req, res) => {
 
   if (
     req.method === "POST" &&
+    (req.url === "/api/me/ai/reserve" ||
+      req.url?.startsWith("/api/me/ai/reserve?") ||
+      req.url === "/api/internal/ai/reserve" ||
+      req.url?.startsWith("/api/internal/ai/reserve?"))
+  ) {
+    if (!quotaSecretOk(req)) {
+      req.resume();
+      return sendJson(res, 503, { ok: false, error: "quota_unavailable" });
+    }
+    const internal = pathOnly === "/api/internal/ai/reserve";
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      let userId = "";
+      if (internal) {
+        userId = String(body?.userId || "").trim();
+        const granted = await quotaGrantUserId(body?.quotaGrant);
+        if (!granted || granted !== userId) {
+          return sendJson(res, 403, { ok: false, error: "quota_forbidden" });
+        }
+      } else {
+        const ident = await authenticateClerkRequest(req);
+        if (!ident.signedIn) {
+          return sendJson(res, 402, {
+            ok: false,
+            error: "subscription_required",
+            message: "The hosted co-inventor is a monthly subscription. Self-host if you want it free.",
+          });
+        }
+        userId = ident.userId;
+      }
+      const result = await reserveQuota({
+        userId,
+        kind: body?.kind,
+        chars: body?.chars,
+        inputTokens: body?.inputTokens,
+      });
+      return sendJson(res, result.ok ? 200 : result.status || 402, result);
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "quota_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
+    (req.url === "/api/me/ai/settle" || req.url?.startsWith("/api/me/ai/settle?"))
+  ) {
+    if (!quotaSecretOk(req)) {
+      req.resume();
+      return sendJson(res, 503, { ok: false, error: "quota_unavailable" });
+    }
+    try {
+      const body = await readBody(req, { maxBytes: 8_000 });
+      const result = await settleQuota({
+        reservationId: body?.reservationId,
+        userId: body?.userId,
+        settleToken: body?.settleToken,
+        release: body?.release,
+        inputTokens: body?.inputTokens,
+        outputTokens: body?.outputTokens,
+        chars: body?.chars,
+        durationMs: body?.durationMs,
+        bill: body?.bill,
+      });
+      return sendJson(res, result.ok ? 200 : result.status || 400, result);
+    } catch (e) {
+      return sendJson(res, errorStatus(e), { ok: false, error: "quota_failed" });
+    }
+  }
+
+  if (
+    req.method === "POST" &&
     (req.url === "/api/webhooks/clerk" || req.url?.startsWith("/api/webhooks/clerk?"))
   ) {
     const secret = clerkWebhookSecretFromEnv();
@@ -2815,6 +2927,14 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { ok: false, error: "invalid_webhook" });
         }
         return sendJson(res, 401, { ok: false, error: "invalid_signature" });
+      }
+      const billing = planClerkBillingEvent(evt);
+      if (String(evt?.type || "").startsWith("subscription")) {
+        if (!billing.ok) return sendJson(res, 400, { ok: false, error: billing.error });
+        if (billing.action === "upsert_subscription") {
+          await upsertSubscription(billing);
+        }
+        return sendJson(res, 200, { ok: true, action: billing.action });
       }
       const plan = planClerkUserEvent(evt);
       if (!plan.ok) return sendJson(res, 400, { ok: false, error: plan.error });
