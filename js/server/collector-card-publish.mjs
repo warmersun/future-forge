@@ -250,3 +250,43 @@ export function findCardIdProblems(cards, opts = {}) {
   }
   return problems;
 }
+
+/**
+ * Engineering words that a stranger on the street will not know. The
+ * validator warns (never fails) when one shows up in a card's title,
+ * capability, or use cases, so the author glosses it in the same sentence or
+ * cuts it. Matching is on whole words; it cannot tell whether a term is
+ * already explained, which is why this is a warning and not an error.
+ */
+export const CARD_JARGON_TERMS = [
+  { term: "bandgap", re: /\bband[\s-]?gaps?\b/i },
+  { term: "electronvolt", re: /\belectron[\s-]?volts?\b|\d\s*-?\s*eV\b|\beV\b/ },
+  { term: "Schottky", re: /\bschottky\b/i },
+  { term: "substrate", re: /\bsubstrates?\b/i },
+  { term: "epitaxy", re: /\bepitax(?:y|ial)\b/i },
+  { term: "doping", re: /\bdop(?:ed|ing|ant|ants)\b/i },
+  { term: "p-type / n-type", re: /\b[pn]-type\b/i },
+  { term: "diode", re: /\bdiodes?\b/i },
+  { term: "transistor", re: /\btransistors?\b/i },
+  { term: "sapphire", re: /\bsapphire\b/i },
+];
+
+/** Card fields that must pass the stranger test without help from the body. */
+export const CARD_JARGON_FIELDS = ["title", "capability", "useCases"];
+
+/**
+ * @param {{ title?: string, capability?: string, useCases?: string[] }} card
+ * @returns {{ field: string, term: string }[]} one entry per field and term
+ */
+export function findCardJargon(card) {
+  const hits = [];
+  for (const field of CARD_JARGON_FIELDS) {
+    const raw = card?.[field];
+    const text = Array.isArray(raw) ? raw.join("\n") : String(raw || "");
+    if (!text) continue;
+    for (const { term, re } of CARD_JARGON_TERMS) {
+      if (re.test(text)) hits.push({ field, term });
+    }
+  }
+  return hits;
+}

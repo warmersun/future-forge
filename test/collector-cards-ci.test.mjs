@@ -223,6 +223,25 @@ test("validator: daily cards need an id, the name rule, and a 16:9 image", () =>
   assert.match(r.stderr, /bad_use_cases/);
   fs.rmSync(path.join(repo.dir, "cards/daily/2026-10-10-nocap.json"));
 
+  // Jargon and over-long link labels warn but never fail.
+  repo.write(
+    "cards/daily/2026-10-11-jargon.json",
+    card("a0c17e53-8c6f-4b10-8d34-5f6071829304", "A 7-electronvolt diode", {
+      capability: "We can now grow a film with a bandgap above 7 electronvolts.",
+      links: [{ label: "x".repeat(81), url: "https://example.com/long" }],
+    })
+  );
+  repo.write("cards/daily/2026-10-11-jargon.png", solidPng(1600, 900));
+  r = validate("cards/daily/2026-10-11-jargon.json");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /warn: jargon: "electronvolt" in title/);
+  assert.match(r.stdout, /warn: jargon: "diode" in title/);
+  assert.match(r.stdout, /warn: jargon: "bandgap" in capability/);
+  assert.match(r.stdout, /warn: 1 link label\(s\) over 80 characters/);
+  r = validate("cards/daily/2026-10-08-good.json");
+  assert.doesNotMatch(r.stdout, /jargon/);
+  fs.rmSync(path.join(repo.dir, "cards/daily/2026-10-11-jargon.json"));
+
   // Examples keep the old, looser rules: no id needed, odd aspect only warns.
   repo.write("cards/examples/legacy.json", card(null, "Legacy example", { capability: undefined, useCases: undefined }));
   repo.write("cards/examples/legacy.png", solidPng(1200, 1073));

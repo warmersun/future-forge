@@ -64,13 +64,22 @@ A collected card can be played again. One card mints at most one tile on a board
 2. **Player-facing prose is the capability, not the news.** `title`, `description`, `body`, and link `label`s do not name the company, lab, product, or paper. Those belong in `source` and in the link URLs.
 3. **`description` is the invention.** One paragraph a learner could mean as "how this works here": the mechanism, in everyday words. Put that mechanism in the **first 400 characters** — that slice is the picture prompt and the link preview clips at 300. No quest, no named people, no "your job".
 4. **`capability` and `useCases` are required on every card** (the validator enforces them for `cards/daily/`). `capability` answers, in plain words a 14-year-old understands: *what can we do now that we could not do before?* One or two sentences, ≤ 400 characters. Say what is demonstrated today; if it is an early lab result or a pilot, say so. `useCases` is a list of 1–3 (2–3 is better) concrete, plain-language uses, each ≤ 200 characters, phrased as what this could make possible. Every use case must be grounded in a claim the linked sources make. No speculation the sources do not support, no names of labs, companies, products, or journals.
-5. **`title`** names the capability (≤ 80). **`body`** is the public-page extra: where this sits in a larger system, the bottleneck, and one honest limit. Blank line between paragraphs. Omit `body` if you have nothing to add.
-6. **`source`** is required for the operator and is not stored or shown. One line: who announced or published what, and the date. No invented attribution.
-7. **`links`**: 1–8 entries. `label` ≤ 80, saying what the page shows. `url` is `http` or `https` with no username or password. Primary sources only. A bad URL is dropped on issue, not repaired.
-8. **No invented facts.** Counts, times, and limits in `description` and `body` must be in the linked sources. If you cannot cite it, leave it out.
-9. **`id`.** Daily cards always include a fixed UUID. One-off / example cards omit it until they already have one (then keep it). Never invent a second id for the same card. No `""`, no `[]`. Omit unused optional keys (`published`, `image`). Set `published: false` only to hide a card. Set `image` only when the picture is not the sibling file (path relative to the JSON).
-10. **New cards need a picture** before issue. Same basename as the JSON, AI-generated, 16:9, ≤ 1.5 MB, no photos or logos. The issuer refuses a new card with no image file. Daily cards fail validation without one.
-11. Validate until the script prints `OK`. Justify any `warn:` in the hand-off. Do not run the issue script for a daily card — the merge publishes it. For anything else, do not run the issue script unless the user asked to publish.
+5. **The stranger-on-the-street test.** `title`, `description`, `capability`, and every `useCases` entry must make sense to a non-engineer in one read, and they must leave the reader knowing why it matters. Lead with what gets better for people (smaller, cheaper, safer, faster, less waste); the material, method, or lab detail comes after, and lightly. Any technical term either gets a plain gloss in the same sentence or is cut. Lab device names never appear. Use cases describe what a person could build or change, not device physics. The validator warns on common jargon in `title`, `capability`, and `useCases`; treat each `warn: jargon` as a rewrite unless the term is explained right there.
+
+   | Don't (rejected, AlphaFET card) | Do (accepted rewrite) |
+   |---|---|
+   | "We can now grow a thin crystal film with a bandgap above 7 electronvolts that still carries current, and build a working diode and a transistor from it on an ordinary sapphire wafer. These are early lab devices, not products." | "Power switches, the parts inside chargers, electric cars and the power grid that turn electricity on and off, could get smaller, run cooler and waste less energy. Researchers took a first step with a new lab-made chip material that should handle very high voltages and grows on cheap wafers factories already make. It's early lab work, not a product yet." |
+   | Use case: "Building those very-wide-bandgap devices on sapphire wafers that factories already make at massive scale…" | Use case: "Smaller chargers and power supplies that stay cooler and waste less electricity as heat." |
+   | Title: "A 7-electronvolt oxide semiconductor that works as a diode and transistor" | Title: "A new chip material for smaller, cooler power electronics" |
+
+   The rejected version is accurate but tells a stranger nothing they can use: four unexplained terms and no reason to care. The rewrite keeps the same facts, puts the benefit first, and keeps the honest "early lab work" line.
+6. **`title`** names the capability (≤ 80). **`body`** is the public-page extra: where this sits in a larger system, the bottleneck, and one honest limit. Blank line between paragraphs. Omit `body` if you have nothing to add.
+7. **`source`** is required for the operator and is not stored or shown. One line: who announced or published what, and the date. No invented attribution.
+8. **`links`**: 1–8 entries. `label` ≤ 80, saying what the page shows. `url` is `http` or `https` with no username or password. Primary sources only. A bad URL is dropped on issue, not repaired.
+9. **No invented facts.** Counts, times, and limits in `description` and `body` must be in the linked sources. If you cannot cite it, leave it out.
+10. **`id`.** Daily cards always include a fixed UUID. One-off / example cards omit it until they already have one (then keep it). Never invent a second id for the same card. No `""`, no `[]`. Omit unused optional keys (`published`, `image`). Set `published: false` only to hide a card. Set `image` only when the picture is not the sibling file (path relative to the JSON).
+11. **New cards need a picture** before issue. Same basename as the JSON, AI-generated, 16:9, ≤ 1.5 MB, no photos or logos. The issuer refuses a new card with no image file. Daily cards fail validation without one.
+12. Validate until the script prints `OK`. Justify any `warn:` in the hand-off. Do not run the issue script for a daily card — the merge publishes it. For anything else, do not run the issue script unless the user asked to publish.
 
 ## Procedure
 
@@ -84,10 +93,11 @@ Read the primary sources. Keep a one-line citation for `source`. Collect only cl
 
 ### 3. Write the card
 
-- `title`: the capability in a short phrase.
+- `title`: the capability in a short phrase, framed as what it does for people, not what the material is.
 - `description`: one paragraph, mechanism first, general terms, aim ≤ 400 characters.
-- `capability`: what we can do now that we could not do before, in plain words. Honest about how early it is.
+- `capability`: what we can do now that we could not do before, in plain words. Lead with the benefit, then (lightly) how, then how early it is.
 - `useCases`: 1–3 concrete uses this could make possible, each one sentence, each backed by the sources.
+- Before validating, read the title, description, capability, and use cases as a stranger would (rule 5). Gloss or cut every technical term.
 - `body`: system context, bottleneck, honest limit. One to three paragraphs.
 - `links`: the pages you actually used.
 - `source`: operator citation.
@@ -100,14 +110,14 @@ Match the voice of `cards/examples/drones-urban-delivery.json` and `cards/exampl
 npm run validate:collector-card -- cards/daily/YYYY-MM-DD-<slug>.json
 ```
 
-`unknown_tech`, `bad_title`, `bad_description`, `bad_capability`, `bad_use_cases`, `bad_body`, `bad_id`, and (for daily cards) `id_required`, `capability_required`, `use_cases_required`, `bad_daily_name`, `image_required`, and `image_not_16x9` are failures. Fix them. For one-off cards a missing sibling image is a warning until you add the file; the issue script treats it as a failure for a new card.
+`unknown_tech`, `bad_title`, `bad_description`, `bad_capability`, `bad_use_cases`, `bad_body`, `bad_id`, and (for daily cards) `id_required`, `capability_required`, `use_cases_required`, `bad_daily_name`, `image_required`, and `image_not_16x9` are failures. Fix them. For one-off cards a missing sibling image is a warning until you add the file; the issue script treats it as a failure for a new card. `warn: jargon` (a technical term in the title, capability, or use cases) and `warn: … link label(s) over 80 characters` never fail the check, but fix them or justify them in the hand-off.
 
 ### 5. Preview screenshots (required on every card PR)
 
 Sic reviews the card as a reader sees it, so every collector-card PR carries screenshots of the local preview.
 
 1. Render the card locally: `node scripts/preview-collector-card.mjs cards/daily/<file>.json` (serves `http://localhost:8766/card/preview`, no database).
-2. Screenshot the full page with a headless browser (Chromium/Chrome via Playwright or similar), reduced motion on: **desktop** 1440×900 and **mobile** 390×844 (2× scale). Look at both: the title, the image, the Capability panel with its Use cases, and the details must all read correctly. The card number (`No. 0000·0000`) and "Sign in is unavailable" are preview placeholders.
+2. Screenshot the full page with a headless browser (Chromium/Chrome via Playwright or similar), reduced motion on: **desktop** 1440×900 and **mobile** 390×844 (2× scale). Look at both: the title, the image, the Capability panel with its Use cases, and the details must all read correctly, and no link label may be cut off. The card number (`No. 0000·0000`) and "Sign in is unavailable" are preview placeholders.
 3. Push the PNGs to the `card-previews` branch (orphan, never merged; create it if missing) as `previews/<card-basename>-desktop.png` and `-mobile.png`. For a re-shoot, add a suffix (`-v2`) instead of overwriting.
 4. Post a PR comment with a one-line caption and both images, using `https://github.com/warmersun/future-forge/blob/card-previews/previews/<file>?raw=true` as the image URL. Never add the screenshots to the card PR's own branch.
 
@@ -130,7 +140,7 @@ Bob picks one real invention each weekday. Future Forge authors it as a collecto
 |------|--------|
 | Path | `cards/daily/YYYY-MM-DD-<kebab-slug>.json` + sibling image |
 | `id` | Required. Stable UUID. The database primary key. Edits keep the same id and update the card in place. |
-| `capability` + `useCases` | Required. Shown as a highlighted panel right under the description. |
+| `capability` + `useCases` | Required. Shown as a highlighted panel right under the description. Must pass the stranger-on-the-street test (rule 5). |
 | Preview | Desktop + mobile screenshots posted on the PR (images on the `card-previews` branch). |
 | Image | AI-generated, 16:9, ≤ 1.5 MB, jpg/png/webp, no photos or logos |
 | Scope | Only `cards/daily/` is published. `cards/examples/` and `test/fixtures/` never are. |
