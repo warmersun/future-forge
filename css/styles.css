@@ -9162,7 +9162,6 @@ body.is-quest-briefing .workshop-layout > .vision-panel:has(.vision-canvas-wrap.
   flex-direction: column;
   gap: 0.65rem;
   min-height: 160px;
-  container-type: size;
 }
 
 .co-msg {
@@ -9224,7 +9223,7 @@ body.is-quest-briefing .workshop-layout > .vision-panel:has(.vision-canvas-wrap.
 .co-bubble-md img.md-img {
   display: block;
   max-width: 100%;
-  max-height: min(52cqh, 16rem);
+  max-height: 16rem;
   width: auto;
   height: auto;
   object-fit: contain;

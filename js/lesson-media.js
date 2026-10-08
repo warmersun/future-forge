@@ -4,6 +4,8 @@
  * Package paths (lessons/…, assets/…) are joined to a content root first.
  */
 
+import { unwrapMarkdownDestination } from "./md-lite.js?v=voice-18";
+
 export const LESSON_IMAGE_CAP = 8;
 export const LESSON_LINK_CAP = 12;
 export const TUTOR_NOTE_CAP = 2500;
@@ -29,8 +31,23 @@ function parseMdLink(text, openBracket) {
     j += 1;
   }
   if (depth !== 0) return null;
-  const url = text.slice(closeLabel + 2, j - 1).trim();
+  const url = unwrapMarkdownDestination(text.slice(closeLabel + 2, j - 1));
   return { label: label.slice(0, 160), url, end: j };
+}
+
+/**
+ * Short reading name for a bare URL. No scheme, so a voice prompt can list it.
+ * @param {string} url
+ */
+function bareReadingLabel(url) {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.replace(/\/+$/, "");
+    const tail = path && path !== "/" ? `${u.hostname}${path}` : u.hostname;
+    return tail.slice(0, 160) || "Reading";
+  } catch {
+    return "Reading";
+  }
 }
 
 /**
@@ -75,8 +92,8 @@ function withSlash(root) {
  * @param {string} assetRoot
  * @returns {string|null}
  */
-function boundPackageUrl(url, lessonRoot, assetRoot) {
-  const raw = String(url || "").trim();
+function boundPackageUrl(url, lessonRoot, assetRoot, includeGameStills) {
+  const raw = unwrapMarkdownDestination(url);
   if (!raw || /[\s<>"']/.test(raw) || raw.includes("..")) return null;
   if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//")) return null;
   const cut = raw.search(/[?#]/);
@@ -85,25 +102,87 @@ function boundPackageUrl(url, lessonRoot, assetRoot) {
   if (path.startsWith("lessons/") && lessonRoot) {
     return lessonRoot + path.slice("lessons/".length) + suffix;
   }
-  if (
-    path.startsWith("assets/") &&
-    assetRoot &&
-    !GAME_ASSET_PREFIXES.some((prefix) => path.startsWith(prefix))
-  ) {
+  if (path.startsWith("assets/") && assetRoot) {
+    if (
+      !includeGameStills &&
+      GAME_ASSET_PREFIXES.some((prefix) => path.startsWith(prefix))
+    ) {
+      return null;
+    }
     return assetRoot + path.slice("assets/".length) + suffix;
   }
   return null;
 }
 
 /**
+ * One package path joined to lesson/asset roots. Absolute URLs stay as written.
+ * @param {string} url
+ * @param {{ lessonRoot?: string, assetRoot?: string, includeGameStills?: boolean }} [roots]
+ * @returns {string}
+ */
+export function resolvePackageMediaUrl(url, roots = {}) {
+  const raw = unwrapMarkdownDestination(url);
+  if (!raw) return "";
+  const next = boundPackageUrl(
+    raw,
+    withSlash(roots.lessonRoot),
+    withSlash(roots.assetRoot),
+    Boolean(roots.includeGameStills)
+  );
+  return next || raw;
+}
+
+/**
+ * Lesson and asset roots for a remote tile or catalog URL.
+ * Staging uses …/staging/&lt;token&gt;/lessons/ and …/quests/package/assets/.
+ * @param {string} remoteUrl
+ * @returns {{ lessonRoot: string, assetRoot: string, includeGameStills: true }|null}
+ */
+export function mediaRootsFromRemoteUrl(remoteUrl) {
+  const raw = String(remoteUrl || "").trim();
+  if (!/^https?:\/\//i.test(raw)) return null;
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  const path = u.pathname;
+  const staging = /^(.*\/staging\/[^/]+\/)/.exec(path);
+  if (staging) {
+    const base = `${u.origin}${staging[1]}`;
+    return {
+      lessonRoot: `${base}lessons/`,
+      assetRoot: `${base}quests/package/assets/`,
+      includeGameStills: true,
+    };
+  }
+  const questsAt = path.indexOf("/quests/");
+  if (questsAt < 0) return null;
+  const site = `${u.origin}${path.slice(0, questsAt)}`;
+  const packageMark = "/quests/package/";
+  const packageAt = path.indexOf(packageMark);
+  const assetRoot =
+    packageAt >= 0
+      ? `${u.origin}${path.slice(0, packageAt + packageMark.length)}assets/`
+      : `${site}/quests/package/assets/`;
+  return {
+    lessonRoot: `${site}/lessons/`,
+    assetRoot,
+    includeGameStills: true,
+  };
+}
+
+/**
  * Turn lessons/ and assets/ markdown targets into absolute content URLs.
  * @param {unknown} raw
- * @param {{ lessonRoot?: string, assetRoot?: string }} [roots]
+ * @param {{ lessonRoot?: string, assetRoot?: string, includeGameStills?: boolean }} [roots]
  */
 export function bindPackageMediaUrls(raw, roots = {}) {
   const text = String(raw || "");
   const lessonRoot = withSlash(roots.lessonRoot);
   const assetRoot = withSlash(roots.assetRoot);
+  const includeGameStills = Boolean(roots.includeGameStills);
   if (!text || (!lessonRoot && !assetRoot)) return text;
   let out = "";
   let i = 0;
@@ -112,7 +191,7 @@ export function bindPackageMediaUrls(raw, roots = {}) {
     if (image || text[i] === "[") {
       const parsed = parseMdLink(text, image ? i + 1 : i);
       if (parsed) {
-        const next = boundPackageUrl(parsed.url, lessonRoot, assetRoot);
+        const next = boundPackageUrl(parsed.url, lessonRoot, assetRoot, includeGameStills);
         if (next) {
           out += `${image ? "!" : ""}[${parsed.label}](${next})`;
         } else {
@@ -167,6 +246,21 @@ export function listLessonMedia(raw) {
         continue;
       }
     }
+    const bare = /^<?(https?:\/\/[^\s<>)\]]+)>?/i.exec(text.slice(i));
+    if (bare) {
+      let url = bare[1];
+      while (url.length && /[.,);:!?]$/.test(url)) url = url.slice(0, -1);
+      if (isLessonHttps(url) && !seenLink.has(url) && links.length < LESSON_LINK_CAP) {
+        seenLink.add(url);
+        links.push({
+          id: `link${links.length + 1}`,
+          label: bareReadingLabel(url),
+          url,
+        });
+      }
+      i += bare[0].length;
+      continue;
+    }
     i += 1;
   }
   return { images, links };
@@ -199,7 +293,11 @@ export function tutorNotesForVoice(raw, media) {
     out += text[i];
     i += 1;
   }
-  const stripped = out.replace(/https?:\/\/[^\s<>)\]]+/gi, "");
+  const stripped = out.replace(/<?(https?:\/\/[^\s<>)\]]+)>?/gi, (full, url) => {
+    let clean = url;
+    while (clean.length && /[.,);:!?]$/.test(clean)) clean = clean.slice(0, -1);
+    return linkByUrl.get(clean) || linkByUrl.get(url) || "";
+  });
   const trimmed = stripped.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   return trimmed ? trimmed.slice(0, TUTOR_NOTE_CAP) : "";
 }

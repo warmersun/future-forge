@@ -30,14 +30,14 @@ import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-16";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-18";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-16";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
 } from "./lean-coinvent-context.js";
-import { bindPackageMediaUrls } from "./lesson-media.js";
+import { bindPackageMediaUrls, mediaRootsFromRemoteUrl } from "./lesson-media.js?v=voice-18";
 import {
   pushAiTrace,
   listAiTrace,
@@ -673,7 +673,28 @@ function coInventorLearningQuest() {
   return Boolean(state.mission?.isLearningModule);
 }
 
+function remoteMediaUrlForMission() {
+  const id = String(state.mission?.id || "").trim();
+  if (id) {
+    const listed = (state.remoteQuests || []).find(
+      (q) => q && (String(q.id || "") === id || String(q.mission?.id || "") === id)
+    );
+    if (listed?.remoteUrl) return String(listed.remoteUrl);
+  }
+  if (state.mission?.remoteUrl) return String(state.mission.remoteUrl);
+  if (state.mission?.source === "remote" && state.remoteQuestsUrl) {
+    return String(state.remoteQuestsUrl);
+  }
+  return "";
+}
+
 function contentMediaRoots() {
+  const remote = remoteMediaUrlForMission();
+  if (remote) {
+    const roots = mediaRootsFromRemoteUrl(remote);
+    if (roots) return roots;
+    if (state.mission?.source === "remote") return null;
+  }
   try {
     const origin = typeof location !== "undefined" ? location.origin : "";
     if (!origin || origin === "null") return null;
@@ -18042,6 +18063,7 @@ function ensureCoInventor() {
         grounding: state.mission?.grounding || null,
         isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),
+        mediaRoots: contentMediaRoots(),
         questId: state.mission?.id || null,
         source: state.mission?.source || null,
         tutorMode: isLearningTutorSessionActive(),

@@ -99,6 +99,32 @@ describe("md-lite", () => {
     assert.match(html, /href="https:\/\/docs.example.com"/);
   });
 
+  it("keeps angle-bracket autolinks and drops the quoted title", () => {
+    const auto = renderChatMarkdown(
+      "The long version:\n\n<https://theoceancleanup.com/rivers/>"
+    );
+    assert.match(auto, /href="https:\/\/theoceancleanup.com\/rivers\/"/);
+    assert.match(auto, />https:\/\/theoceancleanup.com\/rivers\/</);
+    assert.equal((auto.match(/<a\b/g) || []).length, 1);
+    assert.equal(auto.includes("<a href=\"https://theoceancleanup.com/rivers/\" target=\"_blank\" rel=\"noopener noreferrer\"></a>"), false);
+    assert.match(auto, /The long version/);
+
+    const titled = renderChatMarkdown(
+      '![Sennet](https://warmersun.com/staging/place-1.jpg "the river")\n\n[Rivers](https://theoceancleanup.com/rivers/ "guide")'
+    );
+    assert.match(titled, /src="https:\/\/warmersun.com\/staging\/place-1.jpg"/);
+    assert.match(titled, /href="https:\/\/theoceancleanup.com\/rivers\/"/);
+    assert.equal(titled.includes("guide"), false);
+
+    const wrapped = renderChatMarkdown(
+      "![Pic](<https://warmersun.com/lessons/x.png>)"
+    );
+    assert.match(wrapped, /src="https:\/\/warmersun.com\/lessons\/x.png"/);
+
+    const bad = renderChatMarkdown("<javascript:alert(1)>");
+    assert.equal(bad.includes("javascript"), false);
+  });
+
   it("isSafeHttpUrl", () => {
     assert.equal(isSafeHttpUrl("https://a.com"), true);
     assert.equal(isSafeHttpUrl("http://a.com/x"), true);

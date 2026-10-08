@@ -64,8 +64,11 @@ export function renderMarkdownSafe(md, opts = {}) {
   const src = String(md || "").replace(/\r\n/g, "\n");
   if (!src.trim()) return "";
 
+  // Clean destinations first so <https://…> and titled URLs are not eaten as tags.
+  const normalized = normalizeMarkdownDestinations(src);
+  const withAutolinks = convertAngleAutolinks(normalized);
   // Strip any raw HTML tags entirely (do not interpret)
-  const cleaned = src.replace(/<[^>]*>/g, "");
+  const cleaned = withAutolinks.replace(/<[^>]*>/g, "");
 
   const lines = cleaned.split("\n");
   const blocks = [];
@@ -147,6 +150,27 @@ export function renderMarkdownSafe(md, opts = {}) {
  */
 export function renderChatMarkdown(md) {
   return renderMarkdownSafe(md, { allowImages: true, autolink: true });
+}
+
+/**
+ * Markdown link destination: drop a quoted title and angle brackets.
+ * Accepts raw quotes and the entities escapeHtml writes.
+ * @param {string} raw
+ * @returns {string}
+ */
+export function unwrapMarkdownDestination(raw) {
+  let u = String(raw || "").trim();
+  if (u.length >= 2 && u.startsWith("<") && u.endsWith(">")) {
+    const inner = u.slice(1, -1).trim();
+    if (inner && !/[\s<>]/.test(inner)) u = inner;
+  }
+  if (u.startsWith("&lt;") && u.endsWith("&gt;")) {
+    const inner = u.slice(4, -4).trim();
+    if (inner && !/[\s<>]/.test(inner) && !/&(?:lt|gt);/.test(inner)) u = inner;
+  }
+  const titled = /^(\S+)\s+(?:"[^"]*"|'[^']*'|&quot;[\s\S]*?&quot;|&#39;[\s\S]*?&#39;)\s*$/.exec(u);
+  if (titled) u = titled[1];
+  return u;
 }
 
 /**
@@ -260,8 +284,44 @@ function parseMdLinkAt(s, openBracket) {
     j += 1;
   }
   if (depth !== 0) return null;
-  const url = s.slice(closeLabel + 2, j - 1).trim();
+  const url = unwrapMarkdownDestination(s.slice(closeLabel + 2, j - 1));
   return { label, url, end: j };
+}
+
+/**
+ * Rewrite ![alt](dest) and [label](dest) so dest is only the URL.
+ * @param {string} src
+ */
+function normalizeMarkdownDestinations(src) {
+  let out = "";
+  let i = 0;
+  while (i < src.length) {
+    const image = src[i] === "!" && src[i + 1] === "[";
+    if (image || src[i] === "[") {
+      const parsed = parseMdLinkAt(src, image ? i + 1 : i);
+      if (parsed) {
+        out += `${image ? "!" : ""}[${parsed.label}](${parsed.url})`;
+        i = parsed.end;
+        continue;
+      }
+    }
+    out += src[i];
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Markdown autolinks <https://…> become real links before the tag strip.
+ * Unsafe schemes are left for the stripper to delete.
+ * @param {string} src
+ */
+function convertAngleAutolinks(src) {
+  return src.replace(/<(https?:\/\/[^>\s]+)>/gi, (full, url) => {
+    const clean = unwrapMarkdownDestination(url);
+    if (!isSafeHttpUrl(clean)) return full;
+    return `[${clean}](${clean})`;
+  });
 }
 
 /**
@@ -276,11 +336,18 @@ function sanitizeUrlAttr(url) {
  * @param {string} s HTML fragment
  */
 function autolinkBareUrls(s) {
-  // Split on tags so we only touch text nodes
+  // Split on tags so we only touch text nodes. A URL that is already
+  // the label of a link (angle autolinks become [url](url)) must stay put.
   const parts = s.split(/(<[^>]+>)/g);
+  let inAnchor = false;
   return parts
     .map((part) => {
-      if (!part || part[0] === "<") return part;
+      if (part && part[0] === "<") {
+        if (/^<a\b/i.test(part)) inAnchor = true;
+        else if (/^<\/a\b/i.test(part)) inAnchor = false;
+        return part;
+      }
+      if (!part || inAnchor) return part;
       return part.replace(
         /(https?:\/\/[^\s<]+)/gi,
         (raw) => {

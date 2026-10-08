@@ -5,7 +5,8 @@
 import { getClientSessionId } from "./client-session.js";
 import { inventDraftFieldsForContext } from "./lean-coinvent-context.js";
 import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
-import { isSafeHttpUrl, renderChatMarkdown } from "./md-lite.js";
+import { isSafeHttpUrl, renderChatMarkdown } from "./md-lite.js?v=voice-18";
+import { bindPackageMediaUrls, resolvePackageMediaUrl } from "./lesson-media.js?v=voice-18";
 import {
   attachReadAloud,
   pruneDetachedReadAloud,
@@ -1476,8 +1477,9 @@ export class CoInventor {
     }
 
     // Tutor / co-inventor: safe markdown (links, images, lists, bold)
-    const html = formatMessage(m.content || "");
-    const lesson = renderLessonMedia(m.media);
+    const roots = this.getContext?.()?.mediaRoots || null;
+    const html = formatMessage(bindPackageMediaUrls(m.content || "", roots || {}));
+    const lesson = renderLessonMedia(m.media, roots);
     const quote = draftQuoteForBubble(m.content, p.inventionHow);
     const draft = quote
       ? `<blockquote class="co-how-draft">${escapeHtml(quote)}</blockquote>`
@@ -1559,13 +1561,14 @@ function formatMessage(text) {
 /**
  * Lesson pictures and reading links attached by show_lesson_media.
  * @param {{ images?: { alt?: string, url?: string }[], links?: { label?: string, url?: string }[] }|null|undefined} media
+ * @param {{ lessonRoot?: string, assetRoot?: string, includeGameStills?: boolean }|null} [roots]
  */
-function renderLessonMedia(media) {
+function renderLessonMedia(media, roots) {
   const images = Array.isArray(media?.images) ? media.images : [];
   const links = Array.isArray(media?.links) ? media.links : [];
   const figures = [];
   for (const img of images) {
-    const url = String(img?.url || "").trim();
+    const url = resolvePackageMediaUrl(img?.url, roots || {});
     if (!isSafeHttpUrl(url)) continue;
     const alt = escapeHtml(img?.alt || "");
     const src = escapeHtml(url);
@@ -1576,7 +1579,7 @@ function renderLessonMedia(media) {
   }
   const anchors = [];
   for (const link of links) {
-    const url = String(link?.url || "").trim();
+    const url = resolvePackageMediaUrl(link?.url, roots || {});
     if (!isSafeHttpUrl(url)) continue;
     const label = escapeHtml(link?.label || "Lesson page");
     anchors.push(

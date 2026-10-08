@@ -6,6 +6,7 @@ import {
   bindPackageMediaUrls,
   hasLessonMedia,
   listLessonMedia,
+  mediaRootsFromRemoteUrl,
   tutorNotesForVoice,
 } from "./lesson-media.js";
 
@@ -117,6 +118,37 @@ describe("bindPackageMediaUrls", () => {
       "[Page](http://127.0.0.1:8765/content/lessons/red-clay/01.html)";
     assert.equal(bindPackageMediaUrls(text, roots), text);
   });
+
+  it("joins a staging package, including quest stills, and drops a quoted title", () => {
+    const staging = mediaRootsFromRemoteUrl(
+      "https://warmersun.com/staging/20261008-124554-49db57ea-solved-today/quests/package/solved-today-ocean-cleanup-sennet-2026.json"
+    );
+    assert.equal(
+      staging.lessonRoot,
+      "https://warmersun.com/staging/20261008-124554-49db57ea-solved-today/lessons/"
+    );
+    assert.equal(
+      staging.assetRoot,
+      "https://warmersun.com/staging/20261008-124554-49db57ea-solved-today/quests/package/assets/"
+    );
+    const bound = bindPackageMediaUrls(
+      [
+        '[Page](lessons/sennet/01.html "the river")',
+        "![Place](assets/quests/solved-today-ocean-cleanup-sennet-2026/place-1.jpg)",
+      ].join("\n"),
+      staging
+    );
+    const media = listLessonMedia(bound);
+    assert.equal(
+      media.links[0].url,
+      "https://warmersun.com/staging/20261008-124554-49db57ea-solved-today/lessons/sennet/01.html"
+    );
+    assert.equal(
+      media.images[0].url,
+      "https://warmersun.com/staging/20261008-124554-49db57ea-solved-today/quests/package/assets/quests/solved-today-ocean-cleanup-sennet-2026/place-1.jpg"
+    );
+    assert.equal(mediaRootsFromRemoteUrl("not a url"), null);
+  });
 });
 
 describe("tutorNotesForVoice", () => {
@@ -127,5 +159,18 @@ describe("tutorNotesForVoice", () => {
     assert.match(notes, /link2/);
     assert.doesNotMatch(notes, /https?:\/\//);
     assert.doesNotMatch(notes, /javascript:/);
+  });
+
+  it("catalogs a bare reading and names it in the notes without the URL", () => {
+    const text =
+      "RESOURCES:\n- The Ocean Cleanup main site: https://theoceancleanup.com/rivers/\n";
+    const media = listLessonMedia(text);
+    assert.deepEqual(media.links.map((item) => [item.id, item.url]), [
+      ["link1", "https://theoceancleanup.com/rivers/"],
+    ]);
+    assert.equal(media.links[0].label.includes("https://"), false);
+    const notes = tutorNotesForVoice(text, media);
+    assert.match(notes, /link1/);
+    assert.doesNotMatch(notes, /https?:\/\//);
   });
 });
