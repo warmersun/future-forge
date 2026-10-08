@@ -11,6 +11,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
+import { resolveContentBaseUrl, contentCatalogUrl } from "./content-base.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
@@ -45,7 +47,8 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 /**
  * Resolve remote catalog URL or local path from env.
  * Empty / "0" / "off" / "false" disables remote fetch.
- * Unset: local combined catalog if present, else https://warmersun.com/quests/catalog.json.
+ * Unset: FF_CONTENT_BASE_URL + quests/catalog.json when set (staging),
+ * else local combined catalog if present, else https://warmersun.com/quests/catalog.json.
  * @returns {string|null}
  */
 export function resolveQuestsRemoteUrl() {
@@ -55,6 +58,8 @@ export function resolveQuestsRemoteUrl() {
     if (!s || s === "0" || /^off$/i.test(s) || /^false$/i.test(s)) return null;
     return s;
   }
+  const base = resolveContentBaseUrl();
+  if (base) return contentCatalogUrl(base, "quests");
   return defaultLocalWarmersunCatalogPath() || DEFAULT_QUESTS_REMOTE_URL;
 }
 
@@ -66,8 +71,8 @@ export function resolveQuestsRemoteUrl() {
 export function resolveQuestsRemoteUrlCandidates(primary = resolveQuestsRemoteUrl()) {
   if (!primary) return [];
   const raw = process.env.FF_QUESTS_REMOTE_URL;
-  // Explicit env: only that target
-  if (raw !== undefined) return [primary];
+  // Explicit env or content base (staging): only that target, never fall back to live
+  if (raw !== undefined || resolveContentBaseUrl()) return [primary];
   const out = [primary];
   if (primary !== DEFAULT_QUESTS_REMOTE_URL) out.push(DEFAULT_QUESTS_REMOTE_URL);
   return [...new Set(out.filter(Boolean))];
@@ -351,7 +356,10 @@ export async function fetchRemoteQuestCatalog(url = resolveQuestsRemoteUrl(), op
     return { url: null, ok: true, quests: [], errors: [], cached: false };
   }
 
-  const tryFallbacks = opts.tryFallbacks !== false && process.env.FF_QUESTS_REMOTE_URL === undefined;
+  const tryFallbacks =
+    opts.tryFallbacks !== false &&
+    process.env.FF_QUESTS_REMOTE_URL === undefined &&
+    !resolveContentBaseUrl();
   const candidates = tryFallbacks
     ? resolveQuestsRemoteUrlCandidates(url)
     : [url];
