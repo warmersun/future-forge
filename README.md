@@ -123,13 +123,17 @@ Each weekday one real invention becomes a collector card. The card is authored w
 
 **Where cards go.** `cards/daily/YYYY-MM-DD-<kebab-slug>.json`, with the page image next to it under the same name (`.jpg`, `.png`, or `.webp`). The image is AI-generated, 16:9, at most 1.5 MB, with no photos and no logos (the same rule as Spotlight brief beats). Only `cards/daily/` is published. `cards/examples/` and `test/fixtures/` never are.
 
+**Capability and use cases.** Every daily card says, in plain words, what we can do now that we could not do before (`"capability"`), and lists 1–3 concrete uses (`"useCases"`). The page shows them as a highlighted panel right under the description. They are stored inside the card's body text, so there is no database change.
+
+**Preview screenshots.** Every card PR gets a comment with desktop and mobile screenshots of `node scripts/preview-collector-card.mjs <card.json>`. The images go on the `card-previews` branch, which is never merged (see the collector-card skill).
+
 **Each card has its own fixed id.** Every daily card carries a UUID `"id"`, minted once at authoring time (`node -e "console.log(crypto.randomUUID())"`) and never changed. That id is the database primary key, and publishing is `INSERT ... ON CONFLICT (id) DO UPDATE`. So re-running the workflow, merging the same card twice, or merging a later edit always updates the one card in place and never creates a second. An edited card keeps its link. To retire a card, set `"published": false` and merge; deleting the file does not unpublish it.
 
 **The two workflows:**
 
 | Workflow | When | What |
 |----------|------|------|
-| `.github/workflows/collector-cards-check.yml` | PR that touches `cards/**` | Runs `npm run validate:collector-card` on each added or changed card. Daily cards must have an `id`, the file-name rule, and a 16:9 jpg/png/webp image of at most 1.5 MB. It also fails if two cards share an id, or if an existing card's id was changed or removed. Needs no secrets. |
+| `.github/workflows/collector-cards-check.yml` | PR that touches `cards/**` | Runs `npm run validate:collector-card` on each added or changed card. Daily cards must have an `id`, a `capability`, 1–3 `useCases`, the file-name rule, and a 16:9 jpg/png/webp image of at most 1.5 MB. It also fails if two cards share an id, or if an existing card's id was changed or removed. Needs no secrets. |
 | `.github/workflows/collector-cards-publish.yml` | Push to `main` that touches `cards/daily/**`, or a manual run | Finds the added or changed daily cards, checks them again, upserts each one with `scripts/issue-collector-card.sh`, writes the `https://cloud.warmersun.com/card/<id>` links to the job summary, and comments them on the merged PR. Runs one at a time. Fails with a clear message if `DATABASE_URL` is missing. |
 
 **Republish or retry.** Re-running a failed publish job is safe. Actions → **Collector cards publish** → **Run workflow** republishes every daily card, which is also safe because each one is an upsert on its id. Tick *Dry run* to see what would be stored without touching the database. Locally: `./scripts/issue-collector-card.sh --dry-run cards/daily/<file>.json` prints the exact SQL and the link without connecting.

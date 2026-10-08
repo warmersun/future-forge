@@ -10,6 +10,30 @@ The issue script (`scripts/issue-collector-card.mjs`) reads one JSON object and 
 | `title` | string | Trimmed, 1–80 characters. Tile name, page heading, picker label, link-preview title. |
 | `description` | string | Trimmed, 1–4000 characters. Page lede. Tile how-text (clipped at 4000 when minted). Picture prompt is the first 400. Link preview uses the first 300 after whitespace collapse. |
 
+## Capability and use cases (required for daily cards)
+
+| Key | Type | Rules |
+|-----|------|--------|
+| `capability` | string | Plain words: what can we do now that we could not do before? Whitespace collapsed, 1–400 characters. Required for `cards/daily/`; optional elsewhere, but strongly expected. |
+| `useCases` | array of strings | 1–3 items, each a plain sentence, 1–200 characters after trimming (a leading `- ` is stripped). Required for `cards/daily/`. `use_cases` is accepted as an alias. |
+
+Both are stored inside `body` (no extra database columns). The issuer writes the body as:
+
+```text
+## Capability
+<capability>
+
+## Use cases
+- <use case 1>
+- <use case 2>
+
+## The details
+
+<your body paragraphs>
+```
+
+The card page renders that opening block as a highlighted panel directly under the description, then the details. The 8000-character `body` cap applies to that whole stored text. Cards without these fields store and render exactly as before. In a hand-written `body`, a paragraph that starts with `## ` becomes a heading and a paragraph whose lines all start with `- ` becomes a list.
+
 ## Operator note (not stored)
 
 | Key | Type | Rules |
@@ -46,7 +70,9 @@ Not a JSON field unless `image` overrides it. The issuer looks beside the JSON, 
 | `unknown_tech` | Missing or unknown `techId` |
 | `bad_title` | Empty or longer than 80 |
 | `bad_description` | Empty or longer than 4000 |
-| `bad_body` | Longer than 8000 |
+| `bad_capability` | `capability` present but empty, not a string, or over 400 |
+| `bad_use_cases` | `useCases` not an array of 1–3 non-empty strings of at most 200 characters |
+| `bad_body` | Stored body (Capability + Use cases + body) longer than 8000 |
 | `bad_id` | `id` present and not a UUID |
 | `image_required` | Daily cards: the validator. New cards of any kind: the issue script. |
 
@@ -70,5 +96,6 @@ Files under `cards/daily/` are published automatically when they land on `main`.
 |------|--------|
 | File name | `YYYY-MM-DD-<kebab-slug>.json` (real calendar date, lowercase slug) |
 | `id` | Required, fixed UUID. Mint once; never change. |
+| `capability`, `useCases` | Required (see above). |
 | Image | Sibling file required before the PR can pass. 16:9, ≤ 1.5 MB, jpg/png/webp, AI-generated. |
 | Scope | Only this folder is published. `cards/examples/` is never published by the workflow. |

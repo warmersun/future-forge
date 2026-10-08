@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { cloudWriteGate } from "./cloud-save.mjs";
 import {
   parseIssueCard,
+  composeCardBody,
+  renderCardBodyHtml,
   renderCollectorCardPage,
   collectHttpResult,
   sanitizeCardLinks,
@@ -166,4 +168,74 @@ test("card page lights the gallery with the emTech domain color", () => {
   assert.match(html, /--domain-rgb:52, 211, 153/);
   assert.match(html, /Synthetic Biology/);
   assert.match(html, /Collect this card/);
+});
+
+test("capability and use cases are optional, validated, and folded into the stored body", () => {
+  const base = { techId: "drones", title: "T", description: "D" };
+  const plain = parseIssueCard({ ...base, body: "Para one.\n\nPara two." }, { requireImage: false });
+  assert.equal(plain.ok, true);
+  assert.equal(plain.card.body, "Para one.\n\nPara two.");
+  assert.equal(plain.card.capability, "");
+  assert.deepEqual(plain.card.useCases, []);
+
+  const full = parseIssueCard(
+    { ...base, capability: "  We can now   do X. ", useCases: ["- Use A", " Use B "], body: "More." },
+    { requireImage: false }
+  );
+  assert.equal(full.ok, true, full.error);
+  assert.equal(full.card.capability, "We can now do X.");
+  assert.deepEqual(full.card.useCases, ["Use A", "Use B"]);
+  assert.equal(
+    full.card.body,
+    "## Capability\nWe can now do X.\n\n## Use cases\n- Use A\n- Use B\n\n## The details\n\nMore."
+  );
+  assert.equal(composeCardBody({ capability: "C", useCases: ["U"] }), "## Capability\nC\n\n## Use cases\n- U");
+
+  for (const bad of [
+    { capability: "" },
+    { capability: 42 },
+    { capability: "x".repeat(401) },
+  ]) {
+    assert.equal(parseIssueCard({ ...base, ...bad }, { requireImage: false }).error, "bad_capability");
+  }
+  for (const bad of [
+    { useCases: [] },
+    { useCases: "one" },
+    { useCases: ["a", "b", "c", "d"] },
+    { useCases: ["ok", " "] },
+    { useCases: [7] },
+    { useCases: ["x".repeat(201)] },
+  ]) {
+    assert.equal(parseIssueCard({ ...base, ...bad }, { requireImage: false }).error, "bad_use_cases");
+  }
+});
+
+test("card body renders the Capability panel first, then the details; legacy bodies are unchanged", () => {
+  const legacy = renderCardBodyHtml("Line one.\nstill one\n\nLine <two>.");
+  assert.equal(legacy, '<div class="prose"><p>Line one.<br>still one</p><p>Line &lt;two&gt;.</p></div>');
+  assert.equal(renderCardBodyHtml(""), "");
+
+  const html = renderCardBodyHtml(
+    composeCardBody({ capability: "We can <now> do X.", useCases: ["Use A", "Use B"], body: "More." })
+  );
+  assert.match(
+    html,
+    /^<section class="capability" aria-label="Capability"><h2>Capability<\/h2><p class="capability-text">We can &lt;now&gt; do X\.<\/p><h2>Use cases<\/h2><ul><li>Use A<\/li><li>Use B<\/li><\/ul><\/section><div class="prose"><h2>The details<\/h2><p>More\.<\/p><\/div>$/
+  );
+
+  const page = renderCollectorCardPage(
+    {
+      id: CARD_ID,
+      techId: "drones",
+      title: "Card",
+      description: "Lead text.",
+      body: composeCardBody({ capability: "Cap.", useCases: ["U1"] }),
+      links: [],
+    },
+    { origin: "https://cloud.warmersun.com" }
+  );
+  const lead = page.indexOf('<p class="lead">');
+  const panel = page.indexOf('<section class="capability"');
+  assert.ok(lead > 0 && panel > lead, "capability panel sits right after the description");
+  assert.ok(!page.slice(lead, panel).includes("<div class=\"prose\">"));
 });

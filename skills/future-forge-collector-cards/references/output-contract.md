@@ -11,6 +11,11 @@ Write one JSON object. UTF-8. Two-space indent. No trailing commentary in the fi
   "techId": "synbio",
   "title": "Name the capability in a short phrase",
   "description": "One paragraph. The mechanism, in general terms, with any cited number. This is the invention how-text. Keep it within 400 characters so the picture prompt gets the whole mechanism.",
+  "capability": "In plain words: what we can do now that we could not do before. Say if it is still an early lab result.",
+  "useCases": [
+    "A concrete thing this could make possible, backed by the sources",
+    "A second concrete use, one sentence"
+  ],
   "body": "Where this sits in a larger system. The bottleneck. An honest limit in its own sentence.",
   "links": [
     {
@@ -21,7 +26,7 @@ Write one JSON object. UTF-8. Two-space indent. No trailing commentary in the fi
 }
 ```
 
-The `"id"` line is required for every daily card. Mint once with `node -e "console.log(crypto.randomUUID())"` and keep it.
+The `"id"`, `"capability"`, and `"useCases"` lines are required for every daily card. Mint once with `node -e "console.log(crypto.randomUUID())"` and keep it.
 
 ## Omit
 
@@ -44,4 +49,4 @@ Slug is kebab-case from the capability, not from the company. The page image use
 npm run validate:collector-card -- cards/daily/YYYY-MM-DD-<slug>.json
 ```
 
-`OK` and no unexplained `warn:`. For a daily card the sibling image must already exist (validation fails without it). Merging the PR publishes it; do not run the issue script for daily cards.
+`OK` and no unexplained `warn:`. For a daily card the sibling image must already exist (validation fails without it). Merging the PR publishes it; do not run the issue script for daily cards. After opening the PR, post the desktop + mobile preview screenshots as a PR comment (see SKILL.md, step 5).

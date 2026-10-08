@@ -12,6 +12,15 @@ export const CARD_BODY_MAX = 8000;
 export const CARD_LINKS_MAX = 8;
 export const CARD_IMAGE_MAX_BYTES = 1_500_000;
 
+/** Plain-words answer to "what can we do now that we could not do before?" */
+export const CARD_CAPABILITY_MAX = 400;
+/** Each use case is one short plain sentence. */
+export const CARD_USE_CASE_MAX = 200;
+export const CARD_USE_CASES_MAX = 3;
+export const CARD_CAPABILITY_HEADING = "Capability";
+export const CARD_USE_CASES_HEADING = "Use cases";
+export const CARD_DETAILS_HEADING = "The details";
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -151,6 +160,55 @@ export function resolveCardImageFile(jsonPath, exists, override) {
   return null;
 }
 
+/** One line of plain text: whitespace collapsed, trimmed. */
+function oneLine(v) {
+  return String(v ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Validate optional `capability` and `useCases`.
+ * @param {object} src
+ * @returns {{ ok: true, capability: string, useCases: string[] } | { ok: false, error: string }}
+ */
+export function parseCapabilityFields(src) {
+  const capability = oneLine(src?.capability);
+  if (src?.capability !== undefined && (typeof src.capability !== "string" || !capability)) {
+    return { ok: false, error: "bad_capability" };
+  }
+  if (capability.length > CARD_CAPABILITY_MAX) return { ok: false, error: "bad_capability" };
+  let useCases = [];
+  const raw = src?.useCases ?? src?.use_cases;
+  if (raw !== undefined) {
+    if (!Array.isArray(raw) || raw.length < 1 || raw.length > CARD_USE_CASES_MAX) {
+      return { ok: false, error: "bad_use_cases" };
+    }
+    for (const item of raw) {
+      const text = typeof item === "string" ? oneLine(item).replace(/^[-*•]\s+/, "") : "";
+      if (!text || text.length > CARD_USE_CASE_MAX) return { ok: false, error: "bad_use_cases" };
+      useCases.push(text);
+    }
+  }
+  return { ok: true, capability, useCases };
+}
+
+/**
+ * Stored body: the Capability and Use cases sections first, then the free
+ * body under "The details". Plain `body` alone is returned unchanged, so
+ * cards without the new fields store exactly what they did before.
+ * @param {{ capability?: string, useCases?: string[], body?: string }} card
+ */
+export function composeCardBody({ capability = "", useCases = [], body = "" }) {
+  const rest = String(body || "").trim();
+  const parts = [];
+  if (capability) parts.push(`## ${CARD_CAPABILITY_HEADING}\n${capability}`);
+  if (useCases.length) {
+    parts.push(`## ${CARD_USE_CASES_HEADING}\n${useCases.map((u) => `- ${u}`).join("\n")}`);
+  }
+  if (!parts.length) return rest;
+  if (rest) parts.push(`## ${CARD_DETAILS_HEADING}\n\n${rest}`);
+  return parts.join("\n\n");
+}
+
 /**
  * Validate an issue-script payload. `source` is dropped.
  * @param {unknown} raw
@@ -170,7 +228,13 @@ export function parseIssueCard(raw, opts = {}) {
   if (!description || description.length > CARD_DESCRIPTION_MAX) {
     return { ok: false, error: "bad_description" };
   }
-  const body = String(src.body || "").trim();
+  const extra = parseCapabilityFields(src);
+  if (!extra.ok) return extra;
+  const body = composeCardBody({
+    capability: extra.capability,
+    useCases: extra.useCases,
+    body: String(src.body || "").trim(),
+  });
   if (body.length > CARD_BODY_MAX) return { ok: false, error: "bad_body" };
   const links = sanitizeCardLinks(src.links);
   const id = src.id ? normalizeCardId(src.id) : null;
@@ -187,6 +251,8 @@ export function parseIssueCard(raw, opts = {}) {
       techId,
       title,
       description,
+      capability: extra.capability,
+      useCases: extra.useCases,
       body,
       links,
       published,
@@ -252,6 +318,65 @@ function linkHost(url) {
 }
 
 /**
+ * Card body to HTML. Blank lines split blocks. A block that starts with
+ * "## " is a heading (any following lines become a paragraph). A block whose
+ * lines all start with "- " is a list. Anything else is a paragraph with
+ * single newlines kept as line breaks. When the body opens with the
+ * Capability section, it and Use cases go in a highlighted panel so they read
+ * first, right under the description.
+ * @param {string} body
+ * @returns {string}
+ */
+export function renderCardBodyHtml(body) {
+  const text = String(body || "").trim();
+  if (!text) return "";
+  /** @type {{ kind: "h" | "p" | "ul", text?: string, items?: string[] }[]} */
+  const blocks = [];
+  for (const chunk of text.split(/\n{2,}/)) {
+    const lines = chunk.split("\n");
+    if (/^## \S/.test(lines[0])) {
+      blocks.push({ kind: "h", text: lines[0].slice(3).trim() });
+      const rest = lines.slice(1);
+      if (rest.length && rest.every((l) => /^- \S/.test(l))) {
+        blocks.push({ kind: "ul", items: rest.map((l) => l.slice(2).trim()) });
+      } else if (rest.join("").trim()) {
+        blocks.push({ kind: "p", text: rest.join("\n").trim() });
+      }
+    } else if (lines.every((l) => /^- \S/.test(l))) {
+      blocks.push({ kind: "ul", items: lines.map((l) => l.slice(2).trim()) });
+    } else {
+      blocks.push({ kind: "p", text: chunk });
+    }
+  }
+  const html = (b, panel) => {
+    if (b.kind === "h") return `<h2>${escapeHtml(b.text)}</h2>`;
+    if (b.kind === "ul") return `<ul>${b.items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+    const cls = panel ? ' class="capability-text"' : "";
+    return `<p${cls}>${escapeHtml(b.text).replace(/\n/g, "<br>")}</p>`;
+  };
+  let panelEnd = 0;
+  if (blocks[0]?.kind === "h" && blocks[0].text === CARD_CAPABILITY_HEADING) {
+    panelEnd = blocks.length;
+    for (let i = 1; i < blocks.length; i++) {
+      const b = blocks[i];
+      if (b.kind === "h" && b.text !== CARD_USE_CASES_HEADING) {
+        panelEnd = i;
+        break;
+      }
+    }
+  }
+  const panel = panelEnd
+    ? `<section class="capability" aria-label="${escapeHtml(CARD_CAPABILITY_HEADING)}">${blocks
+        .slice(0, panelEnd)
+        .map((b) => html(b, true))
+        .join("")}</section>`
+    : "";
+  const rest = blocks.slice(panelEnd);
+  const restHtml = rest.length ? `<div class="prose">${rest.map((b) => html(b, false)).join("")}</div>` : "";
+  return panel + restHtml;
+}
+
+/**
  * @param {object} row
  * @param {{ origin: string, publishableKey?: string, clerkEnabled?: boolean, collectNow?: boolean }} opts
  */
@@ -277,12 +402,7 @@ export function renderCollectorCardPage(row, opts) {
         })
         .join("")}</ul></section>`
     : "";
-  const bodyHtml = body
-    ? `<div class="prose">${escapeHtml(body)
-        .split(/\n{2,}/)
-        .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-        .join("")}</div>`
-    : "";
+  const bodyHtml = renderCardBodyHtml(body);
   const boot = JSON.stringify({
     cardId: id,
     publishableKey: opts.clerkEnabled ? String(opts.publishableKey || "") : "",
@@ -542,6 +662,53 @@ export function renderCollectorCardPage(row, opts) {
     }
     .prose p { margin: 0 0 0.95rem; }
     .prose p:last-child { margin: 0; }
+    .prose h2, .capability h2 {
+      margin: 1.1rem 0 0.45rem;
+      color: var(--gold-2);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .prose h2:first-child, .capability h2:first-child { margin-top: 0; }
+    .prose ul { margin: 0 0 0.95rem; padding-left: 1.2rem; }
+    .capability {
+      margin-top: 1.25rem;
+      padding: 1.1rem 1.25rem 1.15rem;
+      border-radius: 14px;
+      border-left: 4px solid rgb(var(--domain-rgb));
+      background: linear-gradient(135deg, rgba(var(--domain-rgb), 0.2), rgba(var(--domain-rgb), 0.06));
+      box-shadow: inset 0 0 0 1px rgba(var(--domain-rgb), 0.35);
+      color: #fff;
+    }
+    .capability-text {
+      margin: 0;
+      font-size: clamp(1.2rem, 1.35vw, 1.5rem);
+      font-weight: 650;
+      line-height: 1.45;
+      text-wrap: pretty;
+    }
+    .capability ul { list-style: none; margin: 0; padding: 0; }
+    .capability li {
+      position: relative;
+      margin: 0 0 0.55rem;
+      padding-left: 1.35rem;
+      font-size: clamp(1.1rem, 1.2vw, 1.3rem);
+      font-weight: 600;
+      line-height: 1.45;
+    }
+    .capability li:last-child { margin-bottom: 0; }
+    .capability li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.42em;
+      width: 0.62rem;
+      height: 0.72rem;
+      background: rgb(var(--domain-rgb));
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    }
+    .capability + .prose { margin-top: 1.25rem; }
     .record { margin-top: 1.5rem; }
     .record h2 {
       margin: 0 0 0.35rem;

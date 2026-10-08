@@ -4,6 +4,11 @@
   "techId": "drones",
   "title": "Sample daily card used by the publish tests",
   "description": "A test fixture that stands in for a daily collector card. It exists so the validator, the change detection, and the dry-run publish can be exercised without a database.",
+  "capability": "A test card can now be checked and dry-run published without touching a database.",
+  "useCases": [
+    "Checking the validator rules on a daily card",
+    "Exercising the dry-run publish path in tests"
+  ],
   "links": [
     {
       "label": "Future Forge repository",
