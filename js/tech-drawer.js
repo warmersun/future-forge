@@ -1,10 +1,12 @@
 /**
  * Compact-screen emTech drawer for workshop layouts (solo + multiplayer).
- * Desktop (≥1200px): catalog pins in the 3-column grid, or tucks like a Mac dock
- * (edge peek + sticky overlay). Tablet/phone: overlay drawer via “+ Add tech”.
+ * Desktop (mouse, ≥1200px): catalog pins in the 3-column grid, or tucks like a Mac dock
+ * (edge peek + sticky overlay). Tablet/phone, and coarse pointers up to 1399px
+ * (iPad landscape): overlay drawer via “Emerging tech” / “+ Add tech”.
  */
 
-const COMPACT_MQ = "(max-width: 1199px)";
+const COMPACT_MQ =
+  "(max-width: 1199px), (max-width: 1399px) and (any-pointer: coarse)";
 const RAIL_COLLAPSED_KEY = "future-forge:tech-rail-collapsed";
 
 /** @type {MediaQueryList|null} */

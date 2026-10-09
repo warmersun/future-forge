@@ -7091,6 +7091,10 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   display: none;
 }
 
+.hex-emtech-bar {
+  display: none;
+}
+
 /* Tech library — desktop pinned: in-flow column */
 .tech-library {
   border-right: 1px solid var(--border);
@@ -7291,8 +7295,9 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
 }
 
 /* —— Compact workshop: tablet (iPad) + phone ——
-   Vision stays on stage; emTech slides in as a drawer/sheet. */
-@media (max-width: 1199px) {
+   Vision stays on stage; emTech slides in as a drawer/sheet.
+   Keep in sync with COMPACT_MQ in js/tech-drawer.js. */
+@media (max-width: 1199px), (max-width: 1399px) and (any-pointer: coarse) {
   #screen-workshop {
     height: 100vh;
     height: 100dvh;
@@ -7444,6 +7449,30 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
 
   .tech-drawer-open {
     display: inline-flex;
+  }
+
+  /* Solo invent: keep the selector in reach above the quest brief. */
+  .hex-emtech-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    padding: 0.45rem 0.85rem;
+    background: rgba(7, 11, 20, 0.96);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Toolbar copy stays hidden until the maximized board covers the invent column. */
+  .hex-board-toolbar .tech-drawer-open {
+    display: none;
+  }
+
+  .hex-board-wrap.is-expanded .hex-board-toolbar .tech-drawer-open {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-right: 0.15rem;
   }
 
   .tech-drawer-close {

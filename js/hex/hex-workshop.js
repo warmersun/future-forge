@@ -21,6 +21,7 @@ import {
   isScaffoldComplete,
 } from "../invent-scaffold.js";
 import { termHtml } from "../glossary.js";
+import { isTechDrawerMode } from "../tech-drawer.js";
 
 /** Plain words for a tile's world (bits / atoms / both). */
 const WORLD_PLAIN = {
@@ -1479,7 +1480,9 @@ export function createHexWorkshop(api) {
         const place = api.getPlace?.() || "this place";
         hint.textContent = `Start from what is scarce in ${place}. Ask for ideas, or fill the two blanks. World: ${WORLD_PLAIN[pol] || pol}.`;
       } else {
-        hint.textContent = "Pick an emTech on the left — start with “For this place”.";
+        hint.textContent = isTechDrawerMode()
+          ? "Open Emerging tech, then start with “For this place”."
+          : "Pick an emTech on the left — start with “For this place”.";
       }
     }
     syncScaffold(tech);
