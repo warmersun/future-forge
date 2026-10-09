@@ -1,0 +1,28 @@
+{
+  "source": "Life Biosciences, interim first-in-human Phase 1 data for ER-100 (AAV2 delivering OCT4, SOX2, KLF4 'OSK', switched on by oral doxycycline for 56 days) in 3 open-angle glaucoma participants at Dose Level 1 (2x10^11 vg), press release 8 October 2026 (GlobeNewswire), to be presented at Eyecelerator at AAO 2026; trial NCT07290244 (open-label, OAG and NAION, est. 18 participants); coverage Longevity.Technology, 8 October 2026. Not stored or shown.",
+  "id": "cdb127c8-d1b3-4640-9be1-59bb8f77a905",
+  "techId": "genetic-engineering",
+  "title": "A first test in people of making aging eye nerve cells act younger",
+  "description": "A single injection into the eye delivers three genes that work like a reset switch, telling worn-out nerve cells to use their genes the way younger cells do. The genes only turn on while the patient takes a daily pill, here for 56 days. In the first three people with glaucoma, an eye disease that damages the nerve cells carrying sight to the brain, it caused no serious side effects.",
+  "capability": "We can now put three genes into a living person's eye and switch them on with a daily pill, to try to make aged, damaged nerve cells act younger. In the first three patients it caused no serious side effects over eight weeks, and two of them did better on parts of a standard sight test. It's a very early test, not proof it works yet.",
+  "useCases": [
+    "Bringing back some of the sight lost to glaucoma, a leading cause of blindness in older adults, where lost sight is usually gone for good because these nerve cells do not grow back.",
+    "Treating sudden vision loss after fifty caused by poor blood flow to the eye's nerve, which the same trial is also testing and which has no approved treatment today.",
+    "The hope, stated by its developers but not yet tested, that the same reset could one day treat other diseases of aging elsewhere in the body."
+  ],
+  "body": "The nerve cells that carry pictures from the eye to the brain do not grow back, so when glaucoma or similar nerve damage kills them, lost sight is usually permanent. Glaucoma often keeps getting worse even when treated. The idea here is to reset the cells rather than only protect them. The three genes come from a famous recipe of four that can turn adult cells all the way back into stem cells; the fourth, the one most tied to cancer, is left out, so the cells should act younger without forgetting what kind of cell they are. The daily pill is the on-off switch, and the treatment does not edit the person's own genes. In aged mice, the same three genes have restored vision.\n\nThis is the first safety test in people, and it is tiny: three patients, all at the starting dose, followed for 56 days. Nobody got a dummy treatment for comparison, and everyone knew what they received. Some side effects did happen, but doctors linked them to the injection, a steroid pill given to calm inflammation, or health problems the patients already had. An independent safety board has allowed a higher dose. The trial plans about 18 people, including some with sudden blood-flow damage to the eye's nerve, and will follow them for up to five years. Bigger groups, higher doses and longer follow-up will show whether the sight gains hold up.",
+  "links": [
+    {
+      "label": "The developer's announcement of the first results in three patients",
+      "url": "https://www.globenewswire.com/news-release/2026/10/08/3377649/0/en/life-biosciences-announces-first-in-human-data-from-ongoing-phase-1-trial-evaluating-er-100-in-optic-neuropathies.html"
+    },
+    {
+      "label": "The trial's public registry entry: conditions, doses and what is measured",
+      "url": "https://clinicaltrials.gov/study/NCT07290244"
+    },
+    {
+      "label": "A news report on what the early results do and do not show",
+      "url": "https://longevity.technology/news/cellular-rejuvenation-reaches-a-human-trial/"
+    }
+  ]
+}
