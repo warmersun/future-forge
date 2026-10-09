@@ -135,7 +135,9 @@ import {
   publicCardDto,
   renderCollectorCardPage,
   collectHttpResult,
+  collectorImageHeaders,
 } from "../js/server/collector-cards.mjs";
+import { renderCollectorCardShare } from "../js/server/collector-card-share.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota } from "../js/server/cloud-quota.mjs";
@@ -2112,42 +2114,66 @@ function sendHtml(res, status, html) {
   res.end(buf);
 }
 
+function replyCollector(req, res, status, body, headers) {
+  const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  res.writeHead(status, { ...headers, "Content-Length": buf.length });
+  if (req.method === "HEAD") return res.end();
+  return res.end(buf);
+}
+
+function finishCardImage(req, res, buf, contentType, etag) {
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, {
+      ETag: etag,
+      "Cache-Control": "public, max-age=86400",
+    });
+    return res.end();
+  }
+  return replyCollector(req, res, 200, buf, collectorImageHeaders(buf.length, { contentType, etag }));
+}
+
 async function serveCollectorCard(req, res, pathOnly) {
   const parsed = parseCardPath(pathOnly);
   if (!parsed || parsed.invalid) {
-    return sendHtml(res, 404, "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>");
+    return replyCollector(
+      req,
+      res,
+      404,
+      "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>",
+      { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }
+    );
   }
   if (!dbEnabled()) {
     return sendJson(res, 503, { ok: false, error: "db_unavailable" });
   }
   try {
-    if (parsed.image) {
+    if (parsed.image || parsed.share) {
       const img = await getCollectorCardImage(parsed.id);
       if (!img?.bytes) {
         return sendJson(res, 404, { ok: false, error: "not_found" });
       }
       const stamp = img.updatedAt ? new Date(img.updatedAt).toISOString() : parsed.id;
-      const etag = `W/"${stamp}"`;
-      if (req.headers["if-none-match"] === etag) {
-        res.writeHead(304, {
-          ETag: etag,
-          "Cache-Control": "public, max-age=86400",
+      if (parsed.share) {
+        const jpeg = await renderCollectorCardShare({
+          id: parsed.id,
+          techId: img.techId,
+          bytes: img.bytes,
+          updatedAt: img.updatedAt,
         });
-        return res.end();
+        return finishCardImage(req, res, jpeg, "image/jpeg", `W/"share-${stamp}"`);
       }
       const buf = Buffer.isBuffer(img.bytes) ? img.bytes : Buffer.from(img.bytes);
-      res.writeHead(200, {
-        "Content-Type": img.contentType || "image/jpeg",
-        "Content-Length": buf.length,
-        ETag: etag,
-        "Cache-Control": "public, max-age=86400",
-        "Access-Control-Allow-Origin": "*",
-      });
-      return res.end(buf);
+      return finishCardImage(req, res, buf, img.contentType || "image/jpeg", `W/"${stamp}"`);
     }
     const card = await getPublishedCollectorCard(parsed.id);
     if (!card) {
-      return sendHtml(res, 404, "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>");
+      return replyCollector(
+        req,
+        res,
+        404,
+        "<!DOCTYPE html><title>Card not found</title><p>This collector card is not available.</p>",
+        { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }
+      );
     }
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const clerk = publicClerkConfig();
@@ -2157,7 +2183,10 @@ async function serveCollectorCard(req, res, pathOnly) {
       clerkEnabled: clerk.enabled,
       collectNow: url.searchParams.get("collect") === "1",
     });
-    return sendHtml(res, 200, html);
+    return replyCollector(req, res, 200, html, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
   } catch (e) {
     console.warn("[collector card]", e?.message || e);
     return sendJson(res, errorStatus(e), { ok: false, error: "card_failed" });
@@ -2371,7 +2400,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && pathOnly === "/subscribe") {
     return servePortalSubscribe(res);
   }
-  if (req.method === "GET" && pathOnly.startsWith("/card/")) {
+  if ((req.method === "GET" || req.method === "HEAD") && pathOnly.startsWith("/card/")) {
     return serveCollectorCard(req, res, pathOnly);
   }
   if ((req.method === "GET" || req.method === "HEAD") && pathOnly.startsWith("/assets/brand/")) {

@@ -13,6 +13,7 @@ import {
   sanitizeCardLinks,
   parseCardPath,
   parseCollectPath,
+  collectorImageHeaders,
   siblingCardImageCandidates,
   resolveCardImageFile,
 } from "./collector-cards.mjs";
@@ -78,8 +79,13 @@ test("card page escapes text, drops javascript links, and points og:image at the
     },
     { origin: "https://cloud.warmersun.com", clerkEnabled: false }
   );
-  assert.match(html, /og:image" content="https:\/\/cloud\.warmersun\.com\/card\/11111111-1111-4111-8111-111111111111\/image"/);
+  assert.match(html, /og:image" content="https:\/\/cloud\.warmersun\.com\/card\/11111111-1111-4111-8111-111111111111\/preview\.jpg"/);
+  assert.match(html, /og:image:width" content="1200"/);
+  assert.match(html, /og:image:height" content="630"/);
+  assert.match(html, /og:image:type" content="image\/jpeg"/);
+  assert.match(html, /twitter:image" content="https:\/\/cloud\.warmersun\.com\/card\/11111111-1111-4111-8111-111111111111\/preview\.jpg"/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
+  assert.match(html, /class="shot" src="https:\/\/cloud\.warmersun\.com\/card\/11111111-1111-4111-8111-111111111111\/image"/);
   assert.doesNotMatch(html, /<drone>/);
   assert.match(html, /Urban &lt;drone&gt;/);
   assert.doesNotMatch(html, /javascript:/);
@@ -112,11 +118,23 @@ test("collect requires a sign-in and is idempotent once the gate passes", () => 
 });
 
 test("card paths accept a uuid and reject anything else", () => {
-  assert.deepEqual(parseCardPath(`/card/${CARD_ID}`), { id: CARD_ID, image: false });
-  assert.deepEqual(parseCardPath(`/card/${CARD_ID}/image`), { id: CARD_ID, image: true });
+  assert.deepEqual(parseCardPath(`/card/${CARD_ID}`), { id: CARD_ID, image: false, share: false });
+  assert.deepEqual(parseCardPath(`/card/${CARD_ID}/image`), { id: CARD_ID, image: true, share: false });
+  assert.deepEqual(parseCardPath(`/card/${CARD_ID}/preview.jpg`), { id: CARD_ID, image: false, share: true });
   assert.deepEqual(parseCollectPath(`/api/me/cards/${CARD_ID}/collect`), { id: CARD_ID });
   assert.equal(parseCardPath("/card/not-a-uuid")?.invalid, true);
   assert.equal(parseCardPath("/signin"), null);
+});
+
+test("card image headers name the bytes for both GET and HEAD", () => {
+  const headers = collectorImageHeaders(1200, {
+    contentType: "image/jpeg",
+    etag: 'W/"share-2026-10-08T00:00:00.000Z"',
+  });
+  assert.equal(headers["Content-Type"], "image/jpeg");
+  assert.equal(headers["Content-Length"], "1200");
+  assert.equal(headers.ETag, 'W/"share-2026-10-08T00:00:00.000Z"');
+  assert.match(headers["Cache-Control"], /public/);
 });
 
 test("emTech filter appears once the collection reaches six cards", () => {

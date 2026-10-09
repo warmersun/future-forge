@@ -996,7 +996,7 @@ export async function getCollectorCardImage(cardId) {
   if (!cardId) return null;
   const got = await withUnpooledClient(async (client) => {
     const r = await client.query(
-      `SELECT image, content_type, updated_at
+      `SELECT image, content_type, tech_id, updated_at
        FROM collector_cards
        WHERE id = $1 AND published = true AND image IS NOT NULL AND byte_len > 0`,
       [cardId]
@@ -1007,6 +1007,7 @@ export async function getCollectorCardImage(cardId) {
   return {
     bytes: got.image,
     contentType: got.content_type || "image/jpeg",
+    techId: got.tech_id || "",
     updatedAt: got.updated_at || null,
   };
 }

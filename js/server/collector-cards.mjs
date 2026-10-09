@@ -21,6 +21,11 @@ export const CARD_CAPABILITY_HEADING = "Capability";
 export const CARD_USE_CASES_HEADING = "Use cases";
 export const CARD_DETAILS_HEADING = "The details";
 
+/** Open Graph / X large-card image. 1200×630 is the size those crawlers expect. */
+export const CARD_SHARE_WIDTH = 1200;
+export const CARD_SHARE_HEIGHT = 630;
+export const CARD_SHARE_TYPE = "image/jpeg";
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -44,10 +49,10 @@ export function normalizeCardId(id) {
 
 /**
  * @param {string} pathOnly
- * @returns {{ id: string, image: boolean } | { invalid: true } | null}
+ * @returns {{ id: string, image: boolean, share: boolean } | { invalid: true } | null}
  */
 export function parseCardPath(pathOnly) {
-  const m = /^\/card\/([^/]+)(?:\/(image))?$/.exec(String(pathOnly || ""));
+  const m = /^\/card\/([^/]+)(?:\/(image|preview\.jpg))?$/.exec(String(pathOnly || ""));
   if (!m) return null;
   let raw = m[1];
   try {
@@ -57,7 +62,7 @@ export function parseCardPath(pathOnly) {
   }
   const id = normalizeCardId(raw);
   if (!id) return { invalid: true };
-  return { id, image: m[2] === "image" };
+  return { id, image: m[2] === "image", share: m[2] === "preview.jpg" };
 }
 
 /**
@@ -295,11 +300,35 @@ export function publicCardDto(row, origin) {
 }
 
 /**
+ * Edition line printed on the plate and on the share image.
+ * @param {string} id
+ */
+export function cardEdition(id) {
+  const s = String(id || "");
+  return `No. ${s.slice(0, 4).toUpperCase()}\u00b7${s.slice(4, 8).toUpperCase()}`;
+}
+
+/**
+ * Headers for a public card image. HEAD and GET share them; only GET sends bytes.
+ * @param {number} byteLength
+ * @param {{ contentType?: string, etag: string }} meta
+ */
+export function collectorImageHeaders(byteLength, meta) {
+  return {
+    "Content-Type": meta.contentType || CARD_SHARE_TYPE,
+    "Content-Length": String(byteLength),
+    ETag: meta.etag,
+    "Cache-Control": "public, max-age=86400",
+    "Access-Control-Allow-Origin": "*",
+  };
+}
+
+/**
  * Domain light for the gallery. Falls back to forge gold.
  * @param {string} techId
  * @returns {string} "r, g, b"
  */
-function domainRgb(techId) {
+export function domainRgb(techId) {
   const hex = DOMAINS[techById(techId)?.domain]?.color;
   const safe = /^#[0-9a-f]{6}$/i.test(String(hex || "")) ? hex : "#e4c56a";
   const n = parseInt(safe.slice(1), 16);
@@ -391,9 +420,10 @@ export function renderCollectorCardPage(row, opts) {
   const links = sanitizeCardLinks(row.links);
   const pageUrl = `${origin}/card/${id}`;
   const imageUrl = `${origin}/card/${id}/image`;
+  const shareUrl = `${origin}/card/${id}/preview.jpg`;
   const ogDescription = description.replace(/\s+/g, " ").slice(0, 300);
   const paint = domainRgb(techId);
-  const edition = `No. ${id.slice(0, 4).toUpperCase()}\u00b7${id.slice(4, 8).toUpperCase()}`;
+  const edition = cardEdition(id);
   const linkHtml = links.length
     ? `<section class="record"><h2>The record</h2><ul>${links
         .map((l) => {
@@ -420,13 +450,16 @@ export function renderCollectorCardPage(row, opts) {
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
-  <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image" content="${escapeHtml(shareUrl)}" />
   <meta property="og:image:alt" content="${escapeHtml(title)}" />
+  <meta property="og:image:width" content="${CARD_SHARE_WIDTH}" />
+  <meta property="og:image:height" content="${CARD_SHARE_HEIGHT}" />
+  <meta property="og:image:type" content="${CARD_SHARE_TYPE}" />
   <meta property="og:url" content="${escapeHtml(pageUrl)}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
-  <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+  <meta name="twitter:image" content="${escapeHtml(shareUrl)}" />
   <link rel="icon" href="/assets/brand/ff-mark-hex.png" type="image/png" />
   <style>
     :root {
