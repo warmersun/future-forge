@@ -29,7 +29,7 @@
 
 ### KG EmTech present vs missing
 
-**Present:** 3D Printing, Alternative Proteins, Artificial Intelligence, Battery Technology, Computing, Drones, Gene Sequencing, Genetic Engineering, Internet of Things, Networks, Robots, Synthetic Biology, Transportation.
+**Present:** 3D Printing, Alternative Proteins, Super Intelligence, Battery Technology, Computing, Drones, Gene Sequencing, Genetic Engineering, Internet of Things, Networks, Robots, Synthetic Biology, Transportation.
 
 **Missing taxonomy nodes (do not invent extra EmTechs; pre-load from schema only):** Energy, Crypto-Currency, Quantum Computing, Geothermal Power, Tidal Power, Solar Power, Wind Power, Wave Power, Nuclear Power, Self-Driving Cars, Quantum Internet, Space Exploration, Brain-Computer Interface, Virtual Reality, Material Science, Nano-Technology.
 

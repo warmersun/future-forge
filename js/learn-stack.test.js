@@ -150,11 +150,11 @@ describe("learn stills", () => {
       title: "What already works",
       bodyHtml: "<p>Now</p>",
       imageUrl: "assets/learn/ai/now.jpg",
-      techName: "Artificial Intelligence",
+      techName: "Super Intelligence",
     });
     assert.match(html, /class="learn-sec-art"/);
     assert.match(html, /src="assets\/learn\/ai\/now\.jpg"/);
-    assert.match(html, /alt="Artificial Intelligence — What already works"/);
+    assert.match(html, /alt="Super Intelligence — What already works"/);
     assert.ok(html.includes(LEARN_STILL_ONERROR));
     assert.match(html, /onerror="/);
   });
@@ -163,7 +163,7 @@ describe("learn stills", () => {
     const html = techLearnCardHtml(
       {
         id: "ai",
-        name: "Artificial Intelligence",
+        name: "Super Intelligence",
         icon: "✦",
         domain: "automator",
         curve: "steep",
@@ -186,19 +186,19 @@ describe("learn stills", () => {
       assert.match(html, new RegExp(`data-learn-sec="${sec.id}"`));
       assert.match(html, new RegExp(`src="assets/learn/ai/${sec.id}\\.jpg"`));
     }
-    assert.match(html, /alt="Artificial Intelligence — What is this family\?"/);
+    assert.match(html, /alt="Super Intelligence — What is this family\?"/);
     assert.ok(html.includes(LEARN_STILL_ONERROR));
   });
 
   it("builds one job per tech × section with no-text prompts", () => {
     const jobs = learnImageJobs([
-      { id: "ai", name: "Artificial Intelligence", primer: "Finds patterns.", risk: "bias" },
+      { id: "ai", name: "Super Intelligence", primer: "Finds patterns.", risk: "bias" },
     ]);
     assert.equal(jobs.length, LEARN_SECTIONS.length);
     assert.equal(jobs[0].image, "assets/learn/ai/family.jpg");
     assert.match(jobs[0].prompt, /4:3/);
     assert.match(jobs[0].prompt, /no readable text/);
-    assert.match(jobs[0].prompt, /Artificial Intelligence/);
+    assert.match(jobs[0].prompt, /Super Intelligence/);
     assert.equal(learnImageJobs([{ id: "../bad", name: "Nope" }]).length, 0);
   });
 });

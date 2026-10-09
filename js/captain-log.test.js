@@ -84,10 +84,10 @@ describe("captain-log", () => {
   it("keeps the emTech beside an idea", () => {
     const e = appendCaptainLog({
       title: "Placed",
-      ideas: [{ text: "graphene filter", tech: "Artificial Intelligence" }],
+      ideas: [{ text: "graphene filter", tech: "Super Intelligence" }],
     });
     assert.equal(e.ideas[0].text, "graphene filter");
-    assert.equal(e.ideas[0].tech, "Artificial Intelligence");
+    assert.equal(e.ideas[0].tech, "Super Intelligence");
   });
 
   it("keeps pathway names and the full description", () => {

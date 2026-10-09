@@ -994,11 +994,11 @@ describe("island inventHow", () => {
       place: "Quay",
       year: 2027,
       techTitle: (id) =>
-        id === "ai" ? "Artificial Intelligence" : id === "iot" ? "Internet of Things" : id,
+        id === "ai" ? "Super Intelligence" : id === "iot" ? "Internet of Things" : id,
     });
     assert.equal(sum.stack.join(","), "ai,iot");
     assert.match(sum.text, /Quay · held in 2027/);
-    assert.match(sum.text, /Artificial Intelligence/);
+    assert.match(sum.text, /Super Intelligence/);
     assert.match(sum.text, /Internet of Things/);
     assert.match(sum.text, /on-board AI so it can fly blind, geo-fencing, kill-switch/);
     assert.match(sum.text, /sensors with IOT: camera, GPS for geo-fencing, barometer, IMU/);

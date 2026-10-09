@@ -160,7 +160,7 @@ describe("localIdeaSparks", () => {
 
   it("pads when the catalog has fewer than 3 use cases", () => {
     const ideas = localIdeaSparks(
-      { id: "ai", name: "Artificial Intelligence", useCasesNow: ["Triage support"] },
+      { id: "ai", name: "Super Intelligence", useCasesNow: ["Triage support"] },
       { place: "North Stack", year: 2026 }
     );
     assert.equal(ideas.length, 3);
@@ -209,7 +209,7 @@ describe("rotateLocalIdeaSparks", () => {
 describe("ideasOrFallback", () => {
   const tech = {
     id: "ai",
-    name: "Artificial Intelligence",
+    name: "Super Intelligence",
     useCasesNow: ["Triage support", "Tutoring aids", "Early-warning scoring"],
   };
 

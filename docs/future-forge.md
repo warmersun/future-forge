@@ -169,7 +169,7 @@ The catalog is **29** always-pickable cards in [js/data.js](../js/data.js) (`TEC
 | Domain | What sits there |
 |--------|-----------------|
 | **Power** | Computing, energy, crypto, quantum, geothermal, tidal, solar, wind, wave, nuclear, batteries |
-| **Automator** | Artificial intelligence, robots |
+| **Automator** | Super intelligence, robots |
 | **Mover** | Networks, transportation, self-driving, drones, quantum internet, space |
 | **LifeForce** | Synthetic biology, brain-computer interfaces, genetic engineering, gene sequencing, alternative proteins |
 | **Link** | Virtual reality (the VR/AR family) |

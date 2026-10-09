@@ -593,7 +593,7 @@ export const TECHS = [
     { city: "quiet-mobility", infra: "charge-mesh", narrative: "Power waits in packs until needed." }),
 
   // —— Automator: AI & robotics ——
-  tech("ai", "Artificial Intelligence", "✦", "automator", 2026, "steep",
+  tech("ai", "Super Intelligence", "✦", "automator", 2026, "steep",
     "Systems that predict, recommend, generate, and decide from data.",
     "Automates pattern-finding; still needs human accountability.",
     "Triage, tutoring, logistics, early warning.",
@@ -807,7 +807,7 @@ function capabilitySeed(id, name, summary) {
     },
     ai: {
       primer:
-        "Artificial intelligence finds patterns in data to predict, recommend, generate text or images, and support decisions. It is already a co-worker in many clinics, classrooms, and logistics desks — but it can be biased, overconfident, or opaque. Strong local inventions keep humans accountable and scope the model to a real workflow.",
+        "Super intelligence finds patterns in data to predict, recommend, generate text or images, and support decisions. It is already a co-worker in many clinics, classrooms, and logistics desks — but it can be biased, overconfident, or opaque. Strong local inventions keep humans accountable and scope the model to a real workflow.",
       maturity: {
         now: "Assistive models, classification, forecasting, and copilots with human oversight.",
         near: "More reliable agents for narrow workflows; better local-language models.",
