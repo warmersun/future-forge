@@ -1,0 +1,18 @@
+{
+  "source": "Test fixture only. Not a real card and never published.",
+  "id": "5b7c2f0e-3d1a-4c6b-9e8f-0a1b2c3d4e5f",
+  "techId": "drones",
+  "title": "Sample daily card used by the publish tests",
+  "description": "A test fixture that stands in for a daily collector card. It exists so the validator, the change detection, and the dry-run publish can be exercised without a database.",
+  "capability": "A test card can now be checked and dry-run published without touching a database.",
+  "useCases": [
+    "Checking the validator rules on a daily card",
+    "Exercising the dry-run publish path in tests"
+  ],
+  "links": [
+    {
+      "label": "Future Forge repository",
+      "url": "https://github.com/warmersun/future-forge"
+    }
+  ]
+}

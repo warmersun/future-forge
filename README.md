@@ -117,6 +117,37 @@ Lesson pages and images are not fetched by the server. They are whatever absolut
 
 `FF_CONTENT_BASE_URL` works with `npm start` and the portal too. Unset, the live defaults are unchanged.
 
+### Daily collector cards (publish on merge)
+
+Each weekday one real invention becomes a collector card. The card is authored with `skills/future-forge-collector-cards/`, opened as a PR in this repo, and merged by Sic. **Merging publishes it.** No bot holds the database password: only GitHub Actions does, as a repository secret.
+
+**Where cards go.** `cards/daily/YYYY-MM-DD-<kebab-slug>.json`, with the page image next to it under the same name (`.jpg`, `.png`, or `.webp`). The image is AI-generated, 16:9, at most 1.5 MB, with no photos and no logos (the same rule as Spotlight brief beats). Only `cards/daily/` is published. `cards/examples/` and `test/fixtures/` never are.
+
+**Capability and use cases.** Every daily card says, in plain words, what we can do now that we could not do before (`"capability"`), and lists 1–3 concrete uses (`"useCases"`). The page shows them as a highlighted panel right under the description. They are stored inside the card's body text, so there is no database change.
+
+**Preview screenshots.** Every card PR gets a comment with desktop and mobile screenshots of `node scripts/preview-collector-card.mjs <card.json>`. The images go on the `card-previews` branch, which is never merged (see the collector-card skill).
+
+**Each card has its own fixed id.** Every daily card carries a UUID `"id"`, minted once at authoring time (`node -e "console.log(crypto.randomUUID())"`) and never changed. That id is the database primary key, and publishing is `INSERT ... ON CONFLICT (id) DO UPDATE`. So re-running the workflow, merging the same card twice, or merging a later edit always updates the one card in place and never creates a second. An edited card keeps its link. To retire a card, set `"published": false` and merge; deleting the file does not unpublish it.
+
+**The two workflows:**
+
+| Workflow | When | What |
+|----------|------|------|
+| `.github/workflows/collector-cards-check.yml` | PR that touches `cards/**` | Runs `npm run validate:collector-card` on each added or changed card. Daily cards must have an `id`, a `capability`, 1–3 `useCases`, the file-name rule, and a 16:9 jpg/png/webp image of at most 1.5 MB. It also fails if two cards share an id, or if an existing card's id was changed or removed. Needs no secrets. |
+| `.github/workflows/collector-cards-publish.yml` | Push to `main` that touches `cards/daily/**`, or a manual run | Finds the added or changed daily cards, checks them again, upserts each one with `scripts/issue-collector-card.sh`, writes the `https://cloud.warmersun.com/card/<id>` links to the job summary, and comments them on the merged PR. Runs one at a time. Fails with a clear message if `DATABASE_URL` is missing. |
+
+**Republish or retry.** Re-running a failed publish job is safe. Actions → **Collector cards publish** → **Run workflow** republishes every daily card, which is also safe because each one is an upsert on its id. Tick *Dry run* to see what would be stored without touching the database. Locally: `./scripts/issue-collector-card.sh --dry-run cards/daily/<file>.json` prints the exact SQL and the link without connecting.
+
+**One-time setup: the `DATABASE_URL` secret.** The cards live in the Warmer Sun Cloud **Neon Postgres** database, the same one the portal uses.
+
+1. Copy the value. Either:
+   - **Render** → Dashboard → the **warmer-sun-portal** service → **Environment** (left pane) → under *Environment Variables*, reveal **`DATABASE_URL`** and copy its value; or
+   - **Neon Console** → the project → **Connect** (in the Console nav) → in *Connect to your branch*, pick the production branch, database, and role that the portal uses → leave *Connection pooling* on → click the copy icon next to the connection string.
+2. **GitHub** → `warmersun/future-forge` → **Settings** → **Secrets and variables** (in the *Security* section of the sidebar) → **Actions** → **Secrets** tab → **New repository secret**.
+3. **Name:** `DATABASE_URL`. **Secret:** paste the value. Click **Add secret**.
+
+Nothing else is needed. The `collector_cards` table already exists, because the portal applies `js/server/db/014_collector_cards.sql` on start. Neon accepts connections from any address unless *IP Allow* is turned on (Neon project → Settings → Networking). If it is ever turned on, GitHub-hosted runners have no fixed address and publishing will fail. There is no GitHub Environment with required reviewers, on purpose: it would add an approval click after every merge, and the merge is already the approval.
+
 ### Learner accounts (optional Clerk)
 
 Sign-in is **optional**. Clerk UI runs on the hosted portal at **`https://cloud.warmersun.com/signin`**. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens the portal and stores a session JWT. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
