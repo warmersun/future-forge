@@ -3739,7 +3739,6 @@ function postCloudRun(run) {
       if (res.ok && data.id) state.cloudRunId = data.id;
       if (res.ok && Array.isArray(data.unlocked) && data.unlocked.length) {
         flashToast(data.unlocked.map((u) => u.title).filter(Boolean).join(" · "));
-        void loadAchievementsStrip();
       }
       applyOutcomeCloudSaveChrome();
       return res.ok ? data.id || null : null;
@@ -4288,6 +4287,7 @@ function showScreen(id) {
     });
   }
   if (id === "outcome") renderOutcome();
+  if (id === "cloud") void loadForge();
   try {
     tutorialCtl?.refresh?.();
   } catch {
@@ -4328,20 +4328,12 @@ function renderTitleCtas() {
     choose.classList.add("btn-primary");
     choose.classList.remove("btn-secondary");
   }
-  const logBtn = $("#btn-quest-log");
-  const profBtn = $("#btn-cloud-profile");
-  const dailyBtn = $("#btn-daily-board");
-  const showLog = isClerkSignedIn();
-  for (const btn of [logBtn, profBtn]) {
-    if (!btn) continue;
-    btn.hidden = !showLog;
-    if (showLog) btn.removeAttribute("hidden");
-    else btn.setAttribute("hidden", "");
-  }
-  if (dailyBtn) {
-    dailyBtn.hidden = !showLog;
-    if (showLog) dailyBtn.removeAttribute("hidden");
-    else dailyBtn.setAttribute("hidden", "");
+  const forgeBtn = $("#btn-cloud-forge");
+  const showForge = isClerkSignedIn();
+  if (forgeBtn) {
+    forgeBtn.hidden = !showForge;
+    if (showForge) forgeBtn.removeAttribute("hidden");
+    else forgeBtn.setAttribute("hidden", "");
   }
   if (start) {
     start.hidden = true;
@@ -4360,40 +4352,11 @@ function renderTitleCtas() {
   }
 }
 
-async function loadAchievementsStrip() {
-  const el = $("#cloud-achievements-strip");
-  if (!el) return;
-  if (!isClerkSignedIn()) {
-    el.hidden = true;
-    el.textContent = "";
-    return;
-  }
-  try {
-    const res = await apiFetch("/api/me/achievements");
-    const data = await res.json().catch(() => ({}));
-    const list = res.ok && Array.isArray(data.achievements) ? data.achievements : [];
-    if (!list.length) {
-      el.hidden = true;
-      el.textContent = "";
-      return;
-    }
-    el.hidden = false;
-    el.innerHTML = list
-      .map(
-        (a) =>
-          `<span class="achievement-chip" title="${escapeHtml(a.blurb || "")}">${escapeHtml(a.title || "")}</span>`
-      )
-      .join('<span class="achievement-sep" aria-hidden="true"> · </span>');
-  } catch {
-    el.hidden = true;
-  }
-}
-
 function renderTitleMeta() {
   renderTitleCtas();
-  void loadAchievementsStrip();
   void maybeOfferContinue();
-  if (state.screen === "quest-log") void loadQuestLog();
+  if (state.screen === "quest-log" && !forgePreview) void loadQuestLog();
+  if (state.screen === "cloud" && !forgePreview) void loadForge();
   // Keep catalog warm for hub/lists
   void refreshHostedQuests({ silent: true }).then(() => {
     if (state.screen === "quest-hub") renderQuestHub();
@@ -4465,15 +4428,6 @@ function applyFullToolkitPreview() {
     /* ignore */
   }
   paintCloudPortfolio(localPortfolioPayload());
-  const strip = $("#cloud-achievements-strip");
-  if (strip) {
-    const have = strip.textContent.trim();
-    strip.hidden = false;
-    strip.removeAttribute("hidden");
-    if (!/Full toolkit/i.test(have)) {
-      strip.textContent = have ? `${have} · Full toolkit` : "Full toolkit";
-    }
-  }
 }
 
 async function clearFullToolkitPreview() {
@@ -4485,7 +4439,7 @@ async function clearFullToolkitPreview() {
   paintCloudPortfolio(
     pickRicherPublicPortfolio(await portfolioFromCloudHolds(), publicPortfolio(null))
   );
-  void loadAchievementsStrip();
+  if (state.screen === "cloud" && !forgePreview) void loadForge();
 }
 
 function paintCloudPortfolio(portfolio) {
@@ -4645,6 +4599,8 @@ async function saveCloudProfile() {
     if (res.ok) {
       setCloudProfileCache(data.profile || null);
       refreshAccountChip();
+      const nameEl = $("#cloud-forge-name");
+      if (nameEl && state.screen === "cloud") nameEl.textContent = data.profile?.displayName || display;
     }
     if (status) {
       status.textContent = res.ok
@@ -4666,8 +4622,418 @@ async function saveCloudProfile() {
   }
 }
 
+let forgePreview = false;
+let forgeEmpty = false;
+let boardReturn = "title";
+let questLogReturn = "title";
+
+const BADGE_ORDER = [
+  "held_pathway",
+  "first_friends_hold",
+  "sponsored_spotlight",
+  "four_challengers",
+  "converter_dock",
+  "full_toolkit",
+  "founding",
+  "invent_night_2026",
+  "streak_3",
+  "streak_7",
+  "streak_30",
+];
+
+const FORGE_BADGE_DEFS = [
+  { code: "held_pathway", title: "Pathway holds", blurb: "You held a pathway before the place fell." },
+  { code: "first_friends_hold", title: "Held it together", blurb: "A Friends invent that held." },
+  { code: "sponsored_spotlight", title: "Named invent", blurb: "You invented on a sponsored spotlight." },
+  { code: "four_challengers", title: "All four questions", blurb: "Summoned all four challengers on a held pathway." },
+  { code: "converter_dock", title: "Bits to atoms", blurb: "Used a converter to dock bits to atoms." },
+  { code: "full_toolkit", title: "Full toolkit", blurb: "You held pathways using every main emTech." },
+  { code: "founding", title: "Founding inventor", blurb: "Among the first Cloud accounts." },
+  { code: "invent_night_2026", title: "Invent Night 2026", blurb: "Showed up for Invent Night." },
+  { code: "streak_3", title: "Three days", blurb: "Held a pathway three days in a row." },
+  { code: "streak_7", title: "Seven days", blurb: "Held a pathway seven days in a row." },
+  { code: "streak_30", title: "Thirty days", blurb: "Held a pathway thirty days in a row." },
+];
+
+function browserTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+function editionNo(rank) {
+  const n = Number(rank);
+  if (!Number.isFinite(n) || n <= 0) return "No. ----";
+  return `No. ${String(Math.trunc(n)).padStart(4, "0")}`;
+}
+
+function appendPlateTicks(el) {
+  for (const pos of ["tl", "tr", "bl", "br"]) {
+    const tick = document.createElement("span");
+    tick.className = `ff-tick ${pos}`;
+    tick.setAttribute("aria-hidden", "true");
+    el.appendChild(tick);
+  }
+}
+
+function appendPlateSheen(el) {
+  const sheen = document.createElement("span");
+  sheen.className = "ff-sheen";
+  sheen.setAttribute("aria-hidden", "true");
+  el.appendChild(sheen);
+}
+
+function streakLabel(n) {
+  const c = Number(n) || 0;
+  if (c <= 0) return "No streak yet";
+  if (c === 1) return "1 day";
+  return `${c} days`;
+}
+
+function outcomePipClass(outcome) {
+  if (outcome === "hold") return "";
+  if (outcome === "partial") return "is-partial";
+  return "is-dim";
+}
+
+function starMarks(stars) {
+  const n = Math.max(0, Math.min(5, Math.trunc(Number(stars) || 0)));
+  return n ? "★".repeat(n) : "";
+}
+
+function orderedBadges(achievements, catalog) {
+  const all = new Map();
+  for (const a of catalog || []) all.set(a.code, { ...a, unlocked: false });
+  for (const a of achievements || []) all.set(a.code, { ...a, unlocked: true });
+  const out = [];
+  for (const code of BADGE_ORDER) {
+    if (!all.has(code)) continue;
+    out.push(all.get(code));
+    all.delete(code);
+  }
+  for (const a of all.values()) out.push(a);
+  return out;
+}
+
+function forgeFixture() {
+  const locked = FORGE_BADGE_DEFS.filter((d) => d.code !== "held_pathway" && d.code !== "streak_3");
+  if (forgeEmpty) {
+    return {
+      name: "Ada Forge",
+      streak: { current: 0, best: 0, today: false, days: [false, false, false, false, false, false, false] },
+      you: null,
+      board: [],
+      runs: [],
+      achievements: [],
+      catalog: FORGE_BADGE_DEFS,
+    };
+  }
+  return {
+    name: "Ada Forge",
+    streak: {
+      current: 3,
+      best: 5,
+      today: true,
+      days: [false, true, true, false, true, true, true],
+    },
+    you: { rank: 2, score: 4.5, quests: 6, displayName: "Ada Forge" },
+    board: [
+      {
+        rank: 1,
+        displayName: "Nia Okonkwo",
+        score: 6.2,
+        quests: 8,
+        pathwayText: "A cooler ward that shares the night shift before the float pool runs out.",
+      },
+      {
+        rank: 2,
+        displayName: "Ada Forge",
+        score: 4.5,
+        quests: 6,
+        stillSrc: "assets/problems/water.jpg",
+        pathwayText: "Step wells that keep a dry week from emptying the village tap.",
+      },
+      { rank: 3, displayName: "Jules Maren", score: 3.1, quests: 4 },
+    ],
+    runs: [
+      { place: "Paddy Step Wells", outcome: "hold", kind: "lesson", yearReached: 2031, stars: 3 },
+      { place: "Saltreed Ridge", outcome: "partial", kind: "theme", yearReached: 2034, stars: 2 },
+      { place: "Kettle Ford", outcome: "hold", kind: "friends", yearReached: 2029, stars: 3 },
+    ],
+    achievements: FORGE_BADGE_DEFS.filter((d) => d.code === "held_pathway" || d.code === "streak_3"),
+    catalog: locked,
+  };
+}
+
+function paintStreakRail(streak) {
+  const rail = $("#cloud-forge-rail");
+  const label = $("#cloud-forge-streak");
+  const bestEl = $("#cloud-forge-best");
+  if (label) label.textContent = streakLabel(streak?.current);
+  if (bestEl) {
+    const best = Number(streak?.best) || 0;
+    const current = Number(streak?.current) || 0;
+    const show = best > current && best > 0;
+    bestEl.hidden = !show;
+    bestEl.textContent = show ? `Best ${best} ${best === 1 ? "day" : "days"}` : "";
+    if (show) bestEl.removeAttribute("hidden");
+  }
+  if (!rail) return;
+  rail.replaceChildren();
+  const days =
+    Array.isArray(streak?.days) && streak.days.length === 7
+      ? streak.days
+      : [false, false, false, false, false, false, false];
+  days.forEach((on, i) => {
+    const li = document.createElement("li");
+    if (on) li.className = "is-on";
+    const ago = 6 - i;
+    li.title = ago === 0 ? "Today" : ago === 1 ? "Yesterday" : `${ago} days ago`;
+    rail.appendChild(li);
+  });
+}
+
+function paintBadgeCabinet(achievements, catalog) {
+  const list = $("#cloud-forge-badges");
+  if (!list) return;
+  list.replaceChildren();
+  for (const b of orderedBadges(achievements, catalog)) {
+    const li = document.createElement("li");
+    li.className = `ff-plate ff-badge${b.unlocked ? "" : " is-locked"}`;
+    appendPlateTicks(li);
+    if (b.unlocked) appendPlateSheen(li);
+    const eye = document.createElement("p");
+    eye.className = "ff-eyebrow";
+    const pip = document.createElement("span");
+    pip.className = `ff-pip${b.unlocked ? "" : " is-dim"}`;
+    pip.setAttribute("aria-hidden", "true");
+    eye.append(pip, document.createTextNode(b.unlocked ? "Earned" : "Locked"));
+    const title = document.createElement("h3");
+    title.textContent = b.title || b.code || "Badge";
+    const blurb = document.createElement("p");
+    blurb.textContent = b.blurb || "";
+    li.append(eye, title, blurb);
+    list.appendChild(li);
+  }
+}
+
+function logPlate(run) {
+  const li = document.createElement("li");
+  li.className = "ff-plate ff-log-row";
+  appendPlateTicks(li);
+  const eye = document.createElement("p");
+  eye.className = "ff-eyebrow";
+  const pip = document.createElement("span");
+  pip.className = `ff-pip ${outcomePipClass(run?.outcome)}`.trim();
+  pip.setAttribute("aria-hidden", "true");
+  eye.append(pip, document.createTextNode(questLogOutcomeLabel(run?.outcome)));
+  const title = document.createElement("p");
+  title.className = "quest-log-item-title";
+  title.textContent = run?.place || run?.questId || "Quest";
+  const meta = document.createElement("p");
+  meta.className = "ff-log-meta";
+  const bits = [
+    run?.kind || null,
+    run?.yearReached != null ? `year ${run.yearReached}` : null,
+    starMarks(run?.stars),
+  ].filter(Boolean);
+  meta.textContent = bits.join(" · ");
+  li.append(eye, title, meta);
+  return li;
+}
+
+function boardPlate(row, opts = {}) {
+  const players = Boolean(opts.players);
+  const li = document.createElement("li");
+  const rank = Number(row?.rank) || 0;
+  const yours = Boolean(opts.yours);
+  li.className = `ff-plate ff-board-row${yours ? " is-you" : ""}`;
+  if (rank > 0 && rank <= 3) {
+    appendPlateTicks(li);
+    appendPlateSheen(li);
+  }
+  const head = document.createElement("div");
+  head.className = "ff-board-head";
+  const edition = document.createElement("span");
+  edition.className = "ff-edition";
+  edition.textContent = editionNo(rank);
+  const name = document.createElement("strong");
+  name.textContent = row?.displayName || "Inventor";
+  const score = document.createElement("span");
+  score.className = "ff-board-score";
+  if (players) {
+    const n = Number(row?.quests) || 0;
+    score.textContent = `${formatBoardScore(row)} · ${n} quest${n === 1 ? "" : "s"}`;
+  } else {
+    score.textContent = `${formatBoardScore(row)} · ${row?.stars ?? 0}★ / ${row?.years || "?"}y · ${row?.waits ?? 0} waits`;
+  }
+  head.append(edition, name, score);
+  li.appendChild(head);
+  const stillSrc = row?.stillSrc || (!players ? stillUrlForRow(opts.questId, row) : "");
+  if (stillSrc) {
+    const mat = document.createElement("div");
+    mat.className = "ff-mat";
+    const img = document.createElement("img");
+    img.alt = `Vision still, ${row?.displayName || "inventor"}`;
+    mat.appendChild(img);
+    li.appendChild(mat);
+    if (row?.stillSrc) {
+      img.src = row.stillSrc;
+    } else {
+      void apiFetch(stillSrc)
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (!blob || !img.isConnected) return;
+          img.src = URL.createObjectURL(blob);
+        })
+        .catch(() => {});
+    }
+  }
+  if (row?.pathwayText) {
+    const p = document.createElement("p");
+    p.className = "ff-writeup";
+    p.textContent = row.pathwayText;
+    li.appendChild(p);
+  }
+  return li;
+}
+
+function paintBoardPlates(list, rows, opts = {}) {
+  if (!list) return;
+  list.replaceChildren();
+  const top = Array.isArray(rows) ? rows : [];
+  const limit = Number(opts.limit) || top.length;
+  const you = opts.you || null;
+  for (const row of top.slice(0, limit)) {
+    const yours =
+      you &&
+      !you.needsDisplayName &&
+      Number(you.rank) === Number(row.rank) &&
+      (you.displayName || "") === (row.displayName || "");
+    list.appendChild(boardPlate(row, { ...opts, yours }));
+  }
+}
+
+function paintForge(data) {
+  const nameEl = $("#cloud-forge-name");
+  if (nameEl) nameEl.textContent = data?.name || "Inventor";
+  paintStreakRail(data?.streak);
+  const rankEl = $("#cloud-forge-rank");
+  if (rankEl) {
+    const you = data?.you;
+    if (you?.needsDisplayName) {
+      rankEl.textContent = "Pick a display name to appear on the leaderboard.";
+    } else if (you?.rank) {
+      rankEl.textContent = `You are ${editionNo(you.rank)} on the leaderboard.`;
+    } else {
+      rankEl.textContent = "";
+    }
+  }
+  const emptyBtn = $("#btn-cloud-forge-empty");
+  if (emptyBtn) {
+    emptyBtn.hidden = !forgePreview;
+    emptyBtn.textContent = forgeEmpty ? "Preview a forge" : "Preview empty";
+    if (forgePreview) emptyBtn.removeAttribute("hidden");
+  }
+  paintBadgeCabinet(data?.achievements, data?.catalog);
+  const board = $("#cloud-forge-board");
+  const boardEmpty = $("#cloud-forge-board-empty");
+  const top = Array.isArray(data?.board) ? data.board : [];
+  if (boardEmpty) {
+    boardEmpty.hidden = top.length > 0;
+    if (!top.length) boardEmpty.removeAttribute("hidden");
+  }
+  paintBoardPlates(board, top, { players: true, you: data?.you, limit: 3 });
+  const recent = $("#cloud-forge-recent");
+  const recentEmpty = $("#cloud-forge-recent-empty");
+  const runs = (Array.isArray(data?.runs) ? data.runs : []).filter(
+    (r) => r?.outcome === "hold" || r?.outcome === "partial"
+  );
+  if (recentEmpty) {
+    recentEmpty.hidden = runs.length > 0;
+    if (!runs.length) recentEmpty.removeAttribute("hidden");
+  }
+  if (recent) {
+    recent.replaceChildren();
+    for (const run of runs.slice(0, 3)) recent.appendChild(logPlate(run));
+  }
+}
+
+async function loadForge() {
+  if (forgePreview) {
+    const fx = forgeFixture();
+    paintForge(fx);
+    const toolkitHash = String(location.hash || "") === "#ff-preview-toolkit";
+    paintCloudPortfolio(
+      toolkitHash
+        ? localPortfolioPayload()
+        : forgeEmpty
+          ? publicPortfolio(null)
+          : publicPortfolio({ uses: { ai: 2, robots: 1, energy: 1 } })
+    );
+    return;
+  }
+  if (!isClerkSignedIn()) {
+    showScreen("title");
+    return;
+  }
+  const tz = encodeURIComponent(browserTimeZone());
+  let achievements = [];
+  let catalog = [];
+  let streak = null;
+  let name = "Inventor";
+  let you = null;
+  let board = [];
+  let runs = [];
+  let portfolio = null;
+  try {
+    const [aRes, pRes, bRes, rRes] = await Promise.all([
+      apiFetch(`/api/me/achievements?tz=${tz}`),
+      apiFetch("/api/me/profile"),
+      apiFetch("/api/board"),
+      apiFetch("/api/me/runs?limit=12"),
+    ]);
+    const aData = await aRes.json().catch(() => ({}));
+    const pData = await pRes.json().catch(() => ({}));
+    const bData = await bRes.json().catch(() => ({}));
+    const rData = await rRes.json().catch(() => ({}));
+    if (aRes.ok) {
+      achievements = Array.isArray(aData.achievements) ? aData.achievements : [];
+      catalog = Array.isArray(aData.catalog) ? aData.catalog : [];
+      streak = aData.streak || null;
+    }
+    if (pRes.ok) {
+      setCloudProfileCache(pData.profile || null);
+      name = pData.profile?.displayName || "Inventor";
+      portfolio = pData.portfolio || null;
+    }
+    if (bRes.ok) {
+      board = Array.isArray(bData.top) ? bData.top : [];
+      you = bData.you || null;
+    }
+    if (rRes.ok) runs = Array.isArray(rData.runs) ? rData.runs : [];
+  } catch {
+    /* paint whatever arrived */
+  }
+  paintForge({ name, streak, you, board, runs, achievements, catalog });
+  const fromHolds = await portfolioFromCloudHolds();
+  paintCloudPortfolio(pickRicherPublicPortfolio(localPortfolioPayload(), portfolio, fromHolds));
+}
+
+function openForge() {
+  showScreen("cloud");
+}
+
 function openQuestLog() {
+  questLogReturn = state.screen === "cloud" ? "cloud" : questLogReturn || "title";
   showScreen("quest-log");
+  if (forgePreview) {
+    state.questLogRuns = forgeFixture().runs;
+    renderQuestLog();
+    return;
+  }
   void loadQuestLog();
 }
 
@@ -4713,29 +5079,24 @@ function renderQuestLog() {
   }
   if (!list) return;
   list.replaceChildren();
-  const runs = state.questLogRuns || [];
+  let runs = state.questLogRuns || [];
+  if (forgePreview) {
+    if (state.questLogFilter?.outcome) {
+      runs = runs.filter((r) => r.outcome === state.questLogFilter.outcome);
+    }
+    if (state.questLogFilter?.kind) {
+      runs = runs.filter((r) => r.kind === state.questLogFilter.kind);
+    }
+  }
+  const back = $("#btn-quest-log-back");
+  if (back) back.textContent = questLogReturn === "cloud" ? "← Forge" : "← Home";
   if (empty) {
     empty.hidden = runs.length > 0;
-    empty.textContent = "No quests on this account yet.";
+    empty.textContent = runs.length ? "" : "No quests on this account yet.";
+    empty.classList.toggle("ff-plate", runs.length === 0);
+    empty.classList.toggle("is-empty", runs.length === 0);
   }
-  for (const run of runs) {
-    const li = document.createElement("li");
-    li.className = "quest-log-item";
-    const title = document.createElement("p");
-    title.className = "quest-log-item-title";
-    title.textContent = run.place || run.questId || "Quest";
-    const meta = document.createElement("p");
-    meta.className = "quest-log-item-meta";
-    const bits = [
-      questLogOutcomeLabel(run.outcome),
-      run.kind,
-      run.yearReached != null ? `year ${run.yearReached}` : null,
-      run.stars != null ? `${run.stars}★` : null,
-    ].filter(Boolean);
-    meta.textContent = bits.join(" · ");
-    li.append(title, meta);
-    list.appendChild(li);
-  }
+  for (const run of runs) list.appendChild(logPlate(run));
 }
 
 function currentPathwaySummary() {
@@ -4855,9 +5216,16 @@ async function loadDailyBoard() {
 }
 
 function openPlayersBoard() {
+  boardReturn = state.screen === "cloud" ? "cloud" : "title";
   state.boardKind = "players";
   state.boardQuestId = null;
   showScreen("daily-board");
+  if (forgePreview) {
+    const fx = forgeFixture();
+    state.dailyBoard = { kind: "players", top: fx.board, you: fx.you };
+    renderDailyBoard();
+    return;
+  }
   void loadDailyBoard();
 }
 
@@ -4907,19 +5275,23 @@ function renderDailyBoard() {
     }
   }
   if (dateEl) dateEl.textContent = players ? "" : data.place && data.title ? data.place : "";
-  if (back) back.textContent = players ? "← Home" : "← Quests";
+  if (back) {
+    back.textContent = players ? (boardReturn === "cloud" ? "← Forge" : "← Home") : "← Quests";
+  }
 
+  const top = Array.isArray(data.top) ? data.top : [];
+  const youInTop =
+    data.you &&
+    !data.you.needsDisplayName &&
+    top.some((row) => Number(row.rank) === Number(data.you.rank));
   if (youEl) {
-    if (data.you) {
+    if (data.you && !youInTop) {
       youEl.hidden = false;
-      const base = players
-        ? `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.quests || 0} quest${
-            data.you.quests === 1 ? "" : "s"
-          }`
-        : `You: #${data.you.rank} · ${formatBoardScore(data.you)} · ${data.you.stars}★`;
+      youEl.removeAttribute("hidden");
+      youEl.className = "ff-plate ff-log-row";
       youEl.textContent = data.you.needsDisplayName
-        ? `${base} — pick a display name to appear on this board.`
-        : base;
+        ? "Pick a display name to appear on this board."
+        : `You · ${editionNo(data.you.rank)} · ${formatBoardScore(data.you)}`;
     } else {
       youEl.hidden = true;
       youEl.textContent = "";
@@ -4928,50 +5300,17 @@ function renderDailyBoard() {
 
   if (!list) return;
   list.hidden = false;
-  list.replaceChildren();
-  const top = Array.isArray(data.top) ? data.top : [];
   if (empty) {
     empty.hidden = top.length > 0;
-    empty.textContent = "No holds yet.";
+    empty.textContent = top.length ? "" : "No holds yet.";
+    empty.classList.toggle("ff-plate", top.length === 0);
+    empty.classList.toggle("is-empty", top.length === 0);
   }
-  for (const row of top) {
-    const li = document.createElement("li");
-    li.className = "quest-board-row";
-    const head = document.createElement("div");
-    head.className = "quest-board-row-head";
-    if (players) {
-      const n = Number(row.quests) || 0;
-      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${n} quest${
-        n === 1 ? "" : "s"
-      }`;
-    } else {
-      head.textContent = `#${row.rank} ${row.displayName} · ${formatBoardScore(row)} · ${row.stars}★ / ${row.years || "?"}y · ${row.waits} waits`;
-    }
-    li.appendChild(head);
-    if (!players) {
-      const stillSrc = stillUrlForRow(questId, row);
-      if (stillSrc) {
-        const img = document.createElement("img");
-        img.className = "quest-board-still";
-        img.alt = `Vision still, ${row.displayName}`;
-        li.appendChild(img);
-        void apiFetch(stillSrc)
-          .then((res) => (res.ok ? res.blob() : null))
-          .then((blob) => {
-            if (!blob || !img.isConnected) return;
-            img.src = URL.createObjectURL(blob);
-          })
-          .catch(() => {});
-      }
-      if (row.pathwayText) {
-        const p = document.createElement("p");
-        p.className = "quest-board-writeup";
-        p.textContent = row.pathwayText;
-        li.appendChild(p);
-      }
-    }
-    list.appendChild(li);
-  }
+  paintBoardPlates(list, top, {
+    players,
+    questId,
+    you: data.you,
+  });
 }
 
 /**
@@ -21447,10 +21786,17 @@ function bind() {
     startTutorial();
   });
   $("#btn-cloud-continue")?.addEventListener("click", () => continueCloudRun());
-  $("#btn-quest-log")?.addEventListener("click", () => openQuestLog());
-  $("#btn-cloud-profile")?.addEventListener("click", () => openCloudProfile());
+  $("#btn-cloud-forge")?.addEventListener("click", () => openForge());
+  $("#btn-cloud-forge-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-cloud-forge-edit")?.addEventListener("click", () => void openCloudProfile());
+  $("#btn-cloud-forge-board")?.addEventListener("click", () => openPlayersBoard());
+  $("#btn-cloud-forge-log")?.addEventListener("click", () => openQuestLog());
+  $("#btn-cloud-forge-empty")?.addEventListener("click", () => {
+    forgeEmpty = !forgeEmpty;
+    void loadForge();
+  });
   window.addEventListener("ff-open-cloud-profile", () => {
-    void openCloudProfile();
+    openForge();
   });
   $("#btn-cloud-profile-close")?.addEventListener("click", () => closeCloudProfile());
   $("#cloud-profile-backdrop")?.addEventListener("click", (e) => {
@@ -21474,11 +21820,11 @@ function bind() {
       body: JSON.stringify({ runId: id, share: true }),
     }).catch(() => {});
   });
-  $("#btn-daily-board")?.addEventListener("click", () => openPlayersBoard());
-  $("#btn-daily-board-back")?.addEventListener("click", () =>
-    showScreen(state.boardKind === "players" ? "title" : "quest-hub")
-  );
-  $("#btn-quest-log-back")?.addEventListener("click", () => showScreen("title"));
+  $("#btn-daily-board-back")?.addEventListener("click", () => {
+    if (state.boardKind === "players") showScreen(boardReturn || "title");
+    else showScreen("quest-hub");
+  });
+  $("#btn-quest-log-back")?.addEventListener("click", () => showScreen(questLogReturn || "title"));
   $("#quest-log-filters")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("[data-log-filter], [data-log-kind]");
     if (!btn) return;
@@ -21487,7 +21833,8 @@ function bind() {
     if (f === "all") state.questLogFilter = { outcome: null, kind: null };
     else if (f) state.questLogFilter = { outcome: f, kind: null };
     else if (k) state.questLogFilter = { outcome: null, kind: k };
-    void loadQuestLog();
+    if (forgePreview) renderQuestLog();
+    else void loadQuestLog();
   });
   $("#btn-surprise")?.addEventListener("click", () => {
     clearMissionPickSession();
@@ -22346,6 +22693,17 @@ export function init() {
     void maybePromptDisplayName();
     if (isClerkSignedIn()) void consumeDeepLink();
   });
+  const hash = String(location.hash || "");
+  if (hash === "#ff-preview-toolkit") {
+    applyFullToolkitPreview();
+    forgePreview = true;
+    forgeEmpty = false;
+    openForge();
+  } else if (hash === "#ff-preview-forge" || hash === "#ff-preview-forge-empty") {
+    forgePreview = true;
+    forgeEmpty = hash === "#ff-preview-forge-empty";
+    openForge();
+  }
   void (async () => {
     await Promise.race([
       whenAuthReady(),
@@ -22353,10 +22711,6 @@ export function init() {
     ]);
     await resumePendingDeviceHandshake();
     await consumeDeepLink();
-    if (String(location.hash || "") === "#ff-preview-toolkit") {
-      applyFullToolkitPreview();
-      void openCloudProfile();
-    }
   })();
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;

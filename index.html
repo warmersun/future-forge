@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-79" />
+    <link rel="stylesheet" href="css/styles.css?v=portal-81" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -36,7 +36,6 @@
             height="347"
           />
         </a>
-        <p id="cloud-achievements-strip" class="cloud-achievements-strip" hidden></p>
         <p class="tagline" id="game-tagline">
           Invent local pathways with emerging tech — place them on the board as the future arrives.
         </p>
@@ -74,14 +73,8 @@
           <button type="button" class="btn btn-secondary" id="btn-cloud-continue" hidden>
             Continue
           </button>
-          <button type="button" class="btn btn-ghost" id="btn-quest-log" hidden>
-            Quest log
-          </button>
-          <button type="button" class="btn btn-ghost" id="btn-cloud-profile" hidden>
-            Profile
-          </button>
-          <button type="button" class="btn btn-ghost" id="btn-daily-board" hidden>
-            Leaderboard
+          <button type="button" class="btn btn-forge" id="btn-cloud-forge" hidden>
+            Your forge
           </button>
           <button type="button" class="btn btn-primary" id="btn-start" hidden aria-hidden="true">
             Start a Quest →
@@ -145,6 +138,106 @@
         <p id="daily-board-you" class="quest-log-item-meta" hidden></p>
         <p id="daily-board-empty" class="muted">No holds yet.</p>
         <ol id="daily-board-list" class="quest-log-list"></ol>
+      </div>
+    </section>
+
+    <!-- YOUR FORGE — signed-in Cloud identity -->
+    <section id="screen-cloud" class="screen">
+      <header class="topbar">
+        <div class="brand">
+          <a class="hud-product" href="https://warmersun.com" target="_blank" rel="noopener noreferrer" aria-label="Future Forge by Warmer Sun">
+            <img src="assets/brand/ff-by-warmersun-transparent-bg.png" alt="" width="1242" height="347" />
+          </a>
+        </div>
+        <div class="progress-pills">
+          <span class="pill active">Forge</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-back">← Home</button>
+      </header>
+      <div class="content cloud-forge">
+        <article class="ff-plate cloud-forge-hero" id="cloud-forge-hero">
+          <span class="ff-tick tl" aria-hidden="true"></span>
+          <span class="ff-tick tr" aria-hidden="true"></span>
+          <span class="ff-tick bl" aria-hidden="true"></span>
+          <span class="ff-tick br" aria-hidden="true"></span>
+          <span class="ff-sheen" aria-hidden="true"></span>
+          <p class="ff-eyebrow"><span class="ff-pip" aria-hidden="true"></span> Warmer Sun Cloud</p>
+          <h1 class="cloud-forge-name" id="cloud-forge-name">Inventor</h1>
+          <p class="ff-edition" id="cloud-forge-streak">No streak yet</p>
+          <p class="cloud-forge-best" id="cloud-forge-best" hidden></p>
+          <ol class="ff-streak-rail" id="cloud-forge-rail" aria-label="Last seven days"></ol>
+          <p class="cloud-forge-rank" id="cloud-forge-rank"></p>
+          <div class="cloud-forge-hero-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-edit">Edit page</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-empty" hidden>Preview empty</button>
+          </div>
+        </article>
+
+        <section class="cloud-forge-block" aria-labelledby="cloud-forge-badges-title">
+          <header class="cloud-forge-block-head">
+            <h2 id="cloud-forge-badges-title">Badges</h2>
+          </header>
+          <ol id="cloud-forge-badges" class="ff-badge-grid"></ol>
+        </section>
+
+        <section id="cloud-profile-portfolio" class="cloud-portfolio ff-plate" hidden>
+          <span class="ff-tick tl" aria-hidden="true"></span>
+          <span class="ff-tick tr" aria-hidden="true"></span>
+          <span class="ff-tick bl" aria-hidden="true"></span>
+          <span class="ff-tick br" aria-hidden="true"></span>
+          <span class="ff-sheen" aria-hidden="true"></span>
+          <header class="cloud-portfolio-hero">
+            <div class="cloud-portfolio-seal" aria-hidden="true">
+              <span class="cloud-portfolio-seal-mark"></span>
+            </div>
+            <h2 class="cloud-portfolio-title" id="cloud-portfolio-title">emTech toolkit</h2>
+            <p class="muted sm cloud-portfolio-lede" id="cloud-portfolio-lede">
+              emTechs on invent tiles that passed the challenge and held the quest.
+            </p>
+            <p id="cloud-portfolio-progress" class="cloud-portfolio-progress"></p>
+            <div
+              id="cloud-portfolio-meter"
+              class="cloud-portfolio-meter"
+              hidden
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="11"
+            >
+              <span id="cloud-portfolio-meter-fill"></span>
+            </div>
+            <p id="cloud-portfolio-achievement" class="cloud-portfolio-badge" hidden>
+              <strong>Full toolkit</strong>
+              <span>Every main emTech has held a quest.</span>
+            </p>
+          </header>
+          <ol id="cloud-portfolio-grid" class="cloud-portfolio-grid"></ol>
+          <p id="cloud-portfolio-dev" class="cloud-portfolio-dev" hidden>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-preview">
+              Preview all 11
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-clear">
+              Clear preview
+            </button>
+          </p>
+        </section>
+
+        <section class="cloud-forge-block" aria-labelledby="cloud-forge-board-title">
+          <header class="cloud-forge-block-head">
+            <h2 id="cloud-forge-board-title">Leaderboard</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-board">Full board</button>
+          </header>
+          <p id="cloud-forge-board-empty" class="ff-plate is-empty" hidden>No holds yet.</p>
+          <ol id="cloud-forge-board" class="ff-board-list"></ol>
+        </section>
+
+        <section class="cloud-forge-block" aria-labelledby="cloud-forge-recent-title">
+          <header class="cloud-forge-block-head">
+            <h2 id="cloud-forge-recent-title">Recent holds</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-log">Quest log</button>
+          </header>
+          <p id="cloud-forge-recent-empty" class="ff-plate is-empty" hidden>No holds yet.</p>
+          <ol id="cloud-forge-recent" class="ff-board-list"></ol>
+        </section>
       </div>
     </section>
 
@@ -2317,41 +2410,6 @@
           </p>
         </header>
         <p id="cloud-profile-login" class="muted sm cloud-profile-login" hidden></p>
-        <section id="cloud-profile-portfolio" class="cloud-portfolio" hidden>
-          <header class="cloud-portfolio-hero">
-            <div class="cloud-portfolio-seal" aria-hidden="true">
-              <span class="cloud-portfolio-seal-mark"></span>
-            </div>
-            <h4 class="cloud-portfolio-title" id="cloud-portfolio-title">emTech toolkit</h4>
-            <p class="muted sm cloud-portfolio-lede" id="cloud-portfolio-lede">
-              emTechs on invent tiles that passed the challenge and held the quest.
-            </p>
-            <p id="cloud-portfolio-progress" class="cloud-portfolio-progress"></p>
-            <div
-              id="cloud-portfolio-meter"
-              class="cloud-portfolio-meter"
-              hidden
-              role="progressbar"
-              aria-valuemin="0"
-              aria-valuemax="11"
-            >
-              <span id="cloud-portfolio-meter-fill"></span>
-            </div>
-            <p id="cloud-portfolio-achievement" class="cloud-portfolio-badge" hidden>
-              <strong>Full toolkit</strong>
-              <span>Every main emTech has held a quest.</span>
-            </p>
-          </header>
-          <ol id="cloud-portfolio-grid" class="cloud-portfolio-grid"></ol>
-          <p id="cloud-portfolio-dev" class="cloud-portfolio-dev" hidden>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-preview">
-              Preview all 11
-            </button>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-portfolio-clear">
-              Clear preview
-            </button>
-          </p>
-        </section>
         <form id="cloud-profile-form" class="cloud-profile-form">
           <div class="field">
             <label for="cloud-profile-username">Username</label>
@@ -2405,6 +2463,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-63"></script>
+    <script type="module" src="js/main.js?v=portal-81"></script>
   </body>
 </html>

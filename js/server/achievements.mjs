@@ -37,7 +37,26 @@ export const ACHIEVEMENT_DEFS = {
     title: "Invent Night 2026",
     blurb: "Showed up for Invent Night.",
   },
+  streak_3: {
+    title: "Three days",
+    blurb: "Held a pathway three days in a row.",
+  },
+  streak_7: {
+    title: "Seven days",
+    blurb: "Held a pathway seven days in a row.",
+  },
+  streak_30: {
+    title: "Thirty days",
+    blurb: "Held a pathway thirty days in a row.",
+  },
 };
+
+/** Days of invent streak that mint a badge. Server-side only. */
+export const STREAK_MILESTONES = [
+  { days: 3, code: "streak_3" },
+  { days: 7, code: "streak_7" },
+  { days: 30, code: "streak_30" },
+];
 
 /**
  * @param {{ outcome?: string|null, kind?: string, techIds?: string[] }} run
@@ -109,6 +128,36 @@ export function foundingCodes(ctx = {}) {
     }
   }
   return codes;
+}
+
+/**
+ * Award streak badges from a computed current streak. Ignores any client claim.
+ * @param {number} current
+ * @param {string[]} [already]
+ * @returns {string[]}
+ */
+export function awardStreakCodes(current, already = []) {
+  const have = new Set(already || []);
+  const n = Number(current) || 0;
+  const out = [];
+  for (const m of STREAK_MILESTONES) {
+    if (n >= m.days && ACHIEVEMENT_DEFS[m.code] && !have.has(m.code)) {
+      have.add(m.code);
+      out.push(m.code);
+    }
+  }
+  return out;
+}
+
+/**
+ * Locked defs, in cabinet order. Earned codes are omitted.
+ * @param {string[]} earnedCodes
+ */
+export function achievementCatalog(earnedCodes = []) {
+  const have = new Set(earnedCodes || []);
+  return Object.entries(ACHIEVEMENT_DEFS)
+    .filter(([code]) => !have.has(code))
+    .map(([code, def]) => ({ code, title: def.title, blurb: def.blurb }));
 }
 
 export function publicAchievement(code, unlockedAt = null) {

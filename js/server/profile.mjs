@@ -3,6 +3,7 @@
  */
 
 import { sanitizeQuestId } from "./cloud-save.mjs";
+import { sanitizeTimeZone } from "./streaks.mjs";
 
 export const USERNAME_RE = /^[a-z0-9_]{3,24}$/;
 export const BIO_MAX = 280;
@@ -81,6 +82,10 @@ export function parseProfilePatch(body) {
       };
     }
     out.displayName = n;
+  }
+  if ("timeZone" in src || "time_zone" in src) {
+    const zone = sanitizeTimeZone(src.timeZone ?? src.time_zone);
+    if (zone) out.timeZone = zone;
   }
   if (out.isPublic && !out.username && !sanitizeUsername(src.username)) {
     return { ok: false, error: "invalid_username" };

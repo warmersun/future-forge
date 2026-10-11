@@ -101,6 +101,7 @@ import {
   startRun,
   getRunForUser,
   listAchievements,
+  listPathwayEndedAt,
   listHoldTechIdLists,
   insertAchievements,
   countUsers,
@@ -171,9 +172,12 @@ import {
 import {
   awardForRun,
   awardPortfolioCodes,
+  awardStreakCodes,
+  achievementCatalog,
   publicAchievement,
   foundingCodes,
 } from "../js/server/achievements.mjs";
+import { computeStreak, sanitizeTimeZone } from "../js/server/streaks.mjs";
 import {
   portfolioFromTechIdLists,
   publicPortfolio,
@@ -1263,6 +1267,17 @@ async function grantCloudAchievements(clerkUserId, run, extra = {}) {
     });
     for (const c of extraCodes) {
       if (!have.some((h) => h.code === c) && !codes.includes(c)) codes.push(c);
+    }
+    try {
+      const profile = await getProfileByUserId(clerkUserId);
+      const ended = await listPathwayEndedAt(clerkUserId);
+      const streak = computeStreak(ended, profile?.timeZone);
+      const streakCodes = awardStreakCodes(streak.current, [...already, ...codes]);
+      for (const c of streakCodes) {
+        if (!codes.includes(c)) codes.push(c);
+      }
+    } catch {
+      /* streak is additive; the hold still saved */
     }
     if (codes.length) await insertAchievements(clerkUserId, codes, extra.runId || run.id || null);
     return codes.map((c) => publicAchievement(c)).filter(Boolean);
@@ -2567,9 +2582,31 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const rows = await listAchievements(gate.userId);
+      const achievements = rows
+        .map((r) => publicAchievement(r.code, r.unlockedAt))
+        .filter(Boolean);
+      let streak = computeStreak([], "UTC");
+      try {
+        const profile = await getProfileByUserId(gate.userId);
+        const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+        let zone = profile?.timeZone || null;
+        if (!zone) {
+          const hinted = sanitizeTimeZone(url.searchParams.get("tz"));
+          if (hinted) {
+            await updateProfile(gate.userId, { timeZone: hinted });
+            zone = hinted;
+          }
+        }
+        const ended = await listPathwayEndedAt(gate.userId);
+        streak = computeStreak(ended, zone);
+      } catch {
+        /* badges still return */
+      }
       return sendJson(res, 200, {
         ok: true,
-        achievements: rows.map((r) => publicAchievement(r.code, r.unlockedAt)).filter(Boolean),
+        achievements,
+        catalog: achievementCatalog(achievements.map((a) => a.code)),
+        streak,
       });
     } catch (e) {
       console.warn("[cloud db] achievements", e?.message || e);

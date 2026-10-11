@@ -5,6 +5,8 @@ import {
   awardPortfolioCodes,
   publicAchievement,
   foundingCodes,
+  awardStreakCodes,
+  achievementCatalog,
   FOUNDING_MAX,
 } from "./achievements.mjs";
 import { emptyPortfolio, addTechsToPortfolio, PORTFOLIO_CATEGORIES } from "../sim/portfolio.js";
@@ -85,10 +87,31 @@ describe("awardPortfolioCodes", () => {
   });
 });
 
+describe("awardStreakCodes", () => {
+  it("awards each milestone once and ignores a client claim", () => {
+    assert.deepEqual(awardStreakCodes(2), []);
+    assert.deepEqual(awardStreakCodes(3), ["streak_3"]);
+    assert.deepEqual(awardStreakCodes(7, ["streak_3"]), ["streak_7"]);
+    assert.deepEqual(awardStreakCodes(30, ["streak_3", "streak_7"]), ["streak_30"]);
+    assert.deepEqual(awardStreakCodes(30, ["streak_3", "streak_7", "streak_30"]), []);
+    assert.equal(awardStreakCodes(0, [], { claim: ["streak_30"] }).includes("streak_30"), false);
+  });
+});
+
+describe("achievementCatalog", () => {
+  it("lists locked defs and omits earned codes", () => {
+    const locked = achievementCatalog(["held_pathway"]);
+    assert.equal(locked.some((a) => a.code === "held_pathway"), false);
+    assert.equal(locked.some((a) => a.code === "streak_3"), true);
+    assert.equal(locked.find((a) => a.code === "streak_7").title, "Seven days");
+  });
+});
+
 describe("publicAchievement", () => {
   it("hides unknown codes", () => {
     assert.equal(publicAchievement("grade_a"), null);
     assert.equal(publicAchievement("held_pathway").title, "Pathway holds");
     assert.equal(publicAchievement("full_toolkit").title, "Full toolkit");
+    assert.equal(publicAchievement("streak_3").title, "Three days");
   });
 });

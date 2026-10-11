@@ -41,6 +41,15 @@ describe("parseProfilePatch", () => {
     assert.equal(privatePatch.patch.username, null);
     assert.equal(parseProfilePatch({ username: "", public: true, displayName: "Ada" }).ok, false);
   });
+  it("stores a real time zone and ignores a bad one", () => {
+    const ok = parseProfilePatch({ timeZone: "America/Los_Angeles" });
+    assert.equal(ok.ok, true);
+    assert.equal(ok.patch.timeZone, "America/Los_Angeles");
+    const bad = parseProfilePatch({ timeZone: "Not/AZone", displayName: "Ada" });
+    assert.equal(bad.ok, true);
+    assert.equal("timeZone" in bad.patch, false);
+    assert.equal(bad.patch.displayName, "Ada");
+  });
 });
 
 describe("chosenDisplayName", () => {
@@ -59,12 +68,13 @@ describe("publicInventorPage", () => {
   });
   it("never includes email", () => {
     const page = publicInventorPage(
-      { username: "sic", isPublic: true, displayName: "Tamas", bio: "yo", email: "x@y.z" },
+      { username: "sic", isPublic: true, displayName: "Tamas", bio: "yo", email: "x@y.z", timeZone: "UTC" },
       [{ questId: "q1", place: "Accra", yearReached: 2034 }]
     );
     assert.equal(page.username, "sic");
     assert.equal("email" in page, false);
     assert.equal("login" in page, false);
+    assert.equal("timeZone" in page, false);
     assert.equal(page.holds[0].place, "Accra");
     assert.equal("portfolio" in page, false);
   });

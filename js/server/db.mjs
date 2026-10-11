@@ -492,6 +492,27 @@ export async function listAchievements(clerkUserId) {
 }
 
 /**
+ * Ended instants for hold and partial pathways. Streak day-bucketing only.
+ * @param {string} clerkUserId
+ * @returns {Promise<Date[]>}
+ */
+export async function listPathwayEndedAt(clerkUserId) {
+  const db = getPool();
+  const uid = normalizeClerkUserId(clerkUserId);
+  if (!db || !uid) return [];
+  const r = await db.query(
+    `SELECT ended_at FROM runs
+     WHERE clerk_user_id = $1
+       AND outcome IN ('hold', 'partial')
+       AND ended_at IS NOT NULL
+     ORDER BY ended_at DESC
+     LIMIT 2000`,
+    [uid]
+  );
+  return r.rows.map((row) => row.ended_at).filter(Boolean);
+}
+
+/**
  * @param {string} clerkUserId
  * @param {string[]} codes
  * @param {string|null} [runId]
@@ -520,6 +541,7 @@ function profileRow(row) {
     bio: row.bio || "",
     isPublic: Boolean(row.is_public),
     hideEmail: row.hide_email !== false,
+    timeZone: row.time_zone || null,
   };
 }
 
@@ -528,7 +550,7 @@ export async function getProfileByUserId(clerkUserId) {
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid) return null;
   const r = await db.query(
-    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email
+    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email, time_zone
      FROM users WHERE clerk_user_id = $1`,
     [uid]
   );
@@ -539,7 +561,7 @@ export async function getProfileByUsername(username) {
   const db = getPool();
   if (!db || !username) return null;
   const r = await db.query(
-    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email
+    `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email, time_zone
      FROM users WHERE username = $1`,
     [String(username)]
   );
@@ -562,6 +584,7 @@ export async function updateProfile(clerkUserId, patch) {
   if ("bio" in patch) add("bio", patch.bio);
   if ("isPublic" in patch) add("is_public", Boolean(patch.isPublic));
   if ("hideEmail" in patch) add("hide_email", Boolean(patch.hideEmail));
+  if ("timeZone" in patch) add("time_zone", patch.timeZone);
   if (!fields.length) return { skipped: false, profile: await getProfileByUserId(uid) };
   params.push(uid);
   await db.query(

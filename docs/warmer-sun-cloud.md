@@ -78,6 +78,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | [**E3**](#E3) Cloud pins | `GET/PUT /api/me/pins` max 3 |
 | [**E4**](#E4) Friends rooms with Clerk names | room player `clerkUserId`; friends `runs` on hold |
 | [**E7**](#E7) Founding / season badges | first 100 accounts; Invent Night 2026 on Wednesday Friends |
+| [**E2**](#E2) Invent-day streak | hold/partial calendar days; `GET /api/me/achievements` includes `streak`; badges at 3, 7, 30 |
 | [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk → DB webhooks | `POST /api/webhooks/clerk` verifies Svix; user.deleted cascades Neon rows |
 | [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state` — hex, invent panel, chats; strips data-URL art; Continue on title |
@@ -116,7 +117,7 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 | Observability beyond console | Render logs today |
 | Optional: `warmersun.com/cloud` redirect | Ops after first deploy |
 
-[**E9**](#E9) (cross-device is why Sign in exists) is a product rule, not a feature — it is [C1](#C1)+[C3](#C3)+[A2](#A2). [**D3**](#D3) (what not to rank) is a rule, not work. [**D2**](#D2) weekly door, [**E2**](#E2) streaks, [**E6**](#E6) ghost, and [**E10**](#E10) Daily homepage are **dropped**.
+[**E9**](#E9) (cross-device is why Sign in exists) is a product rule, not a feature — it is [C1](#C1)+[C3](#C3)+[A2](#A2). [**D3**](#D3) (what not to rank) is a rule, not work. [**D2**](#D2) weekly door, [**E6**](#E6) ghost, and [**E10**](#E10) Daily homepage are **dropped**. [**E2**](#E2) is an invent-day streak, not a Daily check-in.
 
 ---
 
@@ -272,9 +273,11 @@ Don’t rank “most lessons completed” as if it were homework. Don’t rank A
 **How.** `users.profile` (`username` unique, `bio`, `public` bool). Username via Clerk or our table. Only publish runs with `share: true` (outcome screen already has a share card — add “Publish to my page”).
 
 <a id="E2"></a>
-### E2. Streaks (the Daily habit) — **dropped**
+### E2. Invent-day streak — **done**
 
-Consecutive official-Daily check-ins needed a featured door. Daily is a Learning module now. No streak chip.
+**Idea.** A run of days you held a pathway. Not a login check-in, and not a featured Daily door.
+
+**How.** A day counts when a `hold` or `partial` run’s `ended_at` falls on that local calendar date. Two holds the same day count once. The streak stays alive until local midnight on a day you have not played yet. The browser’s IANA zone is stored once on `users.time_zone` (migration `017_streak_timezone.sql`). Until then, the boundary is UTC. `js/server/streaks.mjs` computes `{ current, best, today, days[7] }` from the runs. The client never sends a count. `GET /api/me/achievements` returns `streak` plus the locked `catalog`. Crossing 3, 7, or 30 days awards `streak_3`, `streak_7`, `streak_30` on the server when a run completes. The signed-in Forge screen paints the rail.
 
 <a id="E3"></a>
 ### E3. Pins in the cloud (watch later) — **done**
