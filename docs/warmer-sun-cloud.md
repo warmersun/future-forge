@@ -127,7 +127,7 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 <a id="A1"></a>
 ### A1. “You need an account for lessons” — **done** (Node gate + Learning lock); CDN leak still [H](#H)
 
-**Idea.** Core invent (pick a theme, hex board, friends, surprise mission) stays open. The **catalog that we curate** — learning modules, sponsored spotlights — asks you to sign in. Reason: those are *our* drops, they cost us AI, and they only mean something if the same person can come back tomorrow.
+**Idea.** On self-host, core invent (pick a theme, hex board, friends, surprise mission) stays open. On the hosted app, Sign in is required before any of that play. The **catalog that we curate** — learning modules, sponsored spotlights — asks you to sign in on every host. Reason: those are *our* drops, they cost us AI, and they only mean something if the same person can come back tomorrow.
 
 #### Access wording (source of truth)
 
@@ -138,10 +138,10 @@ Other docs and marketing copy must link here instead of restating the rule.
 **How.**  
 - Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. A remote learning module with no `access` set is treated as `account`; set `access: "open"` to make a learning module or its quests playable with no account.  
 - Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: remote `access: account|paid` tiles, and remote Learning tiles with no `access` set, show a lock + Sign in. Remote tiles with `access: "open"` play with no account, even when `isLearningModule` is set (`catalogNeedsAccount` in `js/quest-catalog.js`). **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
-- **The browser lock is UX only.** **portal** (`portal/server.mjs`) is the real gate for the **curated remote catalog**: no session → no tutor context. **game** does not gate theme play or Library side-load.  
+- **The browser lock is UX only** for the curated catalog. **portal** (`portal/server.mjs`) is the real gate for that catalog: no session → no tutor context. **game** does not gate theme play or Library side-load on self-host. On the hosted app, theme play, tutorial, friends, and surprise wait for Sign in.  
 - `GET /api/quests` may list remote cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT **for gated remote tiles**. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check. Library sessions keep the side-loaded notes and must not look up the remote-wins merge by id.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
-- Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins.
+- Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins. On the hosted app the title still paints, and Choose theme, tutorial, friends, Surprise Quest, and a lesson link open Sign in in the same tab until there is a session.
 
 **Public gate:** **portal** on Render ([H](#H)), doorway at `warmersun.com/cloud` when the redirect is set. here.now is files, not the gate.
 

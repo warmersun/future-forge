@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./hosted-plan.js";
 
 describe("hostedSessionAllowed", () => {
-  it("leaves self-host and unsigned visitors alone", () => {
+  it("leaves self-host open and requires sign-in on the hosted app", () => {
     assert.equal(hostedSessionAllowed({ cloudAi: false, signedIn: true, entitled: false }), true);
-    assert.equal(hostedSessionAllowed({ cloudAi: true, signedIn: false, entitled: false }), true);
+    assert.equal(hostedSessionAllowed({ cloudAi: false, signedIn: false, entitled: false }), true);
+    assert.equal(hostedSessionAllowed({ cloudAi: true, signedIn: false, entitled: false }), false);
+    assert.equal(hostedSessionAllowed({ cloudAi: true, signedIn: false, entitled: false, lesson: true }), false);
   });
 
   it("sends a signed-in player without a plan to subscribe", () => {

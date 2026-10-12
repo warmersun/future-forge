@@ -98,7 +98,7 @@ import {
   resolveShareOrigin,
   buildQuestShareUrl,
 } from "./deep-link.js";
-import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js";
+import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js?v=portal-84";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -7594,12 +7594,28 @@ function clearMissionPickSession() {
 }
 
 const HOSTED_SUBSCRIBE_URL = "https://cloud.warmersun.com/subscribe";
+const HOSTED_TITLE_LAUNCH_IDS = new Set([
+  "btn-start",
+  "btn-choose-theme",
+  "btn-tutorial",
+  "btn-surprise",
+  "btn-friends",
+  "btn-cloud-continue",
+]);
 let hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
 let hostedPlanRedirecting = false;
 let hostedPlanCheck = null;
+let hostedLaunchSettled = false;
+let hostedLaunchReplay = null;
+let hostedLaunchFlushing = false;
 
 function hostedPlanBlocksMission(mission) {
-  if (!hostedPlanState.cloudAi || !isClerkSignedIn() || hostedPlanState.entitled) return false;
+  if (!hostedPlanState.cloudAi) return false;
+  if (!isClerkSignedIn()) {
+    openCloudSignIn({ sameTab: true });
+    return true;
+  }
+  if (hostedPlanState.entitled) return false;
   return !catalogLessonSkipsPlan(mission);
 }
 
@@ -7615,16 +7631,23 @@ function redirectHostedSubscribe() {
 }
 
 /**
- * On the hosted app, a signed-in player without plan `cloud` goes to subscribe.
- * A catalog lesson in the URL may stay. Returns true when navigation starts.
+ * On the hosted app, play needs Sign in. A signed-in player without plan `cloud`
+ * goes to subscribe. A catalog lesson in the URL may stay. Returns true when
+ * navigation starts. A failed health check stays open, same as an unknown plan.
  */
 async function enforceHostedPlan() {
-  if (hostedPlanRedirecting || !isClerkSignedIn()) return false;
+  if (hostedPlanRedirecting) return true;
   if (hostedPlanCheck) return hostedPlanCheck;
   hostedPlanCheck = (async () => {
+    await Promise.race([
+      whenAuthReady(),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+    if (hostedPlanRedirecting) return true;
     let cloudAi = false;
     try {
       const res = await fetch("/api/health");
+      if (!res.ok) return false;
       const data = await res.json();
       cloudAi = Boolean(data?.cloudAi);
     } catch {
@@ -7633,6 +7656,11 @@ async function enforceHostedPlan() {
     if (!cloudAi) {
       hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
       return false;
+    }
+    if (!isClerkSignedIn()) {
+      hostedPlanState = { cloudAi: true, entitled: false, subscribeUrl: HOSTED_SUBSCRIBE_URL };
+      openCloudSignIn({ sameTab: true });
+      return true;
     }
     let entitled = false;
     let subscribeUrl = HOSTED_SUBSCRIBE_URL;
@@ -7667,18 +7695,69 @@ async function enforceHostedPlan() {
     return true;
   })().finally(() => {
     hostedPlanCheck = null;
+    hostedLaunchSettled = true;
   });
   return hostedPlanCheck;
 }
 
+/**
+ * Clicks on title play actions wait until the hosted check settles.
+ * A click during that wait cannot start a local run.
+ */
+function holdHostedTitleLaunch() {
+  document.addEventListener(
+    "click",
+    (ev) => {
+      const btn = ev.target instanceof Element ? ev.target.closest("button") : null;
+      if (!btn || !HOSTED_TITLE_LAUNCH_IDS.has(btn.id)) return;
+      if (hostedLaunchSettled) {
+        if (hostedPlanState.cloudAi && !isClerkSignedIn()) {
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          openCloudSignIn({ sameTab: true });
+        }
+        return;
+      }
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      hostedLaunchReplay = btn.id;
+      void flushHostedLaunchReplay();
+    },
+    true
+  );
+}
+
+async function flushHostedLaunchReplay() {
+  if (hostedLaunchFlushing) return;
+  hostedLaunchFlushing = true;
+  try {
+    const blocked = await enforceHostedPlan();
+    const id = hostedLaunchReplay;
+    hostedLaunchReplay = null;
+    if (blocked || !id) return;
+    if (hostedPlanState.cloudAi && !isClerkSignedIn()) return;
+    document.getElementById(id)?.click();
+  } finally {
+    hostedLaunchFlushing = false;
+    if (hostedLaunchReplay) void flushHostedLaunchReplay();
+  }
+}
+
 function startMission(mission, opts = {}) {
+  if (!hostedLaunchSettled) {
+    void (async () => {
+      const blocked = await enforceHostedPlan();
+      if (!blocked) startMission(mission, opts);
+    })();
+    return false;
+  }
   if (state.scenariosLoading) {
     flashToast("Challenges still drafting — wait a moment.");
     return false;
   }
   if (!mission) return false;
   if (hostedPlanBlocksMission(mission)) {
-    void redirectHostedSubscribe();
+    if (isClerkSignedIn()) void redirectHostedSubscribe();
     return false;
   }
 
@@ -21854,6 +21933,7 @@ function copyInspectText(text) {
 }
 
 function bind() {
+  holdHostedTitleLaunch();
   // Title actions first — never let multiplayer/friends setup block the home screen.
   $("#btn-start")?.addEventListener("click", () => {
     clearMissionPickSession();
