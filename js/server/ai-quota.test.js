@@ -20,6 +20,7 @@ import {
   settleMicroFor,
   SUBSCRIPTION_REQUIRED_MESSAGE,
   subscriptionEntitled,
+  subscriptionView,
   voiceConnectedMinuteMicro,
 } from "./ai-quota.mjs";
 
@@ -177,6 +178,18 @@ describe("subscriptionEntitled", () => {
 
   it("free_user and past_due are not", () => {
     assert.equal(subscriptionEntitled({ status: "active", planSlug: "free_user", periodEnd: future }), false);
+    const view = subscriptionView(
+      { plan_slug: "free_user", status: "active", period_end: new Date(future).toISOString() },
+      { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
+    );
+    assert.equal(view.entitled, false);
+    assert.equal(view.subscribeUrl, "https://cloud.warmersun.com/subscribe");
+    const paid = subscriptionView(
+      { plan_slug: "cloud", status: "active", period_end: new Date(future).toISOString() },
+      { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
+    );
+    assert.equal(paid.entitled, true);
+    assert.equal(paid.planSlug, "cloud");
     assert.equal(subscriptionEntitled({ status: "past_due", planSlug: "cloud", periodEnd: future }), false);
   });
 

@@ -2192,6 +2192,7 @@ const server = http.createServer(async (req, res) => {
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
       portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
+      cloudAi: CLOUD_AI,
       shareOrigin,
       joinUrls,
     };

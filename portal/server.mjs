@@ -129,6 +129,7 @@ import {
   collectCollectorCard,
   listCollectedCards,
   upsertSubscription,
+  getSubscription,
 } from "../js/server/db.mjs";
 import {
   parseCardPath,
@@ -141,7 +142,8 @@ import {
 import { renderCollectorCardShare } from "../js/server/collector-card-share.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
-import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota } from "../js/server/cloud-quota.mjs";
+import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
+import { planSlugsFromEnv, subscriptionView } from "../js/server/ai-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -2537,6 +2539,14 @@ const server = http.createServer(async (req, res) => {
         console.warn("[quota] grant", e?.message || e);
       }
     }
+    let sub = null;
+    if (dbOn) {
+      try {
+        sub = await getSubscription(ident.userId);
+      } catch (e) {
+        console.warn("[quota] subscription", e?.message || e);
+      }
+    }
     return sendJson(res, 200, {
       ok: true,
       signedIn: true,
@@ -2546,6 +2556,10 @@ const server = http.createServer(async (req, res) => {
       db: dbOn,
       solvedIds,
       quotaGrant,
+      subscription: subscriptionView(sub, {
+        subscribeUrl: subscribeUrlFromEnv(),
+        allowedSlugs: planSlugsFromEnv(),
+      }),
     });
   }
 

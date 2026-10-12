@@ -289,8 +289,26 @@ export function settleMicroFor(kind, measure = {}, rates = {}) {
 }
 
 /**
- * @param {{ status?: string, planSlug?: string, periodEnd?: string|number|Date|null, now?: number|Date, allowedSlugs?: string[] }} input
+ * Public /api/me shape. No allowance numbers.
+ * @param {object|null|undefined} sub
+ * @param {{ subscribeUrl?: string, allowedSlugs?: string[], now?: number|Date }} [opts]
  */
+export function subscriptionView(sub, opts = {}) {
+  const entitled = subscriptionEntitled({
+    status: sub?.status,
+    planSlug: sub?.plan_slug,
+    periodEnd: sub?.period_end,
+    now: opts.now,
+    allowedSlugs: opts.allowedSlugs,
+  });
+  return {
+    entitled,
+    planSlug: sub?.plan_slug || null,
+    status: sub?.status || null,
+    subscribeUrl: String(opts.subscribeUrl || ""),
+  };
+}
+
 export function subscriptionEntitled(input = {}) {
   const slug = String(input.planSlug || "").trim();
   const allowed = Array.isArray(input.allowedSlugs) ? input.allowedSlugs : DEFAULT_PLAN_SLUGS;

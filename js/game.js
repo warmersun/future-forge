@@ -98,6 +98,8 @@ import {
   resolveShareOrigin,
   buildQuestShareUrl,
 } from "./deep-link.js";
+import { hostedSessionAllowed } from "./cloud/hosted-plan.js";
+import { catalogLessonSkipsQuota } from "./server/cloud-gate.mjs";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -7592,12 +7594,94 @@ function clearMissionPickSession() {
   missionPickSession = null;
 }
 
+const HOSTED_SUBSCRIBE_URL = "https://cloud.warmersun.com/subscribe";
+let hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
+let hostedPlanRedirecting = false;
+let hostedPlanCheck = null;
+
+function hostedPlanBlocksMission(mission) {
+  if (!hostedPlanState.cloudAi || !isClerkSignedIn() || hostedPlanState.entitled) return false;
+  return !catalogLessonSkipsQuota(mission);
+}
+
+function redirectHostedSubscribe() {
+  if (hostedPlanRedirecting) return;
+  hostedPlanRedirecting = true;
+  const url = hostedPlanState.subscribeUrl || HOSTED_SUBSCRIBE_URL;
+  try {
+    location.assign(url);
+  } catch {
+    hostedPlanRedirecting = false;
+  }
+}
+
+/**
+ * On the hosted app, a signed-in player without plan `cloud` goes to subscribe.
+ * A catalog lesson in the URL may stay. Returns true when navigation starts.
+ */
+async function enforceHostedPlan() {
+  if (hostedPlanRedirecting || !isClerkSignedIn()) return false;
+  if (hostedPlanCheck) return hostedPlanCheck;
+  hostedPlanCheck = (async () => {
+    let cloudAi = false;
+    try {
+      const res = await fetch("/api/health");
+      const data = await res.json();
+      cloudAi = Boolean(data?.cloudAi);
+    } catch {
+      return false;
+    }
+    if (!cloudAi) {
+      hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
+      return false;
+    }
+    let entitled = false;
+    let subscribeUrl = HOSTED_SUBSCRIBE_URL;
+    let known = false;
+    try {
+      const res = await apiFetch("/api/me");
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) return false;
+      if (res.ok && data.subscription && typeof data.subscription.entitled === "boolean") {
+        known = true;
+        entitled = data.subscription.entitled;
+        if (data.subscription.subscribeUrl) subscribeUrl = String(data.subscription.subscribeUrl);
+      }
+    } catch {
+      known = false;
+    }
+    if (!known) return false;
+    let lesson = false;
+    const intent = parseDeepLink(typeof location !== "undefined" ? location.href : "");
+    if (intent?.token) {
+      try {
+        if (!state.hostedQuestsLoaded) await refreshHostedQuests({ silent: true });
+        const entry = findCatalogEntry(intent.token, partitionCatalogQuests().all);
+        lesson = catalogLessonSkipsQuota(entry);
+      } catch {
+        lesson = false;
+      }
+    }
+    hostedPlanState = { cloudAi: true, entitled, subscribeUrl };
+    if (hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled, lesson })) return false;
+    redirectHostedSubscribe();
+    return true;
+  })().finally(() => {
+    hostedPlanCheck = null;
+  });
+  return hostedPlanCheck;
+}
+
 function startMission(mission, opts = {}) {
   if (state.scenariosLoading) {
     flashToast("Challenges still drafting — wait a moment.");
     return false;
   }
   if (!mission) return false;
+  if (hostedPlanBlocksMission(mission)) {
+    void redirectHostedSubscribe();
+    return false;
+  }
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
@@ -22689,9 +22773,13 @@ export function init() {
   void loadPredictionsFromServer();
   onClerkSession(() => {
     renderTitleMeta();
-    void syncCloudProgress();
-    void maybePromptDisplayName();
-    if (isClerkSignedIn()) void consumeDeepLink();
+    void (async () => {
+      const blocked = await enforceHostedPlan();
+      if (blocked) return;
+      void syncCloudProgress();
+      void maybePromptDisplayName();
+      if (isClerkSignedIn()) void consumeDeepLink();
+    })();
   });
   const hash = String(location.hash || "");
   if (hash === "#ff-preview-toolkit") {
@@ -22710,7 +22798,8 @@ export function init() {
       new Promise((r) => setTimeout(r, 4000)),
     ]);
     await resumePendingDeviceHandshake();
-    await consumeDeepLink();
+    const blocked = await enforceHostedPlan();
+    if (!blocked) await consumeDeepLink();
   })();
   // Refresh: Clerk cookie session can arrive after the first title paint.
   let ticks = 0;
