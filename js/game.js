@@ -98,8 +98,7 @@ import {
   resolveShareOrigin,
   buildQuestShareUrl,
 } from "./deep-link.js";
-import { hostedSessionAllowed } from "./cloud/hosted-plan.js";
-import { catalogLessonSkipsQuota } from "./server/cloud-gate.mjs";
+import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js";
 import {
   IdeaDeck,
   ideaCacheKey,
@@ -7601,7 +7600,7 @@ let hostedPlanCheck = null;
 
 function hostedPlanBlocksMission(mission) {
   if (!hostedPlanState.cloudAi || !isClerkSignedIn() || hostedPlanState.entitled) return false;
-  return !catalogLessonSkipsQuota(mission);
+  return !catalogLessonSkipsPlan(mission);
 }
 
 function redirectHostedSubscribe() {
@@ -7657,7 +7656,7 @@ async function enforceHostedPlan() {
       try {
         if (!state.hostedQuestsLoaded) await refreshHostedQuests({ silent: true });
         const entry = findCatalogEntry(intent.token, partitionCatalogQuests().all);
-        lesson = catalogLessonSkipsQuota(entry);
+        lesson = catalogLessonSkipsPlan(entry);
       } catch {
         lesson = false;
       }

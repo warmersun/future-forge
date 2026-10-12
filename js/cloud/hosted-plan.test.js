@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { hostedSessionAllowed } from "./hosted-plan.js";
+import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./hosted-plan.js";
 
 describe("hostedSessionAllowed", () => {
   it("leaves self-host and unsigned visitors alone", () => {
@@ -10,6 +10,18 @@ describe("hostedSessionAllowed", () => {
 
   it("sends a signed-in player without a plan to subscribe", () => {
     assert.equal(hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: false }), false);
+  });
+
+  it("treats a catalog lesson as the only unpaid exception", () => {
+    assert.equal(catalogLessonSkipsPlan({ isLearningModule: true }), true);
+    assert.equal(catalogLessonSkipsPlan({ access: "account" }), true);
+    assert.equal(catalogLessonSkipsPlan({ kind: "module", id: "module-x" }), true);
+    assert.equal(catalogLessonSkipsPlan({ id: "open-quest" }), false);
+    assert.equal(catalogLessonSkipsPlan({ access: "paid", isLearningModule: true }), false);
+    assert.equal(
+      catalogLessonSkipsPlan({ source: "hosted", isLearningModule: true }),
+      false
+    );
   });
 
   it("keeps a subscriber and a signed-in lesson", () => {
