@@ -3,14 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Warmer Sun Cloud — Subscribe</title>
+    <title>Subscribe — Future Forge Hosted4U</title>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #070b14;
-        --text: #e8eef9;
-        --dim: #94a3b8;
-        --accent: #a78bfa;
+        --bg: #0b0a14;
+        --text: #fff4e6;
+        --dim: #d9cbb8;
+        --gold: #ffb347;
+        --line: rgba(255, 179, 71, 0.28);
       }
       html,
       body {
@@ -21,43 +22,146 @@
         font-family: "Segoe UI", system-ui, sans-serif;
       }
       main {
-        max-width: 40rem;
+        max-width: 68rem;
         margin: 0 auto;
-        padding: 2.5rem 1.25rem 4rem;
+        padding: clamp(2rem, 7vh, 4.5rem) clamp(1.25rem, 4vw, 3rem) 4.5rem;
+        display: grid;
+        gap: 2.25rem;
+      }
+      .eyebrow {
+        margin: 0;
+        color: var(--gold);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
       }
       h1 {
-        font-size: 1.25rem;
-        font-weight: 600;
+        margin: 0.4rem 0 0;
+        max-width: 16ch;
+        font-size: clamp(2.1rem, 4.6vw, 3.35rem);
+        font-weight: 560;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
       }
-      p {
+      .lead {
+        margin: 1.1rem 0 0;
+        max-width: 38rem;
+        color: var(--text);
+        font-size: 1.12rem;
+        line-height: 1.5;
+      }
+      dl {
+        margin: 1.75rem 0 0;
+        max-width: 38rem;
+      }
+      dt {
+        margin: 0;
+        color: var(--gold);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      dd {
+        margin: 0.35rem 0 1.2rem;
         color: var(--dim);
         line-height: 1.5;
       }
+      .aside {
+        margin: 0.25rem 0 0;
+        max-width: 38rem;
+        color: var(--dim);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.25rem;
+        margin-top: 1.25rem;
+      }
+      a {
+        color: var(--gold);
+      }
+      .checkout {
+        min-width: 0;
+      }
+      #status {
+        margin: 0 0 0.8rem;
+        color: var(--dim);
+        line-height: 1.45;
+      }
+      #status:empty {
+        display: none;
+      }
       #clerk-mount {
-        margin-top: 1.15rem;
+        min-height: 12rem;
+      }
+      @media (min-width: 900px) {
+        main {
+          grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 32rem);
+          align-items: start;
+          column-gap: 3.5rem;
+        }
+        .checkout {
+          position: sticky;
+          top: 2rem;
+          padding-top: 0.2rem;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Warmer Sun Cloud</h1>
-      <p id="status">Loading plans…</p>
-      <div id="clerk-mount"></div>
+      <section class="promise">
+        <p class="eyebrow">Future Forge Hosted4U</p>
+        <h1>You invent. We run the app.</h1>
+        <p class="lead">
+          You are buying a month of hosted Future Forge for one person.
+          Pick a real problem, try what just became possible, and see which parts are ready now.
+        </p>
+        <dl>
+          <dt>What you are buying</dt>
+          <dd>
+            The app at ff.warmersun.com, already running.
+            The co-inventor, images, voice, and speech are included.
+            $49, billed monthly.
+          </dd>
+          <dt>The promise</dt>
+          <dd>
+            You lead. The computer stays with you while you try a real place and see what holds.
+            The computer does not do it for you.
+          </dd>
+        </dl>
+        <p class="aside">
+          The software is open source and free for personal use if you run it yourself.
+          Lessons need a sign-in. A school or a company running the software needs a paid license.
+        </p>
+        <p class="links">
+          <a href="https://ff.warmersun.com/">Open the hosted app</a>
+          <a href="https://warmersun.com/future-forge/get-started/">Run your own copy</a>
+        </p>
+      </section>
+      <section class="checkout" aria-label="Subscribe">
+        <p id="status">Loading the plan…</p>
+        <div id="clerk-mount"></div>
+      </section>
     </main>
     <script type="module">
       const CLERK_APPEARANCE = {
         variables: {
-          colorPrimary: "#a78bfa",
-          colorPrimaryForeground: "#0c1220",
-          colorBackground: "#121a2b",
-          colorForeground: "#e8eef9",
-          colorMuted: "#1a2438",
-          colorMutedForeground: "#94a3b8",
-          colorNeutral: "#94a3b8",
-          colorInput: "#1a2438",
-          colorInputForeground: "#e8eef9",
-          colorBorder: "#2a3a58",
-          colorModalBackdrop: "rgba(7, 11, 20, 0.78)",
+          colorPrimary: "#ffb347",
+          colorPrimaryForeground: "#1a1008",
+          colorBackground: "#14121c",
+          colorForeground: "#fff4e6",
+          colorMuted: "#1c1824",
+          colorMutedForeground: "#d9cbb8",
+          colorNeutral: "#d9cbb8",
+          colorInput: "#1c1824",
+          colorInputForeground: "#fff4e6",
+          colorBorder: "#3a3228",
+          colorModalBackdrop: "rgba(11, 10, 20, 0.78)",
           borderRadius: "14px",
         },
       };
@@ -85,7 +189,15 @@
         });
       }
 
-      const health = await fetch("/api/health").then((r) => r.json());
+      let health;
+      try {
+        const res = await fetch("/api/health");
+        if (!res.ok) throw new Error("health");
+        health = await res.json();
+      } catch {
+        status.textContent = "Plans are unavailable right now. Reload this page.";
+        throw new Error("health");
+      }
       const pk = health?.clerk?.publishableKey;
       if (!health?.clerk?.enabled || !pk) {
         status.textContent = "Subscriptions are off on this portal (Clerk keys missing).";
@@ -104,9 +216,8 @@
         appearance: CLERK_APPEARANCE,
       });
 
-      status.textContent =
-        "A monthly subscription includes the hosted co-inventor. Self-host if you want it free.";
       if (typeof Clerk.mountPricingTable === "function") {
+        status.textContent = "";
         Clerk.mountPricingTable(mount, { appearance: CLERK_APPEARANCE, for: "user" });
       } else {
         status.textContent = "Turn on Clerk Billing, then reload this page.";
