@@ -9,6 +9,8 @@ import {
   needsPlayerBilling,
   tileIsSponsored,
   isTutorContext,
+  hostedLessonSkipsQuota,
+  catalogLessonSkipsQuota,
   questIdFromContext,
   prepareTutorContext,
 } from "./cloud-gate.mjs";
@@ -159,6 +161,44 @@ describe("applyCatalogGate", () => {
     assert.equal(
       applyCatalogGate(learning, { enabled: false, signedIn: false }).aiTutorContext,
       "SECRET CURRICULUM"
+    );
+  });
+});
+
+describe("hostedLessonSkipsQuota", () => {
+  it("skips only a hosted lesson tutor co-invent", () => {
+    assert.equal(
+      hostedLessonSkipsQuota("co-invent", { context: { tutorMode: true } }),
+      true
+    );
+    assert.equal(
+      hostedLessonSkipsQuota("co-invent", {
+        context: { isLearningModule: true },
+      }),
+      true
+    );
+    assert.equal(
+      hostedLessonSkipsQuota("co-invent", {
+        context: { tutorMode: false, isLearningModule: true },
+      }),
+      false
+    );
+    assert.equal(
+      hostedLessonSkipsQuota("co-invent", { context: { tutorMode: false } }),
+      false
+    );
+    assert.equal(hostedLessonSkipsQuota("tts", { context: { tutorMode: true } }), false);
+    assert.equal(hostedLessonSkipsQuota("voice", { context: { tutorMode: true } }), false);
+    assert.equal(hostedLessonSkipsQuota("vision", { context: { tutorMode: true } }), false);
+  });
+
+  it("lets a catalog lesson skip the paid plan and keeps open quests on it", () => {
+    assert.equal(catalogLessonSkipsQuota(learning), true);
+    assert.equal(catalogLessonSkipsQuota({ id: "m", kind: "module" }), true);
+    assert.equal(catalogLessonSkipsQuota(openTile), false);
+    assert.equal(
+      catalogLessonSkipsQuota({ id: "lib", source: "hosted", isLearningModule: true }),
+      false
     );
   });
 });

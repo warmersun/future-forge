@@ -116,6 +116,11 @@ import {
   verifyPortalUser,
   withCloudQuota,
 } from "./js/server/cloud-quota-client.mjs";
+import {
+  catalogLessonSkipsQuota,
+  hostedLessonSkipsQuota,
+  questIdFromContext,
+} from "./js/server/cloud-gate.mjs";
 import { knownVoiceId } from "./js/voice-choices.js";
 import { attachVoiceSockets } from "./js/server/voice-proxy.mjs";
 
@@ -273,9 +278,43 @@ function gateExpensive(req, route, body = null) {
  * @param {() => Promise<any>} call
  * @param {(result: any) => object} measure
  */
+async function catalogLessonForRequest(context) {
+  const id = questIdFromContext(context);
+  if (!id || !QUESTS_REMOTE_URL) return false;
+  try {
+    const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);
+    const quests = remote?.quests || [];
+    const tile = quests.find((q) => q && (q.id === id || q.mission?.id === id));
+    return catalogLessonSkipsQuota(tile);
+  } catch {
+    return false;
+  }
+}
+
 async function hostedAi(req, route, body, call, measure) {
   const gate = gateExpensive(req, route, body);
   if (!gate.ok) return { ok: false, gate };
+  if (CLOUD_AI && hostedLessonSkipsQuota(route, body)) {
+    const lesson = await catalogLessonForRequest(body?.context);
+    if (lesson) {
+      const user = await verifyPortalUser({
+        authorization: req.headers.authorization || "",
+      });
+      if (!user) {
+        return {
+          ok: false,
+          gate: {
+            ok: false,
+            status: 401,
+            error: "sign_in_required",
+            message: "Sign in to use this lesson.",
+          },
+        };
+      }
+      const result = await call();
+      return { ok: true, result, ip: gate.ip };
+    }
+  }
   const kind = quotaKindForRoute(route);
   const chars = kind === "tts" ? String(body?.text || "").length : 0;
   const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;

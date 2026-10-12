@@ -127,6 +127,25 @@ export function isTutorContext(context) {
 }
 
 /**
+ * Hosted lesson tutor text. Signed-in callers skip the paid quota.
+ * Images, speech, and voice stay on the paid plan.
+ * @param {string} route
+ * @param {object|null|undefined} body
+ */
+export function hostedLessonSkipsQuota(route, body) {
+  return route === "co-invent" && isTutorContext(body?.context);
+}
+
+/**
+ * A catalog lesson may be tutored without plan `cloud`.
+ * Library tiles and open quests stay on the paid path.
+ * @param {object|null|undefined} tile
+ */
+export function catalogLessonSkipsQuota(tile) {
+  return tileAccess(tile) === ACCESS.ACCOUNT;
+}
+
+/**
  * @param {object|null|undefined} context
  * @returns {string|null}
  */
