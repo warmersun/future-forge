@@ -218,7 +218,11 @@
 
       if (typeof Clerk.mountPricingTable === "function") {
         status.textContent = "";
-        Clerk.mountPricingTable(mount, { appearance: CLERK_APPEARANCE, for: "user" });
+        Clerk.mountPricingTable(mount, {
+          appearance: CLERK_APPEARANCE,
+          for: "user",
+          newSubscriptionRedirectUrl: "https://ff.warmersun.com/",
+        });
       } else {
         status.textContent = "Turn on Clerk Billing, then reload this page.";
       }

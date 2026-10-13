@@ -141,9 +141,9 @@ import {
 } from "../js/server/collector-cards.mjs";
 import { renderCollectorCardShare } from "../js/server/collector-card-share.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
-import { planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
+import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
-import { planSlugsFromEnv, subscriptionView } from "../js/server/ai-quota.mjs";
+import { planSlugsFromEnv, subscriptionEntitled, subscriptionView } from "../js/server/ai-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -2546,6 +2546,24 @@ const server = http.createServer(async (req, res) => {
         sub = await getSubscription(ident.userId);
       } catch (e) {
         console.warn("[quota] subscription", e?.message || e);
+      }
+      const allowedSlugs = planSlugsFromEnv();
+      const entitled = subscriptionEntitled({
+        status: sub?.status,
+        planSlug: sub?.plan_slug,
+        periodEnd: sub?.period_end,
+        allowedSlugs,
+      });
+      if (!entitled) {
+        try {
+          const fresh = await clerkPaidSubscriptionRow(ident.userId);
+          if (fresh) {
+            await upsertSubscription({ userId: ident.userId, ...fresh });
+            sub = await getSubscription(ident.userId);
+          }
+        } catch (e) {
+          console.warn("[quota] clerk billing", e?.message || e);
+        }
       }
     }
     return sendJson(res, 200, {
