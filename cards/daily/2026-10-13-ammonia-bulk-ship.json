@@ -1,0 +1,39 @@
+{
+  "source": "CMB.TECH press release 9 Oct 2026 (Mineral Europa, 210,000 dwt, world's first ammonia-powered dry bulk vessel, maiden voyage to Australia; 21 ammonia ships through 2029; ammonia storage and bunker barges). Hydrocarbon Processing 12 Oct 2026 (sea trials complete). WinGD 15 Jun 2026 (X72DF-A dual-fuel engine; pilot fuel ~5% at full load; >90% lower GHG in ammonia mode vs diesel mode in testing). Ship & Bunker 12 Oct 2026 (Exmar ammonia gas carrier earlier; first in dry bulk). Limits: EMSA ammonia safety study (toxicity, N2O, green ammonia for well-to-wake); ICCT Shipping 2050 (N2O factors lacking, needs real-world data). CMB.TECH cheaper-than-diesel claim not used. Not stored or shown.",
+  "id": "9d17ee7e-36c0-4de1-8be1-389914080df0",
+  "techId": "transportation",
+  "title": "The first bulk cargo ship that runs mainly on ammonia sets off across the ocean",
+  "description": "A giant ocean cargo ship, built to carry about 210,000 tonnes of loose cargo poured straight into its holds, with a main engine that burns ammonia instead of diesel. Burning ammonia gives off no carbon dioxide. The engine still burns a small dose of regular fuel alongside it, about 5% at full power.",
+  "capability": "A giant ocean cargo ship can now cross oceans burning mostly ammonia, a fuel that gives off no carbon dioxide when burned. It is one first ship in service, on its first trip to Australia in October 2026, not a whole fleet yet.",
+  "useCases": [
+    "Moving loose cargo in huge loads on long ocean routes, such as to Australia, with far less carbon dioxide from the engine than ships that burn diesel.",
+    "Ports and shipping firms setting up storage tanks and small fuel boats so ammonia can be loaded safely onto big ships."
+  ],
+  "body": "In October 2026, after its test runs at sea, a newly built cargo ship set off on its first voyage, to Australia. It is the first ship of its kind, one that carries loose cargo in its holds, to run mainly on ammonia. A ship that carries ammonia gas as cargo did this earlier in the year, so this is the first for this kind of cargo ship, not the first ship ever. The same company says it plans 21 ammonia ships by 2029, most of them within nine months, and is investing in ammonia storage and small fuel boats to refuel ships.\n\nIn the engine maker's testing, this type of engine gave off more than 90% less climate-warming gas running on ammonia than running on diesel. But there are limits. It still burns a little regular fuel. How much it helps the climate depends on how the ammonia was made, and the company has not said what this voyage uses. Ammonia is poisonous to people, and burning it can release nitrous oxide, a gas that warms the planet far more strongly than carbon dioxide. Experts say more real-world measurements are still needed.",
+  "links": [
+    {
+      "label": "The shipowner's announcement of the first voyage",
+      "url": "https://cmb.tech/public/CMBT_PressRelease_Mineral-Europa_EN_PDF.pdf"
+    },
+    {
+      "label": "News report on the finished sea trials",
+      "url": "https://hydrocarbonprocessing.com/news/2026/10/cmbtech-completes-sea-trials-for-worlds-first-ammonia-powered-dry-bulk-carrier/"
+    },
+    {
+      "label": "The engine maker's test results",
+      "url": "https://oneweb.wingd.com/media/q0knfobf/wingd-achieves-next-ammonia-milestone-with-first-x72df-a-engine-approval.pdf"
+    },
+    {
+      "label": "Shipping news report on the maiden voyage",
+      "url": "https://shipandbunker.com/news/apac/464593-cmbtechs-first-ammonia-fuelled-bulker-begins-maiden-voyage-to-australia"
+    },
+    {
+      "label": "EU safety study on ammonia as a ship fuel",
+      "url": "https://emsa.europa.eu/publications/download/7881/5264/23.html"
+    },
+    {
+      "label": "Research report on cutting shipping emissions by 2050",
+      "url": "https://theicct.org/wp-content/uploads/2025/04/ID-328-%E2%80%93-Shipping-2050_report_final-v4-1.pdf"
+    }
+  ]
+}
