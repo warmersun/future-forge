@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Browser click-through against **portal** `/signin`: device start → Clerk email/password → JWT redeem.
+ * Browser click-through used to drive the mounted Sign in on portal `/signin`.
+ * That page is now a handshake callback. The form is Clerk's Account Portal.
+ * This script stops with a clear error if the mounted form is gone.
  *
  *   npm i -D playwright
  *   npx playwright install chromium
@@ -131,6 +133,12 @@ async function main() {
     log("2", `open ${signInUrl}`);
     await page.goto(signInUrl, { waitUntil: "domcontentloaded" });
     await shot(page, "01-loaded");
+    const mounted = await page.locator("#clerk-mount").count();
+    if (!mounted) {
+      throw new Error(
+        "portal /signin no longer mounts Clerk Sign in. The form is the Account Portal; this click-through does not drive it."
+      );
+    }
 
     log("3", "wait for Clerk Sign in (or leftover session choice)");
     const switchBtn = page.locator("#switch");

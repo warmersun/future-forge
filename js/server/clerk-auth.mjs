@@ -28,6 +28,7 @@ const DEFAULT_AUTHORIZED_PARTIES = [
   "http://127.0.0.1:8766",
   "http://localhost:8766",
   "https://warmersun.com",
+  "https://ff.warmersun.com",
   CLOUD_PORTAL_ORIGIN,
 ];
 

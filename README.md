@@ -150,17 +150,17 @@ Nothing else is needed. The `collector_cards` table already exists, because the 
 
 ### Learner accounts (optional Clerk)
 
-Sign-in is **optional**. Clerk UI runs on the hosted portal at **`https://cloud.warmersun.com/signin`**. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens the portal and stores a session JWT. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
+Sign-in is **optional**. The form is Clerk's Account Portal at **`https://accounts.warmersun.com/sign-in`**. On **`https://ff.warmersun.com`** the game loads Clerk and returns there with the session. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens the Account Portal, then **`https://cloud.warmersun.com/signin`** finishes a device code and stores a session JWT. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
-Set `FF_PORTAL_URL` on the game to the portal API origin (Render `https://….onrender.com` is fine). Production Clerk keys only load on `warmersun.com` (or a subdomain) — that is why Sign in is on `cloud.warmersun.com`, not on loopback.
+Set `FF_PORTAL_URL` on the game to the portal API origin (Render `https://….onrender.com` is fine). Production Clerk keys only load on `warmersun.com` and its allowlisted subdomains (`ff.warmersun.com`, `cloud.warmersun.com`). Loopback cannot load them, so the local game uses the device-code callback.
 
 ```bash
 cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
 # Render Dashboard holds pk_live_ / sk_live_
 # If you set CLERK_AUTHORIZED_PARTIES it *replaces* defaults — include:
-#   https://warmersun.com,https://cloud.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
+#   https://warmersun.com,https://ff.warmersun.com,https://cloud.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
 # Funnel / public game host (device handshake CORS; appends to loopback):
 #   FF_GAME_DEVICE_ORIGINS=https://futureforge.xantu-chickadee.ts.net
 ```
@@ -369,8 +369,8 @@ This is a **long-running Node process**, not a static-only site (unless you acce
 1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
 2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
 3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled), `FF_TRUST_PROXY=1`. No xAI.
-4. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://<service>.onrender.com`. Sign in is **`https://cloud.warmersun.com/signin`**.
-5. Clerk allowed origins / Google / X JS origins = `https://cloud.warmersun.com` and `https://warmersun.com`. `CLERK_AUTHORIZED_PARTIES` must include those plus loopback game origins if the env **replaces** defaults. Webhook URL is still the Render `/api/webhooks/clerk` until the custom domain is the webhook host too.
+4. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://<service>.onrender.com`. Sign in is the Account Portal. **`https://cloud.warmersun.com/signin`** only finishes the local device code.
+5. Clerk allowed subdomains include `ff.warmersun.com` and `cloud.warmersun.com`. `CLERK_AUTHORIZED_PARTIES` must include `https://ff.warmersun.com`, `https://cloud.warmersun.com`, `https://warmersun.com`, and the loopback game origins if the env **replaces** defaults. Webhook URL is still the Render `/api/webhooks/clerk` until the custom domain is the webhook host too.
 6. DNS: CNAME `cloud.warmersun.com` → the Render hostname; add the custom domain on Render. Cloudflare-proxied TLS is fine on this public host.
 
 Do not run **game** and **portal** on the same port.

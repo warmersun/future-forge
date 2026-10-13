@@ -99,6 +99,7 @@ describe("authorizedPartiesFromEnv", () => {
     assert.ok(parties.includes("http://127.0.0.1:8766"));
     assert.ok(parties.includes("http://localhost:8766"));
     assert.ok(parties.includes("https://warmersun.com"));
+    assert.ok(parties.includes("https://ff.warmersun.com"));
     assert.ok(parties.includes("https://cloud.warmersun.com"));
     assert.equal(parties.includes("https://local.warmersun.com"), false);
   });

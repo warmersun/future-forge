@@ -10,7 +10,6 @@
         --bg: #070b14;
         --text: #e8eef9;
         --dim: #94a3b8;
-        --accent: #a78bfa;
       }
       html,
       body {
@@ -33,34 +32,8 @@
         color: var(--dim);
         line-height: 1.5;
       }
-      button {
-        font: inherit;
-        cursor: pointer;
-        border: 0;
-        border-radius: 10px;
-        padding: 0.55rem 1rem;
-        background: var(--accent);
-        color: #0c1220;
-      }
-      button.secondary {
-        background: transparent;
-        color: var(--text);
-        box-shadow: inset 0 0 0 1px #2a3a58;
-      }
-      button[hidden] {
-        display: none !important;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-        margin-top: 0.35rem;
-      }
       #status {
         margin-top: 1rem;
-      }
-      #clerk-mount {
-        margin-top: 1.15rem;
       }
     </style>
   </head>
@@ -68,91 +41,31 @@
     <main>
       <h1>Warmer Sun Cloud</h1>
       <p id="status">Loading Sign in…</p>
-      <p class="actions">
-        <button type="button" id="continue" hidden>Continue</button>
-        <button type="button" class="secondary" id="switch" hidden>
-          Use a different account
-        </button>
-      </p>
-      <div id="clerk-mount"></div>
     </main>
     <script type="module">
-      const CLERK_APPEARANCE = {
-        variables: {
-          colorPrimary: "#a78bfa",
-          colorPrimaryForeground: "#0c1220",
-          colorBackground: "#121a2b",
-          colorForeground: "#e8eef9",
-          colorMuted: "#1a2438",
-          colorMutedForeground: "#94a3b8",
-          colorNeutral: "#94a3b8",
-          colorInput: "#1a2438",
-          colorInputForeground: "#e8eef9",
-          colorBorder: "#2a3a58",
-          colorModalBackdrop: "rgba(7, 11, 20, 0.78)",
-          borderRadius: "14px",
-        },
-      };
-
+      const BOUNCE_KEY = "ff-account-portal-bounce";
       const status = document.getElementById("status");
-      const continueBtn = document.getElementById("continue");
-      const switchBtn = document.getElementById("switch");
-      const mount = document.getElementById("clerk-mount");
       const params = new URLSearchParams(location.search);
       const device = params.get("device") || "";
       const returnTo = params.get("return") || "";
-
-      const PROVIDER_LABELS = {
-        oauth_google: "Google",
-        google: "Google",
-        oauth_x: "X",
-        x: "X",
-        oauth_twitter: "X",
-        twitter: "X",
-        oauth_github: "GitHub",
-        github: "GitHub",
-      };
-
-      function clerkProviderLabel(provider) {
-        const raw = String(provider || "")
-          .trim()
-          .toLowerCase();
-        if (!raw) return "";
-        if (PROVIDER_LABELS[raw]) return PROVIDER_LABELS[raw];
-        const stripped = raw.replace(/^oauth_/, "");
-        if (PROVIDER_LABELS[stripped]) return PROVIDER_LABELS[stripped];
-        return stripped
-          .split(/[_-]+/)
-          .filter(Boolean)
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-      }
-
-      function continueAsLine(user) {
-        const email = String(
-          user?.primaryEmailAddress?.emailAddress ||
-            user?.emailAddresses?.[0]?.emailAddress ||
-            ""
-        ).trim();
-        const providers = [];
-        const seen = new Set();
-        for (const acc of user?.externalAccounts || []) {
-          const label = clerkProviderLabel(acc?.provider);
-          if (!label || seen.has(label)) continue;
-          seen.add(label);
-          providers.push(label);
-        }
-        if (email && providers.length) return `Continue as ${email} · ${providers.join(", ")}`;
-        if (email) return `Continue as ${email}`;
-        if (providers.length) return `Continue as ${providers.join(", ")}`;
-        return "Continue as this account";
-      }
 
       function clerkFrontendApiHost(publishableKey) {
         const parts = String(publishableKey || "").trim().split("_");
         if (parts.length < 3) throw new Error("Invalid Clerk publishable key");
         const decoded = atob(parts.slice(2).join("_"));
-        return decoded.endsWith("$") ? decoded.slice(0, -1) : decoded;
+        const host = decoded.endsWith("$") ? decoded.slice(0, -1) : decoded;
+        if (!host || host.includes("/") || /\s/.test(host)) {
+          throw new Error("Invalid Clerk Frontend API host");
+        }
+        return host;
+      }
+
+      function accountPortalHost(publishableKey) {
+        const host = clerkFrontendApiHost(publishableKey);
+        const dev = ".clerk.accounts.dev";
+        if (host.endsWith(dev)) return `${host.slice(0, -dev.length)}.accounts.dev`;
+        if (host.startsWith("clerk.")) return `accounts.${host.slice("clerk.".length)}`;
+        throw new Error("Cannot derive Account Portal host");
       }
 
       function loadScript(src, attrs = {}) {
@@ -166,21 +79,6 @@
           script.onerror = () => reject(new Error(`Failed to load ${src}`));
           document.head.appendChild(script);
         });
-      }
-
-      async function complete(token) {
-        const res = await fetch("/api/device/complete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ code: device }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || "Could not finish handshake");
-        }
       }
 
       function isAllowedGameReturnUrl(href) {
@@ -199,6 +97,39 @@
         }
       }
 
+      function readBounced() {
+        try {
+          return sessionStorage.getItem(BOUNCE_KEY) === "1";
+        } catch {
+          return false;
+        }
+      }
+
+      function writeBounced(on) {
+        try {
+          if (on) sessionStorage.setItem(BOUNCE_KEY, "1");
+          else sessionStorage.removeItem(BOUNCE_KEY);
+        } catch {
+          /* private mode */
+        }
+      }
+
+      async function complete(token) {
+        const res = await fetch("/api/device/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code: device }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Could not finish handshake");
+        }
+      }
+
+      try {
       const health = await fetch("/api/health").then((r) => r.json());
       const pk = health?.clerk?.publishableKey;
       if (!health?.clerk?.enabled || !pk) {
@@ -212,195 +143,48 @@
         throw new Error("no device");
       }
 
+      const here = `${location.origin}${location.pathname}${location.search}`;
+      const portal = new URL(`https://${accountPortalHost(pk)}/sign-in`);
+      portal.searchParams.set("redirect_url", here);
+
       const host = clerkFrontendApiHost(pk);
-      await loadScript(`https://${host}/npm/@clerk/ui@1/dist/ui.browser.js`);
       await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
         "data-clerk-publishable-key": pk,
       });
-
-      const stayHere = device
-        ? `${location.origin}/signin?device=${encodeURIComponent(device)}` +
-          (returnOk ? `&return=${encodeURIComponent(returnTo)}` : "")
-        : `${location.origin}/signin?return=${encodeURIComponent(returnTo)}`;
-      const pickHere = `${stayHere}&pick=1`;
-      const AWAIT_KEY = "ff-clerk-await-signin";
-
-      function setAwaiting() {
-        try {
-          sessionStorage.setItem(AWAIT_KEY, "1");
-        } catch {
-          /* ignore */
-        }
-      }
-
-      function clearAwaiting() {
-        try {
-          sessionStorage.removeItem(AWAIT_KEY);
-        } catch {
-          /* ignore */
-        }
-      }
-
-      function isAwaiting() {
-        if (new URLSearchParams(location.search).get("pick") === "1") return true;
-        try {
-          return sessionStorage.getItem(AWAIT_KEY) === "1";
-        } catch {
-          return false;
-        }
-      }
-
       const Clerk = window.Clerk;
-      await Clerk.load({
-        ui: { ClerkUI: window.__internal_ClerkUICtor },
-        appearance: CLERK_APPEARANCE,
-        afterSignOutUrl: pickHere,
-        signInForceRedirectUrl: pickHere,
-        signInFallbackRedirectUrl: pickHere,
-      });
+      await Clerk.load();
 
-      const signInProps = {
-        appearance: CLERK_APPEARANCE,
-        withSignUp: true,
-        routing: "hash",
-        oauthFlow: "redirect",
-        forceRedirectUrl: pickHere,
-        fallbackRedirectUrl: pickHere,
-      };
-
-      let completing = false;
-      let autoFinish = false;
-      let signInMounted = false;
-
-      function hideChoice() {
-        continueBtn.hidden = true;
-        switchBtn.hidden = true;
-      }
-
-      function showSignInUi() {
-        setAwaiting();
-        hideChoice();
-        status.textContent = "Sign in to continue in the game on this computer.";
-        if (signInMounted) {
-          try {
-            Clerk.unmountSignIn(mount);
-          } catch {
-            /* ignore */
-          }
-          signInMounted = false;
+      if (!Clerk.session) {
+        if (readBounced()) {
+          writeBounced(false);
+          status.textContent =
+            "Sign in did not finish. Open Sign in from Future Forge again.";
+        } else {
+          writeBounced(true);
+          status.textContent = "Opening the account portal…";
+          location.replace(portal.href);
         }
-        Clerk.mountSignIn(mount, signInProps);
-        signInMounted = true;
-      }
-
-      function showContinueChoice() {
-        autoFinish = false;
-        if (signInMounted) {
-          try {
-            Clerk.unmountSignIn(mount);
-          } catch {
-            /* ignore */
-          }
-          signInMounted = false;
-        }
-        mount.replaceChildren();
-        status.textContent = continueAsLine(Clerk.user);
-        continueBtn.hidden = false;
-        switchBtn.hidden = false;
-      }
-
-      async function finishIfSignedIn() {
-        if (completing || !Clerk.session) return false;
-        completing = true;
-        try {
-          const token = await Clerk.session.getToken();
-          if (!token) {
-            completing = false;
-            return false;
-          }
-          if (device) await complete(token);
-          clearAwaiting();
-          hideChoice();
-          if (signInMounted) {
-            try {
-              Clerk.unmountSignIn(mount);
-            } catch {
-              /* ignore */
-            }
-            signInMounted = false;
-          }
-          if (returnTo && isAllowedGameReturnUrl(returnTo)) {
-            status.textContent = "Signed in. Returning to Future Forge…";
-            location.replace(returnTo);
-            return true;
-          }
+      } else {
+        writeBounced(false);
+        const token = await Clerk.session.getToken();
+        if (!token) throw new Error("Could not read the session");
+        if (device) await complete(token);
+        if (returnOk) {
+          status.textContent = "Signed in. Returning to Future Forge…";
+          location.replace(returnTo);
+        } else {
           status.textContent = "Signed in. You can return to Future Forge.";
           try {
             window.close();
           } catch {
             /* ignore */
           }
-          setTimeout(() => {
-            try {
-              window.close();
-            } catch {
-              /* ignore */
-            }
-          }, 1000);
-          return true;
-        } catch (e) {
-          completing = false;
-          throw e;
         }
       }
-
-      continueBtn.addEventListener("click", async () => {
-        try {
-          await finishIfSignedIn();
-        } catch (e) {
-          status.textContent = e?.message || String(e);
-          continueBtn.hidden = false;
-          switchBtn.hidden = false;
-        }
-      });
-
-      switchBtn.addEventListener("click", async () => {
-        hideChoice();
-        status.textContent = "Sign in to continue in the game on this computer.";
-        autoFinish = true;
-        setAwaiting();
-        try {
-          await Clerk.signOut({ redirectUrl: pickHere });
-        } catch {
-          /* still show Sign in */
-        }
-        if (Clerk.session) return;
-        showSignInUi();
-      });
-
-      Clerk.addListener?.(async () => {
-        if (!autoFinish) return;
-        try {
-          await finishIfSignedIn();
-        } catch (e) {
+      } catch (e) {
+        if (!status.textContent || status.textContent === "Loading Sign in…") {
           status.textContent = e?.message || String(e);
         }
-      });
-
-      if (Clerk.session && isAwaiting()) {
-        autoFinish = true;
-        status.textContent = "Signing in…";
-        try {
-          await finishIfSignedIn();
-        } catch (e) {
-          status.textContent = e?.message || String(e);
-          showContinueChoice();
-        }
-      } else if (Clerk.session) {
-        showContinueChoice();
-      } else {
-        autoFinish = true;
-        showSignInUi();
       }
     </script>
   </body>

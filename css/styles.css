@@ -118,6 +118,7 @@ button:disabled {
 }
 
 #ff-account-who[hidden],
+#ff-account-manage[hidden],
 #ff-account-signout[hidden],
 #ff-account-signin[hidden] {
   display: none !important;

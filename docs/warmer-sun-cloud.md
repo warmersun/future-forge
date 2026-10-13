@@ -33,7 +33,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 
 | Piece | Today |
 |--------|--------|
-| Identity | Clerk (`user_…`). Optional. Sign in chip on **game**; Clerk UI on **`https://cloud.warmersun.com/signin`**. |
+| Identity | Clerk (`user_…`). Optional. Sign in chip on **game**; form on the Account Portal **`https://accounts.warmersun.com/sign-in`**. |
 | Play | Works unsigned. Self-host needs no Clerk. |
 | Progress | `localStorage` always (cache). Signed-in + portal `DATABASE_URL`: `solved_quests` + `runs` in Neon after [A2](#A2) import / later holds. Quest log: [C1](#C1). Continue board: [C3](#C3). |
 | Daily | A **Learning** module (`isLearningModule`), not a UTC rotation. Play it from the Learning hub. Ranked on that tile’s [D1](#D1) board. |
@@ -62,7 +62,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 
 | Item | Where |
 |------|--------|
-| Optional Sign in / Sign out | `js/auth.js` device handshake; Clerk UI on portal `GET /signin` |
+| Optional Sign in / Sign out | `js/auth.js`. Hosted game uses the Account Portal. Other hosts use the device handshake. `GET /signin` only finishes that handshake. |
 | [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; Learning lock |
 | **App host** = **portal** | Render Web Service, `npm run portal`. Live: `https://future-forge-0yil.onrender.com`. [H](#H). |
 | `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/server.mjs`, `js/server/clerk-auth.mjs` |
@@ -467,15 +467,15 @@ Render **Web Services** (see `render.yaml`):
 
 1. **Portal.** Build `npm install`. Start `npm run portal`. Health `GET /api/health`. Env: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`, `FF_API_SECRET`, `FF_CLOUD_PLAN_SLUGS`, `FF_CLOUD_AI_BUDGET`, and the `FF_QUOTA_*` rates. **No `FF_XAI_API_KEY`.** Render injects `PORT`. Subscribe UI is `GET /subscribe`.
 2. **Game.** Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL` (the portal origin), the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` unset.
-3. Optional: on warmersun.com, **`/cloud` → 302** to the game; Sign in stays **`https://cloud.warmersun.com/signin`**.
+3. Optional: on warmersun.com, **`/cloud` → 302** to the game. Sign in is the Account Portal. **`https://cloud.warmersun.com/signin`** is only the local handshake callback.
 
 Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).
 
 **Clerk / CORS**
 
-- Production Clerk keys only load on `warmersun.com` (or a subdomain). Sign in is **`https://cloud.warmersun.com/signin`**. CNAME that host to Render; add the custom domain on Render. Cloudflare-proxied TLS is fine here (public host, not loopback).
-- Local **game** is HTTP **`:8765` only** (`http://127.0.0.1:8765` or `http://localhost:8765`). Do not bind port 443. The game never calls `Clerk.load()`.
-- Dashboard allowed origins + `CLERK_AUTHORIZED_PARTIES`: `https://cloud.warmersun.com`, `https://warmersun.com`, plus loopback game origins (`http://127.0.0.1:8765`, `http://localhost:8765`). If `CLERK_AUTHORIZED_PARTIES` is set on Render it **replaces** code defaults — keep those hosts. Google and X **Authorized JavaScript origins**: `https://cloud.warmersun.com` and `https://warmersun.com` only.
+- Production Clerk keys load on `warmersun.com` and allowlisted subdomains. The hosted game at **`https://ff.warmersun.com`** calls `Clerk.load()`. Sign in is **`https://accounts.warmersun.com/sign-in`**. `cloud.warmersun.com` CNAMEs to Render and serves the handshake callback plus subscribe.
+- Local **game** is HTTP **`:8765` only** (`http://127.0.0.1:8765` or `http://localhost:8765`). Do not bind port 443. That host never calls `Clerk.load()`.
+- `CLERK_AUTHORIZED_PARTIES`: `https://ff.warmersun.com`, `https://cloud.warmersun.com`, `https://warmersun.com`, plus loopback game origins (`http://127.0.0.1:8765`, `http://localhost:8765`). If that env var is set on Render it **replaces** code defaults — keep those hosts. Allowed subdomains are `ff.warmersun.com` and `cloud.warmersun.com`.
 - Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).
 - Device handshake (`POST /api/device/start`, `GET /api/device/status`) CORS is loopback game origins plus optional `FF_GAME_DEVICE_ORIGINS` (comma-separated Funnel/public game origins). Other Cloud APIs stay CORS `*`. Do not serve the playable SPA from portal.
 

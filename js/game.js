@@ -98,7 +98,7 @@ import {
   resolveShareOrigin,
   buildQuestShareUrl,
 } from "./deep-link.js";
-import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js?v=portal-84";
+import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js?v=portal-85";
 import {
   IdeaDeck,
   ideaCacheKey,

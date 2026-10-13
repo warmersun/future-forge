@@ -2460,6 +2460,7 @@ const server = http.createServer(async (req, res) => {
     return sendDeviceJson(req, res, 200, {
       ok: true,
       code,
+      // Callback only. The game wraps this as the Account Portal redirect_url.
       signInUrl: `${origin}/signin?device=${encodeURIComponent(code)}`,
     });
   }

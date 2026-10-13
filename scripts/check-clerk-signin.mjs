@@ -6,8 +6,8 @@
  *   FF_ORIGIN=http://127.0.0.1:8765 npm run check:clerk-signin
  *   FF_ORIGIN=https://future-forge-0yil.onrender.com npm run check:clerk-signin
  *
- * Clerk UI is GET /signin on the portal. The game (`npm start` + FF_PORTAL_URL)
- * only stores the handshake JWT.
+ * GET /signin is the device-handshake callback. The sign-in form is the
+ * Account Portal. The game (`npm start` + FF_PORTAL_URL) stores the JWT.
  */
 
 import fs from "node:fs";
@@ -126,12 +126,13 @@ async function main() {
   if (
     signin.status === 200 &&
     /Warmer Sun Cloud/i.test(signin.text) &&
-    /id="continue"/.test(signin.text) &&
-    /id="switch"/.test(signin.text) &&
-    /id="clerk-mount"/.test(signin.text)
+    /id="status"/.test(signin.text) &&
+    /redirect_url/.test(signin.text) &&
+    !/mountSignIn/.test(signin.text) &&
+    !/id="clerk-mount"/.test(signin.text)
   ) {
-    ok("GET /signin HTML Sign in page (Continue / switch / Clerk mount)");
-  } else fail(`GET /signin HTTP ${signin.status} — portal must serve /signin`);
+    ok("GET /signin HTML handshake callback (Account Portal redirect, no mounted Sign in)");
+  } else fail(`GET /signin HTTP ${signin.status} — portal must serve the handshake callback`);
 
   const spa = await get("/index.html");
   if (spa.status === 404) ok("GET /index.html 404 (API-only)");
@@ -183,7 +184,7 @@ async function main() {
     console.log("Fix each FAIL.");
     process.exit(1);
   }
-  console.log("RESULT  PASS  portal is Cloud APIs + /signin. Game handshake uses FF_PORTAL_URL.");
+  console.log("RESULT  PASS  portal is Cloud APIs + /signin callback. Sign-in form is the Account Portal.");
   console.log(`API ${ORIGIN}/api/health`);
   process.exit(0);
 }

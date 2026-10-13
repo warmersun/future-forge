@@ -1,4 +1,4 @@
-/** Hosted portal (Render custom domain). Clerk Sign in runs here, not on the game. */
+/** Hosted portal (Render custom domain). The device handshake callback lives here. The sign-in form is Clerk's Account Portal. */
 
 export const CLOUD_PORTAL_HOST = "cloud.warmersun.com";
 export const CLOUD_PORTAL_ORIGIN = `https://${CLOUD_PORTAL_HOST}`;

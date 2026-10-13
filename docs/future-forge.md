@@ -317,7 +317,7 @@ Sign-in is optional. Unsigned play is complete. Browser state (scenario cache, s
 
 Both default to port **8765**. Do not run them together. Override the game with `FF_PORT`. Render sets `PORT` for the portal.
 
-Learner identity is a Clerk session. The Sign-in page is hosted at `https://cloud.warmersun.com/signin`. Local game never loads Clerk; the Sign in chip opens the portal and stores a session JWT. Set `FF_PORTAL_URL` on the game to the portal origin. After sign-in, Cloud can import the local solved set; cloud then becomes the source of truth for solved ids. Cloud stance and feature inventory: [warmer-sun-cloud.md](warmer-sun-cloud.md).
+Learner identity is a Clerk session. The sign-in form is Clerk's Account Portal at `https://accounts.warmersun.com/sign-in`. The hosted game at `https://ff.warmersun.com` loads Clerk. Local game never loads Clerk; the Sign in chip opens the Account Portal, and `https://cloud.warmersun.com/signin` stores a session JWT. Set `FF_PORTAL_URL` on the game to the portal origin. After sign-in, Cloud can import the local solved set; cloud then becomes the source of truth for solved ids. Cloud stance and feature inventory: [warmer-sun-cloud.md](warmer-sun-cloud.md).
 
 Two credentials are easy to mix up:
 

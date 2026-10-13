@@ -2,6 +2,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   clerkFrontendApiHost,
+  accountPortalHost,
+  accountPortalSignInUrl,
+  accountPortalUserUrl,
   isCloudApiPath,
   accountChipLabel,
   formatClerkLoginLine,
@@ -19,6 +22,26 @@ describe("clerkFrontendApiHost", () => {
   it("rejects junk keys", () => {
     assert.throws(() => clerkFrontendApiHost("pk_test"), /Invalid/);
     assert.throws(() => clerkFrontendApiHost(""), /Invalid/);
+  });
+});
+
+describe("account portal urls", () => {
+  function pk(prefix, host) {
+    return `${prefix}_${Buffer.from(`${host}$`, "utf8").toString("base64")}`;
+  }
+
+  it("maps a development Frontend API host to accounts.dev", () => {
+    const key = pk("pk_test", "foo-12.clerk.accounts.dev");
+    assert.equal(accountPortalHost(key), "foo-12.accounts.dev");
+  });
+
+  it("maps clerk.warmersun.com to the production Account Portal", () => {
+    const key = pk("pk_live", "clerk.warmersun.com");
+    assert.equal(accountPortalHost(key), "accounts.warmersun.com");
+    const signIn = new URL(accountPortalSignInUrl(key, "https://ff.warmersun.com/?q=a"));
+    assert.equal(signIn.origin + signIn.pathname, "https://accounts.warmersun.com/sign-in");
+    assert.equal(signIn.searchParams.get("redirect_url"), "https://ff.warmersun.com/?q=a");
+    assert.equal(accountPortalUserUrl(key), "https://accounts.warmersun.com/user");
   });
 });
 

@@ -1,15 +1,27 @@
 /**
- * Optional learner accounts. The game never loads Clerk JS.
- * Sign in happens on the hosted portal; a device handshake returns a JWT.
+ * Optional learner accounts.
+ * Hosted play (ff.warmersun.com) loads Clerk and signs in on the Account Portal.
+ * Every other host keeps the device handshake and never loads Clerk.
+ * The portal /signin page only finishes that handshake.
  */
+
+import { isAllowedGameReturnUrl, signInUrlWithReturn } from "./cloud/portal-origin.js";
 
 const JWT_STORAGE = "ff-clerk-jwt";
 const PENDING_DEVICE = "ff-pending-device";
 const PENDING_DEVICE_TTL_MS = 8 * 60 * 1000;
 
+const HOSTED_CLERK_HOST = "ff.warmersun.com";
+
 /** @type {string|null} */
 let handshakeJwt = null;
 let handshakeReady = false;
+/** @type {string} */
+let publishableKey = "";
+/** Clerk JS is loaded on the hosted game. */
+let hostedClerk = false;
+/** Hosted host rejected Clerk. Do not fall back to the device handshake. */
+let hostedClerkBlocked = false;
 
 /** @type {Set<() => void>} */
 const sessionListeners = new Set();
@@ -47,8 +59,50 @@ export function clerkFrontendApiHost(publishableKey) {
   return host;
 }
 
+/**
+ * Account Portal host for a publishable key.
+ * Dev FAPI `name.clerk.accounts.dev` → `name.accounts.dev`.
+ * Production FAPI `clerk.example.com` → `accounts.example.com`.
+ * @param {string} key
+ * @returns {string}
+ */
+export function accountPortalHost(key) {
+  const host = clerkFrontendApiHost(key);
+  const dev = ".clerk.accounts.dev";
+  if (host.endsWith(dev)) return `${host.slice(0, -dev.length)}.accounts.dev`;
+  if (host.startsWith("clerk.")) return `accounts.${host.slice("clerk.".length)}`;
+  throw new Error("Cannot derive Account Portal host");
+}
+
+/**
+ * @param {string} key
+ * @param {string} redirectUrl
+ * @returns {string}
+ */
+export function accountPortalSignInUrl(key, redirectUrl) {
+  const u = new URL(`https://${accountPortalHost(key)}/sign-in`);
+  const back = String(redirectUrl || "").trim();
+  if (back) u.searchParams.set("redirect_url", back);
+  return u.href;
+}
+
+/**
+ * @param {string} key
+ * @returns {string}
+ */
+export function accountPortalUserUrl(key) {
+  return `https://${accountPortalHost(key)}/user`;
+}
+
+/** Production game host that shares the Clerk session. Loopback and Funnel do not. */
+export function isHostedClerkGame() {
+  if (typeof location === "undefined" || !location?.hostname) return false;
+  return location.hostname.toLowerCase() === HOSTED_CLERK_HOST;
+}
+
 export function getClerk() {
-  return null;
+  if (typeof window === "undefined") return null;
+  return window.Clerk || null;
 }
 
 export function isClerkReady() {
@@ -74,6 +128,7 @@ function storedJwtExpired(token = handshakeJwt) {
 }
 
 export function isClerkSignedIn() {
+  if (hostedClerk && getClerk()?.session) return true;
   if (!handshakeJwt) return false;
   if (storedJwtExpired()) return false;
   return true;
@@ -206,6 +261,18 @@ async function loadCloudProfileForChip() {
  * @returns {Promise<string|null>}
  */
 export async function getClerkToken() {
+  const clerk = hostedClerk ? getClerk() : null;
+  if (clerk?.session) {
+    try {
+      const token = await clerk.session.getToken();
+      if (token) {
+        if (token !== handshakeJwt) writeStoredJwt(token);
+        return token;
+      }
+    } catch {
+      /* use the stored session token */
+    }
+  }
   if (storedJwtExpired()) return null;
   return handshakeJwt;
 }
@@ -343,7 +410,58 @@ function clearPendingDevice() {
 }
 
 /**
- * Handshake: portal /signin holds Clerk; game only stores the JWT.
+ * @param {string} src
+ * @param {Record<string, string>} [attrs]
+ */
+function loadScript(src, attrs = {}) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    for (const [k, v] of Object.entries(attrs)) script.setAttribute(k, v);
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Load Clerk on the hosted game and mirror its session into the stored JWT.
+ * A failed load blocks sign-in. It does not fall through to the device code.
+ * @param {string} key
+ */
+async function initHostedClerk(key) {
+  const host = clerkFrontendApiHost(key);
+  await loadScript(`https://${host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
+    "data-clerk-publishable-key": key,
+  });
+  const clerk = getClerk();
+  if (!clerk) throw new Error("Clerk missing after load");
+  await clerk.load();
+  hostedClerk = true;
+  const sync = async () => {
+    if (clerk.session) {
+      try {
+        const token = await clerk.session.getToken();
+        writeStoredJwt(token || null);
+      } catch {
+        writeStoredJwt(null);
+      }
+    } else {
+      writeStoredJwt(null);
+    }
+    emitClerkSession();
+  };
+  clerk.addListener?.(() => {
+    void sync();
+  });
+  await sync();
+}
+
+/**
+ * Portal health says Clerk is on. Hosted play uses the Account Portal.
+ * Other hosts store a handshake JWT and never load Clerk.
  */
 export async function initAuth() {
   const mount = document.getElementById("ff-account");
@@ -354,12 +472,22 @@ export async function initAuth() {
     const res = await fetch(`${origin}/api/health`);
     if (!res.ok) return;
     const data = await res.json();
-    if (!data?.clerk?.enabled) return;
-    handshakeReady = true;
-    handshakeJwt = readStoredJwt();
-    if (storedJwtExpired()) writeStoredJwt(null);
+    if (!data?.clerk?.enabled || !data?.clerk?.publishableKey) return;
+    publishableKey = String(data.clerk.publishableKey);
     document.body.classList.add("ff-accounts");
     mount.hidden = false;
+    if (isHostedClerkGame()) {
+      try {
+        await initHostedClerk(publishableKey);
+      } catch (e) {
+        hostedClerkBlocked = true;
+        console.warn("[clerk]", e?.message || e);
+      }
+    } else {
+      handshakeJwt = readStoredJwt();
+      if (storedJwtExpired()) writeStoredJwt(null);
+    }
+    handshakeReady = true;
     bindAccountChip(mount);
     emitClerkSession();
   } catch (e) {
@@ -369,27 +497,28 @@ export async function initAuth() {
   }
 }
 
-function withReturnOnSignInUrl(signInUrl, returnHref) {
-  const base = String(signInUrl || "").trim();
-  const back = String(returnHref || "").trim();
-  if (!base || !back) return base;
+/**
+ * @param {string} returnHref
+ */
+function startHostedSignIn(returnHref) {
+  if (hostedClerkBlocked || !publishableKey) {
+    console.warn("[clerk] Sign in is unavailable on this host");
+    return;
+  }
+  const requested = String(returnHref || "").trim();
+  const back =
+    requested && isAllowedGameReturnUrl(requested) ? requested : location.href;
+  let signInUrl;
   try {
-    const bounce = new URL(back);
-    const host = bounce.hostname.toLowerCase();
-    const ok =
-      (bounce.protocol === "http:" || bounce.protocol === "https:") &&
-      !bounce.username &&
-      (host === "127.0.0.1" ||
-        host === "localhost" ||
-        host === "warmersun.com" ||
-        host.endsWith(".warmersun.com") ||
-        host.endsWith(".ts.net"));
-    if (!ok) return base;
-    const u = new URL(base);
-    u.searchParams.set("return", back);
-    return u.href;
+    signInUrl = accountPortalSignInUrl(publishableKey, back);
+  } catch (e) {
+    console.warn("[clerk]", e?.message || e);
+    return;
+  }
+  try {
+    location.assign(signInUrl);
   } catch {
-    return base;
+    location.href = signInUrl;
   }
 }
 
@@ -398,6 +527,12 @@ function withReturnOnSignInUrl(signInUrl, returnHref) {
  */
 async function startDeviceHandshake(opts = {}) {
   if (!handshakeReady) return;
+  const returnHref =
+    opts.returnHref || (typeof location !== "undefined" ? location.href : "");
+  if (isHostedClerkGame()) {
+    startHostedSignIn(returnHref);
+    return;
+  }
   const origin = await resolvePortalOrigin();
   if (!origin) return;
   const res = await apiFetch("/api/device/start", { method: "POST" });
@@ -407,9 +542,15 @@ async function startDeviceHandshake(opts = {}) {
     return;
   }
   writePendingDevice(data.code);
-  const returnHref =
-    opts.returnHref || (typeof location !== "undefined" ? location.href : "");
-  const signInUrl = withReturnOnSignInUrl(data.signInUrl, returnHref);
+  const callback = signInUrlWithReturn(data.signInUrl, returnHref);
+  let signInUrl = callback;
+  if (publishableKey) {
+    try {
+      signInUrl = accountPortalSignInUrl(publishableKey, callback);
+    } catch (e) {
+      console.warn("[clerk]", e?.message || e);
+    }
+  }
   const sameTab = opts.sameTab === true;
   /** @type {Window|null} */
   let popup = null;
@@ -486,7 +627,16 @@ function closeHandshakePopup(win) {
   }
 }
 
-function signOutHandshake() {
+async function signOutHandshake() {
+  const clerk = hostedClerk ? getClerk() : null;
+  writeStoredJwt(null);
+  emitClerkSession();
+  if (!clerk?.session) return;
+  try {
+    await clerk.signOut();
+  } catch (e) {
+    console.warn("[clerk]", e?.message || e);
+  }
   writeStoredJwt(null);
   emitClerkSession();
 }
@@ -509,10 +659,28 @@ function bindAccountChip(mount) {
       window.dispatchEvent(new CustomEvent("ff-open-cloud-profile"));
     });
   }
+  const manage = mount.querySelector("#ff-account-manage");
+  if (manage && manage.dataset.bound !== "1") {
+    manage.dataset.bound = "1";
+    manage.addEventListener("click", () => {
+      if (!publishableKey) return;
+      let url = "";
+      try {
+        url = accountPortalUserUrl(publishableKey);
+      } catch (e) {
+        console.warn("[clerk]", e?.message || e);
+        return;
+      }
+      const opened = window.open(url, "_blank", "noopener");
+      if (!opened) location.assign(url);
+    });
+  }
   const out = mount.querySelector("#ff-account-signout");
   if (out && out.dataset.bound !== "1") {
     out.dataset.bound = "1";
-    out.addEventListener("click", () => signOutHandshake());
+    out.addEventListener("click", () => {
+      void signOutHandshake();
+    });
   }
 }
 
@@ -522,6 +690,7 @@ function renderAccountChip() {
   if (!mount) return;
   const signInBtn = mount.querySelector("#ff-account-signin");
   const whoBtn = mount.querySelector("#ff-account-who");
+  const manageBtn = mount.querySelector("#ff-account-manage");
   const signOutBtn = mount.querySelector("#ff-account-signout");
   const signedIn = isClerkSignedIn();
   if (signInBtn) signInBtn.hidden = signedIn;
@@ -532,5 +701,6 @@ function renderAccountChip() {
       whoBtn.title = "Inventor page";
     }
   }
+  if (manageBtn) manageBtn.hidden = !signedIn || !publishableKey;
   if (signOutBtn) signOutBtn.hidden = !signedIn;
 }
