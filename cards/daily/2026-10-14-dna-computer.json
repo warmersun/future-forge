@@ -1,0 +1,31 @@
+{
+  "source": "Stérin, Eshra, Evans, Adio, Woods (Hamilton Institute, Maynooth University), 'A thermodynamically favoured molecular computer', Nature 657, 646-652, published 16 Sep 2026, DOI 10.1038/s41586-026-10996-5 (scaffolded DNA computer; 10 programs, 700+ computations incl. multiply-by-3, divide-by-2, 8-bit parity, addition of 25-bit numbers; small instances under a minute; 25-position computation in 14 h; scaling to length 25 required slower anneals; reusable dozens of times; DNA storage and in-cell use only as future possibilities). Maynooth University research page (water+salt, heat and cool; no fuel, prepared start state or continuous power; reuse up to 25 in a row; correct after 15 months). EurekAlert 16 Sep 2026 and SciTechDaily 13 Oct 2026 (10+3 in 30 s; numbers about 11-34 million in up to 14 h; not as fast as silicon). 'World first' wording appears only in press copy and is not used. Not stored or shown.",
+  "id": "b9fe5979-f0b6-429b-a71d-8bd2e3f91ef1",
+  "techId": "synbio",
+  "title": "A tube of DNA, water and salt that works out sums",
+  "description": "A computer made of DNA. One long DNA strand floats in salty water with many short DNA pieces that compete to stick along it. When the mix is heated and then cooled, the pieces settle into the most stable pattern they can, and that pattern spells out the answer. Nothing has to keep powering it while it works.",
+  "capability": "Scientists can now make a tube of DNA, water and salt work out sums like addition and multiplication just by heating it and letting it cool, with no electricity running while it computes. The aim is computing that works right among the molecules of living things, such as inside cells. That has not been shown yet, and it is far slower than a computer chip.",
+  "useCases": [
+    "The goal: DNA computers that work inside living cells to help detect disease. Not shown yet; so far it has only done sums in a test tube.",
+    "The goal: storing information in DNA in a way that stays reliable for a long time. Not shown yet; so far it has only done sums."
+  ],
+  "body": "In September 2026, researchers reported a computer built from DNA instead of a chip. They mix a long DNA strand and many short DNA pieces with water and salt, heat it, and let it cool. As it cools, the short pieces compete for places along the long strand, and the most stable pattern they end up in is the answer. It needs no fuel, no special starting setup and no power running while it works. They ran 10 different programs and more than 700 calculations, including adding, multiplying by 3, dividing by 2, and checking whether a string of ones and zeros has an odd or even number of ones.\n\nA small sum like 10 plus 3 took under a minute. The biggest job, adding two numbers as large as about 33 million, took up to 14 hours. The same mix worked for up to 25 calculations in a row, and one setup still gave correct answers after 15 months. But it is a lab experiment, not a product, and it is much slower than a computer chip. Bigger problems need slower cooling. The team hopes ideas like this could one day store information reliably in DNA, or work inside living cells to help detect disease, but neither has been shown yet.",
+  "links": [
+    {
+      "label": "The research paper (open access)",
+      "url": "https://www.nature.com/articles/s41586-026-10996-5"
+    },
+    {
+      "label": "The research team's summary of the work",
+      "url": "https://www.maynoothuniversity.ie/node/565228"
+    },
+    {
+      "label": "News release on the DNA computer",
+      "url": "https://www.eurekalert.org/news-releases/1143967"
+    },
+    {
+      "label": "News report on the DNA computer",
+      "url": "https://scitechdaily.com/scientists-build-a-world-first-dna-computer-that-runs-without-continuous-power/"
+    }
+  ]
+}
