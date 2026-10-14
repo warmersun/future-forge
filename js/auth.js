@@ -94,6 +94,36 @@ export function accountPortalUserUrl(key) {
   return `https://${accountPortalHost(key)}/user`;
 }
 
+/**
+ * Open the Account Portal in a new tab. Fall back to this tab only when
+ * the browser actually blocks the popup. `noopener` in the feature string
+ * makes window.open return null even when the tab opened.
+ * @param {string} url
+ * @param {{ open?: (url: string, target: string) => { opener: unknown }|null, assign?: (url: string) => void }} [opts]
+ */
+export function openAccountPortalTab(url, opts = {}) {
+  const open =
+    opts.open ||
+    (typeof window !== "undefined" ? (href, target) => window.open(href, target) : null);
+  const assign =
+    opts.assign ||
+    (typeof location !== "undefined" ? (href) => location.assign(href) : null);
+  if (!open) {
+    assign?.(url);
+    return;
+  }
+  const opened = open(url, "_blank");
+  if (opened) {
+    try {
+      opened.opener = null;
+    } catch {
+      /* The new tab can refuse opener once it is cross-origin. */
+    }
+    return;
+  }
+  assign?.(url);
+}
+
 /** Production game host that shares the Clerk session. Loopback and Funnel do not. */
 export function isHostedClerkGame() {
   if (typeof location === "undefined" || !location?.hostname) return false;
@@ -489,6 +519,7 @@ export async function initAuth() {
     }
     handshakeReady = true;
     bindAccountChip(mount);
+    bindAccountChipInset();
     emitClerkSession();
   } catch (e) {
     console.warn("[clerk]", e?.message || e);
@@ -671,8 +702,7 @@ function bindAccountChip(mount) {
         console.warn("[clerk]", e?.message || e);
         return;
       }
-      const opened = window.open(url, "_blank", "noopener");
-      if (!opened) location.assign(url);
+      openAccountPortalTab(url);
     });
   }
   const out = mount.querySelector("#ff-account-signout");
@@ -703,4 +733,26 @@ function renderAccountChip() {
   }
   if (manageBtn) manageBtn.hidden = !signedIn || !publishableKey;
   if (signOutBtn) signOutBtn.hidden = !signedIn;
+  syncAccountChipInset();
+}
+
+let accountInsetBound = false;
+
+function bindAccountChipInset() {
+  if (accountInsetBound || typeof window === "undefined") return;
+  accountInsetBound = true;
+  window.addEventListener("resize", () => syncAccountChipInset());
+}
+
+function syncAccountChipInset() {
+  if (typeof document === "undefined") return;
+  const mount = document.getElementById("ff-account");
+  const root = document.documentElement;
+  if (!root) return;
+  if (!mount || mount.hidden) {
+    root.style.removeProperty("--ff-account-w");
+    return;
+  }
+  const w = mount.getBoundingClientRect().width;
+  if (w > 0) root.style.setProperty("--ff-account-w", `${Math.ceil(w)}px`);
 }

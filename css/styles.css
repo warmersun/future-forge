@@ -146,10 +146,13 @@ body.hex-board-expanded.ff-accounts #ff-account {
   }
 }
 
-/* Leave room so Sign in / name / Sign out does not cover topbar actions */
+/* Leave room so Sign in / name / Manage / Sign out does not cover topbar actions.
+   --ff-account-w is the measured chip width. A narrow screen wraps ← Home
+   onto the next row, under the one-row chip. */
 body.ff-accounts .topbar,
 body.ff-accounts .topbar-game {
-  padding-right: 12.5rem;
+  flex-wrap: wrap;
+  padding-right: calc(var(--page-gutter) + var(--ff-account-w, 12.5rem) + 0.75rem);
 }
 
 .outcome-publish {

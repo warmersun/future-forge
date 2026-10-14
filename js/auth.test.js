@@ -5,6 +5,7 @@ import {
   accountPortalHost,
   accountPortalSignInUrl,
   accountPortalUserUrl,
+  openAccountPortalTab,
   isCloudApiPath,
   accountChipLabel,
   formatClerkLoginLine,
@@ -42,6 +43,34 @@ describe("account portal urls", () => {
     assert.equal(signIn.origin + signIn.pathname, "https://accounts.warmersun.com/sign-in");
     assert.equal(signIn.searchParams.get("redirect_url"), "https://ff.warmersun.com/?q=a");
     assert.equal(accountPortalUserUrl(key), "https://accounts.warmersun.com/user");
+  });
+
+  it("opens Manage in a new tab and leaves this tab when the popup opens", () => {
+    let assigned = "";
+    const win = { opener: {} };
+    openAccountPortalTab("https://accounts.warmersun.com/user", {
+      open: (url, target) => {
+        assert.equal(url, "https://accounts.warmersun.com/user");
+        assert.equal(target, "_blank");
+        return win;
+      },
+      assign: (url) => {
+        assigned = url;
+      },
+    });
+    assert.equal(win.opener, null);
+    assert.equal(assigned, "");
+  });
+
+  it("follows Manage in this tab only when the popup is blocked", () => {
+    let assigned = "";
+    openAccountPortalTab("https://accounts.warmersun.com/user", {
+      open: () => null,
+      assign: (url) => {
+        assigned = url;
+      },
+    });
+    assert.equal(assigned, "https://accounts.warmersun.com/user");
   });
 });
 
