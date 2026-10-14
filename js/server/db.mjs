@@ -1156,6 +1156,8 @@ export async function putRunState(clerkUserId, state) {
 }
 
 const QUOTA_HOLD_STALE = "2 hours";
+/** Settled tickets stay this long so a lost settle response can still retry. */
+const QUOTA_SETTLED_KEEP = "1 day";
 
 function microInt(value) {
   const n = Number(value);
@@ -1236,6 +1238,12 @@ export async function reserveAiBudget(input) {
         [uid, row.period_start, heldAmt]
       );
     }
+    await client.query(
+      `DELETE FROM ai_quota_reservations
+       WHERE clerk_user_id = $1 AND settled = true
+         AND created_at < now() - interval '${QUOTA_SETTLED_KEEP}'`,
+      [uid]
+    );
     await client.query("COMMIT");
   } catch (e) {
     try {
