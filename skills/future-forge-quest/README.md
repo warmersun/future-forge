@@ -52,5 +52,4 @@ Works with Grok, Claude Code, Cursor, Codex, and plain "read this folder" workfl
 ## Hand-off
 
 - Library / classroom, no lesson pages: copy into game `quests/` and refresh (External Quests), or **Import Quest…** on the title screen.
-- Learning quest with lesson pages: the hand-off is one `<id>.ffquest` — the tile(s) and those pages. `npm run pack:quest -- <srcdir> -o <id>.ffquest` from the game repo. Format: `docs/quest-package.md`.
-- Official Sponsored / Learning catalog: see the game repo's `quests/README.md`.
+- Hosted catalog: one `<id>.ffquest`. `npm run pack:quest -- <srcdir> -o <id>.ffquest` from the game repo. A learning quest includes the lesson pages. Format: `docs/quest-package.md`. Publish only when asked, from the warmersun repo: `./scripts/gated-deploy-package.sh`.

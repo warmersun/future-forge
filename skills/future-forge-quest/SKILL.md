@@ -3,8 +3,9 @@ name: future-forge-quest
 license: MIT
 description: >
   Research a recent emTech advance and author a Future Forge Spotlight Quest
-  tile (JSON). A learning quest ships as one .ffquest file: the tile plus the
-  lesson pages it teaches from.   Portable multi-harness skill — not tied to a
+  tile (JSON). The hosted catalog ships as one .ffquest file: the tile, plus
+  the lesson pages when it has them. Deploy with gated-deploy-package.sh in
+  the warmersun repo, only when asked. Portable multi-harness skill — not tied to a
   single agent product. Player-facing prose is a short instance of the global
   problem and what that problem is. The ask may be an invention, or recognizing
   which emTech, capability, and use case fit. Ships with a validator, a lint
@@ -72,7 +73,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 9. **`resources`** only when the **first** island cannot buy the spotlight tech at Budget 5 (frontier techs cost 2–3$). Pathway ease pays +1 Budget per eased role; that funds act two. `startingBudget: 8` is the classic mistake.
 10. Sensitive themes: `references/sensitivity.md`. Fictive places only; no real victims.
 11. **Omit** unused optional keys. No `""`, no `[]`, no `false` for optionals.
-12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year. A learning quest with lesson pages also ships only after `npm run pack:quest` succeeds (step 9).
+12. Ship only at `npm run validate:quest -- <file> --strict` → `OK:` + `lint: clean` (or each remaining `WARN` justified in the hand-off) **and** `npm run economy:quest -- <file>` → quest verdict **challenging** on both solo paths, same year. The hosted catalog also ships only after `npm run pack:quest` succeeds (step 9).
 
 ## Procedure
 
@@ -122,9 +123,9 @@ npm run economy:quest -- <file>
 
 Fix every `WARN <code>` (codes and meanings: `references/schema.md` → Craft lint). Then read the lab: `too_hard` usually means a frontier spotlight tile costs more than Budget 5 / Will 3 buys, or local is not hotter than global; `too_easy` means one cheap tile clears everything with years to spare. Do not raise `startingBudget` to fund act two.
 
-### 9. Package a learning quest
+### 9. Package the quest
 
-When the quest has lesson pages, the hand-off is one `<id>.ffquest`. That file is a zip of the quest tile(s) and the lesson pages those tiles teach from. Loose JSON is not the hand-off.
+The hosted hand-off is one `<id>.ffquest`. A learning quest includes the lesson pages. A spotlight with no pages is the same zip with only `quests/` (and `assets/` when it has stills). Loose JSON is for local play (Library or Import Quest…), not the hosted catalog.
 
 Build a source directory. Do not write `manifest.json`. `pack` does.
 
@@ -147,11 +148,9 @@ From the game repo, after each tile is strict-clean and **challenging**:
 npm run pack:quest -- <srcdir> -o <outdir>/<id>.ffquest
 ```
 
-`pack` checks the tree, runs the strict quest validator, and writes the zip. Hand off that file. The format spec is `docs/quest-package.md` in the game repo. Stage and deploy only when asked.
+`pack` checks the tree, runs the strict quest validator, and writes the zip. Hand off that file. The format spec is `docs/quest-package.md` in the game repo. Name the UI chips, and multi-lesson order if any. A spotlight with no lesson pages can still be copied into `quests/` or opened with Import Quest… for local play.
 
-A spotlight with no lesson pages still hands off the JSON: path, `quests/` or Import Quest…, the UI chips (Spotlight / Sponsored / Learn / Start / Crisis), any lint warning you kept and why, and multi-lesson order if any.
-
-To put a tile on the hosted catalog, only when asked: `npm run publish:quest` (`skills/future-forge-publish-quest`).
+Stage and deploy only when asked, from the warmersun repo. `./scripts/stage-package.sh` is the preview. `./scripts/gated-deploy-package.sh` puts the quest JSON in the object store and the lesson pages on the website. `./scripts/website-deploy-package.sh` publishes the quest catalog on the website as well.
 
 ## What lint cannot check (you still must)
 

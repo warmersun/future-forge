@@ -134,7 +134,10 @@ Those scripts live in the warmersun repo, because that is where the site tree an
 ```bash
 # from ~/dev/warmersun
 ./scripts/stage-package.sh path/to/out.ffquest
-./scripts/deploy-package.sh path/to/out.ffquest
+./scripts/website-deploy-package.sh path/to/out.ffquest
+./scripts/gated-deploy-package.sh path/to/out.ffquest
 ```
+
+`website-deploy-package.sh` publishes the quest catalog and the lesson pages on warmersun.com. `gated-deploy-package.sh` upserts the quest JSON into the private object-store catalog and publishes the lesson pages (and package images) on the website. The new tile is not added to the public quest catalog.
 
 `FF_REPO` (default `~/dev/learning-game`) points at this repo. See `~/dev/warmersun/scripts/README.md`.

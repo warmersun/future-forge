@@ -4,7 +4,7 @@ This document is for Grok Bot. Reading it is the request to copy the current off
 
 Dry-run first. Upload when the dry-run matches the checks in this document. Leave warmersun.com, Render, and every tile's `access` field as they are.
 
-Publish procedure for a single new tile: `skills/future-forge-publish-quest`. This document is the one-time move of the catalogs that already exist.
+A new tile ships as one `.ffquest`, then `./scripts/gated-deploy-package.sh` in the warmersun repo. This document is the one-time move of the catalogs that already exist. That move calls `npm run publish:quest` directly.
 
 Inventory date: 2026-10-14. Re-read the source catalogs when you run. The counts below are the expected set.
 
