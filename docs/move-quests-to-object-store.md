@@ -6,7 +6,7 @@ Dry-run first. Upload when the dry-run matches the checks in this document. Leav
 
 A new tile ships as one `.ffquest`, then `./scripts/gated-deploy-package.sh` in the warmersun repo. This document is the one-time move of the catalogs that already exist. That move calls `npm run publish:quest` directly.
 
-Inventory date: 2026-10-14. Re-read the source catalogs when you run. The counts below are the expected set.
+Inventory date: 2026-10-14 (updated for Solved Today). Re-read the source catalogs when you run. The counts below are the expected set.
 
 ## What changed
 
@@ -39,19 +39,52 @@ Lesson HTML on warmersun.com/lessons stays public. This upload is JSON tiles onl
 
 ## Where the quests are
 
-Run the command from `/mnt/data/dev/learning-game`.
+Paths depend on the machine. Set these before you run anything. Each one has a default:
 
-The public site is built by `/mnt/data/dev/warmersun/scripts/publish-quests.sh` from `scripts/quest-sources.json`:
-
-| Source id | Path | On disk on 2026-10-14 |
+| Variable | Default | What it is |
 | --- | --- | --- |
-| `spotlights` | `/mnt/data/dev/warmersun/future-forge/quests` | yes, catalog `updated` 2026-10-09, 29 entries |
-| `solved-today` | `~/dev/ff-solved-today/quests` | missing |
-| `learn-daily` | `~/dev/ff-learn-daily/quests` | yes, catalog `updated` 2026-09-30, 24 entries |
+| `FF_GAME_DIR` | the current directory | This future-forge checkout. `npm run publish:quest` runs here. |
+| `FF_WARMERSUN_DIR` | `~/dev/warmersun` | The warmersun repo checkout. |
+| `FF_SPOTLIGHTS_QUESTS_DIR` | `$FF_WARMERSUN_DIR/future-forge/quests` | The `spotlights` source. |
+| `FF_SOLVED_TODAY_QUESTS_DIR` | `~/dev/ff-solved-today/quests` | The `solved-today` source (warmersun/ff-solved-today). |
+| `FF_LEARN_DAILY_QUESTS_DIR` | `~/dev/ff-learn-daily/quests` | The `learn-daily` source (warmersun/ff-learn-daily). |
+| `FF_QUEST_MOVE_FILES` | `/tmp/ff-quest-move-files.txt` | Where the file list from step 2 is saved. |
+| `FF_QUEST_MOVE_MIN` | `60` | The smallest total number of catalog tiles the file list may have. |
 
-`publish-quests.sh` and `publish-quests.py` stop when any listed source catalog is missing. Without `--build-only` they also publish the public website. Do not run either script. Do not edit `quest-sources.json` to skip the missing source.
+For example:
 
-The built tree `/mnt/data/dev/warmersun/quests/catalog.json` was last written 2026-10-07. It has 52 tiles and is missing `spotlight-synbio-tallowkey-bottles-2026`. Publish from the two source catalogs that exist.
+```bash
+export FF_GAME_DIR="$PWD"
+export FF_WARMERSUN_DIR="$HOME/dev/warmersun"
+```
+
+The public site is built by `$FF_WARMERSUN_DIR/scripts/publish-quests.sh` from `scripts/quest-sources.json`, which lists three sources:
+
+| Source id | Path | On 2026-10-14 |
+| --- | --- | --- |
+| `spotlights` | `$FF_SPOTLIGHTS_QUESTS_DIR` | catalog `updated` 2026-10-13, 29 entries |
+| `solved-today` | `$FF_SOLVED_TODAY_QUESTS_DIR` | catalog `updated` 2026-10-13, 7 entries: the `solved-today` module and its 6 lessons |
+| `learn-daily` | `$FF_LEARN_DAILY_QUESTS_DIR` | catalog `updated` 2026-10-01, 24 entries |
+
+That is 60 tiles, the same 60 ids as the live https://warmersun.com/quests/catalog.json on 2026-10-14 (29 under `spotlights/`, 7 under `solved-today/`, 24 under `learn-daily/`).
+
+`publish-quests.sh` and `publish-quests.py` stop when any listed source catalog is missing. Without `--build-only` they also publish the public website. Do not run either script. Publish from the three source catalogs.
+
+Solved Today holds these tiles, all with `access: "open"`:
+
+| Catalog id | File |
+| --- | --- |
+| `solved-today` (`kind: "module"`, lessons are the six below) | `solved-today.json` |
+| `spotlight-robots-grayreach-deck-2026` | `spotlight-robots-grayreach-deck-2026.json` |
+| `spotlight-geothermal-steamholt-brine-2026` | `spotlight-geothermal-steamholt-brine-2026.json` |
+| `spotlight-print3d-beadwell-walls-2026` | `spotlight-print3d-beadwell-walls-2026.json` |
+| `solved-today-ocean-cleanup-sennet-2026` | `solved-today-ocean-cleanup-sennet-2026.json` |
+| `spotlight-space-farcall-ferry-2026` | `spotlight-space-farcall-ferry-2026.json` |
+| `spotlight-geneng-mistlantern-fields-2026` | `spotlight-geneng-mistlantern-fields-2026.json` |
+
+The module wrapper lists its six lessons, so all seven files go in the same command, like the `module-progress-and-predictions` batch.
+
+The source tiles are not byte-for-byte the public ones. The public build rewrites image URLs. In the Sennet, Farcall and Mistlantern source files, `briefBeats[].imageUrl` points at `https://warmersun.com/future-forge/quests/assets/...`, which returns 404. The public copies point at `https://warmersun.com/quests/solved-today/assets/...`, which works. The bucket gets the source files as they are, so those three tiles will show broken beat images from the bucket until their sources are fixed in ff-solved-today. Mention this in the summary. Do not edit tiles as part of this move.
 
 Each source `catalog.json` is an index of `{ id, file }`. The tile JSON holds `access`, `kind`, `isLearningModule`, and `sponsorName`. Pass `path.join(sourceDir, entry.file)` for every entry. `catalog.json` itself is not a tile.
 
@@ -59,11 +92,11 @@ One source filename does not match its id. The spotlights catalog entry `spotlig
 
 The spotlights directory also contains `spotlight-ai-hearthline-rsi-check-play-2026.json`. It is not in `catalog.json`. The catalog tile is `spotlight-ai-hearthline-rsi-check-2026`. Directory mode of `publish:quest` uploads every `*.json` except `catalog.json` in that folder, one level only, so it would upload the play file. Pass the catalog file list. Do not pass either source directory.
 
-`module-progress-and-predictions` is in the spotlights catalog. Its lesson ids are the twelve `pp-01` through `pp-12` tiles in that same catalog. Those lessons have to be in the same command, or already in the bucket, or the command uploads nothing. One command with every catalog-listed file from both sources is the batch. The two `pp-automator-lesson-*` tiles are separate quests in the spotlights catalog. Include them too. They are not the module wrapper's lesson list.
+`module-progress-and-predictions` is in the spotlights catalog. Its lesson ids are the twelve `pp-01` through `pp-12` tiles in that same catalog. Those lessons have to be in the same command, or already in the bucket, or the command uploads nothing. One command with every catalog-listed file from all three sources is the batch. The two `pp-automator-lesson-*` tiles are separate quests in the spotlights catalog. Include them too. They are not the module wrapper's lesson list.
 
-`~/dev/ff-learn-daily/quests` must be present. If either source catalog or any listed file is missing, stop and upload nothing.
+All three source folders must be present. If any source catalog or any listed file is missing, stop and upload nothing.
 
-Do not publish `/mnt/data/dev/learning-game/quests`. That folder is the local Library side-load (nine sample JSON files on 2026-10-14, including copies of official ids).
+Do not publish `$FF_GAME_DIR/quests`. That folder is the local Library side-load (sample JSON files, including copies of official ids).
 
 ## Access to leave in place
 
@@ -72,6 +105,7 @@ Do not pass `--access`. The flag would rewrite `access` on the uploaded JSON. Th
 | Tiles | Stored `access` | Portal enforces |
 | --- | --- | --- |
 | `spotlight-synbio-tallowkey-bottles-2026` | `open` (also a learning module) | `open` |
+| `solved-today` and its six lessons (Grayreach, Steamholt, Beadwell, Sennet, Farcall, Mistlantern) | `open` | `open` |
 | `spotlight-drones-northline-cedar-bend-2026` (MyCompany), `spotlight-gene-seq-yourcompany-crossing-clinic-2026` (YourCompany), `spotlight-robots-ourcompany-millspan-line-2026` (OurCompany) | unset, not a learning module | `open` |
 | The other 24 spotlights quests, including Extropic `spotlight-computing-northwharf-dispatch-2026` and the four Base saltpier tiles | unset learning modules | `account` |
 | `module-progress-and-predictions` | unset `kind: "module"` | `account` |
@@ -82,9 +116,9 @@ None of these tiles are `paid`. None set `entitlement`. Sponsored learning tiles
 
 ## Steps
 
-1. Confirm both source catalogs exist and `~/dev/ff-solved-today/quests` is still absent. Absence of solved-today is expected. Do not create it.
+1. Set the path variables above. Confirm all three source catalogs exist: `$FF_SPOTLIGHTS_QUESTS_DIR/catalog.json`, `$FF_SOLVED_TODAY_QUESTS_DIR/catalog.json` and `$FF_LEARN_DAILY_QUESTS_DIR/catalog.json`. Pull each source repo so it matches the live catalog.
 
-2. Build the file list from the two catalogs. This prints absolute paths and exits 1 if a catalog or a listed file is missing, if a JSON `id` disagrees with the catalog id, if the play file is included, or if any id from the inventory below is absent.
+2. Build the file list from the three catalogs. This prints absolute paths and exits 1 if a catalog or a listed file is missing, if a JSON `id` disagrees with the catalog id, if the play file is included, or if any id from the inventory below is absent, or if the list has fewer than `FF_QUEST_MOVE_MIN` tiles.
 
 ```bash
 node --input-type=module << 'JS'
@@ -92,10 +126,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+const home = os.homedir();
+const expand = (p) => (p.startsWith("~/") ? path.join(home, p.slice(2)) : p);
+const env = (name, fallback) => path.resolve(expand(process.env[name] || fallback));
+const warmersunDir = env("FF_WARMERSUN_DIR", "~/dev/warmersun");
 const sources = [
-  "/mnt/data/dev/warmersun/future-forge/quests",
-  path.join(os.homedir(), "dev/ff-learn-daily/quests"),
+  env("FF_SPOTLIGHTS_QUESTS_DIR", path.join(warmersunDir, "future-forge/quests")),
+  env("FF_SOLVED_TODAY_QUESTS_DIR", "~/dev/ff-solved-today/quests"),
+  env("FF_LEARN_DAILY_QUESTS_DIR", "~/dev/ff-learn-daily/quests"),
 ];
+const minCount = Number(process.env.FF_QUEST_MOVE_MIN || 60);
 const required = new Set(`
 spotlight-computing-northwharf-dispatch-2026
 spotlight-drones-northline-cedar-bend-2026
@@ -113,6 +153,13 @@ spotlight-crypto-saltpier-share-2026
 spotlight-crypto-saltpier-agent-2026
 spotlight-ai-hearthline-rsi-check-2026
 spotlight-synbio-tallowkey-bottles-2026
+solved-today
+spotlight-robots-grayreach-deck-2026
+spotlight-geothermal-steamholt-brine-2026
+spotlight-print3d-beadwell-walls-2026
+solved-today-ocean-cleanup-sennet-2026
+spotlight-space-farcall-ferry-2026
+spotlight-geneng-mistlantern-fields-2026
 module-progress-and-predictions
 pp-01-exponential-quiet-2026
 pp-02-computing-living-plan-2026
@@ -193,31 +240,40 @@ if (missing.length) {
   console.error("missing required ids:", missing.join(", "));
   process.exit(1);
 }
+if (new Set(ids).size !== ids.length) {
+  console.error("duplicate catalog ids across sources");
+  process.exit(1);
+}
+if (files.length < minCount) {
+  console.error(`only ${files.length} tiles, expected at least ${minCount}`);
+  process.exit(1);
+}
 const extra = ids.filter((id) => !required.has(id));
 if (extra.length) console.error("extra catalog ids:", extra.join(", "));
+console.error(`ok: ${files.length} tiles from ${sources.length} catalogs`);
 process.stdout.write(files.join("\n") + "\n");
 JS
 ```
 
-Save stdout to a file such as `/tmp/ff-quest-move-files.txt`. If stderr reports extra catalog ids, keep those files in the list. They belong to the current source catalogs. Mention them in the summary. If the script exits 1, stop.
+Save stdout to `$FF_QUEST_MOVE_FILES` (for example, end the `node` line with `> "${FF_QUEST_MOVE_FILES:-/tmp/ff-quest-move-files.txt}"`). If stderr reports extra catalog ids, keep those files in the list. They belong to the current source catalogs. Mention them in the summary. If the script exits 1, stop.
 
 3. Credentials load from the process environment, then `.env.object-storage.local`, then `.env.portal`. The command does that itself. Do not print those files or any secret value. If `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, or `AWS_SECRET_ACCESS_KEY` is missing, the command exits before upload. Stop there. Do not fetch the public catalog to fill the bucket. Do not write a new `DATABASE_URL`.
 
 4. Dry-run from the game repo. This still reads the live catalog.
 
 ```bash
-cd /mnt/data/dev/learning-game
-mapfile -t FILES < /tmp/ff-quest-move-files.txt
+cd "${FF_GAME_DIR:-.}"
+mapfile -t FILES < "${FF_QUEST_MOVE_FILES:-/tmp/ff-quest-move-files.txt}"
 npm run publish:quest -- "${FILES[@]}" --dry-run
 ```
 
 5. Accept the dry-run only when all of these are true:
 
-- One `added` or `updated` line for every id in the file list, including `module-progress-and-predictions`, all twelve `pp-01` through `pp-12` lessons, and `spotlight-synbio-tallowkey-bottles-2026`.
+- One `added` or `updated` line for every id in the file list, including `module-progress-and-predictions`, all twelve `pp-01` through `pp-12` lessons, `spotlight-synbio-tallowkey-bottles-2026`, and the `solved-today` module with its six lessons.
 - The harborlane line is `spotlight-synbio-harborlane-rehab-2026`, from `cells-already-know.json`.
 - No line for `spotlight-ai-hearthline-rsi-check-play-2026`.
-- Access on the four open tiles above is `open`. Access on `module-progress-and-predictions`, the Extropic and Base tiles, and both unset learn-daily tiles is `account`. No line says `access=paid`.
-- The catalog count is at least 53. Upsert keeps ids already in the bucket, so a count above 53 means the live catalog had other entries. That is fine. A count below 53 is not.
+- Access on the four open spotlights tiles above and on all seven Solved Today tiles is `open`. Access on `module-progress-and-predictions`, the Extropic and Base tiles, and both unset learn-daily tiles is `account`. No line says `access=paid`.
+- The catalog count is at least 60 (29 spotlights + 7 solved-today + 24 learn-daily). Upsert keeps ids already in the bucket, so a count above 60 means the live catalog had other entries. That is fine. A count below 60 is not.
 - The output contains `dry-run: uploaded nothing` and no line that starts with `uploaded`.
 
 6. If validation, craft lint, or the economy lab fails, the command uploads nothing. Report the file path and the warning or verdict. Do not pass `--skip-economy`. Do not edit a tile to force this move through. A `kind: "quest"` tile must verdict `challenging`. The module wrapper skips the lab.
@@ -225,8 +281,8 @@ npm run publish:quest -- "${FILES[@]}" --dry-run
 7. When the dry-run matches, upload with the same file list and no `--access` flag:
 
 ```bash
-cd /mnt/data/dev/learning-game
-mapfile -t FILES < /tmp/ff-quest-move-files.txt
+cd "${FF_GAME_DIR:-.}"
+mapfile -t FILES < "${FF_QUEST_MOVE_FILES:-/tmp/ff-quest-move-files.txt}"
 npm run publish:quest -- "${FILES[@]}"
 ```
 
