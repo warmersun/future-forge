@@ -85,11 +85,18 @@ import {
 } from "../js/cloud/portal-origin.js";
 import {
   applyCatalogGate,
-  publicCatalogTile,
+  catalogCard,
   prepareTutorContext,
   questIdFromContext,
+  questReadDecision,
   tileIsSponsored,
 } from "../js/server/cloud-gate.mjs";
+import {
+  fetchObjectQuestCatalog,
+  questsBucketFromEnv,
+  questsObjectPrefixFromEnv,
+} from "../js/server/quest-object-storage.mjs";
+import { omitOfficialLocalDuplicates } from "../js/server/quest-portal-client.mjs";
 import {
   dbEnabled,
   publicDbConfig,
@@ -1199,13 +1206,49 @@ async function aiCoInvent(body, client, meta = {}) {
  * Local folder + remote catalog, merged by id (remote wins).
  * @param {{ forceRemote?: boolean }} [opts]
  */
+/**
+ * Official catalog: private object storage when FF_QUESTS_BUCKET is set.
+ * Otherwise the public remote URL. A configured bucket does not fall back.
+ * @param {{ force?: boolean }} [opts]
+ */
+async function fetchOfficialQuestCatalog(opts = {}) {
+  const bucket = questsBucketFromEnv();
+  if (bucket) {
+    return fetchObjectQuestCatalog({
+      bucket,
+      prefix: questsObjectPrefixFromEnv(),
+      force: Boolean(opts.force),
+    });
+  }
+  return fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: Boolean(opts.force) });
+}
+
+/**
+ * @param {object|null|undefined} ident
+ */
+async function entitlementForIdent(ident) {
+  if (!ident?.enabled || !ident.signedIn || !dbEnabled()) return false;
+  try {
+    const sub = await getSubscription(ident.userId);
+    return subscriptionEntitled({
+      status: sub?.status,
+      planSlug: sub?.plan_slug,
+      periodEnd: sub?.period_end,
+      allowedSlugs: planSlugsFromEnv(),
+    });
+  } catch (e) {
+    console.warn("[quests] subscription", e?.message || e);
+    return false;
+  }
+}
+
 async function loadMergedQuestTiles(opts = {}) {
   const [scanned, remote] = await Promise.all([
     scanQuestsFolder(QUESTS_DIR),
-    fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: Boolean(opts.forceRemote) }),
+    fetchOfficialQuestCatalog({ force: Boolean(opts.forceRemote) }),
   ]);
-  const local = scanned.quests || [];
   const remoteQuests = remote.quests || [];
+  const local = omitOfficialLocalDuplicates(scanned.quests || [], remoteQuests);
   const byId = new Map();
   for (const q of local) byId.set(q.id, q);
   for (const q of remoteQuests) byId.set(q.id, q);
@@ -3241,6 +3284,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
       const ident = await authenticateClerkRequest(req);
+      const entitled = await entitlementForIdent(ident);
       const forceRemote = url.searchParams.get("refresh") === "1";
       const pack = await loadMergedQuestTiles({ forceRemote });
       const { scanned, remote, local, remoteQuests, quests } = pack;
@@ -3257,20 +3301,21 @@ const server = http.createServer(async (req, res) => {
         if (!tile) {
           return sendJson(res, 404, { ok: false, error: "not_found", id: questId });
         }
-        const gated = applyCatalogGate(tile, ident);
-        const stripped = gated !== tile;
-        if (stripped) {
-          return sendJson(res, 401, {
+        const decision = questReadDecision(tile, ident, { entitled });
+        if (!decision.allow) {
+          const body = {
             ok: false,
-            error: "sign_in_required",
+            error: decision.error,
             id: questId,
-            tile: gated,
-          });
+            tile: catalogCard(tile),
+          };
+          if (decision.status === 402) body.subscribeUrl = subscribeUrlFromEnv();
+          return sendJson(res, decision.status, body);
         }
         return sendJson(res, 200, { ok: true, tile });
       }
 
-      const gateOne = (q) => applyCatalogGate(q, ident);
+      const gateOne = (q) => applyCatalogGate(q, ident, { entitled });
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
@@ -3559,12 +3604,17 @@ const server = http.createServer(async (req, res) => {
         console.warn("[quests catalog]", e.message || e);
       }
       const tile = findQuestTile(pack, questIdFromContext(body.context));
-      const prepared = prepareTutorContext(body.context, ident, tile);
+      const entitled = await entitlementForIdent(ident);
+      const prepared = prepareTutorContext(body.context, ident, tile, { entitled });
       if (!prepared.ok) {
         return sendJson(res, prepared.status || 401, {
           error: prepared.error || "sign_in_required",
           source: "error",
-          message: "Sign in to use the tutor on this lesson.",
+          message:
+            prepared.error === "subscription_required"
+              ? "A subscription is required for this lesson."
+              : "Sign in to use the tutor on this lesson.",
+          subscribeUrl: prepared.error === "subscription_required" ? subscribeUrlFromEnv() : undefined,
           proposals: {
             addTechIds: [],
             removeTechIds: [],
@@ -3823,10 +3873,32 @@ server.listen(PORT, HOST, async () => {
   } catch (e) {
     console.warn(`Local Quests: scan failed for ${QUESTS_DIR}:`, e.message || e);
   }
-  if (QUESTS_REMOTE_URL) {
+  const questsBucket = questsBucketFromEnv();
+  if (questsBucket) {
+    console.log(`Official quests: object storage bucket ${questsBucket}`);
+    try {
+      const remote = await fetchOfficialQuestCatalog();
+      console.log(
+        `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${
+          remote.cached ? " [cache]" : ""
+        }`
+      );
+      if (remote.errors.length) {
+        console.warn(
+          `  ${remote.errors.length} remote issue(s):`,
+          remote.errors
+            .slice(0, 5)
+            .map((e) => `${e.file} (${e.error})`)
+            .join(", ")
+        );
+      }
+    } catch (e) {
+      console.warn(`  Remote catalog failed:`, e.message || e);
+    }
+  } else if (QUESTS_REMOTE_URL) {
     console.log(`Remote Quests catalog: ${QUESTS_REMOTE_URL}`);
     try {
-      const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);
+      const remote = await fetchOfficialQuestCatalog();
       console.log(
         `  → ${remote.quests.length} official tile(s)${remote.ok ? "" : " (fetch issues)"}${
           remote.cached ? " [cache]" : ""

@@ -13,6 +13,7 @@ import {
   groupLearningModules,
   catalogTopLevel,
   catalogHubCounts,
+  lockedCatalogHubEntry,
   sameModuleLessonOffer,
 } from "./quest-catalog.js";
 
@@ -359,6 +360,84 @@ describe("catalogNeedsAccount / Library source", () => {
     });
     assert.equal(offer.nextId, "lesson-3");
     assert.equal(offer.nextTitle, "Lesson 3");
+  });
+
+  it("orders locked cards by lesson and offers the next one", () => {
+    const cards = [3, 1, 2].map((n) => ({
+      id: `lesson-${n}`,
+      title: `Lesson ${n}`,
+      gated: true,
+      access: "account",
+      isLearningModule: true,
+      module: "Same-day dollars",
+      lesson: n,
+      totalLessons: 3,
+      source: "remote",
+    }));
+    const groups = groupLearningModules(cards);
+    assert.deepEqual(
+      groups[0].entries.map((e) => e.id),
+      ["lesson-1", "lesson-2", "lesson-3"]
+    );
+    assert.equal(groups[0].totalLessons, 3);
+    const offer = sameModuleLessonOffer(
+      {
+        id: "lesson-1",
+        isLearningModule: true,
+        module: "Same-day dollars",
+        lesson: 1,
+        totalLessons: 3,
+      },
+      groups
+    );
+    assert.equal(offer.nextId, "lesson-2");
+    assert.equal(offer.nextTitle, "Lesson 2");
+  });
+
+  it("keeps a locked card as a hub entry without a mission body", () => {
+    const entry = lockedCatalogHubEntry(
+      {
+        id: "lesson-2",
+        title: "Lesson 2",
+        summary: "The stall closed.",
+        gated: true,
+        access: "account",
+        isLearningModule: true,
+        module: "Same-day dollars",
+        lesson: 2,
+        totalLessons: 4,
+        globalId: "payments",
+        place: "Harbor market",
+        source: "remote",
+        tile: { aiTutorContext: "SECRET" },
+      },
+      "remote"
+    );
+    assert.equal(entry.mission, null);
+    assert.equal(entry.gated, true);
+    assert.equal(entry.lesson, 2);
+    assert.equal(entry.globalId, "payments");
+    assert.equal(entry.place, "Harbor market");
+    assert.equal(JSON.stringify(entry).includes("SECRET"), false);
+    assert.equal(lockedCatalogHubEntry({ id: "plain", title: "Open" }, "remote"), null);
+  });
+
+  it("groups a gated lesson card that has no mission body", () => {
+    const card = {
+      id: "lesson-2",
+      title: "Lesson 2",
+      gated: true,
+      access: "account",
+      isLearningModule: true,
+      module: "Same-day dollars",
+      lesson: 2,
+      source: "remote",
+    };
+    assert.equal(isLearningEntry(card), true);
+    const groups = groupLearningModules([wrapper(), card]);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].entries.length, 1);
+    assert.equal(groups[0].entries[0].mission, undefined);
   });
 
   it("locks remote learning when Clerk is ready", () => {

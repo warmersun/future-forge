@@ -5,6 +5,8 @@ import {
   mayReadSecrets,
   requireCloudAccount,
   publicCatalogTile,
+  catalogCard,
+  questReadDecision,
   applyCatalogGate,
   needsPlayerBilling,
   tileIsSponsored,
@@ -135,10 +137,63 @@ describe("publicCatalogTile", () => {
   });
 });
 
+describe("questReadDecision", () => {
+  const out = { enabled: true, signedIn: false };
+  const inn = { enabled: true, signedIn: true, userId: "user_1" };
+  const paid = {
+    id: "paid-1",
+    access: "paid",
+    source: "remote",
+    aiTutorContext: "PAID NOTES",
+    mission: { id: "paid-1", access: "paid", aiTutorContext: "PAID NOTES" },
+  };
+  const sponsored = {
+    ...paid,
+    id: "spon-1",
+    sponsorName: "Acme",
+    entitlement: "catalog.free",
+  };
+
+  it("allows open and Clerk-off, and cards the rest", () => {
+    assert.equal(questReadDecision(openTile, out).allow, true);
+    assert.equal(questReadDecision(learning, { enabled: false }).allow, true);
+    assert.equal(questReadDecision(learning, out).allow, false);
+    assert.equal(questReadDecision(learning, out).status, 401);
+    assert.equal(questReadDecision(learning, inn).allow, true);
+  });
+
+  it("requires a subscription only for paid tiles that bill the player", () => {
+    assert.equal(questReadDecision(paid, out).status, 401);
+    assert.equal(questReadDecision(paid, inn, { entitled: false }).status, 402);
+    assert.equal(questReadDecision(paid, inn, { entitled: true }).allow, true);
+    assert.equal(questReadDecision(sponsored, inn, { entitled: false }).allow, true);
+  });
+
+  it("catalog cards omit the mission body and tutor notes", () => {
+    const card = catalogCard({
+      ...learning,
+      globalId: "payments",
+      place: "Harbor market",
+      mission: { ...learning.mission, globalId: "payments", place: "Harbor market" },
+    });
+    assert.equal(card.gated, true);
+    assert.equal(card.id, "lesson-1");
+    assert.equal(card.access, "account");
+    assert.equal(card.mission, undefined);
+    assert.equal(card.aiTutorContext, undefined);
+    assert.equal(card.globalId, "payments");
+    assert.equal(card.place, "Harbor market");
+    assert.equal(JSON.stringify(card).includes("SECRET"), false);
+  });
+});
+
 describe("applyCatalogGate", () => {
-  it("strips when Clerk on and unsigned", () => {
+  it("returns a card when Clerk on and unsigned", () => {
     const p = applyCatalogGate(learning, { enabled: true, signedIn: false });
     assert.equal(p.aiTutorContext, undefined);
+    assert.equal(p.mission, undefined);
+    assert.equal(p.gated, true);
+    assert.equal(p.id, "lesson-1");
   });
 
   it("keeps Library tutor text when unsigned", () => {
@@ -219,6 +274,24 @@ describe("prepareTutorContext", () => {
     );
     assert.equal(r.ok, false);
     assert.equal(r.error, "sign_in_required");
+  });
+
+  it("402 when a paid tile needs a subscription", () => {
+    const paid = {
+      id: "paid-1",
+      access: "paid",
+      aiTutorContext: "PAID NOTES",
+      mission: { id: "paid-1", access: "paid" },
+    };
+    const r = prepareTutorContext(
+      { tutorMode: true, aiTutorContext: "from-client", questId: "paid-1" },
+      { enabled: true, signedIn: true },
+      paid,
+      { entitled: false }
+    );
+    assert.equal(r.ok, false);
+    assert.equal(r.status, 402);
+    assert.equal(r.error, "subscription_required");
   });
 
   it("replaces client tutor text with catalog when signed in", () => {

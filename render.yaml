@@ -30,6 +30,16 @@ services:
         sync: false
       - key: DATABASE_URL_UNPOOLED
         sync: false
+      - key: FF_QUESTS_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_REGION
+        sync: false
       - key: FF_API_SECRET
         sync: false
       - key: FF_CLOUD_PLAN_SLUGS

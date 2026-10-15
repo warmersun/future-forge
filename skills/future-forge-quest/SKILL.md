@@ -151,6 +151,8 @@ npm run pack:quest -- <srcdir> -o <outdir>/<id>.ffquest
 
 A spotlight with no lesson pages still hands off the JSON: path, `quests/` or Import Quest…, the UI chips (Spotlight / Sponsored / Learn / Start / Crisis), any lint warning you kept and why, and multi-lesson order if any.
 
+To put a tile on the hosted catalog, only when asked: `npm run publish:quest` (`skills/future-forge-publish-quest`).
+
 ## What lint cannot check (you still must)
 
 - The place is fictive and the people have dignity.

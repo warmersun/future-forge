@@ -121,6 +121,13 @@ import {
   hostedLessonSkipsQuota,
   questIdFromContext,
 } from "./js/server/cloud-gate.mjs";
+import {
+  fetchPortalQuests,
+  mergeQuestCatalog,
+  officialTutorContext,
+  omitOfficialLocalDuplicates,
+  portalQuestsEnabled,
+} from "./js/server/quest-portal-client.mjs";
 import { knownVoiceId } from "./js/voice-choices.js";
 import { attachVoiceSockets } from "./js/server/voice-proxy.mjs";
 
@@ -278,10 +285,15 @@ function gateExpensive(req, route, body = null) {
  * @param {() => Promise<any>} call
  * @param {(result: any) => object} measure
  */
-async function catalogLessonForRequest(context) {
+async function catalogLessonForRequest(context, authorization) {
   const id = questIdFromContext(context);
-  if (!id || !QUESTS_REMOTE_URL) return false;
+  if (!id) return false;
   try {
+    if (portalQuestsEnabled()) {
+      const got = await fetchPortalQuests({ id, authorization });
+      return catalogLessonSkipsQuota(got.data?.tile);
+    }
+    if (!QUESTS_REMOTE_URL) return false;
     const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);
     const quests = remote?.quests || [];
     const tile = quests.find((q) => q && (q.id === id || q.mission?.id === id));
@@ -291,11 +303,27 @@ async function catalogLessonForRequest(context) {
   }
 }
 
+/**
+ * Official tutor notes come from the portal. Returns a deny result, or null
+ * after replacing body.context.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {object} body
+ */
+async function applyOfficialTutor(req, body) {
+  if (!body || typeof body !== "object") return null;
+  const decided = await officialTutorContext(body.context, {
+    authorization: req.headers.authorization || "",
+  });
+  if (!decided.ok) return decided;
+  body.context = decided.context;
+  return null;
+}
+
 async function hostedAi(req, route, body, call, measure) {
   const gate = gateExpensive(req, route, body);
   if (!gate.ok) return { ok: false, gate };
   if (CLOUD_AI && hostedLessonSkipsQuota(route, body)) {
-    const lesson = await catalogLessonForRequest(body?.context);
+    const lesson = await catalogLessonForRequest(body?.context, req.headers.authorization || "");
     if (lesson) {
       const user = await verifyPortalUser({
         authorization: req.headers.authorization || "",
@@ -2235,22 +2263,69 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // —— Quest tiles: local folder (Library) + remote catalog (Sponsored/Learning) ——
-  if (req.method === "GET" && (req.url === "/api/quests" || req.url?.startsWith("/api/quests?"))) {
+  // —— Quest tiles: local folder (Library) + official catalog (portal or remote) ——
+  if (
+    req.method === "GET" &&
+    req.url &&
+    (req.url === "/api/quests" ||
+      req.url.startsWith("/api/quests?") ||
+      req.url.startsWith("/api/quests/"))
+  ) {
     try {
-      const forceRemote =
-        typeof req.url === "string" && /[?&]refresh=1(?:&|$)/.test(req.url);
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const questId = url.pathname.startsWith("/api/quests/")
+        ? decodeURIComponent(url.pathname.slice("/api/quests/".length)).trim()
+        : "";
+      const forceRemote = url.searchParams.get("refresh") === "1";
+      if (portalQuestsEnabled()) {
+        const authorization = req.headers.authorization || "";
+        if (questId) {
+          const got = await fetchPortalQuests({ id: questId, authorization });
+          if (got.status === 200 || got.status === 401 || got.status === 402) {
+            return sendJson(res, got.status, got.data);
+          }
+          const scanned = await scanQuestsFolder(QUESTS_DIR);
+          const local = (scanned.quests || []).find(
+            (q) => q.id === questId || q.mission?.id === questId
+          );
+          if (local) return sendJson(res, 200, { ok: true, tile: local });
+          return sendJson(res, got.status || 404, got.data || { ok: false, error: "not_found", id: questId });
+        }
+        const [scanned, portal] = await Promise.all([
+          scanQuestsFolder(QUESTS_DIR),
+          fetchPortalQuests({
+            authorization,
+            search: forceRemote ? "refresh=1" : "",
+          }),
+        ]);
+        const remoteQuests = Array.isArray(portal.data?.remote) ? portal.data.remote : [];
+        const local = omitOfficialLocalDuplicates(scanned.quests || [], remoteQuests);
+        const quests = mergeQuestCatalog(local, remoteQuests);
+        return sendJson(res, 200, {
+          ok: portal.ok || portal.data?.ok === true,
+          dir: scanned.dir,
+          remoteUrl: portal.data?.remoteUrl ?? null,
+          remoteOk: portal.ok && portal.data?.remoteOk !== false,
+          remoteCached: Boolean(portal.data?.remoteCached),
+          local,
+          remote: remoteQuests,
+          count: quests.length,
+          quests,
+          errors: [...(scanned.errors || []), ...(portal.data?.errors || [])],
+        });
+      }
       const [scanned, remote] = await Promise.all([
         scanQuestsFolder(QUESTS_DIR),
         fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: forceRemote }),
       ]);
-      const local = scanned.quests || [];
       const remoteQuests = remote.quests || [];
-      // Merge for backward compat: remote wins on id
-      const byId = new Map();
-      for (const q of local) byId.set(q.id, q);
-      for (const q of remoteQuests) byId.set(q.id, q);
-      const quests = [...byId.values()];
+      const local = omitOfficialLocalDuplicates(scanned.quests || [], remoteQuests);
+      const quests = mergeQuestCatalog(local, remoteQuests);
+      if (questId) {
+        const tile = quests.find((q) => q.id === questId || q.mission?.id === questId);
+        if (!tile) return sendJson(res, 404, { ok: false, error: "not_found", id: questId });
+        return sendJson(res, 200, { ok: true, tile });
+      }
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
@@ -2268,7 +2343,7 @@ const server = http.createServer(async (req, res) => {
         ok: false,
         error: e.message || "quests_scan_failed",
         dir: QUESTS_DIR,
-        remoteUrl: QUESTS_REMOTE_URL,
+        remoteUrl: portalQuestsEnabled() ? "portal" : QUESTS_REMOTE_URL,
         local: [],
         remote: [],
         quests: [],
@@ -2558,6 +2633,14 @@ const server = http.createServer(async (req, res) => {
         if (found.closedSettle) await found.closedSettle;
         return sendJson(res, 200, { ok: true });
       }
+      const tutorDenied = await applyOfficialTutor(req, body);
+      if (tutorDenied) {
+        return sendJson(res, tutorDenied.status || 401, {
+          ok: false,
+          error: tutorDenied.error || "sign_in_required",
+          subscribeUrl: tutorDenied.subscribeUrl || undefined,
+        });
+      }
       const gate = gateExpensive(req, "voice", body);
       if (!gate.ok) {
         return sendJson(res, gate.status || 429, {
@@ -2658,6 +2741,20 @@ const server = http.createServer(async (req, res) => {
         inventionHow: null,
         inventionImpact: null,
       };
+      const tutorDenied = await applyOfficialTutor(req, body);
+      if (tutorDenied) {
+        return sendJson(res, tutorDenied.status || 401, {
+          error: tutorDenied.error || "sign_in_required",
+          source: "error",
+          message:
+            tutorDenied.error === "subscription_required"
+              ? "A subscription is required for this lesson."
+              : "Sign in to use the tutor on this lesson.",
+          subscribeUrl: tutorDenied.subscribeUrl || undefined,
+          proposals: emptyProposals,
+          teaching: [],
+        });
+      }
       const outcome = await hostedAi(
         req,
         "co-invent",
@@ -3047,7 +3144,9 @@ async function afterListen() {
   } catch (e) {
     console.warn(`Local Quests: scan failed for ${QUESTS_DIR}:`, e.message || e);
   }
-  if (QUESTS_REMOTE_URL) {
+  if (portalQuestsEnabled()) {
+    console.log("Official quests: portal (object storage is read there)");
+  } else if (QUESTS_REMOTE_URL) {
     console.log(`Remote Quests catalog: ${QUESTS_REMOTE_URL}`);
     try {
       const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);

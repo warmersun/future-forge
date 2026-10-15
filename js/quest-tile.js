@@ -82,6 +82,27 @@ export function parseAccessField(tile, missionIn = {}, opts = {}) {
 }
 
 /**
+ * Optional catalog entitlement, such as "catalog.free".
+ * Omitted is fine. A non-string fails validation.
+ * @param {object} tile
+ * @param {object} [missionIn]
+ * @returns {{ ok: true, value: string|null } | { ok: false, details: string[] }}
+ */
+export function parseEntitlementField(tile, missionIn = {}) {
+  const raw = pickTileOrMissionField(tile, missionIn, "entitlement");
+  if (raw === undefined || raw === null || raw === "") return { ok: true, value: null };
+  if (typeof raw !== "string") {
+    return { ok: false, details: ["entitlement_not_string"] };
+  }
+  const v = raw.trim().slice(0, 80);
+  if (!v) return { ok: true, value: null };
+  if (!/^[A-Za-z0-9._:-]+$/.test(v)) {
+    return { ok: false, details: ["entitlement_invalid"] };
+  }
+  return { ok: true, value: v };
+}
+
+/**
  * Optional quest-embedded capability trends + spotlight trend ids.
  * @param {object} tile
  * @param {object} [missionIn]
@@ -739,6 +760,8 @@ export function validateQuestModule(tile, opts = {}) {
 
   const accessParsed = parseAccessField(tile, {}, { isLearningModule: true });
   if (!accessParsed.ok) details.push(...accessParsed.details);
+  const entitlementParsed = parseEntitlementField(tile, {});
+  if (!entitlementParsed.ok) details.push(...entitlementParsed.details);
 
   if (details.length) {
     return { ok: false, error: "validation_failed", details };
@@ -776,6 +799,9 @@ export function validateQuestModule(tile, opts = {}) {
   if (sponsorName) normalized.sponsorName = sponsorName;
   if (sponsorBanner) normalized.sponsorBanner = sponsorBanner;
   if (accessParsed.ok) normalized.access = accessParsed.value;
+  if (entitlementParsed.ok && entitlementParsed.value) {
+    normalized.entitlement = entitlementParsed.value;
+  }
 
   return { ok: true, tile: normalized, mission: null, kind: "module" };
 }
@@ -821,6 +847,7 @@ export function catalogRecordFromValidated(v, extra = {}) {
       sponsorBanner: t.sponsorBanner || "",
       isLearningModule: true,
       access: t.access,
+      entitlement: t.entitlement || "",
       ...extra,
     };
   }
@@ -975,6 +1002,10 @@ export function validateQuestTile(tile, opts = {}) {
   if (!accessParsed.ok) {
     details.push(...accessParsed.details);
   }
+  const entitlementParsed = parseEntitlementField(tile, missionIn);
+  if (!entitlementParsed.ok) {
+    details.push(...entitlementParsed.details);
+  }
 
   const trendsParsed = parseQuestTrendFields(tile, missionIn, {
     techIds: [...techIds],
@@ -1111,6 +1142,9 @@ export function validateQuestTile(tile, opts = {}) {
   if (sponsorName) mission.sponsorName = sponsorName;
   if (sponsorBanner) mission.sponsorBanner = sponsorBanner;
   if (accessParsed.ok) mission.access = accessParsed.value;
+  if (entitlementParsed.ok && entitlementParsed.value) {
+    mission.entitlement = entitlementParsed.value;
+  }
   const trendFields = trendsParsed.ok ? trendsParsed.value : {};
   if (trendFields.trends?.length) mission.trends = trendFields.trends;
   if (trendFields.spotlightTrends?.length) {
@@ -1149,6 +1183,9 @@ export function validateQuestTile(tile, opts = {}) {
   if (sponsorName) normalizedTile.sponsorName = sponsorName;
   if (sponsorBanner) normalizedTile.sponsorBanner = sponsorBanner;
   if (accessParsed.ok) normalizedTile.access = accessParsed.value;
+  if (entitlementParsed.ok && entitlementParsed.value) {
+    normalizedTile.entitlement = entitlementParsed.value;
+  }
   if (trendFields.trends?.length) normalizedTile.trends = trendFields.trends;
   if (trendFields.spotlightTrends?.length) {
     normalizedTile.spotlightTrends = trendFields.spotlightTrends;

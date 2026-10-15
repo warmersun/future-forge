@@ -33,10 +33,25 @@ export function isModuleEntry(e) {
 /**
  * @param {object|null|undefined} e
  */
+/**
+ * A lesson card may have no mission body when the portal has gated it.
+ * @param {object|null|undefined} e
+ */
+export function isCatalogLessonEntry(e) {
+  if (!e || isModuleEntry(e)) return false;
+  if (isLearningMission(e.mission)) return true;
+  if (e.isLearningModule === true) return true;
+  if (e.lesson != null && e.lesson !== "") return true;
+  return false;
+}
+
+/**
+ * @param {object|null|undefined} e
+ */
 export function isLearningEntry(e) {
   if (!e) return false;
   if (isModuleEntry(e)) return true;
-  return isLearningMission(e.mission);
+  return isCatalogLessonEntry(e);
 }
 
 /**
@@ -160,6 +175,67 @@ function entryId(entry) {
   return String(entry?.id || entry?.mission?.id || "");
 }
 
+/**
+ * Lesson index on a full tile or a gated card (the card has no mission).
+ * @param {object|null|undefined} entry
+ * @returns {number}
+ */
+export function catalogLessonIndex(entry) {
+  const raw = entry?.lesson ?? entry?.mission?.lesson ?? entry?.tile?.lesson;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/**
+ * @param {object|null|undefined} entry
+ * @returns {number}
+ */
+export function catalogLessonTotal(entry) {
+  const raw = entry?.totalLessons ?? entry?.mission?.totalLessons ?? entry?.tile?.totalLessons;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/**
+ * Hub row for a portal card that has no mission body.
+ * Returns null unless the record is gated or access is account/paid.
+ * @param {object|null|undefined} e
+ * @param {string} [source]
+ * @param {{ canRemove?: boolean }} [opts]
+ */
+export function lockedCatalogHubEntry(e, source, opts = {}) {
+  if (!e || typeof e !== "object" || isModuleEntry(e) || e.mission) return null;
+  const access = e.access || e.tile?.access;
+  const locked = e.gated === true || access === "account" || access === "paid";
+  if (!locked) return null;
+  const id = String(e.id || "").trim();
+  if (!id) return null;
+  /** @type {Record<string, unknown>} */
+  const entry = {
+    id,
+    kind: "quest",
+    source: source || e.source || "remote",
+    gated: true,
+    title: String(e.title || "Quest"),
+    summary: String(e.summary || ""),
+    place: String(e.place || ""),
+    canRemove: Boolean(opts.canRemove),
+    file: e.file ? String(e.file) : null,
+    remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
+    mission: null,
+  };
+  if (e.globalId) entry.globalId = e.globalId;
+  if (access === "open" || access === "account" || access === "paid") entry.access = access;
+  if (e.entitlement) entry.entitlement = e.entitlement;
+  if (e.isLearningModule === true) entry.isLearningModule = true;
+  if (typeof e.module === "string" && e.module.trim()) entry.module = e.module.trim();
+  if (e.lesson != null && e.lesson !== "") entry.lesson = e.lesson;
+  if (e.totalLessons != null && e.totalLessons !== "") entry.totalLessons = e.totalLessons;
+  const sponsor = String(e.sponsorName || "").trim();
+  if (sponsor) entry.sponsorName = sponsor;
+  return entry;
+}
+
 function catalogIdKey(raw) {
   return slugId(raw);
 }
@@ -229,7 +305,7 @@ export function groupLearningModules(entries) {
   const lessons = [];
   for (const e of list) {
     if (isModuleEntry(e)) wrappers.push(e);
-    else if (isLearningMission(e.mission)) lessons.push(e);
+    else if (isCatalogLessonEntry(e)) lessons.push(e);
   }
 
   const byId = new Map();
@@ -270,8 +346,7 @@ export function groupLearningModules(entries) {
   for (const g of map.values()) {
     if (!g.wrapper) {
       g.entries.sort(
-        (a, b) =>
-          (Number(a.mission?.lesson) || 0) - (Number(b.mission?.lesson) || 0)
+        (a, b) => (catalogLessonIndex(a) || 0) - (catalogLessonIndex(b) || 0)
       );
     }
     if (!g.summary) {
@@ -289,11 +364,11 @@ export function groupLearningModules(entries) {
     }
     if (!g.totalLessons) {
       const first = g.entries[0];
-      const fromMission = Number(first?.mission?.totalLessons);
+      const fromEntry = catalogLessonTotal(first);
       g.totalLessons =
-        (Number.isFinite(fromMission) && fromMission >= 1 ? fromMission : 0) ||
+        (Number.isFinite(fromEntry) && fromEntry >= 1 ? fromEntry : 0) ||
         g.entries.reduce(
-          (max, e) => Math.max(max, Number(e.mission?.lesson) || 0),
+          (max, e) => Math.max(max, catalogLessonIndex(e) || 0),
           0
         ) ||
         g.entries.length;
@@ -383,10 +458,10 @@ export function sameModuleLessonOffer(mission, groups, opts = {}) {
   const total = Number(group.totalLessons) || n;
   if (!group.wrapper && n < 2 && total < 2) return null;
 
-  const currentLesson = Number(mission.lesson);
+  const currentLesson = catalogLessonIndex(mission);
   const laterEntries = (group.entries || []).filter((e) => {
     if (String(e.id || e.mission?.id || "") === missionId) return false;
-    const ln = Number(e.mission?.lesson);
+    const ln = catalogLessonIndex(e);
     return (
       Number.isFinite(ln) &&
       Number.isFinite(currentLesson) &&

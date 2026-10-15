@@ -247,6 +247,9 @@ import {
   groupLearningModules,
   catalogTopLevel,
   catalogHubCounts,
+  catalogLessonIndex,
+  catalogLessonTotal,
+  lockedCatalogHubEntry,
   sameModuleLessonOffer,
 } from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
@@ -5465,7 +5468,7 @@ function catalogEntryFromApi(e, source, opts = {}) {
       remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
     };
   }
-  if (!e?.mission) return null;
+  if (!e?.mission) return lockedCatalogHubEntry(e, source, opts);
   const id = String(e.id || e.mission.id || "");
   if (!id) return null;
   const globalId = e.globalId || e.mission.globalId;
@@ -5605,6 +5608,12 @@ async function fetchFullQuestTile(id) {
       promptCloudSignIn("Sign in to open this lesson.");
       return null;
     }
+    if (res.status === 402) {
+      if (data.subscribeUrl) hostedPlanState.subscribeUrl = String(data.subscribeUrl);
+      flashToast("This quest needs a subscription.");
+      redirectHostedSubscribe();
+      return null;
+    }
     if (!res.ok || !data?.ok) return null;
     return data.tile || null;
   } catch {
@@ -5629,11 +5638,7 @@ async function playCatalogEntry(entry, opts = {}) {
     openQuestCatalog(kind, { moduleKey: title || entry.id });
     return "opened_module";
   }
-  if (!entry?.mission) {
-    flashToast("Quest missing mission data.");
-    return "missing";
-  }
-  if (catalogNeedsAccount(entry) && !isClerkSignedIn()) {
+  if ((entry?.gated || catalogNeedsAccount(entry)) && !isClerkSignedIn()) {
     promptCloudSignIn(
       opts.sameTabSignIn ? "Opening Sign in…" : "Sign in to play this lesson.",
       { sameTab: Boolean(opts.sameTabSignIn) }
@@ -5641,17 +5646,32 @@ async function playCatalogEntry(entry, opts = {}) {
     return "needs_sign_in";
   }
   let src = entry;
-  const learning = Boolean(entry.isLearningModule || entry.mission?.isLearningModule);
+  const learning = Boolean(entry?.isLearningModule || entry?.mission?.isLearningModule);
   // Library JSON is the lesson — do not hydrate from the gated Cloud catalog.
-  if (
-    learning &&
-    isClerkReady() &&
+  const needsBody =
     !isLibraryCatalogEntry(entry) &&
-    !entry.aiTutorContext &&
-    !entry.mission?.aiTutorContext
-  ) {
+    (entry?.gated === true ||
+      !entry?.mission ||
+      (learning &&
+        isClerkReady() &&
+        !entry.aiTutorContext &&
+        !entry.mission?.aiTutorContext));
+  if (needsBody && entry?.id) {
     const full = await fetchFullQuestTile(entry.id);
-    if (full?.mission) src = { ...entry, ...full, mission: { ...entry.mission, ...full.mission } };
+    if (full?.mission) {
+      src = {
+        ...entry,
+        ...full,
+        gated: false,
+        mission: { ...(entry.mission || {}), ...full.mission },
+      };
+    } else if (entry?.gated || catalogNeedsAccount(entry)) {
+      return "denied";
+    }
+  }
+  if (!src?.mission) {
+    flashToast("Quest missing mission data.");
+    return "missing";
   }
   const m = normalizeMission(
     { ...src.mission, source: src.source || src.mission.source || "hosted" },
@@ -6484,8 +6504,8 @@ function learningModuleProgressHtml(group, opts = {}) {
   const first = group?.entries?.[0];
   const total =
     Number(group?.totalLessons) ||
-    Number(first?.mission?.totalLessons) ||
-    group?.entries?.reduce((max, e) => Math.max(max, Number(e.mission?.lesson) || 0), 0) ||
+    catalogLessonTotal(first) ||
+    group?.entries?.reduce((max, e) => Math.max(max, catalogLessonIndex(e) || 0), 0) ||
     group?.entries?.length ||
     0;
   return learningProgressBarHtml({
@@ -8042,7 +8062,7 @@ function renderWorkshop() {
           if (!Number.isFinite(totalLessons) || totalLessons < 1) {
             totalLessons =
               group.entries.reduce(
-                (max, e) => Math.max(max, Number(e.mission?.lesson) || 0),
+                (max, e) => Math.max(max, catalogLessonIndex(e) || 0),
                 0
               ) || group.entries.length;
           }
