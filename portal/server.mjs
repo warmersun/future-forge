@@ -97,6 +97,7 @@ import {
   questsObjectPrefixFromEnv,
 } from "../js/server/quest-object-storage.mjs";
 import { omitOfficialLocalDuplicates } from "../js/server/quest-portal-client.mjs";
+import { isPortalApiPath } from "../js/server/portal-api-paths.mjs";
 import {
   dbEnabled,
   publicDbConfig,
@@ -2335,19 +2336,6 @@ function servePortalSignin(res) {
  * Cloud API surface only. The playable SPA, co-inventor, and Friends WS are game.
  * @param {string} pathOnly
  */
-function isPortalApiPath(pathOnly) {
-  const p = String(pathOnly || "");
-  if (p === "/api/health" || p.startsWith("/api/health/")) return true;
-  if (p === "/api/me" || p.startsWith("/api/me/")) return true;
-  if (p.startsWith("/api/u/")) return true;
-  if (p === "/api/webhooks/clerk" || p.startsWith("/api/webhooks/clerk/")) return true;
-  if (p === "/api/report" || p.startsWith("/api/report/")) return true;
-  if (p === "/api/board" || p.startsWith("/api/board/")) return true;
-  if (p === "/api/device" || p.startsWith("/api/device/")) return true;
-  if (p === "/api/internal/ai/reserve") return true;
-  return false;
-}
-
 function quotaSecretOk(req) {
   const secret = String(process.env.FF_API_SECRET || "").trim();
   if (!secret) return false;
