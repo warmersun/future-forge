@@ -2620,6 +2620,40 @@ button.btn[hidden] {
 }
 
 /* Quest hub — Themes / Sponsored / Learning / Library */
+.quest-id-panel {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+.quest-id-panel h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+.quest-id-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.quest-id-form .field {
+  flex: 1 1 240px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.quest-id-form input {
+  width: 100%;
+}
+.quest-id-form > .btn {
+  margin: 0;
+}
+.quest-id-panel .quest-catalog-grid {
+  margin-top: 1rem;
+}
+.quest-id-panel [hidden] {
+  display: none;
+}
 .quest-hub-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -2702,7 +2736,7 @@ button.btn[hidden] {
 }
 .quest-catalog-grid .catalog-dev,
 .quest-catalog-grid .catalog-board,
-.quest-catalog-grid .catalog-copy,
+.quest-catalog-grid .catalog-copy-id,
 .quest-catalog-grid .catalog-remove {
   align-self: auto;
 }

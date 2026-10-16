@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=portal-86" />
+    <link rel="stylesheet" href="css/styles.css?v=quest-id-88" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -266,6 +266,19 @@
             side-loaded Quests.
           </p>
         </div>
+        <section class="quest-id-panel" aria-labelledby="quest-id-heading">
+          <h2 id="quest-id-heading">Have a Quest ID?</h2>
+          <form id="quest-id-form" class="quest-id-form" novalidate>
+            <div class="field">
+              <label for="quest-id-input">Quest ID</label>
+              <input id="quest-id-input" type="text" placeholder="Paste a Quest ID" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="quest-id-help quest-id-status" />
+            </div>
+            <button type="submit" class="btn btn-secondary" id="btn-load-quest-id">Load Quest</button>
+          </form>
+          <p id="quest-id-help" class="muted sm">Paste the ID copied from a Quest card to load it through the portal. Local Library and imported Quests are only available where they were added, unless published.</p>
+          <p id="quest-id-status" class="mission-status" role="status" aria-live="polite" hidden></p>
+          <div id="quest-id-preview" class="quest-catalog-grid" hidden></div>
+        </section>
         <div id="quest-hub-grid" class="quest-hub-grid"></div>
       </div>
     </section>
@@ -2466,6 +2479,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=portal-85"></script>
+    <script type="module" src="js/main.js?v=quest-id-88"></script>
   </body>
 </html>

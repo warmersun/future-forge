@@ -95,9 +95,8 @@ import {
   parseDeepLink,
   findCatalogEntry,
   hrefWithoutDeepLink,
-  resolveShareOrigin,
-  buildQuestShareUrl,
 } from "./deep-link.js";
+import { lookupQuestById } from "./quest-lookup.js";
 import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js?v=portal-85";
 import {
   IdeaDeck,
@@ -498,8 +497,6 @@ const state = {
   remoteQuestsUrl: null,
   remoteQuestsOk: true,
   hostedQuestsLoaded: false,
-  /** Public share origin from GET /api/health (`FF_SHARE_ORIGIN`), else inferred */
-  shareOrigin: "",
   /** @type {object[]} Capability trends from GET /api/trends */
   hostedTrends: [],
   hostedTrendsLoaded: false,
@@ -5699,25 +5696,89 @@ function clearDeepLinkFromUrl() {
   }
 }
 
-function currentShareOrigin() {
-  return resolveShareOrigin({
-    healthShareOrigin: state.shareOrigin,
-    hostname: typeof location !== "undefined" ? location.hostname : "",
-    locationOrigin: typeof location !== "undefined" ? location.origin : "",
+/** Copy the stored ID verbatim, not a title-derived slug or a share URL. */
+function wireQuestIdCopyButtons(root) {
+  root.querySelectorAll("[data-copy-quest-id]").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copyQuestId);
+        flashToast("Quest ID copied");
+      } catch {
+        flashToast("Could not copy Quest ID.");
+      }
+    });
   });
 }
 
-async function copyQuestShareLink(questId) {
-  const url = buildQuestShareUrl(questId, currentShareOrigin());
-  if (!url) {
-    flashToast("Could not build a link for this Quest.");
-    return;
-  }
+/** Fetch by exact ID and show a card for the player to launch explicitly. */
+async function loadQuestIdPreview() {
+  const input = $("#quest-id-input");
+  const btn = $("#btn-load-quest-id");
+  const status = $("#quest-id-status");
+  const preview = $("#quest-id-preview");
+  if (!input || !btn || !status || !preview || btn.disabled) return;
+  const raw = input.value;
+  btn.disabled = true;
+  input.readOnly = true;
+  btn.textContent = "Loading…";
+  preview.hidden = true;
+  preview.innerHTML = "";
+  status.hidden = false;
+  status.textContent = "Loading Quest…";
+  input.removeAttribute("aria-invalid");
   try {
-    await navigator.clipboard.writeText(url);
-    flashToast("Link copied");
-  } catch {
-    flashToast("Could not copy link.");
+    await Promise.race([
+      whenAuthReady(),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+    const result = await lookupQuestById(raw, { fetchImpl: apiFetch });
+    const messages = {
+      invalid: "Enter a valid Quest ID, not a title or link.",
+      not_found: "Quest not found. Check the ID. Local or imported Quests must be published before others can load them.",
+      unavailable: "Could not reach the quest service or load this Quest. Try again.",
+      sign_in_required: "Quest found. Sign in to play this Quest.",
+      subscription_required: "Quest found. A subscription is required to play this Quest.",
+      loaded: "Quest loaded. Choose Play when you are ready.",
+    };
+    status.textContent = messages[result.status];
+    if (result.status === "invalid") input.setAttribute("aria-invalid", "true");
+    if (!result.tile) return;
+    if (result.subscribeUrl) hostedPlanState.subscribeUrl = result.subscribeUrl;
+    const source = result.tile.source || result.tile.mission?.source || "remote";
+    const entry = catalogEntryFromApi(result.tile, source);
+    if (!entry) {
+      status.textContent = messages.unavailable;
+      return;
+    }
+    // Module sponsorship can come from a lesson, not just the wrapper.
+    if (isModuleEntry(entry) && !state.hostedQuestsLoaded) {
+      await refreshHostedQuests({ silent: true });
+    }
+    // Keep the fetched entry available to module navigation and progress lookup.
+    const bucket = source === "hosted" ? "localHostedQuests" : "remoteQuests";
+    state[bucket] = [...state[bucket].filter((e) => e.id !== entry.id), result.tile];
+    const parts = partitionCatalogQuests();
+    const kind = source === "hosted"
+      ? "library"
+      : parts.sponsored.some((e) => e.id === entry.id) ? "sponsored" : "learning";
+    preview.hidden = false;
+    if (isModuleEntry(entry)) {
+      const groups = groupLearningModules(parts[kind]).filter((g) => g.wrapper?.id === entry.id);
+      preview.innerHTML = `<div class="challenge-grid">${groups.map(moduleCardHtml).join("")}</div>`;
+      wireModuleCards(preview, kind, groups);
+      if (result.status === "loaded") status.textContent = "Module loaded. Open it to choose a lesson.";
+    } else {
+      paintCatalogEntries(preview, [entry], kind);
+    }
+    if (source === "hosted") {
+      status.textContent += " This Quest is from this server's local Library.";
+    }
+  } finally {
+    btn.disabled = false;
+    input.readOnly = false;
+    btn.textContent = "Load Quest";
   }
 }
 
@@ -6457,10 +6518,10 @@ function catalogCardHtml(entry, kind, opts = {}) {
         </button>`
             : ""
         }
-        <button type="button" class="btn btn-ghost btn-sm catalog-copy" data-catalog-copy-id="${escapeHtml(
+        <button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(
           entry.id || m?.id || ""
-        )}" title="Copy a public link to this Quest">
-          Copy link
+        )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">
+          Copy Quest ID
         </button>
         ${
           questHasLeaderboard(entry.id || m?.id)
@@ -6572,8 +6633,12 @@ function moduleCardHtml(group) {
         </span>
       </button>
       ${
-        inspectBtn
-          ? `<div class="catalog-card-actions">${inspectBtn}</div>`
+        inspectBtn || group.wrapper?.id
+          ? `<div class="catalog-card-actions">${inspectBtn}${
+              group.wrapper?.id
+                ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button>`
+                : ""
+            }</div>`
           : ""
       }
     </div>`;
@@ -6618,6 +6683,7 @@ function moduleSummaryHtml(group) {
 }
 
 function wireModuleCards(grid, kind, groups) {
+  wireQuestIdCopyButtons(grid);
   grid.querySelectorAll(".quest-module-card").forEach((btn) => {
     btn.addEventListener("click", () => {
       openQuestCatalog(kind, { moduleKey: btn.dataset.moduleKey });
@@ -6751,17 +6817,12 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
       .join("")}</div>`;
   }
 
+  wireQuestIdCopyButtons(grid);
   grid.querySelectorAll(".catalog-card-wrap").forEach((wrap) => {
     const id = wrap.dataset.catalogId;
     const entry = flat.find((e) => e.id === id);
     wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
       playCatalogEntry(entry);
-    });
-    wrap.querySelector(".catalog-copy")?.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const qid = ev.currentTarget?.dataset?.catalogCopyId || entry?.id;
-      if (qid) void copyQuestShareLink(qid);
     });
     wrap.querySelector(".catalog-dev")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -22089,6 +22150,10 @@ function bind() {
       }
     });
   }
+  $("#quest-id-form")?.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    void loadQuestIdPreview();
+  });
   $("#btn-quest-hub-back")?.addEventListener("click", () => {
     if (missionPickSession) {
       const session = missionPickSession;
@@ -22817,8 +22882,6 @@ async function refreshDeveloperModeFromHealth() {
     if (!res.ok) return;
     const data = await res.json();
     const next = Boolean(data?.developer);
-    const share = String(data?.shareOrigin || "").trim();
-    if (share) state.shareOrigin = share;
     if (next === state.developer) return;
     state.developer = next;
     syncDeveloperAiTraceTab();

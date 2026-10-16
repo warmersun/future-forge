@@ -128,7 +128,6 @@ Quests, predictions, and trends
 - FF_QUESTS_REMOTE_URL — leave unset to use the official Warmer Sun Sponsored and Learning catalog. Set off when the room should see only the Library folder.
 - FF_PREDICTIONS_FILE — leave unset to use predictions/default.json. A path or an https URL replaces that bank. It does not merge. The repo already has predictions/examples/musk-abundance.json.
 - FF_TRENDS_REMOTE_URL — leave unset to use the official trends catalog. Set off to skip it.
-- FF_SHARE_ORIGIN — leave unset. Copy link then uses the public warmersun.com/forge page.
 
 Side-loading quests — ask once, after the run-mode question: "Do you have a quest file to add, a .json tile or a .ffquest package?" If they say no, skip the copy and still explain the three ways in the closing summary. If they name files, add them before the health check, then restart with the script so the Library scan picks them up.
 

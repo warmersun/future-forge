@@ -77,9 +77,11 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 3. Learners see **External Quests** on the home screen and **first** when choosing a theme/Quest (including Friends). Cards use a gold “External” badge.
 4. Override path: `FF_QUESTS_DIR=/path/to/folder npm start`. API: `GET /api/quests`.
 
+**Open a Quest by ID:** before launching, choose **Copy Quest ID** on a Quest card. On **Start a Quest**, paste it into **Quest ID** and choose **Load Quest**. This fetches the exact ID through `GET /api/quests/:id` (the game forwards to the portal when configured) and shows a card; gameplay starts only when you choose Play. Sign-in and subscription requirements still apply. IDs are the existing stable slugs, not titles or UUIDs. Local Library tiles are only available on their server, and browser imports must be published before others can retrieve them by ID.
+
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Lands in **Library**. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
-**Share a lesson (X / open table):** catalog card → **Copy link**. That copies `https://warmersun.com/forge/?q=<quest-id>`. The hop forwards `?q=` onto the Funnel game host, and Future Forge starts that Quest. Learning lessons still need Sign in when Cloud is on. Do not post the `*.ts.net` URL.
+**Share a Quest:** use **Copy Quest ID** and ask the recipient to load it on **Start a Quest**. Previously shared `?q=` / `?quest=` links remain supported.
 
 Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
 
