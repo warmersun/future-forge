@@ -1,0 +1,32 @@
+{
+  "source": "National Fire Research Institute (National Fire Agency, Korea) with Prof. Yoo Ji-hwan's soft-robotics team at KAIST: 'Vine Robot' deployed in August 2026 at a fire in the finished-goods warehouse of a primary-battery factory in South Chungcheong (~210,000 military primary battery packs heat-exposed). NFA press release via korea.kr 12 Oct 2026; Yonhap 11 Oct 2026; SBS English 12 Oct 2026; The Tech 12 Oct 2026 (recon data for safety manuals and fire-cause analysis). Not stored or shown.",
+  "id": "0fbe55d0-30b3-44e4-b123-7be5c65ac456",
+  "techId": "robots",
+  "title": "A soft robot that grows like a vine checks a battery warehouse after a fire",
+  "description": "A soft, very light robot that stretches forward like a growing vine when compressed air is pumped into it, instead of rolling on wheels or walking on legs. Because it barely presses on the floor and fits through narrow gaps, firefighters steered it from outside into a warehouse where heat-damaged batteries could explode if anything pushed on them, and checked conditions inside.",
+  "capability": "Firefighters can now send a soft robot that grows like a vine into places too fragile or dangerous for people or heavy robots, like a warehouse of heat-damaged batteries that could explode if anything pressed on them, and check conditions inside while they stay behind a protective wall outside. It was done at a real fire in August 2026.",
+  "useCases": [
+    "Checking inside warehouses full of heat-damaged batteries after a fire, when the batteries could still overheat and explode and nobody can safely walk in.",
+    "Writing step-by-step safety-check guides for fires at big sites that store single-use batteries, such as military bases and industrial parks, based on what the robot found.",
+    "Helping investigators work out how a fire started, using what the robot gathered inside."
+  ],
+  "body": "In August 2026, a fire in the storage building of a factory that makes single-use batteries was put out early, and fire walls and automatic extinguishers kept it from spreading. But about 210,000 military battery packs inside were left unburned and badly heated. Heated batteries like these can start overheating by themselves and set each other off in a chain of explosions, so firefighters kept everyone out for two weeks and watched from outside. Tracked machines and four-legged walking robots were ruled out, because their weight could press on batteries lying on the floor and set one off.\n\nInstead, fire researchers worked with a university soft-robot team. Pumping compressed air into the robot makes it grow forward like a vine, so it puts very little weight on the floor and slips through narrow spaces without disturbing the batteries. Crews steered it from outside the building, behind a protective wall and in protective gear, and completed the checks inside. What it gathered will feed safety-check guides for large battery sites and the study of how this fire started. This was one use at one fire, made public in October 2026.",
+  "links": [
+    {
+      "label": "The fire agency's announcement (in Korean)",
+      "url": "https://www.korea.kr/briefing/pressReleaseView.do?newsId=156784818"
+    },
+    {
+      "label": "News report on the mission (in Korean)",
+      "url": "https://www.yna.co.kr/view/AKR20261011023700530"
+    },
+    {
+      "label": "News report on the mission (English translation)",
+      "url": "https://news.sbs.co.kr/english/article.do?news_id=N1008792295"
+    },
+    {
+      "label": "Report on how the findings will be used (in Korean)",
+      "url": "https://www.the-tech.co.kr/news/article.html?no=42000"
+    }
+  ]
+}
