@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Verify **portal** Cloud APIs (no game UI).
+ * Verify the portal account SPA and Cloud APIs (no game UI).
  *
  *   npm run portal
  *   FF_ORIGIN=http://127.0.0.1:8765 npm run check:clerk-signin
@@ -112,31 +112,24 @@ async function main() {
   }
 
   const rootHit = await get("/").catch(() => null);
-  if (rootHit?.status === 200) {
-    try {
-      const body = JSON.parse(rootHit.text);
-      if (body.service === "portal") ok("GET / is portal JSON (no game UI)");
-      else fail(`GET / JSON service=${body.service}`);
-    } catch {
-      fail("GET / is not JSON — portal must not serve the game SPA");
-    }
-  } else fail(`GET / HTTP ${rootHit?.status}`);
+  const signin = await get("/signin?device=test-code");
+  const subscribe = await get("/subscribe");
+  if ([rootHit, signin, subscribe].every((r) => r?.status === 200 &&
+      /<main id="app"/.test(r.text) && /src="\/app\.js"/.test(r.text)) &&
+      rootHit.text === signin.text && signin.text === subscribe.text) {
+    ok("GET /, /signin and /subscribe serve one portal SPA shell");
+  } else fail("portal routes must serve the same SPA shell (not the game)");
 
-  const signin = await get("/signin");
-  if (
-    signin.status === 200 &&
-    /Warmer Sun Cloud/i.test(signin.text) &&
-    /id="status"/.test(signin.text) &&
-    /redirect_url/.test(signin.text) &&
-    !/mountSignIn/.test(signin.text) &&
-    !/id="clerk-mount"/.test(signin.text)
-  ) {
-    ok("GET /signin HTML handshake callback (Account Portal redirect, no mounted Sign in)");
-  } else fail(`GET /signin HTTP ${signin.status} — portal must serve the handshake callback`);
+  const spaScript = await get("/app.js");
+  if (spaScript.status === 200 && /completeDevice/.test(spaScript.text) &&
+      /redirect_url/.test(spaScript.text) && /mountPricingTable/.test(spaScript.text) &&
+      !/mountSignIn/.test(spaScript.text)) {
+    ok("portal SPA keeps device callback and Billing; Account Portal owns Sign in");
+  } else fail("GET /app.js missing expected portal flows");
 
   const spa = await get("/index.html");
-  if (spa.status === 404) ok("GET /index.html 404 (API-only)");
-  else fail(`GET /index.html HTTP ${spa.status} — portal must not serve the SPA`);
+  if (spa.status === 404) ok("GET /index.html 404 (only canonical SPA routes)");
+  else fail(`GET /index.html HTTP ${spa.status} — use canonical SPA routes`);
 
   const js = await get("/js/game.js");
   if (js.status === 404) ok("GET /js/game.js 404");
@@ -184,7 +177,7 @@ async function main() {
     console.log("Fix each FAIL.");
     process.exit(1);
   }
-  console.log("RESULT  PASS  portal is Cloud APIs + /signin callback. Sign-in form is the Account Portal.");
+  console.log("RESULT  PASS  portal SPA and Cloud APIs. Sign-in form is the Account Portal.");
   console.log(`API ${ORIGIN}/api/health`);
   process.exit(0);
 }

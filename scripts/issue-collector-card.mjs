@@ -69,7 +69,8 @@ function loadEnvFile() {
   }
 }
 
-loadEnvFile();
+// Tests use scratch card repos; never load real portal credentials into those runs.
+if (process.env.FF_SKIP_PORTAL_ENV_FILE !== "1") loadEnvFile();
 
 const argv = process.argv.slice(2);
 const dryRun =

@@ -2315,21 +2315,27 @@ function serveBrandAsset(req, res, pathOnly) {
   });
 }
 
-function servePortalSignin(res) {
-  const file = path.join(__dirname, "signin.html");
-  let html;
+// Exact allowlist: never resolve a request path against the portal directory.
+function servePortalFile(req, res, name) {
+  const mime = {
+    "index.html": "text/html; charset=utf-8",
+    "app.js": "text/javascript; charset=utf-8",
+    "app.css": "text/css; charset=utf-8",
+  }[name];
+  if (!mime) return sendJson(res, 404, { ok: false, error: "not_found", service: "portal" });
+  let buf;
   try {
-    html = fs.readFileSync(file, "utf8");
+    buf = fs.readFileSync(path.join(__dirname, name));
   } catch {
-    return sendJson(res, 500, { ok: false, error: "signin_missing" });
+    return sendJson(res, 500, { ok: false, error: "portal_asset_missing" });
   }
-  const buf = Buffer.from(html);
   res.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8",
+    "Content-Type": mime,
     "Content-Length": buf.length,
     "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
   });
-  res.end(buf);
+  res.end(req.method === "HEAD" ? undefined : buf);
 }
 
 /**
@@ -2342,23 +2348,6 @@ function quotaSecretOk(req) {
   const presented = String(req.headers["x-ff-secret"] || "").trim();
   if (!presented) return false;
   return timingSafeEqualStr(presented, secret);
-}
-
-function servePortalSubscribe(res) {
-  const file = path.join(__dirname, "subscribe.html");
-  let html;
-  try {
-    html = fs.readFileSync(file, "utf8");
-  } catch {
-    return sendJson(res, 500, { ok: false, error: "subscribe_missing" });
-  }
-  const buf = Buffer.from(html);
-  res.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": buf.length,
-    "Cache-Control": "no-store",
-  });
-  res.end(buf);
 }
 
 function parseBoardPath(pathOnly) {
@@ -2432,7 +2421,7 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  if (req.method === "GET" && (pathOnly === "/" || pathOnly === "/api")) {
+  if (req.method === "GET" && pathOnly === "/api") {
     return sendJson(res, 200, {
       ok: true,
       service: "portal",
@@ -2442,11 +2431,13 @@ const server = http.createServer(async (req, res) => {
       subscribe: "/subscribe",
     });
   }
-  if (req.method === "GET" && pathOnly === "/signin") {
-    return servePortalSignin(res);
-  }
-  if (req.method === "GET" && pathOnly === "/subscribe") {
-    return servePortalSubscribe(res);
+  // Do not use an SPA catch-all: API, game, and private paths must not serve HTML.
+  if (req.method === "GET" || req.method === "HEAD") {
+    if (pathOnly === "/" || pathOnly === "/signin" || pathOnly === "/subscribe") {
+      return servePortalFile(req, res, "index.html");
+    }
+    if (pathOnly === "/app.js") return servePortalFile(req, res, "app.js");
+    if (pathOnly === "/app.css") return servePortalFile(req, res, "app.css");
   }
   if ((req.method === "GET" || req.method === "HEAD") && pathOnly.startsWith("/card/")) {
     return serveCollectorCard(req, res, pathOnly);

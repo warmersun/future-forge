@@ -39,6 +39,13 @@ function portalOrigin(env) {
     .replace(/\/$/, "");
 }
 
+/** Browser destination is configured separately from the API origin. */
+function subscribeUrl(env) {
+  const ui = String(env.FF_PORTAL_UI_URL || "").trim().replace(/\/+$/, "");
+  const base = ui || portalOrigin(env);
+  return base ? `${base}/subscribe` : null;
+}
+
 /**
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} env
  * @param {number} status
@@ -46,13 +53,12 @@ function portalOrigin(env) {
  * @param {string} [message]
  */
 function denied(env, status, error, message) {
-  const origin = portalOrigin(env);
   return {
     ok: false,
     status,
     error,
     message: message || (status === 402 ? SUBSCRIPTION_REQUIRED_MESSAGE : QUOTA_SPENT_MESSAGE),
-    subscribeUrl: origin ? `${origin}/subscribe` : null,
+    subscribeUrl: subscribeUrl(env),
   };
 }
 
@@ -117,7 +123,7 @@ async function postPortal(opts) {
     holdMicro: Number(data.holdMicro) || 0,
     maxOutputTokens: Number(data.maxOutputTokens) || 0,
     minuteMicro: Number(data.minuteMicro) || 0,
-    subscribeUrl: data.subscribeUrl || (origin ? `${origin}/subscribe` : null),
+    subscribeUrl: data.subscribeUrl || subscribeUrl(env),
   };
 }
 

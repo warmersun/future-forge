@@ -78,6 +78,82 @@ describe("cloud quota client", () => {
     assert.equal(d.subscribeUrl, "https://portal.example/subscribe");
   });
 
+  it("uses the configured browser UI for unsigned and unavailable quota links, not the API origin", async () => {
+    const env = {
+      FF_CLOUD_AI: "1",
+      FF_PORTAL_URL: "https://function.example/",
+      FF_PORTAL_UI_URL: "https://warmersun.com/portal/",
+      FF_API_SECRET: "s",
+    };
+    const unsigned = await reserveCloudQuota({ kind: "text", env, fetchImpl: async () => {
+      throw new Error("should not fetch");
+    } });
+    assert.equal(unsigned.subscribeUrl, "https://warmersun.com/portal/subscribe");
+
+    const down = await reserveCloudQuota({
+      kind: "text", authorization: "Bearer jwt", env,
+      fetchImpl: async (url) => {
+        assert.equal(url, "https://function.example/api/me/ai/reserve");
+        throw new Error("offline");
+      },
+    });
+    assert.equal(down.status, 503);
+    assert.equal(down.subscribeUrl, "https://warmersun.com/portal/subscribe");
+  });
+
+  it("uses the browser UI on API denial and successful reservation without subscribeUrl", async () => {
+    const env = {
+      FF_CLOUD_AI: "1", FF_PORTAL_URL: "https://function.example",
+      FF_PORTAL_UI_URL: "https://warmersun.com/portal/", FF_API_SECRET: "s",
+    };
+    for (const [status, payload, expectedOk] of [
+      [402, { ok: false, error: "subscription_required" }, false],
+      [200, { ok: true, reservationId: "r1" }, true],
+    ]) {
+      const result = await reserveCloudQuota({
+        kind: "text", authorization: "Bearer jwt", env,
+        fetchImpl: async (url) => {
+          assert.equal(url, "https://function.example/api/me/ai/reserve");
+          return { ok: status === 200, status, json: async () => payload };
+        },
+      });
+      assert.equal(result.ok, expectedOk);
+      assert.equal(result.subscribeUrl, "https://warmersun.com/portal/subscribe");
+    }
+  });
+
+  it("retains the legacy API-origin fallback when no UI URL is configured", async () => {
+    const result = await reserveCloudQuota({
+      kind: "text", env: { FF_CLOUD_AI: "1", FF_PORTAL_URL: "https://portal.example" },
+    });
+    assert.equal(result.subscribeUrl, "https://portal.example/subscribe");
+  });
+
+  it("keeps the configured UI link when the API origin is missing", async () => {
+    const result = await reserveCloudQuota({
+      kind: "text", authorization: "Bearer jwt",
+      env: { FF_CLOUD_AI: "1", FF_PORTAL_UI_URL: "https://warmersun.com/portal/" },
+      fetchImpl: async () => { throw new Error("should not fetch"); },
+    });
+    assert.equal(result.status, 503);
+    assert.equal(result.subscribeUrl, "https://warmersun.com/portal/subscribe");
+  });
+
+  it("preserves a subscription link returned by the trusted API", async () => {
+    const result = await reserveCloudQuota({
+      kind: "text", authorization: "Bearer jwt",
+      env: {
+        FF_CLOUD_AI: "1", FF_PORTAL_URL: "https://function.example",
+        FF_PORTAL_UI_URL: "https://warmersun.com/portal/", FF_API_SECRET: "s",
+      },
+      fetchImpl: async () => ({
+        ok: true, status: 200,
+        json: async () => ({ ok: true, subscribeUrl: "https://warmersun.com/portal/subscribe?plan=cloud" }),
+      }),
+    });
+    assert.equal(result.subscribeUrl, "https://warmersun.com/portal/subscribe?plan=cloud");
+  });
+
   it("leaves the hold when settle fails after the provider call", async () => {
     const settles = [];
     const out = await withCloudQuota({

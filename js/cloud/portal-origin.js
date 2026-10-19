@@ -1,6 +1,6 @@
-/** Hosted portal (Render custom domain). The device handshake callback lives here. The sign-in form is Clerk's Account Portal. */
+/** Hosted portal (Neon Function). The device handshake callback lives here. The sign-in form is Clerk's own sign-in component. */
 
-export const CLOUD_PORTAL_HOST = "cloud.warmersun.com";
+export const CLOUD_PORTAL_HOST = "br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech";
 export const CLOUD_PORTAL_ORIGIN = `https://${CLOUD_PORTAL_HOST}`;
 
 /** CORS allowlist for device handshake (game SPA only). Loopback is always on. */

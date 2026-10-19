@@ -65,10 +65,11 @@ function scratchRepo() {
 }
 
 function run(script, args, cwd, extraEnv = {}) {
-  const env = { ...process.env, FF_CARDS_ROOT: cwd, ...extraEnv };
+  const env = { ...process.env, FF_CARDS_ROOT: cwd, FF_SKIP_PORTAL_ENV_FILE: "1", ...extraEnv };
   delete env.DATABASE_URL;
   delete env.DATABASE_URL_UNPOOLED;
   delete env.GITHUB_STEP_SUMMARY;
+  if (!("DRY_RUN" in extraEnv)) delete env.DRY_RUN;
   return spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8", env });
 }
 
@@ -293,6 +294,7 @@ test("publish helper: keeps going after a failure and writes the links file", ()
   assert.equal(r.status, 1);
   const md = fs.readFileSync(links, "utf8");
   assert.match(md, /dry run/);
-  assert.match(md, new RegExp(`2026-10-08-good\\.json\`: https://cloud\\.warmersun\\.com/card/${ID_A}`));
+  const cardHost = "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech";
+  assert.ok(md.includes("2026-10-08-good.json`: " + cardHost + "/card/" + ID_A));
   assert.match(md, /2026-10-08-noid\.json`: \*\*not issued\*\*/);
 });

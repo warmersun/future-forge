@@ -35,7 +35,7 @@ import {
  * @param {string} [origin]
  */
 export function subscribeUrlFromEnv(env = process.env) {
-  const origin = String(env.FF_PUBLIC_ORIGIN || "https://cloud.warmersun.com")
+  const origin = String(env.FF_PORTAL_UI_URL || env.FF_PUBLIC_ORIGIN || "https://cloud.warmersun.com")
     .trim()
     .replace(/\/$/, "");
   return `${origin}/subscribe`;

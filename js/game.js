@@ -7674,7 +7674,7 @@ function clearMissionPickSession() {
   missionPickSession = null;
 }
 
-const HOSTED_SUBSCRIBE_URL = "https://cloud.warmersun.com/subscribe";
+const HOSTED_SUBSCRIBE_URL = "https://warmersun.com/portal/subscribe";
 const HOSTED_TITLE_LAUNCH_IDS = new Set([
   "btn-start",
   "btn-choose-theme",

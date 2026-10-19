@@ -14,9 +14,9 @@ import {
 const EMPTY = {};
 
 describe("portalPublicOrigin", () => {
-  it("defaults to cloud.warmersun.com", () => {
+  it("defaults to the hosted Neon Function portal", () => {
     assert.equal(portalPublicOrigin({}), CLOUD_PORTAL_ORIGIN);
-    assert.equal(CLOUD_PORTAL_ORIGIN, "https://cloud.warmersun.com");
+    assert.equal(CLOUD_PORTAL_ORIGIN, "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech");
   });
 
   it("honors FF_PUBLIC_ORIGIN without a trailing slash", () => {

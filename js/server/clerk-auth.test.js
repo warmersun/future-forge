@@ -93,14 +93,14 @@ describe("clerkWebhookSecretFromEnv", () => {
 });
 
 describe("authorizedPartiesFromEnv", () => {
-  it("defaults include local and warmersun.com", () => {
+  it("defaults include local, warmersun.com and the hosted portal", () => {
     const parties = authorizedPartiesFromEnv({});
     assert.ok(parties.includes("http://127.0.0.1:8765"));
     assert.ok(parties.includes("http://127.0.0.1:8766"));
     assert.ok(parties.includes("http://localhost:8766"));
     assert.ok(parties.includes("https://warmersun.com"));
     assert.ok(parties.includes("https://ff.warmersun.com"));
-    assert.ok(parties.includes("https://cloud.warmersun.com"));
+    assert.ok(parties.includes("https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech"));
     assert.equal(parties.includes("https://local.warmersun.com"), false);
   });
 

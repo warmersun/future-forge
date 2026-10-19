@@ -3110,7 +3110,7 @@ async function afterListen() {
   console.log(`Future Forge → http://127.0.0.1:${PORT} (bound ${HOST})`);
   if (process.env.FF_PORTAL_URL) {
     console.log(
-      "Sign in: https://accounts.warmersun.com/sign-in (hosted game). Local game uses the Account Portal, then https://cloud.warmersun.com/signin finishes the device code."
+      "Sign in: https://warmersun.com/portal/signin (Clerk's own form). The portal then finishes the device code against the Neon Function."
     );
   }
   if (usage.enabled) {

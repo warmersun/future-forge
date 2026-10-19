@@ -55,7 +55,7 @@ Open **http://127.0.0.1:8765**
 |--------|---------|
 | `npm start` / `npm run serve` | **game** — Future Forge engine (`server.mjs`). No Clerk, no Neon. |
 | `npm run staging -- <token>` | game against a warmersun.com **staging** build instead of live (see below) |
-| `npm run portal` | **portal** — Cloud **APIs** only (`portal/server.mjs`). Clerk + Neon. No game UI. Render runs this. |
+| `npm run portal` | **portal** — Cloud account/subscribe SPA and APIs (`portal/server.mjs`). Clerk + Neon. No game UI. Render runs this until the Functions migration. |
 | `npm start -- --usage` | game with AI/session usage metrics writing to `data/usage/` |
 | `npm run check:briefs` | Verify problem-brief coverage for all themes |
 | `npm run validate:quest -- path.json` | Validate a Spotlight Quest tile JSON |
@@ -136,7 +136,7 @@ Each weekday one real invention becomes a collector card. The card is authored w
 | Workflow | When | What |
 |----------|------|------|
 | `.github/workflows/collector-cards-check.yml` | PR that touches `cards/**` | Runs `npm run validate:collector-card` on each added or changed card. Daily cards must have an `id`, a `capability`, 1–3 `useCases`, the file-name rule, and a 16:9 jpg/png/webp image of at most 1.5 MB. It also fails if two cards share an id, or if an existing card's id was changed or removed. Needs no secrets. |
-| `.github/workflows/collector-cards-publish.yml` | Push to `main` that touches `cards/daily/**`, or a manual run | Finds the added or changed daily cards, checks them again, upserts each one with `scripts/issue-collector-card.sh`, writes the `https://cloud.warmersun.com/card/<id>` links to the job summary, and comments them on the merged PR. Runs one at a time. Fails with a clear message if `DATABASE_URL` is missing. |
+| `.github/workflows/collector-cards-publish.yml` | Push to `main` that touches `cards/daily/**`, or a manual run | Finds the added or changed daily cards, checks them again, upserts each one with `scripts/issue-collector-card.sh`, writes the portal card links (`https://<neon-function-origin>/card/<id>`) to the job summary, and comments them on the merged PR. Runs one at a time. Fails with a clear message if `DATABASE_URL` is missing. |
 
 **Republish or retry.** Re-running a failed publish job is safe. Actions → **Collector cards publish** → **Run workflow** republishes every daily card, which is also safe because each one is an upsert on its id. Tick *Dry run* to see what would be stored without touching the database. Locally: `./scripts/issue-collector-card.sh --dry-run cards/daily/<file>.json` prints the exact SQL and the link without connecting.
 
@@ -152,17 +152,17 @@ Nothing else is needed. The `collector_cards` table already exists, because the 
 
 ### Learner accounts (optional Clerk)
 
-Sign-in is **optional**. The form is Clerk's Account Portal at **`https://accounts.warmersun.com/sign-in`**. On **`https://ff.warmersun.com`** the game loads Clerk and returns there with the session. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens the Account Portal, then **`https://cloud.warmersun.com/signin`** finishes a device code and stores a session JWT. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud on Render turns Clerk on so players have a stable identity (progress, quest boards, Continue).
+Sign-in is **optional**. On **`https://ff.warmersun.com`** the game loads Clerk and returns there with the session. Local **game** (`npm start` at `http://127.0.0.1:8765`) never loads Clerk; the Sign in chip opens **`https://warmersun.com/portal/signin`**, which mounts Clerk's own sign-in component and then finishes a device code against the Neon Function. Future Forge stays fully playable without an account. Hosted Warmer Sun Cloud runs on Neon Functions so players have a stable identity (progress, quest boards, Continue).
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
-Set `FF_PORTAL_URL` on the game to the portal API origin (Render `https://….onrender.com` is fine). Production Clerk keys only load on `warmersun.com` and its allowlisted subdomains (`ff.warmersun.com`, `cloud.warmersun.com`). Loopback cannot load them, so the local game uses the device-code callback.
+Set `FF_PORTAL_URL` on the game to the portal **API** origin — the Neon Function URL, e.g. `https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech`. Set `FF_PORTAL_UI_URL=https://warmersun.com/portal/` for subscription links. Do **not** point `FF_PORTAL_URL` at the static portal: `https://warmersun.com/portal/` proxies only `/api/health` and `/api/device/complete`. Loopback cannot load Clerk's keys, so the local game uses the device-code callback.
 
 ```bash
 cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
-# Render Dashboard holds pk_live_ / sk_live_
+# The Function env holds pk_live_ / sk_live_ (see neon.portal.ts).
 # If you set CLERK_AUTHORIZED_PARTIES it *replaces* defaults — include:
-#   https://warmersun.com,https://ff.warmersun.com,https://cloud.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
+#   https://warmersun.com,https://ff.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
 # Funnel / public game host (device handshake CORS; appends to loopback):
 #   FF_GAME_DEVICE_ORIGINS=https://futureforge.xantu-chickadee.ts.net
 ```
@@ -172,7 +172,7 @@ cp .env.portal.example .env.portal   # gitignored — local portal / test keys o
 | `GET /api/health` | Public `clerk.enabled` + publishable key (never the secret) |
 | `GET /api/me` | `{ signedIn: false }` unsigned; `{ userId }` when the session JWT is valid; `401` on a bad token |
 
-In the Clerk Dashboard, add allowed origins for `https://cloud.warmersun.com` and `https://warmersun.com`. Google / X **Authorized JavaScript origins** are those same hosts (not loopback). If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
+In the Clerk Dashboard, add allowed origins for `https://warmersun.com` and `https://ff.warmersun.com`. Google / X **Authorized JavaScript origins** are those same hosts (not loopback). If `FF_API_SECRET` is also set, send it as **`X-FF-Secret`** so it does not collide with the Clerk Bearer JWT.
 
 Without these keys, `npm run portal` has no Sign in page. `npm start` (**game**) loads `.env` only and never reads Clerk keys. Unsigned play at `http://127.0.0.1:8765` still works.
 
@@ -366,14 +366,14 @@ Browser state lives in **localStorage** on the learner’s device: scenario cach
 
 This is a **long-running Node process**, not a static-only site (unless you accept the local co-inventor only).
 
-**Warmer Sun Cloud (portal)** is a Render **Web Service** of **HTTP APIs**, not the game. See `render.yaml`.
+**Warmer Sun Cloud (portal)** is the account/subscribe SPA plus HTTP APIs, not the playable game. It runs as a **Neon Function** (`cloudapi`) on `proud-hill-53375382/main`, deployed from `neon.portal.ts`. The SPA itself is a static here.now Site (`autumn-linden-y6rk`) mounted at **`https://warmersun.com/portal/`**, with `.herenow/proxy.json` forwarding `/api/health` and `/api/device/complete` to the Function. The former Render portal service and its `cloud.warmersun.com` custom domain are removed.
 
-1. New Web Service on this repo. Build: `npm install`. Start: `npm run portal`.
-2. Health check: `/api/health`. Bind uses Render’s `PORT` (do not hardcode 8765).
-3. Dashboard env: Clerk keys, `DATABASE_URL` (+ unpooled), `FF_TRUST_PROXY=1`. No xAI.
-4. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://<service>.onrender.com`. Sign in is the Account Portal. **`https://cloud.warmersun.com/signin`** only finishes the local device code.
-5. Clerk allowed subdomains include `ff.warmersun.com` and `cloud.warmersun.com`. `CLERK_AUTHORIZED_PARTIES` must include `https://ff.warmersun.com`, `https://cloud.warmersun.com`, `https://warmersun.com`, and the loopback game origins if the env **replaces** defaults. Webhook URL is still the Render `/api/webhooks/clerk` until the custom domain is the webhook host too.
-6. DNS: CNAME `cloud.warmersun.com` → the Render hostname; add the custom domain on Render. Cloudflare-proxied TLS is fine on this public host.
+1. Deploy with `neon deploy --config neon.portal.ts --env <env-file> --project-id proud-hill-53375382 --branch main --no-env-pull`.
+2. Env lives in the Function, not a service dashboard: Clerk keys, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=<Function origin>`, quota and plan settings. Never set `DATABASE_URL` — Neon injects the branch URL.
+3. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=<Function origin>` and `FF_PORTAL_UI_URL=https://warmersun.com/portal/`. Sign in is Clerk's own component on the portal; the local game finishes the device code against the Function directly.
+4. `CLERK_AUTHORIZED_PARTIES` must include `https://warmersun.com`, `https://ff.warmersun.com`, and the loopback game origins if the env **replaces** defaults.
+5. Clerk webhook destination: `https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech/api/webhooks/clerk` (single destination; `020_clerk_webhook_events.sql` makes delivery idempotent).
+6. here.now proxy routes do **not** forward the browser's `Authorization` header, so the portal sends the per-user Clerk JWT to the Function directly. Do not add a shared API key to a proxy route.
 
 Do not run **game** and **portal** on the same port.
 
