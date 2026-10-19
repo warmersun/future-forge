@@ -157,7 +157,7 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
         const r = got.rows[0];
         const html = renderCollectorCardPage({ id: r.id, techId: r.tech_id, title: r.title,
           description: r.description, body: r.body, links: r.links }, {
-          origin: publicOrigin, publishableKey, clerkEnabled: clerkOn,
+          origin: publicOrigin, portalUiUrl: env.FF_PORTAL_UI_URL, publishableKey, clerkEnabled: clerkOn,
           collectNow: url.searchParams.get("collect") === "1",
         });
         return new Response(request.method === "HEAD" ? null : html, { status: 200,

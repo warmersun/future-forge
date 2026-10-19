@@ -2240,6 +2240,7 @@ async function serveCollectorCard(req, res, pathOnly) {
     const clerk = publicClerkConfig();
     const html = renderCollectorCardPage(card, {
       origin: portalPublicOrigin(),
+      portalUiUrl: process.env.FF_PORTAL_UI_URL || portalPublicOrigin(),
       publishableKey: clerk.publishableKey,
       clerkEnabled: clerk.enabled,
       collectNow: url.searchParams.get("collect") === "1",

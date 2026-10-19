@@ -163,6 +163,30 @@ describe("Neon Cloud API", () => {
     assert.equal((await call(api, "/api/me", "GET", { headers: { Authorization: "Bearer forged", "X-User-Id": "user_1" } })).status, 401);
   });
 
+  it("wires the verified player identity and offline Clerk provider into profile reads", async () => {
+    const seen = [];
+    const db = {
+      async query(sql, args) {
+        if (sql.includes("FROM users WHERE clerk_user_id")) {
+          assert.equal(args[0], "user_1");
+          return { rows: [{ clerk_user_id: "user_1", display_name: "Inventor", is_public: false }] };
+        }
+        if (sql.includes("SELECT tech_ids FROM runs")) return { rows: [] };
+        throw new Error("Unexpected profile query");
+      },
+    };
+    const api = app(db, { getUser: async (userId) => {
+      seen.push(userId);
+      return { primaryEmailAddressId: "email_1", emailAddresses: [{ id: "email_1", emailAddress: "fixture@example.com" }],
+        externalAccounts: [{ provider: "oauth_google" }], firstName: "Private" };
+    } });
+    const result = await call(api, "/api/me/profile", "GET", { headers: { Authorization: `Bearer ${jwt}` } });
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.body.login, { email: "fixture@example.com", providers: ["Google"] });
+    assert.deepEqual(seen, ["user_1"]);
+    assert.equal(JSON.stringify(result.body).includes("Private"), false);
+  });
+
   it("dispatches all owned route slices, scopes identity and preflights writes", async () => {
     const api = app(fakeDb(), { loadCatalog: async () => ({ ok: true, url: "bucket", quests: [], errors: [] }) });
     assert.deepEqual((await call(api, "/api/quests")).body.quests, []);

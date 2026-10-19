@@ -72,6 +72,8 @@ services:
         value: "1"
       - key: FF_CLOUD_AI
         value: "1"
+      - key: FF_PORTAL_QUESTS
+        value: "1"
       - key: FF_XAI_API_KEY
         sync: false
       - key: FF_PORTAL_URL

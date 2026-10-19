@@ -202,10 +202,10 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const token = await Clerk.session.getToken();
       if (!active(id)) return;
       if (!token) throw new Error("Could not read the session");
-      if (!device) return showSignedIn(id, Clerk, config, token);
+      if (!device && !returnOk) return showSignedIn(id, Clerk, config, token);
       // here.now proxies do not forward the browser's Authorization header.
       // Send the per-user Clerk JWT to our API directly (with origin-bound CORS).
-      await completeDevice(device, token, config.apiOrigin);
+      if (device) await completeDevice(device, token, config.apiOrigin);
       if (!active(id)) return;
       if (returnOk) {
         status.textContent = "Signed in. Returning to Future Forge…";
@@ -227,18 +227,24 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     const who = Clerk.user?.fullName
       || Clerk.user?.primaryEmailAddress?.emailAddress
       || "your account";
-    let plan = "";
+    let plan = "Subscription status unavailable";
     try {
       const res = await fetch(`${config.apiOrigin}/api/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const me = res.ok ? await res.json().catch(() => null) : null;
       const sub = me?.subscription;
-      if (sub?.entitled) plan = `Plan: ${sub.planSlug || "active"} · ${sub.status || "active"}`;
+      // Failed/anonymous/malformed responses cannot establish an inactive plan.
+      if (me?.ok === true && me.signedIn === true && typeof sub?.entitled === "boolean") {
+        plan = sub.entitled
+          ? `Plan: ${sub.planSlug || "active"} · ${sub.status || "active"}`
+          : "no active subscription";
+      }
     } catch { /* account state is best-effort; never block the portal */ }
+    if (!active(id)) return;
     status.textContent = "";
     mount.hidden = true;
-    account.textContent = plan ? `${who} — ${plan}` : `${who} — no active subscription`;
+    account.textContent = `${who} — ${plan}`;
     panel.hidden = false;
     doc.getElementById("sign-out").onclick = async () => {
       try {

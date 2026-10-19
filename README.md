@@ -158,6 +158,8 @@ This is **not** the same as xAI / SuperGrok credentials below (those are the AI 
 
 Set `FF_PORTAL_URL` on the game to the portal **API** origin — `https://cloud.warmersun.com` (a custom domain on the Neon Function `cloudapi`). Set `FF_PORTAL_UI_URL=https://warmersun.com/portal/` for subscription links. Do **not** point `FF_PORTAL_URL` at the static portal: `https://warmersun.com/portal/` proxies only `/api/health` and `/api/device/complete`, and here.now drops the `Authorization` header, so authenticated routes cannot go through it. Loopback cannot load Clerk's keys, so the local game uses the device-code callback.
 
+Accounts do not select the hosted quest catalog. Self-hosted games keep their Library and configured remote catalog unless they explicitly set `FF_PORTAL_QUESTS=1`. The hosted game must set this flag to retain the gated official catalog; the Render Blueprint includes it. Existing Dashboard-managed services need the flag added before deploying this change. Leave it unset for account-only connectivity.
+
 ```bash
 cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
 # The Function env holds pk_live_ / sk_live_ (see neon.portal.ts).
@@ -369,13 +371,15 @@ This is a **long-running Node process**, not a static-only site (unless you acce
 **Warmer Sun Cloud (portal)** is the account/subscribe SPA plus HTTP APIs, not the playable game. It runs as a **Neon Function** (`cloudapi`) on `proud-hill-53375382/main`, deployed from `neon.portal.ts`, behind the custom domain **`https://cloud.warmersun.com`** (`neon functions domains register cloud.warmersun.com --slug cloudapi`). The SPA itself is a static here.now Site (`autumn-linden-y6rk`) mounted at **`https://warmersun.com/portal/`**, with `.herenow/proxy.json` forwarding `/api/health` and `/api/device/complete` to that domain. The former Render portal service is removed.
 
 1. Deploy with `neon deploy --config neon.portal.ts --env <env-file> --project-id proud-hill-53375382 --branch main --no-env-pull`.
-2. Env lives in the Function, not a service dashboard: Clerk keys, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=https://cloud.warmersun.com`, quota and plan settings. Never set `DATABASE_URL` — Neon injects the branch URL.
+2. Env lives in the Function, not a service dashboard: Clerk keys, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=https://cloud.warmersun.com`, quota and plan settings. If the previous portal used `FF_PORTAL_SESSION_SECRET`, supply that same key when deploying to preserve existing device sessions; leave it unset to retain the Clerk-secret fallback. Never set `DATABASE_URL` — Neon injects the branch URL.
 3. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://cloud.warmersun.com` and `FF_PORTAL_UI_URL=https://warmersun.com/portal/`. Sign in is Clerk's own component on the portal; the local game finishes the device code against the Function directly.
 4. `CLERK_AUTHORIZED_PARTIES` must include `https://warmersun.com`, `https://ff.warmersun.com`, and the loopback game origins if the env **replaces** defaults.
 5. Clerk webhook destination: `https://cloud.warmersun.com/api/webhooks/clerk` (single destination; `020_clerk_webhook_events.sql` makes delivery idempotent).
 6. here.now proxy routes do **not** forward the browser's `Authorization` header, so the portal sends the per-user Clerk JWT to the Function directly. Do not add a shared API key to a proxy route.
 
 Do not run **game** and **portal** on the same port.
+
+`npm test` includes all portal Function route suites. The optional real-Postgres concurrency checks require a disposable, local-only database named `portal_review_test`; run them with `FF_TEST_POSTGRES_URL=postgresql://postgres@127.0.0.1:<port>/portal_review_test node --test portal/functions/billing-postgres.test.js`. They create and remove isolated test schemas and never load application env files. Without this explicit test URL, only these database integration checks are skipped.
 
 Do not commit secrets. Do not put API keys in the client or the git repo.
 

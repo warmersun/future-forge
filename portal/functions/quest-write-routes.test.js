@@ -1,6 +1,9 @@
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createQuestWriteRoutes } from "./quest-write-routes.mjs";
+import { DEFAULT_QUESTS_REMOTE_URL, _resetRemoteQuestCache } from "../../js/quests-remote.mjs";
+import { _resetObjectQuestCache } from "../../js/server/quest-object-storage.mjs";
 
 const Q = "spotlight-space-farcall-ferry-2026";
 const A = { enabled: true, signedIn: true, userId: "user_A" };
@@ -168,6 +171,93 @@ describe("quest write routes", () => {
     const res = await api.fetch(request("score", { runId: RUN, startYear: 2020 }), A);
     assert.equal(res.status, 200);
     assert.equal(db.scores.get("user_A").start_year, 2030);
+  });
+  describe("catalog source parity", () => {
+    const tile = JSON.parse(readFileSync(new URL("../../test/fixtures/quests/spotlight-gene-seq.json", import.meta.url), "utf8"));
+    tile.id = Q;
+    tile.mission.id = Q;
+    const catalogBody = JSON.stringify({ quests: [{ id: Q, file: "quest.json" }] });
+    const tileBody = JSON.stringify(tile);
+    beforeEach(() => {
+      _resetRemoteQuestCache();
+      _resetObjectQuestCache();
+    });
+
+    for (const [name, env, catalogUrl] of [
+      ["explicit", { FF_QUESTS_REMOTE_URL: "  https://catalog.example.test/quests/catalog.json  " }, "https://catalog.example.test/quests/catalog.json"],
+      ["default", {}, DEFAULT_QUESTS_REMOTE_URL],
+    ]) {
+      it(`uses the ${name} remote-only catalog year instead of inflating rank`, async () => {
+        const db = fakeDb(), fetched = [];
+        db.scores.set("user_B", { clerk_user_id: "user_B", quest_id: Q, year_reached: 2028,
+          start_year: 2026, stars: 3, waits: 2, profile_display_name: "Bea" });
+        const api = route(db, { env, loadCatalog: undefined, fetchImpl: async (url) => {
+          fetched.push(url);
+          if (url === catalogUrl) return new Response(catalogBody);
+          if (url === new URL("quest.json", catalogUrl).href) return new Response(tileBody);
+          throw new Error("unexpected_catalog_source");
+        } });
+        const res = await api.fetch(request("score", { runId: RUN, startYear: 2029 }), A);
+        assert.equal(res.status, 200);
+        assert.equal(db.scores.get("user_A").start_year, 2026);
+        assert.equal((await res.json()).rank, 2);
+        assert.deepEqual(fetched, [catalogUrl, new URL("quest.json", catalogUrl).href]);
+      });
+    }
+
+    for (const configured of ["", "  ", "0", "OFF", "false"]) {
+      it(`does not fetch a disabled remote catalog (${JSON.stringify(configured)})`, async () => {
+        const db = fakeDb(), fetched = [];
+        const api = route(db, { env: { FF_QUESTS_REMOTE_URL: configured }, loadCatalog: undefined,
+          fetchImpl: async (url) => { fetched.push(url); throw new Error("unexpected_fetch"); } });
+        const res = await api.fetch(request("score", { runId: RUN, startYear: 2020 }), A);
+        assert.equal(res.status, 200);
+        assert.equal(db.scores.get("user_A").start_year, 2030);
+        assert.deepEqual(fetched, []);
+      });
+    }
+
+    for (const fails of [false, true]) {
+      it(`${fails ? "never falls back from a failed" : "prefers the"} private bucket to the public source`, async () => {
+        const db = fakeDb(), read = [], fetched = [];
+        const api = route(db, {
+          env: { FF_QUESTS_BUCKET: "private-quests", FF_QUESTS_OBJECT_PREFIX: "/official/",
+            FF_QUESTS_REMOTE_URL: "https://catalog.example.test/catalog.json" },
+          loadCatalog: undefined,
+          readObjectText: async (key) => {
+            read.push(key);
+            if (fails) throw new Error("private_unavailable");
+            if (key === "official/catalog.json") return catalogBody;
+            if (key === "official/quest.json") return tileBody;
+            throw new Error("unexpected_object");
+          },
+          fetchImpl: async (url) => { fetched.push(url); return new Response(catalogBody); },
+        });
+        const res = await api.fetch(request("score", { runId: RUN, startYear: 2020 }), A);
+        assert.equal(res.status, 200);
+        assert.equal(db.scores.get("user_A").start_year, fails ? 2030 : 2026);
+        assert.deepEqual(read, fails ? ["official/catalog.json"] : ["official/catalog.json", "official/quest.json"]);
+        assert.deepEqual(fetched, []);
+      });
+    }
+
+    it("does not use another source's cached year after an explicit remote catalog fails", async () => {
+      const db = fakeDb();
+      const good = route(db, { env: { FF_QUESTS_REMOTE_URL: "https://good.example.test/catalog.json" },
+        loadCatalog: undefined, fetchImpl: async (url) => new Response(url.endsWith("catalog.json") ? catalogBody : tileBody) });
+      assert.equal((await good.fetch(request("score", { runId: RUN }), A)).status, 200);
+      assert.equal(db.scores.get("user_A").start_year, 2026);
+      db.scores.clear();
+      const fetched = [];
+      const failed = route(db, { env: { FF_QUESTS_REMOTE_URL: "https://failed.example.test/catalog.json" },
+        loadCatalog: undefined, fetchImpl: async (url) => {
+          fetched.push(url);
+          return new Response("unavailable", { status: 503 });
+        } });
+      assert.equal((await failed.fetch(request("score", { runId: RUN, startYear: 2020 }), A)).status, 200);
+      assert.equal(db.scores.get("user_A").start_year, 2030);
+      assert.deepEqual(fetched, ["https://failed.example.test/catalog.json"]);
+    });
   });
   it("bounds streamed JSON and binary bodies before full buffering", async () => {
     const db = fakeDb(), api = route(db);

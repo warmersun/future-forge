@@ -16,7 +16,7 @@ The portal serves one official catalog.
 - With `FF_QUESTS_BUCKET` unset, the portal reads the public catalog (`FF_QUESTS_REMOTE_URL`, otherwise the warmersun.com quests catalog).
 - The two sources are not merged.
 
-The game asks the portal when `FF_PORTAL_URL` is set. The game never holds bucket keys. Portal 200, 401, and 402 pass through. Any other portal status falls back to the local Library folder only.
+The game asks the portal for quests only when both `FF_PORTAL_URL` and `FF_PORTAL_QUESTS=1` are set. Setting only the API origin connects accounts without replacing a self-hosted game's Library or configured remote catalog. The hosted game must explicitly enable the catalog flag. The game never holds bucket keys. Portal 200, 401, and 402 pass through. Any other portal status falls back to the local Library folder only.
 
 The local Library folder still merges with whichever official catalog is active. Official wins on a shared id. `omitOfficialLocalDuplicates` drops the Library copy of an official id from the list the hub renders, so that copy cannot skip the gate. A failed official fetch yields no ids to omit, and Library copies can still be served in that case.
 

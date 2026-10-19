@@ -7,7 +7,11 @@ import { parseRunsQuery, parseStartBody, publicRunRow } from "../../js/server/qu
 import { parseShareBody, parseProfilePatch, profileNeedsDisplayName } from "../../js/server/profile.mjs";
 import { sanitizePinList } from "../../js/server/pins.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../../js/server/run-state.mjs";
-import { achievementCatalog, publicAchievement, awardForRun } from "../../js/server/achievements.mjs";
+import { achievementCatalog, publicAchievement, awardForRun, awardPortfolioCodes, foundingCodes, awardStreakCodes } from "../../js/server/achievements.mjs";
+import { fetchClerkLoginSummary } from "../../js/server/clerk-auth.mjs";
+import { tileIsSponsored } from "../../js/server/cloud-gate.mjs";
+import { fetchObjectQuestCatalog, questsBucketFromEnv, questsObjectPrefixFromEnv } from "../../js/server/quest-object-storage.mjs";
+import { fetchRemoteQuestCatalog, DEFAULT_QUESTS_REMOTE_URL } from "../../js/quests-remote.mjs";
 import { computeStreak, sanitizeTimeZone } from "../../js/server/streaks.mjs";
 import { portfolioFromTechIdLists, publicPortfolio } from "../../js/sim/portfolio.js";
 
@@ -43,7 +47,7 @@ async function getProfile(db, uid) {
 async function portfolio(db, uid) {
   const rows = (await db.query(`SELECT tech_ids FROM runs WHERE clerk_user_id = $1
     AND outcome IN ('hold','partial') ORDER BY ended_at ASC NULLS LAST`, [uid])).rows;
-  return publicPortfolio(portfolioFromTechIdLists(rows.map((r) => Array.isArray(r.tech_ids) ? r.tech_ids.map(String) : [])));
+  return portfolioFromTechIdLists(rows.map((r) => Array.isArray(r.tech_ids) ? r.tech_ids.map(String) : []));
 }
 async function ensureUser(db, uid) {
   await db.query(`INSERT INTO users (clerk_user_id) VALUES ($1)
@@ -106,18 +110,57 @@ async function putRunRow(cx, uid, run, imported) {
   }
   return row?.id || null;
 }
-async function awardBasic(cx, uid, run, runId) {
-  // Only deterministic run-derived awards. Catalog/sponsor, toolkit, founding and
-  // streak awards need separate parity wiring; never trust client award claims.
-  const have = (await cx.query("SELECT code FROM achievements WHERE clerk_user_id = $1", [uid])).rows.map((r) => r.code);
-  const codes = awardForRun(run, { already: have });
-  if (codes.length) await cx.query(`INSERT INTO achievements (clerk_user_id, code, run_id)
-    SELECT $1, x, $3::uuid FROM unnest($2::text[]) AS x ON CONFLICT DO NOTHING`, [uid, codes, runId]);
-  return codes.map((c) => publicAchievement(c)).filter(Boolean);
-}
-
 /** db is a pg Pool-like object; identity must be a *verified* parent result. */
-export function createPlayerRoutes({ db } = {}) {
+export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchImpl, readObjectText, getUser, now = () => new Date() } = {}) {
+  async function catalog() {
+    if (loadCatalog) return loadCatalog();
+    // Match quest writes: a private bucket is authoritative, even on failure.
+    // Never merge it with or fall back to the public remote catalog.
+    const bucket = questsBucketFromEnv(env);
+    if (bucket) return fetchObjectQuestCatalog({
+      bucket, prefix: questsObjectPrefixFromEnv(env), readText: readObjectText,
+    });
+    const configured = env.FF_QUESTS_REMOTE_URL;
+    const remoteUrl = configured === undefined ? DEFAULT_QUESTS_REMOTE_URL : String(configured).trim();
+    return fetchRemoteQuestCatalog(remoteUrl && !/^(0|off|false)$/i.test(remoteUrl) ? remoteUrl : null,
+      { tryFallbacks: false, fetchImpl });
+  }
+  // Call only after the progress transaction commits and releases its connection.
+  // These optional, server-derived rewards must never roll back a saved pathway.
+  async function grantAchievements(uid, run, runId) {
+    try {
+      const already = (await db.query("SELECT code FROM achievements WHERE clerk_user_id = $1", [uid])).rows.map((r) => r.code);
+      let sponsored = false;
+      try {
+        const pack = await catalog();
+        // Failed remote loads can contain stale quests from another source.
+        // Only a successful catalog can establish sponsorship.
+        if (pack?.ok !== false) {
+          const tile = pack?.byId?.get(run.questId) || pack?.quests?.find((q) => q.id === run.questId || q.mission?.id === run.questId);
+          sponsored = tileIsSponsored(tile);
+        }
+      } catch { /* catalog failure must not suppress other awards */ }
+      const codes = awardForRun(run, { already, sponsored });
+      try {
+        codes.push(...awardPortfolioCodes(await portfolio(db, uid), [...already, ...codes]));
+      } catch { /* portfolio is additive */ }
+      const at = now();
+      const n = (await db.query("SELECT COUNT(*)::int AS n FROM users")).rows[0]?.n || 0;
+      for (const code of foundingCodes({ userCount: n, inventNight: run.kind === "friends" && at.getUTCDay() === 3 })) {
+        if (!already.includes(code) && !codes.includes(code)) codes.push(code);
+      }
+      try {
+        const p = await getProfile(db, uid);
+        const ended = (await db.query(`SELECT ended_at FROM runs WHERE clerk_user_id = $1
+          AND outcome IN ('hold','partial') AND ended_at IS NOT NULL
+          ORDER BY ended_at DESC LIMIT 2000`, [uid])).rows.map((r) => r.ended_at).filter(Boolean);
+        codes.push(...awardStreakCodes(computeStreak(ended, p?.timeZone, at).current, [...already, ...codes]));
+      } catch { /* streak is additive */ }
+      if (codes.length) await db.query(`INSERT INTO achievements (clerk_user_id, code, run_id)
+        SELECT $1, x, $3::uuid FROM unnest($2::text[]) AS x ON CONFLICT DO NOTHING`, [uid, codes, runId || run.id || null]);
+      return codes.map((code) => publicAchievement(code)).filter(Boolean);
+    } catch { return []; }
+  }
   return {
     async fetch(request, identity) {
       const path = new URL(request.url).pathname;
@@ -156,12 +199,12 @@ export function createPlayerRoutes({ db } = {}) {
         if (path === "/api/me/runs" && request.method === "POST") {
           const run = sanitizeLastRun(body?.run || body);
           if (!run) return reply({ ok: false, error: "invalid_run" }, 400);
-          const result = await transaction(db, async (cx) => {
+          const id = await transaction(db, async (cx) => {
             await ensureUser(cx, uid);
-            const id = await putRunRow(cx, uid, run, false);
-            return { id, unlocked: await awardBasic(cx, uid, run, id) };
+            return putRunRow(cx, uid, run, false);
           });
-          return reply({ ok: true, stored: true, id: result.id, questId: run.questId, unlocked: result.unlocked });
+          const unlocked = await grantAchievements(uid, run, id);
+          return reply({ ok: true, stored: true, id, questId: run.questId, unlocked });
         }
         if (path === "/api/me/import") {
           const parsed = parseImportBody(body);
@@ -172,11 +215,11 @@ export function createPlayerRoutes({ db } = {}) {
             const count = (await cx.query("SELECT COUNT(*)::int AS n FROM runs WHERE clerk_user_id = $1", [uid])).rows[0]?.n || 0;
             const lastRunStored = Boolean(parsed.lastRun && Number(count) === 0);
             const lastRunId = lastRunStored ? await putRunRow(cx, uid, parsed.lastRun, true) : null;
-            const unlocked = lastRunStored ? await awardBasic(cx, uid, parsed.lastRun, lastRunId) : [];
             const solvedIds = (await cx.query("SELECT quest_id FROM solved_quests WHERE clerk_user_id = $1 ORDER BY first_solved_at ASC", [uid])).rows.map((r) => String(r.quest_id));
-            return { inserted, total: solvedIds.length, lastRunStored, lastRunId, solvedIds, unlocked };
+            return { inserted, total: solvedIds.length, lastRunStored, lastRunId, solvedIds };
           });
-          return reply({ ok: true, ...result });
+          const unlocked = result.lastRunStored ? await grantAchievements(uid, parsed.lastRun, result.lastRunId) : [];
+          return reply({ ok: true, ...result, unlocked });
         }
         if (path === "/api/me/runs/share") {
           const parsed = parseShareBody(body);
@@ -239,9 +282,10 @@ export function createPlayerRoutes({ db } = {}) {
             });
           }
           p = await getProfile(db, uid) || { isPublic: false, username: null, displayName: null };
+          const login = request.method === "GET" ? await fetchClerkLoginSummary(uid, { env, getUser }) : null;
           let data = publicPortfolio(null);
-          try { data = await portfolio(db, uid); } catch { /* profile remains readable */ }
-          return reply({ ok: true, profile: p, portfolio: data, needsDisplayName: profileNeedsDisplayName(p) });
+          try { data = publicPortfolio(await portfolio(db, uid)); } catch { /* profile remains readable */ }
+          return reply({ ok: true, profile: p, portfolio: data, needsDisplayName: profileNeedsDisplayName(p), ...(login ? { login } : {}) });
         }
         if (path === "/api/me/achievements") {
           const rows = (await db.query(`SELECT code, run_id, unlocked_at FROM achievements

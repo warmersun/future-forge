@@ -192,7 +192,11 @@ test("card HTML, image GET/HEAD/304, preview and unpublished/invalid cards", asy
     overrides: { renderShare: async () => Buffer.from("preview") } });
   const page = await f.request(`/card/${cardId}?collect=1`);
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /&lt;safe&gt;/);
+  const html = await page.text();
+  assert.match(html, /&lt;safe&gt;/);
+  const boot = JSON.parse(html.match(/const boot = ([^\n]+);/)[1]);
+  assert.equal(boot.signInUrl, "https://warmersun.com/portal/signin");
+  assert.equal(boot.collectNow, true);
   const head = await f.request(`/card/${cardId}/image`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(head.headers.get("content-length"), "5");
@@ -208,6 +212,17 @@ test("card HTML, image GET/HEAD/304, preview and unpublished/invalid cards", asy
   const missing = fixture();
   assert.equal((await missing.request(`/card/${cardId}`)).status, 404);
   assert.deepEqual(await body(await missing.request(`/card/${cardId}/image`)), [404, { ok: false, error: "not_found" }]);
+});
+
+test("card HTML receives the configured portal UI URL rather than the API origin", async () => {
+  const f = fixture({ routeEnv: { ...env, FF_PORTAL_UI_URL: "https://accounts.example/portal/" },
+    rows: () => [{ id: cardId, tech_id: "unknown", title: "Card" }] });
+  const page = await f.request(`/card/${cardId}`);
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  const boot = JSON.parse(html.match(/const boot = ([^\n]+);/)[1]);
+  assert.equal(boot.signInUrl, "https://accounts.example/portal/signin");
+  assert.equal(boot.returnUrl, `https://cloud.warmersun.com/card/${cardId}?collect=1`);
 });
 
 test("route allowlist, methods, CORS and DB failure stay closed", async () => {

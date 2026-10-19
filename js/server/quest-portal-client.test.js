@@ -9,9 +9,25 @@ import {
 } from "./quest-portal-client.mjs";
 
 describe("quest portal client", () => {
-  it("is off until FF_PORTAL_URL is set", () => {
+  it("requires a separate catalog opt-in, not just account connectivity", () => {
     assert.equal(portalQuestsEnabled({}), false);
-    assert.equal(portalQuestsEnabled({ FF_PORTAL_URL: "https://portal.example" }), true);
+    assert.equal(portalQuestsEnabled({ FF_PORTAL_URL: "https://portal.example" }), false);
+    assert.equal(portalQuestsEnabled({ FF_PORTAL_QUESTS: "1" }), false);
+    for (const value of ["1", "true", "yes", " TRUE "]) {
+      assert.equal(portalQuestsEnabled({ FF_PORTAL_URL: "https://portal.example", FF_PORTAL_QUESTS: value }), true);
+    }
+    for (const value of ["0", "false", "off", "", "unexpected"]) {
+      assert.equal(portalQuestsEnabled({ FF_PORTAL_URL: "https://portal.example", FF_PORTAL_QUESTS: value }), false);
+    }
+  });
+
+  it("keeps local tutor context untouched when only accounts are connected", async () => {
+    const context = { tutorMode: true, questId: "local-lesson", source: "remote", aiTutorContext: "LOCAL NOTES" };
+    const result = await officialTutorContext(context, {
+      env: { FF_PORTAL_URL: "https://portal.example" },
+      fetchImpl: async () => { throw new Error("account-only game must not fetch the hosted catalog"); },
+    });
+    assert.deepEqual(result, { ok: true, context });
   });
 
   it("lets the official catalog win on id", () => {
@@ -79,7 +95,7 @@ describe("quest portal client", () => {
         aiTutorContext: "CLIENT NOTES",
       },
       {
-        env: { FF_PORTAL_URL: "https://portal.example" },
+        env: { FF_PORTAL_URL: "https://portal.example", FF_PORTAL_QUESTS: "1" },
         authorization: "Bearer player-jwt",
         fetchImpl,
       }
@@ -112,7 +128,7 @@ describe("quest portal client", () => {
         source: "remote",
         aiTutorContext: "CLIENT NOTES",
       },
-      { env: { FF_PORTAL_URL: "https://portal.example" }, fetchImpl }
+      { env: { FF_PORTAL_URL: "https://portal.example", FF_PORTAL_QUESTS: "1" }, fetchImpl }
     );
     assert.equal(decided.ok, true);
     assert.equal(decided.context.aiTutorContext, "SERVER NOTES");

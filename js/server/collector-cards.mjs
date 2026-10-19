@@ -405,9 +405,19 @@ export function renderCardBodyHtml(body) {
   return panel + restHtml;
 }
 
+function portalSignInUrl(value = "https://warmersun.com/portal/") {
+  try {
+    const url = new URL(String(value).trim());
+    if (url.username || url.password || url.search || url.hash) return null;
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return null;
+    url.pathname = `${url.pathname.replace(/\/+$/, "")}/signin`;
+    return url.href;
+  } catch { return null; }
+}
+
 /**
  * @param {object} row
- * @param {{ origin: string, publishableKey?: string, clerkEnabled?: boolean, collectNow?: boolean }} opts
+ * @param {{ origin: string, portalUiUrl?: string, publishableKey?: string, clerkEnabled?: boolean, collectNow?: boolean }} opts
  */
 export function renderCollectorCardPage(row, opts) {
   const origin = String(opts.origin || "").replace(/\/$/, "");
@@ -435,6 +445,9 @@ export function renderCollectorCardPage(row, opts) {
   const bodyHtml = renderCardBodyHtml(body);
   const boot = JSON.stringify({
     cardId: id,
+    signInUrl: portalSignInUrl(opts.portalUiUrl),
+    // Use the configured public card URL, never a visitor-supplied return query.
+    returnUrl: `${pageUrl}?collect=1`,
     publishableKey: opts.clerkEnabled ? String(opts.publishableKey || "") : "",
     clerkEnabled: Boolean(opts.clerkEnabled && opts.publishableKey),
     collectNow: Boolean(opts.collectNow),
@@ -990,9 +1003,13 @@ export function renderCollectorCardPage(row, opts) {
       });
     }
     function signIn() {
-      const back = new URL(location.href);
-      back.searchParams.set("collect", "1");
-      location.href = "/signin?return=" + encodeURIComponent(back.toString());
+      if (!boot.signInUrl) {
+        status.textContent = "Sign in is unavailable.";
+        return;
+      }
+      const url = new URL(boot.signInUrl);
+      url.searchParams.set("return", boot.returnUrl);
+      location.href = url.toString();
     }
     async function owned(token) {
       const res = await fetch("/api/me/cards", { headers: { Authorization: "Bearer " + token } });

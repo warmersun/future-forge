@@ -104,7 +104,7 @@ async function readCode(request) {
 
 /** Dependency injection keeps handler tests offline; production uses the injected branch DATABASE_URL. */
 export function createCloudApi({ env = process.env, db, verifyClerk, verifySignedWebhook,
-  getUserBillingSubscription, loadCatalog, generateCode } = {}) {
+  getUserBillingSubscription, getUser, loadCatalog, generateCode } = {}) {
   const allowedOrigins = originsFromEnv(env);
   const portalBase = portalUiBase(env.FF_PORTAL_UI_URL || env.FF_PUBLIC_ORIGIN);
   const apiOrigin = validOrigin(String(env.FF_PUBLIC_ORIGIN || "").trim());
@@ -133,7 +133,7 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
       const cx = database();
       routes = {
         account: createAccountRoutes({ db: cx, env, getUserBillingSubscription }),
-        player: createPlayerRoutes({ db: cx }),
+        player: createPlayerRoutes({ db: cx, env, loadCatalog, getUser }),
         quest: createQuestWriteRoutes({ db: cx, env, loadCatalog }),
         public: createPublicRoutes({ db: cx, env, verifyClerk: verify, loadCatalog }),
         billing: createBillingRoutes({ db: cx, env, verifyClerk: verify,

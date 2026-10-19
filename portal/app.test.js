@@ -246,6 +246,35 @@ test("a plain portal visit shows Clerk's form instead of a device-code dead end"
   assert.deepEqual(ui.doc.body.classList.added, []);
 });
 
+test("a mounted return-only form survives Clerk hash popstate without remounting", async (t) => {
+  const ui = fakeUi("https://warmersun.com/portal/signin?return=https%3A%2F%2Fcloud.warmersun.com%2Fcard%2F123%3Fcollect%3D1");
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  globalThis.sessionStorage = { getItem() { return null; }, removeItem() {}, setItem() {} };
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({
+    clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") },
+  }) });
+  let mounts = 0;
+  let unmounts = 0;
+  ui.win.Clerk = { load: async () => {}, session: null,
+    mountSignIn(mount) { mounts++; mount.childElementCount = 1; },
+    unmountSignIn() { unmounts++; } };
+  startPortal({ ...ui, base: "/portal" });
+  await tick(); await tick();
+  assert.equal(mounts, 1);
+  const html = ui.app.innerHTML;
+  ui.win.Clerk.session = { getToken: async () => { throw new Error("must not restart the callback"); } };
+  ui.win.location.href += "#/sso-callback";
+  ui.win.listeners.popstate();
+  ui.win.listeners.popstate();
+  await tick(); await tick();
+  assert.equal(mounts, 1);
+  assert.equal(unmounts, 0);
+  assert.equal(ui.app.innerHTML, html);
+  assert.equal(ui.win.location.replaced, undefined);
+});
+
 test("a device-code handoff drops the portal chrome", async (t) => {
   const ui = fakeUi("https://portal.example/signin?device=ABC");
   const previous = globalThis.fetch;
@@ -300,6 +329,106 @@ test("an existing session on a plain visit shows the account instead of signing 
   assert.equal(ui.win.location.replaced, "https://portal.example/signin");
 });
 
+test("return-only sign-in resumes the allowed destination without a device handshake", async (t) => {
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  globalThis.sessionStorage = { getItem() { return null; }, removeItem() {}, setItem() {} };
+  for (const freshSession of [false, true]) {
+    const ret = "https://cloud.warmersun.com/card/123?collect=1";
+    const ui = fakeUi(`https://warmersun.com/portal/signin?return=${encodeURIComponent(ret)}`);
+    const calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(url);
+      return { ok: true, json: async () => ({ apiOrigin: "https://function.example",
+        clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }) };
+    };
+    let signInOptions;
+    ui.win.Clerk = { load: async () => {},
+      session: freshSession ? null : { getToken: async () => "token-123" },
+      mountSignIn(_mount, opts) { signInOptions = opts; },
+      signOut() { throw new Error("return-only must not clear the browser session"); } };
+    const rerender = startPortal({ ...ui, base: "/portal" });
+    await tick(); await tick();
+    if (freshSession) {
+      assert.equal(signInOptions.forceRedirectUrl, ui.win.location.href);
+      ui.win.Clerk.session = { getToken: async () => "token-123" };
+      rerender();
+      await tick(); await tick();
+    }
+    assert.equal(ui.win.location.replaced, ret);
+    assert.equal(ui.signedIn.hidden, true);
+    assert.ok(calls.every((url) => url === "/portal/api/health"));
+    assert.equal(ui.win.closed, undefined);
+  }
+});
+
+test("unsafe return-only URLs keep the signed-in account visible", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+    ? { clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+    : { ok: true, signedIn: true, subscription: { entitled: false } } });
+  for (const ret of ["https://evil.example/", "https://warmersun.com.evil.example/", "javascript:alert(1)", "https://user@cloud.warmersun.com/"]) {
+    const ui = fakeUi(`https://portal.example/signin?return=${encodeURIComponent(ret)}`);
+    ui.win.Clerk = { load: async () => {}, session: { getToken: async () => "token-123" } };
+    startPortal(ui);
+    await tick(); await tick();
+    assert.equal(ui.win.location.replaced, undefined, ret);
+    assert.equal(ui.signedIn.hidden, false, ret);
+    assert.equal(ui.win.closed, undefined, ret);
+  }
+});
+
+test("account subscription is unavailable on failed or malformed /api/me responses", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  const cases = [
+    ["401", async () => ({ ok: false, status: 401, json: async () => ({ ok: false }) })],
+    ["503", async () => ({ ok: false, status: 503, json: async () => ({ ok: false }) })],
+    ["network", async () => { throw new Error("offline"); }],
+    ["invalid JSON", async () => ({ ok: true, json: async () => { throw new SyntaxError("bad JSON"); } })],
+    ...[null, {}, { ok: false }, { ok: true, signedIn: false },
+      { ok: true, signedIn: false, subscription: { entitled: false } },
+      { ok: true, signedIn: true }, { ok: true, signedIn: true, subscription: {} },
+      { ok: true, signedIn: true, subscription: { entitled: "false" } },
+      { ok: false, signedIn: true, subscription: { entitled: false } },
+    ].map((body) => [JSON.stringify(body), async () => ({ ok: true, json: async () => body })]),
+  ];
+  for (const [name, response] of cases) {
+    const ui = fakeUi("https://portal.example/signin");
+    globalThis.fetch = async (url, options) => {
+      if (url === "/api/health") return { ok: true, json: async () => ({
+        apiOrigin: "https://function.example", clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") },
+      }) };
+      assert.equal(url, "https://function.example/api/me");
+      assert.equal(options.headers.Authorization, "Bearer per-user-token");
+      return response();
+    };
+    ui.win.Clerk = { load: async () => {}, user: { fullName: "Ada" },
+      session: { getToken: async () => "per-user-token" } };
+    startPortal(ui);
+    await tick(); await tick();
+    assert.equal(ui.signedIn.hidden, false, name);
+    assert.match(ui.account.textContent, /Ada.*subscription.*unavailable/i, name);
+    assert.doesNotMatch(ui.account.textContent, /no active subscription/i, name);
+    assert.equal(typeof ui.signOut.onclick, "function", name);
+  }
+});
+
+test("only a valid signed-in account response can assert no active subscription", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+    ? { clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+    : { ok: true, signedIn: true, subscription: { entitled: false, planSlug: null, status: null } } });
+  const ui = fakeUi("https://portal.example/signin");
+  ui.win.Clerk = { load: async () => {}, user: { fullName: "Ada" }, session: { getToken: async () => "token" } };
+  startPortal(ui);
+  await tick(); await tick();
+  assert.equal(ui.account.textContent, "Ada — no active subscription");
+});
+
 test("unsafe return URL does not redirect after successful device handshake", async (t) => {
   const ui = fakeUi("https://portal.example/signin?device=ABC&return=https%3A%2F%2Fevil.example%2F");
   const previous = globalThis.fetch;
@@ -346,7 +475,7 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     const res = await fetch(base + route);
     assert.equal(res.status, 200, route);
     assert.match(res.headers.get("content-type"), /text\/html/);
-    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-no-remount"/);
+    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-review-fixes"/);
   }
   for (const [asset, mime] of [["/app.js", "text/javascript"], ["/app.css", "text/css"]]) {
     const res = await fetch(base + asset);

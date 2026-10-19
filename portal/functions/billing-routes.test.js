@@ -119,6 +119,26 @@ function signed(evt) {
 }
 
 describe("staged quota routes", () => {
+  it("locks the payer before the subscription row, in the same order as webhooks", async () => {
+    const db = fakeDb(), api = app(db);
+    assert.equal((await call(api, "/api/me/ai/reserve", { kind: "image" }, auth)).status, 200);
+    const advisory = db.log.findIndex(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    const subscription = db.log.findIndex(([sql]) => sql.includes("FROM subscriptions") && sql.includes("FOR SHARE"));
+    assert(advisory >= 0 && advisory < subscription, "reserve must take advisory lock before FOR SHARE");
+    assert.deepEqual(db.log[advisory][1], ["user_1"]);
+    db.log.length = 0;
+    db.billing.set("user_1", { subscriptionItems: [] });
+    const event = signed({ id: "evt_lock_order", type: "subscriptionItem.canceled", data: { payer: { user_id: "user_1" } } });
+    const webhook = app(db, { getUserBillingSubscription: async (id) => {
+      assert(db.log.some(([sql, args]) => sql.includes("pg_advisory_xact_lock") && args[0] === id));
+      assert(!db.log.some(([sql]) => sql.includes("INSERT INTO subscriptions")));
+      return db.billing.get(id);
+    } });
+    assert.equal((await call(webhook, "/api/webhooks/clerk", event.raw, event.headers)).status, 200);
+    const webhookLock = db.log.findIndex(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    const write = db.log.findIndex(([sql]) => sql.includes("INSERT INTO subscriptions"));
+    assert(webhookLock >= 0 && webhookLock < write);
+  });
   it("rejects missing secrets, invalid Clerk identity, game JWT, wrong methods and body limits", async () => {
     const db = fakeDb(); const api = app(db);
     assert.equal((await call(createBillingRoutes({ env: {}, db }), "/api/me/ai/reserve", { kind: "image" }, auth)).status, 402);

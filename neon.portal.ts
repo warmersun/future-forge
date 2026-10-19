@@ -20,6 +20,11 @@ export default defineConfig({
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
         CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY!,
         CLERK_WEBHOOK_SECRET: process.env.CLERK_WEBHOOK_SECRET!,
+        // Preserve the existing device-session key when one is configured.
+        // Otherwise keep the game-session helper's Clerk-secret fallback.
+        ...(process.env.FF_PORTAL_SESSION_SECRET
+          ? { FF_PORTAL_SESSION_SECRET: process.env.FF_PORTAL_SESSION_SECRET }
+          : {}),
         FF_API_SECRET: process.env.FF_API_SECRET!,
         FF_CLOUD_PLAN_SLUGS: process.env.FF_CLOUD_PLAN_SLUGS!,
         FF_CLOUD_AI_BUDGET: process.env.FF_CLOUD_AI_BUDGET!,

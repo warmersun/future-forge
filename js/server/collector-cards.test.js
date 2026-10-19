@@ -94,6 +94,53 @@ test("card page escapes text, drops javascript links, and points og:image at the
   assert.equal(sanitizeCardLinks([{ label: "Bad", url: "javascript:alert(1)" }]).length, 0);
 });
 
+test("card sign-in uses the configured UI mount and a canonical collect return", async () => {
+  for (const [portalUiUrl, expected] of [
+    [undefined, "https://warmersun.com/portal/signin"],
+    ["https://accounts.example/portal/", "https://accounts.example/portal/signin"],
+    ["https://accounts.example/portal", "https://accounts.example/portal/signin"],
+    ["http://localhost:8766", "http://localhost:8766/signin"],
+    ["javascript:alert(1)", null],
+    ["https://user:password@accounts.example/portal", null],
+    ["http://accounts.example/portal", null],
+    ["https://accounts.example/portal?return=https://evil.example", null],
+  ]) {
+    const html = renderCollectorCardPage({ id: CARD_ID, title: "Card" }, {
+      origin: "https://cloud.warmersun.com", portalUiUrl,
+      clerkEnabled: true, publishableKey: `pk_test_${Buffer.from("clerk.example$").toString("base64")}`,
+    });
+    const script = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+    let collectClick;
+    const btn = { addEventListener(_name, handler) { collectClick = handler; }, classList: { add() {} } };
+    const status = { textContent: "" };
+    const doc = { getElementById(id) { return id === "collect" ? btn : id === "status" ? status : { textContent: "" }; },
+      createElement() { return { setAttribute() {} }; }, head: { appendChild(script) { script.onload(); } } };
+    // Browser location/query must not be able to inject a different return target.
+    const location = { href: "https://evil.example/card/other?return=https://evil.example/" };
+    const win = { Clerk: { load: async () => {}, session: null } };
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction("document", "window", "location", "fetch", script)(doc, win, location,
+      async () => { throw new Error("signed-out card must not call authenticated API"); });
+    await collectClick();
+    if (expected === null) {
+      assert.equal(location.href, "https://evil.example/card/other?return=https://evil.example/");
+      assert.match(status.textContent, /Sign in is unavailable/);
+      continue;
+    }
+    const signin = new URL(location.href);
+    assert.equal(`${signin.origin}${signin.pathname}`, expected);
+    assert.equal(signin.searchParams.get("return"), `https://cloud.warmersun.com/card/${CARD_ID}?collect=1`);
+    assert.equal(signin.searchParams.has("device"), false);
+  }
+});
+
+test("the retained portal server passes its configured UI origin to card rendering", () => {
+  const server = fs.readFileSync(path.join(ROOT, "portal/server.mjs"), "utf8");
+  const options = server.match(/renderCollectorCardPage\(card, \{([\s\S]*?)\}\)/)?.[1];
+  assert.ok(options, "legacy card renderer call must remain explicit");
+  assert.match(options, /portalUiUrl:\s*process\.env\.FF_PORTAL_UI_URL\s*\|\|\s*portalPublicOrigin\(\)/);
+});
+
 test("collect requires a sign-in and is idempotent once the gate passes", () => {
   const unsigned = cloudWriteGate(
     { enabled: true, signedIn: false, missingToken: true },

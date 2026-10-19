@@ -124,6 +124,9 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
   }
   async function reserve(cx, userId, body) {
     if (!isQuotaKind(body.kind)) return { ok: false, status: 400, error: "bad_kind" };
+    // Match webhook reconciliation: payer advisory lock, then subscription row.
+    // Reversing these locks can deadlock a reserve against a cancellation.
+    await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [userId]);
     const sub = (await cx.query(
       "SELECT plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1 FOR SHARE", [userId]
     )).rows[0];
@@ -131,8 +134,7 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
       return { ok: false, status: 402, error: "subscription_required", message: SUBSCRIPTION_REQUIRED_MESSAGE };
     }
     const start = sub.period_start ? new Date(sub.period_start).toISOString() : monthPeriodStart();
-    // Serializes stale cleanup and settlement for this user, including across periods.
-    await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [userId]);
+    // The payer lock also serializes stale cleanup and settlement across periods.
     const stale = await cx.query(
       `UPDATE ai_quota_reservations SET settled = true, settled_points = held_points
        WHERE clerk_user_id = $1 AND settled = false AND created_at < now() - interval '2 hours'

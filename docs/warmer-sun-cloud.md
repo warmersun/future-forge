@@ -449,7 +449,7 @@ Browser
 
 **Why the gate cannot be bypassed (for the Cloud catalog):** the catalog lives in a private Neon bucket. The bucket credential never ships in `js/` and is not in the SPA. Leaking it is an ops incident (rotate), not “inspect element.”
 
-**Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY`. They never call the portal. They incur their own AI cost. That is the point.
+**Self-host** keeps local `quests/` and its own `FF_XAI_API_KEY`. Optional account connectivity through `FF_PORTAL_URL` does not change the quest catalog. Selecting the hosted catalog is a separate opt-in, `FF_PORTAL_QUESTS=1`. Self-hosters incur their own AI cost.
 
 **Extend the host later** without moving files: Billing `has()`, gallery, extra quotas. Friends WS stays on **game**. One Function, one Neon branch, one private bucket.
 
@@ -460,7 +460,7 @@ Browser
 **Neon Function** (`neon.portal.ts`, project `proud-hill-53375382`, branch `main`):
 
 1. **cloudapi.** Source `portal/functions/cloud-api-entry.mjs`. Env: Clerk keys, `CLERK_WEBHOOK_SECRET`, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=https://cloud.warmersun.com`, `FF_CLOUD_PLAN_SLUGS`, `FF_CLOUD_AI_BUDGET`, and the `FF_QUOTA_*` rates. **No `DATABASE_URL`** — Neon injects the branch URL. **No `FF_XAI_API_KEY`.** Custom domain `cloud.warmersun.com` (branch-scoped, bound to this one Function). Deploy: `neon deploy --config neon.portal.ts --env <env-file> --project-id proud-hill-53375382 --branch main --no-env-pull`.
-2. **Game** (Render Web Service, `render.yaml`). Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL=https://cloud.warmersun.com`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` unset.
+2. **Game** (Render Web Service, `render.yaml`). Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_PORTAL_QUESTS=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL=https://cloud.warmersun.com`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` and `FF_PORTAL_QUESTS` unset. Dashboard-managed hosted services must add the catalog flag before deploying this change; the Blueprint already declares it.
 3. Optional: on warmersun.com, **`/cloud` → 302** to the game. Sign in is Clerk's own component on the portal. **`https://warmersun.com/portal/signin`** finishes the local device handshake.
 
 Local Cloud: the Function needs the same env (see `neon.portal.ts`); the SPA is published from `portal/`. Engine only: `npm start` (`.env`).

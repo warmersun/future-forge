@@ -2,16 +2,28 @@
 
 **Status: cut over (2026-10-19).** The Neon Function is the production portal backend on `proud-hill-53375382/main`. The static SPA is mounted at `https://warmersun.com/portal/`. The Render portal service and its `cloud.warmersun.com` custom domain have been **removed**. The playable Future Forge game remains a separate app and service. The former `aws-us-west-2` Neon database is no longer authoritative; Neon Functions are not available in that region.
 
-Live endpoints and the historical staging notes below are preserved for context.
+## Deployed review fixes
+
+The reviewed fixes are deployed to production: `cloudapi` deployment **10** is active on `proud-hill-53375382/main`, and here.now Site `autumn-linden-y6rk` serves version **`01M5AWYEJMMTQP3QGVKXCPKA2G`** under `https://warmersun.com/portal/`. The entry script is `app.js?v=20261019-review-fixes`.
+
+- Collector cards use the configured portal UI for sign-in and return to the canonical card URL. Return-only sign-in works independently of device handshakes. Account lookup failures display unavailable subscription state, not an inactive plan.
+- Player progress commits before best-effort achievements. Sponsored, toolkit, founding/event and streak awards are restored, with private/remote catalog source parity. Profile reads restore the sanitized owner login summary.
+- Quota reservation and webhook reconciliation use consistent lock ordering. Account subscription refreshes take the same payer lock before fetching Clerk state. Remote-only score writes load the catalog's start year.
+- `FF_PORTAL_SESSION_SECRET` is preserved when supplied at deployment. The current production deployment has no dedicated session key and keeps its existing Clerk-secret fallback.
+- Accounts and hosted catalog selection are separate: the game now requires `FF_PORTAL_QUESTS=1` to proxy quests through the portal. This change is in the local game source, Blueprint and setup docs; the hosted game was not redeployed or reconfigured during this portal update. Dashboard-managed hosted games must add the flag before their next game deployment.
+
+Verification: the complete offline suite passed **1,570 tests**, with no failures and the two optional local-Postgres tests skipped. Independent specification and quality reviews passed. **19 live checks** passed against the deployed API and mounted SPA, including malformed-token rejection, origin/preflight checks, the unchanged 31-entry quest catalog, gated quest detail, card sign-in configuration, native share-image rendering, exact HTML routes, unknown-route 404s, and a short-lived unbound device handshake. All six published file hashes, including `.herenow/proxy.json`, and the mounted `app.js` bytes were read back and matched. No schema/data migration, DNS, webhook, hosted-game configuration, or billing change was made. Real Clerk sign-in and checkout remain manual verification steps.
+
+The previous Site version, **`01M59HMGV4YNHPE762AT4YQCYZ`**, was backed up and hash-verified before publication. The older staging and migration notes below are historical, not the current deployment checklist.
 
 ## Boundaries
 
 - A static frontend host serves one portal SPA at `/`, `/signin` and `/subscribe`. It does not serve `/api/*` or dynamic `/card/*` as SPA fallbacks. Neon Functions do not host the frontend.
 - The Function owns Cloud APIs and dynamic collector-card pages. The game retains its own local gameplay, AI and Friends logic. Keep Clerk as the identity provider and existing private bucket/catalog behavior until their replacements have been tested.
 - The Function URL is public. Browser calls carry a verified Clerk/session JWT; server-to-server quota calls use the existing shared secret. The smoke-test API key must never be embedded in the SPA. Public read endpoints are explicitly listed, not permitted by default.
-- The live Render process, DNS, Clerk webhook target and game `FF_PORTAL_URL` are unchanged throughout development.
+- Portal review updates change only the Function code and static Site version. DNS, Clerk webhook destination and the hosted game's configuration remain unchanged.
 
-## Static portal staging site
+## Historical: static portal staging site
 
 The portal SPA is published as its own authenticated here.now Site at `https://autumn-linden-y6rk.here.now/` and mounted at `https://warmersun.com/portal/`. This is an **additional** frontend; `cloud.warmersun.com`, the game and production routing are unchanged. The existing account's here.now plan permits only one custom domain, so `portal.warmersun.com` was not connected. The user chose the `/portal/` mount instead.
 
@@ -21,7 +33,7 @@ The two site-local proxies, `/api/health` and `/api/device/complete`, point to t
 
 The portal has no fixed link or checkout redirect to the playable app. Hosted and self-hosted installations may have different addresses; sign-in starts in the app and only an allowlisted return URL supplied by that flow can take the player back.
 
-## Data preparation status (not a cutover)
+## Historical: data preparation status before cutover
 
 The west-region production database was snapshotted into both `proud-hill-53375382/migration-rehearsal` and `proud-hill-53375382/main` in the new east-region project. Source and target table counts and constraints were compared after restore. The isolated rehearsal branch also has the new `clerk_webhook_events` table, which is **not** yet installed on target `main`. The source's private `assets` and `quests` buckets in `soft-hat-66349820/main` were copied into private buckets on target `main`: 1 asset and 28 quest objects. Every copied object was downloaded from the target and checked byte-for-byte; a separate listing confirmed matching counts, sizes and ETags. These are snapshots, not replication. Check for source writes and copy deltas again before any cutover. No live traffic, webhook destination, or game configuration has been changed.
 

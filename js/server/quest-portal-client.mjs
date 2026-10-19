@@ -24,7 +24,8 @@ export function portalOrigin(env = process.env) {
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  */
 export function portalQuestsEnabled(env = process.env) {
-  return Boolean(portalOrigin(env));
+  // Connecting an account must not replace a self-hosted game's catalog.
+  return Boolean(portalOrigin(env)) && /^(1|true|yes)$/i.test(String(env.FF_PORTAL_QUESTS || "").trim());
 }
 
 /**
@@ -123,7 +124,7 @@ export async function fetchPortalQuests(opts = {}) {
 }
 
 /**
- * When the portal is configured, tutor notes for an official quest come from
+ * When the hosted catalog is opted into, tutor notes for an official quest come from
  * the portal tile. Client-supplied notes are dropped.
  * @param {object|null|undefined} context
  * @param {{ authorization?: string, env?: NodeJS.ProcessEnv, fetchImpl?: typeof fetch }} [opts]

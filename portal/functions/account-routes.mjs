@@ -2,12 +2,13 @@
 // identity; this module never treats headers, query strings or bodies as identity.
 // Not wired into cloud-api.mjs until the parent can route verified identities.
 import { randomBytes } from "node:crypto";
+import { createClerkClient } from "@clerk/backend";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate } from "../../js/server/cloud-save.mjs";
 import { parseCollectPath, publicCardDto, collectHttpResult } from "../../js/server/collector-cards.mjs";
 import { planSlugsFromEnv, signQuotaGrant, subscriptionEntitled, subscriptionView } from "../../js/server/ai-quota.mjs";
 import { subscribeUrlFromEnv } from "../../js/server/cloud-quota.mjs";
-import { clerkPaidSubscriptionRow } from "../../js/server/clerk-webhooks.mjs";
+import { rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
 import { portalPublicOrigin } from "../../js/cloud/portal-origin.js";
 
 const MAX_COLLECT_BODY = 1024; // This POST takes no input; consume only a bounded body.
@@ -36,6 +37,11 @@ async function discardBounded(request) {
 export function createAccountRoutes({ db, env = process.env, getUserBillingSubscription } = {}) {
   const publicOrigin = portalPublicOrigin(env);
   const allowedSlugs = planSlugsFromEnv(env);
+  const loadBilling = getUserBillingSubscription || (async (userId) => {
+    const secretKey = env.CLERK_SECRET_KEY || env.FF_CLERK_SECRET_KEY;
+    if (!secretKey) return null;
+    return createClerkClient({ secretKey }).billing.getUserBillingSubscription(userId);
+  });
   async function grantFor(uid) {
     const existing = await db.query("SELECT secret FROM quota_grant_key WHERE id = 1");
     let secret = existing.rows[0]?.secret;
@@ -59,19 +65,34 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
     try { sub = (await db.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null; }
     catch { /* legacy returns an unentitled subscription view */ }
     if (!subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs })) {
+      let cx;
       try {
-        const fresh = await clerkPaidSubscriptionRow(uid, { env, getUserBillingSubscription });
-        if (fresh) {
-          // Same upsert as the legacy portal. Always bind the verified identity.
-          await db.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen_at = now()", [uid]);
-          await db.query(`INSERT INTO subscriptions (clerk_user_id, plan_slug, status, period_start, period_end, updated_at)
-            VALUES ($1,$2,$3,$4,$5,now()) ON CONFLICT (clerk_user_id) DO UPDATE SET
-            plan_slug = EXCLUDED.plan_slug, status = EXCLUDED.status, period_start = EXCLUDED.period_start,
-            period_end = EXCLUDED.period_end, updated_at = now()`,
-          [uid, fresh.planSlug || null, String(fresh.status || "active"), fresh.periodStart || null, fresh.periodEnd || null]);
-          sub = (await db.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null;
+        cx = await db.connect();
+        await cx.query("BEGIN");
+        // Share the webhook's lock BEFORE fetching provider state. A snapshot
+        // fetched outside it could resurrect a subscription after cancellation.
+        await cx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [uid]);
+        sub = (await cx.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null;
+        let refreshed = sub;
+        if (!subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs })) {
+          const fresh = rowFromClerkBillingSubscription(await loadBilling(uid), { env });
+          if (fresh) {
+            // Always bind the verified identity, never provider identity fields.
+            await cx.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen_at = now()", [uid]);
+            await cx.query(`INSERT INTO subscriptions (clerk_user_id, plan_slug, status, period_start, period_end, updated_at)
+              VALUES ($1,$2,$3,$4,$5,now()) ON CONFLICT (clerk_user_id) DO UPDATE SET
+              plan_slug = EXCLUDED.plan_slug, status = EXCLUDED.status, period_start = EXCLUDED.period_start,
+              period_end = EXCLUDED.period_end, updated_at = now()`,
+            [uid, fresh.planSlug || null, String(fresh.status || "active"), fresh.periodStart || null, fresh.periodEnd || null]);
+            refreshed = (await cx.query("SELECT clerk_user_id, plan_slug, status, period_start, period_end FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0] || null;
+          }
         }
-      } catch { /* legacy preserves the previous DB subscription on billing error */ }
+        await cx.query("COMMIT");
+        sub = refreshed;
+      } catch {
+        // Preserve the last committed DB view; never disclose provider/DB errors.
+        if (cx) try { await cx.query("ROLLBACK"); } catch { /* original failure wins */ }
+      } finally { cx?.release(); }
     }
     return reply({
       ok: true, signedIn: true, clerk: true, userId: uid, sessionId: identity.sessionId ?? null,

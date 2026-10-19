@@ -10,6 +10,7 @@ import {
   questHasLeaderboard, STILL_MAX_BYTES, STILL_TOP_K,
 } from "../../js/server/quest-board.mjs";
 import { fetchObjectQuestCatalog, questsBucketFromEnv, questsObjectPrefixFromEnv } from "../../js/server/quest-object-storage.mjs";
+import { fetchRemoteQuestCatalog, DEFAULT_QUESTS_REMOTE_URL } from "../../js/quests-remote.mjs";
 
 const SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reached, q.start_year,
   q.stars, q.waits, q.place, q.stack, q.pathway_text,
@@ -81,7 +82,7 @@ async function evict(cx, questId, keep) {
 }
 
 /** db is a pg Pool-like object; identity is a verified caller result. */
-export function createQuestWriteRoutes({ db, env = process.env, loadCatalog, logger = console } = {}) {
+export function createQuestWriteRoutes({ db, env = process.env, loadCatalog, fetchImpl, readObjectText, logger = console } = {}) {
   let pool;
   function database() {
     if (db) return db;
@@ -92,12 +93,27 @@ export function createQuestWriteRoutes({ db, env = process.env, loadCatalog, log
     }
     return pool;
   }
+  async function catalog() {
+    if (loadCatalog) return loadCatalog();
+    // Match public reads: a configured private bucket is authoritative, even
+    // when it fails. Never merge it with or fall back to the public catalog.
+    const bucket = questsBucketFromEnv(env);
+    if (bucket) return fetchObjectQuestCatalog({
+      bucket, prefix: questsObjectPrefixFromEnv(env), readText: readObjectText,
+    });
+    const configured = env.FF_QUESTS_REMOTE_URL;
+    const remoteUrl = configured === undefined ? DEFAULT_QUESTS_REMOTE_URL : String(configured).trim();
+    return fetchRemoteQuestCatalog(remoteUrl && !/^(0|off|false)$/i.test(remoteUrl) ? remoteUrl : null,
+      { tryFallbacks: false, fetchImpl });
+  }
   async function catalogYear(questId) {
     try {
-      const catalog = loadCatalog ? await loadCatalog() : questsBucketFromEnv(env)
-        ? await fetchObjectQuestCatalog({ bucket: questsBucketFromEnv(env), prefix: questsObjectPrefixFromEnv(env) }) : null;
+      const loaded = await catalog();
+      // Remote helpers may return stale cached quests on failure, including
+      // another URL's catalog. Those are not authoritative for this source.
+      if (loaded?.ok === false) return null;
       // A missing catalog must not license a client-supplied start year.
-      const tile = catalog?.quests?.find((q) => q.id === questId);
+      const tile = loaded?.quests?.find((q) => q.id === questId);
       return tile?.mission?.startYear ?? tile?.startYear ?? null;
     } catch { return null; }
   }

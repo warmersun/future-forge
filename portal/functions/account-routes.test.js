@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createAccountRoutes } from "./account-routes.mjs";
+import { createBillingRoutes } from "./billing-routes.mjs";
 import { verifyQuotaGrant } from "../../js/server/ai-quota.mjs";
 
 const ID = "11111111-2222-4333-8444-555555555555";
@@ -20,6 +21,21 @@ function mockDb({ subscription = null, cards = [], collected = [], published = n
   const owners = new Set(collected.map((row) => `${uid}:${row.id}`));
   return {
     queries,
+    async connect() {
+      const previous = sub;
+      return {
+        query: async (sql, params) => {
+          if (["BEGIN", "COMMIT", "ROLLBACK"].includes(sql) || sql.includes("pg_advisory_xact_lock")) {
+            queries.push({ sql, params: params || [] });
+            if (fail && sql.includes(fail)) throw new Error("private transaction failure detail");
+            if (sql === "ROLLBACK") sub = previous;
+            return { rows: [] };
+          }
+          return this.query(sql, params);
+        },
+        release() { queries.push({ sql: "RELEASE", params: [] }); },
+      };
+    },
     async query(sql, params = []) {
       queries.push({ sql, params });
       if (fail && sql.includes(fail)) throw new Error("private failure detail");
@@ -48,6 +64,133 @@ function mockDb({ subscription = null, cards = [], collected = [], published = n
 }
 
 const published = { id: ID, tech_id: "synthetic-tech", title: "Card", description: "Description", published: true, source: "operator-secret", image: Buffer.from("secret-image") };
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+// Connections run concurrently. Only pg_advisory_xact_lock serializes them;
+// writes become visible at COMMIT, so whole-transaction serialization cannot
+// accidentally hide a missing lock in the account handler.
+function concurrentSubscriptionDb(onLock) {
+  const base = mockDb();
+  let tail = Promise.resolve();
+  let attempts = 0;
+  let releases = 0;
+  return {
+    ...base,
+    get releases() { return releases; },
+    async connect() {
+      let unlock;
+      let pending = [];
+      return {
+        async query(sql, params = []) {
+          if (sql.includes("pg_advisory_xact_lock")) {
+            assert.deepEqual(params, [uid]);
+            const previous = tail;
+            tail = new Promise((done) => { unlock = done; });
+            onLock(++attempts);
+            await previous;
+          } else if (sql === "COMMIT") {
+            for (const [write, args] of pending) await base.query(write, args);
+            pending = [];
+          } else if (sql === "ROLLBACK") pending = [];
+          else if (sql.includes("INSERT INTO clerk_webhook_events")) return { rows: [{ event_id: params[0] }] };
+          else if (sql.startsWith("INSERT INTO subscriptions")) pending.push([sql, params]);
+          else if (sql.includes("FROM subscriptions") && pending.length) {
+            const args = pending.at(-1)[1];
+            return { rows: [{ plan_slug: args[1], status: args[2], period_start: args[3], period_end: args[4] }] };
+          } else if (sql !== "BEGIN") return base.query(sql, params);
+          return { rows: [] };
+        },
+        release() { releases++; unlock?.(); },
+      };
+    },
+  };
+}
+
+const paidSnapshot = { subscriptionItems: [{ plan: { slug: "pro" }, status: "active", periodEnd: 4_000_000_000_000 }] };
+const billingEnv = { ...env, CLERK_SECRET_KEY: "offline-fixture", CLERK_WEBHOOK_SECRET: "offline-fixture" };
+function cancellation(db, getUserBillingSubscription) {
+  const webhook = createBillingRoutes({ env: billingEnv, db, getUserBillingSubscription,
+    verifySignedWebhook: async () => ({ id: "evt_race", type: "subscriptionItem.canceled", data: { payer: { user_id: uid } } }),
+  });
+  return webhook.fetch(req("/api/webhooks/clerk", "POST", { body: "{}" }));
+}
+
+test("delayed account snapshot cannot overwrite a newer cancellation webhook", { timeout: 2000 }, async () => {
+  const providerStarted = deferred(), releaseSnapshot = deferred(), webhookWaiting = deferred();
+  let accountFetching = false;
+  const db = concurrentSubscriptionDb(() => { if (accountFetching) webhookWaiting.resolve(); });
+  let webhookReads = 0;
+  const account = createAccountRoutes({ env, db, getUserBillingSubscription: async () => {
+    accountFetching = true;
+    providerStarted.resolve();
+    await releaseSnapshot.promise;
+    return paidSnapshot;
+  } });
+  const pendingAccount = result(account, req("/api/me"), signed);
+  await providerStarted.promise;
+  const pendingWebhook = cancellation(db, async () => { webhookReads++; return { subscriptionItems: [] }; });
+  await webhookWaiting.promise;
+  await new Promise((done) => setImmediate(done));
+  try { assert.equal(webhookReads, 0, "webhook must wait until account snapshot commits"); }
+  finally { releaseSnapshot.resolve(); }
+  const [accountResponse, webhookResponse] = await Promise.all([pendingAccount, pendingWebhook]);
+  assert.equal(accountResponse.status, 200);
+  assert.equal(webhookResponse.status, 200);
+  const stored = (await db.query("SELECT * FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0];
+  assert.equal(stored.status, "inactive");
+  assert.equal(stored.plan_slug, null);
+  assert.equal(db.releases, 2);
+});
+
+test("account re-reads cancellation committed while waiting for the webhook lock", { timeout: 2000 }, async () => {
+  const providerStarted = deferred(), releaseWebhook = deferred(), accountWaiting = deferred();
+  const db = concurrentSubscriptionDb((attempt) => { if (attempt === 2) accountWaiting.resolve(); });
+  const pendingWebhook = cancellation(db, async () => {
+    providerStarted.resolve();
+    await releaseWebhook.promise;
+    return { subscriptionItems: [] };
+  });
+  await providerStarted.promise;
+  let accountReads = 0;
+  const account = createAccountRoutes({ env, db, getUserBillingSubscription: async () => { accountReads++; return null; } });
+  const pendingAccount = result(account, req("/api/me"), signed);
+  try {
+    assert.equal(await Promise.race([accountWaiting.promise.then(() => "waiting"), pendingAccount.then(() => "finished")]), "waiting");
+    assert.equal(accountReads, 0);
+  } finally { releaseWebhook.resolve(); }
+  assert.equal((await pendingWebhook).status, 200);
+  const response = await pendingAccount;
+  assert.equal(response.body.subscription.status, "inactive");
+  assert.equal(response.body.subscription.entitled, false);
+  assert.equal(accountReads, 1);
+  assert.equal(db.releases, 2);
+});
+
+test("account skips provider refresh when webhook made the locked DB row entitled", { timeout: 2000 }, async () => {
+  const providerStarted = deferred(), releaseWebhook = deferred(), accountWaiting = deferred();
+  const db = concurrentSubscriptionDb((attempt) => { if (attempt === 2) accountWaiting.resolve(); });
+  const pendingWebhook = cancellation(db, async () => {
+    providerStarted.resolve();
+    await releaseWebhook.promise;
+    return paidSnapshot;
+  });
+  await providerStarted.promise;
+  let accountReads = 0;
+  const account = createAccountRoutes({ env, db, getUserBillingSubscription: async () => { accountReads++; return null; } });
+  const pendingAccount = result(account, req("/api/me"), signed);
+  try {
+    assert.equal(await Promise.race([accountWaiting.promise.then(() => "waiting"), pendingAccount.then(() => "finished")]), "waiting");
+  } finally { releaseWebhook.resolve(); }
+  assert.equal((await pendingWebhook).status, 200);
+  assert.equal((await pendingAccount).body.subscription.entitled, true);
+  assert.equal(accountReads, 0);
+  assert.equal(db.releases, 2);
+});
 
 test("/api/me unsigned, disabled, invalid, and signed-in DB unavailable contracts", async () => {
   const handler = createAccountRoutes({ env });
@@ -94,23 +237,50 @@ test("missing/expired subscription refreshes paid Clerk billing row and reads it
   let calls = 0;
   const handler = createAccountRoutes({ env, db, getUserBillingSubscription: async (id) => {
     assert.equal(id, uid); calls++;
+    const begin = db.queries.findIndex((q) => q.sql === "BEGIN");
+    const lock = db.queries.findIndex((q) => q.sql.includes("pg_advisory_xact_lock"));
+    assert(begin >= 0 && lock > begin, "provider fetch must run inside the payer transaction lock");
+    assert.deepEqual(db.queries[lock].params, [uid]);
+    assert(db.queries.slice(lock + 1).some((q) => q.sql.includes("FROM subscriptions")), "re-read subscription after acquiring lock");
     return { subscriptionItems: [{ plan: { slug: "pro" }, status: "active", periodStart: 1_700_000_000_000, periodEnd: 4_000_000_000_000 }] };
   } });
   const body = (await result(handler, req("/api/me"), signed)).body;
   assert.deepEqual(body.subscription, { entitled: true, planSlug: "pro", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" });
   assert.equal(calls, 1);
+  assert(db.queries.some((q) => q.sql === "COMMIT"));
+  assert(db.queries.some((q) => q.sql === "RELEASE"));
   assert(db.queries.some((q) => q.sql.startsWith("INSERT INTO subscriptions") && q.params[0] === uid));
   await result(handler, req("/api/me"), signed);
   assert.equal(calls, 1);
 });
 
-test("partial account read failures keep legacy field defaults and billing refresh failure retains sub", async () => {
+test("partial account read failures keep legacy field defaults and billing refresh failure retains sub", async (t) => {
+  const warning = t.mock.method(console, "warn", () => {});
   const db = mockDb({ fail: "FROM solved_quests", subscription: { plan_slug: "free_user", status: "active" } });
   const handler = createAccountRoutes({ env, db, getUserBillingSubscription: async () => { throw Error("secret-error"); } });
   const { body } = await result(handler, req("/api/me"), signed);
   assert.deepEqual(body.solvedIds, []);
   assert.equal(body.subscription.entitled, false);
   assert.equal(body.subscription.planSlug, "free_user");
+  assert(db.queries.some((q) => q.sql === "ROLLBACK"));
+  assert.equal(db.queries.at(-1).sql, "RELEASE");
+  assert.equal(warning.mock.callCount(), 0, "provider error details must not reach logs");
+  assert.doesNotMatch(JSON.stringify(body), /secret-error|private failure/);
+});
+
+test("failed refresh writes or commit roll back and never return uncommitted entitlement", async () => {
+  for (const fail of ["INSERT INTO subscriptions", "COMMIT"]) {
+    const db = mockDb({ fail, subscription: { plan_slug: "cloud", status: "inactive" } });
+    const handler = createAccountRoutes({ env, db, getUserBillingSubscription: async () => paidSnapshot });
+    const response = await result(handler, req("/api/me"), signed);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.subscription.entitled, false);
+    assert.equal(response.body.subscription.status, "inactive");
+    assert(db.queries.some((q) => q.sql === "ROLLBACK"));
+    assert.equal(db.queries.at(-1).sql, "RELEASE");
+    assert.equal((await db.query("SELECT * FROM subscriptions WHERE clerk_user_id = $1", [uid])).rows[0].status, "inactive");
+    assert.doesNotMatch(JSON.stringify(response.body), /private.*failure/);
+  }
 });
 
 test("quota and subscription query failures never disclose errors or fabricate entitlements", async () => {
