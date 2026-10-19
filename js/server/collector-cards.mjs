@@ -920,7 +920,7 @@ export function renderCollectorCardPage(row, opts) {
   </svg>
   <header class="mast">
     <a href="https://warmersun.com" class="branding">
-      <img src="/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="1242" height="347" />
+      <img src="https://ff.warmersun.com/assets/brand/ff-by-warmersun-transparent-bg.png" alt="Future Forge by Warmer Sun" width="1242" height="347" />
     </a>
     <p class="mast-series">Collection</p>
   </header>
@@ -958,7 +958,7 @@ export function renderCollectorCardPage(row, opts) {
     </div>
   </main>
   <footer>
-    <img src="/assets/brand/ff-mark-footer.png" alt="Future Forge" width="592" height="567" />
+    <img src="https://ff.warmersun.com/assets/brand/ff-mark-footer.png" alt="Future Forge" width="592" height="567" />
     <p><a href="https://warmersun.com">Warmer Sun</a></p>
   </footer>
 

@@ -16,7 +16,7 @@ export default defineConfig({
       env: {
         FF_QUESTS_BUCKET: "quests",
         FF_PORTAL_UI_URL: "https://warmersun.com/portal/",
-        FF_PUBLIC_ORIGIN: process.env.FF_PUBLIC_ORIGIN || "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech",
+        FF_PUBLIC_ORIGIN: process.env.FF_PUBLIC_ORIGIN || "https://cloud.warmersun.com",
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
         CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY!,
         CLERK_WEBHOOK_SECRET: process.env.CLERK_WEBHOOK_SECRET!,

@@ -156,7 +156,7 @@ Sign-in is **optional**. On **`https://ff.warmersun.com`** the game loads Clerk 
 
 This is **not** the same as xAI / SuperGrok credentials below (those are the AI provider for the co-inventor).
 
-Set `FF_PORTAL_URL` on the game to the portal **API** origin — the Neon Function URL, e.g. `https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech`. Set `FF_PORTAL_UI_URL=https://warmersun.com/portal/` for subscription links. Do **not** point `FF_PORTAL_URL` at the static portal: `https://warmersun.com/portal/` proxies only `/api/health` and `/api/device/complete`. Loopback cannot load Clerk's keys, so the local game uses the device-code callback.
+Set `FF_PORTAL_URL` on the game to the portal **API** origin — `https://cloud.warmersun.com` (a custom domain on the Neon Function `cloudapi`). Set `FF_PORTAL_UI_URL=https://warmersun.com/portal/` for subscription links. Do **not** point `FF_PORTAL_URL` at the static portal: `https://warmersun.com/portal/` proxies only `/api/health` and `/api/device/complete`, and here.now drops the `Authorization` header, so authenticated routes cannot go through it. Loopback cannot load Clerk's keys, so the local game uses the device-code callback.
 
 ```bash
 cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
@@ -366,13 +366,13 @@ Browser state lives in **localStorage** on the learner’s device: scenario cach
 
 This is a **long-running Node process**, not a static-only site (unless you accept the local co-inventor only).
 
-**Warmer Sun Cloud (portal)** is the account/subscribe SPA plus HTTP APIs, not the playable game. It runs as a **Neon Function** (`cloudapi`) on `proud-hill-53375382/main`, deployed from `neon.portal.ts`. The SPA itself is a static here.now Site (`autumn-linden-y6rk`) mounted at **`https://warmersun.com/portal/`**, with `.herenow/proxy.json` forwarding `/api/health` and `/api/device/complete` to the Function. The former Render portal service and its `cloud.warmersun.com` custom domain are removed.
+**Warmer Sun Cloud (portal)** is the account/subscribe SPA plus HTTP APIs, not the playable game. It runs as a **Neon Function** (`cloudapi`) on `proud-hill-53375382/main`, deployed from `neon.portal.ts`, behind the custom domain **`https://cloud.warmersun.com`** (`neon functions domains register cloud.warmersun.com --slug cloudapi`). The SPA itself is a static here.now Site (`autumn-linden-y6rk`) mounted at **`https://warmersun.com/portal/`**, with `.herenow/proxy.json` forwarding `/api/health` and `/api/device/complete` to that domain. The former Render portal service is removed.
 
 1. Deploy with `neon deploy --config neon.portal.ts --env <env-file> --project-id proud-hill-53375382 --branch main --no-env-pull`.
-2. Env lives in the Function, not a service dashboard: Clerk keys, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=<Function origin>`, quota and plan settings. Never set `DATABASE_URL` — Neon injects the branch URL.
-3. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=<Function origin>` and `FF_PORTAL_UI_URL=https://warmersun.com/portal/`. Sign in is Clerk's own component on the portal; the local game finishes the device code against the Function directly.
+2. Env lives in the Function, not a service dashboard: Clerk keys, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=https://cloud.warmersun.com`, quota and plan settings. Never set `DATABASE_URL` — Neon injects the branch URL.
+3. Play the SPA on **game** (`npm start` at `http://127.0.0.1:8765`) with `FF_PORTAL_URL=https://cloud.warmersun.com` and `FF_PORTAL_UI_URL=https://warmersun.com/portal/`. Sign in is Clerk's own component on the portal; the local game finishes the device code against the Function directly.
 4. `CLERK_AUTHORIZED_PARTIES` must include `https://warmersun.com`, `https://ff.warmersun.com`, and the loopback game origins if the env **replaces** defaults.
-5. Clerk webhook destination: `https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech/api/webhooks/clerk` (single destination; `020_clerk_webhook_events.sql` makes delivery idempotent).
+5. Clerk webhook destination: `https://cloud.warmersun.com/api/webhooks/clerk` (single destination; `020_clerk_webhook_events.sql` makes delivery idempotent).
 6. here.now proxy routes do **not** forward the browser's `Authorization` header, so the portal sends the per-user Clerk JWT to the Function directly. Do not add a shared API key to a proxy route.
 
 Do not run **game** and **portal** on the same port.

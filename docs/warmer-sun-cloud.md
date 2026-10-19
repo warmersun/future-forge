@@ -1,19 +1,19 @@
 # Warmer Sun Cloud — what we can build now
 
-**Status:** **done / ready / todo** below. Cloud APIs are live on Render; the playable SPA is **game**.  
+**Status:** **done / ready / todo** below. Cloud APIs are live on **Neon Functions**; the playable SPA is **game**.  
 **Clerk application:** `Warmer Sun Cloud`  
-**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). Neon Postgres is provisioned (migrations `001`–`011`, no Daily scores table). Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1). Continue: [C3](#C3).
+**Today:** optional Sign in on Future Forge (`feat/clerk-auth`). The portal runs as the Neon Function `cloudapi` on `proud-hill-53375382/main` behind **`https://cloud.warmersun.com`**; the account/subscribe SPA is a static here.now Site mounted at **`https://warmersun.com/portal/`**. Unsigned progress is **this browser’s localStorage**. Signed-in Cloud play **imports** the local solved set and last run into Neon ([A2](#A2)); after that, cloud is source of truth for solved ids (localStorage is a cache). Quest log: [C1](#C1). Continue: [C3](#C3).
 
 **game** vs **portal** (same git repo, two Node processes):
 
 | Name | Command | What |
 |------|---------|------|
 | **game** | `npm start` → `server.mjs` | Future Forge engine as it was before this branch. Self-host, Invent Night, unsigned play. No Clerk, no Neon. |
-| **portal** | `npm run portal` → `portal/server.mjs` | Warmer Sun Cloud **HTTP APIs** (Clerk, Neon, quest boards, webhooks). No game UI. **Render**. |
+| **portal** | Neon Function `cloudapi` (`neon.portal.ts`) | Warmer Sun Cloud **HTTP APIs** (Clerk, Neon, quest boards, webhooks). No game UI. Live at **`https://cloud.warmersun.com`**. |
 
-Do not run both on port 8765. Render runs **portal** and, when Cloud AI is on, a second **game** service (`FF_CLOUD_AI=1`, `FF_XAI_API_KEY`).
+Do not run both on port 8765. Render runs **game** (`FF_CLOUD_AI=1`, `FF_XAI_API_KEY`); **portal** is the Neon Function and needs no service.
 
-Letter IDs that are **done** are in the repo. **Ready** means the next work is code, not a vendor search. That bucket is empty: every feature we could write on Clerk + Neon + Render is **done**. **Todo** waits on **another building block** (a vendor or ops pick). Until we provision one, nothing moves to Ready.
+Letter IDs that are **done** are in the repo. **Ready** means the next work is code, not a vendor search. That bucket is empty: every feature we could write on Clerk + Neon is **done**. **Todo** waits on **another building block** (a vendor or ops pick). Until we provision one, nothing moves to Ready.
 
 ---
 
@@ -40,7 +40,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI gated by [A1](#A1). No paywall ([B1](#B1) todo). Cloud progress via [C1](#C1) / [C3](#C3). |
 | Friends | Rooms + WebSocket on **game**. Signed-in players send Clerk names ([E4](#E4)). Unsigned stays per-room names. |
 | Money | None in software. `COMMERCIAL.md` is a **license** conversation (self-host / education / commercial / cloud operator). Clerk Billing is unused. |
-| Database | **Neon Postgres** (`DATABASE_URL` in gitignored `.env.portal`, pooler host, `us-west-2`). Cloud tables from `js/server/db/*.sql`. Usage JSONL is still only operator cost logs. |
+| Database | **Neon Postgres** (branch `proud-hill-53375382/main`, `us-east-2`; `DATABASE_URL` is injected into the Function). Cloud tables from `js/server/db/*.sql`. Usage JSONL is still only operator cost logs. |
 
 **Implementation default for almost everything below**
 
@@ -64,8 +64,8 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 |------|--------|
 | Optional Sign in / Sign out | `js/auth.js`. Hosted game uses the Account Portal. Other hosts use the device handshake. `GET /signin` only finishes that handshake. |
 | [**A1**](#A1) catalog/tutor account door | `js/server/cloud-gate.mjs` — strip `aiTutorContext` unsigned; tutor `401`; Learning lock |
-| **App host** = **portal** | Render Web Service, `npm run portal`. Live: `https://future-forge-0yil.onrender.com`. [H](#H). |
-| `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/server.mjs`, `js/server/clerk-auth.mjs` |
+| **App host** = **portal** | Neon Function `cloudapi` on `proud-hill-53375382/main`. Live: `https://cloud.warmersun.com`. [H](#H). |
+| `GET /api/health` `clerk` + `db` blocks, `GET /api/me`, JWT on expensive POSTs | `portal/functions/cloud-api.mjs`, `js/server/clerk-auth.mjs` |
 | [**A2**](#A2) save-at-pride / first sign-in import | `POST /api/me/import`, `POST /api/me/runs`; outcome Sign in CTA; union merge ([C4](#C4)) |
 | [**C4**](#C4) Merge localStorage on first sign-in | same as [A2](#A2) — union of solved ids; cloud wins last run |
 | SQL migrations `users` / `solved_quests` / `runs` / `run_state` / `quest_scores` | `js/server/db/*.sql` (no `daily_scores`), `pg` Pool |
@@ -82,8 +82,8 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | [**E8**](#E8) Display name / hide email | profile hideEmail; public page never includes email; `POST /api/report` |
 | Clerk → DB webhooks | `POST /api/webhooks/clerk` verifies Svix; user.deleted cascades Neon rows |
 | [**C3**](#C3) Continue the board | `PUT/GET /api/me/run-state` — hex, invent panel, chats; strips data-URL art; Continue on title |
-| Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + `.env.portal` |
-| Neon project, pooler `DATABASE_URL` (gitignored) | `.env.portal`; pinged `neondb` as `neondb_owner` |
+| Clerk app **Warmer Sun Cloud** (dev keys) | Dashboard + Function env |
+| Neon project (branch `proud-hill-53375382/main`) | Injected into the Function; no connection string in the repo |
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
 | No ORM; Clerk = identity, Neon = Postgres only | [Decisions locked](#decisions-locked) |
 | Unsigned engine: localStorage progress, theme play, learning tiles, Friends WS, usage JSONL | existing **game** |
@@ -92,20 +92,20 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 
 ### Ready (building blocks exist — write the feature)
 
-None. Clerk + Neon + Render are spent: every lettered ID those blocks unlocked is **done**. Remaining IDs stay **todo** until we pick another block (table below).
+None. Clerk + Neon are spent: every lettered ID those blocks unlocked is **done**. Remaining IDs stay **todo** until we pick another block (table below).
 
 ### Next building blocks (would fill Ready)
 
-The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. Each row here is a *pick*, not a feature. After the pick, the listed IDs become **ready**.
+The first stack was Clerk identity + Neon + portal on Neon Functions. That is **done**. Each row here is a *pick*, not a feature. After the pick, the listed IDs become **ready**.
 
 | Building block | What to pick | Then Ready |
 |----------------|--------------|------------|
 | **Clerk production** | Claim the app; `pk_live_` / `sk_live_`; production instance | Real users on a public origin. Not a lettered feature — ops so Cloud is not on keyless dev keys. |
 | **Clerk Billing** | Enable Billing; create the paid `cloud` plan (ignore `free_user`); `subscription.*` webhooks | [B1](#B1) paid modules. [B2](#B2) quota code is in; it stays dark until this plan exists. |
 | **Clerk Organizations** | Enable Orgs (with Billing) | [F2](#F2) company seats. Only when a company asks with money. |
-| **Gated catalog CDN** | here.now passworded Site or Drive API key (`HERENOW_GATED_SECRET`) | Finish [A1](#A1): `aiTutorContext` off the public CDN. Portal already strips on *our* API. |
+| **Gated catalog CDN** | **Done — private Neon bucket.** The Function reads it with the branch's Object Storage credentials; nothing ships to the browser. | Superseded the here.now passworded-Site / Drive idea: there is no shared secret to leak. |
 | **Marketing surface** | Where `warmersun.com` is served; optional `/cloud` 302 | A Learning tile on the marketing site; [E1](#E1) `warmersun.com/u/…`. In-game pages are already **done**. |
-| **Observability** | Beyond Render logs | Ops. Not a player feature. |
+| **Observability** | Beyond Neon Function logs | Ops. Not a player feature. |
 
 ### Todo (missing a building block or later product)
 
@@ -114,7 +114,7 @@ The first stack was Clerk identity + Neon + portal-on-Render. That is **done**. 
 | **Clerk production** instance | Claim the keyless app; `pk_live_` / `sk_live_`; custom domain |
 | [**B1**](#B1) Paid lesson modules | Clerk **Billing** not enabled |
 | [**F2**](#F2) Company seats on our Cloud | Clerk Organizations + Billing not on |
-| Observability beyond console | Render logs today |
+| Observability beyond console | Neon Function logs today |
 | Optional: `warmersun.com/cloud` redirect | Ops after first deploy |
 
 [**E9**](#E9) (cross-device is why Sign in exists) is a product rule, not a feature — it is [C1](#C1)+[C3](#C3)+[A2](#A2). [**D3**](#D3) (what not to rank) is a rule, not work. [**D2**](#D2) weekly door, [**E6**](#E6) ghost, and [**E10**](#E10) Daily homepage are **dropped**. [**E2**](#E2) is an invent-day streak, not a Daily check-in.
@@ -138,12 +138,12 @@ Other docs and marketing copy must link here instead of restating the rule.
 **How.**  
 - Tag tiles: `access: "open" | "account" | "paid"`. Default today’s theme play = `open`. A remote learning module with no `access` set is treated as `account`; set `access: "open"` to make a learning module or its quests playable with no account.  
 - Hub splits Themes / Sponsored / **Learning** / Library. Unsigned: remote `access: account|paid` tiles, and remote Learning tiles with no `access` set, show a lock + Sign in. Remote tiles with `access: "open"` play with no account, even when `isLearningModule` is set (`catalogNeedsAccount` in `js/quest-catalog.js`). **Library** (`hosted` disk or browser Import) is local JSON — play and tutor from that file, no account door, even when `isLearningModule` is set. There is no official Daily/weekly door — a Daily practice is a Learning tile. Boards are [D1](#D1).  
-- **The browser lock is UX only** for the curated catalog. **portal** (`portal/server.mjs`) is the real gate for that catalog: no session → no tutor context. **game** does not gate theme play or Library side-load on self-host. On the hosted app, theme play, tutorial, friends, and surprise wait for Sign in.  
+- **The browser lock is UX only** for the curated catalog. **portal** (the Neon Function) is the real gate for that catalog: no session → no tutor context. **game** does not gate theme play or Library side-load on self-host. On the hosted app, theme play, tutorial, friends, and surprise wait for Sign in.  
 - `GET /api/quests` may list remote cards (title, access, price chip) for everyone; **bodies that matter** (`aiTutorContext`, full brief) stay off the wire until the server has allowed the user. Tutor AI (`POST /api/co-invent` in tutor mode) requires a verified Clerk JWT **for gated remote tiles**. Do not trust a client-supplied `aiTutorContext` for a gated tile — load it from the server catalog by id after the check. Library sessions keep the side-loaded notes and must not look up the remote-wins merge by id.  
 - Self-host without Clerk keys: no gate (operator’s catalog, operator’s AI bill).  
 - Do **not** hide the whole title screen behind Clerk. That kills self-host and Invent Night drop-ins. On the hosted app the title still paints, and Choose theme, tutorial, friends, Surprise Quest, and a lesson link open Sign in in the same tab until there is a session.
 
-**Public gate:** **portal** on Render ([H](#H)), doorway at `warmersun.com/cloud` when the redirect is set. here.now is files, not the gate.
+**Public gate:** **portal** — the Neon Function at `https://cloud.warmersun.com` ([H](#H)). The account/subscribe SPA is a static here.now Site at `https://warmersun.com/portal/`; here.now is files, not the gate.
 
 **Softer variant:** anyone can *play* a Learning tile unsigned on self-host; on Cloud you need an account for tutor + to **count** a hold on the quest board.
 
@@ -416,107 +416,101 @@ These are settled. Do not re-open them in implementation.
 
 1. **No ORM.** This repo is vanilla JS, not TypeScript. Skip Drizzle, Prisma, and the rest. Talk to Neon with a Postgres driver (`pg` or `postgres`) and plain SQL (`CREATE TABLE`, migrations as `.sql` files under `js/server/db/`). Typed query builders buy nothing here.
 2. **Clerk is identity; Neon is only Postgres.** Do not enable Neon Auth (or Supabase Auth, or a second user table that pretends to be login). Session JWT we already verify is the user. Neon stores `runs`, achievements, quest scores — keyed by `clerk_user_id`.
-3. **The Cloud host is the gate.** Two here.now Sites (public files vs gated files). Only **portal** knows the gated credential. Neon, Clerk verify, and entitlements live **on portal**, not on here.now. Live xAI (co-inventor, Imagine, TTS) is **game**, not portal. **game** (self-host) never talks to the gated Site. Details: [H](#H).
-4. **The host is a Render Web Service running portal** (`npm run portal`, `render.yaml`). Funnel on this machine was a laptop prototype. Optional: `https://warmersun.com/cloud` 302s to the Render URL.
+3. **The Cloud host is the gate.** The catalog lives in a **private Neon bucket**; only **portal** (the Function) holds the bucket credential. Neon, Clerk verify, and entitlements live **on portal**, not on here.now. Live xAI (co-inventor, Imagine, TTS) is **game**, not portal. **game** (self-host) never calls the portal. Details: [H](#H).
+4. **The portal host is the Neon Function `cloudapi`** (`neon.portal.ts`, `neon functions deploy`), not a long-running service. **game** is still a long-running Node process on Render (`render.yaml`). Funnel on this machine was a laptop prototype. Optional: `https://warmersun.com/cloud` 302s to the game URL.
 
 ---
 
 <a id="H"></a>
-## H. The Cloud host — portal on Render
+## H. The Cloud host — portal as a Neon Function
 
-**Status:** **done** (Render). **Where it runs:** **portal** (`portal/server.mjs`, `npm run portal`) on a Render **Web Service** is Cloud HTTP APIs plus **`GET /signin`** (`https://cloud.warmersun.com`, API also at `https://future-forge-0yil.onrender.com`). **game** (`npm start`) is the playable SPA at `http://127.0.0.1:8765`. Set `FF_PORTAL_URL` on game to the Render origin. Optional: **`https://warmersun.com/cloud`** 302s to the game SPA, not to JSON APIs.
+**Status:** **done** (Neon Functions). **Where it runs:** **portal** is the Neon Function `cloudapi` on `proud-hill-53375382/main`, deployed from `neon.portal.ts`, behind the custom domain **`https://cloud.warmersun.com`**. The account/subscribe SPA is a static here.now Site (`autumn-linden-y6rk`) mounted at **`https://warmersun.com/portal/`**; its `.herenow/proxy.json` forwards `/api/health` and `/api/device/complete` to the Function. **game** (`npm start`) is the playable SPA at `http://127.0.0.1:8765`. Set `FF_PORTAL_URL` on game to `https://cloud.warmersun.com`.
 
-Warmer Sun Cloud (**portal**) is the hosted product. It is an always-on Node process that:
+Warmer Sun Cloud (**portal**) is the hosted product. It is a stateless Function that:
 
 - Verifies Clerk JWTs  
 - Owns Neon (`runs`, entitlements, quotas)  
 - Does **not** call xAI — live co-inventor / Imagine / TTS is **game**  
-- Is the **only** client that can read gated catalog files  
+- Is the **only** client that can read the private quest bucket  
 
-here.now stays a **CDN for files**.
+here.now stays a **CDN for files** — the SPA only. The catalog is a **private Neon bucket**, not a gated here.now Site: the Function holds the bucket credential and applies the account gate itself.
 
 ```
 Browser
   │
-  ├─ public here.now     free SPA, free catalog JSON, theme play
-  │                      (anyone can GET)
+  ├─ warmersun.com/portal   account/subscribe SPA (static here.now Site)
+  │                          proxies /api/health + /api/device/complete
   │
-  └─ portal (Render)     Cloud APIs + GET /signin (Clerk + Neon, no playable SPA, no xAI)
+  └─ cloud.warmersun.com    Cloud APIs (Neon Function: Clerk + Neon, no playable SPA, no xAI)
          │
-         └─ gated here.now   paid tiles, aiTutorContext, lesson bodies
-                             credential known only to portal
+         └─ private Neon bucket   official quest catalog + aiTutorContext
+                                   credential known only to the Function
 ```
 
-**Public Site** — game shell, open tiles, marketing. Free stuff never needs the host.
+**Why the gate cannot be bypassed (for the Cloud catalog):** the catalog lives in a private Neon bucket. The bucket credential never ships in `js/` and is not in the SPA. Leaking it is an ops incident (rotate), not “inspect element.”
 
-**Gated Site** — password-protected (or a here.now **Drive** with an API key — same idea, better for servers). Browsers get 401. The host stores `HERENOW_GATED_SECRET` (or Drive token) in env, fetches JSON server-side, and only then returns a lesson to a Clerk user who is allowed.
+**Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY`. They never call the portal. They incur their own AI cost. That is the point.
 
-**Why the host cannot be bypassed (for Cloud catalog):** the gated URL is useless without the secret. The secret never ships in `js/`. Leaking it is an ops incident (rotate), not “inspect element.” This is a **shared secret**, not per-user crypto — good enough to keep `aiTutorContext` off the public CDN.
+**Extend the host later** without moving files: Billing `has()`, gallery, extra quotas. Friends WS stays on **game**. One Function, one Neon branch, one private bucket.
 
-**Self-host** is unchanged: local `quests/` + their `FF_XAI_API_KEY`. They never call the gated Site. They incur their own AI cost. That is the point.
-
-**Extend the host later** without moving files: Billing `has()`, gallery, extra quotas. Friends WS stays on **game**. One portal process, one Neon, one gated-catalog secret.
-
-**Caveat:** confirm here.now **site password** is something Node can send (HTTP Basic / header), not only a browser interstitial + cookie. If it is cookie-only, use a **Drive + API key** instead of a passworded Site — same split, designed for server fetch.
-
-**Does not live on here.now:** Neon, Clerk verify. WebSockets and live xAI are **game**, not portal. The game SPA calls Render `/api/*` (CORS `*`). Do not serve the SPA from portal.
+**Does not live on here.now:** Neon, Clerk verify, the private bucket. WebSockets and live xAI are **game**, not portal. The game SPA calls the Function `/api/*` with origin-bound CORS. Do not serve the SPA from portal.
 
 ### Where it runs
 
-Render **Web Services** (see `render.yaml`):
+**Neon Function** (`neon.portal.ts`, project `proud-hill-53375382`, branch `main`):
 
-1. **Portal.** Build `npm install`. Start `npm run portal`. Health `GET /api/health`. Env: Clerk keys, `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`), `FF_TRUST_PROXY=1`, `FF_API_SECRET`, `FF_CLOUD_PLAN_SLUGS`, `FF_CLOUD_AI_BUDGET`, and the `FF_QUOTA_*` rates. **No `FF_XAI_API_KEY`.** Render injects `PORT`. Subscribe UI is `GET /subscribe`.
-2. **Game.** Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL` (the portal origin), the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` unset.
-3. Optional: on warmersun.com, **`/cloud` → 302** to the game. Sign in is the Account Portal. **`https://cloud.warmersun.com/signin`** is only the local handshake callback.
+1. **cloudapi.** Source `portal/functions/cloud-api-entry.mjs`. Env: Clerk keys, `CLERK_WEBHOOK_SECRET`, `FF_API_SECRET`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, `FF_PUBLIC_ORIGIN=https://cloud.warmersun.com`, `FF_CLOUD_PLAN_SLUGS`, `FF_CLOUD_AI_BUDGET`, and the `FF_QUOTA_*` rates. **No `DATABASE_URL`** — Neon injects the branch URL. **No `FF_XAI_API_KEY`.** Custom domain `cloud.warmersun.com` (branch-scoped, bound to this one Function). Deploy: `neon deploy --config neon.portal.ts --env <env-file> --project-id proud-hill-53375382 --branch main --no-env-pull`.
+2. **Game** (Render Web Service, `render.yaml`). Start `npm start`. Env: `FF_TRUST_PROXY=1`, `FF_CLOUD_AI=1`, `FF_XAI_API_KEY`, `FF_PORTAL_URL=https://cloud.warmersun.com`, `FF_PORTAL_UI_URL=https://warmersun.com/portal/`, the same `FF_API_SECRET`, `FF_JOIN_ORIGIN`. This process spends the key. Self-host leaves `FF_CLOUD_AI` unset.
+3. Optional: on warmersun.com, **`/cloud` → 302** to the game. Sign in is Clerk's own component on the portal. **`https://warmersun.com/portal/signin`** finishes the local device handshake.
 
-Local Cloud: `npm run portal` (Clerk + Neon in gitignored `.env.portal`). Engine only: `npm start` (`.env`).
+Local Cloud: the Function needs the same env (see `neon.portal.ts`); the SPA is published from `portal/`. Engine only: `npm start` (`.env`).
 
 **Clerk / CORS**
 
-- Production Clerk keys load on `warmersun.com` and allowlisted subdomains. The hosted game at **`https://ff.warmersun.com`** calls `Clerk.load()`. Sign in is **`https://accounts.warmersun.com/sign-in`**. `cloud.warmersun.com` CNAMEs to Render and serves the handshake callback plus subscribe.
+- Production Clerk keys load on `warmersun.com` and allowlisted subdomains. The hosted game at **`https://ff.warmersun.com`** calls `Clerk.load()`. Sign in is Clerk's own component on **`https://warmersun.com/portal/signin`**. `cloud.warmersun.com` is a Neon Functions custom domain (CNAME to Neon's edge) and serves the API; the account/subscribe SPA is at `warmersun.com/portal/`.
 - Local **game** is HTTP **`:8765` only** (`http://127.0.0.1:8765` or `http://localhost:8765`). Do not bind port 443. That host never calls `Clerk.load()`.
 - `CLERK_AUTHORIZED_PARTIES`: `https://ff.warmersun.com`, `https://cloud.warmersun.com`, `https://warmersun.com`, plus loopback game origins (`http://127.0.0.1:8765`, `http://localhost:8765`). If that env var is set on Render it **replaces** code defaults — keep those hosts. Allowed subdomains are `ff.warmersun.com` and `cloud.warmersun.com`.
-- Webhooks: `https://future-forge-0yil.onrender.com/api/webhooks/clerk` (must stay the same hostname until you add a custom domain).
+- Webhooks: `https://cloud.warmersun.com/api/webhooks/clerk`. Single destination; `020_clerk_webhook_events.sql` makes delivery idempotent. Add it in the Clerk dashboard — the Svix signing secret must match `CLERK_WEBHOOK_SECRET` on the Function, and here.now proxy routes do **not** forward the browser `Authorization` header, so authenticated calls go straight to the Function.
 - Device handshake (`POST /api/device/start`, `GET /api/device/status`) CORS is loopback game origins plus optional `FF_GAME_DEVICE_ORIGINS` (comma-separated Funnel/public game origins). Other Cloud APIs stay CORS `*`. Do not serve the playable SPA from portal.
 
-**Ops honesty:** Render sleep on free instances = Cloud down; use a paid instance if Sign in / boards must stay up. Custom domain, Clerk production keys, and the `/cloud` redirect are ops after the first deploy. Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
+**Ops honesty:** Neon Functions scale to zero when idle, so the first request after inactivity pays a cold start. The hosted **game** is a Render Web Service — Render sleep on free instances = game down; use a paid instance if play must stay up. The custom domain is branch-scoped and bound to `cloudapi`: recreating `main` means re-registering it (`neon functions domains register cloud.warmersun.com --slug cloudapi`). Funnel on a laptop was the prototype; do not point production webhooks at `*.ts.net`.
 
 ---
 
 <a id="G"></a>
 ## G. Outstanding building blocks — research and recommendation
 
-**Researched:** 2026-08-25. Prices and plan names move; re-check before spending. Clerk is identity only. Neon is the store (provisioned; schema **done**). Host pick: Render for **portal**, not Fly.
+**Researched:** 2026-08-25. Prices and plan names move; re-check before spending. Clerk is identity only. Neon is the store (provisioned; schema **done**). Host pick: **Neon Functions for portal** (moved off Render 2026-10-19), not Fly. **game** stays a long-running Node process on Render.
 
 <a id="G0"></a>
 ### G0. Constraints of *this* stack (do not pretend we are Next.js)
 
 | Constraint | Why it matters |
 |------------|----------------|
-| Long-running Node (`server.mjs`) | Not a serverless function. Friends rooms use **WebSockets**. Vercel / Netlify / Cloudflare Workers are the wrong shape. |
+| Long-running Node (`server.mjs`) | **game** is not serverless: Friends rooms use **WebSockets**. Vercel / Netlify / Cloudflare Workers are the wrong shape for **game**. **portal** is the opposite — it is a Neon Function, stateless per request. |
 | Disk already in play | Shared TTS cache under `data/tts-cache/`. The process wants a volume, not a read-only lambda. |
 | Clerk already chosen | Do not buy a second auth (Supabase Auth, Firebase Auth, PlayFab). |
-| Catalog vs game | `warmersun.com` already publishes quest/trend JSON. The **game** is a Node process (`npm start`). Cloud DB belongs on **portal**, not inside the static site. |
+| Catalog vs game | `warmersun.com` already publishes quest/trend JSON. The **game** is a Node process (`npm start`). The Cloud catalog is a **private Neon bucket** read by **portal** (the Function), not inside the static site. |
 | Scale | Sole prop, consumer, Invent Night + Daily. Hundreds of users first, not 100k DAU. **xAI tokens will dwarf the database bill.** |
 | Self-host must stay simple | Hobby `npm start` without Cloud. No required Neon account for a LAN night. |
 
-README deploy: **portal** on Render (`npm run portal`); **game** is `npm start` with `FF_PORTAL_URL`. Self-host engine stays `npm start` without Clerk.
+README deploy: **portal** is the Neon Function `cloudapi`; **game** is `npm start` with `FF_PORTAL_URL`. Self-host engine stays `npm start` without Clerk.
 
 <a id="G1"></a>
 ### G1. Outstanding blocks (the shopping list)
 
 | Block | What it is | Bucket | Needed for |
 |-------|------------|--------|------------|
-| **1. App host** | Always-on Node + HTTPS | **Done** — Render Web Service running **portal** | Public webhooks, [A1](#A1), [E5](#E5) |
-| **2. Database** | Relational store keyed by `clerk_user_id` | **Done** — Neon, `.env.portal` | [C1](#C1), [D1](#D1), [B2](#B2) |
-| **3. Schema + migrations** | Versioned `.sql`, no ORM | **Done** — `js/server/db/001`–`010` | Same |
+| **1. App host** | HTTPS endpoint for Cloud APIs | **Done** — Neon Function `cloudapi` at `https://cloud.warmersun.com` | Public webhooks, [A1](#A1), [E5](#E5) |
+| **2. Database** | Relational store keyed by `clerk_user_id` | **Done** — Neon, injected into the Function | [C1](#C1), [D1](#D1), [B2](#B2) |
+| **3. Schema + migrations** | Versioned `.sql`, no ORM | **Done** — `js/server/db/001`–`020` | Same |
 | **4. Clerk → our DB** | Webhooks + JWT on writes | **Done** — JWT + `POST /api/webhooks/clerk` | Names on the board, delete-account |
-| **5. Public webhook URL** | TLS endpoint Clerk/Svix can POST | **Done** — `https://future-forge-0yil.onrender.com/api/webhooks/clerk` | (4) in production |
+| **5. Public webhook URL** | TLS endpoint Clerk/Svix can POST | **Done** — `https://cloud.warmersun.com/api/webhooks/clerk` | (4) in production |
 | **6. Backups** | PITR off the app disk | **Done** — Neon instant restore on the project | Not losing the quest log |
 | **7. Clerk production instance** | `pk_live_` / claimed app | **Todo** | Real users on warmersun.com |
 | **8. Billing** | Clerk Billing + `subscription.*` | **Todo** | [B1](#B1), [F2](#F2) |
 | **9. Object storage** | Gallery stills | **Not needed** — top-3 stills are Neon BYTEA on [D1](#D1) | Dropped [E5](#E5) |
-| **10. Secrets / env** | `DATABASE_URL`, Clerk keys | **Done** locally (`.env.portal`) and on Render | Deploy |
+| **10. Secrets / env** | Clerk keys, `FF_API_SECRET`, webhook secret | **Done** — Function env (`neon.portal.ts`); `DATABASE_URL` is injected by Neon | Deploy |
 | **11. Observability** | Process up, webhook failures | **Todo** | Operating Cloud |
 | **12. Legal** | Privacy / ToS for stored runs | **Done** — warmersun.com/terms and /privacy (25 Aug 2026) | Cloud rows, Continue, leaderboard stills named |
 
@@ -549,7 +543,7 @@ Clerk’s own docs (2026): prefer **session JWT** for the current user; **sync a
 <a id="G3"></a>
 ### G3. Recommendation
 
-**Done in spirit, host pick updated:** schema is Postgres; Cloud Postgres is Neon; **portal** Node is on **Render** (`npm run portal`), not Fly. Do not put the database on the app’s local disk in production. The Fly.io notes below are the 2026-08-25 research that led here — do not re-open the host pick.
+**Done in spirit, host pick updated:** schema is Postgres; Cloud Postgres is Neon; **portal** is a **Neon Function** (moved off Render 2026-10-19), not Fly. Do not put the database on the app’s local disk in production. The Fly.io notes below are the 2026-08-25 research that led here — do not re-open the host pick.
 
 Why this split:
 
@@ -583,11 +577,11 @@ Infrastructure for save + Daily is cheap. Schema, webhook, and `runs` are **done
 ### G5. First infra slice — **done**
 
 1. Clerk app **Warmer Sun Cloud**; **dev** keys on localhost and on Render. Production instance is **todo**.  
-2. Neon project, region `us-west-2`. `DATABASE_URL` in gitignored `.env.portal`.  
-3. SQL migrations `001`–`011` (`users`, `runs`, achievements, profile, quota, pins, `run_state`, `quest_scores`). No `daily_scores`. No ORM.  
+2. Neon project `proud-hill-53375382`, region `us-east-2`. `DATABASE_URL` is injected into the Function.
+3. SQL migrations `001`–`020` (`users`, `runs`, achievements, profile, quota, pins, `run_state`, `quest_scores`, `device_handshakes`, `clerk_webhook_events`). No `daily_scores`. No ORM.  
 4. `POST /api/webhooks/clerk` on portal.  
 5. `POST /api/me/runs` (JWT required) + `GET /api/me/runs`.  
-6. Portal on Render; webhook URL `https://future-forge-0yil.onrender.com/api/webhooks/clerk`.
+6. Portal is the Neon Function `cloudapi` at `https://cloud.warmersun.com`; webhook URL `https://cloud.warmersun.com/api/webhooks/clerk`.
 
 Skip paid lessons, gallery, and org seats until that loop stays boringly reliable.
 
@@ -597,5 +591,5 @@ Skip paid lessons, gallery, and org seats until that loop stays boringly reliabl
 - Clerk: [sync data with webhooks](https://clerk.com/docs/guides/development/webhooks/syncing), [Neon integration](https://clerk.com/docs/guides/development/integrations/databases/neon), [webhooks overview](https://clerk.com/docs/guides/development/webhooks/overview)  
 - Neon vs Supabase vs Railway (SaaS Postgres, May–Aug 2026 roundups): free-tier pause vs scale-to-zero, Pro $25 floor vs Neon usage  
 - Fly.io [resource pricing](https://fly.io/docs/about/pricing/) — machines, volumes, unmanaged vs managed Postgres  
-- This repo: `README.md` deploy section; `portal/server.mjs` Cloud APIs; `server.mjs` game HTTP + `ws`; Clerk + Neon in `.env.portal`  
+- This repo: `README.md` deploy section; `portal/functions/cloud-api.mjs` Cloud APIs (Neon Function); `server.mjs` game HTTP + `ws`; Clerk + Neon in the Function env  
 - Game BaaS pricing surveys (PlayFab / Nakama / LootLocker at 200–1k DAU) — used only as **negative** space

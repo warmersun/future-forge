@@ -1,11 +1,11 @@
 {
   "proxies": {
     "/api/health": {
-      "upstream": "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech/api/health",
+      "upstream": "https://cloud.warmersun.com/api/health",
       "method": "GET"
     },
     "/api/device/complete": {
-      "upstream": "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech/api/device/complete",
+      "upstream": "https://cloud.warmersun.com/api/device/complete",
       "method": "POST"
     }
   }

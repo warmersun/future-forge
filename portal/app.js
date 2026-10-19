@@ -100,21 +100,21 @@ async function completeDevice(code, token, base) {
   if (!res.ok || !data.ok) throw new Error(data.error || "Could not finish handshake");
 }
 
-const home = (base) => `<section><p class="eyebrow">Future Forge · Warmer Sun Cloud</p>
+const home = (base) => `<section id="app-home" data-route="/"><p class="eyebrow">Future Forge · Warmer Sun Cloud</p>
   <h1>Invent with us. Run it your way.</h1>
   <p class="lead">Sign in to continue your Future Forge journey, or choose hosted access. The playable app runs separately from this account portal.</p>
   <p class="links"><a class="button primary" data-link href="${base}/subscribe">Explore hosted access</a>
   <a class="button" data-link href="${base}/signin">Sign in</a></p></section>`;
 // A device-code handoff comes straight from the app, so it gets Clerk's form
 // with no portal chrome around it. A plain visit keeps the portal heading.
-const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" : ""}">${deviceFlow ? "" : '<p class="eyebrow">Future Forge account</p><h1>Sign in</h1>'}
+const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" : ""}" data-route="/signin">${deviceFlow ? "" : '<p class="eyebrow">Future Forge account</p><h1>Sign in</h1>'}
   <p id="status" role="status">Loading Sign in…</p>
   <div id="signin-mount"></div>
   <div id="signed-in" hidden>
     <p id="account"></p>
     <p class="links"><button id="sign-out" class="button" type="button">Sign out</button></p>
   </div></section>`;
-const subscribe = `<div class="split"><section class="promise">
+const subscribe = `<div class="split" data-route="/subscribe"><section class="promise">
   <p class="eyebrow">Future Forge Hosted4U</p><h1>You invent. We run the app.</h1>
   <p class="lead">You are buying a month of hosted Future Forge for one person.
   Pick a real problem, try what just became possible, and see which parts are ready now.</p>
@@ -142,8 +142,16 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
   if (deviceFlow) doc.body?.classList.add?.("device-flow");
   let generation = 0;
   let pricingMount = null;
+  // null until Clerk mounts: showSignin() uses this to tell a fresh visit from
+  // Clerk's own hash re-entry, which fires popstate and re-runs render().
   let signInMount = null;
   const active = (id) => generation === id;
+
+  function dropSignInMount() {
+    if (!signInMount) return;
+    win.Clerk?.unmountSignIn?.(signInMount);
+    signInMount = null;
+  }
 
   async function showSignin(id) {
     const status = doc.getElementById("status");
@@ -156,6 +164,12 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       if (!active(id)) return;
       if (!config) { status.textContent = "Sign in is off on this portal (Clerk keys missing)."; return; }
       const here = `${win.location.origin}${win.location.pathname}${win.location.search}`;
+      const mount = doc.getElementById("signin-mount");
+      // Clerk's hash routing rewrites the URL and fires popstate, which calls
+      // render() again. If the form is still mounted, this is that re-entry, not
+      // a fresh visit: re-running the mount would fire the SSO callback a second
+      // time and show the sign-in form twice in a row.
+      if (signInMount && mount && signInMount === mount && mount.childElementCount > 0) return;
       await loadScript(doc, `https://${config.host}/npm/@clerk/ui@1/dist/ui.browser.js`);
       if (!active(id)) return;
       await loadScript(doc, `https://${config.host}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
@@ -169,7 +183,6 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
         // No session: show Clerk's own form. The device code is optional.
         writeBounced(true);
         status.textContent = "";
-        const mount = doc.getElementById("signin-mount");
         Clerk.mountSignIn(mount, { routing: "hash", forceRedirectUrl: here,
           signUpForceRedirectUrl: here, appearance: CLERK_APPEARANCE });
         signInMount = mount;
@@ -268,15 +281,30 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
 
   function render() {
     const id = ++generation;
+    const route = win.location.pathname.slice(base.length) || "/";
+    const current = app.innerHTML.match(/data-route="([^"]*)"/);
+    const mounted = app.querySelector?.("#app-home, #signin-mount, #clerk-mount") ?? null;
+    // The route only changes when the URL path changes. Clerk's hash routing
+    // rewrites the URL and fires popstate; rebuilding on that would unmount the
+    // form and remount it, and the remount fires the SSO callback again — the
+    // second sign-in prompt right after the first. A same-route popstate keeps
+    // the mounted form exactly as it is.
+    const routeChanged = current?.[1] !== route || !mounted;
+    if (!routeChanged) {
+      doc.querySelectorAll("[data-nav]").forEach((link) => {
+        if (link.getAttribute("data-nav") === route) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      doc.title = `${route === "/signin" ? "Sign in" : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
+      if (route === "/signin") void showSignin(id);
+      if (route === "/subscribe") void showSubscribe(id);
+      return;
+    }
     if (pricingMount) {
       win.Clerk?.unmountPricingTable?.(pricingMount);
       pricingMount = null;
     }
-    if (signInMount) {
-      win.Clerk?.unmountSignIn?.(signInMount);
-      signInMount = null;
-    }
-    const route = win.location.pathname.slice(base.length) || "/";
+    dropSignInMount();
     doc.querySelectorAll("[data-nav]").forEach((link) => {
       if (link.getAttribute("data-nav") === route) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");

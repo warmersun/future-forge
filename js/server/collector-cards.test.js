@@ -163,9 +163,9 @@ test("card page includes Future Forge branding and logo assets", () => {
   );
   // Header branding with logo
   assert.match(html, /Future Forge by Warmer Sun/);
-  assert.match(html, /\/assets\/brand\/ff-mark-footer\.png/);
+  assert.match(html, /src="https:\/\/ff\.warmersun\.com\/assets\/brand\/ff-by-warmersun-transparent-bg\.png"/);
   // Footer branding
-  assert.match(html, /\/assets\/brand\/ff-by-warmersun-transparent-bg\.png/);
+  assert.match(html, /src="https:\/\/ff\.warmersun\.com\/assets\/brand\/ff-mark-footer\.png"/);
   // Check that logo assets exist
   assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-mark-footer.png")));
   assert.ok(fs.existsSync(path.join(ROOT, "assets/brand/ff-by-warmersun-transparent-bg.png")));

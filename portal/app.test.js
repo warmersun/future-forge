@@ -22,11 +22,11 @@ function fakeUi(initial) {
   }));
   const status = { textContent: "" };
   const mount = {};
-  const signInMount = {};
+  const signInMount = { childElementCount: 0 };
   const signedIn = { hidden: true };
   const account = { textContent: "" };
   const signOut = { onclick: null };
-  const app = { innerHTML: "" };
+  const app = { innerHTML: "", querySelector(sel) { return /data-route=/.test(app.innerHTML) ? {} : null; } };
   const first = new URL(initial);
   const location = {
     href: first.href, origin: first.origin, pathname: first.pathname, search: first.search,
@@ -201,6 +201,31 @@ test("an existing browser session signs out before Clerk's form appears", async 
   assert.equal(signInOptions.forceRedirectUrl, "https://portal.example/signin?device=ABC");
 });
 
+test("Clerk's own hash re-entry does not remount the form a second time", async (t) => {
+  // Clerk's hash routing pushes #/sso-callback and fires popstate. render() must
+  // leave the mounted form alone; remounting it fires the SSO callback again and
+  // the user gets a second sign-in prompt immediately after the first.
+  const ui = fakeUi("https://portal.example/signin?device=ABC");
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  globalThis.sessionStorage = { getItem() { return "1"; }, removeItem() {}, setItem() {} };
+  globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+    ? { clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+    : { ok: true } });
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  let mounts = 0;
+  ui.signInMount.childElementCount = 1;
+  ui.win.Clerk = { load: async () => {}, session: { getToken: async () => "token-123" },
+    mountSignIn() { mounts++; } };
+  const rerender = startPortal(ui);
+  await tick(); await tick();
+  rerender();
+  rerender();
+  await tick(); await tick();
+  assert.equal(mounts, 0);
+  assert.equal(ui.app.innerHTML.match(/data-route="\/signin"/g).length, 1);
+});
+
 test("a plain portal visit shows Clerk's form instead of a device-code dead end", async (t) => {
   const ui = fakeUi("https://portal.example/signin");
   const previous = globalThis.fetch;
@@ -321,7 +346,7 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     const res = await fetch(base + route);
     assert.equal(res.status, 200, route);
     assert.match(res.headers.get("content-type"), /text\/html/);
-    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-bare-device"/);
+    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-no-remount"/);
   }
   for (const [asset, mime] of [["/app.js", "text/javascript"], ["/app.css", "text/css"]]) {
     const res = await fetch(base + asset);
