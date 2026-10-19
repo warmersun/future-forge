@@ -14,6 +14,52 @@ const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.signature";
 const future = "2099-01-01T00:00:00.000Z";
 const period = "2026-10-01T00:00:00.000Z";
 
+it("standalone billing preflight accepts private-LAN origins by default, never public HTTP", async () => {
+  const lan = "http://192.168.1.140:8765";
+  const request = (origin, path = "/api/me/ai/reserve") => new Request(`https://cloud.warmersun.com${path}`, {
+    method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Headers": "authorization,content-type" },
+  });
+  for (const name of ["FF_GAME_DEVICE_ORIGINS", "FF_CLOUD_CORS_ORIGINS"]) {
+    const api = createBillingRoutes({ env: { ...env, [name]: `${lan},http://public.example` } });
+    const allowed = await api.fetch(request(lan));
+    assert.equal(allowed.status, 204);
+    assert.equal(allowed.headers.get("Access-Control-Allow-Origin"), lan);
+    assert.equal(allowed.headers.get("Access-Control-Allow-Headers"), "Authorization, Content-Type");
+    // Unconfigured private-LAN origins (different host/port) are allowed by default.
+    for (const extraLan of ["http://192.168.1.141:8765", "http://192.168.1.140:8766"]) {
+      const extra = await api.fetch(request(extraLan));
+      assert.equal(extra.status, 204, extraLan);
+      assert.equal(extra.headers.get("Access-Control-Allow-Origin"), extraLan);
+    }
+    const denied = await api.fetch(request("http://public.example"));
+    assert.equal(denied.status, 403);
+    assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+    // With the LAN switch off, unconfigured LAN origins are forbidden again.
+    const strict = createBillingRoutes({ env: { ...env, [name]: `${lan},http://public.example`, FF_ALLOW_LAN_ORIGINS: "0" } });
+    for (const origin of ["http://192.168.1.141:8765", "http://192.168.1.140:8766", "http://public.example"]) {
+      const forbidden = await strict.fetch(request(origin));
+      assert.equal(forbidden.status, 403, origin);
+      assert.equal(forbidden.headers.get("Access-Control-Allow-Origin"), null);
+    }
+    // Loopback and the explicitly listed origin keep working while LAN is off.
+    for (const kept of ["http://127.0.0.1:8765", lan]) {
+      const ok = await strict.fetch(request(kept));
+      assert.equal(ok.status, 204, kept);
+      assert.equal(ok.headers.get("Access-Control-Allow-Origin"), kept);
+    }
+    for (const path of ["/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"]) {
+      assert.equal((await api.fetch(request(lan, path))).status, 403);
+    }
+  }
+  // Default env: private-LAN origins need no configuration.
+  const allowed = await createBillingRoutes({ env }).fetch(request(lan));
+  assert.equal(allowed.status, 204);
+  assert.equal(allowed.headers.get("Access-Control-Allow-Origin"), lan);
+  const denied = await createBillingRoutes({ env }).fetch(request("http://public.example"));
+  assert.equal(denied.status, 403);
+  assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+});
+
 function fakeDb() {
   let data = { users: new Map(), subs: new Map(), ledger: new Map(), reservations: new Map(), events: new Set(), grant: "grant-key" };
   const billing = new Map();

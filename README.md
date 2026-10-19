@@ -160,6 +160,10 @@ Set `FF_PORTAL_URL` on the game to the portal **API** origin — `https://cloud.
 
 Accounts do not select the hosted quest catalog. Self-hosted games keep their Library and configured remote catalog unless they explicitly set `FF_PORTAL_QUESTS=1`. The hosted game must set this flag to retain the gated official catalog; the Render Blueprint includes it. Existing Dashboard-managed services need the flag added before deploying this change. Leave it unset for account-only connectivity.
 
+The development launcher `./scripts/dev-server.sh` explicitly opts into the gated official catalog with `--portal-quests` when `FF_PORTAL_URL` is configured. An explicit `FF_PORTAL_QUESTS=0` in the environment or `.env` overrides this default for local-only catalog work. Normal `npm start` remains account-only unless the flag or environment opt-in is supplied. Check `/api/health` → `portal.quests` to confirm which mode the running game uses. Local Library side-loads remain playable without an account; official account/paid quest content is fetched through the portal, never its ungated public mirror.
+
+Local sign-in goes directly to the portal, not Clerk's hosted Account Portal. In popup mode the original game tab alone redeems the one-time device code; a blocked popup or explicit same-tab flow returns to the game and resumes there. A game served from a private IPv4 address (`http://192.168.1.140:8765`, `http://10.0.0.7:8765`, …) needs **no configuration**: private RFC1918 literals are accepted for CORS, the device handshake, and the same-tab return, because only a page actually served from that address can send it as `Origin`. Set `FF_ALLOW_LAN_ORIGINS=0` on the Function to forbid them again. Public HTTP hosts, link-local (`169.254.x`), CGNAT (`100.64.x`), IPv6 ULA, and non-literal hostnames stay forbidden; a non-private origin (e.g. a Tailscale Funnel URL) still goes in `FF_GAME_DEVICE_ORIGINS`. The API publishes the validated game return origins in `/api/health` → `gameDeviceOrigins` so the SPA can return a same-tab sign-in.
+
 ```bash
 cp .env.portal.example .env.portal   # gitignored — local portal / test keys only
 # The Function env holds pk_live_ / sk_live_ (see neon.portal.ts).
@@ -167,6 +171,8 @@ cp .env.portal.example .env.portal   # gitignored — local portal / test keys o
 #   https://warmersun.com,https://ff.warmersun.com,http://127.0.0.1:8765,http://localhost:8765
 # Funnel / public game host (device handshake CORS; appends to loopback):
 #   FF_GAME_DEVICE_ORIGINS=https://futureforge.xantu-chickadee.ts.net
+# Private-LAN games (192.168.x / 10.x / 172.16-31.x) need no entry here.
+# FF_ALLOW_LAN_ORIGINS=0 forbids them again.
 ```
 
 | Endpoint | Behavior |

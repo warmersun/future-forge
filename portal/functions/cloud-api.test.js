@@ -69,11 +69,115 @@ function app(db, overrides = {}) {
 // Tests use a SQL-shaped stand-in, never a network database. The same db is
 // shared across separate handler instances to model isolate restarts.
 describe("Neon Cloud API", () => {
+  it("permits configured and private-LAN CORS end-to-end, never public HTTP", async () => {
+    const lan = "http://192.168.1.140:8765";
+    const other = "http://192.168.1.141:8765";
+    const publicHttp = "http://public.example";
+    const routes = [["/api/health", "GET"], ["/api/device/start", "POST"],
+      [`/api/device/status?code=${code}`, "GET"], ["/api/me", "GET"], ["/api/quests", "GET"],
+      ["/api/health", "OPTIONS"], ["/api/device/complete", "OPTIONS"], ["/api/me", "OPTIONS"],
+      ["/api/quests", "OPTIONS"], ["/api/me/ai/reserve", "OPTIONS"]];
+    for (const name of ["FF_GAME_DEVICE_ORIGINS", "FF_CLOUD_CORS_ORIGINS"]) {
+      const api = app(fakeDb(), { env: { ...env, [name]: `${lan},${publicHttp}` },
+        loadCatalog: async () => ({ ok: true, quests: [] }) });
+      for (const [path, method] of routes) {
+        const res = await api.fetch(request(path, method, { headers: { Origin: lan } }));
+        assert.equal(res.status, method === "OPTIONS" ? 204 : 200, `${name}: ${method} ${path}`);
+        assert.equal(res.headers.get("Access-Control-Allow-Origin"), lan);
+        assert.equal(res.headers.get("Access-Control-Allow-Private-Network"), null);
+        if (method === "OPTIONS") assert.equal(res.headers.get("Access-Control-Allow-Headers"), "Authorization, Content-Type");
+        const forbidden = await api.fetch(request(path, method, { headers: { Origin: publicHttp } }));
+        assert.equal(forbidden.status, 403, `${publicHttp}: ${method} ${path}`);
+        assert.equal(forbidden.headers.get("Access-Control-Allow-Origin"), null);
+        assert.equal((await forbidden.json()).error, "origin_forbidden");
+      }
+      // Unconfigured private-LAN origins (different host/port) are allowed by default.
+      for (const extraLan of [other, "http://192.168.1.140:8766"]) {
+        const extraApi = app(fakeDb(), { env: { ...env, [name]: `${lan},${publicHttp}` },
+          loadCatalog: async () => ({ ok: true, quests: [] }) });
+        for (const [path, method] of routes) {
+          const extra = await extraApi.fetch(request(path, method, { headers: { Origin: extraLan } }));
+          assert.equal(extra.status, method === "OPTIONS" ? 204 : 200, `${extraLan}: ${method} ${path}`);
+          assert.equal(extra.headers.get("Access-Control-Allow-Origin"), extraLan);
+        }
+      }
+      // With the LAN switch off, unconfigured LAN origins are forbidden again,
+      // while loopback and the explicitly listed origin keep working.
+      const strictEnv = { ...env, [name]: `${lan},${publicHttp}`, FF_ALLOW_LAN_ORIGINS: "0" };
+      for (const denied of [other, publicHttp, "http://192.168.1.140:8766"]) {
+        const strict = app(fakeDb(), { env: strictEnv, loadCatalog: async () => ({ ok: true, quests: [] }) });
+        for (const [path, method] of routes) {
+          const deniedRes = await strict.fetch(request(path, method, { headers: { Origin: denied } }));
+          assert.equal(deniedRes.status, 403, `${denied}: ${method} ${path}`);
+          assert.equal(deniedRes.headers.get("Access-Control-Allow-Origin"), null);
+          assert.equal((await deniedRes.json()).error, "origin_forbidden");
+        }
+      }
+      for (const kept of ["http://127.0.0.1:8765", lan]) {
+        const keptApi = app(fakeDb(), { env: strictEnv, loadCatalog: async () => ({ ok: true, quests: [] }) });
+        for (const [path, method] of routes) {
+          const keptRes = await keptApi.fetch(request(path, method, { headers: { Origin: kept } }));
+          assert.equal(keptRes.status, method === "OPTIONS" ? 204 : 200, `${kept}: ${method} ${path}`);
+          assert.equal(keptRes.headers.get("Access-Control-Allow-Origin"), kept);
+        }
+      }
+    }
+    const handoff = app(fakeDb(), { env: { ...env, FF_GAME_DEVICE_ORIGINS: lan } });
+    const headers = { Origin: lan, Authorization: `Bearer ${jwt}` };
+    assert.equal((await call(handoff, "/api/device/start", "POST", { headers })).status, 200);
+    const complete = await call(handoff, "/api/device/complete", "POST", { headers, body: { code } });
+    assert.equal(complete.status, 200);
+    assert.equal(complete.headers.get("Access-Control-Allow-Origin"), lan);
+    const redeemed = await call(handoff, `/api/device/status?code=${code}`, "GET", { headers });
+    assert.equal(redeemed.status, 200);
+    assert.equal(redeemed.body.pending, false);
+    assert.equal(typeof redeemed.body.token, "string");
+    const account = await call(handoff, "/api/me", "GET", { headers });
+    assert.equal(account.status, 200);
+    assert.equal(account.body.signedIn, true);
+    assert.equal(account.headers.get("Access-Control-Allow-Origin"), lan);
+    // Default env: private-LAN origins are permitted without configuration.
+    const defaults = app(fakeDb());
+    for (const [path, method] of routes) {
+      const res = await defaults.fetch(request(path, method, { headers: { Origin: lan } }));
+      assert.equal(res.status, method === "OPTIONS" ? 204 : 200, `${method} ${path}`);
+      assert.equal(res.headers.get("Access-Control-Allow-Origin"), lan);
+      const forbidden = await defaults.fetch(request(path, method, { headers: { Origin: publicHttp } }));
+      assert.equal(forbidden.status, 403, `${publicHttp}: ${method} ${path}`);
+      assert.equal(forbidden.headers.get("Access-Control-Allow-Origin"), null);
+    }
+    // With the switch off, the default env forbids unconfigured LAN origins.
+    const strictDefaults = app(fakeDb(), { env: { ...env, FF_ALLOW_LAN_ORIGINS: "0" } });
+    for (const [path, method] of routes) {
+      const res = await strictDefaults.fetch(request(path, method, { headers: { Origin: lan } }));
+      assert.equal(res.status, 403, `${method} ${path}`);
+      assert.equal(res.headers.get("Access-Control-Allow-Origin"), null);
+      const loopback = await strictDefaults.fetch(request(path, method, { headers: { Origin: "http://127.0.0.1:8765" } }));
+      assert.equal(loopback.status, method === "OPTIONS" ? 204 : 200, `${method} ${path}`);
+    }
+  });
+
+  it("health publishes only validated game return origins, including degraded health", async () => {
+    const lan = "http://192.168.1.140:8765";
+    const corsOnly = "http://10.0.0.2:9000";
+    const config = { ...env, FF_GAME_DEVICE_ORIGINS: `${lan},${lan},https://play.example,http://public.example,http://user@192.168.1.141:8765,http:/10.0.0.3:9000,http://10.0.0.4:9000/path`,
+      FF_CLOUD_CORS_ORIGINS: corsOnly };
+    const expected = ["http://127.0.0.1:8765", "http://localhost:8765", lan, "https://play.example"];
+    for (const db of [fakeDb(), { query: async () => { throw new Error("offline"); } }]) {
+      const health = await call(app(db, { env: config }), "/api/health");
+      assert.deepEqual(health.body.gameDeviceOrigins, expected);
+      assert.equal(health.body.gameDeviceOrigins.includes(corsOnly), false);
+    }
+    const missing = await call(createCloudApi({ env: { FF_GAME_DEVICE_ORIGINS: lan } }), "/api/health");
+    assert.equal(missing.status, 503);
+    assert.deepEqual(missing.body.gameDeviceOrigins, expected.slice(0, 3));
+  });
+
   it("health probes DB without leaking keys or URL, and fails closed", async () => {
     const db = fakeDb();
     const good = await call(app(db), "/api/health");
     assert.equal(good.status, 200);
-    assert.deepEqual(good.body, { ok: true, service: "portal", clerk: { enabled: true, publishableKey: "pk_test_fixture" }, apiOrigin: "https://cloud.warmersun.com", db: { enabled: true } });
+    assert.deepEqual(good.body, { ok: true, service: "portal", clerk: { enabled: true, publishableKey: "pk_test_fixture" }, apiOrigin: "https://cloud.warmersun.com", gameDeviceOrigins: ["http://127.0.0.1:8765", "http://localhost:8765", "https://play.example"], db: { enabled: true } });
     assert.equal(JSON.stringify(good.body).includes("secret"), false);
     assert.equal((await call(app({ query: async () => { throw new Error("DATABASE_URL=secret"); } }), "/api/health")).status, 503);
     const disabled = await call(createCloudApi({ env: {} }), "/api/device/start", "POST");

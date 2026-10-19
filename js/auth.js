@@ -22,6 +22,10 @@ let publishableKey = "";
 let hostedClerk = false;
 /** Hosted host rejected Clerk. Do not fall back to the device handshake. */
 let hostedClerkBlocked = false;
+/** Exact additional return origins advertised by portal health. */
+let gameDeviceOrigins = [];
+/** Only this game tab redeems an active device handoff. */
+let deviceHandshakeActive = false;
 
 /** @type {Set<() => void>} */
 const sessionListeners = new Set();
@@ -239,9 +243,10 @@ export function refreshAccountChip() {
 
 /**
  * @param {{ sameTab?: boolean, returnHref?: string }} [opts]
+ * @returns {Promise<void>}
  */
 export function openCloudSignIn(opts = {}) {
-  void startDeviceHandshake(opts);
+  return startDeviceHandshake(opts);
 }
 
 /**
@@ -502,6 +507,9 @@ export async function initAuth() {
     const res = await fetch(`${origin}/api/health`);
     if (!res.ok) return;
     const data = await res.json();
+    gameDeviceOrigins = Array.isArray(data?.gameDeviceOrigins)
+      ? data.gameDeviceOrigins.filter((origin) => typeof origin === "string")
+      : [];
     if (!data?.clerk?.enabled || !data?.clerk?.publishableKey) return;
     publishableKey = String(data.clerk.publishableKey);
     document.body.classList.add("ff-accounts");
@@ -557,66 +565,79 @@ function startHostedSignIn(returnHref) {
  * @param {{ sameTab?: boolean, returnHref?: string }} [opts]
  */
 async function startDeviceHandshake(opts = {}) {
-  if (!handshakeReady) return;
+  if (!handshakeReady || deviceHandshakeActive) return;
   const returnHref =
     opts.returnHref || (typeof location !== "undefined" ? location.href : "");
   if (isHostedClerkGame()) {
     startHostedSignIn(returnHref);
     return;
   }
-  const origin = await resolvePortalOrigin();
-  if (!origin) return;
-  const res = await apiFetch("/api/device/start", { method: "POST" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data?.code || !data?.signInUrl) {
-    console.warn("[clerk]", data?.error || "device_start_failed");
-    return;
-  }
-  writePendingDevice(data.code);
-  const callback = signInUrlWithReturn(data.signInUrl, returnHref);
-  let signInUrl = callback;
-  if (publishableKey) {
-    try {
-      signInUrl = accountPortalSignInUrl(publishableKey, callback);
-    } catch (e) {
-      console.warn("[clerk]", e?.message || e);
-    }
-  }
-  const sameTab = opts.sameTab === true;
+  deviceHandshakeActive = true;
   /** @type {Window|null} */
   let popup = null;
-  if (!sameTab) {
-    popup = window.open(signInUrl, "ff-cloud-signin", "width=480,height=720");
-  }
-  if (sameTab || !popup) {
-    try {
-      location.assign(signInUrl);
-    } catch {
-      location.href = signInUrl;
+  try {
+    // Reserve a fresh tab during the click, before any await or pending record.
+    // An opener's sessionStorage is copied at open time, so never copy a code
+    // that another game tab could redeem on a later reload.
+    clearPendingDevice();
+    if (opts.sameTab !== true) {
+      popup = window.open("about:blank", "_blank", "width=480,height=720");
+      if (popup) {
+        try {
+          popup.opener = null;
+        } catch {
+          /* Some browsers refuse opener changes. */
+        }
+      }
     }
-    return;
-  }
-  const deadline = Date.now() + 5 * 60 * 1000;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 1000));
-    const st = await apiFetch(
-      `/api/device/status?code=${encodeURIComponent(data.code)}`
-    );
-    const body = await st.json().catch(() => ({}));
-    if (st.ok && body.pending === false && body.token) {
-      writeStoredJwt(body.token);
-      clearPendingDevice();
-      closeHandshakePopup(popup);
-      emitClerkSession();
+    const origin = await resolvePortalOrigin();
+    if (!origin) return;
+    const res = await apiFetch("/api/device/start", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.code || !data?.signInUrl) {
+      console.warn("[clerk]", data?.error || "device_start_failed");
       return;
     }
-    if (!st.ok && body.error === "unknown") {
-      clearPendingDevice();
-      closeHandshakePopup(popup);
+    // The portal owns the local sign-in UI. Do not wrap it in Account Portal.
+    // Only same-tab navigation gets a return URL and a resumable pending code.
+    const signInUrl = new URL(data.signInUrl);
+    signInUrl.searchParams.delete("return");
+    if (!popup || popup.closed) {
+      writePendingDevice(data.code);
+      const callback = signInUrlWithReturn(signInUrl.href, returnHref, gameDeviceOrigins);
+      try {
+        location.assign(callback);
+      } catch {
+        location.href = callback;
+      }
       return;
     }
+    popup.location.replace(signInUrl.href);
+    const deadline = Date.now() + 5 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const st = await apiFetch(
+        `/api/device/status?code=${encodeURIComponent(data.code)}`
+      );
+      const body = await st.json().catch(() => ({}));
+      if (st.ok && body.pending === false && body.token) {
+        writeStoredJwt(body.token);
+        clearPendingDevice();
+        emitClerkSession();
+        return;
+      }
+      if (!st.ok && body.error === "unknown") {
+        clearPendingDevice();
+        return;
+      }
+    }
+  } catch (e) {
+    clearPendingDevice();
+    console.warn("[clerk]", e?.message || e);
+  } finally {
+    closeHandshakePopup(popup);
+    deviceHandshakeActive = false;
   }
-  closeHandshakePopup(popup);
 }
 
 /**
@@ -625,6 +646,7 @@ async function startDeviceHandshake(opts = {}) {
  * @returns {Promise<boolean>}
  */
 export async function resumePendingDeviceHandshake() {
+  if (deviceHandshakeActive) return false;
   const pending = readPendingDevice();
   if (!pending?.code) return false;
   if (!handshakeReady) return false;

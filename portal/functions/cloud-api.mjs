@@ -12,6 +12,7 @@ import { createPlayerRoutes } from "./player-routes.mjs";
 import { createQuestWriteRoutes } from "./quest-write-routes.mjs";
 import { createPublicRoutes } from "./public-routes.mjs";
 import { createBillingRoutes } from "./billing-routes.mjs";
+import { cloudCorsOriginsFromEnv, cloudOriginAllowed, gameDeviceOriginsFromEnv, validPortalCorsOrigin } from "../../js/cloud/portal-origin.js";
 
 const CODE_RE = /^[A-Za-z0-9_-]{24}$/;
 const MAX_BODY_BYTES = 1024;
@@ -31,16 +32,6 @@ function allowedMethods(path) {
   return null;
 }
 
-function validOrigin(value) {
-  try {
-    const url = new URL(value);
-    if (url.origin !== value || url.username || url.password) return null;
-    if (url.protocol === "https:") return value;
-    if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)) return value;
-  } catch { /* invalid origin */ }
-  return null;
-}
-
 function portalUiBase(value) {
   try {
     const url = new URL(String(value || "").trim());
@@ -48,18 +39,6 @@ function portalUiBase(value) {
     if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return null;
     return `${url.origin}${url.pathname.replace(/\/$/, "")}`;
   } catch { return null; }
-}
-
-function originsFromEnv(env) {
-  const list = [
-    "http://127.0.0.1:8765", "http://localhost:8765",
-    "http://127.0.0.1:8766", "http://localhost:8766",
-    "https://ff.warmersun.com", "https://cloud.warmersun.com", "https://warmersun.com",
-    env.FF_PUBLIC_ORIGIN,
-    ...(env.FF_GAME_DEVICE_ORIGINS || "").split(","),
-    ...(env.FF_CLOUD_CORS_ORIGINS || "").split(","),
-  ];
-  return new Set(list.map((s) => validOrigin(String(s || "").trim())).filter(Boolean));
 }
 
 function response(body, status = 200, cors = {}) {
@@ -105,9 +84,11 @@ async function readCode(request) {
 /** Dependency injection keeps handler tests offline; production uses the injected branch DATABASE_URL. */
 export function createCloudApi({ env = process.env, db, verifyClerk, verifySignedWebhook,
   getUserBillingSubscription, getUser, loadCatalog, generateCode } = {}) {
-  const allowedOrigins = originsFromEnv(env);
+  const allowedOrigins = cloudCorsOriginsFromEnv(env);
+  // Return destinations are game origins, never the broader CORS-only list.
+  const gameDeviceOrigins = gameDeviceOriginsFromEnv(env);
   const portalBase = portalUiBase(env.FF_PORTAL_UI_URL || env.FF_PUBLIC_ORIGIN);
-  const apiOrigin = validOrigin(String(env.FF_PUBLIC_ORIGIN || "").trim());
+  const apiOrigin = validPortalCorsOrigin(String(env.FF_PUBLIC_ORIGIN || "").trim());
   let pool;
   const database = () => {
     if (db) return db;
@@ -154,7 +135,7 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
     const url = new URL(request.url);
     const path = url.pathname;
     const origin = request.headers.get("origin");
-    if (origin && !path.startsWith("/card/") && !allowedOrigins.has(origin))
+    if (origin && !path.startsWith("/card/") && !cloudOriginAllowed(origin, env, allowedOrigins))
       return response({ ok: false, error: "origin_forbidden" }, 403);
     const cors = origin ? { "Access-Control-Allow-Origin": origin } : {};
     if (request.method === "OPTIONS") {
@@ -196,12 +177,12 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
     );
     if (path === "/api/health") {
       const cx = database();
-      if (!cx) return response({ ok: false, service: "portal", clerk, apiOrigin, db: { enabled: false } }, 503, cors);
+      if (!cx) return response({ ok: false, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: false } }, 503, cors);
       try {
         await cx.query("SELECT 1");
-        return response({ ok: true, service: "portal", clerk, apiOrigin, db: { enabled: true } }, 200, cors);
+        return response({ ok: true, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: true } }, 200, cors);
       } catch {
-        return response({ ok: false, service: "portal", clerk, apiOrigin, db: { enabled: false } }, 503, cors);
+        return response({ ok: false, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: false } }, 503, cors);
       }
     }
     if (!clerkOn) return response({ ok: false, error: "clerk_off" }, 503, cors);

@@ -126,6 +126,7 @@ import {
   mergeQuestCatalog,
   officialTutorContext,
   omitOfficialLocalDuplicates,
+  portalQuestNotFound,
   portalQuestsEnabled,
 } from "./js/server/quest-portal-client.mjs";
 import { knownVoiceId } from "./js/voice-choices.js";
@@ -158,7 +159,8 @@ function loadEnvFile() {
 }
 
 // Must run before reading FF_* config from process.env
-loadEnvFile();
+// HTTP integration tests use fixture-only env and must never load real keys.
+if (process.env.FF_SKIP_GAME_ENV_FILE !== "1") loadEnvFile();
 
 const QUESTS_DIR = resolveQuestsDir(ROOT);
 ensureQuestsDir(QUESTS_DIR);
@@ -2219,7 +2221,7 @@ const server = http.createServer(async (req, res) => {
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
       aiSearch: AI_SEARCH_ENABLED,
-      portal: portalOrigin ? { origin: portalOrigin } : { origin: null },
+      portal: { origin: portalOrigin || null, quests: portalQuestsEnabled() },
       cloudAi: CLOUD_AI,
       shareOrigin,
       joinUrls,
@@ -2281,8 +2283,10 @@ const server = http.createServer(async (req, res) => {
         const authorization = req.headers.authorization || "";
         if (questId) {
           const got = await fetchPortalQuests({ id: questId, authorization });
-          if (got.status === 200 || got.status === 401 || got.status === 402) {
-            return sendJson(res, got.status, got.data);
+          // An outage or route-level 404 must not expose a local duplicate.
+          // Only a confirmed missing official quest permits a local side-load.
+          if (!portalQuestNotFound(got, questId)) {
+            return sendJson(res, got.status || 503, got.data || { ok: false, error: "portal_unavailable" });
           }
           const scanned = await scanQuestsFolder(QUESTS_DIR);
           const local = (scanned.quests || []).find(
@@ -2298,7 +2302,13 @@ const server = http.createServer(async (req, res) => {
             search: forceRemote ? "refresh=1" : "",
           }),
         ]);
-        const remoteQuests = Array.isArray(portal.data?.remote) ? portal.data.remote : [];
+        if (!portal.ok || portal.data?.ok !== true || !Array.isArray(portal.data?.remote)) {
+          return sendJson(res, portal.status >= 400 ? portal.status : 502, {
+            ok: false,
+            error: portal.data?.error || "portal_catalog_unavailable",
+          });
+        }
+        const remoteQuests = portal.data.remote;
         const local = omitOfficialLocalDuplicates(scanned.quests || [], remoteQuests);
         const quests = mergeQuestCatalog(local, remoteQuests);
         return sendJson(res, 200, {

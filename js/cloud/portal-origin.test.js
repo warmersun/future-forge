@@ -4,14 +4,123 @@ import {
   CLOUD_PORTAL_ORIGIN,
   GAME_DEVICE_ORIGINS,
   allowGameDeviceOrigin,
+  allowLanOriginsFromEnv,
+  cloudOriginAllowed,
   gameDeviceOriginsFromEnv,
   isAllowedGameReturnUrl,
+  isLanHttpOrigin,
   normalizeGameDeviceOrigin,
   portalPublicOrigin,
   signInUrlWithReturn,
+  cloudCorsOriginsFromEnv,
+  validPortalCorsOrigin,
 } from "./portal-origin.js";
 
 const EMPTY = {};
+
+describe("private-LAN origins", () => {
+  const lan = "http://192.168.1.140:8765";
+  const other = "http://192.168.1.141:8765";
+  const back = `${lan}/?quest=lesson-1#play`;
+  const base = "https://cloud.warmersun.com/signin?device=abc";
+
+  it("allows private-LAN origins by default and rejects public HTTP", () => {
+    assert.equal(isAllowedGameReturnUrl(back), true);
+    assert.equal(new URL(signInUrlWithReturn(base, back)).searchParams.get("return"), back);
+    assert.equal(isAllowedGameReturnUrl(back, [lan]), true);
+    assert.equal(isAllowedGameReturnUrl(back, { FF_GAME_DEVICE_ORIGINS: lan }), true);
+    assert.equal(new URL(signInUrlWithReturn(base, back, [lan])).searchParams.get("return"), back);
+    // A different LAN host or port is still a private-LAN origin.
+    assert.equal(isAllowedGameReturnUrl(`${other}/`, [lan]), true);
+    assert.equal(isAllowedGameReturnUrl("http://192.168.1.140:8766/", [lan]), true);
+    // Public HTTP stays rejected even when a LAN origin is configured.
+    assert.equal(isAllowedGameReturnUrl("http://public.example/", [lan]), false);
+    assert.equal(isAllowedGameReturnUrl("http://warmersun.com/", [lan]), false);
+    assert.equal(isAllowedGameReturnUrl("http://8.8.8.8/", [lan]), false);
+    assert.equal(isAllowedGameReturnUrl(back, { FF_CLOUD_CORS_ORIGINS: lan }), true);
+  });
+
+  it("accepts different private-LAN hosts and ports by default, and honors FF_ALLOW_LAN_ORIGINS=1", () => {
+    const hosts = [lan, other, "http://10.0.0.1:9000", "http://172.16.0.1", "http://172.31.255.255:8766"];
+    for (const origin of hosts) {
+      assert.equal(isLanHttpOrigin(origin), true, origin);
+      assert.equal(isAllowedGameReturnUrl(`${origin}/`), true, origin);
+      assert.equal(allowGameDeviceOrigin(origin, EMPTY), true, origin);
+      assert.equal(cloudOriginAllowed(origin, EMPTY), true, origin);
+    }
+    for (const on of ["1", "true", "yes", "on", ""]) {
+      const env = { FF_ALLOW_LAN_ORIGINS: on };
+      assert.equal(allowLanOriginsFromEnv(env), true, on);
+      assert.equal(isAllowedGameReturnUrl(back, env), true, on);
+      assert.equal(allowGameDeviceOrigin(lan, env), true, on);
+      assert.equal(cloudOriginAllowed(lan, env), true, on);
+    }
+    assert.equal(allowLanOriginsFromEnv(EMPTY), true);
+    assert.equal(isAllowedGameReturnUrl(back, EMPTY), true);
+  });
+
+  it("forbids private-LAN origins again when FF_ALLOW_LAN_ORIGINS is off", () => {
+    for (const off of ["0", "false", "no", "off", " FALSE ", "Off"]) {
+      const env = { FF_ALLOW_LAN_ORIGINS: off };
+      assert.equal(allowLanOriginsFromEnv(env), false, off);
+      assert.equal(isLanHttpOrigin(lan), true, off);
+      assert.equal(isAllowedGameReturnUrl(back, env), false, off);
+      assert.equal(allowGameDeviceOrigin(lan, env), false, off);
+      assert.equal(cloudOriginAllowed(lan, env), false, off);
+      // Loopback and explicitly listed origins keep working.
+      assert.equal(isAllowedGameReturnUrl("http://127.0.0.1:8765/", env), true, off);
+      assert.equal(allowGameDeviceOrigin("http://127.0.0.1:8765", env), true, off);
+      assert.equal(cloudOriginAllowed("http://127.0.0.1:8765", env), true, off);
+      const listed = { ...env, FF_GAME_DEVICE_ORIGINS: lan };
+      assert.equal(isAllowedGameReturnUrl(back, listed), true, off);
+      assert.equal(allowGameDeviceOrigin(lan, listed), true, off);
+      assert.equal(cloudOriginAllowed(lan, listed), true, off);
+    }
+  });
+
+  it("allows configured RFC1918 ranges, but not public HTTP or other local networks", () => {
+    for (const origin of [lan, "http://10.0.0.1:9000", "http://172.16.0.1", "http://172.31.255.255"]) {
+      assert.equal(validPortalCorsOrigin(origin), null);
+      assert.equal(validPortalCorsOrigin(origin, { allowLan: true }), origin);
+      for (const name of ["FF_GAME_DEVICE_ORIGINS", "FF_CLOUD_CORS_ORIGINS"]) {
+        assert.equal(cloudCorsOriginsFromEnv({ [name]: origin }).has(origin), true);
+      }
+      assert.equal(cloudCorsOriginsFromEnv({ FF_PUBLIC_ORIGIN: origin }).has(origin), false);
+      assert.equal(isAllowedGameReturnUrl(`${origin}/`, [origin]), true);
+    }
+    for (const origin of ["http://public.example", "http://warmersun.com", "http://8.8.8.8", "http://172.15.255.255",
+      "http://172.32.0.1", "http://169.254.0.1", "http://100.64.0.1", "http://[fc00::1]", "http://router.local"]) {
+      assert.equal(gameDeviceOriginsFromEnv({ FF_GAME_DEVICE_ORIGINS: origin }).includes(origin), false, origin);
+      assert.equal(cloudCorsOriginsFromEnv({ FF_GAME_DEVICE_ORIGINS: origin, FF_CLOUD_CORS_ORIGINS: origin }).has(origin), false, origin);
+      assert.equal(isAllowedGameReturnUrl(`${origin}/`, [origin]), false, origin);
+    }
+  });
+
+  it("rejects credentials and malformed origins/URLs even when supplied as extras", () => {
+    for (const origin of [`${lan}/path`, `${lan}/?x=1`, `${lan}/#x`, `${lan}/x/..`,
+      "http://user:pass@192.168.1.140:8765", "http://@192.168.1.140:8765", "http:/192.168.1.140:8765",
+      "http://0xc0a8018c:8765", "http://192.168.001.140:8765", "http://192.168.1.140:99999",
+      "http://192.168.1.140:8765\\", "javascript:alert(1)"]) {
+      assert.equal(normalizeGameDeviceOrigin(origin), "", origin);
+      assert.equal(validPortalCorsOrigin(origin, { allowLan: true }), null, origin);
+      assert.equal(isLanHttpOrigin(origin), false, origin);
+      assert.equal(cloudOriginAllowed(origin, EMPTY), false, origin);
+      assert.equal(allowGameDeviceOrigin(origin, EMPTY), false, origin);
+      assert.equal(gameDeviceOriginsFromEnv({ FF_GAME_DEVICE_ORIGINS: origin }).includes(lan), false, origin);
+    }
+    for (const href of ["http:/192.168.1.140:8765/", "http://user@192.168.1.140:8765/",
+      "http://@192.168.1.140:8765/", "http://192.168.1.140:8765\\evil", "http://192.168.1.140:8765/%zz",
+      "http://192.168.1.140:8765/\n", "http://0xc0a8018c:8765/", "ftp://192.168.1.140:8765/", "//192.168.1.140:8765/"]) {
+      assert.equal(isAllowedGameReturnUrl(href, [lan]), false, href);
+      assert.equal(signInUrlWithReturn(base, href, [lan]), base, href);
+    }
+    // A malformed extra is never a configured origin; the LAN default still
+    // applies to well-formed private-LAN returns.
+    assert.equal(gameDeviceOriginsFromEnv({ FF_GAME_DEVICE_ORIGINS: `${lan}/path` }).includes(`${lan}/path`), false);
+    assert.equal(isAllowedGameReturnUrl("https://public.example/", [`${lan}/path`]), false);
+    assert.equal(isAllowedGameReturnUrl(back, [`${lan}/path`]), true);
+  });
+});
 
 describe("portalPublicOrigin", () => {
   it("defaults to the hosted Neon Function portal", () => {
@@ -29,6 +138,7 @@ describe("portalPublicOrigin", () => {
 
 describe("normalizeGameDeviceOrigin", () => {
   it("keeps scheme+host+port and strips a trailing slash", () => {
+    assert.equal(normalizeGameDeviceOrigin("https://PLAY.EXAMPLE:443/"), "https://play.example");
     assert.equal(
       normalizeGameDeviceOrigin("https://futureforge.xantu-chickadee.ts.net/"),
       "https://futureforge.xantu-chickadee.ts.net"

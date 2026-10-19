@@ -22,10 +22,15 @@ export function portalOrigin(env = process.env) {
 
 /**
  * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ * @param {string[]} [args]
  */
-export function portalQuestsEnabled(env = process.env) {
+export function portalQuestsEnabled(env = process.env, args = process.argv.slice(2)) {
   // Connecting an account must not replace a self-hosted game's catalog.
-  return Boolean(portalOrigin(env)) && /^(1|true|yes)$/i.test(String(env.FF_PORTAL_QUESTS || "").trim());
+  // The dev launcher explicitly opts in; env/.env choices still take priority.
+  const enabled = env.FF_PORTAL_QUESTS === undefined
+    ? args.includes("--portal-quests")
+    : /^(1|true|yes)$/i.test(String(env.FF_PORTAL_QUESTS).trim());
+  return Boolean(portalOrigin(env)) && enabled;
 }
 
 /**
@@ -123,6 +128,11 @@ export async function fetchPortalQuests(opts = {}) {
   }
 }
 
+/** Only an authoritative missing-quest response permits a local side-load. */
+export function portalQuestNotFound(result, id) {
+  return result?.status === 404 && result.data?.error === "not_found" && result.data?.id === id;
+}
+
 /**
  * When the hosted catalog is opted into, tutor notes for an official quest come from
  * the portal tile. Client-supplied notes are dropped.
@@ -155,7 +165,7 @@ export async function officialTutorContext(context, opts = {}) {
   if (got.status === 200 && got.data?.tile) {
     return { ok: true, context: tutorContextFromCatalogTile(ctx, got.data.tile) };
   }
-  if (got.status === 404) {
+  if (portalQuestNotFound(got, id)) {
     return { ok: true, context: tutorContextFromCatalogTile(ctx, null) };
   }
   return {

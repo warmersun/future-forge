@@ -8,6 +8,7 @@ import {
   startPortal, accountPortalHost, clerkFrontendApiHost, isAllowedGameReturnUrl,
   portalBaseFromModuleUrl,
 } from "./app.js";
+import { isAllowedGameReturnUrl as gameReturnAllowed } from "../js/cloud/portal-origin.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const key = (host) => `pk_test_${Buffer.from(`${host}$`).toString("base64")}`;
@@ -58,6 +59,92 @@ test("Clerk host and return URL allowlist reject redirects to arbitrary origins"
   assert.throws(() => accountPortalHost(key("evil.com")));
   for (const url of ["https://ff.warmersun.com/game", "http://127.0.0.1:8765/", "https://node.ts.net/"]) assert.equal(isAllowedGameReturnUrl(url), true);
   for (const url of ["https://warmersun.com.evil.org", "https://evil.org", "javascript:alert(1)", "https://user@ff.warmersun.com/"]) assert.equal(isAllowedGameReturnUrl(url), false);
+});
+
+test("standalone SPA and game share the default-on private-LAN return policy", () => {
+  const lan = "http://192.168.1.140:8765";
+  const cases = [
+    [`${lan}/?quest=lesson#play`, [], true], [`${lan}/?quest=lesson#play`, [lan], true],
+    ["http://10.0.0.1:9000/", [], true],
+    ["http://172.16.0.1/", ["http://172.16.0.1"], true],
+    ["http://192.168.1.141:8765/", [lan], true], ["http://192.168.1.140:8766/", [lan], true],
+    ["http://public.example/", ["http://public.example"], false],
+    ["http://warmersun.com/", ["http://warmersun.com"], false],
+    ["http://169.254.0.1/", ["http://169.254.0.1"], false],
+    ["http://172.32.0.1/", ["http://172.32.0.1"], false],
+    ["https://custom.example/game", ["https://custom.example"], true],
+    [`${lan}/`, [`${lan}/path`, "javascript:alert(1)", null], true],
+    ...["http://user:pass@192.168.1.140:8765/", "http://@192.168.1.140:8765/",
+      "http:/192.168.1.140:8765/", "http://192.168.1.140:8765\\evil", "http://192.168.1.140:8765/%zz",
+      "http://192.168.1.140:8765/\n", "http://0xc0a8018c:8765/", "ftp://192.168.1.140:8765/",
+      "//192.168.1.140:8765/", "javascript:alert(1)"].map((href) => [href, [lan], false]),
+  ];
+  for (const [href, extras, expected] of cases) {
+    assert.equal(isAllowedGameReturnUrl(href, extras), expected, href);
+    assert.equal(gameReturnAllowed(href, extras), expected, href);
+  }
+});
+
+test("LAN navigation waits for health configuration and preserves device completion", async (t) => {
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  globalThis.sessionStorage = { getItem() { return "1"; }, removeItem() {}, setItem() {} };
+  const lan = "http://192.168.1.140:8765";
+  const ret = `${lan}/?quest=lesson-1#play`;
+  for (const device of ["", "XYZ"]) {
+    const ui = fakeUi(`https://portal.example/signin?${device ? `device=${device}&` : ""}return=${encodeURIComponent(ret)}`);
+    const calls = [];
+    let resolveHealth;
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, options });
+      if (url === "/api/health") return new Promise((resolve) => { resolveHealth = resolve; });
+      return { ok: true, json: async () => ({ ok: true }) };
+    };
+    ui.win.Clerk = { load: async () => {}, session: { getToken: async () => "token-123" } };
+    startPortal(ui);
+    await tick();
+    assert.equal(ui.win.location.replaced, undefined);
+    resolveHealth({ ok: true, json: async () => ({ apiOrigin: "https://function.example", gameDeviceOrigins: [lan],
+      clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }) });
+    await tick(); await tick();
+    assert.equal(ui.win.location.replaced, ret);
+    assert.equal(calls.length, device ? 2 : 1);
+    if (device) {
+      assert.equal(calls[1].url, "https://function.example/api/device/complete");
+      assert.deepEqual(JSON.parse(calls[1].options.body), { code: device });
+      assert.equal(calls[1].options.headers.Authorization, "Bearer token-123");
+    }
+  }
+});
+
+test("SPA accepts private-LAN returns by default and rejects malformed health allowlists", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  const lan = "http://192.168.1.140:8765";
+  const cases = [
+    // [gameDeviceOrigins, ret, allowed]
+    [undefined, `${lan}/`, true],
+    [lan, `${lan}/`, true],
+    [{ origin: lan }, `${lan}/`, true],
+    [["http://192.168.1.141:8765"], `${lan}/`, true],
+    [[`${lan}/path`], `${lan}/`, true],
+    [["http://public.example"], "http://public.example/", false],
+    [[lan], "http://user@192.168.1.140:8765/", false],
+    [[lan], "http:/192.168.1.140:8765/", false],
+    [[lan], "javascript:alert(1)", false],
+  ];
+  for (const [gameDeviceOrigins, ret, allowed] of cases) {
+    globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+      ? { gameDeviceOrigins, clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+      : { ok: true, signedIn: true, subscription: { entitled: false } } });
+    const ui = fakeUi(`https://portal.example/signin?return=${encodeURIComponent(ret)}`);
+    ui.win.Clerk = { load: async () => {}, session: { getToken: async () => "token-123" } };
+    startPortal(ui);
+    await tick(); await tick();
+    assert.equal(ui.win.location.replaced, allowed ? ret : undefined, ret);
+    assert.equal(ui.signedIn.hidden, allowed, ret);
+  }
 });
 
 test("SPA renders home, navigates by history, and handles disabled Clerk", async (t) => {
@@ -475,7 +562,7 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     const res = await fetch(base + route);
     assert.equal(res.status, 200, route);
     assert.match(res.headers.get("content-type"), /text\/html/);
-    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-review-fixes"/);
+    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-lan-open"/);
   }
   for (const [asset, mime] of [["/app.js", "text/javascript"], ["/app.css", "text/css"]]) {
     const res = await fetch(base + asset);

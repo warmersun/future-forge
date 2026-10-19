@@ -31,6 +31,49 @@ function fixture({ rows = () => [], catalog = { ok: true, url: "neon://private/c
 
 const body = async (response) => [response.status, await response.json()];
 
+test("standalone public slice accepts private-LAN origins by default, never public HTTP", async () => {
+  const lan = "http://192.168.1.140:8765";
+  for (const name of ["FF_GAME_DEVICE_ORIGINS", "FF_CLOUD_CORS_ORIGINS"]) {
+    const f = fixture({ routeEnv: { ...env, [name]: `${lan},http://public.example` } });
+    for (const method of ["GET", "OPTIONS"]) {
+      const allowed = await f.request("/api/quests", { method, headers: { Origin: lan } });
+      assert.equal(allowed.status, method === "OPTIONS" ? 204 : 200);
+      assert.equal(allowed.headers.get("Access-Control-Allow-Origin"), lan);
+      // Unconfigured private-LAN origins (different host/port) are allowed by default.
+      for (const extraLan of ["http://192.168.1.141:8765", "http://192.168.1.140:8766"]) {
+        const extra = await f.request("/api/quests", { method, headers: { Origin: extraLan } });
+        assert.equal(extra.status, method === "OPTIONS" ? 204 : 200, extraLan);
+        assert.equal(extra.headers.get("Access-Control-Allow-Origin"), extraLan);
+      }
+      const denied = await f.request("/api/quests", { method, headers: { Origin: "http://public.example" } });
+      assert.equal(denied.status, 403);
+      assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+      // With the LAN switch off, unconfigured LAN origins are forbidden again.
+      const strict = fixture({ routeEnv: { ...env, [name]: `${lan},http://public.example`, FF_ALLOW_LAN_ORIGINS: "0" } });
+      for (const origin of ["http://192.168.1.141:8765", "http://192.168.1.140:8766", "http://public.example"]) {
+        const forbidden = await strict.request("/api/quests", { method, headers: { Origin: origin } });
+        assert.equal(forbidden.status, 403, origin);
+        assert.equal(forbidden.headers.get("Access-Control-Allow-Origin"), null);
+      }
+      // Loopback and the explicitly listed origin keep working while LAN is off.
+      for (const kept of ["http://127.0.0.1:8765", lan]) {
+        const ok = await strict.request("/api/quests", { method, headers: { Origin: kept } });
+        assert.equal(ok.status, method === "OPTIONS" ? 204 : 200, kept);
+        assert.equal(ok.headers.get("Access-Control-Allow-Origin"), kept);
+      }
+    }
+  }
+  // Default env: private-LAN origins need no configuration.
+  for (const method of ["GET", "OPTIONS"]) {
+    const res = await fixture().request("/api/quests", { method, headers: { Origin: lan } });
+    assert.equal(res.status, method === "OPTIONS" ? 204 : 200);
+    assert.equal(res.headers.get("Access-Control-Allow-Origin"), lan);
+    const denied = await fixture().request("/api/quests", { method, headers: { Origin: "http://public.example" } });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+  }
+});
+
 test("private catalog lists safe cards, protects detail, and never falls back on bucket failure", async () => {
   const f = fixture();
   const [status, listing] = await body(await f.request("/api/quests?refresh=1"));

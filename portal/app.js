@@ -31,15 +31,45 @@ export function accountPortalHost(publishableKey) {
   throw new Error("Cannot derive Account Portal host");
 }
 
-export function isAllowedGameReturnUrl(href) {
+// Keep in sync with js/cloud/portal-origin.js. This SPA is published as a
+// standalone app.js, without the game's module tree; parity tests cover both.
+function gameHttpUrl(raw) {
+  if (typeof raw !== "string" || /[\s\\\u0000-\u001f\u007f]/.test(raw) || /%(?![a-f\d]{2})/i.test(raw)) return null;
+  const authority = /^https?:\/\/([^/?#]+)/i.exec(raw)?.[1];
+  if (!authority || /[@%]/.test(authority)) return null;
   try {
-    const u = new URL(String(href || ""));
-    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-    if (u.username || u.password) return false;
-    const host = u.hostname.toLowerCase();
-    return host === "127.0.0.1" || host === "localhost" ||
-      host === "warmersun.com" || host.endsWith(".warmersun.com") || host.endsWith(".ts.net");
-  } catch { return false; }
+    const url = new URL(raw);
+    if (url.username || url.password || !url.hostname) return null;
+    if (/^[\d.]+$/.test(url.hostname) && authority.split(":")[0] !== url.hostname) return null;
+    return url;
+  } catch { return null; }
+}
+
+/** RFC1918 IPv4 literal. A public page cannot claim one, so LAN needs no setup. */
+function isPrivateIpv4(host) {
+  const parts = String(host || "").split(".").map(Number);
+  return parts.length === 4 && parts.every((n) => Number.isInteger(n) && n >= 0 && n <= 255)
+    && parts.join(".") === host
+    && (parts[0] === 10 || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+      || (parts[0] === 192 && parts[1] === 168));
+}
+
+function configuredGameOrigin(raw) {
+  const u = gameHttpUrl(raw);
+  if (!u || raw !== u.origin) return "";
+  if (u.protocol === "https:" || ["localhost", "127.0.0.1"].includes(u.hostname)) return u.origin;
+  return isPrivateIpv4(u.hostname) ? u.origin : "";
+}
+
+export function isAllowedGameReturnUrl(href, extras = []) {
+  const u = gameHttpUrl(href);
+  if (!u) return false;
+  const host = u.hostname.toLowerCase();
+  if (host === "127.0.0.1" || host === "localhost") return true;
+  if (u.protocol === "https:" && (host === "warmersun.com" || host.endsWith(".warmersun.com") || host.endsWith(".ts.net"))) return true;
+  // A self-hosted game on the local network is a first-class return target.
+  if (u.protocol === "http:" && isPrivateIpv4(host)) return true;
+  return Array.isArray(extras) && extras.map(configuredGameOrigin).filter(Boolean).includes(u.origin);
 }
 
 const scriptLoads = new Map();
@@ -76,7 +106,9 @@ async function clerkConfig(base) {
     }
     apiOrigin = url.origin;
   }
-  return { pk, host: clerkFrontendApiHost(pk), apiOrigin };
+  const gameDeviceOrigins = Array.isArray(health.gameDeviceOrigins)
+    ? health.gameDeviceOrigins.map(configuredGameOrigin).filter(Boolean) : [];
+  return { pk, host: clerkFrontendApiHost(pk), apiOrigin, gameDeviceOrigins };
 }
 
 function readBounced() {
@@ -158,11 +190,11 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     const params = new URLSearchParams(win.location.search);
     const device = params.get("device") || "";
     const returnTo = params.get("return") || "";
-    const returnOk = Boolean(returnTo && isAllowedGameReturnUrl(returnTo));
     try {
       const config = await clerkConfig(base);
       if (!active(id)) return;
       if (!config) { status.textContent = "Sign in is off on this portal (Clerk keys missing)."; return; }
+      const returnOk = Boolean(returnTo && isAllowedGameReturnUrl(returnTo, config.gameDeviceOrigins));
       const here = `${win.location.origin}${win.location.pathname}${win.location.search}`;
       const mount = doc.getElementById("signin-mount");
       // Clerk's hash routing rewrites the URL and fires popstate, which calls

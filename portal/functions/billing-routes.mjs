@@ -16,18 +16,13 @@ import {
   SUBSCRIPTION_REQUIRED_MESSAGE, QUOTA_SPENT_MESSAGE, QUOTA_UNAVAILABLE_MESSAGE,
 } from "../../js/server/ai-quota.mjs";
 import { clerkTimeIso, entitledPlanSlug, planClerkBillingEvent, planClerkUserEvent, rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
+import { cloudCorsOriginsFromEnv, cloudOriginAllowed } from "../../js/cloud/portal-origin.js";
 
 const ROUTES = new Set(["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"]);
 const BODY_LIMIT = 8_000;
 const WEBHOOK_LIMIT = 256_000;
 const ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
-function validOrigin(raw) {
-  try {
-    const u = new URL(raw);
-    return u.origin === raw && !u.username && !u.password &&
-      (u.protocol === "https:" || (u.protocol === "http:" && ["localhost", "127.0.0.1"].includes(u.hostname)));
-  } catch { return false; }
-}
+
 const points = (n) => Math.max(0, Math.floor(Number(n) || 0));
 
 function equal(a, b) {
@@ -101,14 +96,7 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
   const loadBilling = getUserBillingSubscription || ((userId) =>
     createClerkClient({ secretKey: env.CLERK_SECRET_KEY || env.FF_CLERK_SECRET_KEY })
       .billing.getUserBillingSubscription(userId));
-  const allowedOrigins = new Set([
-    "https://cloud.warmersun.com", "https://ff.warmersun.com", "https://warmersun.com",
-    "http://localhost:8765", "http://127.0.0.1:8765",
-    "http://localhost:8766", "http://127.0.0.1:8766",
-    env.FF_PUBLIC_ORIGIN,
-    ...(env.FF_GAME_DEVICE_ORIGINS || "").split(","),
-    ...(env.FF_CLOUD_CORS_ORIGINS || "").split(","),
-  ].map((s) => String(s || "").trim()).filter(validOrigin));
+  const allowedOrigins = cloudCorsOriginsFromEnv(env);
   async function identity(req) {
     const token = bearer(req);
     if (!isJwtShaped(token)) return null;
@@ -273,7 +261,7 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
     const path = new URL(req.url).pathname;
     const browser = path === "/api/me/ai/reserve";
     const origin = req.headers.get("origin");
-    const permitted = browser && origin && allowedOrigins.has(origin);
+    const permitted = browser && origin && cloudOriginAllowed(origin, env, allowedOrigins);
     const cors = permitted ? { "Access-Control-Allow-Origin": origin, Vary: "Origin" } : { Vary: "Origin" };
     const result = (body, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store", ...cors } });
     const failure = (error, status, message) => result({ ok: false, error, ...(message ? { message } : {}) }, status);

@@ -16,6 +16,7 @@ import { rankPlayers, rankBoard, attachBoardExtras, questHasLeaderboard } from "
 import { planSlugsFromEnv, subscriptionEntitled } from "../../js/server/ai-quota.mjs";
 import { parseCardPath, renderCollectorCardPage, collectorImageHeaders } from "../../js/server/collector-cards.mjs";
 import { renderCollectorCardShare } from "../../js/server/collector-card-share.mjs";
+import { cloudCorsOriginsFromEnv, cloudOriginAllowed, validPortalCorsOrigin } from "../../js/cloud/portal-origin.js";
 
 const SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reached, q.start_year,
   q.stars, q.waits, q.place, q.stack, q.pathway_text,
@@ -24,13 +25,7 @@ const SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reach
 const json = (body, status = 200, headers = {}) => Response.json(body, {
   status, headers: { "Cache-Control": "no-store", ...headers },
 });
-function validOrigin(raw) {
-  try {
-    const u = new URL(raw);
-    return u.origin === raw && !u.username && !u.password &&
-      (u.protocol === "https:" || (u.protocol === "http:" && ["localhost", "127.0.0.1"].includes(u.hostname)));
-  } catch { return false; }
-}
+
 function scoreRow(row) {
   const chosen = row.profile_display_name || null;
   return {
@@ -68,15 +63,8 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
     secretKey: env.CLERK_SECRET_KEY || env.FF_CLERK_SECRET_KEY,
     authorizedParties: authorizedPartiesFromEnv(env),
   }));
-  const allowedOrigins = new Set([
-    "https://cloud.warmersun.com", "https://ff.warmersun.com", "https://warmersun.com",
-    "http://localhost:8765", "http://127.0.0.1:8765",
-    "http://localhost:8766", "http://127.0.0.1:8766",
-    env.FF_PUBLIC_ORIGIN,
-    ...(env.FF_GAME_DEVICE_ORIGINS || "").split(","),
-    ...(env.FF_CLOUD_CORS_ORIGINS || "").split(","),
-  ].map((s) => String(s || "").trim()).filter(validOrigin));
-  const publicOrigin = validOrigin(String(env.FF_PUBLIC_ORIGIN || "").replace(/\/$/, ""))
+  const allowedOrigins = cloudCorsOriginsFromEnv(env);
+  const publicOrigin = validPortalCorsOrigin(String(env.FF_PUBLIC_ORIGIN || "").replace(/\/$/, ""))
     ? String(env.FF_PUBLIC_ORIGIN).replace(/\/$/, "") : "https://cloud.warmersun.com";
   async function identity(request) {
     const token = request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
@@ -115,7 +103,7 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
     const path = url.pathname;
     const origin = request.headers.get("origin");
     // Collector images are public and carry wildcard CORS on the legacy portal.
-    if (origin && !path.startsWith("/card/") && !allowedOrigins.has(origin))
+    if (origin && !path.startsWith("/card/") && !cloudOriginAllowed(origin, env, allowedOrigins))
       return json({ ok: false, error: "origin_forbidden" }, 403);
     const cors = origin ? { "Access-Control-Allow-Origin": origin, Vary: "Origin" } : {};
     const reply = (body, status = 200) => json(body, status, cors);

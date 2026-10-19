@@ -4,6 +4,7 @@ import {
   fetchPortalQuests,
   mergeQuestCatalog,
   officialTutorContext,
+  portalQuestNotFound,
   omitOfficialLocalDuplicates,
   portalQuestsEnabled,
 } from "./quest-portal-client.mjs";
@@ -21,6 +22,17 @@ describe("quest portal client", () => {
     }
   });
 
+  it("lets the dev launcher opt into the gated catalog without overriding explicit config", () => {
+    const connected = { FF_PORTAL_URL: "https://portal.example" };
+    assert.equal(portalQuestsEnabled(connected, ["--portal-quests"]), true);
+    assert.equal(portalQuestsEnabled(connected, []), false);
+    assert.equal(portalQuestsEnabled({}, ["--portal-quests"]), false);
+    for (const value of ["0", "false", "off", ""]) {
+      assert.equal(portalQuestsEnabled({ ...connected, FF_PORTAL_QUESTS: value }, ["--portal-quests"]), false);
+    }
+    assert.equal(portalQuestsEnabled({ ...connected, FF_PORTAL_QUESTS: "1" }, []), true);
+  });
+
   it("keeps local tutor context untouched when only accounts are connected", async () => {
     const context = { tutorMode: true, questId: "local-lesson", source: "remote", aiTutorContext: "LOCAL NOTES" };
     const result = await officialTutorContext(context, {
@@ -28,6 +40,16 @@ describe("quest portal client", () => {
       fetchImpl: async () => { throw new Error("account-only game must not fetch the hosted catalog"); },
     });
     assert.deepEqual(result, { ok: true, context });
+  });
+
+  it("accepts only a matching authoritative not-found response for local fallback", () => {
+    assert.equal(portalQuestNotFound({ status: 404, data: { error: "not_found", id: "local" } }, "local"), true);
+    for (const result of [
+      { status: 503, data: { error: "quests_unavailable" } },
+      { status: 404, data: { error: "not_found", service: "portal" } },
+      { status: 404, data: { error: "not_found", id: "other" } },
+      { status: 200, data: { error: "not_found", id: "local" } },
+    ]) assert.equal(portalQuestNotFound(result, "local"), false);
   });
 
   it("lets the official catalog win on id", () => {
