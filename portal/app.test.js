@@ -23,6 +23,9 @@ function fakeUi(initial) {
   const status = { textContent: "" };
   const mount = {};
   const signInMount = {};
+  const signedIn = { hidden: true };
+  const account = { textContent: "" };
+  const signOut = { onclick: null };
   const app = { innerHTML: "" };
   const first = new URL(initial);
   const location = {
@@ -37,12 +40,14 @@ function fakeUi(initial) {
   };
   const doc = {
     title: "", head: { appendChild(script) { win.lastScript = script; script.onload(); } },
+    body: { classList: { added: [], add(name) { this.added.push(name); } } },
     createElement() { return { setAttribute() {} }; },
-    getElementById(id) { return { app, status, "clerk-mount": mount, "signin-mount": signInMount }[id]; },
+    getElementById(id) { return { app, status, "clerk-mount": mount, "signin-mount": signInMount,
+      "signed-in": signedIn, account, "sign-out": signOut }[id]; },
     querySelectorAll() { return nav; },
     addEventListener(name, fn) { listeners[name] = fn; },
   };
-  return { doc, win, app, status, mount, signInMount, nav };
+  return { doc, win, app, status, mount, signInMount, signedIn, account, signOut, nav };
 }
 
 test("Clerk host and return URL allowlist reject redirects to arbitrary origins", () => {
@@ -196,6 +201,80 @@ test("an existing browser session signs out before Clerk's form appears", async 
   assert.equal(signInOptions.forceRedirectUrl, "https://portal.example/signin?device=ABC");
 });
 
+test("a plain portal visit shows Clerk's form instead of a device-code dead end", async (t) => {
+  const ui = fakeUi("https://portal.example/signin");
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  globalThis.sessionStorage = { getItem() { return null; }, removeItem() {}, setItem() {} };
+  globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+    ? { clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+    : { ok: true } });
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  let signInOptions;
+  ui.win.Clerk = { load: async () => {}, session: null, unmountSignIn() {},
+    mountSignIn(mount, opts) { assert.equal(mount, ui.signInMount); signInOptions = opts; } };
+  startPortal(ui);
+  await tick(); await tick();
+  assert.equal(signInOptions.forceRedirectUrl, "https://portal.example/signin");
+  assert.doesNotMatch(ui.status.textContent, /device code/);
+  assert.match(ui.app.innerHTML, /<h1>Sign in<\/h1>/);
+  assert.deepEqual(ui.doc.body.classList.added, []);
+});
+
+test("a device-code handoff drops the portal chrome", async (t) => {
+  const ui = fakeUi("https://portal.example/signin?device=ABC");
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  globalThis.sessionStorage = { getItem() { return null; }, removeItem() {}, setItem() {} };
+  globalThis.fetch = async (url) => ({ ok: true, json: async () => url === "/api/health"
+    ? { clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+    : { ok: true } });
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  let signInOptions;
+  ui.win.Clerk = { load: async () => {}, session: null, unmountSignIn() {},
+    mountSignIn(_mount, opts) { signInOptions = opts; } };
+  startPortal(ui);
+  await tick(); await tick();
+  assert.deepEqual(ui.doc.body.classList.added, ["device-flow"]);
+  assert.doesNotMatch(ui.app.innerHTML, /<h1>Sign in<\/h1>/);
+  assert.doesNotMatch(ui.app.innerHTML, /Future Forge account/);
+  assert.equal(signInOptions.forceRedirectUrl, "https://portal.example/signin?device=ABC");
+});
+
+test("an existing session on a plain visit shows the account instead of signing out", async (t) => {
+  const ui = fakeUi("https://portal.example/signin");
+  const previous = globalThis.fetch;
+  const storage = globalThis.sessionStorage;
+  let bounced = false;
+  globalThis.sessionStorage = { getItem() { return bounced ? "1" : null; },
+    setItem() { bounced = true; }, removeItem() { bounced = false; } };
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    return { ok: true, json: async () => url === "/api/health"
+      ? { apiOrigin: "https://function.example", clerk: { enabled: true, publishableKey: key("abc.clerk.accounts.dev") } }
+      : { ok: true, signedIn: true, subscription: { entitled: true, planSlug: "cloud", status: "active" } } };
+  };
+  t.after(() => { globalThis.fetch = previous; globalThis.sessionStorage = storage; });
+  let signedOut = 0;
+  ui.win.Clerk = { load: async () => {},
+    user: { fullName: "Ada Inventor" },
+    session: { getToken: async () => "token-123" },
+    signOut: async () => { signedOut++; },
+    mountSignIn() { throw new Error("must not mount the form"); } };
+  startPortal(ui);
+  await tick(); await tick();
+  assert.equal(signedOut, 0);
+  assert.equal(ui.signedIn.hidden, false);
+  assert.equal(ui.signInMount.hidden, true);
+  assert.match(ui.account.textContent, /Ada Inventor/);
+  assert.match(ui.account.textContent, /cloud/);
+  assert.ok(calls.some((u) => u === "https://function.example/api/me"));
+  await ui.signOut.onclick();
+  assert.equal(signedOut, 1);
+  assert.equal(ui.win.location.replaced, "https://portal.example/signin");
+});
+
 test("unsafe return URL does not redirect after successful device handshake", async (t) => {
   const ui = fakeUi("https://portal.example/signin?device=ABC&return=https%3A%2F%2Fevil.example%2F");
   const previous = globalThis.fetch;
@@ -242,7 +321,7 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     const res = await fetch(base + route);
     assert.equal(res.status, 200, route);
     assert.match(res.headers.get("content-type"), /text\/html/);
-    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-clerk-native"/);
+    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-bare-device"/);
   }
   for (const [asset, mime] of [["/app.js", "text/javascript"], ["/app.css", "text/css"]]) {
     const res = await fetch(base + asset);

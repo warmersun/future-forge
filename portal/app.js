@@ -105,10 +105,15 @@ const home = (base) => `<section><p class="eyebrow">Future Forge · Warmer Sun C
   <p class="lead">Sign in to continue your Future Forge journey, or choose hosted access. The playable app runs separately from this account portal.</p>
   <p class="links"><a class="button primary" data-link href="${base}/subscribe">Explore hosted access</a>
   <a class="button" data-link href="${base}/signin">Sign in</a></p></section>`;
-const signin = `<section class="signin"><p class="eyebrow">Future Forge account</p><h1>Sign in</h1>
+// A device-code handoff comes straight from the app, so it gets Clerk's form
+// with no portal chrome around it. A plain visit keeps the portal heading.
+const signin = (deviceFlow) => `<section class="signin${deviceFlow ? " device" : ""}">${deviceFlow ? "" : '<p class="eyebrow">Future Forge account</p><h1>Sign in</h1>'}
   <p id="status" role="status">Loading Sign in…</p>
   <div id="signin-mount"></div>
-  <p class="aside">To connect your game, open Sign in from the Future Forge app you use.</p></section>`;
+  <div id="signed-in" hidden>
+    <p id="account"></p>
+    <p class="links"><button id="sign-out" class="button" type="button">Sign out</button></p>
+  </div></section>`;
 const subscribe = `<div class="split"><section class="promise">
   <p class="eyebrow">Future Forge Hosted4U</p><h1>You invent. We run the app.</h1>
   <p class="lead">You are buying a month of hosted Future Forge for one person.
@@ -132,6 +137,9 @@ export function portalBaseFromModuleUrl(moduleUrl) {
 export function startPortal({ doc = document, win = window, base = portalBaseFromModuleUrl(import.meta.url) } = {}) {
   const app = doc.getElementById("app");
   if (!app) throw new Error("Missing portal app mount");
+  // A device-code handoff is a bare Clerk form: drop the site chrome.
+  const deviceFlow = new URLSearchParams(win.location.search).has("device");
+  if (deviceFlow) doc.body?.classList.add?.("device-flow");
   let generation = 0;
   let pricingMount = null;
   let signInMount = null;
@@ -147,10 +155,6 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const config = await clerkConfig(base);
       if (!active(id)) return;
       if (!config) { status.textContent = "Sign in is off on this portal (Clerk keys missing)."; return; }
-      if (!device && !returnOk) {
-        status.textContent = "Open Sign in from the Future Forge app you use. This page needs a device code from that app.";
-        return;
-      }
       const here = `${win.location.origin}${win.location.pathname}${win.location.search}`;
       await loadScript(doc, `https://${config.host}/npm/@clerk/ui@1/dist/ui.browser.js`);
       if (!active(id)) return;
@@ -161,17 +165,8 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       const Clerk = win.Clerk;
       await Clerk.load({ ui: { ClerkUI: win.__internal_ClerkUICtor }, appearance: CLERK_APPEARANCE });
       if (!active(id)) return;
-      // Signing out of the game does not clear a browser's Clerk session. Start
-      // each new device flow with Clerk's own sign-in UI, not a silent reuse of
-      // whichever account happened to be active in this browser.
-      if (Clerk.session && !readBounced()) {
-        writeBounced(true);
-        status.textContent = "Opening Clerk sign-in…";
-        await Clerk.signOut({ redirectUrl: here });
-        if (active(id)) win.location.replace(here);
-        return;
-      }
       if (!Clerk.session) {
+        // No session: show Clerk's own form. The device code is optional.
         writeBounced(true);
         status.textContent = "";
         const mount = doc.getElementById("signin-mount");
@@ -180,13 +175,24 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
         signInMount = mount;
         return;
       }
+      // A device flow must not silently reuse a stale browser session, so it
+      // always starts from Clerk's own form. A plain portal visit keeps the
+      // session and shows the account instead.
+      if (device && !readBounced()) {
+        writeBounced(true);
+        status.textContent = "Opening Clerk sign-in…";
+        await Clerk.signOut({ redirectUrl: here });
+        if (active(id)) win.location.replace(here);
+        return;
+      }
       writeBounced(false);
       const token = await Clerk.session.getToken();
       if (!active(id)) return;
       if (!token) throw new Error("Could not read the session");
+      if (!device) return showSignedIn(id, Clerk, config, token);
       // here.now proxies do not forward the browser's Authorization header.
       // Send the per-user Clerk JWT to our API directly (with origin-bound CORS).
-      if (device) await completeDevice(device, token, config.apiOrigin);
+      await completeDevice(device, token, config.apiOrigin);
       if (!active(id)) return;
       if (returnOk) {
         status.textContent = "Signed in. Returning to Future Forge…";
@@ -198,6 +204,37 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     } catch (e) {
       if (active(id)) status.textContent = e?.message || String(e);
     }
+  }
+
+  async function showSignedIn(id, Clerk, config, token) {
+    const status = doc.getElementById("status");
+    const mount = doc.getElementById("signin-mount");
+    const panel = doc.getElementById("signed-in");
+    const account = doc.getElementById("account");
+    const who = Clerk.user?.fullName
+      || Clerk.user?.primaryEmailAddress?.emailAddress
+      || "your account";
+    let plan = "";
+    try {
+      const res = await fetch(`${config.apiOrigin}/api/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const me = res.ok ? await res.json().catch(() => null) : null;
+      const sub = me?.subscription;
+      if (sub?.entitled) plan = `Plan: ${sub.planSlug || "active"} · ${sub.status || "active"}`;
+    } catch { /* account state is best-effort; never block the portal */ }
+    status.textContent = "";
+    mount.hidden = true;
+    account.textContent = plan ? `${who} — ${plan}` : `${who} — no active subscription`;
+    panel.hidden = false;
+    doc.getElementById("sign-out").onclick = async () => {
+      try {
+        await Clerk.signOut();
+        if (active(id)) win.location.replace(`${win.location.origin}${base}/signin`);
+      } catch (e) {
+        if (active(id)) status.textContent = e?.message || String(e);
+      }
+    };
   }
 
   async function showSubscribe(id) {
@@ -245,7 +282,7 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
       else link.removeAttribute("aria-current");
     });
     doc.title = `${route === "/signin" ? "Sign in" : route === "/subscribe" ? "Subscribe" : "Home"} — Warmer Sun Cloud`;
-    app.innerHTML = route === "/signin" ? signin : route === "/subscribe" ? subscribe : home(base);
+    app.innerHTML = route === "/signin" ? signin(deviceFlow) : route === "/subscribe" ? subscribe : home(base);
     if (route === "/signin") void showSignin(id);
     if (route === "/subscribe") void showSubscribe(id);
   }
