@@ -8,6 +8,8 @@
 #
 # Needs one repository secret: DATABASE_URL (the Neon connection string the
 # portal uses). See README > "Daily collector cards".
+# Since Oct 19, 2026 that is Neon project proud-hill-53375382, branch main
+# (us-east-2). The old us-west-2 database is no longer read.
 name: Collector cards publish
 
 on:
