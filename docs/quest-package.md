@@ -76,11 +76,12 @@ python3 scripts/quest-package.py unpack out.ffquest path/to/destdir \
 | Use | lesson root | asset root |
 |-----|-------------|------------|
 | Stage | `https://warmersun.com/staging/<token>/lessons/` | `https://warmersun.com/staging/<token>/quests/package/assets/` |
-| Deploy | `https://warmersun.com/lessons/` | `https://warmersun.com/future-forge/quests/assets/` |
+| Website deploy (public catalog) | `https://warmersun.com/lessons/` | `https://warmersun.com/future-forge/quests/assets/` |
+| Gated deploy (object store) | `https://warmersun.com/lessons/` | `https://warmersun.com/quests/<source>/assets/` |
 | Lesson pages on disk | `file:///absolute/dir/lessons/` | `file:///absolute/dir/assets/` |
 | Game on localhost | `http://127.0.0.1:<port>/content/lessons/` | `http://127.0.0.1:<port>/content/assets/` |
 
-Deploy's asset root is the prefix `publish-quests.py` already rewrites to `https://warmersun.com/quests/<source>/assets/`.
+The website deploy's asset root is the prefix `publish-quests.py` rewrites to `https://warmersun.com/quests/<source>/assets/` when it builds the public site. A gated tile skips that build: `npm run publish:quest` uploads the JSON to the bucket unchanged, and the game uses `imageUrl` as written. So a gated tile must already cite the final path, with `<source>` the module's id in warmersun's `scripts/quest-sources.json` (`solved-today` for Solved Today, `spotlights` for single spotlights). The images themselves are still served from the public site: they must sit in that source's `quests/assets/`, which `publish-quests.py` copies to `/quests/<source>/assets/`.
 
 To play a package on this machine, in developer mode, with the quest in Library:
 
