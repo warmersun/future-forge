@@ -144,9 +144,7 @@ Each weekday one real invention becomes a collector card. The card is authored w
 
 Since the Oct 19, 2026 move, that is Neon project `proud-hill-53375382`, branch `main` (us-east-2): the portal's card page reads only this database, so the secret must point there. The old us-west-2 database is no longer read; a card written there will not show up.
 
-1. Copy the value. Either:
-   - **Render** → Dashboard → the **warmer-sun-portal** service → **Environment** (left pane) → under *Environment Variables*, reveal **`DATABASE_URL`** and copy its value; or
-   - **Neon Console** → the project → **Connect** (in the Console nav) → in *Connect to your branch*, pick the production branch, database, and role that the portal uses → leave *Connection pooling* on → click the copy icon next to the connection string.
+1. Copy the value: **Neon Console** → the project → **Connect** (in the Console nav) → in *Connect to your branch*, pick the production branch, database, and role that the portal uses → leave *Connection pooling* on → click the copy icon next to the connection string.
 2. **GitHub** → `warmersun/future-forge` → **Settings** → **Secrets and variables** (in the *Security* section of the sidebar) → **Actions** → **Secrets** tab → **New repository secret**.
 3. **Name:** `DATABASE_URL`. **Secret:** paste the value. Click **Add secret**.
 
