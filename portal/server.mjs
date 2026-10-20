@@ -147,7 +147,7 @@ import {
   collectHttpResult,
   collectorImageHeaders,
 } from "../js/server/collector-cards.mjs";
-import { renderCollectorCardShare } from "../js/server/collector-card-share.mjs";
+import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../js/server/collector-card-share.mjs";
 import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
@@ -2221,7 +2221,7 @@ async function serveCollectorCard(req, res, pathOnly) {
           bytes: img.bytes,
           updatedAt: img.updatedAt,
         });
-        return finishCardImage(req, res, jpeg, "image/jpeg", `W/"share-${stamp}"`);
+        return finishCardImage(req, res, jpeg, "image/jpeg", `W/"share-v${SHARE_RENDER_VERSION}-${stamp}"`);
       }
       const buf = Buffer.isBuffer(img.bytes) ? img.bytes : Buffer.from(img.bytes);
       return finishCardImage(req, res, buf, img.contentType || "image/jpeg", `W/"${stamp}"`);

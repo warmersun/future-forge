@@ -10,8 +10,16 @@ import {
   cardEdition,
   domainRgb,
 } from "./collector-cards.mjs";
+import { shareTextSvg } from "./share-text.mjs";
 
 export { CARD_SHARE_HEIGHT, CARD_SHARE_WIDTH };
+
+/**
+ * Bumped when the share image's look changes, so its ETag changes too and caches
+ * that revalidate fetch the new image instead of getting a 304.
+ * 2: label drawn from baked glyph outlines (no host fonts).
+ */
+export const SHARE_RENDER_VERSION = 2;
 
 const CACHE_MAX = 32;
 /** @type {Map<string, Buffer>} */
@@ -32,17 +40,6 @@ function stampOf(updatedAt) {
   if (!updatedAt) return "0";
   const d = new Date(/** @type {string|number|Date} */ (updatedAt));
   return Number.isNaN(d.getTime()) ? String(updatedAt) : d.toISOString();
-}
-
-/**
- * @param {string} s
- */
-function xml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -166,7 +163,7 @@ function frameSvg(box, art, edition, W, H) {
     <path ${tick} d="M${x2 - arm} ${y1} H${x2} V${y1 + arm}"/>
     <path ${tick} d="M${x1} ${y2 - arm} V${y2} H${x1 + arm}"/>
     <path ${tick} d="M${x2 - arm} ${y2} H${x2} V${y2 - arm}"/>
-    <text x="${box.x + box.w - 22}" y="${box.y + box.h - 15}" text-anchor="end" fill="#f6e7b8" font-family="DejaVu Sans, Liberation Sans, Noto Sans, sans-serif" font-size="22" font-weight="700" letter-spacing="0.8">${xml(edition)}</text>
+    ${shareTextSvg(edition, { x: box.x + box.w - 22, y: box.y + box.h - 15, size: 22, fill: "#f6e7b8", letterSpacing: 0.8, anchor: "end" })}
   </svg>`;
 }
 
