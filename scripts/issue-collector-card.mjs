@@ -27,7 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { portalPublicOrigin } from "../js/cloud/portal-origin.js";
+import { cardPublicBaseUrl } from "../js/cloud/portal-origin.js";
 import {
   parseIssueCard,
   contentTypeForImageExt,
@@ -134,7 +134,7 @@ if (daily && !parsed.card.id) {
 }
 
 const id = parsed.card.id || randomUUID();
-const url = `${portalPublicOrigin()}/card/${id}`;
+const url = `${cardPublicBaseUrl()}/card/${id}`;
 const hasImage = Boolean(image && image.length);
 const sql = hasImage ? COLLECTOR_CARD_UPSERT_SQL : COLLECTOR_CARD_UPDATE_TEXT_SQL;
 const params = hasImage

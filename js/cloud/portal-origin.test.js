@@ -1,7 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  CARD_PUBLIC_BASE_DEFAULT,
   CLOUD_PORTAL_ORIGIN,
+  cardPublicBaseUrl,
   GAME_DEVICE_ORIGINS,
   allowGameDeviceOrigin,
   allowLanOriginsFromEnv,
@@ -133,6 +135,31 @@ describe("portalPublicOrigin", () => {
       portalPublicOrigin({ FF_PUBLIC_ORIGIN: "http://127.0.0.1:9000/" }),
       "http://127.0.0.1:9000"
     );
+  });
+});
+
+describe("cardPublicBaseUrl", () => {
+  it("defaults to cloud.warmersun.com", () => {
+    assert.equal(cardPublicBaseUrl({}), "https://cloud.warmersun.com");
+    assert.equal(CARD_PUBLIC_BASE_DEFAULT, "https://cloud.warmersun.com");
+  });
+
+  it("never follows DATABASE_URL or the portal Function host", () => {
+    const env = {
+      DATABASE_URL: "postgresql://u:p@ep-fake-123.us-east-2.aws.neon.tech/db?sslmode=require",
+      FF_PUBLIC_ORIGIN: CLOUD_PORTAL_ORIGIN,
+    };
+    assert.equal(cardPublicBaseUrl(env), "https://cloud.warmersun.com");
+  });
+
+  it("honors FF_CARD_PUBLIC_BASE_URL and trims trailing slashes", () => {
+    assert.equal(cardPublicBaseUrl({ FF_CARD_PUBLIC_BASE_URL: "https://cards.example.org//" }), "https://cards.example.org");
+    assert.equal(cardPublicBaseUrl({ FF_CARD_PUBLIC_BASE_URL: " http://127.0.0.1:8766/ " }), "http://127.0.0.1:8766");
+  });
+
+  it("ignores a value that is not an http(s) URL", () => {
+    assert.equal(cardPublicBaseUrl({ FF_CARD_PUBLIC_BASE_URL: "cloud.warmersun.com" }), "https://cloud.warmersun.com");
+    assert.equal(cardPublicBaseUrl({ FF_CARD_PUBLIC_BASE_URL: "postgresql://x@y/z" }), "https://cloud.warmersun.com");
   });
 });
 
