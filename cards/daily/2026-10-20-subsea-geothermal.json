@@ -1,0 +1,28 @@
+{
+  "source": "Endurance Energy press release, 19 Oct 2026 ('Adélie' test plant at Axial Seamount, ~300 mi off Oregon, ~5,000 ft; 16 m (~2 in) well drilled, cased, cemented and capped, flowed at 260°C but too restrictive to run the plant; moved to natural vent ~281°C; turbine ~26,000 rpm; net-positive 8.7 s, median ~2 kW net, peak 16.5 kW net; stopped by battery overcurrent protection, then refrigerant-pump power cable failed; controlled from Seattle over NSF Regional Cabled Array (University of Washington, OOI); voluntary monitoring of tubeworms, snails, crabs, bacterial mats, no significant changes, 40+ samples at independent labs; 'Gentoo' this winter; 'Leopard' 2 MW generator; Tonga first commercial project targeting first power 2027, grid largely on imported diesel; target markets coastal grids, industrial sites and data centers). Ars Technica (Jeremy Hsu), 19 Oct 2026 ('world's first demonstration of a subsea geothermal power plant'; 3-ton, 100 kW plant; 60 Wh over nearly half a minute; seawater seeped into the cable; 2 MW generators about the size of a shipping container, up to six off Tonga; Roland Horne, Stanford: 'probably technically feasible, but it would undoubtedly be more expensive than to do it on land'; Redd: Pacific Northwest, Alaska, Taiwan, Japan). Canary Media (Maria Gallucci), 19 Oct 2026 (~60 Wh over ~29 s; Emily Pope, C2ES, doubts the economics and says islands could more easily use solar and batteries; a 2016 Chinese team got a few watts from a vent). Not stored or shown.",
+  "id": "b245440b-02cd-4244-8a62-54c56ffea6aa",
+  "techId": "geothermal",
+  "title": "A small power plant on an undersea volcano makes electricity for a few seconds",
+  "description": "A three-ton power plant set on the floor of the Pacific, nearly a mile down on an active underwater volcano. It takes in water heated by the volcano to about 280°C, uses that heat to spin a turbine and make electricity, and is controlled in real time by a team on shore through an undersea internet cable.",
+  "capability": "We can now turn the heat of an underwater volcano into electricity right on the seafloor and run the plant from shore. So far it is one first test, and it made more power than it used for only about nine seconds.",
+  "useCases": [
+    "Planned: giving island nations like Tonga steady, always-on local power instead of electricity from imported diesel. The first project there aims to start in 2027.",
+    "Planned: clean power that does not depend on sun or wind for coastal grids near undersea volcanic areas, such as the Pacific Northwest, Alaska, Japan and Taiwan.",
+    "Planned: round-the-clock power for factories and data centers near the coast that need electricity every hour of the day."
+  ],
+  "body": "In September 2026, a team drilled a narrow hole about 16 meters into the seafloor of an active underwater volcano in the Pacific, about 300 miles off Oregon and nearly a mile down. They lined it, sealed it with cement and capped it with a valve, and it gushed water at 260°C. But the hole was too small to feed the power plant, so they moved the plant to a natural crack in the seafloor where water at about 281°C already pours out. On September 27, run live from Seattle, the plant spun its turbine to about 26,000 turns a minute and made electricity for about half a minute. For 8.7 seconds of that, it made more electricity than it needed to run itself. Then a battery safety cutoff stopped it, and seawater leaking into a power cable ended the dive. Independent press called it the first test of a power plant like this on the seafloor. A much smaller research setup got a few watts from a hot vent in 2016.\n\nThe company plans an upgraded test this winter, then generators the size of a shipping container, with a first project for Tonga, whose grid runs mostly on imported diesel, aiming for first power in 2027. Experts doubt the cost: one said it is \"probably technically feasible, but it would undoubtedly be more expensive than to do it on land,\" and another said islands could more easily use solar panels and batteries. The hot vents are home to tubeworms, crabs and mats of bacteria. The company drilled away from them and watched the site on every dive. It says it saw no significant changes, but more than 40 water, rock and mineral samples are still being tested by outside labs.",
+  "links": [
+    {
+      "label": "The company's announcement of the test",
+      "url": "https://www.enduranceenergy.com/press/adelie"
+    },
+    {
+      "label": "News report with an outside expert's view",
+      "url": "https://arstechnica.com/science/2026/10/startup-taps-underwater-volcano-as-energy-source-in-proof-point-test/"
+    },
+    {
+      "label": "News report on the test and the doubts about cost",
+      "url": "https://www.canarymedia.com/articles/geothermal/geothermal-startup-power-seafloor-drilling"
+    }
+  ]
+}
