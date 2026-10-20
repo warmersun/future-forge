@@ -294,7 +294,7 @@ test("publish helper: keeps going after a failure and writes the links file", ()
   assert.equal(r.status, 1);
   const md = fs.readFileSync(links, "utf8");
   assert.match(md, /dry run/);
-  const cardHost = "https://br-wild-surf-b4jds6qu-cloudapi.compute.c-6.us-east-2.aws.neon.tech";
+  const cardHost = "https://cloud.warmersun.com";
   assert.ok(md.includes("2026-10-08-good.json`: " + cardHost + "/card/" + ID_A));
   assert.match(md, /2026-10-08-noid\.json`: \*\*not issued\*\*/);
 });

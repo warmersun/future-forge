@@ -19,6 +19,21 @@ export function portalPublicOrigin(env = process.env) {
   return CLOUD_PORTAL_ORIGIN;
 }
 
+/** Public base for collector card links, e.g. https://cloud.warmersun.com/card/<id>. */
+export const CARD_PUBLIC_BASE_DEFAULT = "https://cloud.warmersun.com";
+
+/**
+ * Base URL for collector card links. Set FF_CARD_PUBLIC_BASE_URL to override.
+ * Never derived from DATABASE_URL or from the portal Function's own host.
+ * Trailing slashes are trimmed; anything that is not http(s) falls back to the default.
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+export function cardPublicBaseUrl(env = process.env) {
+  const raw = String(env.FF_CARD_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "");
+  if (/^https?:\/\/[^/\s]+/i.test(raw)) return raw;
+  return CARD_PUBLIC_BASE_DEFAULT;
+}
+
 /** RFC1918 IPv4 only, not link-local, CGNAT, or arbitrary private hostnames. */
 export function isLanHostname(host) {
   if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) return false;
