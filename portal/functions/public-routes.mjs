@@ -15,7 +15,7 @@ import { portfolioFromTechIdLists, publicPortfolio } from "../../js/sim/portfoli
 import { rankPlayers, rankBoard, attachBoardExtras, questHasLeaderboard } from "../../js/server/quest-board.mjs";
 import { planSlugsFromEnv, subscriptionEntitled } from "../../js/server/ai-quota.mjs";
 import { parseCardPath, renderCollectorCardPage, collectorImageHeaders } from "../../js/server/collector-cards.mjs";
-import { renderCollectorCardShare } from "../../js/server/collector-card-share.mjs";
+import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../../js/server/collector-card-share.mjs";
 import { cloudCorsOriginsFromEnv, cloudOriginAllowed, validPortalCorsOrigin } from "../../js/cloud/portal-origin.js";
 
 const SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reached, q.start_year,
@@ -133,7 +133,7 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
           const bytes = parsed.share ? await renderShare({ id: parsed.id, techId: img.tech_id,
             bytes: img.image, updatedAt: img.updated_at }) : Buffer.from(img.image);
           const stamp = img.updated_at ? new Date(img.updated_at).toISOString() : parsed.id;
-          const etag = parsed.share ? `W/"share-${stamp}"` : `W/"${stamp}"`;
+          const etag = parsed.share ? `W/"share-v${SHARE_RENDER_VERSION}-${stamp}"` : `W/"${stamp}"`;
           if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304,
             headers: { ETag: etag, "Cache-Control": "public, max-age=86400" } });
           return new Response(request.method === "HEAD" ? null : bytes, { status: 200,

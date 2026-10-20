@@ -251,6 +251,10 @@ test("card HTML, image GET/HEAD/304, preview and unpublished/invalid cards", asy
   const preview = await f.request(`/card/${cardId}/preview.jpg`);
   assert.equal(preview.headers.get("content-type"), "image/jpeg");
   assert.equal(await preview.text(), "preview");
+  // The ETag carries the renderer version, so a cached pre-fix preview revalidates to new bytes.
+  assert.equal(preview.headers.get("etag"), 'W/"share-v2-2025-01-01T00:00:00.000Z"');
+  assert.equal((await f.request(`/card/${cardId}/preview.jpg`, { headers: { "If-None-Match": 'W/"share-2025-01-01T00:00:00.000Z"' } })).status, 200);
+  assert.equal((await f.request(`/card/${cardId}/preview.jpg`, { headers: { "If-None-Match": preview.headers.get("etag") } })).status, 304);
   assert.equal((await f.request("/card/nope")).status, 404);
   const missing = fixture();
   assert.equal((await missing.request(`/card/${cardId}`)).status, 404);

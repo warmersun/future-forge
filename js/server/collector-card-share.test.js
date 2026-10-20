@@ -30,3 +30,8 @@ test("share image is a 1200×630 JPEG and stays cached for the same card", async
   assert.notEqual(fresh, jpeg);
   assert.equal(shareCacheKey(CARD_ID, UPDATED) === shareCacheKey(CARD_ID, "2026-10-09T00:00:00.000Z"), false);
 });
+
+test("share image label does not depend on host fonts", async () => {
+  const src = fs.readFileSync(path.join(ROOT, "js/server/collector-card-share.mjs"), "utf8");
+  assert.ok(!/<text\b/.test(src), "share frame must draw text as paths, not <text>");
+});
