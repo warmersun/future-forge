@@ -1,0 +1,24 @@
+{
+  "source": "Ecola, Zhang, Kahn & Kapetanovic (Stanford), 'First-principles channel model and capacity-achieving transmission scheme in thermal noise backscatter links', PNAS 123(43) e2606732123, published online 20 Oct 2026, doi:10.1073/pnas.2606732123 (thermal noise backscatter at ambient temperature; data rates in the kilobits-per-second range, over two orders of magnitude above prior demonstrations; polar codes reach the derived capacity; abstract names low-power sensor networks, IoT, EMI-sensitive environments, RFID). Stanford news story by Ula Chrobak, reposted on Tech Xplore 20 Oct 2026 (antenna switches between open and short circuit = 1 and 0; receiver amplifier acts like an 'electron refrigerator' making noise look colder; reflected noise looks hotter or colder; tests in a densely insulated, foam-lined chamber; channel model used to raise data rate 100x; radio transmitter uses up to 1,000 times as much energy; suited to relatively small amounts of data where power is limited; now testing networks of multiple transmitters and noisier environments; possible uses alongside medical devices or astronomy observatories, or environmental sensing; Kapetanovic's earlier agricultural sensing work, e.g. soil moisture, inspired it). Not stored or shown.",
+  "id": "7238e5f5-16b4-4079-acef-bf8f263333f9",
+  "techId": "iot",
+  "title": "Sending data without a radio signal, by reflecting background static",
+  "description": "A tiny transmitter sends data without making any radio signal of its own. Every warm object gives off faint background static. The transmitter's antenna keeps flipping between two settings: one soaks that static up, the other bounces it back. To a nearby receiver, the static coming off the antenna looks a little \"hotter\" or \"colder\", and those two states stand for the 1s and 0s of a message.",
+  "capability": "A tiny sensor can now send small amounts of data wirelessly without making a radio signal of its own, just by reflecting the faint background static all around it, using up to about 1,000 times less energy than a radio. So far it only works inside a sealed lab chamber.",
+  "useCases": [
+    "The goal: sensors on farms and out in nature that report things like how wet the soil is while using almost no power. Not shown yet; so far it has only worked in a lab chamber.",
+    "The goal: wireless links right next to medical equipment that a radio signal could disturb, since these links send out no signal of their own. Not shown yet.",
+    "The goal: sending data near observatories that listen to faint signals from space, where a radio would get in the way. Not shown yet."
+  ],
+  "body": "To test the idea, the team built a sealed box lined with foam that blocks outside signals, with a transmitter and a receiver inside at a distance they could adjust. They worked out why it works even when everything is at room temperature: the receiver's amplifier acts like an \"electron refrigerator\" that makes the static look colder, so the transmitter can make it look hotter or colder just by soaking it up or reflecting it, without heating or cooling anything. One researcher compared it to a castaway signaling with a hand mirror.\n\nFrom those tests they wrote an equation that describes how the signal travels, then used it to tune the setup and send data 100 times faster than before, in the range of thousands of bits per second. That suits places where only small amounts of data, like a sensor's readings, have to move and power is scarce.\n\nIt is early lab work. Every test so far ran inside the sealed box. The team is still working out how to link many transmitters into one network, and how to keep the signal from getting lost in noisier places out in the real world.",
+  "links": [
+    {
+      "label": "The research paper on how it works and the faster setup",
+      "url": "https://pnas.org/doi/10.1073/pnas.2606732123"
+    },
+    {
+      "label": "University news story explaining the tests and possible uses",
+      "url": "https://techxplore.com/news/2026-10-background-static-wireless-generated-radio.html"
+    }
+  ]
+}
