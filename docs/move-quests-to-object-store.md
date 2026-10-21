@@ -70,7 +70,7 @@ That is 60 tiles, the same 60 ids as the live https://warmersun.com/quests/catal
 
 `publish-quests.sh` and `publish-quests.py` stop when any listed source catalog is missing. Without `--build-only` they also publish the public website. Do not run either script. Publish from the three source catalogs.
 
-Solved Today holds these tiles, all with `access: "open"`:
+Solved Today holds these tiles, all with `access: "account"`. They were `open` at the 2026-10-14 inventory; Sic changed the module and its lessons to require an account on 2026-10-19 (ff-solved-today commit `afbd7b1`).
 
 | Catalog id | File |
 | --- | --- |
@@ -105,7 +105,7 @@ Do not pass `--access`. The flag would rewrite `access` on the uploaded JSON. Th
 | Tiles | Stored `access` | Portal enforces |
 | --- | --- | --- |
 | `spotlight-synbio-tallowkey-bottles-2026` | `open` (also a learning module) | `open` |
-| `solved-today` and its six lessons (Grayreach, Steamholt, Beadwell, Sennet, Farcall, Mistlantern) | `open` | `open` |
+| `solved-today` and its six lessons (Grayreach, Steamholt, Beadwell, Sennet, Farcall, Mistlantern) | `account` (was `open` until 2026-10-19) | `account` |
 | `spotlight-drones-northline-cedar-bend-2026` (MyCompany), `spotlight-gene-seq-yourcompany-crossing-clinic-2026` (YourCompany), `spotlight-robots-ourcompany-millspan-line-2026` (OurCompany) | unset, not a learning module | `open` |
 | The other 24 spotlights quests, including Extropic `spotlight-computing-northwharf-dispatch-2026` and the four Base saltpier tiles | unset learning modules | `account` |
 | `module-progress-and-predictions` | unset `kind: "module"` | `account` |
@@ -272,7 +272,7 @@ npm run publish:quest -- "${FILES[@]}" --dry-run
 - One `added` or `updated` line for every id in the file list, including `module-progress-and-predictions`, all twelve `pp-01` through `pp-12` lessons, `spotlight-synbio-tallowkey-bottles-2026`, and the `solved-today` module with its six lessons.
 - The harborlane line is `spotlight-synbio-harborlane-rehab-2026`, from `cells-already-know.json`.
 - No line for `spotlight-ai-hearthline-rsi-check-play-2026`.
-- Access on the four open spotlights tiles above and on all seven Solved Today tiles is `open`. Access on `module-progress-and-predictions`, the Extropic and Base tiles, and both unset learn-daily tiles is `account`. No line says `access=paid`.
+- Access on the four open spotlights tiles above is `open`. Access on all seven Solved Today tiles is `account`. Access on `module-progress-and-predictions`, the Extropic and Base tiles, and both unset learn-daily tiles is `account`. No line says `access=paid`.
 - The catalog count is at least 60 (29 spotlights + 7 solved-today + 24 learn-daily). Upsert keeps ids already in the bucket, so a count above 60 means the live catalog had other entries. That is fine. A count below 60 is not.
 - The output contains `dry-run: uploaded nothing` and no line that starts with `uploaded`.
 
