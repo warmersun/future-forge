@@ -1,0 +1,27 @@
+{
+  "source": "Fu, H., Li, Z., Chaturvedi, S., Zhang, X., Li, X., Li, Q. & Khudiyev, T. (Department of Materials Science and Engineering, National University of Singapore), 'Touch-sensing digital pixel fibre enables interactive garment GUI', Nature, published 21 Oct 2026, doi:10.1038/s41586-026-11128-9 (abstract: addressable pixels, common propagation-axis interconnection for in-fibre circuitry, coaxial sensing layer for touch localization in one thermally drawn fibre; peripheral fibre sensors/actuators for physiological, inertial, optical and acoustic input/output; knitted into the forearm of a garment sleeve: 96 x 54 pixels, 30 fps, 8-bit colour; dynamic graphics, audio-video playback, wireless data exchange, interactive computing; keeps flexibility, washability, breathability, robustness. Supp. Video 5: fibre operates fully submerged in water. Supp. Video 6: two-page menu, calculator, body-temperature sensing, image display, video 30 fps without audio / 25 fps with audio, compass, voice-triggered control, BLE transfer, autorotation, auto-brightness. Prior work cited: Shi et al., Nature 2021 display textiles; Gupta et al., Nature 2025 single-fibre computer. Funded by Singapore Ministry of Health's National Medical Research Council). Shanshan Yao (Stony Brook University), Nature News & Views, 21 Oct 2026 ('Fabric user interface can be worn on your sleeve - and machine-washed'; sleeve displays graphics, senses touch and environmental conditions, does simple computing; a GUI similar to a smartphone screen that lets people interact with electronic devices; rest paywalled, not read). Code: github.com/ZiangLi-NUS/GarmentGUI (image and video converters for the display MCUs). Wash-cycle counts, battery and power not verified, left out. Not stored or shown.",
+  "id": "88b6959a-1c44-4264-aa79-ac13dcfd9bbf",
+  "techId": "computing",
+  "title": "A knitted sleeve that works as a washable touch screen",
+  "description": "Each thread in this sleeve is a single fibre that carries a row of tiny colored lights, the wiring that turns each light on and off, and an outer layer that feels exactly where along it you touch. Knitted side by side into the forearm of a sleeve, the fibres light up together as one small screen that shows pictures and video and answers your fingertip, while the cloth still bends and breathes.",
+  "capability": "Clothing can now work as a small touch screen: a knitted sleeve shows moving pictures and video, feels where you tap it, and runs simple apps, while it still bends, breathes and can be washed like ordinary cloth. So far it is one lab-made sleeve, not a product.",
+  "useCases": [
+    "The goal: clothes that keep track of signals from your body, such as your temperature, and show them right on your sleeve. So far only one lab-made sleeve has done this.",
+    "The goal: tapping your own sleeve to use your phone and other devices, the way you would use a phone's screen, without taking a gadget out. Not ready for everyday use yet."
+  ],
+  "body": "To make the fibre, a strip of tiny lights is fed into a furnace and sealed inside a softened coating as the fibre is pulled out long and thin, with a touch-sensing layer forming around it. The lights keep working the whole time the fibre is being made.\n\nKnitted into the forearm of a sleeve, the fibres make a screen 96 dots of light wide and 54 tall that changes picture 30 times a second, in color. In the team's tests the sleeve ran a two-page menu you tap through, showed pictures and video with sound, read body temperature, answered spoken commands, and sent data wirelessly to other devices. One fibre kept working while fully under water.\n\nIt is early lab work on a single sleeve, and the screen is small and coarse, about 5,000 dots of light in all. Cloth that can show pictures, and a computer built into a single fibre, had both been made before. What is new is putting the display, the touch sensing and the computing into one fibre that can be knitted like yarn.",
+  "links": [
+    {
+      "label": "The research paper describing the fibre and the sleeve",
+      "url": "https://www.nature.com/articles/s41586-026-11128-9"
+    },
+    {
+      "label": "An outside expert's commentary on the result",
+      "url": "https://www.nature.com/articles/d41586-026-03064-5"
+    },
+    {
+      "label": "The team's software for turning pictures and video into screen data",
+      "url": "https://github.com/ZiangLi-NUS/GarmentGUI"
+    }
+  ]
+}
