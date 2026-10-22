@@ -3,6 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   FAST_EVAL_MODES,
   SCORE_PATHWAY_SYSTEM,
@@ -16,13 +17,15 @@ import {
   WORLD_CLOCK_TIMING_LINE,
   WORLD_CLOCK_CONTEXT_LINE,
   buildFastPayload,
+  fastEvalSystem,
   sanitizeFast,
   isFastEvalMode,
   reasoningEffortForCoInvent,
   worldClockContext,
 } from "./fast-eval.mjs";
 import { SEARCH_SYSTEM_LINE } from "./ai-search.mjs";
-import { setWorldForesightBank } from "../sim/world-foresight.js";
+import { setWorldForesightBank, validatePredictionsBank } from "../sim/world-foresight.js";
+import { buildSourceInquiry } from "../companion-context.js";
 
 const CLOCK_BANK = {
   schema: "future-forge.predictions/v1",
@@ -116,6 +119,8 @@ describe("FAST_EVAL_MODES", () => {
     assert.equal(ASSESS_FEASIBILITY_SYSTEM.includes(ASSESS_GROUNDING_LINE), true);
     assert.equal(ASSESS_FEASIBILITY_SYSTEM.includes(GROUNDING_LINE), false);
     assert.equal(SCORE_PATHWAY_SYSTEM.includes(GROUNDING_LINE), true);
+    assert.equal(SCORE_PATHWAY_SYSTEM.includes("sourceConstraint"), true);
+    assert.equal(ASSESS_FEASIBILITY_SYSTEM.includes("sourceConstraint"), true);
     assert.equal(IDEA_SPARKS_SYSTEM.includes(GROUNDING_LINE), true);
     assert.equal(POSE_CHALLENGE_SYSTEM.includes(GROUNDING_LINE), true);
     assert.equal(EVALUATE_CONVERGENCE_SYSTEM.includes(CONVERGENCE_GROUNDING_LINE), true);
@@ -258,6 +263,18 @@ describe("buildFastPayload", () => {
     assert.ok(p.concerns[0].playerAnswer.length <= 2000);
     assert.equal(p.concerns[0].answerQuality, "hit");
     assert.ok(p.grounding.length <= 3000);
+    assert.equal(p.sourceConstraint, null);
+    assert.equal(p.grounding.includes("sourceConstraint"), false);
+    const limited = buildFastPayload("score-pathway", {
+      pathway: { inventions: [] },
+      grounding: "Capability stays here.",
+      sourceConstraint: "Opinion, disputed. Question: What stays with people?",
+    });
+    assert.equal(limited.grounding, "Capability stays here.");
+    assert.equal(
+      limited.sourceConstraint,
+      "Opinion, disputed. Question: What stays with people?"
+    );
     assert.equal(json.includes("SecretName"), false);
     assert.equal(json.includes("should not appear"), false);
     assert.equal(
@@ -496,7 +513,12 @@ describe("sanitizeFast", () => {
       { timing: { level: "green", reason: "Pilot honest." }, message: "nope" },
       "ai"
     );
-    assert.deepEqual(out.timing, { level: "green", reason: "Pilot honest." });
+    assert.deepEqual(out.timing, {
+      level: "green",
+      reason: "Pilot honest.",
+      basis: "ordinary",
+      assumedPredictionIds: [],
+    });
     assert.equal(out.message, undefined);
   });
 
@@ -587,5 +609,144 @@ describe("reasoningEffortForCoInvent", () => {
       "low"
     );
     assert.equal(reasoningEffortForCoInvent({ mode: "assess-feasibility" }), "low");
+  });
+});
+
+describe("assumed premise fast payloads", () => {
+  const fixture = JSON.parse(
+    fs.readFileSync(new URL("../../test/fixtures/quests/companion-moonshots-304.json", import.meta.url), "utf8")
+  );
+  const bank = validatePredictionsBank(
+    JSON.parse(
+      fs.readFileSync(new URL("../../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8")
+    )
+  ).bank;
+  const companion = fixture.companion;
+
+  function context(mode, year = 2026) {
+    return {
+      year,
+      place: "Kiln Ferry parcel dock",
+      challengeAngle: "nature",
+      predictionsBank: bank,
+      sourceInquiry: buildSourceInquiry(companion, { mode, angle: "nature", bank, year }),
+      inventionHow: "A person moves parcels. The granted check names visible damage on the lit bench.",
+      pathway: { inventions: [{ techId: "ai", howText: "Check visible damage, then a person moves the parcel." }], howText: "" },
+    };
+  }
+
+  it("score-pathway carries pressure criteria and the premise line", () => {
+    const ctx = context("score-pathway");
+    const payload = buildFastPayload("score-pathway", ctx);
+    assert.equal(payload.pressureLinks.local.criterion.includes("usable workflow"), true);
+    assert.equal(payload.sourceInquiry.premise.mode, "assumed");
+    assert.equal(Object.hasOwn(payload, "inventionName"), false);
+    const system = fastEvalSystem("score-pathway", ctx);
+    assert.match(system, /Do not deny an accepted premise/);
+    assert.match(system, /low-tech/);
+    assert.equal(system.startsWith(SCORE_PATHWAY_SYSTEM), true);
+    assert.equal(SCORE_PATHWAY_SYSTEM.includes("Do not deny an accepted premise"), false);
+  });
+
+  it("timing and convergence omit the pressure rubric", () => {
+    const timing = buildFastPayload("assess-feasibility", context("assess-feasibility"));
+    assert.equal(Object.hasOwn(timing.sourceInquiry, "pressureLinks"), false);
+    assert.equal(timing.worldClock.some((row) => row.id === "dock-inspection-2026"), true);
+    const convergence = buildFastPayload("evaluate-convergence", context("evaluate-convergence"));
+    assert.equal(Object.hasOwn(convergence.sourceInquiry, "pressureLinks"), false);
+    const system = fastEvalSystem("evaluate-convergence", context("evaluate-convergence"));
+    assert.match(system, /Scenario grant exception/);
+    assert.equal(system.includes("Do not deny an accepted premise"), false);
+  });
+
+  it("pose carries one critic and the critic premise line", () => {
+    const ctx = context("pose-challenge");
+    const payload = buildFastPayload("pose-challenge", ctx);
+    assert.equal(payload.sourceInquiry.challenge.angle, "nature");
+    assert.equal(Object.hasOwn(payload.sourceInquiry, "challenges"), false);
+    assert.match(fastEvalSystem("pose-challenge", ctx), /Accept every active due grant/);
+  });
+
+  it("keeps a covered green and drops a forged grant id", () => {
+    const ctx = context("assess-feasibility");
+    const covered = sanitizeFast(
+      "assess-feasibility",
+      {
+        timing: {
+          level: "green",
+          reason: "The check stays inside the granted inspection.",
+          basis: "scenario",
+          assumedPredictionIds: ["forged-grant", "dock-inspection-2026"],
+        },
+      },
+      "ai",
+      ctx
+    );
+    assert.equal(covered.timing.level, "green");
+    assert.equal(covered.timing.basis, "scenario");
+    assert.deepEqual(covered.timing.assumedPredictionIds, ["dock-inspection-2026"]);
+    const forged = sanitizeFast(
+      "assess-feasibility",
+      {
+        timing: {
+          level: "green",
+          reason: "Invented coverage.",
+          basis: "scenario",
+          assumedPredictionIds: ["forged-grant"],
+        },
+      },
+      "ai",
+      ctx
+    );
+    assert.equal(forged.timing.basis, "ordinary");
+    assert.deepEqual(forged.timing.assumedPredictionIds, []);
+  });
+
+  it("does not activate a not-yet row early", () => {
+    const ctx = context("assess-feasibility", 2025);
+    assert.equal(ctx.sourceInquiry.premise.grants[0].status, "not_yet");
+    const out = sanitizeFast(
+      "assess-feasibility",
+      {
+        timing: {
+          level: "green",
+          reason: "Too soon.",
+          basis: "scenario",
+          assumedPredictionIds: ["dock-inspection-2026"],
+        },
+      },
+      "ai",
+      ctx
+    );
+    assert.equal(out.timing.basis, "ordinary");
+    assert.deepEqual(out.timing.assumedPredictionIds, []);
+  });
+
+  it("appends a ranked-out premise row on the fast clock", () => {
+    const fillers = Array.from({ length: 12 }, (_, i) => ({
+      id: `filler-${i}`,
+      year: 2026,
+      kind: "milestone",
+      techIds: ["solar"],
+      headline: `Filler ${i}`,
+      detail: "Unrelated filler row for ranking.",
+      claimBand: "now",
+    }));
+    const crowded = validatePredictionsBank({
+      ...bank,
+      predictions: [...bank.predictions, ...fillers],
+    }).bank;
+    const year = 2026;
+    const sourceInquiry = buildSourceInquiry(companion, {
+      mode: "assess-feasibility",
+      bank: crowded,
+      year,
+    });
+    const clock = worldClockContext(
+      { year, predictionsBank: crowded, sourceInquiry },
+      { techIds: ["solar"], limit: 4 }
+    );
+    assert.equal(clock.some((row) => row.id === "dock-inspection-2026"), true);
+    assert.equal(clock.filter((row) => row.id.startsWith("filler-")).length <= 4, true);
   });
 });

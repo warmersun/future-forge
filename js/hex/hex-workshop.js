@@ -121,6 +121,7 @@ import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
+import { provisionalScenarioTiming } from "../companion-context.js";
 import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
 
 /**
@@ -1263,6 +1264,13 @@ export function createHexWorkshop(api) {
             line += ` <span class="muted">(base ${escapeHtml(String(Math.round(base)))}%)</span>`;
           }
           parts.push(`<p>${line}</p>`);
+          if (t.timingBasis === "scenario") {
+            const assumption =
+              lvl === "green"
+                ? "Feasible under this Quest's assumptions."
+                : "Under this Quest's assumptions.";
+            parts.push(`<p>${escapeHtml(assumption)}</p>`);
+          }
           if (t.timingReason) {
             parts.push(`<p class="muted">${escapeHtml(t.timingReason)}</p>`);
           }
@@ -1698,6 +1706,7 @@ export function createHexWorkshop(api) {
       globalId: api.getGlobal?.()?.id || mission?.globalId || "",
       global: api.getGlobal?.() || null,
       mission,
+      sourceInquiryKey: api.getSourceInquiryKey?.() || "",
     };
   }
 
@@ -2144,6 +2153,7 @@ export function createHexWorkshop(api) {
         const role = t.role || "local";
         const delta = parseCrisisDeltaField(impact.crisisDelta?.[role]).delta;
         const reason = String(impact.crisisReasons?.[role] || "").trim();
+        const connection = String(api.getPressureConnection?.(role) || "").trim();
         const all = reasonsForCrisisTile(b, t).filter((r) => !r.pending);
         items.push({
           kind: "crisis",
@@ -2152,6 +2162,7 @@ export function createHexWorkshop(api) {
           delta,
           absDelta: Math.abs(delta),
           reason,
+          connection,
           extraCount: all.length,
           net: all.reduce((s, r) => s + (Number(r.delta) || 0), 0),
         });
@@ -2165,6 +2176,7 @@ export function createHexWorkshop(api) {
           name: t.name || t.angle,
           level: row.level,
           reason: String(row.reason || "").trim(),
+          connection: String(t.sourceInquiry?.connection || "").trim(),
           extraCount: all.length,
         });
       }
@@ -2192,6 +2204,9 @@ export function createHexWorkshop(api) {
         const reason = item.reason
           ? `<span class="hex-score-chip-reason">${escapeHtml(item.reason)}</span>`
           : "";
+        const why = item.connection
+          ? `<span class="hex-score-chip-why">Why this matters here: ${escapeHtml(item.connection)}</span>`
+          : "";
         const subHtml = sub
           ? `<span class="hex-score-chip-sub muted">${escapeHtml(sub)}</span>`
           : "";
@@ -2199,7 +2214,7 @@ export function createHexWorkshop(api) {
           item.tileId
         )}"><span class="hex-score-chip-kicker">${escapeHtml(
           kicker
-        )}</span>${reason}${subHtml}</button>`;
+        )}</span>${reason}${why}${subHtml}</button>`;
       })
       .join("");
     const buttons = [...host.querySelectorAll(".hex-score-chip")];
@@ -2250,6 +2265,7 @@ export function createHexWorkshop(api) {
         priorLevel: t.lamp || "red",
         inventChanged: concernInventChanged(t, inventions, board),
         posedHowText: String(t.posedHowText || "").slice(0, 1600),
+        ...(t.sourceInquiry ? { sourceInquiry: t.sourceInquiry } : {}),
       });
     }
     return { concernAngles, concernAnswers, concerns };
@@ -2373,14 +2389,21 @@ export function createHexWorkshop(api) {
     }
   }
 
+  function sourceKeyNow() {
+    return api.getSourceInquiryKey?.() || "";
+  }
+
   function localTileTiming(tile, year) {
+    const provisional = provisionalScenarioTiming(api.getScenarioPremise?.() || null);
+    if (provisional) return provisional;
     const tech = tile.techId ? techById(tile.techId) : null;
     const techs = tech ? [tech] : [];
     const how = String(tile.howText || "").trim();
-    return detectClaimStretch(how, techs, year);
+    const ordinary = detectClaimStretch(how, techs, year);
+    return { ...ordinary, basis: "ordinary", assumedPredictionIds: [] };
   }
 
-  function applyTimingToTile(tileId, level, reason, forKey) {
+  function applyTimingToTile(tileId, level, reason, forKey, meta = {}) {
     const b = cloneBoard(board());
     const t = b.tiles[tileId];
     if (!t || t.kind !== TILE_KIND.invention) return b;
@@ -2389,7 +2412,17 @@ export function createHexWorkshop(api) {
     t.feasibilityPct = timingLevelToPct(level);
     t.timingPending = false;
     t.timingForKey = forKey;
-    timingCache.set(tileId, { level, reason: t.timingReason, forKey });
+    t.timingBasis = meta.basis === "scenario" ? "scenario" : "ordinary";
+    t.assumedPredictionIds = Array.isArray(meta.assumedPredictionIds)
+      ? meta.assumedPredictionIds.filter((id) => typeof id === "string").slice(0, 3)
+      : [];
+    timingCache.set(tileId, {
+      level,
+      reason: t.timingReason,
+      forKey,
+      basis: t.timingBasis,
+      assumedPredictionIds: t.assumedPredictionIds,
+    });
     return b;
   }
 
@@ -2398,8 +2431,8 @@ export function createHexWorkshop(api) {
     syncPathwayScores();
   }
 
-  function settleTileTiming(tileId, level, reason, forKey) {
-    setBoard(applyTimingToTile(tileId, level, reason, forKey));
+  function settleTileTiming(tileId, level, reason, forKey, meta) {
+    setBoard(applyTimingToTile(tileId, level, reason, forKey, meta));
     ensureUi()?.render();
     // onBoardPainted runs from syncPathwayScores, after lampPending is set.
     afterTimingSettled(tileId);
@@ -2418,7 +2451,7 @@ export function createHexWorkshop(api) {
     const tile = board()?.tiles?.[tileId];
     if (!tile || tile.kind !== TILE_KIND.invention) return;
     const year = api.getYear();
-    const key = tileTimingCacheKey(tile, year);
+    const key = tileTimingCacheKey(tile, year, sourceKeyNow());
     const cached = timingCache.get(tileId);
     if (cached?.forKey === key || tile.timingForKey === key) {
       if (
@@ -2486,9 +2519,13 @@ export function createHexWorkshop(api) {
     });
   }
 
-  function commitTileTiming(tile, tileId, level, reason, key) {
+  function commitTileTiming(tile, tileId, level, reason, key, meta) {
     logTileFeasibility(tile, level, reason);
-    settleTileTiming(tileId, level, reason, key);
+    settleTileTiming(tileId, level, reason, key, meta);
+  }
+
+  function timingStillCurrent(tileId, gen, sourceKey) {
+    return timingGens.get(tileId) === gen && sourceKeyNow() === sourceKey;
   }
 
   async function runTileTiming(tileId, gen) {
@@ -2496,11 +2533,12 @@ export function createHexWorkshop(api) {
     const tile = board()?.tiles?.[tileId];
     if (!tile || tile.kind !== TILE_KIND.invention) return;
     const year = api.getYear();
-    const key = tileTimingCacheKey(tile, year);
+    const sourceKey = sourceKeyNow();
+    const key = tileTimingCacheKey(tile, year, sourceKey);
     if (!api.coInvent) {
       const local = localTileTiming(tile, year);
-      if (timingGens.get(tileId) !== gen) return;
-      commitTileTiming(tile, tileId, local.level, local.reason, key);
+      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
+      commitTileTiming(tile, tileId, local.level, local.reason, key, local);
       return;
     }
     try {
@@ -2511,19 +2549,19 @@ export function createHexWorkshop(api) {
         place: api.getPlace?.() || "",
         grounding: api.getGrounding?.() || null,
       });
-      if (timingGens.get(tileId) !== gen) return;
+      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
       const rawLevel = data.timing?.level || data.timingLevel;
       const reason = data.timing?.reason || data.timingNote || data.message || "";
       if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
-        commitTileTiming(tile, tileId, rawLevel, reason, key);
+        commitTileTiming(tile, tileId, rawLevel, reason, key, data.timing || {});
       } else {
         const local = localTileTiming(tile, year);
-        commitTileTiming(tile, tileId, local.level, local.reason, key);
+        commitTileTiming(tile, tileId, local.level, local.reason, key, local);
       }
     } catch {
       const local = localTileTiming(tile, year);
-      if (timingGens.get(tileId) !== gen) return;
-      commitTileTiming(tile, tileId, local.level, local.reason, key);
+      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
+      commitTileTiming(tile, tileId, local.level, local.reason, key, local);
     }
   }
 
@@ -2890,7 +2928,8 @@ export function createHexWorkshop(api) {
     const neighbor = b0?.tiles?.[neighborId];
     if (!placed || !neighbor) return;
     const key = convergencePairKey(placedId, neighborId);
-    if (b0.convergences?.[key]) return;
+    const existing = b0.convergences?.[key];
+    if (existing && !existing.stale) return;
     const factor = CONVERGENCE_FACTOR;
     const labelA = convergenceSideLabel(placed);
     const labelB = convergenceSideLabel(neighbor);
@@ -2947,7 +2986,8 @@ export function createHexWorkshop(api) {
     const nabes = inventionNeighbors(board(), tileId);
     const fresh = nabes.filter((n) => {
       const key = convergencePairKey(tileId, n.id);
-      return !board()?.convergences?.[key];
+      const row = board()?.convergences?.[key];
+      return !row || row.stale;
     });
     if (!fresh.length) return;
 
@@ -2957,7 +2997,8 @@ export function createHexWorkshop(api) {
       const other = board()?.tiles?.[n.id] || n;
       if (!current || !other) continue;
       const key = convergencePairKey(tileId, other.id);
-      if (board()?.convergences?.[key]) continue;
+      const prior = board()?.convergences?.[key];
+      if (prior && !prior.stale) continue;
 
       ensureUi()?.setEvaluatingPairs?.([{ a: tileId, b: other.id }]);
       let hit = null;
@@ -3107,6 +3148,7 @@ export function createHexWorkshop(api) {
         if (text) howParts.push(text);
       }
       const pathwayLabel = pathwayArtLabel(posedTiles);
+      const authored = api.getCriticPrompt?.(pickAngle) || null;
       const pathway = {
         inventions: posedTiles.map((n) => ({
           techId: n.techId,
@@ -3116,7 +3158,11 @@ export function createHexWorkshop(api) {
         howText: howParts.join("\n\n"),
       };
       const hexBoard = summarizeBoardForScrutiny(board(), spawn.inventionIds);
-      const local = localPose(pickAngle, { place });
+      const local = localPose(pickAngle, {
+        place,
+        authoredQuestion: authored?.question || "",
+        authoredConnection: authored?.connection || "",
+      });
 
       const until = (async () => {
         let speech = local.speech;
@@ -3219,6 +3265,16 @@ export function createHexWorkshop(api) {
         posedInventionIds: spawn.inventionIds,
         posedFingerprints: spawn.fingerprints,
         posedHowText: spawn.howText,
+        ...(authored
+          ? {
+              sourceInquiry: {
+                key: api.getSourceInquiryKey?.() || "",
+                focus: api.getExplorationFocus?.() || "",
+                connection: authored.connection,
+                question: authored.question,
+              },
+            }
+          : {}),
       });
       if (!placed.ok) {
         api.flashToast?.(placed.error || "Could not place challenger");
@@ -3285,6 +3341,22 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
   }
 
+  function afterSourceChange() {
+    for (const [id, gen] of timingGens) timingGens.set(id, (gen || 0) + 1);
+    timingCache.clear();
+    for (const fp of [...pathwayJobs.keys()]) abortPathwayJob(fp);
+    syncPathwayScores();
+    const placed = Object.values(board()?.tiles || {}).filter(
+      (t) => t && t.kind === TILE_KIND.invention && t.q != null && t.r != null
+    );
+    for (const tile of placed) {
+      evaluateConvergenceAfterPlace(tile.id).catch((e) =>
+        console.warn("[hex convergence]", e)
+      );
+    }
+    api.onBoardPainted?.();
+  }
+
   let artResolveBusy = false;
   async function resolveMissingTileArt() {
     if (artResolveBusy || !api.fetchIdeaImage) return;
@@ -3339,6 +3411,9 @@ export function createHexWorkshop(api) {
     resolveMissingTileArt();
     if ((board()?.rulesWeatherKey ?? "") !== liveRulesWeatherKey()) {
       afterRulesChange();
+    }
+    if ((board()?.sourceInquiryKey ?? "") !== sourceKeyNow()) {
+      afterSourceChange();
     }
   }
 

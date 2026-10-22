@@ -79,9 +79,11 @@ AI agents (any harness) can research a recent emTech advance and author a portab
 
 **Open a Quest by ID:** before launching, choose **Copy Quest ID** on a Quest card. On **Start a Quest**, paste it into **Quest ID** and choose **Load Quest**. This fetches the exact ID through `GET /api/quests/:id` (the game forwards to the portal when configured) and shows a card; gameplay starts only when you choose Play. Sign-in and subscription requirements still apply. IDs are the existing stable slugs, not titles or UUIDs. Local Library tiles are only available on their server, and browser imports must be published before others can retrieve them by ID.
 
+**Open a Quest by link:** **Copy link** writes `?q=<quest-id>` on the server that is serving this page (`https://ff.warmersun.com/?q=<quest-id>` on the public app, `http://127.0.0.1:8765/?q=<quest-id>` on a local server). Opening that URL on the same server launches the Quest. A link does not travel to a different server. The Quest ID does. If the page was not opened from the server, Copy link says so and does not invent an address.
+
 **Browser import (per device):** title screen → **Import Quest…** (or drop a `.json`). Lands in **Library**. Example: `test/fixtures/quests/spotlight-gene-seq.json` (also copied under `quests/`).
 
-**Share a Quest:** use **Copy Quest ID** and ask the recipient to load it on **Start a Quest**. Previously shared `?q=` / `?quest=` links remain supported.
+**Share a Quest:** **Copy link** for someone on this same server, or **Copy Quest ID** when they will load it on Start a Quest. `?q=` and `?quest=` launch the exact ID on the server that served the link.
 
 Default port: **8765** (override with `FF_PORT`). **game** and **portal** both default to 8765 — do not run them at the same time. Render sets `PORT` for portal.
 

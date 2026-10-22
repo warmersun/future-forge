@@ -9,6 +9,14 @@
  */
 export function localPose(angle, opts = {}) {
   const id = typeof angle === "string" ? angle : angle?.id || "";
+  const authoredQuestion = String(opts.authoredQuestion || "").trim();
+  if (authoredQuestion) {
+    const connection = String(opts.authoredConnection || "").trim();
+    return {
+      speech: connection || authoredQuestion,
+      question: authoredQuestion,
+    };
+  }
   const place = opts.place || "here";
   const name = opts.inventionName || "this pathway";
   if (id === "nature") {

@@ -1,0 +1,27 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "companion-dock-test",
+  "title": "Synthetic dock test bank",
+  "predictions": [
+    {
+      "id": "dock-inspection-2026",
+      "year": 2026,
+      "kind": "prediction",
+      "techIds": ["ai"],
+      "headline": "Fictional dock inspection and sorting instructions",
+      "detail": "Synthetic test assumption: an AI can reliably inspect visible parcel damage and produce workable sorting instructions for an ordinary parcel mix. This row is not a real forecast and is not attributed to a podcast guest.",
+      "claimBand": "now",
+      "sourceNote": "synthetic test fixture, not a published forecast"
+    },
+    {
+      "id": "dock-handling-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "techIds": ["robots"],
+      "headline": "Fictional parcel handling robots",
+      "detail": "Synthetic test row. Physical handling robots are not granted by the dock inspection premise. Not a published forecast.",
+      "claimBand": "frontier",
+      "sourceNote": "synthetic test fixture, not a published forecast"
+    }
+  ]
+}

@@ -20,6 +20,22 @@ describe("localPose", () => {
     assert.match(posed.speech, /Harbor Loom/);
     assert.match(posed.question, /breaks first|absorb a bad week/i);
   });
+
+  it("uses an authored question and connection verbatim", () => {
+    const posed = localPose("nature", {
+      place: "Kiln Ferry",
+      inventionName: "Belt split",
+      authoredQuestion:
+        "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?",
+      authoredConnection: "Physical deployment remains after the demonstration.",
+    });
+    assert.equal(
+      posed.question,
+      "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+    );
+    assert.equal(posed.speech, "Physical deployment remains after the demonstration.");
+    assert.equal(posed.speech.includes("Belt split"), false);
+  });
 });
 
 describe("game Face Challenge", () => {

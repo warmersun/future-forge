@@ -324,10 +324,14 @@ export function applyAction(sim, action, opts = {}) {
       prevId: next.marketNews?.id || null,
     });
     next.marketNews = news;
+    const pinnedPool =
+      action.payload?.predictionsPool ||
+      next.mission?.pinnedPredictionsBank?.predictions;
     const highlights = foresightForYear(next.year, {
       techIds: next.selectedTechIds || [],
       globalId: next.globalId || next.mission?.globalId,
       seed: `${next.mission?.id || "solo"}:y${next.year}`,
+      ...(Array.isArray(pinnedPool) ? { pool: pinnedPool } : {}),
     });
     next.lastYearBulletin = {
       fromYear: yearBefore,
@@ -403,10 +407,15 @@ export function applyAction(sim, action, opts = {}) {
       prevId: next.marketNews?.id || null,
     });
     next.marketNews = news;
+    const pinnedPool =
+      action.payload?.predictionsPool ||
+      mission.pinnedPredictionsBank?.predictions ||
+      next.mission?.pinnedPredictionsBank?.predictions;
     const highlights = foresightForYear(next.year, {
       techIds: next.selectedTechIds || action.payload?.techs?.map((t) => t.id) || [],
       globalId: mission.globalId || next.globalId,
       seed: `${mission.id || "solo"}:y${next.year}:wait`,
+      ...(Array.isArray(pinnedPool) ? { pool: pinnedPool } : {}),
     });
     next.lastYearBulletin = {
       fromYear: yearBeforeWait,

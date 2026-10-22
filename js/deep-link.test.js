@@ -6,8 +6,10 @@ import {
   slugifyTitle,
   normalizeShareOrigin,
   shareOriginFromEnv,
+  shareOriginFromLocation,
   resolveShareOrigin,
   buildQuestShareUrl,
+  questLinkOutcome,
   parseDeepLink,
   hrefWithoutDeepLink,
   findCatalogEntry,
@@ -112,7 +114,7 @@ describe("share origin + build URL", () => {
     assert.equal(shareOriginFromEnv({}), "");
   });
 
-  it("uses health, then Funnel heuristic, then location", () => {
+  it("uses an explicit health origin, then the page origin", () => {
     assert.equal(
       resolveShareOrigin({ healthShareOrigin: "https://warmersun.com/forge/" }),
       PUBLIC_FORGE_ORIGIN
@@ -122,7 +124,14 @@ describe("share origin + build URL", () => {
         hostname: "futureforge.xantu-chickadee.ts.net",
         locationOrigin: "https://futureforge.xantu-chickadee.ts.net",
       }),
-      PUBLIC_FORGE_ORIGIN
+      "https://futureforge.xantu-chickadee.ts.net"
+    );
+    assert.equal(
+      resolveShareOrigin({
+        hostname: "ff.warmersun.com",
+        locationOrigin: "https://ff.warmersun.com",
+      }),
+      "https://ff.warmersun.com"
     );
     assert.equal(
       resolveShareOrigin({
@@ -131,9 +140,26 @@ describe("share origin + build URL", () => {
       }),
       "http://127.0.0.1:8765"
     );
+    assert.equal(resolveShareOrigin({}), "");
   });
 
-  it("builds the X-ready hop URL", () => {
+  it("reads the page origin and strips index.html", () => {
+    assert.equal(
+      shareOriginFromLocation("http://127.0.0.1:8765/?q=abc"),
+      "http://127.0.0.1:8765"
+    );
+    assert.equal(
+      shareOriginFromLocation("http://127.0.0.1:8765/index.html"),
+      "http://127.0.0.1:8765"
+    );
+    assert.equal(
+      shareOriginFromLocation("https://ff.warmersun.com/play/index.html"),
+      "https://ff.warmersun.com/play"
+    );
+    assert.equal(shareOriginFromLocation(""), "");
+  });
+
+  it("builds a link only when an origin is known", () => {
     assert.equal(
       buildQuestShareUrl(LESSON.id, PUBLIC_FORGE_ORIGIN),
       `https://warmersun.com/forge/?q=${LESSON.id}`
@@ -142,6 +168,20 @@ describe("share origin + build URL", () => {
       buildQuestShareUrl(LESSON.id, "http://127.0.0.1:8765"),
       `http://127.0.0.1:8765/?q=${LESSON.id}`
     );
+    assert.equal(
+      buildQuestShareUrl(LESSON.id, "https://ff.warmersun.com"),
+      `https://ff.warmersun.com/?q=${LESSON.id}`
+    );
+    assert.equal(buildQuestShareUrl(LESSON.id, ""), "");
     assert.equal(buildQuestShareUrl("nope nope", PUBLIC_FORGE_ORIGIN), "");
+  });
+
+  it("keeps sign-in and a missing quest on this server", () => {
+    assert.equal(questLinkOutcome("loaded"), "launch");
+    assert.equal(questLinkOutcome("sign_in_required"), "keep");
+    assert.equal(questLinkOutcome("subscription_required"), "keep");
+    assert.equal(questLinkOutcome("not_found"), "missing");
+    assert.equal(questLinkOutcome("invalid"), "missing");
+    assert.equal(questLinkOutcome("unavailable"), "unavailable");
   });
 });

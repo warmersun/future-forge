@@ -451,3 +451,27 @@ describe("catalogNeedsAccount / Library source", () => {
     assert.equal(catalogNeedsAccount(openRemote, { clerkReady: true }), false);
   });
 });
+
+describe("companion partition", () => {
+  it("stays out of Sponsored unless sponsorName is set", () => {
+    const companion = {
+      id: "kiln",
+      title: "Night shift",
+      source: "remote",
+      mission: { id: "kiln", title: "Night shift", companion: { move: "opinion" } },
+    };
+    const sponsored = {
+      ...companion,
+      id: "paid-kiln",
+      sponsorName: "Acme",
+      mission: { ...companion.mission, id: "paid-kiln", sponsorName: "Acme" },
+    };
+    const parts = partitionCatalogQuests({
+      remote: [companion, sponsored],
+      local: [],
+      imported: [],
+    });
+    assert.equal(parts.sponsored.some((e) => e.id === "kiln"), false);
+    assert.equal(parts.sponsored.some((e) => e.id === "paid-kiln"), true);
+  });
+});

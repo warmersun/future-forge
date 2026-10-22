@@ -30,6 +30,7 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 | `rules` | HUD weather | Fast-eval `mission.rules` | body 280 |
 | `resources` | **Start ·** chip; starting wallet | Economy lab | — |
 | `trends` / `spotlightTrends` | Look Ahead charts | — | 8 series |
+| `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` beside `grounding` (≤500); claim and grants in `sourceInquiry` | pair table in `companion.md` |
 
 **Stored, not shown or read:** `research` (incl. `showToPlayer`), `visionTheme`, `placement.activeFrom` / `activeTo` / `priority`, `tags`, `author`, `license`, `version`. `research` is citation metadata for humans reading the file. Capability truth the AI must respect goes in `grounding`.
 
@@ -312,11 +313,12 @@ Selection chip: **Sponsored · {name}**.
 | `mission.stakeholder` | Named role; shown on the invent banner and pre-fills the how-it-works scaffold; sent to idea sparks |
 | `research` | Citation metadata for humans: `topic`, `bullets`, `sources` (`https` objects `{ title, url, accessed }`). **Nothing in the game reads it**, including `showToPlayer`. Omit `sources` rather than emit `[]` (lint `research_sources_empty`, `research_sources_missing`, `research_source_not_https`, `research_source_placeholder`) |
 | `placement.mode` | Legacy, inert (`replace-daily` \| `alongside` \| `library-only`); imports always land in the Library |
+| `titleImageUrl` | Optional `https://…` or `assets/…jpg\|png\|webp`. The companion stage uses it as the full-bleed background behind the claim. Omit it and the stage uses the theme postcard |
 | `author`, `tags`, `license`, `createdAt`, `version`, `mission.visionTheme` | Stored, never shown or read |
 
 ## Field placement
 
-Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
+Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`, `titleImageUrl`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.
 
 ## Craft lint (warnings; `--strict` fails)
 
@@ -330,6 +332,7 @@ Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fie
 | `research` | `research_sources_empty`, `research_sources_missing`, `research_source_not_https:<url>`, `research_source_placeholder:<url>` |
 | `suggestedWhy` | `suggestedWhy_missing:<id>`, `suggestedWhy_no_meter_label:<id>` |
 | Learning | `learning_lesson_without_total`, `learning_no_tutor_context` |
+| `companion` | `companion_author_as_sponsor`, `companion_source_not_in_research`, `companion_invitation_not_in_quest`, `companion_limits_thin`, `companion_exploration_missing`. Field rules: `companion.md` |
 
 Ship with zero warnings, or name each remaining warning and why in the hand-off.
 

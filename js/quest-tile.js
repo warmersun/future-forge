@@ -12,6 +12,7 @@ import {
 import { isSafeBriefImageUrl, normalizeBriefBeats, briefMdShapeIssues } from "./brief-beats.js";
 import { SUMMARY_CAP } from "./quest-summary.js";
 import { parseQuestRules } from "./sim/policy-rules.js";
+import { parseCompanion } from "./companion.js";
 
 export const QUEST_TILE_SCHEMA = "future-forge.quest-tile/v1";
 
@@ -758,6 +759,8 @@ export function validateQuestModule(tile, opts = {}) {
     }
   }
 
+  if (tile.companion !== undefined) details.push("companion_not_on_module");
+
   const accessParsed = parseAccessField(tile, {}, { isLearningModule: true });
   if (!accessParsed.ok) details.push(...accessParsed.details);
   const entitlementParsed = parseEntitlementField(tile, {});
@@ -1020,6 +1023,18 @@ export function validateQuestTile(tile, opts = {}) {
     details.push(...rulesParsed.details);
   }
 
+  const titleImageRaw = pickTileOrMissionField(tile, missionIn, "titleImageUrl");
+  let titleImageUrl = "";
+  if (titleImageRaw !== undefined && titleImageRaw !== null) {
+    if (typeof titleImageRaw !== "string") {
+      details.push("titleImageUrl_not_string");
+    } else {
+      const url = titleImageRaw.trim();
+      if (url && !isSafeBriefImageUrl(url)) details.push("titleImageUrl_unsafe");
+      else titleImageUrl = url;
+    }
+  }
+
   const briefBeatsRaw = pickTileOrMissionField(tile, missionIn, "briefBeats");
   let briefBeats = null;
   if (briefBeatsRaw !== undefined && briefBeatsRaw !== null) {
@@ -1056,6 +1071,18 @@ export function validateQuestTile(tile, opts = {}) {
 
   // Breaking: quest tiles must use structured pressure (local|global|support entries).
   // Legacy flat maps are no longer accepted on imported/hosted tiles.
+  const companionRaw = pickTileOrMissionField(tile, missionIn, "companion");
+  /** @type {object|null} */
+  let companion = null;
+  if (companionRaw !== undefined) {
+    const explicitAccess = pickTileOrMissionField(tile, missionIn, "access");
+    const parsedCompanion = parseCompanion(companionRaw, {
+      access: explicitAccess === undefined || explicitAccess === null ? "" : accessParsed.ok ? accessParsed.value : "",
+    });
+    if (!parsedCompanion.ok) details.push(...parsedCompanion.details);
+    else companion = parsedCompanion.value;
+  }
+
   if (!isStructuredPressure(missionIn.pressure)) {
     details.push("pressure_must_be_structured");
   }
@@ -1154,6 +1181,8 @@ export function validateQuestTile(tile, opts = {}) {
   if (briefBeats?.length) {
     mission.briefBeats = briefBeats;
   }
+  if (titleImageUrl) mission.titleImageUrl = titleImageUrl;
+  if (companion) mission.companion = companion;
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -1193,6 +1222,8 @@ export function validateQuestTile(tile, opts = {}) {
   if (briefBeats?.length) {
     normalizedTile.briefBeats = briefBeats;
   }
+  if (titleImageUrl) normalizedTile.titleImageUrl = titleImageUrl;
+  if (companion) normalizedTile.companion = companion;
 
   return { ok: true, tile: normalizedTile, mission, kind: "quest" };
 }

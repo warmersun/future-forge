@@ -6,11 +6,22 @@
 import { ideasOrFallback } from "../idea-cards.js";
 import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
 import { worldClockForYear } from "../sim/world-foresight.js";
+import {
+  clockWithPremiseRows,
+  predictionsPoolForContext,
+  sanitizeScenarioTiming,
+  sanitizeSourceInquiry,
+  scenarioGrantSuffix,
+} from "../companion-context.js";
 
 const GROUNDING_CAP = 3000;
 
 export const GROUNDING_LINE =
   "If grounding is present, treat it as authoritative Quest capability truth. Do not invent contradicting facts.";
+
+/** Cited episode or post. Separate from grounding. Not capability truth. */
+export const SOURCE_CONSTRAINT_LINE =
+  "If sourceConstraint is present, it is a separate limit on the cited episode or post. It is not part of grounding and it is not capability truth. An idea, opinion, trend, or prediction is not current capability. A milestone is only as firm as its evidence status. Disagreement is valid. Do not say the game verified the source. Do not require agreement or a product purchase.";
 
 /** Timing only: examples are existence proofs, not a closed inventory. */
 export const ASSESS_GROUNDING_LINE =
@@ -38,14 +49,48 @@ function clockTechIds(context, stack) {
 export function worldClockContext(context, opts = {}) {
   const year = Number(context?.year);
   if (!Number.isFinite(year) || year <= 0) return null;
+  const pool = predictionsPoolForContext(context, opts);
+  if (pool === null) return null;
   const globalId =
-    context?.globalId || context?.mission?.globalId || context?.global?.id || null;
+    opts.globalId ||
+    context?.globalId ||
+    context?.mission?.globalId ||
+    context?.global?.id ||
+    null;
   const rows = worldClockForYear(year, {
     techIds: opts.techIds || clockTechIds(context, null),
     globalId,
     limit: opts.limit ?? 12,
+    ...(pool ? { pool } : {}),
   });
-  return rows.length ? rows : null;
+  const premise = opts.premise || context?.sourceInquiry?.premise;
+  const merged = clockWithPremiseRows(rows, premise);
+  return merged.length ? merged : null;
+}
+
+function sourceInquiryOf(context, mode) {
+  if (!context || typeof context !== "object") return null;
+  return sanitizeSourceInquiry(context.sourceInquiry, {
+    mode,
+    bank: context.predictionsBank || null,
+    year: context.year,
+    angle: context.challengeAngle || context.angle,
+    concern: context.concern || context.sourceConcern || null,
+    concerns: context.concerns,
+  });
+}
+
+function withInquiry(payload, context, mode) {
+  if (
+    mode === "judge-contribution" ||
+    mode === "judge-scrutiny-move" ||
+    mode === "fill-quest-summary"
+  ) {
+    return payload;
+  }
+  const inquiry = sourceInquiryOf(context, mode);
+  if (!inquiry) return payload;
+  return { ...payload, sourceInquiry: inquiry };
 }
 
 /** Convergence: place/year may color a use; do not write a quest-feasibility brief. */
@@ -78,6 +123,12 @@ function slimStack(context) {
   if (!ids.size) return fromAvailable.slice(0, 8);
   const hit = fromAvailable.filter((t) => ids.has(String(t.id)));
   return hit.length ? hit : fromAvailable.slice(0, 8);
+}
+
+function sourceConstraintOf(context) {
+  const s =
+    typeof context?.sourceConstraint === "string" ? context.sourceConstraint.trim() : "";
+  return s ? s.slice(0, 500) : null;
 }
 
 function groundingOf(context) {
@@ -140,6 +191,7 @@ reason is one everyday sentence (≤160 chars) that cites the how-text mechanism
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
 concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only (no markdown, no other keys):
 {"crisisDelta":{"local":{"delta":-1,"reason":"one sentence"},"global":{"delta":0,"reason":"one sentence"},"support":{"delta":0,"reason":"one sentence"}},"concerns":{"moloch":{"level":"yellow","reason":"one sentence"}}}`;
 
@@ -151,6 +203,7 @@ red = only (1) grounding EXPLICITLY forbids / says not yet, or (2) sci-fi treate
 If priorTiming is set with the same claims, a later year must not score harsher.
 ${WORLD_CLOCK_TIMING_LINE}
 ${ASSESS_GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"timing":{"level":"green","reason":"one sentence"}}`;
 
@@ -163,6 +216,7 @@ Reject generic synergy, "both are tech," and clinic-job honesty (this pack unblo
 title must name the two fields (not a local job). reason must state A → B and B → demand/scale for A in 2–3 sentences. Do not pick a single winner; both tiles are catalyzed.
 
 ${CONVERGENCE_GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"convergences":[{"neighborId":"...","converges":true,"title":"≤60 chars","reason":"2-3 teaching sentences"}]}`;
 
@@ -174,6 +228,7 @@ howText/insertText is one clear mechanism sentence in everyday words (named pers
 If refresh is true, do not repeat avoidTitles.
 ${WORLD_CLOCK_CONTEXT_LINE}
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"ideas":[{"id":"slug","title":"≤60 chars","blurb":"≤140","insertText":"≤280","howText":"≤280","imagePrompt":"≤400","year":2026}]}`;
 
@@ -182,6 +237,7 @@ Speak ONLY as the fixed challengeAngle: moloch (system traps/freeriding), ethici
 There is no invention name. Attack THIS pathway in THIS place: pathway.inventions[] (techId + howText) are the parts; pathway.howText is the island inventHow if written. Treat them as ONE invent. A downstream tile can make an upstream claim honest. 2–4 vivid sentences. End with ONE sharp question.
 Stay local and specific. No UN resolutions. No tabletop jargon.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"angle":"<same as challengeAngle>","angleLabel":"<name>","challengeSpeech":"<2-4 sentences>","challengeQuestion":"<one question>"}`;
 
@@ -189,6 +245,7 @@ export const JUDGE_SCRUTINY_SYSTEM = `You score the learner's argument against a
 quality: hit | glance | miss. hit = concrete actors/costs/limits/mechanics that answer the question; glance = partial; miss = vague or off-topic.
 damage: hit=2, glance=1, miss=0. Be fair but strict on freeriding and handwaving.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"quality":"glance","damage":1,"message":"1-2 sentences of feedback"}`;
 
@@ -196,18 +253,21 @@ export const JUDGE_CHALLENGE_SYSTEM = `You judge the learner's answer to a chall
 verdict: pass | partial | fail. Concrete mechanisms, named actors, costs, or physical limits = pass/partial. Vague hope = fail.
 There is no invention name. If pathway is present, inventions[] + howText are ONE docked invent island. Judge the written answer together with that whole pathway. pathway.anyTouch false means nothing is docked — still score the writing, but that score does not ease the tile light.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"verdict":"partial","message":"feedback","lesson":"one teaching sentence"}`;
 
 export const JUDGE_CONTRIBUTION_SYSTEM = `You decide if afterText is ADDITIVE vs DESTRUCTIVE relative to beforeText on field.
 Additive keeps original substance and layers detail. Destructive rewrites, clears, or strips core meaning.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"additive":true,"reason":"one sentence"}`;
 
 export const COACH_CHALLENGE_SYSTEM = `You coach a learner stuck on a challenge in Future Forge.
 Explain what this angle cares about. Give 2–4 concrete hint bullets for THIS pathway (inventions[] as one invent). Do not write a full ready-to-submit answer unless they asked to draft.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"message":"coaching text"}`;
 
@@ -215,6 +275,7 @@ export const DRAFT_CHALLENGE_SYSTEM = `You write a solid draft answer the learne
 Be specific to their pathway (no invention name; inventions[] + howText as one invent): actors, costs or physical limits, anti-defection or affordability as relevant.
 Put the full draft in draftAnswer and a short coaching note in message.
 ${GROUNDING_LINE}
+${SOURCE_CONSTRAINT_LINE}
 Return JSON only:
 {"message":"short coaching note","draftAnswer":"full draft"}`;
 
@@ -257,6 +318,7 @@ function buildScorePathwayPayload(context) {
     year: context?.year || null,
     mission,
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     pressureBase: context?.pressureBase || {},
     winMax: context?.winMax || {},
     crisisRoles: (context?.crisisRoles || []).map((r) => ({
@@ -278,6 +340,16 @@ function buildScorePathwayPayload(context) {
         : "red",
       inventChanged: Boolean(c?.inventChanged),
       posedHowText: clip(c?.posedHowText, 1600),
+      ...(c?.sourceInquiry && typeof c.sourceInquiry === "object"
+        ? {
+            sourceInquiry: {
+              key: clip(c.sourceInquiry.key, 8000),
+              focus: clip(c.sourceInquiry.focus, 280),
+              connection: clip(c.sourceInquiry.connection, 280),
+              question: clip(c.sourceInquiry.question, 400),
+            },
+          }
+        : {}),
     })),
     pathway: {
       inventions: invs.map((n) => ({
@@ -293,21 +365,36 @@ function buildScorePathwayPayload(context) {
   };
 }
 
+function finishScorePathwayPayload(context) {
+  const payload = buildScorePathwayPayload(context);
+  const inquiry = sourceInquiryOf(context, "score-pathway");
+  if (inquiry?.pressureLinks) payload.pressureLinks = inquiry.pressureLinks;
+  if (inquiry) payload.sourceInquiry = inquiry;
+  return payload;
+}
+
 function buildAssessFeasibilityPayload(context) {
   const stack = slimStack(context);
-  const worldClock = worldClockContext(context, {
-    techIds: clockTechIds(context, stack),
-    limit: 12,
-  });
+  const inquiry = sourceInquiryOf(context, "assess-feasibility");
+  const worldClock = worldClockContext(
+    { ...context, sourceInquiry: inquiry },
+    {
+      techIds: clockTechIds(context, stack),
+      limit: 12,
+      premise: inquiry?.premise,
+    }
+  );
   return {
     mode: "assess-feasibility",
     year: context?.year || null,
     place: context?.place || null,
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     inventionHow: clip(context?.inventionHow, 1200),
     inventionImpact: clip(context?.inventionImpact, 800),
     stack,
     priorTiming: context?.priorTiming || null,
+    ...(inquiry ? { sourceInquiry: inquiry } : {}),
     ...(worldClock ? { worldClock } : {}),
   };
 }
@@ -318,10 +405,15 @@ function buildIdeaSparksPayload(context) {
   const techs = (context?.availableTechs || []).map(slimTech).filter(Boolean);
   const focus =
     techs.find((t) => t.id === focusId) || techs[0] || null;
-  const worldClock = worldClockContext(context, {
-    techIds: focus?.id ? [focus.id] : [],
-    limit: 8,
-  });
+  const inquiry = sourceInquiryOf(context, "idea-sparks");
+  const worldClock = worldClockContext(
+    { ...context, sourceInquiry: inquiry },
+    {
+      techIds: focus?.id ? [focus.id] : [],
+      limit: 8,
+      premise: inquiry?.premise,
+    }
+  );
   return {
     mode: "idea-sparks",
     focusTechId: focusId,
@@ -330,10 +422,12 @@ function buildIdeaSparksPayload(context) {
     year: context?.year || null,
     mission,
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     refresh: Boolean(context?.refresh),
     avoidTitles: Array.isArray(context?.avoidTitles)
       ? context.avoidTitles.map(String).slice(0, 12)
       : [],
+    ...(inquiry ? { sourceInquiry: inquiry } : {}),
     ...(worldClock ? { worldClock } : {}),
   };
 }
@@ -360,8 +454,13 @@ function buildPosePayload(context) {
     pathway: pathwaySlice(context),
     stack: slimStack(context),
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     mission,
   };
+}
+
+function finishPosePayload(context) {
+  return withInquiry(buildPosePayload(context), context, "pose-challenge");
 }
 
 function buildJudgePayload(mode, context) {
@@ -385,6 +484,7 @@ function buildJudgePayload(mode, context) {
         : clip(context?.inventionImpact, 800),
     stack: slimStack(context),
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     mission,
     field: context?.field || null,
     beforeText: clip(context?.beforeText, 2000),
@@ -411,19 +511,33 @@ function buildEvaluateConvergencePayload(context) {
     year: context?.year || null,
     place: context?.place || null,
     grounding: groundingOf(context),
+    sourceConstraint: sourceConstraintOf(context),
     placed: convergenceTileSlice(placed),
     neighbors: neighbors.map((n) => convergenceTileSlice(n)),
   };
 }
 
 export function buildFastPayload(mode, context = {}) {
-  if (mode === "score-pathway") return buildScorePathwayPayload(context);
+  if (mode === "score-pathway") return finishScorePathwayPayload(context);
   if (mode === "assess-feasibility") return buildAssessFeasibilityPayload(context);
-  if (mode === "evaluate-convergence") return buildEvaluateConvergencePayload(context);
+  if (mode === "evaluate-convergence") {
+    return withInquiry(buildEvaluateConvergencePayload(context), context, mode);
+  }
   if (mode === "idea-sparks") return buildIdeaSparksPayload(context);
-  if (mode === "pose-challenge") return buildPosePayload(context);
+  if (mode === "pose-challenge") return finishPosePayload(context);
   if (mode === "fill-quest-summary") return buildFillQuestSummaryPayload(context);
-  return buildJudgePayload(mode, context);
+  return withInquiry(buildJudgePayload(mode, context), context, mode);
+}
+
+/**
+ * Fast-eval system text. The grant sentence is appended only for an assumed premise.
+ * @param {string} mode
+ * @param {object} [context]
+ */
+export function fastEvalSystem(mode, context = {}) {
+  const base = FAST_EVAL_MODES[mode]?.system || "";
+  const inquiry = sourceInquiryOf(context, mode);
+  return `${base}${scenarioGrantSuffix(inquiry, mode)}`;
 }
 
 function clampDelta(v) {
@@ -474,15 +588,12 @@ function sanitizeScorePathway(parsed, source) {
   };
 }
 
-function sanitizeTiming(parsed, source) {
+function sanitizeTiming(parsed, source, context) {
   const raw = parsed?.timing || parsed;
-  const lvl = String(raw?.level || "").toLowerCase();
-  const level = ["red", "yellow", "green"].includes(lvl) ? lvl : null;
+  const inquiry = sourceInquiryOf(context, "assess-feasibility");
   return {
     source,
-    timing: level
-      ? { level, reason: String(raw?.reason || "").slice(0, 280) }
-      : null,
+    timing: sanitizeScenarioTiming(raw, inquiry?.premise),
   };
 }
 
@@ -593,7 +704,7 @@ function sanitizeFillQuestSummary(parsed, source) {
 
 export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
   if (mode === "score-pathway") return sanitizeScorePathway(parsed, source);
-  if (mode === "assess-feasibility") return sanitizeTiming(parsed, source);
+  if (mode === "assess-feasibility") return sanitizeTiming(parsed, source, context);
   if (mode === "evaluate-convergence") {
     return sanitizeEvaluateConvergence(parsed, source, context);
   }

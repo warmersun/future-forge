@@ -30,9 +30,9 @@ import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-18";
-import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-16";
-import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-16";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-19";
+import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
+import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-19";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -93,9 +93,36 @@ import {
 } from "./auth.js";
 import {
   parseDeepLink,
-  findCatalogEntry,
   hrefWithoutDeepLink,
+  sanitizeQuestToken,
+  shareOriginFromLocation,
+  resolveShareOrigin,
+  buildQuestShareUrl,
+  questLinkOutcome,
 } from "./deep-link.js";
+import {
+  parseCompanion,
+  stageCopy,
+  companionAccessLine,
+  companionGateDecision,
+  markCompanionAccepted,
+  clearCompanionAccepted,
+  siblingSourceLine,
+  companionFromLine,
+  sourceConstraintText,
+} from "./companion.js";
+import { catalogInspectCompanionHtml } from "./quest-dev-inspect.js";
+import {
+  pinPredictionsBank,
+  buildSourceInquiry,
+  sourceInquiryKey,
+  resolveScenarioPremise,
+  provisionalScenarioTiming,
+} from "./companion-context.js";
+import {
+  formatSourceResponse,
+  inventionLineForResponse,
+} from "./companion-reflection.js";
 import { lookupQuestById } from "./quest-lookup.js";
 import { catalogLessonSkipsPlan, hostedSessionAllowed } from "./cloud/hosted-plan.js?v=portal-85";
 import {
@@ -282,6 +309,7 @@ import {
   normalizeBriefBeats,
   resolveBriefBeats,
   briefBeatAuthoredUrl,
+  isSafeBriefImageUrl,
   outcomeJobFromMission,
 } from "./brief-beats.js";
 import {
@@ -483,10 +511,16 @@ const state = {
   screen: "title",
   global: null,
   mission: null,
+  /** Validated predictions bank pinned for an assumed-premise run. Null otherwise. */
+  pinnedPredictionsBank: null,
+  /** Private outcome reflection. Not published. */
+  companionReflection: "",
   /** @type {null | object} multiplayer chrome flags (set by hotseatBridge.hydrateSoloState) */
   mp: null,
   /** Server developer mode from GET /api/health (CLI --developer). Off by default. */
   developer: false,
+  /** Share origin from GET /api/health, when the server knows its public host. */
+  healthShareOrigin: "",
   /** @type {object[]} Merged quests from GET /api/quests (compat) */
   hostedQuests: [],
   /** @type {object[]} Local `quests/` folder — Library side-load */
@@ -1300,7 +1334,12 @@ function reconcileStackFromBoard(nextIds, prevEcon) {
 }
 
 function dispatchSim(type, payload = {}) {
-  const result = applyAction(simSliceFromState(state), { type, payload }, {
+  const pool = activePinnedBank()?.predictions;
+  const sent =
+    Array.isArray(pool) && payload.predictionsPool == null
+      ? { ...payload, predictionsPool: pool }
+      : payload;
+  const result = applyAction(simSliceFromState(state), { type, payload: sent }, {
     features: features(),
     apMax: state.apMax ?? GAME.apMax,
     techById,
@@ -1493,6 +1532,49 @@ let focusedTechId = null;
 /** @type {ReturnType<typeof createHexWorkshop>|null} */
 let hexWorkshop = null;
 
+function activePinnedBank() {
+  if (state.pinnedPredictionsBank?.id) return state.pinnedPredictionsBank;
+  const carried = state.mission?.pinnedPredictionsBank;
+  if (carried && carried.id && carried.id !== "empty") return carried;
+  return null;
+}
+
+function liveScenarioPremise() {
+  const companion = state.mission?.companion;
+  if (!companion?.exploration) return null;
+  const resolved = resolveScenarioPremise(companion, activePinnedBank(), state.year);
+  return resolved.ok ? resolved.premise : null;
+}
+
+function criticPromptForAngle(angle) {
+  const row = state.mission?.companion?.exploration?.challenges?.[angle];
+  if (!row || typeof row !== "object") return null;
+  const question = String(row.question || "").trim();
+  const connection = String(row.connection || "").trim();
+  if (!question && !connection) return null;
+  return { question, connection };
+}
+
+function pressureConnectionForRole(role) {
+  const row = state.mission?.companion?.exploration?.pressureLinks?.[role];
+  return String(row?.connection || "").trim();
+}
+
+/**
+ * Local timing. An assumed due grant stays provisional yellow when the
+ * ordinary heuristic cannot tell coverage. Ordinary quests stay on detectClaimStretch.
+ */
+function missionLocalTiming(how, techs, year) {
+  const provisional = provisionalScenarioTiming(liveScenarioPremise());
+  if (provisional) return provisional;
+  return detectClaimStretch(how, techs, year);
+}
+
+function foresightPoolOpts(extra = {}) {
+  const pool = activePinnedBank()?.predictions;
+  return Array.isArray(pool) ? { ...extra, pool } : extra;
+}
+
 function ensureHexWorkshop() {
   if (hexWorkshop) return hexWorkshop;
   hexWorkshop = createHexWorkshop({
@@ -1520,6 +1602,12 @@ function ensureHexWorkshop() {
     getRules: () => liveRules(),
     getGlobal: () => state.global || null,
     getGrounding: () => state.mission?.grounding || null,
+    getSourceInquiryKey: () =>
+      sourceInquiryKey(state.mission?.companion, activePinnedBank(), state.year),
+    getScenarioPremise: () => liveScenarioPremise(),
+    getExplorationFocus: () => String(state.mission?.companion?.exploration?.focus || ""),
+    getCriticPrompt: (angle) => criticPromptForAngle(angle),
+    getPressureConnection: (role) => pressureConnectionForRole(role),
     setDerivedProse: (prose) => {
       state.inventionName = prose.inventionName || "";
       state.inventionHow = prose.inventionHow || "";
@@ -3723,7 +3811,15 @@ function applyOutcomeCloudSaveChrome() {
   panel.hidden = !show;
   const pub = $("#outcome-publish-wrap");
   if (pub) {
-    const showPub = isClerkSignedIn() && pride && state.screen === "outcome" && !isMultipartyOutcome();
+    const assumed =
+      state.mission?.companion?.exploration?.premise?.mode === "assumed" ||
+      Boolean(activePinnedBank()?.id);
+    const showPub =
+      isClerkSignedIn() &&
+      pride &&
+      state.screen === "outcome" &&
+      !isMultipartyOutcome() &&
+      !assumed;
     pub.hidden = !showPub;
   }
 }
@@ -3855,6 +3951,10 @@ function cloudRunStatePayload() {
       rules: cloneRules(state.rules),
       tutorSessionActive: Boolean(state.tutorSessionActive),
       mission: slimMissionForContinue(state.mission),
+      ...(activePinnedBank() ? { predictionsBank: activePinnedBank() } : {}),
+      ...(String(state.companionReflection || "").trim()
+        ? { reflection: String(state.companionReflection).slice(0, 2000) }
+        : {}),
       focusedTechId: focusedTechId || hexWorkshop?.getFocusedTechId?.() || null,
       ideas: ideaSparkCache.size
         ? Object.fromEntries(ideaSparkCache.entries())
@@ -3887,6 +3987,13 @@ function slimMissionForContinue(m) {
     module: m.module,
     lesson: m.lesson,
     totalLessons: m.totalLessons,
+    ...(m.access === "open" || m.access === "account" || m.access === "paid"
+      ? { access: m.access }
+      : {}),
+    ...(typeof m.grounding === "string" && m.grounding && !m.grounding.startsWith("data:")
+      ? { grounding: m.grounding.slice(0, 3000) }
+      : {}),
+    ...(m.companion && typeof m.companion === "object" ? { companion: m.companion } : {}),
   };
 }
 
@@ -3952,6 +4059,9 @@ function applyRestoredPlay(play) {
     state.tutorSessionActive = play.tutorSessionActive;
   }
   if (play.focusedTechId) focusedTechId = String(play.focusedTechId);
+  if (typeof play.reflection === "string" && !play.reflection.startsWith("data:")) {
+    state.companionReflection = play.reflection.slice(0, 2000);
+  }
   if (play.ideas && typeof play.ideas === "object") {
     ideaSparkCache.clear();
     for (const [key, list] of Object.entries(play.ideas)) {
@@ -3981,6 +4091,16 @@ async function maybeOfferContinue() {
   }
 }
 
+function overlayContinueCompanion(mission, st) {
+  if (!mission) return mission;
+  const snap = st?.play?.mission?.companion;
+  if (!snap || typeof snap !== "object") return mission;
+  const access = mission.access || "open";
+  const parsed = parseCompanion(snap, { access });
+  if (!parsed.ok) return mission;
+  return { ...mission, companion: parsed.value };
+}
+
 function resolveContinueMission(st) {
   const id = st?.questId;
   if (!id) return null;
@@ -3988,18 +4108,28 @@ function resolveContinueMission(st) {
     (q) => q.id === id || q.mission?.id === id
   );
   if (fromHosted?.mission) {
-    return normalizeMission(fromHosted.mission, fromHosted.mission.globalId);
+    let mission = normalizeMission(fromHosted.mission, fromHosted.mission.globalId);
+    const liveAccess = fromHosted.access || fromHosted.mission.access;
+    if (
+      (liveAccess === "open" || liveAccess === "account" || liveAccess === "paid") &&
+      !mission.access
+    ) {
+      mission = { ...mission, access: liveAccess };
+    }
+    return overlayContinueCompanion(mission, st);
   }
   const stub = st.play?.mission || st.mission;
   if (stub?.id) {
-    return normalizeMission(stub, stub.globalId);
+    return overlayContinueCompanion(normalizeMission(stub, stub.globalId), st);
   }
   for (const list of Object.values(state.scenarioCache || {})) {
     const raw = (list || []).find((m) => m && (m.id === id || m.mission?.id === id));
     const m = raw?.mission || raw;
-    if (m?.id) return normalizeMission(m, m.globalId);
+    if (m?.id) {
+      return overlayContinueCompanion(normalizeMission(m, m.globalId), st);
+    }
   }
-  if (state.mission?.id === id) return state.mission;
+  if (state.mission?.id === id) return overlayContinueCompanion(state.mission, st);
   return null;
 }
 
@@ -5465,7 +5595,13 @@ function catalogEntryFromApi(e, source, opts = {}) {
       remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
     };
   }
-  if (!e?.mission) return lockedCatalogHubEntry(e, source, opts);
+  if (!e?.mission) {
+    const locked = lockedCatalogHubEntry(e, source, opts);
+    if (locked && e.companion && typeof e.companion === "object") {
+      locked.companion = e.companion;
+    }
+    return locked;
+  }
   const id = String(e.id || e.mission.id || "");
   if (!id) return null;
   const globalId = e.globalId || e.mission.globalId;
@@ -5473,6 +5609,9 @@ function catalogEntryFromApi(e, source, opts = {}) {
     { ...e.mission, source: source || e.mission.source || "hosted" },
     globalId
   );
+  const access = e.access || e.mission.access || mission.access;
+  const entitlement = e.entitlement || e.mission.entitlement || "";
+  const sponsorName = e.sponsorName || mission.sponsorName || "";
   return {
     id,
     kind: "quest",
@@ -5487,6 +5626,10 @@ function catalogEntryFromApi(e, source, opts = {}) {
     tile: e.tile && typeof e.tile === "object" ? e.tile : null,
     file: e.file ? String(e.file) : null,
     remoteUrl: e.remoteUrl ? String(e.remoteUrl) : null,
+    ...(access ? { access } : {}),
+    ...(entitlement ? { entitlement } : {}),
+    ...(sponsorName ? { sponsorName } : {}),
+    ...(e.companion && !mission.companion ? { companion: e.companion } : {}),
   };
 }
 
@@ -5596,19 +5739,33 @@ function promptCloudSignIn(msg, opts = {}) {
   openCloudSignIn(opts);
 }
 
-async function fetchFullQuestTile(id) {
+async function fetchFullQuestTile(id, opts = {}) {
   if (!id) return null;
   try {
     const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}`);
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) {
-      promptCloudSignIn("Sign in to open this lesson.");
+      if (opts.keepUrl) {
+        if (deepLinkHold !== "sign_in_required") {
+          deepLinkHold = "sign_in_required";
+          promptCloudSignIn("Sign in to open this quest.", { sameTab: true });
+        }
+      } else {
+        promptCloudSignIn("Sign in to open this lesson.");
+      }
       return null;
     }
     if (res.status === 402) {
       if (data.subscribeUrl) hostedPlanState.subscribeUrl = String(data.subscribeUrl);
-      flashToast("This quest needs a subscription.");
-      redirectHostedSubscribe();
+      if (opts.keepUrl) {
+        if (deepLinkHold !== "subscription_required") {
+          deepLinkHold = "subscription_required";
+          flashToast("This quest needs a subscription.");
+        }
+      } else {
+        flashToast("This quest needs a subscription.");
+        redirectHostedSubscribe();
+      }
       return null;
     }
     if (!res.ok || !data?.ok) return null;
@@ -5636,10 +5793,13 @@ async function playCatalogEntry(entry, opts = {}) {
     return "opened_module";
   }
   if ((entry?.gated || catalogNeedsAccount(entry)) && !isClerkSignedIn()) {
-    promptCloudSignIn(
-      opts.sameTabSignIn ? "Opening Sign in…" : "Sign in to play this lesson.",
-      { sameTab: Boolean(opts.sameTabSignIn) }
-    );
+    if (!(opts.keepUrl && deepLinkHold === "sign_in_required")) {
+      if (opts.keepUrl) deepLinkHold = "sign_in_required";
+      promptCloudSignIn(
+        opts.sameTabSignIn ? "Opening Sign in…" : "Sign in to play this lesson.",
+        { sameTab: Boolean(opts.sameTabSignIn) }
+      );
+    }
     return "needs_sign_in";
   }
   let src = entry;
@@ -5654,7 +5814,7 @@ async function playCatalogEntry(entry, opts = {}) {
         !entry.aiTutorContext &&
         !entry.mission?.aiTutorContext));
   if (needsBody && entry?.id) {
-    const full = await fetchFullQuestTile(entry.id);
+    const full = await fetchFullQuestTile(entry.id, { keepUrl: Boolean(opts.keepUrl) });
     if (full?.mission) {
       src = {
         ...entry,
@@ -5683,8 +5843,29 @@ async function playCatalogEntry(entry, opts = {}) {
   return ok === false ? "blocked" : "started";
 }
 
+/**
+ * Catalog cards open the companion stage first. Other quests play immediately.
+ * @param {object} entry
+ */
+async function openCatalogEntry(entry) {
+  if (!entry) return;
+  const decision = companionGateDecision(entry, sessionStorage);
+  if (decision === "gate") {
+    openCompanionStage(entry);
+    return;
+  }
+  if (decision === "resume-after-accept") {
+    clearCompanionAccepted(entry.id, sessionStorage);
+  }
+  await playCatalogEntry(entry);
+}
+
 let deepLinkInFlight = false;
 let deepLinkFinished = false;
+/** Last 401/402 toast for this page load, so boot and sign-in do not double-toast. */
+let deepLinkHold = "";
+/** Catalog entry currently on the companion stage. */
+let companionStageEntry = null;
 
 function clearDeepLinkFromUrl() {
   try {
@@ -5694,6 +5875,19 @@ function clearDeepLinkFromUrl() {
   } catch {
     /* ignore */
   }
+}
+
+function currentShareOrigin() {
+  let locationOrigin = "";
+  try {
+    locationOrigin = shareOriginFromLocation(location);
+  } catch {
+    locationOrigin = "";
+  }
+  return resolveShareOrigin({
+    healthShareOrigin: state.healthShareOrigin,
+    locationOrigin,
+  });
 }
 
 /** Copy the stored ID verbatim, not a title-derived slug or a share URL. */
@@ -5710,6 +5904,271 @@ function wireQuestIdCopyButtons(root) {
       }
     });
   });
+  root.querySelectorAll("[data-copy-quest-link]").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const origin = currentShareOrigin();
+      const url = buildQuestShareUrl(btn.dataset.copyQuestLink, origin);
+      if (!url) {
+        flashToast("Open this page from the server to copy a link.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        flashToast("Quest link copied");
+      } catch {
+        flashToast("Could not copy the link.");
+      }
+    });
+  });
+}
+
+function setCompanionText(id, text, opts = {}) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const value = String(text || "");
+  el.textContent = value;
+  const hide = opts.hideEmpty && !value;
+  el.hidden = hide;
+  if (hide) el.setAttribute("hidden", "");
+  else el.removeAttribute("hidden");
+}
+
+let companionStageBound = false;
+
+function bindCompanionStage() {
+  if (companionStageBound) return;
+  companionStageBound = true;
+  document.getElementById("btn-companion-home")?.addEventListener("click", () => {
+    showScreen("title");
+  });
+  document.getElementById("btn-companion-play")?.addEventListener("click", () => {
+    void playFromCompanionStage();
+  });
+}
+
+function bankForCompanion(companion, preferPinned) {
+  const want = companion?.exploration?.premise?.bankId;
+  if (!want) return null;
+  const pinned = preferPinned ? activePinnedBank() : null;
+  if (pinned && pinned.id === want) return pinned;
+  const loaded = getWorldForesightBank();
+  if (loaded && loaded.id === want && loaded.id !== "empty") return loaded;
+  return null;
+}
+
+function assumedPremiseCopy(companion, year, bank) {
+  const authored = companion?.exploration?.premise;
+  if (!authored || authored.mode !== "assumed") return "";
+  const statement = String(authored.statement || "").trim();
+  if (!statement) return "";
+  if (!bank || bank.id !== authored.bankId) return statement;
+  const resolved = resolveScenarioPremise(companion, bank, year);
+  const pending = (resolved.premise?.grants || []).filter((g) => g.status === "not_yet");
+  const years = pending.map((g) => Number(g.year)).filter((n) => Number.isFinite(n) && n > 0);
+  if (!years.length) return statement;
+  return `${statement} Available in this Quest from ${Math.min(...years)}.`;
+}
+
+function appendDetailLine(parent, label, text) {
+  const value = String(text || "").trim();
+  if (!value) return;
+  const p = document.createElement("p");
+  const strong = document.createElement("strong");
+  strong.textContent = label;
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(` ${value}`));
+  parent.appendChild(p);
+}
+
+function paintSourceDetails(container, companion, opts = {}) {
+  if (!container) return;
+  container.replaceChildren();
+  const copy = stageCopy(companion);
+  const year = opts.year;
+  const bank = opts.bank || null;
+  const resolved =
+    bank && companion ? resolveScenarioPremise(companion, bank, year) : { ok: false, premise: null };
+  if (opts.includePrivate) {
+    appendDetailLine(container, "Focus.", companion?.exploration?.focus);
+    appendDetailLine(container, "Connection.", companion?.exploration?.bridge);
+  }
+  if (copy.quote && copy.claim) appendDetailLine(container, "Claim.", copy.claim);
+  else if (!opts.claimShown && copy.claim) appendDetailLine(container, "Claim.", copy.claim);
+  const grants = resolved.ok ? resolved.premise?.grants || [] : companion?.exploration?.premise?.grants || [];
+  for (const grant of grants) {
+    const when = grant.year ? `${grant.year}` : "the bank row";
+    const status = grant.status ? `, ${grant.status}` : "";
+    const headline = grant.headline ? `${grant.headline} ` : "";
+    appendDetailLine(container, "Grant.", `${headline}(${when}${status}). ${grant.scope || ""}`.trim());
+    appendDetailLine(container, "Not granted.", grant.limits);
+    const who = typeof grant.attribution === "string" ? grant.attribution : grant.attribution?.name;
+    appendDetailLine(container, "Row attribution.", who);
+  }
+  appendDetailLine(container, "Evidence.", copy.evidenceSentence);
+  const speaker = copy.speaker;
+  const from = companion?.source?.show || companion?.source?.publication || "";
+  appendDetailLine(container, "Source.", [speaker, from].filter(Boolean).join(", "));
+  if (copy.linkUrl) {
+    const p = document.createElement("p");
+    const a = document.createElement("a");
+    a.href = copy.linkUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = copy.linkLabel || "Open source";
+    p.appendChild(a);
+    container.appendChild(p);
+  }
+}
+
+/**
+ * Quest title still. Safe assets/ or https only. Empty uses the theme postcard.
+ * @param {object} entry
+ */
+function companionTitleImageUrl(entry) {
+  const raw = String(
+    entry?.mission?.titleImageUrl || entry?.titleImageUrl || entry?.tile?.titleImageUrl || ""
+  ).trim();
+  return isSafeBriefImageUrl(raw) ? raw : "";
+}
+
+/**
+ * Full-bleed source stage. Play is the only way into the workshop.
+ * @param {object} entry
+ */
+function openCompanionStage(entry) {
+  const companion = entry?.mission?.companion || entry?.companion;
+  if (!companion) return;
+  companionStageEntry = entry;
+  bindCompanionStage();
+  const copy = stageCopy(companion);
+  const still = document.getElementById("companion-still");
+  const screen = document.getElementById("screen-companion");
+  const titleImage = companionTitleImageUrl(entry);
+  const backdrop =
+    titleImage || problemVisualUrl(entry.globalId || entry.mission?.globalId || "automation");
+  if (still) still.style.backgroundImage = backdrop ? `url("${backdrop}")` : "";
+  screen?.classList.toggle("is-titled", Boolean(titleImage));
+  setCompanionText("companion-kicker", copy.kicker);
+  setCompanionText("companion-invitation", copy.invitation);
+  setCompanionText("companion-byline", copy.byline, { hideEmpty: true });
+  const chip = document.getElementById("companion-chip");
+  if (chip) {
+    chip.textContent = copy.moveLabel || "";
+    chip.className = `companion-chip companion-chip-${copy.move || "idea"}`;
+  }
+  const quote = document.getElementById("companion-quote");
+  if (quote) {
+    quote.replaceChildren();
+    if (copy.quote) {
+      quote.hidden = false;
+      quote.className = `companion-quote companion-quote-${copy.move || "idea"}`;
+      const words = document.createElement("p");
+      words.textContent = copy.quote;
+      quote.appendChild(words);
+      if (copy.speaker) {
+        const cite = document.createElement("cite");
+        cite.textContent = copy.speaker;
+        quote.appendChild(cite);
+      }
+    } else {
+      quote.hidden = true;
+    }
+  }
+  setCompanionText(
+    "companion-reading",
+    copy.interpretation ? `Our reading: ${copy.interpretation}` : "",
+    { hideEmpty: true }
+  );
+  const stageYear = entry.mission?.startYear || entry.startYear;
+  const stageBank = bankForCompanion(companion, false);
+  setCompanionText("companion-claim", !copy.quote && copy.claim ? copy.claim : "", {
+    hideEmpty: true,
+  });
+  setCompanionText(
+    "companion-assume",
+    assumedPremiseCopy(companion, stageYear, stageBank),
+    { hideEmpty: true }
+  );
+  const stageDetails = document.getElementById("companion-details");
+  const stageBody = document.getElementById("companion-details-body");
+  if (stageDetails && stageBody) {
+    paintSourceDetails(stageBody, companion, {
+      includePrivate: false,
+      claimShown: !copy.quote && Boolean(copy.claim),
+      year: stageYear,
+      bank: stageBank,
+    });
+    const hasDetails = stageBody.childNodes.length > 0;
+    stageDetails.hidden = !hasDetails;
+  }
+  setCompanionText("companion-collab", copy.collaborationLine);
+  const siblings = siblingSourceLine(entry, partitionCatalogQuests().all);
+  setCompanionText("companion-siblings", siblings, { hideEmpty: true });
+  const evidence = [copy.evidenceSentence, copy.reviewedLabel].filter(Boolean).join(" ");
+  setCompanionText("companion-evidence", evidence);
+  setCompanionText("companion-access", companionAccessLine(entry));
+  const sponsor = String(entry.sponsorName || entry.mission?.sponsorName || "").trim();
+  setCompanionText("companion-sponsor", sponsor ? `Sponsored by ${sponsor}` : "", {
+    hideEmpty: true,
+  });
+  const link = document.getElementById("companion-source-link");
+  if (link) {
+    if (copy.linkUrl && copy.linkLabel) {
+      link.hidden = false;
+      link.href = copy.linkUrl;
+      link.textContent = copy.linkLabel;
+    } else {
+      link.hidden = true;
+      link.removeAttribute("href");
+      link.textContent = "";
+    }
+  }
+  showScreen("companion");
+}
+
+async function playFromCompanionStage() {
+  const entry = companionStageEntry;
+  if (!entry) return;
+  markCompanionAccepted(entry.id, sessionStorage);
+  const result = await playCatalogEntry(entry, { sameTabSignIn: true, keepUrl: true });
+  if (result === "started" || result === "opened_module") {
+    clearCompanionAccepted(entry.id, sessionStorage);
+    clearDeepLinkFromUrl();
+    deepLinkFinished = true;
+    return;
+  }
+  if (result === "needs_sign_in" || result === "denied" || result === "blocked") {
+    deepLinkFinished = false;
+  }
+}
+
+function stashLookedUpTile(tile) {
+  if (!tile?.id) return;
+  const source = tile.source || tile.mission?.source || "remote";
+  const bucket =
+    source === "hosted" || source === "imported" ? "localHostedQuests" : "remoteQuests";
+  state[bucket] = [...(state[bucket] || []).filter((e) => e.id !== tile.id), tile];
+}
+
+/**
+ * @param {object} entry
+ * @param {{ keepUrl?: boolean }} [opts]
+ */
+async function finishDeepLinkPlay(entry, opts = {}) {
+  const result = await playCatalogEntry(entry, {
+    sameTabSignIn: true,
+    keepUrl: opts.keepUrl !== false,
+  });
+  if (result === "started" || result === "opened_module") {
+    clearDeepLinkFromUrl();
+    deepLinkFinished = true;
+    return;
+  }
+  if (result === "needs_sign_in" || result === "denied" || result === "blocked") {
+    deepLinkFinished = false;
+  }
 }
 
 /** Fetch by exact ID and show a card for the player to launch explicitly. */
@@ -5802,25 +6261,49 @@ async function consumeDeepLink() {
       whenAuthReady(),
       new Promise((r) => setTimeout(r, 4000)),
     ]);
-    if (!state.hostedQuestsLoaded) {
-      await refreshHostedQuests({ silent: true });
+    const looked = await lookupQuestById(intent.token, { fetchImpl: apiFetch });
+    const outcome = questLinkOutcome(looked.status);
+    if (outcome === "missing") {
+      flashToast("This server does not have that quest.");
+      deepLinkFinished = true;
+      return;
     }
-    const entry = findCatalogEntry(intent.token, partitionCatalogQuests().all);
+    if (outcome === "unavailable" || !looked.tile) {
+      flashToast("Could not load that quest from this server. The link stays.");
+      return;
+    }
+    if (looked.subscribeUrl) hostedPlanState.subscribeUrl = String(looked.subscribeUrl);
+    const source = looked.tile.source || looked.tile.mission?.source || "remote";
+    stashLookedUpTile(looked.tile);
+    const entry = catalogEntryFromApi(looked.tile, source);
     if (!entry) {
-      flashToast("Quest not found.");
-      clearDeepLinkFromUrl();
+      flashToast("Could not load that quest from this server. The link stays.");
+      return;
+    }
+    const decision = companionGateDecision(entry, sessionStorage);
+    if (decision === "resume-after-accept") {
+      clearCompanionAccepted(entry.id, sessionStorage);
+      await finishDeepLinkPlay(entry);
+      return;
+    }
+    if (decision === "gate") {
+      openCompanionStage(entry);
       deepLinkFinished = true;
       return;
     }
-    const result = await playCatalogEntry(entry, { sameTabSignIn: true });
-    if (result === "needs_sign_in") return;
-    if (result === "started") {
-      clearDeepLinkFromUrl();
-      deepLinkFinished = true;
+    if (outcome === "keep") {
+      if (looked.status === "sign_in_required") {
+        if (deepLinkHold !== "sign_in_required") {
+          deepLinkHold = "sign_in_required";
+          promptCloudSignIn("Sign in to open this quest.", { sameTab: true });
+        }
+      } else if (deepLinkHold !== "subscription_required") {
+        deepLinkHold = "subscription_required";
+        flashToast("This quest needs a subscription.");
+      }
       return;
     }
-    clearDeepLinkFromUrl();
-    deepLinkFinished = true;
+    await finishDeepLinkPlay(entry);
   } finally {
     deepLinkInFlight = false;
   }
@@ -6177,6 +6660,7 @@ function catalogInspectTile(entry) {
   if (Array.isArray(m.briefBeats) && m.briefBeats.length) {
     out.briefBeats = m.briefBeats;
   }
+  if (m.companion && typeof m.companion === "object") out.companion = m.companion;
   return out;
 }
 
@@ -6250,6 +6734,24 @@ function catalogInspectBeatsHtml(mission, tile) {
       }
       <ol class="quest-dev-beats">${items}</ol>
     </section>`;
+}
+
+/**
+ * Role → meter label for the companion pressure links in Developer inspect.
+ * Normalized missions key pressure by label and keep the role order on crisisRoles.
+ * @param {object} mission
+ * @returns {Record<string, string>}
+ */
+function inspectPressureLabels(mission) {
+  const roles = Array.isArray(mission?.crisisRoles) ? mission.crisisRoles : [];
+  const names = Object.keys(mission?.pressure || {});
+  if (!roles.length || roles.length !== names.length) return {};
+  /** @type {Record<string, string>} */
+  const labels = {};
+  roles.forEach((role, i) => {
+    if (names[i]) labels[String(role)] = names[i];
+  });
+  return labels;
 }
 
 /**
@@ -6416,6 +6918,10 @@ function openQuestCatalogInspect(entry) {
       </section>
       ${jsonSection}`
       : `${overviewSection}
+      ${catalogInspectCompanionHtml(
+        m.companion || tile.companion || entry.companion,
+        { pressureLabels: inspectPressureLabels(m) }
+      )}
       <section class="quest-dev-section">
         <h4>Scene</h4>
         <p class="quest-dev-scene">${escapeHtml(m.scene || "(empty)")}</p>
@@ -6476,15 +6982,24 @@ function catalogCardHtml(entry, kind, opts = {}) {
   const locked = catalogNeedsAccount(entry) && !isClerkSignedIn();
   const suggested =
     Boolean(opts.suggestId) && String(opts.suggestId) === String(entry.id);
+  const companion = entry.mission?.companion || entry.companion;
   const cta = locked
-    ? "Sign in to play →"
+    ? "Sign in"
     : suggested
       ? "Next lesson →"
       : missionPickSession
-        ? "Use for friends game →"
+        ? "Use for this table"
         : solved
           ? "Play again →"
-          : "Play this Quest →";
+          : companion
+            ? "Open"
+            : "Play this Quest →";
+  const fromLine = companionFromLine(entry);
+  const moveChip = companion
+    ? `<span class="companion-chip companion-chip-${escapeHtml(
+        companion.move || "idea"
+      )}">${escapeHtml(stageCopy(companion).moveLabel)}</span>`
+    : "";
   const nextTag = suggested
     ? `<span class="scenario-tag next-lesson-tag" title="Next lesson in this module">Next</span>`
     : "";
@@ -6503,6 +7018,13 @@ function catalogCardHtml(entry, kind, opts = {}) {
               : `<span class="num muted">${escapeHtml(place || "Quest")}</span>`
           }
           <h3>${escapeHtml(entry.title || m?.title || "Quest")}</h3>
+          ${
+            fromLine || moveChip
+              ? `<p class="catalog-from-line">${moveChip}${
+                  fromLine ? `<span>${escapeHtml(fromLine)}</span>` : ""
+                }</p>`
+              : ""
+          }
           ${metaLine ? `<p class="muted">${escapeHtml(metaLine)}</p>` : ""}
           <p>${escapeHtml(scene)}</p>
           <span class="cta">${cta}</span>
@@ -6522,6 +7044,11 @@ function catalogCardHtml(entry, kind, opts = {}) {
           entry.id || m?.id || ""
         )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">
           Copy Quest ID
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(
+          entry.id || m?.id || ""
+        )}" title="Copy a link that opens this Quest on this server">
+          Copy link
         </button>
         ${
           questHasLeaderboard(entry.id || m?.id)
@@ -6636,7 +7163,7 @@ function moduleCardHtml(group) {
         inspectBtn || group.wrapper?.id
           ? `<div class="catalog-card-actions">${inspectBtn}${
               group.wrapper?.id
-                ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button>`
+                ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button><button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(group.wrapper.id)}" title="Copy a link that opens this module on this server">Copy link</button>`
                 : ""
             }</div>`
           : ""
@@ -6822,7 +7349,7 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
     const id = wrap.dataset.catalogId;
     const entry = flat.find((e) => e.id === id);
     wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
-      playCatalogEntry(entry);
+      void openCatalogEntry(entry);
     });
     wrap.querySelector(".catalog-dev")?.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -7450,6 +7977,13 @@ function normalizeMission(raw, globalId) {
     ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
     ...(sponsorName ? { sponsorName } : {}),
     ...(sponsorBanner ? { sponsorBanner } : {}),
+    ...(() => {
+      if (!raw.companion || typeof raw.companion !== "object") return {};
+      const parsed = parseCompanion(raw.companion, {
+        access: raw.access || "open",
+      });
+      return parsed.ok ? { companion: parsed.value } : {};
+    })(),
     ...(trends?.length ? { trends } : {}),
     ...(spotlightTrends?.length ? { spotlightTrends } : {}),
     ...(String(raw.summary || "").trim()
@@ -7763,9 +8297,11 @@ async function enforceHostedPlan() {
     const intent = parseDeepLink(typeof location !== "undefined" ? location.href : "");
     if (intent?.token) {
       try {
-        if (!state.hostedQuestsLoaded) await refreshHostedQuests({ silent: true });
-        const entry = findCatalogEntry(intent.token, partitionCatalogQuests().all);
-        lesson = catalogLessonSkipsPlan(entry);
+        const id = sanitizeQuestToken(intent.token);
+        if (id) {
+          const looked = await lookupQuestById(id, { fetchImpl: apiFetch });
+          lesson = catalogLessonSkipsPlan(looked.tile);
+        }
       } catch {
         lesson = false;
       }
@@ -7844,11 +8380,22 @@ function startMission(mission, opts = {}) {
 
   // Multiplayer intercept — same cards, different continue
   if (missionPickSession) {
+    const global = globalById(mission.globalId) || state.global;
+    const normalizedPick = normalizeMission(mission, mission.globalId || global?.id);
+    const handed = { ...mission, ...normalizedPick, id: mission.id || normalizedPick.id };
+    const pinnedPick = pinPredictionsBank(handed.companion, {
+      loadedBank: getWorldForesightBank(),
+      year: handed.startYear,
+    });
+    if (!pinnedPick.ok) {
+      flashToast(pinnedPick.message);
+      return false;
+    }
+    if (pinnedPick.bank) handed.pinnedPredictionsBank = pinnedPick.bank;
     const session = missionPickSession;
     missionPickSession = null;
-    const global = globalById(mission.globalId) || state.global;
     try {
-      session.onSelect(mission, global);
+      session.onSelect(handed, global);
     } catch (e) {
       console.error("[mission pick]", e);
       flashToast(e.message || "Could not start Friends mission");
@@ -7869,6 +8416,25 @@ function startMission(mission, opts = {}) {
     delete merged.aiTutorContext;
     delete merged.isLearningModule;
   }
+  if (opts.restore?.play?.mission?.companion) {
+    const access = merged.access || mission.access || "open";
+    const parsed = parseCompanion(opts.restore.play.mission.companion, { access });
+    if (parsed.ok) merged.companion = parsed.value;
+  }
+  const pinned = pinPredictionsBank(merged.companion, {
+    loadedBank: getWorldForesightBank(),
+    restoreBank: opts.restore
+      ? opts.restore.play?.predictionsBank || opts.restore.predictionsBank || null
+      : null,
+    year: opts.restore?.year || merged.startYear,
+  });
+  if (!pinned.ok) {
+    flashToast(pinned.message);
+    return false;
+  }
+  state.pinnedPredictionsBank = pinned.bank;
+  if (pinned.bank) merged.pinnedPredictionsBank = pinned.bank;
+  state.companionReflection = "";
   state.mission = merged;
   resetQuestBriefing({
     clearDismissed: !opts.restore,
@@ -8091,6 +8657,72 @@ async function ensureMissionSummary(el) {
   if (text && state.mission?.id === m.id) cacheMissionSummary(state.mission, text);
 }
 
+function paintWorkshopCompanion(m) {
+  const el = document.getElementById("ws-companion");
+  if (!el) return;
+  const companion = m?.companion;
+  if (!companion) {
+    el.hidden = true;
+    el.replaceChildren();
+    return;
+  }
+  const copy = stageCopy(companion);
+  el.hidden = false;
+  el.replaceChildren();
+  const credit = document.createElement("div");
+  credit.className = "ws-companion-credit";
+  const chip = document.createElement("span");
+  chip.className = `companion-chip companion-chip-${copy.move || "idea"}`;
+  chip.textContent = copy.moveLabel || "";
+  credit.appendChild(chip);
+  const from = companion.source?.show || companion.source?.publication || "";
+  if (from) {
+    const span = document.createElement("span");
+    span.className = "ws-companion-from";
+    span.textContent = `From ${from}`;
+    credit.appendChild(span);
+  }
+  if (copy.linkUrl) {
+    const link = document.createElement("a");
+    link.href = copy.linkUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent =
+      companion.medium === "podcast" && companion.source?.cue
+        ? companion.source.cue
+        : copy.linkLabel || "Open source";
+    credit.appendChild(link);
+  }
+  el.appendChild(credit);
+  if (copy.invitation) {
+    const invite = document.createElement("p");
+    invite.className = "ws-companion-invite";
+    invite.textContent = copy.invitation;
+    el.appendChild(invite);
+  }
+  const assume = assumedPremiseCopy(companion, state.year, bankForCompanion(companion, true));
+  if (assume) {
+    const line = document.createElement("p");
+    line.className = "ws-companion-assume";
+    line.textContent = assume;
+    el.appendChild(line);
+  }
+  const details = document.createElement("details");
+  details.className = "ws-companion-details";
+  const summary = document.createElement("summary");
+  summary.textContent = "Why this problem?";
+  details.appendChild(summary);
+  const body = document.createElement("div");
+  paintSourceDetails(body, companion, {
+    includePrivate: true,
+    claimShown: false,
+    year: state.year,
+    bank: bankForCompanion(companion, true),
+  });
+  details.appendChild(body);
+  if (body.childNodes.length) el.appendChild(details);
+}
+
 /* —— Workshop —— */
 function renderWorkshop() {
   const m = state.mission;
@@ -8181,6 +8813,7 @@ function renderWorkshop() {
       if (sponsorBannerEl) sponsorBannerEl.textContent = "";
     }
   }
+  paintWorkshopCompanion(m);
   const sceneEl = $("#ws-mission-scene");
   const visionRoot = $("#vision-root");
   if (visionRoot) {
@@ -8576,7 +9209,7 @@ function assessFeasibility() {
       timingNote = state.aiTiming.reason || "AI timing assess.";
     } else {
       const how = state.inventionHow.trim() || state.inventionImpact.trim();
-      const adj = detectClaimStretch(how, techs, year);
+      const adj = missionLocalTiming(how, techs, year);
       const rawLevel = adj.level;
       timingLevel = applyTimingYearMonotonicity(rawLevel);
       timingNote =
@@ -9786,6 +10419,7 @@ function ideaSparksContext(techId) {
     pressure: state.pressure,
     availableTechs: TECHS.map((t) => techForAi(t, state.year)),
     grounding: state.mission?.grounding || null,
+    ...sourceConstraintFields("idea-sparks"),
     isLearningModule: Boolean(coInventorLearningQuest()),
     questId: state.mission?.id || null,
     source: state.mission?.source || null,
@@ -10081,7 +10715,7 @@ function renderTiming() {
     }`;
     return;
   }
-  const stretch = detectClaimStretch(
+  const stretch = missionLocalTiming(
     state.inventionHow.trim() || state.inventionImpact.trim(),
     techs,
     state.year
@@ -11398,7 +12032,7 @@ function waitTurn(opts = {}) {
     mpSyncFromSolo();
     const m = state.mission;
     const techsNow = selectedTechs();
-    const stretch = detectClaimStretch(
+    const stretch = missionLocalTiming(
       state.inventionHow.trim() || state.inventionImpact.trim(),
       techsNow,
       state.year
@@ -11459,7 +12093,7 @@ function waitTurn(opts = {}) {
   const prevPressure = clonePressure(state.pressure);
 
   const techsNow = selectedTechs();
-  const stretch = detectClaimStretch(
+  const stretch = missionLocalTiming(
     state.inventionHow.trim() || state.inventionImpact.trim(),
     techsNow,
     state.year
@@ -12070,9 +12704,39 @@ function rulesForAiContext() {
   return list.length ? list : undefined;
 }
 
+function sourceConstraintFields(mode = "chat", extra = {}) {
+  const companion = state.mission?.companion || null;
+  const text = sourceConstraintText(companion);
+  const bank = activePinnedBank();
+  const inquiry = buildSourceInquiry(companion, {
+    mode,
+    bank: bank || undefined,
+    year: state.year,
+    angle: extra.challengeAngle || extra.angle,
+    concern:
+      extra.concern ||
+      (extra.challengeQuestion
+        ? {
+            question: extra.challengeQuestion,
+            connection: extra.challengeSpeech || "",
+          }
+        : null),
+    concerns: extra.concerns,
+  });
+  const out = {};
+  if (text) out.sourceConstraint = text;
+  if (inquiry) out.sourceInquiry = inquiry;
+  if (bank?.id) {
+    out.predictionsBankId = bank.id;
+    out.predictionsBank = bank;
+  }
+  return out;
+}
+
 function leanCoInventContext(mode, extra = {}) {
   const scene = String(state.mission?.scene || "").slice(0, 600);
   const rules = extra.rules !== undefined ? extra.rules : rulesForAiContext();
+  const fields = sourceConstraintFields(mode, extra);
   return buildLeanCoInventContext(
     mode,
     rules ? { ...extra, rules } : extra,
@@ -12081,6 +12745,7 @@ function leanCoInventContext(mode, extra = {}) {
       place: state.mission?.place,
       globalId: state.global?.id || state.mission?.globalId || null,
       grounding: state.mission?.grounding || null,
+      ...fields,
       missionTitle: state.mission?.title || "",
       missionScene: scene,
       inventionHow: state.inventionHow,
@@ -12145,6 +12810,7 @@ async function apiCoInvent(mode, userContent, extra = {}) {
         pressure: state.pressure,
         availableTechs: techsForCoInventMode(mode),
         grounding: state.mission?.grounding || null,
+        ...sourceConstraintFields(mode, rest),
         isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),
         questId: state.mission?.id || null,
@@ -15989,7 +16655,7 @@ function snapshotTimingAtDeploy() {
   const timingSnap =
     state.aiTiming?.level && state.aiTiming?.forKey === timingCacheKey()
       ? state.aiTiming.level
-      : detectClaimStretch(state.inventionHow, techs, state.year).level;
+      : missionLocalTiming(state.inventionHow, techs, state.year).level;
   state.timingLevelAtDeploy = timingSnap;
   return timingSnap;
 }
@@ -16604,7 +17270,7 @@ function buildRunReport(kind, meta = {}) {
       meta.timingLevel ||
       state.timingLevelAtDeploy ||
       state.aiTiming?.level ||
-      detectClaimStretch(state.inventionHow, techs, state.year).level,
+      missionLocalTiming(state.inventionHow, techs, state.year).level,
     inventionHow: state.inventionHow,
     synergyPairCount: pairs.length,
     domainCount: domains.length,
@@ -17399,6 +18065,118 @@ function outcomePathwayLabel(o, mp) {
   };
 }
 
+function recordedInventionSummary() {
+  const sum = currentPathwaySummary();
+  return inventionLineForResponse({
+    pathwayText: sum?.text || "",
+    inventionCount: Array.isArray(sum?.inventions) ? sum.inventions.length : 0,
+    how: state.inventionHow,
+    impact: state.inventionImpact,
+  });
+}
+
+function sourceResponseInput() {
+  const companion = state.mission?.companion;
+  const copy = stageCopy(companion || {});
+  const premise = companion?.exploration?.premise;
+  const id = state.mission?.id;
+  const questUrl = id ? buildQuestShareUrl(id, currentShareOrigin()) : "";
+  return {
+    questTitle: state.mission?.title || "",
+    sourceTitle: companion?.source?.show || companion?.source?.publication || "",
+    speaker: copy.speaker,
+    claim: copy.claim,
+    premiseStatement: premise?.mode === "assumed" ? premise.statement : "",
+    inventionSummary: recordedInventionSummary(),
+    reflection: state.companionReflection,
+    questUrl,
+    sourceUrl: copy.linkUrl,
+  };
+}
+
+let outcomeSourceBound = false;
+
+function bindOutcomeSource() {
+  if (outcomeSourceBound) return;
+  outcomeSourceBound = true;
+  document.getElementById("outcome-source-reflection")?.addEventListener("input", (ev) => {
+    state.companionReflection = String(ev.target.value || "").slice(0, 2000);
+    scheduleCloudRunState();
+  });
+  document.getElementById("outcome-source-preview")?.addEventListener("click", () => {
+    const pre = document.getElementById("outcome-source-preview-text");
+    if (!pre) return;
+    pre.hidden = false;
+    pre.textContent = formatSourceResponse(sourceResponseInput());
+  });
+  document.getElementById("outcome-source-copy")?.addEventListener("click", async () => {
+    const text = formatSourceResponse(sourceResponseInput());
+    const pre = document.getElementById("outcome-source-preview-text");
+    if (pre) {
+      pre.hidden = false;
+      pre.textContent = text;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      flashToast("Response copied");
+    } catch {
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      } catch {
+        /* preview stays selectable */
+      }
+      flashToast("Could not copy. The response stays in the preview.");
+    }
+  });
+}
+
+function paintOutcomeSource() {
+  const section = document.getElementById("outcome-source");
+  if (!section) return;
+  const companion = state.mission?.companion;
+  if (!companion) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  bindOutcomeSource();
+  const copy = stageCopy(companion);
+  setCompanionText("outcome-source-claim", copy.claim, { hideEmpty: true });
+  setCompanionText(
+    "outcome-source-assume",
+    assumedPremiseCopy(companion, state.outcome?.year ?? state.year, bankForCompanion(companion, true)),
+    { hideEmpty: true }
+  );
+  setCompanionText(
+    "outcome-source-invention",
+    recordedInventionSummary() || "No invention recorded yet."
+  );
+  const prompt = String(companion.exploration?.reflectionPrompt || "").trim();
+  const label = document.getElementById("outcome-source-reflect-label");
+  const promptEl = document.getElementById("outcome-source-prompt");
+  if (promptEl) promptEl.textContent = prompt || "What did this invention make possible?";
+  if (label) label.hidden = false;
+  const ta = document.getElementById("outcome-source-reflection");
+  if (ta && document.activeElement !== ta) {
+    const next = String(state.companionReflection || "");
+    if (ta.value !== next) ta.value = next;
+  }
+  const open = document.getElementById("outcome-source-open");
+  if (open) {
+    if (copy.linkUrl) {
+      open.hidden = false;
+      open.href = copy.linkUrl;
+    } else {
+      open.hidden = true;
+      open.removeAttribute("href");
+    }
+  }
+}
+
 function renderOutcome() {
   const tutorialPanel = $("#outcome-tutorial-done");
   if (tutorialPanel) {
@@ -17432,6 +18210,7 @@ function renderOutcome() {
 
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
+  paintOutcomeSource();
 
   const starsEl = $("#outcome-stars");
   const report = o.runReport || state.runReport;
@@ -17643,7 +18422,7 @@ function renderOutcome() {
     (o.techs || []).map((t) => t.id),
     state.global?.id || state.mission?.globalId,
     o.year,
-    { seed: state.mission?.id || "outcome" }
+    foresightPoolOpts({ seed: state.mission?.id || "outcome" })
   );
   const fg = $("#outcome-foresight");
   if (fg) {
@@ -18643,6 +19422,11 @@ function ensureCoInventor() {
         spotlightTechId: state.mission?.spotlight?.techId || null,
         spotlightAdvance: spotlightAdvanceForAi(state.mission),
         grounding: state.mission?.grounding || null,
+        ...sourceConstraintFields("chat", {
+          challengeAngle: state.challengeAngle,
+          challengeQuestion: state.challengeQuestion,
+          challengeSpeech: state.challengeText,
+        }),
         isLearningModule: Boolean(coInventorLearningQuest()),
         aiTutorContext: coInventorAiTutorContext(),
         mediaRoots: contentMediaRoots(),
@@ -19647,6 +20431,7 @@ async function callCoInventMode(mode, userLabel) {
       pressure: state.pressure,
       availableTechs: TECHS.map((t) => techForAi(t, state.year)),
       grounding: state.mission?.grounding || null,
+      ...sourceConstraintFields(mode),
       isLearningModule: Boolean(coInventorLearningQuest()),
       aiTutorContext: coInventorAiTutorContext(),
       questId: state.mission?.id || null,
@@ -20739,11 +21524,14 @@ function openYearForesightFromHud() {
     showYearBulletinModal(b, { userOpen: true });
     return;
   }
-  const highlights = foresightForYear(state.year, {
-    techIds: state.selectedTechIds || [],
-    globalId: state.global?.id || state.mission?.globalId,
-    seed: `${state.mission?.id || "solo"}:hud:${state.year}`,
-  });
+  const highlights = foresightForYear(
+    state.year,
+    foresightPoolOpts({
+      techIds: state.selectedTechIds || [],
+      globalId: state.global?.id || state.mission?.globalId,
+      seed: `${state.mission?.id || "solo"}:hud:${state.year}`,
+    })
+  );
   showYearBulletinModal(
     {
       fromYear: Math.max(GAME.startYear || 2026, (state.year || 2026) - 1),
@@ -20806,7 +21594,7 @@ function showYearBulletinModal(bulletin, opts = {}) {
   const list = el.querySelector("#year-bulletin-list");
   const okBtn = el.querySelector("#year-bulletin-ok");
   if (kicker) {
-    const bank = getWorldForesightBank();
+    const bank = activePinnedBank() || getWorldForesightBank();
     const bankLabel =
       bank?.id && bank.id !== "future-forge-default" && bank.title ? ` · ${bank.title}` : "";
     kicker.textContent = opts.userOpen
@@ -22881,6 +23669,8 @@ async function refreshDeveloperModeFromHealth() {
     const res = await fetch("/api/health");
     if (!res.ok) return;
     const data = await res.json();
+    state.healthShareOrigin =
+      typeof data?.shareOrigin === "string" ? data.shareOrigin : "";
     const next = Boolean(data?.developer);
     if (next === state.developer) return;
     state.developer = next;

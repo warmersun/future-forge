@@ -90,7 +90,32 @@ export function createEmptyBoard() {
     islandHow: {},
     /** Sorted `id:status` of live local rules this cache was scored under. */
     rulesWeatherKey: "",
+    /** Canonical companion premise/rubric this cache was scored under. */
+    sourceInquiryKey: "",
   };
+}
+
+function cloneSourceInquiry(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const key = String(raw.key || "").slice(0, 8000);
+  const focus = String(raw.focus || "").slice(0, 280);
+  const connection = String(raw.connection || "").slice(0, 280);
+  const question = String(raw.question || "").slice(0, 400);
+  if (!key && !focus && !connection && !question) return undefined;
+  return {
+    ...(key ? { key } : {}),
+    ...(focus ? { focus } : {}),
+    ...(connection ? { connection } : {}),
+    ...(question ? { question } : {}),
+  };
+}
+
+function cloneTile(tile) {
+  const copy = { ...tile };
+  const snap = cloneSourceInquiry(tile?.sourceInquiry);
+  if (snap) copy.sourceInquiry = snap;
+  else delete copy.sourceInquiry;
+  return copy;
 }
 
 function cloneIslandHow(src) {
@@ -118,7 +143,7 @@ export function cloneBoard(board) {
   const impacts = board.pathwayImpacts || {};
   return {
     tiles: Object.fromEntries(
-      Object.entries(board.tiles || {}).map(([id, t]) => [id, { ...t }])
+      Object.entries(board.tiles || {}).map(([id, t]) => [id, cloneTile(t)])
     ),
     concernsSummoned: Boolean(board.concernsSummoned),
     concernTargetCount: clampChallengerCount(
@@ -169,6 +194,7 @@ export function cloneBoard(board) {
     convergences: cloneConvergences(board.convergences),
     islandHow: cloneIslandHow(board.islandHow),
     rulesWeatherKey: String(board.rulesWeatherKey ?? ""),
+    sourceInquiryKey: String(board.sourceInquiryKey ?? ""),
   };
 }
 
@@ -185,6 +211,7 @@ function cloneConvergences(src) {
       factor: Number(row.factor) || CONVERGENCE_FACTOR,
       title: String(row.title || "").slice(0, 80),
       reason: String(row.reason || "").slice(0, 400),
+      ...(row.stale ? { stale: true } : {}),
     };
   }
   return out;
@@ -636,6 +663,9 @@ export function mintConcernTiles(byAngle = null) {
       answerPending: Boolean(enrich.answerPending),
       spawnQ: Number.isFinite(Number(enrich.spawnQ)) ? Number(enrich.spawnQ) : null,
       spawnR: Number.isFinite(Number(enrich.spawnR)) ? Number(enrich.spawnR) : null,
+      ...(cloneSourceInquiry(enrich.sourceInquiry)
+        ? { sourceInquiry: cloneSourceInquiry(enrich.sourceInquiry) }
+        : {}),
       posedInventionIds: Array.isArray(enrich.posedInventionIds)
         ? enrich.posedInventionIds.map(String)
         : [],

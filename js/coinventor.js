@@ -17,7 +17,7 @@ import {
   sharedVoiceCallFor,
   hangupVoice,
   isVoiceLive,
-} from "./coinventor-voice.js?v=voice-16";
+} from "./coinventor-voice.js?v=voice-19";
 import {
   beginAssistantSpeech,
   capVoiceHistory,
@@ -26,14 +26,14 @@ import {
   settleVoiceTurn,
   tutorToggleLocked,
   voiceBlocksModeSwitch,
-} from "./voice-context.js?v=voice-16";
-import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-16";
+} from "./voice-context.js?v=voice-19";
+import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-19";
 import {
   draftQuoteForBubble,
   hexHowApplyCopy,
   hexHowTargetsPathway,
   howAppliedLabel,
-} from "./coinventor-how-apply.js?v=voice-16";
+} from "./coinventor-how-apply.js?v=voice-19";
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Co-inventor unavailable";
@@ -1266,6 +1266,10 @@ export class CoInventor {
       metricsPending: Boolean(ctx.metricsPending),
       availableTechs: ctx.availableTechs,
       grounding: ctx.grounding || null,
+      ...(ctx.sourceConstraint ? { sourceConstraint: ctx.sourceConstraint } : {}),
+      ...(ctx.sourceInquiry ? { sourceInquiry: ctx.sourceInquiry } : {}),
+      ...(ctx.predictionsBankId ? { predictionsBankId: ctx.predictionsBankId } : {}),
+      ...(ctx.predictionsBank ? { predictionsBank: ctx.predictionsBank } : {}),
       isLearningModule: Boolean(ctx.isLearningModule),
       aiTutorContext: ctx.aiTutorContext || null,
       questId: ctx.questId || ctx.challenge?.id || null,

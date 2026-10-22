@@ -57,8 +57,27 @@ Optional: `placement.mode` (legacy: `replace-daily` | `alongside` | `library-onl
 | `aiTutorContext` | — | Conversational tutor only (not fast-eval) | 50k |
 | `rules` | HUD weather | Fast-eval `mission.rules` | body 280 |
 | `research`, `visionTheme`, `placement.*`, `tags`, `author`, `license`, `version` | — | — | stored, not shown or read |
+| `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` ≤500 beside `grounding`; claim and grants in `sourceInquiry` | see below |
 
 `research` is citation metadata for humans reading the file. Capability truth the AI must respect goes in `grounding`.
+
+### Optional `companion`
+
+Omit the key and the quest is ordinary. One source and one move. The invitation is the question the player sees before play. `sponsorName` stays funding credit. A speaker, show, author, or publication is never stored as `sponsorName`. The object is rejected on `kind: "module"`.
+
+`medium`: `podcast` | `post` | `article` | `video` | `talk` | `paper` | `other`. A podcast requires `source.show`, `source.title`, `source.url`, `source.cue` (`H:MM:SS` or `M:SS`), and `source.speaker`. Other media require `source.title`, `source.url`, and `source.author` or `source.publication`. URLs are `https` only.
+
+| Move | `evidence.status` | Also required |
+|------|-------------------|---------------|
+| `milestone` | `demonstrated`, `inferred`, `disputed` | — |
+| `trend` | `inferred`, `proposed`, `disputed` | `evidence.scope` ≤160 |
+| `idea` | `proposed`, `inferred`, `disputed` | — |
+| `opinion` | `proposed`, `inferred`, `disputed` | — |
+| `prediction` | `prediction` only | `evidence.horizon` ≤40 |
+
+Also required: `claim` ≤280, `evidence.limits` 40–400, `evidence.reviewed` (`YYYY-MM-DD`), `invitation` ≤280, and an explicit tile `access`. Optional `quote` ≤240 requires `interpretation` ≤280 and a `claim` that differs from the quote. `collaboration` is `independent` (the default when omitted) or `co-produced` (requires `partnerName`).
+
+Optional `exploration` (version integer `1`) adds `focus`, `bridge`, `premise` (`assumed` or `evidence-grounded`), `pressureLinks`, four critic `challenges`, and `reflectionPrompt`. An assumed premise names `bankId` and one to three grants (`predictionId`, `scope`, `limits`). The bank row supplies the year and the capability. `exploration` is not on the public catalog slice. Authoring detail and lint codes: `skills/future-forge-quest/references/companion.md`. Worked tile: `test/fixtures/quests/companion-moonshots-304.json`. Bank fixture: `test/fixtures/predictions/companion-dock-test.json`.
 
 ### Craft lint
 

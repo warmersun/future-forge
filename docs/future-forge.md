@@ -241,7 +241,7 @@ Two ways to invent with other people. Both keep **personal invents** and **one s
 
 Tutor mode stays off in both. A learning Quest played with other people is still an invent, without the step-by-step tutor.
 
-**Friends** is a live room. From the title screen: **Create room**, then share the join address and the room code. Each person uses their own browser. The address friends open is `FF_JOIN_ORIGIN` (often a Tailscale Funnel host such as `https://….ts.net`). The design size is a small table, about 2–6 people. Share a lesson on the public hop `https://warmersun.com/forge/?q=<quest-id>`, which forwards into the game and starts that Quest. Post that link, not the raw Funnel host.
+**Friends** is a live room. From the title screen: **Create room**, then share the join address and the room code. Each person uses their own browser. The address friends open is `FF_JOIN_ORIGIN` (often a Tailscale Funnel host such as `https://….ts.net`). The design size is a small table, about 2–6 people. A Quest link is the address of the server that has the Quest, plus `?q=<quest-id>`. On the public app that is `https://ff.warmersun.com/?q=<quest-id>`. On a laptop running the game it is `http://127.0.0.1:8765/?q=<quest-id>`. The link is not portable across servers. The Quest ID is. Post the link for the server you are sharing from.
 
 **Hotseat** is the same session on one machine. **Start hotseat** takes comma-separated seat names. When a turn ends, pass the device. The rules match Friends; the transport is the laptop in the middle of the table.
 
@@ -275,6 +275,18 @@ The job stays an outcome for the people in the place. Naming the brand is not th
 A sponsored learning path (wrapper or any lesson carries `sponsorName`) is listed under **Sponsored**, including when it is also a module. It is not listed a second time under Learning. Official Sponsored tiles come from the same Warmer Sun catalog as Learning. Refresh on the catalog skips the server’s ~10-minute cache.
 
 `grounding` is required in practice. The skill’s copy rules and the one-lesson versus multi-lesson shapes are in [learning-and-sponsor.md](../skills/future-forge-quest/references/learning-and-sponsor.md).
+
+## Companion quests
+
+A companion is an ordinary Quest with one optional source attached: a podcast, a post, or another published piece, and one move (a milestone, a trend, an idea, an opinion, or a prediction). The player sees that source and one question before play. The invention is still the Quest.
+
+Sponsored credit and source credit are different lines. **Sponsored by** appears only when `sponsorName` is set. The byline is the speaker or the author. Future Forge can say it wrote the reading. That sentence is not a partnership.
+
+The catalog card says **Open** and `From {show or publication}`. Play opens the workshop. The strip under the title keeps the source credit, the invitation, and, when the Quest says so, **For this Quest, assume…**. The pathway the player writes is the contribution. At the end, **Back to the idea** is an optional note. It does not verify the source.
+
+The AI reads a short source limit beside `grounding`, plus a structured source inquiry when the Quest has a claim. Outside an explicit scenario grant, an idea, an opinion, a trend, or a prediction is not a current capability. A milestone is only as firm as its evidence. Disagreement is a valid invention.
+
+Authoring: [companion.md](../skills/future-forge-quest/references/companion.md). The worked example is Moonshots episode 304, `companion-moonshots-304`, on a developer server.
 
 ## Other Quests
 

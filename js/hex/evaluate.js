@@ -793,6 +793,33 @@ export function hexPathwayPanel(board) {
  * @param {object} board — mutated
  * @param {object} opts
  */
+/**
+ * Mark pathway scores and invention timing stale when the companion premise changes.
+ * Does not refund income or clear invention text.
+ * @param {object} board
+ * @param {string} liveKey
+ * @returns {boolean}
+ */
+export function syncSourceInquiry(board, liveKey) {
+  const nextKey = String(liveKey || "");
+  const stored = board.sourceInquiryKey ?? "";
+  board.sourceInquiryKey = nextKey;
+  if (nextKey === stored) return false;
+  for (const row of Object.values(board.pathwayImpacts || {})) {
+    if (!row) continue;
+    row.pending = true;
+  }
+  for (const tile of Object.values(board.tiles || {})) {
+    if (!tile || tile.kind !== TILE_KIND.invention) continue;
+    tile.timingPending = true;
+    tile.timingForKey = null;
+  }
+  for (const row of Object.values(board.convergences || {})) {
+    if (row) row.stale = true;
+  }
+  return true;
+}
+
 function syncRulesWeather(board, opts = {}) {
   const liveKey = rulesWeatherKey(opts.rules);
   const storedKey = board.rulesWeatherKey ?? "";
@@ -877,6 +904,9 @@ export function applyPathwayPressure(board, opts = {}) {
 
   if (opts.rules !== undefined) {
     syncRulesWeather(next, opts);
+  }
+  if (opts.sourceInquiryKey !== undefined) {
+    syncSourceInquiry(next, opts.sourceInquiryKey);
   }
 
   const pathways = listInventionPathways(next).map((inventions) => {
@@ -1555,13 +1585,16 @@ export function boardPathwayReevaluating(board) {
  * @param {object} tile
  * @param {number} year
  */
-export function tileTimingCacheKey(tile, year) {
-  return [
+export function tileTimingCacheKey(tile, year, sourceKey = "") {
+  const parts = [
     tile?.id || "",
     Number(year) || 0,
     String(tile?.techId || ""),
     String(tile?.howText || "").trim(),
-  ].join("|");
+  ];
+  const source = String(sourceKey || "");
+  if (source) parts.push(source);
+  return parts.join("|");
 }
 
 /**

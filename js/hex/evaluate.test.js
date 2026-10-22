@@ -457,6 +457,13 @@ describe("tileTimingCacheKey", () => {
       2026
     );
     assert.equal(a, b);
+    assert.equal(tileTimingCacheKey({ id: "1", techId: "ai", howText: "x" }, 2026, ""), a);
+    const sourced = tileTimingCacheKey({ id: "1", techId: "ai", howText: "x" }, 2026, "premise-a");
+    assert.notEqual(sourced, a);
+    assert.notEqual(
+      sourced,
+      tileTimingCacheKey({ id: "1", techId: "ai", howText: "x" }, 2026, "premise-b")
+    );
   });
 });
 

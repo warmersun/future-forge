@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=quest-id-88" />
+    <link rel="stylesheet" href="css/styles.css?v=companion-13" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -275,7 +275,7 @@
             </div>
             <button type="submit" class="btn btn-secondary" id="btn-load-quest-id">Load Quest</button>
           </form>
-          <p id="quest-id-help" class="muted sm">Paste the ID copied from a Quest card to load it through the portal. Local Library and imported Quests are only available where they were added, unless published.</p>
+          <p id="quest-id-help" class="muted sm">Paste the ID copied from a Quest card, or open a link from this server. A link opens the Quest on the server that served the page. The ID is what you copy to another server.</p>
           <p id="quest-id-status" class="mission-status" role="status" aria-live="polite" hidden></p>
           <div id="quest-id-preview" class="quest-catalog-grid" hidden></div>
         </section>
@@ -1003,6 +1003,40 @@
       </div>
     </section>
 
+    <!-- COMPANION: source stage before play -->
+    <section id="screen-companion" class="screen screen-companion" aria-labelledby="companion-invitation">
+      <div class="companion-still" id="companion-still" aria-hidden="true"></div>
+      <div class="companion-scrim" aria-hidden="true"></div>
+      <button type="button" class="btn btn-ghost btn-sm companion-home" id="btn-companion-home">← Home</button>
+      <div class="companion-layout">
+        <div class="companion-stage">
+          <p class="companion-kicker" id="companion-kicker"></p>
+          <h1 id="companion-invitation"></h1>
+          <p class="companion-byline" id="companion-byline"></p>
+          <p class="companion-chip-row"><span class="companion-chip" id="companion-chip"></span></p>
+          <blockquote class="companion-quote" id="companion-quote" hidden></blockquote>
+          <p class="companion-reading" id="companion-reading" hidden></p>
+          <p class="companion-claim" id="companion-claim" hidden></p>
+          <p class="companion-assume" id="companion-assume" hidden></p>
+          <details class="companion-details" id="companion-details" hidden>
+            <summary>Why this problem?</summary>
+            <div id="companion-details-body"></div>
+          </details>
+          <p class="companion-collab" id="companion-collab"></p>
+          <p class="companion-siblings" id="companion-siblings" hidden></p>
+        </div>
+        <footer class="companion-dock">
+          <p class="companion-evidence" id="companion-evidence"></p>
+          <p class="companion-access" id="companion-access"></p>
+          <p class="companion-sponsor" id="companion-sponsor" hidden></p>
+          <div class="companion-actions">
+            <button type="button" class="btn btn-primary" id="btn-companion-play">Play this Quest</button>
+            <a class="btn btn-ghost" id="companion-source-link" target="_blank" rel="noopener noreferrer" hidden></a>
+          </div>
+        </footer>
+      </div>
+    </section>
+
     <!-- WORKSHOP -->
     <section id="screen-workshop" class="screen">
       <header class="topbar topbar-game">
@@ -1137,6 +1171,7 @@
               <p id="ws-sponsor-label" class="ws-sponsor-label"></p>
               <p id="ws-sponsor-banner" class="ws-sponsor-banner muted" hidden></p>
             </div>
+            <div id="ws-companion" class="ws-companion" hidden></div>
             <p id="ws-spotlight-chip" class="ws-spotlight-chip" hidden style="display:none"></p>
             <div id="ws-mission-scene" class="ws-mission-scene"></div>
             <p id="ws-spotlight-encourage" class="ws-spotlight-encourage muted" hidden></p>
@@ -2094,6 +2129,24 @@
           <p id="outcome-board-rank" class="quest-log-item-meta" hidden></p>
         </div>
 
+        <section id="outcome-source" class="outcome-source panel" hidden>
+          <h3>Back to the idea</h3>
+          <p id="outcome-source-claim"></p>
+          <p id="outcome-source-assume"></p>
+          <p id="outcome-source-invention"></p>
+          <p class="muted sm">This was a fictional exploration under the Quest's assumptions. It does not verify the source.</p>
+          <label class="outcome-source-reflect" id="outcome-source-reflect-label">
+            <span id="outcome-source-prompt"></span>
+            <textarea id="outcome-source-reflection" rows="4" maxlength="2000"></textarea>
+          </label>
+          <div class="outcome-source-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="outcome-source-preview">Preview response</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="outcome-source-copy">Copy response</button>
+            <a class="btn btn-ghost btn-sm" id="outcome-source-open" target="_blank" rel="noopener noreferrer" hidden>Open source</a>
+          </div>
+          <pre id="outcome-source-preview-text" class="outcome-source-preview" hidden></pre>
+        </section>
+
         <details id="outcome-log" class="outcome-log">
           <summary id="outcome-log-summary">Captain's log</summary>
           <p class="muted sm outcome-log-lead">What you did, and how it was judged.</p>
@@ -2479,6 +2532,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=quest-id-88"></script>
+    <script type="module" src="js/main.js?v=companion-13"></script>
   </body>
 </html>

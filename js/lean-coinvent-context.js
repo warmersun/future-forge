@@ -39,6 +39,22 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
   delete rest.inventionName;
   const grounding =
     rest.grounding !== undefined ? rest.grounding : snap.grounding ?? null;
+  const sourceRaw =
+    rest.sourceConstraint !== undefined ? rest.sourceConstraint : snap.sourceConstraint;
+  const sourceConstraint = String(sourceRaw || "").trim().slice(0, 500);
+  delete rest.sourceConstraint;
+  const inquiryRaw = rest.sourceInquiry !== undefined ? rest.sourceInquiry : snap.sourceInquiry;
+  const sourceInquiry =
+    inquiryRaw && typeof inquiryRaw === "object" && !Array.isArray(inquiryRaw) ? inquiryRaw : null;
+  delete rest.sourceInquiry;
+  const bankRaw = rest.predictionsBank !== undefined ? rest.predictionsBank : snap.predictionsBank;
+  const predictionsBank =
+    bankRaw && typeof bankRaw === "object" && !Array.isArray(bankRaw) ? bankRaw : null;
+  delete rest.predictionsBank;
+  const bankIdRaw =
+    rest.predictionsBankId !== undefined ? rest.predictionsBankId : snap.predictionsBankId;
+  const predictionsBankId = String(bankIdRaw || "").trim().slice(0, 80);
+  delete rest.predictionsBankId;
   const year = rest.year ?? snap.year;
   const place = rest.place ?? snap.place;
   const globalId = rest.globalId ?? snap.globalId ?? null;
@@ -48,6 +64,10 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     place,
     ...(globalId ? { globalId } : {}),
     grounding,
+    ...(sourceConstraint ? { sourceConstraint } : {}),
+    ...(sourceInquiry ? { sourceInquiry } : {}),
+    ...(predictionsBankId ? { predictionsBankId } : {}),
+    ...(predictionsBank ? { predictionsBank } : {}),
     missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
     missionScene: rest.missionScene ?? scene,
     ...rest,
@@ -98,6 +118,10 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
       place,
       ...(globalId ? { globalId } : {}),
       grounding,
+      ...(sourceConstraint ? { sourceConstraint } : {}),
+      ...(sourceInquiry ? { sourceInquiry } : {}),
+      ...(predictionsBankId ? { predictionsBankId } : {}),
+      ...(predictionsBank ? { predictionsBank } : {}),
       missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
       missionScene: rest.missionScene ?? scene,
       inventionHow: rest.inventionHow ?? snap.inventionHow,

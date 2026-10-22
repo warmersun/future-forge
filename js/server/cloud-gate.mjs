@@ -12,6 +12,7 @@
  */
 
 import { isLibraryCatalogEntry } from "../quest-catalog.js";
+import { publicCompanionSlice } from "../companion.js";
 
 export const ACCESS = {
   OPEN: "open",
@@ -161,6 +162,10 @@ export function catalogCard(tile) {
     card.isLearningModule = true;
   }
   if (lessons.length) card.lessons = lessons.map((id) => String(id));
+  const companion = publicCompanionSlice(
+    tile.companion || mission.companion || rawTile.companion
+  );
+  if (companion) card.companion = companion;
   return card;
 }
 

@@ -83,6 +83,11 @@ describe("needsPlayerBilling (B3)", () => {
   it("plain paid tiles would need Billing (todo B1)", () => {
     assert.equal(needsPlayerBilling({ access: "paid" }), true);
   });
+  it("a companion does not waive billing", () => {
+    const companion = { medium: "post", move: "opinion" };
+    assert.equal(needsPlayerBilling({ access: "paid", companion }), true);
+    assert.equal(needsPlayerBilling({ access: "paid", companion, sponsorName: "Acme" }), false);
+  });
 });
 
 describe("tileIsSponsored", () => {

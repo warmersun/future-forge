@@ -1,0 +1,193 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "companion-moonshots-304",
+  "version": 1,
+  "title": "Night shift at Kiln Ferry",
+  "summary": "Two people run the night shift at Kiln Ferry dock. A vendor demo can name damaged parcels on a bench. The feeder circuit cannot carry that demo through the shift.",
+  "author": {
+    "name": "Future Forge",
+    "note": "Independent reading of Moonshots episode 304. Not a partnership."
+  },
+  "createdAt": "2026-10-22T12:00:00Z",
+  "tags": ["companion", "automation", "podcast"],
+  "license": "MIT",
+  "placement": { "mode": "library-only" },
+  "access": "open",
+  "titleImageUrl": "assets/quests/companion-moonshots-304/title.jpg",
+  "spotlight": {
+    "techId": "ai",
+    "advanceTitle": "Shift-scale vision assist",
+    "advanceSummary": "A camera model can flag a damaged parcel on a bench when the light and the power hold. A staffed night shift is a different claim.",
+    "asOf": "2026-10",
+    "encourageCopy": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions."
+  },
+  "research": {
+    "topic": "Moonshots episode 304, Chamath on diffusion",
+    "bullets": [
+      "On 20 Oct 2026 Chamath Palihapitiya said he thinks AGI is here and that it cannot diffuse because the build-out is missing.",
+      "That sentence is his judgement. It does not define AGI and it is not a demonstrated capability."
+    ],
+    "sources": [
+      {
+        "title": "Moonshots episode 304",
+        "url": "https://www.youtube.com/watch?v=kAwG9E1W_ME&t=2698",
+        "accessed": "2026-10-22"
+      }
+    ],
+    "showToPlayer": false
+  },
+  "globalId": "automation",
+  "grounding": "## Technology\n- **emTech:** ai\n- **Product category:** Shift-scale vision and drafting assist for a parcel dock\n\n## Capabilities\nA current vision model can flag a torn parcel, a missing label, or a stack that leans, when the camera sees the bench and a person checks the flag. A drafting assist can suggest the next bin. The check stays with the person on the shift.\n\n## Trends & predictions\nCameras and on-site models get cheaper. Power and a human checker still bound a night dock. A guest's forecast is an opinion. It is not what this shift proves.\n\n## Milestone\nBench demos in 2026 can name visible damage on a parcel in good light. That is a bench, not a staffed night.\n\n## Honest limits\nThe dock, the circuit, and the night crew are fictional. Winning this shift does not establish that AGI exists or that build-out is the real world's only bottleneck. Power, physical handling, and responsibility are not granted.\n\n## Unlocks Use Case(s)\nFlagging damaged parcels for a person who still decides. A short list of what the shift will not hand to the demo.\n\n## Applications\nA night board that shows only the flags a person confirmed. A cart that stops when someone is in the aisle. A paper list for the hour the circuit drops.\n",
+  "companion": {
+    "medium": "podcast",
+    "move": "opinion",
+    "source": {
+      "show": "Moonshots with Peter Diamandis",
+      "episode": "304",
+      "title": "Chamath: AGI Is Here, Anthropic’s $100B Giveaway, Elon’s SpaceX Shares for 72M Kids",
+      "url": "https://www.youtube.com/watch?v=kAwG9E1W_ME&t=2698",
+      "published": "2026-10-21",
+      "recorded": "2026-10-20",
+      "cue": "44:58",
+      "speaker": "Chamath Palihapitiya",
+      "hosts": ["Peter Diamandis", "Salim Ismail", "Dave Blundin", "Alexander Wissner-Gross"]
+    },
+    "claim": "A guest says AGI is already here and that it cannot spread because the build-out is missing, not because the model is weak.",
+    "quote": "I do think that we have achieved AGI. It cannot diffuse.",
+    "interpretation": "That is one guest's judgement on 20 Oct 2026. The sentence does not define AGI. Future Forge's scenario assumption is separate from this quote. The fictional shift does not establish the guest's claim.",
+    "evidence": {
+      "status": "disputed",
+      "limits": "Recorded 20 Oct 2026. The sentence does not define AGI. The build-out point can still be the constraint if the premise is early.",
+      "reviewed": "2026-10-21"
+    },
+    "collaboration": "independent",
+    "invitation": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+    "exploration": {
+      "version": 1,
+      "focus": "The night's parcels have to be ready for the morning truck. The guest's claim about AGI is not what this shift has to prove.",
+      "bridge": "The episode argues that deployment is lagging capability. Assume the defined AI capability is available here. What would you invent so it actually helps this shift?",
+      "premise": {
+        "mode": "assumed",
+        "bankId": "companion-dock-test",
+        "statement": "For this Quest, assume an AI can reliably inspect visible parcel damage and produce workable sorting instructions across this dock's ordinary parcel mix. That capability is available in the scenario from its starting year. Power, physical handling, staffing, and responsibility are not solved for you.",
+        "grants": [
+          {
+            "predictionId": "dock-inspection-2026",
+            "scope": "Reliable inspection of visible parcel damage and workable sorting instructions for this dock's ordinary parcel mix, from the Quest's starting year.",
+            "limits": "Power, physical handling, staffing, and responsibility are not granted. The grant is not a capable robot and not a proof that AGI exists."
+          }
+        ]
+      },
+      "pressureLinks": {
+        "local": {
+          "connection": "The night is stuck when damaged parcels are not ready for the truck.",
+          "criterion": "Credit a usable workflow that gets ordinary parcels ready. Saying the AI is capable is not relief."
+        },
+        "global": {
+          "connection": "A bench demo does not keep the dock running.",
+          "criterion": "Credit a way to operate past the demo: power, integration, equipment, or a different arrangement. Build infrastructure or use AGI alone earns nothing."
+        },
+        "support": {
+          "connection": "Someone still has to take the cases the grant does not cover.",
+          "criterion": "Credit a workable split of who handles out-of-scope cases. Human in the loop without naming who does the work earns nothing."
+        }
+      },
+      "challenges": {
+        "nature": {
+          "connection": "The feeder cannot carry the belt and the demo at the same time.",
+          "question": "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+        },
+        "moloch": {
+          "connection": "The vendor is paid for the demo. The crew pays for the failures.",
+          "question": "The vendor gets paid for a successful demo, while the crew pays for failures. What changes that incentive in your approach?"
+        },
+        "ethicist": {
+          "connection": "A correct flag can still be overruled by the dispatch deadline.",
+          "question": "The system correctly flags a parcel, but the dispatch deadline creates pressure to ship it anyway. Who makes that decision, and whose interests does your design protect?"
+        },
+        "stakeholder": {
+          "connection": "A pilot that worked once still has to survive ordinary shifts.",
+          "question": "The pilot worked once. Who can keep your arrangement staffed, maintained, and funded through ordinary shifts?"
+        }
+      },
+      "reflectionPrompt": "With that AI capability available, what did your invention make possible, and which constraint mattered most?"
+    }
+  },
+  "mission": {
+    "id": "companion-moonshots-304",
+    "globalId": "automation",
+    "title": "Night shift at Kiln Ferry",
+    "place": "Kiln Ferry parcel dock",
+    "startYear": 2026,
+    "collapseYear": 2034,
+    "yearsPerTurn": 2,
+    "pressure": {
+      "local": {
+        "label": "Shift backlog",
+        "description": "The morning truck needs the night's parcels ready. A usable workflow counts. Saying the AI is capable does not.",
+        "pressure": 3,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "global": {
+        "label": "Build-out",
+        "description": "The dock has to keep working past a bench demo: power, integration, equipment, or a different arrangement. Naming infrastructure or AGI is not a plan.",
+        "pressure": 2,
+        "pressureRise": 1,
+        "winMax": 1
+      },
+      "support": {
+        "label": "Handoff",
+        "description": "Out-of-scope cases need a person who does that work. A checker who redoes every granted inspection is not the split.",
+        "pressure": 2,
+        "pressureRise": 0,
+        "winMax": 1
+      }
+    },
+    "scene": "Kiln Ferry is a fictional night parcel dock. Two people face damaged parcels and a vendor demo that can name the damage on a lit bench. The feeder circuit drops when the belt and the demo run together. The morning truck still expects a clean count.",
+    "briefMd": "## The place\n\nTwo people keep the night at Kiln Ferry, an inland parcel dock. The belt coughs. One feeder circuit feeds the lights, the belt, and a bench where a vendor demo can name a torn parcel.\n\nThe demo works on that bench. It does not work as the shift. When the belt is up, the circuit drops. The morning truck still wants a count.\n\n## The bigger problem\n\nA tool can look finished on a bench and still be impossible to run where the work is. The constraint is the build-out: power, a checker, and a shift that can keep going when the demo stops.\n\n## Your job\n\nGet the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.\n",
+    "briefBeats": [
+      {
+        "id": "place-1",
+        "role": "place",
+        "title": "The place",
+        "bodyMd": "Two people keep the night at Kiln Ferry, an inland parcel dock. The belt coughs. One feeder circuit feeds the lights, the belt, and a bench where a vendor demo can name a torn parcel.",
+        "imageUrl": "assets/quests/companion-moonshots-304/place-1.jpg",
+        "imagePrompt": "Photoreal documentary still of a night parcel dock. Two workers in dark jackets stand at a short conveyor. A grey cabinet feeds cables to the belt, the lamps, and a bench. A torn parcel sits in cool light. Blank parcel faces, unmarked equipment."
+      },
+      {
+        "id": "place-2",
+        "role": "place",
+        "title": "The circuit",
+        "bodyMd": "The demo works on that bench. It does not work as the shift. When the belt is up, the circuit drops. The morning truck still wants a count.",
+        "imageUrl": "assets/quests/companion-moonshots-304/place-2.jpg",
+        "imagePrompt": "Same night dock and same two workers. The belt is moving and the lamps are out, so the bay is mostly dark. One worker holds a parcel. A faint warm glow comes from the far door. Blank parcel faces, unmarked equipment."
+      },
+      {
+        "id": "strain-1",
+        "role": "strain",
+        "title": "The bigger problem",
+        "bodyMd": "A tool can look finished on a bench and still be impossible to run where the work is. The constraint is the build-out: power, a checker, and a shift that can keep going when the demo stops.",
+        "imageUrl": "assets/quests/companion-moonshots-304/strain-1.jpg",
+        "imagePrompt": "Same dock and same two workers. A steel bench is brightly lit like a finished demo, with one clean parcel under a simple camera. The belt and the rest of the floor are dark. The workers stand in that darker area. Blank parcel faces, unmarked equipment."
+      },
+      {
+        "id": "job-1",
+        "role": "job",
+        "title": "Your job",
+        "bodyMd": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+        "imageUrl": "assets/quests/companion-moonshots-304/job-1.jpg",
+        "imagePrompt": "Same dock and same two workers at dawn. Pale light fills the roll-up door. The crew is still at the conveyor as morning arrives. Blank parcel faces, unmarked equipment."
+      }
+    ],
+    "stakeholder": "Nia, night lead",
+    "suggested": ["ai", "robots", "computing"],
+    "suggestedWhy": {
+      "ai": "A vision assist flags damaged parcels before dawn, easing Shift backlog.",
+      "robots": "A cart that stops for people can carry parcels, easing Build-out.",
+      "computing": "A dock checklist keeps the last call with people, easing Handoff."
+    },
+    "visionTheme": "rebuild-city"
+  }
+}

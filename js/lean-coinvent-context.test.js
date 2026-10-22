@@ -75,6 +75,33 @@ describe("leanCoInventContext assess-feasibility", () => {
   });
 });
 
+describe("leanCoInventContext sourceConstraint", () => {
+  it("keeps a non-empty limit beside grounding on assess-feasibility", () => {
+    const ctx = leanCoInventContext(
+      "assess-feasibility",
+      {
+        inventionHow: "A bench demo names the parcel.",
+        selectedTechIds: ["ai"],
+        grounding: "Honest limits: a bench is not a shift.",
+        sourceConstraint: "Opinion, disputed. Question: What stays with people?",
+      },
+      leftoverSnap
+    );
+    assert.equal(ctx.grounding, "Honest limits: a bench is not a shift.");
+    assert.equal(ctx.sourceConstraint, "Opinion, disputed. Question: What stays with people?");
+    assert.equal(ctx.grounding.includes("disputed"), false);
+  });
+
+  it("omits an empty source limit", () => {
+    const ctx = leanCoInventContext(
+      "assess-feasibility",
+      { inventionHow: "x", selectedTechIds: ["ai"], sourceConstraint: "  " },
+      leftoverSnap
+    );
+    assert.equal(Object.hasOwn(ctx, "sourceConstraint"), false);
+  });
+});
+
 describe("leanCoInventContext other lean modes", () => {
   it("strips inventionName from score-pathway extra spread", () => {
     const ctx = leanCoInventContext(

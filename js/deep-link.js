@@ -1,10 +1,11 @@
 /**
  * Quest deep links: parse / match / build share URLs.
- * Canonical public form: https://warmersun.com/forge/?q=<quest-id>
- * The forge hop forwards search to the Funnel game host.
+ * A link is this page's origin plus ?q=<quest-id>.
+ * https://ff.warmersun.com/?q=<id> and http://127.0.0.1:8765/?q=<id>
+ * name different servers. The id is what travels between them.
  */
 
-/** Public invent hop — share this, never the Funnel *.ts.net hostname. */
+/** Historical public hop. Share helpers do not invent this origin. */
 export const PUBLIC_FORGE_ORIGIN = "https://warmersun.com/forge";
 
 const TOKEN_MAX = 120;
@@ -66,7 +67,39 @@ export function shareOriginFromEnv(env = typeof process !== "undefined" ? proces
 }
 
 /**
- * Funnel host copies the public hop URL; localhost copies itself.
+ * Page origin for a copied quest link. Strips /index.html.
+ * Uses the origin when the path is /. Otherwise origin plus the path, no trailing slash.
+ * @param {string|{ href?: string, origin?: string, pathname?: string }|null|undefined} loc
+ * @returns {string}
+ */
+export function shareOriginFromLocation(loc) {
+  let url;
+  try {
+    if (typeof loc === "string") {
+      if (!loc.trim()) return "";
+      url = new URL(loc);
+    } else if (loc && typeof loc === "object") {
+      if (loc.href) url = new URL(String(loc.href));
+      else if (loc.origin) {
+        const path = loc.pathname != null ? String(loc.pathname) : "/";
+        url = new URL(path, `${String(loc.origin).replace(/\/+$/, "")}/`);
+      } else return "";
+    } else return "";
+  } catch {
+    return "";
+  }
+  let path = url.pathname || "/";
+  if (path.endsWith("/index.html")) {
+    path = path.slice(0, -"/index.html".length) || "/";
+  }
+  if (path !== "/" && path.endsWith("/")) path = path.replace(/\/+$/, "");
+  const composed = path === "/" || path === "" ? url.origin : `${url.origin}${path}`;
+  return normalizeShareOrigin(composed);
+}
+
+/**
+ * Explicit FF_SHARE_ORIGIN (via health) wins. Otherwise the page origin.
+ * A missing origin stays empty. This does not rewrite a host to another site.
  * @param {{
  *   healthShareOrigin?: string|null,
  *   hostname?: string,
@@ -77,13 +110,9 @@ export function shareOriginFromEnv(env = typeof process !== "undefined" ? proces
 export function resolveShareOrigin(opts = {}) {
   const fromHealth = normalizeShareOrigin(opts.healthShareOrigin);
   if (fromHealth) return fromHealth;
-  const host = String(opts.hostname || "");
-  if (host === "warmersun.com" || host.endsWith(".warmersun.com") || host.endsWith(".ts.net")) {
-    return PUBLIC_FORGE_ORIGIN;
-  }
   const loc = normalizeShareOrigin(opts.locationOrigin);
   if (loc) return loc;
-  return PUBLIC_FORGE_ORIGIN;
+  return "";
 }
 
 /**
@@ -94,8 +123,23 @@ export function resolveShareOrigin(opts = {}) {
 export function buildQuestShareUrl(questId, origin) {
   const id = sanitizeQuestToken(questId);
   if (!id) return "";
-  const base = normalizeShareOrigin(origin) || PUBLIC_FORGE_ORIGIN;
+  const base = normalizeShareOrigin(origin);
+  if (!base) return "";
   return `${base}/?q=${encodeURIComponent(id)}`;
+}
+
+/**
+ * What ?q= should do with a lookup status.
+ * launch starts play. keep leaves the query for sign-in or subscribe.
+ * missing leaves the query and says this server does not have the quest.
+ * @param {unknown} status
+ * @returns {"launch"|"keep"|"missing"|"unavailable"}
+ */
+export function questLinkOutcome(status) {
+  if (status === "loaded") return "launch";
+  if (status === "sign_in_required" || status === "subscription_required") return "keep";
+  if (status === "not_found" || status === "invalid") return "missing";
+  return "unavailable";
 }
 
 /**

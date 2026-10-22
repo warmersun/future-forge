@@ -23,6 +23,7 @@ Module: `js/sim/world-foresight.js` (validation, active bank, selectors). Loader
 - A side-loaded bank **replaces** the default. It does not merge.
 - `GET /api/predictions` returns `{ ok, source, fallback, count, bank, errors }`. `?refresh=1` re-reads the source. Local paths are reported repo-relative.
 - The browser fetches `/api/predictions` at startup and activates the bank with `setWorldForesightBank`. Without a server (static hosting) the bank is empty and the year dialog reads as a quiet year.
+- An assumed companion Quest pins the loaded bank for that run when `exploration.premise.bankId` matches. Continue stores that snapshot. A mismatched or missing bank does not start the run on the default bank. Year bulletins, outcome cards, and the AI clock for that run read the pinned pool. Other requests keep the process-global bank. Side-load a test bank with `FF_PREDICTIONS_FILE=test/fixtures/predictions/companion-dock-test.json npm start`.
 
 ## The AI world clock
 

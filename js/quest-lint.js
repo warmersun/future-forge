@@ -119,6 +119,7 @@ export function lintQuestTile(rawTile, validated, opts = {}) {
   lintResources(pick("resources"), warn);
   lintGrounding(pick("grounding"), warn);
   lintResearch(tile.research, warn);
+  lintCompanion(tile, mission, missionIn, warn);
   lintSuggestedWhy(suggested, mission.suggestedWhy || pick("suggestedWhy"), pressure, warn);
   lintLearning(mission, pick, warn);
 
@@ -291,6 +292,66 @@ function lintGrounding(grounding, warn) {
         `"${s.title}" is not part of the grounding chain; move tutor-only notes to aiTutorContext.`
       );
     }
+  }
+}
+
+function lintCompanion(tile, mission, missionIn, warn) {
+  const raw =
+    tile?.companion !== undefined
+      ? tile.companion
+      : missionIn?.companion !== undefined
+        ? missionIn.companion
+        : mission?.companion;
+  if (!raw || typeof raw !== "object") return;
+  const src = raw.source && typeof raw.source === "object" ? raw.source : {};
+  const sponsor = str(tile.sponsorName || mission?.sponsorName || missionIn?.sponsorName)
+    .trim()
+    .toLowerCase();
+  if (sponsor) {
+    const names = [src.author, src.speaker, src.show, src.publication, raw.partnerName]
+      .map((s) => str(s).trim().toLowerCase())
+      .filter(Boolean);
+    if (names.includes(sponsor)) {
+      warn(
+        "companion_author_as_sponsor",
+        "sponsorName matches the source byline, show, or partner. A source credit is not a sponsor."
+      );
+    }
+  }
+  const url = str(src.url).trim();
+  const sources = Array.isArray(tile.research?.sources) ? tile.research.sources : [];
+  const urls = sources.map((s) => str(typeof s === "string" ? s : s?.url).trim());
+  if (url && !urls.includes(url)) {
+    warn(
+      "companion_source_not_in_research",
+      "Put source.url in research.sources. research is the citation and is not shown to the player."
+    );
+  }
+  const invitation = str(raw.invitation).trim();
+  const encourage = str(
+    tile.spotlight?.encourageCopy ||
+      mission?.spotlight?.encourageCopy ||
+      missionIn?.spotlight?.encourageCopy
+  );
+  const brief = str(tile.briefMd || missionIn?.briefMd || mission?.briefMd);
+  if (invitation && !encourage.includes(invitation) && !brief.includes(invitation)) {
+    warn(
+      "companion_invitation_not_in_quest",
+      "The invitation should be the Quest ask, inside encourageCopy or briefMd."
+    );
+  }
+  const limits = str(raw.evidence?.limits).trim();
+  if (limits && limits.length < 40) {
+    warn(
+      "companion_limits_thin",
+      "evidence.limits should say what the source does not establish, in at least 40 characters."
+    );
+  }
+  if (!raw.exploration) {
+    warn(
+      "companion_exploration_missing",
+      "A source-connected Quest should include companion.exploration. Legacy files stay valid."
+    );
   }
 }
 

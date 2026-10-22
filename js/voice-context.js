@@ -310,6 +310,25 @@ export function voiceContextFingerprint(context) {
     String(c.guidance || "").trim(),
     String(c.aiTutorContext || "").trim(),
     c.metricsPending ? "1" : "0",
+    String(c.grounding || "").trim(),
+    String(c.sourceConstraint || "").trim(),
+    String(c.sourceInquiry?.claim || "").trim(),
+    String(c.sourceInquiry?.invitation || "").trim(),
+    String(c.sourceInquiry?.premise?.mode || "").trim(),
+    String(c.sourceInquiry?.premise?.statement || "").trim(),
+    (Array.isArray(c.sourceInquiry?.premise?.grants) ? c.sourceInquiry.premise.grants : [])
+      .map((grant) =>
+        [
+          grant?.predictionId || "",
+          grant?.status || "",
+          grant?.scope || "",
+          grant?.limits || "",
+          grant?.year || "",
+        ].join(":")
+      )
+      .join("|"),
+    String(c.predictionsBankId || "").trim(),
+    c.predictionsBank ? JSON.stringify(c.predictionsBank.predictions || []) : "",
   ].join("\u0001");
 }
 

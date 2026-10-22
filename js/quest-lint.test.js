@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { QUEST_TILE_SCHEMA, validateQuestTile, validateQuestDocument } from "./quest-tile.js";
 import { lintQuestTile, formatLintWarnings } from "./quest-lint.js";
 
@@ -236,6 +237,21 @@ describe("quest-lint", () => {
     assert.ok(!has(codes, "summary_theme_lede"));
     assert.ok(!has(codes, "tech_named_in_player_text"));
     assert.ok(!codes.includes("grounding_missing"));
+  });
+
+  it("warns when a companion omits exploration and stays quiet when it is present", () => {
+    const fixture = JSON.parse(
+      fs.readFileSync(new URL("../test/fixtures/quests/companion-moonshots-304.json", import.meta.url), "utf8")
+    );
+    const v = validateQuestDocument(fixture);
+    assert.equal(v.ok, true, v.details?.join(","));
+    const withExploration = lintQuestTile(fixture, v).warnings.map((w) => w.code);
+    assert.equal(withExploration.includes("companion_exploration_missing"), false);
+    const legacy = structuredClone(fixture);
+    delete legacy.companion.exploration;
+    const codes = lintQuestTile(legacy, v).warnings.map((w) => w.code);
+    assert.ok(codes.includes("companion_exploration_missing"));
+    assert.equal(validateQuestDocument(legacy).ok, true);
   });
 
   it("formatLintWarnings prints WARN lines", () => {

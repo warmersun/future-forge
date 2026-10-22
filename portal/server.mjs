@@ -203,18 +203,21 @@ import {
   FAST_EVAL_MODES,
   isFastEvalMode,
   fastEvalUserContent,
+  fastEvalSystem,
   sanitizeFast,
   reasoningEffortForCoInvent,
   worldClockContext,
   WORLD_CLOCK_TIMING_LINE,
   WORLD_CLOCK_CONTEXT_LINE,
 } from "../js/server/fast-eval.mjs";
+import { sanitizeSourceInquiry, scenarioGrantSuffix } from "../js/companion-context.js";
 import { buildImageLlmInspect, buildLlmInspect } from "../js/server/llm-inspect.mjs";
 import {
   GROUNDING_HINT,
   HEX_INVENT_HINT,
   TUTOR_HINT,
   resolveGrounding,
+  resolveSourceConstraint,
   resolveTutorContext,
   resolveSpotlightAdvance,
   isTutorMode,
@@ -511,6 +514,7 @@ Hard rules:
 - Never say a category is locked until a year.
 - ${WORLD_CLOCK_CONTEXT_LINE} For assess-feasibility: ${WORLD_CLOCK_TIMING_LINE}
 - If context.grounding is set, treat it as the authoritative source of truth for this Quest along the chain: emTech enables product category → capabilities → trends → predictions → milestones unlock use cases → inventable applications (+ honest limits). Prefer product-category grain over generic tech-id encyclopedia when advising or assessing.
+- If context.sourceConstraint is set, it is a separate limit on the cited episode or post. It is not part of grounding and it is not capability truth. An idea, opinion, trend, or prediction is not current capability. A milestone is only as firm as its evidence status. Disagreement with the speaker is a valid invention. Do not say the game verified the source. Do not require agreement or a product purchase.
 
 Respond with a single JSON object (no markdown fences):
 {
@@ -562,6 +566,7 @@ Role:
   - Give the one matching page after the spoken paragraph when: this is the next SEQUENCE idea they have not asked past and a row exists for it; a listed misconception just fired and that row names a page; they ask for the long version, the picture, or "where is this written?"
   - Never use a page as a substitute for the invent gate.
 - If context.grounding is present, treat it as authoritative capability truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits). Prefer that grain over the whole emTech tray card.
+- If context.sourceConstraint is set, it is a separate limit on the cited episode or post. It is not part of grounding and it is not capability truth. An idea, opinion, trend, or prediction is not current capability. A milestone is only as firm as its evidence status. Disagreement with the speaker is a valid invention. Do not say the game verified the source. Do not require agreement or a product purchase.
 - Scaffold the learner to **apply** unlocked use cases as a local **application** in this place/year (pilot-honest) — do not dump a finished invention or expand to unlimited bare emTech.
 - If context.spotlightAdvance is set, this lesson is pegged to a real recent advance (title, summary, asOf). The player-facing story deliberately never names it. Once the learner has the story (they have read the briefing, or asked about the place or what could help), name the advance, the emTech family it belongs to, and where it sits on its curve: what just became possible, and what is still years out. Say it in plain words first, then the term. Do not lead with the advance before the story, and never present it as the answer to invent — it is what makes the invent possible here.
 - Stay local to this place/year. emTech categories are always pickable; feasibility timing judges CLAIMS vs year/grounding, not card locks.
@@ -747,6 +752,7 @@ function buildUserPayload({ messages, context, mode }) {
   const focusTechs = available.filter((t) => selectedIds.has(t.id));
 
   const grounding = resolveGrounding(context);
+  const sourceConstraint = resolveSourceConstraint(context);
   const tutorMode = isTutorMode(context);
   const aiTutorContext = tutorMode ? resolveTutorContext(context) : null;
   const tutorModes = new Set([
@@ -782,6 +788,7 @@ function buildUserPayload({ messages, context, mode }) {
       selectedTechIds: context?.selectedTechIds || [],
       stack: focusTechs.length ? focusTechs : available.slice(0, 6),
       grounding,
+      sourceConstraint,
       mission: context?.challenge
         ? {
             title: context.challenge.title || null,
@@ -821,6 +828,7 @@ function buildUserPayload({ messages, context, mode }) {
     guidance: context?.guidance || null,
     depthCharacter: context?.depthCharacter || null,
     grounding,
+    sourceConstraint,
     isLearningModule: tutorMode,
     tutorMode,
     aiTutorContext,
@@ -855,6 +863,9 @@ function buildUserPayload({ messages, context, mode }) {
       "emTech categories are always pickable; feasibility timing judges claims in how-it-works vs year." +
       (grounding
         ? " When grounding is present, treat it as authoritative Quest source-of-truth."
+        : "") +
+      (sourceConstraint
+        ? " sourceConstraint is a separate limit on the cited source. It is not grounding and it is not capability truth."
         : "") +
       (tutorMode
         ? " Tutor mode: one current idea; short teaching paragraph (analogy + one mechanism); no quizzes; answer the question they asked; explain unfamiliar terms on first use; use aiTutorContext as hidden curriculum; explain first then at most one matching lesson link — never a URL alone, never rewrite a page, never send them away to invent."
@@ -1044,12 +1055,21 @@ function composeCoInventCall(body) {
     !fastSpec && isTutorMode(context) && mode !== "generate-scenarios";
   const searchTools = searchToolsForMode(mode, AI_SEARCH_ENABLED);
   let systemContent = fastSpec
-    ? fastSpec.system
+    ? fastEvalSystem(mode, context)
     : isTutor
       ? TUTOR_SYSTEM_PROMPT
       : SYSTEM_PROMPT;
   if (searchTools) {
     systemContent = `${systemContent}\n${SEARCH_SYSTEM_LINE}`;
+  }
+  if (!fastSpec) {
+    const inquiry = sanitizeSourceInquiry(context.sourceInquiry, {
+      mode: isTutor ? "chat" : mode,
+      bank: context.predictionsBank || null,
+      year: context.year,
+    });
+    const suffix = scenarioGrantSuffix(inquiry, isTutor ? "chat" : mode);
+    if (suffix) systemContent += suffix;
   }
   const userContent = fastSpec
     ? fastEvalUserContent(mode, context)

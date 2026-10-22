@@ -39,6 +39,7 @@ Write the tile from **`references/output-contract.md`**. New tiles use a spotlig
 | **`references/economy.md`** | Difficulty lab: what challenging means, tech cost, two-act meters |
 | **`references/output-contract.md`** | Skeleton, optional extensions, recipes A–G |
 | **`references/learning-and-sponsor.md`** | Tutor lessons, multi-lesson sets, sponsors |
+| **`references/companion.md`** | Optional source stage: one podcast or post, one move, one question, optional assumed premise |
 | **`references/brief-beats.md`** | How the briefing walk derives cards; optional authored `briefBeats` |
 | **`references/tech-ids.md`**, **`references/sensitivity.md`** | Valid ids; charged themes |
 
@@ -59,6 +60,7 @@ Write for these surfaces, not for the JSON. Numbers are character clips in the e
 | `aiTutorContext` | — | Conversational tutor only (never fast-eval) | 50k |
 | `rules` | HUD weather + honesty gates | Fast-eval | body 280 |
 | `research`, `visionTheme`, `placement`, `tags`, `author` | — | — | stored, never shown or read |
+| `companion` | Stage before play, catalog From-line, workshop premise | `sourceConstraint` beside `grounding`, ≤500; claim and grants in `sourceInquiry` | see `references/companion.md` |
 
 ## Hard rules
 

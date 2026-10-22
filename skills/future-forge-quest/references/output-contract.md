@@ -106,7 +106,8 @@ All of these may appear on **one** tile:
 | **AI capability truth** | `grounding` (Markdown) | **Recommended** for every spotlight — chain: emTech → product category → capabilities → trends/predictions → milestone → use cases → applications (+ honest limits). See `grounding-template.md`. **This is where tech hints live.** First 3000 chars reach fast-eval. |
 | **Plottable Wait trends** | `trends` (capability-trend objects), `spotlightTrends` (ids) | Show log-scale charts on Wait; may override/add to warmersun catalog. See schema + skill `future-forge-trends` |
 | **Learning / tutor** | `isLearningModule: true`, `aiTutorContext` (hidden), `module` / `lesson` / `totalLessons` | Sequential lessons; solo tutor UI + prompt. Multi-lesson sets also get a `kind: "module"` wrapper. **The tutor names the spotlight advance after the player has the story.** Defaults to `access: "account"`. |
-| **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Attribution; capability still in `grounding` |
+| **Sponsor** | `sponsorName`, `sponsorBanner` (**text only**) | Funding credit. Source credit is `companion`, not this name |
+| **Companion** | `companion` | One podcast or post, one move, one question before play. Optional `exploration` states an assumed premise. Rules: `companion.md`. Omit the key for an ordinary quest |
 | **Briefing cards** | `briefBeats` (3–8) | Tighter captions + shipped stills (`imageUrl`) or live `imagePrompt`; omit if `briefMd` already steps well |
 | **Local rules** | `rules` (1–3) | Named regulation / law / policy / ban already on the books. Weather, not the invent. Lobby can write more in play. Side effect: switches off default theme backlash on `automation` / `rogue-si`. |
 
@@ -273,6 +274,7 @@ Only when captions should be tighter than `briefMd`, you want **shipped stills**
 | Single-tech shelf | `suggested: ["<techId>"]` is valid but leaves the player one card; prefer 1–2 partners |
 | Not a lesson | Omit all learning keys |
 | No sponsor | Omit `sponsorName` / `sponsorBanner` |
+| No source stage | Omit `companion` |
 | Focused meters | Omit unused `pressure` roles |
 | Default walkthrough | Omit `briefBeats` — engine derives from `briefMd` paragraphs |
 | No local policy weather | Omit `rules` |

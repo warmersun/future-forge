@@ -1,0 +1,296 @@
+{
+  "label": "Synthetic test data. Not a real discovery and not a published forecast.",
+  "bankId": "companion-dock-test",
+  "companions": [
+    {
+      "id": "synthetic-milestone-article",
+      "label": "Synthetic test data. Not a real discovery and not a published forecast.",
+      "companion": {
+        "medium": "article",
+        "move": "milestone",
+        "source": {
+          "title": "synthetic-milestone-article (synthetic test data)",
+          "url": "https://example.com/synthetic-milestone-article",
+          "author": "Test Author",
+          "publication": "Test Notes"
+        },
+        "claim": "Synthetic test data. A bench note says visible parcel damage can be named in good light.",
+        "evidence": {
+          "status": "demonstrated",
+          "limits": "Synthetic test data. This note does not establish a real product, a forecast, or a scientific result.",
+          "reviewed": "2026-10-21"
+        },
+        "collaboration": "independent",
+        "invitation": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+        "exploration": {
+          "version": 1,
+          "focus": "Synthetic test data. The reported bench capability is granted at this dock. The night's parcels are still the problem.",
+          "bridge": "Synthetic test data. The fictional dock grants only the named inspection row. The source did not report this dock.",
+          "premise": {
+            "mode": "assumed",
+            "bankId": "companion-dock-test",
+            "statement": "For this Quest, assume the reported inspection capability is available on this dock's lit bench, inside the grant's scope. Power, physical handling, staffing, and responsibility are not solved for you.",
+            "grants": [
+              {
+                "predictionId": "dock-inspection-2026",
+                "scope": "Reliable inspection of visible parcel damage and workable sorting instructions for this dock's ordinary parcel mix, from the Quest's starting year.",
+                "limits": "Power, physical handling, staffing, and responsibility are not granted. The grant is not a capable robot and not a proof that AGI exists."
+              }
+            ]
+          },
+          "pressureLinks": {
+            "local": {
+              "connection": "The night is stuck when damaged parcels are not ready for the truck.",
+              "criterion": "Credit a usable workflow that gets ordinary parcels ready. Saying the AI is capable is not relief."
+            },
+            "global": {
+              "connection": "A bench demo does not keep the dock running.",
+              "criterion": "Credit a way to operate past the demo: power, integration, equipment, or a different arrangement. Build infrastructure or use AGI alone earns nothing."
+            },
+            "support": {
+              "connection": "Someone still has to take the cases the grant does not cover.",
+              "criterion": "Credit a workable split of who handles out-of-scope cases. Human in the loop without naming who does the work earns nothing."
+            }
+          },
+          "challenges": {
+            "nature": {
+              "connection": "The feeder cannot carry the belt and the demo at the same time.",
+              "question": "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+            },
+            "moloch": {
+              "connection": "The vendor is paid for the demo. The crew pays for the failures.",
+              "question": "The vendor gets paid for a successful demo, while the crew pays for failures. What changes that incentive in your approach?"
+            },
+            "ethicist": {
+              "connection": "A correct flag can still be overruled by the dispatch deadline.",
+              "question": "The system correctly flags a parcel, but the dispatch deadline creates pressure to ship it anyway. Who makes that decision, and whose interests does your design protect?"
+            },
+            "stakeholder": {
+              "connection": "A pilot that worked once still has to survive ordinary shifts.",
+              "question": "The pilot worked once. Who can keep your arrangement staffed, maintained, and funded through ordinary shifts?"
+            }
+          },
+          "reflectionPrompt": "This capability could enable the approach if the surrounding conditions hold."
+        }
+      }
+    },
+    {
+      "id": "synthetic-trend-post",
+      "label": "Synthetic test data. Not a real discovery and not a published forecast.",
+      "companion": {
+        "medium": "post",
+        "move": "trend",
+        "source": {
+          "title": "synthetic-trend-post (synthetic test data)",
+          "url": "https://example.com/synthetic-trend-post",
+          "author": "Test Author",
+          "publication": "Test Notes"
+        },
+        "claim": "Synthetic test data. A post says inspection instructions are becoming cheap enough for a small dock circuit.",
+        "evidence": {
+          "status": "proposed",
+          "limits": "Synthetic test data. This note does not establish a real product, a forecast, or a scientific result.",
+          "reviewed": "2026-10-21",
+          "scope": "Inspection cost at one night dock"
+        },
+        "collaboration": "independent",
+        "invitation": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+        "exploration": {
+          "version": 1,
+          "focus": "Synthetic test data. A cheaper threshold is granted. Power and staffing are still constrained.",
+          "bridge": "Synthetic test data. The fictional dock grants only the named inspection row. The source did not report this dock.",
+          "premise": {
+            "mode": "assumed",
+            "bankId": "companion-dock-test",
+            "statement": "For this Quest, assume inspection instructions are cheap enough to run on this dock's ordinary circuit from the row's year. Power, handling, and responsibility stay constrained.",
+            "grants": [
+              {
+                "predictionId": "dock-inspection-2026",
+                "scope": "Reliable inspection of visible parcel damage and workable sorting instructions for this dock's ordinary parcel mix, from the Quest's starting year.",
+                "limits": "Power, physical handling, staffing, and responsibility are not granted. The grant is not a capable robot and not a proof that AGI exists."
+              }
+            ]
+          },
+          "pressureLinks": {
+            "local": {
+              "connection": "The night is stuck when damaged parcels are not ready for the truck.",
+              "criterion": "Credit a usable workflow that gets ordinary parcels ready. Saying the AI is capable is not relief."
+            },
+            "global": {
+              "connection": "A bench demo does not keep the dock running.",
+              "criterion": "Credit a way to operate past the demo: power, integration, equipment, or a different arrangement. Build infrastructure or use AGI alone earns nothing."
+            },
+            "support": {
+              "connection": "Someone still has to take the cases the grant does not cover.",
+              "criterion": "Credit a workable split of who handles out-of-scope cases. Human in the loop without naming who does the work earns nothing."
+            }
+          },
+          "challenges": {
+            "nature": {
+              "connection": "The feeder cannot carry the belt and the demo at the same time.",
+              "question": "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+            },
+            "moloch": {
+              "connection": "The vendor is paid for the demo. The crew pays for the failures.",
+              "question": "The vendor gets paid for a successful demo, while the crew pays for failures. What changes that incentive in your approach?"
+            },
+            "ethicist": {
+              "connection": "A correct flag can still be overruled by the dispatch deadline.",
+              "question": "The system correctly flags a parcel, but the dispatch deadline creates pressure to ship it anyway. Who makes that decision, and whose interests does your design protect?"
+            },
+            "stakeholder": {
+              "connection": "A pilot that worked once still has to survive ordinary shifts.",
+              "question": "The pilot worked once. Who can keep your arrangement staffed, maintained, and funded through ordinary shifts?"
+            }
+          },
+          "reflectionPrompt": "At this assumed level, this approach becomes worth trying."
+        }
+      }
+    },
+    {
+      "id": "synthetic-idea-post",
+      "label": "Synthetic test data. Not a real discovery and not a published forecast.",
+      "companion": {
+        "medium": "post",
+        "move": "idea",
+        "source": {
+          "title": "synthetic-idea-post (synthetic test data)",
+          "url": "https://example.com/synthetic-idea-post",
+          "author": "Test Author",
+          "publication": "Test Notes"
+        },
+        "claim": "Synthetic test data. A note proposes sorting instructions from a vision check as the enabling mechanism.",
+        "evidence": {
+          "status": "proposed",
+          "limits": "Synthetic test data. This note does not establish a real product, a forecast, or a scientific result.",
+          "reviewed": "2026-10-21"
+        },
+        "collaboration": "independent",
+        "invitation": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+        "exploration": {
+          "version": 1,
+          "focus": "Synthetic test data. The selected mechanism is granted. The rest of the shift is still to invent.",
+          "bridge": "Synthetic test data. The fictional dock grants only the named inspection row. The source did not report this dock.",
+          "premise": {
+            "mode": "assumed",
+            "bankId": "companion-dock-test",
+            "statement": "For this Quest, assume that enabling mechanism works for ordinary visible parcels. Invent the rest of the shift. Handling and power are not granted.",
+            "grants": [
+              {
+                "predictionId": "dock-inspection-2026",
+                "scope": "Reliable inspection of visible parcel damage and workable sorting instructions for this dock's ordinary parcel mix, from the Quest's starting year.",
+                "limits": "Power, physical handling, staffing, and responsibility are not granted. The grant is not a capable robot and not a proof that AGI exists."
+              }
+            ]
+          },
+          "pressureLinks": {
+            "local": {
+              "connection": "The night is stuck when damaged parcels are not ready for the truck.",
+              "criterion": "Credit a usable workflow that gets ordinary parcels ready. Saying the AI is capable is not relief."
+            },
+            "global": {
+              "connection": "A bench demo does not keep the dock running.",
+              "criterion": "Credit a way to operate past the demo: power, integration, equipment, or a different arrangement. Build infrastructure or use AGI alone earns nothing."
+            },
+            "support": {
+              "connection": "Someone still has to take the cases the grant does not cover.",
+              "criterion": "Credit a workable split of who handles out-of-scope cases. Human in the loop without naming who does the work earns nothing."
+            }
+          },
+          "challenges": {
+            "nature": {
+              "connection": "The feeder cannot carry the belt and the demo at the same time.",
+              "question": "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+            },
+            "moloch": {
+              "connection": "The vendor is paid for the demo. The crew pays for the failures.",
+              "question": "The vendor gets paid for a successful demo, while the crew pays for failures. What changes that incentive in your approach?"
+            },
+            "ethicist": {
+              "connection": "A correct flag can still be overruled by the dispatch deadline.",
+              "question": "The system correctly flags a parcel, but the dispatch deadline creates pressure to ship it anyway. Who makes that decision, and whose interests does your design protect?"
+            },
+            "stakeholder": {
+              "connection": "A pilot that worked once still has to survive ordinary shifts.",
+              "question": "The pilot worked once. Who can keep your arrangement staffed, maintained, and funded through ordinary shifts?"
+            }
+          },
+          "reflectionPrompt": "If that mechanism works as assumed, this is what the invention would do with it."
+        }
+      }
+    },
+    {
+      "id": "synthetic-prediction-post",
+      "label": "Synthetic test data. Not a real discovery and not a published forecast.",
+      "companion": {
+        "medium": "post",
+        "move": "prediction",
+        "source": {
+          "title": "synthetic-prediction-post (synthetic test data)",
+          "url": "https://example.com/synthetic-prediction-post",
+          "author": "Test Author",
+          "publication": "Test Notes"
+        },
+        "claim": "Synthetic test data. A note forecasts reliable visible-damage inspection at this kind of dock in 2026.",
+        "evidence": {
+          "status": "prediction",
+          "limits": "Synthetic test data. This note does not establish a real product, a forecast, or a scientific result.",
+          "reviewed": "2026-10-21",
+          "horizon": "2026"
+        },
+        "collaboration": "independent",
+        "invitation": "Get the night's parcels ready for the morning truck without leaving the crew to absorb unsafe work or uncheckable decisions.",
+        "exploration": {
+          "version": 1,
+          "focus": "Synthetic test data. The forecast is granted from its bank year. It is not verified by playing.",
+          "bridge": "Synthetic test data. The fictional dock grants only the named inspection row. The source did not report this dock.",
+          "premise": {
+            "mode": "assumed",
+            "bankId": "companion-dock-test",
+            "statement": "For this Quest, assume that forecast holds inside the grant's scope from its bank year. Playing does not verify the forecast.",
+            "grants": [
+              {
+                "predictionId": "dock-inspection-2026",
+                "scope": "Reliable inspection of visible parcel damage and workable sorting instructions for this dock's ordinary parcel mix, from the Quest's starting year.",
+                "limits": "Power, physical handling, staffing, and responsibility are not granted. The grant is not a capable robot and not a proof that AGI exists."
+              }
+            ]
+          },
+          "pressureLinks": {
+            "local": {
+              "connection": "The night is stuck when damaged parcels are not ready for the truck.",
+              "criterion": "Credit a usable workflow that gets ordinary parcels ready. Saying the AI is capable is not relief."
+            },
+            "global": {
+              "connection": "A bench demo does not keep the dock running.",
+              "criterion": "Credit a way to operate past the demo: power, integration, equipment, or a different arrangement. Build infrastructure or use AGI alone earns nothing."
+            },
+            "support": {
+              "connection": "Someone still has to take the cases the grant does not cover.",
+              "criterion": "Credit a workable split of who handles out-of-scope cases. Human in the loop without naming who does the work earns nothing."
+            }
+          },
+          "challenges": {
+            "nature": {
+              "connection": "The feeder cannot carry the belt and the demo at the same time.",
+              "question": "The feeder cannot run the belt and the demo together. How does your shift still get parcels ready?"
+            },
+            "moloch": {
+              "connection": "The vendor is paid for the demo. The crew pays for the failures.",
+              "question": "The vendor gets paid for a successful demo, while the crew pays for failures. What changes that incentive in your approach?"
+            },
+            "ethicist": {
+              "connection": "A correct flag can still be overruled by the dispatch deadline.",
+              "question": "The system correctly flags a parcel, but the dispatch deadline creates pressure to ship it anyway. Who makes that decision, and whose interests does your design protect?"
+            },
+            "stakeholder": {
+              "connection": "A pilot that worked once still has to survive ordinary shifts.",
+              "question": "The pilot worked once. Who can keep your arrangement staffed, maintained, and funded through ordinary shifts?"
+            }
+          },
+          "reflectionPrompt": "If that forecast holds, here is an opportunity and a dependency the invention can now see."
+        }
+      }
+    }
+  ]
+}

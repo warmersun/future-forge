@@ -687,10 +687,12 @@ function passToNext(session, opts = {}) {
     for (const f of Object.values(next.invents || {})) {
       for (const x of f.stack || []) if (x.techId) stackIds.push(x.techId);
     }
+    const pinnedPool = next.questMeta?.mission?.pinnedPredictionsBank?.predictions;
     const highlights = foresightForYear(yearAfter, {
       techIds: stackIds,
       globalId: next.place?.globalId || next.questMeta?.globalId,
       seed: `${next.place?.mission?.id || "mp"}:r${next.round}:y${yearAfter}`,
+      ...(Array.isArray(pinnedPool) ? { pool: pinnedPool } : {}),
     });
     next.place.lastYearBulletin = {
       fromYear: yearBefore,

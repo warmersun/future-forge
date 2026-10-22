@@ -4,6 +4,9 @@
 
 import { sanitizeQuestId } from "./cloud-save.mjs";
 import { boardForWire } from "../hex/board-state.js";
+import { parseCompanion } from "../companion.js";
+import { BANK_PIN_MAX_BYTES } from "../companion-context.js";
+import { validatePredictionsBank } from "../sim/world-foresight.js";
 
 export const RUN_STATE_MAX_BYTES = 400_000;
 export const CHAT_LANE_MAX = 80;
@@ -90,7 +93,33 @@ export function sanitizeMissionStub(raw) {
   if (typeof raw.module === "string") stub.module = clipStr(raw.module, 120);
   if (raw.lesson != null) stub.lesson = optionalInt(raw.lesson, 0, 99);
   if (raw.totalLessons != null) stub.totalLessons = optionalInt(raw.totalLessons, 0, 99);
+  const access = raw.access === "open" || raw.access === "account" || raw.access === "paid" ? raw.access : "";
+  if (access) stub.access = access;
+  if (raw.companion && typeof raw.companion === "object" && !Array.isArray(raw.companion)) {
+    const parsed = parseCompanion(raw.companion, { access: access || "open" });
+    if (parsed.ok) stub.companion = parsed.value;
+  }
+  if (typeof raw.grounding === "string") {
+    const grounding = raw.grounding.trim().slice(0, 3000);
+    if (grounding && !looksInline(grounding)) stub.grounding = grounding;
+  }
   return stub;
+}
+
+function sanitizePinnedBank(raw) {
+  if (raw == null) return { bank: null, error: null };
+  if (typeof raw !== "object" || Array.isArray(raw)) return { bank: null, error: "bank_invalid" };
+  let json = "";
+  try {
+    json = JSON.stringify(raw);
+  } catch {
+    return { bank: null, error: "bank_invalid" };
+  }
+  if (looksInline(json)) return { bank: null, error: "bank_invalid" };
+  if (json.length > BANK_PIN_MAX_BYTES) return { bank: null, error: "bank_too_large" };
+  const validated = validatePredictionsBank(raw);
+  if (!validated.ok || !validated.bank) return { bank: null, error: "bank_invalid" };
+  return { bank: validated.bank, error: null };
 }
 
 export function sanitizePlay(raw) {
@@ -117,6 +146,13 @@ export function sanitizePlay(raw) {
     ideas: sanitizeIdeaCache(raw.ideas),
     sparkBatches: sanitizeSparkBatches(raw.sparkBatches),
   };
+  const pinned = sanitizePinnedBank(raw.predictionsBank);
+  if (pinned.error === "bank_too_large") play.predictionsBankError = "bank_too_large";
+  else if (pinned.bank) play.predictionsBank = pinned.bank;
+  if (typeof raw.reflection === "string") {
+    const reflection = clipStr(raw.reflection, 2000);
+    if (reflection.trim() && !looksInline(reflection)) play.reflection = reflection;
+  }
   return play;
 }
 
@@ -232,6 +268,9 @@ export function parseRunStateBody(body) {
     play: sanitizePlay(src.play),
     chats: sanitizeChats(src.chats),
   };
+  if (state.play?.predictionsBankError === "bank_too_large") {
+    return { ok: false, error: "bank_too_large" };
+  }
   const cleaned = stripDataDeep(state);
   const raw = JSON.stringify(cleaned);
   if (raw.length > RUN_STATE_MAX_BYTES) return { ok: false, error: "too_large" };

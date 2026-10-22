@@ -35,6 +35,9 @@ scenario-seeds.bak-*
 .agents/
 skills-lock.json
 docs/a-better-land/
-assets/quests/
+# Local quest stills stay out of git. The Kiln Ferry companion example is tracked with its fixture.
+assets/quests/*
+!assets/quests/companion-moonshots-304/
+!assets/quests/companion-moonshots-304/**
 quests/base-onchain-dollars*
 quests/spotlight-drones-sorrel-creek-2026.ffquest

@@ -17,8 +17,8 @@ import {
   voiceContextFingerprint,
   userTranscriptIsFinal,
   planVoiceContextFlush,
-} from "./voice-context.js?v=voice-16";
-import { knownVoiceId } from "./voice-choices.js?v=voice-16";
+} from "./voice-context.js?v=voice-19";
+import { knownVoiceId } from "./voice-choices.js?v=voice-19";
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Voice session failed";
@@ -36,7 +36,7 @@ const CONTEXT_DEBOUNCE_MS = 1000;
 /** Hold the first ~120 ms of a reply so a late TCP chunk does not punch a hole. */
 const PREROLL_SAMPLES = Math.round(VOICE_SAMPLE_RATE * 0.12);
 const PREROLL_MS = 120;
-const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-16", import.meta.url).href;
+const CAPTURE_WORKLET_URL = new URL("./voice-capture-worklet.js?v=voice-19", import.meta.url).href;
 
 /** @typedef {"idle"|"connecting"|"listening"|"speaking"|"error"} VoiceUiState */
 

@@ -17,10 +17,11 @@ import { briefMdFromLivedStory } from "../brief-beats.js";
 import { localIdeaSparks, rotateLocalIdeaSparks } from "../idea-cards.js";
 import { localScrutinyProposals } from "../scrutiny-shared.js";
 import { heuristicConverges, clampPathwayScore } from "../hex/evaluate.js";
+import { provisionalScenarioTiming, sanitizeSourceInquiry } from "../companion-context.js";
 
 /** Appended to invent/challenge modeHints when capability truth matters. */
 const GROUNDING_HINT =
-  " If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits); prefer that grain over generic tech-id encyclopedia; do not invent contradicting facts.";
+  " If context.grounding is present, treat it as authoritative Quest source-of-truth along its chain (product category, capabilities, trends/predictions, milestones, unlocked use cases → applications, honest limits); prefer that grain over generic tech-id encyclopedia; do not invent contradicting facts. If context.sourceConstraint is set, it is a separate limit on the cited episode or post and is not capability truth: an idea, opinion, trend, or prediction is not current capability; a milestone is only as firm as its evidence status; disagreement is valid; do not say the game verified the source; do not require agreement or a product purchase.";
 
 /** Hex workshop: apply buttons focus emTech / fill mint-box or pathway how, not essay/stack. */
 const HEX_INVENT_HINT =
@@ -35,6 +36,30 @@ const TUTOR_HINT =
  * @param {object|null|undefined} context
  * @returns {string|null}
  */
+/**
+ * Cited source limit. Never folded into grounding.
+ * @param {object|null|undefined} context
+ * @returns {string|null}
+ */
+function resolveSourceConstraint(context) {
+  const raw = context?.sourceConstraint;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  return raw.trim().slice(0, 500);
+}
+
+/**
+ * Player-facing head of the source limit, without the advisor rules.
+ * @param {object|null|undefined} context
+ * @returns {string}
+ */
+function sourceLimitExcerpt(context) {
+  const raw = resolveSourceConstraint(context);
+  if (!raw) return "";
+  const head = raw.split(" An idea, opinion,")[0].trim();
+  if (!head) return "";
+  return `Source limit: ${head.slice(0, 280)}. `;
+}
+
 function resolveGrounding(context) {
   if (typeof context?.grounding === "string" && context.grounding.trim()) {
     return String(context.grounding).trim().slice(0, 50_000);
@@ -492,6 +517,15 @@ function sanitizeScenarioList(rawList, context, techIds) {
 }
 
 function localAssessFeasibility(context, selected, map, base) {
+  const inquiry = sanitizeSourceInquiry(context?.sourceInquiry, {
+    mode: "assess-feasibility",
+    bank: context?.predictionsBank || null,
+    year: context?.year,
+  });
+  const provisional = provisionalScenarioTiming(inquiry?.premise);
+  if (provisional) {
+    return { source: "local", timing: provisional };
+  }
   const year = context.year || 2026;
   const how = String(context.inventionHow || "").trim();
   const impact = String(context.inventionImpact || "").trim();
@@ -542,7 +576,7 @@ function localAssessFeasibility(context, selected, map, base) {
     : reason;
   return {
     source: "local",
-    timing: { level, reason: reasonOut },
+    timing: { level, reason: reasonOut, basis: "ordinary", assumedPredictionIds: [] },
   };
 }
 
@@ -939,6 +973,20 @@ function localCoInvent({ mode, messages, context }) {
   }
 
   if (mode === "pose-challenge") {
+    const authored = context?.sourceInquiry?.challenge;
+    const authoredQuestion = String(authored?.question || "").trim();
+    if (authoredQuestion) {
+      const connection = String(authored.connection || "").trim();
+      return {
+        source: "local",
+        angle: context.challengeAngle || authored.angle || "",
+        angleLabel: context.challengeAngle || "",
+        challengeSpeech: connection || authoredQuestion,
+        challengeQuestion: authoredQuestion,
+        proposals: { ...base },
+        teaching: [],
+      };
+    }
     const place = context.place || "this place";
     const name = context.inventionName || "this invention";
     const angles = ["moloch", "ethicist", "stakeholder", "nature"];
@@ -1252,6 +1300,7 @@ function localCoInvent({ mode, messages, context }) {
     : "";
   let message =
     tutorPrefix +
+    sourceLimitExcerpt(context) +
     `I'm with you on **${challengeTitle}**. ` +
     (selected.length
       ? `Your stack so far: ${selected.map((id) => map.get(id)?.name || id).join(", ")}. `
@@ -1322,6 +1371,7 @@ export {
   HEX_INVENT_HINT,
   TUTOR_HINT,
   resolveGrounding,
+  resolveSourceConstraint,
   resolveTutorContext,
   resolveSpotlightAdvance,
   isTutorMode,

@@ -152,6 +152,9 @@ export function cloneMission(m) {
     ...(typeof m.sponsorBanner === "string" && m.sponsorBanner
       ? { sponsorBanner: String(m.sponsorBanner) }
       : {}),
+    ...(m.companion && typeof m.companion === "object"
+      ? { companion: structuredClone(m.companion) }
+      : {}),
   };
 }
 

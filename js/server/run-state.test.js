@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { parseRunStateBody, applyContinueSnapshot, RUN_STATE_MAX_BYTES } from "./run-state.mjs";
+import { parseRunStateBody, applyContinueSnapshot, sanitizeMissionStub, RUN_STATE_MAX_BYTES } from "./run-state.mjs";
+import fs from "node:fs";
 
 describe("parseRunStateBody", () => {
   it("requires questId and strips data-URL art", () => {
@@ -67,6 +68,61 @@ describe("parseRunStateBody", () => {
     assert.equal(parsed.ok, true);
     assert.equal(parsed.state.play.mission.id, "gen-air-abc123");
     assert.equal(parsed.state.play.mission.place, "Cedar Bend");
+  });
+
+  it("keeps a companion, a pinned bank, and a private reflection", () => {
+    const tile = JSON.parse(
+      fs.readFileSync(new URL("../../test/fixtures/quests/companion-moonshots-304.json", import.meta.url), "utf8")
+    );
+    const bank = JSON.parse(
+      fs.readFileSync(new URL("../../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8")
+    );
+    const stub = sanitizeMissionStub({
+      id: tile.id,
+      access: "account",
+      grounding: tile.grounding,
+      companion: tile.companion,
+    });
+    assert.equal(stub.access, "account");
+    assert.equal(stub.companion.claim, tile.companion.claim);
+    assert.equal(stub.companion.exploration.premise.bankId, "companion-dock-test");
+    assert.ok(stub.grounding.includes("fictional"));
+    const parsed = parseRunStateBody({
+      questId: tile.id,
+      play: {
+        mission: stub,
+        predictionsBank: bank,
+        reflection: "The power drop mattered.",
+      },
+    });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.state.play.predictionsBank.id, "companion-dock-test");
+    assert.equal(parsed.state.play.reflection, "The power drop mattered.");
+    assert.equal(parsed.state.play.mission.companion.invitation, tile.companion.invitation);
+  });
+
+  it("rejects a predictions bank that is too large to pin", () => {
+    const huge = {
+      schema: "future-forge.predictions/v1",
+      id: "too-big",
+      title: "Too big",
+      predictions: [
+        {
+          id: "row-1",
+          year: 2026,
+          kind: "milestone",
+          headline: "x",
+          detail: "y".repeat(120_000),
+          claimBand: "now",
+        },
+      ],
+    };
+    const parsed = parseRunStateBody({
+      questId: "q1",
+      play: { predictionsBank: huge },
+    });
+    assert.equal(parsed.ok, false);
+    assert.equal(parsed.error, "bank_too_large");
   });
 
   it("keeps idea sparks and R&D spark batches", () => {

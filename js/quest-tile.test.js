@@ -828,6 +828,24 @@ describe("quest-tile", () => {
     assert.equal(r.tile.briefBeats.length, 3);
   });
 
+  it("copies a safe title image and rejects an unsafe one", () => {
+    const ok = validateQuestTile(
+      baseTile({ titleImageUrl: "assets/quests/companion-moonshots-304/title.jpg" }),
+      { techIds: TECHS, globalIds: GLOBALS }
+    );
+    assert.equal(ok.ok, true);
+    assert.equal(ok.mission.titleImageUrl, "assets/quests/companion-moonshots-304/title.jpg");
+    assert.equal(ok.tile.titleImageUrl, "assets/quests/companion-moonshots-304/title.jpg");
+    const plain = validateQuestTile(baseTile(), { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(plain.mission.titleImageUrl, undefined);
+    const bad = validateQuestTile(baseTile({ titleImageUrl: "javascript:alert(1)" }), {
+      techIds: TECHS,
+      globalIds: GLOBALS,
+    });
+    assert.equal(bad.ok, false);
+    assert.ok(bad.details.includes("titleImageUrl_unsafe"));
+  });
+
   it("rejects invalid briefBeats (too few)", () => {
     const t = baseTile({
       briefBeats: [
