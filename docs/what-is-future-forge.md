@@ -239,12 +239,13 @@ A sponsored Quest shows **Sponsored by {name}** and a plain-text tagline. That i
 
 ### Agent skills
 
-Four MIT packages under `skills/` teach any agent how to author content for the practice. They do not relicense the app.
+Five MIT packages under `skills/` teach any agent how to author content for the practice. They do not relicense the app.
 
 | Skill | What it writes |
 |-------|----------------|
 | [`skills/future-forge-quest/`](../skills/future-forge-quest/) | Spotlight, learning, and sponsored Quest tiles, and the `.ffquest` package |
 | [`skills/future-forge-predictions/`](../skills/future-forge-predictions/) | The predictions bank the year dialog and the timing judge read |
+| [`skills/future-forge-companion/`](../skills/future-forge-companion/) | A companion quest from a YouTube video, podcast, blog, or X post, joined to that bank when the premise is assumed |
 | [`skills/future-forge-trends/`](../skills/future-forge-trends/) | One measured capability curve for Look Ahead charts |
 | [`skills/future-forge-collector-cards/`](../skills/future-forge-collector-cards/) | A collector card: a real capability, collected by link, played as a free invention tile |
 

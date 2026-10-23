@@ -13,7 +13,7 @@ The ways people run it:
 - [Learning quests](#learning-quests) — tutor, lesson pages, module progress
 - [Sponsored quests](#sponsored-quests) — a named partner, invent still required
 - [Multi-user sessions](#multi-user-sessions) — Friends rooms and hotseat
-- [Agent skills](#agent-skills) — the four MIT packages that author Quests, predictions, trends, and collector cards
+- [Agent skills](#agent-skills) — the five MIT packages that author Quests, predictions, companion quests, trends, and collector cards
 
 ---
 
@@ -286,7 +286,7 @@ The catalog card says **Open** and `From {show or publication}`. Play opens the 
 
 The AI reads a short source limit beside `grounding`, plus a structured source inquiry when the Quest has a claim. Outside an explicit scenario grant, an idea, an opinion, a trend, or a prediction is not a current capability. A milestone is only as firm as its evidence. Disagreement is a valid invention.
 
-Authoring: [companion.md](../skills/future-forge-quest/references/companion.md). The worked example is Moonshots episode 304, `companion-moonshots-304`, on a developer server.
+Authoring from a YouTube video, podcast, blog, or X post: [future-forge-companion](../skills/future-forge-companion/). Field rules: [companion.md](../skills/future-forge-quest/references/companion.md). The worked example is Moonshots episode 304, `companion-moonshots-304`, on a developer server.
 
 ## Other Quests
 
@@ -373,14 +373,15 @@ A facilitator who is in the room and is not charging can host classmates under t
 
 ## Agent skills
 
-Four MIT skill packages live in [skills/](../skills/). They teach **any** agent harness how to research and author portable JSON. They do not relicense the app. The app stays CC BY-NC-SA 4.0; only the skill trees and their examples are MIT. Each package works by reading its `SKILL.md`. A symlink into a harness skills directory is optional.
+Five MIT skill packages live in [skills/](../skills/). They teach **any** agent harness how to research and author portable JSON. They do not relicense the app. The app stays CC BY-NC-SA 4.0; only the skill trees and their examples are MIT. Each package works by reading its `SKILL.md`. A symlink into a harness skills directory is optional.
 
-In this checkout, quest, predictions, and collector cards are also linked from `.grok/skills/` so agents here discover them. Capability trends are read from `skills/future-forge-trends/` directly.
+In this checkout, quest, predictions, companion, and collector cards are also linked from `.grok/skills/` so agents here discover them. Capability trends are read from `skills/future-forge-trends/` directly.
 
 | Skill | You author | It drives | Check |
 |-------|------------|-----------|-------|
 | [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` and `npm run economy:quest -- <file>` (verdict: **challenging**) |
 | [future-forge-predictions](../skills/future-forge-predictions/) | One `future-forge.predictions/v1` bank of dated milestones, trends, and predictions, with attribution | Year dialog, outcome foresight cards, the AI world clock | `npm run validate:predictions -- <file>`, then `FF_PREDICTIONS_FILE=<file> npm start` |
+| [future-forge-companion](../skills/future-forge-companion/) | One companion quest from a YouTube video, podcast, blog, or X post, plus the grant rows when the premise is assumed | The source stage before play, and the bank that quest pins | The quest and predictions checks above. Procedure: that skill |
 | [future-forge-trends](../skills/future-forge-trends/) | One measured capability series (`future-forge.capability-trend/v1`): compounding, anchor, milestones. No invented statistics | Look Ahead charts; optional embed on a Quest | `npm run validate:trend -- <file>` |
 | [future-forge-collector-cards](../skills/future-forge-collector-cards/) | One capability card plus a sibling page image | Public `/card/<id>` page; a free reusable invention tile once collected | `npm run validate:collector-card -- cards/<slug>.json` |
 
@@ -437,7 +438,7 @@ Deploy sketch: the practice is a long-running Node process. Warmer Sun Cloud on 
 
 Future Forge by Warmer Sun Education, a sole proprietorship by Tamas Simon (© 2026), is [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Non-commercial copy, share, and adapt are free with attribution and share-alike. Hosting a meeting you take part in, or running a server with no commercial intent and no charge, is a free grant. Schools, companies, client work, and paid multi-tenant hosting need a paid license. Text: [LICENSE.md](../LICENSE.md). Grants and paid tiers: [COMMERCIAL.md](../COMMERCIAL.md).
 
-The four authoring skills are MIT and may be reused on their own. AI providers’ terms apply to any keys you use.
+The five authoring skills are MIT and may be reused on their own. AI providers’ terms apply to any keys you use.
 
 ---
 

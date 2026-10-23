@@ -4,6 +4,8 @@ Optional object on a normal quest. Omit the key and the quest is ordinary. One s
 
 `sponsorName` is funding credit (**Sponsored by**). The companion is source credit. A speaker, show, author, or publication is never `sponsorName`.
 
+To author this object from a YouTube video, podcast, blog, or X post, and to pair an assumed premise with a predictions bank, follow `skills/future-forge-companion/`.
+
 Do not put `companion` on `kind: "module"` (`companion_not_on_module`).
 
 ## Medium and move

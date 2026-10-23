@@ -29,6 +29,7 @@ So the years you choose change how harshly invention timing gets judged. Place t
 - "Side-load a more aggressive / more conservative timeline into Future Forge"
 - "Produce `future-forge.predictions/v1` JSON"
 - "Add attribution to predictions"
+- A companion quest assumes a premise: the grant rows live in the one bank the server will load. Pairing procedure: `skills/future-forge-companion/`
 
 ## Deliverable
 

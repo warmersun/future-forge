@@ -47,32 +47,34 @@ Install, after they confirm the folder:
 
 Agent skills, after the clone:
 
-The repo ships four MIT skill packages under `skills/`. They teach an agent how to author game content. They do not relicense the game. Grok discovers project skills from `.grok/skills/`, and `.grok/` is gitignored, so a fresh clone has the packages and no links. Create the links. Do not copy the trees. Do not commit `.grok/`. If a link is already there, leave it.
+The repo ships five MIT skill packages under `skills/`. They teach an agent how to author game content. They do not relicense the game. Grok discovers project skills from `.grok/skills/`, and `.grok/` is gitignored, so a fresh clone has the packages and no links. Create the links. Do not copy the trees. Do not commit `.grok/`. If a link is already there, leave it.
 
 On macOS and Linux, from the repo root:
 
 mkdir -p .grok/skills
 ln -sfn ../../skills/future-forge-quest .grok/skills/future-forge-quest
 ln -sfn ../../skills/future-forge-predictions .grok/skills/future-forge-predictions
+ln -sfn ../../skills/future-forge-companion .grok/skills/future-forge-companion
 ln -sfn ../../skills/future-forge-trends .grok/skills/future-forge-trends
 ln -sfn ../../skills/future-forge-collector-cards .grok/skills/future-forge-collector-cards
 
 On Windows, from the repo root, make a directory junction for each package (no administrator prompt):
 
 New-Item -ItemType Directory -Force -Path .grok\skills | Out-Null
-foreach ($name in 'future-forge-quest','future-forge-predictions','future-forge-trends','future-forge-collector-cards') {
+foreach ($name in 'future-forge-quest','future-forge-predictions','future-forge-companion','future-forge-trends','future-forge-collector-cards') {
   $link = Join-Path .grok\skills $name
   if (-not (Test-Path $link)) {
     New-Item -ItemType Junction -Path $link -Target (Join-Path (Resolve-Path skills) $name) | Out-Null
   }
 }
 
-When they later ask for a quest, a predictions timeline, a capability chart, or a collector card, open `grok` in this repo and follow that skill's `SKILL.md`. Do not author any of those during this install unless they ask now.
+When they later ask for a quest, a predictions timeline, a companion quest from a video or post, a capability chart, or a collector card, open `grok` in this repo and follow that skill's `SKILL.md`. Do not author any of those during this install unless they ask now.
 
 | Skill | They can ask for | Where it lands |
 |-------|------------------|----------------|
 | `skills/future-forge-quest/` | A Spotlight Quest, or a learning quest with lesson pages packed as one `.ffquest` | Library, after the side-load steps below |
 | `skills/future-forge-predictions/` | A dated predictions bank | `FF_PREDICTIONS_FILE` |
+| `skills/future-forge-companion/` | A companion quest from a YouTube video, podcast, blog, or X post | `quests/<id>.json`, plus the bank when the premise is assumed |
 | `skills/future-forge-trends/` | One measured capability curve for Look Ahead charts | A trend JSON file, then the trends catalog |
 | `skills/future-forge-collector-cards/` | A collector card: a real capability, collected by link, played as a free invention tile | `cards/<slug>.json` plus its page image |
 
@@ -171,13 +173,13 @@ Then tell them, in plain language, how to play:
 
 Say this before any link is shared: friends in a room spend the host's Grok subscription.
 
-When you finish, tell them: the folder, the start-script path, the local URL, whether the co-inventor is live, which choice you configured, and the lines you put in `.env`. Tell them to run the script to start next time and the script's stop command to stop. To update: `git pull`, `npm install`, then run the script again. The skill links live in gitignored `.grok/skills/`, so after a fresh clone on another machine, make those four links again.
+When you finish, tell them: the folder, the start-script path, the local URL, whether the co-inventor is live, which choice you configured, and the lines you put in `.env`. Tell them to run the script to start next time and the script's stop command to stop. To update: `git pull`, `npm install`, then run the script again. The skill links live in gitignored `.grok/skills/`, so after a fresh clone on another machine, make those five links again.
 
 Then tell them, in plain language, how to add a quest and what the skills are for:
 
 - A quest tile is one JSON file. Put it in the `quests` folder and restart, and everyone on this server sees it in Library, including friends in a room. Import Quest on the home screen keeps a tile on that browser only.
 - A learning quest that includes lesson pages is one `.ffquest` file. Hand that file over and ask to side-load it. One-shot play uses `scripts/sideload-local-package.sh`. A package that should stay uses `data/sideload/` plus FF_QUESTS_DIR and FF_CONTENT_DIR.
-- Four authoring skills are linked for Grok in this folder. Next time they open `grok` here they can ask for a Quest (`future-forge-quest`), a predictions timeline (`future-forge-predictions`, side-loaded with FF_PREDICTIONS_FILE), a capability chart (`future-forge-trends`), or a collector card (`future-forge-collector-cards`). Grok should read that skill's SKILL.md and follow it. The skills are MIT. The game is not.
+- Five authoring skills are linked for Grok in this folder. Next time they open `grok` here they can ask for a Quest (`future-forge-quest`), a predictions timeline (`future-forge-predictions`, side-loaded with FF_PREDICTIONS_FILE), a companion quest from a video, podcast, blog, or X post (`future-forge-companion`), a capability chart (`future-forge-trends`), or a collector card (`future-forge-collector-cards`). Grok should read that skill's SKILL.md and follow it. The skills are MIT. The game is not.
 
 Close with one line: this setup is for them and for friends they play with; a school or company needs a separate license.
 
