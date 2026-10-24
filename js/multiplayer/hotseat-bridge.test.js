@@ -23,6 +23,29 @@ const mission = {
 };
 
 describe("hotseat-bridge", () => {
+  it("switches worlds without carrying a solo calendar or private reflection", () => {
+    const bridge = createHotseatBridge();
+    const state = {
+      global: { id: "climate" }, selectedTechIds: [],
+      pinnedPredictionsBank: { id: "solo-a" },
+      runWorld: { bank: { id: "solo-a" } },
+      companionReflection: "private solo reflection",
+    };
+    const picked = { ...mission, runWorld: { bank: { id: "room-b", predictions: [] }, packageRef: null, questId: mission.id } };
+    assert.equal(bridge.startFromPick(["Alex", "Bea"], picked, "climate").ok, true);
+    bridge.hydrateSoloState(state);
+    assert.equal(state.runWorld.bank.id, "room-b");
+    assert.equal(state.pinnedPredictionsBank, null);
+    assert.equal(state.companionReflection, "");
+    state.runWorld.bank.id = "client-mutation";
+    bridge.hydrateSoloState(state);
+    assert.equal(state.runWorld.bank.id, "room-b");
+    assert.equal(bridge.startFromPick(["Alex", "Bea"], mission, "climate").ok, true);
+    bridge.hydrateSoloState(state);
+    assert.equal(state.runWorld.bank, null);
+    assert.equal(state.runWorld.packageRef, null);
+  });
+
   it("maps deploy stages", () => {
     assert.equal(inventToSoloDeployStage("pilot_ok"), "pilot");
     assert.equal(inventToSoloDeployStage("scaled"), "scale");

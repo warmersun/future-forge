@@ -14,6 +14,7 @@ import {
 } from "./economy.js";
 import { rollRoundMarketNews, cloneMarketNews } from "./market-news.js";
 import { bulletinHighlight, foresightForYear } from "./world-foresight.js";
+import { bankForRun } from "./run-world.js";
 import { applyThinkingAiCharge, isAiSeasonTaxMode } from "./ai-tax.js";
 import {
   cloneRules,
@@ -324,9 +325,9 @@ export function applyAction(sim, action, opts = {}) {
       prevId: next.marketNews?.id || null,
     });
     next.marketNews = news;
-    const pinnedPool =
-      action.payload?.predictionsPool ||
-      next.mission?.pinnedPredictionsBank?.predictions;
+    const pinnedPool = next.runWorld?.packageRef
+      ? bankForRun(next)?.predictions || []
+      : bankForRun(next)?.predictions || action.payload?.predictionsPool;
     const highlights = foresightForYear(next.year, {
       techIds: next.selectedTechIds || [],
       globalId: next.globalId || next.mission?.globalId,
@@ -407,10 +408,10 @@ export function applyAction(sim, action, opts = {}) {
       prevId: next.marketNews?.id || null,
     });
     next.marketNews = news;
-    const pinnedPool =
-      action.payload?.predictionsPool ||
-      mission.pinnedPredictionsBank?.predictions ||
-      next.mission?.pinnedPredictionsBank?.predictions;
+    const pinnedPool = next.runWorld?.packageRef
+      ? bankForRun(next)?.predictions || []
+      : bankForRun(next)?.predictions || mission.runWorld?.bank?.predictions ||
+        action.payload?.predictionsPool || mission.pinnedPredictionsBank?.predictions;
     const highlights = foresightForYear(next.year, {
       techIds: next.selectedTechIds || action.payload?.techs?.map((t) => t.id) || [],
       globalId: mission.globalId || next.globalId,

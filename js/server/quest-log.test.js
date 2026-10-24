@@ -5,6 +5,8 @@ import {
   filterRuns,
   sanitizeTechIds,
   parseStartBody,
+  parseStartPackageRef,
+  clientPackageBindingIgnored,
   publicRunRow,
   DEFAULT_RUNS_LIMIT,
   MAX_RUNS_LIMIT,
@@ -57,6 +59,16 @@ describe("sanitizeTechIds / parseStartBody", () => {
     assert.equal(s.questId, "spotlight-gene-seq");
     assert.equal(s.kind, "lesson");
     assert.equal(s.place, "Accra");
+    assert.equal(parseStartPackageRef(s), null);
+    const ref = {
+      packageId: "kiln-ferry-test",
+      revision: `sha256:${"cd".repeat(32)}`,
+      questId: "kiln-ferry-test",
+    };
+    assert.deepEqual(parseStartPackageRef({ packageRef: ref }), ref);
+    assert.equal(parseStartPackageRef({ packageRef: { packageId: "../x", revision: "latest", questId: "q" } }), null);
+    assert.equal(clientPackageBindingIgnored({ package_revision: ref.revision }), true);
+    assert.equal(clientPackageBindingIgnored({ place: "Accra" }), false);
   });
 });
 
@@ -80,5 +92,19 @@ describe("publicRunRow", () => {
     assert.equal(p.outcome, null);
     assert.deepEqual(p.techIds, ["gene-seq"]);
     assert.equal(p.yearReached, 2034);
+    assert.equal(p.packageRef, null);
+    const bound = publicRunRow({
+      ...{
+        id: "abc",
+        quest_id: "kiln-ferry-test",
+        kind: "theme",
+        outcome: null,
+        package_id: "kiln-ferry-test",
+        package_revision: `sha256:${"cd".repeat(32)}`,
+        package_quest_id: "kiln-ferry-test",
+      },
+    });
+    assert.equal(bound.packageRef.questId, "kiln-ferry-test");
+    assert.equal(bound.packageRef.revision.startsWith("sha256:"), true);
   });
 });

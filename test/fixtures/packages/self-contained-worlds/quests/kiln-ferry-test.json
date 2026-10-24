@@ -1,0 +1,36 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "kiln-ferry-test",
+  "title": "TEST: Kiln Ferry morning run",
+  "summary": "Synthetic quest. Invented claims only.",
+  "predictionBankId": "kiln-ferry-bank",
+  "companion": {
+    "claim": "Invented test claim about the morning kiln run.",
+    "invitation": "Treat the grant as a fictional condition, not a verified fact.",
+    "exploration": {
+      "version": 1,
+      "focus": "Notice which invented row is due inside this package.",
+      "bridge": "The package bank is the calendar. The grant is only a bounded exception.",
+      "reflectionPrompt": "What stayed challengeable outside the grant?",
+      "premise": {
+        "mode": "assumed",
+        "bankId": "kiln-ferry-bank",
+        "statement": "TEST DATA: the morning loading robots are assumed due. This is not a real forecast.",
+        "grants": [
+          {
+            "predictionId": "kiln-ferry-due-2026",
+            "scope": "Only the fictional morning loading run at Kiln Ferry.",
+            "limits": "Does not verify the claim, fund the slips, or enable the 2032 night-power row."
+          }
+        ]
+      },
+      "pressureLinks": {
+        "local": {
+          "connection": "The grant covers only the morning loading run.",
+          "criterion": "A design that needs night power is still ahead."
+        }
+      }
+    }
+  }
+}

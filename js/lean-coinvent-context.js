@@ -55,6 +55,10 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     rest.predictionsBankId !== undefined ? rest.predictionsBankId : snap.predictionsBankId;
   const predictionsBankId = String(bankIdRaw || "").trim().slice(0, 80);
   delete rest.predictionsBankId;
+  const packageRef = rest.packageRef ?? snap.packageRef ?? null;
+  delete rest.packageRef;
+  const runId = rest.runId ?? snap.runId ?? null;
+  delete rest.runId;
   const year = rest.year ?? snap.year;
   const place = rest.place ?? snap.place;
   const globalId = rest.globalId ?? snap.globalId ?? null;
@@ -67,7 +71,9 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
     ...(sourceConstraint ? { sourceConstraint } : {}),
     ...(sourceInquiry ? { sourceInquiry } : {}),
     ...(predictionsBankId ? { predictionsBankId } : {}),
-    ...(predictionsBank ? { predictionsBank } : {}),
+    ...(packageRef ? { packageRef } : {}),
+    ...(runId ? { runId } : {}),
+    ...(predictionsBank && !packageRef ? { predictionsBank } : {}),
     missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
     missionScene: rest.missionScene ?? scene,
     ...rest,
@@ -121,7 +127,9 @@ export function leanCoInventContext(mode, extra = {}, snap = {}) {
       ...(sourceConstraint ? { sourceConstraint } : {}),
       ...(sourceInquiry ? { sourceInquiry } : {}),
       ...(predictionsBankId ? { predictionsBankId } : {}),
-      ...(predictionsBank ? { predictionsBank } : {}),
+      ...(packageRef ? { packageRef } : {}),
+      ...(runId ? { runId } : {}),
+      ...(predictionsBank && !packageRef ? { predictionsBank } : {}),
       missionTitle: rest.missionTitle ?? (snap.missionTitle || ""),
       missionScene: rest.missionScene ?? scene,
       inventionHow: rest.inventionHow ?? snap.inventionHow,

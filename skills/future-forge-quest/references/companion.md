@@ -66,11 +66,14 @@ Play contract: assume the premise and invent within its implications. Questionin
 
 Authoring checks, reviewed by a person: the claim stays attributed; if the grant were unavailable a meaningful design choice would change; the player may rely on exactly the grant; more than one mechanism can solve the problem.
 
-Bind a bank with the existing loader. Do not add a second predictions file format.
+For distribution, bind the complete bank in a v2 `.ffquest`: set top-level `predictionBankId`, match `premise.bankId`, and include `predictions/<bank-id>.json`. Do not add a second bank format or require a process-global bank.
 
 ```bash
-FF_PREDICTIONS_FILE=test/fixtures/predictions/companion-dock-test.json npm start
+node scripts/build-companion-dock-example.mjs <output-directory>
+./scripts/sideload-local-package.sh <output-directory>/companion-moonshots-304.ffquest
 ```
+
+For an explicitly requested legacy/developer run of the unbound fixture only, `FF_PREDICTIONS_FILE=test/fixtures/predictions/companion-dock-test.json npm start` remains supported. Missing or invalid saved banks must not fall back to the current process bank.
 
 The worked opinion tile uses bank id `companion-dock-test` and row `dock-inspection-2026`. That row is a fictional test assumption. It is not a forecast by the podcast guest. A public quest uses a researched row from `skills/future-forge-predictions/`.
 

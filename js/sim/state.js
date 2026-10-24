@@ -6,6 +6,7 @@
 import { GAME } from "../data.js";
 import { clonePressure } from "./pressure.js";
 import { cloneRules, seedLiveRules } from "./policy-rules.js";
+import { emptyRunWorld } from "./run-world.js";
 
 /**
  * @param {object} mission — normalized mission
@@ -42,6 +43,7 @@ export function createSimState(mission, global = null, opts = {}) {
     turnPhase: "act",
     globalId: global?.id || mission?.globalId || null,
     mission: mission ? cloneMission(mission) : null,
+    runWorld: mission?.runWorld ? structuredClone(mission.runWorld) : emptyRunWorld(),
     year: mission?.startYear ?? GAME.startYear ?? 2026,
     turn: 0,
     waits: 0,
@@ -116,6 +118,7 @@ export function cloneMission(m) {
   if (!m) return null;
   return {
     ...m,
+    ...(m.runWorld ? { runWorld: structuredClone(m.runWorld) } : {}),
     pressure: clonePressure(m.pressure),
     pressureRise: { ...(m.pressureRise || {}) },
     winMax: { ...(m.winMax || {}) },

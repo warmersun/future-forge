@@ -1,0 +1,9 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "module",
+  "id": "module-kiln",
+  "title": "TEST: Kiln module wrapper",
+  "module": "TEST: Kiln module wrapper",
+  "lessons": ["kiln-ferry-test"],
+  "totalLessons": 1
+}

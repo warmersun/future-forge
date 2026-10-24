@@ -63,7 +63,7 @@ async function call(api, path, method = "GET", opts = {}) {
 }
 function app(db, overrides = {}) {
   return createCloudApi({ env, db, generateCode: () => code, verifyClerk: async () => ({ sub: "user_1", sid: "sess_1" }),
-    getUserBillingSubscription: async () => null, ...overrides });
+    loadCatalog: async () => ({ ok: true, quests: [] }), getUserBillingSubscription: async () => null, ...overrides });
 }
 
 // Tests use a SQL-shaped stand-in, never a network database. The same db is
@@ -155,6 +155,58 @@ describe("Neon Cloud API", () => {
       const loopback = await strictDefaults.fetch(request(path, method, { headers: { Origin: "http://127.0.0.1:8765" } }));
       assert.equal(loopback.status, method === "OPTIONS" ? 204 : 200, `${method} ${path}`);
     }
+  });
+
+  it("dispatches server-selected package starts with verified identity and server billing", async () => {
+    const ref = { packageId: "official-world", revision: `sha256:${"ab".repeat(32)}`, questId: "q1" };
+    const calls = [];
+    const runId = "11111111-1111-4111-8111-111111111111";
+    let saved;
+    const db = { async query(sql, args = []) {
+      calls.push({ sql, args });
+      if (sql.includes("FROM subscriptions")) return { rows: [] };
+      if (sql.startsWith("INSERT INTO runs")) return { rows: [{ id: runId }] };
+      if (sql.includes("FROM runs WHERE clerk_user_id = $1 AND id = $2::uuid")) {
+        assert.deepEqual(args, ["user_1", runId]);
+        return { rows: [{ id: runId, clerk_user_id: "user_1", quest_id: "q1",
+          package_id: ref.packageId, package_revision: ref.revision, package_quest_id: ref.questId }] };
+      }
+      if (sql.startsWith("INSERT INTO run_state")) saved = { run_id: args[1], quest_id: args[2], play: JSON.parse(args[6]) };
+      if (sql.includes("FROM run_state WHERE")) return { rows: saved ? [saved] : [] };
+      return { rows: [] };
+    }, async connect() { return { query: db.query, release() {} }; } };
+    let revoked = false;
+    const api = app(db, { loadCatalog: async (opts) => {
+      assert.equal(opts.force, true);
+      return { ok: true, quests: [{ id: "q1", packageRef: ref }] };
+    }, resolvePackage: async (r, opts) => {
+      assert.deepEqual(r, ref);
+      assert.equal(opts.identity.userId, "user_1");
+      assert.equal(opts.entitled, false);
+      return revoked ? { ok: false, code: "subscription_required", status: 402 } : { ok: true, packageRef: ref,
+        record: { mission: { id: "q1", title: "Official" } }, runWorld: { bank: { id: "official-bank" } } };
+    } });
+    const opts = { headers: { Authorization: `Bearer ${jwt}` }, body: { questId: "q1", userId: "user_forged", entitled: true } };
+    const started = await call(api, "/api/me/runs/start", "POST", opts);
+    assert.equal(started.status, 200);
+    assert.deepEqual(started.body.packageRef, ref);
+    assert.equal(calls.find((c) => c.sql.startsWith("INSERT INTO runs")).args[0], "user_1");
+    assert.equal(calls.find((c) => c.sql.startsWith("INSERT INTO runs")).args[5], ref.revision);
+    const progress = { headers: opts.headers, body: { questId: "q1", runId, userId: "user_forged",
+      play: { mission: { id: "q1", title: "Forged" }, predictionsBank: {}, reflection: "private" } } };
+    assert.equal((await call(api, "/api/me/run-state", "PUT", progress)).status, 200);
+    const continued = await call(api, "/api/me/run-state", "GET", { headers: opts.headers });
+    assert.equal(continued.status, 200);
+    assert.equal(continued.body.state.play.mission.title, "Official");
+    assert.equal(continued.body.state.play.mission.runWorld.bank.id, "official-bank");
+    assert.equal(continued.body.state.play.runWorld, undefined);
+    assert.equal(continued.body.state.play.predictionsBank, undefined);
+    assert.equal(continued.body.state.play.reflection, "private");
+    revoked = true;
+    assert.equal((await call(api, "/api/me/run-state", "GET", { headers: opts.headers })).status, 402);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", progress)).status, 402);
+    assert.equal((await call(api, "/api/me/runs/start", "POST", opts)).status, 402);
+    assert.equal(calls.filter((c) => c.sql.startsWith("INSERT INTO runs")).length, 1);
   });
 
   it("health publishes only validated game return origins, including degraded health", async () => {

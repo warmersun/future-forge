@@ -5,6 +5,15 @@
  */
 
 import { catalogRecordFromValidated, validateQuestDocument } from "../quest-tile.js";
+import { parsePackageRef, safePackageMember } from "./package-paths.mjs";
+import { catalogCard } from "./cloud-gate.mjs";
+
+/** Package catalog entries are metadata only; never follow their loose file field. */
+export function packageCatalogRecord(entry) {
+  const ref = parsePackageRef(entry?.packageRef);
+  if (!ref || (entry.id && entry.id !== ref.questId)) return null;
+  return { ...catalogCard({ ...entry, id: ref.questId, source: "remote" }), packageRef: ref };
+}
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 
@@ -58,18 +67,24 @@ export function _resetObjectQuestCache() {
  * @param {string} bucket
  * @param {string} key
  */
+export function createNeonObjectReader(bucket) {
+  let client;
+  return async (key) => {
+    if (!safePackageMember(key)) throw new Error("object_key_forbidden");
+    try {
+      if (!client) {
+        const { Files } = await import("files-sdk");
+        const { neon } = await import("files-sdk/neon");
+        client = new Files({ adapter: neon({ bucket }) });
+      }
+      const stored = await client.download(key);
+      return Buffer.from(await stored.arrayBuffer());
+    } catch { throw new Error("object_read_failed"); }
+  };
+}
+
 async function readNeonObjectText(bucket, key) {
-  const { Files } = await import("files-sdk");
-  const { neon } = await import("files-sdk/neon");
-  const files = new Files({ adapter: neon({ bucket }) });
-  try {
-    const stored = await files.download(key);
-    return await stored.text();
-  } catch {
-    const err = new Error("object_read_failed");
-    err.key = key;
-    throw err;
-  }
+  return (await createNeonObjectReader(bucket)(key)).toString("utf8");
 }
 
 /**
@@ -114,7 +129,17 @@ export async function catalogFromObjectReader(readText, opts = {}) {
 
   const list = Array.isArray(catalog?.quests) ? catalog.quests : [];
   for (const entry of list) {
+    if (entry && Object.hasOwn(entry, "packageRef")) {
+      const record = packageCatalogRecord(entry);
+      if (record) quests.push(record);
+      else errors.push({ file: String(entry?.id || "?"), error: "package_reference_forbidden" });
+      continue;
+    }
     const file = String(entry?.file || "").trim();
+    if (file && !safePackageMember(file)) {
+      errors.push({ file, error: "object_key_forbidden" });
+      continue;
+    }
     if (!file) {
       errors.push({ file: String(entry?.id || "?"), error: "missing_file" });
       continue;
@@ -147,6 +172,7 @@ export async function catalogFromObjectReader(readText, opts = {}) {
       file,
       remoteUrl: remoteBase ? `${remoteBase}${key}` : key,
       source: "remote",
+      ...(parsePackageRef(entry.packageRef) ? { packageRef: parsePackageRef(entry.packageRef) } : {}),
     });
     if (!rec) continue;
     quests.push(rec);

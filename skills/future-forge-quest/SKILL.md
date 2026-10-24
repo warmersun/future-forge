@@ -133,13 +133,15 @@ Build a source directory. Do not write `manifest.json`. `pack` does.
 
 ```text
 quests/<id>.json                         file name is the id
+predictions/<bank-id>.json               complete calendar when using v2
 lessons/<folder>/index.html              the book: title and a link to each page
 lessons/<folder>/NN-<slug>.html          one file per lesson page, in teaching order
 lessons/<folder>/illustrations/…         the figures those pages show
 assets/…                                 stills this quest ships (cover, briefing)
 ```
 
-- Only `quests/`, `lessons/`, and `assets/`. Quest JSON sits directly in `quests/`.
+- V1 permits `quests/`, `lessons/`, and `assets/`; v2 also permits `predictions/`. Quest JSON sits directly in `quests/`.
+- Set top-level `predictionBankId` on every playable v2 Quest. Its exact bank ID and filename must agree; assumed `premise.bankId` must match. Include the complete calendar, not a runtime overlay. Different calendars use separate banks; no orphan banks or external world dependencies. Module wrappers do not bind a bank.
 - One lesson folder for a single quest. A multi-lesson path is one `.ffquest`: the `kind: "module"` wrapper plus every lesson quest it lists, and the lesson folders those quests cite. The package id is the wrapper id when there is one, otherwise the quest id. The folder slug is lowercase and does not have to match the id. The kind string `quest-pack` is invalid; it is not a second packaging format.
 - Lesson HTML uses page-relative links (`href="01-job.html"`, `src="illustrations/cover.png"`).
 - Quest text that cites a shipped page or image uses a package path (`lessons/<folder>/01-job.html`, `assets/cover.png`). A reading that is not in the zip stays `https://`. Write the package path yourself. `pack` only rewrites `https://warmersun.com/lessons/…` and `https://warmersun.com/future-forge/quests/assets/…`. Any other host, including a placeholder, is left as written and is not checked as a file in the zip.
@@ -150,9 +152,11 @@ From the game repo, after each tile is strict-clean and **challenging**:
 npm run pack:quest -- <srcdir> -o <outdir>/<id>.ffquest
 ```
 
-`pack` checks the tree, runs the strict quest validator, and writes the zip. Hand off that file. The format spec is `docs/quest-package.md` in the game repo. Name the UI chips, and multi-lesson order if any. A spotlight with no lesson pages can still be copied into `quests/` or opened with Import Quest… for local play.
+`pack` checks the tree, runs the strict quest validator, and writes the zip. Hand off that file. The format spec is `docs/quest-package.md` in the game repo. Name the UI chips, and multi-lesson order if any. An ordinary unbound spotlight with no lesson pages can still be copied into `quests/` or opened with Import Quest… for local play. Package-bound Quests require their `.ffquest`; preview with `./scripts/sideload-local-package.sh <archive>`. No server-wide bank setting is required.
 
-Stage and deploy only when asked, from the warmersun repo. `./scripts/stage-package.sh` is the preview. `./scripts/gated-deploy-package.sh` puts the quest JSON in the object store and the lesson pages on the website. `./scripts/website-deploy-package.sh` publishes the quest catalog on the website as well.
+V2 revisions identify all source bytes. Keep raw extracted releases separate from URL projections; edits require a new revision. Existing runs retain their exact revision subject to current access. Missing dependencies must stop with recovery guidance, never substitute the current default bank.
+
+Stage and deploy only when asked, from the warmersun repo. The v2 workflow must retain complete immutable releases and use the package publisher, never upload only loose Quest JSON. Use `npm run publish:quest-package -- <archive> --dry-run` for offline publication checks. A live CAS-capable storage adapter and staging verification remain required; consult `docs/testing/self-contained-quest-packages.md` for current gates.
 
 ## What lint cannot check (you still must)
 

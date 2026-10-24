@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
+import { resolveLocalPackage } from "./server/quest-package-resolver.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -44,7 +45,7 @@ export function ensureQuestsDir(dir) {
  *   errors: { file: string, error: string, details?: string[] }[],
  * }>}
  */
-export async function scanQuestsFolder(dir = resolveQuestsDir()) {
+export async function scanQuestsFolder(dir = resolveQuestsDir(), opts = {}) {
   ensureQuestsDir(dir);
   const { parseQuestTileJson, validateQuestDocument, catalogRecordFromValidated } =
     await import(pathToFileURL(path.join(ROOT, "js/quest-tile.js")).href);
@@ -105,6 +106,23 @@ export async function scanQuestsFolder(dir = resolveQuestsDir()) {
 
     const rec = catalogRecordFromValidated(v, { file: name, source: "hosted" });
     if (!rec) continue;
+    if (rec.predictionBankId) {
+      const release = opts.packageRegistry?.questRelease(rec.id);
+      const packageRef = release ? {
+        packageId: release.packageId,
+        revision: release.revision,
+        questId: rec.id,
+      } : null;
+      const resolved = packageRef ? resolveLocalPackage(opts.packageRegistry, packageRef) : null;
+      if (!resolved?.ok) {
+        errors.push({ file: name, error: resolved?.code || "package_dependency_missing" });
+        continue;
+      }
+      rec.packageRef = packageRef;
+      rec.trust = "local-import";
+      rec.mission.packageRef = packageRef;
+      rec.mission.runWorld = { packageRef, bank: resolved.bank, trust: "local-import", questId: rec.id };
+    }
     quests.push(rec);
   }
 

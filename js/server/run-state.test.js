@@ -125,6 +125,64 @@ describe("parseRunStateBody", () => {
     assert.equal(parsed.error, "bank_too_large");
   });
 
+  it("returns explicit errors for invalid saved banks", () => {
+    for (const predictionsBank of ["invalid", {}, { id: "broken", predictions: [] }]) {
+      assert.deepEqual(parseRunStateBody({ questId: "q1", play: { predictionsBank } }),
+        { ok: false, error: "bank_invalid" });
+    }
+  });
+
+  it("rejects missing assumed banks and persisted failure markers rather than silently unpinning", () => {
+    const tile = JSON.parse(fs.readFileSync(new URL("../../test/fixtures/quests/companion-moonshots-304.json", import.meta.url), "utf8"));
+    const missing = parseRunStateBody({ questId: tile.id, play: { mission: { id: tile.id, companion: tile.companion, access: "account" } } });
+    assert.deepEqual(missing, { ok: false, error: "legacy_world_unresolved" });
+    assert.deepEqual(parseRunStateBody({ questId: "q1", play: { mission: { id: "q1",
+      companion: { exploration: { premise: { mode: "assumed", bankId: "missing" } } } } } }),
+      { ok: false, error: "legacy_world_unresolved" });
+    for (const field of ["packageRefError", "predictionsBankError"]) {
+      for (const play of [{ [field]: "saved_bank_missing" }, { mission: { id: "q1", [field]: "saved_bank_missing" } }]) {
+        assert.deepEqual(parseRunStateBody({ questId: "q1", play }), { ok: false, error: "legacy_world_unresolved" });
+      }
+    }
+  });
+
+  it("reports all invalid assumed legacy banks with the stable recovery code without mutating the save", () => {
+    const tile = JSON.parse(fs.readFileSync(new URL("../../test/fixtures/quests/companion-moonshots-304.json", import.meta.url), "utf8"));
+    const bank = JSON.parse(fs.readFileSync(new URL("../../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8"));
+    for (const predictionsBank of [null, false, "invalid", {}, { ...bank, id: "other-bank" },
+      { ...bank, predictions: [] }, { ...bank, title: "界".repeat(40_000) }]) {
+      const snapshot = { questId: tile.id, play: { mission: { id: tile.id, access: "account", companion: tile.companion }, predictionsBank, reflection: "Keep this private note." } };
+      const before = structuredClone(snapshot);
+      assert.deepEqual(parseRunStateBody(snapshot), { ok: false, error: "legacy_world_unresolved" });
+      assert.deepEqual(snapshot, before);
+    }
+  });
+
+  it("enforces UTF-8 bytes for the snapshot and pinned-bank caps", () => {
+    const multibyte = { tiles: { a: { id: "a", fluff: "界".repeat(150_000) } } };
+    const wire = JSON.stringify(multibyte);
+    assert.ok(wire.length < RUN_STATE_MAX_BYTES);                       // char count under cap
+    assert.ok(Buffer.byteLength(wire, "utf8") > RUN_STATE_MAX_BYTES);  // byte count over cap
+    assert.deepEqual(parseRunStateBody({ questId: "q1", board: multibyte }),
+      { ok: false, error: "too_large" });
+    const bank = JSON.parse(fs.readFileSync(new URL("../../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8"));
+    bank.predictions[0].detail = "界".repeat(40_000);
+    const bankWire = JSON.stringify(bank);
+    assert.ok(Buffer.byteLength(bankWire, "utf8") > 100_000);          // byte count over the pinned-bank cap
+    assert.deepEqual(parseRunStateBody({ questId: "q1", play: { predictionsBank: bank } }),
+      { ok: false, error: "bank_too_large" });
+  });
+
+  it("rejects malformed, mismatched, or cross-quest package refs instead of stripping them", () => {
+    const ref = { packageId: "package-a", questId: "q1", revision: `sha256:${"ab".repeat(32)}` };
+    for (const packageRef of [{ ...ref, revision: ` ${ref.revision}` }, { ...ref, questId: "q2" }, { ...ref, packageId: "../a" }]) {
+      assert.deepEqual(parseRunStateBody({ questId: "q1", play: { packageRef, mission: { id: "q1", packageRef } } }),
+        { ok: false, error: "package_reference_forbidden" });
+    }
+    const parsed = parseRunStateBody({ questId: "q1", play: { packageRef: ref, mission: { id: "q1", packageRef: { ...ref, revision: `sha256:${"cd".repeat(32)}` } } } });
+    assert.deepEqual(parsed, { ok: false, error: "package_reference_forbidden" });
+  });
+
   it("keeps idea sparks and R&D spark batches", () => {
     const parsed = parseRunStateBody({
       questId: "q1",

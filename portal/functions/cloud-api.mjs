@@ -83,7 +83,7 @@ async function readCode(request) {
 
 /** Dependency injection keeps handler tests offline; production uses the injected branch DATABASE_URL. */
 export function createCloudApi({ env = process.env, db, verifyClerk, verifySignedWebhook,
-  getUserBillingSubscription, getUser, loadCatalog, generateCode } = {}) {
+  getUserBillingSubscription, getUser, loadCatalog, resolvePackage, generateCode } = {}) {
   const allowedOrigins = cloudCorsOriginsFromEnv(env);
   // Return destinations are game origins, never the broader CORS-only list.
   const gameDeviceOrigins = gameDeviceOriginsFromEnv(env);
@@ -114,7 +114,7 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
       const cx = database();
       routes = {
         account: createAccountRoutes({ db: cx, env, getUserBillingSubscription }),
-        player: createPlayerRoutes({ db: cx, env, loadCatalog, getUser }),
+        player: createPlayerRoutes({ db: cx, env, loadCatalog, getUser, resolvePackage, enforcePackageCatalog: true }),
         quest: createQuestWriteRoutes({ db: cx, env, loadCatalog }),
         public: createPublicRoutes({ db: cx, env, verifyClerk: verify, loadCatalog }),
         billing: createBillingRoutes({ db: cx, env, verifyClerk: verify,

@@ -32,6 +32,17 @@ if (typeof globalThis.localStorage === "undefined") {
 const { CoInventor } = await import("./coinventor.js");
 
 describe("CoInventor._buildRequestContext", () => {
+  it("keeps immutable run/package identity for text and voice without duplicating the bank", () => {
+    const packageRef = { packageId: "dock", questId: "dock", revision: `sha256:${"ab".repeat(32)}` };
+    const runId = "11111111-1111-4111-8111-111111111111";
+    const sent = CoInventor.prototype._buildRequestContext.call({
+      getContext: () => ({ year: 2026, packageRef, runId, predictionsBank: { id: "not-authority" } }),
+    });
+    assert.deepEqual(sent.packageRef, packageRef);
+    assert.equal(sent.runId, runId);
+    assert.equal(sent.predictionsBank, undefined);
+  });
+
   it("keeps source fields and grounding", () => {
     const bank = { id: "companion-dock-test", predictions: [{ id: "dock-inspection-2026" }] };
     const inquiry = {

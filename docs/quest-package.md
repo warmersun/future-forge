@@ -4,6 +4,34 @@ One file for a quest, or for a whole learning module, plus the lesson pages and 
 
 This is how a Spotlight lesson moves from an authoring directory to staging and to warmersun.com. The game still plays quest JSON. The package is the envelope around that JSON and the lesson site that goes with it.
 
+## Self-contained worlds (v2)
+
+A Quest with `predictionBankId` or a package containing `predictions/` uses `future-forge.quest-package/v2`. Each playable member names exactly one complete calendar in `predictions/<bank-id>.json`. The filename, bank ID, and Quest binding must agree literally; identifiers are not trimmed or repaired. A module wrapper does not bind a bank. An assumed companion's `premise.bankId` must match its Quest's `predictionBankId`, and grants refer to rows in that calendar.
+
+Different calendars stay separate, even when unrelated packages use the same internal bank ID. Sharing a bank deliberately shares its complete calendar, not just a Quest's granted rows. Unreferenced banks and missing dependencies fail validation. World dependency checks still run under `--no-validate`; that flag does not make an incomplete world valid.
+
+A v2 release has an immutable `revision`: `sha256:` followed by the SHA-256 of compact UTF-8 JSON `[schema, packageId, [[path, digest], ...]]`. Member paths are sorted by raw UTF-8 bytes; file digests are lowercase hexadecimal without a prefix in this descriptor. Every source dependency contributes; generated `manifest.json` and `createdAt` do not. Repacking unchanged bytes retains the revision; changing a calendar, scope, Quest, lesson, or asset creates a new one.
+
+V2 `unpack` retains verified bytes in `raw/` and creates any delivery projection separately. Register `raw/` for integrity and world resolution; never hash a URL-rewritten projection as though it were the original release. Sideload installs this snapshot without changing the process-global calendar. V1 ordinary packages and an explicitly configured v1 developer bank remain supported.
+
+Archive safeguards reject unsafe paths, duplicate names, symbolic links, more than 512 entries, any decompressed member over 8,000,000 bytes, or total decompressed contents over 32,000,000 bytes.
+
+### Worked example and offline publication
+
+Build the existing dock fixture without changing its source claims, adding only its explicit bank binding:
+
+```sh
+node scripts/build-companion-dock-example.mjs /absolute/path/to/example-output
+./scripts/sideload-local-package.sh /absolute/path/to/example-output/companion-moonshots-304.ffquest
+npm run publish:quest-package -- /absolute/path/to/example-output/companion-moonshots-304.ffquest --dry-run
+```
+
+The calendar rows are synthetic test assumptions, not verified forecasts or statements by the source speaker. The source quote, interpretation, and fictional scenario premise remain distinct.
+
+Publication validates package integrity/world bindings, strict craft lint, and both solo economy paths before loading an adapter. Both solo paths must be challenging and finish in the same year. Access changes require editing the source and repacking a new revision. Public catalog metadata is derived from that release and replaces stale policy, sponsor, and entitlement fields; current policy also gates historical reads.
+
+Live publication additionally requires a verified atomic create/CAS storage adapter and staging validation. The offline test publisher is not proof of deployed compatibility. See [verification and release gates](testing/self-contained-quest-packages.md) for what was actually exercised, migration/recovery boundaries, and outstanding cross-repository checks.
+
 ## Layout
 
 A source directory and the zip use the same paths. `pack` writes `manifest.json`; you do not.
@@ -16,7 +44,7 @@ lessons/<folder>/illustrations/…
 assets/…                        optional quest assets
 ```
 
-Only `quests/`, `lessons/`, and `assets/` are allowed. Quest JSON sits directly in `quests/`, not in a subdirectory. Lesson folder names are lowercase slugs and do not have to match the quest id (`cells-already-know` can belong to `spotlight-synbio-harborlane-rehab-2026`).
+Only `quests/`, `lessons/`, and `assets/` are allowed in v1; v2 also permits `predictions/`. Quest JSON sits directly in `quests/`, not in a subdirectory. Lesson folder names are lowercase slugs and do not have to match the quest id (`cells-already-know` can belong to `spotlight-synbio-harborlane-rehab-2026`).
 
 Two shapes, one format:
 
@@ -27,7 +55,7 @@ The package id is the wrapper id when there is one, otherwise the quest id. The 
 
 ## Manifest
 
-Schema `future-forge.quest-package/v1`.
+The legacy manifest example below uses schema `future-forge.quest-package/v1`. V2 uses schema `future-forge.quest-package/v2`, `version: 2`, a content `revision`, a `predictions` index, and `predictionBankId` on every playable Quest index entry.
 
 ```json
 {
@@ -65,7 +93,7 @@ The zip stores package paths, not a host. A quest cites `lessons/<folder>/01-job
 
 A still the game already serves (`assets/problems/…`, `assets/quests/…` in the game repo) is left as that path. It is rewritten only when the file is actually in the zip.
 
-`unpack` joins a root onto those paths. Omit the roots and the extracted tree stays in package form, which is what you edit and re-pack.
+For v1, `unpack` joins a root onto those paths in the extracted files. For v2, the verified original files stay under `raw/`, with URL-rewritten delivery copies outside `raw/`. Register only the immutable raw release; never overwrite it with the display projection. The root table below describes the legacy v1 delivery layout; v2 deployment roots must include the immutable package ID/revision directory.
 
 ```bash
 python3 scripts/quest-package.py unpack out.ffquest path/to/destdir \
@@ -124,9 +152,9 @@ When a `kind: "module"` tile is present, `verify` also checks the wrapper the wa
 - `lesson` numbers are unique and run `1..N` in wrapper order.
 - The wrapper lists at most 24 lessons.
 
-`--allow-external-lessons` turns a missing lesson id into a warning, for a package that extends lessons already on the live catalog. `pack` and `verify` both take the flag. Deploy still requires each external id to already be in `future-forge/quests/catalog.json`.
+For v1 only, `--allow-external-lessons` turns a missing lesson id into a warning, for a package that extends lessons already on the live catalog. V2 must include its required lesson Quests and banks; this flag cannot relax those dependencies. `pack` and `verify` both take the flag. Deploy still requires each external id to already be in `future-forge/quests/catalog.json`.
 
-`unpack` verifies first, then extracts. It refuses a non-empty destination. `--lesson-root` and `--asset-root` are joined onto package paths in `*.json` and `*.html`. A root without a trailing slash gets one. The manifest itself is not rewritten.
+`unpack` verifies first, then extracts. It refuses a non-empty destination. `--lesson-root` and `--asset-root` are joined onto package paths in delivery `*.json` and `*.html` copies, leaving v2 `raw/` bytes unchanged. A root without a trailing slash gets one. The manifest itself is not rewritten.
 
 ## Stage and deploy
 

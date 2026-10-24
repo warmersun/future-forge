@@ -4,6 +4,7 @@
  */
 
 import { mapKind, mapOutcome, sanitizeQuestId, PLACE_MAX } from "./cloud-save.mjs";
+import { parsePackageRef } from "./package-paths.mjs";
 
 export const RUN_KINDS = ["theme", "lesson", "friends", "import"];
 export const RUN_OUTCOMES = ["hold", "partial", "collapse", "abandon"];
@@ -72,12 +73,40 @@ export function parseStartBody(body) {
   const src = body && typeof body === "object" ? body : {};
   const questId = sanitizeQuestId(src.questId || src.quest_id);
   if (!questId) return null;
+  if ((Object.hasOwn(src, "packageRef") || Object.hasOwn(src, "package_ref")) &&
+      !parseStartPackageRef(src)) return null;
   const placeRaw = src.place != null ? String(src.place).trim() : "";
   return {
     questId,
     kind: mapKind(src.kind),
     place: placeRaw ? placeRaw.slice(0, PLACE_MAX) : null,
   };
+}
+
+/**
+ * A client may name a package ref at start. It is not trusted until the
+ * server resolves it. Save bodies cannot supply a replacement.
+ * @param {unknown} body
+ * @returns {{ packageId: string, revision: string, questId: string } | null}
+ */
+export function parseStartPackageRef(body) {
+  const src = body && typeof body === "object" ? body : {};
+  return parsePackageRef(src.packageRef || src.package_ref);
+}
+
+/**
+ * Binding columns are written only at start. A later save that includes them
+ * is ignored rather than applied.
+ * @param {unknown} body
+ */
+export function clientPackageBindingIgnored(body) {
+  const src = body && typeof body === "object" ? body : {};
+  return (
+    src.packageRef != null ||
+    src.package_id != null ||
+    src.package_revision != null ||
+    src.package_quest_id != null
+  );
 }
 
 /**
@@ -99,5 +128,13 @@ export function publicRunRow(row) {
     startedAt: row.started_at || row.startedAt || null,
     endedAt: row.ended_at || row.endedAt || null,
     imported: Boolean(row.imported),
+    packageRef:
+      row.package_id && row.package_revision && row.package_quest_id
+        ? {
+            packageId: String(row.package_id),
+            revision: String(row.package_revision),
+            questId: String(row.package_quest_id),
+          }
+        : null,
   };
 }

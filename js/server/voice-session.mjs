@@ -4,6 +4,8 @@
  */
 
 import crypto from "node:crypto";
+import { applyAuthoritativeContext } from "./quest-world-context.mjs";
+import { parsePackageRef } from "./package-paths.mjs";
 
 export const DEFAULT_VOICE_MAX_SESSIONS = 8;
 export const DEFAULT_VOICE_MAX_MS = 10 * 60 * 1000;
@@ -76,7 +78,20 @@ export function createVoiceSessionStore(opts = {}) {
   const randomId = typeof opts.randomId === "function" ? opts.randomId : defaultId;
   const randomToken =
     typeof opts.randomToken === "function" ? opts.randomToken : defaultToken;
+  const resolvePackage = typeof opts.resolvePackage === "function" ? opts.resolvePackage : null;
   const onClose = typeof opts.onClose === "function" ? opts.onClose : null;
+
+  const trusted = Symbol("authorized context");
+
+  function bindContext(context, authority) {
+    if (authority === trusted) return { ok: true, context: structuredClone(context) };
+    const body = { context: context && typeof context === "object" ? context : {} };
+    const guarded = applyAuthoritativeContext(body, resolvePackage || undefined);
+    if (!guarded.ok) {
+      return { ok: false, status: guarded.status || 409, error: guarded.code };
+    }
+    return { ok: true, context: structuredClone(guarded.body.context) };
+  }
 
   /** @type {Map<string, object>} */
   const sessions = new Map();
@@ -133,10 +148,12 @@ export function createVoiceSessionStore(opts = {}) {
    * @param {{ context?: object, clientSessionId?: string|null, ip?: string, voice?: string }} input
    * @returns {{ ok: true, session: object } | { ok: false, status: number, error: string }}
    */
-  function create(input = {}) {
+  function create(input = {}, authority) {
     const clientSessionId = input.clientSessionId
       ? String(input.clientSessionId).trim().slice(0, 120)
       : "";
+    const bound = bindContext(input.context, authority);
+    if (!bound.ok) return bound;
     if (clientSessionId && byClient.has(clientSessionId)) {
       close(byClient.get(clientSessionId), "replaced");
     }
@@ -149,7 +166,8 @@ export function createVoiceSessionStore(opts = {}) {
     const session = {
       id,
       token,
-      context: input.context && typeof input.context === "object" ? input.context : {},
+      context: bound.context,
+      authorizeContext: input.authorizeContext || null,
       clientSessionId: clientSessionId || null,
       ip: input.ip || null,
       voice: input.voice || "eve",
@@ -189,11 +207,82 @@ export function createVoiceSessionStore(opts = {}) {
     return s;
   }
 
-  function updateContext(id, context) {
+  function updateContext(id, context, authority, preview = false) {
     const s = get(id);
     if (!s) return null;
-    if (context && typeof context === "object") s.context = context;
+    const fixedRef = s.context?.packageRef || null;
+    for (const id of [context?.questId, context?.mission?.id, context?.challenge?.id]) {
+      if (id != null && s.context?.questId != null && id !== s.context.questId)
+        return { ok: false, status: 403, error: "package_reference_forbidden" };
+    }
+    for (const key of ["runId", "cloudRunId", "questId"]) {
+      const fixed = key === "cloudRunId" ? s.context?.runId || s.context?.cloudRunId : s.context?.[key];
+      if (context?.[key] != null && context[key] !== fixed)
+        return { ok: false, status: 403, error: "package_reference_forbidden" };
+    }
+    if (context?.packageRef != null) {
+      const incoming = parsePackageRef(context.packageRef);
+      if (!fixedRef || !incoming || incoming.packageId !== fixedRef.packageId ||
+          incoming.revision !== fixedRef.revision || incoming.questId !== fixedRef.questId) {
+        return { ok: false, status: 403, error: "package_reference_forbidden" };
+      }
+    }
+    const bound = bindContext({
+      ...(context && typeof context === "object" ? context : {}),
+      ...(fixedRef ? { packageRef: fixedRef } : {}),
+      ...(s.context?.runId ? { runId: s.context.runId } : {}),
+      ...(s.context?.questId ? { questId: s.context.questId } : {}),
+    }, authority);
+    if (!bound.ok) return bound;
+    if (preview) return bound;
+    s.context = bound.context;
     return s;
+  }
+
+  async function createAuthorized(input = {}) {
+    if (typeof input.authorizeContext !== "function") return create(input);
+    const result = await input.authorizeContext({ context: input.context || {} });
+    if (!result?.ok) return { ok: false, status: result?.status || 503, error: result?.code || result?.error || "voice_context_unavailable" };
+    return create({ ...input, context: result.body.context }, trusted);
+  }
+
+  // Socket packets, upstream tools and reconnects all share this queue. A
+  // per-socket queue alone permits a late tool check to restore an older year.
+  const authorityQueues = new WeakMap();
+  function queueAuthority(id, context, revalidate = false) {
+    const s = get(id);
+    if (!s) return Promise.resolve(null);
+    const input = revalidate ? null : structuredClone(context);
+    const pending = (authorityQueues.get(s) || Promise.resolve()).then(() => {
+      if (get(id) !== s) return null;
+      return bindAuthorizedContext(id, revalidate ? s.context : input);
+    });
+    authorityQueues.set(s, pending.catch(() => {}));
+    return pending;
+  }
+  function updateAuthorizedContext(id, context) {
+    return queueAuthority(id, context);
+  }
+  function revalidateAuthorizedContext(id) {
+    return queueAuthority(id, null, true);
+  }
+
+  async function bindAuthorizedContext(id, context) {
+    const s = get(id);
+    if (!s) return null;
+    // Validate the immutable identity BEFORE adding stored bindings. Never silently repair swaps.
+    const checked = updateContext(id, context, trusted, true);
+    if (!checked || checked.ok === false) return checked;
+    if (typeof s.authorizeContext !== "function") return updateContext(id, context);
+    let result;
+    try { result = await s.authorizeContext({ context: checked.context }); }
+    catch { result = { ok: false, code: "voice_context_unavailable", status: 503 }; }
+    if (!result?.ok) {
+      close(id, "authority_denied");
+      return { ok: false, status: result?.status || 503, error: result?.code || result?.error || "voice_context_unavailable" };
+    }
+    if (get(id) !== s) return null;
+    return updateContext(id, result.body.context, trusted);
   }
 
   function bindClient(id, ws) {
@@ -223,6 +312,9 @@ export function createVoiceSessionStore(opts = {}) {
 
   return {
     create,
+    createAuthorized,
+    updateAuthorizedContext,
+    revalidateAuthorizedContext,
     get,
     auth,
     updateContext,

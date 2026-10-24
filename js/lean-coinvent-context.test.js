@@ -21,6 +21,19 @@ const leftoverSnap = {
 };
 
 describe("leanCoInventContext assess-feasibility", () => {
+  it("preserves compact package identity without sending a bank body", () => {
+    const packageRef = { packageId: "dock", revision: `sha256:${"ab".repeat(32)}`, questId: "dock" };
+    for (const mode of ["chat", "assess-feasibility", "score-pathway", "pose-challenge"]) {
+      const context = leanCoInventContext(mode, {}, {
+        ...leftoverSnap, packageRef, runId: "11111111-1111-4111-8111-111111111111",
+        predictionsBank: { id: "bank", predictions: [{ id: "row", detail: "full bank body" }] },
+      });
+      assert.deepEqual(context.packageRef, packageRef);
+      assert.equal(context.runId, "11111111-1111-4111-8111-111111111111");
+      assert.equal(context.predictionsBank, undefined);
+    }
+  });
+
   it("omits inventionName even when extra sends null and snap has a leftover name", () => {
     const ctx = leanCoInventContext(
       "assess-feasibility",

@@ -145,6 +145,99 @@ describe("hex-workshop tile timing extra", () => {
   });
 });
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
+async function untilCalled(check) {
+  for (let i = 0; i < 150; i++) {
+    if (check()) return;
+    await tick();
+  }
+  assert.fail("request was not started");
+}
+
+// Deferred real workshop calls: intentionally do not paint/abort on switching.
+// Reused tile/Quest IDs and identical banks must still isolate the old run.
+describe("hex-workshop stale response isolation", () => {
+  before(() => stubDom());
+  for (const change of ["run", "year"]) {
+    for (const mode of ["assess-feasibility", "score-pathway", "pose-challenge", "evaluate-convergence"]) {
+      it(`rejects late ${mode} after ${change} change without economy side effects`, async () => {
+        let board = seededBoard();
+        const mission = { id: "same-quest", pressure: { Floods: 2 }, winMax: { Floods: 1 } };
+        let world = { bank: null, packageRef: null };
+        let year = 2026;
+        let awards = 0, spent = 0, refunds = 0, called = false;
+        const pending = deferred();
+        if (mode === "evaluate-convergence") {
+          board = addTile(board, mintInventionTile({ id: "b", techId: "ai", howText: "Local quay pumps", year }));
+          board = placeOk(board, "b", board.tiles.a.q - 1, board.tiles.a.r);
+        }
+        const ws = createHexWorkshop({
+          getBoard: () => board, setBoard: (b) => { board = b; },
+          getYear: () => year, getMission: () => mission, getRunWorld: () => world,
+          grantPathwayEase: () => { awards++; },
+          apEnabled: () => true,
+          spendFirstSummonAp: () => { spent++; return { ok: true }; },
+          refundFirstSummonAp: () => { refunds++; },
+          coInvent: async (which) => {
+            if (which === mode) { called = true; return pending.promise; }
+            return {};
+          },
+        });
+        let done;
+        if (mode === "assess-feasibility") ws.refreshAfterYearChange();
+        if (mode === "score-pathway") ws.refreshAfterYearChange();
+        if (mode === "pose-challenge") done = ws.summonNextChallenger();
+        if (mode === "evaluate-convergence") ws.afterBoardChange("b", "place");
+        await untilCalled(() => called);
+        if (change === "run") { world = { bank: null, packageRef: null }; board = seededBoard(); }
+        else year++;
+        const before = JSON.stringify(board);
+        pending.resolve({
+          timing: { level: "green", reason: "OLD RESPONSE" },
+          crisisDelta: { local: -2, global: 0, support: 0 }, concerns: {},
+          challengeSpeech: "OLD RESPONSE", challengeQuestion: "OLD RESPONSE?",
+          convergences: [{ neighborId: "a", converges: true, reason: "OLD RESPONSE" }],
+        });
+        if (done) await done;
+        await tick();
+        assert.equal(JSON.stringify(board), before);
+        assert.equal(awards, 0);
+        assert.equal(spent, mode === "pose-challenge" ? 1 : 0);
+        assert.equal(refunds, mode === "pose-challenge" && change === "year" ? 1 : 0);
+        ws.seedFromMission(mission); // cancel outstanding debounce timers
+      });
+    }
+  }
+
+  it("rechecks invalidated scores without repaying pathway ease", async () => {
+    let board = seededBoard();
+    const mission = { id: "same", pressure: { Floods: 2 }, winMax: { Floods: 1 } };
+    let year = 2026, awards = 0, calls = 0;
+    const ws = createHexWorkshop({
+      getBoard: () => board, setBoard: (b) => { board = b; },
+      getYear: () => year, getMission: () => mission,
+      grantPathwayEase: () => { awards++; },
+      coInvent: async (mode) => { if (mode === "score-pathway") calls++; return { timing: { level: "green" }, crisisDelta: { local: -1, global: 0, support: 0 }, concerns: {} }; },
+    });
+    ws.refreshAfterYearChange();
+    await untilCalled(() => calls === 1);
+    await tick();
+    assert.equal(awards, 1);
+    year++;
+    ws.refreshAfterYearChange();
+    await untilCalled(() => calls === 2);
+    await tick();
+    assert.equal(awards, 1);
+    assert.equal(Object.keys(board.pathwayEaseAwards).length, 1);
+    ws.seedFromMission(mission);
+  });
+});
+
 describe("hex-workshop why blocks", () => {
   it("crisisWhyBlockHtml lists net and each island", () => {
     const one = crisisWhyBlockHtml([

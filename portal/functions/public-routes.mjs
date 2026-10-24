@@ -9,6 +9,9 @@ import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { isPortalApiPath } from "../../js/server/portal-api-paths.mjs";
 import { applyCatalogGate, catalogCard, questReadDecision } from "../../js/server/cloud-gate.mjs";
 import { fetchObjectQuestCatalog, questsBucketFromEnv, questsObjectPrefixFromEnv } from "../../js/server/quest-object-storage.mjs";
+import { createHostedPackageResolverFromEnv } from "../../js/server/hosted-package-resolver.mjs";
+import { parsePackageRef } from "../../js/server/package-paths.mjs";
+import { createQuestRequestAuthority } from "../../js/server/quest-request-authority.mjs";
 import { fetchRemoteQuestCatalog, DEFAULT_QUESTS_REMOTE_URL } from "../../js/quests-remote.mjs";
 import { sanitizeUsername, publicInventorPage } from "../../js/server/profile.mjs";
 import { portfolioFromTechIdLists, publicPortfolio } from "../../js/sim/portfolio.js";
@@ -45,7 +48,10 @@ function cardMissing() {
   });
 }
 
-export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCatalog, renderShare = renderCollectorCardShare } = {}) {
+export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCatalog, packageResolver, readPackageBytes,
+  renderShare = renderCollectorCardShare } = {}) {
+  const resolver = packageResolver || createHostedPackageResolverFromEnv({ env, readBytes: readPackageBytes,
+    loadCatalog: () => catalog(true) });
   let pool;
   function database() {
     if (db) return db;
@@ -86,6 +92,13 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
     if (bucket) return fetchObjectQuestCatalog({ bucket, prefix: questsObjectPrefixFromEnv(env), force });
     const configured = env.FF_QUESTS_REMOTE_URL;
     const remoteUrl = configured === undefined ? DEFAULT_QUESTS_REMOTE_URL : String(configured).trim();
+    if (remoteUrl && !/^(0|off|false)$/i.test(remoteUrl)) {
+      try {
+        const approved = new URL(remoteUrl);
+        if (approved.protocol !== "https:" || approved.username || approved.password || approved.search || approved.hash ||
+            !approved.pathname.endsWith("/catalog.json")) throw new Error("catalog_origin_forbidden");
+      } catch { return { ok: false, quests: [], errors: [{ error: "catalog_origin_forbidden" }] }; }
+    }
     return fetchRemoteQuestCatalog(remoteUrl && !/^(0|off|false)$/i.test(remoteUrl) ? remoteUrl : null,
       { force, tryFallbacks: false });
   }
@@ -98,6 +111,16 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
         periodEnd: sub?.period_end, allowedSlugs: planSlugsFromEnv(env) });
     } catch { return false; }
   }
+  const authorizeContext = createQuestRequestAuthority({
+    loadCatalog: () => catalog(true),
+    resolvePackage: (ref, opts) => resolver.resolve(ref, opts),
+    loadRun: async (uid, id) => {
+      const cx = database();
+      if (!cx) return null;
+      return (await cx.query(`SELECT quest_id, package_id, package_revision, package_quest_id
+        FROM runs WHERE id = $1::uuid AND clerk_user_id = $2`, [id, uid])).rows[0] || null;
+    },
+  });
   async function handle(request) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -114,6 +137,26 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
     if (!owned || (path.startsWith("/api/") && !isPortalApiPath(path)))
       return reply({ ok: false, error: "not_found", service: "portal" }, 404);
     const isCard = path.startsWith("/card/");
+    if (path === "/api/quests/resolve-context") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: {
+        ...cors, "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type",
+      } });
+      if (request.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
+      try {
+        const chunks = [];
+        let size = 0;
+        for await (const chunk of request.body || []) {
+          size += chunk.byteLength;
+          if (size > 400_000) return reply({ ok: false, error: "payload_too_large" }, 413);
+          chunks.push(Buffer.from(chunk));
+        }
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        const ident = await identity(request);
+        const result = await authorizeContext(body, { identity: ident, entitled: await entitled(ident, database()) });
+        return result.ok ? reply({ ok: true, context: result.body.context })
+          : reply({ ok: false, error: result.code }, result.status || 409);
+      } catch { return reply({ ok: false, error: "invalid_context" }, 400); }
+    }
     if (request.method === "OPTIONS" && !isCard) return new Response(null, { status: 204,
       headers: { ...cors, "Cache-Control": "no-store", "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Authorization, Content-Type" } });
@@ -171,9 +214,23 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
           const decision = questReadDecision(tile, ident, { entitled: paid });
           if (!decision.allow) return reply({ ok: false, error: decision.error, id,
             tile: catalogCard(tile), ...(decision.status === 402 ? { subscribeUrl: "https://warmersun.com/portal/subscribe" } : {}) }, decision.status);
+          if (tile.packageRef) {
+            const currentRef = parsePackageRef(tile.packageRef);
+            if (!currentRef) return reply({ ok: false, error: "package_reference_forbidden" }, 400);
+            const ref = { ...currentRef, revision: url.searchParams.get("revision") || currentRef.revision };
+            const resolved = await resolver.resolve(ref, { identity: ident, entitled: paid });
+            if (!resolved?.ok) return reply({ ok: false, error: resolved?.code || "package_revision_unavailable", id }, resolved?.status || 409);
+            // Recheck the actual release even for an injected resolver. Access query flags are ignored.
+            const checked = questReadDecision(resolved.record || resolved.tile, ident, { entitled: paid });
+            if (!checked.allow) return reply({ ok: false, error: checked.error, id, tile: catalogCard(tile) }, checked.status);
+            return reply({ ok: true, tile: resolved.record || resolved.tile });
+          }
           return reply({ ok: true, tile });
         }
-        const gated = quests.map((q) => applyCatalogGate(q, ident, { entitled: paid }));
+        const gated = quests.map((q) => q.packageRef
+          ? { ...catalogCard(q), packageRef: q.packageRef,
+            gated: !questReadDecision(q, ident, { entitled: paid }).allow }
+          : applyCatalogGate(q, ident, { entitled: paid }));
         // No local filesystem catalog exists in this Function. Preserve the legacy
         // response shape while serving only bucket/remote entries through the gate.
         return reply({ ok: true, dir: null, remoteUrl: remote.url, remoteOk: remote.ok,

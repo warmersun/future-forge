@@ -868,6 +868,7 @@ export function catalogRecordFromValidated(v, extra = {}) {
     placement: v.tile.placement || { mode: "replace-daily" },
     mission,
     tile: { ...v.tile, mission },
+    ...(mission.predictionBankId ? { predictionBankId: mission.predictionBankId } : {}),
     ...extra,
   };
 }
@@ -1083,6 +1084,14 @@ export function validateQuestTile(tile, opts = {}) {
     else companion = parsedCompanion.value;
   }
 
+  const predictionBankIdRaw = pickTileOrMissionField(tile, missionIn, "predictionBankId");
+  const predictionBankId = predictionBankIdRaw === undefined ? null : predictionBankIdRaw;
+  if (predictionBankIdRaw !== undefined &&
+      (typeof predictionBankIdRaw !== "string" ||
+       !/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(predictionBankIdRaw))) {
+    details.push("predictionBankId_invalid");
+  }
+
   if (!isStructuredPressure(missionIn.pressure)) {
     details.push("pressure_must_be_structured");
   }
@@ -1183,6 +1192,7 @@ export function validateQuestTile(tile, opts = {}) {
   }
   if (titleImageUrl) mission.titleImageUrl = titleImageUrl;
   if (companion) mission.companion = companion;
+  if (predictionBankId) mission.predictionBankId = predictionBankId;
 
   const normalizedTile = {
     schema: QUEST_TILE_SCHEMA,
@@ -1224,6 +1234,7 @@ export function validateQuestTile(tile, opts = {}) {
   }
   if (titleImageUrl) normalizedTile.titleImageUrl = titleImageUrl;
   if (companion) normalizedTile.companion = companion;
+  if (mission.predictionBankId) normalizedTile.predictionBankId = mission.predictionBankId;
 
   return { ok: true, tile: normalizedTile, mission, kind: "quest" };
 }

@@ -16,9 +16,7 @@ import {
   globalById,
   missionsForGlobal,
   localScenariosForGlobal,
-  packRulesForMission,
   SCENARIO_PACK_REV,
-  allTechIds,
   techById,
   domainsInStack,
   detectClaimStretch,
@@ -65,8 +63,8 @@ import {
   formatScrutinyLog,
 } from "./captain-log.js";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire } from "./cloud/continue.js?v=portal-19";
-import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-19";
+import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=portal-20";
+import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-20";
 import {
   publicPortfolio,
   portfolioFromRuns,
@@ -212,6 +210,8 @@ import {
 } from "./sim/collapse.js";
 import { inventYear } from "./sim/mp-session.js";
 import { cloudRunKind, missionForFriendsPlay } from "./sim/state.js";
+import { bankForRun, emptyRunWorld, prepareRunWorld } from "./sim/run-world.js";
+import { normalizeMission } from "./mission-normalize.js";
 import { scoreRun, starLabel } from "./sim/scoring.js";
 import {
   applyAction,
@@ -256,8 +256,6 @@ import {
   validateQuestDocument,
   catalogRecordFromValidated,
   CAPS,
-  parseResourceOverrides,
-  normalizeMissionPressure,
   resourceOverrideLabel,
   crisisRolesLabel,
   learningProgressBarHtml,
@@ -284,7 +282,7 @@ import {
   destroyTrendChart,
   formatTrendValue,
 } from "./trend-chart.js";
-import { SCENE_PROSE, SCENE_CHAR_CAP } from "./scene-prose.js";
+import { SCENE_PROSE } from "./scene-prose.js";
 import { clipSummary, ensureQuestSummary } from "./quest-summary.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
 import {
@@ -305,8 +303,6 @@ import {
 } from "./tutorial.js";
 import {
   BRIEF_MD_RECIPE,
-  briefMdFromLivedStory,
-  normalizeBriefBeats,
   resolveBriefBeats,
   briefBeatAuthoredUrl,
   isSafeBriefImageUrl,
@@ -360,7 +356,7 @@ import {
 } from "./sim/scrutiny.js";
 import { deriveInventPhase } from "./sim/invent-phase.js";
 import { featuresForPlayMode, forgetLegacySparkKey } from "./sim/play-mode.js";
-import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi, sanitizeSuggestedWhy } from "./tech-why.js";
+import { splitTray, whyHere, capabilityLine, pickTechsForCrisis, spotlightAdvanceForAi } from "./tech-why.js";
 import { termHtml, bindGlossaryTaps } from "./glossary.js";
 import {
   resolveConceptCard,
@@ -513,6 +509,8 @@ const state = {
   mission: null,
   /** Validated predictions bank pinned for an assumed-premise run. Null otherwise. */
   pinnedPredictionsBank: null,
+  /** One resolved world for this run. Replaces dual bank ownership when set. */
+  runWorld: emptyRunWorld(),
   /** Private outcome reflection. Not published. */
   companionReflection: "",
   /** @type {null | object} multiplayer chrome flags (set by hotseatBridge.hydrateSoloState) */
@@ -1533,10 +1531,7 @@ let focusedTechId = null;
 let hexWorkshop = null;
 
 function activePinnedBank() {
-  if (state.pinnedPredictionsBank?.id) return state.pinnedPredictionsBank;
-  const carried = state.mission?.pinnedPredictionsBank;
-  if (carried && carried.id && carried.id !== "empty") return carried;
-  return null;
+  return bankForRun(state);
 }
 
 function liveScenarioPremise() {
@@ -1596,6 +1591,8 @@ function ensureHexWorkshop() {
     getPlace: () => state.mission?.place || "",
     getMissionTitle: () => state.mission?.title || "",
     getMission: () => state.mission || null,
+    getRunWorld: () => state.runWorld,
+    getRunId: () => state.cloudRunId || state.runWorld,
     /** "What could help here?" — suggested emTechs with plain reasons for a crisis hex */
     techsForCrisis: (where) => pickTechsForCrisis(state.mission, TECHS, where || {}, 3),
     focusTechFromBoard: (id) => focusTech(id),
@@ -1603,7 +1600,7 @@ function ensureHexWorkshop() {
     getGlobal: () => state.global || null,
     getGrounding: () => state.mission?.grounding || null,
     getSourceInquiryKey: () =>
-      sourceInquiryKey(state.mission?.companion, activePinnedBank(), state.year),
+      sourceInquiryKey(state.mission?.companion, activePinnedBank(), state.year, state.runWorld?.packageRef),
     getScenarioPremise: () => liveScenarioPremise(),
     getExplorationFocus: () => String(state.mission?.companion?.exploration?.focus || ""),
     getCriticPrompt: (angle) => criticPromptForAngle(angle),
@@ -3857,13 +3854,17 @@ function postCloudRunStart(mission) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       questId: String(mission.id),
+      ...(mission.packageRef && mission.runWorld?.trust !== "local-import" ? { packageRef: mission.packageRef } : {}),
       kind,
       place: mission.place ? String(mission.place) : "",
     }),
   })
     .then(async (res) => {
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.id) state.cloudRunId = String(data.id);
+      if (res.ok && data.id && state.mission === mission) {
+        state.cloudRunId = String(data.id);
+        scheduleCloudRunState();
+      }
     })
     .catch(() => {
       /* local play continues */
@@ -3951,7 +3952,9 @@ function cloudRunStatePayload() {
       rules: cloneRules(state.rules),
       tutorSessionActive: Boolean(state.tutorSessionActive),
       mission: slimMissionForContinue(state.mission),
-      ...(activePinnedBank() ? { predictionsBank: activePinnedBank() } : {}),
+      ...(state.mission.packageRef && state.runWorld?.trust !== "local-import"
+        ? { packageRef: state.mission.packageRef }
+        : !state.runWorld?.packageRef && activePinnedBank() ? { predictionsBank: activePinnedBank() } : {}),
       ...(String(state.companionReflection || "").trim()
         ? { reflection: String(state.companionReflection).slice(0, 2000) }
         : {}),
@@ -3965,37 +3968,6 @@ function cloudRunStatePayload() {
   });
 }
 
-function slimMissionForContinue(m) {
-  if (!m?.id) return null;
-  return {
-    id: m.id,
-    globalId: m.globalId || null,
-    title: m.title || "",
-    place: m.place || "",
-    scene: m.scene || "",
-    startYear: m.startYear,
-    collapseYear: m.collapseYear,
-    yearsPerTurn: m.yearsPerTurn,
-    pressure: m.pressure,
-    pressureRise: m.pressureRise,
-    winMax: m.winMax,
-    pressureDesc: m.pressureDesc,
-    crisisRoles: m.crisisRoles,
-    suggested: m.suggested,
-    source: m.source || "play",
-    isLearningModule: Boolean(m.isLearningModule),
-    module: m.module,
-    lesson: m.lesson,
-    totalLessons: m.totalLessons,
-    ...(m.access === "open" || m.access === "account" || m.access === "paid"
-      ? { access: m.access }
-      : {}),
-    ...(typeof m.grounding === "string" && m.grounding && !m.grounding.startsWith("data:")
-      ? { grounding: m.grounding.slice(0, 3000) }
-      : {}),
-    ...(m.companion && typeof m.companion === "object" ? { companion: m.companion } : {}),
-  };
-}
 
 function scheduleCloudRunState() {
   if (!isClerkSignedIn() || !state.mission?.id) return;
@@ -4081,6 +4053,18 @@ async function maybeOfferContinue() {
     const res = await apiFetch("/api/me/run-state");
     const data = await res.json().catch(() => ({}));
     const st = data.state;
+    if (!res.ok) {
+      // Preserve a cached save on a failed GET so recovery can be offered.
+      if (data?.error === "legacy_world_unresolved" && !state.legacyToastShown) {
+        state.legacyToastShown = true;
+        flashToast("Preserve or export the save for recovery.");
+      }
+      if (btn) btn.hidden = !state.cloudContinue;
+      if (res.status === 401 && data.error === "invalid_token") {
+        invalidateClerkSession();
+      }
+      return;
+    }
     state.cloudContinue = st && st.questId ? st : null;
     btn.hidden = !state.cloudContinue;
     if (res.status === 401 && data.error === "invalid_token") {
@@ -4092,7 +4076,7 @@ async function maybeOfferContinue() {
 }
 
 function overlayContinueCompanion(mission, st) {
-  if (!mission) return mission;
+  if (!mission || mission.packageRef) return mission;
   const snap = st?.play?.mission?.companion;
   if (!snap || typeof snap !== "object") return mission;
   const access = mission.access || "open";
@@ -4101,9 +4085,13 @@ function overlayContinueCompanion(mission, st) {
   return { ...mission, companion: parsed.value };
 }
 
-function resolveContinueMission(st) {
+async function resolveContinueMission(st) {
   const id = st?.questId;
   if (!id) return null;
+  if (st.packageRef || st.play?.packageRef || st.play?.mission?.packageRef) {
+    return resolvePackageContinueMission(st, (questId, packageRef) =>
+      fetchFullQuestTile(questId, { packageRef }));
+  }
   const fromHosted = (state.hostedQuests || []).find(
     (q) => q.id === id || q.mission?.id === id
   );
@@ -4138,6 +4126,11 @@ async function continueCloudRun() {
   if (continueInFlight) return;
   const st = state.cloudContinue;
   if (!st?.questId) return;
+  const checked = validateContinueWorld(st);
+  if (!checked.ok) {
+    flashToast(checked.message || "Preserve or export the save for recovery.");
+    return;
+  }
   const btn = $("#btn-cloud-continue");
   continueInFlight = true;
   if (btn) btn.disabled = true;
@@ -4149,7 +4142,7 @@ async function continueCloudRun() {
         /* stub / cache may still restore */
       }
     }
-    const mission = resolveContinueMission(st);
+    const mission = await resolveContinueMission(st);
     if (!mission?.id) {
       flashToast("Could not restore that quest on this device.");
       return;
@@ -5742,7 +5735,8 @@ function promptCloudSignIn(msg, opts = {}) {
 async function fetchFullQuestTile(id, opts = {}) {
   if (!id) return null;
   try {
-    const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}`);
+    const suffix = opts.packageRef ? `?revision=${encodeURIComponent(opts.packageRef.revision)}` : "";
+    const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}${suffix}`);
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) {
       if (opts.keepUrl) {
@@ -5807,14 +5801,15 @@ async function playCatalogEntry(entry, opts = {}) {
   // Library JSON is the lesson — do not hydrate from the gated Cloud catalog.
   const needsBody =
     !isLibraryCatalogEntry(entry) &&
-    (entry?.gated === true ||
+    (Boolean(entry?.packageRef || entry?.mission?.packageRef) ||
+      entry?.gated === true ||
       !entry?.mission ||
       (learning &&
         isClerkReady() &&
         !entry.aiTutorContext &&
         !entry.mission?.aiTutorContext));
   if (needsBody && entry?.id) {
-    const full = await fetchFullQuestTile(entry.id, { keepUrl: Boolean(opts.keepUrl) });
+    const full = await fetchFullQuestTile(entry.id, { keepUrl: Boolean(opts.keepUrl), packageRef: entry.packageRef || entry.mission?.packageRef });
     if (full?.mission) {
       src = {
         ...entry,
@@ -5822,7 +5817,7 @@ async function playCatalogEntry(entry, opts = {}) {
         gated: false,
         mission: { ...(entry.mission || {}), ...full.mission },
       };
-    } else if (entry?.gated || catalogNeedsAccount(entry)) {
+    } else if (entry?.packageRef || entry?.mission?.packageRef || entry?.gated || catalogNeedsAccount(entry)) {
       return "denied";
     }
   }
@@ -7807,199 +7802,6 @@ async function ensureScenarios(global, { force = false } = {}) {
   return seedLocal();
 }
 
-function normalizeMission(raw, globalId) {
-  const id =
-    String(raw.id || "").trim() ||
-    `gen-${globalId}-${Math.random().toString(36).slice(2, 8)}`;
-
-  // Structured { local|global|support: { label, pressure, … } } or legacy flat maps
-  const meters = normalizeMissionPressure(raw.pressure, raw.pressureRise, raw.winMax);
-  let pressure;
-  let pressureRise;
-  let winMax;
-  let crisisRoles = null;
-  /** @type {Record<string, string>} */
-  let pressureDesc = {};
-  if (meters.ok) {
-    pressure = meters.pressure;
-    pressureRise = meters.pressureRise;
-    winMax = meters.winMax;
-    crisisRoles = meters.crisisRoles;
-    pressureDesc = { ...(meters.pressureDesc || {}) };
-  } else {
-    // Fallback (should not happen for valid data)
-    pressure = { Pressure: 2, Capacity: 2, Trust: 1 };
-    pressureRise = { Pressure: 1, Capacity: 1, Trust: 0 };
-    winMax = { Pressure: 1, Capacity: 1, Trust: 1 };
-  }
-  // Prefer explicit crisisRoles already on a pre-normalized mission
-  if (Array.isArray(raw.crisisRoles) && raw.crisisRoles.length) {
-    crisisRoles = raw.crisisRoles.map(String);
-  }
-  // Label-keyed descriptions survive flatten / cache round-trip
-  if (raw.pressureDesc && typeof raw.pressureDesc === "object") {
-    for (const k of Object.keys(pressure)) {
-      if (pressureDesc[k]) continue;
-      const d = raw.pressureDesc[k];
-      if (typeof d === "string" && d.trim()) {
-        pressureDesc[k] = d.trim().slice(0, 400);
-      }
-    }
-  }
-  for (const k of Object.keys(pressure)) {
-    if (pressureDesc[k] == null) pressureDesc[k] = "";
-  }
-
-  const validTech = new Set(allTechIds());
-  let suggested = (Array.isArray(raw.suggested) ? raw.suggested : [])
-    .map(String)
-    .filter((t) => validTech.has(t))
-    .slice(0, 8);
-
-  let spotlight = null;
-  if (raw.spotlight && typeof raw.spotlight === "object" && raw.spotlight.techId) {
-    const techId = String(raw.spotlight.techId);
-    if (validTech.has(techId)) {
-      spotlight = {
-        techId,
-        advanceTitle: String(raw.spotlight.advanceTitle || "").slice(0, 200),
-        advanceSummary: String(raw.spotlight.advanceSummary || "").slice(0, 600),
-        asOf: String(raw.spotlight.asOf || "").slice(0, 32),
-        encourageCopy: String(raw.spotlight.encourageCopy || "").slice(0, 280),
-      };
-      // Spotlight Quests: the spotlight leads the "For this place" shelf;
-      // authored supporting emTechs follow in order (convergence partners).
-      suggested = [techId, ...suggested.filter((id) => id !== techId)].slice(0, 8);
-    }
-  }
-
-  const authoredBrief = String(raw.briefMd || "").trim().slice(0, 12_000);
-  const briefMd =
-    authoredBrief ||
-    briefMdFromLivedStory({
-      scene: String(raw.scene || "").trim(),
-      title: String(raw.title || "").trim(),
-      stakeholder: String(raw.stakeholder || "").trim(),
-      pressure: raw.pressure,
-      globalTitle: String(globalById(globalId)?.title || "").trim(),
-      encourageCopy: String(
-        raw.encourageCopy || raw.spotlight?.encourageCopy || ""
-      ).trim(),
-    }).slice(0, 12_000);
-  const source =
-    raw.source === "curated"
-      ? "curated"
-      : raw.source === "imported"
-        ? "imported"
-        : raw.source === "hosted"
-          ? "hosted"
-          : raw.source === "remote"
-            ? "remote"
-            : raw.source === "daily"
-              ? "daily"
-              : "generated";
-
-  const resourcesParsed = parseResourceOverrides(raw.resources);
-  const resources =
-    resourcesParsed.ok && resourcesParsed.value ? resourcesParsed.value : null;
-  const grounding =
-    typeof raw.grounding === "string" && raw.grounding.trim()
-      ? raw.grounding.trim().slice(0, 50_000)
-      : null;
-  const isLearningModule = raw.isLearningModule === true;
-  const aiTutorContext =
-    typeof raw.aiTutorContext === "string" && raw.aiTutorContext.trim()
-      ? raw.aiTutorContext.trim().slice(0, 50_000)
-      : null;
-  const posInt = (v) =>
-    typeof v === "number" && Number.isInteger(v) && v >= 1 ? v : null;
-  const moduleTitle =
-    typeof raw.module === "string" && raw.module.trim()
-      ? raw.module.trim().slice(0, CAPS.moduleTitle)
-      : null;
-  const lessonN = posInt(raw.lesson);
-  const totalLessonsN = posInt(raw.totalLessons);
-  const sponsorName =
-    typeof raw.sponsorName === "string" && raw.sponsorName.trim()
-      ? raw.sponsorName.trim().slice(0, 120)
-      : null;
-  const sponsorBanner =
-    typeof raw.sponsorBanner === "string" && raw.sponsorBanner.trim()
-      ? raw.sponsorBanner.trim().slice(0, 200)
-      : null;
-
-  const trends = Array.isArray(raw.trends)
-    ? raw.trends.filter((t) => t && typeof t === "object" && t.id)
-    : null;
-  const spotlightTrends = Array.isArray(raw.spotlightTrends)
-    ? raw.spotlightTrends.map(String).filter(Boolean).slice(0, 8)
-    : null;
-  let briefBeatsSafe = null;
-  if (Array.isArray(raw.briefBeats) && raw.briefBeats.length) {
-    const n = normalizeBriefBeats(raw.briefBeats);
-    if (n.ok) briefBeatsSafe = n.beats;
-  }
-  const suggestedSafe = suggested.length ? suggested : ["ai", "iot", "networks"];
-  const suggestedWhy = sanitizeSuggestedWhy(raw.suggestedWhy, new Set(suggestedSafe));
-
-  return {
-    id,
-    globalId,
-    title: String(raw.title || "Local Challenge").slice(0, 100),
-    place: String(raw.place || "Local place").slice(0, 80),
-    startYear: Number(raw.startYear) || GAME.startYear,
-    collapseYear: Number(raw.collapseYear) || GAME.startYear + 8,
-    yearsPerTurn: Number(raw.yearsPerTurn) || GAME.yearsPerTurn,
-    pressure,
-    pressureRise,
-    winMax,
-    pressureDesc,
-    scene: String(raw.scene || "").slice(
-      0,
-      source === "imported" || source === "hosted" || source === "remote"
-        ? 500
-        : SCENE_CHAR_CAP
-    ),
-    briefMd,
-    stakeholder: String(raw.stakeholder || "").slice(0, 120),
-    suggested: suggestedSafe,
-    ...(suggestedWhy ? { suggestedWhy } : {}),
-    visionTheme: String(raw.visionTheme || "rebuild-city").slice(0, 40),
-    source,
-    spotlight,
-    ...(resources ? { resources } : {}),
-    ...(crisisRoles?.length ? { crisisRoles } : {}),
-    ...(grounding ? { grounding } : {}),
-    ...(isLearningModule ? { isLearningModule: true } : {}),
-    ...(aiTutorContext ? { aiTutorContext } : {}),
-    ...(moduleTitle ? { module: moduleTitle } : {}),
-    ...(lessonN != null ? { lesson: lessonN } : {}),
-    ...(totalLessonsN != null ? { totalLessons: totalLessonsN } : {}),
-    ...(sponsorName ? { sponsorName } : {}),
-    ...(sponsorBanner ? { sponsorBanner } : {}),
-    ...(() => {
-      if (!raw.companion || typeof raw.companion !== "object") return {};
-      const parsed = parseCompanion(raw.companion, {
-        access: raw.access || "open",
-      });
-      return parsed.ok ? { companion: parsed.value } : {};
-    })(),
-    ...(trends?.length ? { trends } : {}),
-    ...(spotlightTrends?.length ? { spotlightTrends } : {}),
-    ...(String(raw.summary || "").trim()
-      ? { summary: String(raw.summary).trim().slice(0, CAPS.summary) }
-      : {}),
-    ...(briefBeatsSafe ? { briefBeats: briefBeatsSafe } : {}),
-    ...(() => {
-      const rawRules =
-        Array.isArray(raw.rules) && raw.rules.length
-          ? raw.rules
-          : packRulesForMission(raw);
-      const parsed = parseQuestRules(rawRules);
-      return parsed.ok && parsed.value?.length ? { rules: parsed.value } : {};
-    })(),
-  };
-}
 
 /** HTML chip for non-default starting resources on selection cards. */
 function resourceOverrideBadgeHtml(resources) {
@@ -8383,7 +8185,7 @@ function startMission(mission, opts = {}) {
     const global = globalById(mission.globalId) || state.global;
     const normalizedPick = normalizeMission(mission, mission.globalId || global?.id);
     const handed = { ...mission, ...normalizedPick, id: mission.id || normalizedPick.id };
-    const pinnedPick = pinPredictionsBank(handed.companion, {
+    const pinnedPick = prepareRunWorld(handed, {
       loadedBank: getWorldForesightBank(),
       year: handed.startYear,
     });
@@ -8391,7 +8193,8 @@ function startMission(mission, opts = {}) {
       flashToast(pinnedPick.message);
       return false;
     }
-    if (pinnedPick.bank) handed.pinnedPredictionsBank = pinnedPick.bank;
+    delete handed.pinnedPredictionsBank;
+    handed.runWorld = pinnedPick.world;
     const session = missionPickSession;
     missionPickSession = null;
     try {
@@ -8416,13 +8219,14 @@ function startMission(mission, opts = {}) {
     delete merged.aiTutorContext;
     delete merged.isLearningModule;
   }
-  if (opts.restore?.play?.mission?.companion) {
+  if (!merged.packageRef && opts.restore?.play?.mission?.companion) {
     const access = merged.access || mission.access || "open";
     const parsed = parseCompanion(opts.restore.play.mission.companion, { access });
     if (parsed.ok) merged.companion = parsed.value;
   }
-  const pinned = pinPredictionsBank(merged.companion, {
+  const pinned = prepareRunWorld(merged, {
     loadedBank: getWorldForesightBank(),
+    restoring: Boolean(opts.restore),
     restoreBank: opts.restore
       ? opts.restore.play?.predictionsBank || opts.restore.predictionsBank || null
       : null,
@@ -8432,8 +8236,10 @@ function startMission(mission, opts = {}) {
     flashToast(pinned.message);
     return false;
   }
-  state.pinnedPredictionsBank = pinned.bank;
-  if (pinned.bank) merged.pinnedPredictionsBank = pinned.bank;
+  state.runWorld = pinned.world;
+  state.pinnedPredictionsBank = null;
+  delete merged.pinnedPredictionsBank;
+  merged.runWorld = pinned.world;
   state.companionReflection = "";
   state.mission = merged;
   resetQuestBriefing({
@@ -12726,9 +12532,13 @@ function sourceConstraintFields(mode = "chat", extra = {}) {
   const out = {};
   if (text) out.sourceConstraint = text;
   if (inquiry) out.sourceInquiry = inquiry;
+  if (state.runWorld?.packageRef) {
+    out.packageRef = state.runWorld.packageRef;
+    if (state.cloudRunId && state.runWorld.trust !== "local-import") out.runId = state.cloudRunId;
+  }
   if (bank?.id) {
     out.predictionsBankId = bank.id;
-    out.predictionsBank = bank;
+    if (!state.runWorld?.packageRef) out.predictionsBank = bank;
   }
   return out;
 }

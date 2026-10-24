@@ -78,6 +78,29 @@ function buildWorkshopBoard() {
 }
 
 describe("Continue hex + ideas tray round-trip", () => {
+  it("measures a realistic board, private reflection, and Unicode chat lanes in UTF-8 bytes", () => {
+    const snapshot = (count, length) => snapshotForWire({
+      questId: "unicode-workshop", year: 2028, board: buildWorkshopBoard(),
+      play: { inventionHow: "海辺の共同作業 — repairable pumps", reflection: "私の観察 🛠️", selectedTechIds: ["iot"] },
+      chats: {
+        tutor: Array.from({ length: count }, () => ({ role: "user", content: "界".repeat(length) })),
+        coinventor: Array.from({ length: count }, () => ({ role: "assistant", content: "海".repeat(length) })),
+      },
+    });
+    const small = snapshot(20, 500);
+    assert.ok(Buffer.byteLength(JSON.stringify(small), "utf8") < RUN_STATE_MAX_BYTES);
+    const parsed = parseRunStateBody(small);
+    assert.equal(parsed.ok, true);
+    assert.equal(Object.keys(parsed.state.board.tiles).length, 5);
+    assert.equal(parsed.state.chats.tutor.length, 20);
+    assert.equal(parsed.state.chats.coinventor.length, 20);
+    assert.equal(parsed.state.play.reflection, small.play.reflection);
+    const large = snapshot(80, 1000);
+    assert.ok(JSON.stringify(large).length < RUN_STATE_MAX_BYTES, "character count deliberately fits");
+    assert.ok(Buffer.byteLength(JSON.stringify(large), "utf8") > RUN_STATE_MAX_BYTES);
+    assert.deepEqual(parseRunStateBody(large), { ok: false, error: "too_large" });
+  });
+
   it("raw board with data:image art is huge / would have failed the old PUT", () => {
     const board = buildWorkshopBoard();
     const raw = JSON.stringify({ questId: "q1", board });

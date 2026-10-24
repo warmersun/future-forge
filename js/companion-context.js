@@ -6,6 +6,7 @@
  * bank. It is not a second calendar and not a claim that the source is true.
  */
 
+import { semanticDigest } from "./semantic-digest.js";
 import {
   getWorldForesightBank,
   validatePredictionsBank,
@@ -422,20 +423,47 @@ function bankRowsForKey(bank) {
     detail: row?.detail || "",
     claimBand: row?.claimBand || "",
     techIds: Array.isArray(row?.techIds) ? [...row.techIds].map(String).sort() : [],
+    globalIds: Array.isArray(row?.globalIds) ? [...row.globalIds].map(String).sort() : [],
+    sourceNote: row?.sourceNote || "",
+    attribution: row?.attribution || null,
   }));
 }
 
 /**
- * Canonical semantic key. Display-only source titles are not included.
+ * Titles, publication timestamps, and bank presentation metadata are display-only.
+ * Every prediction field used by the world clock, ranking, or grants is semantic.
+ * Recompute for mutable legacy banks, including same-id and in-place edits.
+ * Package identity is additive, never a substitute for effective bank contents.
+ */
+export function predictionsContextKey(bank, year, packageRef = null) {
+  return semanticDigest("predictions-context-v1", {
+    packageId: packageRef?.packageId || "",
+    revision: packageRef?.revision || "",
+    questId: packageRef?.questId || "",
+    bankId: bank?.id || "",
+    schema: bank?.schema || "",
+    attribution: bank?.attribution || null,
+    rows: bankRowsForKey(bank),
+    year: Number(year) || 0,
+  });
+}
+
+/**
+ * Compact SHA-256 semantic key. Source and bank titles are display-only;
+ * row headlines, source identity/attribution, and all rubric inputs are semantic.
  * Bank contents and the run year are included, so a same-id file change
  * and a Wait across a grant year both miss the cache.
+ * Recompute rather than memoizing mutable banks by object identity: in-place
+ * content edits must invalidate too. Object property order is not semantic.
  * @param {object|null|undefined} companion
  * @param {object|null|undefined} validatedBank
  * @param {number} year
  * @returns {string}
  */
-export function sourceInquiryKey(companion, validatedBank, year) {
-  if (!companion || typeof companion !== "object") return "";
+export function sourceInquiryKey(companion, validatedBank, year, packageRef = null) {
+  if (!companion || typeof companion !== "object") {
+    return validatedBank || packageRef ? predictionsContextKey(validatedBank, year, packageRef) : "";
+  }
   const y = Number(year) || 0;
   const exploration = companion.exploration || null;
   const premise = exploration?.premise || null;
@@ -446,7 +474,11 @@ export function sourceInquiryKey(companion, validatedBank, year) {
     scope: grant.scope,
     limits: grant.limits,
   }));
-  return JSON.stringify({
+  const { title: _displayTitle, ...source } = sourceIdentity(companion);
+  return semanticDigest("source-inquiry-v1", {
+    source,
+    medium: companion.medium || "",
+    evidence: evidenceSlice(companion),
     claim: companion.claim || "",
     invitation: companion.invitation || "",
     move: companion.move || "",
@@ -466,8 +498,7 @@ export function sourceInquiryKey(companion, validatedBank, year) {
       : [],
     pressureLinks: exploration?.pressureLinks || null,
     challenges: exploration?.challenges || null,
-    bankIdResolved: validatedBank?.id || "",
-    bankRows: validatedBank ? bankRowsForKey(validatedBank) : [],
+    world: predictionsContextKey(validatedBank, y, packageRef),
     year: y,
     statuses,
   });
@@ -557,10 +588,19 @@ export function worldClockWithPremise(year, context, opts = {}) {
   return clockWithPremiseRows(rows, context?.sourceInquiry?.premise);
 }
 
+/** Stable recovery contract: never discard or replace an unreproducible save. */
+export function legacyWorldUnresolved() {
+  return {
+    ok: false,
+    error: "legacy_world_unresolved",
+    message: "This older run's saved world cannot be reproduced. Preserve or export the save for recovery; start a fresh run separately. The saved world has not been replaced.",
+  };
+}
+
 /**
  * Bind an assumed Quest to one validated bank. Does not mutate global state.
  * @param {object|null|undefined} companion
- * @param {{ loadedBank?: object|null, restoreBank?: object|null, year?: number }} [opts]
+ * @param {{ loadedBank?: object|null, restoreBank?: object|null, restoring?: boolean, year?: number }} [opts]
  */
 export function pinPredictionsBank(companion, opts = {}) {
   const mode = companion?.exploration?.premise?.mode;
@@ -579,29 +619,20 @@ export function pinPredictionsBank(companion, opts = {}) {
 
   const tooBig = (bank) => {
     try {
-      return JSON.stringify(bank).length > BANK_PIN_MAX_BYTES;
+      return new TextEncoder().encode(JSON.stringify(bank)).length > BANK_PIN_MAX_BYTES;
     } catch {
       return true;
     }
   };
 
-  const restored = opts.restoreBank ? accept(opts.restoreBank) : null;
-  if (opts.restoreBank && restored) {
-    if (tooBig(restored)) {
-      return {
-        ok: false,
-        error: "bank_too_large",
-        message: "This Quest's predictions bank is too large to pin for Continue.",
-      };
-    }
+  // A restore is an exact snapshot read, not a search for a usable calendar.
+  // Check original bytes before validation can clip oversized fields.
+  if (opts.restoring || opts.restoreBank != null) {
+    if (opts.restoreBank == null || tooBig(opts.restoreBank)) return legacyWorldUnresolved();
+    const restored = accept(opts.restoreBank);
+    if (!restored) return legacyWorldUnresolved();
     const resolved = resolveScenarioPremise(companion, restored, year);
-    if (!resolved.ok) {
-      return {
-        ok: false,
-        error: resolved.error,
-        message: "This Quest's premise rows are not in the loaded predictions bank.",
-      };
-    }
+    if (!resolved.ok) return legacyWorldUnresolved();
     return { ok: true, bank: restored, premise: resolved.premise };
   }
 

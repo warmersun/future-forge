@@ -51,6 +51,12 @@ Write for the surface, not the file. These are the real clips (`js/game.js`, `js
 
 Also set: `id`, `title`, `spotlight` fields, years, stakeholder as in the output contract. `research` is citation metadata (never read by the game); `placement` and `visionTheme` are legacy and inert.
 
+## Package-local calendar (v2 envelope)
+
+Top-level `predictionBankId` is optional for ordinary loose/v1 Quests and required for every playable v2 member. It is an exact lowercase bank ID, not a path or URL; include `predictions/<bank-id>.json`. An assumed companion's `premise.bankId` must match it. A module wrapper has no bank binding. The bank schema stays `future-forge.predictions/v1`; the package envelope is `future-forge.quest-package/v2`.
+
+Share a bank only when the complete calendar is deliberately shared. Required dependencies must be local; a loose package-bound Quest requires its archive. `packageRef` and `runWorld` are runtime projections, not author-authored alternatives to `predictionBankId`. See `docs/quest-package.md`.
+
 ## Crisis meters — `mission.pressure` (required structured)
 
 Dictionary of up to three perspectives. **Only present keys appear on the HUD** and in win/collapse checks. Omit a role for focused / easier quests.

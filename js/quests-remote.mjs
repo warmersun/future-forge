@@ -12,6 +12,8 @@ import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
 import { resolveContentBaseUrl, contentCatalogUrl } from "./content-base.mjs";
+import { packageCatalogRecord } from "./server/quest-object-storage.mjs";
+import { safePackageMember } from "./server/package-paths.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -152,6 +154,7 @@ async function fetchText(urlOrPath, opts = {}) {
   const requestUrl = opts.force ? withCacheBust(urlOrPath) : urlOrPath;
   try {
     const res = await fetchFn(requestUrl, {
+      redirect: "error",
       signal: ctrl.signal,
       headers: { Accept: "application/json" },
     });
@@ -267,7 +270,17 @@ async function fetchOneRemoteCatalog(url, opts = {}) {
   const list = Array.isArray(catalog?.quests) ? catalog.quests : [];
 
   for (const entry of list) {
+    if (entry && Object.hasOwn(entry, "packageRef")) {
+      const record = packageCatalogRecord(entry);
+      if (record) quests.push(record);
+      else errors.push({ file: String(entry?.id || "?"), error: "package_reference_forbidden" });
+      continue;
+    }
     const file = String(entry?.file || "").trim();
+    if (file && !safePackageMember(file)) {
+      errors.push({ file, error: "object_key_forbidden" });
+      continue;
+    }
     if (!file) {
       errors.push({ file: String(entry?.id || "?"), error: "missing_file" });
       continue;

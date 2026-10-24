@@ -1263,7 +1263,7 @@ describe("pickConcernSpawn", () => {
       `spawn ${spawn.q},${spawn.r} should neighbor 0,0`
     );
     assert.deepEqual(spawn.inventionIds, ["a"]);
-    assert.ok(spawn.fingerprints[0].includes("a:"));
+    assert.match(spawn.fingerprints[0], /^sha256:[a-f0-9]{64}$/);
   });
 
   it("two islands pick a hex that sees both when one exists", () => {

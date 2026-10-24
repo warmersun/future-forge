@@ -4,6 +4,7 @@
  */
 
 import { cloneMission } from "../sim/state.js";
+import { emptyRunWorld } from "../sim/run-world.js";
 import { clonePressure } from "../sim/pressure.js";
 import { cloneRules } from "../sim/policy-rules.js";
 import { inventYear, inventWaits } from "../sim/mp-session.js";
@@ -263,6 +264,9 @@ export function createRoomBridge() {
     };
 
     state.mission = cloneMission(place.mission);
+    state.runWorld = state.mission?.runWorld ? structuredClone(state.mission.runWorld) : emptyRunWorld();
+    state.pinnedPredictionsBank = null;
+    state.companionReflection = "";
     if (state.mission) {
       delete state.mission.aiTutorContext;
       // Theme / non-learning quests: never carry module lesson chrome into invent

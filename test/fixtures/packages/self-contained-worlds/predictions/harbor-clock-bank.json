@@ -1,0 +1,32 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "harbor-clock-bank",
+  "title": "TEST DATA: Harbor clock invented calendar",
+  "attribution": {
+    "name": "Test fixture speaker",
+    "date": "2026-10-23",
+    "quote": "Invented test claim. Not a real forecast."
+  },
+  "predictions": [
+    {
+      "id": "harbor-tide-due-2027",
+      "year": 2027,
+      "kind": "milestone",
+      "techIds": ["iot"],
+      "headline": "TEST: Harbor clock reads the next tide without a person",
+      "detail": "Invented test claim: this fictional harbor assumes an unattended tide clock in 2027. Not a real milestone.",
+      "claimBand": "near",
+      "sourceNote": "Synthetic fixture row. Not a source."
+    },
+    {
+      "id": "harbor-lane-ahead-2034",
+      "year": 2034,
+      "kind": "prediction",
+      "techIds": ["ai"],
+      "headline": "TEST: Harbor lanes reroute themselves after a missed bell",
+      "detail": "Invented test claim: self-rerouting lanes stay ahead until 2034 in this fictional calendar. Not a real forecast.",
+      "claimBand": "frontier",
+      "sourceNote": "Synthetic fixture row. Not a source."
+    }
+  ]
+}

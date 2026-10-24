@@ -326,3 +326,252 @@ with ZipFile(dest, "w") as zf:
     assert.equal(externalVerify.status, 0, externalVerify.stderr);
   });
 });
+
+const WORLDS = path.join(ROOT, "test/fixtures/packages/self-contained-worlds");
+
+function copyWorldQuest(src, id) {
+  fs.mkdirSync(path.join(src, "quests"), { recursive: true });
+  fs.copyFileSync(
+    path.join(WORLDS, "quests", `${id}.json`),
+    path.join(src, "quests", `${id}.json`)
+  );
+}
+
+function copyWorldBank(src, fileName) {
+  fs.mkdirSync(path.join(src, "predictions"), { recursive: true });
+  fs.copyFileSync(
+    path.join(WORLDS, "predictions", fileName),
+    path.join(src, "predictions", fileName)
+  );
+}
+
+/**
+ * Two calendars, a deliberately shared bank, a no-companion quest, and a module.
+ * Every claim in the copied banks is invented test data.
+ * @param {string} src
+ */
+function selfContainedWorldTree(src) {
+  copyWorldQuest(src, "kiln-ferry-test");
+  copyWorldQuest(src, "harbor-clock-test");
+  copyWorldQuest(src, "kiln-shared-test");
+  copyWorldQuest(src, "plain-shelf-test");
+  copyWorldQuest(src, "module-kiln");
+  const kiln = JSON.parse(fs.readFileSync(path.join(src, "quests/kiln-ferry-test.json"), "utf8"));
+  kiln.isLearningModule = true;
+  kiln.module = "TEST: Kiln module wrapper";
+  kiln.lesson = 1;
+  kiln.totalLessons = 1;
+  writeJson(path.join(src, "quests/kiln-ferry-test.json"), kiln);
+  fs.mkdirSync(path.join(src, "lessons/kiln-notes"), { recursive: true });
+  fs.writeFileSync(
+    path.join(src, "lessons/kiln-notes/index.html"),
+    "<!DOCTYPE html><html><head><title>TEST kiln notes</title></head><body><p>Synthetic lesson.</p></body></html>\n"
+  );
+  copyWorldBank(src, "kiln-ferry-bank.json");
+  copyWorldBank(src, "harbor-clock-bank.json");
+}
+
+describe("self-contained quest worlds", { skip: python.status !== 0 }, () => {
+  it("packs a v2 archive whose playable quests bind complete local banks", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    const pkg = path.join(work, "worlds.ffquest");
+    const packed = run(["pack", src, "-o", pkg, "--no-validate"]);
+    assert.equal(packed.status, 0, packed.stderr);
+    const summary = JSON.parse(run(["inspect", pkg, "--json"]).stdout);
+    assert.equal(summary.ok, true, JSON.stringify(summary.errors));
+    assert.equal(summary.manifest.schema, "future-forge.quest-package/v2");
+    assert.equal(summary.manifest.version, 2);
+    assert.ok(summary.manifest.revision.startsWith("sha256:"));
+    assert.deepEqual(
+      summary.manifest.predictions.map((row) => row.id),
+      ["harbor-clock-bank", "kiln-ferry-bank"]
+    );
+    const byId = Object.fromEntries(summary.manifest.quests.map((q) => [q.id, q]));
+    assert.equal(byId["kiln-ferry-test"].predictionBankId, "kiln-ferry-bank");
+    assert.equal(byId["harbor-clock-test"].predictionBankId, "harbor-clock-bank");
+    assert.equal(byId["kiln-shared-test"].predictionBankId, "kiln-ferry-bank");
+    assert.equal(byId["plain-shelf-test"].predictionBankId, "kiln-ferry-bank");
+    assert.equal(byId["module-kiln"].predictionBankId, undefined);
+    assert.equal(run(["verify", pkg]).status, 0);
+  });
+
+  it("rejects a playable quest whose bank file is missing", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    fs.rmSync(path.join(src, "predictions/harbor-clock-bank.json"));
+    const packed = run(["pack", src, "-o", path.join(work, "missing-bank.ffquest"), "--no-validate"]);
+    assert.notEqual(packed.status, 0);
+    assert.match(packed.stderr, /package_dependency_missing|missing bank/i);
+  });
+
+  it("rejects a grant whose prediction row is not in the bound bank", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    const tile = JSON.parse(fs.readFileSync(path.join(src, "quests/kiln-ferry-test.json"), "utf8"));
+    tile.companion.exploration.premise.grants[0].predictionId = "not-in-this-bank";
+    writeJson(path.join(src, "quests/kiln-ferry-test.json"), tile);
+    const packed = run(["pack", src, "-o", path.join(work, "missing-row.ffquest"), "--no-validate"]);
+    assert.notEqual(packed.status, 0);
+    assert.match(packed.stderr, /unresolved grant|missing prediction|not-in-this-bank/i);
+  });
+
+  it("rejects an assumed premise whose bankId disagrees with predictionBankId", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    const tile = JSON.parse(fs.readFileSync(path.join(src, "quests/kiln-ferry-test.json"), "utf8"));
+    tile.companion.exploration.premise.bankId = "harbor-clock-bank";
+    writeJson(path.join(src, "quests/kiln-ferry-test.json"), tile);
+    const packed = run(["pack", src, "-o", path.join(work, "mismatch.ffquest"), "--no-validate"]);
+    assert.notEqual(packed.status, 0);
+    assert.match(packed.stderr, /mismatched premise|bankId/i);
+  });
+
+  it("rejects an orphan bank that no packaged quest references", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    copyWorldBank(src, "collision-bank.json");
+    const packed = run(["pack", src, "-o", path.join(work, "orphan.ffquest"), "--no-validate"]);
+    assert.notEqual(packed.status, 0);
+    assert.match(packed.stderr, /orphan/i);
+  });
+
+  it("rejects an unsupported package schema instead of playing an incomplete world", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    const pkg = path.join(work, "future.ffquest");
+    assert.equal(run(["pack", src, "-o", pkg, "--no-validate"]).status, 0);
+    const bad = path.join(work, "unsupported.ffquest");
+    const rewrite = spawnSync(
+      "python3",
+      [
+        "-c",
+        `
+import json, sys
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+src, dest = sys.argv[1], sys.argv[2]
+with ZipFile(src) as zf:
+    items = {i.filename: zf.read(i) for i in zf.infolist() if not i.is_dir()}
+manifest = json.loads(items["manifest.json"])
+manifest["schema"] = "future-forge.quest-package/v9"
+manifest["version"] = 9
+items["manifest.json"] = (json.dumps(manifest, indent=2) + "\\n").encode()
+with ZipFile(dest, "w") as out:
+    for name, data in sorted(items.items()):
+        info = ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+        info.compress_type = ZIP_DEFLATED
+        out.writestr(info, data)
+`,
+        pkg,
+        bad,
+      ],
+      { encoding: "utf8" }
+    );
+    assert.equal(rewrite.status, 0, rewrite.stderr);
+    const verified = run(["verify", bad]);
+    assert.notEqual(verified.status, 0);
+    assert.match(verified.stderr, /package_version_unsupported|unsupported schema|schema/i);
+  });
+
+  it("keeps the same revision when only the zip timestamp changes", () => {
+    const src = tmp();
+    const work = tmp();
+    selfContainedWorldTree(src);
+    const pkg = path.join(work, "worlds.ffquest");
+    assert.equal(run(["pack", src, "-o", pkg, "--no-validate"]).status, 0);
+    const first = JSON.parse(run(["inspect", pkg, "--json"]).stdout).manifest.revision;
+    const restamped = path.join(work, "restamped.ffquest");
+    const stamp = spawnSync(
+      "python3",
+      [
+        "-c",
+        `
+import sys
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+src, dest = sys.argv[1], sys.argv[2]
+with ZipFile(src) as zf, ZipFile(dest, "w") as out:
+    for info in zf.infolist():
+        data = zf.read(info)
+        clone = ZipInfo(info.filename, date_time=(2024, 6, 2, 3, 4, 5))
+        clone.compress_type = ZIP_DEFLATED
+        clone.external_attr = info.external_attr
+        out.writestr(clone, data)
+`,
+        pkg,
+        restamped,
+      ],
+      { encoding: "utf8" }
+    );
+    assert.equal(stamp.status, 0, stamp.stderr);
+    const second = JSON.parse(run(["inspect", restamped, "--json"]).stdout).manifest.revision;
+    assert.equal(second, first);
+    assert.equal(run(["verify", restamped]).status, 0);
+
+    const raw = path.join(work, "raw");
+    assert.equal(run(["unpack", pkg, raw]).status, 0);
+    const rawQuest = fs.readFileSync(path.join(raw, "raw/quests/kiln-ferry-test.json"), "utf8");
+    assert.match(rawQuest, /predictionBankId/);
+    assert.doesNotMatch(rawQuest, /127\.0\.0\.1|warmersun\.com/);
+    assert.equal(run(["verify", pkg]).status, 0);
+    assert.equal(process.env.FF_PREDICTIONS_FILE, undefined);
+  });
+
+  it("rejects traversal, absolute paths, symlinks, duplicate names, and oversized archives", () => {
+    const work = tmp();
+    const cases = [
+      ["../escape.json", "traversal"],
+      ["/tmp/escape.json", "absolute"],
+      ["quests/dup.json", "duplicate"],
+    ];
+    function writeHostile(dest, mutate) {
+      const code = `
+import sys
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+dest = sys.argv[1]
+kind = sys.argv[2]
+with ZipFile(dest, "w") as zf:
+    def put(name, data, attr=0):
+        info = ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+        info.compress_type = ZIP_DEFLATED
+        info.external_attr = attr
+        zf.writestr(info, data)
+    manifest = b'{"schema":"future-forge.quest-package/v1","version":1,"id":"x","createdAt":"2026-01-01T00:00:00Z","title":"x","quests":[],"lessons":[],"paths":{},"files":{}}'
+    put("manifest.json", manifest)
+    if kind == "traversal":
+        put("../escape.json", b"{}")
+    elif kind == "absolute":
+        put("/tmp/escape.json", b"{}")
+    elif kind == "symlink":
+        put("quests/link.json", b"target", attr=(0o120000 << 16))
+    elif kind == "duplicate":
+        put("quests/dup.json", b"{}")
+        put("quests/dup.json", b"{}")
+    elif kind == "count":
+        for i in range(${600}):
+            put(f"quests/n{i}.json", b"{}")
+`;
+      return spawnSync("python3", ["-c", code, dest, mutate], { encoding: "utf8" });
+    }
+    for (const [label, kind] of [
+      ["traversal", "traversal"],
+      ["absolute", "absolute"],
+      ["symlink", "symlink"],
+      ["duplicate", "duplicate"],
+      ["count", "count"],
+    ]) {
+      const dest = path.join(work, `${label}.ffquest`);
+      const wrote = writeHostile(dest, kind);
+      assert.equal(wrote.status, 0, wrote.stderr);
+      const verified = run(["verify", dest]);
+      assert.notEqual(verified.status, 0, label);
+      assert.match(verified.stderr, /package_integrity_failed|refusing/);
+    }
+    assert.ok(cases);
+  });
+});

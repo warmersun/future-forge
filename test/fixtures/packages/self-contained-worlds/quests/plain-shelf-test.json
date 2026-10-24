@@ -1,0 +1,8 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "plain-shelf-test",
+  "title": "TEST: no companion",
+  "summary": "Synthetic quest with a package bank and no companion.",
+  "predictionBankId": "kiln-ferry-bank"
+}

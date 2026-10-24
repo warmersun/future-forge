@@ -31,15 +31,34 @@ python3 "$ROOT/scripts/quest-package.py" unpack "$PKG" "$DEST" \
   --lesson-root "http://127.0.0.1:${PORT}/content/lessons/" \
   --asset-root "http://127.0.0.1:${PORT}/content/assets/"
 
+PACKAGE_ROOT="$DEST"
+if [[ -f "$DEST/raw/manifest.json" ]]; then
+  PACKAGE_ROOT="$DEST/raw"
+fi
+
 cd "$ROOT"
 export FF_CONTENT_DIR="$DEST"
 export FF_QUESTS_DIR="$DEST/quests"
+if [[ ! -d "$FF_QUESTS_DIR" && -d "$PACKAGE_ROOT/quests" ]]; then
+  export FF_QUESTS_DIR="$PACKAGE_ROOT/quests"
+fi
+if [[ -f "$DEST/raw/manifest.json" ]]; then
+  export FF_QUEST_PACKAGES_DIR="$DEST"
+else
+  unset FF_QUEST_PACKAGES_DIR
+fi
 export FF_PORT="$PORT"
+# v2 owns its calendar; v1 intentionally retains a developer-configured bank.
+PACKAGE_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$PACKAGE_ROOT/manifest.json")"
+if [[ "$PACKAGE_VERSION" == "2" ]]; then
+  unset FF_PREDICTIONS_FILE
+fi
 : "${FF_QUESTS_REMOTE_URL:=https://warmersun.com/quests/catalog.json}"
 export FF_QUESTS_REMOTE_URL
 
 echo "Sideloaded $(basename "$PKG")"
-echo "  Library quests: $DEST/quests"
+echo "  Library quests: $FF_QUESTS_DIR"
+echo "  Package release: $PACKAGE_ROOT"
 echo "  Lessons: http://127.0.0.1:${PORT}/content/"
 echo "  Open:    http://127.0.0.1:${PORT}/"
 node server.mjs --developer --ai-search "$@"

@@ -34,7 +34,7 @@ Read both `SKILL.md` files before you write. This file is the order of work and 
 1. **One source, one move, one question.** Field shape, caps, evidence pairs, and lint codes live in `skills/future-forge-quest/references/companion.md`. Do not copy them into the tile notes or into this file.
 2. **Source credit stays off `sponsorName`.** The speaker, show, author, or publication is the byline. `sponsorName` is funding credit. companion.md rejects them when they match.
 3. **A grant row is a scenario assumption.** It describes a bounded capability this quest allows the player to use. `sourceNote` says it is a scenario assumption for this quest. Leave `attribution` off that row. Leave the speaker's words out of its `quote`. `headline` and `detail` describe the granted capability, and `detail` says the quest assumes it. A forecast the person actually made is a separate row and follows the predictions skill, including attribution. It becomes a grant only when this quest's premise grants that capability inside a `scope` and `limits`. A bank of only scenario rows has no bank-level attribution.
-4. **One server loads one bank.** `premise.bankId` is that file's `id` string, not a path and not a row id. Each grant `predictionId` is a row id in that file. A second assumed quest adds rows to the bank that will be loaded. A different file starts only the quests whose `bankId` equals that file's `id`. Whether that file replaces or extends the shipped default is the predictions skill's rule. Edit `predictions/default.json` only when the user asks.
+4. **One packaged Quest binds one complete calendar.** Put the bank in `predictions/<bank-id>.json` inside the source tree and set top-level `predictionBankId` to its exact `id`. The assumed `premise.bankId` must match; grants reference rows in that bank. Different calendars use separate banks; share a bank only when every row is deliberately shared. Never merge unrelated assumptions into a server bank or edit `predictions/default.json` without authorization.
 5. **The developer server injects one fixture:** `test/fixtures/quests/companion-moonshots-304.json` (`COMPANION_FIXTURE` in `server.mjs`). A new example is `quests/<id>.json`. Leave the fixture in place unless the user asks to change it.
 6. **Publish, pack, or commit only when the user asks.** Packaging stays the quest skill's package step.
 
@@ -88,7 +88,7 @@ Use the mode the user already named. Otherwise decide from the source.
 Follow `skills/future-forge-predictions/SKILL.md` for the file shape, years, and bands.
 
 - Prefer `predictions/<id>.json`. Its `id` is the string you will store as `premise.bankId`.
-- When the user is adding an example next to the worked Kiln Ferry quest, add the new rows to the bank that quest already pins (named in companion.md) so one loaded file still starts both.
+- Include the complete intended calendar, with no runtime inheritance from the default bank. A neighboring example gets its own bank when its assumptions differ.
 - Write each grant row under hard rule 3. The worked grant in that bank is the pattern: a scenario assumption, with `sourceNote` saying so.
 - Validate until the file reports OK:
 
@@ -103,7 +103,7 @@ Follow `skills/future-forge-quest/SKILL.md` for the fictive place, pressures, gr
 - `research.sources` includes the exact `source.url`.
 - The invitation sentence also appears in `spotlight.encourageCopy` or `briefMd`.
 - Write `access` on the tile (`open`, `account`, or `paid`).
-- `premise.bankId` equals the bank's `id`. Each grant's `predictionId` equals a row id. Grant objects carry only `predictionId`, `scope`, and `limits`.
+- In a v2 package, top-level `predictionBankId` and `premise.bankId` both equal the bank's `id`. Each grant's `predictionId` equals a row id. Grant objects carry only `predictionId`, `scope`, and `limits`.
 - Capability truth stays in `grounding`. The grant is the only added capability, and only inside its scope. The grant `limits` say what the quest does not give the player.
 - Optional `titleImageUrl` is the full-bleed stage background. The field rule is in `skills/future-forge-quest/references/schema.md`. Omit it and the theme postcard remains.
 - Save the new tile as `quests/<id>.json`.
@@ -120,17 +120,19 @@ The quest line reports `OK:` and `lint: clean`, or you name each remaining `WARN
 
 ### 6. Hand off local play
 
-An assumed quest starts only when the loaded bank's `id` equals `premise.bankId`:
+When packaging is requested, deliver one v2 archive with the Quest and its complete local bank:
 
 ```bash
-FF_PREDICTIONS_FILE=<bank> npm start
+npm run pack:quest -- <source-directory> -o <id>.ffquest
+npm run verify:quest-package -- <id>.ffquest
+./scripts/sideload-local-package.sh <id>.ffquest
 ```
 
-Open `http://127.0.0.1:8765/?q=<id>`. The process keeps the bank from the command that started it. `GET /api/predictions?refresh=1` re-reads that same path. A different file needs a restart. A quest under `quests/` reloads with the page. The developer fixture in hard rule 5 stays cached until that process restarts.
+The sideload command prints the local URL; no `FF_PREDICTIONS_FILE` is needed. Every playable member in v2 needs a bank, including evidence-grounded companions. Ordinary loose/evidence-grounded v1 Quests remain supported without that new requirement. A loose Quest carrying `predictionBankId` requires its package, not an ambient bank.
 
-An evidence-grounded quest needs no predictions file. `npm start` does not inject the developer fixture.
+`FF_PREDICTIONS_FILE=<bank> npm start` remains an explicit legacy/developer path for unbound assumed Quests, not the distribution workflow.
 
-Tell the user the quest path, the bank path and its `id` when there is one, the URL, and that publish or commit waits until they ask.
+Tell the user the archive, Quest and bank IDs, verification results, and local command. Changed assumptions create a new immutable revision; existing runs retain the old one. Missing releases must be restored or started separately as new runs. An invalid older saved bank must stay available for recovery, never be silently replaced. Publish or commit only when asked.
 
 ## Non-goals
 

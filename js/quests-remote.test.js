@@ -21,6 +21,25 @@ const WARMERSUN_KIMI = path.join(
 );
 
 describe("quests-remote", () => {
+  it("mixes legacy tiles with slim explicit packages without fetching arbitrary entry paths", async () => {
+    _resetRemoteQuestCache();
+    const packageRef = { packageId: "demo", questId: "demo-quest", revision: `sha256:${"ab".repeat(32)}` };
+    const calls = [];
+    const result = await fetchRemoteQuestCatalog("https://approved.example/quests/catalog.json", {
+      force: true, tryFallbacks: false, fetchImpl: async (url) => {
+        calls.push(url);
+        return new Response(JSON.stringify({ quests: [
+          { id: "demo-quest", title: "Demo", access: "paid", packageRef, file: "https://evil.example/bank", mission: { secret: "hidden" } },
+          { id: "escape", file: "../secret" },
+        ] }));
+      },
+    });
+    assert.equal(result.quests.length, 1);
+    assert.deepEqual(result.quests[0].packageRef, packageRef);
+    assert.equal(result.quests[0].mission, undefined);
+    assert.equal(result.errors[0].error, "object_key_forbidden");
+    assert.equal(calls.length, 1);
+  });
   let tmp;
   let catalogPath;
   let tileId;

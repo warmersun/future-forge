@@ -130,6 +130,18 @@ describe("tutorToggleLocked", () => {
 });
 
 describe("voiceContextFingerprint", () => {
+  it("changes when the run or immutable release changes even if spoken text is identical", () => {
+    const packageRef = { packageId: "dock", questId: "dock", revision: `sha256:${"ab".repeat(32)}` };
+    const current = { ...board, packageRef, runId: "run-a" };
+    const fp = voiceContextFingerprint(current);
+    for (const changed of [
+      { ...current, runId: "run-b" },
+      { ...current, packageRef: { ...packageRef, revision: `sha256:${"cd".repeat(32)}` } },
+      { ...current, packageRef: { ...packageRef, questId: "another-member" } },
+      { ...current, packageRef: { ...packageRef, packageId: "another-package" } },
+    ]) assert.notEqual(voiceContextFingerprint(changed), fp);
+  });
+
   it("is stable for the same board, including pressure key order", () => {
     const a = voiceContextFingerprint(board);
     const b = voiceContextFingerprint({

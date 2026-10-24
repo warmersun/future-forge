@@ -1,0 +1,8 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "kiln-shared-test",
+  "title": "TEST: shared Kiln calendar",
+  "summary": "Synthetic quest that deliberately shares the complete Kiln Ferry calendar.",
+  "predictionBankId": "kiln-ferry-bank"
+}

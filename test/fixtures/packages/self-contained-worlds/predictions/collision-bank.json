@@ -1,0 +1,20 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "collision-bank",
+  "title": "TEST DATA: same bank id, different package calendar",
+  "attribution": {
+    "name": "Other test fixture speaker"
+  },
+  "predictions": [
+    {
+      "id": "other-package-row-2028",
+      "year": 2028,
+      "kind": "trend",
+      "techIds": ["networks"],
+      "headline": "TEST: other package uses the same bank id",
+      "detail": "Invented test claim: this row must not merge with kiln-ferry-bank from another package. Not a real trend.",
+      "claimBand": "now",
+      "sourceNote": "Synthetic collision fixture. Not a source."
+    }
+  ]
+}

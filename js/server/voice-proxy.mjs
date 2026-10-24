@@ -303,6 +303,13 @@ export function attachVoiceSockets(httpServer, opts) {
       if (closed || !session) return;
       const gen = ++xaiGen;
       opening = true;
+      const checked = await sessions.revalidateAuthorizedContext(session.id);
+      if (closed || !session || gen !== xaiGen) return;
+      if (!checked || checked.ok === false) {
+        sendClient({ type: "error", error: checked?.error || "voice_context_unavailable" });
+        hangup("authority_denied");
+        return;
+      }
       let token = await getAccessToken({ forceRefresh });
       if (closed || !session || gen !== xaiGen) return;
       if (!token) {
@@ -444,6 +451,12 @@ export function attachVoiceSockets(httpServer, opts) {
 
     const runTool = async (event) => {
       const startedGen = xaiGen;
+      if (!session || closed) return { output: { error: "voice_context_unavailable" } };
+      const checked = await sessions.revalidateAuthorizedContext(session.id);
+      if (!checked || checked.ok === false || closed || !session) {
+        if (!closed) hangup("authority_denied");
+        return { output: { error: checked?.error || "voice_context_unavailable" } };
+      }
       const result =
         String(event.name || "").trim() === "get_invent_state"
           ? await waitForInventState()
@@ -478,7 +491,9 @@ export function attachVoiceSockets(httpServer, opts) {
       return result;
     };
 
-    clientWs.on("message", (raw, isBinary) => {
+    // Serialize async authority checks so later packets cannot overtake context binding.
+    let clientQueue = Promise.resolve();
+    const onClientMessage = async (raw, isBinary) => {
       if (isBinary) return;
       if (Buffer.byteLength(String(raw)) > maxPayload) {
         safeSend(clientWs, { type: "error", error: "payload_too_large" });
@@ -517,6 +532,13 @@ export function attachVoiceSockets(httpServer, opts) {
         authed = true;
         clearTimeout(authTimer);
         session = found;
+        const checked = await sessions.revalidateAuthorizedContext(found.id);
+        if (!checked || checked.ok === false) {
+          sendClient({ type: "error", error: checked?.error || "voice_context_unavailable" });
+          hangup("authority_denied");
+          return;
+        }
+        if (closed || !session) return;
         sessions.bindClient(session.id, clientWs);
         idle = createIdleGuard({
           ms: idleMs,
@@ -541,6 +563,8 @@ export function attachVoiceSockets(httpServer, opts) {
       if (closed || !session) return;
 
       if (msg.type === "voice") {
+        const checked = await sessions.revalidateAuthorizedContext(session.id);
+        if (!checked || checked.ok === false || closed || !session) return;
         const current = session.voice || defaultVoice;
         const plan = planVoiceChange(current, msg.voice);
         if (plan.ok) {
@@ -561,10 +585,14 @@ export function attachVoiceSockets(httpServer, opts) {
       }
 
       if (msg.type === "context") {
-        const fp = voiceContextFingerprint(msg.context);
+        const updated = await sessions.updateAuthorizedContext(session.id, msg.context);
+        if (!updated || updated.ok === false) {
+          sendClient({ type: "error", error: updated?.error || "voice_context_unavailable" });
+          return;
+        }
+        const fp = voiceContextFingerprint(session.context);
         const socketOpen = xaiWs && xaiWs.readyState === WebSocket.OPEN && !opening;
         const sameFp = fp === session.voiceFp;
-        sessions.updateContext(session.id, msg.context);
         session.voiceFp = fp;
         if (!sameFp && socketOpen) {
           safeSend(
@@ -598,6 +626,13 @@ export function attachVoiceSockets(httpServer, opts) {
       if (msg.type === "input_audio_buffer.clear" || msg.type === "response.cancel") {
         safeSend(xaiWs, { type: msg.type });
       }
+    };
+
+    clientWs.on("message", (raw, isBinary) => {
+      clientQueue = clientQueue.then(() => onClientMessage(raw, isBinary)).catch(() => {
+        sendClient({ type: "error", error: "voice_context_unavailable" });
+        hangup("authority_denied");
+      });
     });
 
     clientWs.on("close", () => {

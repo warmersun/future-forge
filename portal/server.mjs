@@ -43,6 +43,13 @@ import {
   logPredictionsLoad,
   predictionsApiResponse,
 } from "../js/predictions-bank.mjs";
+import {
+  registerPackagesDir,
+  resolveQuestPackagesDir,
+} from "../js/server/quest-package-resolver.mjs";
+import { createQuestRequestAuthority } from "../js/server/quest-request-authority.mjs";
+import { createHostedPackageResolverFromEnv } from "../js/server/hosted-package-resolver.mjs";
+import { parsePackageRef } from "../js/server/package-paths.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "../js/scene-prose.js";
 import { QUEST_SUMMARY_RECIPE } from "../js/quest-summary.js";
 import { BRIEF_MD_RECIPE } from "../js/brief-beats.js";
@@ -148,7 +155,7 @@ import {
   collectorImageHeaders,
 } from "../js/server/collector-cards.mjs";
 import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../js/server/collector-card-share.mjs";
-import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
+import { RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
 import { planSlugsFromEnv, subscriptionEntitled, subscriptionView } from "../js/server/ai-quota.mjs";
@@ -231,6 +238,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
 function loadEnvFile() {
+  if (process.env.FF_SKIP_PORTAL_ENV_FILE === "1") return;
   const candidates = [
     path.join(ROOT, ".env.portal"),
     path.join(ROOT, ".env.portal.local"),
@@ -272,6 +280,19 @@ const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
 const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
 // Rooms, year bulletins, and the AI world clock read this bank from the first request on.
 await loadPredictionsBank();
+const QUEST_PACKAGES_DIR = resolveQuestPackagesDir(ROOT);
+const localPackageRegistry = QUEST_PACKAGES_DIR
+  ? registerPackagesDir(QUEST_PACKAGES_DIR)
+  : { registry: null, errors: [], registered: 0 };
+if (localPackageRegistry.errors?.length) {
+  for (const err of localPackageRegistry.errors) {
+    console.warn(`Quest package ${err.dir}: ${err.message}`);
+  }
+} else if (localPackageRegistry.registered) {
+  console.log(
+    `Quest packages: ${localPackageRegistry.registered} local release(s) from ${QUEST_PACKAGES_DIR}`
+  );
+}
 const XAI_BASE = "https://api.x.ai/v1";
 
 const PORT = Number(process.env.PORT || process.env.FF_PORT) || 8765;
@@ -829,6 +850,12 @@ function buildUserPayload({ messages, context, mode }) {
     depthCharacter: context?.depthCharacter || null,
     grounding,
     sourceConstraint,
+    sourceInquiry: sanitizeSourceInquiry(context?.sourceInquiry, {
+      mode,
+      bank: context?.predictionsBank || null,
+      year: context?.year,
+      angle: context?.challengeAngle,
+    }),
     isLearningModule: tutorMode,
     tutorMode,
     aiTutorContext,
@@ -1046,6 +1073,7 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
 }
 
 function composeCoInventCall(body) {
+  if (!authorizedQuestBodies.has(body)) throw Object.assign(new Error("package_authority_required"), { status: 403 });
   const mode = body.mode || "chat";
   const context = body.context || {};
   const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -1247,6 +1275,16 @@ async function fetchOfficialQuestCatalog(opts = {}) {
 /**
  * @param {object|null|undefined} ident
  */
+const authorizedQuestBodies = new WeakSet();
+const hostedPackageResolver = createHostedPackageResolverFromEnv({
+  env: { ...process.env, FF_QUESTS_REMOTE_URL: QUESTS_REMOTE_URL || "" },
+  loadCatalog: fetchOfficialQuestCatalog,
+});
+const authorizeQuestRequest = createQuestRequestAuthority({
+  loadCatalog: fetchOfficialQuestCatalog,
+  loadRun: getRunForUser,
+  resolvePackage: (ref, opts) => hostedPackageResolver.resolve(ref, opts),
+});
 async function entitlementForIdent(ident) {
   if (!ident?.enabled || !ident.signedIn || !dbEnabled()) return false;
   try {
@@ -1263,9 +1301,18 @@ async function entitlementForIdent(ident) {
   }
 }
 
+async function runAuthorityForIdent(identity) {
+  const entitled = await entitlementForIdent(identity);
+  return {
+    identity,
+    loadCatalog: fetchOfficialQuestCatalog,
+    resolvePackage: (ref) => hostedPackageResolver.resolve(ref, { identity, entitled }),
+  };
+}
+
 async function loadMergedQuestTiles(opts = {}) {
   const [scanned, remote] = await Promise.all([
-    scanQuestsFolder(QUESTS_DIR),
+    scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry }),
     fetchOfficialQuestCatalog({ force: Boolean(opts.forceRemote) }),
   ]);
   const remoteQuests = remote.quests || [];
@@ -1362,6 +1409,7 @@ function findQuestTile(pack, id) {
 }
 
 async function handleCoInvent(body) {
+  if (!authorizedQuestBodies.has(body)) throw Object.assign(new Error("package_authority_required"), { status: 403 });
   const context = body.context || {};
   const mode = body.mode || "chat";
   const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -2782,10 +2830,10 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, gate.status, { ok: false, error: gate.error, clerk: ident.enabled });
     }
     try {
-      const st = await getRunState(gate.userId);
+      const st = await getRunState(gate.userId, await runAuthorityForIdent(ident));
       return sendJson(res, 200, { ok: true, state: st });
     } catch (e) {
-      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+      return sendJson(res, errorStatus(e), { ok: false, error: e?.packageBinding ? e.code : "run_state_failed" });
     }
   }
 
@@ -2801,12 +2849,11 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const body = await readBody(req, { maxBytes: RUN_STATE_MAX_BYTES });
-      const parsed = parseRunStateBody(body);
-      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error });
-      await putRunState(gate.userId, parsed.state);
+      // Bind against the owned run before sanitization drops client world fields.
+      await putRunState(gate.userId, body, await runAuthorityForIdent(ident));
       return sendJson(res, 200, { ok: true });
     } catch (e) {
-      return sendJson(res, errorStatus(e), { ok: false, error: "run_state_failed" });
+      return sendJson(res, errorStatus(e), { ok: false, error: e?.packageBinding ? e.code : "run_state_failed" });
     }
   }
 
@@ -3182,13 +3229,15 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const body = await readBody(req, { maxBytes: 8_000 });
-      const result = await startRun({ ...body, clerkUserId: gate.userId });
-      return sendJson(res, 200, { ok: true, stored: result.stored, id: result.id || null });
+      const result = await startRun({ ...body, clerkUserId: gate.userId, ...await runAuthorityForIdent(ident) });
+      return sendJson(res, 200, { ok: true, stored: result.stored, id: result.id || null, packageRef: result.packageRef || null });
     } catch (e) {
       console.warn("[cloud db] startRun", e?.message || e);
+      const packageError =
+        e?.status === 403 || e?.status === 409 ? e.message || "package_revision_unavailable" : "";
       return sendJson(res, errorStatus(e), {
         ok: false,
-        error: e?.status === 400 ? "invalid_run" : "run_failed",
+        error: e?.status === 400 ? "invalid_run" : packageError || "run_failed",
       });
     }
   }
@@ -3279,6 +3328,18 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (req.method === "POST" && pathOnly === "/api/quests/resolve-context") {
+    try {
+      const body = await readBody(req);
+      const identity = await authenticateClerkRequest(req);
+      const result = await authorizeQuestRequest(body, { identity, entitled: await entitlementForIdent(identity) });
+      return result.ok ? sendJson(res, 200, { ok: true, context: result.body.context })
+        : sendJson(res, result.status || 409, { ok: false, error: result.code });
+    } catch (error) {
+      return sendJson(res, errorStatus(error), { ok: false, error: "invalid_context" });
+    }
+  }
+
   // —— Quest tiles: local folder (Library) + remote catalog (Sponsored/Learning) ——
   if (req.method === "GET" && req.url && (req.url === "/api/quests" || req.url.startsWith("/api/quests?") || req.url.startsWith("/api/quests/"))) {
     try {
@@ -3288,6 +3349,7 @@ const server = http.createServer(async (req, res) => {
       const forceRemote = url.searchParams.get("refresh") === "1";
       const pack = await loadMergedQuestTiles({ forceRemote });
       const { scanned, remote, local, remoteQuests, quests } = pack;
+      if (!remote?.ok) return sendJson(res, 503, { ok: false, error: "quests_scan_failed" });
 
       const idParam =
         url.searchParams.get("id") ||
@@ -3312,10 +3374,20 @@ const server = http.createServer(async (req, res) => {
           if (decision.status === 402) body.subscribeUrl = subscribeUrlFromEnv();
           return sendJson(res, decision.status, body);
         }
+        if (tile.packageRef && remoteQuests.some((q) => q.id === questId)) {
+          const current = parsePackageRef(tile.packageRef);
+          if (!current) return sendJson(res, 400, { ok: false, error: "package_reference_forbidden" });
+          const ref = { ...current, revision: url.searchParams.get("revision") || current.revision };
+          const resolved = await hostedPackageResolver.resolve(ref, { identity: ident, entitled });
+          if (!resolved?.ok) return sendJson(res, resolved?.status || 409, { ok: false, error: resolved?.code || "package_revision_unavailable" });
+          return sendJson(res, 200, { ok: true, tile: resolved.record });
+        }
         return sendJson(res, 200, { ok: true, tile });
       }
 
-      const gateOne = (q) => applyCatalogGate(q, ident, { entitled });
+      const gateOne = (q) => q.packageRef
+        ? { ...catalogCard(q), packageRef: q.packageRef, gated: !questReadDecision(q, ident, { entitled }).allow }
+        : applyCatalogGate(q, ident, { entitled });
       return sendJson(res, 200, {
         ok: true,
         dir: scanned.dir,
@@ -3605,7 +3677,10 @@ const server = http.createServer(async (req, res) => {
       }
       const tile = findQuestTile(pack, questIdFromContext(body.context));
       const entitled = await entitlementForIdent(ident);
-      const prepared = prepareTutorContext(body.context, ident, tile, { entitled });
+      const guarded = await authorizeQuestRequest(body, { identity: ident, entitled });
+      const prepared = !guarded.ok ? guarded : guarded.body.context?.packageRef
+        ? { ok: true, context: guarded.body.context }
+        : prepareTutorContext(guarded.body.context, ident, tile, { entitled });
       if (!prepared.ok) {
         return sendJson(res, prepared.status || 401, {
           error: prepared.error || "sign_in_required",
@@ -3625,9 +3700,9 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
-      const result = await withClerkIdentity(req, () =>
-        handleCoInvent({ ...body, context: prepared.context })
-      );
+      const authorizedBody = { ...body, context: prepared.context };
+      authorizedQuestBodies.add(authorizedBody);
+      const result = await withClerkIdentity(req, () => handleCoInvent(authorizedBody));
       return sendJson(res, 200, result);
     } catch (e) {
       console.error("[co-invent]", e.message || e);
@@ -3651,7 +3726,10 @@ const server = http.createServer(async (req, res) => {
   return sendJson(res, 405, { ok: false, error: "method_not_allowed", service: "portal" });
 });
 
-// Inject AI boundary into rooms (PR10) once handleCoInvent is in scope
+// Inject AI boundary into rooms (PR10) once handleCoInvent is in scope.
+// Note: portal rooms are disabled (ROOMS_ENABLED=false) by default. If enabled,
+// the handler must resolve authority before calling handleCoInvent, otherwise
+// handleCoInvent throws package_authority_required (see server.mjs:3025).
 if (roomManager) {
   roomManager.coInventHandler = (body) => handleCoInvent(body);
 }
@@ -3860,7 +3938,7 @@ server.listen(PORT, HOST, async () => {
   }
   console.log("AI search: OFF (portal does not use live AI; that is game)");
   try {
-    const scanned = await scanQuestsFolder(QUESTS_DIR);
+    const scanned = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
     console.log(
       `Local Quests (Library): ${scanned.quests.length} tile(s) in ${scanned.dir}`
     );

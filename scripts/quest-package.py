@@ -25,12 +25,15 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-SCHEMA = "future-forge.quest-package/v1"
+SCHEMA_V1 = "future-forge.quest-package/v1"
+SCHEMA_V2 = "future-forge.quest-package/v2"
+SCHEMA = SCHEMA_V1
 MAX_MODULE_LESSONS = 24
 # Hosts authors may still write. pack turns them into package paths.
 LEGACY_LESSON_BASE = "https://warmersun.com/lessons/"
@@ -38,7 +41,11 @@ LEGACY_ASSET_BASE = "https://warmersun.com/future-forge/quests/assets/"
 PATHS = {"lessons": "lessons/", "assets": "assets/"}
 # Game-server stills. They are not package files unless the zip actually has them.
 GAME_ASSET_PREFIXES = ("assets/problems/", "assets/quests/")
-TOP_LEVEL = frozenset({"quests", "lessons", "assets"})
+TOP_LEVEL_V1 = frozenset({"quests", "lessons", "assets"})
+TOP_LEVEL = TOP_LEVEL_V1 | frozenset({"predictions"})
+MAX_ZIP_ENTRIES = 512
+MAX_ZIP_ENTRY_BYTES = 8_000_000
+MAX_ZIP_TOTAL_BYTES = 32_000_000
 ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$")
 TITLE_RE = re.compile(r"<title>([^<]*)</title>", re.IGNORECASE)
 HREF_RE = re.compile(
@@ -63,6 +70,34 @@ def die(msg: str) -> None:
 
 def sha256_hex(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def compare_utf8_paths(left: str, right: str) -> int:
+    """Sort by raw UTF-8 bytes. Matches js/package-identity.js."""
+    a = left.encode("utf-8")
+    b = right.encode("utf-8")
+    if a < b:
+        return -1
+    if a > b:
+        return 1
+    return 0
+
+
+def package_revision(schema: str, package_id: str, files: dict[str, str]) -> str:
+    """sha256 of [schema, id, [[path, digest], ...]] with no whitespace."""
+    pairs = []
+    for rel, digest in files.items():
+        if rel == "manifest.json":
+            continue
+        hex_digest = str(digest or "")
+        if hex_digest.startswith("sha256:"):
+            hex_digest = hex_digest[len("sha256:") :]
+        pairs.append([rel, hex_digest.lower()])
+    pairs.sort(key=lambda row: row[0].encode("utf-8"))
+    encoded = json.dumps(
+        [schema, package_id, pairs], ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    return sha256_hex(encoded)
 
 
 def safe_zip_name(name: str) -> bool:
@@ -100,16 +135,40 @@ def read_tree_from_zip(pkg: Path) -> dict[str, bytes]:
     if not pkg.is_file():
         die(f"not a file: {pkg}")
     tree: dict[str, bytes] = {}
+    total = 0
     try:
         with ZipFile(pkg) as zf:
-            for info in zf.infolist():
-                if info.is_dir():
-                    continue
+            infos = [info for info in zf.infolist() if not info.is_dir()]
+            if len(infos) > MAX_ZIP_ENTRIES:
+                die(f"package_integrity_failed: more than {MAX_ZIP_ENTRIES} entries")
+            seen: set[str] = set()
+            for info in infos:
                 name = info.filename
+                if name in seen:
+                    die(f"package_integrity_failed: duplicate zip entry {name!r}")
+                seen.add(name)
+                if info.external_attr >> 16 & 0o170000 == 0o120000:
+                    die(f"package_integrity_failed: symlink entry {name!r}")
                 if not safe_zip_name(name):
-                    die(f"refusing zip entry {name!r}")
-                tree[name] = zf.read(info)
+                    die(f"package_integrity_failed: refusing zip entry {name!r}")
+                if info.file_size > MAX_ZIP_ENTRY_BYTES:
+                    die(
+                        f"package_integrity_failed: {name} exceeds "
+                        f"{MAX_ZIP_ENTRY_BYTES} decompressed bytes"
+                    )
+                total += info.file_size
+                if total > MAX_ZIP_TOTAL_BYTES:
+                    die(
+                        f"package_integrity_failed: package exceeds "
+                        f"{MAX_ZIP_TOTAL_BYTES} decompressed bytes"
+                    )
+                data = zf.read(info)
+                if len(data) != info.file_size:
+                    die(f"package_integrity_failed: size mismatch for {name}")
+                tree[name] = data
     except PackageError:
+        raise
+    except SystemExit:
         raise
     except Exception as e:  # noqa: BLE001 — zipfile raises several types
         die(f"cannot read {pkg}: {e}")
@@ -308,7 +367,7 @@ def quests_for_folder(
     return sorted(ids, key=sort_key)
 
 
-def public_quest(quest: dict[str, Any]) -> dict[str, Any]:
+def public_quest(quest: dict[str, Any], *, v2: bool = False) -> dict[str, Any]:
     entry: dict[str, Any] = {
         "id": quest["id"],
         "file": quest["file"],
@@ -319,13 +378,68 @@ def public_quest(quest: dict[str, Any]) -> dict[str, Any]:
         quest["lesson"], bool
     ):
         entry["lesson"] = quest["lesson"]
+    if v2 and quest["kind"] != "module":
+        bank_id = str(quest["tile"].get("predictionBankId") or "").strip()
+        if bank_id:
+            entry["predictionBankId"] = bank_id
     return entry
+
+
+def tree_has_world(tree: dict[str, bytes], quests: list[dict[str, Any]]) -> bool:
+    if any(rel.startswith("predictions/") and rel.endswith(".json") for rel in tree):
+        return True
+    return any(
+        q["kind"] != "module" and str(q["tile"].get("predictionBankId") or "").strip()
+        for q in quests
+    )
+
+
+def prediction_index(tree: dict[str, bytes]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for rel in sorted(tree):
+        if not (rel.startswith("predictions/") and rel.endswith(".json")):
+            continue
+        if rel.count("/") != 1:
+            continue
+        rows.append({"id": PurePosixPath(rel).stem, "file": rel})
+    rows.sort(key=lambda row: row["id"])
+    return rows
+
+
+def run_world_validator(src: Path) -> list[str]:
+    """Call the shared Node bank binder. Not skipped by --no-validate."""
+    script = Path(__file__).resolve().parent / "validate-quest-package.mjs"
+    node = shutil.which("node")
+    if node is None:
+        return ["node is not on PATH; cannot validate package banks"]
+    if not script.is_file():
+        return [f"missing world validator {script}"]
+    result = subprocess.run(
+        [node, str(script), str(src)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return []
+    detail = (result.stdout or result.stderr or "").strip()
+    messages = [detail or "package world validation failed"]
+    try:
+        payload = json.loads(result.stdout or "")
+    except json.JSONDecodeError:
+        return messages
+    parsed = []
+    for item in payload.get("errors") or []:
+        if isinstance(item, dict) and item.get("message"):
+            parsed.append(str(item["message"]))
+        elif item:
+            parsed.append(str(item))
+    return parsed or messages
 
 
 def build_description(
     tree: dict[str, bytes],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Manifest without files/createdAt, plus the ordered quest records."""
+    """Manifest without files/createdAt/revision, plus the ordered quest records."""
     quests = collect_quests(tree)
     module = derive_module(quests)
     ordered = order_quests(quests, module)
@@ -345,15 +459,18 @@ def build_description(
         title = module["title"]
     else:
         title = ordered[0]["title"]
+    v2 = tree_has_world(tree, quests)
     manifest: dict[str, Any] = {
-        "schema": SCHEMA,
+        "schema": SCHEMA_V2 if v2 else SCHEMA_V1,
         "id": package_id,
-        "version": 1,
+        "version": 2 if v2 else 1,
         "title": title,
-        "quests": [public_quest(q) for q in ordered],
+        "quests": [public_quest(q, v2=v2) for q in ordered],
         "lessons": lessons,
         "paths": dict(PATHS),
     }
+    if v2:
+        manifest["predictions"] = prediction_index(tree)
     if module:
         manifest["module"] = module
     return manifest, ordered
@@ -587,26 +704,42 @@ def check_tree(
     }
     canonical = dict(built)
     canonical["files"] = files
+    if built.get("version") == 2:
+        canonical["revision"] = package_revision(SCHEMA_V2, built["id"], files)
 
     if manifest is None:
         return canonical, errors, warnings
 
-    if manifest.get("schema") != SCHEMA:
+    schema = manifest.get("schema")
+    version = manifest.get("version")
+    if schema == SCHEMA_V1 and version == 1:
+        if built.get("version") != 1:
+            errors.append(
+                "package_version_unsupported: v1 manifest cannot describe world data"
+            )
+    elif schema == SCHEMA_V2 and version == 2:
+        if built.get("version") != 2:
+            errors.append("manifest schema v2 requires packaged world data")
+    else:
         errors.append(
-            f"manifest schema {manifest.get('schema')!r} is not {SCHEMA}"
+            "package_version_unsupported: "
+            f"manifest schema {schema!r} version {version!r} is not supported"
         )
-    if manifest.get("version") != 1:
-        errors.append("manifest version must be 1")
     if not str(manifest.get("createdAt") or "").strip():
         errors.append("manifest createdAt is missing")
     else:
         canonical["createdAt"] = manifest["createdAt"]
 
-    for key in ("id", "title", "quests", "lessons", "paths"):
+    compare_keys = ["id", "title", "quests", "lessons", "paths"]
+    if built.get("version") == 2:
+        compare_keys.append("predictions")
+    for key in compare_keys:
         if manifest.get(key) != built.get(key):
             errors.append(f"manifest {key} does not match the package contents")
     if manifest.get("module") != built.get("module"):
         errors.append("manifest.module does not match the module wrapper")
+    if built.get("version") == 2 and manifest.get("revision") != canonical.get("revision"):
+        errors.append("manifest revision does not match the package contents")
     if expect_hashes and manifest.get("files") != files:
         errors.append("manifest files hashes do not match the package contents")
         stored = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
@@ -695,11 +828,15 @@ def cmd_pack(args: argparse.Namespace) -> None:
     canonical, errors, warnings = check_tree(
         tree, None, args.allow_external_lessons, expect_hashes=False
     )
+    if canonical.get("version") == 2 or any(
+        rel.startswith("predictions/") for rel in tree
+    ):
+        errors = list(errors) + run_world_validator(src)
     if not args.no_validate:
         errors = list(errors) + run_validator(src)
     report(errors, warnings)
     canonical["createdAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    # createdAt is not part of the pre-check canonical comparison; insert in order.
+    # createdAt is not part of the content revision. revision excludes itself.
     ordered = {
         "schema": canonical["schema"],
         "id": canonical["id"],
@@ -710,6 +847,9 @@ def cmd_pack(args: argparse.Namespace) -> None:
     }
     if "module" in canonical:
         ordered["module"] = canonical["module"]
+    if canonical.get("version") == 2:
+        ordered["predictions"] = canonical.get("predictions") or []
+        ordered["revision"] = canonical["revision"]
     ordered["lessons"] = canonical["lessons"]
     ordered["paths"] = canonical["paths"]
     ordered["files"] = canonical["files"]
@@ -724,11 +864,22 @@ def cmd_pack(args: argparse.Namespace) -> None:
 
 
 def cmd_verify(args: argparse.Namespace) -> None:
-    tree = read_tree_from_zip(Path(args.package))
+    pkg = Path(args.package)
+    tree = read_tree_from_zip(pkg)
     manifest = load_manifest(tree)
     _canonical, errors, warnings = check_tree(
         content_tree(tree), manifest, args.allow_external_lessons, expect_hashes=True
     )
+    if manifest.get("version") == 2:
+        work = Path(tempfile.mkdtemp(prefix="ffquest-verify-"))
+        try:
+            for rel, data in content_tree(tree).items():
+                target = work / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            errors = list(errors) + run_world_validator(work)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
     report(errors, warnings)
     print(f"ok: {manifest.get('id')} ({len(manifest.get('files') or {})} files)")
 
@@ -792,6 +943,13 @@ def cmd_inspect(args: argparse.Namespace) -> None:
         report(errors, warnings)
     else:
         print("  links: ok")
+        if manifest.get("revision"):
+            print(f"  revision: {manifest.get('revision')}")
+        predictions = manifest.get("predictions") or []
+        if predictions:
+            print("  predictions:")
+            for row in predictions:
+                print(f"    {row.get('id')}  {row.get('file')}")
         for warning in warnings:
             print(f"warning: {warning}", file=sys.stderr)
 
@@ -847,15 +1005,34 @@ def cmd_unpack(args: argparse.Namespace) -> None:
     if dest.exists() and any(dest.iterdir()):
         die(f"refusing to unpack into non-empty directory {dest}")
     dest.mkdir(parents=True, exist_ok=True)
+    raw_dir = dest / "raw" if manifest.get("version") == 2 else None
+    if raw_dir is not None:
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        for rel, data in tree.items():
+            if not safe_zip_name(rel):
+                die(f"refusing path {rel}")
+            target = raw_dir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+    projected = dict(tree)
     if args.lesson_root or args.asset_root:
-        bind_roots(tree, args.lesson_root or "", args.asset_root or "")
-    for rel, data in tree.items():
+        bind_roots(projected, args.lesson_root or "", args.asset_root or "")
+    elif manifest.get("version") == 2:
+        print(f"unpacked {manifest.get('id')} raw bytes to {raw_dir}")
+        return
+    for rel, data in projected.items():
         if not safe_zip_name(rel):
             die(f"refusing path {rel}")
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
-    print(f"unpacked {manifest.get('id')} to {dest}")
+    if raw_dir is not None:
+        print(
+            f"unpacked {manifest.get('id')} raw bytes to {raw_dir}; "
+            f"delivery projection to {dest}"
+        )
+    else:
+        print(f"unpacked {manifest.get('id')} to {dest}")
 
 
 def main() -> None:

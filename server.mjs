@@ -44,6 +44,13 @@ import {
   logPredictionsLoad,
   predictionsApiResponse,
 } from "./js/predictions-bank.mjs";
+import {
+  registerPackagesDir,
+  resolveQuestPackagesDir,
+  resolveLocalPackage,
+} from "./js/server/quest-package-resolver.mjs";
+import { createQuestRequestAuthority, createPortalQuestRequestAuthority, createRoomQuestRequestAuthority, createAsyncRoomQuestRequestAuthority } from "./js/server/quest-request-authority.mjs";
+import { createHostedPackageResolverFromEnv } from "./js/server/hosted-package-resolver.mjs";
 import { SCENE_PROSE, SCENE_PROSE_CAPSULE } from "./js/scene-prose.js";
 import { QUEST_SUMMARY_RECIPE } from "./js/quest-summary.js";
 import { BRIEF_MD_RECIPE } from "./js/brief-beats.js";
@@ -125,6 +132,7 @@ import {
   questIdFromContext,
 } from "./js/server/cloud-gate.mjs";
 import {
+  portalOrigin,
   fetchPortalQuests,
   mergeQuestCatalog,
   officialTutorContext,
@@ -221,6 +229,24 @@ const QUESTS_REMOTE_URL = resolveQuestsRemoteUrl();
 const TRENDS_REMOTE_URL = resolveTrendsRemoteUrl();
 // Rooms, year bulletins, and the AI world clock read this bank from the first request on.
 await loadPredictionsBank();
+const QUEST_PACKAGES_DIR = resolveQuestPackagesDir(ROOT);
+const localPackageRegistry = QUEST_PACKAGES_DIR
+  ? registerPackagesDir(QUEST_PACKAGES_DIR)
+  : { registry: null, errors: [], registered: 0 };
+if (localPackageRegistry.errors?.length) {
+  for (const err of localPackageRegistry.errors) {
+    console.warn(`Quest package ${err.dir}: ${err.message}`);
+  }
+  if (QUEST_PACKAGES_DIR && localPackageRegistry.registered === 0) {
+    console.warn(
+      `Quest packages: none registered from ${QUEST_PACKAGES_DIR} (package_quest_collision or integrity failure)`
+    );
+  }
+} else if (localPackageRegistry.registered) {
+  console.log(
+    `Quest packages: ${localPackageRegistry.registered} local release(s) from ${QUEST_PACKAGES_DIR}`
+  );
+}
 const GROK_HOME = process.env.FF_GROK_HOME || path.join(os.homedir(), ".grok");
 const AUTH_PATH = path.join(GROK_HOME, "auth.json");
 const XAI_BASE = "https://api.x.ai/v1";
@@ -273,6 +299,7 @@ const usage = usageTrackerFromEnv(
 
 let quotaOnVoiceClose = () => {};
 const voiceSessions = createVoiceSessionStore({
+  resolvePackage: (ref) => resolveLocalPackage(localPackageRegistry.registry, ref),
   onClose(session) {
     try {
       quotaOnVoiceClose(session);
@@ -306,6 +333,13 @@ const roomManager = ROOMS_ENABLED
   ? new RoomManager({
       maxRooms: MAX_ROOMS,
       rateLimiter,
+      resolveMission: createRoomQuestRequestAuthority({
+        packageRefForQuest: (id) => {
+          const release = localPackageRegistry.registry?.questRelease(id);
+          return release ? { packageId: release.packageId, revision: release.revision, questId: id } : null;
+        },
+        resolvePackage: (ref) => resolveLocalPackage(localPackageRegistry.registry, ref),
+      }),
       onRoomStart: (code, meta) => usage.roomStart(code, meta),
       onRoomEnd: (code, meta) => usage.roomEnd(code, meta),
       onRoomPlayers: (code, n) => usage.roomTouchPlayers(code, n),
@@ -364,8 +398,60 @@ async function catalogLessonForRequest(context, authorization) {
  * @param {import('node:http').IncomingMessage} req
  * @param {object} body
  */
+const authorizedQuestBodies = new WeakSet();
+const portalQuestAuthority = createPortalQuestRequestAuthority({ origin: portalOrigin() });
+const loadAuthorityCatalog = async (opts = {}) => {
+  const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, opts);
+  if (!remote?.ok) return remote;
+  const local = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
+  return { ...remote, quests: mergeQuestCatalog(local.quests, remote.quests) };
+};
+const hostedPackageResolver = createHostedPackageResolverFromEnv({
+  env: { ...process.env, FF_QUESTS_REMOTE_URL: QUESTS_REMOTE_URL || "" },
+  loadCatalog: (opts) => fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, opts),
+});
+const localQuestAuthority = createQuestRequestAuthority({
+  loadCatalog: loadAuthorityCatalog,
+  resolvePackage: async (ref, opts) => {
+    const official = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: true });
+    if (!official?.ok) return { ok: false, code: "package_catalog_unavailable", status: 503 };
+    if (official.quests?.some((q) => q.id === ref.questId)) return hostedPackageResolver.resolve(ref, opts);
+    return resolveLocalPackage(localPackageRegistry.registry, ref);
+  },
+});
+function questAuthorityForRequest(req) {
+  const authorization = req.headers.authorization || "";
+  return (body) => portalQuestsEnabled() || CLOUD_AI
+    ? portalQuestAuthority(body, { authorization })
+    : localQuestAuthority(body);
+}
+if (roomManager) {
+  roomManager.resolveMissionAsync = createAsyncRoomQuestRequestAuthority({
+    portal: Boolean(portalQuestsEnabled() || CLOUD_AI),
+    loadCatalog: async (opts) => {
+      if (portalQuestsEnabled() || CLOUD_AI) {
+        const got = await fetchPortalQuests({});
+        return got.ok && got.data?.ok ? got.data : { ok: false };
+      }
+      return loadAuthorityCatalog(opts);
+    },
+    resolveLocal: roomManager.resolveMission,
+    resolvePackage: async (ref, opts) => {
+      const official = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: true });
+      if (!official?.ok) return { ok: false, code: "package_catalog_unavailable", status: 503 };
+      if (official.quests?.some(q => q.id === ref.questId)) return hostedPackageResolver.resolve(ref, opts);
+      return resolveLocalPackage(localPackageRegistry.registry, ref);
+    },
+  });
+}
 async function applyOfficialTutor(req, body) {
   if (!body || typeof body !== "object") return null;
+  const guarded = await questAuthorityForRequest(req)(body);
+  if (!guarded.ok) return guarded;
+  body.context = guarded.body.context;
+  authorizedQuestBodies.add(body);
+  // A resolved package already contains the exact revision's tutor notes.
+  if (body.context?.packageRef) return null;
   const decided = await officialTutorContext(body.context, {
     authorization: req.headers.authorization || "",
   });
@@ -1026,6 +1112,12 @@ function buildUserPayload({ messages, context, mode }) {
     depthCharacter: context?.depthCharacter || null,
     grounding,
     sourceConstraint,
+    sourceInquiry: sanitizeSourceInquiry(context?.sourceInquiry, {
+      mode,
+      bank: context?.predictionsBank || null,
+      year: context?.year,
+      angle: context?.challengeAngle,
+    }),
     isLearningModule: tutorMode,
     tutorMode,
     aiTutorContext,
@@ -1243,6 +1335,7 @@ function sanitizeScenariosResult(parsed, context, source = "ai") {
 }
 
 function composeCoInventCall(body) {
+  if (!authorizedQuestBodies.has(body)) throw Object.assign(new Error("package_authority_required"), { status: 403 });
   const mode = body.mode || "chat";
   const context = body.context || {};
   const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -1441,6 +1534,7 @@ async function aiCoInvent(body, client, meta = {}) {
 }
 
 async function handleCoInvent(body, opts = {}) {
+  if (!authorizedQuestBodies.has(body)) throw Object.assign(new Error("package_authority_required"), { status: 403 });
   const allowLocal = opts.allowLocal !== false;
   const context = body.context || {};
   const mode = body.mode || "chat";
@@ -2352,13 +2446,19 @@ const server = http.createServer(async (req, res) => {
       if (portalQuestsEnabled()) {
         const authorization = req.headers.authorization || "";
         if (questId) {
-          const got = await fetchPortalQuests({ id: questId, authorization });
+          const revision = url.searchParams.get("revision");
+          const got = revision ? await (async () => {
+            const response = await fetch(`${portalOrigin()}/api/quests/${encodeURIComponent(questId)}?revision=${encodeURIComponent(revision)}`, {
+              headers: authorization ? { Authorization: authorization } : {}, redirect: "error", signal: AbortSignal.timeout(12000),
+            });
+            return { ok: response.ok, status: response.status, data: await response.json() };
+          })() : await fetchPortalQuests({ id: questId, authorization });
           // An outage or route-level 404 must not expose a local duplicate.
           // Only a confirmed missing official quest permits a local side-load.
           if (!portalQuestNotFound(got, questId)) {
             return sendJson(res, got.status || 503, got.data || { ok: false, error: "portal_unavailable" });
           }
-          const scanned = await scanQuestsFolder(QUESTS_DIR);
+          const scanned = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
           let local = (scanned.quests || []).find(
             (q) => q.id === questId || q.mission?.id === questId
           );
@@ -2372,7 +2472,7 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, got.status || 404, got.data || { ok: false, error: "not_found", id: questId });
         }
         const [scanned, portal] = await Promise.all([
-          scanQuestsFolder(QUESTS_DIR),
+          scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry }),
           fetchPortalQuests({
             authorization,
             search: forceRemote ? "refresh=1" : "",
@@ -2404,7 +2504,7 @@ const server = http.createServer(async (req, res) => {
         });
       }
       const [scanned, remote] = await Promise.all([
-        scanQuestsFolder(QUESTS_DIR),
+        scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry }),
         fetchRemoteQuestCatalog(QUESTS_REMOTE_URL, { force: forceRemote }),
       ]);
       const remoteQuests = remote.quests || [];
@@ -2538,7 +2638,7 @@ const server = http.createServer(async (req, res) => {
         if (!room) return sendJson(res, 404, { ok: false, error: "room_not_found" });
         // Only resolve playerToken inside this room (no cross-room host privilege)
         const player = roomManager.playerInRoom(room, body.playerToken);
-        const result = roomManager.hostCommand(room, player, body.cmd, body);
+        const result = await roomManager.hostCommandAsync(room, player, body.cmd, body);
         const status = result.ok
           ? 200
           : result.error === "unauthorized"
@@ -2780,7 +2880,8 @@ const server = http.createServer(async (req, res) => {
             : "Voice needs SuperGrok or FF_XAI_API_KEY. Text co-inventor still works locally.",
         });
       }
-      const created = voiceSessions.create({
+      const created = await voiceSessions.createAuthorized({
+        authorizeContext: questAuthorityForRequest(req),
         context: body?.context && typeof body.context === "object" ? body.context : {},
         clientSessionId: clientSessionFromBody(body),
         ip: gate.ip,
@@ -2921,13 +3022,23 @@ const server = http.createServer(async (req, res) => {
 
 // Inject AI boundary into rooms (PR10) once handleCoInvent is in scope
 if (roomManager) {
-  roomManager.coInventHandler = async (body) => {
+  roomManager.coInventHandler = async (body, { room, player } = {}) => {
     const userId = body?.clerkUserId || null;
     const quotaGrant = body?.quotaGrant || null;
     if (body && typeof body === "object") {
       delete body.clerkUserId;
       delete body.quotaGrant;
     }
+    const checked = room && await roomManager.resolveMissionAsync(room.questMeta?.mission, {
+      players: room.players.map(p => ({ id: p.id, clerkUserId: p.clerkUserId || null })),
+    });
+    if (!checked?.ok) throw Object.assign(new Error(checked?.code || "package_revision_unavailable"), { status: 409 });
+    const guarded = portalQuestsEnabled() || CLOUD_AI
+      ? await portalQuestAuthority(body)
+      : await localQuestAuthority(body, { identity: { enabled: true, signedIn: Boolean(player?.clerkUserId), userId: player?.clerkUserId || null }, entitled: false });
+    if (!guarded.ok) throw Object.assign(new Error(guarded.code), { status: guarded.status });
+    body.context = guarded.body.context;
+    authorizedQuestBodies.add(body);
     const kind = body?.mode === "vision" ? "image" : "text";
     const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
     const reserved = await reserveCloudQuotaForUser({ userId, kind, quotaGrant, inputTokens });
@@ -2985,7 +3096,7 @@ if (ROOMS_ENABLED && roomManager) {
     let bound = null; // { room, player }
     const ip = clientIp(req);
 
-    socket.on("message", (raw) => {
+    socket.on("message", async (raw) => {
       if (raw != null && Buffer.byteLength(String(raw)) > WS_MAX_PAYLOAD) {
         return safeWs(socket, { type: "error", error: "payload_too_large" });
       }
@@ -3098,7 +3209,7 @@ if (ROOMS_ENABLED && roomManager) {
       }
 
       if (msg.type === "host") {
-        const result = roomManager.hostCommand(room, player, msg.cmd, {
+        const result = await roomManager.hostCommandAsync(room, player, msg.cmd, {
           ...msg.payload,
           hostToken: msg.hostToken,
           playerToken: player.playerToken,
@@ -3223,7 +3334,7 @@ async function afterListen() {
     console.log("AI search: OFF (pass --ai-search or set FF_AI_SEARCH=1 to enable)");
   }
   try {
-    const scanned = await scanQuestsFolder(QUESTS_DIR);
+    const scanned = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
     console.log(
       `Local Quests (Library): ${scanned.quests.length} tile(s) in ${scanned.dir}`
     );
@@ -3290,6 +3401,7 @@ async function afterListen() {
     console.log("LAN: no private IPv4 found — check Wi‑Fi / ethernet");
   }
   if (ROOMS_ENABLED) {
+    if (CLOUD_AI || portalQuestsEnabled()) console.warn("Friends package quests require per-seat portal credentials and are denied; ordinary rooms remain available.");
     console.log(
       `Friends rooms: ON · WS /ws/rooms · maxRooms=${MAX_ROOMS} (FF_ENABLE_ROOMS=0 to disable)`
     );

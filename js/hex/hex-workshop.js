@@ -82,6 +82,7 @@ import {
   normalizePathwayScore,
   blendPathwayScore,
   emptyCrisisDelta,
+  crisisDeltaValues,
   emptyCrisisReasons,
   parseCrisisDeltaField,
   clampPressure,
@@ -121,15 +122,19 @@ import { createHexBoardUi } from "./board-ui.js";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
-import { provisionalScenarioTiming } from "../companion-context.js";
+import { semanticDigest } from "../semantic-digest.js";
+import { predictionsContextKey, provisionalScenarioTiming } from "../companion-context.js";
 import { attachReadAloud, stopReadAloudFor } from "../read-aloud.js";
 
 /**
- * @param {object} api — callbacks into game.js
+ * @param {object} api — callbacks into game.js. getRunWorld returns state.runWorld
+ * (stable object until a run switch); getRunId may return a local/cloud run token.
+ * getMission must return the active mission object, not a freshly cloned view.
  */
 export function createHexWorkshop(api) {
   /** @type {ReturnType<typeof createHexBoardUi>|null} */
   let ui = null;
+  let runGeneration = 0;
   let focusedTechId = null;
   /** @type {Map<string, { abort: AbortController, timer: ReturnType<typeof setTimeout>|null }>} */
   const pathwayJobs = new Map();
@@ -142,6 +147,7 @@ export function createHexWorkshop(api) {
   let ideasBusy = false;
   let mintBusy = false;
   let summonBusy = false;
+  let summonJob = null;
   /** @type {Map<string, { ids: string[], titles: string[] }>} */
   const sparkBatches = new Map();
   /** @type {ReturnType<typeof setTimeout>|null} */
@@ -1349,6 +1355,13 @@ export function createHexWorkshop(api) {
   }
 
   function seedFromMission(mission) {
+    runGeneration += 1;
+    summonJob = null;
+    summonBusy = false;
+    for (const fp of [...pathwayJobs.keys()]) abortPathwayJob(fp);
+    for (const timer of timingTimers.values()) clearTimeout(timer);
+    timingTimers.clear();
+    timingGens.clear();
     timingCache.clear();
     sparkBatches.clear();
     const b = seedCrisisTiles(mission || {});
@@ -1706,7 +1719,7 @@ export function createHexWorkshop(api) {
       globalId: api.getGlobal?.()?.id || mission?.globalId || "",
       global: api.getGlobal?.() || null,
       mission,
-      sourceInquiryKey: api.getSourceInquiryKey?.() || "",
+      sourceInquiryKey: sourceKeyNow(),
     };
   }
 
@@ -2000,10 +2013,15 @@ export function createHexWorkshop(api) {
   function schedulePathwayScore(fp) {
     if (!fp || pathwayJobs.has(fp)) return;
     const abort = new AbortController();
+    const isCurrent = requestGuard();
     const job = { abort, timer: null };
     pathwayJobs.set(fp, job);
     job.timer = setTimeout(() => {
       job.timer = null;
+      if (!isCurrent()) {
+        if (pathwayJobs.get(fp) === job) pathwayJobs.delete(fp);
+        return;
+      }
       runPathwayScore(fp, abort.signal).catch((e) => {
         if (!isAbortError(e)) console.warn("[score-pathway]", e);
       });
@@ -2025,6 +2043,21 @@ export function createHexWorkshop(api) {
     const next = cloneBoard(board());
     if (!next.pathwayImpacts[fp]) return;
     const prev = next.pathwayImpacts[fp];
+    const members = (opts.inventions || inventionsForFingerprint(next, fp, prev.inventionIds));
+    const awardKey = semanticDigest("pathway-ease-v1", [
+      members.map((t) => [t.id, t.techId, String(t.howText || "").trim()]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+      resolveIslandHow(next, members).text,
+    ]);
+    const awards = next.pathwayEaseAwards || (next.pathwayEaseAwards = {});
+    const newlyEased = emptyCrisisDelta();
+    for (const [role, delta] of Object.entries(crisisDeltaValues(score?.crisisDelta))) {
+      const roleKey = semanticDigest("pathway-ease-role-v1", [awardKey, role]);
+      if (!opts.keepCrisisDelta && delta < 0 && !awards[roleKey]) {
+        newlyEased[role] = delta;
+        awards[roleKey] = true;
+      }
+    }
+    const earnsEase = Object.values(newlyEased).some((n) => n < 0);
     next.pathwayImpacts[fp] = {
       ...prev,
       crisisDelta: opts.keepCrisisDelta
@@ -2063,9 +2096,9 @@ export function createHexWorkshop(api) {
         tone: scored.tone,
       });
     }
-    api.grantPathwayEase?.({
-      crisisDelta: keepCrisis ? null : score?.crisisDelta || emptyCrisisDelta(),
-      skip: keepCrisis,
+    if (earnsEase) api.grantPathwayEase?.({
+      crisisDelta: newlyEased,
+      skip: false,
     });
     showScoreSettleChips(fp, {
       keepCrisisDelta: keepCrisis,
@@ -2272,6 +2305,7 @@ export function createHexWorkshop(api) {
   }
 
   async function runPathwayScore(fp, signal) {
+    const isCurrent = requestGuard();
     const year = api.getYear();
     const mission = api.getMission?.() || null;
     const winMax = api.getWinMax?.() || mission?.winMax || {};
@@ -2294,6 +2328,11 @@ export function createHexWorkshop(api) {
       const globalId = api.getGlobal?.()?.id || mission?.globalId || "";
       const rules = api.getRules?.() || mission?.rules || [];
       const heurOpts = { concernAngles, concernAnswers, globalId, mission, rules };
+      const concernKey = pathwayConcernScoreKey(b, inventions);
+      const scoreCurrent = () => isCurrent() && !signal?.aborted &&
+        pathwayJobs.get(fp)?.abort.signal === signal &&
+        listInventionPathways(board()).some((invs) => pathwayContentFingerprint(invs, board()) === fp) &&
+        pathwayConcernScoreKey(board(), inventions.map((t) => board().tiles[t.id])) === concernKey;
 
       let score;
       if (!api.coInvent) {
@@ -2348,6 +2387,7 @@ export function createHexWorkshop(api) {
         }
       }
       if (signal?.aborted) return;
+      if (!scoreCurrent()) return;
       const docked = concernsReachedFromPathway(b, inventions);
       if (score?.concerns) {
         for (const t of docked) {
@@ -2366,7 +2406,7 @@ export function createHexWorkshop(api) {
       applySettledPathwayScore(
         fp,
         score,
-        pathwayConcernScoreKey(b, inventions),
+        concernKey,
         { keepCrisisDelta, inventions }
       );
     } finally {
@@ -2380,7 +2420,7 @@ export function createHexWorkshop(api) {
         (invs) => pathwayContentFingerprint(invs, b) === fp
       );
       if (
-        stillPlaced &&
+        isCurrent() && !signal?.aborted && stillPlaced &&
         (impact?.pending || impact?.concernsPending) &&
         !pathwayJobs.has(fp)
       ) {
@@ -2390,7 +2430,27 @@ export function createHexWorkshop(api) {
   }
 
   function sourceKeyNow() {
-    return api.getSourceInquiryKey?.() || "";
+    const mission = api.getMission?.();
+    const world = api.getRunWorld?.() || mission?.runWorld;
+    return semanticDigest("workshop-world-v1", [
+      api.getSourceInquiryKey?.() || "",
+      predictionsContextKey(world?.bank, api.getYear?.(), world?.packageRef || mission?.packageRef),
+    ]);
+  }
+
+  // Compare at the point of mutation, not only when scheduling/aborting jobs.
+  // Mission/world object identity isolates fresh runs with identical semantic IDs.
+  function requestGuard() {
+    const generation = runGeneration;
+    const mission = api.getMission?.();
+    const world = api.getRunWorld?.();
+    const runId = api.getRunId?.();
+    const year = api.getYear?.();
+    const source = sourceKeyNow();
+    const rules = liveRulesWeatherKey();
+    return () => runGeneration === generation && api.getMission?.() === mission && api.getRunWorld?.() === world &&
+      api.getRunId?.() === runId && api.getYear?.() === year &&
+      sourceKeyNow() === source && liveRulesWeatherKey() === rules;
   }
 
   function localTileTiming(tile, year) {
@@ -2490,6 +2550,7 @@ export function createHexWorkshop(api) {
     ensureUi()?.render();
     api.onBoardPainted?.();
 
+    const isCurrent = requestGuard();
     const prev = timingTimers.get(tileId);
     if (prev) clearTimeout(prev);
     const gen = (timingGens.get(tileId) || 0) + 1;
@@ -2498,6 +2559,7 @@ export function createHexWorkshop(api) {
       tileId,
       setTimeout(() => {
         timingTimers.delete(tileId);
+        if (!isCurrent()) return;
         runTileTiming(tileId, gen).catch((e) => console.warn("[hex timing]", e));
       }, 500)
     );
@@ -2524,11 +2586,14 @@ export function createHexWorkshop(api) {
     settleTileTiming(tileId, level, reason, key, meta);
   }
 
-  function timingStillCurrent(tileId, gen, sourceKey) {
-    return timingGens.get(tileId) === gen && sourceKeyNow() === sourceKey;
+  function timingStillCurrent(tileId, gen, key, isCurrent) {
+    const live = board()?.tiles?.[tileId];
+    return isCurrent() && timingGens.get(tileId) === gen && live &&
+      tileTimingCacheKey(live, api.getYear(), sourceKeyNow()) === key;
   }
 
   async function runTileTiming(tileId, gen) {
+    const isCurrent = requestGuard();
     if (timingGens.get(tileId) !== gen) return;
     const tile = board()?.tiles?.[tileId];
     if (!tile || tile.kind !== TILE_KIND.invention) return;
@@ -2537,7 +2602,7 @@ export function createHexWorkshop(api) {
     const key = tileTimingCacheKey(tile, year, sourceKey);
     if (!api.coInvent) {
       const local = localTileTiming(tile, year);
-      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
+      if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
       commitTileTiming(tile, tileId, local.level, local.reason, key, local);
       return;
     }
@@ -2549,7 +2614,7 @@ export function createHexWorkshop(api) {
         place: api.getPlace?.() || "",
         grounding: api.getGrounding?.() || null,
       });
-      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
+      if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
       const rawLevel = data.timing?.level || data.timingLevel;
       const reason = data.timing?.reason || data.timingNote || data.message || "";
       if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
@@ -2560,7 +2625,7 @@ export function createHexWorkshop(api) {
       }
     } catch {
       const local = localTileTiming(tile, year);
-      if (!timingStillCurrent(tileId, gen, sourceKey)) return;
+      if (!timingStillCurrent(tileId, gen, key, isCurrent)) return;
       commitTileTiming(tile, tileId, local.level, local.reason, key, local);
     }
   }
@@ -2921,7 +2986,7 @@ export function createHexWorkshop(api) {
     });
   }
 
-  async function presentConvergence(placedId, hit) {
+  async function presentConvergence(placedId, hit, isCurrent = requestGuard()) {
     const neighborId = hit.neighborId;
     const b0 = board();
     const placed = b0?.tiles?.[placedId];
@@ -2930,6 +2995,12 @@ export function createHexWorkshop(api) {
     const key = convergencePairKey(placedId, neighborId);
     const existing = b0.convergences?.[key];
     if (existing && !existing.stale) return;
+    const pairContent = (b) => semanticDigest("convergence-request-v1", [placedId, neighborId].map((id) => {
+      const t = b?.tiles?.[id];
+      return t ? [t.id, t.techId, t.howText, t.q, t.r] : null;
+    }));
+    const pairKey = pairContent(b0);
+    const pairCurrent = () => isCurrent() && pairContent(board()) === pairKey;
     const factor = CONVERGENCE_FACTOR;
     const labelA = convergenceSideLabel(placed);
     const labelB = convergenceSideLabel(neighbor);
@@ -2943,6 +3014,7 @@ export function createHexWorkshop(api) {
     if (!reduced) {
       ensureUi()?.setPulsePair?.(placedId, neighborId);
       await sleep(900);
+      if (!pairCurrent()) return;
       ensureUi()?.setPulsePair?.(null, null);
     }
     if (!reduced) {
@@ -2953,6 +3025,9 @@ export function createHexWorkshop(api) {
         lines: [pctLine(placed, labelA), pctLine(neighbor, labelB)].filter(Boolean),
       });
     }
+    if (!pairCurrent()) return;
+    const live = board()?.convergences?.[key];
+    if (live && !live.stale) return;
     const next = putConvergence(board(), placedId, neighborId, {
       factor,
       title: hit.title,
@@ -2972,6 +3047,7 @@ export function createHexWorkshop(api) {
   }
 
   async function evaluateConvergenceAfterPlace(tileId) {
+    const isCurrent = requestGuard();
     let b = pruneStaleConvergences(board());
     setBoard(b);
     const placed = board()?.tiles?.[tileId];
@@ -2993,6 +3069,7 @@ export function createHexWorkshop(api) {
 
     // One pair at a time (A–B, then B–C). Never highlight more than two tiles.
     for (const n of fresh) {
+      if (!isCurrent()) return;
       const current = board()?.tiles?.[tileId];
       const other = board()?.tiles?.[n.id] || n;
       if (!current || !other) continue;
@@ -3046,9 +3123,13 @@ export function createHexWorkshop(api) {
           if (!prefersReducedMotion()) await sleep(400);
         }
       } finally {
-        ensureUi()?.setEvaluatingPairs?.(null);
+        if (isCurrent()) ensureUi()?.setEvaluatingPairs?.(null);
       }
-      if (hit) await presentConvergence(tileId, hit);
+      if (!isCurrent()) return;
+      const currentPair = inventionNeighbors(board(), tileId).find((t) => t.id === other.id);
+      if (!currentPair || tileTimingCacheKey(board().tiles[tileId], api.getYear(), "") !== tileTimingCacheKey(current, api.getYear(), "") ||
+          tileTimingCacheKey(currentPair, api.getYear(), "") !== tileTimingCacheKey(other, api.getYear(), "")) continue;
+      if (hit) await presentConvergence(tileId, hit, isCurrent);
     }
   }
 
@@ -3057,6 +3138,12 @@ export function createHexWorkshop(api) {
    * Poses only the drawn angle (speech + question) — not all four critics.
    */
   async function summonNextChallenger() {
+    const generationAtStart = runGeneration;
+    const missionAtStart = api.getMission?.();
+    const worldAtStart = api.getRunWorld?.();
+    const runAtStart = api.getRunId?.();
+    const sameRun = () => runGeneration === generationAtStart && api.getMission?.() === missionAtStart && api.getRunWorld?.() === worldAtStart && api.getRunId?.() === runAtStart;
+    const isCurrent = requestGuard();
     if (summonBusy) return board();
     if (api.canSummonChallengers && !api.canSummonChallengers()) {
       api.flashToast?.(
@@ -3092,6 +3179,8 @@ export function createHexWorkshop(api) {
         label: CONCERN_LABELS[pickAngle] || pickAngle,
       };
 
+    const job = {};
+    summonJob = job;
     setCreateBusy("summon", true);
     api.setAiBusy?.(true, { summon: true });
     hideTilePopup();
@@ -3188,6 +3277,7 @@ export function createHexWorkshop(api) {
         } catch (e) {
           console.warn("[pose-challenge]", e?.message || e);
         }
+        if (!isCurrent()) return null;
         const imagePrompt = defaultChallengerImagePrompt(
           pickAngle,
           place,
@@ -3258,6 +3348,7 @@ export function createHexWorkshop(api) {
         };
       }
 
+      if (!isCurrent()) return board();
       const placed = summonOneConcern(board(), pickAngle, {
         ...enrich,
         spawnQ: spawn.q,
@@ -3268,7 +3359,7 @@ export function createHexWorkshop(api) {
         ...(authored
           ? {
               sourceInquiry: {
-                key: api.getSourceInquiryKey?.() || "",
+                key: sourceKeyNow(),
                 focus: api.getExplorationFocus?.() || "",
                 connection: authored.connection,
                 question: authored.question,
@@ -3307,16 +3398,21 @@ export function createHexWorkshop(api) {
       );
       return placed.board;
     } finally {
-      if (paidFirstSummon && !placedOk) {
+      if (sameRun() && paidFirstSummon && !placedOk) {
         api.refundFirstSummonAp?.();
       }
-      hideReel();
-      setCreateBusy("summon", false);
-      api.setAiBusy?.(false);
-      ensureUi()?.setHighlight?.(null);
-      ensureUi()?.render();
-      if (statusEl && statusEl.textContent.includes("Summoning")) {
-        statusEl.textContent = prevStatus;
+      if (summonJob === job) {
+        summonJob = null;
+        if (sameRun()) setCreateBusy("summon", false);
+        else summonBusy = false;
+        // An old run may release its own local busy flag, never the new run UI.
+        if (sameRun()) {
+          hideReel();
+          api.setAiBusy?.(false);
+          ensureUi()?.setHighlight?.(null);
+          ensureUi()?.render();
+          if (statusEl && statusEl.textContent.includes("Summoning")) statusEl.textContent = prevStatus;
+        }
       }
     }
   }
@@ -3327,10 +3423,11 @@ export function createHexWorkshop(api) {
   }
 
   function refreshAfterYearChange() {
-    retimeOnBoardInventions().catch((e) => console.warn("[hex retime]", e));
-    // Year is not in pathway fingerprint; timing re-score will invalidate via afterTimingSettled
+    const retimed = retimeOnBoardInventions().catch((e) => console.warn("[hex retime]", e));
+    // World/year identity invalidates pressure now; timing also re-fingerprints.
     syncPathwayScores();
     api.onBoardPainted?.();
+    return retimed;
   }
 
   function afterRulesChange() {
@@ -3350,6 +3447,7 @@ export function createHexWorkshop(api) {
       (t) => t && t.kind === TILE_KIND.invention && t.q != null && t.r != null
     );
     for (const tile of placed) {
+      scheduleTileTiming(tile.id);
       evaluateConvergenceAfterPlace(tile.id).catch((e) =>
         console.warn("[hex convergence]", e)
       );

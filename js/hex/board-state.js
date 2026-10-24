@@ -75,6 +75,8 @@ export function createEmptyBoard() {
      * }>}
      */
     pathwayImpacts: {},
+    /** Content-only income ledger; retiming/world invalidation must not repay. */
+    pathwayEaseAwards: {},
     /**
      * Already-judged invention pairs. Key = sorted `idA|idB`.
      * Rows persist after lift so a re-dock does not stack; dropped when a
@@ -191,6 +193,7 @@ export function cloneBoard(board) {
         },
       ])
     ),
+    pathwayEaseAwards: { ...(board.pathwayEaseAwards || {}) },
     convergences: cloneConvergences(board.convergences),
     islandHow: cloneIslandHow(board.islandHow),
     rulesWeatherKey: String(board.rulesWeatherKey ?? ""),

@@ -5,8 +5,23 @@
 import { sanitizeQuestId } from "./cloud-save.mjs";
 import { boardForWire } from "../hex/board-state.js";
 import { parseCompanion } from "../companion.js";
-import { BANK_PIN_MAX_BYTES } from "../companion-context.js";
+import { BANK_PIN_MAX_BYTES, isRefId } from "../companion-context.js";
 import { validatePredictionsBank } from "../sim/world-foresight.js";
+import { prepareRunWorld } from "../sim/run-world.js";
+import { validateContinueWorld } from "../cloud/continue.js";
+
+function validPackageRef(ref, questId) {
+  const id = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
+  return ref && typeof ref === "object" && !Array.isArray(ref) &&
+    typeof ref.packageId === "string" && id.test(ref.packageId) &&
+    typeof ref.questId === "string" && id.test(ref.questId) &&
+    typeof ref.revision === "string" && /^sha256:[0-9a-f]{64}$/.test(ref.revision) &&
+    (!questId || ref.questId === questId);
+}
+
+function refForWire(ref) {
+  return { packageId: ref.packageId, revision: ref.revision, questId: ref.questId };
+}
 
 export const RUN_STATE_MAX_BYTES = 400_000;
 export const CHAT_LANE_MAX = 80;
@@ -87,6 +102,21 @@ export function sanitizeMissionStub(raw) {
     source: clipStr(raw.source, 40) || "play",
     isLearningModule: Boolean(raw.isLearningModule),
   };
+  if (raw.predictionBankId != null) {
+    if (!isRefId(raw.predictionBankId)) stub.packageRefError = "package_dependency_missing";
+    else stub.predictionBankId = raw.predictionBankId;
+  }
+  if (raw.packageRef != null) {
+    if (!validPackageRef(raw.packageRef, id)) stub.packageRefError = "package_reference_forbidden";
+    else stub.packageRef = refForWire(raw.packageRef);
+  }
+  if (raw.runWorld?.trust === "local-import") {
+    const pinned = sanitizePinnedBank(raw.runWorld.bank);
+    const ready = prepareRunWorld(raw, { year: raw.startYear });
+    if (pinned.error) stub.predictionsBankError = pinned.error;
+    else if (!ready.ok) stub.packageRefError = ready.error;
+    else stub.runWorld = ready.world;
+  }
   if (Array.isArray(raw.crisisRoles)) {
     stub.crisisRoles = raw.crisisRoles.map((x) => clipStr(x, 40)).filter(Boolean).slice(0, 8);
   }
@@ -98,6 +128,7 @@ export function sanitizeMissionStub(raw) {
   if (raw.companion && typeof raw.companion === "object" && !Array.isArray(raw.companion)) {
     const parsed = parseCompanion(raw.companion, { access: access || "open" });
     if (parsed.ok) stub.companion = parsed.value;
+    else if (raw.companion.exploration?.premise?.mode === "assumed") stub.packageRefError = "legacy_world_unresolved";
   }
   if (typeof raw.grounding === "string") {
     const grounding = raw.grounding.trim().slice(0, 3000);
@@ -116,7 +147,7 @@ function sanitizePinnedBank(raw) {
     return { bank: null, error: "bank_invalid" };
   }
   if (looksInline(json)) return { bank: null, error: "bank_invalid" };
-  if (json.length > BANK_PIN_MAX_BYTES) return { bank: null, error: "bank_too_large" };
+  if (Buffer.byteLength(json, "utf8") > BANK_PIN_MAX_BYTES) return { bank: null, error: "bank_too_large" };
   const validated = validatePredictionsBank(raw);
   if (!validated.ok || !validated.bank) return { bank: null, error: "bank_invalid" };
   return { bank: validated.bank, error: null };
@@ -146,9 +177,16 @@ export function sanitizePlay(raw) {
     ideas: sanitizeIdeaCache(raw.ideas),
     sparkBatches: sanitizeSparkBatches(raw.sparkBatches),
   };
+  const suppliedRef = raw.packageRef ?? play.mission?.packageRef;
+  if (suppliedRef != null) {
+    if (!validPackageRef(suppliedRef, play.mission?.id)) play.packageRefError = "package_reference_forbidden";
+    else if (play.mission?.packageRef && JSON.stringify(refForWire(suppliedRef)) !== JSON.stringify(play.mission.packageRef)) {
+      play.packageRefError = "package_reference_forbidden";
+    } else if (play.mission?.runWorld?.trust !== "local-import") play.packageRef = refForWire(suppliedRef);
+  }
   const pinned = sanitizePinnedBank(raw.predictionsBank);
-  if (pinned.error === "bank_too_large") play.predictionsBankError = "bank_too_large";
-  else if (pinned.bank) play.predictionsBank = pinned.bank;
+  if (pinned.error) play.predictionsBankError = pinned.error;
+  else if (pinned.bank && !play.packageRef) play.predictionsBank = pinned.bank;
   if (typeof raw.reflection === "string") {
     const reflection = clipStr(raw.reflection, 2000);
     if (reflection.trim() && !looksInline(reflection)) play.reflection = reflection;
@@ -248,6 +286,10 @@ export function sanitizeChats(raw) {
  */
 export function parseRunStateBody(body) {
   const src = body && typeof body === "object" ? body : {};
+  // A previously failed snapshot is not a fresh legacy game. Keep its failure
+  // explicit rather than dropping the marker and allowing a default calendar.
+  const savedWorld = validateContinueWorld(src);
+  if (!savedWorld.ok) return { ok: false, error: savedWorld.error };
   const questId = sanitizeQuestId(src.questId || src.quest_id);
   if (!questId) return { ok: false, error: "invalid_quest" };
   let board = src.board && typeof src.board === "object" ? src.board : null;
@@ -268,12 +310,19 @@ export function parseRunStateBody(body) {
     play: sanitizePlay(src.play),
     chats: sanitizeChats(src.chats),
   };
-  if (state.play?.predictionsBankError === "bank_too_large") {
-    return { ok: false, error: "bank_too_large" };
+  const error = state.play?.packageRefError || state.play?.mission?.packageRefError ||
+    state.play?.predictionsBankError || state.play?.mission?.predictionsBankError;
+  if (error) return { ok: false, error };
+  const ref = state.play?.packageRef || state.play?.mission?.packageRef;
+  if (ref && ref.questId !== questId) return { ok: false, error: "package_reference_forbidden" };
+  if (!ref && state.play?.mission?.companion?.exploration?.premise?.mode === "assumed") {
+    const restored = prepareRunWorld(state.play.mission, { restoring: true,
+      restoreBank: state.play.mission.runWorld?.bank || state.play.predictionsBank, year: state.year });
+    if (!restored.ok) return { ok: false, error: restored.error };
   }
   const cleaned = stripDataDeep(state);
   const raw = JSON.stringify(cleaned);
-  if (raw.length > RUN_STATE_MAX_BYTES) return { ok: false, error: "too_large" };
+  if (Buffer.byteLength(raw, "utf8") > RUN_STATE_MAX_BYTES) return { ok: false, error: "too_large" };
   return { ok: true, state: cleaned };
 }
 

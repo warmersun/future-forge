@@ -100,4 +100,53 @@ describe("quests object storage", () => {
     assert.equal(again.quests.length, 1);
     assert.equal(reads, 2);
   });
+
+  it("mixes legacy entries and slim package cards without reading package file hints or escaped keys", async () => {
+    const ref = { packageId: "demo", revision: `sha256:${"ab".repeat(32)}`, questId: "package-quest" };
+    const reads = [];
+    const result = await catalogFromObjectReader(async (key) => {
+      reads.push(key);
+      if (key === "private/legacy.json") return tileRaw;
+      if (key === "private/catalog.json") return JSON.stringify({ quests: [
+        { id: tile.id, file: "legacy.json" },
+        { id: "package-quest", title: "Package", access: "paid", packageRef: ref, file: "https://evil.example/secret", mission: { secret: "private" } },
+        { id: "escape", file: "../secret" },
+      ] });
+      throw new Error("unexpected key");
+    }, { prefix: "private" });
+    assert.equal(result.quests.length, 2);
+    assert.ok(result.quests[0].mission);
+    assert.equal(result.quests[1].mission, undefined);
+    assert.equal(result.quests[1].access, "paid");
+    assert.deepEqual(reads, ["private/catalog.json", "private/legacy.json"]);
+    assert.equal(result.errors[0].error, "object_key_forbidden");
+  });
+
+  it("keeps an explicit packageRef and drops a forged one", async () => {
+    const ref = {
+      packageId: "kiln-ferry-test",
+      revision: `sha256:${"ab".repeat(32)}`,
+      questId: tile.id,
+    };
+    const catalog = JSON.stringify({
+      quests: [
+        { id: tile.id, file: "spotlight-gene-seq.json", packageRef: ref },
+        {
+          id: "forged",
+          file: "spotlight-gene-seq.json",
+          packageRef: { packageId: "../escape", revision: "latest", questId: tile.id },
+        },
+      ],
+    });
+    const result = await catalogFromObjectReader(
+      store({
+        "catalog.json": catalog,
+        "spotlight-gene-seq.json": tileRaw,
+      })
+    );
+    assert.equal(result.quests.length, 1);
+    assert.deepEqual(result.quests[0].packageRef, ref);
+    assert.equal(result.quests[0].mission, undefined);
+    assert.equal(result.errors[0].error, "package_reference_forbidden");
+  });
 });

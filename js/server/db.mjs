@@ -16,6 +16,7 @@ import {
   shouldStoreLastRun,
 } from "./cloud-save.mjs";
 import { parseStartBody, publicRunRow } from "./quest-log.mjs";
+import { resolveStartPackageBinding, resolveRunPackageBinding, sanitizeBoundRunState, compactBoundRunState, ownerRunLoader, packageBindingError } from "./run-package-binding.mjs";
 import { sanitizeUsername } from "./profile.mjs";
 
 const { Pool, Client } = pg;
@@ -373,7 +374,8 @@ export async function listRuns(input) {
   const limit = Math.min(100, Math.max(1, Number(input?.limit) || 50));
   const params = [clerkUserId];
   let sql = `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place,
-                    tech_ids, started_at, ended_at, imported, created_at
+                    tech_ids, started_at, ended_at, imported, created_at,
+                    package_id, package_revision, package_quest_id
              FROM runs WHERE clerk_user_id = $1`;
   if (input?.kind) {
     params.push(input.kind);
@@ -399,18 +401,35 @@ export async function startRun(input) {
   if (!clerkUserId) throw Object.assign(new Error("invalid_user"), { status: 401 });
   const parsed = parseStartBody(input);
   if (!parsed) throw Object.assign(new Error("invalid_run"), { status: 400 });
+  const selected = await resolveStartPackageBinding({ ...input, questId: parsed.questId }, {
+    loadCatalog: input.loadCatalog, resolvePackage: input.resolvePackage, resolveQuestPackage: input.resolveQuestPackage,
+    userId: clerkUserId, identity: input.identity,
+  });
+  if (!selected.ok) throw packageBindingError(selected);
+  const binding = selected.packageRef;
   const client = await db.connect();
   try {
     await client.query("BEGIN");
     await ensureUser(clerkUserId, client);
     const r = await client.query(
-      `INSERT INTO runs (clerk_user_id, quest_id, kind, outcome, place, started_at, imported)
-       VALUES ($1,$2,$3,NULL,$4, now(), false)
+      `INSERT INTO runs (
+         clerk_user_id, quest_id, kind, outcome, place, started_at, imported,
+         package_id, package_revision, package_quest_id
+       )
+       VALUES ($1,$2,$3,NULL,$4, now(), false, $5, $6, $7)
        RETURNING id`,
-      [clerkUserId, parsed.questId, parsed.kind, parsed.place]
+      [
+        clerkUserId,
+        parsed.questId,
+        parsed.kind,
+        parsed.place,
+        binding?.packageId || null,
+        binding?.revision || null,
+        binding?.questId || null,
+      ]
     );
     await client.query("COMMIT");
-    return { skipped: false, stored: true, id: r.rows[0]?.id || null, questId: parsed.questId };
+    return { skipped: false, stored: true, id: r.rows[0]?.id || null, questId: parsed.questId, packageRef: binding };
   } catch (e) {
     try {
       await client.query("ROLLBACK");
@@ -432,7 +451,9 @@ export async function getRunForUser(clerkUserId, runId) {
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid || !runId) return null;
     const r = await db.query(
-      `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place FROM runs
+      `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place,
+              package_id, package_revision, package_quest_id
+       FROM runs
      WHERE id = $1::uuid AND clerk_user_id = $2`,
       [runId, uid]
     );
@@ -685,7 +706,7 @@ export async function replacePins(clerkUserId, pins) {
   }
 }
 
-export async function getRunState(clerkUserId) {
+export async function getRunState(clerkUserId, authority = {}) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid) return null;
@@ -696,7 +717,7 @@ export async function getRunState(clerkUserId) {
   );
   const row = r.rows[0];
   if (!row) return null;
-  return {
+  const state = {
     runId: row.run_id,
     questId: row.quest_id,
     year: row.year_reached,
@@ -706,6 +727,9 @@ export async function getRunState(clerkUserId) {
     chats: row.chats || null,
     updatedAt: row.updated_at,
   };
+  const checked = sanitizeBoundRunState(await resolveRunPackageBinding(state, { ...authority, userId: uid, loadRun: authority.loadRun || ownerRunLoader(db) }));
+  if (!checked.ok) throw packageBindingError(checked);
+  return checked.state;
 }
 
 const QUEST_SCORE_SELECT = `SELECT q.clerk_user_id, q.quest_id, q.run_id, q.year_reached, q.start_year,
@@ -1124,10 +1148,13 @@ export async function listCollectedCards(clerkUserId) {
   return r.rows.map(cardRow);
 }
 
-export async function putRunState(clerkUserId, state) {
+export async function putRunState(clerkUserId, state, authority = {}) {
   const db = getPool();
   const uid = normalizeClerkUserId(clerkUserId);
   if (!db || !uid) return { skipped: true };
+  const checked = sanitizeBoundRunState(await resolveRunPackageBinding(state, { ...authority, userId: uid, loadRun: authority.loadRun || ownerRunLoader(db) }));
+  if (!checked.ok) throw packageBindingError(checked);
+  state = compactBoundRunState(checked);
   await ensureUser(uid);
   await db.query(
     `INSERT INTO run_state (clerk_user_id, run_id, quest_id, year_reached, tutor, board, play, chats)

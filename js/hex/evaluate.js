@@ -4,6 +4,7 @@
  * timing is per invention tile (techId + howText only — no invention name).
  */
 
+import { semanticDigest } from "../semantic-digest.js";
 import { assessSustainable } from "../sim/sustainable.js";
 import { clampPathwayScore } from "../sim/policy-honesty.js";
 import { rulesWeatherKey } from "../sim/policy-rules.js";
@@ -405,12 +406,10 @@ export function pathwayContentFingerprint(inventions, board) {
       const timing =
         n.timingLevel ||
         (n.feasibilityPct != null ? `pct:${n.feasibilityPct}` : "");
-      return `${n.id}:${n.techId || ""}:${how}:${timing}`;
+      return [n.id, n.techId || "", how, timing];
     });
-  const body = parts.join(";") || "empty";
   const resolved = resolveIslandHow(board, inventions);
-  if (!resolved.stored) return body;
-  return `${body}#ih:${resolved.text}`;
+  return semanticDigest("pathway-content-v1", [parts, resolved.stored ? resolved.text : ""]);
 }
 
 /**
@@ -1594,7 +1593,7 @@ export function tileTimingCacheKey(tile, year, sourceKey = "") {
   ];
   const source = String(sourceKey || "");
   if (source) parts.push(source);
-  return parts.join("|");
+  return semanticDigest("tile-timing-v1", parts);
 }
 
 /**

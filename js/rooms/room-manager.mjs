@@ -17,6 +17,7 @@ import {
   MAX_PLAYERS,
 } from "../sim/mp-session.js";
 import { missionForFriendsPlay } from "../sim/state.js";
+import { prepareRunWorld } from "../sim/run-world.js";
 import {
   createRoomAiQuotaState,
   reserveRoomAiJob,
@@ -92,6 +93,11 @@ export class RoomManager {
     this.maxRooms = opts.maxRooms ?? DEFAULT_MAX_ROOMS;
     this.rateLimiter = opts.rateLimiter || new RateLimiter();
     this.coInventHandler = opts.coInventHandler || null;
+    // Synchronous: called for EVERY selection, including IDs known only to the server.
+    // Return { ok: true, mission, globalId? }, null for ordinary legacy IDs,
+    // or { ok: false, error }. Check access for ALL supplied verified identities.
+    this.resolveMission = typeof opts.resolveMission === "function" ? opts.resolveMission : null;
+    this.resolveMissionAsync = typeof opts.resolveMissionAsync === "function" ? opts.resolveMissionAsync : null;
     /** Optional usage-metrics hooks (hosting cost tracking). */
     this.onRoomStart = typeof opts.onRoomStart === "function" ? opts.onRoomStart : null;
     this.onRoomEnd = typeof opts.onRoomEnd === "function" ? opts.onRoomEnd : null;
@@ -309,6 +315,7 @@ export class RoomManager {
     if (playerToken) {
       const seat = room.players.find((p) => p.playerToken === playerToken);
       if (seat) {
+        room._membershipVersion = (room._membershipVersion || 0) + 1;
         seat.connected = true;
         if (clerkUserId) seat.clerkUserId = clerkUserId;
         if (quotaGrant) seat.quotaGrant = quotaGrant;
@@ -339,6 +346,7 @@ export class RoomManager {
           return { ok: false, error: "name_in_use", status: 409 };
         }
         seat.playerToken = randomToken(16);
+        room._membershipVersion = (room._membershipVersion || 0) + 1;
         seat.connected = true;
         seat.displayName = name;
         if (clerkUserId) seat.clerkUserId = clerkUserId;
@@ -368,6 +376,7 @@ export class RoomManager {
 
     const playerId = randomToken(8);
     const token = randomToken(16);
+    room._membershipVersion = (room._membershipVersion || 0) + 1;
     room.players.push({
       id: playerId,
       displayName: name,
@@ -402,6 +411,7 @@ export class RoomManager {
   }
 
   bindSocket(room, player, socket) {
+    room._membershipVersion = (room._membershipVersion || 0) + 1;
     player.connected = true;
     player._socket = socket;
     room.sockets.add(socket);
@@ -421,6 +431,7 @@ export class RoomManager {
       let left = null;
       for (const p of room.players) {
         if (p._socket === socket) {
+          room._membershipVersion = (room._membershipVersion || 0) + 1;
           p.connected = false;
           p._socket = null;
           left = p;
@@ -630,7 +641,74 @@ export class RoomManager {
     }
   }
 
-  hostCommand(room, player, cmd, payload = {}) {
+  async hostCommandAsync(room, player, cmd, payload = {}) {
+    if (!this.resolveMissionAsync || !["set_quest", "start_quest"].includes(cmd))
+      return this.hostCommand(room, player, cmd, payload);
+    const permitted = this.hostCommand(room, player, cmd, payload, { checkOnly: true });
+    if (!permitted.ok) return permitted;
+    if (room.mp && !this.isQuestOutcome(room)) return { ok: false, error: "already_started" };
+    const selected = cmd === "start_quest" ? (room.questMeta || payload) : payload;
+    if (!selected.mission?.id) return { ok: false, error: "mission_required" };
+    const epoch = room._missionEpoch = (room._missionEpoch || 0) + 1;
+    const meta = room.questMeta, mp = room.mp, version = room.simVersion;
+    const members = () => JSON.stringify(room.players.map(p => [p.id, p.clerkUserId, p.quotaGrant, p.connected, p.isHost]));
+    const before = members(), membershipVersion = room._membershipVersion || 0;
+    let resolved;
+    try {
+      resolved = await this.resolveMissionAsync(structuredClone(selected.mission), {
+        roomCode: room.code,
+        players: room.players.map(p => ({ id: p.id, clerkUserId: p.clerkUserId || null })),
+      });
+    } catch { return { ok: false, error: "package_authority_unavailable" }; }
+    if (this.rooms.get(room.code) !== room || room._missionEpoch !== epoch ||
+        room.questMeta !== meta || room.mp !== mp || room.simVersion !== version || members() !== before ||
+        (room._membershipVersion || 0) !== membershipVersion)
+      return { ok: false, error: "room_changed" };
+    if (!resolved?.ok) return { ok: false, error: resolved?.error || resolved?.code || "package_revision_unavailable" };
+    // hostCommand repeats privilege checks immediately before the synchronous commit.
+    return this.hostCommand(room, player, cmd, payload, { resolved });
+  }
+
+  _resolveRoomMission(room, selected, globalId, preResolved) {
+    if (!selected?.id) return { ok: false, error: "mission_required" };
+    const packageBearing = Boolean(selected.packageRef || selected.predictionBankId ||
+      selected.runWorld?.packageRef || selected.runWorld?.bank);
+    try {
+      const result = preResolved || this.resolveMission?.(structuredClone(selected), {
+        roomCode: room.code,
+        players: room.players.map((p) => ({ id: p.id, clerkUserId: p.clerkUserId || null })),
+        playerIds: room.players.map((p) => p.id),
+        clerkUserIds: room.players.map((p) => p.clerkUserId || null),
+        currentPackageRef: structuredClone(room.questMeta?.mission?.packageRef || null),
+      });
+      if (result && typeof result.then === "function") {
+        return { ok: false, error: "package_revision_unavailable" };
+      }
+      if (result && (!result.ok || !result.mission?.id)) {
+        return { ok: false, error: result.error || result.code || "package_revision_unavailable" };
+      }
+      if (!result && packageBearing) return { ok: false, error: "package_revision_unavailable" };
+      const mission = structuredClone(result?.mission || selected);
+      if (mission.id !== selected.id) return { ok: false, error: "package_reference_forbidden" };
+      if (mission.packageRef || mission.predictionBankId) {
+        const checked = prepareRunWorld(mission);
+        if (!checked.ok) return { ok: false, error: checked.error };
+        mission.runWorld = checked.world;
+      }
+      if (!result) {
+        // No client-carried world may turn an ordinary Quest into a package.
+        delete mission.runWorld;
+        delete mission.pinnedPredictionsBank;
+        delete mission.predictionsBank;
+      }
+      return { ok: true, mission: missionForFriendsPlay(mission),
+        globalId: result?.globalId || mission.globalId || globalId };
+    } catch {
+      return { ok: false, error: "package_revision_unavailable" };
+    }
+  }
+
+  hostCommand(room, player, cmd, payload = {}, internal = {}) {
     // Re-bind player to this room only (blocks cross-room host privilege)
     let boundPlayer = player || null;
     if (boundPlayer && !room.players.includes(boundPlayer)) {
@@ -667,13 +745,14 @@ export class RoomManager {
       return { ok: false, error: "not_host" };
     }
 
+    if (internal.checkOnly) return { ok: true };
+
     if (isSetQuest) {
       // Mid-Quest: locked. Lobby or post-outcome next Quest: ok.
       if (room.mp && !outcome) return { ok: false, error: "already_started" };
-      const mission = payload.mission;
-      const globalId = payload.globalId || mission?.globalId;
-      if (!mission?.id) return { ok: false, error: "mission_required" };
-      room.questMeta = { globalId, mission: missionForFriendsPlay(mission) };
+      const resolved = this._resolveRoomMission(room, payload.mission, payload.globalId, internal.resolved);
+      if (!resolved.ok) return resolved;
+      room.questMeta = { globalId: resolved.globalId, mission: resolved.mission };
       room.updatedAt = Date.now();
       const phase = outcome ? "next_quest_ready" : "ready";
       const chooser = this.nextQuestChooserId(room);
@@ -710,14 +789,10 @@ export class RoomManager {
       }
 
       const meta = room.questMeta || payload;
-      const mission = meta.mission || payload.mission;
-      if (!mission) return { ok: false, error: "mission_required" };
-      if (payload.mission) {
-        room.questMeta = {
-          globalId: payload.globalId || mission.globalId,
-          mission: missionForFriendsPlay(mission),
-        };
-      }
+      const resolved = this._resolveRoomMission(room, meta.mission, meta.globalId, internal.resolved);
+      if (!resolved.ok) return resolved;
+      const mission = resolved.mission;
+      const globalId = resolved.globalId;
 
       let mp = createMpLobby(seats, {
         mode: "friends_coopetition",
@@ -730,7 +805,7 @@ export class RoomManager {
       mp = setMpQuest(
         mp,
         mission,
-        room.questMeta?.globalId || mission.globalId
+        globalId || mission.globalId
       );
       // Solver/host who picks next Quest goes first when possible
       const first =
@@ -745,7 +820,7 @@ export class RoomManager {
       room.simVersion = room.mp.version || 1;
       room.nextQuestChooserId = null;
       room.questMeta = {
-        globalId: room.questMeta?.globalId || mission.globalId,
+        globalId: globalId || mission.globalId,
         mission: missionForFriendsPlay(mission),
       };
       room.updatedAt = Date.now();
@@ -786,6 +861,7 @@ export class RoomManager {
       if (room.mp) return { ok: false, error: "cannot_kick_after_start" };
       const idx = room.players.findIndex((p) => p.id === targetId);
       if (idx < 0) return { ok: false, error: "not_found" };
+      room._membershipVersion = (room._membershipVersion || 0) + 1;
       const [gone] = room.players.splice(idx, 1);
       if (gone._socket) {
         safeSend(gone._socket, { type: "kicked" });
@@ -1073,7 +1149,7 @@ export class RoomManager {
         clerkUserId: player.clerkUserId || null,
         quotaGrant: player.quotaGrant || null,
       };
-      const result = await this.coInventHandler(body);
+      const result = await this.coInventHandler(body, { room, player });
       return this.completeAiJob(room, player, clientActionId, {
         ok: true,
         result,
@@ -1356,6 +1432,15 @@ function buildRoomAiContext(room, player, payload) {
     displayName: player.displayName,
     openTable: mp?.openTable,
     ...(payload.context || {}),
+    // Evaluation must use the room's bound world, never a client replacement.
+    ...(mission?.packageRef ? {
+      packageRef: structuredClone(mission.packageRef),
+      mission: structuredClone(mission),
+      runWorld: structuredClone(mission.runWorld),
+      predictionsBank: structuredClone(mission.runWorld?.bank || null),
+      predictionsBankId: mission.predictionBankId,
+      year: inventYear,
+    } : {}),
   };
 }
 

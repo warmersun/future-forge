@@ -31,7 +31,9 @@ It does **not** relicense the Future Forge app. Only this skill tree (and exampl
 npm run validate:predictions -- predictions/<id>.json
 ```
 
-3. Side-load it:
+3. For a packaged world, include `predictions/<id>.json`, bind the Quest through `predictionBankId`, and follow the Quest skill to pack/verify a v2 `.ffquest`. Preview with `./scripts/sideload-local-package.sh <archive>`.
+
+For an explicitly requested legacy/default-world override only:
 
 ```bash
 FF_PREDICTIONS_FILE=predictions/<id>.json npm start

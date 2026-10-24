@@ -81,6 +81,14 @@ describe("quest-tile", () => {
     assert.equal(parseQuestTileJson("{").ok, false);
   });
 
+  it("rejects malformed bank identifiers rather than repairing them", () => {
+    for (const predictionBankId of [42, "", " bank-a", "bank-a ", "BANK-A", "../bank-a", "a".repeat(81)]) {
+      const result = validateQuestTile(baseTile({ predictionBankId }));
+      assert.equal(result.ok, false, JSON.stringify(predictionBankId));
+      assert.ok(result.details.includes("predictionBankId_invalid"));
+    }
+  });
+
   it("defaults missing encourageCopy to an outcome, not a tech riddle", () => {
     const t = baseTile();
     delete t.spotlight.encourageCopy;
@@ -970,6 +978,17 @@ describe("quest module wrapper", () => {
     assert.equal(qrec.kind, "quest");
     assert.equal(qrec.mission.source, "remote");
     assert.equal(qrec.id, "spotlight-gene-seq-test");
+    assert.equal(qrec.predictionBankId, undefined);
+
+    const bound = baseTile({ predictionBankId: "kiln-ferry-bank" });
+    const boundV = validateQuestTile(bound, { techIds: TECHS, globalIds: GLOBALS });
+    assert.equal(boundV.ok, true, JSON.stringify(boundV.details));
+    assert.equal(boundV.mission.predictionBankId, "kiln-ferry-bank");
+    assert.equal(boundV.tile.predictionBankId, "kiln-ferry-bank");
+    const boundRec = catalogRecordFromValidated(boundV);
+    assert.equal(boundRec.predictionBankId, "kiln-ferry-bank");
+    assert.equal(boundRec.tile.predictionBankId, "kiln-ferry-bank");
+    assert.equal(boundRec.mission.predictionBankId, "kiln-ferry-bank");
   });
 });
 

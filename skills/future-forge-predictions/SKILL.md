@@ -4,8 +4,8 @@ license: MIT
 description: >
   Research dated technology predictions (a person's forecasts, an analyst
   report, or a curated outlook) and author a Future Forge predictions bank
-  JSON file (future-forge.predictions/v1) that a server side-loads with
-  FF_PREDICTIONS_FILE. The bank drives the year dialog, outcome foresight
+  JSON file (future-forge.predictions/v1) for a package-local calendar or
+  explicit legacy/default-world side-loading. The bank drives the year dialog, outcome foresight
   cards, and the AI world clock that judges invention timing. Portable
   multi-harness skill — not tied to a single agent product. Ships with a
   validator and examples, including an Elon Musk bank with attribution.
@@ -15,7 +15,7 @@ description: >
 
 **License: MIT** (this skill package only).
 
-You write **one predictions bank**: a dated list of milestones, trends, and predictions. A Future Forge server loads exactly one bank. It then:
+You write **one predictions bank**: a dated list of milestones, trends, and predictions. A packaged Quest selects one complete package-local bank; ordinary legacy/default-world play can use a server-loaded bank. That selected calendar:
 
 - shows the rows for the current game year when a learner clicks the calendar year (and after the calendar advances)
 - picks outcome-screen foresight cards from it
@@ -29,7 +29,7 @@ So the years you choose change how harshly invention timing gets judged. Place t
 - "Side-load a more aggressive / more conservative timeline into Future Forge"
 - "Produce `future-forge.predictions/v1` JSON"
 - "Add attribution to predictions"
-- A companion quest assumes a premise: the grant rows live in the one bank the server will load. Pairing procedure: `skills/future-forge-companion/`
+- A companion quest assumes a premise: its grants reference rows in its complete package-local bank. Pairing procedure: `skills/future-forge-companion/`
 
 ## Deliverable
 
@@ -37,7 +37,8 @@ One JSON file conforming to `future-forge.predictions/v1`:
 
 - Prefer path: `predictions/<id>.json` (or `output/predictions/<id>.json` outside the repo)
 - Validate: `npm run validate:predictions -- <file>`
-- Side-load: `FF_PREDICTIONS_FILE=<file> npm start` (path or https URL)
+- For v2 distribution: include this file as `predictions/<id>.json`, set the Quest's top-level `predictionBankId` to the exact ID, and pack the source tree.
+- Legacy/default-world side-load only: `FF_PREDICTIONS_FILE=<file> npm start` (path or https URL).
 
 | Doc | Purpose |
 |-----|---------|
@@ -55,15 +56,16 @@ One JSON file conforming to `future-forge.predictions/v1`:
 4. **Attribution is for forecasts that belong to someone.** When the whole bank is one person's forecasts, set bank-level `attribution` once. Use row-level `attribution` for mixed banks. Never attribute a statement the person did not make. Never put words in a `quote` that are not verbatim.
 5. **No invented facts.** A `milestone` must have actually happened by its `year`. A `prediction` must be labeled as a forecast in `detail` ("Prediction: …"). Put how you placed the year in `sourceNote`.
 6. **Year placement:** when a source gives a range ("2026–2027"), use the **later** year. When it gives "within N years" from a dated statement, add N to the statement year. When undated, say so in `sourceNote` and pick the earliest year the source's framing allows, not the most dramatic.
-7. **Replace, not merge.** A side-loaded bank replaces the default. If the user wants the default rows too, copy `predictions/default.json` rows into the file and add theirs.
-8. **Omit** unused optional keys. Validate until every file reports `OK`.
+7. **Complete calendar, no runtime merge.** A v2 Quest uses only its included bank. Copy researched baseline rows at authoring time only when intended; do not add unrelated scenarios. Different calendars get different banks. Explicit legacy side-loading replaces the default rather than merging it.
+8. **Scenario assumptions are not source forecasts.** Label invented granted rows as fictional assumptions in `detail` and `sourceNote`; do not give them a real speaker's quote or attribution, including a bank-level default. Being due in the game does not verify a claim in reality.
+9. **Omit** unused optional keys. Validate until every file reports `OK`.
 
 ## Procedure
 
 ### 1. Intake
 
 - Whose predictions, or what outlook? One attributed person, a mix, or unattributed?
-- Replace the default entirely, or extend it?
+- Package-local calendar, or an explicitly requested legacy/default-world override? Which baseline rows, if any, belong in this complete calendar?
 - Which techs and themes matter most to the user's Quests?
 
 ### 2. Research
@@ -95,7 +97,9 @@ npm run validate:predictions -- predictions/<id>.json
 
 ### 7. Hand off
 
-Tell the user how to side-load it:
+For package-local use, hand off the bank with its Quest in one v2 `.ffquest` via the Quest skill. Every playable v2 Quest binds a complete bank, and an assumed companion's `premise.bankId` equals `predictionBankId`. Validate, pack and verify; preview with `./scripts/sideload-local-package.sh <archive>`. New dates or scopes mean a new revision, not a rewrite of saved runs.
+
+For an explicitly requested legacy/default-world override only, tell the user how to side-load it:
 
 ```bash
 FF_PREDICTIONS_FILE=predictions/<id>.json npm start

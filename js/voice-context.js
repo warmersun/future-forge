@@ -289,6 +289,10 @@ export function voiceContextFingerprint(context) {
   const title = String(c.challenge?.title || "").trim();
   const problem = String(c.challenge?.problem || "").trim();
   return [
+    c.runId ?? "",
+    c.packageRef?.packageId ?? "",
+    c.packageRef?.revision ?? "",
+    c.packageRef?.questId ?? "",
     c.year ?? "",
     c.turn ?? "",
     String(c.place || "").trim(),

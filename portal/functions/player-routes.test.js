@@ -40,6 +40,8 @@ function fakeDb() {
     if (sql.startsWith("SELECT code, run_id, unlocked_at")) return { rows: (state.achievements.get(uid) || []).map((code) => ({ code, unlocked_at: "2026-01-01" })) };
     if (sql.startsWith("SELECT ended_at FROM runs")) return { rows: (state.runs.get(uid) || []).filter((r) => ["hold", "partial"].includes(r.outcome) && r.ended_at) };
     if (sql.startsWith("SELECT tech_ids FROM runs")) return { rows: (state.runs.get(uid) || []).filter((r) => ["hold", "partial"].includes(r.outcome)) };
+    if (sql.includes("FROM subscriptions")) return { rows: state.subscription ? [state.subscription] : [] };
+    if (sql.includes("FROM runs WHERE clerk_user_id = $1 AND id = $2::uuid")) return { rows: (state.runs.get(uid) || []).filter((r) => r.id === args[1]) };
     if (sql.includes("FROM runs WHERE clerk_user_id = $1")) {
       let rows = state.runs.get(uid) || [];
       if (sql.includes("AND kind = $2")) rows = rows.filter((r) => r.kind === args[1]);
@@ -48,7 +50,16 @@ function fakeDb() {
     }
     if (sql.startsWith("INSERT INTO runs")) {
       const run = sql.includes("NULL,$4")
-        ? { id, quest_id: args[1], kind: args[2], outcome: null, place: args[3] }
+        ? {
+            id,
+            quest_id: args[1],
+            kind: args[2],
+            outcome: null,
+            place: args[3],
+            package_id: args[4] || null,
+            package_revision: args[5] || null,
+            package_quest_id: args[6] || null,
+          }
         : { id, quest_id: args[1], kind: args[2], outcome: args[3], stars: args[4], year_reached: args[5], waits: args[6], place: args[7], tech_ids: args[9], imported: args[8] };
       state.runs.set(uid, [...(state.runs.get(uid) || []), run]);
       return { rows: [{ id }], rowCount: 1 };
@@ -149,7 +160,7 @@ describe("Neon player routes (offline SQL adapter)", () => {
 
   it("scopes start, completion, list, share and import to verified user; ignores body userId", async () => {
     const db = fakeDb(), api = createPlayerRoutes({ db });
-    assert.deepEqual((await call(api, "/api/me/runs/start", "POST", { questId: "q1", userId: B.userId })).body, { ok: true, stored: true, id });
+    assert.deepEqual((await call(api, "/api/me/runs/start", "POST", { questId: "q1", userId: B.userId })).body, { ok: true, stored: true, id, packageRef: null });
     assert.equal((await call(api, "/api/me/runs", "GET", undefined, B)).body.runs.length, 0);
     const completed = await call(api, "/api/me/runs", "POST", { run: { id, questId: "q1", outcome: "hold", kind: "theme", userId: B.userId } });
     assert.equal(completed.body.unlocked[0].code, "held_pathway");
@@ -161,6 +172,154 @@ describe("Neon player routes (offline SQL adapter)", () => {
     assert.equal(imported.body.lastRunStored, false);
     assert.equal((await call(api, "/api/me/import", "POST", { solvedIds: ["q9"] }, B)).body.total, 1);
     assert.ok(db.calls.filter(({ sql }) => !["BEGIN", "COMMIT", "ROLLBACK", "SELECT COUNT(*)::int AS n FROM users"].includes(sql)).every(({ args }) => args.includes(A.userId) || args.includes(B.userId)), "all player statements bind an owner");
+  });
+
+  it("refuses malformed start references instead of silently starting an unbound run", async () => {
+    const db = fakeDb();
+    const api = createPlayerRoutes({ db });
+    for (const packageRef of [{}, { packageId: " bad", revision: "latest", questId: "q1" }, null]) {
+      const result = await call(api, "/api/me/runs/start", "POST", { questId: "q1", packageRef });
+      assert.equal(result.status, 400);
+      assert.equal(result.body.error, "invalid_run");
+    }
+    assert.equal(db.calls.length, 0);
+  });
+
+  it("binds a resolved package and refuses a start when resolution fails", async () => {
+    const ref = {
+      packageId: "kiln-ferry-test",
+      revision: `sha256:${"ab".repeat(32)}`,
+      questId: "q1",
+    };
+    const db = fakeDb();
+    const api = createPlayerRoutes({
+      db,
+      resolvePackage: async () => ({ ok: true, packageRef: ref }),
+    });
+    const started = await call(api, "/api/me/runs/start", "POST", { questId: "q1", packageRef: ref });
+    assert.equal(started.status, 200);
+    assert.deepEqual(started.body.packageRef, ref);
+    const listed = await call(api, "/api/me/runs");
+    assert.equal(listed.body.runs[0].packageRef.revision, ref.revision);
+
+    const denied = fakeDb();
+    const blocked = createPlayerRoutes({
+      db: denied,
+      resolvePackage: async () => ({ ok: false, code: "package_reference_forbidden" }),
+    });
+    const failed = await call(blocked, "/api/me/runs/start", "POST", { questId: "q1", packageRef: ref });
+    assert.equal(failed.status, 403);
+    assert.equal(failed.body.error, "package_reference_forbidden");
+    assert.equal(denied.calls.some(({ sql }) => sql.startsWith("INSERT INTO runs")), false);
+  });
+
+  it("owns official start and Continue identity, revision and current access on actual routes", async () => {
+    const db = fakeDb();
+    const ref = { packageId: "official-world", revision: `sha256:${"ab".repeat(32)}`, questId: "q1" };
+    const next = { ...ref, revision: `sha256:${"cd".repeat(32)}` };
+    let current = ref, allowed = true;
+    const seen = [];
+    const api = createPlayerRoutes({ db, loadCatalog: async (opts) => {
+      assert.equal(opts.force, true);
+      return { ok: true, quests: [{ id: "q1", packageRef: current }] };
+    }, resolvePackage: async (bound, opts) => {
+      seen.push({ bound, opts });
+      return allowed ? { ok: true, packageRef: bound,
+        record: { mission: { id: "q1", title: "SERVER" } }, runWorld: { bank: { id: "server-bank" } } }
+        : { ok: false, code: "subscription_required", status: 402 };
+    } });
+    const start = await call(api, "/api/me/runs/start", "POST", { questId: "q1" });
+    assert.deepEqual(start.body.packageRef, ref);
+    assert.equal(db.state.runs.get(A.userId)[0].package_revision, ref.revision);
+    const snapshot = { questId: "q1", runId: start.body.id, play: { packageRef: ref,
+      mission: { id: "q1", title: "FORGED", packageRef: ref }, predictionsBank: { id: "forged" }, reflection: "my reflection" },
+      chats: { tutor: [{ role: "user", content: "keep my chat" }] } };
+    assert.equal((await call(api, "/api/me/run-state", "PUT", snapshot)).status, 200);
+    let saved = db.state.snapshots.get(A.userId);
+    assert.equal(saved.play.mission.title, undefined);
+    assert.equal(saved.play.predictionsBank, undefined);
+    assert.equal(saved.play.runWorld, undefined);
+    assert.equal(saved.play.mission.runWorld, undefined);
+    assert.deepEqual(saved.play.packageRef, ref);
+    assert.equal(saved.play.reflection, "my reflection");
+    assert.equal(saved.chats.tutor[0].content, "keep my chat");
+    current = next;
+    const continued = await call(api, "/api/me/run-state");
+    assert.equal(continued.body.state.play.packageRef.revision, ref.revision);
+    assert.equal(continued.body.state.play.mission.title, "SERVER");
+    assert.equal(continued.body.state.play.mission.runWorld.bank.id, "server-bank");
+    assert.equal(continued.body.state.play.runWorld, undefined);
+    assert.equal(seen.at(-1).bound.revision, ref.revision);
+    assert.equal(seen.at(-1).opts.identity.userId, A.userId);
+    assert.equal(seen.at(-1).opts.entitled, false);
+    assert.equal((await call(api, "/api/me/runs/start", "POST", { questId: "q1", packageRef: ref })).status, 409);
+    const forged = structuredClone(snapshot); forged.play.packageRef = next;
+    assert.equal((await call(api, "/api/me/run-state", "PUT", forged)).status, 409);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", { ...snapshot, questId: "q2" })).status, 409);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", snapshot, B)).status, 403);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", { questId: "q1", runId: id }, B)).status, 403);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", { ...snapshot, runId: null })).status, 403);
+    allowed = false;
+    assert.equal((await call(api, "/api/me/run-state")).status, 402);
+    assert.equal((await call(api, "/api/me/run-state", "PUT", snapshot)).status, 402);
+    assert.equal((await call(api, "/api/me/runs/start", "POST", { questId: "q1" })).status, 402);
+    saved = db.state.snapshots.get(A.userId);
+    saved.play.packageRef = next;
+    assert.equal((await call(api, "/api/me/run-state")).status, 409);
+    assert.equal(db.state.snapshots.has(B.userId), false);
+    db.state.snapshots.set(B.userId, structuredClone(saved));
+    assert.equal((await call(api, "/api/me/run-state", "GET", undefined, B)).status, 403);
+  });
+
+  it("roundtrips local-import identity without upgrading it to an official release", async () => {
+    const db = fakeDb(), api = createPlayerRoutes({ db, resolvePackage: () => { throw new Error("must not resolve official"); } });
+    const ref = { packageId: "local-world", questId: "q1", revision: `sha256:${"ab".repeat(32)}` };
+    const bank = JSON.parse(readFileSync(new URL("../../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8"));
+    const state = { questId: "q1", play: { mission: { id: "q1", source: "imported", packageRef: ref,
+      predictionBankId: bank.id, runWorld: { packageRef: ref, bank, trust: "local-import", questId: "q1" } } } };
+    assert.equal((await call(api, "/api/me/run-state", "PUT", state)).status, 200);
+    const got = (await call(api, "/api/me/run-state")).body.state;
+    assert.equal(got.play.packageRef, undefined);
+    assert.equal(got.play.mission.runWorld.trust, "local-import");
+    assert.equal(got.play.mission.runWorld.bank.id, bank.id);
+    const broken = structuredClone(state); delete broken.play.mission.runWorld.bank;
+    assert.equal((await call(api, "/api/me/run-state", "PUT", broken)).status, 400);
+    assert.equal((await call(api, "/api/me/run-state")).body.state.play.mission.runWorld.bank.id, bank.id);
+  });
+
+  it("stores large official calendars as compact references and hydrates a single copy", async () => {
+    const db = fakeDb();
+    const ref = { packageId: "official-world", questId: "q1", revision: `sha256:${"ab".repeat(32)}` };
+    const bank = { schema: "future-forge.predictions/v1", id: "unicode-bank", title: "Synthetic test calendar",
+      predictions: Array.from({ length: 120 }, (_, index) => ({ id: `row-${index}`, year: 2026, kind: "prediction", claimBand: "now", headline: "Synthetic", detail: "界".repeat(650) })) };
+    const api = createPlayerRoutes({ db, loadCatalog: async () => ({ ok: true, quests: [{ id: "q1", packageRef: ref }] }),
+      resolvePackage: async () => ({ ok: true, packageRef: ref, record: { mission: { id: "q1", predictionBankId: bank.id } }, runWorld: { bank, packageRef: ref, trust: "official" } }) });
+    const start = await call(api, "/api/me/runs/start", "POST", { questId: "q1" });
+    const put = await call(api, "/api/me/run-state", "PUT", { questId: "q1", runId: start.body.id, year: 2026 });
+    assert.equal(put.status, 200, JSON.stringify(put.body));
+    assert.ok(Buffer.byteLength(JSON.stringify(db.state.snapshots.get(A.userId)), "utf8") < 2000);
+    const get = await call(api, "/api/me/run-state");
+    assert.equal(get.status, 200, JSON.stringify(get.body));
+    assert.equal(get.body.state.play.runWorld, undefined);
+    assert.equal(get.body.state.play.mission.runWorld.bank.predictions.length, 120);
+  });
+
+  it("enforces the final UTF-8 snapshot cap after restoring the authoritative projection on GET and PUT", async () => {
+    const db = fakeDb();
+    const ref = { packageId: "official-world", questId: "q1", revision: `sha256:${"ab".repeat(32)}` };
+    const api = createPlayerRoutes({ db, loadCatalog: async () => ({ ok: true, quests: [{ id: "q1", packageRef: ref }] }),
+      resolvePackage: async () => ({ ok: true, packageRef: ref, record: { mission: { id: "q1", title: "Authoritative" } },
+        runWorld: { bank: { id: "official", detail: "界".repeat(150_000) } } }) });
+    const start = await call(api, "/api/me/runs/start", "POST", { questId: "q1" });
+    const state = { questId: "q1", runId: start.body.id };
+    const put = await call(api, "/api/me/run-state", "PUT", state);
+    assert.equal(put.status, 400);
+    assert.equal(put.body.error, "too_large");
+    assert.equal(db.state.snapshots.size, 0);
+    db.state.snapshots.set(A.userId, { quest_id: "q1", run_id: start.body.id });
+    const get = await call(api, "/api/me/run-state");
+    assert.equal(get.status, 400);
+    assert.equal(get.body.error, "too_large");
   });
 
   it("roundtrips per-user pins, run-state and profile; achievements list stays private", async () => {

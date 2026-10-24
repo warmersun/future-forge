@@ -1,0 +1,36 @@
+{
+  "schema": "future-forge.quest-tile/v1",
+  "kind": "quest",
+  "id": "harbor-clock-test",
+  "title": "TEST: Harbor clock",
+  "summary": "Synthetic quest with a different invented calendar.",
+  "predictionBankId": "harbor-clock-bank",
+  "companion": {
+    "claim": "Invented test claim about an unattended tide clock.",
+    "invitation": "Use only the harbor calendar, not the kiln calendar.",
+    "exploration": {
+      "version": 1,
+      "focus": "Keep this calendar separate from Kiln Ferry.",
+      "bridge": "Sharing a bank would mean sharing the whole calendar. This quest does not.",
+      "reflectionPrompt": "Which kiln row must stay out of this world?",
+      "premise": {
+        "mode": "assumed",
+        "bankId": "harbor-clock-bank",
+        "statement": "TEST DATA: the unattended tide clock is assumed due. Not a real milestone.",
+        "grants": [
+          {
+            "predictionId": "harbor-tide-due-2027",
+            "scope": "Only the fictional unattended tide reading.",
+            "limits": "Does not make the 2034 lane forecast due, and does not verify the claim."
+          }
+        ]
+      },
+      "pressureLinks": {
+        "local": {
+          "connection": "The grant covers the tide reading only.",
+          "criterion": "Self-rerouting lanes remain a forecast."
+        }
+      }
+    }
+  }
+}

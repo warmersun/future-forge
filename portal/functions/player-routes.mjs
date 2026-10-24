@@ -1,12 +1,15 @@
 // Authenticated player-data slice for Neon Functions. The caller MUST verify
 // Clerk and pass the resulting identity separately; request headers are never
 // interpreted as identity here. Return null for paths this slice does not own.
+import { resolveStartPackageBinding, resolveRunPackageBinding, sanitizeBoundRunState, compactBoundRunState, ownerRunLoader } from "../../js/server/run-package-binding.mjs";
+import { createHostedPackageResolverFromEnv } from "../../js/server/hosted-package-resolver.mjs";
+import { planSlugsFromEnv, subscriptionEntitled } from "../../js/server/ai-quota.mjs";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate, parseImportBody, sanitizeLastRun } from "../../js/server/cloud-save.mjs";
 import { parseRunsQuery, parseStartBody, publicRunRow } from "../../js/server/quest-log.mjs";
 import { parseShareBody, parseProfilePatch, profileNeedsDisplayName } from "../../js/server/profile.mjs";
 import { sanitizePinList } from "../../js/server/pins.mjs";
-import { parseRunStateBody, RUN_STATE_MAX_BYTES } from "../../js/server/run-state.mjs";
+import { RUN_STATE_MAX_BYTES } from "../../js/server/run-state.mjs";
 import { achievementCatalog, publicAchievement, awardForRun, awardPortfolioCodes, foundingCodes, awardStreakCodes } from "../../js/server/achievements.mjs";
 import { fetchClerkLoginSummary } from "../../js/server/clerk-auth.mjs";
 import { tileIsSponsored } from "../../js/server/cloud-gate.mjs";
@@ -26,7 +29,8 @@ const routes = new Map([
   ["/api/me/achievements", ["GET"]],
 ]);
 const RUN_SELECT = `SELECT id, quest_id, kind, outcome, stars, year_reached, waits, place,
-  tech_ids, started_at, ended_at, imported, created_at FROM runs WHERE clerk_user_id = $1`;
+  tech_ids, started_at, ended_at, imported, created_at,
+  package_id, package_revision, package_quest_id FROM runs WHERE clerk_user_id = $1`;
 const PROFILE_SELECT = `SELECT clerk_user_id, username, display_name, bio, is_public, hide_email, time_zone
   FROM users WHERE clerk_user_id = $1`;
 
@@ -111,19 +115,30 @@ async function putRunRow(cx, uid, run, imported) {
   return row?.id || null;
 }
 /** db is a pg Pool-like object; identity must be a *verified* parent result. */
-export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchImpl, readObjectText, getUser, now = () => new Date() } = {}) {
-  async function catalog() {
-    if (loadCatalog) return loadCatalog();
+export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchImpl, readObjectText, getUser, resolvePackage, enforcePackageCatalog = false, now = () => new Date() } = {}) {
+  async function catalog({ force = false } = {}) {
+    if (loadCatalog) return loadCatalog({ force });
     // Match quest writes: a private bucket is authoritative, even on failure.
     // Never merge it with or fall back to the public remote catalog.
     const bucket = questsBucketFromEnv(env);
     if (bucket) return fetchObjectQuestCatalog({
-      bucket, prefix: questsObjectPrefixFromEnv(env), readText: readObjectText,
+      bucket, prefix: questsObjectPrefixFromEnv(env), readText: readObjectText, force,
     });
     const configured = env.FF_QUESTS_REMOTE_URL;
     const remoteUrl = configured === undefined ? DEFAULT_QUESTS_REMOTE_URL : String(configured).trim();
     return fetchRemoteQuestCatalog(remoteUrl && !/^(0|off|false)$/i.test(remoteUrl) ? remoteUrl : null,
-      { tryFallbacks: false, fetchImpl });
+      { force, tryFallbacks: false, fetchImpl });
+  }
+  const hosted = createHostedPackageResolverFromEnv({ env, loadCatalog: catalog, fetchImpl });
+  const packageCatalogConfigured = Boolean(enforcePackageCatalog || loadCatalog || questsBucketFromEnv(env) || env.FF_QUESTS_REMOTE_URL);
+  async function resolveForUser(ref, { userId, identity } = {}) {
+    const ident = identity || { enabled: true, signedIn: true, userId };
+    let paid = false;
+    try {
+      const sub = (await db.query("SELECT status, plan_slug, period_end FROM subscriptions WHERE clerk_user_id = $1", [userId])).rows[0];
+      paid = subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs: planSlugsFromEnv(env) });
+    } catch { /* billing failure denies paid access */ }
+    return resolvePackage ? resolvePackage(ref, { userId, identity: ident, entitled: paid }) : hosted.resolve(ref, { identity: ident, entitled: paid });
   }
   // Call only after the progress transaction commits and releases its connection.
   // These optional, server-derived rewards must never roll back a saved pathway.
@@ -189,12 +204,22 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
         if (path === "/api/me/runs/start") {
           const run = parseStartBody(body);
           if (!run) return reply({ ok: false, error: "invalid_run" }, 400);
+          const selected = await resolveStartPackageBinding({ ...body, questId: run.questId }, {
+            loadCatalog: packageCatalogConfigured ? catalog : undefined, resolvePackage: resolveForUser, userId: uid, identity,
+          });
+          if (!selected.ok) return reply({ ok: false, error: selected.code }, selected.status);
+          const binding = selected.packageRef;
           const id = await transaction(db, async (cx) => {
             await ensureUser(cx, uid);
-            return (await cx.query(`INSERT INTO runs (clerk_user_id, quest_id, kind, outcome, place, started_at, imported)
-              VALUES ($1,$2,$3,NULL,$4,now(),false) RETURNING id`, [uid, run.questId, run.kind, run.place])).rows[0]?.id || null;
+            return (await cx.query(`INSERT INTO runs (
+                clerk_user_id, quest_id, kind, outcome, place, started_at, imported,
+                package_id, package_revision, package_quest_id)
+              VALUES ($1,$2,$3,NULL,$4,now(),false,$5,$6,$7) RETURNING id`, [
+              uid, run.questId, run.kind, run.place,
+              binding?.packageId || null, binding?.revision || null, binding?.questId || null,
+            ])).rows[0]?.id || null;
           });
-          return reply({ ok: true, stored: true, id });
+          return reply({ ok: true, stored: true, id, packageRef: binding });
         }
         if (path === "/api/me/runs" && request.method === "POST") {
           const run = sanitizeLastRun(body?.run || body);
@@ -249,14 +274,18 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
           if (request.method === "GET") {
             const r = (await db.query(`SELECT run_id, quest_id, year_reached, tutor, board, play, chats, updated_at
               FROM run_state WHERE clerk_user_id = $1`, [uid])).rows[0];
-            return reply({ ok: true, state: r ? { runId: r.run_id, questId: r.quest_id, year: r.year_reached,
-              tutor: Boolean(r.tutor), board: r.board, play: r.play || null, chats: r.chats || null, updatedAt: r.updated_at } : null });
+            const checked = sanitizeBoundRunState(await resolveRunPackageBinding(r ? { runId: r.run_id, questId: r.quest_id, year: r.year_reached,
+              tutor: Boolean(r.tutor), board: r.board, play: r.play || null, chats: r.chats || null, updatedAt: r.updated_at } : null,
+              { userId: uid, identity, loadRun: ownerRunLoader(db), resolvePackage: resolveForUser }));
+            if (!checked.ok) return reply({ ok: false, error: checked.code }, checked.status);
+            return reply({ ok: true, state: checked.state });
           }
-          const parsed = parseRunStateBody(body);
-          if (!parsed.ok) return reply({ ok: false, error: parsed.error }, 400);
+          const checked = sanitizeBoundRunState(await resolveRunPackageBinding(body,
+            { userId: uid, identity, loadRun: ownerRunLoader(db), resolvePackage: resolveForUser }));
+          if (!checked.ok) return reply({ ok: false, error: checked.code }, checked.status);
           await transaction(db, async (cx) => {
             await ensureUser(cx, uid);
-            const s = parsed.state;
+            const s = compactBoundRunState(checked);
             await cx.query(`INSERT INTO run_state (clerk_user_id, run_id, quest_id, year_reached, tutor, board, play, chats)
               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)
               ON CONFLICT (clerk_user_id) DO UPDATE SET run_id = EXCLUDED.run_id,

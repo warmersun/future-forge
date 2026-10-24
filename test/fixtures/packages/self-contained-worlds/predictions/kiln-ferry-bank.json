@@ -1,0 +1,32 @@
+{
+  "schema": "future-forge.predictions/v1",
+  "id": "kiln-ferry-bank",
+  "title": "TEST DATA: Kiln Ferry invented calendar",
+  "attribution": {
+    "name": "Test fixture speaker",
+    "date": "2026-10-23",
+    "quote": "Invented test claim. Not a real forecast."
+  },
+  "predictions": [
+    {
+      "id": "kiln-ferry-due-2026",
+      "year": 2026,
+      "kind": "prediction",
+      "techIds": ["robots"],
+      "headline": "TEST: Kiln ferry robots load the morning run",
+      "detail": "Invented test claim: in this fictional calendar, loading robots are assumed due in 2026. Not a real forecast and not verified.",
+      "claimBand": "frontier",
+      "sourceNote": "Synthetic fixture row. Not a source."
+    },
+    {
+      "id": "kiln-ferry-ahead-2032",
+      "year": 2032,
+      "kind": "prediction",
+      "techIds": ["solar"],
+      "headline": "TEST: Kiln slip sheds make their own night power",
+      "detail": "Invented test claim: night power at the fictional slips is still ahead in 2032. Not a real forecast.",
+      "claimBand": "frontier",
+      "sourceNote": "Synthetic fixture row. Not a source."
+    }
+  ]
+}

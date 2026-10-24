@@ -1,6 +1,6 @@
 # Predictions bank
 
-Future Forge has one source of truth for "what is possible by year Y": a **predictions bank**, one JSON file in the `future-forge.predictions/v1` schema. The server loads one bank at boot, and every surface reads it.
+Future Forge uses the `future-forge.predictions/v1` schema for calendars. Ordinary and legacy play use the default bank loaded at boot. A self-contained v2 Quest instead reads its complete package-local bank through the run's exact package/revision/member identity. These calendars are not merged; unrelated packages may reuse an internal bank ID without sharing rows.
 
 | Surface | Code | What it reads |
 |---------|------|---------------|
@@ -23,7 +23,8 @@ Module: `js/sim/world-foresight.js` (validation, active bank, selectors). Loader
 - A side-loaded bank **replaces** the default. It does not merge.
 - `GET /api/predictions` returns `{ ok, source, fallback, count, bank, errors }`. `?refresh=1` re-reads the source. Local paths are reported repo-relative.
 - The browser fetches `/api/predictions` at startup and activates the bank with `setWorldForesightBank`. Without a server (static hosting) the bank is empty and the year dialog reads as a quiet year.
-- An assumed companion Quest pins the loaded bank for that run when `exploration.premise.bankId` matches. Continue stores that snapshot. A mismatched or missing bank does not start the run on the default bank. Year bulletins, outcome cards, and the AI clock for that run read the pinned pool. Other requests keep the process-global bank. Side-load a test bank with `FF_PREDICTIONS_FILE=test/fixtures/predictions/companion-dock-test.json npm start`.
+- **Self-contained v2 distribution:** include `predictions/<bank-id>.json` and set the Quest's literal `predictionBankId`. An assumed companion's `premise.bankId` must agree. Selectors use the run-owned calendar for bulletins, outcome cards, and model context; client-provided bank/grant fields are not official world authority. Continue resolves the stored immutable reference with current access checks. Invalid or unavailable saved worlds fail explicitly rather than falling back.
+- **Legacy/developer side-loading:** an assumed companion Quest may pin the loaded bank when `exploration.premise.bankId` matches. Continue retains a valid snapshot; an invalid or missing assumed snapshot cannot resume under a replacement default. `FF_PREDICTIONS_FILE=test/fixtures/predictions/companion-dock-test.json npm start` remains a developer/default-world feature, not a requirement for distributing v2 packages. Do not combine unrelated Quest assumptions into one process bank. See [Quest packages](quest-package.md) for the worked v2 example.
 
 ## The AI world clock
 
