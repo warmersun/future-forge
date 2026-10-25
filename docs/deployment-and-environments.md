@@ -8,29 +8,18 @@ This document provides an authoritative overview of Future Forge's operational t
 
 ```mermaid
 flowchart TB
-    subgraph Browser["Learner / Player Browser"]
+    subgraph Browser["Learner / Player Browser (Zero DB/S3 Access)"]
         GameClient["Playable Game SPA<br/>(ff.warmersun.com)"]
         PortalClient["Account & Billing SPA<br/>(warmersun.com/portal/)"]
     end
 
-    subgraph HomeLaptop["Home Laptop / Local Workstation"]
+    subgraph HomeLaptop["Home Laptop / Local Workstation (Zero DB/S3 Access)"]
         CFTunnel["Cloudflare Tunnel<br/>(cloudflared)"]
-        GameServer["Future Forge Node.js Server<br/>(server.mjs on :8765)<br/>• WebSockets (Friends Rooms)<br/>• xAI Grok API Client<br/>• Disk Cache (data/tts-cache/)"]
+        GameServer["Future Forge Node.js Server<br/>(server.mjs on :8765)<br/>• WebSockets (Friends Rooms)<br/>• xAI Grok API Client<br/>• Disk Cache (data/tts-cache/)<br/><i>(Holds ZERO DB or S3 credentials)</i>"]
     end
 
-    subgraph HereNow["here.now Static CDN"]
+    subgraph HereNow["here.now Static CDN (Zero DB/S3 Access)"]
         HereNowSite["here.now Site: autumn-linden-y6rk<br/>(warmersun.com/portal/)<br/>• Static HTML/JS/CSS<br/>• Upstream Proxies (.herenow/proxy.json)"]
-    end
-
-    subgraph NeonCloud["Neon Serverless Platform (us-east-2)"]
-        subgraph NeonFuncs["Neon Serverless Functions"]
-            CloudApi["cloudapi Function<br/>(cloud.warmersun.com)<br/>• Device Auth & Clerk JWTs<br/>• Player Progress & Runs<br/>• Leaderboards & Stills<br/>• AI Quota & Billing Webhooks"]
-        end
-
-        subgraph NeonStore["Neon Storage & DB"]
-            PostgresDB[("Lakebase Postgres (neondb)<br/>• Pooled connection: :5432<br/>• Tables: users, runs, scores, cards, handshakes")]
-            ObjectStore[("Neon Object Store (S3-compatible)<br/>• quests bucket (private)<br/>• assets bucket (private)")]
-        end
     end
 
     subgraph ExternalServices["External APIs & Auth"]
@@ -38,21 +27,40 @@ flowchart TB
         XAI["xAI Grok API<br/>(api.x.ai)"]
     end
 
+    subgraph NeonCloud["Neon Cloud Platform (AWS us-east-2)"]
+        subgraph ServerlessIsolation["SOLE ACCESS LAYER"]
+            CloudApi["cloudapi Serverless Function<br/>(cloud.warmersun.com)<br/><b>SOLE ENTITY with Database & Object Store Credentials</b>"]
+        end
+
+        subgraph NeonStorage["Protected Neon Data Plane (Private / Gated)"]
+            PostgresDB[("Lakebase Postgres (neondb)<br/>• Users, Runs, Scores, Handshakes<br/><b>Connected ONLY by cloudapi</b>")]
+            ObjectStore[("Neon Object Store (S3-compatible)<br/>• Private 'quests' bucket (catalog)<br/>• Private 'assets' bucket<br/><b>Read ONLY by cloudapi</b>")]
+        end
+    end
+
     %% Network flows
     GameClient -->|"HTTPS / WSS"| CFTunnel
     CFTunnel -->|"localhost:8765"| GameServer
     GameServer -->|"LLM / Imagine / TTS"| XAI
-    GameServer -->|"Quota reserves & Catalog"| CloudApi
+    GameServer -->|"HTTPS Quota & Catalog calls<br/>(via cloud.warmersun.com)"| CloudApi
 
     PortalClient -->|"Static files"| HereNowSite
     HereNowSite -->|"Proxy /api/health & /api/device/complete"| CloudApi
     PortalClient -->|"Direct CORS API calls"| CloudApi
     PortalClient -->|"Sign-in & Billing UI"| Clerk
 
-    CloudApi -->|"Pooled queries"| PostgresDB
-    CloudApi -->|"S3 GetObject (Private catalog)"| ObjectStore
-    CloudApi -->|"JWT Verification & Billing Sync"| Clerk
+    %% EXCLUSIVE DATABASE & OBJECT STORE ACCESS
+    CloudApi ==>|"<b>EXCLUSIVE:</b> Pooled SQL :5432"| PostgresDB
+    CloudApi ==>|"<b>EXCLUSIVE:</b> S3 GetObject (Private Bucket)"| ObjectStore
+    CloudApi -->|"JWT Verification & Webhooks"| Clerk
 ```
+
+> [!IMPORTANT]
+> **Strict Data Plane Isolation: Serverless Functions are the SOLE DB & Storage Client**
+> - **Only the serverless Neon Function (`cloudapi`) connects to Lakebase Postgres and the Neon Object Store.**
+> - **The Home Laptop Game Server** holds **zero** database connection strings and **zero** object storage credentials. It communicates exclusively over HTTPS with `cloudapi` (`/api/internal/ai/reserve` and `/api/quests`).
+> - **Browser Clients** (both Game SPA and Portal SPA) never touch Postgres or the private S3 buckets directly.
+> - **The private `quests` bucket is completely sealed** from public read; `cloudapi` is the sole reader, enforcing authentication and subscription checks before serving quest data.
 
 ---
 
