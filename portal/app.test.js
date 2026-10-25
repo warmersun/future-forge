@@ -189,6 +189,41 @@ test("mounted portal keeps routes and API calls under its path", async (t) => {
   assert.equal(ui.nav[2].attrs["aria-current"], "page");
 });
 
+test("published portal bootstraps pricing directly from its configured API origin", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  const ui = fakeUi("https://warmersun.com/portal/subscribe");
+  ui.doc.querySelector = () => ({ getAttribute: () => "https://cloud.warmersun.com" });
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    assert.equal(url, "https://cloud.warmersun.com/api/health");
+    return { ok: true, json: async () => ({ apiOrigin: "https://cloud.warmersun.com",
+      clerk: { enabled: true, publishableKey: key("clerk.warmersun.com") } }) };
+  };
+  let pricingOptions;
+  ui.win.Clerk = { load: async () => {}, mountPricingTable(_mount, options) { pricingOptions = options; } };
+  startPortal({ ...ui, base: "/portal" });
+  await tick(); await tick();
+  assert.deepEqual(calls, ["https://cloud.warmersun.com/api/health"]);
+  assert.equal(pricingOptions.for, "user");
+  assert.equal(ui.status.textContent, "");
+});
+
+test("portal bootstrap origin rejects non-origin and insecure configuration before fetching", async (t) => {
+  const previous = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previous; });
+  globalThis.fetch = async () => { assert.fail("invalid bootstrap configuration must not fetch"); };
+  for (const origin of ["http://cloud.warmersun.com", "https://cloud.warmersun.com/path",
+    "https://user@cloud.warmersun.com", "https://cloud.warmersun.com?redirect=evil", "javascript:alert(1)"]) {
+    const ui = fakeUi("https://warmersun.com/portal/subscribe");
+    ui.doc.querySelector = () => ({ getAttribute: () => origin });
+    startPortal({ ...ui, base: "/portal" });
+    await tick();
+    assert.match(ui.status.textContent, /Invalid portal bootstrap origin/);
+  }
+});
+
 test("device callback completes with Clerk token then returns to allowed game URL", async (t) => {
   const ret = "https://ff.warmersun.com/play";
   const ui = fakeUi(`https://portal.example/signin?device=XYZ&return=${encodeURIComponent(ret)}`);
@@ -562,7 +597,7 @@ test("live portal serves only exact SPA routes/assets; API stays JSON", { timeou
     const res = await fetch(base + route);
     assert.equal(res.status, 200, route);
     assert.match(res.headers.get("content-type"), /text\/html/);
-    assert.match(await res.text(), /src="\.\/app\.js\?v=20261019-lan-open"/);
+    assert.match(await res.text(), /src="\.\/app\.js\?v=20261025-auth-repair"/);
   }
   for (const [asset, mime] of [["/app.js", "text/javascript"], ["/app.css", "text/css"]]) {
     const res = await fetch(base + asset);

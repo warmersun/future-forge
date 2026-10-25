@@ -92,13 +92,24 @@ function loadScript(doc, src, attrs = {}) {
   return scriptLoads.get(src);
 }
 
-async function clerkConfig(base) {
-  const res = await fetch(`${base}/api/health`);
+async function clerkConfig(base, doc) {
+  // The published shell can bootstrap directly from the canonical API origin.
+  // This avoids making Clerk initialization depend on a static-host proxy.
+  const configuredOrigin = doc.querySelector?.('meta[name="ff-api-origin"]')?.getAttribute("content");
+  let healthBase = base;
+  if (configuredOrigin) {
+    const url = new URL(configuredOrigin);
+    if (url.origin !== configuredOrigin || url.protocol !== "https:" || url.username || url.password) {
+      throw new Error("Invalid portal bootstrap origin");
+    }
+    healthBase = url.origin;
+  }
+  const res = await fetch(`${healthBase}/api/health`);
   if (!res.ok) throw new Error("Health check failed");
   const health = await res.json();
   const pk = health?.clerk?.publishableKey;
   if (!health?.clerk?.enabled || !pk) return null;
-  let apiOrigin = base;
+  let apiOrigin = healthBase;
   if (health.apiOrigin) {
     const url = new URL(health.apiOrigin);
     if (url.origin !== health.apiOrigin || url.protocol !== "https:" || url.username || url.password) {
@@ -191,7 +202,7 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     const device = params.get("device") || "";
     const returnTo = params.get("return") || "";
     try {
-      const config = await clerkConfig(base);
+      const config = await clerkConfig(base, doc);
       if (!active(id)) return;
       if (!config) { status.textContent = "Sign in is off on this portal (Clerk keys missing)."; return; }
       const returnOk = Boolean(returnTo && isAllowedGameReturnUrl(returnTo, config.gameDeviceOrigins));
@@ -292,7 +303,7 @@ export function startPortal({ doc = document, win = window, base = portalBaseFro
     const status = doc.getElementById("status");
     const mount = doc.getElementById("clerk-mount");
     try {
-      const config = await clerkConfig(base);
+      const config = await clerkConfig(base, doc);
       if (!active(id)) return;
       if (!config) { status.textContent = "Subscriptions are off on this portal (Clerk keys missing)."; return; }
       await loadScript(doc, `https://${config.host}/npm/@clerk/ui@1/dist/ui.browser.js`);

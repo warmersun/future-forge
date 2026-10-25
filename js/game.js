@@ -80,6 +80,7 @@ import {
   resolvePortalOrigin,
   isClerkReady,
   isClerkSignedIn,
+  isHostedClerkGame,
   openCloudSignIn,
   onClerkSession,
   refreshAccountChip,
@@ -4061,15 +4062,15 @@ async function maybeOfferContinue() {
       }
       if (btn) btn.hidden = !state.cloudContinue;
       if (res.status === 401 && data.error === "invalid_token") {
-        invalidateClerkSession();
+        // A verifier outage must not invalidate a live hosted Clerk session and
+        // emit another session event that immediately repeats this same GET.
+        if (isHostedClerkGame() && isClerkSignedIn()) hostedPlanUnavailable(true);
+        else invalidateClerkSession();
       }
       return;
     }
     state.cloudContinue = st && st.questId ? st : null;
     btn.hidden = !state.cloudContinue;
-    if (res.status === 401 && data.error === "invalid_token") {
-      invalidateClerkSession();
-    }
   } catch {
     if (btn) btn.hidden = true;
   }
@@ -4135,6 +4136,7 @@ async function continueCloudRun() {
   continueInFlight = true;
   if (btn) btn.disabled = true;
   try {
+    if (!hostedLaunchSettled && await enforceHostedPlan({ mission: st.play?.mission || st.mission })) return;
     if (!state.hostedQuestsLoaded) {
       try {
         await refreshHostedQuests({ silent: true });
@@ -5739,6 +5741,10 @@ async function fetchFullQuestTile(id, opts = {}) {
     const res = await apiFetch(`/api/quests/${encodeURIComponent(id)}${suffix}`);
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) {
+      if (isClerkSignedIn()) {
+        hostedPlanUnavailable(true);
+        return null;
+      }
       if (opts.keepUrl) {
         if (deepLinkHold !== "sign_in_required") {
           deepLinkHold = "sign_in_required";
@@ -5775,6 +5781,7 @@ async function fetchFullQuestTile(id, opts = {}) {
  * @param {{ clearPick?: boolean, sameTabSignIn?: boolean }} [opts]
  */
 async function playCatalogEntry(entry, opts = {}) {
+  if (!hostedLaunchSettled && await enforceHostedPlan({ mission: entry })) return "blocked";
   if (isModuleEntry(entry)) {
     const title = String(entry.module || entry.title || "").trim();
     const kind =
@@ -6252,12 +6259,17 @@ async function consumeDeepLink() {
 
   deepLinkInFlight = true;
   try {
+    if (!hostedLaunchSettled && await enforceHostedPlan()) return;
     await Promise.race([
       whenAuthReady(),
       new Promise((r) => setTimeout(r, 4000)),
     ]);
     const looked = await lookupQuestById(intent.token, { fetchImpl: apiFetch });
     const outcome = questLinkOutcome(looked.status);
+    if (looked.status === "sign_in_required" && isClerkSignedIn()) {
+      hostedPlanUnavailable(true);
+      return;
+    }
     if (outcome === "missing") {
       flashToast("This server does not have that quest.");
       deepLinkFinished = true;
@@ -8019,21 +8031,36 @@ const HOSTED_TITLE_LAUNCH_IDS = new Set([
   "btn-friends",
   "btn-cloud-continue",
 ]);
-let hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
+// Unknown is never equivalent to self-host or to a verified subscription.
+let hostedPlanState = { cloudAi: null, entitled: false, subscribeUrl: HOSTED_SUBSCRIBE_URL };
 let hostedPlanRedirecting = false;
 let hostedPlanCheck = null;
 let hostedLaunchSettled = false;
 let hostedLaunchReplay = null;
 let hostedLaunchFlushing = false;
 
+function hostedPlanUnavailable(authFailure = false) {
+  hostedLaunchSettled = false;
+  hostedPlanState.entitled = false;
+  flashToast(
+    authFailure && isClerkSignedIn()
+      ? "You are signed in, but the account service could not verify your session. Play is paused. Try your play action again to retry."
+      : "Could not verify account/subscription access. Play is paused. Try your play action again to retry.",
+    { durationMs: 10000 }
+  );
+  return true;
+}
+
 function hostedPlanBlocksMission(mission) {
-  if (!hostedPlanState.cloudAi) return false;
+  if (!hostedLaunchSettled) return true;
+  if (hostedPlanState.cloudAi === false) return false;
   if (!isClerkSignedIn()) {
     openCloudSignIn({ sameTab: true });
     return true;
   }
-  if (hostedPlanState.entitled) return false;
-  return !catalogLessonSkipsPlan(mission);
+  if (hostedPlanState.entitled || catalogLessonSkipsPlan(mission)) return false;
+  redirectHostedSubscribe();
+  return true;
 }
 
 function redirectHostedSubscribe() {
@@ -8048,75 +8075,80 @@ function redirectHostedSubscribe() {
 }
 
 /**
- * On the hosted app, play needs Sign in. A signed-in player without plan `cloud`
- * goes to subscribe. A catalog lesson in the URL may stay. Returns true when
- * navigation starts. A failed health check stays open, same as an unknown plan.
+ * Returns true whenever play must stop, including pending/failed verification.
+ * Only a verified health response can identify an open self-host. A backend 401
+ * is not evidence that the browser's Clerk session is absent: never sign it out
+ * or send it around the sign-in redirect loop. A new play action retries.
+ * Share verification, but evaluate each caller's lesson exception separately.
  */
-async function enforceHostedPlan() {
+async function enforceHostedPlan({ mission } = {}) {
   if (hostedPlanRedirecting) return true;
-  if (hostedPlanCheck) return hostedPlanCheck;
-  hostedPlanCheck = (async () => {
-    await Promise.race([
-      whenAuthReady(),
-      new Promise((r) => setTimeout(r, 4000)),
-    ]);
-    if (hostedPlanRedirecting) return true;
-    let cloudAi = false;
-    try {
-      const res = await fetch("/api/health");
-      if (!res.ok) return false;
+  if (!hostedPlanCheck) {
+    hostedLaunchSettled = false;
+    hostedPlanState.entitled = false;
+    hostedPlanCheck = (async () => {
+      await Promise.race([
+        whenAuthReady(),
+        new Promise((r) => setTimeout(r, 4000)),
+      ]);
+      const res = await fetch("/api/health", { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) return hostedPlanUnavailable();
       const data = await res.json();
-      cloudAi = Boolean(data?.cloudAi);
-    } catch {
-      return false;
-    }
-    if (!cloudAi) {
-      hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
-      return false;
-    }
-    if (!isClerkSignedIn()) {
+      if (typeof data?.cloudAi !== "boolean") return hostedPlanUnavailable();
+      if (!data.cloudAi) {
+        hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
+        hostedLaunchSettled = true;
+        return false;
+      }
       hostedPlanState = { cloudAi: true, entitled: false, subscribeUrl: HOSTED_SUBSCRIBE_URL };
-      openCloudSignIn({ sameTab: true });
-      return true;
-    }
-    let entitled = false;
-    let subscribeUrl = HOSTED_SUBSCRIBE_URL;
-    let known = false;
+      if (!isClerkSignedIn()) return true;
+      const me = await apiFetch("/api/me", { signal: AbortSignal.timeout(10000) });
+      if (me.status === 401) return hostedPlanUnavailable(true);
+      const account = await me.json();
+      if (!me.ok || account?.ok !== true || account?.signedIn !== true ||
+          typeof account?.subscription?.entitled !== "boolean") {
+        return hostedPlanUnavailable();
+      }
+      // The session may have disappeared while the account request was pending.
+      if (!isClerkSignedIn()) return true;
+      hostedPlanState = {
+        cloudAi: true,
+        entitled: account.subscription.entitled,
+        subscribeUrl: String(account.subscription.subscribeUrl || HOSTED_SUBSCRIBE_URL),
+      };
+      hostedLaunchSettled = true;
+      return false;
+    })().catch(() => hostedPlanUnavailable()).finally(() => {
+      hostedPlanCheck = null;
+    });
+  }
+  const blocked = await hostedPlanCheck;
+  if (blocked) {
+    if (hostedPlanState.cloudAi && !isClerkSignedIn()) openCloudSignIn({ sameTab: true });
+    return true;
+  }
+  if (hostedPlanState.cloudAi === false) return false;
+  if (!isClerkSignedIn()) {
+    openCloudSignIn({ sameTab: true });
+    return true;
+  }
+  let lesson = catalogLessonSkipsPlan(mission);
+  // An explicit mission must not inherit an unrelated lesson URL's exception.
+  const intent = !mission && parseDeepLink(typeof location !== "undefined" ? location.href : "");
+  if (!hostedPlanState.entitled && intent?.token) {
     try {
-      const res = await apiFetch("/api/me");
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) return false;
-      if (res.ok && data.subscription && typeof data.subscription.entitled === "boolean") {
-        known = true;
-        entitled = data.subscription.entitled;
-        if (data.subscription.subscribeUrl) subscribeUrl = String(data.subscription.subscribeUrl);
+      const id = sanitizeQuestToken(intent.token);
+      if (id) {
+        const looked = await lookupQuestById(id, { fetchImpl: apiFetch });
+        lesson = catalogLessonSkipsPlan(looked.tile);
       }
     } catch {
-      known = false;
+      lesson = false;
     }
-    if (!known) return false;
-    let lesson = false;
-    const intent = parseDeepLink(typeof location !== "undefined" ? location.href : "");
-    if (intent?.token) {
-      try {
-        const id = sanitizeQuestToken(intent.token);
-        if (id) {
-          const looked = await lookupQuestById(id, { fetchImpl: apiFetch });
-          lesson = catalogLessonSkipsPlan(looked.tile);
-        }
-      } catch {
-        lesson = false;
-      }
-    }
-    hostedPlanState = { cloudAi: true, entitled, subscribeUrl };
-    if (hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled, lesson })) return false;
-    redirectHostedSubscribe();
-    return true;
-  })().finally(() => {
-    hostedPlanCheck = null;
-    hostedLaunchSettled = true;
-  });
-  return hostedPlanCheck;
+  }
+  if (hostedSessionAllowed({ cloudAi: true, signedIn: true, entitled: hostedPlanState.entitled, lesson })) return false;
+  redirectHostedSubscribe();
+  return true;
 }
 
 /**
@@ -8130,10 +8162,13 @@ function holdHostedTitleLaunch() {
       const btn = ev.target instanceof Element ? ev.target.closest("button") : null;
       if (!btn || !HOSTED_TITLE_LAUNCH_IDS.has(btn.id)) return;
       if (hostedLaunchSettled) {
-        if (hostedPlanState.cloudAi && !isClerkSignedIn()) {
+        // Continue may restore an account-only lesson; check its actual mission.
+        const mission = btn.id === "btn-cloud-continue"
+          ? state.cloudContinue?.play?.mission || state.cloudContinue?.mission
+          : null;
+        if (hostedPlanBlocksMission(mission)) {
           ev.preventDefault();
           ev.stopImmediatePropagation();
-          openCloudSignIn({ sameTab: true });
         }
         return;
       }
@@ -8150,7 +8185,10 @@ async function flushHostedLaunchReplay() {
   if (hostedLaunchFlushing) return;
   hostedLaunchFlushing = true;
   try {
-    const blocked = await enforceHostedPlan();
+    const mission = hostedLaunchReplay === "btn-cloud-continue"
+      ? state.cloudContinue?.play?.mission || state.cloudContinue?.mission
+      : null;
+    const blocked = await enforceHostedPlan({ mission });
     const id = hostedLaunchReplay;
     hostedLaunchReplay = null;
     if (blocked || !id) return;
@@ -8165,7 +8203,7 @@ async function flushHostedLaunchReplay() {
 function startMission(mission, opts = {}) {
   if (!hostedLaunchSettled) {
     void (async () => {
-      const blocked = await enforceHostedPlan();
+      const blocked = await enforceHostedPlan({ mission });
       if (!blocked) startMission(mission, opts);
     })();
     return false;
@@ -8176,7 +8214,6 @@ function startMission(mission, opts = {}) {
   }
   if (!mission) return false;
   if (hostedPlanBlocksMission(mission)) {
-    if (isClerkSignedIn()) void redirectHostedSubscribe();
     return false;
   }
 
