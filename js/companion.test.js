@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { resolveScenarioPremise } from "./companion-context.js";
 import {
   parseCompanion,
   parseExploration,
@@ -197,7 +198,7 @@ describe("Moonshots fixture", () => {
     assert.match(stage.linkUrl, /t=2698/);
     assert.equal(stage.linkLabel, "Listen at 44:58");
     assert.equal(stage.moveLabel, "Opinion");
-    assert.match(stage.evidenceSentence, /Disputed/);
+    assert.match(stage.evidenceSentence, /The claim is disputed\./);
     assert.equal(stage.collaborationLine, "Future Forge wrote this. Credit is not a partnership.");
     const constraint = sourceConstraintText(c);
     assert.ok(constraint.length <= 500);
@@ -292,6 +293,79 @@ describe("stage copy for other moves", () => {
     const stage = stageCopy(parsed.value);
     assert.equal(stage.moveLabel, "A prediction, not a current capability");
     assert.match(stage.evidenceSentence, /next year/);
+  });
+});
+
+describe("source details use ordinary prose", () => {
+  function render(companion, opts = {}) {
+    const game = fs.readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const code = game.slice(
+      game.indexOf("function appendDetailParagraph("),
+      game.indexOf("/**\n * Quest title still.")
+    );
+    const document = {
+      createElement(tag) {
+        return {
+          tag,
+          textContent: "",
+          childNodes: [],
+          appendChild(child) { this.childNodes.push(child); },
+          replaceChildren() { this.childNodes = []; },
+        };
+      },
+    };
+    const paint = new Function("document", "stageCopy", "resolveScenarioPremise", `${code}\nreturn paintSourceDetails;`)(
+      document, stageCopy, resolveScenarioPremise
+    );
+    const container = document.createElement("div");
+    paint(container, companion, opts);
+    const text = container.childNodes.map((p) => p.textContent || p.childNodes.map((a) => a.textContent).join(" ")).join("\n");
+    return { container, text };
+  }
+
+  it("shows authored assumptions without internal labels when the bank is not loaded", () => {
+    const { container, text } = render(fixture.companion, { includePrivate: true });
+    assert.ok(text.includes(fixture.companion.exploration.premise.grants[0].scope));
+    assert.ok(text.includes(fixture.companion.exploration.premise.grants[0].limits));
+    assert.ok(text.includes(fixture.companion.claim));
+    assert.doesNotMatch(text, /Grant\.|Not granted\.|Evidence\.|Row attribution\.|the bank row|not_yet|\bdue\b/);
+    assert.equal(container.childNodes.some((p) => p.childNodes.some((c) => c.tag === "strong")), false);
+    const link = container.childNodes.at(-1).childNodes[0];
+    assert.equal(link.href, fixture.companion.source.url);
+    assert.equal(link.rel, "noopener noreferrer");
+  });
+
+  it("omits evidence already visible on the stage but keeps it in workshop details", () => {
+    const evidence = stageCopy(fixture.companion).evidenceSentence;
+    assert.ok(evidence);
+    const game = fs.readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const stage = game.slice(game.indexOf("function openCompanionStage("), game.indexOf("function openCompanionStage(") + 7000);
+    assert.match(stage, /paintSourceDetails\(stageBody, companion, \{[^}]*evidenceShown: true,/);
+    assert.match(stage, /setCompanionText\("companion-evidence", evidence\)/);
+    const stageDetails = render(fixture.companion, { evidenceShown: true }).text;
+    assert.equal(stageDetails.includes(evidence), false);
+    assert.ok(stageDetails.includes(fixture.companion.exploration.premise.grants[0].limits));
+    const workshopDetails = render(fixture.companion, { includePrivate: true }).text;
+    assert.equal(workshopDetails.split(evidence).length - 1, 1);
+  });
+
+  it("describes a future or available capability in full sentences", () => {
+    const bank = JSON.parse(fs.readFileSync(new URL("../test/fixtures/predictions/companion-dock-test.json", import.meta.url), "utf8"));
+    const future = render(fixture.companion, { bank, year: 2025 }).text;
+    assert.match(future, /This capability becomes available in this Quest in 2026\./);
+    assert.doesNotMatch(future, /not_yet|the bank row/);
+    const current = render(fixture.companion, { bank, year: 2026, claimShown: true }).text;
+    assert.match(current, /You can rely on this capability from 2026 in this Quest\./);
+    assert.equal(current.includes(fixture.companion.claim), false);
+  });
+
+  it("describes forecasts without label fragments and preserves month names", () => {
+    for (const horizon of ["Around the end of 2027", "April 2027"]) {
+      const copy = stageCopy({ ...base(), move: "prediction", evidence: { status: "prediction", horizon, limits: "The date may change." } });
+      assert.match(copy.evidenceSentence, /^This is a forecast, not a demonstrated capability\./);
+      assert.doesNotMatch(copy.evidenceSentence, /A prediction\.|Horizon:|Scope:/);
+      assert.ok(copy.evidenceSentence.includes(horizon === "April 2027" ? "April 2027" : "around the end of 2027"));
+    }
   });
 });
 

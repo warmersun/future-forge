@@ -5973,14 +5973,11 @@ function assumedPremiseCopy(companion, year, bank) {
   return `${statement} Available in this Quest from ${Math.min(...years)}.`;
 }
 
-function appendDetailLine(parent, label, text) {
+function appendDetailParagraph(parent, text) {
   const value = String(text || "").trim();
   if (!value) return;
   const p = document.createElement("p");
-  const strong = document.createElement("strong");
-  strong.textContent = label;
-  p.appendChild(strong);
-  p.appendChild(document.createTextNode(` ${value}`));
+  p.textContent = value;
   parent.appendChild(p);
 }
 
@@ -5993,25 +5990,26 @@ function paintSourceDetails(container, companion, opts = {}) {
   const resolved =
     bank && companion ? resolveScenarioPremise(companion, bank, year) : { ok: false, premise: null };
   if (opts.includePrivate) {
-    appendDetailLine(container, "Focus.", companion?.exploration?.focus);
-    appendDetailLine(container, "Connection.", companion?.exploration?.bridge);
+    appendDetailParagraph(container, companion?.exploration?.focus);
+    appendDetailParagraph(container, companion?.exploration?.bridge);
   }
-  if (copy.quote && copy.claim) appendDetailLine(container, "Claim.", copy.claim);
-  else if (!opts.claimShown && copy.claim) appendDetailLine(container, "Claim.", copy.claim);
+  if (!opts.claimShown && copy.claim) appendDetailParagraph(container, copy.claim);
   const grants = resolved.ok ? resolved.premise?.grants || [] : companion?.exploration?.premise?.grants || [];
   for (const grant of grants) {
-    const when = grant.year ? `${grant.year}` : "the bank row";
-    const status = grant.status ? `, ${grant.status}` : "";
-    const headline = grant.headline ? `${grant.headline} ` : "";
-    appendDetailLine(container, "Grant.", `${headline}(${when}${status}). ${grant.scope || ""}`.trim());
-    appendDetailLine(container, "Not granted.", grant.limits);
+    appendDetailParagraph(container, grant.scope);
+    if (grant.year) {
+      appendDetailParagraph(
+        container,
+        grant.status === "not_yet"
+          ? `This capability becomes available in this Quest in ${grant.year}.`
+          : `You can rely on this capability from ${grant.year} in this Quest.`
+      );
+    }
+    appendDetailParagraph(container, grant.limits);
     const who = typeof grant.attribution === "string" ? grant.attribution : grant.attribution?.name;
-    appendDetailLine(container, "Row attribution.", who);
+    if (who) appendDetailParagraph(container, `This assumption draws on a forecast by ${who}.`);
   }
-  appendDetailLine(container, "Evidence.", copy.evidenceSentence);
-  const speaker = copy.speaker;
-  const from = companion?.source?.show || companion?.source?.publication || "";
-  appendDetailLine(container, "Source.", [speaker, from].filter(Boolean).join(", "));
+  if (!opts.evidenceShown) appendDetailParagraph(container, copy.evidenceSentence);
   if (copy.linkUrl) {
     const p = document.createElement("p");
     const a = document.createElement("a");
@@ -6099,6 +6097,7 @@ function openCompanionStage(entry) {
     paintSourceDetails(stageBody, companion, {
       includePrivate: false,
       claimShown: !copy.quote && Boolean(copy.claim),
+      evidenceShown: true,
       year: stageYear,
       bank: stageBank,
     });
@@ -6126,6 +6125,38 @@ function openCompanionStage(entry) {
       link.removeAttribute("href");
       link.textContent = "";
     }
+  }
+  const narrative = document.getElementById("companion-narrative");
+  if (narrative) {
+    attachReadAloud(narrative, {
+      minChars: 12,
+      continueOnChange: true,
+      getText: () => {
+        const parts = [];
+        for (const id of [
+          "companion-quote",
+          "companion-reading",
+          "companion-claim",
+          "companion-assume",
+          "companion-collab",
+          "companion-siblings",
+          "companion-evidence",
+        ]) {
+          const el = document.getElementById(id);
+          if (!el || el.hidden) continue;
+          const text = String(el.textContent || "").replace(/\s+/g, " ").trim();
+          if (text) parts.push(text);
+        }
+        const details = document.getElementById("companion-details");
+        const body = document.getElementById("companion-details-body");
+        if (details && !details.hidden && body) {
+          const text = String(body.textContent || "").replace(/\s+/g, " ").trim();
+          if (text) parts.push(text);
+        }
+        return parts.join("\n\n");
+      },
+    });
+    refreshReadAloud(narrative);
   }
   showScreen("companion");
 }

@@ -654,12 +654,18 @@ export function stageCopy(companion) {
   } else {
     byline = String(source.author || source.publication || "");
   }
-  const statusLabel = STATUS_LABEL[evidence.status] || "";
+  const evidenceLead = {
+    demonstrated: "The source describes a demonstrated result.",
+    inferred: "The claim is an inference from the available evidence.",
+    proposed: "The source proposes this; it has not been demonstrated.",
+    disputed: "The claim is disputed.",
+    prediction: "This is a forecast, not a demonstrated capability.",
+  }[evidence.status];
   const evidenceBits = [];
-  if (statusLabel) evidenceBits.push(statusLabel.endsWith(".") ? statusLabel : `${statusLabel}.`);
+  if (evidenceLead) evidenceBits.push(evidenceLead);
   if (evidence.limits) evidenceBits.push(String(evidence.limits));
-  if (evidence.scope) evidenceBits.push(`Scope: ${evidence.scope}.`);
-  if (evidence.horizon) evidenceBits.push(`Horizon: ${evidence.horizon}.`);
+  if (evidence.scope) evidenceBits.push(`The evidence covers ${String(evidence.scope).replace(/[.!?]$/, "")}.`);
+  if (evidence.horizon) evidenceBits.push(`The forecast is for ${String(evidence.horizon).replace(/^(Around|By|Within|Next|Early|Late)\b/, (word) => word.toLowerCase()).replace(/[.!?]$/, "")}.`);
   const linkUrl = String(source.url || "");
   const linkLabel = sourceLinkLabel(medium, source);
   const collaboration = c.collaboration === "co-produced" ? "co-produced" : "independent";
@@ -678,7 +684,7 @@ export function stageCopy(companion) {
     collaborationLine:
       collaboration === "co-produced" && c.partnerName
         ? `Made with ${c.partnerName}.`
-        : "Future Forge wrote this. Credit is not a partnership.",
+        : "Created independently by Future Forge. Not affiliated with the source's creators.",
     linkLabel,
     linkUrl: linkUrl.startsWith("https://") ? linkUrl : "",
   };
