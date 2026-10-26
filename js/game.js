@@ -278,11 +278,12 @@ import {
   sameModuleLessonOffer,
 } from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
+import { createCapabilityExplorer } from "./capability-explorer.js?v=outlook-1";
 import {
   mountTrendChart,
   destroyTrendChart,
   formatTrendValue,
-} from "./trend-chart.js";
+} from "./trend-chart.js?v=explorer-1";
 import { SCENE_PROSE } from "./scene-prose.js";
 import { clipSummary, ensureQuestSummary } from "./quest-summary.js";
 import { renderMarkdownSafe, excerptFromBrief, plainTextFromMarkdown } from "./md-lite.js";
@@ -1420,6 +1421,7 @@ function mpHydrateAndRender(opts = {}) {
       const drafts = captureFocusedInventDrafts();
       b.hydrateSoloState(state, { global: state.global });
       reapplyFocusedInventDrafts(drafts);
+      syncCapabilityExplorer();
       applyEndTurnChrome();
       if (!opts.skipTurnNotice) maybeNotifyMpTurnStart();
     } catch (e) {
@@ -1536,6 +1538,63 @@ let ideaDeckTechId = null;
 let focusedTechId = null;
 /** @type {ReturnType<typeof createHexWorkshop>|null} */
 let hexWorkshop = null;
+
+// The controller owns presentation only; snapshots always come from the currently
+// hydrated invention, never from a captured asynchronous request.
+let capabilityExplorer = null;
+let capabilityExplorerHost = null;
+let capabilityExplorerRun = 0;
+
+function resetCapabilityExplorerRun() {
+  capabilityExplorerRun += 1;
+  disposeCapabilityExplorer();
+}
+
+function suspendCapabilityExplorer() {
+  capabilityExplorer?.suspend();
+}
+
+function disposeCapabilityExplorer() {
+  capabilityExplorer?.destroy();
+  capabilityExplorer = null;
+  capabilityExplorerHost = null;
+}
+
+function syncCapabilityExplorer() {
+  if (state.screen !== "workshop" || !state.mission) return;
+  const host = $("#invent-capability-explorer");
+  if (!host) { disposeCapabilityExplorer(); return; }
+  if (capabilityExplorerHost !== host) {
+    disposeCapabilityExplorer();
+    capabilityExplorerHost = host;
+    capabilityExplorer = createCapabilityExplorer(host, {
+      mountTrendChart,
+      destroyTrendChart,
+      retry: () => refreshHostedTrends({ force: true, silent: true }),
+    });
+  }
+  const ref = state.mission.packageRef || state.runWorld?.packageRef || null;
+  const viewIdentity = JSON.stringify([
+    capabilityExplorerRun, state.mp?.mode || "solo", state.mp?.code || null,
+    state.mission.id, ref?.packageId || null, ref?.questId || null,
+    ref?.revision || null, state.mp?.viewSeatId || null,
+  ]);
+  capabilityExplorer.update({
+    mission: state.mission,
+    runWorld: state.runWorld,
+    pinnedPredictionsBank: state.pinnedPredictionsBank,
+    ambientBank: getWorldForesightBank(),
+    scenarioPremise: liveScenarioPremise(),
+    year: state.year,
+    focusedTechId,
+    focusedTechName: focusedTechId ? techById(focusedTechId)?.name || "" : "",
+    selectedTechIds: state.selectedTechIds,
+    catalogTrends: state.hostedTrends,
+    catalogStatus: !state.hostedTrendsLoaded ? "loading" : state.hostedTrendsOk ? "ready" : "error",
+    status: { catalog: !state.hostedTrendsLoaded ? "loading" : state.hostedTrendsOk ? "ready" : "error" },
+    viewIdentity,
+  });
+}
 
 function activePinnedBank() {
   return bankForRun(state);
@@ -3369,6 +3428,7 @@ function enterRoomPlay(client, opts = {}) {
       }
       // New race after outcome — force full re-enter once
       if (evt.type === "next_quest_started" || evt.type === "quest_started") {
+        resetCapabilityExplorerRun();
         const nextKey = roomPlaySessionKey(client);
         if (nextKey !== roomPlayEnterKey) {
           flashToast("Race starting!");
@@ -4383,6 +4443,7 @@ function showScreen(id) {
     id = "workshop";
     state.screen = "workshop";
   }
+  if (id !== "workshop") suspendCapabilityExplorer();
   hangupVoiceOnScreenChange(prevScreen, id);
   if (id !== "workshop") {
     try {
@@ -5509,12 +5570,13 @@ async function refreshHostedTrends(opts = {}) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
       if (!opts.silent) flashToast("Could not load capability trends.");
-      state.hostedTrends = [];
       state.hostedTrendsOk = false;
       state.hostedTrendsLoaded = true;
       return [];
     }
-    state.hostedTrends = Array.isArray(data.trends) ? data.trends : [];
+    if (data.remoteOk !== false || (Array.isArray(data.trends) && data.trends.length)) {
+      state.hostedTrends = Array.isArray(data.trends) ? data.trends : [];
+    }
     state.hostedTrendsUrl = data.url ?? null;
     state.hostedTrendsOk = data.remoteOk !== false;
     state.hostedTrendsLoaded = true;
@@ -5522,10 +5584,11 @@ async function refreshHostedTrends(opts = {}) {
     return state.hostedTrends;
   } catch {
     if (!opts.silent) flashToast("Could not reach /api/trends.");
-    state.hostedTrends = [];
     state.hostedTrendsOk = false;
     state.hostedTrendsLoaded = true;
     return [];
+  } finally {
+    syncCapabilityExplorer();
   }
 }
 
@@ -8272,6 +8335,7 @@ function startMission(mission, opts = {}) {
     const session = missionPickSession;
     missionPickSession = null;
     try {
+      resetCapabilityExplorerRun();
       session.onSelect(handed, global);
     } catch (e) {
       console.error("[mission pick]", e);
@@ -8310,6 +8374,7 @@ function startMission(mission, opts = {}) {
     flashToast(pinned.message);
     return false;
   }
+  resetCapabilityExplorerRun();
   state.runWorld = pinned.world;
   state.pinnedPredictionsBank = null;
   delete merged.pinnedPredictionsBank;
@@ -8800,6 +8865,7 @@ function renderWorkshop() {
   updateLearnButton();
   updateChallengeButton();
   renderWorkshopDeployBay();
+  syncCapabilityExplorer();
   ensureCoInventor();
   // Co-inventor may remount — re-apply spectator / busy locks
   syncInventActionButtons();
@@ -9806,6 +9872,7 @@ function renderTechList() {
       }
       focusedTechId = btn.dataset.techToggle;
       onTechClick(btn.dataset.techToggle);
+      syncCapabilityExplorer();
     });
   });
   el.querySelectorAll(".tech-card").forEach((card) => {
@@ -10126,6 +10193,7 @@ function focusTech(techId) {
   renderSelectedChips();
   renderIdeaFocusBar();
   updateLearnButton();
+  syncCapabilityExplorer();
   refreshCoachMarks();
 }
 
@@ -23589,6 +23657,8 @@ async function loadPredictionsFromServer() {
     if (!set.ok) console.warn("[predictions] server bank rejected", set.errors);
   } catch {
     /* offline / static — no bank; bulletins read as a quiet year */
+  } finally {
+    syncCapabilityExplorer();
   }
 }
 

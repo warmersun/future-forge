@@ -211,11 +211,14 @@ Apply buttons still confirm anything that would change the board. The co-invento
 
 Timing has two instruments.
 
-**Capability trends** are measured curves: cost per genome, solar levelized cost, frontier training compute, and so on. Each file is one series with a compounding rule (doubling, halving, or compound annual growth), an anchor, and dated milestones. They draw on **Look Ahead** / Wait charts (log scale). The official catalog is published from Warmer Sun (`FF_TRENDS_REMOTE_URL`). A Quest may embed `trends` or `spotlightTrends`, which override the catalog by id. Schema: [capability-trend-schema.md](capability-trend-schema.md). Loading: [capability-trends-remote.md](capability-trends-remote.md).
+**Capability trends** model measured series: cost per genome, solar levelized cost, frontier training compute, and so on. Each file is one series with a compounding rule (doubling, halving, or compound annual growth), an anchor, and dated milestones. The inline **Capability outlook** in Invent shows relevant trends for the focused technology, or the selected stack when none is focused. Choose a trend to see its description, modeled curve, quest year, milestones and sources; where the description overflows, **Read full description** expands the authored text. The estimate is conditional on the trend continuing and is not supplied outside its authored domain. Related predictions and milestones come from the active run's bank and are related by technology, not measurements of the curve. Missing coverage does not mean a capability is impossible.
+
+The explorer and its chart are read-only: viewing evidence does not advance the simulation or create a new authoritative grant for AI. Existing **Look Ahead** / **Wait +2 years** charts and the HUD year dialog remain available. The official catalog is published from Warmer Sun (`FF_TRENDS_REMOTE_URL`). A Quest may embed `trends` or `spotlightTrends`; embedded trends override catalog trends by id. Schema: [capability-trend-schema.md](capability-trend-schema.md). Loading: [capability-trends-remote.md](capability-trends-remote.md).
 
 **The predictions bank** is one JSON file, schema `future-forge.predictions/v1`, loaded at boot. The ship default is [predictions/default.json](../predictions/default.json). Set `FF_PREDICTIONS_FILE` to replace it (a path or an `https://` URL). A side-load replaces the default; it does not merge. The bank drives:
 
 - the year dialog when you open the calendar, and the bulletin after the year advances
+- related evidence in the inline Capability outlook
 - outcome foresight cards (one milestone, one trend, one prediction still ahead)
 - the **AI world clock**
 
@@ -380,9 +383,9 @@ In this checkout, quest, predictions, companion, and collector cards are also li
 | Skill | You author | It drives | Check |
 |-------|------------|-----------|-------|
 | [future-forge-quest](../skills/future-forge-quest/) | A Spotlight Quest tile. A learning Quest with pages also packs to one `.ffquest` | Library, External Quests, Sponsored and Learning catalogs, the briefing, grounding for every AI judgement, tutor mode | `npm run validate:quest -- <file> --strict` and `npm run economy:quest -- <file>` (verdict: **challenging**) |
-| [future-forge-predictions](../skills/future-forge-predictions/) | One `future-forge.predictions/v1` bank of dated milestones, trends, and predictions, with attribution | Year dialog, outcome foresight cards, the AI world clock | `npm run validate:predictions -- <file>`, then `FF_PREDICTIONS_FILE=<file> npm start` |
+| [future-forge-predictions](../skills/future-forge-predictions/) | One `future-forge.predictions/v1` bank of dated milestones, trends, and predictions, with attribution | Capability outlook, year dialog, outcome foresight cards, the AI world clock | `npm run validate:predictions -- <file>`, then `FF_PREDICTIONS_FILE=<file> npm start` |
 | [future-forge-companion](../skills/future-forge-companion/) | One companion quest from a YouTube video, podcast, blog, or X post, plus the grant rows when the premise is assumed | The source stage before play, and the bank that quest pins | The quest and predictions checks above. Procedure: that skill |
-| [future-forge-trends](../skills/future-forge-trends/) | One measured capability series (`future-forge.capability-trend/v1`): compounding, anchor, milestones. No invented statistics | Look Ahead charts; optional embed on a Quest | `npm run validate:trend -- <file>` |
+| [future-forge-trends](../skills/future-forge-trends/) | One measured capability series (`future-forge.capability-trend/v1`): compounding, anchor, milestones. No invented statistics | Inline Capability outlook and Look Ahead charts; optional embed on a Quest | `npm run validate:trend -- <file>` |
 | [future-forge-collector-cards](../skills/future-forge-collector-cards/) | One capability card plus a sibling page image | Public `/card/<id>` page; a free reusable invention tile once collected | `npm run validate:collector-card -- cards/<slug>.json` |
 
 Quest hard rules worth knowing before you edit a tile: the spotlight id is index 0 of `mission.suggested`, with 2–4 supporting ids; player-facing prose never names those technologies or a product as the answer; `briefMd` runs The place → The bigger problem → Your job (outcome only); `grounding` holds the truth the model must respect; new meters default to local 3↑1, global 2↑1, support 2↑0. The skill’s `references/` spell the character clips, the prose craft, the lint codes, and the economy.

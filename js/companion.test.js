@@ -199,7 +199,7 @@ describe("Moonshots fixture", () => {
     assert.equal(stage.linkLabel, "Listen at 44:58");
     assert.equal(stage.moveLabel, "Opinion");
     assert.match(stage.evidenceSentence, /The claim is disputed\./);
-    assert.equal(stage.collaborationLine, "Future Forge wrote this. Credit is not a partnership.");
+    assert.equal(stage.collaborationLine, "Created independently by Future Forge. Not affiliated with the source's creators.");
     const constraint = sourceConstraintText(c);
     assert.ok(constraint.length <= 500);
     assert.match(constraint, /opinion/i);

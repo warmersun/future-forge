@@ -8508,6 +8508,210 @@ body.challenge-spectator .scrutiny-move-btn.is-selected.is-spectator-locked {
   font-size: 0.9rem;
 }
 
+/* Capability outlook is sized by the Invent column, not the viewport. */
+.capability-explorer {
+  container-type: inline-size;
+  min-width: 0;
+  margin: 1rem 1.2rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
+  overflow-wrap: anywhere;
+}
+
+.capability-explorer[hidden] {
+  display: none;
+}
+
+.capability-explorer-header,
+.capability-explorer-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.capability-explorer-header {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.capability-explorer-heading {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.capability-explorer-heading strong {
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.capability-explorer-context {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.capability-explorer-choices {
+  margin-block: 0.9rem;
+  gap: 0.4rem;
+}
+
+.capability-explorer-choices button,
+.capability-explorer-header button {
+  padding: 0.38rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-3);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.capability-explorer-choices button:hover,
+.capability-explorer-header button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.capability-explorer-choices button[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.12);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.capability-explorer-choices button[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+.capability-explorer button,
+.capability-explorer a {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.capability-explorer :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent, #38bdf8);
+  outline-offset: 3px;
+}
+
+.capability-explorer-body,
+.capability-explorer-layout,
+.capability-explorer-description,
+.capability-explorer-chart-column {
+  min-width: 0;
+}
+
+.capability-explorer-title {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.capability-explorer-meta,
+.capability-explorer-assumption {
+  margin: 0.3rem 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.capability-explorer-estimate {
+  margin: 0.65rem 0 0.85rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--accent-2);
+  border-radius: var(--radius-sm);
+  background: rgba(167, 139, 250, 0.1);
+  font-size: 0.85rem;
+}
+
+.capability-explorer-body details {
+  margin-block: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-1);
+}
+
+.capability-explorer-body summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.capability-explorer-body details p,
+.capability-explorer-body details blockquote {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.capability-explorer-body h4 {
+  margin: 0.85rem 0 0.25rem;
+  font-size: 0.9rem;
+}
+
+.capability-explorer-body button[data-action="description"],
+.capability-explorer-body button[data-action="all"] {
+  padding: 0.25rem 0;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.capability-explorer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.capability-explorer-description-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.capability-explorer-description-text--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.capability-explorer-chart {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  min-width: 0;
+}
+
+.capability-explorer-chart canvas {
+  max-width: 100%;
+}
+
+.capability-explorer-rail {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+@container (min-width: 760px) {
+  .capability-explorer-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+
 .invent-form {
   padding: 1.1rem 1.2rem 2rem;
   display: flex;

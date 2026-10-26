@@ -3,7 +3,7 @@
  * Expects window.Chart (UMD) when mounting; buildTrendChartConfig is DOM-free.
  */
 
-import { sampleCurve } from "./capability-trend.js";
+import { sampleCurve, valueAtYear } from "./capability-trend.js";
 
 let _annotationRegistered = false;
 
@@ -66,16 +66,27 @@ export function formatTrendValue(v, unit = "") {
   return unit ? `${s} ${unit}` : s;
 }
 
+/** Return the modeled value only when the year is in the authored domain. */
+export function trendValueInDomain(trend, year) {
+  if (year == null || year === "") return null;
+  const y = Number(year);
+  const start = Number(trend?.domain?.start);
+  const end = Number(trend?.domain?.end);
+  if (trend?.domain?.start == null || trend?.domain?.end == null ||
+      !Number.isFinite(y) || !Number.isFinite(start) || !Number.isFinite(end) ||
+      end <= start || y < start || y > end) return null;
+  return valueAtYear(trend, y);
+}
+
 /**
  * Pure Chart.js config builder (no canvas required).
- * @param {object} trend — normalized capability trend
- * @param {{
- *   yearNow?: number,
- *   yearNext?: number,
- *   spotlight?: boolean,
- *   css?: object,
- *   curveSteps?: number,
- * }} [opts]
+ * @param {object} trend normalized capability trend
+ * @param {{yearNow?: number, yearNext?: number, spotlight?: boolean,
+ *   css?: object, curveSteps?: number, nowLabel?: string, dashedModel?: boolean,
+ *   displayMin?: number, displayMax?: number, explorerTicks?: boolean,
+ *   onLayout?: (chart: object) => void}} [opts]
+ * onLayout receives the chart after each layout, including resize layouts;
+ * use chart.scales.x and chart.chartArea for external rail alignment.
  */
 export function buildTrendChartConfig(trend, opts = {}) {
   const css = defaultCss(opts.css);
@@ -120,7 +131,7 @@ export function buildTrendChartConfig(trend, opts = {}) {
       borderDash: [4, 3],
       label: {
         display: true,
-        content: "now",
+        content: opts.nowLabel ?? "now",
         position: "start",
         backgroundColor: "rgba(2, 6, 14, 0.75)",
         color: css.text,
@@ -151,15 +162,19 @@ export function buildTrendChartConfig(trend, opts = {}) {
 
   return {
     type: "scatter",
+    ...(typeof opts.onLayout === "function" ? {
+      plugins: [{ id: "trendChartLayout", afterLayout(chart) { opts.onLayout(chart); } }],
+    } : {}),
     data: {
       datasets: [
         {
           type: "line",
-          label: "Trend",
+          label: opts.dashedModel ? "Trend model" : "Trend",
           data: curve,
           borderColor: lineColor,
           backgroundColor: "transparent",
           borderWidth: 2,
+          ...(opts.dashedModel ? { borderDash: [6, 4] } : {}),
           pointRadius: 0,
           pointHoverRadius: 0,
           tension: 0,
@@ -225,8 +240,10 @@ export function buildTrendChartConfig(trend, opts = {}) {
       scales: {
         x: {
           type: "linear",
-          min: Number.isFinite(domainStart) ? domainStart : undefined,
-          max: Number.isFinite(domainEnd) ? domainEnd : undefined,
+          min: opts.displayMin != null && Number.isFinite(Number(opts.displayMin))
+            ? Number(opts.displayMin) : Number.isFinite(domainStart) ? domainStart : undefined,
+          max: opts.displayMax != null && Number.isFinite(Number(opts.displayMax))
+            ? Number(opts.displayMax) : Number.isFinite(domainEnd) ? domainEnd : undefined,
           title: {
             display: true,
             text: "Year",
@@ -252,6 +269,7 @@ export function buildTrendChartConfig(trend, opts = {}) {
             callback(v) {
               const n = Number(v);
               if (!Number.isFinite(n) || n <= 0) return "";
+              if (opts.explorerTicks) return String(Number(n.toPrecision(12)));
               // Show decade ticks roughly
               const log10 = Math.log10(n);
               if (Math.abs(log10 - Math.round(log10)) > 0.001) return "";

@@ -4,12 +4,15 @@ Future Forge uses the `future-forge.predictions/v1` schema for calendars. Ordina
 
 | Surface | Code | What it reads |
 |---------|------|---------------|
+| Inline Invent Capability outlook | `js/capability-explorer-model.js` | Related rows from the run's active bank, matched by technology; three nearest by year initially, with an option to show all |
 | Year dialog (click the HUD year; bulletin after the calendar advances) | `foresightForYear` → `showYearBulletinModal` | 3–6 rows: new this year first, then still-active. Stack and theme hits rank higher |
 | Multiplayer bulletins | `js/sim/mp-session.js`, `js/sim/actions.js` | Same, computed on the server and synced in the place snapshot |
 | Outcome foresight cards | `foresightForStack` | One milestone and one trend due by the outcome year, one prediction still ahead |
 | AI world clock | `worldClockForYear` via `worldClockContext` in `js/server/fast-eval.mjs` | Due rows plus the nearest not-yet rows, each tagged `status: "due" \| "not_yet"` |
 
 Module: `js/sim/world-foresight.js` (validation, active bank, selectors). Loader: `js/predictions-bank.mjs`.
+
+The outlook can show these dated rows alongside a trend chart, but they are related by technology, not measurements of that curve. A date passing does not verify a prediction. Viewing evidence is read-only: it neither advances the simulation nor creates a new authoritative grant for AI. The HUD year dialog and Look Ahead / Wait entrypoints remain available. Package-bound or assumed-premise runs do not fall back to the ambient bank when their bound evidence is unavailable.
 
 ## Loading and side-loading
 

@@ -1,6 +1,8 @@
 # Capability trend schema (`future-forge.capability-trend/v1`)
 
-Portable **quantitative exponential trend** files for Future Forge Wait charts.
+Portable **quantitative exponential trend** files for the inline Invent Capability outlook and Future Forge Wait charts.
+
+The outlook displays the authored `summary`; when it overflows, **Read full description** expands the full text. Its chart is a read-only model, not a simulation action or a new authoritative grant for AI. An estimate is shown for the quest year only within the authored domain. Existing Look Ahead / Wait charts and the HUD year dialog remain available. This presentation adds no authoring fields or changes to the limits below.
 
 | Channel | How trends get in |
 |---------|------------------|
