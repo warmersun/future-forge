@@ -15,7 +15,7 @@ it('sideload preserves an explicit v1 developer bank and isolates v2 without sta
     fs.mkdirSync(bin);
     const python = spawnSync('which', ['python3'], { encoding: 'utf8' }).stdout.trim();
     // Stub only unpacking: exercise the real script's manifest/environment logic.
-    fs.writeFileSync(path.join(bin, 'python3'), `#!/usr/bin/env bash\nif [[ "$2" == "unpack" ]]; then\n dest="$4"\n if [[ "$TEST_VERSION" == "2" ]]; then dest="$dest/raw"; fi\n mkdir -p "$dest/quests"\n printf '{"version":%s}' "$TEST_VERSION" > "$dest/manifest.json"\nelse\n exec ${JSON.stringify(python)} "$@"\nfi\n`, { mode: 0o755 });
+    fs.writeFileSync(path.join(bin, 'python3'), `#!/usr/bin/env bash\nif [[ "$2" == "unpack" ]]; then\n dest="$4"\n if [[ "$TEST_VERSION" == "2" ]]; then dest="$dest/raw"; fi\n mkdir -p "$dest/quests"\n printf '{"id":"test-quest","version":%s}' "$TEST_VERSION" > "$dest/manifest.json"\nelse\n exec ${JSON.stringify(python)} "$@"\nfi\n`, { mode: 0o755 });
     fs.writeFileSync(path.join(bin, 'node'), '#!/usr/bin/env bash\nprintf "BANK=%s\\nPACKAGES=%s\\nARGS=%s\\n" "${FF_PREDICTIONS_FILE-unset}" "${FF_QUEST_PACKAGES_DIR-unset}" "$*"\n', { mode: 0o755 });
     const pkg = path.join(dir, 'test.ffquest');
     fs.writeFileSync(pkg, 'unpack stub fixture');
@@ -24,7 +24,8 @@ it('sideload preserves an explicit v1 developer bank and isolates v2 without sta
       assert.equal(result.status, 0, result.stderr);
       assert.match(result.stdout, version === '1' ? /BANK=\/developer\/intentional-bank.json/ : /BANK=unset/);
       assert.match(result.stdout, version === '1' ? /PACKAGES=unset/ : /PACKAGES=.*ffquest\./);
-      assert.match(result.stdout, /ARGS=server.mjs --developer --ai-search/);
+      assert.match(result.stdout, /ARGS=server\.mjs --developer --ai-search/);
+      assert.match(result.stdout, /Quest:\s+http:\/\/127\.0\.0\.1:\d+\/\?q=test-quest/);
     }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

@@ -50,6 +50,10 @@ fi
 export FF_PORT="$PORT"
 # v2 owns its calendar; v1 intentionally retains a developer-configured bank.
 PACKAGE_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$PACKAGE_ROOT/manifest.json")"
+# The manifest id is the tile the deep link resolves to: the module wrapper for a
+# module package, otherwise the single quest. Print it so a sideload opens on the
+# quest itself rather than the Library root.
+QUEST_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("id",""))' "$PACKAGE_ROOT/manifest.json" 2>/dev/null || true)"
 if [[ "$PACKAGE_VERSION" == "2" ]]; then
   unset FF_PREDICTIONS_FILE
 fi
@@ -61,4 +65,7 @@ echo "  Library quests: $FF_QUESTS_DIR"
 echo "  Package release: $PACKAGE_ROOT"
 echo "  Lessons: http://127.0.0.1:${PORT}/content/"
 echo "  Open:    http://127.0.0.1:${PORT}/"
+if [[ -n "$QUEST_ID" ]]; then
+  echo "  Quest:   http://127.0.0.1:${PORT}/?q=${QUEST_ID}"
+fi
 node server.mjs --developer --ai-search "$@"
