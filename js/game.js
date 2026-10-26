@@ -28,7 +28,7 @@ import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-19";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-20";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-19";
 import {
@@ -852,9 +852,15 @@ function applyInventSidePanes() {
   const co = document.querySelector("#side-coinventor");
   const trace = document.querySelector("#side-aitrace");
   const log = document.querySelector("#side-log");
-  const showCo = tab === "vision" || tab === "coinventor";
-  if (stack) stack.hidden = !showCo;
-  if (vision) vision.hidden = false;
+  // All three tabs share the upper slot; the co-inventor stays below them.
+  for (const pane of [log, trace]) {
+    if (stack && pane && pane.parentElement !== stack) {
+      stack.insertBefore(pane, stack.querySelector(".vision-split-handle"));
+      pane.classList.add("vision-stack-top");
+    }
+  }
+  if (stack) stack.hidden = false;
+  if (vision) vision.hidden = tab !== "vision";
   if (co) co.hidden = false;
   if (trace) trace.hidden = tab !== "aitrace";
   if (log) log.hidden = tab !== "log";
@@ -23300,6 +23306,17 @@ function bind() {
     refreshChallengeVision(null, { immediate: true, force: true });
   });
 
+  document.addEventListener("ff-co-inventor-toggle-collapse", () => {
+    const panel = document.querySelector("#screen-workshop .vision-panel");
+    const button = panel?.querySelector("#co-collapse-toggle");
+    if (!button) return;
+    const collapsed = panel.classList.toggle("is-co-collapsed");
+    button.setAttribute("aria-expanded", String(!collapsed));
+    const label = `${collapsed ? "Expand" : "Collapse"} AI co-inventor`;
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    document.dispatchEvent(new Event("ff-side-layout"));
+  });
   $$(".side-tab[data-tab]").forEach((btn) =>
     btn.addEventListener("click", () => setSideTab(btn.dataset.tab))
   );

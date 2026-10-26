@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import {
   DEFAULT_RATIO,
   KEY_STEP,
@@ -81,6 +83,54 @@ function fakeStack(doc) {
   };
   return { stack, listeners };
 }
+
+describe("workshop shared upper pane", () => {
+  it("keeps co-inventor below all three tabs without resetting collapse", () => {
+    const source = readFileSync(new URL("./game.js", import.meta.url), "utf8");
+    const start = source.indexOf("function applyInventSidePanes()");
+    const end = source.indexOf("function seedLearningVisionStill()", start);
+    const panes = Object.fromEntries(["vision", "coinventor", "log", "aitrace"].map((id) => [
+      `#side-${id}`,
+      { hidden: false, classList: { add(name) { this[name] = true; } } },
+    ]));
+    const stack = {
+      querySelector() { return null; },
+      insertBefore(pane) { pane.parentElement = this; },
+    };
+    const classes = new Set(["is-co-collapsed"]);
+    const panel = {
+      classList: {
+        remove(...names) { names.forEach((name) => classes.delete(name)); },
+        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      },
+      querySelector() { return stack; },
+    };
+    const state = {};
+    const apply = runInNewContext(`(${source.slice(start, end)})`, {
+      state,
+      visionPaneAway: () => false,
+      document: {
+        querySelector: (selector) => selector.includes(".vision-panel") ? panel : panes[selector],
+        dispatchEvent() {},
+      },
+      Event: class {},
+    });
+    for (const tab of ["vision", "log", "aitrace"]) {
+      state.sideTab = tab;
+      apply();
+      assert.equal(stack.hidden, false);
+      assert.equal(panes["#side-coinventor"].hidden, false);
+      assert.ok(classes.has("is-co-collapsed"));
+      for (const id of ["vision", "log", "aitrace"]) {
+        assert.equal(panes[`#side-${id}`].hidden, id !== tab);
+      }
+    }
+    for (const id of ["log", "aitrace"]) {
+      assert.equal(panes[`#side-${id}`].parentElement, stack);
+      assert.ok(panes[`#side-${id}`].classList["vision-stack-top"]);
+    }
+  });
+});
 
 describe("bindVisionSplit shared ratio", () => {
   it("arrow keys on a second handle continue from the saved ratio", () => {

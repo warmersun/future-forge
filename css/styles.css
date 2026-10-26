@@ -13460,6 +13460,61 @@ body.ff-second-pane .btn-second-screen {
   max-height: none;
 }
 
+/* ── Co-inventor collapse toggle ───────────────────────────────────── */
+.co-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  line-height: 1;
+}
+
+.co-collapse-chevron {
+  transition: transform 0.25s ease;
+}
+
+.vision-panel.is-co-collapsed .co-collapse-chevron {
+  transform: rotate(180deg);
+}
+
+/* When collapsed: hide everything below the header, hide the split handle,
+   and let the top pane (vision) fill the stack. */
+#screen-workshop .vision-panel.is-co-collapsed .vision-split-handle {
+  display: none !important;
+}
+
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-bottom {
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-bottom .co-actions,
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-bottom .co-messages,
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-bottom .co-compose,
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-bottom .co-voice-caption {
+  display: none !important;
+}
+
+#screen-workshop .vision-panel.is-co-collapsed .vision-stack-top {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+#screen-workshop .vision-co-stack > .vision-stack-top[hidden] {
+  display: none !important;
+}
+
+/* Collapsing is a workshop layout control, not a detached/chat-only control. */
+.co-collapse-toggle {
+  display: none;
+}
+
+#screen-workshop .vision-stack-bottom .co-collapse-toggle {
+  display: inline-flex;
+}
+
 body.ff-second-pane {
   margin: 0;
   height: 100vh;

@@ -277,6 +277,14 @@ export class CoInventor {
             title="Resume AI tutor mode — free AP, one short idea at a time (learning quests only)"
           >Resume tutoring</button>
           <button type="button" class="btn btn-ghost btn-sm" id="co-clear" title="Clear chat">Clear</button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm co-collapse-toggle"
+            id="co-collapse-toggle"
+            aria-expanded="true"
+            aria-label="Collapse AI co-inventor"
+            title="Collapse AI co-inventor"
+          ><svg class="co-collapse-chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>
       <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
@@ -374,6 +382,15 @@ export class CoInventor {
     root.querySelector("#co-clear").addEventListener("click", () => {
       if (this.learningQuest && this.tutorMode) return;
       this.reset(true);
+    });
+    const collapseButton = root.querySelector("#co-collapse-toggle");
+    const collapsed = root.closest(".vision-panel")?.classList.contains("is-co-collapsed");
+    const collapseLabel = `${collapsed ? "Expand" : "Collapse"} AI co-inventor`;
+    collapseButton?.setAttribute("aria-expanded", String(!collapsed));
+    collapseButton?.setAttribute("aria-label", collapseLabel);
+    if (collapseButton) collapseButton.title = collapseLabel;
+    collapseButton?.addEventListener("click", () => {
+      document.dispatchEvent(new CustomEvent("ff-co-inventor-toggle-collapse"));
     });
     root.querySelector("#co-end-tutor")?.addEventListener("click", () => {
       if (
