@@ -1,0 +1,24 @@
+{
+  "source": "UC Davis College of Engineering news, Nadine A. Yehya (UC Davis Health), 26 Oct 2026: 'First-in-human study of dual-imaging catheter to assess heart attack risk, guide treatment' (https://engineering.ucdavis.edu/news/first-human-study-dual-imaging-catheter-assess-heart-attack-risk-guide-treatment). Full story on UC Davis Health, dated 20 Oct 2026 (https://health.ucdavis.edu/news/headlines/first-in-human-study-of-dual-imaging-catheter-to-assess-heart-attack-risk-guide-treatment/2026/10). Confirmed: flexible catheter built in academic lab (NCIBT / Marcu Lab; catheter and console by Julien Bec); FLIm (artery wall's faint natural fluorescence = biochemical composition) + PS-OCT (scattered light = microstructure) at once in coronary arteries; previously animals and human coronary artery samples; FDA approval this year as investigational device in 10 patients; imaging of final patient completed Aug 2026; aims: assess heart-attack risk, guide/personalize treatment (stents, drugs), detect plaque before stenosis; current cath (OCT/IVUS) shows structure only, not biochemistry; single pullback; next step scale up — no clinical outcome results claiming better heart-attack prediction. Health story also names 80 mm / 2 s pullback and Southard/Zhou roles; those extras left out of player prose per Bob's 'no other numbers' / stick-to list. Not stored or shown.",
+  "id": "8045c787-dc0b-4b8c-9768-9b09f75bf572",
+  "techId": "iot",
+  "title": "A heart tube that sees what artery plaque is made of",
+  "description": "A thin flexible tube, the kind doctors already slide into a heart artery, now looks two ways at once. One reads the artery wall's faint natural glow to show what a plaque — the fatty buildup on the wall — is made of. The other maps how that plaque is built from the way light scatters back. Together they show chemistry and structure in real time while the tube moves through the artery.",
+  "capability": "Doctors can now see both what a plaque (the fatty buildup) inside a heart artery is made of and how it is built, in one pass, during a routine thin-tube heart procedure. So far this has only been tried in a small first study in people; nobody has yet shown it predicts heart attacks better than today's tools.",
+  "useCases": [
+    "The goal: helping doctors judge which plaque is more likely to cause a heart attack, so they can act earlier. Not shown yet — nobody has proven this predicts heart attacks better.",
+    "The goal: helping doctors choose treatments such as stents (tiny scaffolds that hold an artery open) and medicines, based on what the plaque is made of. Not shown yet.",
+    "The goal: spotting plaque buildup in a heart artery before it narrows enough to cut blood flow. Named as a hope; not yet shown to change care."
+  ],
+  "body": "Doctors already use thin flexible tubes to look inside heart arteries. Today's versions can show the shape of the artery wall, but not what a plaque is made of — and that chemistry is what can make a plaque unstable and raise the risk of a heart attack.\n\nThis tube adds a second look at the same time. One part reads the artery wall's faint natural glow to show the plaque's chemistry. The other maps how the plaque is built from how light scatters. In one pass both pictures come back together, while the tube is pulled through the artery.\n\nIt was first tested in animals and in samples of human heart arteries. This year it was cleared for a first study in ten people as an investigational device, and imaging of the last of those people finished in August 2026. There are no results yet on whether it helps doctors choose better treatments or predict heart attacks more accurately. The next step the team names is a larger study.",
+  "links": [
+    {
+      "label": "The announcement of the first study in people",
+      "url": "https://engineering.ucdavis.edu/news/first-human-study-dual-imaging-catheter-assess-heart-attack-risk-guide-treatment"
+    },
+    {
+      "label": "The fuller story with how the tube works and what it aims to do",
+      "url": "https://health.ucdavis.edu/news/headlines/first-in-human-study-of-dual-imaging-catheter-to-assess-heart-attack-risk-guide-treatment/2026/10"
+    }
+  ]
+}
