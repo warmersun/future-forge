@@ -264,7 +264,7 @@ This section details all environment variables required for each running applica
 | `FF_QUESTS_BUCKET` | **Required** | `quests` | Name of the private Neon Object Storage bucket holding official quest packages. | Neon bucket name (`quests`). Created via `neon.portal.ts` / Neon Console. |
 | `FF_GAME_DEVICE_ORIGINS` | Optional | `https://ff.warmersun.com` | Comma-separated list of additional game origins allowed for device handshake CORS (loopbacks and LAN IPs are allowed automatically). | Add `https://ff.warmersun.com` and any custom Tailscale Funnel origins. |
 | `FF_ALLOW_LAN_ORIGINS` | Optional | `1` | Controls whether private LAN origins (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) are allowed for device handshake CORS. Default `1` (allowed); set to `0` to forbid. | Operator preference. Default is `1`. |
-| `FF_CLOUD_PLAN_SLUGS` | **Required** | `cloud` | Comma-separated list of Clerk subscription plan slugs eligible to spend Cloud AI quota. | Matches plan slug created in **Clerk Dashboard** &rarr; **Billing** &rarr; **Plans** (e.g. `cloud`). |
+| `FF_CLOUD_PLAN_SLUGS` | **Required** | `cloud` | Comma-separated list of Clerk subscription plan slugs eligible to spend Cloud AI quota. A Content slug here would grant hosted AI. | Matches the Cloud plan slug in **Clerk Dashboard** &rarr; **Billing** &rarr; **Plans** (e.g. `cloud`). |
 | `FF_CLOUD_AI_BUDGET` | **Required** | `5000` | Points allocated per billing cycle for active subscribers. | Defined by operator pricing model (e.g., `5000` points). |
 | `FF_QUOTA_TEXT_IN_PER_KTOK` | **Required** | `2` | Quota points charged per 1,000 prompt input tokens. | Operator policy (see `.env.portal.example`). Default `2`. |
 | `FF_QUOTA_TEXT_OUT_PER_KTOK` | **Required** | `6` | Quota points charged per 1,000 generated output tokens. | Operator policy (see `.env.portal.example`). Default `6`. |
@@ -348,5 +348,7 @@ In **Clerk Dashboard** &rarr; **Configure** &rarr; **Webhooks**:
 ### 4.3. Clerk Billing (Subscription Plan Slug)
 In **Clerk Dashboard** &rarr; **Configure** &rarr; **Billing**:
 - **Enable Billing**: Toggle on Clerk Billing / Pricing features.
-- **Create Plan**: Create a plan with **Slug:** `cloud` (must match `FF_CLOUD_PLAN_SLUGS=cloud`).  
-  *(The backend quota engine ignores Clerk's built-in `free_user` plan. Users must have an active subscription with slug `cloud` to spend Cloud AI quota).*
+- **Create Plans** (user plans, not organization plans):
+  - **Slug:** `cloud` (must match `FF_CLOUD_PLAN_SLUGS=cloud`). Active subscribers spend Cloud AI quota. The live plan is “Future Forge Hosted4U,” $49 USD monthly.
+  - **Slug:** `content` (must match `FF_CONTENT_PLAN_SLUGS=content`). Name “Content,” $10 USD monthly, public on the user pricing table. Unlocks paid catalog bodies. It does not spend AI quota. Cloud includes Content in the app, so do not add `content` to `FF_CLOUD_PLAN_SLUGS`.
+  *(The backend ignores Clerk's built-in `free_user` plan. Unknown paid slugs are stored as `cloud` so older subscribers keep inference. The slug `content` is stored as itself.)*

@@ -104,7 +104,7 @@ describe("quest portal client", () => {
       status: 402,
       json: async () => ({
         ok: false,
-        error: "subscription_required",
+        error: "content_required",
         subscribeUrl: "https://cloud.warmersun.com/subscribe",
         tile: { id: "paid-1", gated: true, access: "paid" },
       }),
@@ -124,7 +124,7 @@ describe("quest portal client", () => {
     );
     assert.equal(decided.ok, false);
     assert.equal(decided.status, 402);
-    assert.equal(decided.error, "subscription_required");
+    assert.equal(decided.error, "content_required");
   });
 
   it("replaces client tutor notes with the portal tile", async () => {

@@ -3,7 +3,7 @@
  * When Clerk is off, nothing is gated (self-host / LAN).
  * When Clerk is on, *curated remote* learning (and access:account|paid) tiles
  * need a session before the quest JSON is returned. access:paid that bills
- * the player also needs an active subscription. Library side-load
+ * the player needs the content plan. Cloud includes content. Library side-load
  * (`hosted` / `imported`) is local JSON — play and tutor use the tile itself,
  * never the Cloud catalog.
  *
@@ -187,7 +187,7 @@ export function questReadDecision(tile, ident, opts = {}) {
     return { allow: false, status: 401, error: "sign_in_required" };
   }
   if (access === ACCESS.PAID && needsPlayerBilling(tile) && !opts.entitled) {
-    return { allow: false, status: 402, error: "subscription_required" };
+    return { allow: false, status: 402, error: "content_required" };
   }
   return { allow: true };
 }
@@ -269,7 +269,7 @@ export function prepareTutorContext(context, ident, catalogTile, opts = {}) {
   const account = requireCloudAccount(ident);
   if (!account.ok) return account;
   if (needsPlayerBilling(catalogTile) && !opts.entitled) {
-    return { ok: false, status: 402, error: "subscription_required" };
+    return { ok: false, status: 402, error: "content_required" };
   }
 
   const next = { ...ctx };

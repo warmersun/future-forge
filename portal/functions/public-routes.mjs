@@ -16,7 +16,7 @@ import { fetchRemoteQuestCatalog, DEFAULT_QUESTS_REMOTE_URL } from "../../js/que
 import { sanitizeUsername, publicInventorPage } from "../../js/server/profile.mjs";
 import { portfolioFromTechIdLists, publicPortfolio } from "../../js/sim/portfolio.js";
 import { rankPlayers, rankBoard, attachBoardExtras, questHasLeaderboard } from "../../js/server/quest-board.mjs";
-import { planSlugsFromEnv, subscriptionEntitled } from "../../js/server/ai-quota.mjs";
+import { contentEntitled } from "../../js/server/ai-quota.mjs";
 import { parseCardPath, renderCollectorCardPage, collectorImageHeaders } from "../../js/server/collector-cards.mjs";
 import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../../js/server/collector-card-share.mjs";
 import { cloudCorsOriginsFromEnv, cloudOriginAllowed, validPortalCorsOrigin } from "../../js/cloud/portal-origin.js";
@@ -107,8 +107,8 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
     try {
       const got = await cx.query("SELECT status, plan_slug, period_end FROM subscriptions WHERE clerk_user_id = $1", [ident.userId]);
       const sub = got.rows[0];
-      return subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug,
-        periodEnd: sub?.period_end, allowedSlugs: planSlugsFromEnv(env) });
+      return contentEntitled({ status: sub?.status, planSlug: sub?.plan_slug,
+        periodEnd: sub?.period_end, env });
     } catch { return false; }
   }
   const authorizeContext = createQuestRequestAuthority({

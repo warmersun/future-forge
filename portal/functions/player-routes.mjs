@@ -3,7 +3,7 @@
 // interpreted as identity here. Return null for paths this slice does not own.
 import { resolveStartPackageBinding, resolveRunPackageBinding, sanitizeBoundRunState, compactBoundRunState, ownerRunLoader } from "../../js/server/run-package-binding.mjs";
 import { createHostedPackageResolverFromEnv } from "../../js/server/hosted-package-resolver.mjs";
-import { planSlugsFromEnv, subscriptionEntitled } from "../../js/server/ai-quota.mjs";
+import { contentEntitled } from "../../js/server/ai-quota.mjs";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate, parseImportBody, sanitizeLastRun } from "../../js/server/cloud-save.mjs";
 import { parseRunsQuery, parseStartBody, publicRunRow } from "../../js/server/quest-log.mjs";
@@ -136,7 +136,7 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
     let paid = false;
     try {
       const sub = (await db.query("SELECT status, plan_slug, period_end FROM subscriptions WHERE clerk_user_id = $1", [userId])).rows[0];
-      paid = subscriptionEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, allowedSlugs: planSlugsFromEnv(env) });
+      paid = contentEntitled({ status: sub?.status, planSlug: sub?.plan_slug, periodEnd: sub?.period_end, env });
     } catch { /* billing failure denies paid access */ }
     return resolvePackage ? resolvePackage(ref, { userId, identity: ident, entitled: paid }) : hosted.resolve(ref, { identity: ident, entitled: paid });
   }

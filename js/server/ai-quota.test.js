@@ -6,6 +6,8 @@ import {
   DEFAULT_BUDGET_POINTS,
   DEFAULT_TEXT_HOLD_POINTS,
   chargeMicro,
+  contentEntitled,
+  contentPlanSlugsFromEnv,
   DEFAULT_TEXT_MAX_OUT,
   holdMicroFor,
   planSlugsFromEnv,
@@ -183,13 +185,23 @@ describe("subscriptionEntitled", () => {
       { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
     );
     assert.equal(view.entitled, false);
+    assert.equal(view.content, false);
     assert.equal(view.subscribeUrl, "https://cloud.warmersun.com/subscribe");
     const paid = subscriptionView(
       { plan_slug: "cloud", status: "active", period_end: new Date(future).toISOString() },
       { subscribeUrl: "https://cloud.warmersun.com/subscribe", now: Date.now() }
     );
     assert.equal(paid.entitled, true);
+    assert.equal(paid.content, true);
     assert.equal(paid.planSlug, "cloud");
+    const content = subscriptionView(
+      { plan_slug: "content", status: "active", period_end: new Date(future).toISOString() },
+      { subscribeUrl: "https://cloud.warmersun.com/subscribe", allowedSlugs: ["cloud"], now: Date.now() }
+    );
+    assert.equal(content.entitled, false);
+    assert.equal(content.content, true);
+    assert.equal(contentEntitled({ status: "active", planSlug: "other", periodEnd: future, now: Date.now() }), false);
+    assert.equal(subscriptionEntitled({ status: "active", planSlug: "content", periodEnd: future, now: Date.now() }), false);
     assert.equal(subscriptionEntitled({ status: "past_due", planSlug: "cloud", periodEnd: future }), false);
   });
 
@@ -211,6 +223,8 @@ describe("subscriptionEntitled", () => {
   it("reads plan slugs from the env", () => {
     assert.deepEqual(planSlugsFromEnv({}), ["cloud"]);
     assert.deepEqual(planSlugsFromEnv({ FF_CLOUD_PLAN_SLUGS: "cloud, studio" }), ["cloud", "studio"]);
+    assert.deepEqual(contentPlanSlugsFromEnv({}), ["content"]);
+    assert.deepEqual(contentPlanSlugsFromEnv({ FF_CONTENT_PLAN_SLUGS: "lessons" }), ["lessons"]);
   });
 });
 

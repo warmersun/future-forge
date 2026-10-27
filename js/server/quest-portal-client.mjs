@@ -158,7 +158,7 @@ export async function officialTutorContext(context, opts = {}) {
     return {
       ok: false,
       status: got.status,
-      error: got.data?.error || (got.status === 402 ? "subscription_required" : "sign_in_required"),
+      error: got.data?.error || (got.status === 402 ? "content_required" : "sign_in_required"),
       subscribeUrl: got.data?.subscribeUrl || null,
     };
   }

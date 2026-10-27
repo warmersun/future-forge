@@ -180,6 +180,7 @@ describe("share origin + build URL", () => {
     assert.equal(questLinkOutcome("loaded"), "launch");
     assert.equal(questLinkOutcome("sign_in_required"), "keep");
     assert.equal(questLinkOutcome("subscription_required"), "keep");
+    assert.equal(questLinkOutcome("content_required"), "keep");
     assert.equal(questLinkOutcome("not_found"), "missing");
     assert.equal(questLinkOutcome("invalid"), "missing");
     assert.equal(questLinkOutcome("unavailable"), "unavailable");

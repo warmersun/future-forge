@@ -404,7 +404,7 @@ describe("public card and gate", () => {
     assert.match(companionAccessLine({ source: "hosted", access: "open" }), /Library/);
     assert.match(companionAccessLine({ access: "open" }, { placed: false }), /No account is required/);
     assert.match(companionAccessLine({ access: "account", source: "remote" }), /Sign-in is required/);
-    assert.match(companionAccessLine({ access: "paid", source: "remote" }), /subscription is required/i);
+    assert.match(companionAccessLine({ access: "paid", source: "remote" }), /Content plan/);
     assert.match(
       companionAccessLine({ access: "paid", source: "remote", sponsorName: "Acme" }),
       /not required/

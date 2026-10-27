@@ -97,7 +97,7 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
     return reply({
       ok: true, signedIn: true, clerk: true, userId: uid, sessionId: identity.sessionId ?? null,
       db: true, solvedIds, quotaGrant,
-      subscription: subscriptionView(sub, { subscribeUrl: subscribeUrlFromEnv(env), allowedSlugs }),
+      subscription: subscriptionView(sub, { subscribeUrl: subscribeUrlFromEnv(env), allowedSlugs, env }),
     });
   }
   return {

@@ -15,7 +15,7 @@ import {
   voiceConnectedMinuteMicro, voiceMaxMsFromEnv,
   SUBSCRIPTION_REQUIRED_MESSAGE, QUOTA_SPENT_MESSAGE, QUOTA_UNAVAILABLE_MESSAGE,
 } from "../../js/server/ai-quota.mjs";
-import { clerkTimeIso, entitledPlanSlug, planClerkBillingEvent, planClerkUserEvent, rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
+import { canceledRowFromClerkBillingSubscription, planClerkBillingEvent, planClerkUserEvent, rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
 import { cloudCorsOriginsFromEnv, cloudOriginAllowed } from "../../js/cloud/portal-origin.js";
 
 const ROUTES = new Set(["/api/me/ai/reserve", "/api/internal/ai/reserve", "/api/me/ai/settle", "/api/webhooks/clerk"]);
@@ -215,15 +215,8 @@ export function createBillingRoutes({ env = process.env, db, verifyClerk, verify
         const active = rowFromClerkBillingSubscription(snapshot, { env });
         // Preserve Clerk's paid-until-period-end cancellation semantics; an
         // empty/free/ended snapshot is unentitled, regardless of event payload.
-        const canceled = !active && snapshot.subscriptionItems.find((item) =>
-          Boolean(item?.plan?.slug) && !["free_user", "free_org"].includes(String(item.plan.slug)) &&
-          String(item?.status || "").toLowerCase() === "canceled" &&
-          clerkTimeIso(item?.periodEnd ?? item?.period_end));
-        const paid = active || (canceled ? {
-          planSlug: entitledPlanSlug(canceled.plan.slug, env),
-          status: "canceled", periodStart: clerkTimeIso(canceled.periodStart ?? canceled.period_start),
-          periodEnd: clerkTimeIso(canceled.periodEnd ?? canceled.period_end),
-        } : null);
+        // Among canceled items, cloud outranks content, same as an active snapshot.
+        const paid = active || canceledRowFromClerkBillingSubscription(snapshot, { env });
         await cx.query("INSERT INTO users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING", [billing.userId]);
         await cx.query(
           `INSERT INTO subscriptions (clerk_user_id, plan_slug, status, period_start, period_end)

@@ -5837,13 +5837,18 @@ async function fetchFullQuestTile(id, opts = {}) {
     }
     if (res.status === 402) {
       if (data.subscribeUrl) hostedPlanState.subscribeUrl = String(data.subscribeUrl);
+      const contentDenied = data.error !== "subscription_required";
+      const hold = contentDenied ? "content_required" : "subscription_required";
+      const msg = contentDenied
+        ? "This quest is paid content. It needs the Content plan, which Cloud includes."
+        : "This quest needs a subscription.";
       if (opts.keepUrl) {
-        if (deepLinkHold !== "subscription_required") {
-          deepLinkHold = "subscription_required";
-          flashToast("This quest needs a subscription.");
+        if (deepLinkHold !== hold) {
+          deepLinkHold = hold;
+          flashToast(msg);
         }
       } else {
-        flashToast("This quest needs a subscription.");
+        flashToast(msg);
         redirectHostedSubscribe();
       }
       return null;
@@ -6311,6 +6316,7 @@ async function loadQuestIdPreview() {
       not_found: "Quest not found. Check the ID. Local or imported Quests must be published before others can load them.",
       unavailable: "Could not reach the quest service or load this Quest. Try again.",
       sign_in_required: "Quest found. Sign in to play this Quest.",
+      content_required: "Quest found. This quest is paid content. It needs the Content plan, which Cloud includes.",
       subscription_required: "Quest found. A subscription is required to play this Quest.",
       loaded: "Quest loaded. Choose Play when you are ready.",
     };
@@ -6414,6 +6420,11 @@ async function consumeDeepLink() {
         if (deepLinkHold !== "sign_in_required") {
           deepLinkHold = "sign_in_required";
           promptCloudSignIn("Sign in to open this quest.", { sameTab: true });
+        }
+      } else if (looked.status === "content_required") {
+        if (deepLinkHold !== "content_required") {
+          deepLinkHold = "content_required";
+          flashToast("This quest is paid content. It needs the Content plan, which Cloud includes.");
         }
       } else if (deepLinkHold !== "subscription_required") {
         deepLinkHold = "subscription_required";

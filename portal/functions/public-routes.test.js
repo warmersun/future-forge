@@ -92,6 +92,7 @@ test("private catalog lists safe cards, protects detail, and never falls back on
   }]);
   const [payStatus, denied] = await body(await f.request("/api/quests?id=paid", { token: jwt }));
   assert.equal(payStatus, 402);
+  assert.equal(denied.error, "content_required");
   assert.equal(denied.subscribeUrl, "https://warmersun.com/portal/subscribe");
   assert.equal(denied.tile.mission, undefined);
   const [signed, allowed] = await body(await f.request("/api/quests/account", { token: jwt }));
@@ -113,7 +114,11 @@ test("paid access requires active configured plan; malformed tokens cannot autho
   assert.equal((await body(await f.request("/api/quests/paid", { token: "bad" })))[0], 401);
   assert.equal((await body(await f.request("/api/quests/paid", { token: "a.b.c" })))[0], 401);
   const notPaid = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "other", period_end: new Date("2099-01-01") }] : [] });
-  assert.equal((await body(await notPaid.request("/api/quests/paid", { token: jwt })))[0], 402);
+  assert.equal((await body(await notPaid.request("/api/quests/paid", { token: jwt })))[1].error, "content_required");
+  const contentPlan = fixture({ rows: (sql) => sql.includes("FROM subscriptions") ? [{ status: "active", plan_slug: "content", period_end: new Date("2099-01-01") }] : [] });
+  assert.equal((await body(await contentPlan.request("/api/quests/paid", { token: jwt })))[0], 200);
+  const unsigned = fixture({ rows: () => [] });
+  assert.equal((await body(await unsigned.request("/api/quests/paid", { token: jwt })))[1].error, "content_required");
 });
 
 test("signed game sessions grant account/entitled access, but forged, expired and wrong-secret tokens do not", async () => {

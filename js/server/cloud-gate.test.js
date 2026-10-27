@@ -169,6 +169,7 @@ describe("questReadDecision", () => {
 
   it("requires a subscription only for paid tiles that bill the player", () => {
     assert.equal(questReadDecision(paid, out).status, 401);
+    assert.equal(questReadDecision(paid, inn, { entitled: false }).error, "content_required");
     assert.equal(questReadDecision(paid, inn, { entitled: false }).status, 402);
     assert.equal(questReadDecision(paid, inn, { entitled: true }).allow, true);
     assert.equal(questReadDecision(sponsored, inn, { entitled: false }).allow, true);
@@ -296,7 +297,7 @@ describe("prepareTutorContext", () => {
     );
     assert.equal(r.ok, false);
     assert.equal(r.status, 402);
-    assert.equal(r.error, "subscription_required");
+    assert.equal(r.error, "content_required");
   });
 
   it("replaces client tutor text with catalog when signed in", () => {

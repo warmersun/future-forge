@@ -158,7 +158,7 @@ import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../js/server/col
 import { RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
-import { planSlugsFromEnv, subscriptionEntitled, subscriptionView } from "../js/server/ai-quota.mjs";
+import { contentEntitled, planSlugsFromEnv, subscriptionEntitled, subscriptionView } from "../js/server/ai-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -1289,11 +1289,11 @@ async function entitlementForIdent(ident) {
   if (!ident?.enabled || !ident.signedIn || !dbEnabled()) return false;
   try {
     const sub = await getSubscription(ident.userId);
-    return subscriptionEntitled({
+    return contentEntitled({
       status: sub?.status,
       planSlug: sub?.plan_slug,
       periodEnd: sub?.period_end,
-      allowedSlugs: planSlugsFromEnv(),
+      env: process.env,
     });
   } catch (e) {
     console.warn("[quests] subscription", e?.message || e);
@@ -2669,6 +2669,7 @@ const server = http.createServer(async (req, res) => {
       subscription: subscriptionView(sub, {
         subscribeUrl: subscribeUrlFromEnv(),
         allowedSlugs: planSlugsFromEnv(),
+        env: process.env,
       }),
     });
   }
@@ -3686,10 +3687,15 @@ const server = http.createServer(async (req, res) => {
           error: prepared.error || "sign_in_required",
           source: "error",
           message:
-            prepared.error === "subscription_required"
-              ? "A subscription is required for this lesson."
-              : "Sign in to use the tutor on this lesson.",
-          subscribeUrl: prepared.error === "subscription_required" ? subscribeUrlFromEnv() : undefined,
+            prepared.error === "content_required"
+              ? "This lesson is paid content. It needs the Content plan, which Cloud includes."
+              : prepared.error === "subscription_required"
+                ? "A subscription is required for this lesson."
+                : "Sign in to use the tutor on this lesson.",
+          subscribeUrl:
+            prepared.error === "content_required" || prepared.error === "subscription_required"
+              ? subscribeUrlFromEnv()
+              : undefined,
           proposals: {
             addTechIds: [],
             removeTechIds: [],

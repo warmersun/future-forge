@@ -81,7 +81,7 @@ test("current membership and billing are rechecked after cache warm, including m
   const paidRef = { ...f.ref, questId: "harbor-clock-test" };
   assert.equal((await f.resolver.resolve(paidRef, { identity: signed, entitled: true })).ok, true);
   const denied = await f.resolver.resolve(paidRef, { identity: signed, entitled: false });
-  assert.equal(denied.code, "subscription_required");
+  assert.equal(denied.code, "content_required");
   assert.equal(denied.record.mission, undefined);
   assert.equal(JSON.stringify(denied).includes("predictions"), false);
   f.setCatalog({ ok: true, quests: [] });

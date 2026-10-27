@@ -344,6 +344,27 @@ describe("staged Clerk webhook", () => {
     assert.equal((await call(recovered, "/api/webhooks/clerk", event.raw, event.headers)).status, 200);
     assert.equal(db.data.subs.get("user_1").status, "inactive");
   });
+  it("stores a content plan as content and keeps cloud when both items are active", async () => {
+    const db = fakeDb(), api = app(db);
+    db.billing.set("user_6", { subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 }] });
+    const content = signed({ id: "evt_content", type: "subscription.active", data: { payer: { user_id: "user_6" }, status: "active" } });
+    assert.equal((await call(api, "/api/webhooks/clerk", content.raw, content.headers)).status, 200);
+    assert.equal(db.data.subs.get("user_6").plan_slug, "content");
+    db.billing.set("user_6", { subscriptionItems: [
+      { plan: { slug: "content" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 },
+      { plan: { slug: "cloud" }, status: "active", periodStart: 1790812800000, periodEnd: 4070908800000 },
+    ] });
+    const both = signed({ id: "evt_both", type: "subscription.updated", data: { payer: { user_id: "user_6" }, status: "active" } });
+    assert.equal((await call(api, "/api/webhooks/clerk", both.raw, both.headers)).status, 200);
+    assert.equal(db.data.subs.get("user_6").plan_slug, "cloud");
+  });
+  it("rejects hosted AI reserve for a content plan", async () => {
+    const db = fakeDb();
+    db.data.subs.set("user_1", { plan_slug: "content", status: "active", period_start: period, period_end: future });
+    const denied = await call(app(db), "/api/me/ai/reserve", { kind: "image" }, auth);
+    assert.equal(denied.status, 402);
+    assert.equal(denied.body.error, "subscription_required");
+  });
   it("preserves canceled paid-through-period entitlement from the current snapshot", async () => {
     const db = fakeDb(), api = app(db);
     db.billing.set("user_5", { subscriptionItems: [{ status: "canceled", plan: { slug: "paid" }, periodEnd: 4070908800000 }] });

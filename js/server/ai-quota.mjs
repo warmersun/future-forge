@@ -35,6 +35,7 @@ export const DEFAULT_TEXT_MAX_OUT = 8192;
 /** Room seats keep a portal-signed grant this long. Entitlement is rechecked at reserve. */
 export const QUOTA_GRANT_TTL_MS = 12 * 60 * 60 * 1000;
 export const DEFAULT_PLAN_SLUGS = ["cloud"];
+export const DEFAULT_CONTENT_PLAN_SLUGS = ["content"];
 export const DEFAULT_VOICE_MAX_MS = 600_000;
 
 const KINDS = new Set(["text", "image", "tts", "voice"]);
@@ -118,6 +119,20 @@ export function textMaxOutFromEnv(env = process.env) {
 export function planSlugsFromEnv(env = process.env) {
   const raw = String(env.FF_CLOUD_PLAN_SLUGS ?? "").trim();
   if (!raw) return [...DEFAULT_PLAN_SLUGS];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Paid-catalog plan slugs. Cloud slugs are not listed here; cloud includes them.
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ * @returns {string[]}
+ */
+export function contentPlanSlugsFromEnv(env = process.env) {
+  const raw = String(env.FF_CONTENT_PLAN_SLUGS ?? "").trim();
+  if (!raw) return [...DEFAULT_CONTENT_PLAN_SLUGS];
   return raw
     .split(",")
     .map((s) => s.trim())
@@ -289,9 +304,38 @@ export function settleMicroFor(kind, measure = {}, rates = {}) {
 }
 
 /**
+ * Paid catalog access. True for an active content plan or any cloud plan.
+ * Cloud includes content. Content does not include hosted AI quota.
+ * @param {{ status?: string, planSlug?: string, periodEnd?: unknown, now?: number|Date, env?: NodeJS.ProcessEnv|Record<string, string|undefined>, cloudSlugs?: string[], contentSlugs?: string[] }} [input]
+ */
+export function contentEntitled(input = {}) {
+  const env = input.env;
+  const cloud = Array.isArray(input.cloudSlugs)
+    ? input.cloudSlugs
+    : env
+      ? planSlugsFromEnv(env)
+      : [...DEFAULT_PLAN_SLUGS];
+  const content = Array.isArray(input.contentSlugs)
+    ? input.contentSlugs
+    : contentPlanSlugsFromEnv(env || {});
+  const allowedSlugs = [];
+  for (const slug of [...content, ...cloud]) {
+    if (slug && !allowedSlugs.includes(slug)) allowedSlugs.push(slug);
+  }
+  return subscriptionEntitled({
+    status: input.status,
+    planSlug: input.planSlug,
+    periodEnd: input.periodEnd,
+    now: input.now,
+    allowedSlugs,
+  });
+}
+
+/**
  * Public /api/me shape. No allowance numbers.
+ * `entitled` is the cloud plan (hosted AI). `content` is paid catalog access.
  * @param {object|null|undefined} sub
- * @param {{ subscribeUrl?: string, allowedSlugs?: string[], now?: number|Date }} [opts]
+ * @param {{ subscribeUrl?: string, allowedSlugs?: string[], contentSlugs?: string[], env?: NodeJS.ProcessEnv|Record<string, string|undefined>, now?: number|Date }} [opts]
  */
 export function subscriptionView(sub, opts = {}) {
   const entitled = subscriptionEntitled({
@@ -301,8 +345,18 @@ export function subscriptionView(sub, opts = {}) {
     now: opts.now,
     allowedSlugs: opts.allowedSlugs,
   });
+  const content = contentEntitled({
+    status: sub?.status,
+    planSlug: sub?.plan_slug,
+    periodEnd: sub?.period_end,
+    now: opts.now,
+    env: opts.env,
+    cloudSlugs: opts.allowedSlugs,
+    contentSlugs: opts.contentSlugs,
+  });
   return {
     entitled,
+    content,
     planSlug: sub?.plan_slug || null,
     status: sub?.status || null,
     subscribeUrl: String(opts.subscribeUrl || ""),

@@ -27,6 +27,7 @@ export default defineConfig({
           : {}),
         FF_API_SECRET: process.env.FF_API_SECRET!,
         FF_CLOUD_PLAN_SLUGS: process.env.FF_CLOUD_PLAN_SLUGS!,
+        FF_CONTENT_PLAN_SLUGS: process.env.FF_CONTENT_PLAN_SLUGS!,
         FF_CLOUD_AI_BUDGET: process.env.FF_CLOUD_AI_BUDGET!,
         FF_QUOTA_TEXT_IN_PER_KTOK: process.env.FF_QUOTA_TEXT_IN_PER_KTOK!,
         FF_QUOTA_TEXT_OUT_PER_KTOK: process.env.FF_QUOTA_TEXT_OUT_PER_KTOK!,

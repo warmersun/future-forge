@@ -185,7 +185,7 @@ describe("immutable package publisher", () => {
       const signedIn = { identity: { enabled: true, signedIn: true } };
       const insufficient = await resolver.resolve(old.entries[0].packageRef, signedIn);
       assert.equal(insufficient.ok, access === "account");
-      if (access === "paid") assert.equal(insufficient.code, "subscription_required");
+      if (access === "paid") assert.equal(insufficient.code, "content_required");
       assert.equal((await resolver.resolve(old.entries[0].packageRef, { ...signedIn, entitled: true })).ok, true);
     });
   }

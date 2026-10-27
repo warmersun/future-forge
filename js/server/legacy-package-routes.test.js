@@ -109,7 +109,7 @@ it('legacy portal HTTP run start and Continue bind the owned immutable release w
     fs.writeFileSync(objectFile,JSON.stringify(objects));
     const revoked=await request('/api/me/run-state','GET');
     assert.equal(revoked.status,402,await revoked.clone().text());
-    assert.equal((await revoked.json()).error,'subscription_required');
+    assert.equal((await revoked.json()).error,'content_required');
   } finally {
     child.kill('SIGTERM'); const force=setTimeout(()=>child.kill('SIGKILL'),2000); force.unref();
     await ended; clearTimeout(force); fs.rmSync(work,{recursive:true,force:true});

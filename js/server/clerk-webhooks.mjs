@@ -4,23 +4,56 @@
  */
 
 import { clerkKeysFromEnv, normalizeClerkUserId } from "./clerk-auth.mjs";
-import { planSlugsFromEnv } from "./ai-quota.mjs";
+import { contentPlanSlugsFromEnv, planSlugsFromEnv } from "./ai-quota.mjs";
 import { foundingCodes } from "./achievements.mjs";
 import { sanitizeUsername } from "./profile.mjs";
 
 const FREE_PLAN_SLUGS = new Set(["free_user", "free_org"]);
 
 /**
- * Prefer a paid item so a free plan listed first cannot replace it.
- * @param {unknown} items
+ * Cloud outranks content. Unknown paid slugs normalize to cloud, so they outrank content too.
+ * Free plans rank 0.
+ * @param {unknown} raw
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
  */
-function paidBillingItem(items) {
+function storedPlanRank(raw, env) {
+  const slug = String(raw || "").trim();
+  if (!slug || FREE_PLAN_SLUGS.has(slug)) return 0;
+  const stored = entitledPlanSlug(slug, env);
+  if (!stored || FREE_PLAN_SLUGS.has(stored)) return 0;
+  if (planSlugsFromEnv(env).includes(stored)) return 2;
+  if (contentPlanSlugsFromEnv(env).includes(stored)) return 1;
+  return 0;
+}
+
+/**
+ * Highest-ranked paid item that matches. Free plans stay out unless nothing paid exists.
+ * @param {unknown} items
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ * @param {(item: object) => boolean} [accept]
+ */
+function bestPaidItem(items, env, accept) {
   const list = Array.isArray(items) ? items : [];
-  const paid = list.find((item) => {
-    const slug = String(item?.plan?.slug || "").trim();
-    return slug && !FREE_PLAN_SLUGS.has(slug);
-  });
-  return paid || list[0] || null;
+  let best = null;
+  let bestRank = 0;
+  for (const item of list) {
+    if (accept && !accept(item)) continue;
+    const rank = storedPlanRank(item?.plan?.slug, env);
+    if (rank > bestRank) {
+      best = item;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
+/**
+ * Prefer a cloud item over content, and any paid item over a free plan listed first.
+ * @param {unknown} items
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+function paidBillingItem(items, env) {
+  return bestPaidItem(items, env) || (Array.isArray(items) ? items[0] : null) || null;
 }
 
 /**
@@ -104,9 +137,10 @@ export function entitledPlanSlug(raw, env = process.env) {
   const slug = String(raw || "").trim();
   if (!slug) return null;
   if (FREE_PLAN_SLUGS.has(slug)) return slug;
-  const allowed = planSlugsFromEnv(env);
-  if (allowed.includes(slug)) return slug;
-  return allowed[0] || "cloud";
+  const cloud = planSlugsFromEnv(env);
+  if (cloud.includes(slug)) return slug;
+  if (contentPlanSlugsFromEnv(env).includes(slug)) return slug;
+  return cloud[0] || "cloud";
 }
 
 /**
@@ -116,22 +150,38 @@ export function entitledPlanSlug(raw, env = process.env) {
  * @param {{ env?: NodeJS.ProcessEnv|Record<string, string|undefined> }} [opts]
  * @returns {{ planSlug: string, status: string, periodStart: string|null, periodEnd: string|null } | null}
  */
-export function rowFromClerkBillingSubscription(sub, opts = {}) {
-  const items = Array.isArray(sub?.subscriptionItems) ? sub.subscriptionItems : [];
-  const paid = items.find((item) => {
-    const slug = String(item?.plan?.slug || "").trim();
-    const status = String(item?.status || "").trim().toLowerCase();
-    return slug && !FREE_PLAN_SLUGS.has(slug) && status === "active";
-  });
-  if (!paid) return null;
-  const planSlug = entitledPlanSlug(paid.plan?.slug, opts.env);
-  if (!planSlug) return null;
+function rowFromPaidItem(item, env, status) {
+  if (!item) return null;
+  const planSlug = entitledPlanSlug(item.plan?.slug, env);
+  if (!planSlug || FREE_PLAN_SLUGS.has(planSlug)) return null;
   return {
     planSlug,
-    status: "active",
-    periodStart: clerkTimeIso(paid.periodStart ?? paid.period_start),
-    periodEnd: clerkTimeIso(paid.periodEnd ?? paid.period_end),
+    status,
+    periodStart: clerkTimeIso(item.periodStart ?? item.period_start),
+    periodEnd: clerkTimeIso(item.periodEnd ?? item.period_end),
   };
+}
+
+export function rowFromClerkBillingSubscription(sub, opts = {}) {
+  const items = Array.isArray(sub?.subscriptionItems) ? sub.subscriptionItems : [];
+  const paid = bestPaidItem(items, opts.env, (item) => {
+    return String(item?.status || "").trim().toLowerCase() === "active";
+  });
+  return rowFromPaidItem(paid, opts.env, "active");
+}
+
+/**
+ * Canceled item that is still paid through period_end. Cloud outranks content.
+ * @param {object|null|undefined} sub
+ * @param {{ env?: NodeJS.ProcessEnv|Record<string, string|undefined> }} [opts]
+ */
+export function canceledRowFromClerkBillingSubscription(sub, opts = {}) {
+  const items = Array.isArray(sub?.subscriptionItems) ? sub.subscriptionItems : [];
+  const canceled = bestPaidItem(items, opts.env, (item) => {
+    const status = String(item?.status || "").trim().toLowerCase();
+    return status === "canceled" && Boolean(clerkTimeIso(item?.periodEnd ?? item?.period_end));
+  });
+  return rowFromPaidItem(canceled, opts.env, "canceled");
 }
 
 /**
@@ -177,7 +227,7 @@ export function planClerkBillingEvent(evt, opts = {}) {
   if (SUBSCRIPTION_EVENTS.has(type)) {
     const userId = normalizeClerkUserId(data.payer?.user_id || data.payer?.userId);
     if (!userId) return { ok: false, error: "invalid_user" };
-    const item = paidBillingItem(data.items);
+    const item = paidBillingItem(data.items, opts.env);
     return {
       ok: true,
       action: "upsert_subscription",

@@ -2940,9 +2940,11 @@ const server = http.createServer(async (req, res) => {
           error: tutorDenied.error || "sign_in_required",
           source: "error",
           message:
-            tutorDenied.error === "subscription_required"
-              ? "A subscription is required for this lesson."
-              : "Sign in to use the tutor on this lesson.",
+            tutorDenied.error === "content_required"
+              ? "This lesson is paid content. It needs the Content plan, which Cloud includes."
+              : tutorDenied.error === "subscription_required"
+                ? "A subscription is required for this lesson."
+                : "Sign in to use the tutor on this lesson.",
           subscribeUrl: tutorDenied.subscribeUrl || undefined,
           proposals: emptyProposals,
           teaching: [],

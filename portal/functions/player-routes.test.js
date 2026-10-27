@@ -271,6 +271,24 @@ describe("Neon player routes (offline SQL adapter)", () => {
     assert.equal((await call(api, "/api/me/run-state", "GET", undefined, B)).status, 403);
   });
 
+  it("grants paid catalog resolve to content and cloud, not to another plan", async () => {
+    const ref = { packageId: "official-world", revision: `sha256:${"ab".repeat(32)}`, questId: "q1" };
+    for (const [plan, entitled] of [["content", true], ["cloud", true], ["other", false]]) {
+      const db = fakeDb();
+      db.state.subscription = { status: "active", plan_slug: plan, period_end: "2099-01-01" };
+      let seen = null;
+      const api = createPlayerRoutes({
+        db,
+        resolvePackage: async (bound, opts) => {
+          seen = opts;
+          return { ok: true, packageRef: bound };
+        },
+      });
+      assert.equal((await call(api, "/api/me/runs/start", "POST", { questId: "q1", packageRef: ref })).status, 200, plan);
+      assert.equal(seen.entitled, entitled, plan);
+    }
+  });
+
   it("roundtrips local-import identity without upgrading it to an official release", async () => {
     const db = fakeDb(), api = createPlayerRoutes({ db, resolvePackage: () => { throw new Error("must not resolve official"); } });
     const ref = { packageId: "local-world", questId: "q1", revision: `sha256:${"ab".repeat(32)}` };

@@ -137,7 +137,7 @@ export function buildQuestShareUrl(questId, origin) {
  */
 export function questLinkOutcome(status) {
   if (status === "loaded") return "launch";
-  if (status === "sign_in_required" || status === "subscription_required") return "keep";
+  if (status === "sign_in_required" || status === "subscription_required" || status === "content_required") return "keep";
   if (status === "not_found" || status === "invalid") return "missing";
   return "unavailable";
 }

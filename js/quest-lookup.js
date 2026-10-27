@@ -21,7 +21,13 @@ export async function lookupQuestById(raw, { fetchImpl }) {
       return { status: "unavailable", id };
     }
     return {
-      status: denied ? (res.status === 401 ? "sign_in_required" : "subscription_required") : "loaded",
+      status: denied
+        ? (res.status === 401
+          ? "sign_in_required"
+          : data?.error === "subscription_required"
+            ? "subscription_required"
+            : "content_required")
+        : "loaded",
       id,
       tile: denied ? { ...data.tile, gated: true } : data.tile,
       subscribeUrl: res.status === 402 ? String(data.subscribeUrl || "") : "",

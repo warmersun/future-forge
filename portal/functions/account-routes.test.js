@@ -214,11 +214,29 @@ test("signed /api/me reproduces solved IDs, grant and subscription view without 
   assert.deepEqual(Object.keys(body), ["ok", "signedIn", "clerk", "userId", "sessionId", "db", "solvedIds", "quotaGrant", "subscription"]);
   assert.deepEqual({ ...body, quotaGrant: null }, { ok: true, signedIn: true, clerk: true, userId: uid,
     sessionId: "sess_123", db: true, solvedIds: ["a", "b"], quotaGrant: null,
-    subscription: { entitled: true, planSlug: "cloud", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" } });
+    subscription: { entitled: true, content: true, planSlug: "cloud", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" } });
   assert.equal(verifyQuotaGrant(body.quotaGrant, "private-key"), uid);
   assert.doesNotMatch(JSON.stringify(body), /private-key|operator-secret|secret-image/);
   assert(db.queries.filter((q) => q.params.includes(uid)).length > 0);
   assert(db.queries.every((q) => !q.params.includes(other)));
+});
+
+test("content plan unlocks paid content and not hosted AI", async () => {
+  const db = mockDb({ subscription: { plan_slug: "content", status: "active", period_end: "2999-01-01" } });
+  const handler = createAccountRoutes({
+    env,
+    db,
+    getUserBillingSubscription: async () => ({
+      subscriptionItems: [{ plan: { slug: "content" }, status: "active", periodStart: 1_700_000_000_000, periodEnd: 4_000_000_000_000 }],
+    }),
+  });
+  const body = (await result(handler, req("/api/me"), signed)).body;
+  assert.deepEqual(body.subscription, {
+    entitled: false, content: true, planSlug: "content", status: "active",
+    subscribeUrl: "https://cloud.warmersun.com/subscribe",
+  });
+  assert.equal(db.queries.some((q) => q.sql.startsWith("INSERT INTO subscriptions") && q.params[1] === "content"), true);
+  assert.equal(db.queries.some((q) => q.params.includes("cloud") && q.sql.startsWith("INSERT INTO subscriptions")), false);
 });
 
 test("quota key is generated once and signed grant uses persisted key", async () => {
@@ -245,7 +263,7 @@ test("missing/expired subscription refreshes paid Clerk billing row and reads it
     return { subscriptionItems: [{ plan: { slug: "pro" }, status: "active", periodStart: 1_700_000_000_000, periodEnd: 4_000_000_000_000 }] };
   } });
   const body = (await result(handler, req("/api/me"), signed)).body;
-  assert.deepEqual(body.subscription, { entitled: true, planSlug: "pro", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" });
+  assert.deepEqual(body.subscription, { entitled: true, content: true, planSlug: "pro", status: "active", subscribeUrl: "https://cloud.warmersun.com/subscribe" });
   assert.equal(calls, 1);
   assert(db.queries.some((q) => q.sql === "COMMIT"));
   assert(db.queries.some((q) => q.sql === "RELEASE"));

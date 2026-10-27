@@ -47,10 +47,11 @@ describe("lookupQuestById", () => {
 
   it("keeps 401 and 402 cards gated and preserves the subscription URL", async () => {
     const { mission, ...card } = tile;
-    for (const [status, expected] of [[401, "sign_in_required"], [402, "subscription_required"]]) {
+    for (const [status, expected] of [[401, "sign_in_required"], [402, "content_required"]]) {
       const result = await lookupQuestById(tile.id, {
         fetchImpl: async () => response({
           ok: false,
+          error: status === 402 ? "content_required" : "sign_in_required",
           tile: { ...card, access: status === 401 ? "account" : "paid" },
           subscribeUrl: "https://portal.example/subscribe",
         }, status),

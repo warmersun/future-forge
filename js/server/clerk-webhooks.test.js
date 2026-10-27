@@ -5,6 +5,7 @@ import {
   clerkUsernameSlug,
   planClerkBillingEvent,
   planClerkUserEvent,
+  canceledRowFromClerkBillingSubscription,
   rowFromClerkBillingSubscription,
 } from "./clerk-webhooks.mjs";
 
@@ -228,6 +229,42 @@ describe("rowFromClerkBillingSubscription", () => {
     assert.equal(row.status, "active");
     assert.equal(row.periodStart, new Date(1_700_000_000_000).toISOString());
     assert.equal(row.periodEnd, new Date(1_702_592_000_000).toISOString());
+  });
+
+  it("stores content as content and prefers cloud when both are active", () => {
+    const content = rowFromClerkBillingSubscription({
+      subscriptionItems: [
+        { status: "active", plan: { slug: "content" }, periodStart: 1_700_000_000_000, periodEnd: 1_702_592_000_000 },
+      ],
+    }, { env: {} });
+    assert.equal(content.planSlug, "content");
+    const both = rowFromClerkBillingSubscription({
+      subscriptionItems: [
+        { status: "active", plan: { slug: "content" }, periodEnd: 1_702_592_000_000 },
+        { status: "active", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 },
+      ],
+    }, { env: {} });
+    assert.equal(both.planSlug, "cloud");
+    assert.equal(both.periodEnd, new Date(1_800_000_000_000).toISOString());
+    const unknown = rowFromClerkBillingSubscription({
+      subscriptionItems: [
+        { status: "active", plan: { slug: "content" } },
+        { status: "active", plan: { slug: "paid" } },
+      ],
+    }, { env: {} });
+    assert.equal(unknown.planSlug, "cloud");
+  });
+
+  it("prefers a canceled cloud item over canceled content", () => {
+    const row = canceledRowFromClerkBillingSubscription({
+      subscriptionItems: [
+        { status: "canceled", plan: { slug: "content" }, periodEnd: 1_702_592_000_000 },
+        { status: "canceled", plan: { slug: "cloud" }, periodEnd: 1_800_000_000_000 },
+      ],
+    }, { env: {} });
+    assert.equal(row.planSlug, "cloud");
+    assert.equal(row.status, "canceled");
+    assert.equal(row.periodEnd, new Date(1_800_000_000_000).toISOString());
   });
 
   it("does not map a free plan or an inactive paid plan", () => {

@@ -56,7 +56,12 @@ const portal = http.createServer((req, res) => {
   } else if (req.url === "/api/quests/sign-in-quest" || req.url === "/api/quests/paid-quest") {
     status = req.url.includes("sign-in") ? 401 : 402;
     const card = catalogCard({ ...tile, id: status === 401 ? "sign-in-quest" : "paid-quest", access: status === 401 ? "account" : "paid" });
-    data = { ok: false, tile: card, subscribeUrl: "https://portal.example/subscribe" };
+    data = {
+      ok: false,
+      error: status === 402 ? "content_required" : "sign_in_required",
+      tile: card,
+      subscribeUrl: "https://portal.example/subscribe",
+    };
   } else if (req.url === "/api/quests/broken-quest") {
     status = 503;
     data = { ok: false, error: "quests_unavailable" };
@@ -172,7 +177,7 @@ try {
   assert.match(await load("broken-quest"), /Could not reach/);
   assert.match(await load("sign-in-quest"), /Sign in/);
   assert.equal(await evaluate("document.querySelector('#quest-id-preview').hidden"), false);
-  assert.match(await load("paid-quest"), /subscription/);
+  assert.match(await load("paid-quest"), /paid content/);
   assert.equal(await evaluate("document.querySelector('.screen.active').id"), "screen-quest-hub");
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
   assert.equal(await evaluate("document.documentElement.scrollWidth <= innerWidth"), true, "mobile overflow");
