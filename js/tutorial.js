@@ -332,7 +332,7 @@ export const TUTORIAL_STEPS = [
   {
     id: "crisis-introduction",
     title: "Meet the crisis",
-    body: "Click each crisis card to send it to the board.",
+    body: "The cards show the harm here and now, its root cause, and public support. Click each card one at a time to send its crisis hex to the board. Crisis hexes stay on the board.",
     focusSelector: "#crisis-introduction-cards button",
     targets: [sel("#crisis-introduction-cards")],
     advanceWhen: (s) => !s.crisisIntroductionPending,

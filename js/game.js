@@ -303,7 +303,7 @@ import {
   tutorialCoInventResult,
   readTutorialDone,
   markTutorialDone,
-} from "./tutorial.js?v=crisis-intro-1";
+} from "./tutorial.js?v=crisis-intro-2";
 import {
   BRIEF_MD_RECIPE,
   resolveBriefBeats,

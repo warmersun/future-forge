@@ -269,6 +269,9 @@ describe("resolveTutorialStep", () => {
     const i = TUTORIAL_STEPS.findIndex((s) => s.id === "crisis-introduction");
     const pending = resolveTutorialStep(snap({ screen: "workshop", crisisIntroductionPending: 2 }), i);
     assert.equal(pending.step.id, "crisis-introduction");
+    assert.match(pending.step.body, /here and now.*root cause.*public support/i);
+    assert.match(pending.step.body, /click each card one at a time/i);
+    assert.match(pending.step.body, /crisis hexes stay on the board/i);
     assert.equal(pending.step.targets[0].selector, "#crisis-introduction-cards");
     assert.equal(pending.step.focusSelector, "#crisis-introduction-cards button");
     const done = resolveTutorialStep(snap({ screen: "workshop", crisisIntroductionPending: 0 }), i);
