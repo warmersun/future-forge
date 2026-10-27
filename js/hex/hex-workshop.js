@@ -118,7 +118,7 @@ import {
 } from "./evaluate.js";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi } from "./board-ui.js";
+import { createHexBoardUi } from "./board-ui.js?v=crisis-intro-1";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
@@ -537,6 +537,7 @@ export function createHexWorkshop(api) {
     if (!svg) return null;
     ui = createHexBoardUi({
       svg,
+      isIntroductionHidden: (id) => api.isIntroductionHidden?.(id) || false,
       getBoard: () => board(),
       setBoard: (b) => setBoard(b),
       getYear: () => api.getYear(),

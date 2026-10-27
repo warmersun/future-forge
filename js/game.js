@@ -134,7 +134,8 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=crisis-intro-1";
+import { createCrisisIntroduction } from "./crisis-introduction.js?v=3";
 import {
   boardHolds,
   deriveBoardProse,
@@ -302,7 +303,7 @@ import {
   tutorialCoInventResult,
   readTutorialDone,
   markTutorialDone,
-} from "./tutorial.js";
+} from "./tutorial.js?v=crisis-intro-1";
 import {
   BRIEF_MD_RECIPE,
   resolveBriefBeats,
@@ -1640,6 +1641,7 @@ function ensureHexWorkshop() {
   if (hexWorkshop) return hexWorkshop;
   hexWorkshop = createHexWorkshop({
     $: (sel) => $(sel),
+    isIntroductionHidden: (id) => crisisIntroduction.isHidden(id),
     getBoard: () => state.hexBoard || createEmptyBoard(),
     setBoard: (b) => {
       state.hexBoard = b;
@@ -4434,6 +4436,14 @@ function hangupVoiceOnScreenChange(prevScreenId, nextScreenId) {
 /** Set while startTutorial navigates home so showScreen does not cancel the run. */
 let keepTutorialOnTitle = false;
 
+const crisisIntroduction = createCrisisIntroduction({
+  document,
+  getBoard: () => state.hexBoard,
+  repaint: () => hexWorkshop?.paint?.(),
+  onChange: () => { try { tutorialCtl?.refresh?.(); } catch {} },
+  reducedMotion: () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false,
+});
+
 function showScreen(id) {
   stopReadAloud();
   const prevScreen = state.screen;
@@ -4444,6 +4454,7 @@ function showScreen(id) {
     state.screen = "workshop";
   }
   if (id !== "workshop") suspendCapabilityExplorer();
+  if (prevScreen === "workshop" && id !== "workshop") crisisIntroduction.reset();
   hangupVoiceOnScreenChange(prevScreen, id);
   if (id !== "workshop") {
     try {
@@ -8375,6 +8386,7 @@ function startMission(mission, opts = {}) {
     return false;
   }
   resetCapabilityExplorerRun();
+  crisisIntroduction.reset();
   state.runWorld = pinned.world;
   state.pinnedPredictionsBank = null;
   delete merged.pinnedPredictionsBank;
@@ -8533,6 +8545,7 @@ function startMission(mission, opts = {}) {
   } catch (e) {
     console.warn("[hex board seed]", e);
   }
+  crisisIntroduction.prepare(state.hexBoard, !opts.restore);
   showScreen("workshop");
   setSideTab(state.sideTab || "vision");
   const savedChats = restored.chats;
@@ -8762,16 +8775,19 @@ function renderWorkshop() {
   const sceneEl = $("#ws-mission-scene");
   const visionRoot = $("#vision-root");
   if (visionRoot) {
-    paintQuestBriefing(visionRoot, m, {
+    const briefing = paintQuestBriefing(visionRoot, m, {
       sceneEl,
       summary: m.summary,
       globalId: m.globalId || g?.id,
       onChange: (snap) => {
         if (snap?.mode === "walk") {
+          const panel = $("#crisis-briefing");
+          if (panel) panel.hidden = true;
           refreshCoachMarks();
           return;
         }
         if (snap?.mode !== "off") return;
+        crisisIntroduction.show();
         ensureCoInventor();
         try {
           updateVision({ debounceMs: 80, force: true });
@@ -8781,6 +8797,11 @@ function renderWorkshop() {
         refreshCoachMarks();
       },
     });
+    if (!briefing.active) crisisIntroduction.show();
+    else {
+      const panel = $("#crisis-briefing");
+      if (panel) panel.hidden = true;
+    }
   } else if (sceneEl) {
     sceneEl.hidden = false;
     sceneEl.textContent = m.scene || m.problem || "";
@@ -22262,6 +22283,7 @@ function tourSnapshot() {
       index: Number(brief.index) || 0,
       beatCount,
     },
+    crisisIntroductionPending: crisisIntroduction.count(),
     firstPlacedTileId: placed[0]?.id || null,
     convergedTileId: placed.find((t) => Number(t.convergenceFactor) > 1)?.id || null,
     unplacedInventionCount: unplaced.length,

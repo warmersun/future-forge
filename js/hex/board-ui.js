@@ -515,6 +515,11 @@ export function createHexBoardUi(opts) {
       g.dataset.id = t.id;
       g.setAttribute("tabindex", "0");
       g.setAttribute("role", "button");
+      if (opts.isIntroductionHidden?.(t.id)) {
+        g.style.visibility = "hidden";
+        g.setAttribute("tabindex", "-1");
+        g.setAttribute("aria-hidden", "true");
+      }
       g.setAttribute(
         "aria-label",
         `${t.name || t.id}. Hover for details, click to highlight pathway.`

@@ -330,6 +330,14 @@ export const TUTORIAL_STEPS = [
       (Boolean(s.briefingSeen) || s.briefing?.mode === "off"),
   },
   {
+    id: "crisis-introduction",
+    title: "Meet the crisis",
+    body: "Click each crisis card to send it to the board.",
+    focusSelector: "#crisis-introduction-cards button",
+    targets: [sel("#crisis-introduction-cards")],
+    advanceWhen: (s) => !s.crisisIntroductionPending,
+  },
+  {
     id: "board-read",
     mode: "read",
     title: "Why pathway",
@@ -682,6 +690,7 @@ function materialize(step, snap) {
     targets,
     spotlight,
     type: step.type || null,
+    focusSelector: step.focusSelector || "",
     paste: Array.isArray(step.paste) ? step.paste : null,
     place: step.place || null,
     wrongPlaceHint: step.wrongPlaceHint || "",
@@ -1191,7 +1200,7 @@ export function createTutorial(opts = {}) {
     paintedId = step.id;
     layout(step);
     if (!changed) return;
-    const focusSel = step.type?.selector;
+    const focusSel = step.focusSelector || step.type?.selector;
     const field = focusSel ? document.querySelector(focusSel) : null;
     const focusEl = field || card;
     try {

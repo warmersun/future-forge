@@ -92,8 +92,8 @@ describe("tutorial lesson copy", () => {
     return texts;
   }
 
-  it("keeps 38 steps and the corrected lesson", () => {
-    assert.equal(TUTORIAL_STEPS.length, 38);
+  it("keeps 39 steps and the corrected lesson", () => {
+    assert.equal(TUTORIAL_STEPS.length, 39);
     const byId = Object.fromEntries(TUTORIAL_STEPS.map((s) => [s.id, s]));
     assert.match(byId["home-quest"].body, /design challenge/i);
     assert.match(byId["home-quest"].body, /grounding/i);
@@ -263,6 +263,16 @@ describe("resolveTutorialStep", () => {
     assert.equal(open.step.id, "crisis-card");
     assert.equal(open.step.mode, "read");
     assert.equal(open.step.pinPopup, true);
+  });
+
+  it("waits for crisis cards before the board lesson", () => {
+    const i = TUTORIAL_STEPS.findIndex((s) => s.id === "crisis-introduction");
+    const pending = resolveTutorialStep(snap({ screen: "workshop", crisisIntroductionPending: 2 }), i);
+    assert.equal(pending.step.id, "crisis-introduction");
+    assert.equal(pending.step.targets[0].selector, "#crisis-introduction-cards");
+    assert.equal(pending.step.focusSelector, "#crisis-introduction-cards button");
+    const done = resolveTutorialStep(snap({ screen: "workshop", crisisIntroductionPending: 0 }), i);
+    assert.equal(done.step.id, "board-read");
   });
 
   it("mint-iot waits for an Internet of Things tile", () => {

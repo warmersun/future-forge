@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=companion-17" />
+    <link rel="stylesheet" href="css/styles.css?v=companion-20" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -1175,7 +1175,14 @@
             </div>
             <div id="ws-companion" class="ws-companion" hidden></div>
             <p id="ws-spotlight-chip" class="ws-spotlight-chip" hidden style="display:none"></p>
-            <div id="ws-mission-scene" class="ws-mission-scene"></div>
+            <details id="crisis-briefing" class="crisis-briefing" hidden open>
+              <summary class="co-header crisis-briefing-header">
+                <span class="co-title">Quest briefing</span>
+                <span class="btn btn-ghost btn-sm crisis-briefing-toggle" aria-hidden="true"><svg class="co-collapse-chevron" viewBox="0 0 16 16" width="14" height="14"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </summary>
+              <div id="ws-mission-scene" class="ws-mission-scene"></div>
+              <div id="crisis-introduction-cards" class="crisis-introduction-cards" hidden></div>
+            </details>
             <p id="ws-spotlight-encourage" class="ws-spotlight-encourage muted" hidden></p>
             <div id="wait-report" class="wait-report" hidden></div>
             <div id="market-news-banner" class="market-news-banner" hidden></div>
@@ -2536,6 +2543,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=companion-21"></script>
+    <script type="module" src="js/main.js?v=companion-24"></script>
   </body>
 </html>
