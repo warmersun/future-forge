@@ -2,17 +2,18 @@
 name: future-forge-quest-engagement
 license: MIT
 description: >
-  Use when authoring or rewriting Future Forge quests. Apply two principles:
-  enthusiasm is contagious; avoid the curse of knowledge. Find what is genuinely
-  exciting in the subject and share it so someone new to it can understand and
-  join in. Complements future-forge-quest and future-forge-companion.
+  Use when authoring or rewriting Future Forge quests. Apply three principles:
+  enthusiasm is contagious; avoid the curse of knowledge; communicate clearly,
+  like Hemingway. Share what is exciting, explain what a newcomer needs, and
+  write direct, concrete prose. Complements future-forge-quest and
+  future-forge-companion.
 ---
 
 # Quest authoring: share the excitement
 
 Use this skill alongside `../future-forge-quest/SKILL.md` and, for a source-led quest, `../future-forge-companion/SKILL.md`. They handle the quest format. This skill handles how you bring the subject to the learner.
 
-There are only two principles.
+There are only three principles.
 
 ## 1. Enthusiasm is contagious
 
@@ -35,20 +36,40 @@ Once you understand a subject, it is easy to forget what it was like not to unde
 
 ### Put it into practice
 
-- Read as an intelligent newcomer, not as a fellow specialist. Unless the audience is specified otherwise, assume no specialist knowledge of this subject. Lack of background is not lack of intelligence.
-- At each unfamiliar idea, ask: **What am I assuming the learner already knows?** Supply the missing piece where it is needed.
-- Explain what a thing does before relying on its technical name. Spell out an acronym only if that helps; an unfamiliar full name may need an explanation too.
-- Explain why a result is exciting. If it is faster, cheaper, smaller, or newly possible, give enough of the earlier situation for the learner to understand the difference. Do not assume they already know what used to be difficult.
-- Make the links explicit. Do not jump from a scientific result to an application without explaining how one could enable the other.
-- Prefer familiar words and concrete explanations. When using an analogy, make clear what it helps explain; do not let it silently replace the actual idea.
-- Give enough context to follow, not a course in the whole field. Add the missing bridge, then return to what is exciting. If simplifying removes the explanation, restore the explanation in plainer language.
+- Read as one intelligent newcomer, not as a fellow specialist. Unless the audience is specified otherwise, assume no useful mental model of this subject yet. Lack of background is not lack of intelligence.
+- Before writing, privately ask: **What am I assuming the learner already knows? What must they understand for this to make sense?** Build from that starting point, not from where the source's author starts.
+- Show the whole idea before its parts. Establish what is happening and why it matters before introducing names, measurements, or subtypes.
+- Explain what a thing does before giving its technical name. Define a necessary term in the same breath you first use it; otherwise leave it out. Expanding an acronym is not an explanation.
+- Use **explain → concretize → land**: state the idea plainly, give a concrete example or familiar picture, then say what follows from it. Use this as a writing move, not a mandatory set of headings.
+- Explain the mechanism. Say what starts the process, what happens next, and how that leads to the result. Do not replace the explanation with a claim about benefits or a list of features.
+- Explain why a result is exciting. Give enough of the earlier situation for the learner to understand what changed. Connect the scientific result to the possible application instead of silently jumping between them.
+- Use one useful analogy when it helps. Explain the real process too, and make clear where the comparison stops working. Do not make the learner learn a second unfamiliar subject to understand the first.
+- Omit side branches that block the first understanding. Keep any limitation that would materially change what the learner thinks is possible, and explain it in the prose where it matters.
+- Keep your teaching machinery private. The quest should explain the subject, not announce what you simplified, list the jargon you removed, or expose workshop labels. Do not patch an unclear explanation with a glossary or a fine-print box.
 
-**Read-back question:** Could someone meeting this subject for the first time follow what I mean and see why I find it exciting—without needing to look things up?
+**Read-back test:** Privately retell the idea in about a minute using only the draft—not the source or your background knowledge. Can you explain what happens, how it works, and why it is exciting? If not, rewrite from an earlier starting point. Repair the explanation itself, not the notes around it. Check that the simpler version has not changed a material fact.
 
-## How to use the two principles
+## 3. Communicate clearly, like Hemingway
 
-Read the source and the existing quest, if there is one. Find what you genuinely want to share. Draft around it. Then reread for the knowledge you have silently assumed. Explain those missing pieces without losing the energy that made you want to share the subject.
+Use plain words, concrete details, and direct sentences. Make the thought easy to follow. “Like Hemingway” means clarity and economy, not imitation of a literary voice or a string of dramatic fragments.
 
-When reviewing, point to where the excitement comes through or gets lost, and where a newcomer would need an explanation. Offer the actual wording that would help. Do not produce scores, a rubric, a research review, or a compliance report.
+### Put it into practice
+
+- Say who does what. Prefer an active verb when the actor matters: “The robot sorts the parcels,” not “Parcel sorting is undertaken through robotic implementation.”
+- Choose the ordinary word when it means the same thing. Write “use,” not “utilize”; “help,” not “facilitate.” Keep a precise technical word when it is needed, and explain it.
+- Give each sentence a clear job. Split a sentence when it carries too many ideas, not merely because it is long. Let sentence lengths vary so the prose sounds natural.
+- Prefer actions and things the learner can picture to abstract noun piles. Say what changes in the world, not that a “transformative capability enhancement” occurs.
+- Cut throat-clearing, repeated points, empty praise, and words that add no meaning. Start with the thought, not “It is important to note that.”
+- Keep full sentences and explicit connections. Shorter is not clearer if you remove the explanation, turn prose into slogans, or make the learner guess what “this” refers to.
+- State uncertainty precisely. Say “Researchers have tested it in a lab, not in a working hospital,” rather than adding a fog of “potentially,” “possibly,” and “perhaps.” Do not cut a qualification that keeps the claim true.
+- Read the draft aloud. Rewrite where you stumble, lose the subject, or need a second reading to recover the meaning.
+
+**Read-back question:** Can I say this more directly without losing meaning, warmth, or truth?
+
+## How to use the three principles
+
+Read the source and the existing quest, if there is one. Find what you genuinely want to share. Draft around it. Supply the knowledge and causal steps a newcomer needs. Then tighten the prose and read it aloud. Keep the excitement, the explanation, and the truth intact.
+
+When reviewing, point to where the excitement gets lost, where a newcomer cannot follow, and where the wording gets in the way. Offer the actual wording that would help. Do not produce scores, a rubric, a research review, or a compliance report.
 
 When rewriting, deliver the revised quest within the requested scope. Do not add more principles or restore the discarded framework under new names.
