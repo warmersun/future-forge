@@ -1,0 +1,35 @@
+{
+  "source": "Cuorips Inc. (Osaka University spin-out), news 6 Mar 2026: MHLW conditional, time-limited approval of allogeneic iPSC-derived cardiomyocyte sheet RiHEART (IPSOC-1) for severe ischemic heart failure after conventional options; 'world's first approved therapy using cardiomyocytes derived from iPS cells for the treatment of heart failure'; supports damaged myocardium. PMDA review report (English, Feb 2026): 3.3 x 10^7 cardiomyocytes per sheet, attached to heart surface; indication severe heart failure with ischemic cardiomyopathy with inadequate response to standard care; post-marketing surveillance of all treated patients; duration of approval 7 years; target sample 75 patients; 3 immunosuppressants after transplant; improve/maintain cardiac function and exercise tolerance. Cuorips notice 1 Oct 2026: NHI coverage from 1 Sep 2026; first insured transplant 29 Sep 2026 at Osaka Police Hospital. Japan Forward / Sankei, 27 Oct 2026: woman in her 50s, severe heart failure after heart attack, ~50 min surgery led by Dr. Yoshiki Sawa, discharged 22 Oct, no complications, walking, can take deep breaths, full effect expected in 6-12 months, immunosuppressants through year end, expected to promote new blood vessels, 75 patients at ~20 institutions, ~10 more being considered; 'first time an iPS cell product has been put into practical use as a treatment'. Asahi Shimbun, 21 Oct 2026: conditional ('provisional licence') status, efficacy and safety to be checked within 7 years for full approval, 75-patient plan, ~10 patients under consideration. Not stored or shown.",
+  "id": "9d366520-cb92-4a71-8d2a-099d24f9c627",
+  "techId": "synbio",
+  "title": "A patch of lab-grown heart muscle, now an approved treatment for failing hearts",
+  "description": "Donor cells are reset into stem cells, which can turn into any kind of body cell, and then turned into heart muscle cells. About 33 million of them are grown into one thin, living sheet that surgeons lay on the outside of a failing heart. There it is expected to help new blood vessels grow and support the damaged heart muscle around it.",
+  "capability": "Doctors can now patch a badly failing heart with a living sheet of heart muscle grown from donor cells that were reset into stem cells, as an approved treatment that public health insurance covers. The approval is conditional: it still has to prove it works in more patients.",
+  "useCases": [
+    "Treating people whose hearts are failing badly because of blocked blood flow, such as after a heart attack, when standard medicines and procedures no longer help. Approved for this.",
+    "The goal: helping a weakened heart work better so patients can be active again without running out of breath. Expected, but not yet proven in enough patients."
+  ],
+  "body": "The first patient treated since insurance began covering it, a woman in her 50s with severe heart failure after a heart attack, had the sheet attached in surgery on 29 September 2026 that took about 50 minutes. She left the hospital on 22 October with no complications reported, walking and able to take deep breaths again. Doctors expect the full effect to show within six months to a year, and about 10 more patients are being considered.\n\nIt is the first approved treatment for heart failure that uses heart muscle cells made from reset stem cells. But the approval is conditional and time-limited, because the evidence that it works is still limited. Every patient treated is being followed, with a plan for 75 patients at about 20 hospitals, and the treatment has to show it is safe and works within seven years to get full approval.\n\nBecause the cells come from a donor, the body's defenses could attack them, so patients take medicines that hold back the immune system; this first patient takes them through the end of the year. One patient's early recovery is a hopeful sign, not proof.",
+  "links": [
+    {
+      "label": "The approval announcement from the treatment's maker",
+      "url": "https://www.cuorips.co.jp/news-en/20260306"
+    },
+    {
+      "label": "The regulator's review report, with the approval conditions",
+      "url": "https://www.pmda.go.jp/files/000281693.pdf"
+    },
+    {
+      "label": "Notice of the first treatment covered by public health insurance",
+      "url": "https://www.cuorips.co.jp/news-en/200261001"
+    },
+    {
+      "label": "News report on the first patient leaving the hospital",
+      "url": "https://japan-forward.com/first-patient-treated-with-ips-cell-heart-sheet-leaves-hospital-reheart/"
+    },
+    {
+      "label": "News report on the patient's recovery and the approval terms (Japanese)",
+      "url": "https://www.asahi.com/articles/ASVBP1VSDVBPUTFL005M.html"
+    }
+  ]
+}
