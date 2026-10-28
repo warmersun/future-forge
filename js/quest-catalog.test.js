@@ -9,6 +9,9 @@ import {
   isLibraryCatalogSource,
   isLibraryCatalogEntry,
   catalogNeedsAccount,
+  catalogAccessKind,
+  catalogGroupAccessKinds,
+  CATALOG_ACCESS_CHIPS,
   partitionCatalogQuests,
   groupLearningModules,
   catalogTopLevel,
@@ -280,6 +283,51 @@ describe("quest-catalog", () => {
     const top = catalogTopLevel(groups[0].wrapper ? [groups[0].wrapper] : []);
     assert.equal(top.groups.length, 1);
     assert.equal(top.groups[0].entries.length, 0);
+  });
+});
+
+describe("catalog access chips", () => {
+  it("labels open, account, and billing paid", () => {
+    assert.equal(catalogAccessKind({ access: "open" }), "open");
+    assert.equal(catalogAccessKind({ mission: { access: "account" } }), "account");
+    assert.equal(catalogAccessKind({ tile: { access: "paid" } }), "paid");
+    assert.equal(CATALOG_ACCESS_CHIPS.paid.label, "Paid");
+    assert.equal(CATALOG_ACCESS_CHIPS.account.label, "Account");
+    assert.equal(CATALOG_ACCESS_CHIPS.open.label, "Free");
+  });
+
+  it("treats a waived paid tile and an unlabeled lesson as sign-in", () => {
+    assert.equal(
+      catalogAccessKind({ access: "paid", sponsorName: "Acme" }),
+      "account"
+    );
+    assert.equal(
+      catalogAccessKind({ access: "paid", entitlement: "catalog.free" }),
+      "account"
+    );
+    assert.equal(
+      catalogAccessKind({ isLearningModule: true, lesson: 1 }),
+      "account"
+    );
+    assert.equal(catalogAccessKind({ source: "hosted", kind: "quest" }), "open");
+    assert.equal(catalogAccessKind({ source: "remote", kind: "quest" }), "open");
+  });
+
+  it("lists each distinct level on a module, in Free, Sign in, Paid order", () => {
+    const group = {
+      entries: [
+        { access: "paid" },
+        { access: "open" },
+        { access: "paid", sponsorName: "Acme" },
+        { access: "open" },
+      ],
+      wrapper: { kind: "module" },
+    };
+    assert.deepEqual(catalogGroupAccessKinds(group), ["open", "account", "paid"]);
+    assert.deepEqual(
+      catalogGroupAccessKinds({ entries: [], wrapper: { kind: "module" } }),
+      ["account"]
+    );
   });
 });
 

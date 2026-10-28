@@ -110,6 +110,65 @@ export function catalogNeedsAccount(entry, opts = {}) {
   );
 }
 
+/** @typedef {"open"|"account"|"paid"} CatalogAccessKind */
+
+/**
+ * Player-facing access chip. Paid that bills the player is "paid".
+ * A sponsor or catalog.free waiver is "account". A learning tile with no
+ * access field is "account". Library with no access field is "open".
+ * @param {object|null|undefined} entry
+ * @returns {CatalogAccessKind}
+ */
+export function catalogAccessKind(entry) {
+  if (!entry || typeof entry !== "object") return "open";
+  const raw = entry.access || entry.mission?.access || entry.tile?.access || "";
+  const access = raw === "open" || raw === "account" || raw === "paid" ? raw : "";
+  const ent = String(
+    entry.entitlement || entry.mission?.entitlement || entry.tile?.entitlement || ""
+  ).trim();
+  const sponsor = String(
+    entry.sponsorName || entry.mission?.sponsorName || entry.tile?.sponsorName || ""
+  ).trim();
+  const waived = ent === "catalog.free" || Boolean(sponsor);
+  if (access === "paid" && !waived) return "paid";
+  if (access === "open") return "open";
+  if (access === "account" || access === "paid") return "account";
+  if (isLibraryCatalogEntry(entry)) return "open";
+  if (isLearningEntry(entry)) return "account";
+  return "open";
+}
+
+/** Chip copy for one access kind. Order used on mixed module cards. */
+export const CATALOG_ACCESS_CHIPS = {
+  open: {
+    label: "Free",
+    title: "No account is required to open this Quest.",
+  },
+  account: {
+    label: "Account",
+    title: "Sign-in is required before this Quest opens.",
+  },
+  paid: {
+    label: "Paid",
+    title: "This Quest is paid content. It needs the Content plan, which Cloud includes.",
+  },
+};
+
+const CATALOG_ACCESS_ORDER = ["open", "account", "paid"];
+
+/**
+ * Distinct access chips for a module's lessons, Free then Sign in then Paid.
+ * An empty lesson list uses the wrapper.
+ * @param {{ entries?: object[], wrapper?: object|null }} group
+ * @returns {CatalogAccessKind[]}
+ */
+export function catalogGroupAccessKinds(group) {
+  const lessons = Array.isArray(group?.entries) ? group.entries : [];
+  const source = lessons.length ? lessons : group?.wrapper ? [group.wrapper] : [];
+  const present = new Set(source.map((entry) => catalogAccessKind(entry)));
+  return CATALOG_ACCESS_ORDER.filter((kind) => present.has(kind));
+}
+
 /**
  * A module group is Sponsored if the wrapper or any lesson is sponsored.
  * @param {object} group

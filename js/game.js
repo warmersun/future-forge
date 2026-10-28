@@ -277,6 +277,9 @@ import {
   catalogLessonTotal,
   lockedCatalogHubEntry,
   sameModuleLessonOffer,
+  catalogAccessKind,
+  catalogGroupAccessKinds,
+  CATALOG_ACCESS_CHIPS,
 } from "./quest-catalog.js";
 import { mergeTrendsForStack } from "./capability-trend.js";
 import { createCapabilityExplorer } from "./capability-explorer.js?v=outlook-1";
@@ -6715,6 +6718,27 @@ function groupCatalogByTheme(entries) {
  * @param {object} entry
  * @param {"sponsored"|"learning"|"library"} kind
  */
+const ACCESS_ICON = {
+  open: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.15" fill="none" stroke="currentColor" stroke-width="1.35"/><path d="M8 1.35v2.05M8 12.6v2.05M1.35 8h2.05M12.6 8h2.05M3.25 3.25l1.45 1.45M11.3 11.3l1.45 1.45M12.75 3.25l-1.45 1.45M4.7 11.3l-1.45 1.45" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>`,
+  account: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.15" r="2.05" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3.7 13.15c.65-2.25 2.2-3.35 4.3-3.35s3.65 1.1 4.3 3.35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  paid: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.7v6.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+};
+
+function catalogAccessMarksHtml(kinds) {
+  const marks = (Array.isArray(kinds) ? kinds : [kinds])
+    .map((kind) => {
+      const chip = CATALOG_ACCESS_CHIPS[kind];
+      const icon = ACCESS_ICON[kind];
+      if (!chip || !icon) return "";
+      return `<span class="access-mark access-${kind}" title="${escapeHtml(
+        chip.title
+      )}" aria-label="${escapeHtml(chip.label)}">${icon}</span>`;
+    })
+    .filter(Boolean)
+    .join("");
+  return marks ? `<span class="access-marks">${marks}</span>` : "";
+}
+
 function catalogBadgesHtml(entry, kind) {
   const m = entry.mission;
   if (!m) return "";
@@ -7158,6 +7182,7 @@ function catalogCardHtml(entry, kind, opts = {}) {
           <p>${escapeHtml(scene)}</p>
           <span class="cta">${cta}</span>
         </span>
+        ${catalogAccessMarksHtml(catalogAccessKind(entry))}
       </button>
       <div class="catalog-card-actions">
         ${
@@ -7287,6 +7312,7 @@ function moduleCardHtml(group) {
           <p>${escapeHtml(summary || status)}</p>
           <span class="cta">Open module →</span>
         </span>
+        ${catalogAccessMarksHtml(catalogGroupAccessKinds(group))}
       </button>
       ${
         inspectBtn || group.wrapper?.id

@@ -3,6 +3,6 @@
 void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));
-void import("./game.js?v=companion-25")
+void import("./game.js?v=access-3")
   .then((m) => m.init())
   .catch((e) => console.error("[game]", e?.message || e));
