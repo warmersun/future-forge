@@ -18,10 +18,25 @@ describe("tutor prompt contract", () => {
     assert.equal(serverSrc.includes("One short core idea"), false);
   });
 
-  it("asks for a short teaching paragraph that answers the question asked", () => {
-    assert.match(serverSrc, /short paragraph: 4.8 full sentences/);
-    assert.match(serverSrc, /SEQUENCE paces unsolicited next ideas/);
-    assert.match(serverSrc, /answer the question they asked/i);
+  it("prioritizes learner requests over default pacing and scaffolding in both servers", () => {
+    const parts = [];
+    for (const [label, src] of [["server.mjs", serverSrc], ["portal/server.mjs", portalSrc]]) {
+      const prompt = src.match(/const TUTOR_SYSTEM_PROMPT = `([\s\S]*?)`;\n/);
+      const rule = src.match(/\? "\s*(Tutor mode: [^"]+)"/);
+      assert.ok(prompt, `${label}: tutor prompt exists`);
+      assert.ok(rule, `${label}: tutor payload rule exists`);
+      assert.match(prompt[1], /Follow the learner’s explicit request over default pacing/);
+      assert.match(prompt[1], /Never require them to suggest ideas or demonstrate understanding/);
+      assert.match(prompt[1], /provide a complete solution when asked/);
+      assert.match(prompt[1], /cover more when the learner asks/);
+      assert.match(prompt[1], /learner decides what to apply/);
+      assert.match(prompt[1], /SEQUENCE paces unsolicited next ideas/);
+      assert.match(rule[1], /full solutions without requiring ideas first/);
+      assert.doesNotMatch(prompt[1], /When they ask for a full solution, give a partial scaffold/);
+      assert.doesNotMatch(rule[1], /never rewrite a page/);
+      parts.push([prompt[1], rule[1]]);
+    }
+    assert.deepEqual(parts[0], parts[1]);
   });
 
   it("names the spotlight advance in tutor mode only", () => {
