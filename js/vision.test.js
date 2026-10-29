@@ -50,6 +50,18 @@ describe("dataUrlToBlobUrl", () => {
   });
 });
 
+describe("VisionRenderer editing guard", () => {
+  it("settles without generating when a queued edit is no longer ready", async () => {
+    const v = new VisionRenderer(mockRoot(mockImg()));
+    let settled = 0;
+    v.pending = { challenge: { id: "quest" }, shouldRun: () => false, onSettled: () => { settled++; } };
+    await v.flush();
+    assert.equal(settled, 1);
+    assert.equal(v.busy, false);
+    assert.equal(v.currentUrl, "");
+  });
+});
+
 describe("VisionRenderer.seedLocalFrame", () => {
   it("shows a local still without claiming a real Imagine frame", () => {
     const img = mockImg();

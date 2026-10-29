@@ -23,7 +23,7 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer } from "./vision.js";
+import { VisionRenderer } from "./vision.js?v=access-4";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
@@ -1397,6 +1397,107 @@ let _aiTimingTimer = null;
 let _aiTimingGen = 0;
 let _aiTimingPending = false;
 let _aiTimingInFlight = false;
+let _aiTimingActiveGen = null;
+// Pending text-dependent work belongs to the viewed invent, not the shared DOM.
+const storyEdits = new Map();
+let storyRunGeneration = 0;
+function resetStoryEdits() {
+  storyRunGeneration += 1;
+  storyEdits.clear();
+  clearTimeout(_aiTimingTimer);
+  _aiTimingTimer = null;
+  _aiTimingGen += 1;
+  _aiTimingPending = false;
+  _aiTimingInFlight = false;
+  _aiTimingActiveGen = null;
+}
+function storyEditKey(seatId = mpBridge()?.getViewId?.() || "solo") {
+  return JSON.stringify([storyRunGeneration, state.mission?.id || "",
+    state.mp?.mode || "solo", state.mp?.code || "", seatId]);
+}
+function storyEditRecord(key = storyEditKey()) {
+  if (!storyEdits.has(key)) storyEdits.set(key, { generation: 0, how: false, vision: false });
+  return storyEdits.get(key);
+}
+function storyFieldFocused() {
+  return ["invention-how", "invention-impact", "invention-name"].includes(document.activeElement?.id);
+}
+function markStoryEdited(howChanged, visionChanged = true) {
+  const edit = storyEditRecord();
+  edit.generation += 1;
+  if (visionChanged) edit.vision = true;
+  if (howChanged || _aiTimingTimer || _aiTimingInFlight) {
+    edit.how = true;
+    if (howChanged) state.aiTiming = null;
+    clearTimeout(_aiTimingTimer);
+    _aiTimingTimer = null;
+    _aiTimingGen += 1;
+    _aiTimingPending = false;
+    renderTiming();
+    renderFeasibility();
+    updateChallengeButton();
+  }
+}
+function storyVisionGuard(opts = {}) {
+  const key = storyEditKey();
+  const generation = storyEditRecord(key).generation;
+  return () => {
+    if (opts.shouldRun && !opts.shouldRun()) return false;
+    if (opts.force) return true;
+    if (key !== storyEditKey()) return false;
+    if (storyFieldFocused() || storyEditRecord(key).generation !== generation) {
+      storyEditRecord(key).vision = true;
+      lastRoomVisionKey = "";
+      // The edit may already have blurred before this queued request ran.
+      // Defer the retry so it cannot interfere with the request being rejected.
+      if (!storyFieldFocused()) setTimeout(() => flushStoryEdits(key), 0);
+      return false;
+    }
+    return true;
+  };
+}
+function prepareStoryHydration(bridge) {
+  const oldSeat = state.mp?.viewSeatId;
+  const newSeat = bridge?.getViewId?.();
+  if (!oldSeat || !newSeat || oldSeat === newSeat) return;
+  const edit = storyEdits.get(storyEditKey(oldSeat));
+  if (edit && (_aiTimingTimer || _aiTimingInFlight)) edit.how = true;
+  clearTimeout(_aiTimingTimer);
+  _aiTimingTimer = null;
+  _aiTimingGen += 1;
+  _aiTimingPending = false;
+  _aiTimingInFlight = false;
+  _aiTimingActiveGen = null;
+}
+function prepareStorySeatSwitch(bridge, seatId) {
+  if (seatId === bridge.getViewId?.()) return;
+  const key = storyEditKey();
+  if (bridge.viewingOther?.()) {
+    // Unvalidated contributions are deliberately abandoned on switch.
+    storyEdits.delete(key);
+  } else if (_aiTimingTimer || _aiTimingInFlight) {
+    storyEditRecord(key).how = true;
+  }
+  clearTimeout(_aiTimingTimer);
+  _aiTimingTimer = null;
+  _aiTimingGen += 1;
+  _aiTimingPending = false;
+  _aiTimingInFlight = false;
+  _aiTimingActiveGen = null;
+}
+function flushStoryEdits(key = storyEditKey()) {
+  if (key !== storyEditKey() || storyFieldFocused()) return;
+  const edit = storyEdits.get(key);
+  if (!edit) return;
+  if (edit.how) {
+    edit.how = false;
+    scheduleAiTimingAssess();
+  }
+  if (edit.vision) {
+    edit.vision = false;
+    updateVision({ debounceMs: 200 });
+  }
+}
 /** Last settled traffic-light color (red|yellow|green) for the panel circle */
 let lastFeasibilityLightLevel = "red";
 /**
@@ -1423,8 +1524,10 @@ function mpHydrateAndRender(opts = {}) {
     console.warn("[mp] hydrate storm — skipping heavy render", mpHydrateCountWindow.n);
     try {
       const drafts = captureFocusedInventDrafts();
+      prepareStoryHydration(b);
       b.hydrateSoloState(state, { global: state.global });
       reapplyFocusedInventDrafts(drafts);
+      flushStoryEdits();
       syncCapabilityExplorer();
       applyEndTurnChrome();
       if (!opts.skipTurnNotice) maybeNotifyMpTurnStart();
@@ -1439,6 +1542,7 @@ function mpHydrateAndRender(opts = {}) {
     const yearBefore = state.year;
     const viewBefore = state.mp?.viewSeatId;
     const marketBeforeId = state.marketNews?.id || null;
+    prepareStoryHydration(b);
     b.hydrateSoloState(state, {
       global: state.global,
       keepLocalHexBoard: Boolean(hexWorkshop?.isCreateBusy?.()),
@@ -1450,6 +1554,7 @@ function mpHydrateAndRender(opts = {}) {
       if (state.mp?.viewSeatId !== viewBefore) lastSettledTiming = null;
       onInventYearChangedForTiming();
     }
+    flushStoryEdits();
     // Multiplayer: full seat-round wrap ships new market news on the place
     if (state.marketNews?.id && state.marketNews.id !== marketBeforeId) {
       queueMarketNewsModal(state.marketNews, { force: true });
@@ -1870,7 +1975,7 @@ const ideaSparkJobCurrent = new Map();
  */
 function captureFocusedInventDrafts() {
   /** @type {{ inventionName?: string, inventionHow?: string, inventionImpact?: string }} */
-  const drafts = {};
+  const drafts = { viewSeatId: state.mp?.viewSeatId || null };
   const name = $("#invention-name");
   const how = $("#invention-how");
   const impact = $("#invention-impact");
@@ -1899,7 +2004,7 @@ function isLikelyTypingContinuation(hydrated, draft) {
  * @param {{ inventionName?: string, inventionHow?: string, inventionImpact?: string }} drafts
  */
 function reapplyFocusedInventDrafts(drafts) {
-  if (!drafts) return;
+  if (!drafts || drafts.viewSeatId !== (state.mp?.viewSeatId || null)) return;
   if (
     drafts.inventionName !== undefined &&
     isLikelyTypingContinuation(state.inventionName, drafts.inventionName)
@@ -2395,6 +2500,7 @@ function openWorkshopForViewedInvent(bridge) {
   applyEndTurnChrome();
   updateChallengeButton();
   applyStoryFieldLocks();
+  flushStoryEdits();
   if (roomBridge.isRoom()) {
     scheduleRoomVisionRefresh({ immediate: true });
   } else {
@@ -2419,6 +2525,7 @@ function bindMpSeatTabClicks(list, b) {
       // (spectator Challenge / Deploy) and return; combat state lives on the invent.
       const seatId = btn.dataset.seat;
       const me = b.myId?.() || null;
+      prepareStorySeatSwitch(b, seatId);
       // Flush own invent; abandon unvalidated contribution drafts on seat switch.
       // Suppress blur→commit so we don't double-fire AI while changing view.
       if (writeCommitTimer) {
@@ -2835,6 +2942,7 @@ function enterHotseatPlay(names, mission, global) {
   state.runReport = null;
   state.scrutiny = null;
   state.coInventor?.reset?.(false);
+  resetStoryEdits();
   if (state.vision) state.vision.newSession();
   state.tutorSessionActive = false;
   resetPendingSpend();
@@ -3053,10 +3161,12 @@ function handleRoomPlayEvent(client, evt) {
   const viewBeforeHydrate = roomBridge.getViewId();
   const focusedDrafts = captureFocusedInventDrafts();
   if (!selfChallengeBusy) {
+    prepareStoryHydration(roomBridge);
     roomBridge.hydrateSoloState(state, { global: state.global });
     if (roomBridge.getViewId() === viewBeforeHydrate) {
       reapplyFocusedInventDrafts(focusedDrafts);
     }
+    flushStoryEdits();
   } else {
     // Mid-Challenge: still sync AP/Will from server so enter_challenge spend is visible
     // and sidestep isn't blocked by a stale "AP 1" chip while state.ap is already 0.
@@ -3301,6 +3411,7 @@ function enterRoomPlay(client, opts = {}) {
   }
 
   roomPlayEntering = true;
+  resetStoryEdits();
   try {
     leaveHotseat();
     roomBridge.attach(client);
@@ -8502,6 +8613,7 @@ function startMission(mission, opts = {}) {
   state.outcome = null;
   state.runReport = null;
   state.aiTiming = null;
+  resetStoryEdits();
   // Drop any prior invent's assess spinner / debounce
   clearTimeout(_aiTimingTimer);
   _aiTimingTimer = null;
@@ -12933,8 +13045,24 @@ function scheduleAiTimingAssess() {
   // Mark pending before any caller re-paints so the light freezes on last color
   _aiTimingPending = true;
   const gen = ++_aiTimingGen;
+  const keyAtSchedule = storyEditKey();
   _aiTimingTimer = setTimeout(() => {
     _aiTimingTimer = null;
+    if (gen !== _aiTimingGen) return;
+    if (keyAtSchedule !== storyEditKey()) {
+      const edit = storyEdits.get(keyAtSchedule);
+      if (edit) edit.how = true;
+      _aiTimingPending = false;
+      return;
+    }
+    if (storyFieldFocused()) {
+      storyEditRecord(keyAtSchedule).how = true;
+      _aiTimingPending = false;
+      renderFeasibility();
+      renderTiming();
+      updateChallengeButton();
+      return;
+    }
     runAiTimingAssess(gen).catch(() => {});
   }, 1600);
 }
@@ -12945,11 +13073,13 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
     return;
   }
   const key = timingCacheKey();
+  const editKey = storyEditKey();
   if (state.aiTiming?.forKey === key) {
     settleAiTimingAssessIfCurrent(gen);
     return;
   }
   _aiTimingInFlight = true;
+  _aiTimingActiveGen = gen;
   _aiTimingPending = true;
   try {
     const data = await apiCoInvent("assess-feasibility", "[Assess claim timing]", {
@@ -12962,6 +13092,11 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
         : null,
     });
     if (gen !== _aiTimingGen) return;
+    if (editKey !== storyEditKey() || key !== timingCacheKey()) {
+      const edit = storyEdits.get(editKey);
+      if (edit) edit.how = true;
+      return;
+    }
     const rawLevel = data.timing?.level || data.timingLevel;
     const reason = data.timing?.reason || data.timingNote || data.message;
     if (rawLevel && ["red", "yellow", "green"].includes(rawLevel)) {
@@ -12983,7 +13118,10 @@ async function runAiTimingAssess(gen = _aiTimingGen) {
   } catch {
     /* client heuristic remains */
   } finally {
-    _aiTimingInFlight = false;
+    if (_aiTimingActiveGen === gen) {
+      _aiTimingInFlight = false;
+      _aiTimingActiveGen = null;
+    }
     if (gen === _aiTimingGen && !_aiTimingTimer) {
       _aiTimingPending = false;
       renderFeasibility();
@@ -18966,6 +19104,7 @@ function updateVision(opts = {}) {
         : $("#vision-root");
   if (briefingOwnsRoot(primaryRoot) && !opts.force) return;
 
+  const shouldRun = storyVisionGuard(opts);
   state.vision.setState({
     stageId: stage.id,
     stage,
@@ -18997,6 +19136,7 @@ function updateVision(opts = {}) {
     sessionId: sharedSessionId || undefined,
     followOnly,
     visionRev,
+    shouldRun,
     // Owner only: tell the room a new shared frame is ready
     onGenerated: followOnly
       ? undefined
@@ -23017,19 +23157,6 @@ function bind() {
     state.inventionName = e.target.value;
     updateChallengeButton();
   });
-  let narrativeTimer;
-  const bumpNarrative = () => {
-    clearTimeout(narrativeTimer);
-    narrativeTimer = setTimeout(() => updateVision({ debounceMs: 200 }), 2200);
-  };
-  const bumpClaimTiming = () => {
-    state.aiTiming = null;
-    scheduleAiTimingAssess(); // pending before paint freezes light color
-    renderTiming();
-    renderFeasibility();
-    updateChallengeButton();
-  };
-
   $$(".story-mode-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (isMpContributionLocked() || writeCommitInFlight) {
@@ -23074,8 +23201,7 @@ function bind() {
       return;
     }
     state.inventionHow = e.target.value;
-    bumpClaimTiming();
-    bumpNarrative();
+    markStoryEdited(true);
     scheduleSoftInventSave();
     scheduleCloudRunState();
     state.coInventor?.syncChipGates?.();
@@ -23092,8 +23218,7 @@ function bind() {
       return;
     }
     state.inventionImpact = e.target.value;
-    bumpClaimTiming();
-    bumpNarrative();
+    markStoryEdited(false);
     scheduleSoftInventSave();
     scheduleCloudRunState();
   });
@@ -23104,11 +23229,12 @@ function bind() {
       return;
     }
     state.inventionName = e.target.value;
+    markStoryEdited(false, false);
     scheduleSoftInventSave();
     scheduleCloudRunState();
   });
   ["#invention-how", "#invention-impact", "#invention-name"].forEach((sel) => {
-    $(sel)?.addEventListener("blur", () => {
+    $(sel)?.addEventListener("blur", async () => {
       if (suppressInventBlurCommit) return;
       if (isViewedInventStoryLocked() && !isMpContributionLocked()) {
         applyStoryFieldLocks();
@@ -23119,7 +23245,11 @@ function bind() {
         clearTimeout(writeCommitTimer);
         writeCommitTimer = null;
       }
-      commitWriteIfNeeded();
+      const key = storyEditKey();
+      const generation = storyEditRecord(key).generation;
+      await commitWriteIfNeeded();
+      if (key !== storyEditKey() || generation !== storyEditRecord(key).generation) return;
+      flushStoryEdits(key);
     });
   });
 

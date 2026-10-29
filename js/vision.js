@@ -326,6 +326,10 @@ export class VisionRenderer {
   async flush() {
     const state = this.pending;
     if (!state?.challenge) return;
+    if (state.shouldRun && !state.shouldRun()) {
+      state.onSettled?.();
+      return;
+    }
 
     // Multiplayer shared cache key (room+seat) — no WS thrash, same server session
     if (state.sessionId) this.setSessionId(state.sessionId, { clear: false });
