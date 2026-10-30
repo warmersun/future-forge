@@ -286,7 +286,9 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
           WHERE quest_id = $1 AND clerk_user_id = $2`, [qid, uid]);
         const still = got.rows[0];
         if (!still?.bytes) return reply({ ok: false, error: "no_still" }, 404);
-        return new Response(still.bytes, { status: 200, headers: { "Content-Type": still.content_type || "image/jpeg" } });
+        return new Response(still.bytes, { status: 200, headers: {
+          ...cors, "Cache-Control": "no-store", "Content-Type": still.content_type || "image/jpeg",
+        } });
       }
       const ident = await identity(request);
       const [scores, stills] = await Promise.all([
