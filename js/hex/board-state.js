@@ -14,7 +14,7 @@ import {
 } from "./hex-tile-grid.js";
 import { polarityForTech, SPLIT } from "./polarity.js";
 import { GAME, clampChallengerCount } from "../data.js";
-import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-2";
+import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-3";
 
 export const TILE_KIND = {
   invention: "invention",

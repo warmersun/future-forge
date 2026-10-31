@@ -15,7 +15,7 @@ import {
   getOpenTable,
   MIN_PLAYERS,
   MAX_PLAYERS,
-} from "../sim/mp-session.js?v=crisis-role-2";
+} from "../sim/mp-session.js?v=crisis-role-3";
 
 /**
  * @param {string[]} names

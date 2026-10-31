@@ -61,9 +61,9 @@ import {
   captainLogFilterCounts,
   formatTimingLog,
   formatScrutinyLog,
-} from "./captain-log.js?v=crisis-role-2";
+} from "./captain-log.js?v=crisis-role-3";
 import { getClientSessionId } from "./client-session.js";
-import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crisis-role-2";
+import { applyContinueSnapshot, snapshotForWire, slimMissionForContinue, resolvePackageContinueMission, validateContinueWorld } from "./cloud/continue.js?v=crisis-role-3";
 import { questHasLeaderboard } from "./cloud/quest-board.js?v=portal-20";
 import {
   publicPortfolio,
@@ -134,8 +134,8 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=crisis-role-2";
-import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-2";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=crisis-role-3";
+import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
   deriveBoardProse,
@@ -151,7 +151,7 @@ import {
   concernAnglesOnBoard,
   formatFactor,
   convergencesForAi,
-} from "./hex/board-state.js?v=crisis-role-2";
+} from "./hex/board-state.js?v=crisis-role-3";
 import {
   boardWorstPathwayTiming,
   boardPathwayReevaluating,
@@ -165,7 +165,7 @@ import {
   visionGivensFromBoard,
   visionPeopleMood,
   crisisMeterTooltipBits,
-} from "./hex/evaluate.js?v=crisis-role-2";
+} from "./hex/evaluate.js?v=crisis-role-3";
 import {
   clonePressure as simClonePressure,
   previewPressureAfterWait,
@@ -186,7 +186,7 @@ import {
   claimTimingFingerprint,
   clampTimingForYearAdvance,
 } from "./sim/deploy.js";
-import { assessSustainable } from "./sim/sustainable.js?v=crisis-role-2";
+import { assessSustainable } from "./sim/sustainable.js?v=crisis-role-3";
 import {
   cloneRules,
   seedLiveRules,
@@ -210,7 +210,7 @@ import {
   crisisMeterLevel,
   crisisHoldNeedLabel,
 } from "./sim/collapse.js";
-import { inventYear } from "./sim/mp-session.js?v=crisis-role-2";
+import { inventYear } from "./sim/mp-session.js?v=crisis-role-3";
 import { cloudRunKind, missionForFriendsPlay } from "./sim/state.js";
 import { bankForRun, emptyRunWorld, prepareRunWorld } from "./sim/run-world.js";
 import { normalizeMission } from "./mission-normalize.js";
@@ -321,9 +321,9 @@ import {
   stopReadAloud,
   setReadAloudToast,
 } from "./read-aloud.js";
-import { initFriendsUi } from "./multiplayer/ui.js?v=crisis-role-2";
-import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=crisis-role-2";
-import { createRoomBridge } from "./multiplayer/room-bridge.js?v=crisis-role-2";
+import { initFriendsUi } from "./multiplayer/ui.js?v=crisis-role-3";
+import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=crisis-role-3";
+import { createRoomBridge } from "./multiplayer/room-bridge.js?v=crisis-role-3";
 import {
   initTechDrawers,
   updateTechDrawerCount,

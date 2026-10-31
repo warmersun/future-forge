@@ -5,8 +5,8 @@
  */
 
 import { semanticDigest } from "../semantic-digest.js";
-import { assessSustainable } from "../sim/sustainable.js?v=crisis-role-2";
-import { clampPathwayScore } from "../sim/policy-honesty.js?v=crisis-role-2";
+import { assessSustainable } from "../sim/sustainable.js?v=crisis-role-3";
+import { clampPathwayScore } from "../sim/policy-honesty.js?v=crisis-role-3";
 import { rulesWeatherKey } from "../sim/policy-rules.js";
 
 export { clampPathwayScore, rulesWeatherKey };
@@ -23,7 +23,7 @@ import {
   cloneBoard,
   applyLights,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js?v=crisis-role-2";
+} from "./board-state.js?v=crisis-role-3";
 import {
   CRISIS_REASON_MAX,
   crisisRoleKeys,
@@ -34,7 +34,7 @@ import {
   parseCrisisDeltaField,
   crisisDeltaValues,
   crisisDeltaReasons,
-} from "./crisis-delta.js?v=crisis-role-2";
+} from "./crisis-delta.js?v=crisis-role-3";
 
 export {
   CRISIS_REASON_MAX,

@@ -6,7 +6,7 @@
 
 import { worseLevel } from "./deploy.js";
 import { honestyNeeds } from "./policy-rules.js";
-import { scopeCrisisScore } from "../hex/crisis-delta.js?v=crisis-role-2";
+import { scopeCrisisScore } from "../hex/crisis-delta.js?v=crisis-role-3";
 
 /** Techs that can eat shifts unless a share/bridge is in the how-text. */
 export const DISPLACEMENT_TECH_IDS = new Set([

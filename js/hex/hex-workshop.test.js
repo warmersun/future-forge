@@ -1,6 +1,6 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-2";
+import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import {
   createHexWorkshop,
   defaultChallengerImagePrompt,

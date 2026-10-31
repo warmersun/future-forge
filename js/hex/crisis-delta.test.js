@@ -1,10 +1,48 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { crisisRoleKeys, scopeCrisisScore } from "./crisis-delta.js";
+import { CRISIS_REASON_MAX, clipCrisisReason, crisisRoleKeys, scopeCrisisScore } from "./crisis-delta.js";
 import { seedCrisisTiles, cloneBoard, boardForWire, addTile, mintInventionTile, placeTile } from "./board-state.js";
 import { normalizePathwayScore, blendPathwayScore, heuristicPathwayScore, applyPathwayPressure, pathwayContentFingerprint } from "./evaluate.js";
 import { clampPathwayScore } from "../sim/policy-honesty.js";
-import { formatPathwayScoreLog } from "../captain-log.js?v=crisis-role-2";
+import { formatPathwayScoreLog } from "../captain-log.js?v=crisis-role-3";
+import { sanitizeFast } from "../server/fast-eval.mjs";
+
+describe("crisis reason length", () => {
+  it("keeps a complete reason through the 280-character limit", () => {
+    const reason = `${"A tested comparison identifies the useful experiments. ".repeat(5)}`.trim();
+    assert.ok(reason.length > 200 && reason.length <= CRISIS_REASON_MAX);
+    assert.equal(clipCrisisReason(reason), reason);
+  });
+
+  it("keeps the last complete sentence when an overlong response contains one", () => {
+    const first = "Testing the model against baselines shows which experiments teach the lab most.";
+    assert.equal(clipCrisisReason(`${first} ${"More detail ".repeat(40)}`), first);
+  });
+
+  it("marks a word-boundary cut when the first sentence itself is overlong", () => {
+    const reason = `${"A model comparison tests the ranked experiments ".repeat(12)}and finishes.`;
+    const clipped = clipCrisisReason(reason);
+    assert.ok(clipped.length <= CRISIS_REASON_MAX);
+    assert.match(clipped, /\b(ranked|experiments)…$/);
+    assert.equal(clipCrisisReason(clipped), clipped);
+  });
+  it("does not mistake Dr. for a complete rationale through the sanitizer and log", () => {
+    const text = `The comparison uses Dr. Mira's shortlist alongside baselines, ${"then tests the ranked experiments with independent controls ".repeat(8)}`;
+    const score = sanitizeFast("score-pathway", {
+      crisisDelta: { local: { delta: -1, reason: text } },
+    }, "ai", { crisisRoles: [{ role: "local" }] });
+    assert.ok(score.crisisReasons.local.length > 100);
+    assert.notEqual(score.crisisReasons.local, "The comparison uses Dr.");
+    assert.equal(formatPathwayScoreLog(score).detail, `Local -1 — ${score.crisisReasons.local}`);
+  });
+
+  it("does not split an emoji when an unspaced rationale overruns", () => {
+    const clipped = clipCrisisReason(`${"x".repeat(278)}😀more words that overrun the cap`);
+    assert.ok(clipped.length <= CRISIS_REASON_MAX);
+    assert.doesNotMatch(clipped, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
+    assert.ok(clipped.endsWith("…"));
+  });
+});
 
 const allRoles = ["local", "global", "support"];
 const raw = {

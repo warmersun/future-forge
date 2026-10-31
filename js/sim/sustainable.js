@@ -4,7 +4,7 @@
  * Rules-only v1 (no AI). Used for Scale odds with the Scale dim.
  */
 
-import { applyCoordinationCap } from "./policy-honesty.js?v=crisis-role-2";
+import { applyCoordinationCap } from "./policy-honesty.js?v=crisis-role-3";
 
 /** Techs that mostly protect / sense exposure without cutting the driver. */
 export const SHELTER_TECH_IDS = new Set([

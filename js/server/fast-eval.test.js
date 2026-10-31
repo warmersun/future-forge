@@ -114,7 +114,9 @@ describe("FAST_EVAL_MODES", () => {
     assert.match(SCORE_PATHWAY_SYSTEM, /law, ban, UBI bill, or treaty/i);
     assert.match(SCORE_PATHWAY_SYSTEM, /mission.globalId is automation/);
     assert.match(IDEA_SPARKS_SYSTEM, /not bills, bans, or UBI/);
-    assert.equal(FAST_EVAL_MODES["score-pathway"].maxOutputTokens >= 550, true);
+    assert.match(SCORE_PATHWAY_SYSTEM, /≤280 chars/);
+    assert.match(SCORE_PATHWAY_SYSTEM, /State the signed outcome first/);
+    assert.equal(FAST_EVAL_MODES["score-pathway"].maxOutputTokens >= 1200, true);
     assert.match(ASSESS_FEASIBILITY_SYSTEM, /"timing"/);
     assert.match(IDEA_SPARKS_SYSTEM, /"ideas"/);
     assert.match(POSE_CHALLENGE_SYSTEM, /challengeSpeech/);
@@ -593,10 +595,22 @@ describe("sanitizeFast", () => {
     assert.match(out.crisisReasons.local, /noon cooler/);
     assert.equal(out.crisisDelta.support, 1);
     assert.match(out.crisisReasons.support, /Public fear/);
-    assert.equal(out.crisisReasons.local.length <= 160, true);
+    assert.equal(out.crisisReasons.local.length <= 280, true);
   });
 
-  it("score-pathway clips a 400-char nested reason to 160", () => {
+  it("preserves a complete explanation beyond the former 160-character cap", () => {
+    const reason = "One shared plate compares the model's picks with no-change, average-response, and Mira's shortlist under pre-registered metrics, so independent tests show which picks teach the lab more.";
+    assert.ok(reason.length > 160 && reason.length <= 280);
+    const out = sanitizeFast(
+      "score-pathway",
+      { crisisDelta: { local: { delta: -1, reason } } },
+      "ai",
+      { crisisRoles: [{ role: "local" }] }
+    );
+    assert.equal(out.crisisReasons.local, reason);
+  });
+
+  it("score-pathway marks an overlong sentence rather than silently cutting a word", () => {
     const out = sanitizeFast(
       "score-pathway",
       {
@@ -607,7 +621,8 @@ describe("sanitizeFast", () => {
       "ai",
       { crisisRoles: ALL_CRISIS_ROLES }
     );
-    assert.equal(out.crisisReasons.local.length, 160);
+    assert.equal(out.crisisReasons.local.length, 280);
+    assert.ok(out.crisisReasons.local.endsWith("…"));
   });
 
   it("assess-feasibility returns only timing", () => {

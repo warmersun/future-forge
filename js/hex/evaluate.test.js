@@ -1622,7 +1622,8 @@ describe("applyPathwayPressure (cached scores)", () => {
         local: { delta: 0, reason: "x".repeat(400) },
       },
     });
-    assert.equal(clipped.crisisReasons.local.length, 160);
+    assert.equal(clipped.crisisReasons.local.length, 280);
+    assert.ok(clipped.crisisReasons.local.endsWith("…"));
   });
 
   it("heuristicPathwayScore gives mild relief for mature how-text", () => {

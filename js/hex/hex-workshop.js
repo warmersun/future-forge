@@ -12,7 +12,7 @@ import {
   ideaIdentityText,
   formatPathwayScoreLog,
   formatTimingLog,
-} from "../captain-log.js?v=crisis-role-2";
+} from "../captain-log.js?v=crisis-role-3";
 import {
   scaffoldFields,
   scaffoldLabels,
@@ -73,7 +73,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js?v=crisis-role-2";
+} from "./board-state.js?v=crisis-role-3";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -116,11 +116,11 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js?v=crisis-role-2";
-import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-2";
+} from "./evaluate.js?v=crisis-role-3";
+import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-3";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi } from "./board-ui.js?v=crisis-role-2";
+import { createHexBoardUi } from "./board-ui.js?v=crisis-role-3";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";

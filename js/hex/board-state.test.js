@@ -811,7 +811,8 @@ test("cloneBoard clamps nested crisisDelta and clips reasons", () => {
   const copy = cloneBoard(board);
   assert.equal(copy.pathwayImpacts.nested.crisisDelta.local, -2);
   assert.deepEqual(Object.keys(copy.pathwayImpacts.nested.crisisDelta), ["local"]);
-  assert.equal(copy.pathwayImpacts.nested.crisisReasons.local.length, 160);
+  assert.equal(copy.pathwayImpacts.nested.crisisReasons.local.length, 280);
+  assert.ok(copy.pathwayImpacts.nested.crisisReasons.local.endsWith("…"));
   assert.deepEqual(Object.keys(copy.pathwayImpacts.nested.crisisReasons), ["local"]);
 });
 

@@ -18,9 +18,9 @@ import {
   setHotseatQuest,
   startHotseatQuest,
   hotseatApplyAction,
-} from "./hotseat.js?v=crisis-role-2";
+} from "./hotseat.js?v=crisis-role-3";
 import { paintFieldLockElements } from "./locks-ui.js";
-import { MpSidePanel } from "./mp-side.js?v=crisis-role-2";
+import { MpSidePanel } from "./mp-side.js?v=crisis-role-3";
 import { paintScenarioBrief } from "./mission-picker.js";
 import {
   paintTechFilters,
@@ -69,7 +69,7 @@ export function initFriendsUi(api) {
   } = api;
   const client = new RoomClient();
   let bufferTimers = {};
-  /** @type {import('./hotseat.js?v=crisis-role-2').HotseatSession|null} */
+  /** @type {import('./hotseat.js?v=crisis-role-3').HotseatSession|null} */
   let hotseat = null;
   let hsWired = false;
   /** @type {MpSidePanel|null} */

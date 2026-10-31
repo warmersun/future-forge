@@ -15,7 +15,7 @@ import {
   formatPathwayScoreLog,
   formatTimingLog,
   formatPlacementTouch,
-} from "./captain-log.js?v=crisis-role-2";
+} from "./captain-log.js?v=crisis-role-3";
 
 describe("captain-log", () => {
   beforeEach(() => clearCaptainLog());
@@ -144,6 +144,16 @@ describe("captain-log", () => {
     assert.match(row.detail, /Support \+1 — A reactor raises public pressure\./);
     assert.match(row.detail, /Moloch yellow — Partial honest address\./);
     assert.equal(row.tone, "red");
+  });
+
+  it("keeps the full 280-character crisis reason in the log", () => {
+    const reason = `${"A tested comparison makes every selection traceable. ".repeat(5)}`.trim();
+    assert.ok(reason.length > 200 && reason.length <= 280);
+    const row = formatPathwayScoreLog({
+      crisisDelta: { local: -1 },
+      crisisReasons: { local: reason },
+    }, { crisisRoles: ["local"] });
+    assert.equal(row.detail, `Local -1 — ${reason}`);
   });
 
   it("shows only actual roles, retaining a real zero and excluding phantom reasons", () => {

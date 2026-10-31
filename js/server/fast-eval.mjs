@@ -188,7 +188,7 @@ A law, ban, UBI bill, or treaty is not an invent: score each listed crisis role 
 If mission.globalId is automation: robots, AI, or self-driving without a share/bridge/paid-skill/meaning mechanism must not ease global. They may ease local remaining work and may raise support (backlash).
 If mission.globalId is rogue-si: an AI/computing stack without a reachable human override, eval, or audit must not ease global. A smarter score that still locks the last call can raise support.
 mission.rules (if present) are local weather — regulation/law/policy/ban already on the books or lobbied this session. They do not ease meters by themselves. Cite them when they change who can field, not as the invent.
-reason is one everyday sentence (≤160 chars) that cites the how-text mechanism and MATCHES the signed delta. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every listed role, including 0.
+reason is one complete everyday sentence (≤280 chars). State the signed outcome first, then cite the how-text mechanism; finish the sentence within the limit. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every listed role, including 0.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
 concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
 ${GROUNDING_LINE}
@@ -700,7 +700,7 @@ export const FAST_EVAL_MODES = {
     system: SCORE_PATHWAY_SYSTEM,
     userPrefix: "Score this pathway (JSON state):",
     temperature: 0,
-    maxOutputTokens: 550,
+    maxOutputTokens: 1200,
   },
   "assess-feasibility": {
     system: ASSESS_FEASIBILITY_SYSTEM,

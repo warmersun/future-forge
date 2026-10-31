@@ -3,7 +3,7 @@
  * DOM-free. Keep this file free of board-state / evaluate imports.
  */
 
-export const CRISIS_REASON_MAX = 160;
+export const CRISIS_REASON_MAX = 280;
 export const CRISIS_ROLES = ["local", "global", "support"];
 
 /** Accept authored role names or context rows; absent roles mean no meters. */
@@ -32,7 +32,23 @@ export function scopeCrisisScore(score, roles) {
 }
 
 export function clipCrisisReason(s) {
-  return String(s || "").trim().slice(0, CRISIS_REASON_MAX);
+  const text = String(s || "").trim();
+  if (text.length <= CRISIS_REASON_MAX) return text;
+  // Slice on a UTF-16 boundary, never through an emoji's surrogate pair.
+  const safePrefix = (max) => {
+    const prefix = text.slice(0, max);
+    return /[\uD800-\uDBFF]$/.test(prefix) ? prefix.slice(0, -1) : prefix;
+  };
+  const prefix = safePrefix(CRISIS_REASON_MAX);
+  // A title such as "Dr." is not a complete explanation.
+  const sentences = [...prefix.matchAll(/[.!?](?=\s|$)/g)]
+    .filter((match) => !/\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|e\.g|i\.e)\.$/i.test(prefix.slice(0, match.index + 1)));
+  const end = sentences.at(-1)?.index;
+  if (end != null && end >= 20) return prefix.slice(0, end + 1);
+  const budget = CRISIS_REASON_MAX - 1; // leave room for an explicit ellipsis
+  const words = safePrefix(budget);
+  const space = words.lastIndexOf(" ");
+  return `${(space > 0 ? words.slice(0, space) : words).trimEnd()}…`;
 }
 
 export function clampCrisisDelta(v) {

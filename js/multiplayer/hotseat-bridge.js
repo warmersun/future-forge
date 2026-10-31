@@ -10,13 +10,13 @@ import {
   hotseatApplyAction,
   activeSeatId,
   activeSeat,
-} from "./hotseat.js?v=crisis-role-2";
+} from "./hotseat.js?v=crisis-role-3";
 import { cloneMission } from "../sim/state.js";
 import { emptyRunWorld } from "../sim/run-world.js";
 import { clonePressure } from "../sim/pressure.js";
 import { cloneRules } from "../sim/policy-rules.js";
-import { inventYear, inventWaits } from "../sim/mp-session.js?v=crisis-role-2";
-import { preferIncomingHexBoard } from "../hex/board-state.js?v=crisis-role-2";
+import { inventYear, inventWaits } from "../sim/mp-session.js?v=crisis-role-3";
+import { preferIncomingHexBoard } from "../hex/board-state.js?v=crisis-role-3";
 import {
   deriveInventPhase,
   inventPhaseToUiPhase,
