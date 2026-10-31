@@ -66,7 +66,7 @@ describe("searchToolsForMode", () => {
   });
 
   it("raises token budget for search modes", () => {
-    assert.equal(SEARCH_MAX_OUTPUT_TOKENS["assess-feasibility"], 400);
+    assert.equal(SEARCH_MAX_OUTPUT_TOKENS["assess-feasibility"], 600);
     assert.equal(SEARCH_MAX_OUTPUT_TOKENS["idea-sparks"], 900);
     assert.match(SEARCH_SYSTEM_LINE, /web_search/);
     assert.match(SEARCH_SYSTEM_LINE, /x_search/);

@@ -26,6 +26,7 @@ import {
 import { SEARCH_SYSTEM_LINE } from "./ai-search.mjs";
 import { setWorldForesightBank, validatePredictionsBank } from "../sim/world-foresight.js";
 import { buildSourceInquiry } from "../companion-context.js";
+import { formatTimingLog } from "../captain-log.js";
 
 const CLOCK_BANK = {
   schema: "future-forge.predictions/v1",
@@ -638,6 +639,31 @@ describe("sanitizeFast", () => {
       assumedPredictionIds: [],
     });
     assert.equal(out.message, undefined);
+  });
+
+  it("assess-feasibility keeps a 300+ character reason through the server sanitizer", () => {
+    const reason = `${"A measured pilot tests the mechanism against a real baseline. ".repeat(5)}The claimed scale fits this year.`;
+    assert.ok(reason.length > 280 && reason.length <= 400);
+    const out = sanitizeFast("assess-feasibility", { timing: { level: "green", reason } }, "ai");
+    assert.equal(out.timing.reason, reason);
+    assert.match(ASSESS_FEASIBILITY_SYSTEM, /complete timing reason of at most 400 characters/);
+    assert.ok(FAST_EVAL_MODES["assess-feasibility"].maxOutputTokens >= 400);
+  });
+
+  it("assess-feasibility keeps a complete sentence when an overlong reason continues", () => {
+    const first = "Dr. Mira's measured pilot checks the claimed payload against a baseline this year.";
+    const reason = `${first} ${"More partial claims about a later rollout ".repeat(12)}`;
+    const out = sanitizeFast("assess-feasibility", { timing: { level: "yellow", reason } }, "ai");
+    assert.equal(out.timing.reason, `${first}…`);
+    assert.equal(formatTimingLog("yellow", out.timing.reason).detail, `${first}…`);
+  });
+
+  it("assess-feasibility does not cut a newline-separated reason mid-word", () => {
+    const reason = "evidence\n".repeat(50);
+    const out = sanitizeFast("assess-feasibility", { timing: { level: "green", reason } }, "ai");
+    assert.match(out.timing.reason, /evidence…$/);
+    assert.doesNotMatch(out.timing.reason, /evi…$/);
+    assert.equal(formatTimingLog("green", out.timing.reason).detail, out.timing.reason);
   });
 
   it("pose drops proposals envelope", () => {

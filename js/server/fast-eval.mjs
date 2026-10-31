@@ -201,6 +201,7 @@ green = architecture+payload exists or is demonstrated by year (no pilot tax). I
 yellow = vague, OR after checking year the claimed scale is not yet demonstrated.
 red = only (1) grounding EXPLICITLY forbids / says not yet, or (2) sci-fi treated as routine (consumer flying cars, mind upload). Never red or yellow merely for "different category" or "not a small hopper".
 If priorTiming is set with the same claims, a later year must not score harsher.
+Write a concrete, complete timing reason of at most 400 characters. Explain what is demonstrated or what is not yet possible; do not cut a word or leave a sentence unfinished.
 ${WORLD_CLOCK_TIMING_LINE}
 ${ASSESS_GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
@@ -706,7 +707,7 @@ export const FAST_EVAL_MODES = {
     system: ASSESS_FEASIBILITY_SYSTEM,
     userPrefix: "Judge claim timing (JSON state):",
     temperature: 0,
-    maxOutputTokens: 200,
+    maxOutputTokens: 400,
   },
   "evaluate-convergence": {
     system: EVALUATE_CONVERGENCE_SYSTEM,

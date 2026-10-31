@@ -190,6 +190,12 @@ describe("captain-log", () => {
     assert.equal(row.tone, "green");
   });
 
+  it("retains a 300+ character feasibility reason in the Log", () => {
+    const reason = `${"A measured pilot tests the mechanism against a real baseline. ".repeat(5)}The claimed scale fits this year.`;
+    assert.ok(reason.length > 280 && reason.length <= 400);
+    assert.equal(formatTimingLog("green", reason).detail, reason);
+  });
+
   it("omits crisis lines when the delta was kept", () => {
     const row = formatPathwayScoreLog(
       {

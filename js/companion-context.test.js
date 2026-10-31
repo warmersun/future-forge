@@ -18,6 +18,8 @@ import {
   clockWithPremiseRows,
   provisionalScenarioTiming,
   sanitizeScenarioTiming,
+  clipTimingReason,
+  TIMING_REASON_MAX,
   scenarioGrantSuffix,
 } from "./companion-context.js";
 
@@ -350,6 +352,23 @@ describe("sourceInquiryKey and timing provenance", () => {
     assert.deepEqual(timing.assumedPredictionIds, ["dock-inspection-2026"]);
     assert.match(timing.reason, /provisional/i);
     assert.equal(provisionalScenarioTiming(null), null);
+  });
+
+  it("keeps a timing explanation beyond the former 280-character limit", () => {
+    const reason = `${"A supervised pilot checks the payload against a measured baseline. ".repeat(5)}That is feasible this year.`;
+    assert.ok(reason.length > 280 && reason.length <= TIMING_REASON_MAX);
+    assert.equal(sanitizeScenarioTiming({ level: "green", reason }, null).reason, reason);
+  });
+
+  it("marks an overlong timing explanation without breaking a word or emoji", () => {
+    const reason = `${"A supervised pilot tests the payload. ".repeat(15)}More details are omitted.`;
+    const clipped = clipTimingReason(reason);
+    assert.ok(clipped.length <= TIMING_REASON_MAX);
+    assert.match(clipped, /\s[^\s…]+…$/);
+    assert.equal(clipTimingReason(clipped), clipped);
+    const unspaced = clipTimingReason(`${"x".repeat(TIMING_REASON_MAX - 2)}😀extra`);
+    assert.ok(unspaced.length <= TIMING_REASON_MAX);
+    assert.doesNotMatch(unspaced, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
   });
 
   it("drops a scenario basis that names no due grant", () => {

@@ -11,7 +11,7 @@ export const AI_SEARCH_MODES = new Set(["assess-feasibility", "idea-sparks"]);
 export const SEARCH_TOOLS = [{ type: "web_search" }, { type: "x_search" }];
 
 export const SEARCH_MAX_OUTPUT_TOKENS = {
-  "assess-feasibility": 400,
+  "assess-feasibility": 600,
   "idea-sparks": 900,
 };
 

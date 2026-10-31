@@ -662,6 +662,25 @@ export function pinPredictionsBank(companion, opts = {}) {
   return { ok: true, bank: loaded, premise: resolved.premise };
 }
 
+export const TIMING_REASON_MAX = 400;
+
+/** Preserve a timing explanation up to the display limit; mark overruns. */
+export function clipTimingReason(raw) {
+  const text = typeof raw === "string" ? raw.trim() : "";
+  if (text.length <= TIMING_REASON_MAX) return text;
+  const budget = TIMING_REASON_MAX - 1; // reserve an explicit overrun marker
+  let prefix = text.slice(0, budget);
+  if (/[\uD800-\uDBFF]$/.test(prefix)) prefix = prefix.slice(0, -1);
+  const sentences = [...prefix.matchAll(/[.!?](?=\s|$)/g)].filter((match) =>
+    !/\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|e\.g|i\.e|U\.S|U\.K|[A-Z])\.$/i.test(prefix.slice(0, match.index + 1))
+  );
+  const end = sentences.at(-1)?.index;
+  if (end != null && end >= 40) return `${prefix.slice(0, end + 1)}…`;
+  const spaces = [...prefix.matchAll(/\s+/g)];
+  const boundary = spaces.at(-1)?.index;
+  return `${(boundary > 0 ? prefix.slice(0, boundary) : prefix).trimEnd()}…`;
+}
+
 /**
  * @param {{ level?: string, reason?: string, basis?: string, assumedPredictionIds?: string[] }} raw
  * @param {object|null|undefined} premise
@@ -686,7 +705,7 @@ export function sanitizeScenarioTiming(raw, premise) {
   if (basis === "scenario" && !assumedPredictionIds.length) basis = "ordinary";
   return {
     level,
-    reason: clip(raw?.reason, 280),
+    reason: clipTimingReason(raw?.reason),
     basis,
     assumedPredictionIds,
   };
