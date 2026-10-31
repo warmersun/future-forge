@@ -17,6 +17,7 @@ import { briefMdFromLivedStory } from "../brief-beats.js";
 import { localIdeaSparks, rotateLocalIdeaSparks } from "../idea-cards.js";
 import { localScrutinyProposals } from "../scrutiny-shared.js";
 import { heuristicConverges, clampPathwayScore } from "../hex/evaluate.js";
+import { scopeCrisisScore } from "../hex/crisis-delta.js";
 import { provisionalScenarioTiming, sanitizeSourceInquiry } from "../companion-context.js";
 
 /** Appended to invent/challenge modeHints when capability truth matters. */
@@ -844,6 +845,19 @@ function localCoInvent({ mode, messages, context }) {
     if (redTiming || hostile) {
       crisisDelta.support = Math.max(crisisDelta.support, 1);
     }
+    const crisisReasons = {
+      local: crisisDelta.local < 0
+        ? "The how-text names a possible near-term mechanism, but the result still needs a real test."
+        : "The how-text does not yet show how this reduces the local harm.",
+      global: "The how-text does not yet show how this changes the lasting driver of the problem.",
+      support: crisisDelta.support > 0
+        ? redTiming
+          ? "The claimed timing is not credible this year, making public buy-in harder."
+          : "The proposed stack may face public resistance that makes fielding harder."
+        : crisisDelta.support < 0
+          ? "The how-text offers a fieldable path, though public buy-in still needs testing."
+          : "The how-text does not yet show how people would accept or scale this pathway.",
+    };
     const concerns = {};
     for (const c of context.concerns || []) {
       const angle = c?.angle;
@@ -857,7 +871,7 @@ function localCoInvent({ mode, messages, context }) {
       };
     }
     const clamped = clampPathwayScore(
-      { crisisDelta, concerns },
+      { crisisDelta, crisisReasons, concerns },
       invs,
       {
         globalId: context.globalId || context.mission?.globalId || context.global?.id,
@@ -865,12 +879,8 @@ function localCoInvent({ mode, messages, context }) {
         rules: context.rules || context.mission?.rules,
       }
     );
-    return {
-      source: "local",
-      crisisDelta: clamped.crisisDelta,
-      crisisReasons: clamped.crisisReasons,
-      concerns: clamped.concerns,
-    };
+    // Policy clamps can populate all three roles; scope only after applying them.
+    return scopeCrisisScore({ source: "local", ...clamped }, context.crisisRoles);
   }
 
   if (mode === "evaluate-convergence") {

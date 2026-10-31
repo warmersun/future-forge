@@ -6,12 +6,29 @@
 export const CRISIS_REASON_MAX = 160;
 export const CRISIS_ROLES = ["local", "global", "support"];
 
-export function emptyCrisisDelta() {
-  return { local: 0, global: 0, support: 0 };
+/** Accept authored role names or context rows; absent roles mean no meters. */
+export function crisisRoleKeys(roles) {
+  if (!Array.isArray(roles)) return [];
+  return [...new Set(roles.map((row) => typeof row === "string" ? row : row?.role))]
+    .filter((role) => CRISIS_ROLES.includes(role));
 }
 
-export function emptyCrisisReasons() {
-  return { local: "", global: "", support: "" };
+export function emptyCrisisDelta(roles = []) {
+  return Object.fromEntries(crisisRoleKeys(roles).map((role) => [role, 0]));
+}
+
+export function emptyCrisisReasons(roles = []) {
+  return Object.fromEntries(crisisRoleKeys(roles).map((role) => [role, ""]));
+}
+
+/** Scope before display, persistence or rewards; never trust response keys. */
+export function scopeCrisisScore(score, roles) {
+  const keys = crisisRoleKeys(roles);
+  return {
+    ...score,
+    crisisDelta: crisisDeltaValues(score?.crisisDelta, keys),
+    crisisReasons: crisisDeltaReasons(score?.crisisDelta, score?.crisisReasons, keys),
+  };
 }
 
 export function clipCrisisReason(s) {
@@ -44,10 +61,10 @@ export function parseCrisisDeltaField(v) {
  * Numeric deltas from a score or cache row (nested or flat).
  * @param {object|null|undefined} cd
  */
-export function crisisDeltaValues(cd) {
-  const out = emptyCrisisDelta();
+export function crisisDeltaValues(cd, roles = Object.keys(cd || {})) {
+  const out = emptyCrisisDelta(roles);
   if (!cd || typeof cd !== "object") return out;
-  for (const role of CRISIS_ROLES) {
+  for (const role of crisisRoleKeys(roles)) {
     out[role] = parseCrisisDeltaField(cd[role]).delta;
   }
   return out;
@@ -58,10 +75,10 @@ export function crisisDeltaValues(cd) {
  * @param {object|null|undefined} cd
  * @param {object|null|undefined} sibling
  */
-export function crisisDeltaReasons(cd, sibling = null) {
-  const out = emptyCrisisReasons();
+export function crisisDeltaReasons(cd, sibling = null, roles = Object.keys(cd || {})) {
+  const out = emptyCrisisReasons(roles);
   const extra = sibling && typeof sibling === "object" ? sibling : {};
-  for (const role of CRISIS_ROLES) {
+  for (const role of crisisRoleKeys(roles)) {
     const nested = parseCrisisDeltaField(cd?.[role]).reason;
     out[role] = nested || clipCrisisReason(extra[role]);
   }

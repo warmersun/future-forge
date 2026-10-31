@@ -64,6 +64,17 @@ const CLOCK_BANK = {
 };
 
 const ENVELOPE_KEYS = ["proposals", "teaching", "addTechIds"];
+const ALL_CRISIS_ROLES = ["local", "global", "support"];
+const CRISIS_ROLE_CASES = [
+  [],
+  ["local"],
+  ["global"],
+  ["support"],
+  ["local", "global"],
+  ["local", "support"],
+  ["global", "support"],
+  ALL_CRISIS_ROLES,
+];
 
 describe("FAST_EVAL_MODES", () => {
   it("covers judge/eval modes and not conversational invent", () => {
@@ -108,6 +119,27 @@ describe("FAST_EVAL_MODES", () => {
     assert.match(IDEA_SPARKS_SYSTEM, /"ideas"/);
     assert.match(POSE_CHALLENGE_SYSTEM, /challengeSpeech/);
     assert.equal(POSE_CHALLENGE_SYSTEM.includes("teaching"), false);
+  });
+
+  it("all score prompts request only listed roles without a fixed three-role example", () => {
+    const prompts = [SCORE_PATHWAY_SYSTEM];
+    for (const rel of ["../../server.mjs", "../../portal/server.mjs"]) {
+      const src = fs.readFileSync(new URL(rel, import.meta.url), "utf8");
+      const system = src.match(/^- When mode is score-pathway:.*$/m)?.[0];
+      const hint = src.match(/"score-pathway":\s*\n\s*"(Score ONE invention pathway[^\n]+)/)?.[1];
+      assert.ok(system, `${rel} system prompt`);
+      assert.ok(hint, `${rel} mode hint`);
+      prompts.push(system, hint);
+    }
+    for (const prompt of prompts) {
+      assert.match(prompt, /ONLY roles listed in context\.crisisRoles/);
+      assert.match(prompt, /Omit absent roles entirely, not zero-valued entries or reasons/);
+      assert.match(prompt, /Missing or empty crisisRoles means crisisDelta is \{\}/);
+      assert.match(prompt, /role-specific rules below apply only to listed roles/);
+      assert.doesNotMatch(prompt, /crisisDelta:\s*\{\s*local,\s*global,\s*support/);
+      assert.doesNotMatch(prompt, /"crisisDelta":\s*\{\s*"local"/);
+      assert.doesNotMatch(prompt, /(?:every role|local\/global\/support delta)/);
+    }
   });
 
   it("assess grounding is contradiction-only; other modes keep inventory authority", () => {
@@ -206,6 +238,27 @@ describe("world clock in fast payloads", () => {
 });
 
 describe("buildFastPayload", () => {
+  for (const roles of CRISIS_ROLE_CASES) {
+    it(`score-pathway payload contains exactly roles ${JSON.stringify(roles)}`, () => {
+      for (const crisisRoles of [roles, roles.map((role) => ({ role }))]) {
+        const payload = buildFastPayload("score-pathway", { crisisRoles });
+        assert.deepEqual(payload.crisisRoles.map((r) => r.role), roles);
+      }
+    });
+  }
+
+  it("score-pathway payload fails closed on missing/invalid roles and drops duplicates", () => {
+    for (const crisisRoles of [undefined, null, "local", {}, [null, {}, "invented"]]) {
+      assert.deepEqual(buildFastPayload("score-pathway", { crisisRoles }).crisisRoles, []);
+    }
+    const payload = buildFastPayload("score-pathway", {
+      crisisRoles: ["local", { role: "local", name: "Floods" }, { role: "invented" }],
+    });
+    assert.deepEqual(payload.crisisRoles, [
+      { role: "local", name: "Floods", meterKey: "Floods", description: "" },
+    ]);
+  });
+
   it("score-pathway omits catalog, conversation, and invent drafts", () => {
     const p = buildFastPayload("score-pathway", {
       pathway: {
@@ -456,6 +509,53 @@ describe("buildFastPayload", () => {
 });
 
 describe("sanitizeFast", () => {
+  for (const roles of CRISIS_ROLE_CASES) {
+    it(`score-pathway strips unsolicited negative deltas and reasons for ${JSON.stringify(roles)}`, () => {
+      const parsed = {
+        crisisDelta: {
+          local: { delta: -9, reason: "Local relief." },
+          global: { value: -1, reason: "Root relief." },
+          support: -2,
+          invented: { delta: -2, reason: "Invented relief." },
+        },
+        crisisReasons: { local: "Do not replace nested reason.", support: "Public buy-in.", invented: "Drop me." },
+        concerns: { moloch: { level: "YELLOW", reason: "Still needs a safeguard." }, bogus: { level: "invalid" } },
+      };
+      const original = structuredClone(parsed);
+      const expectedDelta = { local: -2, global: -1, support: -2 };
+      const expectedReasons = { local: "Local relief.", global: "Root relief.", support: "Public buy-in." };
+      for (const crisisRoles of [roles, roles.map((role) => ({ role }))]) {
+        const out = sanitizeFast("score-pathway", parsed, "ai", { crisisRoles });
+        assert.deepEqual(out.crisisDelta, Object.fromEntries(roles.map((role) => [role, expectedDelta[role]])));
+        assert.deepEqual(out.crisisReasons, Object.fromEntries(roles.map((role) => [role, expectedReasons[role]])));
+        assert.equal(out.source, "ai");
+        assert.deepEqual(out.concerns, { moloch: { level: "yellow", reason: "Still needs a safeguard." } });
+      }
+      assert.deepEqual(parsed, original);
+    });
+  }
+
+  it("score-pathway fails closed when roles are absent or invalid", () => {
+    const parsed = {
+      crisisDelta: { local: -1, global: -2, support: 1 },
+      crisisReasons: { local: "Local.", global: "Global.", support: "Support." },
+    };
+    for (const context of [undefined, {}, { crisisRoles: null }, { crisisRoles: "local" }, { crisisRoles: {} }, { crisisRoles: ["invented", null, {}] }]) {
+      const out = sanitizeFast("score-pathway", parsed, "ai", context);
+      assert.deepEqual(out.crisisDelta, {});
+      assert.deepEqual(out.crisisReasons, {});
+    }
+  });
+
+  it("score-pathway discards unsolicited positive and zero roles too", () => {
+    const out = sanitizeFast("score-pathway", {
+      crisisDelta: { local: -1, global: 0, support: 1 },
+      crisisReasons: { global: "No root lever.", support: "Backlash." },
+    }, "ai", { crisisRoles: [{ role: "local" }] });
+    assert.deepEqual(out.crisisDelta, { local: -1 });
+    assert.deepEqual(out.crisisReasons, { local: "" });
+  });
+
   it("score-pathway returns only crisisDelta + concerns", () => {
     const out = sanitizeFast(
       "score-pathway",
@@ -465,7 +565,8 @@ describe("sanitizeFast", () => {
         crisisDelta: { local: -9, global: 3, support: 0.2 },
         concerns: { moloch: { level: "yellow", reason: "ok" } },
       },
-      "ai"
+      "ai",
+      { crisisRoles: ALL_CRISIS_ROLES }
     );
     assert.equal(out.message, undefined);
     assert.equal(out.proposals, undefined);
@@ -485,7 +586,8 @@ describe("sanitizeFast", () => {
         },
         crisisReasons: { support: "Public fear of the stack." },
       },
-      "ai"
+      "ai",
+      { crisisRoles: ALL_CRISIS_ROLES }
     );
     assert.equal(out.crisisDelta.local, -1);
     assert.match(out.crisisReasons.local, /noon cooler/);
@@ -502,7 +604,8 @@ describe("sanitizeFast", () => {
           local: { delta: 0, reason: "y".repeat(400) },
         },
       },
-      "ai"
+      "ai",
+      { crisisRoles: ALL_CRISIS_ROLES }
     );
     assert.equal(out.crisisReasons.local.length, 160);
   });

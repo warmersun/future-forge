@@ -1636,6 +1636,7 @@ describe("applyPathwayPressure (cached scores)", () => {
       },
     ];
     const unanswered = heuristicPathwayScore(inventions, 2026, {
+      crisisRoles: ["local", "global", "support"],
       concernAngles: ["moloch"],
     });
     assert.equal(unanswered.crisisDelta.local, -1);
@@ -1645,6 +1646,7 @@ describe("applyPathwayPressure (cached scores)", () => {
     assert.match(unanswered.concerns.moloch.reason, /unanswered/i);
 
     const answered = heuristicPathwayScore(inventions, 2026, {
+      crisisRoles: ["local", "global", "support"],
       concernAngles: ["moloch"],
       concernAnswers: { moloch: "A bonded escrow pays only after proof." },
     });
@@ -1664,7 +1666,7 @@ describe("applyPathwayPressure (cached scores)", () => {
         },
       ],
       2026,
-      { globalId: "automation" }
+      { globalId: "automation", crisisRoles: ["local", "global", "support"] }
     );
     assert.equal(score.crisisDelta.local, 0);
     assert.equal(score.crisisDelta.global, 0);
@@ -1685,7 +1687,7 @@ describe("applyPathwayPressure (cached scores)", () => {
         },
       ],
       2026,
-      { globalId: "automation" }
+      { globalId: "automation", crisisRoles: ["local", "global", "support"] }
     );
     assert.equal(score.crisisDelta.local, -1);
     assert.equal(score.crisisDelta.global, 0);
@@ -1704,7 +1706,8 @@ describe("applyPathwayPressure (cached scores)", () => {
           feasibilityPct: 85,
         },
       ],
-      2026
+      2026,
+      { crisisRoles: ["local", "global", "support"] }
     );
     assert.equal(score.crisisDelta.local, -1);
     assert.equal(score.crisisDelta.support, 1);
@@ -1781,7 +1784,8 @@ describe("applyPathwayPressure (cached scores)", () => {
           feasibilityPct: 85,
         },
       ],
-      2026
+      2026,
+      { crisisRoles: ["local", "global", "support"] }
     );
     assert.equal(local.crisisDelta.local, -1);
     const blended = blendPathwayScore(
@@ -1808,7 +1812,8 @@ describe("applyPathwayPressure (cached scores)", () => {
           feasibilityPct: 85,
         },
       ],
-      2026
+      2026,
+      { crisisRoles: ["local", "global", "support"] }
     );
     const blended = blendPathwayScore(
       {
@@ -2557,9 +2562,7 @@ describe("rules weather key", () => {
     assert.equal(applied.board.rulesWeatherKey, "piece-rate:active");
     const impact = applied.board.pathwayImpacts[fp];
     assert.equal(impact.pending, true);
-    assert.equal(impact.crisisDelta.global, 0);
-    assert.equal(impact.crisisDelta.support, 1);
-    assert.equal(impact.crisisDelta.local, -1);
+    assert.deepEqual(impact.crisisDelta, { global: 0 });
     assert.equal(applied.pathways[0].needsScore, true);
     assert.equal(applied.displayPressure.Surplus, 3);
     assert.deepEqual(diffPathwayScoreJobs(applied.pathways, []).start, [fp]);

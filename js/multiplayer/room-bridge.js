@@ -7,15 +7,15 @@ import { cloneMission } from "../sim/state.js";
 import { emptyRunWorld } from "../sim/run-world.js";
 import { clonePressure } from "../sim/pressure.js";
 import { cloneRules } from "../sim/policy-rules.js";
-import { inventYear, inventWaits } from "../sim/mp-session.js";
-import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js";
+import { inventYear, inventWaits } from "../sim/mp-session.js?v=crisis-role-2";
+import { preferIncomingHexBoard, mergeBoardArt } from "../hex/board-state.js?v=crisis-role-2";
 import {
   deriveInventPhase,
   inventPhaseToUiPhase,
   isInventContentFrozen,
   allowedActions,
 } from "../sim/invent-phase.js";
-import { inventToSoloDeployStage, soloToInventDeployStage } from "./hotseat-bridge.js";
+import { inventToSoloDeployStage, soloToInventDeployStage } from "./hotseat-bridge.js?v=crisis-role-2";
 
 /**
  * @returns {object} bridge API

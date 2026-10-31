@@ -65,6 +65,21 @@ const resolved = {
 };
 
 describe("authoritative quest context", () => {
+  it("derives legacy missing roles from authored pressure but preserves explicit empty roles", () => {
+    for (const [pressure, expected] of [
+      [{ Flood: 2 }, ["local"]],
+      [{ Flood: 2, Trust: 1 }, ["local", "support"]],
+      [{ Flood: 2, Climate: 2, Trust: 1 }, ["local", "global", "support"]],
+    ]) {
+      const legacy = structuredClone(resolved);
+      legacy.record.mission.pressure = pressure;
+      const result = authoritativeQuestContext({ crisisRoles: [{ role: "global" }] }, legacy);
+      assert.deepEqual(result.context.crisisRoles.map((row) => row.role), expected);
+      assert.deepEqual(result.context.crisisRoles.map((row) => row.meterKey), Object.keys(pressure));
+      legacy.record.mission.crisisRoles = [];
+      assert.deepEqual(authoritativeQuestContext({}, legacy).context.crisisRoles, []);
+    }
+  });
   it("uses authored start for missing year in all modes and rejects malformed supplied years", () => {
     for (const mode of ["chat", "evaluate", "challenge", "voice"]) {
       assert.equal(authoritativeQuestContext({ mode }, resolved).context.year, 2026);

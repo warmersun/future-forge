@@ -26,8 +26,8 @@ import {
   neighborTiles,
   isPortableTile,
   formatFactor,
-} from "./board-state.js";
-import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js";
+} from "./board-state.js?v=crisis-role-2";
+import { pathwayHighlight, tileTimingPct, timingPctToLevel } from "./evaluate.js?v=crisis-role-2";
 import { layoutHexLabel } from "./hex-label.js";
 
 const BITS_INK = "#38bdf8";

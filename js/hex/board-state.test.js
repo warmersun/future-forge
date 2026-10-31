@@ -6,6 +6,7 @@ import {
   stackPlacementPlan,
   stackBillingDelta,
   seedCrisisTiles,
+  boardCrisisRoles,
   mintInventionTile,
   mintRdTile,
   unplacedRdTiles,
@@ -173,6 +174,14 @@ test("seedCrisisTiles respects omitted roles", () => {
   assert.ok(board.tiles["crisis-local"]);
   assert.ok(board.tiles["crisis-support"]);
   assert.equal(board.tiles["crisis-global"], undefined);
+});
+
+test("seedCrisisTiles agrees with authoritative roles when explicitly empty or omitted", () => {
+  const pressure = { Outbreak: 2 };
+  const empty = seedCrisisTiles({ crisisRoles: [], pressure });
+  assert.deepEqual(boardCrisisRoles(empty), []);
+  const legacy = seedCrisisTiles({ pressure });
+  assert.deepEqual(boardCrisisRoles(legacy), ["local"]);
 });
 
 test("seedCrisisTiles copies pressureDesc onto tiles", () => {
@@ -763,12 +772,10 @@ test("seedCrisisTiles sets pressureBase; cloneBoard round-trips pathway cache", 
   assert.deepEqual(copy.pressureBase, { Floods: 2, Trust: 3 });
   assert.deepEqual(copy.pathwayImpacts["a:ai:how:yellow"].crisisDelta, {
     local: -1,
-    global: 0,
     support: 0,
   });
   assert.deepEqual(copy.pathwayImpacts["a:ai:how:yellow"].crisisReasons, {
     local: "",
-    global: "",
     support: "",
   });
   assert.equal(copy.pathwayImpacts["a:ai:how:yellow"].concerns.moloch.level, "yellow");
@@ -803,9 +810,9 @@ test("cloneBoard clamps nested crisisDelta and clips reasons", () => {
   };
   const copy = cloneBoard(board);
   assert.equal(copy.pathwayImpacts.nested.crisisDelta.local, -2);
-  assert.equal(copy.pathwayImpacts.nested.crisisDelta.global, 1);
+  assert.deepEqual(Object.keys(copy.pathwayImpacts.nested.crisisDelta), ["local"]);
   assert.equal(copy.pathwayImpacts.nested.crisisReasons.local.length, 160);
-  assert.equal(copy.pathwayImpacts.nested.crisisReasons.global, "Too much.");
+  assert.deepEqual(Object.keys(copy.pathwayImpacts.nested.crisisReasons), ["local"]);
 });
 
 test("buildNeighborEvalContext lists neighbors", () => {

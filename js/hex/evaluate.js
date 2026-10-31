@@ -5,8 +5,8 @@
  */
 
 import { semanticDigest } from "../semantic-digest.js";
-import { assessSustainable } from "../sim/sustainable.js";
-import { clampPathwayScore } from "../sim/policy-honesty.js";
+import { assessSustainable } from "../sim/sustainable.js?v=crisis-role-2";
+import { clampPathwayScore } from "../sim/policy-honesty.js?v=crisis-role-2";
 import { rulesWeatherKey } from "../sim/policy-rules.js";
 
 export { clampPathwayScore, rulesWeatherKey };
@@ -15,6 +15,7 @@ import { crisisMeterLevel } from "../sim/collapse.js";
 import { neighbor } from "./hex-tile-grid.js";
 import {
   TILE_KIND,
+  boardCrisisRoles,
   neighborTiles,
   tileAt,
   findIsolatedSlot,
@@ -22,10 +23,10 @@ import {
   cloneBoard,
   applyLights,
   PATHWAY_TEXT_MAX,
-} from "./board-state.js";
+} from "./board-state.js?v=crisis-role-2";
 import {
   CRISIS_REASON_MAX,
-  CRISIS_ROLES,
+  crisisRoleKeys,
   emptyCrisisDelta,
   emptyCrisisReasons,
   clipCrisisReason,
@@ -33,7 +34,7 @@ import {
   parseCrisisDeltaField,
   crisisDeltaValues,
   crisisDeltaReasons,
-} from "./crisis-delta.js";
+} from "./crisis-delta.js?v=crisis-role-2";
 
 export {
   CRISIS_REASON_MAX,
@@ -564,36 +565,41 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
     /\b(nuclear|reactor|warhead|weapon|surveil|mass.?surveillance)\b/i.test(
       howBlob
     );
-  const delta = emptyCrisisDelta();
-  const crisisReasons = emptyCrisisReasons();
+  const roles = crisisRoleKeys(opts.crisisRoles ?? opts.mission?.crisisRoles);
+  const delta = emptyCrisisDelta(roles);
+  const crisisReasons = emptyCrisisReasons(roles);
   if (mature && howLen >= 40) {
-    delta.local = -1;
-    delta.support = -1;
-    crisisReasons.local =
-      "The how-text names a here-and-now mechanism that can ease this meter.";
-    crisisReasons.support =
-      "The how-text is specific enough that people could actually field it.";
-  } else if (howLen >= 20) {
+    if (roles.includes("local")) {
+      delta.local = -1;
+      crisisReasons.local =
+        "The how-text names a here-and-now mechanism that can ease this meter.";
+    }
+    if (roles.includes("support")) {
+      delta.support = -1;
+      crisisReasons.support =
+        "The how-text is specific enough that people could actually field it.";
+    }
+  } else if (howLen >= 20 && roles.includes("local")) {
     delta.local = -1;
     crisisReasons.local =
       "There is a local mechanism on the page, but it is still thin.";
   }
   // Invent can make a meter worse (red timing, or a hostile stack).
-  if (redTiming || hostile) {
+  if ((redTiming || hostile) && roles.includes("support")) {
     delta.support = Math.max(delta.support, 1);
     crisisReasons.support = redTiming
       ? "A claim is not honest this year, so public buy-in gets harder."
       : "The stack includes something people will not want next door.";
   }
-  if (!crisisReasons.local) {
+  if (roles.includes("local") && !crisisReasons.local) {
     crisisReasons.local =
       "Nothing in the how-text eases the harm people feel today.";
   }
-  if (!crisisReasons.global) {
+  if (roles.includes("global") && !crisisReasons.global) {
     crisisReasons.global =
       "Nothing here names a lasting driver of the problem.";
   }
-  if (!crisisReasons.support) {
+  if (roles.includes("support") && !crisisReasons.support) {
     crisisReasons.support =
       "Nothing here earns public buy-in or a path beyond a pilot.";
   }
@@ -622,11 +628,11 @@ export function heuristicPathwayScore(inventions, year, opts = {}) {
  * Normalize AI / local score-pathway payload.
  * @param {unknown} raw
  */
-export function normalizePathwayScore(raw) {
+export function normalizePathwayScore(raw, roles) {
   const src = raw && typeof raw === "object" ? raw : {};
   const cd = src.crisisDelta || src.deltas || {};
-  const crisisDelta = crisisDeltaValues(cd);
-  const crisisReasons = crisisDeltaReasons(cd, src.crisisReasons);
+  const crisisDelta = crisisDeltaValues(cd, roles);
+  const crisisReasons = crisisDeltaReasons(cd, src.crisisReasons, roles);
   const concerns = {};
   const rawC = src.concerns && typeof src.concerns === "object" ? src.concerns : {};
   for (const [angle, row] of Object.entries(rawC)) {
@@ -646,13 +652,14 @@ export function normalizePathwayScore(raw) {
  * @param {object} ai — from normalizePathwayScore
  * @param {object} local — from heuristicPathwayScore
  */
-export function blendPathwayScore(ai, local) {
-  const cd = crisisDeltaValues(ai?.crisisDelta);
-  const aiReasons = crisisDeltaReasons(ai?.crisisDelta, ai?.crisisReasons);
-  const localDelta = crisisDeltaValues(local?.crisisDelta);
-  const localReasons = local?.crisisReasons || emptyCrisisReasons();
-  const cdEmpty = cd.local === 0 && cd.global === 0 && cd.support === 0;
-  const hasReasons = CRISIS_ROLES.some((role) =>
+export function blendPathwayScore(ai, local, roles = Object.keys(ai?.crisisDelta || local?.crisisDelta || {})) {
+  const keys = crisisRoleKeys(roles);
+  const cd = crisisDeltaValues(ai?.crisisDelta, keys);
+  const aiReasons = crisisDeltaReasons(ai?.crisisDelta, ai?.crisisReasons, keys);
+  const localDelta = crisisDeltaValues(local?.crisisDelta, keys);
+  const localReasons = crisisDeltaReasons(local?.crisisDelta, local?.crisisReasons, keys);
+  const cdEmpty = keys.every((role) => cd[role] === 0);
+  const hasReasons = keys.some((role) =>
     String(aiReasons[role] || "").trim()
   );
   const hasConcerns = Object.keys(ai?.concerns || {}).length > 0;
@@ -663,8 +670,8 @@ export function blendPathwayScore(ai, local) {
       concerns: { ...(local?.concerns || {}), ...(ai?.concerns || {}) },
     };
   }
-  const crisisReasons = emptyCrisisReasons();
-  for (const role of CRISIS_ROLES) {
+  const crisisReasons = emptyCrisisReasons(keys);
+  for (const role of keys) {
     const aiR = String(aiReasons[role] || "").trim();
     if (aiR) {
       crisisReasons[role] = clipCrisisReason(aiR);
@@ -825,6 +832,7 @@ function syncRulesWeather(board, opts = {}) {
   board.rulesWeatherKey = liveKey;
   if (liveKey === storedKey) return false;
   const clampOpts = {
+    crisisRoles: boardCrisisRoles(board),
     globalId: opts.globalId || opts.global,
     global: opts.global,
     mission: opts.mission,
@@ -891,6 +899,7 @@ export function pathwayImpactStillCurrent(board, fp) {
  */
 export function applyPathwayPressure(board, opts = {}) {
   const next = cloneBoard(board);
+  const roles = boardCrisisRoles(next);
   const baseSrc =
     opts.pressureBase ||
     next.pressureBase ||
@@ -927,8 +936,8 @@ export function applyPathwayPressure(board, opts = {}) {
     if (!cached) {
       next.pathwayImpacts[fingerprint] = {
         inventionIds: inventions.map((t) => t.id),
-        crisisDelta: emptyCrisisDelta(),
-        crisisReasons: emptyCrisisReasons(),
+        crisisDelta: emptyCrisisDelta(roles),
+        crisisReasons: emptyCrisisReasons(roles),
         concerns: {},
         pending: true,
         concernsPending: false,

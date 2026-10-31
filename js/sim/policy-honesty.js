@@ -6,6 +6,7 @@
 
 import { worseLevel } from "./deploy.js";
 import { honestyNeeds } from "./policy-rules.js";
+import { scopeCrisisScore } from "../hex/crisis-delta.js?v=crisis-role-2";
 
 /** Techs that can eat shifts unless a share/bridge is in the how-text. */
 export const DISPLACEMENT_TECH_IDS = new Set([
@@ -257,10 +258,10 @@ export function clampPathwayScore(score, inventions = [], opts = {}) {
     crisisDelta: score.crisisDelta,
     crisisReasons: score.crisisReasons,
   });
-  if (!applied.tag) return score;
-  return {
+  const roles = opts.crisisRoles ?? opts.mission?.crisisRoles ?? Object.keys(score.crisisDelta || {});
+  return scopeCrisisScore(applied.tag ? {
     ...score,
     crisisDelta: applied.crisisDelta,
     crisisReasons: applied.crisisReasons,
-  };
+  } : score, roles);
 }

@@ -3,7 +3,7 @@
  * DOM-free ring buffer. Newest first. Cleared when a quest starts.
  */
 
-import { CRISIS_ROLES, parseCrisisDeltaField } from "./hex/crisis-delta.js";
+import { crisisRoleKeys, parseCrisisDeltaField } from "./hex/crisis-delta.js?v=crisis-role-2";
 
 const CAP = 200;
 const KINDS = new Set(["action", "assessment"]);
@@ -257,7 +257,8 @@ export function formatPathwayScoreLog(score = {}, opts = {}) {
   const lines = [];
   const tones = [];
   if (!opts.keepCrisisDelta) {
-    for (const role of CRISIS_ROLES) {
+    const roles = crisisRoleKeys(opts.crisisRoles ?? Object.keys(score?.crisisDelta || {}));
+    for (const role of roles) {
       const parsed = parseCrisisDeltaField(score?.crisisDelta?.[role]);
       const reason = clip(score?.crisisReasons?.[role] || parsed.reason, 200);
       const label = ROLE_LABEL[role] || role;

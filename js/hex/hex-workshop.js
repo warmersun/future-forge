@@ -12,7 +12,7 @@ import {
   ideaIdentityText,
   formatPathwayScoreLog,
   formatTimingLog,
-} from "../captain-log.js";
+} from "../captain-log.js?v=crisis-role-2";
 import {
   scaffoldFields,
   scaffoldLabels,
@@ -64,6 +64,7 @@ import {
   isCollectorTile,
   unplacedInventionsForTech,
   cloneBoard,
+  boardCrisisRoles,
   TILE_KIND,
   neighborTiles,
   CRISIS_ROLE_DEFAULT_NAMES,
@@ -72,7 +73,7 @@ import {
   concernPoseText,
   concernReplyText,
   setConcernReply,
-} from "./board-state.js";
+} from "./board-state.js?v=crisis-role-2";
 import {
   tileTimingCacheKey,
   timingLevelToPct,
@@ -115,10 +116,11 @@ import {
   setIslandHow,
   rekeyIslandHow,
   rulesWeatherKey,
-} from "./evaluate.js";
+} from "./evaluate.js?v=crisis-role-2";
+import { scopeCrisisScore } from "./crisis-delta.js?v=crisis-role-2";
 import { crisisMeterLevel } from "../sim/collapse.js";
 import { applyPressureRiseYears } from "../sim/pressure.js";
-import { createHexBoardUi } from "./board-ui.js?v=crisis-intro-1";
+import { createHexBoardUi } from "./board-ui.js?v=crisis-role-2";
 import { polarityForTech } from "./polarity.js";
 import { paintCollectorPicker } from "../collector-cards.js";
 import { detectClaimStretch } from "../data.js";
@@ -2044,13 +2046,15 @@ export function createHexWorkshop(api) {
     const next = cloneBoard(board());
     if (!next.pathwayImpacts[fp]) return;
     const prev = next.pathwayImpacts[fp];
+    const crisisRoles = boardCrisisRoles(next);
+    score = scopeCrisisScore(score, crisisRoles);
     const members = (opts.inventions || inventionsForFingerprint(next, fp, prev.inventionIds));
     const awardKey = semanticDigest("pathway-ease-v1", [
       members.map((t) => [t.id, t.techId, String(t.howText || "").trim()]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
       resolveIslandHow(next, members).text,
     ]);
     const awards = next.pathwayEaseAwards || (next.pathwayEaseAwards = {});
-    const newlyEased = emptyCrisisDelta();
+    const newlyEased = emptyCrisisDelta(crisisRoles);
     for (const [role, delta] of Object.entries(crisisDeltaValues(score?.crisisDelta))) {
       const roleKey = semanticDigest("pathway-ease-role-v1", [awardKey, role]);
       if (!opts.keepCrisisDelta && delta < 0 && !awards[roleKey]) {
@@ -2062,11 +2066,11 @@ export function createHexWorkshop(api) {
     next.pathwayImpacts[fp] = {
       ...prev,
       crisisDelta: opts.keepCrisisDelta
-        ? prev.crisisDelta || emptyCrisisDelta()
-        : score.crisisDelta || emptyCrisisDelta(),
+        ? prev.crisisDelta || emptyCrisisDelta(crisisRoles)
+        : score.crisisDelta || emptyCrisisDelta(crisisRoles),
       crisisReasons: opts.keepCrisisDelta
-        ? prev.crisisReasons || emptyCrisisReasons()
-        : score.crisisReasons || emptyCrisisReasons(),
+        ? prev.crisisReasons || emptyCrisisReasons(crisisRoles)
+        : score.crisisReasons || emptyCrisisReasons(crisisRoles),
       concerns: score.concerns || {},
       pending: false,
       concernsPending: false,
@@ -2080,7 +2084,7 @@ export function createHexWorkshop(api) {
     api.onBoardPainted?.();
     api.commitBoard?.(applied.board);
     const keepCrisis = Boolean(opts.keepCrisisDelta);
-    const scored = formatPathwayScoreLog(score, { keepCrisisDelta: keepCrisis });
+    const scored = formatPathwayScoreLog(score, { keepCrisisDelta: keepCrisis, crisisRoles });
     const bNow = board();
     const fromOpts = (opts.inventions || []).filter(
       (t) => t && t.kind === TILE_KIND.invention
@@ -2328,7 +2332,8 @@ export function createHexWorkshop(api) {
       );
       const globalId = api.getGlobal?.()?.id || mission?.globalId || "";
       const rules = api.getRules?.() || mission?.rules || [];
-      const heurOpts = { concernAngles, concernAnswers, globalId, mission, rules };
+      const crisisRoles = boardCrisisRoles(b);
+      const heurOpts = { concernAngles, concernAnswers, globalId, mission, rules, crisisRoles };
       const concernKey = pathwayConcernScoreKey(b, inventions);
       const scoreCurrent = () => isCurrent() && !signal?.aborted &&
         pathwayJobs.get(fp)?.abort.signal === signal &&
@@ -2375,8 +2380,9 @@ export function createHexWorkshop(api) {
           if (signal?.aborted) return;
           score = clampPathwayScore(
             blendPathwayScore(
-              normalizePathwayScore(data),
-              heuristicPathwayScore(inventions, year, heurOpts)
+              normalizePathwayScore(data, crisisRoles),
+              heuristicPathwayScore(inventions, year, heurOpts),
+              crisisRoles
             ),
             inventions,
             heurOpts

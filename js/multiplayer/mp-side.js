@@ -7,7 +7,7 @@ import { VisionRenderer } from "../vision.js";
 import { bindVisionSplit } from "../side-split.js";
 import { CoInventor } from "../coinventor.js";
 import { visionStageIdForDeployStage } from "../sim/deploy.js";
-import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js";
+import { visionPathwaysFromBoard, visionGivensFromBoard, visionPeopleMood } from "../hex/evaluate.js?v=crisis-role-2";
 import { briefingOwnsRoot } from "../briefing-ui.js";
 import { spotlightAdvanceForAi } from "../tech-why.js";
 

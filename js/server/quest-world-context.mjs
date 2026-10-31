@@ -73,7 +73,14 @@ export function authoritativeQuestContext(clientContext, resolved) {
     id: context.questId, title: context.missionTitle,
     problem: context.missionScene, recommended: structuredClone(mission.suggested || []),
   };
-  context.crisisRoles = (mission.crisisRoles || []).map((role, index) => {
+  // Older packages omit crisisRoles; mirror the board's pressure-count mapping.
+  // An explicitly empty list is authoritative and must not acquire invented meters.
+  const pressureCount = Object.keys(mission.pressure || {}).length;
+  const legacyRoles = pressureCount === 1 ? ["local"] : pressureCount === 2
+    ? ["local", "support"] : ["local", "global", "support"];
+  const roles = mission.crisisRoles == null ? legacyRoles
+    : Array.isArray(mission.crisisRoles) ? mission.crisisRoles : [];
+  context.crisisRoles = roles.map((role, index) => {
     const name = Object.keys(mission.pressure || {})[index] || "";
     return { role, name, meterKey: name, description: mission.pressureDesc?.[name] || "" };
   });

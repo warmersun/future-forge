@@ -1,5 +1,5 @@
 // Presentation only: the seeded board remains the source of truth.
-import { CRISIS_ROLE_DEFAULT_NAMES } from './hex/board-state.js';
+import { CRISIS_ROLE_DEFAULT_NAMES } from './hex/board-state.js?v=crisis-role-2';
 export function createCrisisIntroduction({ document: doc, getBoard, repaint, onChange = () => {}, reducedMotion = () => false }) {
   let pending = new Set();
   let active = false;

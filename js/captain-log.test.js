@@ -15,7 +15,7 @@ import {
   formatPathwayScoreLog,
   formatTimingLog,
   formatPlacementTouch,
-} from "./captain-log.js";
+} from "./captain-log.js?v=crisis-role-2";
 
 describe("captain-log", () => {
   beforeEach(() => clearCaptainLog());
@@ -144,6 +144,14 @@ describe("captain-log", () => {
     assert.match(row.detail, /Support \+1 — A reactor raises public pressure\./);
     assert.match(row.detail, /Moloch yellow — Partial honest address\./);
     assert.equal(row.tone, "red");
+  });
+
+  it("shows only actual roles, retaining a real zero and excluding phantom reasons", () => {
+    const score = { crisisDelta: { local: 0, global: -1, support: 1 }, crisisReasons: { local: "No change", global: "Phantom", support: "Phantom" } };
+    const row = formatPathwayScoreLog(score, { crisisRoles: ["local"] });
+    assert.equal(row.detail, "Local 0 — No change");
+    assert.equal(formatPathwayScoreLog({ crisisDelta: { local: 0 } }).detail, "Local 0");
+    assert.equal(formatPathwayScoreLog({}, { crisisRoles: [] }).detail, "");
   });
 
   it("says which pathway is applied to which crises and concerns", () => {

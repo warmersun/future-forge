@@ -14,7 +14,7 @@ import {
 } from "./hex-tile-grid.js";
 import { polarityForTech, SPLIT } from "./polarity.js";
 import { GAME, clampChallengerCount } from "../data.js";
-import { crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js";
+import { crisisRoleKeys, crisisDeltaValues, crisisDeltaReasons } from "./crisis-delta.js?v=crisis-role-2";
 
 export const TILE_KIND = {
   invention: "invention",
@@ -37,6 +37,12 @@ export const CONCERN_LABELS = {
   ethicist: "Ethicist",
   stakeholder: "Stakeholder",
 };
+
+/** All authored crisis tiles, not merely the meters reached by an invention. */
+export function boardCrisisRoles(board) {
+  return crisisRoleKeys(Object.values(board?.tiles || {})
+    .filter((tile) => tile?.kind === TILE_KIND.crisis));
+}
 
 export const CRISIS_ROLE_DEFAULT_NAMES = {
   local: "Here and now",
@@ -143,6 +149,7 @@ export function cloneBoard(board) {
   if (!board) return createEmptyBoard();
   const base = board.pressureBase;
   const impacts = board.pathwayImpacts || {};
+  const roles = boardCrisisRoles(board);
   return {
     tiles: Object.fromEntries(
       Object.entries(board.tiles || {}).map(([id, t]) => [id, cloneTile(t)])
@@ -168,10 +175,11 @@ export function cloneBoard(board) {
           inventionIds: Array.isArray(row?.inventionIds)
             ? row.inventionIds.map(String)
             : [],
-          crisisDelta: crisisDeltaValues(row?.crisisDelta),
+          crisisDelta: crisisDeltaValues(row?.crisisDelta, roles),
           crisisReasons: crisisDeltaReasons(
             row?.crisisDelta,
-            row?.crisisReasons
+            row?.crisisReasons,
+            roles
           ),
           concerns:
             row?.concerns && typeof row.concerns === "object"
@@ -342,10 +350,11 @@ export function isPortableTile(tile) {
  */
 export function seedCrisisTiles(mission, opts = {}) {
   const board = createEmptyBoard();
-  const roles =
-    Array.isArray(mission?.crisisRoles) && mission.crisisRoles.length
-      ? mission.crisisRoles
-      : inferRolesFromPressure(mission?.pressure);
+  const roles = Array.isArray(mission?.crisisRoles)
+    ? mission.crisisRoles
+    : mission?.crisisRoles == null
+      ? inferRolesFromPressure(mission?.pressure)
+      : [];
   const keys = Object.keys(mission?.pressure || {});
   const startQ = opts.startQ ?? 1;
   const startR = opts.startR ?? 3;

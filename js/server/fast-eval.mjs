@@ -4,6 +4,7 @@
  */
 
 import { ideasOrFallback } from "../idea-cards.js";
+import { crisisRoleKeys, scopeCrisisScore } from "../hex/crisis-delta.js";
 import { FILL_QUEST_SUMMARY_SYSTEM, clipSummary } from "../quest-summary.js";
 import { worldClockForYear } from "../sim/world-foresight.js";
 import {
@@ -181,19 +182,18 @@ function missionSlice(context) {
 
 export const SCORE_PATHWAY_SYSTEM = `You score ONE invention pathway in Future Forge.
 There is no invention name. pathway.inventions[] (techId + howText + timing) are the parts. pathway.howText is the island inventHow if the learner wrote one — not a concat of parts. Judge the combination as ONE invent for this place and year.
-crisisDelta: for each role local, global, support return {delta, reason}. delta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
+crisisDelta: return ONLY roles listed in context.crisisRoles (crisisRoles in the JSON state), each as {delta, reason}. Omit absent roles entirely, not zero-valued entries or reasons. Missing or empty crisisRoles means crisisDelta is {}. All role-specific rules below apply only to listed roles. delta integers -2..+1: negative eases that crisis meter if this pathway docks it (directly or via invention chain); positive WORSENS it (a reactor can raise public-support pressure). An invent change may score worse than the previous fingerprint — do not protect a prior ease when the idea got harsher.
 local = here-and-now relief; global = root cause; support = public buy-in and scale beyond a pilot.
-A law, ban, UBI bill, or treaty is not an invent: score local/global/support delta 0 (support may be +1). Ask what becomes abundant with which capability this year.
+A law, ban, UBI bill, or treaty is not an invent: score each listed crisis role delta 0 (support may be +1 if listed). Ask what becomes abundant with which capability this year.
 If mission.globalId is automation: robots, AI, or self-driving without a share/bridge/paid-skill/meaning mechanism must not ease global. They may ease local remaining work and may raise support (backlash).
 If mission.globalId is rogue-si: an AI/computing stack without a reachable human override, eval, or audit must not ease global. A smarter score that still locks the last call can raise support.
 mission.rules (if present) are local weather — regulation/law/policy/ban already on the books or lobbied this session. They do not ease meters by themselves. Cite them when they change who can field, not as the invent.
-reason is one everyday sentence (≤160 chars) that cites the how-text mechanism and MATCHES the signed delta. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every role, including 0.
+reason is one everyday sentence (≤160 chars) that cites the how-text mechanism and MATCHES the signed delta. Do not say "eases" when delta is 0 or positive. delta 0 says what is missing for that meter. Always include a reason for every listed role, including 0.
 If a crisis role includes a non-empty description, that text is what the meter means in this place — use it, not only the HUD name. Ignore empty descriptions.
 concerns: for each listed angle, judge ALL inventions in THIS pathway PLUS playerAnswer if present, against challengeSpeech/challengeQuestion. Docking/touching is NOT addressing. If inventChanged is false and there is no playerAnswer, stay red. posedHowText is the invent as it was when this critic was raised — improve yellow/green ONLY if the new pathway honestly answers this critic better than that snapshot. Weakening the invent must not luck into a better lamp. yellow = partial honest address. Green only if the pathway honestly holds the answer. Do not prefer yellow over an honest green. reason is one everyday sentence that cites the mechanism or the unanswered question.
 ${GROUNDING_LINE}
 ${SOURCE_CONSTRAINT_LINE}
-Return JSON only (no markdown, no other keys):
-{"crisisDelta":{"local":{"delta":-1,"reason":"one sentence"},"global":{"delta":0,"reason":"one sentence"},"support":{"delta":0,"reason":"one sentence"}},"concerns":{"moloch":{"level":"yellow","reason":"one sentence"}}}`;
+Return JSON only with keys "crisisDelta" and "concerns" (no markdown, no other keys). crisisDelta maps each listed role to {"delta": integer, "reason": "one sentence"}; concerns maps each listed angle to {"level": "red"|"yellow"|"green", "reason": "one sentence"}. Empty lists produce empty objects.`;
 
 export const ASSESS_FEASIBILITY_SYSTEM = `You judge claim TIMING only in Future Forge: is this mechanism possible or already demonstrated in year?
 Do not judge quest fit, clinic job, hopper vs heavy-lift category, or whether the idea matches grounding's example applications.
@@ -321,12 +321,15 @@ function buildScorePathwayPayload(context) {
     sourceConstraint: sourceConstraintOf(context),
     pressureBase: context?.pressureBase || {},
     winMax: context?.winMax || {},
-    crisisRoles: (context?.crisisRoles || []).map((r) => ({
-      role: r?.role || null,
-      name: r?.name || null,
-      meterKey: r?.meterKey || r?.name || null,
-      description: clip(r?.description, 400),
-    })),
+    crisisRoles: crisisRoleKeys(context?.crisisRoles).map((role) => {
+      const r = context.crisisRoles.find((entry) => entry?.role === role);
+      return {
+        role,
+        name: r?.name || null,
+        meterKey: r?.meterKey || r?.name || null,
+        description: clip(r?.description, 400),
+      };
+    }),
     concerns: (context?.concerns || []).map((c) => ({
       angle: c?.angle || null,
       challengeSpeech: clip(c?.challengeSpeech || c?.analysis, 800),
@@ -540,35 +543,8 @@ export function fastEvalSystem(mode, context = {}) {
   return `${base}${scenarioGrantSuffix(inquiry, mode)}`;
 }
 
-function clampDelta(v) {
-  return Math.max(-2, Math.min(1, Math.round(Number(v) || 0)));
-}
-
-function clipCrisisReason(s) {
-  return String(s || "").trim().slice(0, 160);
-}
-
-function parseDeltaField(v) {
-  if (v && typeof v === "object") {
-    const raw = v.delta != null ? v.delta : v.value;
-    return { delta: clampDelta(raw), reason: clipCrisisReason(v.reason) };
-  }
-  return { delta: clampDelta(v), reason: "" };
-}
-
-function sanitizeScorePathway(parsed, source) {
-  const cd = parsed?.crisisDelta || {};
-  const sibling =
-    parsed?.crisisReasons && typeof parsed.crisisReasons === "object"
-      ? parsed.crisisReasons
-      : {};
-  const crisisDelta = {};
-  const crisisReasons = {};
-  for (const role of ["local", "global", "support"]) {
-    const parsedRole = parseDeltaField(cd[role]);
-    crisisDelta[role] = parsedRole.delta;
-    crisisReasons[role] = parsedRole.reason || clipCrisisReason(sibling[role]);
-  }
+function sanitizeScorePathway(parsed, source, context) {
+  const { crisisDelta, crisisReasons } = scopeCrisisScore(parsed, context?.crisisRoles);
   const concerns = {};
   const rawC =
     parsed?.concerns && typeof parsed.concerns === "object" ? parsed.concerns : {};
@@ -703,7 +679,7 @@ function sanitizeFillQuestSummary(parsed, source) {
 }
 
 export function sanitizeFast(mode, parsed, source = "ai", context = {}) {
-  if (mode === "score-pathway") return sanitizeScorePathway(parsed, source);
+  if (mode === "score-pathway") return sanitizeScorePathway(parsed, source, context);
   if (mode === "assess-feasibility") return sanitizeTiming(parsed, source, context);
   if (mode === "evaluate-convergence") {
     return sanitizeEvaluateConvergence(parsed, source, context);

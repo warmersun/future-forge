@@ -1,5 +1,6 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
+import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-2";
 import {
   createHexWorkshop,
   defaultChallengerImagePrompt,
@@ -8,6 +9,7 @@ import {
   concernWhyBlockHtml,
 } from "./hex-workshop.js";
 import {
+  cloneBoard,
   addTile,
   mintInventionTile,
   placeTile,
@@ -213,6 +215,34 @@ describe("hex-workshop stale response isolation", () => {
       });
     }
   }
+
+  it("logs only board meters through AI scoring and restores scoped state", async () => {
+    clearCaptainLog();
+    let board = seededBoard();
+    const mission = { id: "scope", pressure: { Floods: 2 }, winMax: { Floods: 1 } };
+    let request;
+    const ws = createHexWorkshop({
+      getBoard: () => board, setBoard: (b) => { board = b; },
+      getYear: () => 2026, getMission: () => mission,
+      coInvent: async (mode, _message, extra) => {
+        if (mode === "score-pathway") request = extra;
+        return { crisisDelta: { local: 0, global: -1, support: 1 }, crisisReasons: { local: "No change", global: "phantom", support: "phantom" }, concerns: {} };
+      },
+    });
+    ws.refreshAfterYearChange();
+    await untilCalled(() => request);
+    await untilCalled(() => listCaptainLog({ filter: "all" }).some((row) => row.title === "Pathway scored"));
+    assert.deepEqual(request.crisisRoles.map((row) => row.role), ["local"]);
+    const row = listCaptainLog({ filter: "all" }).find((entry) => entry.title === "Pathway scored");
+    assert.match(row.detail, /Local 0/);
+    assert.doesNotMatch(row.detail, /Global|Support|phantom/);
+    const restored = cloneBoard(JSON.parse(JSON.stringify(board)));
+    const impact = Object.values(restored.pathwayImpacts)[0];
+    assert.deepEqual(Object.keys(impact.crisisDelta), ["local"]);
+    assert.equal(impact.crisisDelta.local, 0);
+    ws.seedFromMission(mission);
+    clearCaptainLog();
+  });
 
   it("rechecks invalidated scores without repaying pathway ease", async () => {
     let board = seededBoard();
