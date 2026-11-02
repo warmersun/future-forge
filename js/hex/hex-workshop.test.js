@@ -1,5 +1,7 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createHotseatBridge } from "../multiplayer/hotseat-bridge.js";
 import { clearCaptainLog, listCaptainLog } from "../captain-log.js?v=crisis-role-3";
 import {
   createHexWorkshop,
@@ -328,6 +330,167 @@ describe("hex-workshop challenger art", () => {
 
 describe("hex-workshop summonNextChallenger", () => {
   before(() => stubDom());
+
+  for (const outcome of ["success", "failure", "clone", "seat", "seat-return", "turn", "run", "replacement"]) {
+    it(`uses real hotseat AP and hydration with ${outcome}`, async () => {
+      const bridge = createHotseatBridge();
+      const mission = { id: "same", title: "Test", place: "Port", globalId: "climate",
+        startYear: 2026, collapseYear: 2036, yearsPerTurn: 2,
+        pressure: { Floods: 2 }, pressureRise: { Floods: 1 }, winMax: { Floods: 0 } };
+      assert.equal(bridge.startFromPick(["Alex", "Bea"], mission, "climate").ok, true);
+      const state = { global: { id: "climate" }, selectedTechIds: [], hexBoard: seededBoard() };
+      bridge.hydrateSoloState(state);
+      const payer = bridge.getActiveId();
+      const otherSeat = bridge.getSession().seatOrder.find((id) => id !== payer);
+      bridge.getSession().invents[payer].ap = 2;
+      bridge.getSession().invents[payer].apSpentThisTurn = 1;
+      bridge.hydrateSoloState(state);
+      const originalMission = state.mission, originalWorld = state.runWorld;
+      const source = readFileSync(new URL("../game.js", import.meta.url), "utf8");
+      const start = source.indexOf("function spendFirstSummonAp() {");
+      const end = source.indexOf("\n/**\n * Spend 1 AP for co-invent", start);
+      assert.ok(start >= 0 && end > start);
+      const { spendFirstSummonAp, refundFirstSummonAp } = new Function(
+        "state", "hotseatBridge", "roomBridge", "apEnabled", "getSpendableAp", "renderHud", "mpFriendlyError",
+        `${source.slice(start, end)}\nreturn { spendFirstSummonAp, refundFirstSummonAp };`
+      )(state, bridge, { isRoom: () => false }, () => true, () => state.ap, () => {}, () => "");
+      const pending = deferred();
+      let called = false;
+      const busy = [];
+      const ws = createHexWorkshop({
+        getBoard: () => state.hexBoard, setBoard: (b) => { state.hexBoard = b; },
+        getYear: () => state.year, getMission: () => state.mission, getRunWorld: () => state.runWorld,
+        getRunId: () => state.runWorld, getRequestIdentity: () => bridge.isHotseat() ? bridge.getRequestIdentity() : null,
+        apEnabled: () => true, spendFirstSummonAp, refundFirstSummonAp,
+        setAiBusy: (value) => busy.push(value),
+        coInvent: async () => { called = true; return pending.promise; },
+        ...(outcome === "failure" ? { playChallengerReel: async () => { throw new Error("reel failed"); } } : {}),
+      });
+      bridge.onRequestIdentityChange(() => ws.cancelSummon());
+      const done = ws.summonNextChallenger();
+      assert.notEqual(state.mission, originalMission);
+      assert.notEqual(state.runWorld, originalWorld);
+      assert.equal(state.ap, 1);
+      if (outcome === "failure") {
+        await assert.rejects(done, /reel failed/);
+        assert.equal(state.ap, 2);
+        assert.equal(bridge.getSession().invents[payer].apSpentThisTurn, 1);
+        assert.deepEqual(busy, [true, false]);
+        pending.resolve({});
+        return;
+      }
+      await untilCalled(() => called);
+      // An additional ordinary hydrate must not retire the request either.
+      bridge.hydrateSoloState(state);
+      if (outcome === "clone") {
+        bridge.setSession(structuredClone(bridge.getSession()));
+        bridge.hydrateSoloState(state);
+      }
+      if (outcome === "seat" || outcome === "seat-return") {
+        const owner = bridge.getViewId();
+        bridge.setViewSeat(bridge.getSession().seatOrder[1]);
+        bridge.hydrateSoloState(state);
+        if (outcome === "seat-return") {
+          bridge.setViewSeat(owner);
+          bridge.hydrateSoloState(state);
+        }
+      }
+      if (outcome === "turn") {
+        assert.equal(bridge.passDevice().ok, true);
+        bridge.hydrateSoloState(state);
+      }
+      if (outcome === "run") {
+        bridge.startFromPick(["Alex", "Bea"], mission, "climate");
+        bridge.hydrateSoloState(state);
+      }
+      if (outcome === "replacement") {
+        const other = createHotseatBridge();
+        other.startFromPick(["Alex", "Bea"], mission, "climate");
+        other.getSession().invents[payer].ap = 1;
+        other.getSession().invents[payer].apSpentThisTurn = 2;
+        bridge.setSession(structuredClone(other.getSession()));
+        bridge.hydrateSoloState(state);
+      }
+      if (!["success", "clone"].includes(outcome)) {
+        assert.equal(ws.isSummonBusy(), false);
+        assert.deepEqual(busy, [true, false]);
+        assert.equal(bridge.getSession().invents[payer].ap, outcome === "replacement" ? 1 : outcome === "run" ? 3 : 2);
+        assert.equal(bridge.getSession().invents[payer].apSpentThisTurn, outcome === "replacement" ? 2 : outcome === "run" ? 0 : 1);
+        assert.equal(bridge.getSession().invents[otherSeat].ap, 3);
+      }
+      const before = JSON.stringify(state.hexBoard);
+      pending.resolve({ challengeSpeech: "Speech", challengeQuestion: "Question?" });
+      await done;
+      if (outcome === "success" || outcome === "clone") {
+        assert.equal(Object.values(state.hexBoard.tiles).filter((t) => t.kind === TILE_KIND.concern).length, 1);
+        assert.equal(state.ap, 1);
+        assert.deepEqual(busy, [true, false]);
+      } else {
+        assert.equal(JSON.stringify(state.hexBoard), before);
+        assert.deepEqual(busy, [true, false]);
+        assert.equal(bridge.getSession().invents[payer].ap, outcome === "replacement" ? 1 : outcome === "run" ? 3 : 2);
+        assert.equal(bridge.getSession().invents[payer].apSpentThisTurn, outcome === "replacement" ? 2 : outcome === "run" ? 0 : 1);
+        assert.equal(bridge.getSession().invents[otherSeat].ap, 3);
+      }
+    });
+  }
+
+  it("keeps the new summon busy when an old seat's job completes", async () => {
+    const bridge = createHotseatBridge();
+    const mission = { id: "m", startYear: 2026, collapseYear: 2036, yearsPerTurn: 2,
+      pressure: { Floods: 2 }, pressureRise: { Floods: 1 }, winMax: { Floods: 0 } };
+    bridge.startFromPick(["Alex", "Bea"], mission, "climate");
+    const state = { global: { id: "climate" }, selectedTechIds: [], hexBoard: seededBoard(), aiBusy: false };
+    bridge.hydrateSoloState(state);
+    const source = readFileSync(new URL("../game.js", import.meta.url), "utf8");
+    const start = source.indexOf("function spendFirstSummonAp() {");
+    const end = source.indexOf("\n/**\n * Spend 1 AP for co-invent", start);
+    const { spendFirstSummonAp, refundFirstSummonAp } = new Function(
+      "state", "hotseatBridge", "roomBridge", "apEnabled", "getSpendableAp", "renderHud", "mpFriendlyError",
+      `${source.slice(start, end)}\nreturn { spendFirstSummonAp, refundFirstSummonAp };`
+    )(state, bridge, { isRoom: () => false }, () => true, () => state.ap, () => {}, () => "");
+    const payer = bridge.getActiveId();
+    const first = deferred(), second = deferred();
+    let calls = 0;
+    const ws = createHexWorkshop({
+      getBoard: () => state.hexBoard, setBoard: (b) => { state.hexBoard = b; },
+      getYear: () => state.year, getMission: () => state.mission, getRunWorld: () => state.runWorld,
+      getRequestIdentity: () => bridge.getRequestIdentity(),
+      apEnabled: () => true, spendFirstSummonAp, refundFirstSummonAp,
+      setAiBusy: (value) => { state.aiBusy = value; state.hexSummonPending = value; },
+      coInvent: () => (++calls === 1 ? first.promise : second.promise),
+    });
+    bridge.onRequestIdentityChange(() => ws.cancelSummon());
+    const old = ws.summonNextChallenger();
+    await untilCalled(() => calls === 1);
+    assert.equal(document.querySelector("#hex-board-pending").hidden, false);
+    bridge.setViewSeat(bridge.getSession().seatOrder[1]);
+    bridge.hydrateSoloState(state);
+    assert.equal(bridge.getSession().invents[payer].ap, 3);
+    assert.equal(state.aiBusy, false);
+    assert.equal(state.hexSummonPending, false);
+    assert.equal(document.querySelector("#hex-board-pending").hidden, true);
+    bridge.setViewSeat(payer);
+    bridge.hydrateSoloState(state);
+    state.hexBoard = seededBoard();
+    const newer = ws.summonNextChallenger();
+    await untilCalled(() => calls === 2);
+    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    first.resolve({ challengeSpeech: "Old", challengeQuestion: "Old?" });
+    await old;
+    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    assert.equal(state.aiBusy, true);
+    assert.equal(state.hexSummonPending, true);
+    assert.equal(ws.isSummonBusy(), true);
+    assert.equal(document.querySelector("#hex-board-pending").hidden, false);
+    second.resolve({ challengeSpeech: "New", challengeQuestion: "New?" });
+    await newer;
+    assert.equal(bridge.getSession().invents[payer].ap, 2);
+    assert.equal(state.aiBusy, false);
+    assert.equal(state.hexSummonPending, false);
+    assert.equal(ws.isSummonBusy(), false);
+    assert.equal(document.querySelector("#hex-board-pending").hidden, true);
+  });
 
   it("places a challenger without referencing a removed prose object", async () => {
     let board = seededBoard();

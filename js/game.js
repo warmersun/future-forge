@@ -134,7 +134,7 @@ import {
   rotateLocalIdeaSparks,
 } from "./idea-cards.js";
 import { localPose } from "./challenge-pose.js";
-import { createHexWorkshop } from "./hex/hex-workshop.js?v=crisis-role-3";
+import { createHexWorkshop } from "./hex/hex-workshop.js?v=hotseat-summon-2";
 import { createCrisisIntroduction } from "./crisis-introduction.js?v=crisis-role-3";
 import {
   boardHolds,
@@ -322,7 +322,7 @@ import {
   setReadAloudToast,
 } from "./read-aloud.js";
 import { initFriendsUi } from "./multiplayer/ui.js?v=crisis-role-3";
-import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=crisis-role-3";
+import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=hotseat-summon-2";
 import { createRoomBridge } from "./multiplayer/room-bridge.js?v=crisis-role-3";
 import {
   initTechDrawers,
@@ -1769,6 +1769,8 @@ function ensureHexWorkshop() {
     getMission: () => state.mission || null,
     getRunWorld: () => state.runWorld,
     getRunId: () => state.cloudRunId || state.runWorld,
+    getRequestIdentity: () => !roomBridge.isRoom() && hotseatBridge.isHotseat()
+      ? hotseatBridge.getRequestIdentity() : null,
     /** "What could help here?" — suggested emTechs with plain reasons for a crisis hex */
     techsForCrisis: (where) => pickTechsForCrisis(state.mission, TECHS, where || {}, 3),
     focusTechFromBoard: (id) => focusTech(id),
@@ -1942,6 +1944,7 @@ function ensureHexWorkshop() {
     openLearnWhileIdeas: (techId) => openLearnWhileIdeas(techId),
     finishLearnWhileIdeas: (opts) => finishLearnWhileIdeas(opts),
   });
+  hotseatBridge.onRequestIdentityChange(() => hexWorkshop?.cancelSummon());
   return hexWorkshop;
 }
 
@@ -12557,7 +12560,9 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   let poseFailed = false;
   let stopped = false;
 
+  const isCurrent = () => opts.isCurrent?.() !== false;
   const setTrack = (i, { snap = false } = {}) => {
+    if (!isCurrent()) return;
     if (snap) track.classList.add("is-snap");
     else track.classList.remove("is-snap");
     track.style.transform = `translateX(-${i * 100}%)`;
@@ -12608,6 +12613,7 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
   };
 
   const finish = () => {
+    if (!isCurrent()) return Promise.resolve(undefined);
     stopped = true;
     if (mode === "pick") {
       idx = winIdx;
@@ -12620,6 +12626,7 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
       }
       return new Promise((resolve) => {
         setTimeout(() => {
+          if (!isCurrent()) { resolve(undefined); return; }
           if (finishBanner) finishChallengerDraw(finalAngle);
           else hideReel();
           if (poseFailed) resolve(undefined);
@@ -12634,6 +12641,7 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
     }
     return new Promise((resolve) => {
       setTimeout(() => {
+        if (!isCurrent()) { resolve(undefined); return; }
         hideReel();
         if (poseFailed) resolve(undefined);
         else resolve(poseResult);
@@ -12675,12 +12683,13 @@ function playChallengerDrawAnimation(finalAngle, opts = {}) {
 
   return (async () => {
     const hardStop = Date.now() + 45000;
-    while (!canStop() && Date.now() < hardStop) {
+    while (isCurrent() && !canStop() && Date.now() < hardStop) {
       await slideOnce();
     }
+    if (!isCurrent()) return undefined;
     if (mode === "pick") {
       if (roster[idx]?.id !== finalAngle.id) {
-        for (let k = 0; k < n && roster[idx]?.id !== finalAngle.id; k++) {
+        for (let k = 0; isCurrent() && k < n && roster[idx]?.id !== finalAngle.id; k++) {
           await slideOnce();
         }
         if (roster[idx]?.id !== finalAngle.id) {
@@ -20153,6 +20162,7 @@ function spendFirstSummonAp() {
     }
   }
   if (hotseatBridge.isHotseat()) {
+    const payer = hotseatBridge.captureSummonPayer();
     const r = hotseatBridge.applyActiveAction?.({
       type: "pay_ap",
       payload: { amount: 1 },
@@ -20168,7 +20178,15 @@ function spendFirstSummonAp() {
     }
     hotseatBridge.hydrateSoloState?.(state, { global: state.global });
     renderHud();
-    return { ok: true };
+    return { ok: true, refund: () => {
+      if (!hotseatBridge.refundSummonPayer(payer)) return;
+      if (hotseatBridge.getActiveId() === payer.seat) {
+        const actor = hotseatBridge.getSession().invents[payer.seat];
+        state.ap = actor.ap;
+        state.apSpentThisTurn = actor.apSpentThisTurn;
+        renderHud();
+      }
+    } };
   }
   const r = dispatchSim("enter_challenge");
   if (!r.ok) {

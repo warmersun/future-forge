@@ -592,7 +592,7 @@ export function createHotseatBridge() {
     });
   }
 
-  return {
+  const bridge = {
     getSession,
     setSession: (s) => {
       session = s;
@@ -626,5 +626,46 @@ export function createHotseatBridge() {
     clear,
     seatSummaries,
     activeSeat: () => (session ? activeSeat(session) : null),
+    // Refund the payer, not whichever seat happens to be active now.
+    captureSummonPayer: () => session && ({
+      run: session._hotseatRunKey, seat: getActiveId(), round: session.round,
+    }),
+    refundSummonPayer: (payer) => {
+      if (!payer?.run || payer.run !== session?._hotseatRunKey) return false;
+      const actor = session.invents?.[payer.seat];
+      const sameTurn = session.round === payer.round;
+      const handoffAcrossRound = session.round === payer.round + 1 && getActiveId() !== payer.seat;
+      if (!actor || (!sameTurn && !handoffAcrossRound)) return false;
+      actor.ap = Math.min(actor.apMax || 3, (actor.ap || 0) + 1);
+      actor.apSpentThisTurn = Math.max(0, (actor.apSpentThisTurn || 0) - 1);
+      session.version = (session.version || 0) + 1;
+      return true;
+    },
   };
+  // Object clones from ordinary actions and hydration are not run changes.
+  // Invalidate even for a seat switch away and back between async checks.
+  let requestIdentity = {};
+  let onIdentityChange = null;
+  let nextRun = 0;
+  const runKey = () => `${Date.now()}-${++nextRun}-${Math.random()}`;
+  bridge.onRequestIdentityChange = (fn) => { onIdentityChange = fn; };
+  bridge.getRequestIdentity = () => requestIdentity;
+  for (const name of ["startFromPick", "clear", "setSession", "setViewSeat", "cycleView", "applyActiveAction", "passDevice", "waitShared", "reopenInvent"]) {
+    const original = bridge[name];
+    bridge[name] = (...args) => {
+      const active = getActiveId(), view = getViewId();
+      const previousRun = session?._hotseatRunKey;
+      const result = original(...args);
+      if (name === "startFromPick" && result?.ok) session._hotseatRunKey = runKey();
+      if (name === "setSession" && session && !session._hotseatRunKey) session._hotseatRunKey = runKey();
+      if ((name === "startFromPick" && result?.ok) || name === "clear" ||
+          (name === "setSession" && previousRun !== session?._hotseatRunKey) ||
+          active !== getActiveId() || view !== getViewId()) {
+        requestIdentity = {};
+        onIdentityChange?.();
+      }
+      return result;
+    };
+  }
+  return bridge;
 }

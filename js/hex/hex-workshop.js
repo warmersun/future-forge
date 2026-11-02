@@ -1357,10 +1357,24 @@ export function createHexWorkshop(api) {
     });
   }
 
-  function seedFromMission(mission) {
-    runGeneration += 1;
+  function cancelSummon() {
+    if (!summonJob) return;
+    const job = summonJob;
     summonJob = null;
-    summonBusy = false;
+    job.refund?.();
+    job.cancelUi?.();
+    setCreateBusy("summon", false);
+    api.setAiBusy?.(false);
+    const draw = document.querySelector("#hex-challenger-draw");
+    if (draw) { draw.hidden = true; draw.setAttribute("hidden", ""); }
+    const track = document.querySelector("#hex-challenger-draw-reel");
+    if (track) { track.innerHTML = ""; track.style.transform = ""; }
+    ensureUi()?.setHighlight?.(null);
+  }
+
+  function seedFromMission(mission) {
+    cancelSummon();
+    runGeneration += 1;
     for (const fp of [...pathwayJobs.keys()]) abortPathwayJob(fp);
     for (const timer of timingTimers.values()) clearTimeout(timer);
     timingTimers.clear();
@@ -2445,18 +2459,26 @@ export function createHexWorkshop(api) {
     ]);
   }
 
-  // Compare at the point of mutation, not only when scheduling/aborting jobs.
-  // Mission/world object identity isolates fresh runs with identical semantic IDs.
-  function requestGuard() {
+  // Hotseat hydration clones mission/world; its bridge supplies a stable token
+  // which changes on run and seat transitions. Other modes retain strict refs.
+  function runGuard() {
     const generation = runGeneration;
+    const identity = api.getRequestIdentity?.();
     const mission = api.getMission?.();
     const world = api.getRunWorld?.();
     const runId = api.getRunId?.();
+    return () => runGeneration === generation && (identity != null
+      ? api.getRequestIdentity?.() === identity
+      : api.getRequestIdentity?.() == null && api.getMission?.() === mission &&
+        api.getRunWorld?.() === world && api.getRunId?.() === runId);
+  }
+
+  function requestGuard() {
+    const sameRun = runGuard();
     const year = api.getYear?.();
     const source = sourceKeyNow();
     const rules = liveRulesWeatherKey();
-    return () => runGeneration === generation && api.getMission?.() === mission && api.getRunWorld?.() === world &&
-      api.getRunId?.() === runId && api.getYear?.() === year &&
+    return () => sameRun() && api.getYear?.() === year &&
       sourceKeyNow() === source && liveRulesWeatherKey() === rules;
   }
 
@@ -3145,11 +3167,7 @@ export function createHexWorkshop(api) {
    * Poses only the drawn angle (speech + question) — not all four critics.
    */
   async function summonNextChallenger() {
-    const generationAtStart = runGeneration;
-    const missionAtStart = api.getMission?.();
-    const worldAtStart = api.getRunWorld?.();
-    const runAtStart = api.getRunId?.();
-    const sameRun = () => runGeneration === generationAtStart && api.getMission?.() === missionAtStart && api.getRunWorld?.() === worldAtStart && api.getRunId?.() === runAtStart;
+    const sameRun = runGuard();
     const isCurrent = requestGuard();
     if (summonBusy) return board();
     if (api.canSummonChallengers && !api.canSummonChallengers()) {
@@ -3165,6 +3183,7 @@ export function createHexWorkshop(api) {
 
     const isFirstDraw = concernAnglesOnBoard(b).length === 0;
     let paidFirstSummon = false;
+    let paymentRefund = null;
     if (isFirstDraw && api.apEnabled?.()) {
       const pay = api.spendFirstSummonAp?.();
       if (pay && pay.ok === false) {
@@ -3174,6 +3193,7 @@ export function createHexWorkshop(api) {
         return board();
       }
       paidFirstSummon = Boolean(pay && pay.ok !== false);
+      paymentRefund = pay?.refund;
     }
 
     const pickAngle =
@@ -3187,6 +3207,12 @@ export function createHexWorkshop(api) {
       };
 
     const job = {};
+    job.refund = () => {
+      if (!paidFirstSummon) return;
+      paidFirstSummon = false;
+      if (paymentRefund) paymentRefund();
+      else if (sameRun()) api.refundFirstSummonAp?.();
+    };
     summonJob = job;
     setCreateBusy("summon", true);
     api.setAiBusy?.(true, { summon: true });
@@ -3218,6 +3244,9 @@ export function createHexWorkshop(api) {
       }
     };
 
+    job.cancelUi = () => {
+      if (statusEl && statusEl.textContent.includes("Summoning")) statusEl.textContent = prevStatus;
+    };
     let placedOk = false;
     try {
       const place = api.getPlace?.() || "";
@@ -3326,6 +3355,7 @@ export function createHexWorkshop(api) {
       if (api.playChallengerReel) {
         enrich = await api.playChallengerReel({
           until,
+          isCurrent: () => summonJob === job && isCurrent(),
           mode: "pick",
           finalAngle: finalMeta,
           roster: CHALLENGE_ANGLES.slice(),
@@ -3379,6 +3409,7 @@ export function createHexWorkshop(api) {
         return board();
       }
       placedOk = true;
+      paidFirstSummon = false;
       setBoard(placed.board);
       const posed = concernPoseText(placed.board?.tiles?.[`concern-${pickAngle}`]);
       logChallengerConcern(
@@ -3405,9 +3436,7 @@ export function createHexWorkshop(api) {
       );
       return placed.board;
     } finally {
-      if (sameRun() && paidFirstSummon && !placedOk) {
-        api.refundFirstSummonAp?.();
-      }
+      if (!placedOk) job.refund();
       if (summonJob === job) {
         summonJob = null;
         if (sameRun()) setCreateBusy("summon", false);
@@ -3773,6 +3802,7 @@ export function createHexWorkshop(api) {
 
   return {
     seedFromMission,
+    cancelSummon,
     focusTech,
     paint,
     wireDom,
