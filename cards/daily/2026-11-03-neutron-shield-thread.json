@@ -1,0 +1,32 @@
+{
+  "source": "Korea Institute of Science and Technology (KIST), team led by Kim Dae-yoon (press: Space Composite Materials Research Center; paper affiliation: Advanced Conductive Materials Research Center). Ryu, K.-H. et al., 'Boron nitride nanotube fibers with over 1 GPa strength and 1000 °C stability for exceptional neutron shielding textiles', Nature Communications 17, 10393, published 1 Sep 2026, DOI 10.1038/s41467-026-77427-x: SAAN 80 fibers, 80 wt% BNNT + 20 wt% CNT, wet-spun through a spinneret (shear alignment); tensile strength 1.18 GPa (>1 GPa); stable -196 to 1200 °C under inert (nitrogen) atmosphere; knot efficiency 87%; >3.5 km continuous fiber; flat woven and tubular knitted textiles on commercial machines. Measured thermal-neutron attenuation: 19.3% (one 76 µm layer), 46.2% (3 layers), 59.7% (5 layers); Beer-Lambert mu = 2.85 mm^-1 => ~99% at ~1.62 mm CALCULATED (Table S2), not a measured 1.62 mm sample. Protection vs GCR-spallation secondary thermal neutrons in spacecraft (IVA) and lunar surface (EVA) is PHITS simulation only. Applications named: spacesuit layer (incl. high-movement joints per press), spacecraft interiors, habitats; press adds nuclear facilities and radiation treatment rooms. Limits per KIST (Chosun Biz): only low-energy thermal neutrons tested; high-energy space radiation and durability need verification; planned CubeSat/space-station exposure tests (Herald). KIST announced 3 Nov 2026 (Chosun Biz, Herald Business, Yonhap). 'World's first' is a KIST/press claim, not used. Dong-A Science (dongascience.com/en/news/80675) was unreachable (503) at authoring time, so it is not linked. Not stored or shown.",
+  "id": "8810c731-f0f3-41ee-9efc-bf8f62c6fcad",
+  "techId": "nano",
+  "title": "A knot-tying space cloth that soaks up invisible neutron radiation",
+  "description": "Tubes far thinner than a hair, mostly made of boron (an element that soaks up neutrons) mixed with some made of carbon, are pushed through a narrow nozzle that lines them all up into one strong, bendable thread. The thread can be tied in a knot and woven or knitted on ordinary textile machines, and it held up from deep cold at -196 °C to 1,200 °C.",
+  "capability": "We can now weave a thin, bendable, heat-proof cloth that soaks up neutrons, a kind of invisible particle radiation made when space radiation hits spacecraft and other materials, from a thread strong enough to tie in a knot. So far it has only been tested against slow neutrons, not the full mix of radiation in space.",
+  "useCases": [
+    "The goal: a protective layer inside spacesuits for Moon and long space missions, even at elbows and knees that bend a lot, to cut the neutron radiation reaching astronauts. Not tested in space yet.",
+    "The goal: flexible shielding linings inside spacecraft and crewed space habitats, protecting people and electronics. Not tested in space yet.",
+    "The goal: light, bendable protection in places on Earth with strong radiation, such as nuclear plants and radiation treatment rooms. Not shown yet."
+  ],
+  "body": "In tests with slow neutrons, a single layer of the cloth, 76 micrometres thick (thinner than a sheet of paper), stopped 19.3% of them, and five stacked layers stopped 59.7%. From those measurements the team calculated that cloth about 1.62 millimetres thick would block about 99% of slow neutrons. That figure is a calculation, not a test of cloth that thick.\n\nThe team spun more than 3.5 kilometres of the thread and made both flat woven cloth and tube-shaped knitted cloth on standard industrial machines. The cloth kept its strength after being frozen to -196 °C and heated to 1,200 °C in a gas with no oxygen, much like space, which has almost none.\n\nThe limits are real. Only slow neutrons were tested. How well it stops the faster, higher-energy radiation in space, and how long it lasts there, still needs testing, as the team itself says. Its protection against the neutrons that space radiation knocks loose from spacecraft and the Moon's surface was shown only in computer simulations. The team plans to test it in space next.",
+  "links": [
+    {
+      "label": "The research paper (open access)",
+      "url": "https://www.nature.com/articles/s41467-026-77427-x"
+    },
+    {
+      "label": "News report on the fiber and its limits",
+      "url": "https://biz.chosun.com/en/en-science/2026/11/03/VMBSSMVIDNFP3CQRJRD2T6W5CA/"
+    },
+    {
+      "label": "News report on mass production and planned uses",
+      "url": "https://biz.heraldcorp.com/article/10923919"
+    },
+    {
+      "label": "News report on the announcement (Korean)",
+      "url": "https://www.yna.co.kr/view/AKR20261103088400017"
+    }
+  ]
+}
