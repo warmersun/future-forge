@@ -67,6 +67,30 @@ describe("ai-trace", () => {
     assert.equal(aiTraceKind({ mode: "score-pathway" }), "text");
   });
 
+  it("keeps latency durations and drops learner text", () => {
+    const entry = pushAiTrace({
+      mode: "chat",
+      received: { source: "ai", message: "The answer stays in the trace body." },
+      latency: {
+        mode: "chat",
+        status: "ok",
+        message: "do not keep this learner text",
+        marks: { submit: 0, first_visible_text: 40 },
+        tokens: {
+          inputTokens: null,
+          outputTokens: 3,
+          reasoningTokens: null,
+          cachedInputTokens: null,
+        },
+      },
+    });
+    assert.equal(entry.latency.first_visible_text_ms, 40);
+    assert.equal(entry.latency.outputTokens, 3);
+    assert.equal(entry.latency.inputTokens, null);
+    assert.equal(entry.latency.message, undefined);
+    assert.equal(JSON.stringify(entry.latency).includes("do not keep"), false);
+  });
+
   it("treats vision and idea-image as image kind", () => {
     assert.equal(aiTraceKind({ mode: "vision" }), "image");
     assert.equal(aiTraceKind({ mode: "idea-image" }), "image");

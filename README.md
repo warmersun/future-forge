@@ -234,6 +234,8 @@ The process only serves **allowlisted public assets** (`index.html`, `css/`, cli
 | `FF_VOICE_MAX_MS` | Max voice call length (default 10 minutes) |
 | `FF_VOICE_IDLE_MS` | Hang up a call with no audio frames (default 90 seconds). An open mic still counts as audio; a backgrounded tab does not |
 | `FF_AI_SEARCH=1` | Live web + X search on timing assess and idea-sparks (off by default; also `--ai-search`) |
+| `FF_CO_INVENT_STREAM=1` | Stream conversational co-invent answers as server-sent events when the request `Accept` header asks for `text/event-stream`. The reasoning trace is one full-width Thinking block. It collapses as a whole when the answer starts, and the thoughts stay inside it. They are not sent back to the model. Feasibility, scoring, scenarios, and other judges stay one JSON body. Voice is unchanged. Off by default |
+| `FF_CO_INVENT_PROMPT_COMPACT=1` | Shorter conversational co-invent and tutor prompt. Still includes the world-clock line and the tutor send-to-read illustration. Off by default. Separate from `FF_CO_INVENT_STREAM` |
 
 Solo AI routes (`/api/co-invent`, `/api/co-invent-voice/session`, `/api/vision`, `/api/market-image`, `/api/tts`) share per-IP rate limits. Friends rooms also enforce action and AI flood limits on the WebSocket.
 

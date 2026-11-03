@@ -687,3 +687,101 @@ describe("RoomManager", () => {
     assert.equal(ended.length, 1);
   });
 });
+
+describe("room co-invent stream", () => {
+  it("broadcasts text without changing sim version and completes once", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    const generation = room.runGeneration;
+    const seen = [];
+    rm.broadcast = (target, msg) => {
+      if (msg.type === "ai_stream") seen.push(msg);
+      else RoomManager.prototype.broadcast.call(rm, target, msg);
+    };
+    rm.coInventHandler = async (_body, ctx) => {
+      const during = room.simVersion;
+      ctx.onReasoning?.("Weighing the gate");
+      ctx.onDelta?.("Hello");
+      ctx.onDelta?.(" there");
+      assert.equal(room.simVersion, during);
+      return { message: "Hello there", proposals: { inventionHow: "A local gate." }, source: "test" };
+    };
+    const result = await rm.requestAi(room, host, { mode: "chat", clientActionId: "stream-1" });
+    assert.equal(result.ok, true);
+    assert.equal(seen.length, 3);
+    assert.equal(seen[0].reasoning, "Weighing the gate");
+    assert.equal(seen[0].text, undefined);
+    assert.equal(seen[1].text, "Hello");
+    assert.equal(seen[0].simVersion, undefined);
+    assert.equal(seen[0].runGeneration, generation);
+    assert.match(room.mp.invents[host.id].inventionHow, /local gate/);
+    const again = rm.completeAiJob(room, host, "stream-1", {
+      ok: true,
+      result: { proposals: { inventionHow: "second" } },
+      runGeneration: generation,
+    });
+    assert.equal(again.error, "not_pending");
+    assert.match(room.mp.invents[host.id].inventionHow, /local gate/);
+  });
+
+  it("drops a late completion after the next quest starts", async () => {
+    const { rm, created, room, host } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    rm.coInventHandler = async () => {
+      await gate;
+      return { message: "late", proposals: { inventionHow: "too late" } };
+    };
+    const pending = rm.requestAi(room, host, { mode: "chat", clientActionId: "late-1" });
+    const firstGen = room.runGeneration;
+    room.mp.place.status = "collapsed";
+    rm.refreshNextQuestChooser(room);
+    const next = rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: { ...sampleMission, id: "next" },
+      globalId: "climate",
+    });
+    assert.equal(next.ok, true, next.error);
+    assert.notEqual(room.runGeneration, firstGen);
+    release();
+    const done = await pending;
+    assert.equal(done.stale || done.error === "stale" || done.ok === false, true);
+    assert.equal(room.mp.invents[host.id].inventionHow || "", "");
+  });
+
+  it("lets only the owner cancel", async () => {
+    const { rm, created, room, host, bea } = twoPlayerRoom();
+    rm.hostCommand(room, host, "start_quest", {
+      hostToken: created.hostToken,
+      mission: sampleMission,
+      globalId: "climate",
+    });
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    rm.coInventHandler = async (_body, ctx) => {
+      await gate;
+      assert.equal(ctx.cancelled(), true);
+      return { cancelled: true };
+    };
+    const pending = rm.requestAi(room, host, { mode: "chat", clientActionId: "cancel-1" });
+    assert.equal(rm.cancelAi(room, bea, "cancel-1").ok, false);
+    assert.equal(rm.cancelAi(room, host, "cancel-1").ok, true);
+    release();
+    const done = await pending;
+    assert.equal(done.ok, false);
+    assert.equal(done.error, "cancelled");
+  });
+});

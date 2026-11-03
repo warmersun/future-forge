@@ -28,9 +28,9 @@ import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=voice-20";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=stream-8";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
-import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=voice-19";
+import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=stream-1";
 import {
   leanCoInventContext as buildLeanCoInventContext,
   inventDraftFieldsForContext,
@@ -321,7 +321,7 @@ import {
   stopReadAloud,
   setReadAloudToast,
 } from "./read-aloud.js";
-import { initFriendsUi } from "./multiplayer/ui.js?v=crisis-role-3";
+import { initFriendsUi } from "./multiplayer/ui.js?v=stream-2";
 import { createHotseatBridge } from "./multiplayer/hotseat-bridge.js?v=hotseat-summon-2";
 import { createRoomBridge } from "./multiplayer/room-bridge.js?v=crisis-role-3";
 import {
@@ -1460,6 +1460,7 @@ function prepareStoryHydration(bridge) {
   const oldSeat = state.mp?.viewSeatId;
   const newSeat = bridge?.getViewId?.();
   if (!oldSeat || !newSeat || oldSeat === newSeat) return;
+  state.coInventor?._invalidateTurn?.("seat");
   const edit = storyEdits.get(storyEditKey(oldSeat));
   if (edit && (_aiTimingTimer || _aiTimingInFlight)) edit.how = true;
   clearTimeout(_aiTimingTimer);
@@ -1471,6 +1472,7 @@ function prepareStoryHydration(bridge) {
 }
 function prepareStorySeatSwitch(bridge, seatId) {
   if (seatId === bridge.getViewId?.()) return;
+  state.coInventor?._invalidateTurn?.("seat");
   const key = storyEditKey();
   if (bridge.viewingOther?.()) {
     // Unvalidated contributions are deliberately abandoned on switch.
@@ -19503,13 +19505,13 @@ function roomCoInventTransport() {
   if (!roomBridge.isRoom()) return null;
   const client = roomBridge.client?.();
   if (!client?.requestAiAsync) return null;
-  return (body) => {
+  return (body, opts) => {
     const tutor = isLearningTutorSessionActive();
     return client.requestAiAsync({
       ...body,
       tutor,
       reservedAp: tutor ? 0 : 1,
-    });
+    }, opts);
   };
 }
 
@@ -19607,9 +19609,15 @@ function ensureCoInventor() {
         cancelled: info?.cancelled,
         ok: info?.ok,
         ms: info?.ms,
+        latency: info?.latency,
       });
     },
     onHistoryChange: () => scheduleCloudRunState(),
+    getOwner: () => ({
+      runId: state.cloudRunId || null,
+      seatId: mpBridge()?.getViewId?.() || "solo",
+      lane: isLearningTutorSessionActive() ? "tutor" : "coinventor",
+    }),
     techById,
     // Invent chips (Spark, stack, Art of the possible, …) only on Invent — not Challenge
     showQuickActions: !onChallenge,

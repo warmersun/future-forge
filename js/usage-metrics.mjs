@@ -163,6 +163,21 @@ export function createUsageTracker(opts = {}) {
       ensureToday();
       const { sessionId: rawSid, roomCode: rawRoom, clerkUserId: rawClerk, ...rest } =
         partial;
+      for (const key of [
+        "message",
+        "messages",
+        "prompt",
+        "content",
+        "text",
+        "reasoning",
+        "rawOutput",
+        "tutorNotes",
+        "delta",
+        "preview",
+        "llm",
+      ]) {
+        delete rest[key];
+      }
       const clerkUserId = normalizeSessionId(rawClerk);
       const event = {
         ...rest,

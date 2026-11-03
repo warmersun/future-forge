@@ -8,7 +8,7 @@ import { ensureQuestSummary } from "../quest-summary.js";
 import { apiFetch } from "../auth.js";
 import { getClientSessionId } from "../client-session.js";
 import { techCost } from "../sim/economy.js";
-import { RoomClient } from "./client.js";
+import { RoomClient } from "./client.js?v=stream-2";
 import { missionForFriendsPlay } from "../sim/state.js";
 import {
   createHotseatSession,
@@ -545,7 +545,7 @@ export function initFriendsUi(api) {
         }
       },
       // AP reserved server-side via transport — no client payAp
-      transport: (body) => client.requestAiAsync(body),
+      transport: (body, opts) => client.requestAiAsync(body, opts),
     });
     roomSide.mount(
       $("#mp-vision-root"),

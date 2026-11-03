@@ -115,6 +115,8 @@ AI
 - FF_XAI_MODEL — default grok-4.7. Leave it.
 - FF_XAI_IMAGE_MODEL — default grok-imagine-image. Use grok-imagine-image-quality only if they ask.
 - FF_AI_SEARCH — default off. Set 1 only if they want live web and X search on timing checks and Ask for ideas. That is slower and costs extra. Same switch as `npm start -- --ai-search`.
+- FF_CO_INVENT_STREAM — default off. Leave unset. When 1, conversational co-invent text can stream as server-sent events if the page sends Accept: text/event-stream. The reasoning trace is one full-width Thinking block. It collapses as a whole when the answer starts, and the thoughts stay inside it. They are not sent back to the model. Feasibility, scoring, scenarios, and other judges stay one JSON response. Voice is a separate path and is not affected. Do not set this unless they ask to try streaming.
+- FF_CO_INVENT_PROMPT_COMPACT — default off. Leave unset. When 1, conversational co-invent and tutor turns use the shorter shared prompt. That prompt still includes the world-clock line and the tutor send-to-read illustration rule. It does not turn streaming on, and it does not change fast-eval or judge modes.
 - FF_DEVELOPER — default off. Leave it off.
 
 Voice and read-aloud

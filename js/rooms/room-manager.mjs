@@ -279,6 +279,8 @@ export class RoomManager {
       },
       /** @type {object|null} mp-session */
       mp: null,
+      /** Increments only when a new quest replaces room.mp. Not simVersion. */
+      runGeneration: 0,
       simVersion: 0,
       createdAt: now,
       updatedAt: now,
@@ -817,6 +819,7 @@ export class RoomManager {
       if (!started.ok) return { ok: false, error: started.error || "start_failed" };
 
       room.mp = started.session;
+      room.runGeneration = (room.runGeneration || 0) + 1;
       room.simVersion = room.mp.version || 1;
       room.nextQuestChooserId = null;
       room.questMeta = {
@@ -1131,6 +1134,11 @@ export class RoomManager {
       };
     }
 
+    const runGeneration = room.runGeneration || 0;
+    const job = { cancelled: false };
+    if (!room._aiCancels) room._aiCancels = new Map();
+    room._aiCancels.set(clientActionId, job);
+    let streamSeq = 0;
     try {
       const messages =
         Array.isArray(payload.messages) && payload.messages.length
@@ -1148,27 +1156,118 @@ export class RoomManager {
         context: buildRoomAiContext(room, player, payload),
         clerkUserId: player.clerkUserId || null,
         quotaGrant: player.quotaGrant || null,
+        requestId: clientActionId,
       };
-      const result = await this.coInventHandler(body, { room, player });
+      const result = await this.coInventHandler(body, {
+        room,
+        player,
+        clientActionId,
+        runGeneration,
+        cancelled: () => job.cancelled || (room.runGeneration || 0) !== runGeneration,
+        onDelta: (text) => {
+          if (job.cancelled || (room.runGeneration || 0) !== runGeneration) return;
+          streamSeq += 1;
+          this.broadcast(room, {
+            type: "ai_stream",
+            clientActionId,
+            playerId: player.id,
+            seq: streamSeq,
+            text: String(text || ""),
+            runGeneration,
+          });
+        },
+        onReasoning: (text) => {
+          if (job.cancelled || (room.runGeneration || 0) !== runGeneration) return;
+          streamSeq += 1;
+          this.broadcast(room, {
+            type: "ai_stream",
+            clientActionId,
+            playerId: player.id,
+            seq: streamSeq,
+            reasoning: String(text || ""),
+            runGeneration,
+          });
+        },
+        onPhase: (phase) => {
+          if (job.cancelled || (room.runGeneration || 0) !== runGeneration) return;
+          streamSeq += 1;
+          this.broadcast(room, {
+            type: "ai_stream",
+            clientActionId,
+            playerId: player.id,
+            seq: streamSeq,
+            phase,
+            runGeneration,
+          });
+        },
+      });
+      if (result?.cancelled) {
+        return this.completeAiJob(room, player, clientActionId, {
+          ok: false,
+          error: "cancelled",
+          mode,
+          runGeneration,
+        });
+      }
       return this.completeAiJob(room, player, clientActionId, {
         ok: true,
         result,
         mode,
+        runGeneration,
       });
     } catch (e) {
       return this.completeAiJob(room, player, clientActionId, {
         ok: false,
         error: e.message || "ai_failed",
         mode,
+        runGeneration,
       });
+    } finally {
+      room._aiCancels?.delete(clientActionId);
     }
+  }
+
+  /**
+   * Owner-only cancel. The provider keeps draining; completion refunds AP.
+   * @param {object} room
+   * @param {object} player
+   * @param {string} clientActionId
+   */
+  cancelAi(room, player, clientActionId) {
+    if (!room?.mp || !player) return { ok: false, error: "not_started" };
+    const id = String(clientActionId || "");
+    const slice = inventPlaceShim(publicMpState(room.mp), player.id);
+    const pending = slice?.pendingAi;
+    if (!pending || String(pending.clientActionId || "") !== id) {
+      return { ok: false, error: "not_pending" };
+    }
+    if (pending.playerId && pending.playerId !== player.id) {
+      return { ok: false, error: "not_owner" };
+    }
+    const job = room._aiCancels?.get(id);
+    if (!job) return { ok: false, error: "not_pending" };
+    job.cancelled = true;
+    return { ok: true, clientActionId: id };
   }
 
   completeAiJob(room, player, clientActionId, outcome = {}) {
     if (!room.mp) return { ok: false, error: "not_started" };
+    if (
+      outcome.runGeneration != null &&
+      Number(outcome.runGeneration) !== Number(room.runGeneration || 0)
+    ) {
+      return { ok: false, error: "stale", stale: true };
+    }
     if (!room.aiQuota) room.aiQuota = createRoomAiQuotaState();
     const slice = inventPlaceShim(publicMpState(room.mp), player.id);
     if (!slice) return { ok: false, error: "no_forge" };
+    const pending = slice.pendingAi;
+    if (!pending || String(pending.clientActionId || "") !== String(clientActionId || "")) {
+      return { ok: false, error: "not_pending", stale: true };
+    }
+    if (pending.playerId && player?.id && pending.playerId !== player.id) {
+      return { ok: false, error: "not_owner" };
+    }
 
     if (outcome.ok === false) {
       const rejected = rejectRoomAiJob(slice, room.aiQuota, clientActionId, {
@@ -1224,6 +1323,15 @@ export class RoomManager {
         verdict: result.verdict,
         quality: result.quality,
         draftAnswer: result.draftAnswer,
+        timing: result.timing,
+        ideas: result.ideas,
+        lights: result.lights,
+        angle: result.angle,
+        angleLabel: result.angleLabel,
+        lesson: result.lesson,
+        damage: result.damage,
+        additive: result.additive,
+        reason: result.reason,
       },
       simVersion: room.simVersion,
       mp: publicMpState(room.mp),

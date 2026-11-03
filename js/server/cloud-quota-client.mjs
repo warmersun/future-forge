@@ -287,7 +287,7 @@ export async function withCloudQuota(opts) {
   try {
     const result = await opts.call(reserved);
     const measure = opts.measure ? opts.measure(result) : { release: true };
-    if (reserved.reservationId) {
+    if (reserved.reservationId && !measure?.retain) {
       const settled = await settleMeasure(measure);
       if (!settled?.ok) {
         console.error("[quota] settle failed after call", reserved.reservationId);
@@ -297,11 +297,28 @@ export async function withCloudQuota(opts) {
   } catch (e) {
     if (reserved.reservationId) {
       try {
-        await settleMeasure({ release: true });
+        await applyQuotaFailure(settleMeasure, e);
       } catch {
         /* still surface the original error */
       }
     }
     throw e;
   }
+}
+
+/**
+ * Explicit provider outcome. A throw with no quotaOutcome still releases the hold,
+ * which is what existing callers depend on.
+ * retain leaves the hold. settle records known usage once.
+ * @param {(measure: object) => Promise<any>} settleMeasure
+ * @param {any} err
+ */
+export async function applyQuotaFailure(settleMeasure, err) {
+  const outcome = err?.quotaOutcome;
+  if (outcome === "retain") return;
+  if (outcome === "settle") {
+    await settleMeasure(err.quotaMeasure || { inputTokens: 0, outputTokens: 0 });
+    return;
+  }
+  await settleMeasure({ release: true });
 }

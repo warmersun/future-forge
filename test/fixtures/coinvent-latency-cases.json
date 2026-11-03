@@ -1,0 +1,58 @@
+[
+  {
+    "id": "short-explanation",
+    "mode": "chat",
+    "tutor": false,
+    "learner": "What does a seawall sensor actually measure?",
+    "marks": { "submit": 0, "ack": 8, "first_visible_text": 30, "first_useful_sentence": 45, "provider_start": 10, "provider_complete": 90, "client_final": 100 }
+  },
+  {
+    "id": "detailed-request",
+    "mode": "chat",
+    "tutor": false,
+    "learner": "Give me three different ways this neighborhood could store midday solar power.",
+    "marks": { "submit": 0, "first_visible_text": 40, "first_useful_sentence": 70, "provider_start": 12, "provider_complete": 140 }
+  },
+  {
+    "id": "misconception",
+    "mode": "chat",
+    "tutor": true,
+    "learner": "Is a ban the same as an invention here?",
+    "marks": { "submit": 0, "first_visible_text": 25, "first_useful_sentence": 50, "provider_start": 5, "provider_complete": 80 }
+  },
+  {
+    "id": "tutor-exit",
+    "mode": "chat",
+    "tutor": true,
+    "learner": "I want to invent the rest on my own.",
+    "marks": { "submit": 0, "first_useful_sentence": 35, "provider_start": 6, "provider_complete": 60 }
+  },
+  {
+    "id": "no-tech",
+    "mode": "spark",
+    "tutor": false,
+    "learner": "I have not picked anything yet.",
+    "marks": { "submit": 0, "first_visible_text": 20, "provider_start": 4, "provider_complete": 70 }
+  },
+  {
+    "id": "forecast",
+    "mode": "art-of-the-possible",
+    "tutor": false,
+    "learner": "What is possible this year, and what is only a forecast?",
+    "marks": { "submit": 0, "first_useful_sentence": 55, "provider_start": 8, "provider_complete": 120 }
+  },
+  {
+    "id": "sit",
+    "mode": "sit",
+    "tutor": false,
+    "learner": "Remix the how-it-works I already wrote.",
+    "marks": { "submit": 0, "first_visible_text": 33, "provider_start": 9, "provider_complete": 110 }
+  },
+  {
+    "id": "draft-how",
+    "mode": "draft-how",
+    "tutor": false,
+    "learner": "Draft how it works for the pathway I have placed.",
+    "marks": { "submit": 0, "first_useful_sentence": 48, "provider_start": 7, "provider_complete": 100 }
+  }
+]

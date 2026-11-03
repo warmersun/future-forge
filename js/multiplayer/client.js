@@ -5,6 +5,7 @@
 
 import { getClientSessionId } from "../client-session.js";
 import { apiFetch } from "../auth.js";
+import { CO_INVENT_TURN_MS } from "../coinventor-stream.js?v=stream-1";
 
 const SS_KEY = "future-forge:roomSession";
 
@@ -326,53 +327,90 @@ export class RoomClient {
    * @param {object} body — { mode, messages, context }
    * @returns {Promise<object>} co-invent style result
    */
-  requestAiAsync(body = {}) {
+  requestAiAsync(body = {}, opts = {}) {
     if (!this.ws || this.ws.readyState !== 1) {
       return Promise.reject(new Error("not_connected"));
     }
-    const clientActionId = `co-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const clientActionId = body.requestId || `co-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const voice = body.mode === "voice";
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => {
+      let settled = false;
+      const finish = (fn) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(t);
         off();
-        reject(new Error("ai_timeout"));
-      }, 90000);
+        opts.signal?.removeEventListener("abort", onAbort);
+        fn();
+      };
+      const t = setTimeout(() => {
+        finish(() => reject(Object.assign(new Error("ai_timeout"), { code: "interrupted" })));
+      }, voice ? 90000 : (opts.timeoutMs || CO_INVENT_TURN_MS));
       const off = this.on((evt) => {
+        if (evt.type === "ai_stream" && evt.clientActionId === clientActionId) {
+          opts.onEvent?.({
+            event: evt.reasoning ? "reasoning_delta" : evt.phase ? "status" : "message_delta",
+            phase: evt.phase,
+            text: evt.reasoning || evt.text || "",
+            seq: evt.seq,
+            requestId: clientActionId,
+          });
+          return;
+        }
         if (evt.type === "reject" && !evt.clientActionId) {
           // generic reject — ignore unless we just sent
         }
         if (voice && evt.type === "ai_pending" && evt.clientActionId === clientActionId) {
-          clearTimeout(t);
-          off();
           this._pendingVoiceActionId = clientActionId;
-          resolve({ pending: true, clientActionId });
+          finish(() => resolve({ pending: true, clientActionId }));
           return;
         }
         if (evt.type === "ai_result" && evt.clientActionId === clientActionId) {
-          clearTimeout(t);
-          off();
           if (evt.ok === false) {
-            reject(new Error(evt.error || "ai_failed"));
+            finish(() => reject(new Error(evt.error || "ai_failed")));
             return;
           }
-          resolve({
-            message: evt.result?.message || "",
-            proposals: evt.result?.proposals || null,
-            teaching: evt.result?.teaching || [],
-            source: evt.result?.source || null,
-            challengeSpeech: evt.result?.challengeSpeech,
-            challengeQuestion: evt.result?.challengeQuestion,
-            verdict: evt.result?.verdict,
-            quality: evt.result?.quality,
-            draftAnswer: evt.result?.draftAnswer,
-          });
+          const result = evt.result || {};
+          finish(() => resolve({
+            message: result.message || "",
+            proposals: result.proposals || null,
+            teaching: result.teaching || [],
+            source: result.source || null,
+            challengeSpeech: result.challengeSpeech,
+            challengeQuestion: result.challengeQuestion,
+            verdict: result.verdict,
+            quality: result.quality,
+            draftAnswer: result.draftAnswer,
+            timing: result.timing,
+            ideas: result.ideas,
+            lights: result.lights,
+            angle: result.angle,
+            angleLabel: result.angleLabel,
+            lesson: result.lesson,
+            damage: result.damage,
+            additive: result.additive,
+            reason: result.reason,
+          }));
         }
         if (evt.type === "reject" && evt.error && evt.clientActionId === clientActionId) {
-          clearTimeout(t);
-          off();
-          reject(new Error(evt.error));
+          finish(() => reject(new Error(evt.error)));
         }
       });
+      const onAbort = () => {
+        try {
+          this.ws?.send(JSON.stringify({ type: "cancel_ai", clientActionId }));
+        } catch {
+          /* socket already closed */
+        }
+        finish(() => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      };
+      if (opts.signal) {
+        if (opts.signal.aborted) {
+          onAbort();
+          return;
+        }
+        opts.signal.addEventListener("abort", onAbort, { once: true });
+      }
       try {
         this.ws.send(
           JSON.stringify({
@@ -391,9 +429,7 @@ export class RoomClient {
           })
         );
       } catch (e) {
-        clearTimeout(t);
-        off();
-        reject(e);
+        finish(() => reject(e));
       }
     });
   }

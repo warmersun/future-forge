@@ -3,6 +3,8 @@
  * DOM-free aside from optional blob: previews of Imagine data URLs.
  */
 
+import { publicLatencyRecord } from "./coinvent-latency.js";
+
 const CAP = 30;
 const PREVIEW_CAP = 6;
 const FILTERS = new Set(["all", "text", "image"]);
@@ -226,6 +228,7 @@ export function pushAiTrace(raw = {}) {
     source,
     previewUrl,
     llm,
+    latency: raw.latency && typeof raw.latency === "object" ? publicLatencyRecord(raw.latency) : null,
   };
   const next = [entry, ...entries];
   const dropped = next.slice(CAP);

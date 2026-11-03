@@ -171,6 +171,26 @@ describe("createUsageTracker", () => {
     assert.equal(last.totalTokens, 1200);
   });
 
+  it("drops learner text before writing a latency event", () => {
+    tracker.record({
+      type: "co_invent_latency",
+      mode: "chat",
+      status: "ok",
+      provider_complete_ms: 12,
+      message: "the learner asked about floods",
+      prompt: "secret prompt",
+      reasoning: "hidden reasoning",
+    });
+    tracker.flush();
+    const day = utcDay(clock);
+    const raw = fs.readFileSync(path.join(tmp, `events-${day}.jsonl`), "utf8");
+    assert.equal(raw.includes("the learner asked"), false);
+    assert.equal(raw.includes("secret prompt"), false);
+    assert.equal(raw.includes("hidden reasoning"), false);
+    assert.match(raw, /co_invent_latency/);
+    assert.match(raw, /"provider_complete_ms":12/);
+  });
+
   it("local text does not add tokens", () => {
     tracker.record({
       type: "ai_text",

@@ -29,11 +29,30 @@ import {
 } from "./voice-context.js?v=voice-19";
 import { VOICE_CHOICES, knownVoiceId } from "./voice-choices.js?v=voice-19";
 import {
+  captureHowProvenance,
   draftQuoteForBubble,
   hexHowApplyCopy,
   hexHowTargetsPathway,
+  howApplyDecision,
   howAppliedLabel,
-} from "./coinventor-how-apply.js?v=voice-19";
+} from "./coinventor-how-apply.js?v=stream-1";
+import {
+  CO_INVENT_TURN_MS,
+  isConversationalStreamMode,
+  postCoInvent,
+  appendThoughts,
+  mergeThoughtState,
+  settledThoughts,
+  streamStatusLabel,
+} from "./coinventor-stream.js?v=stream-7";
+import {
+  announcementDelta,
+  captureTurnIdentity,
+  sameTurnOwner,
+  shouldFollowScroll,
+  terminalTurnView,
+} from "./coinventor-turn.js?v=stream-2";
+import { createLatencyTrace, markLatency, publicLatencyRecord } from "./coinvent-latency.js?v=stream-1";
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Co-inventor unavailable";
@@ -122,6 +141,7 @@ export class CoInventor {
     this.onResumeTutoring = opts.onResumeTutoring || null;
     this.onTutorSessionEnded = opts.onTutorSessionEnded || null;
     this.onHistoryChange = opts.onHistoryChange || null;
+    this.getOwner = opts.getOwner || null;
     /** Separate full transcripts: tutor session vs regular co-inventor. */
     this.histories = {
       tutor: Array.isArray(opts.histories?.tutor) ? [...opts.histories.tutor] : [],
@@ -133,6 +153,13 @@ export class CoInventor {
     /** Active lane — always the same array as histories[activeHistoryKey]. */
     this.messages = this.histories[this.activeHistoryKey];
     this.busy = false;
+    this.turnOwner = null;
+    this._abort = null;
+    this._pending = null;
+    this._provisionalUser = null;
+    this._unfinished = [];
+    this._turnSettled = null;
+    this._announced = "";
     /** When false (e.g. multiplayer spectator), chips/send stay disabled. */
     this.interactive = true;
     this.available = null;
@@ -182,6 +209,7 @@ export class CoInventor {
         : this._historyKeyForState();
     this.activeHistoryKey = key;
     this.messages = this.histories[key];
+    this._invalidateTurn("remount");
     this.renderMessages();
   }
 
@@ -288,7 +316,9 @@ export class CoInventor {
         </div>
       </div>
       <div class="co-actions" id="co-actions" ${this.showQuickActions ? "" : "hidden"}></div>
-      <div class="co-messages" id="co-messages" role="log" aria-live="polite"></div>
+      <div class="co-messages" id="co-messages" role="log"></div>
+      <div id="co-stream-live" class="visually-hidden" aria-live="polite"></div>
+      <button type="button" id="co-stream-jump" class="co-stream-jump" hidden>New answer text</button>
       <div class="co-voice-caption" id="co-voice-caption" hidden>
         <span class="co-voice-who" id="co-voice-who"></span>
         <span class="co-voice-text" id="co-voice-text"></span>
@@ -339,6 +369,7 @@ export class CoInventor {
             aria-label="Hang up"
           ><span class="co-voice-stop-mark" aria-hidden="true"></span></button>
         </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="co-stop" hidden>Stop</button>
         <button type="submit" class="btn btn-primary btn-sm" id="co-send">Send</button>
       </form>
     `;
@@ -367,9 +398,18 @@ export class CoInventor {
       e.preventDefault();
       const input = root.querySelector("#co-input");
       const text = input.value.trim();
-      if (!text || this.busy) return;
+      if (!text || this.busy || this.turnOwner) return;
       input.value = "";
       this.sendChat(text);
+    });
+    root.querySelector("#co-stop")?.addEventListener("click", () => {
+      this._invalidateTurn("stop");
+    });
+    root.querySelector("#co-stream-jump")?.addEventListener("click", () => {
+      const box = root.querySelector("#co-messages");
+      if (box) box.scrollTop = box.scrollHeight;
+      const jump = root.querySelector("#co-stream-jump");
+      if (jump) jump.hidden = true;
     });
 
     root.querySelector("#co-input").addEventListener("keydown", (e) => {
@@ -470,6 +510,7 @@ export class CoInventor {
   async toggleVoice() {
     const voice = this.ensureVoice();
     if (voice.state !== "idle" && voice.state !== "error") return;
+    if (this.turnOwner) this._invalidateTurn("voice");
     if (!this.interactive || this.busy) return;
     if (this.available === false || this.aiLive === false) {
       this.setVoiceCaption(
@@ -804,6 +845,7 @@ export class CoInventor {
     if (voiceBlocksModeSwitch(isVoiceLive(), this.activeHistoryKey, nextKey)) {
       hangupVoice();
     }
+    if (nextKey !== this.activeHistoryKey) this._invalidateTurn("lane");
     this._switchHistoryLane(nextKey);
     this.applyTutorModeUi();
   }
@@ -970,6 +1012,7 @@ export class CoInventor {
    */
   reset(seedWelcome = true) {
     if (this.learningQuest && this.tutorMode) return;
+    this._invalidateTurn("reset");
     hangupVoice();
     this.histories.coinventor = [];
     if (this.activeHistoryKey === "coinventor") {
@@ -984,6 +1027,7 @@ export class CoInventor {
    * @param {boolean} [seedWelcome=false]
    */
   clearAllHistories(seedWelcome = false) {
+    this._invalidateTurn("reset");
     hangupVoice();
     this.histories = { tutor: [], coinventor: [] };
     this.activeHistoryKey = this._historyKeyForState();
@@ -1046,166 +1090,567 @@ export class CoInventor {
     await this.request({ mode, userText, showUser: mode === "chat" ? true : true, userDisplay: userText });
   }
 
+  _liveTurn(turn) {
+    const owner = this.getOwner?.() || {};
+    return captureTurnIdentity({
+      requestId: turn?.requestId || this.turnOwner?.requestId || "",
+      runId: owner.runId ?? null,
+      seatId: owner.seatId || "solo",
+      lane: this._historyKeyForState(),
+      mode: turn?.mode || this.turnOwner?.mode || "chat",
+    });
+  }
+
+  _turnCurrent(turn) {
+    if (!turn || !sameTurnOwner(turn, this.turnOwner)) return false;
+    const live = this._liveTurn(turn);
+    return (live.runId || null) === (turn.runId || null)
+      && live.seatId === turn.seatId
+      && live.lane === turn.lane;
+  }
+
+  /**
+   * Drop an in-flight turn. A late result must not clear a newer one.
+   * @param {string} reason
+   */
+  _invalidateTurn(reason) {
+    const turn = this.turnOwner;
+    if (!turn || this._turnSettled === turn.requestId) return;
+    this._turnSettled = turn.requestId;
+    try { this._abort?.abort(); } catch { /* already aborted */ }
+    this._markUnfinished(reason);
+    this._provisionalUser = null;
+    this.busy = false;
+    this.turnOwner = null;
+    this._abort = null;
+    this.setBusyUi(false);
+    try { this.afterRequest?.(turn.mode, false); } catch { /* host */ }
+    this.syncChipGates();
+    this._paintTransient();
+  }
+
+  _pendingPreview() {
+    const pending = this._pending;
+    if (!pending) return "";
+    return pending.text || pending.reasoning || "";
+  }
+
+  _markUnfinished(reason) {
+    const pending = this._pending;
+    this._pending = null;
+    const preview = pending?.text || pending?.reasoning || "";
+    const view = terminalTurnView({
+      aborted: true,
+      stopReason: reason,
+      preview,
+    });
+    if (!preview || !view.unfinishedNote) return;
+    this._unfinished.push({
+      requestId: pending.requestId,
+      text: preview,
+      note: view.unfinishedNote,
+    });
+  }
+
+  _paintTransient(forceFollow = false) {
+    const box = this.root?.querySelector("#co-messages");
+    if (!box) return;
+    this._forceFollow = forceFollow;
+    box.querySelectorAll("[data-pending-turn], [data-provisional-user], [data-unfinished]").forEach((el) => el.remove());
+    if (this._provisionalUser) {
+      const user = document.createElement("div");
+      user.className = "co-msg user";
+      user.dataset.provisionalUser = "1";
+      const bubble = document.createElement("div");
+      bubble.className = "co-bubble";
+      bubble.textContent = this._provisionalUser.content;
+      user.appendChild(bubble);
+      box.appendChild(user);
+    }
+    for (const item of this._unfinished) {
+      const row = document.createElement("div");
+      row.className = "co-msg assistant unfinished";
+      row.dataset.unfinished = item.requestId || "1";
+      const bubble = document.createElement("div");
+      bubble.className = "co-bubble";
+      const text = document.createElement("div");
+      text.className = "co-pending-text";
+      text.textContent = item.text;
+      const note = document.createElement("p");
+      note.className = "co-unfinished-note";
+      note.textContent = item.note;
+      bubble.append(text, note);
+      row.appendChild(bubble);
+      box.appendChild(row);
+    }
+    if (this._pending) {
+      const row = document.createElement("div");
+      row.className = "co-msg assistant co-pending";
+      row.dataset.pendingTurn = this._pending.requestId;
+      const bubble = document.createElement("div");
+      bubble.className = "co-bubble";
+      const thoughts = document.createElement("div");
+      thoughts.className = "co-thoughts";
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "co-thoughts-trigger";
+      const mark = document.createElement("span");
+      mark.className = "co-thought-mark";
+      mark.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "co-thoughts-label";
+      const chevron = document.createElement("span");
+      chevron.className = "co-thought-chevron";
+      chevron.setAttribute("aria-hidden", "true");
+      trigger.append(mark, label, chevron);
+      trigger.addEventListener("click", () => {
+        if (!this._pending) return;
+        this._pending.traceOpen = !this._pending.traceOpen;
+        this._pending.tracePinned = true;
+        this._syncThoughts(thoughts);
+      });
+      const body = document.createElement("div");
+      body.className = "co-thoughts-body";
+      body.addEventListener("scroll", () => {
+        if (!this._pending) return;
+        const distance = body.scrollHeight - body.scrollTop - body.clientHeight;
+        this._pending.traceStick = distance < 32;
+      });
+      thoughts.append(trigger, body);
+      const status = document.createElement("p");
+      status.className = "co-pending-status";
+      const text = document.createElement("div");
+      text.className = "co-pending-text";
+      text.textContent = this._pending.text;
+      bubble.append(status, text);
+      row.append(thoughts, bubble);
+      box.appendChild(row);
+      this._syncThoughts(thoughts);
+      this._syncAnswerChrome(row);
+    }
+    this._followOrJump(box);
+  }
+
+  /**
+   * One disclosure for the whole trace. Open while thinking, unless the reader
+   * toggled it. Thoughts stay inside, separated, and the block stays collapsed
+   * on the answer.
+   * @param {HTMLElement} list
+   */
+  _syncThoughts(list) {
+    const pending = this._pending;
+    if (!pending || !list) return;
+    pending.thoughts = mergeThoughtState(
+      pending.thoughts,
+      (pending.thoughts || []).map((thought) => thought.text),
+      pending.status
+    );
+    const items = pending.thoughts.filter((thought) => String(thought.text || "").trim());
+    const thinking = pending.status === "thinking";
+    if (!pending.tracePinned) pending.traceOpen = thinking;
+    const show = thinking || items.length > 0;
+    list.hidden = !show;
+    list.classList.toggle("is-open", Boolean(pending.traceOpen));
+    list.classList.toggle("is-live", thinking);
+    const trigger = list.querySelector(".co-thoughts-trigger");
+    const label = list.querySelector(".co-thoughts-label");
+    const body = list.querySelector(".co-thoughts-body");
+    if (trigger) trigger.setAttribute("aria-expanded", pending.traceOpen ? "true" : "false");
+    if (label && label.textContent !== "Thinking") label.textContent = "Thinking";
+    if (!body) return;
+    const stick = pending.traceStick;
+    body.hidden = !pending.traceOpen || items.length === 0;
+    while (body.children.length > items.length) body.lastElementChild.remove();
+    for (let index = 0; index < items.length; index += 1) {
+      let row = body.children[index];
+      if (!row) {
+        row = document.createElement("p");
+        row.className = "co-thought";
+        body.appendChild(row);
+      }
+      const text = String(items[index].text || "").trim();
+      row.classList.toggle("is-live", thinking && index === items.length - 1);
+      if (row.textContent !== text) row.textContent = text;
+    }
+    if (pending.traceOpen && stick) {
+      pending.traceStick = true;
+      body.scrollTop = body.scrollHeight;
+    }
+  }
+
+  /** Hide the answer card until there is an answer or a phase line to show. */
+  _syncAnswerChrome(row) {
+    const pending = this._pending;
+    const bubble = row?.querySelector(".co-bubble");
+    const status = row?.querySelector(".co-pending-status");
+    const text = row?.querySelector(".co-pending-text");
+    if (!pending || !bubble) return;
+    const showPhase = pending.status === "answering" || pending.status === "finalizing";
+    if (status) {
+      status.hidden = !showPhase;
+      if (showPhase) status.textContent = streamStatusLabel(pending.status);
+    }
+    if (text) text.textContent = pending.text;
+    bubble.hidden = !pending.text && !showPhase;
+  }
+
+  _updatePendingNode() {
+    const box = this.root?.querySelector("#co-messages");
+    const row = box?.querySelector("[data-pending-turn]");
+    if (!row || !this._pending) {
+      this._paintTransient();
+      return;
+    }
+    const thoughts = row.querySelector(".co-thoughts");
+    if (!thoughts) {
+      this._paintTransient();
+      return;
+    }
+    this._syncThoughts(thoughts);
+    this._syncAnswerChrome(row);
+    this._followOrJump(box);
+  }
+
+  _followOrJump(box) {
+    if (!box) return;
+    const distance = box.scrollHeight - box.scrollTop - box.clientHeight;
+    const jump = this.root?.querySelector("#co-stream-jump");
+    if (this._forceFollow || shouldFollowScroll(distance)) {
+      this._forceFollow = false;
+      box.scrollTop = box.scrollHeight;
+      if (jump) jump.hidden = true;
+    } else if (jump) {
+      jump.hidden = false;
+    }
+  }
+
+  _onStreamEvent(turn, ev, trace) {
+    if (!this._turnCurrent(turn) || !this._pending) return;
+    const name = ev?.event || ev?.type;
+    if (name === "status" && ev.phase) {
+      this._pending.status = ev.phase;
+      this._updatePendingNode();
+      return;
+    }
+    if (name === "reasoning_delta" && ev.text) {
+      this._pending.reasoning += String(ev.text);
+      const texts = appendThoughts(
+        (this._pending.thoughts || []).map((thought) => thought.text),
+        ev.text
+      );
+      this._pending.thoughts = mergeThoughtState(this._pending.thoughts, texts, this._pending.status);
+      if (this._pending.status !== "answering" && this._pending.status !== "finalizing") {
+        this._pending.status = "thinking";
+      }
+      this._updatePendingNode();
+      return;
+    }
+    if (name === "message_delta" && ev.text) {
+      const prev = this._pending.text;
+      this._pending.text += String(ev.text);
+      this._pending.status = "answering";
+      markLatency(trace, "first_visible_text");
+      const spoken = announcementDelta(prev, this._pending.text);
+      if (spoken) {
+        markLatency(trace, "first_useful_sentence");
+        const live = this.root?.querySelector("#co-stream-live");
+        if (live) live.textContent = spoken;
+      }
+      this._updatePendingNode();
+    }
+  }
+
+  _traceTurn(trace, requestBody, received, ok, error, cancelled) {
+    markLatency(trace, "client_final");
+    trace.status = cancelled ? "cancelled" : ok ? "ok" : "error";
+    if (cancelled) trace.cancellationPhase = this._stopReason || "stop";
+    try {
+      this.onTrace?.({
+        mode: trace.mode,
+        sent: requestBody,
+        received: received || null,
+        ms: Math.round(trace.marks.client_final - trace.marks.submit) || 0,
+        ok,
+        error: error || null,
+        cancelled: Boolean(cancelled),
+        latency: publicLatencyRecord(trace),
+      });
+    } catch {
+      /* inspect must not break chat */
+    }
+  }
+
   async sendChat(text) {
     await this.request({ mode: "chat", userText: text, showUser: true, userDisplay: text });
   }
 
   async request({ mode, userText, showUser, userDisplay }) {
-    if (this.busy) return;
-    await this.checkHealth();
-    if (!this.available) {
-      this.pushAssistant({
-        message: "Co-inventor is offline. Start the app with `npm start` from the project folder.",
-        proposals: emptyProposals(),
-        teaching: [],
-      });
-      return;
-    }
-
-    if (this.beforeRequest) {
-      const ok = await this.beforeRequest(mode);
-      if (!ok) return;
-    }
-
-    if (showUser) {
-      this.messages.push({ role: "user", content: userDisplay || userText });
-      this.renderMessages();
-      try {
-        this.onHistoryChange?.();
-      } catch {
-        /* host */
-      }
-    }
-
+    if (this.turnOwner || this.busy) return;
+    const owner = this.getOwner?.() || {};
+    const requestId = `co-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const turn = captureTurnIdentity({
+      requestId,
+      runId: owner.runId ?? null,
+      seatId: owner.seatId || "solo",
+      lane: this._historyKeyForState(),
+      mode,
+    });
+    this.turnOwner = turn;
     this.busy = true;
+    this._turnSettled = null;
+    this._stopReason = null;
+    this._abort = new AbortController();
+    this._announced = "";
+    const trace = createLatencyTrace({
+      requestId,
+      mode,
+      tutor: turn.lane === "tutor",
+      transport: this.transport ? "room" : "http",
+    });
+    markLatency(trace, "submit");
+    this._pending = {
+      requestId,
+      text: "",
+      reasoning: "",
+      thoughts: [],
+      status: "thinking",
+      unfinished: false,
+      startedAt: Date.now(),
+      traceOpen: true,
+      tracePinned: false,
+      traceStick: true,
+    };
+    this._provisionalUser = showUser ? { content: userDisplay || userText } : null;
     this.setBusyUi(true);
-    const thinkingId = this.pushThinking();
-    let requestOk = false;
-    const t0 = Date.now();
+    this._paintTransient();
+    const deadline = setTimeout(() => {
+      if (sameTurnOwner(turn, this.turnOwner)) {
+        this._stopReason = "timeout";
+        try { this._abort?.abort(); } catch { /* */ }
+      }
+    }, CO_INVENT_TURN_MS);
 
+    const settle = (ok) => {
+      clearTimeout(deadline);
+      if (!sameTurnOwner(turn, this.turnOwner)) return;
+      if (this._turnSettled === requestId) return;
+      this._turnSettled = requestId;
+      this.busy = false;
+      this.turnOwner = null;
+      this._abort = null;
+      this._provisionalUser = null;
+      if (!this._pending?.unfinished) this._pending = null;
+      this.setBusyUi(false);
+      try { this.afterRequest?.(mode, ok); } catch { /* host */ }
+      this.syncChipGates();
+    };
+
+    let requestBody = null;
     try {
-      const requestBody = {
+      if (this.beforeRequest) {
+        const ok = await this.beforeRequest(mode);
+        if (!sameTurnOwner(turn, this.turnOwner) || this._abort?.signal.aborted) {
+          if (ok) {
+            try { this.afterRequest?.(mode, false); } catch { /* already refunded or not reserved */ }
+          }
+          return;
+        }
+        if (!ok) {
+          this._provisionalUser = null;
+          this._pending = null;
+          clearTimeout(deadline);
+          this._turnSettled = requestId;
+          this.busy = false;
+          this.turnOwner = null;
+          this._abort = null;
+          this.setBusyUi(false);
+          this._paintTransient();
+          this.syncChipGates();
+          return;
+        }
+      }
+      if (!this._turnCurrent(turn) || this._abort?.signal.aborted) {
+        this._markUnfinished();
+        settle(false);
+        return;
+      }
+      markLatency(trace, "preflight_done");
+      if (showUser) {
+        this.messages.push({ role: "user", content: userDisplay || userText });
+        this._provisionalUser = null;
+        this.renderMessages();
+        try { this.onHistoryChange?.(); } catch { /* host */ }
+      }
+      const howProvenance = captureHowProvenance(this.getContext?.() || {});
+      requestBody = {
         mode,
+        requestId,
         clientSessionId: getClientSessionId(),
         messages: capVoiceHistory(
           this.messages.filter((m) => m.role === "user" || m.role === "assistant")
         ).map((m) => ({ role: m.role, content: m.content })),
         context: this._buildRequestContext(),
       };
-
-      let data;
-      const trace = (extra = {}) => {
-        try {
-          this.onTrace?.({
-            mode,
-            sent: requestBody,
-            received: data || null,
-            ms: Date.now() - t0,
-            ...extra,
-          });
-        } catch {
-          /* inspect must not break chat */
-        }
-      };
+      markLatency(trace, "auth_headers_start");
+      let data = null;
       if (this.transport) {
-        data = await this.transport(requestBody);
-        this.removeThinking(thinkingId);
-        if (data?.error && !data.message) {
-          trace({ ok: false, error: data.error });
+        markLatency(trace, "auth_headers_done");
+        data = await this.transport(requestBody, {
+          signal: this._abort.signal,
+          requestId,
+          onEvent: (ev) => this._onStreamEvent(turn, ev, trace),
+        });
+      } else if (isConversationalStreamMode(mode)) {
+        const read = await postCoInvent(apiFetch, requestBody, {
+          signal: this._abort.signal,
+          requestId,
+          onEvent: (ev) => this._onStreamEvent(turn, ev, trace),
+          onResponse: () => markLatency(trace, "auth_headers_done"),
+        });
+        if (!this._turnCurrent(turn)) return;
+        if (read.kind === "error") {
+          const view = terminalTurnView({
+            aborted: Boolean(this._abort?.signal.aborted),
+            stopReason: this._stopReason,
+            preview: this._pendingPreview(),
+            errorMessage: read.data?.message,
+          });
+          if (view.cancelled) {
+            clearTimeout(deadline);
+            this._traceTurn(trace, requestBody, null, false, null, true);
+            if (view.message) {
+              this._pending = null;
+              this.pushAssistant({
+                message: view.message,
+                proposals: emptyProposals(),
+                teaching: [],
+              });
+            }
+            this._invalidateTurn(view.outcome === "timeout" ? "timeout" : "stop");
+            return;
+          }
+          if (view.unfinishedNote && this._pendingPreview()) {
+            const pending = this._pending;
+            const preview = this._pendingPreview();
+            this._pending = null;
+            this._unfinished.push({
+              requestId: pending.requestId,
+              text: preview,
+              note: view.unfinishedNote,
+            });
+            this._paintTransient();
+          } else {
+            this._pending = null;
+            this.pushAssistant({
+              message: view.message,
+              proposals: emptyProposals(),
+              teaching: [],
+            });
+          }
+          this._traceTurn(trace, requestBody, read.data, false, read.data?.error || "co_invent_failed", false);
+          settle(false);
+          return;
+        }
+        data = read.data;
+        if (read.kind === "json" && !read.ok && data?.error) {
+          this._pending = null;
+          if (data.error === "sign_in_required" && isClerkReady()) openCloudSignIn();
           this.pushAssistant({
             message: cloudQuotaText(data),
             proposals: emptyProposals(),
             teaching: [],
           });
+          this._traceTurn(trace, requestBody, data, false, data.error, false);
+          settle(false);
           return;
         }
-        trace({ ok: true });
       } else {
         const res = await apiFetch("/api/co-invent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
+          signal: this._abort.signal,
         });
+        markLatency(trace, "auth_headers_done");
         data = await res.json();
-        this.removeThinking(thinkingId);
-        if (!res.ok && data.error) {
-          trace({ ok: false, error: data.error });
-          if (data.error === "sign_in_required" && isClerkReady()) {
-            openCloudSignIn();
-          }
+        if (!res.ok && data?.error) {
+          this._pending = null;
+          if (data.error === "sign_in_required" && isClerkReady()) openCloudSignIn();
           this.pushAssistant({
             message: cloudQuotaText(data),
             proposals: emptyProposals(),
             teaching: [],
           });
+          this._traceTurn(trace, requestBody, data, false, data.error, false);
+          settle(false);
           return;
         }
-        trace({ ok: res.ok });
       }
-
-      // Store plain text for conversation history
-      // SIT / SCAMPER are inspiration only — never surface Apply how-it-works
-      let proposals = data.proposals || emptyProposals();
-      if (mode === "sit" || mode === "scamper") {
-        proposals = {
-          ...emptyProposals(),
-          // keep teaching-related empty; strip all applyable story/stack proposals
-        };
+      if (!this._turnCurrent(turn)) return;
+      if (data?.error && !data.message) {
+        this._pending = null;
+        this.pushAssistant({
+          message: cloudQuotaText(data),
+          proposals: emptyProposals(),
+          teaching: [],
+        });
+        this._traceTurn(trace, requestBody, data, false, data.error, false);
+        settle(false);
+        return;
       }
+      markLatency(trace, "message_complete");
+      markLatency(trace, "validated_result");
+      let proposals = data?.proposals || emptyProposals();
+      if (mode === "sit" || mode === "scamper") proposals = { ...emptyProposals() };
+      const thoughts = settledThoughts(this._pending?.thoughts);
+      this._pending = null;
       this.messages.push({
         role: "assistant",
-        content: data.message || "",
+        content: data?.message || "",
         proposals,
-        teaching: data.teaching,
-        endTutoring: Boolean(data.endTutoring),
+        teaching: data?.teaching,
+        endTutoring: Boolean(data?.endTutoring),
+        howProvenance,
+        ...(thoughts.length ? { thoughts, traceOpen: false } : {}),
       });
       this.renderMessages();
-      requestOk = true;
-      try {
-        this.onHistoryChange?.();
-      } catch {
-        /* host */
+      try { this.onHistoryChange?.(); } catch { /* host */ }
+      if (data?.endTutoring && this.tutorMode && this.learningQuest) {
+        try { this.onTutorSessionEnded?.("ai"); } catch { /* host */ }
       }
-
-      // AI tutor can end the free tutoring session (learning quests)
-      if (data.endTutoring && this.tutorMode && this.learningQuest) {
-        try {
-          this.onTutorSessionEnded?.("ai");
-        } catch {
-          /* host */
-        }
-      }
+      this._traceTurn(trace, requestBody, data, true, null, false);
+      settle(true);
     } catch (e) {
-      this.removeThinking(thinkingId);
-      const cancelled =
-        e?.name === "AbortError" || e?.code === 20;
-      try {
-        this.onTrace?.({
-          mode,
-          sent: null,
-          received: null,
-          cancelled,
-          error: cancelled ? null : String(e?.message || e),
-          ok: false,
-          ms: Date.now() - t0,
+      clearTimeout(deadline);
+      if (!sameTurnOwner(turn, this.turnOwner)) return;
+      const cancelled = e?.name === "AbortError" || e?.code === 20;
+      if (cancelled) {
+        if (!sameTurnOwner(turn, this.turnOwner) || this._turnSettled === requestId) return;
+        const view = terminalTurnView({
+          aborted: true,
+          stopReason: this._stopReason,
+          preview: this._pendingPreview(),
         });
-      } catch {
-        /* inspect */
+        this._traceTurn(trace, requestBody, null, false, null, true);
+        if (view.message) {
+          this._pending = null;
+          this.pushAssistant({
+            message: view.message,
+            proposals: emptyProposals(),
+            teaching: [],
+          });
+        }
+        this._invalidateTurn(view.outcome === "timeout" ? "timeout" : "stop");
+        return;
       }
+      this._pending = null;
       this.pushAssistant({
         message: `Connection error: ${e.message}. Is the Future Forge server running?`,
         proposals: emptyProposals(),
         teaching: [],
       });
-    } finally {
-      this.busy = false;
-      this.setBusyUi(false);
-      try {
-        this.afterRequest?.(mode, requestOk);
-      } catch {
-        /* host cleanup must not break chat */
-      }
-      this.syncChipGates();
+      this._traceTurn(trace, requestBody, null, false, String(e?.message || e), false);
+      settle(false);
     }
   }
 
@@ -1302,10 +1747,13 @@ export class CoInventor {
 
   setBusyUi(busy) {
     const voiceLive = isVoiceLive();
-    const locked = Boolean(busy) || !this.interactive || voiceLive;
+    const turn = Boolean(busy) || Boolean(this.turnOwner);
+    const locked = !this.interactive || voiceLive;
     const send = this.root?.querySelector("#co-send");
+    const stop = this.root?.querySelector("#co-stop");
     const input = this.root?.querySelector("#co-input");
-    if (send) send.disabled = locked;
+    if (send) send.disabled = locked || turn;
+    if (stop) stop.hidden = !turn;
     if (input) {
       input.disabled = locked;
       if (locked && this._lockReason) input.title = this._lockReason;
@@ -1325,6 +1773,8 @@ export class CoInventor {
   renderMessages() {
     const box = this.root?.querySelector("#co-messages");
     if (!box) return;
+    const distance = box.scrollHeight - box.scrollTop - box.clientHeight;
+    const follow = shouldFollowScroll(distance);
     box.innerHTML = this.messages
       .map((m, idx) => {
         if (m.role === "user") {
@@ -1333,6 +1783,19 @@ export class CoInventor {
         return this.renderAssistant(m, idx);
       })
       .join("");
+
+    box.querySelectorAll("[data-thoughts-toggle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const msg = this.messages[Number(btn.dataset.msg)];
+        const group = btn.closest(".co-thoughts");
+        if (!msg || !group) return;
+        msg.traceOpen = !msg.traceOpen;
+        group.classList.toggle("is-open", Boolean(msg.traceOpen));
+        const body = group.querySelector(".co-thoughts-body");
+        if (body) body.hidden = !msg.traceOpen;
+        btn.setAttribute("aria-expanded", msg.traceOpen ? "true" : "false");
+      });
+    });
 
     box.querySelectorAll("[data-apply]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1356,6 +1819,19 @@ export class CoInventor {
             btn.textContent = btn.textContent.replace(/^Add /, "Added ");
           }
           return;
+        }
+        if (kind === "how") {
+          const decision = howApplyDecision(
+            msg.howProvenance,
+            this.getContext?.() || {},
+            msg.proposals,
+            btn.dataset.confirm === "1"
+          );
+          if (!decision.allow) {
+            btn.dataset.confirm = "1";
+            btn.textContent = decision.label || "Apply it to the box in focus now?";
+            return;
+          }
         }
         const result = this.applyPartial(msg.proposals, kind);
         if (kind === "how" && this.surface === "hex" && !result?.filledHow) return;
@@ -1410,7 +1886,7 @@ export class CoInventor {
       });
     });
 
-    box.scrollTop = box.scrollHeight;
+    this._paintTransient(follow);
   }
 
   renderAssistant(m, idx) {
@@ -1509,6 +1985,7 @@ export class CoInventor {
       : "";
 
     return `<div class="co-msg assistant">
+      ${renderThoughtRows(m.thoughts, idx, m.traceOpen)}
       <div class="co-bubble co-bubble-md">${html}${lesson}${draft}${teach}${actions}</div>
     </div>`;
   }
@@ -1567,6 +2044,23 @@ function hasAnyProposal(p) {
       p.inventionImpact ||
       p.scrutiny
   );
+}
+
+function renderThoughtRows(thoughts, idx, open) {
+  const list = (Array.isArray(thoughts) ? thoughts : [])
+    .map((thought) => String(thought?.text || "").trim())
+    .filter(Boolean);
+  if (!list.length) return "";
+  const expanded = Boolean(open);
+  const rows = list.map((text) => `<p class="co-thought">${escapeHtml(text)}</p>`).join("");
+  return `<div class="co-thoughts${expanded ? " is-open" : ""}">
+    <button type="button" class="co-thoughts-trigger" data-msg="${idx}" data-thoughts-toggle aria-expanded="${expanded ? "true" : "false"}">
+      <span class="co-thought-mark" aria-hidden="true"></span>
+      <span class="co-thoughts-label">Thinking</span>
+      <span class="co-thought-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="co-thoughts-body"${expanded ? "" : " hidden"}>${rows}</div>
+  </div>`;
 }
 
 function escapeHtml(s) {

@@ -115,3 +115,75 @@ export function draftQuoteForBubble(message, inventionHow) {
   if (squash(message).includes(how)) return "";
   return String(inventionHow || "").trim();
 }
+
+/**
+ * Board snapshot taken when a turn starts. Restored messages omit this.
+ * @param {object|null|undefined} context
+ */
+export function captureHowProvenance(context) {
+  const pathways = Array.isArray(context?.hexBoard?.pathways) ? context.hexBoard.pathways : [];
+  const inventions = Array.isArray(context?.hexBoard?.inventions) ? context.hexBoard.inventions : [];
+  const techByTile = new Map(
+    inventions.map((tile) => [String(tile?.id || ""), String(tile?.techId || "")])
+  );
+  return {
+    focusTechId: context?.focusTechId ? String(context.focusTechId) : null,
+    pathways: pathways.map((path) => {
+      const inventionIds = (Array.isArray(path?.inventionIds) ? path.inventionIds : []).map(String);
+      return {
+        inventionIds,
+        techIds: inventionIds.map((id) => techByTile.get(id) || "").filter(Boolean),
+      };
+    }),
+  };
+}
+
+function pathwaySignature(provenance) {
+  const paths = Array.isArray(provenance?.pathways) ? provenance.pathways : [];
+  return paths
+    .map((path) => (path.inventionIds || []).join(","))
+    .sort()
+    .join("|");
+}
+
+/**
+ * @param {object|null|undefined} captured
+ * @param {object|null|undefined} context
+ * @param {object|null|undefined} proposals
+ * @param {boolean} [confirmed]
+ */
+export function howApplyDecision(captured, context, proposals, confirmed = false) {
+  if (!captured) return { allow: true, legacy: true, needsConfirm: false, label: "" };
+  const current = captureHowProvenance(context);
+  const focusChanged = (captured.focusTechId || null) !== (current.focusTechId || null);
+  const membersChanged = pathwaySignature(captured) !== pathwaySignature(current);
+  const thenPathway = hexHowTargetsPathway(contextFromProvenance(captured), proposals);
+  const nowPathway = hexHowTargetsPathway(context, proposals);
+  const drifted = focusChanged || membersChanged || thenPathway !== nowPathway;
+  if (!drifted) return { allow: true, legacy: false, needsConfirm: false, label: "" };
+  if (confirmed) return { allow: true, legacy: false, needsConfirm: false, label: "" };
+  const intended = thenPathway ? "the pathway from when you asked" : "the mint box from when you asked";
+  const now = nowPathway ? "the pathway in focus now" : "the mint box in focus now";
+  return {
+    allow: false,
+    legacy: false,
+    needsConfirm: true,
+    label: `That draft was for ${intended}. Apply it to ${now}?`,
+  };
+}
+
+function contextFromProvenance(provenance) {
+  return {
+    focusTechId: provenance?.focusTechId || null,
+    hexBoard: {
+      pathways: (provenance?.pathways || []).map((path) => ({ inventionIds: path.inventionIds || [] })),
+      inventions: (provenance?.pathways || []).flatMap((path) =>
+        (path.inventionIds || []).map((id, index) => ({
+          id,
+          techId: path.techIds?.[index] || "",
+          onBoard: true,
+        }))
+      ),
+    },
+  };
+}

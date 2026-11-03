@@ -7,6 +7,7 @@ import {
   reserveCloudQuotaForUser,
   settleCloudQuotaReliable,
   withCloudQuota,
+  applyQuotaFailure,
 } from "./cloud-quota-client.mjs";
 
 describe("cloud quota client", () => {
@@ -202,6 +203,70 @@ describe("cloud quota client", () => {
     );
     assert.equal(settles.length, 1);
     assert.equal(settles[0].release, true);
+  });
+
+  it("retains the hold when the thrown outcome says usage is unknown", async () => {
+    const settles = [];
+    const err = new Error("dropped");
+    err.quotaOutcome = "retain";
+    await assert.rejects(
+      () =>
+        withCloudQuota({
+          reserve: async () => ({ ok: true, reservationId: "r1", userId: "user_1", settleToken: "tok" }),
+          call: async () => {
+            throw err;
+          },
+          settle: async (_id, measure) => {
+            settles.push(measure);
+            return { ok: true };
+          },
+        }),
+      /dropped/
+    );
+    assert.equal(settles.length, 0);
+  });
+
+  it("settles known usage when structured output is rejected", async () => {
+    const settles = [];
+    const err = new Error("malformed_output");
+    err.quotaOutcome = "settle";
+    err.quotaMeasure = { inputTokens: 9, outputTokens: 4 };
+    await assert.rejects(
+      () =>
+        withCloudQuota({
+          reserve: async () => ({ ok: true, reservationId: "r1", userId: "user_1", settleToken: "tok" }),
+          call: async () => {
+            throw err;
+          },
+          settle: async (_id, measure) => {
+            settles.push(measure);
+            return { ok: true };
+          },
+        }),
+      /malformed_output/
+    );
+    assert.equal(settles.length, 1);
+    assert.equal(settles[0].inputTokens, 9);
+    assert.equal(settles[0].outputTokens, 4);
+    assert.equal(settles[0].release, undefined);
+  });
+
+  it("skips settle when the successful measure says retain", async () => {
+    const settles = [];
+    const out = await withCloudQuota({
+      reserve: async () => ({ ok: true, reservationId: "r1", userId: "user_1", settleToken: "tok" }),
+      call: async () => ({ _quotaUnknown: true }),
+      measure: (result) => (result._quotaUnknown ? { retain: true } : { inputTokens: 0, outputTokens: 0 }),
+      settle: async (_id, measure) => {
+        settles.push(measure);
+        return { ok: true };
+      },
+    });
+    assert.equal(out.ok, true);
+    assert.equal(settles.length, 0);
+    await applyQuotaFailure(async () => {
+      throw new Error("should not settle");
+    }, { quotaOutcome: "retain" });
   });
 
   it("retries a failed settle and then succeeds", async () => {

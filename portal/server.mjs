@@ -217,6 +217,28 @@ import {
   WORLD_CLOCK_TIMING_LINE,
   WORLD_CLOCK_CONTEXT_LINE,
 } from "../js/server/fast-eval.mjs";
+import {
+  coInventStreamRequested,
+  coInventStreamEnabled,
+  isConversationalStreamMode,
+} from "../js/server/coinvent-stream.mjs";
+import { admissionKey, gameAdmission } from "../js/server/coinvent-admission.mjs";
+import {
+  executeStreamedCoInvent,
+  applyOutputCap,
+  openCoInventDelivery,
+  finishCoInventDelivery,
+  failCoInventDelivery,
+  createTurnLatency,
+} from "../js/server/coinvent-turn.mjs";
+import {
+  promptCompactEnabled,
+  isConversationalPromptMode,
+  composeConversationSystem,
+  conversationUserSuffix,
+  compactConversationPayload,
+  conversationPromptVariant,
+} from "../js/server/coinvent-conversation-prompt.mjs";
 import { sanitizeSourceInquiry, scenarioGrantSuffix } from "../js/companion-context.js";
 import { buildImageLlmInspect, buildLlmInspect } from "../js/server/llm-inspect.mjs";
 import {
@@ -361,6 +383,12 @@ const roomManager = ROOMS_ENABLED
     })
   : null;
 
+function quotaDenyMessage(gate, secretCopy, rateCopy) {
+  if (gate?.message) return gate.message;
+  if (gate?.error === "api_secret_required") return secretCopy;
+  return rateCopy;
+}
+
 /**
  * Gate expensive AI POST routes: rate limit + optional FF_API_SECRET.
  * @param {import('node:http').IncomingMessage} req
@@ -409,6 +437,18 @@ function recordAiText(opts) {
     roomCode: opts.roomCode || null,
     clerkUserId: opts.clerkUserId || clerkUserIdFromContext(),
   });
+}
+
+/**
+ * Durations and counts only. The public record has no learner text.
+ * @param {ReturnType<typeof createTurnLatency>|null} turn
+ * @param {string} status
+ */
+function recordTurnLatency(turn, status) {
+  if (!turn || turn.trace.status === "recorded") return;
+  const record = turn.publicRecord(status);
+  turn.trace.status = "recorded";
+  usage.record({ type: "co_invent_latency", ...record, status: record.status });
 }
 
 /**
@@ -1099,13 +1139,42 @@ function composeCoInventCall(body) {
     const suffix = scenarioGrantSuffix(inquiry, isTutor ? "chat" : mode);
     if (suffix) systemContent += suffix;
   }
-  const userContent = fastSpec
+  let userContent = fastSpec
     ? fastEvalUserContent(mode, context)
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only.`;
+
+  if (!fastSpec && promptCompactEnabled() && isConversationalPromptMode(mode)) {
+    const inquiry = sanitizeSourceInquiry(context.sourceInquiry, {
+      mode: isTutor ? "chat" : mode,
+      bank: context.predictionsBank || null,
+      year: context.year,
+    });
+    const grant = scenarioGrantSuffix(inquiry, isTutor ? "chat" : mode);
+    systemContent = composeConversationSystem({
+      mode,
+      tutor: isTutor,
+      hexInvent: Boolean(context.hexInvent),
+      worldClockLine: isTutor
+        ? `${WORLD_CLOCK_CONTEXT_LINE} When teaching trends and predictions, use due rows as what is real now and not_yet rows as labeled forecasts.`
+        : WORLD_CLOCK_CONTEXT_LINE,
+      searchLine: searchTools ? SEARCH_SYSTEM_LINE : "",
+    });
+    if (grant) systemContent += grant;
+    let payloadJson = buildUserPayload({ messages, context, mode });
+    try {
+      payloadJson = JSON.stringify(compactConversationPayload(JSON.parse(payloadJson)));
+    } catch {
+      /* keep the payload string this server already built */
+    }
+    const label = isTutor
+      ? "Tutor session state and conversation (JSON):"
+      : "Co-invention session state and conversation (JSON):";
+    userContent = `${label}\n${payloadJson}\n\n${conversationUserSuffix({ tutor: isTutor })}`;
+  }
 
   const input = [
     { role: "system", content: systemContent },
@@ -1159,10 +1228,67 @@ function stampDeveloperLlm(out, llm) {
   return out;
 }
 
+function finalizePortalCoInvent(call, parsed, rawText) {
+  const { mode, context, availableIds } = call;
+  let out;
+  if (isFastEvalMode(mode)) out = sanitizeFast(mode, parsed, "ai", context);
+  else if (mode === "generate-scenarios") out = sanitizeScenariosResult(parsed, context, "ai");
+  else {
+    out = sanitizeResult(parsed, availableIds, "ai", mode);
+    if (mode === "evaluate-neighbors") {
+      const raw = Array.isArray(parsed.lights) ? parsed.lights : [];
+      out.lights = raw
+        .filter((L) => L && L.id && ["red", "yellow", "green"].includes(String(L.level).toLowerCase()))
+        .map((L) => ({
+          id: String(L.id),
+          level: String(L.level).toLowerCase(),
+          reason: String(L.reason || "").slice(0, 280),
+        }));
+    }
+  }
+  return stampDeveloperLlm(out, coInventLlm(call, { sent: true, rawOutput: String(rawText || "") }));
+}
+
 async function aiCoInvent(body, client, meta = {}) {
   const call = composeCoInventCall(body);
+  applyOutputCap(call.createOpts, meta.maxOutputTokens);
   const { mode, context, messages, availableIds, createOpts } = call;
   const sessionId = meta.sessionId || clientSessionFromBody(body);
+  if (meta.delivery) {
+    const t0 = Date.now();
+    try {
+      const out = await executeStreamedCoInvent({
+        client,
+        createOpts,
+        delivery: meta.delivery,
+        finalize: (parsed, read) => finalizePortalCoInvent(call, parsed, read?.assembled),
+      });
+      const tokens = out?._quotaTokens;
+      recordAiText({
+        mode,
+        source: "ai",
+        model: MODEL,
+        usage: tokens
+          ? { input_tokens: tokens.inputTokens, output_tokens: tokens.outputTokens }
+          : null,
+        latencyMs: Date.now() - t0,
+        ok: true,
+        sessionId,
+      });
+      return out;
+    } catch (e) {
+      recordAiText({
+        mode,
+        source: "error",
+        model: MODEL,
+        usage: null,
+        latencyMs: Date.now() - t0,
+        ok: false,
+        sessionId,
+      });
+      throw e;
+    }
+  }
 
   const t0 = Date.now();
   let response;
@@ -1408,7 +1534,7 @@ function findQuestTile(pack, id) {
   );
 }
 
-async function handleCoInvent(body) {
+async function handleCoInvent(body, opts = {}) {
   if (!authorizedQuestBodies.has(body)) throw Object.assign(new Error("package_authority_required"), { status: 403 });
   const context = body.context || {};
   const mode = body.mode || "chat";
@@ -1434,21 +1560,28 @@ async function handleCoInvent(body) {
     );
   }
 
+  const callMeta = { sessionId, maxOutputTokens: opts.maxOutputTokens, delivery: opts.delivery || null };
   try {
-    return await aiCoInvent(body, client, { sessionId });
+    return await aiCoInvent(body, client, callMeta);
   } catch (e) {
     const msg = String(e?.message || e);
     console.error("[co-invent ai]", msg.slice(0, 200));
 
-    // One retry with forced SuperGrok token refresh
-    if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
+    if (
+      e?.quotaOutcome !== "retain" &&
+      e?.quotaOutcome !== "settle" &&
+      /incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)
+    ) {
       try {
         client = await getClient({ forceRefresh: true });
-        if (client) return await aiCoInvent(body, client, { sessionId });
+        if (client) return await aiCoInvent(body, client, callMeta);
       } catch (e2) {
         console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
+        e = e2;
       }
     }
+
+    if (e?.quotaOutcome === "retain" || e?.quotaOutcome === "settle") throw e;
 
     const local = localCoInvent({ mode, messages, context });
     local.message =
@@ -3647,18 +3780,35 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
+    let writer = null;
+    let turnLatency = null;
     try {
       const body = await readBody(req);
+      const mode = body?.mode || "chat";
+      const tutorOn = Boolean(body?.tutor || body?.context?.tutorMode);
+      turnLatency = createTurnLatency({
+        requestId: body?.requestId,
+        mode,
+        tutor: tutorOn,
+        transport: "json",
+        model: MODEL,
+        effort: reasoningEffortForCoInvent({ mode, tutor: tutorOn }) ?? null,
+        promptVariant: conversationPromptVariant(mode),
+      });
+      turnLatency.noteOutputCap(null);
+      turnLatency.mark("authority_start");
       const gate = await gateExpensive(req, "co-invent", body);
       if (!gate.ok) {
+        turnLatency.mark("authority_done");
+        recordTurnLatency(turnLatency, "denied");
         return sendJson(res, gate.status || 429, {
           error: gate.error || "rate_limited",
-          message: gate.message || undefined,
           source: "error",
-          message:
-            gate.error === "api_secret_required"
-              ? "This server requires an API secret for co-inventor calls."
-              : "Too many co-inventor requests — wait a moment and try again.",
+          message: quotaDenyMessage(
+            gate,
+            "This server requires an API secret for co-inventor calls.",
+            "Too many co-inventor requests — wait a moment and try again."
+          ),
           proposals: {
             addTechIds: [],
             removeTechIds: [],
@@ -3683,6 +3833,8 @@ const server = http.createServer(async (req, res) => {
         ? { ok: true, context: guarded.body.context }
         : prepareTutorContext(guarded.body.context, ident, tile, { entitled });
       if (!prepared.ok) {
+        turnLatency.mark("authority_done");
+        recordTurnLatency(turnLatency, "denied");
         return sendJson(res, prepared.status || 401, {
           error: prepared.error || "sign_in_required",
           source: "error",
@@ -3708,9 +3860,52 @@ const server = http.createServer(async (req, res) => {
       }
       const authorizedBody = { ...body, context: prepared.context };
       authorizedQuestBodies.add(authorizedBody);
-      const result = await withClerkIdentity(req, () => handleCoInvent(authorizedBody));
-      return sendJson(res, 200, result);
+      turnLatency.mark("authority_done");
+      const wantStream = coInventStreamRequested(req, mode);
+      if (wantStream && isConversationalStreamMode(mode)) turnLatency.trace.transport = "sse";
+      const slot = gameAdmission.tryAcquire(
+        admissionKey({ userId: ident?.userId, ip: clientIp(req) })
+      );
+      if (!slot.ok) {
+        recordTurnLatency(turnLatency, "denied");
+        return sendJson(res, 429, {
+          error: "still_finishing",
+          source: "error",
+          message: "Previous requests are still finishing.",
+          proposals: {
+            addTechIds: [],
+            removeTechIds: [],
+            inventionName: null,
+            inventionHow: null,
+            inventionImpact: null,
+          },
+          teaching: [],
+        });
+      }
+      try {
+        let delivery = null;
+        if (wantStream && isConversationalStreamMode(mode)) {
+          const opened = openCoInventDelivery(res, authorizedBody);
+          writer = opened.writer;
+          delivery = turnLatency.watch(opened.delivery);
+        }
+        turnLatency.startProvider();
+        const result = await withClerkIdentity(req, () => handleCoInvent(authorizedBody, { delivery }));
+        turnLatency.completeProvider(result?._quotaTokens);
+        if (writer) finishCoInventDelivery(writer, result);
+        recordTurnLatency(turnLatency, "ok");
+        if (writer) return;
+        return sendJson(res, 200, result);
+      } finally {
+        slot.release();
+      }
     } catch (e) {
+      turnLatency?.completeProvider(e?.quotaMeasure);
+      recordTurnLatency(turnLatency, e?.code === "cancelled" ? "cancelled" : "error");
+      if (writer || res.headersSent) {
+        failCoInventDelivery(writer, e);
+        return;
+      }
       console.error("[co-invent]", e.message || e);
       const status = errorStatus(e);
       return sendJson(res, status, {
@@ -3943,6 +4138,13 @@ server.listen(PORT, HOST, async () => {
     console.log("Developer mode: OFF (pass --developer or set FF_DEVELOPER=1 to enable)");
   }
   console.log("AI search: OFF (portal does not use live AI; that is game)");
+  if (coInventStreamEnabled()) {
+    console.log(
+      "Co-invent stream: ON (FF_CO_INVENT_STREAM=1 · conversational modes when Accept is text/event-stream)"
+    );
+  } else {
+    console.log("Co-invent stream: OFF (set FF_CO_INVENT_STREAM=1 to enable)");
+  }
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
     console.log(

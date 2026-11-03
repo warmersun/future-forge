@@ -207,6 +207,10 @@ What the model is allowed to know depends on the call:
 
 Apply buttons still confirm anything that would change the board. The co-inventor proposes; it does not write the pathway by itself.
 
+`FF_CO_INVENT_STREAM=1` lets conversational modes stream the answer as server-sent events when the browser sends `Accept: text/event-stream`. While the model is still thinking, the reasoning trace is one full-width Thinking block. It collapses as a whole when the answer starts, and the thoughts stay inside it. They are not sent back to the model. The encrypted internal trace is not shown. Those modes are chat, spark, suggest-stack, draft-name, draft-how, draft-impact, push-further, explain-techs, art-of-the-possible, sit, scamper, and complete-picture. Feasibility, scoring, scenarios, and the other judges stay one JSON body. If the flag is off, or the mode is not in that list, the same request is still one JSON body and is not retried. Voice stays on its own realtime path. Proposals commit after the full answer validates. The switch is off by default. When it is on, `GET /api/health` reports `features.coInventStream`. Live first-useful-sentence latency has not been measured.
+
+`FF_CO_INVENT_PROMPT_COMPACT=1` switches conversational co-invent and tutor turns onto the shorter shared prompt. That prompt still includes the world-clock line and, for the tutor, the send-to-read rule that offers one matching lesson page and its illustration. Fast-eval and judge modes keep their own prompts. The switch is off by default and is separate from streaming.
+
 ### Timing, the predictions bank, and Look Ahead
 
 Timing has two instruments.
@@ -429,6 +433,8 @@ Content knobs:
 | `FF_JOIN_ORIGIN` | Public URL friends open to join a room |
 | `FF_DEVELOPER=1` | Developer inspect and the economy lab |
 | `FF_AI_SEARCH=1` | Web and X search on timing and idea sparks |
+| `FF_CO_INVENT_STREAM=1` | Stream conversational co-invent text when the request asks for `text/event-stream`. Other modes stay one JSON body. Voice is unchanged. Off by default |
+| `FF_CO_INVENT_PROMPT_COMPACT=1` | Shorter conversational co-invent and tutor prompt. Keeps the world-clock line and the tutor send-to-read illustration. Off by default |
 | `FF_USAGE_ENABLED=1` | Token, image, TTS, and session rollups under `data/usage/` |
 
 The process serves an allowlist of public assets (`index.html`, `css/`, client `js/`, `assets/`). It does not serve `.env`, `server.mjs`, or `data/` over HTTP. Expensive routes are rate-limited. `FF_API_SECRET`, `FF_ADMIN_TOKEN`, and `FF_TRUST_PROXY` are for a host you control; see the README before turning them on.

@@ -3,6 +3,6 @@
 void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));
-void import("./game.js?v=hotseat-summon-2")
+void import("./game.js?v=stream-8")
   .then((m) => m.init())
   .catch((e) => console.error("[game]", e?.message || e));

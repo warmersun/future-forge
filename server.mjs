@@ -95,6 +95,30 @@ import {
   WORLD_CLOCK_TIMING_LINE,
   WORLD_CLOCK_CONTEXT_LINE,
 } from "./js/server/fast-eval.mjs";
+import {
+  coInventStreamRequested,
+  coInventStreamHealth,
+  coInventStreamEnabled,
+  isConversationalStreamMode,
+} from "./js/server/coinvent-stream.mjs";
+import { admissionKey, gameAdmission } from "./js/server/coinvent-admission.mjs";
+import {
+  executeStreamedCoInvent,
+  quotaMeasureFromResult,
+  openCoInventDelivery,
+  finishCoInventDelivery,
+  failCoInventDelivery,
+  applyOutputCap,
+  createTurnLatency,
+} from "./js/server/coinvent-turn.mjs";
+import {
+  promptCompactEnabled,
+  isConversationalPromptMode,
+  composeConversationSystem,
+  conversationUserSuffix,
+  compactConversationPayload,
+  conversationPromptVariant,
+} from "./js/server/coinvent-conversation-prompt.mjs";
 import { sanitizeSourceInquiry, scenarioGrantSuffix } from "./js/companion-context.js";
 import { buildImageLlmInspect, buildLlmInspect } from "./js/server/llm-inspect.mjs";
 import {
@@ -125,6 +149,7 @@ import {
   settleCloudQuotaReliable,
   verifyPortalUser,
   withCloudQuota,
+  applyQuotaFailure,
 } from "./js/server/cloud-quota-client.mjs";
 import {
   catalogLessonSkipsQuota,
@@ -460,7 +485,7 @@ async function applyOfficialTutor(req, body) {
   return null;
 }
 
-async function hostedAi(req, route, body, call, measure) {
+async function hostedAi(req, route, body, call, measure, turnLatency = null) {
   const gate = gateExpensive(req, route, body);
   if (!gate.ok) return { ok: false, gate };
   if (CLOUD_AI && hostedLessonSkipsQuota(route, body)) {
@@ -480,6 +505,8 @@ async function hostedAi(req, route, body, call, measure) {
           },
         };
       }
+      // Lesson tutors are operator spend. No reservation, so the output cap is absent.
+      turnLatency?.noteOutputCap(null);
       const result = await call();
       return { ok: true, result, ip: gate.ip };
     }
@@ -488,16 +515,32 @@ async function hostedAi(req, route, body, call, measure) {
   const chars = kind === "tts" ? String(body?.text || "").length : 0;
   const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
   const out = await withCloudQuota({
-    reserve: () =>
-      reserveCloudQuota({
-        kind,
-        chars,
-        inputTokens,
-        authorization: req.headers.authorization || "",
-      }),
-    call,
+    reserve: async () => {
+      turnLatency?.mark("quota_reserve_start");
+      try {
+        return await reserveCloudQuota({
+          kind,
+          chars,
+          inputTokens,
+          authorization: req.headers.authorization || "",
+        });
+      } finally {
+        turnLatency?.mark("quota_reserve_done");
+      }
+    },
+    call: async (reserved) => {
+      turnLatency?.noteOutputCap(reserved?.maxOutputTokens);
+      return call(reserved);
+    },
     measure,
-    settle: (reservationId, m) => settleCloudQuotaReliable({ reservationId, ...m }),
+    settle: async (reservationId, m) => {
+      turnLatency?.mark("quota_settle_start");
+      try {
+        return await settleCloudQuotaReliable({ reservationId, ...m });
+      } finally {
+        turnLatency?.mark("quota_settle_done");
+      }
+    },
   });
   if (!out.ok) return out;
   return { ok: true, result: out.result, ip: gate.ip, reserved: out };
@@ -580,6 +623,18 @@ function recordAiText(opts) {
     sessionId: opts.sessionId || null,
     roomCode: opts.roomCode || null,
   });
+}
+
+/**
+ * Durations and counts only. publicRecord already drops learner text.
+ * @param {ReturnType<typeof createTurnLatency>|null} turn
+ * @param {string} status
+ */
+function recordTurnLatency(turn, status) {
+  if (!turn || turn.trace.status === "recorded") return;
+  const record = turn.publicRecord(status);
+  turn.trace.status = "recorded";
+  usage.record({ type: "co_invent_latency", ...record, status: record.status });
 }
 
 /**
@@ -1361,13 +1416,42 @@ function composeCoInventCall(body) {
     const suffix = scenarioGrantSuffix(inquiry, isTutor ? "chat" : mode);
     if (suffix) systemContent += suffix;
   }
-  const userContent = fastSpec
+  let userContent = fastSpec
     ? fastEvalUserContent(mode, context)
     : isTutor
       ? `Tutor session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only. One current idea in a short teaching paragraph (4–8 sentences); full sentences; no quiz questions; answer the learner's question.`
       : `Co-invention session state and conversation (JSON):\n${buildUserPayload({ messages, context, mode })}\n\n` +
         `Respond with the required JSON object only.`;
+
+  if (!fastSpec && promptCompactEnabled() && isConversationalPromptMode(mode)) {
+    const inquiry = sanitizeSourceInquiry(context.sourceInquiry, {
+      mode: isTutor ? "chat" : mode,
+      bank: context.predictionsBank || null,
+      year: context.year,
+    });
+    const grant = scenarioGrantSuffix(inquiry, isTutor ? "chat" : mode);
+    systemContent = composeConversationSystem({
+      mode,
+      tutor: isTutor,
+      hexInvent: Boolean(context.hexInvent),
+      worldClockLine: isTutor
+        ? `${WORLD_CLOCK_CONTEXT_LINE} When teaching trends and predictions, use due rows as what is real now and not_yet rows as labeled forecasts.`
+        : WORLD_CLOCK_CONTEXT_LINE,
+      searchLine: searchTools ? SEARCH_SYSTEM_LINE : "",
+    });
+    if (grant) systemContent += grant;
+    let payloadJson = buildUserPayload({ messages, context, mode });
+    try {
+      payloadJson = JSON.stringify(compactConversationPayload(JSON.parse(payloadJson)));
+    } catch {
+      /* keep the payload string this server already built */
+    }
+    const label = isTutor
+      ? "Tutor session state and conversation (JSON):"
+      : "Co-invention session state and conversation (JSON):";
+    userContent = `${label}\n${payloadJson}\n\n${conversationUserSuffix({ tutor: isTutor })}`;
+  }
 
   const input = [
     { role: "system", content: systemContent },
@@ -1408,11 +1492,7 @@ function composeCoInventCall(body) {
  * @param {number} maxOutputTokens
  */
 function applyHostedOutputCap(createOpts, maxOutputTokens) {
-  const cap = Math.floor(Number(maxOutputTokens) || 0);
-  if (cap <= 0 || !createOpts) return;
-  const existing = Number(createOpts.max_output_tokens);
-  createOpts.max_output_tokens =
-    Number.isFinite(existing) && existing > 0 ? Math.min(existing, cap) : cap;
+  applyOutputCap(createOpts, maxOutputTokens);
 }
 
 function coInventLlm(call, extra = {}) {
@@ -1435,11 +1515,66 @@ function stampDeveloperLlm(out, llm) {
   return out;
 }
 
+function finalizeHostedCoInvent(call, parsed, rawText) {
+  const { mode, context, availableIds } = call;
+  if (isFastEvalMode(mode)) return sanitizeFast(mode, parsed, "ai", context);
+  if (mode === "generate-scenarios") return sanitizeScenariosResult(parsed, context, "ai");
+  const out = sanitizeResult(parsed, availableIds, "ai", mode, context);
+  if (mode === "evaluate-neighbors") {
+    const raw = Array.isArray(parsed.lights) ? parsed.lights : [];
+    out.lights = raw
+      .filter((L) => L && L.id && ["red", "yellow", "green"].includes(String(L.level).toLowerCase()))
+      .map((L) => ({
+        id: String(L.id),
+        level: String(L.level).toLowerCase(),
+        reason: String(L.reason || "").slice(0, 280),
+      }));
+  }
+  return stampDeveloperLlm(out, coInventLlm(call, { sent: true, rawOutput: String(rawText || "") }));
+}
+
+async function streamHostedCoInvent(call, client, meta, sessionId) {
+  const t0 = Date.now();
+  try {
+    const out = await executeStreamedCoInvent({
+      client,
+      createOpts: call.createOpts,
+      delivery: meta.delivery,
+      finalize: (parsed, read) => finalizeHostedCoInvent(call, parsed, read?.assembled),
+    });
+    const tokens = out?._quotaTokens;
+    recordAiText({
+      mode: call.mode,
+      source: "ai",
+      model: MODEL,
+      usage: tokens
+        ? { input_tokens: tokens.inputTokens, output_tokens: tokens.outputTokens }
+        : null,
+      latencyMs: Date.now() - t0,
+      ok: true,
+      sessionId,
+    });
+    return out;
+  } catch (e) {
+    recordAiText({
+      mode: call.mode,
+      source: "error",
+      model: MODEL,
+      usage: null,
+      latencyMs: Date.now() - t0,
+      ok: false,
+      sessionId,
+    });
+    throw e;
+  }
+}
+
 async function aiCoInvent(body, client, meta = {}) {
   const call = composeCoInventCall(body);
   applyHostedOutputCap(call.createOpts, meta.maxOutputTokens);
   const { mode, context, messages, availableIds, createOpts } = call;
   const sessionId = meta.sessionId || clientSessionFromBody(body);
+  if (meta.delivery) return streamHostedCoInvent(call, client, meta, sessionId);
 
   const t0 = Date.now();
   let response;
@@ -1565,27 +1700,35 @@ async function handleCoInvent(body, opts = {}) {
     );
   }
 
+  const callMeta = {
+    sessionId,
+    maxOutputTokens: opts.maxOutputTokens,
+    delivery: opts.delivery || null,
+  };
   try {
-    return await aiCoInvent(body, client, { sessionId, maxOutputTokens: opts.maxOutputTokens });
+    return await aiCoInvent(body, client, callMeta);
   } catch (e) {
     const msg = String(e?.message || e);
     console.error("[co-invent ai]", msg.slice(0, 200));
 
-    // One retry with forced SuperGrok token refresh
-    if (/incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)) {
+    // One retry with forced SuperGrok token refresh. A known quota outcome
+    // means the provider was already dispatched, so do not mask it with a
+    // local answer that would settle as unused.
+    if (
+      e?.quotaOutcome !== "retain" &&
+      e?.quotaOutcome !== "settle" &&
+      /incorrect api key|invalid.*key|401|unauthorized|expired/i.test(msg)
+    ) {
       try {
         client = await getClient({ forceRefresh: true });
-        if (client) {
-          return await aiCoInvent(body, client, {
-            sessionId,
-            maxOutputTokens: opts.maxOutputTokens,
-          });
-        }
+        if (client) return await aiCoInvent(body, client, callMeta);
       } catch (e2) {
         console.error("[co-invent retry]", String(e2?.message || e2).slice(0, 200));
+        e = e2;
       }
     }
 
+    if (e?.quotaOutcome === "retain" || e?.quotaOutcome === "settle") throw e;
     if (!allowLocal) throw e;
 
     const local = localCoInvent({ mode, messages, context });
@@ -2381,6 +2524,7 @@ const server = http.createServer(async (req, res) => {
         tts: ai,
         ttsVoice: TTS_VOICE,
         voice: ai,
+        ...coInventStreamHealth(),
       },
       usageEnabled: usage.enabled,
       developer: DEVELOPER_MODE,
@@ -2925,8 +3069,22 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && req.url?.startsWith("/api/co-invent")) {
+    let writer = null;
+    let turnLatency = null;
     try {
       const body = await readBody(req);
+      const tutorOn = Boolean(body?.tutor || body?.context?.tutorMode);
+      const mode = body?.mode || "chat";
+      turnLatency = createTurnLatency({
+        requestId: body?.requestId,
+        mode,
+        tutor: tutorOn,
+        transport: "json",
+        model: MODEL,
+        effort: reasoningEffortForCoInvent({ mode, tutor: tutorOn }) ?? null,
+        promptVariant: conversationPromptVariant(mode),
+      });
+      turnLatency.mark("authority_start");
       const emptyProposals = {
         addTechIds: [],
         removeTechIds: [],
@@ -2935,7 +3093,9 @@ const server = http.createServer(async (req, res) => {
         inventionImpact: null,
       };
       const tutorDenied = await applyOfficialTutor(req, body);
+      turnLatency.mark("authority_done");
       if (tutorDenied) {
+        recordTurnLatency(turnLatency, "denied");
         return sendJson(res, tutorDenied.status || 401, {
           error: tutorDenied.error || "sign_in_required",
           source: "error",
@@ -2950,20 +3110,71 @@ const server = http.createServer(async (req, res) => {
           teaching: [],
         });
       }
+      const wantStream = coInventStreamRequested(req, mode);
+      if (wantStream && isConversationalStreamMode(mode)) turnLatency.trace.transport = "sse";
       const outcome = await hostedAi(
         req,
         "co-invent",
         body,
-        () => handleCoInvent(body, { allowLocal: !CLOUD_AI }),
-        (result) => {
-          const t = result?._quotaTokens || {};
-          if (result && typeof result === "object") delete result._quotaTokens;
-          return { inputTokens: t.inputTokens || 0, outputTokens: t.outputTokens || 0 };
-        }
+        async (reserved) => {
+          if (req.aborted) {
+            turnLatency.trace.cancellationPhase = "pre_dispatch";
+            const err = new Error("cancelled");
+            err.code = "cancelled";
+            err.quotaOutcome = "release";
+            throw err;
+          }
+          const slot = gameAdmission.tryAcquire(
+            admissionKey({ userId: reserved?.userId, ip: clientIp(req) })
+          );
+          if (!slot.ok) {
+            const err = new Error("still_finishing");
+            err.code = "still_finishing";
+            err.quotaOutcome = "release";
+            throw err;
+          }
+          try {
+            if (req.aborted) {
+              turnLatency.trace.cancellationPhase = "pre_dispatch";
+              const err = new Error("cancelled");
+              err.code = "cancelled";
+              err.quotaOutcome = "release";
+              throw err;
+            }
+            let delivery = null;
+            if (wantStream && isConversationalStreamMode(mode)) {
+              const opened = openCoInventDelivery(res, body);
+              writer = opened.writer;
+              delivery = turnLatency.watch(opened.delivery);
+            }
+            turnLatency.startProvider();
+            const result = await handleCoInvent(body, {
+              allowLocal: !CLOUD_AI,
+              maxOutputTokens: reserved?.maxOutputTokens,
+              delivery,
+            });
+            turnLatency.completeProvider(result?._quotaTokens);
+            if (writer) finishCoInventDelivery(writer, result);
+            return result;
+          } catch (e) {
+            if (e?.code === "cancelled") turnLatency.trace.cancellationPhase ||= "provider";
+            turnLatency.completeProvider(e?.quotaMeasure);
+            throw e;
+          } finally {
+            slot.release();
+          }
+        },
+        quotaMeasureFromResult,
+        turnLatency
       );
+      if (writer) {
+        recordTurnLatency(turnLatency, "ok");
+        return;
+      }
       if (!outcome.ok) {
+        recordTurnLatency(turnLatency, "denied");
         const gate = outcome.gate || outcome;
-        return sendJson(res, gate.status || 429, {
+        const denied = {
           error: gate.error || "rate_limited",
           source: "error",
           message: quotaDenyMessage(
@@ -2974,12 +3185,41 @@ const server = http.createServer(async (req, res) => {
           subscribeUrl: gate.subscribeUrl,
           proposals: emptyProposals,
           teaching: [],
-        });
+        };
+        if (gate.error === "still_finishing") {
+          denied.error = "still_finishing";
+          denied.message = "Previous requests are still finishing.";
+        }
+        return sendJson(res, gate.status || 429, denied);
       }
+      recordTurnLatency(turnLatency, "ok");
       return sendJson(res, 200, outcome.result);
     } catch (e) {
+      recordTurnLatency(
+        turnLatency,
+        e?.code === "cancelled" ? "cancelled" : "error"
+      );
+      if (writer || res.headersSent) {
+        failCoInventDelivery(writer, e);
+        return;
+      }
       console.error("[co-invent]", e.message || e);
       const status = errorStatus(e);
+      if (e?.code === "still_finishing") {
+        return sendJson(res, 429, {
+          error: "still_finishing",
+          source: "error",
+          message: "Previous requests are still finishing.",
+          proposals: {
+            addTechIds: [],
+            removeTechIds: [],
+            inventionName: null,
+            inventionHow: null,
+            inventionImpact: null,
+          },
+          teaching: [],
+        });
+      }
       return sendJson(res, status, {
         error: e.message || "Co-inventor failed",
         source: "error",
@@ -3024,27 +3264,53 @@ const server = http.createServer(async (req, res) => {
 
 // Inject AI boundary into rooms (PR10) once handleCoInvent is in scope
 if (roomManager) {
-  roomManager.coInventHandler = async (body, { room, player } = {}) => {
+  roomManager.coInventHandler = async (body, ctx = {}) => {
+    const { room, player } = ctx;
     const userId = body?.clerkUserId || null;
     const quotaGrant = body?.quotaGrant || null;
     if (body && typeof body === "object") {
       delete body.clerkUserId;
       delete body.quotaGrant;
     }
+    const mode = body?.mode || "chat";
+    const tutorOn = Boolean(body?.tutor || body?.context?.tutorMode);
+    const turnLatency = createTurnLatency({
+      requestId: body?.requestId,
+      mode,
+      tutor: tutorOn,
+      transport: "room",
+      model: MODEL,
+      effort: reasoningEffortForCoInvent({ mode, tutor: tutorOn }) ?? null,
+      promptVariant: conversationPromptVariant(mode),
+    });
+    const finishLatency = (status) => recordTurnLatency(turnLatency, status);
+    try {
+    turnLatency.mark("authority_start");
     const checked = room && await roomManager.resolveMissionAsync(room.questMeta?.mission, {
       players: room.players.map(p => ({ id: p.id, clerkUserId: p.clerkUserId || null })),
     });
-    if (!checked?.ok) throw Object.assign(new Error(checked?.code || "package_revision_unavailable"), { status: 409 });
+    if (!checked?.ok) {
+      turnLatency.mark("authority_done");
+      finishLatency("denied");
+      throw Object.assign(new Error(checked?.code || "package_revision_unavailable"), { status: 409 });
+    }
     const guarded = portalQuestsEnabled() || CLOUD_AI
       ? await portalQuestAuthority(body)
       : await localQuestAuthority(body, { identity: { enabled: true, signedIn: Boolean(player?.clerkUserId), userId: player?.clerkUserId || null }, entitled: false });
-    if (!guarded.ok) throw Object.assign(new Error(guarded.code), { status: guarded.status });
+    turnLatency.mark("authority_done");
+    if (!guarded.ok) {
+      finishLatency("denied");
+      throw Object.assign(new Error(guarded.code), { status: guarded.status });
+    }
     body.context = guarded.body.context;
     authorizedQuestBodies.add(body);
     const kind = body?.mode === "vision" ? "image" : "text";
     const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
+    turnLatency.mark("quota_reserve_start");
     const reserved = await reserveCloudQuotaForUser({ userId, kind, quotaGrant, inputTokens });
+    turnLatency.mark("quota_reserve_done");
     if (!reserved.ok) {
+      finishLatency("denied");
       const err = new Error(
         reserved.subscribeUrl
           ? `${reserved.message || "subscription_required"} ${reserved.subscribeUrl}`
@@ -3053,35 +3319,93 @@ if (roomManager) {
       err.status = reserved.status || 402;
       throw err;
     }
+    turnLatency.noteOutputCap(kind === "text" ? reserved.maxOutputTokens : null);
     const settleCreds = {
       userId: reserved.userId || userId,
       settleToken: reserved.settleToken,
     };
+    const settle = (measure) =>
+      settleCloudQuotaReliable({
+        reservationId: reserved.reservationId,
+        ...measure,
+        bill: kind === "image",
+        ...settleCreds,
+      });
+    if (ctx.cancelled?.()) {
+      turnLatency.trace.cancellationPhase = "pre_dispatch";
+      if (reserved.reservationId) {
+        turnLatency.mark("quota_settle_start");
+        await settle({ release: true });
+        turnLatency.mark("quota_settle_done");
+      }
+      finishLatency("cancelled");
+      return { cancelled: true, ok: false };
+    }
+    const slot = gameAdmission.tryAcquire(
+      admissionKey({
+        userId: reserved.userId || userId || player?.clerkUserId,
+        seatId: player?.id,
+      })
+    );
+    if (!slot.ok) {
+      if (reserved.reservationId) {
+        turnLatency.mark("quota_settle_start");
+        await settle({ release: true });
+        turnLatency.mark("quota_settle_done");
+      }
+      finishLatency("denied");
+      const err = new Error("still_finishing");
+      err.code = "still_finishing";
+      throw err;
+    }
     try {
+      const streamOn =
+        coInventStreamEnabled() &&
+        isConversationalStreamMode(mode) &&
+        typeof ctx.onDelta === "function";
+      const delivery = streamOn
+        ? turnLatency.watch({
+            onDelta: (text) => ctx.onDelta(text),
+            onReasoning: (text) => ctx.onReasoning?.(text),
+            onPhase: (phase) => ctx.onPhase?.(phase),
+            shouldStopDelivery: () => Boolean(ctx.cancelled?.()),
+          })
+        : null;
+      turnLatency.startProvider();
       const result = await handleCoInvent(body, {
         allowLocal: !CLOUD_AI,
         maxOutputTokens: kind === "text" ? reserved.maxOutputTokens || 0 : 0,
+        delivery,
       });
-      const tokens = result?._quotaTokens || {};
-      if (result && typeof result === "object") delete result._quotaTokens;
-      if (reserved.reservationId) {
-        await settleCloudQuotaReliable({
-          reservationId: reserved.reservationId,
-          inputTokens: tokens.inputTokens || 0,
-          outputTokens: tokens.outputTokens || 0,
-          bill: kind === "image",
-          ...settleCreds,
-        });
+      turnLatency.completeProvider(result?._quotaTokens);
+      const measure = quotaMeasureFromResult(result);
+      if (reserved.reservationId && !measure.retain) {
+        turnLatency.mark("quota_settle_start");
+        await settle(measure);
+        turnLatency.mark("quota_settle_done");
       }
+      if (result && typeof result === "object") delete result.endTutoring;
+      if (ctx.cancelled?.()) {
+        turnLatency.trace.cancellationPhase = "provider";
+        finishLatency("cancelled");
+        return { cancelled: true, ok: false };
+      }
+      finishLatency("ok");
       return result;
     } catch (e) {
+      turnLatency.completeProvider(e?.quotaMeasure);
       if (reserved.reservationId) {
-        await settleCloudQuotaReliable({
-          reservationId: reserved.reservationId,
-          release: true,
-          ...settleCreds,
-        });
+        turnLatency.mark("quota_settle_start");
+        await applyQuotaFailure(settle, e);
+        turnLatency.mark("quota_settle_done");
       }
+      finishLatency(e?.code === "cancelled" ? "cancelled" : "error");
+      throw e;
+    } finally {
+      slot.release();
+    }
+    } catch (e) {
+      finishLatency("error");
       throw e;
     }
   };
@@ -3188,6 +3512,12 @@ if (ROOMS_ENABLED && roomManager) {
         if (result?.error === "not_owner") {
           safeWs(socket, { type: "reject", error: result.error });
         }
+        return;
+      }
+
+      if (msg.type === "cancel_ai") {
+        const result = roomManager.cancelAi(room, player, msg.clientActionId);
+        if (!result.ok) return safeWs(socket, { type: "reject", error: result.error || "not_pending", clientActionId: msg.clientActionId });
         return;
       }
 
@@ -3334,6 +3664,13 @@ async function afterListen() {
     console.log("AI search: ON (web + X on timing assess and idea-sparks)");
   } else {
     console.log("AI search: OFF (pass --ai-search or set FF_AI_SEARCH=1 to enable)");
+  }
+  if (coInventStreamEnabled()) {
+    console.log(
+      "Co-invent stream: ON (FF_CO_INVENT_STREAM=1 · conversational modes when Accept is text/event-stream)"
+    );
+  } else {
+    console.log("Co-invent stream: OFF (set FF_CO_INVENT_STREAM=1 to enable)");
   }
   try {
     const scanned = await scanQuestsFolder(QUESTS_DIR, { packageRegistry: localPackageRegistry.registry });
