@@ -395,18 +395,9 @@ body.ff-accounts .topbar-game {
   display: none !important;
 }
 
-#side-vision > .ai-usage {
-  max-width: none;
-  margin: 0;
-  padding: 0 1rem 0.65rem;
-}
-
-.cloud-forge-hero > .ai-usage {
-  margin-top: 0.9rem;
-}
-
-.co-header .ai-usage {
-  margin-top: 0.45rem;
+.title-card > .ai-usage {
+  margin: 1.15rem auto 0;
+  text-align: initial;
 }
 
 .cloud-portfolio-badge {
@@ -704,6 +695,37 @@ body.ff-accounts .topbar-game {
   text-align: center;
   position: relative;
   overflow: hidden;
+}
+
+/* Hosted usage sits under the title buttons. Let that screen scroll if the
+   meter would otherwise be clipped, and tighten a short window so it fits. */
+#screen-title:has(.ai-usage:not([hidden])) {
+  justify-content: safe center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (max-height: 860px) {
+  #screen-title:has(.ai-usage:not([hidden])) {
+    padding-block: 0.6rem;
+  }
+
+  #screen-title:has(.ai-usage:not([hidden])) .title-logo {
+    margin-bottom: 0.45rem;
+  }
+
+  #screen-title:has(.ai-usage:not([hidden])) .tagline {
+    margin-bottom: 0.75rem;
+  }
+
+  #screen-title:has(.ai-usage:not([hidden])) .pitch {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  #screen-title:has(.ai-usage:not([hidden])) > .title-card > .ai-usage {
+    margin-top: 0.45rem;
+  }
 }
 
 .title-orb {

@@ -5,7 +5,7 @@
 import { getClientSessionId } from "./client-session.js";
 import { inventDraftFieldsForContext } from "./lean-coinvent-context.js";
 import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
-import { aiUsageMarkup, refreshAiUsage, repaintAiUsage } from "./ai-usage.js";
+import { refreshAiUsage } from "./ai-usage.js";
 import { isSafeHttpUrl, renderChatMarkdown } from "./md-lite.js?v=voice-18";
 import { bindPackageMediaUrls, resolvePackageMediaUrl } from "./lesson-media.js?v=voice-18";
 import {
@@ -287,7 +287,6 @@ export class CoInventor {
             </button>
           </div>
           <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
-          ${aiUsageMarkup()}
         </div>
         <div class="co-header-actions">
           <span
@@ -506,7 +505,6 @@ export class CoInventor {
     else this._selectVoice(this._voice.voiceId);
     this.syncVoiceChrome();
     this.checkHealth();
-    repaintAiUsage(root);
   }
 
   ensureVoice() {

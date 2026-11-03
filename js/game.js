@@ -23,12 +23,12 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer } from "./vision.js?v=usage-1";
+import { VisionRenderer } from "./vision.js?v=usage-2";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=usage-1";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=usage-2";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=stream-1";
 import {

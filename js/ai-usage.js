@@ -6,7 +6,7 @@
 
 const TONES = ["is-ok", "is-low", "is-empty"];
 
-/** Last payload painted. A later mount (the co-inventor header) reads this. */
+/** Last payload painted. A meter mounted later can repaint from this. */
 let latestRaw;
 let hasLatest = false;
 
