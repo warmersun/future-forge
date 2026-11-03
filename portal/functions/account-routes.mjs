@@ -6,7 +6,7 @@ import { createClerkClient } from "@clerk/backend";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate } from "../../js/server/cloud-save.mjs";
 import { parseCollectPath, publicCardDto, collectHttpResult } from "../../js/server/collector-cards.mjs";
-import { planSlugsFromEnv, signQuotaGrant, subscriptionEntitled, subscriptionView } from "../../js/server/ai-quota.mjs";
+import { planSlugsFromEnv, signQuotaGrant, subscriptionEntitled, subscriptionView, usageForAccount } from "../../js/server/ai-quota.mjs";
 import { subscribeUrlFromEnv } from "../../js/server/cloud-quota.mjs";
 import { rowFromClerkBillingSubscription } from "../../js/server/clerk-webhooks.mjs";
 import { portalPublicOrigin } from "../../js/cloud/portal-origin.js";
@@ -94,10 +94,18 @@ export function createAccountRoutes({ db, env = process.env, getUserBillingSubsc
         if (cx) try { await cx.query("ROLLBACK"); } catch { /* original failure wins */ }
       } finally { cx?.release(); }
     }
+    const subscription = subscriptionView(sub, { subscribeUrl: subscribeUrlFromEnv(env), allowedSlugs, env });
+    let usage = null;
+    if (subscription.entitled) {
+      try {
+        usage = await usageForAccount((sql, params) => db.query(sql, params), uid, sub, env);
+      } catch {
+        usage = null;
+      }
+    }
     return reply({
       ok: true, signedIn: true, clerk: true, userId: uid, sessionId: identity.sessionId ?? null,
-      db: true, solvedIds, quotaGrant,
-      subscription: subscriptionView(sub, { subscribeUrl: subscribeUrlFromEnv(env), allowedSlugs, env }),
+      db: true, solvedIds, quotaGrant, subscription, usage,
     });
   }
   return {

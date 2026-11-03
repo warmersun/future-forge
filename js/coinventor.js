@@ -5,6 +5,7 @@
 import { getClientSessionId } from "./client-session.js";
 import { inventDraftFieldsForContext } from "./lean-coinvent-context.js";
 import { apiFetch, isClerkReady, openCloudSignIn } from "./auth.js";
+import { aiUsageMarkup, refreshAiUsage, repaintAiUsage } from "./ai-usage.js";
 import { isSafeHttpUrl, renderChatMarkdown } from "./md-lite.js?v=voice-18";
 import { bindPackageMediaUrls, resolvePackageMediaUrl } from "./lesson-media.js?v=voice-18";
 import {
@@ -53,6 +54,10 @@ import {
   terminalTurnView,
 } from "./coinventor-turn.js?v=stream-2";
 import { createLatencyTrace, markLatency, publicLatencyRecord } from "./coinvent-latency.js?v=stream-1";
+
+function noteAiUsage() {
+  refreshAiUsage(apiFetch).catch(() => {});
+}
 
 function cloudQuotaText(data) {
   const base = data?.message || data?.error || "Co-inventor unavailable";
@@ -282,6 +287,7 @@ export class CoInventor {
             </button>
           </div>
           <div class="co-sub" id="co-status">${escapeHtml(this.subtitle)}</div>
+          ${aiUsageMarkup()}
         </div>
         <div class="co-header-actions">
           <span
@@ -500,6 +506,7 @@ export class CoInventor {
     else this._selectVoice(this._voice.voiceId);
     this.syncVoiceChrome();
     this.checkHealth();
+    repaintAiUsage(root);
   }
 
   ensureVoice() {
@@ -1548,6 +1555,7 @@ export class CoInventor {
             });
           }
           this._traceTurn(trace, requestBody, read.data, false, read.data?.error || "co_invent_failed", false);
+          noteAiUsage();
           settle(false);
           return;
         }
@@ -1561,6 +1569,7 @@ export class CoInventor {
             teaching: [],
           });
           this._traceTurn(trace, requestBody, data, false, data.error, false);
+          noteAiUsage();
           settle(false);
           return;
         }
@@ -1582,6 +1591,7 @@ export class CoInventor {
             teaching: [],
           });
           this._traceTurn(trace, requestBody, data, false, data.error, false);
+          noteAiUsage();
           settle(false);
           return;
         }
@@ -1595,6 +1605,7 @@ export class CoInventor {
           teaching: [],
         });
         this._traceTurn(trace, requestBody, data, false, data.error, false);
+        noteAiUsage();
         settle(false);
         return;
       }
@@ -1619,6 +1630,7 @@ export class CoInventor {
         try { this.onTutorSessionEnded?.("ai"); } catch { /* host */ }
       }
       this._traceTurn(trace, requestBody, data, true, null, false);
+      noteAiUsage();
       settle(true);
     } catch (e) {
       clearTimeout(deadline);
@@ -1650,6 +1662,7 @@ export class CoInventor {
         teaching: [],
       });
       this._traceTurn(trace, requestBody, null, false, String(e?.message || e), false);
+      noteAiUsage();
       settle(false);
     }
   }

@@ -332,7 +332,7 @@ export function contentEntitled(input = {}) {
 }
 
 /**
- * Public /api/me shape. No allowance numbers.
+ * Public subscription slice of /api/me. Allowance numbers are `usage`, not here.
  * `entitled` is the cloud plan (hosted AI). `content` is paid catalog access.
  * @param {object|null|undefined} sub
  * @param {{ subscribeUrl?: string, allowedSlugs?: string[], contentSlugs?: string[], env?: NodeJS.ProcessEnv|Record<string, string|undefined>, now?: number|Date }} [opts]
@@ -417,4 +417,83 @@ export function cloudAiDecision(input = {}) {
 export function monthPeriodStart(now = Date.now()) {
   const d = now instanceof Date ? now : new Date(now);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+}
+
+/**
+ * Period key shared with reserve. Null when period_start is set but not a date,
+ * so the meter does not read a different month than the ledger.
+ * @param {object|null|undefined} sub
+ * @param {number|Date} [now]
+ */
+export function usagePeriodStart(sub, now = Date.now()) {
+  if (sub?.period_start) {
+    const d = new Date(sub.period_start);
+    if (!Number.isFinite(d.getTime())) return null;
+    return d.toISOString();
+  }
+  return monthPeriodStart(now);
+}
+
+function usagePoints(value) {
+  if (value === undefined || value === null || value === "") return 0;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
+
+function usagePeriodEnd(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+}
+
+/**
+ * Player-facing allowance. Held points are already unavailable.
+ * Remaining is clamped at zero. A non-Cloud account is null.
+ * @param {{ entitled?: boolean, budget?: unknown, spent?: unknown, held?: unknown, periodEnd?: unknown }} [input]
+ */
+export function usageView(input = {}) {
+  if (!input?.entitled) return null;
+  const budget = usagePoints(input.budget);
+  const spent = usagePoints(input.spent);
+  const held = usagePoints(input.held);
+  return {
+    budget,
+    spent,
+    held,
+    remaining: Math.max(0, budget - spent - held),
+    periodEnd: usagePeriodEnd(input.periodEnd),
+  };
+}
+
+/**
+ * Ledger read for signed-in /api/me. Throws on query failure so the route can
+ * return usage null without failing the rest of the account payload.
+ * @param {(sql: string, params?: unknown[]) => Promise<{ rows?: object[] }>} query
+ * @param {string} userId
+ * @param {object|null|undefined} sub
+ * @param {NodeJS.ProcessEnv|Record<string, string|undefined>} [env]
+ */
+export async function usageForAccount(query, userId, sub, env = process.env) {
+  const entitled = subscriptionEntitled({
+    status: sub?.status,
+    planSlug: sub?.plan_slug,
+    periodEnd: sub?.period_end,
+    allowedSlugs: planSlugsFromEnv(env),
+  });
+  if (!entitled) return null;
+  const periodStart = usagePeriodStart(sub);
+  if (!periodStart) return null;
+  const row = (await query(
+    `SELECT spent_points, held_points FROM ai_usage_period
+     WHERE clerk_user_id = $1 AND period_start = $2`,
+    [userId, periodStart]
+  ))?.rows?.[0] || null;
+  return usageView({
+    entitled: true,
+    budget: budgetMicroFromEnv(env),
+    spent: row?.spent_points,
+    held: row?.held_points,
+    periodEnd: sub?.period_end,
+  });
 }

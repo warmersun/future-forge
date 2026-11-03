@@ -6,6 +6,22 @@
 
 import { getClientSessionId } from "./client-session.js";
 import { apiFetch } from "./auth.js";
+import { refreshAiUsage } from "./ai-usage.js";
+
+const VISION_QUOTA_TEXT = {
+  quota_spent: "This period’s co-inventor budget is spent. It comes back when the subscription renews.",
+  subscription_required: "The hosted co-inventor is a monthly subscription. Self-host if you want it free.",
+};
+
+/** Prefer the human quota sentence over the raw error code. */
+export function visionFailureText(data, status) {
+  const message = String(data?.message || "").trim();
+  if (message) return message;
+  const mapped = VISION_QUOTA_TEXT[data?.error];
+  if (mapped) return mapped;
+  const code = String(data?.error || "").trim();
+  return code || `Vision failed (${status})`;
+}
 
 /** Collect vision feature tags from selected tech objects */
 export function featuresFromTechs(techs) {
@@ -512,7 +528,7 @@ export class VisionRenderer {
       });
       data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || `Vision failed (${res.status})`);
+        throw new Error(visionFailureText(data, res.status));
       }
 
       const hadPriorImage = Boolean(this.currentUrl);
@@ -602,6 +618,7 @@ export class VisionRenderer {
         });
       }
     } finally {
+      if (!followOnly) refreshAiUsage(apiFetch).catch(() => {});
       this.busy = false;
       this.setLoading(false);
       try {

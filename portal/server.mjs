@@ -145,6 +145,7 @@ import {
   listCollectedCards,
   upsertSubscription,
   getSubscription,
+  getPool,
 } from "../js/server/db.mjs";
 import {
   parseCardPath,
@@ -158,7 +159,7 @@ import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../js/server/col
 import { RUN_STATE_MAX_BYTES } from "../js/server/run-state.mjs";
 import { clerkPaidSubscriptionRow, planClerkBillingEvent, planClerkUserEvent } from "../js/server/clerk-webhooks.mjs";
 import { quotaGrantForUser, quotaGrantUserId, reserveQuota, settleQuota, subscribeUrlFromEnv } from "../js/server/cloud-quota.mjs";
-import { contentEntitled, planSlugsFromEnv, subscriptionEntitled, subscriptionView } from "../js/server/ai-quota.mjs";
+import { contentEntitled, planSlugsFromEnv, subscriptionEntitled, subscriptionView, usageForAccount } from "../js/server/ai-quota.mjs";
 import { sanitizePinList } from "../js/server/pins.mjs";
 import {
   parseProfilePatch,
@@ -2790,6 +2791,23 @@ const server = http.createServer(async (req, res) => {
         }
       }
     }
+    const subscription = subscriptionView(sub, {
+      subscribeUrl: subscribeUrlFromEnv(),
+      allowedSlugs: planSlugsFromEnv(),
+      env: process.env,
+    });
+    let usage = null;
+    if (dbOn && subscription.entitled) {
+      try {
+        const pool = getPool();
+        usage = pool
+          ? await usageForAccount((sql, params) => pool.query(sql, params), ident.userId, sub)
+          : null;
+      } catch (e) {
+        console.warn("[quota] usage", e?.message || e);
+        usage = null;
+      }
+    }
     return sendJson(res, 200, {
       ok: true,
       signedIn: true,
@@ -2799,11 +2817,8 @@ const server = http.createServer(async (req, res) => {
       db: dbOn,
       solvedIds,
       quotaGrant,
-      subscription: subscriptionView(sub, {
-        subscribeUrl: subscribeUrlFromEnv(),
-        allowedSlugs: planSlugsFromEnv(),
-        env: process.env,
-      }),
+      subscription,
+      usage,
     });
   }
 

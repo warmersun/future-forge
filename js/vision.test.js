@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { dataUrlToBlobUrl, VisionRenderer } from "./vision.js";
+import { dataUrlToBlobUrl, VisionRenderer, visionFailureText } from "./vision.js";
 
 function mockImg() {
   let src = null;
@@ -35,6 +35,19 @@ function mockRoot(img) {
     },
   };
 }
+
+describe("visionFailureText", () => {
+  it("shows the quota sentence instead of the raw code", () => {
+    assert.equal(
+      visionFailureText({ error: "quota_spent", message: "This period’s co-inventor budget is spent. It comes back when the subscription renews." }, 429),
+      "This period’s co-inventor budget is spent. It comes back when the subscription renews."
+    );
+    assert.match(visionFailureText({ error: "quota_spent" }, 429), /budget is spent/);
+    assert.doesNotMatch(visionFailureText({ error: "quota_spent" }, 429), /quota_spent/);
+    assert.equal(visionFailureText({ error: "vision_failed" }, 500), "vision_failed");
+    assert.equal(visionFailureText({}, 503), "Vision failed (503)");
+  });
+});
 
 describe("dataUrlToBlobUrl", () => {
   it("returns a blob: URL instead of the data: payload", () => {

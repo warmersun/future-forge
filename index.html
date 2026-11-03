@@ -9,7 +9,7 @@
     />
     <title>Future Forge — Invent Tomorrow</title>
     <link rel="icon" href="assets/brand/ff-mark-hex.png" type="image/png" />
-    <link rel="stylesheet" href="css/styles.css?v=stream-7" />
+    <link rel="stylesheet" href="css/styles.css?v=usage-1" />
   </head>
   <body>
     <div id="ff-account" hidden>
@@ -170,6 +170,16 @@
           <p class="cloud-forge-best" id="cloud-forge-best" hidden></p>
           <ol class="ff-streak-rail" id="cloud-forge-rail" aria-label="Last seven days"></ol>
           <p class="cloud-forge-rank" id="cloud-forge-rank"></p>
+          <div class="ai-usage" data-ai-usage hidden>
+            <div class="ai-usage-row">
+              <span class="ai-usage-label">AI usage</span>
+              <span class="ai-usage-figures" data-ai-usage-figures></span>
+            </div>
+            <div class="ai-usage-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-ai-usage-meter>
+              <span data-ai-usage-fill></span>
+            </div>
+            <p class="ai-usage-reset" data-ai-usage-reset hidden></p>
+          </div>
           <div class="cloud-forge-hero-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-edit">Edit page</button>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-cloud-forge-empty" hidden>Preview empty</button>
@@ -1524,6 +1534,16 @@
                 </div>
                 <button type="button" class="btn btn-ghost btn-sm" id="btn-regen-vision">↻</button>
               </div>
+              <div class="ai-usage" data-ai-usage hidden>
+                <div class="ai-usage-row">
+                  <span class="ai-usage-label">AI usage</span>
+                  <span class="ai-usage-figures" data-ai-usage-figures></span>
+                </div>
+                <div class="ai-usage-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-ai-usage-meter>
+                  <span data-ai-usage-fill></span>
+                </div>
+                <p class="ai-usage-reset" data-ai-usage-reset hidden></p>
+              </div>
               <div class="vision-canvas-wrap" id="vision-root">
                 <img class="vision-image" alt="Vision of this place" hidden />
                 <div class="vision-loading" hidden aria-live="polite">
@@ -2543,6 +2563,6 @@
 
     <script src="js/vendor/chart.umd.min.js"></script>
     <script src="js/vendor/chartjs-plugin-annotation.min.js"></script>
-    <script type="module" src="js/main.js?v=stream-8"></script>
+    <script type="module" src="js/main.js?v=usage-1"></script>
   </body>
 </html>

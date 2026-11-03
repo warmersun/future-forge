@@ -23,6 +23,9 @@ import {
   SUBSCRIPTION_REQUIRED_MESSAGE,
   subscriptionEntitled,
   subscriptionView,
+  usageForAccount,
+  usagePeriodStart,
+  usageView,
   voiceConnectedMinuteMicro,
 } from "./ai-quota.mjs";
 
@@ -263,5 +266,71 @@ describe("cloudAiDecision", () => {
     });
     assert.equal(ok.ok, true);
     assert.equal(ok.mode, "user");
+  });
+});
+
+describe("usageView", () => {
+  it("hides a non-cloud account and clamps the last points", () => {
+    assert.equal(usageView({ entitled: false, budget: 15000, spent: 0, held: 0 }), null);
+    assert.deepEqual(
+      usageView({ entitled: true, budget: 0, spent: 0, held: 0, periodEnd: null }),
+      { budget: 0, spent: 0, held: 0, remaining: 0, periodEnd: null }
+    );
+    assert.equal(usageView({ entitled: true, budget: 100, spent: 90, held: 20 }).remaining, 0);
+    assert.deepEqual(
+      usageView({
+        entitled: true,
+        budget: "15000",
+        spent: "12400",
+        held: 50,
+        periodEnd: "2026-11-13T23:23:17.295Z",
+      }),
+      {
+        budget: 15000,
+        spent: 12400,
+        held: 50,
+        remaining: 2550,
+        periodEnd: "2026-11-13T23:23:17.295Z",
+      }
+    );
+    assert.equal(usageView({ entitled: true, budget: 10, periodEnd: "not-a-date" }).periodEnd, null);
+  });
+
+  it("reads the same period key as reserve and skips a content plan", async () => {
+    const calls = [];
+    const query = async (sql, params) => {
+      calls.push({ sql, params });
+      return { rows: [{ spent_points: "100", held_points: 5 }] };
+    };
+    const sub = {
+      plan_slug: "cloud",
+      status: "active",
+      period_start: "2026-10-13T23:23:17.295Z",
+      period_end: "2026-11-13T23:23:17.295Z",
+    };
+    const usage = await usageForAccount(query, "user_1", sub, { FF_CLOUD_AI_BUDGET: "15000" });
+    assert.deepEqual(usage, {
+      budget: 15000, spent: 100, held: 5, remaining: 14895,
+      periodEnd: "2026-11-13T23:23:17.295Z",
+    });
+    assert.match(calls[0].sql, /FROM ai_usage_period/);
+    assert.deepEqual(calls[0].params, ["user_1", "2026-10-13T23:23:17.295Z"]);
+    const empty = await usageForAccount(async () => ({ rows: [] }), "user_1", sub, { FF_CLOUD_AI_BUDGET: "15000" });
+    assert.equal(empty.spent, 0);
+    assert.equal(empty.held, 0);
+    assert.equal(empty.remaining, 15000);
+    const content = await usageForAccount(
+      query,
+      "user_1",
+      { plan_slug: "content", status: "active", period_end: "2999-01-01" },
+      {}
+    );
+    assert.equal(content, null);
+    assert.equal(calls.length, 1);
+    assert.equal(usagePeriodStart({ period_start: "nope" }), null);
+    assert.equal(
+      usagePeriodStart({}, Date.parse("2026-11-03T22:00:00.000Z")),
+      "2026-11-01T00:00:00.000Z"
+    );
   });
 });

@@ -23,12 +23,12 @@ import {
   techForAi,
 } from "./data.js";
 import { briefForGlobal } from "./problem-briefs.js";
-import { VisionRenderer } from "./vision.js?v=access-4";
+import { VisionRenderer } from "./vision.js?v=usage-1";
 import { applySplitRatio, bindAllVisionSplits } from "./side-split.js";
 import { initWorkshopDocks, resetWorkshopDocks } from "./dock-layout.js";
 import { bringCoInventorHome, initSecondScreen } from "./second-screen.js";
 import { claimOverlay } from "./overlay-queue.js";
-import { CoInventor, hangupVoice } from "./coinventor.js?v=stream-8";
+import { CoInventor, hangupVoice } from "./coinventor.js?v=usage-1";
 import { voiceHangsUpOnScreenChange } from "./voice-context.js?v=voice-19";
 import { pathwayTilesForHow } from "./coinventor-how-apply.js?v=stream-1";
 import {
@@ -90,6 +90,7 @@ import {
   whenAuthReady,
   resumePendingDeviceHandshake,
 } from "./auth.js";
+import { paintAiUsageMeters, refreshAiUsage } from "./ai-usage.js";
 import {
   parseDeepLink,
   hrefWithoutDeepLink,
@@ -5302,6 +5303,7 @@ async function loadForge() {
     showScreen("title");
     return;
   }
+  refreshAiUsage(apiFetch).catch(() => {});
   const tz = encodeURIComponent(browserTimeZone());
   let achievements = [];
   let catalog = [];
@@ -8362,6 +8364,7 @@ async function enforceHostedPlan({ mission } = {}) {
       if (!data.cloudAi) {
         hostedPlanState = { cloudAi: false, entitled: true, subscribeUrl: HOSTED_SUBSCRIBE_URL };
         hostedLaunchSettled = true;
+        paintAiUsageMeters(null);
         return false;
       }
       hostedPlanState = { cloudAi: true, entitled: false, subscribeUrl: HOSTED_SUBSCRIBE_URL };
@@ -8381,6 +8384,7 @@ async function enforceHostedPlan({ mission } = {}) {
         subscribeUrl: String(account.subscription.subscribeUrl || HOSTED_SUBSCRIBE_URL),
       };
       hostedLaunchSettled = true;
+      paintAiUsageMeters(account.usage ?? null);
       return false;
     })().catch(() => hostedPlanUnavailable()).finally(() => {
       hostedPlanCheck = null;

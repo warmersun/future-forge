@@ -120,7 +120,7 @@ The `cloudapi` function acts as the unified API gateway for Warmer Sun Cloud. It
 
 ##### 2. Account & Collector Cards (`portal/functions/account-routes.mjs`)
 - `GET /api/me`  
-  Returns learner identity, account standing, active subscription status, and remaining cloud AI quota points.
+  Returns learner identity, account standing, and active subscription status. A Cloud plan also includes `usage` (`budget`, `spent`, `held`, `remaining`, `periodEnd`). Other signed-in accounts get `usage: null`.
 - `GET /api/me/cards`  
   Returns the list of collector cards unlocked and claimed by the learner.
 - `POST /api/me/cards/:id/collect`  
@@ -195,7 +195,7 @@ The `cloudapi` function acts as the unified API gateway for Warmer Sun Cloud. It
 #### Why the Game App Runs as a Long-Running Process (Not Serverless)
 1. **Real-time WebSockets**: Future Forge includes cooperative multiplayer "Friends" rooms (`/ws`). Persistent WebSockets require a stateful process to hold room state, peer lists, and low-latency broadcast channels.
 2. **Disk Caching**: Synthesized speech audio is cached on disk under `data/tts-cache/` to eliminate duplicate xAI TTS costs across repeated quest play.
-3. **xAI API Execution & Live AI Search**: The game server directly handles prompt assembly, vision inspection, and real-time web & X search (`FF_AI_SEARCH=1` or `--ai-search`) using xAI Grok (`FF_XAI_API_KEY`). Co-inventor text stays one buffered JSON response unless `FF_CO_INVENT_STREAM=1` and the browser sends `Accept: text/event-stream` for a conversational mode. A separate switch, `FF_CO_INVENT_PROMPT_COMPACT=1`, uses the shorter conversational prompt. That prompt still includes the world-clock line and, for the tutor, the send-to-read rule that offers one matching lesson page and its illustration. Leave the compact switch unset. Voice stays on its own realtime path. Ordinary hosted conversation now forwards the reserved output-token ceiling into the provider call; a lesson-exempt tutor has no reservation, so that cap is recorded as absent. This is a budget correction, not a measured speedup. Live first-useful-sentence latency has not been measured. The portal HTTP route reads the same three flags. Portal rooms stay disabled.
+3. **xAI API Execution & Live AI Search**: The game server directly handles prompt assembly, vision inspection, and real-time web & X search (`FF_AI_SEARCH=1` or `--ai-search`) using xAI Grok (`FF_XAI_API_KEY`). Co-inventor text stays one buffered JSON response unless `FF_CO_INVENT_STREAM=1` and the browser sends `Accept: text/event-stream` for a conversational mode. A separate switch, `FF_CO_INVENT_PROMPT_COMPACT=1`, uses the shorter conversational prompt. That prompt still includes the world-clock line and, for the tutor, the send-to-read rule that offers one matching lesson page and its illustration. Leave the compact switch unset. Voice stays on its own realtime path. Ordinary hosted conversation, including the lesson tutor, forwards the reserved output-token ceiling into the provider call. This is a budget correction, not a measured speedup. Live first-useful-sentence latency has not been measured. The portal HTTP route reads the same three flags. Portal rooms stay disabled.
 4. **Cloudflare Tunnel Simplicity**: Running on the home laptop behind Cloudflare Tunnel provides stable public HTTPS and WSS endpoints without requiring open inbound router ports, static home IPs, or costly cloud server hosting.
 
 ---

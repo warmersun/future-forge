@@ -152,11 +152,6 @@ import {
   applyQuotaFailure,
 } from "./js/server/cloud-quota-client.mjs";
 import {
-  catalogLessonSkipsQuota,
-  hostedLessonSkipsQuota,
-  questIdFromContext,
-} from "./js/server/cloud-gate.mjs";
-import {
   portalOrigin,
   fetchPortalQuests,
   mergeQuestCatalog,
@@ -392,32 +387,6 @@ function gateExpensive(req, route, body = null) {
 }
 
 /**
- * Rate limit, then hosted subscription quota. Self-host skips the quota.
- * @param {import('node:http').IncomingMessage} req
- * @param {string} route
- * @param {object|null} body
- * @param {() => Promise<any>} call
- * @param {(result: any) => object} measure
- */
-async function catalogLessonForRequest(context, authorization) {
-  const id = questIdFromContext(context);
-  if (!id) return false;
-  try {
-    if (portalQuestsEnabled()) {
-      const got = await fetchPortalQuests({ id, authorization });
-      return catalogLessonSkipsQuota(got.data?.tile);
-    }
-    if (!QUESTS_REMOTE_URL) return false;
-    const remote = await fetchRemoteQuestCatalog(QUESTS_REMOTE_URL);
-    const quests = remote?.quests || [];
-    const tile = quests.find((q) => q && (q.id === id || q.mission?.id === id));
-    return catalogLessonSkipsQuota(tile);
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Official tutor notes come from the portal. Returns a deny result, or null
  * after replacing body.context.
  * @param {import('node:http').IncomingMessage} req
@@ -485,32 +454,18 @@ async function applyOfficialTutor(req, body) {
   return null;
 }
 
+/**
+ * Rate limit, then hosted subscription quota. Self-host skips the quota.
+ * Lesson tutor text takes the same reserve as the other co-inventor calls.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {string} route
+ * @param {object|null} body
+ * @param {() => Promise<any>} call
+ * @param {(result: any) => object} measure
+ */
 async function hostedAi(req, route, body, call, measure, turnLatency = null) {
   const gate = gateExpensive(req, route, body);
   if (!gate.ok) return { ok: false, gate };
-  if (CLOUD_AI && hostedLessonSkipsQuota(route, body)) {
-    const lesson = await catalogLessonForRequest(body?.context, req.headers.authorization || "");
-    if (lesson) {
-      const user = await verifyPortalUser({
-        authorization: req.headers.authorization || "",
-      });
-      if (!user) {
-        return {
-          ok: false,
-          gate: {
-            ok: false,
-            status: 401,
-            error: "sign_in_required",
-            message: "Sign in to use this lesson.",
-          },
-        };
-      }
-      // Lesson tutors are operator spend. No reservation, so the output cap is absent.
-      turnLatency?.noteOutputCap(null);
-      const result = await call();
-      return { ok: true, result, ip: gate.ip };
-    }
-  }
   const kind = quotaKindForRoute(route);
   const chars = kind === "tts" ? String(body?.text || "").length : 0;
   const inputTokens = kind === "text" ? estimateInputTokens(body) : 0;
