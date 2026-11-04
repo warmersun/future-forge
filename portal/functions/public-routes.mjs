@@ -17,6 +17,7 @@ import { sanitizeUsername, publicInventorPage } from "../../js/server/profile.mj
 import { portfolioFromTechIdLists, publicPortfolio } from "../../js/sim/portfolio.js";
 import { rankPlayers, rankBoard, attachBoardExtras, questHasLeaderboard } from "../../js/server/quest-board.mjs";
 import { contentEntitled } from "../../js/server/ai-quota.mjs";
+import { parseRatingIds, readTallies } from "../../js/server/quest-ratings.mjs";
 import { parseCardPath, renderCollectorCardPage, collectorImageHeaders } from "../../js/server/collector-cards.mjs";
 import { renderCollectorCardShare, SHARE_RENDER_VERSION } from "../../js/server/collector-card-share.mjs";
 import { cloudCorsOriginsFromEnv, cloudOriginAllowed, validPortalCorsOrigin } from "../../js/cloud/portal-origin.js";
@@ -162,6 +163,18 @@ export function createPublicRoutes({ env = process.env, db, verifyClerk, loadCat
         "Access-Control-Allow-Headers": "Authorization, Content-Type" } });
     if (request.method !== "GET" && !(isCard && request.method === "HEAD"))
       return json({ ok: false, error: "method_not_allowed" }, 405, { ...cors, Allow: isCard ? "GET, HEAD" : "GET" });
+    if (path === "/api/quests/ratings") {
+      const cx = database();
+      if (!cx) return reply({ ok: false, error: "db_unavailable" }, 503);
+      try {
+        const ident = await identity(request);
+        const ids = parseRatingIds(url.searchParams.get("ids"));
+        const result = await readTallies(cx, ids, ident.signedIn ? ident.userId : null);
+        return reply(result);
+      } catch {
+        return reply({ ok: false, error: "ratings_failed" }, 500);
+      }
+    }
     if (isCard) {
       const parsed = parseCardPath(path);
       if (!parsed || parsed.invalid) return cardMissing();

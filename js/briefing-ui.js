@@ -24,6 +24,7 @@ import {
   resolveBriefBeats,
   splitMarkdownSections,
 } from "./brief-beats.js";
+import { markQuestBriefed } from "./quest-ratings.js";
 
 const STORAGE_PREFIX = "ff.briefing.done.";
 const SPEAK_MIN = 12;
@@ -270,6 +271,7 @@ export function paintQuestBriefing(visionRoot, mission, opts = {}) {
   const place = String(mission?.place || "").trim();
   const globalId = String(opts.globalId || mission?.globalId || "").trim();
   const dismissed = isBriefingDismissed(missionId, opts.storage);
+  if (dismissed) markQuestBriefed(missionId);
 
   let rec = records.get(visionRoot);
   if (!rec || rec.fingerprint !== fingerprint) {
@@ -417,9 +419,7 @@ function onBriefAction(rec, action, indexRaw) {
       break;
     case "done":
     case "invent":
-      rec.mode = "off";
-      setBriefingDismissed(rec.missionId, true);
-      commit(rec);
+      finishBriefingWalk(rec);
       break;
     case "replay":
       rec.mode = "walk";
@@ -446,12 +446,17 @@ function step(rec, delta) {
   const next = rec.index + delta;
   if (next < 0) return;
   if (next >= rec.beats.length) {
-    rec.mode = "off";
-    setBriefingDismissed(rec.missionId, true);
-    commit(rec);
+    finishBriefingWalk(rec);
     return;
   }
   rec.index = next;
+  commit(rec);
+}
+
+function finishBriefingWalk(rec) {
+  rec.mode = "off";
+  setBriefingDismissed(rec.missionId, true);
+  markQuestBriefed(rec.missionId);
   commit(rec);
 }
 

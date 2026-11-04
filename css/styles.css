@@ -14511,3 +14511,147 @@ body.ff-second-pane > #side-coinventor {
 .crisis-introduction-lamp.red { color: #fca5a5; }
 .crisis-introduction-lamp.yellow { color: #fde68a; }
 .crisis-introduction-lamp.green { color: #86efac; }
+
+/* Public quest taste — thumbs down, thumbs up, two thumbs. Not performance stars. */
+.outcome-rate { display: flex; justify-content: center; margin: 0.35rem 0 1.1rem; }
+.outcome-rate[hidden] { display: none !important; }
+.quest-rate { display: flex; flex-direction: column; align-items: flex-start; gap: 0.28rem; margin-top: 0.15rem; }
+.outcome-rate .quest-rate { align-items: center; }
+.quest-rate-kicker { margin: 0; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+.quest-rate-row { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.quest-rate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-height: 2rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: rgba(232, 238, 249, 0.55);
+  cursor: pointer;
+  font: inherit;
+}
+.quest-rate-btn.is-locked { cursor: default; }
+.quest-rate-btn svg { width: 1.05rem; height: 1.05rem; fill: currentColor; display: block; }
+.quest-rate-btn svg.is-down { transform: rotate(180deg); transform-origin: center; }
+.quest-rate-love { display: inline-flex; align-items: center; }
+.quest-rate-love svg + svg { margin-left: -0.48rem; }
+.quest-rate-count { font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+.quest-rate-note { margin: 0; color: var(--text-mute); font-size: 0.75rem; }
+.quest-rate-btn.is-leading:not(.is-mine) { color: var(--text); border-color: rgba(232, 238, 249, 0.72); }
+.quest-rate-btn.is-mine {
+  color: #f8fafc;
+  background: rgba(248, 250, 252, 0.12);
+  border-color: rgba(248, 250, 252, 0.78);
+}
+.quest-rate-btn[data-rate="love"].is-mine,
+.quest-rate-btn.is-locked.is-mine { color: #ffe29a; border-color: #ffb347; background: rgba(255, 179, 71, 0.14); }
+.quest-rate--lg .quest-rate-btn { min-height: 2.65rem; padding: 0.35rem 0.9rem; }
+.quest-rate--lg .quest-rate-btn svg { width: 1.35rem; height: 1.35rem; }
+.quest-rate--lg .quest-rate-count { font-size: 0.95rem; }
+
+/* Catalog lists: rating and card tools sit under the card, inside its border, only while that border is lit. */
+.catalog-card-face {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  transition: transform 0.2s var(--ease), border-color 0.2s, box-shadow 0.2s, grid-template-rows 0.2s var(--ease);
+}
+.catalog-card-face:has(.challenge-card.solved) {
+  border-color: rgba(52, 211, 153, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.08);
+}
+.catalog-card-face:has(.is-suggested-lesson) {
+  border-color: rgba(253, 230, 138, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.12);
+}
+.catalog-card-face .catalog-play-card,
+.catalog-card-face .quest-module-card,
+.catalog-card-face .catalog-play-card:hover,
+.catalog-card-face .quest-module-card:hover {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.catalog-card-wrap:hover .catalog-card-face,
+.catalog-card-wrap:focus-within .catalog-card-face,
+.catalog-card-wrap.is-picked .catalog-card-face {
+  grid-template-rows: auto 1fr;
+  border-color: rgba(125, 211, 252, 0.95);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 28px rgba(56, 189, 248, 0.28);
+  transform: translateY(-3px);
+}
+.catalog-card-wrap:hover .card-visual img,
+.catalog-card-wrap:focus-within .card-visual img,
+.catalog-card-wrap.is-picked .card-visual img { transform: scale(1.04); }
+.catalog-card-tools {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0.85rem;
+  border-top: 0 solid var(--border);
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.catalog-card-wrap:hover .catalog-card-tools,
+.catalog-card-wrap:focus-within .catalog-card-tools,
+.catalog-card-wrap.is-picked .catalog-card-tools {
+  padding: 0.65rem 0.85rem 0.8rem;
+  border-top-width: 1px;
+  opacity: 1;
+  pointer-events: auto;
+}
+.catalog-card-face .quest-rate {
+  position: static;
+  align-items: center;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+.catalog-card-face .quest-rate-row { flex-wrap: nowrap; justify-content: center; }
+.catalog-card-face .quest-rate-note {
+  color: rgba(226, 232, 240, 0.82);
+  text-align: center;
+}
+.catalog-card-face .catalog-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.05rem 0.15rem;
+  margin: 0;
+}
+.catalog-card-face .catalog-card-actions .btn {
+  min-height: 0;
+  padding: 0.12rem 0.38rem;
+  border: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.84);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+.catalog-card-face .catalog-card-actions .btn:hover {
+  color: #f8fafc;
+  background: rgba(248, 250, 252, 0.08);
+}

@@ -370,6 +370,7 @@ export function isCloudApiPath(url) {
   if (path === "/api/report" || path.startsWith("/api/report/")) return true;
   if (path === "/api/board" || path.startsWith("/api/board/")) return true;
   if (path === "/api/device" || path.startsWith("/api/device/")) return true;
+  if (path === "/api/quests/ratings") return true;
   return false;
 }
 

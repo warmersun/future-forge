@@ -89,6 +89,9 @@ describe("isCloudApiPath", () => {
     assert.equal(isCloudApiPath("/api/co-invent"), false);
     assert.equal(isCloudApiPath("/api/co-invent-voice/session"), false);
     assert.equal(isCloudApiPath("/api/quests"), false);
+    assert.equal(isCloudApiPath("/api/quests/kiln-ferry"), false);
+    assert.equal(isCloudApiPath("/api/quests/ratings"), true);
+    assert.equal(isCloudApiPath("/api/quests/ratings?ids=q1"), true);
     assert.equal(isCloudApiPath("/api/rooms"), false);
   });
 });

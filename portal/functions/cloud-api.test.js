@@ -350,10 +350,18 @@ describe("Neon Cloud API", () => {
     assert.equal((await call(api, "/api/me/cards")).status, 401);
     assert.equal((await call(api, "/api/me/quests/q-1/score", "POST")).status, 401);
     assert.equal((await call(api, "/api/me/quests/q-1/still", "PUT")).status, 401);
+    assert.equal((await call(api, "/api/me/quests/q-1/briefed", "POST")).status, 401);
+    assert.equal((await call(api, "/api/me/quests/q-1/rating", "PUT")).status, 401);
     assert.equal((await call(api, "/api/me/ai/reserve", "POST", { body: { kind: "image" } })).status, 402);
     const preflight = await api.fetch(request("/api/me/quests/q-1/still", "OPTIONS", { headers: { Origin: "https://warmersun.com" } }));
     assert.equal(preflight.status, 204);
     assert.equal(preflight.headers.get("Access-Control-Allow-Methods"), "PUT, OPTIONS");
+    const ratePreflight = await api.fetch(request("/api/me/quests/q-1/rating", "OPTIONS", { headers: { Origin: "https://warmersun.com" } }));
+    assert.equal(ratePreflight.status, 204);
+    assert.equal(ratePreflight.headers.get("Access-Control-Allow-Methods"), "PUT, OPTIONS");
+    const briefedPreflight = await api.fetch(request("/api/me/quests/q-1/briefed", "OPTIONS", { headers: { Origin: "https://warmersun.com" } }));
+    assert.equal(briefedPreflight.status, 204);
+    assert.equal(briefedPreflight.headers.get("Access-Control-Allow-Methods"), "POST, OPTIONS");
     assert.equal((await call(api, "/api/me/pins", "GET", { headers: { Origin: "https://evil.example" } })).status, 403);
     assert.equal((await call(api, "/api/me/unknown")).status, 404);
   });

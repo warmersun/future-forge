@@ -29,6 +29,8 @@ function allowedMethods(path) {
   if (/^\/api\/me\/cards\/[^/]+\/collect$/.test(path)) return "POST";
   if (/^\/api\/me\/quests\/[^/]+\/score$/.test(path)) return "POST";
   if (/^\/api\/me\/quests\/[^/]+\/still$/.test(path)) return "PUT";
+  if (/^\/api\/me\/quests\/[^/]+\/briefed$/.test(path)) return "POST";
+  if (/^\/api\/me\/quests\/[^/]+\/rating$/.test(path)) return "PUT";
   return null;
 }
 

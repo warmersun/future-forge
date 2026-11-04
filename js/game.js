@@ -90,6 +90,14 @@ import {
   whenAuthReady,
   resumePendingDeviceHandshake,
 } from "./auth.js";
+import {
+  bindQuestRatingClicks,
+  markQuestBriefed,
+  ratingControlHtml,
+  readBriefedQuestIds,
+  refreshQuestRatingHosts,
+  setQuestRatingNotifier,
+} from "./quest-ratings.js";
 import { paintAiUsageMeters, refreshAiUsage } from "./ai-usage.js";
 import {
   parseDeepLink,
@@ -4085,6 +4093,7 @@ async function syncCloudProgress() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         solvedIds: [...state.solvedMissionIds],
+        briefedQuestIds: readBriefedQuestIds(),
         lastRun: readStashedLastRun(),
       }),
     });
@@ -7276,6 +7285,7 @@ function catalogCardHtml(entry, kind, opts = {}) {
     : "";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-catalog-id="${escapeHtml(entry.id)}">
+      <div class="catalog-card-face">
       <button type="button" class="challenge-card challenge-card-visual catalog-play-card ${
         solved ? "solved" : ""
       }${suggested ? " is-suggested-lesson" : ""}">
@@ -7302,38 +7312,36 @@ function catalogCardHtml(entry, kind, opts = {}) {
         </span>
         ${catalogAccessMarksHtml(catalogAccessKind(entry))}
       </button>
-      <div class="catalog-card-actions">
-        ${
-          state.developer
-            ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
-                entry.id
-              )}" title="Inspect tile JSON and Markdown">
-          Developer
-        </button>`
-            : ""
-        }
-        <button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(
-          entry.id || m?.id || ""
-        )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">
-          Copy Quest ID
-        </button>
-        <button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(
-          entry.id || m?.id || ""
-        )}" title="Copy a link that opens this Quest on this server">
-          Copy link
-        </button>
-        ${
-          questHasLeaderboard(entry.id || m?.id)
-            ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
-                entry.id || m?.id || ""
-              )}">Leaderboard</button>`
-            : ""
-        }
-        ${
-          entry.canRemove
-            ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
-            : ""
-        }
+      <div class="catalog-card-tools">
+        ${ratingControlHtml({ questId: entry.id || m?.id || "" })}
+        <div class="catalog-card-actions">
+          ${
+            state.developer
+              ? `<button type="button" class="btn btn-ghost btn-sm catalog-dev" data-catalog-dev-id="${escapeHtml(
+                  entry.id
+                )}" title="Inspect tile JSON and Markdown">Developer</button>`
+              : ""
+          }
+          <button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(
+            entry.id || m?.id || ""
+          )}" title="${isLibraryCatalogEntry(entry) ? "Copy this local Quest ID; other installations need the Quest published or imported" : "Copy this Quest ID to load it from Start a Quest"}">Copy Quest ID</button>
+          <button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(
+            entry.id || m?.id || ""
+          )}" title="Copy a link that opens this Quest on this server">Copy link</button>
+          ${
+            questHasLeaderboard(entry.id || m?.id)
+              ? `<button type="button" class="btn btn-ghost btn-sm catalog-board" data-catalog-board-id="${escapeHtml(
+                  entry.id || m?.id || ""
+                )}">Leaderboard</button>`
+              : ""
+          }
+          ${
+            entry.canRemove
+              ? `<button type="button" class="btn btn-ghost btn-sm catalog-remove" title="Remove from library">Remove</button>`
+              : ""
+          }
+        </div>
+      </div>
       </div>
     </div>`;
 }
@@ -7410,10 +7418,19 @@ function moduleCardHtml(group) {
           group.key
         )}" title="Inspect module JSON">Developer</button>`
       : "";
+  const moduleActions =
+    inspectBtn || group.wrapper?.id
+      ? `<div class="catalog-card-tools"><div class="catalog-card-actions">${inspectBtn}${
+          group.wrapper?.id
+            ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button><button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(group.wrapper.id)}" title="Copy a link that opens this module on this server">Copy link</button>`
+            : ""
+        }</div></div>`
+      : "";
   return `
     <div class="mission-card-wrap catalog-card-wrap" data-module-key="${escapeHtml(
       group.key
     )}">
+      <div class="catalog-card-face">
       <button type="button" class="challenge-card challenge-card-visual quest-module-card" data-module-key="${escapeHtml(
         group.key
       )}">
@@ -7432,15 +7449,8 @@ function moduleCardHtml(group) {
         </span>
         ${catalogAccessMarksHtml(catalogGroupAccessKinds(group))}
       </button>
-      ${
-        inspectBtn || group.wrapper?.id
-          ? `<div class="catalog-card-actions">${inspectBtn}${
-              group.wrapper?.id
-                ? `<button type="button" class="btn btn-ghost btn-sm catalog-copy-id" data-copy-quest-id="${escapeHtml(group.wrapper.id)}" title="Copy this module's Quest ID">Copy Quest ID</button><button type="button" class="btn btn-ghost btn-sm catalog-copy-link" data-copy-quest-link="${escapeHtml(group.wrapper.id)}" title="Copy a link that opens this module on this server">Copy link</button>`
-                : ""
-            }</div>`
-          : ""
-      }
+      ${moduleActions}
+      </div>
     </div>`;
 }
 
@@ -7482,10 +7492,31 @@ function moduleSummaryHtml(group) {
     </section>`;
 }
 
+/**
+ * On a touch screen the first tap lights the card and reveals its tools.
+ * The next tap opens it. A pointer hover lights the card without this step.
+ * @param {HTMLElement|null} wrap
+ * @param {Event} ev
+ */
+function pickCatalogCardFirst(wrap, ev) {
+  if (!wrap || !window.matchMedia("(hover: none)").matches) return false;
+  if (wrap.classList.contains("is-picked")) return false;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const scope = wrap.closest(".quest-catalog-grid") || document;
+  scope.querySelectorAll(".catalog-card-wrap.is-picked").forEach((el) => {
+    el.classList.remove("is-picked");
+  });
+  wrap.classList.add("is-picked");
+  return true;
+}
+
 function wireModuleCards(grid, kind, groups) {
   wireQuestIdCopyButtons(grid);
   grid.querySelectorAll(".quest-module-card").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (ev) => {
+      const wrap = btn.closest(".catalog-card-wrap");
+      if (pickCatalogCardFirst(wrap, ev)) return;
       openQuestCatalog(kind, { moduleKey: btn.dataset.moduleKey });
     });
   });
@@ -7618,10 +7649,12 @@ function paintCatalogEntries(grid, entries, kind, opts = {}) {
   }
 
   wireQuestIdCopyButtons(grid);
+  void refreshQuestRatingHosts(grid);
   grid.querySelectorAll(".catalog-card-wrap").forEach((wrap) => {
     const id = wrap.dataset.catalogId;
     const entry = flat.find((e) => e.id === id);
-    wrap.querySelector(".catalog-play-card")?.addEventListener("click", () => {
+    wrap.querySelector(".catalog-play-card")?.addEventListener("click", (ev) => {
+      if (pickCatalogCardFirst(wrap, ev)) return;
       void openCatalogEntry(entry);
     });
     wrap.querySelector(".catalog-dev")?.addEventListener("click", (ev) => {
@@ -18340,6 +18373,23 @@ function paintOutcomeSource() {
   }
 }
 
+function paintOutcomeRating(mission) {
+  const host = $("#outcome-rate");
+  if (!host) return;
+  const id = String(mission?.id || "").trim();
+  if (!id) {
+    host.hidden = true;
+    host.setAttribute("hidden", "");
+    host.innerHTML = "";
+    return;
+  }
+  markQuestBriefed(id);
+  host.hidden = false;
+  host.removeAttribute("hidden");
+  host.innerHTML = ratingControlHtml({ questId: id, large: true, eligible: true });
+  void refreshQuestRatingHosts(host);
+}
+
 function renderOutcome() {
   const tutorialPanel = $("#outcome-tutorial-done");
   if (tutorialPanel) {
@@ -18374,6 +18424,7 @@ function renderOutcome() {
   // Unmissable full / partial / collapse strip (meters vs mission goals)
   renderOutcomeResultBanner(o, m);
   paintOutcomeSource();
+  paintOutcomeRating(m);
 
   const starsEl = $("#outcome-stars");
   const report = o.runReport || state.runReport;
@@ -23883,6 +23934,8 @@ async function loadPredictionsFromServer() {
 
 export function init() {
   forgetLegacySparkKey();
+  setQuestRatingNotifier(flashToast);
+  bindQuestRatingClicks(document);
   bindGlossaryTaps(document);
   bindAllVisionSplits(document);
   initWorkshopDocks(document);

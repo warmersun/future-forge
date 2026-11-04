@@ -6,6 +6,12 @@ import { createHostedPackageResolverFromEnv } from "../../js/server/hosted-packa
 import { contentEntitled } from "../../js/server/ai-quota.mjs";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
 import { cloudWriteGate, parseImportBody, sanitizeLastRun } from "../../js/server/cloud-save.mjs";
+import {
+  matchQuestPlayerRoute,
+  parseRatingBody,
+  recordBriefed,
+  writeRating,
+} from "../../js/server/quest-ratings.mjs";
 import { parseRunsQuery, parseStartBody, publicRunRow } from "../../js/server/quest-log.mjs";
 import { parseShareBody, parseProfilePatch, profileNeedsDisplayName } from "../../js/server/profile.mjs";
 import { sanitizePinList } from "../../js/server/pins.mjs";
@@ -179,9 +185,11 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
   return {
     async fetch(request, identity) {
       const path = new URL(request.url).pathname;
+      const ratingRoute = matchQuestPlayerRoute(path);
       const spec = routes.get(path);
-      if (!spec) return null;
-      const methods = spec.filter((x) => typeof x === "string");
+      if (!ratingRoute && !spec) return null;
+      const methods = ratingRoute ? ratingRoute.methods : spec.filter((x) => typeof x === "string");
+      const maxBody = ratingRoute ? 4_000 : spec.find((x) => typeof x === "number");
       if (!methods.includes(request.method)) return reply({ ok: false, error: "method_not_allowed" }, 405, { Allow: methods.join(", ") });
       const gate = cloudWriteGate(identity ?? { enabled: true, missingToken: true }, { dbEnabled: Boolean(db) });
       const uid = normalizeClerkUserId(gate.userId);
@@ -190,7 +198,33 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
       }
       try {
         const url = new URL(request.url);
-        const body = methods.length && !["GET"].includes(request.method) ? await readJson(request, spec.find((x) => typeof x === "number")) : null;
+        const body = methods.length && !["GET"].includes(request.method) ? await readJson(request, maxBody) : null;
+        if (ratingRoute?.kind === "briefed") {
+          if (!ratingRoute.questId) return reply({ ok: false, error: "invalid_quest" }, 400);
+          await transaction(db, async (cx) => {
+            await ensureUser(cx, uid);
+            await recordBriefed(cx, uid, [ratingRoute.questId]);
+          });
+          return reply({ ok: true, questId: ratingRoute.questId, eligible: true });
+        }
+        if (ratingRoute?.kind === "rating") {
+          if (!ratingRoute.questId) return reply({ ok: false, error: "invalid_quest" }, 400);
+          const parsed = parseRatingBody(body);
+          if (!parsed.ok) return reply({ ok: false, error: "invalid_rating" }, 400);
+          const result = await transaction(db, async (cx) => {
+            await ensureUser(cx, uid);
+            return writeRating(cx, uid, ratingRoute.questId, parsed.rating);
+          });
+          if (!result.ok) return reply({ ok: false, error: result.error }, result.status);
+          return reply({
+            ok: true,
+            questId: result.questId,
+            mine: result.mine,
+            down: result.down,
+            up: result.up,
+            love: result.love,
+          });
+        }
         if (path === "/api/me/runs" && request.method === "GET") {
           const { kind, outcome, limit } = parseRunsQuery(url.searchParams);
           const args = [uid];
@@ -241,7 +275,8 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
             const lastRunStored = Boolean(parsed.lastRun && Number(count) === 0);
             const lastRunId = lastRunStored ? await putRunRow(cx, uid, parsed.lastRun, true) : null;
             const solvedIds = (await cx.query("SELECT quest_id FROM solved_quests WHERE clerk_user_id = $1 ORDER BY first_solved_at ASC", [uid])).rows.map((r) => String(r.quest_id));
-            return { inserted, total: solvedIds.length, lastRunStored, lastRunId, solvedIds };
+            const briefed = await recordBriefed(cx, uid, parsed.briefedQuestIds);
+            return { inserted, total: solvedIds.length, lastRunStored, lastRunId, solvedIds, briefed };
           });
           const unlocked = result.lastRunStored ? await grantAchievements(uid, parsed.lastRun, result.lastRunId) : [];
           return reply({ ok: true, ...result, unlocked });
@@ -339,7 +374,7 @@ export function createPlayerRoutes({ db, env = process.env, loadCatalog, fetchIm
           return reply({ ok: true, achievements, catalog: achievementCatalog(achievements.map((a) => a.code)), streak });
         }
       } catch (e) {
-        const failure = path.includes("run-state") ? "run_state_failed" : path.includes("pins") ? "pins_failed" : path.includes("profile") ? "profile_failed" : path.includes("achievements") ? "achievements_failed" : path.includes("share") ? "share_failed" : path.includes("import") ? "import_failed" : path.includes("start") || path === "/api/me/runs" && request.method === "POST" ? "run_failed" : "runs_failed";
+        const failure = path.includes("run-state") ? "run_state_failed" : path.includes("pins") ? "pins_failed" : path.includes("profile") ? "profile_failed" : path.includes("achievements") ? "achievements_failed" : path.includes("share") ? "share_failed" : path.includes("import") ? "import_failed" : path.endsWith("/rating") ? "rating_failed" : path.endsWith("/briefed") ? "briefed_failed" : path.includes("start") || path === "/api/me/runs" && request.method === "POST" ? "run_failed" : "runs_failed";
         if (e?.code === "23505" && path === "/api/me/profile") return reply({ ok: false, error: "username_taken" }, 409);
         if (e?.status === 413) return reply({ ok: false, error: failure }, 413);
         if (e?.status === 400) return reply({ ok: false, error: path === "/api/me/import" ? "invalid_json" : failure }, 400);

@@ -164,5 +164,11 @@ describe("parseImportBody", () => {
     assert.deepEqual(p.solvedIds, ["a", "b"]);
     assert.equal(p.lastRun.outcome, "hold");
     assert.equal(p.lastRun.kind, "lesson");
+    assert.deepEqual(p.briefedQuestIds, []);
+  });
+
+  it("keeps briefed quest ids for the rating gate", () => {
+    const p = parseImportBody({ briefedQuestIds: ["q1", "q1", "bad id"], solvedIds: [] });
+    assert.deepEqual(p.briefedQuestIds, ["q1"]);
   });
 });

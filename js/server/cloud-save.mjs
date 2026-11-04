@@ -165,12 +165,13 @@ export function cloudWriteGate(ident, opts = {}) {
 
 /**
  * @param {unknown} body
- * @returns {{ solvedIds: string[], lastRun: ReturnType<typeof sanitizeLastRun> }}
+ * @returns {{ solvedIds: string[], briefedQuestIds: string[], lastRun: ReturnType<typeof sanitizeLastRun> }}
  */
 export function parseImportBody(body) {
   const src = body && typeof body === "object" ? body : {};
   return {
     solvedIds: sanitizeSolvedIds(src.solvedIds || src.solved_ids),
+    briefedQuestIds: sanitizeSolvedIds(src.briefedQuestIds || src.briefed_quest_ids),
     lastRun: sanitizeLastRun(src.lastRun || src.last_run || null),
   };
 }
