@@ -25,7 +25,7 @@ export const DEFAULT_QUOTA_RATES = {
   textOutPerKTok: 6,
   image: 20,
   ttsPerKChar: 15,
-  voicePerMin: 160,
+  voicePerMin: 80,
 };
 
 export const DEFAULT_BUDGET_POINTS = 5000;
@@ -149,8 +149,8 @@ export function voiceMaxMsFromEnv(env = process.env) {
 }
 
 /**
- * Points for one started minute of a two-way voice call.
- * The configured integer is the whole charge; it is not doubled per direction.
+ * Points for one started minute. $0.08 is 80 points.
+ * The configured integer is the whole charge.
  * @param {{ voicePerMin?: number }} rates
  */
 export function voiceConnectedMinuteMicro(rates) {

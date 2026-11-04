@@ -366,8 +366,8 @@ export function createUsageTracker(opts = {}) {
       cost += (counters.ttsChars / 1e6) * prices.ttsPerMChar;
     }
     if (prices.voicePerMin != null) {
-      // xAI bills audio sent or received; count connected minutes × 2.
-      cost += (counters.voiceDurationMs / 60_000) * 2 * prices.voicePerMin;
+      // $0.08 per connected minute. Do not bill a second direction.
+      cost += (counters.voiceDurationMs / 60_000) * prices.voicePerMin;
     }
     counters.estimatedCostUsd = Math.round(cost * 1e6) / 1e6;
   }

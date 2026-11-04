@@ -301,7 +301,7 @@ describe("createUsageTracker", () => {
     assert.equal(tts[0].charCount, 1000);
   });
 
-  it("records ai_voice duration and conservative two-way cost", () => {
+  it("records ai_voice duration at $0.08 per connected minute", () => {
     tracker.record({
       type: "ai_voice",
       source: "ai",
@@ -319,8 +319,8 @@ describe("createUsageTracker", () => {
     assert.equal(s.lifetime.voiceSessions, 1);
     assert.equal(s.lifetime.voiceDurationMs, 60_000);
     assert.equal(s.lifetime.voiceErrors, 1);
-    // 1 min × 2 directions × $0.08
-    assert.equal(s.lifetime.estimatedCostUsd, 0.16);
+    // 1 connected minute × $0.08
+    assert.equal(s.lifetime.estimatedCostUsd, 0.08);
     assert.equal(s.prices.voicePerMin, 0.08);
   });
 

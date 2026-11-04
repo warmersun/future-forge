@@ -38,7 +38,7 @@ describe("quotaRatesFromEnv", () => {
       textOutPerKTok: 6,
       image: 20,
       ttsPerKChar: 15,
-      voicePerMin: 160,
+      voicePerMin: 80,
     });
     assert.equal(budgetMicroFromEnv({}), DEFAULT_BUDGET_POINTS);
     assert.equal(budgetMicroFromEnv({ FF_CLOUD_AI_BUDGET_USD: "5" }), DEFAULT_BUDGET_POINTS);
@@ -48,7 +48,7 @@ describe("quotaRatesFromEnv", () => {
     const rates = quotaRatesFromEnv({ FF_QUOTA_IMAGE: "40" });
     assert.equal(rates.image, 40);
     assert.equal(rates.textInPerKTok, 2);
-    assert.equal(rates.voicePerMin, 160);
+    assert.equal(rates.voicePerMin, 80);
   });
 
   it("a fraction falls back to the default", () => {
@@ -59,7 +59,7 @@ describe("quotaRatesFromEnv", () => {
     });
     assert.equal(rates.image, 20);
     assert.equal(rates.textInPerKTok, 2);
-    assert.equal(rates.voicePerMin, 160);
+    assert.equal(rates.voicePerMin, 80);
   });
 
   it("a rate of 0 quotes 0", () => {
@@ -89,10 +89,10 @@ describe("quotes", () => {
     assert.equal(quoteTtsMicro(0, RATES), 0);
     assert.equal(quoteTtsMicro(1, RATES), 15);
     assert.equal(quoteTtsMicro(1001, RATES), 30);
-    assert.equal(quoteVoiceMicro(1, RATES), 160);
-    assert.equal(quoteVoiceMicro(60_000, RATES), 160);
-    assert.equal(quoteVoiceMicro(60_001, RATES), 320);
-    assert.equal(voiceConnectedMinuteMicro(RATES), 160);
+    assert.equal(quoteVoiceMicro(1, RATES), 80);
+    assert.equal(quoteVoiceMicro(60_000, RATES), 80);
+    assert.equal(quoteVoiceMicro(60_001, RATES), 160);
+    assert.equal(voiceConnectedMinuteMicro(RATES), 80);
   });
 
   it("voice hold is one minute when the budget cannot cover it, else the lesser of remaining and the max session", () => {

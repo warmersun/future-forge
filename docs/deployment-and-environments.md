@@ -275,7 +275,7 @@ This section details all environment variables required for each running applica
 | `FF_QUOTA_TEXT_MAX_OUT` | **Required** | `8192` | Maximum output token ceiling allowed during single generation reservation. | Operator policy. Default `8192`. |
 | `FF_QUOTA_IMAGE` | **Required** | `20` | Quota points charged per generated image. | Operator policy. Default `20`. |
 | `FF_QUOTA_TTS_PER_KCHAR` | **Required** | `15` | Quota points charged per 1,000 characters of TTS audio. | Operator policy. Default `15`. |
-| `FF_QUOTA_VOICE_PER_MIN` | **Required** | `160` | Quota points charged per minute of real-time voice session. | Operator policy. Default `160`. |
+| `FF_QUOTA_VOICE_PER_MIN` | **Required** | `80` | Quota points charged per started minute of a voice session ($0.08). | Operator policy. Default `80`. |
 | `DATABASE_URL` | Automatic / Injected | `postgresql://...` | Connection-pooled PostgreSQL connection string (`ep-...-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require`). | **Automatically injected by Neon** into the function environment on the target branch. Also available in **Neon Console** &rarr; **Dashboard** &rarr; **Connection Details** (select "Pooled"). |
 | `AWS_ACCESS_KEY_ID` | Automatic / Optional | `nak_live_...` | S3 access key ID for accessing Neon private object buckets. | Generated in **Neon Console** &rarr; **Project Settings** &rarr; **Storage Keys** (injected automatically when using `@neon/functions`). |
 | `AWS_SECRET_ACCESS_KEY` | Automatic / Optional | `nsk_live_...` | S3 secret access key for accessing Neon private object buckets. | Generated in **Neon Console** &rarr; **Project Settings** &rarr; **Storage Keys**. |
