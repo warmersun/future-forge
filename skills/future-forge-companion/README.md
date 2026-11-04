@@ -4,7 +4,7 @@
 
 This package teaches **any** AI agent harness how to turn one public source into a Future Forge companion quest. The source is a YouTube video, a podcast episode, a blog or other article, or an X post.
 
-It does **not** relicense the Future Forge app. Only this skill tree is MIT.
+It does **not** relicense the Future Forge app. The app is GNU GPL version 3 or later. Only this skill tree is MIT.
 
 It also does not own the field rules. Those stay in the two skills it joins:
 

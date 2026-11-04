@@ -1,3 +1,22 @@
+/*
+Copyright © 2026 Warmer Sun Education, a sole proprietorship by Tamas Simon
+
+This file is part of Future Forge.
+
+Future Forge is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Future Forge is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 /**
  * Quest tile schema: parse, validate, normalize to runtime mission.
  * Spotlight tiles teach one emTech advance via a fictive local Quest.
@@ -45,6 +64,8 @@ export const CAPS = {
   overviewMd: 8_000,
   maxModuleLessons: 24,
   maxQuestTrends: TREND_CAPS.maxQuestTrends,
+  /** Author-chosen license label. Not the program's GPL. */
+  license: 2_000,
 };
 
 /**
@@ -794,7 +815,7 @@ export function validateQuestModule(tile, opts = {}) {
     author: tile.author && typeof tile.author === "object" ? tile.author : null,
     createdAt: String(tile.createdAt || new Date().toISOString()),
     tags: Array.isArray(tile.tags) ? tile.tags.map(String).slice(0, 20) : [],
-    license: String(tile.license || "").slice(0, 80),
+    license: String(tile.license || "").slice(0, CAPS.license),
   };
   if (spotlight) normalized.spotlight = spotlight;
   if (overviewMd) normalized.overviewMd = overviewMd.slice(0, CAPS.overviewMd);
@@ -1204,7 +1225,7 @@ export function validateQuestTile(tile, opts = {}) {
     author: tile.author && typeof tile.author === "object" ? tile.author : null,
     createdAt: String(tile.createdAt || new Date().toISOString()),
     tags: Array.isArray(tile.tags) ? tile.tags.map(String).slice(0, 20) : [],
-    license: String(tile.license || "").slice(0, 80),
+    license: String(tile.license || "").slice(0, CAPS.license),
     placement,
     spotlight,
     research,

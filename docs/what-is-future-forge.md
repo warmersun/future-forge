@@ -208,8 +208,8 @@ Future Forge is that rethink made concrete: the inventing practice for the missi
 
 Anyone who wants practice connecting technology to human problems — especially high-school seniors through early career, and curious generalists, not only specialists already deep in tech.
 
-- Non-commercial use (CC BY-NC-SA 4.0): [`LICENSE.md`](../LICENSE.md)  
-- School, commercial, or hosted use: [`COMMERCIAL.md`](../COMMERCIAL.md)
+- Program license (GNU GPL version 3 or later, including commercial use and education): [`LICENSE.md`](../LICENSE.md)
+- What that allows: [`COMMERCIAL.md`](../COMMERCIAL.md)
 
 ---
 
@@ -219,11 +219,11 @@ The operational map, with commands and field lists, is the handbook: [`future-fo
 
 ### Self-hosting
 
-`npm start` is the whole practice on a machine you control: the board, the co-inventor, vision, and multi-user rooms. Warmer Sun Cloud is optional. Unsigned play in the browser is complete. You may also run that process as a public server when you do not charge and you have no commercial intent — a free grant in [`COMMERCIAL.md`](../COMMERCIAL.md), next to a free grant for a meeting you yourself join. Install steps: [`README.md`](../README.md). Handbook: [Self-hosting](./future-forge.md#self-hosting).
+`npm start` is the whole practice on a machine you control: the board, the co-inventor, vision, and multi-user rooms. Warmer Sun Cloud is optional. Unsigned play in the browser is complete. You may also run that process as a public server, including for a school or a company. See [`COMMERCIAL.md`](../COMMERCIAL.md). Install steps: [`README.md`](../README.md). Handbook: [Self-hosting](./future-forge.md#self-hosting).
 
 ### Classes
 
-A class is a self-hosted game plus a folder of Quest files (`quests/`, or `FF_QUESTS_DIR`). Learners see those tiles first, marked External, including in a Friends room. A facilitator who participates and does not charge can host classmates under the meeting grant. A school, university, bootcamp, or training org — including a class server for enrolled learners — needs the paid **Education** license. The app has no roster or gradebook. The class is the people, the folder, and the session. Handbook: [Classes](./future-forge.md#classes).
+A class is a self-hosted game plus a folder of Quest files (`quests/`, or `FF_QUESTS_DIR`). Learners see those tiles first, marked External, including in a Friends room. A school, university, bootcamp, or training org may run that class server for enrolled learners. The GPL covers that use. The app has no roster or gradebook. The class is the people, the folder, and the session. Handbook: [Classes](./future-forge.md#classes).
 
 ### Learning quests
 

@@ -4,7 +4,7 @@
 
 This package teaches **any** AI agent harness how to research a recent emerging-technology (emTech) advance and write a portable **Quest tile** (JSON) for [Future Forge](https://github.com/warmersun/future-forge).
 
-It does **not** relicense the Future Forge app. Only this skill tree (and example tiles) are MIT.
+It does **not** relicense the Future Forge app. The app is GNU GPL version 3 or later. Only this skill tree (and example tiles) are MIT.
 
 ## Quick start
 

@@ -399,23 +399,20 @@ Do not commit secrets. Do not put API keys in the client or the git repo.
 
 ## License
 
-**Future Forge** by **Warmer Sun Education, a sole proprietorship by Tamas Simon** (© 2026) is licensed under  
-[**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International**](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0).
+**Future Forge** by **Warmer Sun Education, a sole proprietorship by Tamas Simon** (© 2026) is licensed under the [**GNU General Public License, version 3 or any later version**](https://www.gnu.org/licenses/gpl-3.0.html).
 
-| Use | Free? |
-|-----|--------|
-| **Non-commercial** copy, share, adapt (with attribution + share-alike) | **Yes** — CC BY-NC-SA 4.0 ([`LICENSE.md`](LICENSE.md)) |
-| **Host a meeting** (in person or online) where **you participate**; not charging for Future Forge | **Yes** — free grant in [`COMMERCIAL.md`](COMMERCIAL.md) |
-| **Run an online server** with **no commercial intent** and **not charging** | **Yes** — free grant in [`COMMERCIAL.md`](COMMERCIAL.md) |
-| **School / university / bootcamp / training org** | **No** — Education is commercial use; needs a paid license |
-| **Company / commercial / client work** | **No** — needs a paid commercial license |
-| **Paid cloud / multi-tenant / managed service** for others | **No** — needs a paid commercial license |
+| Use | Allowed? |
+|-----|----------|
+| Run, study, share, and adapt the program | **Yes** — GPLv3 or later ([`LICENSE.md`](LICENSE.md)) |
+| Commercial use, client work, a company | **Yes** |
+| School, university, bootcamp, training org | **Yes** |
+| Sell copies, support, or a hosted service | **Yes** — distributing the program carries the GPL conditions |
+| A separate paid copyright license | **Not required** |
 
-- Public license text and attribution: **[`LICENSE.md`](LICENSE.md)**  
-- Deed: https://creativecommons.org/licenses/by-nc-sa/4.0/  
-- Free grants + paid tiers (Education / Commercial / Cloud): **[`COMMERCIAL.md`](COMMERCIAL.md)**  
-- Source: https://github.com/warmersun/future-forge  
+- Public license text and attribution: **[`LICENSE.md`](LICENSE.md)**
+- Commercial use and education: **[`COMMERCIAL.md`](COMMERCIAL.md)**
+- Source: https://github.com/warmersun/future-forge
 
-If you are unsure, contact us — open a GitHub issue with subject **Commercial license**.
+Quest content an author writes keeps the license and copyright that author chooses. The portable skills under `skills/` are MIT.
 
-Content and art are development-time static assets; scenario text may be generated via the co-inventor when AI is available. AI providers’ terms apply to any keys you use.
+Files that are part of the program follow this license. AI providers’ terms apply to any keys you use.

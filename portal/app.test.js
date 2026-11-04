@@ -1,3 +1,22 @@
+/*
+Copyright © 2026 Warmer Sun Education, a sole proprietorship by Tamas Simon
+
+This file is part of Future Forge.
+
+Future Forge is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Future Forge is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -249,6 +268,18 @@ test("device callback completes with Clerk token then returns to allowed game UR
   assert.equal(ui.win.location.replaced, ret);
 });
 
+
+test("subscribe page allows commercial and education use of the software", async (t) => {
+  const ui = fakeUi("https://portal.example/subscribe");
+  const previous = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ clerk: { enabled: false } }) });
+  t.after(() => { globalThis.fetch = previous; });
+  startPortal(ui);
+  assert.match(ui.app.innerHTML, /GNU General Public License/);
+  assert.match(ui.app.innerHTML, /Commercial use and education use are allowed/);
+  assert.doesNotMatch(ui.app.innerHTML, /needs a paid license/);
+  await tick();
+});
 
 test("pricing mounts Clerk table and returns to the portal, not an app host", async (t) => {
   const ui = fakeUi("https://portal.example/subscribe");

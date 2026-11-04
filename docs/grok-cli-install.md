@@ -28,7 +28,7 @@ Future Forge is a local web game: one Node process serves the page, the AI co-in
 Source (public): https://github.com/warmersun/future-forge.git
 Branch: main
 
-License gate, before you install: personal play, a friends session this person joins, and a free server they do not charge for are allowed. If they want this for a school, university, bootcamp, company, client, or any paid hosting, stop and send them to https://github.com/warmersun/future-forge/blob/main/COMMERCIAL.md — a paid license, requested with a GitHub issue titled "Commercial license".
+License: GNU GPL version 3 or later. Personal play, friends, a school, a university, a company, a client, and paid hosting are all allowed. Do not stop an install because of who will use it. https://github.com/warmersun/future-forge/blob/main/LICENSE.md
 
 Where to install — ask first:
 
@@ -181,9 +181,9 @@ Then tell them, in plain language, how to add a quest and what the skills are fo
 
 - A quest tile is one JSON file. Put it in the `quests` folder and restart, and everyone on this server sees it in Library, including friends in a room. Import Quest on the home screen keeps a tile on that browser only.
 - A learning quest that includes lesson pages is one `.ffquest` file. Hand that file over and ask to side-load it. One-shot play uses `scripts/sideload-local-package.sh`. A package that should stay uses `data/sideload/` plus FF_QUESTS_DIR and FF_CONTENT_DIR.
-- Five authoring skills are linked for Grok in this folder. Next time they open `grok` here they can ask for a Quest (`future-forge-quest`), a predictions timeline (`future-forge-predictions`, side-loaded with FF_PREDICTIONS_FILE), a companion quest from a video, podcast, blog, or X post (`future-forge-companion`), a capability chart (`future-forge-trends`), or a collector card (`future-forge-collector-cards`). Grok should read that skill's SKILL.md and follow it. The skills are MIT. The game is not.
+- Five authoring skills are linked for Grok in this folder. Next time they open `grok` here they can ask for a Quest (`future-forge-quest`), a predictions timeline (`future-forge-predictions`, side-loaded with FF_PREDICTIONS_FILE), a companion quest from a video, podcast, blog, or X post (`future-forge-companion`), a capability chart (`future-forge-trends`), or a collector card (`future-forge-collector-cards`). Grok should read that skill's SKILL.md and follow it. The skills are MIT. The game is GPL version 3 or later.
 
-Close with one line: this setup is for them and for friends they play with; a school or company needs a separate license.
+Close with one line: this setup is theirs to use, including with friends, a school, or a company. The program is GPL version 3 or later.
 
 If they later change their mind, edit `.env` and the funnel flag in the script, then stop and start. Use only variable names from the catalog above.
 

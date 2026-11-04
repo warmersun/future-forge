@@ -21,9 +21,9 @@ Letter IDs that are **done** are in the repo. **Ready** means the next work is c
 
 **The product is for people.** Someone curious about emerging tech, a friend at Invent Night, a teenager who wants a practice, an adult who wants a daily invent. Direct to consumer. Warmer Sun Cloud is the **hosted account + catalog APIs** (portal); the playable SPA is **game**. Not a school platform.
 
-**The engine stays free.** Self-host, unsigned play, friends in a room, hex invent — that remains the CC / hobby path. Cloud is what you **cannot keep in one browser**: a name that follows you, a history, a paid catalog, a public scoreboard, AI that we pay for.
+**The engine stays free software.** Self-host, unsigned play, friends in a room, hex invent — the GNU GPL allows any purpose, including commercial use and education. Cloud is what you **cannot keep in one browser**: a name that follows you, a history, a paid catalog, a public scoreboard, AI that we pay for.
 
-**Do not build for classrooms.** No LMS, no roster, no assignments, no gradebook, no teacher dashboard, no “section 3B due Friday,” no Canvas/Google Classroom. If a school wants Future Forge, that is a **commercial license** (see `COMMERCIAL.md`), not a product surface we design around.
+**Do not build for classrooms.** No LMS, no roster, no assignments, no gradebook, no teacher dashboard, no “section 3B due Friday,” no Canvas/Google Classroom. A school may run the software under the GPL (see `COMMERCIAL.md`). That is not a product surface we design around.
 
 Orgs that pay are **companies, clubs that commercialize, consultancies, other hosts** — not an education SaaS detour.
 
@@ -39,7 +39,7 @@ Orgs that pay are **companies, clubs that commercialize, consultancies, other ho
 | Daily | A **Learning** module (`isLearningModule`), not a UTC rotation. Play it from the Learning hub. Ranked on that tile’s [D1](#D1) board. |
 | Lessons | Quest tiles with `isLearningModule`. Tutor UI gated by [A1](#A1). No paywall ([B1](#B1) todo). Cloud progress via [C1](#C1) / [C3](#C3). |
 | Friends | Rooms + WebSocket on **game**. Signed-in players send Clerk names ([E4](#E4)). Unsigned stays per-room names. |
-| Money | None in software. `COMMERCIAL.md` is a **license** conversation (self-host / education / commercial / cloud operator). Clerk Billing is unused. |
+| Money | None in software as a copyright fee. `COMMERCIAL.md` states that the GPL allows commercial use and education use. A hosted subscription is a service, not a copyright license. Clerk Billing is unused. |
 | Database | **Neon Postgres** (branch `proud-hill-53375382/main`, `us-east-2`; `DATABASE_URL` is injected into the Function). Cloud tables from `js/server/db/*.sql`. Usage JSONL is still only operator cost logs. |
 
 **Implementation default for almost everything below**
@@ -87,7 +87,7 @@ Three buckets. **Done** is in the repo or provisioned. **Ready** means a buildin
 | Neon agent skills | `.agents/skills/neon`, `neon-postgres` |
 | No ORM; Clerk = identity, Neon = Postgres only | [Decisions locked](#decisions-locked) |
 | Unsigned engine: localStorage progress, theme play, learning tiles, Friends WS, usage JSONL | existing **game** |
-| Paper licenses (self-host / education / commercial / cloud operator) | `COMMERCIAL.md` — [F1](#F1), [F3](#F3), [F4](#F4) as **contracts**, not Cloud UX |
+| Copyright | GNU GPL version 3 or later. No paid copyright license for self-host, education, or commercial use (`COMMERCIAL.md`). [F1](#F1)–[F4](#F4) are hosting and product notes, not a copyright gate. |
 | ToS / privacy that names Cloud stored runs | `warmersun.com/terms/`, `warmersun.com/privacy/` (effective 25 August 2026) |
 
 ### Ready (building blocks exist — write the feature)
@@ -330,20 +330,19 @@ There is no `GET /api/daily`. If marketing wants a ritual, put a **Learning** ti
 ---
 
 <a id="F"></a>
-## F. If an org wants a commercial license
+## F. If an org wants to run Future Forge
 
-This is **not** “add Classes.” It is money + rights, matching `COMMERCIAL.md`.
+This is **not** “add Classes.” Running the software, including for a company or a school, does not require a paid copyright license. See `COMMERCIAL.md`. Selling seats on Cloud is a service.
 
 <a id="F1"></a>
-### F1. They want to **self-host** (company, consultancy, paid workshop as a business) — **done** (paper in `COMMERCIAL.md`)
+### F1. They want to **self-host** (company, consultancy, paid workshop as a business)
 
-**Idea.** They run Node. They bring their own xAI key. They do not need our Cloud quest boards. They pay for the **right** to use Future Forge commercially (internal training, client workshops, embedding).
+**Idea.** They run Node. They bring their own xAI key. They do not need our Cloud quest boards. The GPL already allows that commercial use. They do not pay for a copyright license.
 
-**How.**  
-- License is a **contract + invoice**, not a Clerk plan. Spreadsheet / HelloSign / Stripe invoice is enough.  
-- Optional: a license key they put in `.env` (`FF_LICENSE_KEY`) that unlocks a watermark-free commercial build, or we just trust the contract (simpler, honest for v1).  
-- Their instance can disable Warmer Sun Cloud Sign in entirely (already the default without Clerk keys).  
-- We do **not** ship them an LMS. If they invent a teacher mode, that is their fork under the license.
+**How.**
+- No copyright contract is required to run it.
+- Their instance can disable Warmer Sun Cloud Sign in entirely (already the default without Clerk keys).
+- We do **not** ship them an LMS. If they invent a teacher mode, that is their fork under the GPL.
 
 <a id="F2"></a>
 ### F2. They want **seats on our Cloud** (company Invent Night, lab, studio) — **todo** (Clerk Orgs + Billing)
@@ -360,14 +359,14 @@ This is **not** “add Classes.” It is money + rights, matching `COMMERCIAL.md
 <a id="F3"></a>
 ### F3. They want to **resell hosting** (another cloud) — **done** (paper only)
 
-**Idea.** Cloud / Managed Service tier in `COMMERCIAL.md`. Rare. Contract + branding rules. They are not our consumer.
+**Idea.** Someone else hosts Future Forge for customers. The GPL allows that if they pass on the license and the source. They are not our consumer.
 
-**How.** Paper. Maybe a private source drop or a support retainer. Do not build multi-tenant white-label into v1 of Warmer Sun Cloud.
+**How.** A support retainer can be sold. It is not a copyright license. Do not build multi-tenant white-label into v1 of Warmer Sun Cloud.
 
 <a id="F4"></a>
-### F4. Education institutions — **done** (paper; no classroom UX)
+### F4. Education institutions — no classroom UX
 
-They need a paid **Education** license to self-host. We still **do not build classroom UX**. If a university wants seats on Cloud, treat them like [F2](#F2) (a company-shaped org) or send them to self-host. Do not grow a “for schools” SKU in the UI.
+They do **not** need a paid license to self-host. We still **do not build classroom UX**. If a university wants seats on Cloud, treat them like [F2](#F2) (a company-shaped org) or send them to self-host. Do not grow a “for schools” SKU in the UI.
 
 ---
 

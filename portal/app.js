@@ -1,3 +1,22 @@
+/*
+Copyright © 2026 Warmer Sun Education, a sole proprietorship by Tamas Simon
+
+This file is part of Future Forge.
+
+Future Forge is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Future Forge is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 // Portal-only SPA. Game UI and Cloud API requests remain on their own services.
 const BOUNCE_KEY = "ff-account-portal-bounce";
 const CLERK_APPEARANCE = {
@@ -165,8 +184,9 @@ const subscribe = `<div class="split" data-route="/subscribe"><section class="pr
     The co-inventor, images, voice, and speech are included. $49, billed monthly.</dd>
     <dt>The promise</dt><dd>You lead. The computer stays with you while you try a real place and see what holds.
     The computer does not do it for you.</dd></dl>
-  <p class="aside">The software is open source and free for personal use if you run it yourself.
-    Lessons need a sign-in. A school or a company running the software needs a paid license.</p>
+  <p class="aside">The software is free under the GNU General Public License, version 3 or later.
+    Commercial use and education use are allowed when you run it yourself.
+    This page is a paid hosting subscription for one person. Lessons on the hosted service need a sign-in.</p>
   <p class="links"><a href="https://warmersun.com/future-forge/get-started/">Run your own copy</a></p></section>
   <section class="checkout" aria-label="Subscribe"><p id="status" role="status">Loading the plan…</p>
   <div id="clerk-mount"></div></section></div>`;

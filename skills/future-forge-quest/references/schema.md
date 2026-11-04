@@ -322,6 +322,8 @@ Selection chip: **Sponsored · {name}**.
 | `titleImageUrl` | Optional `https://…` or `assets/…jpg\|png\|webp`. The companion stage uses it as the full-bleed background behind the claim. Omit it and the stage uses the theme postcard |
 | `author`, `tags`, `license`, `createdAt`, `version`, `mission.visionTheme` | Stored, never shown or read |
 
+`license` and `author` are the author's choice. Any license is allowed, including a license that is not the GNU GPL, or all rights reserved. Put the copyright notice in `author`. `license` is kept up to 2000 characters. The Future Forge program is GPL version 3 or later, and that license does not apply to the tile, the package, or lesson pages in the package. `"MIT"` in examples is one allowed choice, not a requirement.
+
 ## Field placement
 
 Optional fields (`resources`, `rules`, `grounding`, learning fields, sponsor fields, `briefBeats`, `titleImageUrl`) may sit at **tile top level** or under **`mission`**. Validation accepts both; runtime copies onto the mission.

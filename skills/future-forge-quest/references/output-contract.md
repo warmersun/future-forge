@@ -88,6 +88,8 @@ Recommended: always include **`grounding`** (fast-eval reads its first 3000 char
 }
 ```
 
+`license` and `author` are the author's own terms. `"MIT"` in the skeleton is an example. Any license is allowed, including one that is not the GNU GPL, or all rights reserved. The program's GPL does not apply to the tile.
+
 `title` / `summary` / `encourageCopy`: the instance, and an optional ask (see `SKILL.md` §4). Summary is short and shown whole on the banner. The ask may name the emTech, capability, and use case that fit.
 
 `suggested`: spotlight first, then 0–4 supporting emTechs (convergence partners; one aimed at the global meter for act two). Max 5; the economy lab plans with these ids.

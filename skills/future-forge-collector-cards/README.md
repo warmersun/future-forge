@@ -4,7 +4,7 @@
 
 This package teaches **any** AI agent harness how to research a real emerging-technology capability and write a **collector card** (collection card) JSON file for [Future Forge](https://github.com/warmersun/future-forge).
 
-Players open the issued link, collect the card into their library, and play it as a free reusable invention tile. It does **not** relicense the Future Forge app. Only this skill tree is MIT. The example cards live in the game repo at `cards/examples/`.
+Players open the issued link, collect the card into their library, and play it as a free reusable invention tile. It does **not** relicense the Future Forge app. The app is GNU GPL version 3 or later. Only this skill tree is MIT. The example cards live in the game repo at `cards/examples/`.
 
 ## Quick start
 

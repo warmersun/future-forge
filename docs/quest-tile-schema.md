@@ -355,6 +355,10 @@ Omit when unused. 1–3 named local rules already on the books (a lock, quota, o
 
 Headings `#`–`###`, paragraphs, `**bold**`, `*italic*`, lists, `https?` links. No raw HTML, images, or scripts.
 
-## License note
+## License and copyright
 
-Example tiles and the portable authoring skill under `skills/future-forge-quest/` are **MIT**. The Future Forge app itself may use a different license.
+`license` and `author` are the author's own terms. Any license is allowed, including one that is not the GNU GPL, or all rights reserved. The Future Forge program is GPL version 3 or later. That license does not apply to a quest tile, a quest package, or the lesson pages in a package. Playing the quest, or shipping it beside the program, does not relicense it.
+
+`license` is stored as written, up to 2000 characters. `author` is stored as given and is the place for the copyright notice. Neither field is shown to the player or read by the AI.
+
+Example tiles in this repo that say `"license": "MIT"` stay MIT. The portable authoring skill under `skills/future-forge-quest/` is MIT. Those are examples of an author-chosen license, not a requirement.

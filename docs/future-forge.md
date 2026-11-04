@@ -9,7 +9,7 @@ Player-facing copy calls this a practice, a session, a Quest, and Friends. It do
 The ways people run it:
 
 - [Self-hosting](#self-hosting) — `npm start` on your machine or a server you operate
-- [Classes](#classes) — a shared Quest folder and a room, with an Education license when a school teaches with it
+- [Classes](#classes) — a shared Quest folder and a room, including when a school teaches with it
 - [Learning quests](#learning-quests) — tutor, lesson pages, module progress
 - [Sponsored quests](#sponsored-quests) — a named partner, invent still required
 - [Multi-user sessions](#multi-user-sessions) — Friends rooms and hotseat
@@ -351,12 +351,7 @@ The practice is a Node process you run. `npm start` (`server.mjs`, port 8765) se
 
 Put that same process on a server when other people should reach it. Point `FF_JOIN_ORIGIN` at the public URL (a Tailscale Funnel host is the usual Friends path). Your SuperGrok session or `FF_XAI_API_KEY` stays on that server. Side-load your own Quests (`FF_QUESTS_DIR`), predictions bank (`FF_PREDICTIONS_FILE`), and trend catalog (`FF_TRENDS_REMOTE_URL`). Set `FF_QUESTS_REMOTE_URL=off` when the room should see only the tiles you placed in `quests/`.
 
-Two free grants sit beside the CC license ([COMMERCIAL.md](../COMMERCIAL.md)):
-
-- **A meeting you join.** In person or online, you participate, and you do not charge for Future Forge. Friends, family, classmates, a club.
-- **A server with no commercial intent.** You do not charge for access, seats, or hosting, and you do not market it as a paid or freemium product.
-
-A school, university, bootcamp, or training organization self-hosting for enrolled learners needs a paid **Education** license. That case is [Classes](#classes). A company, client engagement, or paid multi-tenant host needs **Commercial** or **Cloud**. License text: [LICENSE.md](../LICENSE.md) and [COMMERCIAL.md](../COMMERCIAL.md).
+The GPL allows this for any purpose, including a meeting, a public server, a school, and a company ([COMMERCIAL.md](../COMMERCIAL.md)). A school, university, bootcamp, or training organization may self-host for enrolled learners. That case is [Classes](#classes). A company or a paid host may run it too. License text: [LICENSE.md](../LICENSE.md).
 
 `npm run portal` is Warmer Sun Cloud’s API process (Clerk, Neon, quest boards). Render runs that. It is not required to self-host the practice, and it does not serve the game UI. Do not bind game and portal to the same port.
 
@@ -374,13 +369,13 @@ A class is people plus a Quest folder on a self-hosted game. It is not a separat
 
 **Import Quest…** on the title screen is the per-device alternative when you cannot put files on the server. The file lands in that browser’s Library.
 
-A facilitator who is in the room and is not charging can host classmates under the free meeting grant. Institutional teaching — a school, university, bootcamp, or training org, including a multi-user class server — needs the **Education** license. That license is what covers self-hosting for enrolled learners. See [COMMERCIAL.md](../COMMERCIAL.md).
+A school, university, bootcamp, or training org may self-host for enrolled learners, including a multi-user class server. The GPL covers that use. See [COMMERCIAL.md](../COMMERCIAL.md).
 
 ---
 
 ## Agent skills
 
-Five MIT skill packages live in [skills/](../skills/). They teach **any** agent harness how to research and author portable JSON. They do not relicense the app. The app stays CC BY-NC-SA 4.0; only the skill trees and their examples are MIT. Each package works by reading its `SKILL.md`. A symlink into a harness skills directory is optional.
+Five MIT skill packages live in [skills/](../skills/). They teach **any** agent harness how to research and author portable JSON. They do not relicense the app. The app is GNU GPL version 3 or later; only the skill trees and their examples are MIT. Each package works by reading its `SKILL.md`. A symlink into a harness skills directory is optional.
 
 In this checkout, quest, predictions, companion, and collector cards are also linked from `.grok/skills/` so agents here discover them. Capability trends are read from `skills/future-forge-trends/` directly.
 
@@ -445,7 +440,7 @@ Deploy sketch: the practice is a long-running Node process. Warmer Sun Cloud on 
 
 ### License
 
-Future Forge by Warmer Sun Education, a sole proprietorship by Tamas Simon (© 2026), is [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Non-commercial copy, share, and adapt are free with attribution and share-alike. Hosting a meeting you take part in, or running a server with no commercial intent and no charge, is a free grant. Schools, companies, client work, and paid multi-tenant hosting need a paid license. Text: [LICENSE.md](../LICENSE.md). Grants and paid tiers: [COMMERCIAL.md](../COMMERCIAL.md).
+Future Forge by Warmer Sun Education, a sole proprietorship by Tamas Simon (© 2026), is [GNU GPL version 3 or later](https://www.gnu.org/licenses/gpl-3.0.html). Commercial use and education use are allowed. Distributing the program carries the GPL conditions. Text: [LICENSE.md](../LICENSE.md) and [COMMERCIAL.md](../COMMERCIAL.md).
 
 The five authoring skills are MIT and may be reused on their own. AI providers’ terms apply to any keys you use.
 

@@ -4,7 +4,7 @@
 
 This package teaches **any** AI agent harness how to research dated technology predictions and write a portable **predictions bank** JSON file (`future-forge.predictions/v1`) that a [Future Forge](https://github.com/warmersun/future-forge) server side-loads.
 
-It does **not** relicense the Future Forge app. Only this skill tree (and example banks) are MIT.
+It does **not** relicense the Future Forge app. The app is GNU GPL version 3 or later. Only this skill tree (and example banks) are MIT.
 
 ## What the bank drives
 

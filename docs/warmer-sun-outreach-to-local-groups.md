@@ -5,6 +5,8 @@ September 2026
 
 This document is a synthesis of the conversation, not a transcript. It keeps the analysis, the mechanisms, the caveats on rates, and the recommendations that follow from them.
 
+> **License note (2026-11-03).** The public license is now the GNU GPL, version 3 or any later version. Commercial use and education use do not need a paid copyright license. The paid-license ladder later in this essay is superseded. See `LICENSE.md` and `COMMERCIAL.md`.
+
 ---
 
 ## 1. The question

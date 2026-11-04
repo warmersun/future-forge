@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "license": "CC-BY-NC-SA-4.0",
+  "license": "GPL-3.0-or-later",
   "description": "Inventing practice: invent with emerging technologies and an AI co-inventor",
   "engines": {
     "node": ">=20.9"
