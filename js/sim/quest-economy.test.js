@@ -118,6 +118,15 @@ describe("pickTechs / planPath", () => {
     assert.deepEqual(plan.pathways[1].reaches, ["global"]);
     assert.equal(plan.twoAct, true);
   });
+
+  it("supports the documented five tiles per pathway", () => {
+    const port = extractKnobs(MISSIONS.find((m) => m.id === "portside-floods"));
+    port.tilesPerPathway = 5;
+    const plan = planPath(port, ARCHETYPES[0]);
+    assert.deepEqual(plan.pathways.map((p) => p.tileCount), [5, 5]);
+    const result = simulateArchetype(port, ARCHETYPES[0]);
+    assert.deepEqual(result.pathways.map((p) => p.tileCount), [5, 5]);
+  });
 });
 
 describe("clockFacts", () => {
@@ -370,6 +379,13 @@ describe("heavyAiBill", () => {
 });
 
 describe("evaluateQuestEconomy", () => {
+  it("preserves tilesPerPathway when re-evaluating extracted knobs", () => {
+    const k = extractKnobs(loadGeneSeq(), { tilesPerPathway: 2 });
+    const report = evaluateQuestEconomy(k, { recommend: false });
+    assert.equal(report.knobs.tilesPerPathway, 2);
+    assert.equal(report.archetypes["solo-no-ai"].pathways[0].tileCount, 2);
+  });
+
   it("reports too_easy at quest level when only the no-AI solo path is too easy", () => {
     // Synthetic knobs — not the live gene-seq shelf. One cheap tile, deep wallet,
     // one soft meter: no-AI solves it in a single season with years and Budget to spare.

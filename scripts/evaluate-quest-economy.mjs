@@ -37,7 +37,22 @@ const args = parseArgs(process.argv.slice(2));
 const wantAll = Boolean(args.all);
 const wantWrite = Boolean(args.write);
 const wantJson = Boolean(args.json);
-const friendsSeats = args["friends-seats"] ? Number(args["friends-seats"]) : 3;
+const friendsSeats = Number(
+  args["friends-seats"] ??
+    args["friends-seat"] ??
+    args["friend-seats"] ??
+    args["freinds-seat"] ??
+    args["freinds-seats"] ??
+    2
+);
+const inventPerPathway = Number(
+  args["invent-per-pathway"] ??
+    args["invent-per-easing-pathway"] ??
+    args["tiles-per-pathway"] ??
+    args["pathway-tiles"] ??
+    args["tilesPerPathway"] ??
+    1
+);
 const fileArg = args._[0] || null;
 
 if (!wantAll && !fileArg) {
@@ -72,10 +87,10 @@ if (wantAll) {
   for (const row of cat.local) {
     if (row.kind === "quest" && row.tile) {
       targets.push({
-        label: row.rel,
+        label: row.rel || `local:${row.id}`,
         input: row.tile,
         rel: row.rel,
-        writable: true,
+        writable: row.writable,
       });
     }
   }
@@ -126,7 +141,7 @@ for (const spec of targets) {
     input = v;
     rel = path.relative(ROOT, abs).replace(/\\/g, "/");
   }
-  const report = evaluateQuestEconomy(input, { friendsSeats });
+  const report = evaluateQuestEconomy(input, { friendsSeats, tilesPerPathway: inventPerPathway });
   reports.push({ file: spec.label, report });
 
   if (wantWrite && report.recommendation?.needed) {
@@ -220,14 +235,22 @@ function parseArgs(argv) {
       break;
     }
     if (a.startsWith("--")) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("-")) {
-        out[key] = next;
-        i += 1;
+      let key = a.slice(2);
+      let val;
+      if (key.includes("=")) {
+        const eq = key.indexOf("=");
+        val = key.slice(eq + 1);
+        key = key.slice(0, eq);
       } else {
-        out[key] = true;
+        const next = argv[i + 1];
+        if (next && !next.startsWith("-")) {
+          val = next;
+          i += 1;
+        } else {
+          val = true;
+        }
       }
+      out[key] = val;
     } else if (a.startsWith("-") && a.length === 2) {
       out[a.slice(1)] = true;
     } else {

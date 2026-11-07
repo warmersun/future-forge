@@ -36,6 +36,7 @@ import { excerptFromBrief } from "/js/md-lite.js";
 const $ = (id) => document.getElementById(id);
 
 const seatsEl = $("econ-seats");
+const pathwayTilesEl = $("econ-pathway-tiles");
 const statusEl = $("econ-status");
 const pickEl = $("econ-pick");
 const hubEl = $("econ-hub");
@@ -45,6 +46,7 @@ const leaveBtn = $("econ-leave");
 const pickTitle = $("econ-pick-title");
 const pickBlurb = $("econ-pick-blurb");
 const selectedEl = $("econ-selected");
+const controlsEl = $("econ-controls");
 const heroEl = $("econ-hero");
 const setupEl = $("econ-setup");
 const playersEl = $("econ-players");
@@ -151,8 +153,8 @@ async function loadCatalog() {
 }
 
 function showResults(on) {
-  for (const el of [selectedEl, heroEl, setupEl, playersEl, vizEl, recEl]) {
-    if (!on) el.hidden = true;
+  for (const el of [selectedEl, controlsEl, heroEl, setupEl, playersEl, vizEl, recEl]) {
+    el.hidden = !on;
   }
   pickEl.hidden = on;
   if (leaveBtn) leaveBtn.hidden = !on;
@@ -562,8 +564,12 @@ function inputForEval() {
 function runEvaluate() {
   const input = inputForEval();
   if (!input) return;
-  const seats = Math.max(2, Math.min(6, Number(seatsEl.value) || 3));
-  lastReport = evaluateQuestEconomy(input, { friendsSeats: seats });
+  const seats = Math.max(2, Math.min(6, Number(seatsEl.value) || 2));
+  const pathwayTiles = Math.max(1, Math.min(5, Number(pathwayTilesEl?.value) || 1));
+  lastReport = evaluateQuestEconomy(input, {
+    friendsSeats: seats,
+    tilesPerPathway: pathwayTiles,
+  });
   if (!lastReport.archetypes[focusId]) focusId = "solo-no-ai";
   renderSelected();
   renderReport(lastReport);
@@ -577,6 +583,7 @@ function renderSelected() {
   const g = globalTitle(current.globalId);
   const place = current.place || current.mission?.place || "";
   selectedEl.hidden = false;
+  if (controlsEl) controlsEl.hidden = false;
   selectedEl.innerHTML = `
     <article class="econ-picked">
       <img src="${escapeAttr(problemVisualUrl(current.globalId))}" alt="" />
@@ -1251,7 +1258,19 @@ backBtn.addEventListener("click", () => {
   renderNav();
 });
 
+function normalizedControlValue(el) {
+  const min = Number(el.min);
+  const max = Number(el.max);
+  const value = el.value === "" ? min : Number(el.value);
+  return Math.max(min, Math.min(max, Math.round(Number.isFinite(value) ? value : min)));
+}
+
 seatsEl.addEventListener("change", () => {
+  seatsEl.value = String(normalizedControlValue(seatsEl));
+  if (current) runEvaluate();
+});
+pathwayTilesEl.addEventListener("change", () => {
+  pathwayTilesEl.value = String(normalizedControlValue(pathwayTilesEl));
   if (current) runEvaluate();
 });
 

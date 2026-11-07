@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import {
   listQuestEconomyFiles,
   listQuestEconomyCatalog,
+  loadQuestEconomyEntry,
   resolveQuestEconomyPath,
   writeQuestEconomyPatch,
 } from "./quest-economy.mjs";
@@ -70,6 +71,24 @@ describe("listQuestEconomyCatalog", () => {
 });
 
 describe("writeQuestEconomyPatch", () => {
+  it("does not let a configured library file path bypass read-only status", async () => {
+    const prior = process.env.FF_QUESTS_DIR;
+    process.env.FF_QUESTS_DIR = "quests";
+    try {
+      const entry = await loadQuestEconomyEntry(ROOT, { file: "quests/spotlight-gene-seq.json" });
+      assert.equal(entry.ok, true);
+      assert.equal(entry.writable, false);
+      const denied = await writeQuestEconomyPatch(ROOT, "quests/spotlight-gene-seq.json", {
+        resources: { apMax: 4 },
+      });
+      assert.equal(denied.ok, false);
+      assert.equal(denied.error, "configured_library_read_only");
+    } finally {
+      if (prior == null) delete process.env.FF_QUESTS_DIR;
+      else process.env.FF_QUESTS_DIR = prior;
+    }
+  });
+
   it("patches a copy under output/quests and validates", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ff-econ-"));
     const relDir = path.join("output", "quests", "tmp-econ-lab");
@@ -90,6 +109,12 @@ describe("writeQuestEconomyPatch", () => {
       const written = JSON.parse(fs.readFileSync(abs, "utf8"));
       assert.equal(written.resources.apMax, 3);
       assert.equal(written.mission.pressure.local.pressure, 3);
+      written.predictionBankId = "immutable-package-bank";
+      const bound = `${JSON.stringify(written)}\n`;
+      fs.writeFileSync(abs, bound);
+      const denied = await writeQuestEconomyPatch(ROOT, rel, { resources: { apMax: 4 } });
+      assert.equal(denied.error, "package_read_only");
+      assert.equal(fs.readFileSync(abs, "utf8"), bound);
     } finally {
       fs.rmSync(absDir, { recursive: true, force: true });
       try {

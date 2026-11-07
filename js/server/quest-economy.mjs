@@ -26,6 +26,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MIME } from "./static.mjs";
+import { resolveQuestsDir, scanQuestsFolder } from "../quests-folder.mjs";
+import { registerPackagesDir, resolveQuestPackagesDir } from "./quest-package-resolver.mjs";
 import { readBody, sendJson, errorStatus } from "./read-body.mjs";
 
 export const QUEST_WRITE_PREFIXES = ["quests", "output/quests"];
@@ -175,8 +177,17 @@ function slimCatalogRow(row) {
  * Library files + remote warmersun catalog + built-in theme missions.
  * @param {string} root
  */
-export async function listQuestEconomyCatalog(root) {
-  const files = await listQuestEconomyFiles(root);
+export async function listQuestEconomyCatalog(root, opts = {}) {
+  // An explicit Library replaces the repository's development files, just as in
+  // /api/quests. Never turn its operator-configured path into a write capability.
+  const configured = Boolean(String(process.env.FF_QUESTS_DIR || "").trim());
+  const registry = configured
+    ? opts.packageRegistry || registerPackagesDir(resolveQuestPackagesDir(root)).registry
+    : null;
+  const scanned = configured
+    ? await scanQuestsFolder(resolveQuestsDir(root), { packageRegistry: registry })
+    : null;
+  const files = configured ? [] : await listQuestEconomyFiles(root);
   /** @type {object[]} */
   const local = [];
   for (const row of files) {
@@ -185,7 +196,7 @@ export async function listQuestEconomyCatalog(root) {
     const tile = got.ok ? got.tile : null;
     local.push({
       source: "local",
-      writable: row.kind === "quest",
+      writable: row.kind === "quest" && !tile?.predictionBankId,
       id: row.id,
       title: row.title,
       kind: row.kind,
@@ -200,6 +211,19 @@ export async function listQuestEconomyCatalog(root) {
       module: tile?.module || tile?.mission?.module || "",
       lessons: tile?.lessons || [],
       coverImageUrl: tile?.coverImageUrl || "",
+    });
+  }
+
+  for (const row of scanned?.quests || []) {
+    const tile = row.tile || null;
+    local.push({
+      ...row,
+      source: "local",
+      writable: false,
+      rel: null,
+      file: null,
+      tile,
+      mission: row.mission || tile?.mission || null,
     });
   }
 
@@ -258,10 +282,11 @@ export async function listQuestEconomyCatalog(root) {
  * @param {string} root
  * @param {{ source?: string, id?: string, file?: string }} query
  */
-export async function loadQuestEconomyEntry(root, query = {}) {
+export async function loadQuestEconomyEntry(root, query = {}, opts = {}) {
   const source = String(query.source || "").trim();
   const id = String(query.id || "").trim();
   const file = String(query.file || query.rel || "").trim();
+  const configuredLibrary = Boolean(String(process.env.FF_QUESTS_DIR || "").trim());
   if (file || source === "local") {
     const rel = file || "";
     if (rel) {
@@ -270,7 +295,7 @@ export async function loadQuestEconomyEntry(root, query = {}) {
       return {
         ok: true,
         source: "local",
-        writable: true,
+        writable: !configuredLibrary && !got.tile?.predictionBankId,
         rel: got.rel,
         id: got.tile?.id || got.tile?.mission?.id || "",
         tile: got.tile,
@@ -278,7 +303,11 @@ export async function loadQuestEconomyEntry(root, query = {}) {
       };
     }
   }
-  const cat = await listQuestEconomyCatalog(root);
+  const cat = await listQuestEconomyCatalog(root, opts);
+  if (!source && id) {
+    const hit = cat.local.find((t) => t.id === id);
+    if (hit) return { ok: true, ...hit };
+  }
   if (source === "theme" || (!source && id && cat.themes.some((t) => t.id === id))) {
     const hit = cat.themes.find((t) => t.id === id);
     if (!hit) return { ok: false, error: "not_found" };
@@ -302,8 +331,8 @@ export async function loadQuestEconomyEntry(root, query = {}) {
  * @param {string} root
  * @param {{ source: string, id: string }} spec
  */
-export async function copyQuestEconomyToLibrary(root, spec) {
-  const loaded = await loadQuestEconomyEntry(root, spec);
+export async function copyQuestEconomyToLibrary(root, spec, opts = {}) {
+  const loaded = await loadQuestEconomyEntry(root, spec, opts);
   if (!loaded.ok) return loaded;
   if (loaded.source === "theme") return { ok: false, error: "theme_not_copyable" };
   const tile =
@@ -319,6 +348,9 @@ export async function copyQuestEconomyToLibrary(root, spec) {
           mission: loaded.mission,
         }
       : null);
+  if (tile?.predictionBankId || loaded.mission?.packageRef) {
+    return { ok: false, error: "package_read_only" };
+  }
   if (!tile || tile.kind === "module") {
     return { ok: false, error: "not_copyable" };
   }
@@ -361,6 +393,9 @@ export function readQuestEconomyFile(root, rel) {
  * @param {object} patch
  */
 export async function writeQuestEconomyPatch(root, rel, patch) {
+  if (String(process.env.FF_QUESTS_DIR || "").trim()) {
+    return { ok: false, error: "configured_library_read_only" };
+  }
   const resolved = resolveQuestEconomyPath(root, rel);
   if (!resolved.ok) return resolved;
   if (!fs.existsSync(resolved.abs)) return { ok: false, error: "not_found" };
@@ -375,6 +410,9 @@ export async function writeQuestEconomyPatch(root, rel, patch) {
   if (!parsed.ok) return { ok: false, error: parsed.error || "invalid_json" };
   if (parsed.value?.kind === "module") {
     return { ok: false, error: "module_not_playable" };
+  }
+  if (parsed.value?.predictionBankId) {
+    return { ok: false, error: "package_read_only" };
   }
   const next = applyEconomyPatchToTile(parsed.value, patch || {});
   const v = validateQuestDocument(next);
@@ -459,7 +497,7 @@ export async function handleQuestEconomyHttp(req, res, opts = {}) {
       const id = url.searchParams.get("id");
       const source = url.searchParams.get("source");
       if (file || id) {
-        const got = await loadQuestEconomyEntry(root, { file, id, source, rel: file });
+        const got = await loadQuestEconomyEntry(root, { file, id, source, rel: file }, opts);
         if (!got.ok) {
           sendJson(res, got.error === "not_found" ? 404 : 400, got);
           return true;
@@ -478,7 +516,7 @@ export async function handleQuestEconomyHttp(req, res, opts = {}) {
         });
         return true;
       }
-      const cat = await listQuestEconomyCatalog(root);
+      const cat = await listQuestEconomyCatalog(root, opts);
       sendJson(res, 200, {
         ok: true,
         files: cat.local.map(slimCatalogRow),
@@ -498,7 +536,7 @@ export async function handleQuestEconomyHttp(req, res, opts = {}) {
         const w = await copyQuestEconomyToLibrary(root, {
           source: body.source,
           id: body.id,
-        });
+        }, opts);
         sendJson(res, w.ok ? 200 : 400, w);
         return true;
       }

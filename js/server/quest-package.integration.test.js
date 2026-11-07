@@ -109,9 +109,32 @@ it("two local packages with identical bank ids keep separate worlds through the 
     const catalog = await (await fetch(`${origin}/api/quests`)).json();
     assert.equal(catalog.quests.filter((entry) => entry.id.startsWith("package-dock-")).length, 2,
       JSON.stringify({ ids: catalog.quests.map((entry) => entry.id), errors: catalog.errors }));
+    const labCatalog = await (await fetch(`${origin}/api/developer/quest-economy`)).json();
+    assert.deepEqual(labCatalog.local.map((entry) => entry.id).sort(),
+      ["package-dock-a", "package-dock-b"]);
+    for (const entry of labCatalog.local) {
+      assert.equal(entry.writable, false);
+      assert.equal(entry.rel, null);
+      assert.equal(entry.file, null);
+    }
     const seen = [];
     for (const suffix of ["a", "b"]) {
       const id = `package-dock-${suffix}`;
+      for (const query of [`id=${id}`, `source=local&id=${id}`]) {
+        const response = await fetch(`${origin}/api/developer/quest-economy?${query}`);
+        assert.equal(response.status, 200);
+        const lab = await response.json();
+        assert.equal(lab.id, id);
+        assert.equal(lab.tile.predictionBankId, originalBank.id);
+        assert.equal(lab.writable, false);
+      }
+      const copy = await fetch(`${origin}/api/developer/quest-economy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ copyToLibrary: true, source: "local", id }),
+      });
+      assert.equal(copy.status, 400);
+      assert.equal((await copy.json()).error, "package_read_only");
       const detail = await (await fetch(`${origin}/api/quests/${id}`)).json();
       assert.equal(detail.ok, true, JSON.stringify(detail));
       // Use the same normalization at catalog selection and start as game.js;

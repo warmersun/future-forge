@@ -3216,6 +3216,7 @@ const server = http.createServer(async (req, res) => {
     await handleQuestEconomyHttp(req, res, {
       root: ROOT,
       developer: DEVELOPER_MODE,
+      packageRegistry: localPackageRegistry.registry,
     })
   ) {
     return;

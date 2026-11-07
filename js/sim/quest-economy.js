@@ -39,6 +39,13 @@ import { applyAction } from "./actions.js";
 import { createSimState } from "./state.js";
 import { isAiSeasonTaxMode } from "./ai-tax.js";
 
+export const MAX_TILES_PER_PATHWAY = 5;
+
+function normalizedTilesPerPathway(value, fallback = 1) {
+  const normalized = Number.isFinite(Number(value)) && value != null ? Number(value) : fallback;
+  return Math.max(1, Math.min(MAX_TILES_PER_PATHWAY, Math.round(normalized) || 1));
+}
+
 export const ARCHETYPES = [
   {
     id: "solo-no-ai",
@@ -166,6 +173,13 @@ export function extractKnobs(input, overrides = {}) {
     Number(missionRaw.collapseYear) || (GAME.startYear || 2026) + 8;
   let startYear = Number(missionRaw.startYear) || GAME.startYear || 2026;
   let yearsPerTurn = Number(missionRaw.yearsPerTurn) || GAME.yearsPerTurn || 2;
+  let tilesPerPathway = Number(
+    missionRaw.tilesPerPathway ??
+      missionRaw.pathwayTiles ??
+      missionRaw.inventTilesPerPathway ??
+      1
+  );
+  if (!Number.isFinite(tilesPerPathway) || tilesPerPathway < 1) tilesPerPathway = 1;
 
   if (overrides.apMax != null) apMax = Number(overrides.apMax);
   if (overrides.startingBudget != null) budget = Number(overrides.startingBudget);
@@ -173,6 +187,9 @@ export function extractKnobs(input, overrides = {}) {
   if (overrides.collapseYear != null) collapseYear = Number(overrides.collapseYear);
   if (overrides.startYear != null) startYear = Number(overrides.startYear);
   if (overrides.yearsPerTurn != null) yearsPerTurn = Number(overrides.yearsPerTurn);
+  if (overrides.tilesPerPathway != null) tilesPerPathway = Number(overrides.tilesPerPathway);
+  if (overrides.pathwayTiles != null) tilesPerPathway = Number(overrides.pathwayTiles);
+  if (overrides.inventTilesPerPathway != null) tilesPerPathway = Number(overrides.inventTilesPerPathway);
 
   if (overrides.pressure && typeof overrides.pressure === "object") {
     for (const m of meters) {
@@ -206,6 +223,7 @@ export function extractKnobs(input, overrides = {}) {
     startYear,
     collapseYear,
     yearsPerTurn,
+    tilesPerPathway: normalizedTilesPerPathway(tilesPerPathway),
     apMax: Math.max(0, Math.round(Number(apMax) || 0)),
     budget: Math.max(0, Math.round(Number(budget) || 0)),
     will: Math.max(0, Math.round(Number(will) || 0)),
@@ -273,7 +291,8 @@ function worldsCompatible(a, b) {
  * @param {number} n
  */
 export function pickTechs(suggested, n) {
-  const want = Math.max(1, Math.min(4, Math.round(Number(n) || 1)));
+  const normalizedN = Number.isFinite(Number(n)) && n != null ? Number(n) : 1;
+  const want = Math.max(1, Math.min(10, Math.round(normalizedN) || 1));
   const out = [];
   const seen = new Set();
   const add = (t) => {
@@ -324,8 +343,24 @@ function yieldForReaches(band, reaches) {
  * @param {object} knobs
  * @param {object} archetype
  */
-export function planPath(knobs, archetype) {
+export function planPath(knobs, archetype, optsOrTiles = {}) {
   const meters = knobs.meters || [];
+  let tilesPerPathway = 1;
+  if (typeof optsOrTiles === "number") {
+    tilesPerPathway = optsOrTiles;
+  } else if (optsOrTiles && typeof optsOrTiles === "object") {
+    tilesPerPathway =
+      optsOrTiles.tilesPerPathway ??
+      optsOrTiles.pathwayTiles ??
+      optsOrTiles.inventTilesPerPathway ??
+      optsOrTiles.tiles ??
+      knobs?.tilesPerPathway ??
+      1;
+  } else {
+    tilesPerPathway = knobs?.tilesPerPathway ?? 1;
+  }
+  if (!Number.isFinite(tilesPerPathway) || tilesPerPathway < 1) tilesPerPathway = 1;
+  tilesPerPathway = normalizedTilesPerPathway(tilesPerPathway);
   const band = yieldBandFor(archetype);
   const roles = meters.map((m) => m.role);
   const hasLocal = roles.includes("local");
@@ -336,20 +371,20 @@ export function planPath(knobs, archetype) {
     const localReaches = ["local", ...(hasSupport ? ["support"] : [])];
     pathways.push({
       id: "p1",
-      tileCount: 1,
+      tileCount: tilesPerPathway,
       reaches: localReaches,
       yield: yieldForReaches(band, localReaches),
     });
     pathways.push({
       id: "p2",
-      tileCount: 1,
+      tileCount: tilesPerPathway,
       reaches: ["global"],
       yield: yieldForReaches(band, ["global"]),
     });
   } else {
     pathways.push({
       id: "p1",
-      tileCount: 1,
+      tileCount: tilesPerPathway,
       reaches: [...roles],
       yield: yieldForReaches(band, roles),
     });
@@ -427,6 +462,7 @@ function bindPathwaysToTechs(plan, techs) {
   const pathways = (plan.pathways || []).map((p, idx) => {
     const n = Math.max(1, p.tileCount || 1);
     const slice = techs.slice(i, i + n);
+    if (!slice.length) return null;
     i += slice.length;
     return {
       id: p.id || `p${idx + 1}`,
@@ -435,7 +471,7 @@ function bindPathwaysToTechs(plan, techs) {
       yield: { ...p.yield },
       tiles: slice.map((t) => ({ id: t.id, name: t.name })),
     };
-  });
+  }).filter((p) => p !== null);
   if (i < techs.length && pathways[0]) {
     for (const t of techs.slice(i)) {
       pathways[0].tiles.push({ id: t.id, name: t.name });
@@ -632,6 +668,7 @@ function toRuntimeMission(knobs) {
     startYear: knobs.startYear,
     collapseYear: knobs.collapseYear,
     yearsPerTurn: knobs.yearsPerTurn,
+    tilesPerPathway: knobs.tilesPerPathway,
     pressure: { ...knobs.pressure },
     pressureRise: { ...knobs.pressureRise },
     winMax: { ...knobs.winMax },
@@ -1181,8 +1218,13 @@ function defaultArchetypes(opts = {}) {
 export function evaluateQuestEconomy(input, opts = {}) {
   const knobs =
     input?.meters && input?.pressure && input?.apMax != null
-      ? { ...input, ...knobOverrides(input, opts.overrides) }
+      ? { ...input, ...knobOverrides(input, opts.overrides || {}) }
       : extractKnobs(input, opts.overrides || {});
+  if (opts.tilesPerPathway != null || opts.pathwayTiles != null || opts.inventTilesPerPathway != null) {
+    const v =
+      opts.tilesPerPathway ?? opts.pathwayTiles ?? opts.inventTilesPerPathway;
+    knobs.tilesPerPathway = normalizedTilesPerPathway(v);
+  }
   const archetypes = opts.archetypes || defaultArchetypes(opts);
   /** @type {Record<string, object>} */
   const byId = {};
@@ -1252,6 +1294,7 @@ function knobsToPseudoMission(knobs) {
     startYear: knobs.startYear,
     collapseYear: knobs.collapseYear,
     yearsPerTurn: knobs.yearsPerTurn,
+    tilesPerPathway: normalizedTilesPerPathway(knobs.tilesPerPathway),
     pressure,
     suggested: knobs.suggested,
     resources: {

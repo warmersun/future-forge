@@ -29,11 +29,15 @@ npm run economy:quest -- path/to/quest.json
 npm run economy:quest -- --all
 npm run economy:quest -- path/to/quest.json --json
 npm run economy:quest -- path/to/quest.json --write
+# invent tiles per easing pathway (default 1) and Friends seats (default 2)
+npm run economy:quest -- --invent-per-pathway=1 --friends-seats=2 path/to/quest.json
 ```
 
 `--all` evaluates local `quests/` plus the remote Sponsored / Learning catalog (skips `kind: "module"` wrappers). `--write` applies the recommended patch **only** to allowlisted local files (`quests/` and `output/quests/`), then you should re-run `validate:quest`.
 
-`--friends-seats N` (2–6, default 3) is recorded on Friends archetypes. The scripted Friends path is still one wrap analog, not a live multi-seat table.
+`--friends-seats N` (2–6, default 2) is recorded on Friends archetypes. The scripted Friends path is still one wrap analog, not a live multi-seat table.
+
+`--invent-per-pathway N` (1–5, default 1) changes how many invent tiles each easing pathway needs before it pays out. Use a higher N when one tile should not be enough to ease a crisis.
 
 ### Browser lab
 
@@ -45,6 +49,8 @@ npm run start:developer
 Off unless `--developer` / `--dev` / `FF_DEVELOPER=1`. Production `npm start` must leave this off — the HTTP API 404s.
 
 Pick a Quest the same way as the app (Themes, Sponsored, Learning, Library). The lab evaluates in the browser; **Write into file** only works for Library / `output/quests/` JSON. Theme pack and remote catalog tiles are evaluate-only until **Copy to Library**.
+
+When `FF_QUESTS_DIR` is set (including `scripts/sideload-local-package.sh`), the lab uses that configured Library instead of scanning repository development files. These configured quests are evaluate-only; package-bound quests cannot be patched or copied out as loose tiles. Change the package source and repack it to persist tuning.
 
 Developer inspect on a catalog card also links here with `?id=`.
 

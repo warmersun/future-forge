@@ -24,7 +24,7 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Quest Economy Lab · Future Forge</title>
     <link rel="stylesheet" href="/css/styles.css" />
-    <link rel="stylesheet" href="/tools/quest-economy.css" />
+    <link rel="stylesheet" href="/tools/quest-economy.css?v=4" />
   </head>
   <body class="econ-lab">
     <header class="econ-head">
@@ -65,10 +65,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
       <div class="econ-pick-bar">
         <button type="button" class="btn btn-ghost btn-sm" id="econ-back" hidden>← Quests</button>
         <h2 id="econ-pick-title">Start a Quest</h2>
-        <label class="econ-seats-inline">
-          Friends seats
-          <input id="econ-seats" type="number" min="2" max="6" value="3" />
-        </label>
       </div>
       <p id="econ-pick-blurb" class="muted sm"></p>
       <div id="econ-hub" class="quest-hub-grid"></div>
@@ -78,6 +74,22 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
     <p id="econ-status" class="econ-status muted" role="status"></p>
 
     <section id="econ-selected" class="econ-selected" hidden></section>
+    <section id="econ-controls" class="econ-controls" aria-labelledby="econ-controls-title" hidden>
+      <div class="econ-controls-intro">
+        <h2 id="econ-controls-title">Simulation settings</h2>
+        <p>Adjust the assumptions to see how the results change.</p>
+      </div>
+      <div class="econ-controls-fields">
+        <label class="econ-control" for="econ-seats">
+          <span><strong>Friends seats</strong><small>Players at the table · 2–6</small></span>
+          <input id="econ-seats" type="number" min="2" max="6" step="1" value="2" />
+        </label>
+        <label class="econ-control" for="econ-pathway-tiles">
+          <span><strong>Tiles per pathway</strong><small>Invention tiles in each easing pathway · 1–5</small></span>
+          <input id="econ-pathway-tiles" type="number" min="1" max="5" step="1" value="1" />
+        </label>
+      </div>
+    </section>
     <section id="econ-hero" class="econ-hero" hidden></section>
     <section id="econ-setup" class="econ-setup" hidden></section>
 
@@ -99,6 +111,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
     <section id="econ-rec" class="econ-rec" hidden></section>
 
-    <script type="module" src="/tools/quest-economy.js"></script>
+    <script type="module" src="/tools/quest-economy.js?v=4"></script>
   </body>
 </html>
