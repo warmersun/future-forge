@@ -31,7 +31,9 @@ import { catalogCard } from "./cloud-gate.mjs";
 export function packageCatalogRecord(entry) {
   const ref = parsePackageRef(entry?.packageRef);
   if (!ref || (entry.id && entry.id !== ref.questId)) return null;
-  return { ...catalogCard({ ...entry, id: ref.questId, source: "remote" }), packageRef: ref };
+  if (entry.storage === "loose-v2" && ref.packageId !== "loose-quest") return null;
+  return { ...catalogCard({ ...entry, id: ref.questId, source: "remote" }), packageRef: ref,
+    ...(entry.storage === "loose-v2" ? { storage: "loose-v2" } : {}) };
 }
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
@@ -148,6 +150,10 @@ export async function catalogFromObjectReader(readText, opts = {}) {
 
   const list = Array.isArray(catalog?.quests) ? catalog.quests : [];
   for (const entry of list) {
+    if (entry?.storage === "loose-v2" && !Object.hasOwn(entry, "packageRef")) {
+      errors.push({ file: String(entry?.id || "?"), error: "package_reference_forbidden" });
+      continue;
+    }
     if (entry && Object.hasOwn(entry, "packageRef")) {
       const record = packageCatalogRecord(entry);
       if (record) quests.push(record);

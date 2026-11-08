@@ -26,6 +26,7 @@ import { verifyToken } from "@clerk/backend";
 import { authorizedPartiesFromEnv, isJwtShaped } from "../../js/server/clerk-auth.mjs";
 import { isGameSessionToken, mintGameSessionToken, verifyGameSessionToken } from "../../js/server/game-session.mjs";
 import { normalizeClerkUserId } from "../../js/server/clerk-id.mjs";
+import { questsBucketFromEnv } from "../../js/server/quest-object-storage.mjs";
 import { createAccountRoutes } from "./account-routes.mjs";
 import { createPlayerRoutes } from "./player-routes.mjs";
 import { createQuestWriteRoutes } from "./quest-write-routes.mjs";
@@ -201,7 +202,10 @@ export function createCloudApi({ env = process.env, db, verifyClerk, verifySigne
       if (!cx) return response({ ok: false, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: false } }, 503, cors);
       try {
         await cx.query("SELECT 1");
-        return response({ ok: true, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: true } }, 200, cors);
+        const features = questsBucketFromEnv(env) &&
+          env.FF_PREDICTION_BANK_ROOT === "https://warmersun.com/predictions/"
+          ? { features: { looseQuestV2: true } } : {};
+        return response({ ok: true, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: true }, ...features }, 200, cors);
       } catch {
         return response({ ok: false, service: "portal", clerk, apiOrigin, gameDeviceOrigins, db: { enabled: false } }, 503, cors);
       }

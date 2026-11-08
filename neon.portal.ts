@@ -34,6 +34,7 @@ export default defineConfig({
       externalPackages: ["sharp"],
       env: {
         FF_QUESTS_BUCKET: "quests",
+        FF_PREDICTION_BANK_ROOT: "https://warmersun.com/predictions/",
         FF_PORTAL_UI_URL: "https://warmersun.com/portal/",
         FF_PUBLIC_ORIGIN: process.env.FF_PUBLIC_ORIGIN || "https://cloud.warmersun.com",
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,

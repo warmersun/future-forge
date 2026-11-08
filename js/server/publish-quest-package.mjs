@@ -41,15 +41,16 @@ import { catalogCard } from "./cloud-gate.mjs";
 
 /** Match strict authoring acceptance, not merely package integrity. Modules have
  * craft lint but no playable economy; every playable member must pass both solo
- * paths in the same finite finishing year. No adapter/credentials are involved.
+ * paths in the same finite finishing year unless force explicitly bypasses
+ * economy acceptance. Craft lint remains mandatory. No adapter/credentials are involved.
  */
-function acceptAuthoring(raw, id) {
+function acceptAuthoring(raw, id, force = false) {
   const document = JSON.parse(raw.toString("utf8"));
   const validated = validateQuestDocument(document);
   if (!validated.ok) throw new Error(`Invalid quest ${id}: ${validated.error}`);
   const { warnings } = lintQuestTile(document, validated);
   if (warnings.length) throw new Error(`Craft acceptance failed for ${id}:\n${formatLintWarnings(warnings).join("\n")}`);
-  if (validated.kind !== "module" && validated.tile.kind !== "module") {
+  if (!force && validated.kind !== "module" && validated.tile.kind !== "module") {
     const report = evaluateQuestEconomy(validated, { recommend: false });
     const noAi = report.archetypes["solo-no-ai"];
     const ai = report.archetypes["solo-ai"];
@@ -67,9 +68,11 @@ function bytes(body) {
 }
 
 /** files is the verified RAW archive tree, including manifest.json, never a delivery projection.
- * All checks also run in offline dry-run. Access overrides are deliberately rejected.
+ * All checks also run in offline dry-run; force bypasses only economy acceptance.
+ * Access overrides are deliberately rejected.
  */
-export function planPublishPackage({ files, prefix = "", access = null }) {
+export function planPublishPackage({ files, prefix = "", access = null, force = false }) {
+  if (typeof force !== "boolean") throw new Error("force must be a boolean");
   if (access != null) throw new Error("--access cannot mutate a hashed release. Edit quest access in the source, repack, verify, and publish the NEW content revision.");
   if (!files || typeof files !== "object") throw new Error("Raw package files are required");
   const raw = Object.fromEntries(Object.entries(files).map(([name, body]) => {
@@ -99,16 +102,16 @@ export function planPublishPackage({ files, prefix = "", access = null }) {
     const packageRef = { ...ref, questId: id };
     const resolved = resolvePackageRelease(indexed, packageRef, { prefix, projectDelivery: false });
     if (!resolved.ok) throw new Error(`${resolved.code}: ${resolved.message}`);
-    acceptAuthoring(raw[file], id);
+    acceptAuthoring(raw[file], id, force);
     // Only the shared, allowlisted public card belongs in a catalog. Never copy
     // the raw quest, mission, tutor curriculum, or package world into metadata.
     return { ...catalogCard(resolved.record), id, file: packageObjectKey("", ref, file), packageRef };
   });
-  return { files: raw, prefix, packageId: manifest.id, revision, objects, entries, catalogKey: joinObjectKey(prefix, "catalog.json") };
+  return { files: raw, prefix, force, packageId: manifest.id, revision, objects, entries, catalogKey: joinObjectKey(prefix, "catalog.json") };
 }
 
 export function packagePlanSummary(plan) {
-  return { packageId: plan.packageId, revision: plan.revision, catalogKey: plan.catalogKey, entries: plan.entries,
+  return { packageId: plan.packageId, revision: plan.revision, force: plan.force, catalogKey: plan.catalogKey, entries: plan.entries,
     objects: plan.objects.map(({ key, body }) => ({ key, bytes: body.length, sha256: digest(body) })) };
 }
 

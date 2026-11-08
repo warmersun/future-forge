@@ -24,7 +24,8 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 
 /** Sparse overrides after playtest */
 export const TECH_COST_OVERRIDES = {
-  // examples kept empty for default formula balance
+  // Super Intelligence needs public/official backing to adopt, not just cash.
+  ai: { budget: 1, will: 1, frontierRisk: 0 },
 };
 
 /**

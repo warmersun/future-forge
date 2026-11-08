@@ -235,6 +235,55 @@ describe("immutable package publisher", () => {
       assert.equal(touched, 0);
     });
   }
+  it("--force bypasses too-easy economy acceptance in dry-run and publication without changing raw bytes", async () => {
+    const easy = packFixture("too-easy", "open", "kiln-ferry", (tile) => {
+      // A synthetic local/support-only quest can be solved with one invention.
+      delete tile.mission.pressure.global;
+      for (const meter of Object.values(tile.mission.pressure)) {
+        meter.pressure = 2;
+        meter.pressureRise = 0;
+      }
+      tile.mission.suggestedWhy.robots = `A cart eases ${tile.mission.pressure.local.label}.`;
+    });
+    const raw = await readArchivePackage(easy);
+    assert.throws(() => planPublishPackage({ files: raw }), /Economy acceptance.*too_easy/);
+    const warnings = [];
+    const dry = await main([easy, "--force", "--dry-run"], {
+      loadAdapter: async () => { throw new Error("dry-run loaded adapter"); },
+      stdout: () => {}, stderr: text => warnings.push(text),
+    });
+    assert.equal(dry.plan.force, true);
+    assert.deepEqual(dry.wrote, []);
+    assert.match(warnings[0], /--force bypasses economy acceptance only/);
+    const store = memoryStore(null);
+    await main([easy, "--force"], {
+      loadAdapter: async () => store.adapter, stdout: () => {}, stderr: () => {},
+    });
+    const plan = planPublishPackage({ files: raw, force: true });
+    assert.deepEqual(store.catalog().quests, plan.entries);
+    for (const object of plan.objects) assert.deepEqual(store.objects.get(object.key).body, raw[object.name]);
+    store.set(plan.objects[0].key, Buffer.from("conflicting immutable bytes"));
+    await assert.rejects(publishPackagePlan(plan, { adapter: store.adapter }), /Immutable object conflict/);
+  });
+
+  it("--force still rejects craft, integrity, access overrides and invalid archives before adapter load", async () => {
+    const craft = editRelease(files, tile => { delete tile.grounding; delete tile.mission.grounding; });
+    const corrupt = { ...files, "manifest.json": Buffer.from("bad json") };
+    for (const [raw, error] of [[craft, /Craft acceptance/], [corrupt, /manifest/]]) {
+      await assert.rejects(main([archive, "--force"], {
+        readArchive: async () => raw,
+        loadAdapter: async () => { assert.fail("adapter loaded"); }, stdout: () => {},
+      }), error);
+    }
+    assert.throws(() => planPublishPackage({ files, force: true, access: "paid" }), /cannot mutate/);
+    assert.throws(() => planPublishPackage({ files, force: "false" }), /boolean/);
+    const invalid = path.join(temp, "force-broken.ffquest");
+    fs.writeFileSync(invalid, "not a ZIP");
+    await assert.rejects(main([invalid, "--force"], {
+      loadAdapter: async () => { assert.fail("adapter loaded"); }, stdout: () => {},
+    }), /verify failed/);
+  });
+
   it("plans verified bytes and dry-runs with no adapter/credentials/network", async () => {
     const plan = planPublishPackage({ files, prefix: "private/quests" });
     const result = await publishPackagePlan(plan, { dryRun: true });

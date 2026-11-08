@@ -30,7 +30,7 @@ The calendar rows are synthetic test assumptions, not verified forecasts or stat
 
 Publication validates package integrity/world bindings, strict craft lint, and both solo economy paths before loading an adapter. Both solo paths must be challenging and finish in the same year. Access changes require editing the source and repacking a new revision. Public catalog metadata is derived from that release and replaces stale policy, sponsor, and entitlement fields; current policy also gates historical reads.
 
-Live publication additionally requires a verified atomic create/CAS storage adapter and staging validation. The offline test publisher is not proof of deployed compatibility. See [verification and release gates](testing/self-contained-quest-packages.md) for what was actually exercised, migration/recovery boundaries, and outstanding cross-repository checks.
+The direct immutable-package publisher requires a verified atomic create/CAS storage adapter for live publication. The split production path instead retains quests in Neon and versioned prediction banks on the predictions Site; see [hosted loose quest resolution](loose-quest-resolution.md) for its deployment and concurrency limits.
 
 ## Layout
 
@@ -156,17 +156,10 @@ For v1 only, `--allow-external-lessons` turns a missing lesson id into a warning
 
 `unpack` verifies first, then extracts. It refuses a non-empty destination. `--lesson-root` and `--asset-root` are joined onto package paths in delivery `*.json` and `*.html` copies, leaving v2 `raw/` bytes unchanged. A root without a trailing slash gets one. The manifest itself is not rewritten.
 
-## Stage and deploy
+## Preview and deploy
 
-Those scripts live in the warmersun repo, because that is where the site tree and the here.now credentials are. They call this CLI; they do not reimplement the zip.
+Use `./scripts/sideload-local-package.sh path/to/out.ffquest` to play a package locally without publishing it. The local, gitignored `./deploy-quest.sh path/to/out.ffquest` is the production wrapper; `--dry-run` publishes nothing and `--yes` permits a non-interactive deployment.
 
-```bash
-# from ~/dev/warmersun
-./scripts/stage-package.sh path/to/out.ffquest
-./scripts/website-deploy-package.sh path/to/out.ffquest
-./scripts/gated-deploy-package.sh path/to/out.ffquest
-```
+For v1, the wrapper delegates to the Warmer Sun gated deployment workflow. For v2, it prepares a versioned prediction bank on `warmersun.com/predictions/`, lesson content on `warmersun.com/lessons/`, and a retained quest revision in Neon. The v2 portal reader and `FF_PREDICTION_BANK_ROOT` must be deployed before the wrapper's live readiness check can pass. Module-wrapper deployment is not yet supported. See [loose quest resolution](loose-quest-resolution.md) for retention and catalog-writer limitations.
 
-`website-deploy-package.sh` publishes the quest catalog and the lesson pages on warmersun.com. `gated-deploy-package.sh` upserts the quest JSON into the private object-store catalog and publishes the lesson pages (and package images) on the website. The new tile is not added to the public quest catalog.
-
-`FF_REPO` (default `~/dev/learning-game`) points at this repo. See `~/dev/warmersun/scripts/README.md`.
+`--force` bypasses the Economy Lab acceptance gate; integrity, quest validation, v2 craft lint, access controls, and immutable-release protection remain enforced. For v1 it also permits overwriting landed lesson and image files. `FF_REPO` and `WARMERSUN_DIR` select the checkouts.

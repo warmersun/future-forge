@@ -244,6 +244,18 @@ describe("Neon Cloud API", () => {
     assert.deepEqual(missing.body.gameDeviceOrigins, expected.slice(0, 3));
   });
 
+  it("reports loose quest capability only with private bucket and approved bank root", async () => {
+    const root = "https://warmersun.com/predictions/";
+    for (const bucket of [undefined, "off", "false", "0"]) {
+      const result = await call(app(fakeDb(), { env: { ...env, FF_QUESTS_BUCKET: bucket, FF_PREDICTION_BANK_ROOT: root } }), "/api/health");
+      assert.equal(result.body.features, undefined);
+    }
+    const enabled = await call(app(fakeDb(), { env: { ...env, FF_QUESTS_BUCKET: "quests", FF_PREDICTION_BANK_ROOT: root } }), "/api/health");
+    assert.deepEqual(enabled.body.features, { looseQuestV2: true });
+    const wrongRoot = await call(app(fakeDb(), { env: { ...env, FF_QUESTS_BUCKET: "quests", FF_PREDICTION_BANK_ROOT: "https://example.com/" } }), "/api/health");
+    assert.equal(wrongRoot.body.features, undefined);
+  });
+
   it("health probes DB without leaking keys or URL, and fails closed", async () => {
     const db = fakeDb();
     const good = await call(app(db), "/api/health");

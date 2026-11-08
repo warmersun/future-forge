@@ -25,6 +25,9 @@ import { packageRevision } from "../package-identity.js";
 import { packageObjectKey } from "./package-paths.mjs";
 import { createHostedPackageResolver, createHostedPackageResolverFromEnv, createApprovedRemoteObjectReader, readHostedPackageRelease } from "./hosted-package-resolver.mjs";
 import { createPublicRoutes } from "../../portal/functions/public-routes.mjs";
+import { createPublicBankReader } from "./loose-quest-release.mjs";
+import { catalogFromObjectReader } from "./quest-object-storage.mjs";
+import { resolveStartPackageBinding, resolveRunPackageBinding } from "./run-package-binding.mjs";
 
 const json = (file) => JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8"));
 const hash = (body) => createHash("sha256").update(body).digest("hex");
@@ -228,4 +231,71 @@ test("shipped links require explicit delivery configuration; a private bucket ne
   assert.equal(got.ok, true);
   assert.equal(got.record.mission.titleImageUrl, `https://served.example/${packageObjectKey(f.prefix, f.ref)}/assets/chart.png`);
   assert.equal((await factory({ FF_QUEST_PACKAGE_DELIVERY_ROOT: "http://unsafe.example/" }).resolve(f.ref)).code, "package_delivery_root_forbidden");
+});
+
+
+test("loose quest revisions pin exact public bank bytes and recheck access", async () => {
+  const f = fixture();
+  const quest = JSON.parse(f.files[packageObjectKey(f.prefix, f.ref, "quests/kiln-ferry-test.json")]);
+  const bank = f.files[packageObjectKey(f.prefix, f.ref, "predictions/kiln-ferry-bank.json")];
+  const objects = {}; const banks = {}; const urls = [];
+  function release(title, bankBody) {
+    const sha256 = hash(bankBody); banks[sha256] = bankBody;
+    const body = Buffer.from(JSON.stringify({ ...quest, title, predictionBankRef: { id: quest.predictionBankId, sha256 } }));
+    const ref = { packageId: "loose-quest", questId: quest.id, revision: `sha256:${hash(body)}` };
+    objects[`private/loose-quests/${ref.questId}/${hash(body)}.json`] = body;
+    return ref;
+  }
+  const old = release("Old", bank);
+  const newBank = Buffer.from(JSON.stringify({ ...JSON.parse(bank), name: "changed" }));
+  const latest = release("New", newBank);
+  let entry = { id: quest.id, title: "New", access: "open", storage: "loose-v2", packageRef: latest };
+  const catalog = async () => catalogFromObjectReader(async () => JSON.stringify({ quests: [entry] }), { prefix: "private" });
+  const readBank = createPublicBankReader({ root: "https://warmersun.com/predictions/", fetchImpl: async (url, opts) => {
+    urls.push(url); assert.equal(opts.redirect, "error");
+    return new Response(banks[url.match(/([0-9a-f]{64})\.json$/)[1]]);
+  } });
+  const resolver = createHostedPackageResolver({ prefix: "private", readBytes: async key => { if (!objects[key]) throw Error(); return objects[key]; }, loadCatalog: catalog, readBank });
+  const noConfig = createHostedPackageResolverFromEnv({ env: { FF_QUESTS_BUCKET: "offline", FF_QUESTS_OBJECT_PREFIX: "private" }, loadCatalog: catalog, readBytes: async key => objects[key] });
+  assert.equal((await noConfig.resolve(latest)).code, "package_revision_unavailable");
+  const noRefCatalog = await catalogFromObjectReader(async () => JSON.stringify({ quests: [{ id: quest.id, storage: "loose-v2", file: "unsafe.json" }] }));
+  assert.equal(noRefCatalog.quests.length, 0);
+  const resolvePackage = (r) => resolver.resolve(r, { identity: guest });
+  const start = await resolveStartPackageBinding({ questId: quest.id }, { loadCatalog: catalog, resolvePackage });
+  assert.deepEqual(start.packageRef, latest);
+  const previous = await resolvePackage(old);
+  assert.equal(previous.ok, true, JSON.stringify(previous));
+  assert.equal(previous.record.title, "Old");
+  assert.equal(previous.bank.id, quest.predictionBankId);
+  assert.match(urls[0], new RegExp(`^https://warmersun\\.com/predictions/${quest.predictionBankId}/[0-9a-f]{64}\\.json$`));
+  const routes = createPublicRoutes({ env: {}, loadCatalog: catalog, packageResolver: resolver });
+  const response = await routes.fetch(new Request(`https://cloud.warmersun.com/api/quests/${quest.id}`));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).tile.mission.runWorld.bank.id, quest.predictionBankId);
+  const runId = "11111111-1111-4111-8111-111111111111";
+  const saved = await resolveRunPackageBinding({ runId, questId: quest.id, play: { packageRef: old, mission: { title: "FORGED" } } }, {
+    userId: "user_test", loadRun: async () => ({ quest_id: quest.id, packageRef: old }), resolvePackage });
+  assert.equal(saved.ok, true, JSON.stringify(saved));
+  assert.equal(saved.state.play.mission.title, "Old");
+  assert.deepEqual(saved.packageRef, old);
+  entry = { ...entry, access: "paid" };
+  assert.equal((await resolvePackage(old)).ok, false);
+  entry = { ...entry, access: "open" };
+  banks[hash(bank)] = Buffer.from("tampered");
+  assert.equal((await resolvePackage(old)).code, "package_integrity_failed");
+  objects[`private/loose-quests/${old.questId}/${old.revision.slice(7)}.json`] = Buffer.from("tampered");
+  assert.equal((await resolvePackage(old)).code, "package_integrity_failed");
+});
+
+test("public bank reader refuses malicious roots, refs, redirects and oversized responses", async () => {
+  for (const root of ["http://example.com/", "https://u:p@example.com/", "https://example.com/root", "https://example.com/?q=x"]) assert.throws(() => createPublicBankReader({ root }));
+  const calls = [];
+  const read = createPublicBankReader({ root: "https://warmersun.com/predictions/", maxBytes: 2, fetchImpl: async (url, opts) => { calls.push({url, opts}); return new Response("abc"); } });
+  for (const id of ["../bad", "good%2fbad", "https://evil.com", "BAD"]) await assert.rejects(read({ id, sha256: "a".repeat(64) }));
+  await assert.rejects(read({ id: "good", sha256: "A".repeat(64) }));
+  assert.equal(calls.length, 0);
+  await assert.rejects(read({ id: "good", sha256: "a".repeat(64) }));
+  assert.equal(calls[0].opts.redirect, "error");
+  const redirect = createPublicBankReader({ root: "https://warmersun.com/predictions/", fetchImpl: async () => Response.redirect("https://evil.example/") });
+  await assert.rejects(redirect({ id: "good", sha256: "a".repeat(64) }));
 });

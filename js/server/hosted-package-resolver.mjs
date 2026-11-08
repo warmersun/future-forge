@@ -23,6 +23,7 @@ import { packageObjectKey, parsePackageRef, safePackageMember } from "./package-
 import { catalogCard, questReadDecision } from "./cloud-gate.mjs";
 import { createRunWorld } from "../sim/run-world.js";
 import { createNeonObjectReader, catalogFromObjectReader, questsBucketFromEnv, questsObjectPrefixFromEnv } from "./quest-object-storage.mjs";
+import { createPublicBankReader, resolveLooseQuestRelease } from "./loose-quest-release.mjs";
 
 const failure = (code, status = 409) => ({ ok: false, code, error: code, status });
 const bytes = (value) => {
@@ -76,7 +77,7 @@ export async function readHostedPackageRelease(readBytes, rawRef, { prefix = "",
  * identity and entitled must come from server authentication/billing, not a body flag.
  */
 export function createHostedPackageResolver({ readBytes, prefix = "", loadCatalog, trust = "official", techIds, deliveryRoot,
-  maxCachedRevisions = 32, maxFiles, maxBytes } = {}) {
+  readBank, allowLoose = true, maxCachedRevisions = 32, maxFiles, maxBytes } = {}) {
   const cache = new Map();
   return {
     async resolve(rawRef, { identity = { enabled: true, signedIn: false }, entitled = false } = {}) {
@@ -96,7 +97,10 @@ export function createHostedPackageResolver({ readBytes, prefix = "", loadCatalo
       const key = `${ref.packageId}@${ref.revision}`;
       let files = cache.get(key);
       let resolved;
-      if (files) resolved = resolvePackageRelease(files, ref, { prefix, trust, techIds, deliveryRoot });
+      if (current.storage === "loose-v2") {
+        if (!allowLoose || ref.packageId !== "loose-quest" || !readBank) return failure("package_revision_unavailable");
+        resolved = await resolveLooseQuestRelease({ ref, readBytes, readBank, prefix, trust, techIds });
+      } else if (files) resolved = resolvePackageRelease(files, ref, { prefix, trust, techIds, deliveryRoot });
       else {
         const loaded = await readHostedPackageRelease(readBytes, ref, { prefix, trust, techIds, deliveryRoot, maxFiles, maxBytes });
         if (!loaded.ok) return loaded;
@@ -149,5 +153,10 @@ export function createHostedPackageResolverFromEnv({ env = process.env, loadCata
     catch { reader = async () => { throw new Error("package_origin_forbidden"); }; }
   }
   const catalogLoader = loadCatalog || (() => catalogFromObjectReader(async (key) => bytes(await reader(key)).toString("utf8"), { prefix }));
-  return createHostedPackageResolver({ deliveryRoot: env.FF_QUEST_PACKAGE_DELIVERY_ROOT, ...opts, readBytes: reader, prefix, loadCatalog: catalogLoader });
+  let readBank = opts.readBank;
+  if (!readBank) {
+    try { readBank = createPublicBankReader({ root: env.FF_PREDICTION_BANK_ROOT, fetchImpl }); }
+    catch { /* Missing or invalid configuration is fail-closed. */ }
+  }
+  return createHostedPackageResolver({ deliveryRoot: env.FF_QUEST_PACKAGE_DELIVERY_ROOT, ...opts, allowLoose: Boolean(bucket), readBank, readBytes: reader, prefix, loadCatalog: catalogLoader });
 }

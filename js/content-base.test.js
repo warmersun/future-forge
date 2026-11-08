@@ -22,7 +22,6 @@ import assert from "node:assert/strict";
 import {
   resolveContentBaseUrl,
   contentCatalogUrl,
-  stagingBaseFromArg,
 } from "./content-base.mjs";
 import { resolveQuestsRemoteUrl, resolveQuestsRemoteUrlCandidates } from "./quests-remote.mjs";
 import { resolveTrendsRemoteUrl } from "./trends-remote.mjs";
@@ -40,17 +39,6 @@ afterEach(() => {
 });
 
 describe("content-base", () => {
-  it("stagingBaseFromArg accepts a bare token or a staging URL", () => {
-    assert.equal(stagingBaseFromArg(TOKEN), BASE);
-    assert.equal(stagingBaseFromArg(BASE), BASE);
-    assert.equal(stagingBaseFromArg(BASE.slice(0, -1)), BASE);
-    assert.equal(stagingBaseFromArg(`${BASE}index.html`), BASE);
-    assert.equal(stagingBaseFromArg(`${BASE}quests/catalog.json`), BASE);
-    assert.equal(stagingBaseFromArg(`${BASE}quests/`), BASE);
-    assert.throws(() => stagingBaseFromArg(""), /missing/);
-    assert.throws(() => stagingBaseFromArg("../etc"), /not a staging token/);
-  });
-
   it("resolveContentBaseUrl is off unless set", () => {
     assert.equal(resolveContentBaseUrl({}), null);
     assert.equal(resolveContentBaseUrl({ FF_CONTENT_BASE_URL: "off" }), null);
