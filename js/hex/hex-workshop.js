@@ -703,7 +703,7 @@ export function createHexWorkshop(api) {
     const popup = document.querySelector("#hex-tile-popup");
     if (popup) {
       popup.hidden = true;
-      popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern");
+      popup.querySelector(".hex-tile-popup-card")?.classList.remove("is-concern", "is-crisis");
     }
     stopReadAloudFor(document.querySelector("#hex-tile-popup-body"));
   }
@@ -1085,7 +1085,21 @@ export function createHexWorkshop(api) {
             pressureLine += " Each calendar year makes it worse.";
           }
           parts.push(`<p>${pressureLine}</p>`);
+          const lamp = bandToLamp(band);
+          const status =
+            band === "cool"
+              ? "eased — this meter is at or under the win goal."
+              : band === "warm"
+                ? "strained — above the win goal; dock a pathway to ease it."
+                : "hot — near collapse; this meter needs relief.";
+          parts.push(
+            `<p><span class="hex-tile-popup-lamp ${escapeHtml(lamp)}"></span><strong>${escapeHtml(band)}</strong> — ${escapeHtml(status)}</p>`
+          );
+        } else {
+          parts.push(lampExplainHtml(t.lamp, "crisis"));
         }
+        const crisisWhy = crisisWhyBlockHtml(reasonsForCrisisTile(board(), t));
+        if (crisisWhy) parts.push(crisisWhy);
         const collapseYear = api.getCollapseYear?.();
         const year = Number(api.getYear?.()) || null;
         if (
@@ -1113,27 +1127,7 @@ export function createHexWorkshop(api) {
             );
           }
         }
-        parts.push(
-          `<p class="muted">Here-and-now relief without a deeper lever is incomplete; a root-cause story with no support never leaves the notebook; support without a real fix is theater. The three meters together are the inventing discipline.</p>`
-        );
-        if (cur != null) {
-          const curN = Math.max(0, Math.min(5, Math.round(Number(cur) || 0)));
-          const band = crisisMeterLevel(curN, goal);
-          const lamp = bandToLamp(band);
-          const status =
-            band === "cool"
-              ? "eased — this meter is at or under the win goal."
-              : band === "warm"
-                ? "strained — above the win goal; dock a pathway to ease it."
-                : "hot — near collapse; this meter needs relief.";
-          parts.push(
-            `<p><span class="hex-tile-popup-lamp ${escapeHtml(lamp)}"></span><strong>${escapeHtml(band)}</strong> — ${escapeHtml(status)}</p>`
-          );
-        } else {
-          parts.push(lampExplainHtml(t.lamp, "crisis"));
-        }
-        const crisisWhy = crisisWhyBlockHtml(reasonsForCrisisTile(board(), t));
-        if (crisisWhy) parts.push(crisisWhy);
+
         const helpers = api.techsForCrisis?.({ meterLabel: key, role }) || [];
         if (helpers.length) {
           parts.push(
@@ -1368,6 +1362,9 @@ export function createHexWorkshop(api) {
     popup
       .querySelector(".hex-tile-popup-card")
       ?.classList.toggle("is-concern", t.kind === TILE_KIND.concern);
+    popup
+      .querySelector(".hex-tile-popup-card")
+      ?.classList.toggle("is-crisis", t.kind === TILE_KIND.crisis);
     popup.hidden = false;
     requestAnimationFrame(() => {
       positionPopupNearTile(tileId);
@@ -4000,39 +3997,56 @@ export function crisisWhyBlockHtml(rows) {
   const settled = list.filter((r) => !r.pending);
   const pendingCount = list.length - settled.length;
   if (!settled.length) {
-    return `<p class="muted">Judging how docked pathways hit this meter…</p>`;
+    return `<div class="hex-tile-popup-why hex-crisis-eval">
+      <div class="hex-crisis-eval-heading">Pathway Impact</div>
+      <p class="muted hex-crisis-eval-pending">Judging how docked pathways hit this meter…</p>
+    </div>`;
   }
   const net = settled.reduce((s, r) => s + (Number(r.delta) || 0), 0);
-  let body;
-  if (settled.length === 1) {
-    const r = settled[0];
-    const why = r.reason
-      ? `<p class="muted">${escapeHtml(r.reason)}</p>`
+  const isSingle = settled.length === 1;
+
+  const renderItem = (r) => {
+    const delta = Number(r.delta) || 0;
+    const tone = delta < 0 ? "relief" : delta > 0 ? "strain" : "neutral";
+    const deltaValueText = escapeHtml(formatSignedDelta(r.delta));
+    const whyHtml = r.reason
+      ? `<p class="hex-crisis-eval-rationale hex-crisis-eval-rationale--${tone}">${escapeHtml(r.reason)}</p>`
       : "";
-    body = `<p><strong>This pathway: ${escapeHtml(
-      formatSignedDelta(r.delta)
-    )}</strong> · ${escapeHtml(r.label)}</p>${why}`;
+
+    return `<div class="hex-crisis-eval-item">
+      <div class="hex-crisis-eval-line">
+        <span class="hex-crisis-eval-pathway">◈ <strong>${escapeHtml(r.label)}</strong></span>
+        <span class="hex-crisis-eval-delta hex-crisis-eval-delta--${tone}">${deltaValueText}</span>
+      </div>
+      ${whyHtml}
+    </div>`;
+  };
+
+  let body;
+  if (isSingle) {
+    body = renderItem(settled[0]);
   } else {
-    const rowsHtml = settled
-      .map((r) => {
-        const why = r.reason ? ` — ${escapeHtml(r.reason)}` : "";
-        return `<p class="muted"><strong>${escapeHtml(
-          formatSignedDelta(r.delta)
-        )}</strong> · ${escapeHtml(r.label)}${why}</p>`;
-      })
-      .join("");
-    body = `<p><strong>Net ${escapeHtml(
-      formatSignedDelta(net)
-    )} from ${settled.length} pathways</strong></p>${rowsHtml}`;
+    const netTone = net < 0 ? "relief" : net > 0 ? "strain" : "neutral";
+    const rowsHtml = settled.map((r) => renderItem(r)).join("");
+    body = `<div class="hex-crisis-eval-net hex-crisis-eval-net--${netTone}">
+      <strong>Net ${escapeHtml(formatSignedDelta(net))} from ${settled.length} pathways</strong>
+    </div>
+    ${rowsHtml}`;
   }
+
   const judging = pendingCount
-    ? `<p class="muted">${
+    ? `<p class="muted hex-crisis-eval-pending">${
         pendingCount === 1
           ? "Judging another pathway…"
           : `Judging ${pendingCount} other pathways…`
       }</p>`
     : "";
-  return `<div class="hex-tile-popup-why">${body}${judging}</div>`;
+
+  return `<div class="hex-tile-popup-why hex-crisis-eval">
+    <div class="hex-crisis-eval-heading">Pathway Impact</div>
+    ${body}
+    ${judging}
+  </div>`;
 }
 
 export function concernWhyBlockHtml(rows) {

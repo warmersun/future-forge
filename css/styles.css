@@ -13213,6 +13213,20 @@ body.tutorial-popup-front #hex-tile-popup {
   max-width: min(44rem, calc(100vw - 1.5rem));
 }
 
+.hex-tile-popup-card.is-crisis {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.hex-tile-popup-card.is-crisis .hex-tile-popup-title {
+  color: #fff;
+  font-weight: 700;
+}
+
+.hex-tile-popup-card.is-crisis .hex-tile-popup-meta {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
 .hex-board svg.has-pathway-highlight g[data-id].hex-pathway-origin {
   filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.55));
 }
@@ -13426,6 +13440,122 @@ body.tutorial-popup-front #hex-tile-popup {
   margin: 0.55rem 0 0.15rem;
   padding-top: 0.4rem;
   border-top: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+/* Crisis Pathway Evaluation — flat, unnested, prominent */
+.hex-tile-popup-why.hex-crisis-eval {
+  margin: 0.65rem 0 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  box-shadow: none;
+}
+
+.hex-crisis-eval-heading {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #38bdf8;
+  margin: 0 0 0.45rem;
+}
+
+.hex-crisis-eval-net {
+  font-size: 0.84rem;
+  margin: 0 0 0.45rem;
+  color: #e2e8f0;
+}
+
+.hex-crisis-eval-net--relief strong {
+  color: #86efac;
+}
+
+.hex-crisis-eval-net--strain strong {
+  color: #fca5a5;
+}
+
+.hex-crisis-eval-item {
+  margin: 0 0 0.55rem;
+}
+
+.hex-crisis-eval-item:last-child {
+  margin-bottom: 0;
+}
+
+.hex-crisis-eval-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.hex-crisis-eval-pathway {
+  font-size: 0.88rem;
+  color: #38bdf8;
+  letter-spacing: 0.01em;
+}
+
+.hex-crisis-eval-pathway strong {
+  color: #f0f9ff;
+  font-weight: 700;
+}
+
+.hex-crisis-eval-delta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hex-crisis-eval-delta--relief {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.hex-crisis-eval-delta--strain {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.hex-crisis-eval-delta--neutral {
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.hex-crisis-eval-rationale {
+  margin: 0.2rem 0 0;
+  padding: 0.25rem 0 0.25rem 0.65rem;
+  border-left: 2px solid #38bdf8;
+  color: #f8fafc;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  font-style: italic;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hex-crisis-eval-rationale--relief {
+  border-left-color: #22c55e;
+}
+
+.hex-crisis-eval-rationale--strain {
+  border-left-color: #ef4444;
+}
+
+.hex-crisis-eval-rationale--neutral {
+  border-left-color: #64748b;
+}
+
+.hex-crisis-eval-pending {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
 }
 
 .hex-convergence-dialog {

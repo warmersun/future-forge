@@ -294,8 +294,12 @@ describe("hex-workshop why blocks", () => {
     const one = crisisWhyBlockHtml([
       { label: "ai · iot", delta: -1, reason: "The noon cooler keeps class in the rooms.", pending: false },
     ]);
-    assert.match(one, /This pathway: −1|This pathway: -1/);
+    assert.match(one, />-1</);
     assert.match(one, /noon cooler/);
+    assert.match(one, /hex-crisis-eval/);
+    assert.match(one, /hex-crisis-eval-delta--relief/);
+    assert.match(one, /ai · iot/);
+    assert.match(one, /hex-crisis-eval-rationale/);
     const two = crisisWhyBlockHtml([
       { label: "ai", delta: -1, reason: "Cooler at noon.", pending: false },
       { label: "drones", delta: 0, reason: "Never names the heat.", pending: false },
@@ -303,6 +307,7 @@ describe("hex-workshop why blocks", () => {
     assert.match(two, /from 2 pathways/);
     assert.match(two, /Cooler at noon/);
     assert.match(two, /Never names the heat/);
+    assert.match(two, /hex-crisis-eval-net/);
     const pending = crisisWhyBlockHtml([
       { label: "ai", delta: 0, reason: "", pending: true },
     ]);
