@@ -4037,8 +4037,9 @@ function applyOutcomeCloudSaveChrome() {
   }
 }
 
-function postCloudRun(run) {
+function postCloudRun(run, { bindCurrent = true } = {}) {
   if (!isClerkSignedIn() || !run?.questId) return Promise.resolve(null);
+  const missionAtRequest = state.mission;
   return apiFetch("/api/me/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -4046,7 +4047,7 @@ function postCloudRun(run) {
   })
     .then(async (res) => {
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.id) state.cloudRunId = data.id;
+      if (res.ok && data.id && bindCurrent && state.mission === missionAtRequest && state.mission?.id === run.questId) state.cloudRunId = data.id;
       if (res.ok && Array.isArray(data.unlocked) && data.unlocked.length) {
         flashToast(data.unlocked.map((u) => u.title).filter(Boolean).join(" · "));
       }
@@ -4065,6 +4066,12 @@ function postCloudRunStart(mission) {
     multiparty: isRoomOrHotseatSession(),
     isLearningModule: Boolean(mission.isLearningModule),
   });
+  const warnStartFailure = () => {
+    if (state.mission === mission && mission.packageRef && mission.runWorld?.trust !== "local-import" && !state.cloudRunId && !continueSaveWarned) {
+      continueSaveWarned = true;
+      flashToast("Could not start the Cloud run; Continue is not being saved.");
+    }
+  };
   void apiFetch("/api/me/runs/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -4080,11 +4087,11 @@ function postCloudRunStart(mission) {
       if (res.ok && data.id && state.mission === mission) {
         state.cloudRunId = String(data.id);
         scheduleCloudRunState();
+      } else if (!res.ok || !data.id) {
+        warnStartFailure();
       }
     })
-    .catch(() => {
-      /* local play continues */
-    });
+    .catch(warnStartFailure);
 }
 
 async function syncCloudProgress() {
@@ -4128,9 +4135,9 @@ async function syncCloudProgress() {
     }
     if (res.ok) {
       if (data.lastRunId) {
-        state.cloudRunId = String(data.lastRunId);
+        if (!state.mission?.id) state.cloudRunId = String(data.lastRunId);
       } else {
-        await postCloudRun(readStashedLastRun());
+        await postCloudRun(readStashedLastRun(), { bindCurrent: false });
       }
       applyOutcomeCloudSaveChrome();
     }
@@ -4188,16 +4195,22 @@ function cloudRunStatePayload() {
 
 function scheduleCloudRunState() {
   if (!isClerkSignedIn() || !state.mission?.id) return;
-  const body = cloudRunStatePayload();
-  if (!body) return;
+  const mission = state.mission;
   clearTimeout(cloudRunStateTimer);
   cloudRunStateTimer = setTimeout(() => {
+    if (!isClerkSignedIn() || state.mission !== mission) return;
+    // Official packages require their server-owned run before they can be saved.
+    // postCloudRunStart schedules another save once that run exists.
+    if (mission.packageRef && mission.runWorld?.trust !== "local-import" && !state.cloudRunId) return;
+    const body = cloudRunStatePayload();
+    if (!body) return;
     void apiFetch("/api/me/run-state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
       .then((res) => {
+        if (state.mission !== mission) return;
         if (res.ok) {
           continueSaveWarned = false;
           return;
@@ -4212,6 +4225,7 @@ function scheduleCloudRunState() {
         }
       })
       .catch(() => {
+        if (state.mission !== mission) return;
         if (!continueSaveWarned) {
           continueSaveWarned = true;
           flashToast("Could not save Continue to Cloud.");

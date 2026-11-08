@@ -22,6 +22,6 @@ along with Future Forge. If not, see <https://www.gnu.org/licenses/>.
 void import("./auth.js")
   .then((m) => m.initAuth())
   .catch((e) => console.warn("[clerk]", e?.message || e));
-void import("./game.js?v=rating-4")
+void import("./game.js?v=continue-run-1")
   .then((m) => m.init())
   .catch((e) => console.error("[game]", e?.message || e));
